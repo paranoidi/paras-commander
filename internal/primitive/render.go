@@ -1,0 +1,176 @@
+package primitive
+
+import (
+	"strings"
+	"unicode/utf8"
+
+	"github.com/gdamore/tcell/v2"
+)
+
+// Rect describes a terminal region for low-level drawing.
+type Rect struct {
+	X      int
+	Y      int
+	Width  int
+	Height int
+}
+
+// Span applies a style to a half-open rune range.
+type Span struct {
+	Start int
+	End   int
+	Style tcell.Style
+}
+
+// Box draws a single-line box border inside rect.
+func Box(screen tcell.Screen, rect Rect, style tcell.Style) {
+	if rect.Width <= 1 || rect.Height <= 1 {
+		Fill(screen, rect, ' ', style)
+		return
+	}
+
+	for x := rect.X; x < rect.X+rect.Width; x++ {
+		screen.SetContent(x, rect.Y, '─', nil, style)
+		screen.SetContent(x, rect.Y+rect.Height-1, '─', nil, style)
+	}
+	for y := rect.Y; y < rect.Y+rect.Height; y++ {
+		screen.SetContent(rect.X, y, '│', nil, style)
+		screen.SetContent(rect.X+rect.Width-1, y, '│', nil, style)
+	}
+	screen.SetContent(rect.X, rect.Y, '┌', nil, style)
+	screen.SetContent(rect.X+rect.Width-1, rect.Y, '┐', nil, style)
+	screen.SetContent(rect.X, rect.Y+rect.Height-1, '└', nil, style)
+	screen.SetContent(rect.X+rect.Width-1, rect.Y+rect.Height-1, '┘', nil, style)
+}
+
+// Fill writes ch across the entire rect.
+func Fill(screen tcell.Screen, rect Rect, ch rune, style tcell.Style) {
+	for y := rect.Y; y < rect.Y+rect.Height; y++ {
+		for x := rect.X; x < rect.X+rect.Width; x++ {
+			screen.SetContent(x, y, ch, nil, style)
+		}
+	}
+}
+
+// Text writes a clipped, space-padded string at the target row.
+func Text(screen tcell.Screen, x, y, width int, text string, style tcell.Style) {
+	if width <= 0 {
+		return
+	}
+
+	text = TruncateRight(text, width)
+	column := 0
+	for _, r := range text {
+		if column >= width {
+			break
+		}
+		screen.SetContent(x+column, y, r, nil, style)
+		column++
+	}
+	for column < width {
+		screen.SetContent(x+column, y, ' ', nil, style)
+		column++
+	}
+}
+
+// StyledText writes clipped, space-padded text with styled spans.
+func StyledText(screen tcell.Screen, x, y, width int, text string, style tcell.Style, spans []Span) {
+	if width <= 0 {
+		return
+	}
+
+	text = TruncateRight(text, width)
+	runes := []rune(text)
+	column := 0
+	for ; column < len(runes) && column < width; column++ {
+		screen.SetContent(x+column, y, runes[column], nil, styleAt(column, style, spans))
+	}
+	for column < width {
+		screen.SetContent(x+column, y, ' ', nil, style)
+		column++
+	}
+}
+
+// StyledTextCellwise writes clipped, space-padded text where each column's base style comes from cellStyle before span overlays.
+func StyledTextCellwise(screen tcell.Screen, x, y, width int, text string, cellStyle func(column int) tcell.Style, spans []Span) {
+	if width <= 0 {
+		return
+	}
+
+	text = TruncateRight(text, width)
+	runes := []rune(text)
+	column := 0
+	for ; column < len(runes) && column < width; column++ {
+		base := cellStyle(column)
+		screen.SetContent(x+column, y, runes[column], nil, styleAt(column, base, spans))
+	}
+	for column < width {
+		screen.SetContent(x+column, y, ' ', nil, cellStyle(column))
+		column++
+	}
+}
+
+// TextOverlay writes clipped text without clearing the remaining cells.
+func TextOverlay(screen tcell.Screen, x, y, width int, text string, style tcell.Style) {
+	if width <= 0 {
+		return
+	}
+
+	text = TruncateRight(text, width)
+	column := 0
+	for _, r := range text {
+		if column >= width {
+			break
+		}
+		screen.SetContent(x+column, y, r, nil, style)
+		column++
+	}
+}
+
+func styleAt(column int, fallback tcell.Style, spans []Span) tcell.Style {
+	for _, span := range spans {
+		if column >= span.Start && column < span.End {
+			return span.Style
+		}
+	}
+	return fallback
+}
+
+// TruncateRight clips value to width runes, using ~ as an overflow marker.
+func TruncateRight(value string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if utf8.RuneCountInString(value) <= width {
+		return value
+	}
+	runes := []rune(value)
+	if width == 1 {
+		return string(runes[:1])
+	}
+	return string(runes[:width-1]) + "~"
+}
+
+// TruncateMiddle clips value to width runes, preserving both ends when possible.
+func TruncateMiddle(value string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if utf8.RuneCountInString(value) <= width {
+		return value
+	}
+	runes := []rune(value)
+	if width <= 3 {
+		return string(runes[:width])
+	}
+	prefix := (width - 1) / 2
+	suffix := width - prefix - 1
+	return string(runes[:prefix]) + "~" + string(runes[len(runes)-suffix:])
+}
+
+func Repeat(value string, count int) string {
+	if count <= 0 {
+		return ""
+	}
+	return strings.Repeat(value, count)
+}

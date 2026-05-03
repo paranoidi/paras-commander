@@ -1,0 +1,519 @@
+package keymap
+
+// ActionSpec describes one configurable action: its stable ID, human-friendly
+// display metadata, default chord strings, and search keywords.
+type ActionSpec struct {
+	// ID is the stable TOML action identifier (e.g. "file.copy").
+	ID string
+	// Title is a short human-readable name (e.g. "Copy").
+	Title string
+	// Section groups actions in the help screen (e.g. "File operations").
+	Section string
+	// DefaultKeys is the built-in chord strings (e.g. []string{"F5"}); empty = unbound by default.
+	DefaultKeys []string
+	// PreferredKey is the visual label shown in menus, footer, and help summary.
+	// When empty, the first DefaultKey (if any) is used.
+	PreferredKey string
+	// Keywords are extra fuzzy-search terms for the help screen.
+	Keywords []string
+}
+
+// DefaultActionSpecs returns all known configurable actions in display order.
+func DefaultActionSpecs() []ActionSpec {
+	return []ActionSpec{
+		// ── App ──
+		{
+			ID:           ActionAppQuit,
+			Title:        "Quit",
+			Section:      "App",
+			DefaultKeys:  []string{"F10"},
+			PreferredKey: "F10",
+			Keywords:     []string{"exit", "close"},
+		},
+		{
+			ID:           ActionAppOpenMenu,
+			Title:        "Open menu",
+			Section:      "App",
+			DefaultKeys:  []string{"F9"},
+			PreferredKey: "F9",
+			Keywords:     []string{"menu bar"},
+		},
+		{
+			ID:           ActionAppShowHelp,
+			Title:        "Help",
+			Section:      "App",
+			DefaultKeys:  []string{"F1"},
+			PreferredKey: "F1",
+			Keywords:     []string{"help screen"},
+		},
+
+		// ── Panel navigation ──
+		{
+			ID:          ActionPanelSwitch,
+			Title:       "Switch panel",
+			Section:     "Navigation",
+			DefaultKeys: []string{"tab"},
+			Keywords:    []string{"focus", "toggle panel"},
+		},
+		{
+			ID:          ActionPanelFocusSelections,
+			Title:       "Focus selections panel",
+			Section:     "Navigation",
+			DefaultKeys: []string{"S-tab"},
+			Keywords:    []string{"shift-tab", "selections"},
+		},
+		{
+			ID:          ActionNavUp,
+			Title:       "Cursor up",
+			Section:     "Navigation",
+			DefaultKeys: []string{"up"},
+			Keywords:    []string{"previous"},
+		},
+		{
+			ID:          ActionNavDown,
+			Title:       "Cursor down",
+			Section:     "Navigation",
+			DefaultKeys: []string{"down"},
+			Keywords:    []string{"next"},
+		},
+		{
+			ID:          ActionNavPageUp,
+			Title:       "Page up",
+			Section:     "Navigation",
+			DefaultKeys: []string{"pgup"},
+			Keywords:    []string{"scroll"},
+		},
+		{
+			ID:          ActionNavPageDown,
+			Title:       "Page down",
+			Section:     "Navigation",
+			DefaultKeys: []string{"pgdn"},
+			Keywords:    []string{"scroll"},
+		},
+		{
+			ID:          ActionNavTop,
+			Title:       "First entry",
+			Section:     "Navigation",
+			DefaultKeys: []string{"home"},
+			Keywords:    []string{"top", "beginning"},
+		},
+		{
+			ID:          ActionNavBottom,
+			Title:       "Last entry",
+			Section:     "Navigation",
+			DefaultKeys: []string{"end"},
+			Keywords:    []string{"bottom"},
+		},
+		{
+			ID:           ActionNavOpen,
+			Title:        "Open directory or file",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"enter", "right"},
+			PreferredKey: "Enter",
+			Keywords:     []string{"open", "select", "xdg-open", "open file"},
+		},
+		{
+			ID:           ActionNavParent,
+			Title:        "Parent directory",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"left", "backspace"},
+			PreferredKey: "←",
+			Keywords:     []string{"up", "back"},
+		},
+		{
+			ID:          ActionNavForward,
+			Title:       "Forward history",
+			Section:     "Navigation",
+			DefaultKeys: []string{"M-C-left"},
+			Keywords:    []string{"back", "re-enter"},
+		},
+		{
+			ID:          ActionNavBackward,
+			Title:       "Backward history",
+			Section:     "Navigation",
+			DefaultKeys: []string{"M-C-right"},
+			Keywords:    []string{"forward", "re-enter", "timeline"},
+		},
+		{
+			ID:           ActionPanelHistoryDialog,
+			Title:        "Directory history",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"M-h", "C-h"},
+			PreferredKey: "M-h",
+			Keywords:     []string{"history", "picker", "navigate", "alt-h"},
+		},
+		{
+			ID:           ActionPanelRefresh,
+			Title:        "Refresh panel",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"M-C-r"},
+			PreferredKey: "M-C-r",
+			Keywords:     []string{"reload"},
+		},
+		{
+			ID:           ActionPanelExternalBrowser,
+			Title:        "External browser",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"M-e"},
+			PreferredKey: "M-e",
+			Keywords:     []string{"xdg-open", "gui", "file manager", "finder"},
+		},
+		{
+			ID:           ActionPanelOpenDirInOther,
+			Title:        "Open directory in other panel",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"M-o"},
+			PreferredKey: "M-o",
+			Keywords:     []string{"inactive", "split", "cd", "other panel"},
+		},
+		{
+			ID:           ActionPanelToggleSync,
+			Title:        "Toggle panel sync",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"C-M-o"},
+			PreferredKey: "C-M-o",
+			Keywords:     []string{"sync", "follow", "mirror", "latch", "other panel"},
+		},
+
+		// ── Disk usage ──
+		{
+			ID:          ActionPanelDiskUsageScan,
+			Title:       "Disk usage scan",
+			Section:     "Disk usage",
+			DefaultKeys: []string{"C-d"},
+			Keywords:    []string{"size", "subtree"},
+		},
+		{
+			ID:          ActionPanelDiskUsageAbortAll,
+			Title:       "Abort disk usage scans",
+			Section:     "Disk usage",
+			DefaultKeys: []string{"C-M-d"},
+			Keywords:    []string{"cancel", "stop"},
+		},
+
+		// ── Selection ──
+		{
+			ID:          ActionPanelSelectToggle,
+			Title:       "Toggle selection",
+			Section:     "Selection",
+			DefaultKeys: []string{"insert"},
+			Keywords:    []string{"select", "mark"},
+		},
+		{
+			ID:          ActionPanelSelectGroup,
+			Title:       "Select group",
+			Section:     "Selection",
+			DefaultKeys: []string{"+"},
+			Keywords:    []string{"pattern", "glob"},
+		},
+		{
+			ID:          ActionPanelUnselectGroup,
+			Title:       "Unselect group",
+			Section:     "Selection",
+			DefaultKeys: []string{"-"},
+			Keywords:    []string{"pattern", "glob", "deselect"},
+		},
+		{
+			ID:          ActionPanelInvertSelection,
+			Title:       "Invert selection",
+			Section:     "Selection",
+			DefaultKeys: []string{"*"},
+			Keywords:    []string{"reverse"},
+		},
+		{
+			ID:          ActionPanelClearSelection,
+			Title:       "Clear selection",
+			Section:     "Selection",
+			DefaultKeys: []string{"C-u"},
+			Keywords:    []string{"deselect", "unmark"},
+		},
+
+		// ── Sort & display ──
+		{
+			ID:          ActionPanelSortDialog,
+			Title:       "Sort dialog",
+			Section:     "Sort & display",
+			DefaultKeys: []string{"C-s"},
+			Keywords:    []string{"order"},
+		},
+		{
+			ID:          ActionPanelCycleSort,
+			Title:       "Cycle sort mode",
+			Section:     "Sort & display",
+			DefaultKeys: nil, // unbound by default
+			Keywords:    []string{"order"},
+		},
+		{
+			ID:          ActionPanelReverseSort,
+			Title:       "Reverse sort",
+			Section:     "Sort & display",
+			DefaultKeys: nil, // unbound by default
+			Keywords:    []string{"order", "direction"},
+		},
+		{
+			ID:          ActionPanelToggleHidden,
+			Title:       "Toggle hidden files",
+			Section:     "Sort & display",
+			DefaultKeys: []string{"M-."},
+			Keywords:    []string{"show", "hide", "dotfiles"},
+		},
+
+		// ── Bookmarks ──
+		{
+			ID:           ActionBookmarkOpen,
+			Title:        "Open bookmarks",
+			Section:      "Bookmarks",
+			DefaultKeys:  []string{"C-g", "C-e"},
+			PreferredKey: "C-g",
+			Keywords:     []string{"fzf-marks", "marks", "picker"},
+		},
+		{
+			ID:          ActionBookmarkAdd,
+			Title:       "Add bookmark",
+			Section:     "Bookmarks",
+			DefaultKeys: []string{"M-m"},
+			Keywords:    []string{"mark", "save"},
+		},
+
+		// ── File operations ──
+		{
+			ID:           ActionFileRename,
+			Title:        "Rename / Move",
+			Section:      "File operations",
+			DefaultKeys:  []string{"M-r"},
+			PreferredKey: "F6",
+			Keywords:     []string{"rename", "move"},
+		},
+		{
+			ID:          ActionFileMkdir,
+			Title:       "Create directory",
+			Section:     "File operations",
+			DefaultKeys: []string{"F7"},
+			Keywords:    []string{"mkdir", "folder"},
+		},
+		{
+			ID:          ActionFileDelete,
+			Title:       "Delete",
+			Section:     "File operations",
+			DefaultKeys: []string{"F8", "delete"},
+			Keywords:    []string{"remove", "trash"},
+		},
+		{
+			ID:          ActionFileChmod,
+			Title:       "Change mode",
+			Section:     "File operations",
+			DefaultKeys: nil, // unbound by default (menu only)
+			Keywords:    []string{"permissions", "chmod"},
+		},
+		{
+			ID:          ActionFileChown,
+			Title:       "Change owner",
+			Section:     "File operations",
+			DefaultKeys: nil, // unbound by default (menu only)
+			Keywords:    []string{"owner", "group", "chown"},
+		},
+		{
+			ID:          ActionFileSymlink,
+			Title:       "Symlink",
+			Section:     "File operations",
+			DefaultKeys: nil, // unbound by default (menu only)
+			Keywords:    []string{"link", "symbolic"},
+		},
+		{
+			ID:          ActionFileHardlink,
+			Title:       "Hard link",
+			Section:     "File operations",
+			DefaultKeys: nil, // unbound by default (menu only)
+			Keywords:    []string{"link"},
+		},
+		{
+			ID:          ActionFileView,
+			Title:       "View file",
+			Section:     "File operations",
+			DefaultKeys: []string{"F3"},
+			Keywords:    []string{"viewer", "view"},
+		},
+		{
+			ID:          ActionMenuFileViewPath,
+			Title:       "View file path",
+			Section:     "File operations",
+			DefaultKeys: nil,
+			Keywords:    []string{"menu"},
+		},
+		{
+			ID:          ActionMenuFileFilteredView,
+			Title:       "Filtered view",
+			Section:     "File operations",
+			DefaultKeys: []string{"M-!"},
+			Keywords:    []string{"menu"},
+		},
+		{
+			ID:          ActionFileEdit,
+			Title:       "Edit file",
+			Section:     "File operations",
+			DefaultKeys: []string{"F4"},
+			Keywords:    []string{"editor", "edit"},
+		},
+		{
+			ID:          ActionMenuFileRelativeSymlink,
+			Title:       "Relative symlink",
+			Section:     "File operations",
+			DefaultKeys: nil,
+			Keywords:    []string{"menu"},
+		},
+		{
+			ID:          ActionMenuFileEditSymlink,
+			Title:       "Edit symlink",
+			Section:     "File operations",
+			DefaultKeys: nil,
+			Keywords:    []string{"menu"},
+		},
+		{
+			ID:          ActionMenuFileAdvancedChown,
+			Title:       "Advanced chown",
+			Section:     "File operations",
+			DefaultKeys: nil,
+			Keywords:    []string{"menu"},
+		},
+		{
+			ID:          ActionMenuFileChattr,
+			Title:       "Change file attributes",
+			Section:     "File operations",
+			DefaultKeys: nil,
+			Keywords:    []string{"chattr", "menu"},
+		},
+		{
+			ID:          ActionCopy,
+			Title:       "Copy",
+			Section:     "File operations",
+			DefaultKeys: []string{"F5"},
+			Keywords:    []string{"duplicate"},
+		},
+		{
+			ID:          ActionMove,
+			Title:       "Move",
+			Section:     "File operations",
+			DefaultKeys: []string{"F6"},
+			Keywords:    []string{"move"},
+		},
+
+		// ── Commands ──
+		{
+			ID:           ActionCommandsOpen,
+			Title:        "Open Commands view",
+			Section:      "Commands",
+			DefaultKeys:  []string{"C-k"},
+			PreferredKey: "C-k",
+			Keywords:     []string{"shell", "stdout", "stderr"},
+		},
+		{
+			ID:          ActionCommandsClose,
+			Title:       "Close Commands view",
+			Section:     "Commands",
+			DefaultKeys: nil,
+			Keywords:    []string{"back", "browser"},
+		},
+		{
+			ID:          ActionFileRunForEach,
+			Title:       "Run for each",
+			Section:     "Commands",
+			DefaultKeys: nil,
+			Keywords:    []string{"exec", "subprocess", "batch"},
+		},
+
+		// ── Jobs ──
+		// jobs.open defaults belong in [action_keys] (global). Other
+		// jobs.* defaults live in DefaultJobsOverlayKeys ([jobs_action_keys]).
+		{
+			ID:           ActionJobsOpen,
+			Title:        "Open jobs view",
+			Section:      "Jobs",
+			DefaultKeys:  []string{"C-j"},
+			PreferredKey: "C-j",
+			Keywords:     []string{"queue", "background"},
+		},
+		{
+			ID:          ActionJobsCancel,
+			Title:       "Cancel job",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"abort"},
+		},
+		{
+			ID:          ActionJobsPause,
+			Title:       "Pause queued job",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"hold"},
+		},
+		{
+			ID:          ActionJobsResume,
+			Title:       "Resume paused job",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"unpause", "start"},
+		},
+		{
+			ID:          ActionJobsQueueUp,
+			Title:       "Move job up in queue",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"reorder"},
+		},
+		{
+			ID:          ActionJobsQueueDown,
+			Title:       "Move job down in queue",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"reorder"},
+		},
+		{
+			ID:          ActionJobsClearFinished,
+			Title:       "Clear finished jobs",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"remove", "done"},
+		},
+
+		// ── Options dialogs ──
+		{
+			ID:          ActionUIOpenTheme,
+			Title:       "Theme picker",
+			Section:     "UI",
+			DefaultKeys: nil,
+			Keywords:    []string{"appearance", "colors"},
+		},
+		{
+			ID:          ActionUIOpenConfig,
+			Title:       "Configuration editor",
+			Section:     "UI",
+			DefaultKeys: nil,
+			Keywords:    []string{"settings", "toml"},
+		},
+
+		// ── Filter (unbound by default) ──
+		{
+			ID:          ActionPanelFilterOpen,
+			Title:       "Open quick filter",
+			Section:     "Filter",
+			DefaultKeys: nil, // unbound by default
+			Keywords:    []string{"search", "find", "fuzzy"},
+		},
+	}
+}
+
+var specByActionID map[string]ActionSpec
+
+func init() {
+	specs := DefaultActionSpecs()
+	specByActionID = make(map[string]ActionSpec, len(specs))
+	for _, s := range specs {
+		specByActionID[s.ID] = s
+	}
+}
+
+// SpecForAction returns the built-in ActionSpec for id, if any.
+func SpecForAction(id string) (ActionSpec, bool) {
+	s, ok := specByActionID[id]
+	return s, ok
+}

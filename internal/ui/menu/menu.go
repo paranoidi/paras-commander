@@ -1,0 +1,185 @@
+package menu
+
+import "github.com/paranoidi/paras-commander/internal/keymap"
+
+// State is the renderable state for the top pulldown menu.
+type State struct {
+	Open         bool
+	PulldownOpen bool
+	ActiveMenu   int
+	SelectedItem int
+}
+
+// Item is a single selectable pulldown entry.
+type Item struct {
+	// Action is the stable routing ID (typically a keymap.Action* constant).
+	// Empty when Separator is true.
+	Action string
+	Label  string
+	// Shortcut is the letter highlighted when the pulldown is open (plain key).
+	Shortcut rune
+	// KeyLabel is shown on the right side of a pulldown row and used for footer/F-key routing.
+	// BrowserDefinitions / JobsDefinitions fill this from the resolved keymap.
+	KeyLabel string
+	Separator bool
+}
+
+// Definition describes one top-level pulldown menu.
+type Definition struct {
+	ID         TopID
+	PanelScope int // PanelScopeNone, or PanelScopeLeft / PanelScopeRight
+	Label      string
+	Shortcut   rune
+	Items      []Item
+}
+
+// ActiveDefinitions returns defs if non-empty, otherwise the built-in defaults.
+func ActiveDefinitions(defs []Definition) []Definition {
+	if len(defs) > 0 {
+		return defs
+	}
+	return Definitions()
+}
+
+// ApplyMenuKeyLabels sets Item.KeyLabel from km.MenuBindingLabel for every non-separator item.
+func ApplyMenuKeyLabels(defs []Definition, km *keymap.Map) {
+	for i := range defs {
+		for j := range defs[i].Items {
+			item := &defs[i].Items[j]
+			if item.Separator || item.Action == "" {
+				continue
+			}
+			item.KeyLabel = km.MenuBindingLabel(item.Action)
+		}
+	}
+}
+
+// BrowserDefinitions returns Definitions() with KeyLabels resolved from km.
+func BrowserDefinitions(km *keymap.Map) []Definition {
+	defs := Definitions()
+	ApplyMenuKeyLabels(defs, km)
+	return defs
+}
+
+// ApplyCommandsMenuKeyLabels sets Item.KeyLabel using the Commands overlay chords before global.
+func ApplyCommandsMenuKeyLabels(defs []Definition, global, commands *keymap.Map) {
+	for i := range defs {
+		for j := range defs[i].Items {
+			item := &defs[i].Items[j]
+			if item.Separator || item.Action == "" {
+				continue
+			}
+			item.KeyLabel = keymap.MenuBindingLabelPreferCommands(global, commands, item.Action)
+		}
+	}
+}
+
+// ApplyJobsMenuKeyLabels sets Item.KeyLabel using jobs overlay chords before global (jobs pulldown).
+func ApplyJobsMenuKeyLabels(defs []Definition, global, jobs *keymap.Map) {
+	for i := range defs {
+		for j := range defs[i].Items {
+			item := &defs[i].Items[j]
+			if item.Separator || item.Action == "" {
+				continue
+			}
+			item.KeyLabel = keymap.MenuBindingLabelPreferJobs(global, jobs, item.Action)
+		}
+	}
+}
+
+// Definitions returns the built-in v1 menu tree.
+func Definitions() []Definition {
+	optionsItems := []Item{
+		{Action: keymap.ActionUIOpenConfig, Label: "Configuration", Shortcut: 'c'},
+		{Action: keymap.ActionUIOpenTheme, Label: "Theme", Shortcut: 't'},
+	}
+
+	return []Definition{
+		{
+			ID:         TopPanelLeft,
+			PanelScope: PanelScopeLeft,
+			Label:      "Left",
+			Shortcut:   'l',
+			Items: []Item{
+				{Action: keymap.ActionPanelSortDialog, Label: "Sort...", Shortcut: 's'},
+				{Action: keymap.ActionPanelToggleHidden, Label: "Toggle hidden", Shortcut: 'h'},
+				{Action: keymap.ActionPanelRefresh, Label: "Refresh", Shortcut: 'r'},
+				{Action: keymap.ActionPanelDiskUsageScan, Label: "Disk usage", Shortcut: 'u'},
+				{Action: keymap.ActionPanelHistoryDialog, Label: "History...", Shortcut: 'y'},
+				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
+			},
+		},
+		{
+			ID:          TopFile,
+			PanelScope:  PanelScopeNone,
+			Label:       "File",
+			Shortcut:    'f',
+			Items: []Item{
+				{Action: keymap.ActionFileView, Label: "View", Shortcut: 'v'},
+				{Action: keymap.ActionMenuFileViewPath, Label: "View file...", Shortcut: 'w'},
+				{Action: keymap.ActionMenuFileFilteredView, Label: "Filtered view", Shortcut: 'f'},
+				{Action: keymap.ActionFileEdit, Label: "Edit", Shortcut: 'e'},
+				{Action: keymap.ActionCopy, Label: "Copy", Shortcut: 'c'},
+				{Action: keymap.ActionFileChmod, Label: "Chmod", Shortcut: 'h'},
+				{Action: keymap.ActionFileHardlink, Label: "Link", Shortcut: 'l'},
+				{Action: keymap.ActionFileSymlink, Label: "Symlink", Shortcut: 's'},
+				{Action: keymap.ActionMenuFileRelativeSymlink, Label: "Relative symlink", Shortcut: 'k'},
+				{Action: keymap.ActionMenuFileEditSymlink, Label: "Edit symlink", Shortcut: 'y'},
+				{Action: keymap.ActionFileChown, Label: "Chown", Shortcut: 'o'},
+				{Action: keymap.ActionMenuFileAdvancedChown, Label: "Advanced chown", Shortcut: 'a'},
+				{Action: keymap.ActionMenuFileChattr, Label: "Chattr", Shortcut: 't'},
+				{Action: keymap.ActionMove, Label: "Rename/Move", Shortcut: 'r'},
+				{Action: keymap.ActionFileMkdir, Label: "Mkdir", Shortcut: 'm'},
+				{Action: keymap.ActionFileDelete, Label: "Delete", Shortcut: 'd'},
+				{Action: keymap.ActionBookmarkOpen, Label: "Quick cd", Shortcut: 'q'},
+				{Separator: true},
+				{Action: keymap.ActionPanelSelectGroup, Label: "Select group", Shortcut: 'g'},
+				{Action: keymap.ActionPanelUnselectGroup, Label: "Unselect group", Shortcut: 'n'},
+				{Action: keymap.ActionPanelInvertSelection, Label: "Invert selection", Shortcut: 'i'},
+				{Separator: true},
+				{Action: keymap.ActionAppQuit, Label: "Exit", Shortcut: 'x'},
+			},
+		},
+		{
+			ID:          TopCommand,
+			PanelScope:  PanelScopeNone,
+			Label:       "Command",
+			Shortcut:    'c',
+			Items: []Item{
+				{Action: keymap.ActionCommandsOpen, Label: "Commands", Shortcut: 'm'},
+				{Action: keymap.ActionJobsOpen, Label: "Jobs", Shortcut: 'j'},
+				{Action: keymap.ActionFileRunForEach, Label: "Run for each...", Shortcut: 'f'},
+				{Action: keymap.ActionBookmarkOpen, Label: "Bookmarks", Shortcut: 'b'},
+				{Action: keymap.ActionBookmarkAdd, Label: "Add bookmark", Shortcut: 'a'},
+				{Action: keymap.ActionPanelRefresh, Label: "Refresh", Shortcut: 'r'},
+				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
+			},
+		},
+		{
+			ID:          TopOptions,
+			PanelScope:  PanelScopeNone,
+			Label:       "Options",
+			Shortcut:    'o',
+			Items:    optionsItems,
+		},
+		{
+			ID:         TopPanelRight,
+			PanelScope: PanelScopeRight,
+			Label:      "Right",
+			Shortcut:   'r',
+			Items: []Item{
+				{Action: keymap.ActionPanelSortDialog, Label: "Sort...", Shortcut: 's'},
+				{Action: keymap.ActionPanelToggleHidden, Label: "Toggle hidden", Shortcut: 'h'},
+				{Action: keymap.ActionPanelRefresh, Label: "Refresh", Shortcut: 'r'},
+				{Action: keymap.ActionPanelDiskUsageScan, Label: "Disk usage", Shortcut: 'u'},
+				{Action: keymap.ActionPanelHistoryDialog, Label: "History...", Shortcut: 'y'},
+				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
+			},
+		},
+	}
+}
+
+// DefaultIndex is the File menu, matching the most common v1 operations.
+func DefaultIndex() int {
+	return 1
+}

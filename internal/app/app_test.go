@@ -1,0 +1,3522 @@
+package app
+
+import (
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
+)
+
+func TestTransientErrorTextPermissionDenied(t *testing.T) {
+	wrapped := fmt.Errorf(`read directory "/home/nella": %w`, fs.ErrPermission)
+	if got := transientErrorText(wrapped); got != "permission denied" {
+		t.Fatalf("transientErrorText() = %q, want permission denied", got)
+	}
+	if got := transientErrorText(errors.New("other")); got != "other" {
+		t.Fatalf("transientErrorText() = %q, want literal message when not ErrPermission", got)
+	}
+}
+
+func TestFilePanelPlusMinusStarSelectionShortcuts(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	t.Run("minus opens unselect dialog without quick filter", func(t *testing.T) {
+		if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, '-', tcell.ModNone)); quit {
+			t.Fatal("handleKey('-') quit = true")
+		}
+		if !app.model.GroupSelect.Open || app.model.GroupSelect.Mode != "unselect" {
+			t.Fatalf("want unselect group dialog, got %+v", app.model.GroupSelect)
+		}
+		f := app.activePanel().Filter
+		if f.Active || f.Editing || f.Query != "" {
+			t.Fatalf("quick filter should stay off, got %+v", f)
+		}
+		app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+		if app.model.GroupSelect.Open {
+			t.Fatal("dialog should close on Esc")
+		}
+	})
+
+	t.Run("plus opens select dialog with or without shift", func(t *testing.T) {
+		for _, ev := range []*tcell.EventKey{
+			tcell.NewEventKey(tcell.KeyRune, '+', tcell.ModNone),
+			tcell.NewEventKey(tcell.KeyRune, '+', tcell.ModShift),
+		} {
+			if quit, _ := app.handleKey(ev); quit {
+				t.Fatalf("handleKey(%+v) quit", ev)
+			}
+			if !app.model.GroupSelect.Open || app.model.GroupSelect.Mode != "select" {
+				t.Fatalf("ev %+v: want select dialog, got %+v", ev, app.model.GroupSelect)
+			}
+			app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+		}
+	})
+
+	t.Run("star inverts selection", func(t *testing.T) {
+		if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, '*', tcell.ModShift)); quit {
+			t.Fatal("handleKey('*') quit = true")
+		}
+		if !strings.Contains(app.model.Message, "Selection inverted") {
+			t.Fatalf("status message = %q, want selection inverted", app.model.Message)
+		}
+		f := app.activePanel().Filter
+		if f.Active || f.Editing {
+			t.Fatalf("invert must not open quick filter, got %+v", f)
+		}
+	})
+}
+
+func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openGroupSelect("select")
+
+	for _, r := range "focus" {
+		app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if got := app.model.GroupSelect.Text; got != "focus" {
+		t.Fatalf("pattern = %q, want focus", got)
+	}
+	if app.model.GroupSelect.FilesOnly || app.model.GroupSelect.CaseSensitive || !app.model.GroupSelect.UseShellPatterns {
+		t.Fatalf("checkbox state changed unexpectedly: %+v", app.model.GroupSelect)
+	}
+
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'F', tcell.ModShift))
+	if got := app.model.GroupSelect.Text; got != "focusF" {
+		t.Fatalf("pattern after shifted letter = %q, want focusF", got)
+	}
+
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	if !app.model.GroupSelect.FilesOnly || app.model.GroupSelect.Focus != 1 {
+		t.Fatalf("Alt+F should toggle Files only and focus row; got FilesOnly=%v focus=%d",
+			app.model.GroupSelect.FilesOnly, app.model.GroupSelect.Focus)
+	}
+}
+
+func TestMenuBarPermissionHiddenInJobsView(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "x.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	app.model.ViewMode = ui.ViewJobs
+	if got := app.menuBarPermissionText(); got != "" {
+		t.Fatalf("jobs view: menuBarPermissionText() = %q, want empty", got)
+	}
+
+	app.model.ViewMode = ui.ViewBrowser
+	if got := app.menuBarPermissionText(); got == "" {
+		t.Fatal("browser view: menuBarPermissionText should show mode for selected entry")
+	}
+}
+
+func TestHelpViewEnterRunsCopyLikeKeyboardShortcut(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	app.openHelpDialog()
+	if !app.model.HelpView.Open {
+		t.Fatal("HelpView should open")
+	}
+
+	copyEntryIdx := -1
+	for i, e := range app.model.HelpView.Entries {
+		if e.ActionID == keymap.ActionCopy {
+			copyEntryIdx = i
+			break
+		}
+	}
+	if copyEntryIdx < 0 {
+		t.Fatal("help entries should include Copy action")
+	}
+	sel := -1
+	for i, idx := range app.model.HelpView.Ranked {
+		if idx == copyEntryIdx {
+			sel = i
+			break
+		}
+	}
+	if sel < 0 {
+		t.Fatal("ranked list should include Copy entry")
+	}
+	app.model.HelpView.Selected = sel
+	app.model.HelpView.Focus = 0
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
+		t.Fatal("Enter on Copy should not quit")
+	}
+	if app.model.HelpView.Open {
+		t.Fatal("HelpView should close after activating action")
+	}
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != ui.TransferKindCopy {
+		t.Fatal("Copy dialog should open (keyboard parity)")
+	}
+}
+
+func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	dstDir := filepath.Join(dir, "dest")
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
+		t.Fatalf("mkdir dest: %v", err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	if err := app.inactivePanel().Load(dstDir); err != nil {
+		t.Fatalf("inactive Load: %v", err)
+	}
+	defer app.stopWorker()
+	defer flushBackgroundJobs(t, app)
+
+	p := app.activePanel()
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("expected current entry tagged after Insert")
+	}
+
+	app.openCopyDialog()
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != ui.TransferKindCopy {
+		t.Fatal("copy dialog should open")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("opening copy dialog must not clear selection")
+	}
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.TransferDialog.Open {
+		t.Fatal("copy dialog should close on Esc")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("canceling copy dialog must not clear selection")
+	}
+
+	app.openCopyDialog()
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'C', tcell.ModAlt))
+	if app.model.TransferDialog.Open {
+		t.Fatal("copy dialog should close on Alt+C")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("canceling copy dialog with Alt+C must not clear selection")
+	}
+
+	app.openMoveDialog()
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != ui.TransferKindMove {
+		t.Fatal("move dialog should open")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("opening move dialog must not clear selection")
+	}
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.TransferDialog.Open {
+		t.Fatal("move dialog should close on Esc")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("canceling move dialog must not clear selection")
+	}
+
+	app.openMoveDialog()
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt))
+	if app.model.TransferDialog.Open {
+		t.Fatal("move dialog should close on Alt+c")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("canceling move dialog with Alt+C must not clear selection")
+	}
+
+	app.openCopyDialog()
+	app.confirmCopy()
+	if len(p.SelectedPaths) != 0 {
+		t.Fatal("confirming copy should clear current-directory selection")
+	}
+	if len(app.jobState.AllJobs()) != 1 {
+		t.Fatalf("expected one job after confirmCopy, got %d", len(app.jobState.AllJobs()))
+	}
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	nJobs := len(app.jobState.AllJobs())
+	app.enqueueCopyJob()
+	if len(p.SelectedPaths) != 0 {
+		t.Fatal("enqueueCopyJob should clear current-directory selection")
+	}
+	if len(app.jobState.AllJobs()) != nJobs+1 {
+		t.Fatalf("expected one new job from enqueueCopyJob")
+	}
+}
+
+func TestTransferSelfCopyRenameFlow(t *testing.T) {
+	t.Run("dialog OK enters rename phase without queueing", func(t *testing.T) {
+		dir := t.TempDir()
+		aaa := filepath.Join(dir, "aaa")
+		if err := os.Mkdir(aaa, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		screen := newScreen(t, 80, 24)
+		app := newApp(t, screen, dir)
+		defer app.stopWorker()
+
+		p := app.activePanel()
+		p.SelectedPaths = map[string]bool{aaa: true}
+
+		app.openCopyDialog()
+		app.confirmCopy()
+		if !app.model.TransferDialog.Open {
+			t.Fatal("dialog should stay open")
+		}
+		if app.model.TransferDialog.Phase != ui.TransferPhaseSelfCopyRename {
+			t.Fatalf("phase = %v, want SelfCopyRename", app.model.TransferDialog.Phase)
+		}
+		if len(app.jobState.AllJobs()) != 0 {
+			t.Fatal("no job should be queued yet")
+		}
+		if len(p.SelectedPaths) == 0 {
+			t.Fatal("selection should remain until the job is queued")
+		}
+	})
+
+	t.Run("enqueueCopyJob opens rename phase", func(t *testing.T) {
+		dir := t.TempDir()
+		aaa := filepath.Join(dir, "aaa")
+		if err := os.Mkdir(aaa, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		screen := newScreen(t, 80, 24)
+		app := newApp(t, screen, dir)
+		defer app.stopWorker()
+
+		p := app.activePanel()
+		p.SelectedPaths = map[string]bool{aaa: true}
+		app.enqueueCopyJob()
+		if !app.model.TransferDialog.Open || app.model.TransferDialog.Phase != ui.TransferPhaseSelfCopyRename {
+			t.Fatalf("want self-copy rename dialog, got %+v", app.model.TransferDialog)
+		}
+		if len(p.SelectedPaths) == 0 {
+			t.Fatal("enqueue should not clear selection until confirm")
+		}
+	})
+
+	t.Run("same new name shows error", func(t *testing.T) {
+		dir := t.TempDir()
+		aaa := filepath.Join(dir, "aaa")
+		if err := os.Mkdir(aaa, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		screen := newScreen(t, 80, 24)
+		app := newApp(t, screen, dir)
+		defer app.stopWorker()
+
+		p := app.activePanel()
+		p.SelectedPaths = map[string]bool{aaa: true}
+		app.openCopyDialog()
+		app.confirmCopy()
+		app.model.TransferDialog.SelfCopyNewName = ui.FileDialogField{
+			Value:          "aaa",
+			Prefill:        "aaa",
+			Cursor:         len([]rune("aaa")),
+			PrefillPending: false,
+		}
+		form := ui.NewDialogLinearForm(ui.TransferDialogEffectiveNumContent(app.model.TransferDialog))
+		app.model.TransferDialog.FocusField = form.OKIndex()
+		app.confirmCopy()
+		if !strings.Contains(app.model.Message, "New name must differ") {
+			t.Fatalf("message = %q", app.model.Message)
+		}
+		if len(app.jobState.AllJobs()) != 0 {
+			t.Fatal("job should not enqueue")
+		}
+	})
+
+	t.Run("distinct new name queues job", func(t *testing.T) {
+		dir := t.TempDir()
+		aaa := filepath.Join(dir, "aaa")
+		if err := os.Mkdir(aaa, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		screen := newScreen(t, 80, 24)
+		app := newApp(t, screen, dir)
+		defer app.stopWorker()
+
+		p := app.activePanel()
+		p.SelectedPaths = map[string]bool{aaa: true}
+		app.openCopyDialog()
+		app.confirmCopy()
+		app.model.TransferDialog.SelfCopyNewName = ui.FileDialogField{
+			Value:          "aaa2",
+			Prefill:        "aaa2",
+			Cursor:         len([]rune("aaa2")),
+			PrefillPending: false,
+		}
+		form := ui.NewDialogLinearForm(ui.TransferDialogEffectiveNumContent(app.model.TransferDialog))
+		app.model.TransferDialog.FocusField = form.OKIndex()
+		app.confirmCopy()
+		if len(app.jobState.AllJobs()) != 1 {
+			t.Fatalf("expected 1 job, got %d", len(app.jobState.AllJobs()))
+		}
+		j := app.jobState.AllJobs()[0]
+		wantDest := filepath.Join(dir, "aaa2")
+		if filepath.Clean(j.Destination) != filepath.Clean(wantDest) {
+			t.Fatalf("Destination = %q, want %q", j.Destination, wantDest)
+		}
+		if len(p.SelectedPaths) != 0 {
+			t.Fatal("selection cleared after queue")
+		}
+	})
+}
+
+func TestTransferSelfCopyMultipleSourcesRejected(t *testing.T) {
+	dir := t.TempDir()
+	aaa := filepath.Join(dir, "aaa")
+	bbb := filepath.Join(dir, "bbb.txt")
+	if err := os.Mkdir(aaa, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, bbb)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aaa: true, bbb: true}
+	app.openCopyDialog()
+	app.confirmCopy()
+	if app.model.TransferDialog.Phase != ui.TransferPhaseDestination {
+		t.Fatalf("phase = %v, want Destination", app.model.TransferDialog.Phase)
+	}
+	if !strings.Contains(app.model.Message, "multiple items") {
+		t.Fatalf("message = %q", app.model.Message)
+	}
+}
+
+func TestEnqueueMoveJobSameDirUnsupportedDoesNotClearSelection(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "only.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	p := app.activePanel()
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	app.enqueueMoveJob()
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("unsupported same-directory move should leave selection intact")
+	}
+}
+
+func TestHelpViewEnterJobsCancelNoOpWhileBrowser(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	app.openHelpDialog()
+
+	jobsIdx := -1
+	for i, e := range app.model.HelpView.Entries {
+		if e.ActionID == keymap.ActionJobsCancel {
+			jobsIdx = i
+			break
+		}
+	}
+	if jobsIdx < 0 {
+		t.Fatal("help entries should include Cancel job action")
+	}
+	sel := -1
+	for i, idx := range app.model.HelpView.Ranked {
+		if idx == jobsIdx {
+			sel = i
+			break
+		}
+	}
+	if sel < 0 {
+		t.Fatal("ranked list should include Cancel job entry")
+	}
+	app.model.HelpView.Selected = sel
+	app.model.HelpView.Focus = 0
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
+		t.Fatal("Enter on jobs.cancel should not quit")
+	}
+	if !app.model.HelpView.Open {
+		t.Fatal("HelpView should stay open when action is invalid for browser")
+	}
+}
+
+func TestActiveFooterKeysBrowserShowsF7JobsViewUsesJobsLegend(t *testing.T) {
+	dir := t.TempDir()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	browserKeys := menu.FunctionKeys
+	if got := app.activeFooterKeys(); len(got) != len(browserKeys) {
+		t.Fatalf("browser footer len = %d, want %d", len(got), len(browserKeys))
+	}
+	var f7Hint string
+	for _, fk := range app.activeFooterKeys() {
+		if fk.Key == tcell.KeyF7 {
+			f7Hint = fk.Hint
+			break
+		}
+	}
+	if f7Hint == "" {
+		t.Fatal("browser footer: F7 should have a hint (Mkdir)")
+	}
+
+	jobsKeys := menu.FunctionKeysJobsView()
+	app.model.ViewMode = ui.ViewJobs
+	gotJobs := app.activeFooterKeys()
+	if len(gotJobs) != len(jobsKeys) {
+		t.Fatalf("jobs footer len = %d, want %d", len(gotJobs), len(jobsKeys))
+	}
+	for i := range jobsKeys {
+		if gotJobs[i].Key != jobsKeys[i].Key || gotJobs[i].KeyLabel != jobsKeys[i].KeyLabel || gotJobs[i].Hint != jobsKeys[i].Hint {
+			t.Fatalf("jobs footer key %d = %+v, want %+v", i, gotJobs[i], jobsKeys[i])
+		}
+	}
+	for _, fk := range gotJobs {
+		if fk.Key == tcell.KeyF7 {
+			t.Fatal("jobs footer should not list F7 (mkdir is for file panels)")
+		}
+	}
+}
+
+func TestJobsViewEscClosesViewDoesNotQuit(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	app.openJobsView()
+	if app.model.ViewMode != ui.ViewJobs {
+		t.Fatalf("ViewMode = %v, want ViewJobs", app.model.ViewMode)
+	}
+
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if quit {
+		t.Fatal("Esc in jobs view must not quit the application")
+	}
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want browser after Esc", app.model.ViewMode)
+	}
+}
+
+func TestDispatchMovesOnlyActivePanel(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	writeFile(t, filepath.Join(dir, "b.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.dispatch(keymap.ActionNavDown)
+	if app.model.Left.Cursor != 1 {
+		t.Fatalf("left cursor = %d, want 1", app.model.Left.Cursor)
+	}
+	if app.model.Right.Cursor != 0 {
+		t.Fatalf("right cursor = %d, want 0", app.model.Right.Cursor)
+	}
+
+	app.dispatch(keymap.ActionPanelSwitch)
+	app.dispatch(keymap.ActionNavDown)
+	if app.model.ActivePanel != ui.RightPanel {
+		t.Fatalf("active panel = %d, want right panel", app.model.ActivePanel)
+	}
+	if app.model.Left.Cursor != 1 {
+		t.Fatalf("left cursor = %d, want unchanged 1", app.model.Left.Cursor)
+	}
+	if app.model.Right.Cursor != 1 {
+		t.Fatalf("right cursor = %d, want 1", app.model.Right.Cursor)
+	}
+}
+
+func TestDispatchTogglesSelectionOnlyInActivePanel(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	writeFile(t, filepath.Join(dir, "b.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	leftEntry, ok := app.model.Left.CurrentEntry()
+	if !ok {
+		t.Fatal("left CurrentEntry() ok = false, want true")
+	}
+	rightEntry, ok := app.model.Right.CurrentEntry()
+	if !ok {
+		t.Fatal("right CurrentEntry() ok = false, want true")
+	}
+
+	app.dispatch(keymap.ActionPanelSelectToggle)
+	if !app.model.Left.IsSelected(leftEntry) {
+		t.Fatal("left active entry is not selected")
+	}
+	if app.model.Left.Cursor != 1 {
+		t.Fatalf("left cursor = %d, want 1 after selection advances", app.model.Left.Cursor)
+	}
+	if app.model.Right.IsSelected(rightEntry) {
+		t.Fatal("right entry is selected, want inactive panel unchanged")
+	}
+
+	app.dispatch(keymap.ActionPanelSwitch)
+	app.dispatch(keymap.ActionPanelSelectToggle)
+	if !app.model.Right.IsSelected(rightEntry) {
+		t.Fatal("right active entry is not selected after switching panels")
+	}
+}
+
+func TestMenuInputUsesMenuStateInsteadOfPanelNavigation(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	writeFile(t, filepath.Join(dir, "b.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	if !app.model.Menu.Open {
+		t.Fatal("menu open = false, want true")
+	}
+	if app.model.Menu.ActiveMenu != menu.DefaultIndex() {
+		t.Fatalf("active menu = %d, want file menu", app.model.Menu.ActiveMenu)
+	}
+
+	// F9 now opens menu bar only (no pulldown). Press Down to open pulldown.
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.Left.Cursor != 0 {
+		t.Fatalf("left cursor = %d, want unchanged 0 while menu is open", app.model.Left.Cursor)
+	}
+	if !app.model.Menu.PulldownOpen {
+		t.Fatalf("pulldown open = false after Down")
+	}
+	// First selectable menu item (View at index 0) should be selected.
+	if app.model.Menu.SelectedItem != 0 {
+		t.Fatalf("selected menu item = %d, want 0", app.model.Menu.SelectedItem)
+	}
+	// Press Down again to move to second item.
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.Menu.SelectedItem != 1 {
+		t.Fatalf("selected menu item = %d, want 1", app.model.Menu.SelectedItem)
+	}
+
+	// Esc when pulldown open: closes pulldown, keeps menu bar active.
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.Menu.PulldownOpen {
+		t.Fatal("pulldown open = true, want false after Esc")
+	}
+	if !app.model.Menu.Open {
+		t.Fatal("menu open = false, want true after Esc (menu bar stays active)")
+	}
+	// Second Esc closes the menu bar entirely.
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.Menu.Open {
+		t.Fatal("menu open = true, want false after second Esc")
+	}
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	app.handleKey(tcell.NewEventKey(tcell.KeyCtrlLeftSq, 0, tcell.ModNone))
+	if app.model.Menu.Open {
+		t.Fatal("menu open = true, want false after Ctrl-[ (Esc alias)")
+	}
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, '\x1b', tcell.ModNone))
+	if app.model.Menu.Open {
+		t.Fatal("menu open = true, want false after escape rune")
+	}
+}
+
+func TestLeftMenuToggleHiddenTargetsLeftPanel(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, ".hidden"))
+	writeFile(t, filepath.Join(dir, "visible.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	app.model.ActivePanel = ui.RightPanel
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	app.moveMenu(-1)
+	// Open pulldown for Left menu.
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.moveMenuItem(1)
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.Menu.Open {
+		t.Fatal("menu open = true, want closed")
+	}
+	if !app.model.Left.ShowHidden {
+		t.Fatal("left ShowHidden = false, want true")
+	}
+	if app.model.Right.ShowHidden {
+		t.Fatal("right ShowHidden = true, want false")
+	}
+	if len(app.model.Left.Entries) != 2 {
+		t.Fatalf("left len(Entries) = %d, want hidden and visible entries", len(app.model.Left.Entries))
+	}
+	if app.model.Message != "Left panel hidden files shown" {
+		t.Fatalf("Message = %q, want left panel hidden visibility message", app.model.Message)
+	}
+}
+
+func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "deep", "target")
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	line := fmt.Sprintf("markone : %s\n", target)
+	if err := os.WriteFile(marksPath, []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	app.openBookmarkDialog()
+	if !app.model.BookmarkDialog.Open {
+		t.Fatal("expected bookmark dialog open")
+	}
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if app.model.BookmarkDialog.Open {
+		t.Fatal("expected dialog closed")
+	}
+	if got := app.activePanel().Path; got != filepath.Clean(target) {
+		t.Fatalf("panel path = %q want %q", got, filepath.Clean(target))
+	}
+}
+
+func TestHistoryDialogAltHUsesActivePanel(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.model.ActivePanel = ui.RightPanel
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if !app.model.HistoryDialog.Open {
+		t.Fatal("expected history dialog open")
+	}
+	if app.model.HistoryDialog.PanelID != ui.RightPanel {
+		t.Fatalf("History panel = %d want right (%d)", app.model.HistoryDialog.PanelID, ui.RightPanel)
+	}
+}
+
+func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	gamma := filepath.Join(alpha, "gamma")
+	if err := os.MkdirAll(gamma, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	for i := 0; i < left.VisibleEntryCount(); i++ {
+		entry, _, ok := left.VisibleEntry(i)
+		if ok && entry.Name == "alpha" {
+			left.Cursor = i
+			break
+		}
+	}
+	app.model.ActivePanel = ui.LeftPanel
+	app.dispatch(keymap.ActionPanelOpenDirInOther)
+
+	wantRoot := filepath.Clean(root)
+	wantAlpha := filepath.Clean(alpha)
+	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path); got != wantRoot {
+		t.Fatalf("left panel path = %q want %q", got, wantRoot)
+	}
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path); got != wantAlpha {
+		t.Fatalf("right panel path = %q want %q", got, wantAlpha)
+	}
+
+	right := app.panelByID(ui.RightPanel)
+	for i := 0; i < right.VisibleEntryCount(); i++ {
+		entry, _, ok := right.VisibleEntry(i)
+		if ok && entry.Name == "gamma" {
+			right.Cursor = i
+			break
+		}
+	}
+	app.model.ActivePanel = ui.RightPanel
+	app.dispatch(keymap.ActionPanelOpenDirInOther)
+
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path); got != wantAlpha {
+		t.Fatalf("right panel path = %q want %q after second open", got, wantAlpha)
+	}
+	wantGamma := filepath.Clean(gamma)
+	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path); got != wantGamma {
+		t.Fatalf("left panel path = %q want %q", got, wantGamma)
+	}
+}
+
+func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(beta, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	p := app.panelByID(ui.LeftPanel)
+	for i := 0; i < p.VisibleEntryCount(); i++ {
+		entry, _, ok := p.VisibleEntry(i)
+		if ok && entry.Name == "alpha" {
+			p.Cursor = i
+			break
+		}
+	}
+	app.dispatch(keymap.ActionNavOpen)
+	for i := 0; i < p.VisibleEntryCount(); i++ {
+		entry, _, ok := p.VisibleEntry(i)
+		if ok && entry.Name == "beta" {
+			p.Cursor = i
+			break
+		}
+	}
+	app.dispatch(keymap.ActionNavOpen)
+
+	app.openHistoryDialog(ui.LeftPanel)
+	if !app.model.HistoryDialog.Open {
+		t.Fatal("expected history dialog open")
+	}
+	for _, r := range "alpha" {
+		if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone)); quit {
+			t.Fatal("unexpected quit")
+		}
+	}
+	if len(app.model.HistoryDialog.Ranked) == 0 {
+		t.Fatal("expected fuzzy matches for alpha")
+	}
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if app.model.HistoryDialog.Open {
+		t.Fatal("expected dialog closed")
+	}
+	want := filepath.Clean(alpha)
+	if got := filepath.Clean(app.activePanel().Path); got != want {
+		t.Fatalf("panel path = %q want %q", got, want)
+	}
+}
+
+func TestBookmarkDialogFilterSelectsRankedFirst(t *testing.T) {
+	root := t.TempDir()
+	tAlpha := filepath.Join(root, "alpha")
+	tBeta := filepath.Join(root, "beta")
+	if err := os.MkdirAll(tAlpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(tBeta, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	content := fmt.Sprintf("aaa : %s\nbbb : %s\n", tAlpha, tBeta)
+	if err := os.WriteFile(marksPath, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	app.openBookmarkDialog()
+	for _, r := range "b" {
+		if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone)); quit {
+			t.Fatal("unexpected quit")
+		}
+	}
+	if len(app.model.BookmarkDialog.Ranked) == 0 {
+		t.Fatal("expected at least one fuzzy match for query b")
+	}
+	if app.model.BookmarkDialog.Ranked[0] != 1 {
+		t.Fatalf("first ranked index = %d want 1 (bbb line), ranked=%v", app.model.BookmarkDialog.Ranked[0], app.model.BookmarkDialog.Ranked)
+	}
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if got := app.activePanel().Path; got != filepath.Clean(tBeta) {
+		t.Fatalf("panel path = %q want %q", got, filepath.Clean(tBeta))
+	}
+}
+
+func TestBookmarkDialogTypingODoesNotActivateWithoutEnter(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "t")
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	if err := os.WriteFile(marksPath, []byte("x : "+target+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	startPath := app.activePanel().Path
+	app.openBookmarkDialog()
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if !app.model.BookmarkDialog.Open {
+		t.Fatal("typing o in filter must not close or navigate")
+	}
+	if app.model.BookmarkDialog.Query != "o" {
+		t.Fatalf("query = %q want o", app.model.BookmarkDialog.Query)
+	}
+	if app.activePanel().Path != startPath {
+		t.Fatalf("panel path changed without Enter: %q", app.activePanel().Path)
+	}
+}
+
+func TestNewWithOptionsAppliesConfiguredHiddenFilesToBothPanels(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, ".hidden"))
+	writeFile(t, filepath.Join(dir, "visible.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	cfg := config.Default()
+	cfg.ShowHidden = true
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	if !app.model.Left.ShowHidden || !app.model.Right.ShowHidden {
+		t.Fatalf("ShowHidden left=%v right=%v, want both true", app.model.Left.ShowHidden, app.model.Right.ShowHidden)
+	}
+	if len(app.model.Left.Entries) != 2 || len(app.model.Right.Entries) != 2 {
+		t.Fatalf("entry counts left=%d right=%d, want hidden and visible entries", len(app.model.Left.Entries), len(app.model.Right.Entries))
+	}
+}
+
+func TestNewWithOptionsAppliesProvidedTheme(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	styles := theme.Default()
+	styles.Name = "custom"
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Theme:  styles,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	if app.styles.Name != "custom" {
+		t.Fatalf("app theme name = %q, want custom", app.styles.Name)
+	}
+}
+
+func TestNewWithOptionsSetsShowFileIconsFromConfig(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	cfg := config.Default()
+	cfg.UI.ShowFileIcons = false
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+	if app.model.ShowFileIcons {
+		t.Fatal("ShowFileIcons = true, want false from config")
+	}
+}
+
+func TestNewWithOptionsAppliesFilterCycleMatchesToPanels(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	cfg := config.Default()
+	cfg.Filter.CycleMatches = config.FilterCycleMatchesRanked
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate() error = %v", err)
+	}
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+	if app.model.Left.Filter.CycleMatches != config.FilterCycleMatchesRanked {
+		t.Fatalf("Left.Filter.CycleMatches = %q, want ranked", app.model.Left.Filter.CycleMatches)
+	}
+	if app.model.Right.Filter.CycleMatches != config.FilterCycleMatchesRanked {
+		t.Fatalf("Right.Filter.CycleMatches = %q, want ranked", app.model.Right.Filter.CycleMatches)
+	}
+}
+
+func TestOptionsMenuOpensConfigurationDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	app.moveMenu(2)
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
+
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.Menu.Open {
+		t.Fatal("menu open = true, want closed")
+	}
+	if !app.model.ConfigDialog.Open {
+		t.Fatal("configuration dialog open = false, want true")
+	}
+	if !app.model.ConfigDialog.ShowFileIcons {
+		t.Fatal("working copy ShowFileIcons = false, want default true")
+	}
+}
+
+func TestConfigDialogApplyPersistsShowFileIcons(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-icons")}.WithResolvedLocations()
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Paths:  appPaths,
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openConfigDialog()
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.ConfigDialog.Open {
+		t.Fatal("config dialog should close after apply")
+	}
+	if app.model.ShowFileIcons {
+		t.Fatal("ShowFileIcons = true, want false after toggle")
+	}
+	if app.config.UI.ShowFileIcons {
+		t.Fatal("config UI ShowFileIcons = true, want false")
+	}
+	reloaded, err := config.LoadFromPaths(appPaths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths after persist: %v", err)
+	}
+	if reloaded.UI.ShowFileIcons {
+		t.Fatalf("persisted show_file_icons = true, want false")
+	}
+}
+
+func TestOptionsMenuOpensThemeDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	defaultTheme := theme.Default()
+	frappe, err := theme.LoadBuiltIn("catppuccin-frappe")
+	if err != nil {
+		t.Fatalf("LoadBuiltIn(catppuccin-frappe) error = %v", err)
+	}
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Theme:  defaultTheme,
+		ThemeChoices: []theme.NamedTheme{
+			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
+			{Name: frappe.Name, Label: "Catppuccin Frappe", Theme: frappe},
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	app.moveMenu(2)
+	// Open pulldown for Options menu, then press shortcut.
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.Menu.Open {
+		t.Fatal("menu open = true, want closed")
+	}
+	if !app.model.ThemeDialog.Open {
+		t.Fatal("theme dialog open = false, want true")
+	}
+	if app.model.ThemeDialog.Selected != 0 {
+		t.Fatalf("theme dialog selected = %d, want current theme index 0", app.model.ThemeDialog.Selected)
+	}
+}
+
+func TestThemeDialogAppliesThemeImmediately(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	defaultTheme := theme.Default()
+	frappe, err := theme.LoadBuiltIn("catppuccin-frappe")
+	if err != nil {
+		t.Fatalf("LoadBuiltIn(catppuccin-frappe) error = %v", err)
+	}
+	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-theme")}.WithResolvedLocations()
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Theme:  defaultTheme,
+		Paths:  appPaths,
+		ThemeChoices: []theme.NamedTheme{
+			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
+			{Name: frappe.Name, Label: "Catppuccin Frappe", Theme: frappe},
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openThemeDialog()
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.ThemeDialog.Open {
+		t.Fatal("theme dialog open = true, want closed")
+	}
+	if app.styles.Name != "catppuccin-frappe" {
+		t.Fatalf("theme name = %q, want catppuccin-frappe", app.styles.Name)
+	}
+	if app.config.Theme != "catppuccin-frappe" {
+		t.Fatalf("config theme = %q, want catppuccin-frappe", app.config.Theme)
+	}
+	if app.model.ThemeDialog.CurrentName != "catppuccin-frappe" {
+		t.Fatalf("theme dialog current name = %q, want catppuccin-frappe", app.model.ThemeDialog.CurrentName)
+	}
+	if app.model.Message != "Theme changed to catppuccin-frappe" {
+		t.Fatalf("Message = %q, want theme changed message", app.model.Message)
+	}
+	reloaded, err := config.LoadFromPaths(appPaths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths after persist: %v", err)
+	}
+	if reloaded.Theme != "catppuccin-frappe" {
+		t.Fatalf("persisted Theme = %q, want catppuccin-frappe", reloaded.Theme)
+	}
+}
+
+func TestThemeDialogNavigatePreviewsWithoutPersist(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	defaultTheme := theme.Default()
+	frappe, err := theme.LoadBuiltIn("catppuccin-frappe")
+	if err != nil {
+		t.Fatalf("LoadBuiltIn(catppuccin-frappe) error = %v", err)
+	}
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Theme:  defaultTheme,
+		ThemeChoices: []theme.NamedTheme{
+			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
+			{Name: frappe.Name, Label: "Catppuccin Frappe", Theme: frappe},
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openThemeDialog()
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+
+	if !app.model.ThemeDialog.Open {
+		t.Fatal("theme dialog open = false, want true")
+	}
+	if app.styles.Name != "catppuccin-frappe" {
+		t.Fatalf("preview theme name = %q, want catppuccin-frappe", app.styles.Name)
+	}
+	if app.config.Theme != defaultTheme.Name {
+		t.Fatalf("config theme = %q, want persisted default %q", app.config.Theme, defaultTheme.Name)
+	}
+	if app.model.ThemeDialog.CurrentName != defaultTheme.Name {
+		t.Fatalf("ThemeDialog.CurrentName = %q, want %q (marker for saved theme)", app.model.ThemeDialog.CurrentName, defaultTheme.Name)
+	}
+}
+
+func TestThemeDialogEscRevertsPreview(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	defaultTheme := theme.Default()
+	frappe, err := theme.LoadBuiltIn("catppuccin-frappe")
+	if err != nil {
+		t.Fatalf("LoadBuiltIn(catppuccin-frappe) error = %v", err)
+	}
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Theme:  defaultTheme,
+		ThemeChoices: []theme.NamedTheme{
+			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
+			{Name: frappe.Name, Label: "Catppuccin Frappe", Theme: frappe},
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openThemeDialog()
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+
+	if app.model.ThemeDialog.Open {
+		t.Fatal("theme dialog open = true, want closed")
+	}
+	if app.styles.Name != defaultTheme.Name {
+		t.Fatalf("theme name after cancel = %q, want restored %q", app.styles.Name, defaultTheme.Name)
+	}
+	if app.config.Theme != defaultTheme.Name {
+		t.Fatalf("config theme after cancel = %q, want %q", app.config.Theme, defaultTheme.Name)
+	}
+	if app.model.ThemeDialog.CurrentName != defaultTheme.Name {
+		t.Fatalf("ThemeDialog.CurrentName = %q, want %q", app.model.ThemeDialog.CurrentName, defaultTheme.Name)
+	}
+}
+
+func TestActiveFooterKeysThemeDialogShowsF5Reload(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	defaultTheme := theme.Default()
+	frappe, err := theme.LoadBuiltIn("catppuccin-frappe")
+	if err != nil {
+		t.Fatalf("LoadBuiltIn(catppuccin-frappe) error = %v", err)
+	}
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Theme:  defaultTheme,
+		ThemeChoices: []theme.NamedTheme{
+			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
+			{Name: frappe.Name, Label: "Catppuccin Frappe", Theme: frappe},
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openThemeDialog()
+	if !app.model.ThemeDialog.Open {
+		t.Fatal("theme dialog open = false, want true")
+	}
+	keys := app.activeFooterKeys()
+	if len(keys) != 3 {
+		t.Fatalf("theme dialog footer len = %d, want Esc + F5 + F10", len(keys))
+	}
+	if keys[0].Key != tcell.KeyEsc || keys[0].Hint != "Close" {
+		t.Fatalf("first footer key = %+v, want Esc Close", keys[0])
+	}
+	if keys[1].Key != tcell.KeyF5 || keys[1].Hint != "Reload" {
+		t.Fatalf("second footer key = %+v, want F5 Reload", keys[1])
+	}
+	if keys[2].Key != tcell.KeyF10 {
+		t.Fatalf("third footer key = %+v, want F10", keys[2])
+	}
+}
+
+func TestHandleKeyOpeningFileDialogRendersDialogFooterImmediately(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
+	if quit {
+		t.Fatal("handleKey(F7) quit = true, want false")
+	}
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogMkdir {
+		t.Fatalf("file dialog = %+v, want open mkdir dialog", app.model.FileDialog)
+	}
+
+	footer := screenLine(screen, 19, 80)
+	if strings.Contains(footer, "Mkdir") {
+		t.Fatalf("footer = %q, should hide browser F7 hint immediately", footer)
+	}
+	if !strings.Contains(footer, "Esc") || !strings.Contains(footer, "Close") {
+		t.Fatalf("footer = %q, want Esc Close first", footer)
+	}
+	if !strings.Contains(footer, "F10") || !strings.Contains(footer, "Quit") {
+		t.Fatalf("footer = %q, want dialog footer with F10 Quit", footer)
+	}
+}
+
+func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	themesDir := t.TempDir()
+
+	base, err := os.ReadFile(filepath.Join("..", "..", "themes", "default.toml"))
+	if err != nil {
+		t.Fatalf("read default theme fixture: %v", err)
+	}
+	writeDiskDefault := func(hex string) {
+		content := strings.Replace(string(base),
+			`menu.bar = { fg = "default", bg = "default" }`,
+			fmt.Sprintf(`menu.bar = { fg = "white", bg = %q }`, hex), 1)
+		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+	}
+	writeDiskDefault("#111111")
+
+	paths := config.Paths{ThemesDir: themesDir}.WithResolvedLocations()
+	styles, err := theme.Resolve("default", paths.ThemesDir)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	choices, err := theme.ThemeChoices(paths.ThemesDir)
+	if err != nil {
+		t.Fatalf("ThemeChoices: %v", err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config:       config.Default(),
+		Theme:        styles,
+		ThemeChoices: choices,
+		Paths:        paths,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openThemeDialog()
+	_, bg1, _ := app.styles.MenuBar.Decompose()
+	if want := tcell.NewRGBColor(0x11, 0x11, 0x11); bg1 != want {
+		t.Fatalf("initial preview bg = %v, want %v", bg1, want)
+	}
+
+	writeDiskDefault("#222222")
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if quit {
+		t.Fatal("handleKey(F5) quit = true, want false")
+	}
+	_, bg2, _ := app.styles.MenuBar.Decompose()
+	if want := tcell.NewRGBColor(0x22, 0x22, 0x22); bg2 != want {
+		t.Fatalf("after F5 bg = %v, want updated disk theme %v", bg2, want)
+	}
+}
+
+func TestThemeDialogF5ReloadsMenuDropdownAccentFromDisk(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	themesDir := t.TempDir()
+
+	base, err := os.ReadFile(filepath.Join("..", "..", "themes", "default.toml"))
+	if err != nil {
+		t.Fatalf("read default theme fixture: %v", err)
+	}
+	writeAccentFG := func(paletteName string) {
+		content := strings.Replace(string(base),
+			`menu.dropdown.accent = { fg = "white", bg = "black", bold = false }`,
+			fmt.Sprintf(`menu.dropdown.accent = { fg = %q, bg = "black", bold = true }`, paletteName), 1)
+		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+	}
+	writeAccentFG("bright_red")
+
+	paths := config.Paths{ThemesDir: themesDir}.WithResolvedLocations()
+	styles, err := theme.Resolve("default", paths.ThemesDir)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	choices, err := theme.ThemeChoices(paths.ThemesDir)
+	if err != nil {
+		t.Fatalf("ThemeChoices: %v", err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config:       config.Default(),
+		Theme:        styles,
+		ThemeChoices: choices,
+		Paths:        paths,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openThemeDialog()
+	fg1, _, _ := app.styles.MenuDropdownAccent.Decompose()
+	if fg1 != tcell.PaletteColor(9) {
+		t.Fatalf("initial preview menu.dropdown.accent fg = %v, want bright_red (ANSI 9)", fg1)
+	}
+
+	writeAccentFG("bright_green")
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if quit {
+		t.Fatal("handleKey(F5) quit = true, want false")
+	}
+	fg2, _, _ := app.styles.MenuDropdownAccent.Decompose()
+	if fg2 != tcell.PaletteColor(10) {
+		t.Fatalf("after F5 menu.dropdown.accent fg = %v, want bright_green (ANSI 10)", fg2)
+	}
+}
+
+func TestThemePreviewReloadErrorSetsCriticalStatusMessage(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX directory permissions")
+	}
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	themesDir := t.TempDir()
+
+	base, err := os.ReadFile(filepath.Join("..", "..", "themes", "default.toml"))
+	if err != nil {
+		t.Fatalf("read default theme fixture: %v", err)
+	}
+	content := strings.Replace(string(base),
+		`menu.bar = { fg = "default", bg = "default" }`,
+		`menu.bar = { fg = "white", bg = "#111111" }`, 1)
+	if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	paths := config.Paths{ThemesDir: themesDir}.WithResolvedLocations()
+	styles, err := theme.Resolve("default", paths.ThemesDir)
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	choices, err := theme.ThemeChoices(paths.ThemesDir)
+	if err != nil {
+		t.Fatalf("ThemeChoices: %v", err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config:       config.Default(),
+		Theme:        styles,
+		ThemeChoices: choices,
+		Paths:        paths,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openThemeDialog()
+	if err := os.Chmod(themesDir, 0); err != nil {
+		t.Fatalf("Chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(themesDir, 0700) })
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if app.model.MessageDialog.Open {
+		t.Fatal("expected no message dialog after reload error (transient message instead)")
+	}
+	if strings.TrimSpace(app.model.Message) == "" {
+		t.Fatal("expected non-empty transient message after reload error")
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
+		t.Fatalf("MessageUrgency = %v, want MessageUrgencyCritical", app.model.MessageUrgency)
+	}
+	if !app.model.ThemeDialog.Open {
+		t.Fatal("theme dialog should remain open")
+	}
+}
+
+func TestFirstMessageLine(t *testing.T) {
+	tests := []struct {
+		in, want string
+	}{
+		{"", ""},
+		{"single", "single"},
+		{"first\nsecond", "first"},
+		{"\n\nmiddle\n", "middle"},
+		{"  spaced  ", "spaced"},
+	}
+	for _, tt := range tests {
+		if got := firstMessageLine(tt.in); got != tt.want {
+			t.Errorf("firstMessageLine(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+	joined := errors.Join(errors.New("alpha"), errors.New("beta"))
+	if got := firstMessageLine(joined.Error()); got != "alpha" {
+		t.Fatalf("first line of joined error = %q, want alpha", got)
+	}
+}
+
+func TestMenuShortcutActivatesCopyMessage(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	// Open pulldown first, then press shortcut.
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	// 'v' is View's shortcut, which is still not implemented.
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
+
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.Menu.Open {
+		t.Fatal("menu open = true, want closed")
+	}
+	if app.model.Message != "View is not implemented yet" {
+		t.Fatalf("Message = %q, want unsupported message", app.model.Message)
+	}
+}
+
+func TestMenuShortcutCopyQueuedMessage(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	dstDir := filepath.Join(dir, "dest")
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
+		t.Fatalf("mkdir dest: %v", err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if err := app.inactivePanel().Load(dstDir); err != nil {
+		t.Fatalf("inactive Load: %v", err)
+	}
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	// Open pulldown first, then press shortcut.
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
+
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.Menu.Open {
+		t.Fatal("menu open = true, want closed")
+	}
+	if !strings.Contains(app.model.Message, "Copy queued") {
+		t.Fatalf("Message = %q, want 'Copy queued' message", app.model.Message)
+	}
+}
+
+func TestFileMenuExitQuits(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	// Open pulldown first, then press shortcut.
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
+
+	if !quit {
+		t.Fatal("handleKey() quit = false, want true")
+	}
+}
+
+func TestQuickFilterFunctionKeyClosesFuzzyAndRunsUnsupportedFooterBinding(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
+
+	// F3 is View, which is still unsupported.
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" {
+		t.Fatalf("filter should be cleared, got editing=%v active=%v query=%q",
+			app.model.Left.Filter.Editing, app.model.Left.Filter.Active, app.model.Left.Filter.Query)
+	}
+	if app.model.Message != "View is not implemented yet" {
+		t.Fatalf("Message = %q, want unsupported View message", app.model.Message)
+	}
+}
+
+func TestQuickFilterF9ClosesFuzzyAndOpensMenu(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.activePanel().OpenFilter(app.activeViewportRows())
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active {
+		t.Fatal("filter should be cleared after F9")
+	}
+	if !app.model.Menu.Open {
+		t.Fatal("menu open = false, want true after F9 from quick filter")
+	}
+}
+
+func TestQuickFilterF10Quits(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.activePanel().OpenFilter(app.activeViewportRows())
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModNone))
+	if !quit {
+		t.Fatal("handleKey() quit = false, want true for F10 from quick filter")
+	}
+	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active {
+		t.Fatal("filter should be cleared before quit")
+	}
+}
+
+func TestQuickFilterEmptyOverlayThenTypingEnterOnFileClearsFuzzy(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "alpha.txt"))
+	writeFile(t, filepath.Join(dir, "beta.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.activePanel().OpenFilter(app.activeViewportRows())
+	if !app.model.Left.Filter.Editing {
+		t.Fatal("filter editing = false, want true after OpenFilter")
+	}
+	for _, r := range "beta" {
+		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" {
+		t.Fatalf("filter editing=%v active=%v query=%q, want fuzzy cleared after Enter on a file",
+			app.model.Left.Filter.Editing, app.model.Left.Filter.Active, app.model.Left.Filter.Query)
+	}
+	if app.model.Left.VisibleEntryCount() != 2 {
+		t.Fatalf("visible=%d, want both files visible", app.model.Left.VisibleEntryCount())
+	}
+	entry, ok := app.model.Left.CurrentEntry()
+	if !ok || entry.Name != "beta.txt" {
+		t.Fatalf("CurrentEntry() = %q ok=%v, want beta.txt", entry.Name, ok)
+	}
+}
+
+func TestPlainTypingStartsQuickFilterAndMovesToFirstVisibleMatch(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "notes.txt"))
+	writeFile(t, filepath.Join(dir, "src"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModNone))
+
+	if !app.model.Left.Filter.Editing || app.model.Left.Filter.Query != "s" {
+		t.Fatalf("filter editing=%v query=%q, want typing to start query s", app.model.Left.Filter.Editing, app.model.Left.Filter.Query)
+	}
+	entry, ok := app.model.Left.CurrentEntry()
+	if !ok || entry.Name != "notes.txt" {
+		t.Fatalf("CurrentEntry() = %q ok=%v, want first visible match notes.txt", entry.Name, ok)
+	}
+}
+
+func TestPlainTypingMultiLetterSelectsBestRankedMatch(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "abzzc.txt"))
+	writeFile(t, filepath.Join(dir, "abc.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	for _, r := range "abc" {
+		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	entry, ok := app.model.Left.CurrentEntry()
+	if !ok || entry.Name != "abc.txt" {
+		t.Fatalf("CurrentEntry() = %q ok=%v, want best ranked abc.txt", entry.Name, ok)
+	}
+}
+
+func TestQuickFilterEnterOpensDirectoryAndClearsQuery(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "subdir")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("Mkdir(sub): %v", err)
+	}
+	writeFile(t, filepath.Join(dir, "other.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	for _, r := range "sub" {
+		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	wantPath := filepath.Clean(sub)
+	if got := filepath.Clean(app.model.Left.Path); got != wantPath {
+		t.Fatalf("left path=%q after Enter want %q", got, wantPath)
+	}
+	if app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" || app.model.Left.Filter.Editing {
+		t.Fatalf("filter cleared: active=%v query=%q editing=%v want all off",
+			app.model.Left.Filter.Active, app.model.Left.Filter.Query, app.model.Left.Filter.Editing)
+	}
+}
+
+func TestQuickFilterInsertSelectsAndAdvancesCursor(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "alpha.txt"))
+	writeFile(t, filepath.Join(dir, "alpine.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
+	if app.model.Left.Filter.Query != "a" {
+		t.Fatalf("query=%q want a after typing", app.model.Left.Filter.Query)
+	}
+
+	entryPath := filepath.Join(dir, "alpha.txt")
+	if app.model.Left.SelectedPaths[entryPath] {
+		t.Fatal("alpha.txt selected before Insert, want not selected")
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if !app.model.Left.Filter.Active {
+		t.Fatal("filter closed after Insert, want open for multi-select")
+	}
+	if !app.model.Left.SelectedPaths[entryPath] {
+		t.Fatal("alpha.txt not selected after Insert, want selected")
+	}
+	if app.model.Left.Cursor != 1 {
+		t.Fatalf("cursor=%d after Insert, want 1 (moved down past filtered entry)", app.model.Left.Cursor)
+	}
+}
+
+func TestQuickFilterEmptyQueryEnterExitsEditing(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "alpha.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.activePanel().OpenFilter(app.activeViewportRows())
+	if !app.model.Left.Filter.Editing {
+		t.Fatal("want editing after OpenFilter")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.Left.Filter.Editing {
+		t.Fatal("want editing=false after Enter with empty query")
+	}
+	if app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" {
+		t.Fatalf("want no active query, got active=%v query=%q", app.model.Left.Filter.Active, app.model.Left.Filter.Query)
+	}
+}
+
+func TestFilterModeEscCancelsInsteadOfQuitting(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "alpha.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.activePanel().OpenFilter(app.activeViewportRows())
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if quit {
+		t.Fatal("handleKey(Esc) quit = true, want filter cancel")
+	}
+	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active {
+		t.Fatalf("filter editing=%v active=%v, want canceled", app.model.Left.Filter.Editing, app.model.Left.Filter.Active)
+	}
+}
+
+func TestQuickFilterUpDownCyclesMatches(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "assets"))
+	writeFile(t, filepath.Join(dir, "notes.txt"))
+	writeFile(t, filepath.Join(dir, "src"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModNone))
+	if app.model.Left.Filter.Query != "s" {
+		t.Fatalf("query=%q want s", app.model.Left.Filter.Query)
+	}
+	if !app.model.Left.Filter.Editing || !app.model.Left.Filter.Active {
+		t.Fatalf("want filter editing and active, got editing=%v active=%v",
+			app.model.Left.Filter.Editing, app.model.Left.Filter.Active)
+	}
+
+	first, ok := app.model.Left.CurrentEntry()
+	if !ok {
+		t.Fatal("CurrentEntry() = false")
+	}
+	if first.Name != "assets" {
+		t.Fatalf("CurrentEntry() = %q, want first visible match assets", first.Name)
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	second, ok := app.model.Left.CurrentEntry()
+	if !ok {
+		t.Fatal("CurrentEntry() = false after Down")
+	}
+	if second.Name != "notes.txt" {
+		t.Fatalf("after Down want next visible match notes.txt, got %q", second.Name)
+	}
+	if app.model.Left.Filter.Query != "s" {
+		t.Fatalf("query should stay set, got %q", app.model.Left.Filter.Query)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	third, ok := app.model.Left.CurrentEntry()
+	if !ok {
+		t.Fatal("CurrentEntry() = false after second Down")
+	}
+	if third.Name != "src" {
+		t.Fatalf("after second Down want next visible match src, got %q", third.Name)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	wrapped, ok := app.model.Left.CurrentEntry()
+	if !ok {
+		t.Fatal("CurrentEntry() = false after third Down")
+	}
+	if wrapped.Name != first.Name {
+		t.Fatalf("after Down from last match want wrap to %q, got %q", first.Name, wrapped.Name)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	backToLast, ok := app.model.Left.CurrentEntry()
+	if !ok {
+		t.Fatal("CurrentEntry() = false after Up from first")
+	}
+	if backToLast.Name != "src" {
+		t.Fatalf("after Up from first match want wrap to src, got %q", backToLast.Name)
+	}
+}
+
+func TestQuickFilterCtrlBackspaceClearsQuery(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "alpha.txt"))
+	writeFile(t, filepath.Join(dir, "beta.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	// Type something into filter
+	app.activePanel().OpenFilter(app.activeViewportRows())
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModNone))
+
+	if app.model.Left.Filter.Query != "al" {
+		t.Fatalf("query=%q want al", app.model.Left.Filter.Query)
+	}
+	if !app.model.Left.Filter.Editing {
+		t.Fatal("want filter editing")
+	}
+
+	// Ctrl+Backspace should clear query but keep editing
+	app.handleKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModCtrl))
+
+	if app.model.Left.Filter.Query != "" {
+		t.Fatalf("query=%q want empty after Ctrl+Backspace", app.model.Left.Filter.Query)
+	}
+	if !app.model.Left.Filter.Editing {
+		t.Fatal("Ctrl+Backspace should keep filter in editing mode")
+	}
+	if app.model.Left.Filter.Active {
+		t.Fatal("Ctrl+Backspace should deactivate filter")
+	}
+}
+
+func TestFileMenuRenameOpensRenameDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	activateFileMenuItem(t, app, 'r')
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("File dialog not open")
+	}
+	if app.model.FileDialog.DialogType != ui.FileDialogRename {
+		t.Fatalf("dialog type = %d, want FileDialogRename", app.model.FileDialog.DialogType)
+	}
+	if len(app.model.FileDialog.Fields) != 1 || app.model.FileDialog.Fields[0].Value != "test.txt" {
+		t.Fatalf("expected prefilled rename field, got %+v", app.model.FileDialog.Fields)
+	}
+}
+
+func TestFileMenuMkdirOpensMkdirDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	activateFileMenuItem(t, app, 'm')
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("File dialog not open")
+	}
+	if app.model.FileDialog.DialogType != ui.FileDialogMkdir {
+		t.Fatalf("dialog type = %d, want FileDialogMkdir", app.model.FileDialog.DialogType)
+	}
+}
+
+func TestFileMenuDeleteOpensDeleteConfirmation(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	activateFileMenuItem(t, app, 'd')
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("File dialog not open")
+	}
+	if app.model.FileDialog.DialogType != ui.FileDialogDelete {
+		t.Fatalf("dialog type = %d, want FileDialogDelete", app.model.FileDialog.DialogType)
+	}
+	if got, want := app.model.FileDialog.Message, "Delete 1 item?"; got != want {
+		t.Fatalf("Message = %q, want %q", got, want)
+	}
+	if app.model.FileDialog.FocusedField != 1 {
+		t.Fatalf("FocusedField = %d, want 1 (No)", app.model.FileDialog.FocusedField)
+	}
+}
+
+func TestFileMenuChmodOpensChmodDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	activateFileMenuItem(t, app, 'h')
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("File dialog not open")
+	}
+	if app.model.FileDialog.DialogType != ui.FileDialogChmod {
+		t.Fatalf("dialog type = %d, want FileDialogChmod", app.model.FileDialog.DialogType)
+	}
+}
+
+func TestFileMenuChownOpensChownDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	activateFileMenuItem(t, app, 'o')
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("File dialog not open")
+	}
+	if app.model.FileDialog.DialogType != ui.FileDialogChown {
+		t.Fatalf("dialog type = %d, want FileDialogChown", app.model.FileDialog.DialogType)
+	}
+	if len(app.model.FileDialog.Fields) != 2 {
+		t.Fatalf("chown has %d fields, want 2", len(app.model.FileDialog.Fields))
+	}
+}
+
+func TestFileMenuSymlinkOpensSymlinkDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	activateFileMenuItem(t, app, 's')
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("File dialog not open")
+	}
+	if app.model.FileDialog.DialogType != ui.FileDialogSymlink {
+		t.Fatalf("dialog type = %d, want FileDialogSymlink", app.model.FileDialog.DialogType)
+	}
+}
+
+func TestFileMenuHardlinkOpensHardlinkDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	activateFileMenuItem(t, app, 'l')
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("File dialog not open")
+	}
+	if app.model.FileDialog.DialogType != ui.FileDialogHardlink {
+		t.Fatalf("dialog type = %d, want FileDialogHardlink", app.model.FileDialog.DialogType)
+	}
+}
+
+func TestFileDialogEscCancelsAndNoMessage(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	activateFileMenuItem(t, app, 'r')
+	if !app.model.FileDialog.Open {
+		t.Fatal("dialog should be open")
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after Esc")
+	}
+}
+
+func TestFileDialogEnterExecutesRename(t *testing.T) {
+	dir := t.TempDir()
+	oldPath := filepath.Join(dir, "old.txt")
+	writeFile(t, oldPath)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	// Dispatch rename via keybinding (M-r).
+	action := keymap.ActionFileRename
+	app.dispatch(action)
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("dialog should be open")
+	}
+
+	// Clear prefill by typing a character, enter new name.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'w', tcell.ModNone))
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after Enter")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "new")); err != nil {
+		t.Fatalf("renamed file not found: %v", err)
+	}
+	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+		t.Fatal("old file should not exist")
+	}
+	if app.model.Message == "" {
+		t.Fatal("expected success message after rename")
+	}
+}
+
+func TestFileDialogMkdirCreatesDirectory(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileMkdir)
+	if !app.model.FileDialog.Open {
+		t.Fatal("dialog should be open")
+	}
+
+	for _, r := range "newdir" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after Enter")
+	}
+	info, err := os.Stat(filepath.Join(dir, "newdir"))
+	if err != nil {
+		t.Fatalf("created directory not found: %v", err)
+	}
+	if !info.IsDir() {
+		t.Fatal("created path is not a directory")
+	}
+}
+
+func TestFileDialogInsertRune(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileRename)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
+
+	field := &app.model.FileDialog.Fields[0]
+	if field.Value != "n" {
+		t.Fatalf("field value = %q, want n", field.Value)
+	}
+	if field.Cursor != 1 {
+		t.Fatalf("cursor = %d, want 1", field.Cursor)
+	}
+}
+
+func TestFileDialogBackspace(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileMkdir)
+	for _, r := range "hello" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModNone))
+
+	field := &app.model.FileDialog.Fields[0]
+	if field.Value != "hell" {
+		t.Fatalf("field value = %q, want hell", field.Value)
+	}
+}
+
+func TestFileDialogLeftRightMoveCursor(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileMkdir)
+	for _, r := range "abc" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+
+	// cursor should be at 3 (end)
+	field := &app.model.FileDialog.Fields[0]
+	expectedCursor := 3
+	if field.Cursor != expectedCursor {
+		t.Fatalf("cursor = %d, want %d", field.Cursor, expectedCursor)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if field.Cursor != 2 {
+		t.Fatalf("cursor after left = %d, want 2", field.Cursor)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if field.Cursor != 3 {
+		t.Fatalf("cursor after right = %d, want 3", field.Cursor)
+	}
+}
+
+func TestFileDialogHomeEnd(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileMkdir)
+	for _, r := range "abcdef" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	// cursor should be at 3 now (moved left 3 from 6)
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	field := &app.model.FileDialog.Fields[0]
+	if field.Cursor != 6 {
+		t.Fatalf("cursor after End = %d, want 6", field.Cursor)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
+	if field.Cursor != 0 {
+		t.Fatalf("cursor after Home = %d, want 0", field.Cursor)
+	}
+}
+
+func TestRenameDialogPrefillClearsOnType(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "existing.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileRename)
+	field := &app.model.FileDialog.Fields[0]
+	if field.Value != "existing.txt" {
+		t.Fatalf("prefill value = %q, want existing.txt", field.Value)
+	}
+
+	// First printable should clear prefill.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
+	if field.Value != "n" {
+		t.Fatalf("after first printable: value = %q, want n", field.Value)
+	}
+	if field.PrefillPending {
+		t.Fatal("PrefillPending should be false after typing")
+	}
+}
+
+func TestMkdirDialogPrefillsFromCursorEntry(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "cursor-name.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileMkdir)
+	f := &app.model.FileDialog.Fields[0]
+	if f.Value != "cursor-name.txt" || f.Prefill != "cursor-name.txt" {
+		t.Fatalf("field = %+v, want Value and Prefill cursor-name.txt", f)
+	}
+	if !f.PrefillPending {
+		t.Fatal("PrefillPending should be true with a non-empty suggestion")
+	}
+}
+
+func TestRenameDialogPrefillBackspaceCommitsBeforeDelete(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "existing.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileRename)
+	field := &app.model.FileDialog.Fields[0]
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModNone))
+	if field.PrefillPending {
+		t.Fatal("PrefillPending should be false after backspace")
+	}
+	if field.Value != "existing.tx" {
+		t.Fatalf("value = %q, want existing.tx", field.Value)
+	}
+}
+
+func TestFileDialogExecutesDelete(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "test.txt")
+	writeFile(t, filePath)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileDelete)
+	if !app.model.FileDialog.Open {
+		t.Fatal("delete dialog should be open")
+	}
+
+	// Default focus is No; move to Yes then Enter confirms delete.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after confirm")
+	}
+	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+		t.Fatal("file should be deleted")
+	}
+	if app.model.Message == "" {
+		t.Fatal("expected success message after delete")
+	}
+}
+
+func TestKeybindingDispatcherOpensFileDialogs(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	// Test F7 for mkdir.
+	app.handleKey(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogMkdir {
+		t.Fatal("F7 should open mkdir dialog")
+	}
+	app.closeFileDialog()
+
+	// Test F8 for delete (default global binding).
+	app.handleKey(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogDelete {
+		t.Fatal("F8 should open delete dialog")
+	}
+	app.closeFileDialog()
+}
+
+func TestEmptyPanelShowsErrorForFileOperations(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	// Empty dir - just . and possibly no files.
+	// Make it truly empty by using panel with no entries (the only entry might be parent reference).
+	// Actually panel doesn't show ".." in v1, so empty means empty.
+
+	app.dispatch(keymap.ActionFileRename)
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should not open on empty panel")
+	}
+	if app.model.Message == "" {
+		t.Fatal("expected error message for operation on empty panel")
+	}
+}
+
+func TestFileDialogEnterOnDeleteWithNoItems(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileDelete)
+	// Esc should work.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.FileDialog.Open {
+		t.Fatal("Esc should close delete dialog")
+	}
+}
+
+func TestDeleteDialogEnterDefaultCancelsWithoutDelete(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "keep.txt")
+	writeFile(t, filePath)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileDelete)
+	if app.model.FileDialog.FocusedField != 1 {
+		t.Fatalf("FocusedField = %d, want 1 (No)", app.model.FileDialog.FocusedField)
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.FileDialog.Open {
+		t.Fatal("Enter on No should close dialog")
+	}
+	if _, err := os.Stat(filePath); err != nil {
+		t.Fatalf("file should still exist: %v", err)
+	}
+}
+
+func TestDeleteDialogWarningPluralDirectories(t *testing.T) {
+	dir := t.TempDir()
+	d1 := filepath.Join(dir, "a")
+	d2 := filepath.Join(dir, "b")
+	if err := os.Mkdir(d1, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(d2, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{d1: true, d2: true}
+	if err := p.Refresh(app.activeViewportRows()); err != nil {
+		t.Fatal(err)
+	}
+
+	app.dispatch(keymap.ActionFileDelete)
+	want := "Delete 2 items?\nWarning: 2 directories will be removed recursively!"
+	if got := app.model.FileDialog.Message; got != want {
+		t.Fatalf("Message = %q, want %q", got, want)
+	}
+}
+
+func activateFileMenuItem(t *testing.T, app *App, shortcut rune) {
+	t.Helper()
+	app.dispatch(keymap.ActionAppOpenMenu)
+	// F9 opens menu bar only (no pulldown). Open pulldown first.
+	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	// File menu should be at index 1 (default).
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, shortcut, tcell.ModNone))
+	if quit {
+		t.Fatal("menu item should not quit")
+	}
+	if app.model.Menu.Open {
+		t.Fatal("menu should be closed after activation")
+	}
+}
+
+func newScreen(t *testing.T, w, h int) tcell.SimulationScreen {
+	t.Helper()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("screen.Init() error = %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(w, h)
+	return screen
+}
+
+func newApp(t *testing.T, screen tcell.SimulationScreen, dir string) *App {
+	t.Helper()
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	return app
+}
+
+func screenLine(screen tcell.SimulationScreen, y, width int) string {
+	var builder strings.Builder
+	for x := range width {
+		cell, _, _ := screen.Get(x, y)
+		if cell == "" {
+			cell = " "
+		}
+		builder.WriteString(cell)
+	}
+	return builder.String()
+}
+
+func writeFile(t *testing.T, path string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte("content"), 0o644); err != nil {
+		t.Fatalf("WriteFile(%q) error = %v", path, err)
+	}
+}
+
+func flushBackgroundJobs(t *testing.T, app *App) {
+	t.Helper()
+	const maxIter = 2000
+	for i := 0; i < maxIter; i++ {
+		app.pollJobEvents()
+		busy := false
+		for _, j := range app.jobState.AllJobs() {
+			switch j.Status {
+			case jobs.StatusQueued, jobs.StatusRunning, jobs.StatusWaitingDecision:
+				busy = true
+			}
+			if busy {
+				break
+			}
+		}
+		if !busy {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("timed out waiting for jobs to finish")
+}
+
+func TestAddBookmarkDialogOpenPrefillsBasename(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionBookmarkAdd)
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("FileDialog should be open after ActionBookmarkAdd")
+	}
+	if app.model.FileDialog.DialogType != ui.FileDialogAddBookmark {
+		t.Fatalf("dialog type = %d, want FileDialogAddBookmark", app.model.FileDialog.DialogType)
+	}
+	if got, want := len(app.model.FileDialog.Fields), 1; got != want {
+		t.Fatalf("Fields length = %d, want %d", got, want)
+	}
+	wantName := filepath.Base(dir)
+	if app.model.FileDialog.Fields[0].Value != wantName {
+		t.Fatalf("Fields[0].Value = %q, want %q", app.model.FileDialog.Fields[0].Value, wantName)
+	}
+	if !app.model.FileDialog.Fields[0].PrefillPending {
+		t.Fatal("Fields[0].PrefillPending should be true on open")
+	}
+	if app.model.FileDialog.Message != dir {
+		t.Fatalf("Message = %q, want %q", app.model.FileDialog.Message, dir)
+	}
+}
+
+func TestAddBookmarkExecuteAppendsToMarksFile(t *testing.T) {
+	dir := t.TempDir()
+	marksPath := filepath.Join(t.TempDir(), ".fzf-marks")
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.config.Bookmarks.File = marksPath
+
+	app.dispatch(keymap.ActionBookmarkAdd)
+	if !app.model.FileDialog.Open {
+		t.Fatal("dialog should be open")
+	}
+
+	// Replace prefilled name by typing a fresh value (first printable clears prefill).
+	for _, r := range "myproject" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after Enter")
+	}
+	data, err := os.ReadFile(marksPath)
+	if err != nil {
+		t.Fatalf("ReadFile(%q) error = %v", marksPath, err)
+	}
+	wantLine := "myproject : " + dir + "\n"
+	if string(data) != wantLine {
+		t.Fatalf("marks file contents = %q, want %q", string(data), wantLine)
+	}
+	if !strings.Contains(app.model.Message, "Bookmark added") {
+		t.Fatalf("transient message = %q, want it to mention bookmark added", app.model.Message)
+	}
+	if !strings.Contains(app.model.Message, marksPath) {
+		t.Fatalf("transient message = %q, want it to include marks file path %q", app.model.Message, marksPath)
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyInfo {
+		t.Fatalf("message urgency = %v, want info", app.model.MessageUrgency)
+	}
+}
+
+func TestAddBookmarkConfirmFromOKButtonWritesFile(t *testing.T) {
+	dir := t.TempDir()
+	marksPath := filepath.Join(t.TempDir(), ".fzf-marks")
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.config.Bookmarks.File = marksPath
+
+	app.dispatch(keymap.ActionBookmarkAdd)
+	for _, r := range "okbtn" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	// Move focus from name field to OK, then confirm (Enter must still append).
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.FileDialog.FocusedField != 1 {
+		t.Fatalf("FocusedField = %d, want 1 (OK)", app.model.FileDialog.FocusedField)
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after Enter on OK")
+	}
+	data, err := os.ReadFile(marksPath)
+	if err != nil {
+		t.Fatalf("ReadFile(%q) error = %v", marksPath, err)
+	}
+	wantLine := "okbtn : " + dir + "\n"
+	if string(data) != wantLine {
+		t.Fatalf("marks file contents = %q, want %q", string(data), wantLine)
+	}
+}
+
+func TestAddBookmarkEmptyNameClosesWithError(t *testing.T) {
+	dir := t.TempDir()
+	marksPath := filepath.Join(t.TempDir(), ".fzf-marks")
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.config.Bookmarks.File = marksPath
+
+	app.dispatch(keymap.ActionBookmarkAdd)
+	// Wipe the prefilled value so name is empty.
+	app.model.FileDialog.Fields[0].Value = ""
+	app.model.FileDialog.Fields[0].Cursor = 0
+	app.model.FileDialog.Fields[0].PrefillPending = false
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after rejected confirm")
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyError {
+		t.Fatalf("message urgency = %v, want error", app.model.MessageUrgency)
+	}
+	if _, err := os.Stat(marksPath); !os.IsNotExist(err) {
+		t.Fatalf("marks file should not exist; stat err = %v", err)
+	}
+}
+
+func TestAddBookmarkDefaultName(t *testing.T) {
+	tests := []struct {
+		path string
+		want string
+	}{
+		{path: "/", want: "root"},
+		{path: "/home/user/projects", want: "projects"},
+		{path: ".", want: "root"},
+		{path: "", want: "root"},
+	}
+	for _, tt := range tests {
+		if got := defaultBookmarkName(tt.path); got != tt.want {
+			t.Fatalf("defaultBookmarkName(%q) = %q, want %q", tt.path, got, tt.want)
+		}
+	}
+}
+
+// selectPanelEntryByName moves the panel cursor to the entry with the given name.
+// Fails the test if no such entry is visible.
+func selectPanelEntryByName(t *testing.T, p *panel.State, name string) {
+	t.Helper()
+	for i := 0; i < p.VisibleEntryCount(); i++ {
+		entry, _, ok := p.VisibleEntry(i)
+		if ok && entry.Name == name {
+			p.Cursor = i
+			return
+		}
+	}
+	t.Fatalf("entry %q not visible in panel %q", name, p.Path)
+}
+
+func TestToggleSyncEnablesAndImmediatelyMirrorsHighlightedFolder(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+
+	app.dispatch(keymap.ActionPanelToggleSync)
+
+	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.LeftPanel {
+		t.Fatalf("Sync state after enable = (enabled=%v panel=%d), want (true, LeftPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
+	}
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+		t.Fatalf("right panel path after enable = %q, want %q", got, want)
+	}
+	if !strings.Contains(app.model.Message, "Sync") {
+		t.Fatalf("transient message = %q, want Sync notice", app.model.Message)
+	}
+}
+
+func TestToggleSyncDisablesWhenAlreadyDriving(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "alpha"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+
+	app.dispatch(keymap.ActionPanelToggleSync)
+	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.LeftPanel {
+		t.Fatalf("Sync state after enable = (enabled=%v panel=%d), want (true, LeftPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
+	}
+
+	app.dispatch(keymap.ActionPanelToggleSync)
+	if app.model.SyncFollowEnabled {
+		t.Fatalf("SyncFollowEnabled after disable = true, want false")
+	}
+	if !strings.Contains(app.model.Message, "Sync disabled") {
+		t.Fatalf("transient message = %q, want Sync disabled", app.model.Message)
+	}
+}
+
+func TestToggleSyncFromOtherPanelClearsPreviousDriverFirst(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	gamma := filepath.Join(alpha, "gamma")
+	if err := os.MkdirAll(gamma, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.dispatch(keymap.ActionPanelToggleSync)
+	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.LeftPanel {
+		t.Fatalf("Sync state after left enable = (enabled=%v panel=%d), want (true, LeftPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
+	}
+	// Right panel should now be inside /alpha (synced from left).
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+		t.Fatalf("right panel after left enable = %q, want %q", got, want)
+	}
+
+	// Switch focus to right and toggle sync there: should clear left's sync, then enable right.
+	app.model.ActivePanel = ui.RightPanel
+	selectPanelEntryByName(t, app.panelByID(ui.RightPanel), "gamma")
+	app.dispatch(keymap.ActionPanelToggleSync)
+
+	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.RightPanel {
+		t.Fatalf("Sync state after right toggle = (enabled=%v panel=%d), want (true, RightPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
+	}
+	if got, want := filepath.Clean(app.panelByID(ui.LeftPanel).Path), filepath.Clean(gamma); got != want {
+		t.Fatalf("left panel path after right takes over = %q, want %q", got, want)
+	}
+}
+
+func TestSyncFollowsCursorMovementOverDirectory(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	for _, p := range []string{alpha, beta} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.dispatch(keymap.ActionPanelToggleSync)
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+		t.Fatalf("right panel after enable = %q, want %q", got, want)
+	}
+
+	// Move cursor onto beta and verify the right panel mirrors it.
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
+	app.reconcileAfterEvent()
+
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(beta); got != want {
+		t.Fatalf("right panel after move = %q, want %q", got, want)
+	}
+}
+
+func TestSyncSkipsCursorMovementOverFile(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(root, "notes.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.dispatch(keymap.ActionPanelToggleSync)
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+		t.Fatalf("right panel after enable = %q, want %q", got, want)
+	}
+
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
+	app.reconcileAfterEvent()
+
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+		t.Fatalf("right panel after non-dir hover = %q, want unchanged %q", got, want)
+	}
+}
+
+func TestSyncDoesNotFollowFromNonDriverActivePanel(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	for _, p := range []string{alpha, beta} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.dispatch(keymap.ActionPanelToggleSync)
+	rightAfterEnable := filepath.Clean(app.panelByID(ui.RightPanel).Path)
+
+	// Switch focus to the non-driver (right) panel and move its cursor.
+	app.dispatch(keymap.ActionPanelSwitch)
+	if app.model.ActivePanel != ui.RightPanel {
+		t.Fatalf("ActivePanel after switch = %d, want RightPanel", app.model.ActivePanel)
+	}
+	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.LeftPanel {
+		t.Fatalf("Tab should not change Sync state; got (enabled=%v panel=%d), want (true, LeftPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
+	}
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
+	app.reconcileAfterEvent()
+
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path); got != rightAfterEnable {
+		t.Fatalf("right panel changed while non-driver was active: got %q, want unchanged %q", got, rightAfterEnable)
+	}
+}
+
+// Regression: bookmark / history-picker navigation jumps the active panel via
+// navigatePanelToDirectory (which loads, then would historically need its own sync
+// trigger). With the post-event reconciler, the next reconcileAfterEvent re-mirrors
+// the follower automatically — proving the chokepoint catches paths that bypass dispatch.
+func TestSyncFollowsBookmarkLikeNavigationFromActivePanel(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	betaChild := filepath.Join(beta, "child")
+	if err := os.MkdirAll(betaChild, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.dispatch(keymap.ActionPanelToggleSync)
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+		t.Fatalf("right panel after enable = %q, want %q", got, want)
+	}
+
+	// Simulate a bookmark/history jump: navigate the active panel to /beta.
+	if err := app.navigatePanelToDirectory(ui.LeftPanel, beta, ""); err != nil {
+		t.Fatalf("navigatePanelToDirectory: %v", err)
+	}
+	// In the Run loop this is what fires after the bookmark dialog closes.
+	app.reconcileAfterEvent()
+
+	// Cursor in /beta lands on "child" (only entry); sync should mirror it.
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(betaChild); got != want {
+		t.Fatalf("right panel after bookmark-like jump = %q, want %q (sync should re-mirror)", got, want)
+	}
+}
+
+// Regression guard: when the inactive (follower) panel changes directory by other means
+// (e.g. an out-of-band Load), sync must NOT trigger from it because only the driver-while-active
+// fires sync hops.
+func TestSyncDoesNotFollowWhenInactivePanelChangesDirectory(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	for _, p := range []string{alpha, beta} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.dispatch(keymap.ActionPanelToggleSync)
+	leftBefore := filepath.Clean(app.panelByID(ui.LeftPanel).Path)
+
+	// Mutate the follower (right) panel directly. The driver (left) is still active and
+	// has not moved its cursor, so the left panel should stay put even after reconcile.
+	if err := app.panelByID(ui.RightPanel).Load(beta); err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	app.reconcileAfterEvent()
+
+	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path); got != leftBefore {
+		t.Fatalf("left panel changed because follower moved: got %q, want %q", got, leftBefore)
+	}
+}
+
+// Regression-by-design: the Insert key (panel.select-toggle) calls
+// ToggleSelectionAndAdvance, which moves the cursor down by one. With the previous
+// per-call-site wiring this branch had no syncFollowFromActive() call, so sync
+// would have silently gone stale. The post-event reconciler catches it for free.
+func TestSyncFollowsAfterSelectToggleAdvance(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"alpha", "beta"} {
+		if err := os.Mkdir(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.dispatch(keymap.ActionPanelToggleSync)
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "alpha")); got != want {
+		t.Fatalf("right panel after enable = %q, want %q", got, want)
+	}
+
+	// Insert: toggle selection on alpha and advance cursor to beta.
+	app.dispatch(keymap.ActionPanelSelectToggle)
+	app.reconcileAfterEvent()
+
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "beta")); got != want {
+		t.Fatalf("right panel after Insert advance = %q, want %q (reconciler should mirror new highlight)", got, want)
+	}
+}
+
+// reconcileAfterEvent walks both panels. Uncached listings must not enable IdleDiskTotalsSort;
+// per-panel idle timers are only armed once ListingFullyDiskCached holds ( subtree events ).
+func TestDiskUsageIdleArmingSurvivesPanelSwitchViaReconciler(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"alpha", "beta"} {
+		if err := os.Mkdir(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	right := app.panelByID(ui.RightPanel)
+	right.Sort.DiskUsageIdleSizeSort = true
+	right.DiskUsageIdleSortActivated = true
+	right.IdleDiskTotalsSort = false
+
+	if app.diskIdleSort[ui.RightPanel].timer != nil {
+		t.Fatal("right idle timer should be nil before reconcile")
+	}
+
+	app.dispatch(keymap.ActionPanelSwitch)
+	if app.model.ActivePanel != ui.RightPanel {
+		t.Fatalf("ActivePanel after switch = %d, want RightPanel", app.model.ActivePanel)
+	}
+	app.reconcileAfterEvent()
+
+	if app.diskIdleSort[ui.RightPanel].timer != nil {
+		t.Fatal("uncached listing must not arm idle-sort timer from reconcile alone")
+	}
+	if right.IdleDiskTotalsSort {
+		t.Fatalf("IdleDiskTotalsSort = true; want false until listing is fully disk-cached")
+	}
+}
+
+func TestApplyIdleDiskSortRequiresFullListingCache(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"alpha", "beta"} {
+		if err := os.Mkdir(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	alphaPath := filepath.Join(root, "alpha")
+
+	left.Sort.DiskUsageIdleSizeSort = true
+	left.DiskUsageIdleSortActivated = true
+	left.IdleDiskTotalsSort = false
+	left.DiskSorter = func(abs string) (int64, bool) {
+		if filepath.Clean(abs) == filepath.Clean(alphaPath) {
+			return 42, true
+		}
+		return 0, false
+	}
+
+	app.applyIdleDiskSort(ui.LeftPanel, app.diskIdleSort[ui.LeftPanel].epoch)
+
+	if left.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort should stay false when listing is not fully disk-cached")
+	}
+}
+
+func TestHandlePanelDirChangedRightDoesNotInvalidateLeftIdleTimer(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(alpha, "f.txt"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	leftRoot := filepath.Clean(app.panelByID(ui.LeftPanel).Path)
+	left := app.panelByID(ui.LeftPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	left.DiskUsageIdleSortActivated = true
+	left.IdleDiskTotalsSort = false
+	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
+
+	app.diskIdleNavPath[ui.LeftPanel] = leftRoot
+	app.armIdleDiskSortTimer(ui.LeftPanel)
+	if app.diskIdleSort[ui.LeftPanel].timer == nil {
+		t.Fatal("expected idle timer armed")
+	}
+
+	right := app.panelByID(ui.RightPanel)
+	right.Sort.DiskUsageIdleSizeSort = true
+	right.DiskUsageIdleSortActivated = true
+	right.IdleDiskTotalsSort = false
+	vr := app.panelViewportRows(ui.RightPanel)
+	if err := right.NavigateTo(filepath.Clean(alpha), "", vr); err != nil {
+		t.Fatalf("NavigateTo: %v", err)
+	}
+
+	app.handlePanelDirChanged(ui.RightPanel)
+
+	if app.diskIdleSort[ui.LeftPanel].timer == nil {
+		t.Fatal("only the navigated panel should reset idle-sort debounce")
+	}
+	app.invalidateIdleDiskSortPanel(ui.LeftPanel)
+}
+
+func TestHandlePanelDirChangedLeftClearsIdleTimerOnChdir(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(alpha, "f.txt"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	leftRoot := filepath.Clean(app.panelByID(ui.LeftPanel).Path)
+
+	left := app.panelByID(ui.LeftPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	left.DiskUsageIdleSortActivated = true
+	left.IdleDiskTotalsSort = false
+	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
+
+	app.diskIdleNavPath[ui.LeftPanel] = leftRoot
+	app.armIdleDiskSortTimer(ui.LeftPanel)
+
+	vr := app.panelViewportRows(ui.LeftPanel)
+	if err := left.NavigateTo(filepath.Clean(alpha), "", vr); err != nil {
+		t.Fatalf("NavigateTo: %v", err)
+	}
+	app.handlePanelDirChanged(ui.LeftPanel)
+
+	if app.diskIdleSort[ui.LeftPanel].timer != nil {
+		t.Fatal("idle timer should clear when panel cwd changes")
+	}
+}
+
+func TestDiskIdleSortActivatesAfterScanWhenListingCached(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"a", "b"} {
+		if err := os.Mkdir(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	left.DiskUsageIdleSortActivated = true
+	left.IdleDiskTotalsSort = false
+
+	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	if !left.ListingFullyDiskCached() {
+		t.Fatalf("listing not fully cached after scan busy=%v", app.diskUsageScanBusy())
+	}
+
+	ep := app.diskIdleSort[ui.LeftPanel].epoch
+	app.applyIdleDiskSort(ui.LeftPanel, ep)
+
+	if !left.IdleDiskTotalsSort {
+		t.Fatalf("IdleDiskTotalsSort still false epoch=%d busy=%v", ep, app.diskUsageScanBusy())
+	}
+}
+
+func TestHandlePanelDirChangedAppliesDiskSortWhenUsageSortEnabledWithoutActivatedLatch(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	left.DiskUsageIdleSortActivated = false // must not deadlock idle disk ordering
+	left.IdleDiskTotalsSort = false
+	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
+
+	app.handlePanelDirChanged(ui.LeftPanel)
+
+	if !left.IdleDiskTotalsSort {
+		t.Fatal("expected IdleDiskTotalsSort when DiskUsageIdleSizeSort is on and listing is fully cached")
+	}
+}
+
+func TestApplyIdleDiskSortIgnoresStaleEpoch(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+
+	left := app.panelByID(ui.LeftPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	left.DiskUsageIdleSortActivated = true
+	left.IdleDiskTotalsSort = false
+	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
+
+	stale := app.diskIdleSort[ui.LeftPanel].epoch
+	app.invalidateIdleDiskSortPanel(ui.LeftPanel)
+	app.applyIdleDiskSort(ui.LeftPanel, stale)
+
+	if left.IdleDiskTotalsSort {
+		t.Fatal("stale epoch must not apply idle disk sort")
+	}
+}
+
+func TestSyncFollowSkipsHistoryRecordingOnFollower(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	for _, p := range []string{alpha, beta} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	rightHistoryAtStart := append([]string(nil), app.panelByID(ui.RightPanel).History...)
+
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.dispatch(keymap.ActionPanelToggleSync)
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
+	app.reconcileAfterEvent()
+
+	right := app.panelByID(ui.RightPanel)
+	if got, want := filepath.Clean(right.Path), filepath.Clean(beta); got != want {
+		t.Fatalf("right panel path = %q, want %q", got, want)
+	}
+	// Sync hops use Load (not NavigateTo), so the follower's directory history must remain untouched
+	// beyond whatever it already had at startup.
+	if len(right.History) != len(rightHistoryAtStart) {
+		t.Fatalf("right history length = %d, want %d (sync should not record history)", len(right.History), len(rightHistoryAtStart))
+	}
+}

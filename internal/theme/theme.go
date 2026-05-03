@@ -1,0 +1,831 @@
+package theme
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/BurntSushi/toml"
+	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/themes"
+)
+
+const defaultName = "default"
+
+// Registry maps stable theme names to parsed render styles.
+type Registry map[string]Theme
+
+// NamedTheme describes a theme choice suitable for UI display.
+type NamedTheme struct {
+	Name  string
+	Label string
+	Theme Theme
+}
+
+// Theme contains semantic styles used by the UI renderer.
+type Theme struct {
+	Name string
+
+	MenuBar              tcell.Style
+	MenuBarSelected      tcell.Style
+	MenuDropdown         tcell.Style
+	MenuDropdownSelected tcell.Style
+	MenuDropdownFrame    tcell.Style
+	MenuBarAccent        tcell.Style
+	MenuBarAlert         tcell.Style // jobs need input (before permission tail)
+	MenuDropdownAccent   tcell.Style
+	MenuDetail           tcell.Style
+
+	PanelFrame         tcell.Style
+	PanelSurface       tcell.Style
+	PanelTitleActive   tcell.Style
+	PanelTitleInactive tcell.Style
+	// PanelTitleVolumeFree styles the panel top-row volume summary (free / total + percent).
+	PanelTitleVolumeFree tcell.Style
+	PanelHeader          tcell.Style
+	PanelRowNormal       tcell.Style
+	PanelRowDirectory    tcell.Style
+	PanelRowSymlink      tcell.Style
+	PanelRowSelected     tcell.Style
+	PanelCursorActive    tcell.Style
+	PanelCursorInactive  tcell.Style
+	PanelCursorSelected  tcell.Style
+	// PanelSyncIndicator styles the "Sync →" / "← Sync" overlay drawn on the
+	// bottom border of the panel that drives latched panel sync.
+	PanelSyncIndicator tcell.Style
+	// PanelFileIconFG maps cursor-row style keys (e.g. panel.row.cursor.active) to file-devicon FG
+	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
+	PanelFileIconFG map[string]tcell.Color
+
+	// PanelBlocked* is used for both file panels when a modal or pulldown menu
+	// has focus so the file browser reads visually behind the overlay.
+	PanelBlockedFrame          tcell.Style
+	PanelBlockedSurface        tcell.Style
+	PanelBlockedTitle          tcell.Style
+	PanelBlockedHeader         tcell.Style
+	PanelBlockedRowNormal      tcell.Style
+	PanelBlockedRowDirectory   tcell.Style
+	PanelBlockedRowSymlink     tcell.Style
+	PanelBlockedRowSelected    tcell.Style
+	PanelBlockedCursor         tcell.Style
+	PanelBlockedCursorSelected tcell.Style
+
+	// Disk usage overlays (proportionally painted under listing rows once a scan ran).
+	PanelFolderDiskscan            tcell.Style
+	PanelFolderDiskscanExcluded    tcell.Style // directory rows skipped by disk-usage traversal (devicons)
+	PanelSpinner                   tcell.Style // menu-bar activity spinner (braille dot spinner)
+	PanelUsagePrefixNormal         tcell.Style
+	PanelUsagePrefixSelected       tcell.Style
+	PanelUsagePrefixCursorActive   tcell.Style
+	PanelUsagePrefixCursorInactive tcell.Style
+	PanelUsagePrefixCursorSelected tcell.Style
+
+	FuzzyInput           tcell.Style
+	FuzzyInputNomatch    tcell.Style
+	FuzzyHighlight       tcell.Style
+	FuzzyHighlightCursor tcell.Style
+
+	DialogFrame                    tcell.Style
+	DialogTitle                    tcell.Style
+	DialogText                     tcell.Style
+	DialogSurface                  tcell.Style
+	DialogAccent                   tcell.Style
+	DialogInputActive              tcell.Style
+	DialogInputActivePlaceholder   tcell.Style
+	DialogInputInactive            tcell.Style
+	DialogInputInactivePlaceholder tcell.Style
+	DialogButtonNormal             tcell.Style
+	DialogButtonActive             tcell.Style
+	DialogOptionInactive           tcell.Style
+	DialogOptionActive             tcell.Style
+	DialogOptionSelected           tcell.Style
+
+	StatusInfo  tcell.Style
+	StatusWarn  tcell.Style
+	StatusError tcell.Style
+
+	JobsRow     tcell.Style
+	JobsRunning tcell.Style
+	JobsDone    tcell.Style
+	JobsFailed  tcell.Style
+	// Jobs list progress column (horizontal bar with centered percentage).
+	JobsProgressTrack        tcell.Style
+	JobsProgressFill         tcell.Style
+	JobsProgressLabelOnFill  tcell.Style
+	JobsProgressLabelOnTrack tcell.Style
+
+	FooterKey   tcell.Style
+	FooterLabel tcell.Style
+}
+
+// DialogInputPair returns base (row fill + committed text) and placeholder glyph styles.
+func (t Theme) DialogInputPair(focused bool) (base, placeholder tcell.Style) {
+	if focused {
+		return t.DialogInputActive, t.DialogInputActivePlaceholder
+	}
+	return t.DialogInputInactive, t.DialogInputInactivePlaceholder
+}
+
+type styleSpec struct {
+	FG        string
+	BG        string
+	Icon      string // optional; only certain panel cursor styles, see parse()
+	Bold      bool
+	Underline bool
+	Reverse   bool
+}
+
+var requiredStyleKeys = []string{
+	"menu.bar",
+	"menu.bar.selected",
+	"menu.dropdown",
+	"menu.dropdown.selected",
+	"menu.dropdown.frame",
+	"menu.bar.accent",
+	"menu.bar.alert",
+	"menu.dropdown.accent",
+	"menu.detail",
+	"panel.frame",
+	"panel.surface",
+	"panel.title.active",
+	"panel.title.inactive",
+	"panel.title.volume_free",
+	"panel.header",
+	"panel.row.normal",
+	"panel.row.directory",
+	"panel.row.symlink",
+	"panel.row.selected",
+	"panel.row.cursor.active",
+	"panel.row.cursor.inactive",
+	"panel.row.cursor.selected",
+	"panel.sync.indicator",
+	"panel.blocked.frame",
+	"panel.blocked.surface",
+	"panel.blocked.title",
+	"panel.blocked.header",
+	"panel.blocked.row.normal",
+	"panel.blocked.row.directory",
+	"panel.blocked.row.symlink",
+	"panel.blocked.row.selected",
+	"panel.blocked.row.cursor",
+	"panel.blocked.row.cursor.selected",
+	"panel.folder.diskscan",
+	"panel.folder.diskscan_excluded",
+	"panel.spinner",
+	"panel.usage.prefix.normal",
+	"panel.usage.prefix.selected",
+	"panel.usage.prefix.cursor.active",
+	"panel.usage.prefix.cursor.inactive",
+	"panel.usage.prefix.cursor.selected",
+	"fuzzy.input",
+	"fuzzy.input.nomatch",
+	"fuzzy.highlight",
+	"fuzzy.highlight.cursor",
+	"dialog.frame",
+	"dialog.title",
+	"dialog.text",
+	"dialog.surface",
+	"dialog.accent",
+	"dialog.input.active",
+	"dialog.input.active.placeholder",
+	"dialog.input.inactive",
+	"dialog.input.inactive.placeholder",
+	"dialog.button.normal",
+	"dialog.button.active",
+	"dialog.option.inactive",
+	"dialog.option.active",
+	"dialog.option.selected",
+	"status.info",
+	"status.warn",
+	"status.error",
+	"jobs.row",
+	"jobs.running",
+	"jobs.done",
+	"jobs.failed",
+	"jobs.progress.track",
+	"jobs.progress.fill",
+	"jobs.progress.label.on_fill",
+	"jobs.progress.label.on_track",
+	"footer.key",
+	"footer.label",
+}
+
+var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
+
+var builtInThemeOrder = []string{
+	defaultName,
+	"catppuccin-latte",
+	"catppuccin-frappe",
+	"catppuccin-macchiato",
+	"catppuccin-mocha",
+}
+
+var builtInThemeLabels = map[string]string{
+	defaultName:            "Default",
+	"catppuccin-latte":     "Catppuccin Latte",
+	"catppuccin-frappe":    "Catppuccin Frappe",
+	"catppuccin-macchiato": "Catppuccin Macchiato",
+	"catppuccin-mocha":     "Catppuccin Mocha",
+}
+
+// Default returns the embedded default theme. The embedded asset is expected to
+// be valid; a panic here means the binary was built with a broken built-in theme.
+func Default() Theme {
+	value, err := LoadBuiltIn(defaultName)
+	if err != nil {
+		panic(err)
+	}
+	return value
+}
+
+// LoadBuiltIn loads one embedded built-in theme by stable name.
+func LoadBuiltIn(name string) (Theme, error) {
+	if strings.TrimSpace(name) == "" {
+		return Theme{}, fmt.Errorf("theme name is required")
+	}
+	data, err := themes.Files.ReadFile(name + ".toml")
+	if err != nil {
+		return Theme{}, fmt.Errorf("load built-in theme %q: %w", name, err)
+	}
+	value, err := parse(data)
+	if err != nil {
+		return Theme{}, fmt.Errorf("load built-in theme %q: %w", name, err)
+	}
+	if value.Name != name {
+		return Theme{}, fmt.Errorf("load built-in theme %q: file declares name %q", name, value.Name)
+	}
+	return value, nil
+}
+
+// BuiltInThemes returns built-in themes in menu-friendly order.
+func BuiltInThemes() ([]NamedTheme, error) {
+	themes := make([]NamedTheme, 0, len(builtInThemeOrder))
+	for _, name := range builtInThemeOrder {
+		value, err := LoadBuiltIn(name)
+		if err != nil {
+			return nil, err
+		}
+		themes = append(themes, NamedTheme{
+			Name:  name,
+			Label: themeLabel(name),
+			Theme: value,
+		})
+	}
+	return themes, nil
+}
+
+// LoadFile parses a TOML theme file from disk.
+func LoadFile(path string) (Theme, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Theme{}, fmt.Errorf("load theme %q: %w", path, err)
+	}
+	value, err := parse(data)
+	if err != nil {
+		return Theme{}, fmt.Errorf("load theme %q: %w", path, err)
+	}
+	return value, nil
+}
+
+// LoadDir loads all TOML themes from a directory.
+func LoadDir(dir string) (Registry, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return Registry{}, nil
+		}
+		return nil, fmt.Errorf("load themes dir %q: %w", dir, err)
+	}
+
+	registry := Registry{}
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".toml" {
+			continue
+		}
+		path := filepath.Join(dir, entry.Name())
+		value, err := LoadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		if _, exists := registry[value.Name]; exists {
+			return nil, fmt.Errorf("load themes dir %q: duplicate theme name %q", dir, value.Name)
+		}
+		registry[value.Name] = value
+	}
+	return registry, nil
+}
+
+// ThemeChoices returns selectable themes: each stable built-in name appears once
+// (loaded from userDir when a .toml declares that name, otherwise embedded),
+// then any additional themes found only on disk, sorted by name.
+func ThemeChoices(userDir string) ([]NamedTheme, error) {
+	disk := Registry{}
+	if userDir != "" {
+		var err error
+		disk, err = LoadDir(userDir)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	usedFromDisk := make(map[string]bool, len(disk))
+	choices := make([]NamedTheme, 0, len(builtInThemeOrder)+len(disk))
+
+	for _, name := range builtInThemeOrder {
+		if t, ok := disk[name]; ok {
+			choices = append(choices, NamedTheme{Name: name, Label: themeLabel(name), Theme: t})
+			usedFromDisk[name] = true
+			continue
+		}
+		t, err := LoadBuiltIn(name)
+		if err != nil {
+			return nil, err
+		}
+		choices = append(choices, NamedTheme{Name: name, Label: themeLabel(name), Theme: t})
+	}
+
+	extra := make([]string, 0, len(disk))
+	for name := range disk {
+		if !usedFromDisk[name] {
+			extra = append(extra, name)
+		}
+	}
+	sort.Strings(extra)
+	for _, name := range extra {
+		choices = append(choices, NamedTheme{Name: name, Label: themeLabel(name), Theme: disk[name]})
+	}
+	return choices, nil
+}
+
+// lookupUserTheme finds the first parsable theme file in dir (sorted by filename) whose declared
+// name matches wantName. Invalid or unreadable .toml siblings are skipped so one broken file does
+// not block resolving another theme from the same directory.
+func lookupUserTheme(dir, wantName string) (Theme, bool, error) {
+	if strings.TrimSpace(dir) == "" {
+		return Theme{}, false, nil
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return Theme{}, false, nil
+		}
+		return Theme{}, false, err
+	}
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if !e.IsDir() && filepath.Ext(e.Name()) == ".toml" {
+			names = append(names, e.Name())
+		}
+	}
+	sort.Strings(names)
+	for _, base := range names {
+		path := filepath.Join(dir, base)
+		value, err := LoadFile(path)
+		if err != nil {
+			continue
+		}
+		if value.Name == wantName {
+			return value, true, nil
+		}
+	}
+	return Theme{}, false, nil
+}
+
+// Resolve returns a named theme. When userDir is non-empty, the first successfully parsed
+// theme file in that directory whose declared name matches takes precedence over the embedded
+// theme with the same stable name; unreadable or invalid sibling `.toml` files are skipped.
+// Building the full theme list (ThemeChoices / LoadDir) still requires every file in the
+// directory to parse — fix or remove broken files there so the dialog can open.
+// On resolution failure it returns the built-in default alongside the error so startup can fall back
+// while still surfacing the problem.
+func Resolve(name, userDir string) (Theme, error) {
+	if strings.TrimSpace(name) == "" {
+		name = defaultName
+	}
+
+	if strings.TrimSpace(userDir) != "" {
+		value, ok, err := lookupUserTheme(userDir, name)
+		if err != nil {
+			return defaultWithError(err)
+		}
+		if ok {
+			return value, nil
+		}
+	}
+
+	value, err := LoadBuiltIn(name)
+	if err == nil {
+		return value, nil
+	}
+	return defaultWithError(fmt.Errorf("theme %q is not available", name))
+}
+
+func defaultWithError(err error) (Theme, error) {
+	value, defaultErr := LoadBuiltIn(defaultName)
+	if defaultErr != nil {
+		return Theme{}, fmt.Errorf("%w; additionally failed to load default theme: %v", err, defaultErr)
+	}
+	return value, err
+}
+
+func parse(data []byte) (Theme, error) {
+	var raw map[string]any
+	if _, err := toml.Decode(string(data), &raw); err != nil {
+		return Theme{}, err
+	}
+	for key := range raw {
+		if key != "name" && key != "palette" && key != "styles" {
+			return Theme{}, fmt.Errorf("unknown field %q", key)
+		}
+	}
+
+	name, err := stringField(raw, "name")
+	if err != nil {
+		return Theme{}, err
+	}
+	if strings.TrimSpace(name) == "" {
+		return Theme{}, fmt.Errorf("name is required")
+	}
+
+	palette, err := paletteField(raw)
+	if err != nil {
+		return Theme{}, err
+	}
+	specs, err := styleSpecs(raw)
+	if err != nil {
+		return Theme{}, err
+	}
+
+	styles := map[string]tcell.Style{}
+	for _, key := range requiredStyleKeys {
+		spec, ok := specs[key]
+		if !ok {
+			return Theme{}, fmt.Errorf("missing required style %q", key)
+		}
+		style, err := buildStyle(spec, palette)
+		if err != nil {
+			return Theme{}, fmt.Errorf("style %q: %w", key, err)
+		}
+		styles[key] = style
+	}
+
+	panelFileIcons := map[string]tcell.Color{}
+	allowedPanelIconStyles := map[string]struct{}{
+		"panel.row.cursor.active":           {},
+		"panel.row.cursor.inactive":         {},
+		"panel.row.cursor.selected":         {},
+		"panel.blocked.row.cursor":          {},
+		"panel.blocked.row.cursor.selected": {},
+	}
+	for key, spec := range specs {
+		if spec.Icon == "" {
+			continue
+		}
+		if _, ok := allowedPanelIconStyles[key]; !ok {
+			return Theme{}, fmt.Errorf("style %q: field \"icon\" is only allowed on panel cursor row styles", key)
+		}
+		iconColor, err := resolveColor(spec.Icon, palette)
+		if err != nil {
+			return Theme{}, fmt.Errorf("style %q icon: %w", key, err)
+		}
+		panelFileIcons[key] = iconColor
+	}
+	var panelFileIconFG map[string]tcell.Color
+	if len(panelFileIcons) > 0 {
+		panelFileIconFG = panelFileIcons
+	}
+
+	return Theme{
+		Name: name,
+
+		MenuBar:              styles["menu.bar"],
+		MenuBarSelected:      styles["menu.bar.selected"],
+		MenuDropdown:         styles["menu.dropdown"],
+		MenuDropdownSelected: styles["menu.dropdown.selected"],
+		MenuDropdownFrame:    styles["menu.dropdown.frame"],
+		MenuBarAccent:        styles["menu.bar.accent"],
+		MenuBarAlert:         styles["menu.bar.alert"],
+		MenuDropdownAccent:   styles["menu.dropdown.accent"],
+		MenuDetail:           styles["menu.detail"],
+
+		PanelFrame:           styles["panel.frame"],
+		PanelSurface:         styles["panel.surface"],
+		PanelTitleActive:     styles["panel.title.active"],
+		PanelTitleInactive:   styles["panel.title.inactive"],
+		PanelTitleVolumeFree: styles["panel.title.volume_free"],
+		PanelHeader:          styles["panel.header"],
+		PanelRowNormal:       styles["panel.row.normal"],
+		PanelRowDirectory:    styles["panel.row.directory"],
+		PanelRowSymlink:      styles["panel.row.symlink"],
+		PanelRowSelected:     styles["panel.row.selected"],
+		PanelCursorActive:    styles["panel.row.cursor.active"],
+		PanelCursorInactive:  styles["panel.row.cursor.inactive"],
+		PanelCursorSelected:  styles["panel.row.cursor.selected"],
+		PanelSyncIndicator:   styles["panel.sync.indicator"],
+		PanelFileIconFG:      panelFileIconFG,
+
+		PanelBlockedFrame:          styles["panel.blocked.frame"],
+		PanelBlockedSurface:        styles["panel.blocked.surface"],
+		PanelBlockedTitle:          styles["panel.blocked.title"],
+		PanelBlockedHeader:         styles["panel.blocked.header"],
+		PanelBlockedRowNormal:      styles["panel.blocked.row.normal"],
+		PanelBlockedRowDirectory:   styles["panel.blocked.row.directory"],
+		PanelBlockedRowSymlink:     styles["panel.blocked.row.symlink"],
+		PanelBlockedRowSelected:    styles["panel.blocked.row.selected"],
+		PanelBlockedCursor:         styles["panel.blocked.row.cursor"],
+		PanelBlockedCursorSelected: styles["panel.blocked.row.cursor.selected"],
+
+		PanelFolderDiskscan:            styles["panel.folder.diskscan"],
+		PanelFolderDiskscanExcluded:    styles["panel.folder.diskscan_excluded"],
+		PanelSpinner:                   styles["panel.spinner"],
+		PanelUsagePrefixNormal:         styles["panel.usage.prefix.normal"],
+		PanelUsagePrefixSelected:       styles["panel.usage.prefix.selected"],
+		PanelUsagePrefixCursorActive:   styles["panel.usage.prefix.cursor.active"],
+		PanelUsagePrefixCursorInactive: styles["panel.usage.prefix.cursor.inactive"],
+		PanelUsagePrefixCursorSelected: styles["panel.usage.prefix.cursor.selected"],
+
+		FuzzyInput:           styles["fuzzy.input"],
+		FuzzyInputNomatch:    styles["fuzzy.input.nomatch"],
+		FuzzyHighlight:       styles["fuzzy.highlight"],
+		FuzzyHighlightCursor: styles["fuzzy.highlight.cursor"],
+
+		DialogFrame:                    styles["dialog.frame"],
+		DialogTitle:                    styles["dialog.title"],
+		DialogText:                     styles["dialog.text"],
+		DialogSurface:                  styles["dialog.surface"],
+		DialogAccent:                   styles["dialog.accent"],
+		DialogInputActive:              styles["dialog.input.active"],
+		DialogInputActivePlaceholder:   styles["dialog.input.active.placeholder"],
+		DialogInputInactive:            styles["dialog.input.inactive"],
+		DialogInputInactivePlaceholder: styles["dialog.input.inactive.placeholder"],
+		DialogButtonNormal:             styles["dialog.button.normal"],
+		DialogButtonActive:             styles["dialog.button.active"],
+		DialogOptionInactive:           styles["dialog.option.inactive"],
+		DialogOptionActive:             styles["dialog.option.active"],
+		DialogOptionSelected:           styles["dialog.option.selected"],
+
+		StatusInfo:  styles["status.info"],
+		StatusWarn:  styles["status.warn"],
+		StatusError: styles["status.error"],
+
+		JobsRow:     styles["jobs.row"],
+		JobsRunning: styles["jobs.running"],
+		JobsDone:    styles["jobs.done"],
+		JobsFailed:  styles["jobs.failed"],
+
+		JobsProgressTrack:        styles["jobs.progress.track"],
+		JobsProgressFill:         styles["jobs.progress.fill"],
+		JobsProgressLabelOnFill:  styles["jobs.progress.label.on_fill"],
+		JobsProgressLabelOnTrack: styles["jobs.progress.label.on_track"],
+
+		FooterKey:   styles["footer.key"],
+		FooterLabel: styles["footer.label"],
+	}, nil
+}
+
+func stringField(raw map[string]any, key string) (string, error) {
+	value, ok := raw[key]
+	if !ok {
+		return "", fmt.Errorf("%s is required", key)
+	}
+	text, ok := value.(string)
+	if !ok {
+		return "", fmt.Errorf("%s must be a string", key)
+	}
+	return text, nil
+}
+
+func paletteField(raw map[string]any) (map[string]tcell.Color, error) {
+	value, ok := raw["palette"]
+	if !ok {
+		return nil, fmt.Errorf("palette is required")
+	}
+	table, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("palette must be a table")
+	}
+	palette := map[string]tcell.Color{}
+	for name, rawValue := range table {
+		color, err := parsePaletteEntry(rawValue)
+		if err != nil {
+			return nil, fmt.Errorf("palette.%s: %w", name, err)
+		}
+		palette[name] = color
+	}
+	return palette, nil
+}
+
+func parsePaletteEntry(rawValue any) (tcell.Color, error) {
+	switch v := rawValue.(type) {
+	case string:
+		if strings.EqualFold(strings.TrimSpace(v), "default") {
+			return tcell.ColorDefault, nil
+		}
+		return parseHexColor(v)
+	case int64:
+		if v < 0 || v > 255 {
+			return tcell.ColorDefault, fmt.Errorf("ANSI palette index must be 0-255, got %d", v)
+		}
+		return tcell.PaletteColor(int(v)), nil
+	case int:
+		if v < 0 || v > 255 {
+			return tcell.ColorDefault, fmt.Errorf("ANSI palette index must be 0-255, got %d", v)
+		}
+		return tcell.PaletteColor(v), nil
+	default:
+		return tcell.ColorDefault, fmt.Errorf("must be \"default\", #RRGGBB hex string, or ANSI palette index 0-255")
+	}
+}
+
+func styleSpecs(raw map[string]any) (map[string]styleSpec, error) {
+	value, ok := raw["styles"]
+	if !ok {
+		return nil, fmt.Errorf("styles is required")
+	}
+	table, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("styles must be a table")
+	}
+	specs := map[string]styleSpec{}
+	if err := flattenStyleSpecs("", table, specs); err != nil {
+		return nil, err
+	}
+	for key := range specs {
+		if !requiredStyleKeySet[key] {
+			return nil, fmt.Errorf("unknown style %q", key)
+		}
+	}
+	return specs, nil
+}
+
+func flattenStyleSpecs(prefix string, table map[string]any, specs map[string]styleSpec) error {
+	specFields := map[string]any{}
+	for key, value := range table {
+		nextKey := key
+		if prefix != "" {
+			nextKey = prefix + "." + key
+		}
+		if isStyleField(key) {
+			specFields[key] = value
+			continue
+		}
+		child, ok := value.(map[string]any)
+		if !ok {
+			return fmt.Errorf("style %q must be a table", nextKey)
+		}
+		if err := flattenStyleSpecs(nextKey, child, specs); err != nil {
+			return err
+		}
+	}
+	if len(specFields) > 0 {
+		if prefix == "" {
+			return fmt.Errorf("styles root cannot contain style fields")
+		}
+		spec, err := decodeStyleSpec(prefix, specFields)
+		if err != nil {
+			return err
+		}
+		specs[prefix] = spec
+	}
+	return nil
+}
+
+func isStyleField(key string) bool {
+	switch key {
+	case "fg", "bg", "bold", "underline", "reverse", "icon":
+		return true
+	default:
+		return false
+	}
+}
+
+func decodeStyleSpec(key string, table map[string]any) (styleSpec, error) {
+	var spec styleSpec
+	for field, value := range table {
+		switch field {
+		case "fg":
+			text, ok := value.(string)
+			if !ok {
+				return styleSpec{}, fmt.Errorf("style %q fg must be a string", key)
+			}
+			spec.FG = text
+		case "bg":
+			text, ok := value.(string)
+			if !ok {
+				return styleSpec{}, fmt.Errorf("style %q bg must be a string", key)
+			}
+			spec.BG = text
+		case "bold":
+			flag, ok := value.(bool)
+			if !ok {
+				return styleSpec{}, fmt.Errorf("style %q bold must be a bool", key)
+			}
+			spec.Bold = flag
+		case "underline":
+			flag, ok := value.(bool)
+			if !ok {
+				return styleSpec{}, fmt.Errorf("style %q underline must be a bool", key)
+			}
+			spec.Underline = flag
+		case "icon":
+			text, ok := value.(string)
+			if !ok {
+				return styleSpec{}, fmt.Errorf("style %q icon must be a string", key)
+			}
+			spec.Icon = text
+		case "reverse":
+			flag, ok := value.(bool)
+			if !ok {
+				return styleSpec{}, fmt.Errorf("style %q reverse must be a bool", key)
+			}
+			spec.Reverse = flag
+		default:
+			return styleSpec{}, fmt.Errorf("style %q has unknown field %q", key, field)
+		}
+	}
+	return spec, nil
+}
+
+func buildStyle(spec styleSpec, palette map[string]tcell.Color) (tcell.Style, error) {
+	style := tcell.StyleDefault
+	if spec.FG != "" {
+		color, err := resolveColor(spec.FG, palette)
+		if err != nil {
+			return tcell.Style{}, fmt.Errorf("fg: %w", err)
+		}
+		style = style.Foreground(color)
+	}
+	if spec.BG != "" {
+		color, err := resolveColor(spec.BG, palette)
+		if err != nil {
+			return tcell.Style{}, fmt.Errorf("bg: %w", err)
+		}
+		style = style.Background(color)
+	}
+	if spec.Bold {
+		style = style.Bold(true)
+	}
+	if spec.Underline {
+		style = style.Underline(true)
+	}
+	if spec.Reverse {
+		style = style.Reverse(true)
+	}
+	return style, nil
+}
+
+func resolveColor(value string, palette map[string]tcell.Color) (tcell.Color, error) {
+	if strings.HasPrefix(value, "#") {
+		return parseHexColor(value)
+	}
+	if strings.EqualFold(strings.TrimSpace(value), "default") {
+		return tcell.ColorDefault, nil
+	}
+	color, ok := palette[value]
+	if !ok {
+		return tcell.ColorDefault, fmt.Errorf("unknown color %q", value)
+	}
+	return color, nil
+}
+
+func parseHexColor(value string) (tcell.Color, error) {
+	if len(value) != 7 || value[0] != '#' {
+		return tcell.ColorDefault, fmt.Errorf("expected #RRGGBB, got %q", value)
+	}
+	var rgb [3]int32
+	for i := range rgb {
+		part := value[1+i*2 : 3+i*2]
+		parsed, err := strconv.ParseUint(part, 16, 8)
+		if err != nil {
+			return tcell.ColorDefault, fmt.Errorf("invalid hex color %q", value)
+		}
+		rgb[i] = int32(parsed)
+	}
+	return tcell.NewRGBColor(rgb[0], rgb[1], rgb[2]), nil
+}
+
+func makeStyleKeySet(keys []string) map[string]bool {
+	set := make(map[string]bool, len(keys))
+	for _, key := range keys {
+		set[key] = true
+	}
+	return set
+}
+
+func themeLabel(name string) string {
+	if label := builtInThemeLabels[name]; label != "" {
+		return label
+	}
+	label := strings.ReplaceAll(name, "-", " ")
+	words := strings.Fields(label)
+	for i, word := range words {
+		words[i] = strings.ToUpper(word[:1]) + word[1:]
+	}
+	if len(words) == 0 {
+		return name
+	}
+	return strings.Join(words, " ")
+}

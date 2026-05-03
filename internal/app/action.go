@@ -1,0 +1,40 @@
+package app
+
+import (
+	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ui"
+)
+
+// lookupActionForView resolves an action from global and optional view overlays.
+func lookupActionForView(ev *tcell.EventKey, global, jobs, commands *keymap.Map, vm ui.ViewMode) string {
+	if ev == nil || global == nil {
+		return ""
+	}
+	switch vm {
+	case ui.ViewCommands:
+		if commands != nil {
+			if id, ok := commands.Lookup(ev); ok {
+				return id
+			}
+		}
+	case ui.ViewJobs:
+		if jobs != nil {
+			if id, ok := jobs.Lookup(ev); ok {
+				return id
+			}
+		}
+	}
+	id, ok := global.Lookup(ev)
+	if !ok {
+		return ""
+	}
+	return id
+}
+
+func (a *App) actionFromKeyEvent(ev *tcell.EventKey) string {
+	if a == nil {
+		return ""
+	}
+	return lookupActionForView(ev, a.keys, a.keysJobs, a.keysCommands, a.model.ViewMode)
+}
