@@ -73,6 +73,7 @@ type JobEntry struct {
 	TotalBytes  int64
 	Error       string
 	StartedAt   time.Time
+	FinishedAt  time.Time
 	// ETABytesPerSec is smoothed throughput from recent progress samples (bytes/s).
 	ETABytesPerSec float64
 	// DisplaySpeedBPS is slower-smoothed B/s for the Queue Speed column.

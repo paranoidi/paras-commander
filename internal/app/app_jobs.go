@@ -665,7 +665,7 @@ func (a *App) updateJobMessage(ev jobs.Event) {
 	case jobs.EventCompleted:
 		a.setTransientMessage("Job completed", ui.MessageUrgencyInfo)
 	case jobs.EventFailed:
-		a.setTransientMessage(fmt.Sprintf("Job failed: %s", ev.Error), ui.MessageUrgencyError)
+		a.setTransientMessage(fmt.Sprintf("Job failed: %s", jobFailureBannerDetail(ev.Err, ev.Error)), ui.MessageUrgencyError)
 	case jobs.EventCanceled:
 		a.setTransientMessage("Job canceled", ui.MessageUrgencyInfo)
 	}

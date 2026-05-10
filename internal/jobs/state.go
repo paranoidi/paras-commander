@@ -461,6 +461,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 			JobID:  job.ID,
 			Status: StatusFailed,
 			Error:  transferErr.Error(),
+			Err:    transferErr,
 		})
 	default:
 		s.emit(Event{

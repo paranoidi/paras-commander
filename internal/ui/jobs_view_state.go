@@ -25,6 +25,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job) []JobEntry {
 			TotalBytes:        j.TotalBytes,
 			Error:             j.Error,
 			StartedAt:         j.StartedAt,
+			FinishedAt:        j.FinishedAt,
 			ETABytesPerSec:    j.ETABytesPerSec,
 			DisplaySpeedBPS:   j.DisplaySpeedBPS,
 			ThroughputSamples: append([]jobs.ThroughputSample(nil), j.ThroughputSamples...),

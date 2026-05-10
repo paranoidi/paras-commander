@@ -361,6 +361,28 @@ func jobsDetailPathBudget(pathMax int, linePrefix string) int {
 	return b
 }
 
+func jobFinishedWallDuration(j JobEntry, now time.Time) time.Duration {
+	if j.StartedAt.IsZero() {
+		return 0
+	}
+	end := j.FinishedAt
+	if end.IsZero() || end.Before(j.StartedAt) {
+		end = now
+	}
+	return end.Sub(j.StartedAt)
+}
+
+func detailDurationOrETALine(j JobEntry, now time.Time) string {
+	if jobs.Status(j.Status).IsFinished() {
+		label := jobs.FormatHumanDuration(jobFinishedWallDuration(j, now))
+		if j.StartedAt.IsZero() {
+			label = "—"
+		}
+		return fmt.Sprintf(" Took:        %s", label)
+	}
+	return fmt.Sprintf(" ETA:         %s", formatJobETAFull(j, now))
+}
+
 func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir string) []string {
 	if pathMax < 1 {
 		pathMax = jobsDetailLineBudgetFallback
@@ -407,7 +429,7 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	}
 	lines = append(lines, fmt.Sprintf(" Progress:    %d / %s files   %s / %s bytes",
 		j.DoneFiles, tfLabel, formatJobBytes(j.DoneBytes), formatJobBytes(j.TotalBytes)))
-	lines = append(lines, fmt.Sprintf(" ETA:         %s", formatJobETAFull(j, now)))
+	lines = append(lines, detailDurationOrETALine(j, now))
 	lines = append(lines, ThroughputDetailLines(j.ThroughputSamples, now, pathMax, j.Status == "running")...)
 	return lines
 }
@@ -565,8 +587,8 @@ func jobRowLeadingIcon(status string) string {
 	switch status {
 	case "queued", "running":
 		return "\uf144" //  ongoing (play circle)
-	case "waiting-decision":
-		return "\uf059" //  waiting for user decision
+	case "decision":
+		return "\U000f02d7" // 󰋗 input required (AGENTS.md statuses)
 	case "paused":
 		return "\uf28b" //  (nf-fa-pause-circle)
 	case "canceled":
@@ -582,7 +604,7 @@ func jobRowLeadingIcon(status string) string {
 
 func jobStatusStyle(status string, styles theme.Theme) tcell.Style {
 	switch status {
-	case "running", "queued", "paused", "waiting-decision":
+	case "running", "queued", "paused", "decision":
 		return styles.JobsRunning
 	case "completed":
 		return styles.JobsDone

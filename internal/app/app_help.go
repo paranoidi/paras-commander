@@ -165,28 +165,45 @@ func (a *App) effectiveKeyStrings(actionID string, defaults []string) []string {
 	return out
 }
 
-// joinKeyDisplay joins multiple key strings into a display string.
-// If preferredKey is non-empty and present in keys, use it alone.
+// joinKeyDisplay joins every binding into one readable string (comma-separated).
+// When preferredKey is non-empty and appears in keys, it is listed first; remaining
+// bindings keep their order from keys (deduped upstream).
 func joinKeyDisplay(keys []string, preferredKey string) string {
 	if len(keys) == 0 {
 		return ""
 	}
-	if preferredKey != "" {
-		for _, k := range keys {
-			if k == preferredKey {
-				return humanKeyStr(k)
-			}
-		}
-	}
-	if len(keys) == 1 {
-		return humanKeyStr(keys[0])
-	}
+	ordered := keysForHelpDisplay(keys, preferredKey)
 	out := ""
-	for i, k := range keys {
+	for i, k := range ordered {
 		if i > 0 {
 			out += ", "
 		}
 		out += humanKeyStr(k)
+	}
+	return out
+}
+
+func keysForHelpDisplay(keys []string, preferredKey string) []string {
+	if preferredKey == "" {
+		return append([]string(nil), keys...)
+	}
+	prefPresent := false
+	for _, k := range keys {
+		if k == preferredKey {
+			prefPresent = true
+			break
+		}
+	}
+	if !prefPresent {
+		return append([]string(nil), keys...)
+	}
+	out := make([]string, 0, len(keys))
+	out = append(out, preferredKey)
+	for _, k := range keys {
+		if k == preferredKey {
+			continue
+		}
+		out = append(out, k)
 	}
 	return out
 }

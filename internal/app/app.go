@@ -1395,6 +1395,36 @@ func transientErrorText(err error) string {
 	return err.Error()
 }
 
+const jobFailureBannerMaxRunes = 72
+
+// jobFailureBannerDetail returns short text for the status banner on job failure.
+// Full detail remains on the job record (jobs panel).
+func jobFailureBannerDetail(err error, fallback string) string {
+	if err != nil {
+		if short := transientErrorText(err); short != err.Error() {
+			return short
+		}
+		return truncateStatusBannerRunes(firstMessageLine(err.Error()), jobFailureBannerMaxRunes)
+	}
+	line := firstMessageLine(fallback)
+	if strings.Contains(strings.ToLower(line), "permission denied") {
+		return "permission denied"
+	}
+	return truncateStatusBannerRunes(line, jobFailureBannerMaxRunes)
+}
+
+func truncateStatusBannerRunes(s string, maxRunes int) string {
+	s = strings.TrimSpace(s)
+	if maxRunes <= 0 || s == "" {
+		return s
+	}
+	r := []rune(s)
+	if len(r) <= maxRunes {
+		return s
+	}
+	return strings.TrimSpace(string(r[:maxRunes])) + "…"
+}
+
 // firstMessageLine returns the first non-empty line of s (after trim), for errors that join
 // multiple messages with newlines.
 func firstMessageLine(s string) string {

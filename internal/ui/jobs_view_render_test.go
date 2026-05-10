@@ -58,3 +58,10 @@ func TestJobRowLeadingIconFailedUsesAlertGlyph(t *testing.T) {
 		t.Fatalf("failed icon = %q, want %q", got, want)
 	}
 }
+
+func TestJobRowLeadingIconDecisionUsesInputRequiredGlyph(t *testing.T) {
+	want := "\U000f02d7"
+	if got := jobRowLeadingIcon("decision"); got != want {
+		t.Fatalf("decision icon = %q, want %q", got, want)
+	}
+}

@@ -29,6 +29,8 @@ type Event struct {
 	// CurrentDestPath is set for EventProgress (destination path for the same item).
 	CurrentDestPath string
 	Error           string
+	// Err is set for EventFailed when the worker has the original error (for compact banners).
+	Err error
 	// Blocker is set when Type == EventJobBlockerRequest (file conflict or disk space).
 	Blocker *BlockerDetails
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -28,6 +29,25 @@ func TestTransientErrorTextPermissionDenied(t *testing.T) {
 	}
 	if got := transientErrorText(errors.New("other")); got != "other" {
 		t.Fatalf("transientErrorText() = %q, want literal message when not ErrPermission", got)
+	}
+}
+
+func TestJobFailureBannerDetail(t *testing.T) {
+	t.Parallel()
+	wrapped := fmt.Errorf(`create directory "/very/long/path/nested": %w`, fs.ErrPermission)
+	if got := jobFailureBannerDetail(wrapped, wrapped.Error()); got != "permission denied" {
+		t.Fatalf("jobFailureBannerDetail(wrapped) = %q, want permission denied", got)
+	}
+	if got := jobFailureBannerDetail(nil, `open "/tmp/x": permission denied`); got != "permission denied" {
+		t.Fatalf("jobFailureBannerDetail(nil, ...) = %q, want permission denied", got)
+	}
+	long := strings.Repeat("a", 120)
+	got := jobFailureBannerDetail(errors.New(long), "")
+	if got == "" || strings.TrimSuffix(got, "…") == got {
+		t.Fatalf("expected truncated banner with ellipsis, got %q", got)
+	}
+	if utf8.RuneCountInString(got) != jobFailureBannerMaxRunes+1 {
+		t.Fatalf("len runes = %d, want %d", utf8.RuneCountInString(got), jobFailureBannerMaxRunes+1)
 	}
 }
 

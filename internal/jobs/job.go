@@ -23,7 +23,7 @@ const (
 	StatusQueued          Status = "queued"
 	StatusPaused          Status = "paused"
 	StatusRunning         Status = "running"
-	StatusWaitingDecision Status = "waiting-decision"
+	StatusWaitingDecision Status = "decision"
 	StatusCompleted       Status = "completed"
 	StatusFailed          Status = "failed"
 	StatusCanceled        Status = "canceled"
