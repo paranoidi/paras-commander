@@ -535,7 +535,7 @@ func composeJobsProgressLabelCell(barCell tcell.Style, labelStyle tcell.Style) t
 
 // formatJobETAFull returns the computed ETA string without column truncation (for the Details panel).
 func formatJobETAFull(j JobEntry, now time.Time) string {
-	return jobs.FormatETA(jobs.Status(j.Status), j.StartedAt, now, j.TotalBytes, j.DoneBytes, j.TotalFiles, j.DoneFiles, j.ETABytesPerSec)
+	return jobs.FormatETA(jobs.Status(j.Status), j.StartedAt, now, j.TotalBytes, j.DoneBytes, j.TotalFiles, j.DoneFiles, j.ETABytesPerSec, j.ETAFilesPerSec)
 }
 
 // formatJobETA returns a shortened ETA for the Queue list column (jobsListColETA).

@@ -72,9 +72,11 @@ func IsCrossDeviceRenameError(err error) bool {
 // If preservePerms is true, the source file permissions are replicated.
 // If preserveTimes is true, the source file access/mod times are replicated.
 // If dir is true, dst is a directory and the source's basename is used.
+// If syncAfterWrite is true, the destination file is fsync'd before close (slow for many small files).
+// If tryKernelFastCopy is true (Linux), ioctl(FICLONE) is attempted before read/write (CoW when supported).
 // onWritten is called with the byte length of each successful destination write (optional).
 // ctx cancellation is checked before each read from src.
-func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, preserveTimes, dir bool, onWritten func(int64)) error {
+func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, preserveTimes, dir, syncAfterWrite, tryKernelFastCopy bool, onWritten func(int64)) error {
 	srcInfo, err := os.Lstat(src)
 	if err != nil {
 		return fmt.Errorf("stat source %q: %w", src, err)
@@ -99,23 +101,36 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 		return fmt.Errorf("create destination %q: %w", target, err)
 	}
 
-	buf := make([]byte, bufSize)
-	srcWrapped := io.Reader(srcFile)
-	if ctx != nil {
-		srcWrapped = &ctxReader{ctx: ctx, r: srcFile}
+	fastDone := false
+	if tryKernelFastCopy {
+		ok, ferr := tryKernelReflinkCopy(ctx, srcFile, dstFile, srcInfo.Size(), onWritten)
+		if ferr != nil {
+			_ = dstFile.Close()
+			return fmt.Errorf("copy content %q -> %q: %w", src, target, ferr)
+		}
+		fastDone = ok
 	}
-	dstWrapped := io.Writer(dstFile)
-	if onWritten != nil {
-		dstWrapped = &countingWriter{w: dstFile, fn: onWritten}
+	if !fastDone {
+		buf := make([]byte, bufSize)
+		srcWrapped := io.Reader(srcFile)
+		if ctx != nil {
+			srcWrapped = &ctxReader{ctx: ctx, r: srcFile}
+		}
+		dstWrapped := io.Writer(dstFile)
+		if onWritten != nil {
+			dstWrapped = &countingWriter{w: dstFile, fn: onWritten}
+		}
+		_, err = io.CopyBuffer(dstWrapped, srcWrapped, buf)
+		if err != nil {
+			_ = dstFile.Close()
+			return fmt.Errorf("copy content %q -> %q: %w", src, target, err)
+		}
 	}
-	_, err = io.CopyBuffer(dstWrapped, srcWrapped, buf)
-	if err != nil {
-		_ = dstFile.Close()
-		return fmt.Errorf("copy content %q -> %q: %w", src, target, err)
-	}
-	if err := dstFile.Sync(); err != nil {
-		_ = dstFile.Close()
-		return fmt.Errorf("sync destination %q: %w", target, err)
+	if syncAfterWrite {
+		if err := dstFile.Sync(); err != nil {
+			_ = dstFile.Close()
+			return fmt.Errorf("sync destination %q: %w", target, err)
+		}
 	}
 	if err := dstFile.Close(); err != nil {
 		return fmt.Errorf("close destination %q: %w", target, err)
@@ -137,7 +152,7 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 }
 
 // CopyDir recursively copies a directory tree from src to dst.
-func CopyDir(src, dst string, bufSize int, preservePerms, preserveTimes bool) error {
+func CopyDir(src, dst string, bufSize int, preservePerms, preserveTimes, syncAfterWrite bool) error {
 	srcInfo, err := os.Lstat(src)
 	if err != nil {
 		return fmt.Errorf("stat source dir %q: %w", src, err)
@@ -170,7 +185,7 @@ func CopyDir(src, dst string, bufSize int, preservePerms, preserveTimes bool) er
 		}
 
 		if childInfo.IsDir() {
-			if err := CopyDir(childSrc, destDir, bufSize, preservePerms, preserveTimes); err != nil {
+			if err := CopyDir(childSrc, destDir, bufSize, preservePerms, preserveTimes, syncAfterWrite); err != nil {
 				return err
 			}
 		} else if IsSymlink(childInfo) {
@@ -178,7 +193,7 @@ func CopyDir(src, dst string, bufSize int, preservePerms, preserveTimes bool) er
 				return err
 			}
 		} else if childInfo.Mode().IsRegular() {
-			if err := CopyFile(context.Background(), childSrc, destDir, bufSize, preservePerms, preserveTimes, true, nil); err != nil {
+			if err := CopyFile(context.Background(), childSrc, destDir, bufSize, preservePerms, preserveTimes, true, syncAfterWrite, false, nil); err != nil {
 				return err
 			}
 		} else {

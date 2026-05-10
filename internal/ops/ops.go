@@ -33,14 +33,24 @@ type Options struct {
 	PreservePermissions bool
 	PreserveTimestamps  bool
 	CopyBufferKiB       int
+	// SyncAfterEachFile fsyncs each destination file after copy (durable but slow for many files).
+	SyncAfterEachFile bool
+	// DiskSpaceCheckMinFileBytes runs per-file EnsureDiskSpace only when the source file is at least this large.
+	// Zero means check before every file (legacy behavior).
+	DiskSpaceCheckMinFileBytes int64
+	// CowFileCloning enables Linux FICLONE (CoW) when supported, like Midnight Commander's "file cloning".
+	CowFileCloning bool
 }
 
 // DefaultOptions returns the recommended v1 operation defaults.
 func DefaultOptions() Options {
 	return Options{
-		PreservePermissions: true,
-		PreserveTimestamps:  true,
-		CopyBufferKiB:       256,
+		PreservePermissions:        true,
+		PreserveTimestamps:         true,
+		CopyBufferKiB:              256,
+		SyncAfterEachFile:          false,
+		DiskSpaceCheckMinFileBytes: 50 * 1024 * 1024,
+		CowFileCloning:             true,
 	}
 }
 
@@ -106,7 +116,7 @@ func CopyRegular(src, dest string, opts Options, progress ProgressCallback) erro
 		return fmt.Errorf("stat source %q: %w", src, err)
 	}
 
-	if err := localfs.CopyFile(context.Background(), src, dest, bufSize, opts.PreservePermissions, opts.PreserveTimestamps, false, nil); err != nil {
+	if err := localfs.CopyFile(context.Background(), src, dest, bufSize, opts.PreservePermissions, opts.PreserveTimestamps, false, opts.SyncAfterEachFile, opts.CowFileCloning, nil); err != nil {
 		return err
 	}
 
@@ -131,18 +141,18 @@ func CopySymlink(src, dest string, progress ProgressCallback) error {
 	return nil
 }
 
-// planItem describes a single file to copy/move.
-type planItem struct {
-	src       string
-	dst       string
-	isDir     bool
-	isSymlink bool
-	fileSize  int64
+// PlanItem describes a single file to copy/move.
+type PlanItem struct {
+	Src       string
+	Dst       string
+	IsDir     bool
+	IsSymlink bool
+	FileSize  int64
 }
 
 // BuildPlan walks sources and creates a flat list of files to copy/move.
-func BuildPlan(sources []string, destination string, followDirChildren bool) ([]planItem, error) {
-	var items []planItem
+func BuildPlan(sources []string, destination string, followDirChildren bool) ([]PlanItem, error) {
+	var items []PlanItem
 	for _, src := range sources {
 		srcInfo, err := os.Lstat(src)
 		if err != nil {
@@ -161,20 +171,30 @@ func BuildPlan(sources []string, destination string, followDirChildren bool) ([]
 				}
 				childDst := filepath.Join(dst, rel)
 				if info.IsDir() {
-					items = append(items, planItem{
-						src:       path,
-						dst:       childDst,
-						isDir:     true,
-						isSymlink: localfs.IsSymlink(info),
+					items = append(items, PlanItem{
+						Src:       path,
+						Dst:       childDst,
+						IsDir:     true,
+						IsSymlink: localfs.IsSymlink(info),
+					})
+				} else if localfs.IsSymlink(info) {
+					items = append(items, PlanItem{
+						Src:       path,
+						Dst:       childDst,
+						IsDir:     false,
+						IsSymlink: true,
+						FileSize:  0,
+					})
+				} else if info.Mode().IsRegular() {
+					items = append(items, PlanItem{
+						Src:       path,
+						Dst:       childDst,
+						IsDir:     false,
+						IsSymlink: false,
+						FileSize:  localfs.GetFileSize(info),
 					})
 				} else {
-					items = append(items, planItem{
-						src:       path,
-						dst:       childDst,
-						isDir:     false,
-						isSymlink: localfs.IsSymlink(info),
-						fileSize:  localfs.GetFileSize(info),
-					})
+					return fmt.Errorf("unsupported file type for %q (mode %v)", path, info.Mode())
 				}
 				return nil
 			})
@@ -182,15 +202,27 @@ func BuildPlan(sources []string, destination string, followDirChildren bool) ([]
 				return nil, err
 			}
 		} else {
-			// Regular file or symlink.
 			dst := ResolveDestination(src, destination)
-			items = append(items, planItem{
-				src:       src,
-				dst:       dst,
-				isDir:     false,
-				isSymlink: localfs.IsSymlink(srcInfo),
-				fileSize:  localfs.GetFileSize(srcInfo),
-			})
+			switch {
+			case localfs.IsSymlink(srcInfo):
+				items = append(items, PlanItem{
+					Src:       src,
+					Dst:       dst,
+					IsDir:     false,
+					IsSymlink: true,
+					FileSize:  0,
+				})
+			case srcInfo.Mode().IsRegular():
+				items = append(items, PlanItem{
+					Src:       src,
+					Dst:       dst,
+					IsDir:     false,
+					IsSymlink: false,
+					FileSize:  localfs.GetFileSize(srcInfo),
+				})
+			default:
+				return nil, fmt.Errorf("unsupported file type for %q (mode %v)", src, srcInfo.Mode())
+			}
 		}
 	}
 	return items, nil

@@ -150,6 +150,13 @@ type OperationsConfig struct {
 	PreservePermissions bool `toml:"preserve_permissions"`
 	PreserveTimestamps  bool `toml:"preserve_timestamps"`
 	CopyBufferKiB       int  `toml:"copy_buffer_kib"`
+	// SyncAfterEachFile fsyncs each copied file before closing (durable; slow for many small files).
+	SyncAfterEachFile bool `toml:"sync_after_each_file"`
+	// DiskSpaceCheckMinFileBytes: per-file mid-copy disk checks run only when the source file size is >= this value.
+	// Zero means run the check before every file.
+	DiskSpaceCheckMinFileBytes int64 `toml:"disk_space_check_min_file_bytes"`
+	// CowFileCloning enables Linux FICLONE (CoW) when supported (similar to Midnight Commander file cloning).
+	CowFileCloning bool `toml:"cow_file_cloning"`
 }
 
 type LoggingConfig struct {
@@ -203,9 +210,12 @@ func Default() Config {
 			ProgressEmitMinIntervalMS: 200,
 		},
 		Operations: OperationsConfig{
-			PreservePermissions: true,
-			PreserveTimestamps:  true,
-			CopyBufferKiB:       256,
+			PreservePermissions:        true,
+			PreserveTimestamps:         true,
+			CopyBufferKiB:              256,
+			SyncAfterEachFile:          false,
+			DiskSpaceCheckMinFileBytes: 50 * 1024 * 1024,
+			CowFileCloning:             true,
 		},
 		Logging: LoggingConfig{
 			Enabled: false,
@@ -625,6 +635,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Operations.CopyBufferKiB <= 0 {
 		c.Operations.CopyBufferKiB = defaults.Operations.CopyBufferKiB
+	}
+	if c.Operations.DiskSpaceCheckMinFileBytes < 0 {
+		c.Operations.DiskSpaceCheckMinFileBytes = defaults.Operations.DiskSpaceCheckMinFileBytes
 	}
 	if !validLoggingLevel(c.Logging.Level) {
 		c.Logging.Level = defaults.Logging.Level

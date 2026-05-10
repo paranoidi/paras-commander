@@ -58,13 +58,16 @@ type Job struct {
 
 	// ETABytesPerSec is an EMA-smoothed recent transfer rate (bytes/s) for ETA display.
 	ETABytesPerSec float64
+	// ETAFilesPerSec is an EMA-smoothed recent completion rate (files/s) for ETA display.
+	ETAFilesPerSec float64
 	// DisplaySpeedBPS is a slower EMA for queue throughput column display (bytes/s).
 	DisplaySpeedBPS float64
 	// ThroughputSamples holds recent instantaneous B/s samples with wall time for the details sparkline.
 	ThroughputSamples []ThroughputSample
-	// LastProgressSnapshotAt and LastProgressDoneBytes sample DoneBytes for ETA smoothing.
+	// LastProgressSnapshotAt, LastProgressDoneBytes, and LastProgressDoneFiles sample progress for ETA smoothing.
 	LastProgressSnapshotAt time.Time
 	LastProgressDoneBytes int64
+	LastProgressDoneFiles int
 
 	// PendingBlocker is non-nil while the job waits for user resolution (conflict or disk space).
 	PendingBlocker *BlockerDetails

@@ -674,9 +674,12 @@ func (a *App) updateJobMessage(ev jobs.Event) {
 func jobTransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 		opts := ops.Options{
-			PreservePermissions: opsCfg.PreservePermissions,
-			PreserveTimestamps:  opsCfg.PreserveTimestamps,
-			CopyBufferKiB:       opsCfg.CopyBufferKiB,
+			PreservePermissions:        opsCfg.PreservePermissions,
+			PreserveTimestamps:         opsCfg.PreserveTimestamps,
+			CopyBufferKiB:              opsCfg.CopyBufferKiB,
+			SyncAfterEachFile:          opsCfg.SyncAfterEachFile,
+			DiskSpaceCheckMinFileBytes: opsCfg.DiskSpaceCheckMinFileBytes,
+			CowFileCloning:             opsCfg.CowFileCloning,
 		}
 		throttle := ops.ProgressEmitThrottle{
 			MinBytes:    int64(jobsCfg.ProgressEmitMinBytes),
@@ -714,8 +717,7 @@ func jobTransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) 
 				return false, nil
 			}
 		}
-		// MovePlanTotals matches CopyPlanTotals (same prepare + BuildPlan).
-		tf, tb, planErr := ops.CopyPlanTotals(job.Sources, job.Destination)
+		plan, tf, tb, planErr := ops.BuildCopyPlanWithTotals(job.Sources, job.Destination)
 		if planErr == nil {
 			emit(jobs.Event{
 				Type:       jobs.EventPlanTotals,
@@ -746,7 +748,11 @@ func jobTransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) 
 		var err error
 		switch job.Type {
 		case jobs.TypeCopy:
-			doneFiles, doneBytes, err = ops.ExecuteCopy(ctx, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
+			if planErr != nil {
+				doneFiles, doneBytes, err = ops.ExecuteCopy(ctx, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
+			} else {
+				doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlan(ctx, plan, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
+			}
 		case jobs.TypeMove:
 			doneFiles, doneBytes, err = ops.ExecuteMove(ctx, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
 		default:

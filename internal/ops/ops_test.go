@@ -716,6 +716,51 @@ func TestCopyRegularFile(t *testing.T) {
 	}
 }
 
+func TestExecuteCopyUsingPlanMatchesExecuteCopy(t *testing.T) {
+	srcDir := t.TempDir()
+	srcFile := filepath.Join(srcDir, "same.txt")
+	if err := os.WriteFile(srcFile, []byte("payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dstA := filepath.Join(t.TempDir(), "da")
+	dstB := filepath.Join(t.TempDir(), "db")
+	if err := os.Mkdir(dstA, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(dstB, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	opts := Options{PreservePermissions: false, PreserveTimestamps: false, CopyBufferKiB: 8, CowFileCloning: false}
+
+	plan, _, _, err := BuildCopyPlanWithTotals([]string{srcFile}, dstA)
+	if err != nil {
+		t.Fatalf("BuildCopyPlanWithTotals: %v", err)
+	}
+	da, ba, err := ExecuteCopyUsingPlan(context.Background(), plan, []string{srcFile}, dstA, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("ExecuteCopyUsingPlan: %v", err)
+	}
+	db, bb, err := ExecuteCopy(context.Background(), []string{srcFile}, dstB, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("ExecuteCopy: %v", err)
+	}
+	if da != db || ba != bb {
+		t.Fatalf("usingPlan vs ExecuteCopy: files %d vs %d bytes %d vs %d", da, db, ba, bb)
+	}
+	gotA, _ := os.ReadFile(filepath.Join(dstA, "same.txt"))
+	gotB, _ := os.ReadFile(filepath.Join(dstB, "same.txt"))
+	if string(gotA) != string(gotB) {
+		t.Fatalf("dest content differs")
+	}
+}
+
+func TestExecuteCopyUsingPlanNilPlanErrors(t *testing.T) {
+	_, _, err := ExecuteCopyUsingPlan(context.Background(), nil, nil, "", DefaultOptions(), ProgressEmitThrottle{}, nil, nil, nil)
+	if err == nil {
+		t.Fatal("ExecuteCopyUsingPlan(nil plan) error = nil, want error")
+	}
+}
+
 func TestCopyGranularProgressMultipleEmits(t *testing.T) {
 	srcDir := t.TempDir()
 	dstDir := t.TempDir()

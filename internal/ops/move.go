@@ -81,7 +81,7 @@ func ExecuteMove(ctx context.Context, sources []string, destination string, opts
 		return cumulative, 0, nil
 	}
 
-	_, tb, planErr := CopyPlanTotals(sources, destination)
+	plan, _, tb, planErr := BuildCopyPlanWithTotals(sources, destination)
 	if planErr != nil {
 		return 0, 0, fmt.Errorf("move copy phase plan: %w", planErr)
 	}
@@ -89,7 +89,7 @@ func ExecuteMove(ctx context.Context, sources []string, destination string, opts
 		return 0, 0, err
 	}
 
-	doneFiles, doneBytes, err := ExecuteCopy(ctx, sources, destination, opts, throttle, progress, resolver, diskWait)
+	doneFiles, doneBytes, err := ExecuteCopyUsingPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
 	if err != nil {
 		return doneFiles, doneBytes, fmt.Errorf("move copy phase: %w", err)
 	}

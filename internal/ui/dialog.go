@@ -76,6 +76,8 @@ type JobEntry struct {
 	FinishedAt  time.Time
 	// ETABytesPerSec is smoothed throughput from recent progress samples (bytes/s).
 	ETABytesPerSec float64
+	// ETAFilesPerSec is smoothed completion rate from recent progress samples (files/s).
+	ETAFilesPerSec float64
 	// DisplaySpeedBPS is slower-smoothed B/s for the Queue Speed column.
 	DisplaySpeedBPS float64
 	// ThroughputSamples is a snapshot of recent instantaneous B/s with timestamps (details chart).

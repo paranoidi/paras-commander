@@ -15,18 +15,24 @@ import (
 // false to skip, and an error to abort.
 type ConflictResolver func(src, dest string, facts FileConflictFacts) (overwrite bool, err error)
 
+// BuildCopyPlanWithTotals prepares the destination (when needed), walks sources, and returns the flat plan plus totals.
+func BuildCopyPlanWithTotals(sources []string, destination string) (plan []PlanItem, totalFiles int, totalBytes int64, err error) {
+	if err := prepareCopyDestination(sources, destination); err != nil {
+		return nil, 0, 0, err
+	}
+	p, err := BuildPlan(sources, destination, true)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("build copy plan: %w", err)
+	}
+	tf, tb := summarizePlan(p)
+	return p, tf, tb, nil
+}
+
 // CopyPlanTotals returns the file count and byte sum for a copy plan after the same
 // destination validation as ExecuteCopy. Used to populate job totals before transfer.
 func CopyPlanTotals(sources []string, destination string) (totalFiles int, totalBytes int64, err error) {
-	if err := prepareCopyDestination(sources, destination); err != nil {
-		return 0, 0, err
-	}
-	plan, err := BuildPlan(sources, destination, true)
-	if err != nil {
-		return 0, 0, fmt.Errorf("build copy plan: %w", err)
-	}
-	tf, tb := summarizePlan(plan)
-	return tf, tb, nil
+	_, tf, tb, err := BuildCopyPlanWithTotals(sources, destination)
+	return tf, tb, err
 }
 
 func prepareCopyDestination(sources []string, destination string) error {
@@ -54,11 +60,11 @@ func prepareCopyDestination(sources []string, destination string) error {
 	return nil
 }
 
-func summarizePlan(plan []planItem) (totalFiles int, totalBytes int64) {
+func summarizePlan(plan []PlanItem) (totalFiles int, totalBytes int64) {
 	for _, item := range plan {
 		totalFiles++
-		if !item.isDir && !item.isSymlink {
-			totalBytes += item.fileSize
+		if !item.IsDir && !item.IsSymlink {
+			totalBytes += item.FileSize
 		}
 	}
 	return totalFiles, totalBytes
@@ -69,13 +75,31 @@ func summarizePlan(plan []planItem) (totalFiles int, totalBytes int64) {
 // Returns (doneFiles, doneBytes, error).
 // diskWait is optional; when set, regular file copies wait until there is enough free space on the destination volume.
 func ExecuteCopy(ctx context.Context, sources []string, destination string, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
-	if err := prepareCopyDestination(sources, destination); err != nil {
-		return 0, 0, err
-	}
+	return executeCopyWithPlan(ctx, nil, sources, destination, opts, throttle, progress, resolver, diskWait)
+}
 
-	plan, err := BuildPlan(sources, destination, true)
-	if err != nil {
-		return 0, 0, fmt.Errorf("build copy plan: %w", err)
+// ExecuteCopyUsingPlan runs the copy loop using a plan from BuildCopyPlanWithTotals for the same sources and destination
+// (prepareCopyDestination and BuildPlan are skipped). Caller must not mutate the plan slice during the call.
+func ExecuteCopyUsingPlan(ctx context.Context, plan []PlanItem, sources []string, destination string, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+	if plan == nil {
+		return 0, 0, fmt.Errorf("ExecuteCopyUsingPlan: plan is nil")
+	}
+	return executeCopyWithPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
+}
+
+func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources []string, destination string, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+	var plan []PlanItem
+	var err error
+	if planOptional != nil {
+		plan = planOptional
+	} else {
+		if err := prepareCopyDestination(sources, destination); err != nil {
+			return 0, 0, err
+		}
+		plan, err = BuildPlan(sources, destination, true)
+		if err != nil {
+			return 0, 0, fmt.Errorf("build copy plan: %w", err)
+		}
 	}
 
 	th := effectiveProgressThrottle(throttle)
@@ -105,44 +129,38 @@ func ExecuteCopy(ctx context.Context, sources []string, destination string, opts
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
 		}
-		if item.isDir && !item.isSymlink {
-			if err := os.MkdirAll(item.dst, 0o755); err != nil {
-				return doneFiles, doneBytes, fmt.Errorf("create directory %q: %w", item.dst, err)
+		if item.IsDir && !item.IsSymlink {
+			if err := os.MkdirAll(item.Dst, 0o755); err != nil {
+				return doneFiles, doneBytes, fmt.Errorf("create directory %q: %w", item.Dst, err)
 			}
 			doneFiles++
 			if progress != nil {
-				progress(item.src, item.dst, doneFiles, doneBytes)
+				progress(item.Src, item.Dst, doneFiles, doneBytes)
 			}
 			continue
 		}
 
-		if item.isSymlink {
-			if err := copySymlinkWithConflict(item.src, item.dst, resolver); err != nil {
+		if item.IsSymlink {
+			if err := copySymlinkWithConflict(item.Src, item.Dst, resolver); err != nil {
 				return doneFiles, doneBytes, err
 			}
 			doneFiles++
 			if progress != nil {
-				progress(item.src, item.dst, doneFiles, doneBytes)
+				progress(item.Src, item.Dst, doneFiles, doneBytes)
 			}
 			continue
 		}
 
-		srcInfo, err := os.Lstat(item.src)
-		if err != nil {
-			return doneFiles, doneBytes, fmt.Errorf("stat %q: %w", item.src, err)
-		}
-		if !srcInfo.Mode().IsRegular() {
-			return doneFiles, doneBytes, fmt.Errorf("unsupported file type for %q (mode %v)", item.src, srcInfo.Mode())
+		if diskWait != nil && (opts.DiskSpaceCheckMinFileBytes <= 0 || item.FileSize >= opts.DiskSpaceCheckMinFileBytes) {
+			if err := EnsureDiskSpace(diskWait, destination, item.FileSize, item.Src); err != nil {
+				return doneFiles, doneBytes, err
+			}
 		}
 
-		if err := EnsureDiskSpace(diskWait, destination, item.fileSize, item.src); err != nil {
-			return doneFiles, doneBytes, err
-		}
-
-		copied, err := copyFileWithConflict(ctx, item.src, item.dst, opts, resolver, func(delta int64) {
+		copied, err := copyFileWithConflict(ctx, item.Src, item.Dst, opts, resolver, func(delta int64) {
 			doneBytes += delta
 			bytesSinceEmit += delta
-			emitProgress(item.src, item.dst, doneFiles, doneBytes, false)
+			emitProgress(item.Src, item.Dst, doneFiles, doneBytes, false)
 		})
 		if err != nil {
 			return doneFiles, doneBytes, err
@@ -152,7 +170,7 @@ func ExecuteCopy(ctx context.Context, sources []string, destination string, opts
 		}
 
 		doneFiles++
-		emitProgress(item.src, item.dst, doneFiles, doneBytes, true)
+		emitProgress(item.Src, item.Dst, doneFiles, doneBytes, true)
 	}
 
 	return doneFiles, doneBytes, nil
@@ -183,7 +201,7 @@ func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, re
 		return false, fmt.Errorf("stat destination %q: %w", dst, err)
 	}
 
-	err = localfs.CopyFile(ctx, src, dst, BufferSize(opts.CopyBufferKiB), opts.PreservePermissions, opts.PreserveTimestamps, false, onWritten)
+	err = localfs.CopyFile(ctx, src, dst, BufferSize(opts.CopyBufferKiB), opts.PreservePermissions, opts.PreserveTimestamps, false, opts.SyncAfterEachFile, opts.CowFileCloning, onWritten)
 	if err != nil {
 		return false, err
 	}

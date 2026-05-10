@@ -8,6 +8,18 @@ import (
 	"testing"
 )
 
+func TestValidateClampsNegativeDiskSpaceCheckMinFileBytes(t *testing.T) {
+	cfg := Default()
+	cfg.Operations.DiskSpaceCheckMinFileBytes = -1
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	want := int64(50 * 1024 * 1024)
+	if cfg.Operations.DiskSpaceCheckMinFileBytes != want {
+		t.Fatalf("DiskSpaceCheckMinFileBytes = %d, want %d", cfg.Operations.DiskSpaceCheckMinFileBytes, want)
+	}
+}
+
 func TestValidateClampsJobsProgressEmit(t *testing.T) {
 	cfg := Default()
 	cfg.Jobs.ProgressEmitMinBytes = 100

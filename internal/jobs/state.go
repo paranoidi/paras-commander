@@ -207,7 +207,7 @@ func (s *State) ApplyEvent(ev Event) {
 			j.DoneFiles = ev.DoneFiles
 			j.DoneBytes = ev.DoneBytes
 			j.CurrentPath = ev.CurrentPath
-			ApplyProgressETA(j, ev.DoneBytes, time.Now())
+			ApplyProgressETA(j, ev.DoneBytes, ev.DoneFiles, time.Now())
 			j.PendingBlocker = nil
 		}
 	case EventCompleted:
