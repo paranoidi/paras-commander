@@ -47,12 +47,3 @@ func TestRetentionPolicyKeepFinished(t *testing.T) {
 	}
 }
 
-func TestDefaultRetentionPolicy(t *testing.T) {
-	p := DefaultRetentionPolicy()
-	if !p.ShowFinished {
-		t.Fatal("default should show finished")
-	}
-	if p.KeepFinished != 20 {
-		t.Fatalf("KeepFinished = %d, want 20", p.KeepFinished)
-	}
-}

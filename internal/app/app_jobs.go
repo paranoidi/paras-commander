@@ -524,11 +524,7 @@ func (a *App) jobQueue() *jobs.Queue {
 }
 
 func (a *App) jobsWakeDebounce() time.Duration {
-	ms := a.config.Jobs.RefreshDebounceMS
-	if ms <= 0 {
-		return 150 * time.Millisecond
-	}
-	return time.Duration(ms) * time.Millisecond
+	return time.Duration(a.config.Jobs.RefreshDebounceMS) * time.Millisecond
 }
 
 // onJobEmitted wakes PollEvent so the main loop can drain jobs.Events().

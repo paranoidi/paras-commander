@@ -17,10 +17,3 @@ func (p RetentionPolicy) Apply(q *Queue) {
 	}
 }
 
-// DefaultRetentionPolicy returns sensible defaults for v1.
-func DefaultRetentionPolicy() RetentionPolicy {
-	return RetentionPolicy{
-		ShowFinished: true,
-		KeepFinished: 20,
-	}
-}
