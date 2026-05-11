@@ -22,7 +22,7 @@ func TestWalkFolderFlatSizes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tree := diskusage.WalkFolder(root, nil, nil, nil)
+	tree := diskusage.WalkFolder(root, nil, nil, nil, 4)
 	got := map[string]int64{}
 	diskusage.FlattenSizes(tree, got)
 

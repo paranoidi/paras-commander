@@ -24,8 +24,8 @@ const (
 	// keymap package; config only tolerates them as pass-through so a
 	// single bootstrap file can carry both general settings and the
 	// full shortcut map (global plus jobs-view overlay).
-	actionKeysTable        = "action_keys"
-	jobsActionKeysTable    = "jobs_action_keys"
+	actionKeysTable         = "action_keys"
+	jobsActionKeysTable     = "jobs_action_keys"
 	commandsActionKeysTable = "commands_action_keys"
 
 	ThemeDefault    = "default"
@@ -82,28 +82,31 @@ func (paths Paths) withDerivedThemesDir() Paths {
 
 // Config is the parsed general application configuration.
 type Config struct {
-	Theme                           string           `toml:"theme"`
-	ShowHidden                      bool             `toml:"show_hidden"`
-	ConfirmDelete                   bool             `toml:"confirm_delete"`
-	ConfirmOverwrite                bool             `toml:"confirm_overwrite"`
-	CaseInsensitiveFilter           bool             `toml:"case_insensitive_filter"`
-	JobConcurrency                  int              `toml:"job_concurrency"`
-	StartupPathMode                 string           `toml:"startup_path_mode"`
-	DefaultSort                     string           `toml:"default_sort"`
-	SortReverse                     bool             `toml:"sort_reverse"`
-	DirectoriesFirst                bool             `toml:"directories_first"`
-	DiskUsageIdleSizeSort           bool             `toml:"disk_usage_idle_size_sort"`
-	DiskUsageIdleSortDelayMS        int              `toml:"disk_usage_idle_sort_delay_ms"`
-	DiskUsageDescendIntoMountPoints bool             `toml:"disk_usage_descend_into_mount_points"`
-	FollowSymlinksOnNavigation      bool             `toml:"follow_symlinks_on_navigation"`
-	OpenFilesExternally             bool             `toml:"open_files_externally"`
-	DeleteMode                      string           `toml:"delete_mode"`
-	UI                              UIConfig         `toml:"ui"`
-	Filter                          FilterConfig     `toml:"filter"`
-	Jobs                            JobsConfig       `toml:"jobs"`
-	Operations                      OperationsConfig `toml:"operations"`
-	Logging                         LoggingConfig    `toml:"logging"`
-	Bookmarks                       BookmarksConfig  `toml:"bookmarks"`
+	Theme                           string `toml:"theme"`
+	ShowHidden                      bool   `toml:"show_hidden"`
+	ConfirmDelete                   bool   `toml:"confirm_delete"`
+	ConfirmOverwrite                bool   `toml:"confirm_overwrite"`
+	CaseInsensitiveFilter           bool   `toml:"case_insensitive_filter"`
+	JobConcurrency                  int    `toml:"job_concurrency"`
+	StartupPathMode                 string `toml:"startup_path_mode"`
+	DefaultSort                     string `toml:"default_sort"`
+	SortReverse                     bool   `toml:"sort_reverse"`
+	DirectoriesFirst                bool   `toml:"directories_first"`
+	DiskUsageIdleSizeSort           bool   `toml:"disk_usage_idle_size_sort"`
+	DiskUsageIdleSortDelayMS        int    `toml:"disk_usage_idle_sort_delay_ms"`
+	DiskUsageDescendIntoMountPoints bool   `toml:"disk_usage_descend_into_mount_points"`
+	// DiskUsageWalkConcurrency limits concurrent subdirectory branches during a disk-usage walk (minimum 1 after Validate).
+	// Low values spare HDD/NAS; raise for fast local SSDs.
+	DiskUsageWalkConcurrency   int              `toml:"disk_usage_walk_concurrency"`
+	FollowSymlinksOnNavigation bool             `toml:"follow_symlinks_on_navigation"`
+	OpenFilesExternally        bool             `toml:"open_files_externally"`
+	DeleteMode                 string           `toml:"delete_mode"`
+	UI                         UIConfig         `toml:"ui"`
+	Filter                     FilterConfig     `toml:"filter"`
+	Jobs                       JobsConfig       `toml:"jobs"`
+	Operations                 OperationsConfig `toml:"operations"`
+	Logging                    LoggingConfig    `toml:"logging"`
+	Bookmarks                  BookmarksConfig  `toml:"bookmarks"`
 }
 
 // BookmarksConfig controls fzf-marks compatible directory marks.
@@ -182,6 +185,7 @@ func Default() Config {
 		DiskUsageIdleSizeSort:           true,
 		DiskUsageIdleSortDelayMS:        500,
 		DiskUsageDescendIntoMountPoints: false,
+		DiskUsageWalkConcurrency:        4,
 		FollowSymlinksOnNavigation:      true,
 		OpenFilesExternally:             true,
 		DeleteMode:                      DeletePermanent,
@@ -567,6 +571,9 @@ func (c *Config) Validate() error {
 	}
 	if c.DiskUsageIdleSortDelayMS <= 0 {
 		c.DiskUsageIdleSortDelayMS = defaults.DiskUsageIdleSortDelayMS
+	}
+	if c.DiskUsageWalkConcurrency < 1 {
+		c.DiskUsageWalkConcurrency = defaults.DiskUsageWalkConcurrency
 	}
 	if !c.sortModeValid(c.DefaultSort) {
 		c.DefaultSort = defaults.DefaultSort

@@ -48,10 +48,19 @@ drained:
 	if jobFinishedToast {
 		a.setTransientMessage("Disk usage scan finished", ui.MessageUrgencyInfo)
 	}
-	if needRender {
+	if !needRender {
+		return
+	}
+	// While a scan is in flight, coalesce paint/sort work so bursty subtree completions do not
+	// stall the PollEvent loop; job completion still flushes immediately.
+	flushNow := jobFinishedToast || !a.diskUsageScanBusy()
+	if flushNow {
+		a.stopDiskUsageRedrawDebounce()
 		a.resortPanelsDiskUsageSorted()
 		a.render()
+		return
 	}
+	a.scheduleDiskUsageRedrawDebounced()
 }
 
 func (a *App) resortPanelsDiskUsageSorted() {
@@ -245,6 +254,28 @@ func (a *App) armSpinnerRedrawTimer() {
 	a.spinnerRedrawTimer = time.AfterFunc(delay, func() {
 		a.spinnerRedrawTimer = nil
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(spinnerTickPayload{}))
+	})
+}
+
+func (a *App) stopDiskUsageRedrawDebounce() {
+	if a.diskUsageRedrawTimer == nil {
+		return
+	}
+	a.diskUsageRedrawTimer.Stop()
+	a.diskUsageRedrawTimer = nil
+}
+
+func (a *App) scheduleDiskUsageRedrawDebounced() {
+	if a.diskUsageRedrawTimer != nil {
+		return
+	}
+	const debounce = 75 * time.Millisecond
+	a.diskUsageRedrawTimer = time.AfterFunc(debounce, func() {
+		a.diskUsageRedrawTimer = nil
+		if a.diskUsage == nil {
+			return
+		}
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(diskUsageRedrawPayload{}))
 	})
 }
 

@@ -648,6 +648,7 @@ func (a *App) stopWorker() {
 	}
 	a.stopJobsWakeTimer()
 	a.stopSpinnerRedrawTimer()
+	a.stopDiskUsageRedrawDebounce()
 	a.invalidateIdleDiskSortBothPanels()
 	if a.diskUsage != nil {
 		a.diskUsage.Abort()

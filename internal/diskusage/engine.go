@@ -46,14 +46,29 @@ type Engine struct {
 
 	// workerBusy is true while the worker is executing a dequeued scan job (runPlanner or hook).
 	workerBusy atomic.Bool
+
+	// walkConcurrency caps concurrent subdirectory walks in WalkFolder (minimum 1).
+	walkConcurrency int
 }
 
+const cacheMergeChunkSize = 4096
+
+// New returns an engine with default walk concurrency (4).
 func New() *Engine {
+	return NewWithWalkConcurrency(4)
+}
+
+// NewWithWalkConcurrency creates an engine. walkConcurrency below 1 is replaced with 4.
+func NewWithWalkConcurrency(walkConcurrency int) *Engine {
+	if walkConcurrency < 1 {
+		walkConcurrency = 4
+	}
 	e := &Engine{
 		cache:           make(map[string]int64),
 		activeWalkRoots: make(map[string]int),
 		updates:         make(chan struct{}, 1),
 		events:          make(chan Event, 256),
+		walkConcurrency: walkConcurrency,
 	}
 	e.jobCond = sync.NewCond(&e.jobMu)
 	go e.workerLoop()
@@ -344,7 +359,7 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 				continue
 			}
 
-			tree := WalkFolder(jobPath, nil, shouldIgnore, nil)
+			tree := WalkFolder(jobPath, nil, shouldIgnore, nil, e.walkConcurrency)
 
 			if e.gen.Load() != sess {
 				e.mu.Lock()
@@ -358,10 +373,35 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 			merged := map[string]int64{}
 			FlattenSizes(tree, merged)
 
-			e.mu.Lock()
-			for k, v := range merged {
-				e.cache[k] = v
+			keys := make([]string, 0, len(merged))
+			for k := range merged {
+				keys = append(keys, k)
 			}
+			for i := 0; i < len(keys); i += cacheMergeChunkSize {
+				if e.gen.Load() != sess {
+					e.mu.Lock()
+					delete(e.activeWalkRoots, jobPath)
+					e.mu.Unlock()
+					e.finishCurJobRoot(jobPath)
+					e.poke()
+					return
+				}
+				end := min(i+cacheMergeChunkSize, len(keys))
+				e.mu.Lock()
+				for _, k := range keys[i:end] {
+					e.cache[k] = merged[k]
+				}
+				e.mu.Unlock()
+			}
+			if e.gen.Load() != sess {
+				e.mu.Lock()
+				delete(e.activeWalkRoots, jobPath)
+				e.mu.Unlock()
+				e.finishCurJobRoot(jobPath)
+				e.poke()
+				return
+			}
+			e.mu.Lock()
 			delete(e.activeWalkRoots, jobPath)
 			e.mu.Unlock()
 

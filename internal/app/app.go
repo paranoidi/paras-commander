@@ -41,6 +41,9 @@ type diskIdleSortPayload struct {
 	Epoch   uint64
 }
 
+// diskUsageRedrawPayload flushes debounced disk-usage cache/paint updates while a scan is busy.
+type diskUsageRedrawPayload struct{}
+
 type diskIdleSortPanel struct {
 	timer *time.Timer
 	epoch uint64
@@ -51,11 +54,11 @@ type jobsWakePayload struct{}
 
 // App owns lifecycle, state, and input dispatch.
 type App struct {
-	screen tcell.Screen
-	config config.Config
-	styles theme.Theme
-	themes map[string]theme.Theme
-	paths  config.Paths
+	screen       tcell.Screen
+	config       config.Config
+	styles       theme.Theme
+	themes       map[string]theme.Theme
+	paths        config.Paths
 	keys         *keymap.Map
 	keysJobs     *keymap.Map // chords active only in jobs view (overlay)
 	keysCommands *keymap.Map // chords active only in Commands view (overlay)
@@ -73,15 +76,16 @@ type App struct {
 	diskIdleNavPath [2]string
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
-	messageExpiryGen   atomic.Uint64
-	spinnerRedrawTimer *time.Timer
-	jobsWakeMu         sync.Mutex
-	jobsWakeTimer      *time.Timer
+	messageExpiryGen     atomic.Uint64
+	spinnerRedrawTimer   *time.Timer
+	diskUsageRedrawTimer *time.Timer
+	jobsWakeMu           sync.Mutex
+	jobsWakeTimer        *time.Timer
 
-	commandsMu             sync.RWMutex
+	commandsMu              sync.RWMutex
 	commandsBatchesInflight atomic.Int32
-	commandsCtx            context.Context
-	commandsCancel         context.CancelFunc
+	commandsCtx             context.Context
+	commandsCancel          context.CancelFunc
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -91,8 +95,8 @@ type Options struct {
 	Theme        theme.Theme
 	ThemeChoices []theme.NamedTheme
 	Paths        config.Paths
-	Keymap       *keymap.Map        // optional global-only override for tests (ignored when Bundle set)
-	KeymapBundle *keymap.Bundle     // optional full bundle override for tests
+	Keymap       *keymap.Map    // optional global-only override for tests (ignored when Bundle set)
+	KeymapBundle *keymap.Bundle // optional full bundle override for tests
 }
 
 // Run initializes and starts the terminal application.
@@ -200,7 +204,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	listOptions := localfs.ListOptions{
 		ShowHidden: cfg.ShowHidden,
 	}
-	duEngine := diskusage.New()
+	duEngine := diskusage.NewWithWalkConcurrency(cfg.DiskUsageWalkConcurrency)
 
 	left, err := panel.NewWithOptions(path, listOptions)
 	if err != nil {
@@ -245,15 +249,15 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	cmdCtx, cmdCancel := context.WithCancel(context.Background())
 	app := &App{
-		screen: screen,
-		config: cfg,
-		styles: styles,
-		themes: availableThemes,
-		paths:  opts.Paths.WithResolvedLocations(),
-		keys:         km,
-		keysJobs:     kmJobs,
-		keysCommands: kmCommands,
-		commandsCtx:  cmdCtx,
+		screen:         screen,
+		config:         cfg,
+		styles:         styles,
+		themes:         availableThemes,
+		paths:          opts.Paths.WithResolvedLocations(),
+		keys:           km,
+		keysJobs:       kmJobs,
+		keysCommands:   kmCommands,
+		commandsCtx:    cmdCtx,
 		commandsCancel: cmdCancel,
 		model: ui.Model{
 			Left:                   left,
@@ -330,6 +334,10 @@ func (a *App) Run() error {
 				}
 			case diskIdleSortPayload:
 				a.applyIdleDiskSort(d.PanelID, d.Epoch)
+				a.render()
+				didRender = true
+			case diskUsageRedrawPayload:
+				a.resortPanelsDiskUsageSorted()
 				a.render()
 				didRender = true
 			case jobsWakePayload:
@@ -1997,6 +2005,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	}
 }
 func (a *App) render() {
+	a.stopDiskUsageRedrawDebounce()
 	a.model.MenuBarPermission = a.menuBarPermissionText()
 	a.model.MenuBarJobsAttention = a.menuBarJobsAttentionText()
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()

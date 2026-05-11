@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 )
 
@@ -77,12 +76,14 @@ func ReadDirInfos(path string) ([]fs.FileInfo, error) {
 }
 
 // WalkFolder traverses path and aggregates sizes on the returned tree (UpdateSize applied before return).
+// walkConcurrency limits concurrent subdirectory branches (minimum 1). Smaller values reduce HDD/NAS read storms.
 // progress, when non-nil, receives folder-branch counts analogous to upstream godu; WalkFolder never closes progress.
 func WalkFolder(
 	rootPath string,
 	readDir ReadDir,
 	ignore ShouldIgnoreFolder,
 	progress chan<- int,
+	walkConcurrency int,
 ) *File {
 	if readDir == nil {
 		readDir = ReadDirInfos
@@ -90,10 +91,13 @@ func WalkFolder(
 	if ignore == nil {
 		ignore = func(string) bool { return false }
 	}
+	if walkConcurrency < 1 {
+		walkConcurrency = 1
+	}
 	rootPath = filepath.Clean(rootPath)
 
 	var wg sync.WaitGroup
-	sem := make(chan bool, max(2*runtime.NumCPU(), 1))
+	sem := make(chan bool, walkConcurrency)
 
 	tree := walkSubFolderConcurrently(rootPath, nil, ignoringReadDir(ignore, readDir), sem, &wg, progress)
 	wg.Wait()
@@ -179,13 +183,6 @@ func notifyProgress(progress chan<- int, numSubfolders *int) {
 		return
 	}
 	progress <- n
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 // FlattenSizes records every node's Size keyed by filepath.Clean of Path().

@@ -176,8 +176,17 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		statusStyle := jobStatusStyle(entry.Status, styles).Background(bg)
 		iconStyle := jobIconStyle(entry.Status, styles)
 		_, lineBG, _ := lineStyle.Decompose()
-		_, iconFG, _ := iconStyle.Decompose()
+		iconFG, _, iconAttrs := iconStyle.Decompose()
 		iconRenderStyle := tcell.StyleDefault.Foreground(iconFG).Background(lineBG)
+		if iconAttrs&tcell.AttrBold != 0 {
+			iconRenderStyle = iconRenderStyle.Bold(true)
+		}
+		if iconAttrs&tcell.AttrUnderline != 0 {
+			iconRenderStyle = iconRenderStyle.Underline(true)
+		}
+		if iconAttrs&tcell.AttrReverse != 0 {
+			iconRenderStyle = iconRenderStyle.Reverse(true)
+		}
 		iconGlyph := jobRowLeadingIcon(entry.Status, styles)
 		primitive.Text(screen, contentX, y, 2, iconGlyph, iconRenderStyle)
 		line := fmt.Sprintf("%-5s ", truncateRunes(entry.Type, 5))
