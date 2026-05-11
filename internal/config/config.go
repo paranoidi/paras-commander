@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/paranoidi/paras-commander/internal/ops"
 )
 
 const (
@@ -96,6 +95,7 @@ type Config struct {
 	DiskUsageIdleSortDelayMS        int    `toml:"disk_usage_idle_sort_delay_ms"`
 	DiskUsageDescendIntoMountPoints bool   `toml:"disk_usage_descend_into_mount_points"`
 	// DiskUsageWalkConcurrency limits concurrent subdirectory branches during a disk-usage walk (minimum 1 after Validate).
+	// Default is DefaultDiskUsageWalkConcurrency.
 	// Low values spare HDD/NAS; raise for fast local SSDs.
 	DiskUsageWalkConcurrency   int              `toml:"disk_usage_walk_concurrency"`
 	FollowSymlinksOnNavigation bool             `toml:"follow_symlinks_on_navigation"`
@@ -185,7 +185,7 @@ func Default() Config {
 		DiskUsageIdleSizeSort:           true,
 		DiskUsageIdleSortDelayMS:        500,
 		DiskUsageDescendIntoMountPoints: false,
-		DiskUsageWalkConcurrency:        4,
+		DiskUsageWalkConcurrency:        DefaultDiskUsageWalkConcurrency,
 		FollowSymlinksOnNavigation:      true,
 		OpenFilesExternally:             true,
 		DeleteMode:                      DeletePermanent,
@@ -211,16 +211,16 @@ func Default() Config {
 			AutoshowOnError:           true,
 			AutoshowOnStart:           false,
 			RefreshDebounceMS:         150,
-			ProgressEmitMinBytes:      ops.DefaultProgressEmitMinBytes,
-			ProgressEmitMinIntervalMS: ops.DefaultProgressEmitMinIntervalMS,
+			ProgressEmitMinBytes:      DefaultProgressEmitMinBytes,
+			ProgressEmitMinIntervalMS: DefaultProgressEmitMinIntervalMS,
 		},
 		Operations: OperationsConfig{
-			PreservePermissions:        ops.DefaultPreservePermissions,
-			PreserveTimestamps:         ops.DefaultPreserveTimestamps,
-			CopyBufferKiB:              ops.DefaultCopyBufferKiB,
-			SyncAfterEachFile:          ops.DefaultSyncAfterEachFile,
-			DiskSpaceCheckMinFileBytes: ops.DefaultDiskSpaceCheckMinFileBytes,
-			CowFileCloning:             ops.DefaultCowFileCloning,
+			PreservePermissions:        DefaultPreservePermissions,
+			PreserveTimestamps:         DefaultPreserveTimestamps,
+			CopyBufferKiB:              DefaultCopyBufferKiB,
+			SyncAfterEachFile:          DefaultSyncAfterEachFile,
+			DiskSpaceCheckMinFileBytes: DefaultDiskSpaceCheckMinFileBytes,
+			CowFileCloning:             DefaultCowFileCloning,
 		},
 		Logging: LoggingConfig{
 			Enabled: false,
@@ -557,61 +557,61 @@ func (c *Config) Validate() error {
 	if strings.TrimSpace(c.Theme) == "" {
 		return fmt.Errorf("theme is required")
 	}
-	defaults := Default()
+	builtin := Default()
 	ds := strings.ToLower(strings.TrimSpace(c.DefaultSort))
 	if ds == SortDiskUsage || ds == "disk-usage" {
 		c.DefaultSort = SortName
 		c.DiskUsageIdleSizeSort = true
 	}
 	if c.JobConcurrency != 1 {
-		c.JobConcurrency = defaults.JobConcurrency
+		c.JobConcurrency = builtin.JobConcurrency
 	}
 	if c.StartupPathMode != StartupPathCWD {
-		c.StartupPathMode = defaults.StartupPathMode
+		c.StartupPathMode = builtin.StartupPathMode
 	}
 	if c.DiskUsageIdleSortDelayMS <= 0 {
-		c.DiskUsageIdleSortDelayMS = defaults.DiskUsageIdleSortDelayMS
+		c.DiskUsageIdleSortDelayMS = builtin.DiskUsageIdleSortDelayMS
 	}
 	if c.DiskUsageWalkConcurrency < 1 {
-		c.DiskUsageWalkConcurrency = defaults.DiskUsageWalkConcurrency
+		c.DiskUsageWalkConcurrency = builtin.DiskUsageWalkConcurrency
 	}
 	if !c.sortModeValid(c.DefaultSort) {
-		c.DefaultSort = defaults.DefaultSort
+		c.DefaultSort = builtin.DefaultSort
 	}
 	// SortReverse is now supported, no clamping needed
 	if !c.FollowSymlinksOnNavigation {
-		c.FollowSymlinksOnNavigation = defaults.FollowSymlinksOnNavigation
+		c.FollowSymlinksOnNavigation = builtin.FollowSymlinksOnNavigation
 	}
 	if c.DeleteMode != DeletePermanent {
-		c.DeleteMode = defaults.DeleteMode
+		c.DeleteMode = builtin.DeleteMode
 	}
 	if c.UI.BorderStyle != BorderStyleSingle {
-		c.UI.BorderStyle = defaults.UI.BorderStyle
+		c.UI.BorderStyle = builtin.UI.BorderStyle
 	}
 	if c.UI.StatusMessageTTLSeconds < 0 {
-		c.UI.StatusMessageTTLSeconds = defaults.UI.StatusMessageTTLSeconds
+		c.UI.StatusMessageTTLSeconds = builtin.UI.StatusMessageTTLSeconds
 	}
 	if c.Filter.Mode != FilterModeFuzzy {
-		c.Filter.Mode = defaults.Filter.Mode
+		c.Filter.Mode = builtin.Filter.Mode
 	}
 	if c.Filter.Syntax != FilterSyntaxFZF {
-		c.Filter.Syntax = defaults.Filter.Syntax
+		c.Filter.Syntax = builtin.Filter.Syntax
 	}
 	if c.Filter.MatchPathSegments {
-		c.Filter.MatchPathSegments = defaults.Filter.MatchPathSegments
+		c.Filter.MatchPathSegments = builtin.Filter.MatchPathSegments
 	}
 	cm := strings.ToLower(strings.TrimSpace(c.Filter.CycleMatches))
 	switch cm {
 	case FilterCycleMatchesVisual, FilterCycleMatchesRanked:
 		c.Filter.CycleMatches = cm
 	default:
-		c.Filter.CycleMatches = defaults.Filter.CycleMatches
+		c.Filter.CycleMatches = builtin.Filter.CycleMatches
 	}
 	if c.Jobs.KeepFinished <= 0 {
-		c.Jobs.KeepFinished = defaults.Jobs.KeepFinished
+		c.Jobs.KeepFinished = builtin.Jobs.KeepFinished
 	}
 	if c.Jobs.RefreshDebounceMS <= 0 {
-		c.Jobs.RefreshDebounceMS = defaults.Jobs.RefreshDebounceMS
+		c.Jobs.RefreshDebounceMS = builtin.Jobs.RefreshDebounceMS
 	}
 	const jobsRefreshMinMS = 50
 	const jobsRefreshMaxMS = 5000
@@ -624,7 +624,7 @@ func (c *Config) Validate() error {
 	const progressEmitBytesMin = 64 * 1024
 	const progressEmitBytesMax = 64 * 1024 * 1024
 	if c.Jobs.ProgressEmitMinBytes <= 0 {
-		c.Jobs.ProgressEmitMinBytes = defaults.Jobs.ProgressEmitMinBytes
+		c.Jobs.ProgressEmitMinBytes = builtin.Jobs.ProgressEmitMinBytes
 	}
 	if c.Jobs.ProgressEmitMinBytes < progressEmitBytesMin {
 		c.Jobs.ProgressEmitMinBytes = progressEmitBytesMin
@@ -633,7 +633,7 @@ func (c *Config) Validate() error {
 		c.Jobs.ProgressEmitMinBytes = progressEmitBytesMax
 	}
 	if c.Jobs.ProgressEmitMinIntervalMS <= 0 {
-		c.Jobs.ProgressEmitMinIntervalMS = defaults.Jobs.ProgressEmitMinIntervalMS
+		c.Jobs.ProgressEmitMinIntervalMS = builtin.Jobs.ProgressEmitMinIntervalMS
 	}
 	if c.Jobs.ProgressEmitMinIntervalMS < jobsRefreshMinMS {
 		c.Jobs.ProgressEmitMinIntervalMS = jobsRefreshMinMS
@@ -642,13 +642,13 @@ func (c *Config) Validate() error {
 		c.Jobs.ProgressEmitMinIntervalMS = jobsRefreshMaxMS
 	}
 	if c.Operations.CopyBufferKiB <= 0 {
-		c.Operations.CopyBufferKiB = defaults.Operations.CopyBufferKiB
+		c.Operations.CopyBufferKiB = builtin.Operations.CopyBufferKiB
 	}
 	if c.Operations.DiskSpaceCheckMinFileBytes < 0 {
-		c.Operations.DiskSpaceCheckMinFileBytes = defaults.Operations.DiskSpaceCheckMinFileBytes
+		c.Operations.DiskSpaceCheckMinFileBytes = builtin.Operations.DiskSpaceCheckMinFileBytes
 	}
 	if !validLoggingLevel(c.Logging.Level) {
-		c.Logging.Level = defaults.Logging.Level
+		c.Logging.Level = builtin.Logging.Level
 	}
 	return nil
 }

@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/paranoidi/paras-commander/internal/ops"
 )
 
 func TestValidateClampsDiskUsageWalkConcurrency(t *testing.T) {
@@ -16,8 +14,8 @@ func TestValidateClampsDiskUsageWalkConcurrency(t *testing.T) {
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.DiskUsageWalkConcurrency != 4 {
-		t.Fatalf("DiskUsageWalkConcurrency = %d, want 4", cfg.DiskUsageWalkConcurrency)
+	if cfg.DiskUsageWalkConcurrency != DefaultDiskUsageWalkConcurrency {
+		t.Fatalf("DiskUsageWalkConcurrency = %d, want %d", cfg.DiskUsageWalkConcurrency, DefaultDiskUsageWalkConcurrency)
 	}
 	cfg.DiskUsageWalkConcurrency = 2
 	if err := cfg.Validate(); err != nil {
@@ -34,7 +32,7 @@ func TestValidateClampsNegativeDiskSpaceCheckMinFileBytes(t *testing.T) {
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	want := int64(ops.DefaultDiskSpaceCheckMinFileBytes)
+	want := int64(DefaultDiskSpaceCheckMinFileBytes)
 	if cfg.Operations.DiskSpaceCheckMinFileBytes != want {
 		t.Fatalf("DiskSpaceCheckMinFileBytes = %d, want %d", cfg.Operations.DiskSpaceCheckMinFileBytes, want)
 	}

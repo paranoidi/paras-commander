@@ -9,22 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
-)
-
-// Default operation values. Single source of truth — config.Default() references these.
-const (
-	DefaultPreservePermissions        = true
-	DefaultPreserveTimestamps         = true
-	DefaultCopyBufferKiB              = 256
-	DefaultSyncAfterEachFile          = true
-	DefaultDiskSpaceCheckMinFileBytes = 50 * 1024 * 1024
-	DefaultCowFileCloning             = true
-
-	// DefaultProgressEmitMinBytes is the minimum bytes between optional worker progress events.
-	DefaultProgressEmitMinBytes = 512 * 1024
-	// DefaultProgressEmitMinIntervalMS is the minimum milliseconds between optional progress events.
-	DefaultProgressEmitMinIntervalMS = 200
 )
 
 // ProgressEmitThrottle limits how often transfer progress callbacks fire during file copies.
@@ -35,10 +21,10 @@ type ProgressEmitThrottle struct {
 
 func effectiveProgressThrottle(t ProgressEmitThrottle) ProgressEmitThrottle {
 	if t.MinBytes <= 0 {
-		t.MinBytes = DefaultProgressEmitMinBytes
+		t.MinBytes = int64(config.DefaultProgressEmitMinBytes)
 	}
 	if t.MinInterval <= 0 {
-		t.MinInterval = time.Duration(DefaultProgressEmitMinIntervalMS) * time.Millisecond
+		t.MinInterval = time.Duration(config.DefaultProgressEmitMinIntervalMS) * time.Millisecond
 	}
 	return t
 }
@@ -57,15 +43,16 @@ type Options struct {
 	CowFileCloning bool
 }
 
-// DefaultOptions returns the recommended v1 operation defaults.
+// DefaultOptions returns operation defaults aligned with config.Default().Operations.
 func DefaultOptions() Options {
+	o := config.Default().Operations
 	return Options{
-		PreservePermissions:        DefaultPreservePermissions,
-		PreserveTimestamps:         DefaultPreserveTimestamps,
-		CopyBufferKiB:              DefaultCopyBufferKiB,
-		SyncAfterEachFile:          DefaultSyncAfterEachFile,
-		DiskSpaceCheckMinFileBytes: DefaultDiskSpaceCheckMinFileBytes,
-		CowFileCloning:             DefaultCowFileCloning,
+		PreservePermissions:        o.PreservePermissions,
+		PreserveTimestamps:         o.PreserveTimestamps,
+		CopyBufferKiB:              o.CopyBufferKiB,
+		SyncAfterEachFile:          o.SyncAfterEachFile,
+		DiskSpaceCheckMinFileBytes: o.DiskSpaceCheckMinFileBytes,
+		CowFileCloning:             o.CowFileCloning,
 	}
 }
 
@@ -113,7 +100,7 @@ func RenameFastPath(src, dest string) (ok bool, err error) {
 // BufferSize returns the copy buffer size in bytes from the KiB option.
 func BufferSize(copyBufferKiB int) int {
 	if copyBufferKiB <= 0 {
-		return DefaultCopyBufferKiB * 1024
+		return config.DefaultCopyBufferKiB * 1024
 	}
 	return copyBufferKiB * 1024
 }

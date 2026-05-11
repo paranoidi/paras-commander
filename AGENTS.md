@@ -27,6 +27,10 @@ When adding new items into menu, use first letter of the text as a shortcut if a
 
 Theme file defines icons/glyphs for statuses such as ongoing, paused, failed, aborted, success etc. Use them where appropriate.
 
+# Configuration
+
+Default configuration values should be stored in a single place and imported from there instead of putting magic values around the codebase. Built-in defaults for jobs copy progress emit, file operations (copy buffer, fsync, disk checks, CoW cloning), and disk-usage walk concurrency are exported `const` in `internal/config/builtin.go` and wired through `config.Default()`; `internal/ops` reads them via `config` (it must not define parallel magic numbers). `internal/config` must not import `internal/ops` (import-cycle constraint).
+
 # Dialog Standards
 
 All dialogs (modal overlays) must follow these navigation and rendering rules:

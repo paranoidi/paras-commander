@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/paranoidi/paras-commander/internal/config"
 )
 
 type scanJob struct {
@@ -53,15 +55,15 @@ type Engine struct {
 
 const cacheMergeChunkSize = 4096
 
-// New returns an engine with default walk concurrency (4).
+// New returns an engine with the same default walk concurrency as config.Default().
 func New() *Engine {
-	return NewWithWalkConcurrency(4)
+	return NewWithWalkConcurrency(config.DefaultDiskUsageWalkConcurrency)
 }
 
-// NewWithWalkConcurrency creates an engine. walkConcurrency below 1 is replaced with 4.
+// NewWithWalkConcurrency creates an engine. walkConcurrency below 1 is replaced with config.DefaultDiskUsageWalkConcurrency.
 func NewWithWalkConcurrency(walkConcurrency int) *Engine {
 	if walkConcurrency < 1 {
-		walkConcurrency = 4
+		walkConcurrency = config.DefaultDiskUsageWalkConcurrency
 	}
 	e := &Engine{
 		cache:           make(map[string]int64),
