@@ -174,8 +174,14 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		pct := jobPercentDone(entry)
 		eta := formatJobETA(entry, now)
 		statusStyle := jobStatusStyle(entry.Status, styles).Background(bg)
-		line := fmt.Sprintf("%-2s%-5s ", jobRowLeadingIcon(entry.Status), truncateRunes(entry.Type, 5))
-		primitive.Text(screen, contentX, y, jobsListColPrefix, line, lineStyle)
+		iconStyle := jobIconStyle(entry.Status, styles)
+		_, lineBG, _ := lineStyle.Decompose()
+		_, iconFG, _ := iconStyle.Decompose()
+		iconRenderStyle := tcell.StyleDefault.Foreground(iconFG).Background(lineBG)
+		iconGlyph := jobRowLeadingIcon(entry.Status)
+		primitive.Text(screen, contentX, y, 2, iconGlyph, iconRenderStyle)
+		line := fmt.Sprintf("%-5s ", truncateRunes(entry.Type, 5))
+		primitive.Text(screen, contentX+2, y, jobsListColPrefix-2, line, lineStyle)
 		xStatus := contentX + jobsListColPrefix
 		primitive.Text(screen, xStatus, y, jobsListColStatus, truncateRunes(entry.Status, 9), statusStyle)
 		xETA := xStatus + jobsListColStatus
@@ -582,23 +588,55 @@ func truncateMiddle(s string, max int) string {
 	return string(r[:left]) + "…" + string(r[len(r)-right:])
 }
 
-// jobRowLeadingIcon is the leading glyph column in the jobs list (Nerd Font / icon-font glyphs).
+// jobRowLeadingIcon returns the Nerd Font glyph for the given job status.
+// Icons follow the status definitions in AGENTS.md:
+//
+//	  Ongoing (queued / running)
+//	  Paused
+//	  Stopped (canceled)
+//	  Error (failed)
+//	󰋗  Input required (decision)
+//	  Completed
 func jobRowLeadingIcon(status string) string {
 	switch status {
-	case "queued", "running":
-		return "\uf144" //  ongoing (play circle)
+	case "queued":
+		return "\uf017" //  Waiting (clock)
+	case "running":
+		return "\uf144" //  Ongoing (play circle)
 	case "decision":
-		return "\U000f02d7" // 󰋗 input required (AGENTS.md statuses)
+		return "\U000f02d7" // 󰋗 Input required
 	case "paused":
-		return "\uf28b" //  (nf-fa-pause-circle)
+		return "\uf28b" //  Paused (pause circle)
 	case "canceled":
-		return "\U000f073a" // 󰜺 nf-md-cancel
+		return "\uf28d" //  Stopped (stop circle)
 	case "failed":
-		return "\U000f0028" // 󰀨 nf-md-alert-circle-outline
+		return "\uf06a" //  Error (exclamation triangle)
 	case "completed":
-		return "\uf05d" //  completed
+		return "\uf05d" //  Completed
 	default:
 		return " "
+	}
+}
+
+// jobIconStyle returns the themed style for the leading icon of a job status.
+func jobIconStyle(status string, styles theme.Theme) tcell.Style {
+	switch status {
+	case "queued":
+		return styles.JobsIconsQueued
+	case "running":
+		return styles.JobsIconsOngoing
+	case "paused":
+		return styles.JobsIconsPaused
+	case "canceled":
+		return styles.JobsIconsStopped
+	case "failed":
+		return styles.JobsIconsError
+	case "decision":
+		return styles.JobsIconsInputRequired
+	case "completed":
+		return styles.JobsIconsCompleted
+	default:
+		return styles.JobsRow
 	}
 }
 

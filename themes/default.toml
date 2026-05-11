@@ -105,3 +105,11 @@ jobs.progress.track = { fg = "bright_black", bg = "black" }
 jobs.progress.fill = { fg = "black", bg = "bright_green" }
 jobs.progress.label.on_fill = { fg = "black", bg = "bright_green", bold = true }
 jobs.progress.label.on_track = { fg = "bright_white", bg = "bright_black", bold = true }
+
+jobs.icons.queued = { fg = "yellow", bg = "black", bold = true }
+jobs.icons.ongoing = { fg = "bright_green", bg = "black", bold = true }
+jobs.icons.paused = { fg = "yellow", bg = "black", bold = true }
+jobs.icons.stopped = { fg = "bright_red", bg = "black", bold = true }
+jobs.icons.error = { fg = "bright_red", bg = "black", bold = true }
+jobs.icons.input_required = { fg = "cyan", bg = "black", bold = true }
+jobs.icons.completed = { fg = "bright_green", bg = "black", bold = true }

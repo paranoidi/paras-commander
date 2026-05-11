@@ -52,10 +52,17 @@ func TestJobRowLeadingIconCompletedUsesDoneGlyph(t *testing.T) {
 	}
 }
 
-func TestJobRowLeadingIconFailedUsesAlertGlyph(t *testing.T) {
-	want := "\U000f0028"
+func TestJobRowLeadingIconFailedUsesErrorGlyph(t *testing.T) {
+	want := "\uf06a"
 	if got := jobRowLeadingIcon("failed"); got != want {
 		t.Fatalf("failed icon = %q, want %q", got, want)
+	}
+}
+
+func TestJobRowLeadingIconCanceledUsesStoppedGlyph(t *testing.T) {
+	want := "\uf28d"
+	if got := jobRowLeadingIcon("canceled"); got != want {
+		t.Fatalf("canceled icon = %q, want %q", got, want)
 	}
 }
 
@@ -63,5 +70,26 @@ func TestJobRowLeadingIconDecisionUsesInputRequiredGlyph(t *testing.T) {
 	want := "\U000f02d7"
 	if got := jobRowLeadingIcon("decision"); got != want {
 		t.Fatalf("decision icon = %q, want %q", got, want)
+	}
+}
+
+func TestJobRowLeadingIconQueuedUsesClockGlyph(t *testing.T) {
+	want := "\uf017"
+	if got := jobRowLeadingIcon("queued"); got != want {
+		t.Fatalf("queued icon = %q, want %q", got, want)
+	}
+}
+
+func TestJobRowLeadingIconRunningUsesOngoingGlyph(t *testing.T) {
+	want := "\uf144"
+	if got := jobRowLeadingIcon("running"); got != want {
+		t.Fatalf("running icon = %q, want %q", got, want)
+	}
+}
+
+func TestJobRowLeadingIconPausedUsesPausedGlyph(t *testing.T) {
+	want := "\uf28b"
+	if got := jobRowLeadingIcon("paused"); got != want {
+		t.Fatalf("paused icon = %q, want %q", got, want)
 	}
 }

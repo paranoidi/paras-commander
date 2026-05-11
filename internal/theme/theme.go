@@ -118,6 +118,15 @@ type Theme struct {
 	JobsProgressLabelOnFill  tcell.Style
 	JobsProgressLabelOnTrack tcell.Style
 
+	// JobsIcon* styles for the leading icon column in the jobs list.
+	JobsIconsQueued        tcell.Style
+	JobsIconsOngoing       tcell.Style
+	JobsIconsPaused        tcell.Style
+	JobsIconsStopped       tcell.Style
+	JobsIconsError         tcell.Style
+	JobsIconsInputRequired tcell.Style
+	JobsIconsCompleted     tcell.Style
+
 	FooterKey   tcell.Style
 	FooterLabel tcell.Style
 }
@@ -211,6 +220,13 @@ var requiredStyleKeys = []string{
 	"jobs.progress.fill",
 	"jobs.progress.label.on_fill",
 	"jobs.progress.label.on_track",
+	"jobs.icons.queued",
+	"jobs.icons.ongoing",
+	"jobs.icons.paused",
+	"jobs.icons.stopped",
+	"jobs.icons.error",
+	"jobs.icons.input_required",
+	"jobs.icons.completed",
 	"footer.key",
 	"footer.label",
 }
@@ -583,6 +599,14 @@ func parse(data []byte) (Theme, error) {
 		JobsProgressFill:         styles["jobs.progress.fill"],
 		JobsProgressLabelOnFill:  styles["jobs.progress.label.on_fill"],
 		JobsProgressLabelOnTrack: styles["jobs.progress.label.on_track"],
+
+		JobsIconsQueued:        styles["jobs.icons.queued"],
+		JobsIconsOngoing:       styles["jobs.icons.ongoing"],
+		JobsIconsPaused:        styles["jobs.icons.paused"],
+		JobsIconsStopped:       styles["jobs.icons.stopped"],
+		JobsIconsError:         styles["jobs.icons.error"],
+		JobsIconsInputRequired: styles["jobs.icons.input_required"],
+		JobsIconsCompleted:     styles["jobs.icons.completed"],
 
 		FooterKey:   styles["footer.key"],
 		FooterLabel: styles["footer.label"],
