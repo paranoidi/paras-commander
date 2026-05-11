@@ -12,6 +12,21 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
+// Default operation values. Single source of truth — config.Default() references these.
+const (
+	DefaultPreservePermissions        = true
+	DefaultPreserveTimestamps         = true
+	DefaultCopyBufferKiB              = 256
+	DefaultSyncAfterEachFile          = true
+	DefaultDiskSpaceCheckMinFileBytes = 50 * 1024 * 1024
+	DefaultCowFileCloning             = true
+
+	// DefaultProgressEmitMinBytes is the minimum bytes between optional worker progress events.
+	DefaultProgressEmitMinBytes = 512 * 1024
+	// DefaultProgressEmitMinIntervalMS is the minimum milliseconds between optional progress events.
+	DefaultProgressEmitMinIntervalMS = 200
+)
+
 // ProgressEmitThrottle limits how often transfer progress callbacks fire during file copies.
 type ProgressEmitThrottle struct {
 	MinBytes    int64
@@ -20,10 +35,10 @@ type ProgressEmitThrottle struct {
 
 func effectiveProgressThrottle(t ProgressEmitThrottle) ProgressEmitThrottle {
 	if t.MinBytes <= 0 {
-		t.MinBytes = 512 * 1024
+		t.MinBytes = DefaultProgressEmitMinBytes
 	}
 	if t.MinInterval <= 0 {
-		t.MinInterval = 200 * time.Millisecond
+		t.MinInterval = time.Duration(DefaultProgressEmitMinIntervalMS) * time.Millisecond
 	}
 	return t
 }
@@ -45,12 +60,12 @@ type Options struct {
 // DefaultOptions returns the recommended v1 operation defaults.
 func DefaultOptions() Options {
 	return Options{
-		PreservePermissions:        true,
-		PreserveTimestamps:         true,
-		CopyBufferKiB:              256,
-		SyncAfterEachFile:          false,
-		DiskSpaceCheckMinFileBytes: 50 * 1024 * 1024,
-		CowFileCloning:             true,
+		PreservePermissions:        DefaultPreservePermissions,
+		PreserveTimestamps:         DefaultPreserveTimestamps,
+		CopyBufferKiB:              DefaultCopyBufferKiB,
+		SyncAfterEachFile:          DefaultSyncAfterEachFile,
+		DiskSpaceCheckMinFileBytes: DefaultDiskSpaceCheckMinFileBytes,
+		CowFileCloning:             DefaultCowFileCloning,
 	}
 }
 
@@ -98,7 +113,7 @@ func RenameFastPath(src, dest string) (ok bool, err error) {
 // BufferSize returns the copy buffer size in bytes from the KiB option.
 func BufferSize(copyBufferKiB int) int {
 	if copyBufferKiB <= 0 {
-		return 256 * 1024
+		return DefaultCopyBufferKiB * 1024
 	}
 	return copyBufferKiB * 1024
 }

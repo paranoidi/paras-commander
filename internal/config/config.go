@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/paranoidi/paras-commander/internal/ops"
 )
 
 const (
@@ -206,16 +207,16 @@ func Default() Config {
 			AutoshowOnError:           true,
 			AutoshowOnStart:           false,
 			RefreshDebounceMS:         150,
-			ProgressEmitMinBytes:      512 * 1024,
-			ProgressEmitMinIntervalMS: 200,
+			ProgressEmitMinBytes:      ops.DefaultProgressEmitMinBytes,
+			ProgressEmitMinIntervalMS: ops.DefaultProgressEmitMinIntervalMS,
 		},
 		Operations: OperationsConfig{
-			PreservePermissions:        true,
-			PreserveTimestamps:         true,
-			CopyBufferKiB:              256,
-			SyncAfterEachFile:          false,
-			DiskSpaceCheckMinFileBytes: 50 * 1024 * 1024,
-			CowFileCloning:             true,
+			PreservePermissions:        ops.DefaultPreservePermissions,
+			PreserveTimestamps:         ops.DefaultPreserveTimestamps,
+			CopyBufferKiB:              ops.DefaultCopyBufferKiB,
+			SyncAfterEachFile:          ops.DefaultSyncAfterEachFile,
+			DiskSpaceCheckMinFileBytes: ops.DefaultDiskSpaceCheckMinFileBytes,
+			CowFileCloning:             ops.DefaultCowFileCloning,
 		},
 		Logging: LoggingConfig{
 			Enabled: false,

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/ops"
 )
 
 func TestValidateClampsNegativeDiskSpaceCheckMinFileBytes(t *testing.T) {
@@ -14,7 +16,7 @@ func TestValidateClampsNegativeDiskSpaceCheckMinFileBytes(t *testing.T) {
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	want := int64(50 * 1024 * 1024)
+	want := int64(ops.DefaultDiskSpaceCheckMinFileBytes)
 	if cfg.Operations.DiskSpaceCheckMinFileBytes != want {
 		t.Fatalf("DiskSpaceCheckMinFileBytes = %d, want %d", cfg.Operations.DiskSpaceCheckMinFileBytes, want)
 	}
