@@ -1242,10 +1242,6 @@ func TestOptionsMenuOpensThemeDialog(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	defaultTheme := theme.Default()
-	frappe, err := theme.LoadBuiltIn("catppuccin-frappe")
-	if err != nil {
-		t.Fatalf("LoadBuiltIn(catppuccin-frappe) error = %v", err)
-	}
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
@@ -1254,7 +1250,6 @@ func TestOptionsMenuOpensThemeDialog(t *testing.T) {
 		Theme:  defaultTheme,
 		ThemeChoices: []theme.NamedTheme{
 			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
-			{Name: frappe.Name, Label: "Catppuccin Frappe", Theme: frappe},
 		},
 	})
 	if err != nil {
@@ -1293,11 +1288,11 @@ func TestThemeDialogAppliesThemeImmediately(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	defaultTheme := theme.Default()
-	frappe, err := theme.LoadBuiltIn("catppuccin-frappe")
-	if err != nil {
-		t.Fatalf("LoadBuiltIn(catppuccin-frappe) error = %v", err)
-	}
-	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-theme")}.WithResolvedLocations()
+	secondTheme, themePaths := loadTestTheme(t)
+	appPaths := config.Paths{
+		ConfigDir: filepath.Join(t.TempDir(), "persist-theme"),
+		ThemesDir: themePaths.ThemesDir,
+	}.WithResolvedLocations()
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
@@ -1307,7 +1302,7 @@ func TestThemeDialogAppliesThemeImmediately(t *testing.T) {
 		Paths:  appPaths,
 		ThemeChoices: []theme.NamedTheme{
 			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
-			{Name: frappe.Name, Label: "Catppuccin Frappe", Theme: frappe},
+			{Name: secondTheme.Name, Label: "Test Theme", Theme: secondTheme},
 		},
 	})
 	if err != nil {
@@ -1324,24 +1319,24 @@ func TestThemeDialogAppliesThemeImmediately(t *testing.T) {
 	if app.model.ThemeDialog.Open {
 		t.Fatal("theme dialog open = true, want closed")
 	}
-	if app.styles.Name != "catppuccin-frappe" {
-		t.Fatalf("theme name = %q, want catppuccin-frappe", app.styles.Name)
+	if app.styles.Name != "test-theme" {
+		t.Fatalf("theme name = %q, want test-theme", app.styles.Name)
 	}
-	if app.config.Theme != "catppuccin-frappe" {
-		t.Fatalf("config theme = %q, want catppuccin-frappe", app.config.Theme)
+	if app.config.Theme != "test-theme" {
+		t.Fatalf("config theme = %q, want test-theme", app.config.Theme)
 	}
-	if app.model.ThemeDialog.CurrentName != "catppuccin-frappe" {
-		t.Fatalf("theme dialog current name = %q, want catppuccin-frappe", app.model.ThemeDialog.CurrentName)
+	if app.model.ThemeDialog.CurrentName != "test-theme" {
+		t.Fatalf("theme dialog current name = %q, want test-theme", app.model.ThemeDialog.CurrentName)
 	}
-	if app.model.Message != "Theme changed to catppuccin-frappe" {
+	if app.model.Message != "Theme changed to test-theme" {
 		t.Fatalf("Message = %q, want theme changed message", app.model.Message)
 	}
 	reloaded, err := config.LoadFromPaths(appPaths)
 	if err != nil {
 		t.Fatalf("LoadFromPaths after persist: %v", err)
 	}
-	if reloaded.Theme != "catppuccin-frappe" {
-		t.Fatalf("persisted Theme = %q, want catppuccin-frappe", reloaded.Theme)
+	if reloaded.Theme != "test-theme" {
+		t.Fatalf("persisted Theme = %q, want test-theme", reloaded.Theme)
 	}
 }
 
@@ -1357,19 +1352,17 @@ func TestThemeDialogNavigatePreviewsWithoutPersist(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	defaultTheme := theme.Default()
-	frappe, err := theme.LoadBuiltIn("catppuccin-frappe")
-	if err != nil {
-		t.Fatalf("LoadBuiltIn(catppuccin-frappe) error = %v", err)
-	}
+	secondTheme, themePaths := loadTestTheme(t)
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
 		Config: config.Default(),
 		Theme:  defaultTheme,
+		Paths:  themePaths,
 		ThemeChoices: []theme.NamedTheme{
 			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
-			{Name: frappe.Name, Label: "Catppuccin Frappe", Theme: frappe},
+			{Name: secondTheme.Name, Label: "Test Theme", Theme: secondTheme},
 		},
 	})
 	if err != nil {
@@ -1382,8 +1375,8 @@ func TestThemeDialogNavigatePreviewsWithoutPersist(t *testing.T) {
 	if !app.model.ThemeDialog.Open {
 		t.Fatal("theme dialog open = false, want true")
 	}
-	if app.styles.Name != "catppuccin-frappe" {
-		t.Fatalf("preview theme name = %q, want catppuccin-frappe", app.styles.Name)
+	if app.styles.Name != "test-theme" {
+		t.Fatalf("preview theme name = %q, want test-theme", app.styles.Name)
 	}
 	if app.config.Theme != defaultTheme.Name {
 		t.Fatalf("config theme = %q, want persisted default %q", app.config.Theme, defaultTheme.Name)
@@ -1405,19 +1398,17 @@ func TestThemeDialogEscRevertsPreview(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	defaultTheme := theme.Default()
-	frappe, err := theme.LoadBuiltIn("catppuccin-frappe")
-	if err != nil {
-		t.Fatalf("LoadBuiltIn(catppuccin-frappe) error = %v", err)
-	}
+	secondTheme, themePaths := loadTestTheme(t)
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
 		Config: config.Default(),
 		Theme:  defaultTheme,
+		Paths:  themePaths,
 		ThemeChoices: []theme.NamedTheme{
 			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
-			{Name: frappe.Name, Label: "Catppuccin Frappe", Theme: frappe},
+			{Name: secondTheme.Name, Label: "Test Theme", Theme: secondTheme},
 		},
 	})
 	if err != nil {
@@ -1454,10 +1445,6 @@ func TestActiveFooterKeysThemeDialogShowsF5Reload(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	defaultTheme := theme.Default()
-	frappe, err := theme.LoadBuiltIn("catppuccin-frappe")
-	if err != nil {
-		t.Fatalf("LoadBuiltIn(catppuccin-frappe) error = %v", err)
-	}
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
@@ -1466,7 +1453,6 @@ func TestActiveFooterKeysThemeDialogShowsF5Reload(t *testing.T) {
 		Theme:  defaultTheme,
 		ThemeChoices: []theme.NamedTheme{
 			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
-			{Name: frappe.Name, Label: "Catppuccin Frappe", Theme: frappe},
 		},
 	})
 	if err != nil {
@@ -2800,6 +2786,66 @@ func activateFileMenuItem(t *testing.T, app *App, shortcut rune) {
 	if app.model.Menu.Open {
 		t.Fatal("menu should be closed after activation")
 	}
+}
+
+// loadTestTheme creates a minimal theme file in a temp directory and returns the parsed theme
+// along with config.Paths whose ThemesDir points to the temp directory (so theme.Resolve can
+// find it). The theme uses "test-theme" as its name.
+func loadTestTheme(t *testing.T) (theme.Theme, config.Paths) {
+	t.Helper()
+
+	var buf strings.Builder
+	buf.WriteString(`name = "test-theme"
+
+[palette]
+black = "#000000"
+white = "#ffffff"
+yellow = "#ffff00"
+
+[styles]
+`)
+	for _, key := range []string{
+		"menu.bar", "menu.bar.selected", "menu.dropdown", "menu.dropdown.selected",
+		"menu.dropdown.frame", "menu.bar.accent", "menu.bar.alert", "menu.dropdown.accent",
+		"menu.detail",
+		"panel.frame", "panel.surface", "panel.title.active", "panel.title.inactive",
+		"panel.title.volume_free", "panel.header", "panel.row.normal", "panel.row.directory",
+		"panel.row.symlink", "panel.row.selected", "panel.row.cursor.active",
+		"panel.row.cursor.inactive", "panel.row.cursor.selected", "panel.sync.indicator",
+		"panel.blocked.frame", "panel.blocked.surface", "panel.blocked.title",
+		"panel.blocked.header", "panel.blocked.row.normal", "panel.blocked.row.directory",
+		"panel.blocked.row.symlink", "panel.blocked.row.selected", "panel.blocked.row.cursor",
+		"panel.blocked.row.cursor.selected", "panel.folder.diskscan", "panel.folder.diskscan_excluded",
+		"panel.spinner", "panel.usage.prefix.normal", "panel.usage.prefix.selected",
+		"panel.usage.prefix.cursor.active", "panel.usage.prefix.cursor.inactive",
+		"panel.usage.prefix.cursor.selected",
+		"fuzzy.input", "fuzzy.input.nomatch", "fuzzy.highlight", "fuzzy.highlight.cursor",
+		"dialog.frame", "dialog.title", "dialog.text", "dialog.surface", "dialog.accent",
+		"dialog.input.active", "dialog.input.active.placeholder", "dialog.input.inactive",
+		"dialog.input.inactive.placeholder", "dialog.button.normal", "dialog.button.active",
+		"dialog.option.inactive", "dialog.option.active", "dialog.option.selected",
+		"status.info", "status.warn", "status.error", "status.waiting_input",
+		"jobs.row", "jobs.running", "jobs.done", "jobs.failed",
+		"jobs.progress.track", "jobs.progress.fill", "jobs.progress.label.on_fill",
+		"jobs.progress.label.on_track",
+		"jobs.icons.queued", "jobs.icons.ongoing", "jobs.icons.paused", "jobs.icons.stopped",
+		"jobs.icons.error", "jobs.icons.input_required", "jobs.icons.completed",
+		"footer.key", "footer.label",
+	} {
+		fmt.Fprintf(&buf, "%s = { fg = \"white\", bg = \"black\" }\n", key)
+	}
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test-theme.toml")
+	if err := os.WriteFile(path, []byte(buf.String()), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	th, err := theme.LoadFile(path)
+	if err != nil {
+		t.Fatalf("LoadFile: %v", err)
+	}
+	paths := config.Paths{ThemesDir: dir}.WithResolvedLocations()
+	return th, paths
 }
 
 func newScreen(t *testing.T, w, h int) tcell.SimulationScreen {

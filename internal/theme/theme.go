@@ -235,18 +235,10 @@ var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
 
 var builtInThemeOrder = []string{
 	defaultName,
-	"catppuccin-latte",
-	"catppuccin-frappe",
-	"catppuccin-macchiato",
-	"catppuccin-mocha",
 }
 
 var builtInThemeLabels = map[string]string{
-	defaultName:            "Default",
-	"catppuccin-latte":     "Catppuccin Latte",
-	"catppuccin-frappe":    "Catppuccin Frappe",
-	"catppuccin-macchiato": "Catppuccin Macchiato",
-	"catppuccin-mocha":     "Catppuccin Mocha",
+	defaultName: "Default",
 }
 
 // Default returns the embedded default theme. The embedded asset is expected to

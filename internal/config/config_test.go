@@ -453,7 +453,7 @@ func TestWriteMergedPartialRequiresPersistPaths(t *testing.T) {
 func TestWriteMergedPartialThemeCreatesMinimalTomlWhenMissing(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "deep", "config")
 	paths := Paths{ConfigDir: dir}
-	if err := WriteMergedPartial(paths, map[string]interface{}{"theme": "catppuccin-macchiato"}); err != nil {
+	if err := WriteMergedPartial(paths, map[string]interface{}{"theme": "mytheme"}); err != nil {
 		t.Fatalf("WriteMergedPartial error = %v", err)
 	}
 	configPath := filepath.Join(dir, fileName)
@@ -461,14 +461,14 @@ func TestWriteMergedPartialThemeCreatesMinimalTomlWhenMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadFile(%q): %v", configPath, err)
 	}
-	if strings.TrimSpace(string(raw)) != `theme = "catppuccin-macchiato"` {
+	if strings.TrimSpace(string(raw)) != `theme = "mytheme"` {
 		t.Fatalf("file contents:\n%s", string(raw))
 	}
 	cfg, err := LoadFromPaths(Paths{ConfigFile: configPath})
 	if err != nil {
 		t.Fatalf("LoadFromPaths(): %v", err)
 	}
-	if cfg.Theme != "catppuccin-macchiato" || cfg.ShowHidden != Default().ShowHidden {
+	if cfg.Theme != "mytheme" || cfg.ShowHidden != Default().ShowHidden {
 		t.Fatalf("merged config %+v differs from expectation", cfg)
 	}
 }
@@ -479,14 +479,14 @@ keep_finished = 7
 `)
 
 	paths := Paths{ConfigFile: path}
-	if err := WriteMergedPartial(paths, map[string]interface{}{"theme": "catppuccin-latte"}); err != nil {
+	if err := WriteMergedPartial(paths, map[string]interface{}{"theme": "mytheme"}); err != nil {
 		t.Fatalf("WriteMergedPartial: %v", err)
 	}
 	cfg, err := LoadFromPaths(paths)
 	if err != nil {
 		t.Fatalf("LoadFromPaths(): %v", err)
 	}
-	if cfg.Theme != "catppuccin-latte" {
+	if cfg.Theme != "mytheme" {
 		t.Fatalf("Theme = %q", cfg.Theme)
 	}
 	if cfg.Jobs.KeepFinished != 7 {

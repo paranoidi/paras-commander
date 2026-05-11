@@ -28,38 +28,6 @@ func TestDefaultLoadsEmbeddedTheme(t *testing.T) {
 	}
 }
 
-func TestCatppuccinBuiltInThemesLoad(t *testing.T) {
-	tests := []struct {
-		name           string
-		wantBackground tcell.Color
-		wantForeground tcell.Color
-	}{
-		{name: "catppuccin-latte", wantBackground: tcell.NewRGBColor(239, 241, 245), wantForeground: tcell.NewRGBColor(76, 79, 105)},
-		{name: "catppuccin-frappe", wantBackground: tcell.NewRGBColor(48, 52, 70), wantForeground: tcell.NewRGBColor(198, 208, 245)},
-		{name: "catppuccin-macchiato", wantBackground: tcell.NewRGBColor(36, 39, 58), wantForeground: tcell.NewRGBColor(202, 211, 245)},
-		{name: "catppuccin-mocha", wantBackground: tcell.NewRGBColor(30, 30, 46), wantForeground: tcell.NewRGBColor(205, 214, 244)},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			styles, err := LoadBuiltIn(tt.name)
-			if err != nil {
-				t.Fatalf("LoadBuiltIn(%q) error = %v", tt.name, err)
-			}
-			if styles.Name != tt.name {
-				t.Fatalf("theme name = %q, want %q", styles.Name, tt.name)
-			}
-			foreground, background, _ := styles.PanelRowNormal.Decompose()
-			if foreground != tt.wantForeground {
-				t.Fatalf("foreground = %v, want %v", foreground, tt.wantForeground)
-			}
-			if background != tt.wantBackground {
-				t.Fatalf("background = %v, want %v", background, tt.wantBackground)
-			}
-		})
-	}
-}
-
 func TestParsePaletteANSIIndex(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
 		"menu.bar": `{ fg = "marker", bg = "black" }`,
@@ -299,13 +267,13 @@ func TestResolveFallsBackToDefaultForUnavailableTheme(t *testing.T) {
 
 func TestResolvePrefersDiskThemeOverBuiltInWithSameName(t *testing.T) {
 	dir := t.TempDir()
-	data := testTheme(t, "catppuccin-frappe", nil, map[string]string{
+	data := testTheme(t, "default", nil, map[string]string{
 		"menu.bar": `{ fg = "white", bg = "#112233" }`,
 	})
 	if err := os.WriteFile(filepath.Join(dir, "custom.toml"), data, 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
-	got, err := Resolve("catppuccin-frappe", dir)
+	got, err := Resolve("default", dir)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}

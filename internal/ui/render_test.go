@@ -386,7 +386,7 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 			CurrentName: "default",
 			Choices: []ThemeChoice{
 				{Name: "default", Label: "Default"},
-				{Name: "catppuccin-frappe", Label: "Catppuccin Frappe"},
+				{Name: "test-theme", Label: "Test Theme"},
 			},
 		},
 	}
@@ -397,10 +397,10 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 	// Dialog now has dual-column layout with preview.
 	// Theme list is left column, second item at row 3.
 	row := textAt(screen, 0, 3, width)
-	if !strings.Contains(row, "Catppuccin Frappe") {
-		t.Fatalf("theme dialog row = %q, want Catppuccin Frappe", strings.TrimRight(row, " "))
+	if !strings.Contains(row, "Test Theme") {
+		t.Fatalf("theme dialog row = %q, want Test Theme", strings.TrimRight(row, " "))
 	}
-	styleCol := strings.Index(row, "Catppuccin Frappe")
+	styleCol := strings.Index(row, "Test Theme")
 	if styleCol < 0 {
 		t.Fatal("Catppuccin Frappe substring not found in row")
 	}

@@ -144,5 +144,15 @@ Changes must pass `go test ./...`.
 
 # Git worktrees
 
-When working within git worktree (check if current path contains .worktrees) commit verified changes into git. Do NOT use git in any other context unless user explicitly asks.
+When working within git worktree (check if current path contains .worktrees) commit verified changes into git. 
+
+CRITICAL:
+- Do not add ANY new files into git which were not created as part of the changes
+- Do NOT use git in any other context unless user explicitly asks.
+
+# File deletions
+
+CRITICAL:
+
+- Do not remove ANY files which are not being tracked by git
 
