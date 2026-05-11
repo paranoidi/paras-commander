@@ -103,9 +103,10 @@ type Theme struct {
 	DialogOptionActive             tcell.Style
 	DialogOptionSelected           tcell.Style
 
-	StatusInfo  tcell.Style
-	StatusWarn  tcell.Style
-	StatusError tcell.Style
+	StatusInfo        tcell.Style
+	StatusWarn        tcell.Style
+	StatusError       tcell.Style
+	StatusWaitingInput tcell.Style
 
 	JobsRow     tcell.Style
 	JobsRunning tcell.Style
@@ -201,6 +202,7 @@ var requiredStyleKeys = []string{
 	"status.info",
 	"status.warn",
 	"status.error",
+	"status.waiting_input",
 	"jobs.row",
 	"jobs.running",
 	"jobs.done",
@@ -567,9 +569,10 @@ func parse(data []byte) (Theme, error) {
 		DialogOptionActive:             styles["dialog.option.active"],
 		DialogOptionSelected:           styles["dialog.option.selected"],
 
-		StatusInfo:  styles["status.info"],
-		StatusWarn:  styles["status.warn"],
-		StatusError: styles["status.error"],
+		StatusInfo:        styles["status.info"],
+		StatusWarn:        styles["status.warn"],
+		StatusError:       styles["status.error"],
+		StatusWaitingInput: styles["status.waiting_input"],
 
 		JobsRow:     styles["jobs.row"],
 		JobsRunning: styles["jobs.running"],

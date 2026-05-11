@@ -2019,7 +2019,11 @@ func (a *App) menuBarJobsAttentionText() string {
 	if n <= 0 {
 		return ""
 	}
-	return fmt.Sprintf("! %d", n)
+	word := "jobs"
+	if n == 1 {
+		word = "job"
+	}
+	return fmt.Sprintf("󰋗 %d %s waiting", n, word)
 }
 
 func (a *App) menuBarPermissionText() string {

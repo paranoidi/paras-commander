@@ -65,7 +65,7 @@ func menuBarRightTailRuneCount(attention, perm string, showMenuBarSpinner bool) 
 // drawMenuBarBlank fills the menu row with menu background and no labels (modal overlays block the menu).
 func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
 	primitive.Text(screen, rect.X, rect.Y, rect.Width, "", styles.MenuBar)
-	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.PanelSpinner, showMenuBarSpinner, spinPhase)
+	drawMenuBarRightTail(screen, rect, attention, perm, styles.StatusWaitingInput, styles.MenuDetail, styles.PanelSpinner, showMenuBarSpinner, spinPhase)
 }
 
 func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.Definition, styles theme.Theme, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
@@ -95,7 +95,7 @@ func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.
 		}
 		x += labelW + 1
 	}
-	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.PanelSpinner, showMenuBarSpinner, spinPhase)
+	drawMenuBarRightTail(screen, rect, attention, perm, styles.StatusWaitingInput, styles.MenuDetail, styles.PanelSpinner, showMenuBarSpinner, spinPhase)
 }
 
 // menuBarMenusClipExclusive is the first column after the menu label area (before permission tail).

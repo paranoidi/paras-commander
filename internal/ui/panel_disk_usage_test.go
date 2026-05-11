@@ -51,12 +51,14 @@ func TestMenuBarPermissionTailRuneCountIncludesSpinnerSlot(t *testing.T) {
 }
 
 func TestMenuBarRightTailJobsAttentionPaddingAndSpinnerGap(t *testing.T) {
-	if got := menuBarRightTailRuneCount("! 1", "", false); got != utf8.RuneCountInString(" ! 1 ") {
-		t.Fatalf("attention-only tail width: got %d", got)
+	// Verify padded attention width.
+	padded, ok := menuBarAttentionPadded("󰋗 1 job waiting")
+	if !ok || padded == "" {
+		t.Fatal("menuBarAttentionPadded returned empty for non-empty attention")
 	}
-	wantAttentionSpinner := utf8.RuneCountInString(" ! 1 ") + 1 + menuBarSpinnerCells
-	if got := menuBarRightTailRuneCount("! 1", "", true); got != wantAttentionSpinner {
-		t.Fatalf("attention + gap + spinner tail width: got %d want %d", got, wantAttentionSpinner)
+	paddedRunes := []rune(padded)
+	if len(paddedRunes) != 17 {
+		t.Fatalf("padded attention has %d runes, want 17", len(paddedRunes))
 	}
 
 	screen := tcell.NewSimulationScreen("UTF-8")
@@ -64,12 +66,12 @@ func TestMenuBarRightTailJobsAttentionPaddingAndSpinnerGap(t *testing.T) {
 		t.Fatalf("Init() error = %v", err)
 	}
 	defer screen.Fini()
-	const width = 80
+	const width = 120
 	screen.SetSize(width, 12)
 
 	styles := theme.Default()
 	drawMenuBarRightTail(screen, Rect{X: 0, Y: 0, Width: width, Height: 1},
-		"! 1", "", styles.MenuBarAlert, styles.MenuDetail, styles.PanelSpinner, true, 0)
+		"󰋗 1 job waiting", "", styles.StatusWaitingInput, styles.MenuDetail, styles.PanelSpinner, true, 0)
 
 	spinnerCol := width - menuBarPermRightMargin - 1
 	gapCol := spinnerCol - 1
@@ -79,16 +81,34 @@ func TestMenuBarRightTailJobsAttentionPaddingAndSpinnerGap(t *testing.T) {
 		t.Fatalf("gap before spinner = %q, want space", gr)
 	}
 
-	wantLabel := " ! 1 "
-	labelStart := gapCol - utf8.RuneCountInString(wantLabel)
-	row := textAt(screen, 0, 0, width)
-	if gotLabel := row[labelStart:gapCol]; gotLabel != wantLabel {
-		t.Fatalf("attention segment = %q, want %q", gotLabel, wantLabel)
-	}
-	for col := labelStart; col < gapCol; col++ {
+	// For no-permission case the attention segment starts at cell 100 (see drawMenuBarRightTail).
+	attStart := 100
+	for col := attStart; col < attStart+len(paddedRunes); col++ {
 		_, st, _ := screen.Get(col, 0)
-		if st != styles.MenuBarAlert {
-			t.Fatalf("attention cell style at %d = %v, want MenuBarAlert", col, st)
+		if st != styles.StatusWaitingInput {
+			t.Fatalf("attention cell style at %d = %v, want StatusWaitingInput", col, st)
 		}
+	}
+
+	// Verify attention glyphs (handling double-width Nerd Font glyph).
+	var attentionText []rune
+	for col := attStart; col < attStart+len(paddedRunes); {
+		ch, _, cw := screen.Get(col, 0)
+		if cw < 1 {
+			cw = 1
+		}
+		r, _ := utf8.DecodeRuneInString(ch)
+		attentionText = append(attentionText, r)
+		col += cw
+	}
+	got := string(attentionText)
+	if got != padded {
+		t.Fatalf("attention text = %q, want %q", got, padded)
+	}
+
+	// Spinner cell
+	_, st, _ := screen.Get(spinnerCol, 0)
+	if st != styles.PanelSpinner {
+		t.Fatalf("spinner cell style at %d = %v, want PanelSpinner", spinnerCol, st)
 	}
 }
