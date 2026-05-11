@@ -27,6 +27,11 @@ type State struct {
 	blockerRegMu sync.Mutex
 	blockerWait  map[string]chan ConflictDecision
 
+	// pendingActive holds a job dequeued from the queue but not yet holding the transfer lease.
+	// It is set in dequeueJob() (called from runWorker) and nil'd in runJob after s.active is set.
+	// This prevents the job from being invisible in AllJobs() between dequeue and lease acquisition.
+	pendingActive *Job
+
 	// TransferFunc is called by the worker to copy/move files, allowing tests to inject
 	// custom implementations. emit must be used for all job-related UI events (same path as State.emit).
 	TransferFunc func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error
@@ -61,6 +66,18 @@ func (s *State) SetEmitHook(fn func(Event)) {
 	s.emitMu.Lock()
 	s.emitHook = fn
 	s.emitMu.Unlock()
+}
+
+// dequeueJob removes the first runnable job from the queue and sets it as pendingActive
+// while it waits for the transfer lease. Caller must not be holding s.mu.
+func (s *State) dequeueJob() *Job {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job := s.queue.DequeueRunnable()
+	if job != nil {
+		s.pendingActive = job
+	}
+	return job
 }
 
 // AddJob adds a job to the queue and emits an enqueued event.
@@ -115,6 +132,9 @@ func (s *State) HasUnfinishedWork() bool {
 			return true
 		}
 	}
+	if s.pendingActive != nil && !s.pendingActive.Status.IsFinished() {
+		return true
+	}
 	for _, j := range s.queue.AllJobs() {
 		if !j.Status.IsFinished() {
 			return true
@@ -150,6 +170,9 @@ func (s *State) AllJobs() []*Job {
 		if j != nil {
 			all = append(all, j)
 		}
+	}
+	if s.pendingActive != nil {
+		all = append(all, s.pendingActive)
 	}
 	all = append(all, s.queue.AllJobs()...)
 	if len(s.finished) > 0 {
@@ -307,6 +330,19 @@ func (s *State) CancelJob(id string) bool {
 		s.mu.Unlock()
 		return true
 	}
+	if s.pendingActive != nil && s.pendingActive.ID == id {
+		job := s.pendingActive
+		s.pendingActive = nil
+		job.Status = StatusCanceled
+		job.FinishedAt = time.Now()
+		s.mu.Unlock()
+		s.emit(Event{
+			Type:   EventCanceled,
+			JobID:  id,
+			Status: StatusCanceled,
+		})
+		return true
+	}
 	if s.removeWaitingBlockerUnlocked(id) {
 		s.mu.Unlock()
 		s.SubmitBlockerDecision(id, DecisionCancel)
@@ -332,7 +368,7 @@ func (s *State) StartWorker(stop <-chan struct{}) {
 
 func (s *State) runWorker(stop <-chan struct{}) {
 	for {
-		job := s.queue.DequeueRunnable()
+		job := s.dequeueJob()
 		if job == nil {
 			select {
 			case <-stop:
@@ -412,6 +448,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	s.mu.Lock()
 	job.Status = StatusRunning
 	s.active = job
+	s.pendingActive = nil
 	s.cancelRun = cancel
 	s.mu.Unlock()
 
@@ -486,6 +523,10 @@ func (s *State) workerShutdown() {
 		}
 	}
 	s.waitingBlocker = nil
+	if s.pendingActive != nil && !s.pendingActive.Status.IsFinished() {
+		s.pendingActive.Status = StatusCanceled
+	}
+	s.pendingActive = nil
 	if s.active != nil && !s.active.Status.IsFinished() {
 		s.active.Status = StatusCanceled
 	}
@@ -517,6 +558,9 @@ func (s *State) findJobUnlocked(id string) *Job {
 		if job.ID == id {
 			return job
 		}
+	}
+	if s.pendingActive != nil && s.pendingActive.ID == id {
+		return s.pendingActive
 	}
 	if s.active != nil && s.active.ID == id {
 		return s.active

@@ -2492,6 +2492,7 @@ func (a *App) executeDelete() {
 		a.closeFileDialog()
 		return
 	}
+	p.ClearSelection()
 	a.closeFileDialog()
 	a.refreshBothPanels()
 	delNoun := "items"

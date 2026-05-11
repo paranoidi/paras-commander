@@ -178,7 +178,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		_, lineBG, _ := lineStyle.Decompose()
 		_, iconFG, _ := iconStyle.Decompose()
 		iconRenderStyle := tcell.StyleDefault.Foreground(iconFG).Background(lineBG)
-		iconGlyph := jobRowLeadingIcon(entry.Status)
+		iconGlyph := jobRowLeadingIcon(entry.Status, styles)
 		primitive.Text(screen, contentX, y, 2, iconGlyph, iconRenderStyle)
 		line := fmt.Sprintf("%-5s ", truncateRunes(entry.Type, 5))
 		primitive.Text(screen, contentX+2, y, jobsListColPrefix-2, line, lineStyle)
@@ -597,10 +597,13 @@ func truncateMiddle(s string, max int) string {
 //	  Error (failed)
 //	󰋗  Input required (decision)
 //	  Completed
-func jobRowLeadingIcon(status string) string {
+func jobRowLeadingIcon(status string, th theme.Theme) string {
+	if sym, ok := th.Symbols[status]; ok && sym != "" {
+		return sym
+	}
 	switch status {
 	case "queued":
-		return "\uf017" //  Waiting (clock)
+		return "\uf1af9" // ⏳ Queued (clock face)
 	case "running":
 		return "\uf144" //  Ongoing (play circle)
 	case "decision":

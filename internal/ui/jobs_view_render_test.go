@@ -1,6 +1,10 @@
 package ui
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/theme"
+)
 
 func TestJobPercentDoneCompletedReportsFull(t *testing.T) {
 	p := jobPercentDone(JobEntry{Status: "completed", DoneFiles: 99, TotalFiles: 100})
@@ -47,49 +51,49 @@ func TestJobPercentDoneCapsByteRatioAt100(t *testing.T) {
 }
 
 func TestJobRowLeadingIconCompletedUsesDoneGlyph(t *testing.T) {
-	if got := jobRowLeadingIcon("completed"); got != "\uf05d" {
+	if got := jobRowLeadingIcon("completed", theme.Theme{}); got != "\uf05d" {
 		t.Fatalf("completed icon = %q, want %q", got, "\uf05d")
 	}
 }
 
 func TestJobRowLeadingIconFailedUsesErrorGlyph(t *testing.T) {
 	want := "\uf06a"
-	if got := jobRowLeadingIcon("failed"); got != want {
+	if got := jobRowLeadingIcon("failed", theme.Theme{}); got != want {
 		t.Fatalf("failed icon = %q, want %q", got, want)
 	}
 }
 
 func TestJobRowLeadingIconCanceledUsesStoppedGlyph(t *testing.T) {
 	want := "\uf28d"
-	if got := jobRowLeadingIcon("canceled"); got != want {
+	if got := jobRowLeadingIcon("canceled", theme.Theme{}); got != want {
 		t.Fatalf("canceled icon = %q, want %q", got, want)
 	}
 }
 
 func TestJobRowLeadingIconDecisionUsesInputRequiredGlyph(t *testing.T) {
 	want := "\U000f02d7"
-	if got := jobRowLeadingIcon("decision"); got != want {
+	if got := jobRowLeadingIcon("decision", theme.Theme{}); got != want {
 		t.Fatalf("decision icon = %q, want %q", got, want)
 	}
 }
 
 func TestJobRowLeadingIconQueuedUsesClockGlyph(t *testing.T) {
-	want := "\uf017"
-	if got := jobRowLeadingIcon("queued"); got != want {
+	want := "\uf1af9"
+	if got := jobRowLeadingIcon("queued", theme.Theme{}); got != want {
 		t.Fatalf("queued icon = %q, want %q", got, want)
 	}
 }
 
 func TestJobRowLeadingIconRunningUsesOngoingGlyph(t *testing.T) {
 	want := "\uf144"
-	if got := jobRowLeadingIcon("running"); got != want {
+	if got := jobRowLeadingIcon("running", theme.Theme{}); got != want {
 		t.Fatalf("running icon = %q, want %q", got, want)
 	}
 }
 
 func TestJobRowLeadingIconPausedUsesPausedGlyph(t *testing.T) {
 	want := "\uf28b"
-	if got := jobRowLeadingIcon("paused"); got != want {
+	if got := jobRowLeadingIcon("paused", theme.Theme{}); got != want {
 		t.Fatalf("paused icon = %q, want %q", got, want)
 	}
 }

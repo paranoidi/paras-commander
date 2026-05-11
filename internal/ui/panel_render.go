@@ -161,6 +161,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 
 		var subtreeMark bool
 		var jobMark bool
+		var jobStatus string
+		var jobMarkGlyph rune
 
 		if entry, _, ok := state.VisibleEntry(entryIndex); ok {
 			hasEntry = true
@@ -193,8 +195,18 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				}
 			}
 			subtreeMark = entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
-			jobMark = EntryPathMarkedByJobs(entry.Path, jobs)
-			text = formatEntry(entry, rowTextWidth, showIcons, jobMark, subtreeMark, painter)
+			jobMark, jobStatus = EntryPathJobMarkStatus(entry.Path, jobs)
+			if jobMark {
+				glyphStr := jobRowLeadingIcon(jobStatus, styles)
+				if glyphStr != "" {
+					jobMarkGlyph, _ = utf8.DecodeRuneInString(glyphStr)
+				} else {
+					jobMarkGlyph = 0
+				}
+			} else {
+				jobMarkGlyph = 0
+			}
+			text = formatEntry(entry, rowTextWidth, showIcons, jobMarkGlyph, subtreeMark, painter)
 			if showDiskUsage && painter != nil && diskDenom > 0 {
 				fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, painter), diskDenom, fullRowCells)
 			}
@@ -208,18 +220,25 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		}
 
 		if hasEntry {
-			spans = matchSpans(cur, rowTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, styles, showIcons, jobMark, subtreeMark, func(di int) tcell.Style {
+			spans = matchSpans(cur, rowTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, styles, showIcons, jobMarkGlyph, subtreeMark, func(di int) tcell.Style {
 				return blendCell(di + leftGutter + iconStrip)
 			})
 			if jobMark || subtreeMark {
-				display := entryDisplayRunes(cur, nameWidth, showIcons, jobMark, subtreeMark)
-				suf := entryListingSuffixDecorationLen(nameWidth, jobMark, subtreeMark && cur.Type == localfs.EntryDirectory)
+				display := entryDisplayRunes(cur, nameWidth, showIcons, jobMarkGlyph, subtreeMark)
+				suf := entryListingSuffixDecorationLen(nameWidth, jobMarkGlyph, subtreeMark && cur.Type == localfs.EntryDirectory)
 				decStart := len(display) - suf
 				if decStart >= 0 && decStart < len(display) {
+					_, rowBG, _ := style.Decompose()
+					jobIconFG, _, _ := jobIconStyle(jobStatus, styles).Decompose()
 					for i := decStart; i < len(display); i++ {
 						r := display[i].Rune
-						if r == JobQueuedMarkRune || r == '○' {
-							spans = append([]primitive.Span{{Start: i, End: i + 1, Style: style.Foreground(listingMarkFG)}}, spans...)
+						if r == jobMarkGlyph || r == '○' {
+							fg := jobIconFG
+							if r == '○' {
+								fg = listingMarkFG
+							}
+							spanStyle := tcell.StyleDefault.Foreground(fg).Background(rowBG)
+							spans = append([]primitive.Span{{Start: i, End: i + 1, Style: spanStyle}}, spans...)
 						}
 					}
 				}
@@ -347,17 +366,17 @@ type displayRune struct {
 	NameIdx int // -1 for prefix/suffix decoration
 }
 
-func formatEntry(entry localfs.Entry, width int, showFileIcons bool, jobQueueMark bool, subtreeSelectionMark bool, painter DiskUsagePainter) string {
+func formatEntry(entry localfs.Entry, width int, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, painter DiskUsagePainter) string {
 	nameWidth := panelListNameWidth(width)
-	display := entryDisplayRunes(entry, nameWidth, showFileIcons, jobQueueMark, subtreeSelectionMark)
+	display := entryDisplayRunes(entry, nameWidth, showFileIcons, jobMarkRune, subtreeSelectionMark)
 	name := string(runesFromDisplay(display))
 	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter), panelListModTimeCells, formatTime(entry.ModifiedAt))
 }
 
 // entryListingSuffixDecorationLen returns how many trailing runes are reserved for job + subtree selection marks.
-func entryListingSuffixDecorationLen(width int, jobQueueMark, subtreeForDir bool) int {
+func entryListingSuffixDecorationLen(width int, jobMarkRune rune, subtreeForDir bool) int {
 	n := 0
-	if jobQueueMark && width > n+2 {
+	if jobMarkRune != 0 && width > n+2 {
 		n += 2
 	}
 	if subtreeForDir && width > n+2 {
@@ -368,16 +387,16 @@ func entryListingSuffixDecorationLen(width int, jobQueueMark, subtreeForDir bool
 
 // entryDisplayRunes builds the display rune slice for an entry name,
 // including prefix (space or /), symlink suffix (@) when applicable,
-// optional trailing job-queue mark (JobQueuedMarkRune) before subtree selection,
+// optional trailing job-queue mark (icon glyph) before subtree selection,
 // and a trailing " ○" for directories that contain a strictly nested selection, truncated as needed.
-func entryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, jobQueueMark bool, subtreeSelectionMark bool) []displayRune {
-	showJob := jobQueueMark && width > 2
+func entryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool) []displayRune {
+	showJob := jobMarkRune != 0 && width > 2
 	suffixUsed := 0
 	if showJob {
 		suffixUsed = 2
 	}
 	showSub := subtreeSelectionMark && entry.Type == localfs.EntryDirectory && width > suffixUsed+2
-	suffixLen := entryListingSuffixDecorationLen(width, jobQueueMark, subtreeSelectionMark && entry.Type == localfs.EntryDirectory)
+	suffixLen := entryListingSuffixDecorationLen(width, jobMarkRune, subtreeSelectionMark && entry.Type == localfs.EntryDirectory)
 	innerW := width - suffixLen
 	if innerW < 1 {
 		innerW = 1
@@ -423,7 +442,7 @@ func entryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, jobQu
 	out := make([]displayRune, 0, len(core)+suffixLen)
 	out = append(out, core...)
 	if showJob {
-		out = append(out, displayRune{Rune: ' ', NameIdx: -1}, displayRune{Rune: JobQueuedMarkRune, NameIdx: -1})
+		out = append(out, displayRune{Rune: ' ', NameIdx: -1}, displayRune{Rune: jobMarkRune, NameIdx: -1})
 	}
 	if showSub {
 		out = append(out, displayRune{Rune: ' ', NameIdx: -1}, displayRune{Rune: '○', NameIdx: -1})
@@ -439,12 +458,12 @@ func runesFromDisplay(display []displayRune) []rune {
 	return runes
 }
 
-func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, showFileIcons bool, jobQueueMark bool, subtreeSelectionMark bool, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
+func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
 	if len(ranges) == 0 {
 		return nil
 	}
 	nameWidth := panelListNameWidth(rowWidth)
-	display := entryDisplayRunes(entry, nameWidth, showFileIcons, jobQueueMark, subtreeSelectionMark)
+	display := entryDisplayRunes(entry, nameWidth, showFileIcons, jobMarkRune, subtreeSelectionMark)
 	matchStyle := styles.FuzzyHighlight
 	if highlightCursor {
 		matchStyle = styles.FuzzyHighlightCursor

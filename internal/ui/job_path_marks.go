@@ -8,9 +8,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ops"
 )
 
-// JobQueuedMarkRune is appended after entry names when the path is affected by an unfinished copy/move job.
-const JobQueuedMarkRune = '\uf04d'
-
 func pathEqualOrUnder(root, p string) bool {
 	root = filepath.Clean(root)
 	p = filepath.Clean(p)
@@ -27,11 +24,11 @@ func pathEqualOrUnder(root, p string) bool {
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
-// EntryPathMarkedByJobs reports whether absPath is a source or destination tree root
-// for any non-finished job in jobList (queued, running, or waiting on conflict).
-func EntryPathMarkedByJobs(absPath string, jobList []JobEntry) bool {
+// EntryPathJobMarkStatus returns the job status of the first non-finished job that
+// affects absPath, and a bool indicating whether any such job was found.
+func EntryPathJobMarkStatus(absPath string, jobList []JobEntry) (bool, string) {
 	if absPath == "" || len(jobList) == 0 {
-		return false
+		return false, ""
 	}
 	p := filepath.Clean(absPath)
 	for _, j := range jobList {
@@ -44,16 +41,23 @@ func EntryPathMarkedByJobs(absPath string, jobList []JobEntry) bool {
 			}
 			cs := filepath.Clean(src)
 			if pathEqualOrUnder(cs, p) {
-				return true
+				return true, j.Status
 			}
 			if j.Destination == "" {
 				continue
 			}
 			dst := filepath.Clean(ops.ResolveDestination(cs, j.Destination))
 			if dst != "" && dst != "." && pathEqualOrUnder(dst, p) {
-				return true
+				return true, j.Status
 			}
 		}
 	}
-	return false
+	return false, ""
+}
+
+// EntryPathMarkedByJobs reports whether absPath is a source or destination tree root
+// for any non-finished job in jobList (queued, running, or waiting on conflict).
+func EntryPathMarkedByJobs(absPath string, jobList []JobEntry) bool {
+	marked, _ := EntryPathJobMarkStatus(absPath, jobList)
+	return marked
 }

@@ -113,3 +113,12 @@ jobs.icons.stopped = { fg = "bright_red", bg = "black", bold = true }
 jobs.icons.error = { fg = "bright_red", bg = "black", bold = true }
 jobs.icons.input_required = { fg = "cyan", bg = "black", bold = true }
 jobs.icons.completed = { fg = "bright_green", bg = "black", bold = true }
+
+[symbols]
+queued = "\uf1af9"
+running = "\uf144"
+paused = "\uf28b"
+canceled = "\uf28d"
+failed = "\uf06a"
+decision = "\uf059"
+completed = "\uf05d"

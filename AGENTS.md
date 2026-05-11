@@ -25,13 +25,7 @@ When adding new items into menu, use first letter of the text as a shortcut if a
 
 # Statuses
 
-Use following icons for statuses:
-
- = Ongoing (green)
- = Paused (yellow)
- = Stopped (red)
- = Error (red)
-󰋗 = Input required (cyan)
+Theme file defines icons/glyphs for statuses such as ongoing, paused, failed, aborted, success etc. Use them where appropriate.
 
 # Dialog Standards
 
@@ -142,17 +136,9 @@ Logic lives in `internal/ui/dialog_field.go`. When opening a dialog with a sugge
 Changes must pass `golangci-lint run ./...` with the repo `.golangci.yml` (see https://golangci-lint.run/).
 Changes must pass `go test ./...`.
 
-# Git worktrees
-
-When working within git worktree (check if current path contains .worktrees) commit verified changes into git. 
-
-CRITICAL:
-- Do not add ANY new files into git which were not created as part of the changes
-- Do NOT use git in any other context unless user explicitly asks.
-
 # File deletions
 
 CRITICAL:
 
-- Do not remove ANY files which are not being tracked by git
+- Do not remove ANY files which are not being tracked by git.
 

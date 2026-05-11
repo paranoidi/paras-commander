@@ -127,6 +127,10 @@ type Theme struct {
 	JobsIconsInputRequired tcell.Style
 	JobsIconsCompleted     tcell.Style
 
+	// Symbols holds global glyphs (e.g. Nerd Font job status icons) referenced by the UI
+	// from the [symbols] section of the theme file.
+	Symbols map[string]string
+
 	FooterKey   tcell.Style
 	FooterLabel tcell.Style
 }
@@ -447,7 +451,7 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 	for key := range raw {
-		if key != "name" && key != "palette" && key != "styles" {
+		if key != "name" && key != "palette" && key != "styles" && key != "symbols" {
 			return Theme{}, fmt.Errorf("unknown field %q", key)
 		}
 	}
@@ -465,6 +469,11 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 	specs, err := styleSpecs(raw)
+	if err != nil {
+		return Theme{}, err
+	}
+
+	symbols, err := symbolsField(raw)
 	if err != nil {
 		return Theme{}, err
 	}
@@ -600,6 +609,8 @@ func parse(data []byte) (Theme, error) {
 		JobsIconsInputRequired: styles["jobs.icons.input_required"],
 		JobsIconsCompleted:     styles["jobs.icons.completed"],
 
+		Symbols: symbols,
+
 		FooterKey:   styles["footer.key"],
 		FooterLabel: styles["footer.label"],
 	}, nil
@@ -615,6 +626,37 @@ func stringField(raw map[string]any, key string) (string, error) {
 		return "", fmt.Errorf("%s must be a string", key)
 	}
 	return text, nil
+}
+
+func symbolsField(raw map[string]any) (map[string]string, error) {
+	value, ok := raw["symbols"]
+	if !ok {
+		return map[string]string{}, nil
+	}
+	table, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("symbols must be a table")
+	}
+	symbols := map[string]string{}
+	for name, rawValue := range table {
+		switch v := rawValue.(type) {
+		case string:
+			symbols[name] = v
+		case map[string]any:
+			sym, ok := v["symbol"]
+			if !ok {
+				return nil, fmt.Errorf("symbols.%s: missing 'symbol' field", name)
+			}
+			symStr, ok := sym.(string)
+			if !ok {
+				return nil, fmt.Errorf("symbols.%s.symbol must be a string", name)
+			}
+			symbols[name] = symStr
+		default:
+			return nil, fmt.Errorf("symbols.%s: must be a string or inline table with 'symbol' field", name)
+		}
+	}
+	return symbols, nil
 }
 
 func paletteField(raw map[string]any) (map[string]tcell.Color, error) {
