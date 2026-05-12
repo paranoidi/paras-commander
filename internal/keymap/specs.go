@@ -295,8 +295,8 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionFileRename,
 			Title:        "Rename / Move",
 			Section:      "File operations",
-			DefaultKeys:  []string{"M-r"},
-			PreferredKey: "F6",
+			DefaultKeys:  []string{"S-F6"},
+			PreferredKey: "S-F6",
 			Keywords:     []string{"rename", "move"},
 		},
 		{

@@ -259,6 +259,10 @@ func Default() Config {
 				Description: "Count files and folders",
 				Dirs:        `f=$(find "$1" -maxdepth 1 -mindepth 1 -type f | wc -l | awk '{print $1}'); d=$(find "$1" -maxdepth 1 -mindepth 1 -type d | wc -l | awk '{print $1}'); printf '\t%s\t\t%s\n' "$f" "$d"`,
 			},
+			"mkvinfo": {
+				Description: "MKV Info (length, resolution)",
+				File:        `case $(printf '%s' "${1##*.}" | tr '[:upper:]' '[:lower:]') in mkv) ;; *) exit 0;; esac; mkvinfo "$1" 2>/dev/null | awk '!/Default/&&/Duration/{split($4,d,":");dur=d[1]":"d[2]} /Pixel/{if(/width/)w=$NF;else h=$NF} END{print dur"\t"w"x"h}'`,
+			},
 		},
 	}
 }

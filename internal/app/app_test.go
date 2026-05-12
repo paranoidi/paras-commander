@@ -2642,7 +2642,7 @@ func TestFileDialogEnterExecutesRename(t *testing.T) {
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
 
-	// Dispatch rename via keybinding (M-r).
+	// Dispatch rename via keybinding (Shift+F6).
 	action := keymap.ActionFileRename
 	app.dispatch(action)
 
