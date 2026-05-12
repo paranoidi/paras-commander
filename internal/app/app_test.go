@@ -322,6 +322,68 @@ func TestTransferDialogEnterFromDestinationConfirms(t *testing.T) {
 	}
 }
 
+func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	dstDir := filepath.Join(dir, "dest")
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
+		t.Fatalf("mkdir dest: %v", err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	if err := app.inactivePanel().Load(dstDir); err != nil {
+		t.Fatalf("inactive Load: %v", err)
+	}
+	defer app.stopWorker()
+	defer flushBackgroundJobs(t, app)
+
+	p := app.activePanel()
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("expected current entry tagged after Insert")
+	}
+
+	app.openCopyDialog()
+	d := &app.model.TransferDialog
+	if d.FocusField != 0 || d.Phase != ui.TransferPhaseDestination {
+		t.Fatalf("unexpected initial dialog state: focus=%d phase=%v", d.FocusField, d.Phase)
+	}
+	startCursor := d.Destination.Cursor
+	if startCursor == 0 {
+		t.Fatalf("expected destination prefill cursor > 0, got %d", startCursor)
+	}
+
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if d.Destination.Cursor != startCursor-1 {
+		t.Fatalf("Left: cursor = %d, want %d", d.Destination.Cursor, startCursor-1)
+	}
+	if d.DestSubFocus != ui.TransferDestSubFocusText {
+		t.Fatalf("Left changed sub-focus to %v, want text", d.DestSubFocus)
+	}
+
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if d.Destination.Cursor != startCursor-2 {
+		t.Fatalf("Left again: cursor = %d, want %d", d.Destination.Cursor, startCursor-2)
+	}
+
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if d.Destination.Cursor != startCursor-1 {
+		t.Fatalf("Right: cursor = %d, want %d", d.Destination.Cursor, startCursor-1)
+	}
+
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'X', tcell.ModNone))
+	wantInsertPos := startCursor - 1
+	runes := []rune(d.Destination.Value)
+	if wantInsertPos < 0 || wantInsertPos >= len(runes) || runes[wantInsertPos] != 'X' {
+		t.Fatalf("expected 'X' inserted at rune %d in %q", wantInsertPos, d.Destination.Value)
+	}
+	if d.Destination.Cursor != wantInsertPos+1 {
+		t.Fatalf("after insert: cursor = %d, want %d", d.Destination.Cursor, wantInsertPos+1)
+	}
+}
+
 func TestTransferSelfCopyRenameFlow(t *testing.T) {
 	t.Run("dialog OK enters rename phase without queueing", func(t *testing.T) {
 		dir := t.TempDir()

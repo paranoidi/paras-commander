@@ -170,6 +170,8 @@ type PathPickerState struct {
 	Purpose        PathPickerPurpose
 	FileFieldIndex int // when Purpose == PathPickerPurposeApplyFileDialogField
 	Query          string
+	QueryCursor    int // rune offset of caret within Query (0..len(runes))
+	QueryScroll    int // first visible rune offset for horizontal scrolling
 	Items          []PathPickerItem
 	Ranked         []int // indices into Items (rank order)
 	MatchRanges    [][]search.Range

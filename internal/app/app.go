@@ -552,23 +552,31 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 			default:
 				return
 			}
-		} else if event.Key() == tcell.KeyRight {
-			dest := &d.Destination
-			runes := []rune(dest.Value)
-			c := dest.Cursor
-			if c < 0 {
-				c = 0
-			}
-			if c > len(runes) {
-				c = len(runes)
-			}
-			// First Right on a pending placeholder commits it; second Right at EOT moves to the glyph.
-			if dest.Prefill != "" && dest.PrefillPending && dest.Value == dest.Prefill && c >= len(runes) {
-				dest.CommitPrefill()
+		} else {
+			switch event.Key() {
+			case tcell.KeyRight:
+				dest := &d.Destination
+				runes := []rune(dest.Value)
+				c := dest.Cursor
+				if c < 0 {
+					c = 0
+				}
+				if c > len(runes) {
+					c = len(runes)
+				}
+				// First Right on a pending placeholder commits it; second Right at EOT moves to the glyph.
+				if dest.Prefill != "" && dest.PrefillPending && dest.Value == dest.Prefill && c >= len(runes) {
+					dest.CommitPrefill()
+					return
+				}
+				if c >= len(runes) {
+					d.DestSubFocus = ui.TransferDestSubFocusPicker
+					return
+				}
+				dest.MoveCursor(1)
 				return
-			}
-			if c >= len(runes) {
-				d.DestSubFocus = ui.TransferDestSubFocusPicker
+			case tcell.KeyLeft:
+				d.Destination.MoveCursor(-1)
 				return
 			}
 		}

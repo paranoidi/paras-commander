@@ -89,6 +89,77 @@ func drawSimpleDialogInput(screen tcell.Screen, x, y, width int, value string, f
 	}
 }
 
+// EnsureScrollInputVisible adjusts scroll so that cursor is within [scroll, scroll+width-1]
+// for an input rendered with width cells. cursor and length are rune counts.
+// Returns the (possibly clamped) cursor and updated scroll values.
+func EnsureScrollInputVisible(length, cursor, scroll, width int) (int, int) {
+	if width < 1 {
+		width = 1
+	}
+	if cursor < 0 {
+		cursor = 0
+	}
+	if cursor > length {
+		cursor = length
+	}
+	if scroll < 0 {
+		scroll = 0
+	}
+	maxScroll := length - width + 1
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if scroll > maxScroll {
+		scroll = maxScroll
+	}
+	if cursor < scroll {
+		scroll = cursor
+	} else if cursor >= scroll+width {
+		scroll = cursor - width + 1
+	}
+	if scroll < 0 {
+		scroll = 0
+	}
+	return cursor, scroll
+}
+
+// drawScrollingDialogInput paints a dialog input row with horizontal scrolling.
+// The input renders the slice value[scroll : scroll+width] (rune-wise) and shows
+// a reversed cell at cursor-scroll when focused. Overflow markers ('◀'/'▶') are
+// drawn on the edge cells when content is hidden in that direction.
+// Callers should ensure (cursor, scroll) are kept in range via EnsureScrollInputVisible.
+func drawScrollingDialogInput(screen tcell.Screen, x, y, width int, value string, cursor, scroll int, focused, invalid bool, styles theme.Theme) {
+	if width <= 0 {
+		return
+	}
+	style := styles.DialogInputBaseStyle(focused, invalid)
+	runes := []rune(value)
+	length := len(runes)
+
+	cursor, scroll = EnsureScrollInputVisible(length, cursor, scroll, width)
+
+	for i := 0; i < width; i++ {
+		idx := scroll + i
+		ch := ' '
+		if idx < length {
+			ch = runes[idx]
+		}
+		st := style
+		if focused && idx == cursor {
+			st = style.Reverse(true)
+		}
+		screen.SetContent(x+i, y, ch, nil, st)
+	}
+
+	// Overflow markers: only when not hiding the cursor cell and there's hidden content.
+	if scroll > 0 && (!focused || cursor != scroll) {
+		screen.SetContent(x, y, '◀', nil, style)
+	}
+	if scroll+width < length && (!focused || cursor != scroll+width-1) {
+		screen.SetContent(x+width-1, y, '▶', nil, style)
+	}
+}
+
 // DialogButtonSpec describes one rendered dialog button (label, Alt shortcut, focus).
 type DialogButtonSpec struct {
 	Label    string

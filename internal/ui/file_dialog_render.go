@@ -250,49 +250,36 @@ func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 		textStyle = placeholderStyle
 	}
 
-	// Draw the input background (always uses the focused/unfocused input row background).
-	primitive.Text(screen, x, y, width, "", style)
+	runes := []rune(field.Value)
+	length := len(runes)
+	cursor, scroll := EnsureScrollInputVisible(length, field.Cursor, 0, width)
 
-	value := field.Value
-	if utf8.RuneCountInString(value) > width-1 {
-		value = primitive.TruncateRight(value, width-1)
-	}
-	runes := []rune(value)
-	for i, r := range runes {
-		if i >= width {
-			break
-		}
-		screen.SetContent(x+i, y, r, nil, textStyle)
-	}
-	// Fill remaining space with spaces.
-	for i := len(runes); i < width; i++ {
-		screen.SetContent(x+i, y, ' ', nil, textStyle)
-	}
-
-	// Draw cursor if focused.
-	if focused {
-		cx := field.Cursor
-		if cx > len(runes) {
-			cx = len(runes)
-		}
-		if cx >= width {
-			cx = width - 1
-		}
-		if cx < 0 {
-			cx = 0
-		}
-		// Reverse the cursor cell.
+	for i := 0; i < width; i++ {
+		idx := scroll + i
 		ch := ' '
-		if cx < len(runes) {
-			ch = runes[cx]
+		if idx < length {
+			ch = runes[idx]
 		}
-		screen.SetContent(x+cx, y, ch, nil, textStyle.Reverse(true))
+		st := textStyle
+		if focused && idx == cursor {
+			st = textStyle.Reverse(true)
+		}
+		screen.SetContent(x+i, y, ch, nil, st)
+	}
+
+	if scroll > 0 && (!focused || cursor != scroll) {
+		screen.SetContent(x, y, '◀', nil, style)
+	}
+	if scroll+width < length && (!focused || cursor != scroll+width-1) {
+		screen.SetContent(x+width-1, y, '▶', nil, style)
 	}
 }
 
 // drawPathInputRow draws text in the first width-2 cells, the path-picker glyph in the
 // next cell, and leaves the rightmost cell blank (row background).
 // When pathInvalid is true, uses dialog.input.*.error for the row (see Theme.DialogInputBaseStyle).
+// The text area scrolls horizontally to keep the caret visible; overflow markers (◀/▶) appear on
+// the edge text cells when content is hidden in that direction.
 func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogField, rowFocused bool, pickerFocused bool, pathInvalid bool, styles theme.Theme) {
 	if width <= 2 {
 		return
@@ -313,16 +300,29 @@ func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogFiel
 
 	primitive.Text(screen, x, y, width, "", style)
 
-	value := field.Value
-	if utf8.RuneCountInString(value) > textW-1 {
-		value = primitive.TruncateRight(value, textW-1)
+	runes := []rune(field.Value)
+	length := len(runes)
+	textFocused := rowFocused && !pickerFocused
+	cursor, scroll := EnsureScrollInputVisible(length, field.Cursor, 0, textW)
+
+	for i := 0; i < textW; i++ {
+		idx := scroll + i
+		ch := ' '
+		if idx < length {
+			ch = runes[idx]
+		}
+		st := textStyle
+		if textFocused && idx == cursor {
+			st = textStyle.Reverse(true)
+		}
+		screen.SetContent(x+i, y, ch, nil, st)
 	}
-	runes := []rune(value)
-	for i := 0; i < len(runes) && i < textW; i++ {
-		screen.SetContent(x+i, y, runes[i], nil, textStyle)
+
+	if scroll > 0 && (!textFocused || cursor != scroll) {
+		screen.SetContent(x, y, '◀', nil, style)
 	}
-	for i := len(runes); i < textW; i++ {
-		screen.SetContent(x+i, y, ' ', nil, textStyle)
+	if scroll+textW < length && (!textFocused || cursor != scroll+textW-1) {
+		screen.SetContent(x+textW-1, y, '▶', nil, style)
 	}
 
 	glyphX := x + textW
@@ -339,24 +339,6 @@ func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogFiel
 
 	tailX := x + width - 1
 	screen.SetContent(tailX, y, ' ', nil, style)
-
-	if rowFocused && !pickerFocused {
-		cx := field.Cursor
-		if cx > len(runes) {
-			cx = len(runes)
-		}
-		if cx >= textW {
-			cx = textW - 1
-		}
-		if cx < 0 {
-			cx = 0
-		}
-		ch := ' '
-		if cx < len(runes) {
-			ch = runes[cx]
-		}
-		screen.SetContent(x+cx, y, ch, nil, textStyle.Reverse(true))
-	}
 }
 
 // fileDialogFocusIndex returns the focus index for the OK/Yes button.

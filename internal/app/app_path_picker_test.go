@@ -145,6 +145,94 @@ func TestPathPickerCloseStopsValidateTimer(t *testing.T) {
 	}
 }
 
+func TestPathPickerQueryInsertAdvancesCursorAndScroll(t *testing.T) {
+	root := t.TempDir()
+	real := filepath.Join(root, "exists")
+	if err := os.MkdirAll(real, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	if err := os.WriteFile(marksPath, []byte("m : "+real+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	app.openBookmarkDialog()
+
+	const longPath = "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/value"
+	for _, r := range longPath {
+		app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+
+	st := &app.model.PathPicker
+	if st.Query != longPath {
+		t.Fatalf("Query mismatch: got %q want %q", st.Query, longPath)
+	}
+	wantCursor := len([]rune(longPath))
+	if st.QueryCursor != wantCursor {
+		t.Fatalf("QueryCursor = %d want %d", st.QueryCursor, wantCursor)
+	}
+	if st.QueryScroll == 0 {
+		t.Fatalf("expected QueryScroll > 0 for long input, got 0")
+	}
+
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if st.QueryCursor != wantCursor-1 {
+		t.Fatalf("Left arrow: QueryCursor = %d want %d", st.QueryCursor, wantCursor-1)
+	}
+
+	for i := 0; i < 200; i++ {
+		app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	}
+	if st.QueryCursor != 0 {
+		t.Fatalf("after many Left: QueryCursor = %d want 0", st.QueryCursor)
+	}
+	if st.QueryScroll != 0 {
+		t.Fatalf("after cursor home: QueryScroll = %d want 0", st.QueryScroll)
+	}
+
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlE, 0, tcell.ModCtrl))
+	if st.QueryCursor != wantCursor {
+		t.Fatalf("Ctrl+E: QueryCursor = %d want %d", st.QueryCursor, wantCursor)
+	}
+
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
+	if st.QueryCursor != wantCursor-1 {
+		t.Fatalf("Backspace: QueryCursor = %d want %d", st.QueryCursor, wantCursor-1)
+	}
+	if got := st.Query; got != longPath[:len(longPath)-1] {
+		t.Fatalf("after Backspace Query = %q want %q", got, longPath[:len(longPath)-1])
+	}
+
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl))
+	if st.QueryCursor != 0 || st.QueryScroll != 0 {
+		t.Fatalf("Ctrl+A: cursor/scroll = (%d,%d) want (0,0)", st.QueryCursor, st.QueryScroll)
+	}
+
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyDelete, 0, tcell.ModNone))
+	if got := st.Query; got != longPath[1:len(longPath)-1] {
+		t.Fatalf("after Delete Query = %q want %q", got, longPath[1:len(longPath)-1])
+	}
+	if st.QueryCursor != 0 {
+		t.Fatalf("after Delete cursor = %d want 0", st.QueryCursor)
+	}
+}
+
 func TestPathPickerValidateArmIncrementsGeneration(t *testing.T) {
 	root := t.TempDir()
 	real := filepath.Join(root, "exists")

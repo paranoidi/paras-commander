@@ -205,14 +205,31 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 		}
 	case tcell.KeyLeft:
 		switch st.Focus {
+		case 0:
+			a.movePathPickerQueryCursor(-1)
 		case 1:
 			st.Focus = 0
 		case 2:
 			st.Focus = 1
 		}
 	case tcell.KeyRight:
-		if st.Focus == 1 {
+		switch st.Focus {
+		case 0:
+			a.movePathPickerQueryCursor(+1)
+		case 1:
 			st.Focus = 2
+		}
+	case tcell.KeyCtrlA:
+		if st.Focus == 0 {
+			a.setPathPickerQueryCursor(0)
+		}
+	case tcell.KeyCtrlE:
+		if st.Focus == 0 {
+			a.setPathPickerQueryCursor(len([]rune(st.Query)))
+		}
+	case tcell.KeyDelete:
+		if st.Focus == 0 {
+			a.pathPickerForwardDelete()
 		}
 	case tcell.KeyRune:
 		if event.Modifiers() != tcell.ModNone {
@@ -220,11 +237,7 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 		}
 		if st.Focus == 0 {
 			if unicode.IsPrint(event.Rune()) {
-				st.Query += string(event.Rune())
-				a.syncPathPickerRanks()
-				a.armPathPickerValidateTimer()
-				st.Selected = 0
-				ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+				a.pathPickerInsertRune(event.Rune())
 			}
 			break
 		}
@@ -245,26 +258,123 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 		if st.Focus != 0 {
 			break
 		}
-		r := []rune(st.Query)
-		if len(r) > 0 {
-			st.Query = string(r[:len(r)-1])
-			a.syncPathPickerRanks()
-			a.armPathPickerValidateTimer()
-			st.Selected = 0
-			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
-		}
+		a.pathPickerBackspace()
 	case tcell.KeyCtrlU:
 		if st.Focus != 0 {
 			break
 		}
 		if st.Query != "" {
 			st.Query = ""
+			st.QueryCursor = 0
+			st.QueryScroll = 0
 			a.syncPathPickerRanks()
 			a.armPathPickerValidateTimer()
 			st.Selected = 0
 			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 		}
 	}
+}
+
+// pathPickerQueryWidth returns the visible width of the query input row.
+// Mirrors the layout in drawPathPickerDialog: rect.Width - 4 with rect width = 78
+// clamped to layout.Width - 4.
+func (a *App) pathPickerQueryWidth() int {
+	termW, _ := a.screen.Size()
+	width := 78
+	if width > termW-4 {
+		width = termW - 4
+	}
+	if width < 36 {
+		width = 36
+	}
+	return width - 4
+}
+
+func (a *App) ensurePathPickerQueryVisible() {
+	st := &a.model.PathPicker
+	length := len([]rune(st.Query))
+	st.QueryCursor, st.QueryScroll = ui.EnsureScrollInputVisible(length, st.QueryCursor, st.QueryScroll, a.pathPickerQueryWidth())
+}
+
+func (a *App) movePathPickerQueryCursor(delta int) {
+	st := &a.model.PathPicker
+	st.QueryCursor += delta
+	a.ensurePathPickerQueryVisible()
+}
+
+func (a *App) setPathPickerQueryCursor(pos int) {
+	st := &a.model.PathPicker
+	st.QueryCursor = pos
+	a.ensurePathPickerQueryVisible()
+}
+
+func (a *App) pathPickerInsertRune(r rune) {
+	st := &a.model.PathPicker
+	runes := []rune(st.Query)
+	pos := st.QueryCursor
+	if pos < 0 {
+		pos = 0
+	}
+	if pos > len(runes) {
+		pos = len(runes)
+	}
+	newRunes := make([]rune, 0, len(runes)+1)
+	newRunes = append(newRunes, runes[:pos]...)
+	newRunes = append(newRunes, r)
+	newRunes = append(newRunes, runes[pos:]...)
+	st.Query = string(newRunes)
+	st.QueryCursor = pos + 1
+	a.ensurePathPickerQueryVisible()
+	a.syncPathPickerRanks()
+	a.armPathPickerValidateTimer()
+	st.Selected = 0
+	ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+}
+
+func (a *App) pathPickerBackspace() {
+	st := &a.model.PathPicker
+	runes := []rune(st.Query)
+	pos := st.QueryCursor
+	if pos < 0 {
+		pos = 0
+	}
+	if pos > len(runes) {
+		pos = len(runes)
+	}
+	if pos == 0 {
+		return
+	}
+	newRunes := make([]rune, 0, len(runes)-1)
+	newRunes = append(newRunes, runes[:pos-1]...)
+	newRunes = append(newRunes, runes[pos:]...)
+	st.Query = string(newRunes)
+	st.QueryCursor = pos - 1
+	a.ensurePathPickerQueryVisible()
+	a.syncPathPickerRanks()
+	a.armPathPickerValidateTimer()
+	st.Selected = 0
+	ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+}
+
+func (a *App) pathPickerForwardDelete() {
+	st := &a.model.PathPicker
+	runes := []rune(st.Query)
+	pos := st.QueryCursor
+	if pos < 0 {
+		pos = 0
+	}
+	if pos >= len(runes) {
+		return
+	}
+	newRunes := make([]rune, 0, len(runes)-1)
+	newRunes = append(newRunes, runes[:pos]...)
+	newRunes = append(newRunes, runes[pos+1:]...)
+	st.Query = string(newRunes)
+	a.ensurePathPickerQueryVisible()
+	a.syncPathPickerRanks()
+	a.armPathPickerValidateTimer()
+	st.Selected = 0
+	ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 }
 
 // pathPickerItemsHistoryAndBookmarks returns merged passive-first panel histories plus
