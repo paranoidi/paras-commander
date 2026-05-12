@@ -115,7 +115,14 @@ type Config struct {
 
 // MetaCommandDef is one named meta command entry.
 // File runs for regular files; Dirs runs for directories; $1 = absolute path.
-// Output exceeding one line or 20 characters is replaced with "too long".
+//
+// Stdout is shown in the panel Meta column. If the trimmed output contains no tab or newline,
+// it is one cell (legacy): display width over the panel meta budget is replaced with "too long".
+// Otherwise fields are split on tab and line feed (after \r\n/\r normalization to \n, then \n→\t),
+// up to 8 fields; empty fields are preserved. Column widths are the max display width per column
+// across all rows (so the column count grows when a later row has more delimiters); cells are
+// joined with a single space for display. Digit-only cells are right-aligned; others left-aligned.
+// The rendered line is capped to the panel meta column display budget (see internal/ui panel list constants).
 type MetaCommandDef struct {
 	Description string `toml:"description"`
 	File        string `toml:"file"`
@@ -250,7 +257,7 @@ func Default() Config {
 		Meta: map[string]MetaCommandDef{
 			"count-items": {
 				Description: "Count files and folders",
-				Dirs:        `echo "$(find "$1" -maxdepth 1 -mindepth 1 -type f | wc -l) $(find "$1" -maxdepth 1 -mindepth 1 -type d | wc -l) "`,
+				Dirs:        `f=$(find "$1" -maxdepth 1 -mindepth 1 -type f | wc -l | awk '{print $1}'); d=$(find "$1" -maxdepth 1 -mindepth 1 -type d | wc -l | awk '{print $1}'); printf '\t%s\t\t%s\n' "$f" "$d"`,
 			},
 		},
 	}

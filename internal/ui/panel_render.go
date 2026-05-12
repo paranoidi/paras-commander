@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -22,7 +21,8 @@ const (
 	panelListModTimeCells = 16
 	panelListSizeCells    = 5
 	panelListAfterName    = 1 + panelListSizeCells + 2 + panelListModTimeCells
-	// panelListMetaMax is the max output length before showing "too long".
+	// panelListMetaMax is the maximum display width (terminal cells) for the rendered Meta column
+	// (single-cell legacy or tab/newline multi-field layout; see layoutMetaCells).
 	panelListMetaMax = 20
 	// panelListMetaMinCells is the minimum width of the Meta column ("Meta" header).
 	panelListMetaMinCells = 4
@@ -35,23 +35,6 @@ func panelListNameWidth(rowTextWidth int) int {
 // panelListNameWidthWithMeta returns name width when the Meta column is shown.
 func panelListNameWidthWithMeta(rowTextWidth, metaColW int) int {
 	return max(1, rowTextWidth-panelListAfterName-2-metaColW)
-}
-
-// metaColumnWidth returns the display width of the meta column given current results.
-// It is the max rune-length of all non-empty formatted values, clamped to
-// [panelListMetaMinCells, panelListMetaMax].
-func metaColumnWidth(metaResults map[string]string) int {
-	w := panelListMetaMinCells
-	for _, raw := range metaResults {
-		v := formatMetaValue(raw)
-		if n := len([]rune(v)); n > w {
-			w = n
-		}
-	}
-	if w > panelListMetaMax {
-		w = panelListMetaMax
-	}
-	return w
 }
 
 func truncateHeaderRunes(max int, s string) string {
@@ -158,8 +141,9 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 
 	showMeta := metaResults != nil
 	metaColW := 0
+	var metaFormatted map[string]string
 	if showMeta {
-		metaColW = metaColumnWidth(metaResults)
+		metaColW, metaFormatted = layoutMetaCells(metaResults)
 	}
 	header := panelListHeader(rowTextWidth, state, showIcons, showMeta, metaColW)
 	headerY := rect.Y + 1
@@ -242,7 +226,11 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			} else {
 				jobMarkGlyph = 0
 			}
-			text = formatEntry(entry, rowTextWidth, showIcons, jobMarkGlyph, subtreeMark, painter, showMeta, metaColW, metaResults)
+			metaText := ""
+			if showMeta {
+				metaText = metaFormatted[entry.Path]
+			}
+			text = formatEntry(entry, rowTextWidth, showIcons, jobMarkGlyph, subtreeMark, painter, showMeta, metaColW, metaText)
 			if showDiskUsage && painter != nil && diskDenom > 0 {
 				fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, painter), diskDenom, fullRowCells)
 			}
@@ -375,7 +363,8 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 	sizeTitle = truncateHeaderRunes(panelListSizeCells, sizeTitle)
 	modTitle = truncateHeaderRunes(panelListModTimeCells, modTitle)
 	if showMeta {
-		return fmt.Sprintf("%-*s  %-*s %*s  %-*s", nameWidth, nameTitle, metaColW, "Meta", panelListSizeCells, sizeTitle, panelListModTimeCells, modTitle)
+		metaHdr := padMetaLineToWidth("Meta", metaColW)
+		return fmt.Sprintf("%-*s  %s %*s  %-*s", nameWidth, nameTitle, metaHdr, panelListSizeCells, sizeTitle, panelListModTimeCells, modTitle)
 	}
 	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, nameTitle, panelListSizeCells, sizeTitle, panelListModTimeCells, modTitle)
 }
@@ -408,7 +397,7 @@ type displayRune struct {
 	NameIdx int // -1 for prefix/suffix decoration
 }
 
-func formatEntry(entry localfs.Entry, width int, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, painter DiskUsagePainter, showMeta bool, metaColW int, metaResults map[string]string) string {
+func formatEntry(entry localfs.Entry, width int, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, painter DiskUsagePainter, showMeta bool, metaColW int, metaText string) string {
 	nameWidth := panelListNameWidth(width)
 	if showMeta {
 		nameWidth = panelListNameWidthWithMeta(width, metaColW)
@@ -416,27 +405,10 @@ func formatEntry(entry localfs.Entry, width int, showFileIcons bool, jobMarkRune
 	display := entryDisplayRunes(entry, nameWidth, showFileIcons, jobMarkRune, subtreeSelectionMark)
 	name := string(runesFromDisplay(display))
 	if showMeta {
-		metaVal := formatMetaValue(metaResults[entry.Path])
-		return fmt.Sprintf("%-*s  %-*s %*s  %-*s", nameWidth, name, metaColW, metaVal, panelListSizeCells, formatListedSize(entry, painter), panelListModTimeCells, formatTime(entry.ModifiedAt))
+		metaPadded := padMetaLineToWidth(metaText, metaColW)
+		return fmt.Sprintf("%-*s  %s %*s  %-*s", nameWidth, name, metaPadded, panelListSizeCells, formatListedSize(entry, painter), panelListModTimeCells, formatTime(entry.ModifiedAt))
 	}
 	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter), panelListModTimeCells, formatTime(entry.ModifiedAt))
-}
-
-// formatMetaValue truncates or replaces meta command output for display in the panel column.
-// Output with more than one line or more than panelListMetaMax characters is replaced with "too long".
-func formatMetaValue(raw string) string {
-	if raw == "" {
-		return ""
-	}
-	trimmed := strings.TrimRight(raw, "\r\n")
-	if strings.ContainsAny(trimmed, "\n\r") {
-		return "too long"
-	}
-	r := []rune(trimmed)
-	if len(r) > panelListMetaMax {
-		return "too long"
-	}
-	return trimmed
 }
 
 // entryListingSuffixDecorationLen returns how many trailing runes are reserved for job + subtree selection marks.
