@@ -73,6 +73,9 @@ type Model struct {
 	GroupSelect     GroupSelectState
 	BookmarkDialog  BookmarkDialogState
 	HistoryDialog   HistoryDialogState
+	MetaDialog      MetaDialogState
+	// MetaResults holds per-panel command output keyed by entry path (nil = meta not active).
+	MetaResults     [2]map[string]string
 	HelpView        HelpViewState
 	FileDialog      FileDialogState
 	TransferDialog  TransferDialogState
@@ -177,6 +180,23 @@ type HistoryDialogState struct {
 	Focus        int // 0=list+query, 1=OK, 2=Cancel
 }
 
+
+// MetaEntry is one selectable command in the meta picker dialog.
+type MetaEntry struct {
+	Name        string
+	Description string
+}
+
+// MetaDialogState is the radio-button picker for selecting a meta command to run on panel entries.
+// Entries always has "None" as first item (index 0). Focus 0..len(Entries)-1 are radio rows;
+// len(Entries) is OK; len(Entries)+1 is Cancel.
+type MetaDialogState struct {
+	Open     bool
+	PanelID  int
+	Entries  []MetaEntry // first entry is always {Name:"none", Description:"None (clear)"}
+	Selected int         // index into Entries (0 = None)
+	Focus    int         // 0..len(Entries)-1 radio items, len = OK, len+1 = Cancel
+}
 // HelpEntry is one row in the full-screen help view.
 type HelpEntry struct {
 	ActionID string // keymap action id (e.g. file.copy)
@@ -297,7 +317,7 @@ func (m Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.BookmarkDialog.Open || m.HistoryDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open {
+	if m.SortDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.BookmarkDialog.Open || m.HistoryDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open {
 		return true
 	}
 	return false
@@ -358,12 +378,12 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		rightFile, rightStrip := SplitPanelColumn(layout.Right, model.Right.SelectionsStripCount(), model.SelectionsPanelMaxRows, minFileListContentRows)
 
 		syncDriver := model.SyncDriverPanelID()
-		drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobsList, syncDriver)
+		drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobsList, syncDriver, model.MetaResults[LeftPanel])
 		if leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
 			drawSelectionsStrip(screen, leftStrip, model.Left, leftStripFocused, leftChromeBlocked, styles, model.UserHomeDir)
 		}
-		drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobsList, syncDriver)
+		drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobsList, syncDriver, model.MetaResults[RightPanel])
 		if rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
 			drawSelectionsStrip(screen, rightStrip, model.Right, rightStripFocused, chromeBlocked, styles, model.UserHomeDir)
@@ -397,6 +417,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	if model.HistoryDialog.Open {
 		drawHistoryDialog(screen, layout, model.HistoryDialog, styles)
+	}
+	if model.MetaDialog.Open {
+		drawMetaDialog(screen, layout, model.MetaDialog, styles)
 	}
 	if model.FileDialog.Open {
 		drawFileDialog(screen, layout, model.FileDialog, styles)

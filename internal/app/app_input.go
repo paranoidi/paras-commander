@@ -29,6 +29,7 @@ const (
 	InputModeCommandsView
 	InputModeBookmarkDialog
 	InputModeHistoryDialog
+	InputModeMetaDialog
 	InputModeHelpView
 )
 
@@ -40,6 +41,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeBookmarkDialog
 	case a.model.HistoryDialog.Open:
 		return InputModeHistoryDialog
+	case a.model.MetaDialog.Open:
+		return InputModeMetaDialog
 	case a.model.HelpView.Open:
 		return InputModeHelpView
 	case a.model.ThemeDialog.Open:
@@ -53,13 +56,13 @@ func (a *App) inputMode() InputMode {
 	case a.model.FileDialog.Open:
 		return InputModeFileDialog
 	case a.model.ViewMode == ui.ViewCommands &&
-		!a.model.MessageDialog.Open && !a.model.BookmarkDialog.Open && !a.model.HistoryDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
+		!a.model.MessageDialog.Open && !a.model.BookmarkDialog.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
 		!a.model.TransferDialog.Open &&
 		!a.model.ConflictDialog.Open && !a.model.QuitConfirm.Open && !a.model.Menu.Open &&
 		!a.inQuickFilterUI():
 		return InputModeCommandsView
 	case a.model.ViewMode == ui.ViewJobs &&
-		!a.model.MessageDialog.Open && !a.model.BookmarkDialog.Open && !a.model.HistoryDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
+		!a.model.MessageDialog.Open && !a.model.BookmarkDialog.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
 		!a.model.TransferDialog.Open &&
 		!a.model.ConflictDialog.Open && !a.model.QuitConfirm.Open && !a.model.Menu.Open &&
 		!a.inQuickFilterUI():
@@ -89,13 +92,13 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
-	if a.model.BookmarkDialog.Open || a.model.HistoryDialog.Open {
+	if a.model.BookmarkDialog.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
 		return footerWithEscClose([]menu.FunctionKey{
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
 	if a.model.PrimaryModal() != ui.PrimaryModalNone ||
-		a.model.SortDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.BookmarkDialog.Open || a.model.HistoryDialog.Open {
+		a.model.SortDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.BookmarkDialog.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
 		// Dialog open: Esc closes; F10 still quits globally.
 		return footerWithEscClose([]menu.FunctionKey{
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
@@ -179,6 +182,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return false, true
 	case InputModeHistoryDialog:
 		a.handleHistoryDialogKey(event)
+		a.render()
+		return false, true
+	case InputModeMetaDialog:
+		a.handleMetaDialogKey(event)
 		a.render()
 		return false, true
 	case InputModeHelpView:
@@ -290,7 +297,7 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 	}
 	return !ui.IsAuxiliaryView(a.model.ViewMode) && !a.model.Menu.Open &&
 		(a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusSelectionsStrip) &&
-		!a.model.MessageDialog.Open && !a.model.BookmarkDialog.Open && !a.model.HistoryDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
+		!a.model.MessageDialog.Open && !a.model.BookmarkDialog.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
 		!a.model.FileDialog.Open && !a.model.TransferDialog.Open &&
 		!a.model.ConflictDialog.Open && !a.model.QuitConfirm.Open
 }
@@ -391,6 +398,8 @@ func (a *App) dispatch(actionID string) {
 		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
 	case keymap.ActionPanelSortDialog:
 		a.openSortDialog()
+	case keymap.ActionPanelMeta:
+		a.openMetaDialog(a.model.ActivePanel)
 	case keymap.ActionPanelCycleSort:
 		activePanel.CycleSort(viewportRows)
 		a.setTransientMessage(fmt.Sprintf("Sort: %s", activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
@@ -438,6 +447,13 @@ func (a *App) dispatch(actionID string) {
 		if err := activePanel.Parent(viewportRows); err != nil {
 			a.setErrorMessage("Parent failed", err)
 			return
+		}
+	case keymap.ActionNavHome:
+		if a.model.UserHomeDir == "" {
+			return
+		}
+		if err := a.navigatePanelToDirectory(a.model.ActivePanel, a.model.UserHomeDir, ""); err != nil {
+			a.setErrorMessage("Navigate to home failed", err)
 		}
 	case keymap.ActionNavForward:
 		if _, err := activePanel.HistoryForward(viewportRows); err != nil {

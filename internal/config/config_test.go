@@ -1,6 +1,7 @@
 package config
 
 import (
+	"reflect"
 	"bytes"
 	"os"
 	"path/filepath"
@@ -77,7 +78,7 @@ func TestLoadFromPathsUsesDefaultsWhenConfigIsMissing(t *testing.T) {
 		t.Fatalf("LoadFromPaths() error = %v", err)
 	}
 
-	if cfg != Default() {
+	if !reflect.DeepEqual(cfg, Default()) {
 		t.Fatalf("LoadFromPaths() = %+v, want defaults %+v", cfg, Default())
 	}
 }
@@ -317,7 +318,7 @@ func TestEncodeDefaultStubWritesLoadableDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadFromPaths() error = %v", err)
 	}
-	if cfg != Default() {
+	if !reflect.DeepEqual(cfg, Default()) {
 		t.Fatalf("decoded config = %+v, want defaults %+v", cfg, Default())
 	}
 }
@@ -332,7 +333,7 @@ func TestWriteDefaultStubWritesFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadFromPaths() error = %v", err)
 	}
-	if cfg != Default() {
+	if !reflect.DeepEqual(cfg, Default()) {
 		t.Fatalf("decoded config = %+v, want defaults %+v", cfg, Default())
 	}
 }

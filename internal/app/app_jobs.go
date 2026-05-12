@@ -714,18 +714,24 @@ func jobTransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) 
 				return false, nil
 			}
 		}
-		plan, tf, tb, planErr := ops.BuildCopyPlanWithTotals(job.Sources, job.Destination)
-		if planErr == nil {
-			emit(jobs.Event{
-				Type:       jobs.EventPlanTotals,
-				JobID:      job.ID,
-				Status:     jobs.StatusRunning,
-				TotalFiles: tf,
-				TotalBytes: tb,
-			})
-			if job.Type == jobs.TypeCopy && tb > 0 {
-				if err := ops.EnsureDiskSpace(waitBlocker, job.Destination, tb, ""); err != nil {
-					return err
+		var plan []ops.PlanItem
+		var planErr error
+		if job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove {
+			var tf int
+			var tb int64
+			plan, tf, tb, planErr = ops.BuildCopyPlanWithTotals(job.Sources, job.Destination)
+			if planErr == nil {
+				emit(jobs.Event{
+					Type:       jobs.EventPlanTotals,
+					JobID:      job.ID,
+					Status:     jobs.StatusRunning,
+					TotalFiles: tf,
+					TotalBytes: tb,
+				})
+				if job.Type == jobs.TypeCopy && tb > 0 {
+					if err := ops.EnsureDiskSpace(waitBlocker, job.Destination, tb, ""); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -752,6 +758,25 @@ func jobTransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) 
 			}
 		case jobs.TypeMove:
 			doneFiles, doneBytes, err = ops.ExecuteMove(ctx, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
+		case jobs.TypeDelete:
+			emit(jobs.Event{
+				Type:       jobs.EventPlanTotals,
+				JobID:      job.ID,
+				Status:     jobs.StatusRunning,
+				TotalFiles: len(job.Sources),
+				TotalBytes: 0,
+			})
+			deleteProgress := func(path string, df int, db int64) {
+				emit(jobs.Event{
+					Type:        jobs.EventProgress,
+					JobID:       job.ID,
+					Status:      jobs.StatusRunning,
+					DoneFiles:   df,
+					DoneBytes:   db,
+					CurrentPath: path,
+				})
+			}
+			doneFiles, doneBytes, err = ops.ExecuteDeletePaths(ctx, job.Sources, deleteProgress)
 		default:
 			return fmt.Errorf("unknown job type: %s", job.Type)
 		}
@@ -855,6 +880,18 @@ func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, s
 		Sources:     sources,
 		Destination: dest,
 		TotalFiles:  len(sources),
+	}
+	a.jobState.AddJob(job)
+	a.syncJobsList()
+}
+
+func (a *App) enqueueDeleteJob(sources []string) {
+	job := &jobs.Job{
+		ID:         jobs.NewJobID(),
+		Type:       jobs.TypeDelete,
+		Status:     jobs.StatusQueued,
+		Sources:    sources,
+		TotalFiles: len(sources),
 	}
 	a.jobState.AddJob(job)
 	a.syncJobsList()

@@ -2663,6 +2663,7 @@ func TestFileDialogExecutesDelete(t *testing.T) {
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after confirm")
 	}
+	flushBackgroundJobs(t, app)
 	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
 		t.Fatal("file should be deleted")
 	}

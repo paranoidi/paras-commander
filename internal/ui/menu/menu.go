@@ -107,6 +107,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionPanelDiskUsageScan, Label: "Disk usage", Shortcut: 'u'},
 				{Action: keymap.ActionPanelHistoryDialog, Label: "History...", Shortcut: 'y'},
 				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
+				{Action: keymap.ActionPanelMeta, Label: "Meta", Shortcut: 'm'},
 			},
 		},
 		{
@@ -174,6 +175,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionPanelDiskUsageScan, Label: "Disk usage", Shortcut: 'u'},
 				{Action: keymap.ActionPanelHistoryDialog, Label: "History...", Shortcut: 'y'},
 				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
+				{Action: keymap.ActionPanelMeta, Label: "Meta", Shortcut: 'm'},
 			},
 		},
 	}

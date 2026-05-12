@@ -74,6 +74,10 @@ type App struct {
 	diskIdleSort    [2]diskIdleSortPanel // indexed by ui.LeftPanel / ui.RightPanel (0/1)
 	// diskIdleNavPath records last reconciled panel cwd so idle-sort debounce survives benign reconcile but resets on chdir.
 	diskIdleNavPath [2]string
+	// metaActiveCmd holds the name of the active meta command per panel (empty = none).
+	metaActiveCmd [2]string
+	// metaNavPath holds the last panel path for which meta was run (used to detect navigation).
+	metaNavPath [2]string
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
 	messageExpiryGen     atomic.Uint64
@@ -346,6 +350,9 @@ func (a *App) Run() error {
 					didRender = true
 				}
 			case commandWakePayload:
+				a.render()
+				didRender = true
+			case metaWakePayload:
 				a.render()
 				didRender = true
 			}
@@ -1025,6 +1032,8 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		a.openHistoryDialog(panelScope)
 	case keymap.ActionPanelExternalBrowser:
 		a.openPanelPathInExternalBrowser(panelScope)
+	case keymap.ActionPanelMeta:
+		a.openMetaDialog(panelScope)
 	default:
 		a.setUnsupportedMessage(item.Label)
 	}
@@ -1622,6 +1631,8 @@ func (a *App) reconcileAfterEvent() {
 	a.syncFollowFromActive()
 	a.handlePanelDirChanged(ui.LeftPanel)
 	a.handlePanelDirChanged(ui.RightPanel)
+	a.handleMetaPanelDirChanged(ui.LeftPanel)
+	a.handleMetaPanelDirChanged(ui.RightPanel)
 }
 
 // syncFollowFromActive mirrors the active panel's highlighted directory into the inactive panel
@@ -2490,25 +2501,25 @@ func (a *App) executeDelete() {
 		a.closeFileDialog()
 		return
 	}
-	plan, err := ops.PlanDelete(source, a.config.ConfirmDelete, a.config.DeleteMode)
+	_, err = ops.PlanDelete(source, a.config.ConfirmDelete, a.config.DeleteMode)
 	if err != nil {
 		a.setErrorMessage("Delete", err)
 		a.closeFileDialog()
 		return
 	}
-	if err := ops.ExecuteDelete(plan); err != nil {
-		a.setErrorMessage("Delete failed", err)
-		a.closeFileDialog()
-		return
-	}
 	p.ClearSelection()
 	a.closeFileDialog()
-	a.refreshBothPanels()
+	sources := make([]string, len(source.Entries))
+	for i, e := range source.Entries {
+		sources[i] = e.Path
+	}
+	a.enqueueDeleteJob(sources)
+	n := len(sources)
 	delNoun := "items"
-	if len(source.Entries) == 1 {
+	if n == 1 {
 		delNoun = "item"
 	}
-	a.setTransientMessage(fmt.Sprintf("Deleted %d %s", len(source.Entries), delNoun), ui.MessageUrgencyInfo)
+	a.setTransientMessage(fmt.Sprintf("Delete queued (%d %s)", n, delNoun), ui.MessageUrgencyInfo)
 }
 func (a *App) executeChmod() {
 	p := a.activePanel()

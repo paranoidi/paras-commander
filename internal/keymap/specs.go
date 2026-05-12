@@ -121,6 +121,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"up", "back"},
 		},
 		{
+			ID:           ActionNavHome,
+			Title:        "Home directory",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"~", "§"},
+			PreferredKey: "~",
+			Keywords:     []string{"home", "~", "cd"},
+		},
+		{
 			ID:          ActionNavForward,
 			Title:       "Forward history",
 			Section:     "Navigation",
@@ -256,6 +264,13 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Sort & display",
 			DefaultKeys: []string{"M-."},
 			Keywords:    []string{"show", "hide", "dotfiles"},
+		},
+		{
+			ID:          ActionPanelMeta,
+			Title:       "Meta column",
+			Section:     "Sort & display",
+			DefaultKeys: []string{"M-,"},
+			Keywords:    []string{"meta", "column", "command", "count"},
 		},
 
 		// ── Bookmarks ──

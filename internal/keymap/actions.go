@@ -15,6 +15,7 @@ const (
 	ActionNavBottom          = "nav.bottom"
 	ActionNavOpen            = "nav.open"
 	ActionNavParent          = "nav.parent"
+	ActionNavHome            = "nav.home"
 	ActionNavForward         = "nav.forward"
 	ActionNavBackward        = "nav.backward"
 	ActionPanelHistoryDialog = "panel.history-dialog"
@@ -37,6 +38,7 @@ const (
 	ActionPanelExternalBrowser   = "panel.external-browser"
 	ActionPanelOpenDirInOther    = "panel.open-dir-in-other"
 	ActionPanelToggleSync        = "panel.toggle-sync"
+	ActionPanelMeta              = "panel.meta"
 
 	// Dialog actions
 	ActionDialogConfirm = "ui.confirm"
@@ -115,6 +117,7 @@ var KnownActions = map[string]struct{}{
 	ActionNavBottom:          {},
 	ActionNavOpen:            {},
 	ActionNavParent:          {},
+	ActionNavHome:            {},
 	ActionNavForward:         {},
 	ActionNavBackward:        {},
 	ActionPanelHistoryDialog: {},
@@ -137,6 +140,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelExternalBrowser:   {},
 	ActionPanelOpenDirInOther:    {},
 	ActionPanelToggleSync:        {},
+	ActionPanelMeta:              {},
 
 	ActionDialogConfirm: {},
 	ActionDialogCancel:  {},

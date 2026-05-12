@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"bytes"
 	"os"
 	"path/filepath"
@@ -27,7 +28,7 @@ func TestRunConfigStubWritesDefaultsAndExits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadFromPaths() error = %v", err)
 	}
-	if cfg != config.Default() {
+	if !reflect.DeepEqual(cfg, config.Default()) {
 		t.Fatalf("decoded config = %+v, want defaults %+v", cfg, config.Default())
 	}
 }

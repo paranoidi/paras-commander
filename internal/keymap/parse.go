@@ -70,8 +70,10 @@ func ParseKey(s string) (Chord, error) {
 		}
 	}
 
-	if len(rest) == 1 {
-		r := rune(rest[0])
+	// Support single printable rune (handles multi-byte UTF-8 like §, ~, etc.)
+	restRunes := []rune(rest)
+	if len(restRunes) == 1 {
+		r := restRunes[0]
 		if unicode.IsPrint(r) {
 			return Chord{Key: tcell.KeyRune, Rune: r, Mod: mod}, nil
 		}

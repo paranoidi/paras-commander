@@ -107,6 +107,18 @@ type Config struct {
 	Operations                 OperationsConfig `toml:"operations"`
 	Logging                    LoggingConfig    `toml:"logging"`
 	Bookmarks                  BookmarksConfig  `toml:"bookmarks"`
+	// Meta holds named per-entry shell commands shown in the panel Meta column.
+	// Each key is the command name; command receives the entry path as $1.
+	Meta map[string]MetaCommandDef `toml:"meta"`
+}
+
+// MetaCommandDef is one named meta command entry.
+// File runs for regular files; Dirs runs for directories; $1 = absolute path.
+// Output exceeding one line or 20 characters is replaced with "too long".
+type MetaCommandDef struct {
+	Description string `toml:"description"`
+	File        string `toml:"file"`
+	Dirs        string `toml:"dirs"`
 }
 
 // BookmarksConfig controls fzf-marks compatible directory marks.
@@ -229,6 +241,12 @@ func Default() Config {
 		},
 		Bookmarks: BookmarksConfig{
 			File: "",
+		},
+		Meta: map[string]MetaCommandDef{
+			"count-items": {
+				Description: "Count files and folders",
+				Dirs:        `echo "$(find "$1" -maxdepth 1 -mindepth 1 -type f | wc -l) $(find "$1" -maxdepth 1 -mindepth 1 -type d | wc -l) "`,
+			},
 		},
 	}
 }
