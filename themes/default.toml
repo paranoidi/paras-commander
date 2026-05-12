@@ -88,8 +88,10 @@ dialog.surface = { fg = "white", bg = "bright_black" }
 dialog.accent = { fg = "white", bg = "black", bold = true }
 dialog.input.active = { fg = "bright_white", bg = "default" }
 dialog.input.active.placeholder = { fg = "default", bg = "default" }
+dialog.input.active.error = { fg = "red", bg = "default" }
 dialog.input.inactive = { fg = "white", bg = "black" }
 dialog.input.inactive.placeholder = { fg = "white", bg = "black" }
+dialog.input.inactive.error = { fg = "red", bg = "black" }
 dialog.button.normal = { fg = "white", bg = "black" }
 dialog.button.active = { fg = "black", bg = "cyan" }
 dialog.option.inactive = { fg = "white", bg = "bright_black" }
@@ -122,3 +124,4 @@ canceled = "\uf28d"
 failed = "\uf06a"
 decision = "\uf059"
 completed = "\uf05d"
+path_picker = "\uf0ca"

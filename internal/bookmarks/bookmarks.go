@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -25,8 +26,9 @@ type Mark struct {
 // ParseLine parses a single fzf-marks line. It returns false if the line should be skipped
 // (empty, comment-only, or missing a delimiter).
 func ParseLine(raw string) (Mark, bool) {
-	line := strings.TrimSpace(strings.TrimSuffix(raw, "\r"))
-	if line == "" || strings.HasPrefix(line, "#") {
+	// Trim trailing whitespace only: a leading space before ` : ` is valid for an unlabeled path (` : /abs/path`).
+	line := strings.TrimRightFunc(strings.TrimSuffix(raw, "\r"), unicode.IsSpace)
+	if line == "" || strings.HasPrefix(strings.TrimLeftFunc(line, unicode.IsSpace), "#") {
 		return Mark{}, false
 	}
 	name, path, ok := strings.Cut(line, lineDelimiter)
@@ -35,7 +37,7 @@ func ParseLine(raw string) (Mark, bool) {
 	}
 	name = strings.TrimSpace(name)
 	path = strings.TrimSpace(path)
-	if name == "" || path == "" {
+	if path == "" {
 		return Mark{}, false
 	}
 	return Mark{

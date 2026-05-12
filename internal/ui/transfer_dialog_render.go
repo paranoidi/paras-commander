@@ -59,7 +59,10 @@ func drawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 
 	inputY := rect.Y + 3
 	inputWidth := rect.Width - 4
-	drawSimpleDialogInput(screen, rect.X+2, inputY, inputWidth, state.Destination, state.FocusField == 0, styles)
+	rowFocused := state.FocusField == 0
+	pickerFocused := rowFocused && state.DestSubFocus == TransferDestSubFocusPicker
+	destInvalid := state.Phase == TransferPhaseDestination && state.DestPathInvalid && !state.DestPathCheckPending
+	drawPathInputRow(screen, rect.X+2, inputY, inputWidth, state.Destination, rowFocused, pickerFocused, destInvalid, styles)
 
 	if state.Kind == TransferKindCopy {
 		sep1Y := rect.Y + 4

@@ -235,6 +235,11 @@ func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 }
 
 func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField, focused bool, styles theme.Theme) {
+	if field.PathPicker && width > 2 {
+		pickerFocused := field.PickerFocused && focused
+		drawPathInputRow(screen, x, y, width, field, focused, pickerFocused, false, styles)
+		return
+	}
 	if width <= 0 {
 		return
 	}
@@ -277,6 +282,75 @@ func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 			cx = 0
 		}
 		// Reverse the cursor cell.
+		ch := ' '
+		if cx < len(runes) {
+			ch = runes[cx]
+		}
+		screen.SetContent(x+cx, y, ch, nil, textStyle.Reverse(true))
+	}
+}
+
+// drawPathInputRow draws text in the first width-2 cells, the path-picker glyph in the
+// next cell, and leaves the rightmost cell blank (row background).
+// When pathInvalid is true, uses dialog.input.*.error for the row (see Theme.DialogInputBaseStyle).
+func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogField, rowFocused bool, pickerFocused bool, pathInvalid bool, styles theme.Theme) {
+	if width <= 2 {
+		return
+	}
+	textW := width - 2
+	var style, placeholderStyle tcell.Style
+	if pathInvalid {
+		style = styles.DialogInputBaseStyle(rowFocused, true)
+		placeholderStyle = style
+	} else {
+		style, placeholderStyle = styles.DialogInputPair(rowFocused)
+	}
+	prefillPending := field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill
+	textStyle := style
+	if prefillPending && !pathInvalid {
+		textStyle = placeholderStyle
+	}
+
+	primitive.Text(screen, x, y, width, "", style)
+
+	value := field.Value
+	if utf8.RuneCountInString(value) > textW-1 {
+		value = primitive.TruncateRight(value, textW-1)
+	}
+	runes := []rune(value)
+	for i := 0; i < len(runes) && i < textW; i++ {
+		screen.SetContent(x+i, y, runes[i], nil, textStyle)
+	}
+	for i := len(runes); i < textW; i++ {
+		screen.SetContent(x+i, y, ' ', nil, textStyle)
+	}
+
+	glyphX := x + textW
+	symStr := styles.SymbolPathPicker()
+	symR := ' '
+	if sr := []rune(symStr); len(sr) > 0 {
+		symR = sr[0]
+	}
+	glyphStyle := textStyle
+	if rowFocused && pickerFocused {
+		glyphStyle = styles.DialogAccent
+	}
+	screen.SetContent(glyphX, y, symR, nil, glyphStyle)
+
+	tailX := x + width - 1
+	screen.SetContent(tailX, y, ' ', nil, style)
+
+	if rowFocused && !pickerFocused {
+		cx := field.Cursor
+		if cx > len(runes) {
+			cx = len(runes)
+		}
+		if cx >= textW {
+			cx = textW - 1
+		}
+		if cx < 0 {
+			cx = 0
+		}
 		ch := ' '
 		if cx < len(runes) {
 			ch = runes[cx]

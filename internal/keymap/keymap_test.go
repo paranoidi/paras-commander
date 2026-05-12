@@ -149,6 +149,35 @@ func TestDefaultJobsOverlayMapsF8ToClearFinished(t *testing.T) {
 	}
 }
 
+func TestDefaultBundlePathPickerHostOverlayF9(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	id, ok := bundle.PathPickerHost.Lookup(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	if !ok || id != ActionUIOpenPathPicker {
+		t.Fatalf("PathPickerHost F9 = %q %v, want ui.open-path-picker", id, ok)
+	}
+	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	if !ok || id != ActionAppOpenMenu {
+		t.Fatalf("global F9 = %q %v, want app.open-menu", id, ok)
+	}
+}
+
+func TestLoadFromPathsRejectsInvalidPathPickerHostAction(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "kb.toml")
+	if err := writeFile(path, `[path_picker_host_action_keys]
+"app.open-menu" = ["F2"]
+`); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadFromPaths(config.Paths{KeybindingsFile: path})
+	if err == nil {
+		t.Fatal("LoadFromPaths: want error for invalid path_picker_host action")
+	}
+}
+
 func TestLoadFromPathsUsesDefaultsWhenMissing(t *testing.T) {
 	dir := t.TempDir()
 	bundle, err := LoadFromPaths(config.Paths{ConfigDir: dir, KeybindingsFile: filepath.Join(dir, "absent.toml")})

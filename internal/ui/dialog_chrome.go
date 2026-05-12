@@ -60,11 +60,11 @@ func drawDialogHSeparator(screen tcell.Screen, rect Rect, y int, borderStyle tce
 
 // drawSimpleDialogInput paints a full-width input row with dialog input styles (no DialogSurface override)
 // and shows focus with a reversed cell at the logical cursor (end of value), per AGENTS.md.
-func drawSimpleDialogInput(screen tcell.Screen, x, y, width int, value string, focused bool, styles theme.Theme) {
+func drawSimpleDialogInput(screen tcell.Screen, x, y, width int, value string, focused, invalid bool, styles theme.Theme) {
 	if width <= 0 {
 		return
 	}
-	style, _ := styles.DialogInputPair(focused)
+	style := styles.DialogInputBaseStyle(focused, invalid)
 	display := primitive.TruncateRight(value, width)
 	runes := []rune(display)
 

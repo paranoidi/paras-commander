@@ -27,7 +27,7 @@ const (
 	InputModeDialog
 	InputModeJobsView
 	InputModeCommandsView
-	InputModeBookmarkDialog
+	InputModePathPicker
 	InputModeHistoryDialog
 	InputModeMetaDialog
 	InputModeHelpView
@@ -37,8 +37,8 @@ func (a *App) inputMode() InputMode {
 	switch {
 	case a.model.MessageDialog.Open:
 		return InputModeMessageDialog
-	case a.model.BookmarkDialog.Open:
-		return InputModeBookmarkDialog
+	case a.model.PathPicker.Open:
+		return InputModePathPicker
 	case a.model.HistoryDialog.Open:
 		return InputModeHistoryDialog
 	case a.model.MetaDialog.Open:
@@ -56,13 +56,13 @@ func (a *App) inputMode() InputMode {
 	case a.model.FileDialog.Open:
 		return InputModeFileDialog
 	case a.model.ViewMode == ui.ViewCommands &&
-		!a.model.MessageDialog.Open && !a.model.BookmarkDialog.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
+		!a.model.MessageDialog.Open && !a.model.PathPicker.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
 		!a.model.TransferDialog.Open &&
 		!a.model.ConflictDialog.Open && !a.model.QuitConfirm.Open && !a.model.Menu.Open &&
 		!a.inQuickFilterUI():
 		return InputModeCommandsView
 	case a.model.ViewMode == ui.ViewJobs &&
-		!a.model.MessageDialog.Open && !a.model.BookmarkDialog.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
+		!a.model.MessageDialog.Open && !a.model.PathPicker.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
 		!a.model.TransferDialog.Open &&
 		!a.model.ConflictDialog.Open && !a.model.QuitConfirm.Open && !a.model.Menu.Open &&
 		!a.inQuickFilterUI():
@@ -92,17 +92,20 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
-	if a.model.BookmarkDialog.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
+	if a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
 		return footerWithEscClose([]menu.FunctionKey{
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
 	if a.model.PrimaryModal() != ui.PrimaryModalNone ||
-		a.model.SortDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.BookmarkDialog.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
-		// Dialog open: Esc closes; F10 still quits globally.
-		return footerWithEscClose([]menu.FunctionKey{
-			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
-		})
+		a.model.SortDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		if a.pathPickerHostFooterEligible() {
+			if lbl := a.keysPathPickerHost.MenuBindingLabel(keymap.ActionUIOpenPathPicker); lbl != "" {
+				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Paths"}}, rest...)
+			}
+		}
+		return footerWithEscClose(rest)
 	}
 	if a.model.Menu.Open {
 		// Menu open: Esc closes menu / pulldown; F9 and F10 as before.
@@ -176,8 +179,8 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.handleMessageDialogKey(event)
 		a.render()
 		return false, true
-	case InputModeBookmarkDialog:
-		a.handleBookmarkDialogKey(event)
+	case InputModePathPicker:
+		a.handlePathPickerKey(event)
 		a.render()
 		return false, true
 	case InputModeHistoryDialog:
@@ -297,7 +300,7 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 	}
 	return !ui.IsAuxiliaryView(a.model.ViewMode) && !a.model.Menu.Open &&
 		(a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusSelectionsStrip) &&
-		!a.model.MessageDialog.Open && !a.model.BookmarkDialog.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
+		!a.model.MessageDialog.Open && !a.model.PathPicker.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
 		!a.model.FileDialog.Open && !a.model.TransferDialog.Open &&
 		!a.model.ConflictDialog.Open && !a.model.QuitConfirm.Open
 }
@@ -603,22 +606,4 @@ func isPlainPrintableRune(event *tcell.EventKey) bool {
 func (a *App) inQuickFilterUI() bool {
 	filter := a.activePanel().Filter
 	return filter.Active || filter.Editing
-}
-
-func editSimpleStringInput(event *tcell.EventKey, value *string) bool {
-	if value == nil {
-		return false
-	}
-	if event.Key() == tcell.KeyBackspace || event.Key() == tcell.KeyBackspace2 {
-		runes := []rune(*value)
-		if len(runes) > 0 {
-			*value = string(runes[:len(runes)-1])
-		}
-		return true
-	}
-	if isPlainPrintableRune(event) {
-		*value += string(event.Rune())
-		return true
-	}
-	return false
 }

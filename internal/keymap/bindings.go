@@ -61,6 +61,11 @@ func (m *Map) ActionBindings() []Binding {
 			rememberCanonical(ks)
 		}
 	}
+	for _, chords := range DefaultPathPickerHostOverlayKeys() {
+		for _, ks := range chords {
+			rememberCanonical(ks)
+		}
+	}
 	for ch, action := range m.keyToAction {
 		rev[action] = append(rev[action], ch)
 		if _, ok := keyStrs[ch]; !ok {

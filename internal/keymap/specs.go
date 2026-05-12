@@ -505,6 +505,14 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil,
 			Keywords:    []string{"settings", "toml"},
 		},
+		{
+			ID:           ActionUIOpenPathPicker,
+			Title:        "Open path picker",
+			Section:      "UI",
+			DefaultKeys:  nil, // bound only via [path_picker_host_action_keys] (default F9 there)
+			PreferredKey: "F9",
+			Keywords:     []string{"history", "bookmarks", "destination"},
+		},
 
 		// ── Filter (unbound by default) ──
 		{

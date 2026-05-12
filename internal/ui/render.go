@@ -71,20 +71,20 @@ type Model struct {
 	ConfigDialog    ConfigDialogState
 	SortDialog      SortDialogState
 	GroupSelect     GroupSelectState
-	BookmarkDialog  BookmarkDialogState
+	PathPicker      PathPickerState
 	HistoryDialog   HistoryDialogState
 	MetaDialog      MetaDialogState
 	// MetaResults holds per-panel command output keyed by entry path (nil = meta not active).
-	MetaResults     [2]map[string]string
-	HelpView        HelpViewState
-	FileDialog      FileDialogState
-	TransferDialog  TransferDialogState
-	ConflictDialog  ConflictDialogState
-	QuitConfirm     QuitConfirmState
-	MessageDialog   MessageDialogState
-	Message         string
-	MessageUrgency  MessageUrgency
-	FooterKeys      []menu.FunctionKey
+	MetaResults    [2]map[string]string
+	HelpView       HelpViewState
+	FileDialog     FileDialogState
+	TransferDialog TransferDialogState
+	ConflictDialog ConflictDialogState
+	QuitConfirm    QuitConfirmState
+	MessageDialog  MessageDialogState
+	Message        string
+	MessageUrgency MessageUrgency
+	FooterKeys     []menu.FunctionKey
 	// MenuBarPermission is Unix mode text for the active panel cursor row (e.g. "drwxr-xr-x"); empty when none.
 	MenuBarPermission string
 	// MenuBarJobsAttention is the core jobs/conflict label (e.g. "! 1"); the menu bar pads it with
@@ -145,24 +145,41 @@ type GroupSelectState struct {
 	Focus            int // 0=pattern input, 1=Files only, 2=Case sensitive, 3=Using shell patterns, 4=OK, 5=Cancel
 }
 
-// BookmarkEntry is one fzf-marks row for the bookmark picker.
-type BookmarkEntry struct {
-	Name string
-	Path string
+// PathPickerPurpose selects what happens when the user confirms a path in the picker.
+type PathPickerPurpose int
+
+const (
+	// PathPickerPurposeNavigate jumps the active panel to the selected directory (bookmarks menu).
+	PathPickerPurposeNavigate PathPickerPurpose = iota
+	// PathPickerPurposeApplyTransferDestination writes the path into the copy/move destination field.
+	PathPickerPurposeApplyTransferDestination
+	// PathPickerPurposeApplyFileDialogField writes the path into FileDialog.Fields[FileFieldIndex].Value.
+	PathPickerPurposeApplyFileDialogField
+)
+
+// PathPickerItem is one fuzzy-listed row (display Line + filesystem Path).
+type PathPickerItem struct {
 	Line string
+	Path string
 }
 
-// BookmarkDialogState is the fuzzy bookmark picker (fzf-marks compatible file).
-type BookmarkDialogState struct {
-	Open        bool
-	Query       string
-	Entries     []BookmarkEntry
-	Ranked      []int            // indices into Entries (rank order)
-	MatchRanges [][]search.Range // len == len(Entries); highlight ranges on Line
-	Selected    int              // index into Ranked
-	ListScroll  int              // first visible row index into Ranked
-	Focus       int              // 0=list+query, 1=OK, 2=Cancel
-	MarksPath   string           // resolved marks file path
+// PathPickerState is a fuzzy-filtered list dialog (bookmarks, quick path, etc.).
+type PathPickerState struct {
+	Open           bool
+	Title          string
+	Purpose        PathPickerPurpose
+	FileFieldIndex int // when Purpose == PathPickerPurposeApplyFileDialogField
+	Query          string
+	Items          []PathPickerItem
+	Ranked         []int // indices into Items (rank order)
+	MatchRanges    [][]search.Range
+	Selected       int // index into Ranked
+	ListScroll     int // first visible row index into Ranked
+	Focus          int // 0=list+query, 1=OK, 2=Cancel
+	// QueryPathInvalid is true after a debounced check when the filter looks like a path and os.Lstat fails.
+	QueryPathInvalid bool
+	// QueryPathCheckPending is true until debounced validation runs after Query changed.
+	QueryPathCheckPending bool
 }
 
 // HistoryDialogState is a fuzzy picker over one panel’s navigation history paths.
@@ -180,7 +197,6 @@ type HistoryDialogState struct {
 	Focus        int // 0=list+query, 1=OK, 2=Cancel
 }
 
-
 // MetaEntry is one selectable command in the meta picker dialog.
 type MetaEntry struct {
 	Name        string
@@ -197,6 +213,7 @@ type MetaDialogState struct {
 	Selected int         // index into Entries (0 = None)
 	Focus    int         // 0..len(Entries)-1 radio items, len = OK, len+1 = Cancel
 }
+
 // HelpEntry is one row in the full-screen help view.
 type HelpEntry struct {
 	ActionID string // keymap action id (e.g. file.copy)
@@ -245,6 +262,10 @@ type FileDialogField struct {
 	// The first printable character clears and replaces; Backspace/arrow/home/end/delete
 	// commits the suggestion so the user edits it in place.
 	PrefillPending bool
+	// PathPicker enables a trailing glyph and path-picker sub-focus on the input row.
+	PathPicker bool
+	// PickerFocused is true when the trailing path-picker glyph has sub-focus (file dialogs).
+	PickerFocused bool
 }
 
 // FileDialogState holds state for any file operation dialog.
@@ -317,7 +338,7 @@ func (m Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.BookmarkDialog.Open || m.HistoryDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open {
+	if m.SortDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open {
 		return true
 	}
 	return false
@@ -412,8 +433,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	if model.GroupSelect.Open {
 		drawGroupSelectDialog(screen, layout, model.GroupSelect, styles)
 	}
-	if model.BookmarkDialog.Open {
-		drawBookmarkDialog(screen, layout, model.BookmarkDialog, styles)
+	if model.PathPicker.Open {
+		drawPathPickerDialog(screen, layout, model.PathPicker, styles)
 	}
 	if model.HistoryDialog.Open {
 		drawHistoryDialog(screen, layout, model.HistoryDialog, styles)

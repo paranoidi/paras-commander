@@ -53,7 +53,7 @@ func drawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	primitive.Text(screen, leftCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
 
 	filterFocused := state.Focus == 0
-	drawSimpleDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, filterFocused, styles)
+	drawSimpleDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, filterFocused, false, styles)
 
 	// Separator before list.
 	sepBeforeList := rect.Y + 4

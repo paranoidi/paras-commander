@@ -7,8 +7,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// EnsureBookmarkListScroll keeps Selected row visible in a list of height listRows.
-func EnsureBookmarkListScroll(state *BookmarkDialogState, listRows int) {
+// EnsurePathPickerListScroll keeps Selected row visible in a list of height listRows.
+func EnsurePathPickerListScroll(state *PathPickerState, listRows int) {
 	n := len(state.Ranked)
 	if n == 0 || listRows <= 0 {
 		state.ListScroll = 0
@@ -28,7 +28,7 @@ func EnsureBookmarkListScroll(state *BookmarkDialogState, listRows int) {
 	}
 }
 
-func drawBookmarkDialog(screen tcell.Screen, layout Layout, state BookmarkDialogState, styles theme.Theme) {
+func drawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerState, styles theme.Theme) {
 	width := 78
 	if width > layout.Width-4 {
 		width = layout.Width - 4
@@ -53,8 +53,13 @@ func drawBookmarkDialog(screen tcell.Screen, layout Layout, state BookmarkDialog
 		}
 	}
 
+	title := state.Title
+	if title == "" {
+		title = "Choose path"
+	}
+
 	rect := centeredDialogRect(layout, width, height)
-	borderStyle := drawDialogFrame(screen, rect, "Bookmarks", styles)
+	borderStyle := drawDialogFrame(screen, rect, title, styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
 	leftCol := rect.X + 2
@@ -63,7 +68,8 @@ func drawBookmarkDialog(screen tcell.Screen, layout Layout, state BookmarkDialog
 	primitive.Text(screen, leftCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
 
 	filterFocused := state.Focus == 0
-	drawSimpleDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, filterFocused, styles)
+	inputInvalid := state.QueryPathInvalid && !state.QueryPathCheckPending
+	drawSimpleDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, filterFocused, inputInvalid, styles)
 
 	sepBeforeList := rect.Y + 4
 	drawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
@@ -79,8 +85,8 @@ func drawBookmarkDialog(screen tcell.Screen, layout Layout, state BookmarkDialog
 		isCursor := false
 		if idxInRank < len(state.Ranked) {
 			entIdx := state.Ranked[idxInRank]
-			if entIdx >= 0 && entIdx < len(state.Entries) {
-				line = state.Entries[entIdx].Line
+			if entIdx >= 0 && entIdx < len(state.Items) {
+				line = state.Items[entIdx].Line
 				if entIdx < len(state.MatchRanges) {
 					ranges = state.MatchRanges[entIdx]
 				}
@@ -94,7 +100,7 @@ func drawBookmarkDialog(screen tcell.Screen, layout Layout, state BookmarkDialog
 		}
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)
-		text, spans := bookmarkRowContent(line, ranges, rowWidth, matchStyle)
+		text, spans := pathPickerRowContent(line, ranges, rowWidth, matchStyle)
 		primitive.StyledText(screen, leftCol, y, rowWidth, text, baseStyle, spans)
 	}
 
@@ -110,7 +116,7 @@ func drawBookmarkDialog(screen tcell.Screen, layout Layout, state BookmarkDialog
 	}, styles)
 }
 
-func bookmarkRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style) (string, []primitive.Span) {
+func pathPickerRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style) (string, []primitive.Span) {
 	if width <= 0 {
 		return "", nil
 	}
@@ -130,14 +136,14 @@ func bookmarkRowContent(line string, ranges []search.Range, width int, matchStyl
 		if truncated && i == len(disp)-1 && disp[i] == '~' {
 			continue
 		}
-		if bookmarkRangeContains(ranges, i) {
+		if pathPickerRangeContains(ranges, i) {
 			spans = append(spans, primitive.Span{Start: i, End: i + 1, Style: matchStyle})
 		}
 	}
 	return string(disp), spans
 }
 
-func bookmarkRangeContains(ranges []search.Range, index int) bool {
+func pathPickerRangeContains(ranges []search.Range, index int) bool {
 	for _, r := range ranges {
 		if index >= r.Start && index < r.End {
 			return true

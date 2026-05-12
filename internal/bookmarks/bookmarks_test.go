@@ -36,6 +36,14 @@ func TestParseLine(t *testing.T) {
 	if !ok || m.Path != "/trail" {
 		t.Fatalf("CRLF: got %#v", m)
 	}
+	m, ok = ParseLine(" : /home/user/unnamed")
+	if !ok || m.Name != "" || m.Path != "/home/user/unnamed" || m.Line != " : /home/user/unnamed" {
+		t.Fatalf("empty label: got %#v ok=%v", m, ok)
+	}
+	m, ok = ParseLine("  spaced : /tmp/z  ")
+	if !ok || m.Name != "spaced" || m.Path != "/tmp/z" {
+		t.Fatalf("leading/trailing space on line: got %#v", m)
+	}
 }
 
 func TestParseReaderOrder(t *testing.T) {

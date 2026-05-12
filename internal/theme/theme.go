@@ -95,17 +95,19 @@ type Theme struct {
 	DialogAccent                   tcell.Style
 	DialogInputActive              tcell.Style
 	DialogInputActivePlaceholder   tcell.Style
+	DialogInputActiveError         tcell.Style
 	DialogInputInactive            tcell.Style
 	DialogInputInactivePlaceholder tcell.Style
+	DialogInputInactiveError       tcell.Style
 	DialogButtonNormal             tcell.Style
 	DialogButtonActive             tcell.Style
 	DialogOptionInactive           tcell.Style
 	DialogOptionActive             tcell.Style
 	DialogOptionSelected           tcell.Style
 
-	StatusInfo        tcell.Style
-	StatusWarn        tcell.Style
-	StatusError       tcell.Style
+	StatusInfo         tcell.Style
+	StatusWarn         tcell.Style
+	StatusError        tcell.Style
 	StatusWaitingInput tcell.Style
 
 	JobsRow     tcell.Style
@@ -141,6 +143,35 @@ func (t Theme) DialogInputPair(focused bool) (base, placeholder tcell.Style) {
 		return t.DialogInputActive, t.DialogInputActivePlaceholder
 	}
 	return t.DialogInputInactive, t.DialogInputInactivePlaceholder
+}
+
+// DialogInputBaseStyle returns the row fill + committed text style for a simple one-line input
+// (no placeholder split). When invalid is true, uses dialog.input.*.error styles.
+func (t Theme) DialogInputBaseStyle(focused, invalid bool) tcell.Style {
+	if invalid {
+		if focused {
+			return t.DialogInputActiveError
+		}
+		return t.DialogInputInactiveError
+	}
+	if focused {
+		return t.DialogInputActive
+	}
+	return t.DialogInputInactive
+}
+
+// SymbolKeyPathPicker is the [symbols] table key for the path-picker affordance glyph.
+const SymbolKeyPathPicker = "path_picker"
+
+// SymbolPathPicker returns the trailing path-picker glyph from the theme, with a default
+// Nerd-Font private-use fallback when the key is absent.
+func (t Theme) SymbolPathPicker() string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[SymbolKeyPathPicker]); s != "" {
+			return s
+		}
+	}
+	return "\uef0d"
 }
 
 type styleSpec struct {
@@ -205,8 +236,10 @@ var requiredStyleKeys = []string{
 	"dialog.accent",
 	"dialog.input.active",
 	"dialog.input.active.placeholder",
+	"dialog.input.active.error",
 	"dialog.input.inactive",
 	"dialog.input.inactive.placeholder",
+	"dialog.input.inactive.error",
 	"dialog.button.normal",
 	"dialog.button.active",
 	"dialog.option.inactive",
@@ -578,17 +611,19 @@ func parse(data []byte) (Theme, error) {
 		DialogAccent:                   styles["dialog.accent"],
 		DialogInputActive:              styles["dialog.input.active"],
 		DialogInputActivePlaceholder:   styles["dialog.input.active.placeholder"],
+		DialogInputActiveError:         styles["dialog.input.active.error"],
 		DialogInputInactive:            styles["dialog.input.inactive"],
 		DialogInputInactivePlaceholder: styles["dialog.input.inactive.placeholder"],
+		DialogInputInactiveError:       styles["dialog.input.inactive.error"],
 		DialogButtonNormal:             styles["dialog.button.normal"],
 		DialogButtonActive:             styles["dialog.button.active"],
 		DialogOptionInactive:           styles["dialog.option.inactive"],
 		DialogOptionActive:             styles["dialog.option.active"],
 		DialogOptionSelected:           styles["dialog.option.selected"],
 
-		StatusInfo:        styles["status.info"],
-		StatusWarn:        styles["status.warn"],
-		StatusError:       styles["status.error"],
+		StatusInfo:         styles["status.info"],
+		StatusWarn:         styles["status.warn"],
+		StatusError:        styles["status.error"],
 		StatusWaitingInput: styles["status.waiting_input"],
 
 		JobsRow:     styles["jobs.row"],

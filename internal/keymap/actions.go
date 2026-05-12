@@ -90,6 +90,8 @@ const (
 
 	ActionUIOpenTheme  = "ui.open-theme"
 	ActionUIOpenConfig = "ui.open-config"
+	// ActionUIOpenPathPicker is bound via [path_picker_host_action_keys], not [action_keys].
+	ActionUIOpenPathPicker = "ui.open-path-picker"
 )
 
 // Menu routing identifiers for File pulldown entries (bindable in keybindings.toml).
@@ -185,4 +187,6 @@ var KnownActions = map[string]struct{}{
 
 	ActionUIOpenTheme:  {},
 	ActionUIOpenConfig: {},
+
+	ActionUIOpenPathPicker: {},
 }

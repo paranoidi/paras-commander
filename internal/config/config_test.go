@@ -1,10 +1,10 @@
 package config
 
 import (
-	"reflect"
 	"bytes"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -65,10 +65,27 @@ func TestValidateClampsJobsProgressEmit(t *testing.T) {
 	}
 }
 
-func TestDefaultStatusMessageTTL(t *testing.T) {
-	got := Default().UI.StatusMessageTTLSeconds
-	if got != 3.5 {
-		t.Fatalf("Default StatusMessageTTLSeconds = %v, want 3.5", got)
+func TestDefaultPathPickerValidateDelayMS(t *testing.T) {
+	if got := Default().UI.PathPickerValidateDelayMS; got != DefaultPathPickerValidateDelayMS {
+		t.Fatalf("PathPickerValidateDelayMS = %d, want %d", got, DefaultPathPickerValidateDelayMS)
+	}
+}
+
+func TestValidateClampsPathPickerValidateDelayMS(t *testing.T) {
+	cfg := Default()
+	cfg.UI.PathPickerValidateDelayMS = -5
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.PathPickerValidateDelayMS != DefaultPathPickerValidateDelayMS {
+		t.Fatalf("negative delay = %d, want default %d", cfg.UI.PathPickerValidateDelayMS, DefaultPathPickerValidateDelayMS)
+	}
+	cfg.UI.PathPickerValidateDelayMS = 999999
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.PathPickerValidateDelayMS != 30000 {
+		t.Fatalf("huge delay = %d, want 30000", cfg.UI.PathPickerValidateDelayMS)
 	}
 }
 
@@ -375,6 +392,36 @@ func TestLoadFromPathsAcceptsJobsActionKeysTable(t *testing.T) {
 	}
 	if cfg.Theme != "default" {
 		t.Fatalf("Theme = %q, want default", cfg.Theme)
+	}
+}
+
+func TestLoadFromPathsAcceptsPathPickerHostActionKeysTable(t *testing.T) {
+	path := writeConfig(t, `theme = "default"
+[action_keys]
+"app.quit" = ["F12"]
+[path_picker_host_action_keys]
+"ui.open-path-picker" = ["C-p"]
+`)
+	cfg, err := LoadFromPaths(Paths{ConfigFile: path})
+	if err != nil {
+		t.Fatalf("LoadFromPaths() error = %v, want success with [path_picker_host_action_keys]", err)
+	}
+	if cfg.Theme != "default" {
+		t.Fatalf("Theme = %q, want default", cfg.Theme)
+	}
+}
+
+func TestReadPathPickerHostActionKeysExtractsTable(t *testing.T) {
+	path := writeConfig(t, `theme = "default"
+[path_picker_host_action_keys]
+"ui.open-path-picker" = ["C-p"]
+`)
+	keys, err := ReadPathPickerHostActionKeys(path)
+	if err != nil {
+		t.Fatalf("ReadPathPickerHostActionKeys() error = %v", err)
+	}
+	if got, want := keys["ui.open-path-picker"], []string{"C-p"}; !equalStringSlice(got, want) {
+		t.Fatalf("ui.open-path-picker = %v, want %v", got, want)
 	}
 }
 

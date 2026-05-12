@@ -29,18 +29,29 @@ const (
 	TransferPhaseSelfCopyRename
 )
 
+// Destination sub-focus for path input row (text vs trailing path-picker glyph).
+const (
+	TransferDestSubFocusText = iota
+	TransferDestSubFocusPicker
+)
+
 // TransferDialogState holds the copy/move destination dialog (shared chrome and navigation).
 type TransferDialogState struct {
 	Open                 bool
 	Kind                 TransferKind
 	Phase                TransferDialogPhase
-	Destination          string
-	PreservePermissions  bool   // copy only
-	PreserveTimestamps   bool   // copy only
-	FocusField           int    // content indices then OK, Add paused, Cancel; see TransferDialogLinearForm
-	SelfCopyDestDir      string // abs directory from phase 1 (TransferPhaseSelfCopyRename)
+	Destination          FileDialogField
+	DestSubFocus         int  // TransferDestSubFocus* when Phase==TransferPhaseDestination and FocusField==0
+	PreservePermissions  bool // copy only
+	PreserveTimestamps   bool // copy only
+	FocusField           int  // content indices then OK, Add paused, Cancel; see TransferDialogLinearForm
+	SelfCopyDestDir      string
 	SelfCopyOrigBasename string
 	SelfCopyNewName      FileDialogField
+	// DestPathInvalid is true after a debounced check when the destination looks like a path and os.Lstat fails.
+	DestPathInvalid bool
+	// DestPathCheckPending is true until debounced validation runs after Destination.Value changed.
+	DestPathCheckPending bool
 }
 
 // TransferDialogNumContent returns the number of focusable content rows before OK/Cancel.

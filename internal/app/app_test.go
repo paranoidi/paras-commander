@@ -784,13 +784,13 @@ func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	app.openBookmarkDialog()
-	if !app.model.BookmarkDialog.Open {
-		t.Fatal("expected bookmark dialog open")
+	if !app.model.PathPicker.Open {
+		t.Fatal("expected path picker open")
 	}
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
-	if app.model.BookmarkDialog.Open {
+	if app.model.PathPicker.Open {
 		t.Fatal("expected dialog closed")
 	}
 	if got := app.activePanel().Path; got != filepath.Clean(target) {
@@ -962,11 +962,11 @@ func TestBookmarkDialogFilterSelectsRankedFirst(t *testing.T) {
 			t.Fatal("unexpected quit")
 		}
 	}
-	if len(app.model.BookmarkDialog.Ranked) == 0 {
+	if len(app.model.PathPicker.Ranked) == 0 {
 		t.Fatal("expected at least one fuzzy match for query b")
 	}
-	if app.model.BookmarkDialog.Ranked[0] != 1 {
-		t.Fatalf("first ranked index = %d want 1 (bbb line), ranked=%v", app.model.BookmarkDialog.Ranked[0], app.model.BookmarkDialog.Ranked)
+	if app.model.PathPicker.Ranked[0] != 1 {
+		t.Fatalf("first ranked index = %d want 1 (bbb line), ranked=%v", app.model.PathPicker.Ranked[0], app.model.PathPicker.Ranked)
 	}
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
@@ -1006,11 +1006,11 @@ func TestBookmarkDialogTypingODoesNotActivateWithoutEnter(t *testing.T) {
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
-	if !app.model.BookmarkDialog.Open {
+	if !app.model.PathPicker.Open {
 		t.Fatal("typing o in filter must not close or navigate")
 	}
-	if app.model.BookmarkDialog.Query != "o" {
-		t.Fatalf("query = %q want o", app.model.BookmarkDialog.Query)
+	if app.model.PathPicker.Query != "o" {
+		t.Fatalf("query = %q want o", app.model.PathPicker.Query)
 	}
 	if app.activePanel().Path != startPath {
 		t.Fatalf("panel path changed without Enter: %q", app.activePanel().Path)
@@ -2388,6 +2388,129 @@ func TestFileMenuSymlinkOpensSymlinkDialog(t *testing.T) {
 	}
 }
 
+func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "a.txt"))
+	dst := filepath.Join(root, "dst")
+	if err := os.Mkdir(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	line := fmt.Sprintf("m : %s\n", dst)
+	if err := os.WriteFile(marksPath, []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	screen := newScreen(t, 80, 24)
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	p := app.activePanel()
+	for i := 0; i < p.VisibleEntryCount(); i++ {
+		entry, _, ok := p.VisibleEntry(i)
+		if ok && entry.Name == "a.txt" {
+			p.Cursor = i
+			break
+		}
+	}
+
+	app.openCopyDialog()
+	if !app.model.TransferDialog.Open {
+		t.Fatal("copy dialog should open")
+	}
+	for range 3 {
+		app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	}
+	if app.model.TransferDialog.FocusField != 0 {
+		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
+	}
+	keys := app.activeFooterKeys()
+	if len(keys) != 3 {
+		t.Fatalf("footer len = %d, want Esc + Paths + F10", len(keys))
+	}
+	if keys[1].Hint != "Paths" || keys[1].KeyLabel != "F9" {
+		t.Fatalf("middle footer = %+v, want F9 Paths", keys[1])
+	}
+
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dispatch(keymap.ActionFileSymlink)
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogSymlink {
+		t.Fatal("symlink dialog should be open")
+	}
+	keys = app.activeFooterKeys()
+	if len(keys) != 3 {
+		t.Fatalf("symlink footer len = %d, want Esc + Paths + F10", len(keys))
+	}
+	if keys[1].Hint != "Paths" {
+		t.Fatalf("symlink footer middle = %+v, want Paths hint", keys[1])
+	}
+}
+
+func TestPathPickerHostF9OpensPickerFromCopyAndSymlinkDialogs(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "a.txt"))
+	dst := filepath.Join(root, "dst")
+	if err := os.Mkdir(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	line := fmt.Sprintf("m : %s\n", dst)
+	if err := os.WriteFile(marksPath, []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	screen := newScreen(t, 80, 24)
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	p := app.activePanel()
+	for i := 0; i < p.VisibleEntryCount(); i++ {
+		entry, _, ok := p.VisibleEntry(i)
+		if ok && entry.Name == "a.txt" {
+			p.Cursor = i
+			break
+		}
+	}
+
+	app.openCopyDialog()
+	for range 3 {
+		app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	}
+	if app.model.TransferDialog.FocusField != 0 {
+		t.Fatalf("FocusField = %d, want 0", app.model.TransferDialog.FocusField)
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != ui.PathPickerPurposeApplyTransferDestination {
+		t.Fatalf("path picker = open %v purpose %v, want ApplyTransferDestination",
+			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
+	}
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.PathPicker.Open {
+		t.Fatal("path picker should close")
+	}
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+
+	app.dispatch(keymap.ActionFileSymlink)
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogSymlink {
+		t.Fatal("symlink dialog should be open")
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != ui.PathPickerPurposeApplyFileDialogField {
+		t.Fatalf("path picker = open %v purpose %v, want ApplyFileDialogField",
+			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
+	}
+}
+
 func TestFileMenuHardlinkOpensHardlinkDialog(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "test.txt"))
@@ -2822,8 +2945,8 @@ yellow = "#ffff00"
 		"panel.usage.prefix.cursor.selected",
 		"fuzzy.input", "fuzzy.input.nomatch", "fuzzy.highlight", "fuzzy.highlight.cursor",
 		"dialog.frame", "dialog.title", "dialog.text", "dialog.surface", "dialog.accent",
-		"dialog.input.active", "dialog.input.active.placeholder", "dialog.input.inactive",
-		"dialog.input.inactive.placeholder", "dialog.button.normal", "dialog.button.active",
+		"dialog.input.active", "dialog.input.active.placeholder", "dialog.input.active.error", "dialog.input.inactive",
+		"dialog.input.inactive.placeholder", "dialog.input.inactive.error", "dialog.button.normal", "dialog.button.active",
 		"dialog.option.inactive", "dialog.option.active", "dialog.option.selected",
 		"status.info", "status.warn", "status.error", "status.waiting_input",
 		"jobs.row", "jobs.running", "jobs.done", "jobs.failed",

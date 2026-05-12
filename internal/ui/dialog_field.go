@@ -101,6 +101,15 @@ func (f *FileDialogField) commitPrefill() {
 	}
 }
 
+// CommitPrefill clears PrefillPending while keeping Value (placeholder becomes committed text).
+// Used when Right should accept the suggestion before a second Right moves to the path-picker glyph.
+func (f *FileDialogField) CommitPrefill() {
+	if f == nil {
+		return
+	}
+	f.commitPrefill()
+}
+
 func clampRuneCursor(pos, length int) int {
 	if pos < 0 {
 		return 0

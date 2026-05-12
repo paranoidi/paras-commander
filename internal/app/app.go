@@ -35,6 +35,12 @@ type statusMessageExpiryPayload struct {
 // spinnerTickPayload is posted periodically to animate the menu-bar activity spinner.
 type spinnerTickPayload struct{}
 
+// pathPickerValidatePayload wakes PollEvent after debounced path-picker filter validation.
+type pathPickerValidatePayload struct{}
+
+// transferDestValidatePayload wakes PollEvent after debounced copy/move destination path validation.
+type transferDestValidatePayload struct{}
+
 // diskIdleSortPayload applies deferred disk-total sort for one panel after idle delay.
 type diskIdleSortPayload struct {
 	PanelID int
@@ -54,15 +60,16 @@ type jobsWakePayload struct{}
 
 // App owns lifecycle, state, and input dispatch.
 type App struct {
-	screen       tcell.Screen
-	config       config.Config
-	styles       theme.Theme
-	themes       map[string]theme.Theme
-	paths        config.Paths
-	keys         *keymap.Map
-	keysJobs     *keymap.Map // chords active only in jobs view (overlay)
-	keysCommands *keymap.Map // chords active only in Commands view (overlay)
-	model        ui.Model
+	screen             tcell.Screen
+	config             config.Config
+	styles             theme.Theme
+	themes             map[string]theme.Theme
+	paths              config.Paths
+	keys               *keymap.Map
+	keysJobs           *keymap.Map // chords active only in jobs view (overlay)
+	keysCommands       *keymap.Map // chords active only in Commands view (overlay)
+	keysPathPickerHost *keymap.Map // copy/move dest + symlink/hardlink path-picker host overlay
+	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
 	// jobState manages background job queue and worker lifecycle.
@@ -80,11 +87,13 @@ type App struct {
 	metaNavPath [2]string
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
-	messageExpiryGen     atomic.Uint64
-	spinnerRedrawTimer   *time.Timer
-	diskUsageRedrawTimer *time.Timer
-	jobsWakeMu           sync.Mutex
-	jobsWakeTimer        *time.Timer
+	messageExpiryGen          atomic.Uint64
+	spinnerRedrawTimer        *time.Timer
+	diskUsageRedrawTimer      *time.Timer
+	jobsWakeMu                sync.Mutex
+	jobsWakeTimer             *time.Timer
+	pathPickerValidateTimer   *time.Timer
+	transferDestValidateTimer *time.Timer
 
 	commandsMu              sync.RWMutex
 	commandsBatchesInflight atomic.Int32
@@ -176,6 +185,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	km := bundle.Global
 	kmJobs := bundle.Jobs
 	kmCommands := bundle.Commands
+	kmPathPickerHost := bundle.PathPickerHost
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -253,16 +263,17 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	cmdCtx, cmdCancel := context.WithCancel(context.Background())
 	app := &App{
-		screen:         screen,
-		config:         cfg,
-		styles:         styles,
-		themes:         availableThemes,
-		paths:          opts.Paths.WithResolvedLocations(),
-		keys:           km,
-		keysJobs:       kmJobs,
-		keysCommands:   kmCommands,
-		commandsCtx:    cmdCtx,
-		commandsCancel: cmdCancel,
+		screen:             screen,
+		config:             cfg,
+		styles:             styles,
+		themes:             availableThemes,
+		paths:              opts.Paths.WithResolvedLocations(),
+		keys:               km,
+		keysJobs:           kmJobs,
+		keysCommands:       kmCommands,
+		keysPathPickerHost: kmPathPickerHost,
+		commandsCtx:        cmdCtx,
+		commandsCancel:     cmdCancel,
 		model: ui.Model{
 			Left:                   left,
 			Right:                  right,
@@ -355,6 +366,12 @@ func (a *App) Run() error {
 			case metaWakePayload:
 				a.render()
 				didRender = true
+			case pathPickerValidatePayload:
+				a.render()
+				didRender = true
+			case transferDestValidatePayload:
+				a.render()
+				didRender = true
 			}
 		}
 
@@ -421,14 +438,25 @@ func absPathClean(p string) string {
 	return filepath.Clean(abs)
 }
 
+func transferPrefilledDestination(path string) ui.FileDialogField {
+	rn := len([]rune(path))
+	return ui.FileDialogField{
+		Value:          path,
+		Prefill:        path,
+		Cursor:         rn,
+		PrefillPending: path != "",
+	}
+}
+
 func (a *App) openTransferDialog(kind ui.TransferKind) {
 	passive := a.inactivePanel()
 	form := ui.NewTransferDialogLinearForm(ui.TransferDialogNumContent(kind))
 	st := ui.TransferDialogState{
-		Open:        true,
-		Kind:        kind,
-		Destination: passive.Path,
-		FocusField:  form.OKIndex(),
+		Open:         true,
+		Kind:         kind,
+		Destination:  transferPrefilledDestination(passive.Path),
+		DestSubFocus: ui.TransferDestSubFocusText,
+		FocusField:   form.OKIndex(),
 	}
 	if kind == ui.TransferKindCopy {
 		st.PreservePermissions = a.config.Operations.PreservePermissions
@@ -436,6 +464,7 @@ func (a *App) openTransferDialog(kind ui.TransferKind) {
 	}
 	a.model.TransferDialog = st
 	a.clearTransientMessage()
+	a.armTransferDestinationValidateTimer()
 }
 
 func transferSelfCopyNewNamePrefilled(base string) ui.FileDialogField {
@@ -455,7 +484,8 @@ func (a *App) openTransferDialogSelfCopyRename(kind ui.TransferKind, absDestDir,
 		Open:                 true,
 		Kind:                 kind,
 		Phase:                ui.TransferPhaseSelfCopyRename,
-		Destination:          absDestDir,
+		Destination:          ui.FileDialogField{},
+		DestSubFocus:         ui.TransferDestSubFocusText,
 		SelfCopyDestDir:      absDestDir,
 		SelfCopyOrigBasename: base,
 		SelfCopyNewName:      transferSelfCopyNewNamePrefilled(base),
@@ -470,6 +500,7 @@ func (a *App) openTransferDialogSelfCopyRename(kind ui.TransferKind, absDestDir,
 }
 
 func (a *App) closeTransferDialog() {
+	a.stopTransferDestinationValidateTimer()
 	a.model.TransferDialog = ui.TransferDialogState{}
 }
 
@@ -493,13 +524,57 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 		a.closeTransferDialog()
 		return
 	}
+	if a.tryPathPickerHostShortcut(event) {
+		return
+	}
 	if d.FocusField == 0 && d.Phase == ui.TransferPhaseSelfCopyRename {
 		if editTransferSelfCopyNewNameKey(event, &d.SelfCopyNewName) {
 			return
 		}
 	}
+	if d.FocusField == 0 && d.Phase == ui.TransferPhaseDestination {
+		if d.DestSubFocus == ui.TransferDestSubFocusPicker {
+			switch event.Key() {
+			case tcell.KeyLeft:
+				d.DestSubFocus = ui.TransferDestSubFocusText
+				runes := []rune(d.Destination.Value)
+				d.Destination.Cursor = len(runes)
+				return
+			case tcell.KeyEnter:
+				a.openPathPickerForTransfer()
+				return
+			case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
+				d.DestSubFocus = ui.TransferDestSubFocusText
+			default:
+				return
+			}
+		} else if event.Key() == tcell.KeyRight {
+			dest := &d.Destination
+			runes := []rune(dest.Value)
+			c := dest.Cursor
+			if c < 0 {
+				c = 0
+			}
+			if c > len(runes) {
+				c = len(runes)
+			}
+			// First Right on a pending placeholder commits it; second Right at EOT moves to the glyph.
+			if dest.Prefill != "" && dest.PrefillPending && dest.Value == dest.Prefill && c >= len(runes) {
+				dest.CommitPrefill()
+				return
+			}
+			if c >= len(runes) {
+				d.DestSubFocus = ui.TransferDestSubFocusPicker
+				return
+			}
+		}
+	}
 	if focus, ok := ui.TransferDialogMoveFocus(*d, d.FocusField, event.Key()); ok {
+		prev := d.FocusField
 		d.FocusField = focus
+		if prev == 0 && focus != 0 {
+			d.DestSubFocus = ui.TransferDestSubFocusText
+		}
 		return
 	}
 	if event.Key() == tcell.KeyEnter {
@@ -517,7 +592,8 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 		}
 	}
 	if d.FocusField == 0 && d.Phase != ui.TransferPhaseSelfCopyRename {
-		if editSimpleStringInput(event, &d.Destination) {
+		if editTransferSelfCopyNewNameKey(event, &d.Destination) {
+			a.armTransferDestinationValidateTimer()
 			return
 		}
 	}
@@ -607,7 +683,7 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 		return
 	}
 
-	dest := d.Destination
+	dest := strings.TrimSpace(d.Destination.Value)
 	if dest == "" {
 		a.setTransientMessage("Destination required", ui.MessageUrgencyWarn)
 		return
@@ -631,6 +707,9 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 		d.SelfCopyOrigBasename = base
 		d.SelfCopyNewName = transferSelfCopyNewNamePrefilled(base)
 		d.FocusField = 0
+		a.stopTransferDestinationValidateTimer()
+		d.DestPathInvalid = false
+		d.DestPathCheckPending = false
 		return
 	}
 
@@ -2107,6 +2186,10 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		}
 	}
 
+	if a.tryPathPickerHostShortcut(event) {
+		return false
+	}
+
 	switch event.Key() {
 	case tcell.KeyEsc:
 		a.closeFileDialog()
@@ -2118,6 +2201,10 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			} else {
 				a.closeFileDialog()
 			}
+			return false
+		}
+		if f := a.focusedField(); f != nil && f.PathPicker && f.PickerFocused {
+			a.openPathPickerForFileField(a.model.FileDialog.FocusedField)
 			return false
 		}
 		a.executeFileDialog()
@@ -2132,6 +2219,10 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		// On button: move between buttons; on field: move cursor
 		if a.fileDialogOnButton() {
 			a.fileDialogFocusButton(-1)
+		} else if f := a.focusedField(); f != nil && f.PathPicker && f.PickerFocused {
+			f.PickerFocused = false
+			runes := []rune(f.Value)
+			f.Cursor = len(runes)
 		} else {
 			a.fileDialogMoveCursor(-1)
 		}
@@ -2139,6 +2230,24 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	case tcell.KeyRight:
 		if a.fileDialogOnButton() {
 			a.fileDialogFocusButton(1)
+		} else if f := a.focusedField(); f != nil && f.PathPicker && !f.PickerFocused {
+			runes := []rune(f.Value)
+			c := f.Cursor
+			if c < 0 {
+				c = 0
+			}
+			if c > len(runes) {
+				c = len(runes)
+			}
+			if f.Prefill != "" && f.PrefillPending && f.Value == f.Prefill && c >= len(runes) {
+				f.CommitPrefill()
+				return false
+			}
+			if c >= len(runes) {
+				f.PickerFocused = true
+			} else {
+				a.fileDialogMoveCursor(1)
+			}
 		} else {
 			a.fileDialogMoveCursor(1)
 		}
@@ -2294,8 +2403,8 @@ func (a *App) openSymlinkDialog(p *panel.State) {
 	targetPath := entry.Path
 	defaultLink := filepath.Join(a.passivePanelPath(), entry.Name)
 	fields := []ui.FileDialogField{
-		{Label: "Target", Value: targetPath, Cursor: len([]rune(targetPath))},
-		{Label: "Link path", Value: defaultLink, Cursor: len([]rune(defaultLink))},
+		{Label: "Target", Value: targetPath, Cursor: len([]rune(targetPath)), PathPicker: true},
+		{Label: "Link path", Value: defaultLink, Cursor: len([]rune(defaultLink)), PathPicker: true},
 	}
 	a.model.FileDialog = ui.FileDialogState{
 		Open:       true,
@@ -2312,8 +2421,8 @@ func (a *App) openHardlinkDialog(p *panel.State) {
 	sourcePath := entry.Path
 	defaultDest := filepath.Join(a.passivePanelPath(), entry.Name)
 	fields := []ui.FileDialogField{
-		{Label: "Source", Value: sourcePath, Cursor: len([]rune(sourcePath))},
-		{Label: "New path", Value: defaultDest, Cursor: len([]rune(defaultDest))},
+		{Label: "Source", Value: sourcePath, Cursor: len([]rune(sourcePath)), PathPicker: true},
+		{Label: "New path", Value: defaultDest, Cursor: len([]rune(defaultDest)), PathPicker: true},
 	}
 	a.model.FileDialog = ui.FileDialogState{
 		Open:       true,
@@ -2375,6 +2484,9 @@ func (a *App) fileDialogOnButton() bool {
 
 // fileDialogFocusNext moves focus to next item. Down on last button = no-op.
 func (a *App) fileDialogFocusNext() {
+	for i := range a.model.FileDialog.Fields {
+		a.model.FileDialog.Fields[i].PickerFocused = false
+	}
 	count := a.fileDialogFocusCount()
 	if count <= 1 {
 		return
@@ -2388,6 +2500,9 @@ func (a *App) fileDialogFocusNext() {
 
 // fileDialogFocusPrev moves focus to previous item. Up on first item = no-op.
 func (a *App) fileDialogFocusPrev() {
+	for i := range a.model.FileDialog.Fields {
+		a.model.FileDialog.Fields[i].PickerFocused = false
+	}
 	if a.model.FileDialog.FocusedField <= 0 {
 		return // no wrap from first field
 	}

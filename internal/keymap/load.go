@@ -13,11 +13,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 )
 
-// LoadFromPaths resolves the full Bundle (global + jobs-view + Commands-view overlays)
-// using a layered merge per table:
+// LoadFromPaths resolves the full Bundle (global + jobs-view + Commands-view +
+// path-picker-host overlays) using a layered merge per table:
 //
-//  1. built-in defaults (DefaultActionKeys / DefaultJobsOverlayKeys / DefaultCommandsOverlayKeys)
-//  2. config.toml's [action_keys] / [jobs_action_keys] / [commands_action_keys] (when present)
+//  1. built-in defaults (DefaultActionKeys / DefaultJobsOverlayKeys / DefaultCommandsOverlayKeys /
+//     DefaultPathPickerHostOverlayKeys)
+//  2. config.toml's [action_keys] / [jobs_action_keys] / [commands_action_keys] /
+//     [path_picker_host_action_keys] (when present)
 //  3. keybindings.toml's matching tables (when present) — wins over config.toml
 //
 // Any source can be absent without failing startup; built-in defaults
@@ -28,6 +30,7 @@ func LoadFromPaths(paths config.Paths) (*Bundle, error) {
 	globalLayer := DefaultActionKeys()
 	jobsLayer := DefaultJobsOverlayKeys()
 	commandsLayer := DefaultCommandsOverlayKeys()
+	pathPickerHostLayer := DefaultPathPickerHostOverlayKeys()
 
 	configActionKeys, err := config.ReadActionKeys(paths.ConfigFile)
 	if err != nil {
@@ -53,38 +56,48 @@ func LoadFromPaths(paths config.Paths) (*Bundle, error) {
 	}
 	commandsLayer = mergeBindings(commandsLayer, configCommandsKeys)
 
+	configPathPickerHostKeys, err := config.ReadPathPickerHostActionKeys(paths.ConfigFile)
+	if err != nil {
+		return nil, err
+	}
+	if err := validatePathPickerHostOverlayKeys(configPathPickerHostKeys, paths.ConfigFile); err != nil {
+		return nil, err
+	}
+	pathPickerHostLayer = mergeBindings(pathPickerHostLayer, configPathPickerHostKeys)
+
 	file := strings.TrimSpace(paths.KeybindingsFile)
 	if file == "" && strings.TrimSpace(paths.ConfigDir) != "" {
 		file = filepath.Join(paths.ConfigDir, "keybindings.toml")
 	}
 	if file == "" {
-		return buildBundle(globalLayer, jobsLayer, commandsLayer)
+		return buildBundle(globalLayer, jobsLayer, commandsLayer, pathPickerHostLayer)
 	}
 
 	raw, err := os.ReadFile(file)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return buildBundle(globalLayer, jobsLayer, commandsLayer)
+			return buildBundle(globalLayer, jobsLayer, commandsLayer, pathPickerHostLayer)
 		}
 		return nil, fmt.Errorf("read keybindings %q: %w", file, err)
 	}
 
-	actionUser, jobsUser, commandsUser, err := parseKeybindingsFile(raw, file)
+	actionUser, jobsUser, commandsUser, pathPickerHostUser, err := parseKeybindingsFile(raw, file)
 	if err != nil {
 		return nil, err
 	}
 	globalLayer = mergeBindings(globalLayer, actionUser)
 	jobsLayer = mergeBindings(jobsLayer, jobsUser)
 	commandsLayer = mergeBindings(commandsLayer, commandsUser)
-	return buildBundle(globalLayer, jobsLayer, commandsLayer)
+	pathPickerHostLayer = mergeBindings(pathPickerHostLayer, pathPickerHostUser)
+	return buildBundle(globalLayer, jobsLayer, commandsLayer, pathPickerHostLayer)
 }
 
 // DefaultBundle returns built-in global + overlay defaults (no keybindings file).
 func DefaultBundle() (*Bundle, error) {
-	return buildBundle(DefaultActionKeys(), DefaultJobsOverlayKeys(), DefaultCommandsOverlayKeys())
+	return buildBundle(DefaultActionKeys(), DefaultJobsOverlayKeys(), DefaultCommandsOverlayKeys(), DefaultPathPickerHostOverlayKeys())
 }
 
-func buildBundle(global, jobs, commands map[string][]string) (*Bundle, error) {
+func buildBundle(global, jobs, commands, pathPickerHost map[string][]string) (*Bundle, error) {
 	gMap, err := Build(global)
 	if err != nil {
 		return nil, err
@@ -97,7 +110,11 @@ func buildBundle(global, jobs, commands map[string][]string) (*Bundle, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Bundle{Global: gMap, Jobs: jMap, Commands: cMap}, nil
+	phMap, err := Build(pathPickerHost)
+	if err != nil {
+		return nil, err
+	}
+	return &Bundle{Global: gMap, Jobs: jMap, Commands: cMap, PathPickerHost: phMap}, nil
 }
 
 func validateCommandsOverlayKeys(keys map[string][]string, source string) error {
@@ -110,6 +127,21 @@ func validateCommandsOverlayKeys(keys map[string][]string, source string) error 
 		}
 		if !AllowedInCommandsOverlay(action) {
 			return fmt.Errorf("parse config %q: [commands_action_keys] action %q is not allowed (commands.* only)", source, action)
+		}
+	}
+	return nil
+}
+
+func validatePathPickerHostOverlayKeys(keys map[string][]string, source string) error {
+	if keys == nil {
+		return nil
+	}
+	for action, chords := range keys {
+		if len(chords) == 0 {
+			return fmt.Errorf("parse config %q: [path_picker_host_action_keys] action %q has empty key list", source, action)
+		}
+		if !AllowedInPathPickerHostOverlay(action) {
+			return fmt.Errorf("parse config %q: [path_picker_host_action_keys] action %q is not allowed (ui.open-path-picker only)", source, action)
 		}
 	}
 	return nil
@@ -132,17 +164,17 @@ func validateJobsOverlayKeys(keys map[string][]string, source string) error {
 	return nil
 }
 
-func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, commandsKeys map[string][]string, err error) {
+func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, commandsKeys, pathPickerHostKeys map[string][]string, err error) {
 	var top map[string]interface{}
 	if err := toml.Unmarshal(raw, &top); err != nil {
-		return nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+		return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 	}
 	if len(top) == 0 {
-		return map[string][]string{}, map[string][]string{}, map[string][]string{}, nil
+		return map[string][]string{}, map[string][]string{}, map[string][]string{}, map[string][]string{}, nil
 	}
 	for k := range top {
-		if k != "action_keys" && k != "jobs_action_keys" && k != "commands_action_keys" {
-			return nil, nil, nil, fmt.Errorf("parse keybindings %q: unknown field %q (allowed: action_keys, jobs_action_keys, commands_action_keys)", label, k)
+		if k != "action_keys" && k != "jobs_action_keys" && k != "commands_action_keys" && k != "path_picker_host_action_keys" {
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: unknown field %q (allowed: action_keys, jobs_action_keys, commands_action_keys, path_picker_host_action_keys)", label, k)
 		}
 	}
 
@@ -150,14 +182,14 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, comma
 	if rawAK, ok := top["action_keys"]; ok {
 		table, ok := rawAK.(map[string]interface{})
 		if !ok {
-			return nil, nil, nil, fmt.Errorf("parse keybindings %q: [action_keys] must be a table", label)
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [action_keys] must be a table", label)
 		}
 		if err := collectActionKeys(table, "", actionKeys); err != nil {
-			return nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		for action, keys := range actionKeys {
 			if len(keys) == 0 {
-				return nil, nil, nil, fmt.Errorf("parse keybindings %q: action %q has empty key list", label, action)
+				return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: action %q has empty key list", label, action)
 			}
 		}
 	}
@@ -166,17 +198,17 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, comma
 	if rawJK, ok := top["jobs_action_keys"]; ok {
 		table, ok := rawJK.(map[string]interface{})
 		if !ok {
-			return nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] must be a table", label)
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] must be a table", label)
 		}
 		if err := collectActionKeys(table, "", jobsKeys); err != nil {
-			return nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		for action, keys := range jobsKeys {
 			if len(keys) == 0 {
-				return nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] action %q has empty key list", label, action)
+				return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] action %q has empty key list", label, action)
 			}
 			if !AllowedInJobsOverlay(action) {
-				return nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] action %q is not allowed (jobs.* only)", label, action)
+				return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] action %q is not allowed (jobs.* only)", label, action)
 			}
 		}
 	}
@@ -185,22 +217,41 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, comma
 	if rawCK, ok := top["commands_action_keys"]; ok {
 		table, ok := rawCK.(map[string]interface{})
 		if !ok {
-			return nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] must be a table", label)
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] must be a table", label)
 		}
 		if err := collectActionKeys(table, "", commandsKeys); err != nil {
-			return nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		for action, keys := range commandsKeys {
 			if len(keys) == 0 {
-				return nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] action %q has empty key list", label, action)
+				return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] action %q has empty key list", label, action)
 			}
 			if !AllowedInCommandsOverlay(action) {
-				return nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] action %q is not allowed (commands.* only)", label, action)
+				return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] action %q is not allowed (commands.* only)", label, action)
 			}
 		}
 	}
 
-	return actionKeys, jobsKeys, commandsKeys, nil
+	pathPickerHostKeys = map[string][]string{}
+	if rawPP, ok := top["path_picker_host_action_keys"]; ok {
+		table, ok := rawPP.(map[string]interface{})
+		if !ok {
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] must be a table", label)
+		}
+		if err := collectActionKeys(table, "", pathPickerHostKeys); err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+		}
+		for action, keys := range pathPickerHostKeys {
+			if len(keys) == 0 {
+				return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] action %q has empty key list", label, action)
+			}
+			if !AllowedInPathPickerHostOverlay(action) {
+				return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] action %q is not allowed (ui.open-path-picker only)", label, action)
+			}
+		}
+	}
+
+	return actionKeys, jobsKeys, commandsKeys, pathPickerHostKeys, nil
 }
 
 func collectActionKeys(node map[string]interface{}, prefix string, out map[string][]string) error {
@@ -275,18 +326,23 @@ func EncodeDefaultStub(w io.Writer) error {
 		"# are accepted there.\n" +
 		"#\n" +
 		"# Commands-view-only chords under [commands_action_keys] take precedence\n" +
-		"# while the Commands view is focused. Only commands.* action IDs are accepted.\n\n"
+		"# while the Commands view is focused. Only commands.* action IDs are accepted.\n" +
+		"#\n" +
+		"# Path-picker host dialogs (copy/move destination, symlink/hardlink path rows)\n" +
+		"# use [path_picker_host_action_keys]. Only ui.open-path-picker is accepted.\n\n"
 	if _, err := io.WriteString(w, header); err != nil {
 		return fmt.Errorf("encode keybindings stub header: %w", err)
 	}
 	payload := struct {
-		ActionKeys          map[string][]string `toml:"action_keys"`
-		JobsActionKeys      map[string][]string `toml:"jobs_action_keys"`
-		CommandsActionKeys  map[string][]string `toml:"commands_action_keys"`
+		ActionKeys                 map[string][]string `toml:"action_keys"`
+		JobsActionKeys             map[string][]string `toml:"jobs_action_keys"`
+		CommandsActionKeys         map[string][]string `toml:"commands_action_keys"`
+		PathPickerHostActionKeys   map[string][]string `toml:"path_picker_host_action_keys"`
 	}{
-		ActionKeys:         DefaultActionKeys(),
-		JobsActionKeys:       DefaultJobsOverlayKeys(),
-		CommandsActionKeys:   DefaultCommandsOverlayKeys(),
+		ActionKeys:               DefaultActionKeys(),
+		JobsActionKeys:           DefaultJobsOverlayKeys(),
+		CommandsActionKeys:       DefaultCommandsOverlayKeys(),
+		PathPickerHostActionKeys: DefaultPathPickerHostOverlayKeys(),
 	}
 	if err := toml.NewEncoder(w).Encode(payload); err != nil {
 		return fmt.Errorf("encode keybindings stub: %w", err)

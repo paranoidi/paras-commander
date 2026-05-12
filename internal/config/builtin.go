@@ -4,6 +4,9 @@ package config
 // Single source of truth: do not duplicate these in internal/ops.
 
 const (
+	// DefaultPathPickerValidateDelayMS is the debounce before filesystem checks on the path-picker filter.
+	DefaultPathPickerValidateDelayMS = 200
+
 	DefaultDiskUsageWalkConcurrency = 4
 
 	DefaultProgressEmitMinBytes      = 512 * 1024
