@@ -39,6 +39,10 @@ func drawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 		} else {
 			height = 5
 		}
+		if mkdirHasActions(state) {
+			// Separator + 3 radio rows added above the buttons separator.
+			height += 1 + mkdirActionRowCount
+		}
 	}
 	if height > layout.Height-2 {
 		height = layout.Height - 2
@@ -72,6 +76,9 @@ func drawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 	default:
 		if len(state.Fields) > 0 {
 			drawMultiFieldDialog(screen, rect, state, styles)
+		}
+		if mkdirHasActions(state) {
+			drawMkdirActionRows(screen, rect, state, borderStyle, styles)
 		}
 	}
 
@@ -144,6 +151,16 @@ func fileDialogWidth(screenWidth int, state FileDialogState) int {
 	if state.DialogType == FileDialogRunForEach && strings.TrimSpace(state.Message) != "" {
 		for _, line := range strings.Split(state.Message, "\n") {
 			lw := utf8.RuneCountInString(line) + 4
+			if lw > minWidth {
+				minWidth = lw
+			}
+		}
+	}
+	if mkdirHasActions(state) {
+		// Radios render as " (*) Label" with a leading marker; reserve room for the
+		// widest label plus the marker glyphs and outer dialog padding (1+marker+label+1+border).
+		for _, r := range mkdirActionRadios() {
+			lw := utf8.RuneCountInString(r.Label) + 8
 			if lw > minWidth {
 				minWidth = lw
 			}
@@ -346,7 +363,7 @@ func fileDialogOKFocusIndex(state FileDialogState) int {
 	if state.DialogType == FileDialogDelete {
 		return 0
 	}
-	return len(state.Fields)
+	return len(state.Fields) + mkdirExtraFocusRows(state)
 }
 
 // fileDialogCancelFocusIndex returns the focus index for the Cancel/No button.
@@ -354,7 +371,71 @@ func fileDialogCancelFocusIndex(state FileDialogState) int {
 	if state.DialogType == FileDialogDelete {
 		return 1
 	}
-	return len(state.Fields) + 1
+	return len(state.Fields) + mkdirExtraFocusRows(state) + 1
+}
+
+// mkdirActionRowCount is the number of radio rows shown for mkdir post-actions
+// when MkdirShowActions is enabled.
+const mkdirActionRowCount = 3
+
+// mkdirHasActions reports whether the mkdir dialog should render and accept
+// post-mkdir action radio rows.
+func mkdirHasActions(state FileDialogState) bool {
+	return state.DialogType == FileDialogMkdir && state.MkdirShowActions
+}
+
+// mkdirExtraFocusRows returns the number of focus rows contributed by the
+// mkdir radio section, or 0 when not applicable.
+func mkdirExtraFocusRows(state FileDialogState) int {
+	if mkdirHasActions(state) {
+		return mkdirActionRowCount
+	}
+	return 0
+}
+
+// mkdirActionRadios returns the static radio specs rendered below the directory-name input.
+// The order matches MkdirAction iota values.
+func mkdirActionRadios() []struct {
+	Action   MkdirAction
+	Label    string
+	Shortcut rune
+} {
+	return []struct {
+		Action   MkdirAction
+		Label    string
+		Shortcut rune
+	}{
+		{MkdirActionCreate, "Create", 'r'},
+		{MkdirActionCreateCopySelect, "and copy selected", 'c'},
+		{MkdirActionCreateMoveSelect, "and move selected", 'm'},
+	}
+}
+
+// drawMkdirActionRows draws the radio button section under the directory-name input
+// for the mkdir-with-selections dialog. Focus indices for the radio rows start
+// immediately after len(state.Fields).
+func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
+	if !mkdirHasActions(state) || len(state.Fields) == 0 {
+		return
+	}
+	// drawMultiFieldDialog lays out each field as: label row, blank row, input row, blank row.
+	// The first row after the last field block sits at rect.Y + 1 + len(Fields)*4.
+	fieldsBottom := rect.Y + 1 + len(state.Fields)*4
+	sepY := fieldsBottom
+	if sepY >= rect.Y+rect.Height-2 {
+		return
+	}
+	drawDialogHSeparator(screen, rect, sepY, borderStyle)
+	leftCol := rect.X + 2
+	radios := mkdirActionRadios()
+	baseFocus := len(state.Fields)
+	for i, r := range radios {
+		y := sepY + 1 + i
+		if y >= rect.Y+rect.Height-2 {
+			break
+		}
+		drawDialogRadio(screen, leftCol, y, r.Label, r.Shortcut, state.MkdirAction == r.Action, state.FocusedField == baseFocus+i, styles)
+	}
 }
 
 func drawOkCancelButtons(screen tcell.Screen, rect Rect, y int, state FileDialogState, styles theme.Theme) {

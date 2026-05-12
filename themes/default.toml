@@ -86,7 +86,7 @@ dialog.title = { fg = "yellow", bg = "black", bold = true }
 dialog.text = { fg = "white", bg = "black" }
 dialog.surface = { fg = "white", bg = "bright_black" }
 dialog.accent = { fg = "white", bg = "black", bold = true }
-dialog.input.active = { fg = "bright_white", bg = "default" }
+dialog.input.active = { fg = "bright_white", bg = "default", bold = true }
 dialog.input.active.placeholder = { fg = "default", bg = "default" }
 dialog.input.active.error = { fg = "red", bg = "default" }
 dialog.input.inactive = { fg = "white", bg = "black" }

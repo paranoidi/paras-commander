@@ -3798,3 +3798,230 @@ func TestSyncFollowSkipsHistoryRecordingOnFollower(t *testing.T) {
 		t.Fatalf("right history length = %d, want %d (sync should not record history)", len(right.History), len(rightHistoryAtStart))
 	}
 }
+
+func TestMkdirDialogWithoutSelectionHidesActionRadios(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileMkdir)
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogMkdir {
+		t.Fatal("F7 should open mkdir dialog")
+	}
+	if app.model.FileDialog.MkdirShowActions {
+		t.Fatal("MkdirShowActions should be false without selections")
+	}
+	if got, want := app.fileDialogFocusCount(), 3; got != want {
+		t.Fatalf("focus count = %d, want %d (field + OK + Cancel)", got, want)
+	}
+}
+
+func TestMkdirDialogWithSelectionShowsActionRadiosAndNav(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "a.txt")
+	writeFile(t, src)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{src: true}
+
+	app.dispatch(keymap.ActionFileMkdir)
+	if !app.model.FileDialog.Open {
+		t.Fatal("dialog should open")
+	}
+	if !app.model.FileDialog.MkdirShowActions {
+		t.Fatal("MkdirShowActions should be true with selections")
+	}
+	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreate {
+		t.Fatalf("MkdirAction = %v, want MkdirActionCreate (default)", app.model.FileDialog.MkdirAction)
+	}
+	if got, want := app.fileDialogFocusCount(), 6; got != want {
+		t.Fatalf("focus count = %d, want %d (field + 3 radios + OK + Cancel)", got, want)
+	}
+
+	// Down navigates: field(0) -> radio0(1) -> radio1(2) -> radio2(3) -> OK(4)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.FileDialog.FocusedField != 1 {
+		t.Fatalf("Down from field: focus = %d, want 1 (first radio)", app.model.FileDialog.FocusedField)
+	}
+	// Space on first radio selects MkdirActionCreate (already default).
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreate {
+		t.Fatalf("MkdirAction = %v, want MkdirActionCreate after Space on first radio", app.model.FileDialog.MkdirAction)
+	}
+	// Move to second radio and select copy.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreateCopySelect {
+		t.Fatalf("MkdirAction = %v, want MkdirActionCreateCopySelect after Space on second radio", app.model.FileDialog.MkdirAction)
+	}
+	// Down past last radio reaches OK button.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.FileDialog.FocusedField != 4 {
+		t.Fatalf("Down to OK: focus = %d, want 4", app.model.FileDialog.FocusedField)
+	}
+	// Right moves OK -> Cancel.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if app.model.FileDialog.FocusedField != 5 {
+		t.Fatalf("Right OK->Cancel: focus = %d, want 5", app.model.FileDialog.FocusedField)
+	}
+}
+
+func TestMkdirDialogRadioRowsRejectTextInput(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "a.txt")
+	writeFile(t, src)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{src: true}
+
+	app.dispatch(keymap.ActionFileMkdir)
+	// Type a fresh value then move down to a radio row.
+	for _, r := range "newdir" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if !app.fileDialogOnRadio() {
+		t.Fatalf("expected focus on a radio row, focus = %d", app.model.FileDialog.FocusedField)
+	}
+	// Typing must not alter the text field while on a radio row.
+	beforeValue := app.model.FileDialog.Fields[0].Value
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'X', tcell.ModNone))
+	if app.model.FileDialog.Fields[0].Value != beforeValue {
+		t.Fatalf("text field changed while on radio: %q -> %q", beforeValue, app.model.FileDialog.Fields[0].Value)
+	}
+	// Backspace also must not alter the text field on a radio row.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModNone))
+	if app.model.FileDialog.Fields[0].Value != beforeValue {
+		t.Fatalf("text field changed via Backspace on radio: %q -> %q", beforeValue, app.model.FileDialog.Fields[0].Value)
+	}
+}
+
+func TestMkdirActionCreateOnlyDoesNotQueueJob(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "a.txt")
+	writeFile(t, src)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{src: true}
+
+	app.dispatch(keymap.ActionFileMkdir)
+	// Type fresh name (first printable clears prefill).
+	for _, r := range "newdir" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	// MkdirActionCreate is the default; confirm without changing the radio.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should close after Enter")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "newdir")); err != nil {
+		t.Fatalf("expected new directory: %v", err)
+	}
+	if got := len(app.jobState.AllJobs()); got != 0 {
+		t.Fatalf("expected 0 jobs after plain Create, got %d", got)
+	}
+	if !p.SelectedPaths[src] {
+		t.Fatal("plain Create must preserve selection")
+	}
+}
+
+func TestMkdirActionCreateAndCopyQueuesCopyJob(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "a.txt")
+	writeFile(t, src)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{src: true}
+
+	app.dispatch(keymap.ActionFileMkdir)
+	for _, r := range "newdir" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	// Set MkdirActionCreateCopySelect via the model (focus-independent path).
+	app.model.FileDialog.MkdirAction = ui.MkdirActionCreateCopySelect
+	app.executeFileDialog()
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should close after execute")
+	}
+	created := filepath.Join(dir, "newdir")
+	if info, err := os.Stat(created); err != nil || !info.IsDir() {
+		t.Fatalf("expected new directory at %q (err=%v)", created, err)
+	}
+	jobsList := app.jobState.AllJobs()
+	if len(jobsList) != 1 {
+		t.Fatalf("expected 1 job after Create+Copy, got %d", len(jobsList))
+	}
+	j := jobsList[0]
+	if j.Type != jobs.TypeCopy {
+		t.Fatalf("job type = %v, want TypeCopy", j.Type)
+	}
+	if filepath.Clean(j.Destination) != filepath.Clean(created) {
+		t.Fatalf("job destination = %q, want %q", j.Destination, created)
+	}
+	if len(j.Sources) != 1 || filepath.Clean(j.Sources[0]) != filepath.Clean(src) {
+		t.Fatalf("job sources = %v, want [%q]", j.Sources, src)
+	}
+	if len(p.SelectedPaths) != 0 {
+		t.Fatalf("selection should be cleared after queueing copy job, got %d", len(p.SelectedPaths))
+	}
+}
+
+func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "a.txt")
+	writeFile(t, src)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{src: true}
+
+	app.dispatch(keymap.ActionFileMkdir)
+	for _, r := range "newdir" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.model.FileDialog.MkdirAction = ui.MkdirActionCreateMoveSelect
+	app.executeFileDialog()
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should close after execute")
+	}
+	created := filepath.Join(dir, "newdir")
+	if info, err := os.Stat(created); err != nil || !info.IsDir() {
+		t.Fatalf("expected new directory at %q (err=%v)", created, err)
+	}
+	jobsList := app.jobState.AllJobs()
+	if len(jobsList) != 1 {
+		t.Fatalf("expected 1 job after Create+Move, got %d", len(jobsList))
+	}
+	j := jobsList[0]
+	if j.Type != jobs.TypeMove {
+		t.Fatalf("job type = %v, want TypeMove", j.Type)
+	}
+	if filepath.Clean(j.Destination) != filepath.Clean(created) {
+		t.Fatalf("job destination = %q, want %q", j.Destination, created)
+	}
+	if len(p.SelectedPaths) != 0 {
+		t.Fatalf("selection should be cleared after queueing move job, got %d", len(p.SelectedPaths))
+	}
+}
+

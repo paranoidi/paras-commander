@@ -16,8 +16,13 @@ const jobActivityMaxLines = 200
 // jobsDetailLineBudgetFallback is used when line width is unknown (layout line counts only).
 const jobsDetailLineBudgetFallback = 4096
 
-// Jobs list column widths: icon(2) + type(5) + separator space = 8 runes.
-const jobsListColPrefix = 8
+// Jobs list column layout to the Status column: icon, type (widest jobs.Type is "delete"), separator space.
+const (
+	jobsListColIcon      = 2
+	jobsListColTypeRunes = 6 // internal/jobs.Type: copy, move, delete
+	jobsListColTypeCell  = jobsListColTypeRunes + 1
+	jobsListColPrefix    = jobsListColIcon + jobsListColTypeCell // offset from row start to Status column
+)
 const jobsListColStatus = 10
 const jobsListColETA = 10
 const jobsListColSpeed = 10
@@ -134,7 +139,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		return
 	}
 
-	hdr := fmt.Sprintf("%-2s%-5s %-10s%-10s%-10sProgress", "", "Type", "Status", "ETA", "Speed")
+	hdr := fmt.Sprintf("%-2s%-*s %-10s%-10s%-10sProgress", "", jobsListColTypeRunes, "Type", "Status", "ETA", "Speed")
 	headerStyle := styles.PanelHeader.Background(bg)
 	if chromeBlocked {
 		headerStyle = styles.PanelBlockedHeader
@@ -189,8 +194,8 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		}
 		iconGlyph := jobRowLeadingIcon(entry.Status, styles)
 		primitive.Text(screen, contentX, y, 2, iconGlyph, iconRenderStyle)
-		line := fmt.Sprintf("%-5s ", truncateRunes(entry.Type, 5))
-		primitive.Text(screen, contentX+2, y, jobsListColPrefix-2, line, lineStyle)
+		line := fmt.Sprintf("%-*s ", jobsListColTypeRunes, truncateRunes(entry.Type, jobsListColTypeRunes))
+		primitive.Text(screen, contentX+jobsListColIcon, y, jobsListColTypeCell, line, lineStyle)
 		xStatus := contentX + jobsListColPrefix
 		primitive.Text(screen, xStatus, y, jobsListColStatus, truncateRunes(entry.Status, 9), statusStyle)
 		xETA := xStatus + jobsListColStatus

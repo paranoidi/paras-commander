@@ -119,3 +119,73 @@ func findRow(screen tcell.SimulationScreen, width, height int, needle string) bo
 	}
 	return false
 }
+
+// TestRenderMkdirDialogWithoutSelectionHidesActionRadios verifies the F7 dialog
+// renders only the directory-name field plus OK/Cancel when MkdirShowActions is off.
+func TestRenderMkdirDialogWithoutSelectionHidesActionRadios(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	const width = 80
+
+	styles := theme.Default()
+	model := Model{
+		Left:        panel.State{Path: "/tmp"},
+		Right:       panel.State{Path: "/var"},
+		ActivePanel: LeftPanel,
+		FileDialog: FileDialogState{
+			Open:       true,
+			DialogType: FileDialogMkdir,
+			Fields:     []FileDialogField{{Label: "Directory name", Value: "x"}},
+		},
+	}
+
+	Render(screen, model, styles)
+
+	if !findRow(screen, width, 24, "Create directory") {
+		t.Fatal("expected 'Create directory' title")
+	}
+	if findRow(screen, width, 24, "and copy selected") {
+		t.Fatal("Create-and-copy-selected radio must not render when MkdirShowActions is false")
+	}
+	if findRow(screen, width, 24, "and move selected") {
+		t.Fatal("Create-and-move-selected radio must not render when MkdirShowActions is false")
+	}
+}
+
+// TestRenderMkdirDialogWithSelectionShowsActionRadios verifies all three radio
+// labels are drawn when MkdirShowActions is enabled.
+func TestRenderMkdirDialogWithSelectionShowsActionRadios(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	const width = 80
+
+	styles := theme.Default()
+	model := Model{
+		Left:        panel.State{Path: "/tmp"},
+		Right:       panel.State{Path: "/var"},
+		ActivePanel: LeftPanel,
+		FileDialog: FileDialogState{
+			Open:             true,
+			DialogType:       FileDialogMkdir,
+			Fields:           []FileDialogField{{Label: "Directory name", Value: "x"}},
+			MkdirShowActions: true,
+			MkdirAction:      MkdirActionCreate,
+		},
+	}
+
+	Render(screen, model, styles)
+
+	for _, label := range []string{"Create", "and copy selected", "and move selected"} {
+		if !findRow(screen, width, 24, label) {
+			t.Fatalf("expected radio label %q on screen", label)
+		}
+	}
+}
