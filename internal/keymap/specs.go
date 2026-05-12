@@ -513,6 +513,14 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "F9",
 			Keywords:     []string{"history", "bookmarks", "destination"},
 		},
+		{
+			ID:           ActionDialogInputRestoreDefault,
+			Title:        "Restore default placeholder",
+			Section:      "UI",
+			DefaultKeys:  nil, // bound only via [dialog_input_action_keys] (defaults C-r and C-d)
+			PreferredKey: "C-r",
+			Keywords:     []string{"restore", "default", "placeholder", "prefill", "suggested"},
+		},
 
 		// ── Filter (unbound by default) ──
 		{

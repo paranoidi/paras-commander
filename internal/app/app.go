@@ -69,6 +69,7 @@ type App struct {
 	keysJobs           *keymap.Map // chords active only in jobs view (overlay)
 	keysCommands       *keymap.Map // chords active only in Commands view (overlay)
 	keysPathPickerHost *keymap.Map // copy/move dest + symlink/hardlink path-picker host overlay
+	keysDialogInput    *keymap.Map // chords active only while a dialog input field is focused
 	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
@@ -190,6 +191,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	kmJobs := bundle.Jobs
 	kmCommands := bundle.Commands
 	kmPathPickerHost := bundle.PathPickerHost
+	kmDialogInput := bundle.DialogInput
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -276,6 +278,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysJobs:           kmJobs,
 		keysCommands:       kmCommands,
 		keysPathPickerHost: kmPathPickerHost,
+		keysDialogInput:    kmDialogInput,
 		commandsCtx:        cmdCtx,
 		commandsCancel:     cmdCancel,
 		model: ui.Model{
@@ -532,7 +535,7 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if d.FocusField == 0 && d.Phase == ui.TransferPhaseSelfCopyRename {
-		if editTransferSelfCopyNewNameKey(event, &d.SelfCopyNewName) {
+		if a.editTransferFieldKey(event, &d.SelfCopyNewName) {
 			return
 		}
 	}
@@ -612,7 +615,7 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 		}
 	}
 	if d.FocusField == 0 && d.Phase != ui.TransferPhaseSelfCopyRename {
-		if editTransferSelfCopyNewNameKey(event, &d.Destination) {
+		if a.editTransferFieldKey(event, &d.Destination) {
 			a.armTransferDestinationValidateTimer()
 			return
 		}
@@ -627,9 +630,12 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	}
 }
 
-func editTransferSelfCopyNewNameKey(event *tcell.EventKey, f *ui.FileDialogField) bool {
+func (a *App) editTransferFieldKey(event *tcell.EventKey, f *ui.FileDialogField) bool {
 	if f == nil {
 		return false
+	}
+	if a.tryDialogInputRestore(event, f) {
+		return true
 	}
 	switch event.Key() {
 	case tcell.KeyLeft:
@@ -2212,6 +2218,10 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	}
 
 	onRadio := a.fileDialogOnRadio()
+
+	if !onRadio && a.tryDialogInputRestore(event, a.focusedField()) {
+		return false
+	}
 
 	switch event.Key() {
 	case tcell.KeyEsc:

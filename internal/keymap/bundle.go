@@ -7,4 +7,5 @@ type Bundle struct {
 	Jobs           *Map // may be nil when no overlay chords are configured
 	Commands       *Map // Commands-view overlay; may be nil
 	PathPickerHost *Map // path-picker host dialogs (copy/move dest, symlink/hardlink paths)
+	DialogInput    *Map // dialog input field actions (e.g. restore default placeholder)
 }

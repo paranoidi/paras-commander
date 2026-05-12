@@ -203,6 +203,46 @@ func TestLoadFromPathsUsesDefaultsWhenMissing(t *testing.T) {
 	}
 }
 
+func TestDialogInputOverlayDefaultsResolveCtrlRAndCtrlD(t *testing.T) {
+	dir := t.TempDir()
+	bundle, err := LoadFromPaths(config.Paths{ConfigDir: dir, KeybindingsFile: filepath.Join(dir, "absent.toml")})
+	if err != nil {
+		t.Fatalf("LoadFromPaths() error = %v", err)
+	}
+	if bundle.DialogInput == nil {
+		t.Fatal("bundle.DialogInput is nil, want populated overlay")
+	}
+	cases := []struct {
+		name string
+		ev   *tcell.EventKey
+	}{
+		{"ctrl-r", tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModNone)},
+		{"ctrl-d", tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModNone)},
+		{"rune-r-ctrl", tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModCtrl)},
+		{"rune-d-ctrl", tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModCtrl)},
+	}
+	for _, tc := range cases {
+		id, ok := bundle.DialogInput.Lookup(tc.ev)
+		if !ok || id != ActionDialogInputRestoreDefault {
+			t.Fatalf("DialogInput.Lookup(%s) = %q %v, want %q", tc.name, id, ok, ActionDialogInputRestoreDefault)
+		}
+	}
+}
+
+func TestDialogInputOverlayRejectsNonInputActions(t *testing.T) {
+	dir := t.TempDir()
+	keybindings := filepath.Join(dir, "keybindings.toml")
+	body := "[dialog_input_action_keys]\n" +
+		"jobs.cancel = [\"C-r\"]\n"
+	if err := os.WriteFile(keybindings, []byte(body), 0o600); err != nil {
+		t.Fatalf("write keybindings: %v", err)
+	}
+	_, err := LoadFromPaths(config.Paths{ConfigDir: dir, KeybindingsFile: keybindings})
+	if err == nil {
+		t.Fatal("LoadFromPaths: want error for non-ui.input.* action in [dialog_input_action_keys]")
+	}
+}
+
 func TestParseKeyAltBang(t *testing.T) {
 	if _, err := ParseKey("M-!"); err != nil {
 		t.Fatalf("ParseKey(M-!): %v", err)

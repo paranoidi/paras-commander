@@ -67,6 +67,20 @@ func (f *FileDialogField) Clear() {
 	f.PrefillPending = false
 }
 
+// RestorePrefill resets the field to its suggested default state: Value becomes
+// Prefill, the cursor moves to the end, and PrefillPending is re-armed so the
+// next printable rune replaces from scratch (matching the on-open behaviour).
+// Returns false (no-op) when Prefill is empty.
+func (f *FileDialogField) RestorePrefill() bool {
+	if f == nil || f.Prefill == "" {
+		return false
+	}
+	f.Value = f.Prefill
+	f.Cursor = len([]rune(f.Prefill))
+	f.PrefillPending = true
+	return true
+}
+
 // MoveCursor moves the cursor by delta runes and commits pending prefill text.
 func (f *FileDialogField) MoveCursor(delta int) {
 	if f == nil {

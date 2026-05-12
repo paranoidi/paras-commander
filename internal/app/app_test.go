@@ -2854,6 +2854,57 @@ func TestRenameDialogPrefillBackspaceCommitsBeforeDelete(t *testing.T) {
 	}
 }
 
+func TestRenameDialogCtrlRRestoresClearedPrefill(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "existing.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileRename)
+	field := &app.model.FileDialog.Fields[0]
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
+	if field.Value != "" || field.PrefillPending {
+		t.Fatalf("after Ctrl+L: value=%q pending=%v, want empty/false", field.Value, field.PrefillPending)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModNone))
+	if field.Value != "existing.txt" {
+		t.Fatalf("after Ctrl+R: value = %q, want existing.txt", field.Value)
+	}
+	if field.Cursor != len([]rune("existing.txt")) {
+		t.Fatalf("after Ctrl+R: cursor = %d, want %d", field.Cursor, len([]rune("existing.txt")))
+	}
+	if !field.PrefillPending {
+		t.Fatal("after Ctrl+R: PrefillPending should be true")
+	}
+}
+
+func TestRenameDialogCtrlDRestoresEditedPrefill(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "existing.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileRename)
+	field := &app.model.FileDialog.Fields[0]
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
+	if field.Value == "existing.txt" {
+		t.Fatalf("expected prefill to be replaced after typing 'x'; value=%q", field.Value)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModNone))
+	if field.Value != "existing.txt" {
+		t.Fatalf("after Ctrl+D: value = %q, want existing.txt", field.Value)
+	}
+	if !field.PrefillPending {
+		t.Fatal("after Ctrl+D: PrefillPending should be true")
+	}
+}
+
 func TestFileDialogExecutesDelete(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "test.txt")

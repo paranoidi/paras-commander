@@ -128,6 +128,7 @@ Logic lives in `internal/ui/dialog_field.go`. When opening a dialog with a sugge
 - **First printable (`InsertRune`)**: clear `Value`, reset cursor, clear `PrefillPending`, then insert the rune (replace-from-scratch on top of the suggestion).
 - **Backspace, Delete, cursor moves (`MoveCursor` / Home / End via handlers)** call `commitPrefill()` first: drop `PrefillPending` but **keep** `Value`, then apply the usual edit/move.
 - **`Clear`** (file dialog `Ctrl+L`): empty `Value`, cursor `0`, `PrefillPending` false.
+- **`RestorePrefill`** (defaults `Ctrl+R` and `Ctrl+D`, configurable under `[dialog_input_action_keys]` as `ui.input.restore-default`): re-arm the suggested default after editing or clearing — `Value` becomes `Prefill`, cursor moves to the end, `PrefillPending` is set to true. No-op when `Prefill` is empty.
 - **OK while still pending**: use current `Value` (still the full suggestion)—no extra commit step required.
 
 ### Helpers

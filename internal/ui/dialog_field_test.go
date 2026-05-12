@@ -68,3 +68,67 @@ func TestFileDialogFieldEditOperations(t *testing.T) {
 		t.Fatalf("after clear: value=%q cursor=%d", field.Value, field.Cursor)
 	}
 }
+
+func TestFileDialogFieldRestorePrefillAfterClear(t *testing.T) {
+	field := FileDialogField{
+		Value:          "report.txt",
+		Prefill:        "report.txt",
+		PrefillPending: true,
+		Cursor:         len([]rune("report.txt")),
+	}
+
+	field.Clear()
+	if field.Value != "" || field.Cursor != 0 || field.PrefillPending {
+		t.Fatalf("clear precondition: value=%q cursor=%d pending=%v", field.Value, field.Cursor, field.PrefillPending)
+	}
+
+	if !field.RestorePrefill() {
+		t.Fatal("RestorePrefill = false, want true")
+	}
+	if field.Value != "report.txt" {
+		t.Fatalf("Value = %q, want %q", field.Value, "report.txt")
+	}
+	if field.Cursor != len([]rune("report.txt")) {
+		t.Fatalf("Cursor = %d, want %d", field.Cursor, len([]rune("report.txt")))
+	}
+	if !field.PrefillPending {
+		t.Fatal("PrefillPending = false, want true")
+	}
+}
+
+func TestFileDialogFieldRestorePrefillAfterEdit(t *testing.T) {
+	field := FileDialogField{
+		Value:          "report.txt",
+		Prefill:        "report.txt",
+		PrefillPending: true,
+		Cursor:         len([]rune("report.txt")),
+	}
+
+	field.InsertRune('x')
+	field.Backspace()
+	if field.PrefillPending {
+		t.Fatalf("expected PrefillPending=false after edit, got true (value=%q)", field.Value)
+	}
+
+	if !field.RestorePrefill() {
+		t.Fatal("RestorePrefill = false, want true")
+	}
+	if field.Value != "report.txt" || field.Cursor != len([]rune("report.txt")) || !field.PrefillPending {
+		t.Fatalf("after restore: value=%q cursor=%d pending=%v", field.Value, field.Cursor, field.PrefillPending)
+	}
+}
+
+func TestFileDialogFieldRestorePrefillNoOpWhenEmpty(t *testing.T) {
+	field := FileDialogField{Value: "abc", Cursor: 2}
+	if field.RestorePrefill() {
+		t.Fatal("RestorePrefill = true, want false (no Prefill)")
+	}
+	if field.Value != "abc" || field.Cursor != 2 || field.PrefillPending {
+		t.Fatalf("state mutated: value=%q cursor=%d pending=%v", field.Value, field.Cursor, field.PrefillPending)
+	}
+
+	var nilField *FileDialogField
+	if nilField.RestorePrefill() {
+		t.Fatal("nil receiver: want false")
+	}
+}
