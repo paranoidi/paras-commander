@@ -286,6 +286,42 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	}
 }
 
+func TestTransferDialogEnterFromDestinationConfirms(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	dstDir := filepath.Join(dir, "dest")
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
+		t.Fatalf("mkdir dest: %v", err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	if err := app.inactivePanel().Load(dstDir); err != nil {
+		t.Fatalf("inactive Load: %v", err)
+	}
+	defer app.stopWorker()
+	defer flushBackgroundJobs(t, app)
+
+	p := app.activePanel()
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("expected current entry tagged after Insert")
+	}
+
+	app.openCopyDialog()
+	if app.model.TransferDialog.FocusField != 0 {
+		t.Fatalf("FocusField = %d, want destination row", app.model.TransferDialog.FocusField)
+	}
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.TransferDialog.Open {
+		t.Fatal("copy dialog should close after Enter from destination")
+	}
+	if len(app.jobState.AllJobs()) != 1 {
+		t.Fatalf("expected one job after Enter, got %d", len(app.jobState.AllJobs()))
+	}
+}
+
 func TestTransferSelfCopyRenameFlow(t *testing.T) {
 	t.Run("dialog OK enters rename phase without queueing", func(t *testing.T) {
 		dir := t.TempDir()
@@ -357,8 +393,6 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 			Cursor:         len([]rune("aaa")),
 			PrefillPending: false,
 		}
-		form := ui.NewDialogLinearForm(ui.TransferDialogEffectiveNumContent(app.model.TransferDialog))
-		app.model.TransferDialog.FocusField = form.OKIndex()
 		app.confirmCopy()
 		if !strings.Contains(app.model.Message, "New name must differ") {
 			t.Fatalf("message = %q", app.model.Message)
@@ -388,8 +422,6 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 			Cursor:         len([]rune("aaa2")),
 			PrefillPending: false,
 		}
-		form := ui.NewDialogLinearForm(ui.TransferDialogEffectiveNumContent(app.model.TransferDialog))
-		app.model.TransferDialog.FocusField = form.OKIndex()
 		app.confirmCopy()
 		if len(app.jobState.AllJobs()) != 1 {
 			t.Fatalf("expected 1 job, got %d", len(app.jobState.AllJobs()))
@@ -2423,9 +2455,6 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 	if !app.model.TransferDialog.Open {
 		t.Fatal("copy dialog should open")
 	}
-	for range 3 {
-		app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
-	}
 	if app.model.TransferDialog.FocusField != 0 {
 		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
 	}
@@ -2483,9 +2512,6 @@ func TestPathPickerHostF9OpensPickerFromCopyAndSymlinkDialogs(t *testing.T) {
 	}
 
 	app.openCopyDialog()
-	for range 3 {
-		app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
-	}
 	if app.model.TransferDialog.FocusField != 0 {
 		t.Fatalf("FocusField = %d, want 0", app.model.TransferDialog.FocusField)
 	}

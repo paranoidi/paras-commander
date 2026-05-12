@@ -95,8 +95,8 @@ dialog.input.inactive.error = { fg = "red", bg = "black" }
 dialog.button.normal = { fg = "white", bg = "black" }
 dialog.button.active = { fg = "black", bg = "cyan" }
 dialog.option.inactive = { fg = "white", bg = "bright_black" }
-dialog.option.active = { fg = "yellow", bg = "bright_black" }
-dialog.option.selected = { fg = "yellow", bg = "bright_black", bold = true }
+dialog.option.active = { fg = "yellow", bg = "bright_black", bold = true }
+dialog.option.selected = { fg = "yellow", bg = "bright_black" }
 
 jobs.row = { fg = "white", bg = "black" }
 jobs.running = { fg = "bright_cyan", bg = "black", bold = true }

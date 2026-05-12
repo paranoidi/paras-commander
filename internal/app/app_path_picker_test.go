@@ -144,3 +144,42 @@ func TestPathPickerCloseStopsValidateTimer(t *testing.T) {
 		t.Fatal("dialog should be closed")
 	}
 }
+
+func TestPathPickerValidateArmIncrementsGeneration(t *testing.T) {
+	root := t.TempDir()
+	real := filepath.Join(root, "exists")
+	if err := os.MkdirAll(real, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	if err := os.WriteFile(marksPath, []byte("m : "+real+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	app.openBookmarkDialog()
+	before := app.pathPickerValidateGen.Load()
+	app.armPathPickerValidateTimer()
+	afterArm := app.pathPickerValidateGen.Load()
+	if afterArm != before+1 {
+		t.Fatalf("pathPickerValidateGen after arm = %d want %d", afterArm, before+1)
+	}
+	app.closePathPicker()
+	if app.pathPickerValidateGen.Load() <= afterArm {
+		t.Fatalf("pathPickerValidateGen after close should exceed post-arm value; got %d want > %d",
+			app.pathPickerValidateGen.Load(), afterArm)
+	}
+}

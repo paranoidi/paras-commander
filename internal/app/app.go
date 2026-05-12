@@ -94,6 +94,10 @@ type App struct {
 	jobsWakeTimer             *time.Timer
 	pathPickerValidateTimer   *time.Timer
 	transferDestValidateTimer *time.Timer
+	// pathPickerValidateGen / transferDestValidateGen invalidate debounced path checks when input
+	// changes or the host dialog closes before the timer fires (avoids stale AfterFunc callbacks).
+	pathPickerValidateGen   atomic.Uint64
+	transferDestValidateGen atomic.Uint64
 
 	commandsMu              sync.RWMutex
 	commandsBatchesInflight atomic.Int32
@@ -450,13 +454,12 @@ func transferPrefilledDestination(path string) ui.FileDialogField {
 
 func (a *App) openTransferDialog(kind ui.TransferKind) {
 	passive := a.inactivePanel()
-	form := ui.NewTransferDialogLinearForm(ui.TransferDialogNumContent(kind))
 	st := ui.TransferDialogState{
 		Open:         true,
 		Kind:         kind,
 		Destination:  transferPrefilledDestination(passive.Path),
 		DestSubFocus: ui.TransferDestSubFocusText,
-		FocusField:   form.OKIndex(),
+		FocusField:   0, // destination path row
 	}
 	if kind == ui.TransferKindCopy {
 		st.PreservePermissions = a.config.Operations.PreservePermissions
@@ -501,6 +504,7 @@ func (a *App) openTransferDialogSelfCopyRename(kind ui.TransferKind, absDestDir,
 
 func (a *App) closeTransferDialog() {
 	a.stopTransferDestinationValidateTimer()
+	a.transferDestValidateGen.Add(1)
 	a.model.TransferDialog = ui.TransferDialogState{}
 }
 
@@ -579,6 +583,14 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	}
 	if event.Key() == tcell.KeyEnter {
 		tf := ui.NewTransferDialogLinearForm(ui.TransferDialogEffectiveNumContent(*d))
+		if d.Phase == ui.TransferPhaseDestination && d.FocusField == 0 && d.DestSubFocus == ui.TransferDestSubFocusText {
+			a.confirmTransfer()
+			return
+		}
+		if d.Phase == ui.TransferPhaseSelfCopyRename && d.FocusField == 0 {
+			a.confirmTransfer()
+			return
+		}
 		switch d.FocusField {
 		case tf.CancelIndex():
 			a.closeTransferDialog()
@@ -708,6 +720,7 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 		d.SelfCopyNewName = transferSelfCopyNewNamePrefilled(base)
 		d.FocusField = 0
 		a.stopTransferDestinationValidateTimer()
+		a.transferDestValidateGen.Add(1)
 		d.DestPathInvalid = false
 		d.DestPathCheckPending = false
 		return
