@@ -192,6 +192,13 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	kmCommands := bundle.Commands
 	kmPathPickerHost := bundle.PathPickerHost
 	kmDialogInput := bundle.DialogInput
+	if kmDialogInput == nil {
+		m, err := keymap.Build(map[string][]string{})
+		if err != nil {
+			return nil, fmt.Errorf("build empty dialog input map: %w", err)
+		}
+		kmDialogInput = m
+	}
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -634,7 +641,7 @@ func (a *App) editTransferFieldKey(event *tcell.EventKey, f *ui.FileDialogField)
 	if f == nil {
 		return false
 	}
-	if a.tryDialogInputRestore(event, f) {
+	if a.tryDialogInputFieldActions(event, f) {
 		return true
 	}
 	switch event.Key() {
@@ -2219,8 +2226,15 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 
 	onRadio := a.fileDialogOnRadio()
 
-	if !onRadio && a.tryDialogInputRestore(event, a.focusedField()) {
-		return false
+	f := a.focusedField()
+	if !onRadio && f != nil {
+		if f.PathPicker && f.PickerFocused {
+			if a.tryDialogInputRestore(event, f) {
+				return false
+			}
+		} else if a.tryDialogInputFieldActions(event, f) {
+			return false
+		}
 	}
 
 	switch event.Key() {

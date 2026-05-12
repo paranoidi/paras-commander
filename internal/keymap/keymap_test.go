@@ -227,6 +227,21 @@ func TestDialogInputOverlayDefaultsResolveCtrlRAndCtrlD(t *testing.T) {
 			t.Fatalf("DialogInput.Lookup(%s) = %q %v, want %q", tc.name, id, ok, ActionDialogInputRestoreDefault)
 		}
 	}
+	wordCases := []struct {
+		name string
+		ev   *tcell.EventKey
+		want string
+	}{
+		{"ctrl-w", tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModNone), ActionDialogInputKillWordBackward},
+		{"alt-b", tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt), ActionDialogInputBackwardWord},
+		{"alt-f", tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt), ActionDialogInputForwardWord},
+	}
+	for _, tc := range wordCases {
+		id, ok := bundle.DialogInput.Lookup(tc.ev)
+		if !ok || id != tc.want {
+			t.Fatalf("DialogInput.Lookup(%s) = %q %v, want %q", tc.name, id, ok, tc.want)
+		}
+	}
 }
 
 func TestDialogInputOverlayRejectsNonInputActions(t *testing.T) {

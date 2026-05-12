@@ -96,6 +96,12 @@ const (
 	// ActionDialogInputRestoreDefault restores a focused dialog input field's suggested default
 	// (Prefill) and is bound via [dialog_input_action_keys], not [action_keys].
 	ActionDialogInputRestoreDefault = "ui.input.restore-default"
+	// ActionDialogInputKillWordBackward deletes back to the previous word boundary (readline C-w).
+	ActionDialogInputKillWordBackward = "ui.input.kill-word-backward"
+	// ActionDialogInputBackwardWord moves the cursor to the previous word boundary (readline M-b).
+	ActionDialogInputBackwardWord = "ui.input.backward-word"
+	// ActionDialogInputForwardWord moves the cursor past the next word (readline M-f).
+	ActionDialogInputForwardWord = "ui.input.forward-word"
 )
 
 // Menu routing identifiers for File pulldown entries (bindable in keybindings.toml).
@@ -195,4 +201,8 @@ var KnownActions = map[string]struct{}{
 	ActionUIOpenPathPicker: {},
 
 	ActionDialogInputRestoreDefault: {},
+
+	ActionDialogInputKillWordBackward: {},
+	ActionDialogInputBackwardWord:     {},
+	ActionDialogInputForwardWord:      {},
 }

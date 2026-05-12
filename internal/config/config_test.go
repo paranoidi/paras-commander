@@ -425,6 +425,36 @@ func TestReadPathPickerHostActionKeysExtractsTable(t *testing.T) {
 	}
 }
 
+func TestLoadFromPathsAcceptsDialogInputActionKeysTable(t *testing.T) {
+	path := writeConfig(t, `theme = "default"
+[action_keys]
+"app.quit" = ["F12"]
+[dialog_input_action_keys]
+"ui.input.backward-word" = ["M-B"]
+`)
+	cfg, err := LoadFromPaths(Paths{ConfigFile: path})
+	if err != nil {
+		t.Fatalf("LoadFromPaths() error = %v, want success with [dialog_input_action_keys]", err)
+	}
+	if cfg.Theme != "default" {
+		t.Fatalf("Theme = %q, want default", cfg.Theme)
+	}
+}
+
+func TestReadDialogInputActionKeysExtractsTable(t *testing.T) {
+	path := writeConfig(t, `theme = "default"
+[dialog_input_action_keys]
+"ui.input.forward-word" = ["M-f", "C-M-f"]
+`)
+	keys, err := ReadDialogInputActionKeys(path)
+	if err != nil {
+		t.Fatalf("ReadDialogInputActionKeys() error = %v", err)
+	}
+	if got, want := keys["ui.input.forward-word"], []string{"M-f", "C-M-f"}; !equalStringSlice(got, want) {
+		t.Fatalf("ui.input.forward-word = %v, want %v", got, want)
+	}
+}
+
 func TestReadActionKeysReturnsNilWhenMissing(t *testing.T) {
 	keys, err := ReadActionKeys(filepath.Join(t.TempDir(), "missing.toml"))
 	if err != nil {

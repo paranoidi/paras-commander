@@ -233,6 +233,50 @@ func TestPathPickerQueryInsertAdvancesCursorAndScroll(t *testing.T) {
 	}
 }
 
+func TestPathPickerQueryCtrlWAndAltBWordNav(t *testing.T) {
+	root := t.TempDir()
+	real := filepath.Join(root, "exists")
+	if err := os.MkdirAll(real, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	if err := os.WriteFile(marksPath, []byte("m : "+real+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	app.openBookmarkDialog()
+	st := &app.model.PathPicker
+	st.Query = "/foo/bar"
+	st.QueryCursor = len([]rune(st.Query))
+	st.Focus = 0
+
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModNone))
+	if st.Query != "/foo/" || st.QueryCursor != 5 {
+		t.Fatalf("after Ctrl+W: query=%q cursor=%d", st.Query, st.QueryCursor)
+	}
+
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt))
+	if st.QueryCursor != 1 {
+		t.Fatalf("after Alt+b: cursor=%d want 1", st.QueryCursor)
+	}
+}
+
 func TestPathPickerValidateArmIncrementsGeneration(t *testing.T) {
 	root := t.TempDir()
 	real := filepath.Join(root, "exists")

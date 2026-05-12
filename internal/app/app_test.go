@@ -2521,11 +2521,14 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
 	}
 	keys := app.activeFooterKeys()
-	if len(keys) != 3 {
-		t.Fatalf("footer len = %d, want Esc + Paths + F10", len(keys))
+	if len(keys) != 4 {
+		t.Fatalf("footer len = %d, want Esc + Default + Paths + F10", len(keys))
 	}
-	if keys[1].Hint != "Paths" || keys[1].KeyLabel != "F9" {
-		t.Fatalf("middle footer = %+v, want F9 Paths", keys[1])
+	if keys[1].Hint != "Default" || keys[1].KeyLabel != "C-r" {
+		t.Fatalf("restore footer = %+v, want C-r Default", keys[1])
+	}
+	if keys[2].Hint != "Paths" || keys[2].KeyLabel != "F9" {
+		t.Fatalf("paths footer = %+v, want F9 Paths", keys[2])
 	}
 
 	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
@@ -2767,6 +2770,24 @@ func TestFileDialogLeftRightMoveCursor(t *testing.T) {
 	}
 }
 
+func TestFileDialogCtrlWKillWord(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileMkdir)
+	for _, r := range "/foo/bar" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	field := &app.model.FileDialog.Fields[0]
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModNone))
+	if field.Value != "/foo/" || field.Cursor != 5 {
+		t.Fatalf("after Ctrl+W: value=%q cursor=%d", field.Value, field.Cursor)
+	}
+}
+
 func TestFileDialogHomeEnd(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "test.txt"))
@@ -2793,6 +2814,33 @@ func TestFileDialogHomeEnd(t *testing.T) {
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
 	if field.Cursor != 0 {
 		t.Fatalf("cursor after Home = %d, want 0", field.Cursor)
+	}
+}
+
+func TestRenameDialogFooterListsRestoreDefaultShortcut(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "existing.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileRename)
+	keys := app.activeFooterKeys()
+	if len(keys) != 3 {
+		t.Fatalf("footer len = %d, want Esc + Default + F10", len(keys))
+	}
+	if keys[1].Hint != "Default" || keys[1].KeyLabel != "C-r" {
+		t.Fatalf("footer restore = %+v, want C-r Default", keys[1])
+	}
+	if keys[2].Key != tcell.KeyF10 {
+		t.Fatalf("last footer = %+v, want F10 Quit", keys[2])
+	}
+
+	// On OK button the restore hint is hidden (no prefill field focused).
+	app.model.FileDialog.FocusedField = 1
+	keys = app.activeFooterKeys()
+	if len(keys) != 2 {
+		t.Fatalf("on OK footer len = %d, want Esc + F10", len(keys))
 	}
 }
 

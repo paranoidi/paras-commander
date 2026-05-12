@@ -9,7 +9,10 @@ import "strings"
 // unrelated action when no dialog input is focused.
 func DefaultDialogInputOverlayKeys() map[string][]string {
 	return map[string][]string{
-		ActionDialogInputRestoreDefault: {"C-r", "C-d"},
+		ActionDialogInputRestoreDefault:   {"C-r", "C-d"},
+		ActionDialogInputKillWordBackward: {"C-w"},
+		ActionDialogInputBackwardWord:     {"M-b"},
+		ActionDialogInputForwardWord:      {"M-f"},
 	}
 }
 

@@ -109,6 +109,41 @@ func (f *FileDialogField) MoveCursorEnd() {
 	f.Cursor = len([]rune(f.Value))
 }
 
+// MoveWordBackward moves the cursor to the start of the previous word (readline-style).
+func (f *FileDialogField) MoveWordBackward() {
+	if f == nil {
+		return
+	}
+	f.commitPrefill()
+	runes := []rune(f.Value)
+	pos := clampRuneCursor(f.Cursor, len(runes))
+	f.Cursor = BackwardWordIndex(runes, pos)
+}
+
+// MoveWordForward moves the cursor past the end of the next word (readline-style).
+func (f *FileDialogField) MoveWordForward() {
+	if f == nil {
+		return
+	}
+	f.commitPrefill()
+	runes := []rune(f.Value)
+	pos := clampRuneCursor(f.Cursor, len(runes))
+	f.Cursor = ForwardWordIndex(runes, pos)
+}
+
+// KillWordBackward deletes from the backward-word boundary up to the cursor.
+func (f *FileDialogField) KillWordBackward() {
+	if f == nil {
+		return
+	}
+	f.commitPrefill()
+	runes := []rune(f.Value)
+	pos := clampRuneCursor(f.Cursor, len(runes))
+	newRunes, newPos := KillWordBackward(runes, pos)
+	f.Value = string(newRunes)
+	f.Cursor = newPos
+}
+
 func (f *FileDialogField) commitPrefill() {
 	if f.Prefill != "" && f.PrefillPending {
 		f.PrefillPending = false

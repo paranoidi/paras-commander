@@ -141,6 +141,10 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 		}
 	}
 
+	if a.tryDialogInputPathPickerQuery(event) {
+		return
+	}
+
 	switch event.Key() {
 	case tcell.KeyEsc:
 		a.closePathPicker()

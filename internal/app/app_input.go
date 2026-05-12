@@ -105,6 +105,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Paths"}}, rest...)
 			}
 		}
+		if a.dialogInputRestoreFooterEligible() {
+			if lbl := a.keysDialogInput.MenuBindingLabel(keymap.ActionDialogInputRestoreDefault); lbl != "" {
+				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Default"}}, rest...)
+			}
+		}
 		return footerWithEscClose(rest)
 	}
 	if a.model.Menu.Open {

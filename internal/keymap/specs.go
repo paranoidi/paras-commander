@@ -521,6 +521,30 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "C-r",
 			Keywords:     []string{"restore", "default", "placeholder", "prefill", "suggested"},
 		},
+		{
+			ID:           ActionDialogInputKillWordBackward,
+			Title:        "Delete previous word in dialog input",
+			Section:      "UI",
+			DefaultKeys:  nil,
+			PreferredKey: "C-w",
+			Keywords:     []string{"backward", "kill", "word", "path", "input"},
+		},
+		{
+			ID:           ActionDialogInputBackwardWord,
+			Title:        "Move backward by word in dialog input",
+			Section:      "UI",
+			DefaultKeys:  nil,
+			PreferredKey: "M-b",
+			Keywords:     []string{"backward", "word", "path", "input"},
+		},
+		{
+			ID:           ActionDialogInputForwardWord,
+			Title:        "Move forward by word in dialog input",
+			Section:      "UI",
+			DefaultKeys:  nil,
+			PreferredKey: "M-f",
+			Keywords:     []string{"forward", "word", "path", "input"},
+		},
 
 		// ── Filter (unbound by default) ──
 		{

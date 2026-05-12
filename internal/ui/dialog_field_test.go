@@ -132,3 +132,35 @@ func TestFileDialogFieldRestorePrefillNoOpWhenEmpty(t *testing.T) {
 		t.Fatal("nil receiver: want false")
 	}
 }
+
+func TestFileDialogFieldKillWordBackwardPath(t *testing.T) {
+	field := FileDialogField{Value: "/foo/bar", Cursor: len([]rune("/foo/bar"))}
+	field.KillWordBackward()
+	if field.Value != "/foo/" || field.Cursor != 5 {
+		t.Fatalf("after kill: value=%q cursor=%d", field.Value, field.Cursor)
+	}
+}
+
+func TestFileDialogFieldMoveWordCommitsPrefill(t *testing.T) {
+	field := FileDialogField{
+		Value:           "/a/b",
+		Prefill:         "/a/b",
+		PrefillPending:  true,
+		Cursor:           len([]rune("/a/b")),
+	}
+	field.MoveWordBackward()
+	if field.PrefillPending {
+		t.Fatal("MoveWordBackward should commit prefill")
+	}
+	if field.Cursor != 3 {
+		t.Fatalf("cursor = %d, want 3 (before last segment)", field.Cursor)
+	}
+}
+
+func TestFileDialogFieldMoveWordForward(t *testing.T) {
+	field := FileDialogField{Value: "/x/y", Cursor: 0}
+	field.MoveWordForward()
+	if field.Cursor != 2 {
+		t.Fatalf("cursor = %d, want 2", field.Cursor)
+	}
+}
