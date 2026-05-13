@@ -1,0 +1,57 @@
+package dialog
+
+import (
+	"unicode"
+	"unicode/utf8"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/theme"
+)
+
+// dialogButtonLabelRunePadding is extra width beyond utf8.RuneCountInString(label) for drawDialogButton (spaces and brackets).
+const dialogButtonLabelRunePadding = 6
+
+func dialogButtonWidth(label string) int {
+	return utf8.RuneCountInString(label) + dialogButtonLabelRunePadding
+}
+
+// drawDialogButton renders a single button with its shortcut letter highlighted.
+// shortcut is the letter inside label to highlight (e.g. 'O' for "OK").
+// Output shape: space, "[", space, label, space, "]", space so theme backgrounds cover the chrome.
+// Returns the rendered width in rune columns.
+func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune, focused bool, styles theme.Theme) int {
+	var baseStyle tcell.Style
+	if focused {
+		baseStyle = styles.DialogButtonActive
+	} else {
+		baseStyle = styles.DialogButtonNormal
+	}
+	out := x
+	primitive.Text(screen, out, y, 1, " ", baseStyle)
+	out++
+	primitive.Text(screen, out, y, 1, "[", baseStyle)
+	out++
+	primitive.Text(screen, out, y, 1, " ", baseStyle)
+	out++
+
+	highlighted := false
+	for _, r := range label {
+		style := baseStyle
+		if !highlighted && (r == shortcut || r == unicode.ToUpper(shortcut) || r == unicode.ToLower(shortcut)) {
+			style = AccentGlyphStyle(baseStyle, styles.DialogAccent)
+			highlighted = true
+		}
+		screen.SetContent(out, y, r, nil, style)
+		out++
+	}
+
+	primitive.Text(screen, out, y, 1, " ", baseStyle)
+	out++
+	primitive.Text(screen, out, y, 1, "]", baseStyle)
+	out++
+	primitive.Text(screen, out, y, 1, " ", baseStyle)
+	out++
+
+	return out - x
+}

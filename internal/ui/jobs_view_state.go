@@ -30,7 +30,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job) []JobEntry {
 			ETAFilesPerSec:    j.ETAFilesPerSec,
 			DisplaySpeedBPS:   j.DisplaySpeedBPS,
 			ThroughputSamples: append([]jobs.ThroughputSample(nil), j.ThroughputSamples...),
-			PendingBlocker: pending,
+			PendingBlocker:    pending,
 		})
 	}
 	return entries

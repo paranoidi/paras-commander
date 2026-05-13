@@ -32,9 +32,9 @@ type CommandRunEntry struct {
 
 // CommandsViewState tracks focus and scrolling for the Commands screen.
 type CommandsViewState struct {
-	Selected      int
-	FocusPane     int // 0=list, 1=stdout, 2=stderr
-	ListScroll    int
-	StdoutScroll  int
-	StderrScroll  int
+	Selected     int
+	FocusPane    int // 0=list, 1=stdout, 2=stderr
+	ListScroll   int
+	StdoutScroll int
+	StderrScroll int
 }

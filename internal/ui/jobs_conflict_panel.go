@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // JobEntryShowsConflictPanel reports whether the jobs blocker UI should be shown for this row.
@@ -166,7 +167,7 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 	}
 
 	if y < rect.Y+rect.Height-1 {
-		drawDialogHSeparator(screen, rect, y, borderStyle)
+		dialog.DrawDialogHSeparator(screen, rect, y, borderStyle)
 		y++
 	}
 
@@ -187,7 +188,7 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 		{Label: "Abort", Shortcut: 'B', Focused: focused && f == 1},
 	}
 	if y <= rect.Y+rect.Height-2 {
-		drawDialogButtonRowCentered(screen, rect, y, row, styles)
+		dialog.DrawDialogButtonRowCentered(screen, rect, y, row, styles)
 	}
 }
 
@@ -259,7 +260,7 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	y++
 
 	if y < rect.Y+rect.Height-1 {
-		drawDialogHSeparator(screen, rect, y, borderStyle)
+		dialog.DrawDialogHSeparator(screen, rect, y, borderStyle)
 		y++
 	}
 
@@ -284,11 +285,11 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 		{Label: "Cancel", Shortcut: 'C', Focused: focused && f == 4},
 	}
 	if y <= rect.Y+rect.Height-3 {
-		drawDialogButtonRowCentered(screen, rect, y, row1, styles)
+		dialog.DrawDialogButtonRowCentered(screen, rect, y, row1, styles)
 		y++
 	}
 	if y <= rect.Y+rect.Height-2 {
-		drawDialogButtonRowCentered(screen, rect, y, row2, styles)
+		dialog.DrawDialogButtonRowCentered(screen, rect, y, row2, styles)
 	}
 }
 

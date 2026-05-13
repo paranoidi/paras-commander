@@ -20,7 +20,7 @@ type Item struct {
 	Shortcut rune
 	// KeyLabel is shown on the right side of a pulldown row and used for footer/F-key routing.
 	// BrowserDefinitions / JobsDefinitions fill this from the resolved keymap.
-	KeyLabel string
+	KeyLabel  string
 	Separator bool
 }
 
@@ -111,10 +111,10 @@ func Definitions() []Definition {
 			},
 		},
 		{
-			ID:          TopFile,
-			PanelScope:  PanelScopeNone,
-			Label:       "File",
-			Shortcut:    'f',
+			ID:         TopFile,
+			PanelScope: PanelScopeNone,
+			Label:      "File",
+			Shortcut:   'f',
 			Items: []Item{
 				{Action: keymap.ActionFileView, Label: "View", Shortcut: 'v'},
 				{Action: keymap.ActionMenuFileViewPath, Label: "View file...", Shortcut: 'w'},
@@ -142,10 +142,10 @@ func Definitions() []Definition {
 			},
 		},
 		{
-			ID:          TopCommand,
-			PanelScope:  PanelScopeNone,
-			Label:       "Command",
-			Shortcut:    'c',
+			ID:         TopCommand,
+			PanelScope: PanelScopeNone,
+			Label:      "Command",
+			Shortcut:   'c',
 			Items: []Item{
 				{Action: keymap.ActionCommandsOpen, Label: "Commands", Shortcut: 'm'},
 				{Action: keymap.ActionJobsOpen, Label: "Jobs", Shortcut: 'j'},
@@ -157,11 +157,11 @@ func Definitions() []Definition {
 			},
 		},
 		{
-			ID:          TopOptions,
-			PanelScope:  PanelScopeNone,
-			Label:       "Options",
-			Shortcut:    'o',
-			Items:    optionsItems,
+			ID:         TopOptions,
+			PanelScope: PanelScopeNone,
+			Label:      "Options",
+			Shortcut:   'o',
+			Items:      optionsItems,
 		},
 		{
 			ID:         TopPanelRight,

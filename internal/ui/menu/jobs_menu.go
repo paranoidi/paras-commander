@@ -6,9 +6,9 @@ import "github.com/paranoidi/paras-commander/internal/keymap"
 func DefinitionsJobs() []Definition {
 	return []Definition{
 		{
-			ID:          TopJobs,
-			PanelScope:  PanelScopeNone,
-			Label:       "Jobs",
+			ID:         TopJobs,
+			PanelScope: PanelScopeNone,
+			Label:      "Jobs",
 			Items: []Item{
 				{Action: keymap.ActionJobsCancel, Label: "Cancel job", Shortcut: 'c'},
 				{Action: keymap.ActionJobsPause, Label: "Pause queued job", Shortcut: 'p'},
@@ -20,10 +20,10 @@ func DefinitionsJobs() []Definition {
 			},
 		},
 		{
-			ID:          TopFile,
-			PanelScope:  PanelScopeNone,
-			Label:       "File",
-			Shortcut:    'f',
+			ID:         TopFile,
+			PanelScope: PanelScopeNone,
+			Label:      "File",
+			Shortcut:   'f',
 			Items: []Item{
 				{Action: keymap.ActionAppQuit, Label: "Exit", Shortcut: 'x'},
 			},

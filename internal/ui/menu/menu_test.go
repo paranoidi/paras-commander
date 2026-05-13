@@ -187,17 +187,17 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"History...":    "M-h",
 	})
 	assertLabels(t, file, map[string]string{
-		"View":            "F3",
-		"Filtered view":   "M-!",
-		"Edit":            "F4",
-		"Copy":            "F5",
-		"Rename/Move":     "F6",
-		"Mkdir":           "F7",
-		"Quick cd":        "C-g",
-		"Select group":    "+",
-		"Unselect group":  "-",
+		"View":             "F3",
+		"Filtered view":    "M-!",
+		"Edit":             "F4",
+		"Copy":             "F5",
+		"Rename/Move":      "F6",
+		"Mkdir":            "F7",
+		"Quick cd":         "C-g",
+		"Select group":     "+",
+		"Unselect group":   "-",
 		"Invert selection": "*",
-		"Exit":            "F10",
+		"Exit":             "F10",
 	})
 	for _, item := range file.Items {
 		if item.Label == "Delete" {
@@ -225,13 +225,13 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		t.Fatalf("first menu = %s, want TopJobs", defs[0].ID)
 	}
 	want := map[string]string{
-		"Cancel job":           "C-c",
-		"Pause queued job":     "C-p",
-		"Resume paused job":    "C-r",
-		"Move up in queue":     "C-up",
-		"Move down in queue":   "C-down",
-		"Clear finished":       "F8",
-		"Back to file view":    "",
+		"Cancel job":         "C-c",
+		"Pause queued job":   "C-p",
+		"Resume paused job":  "C-r",
+		"Move up in queue":   "C-up",
+		"Move down in queue": "C-down",
+		"Clear finished":     "F8",
+		"Back to file view":  "",
 	}
 	for _, item := range defs[0].Items {
 		w := want[item.Label]

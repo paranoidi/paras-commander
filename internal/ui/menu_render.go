@@ -215,7 +215,7 @@ func drawMenuBarLabel(screen tcell.Screen, x, y, width int, label string, shortc
 		}
 		nextStyle := style
 		if !highlighted && menuOpen && shortcut != 0 && unicode.ToLower(r) == unicode.ToLower(shortcut) {
-			nextStyle = accentGlyphStyle(style, accent)
+			nextStyle = AccentGlyphStyle(style, accent)
 			highlighted = true
 		}
 		screen.SetContent(x+column, y, r, nil, nextStyle)
@@ -295,7 +295,7 @@ func drawMenuLabel(screen tcell.Screen, x, y, width int, item menu.Item, style, 
 		}
 		nextStyle := style
 		if !highlighted && item.Shortcut != 0 && unicode.ToLower(r) == unicode.ToLower(item.Shortcut) {
-			nextStyle = accentGlyphStyle(style, accent)
+			nextStyle = AccentGlyphStyle(style, accent)
 			highlighted = true
 		}
 		screen.SetContent(x+column, y, r, nil, nextStyle)
