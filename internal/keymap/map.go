@@ -2,6 +2,7 @@ package keymap
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -28,6 +29,47 @@ func (m *Map) Lookup(ev *tcell.EventKey) (actionID string, ok bool) {
 		return id, ok
 	}
 	return "", false
+}
+
+// FirstEventKeyForAction returns a stable *tcell.EventKey that Lookup resolves to actionID.
+// Intended for tests; the chord is chosen deterministically when multiple keys bind the same action.
+func (m *Map) FirstEventKeyForAction(actionID string) (*tcell.EventKey, bool) {
+	if m == nil {
+		return nil, false
+	}
+	var chords []Chord
+	for ch, id := range m.keyToAction {
+		if id == actionID {
+			chords = append(chords, ch)
+		}
+	}
+	if len(chords) == 0 {
+		return nil, false
+	}
+	sort.Slice(chords, func(i, j int) bool {
+		a, b := chords[i], chords[j]
+		if a.Key != b.Key {
+			return a.Key < b.Key
+		}
+		if a.Mod != b.Mod {
+			return a.Mod < b.Mod
+		}
+		return a.Rune < b.Rune
+	})
+	for _, ch := range chords {
+		ev := chordToEventKey(ch)
+		if id, ok := m.Lookup(ev); ok && id == actionID {
+			return ev, true
+		}
+	}
+	return nil, false
+}
+
+func chordToEventKey(ch Chord) *tcell.EventKey {
+	if ch.Key == tcell.KeyRune {
+		return tcell.NewEventKey(tcell.KeyRune, ch.Rune, ch.Mod)
+	}
+	return tcell.NewEventKey(ch.Key, ch.Rune, ch.Mod)
 }
 
 // Build parses bindings and validates uniqueness of every chord.

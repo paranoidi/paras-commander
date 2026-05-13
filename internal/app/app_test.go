@@ -2317,6 +2317,48 @@ func TestFilterModeEscCancelsInsteadOfQuitting(t *testing.T) {
 	}
 }
 
+func TestQuickFilterKeymapActionClosesFilterAndOpensDirInOtherPanel(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "subdir")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	writeFile(t, filepath.Join(dir, "other.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	ev, ok := app.keys.FirstEventKeyForAction(keymap.ActionPanelOpenDirInOther)
+	if !ok {
+		t.Fatal("no key bound to ActionPanelOpenDirInOther")
+	}
+
+	app.activePanel().OpenFilter(app.activeViewportRows())
+	for _, r := range "sub" {
+		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if app.model.Left.Filter.Query != "sub" {
+		t.Fatalf("query=%q want sub", app.model.Left.Filter.Query)
+	}
+	entry, okEntry := app.model.Left.CurrentEntry()
+	if !okEntry || entry.Name != "subdir" {
+		t.Fatalf("CurrentEntry() = %q ok=%v, want subdir under cursor before shortcut", entry.Name, okEntry)
+	}
+
+	quit, _ := app.handleKey(ev)
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" {
+		t.Fatalf("filter should be cleared, got editing=%v active=%v query=%q",
+			app.model.Left.Filter.Editing, app.model.Left.Filter.Active, app.model.Left.Filter.Query)
+	}
+	want := filepath.Clean(sub)
+	if got := filepath.Clean(app.model.Right.Path); got != want {
+		t.Fatalf("right panel path=%q want %q", got, want)
+	}
+}
+
 func TestQuickFilterUpDownCyclesMatches(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "assets"))

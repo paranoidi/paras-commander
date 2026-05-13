@@ -256,7 +256,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionPanelListingFormatDialog,
 			Title:       "Listing format dialog",
 			Section:     "Sort & display",
-			DefaultKeys: []string{"M-t"},
+			DefaultKeys: nil, // opened from Left/Right menu by default
 			Keywords:    []string{"columns", "listing", "mtime", "permissions", "brief", "radio"},
 		},
 		{
@@ -270,7 +270,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionPanelCycleListingFormat,
 			Title:       "Cycle listing format",
 			Section:     "Sort & display",
-			DefaultKeys: nil, // opt-in under [action_keys]; M-t defaults to listing-format-dialog
+			DefaultKeys: []string{"M-t"},
 			Keywords:    []string{"columns", "listing", "mtime", "permissions", "brief"},
 		},
 		{

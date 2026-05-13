@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
@@ -247,6 +248,16 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 			a.render()
 			return quit, true
 		}
+		// Bound actions (same keymap as normal browser mode) dismiss the filter unless
+		// the key is filter-local (typing, match cycling, Insert, etc.).
+		if resolvedAction != "" && !a.quickFilterRetainsKey(event, resolvedAction) {
+			a.activePanel().CancelFilter(a.activeViewportRows())
+			fqQuit, fqRendered := a.finishResolvedKeyboardAction(resolvedAction)
+			if fqRendered {
+				a.render()
+			}
+			return fqQuit, fqRendered
+		}
 		// Filter keys (printable, navigation, etc.) update the filter.
 		if a.shouldHandleFilterKey(event) {
 			a.handleFilterKey(event)
@@ -280,22 +291,53 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 		return false, false
 	}
-	if nextAction == keymap.ActionCopy {
+	quit, rendered = a.finishResolvedKeyboardAction(nextAction)
+	if rendered {
+		a.render()
+	}
+	return quit, rendered
+}
+
+// quickFilterRetainsKey reports keys that stay on the quick-filter input path even when
+// the same chord is bound to a panel action (match cycling, Insert, query editing).
+func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string) bool {
+	switch event.Key() {
+	case tcell.KeyUp, tcell.KeyDown, tcell.KeyInsert:
+		return true
+	}
+	if isPlainPrintableRune(event) {
+		return resolvedAction == ""
+	}
+	f := a.activePanel().Filter
+	switch event.Key() {
+	case tcell.KeyBackspace, tcell.KeyBackspace2:
+		if event.Modifiers()&tcell.ModCtrl != 0 {
+			return f.Editing || f.Active
+		}
+		return f.Editing || f.Query != ""
+	case tcell.KeyEnter:
+		return f.Editing && strings.TrimSpace(f.Query) == ""
+	default:
+		return false
+	}
+}
+
+// finishResolvedKeyboardAction runs copy/move/quit or dispatch for a resolved keybinding.
+// The second return is whether the caller should render; quit does not render (matches prior handleKey behavior).
+func (a *App) finishResolvedKeyboardAction(nextAction string) (quit bool, rendered bool) {
+	switch nextAction {
+	case keymap.ActionCopy:
 		a.openCopyDialog()
-		a.render()
 		return false, true
-	}
-	if nextAction == keymap.ActionMove {
+	case keymap.ActionMove:
 		a.openMoveDialog()
-		a.render()
+		return false, true
+	case keymap.ActionAppQuit:
+		return a.handleQuit(), false
+	default:
+		a.dispatch(nextAction)
 		return false, true
 	}
-	if nextAction == keymap.ActionAppQuit {
-		return a.handleQuit(), false
-	}
-	a.dispatch(nextAction)
-	a.render()
-	return false, true
 }
 
 // shouldStartFilter reports whether a plain printable rune should start the quick filter.
@@ -313,24 +355,28 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 }
 
 func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {
-	activeFilter := a.activePanel().Filter
+	f := a.activePanel().Filter
 	if isPlainPrintableRune(event) {
+		if _, ok := a.keys.Lookup(event); ok {
+			return false
+		}
 		return true
-	}
-	if activeFilter.Editing {
-		return true
-	}
-	if !activeFilter.Active {
-		return false
 	}
 	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyCtrlL,
-		tcell.KeyUp, tcell.KeyDown:
-		return true
+	case tcell.KeyEsc, tcell.KeyCtrlL:
+		return f.Editing || f.Active
+	case tcell.KeyUp, tcell.KeyDown, tcell.KeyInsert:
+		return f.Editing || f.Active
+	case tcell.KeyBackspace, tcell.KeyBackspace2:
+		if event.Modifiers()&tcell.ModCtrl != 0 {
+			return f.Editing || f.Active
+		}
+		return f.Editing || f.Query != ""
 	case tcell.KeyEnter:
-		return activeFilter.Query != ""
-	case tcell.KeyInsert:
-		return true
+		if f.Editing && strings.TrimSpace(f.Query) == "" {
+			return true
+		}
+		return f.Active && strings.TrimSpace(f.Query) != ""
 	default:
 		return false
 	}
