@@ -29,6 +29,8 @@ type (
 	FileDialogType            = dialog.FileDialogType
 	FileDialogField           = dialog.FileDialogField
 	MkdirAction               = dialog.MkdirAction
+	RenamePhase               = dialog.RenamePhase
+	RenameSlugifySep          = dialog.RenameSlugifySep
 	FileDialogState           = dialog.FileDialogState
 	PrimaryModal              = dialog.PrimaryModal
 	TransferKind              = dialog.TransferKind
@@ -61,6 +63,13 @@ const (
 	MkdirActionCreate           = dialog.MkdirActionCreate
 	MkdirActionCreateCopySelect = dialog.MkdirActionCreateCopySelect
 	MkdirActionCreateMoveSelect = dialog.MkdirActionCreateMoveSelect
+
+	RenamePhaseMain     = dialog.RenamePhaseMain
+	RenamePhaseSanitize = dialog.RenamePhaseSanitize
+	RenamePhaseSlugify  = dialog.RenamePhaseSlugify
+
+	RenameSlugifyDot         = dialog.RenameSlugifyDot
+	RenameSlugifyUnderscore = dialog.RenameSlugifyUnderscore
 
 	PrimaryModalNone     = dialog.PrimaryModalNone
 	PrimaryModalTheme    = dialog.PrimaryModalTheme
@@ -107,4 +116,24 @@ func AccentGlyphStyle(base, accent tcell.Style) tcell.Style {
 // ThemeDialogListViewportRows is how many theme rows fit in the theme dialog list column (delegates to dialog).
 func ThemeDialogListViewportRows(layout Layout, choiceCount int) int {
 	return dialog.ThemeDialogListViewportRows(layout, choiceCount)
+}
+
+// FileDialogOKFocusIndex returns the FocusedField index of the OK button (delegates to dialog).
+func FileDialogOKFocusIndex(st FileDialogState) int {
+	return dialog.FileDialogOKFocusIndex(st)
+}
+
+// FileDialogCancelFocusIndex returns the FocusedField index of the Cancel button (delegates to dialog).
+func FileDialogCancelFocusIndex(st FileDialogState) int {
+	return dialog.FileDialogCancelFocusIndex(st)
+}
+
+// ApplyRenameSanitize applies dot/underscore-to-space cleanups (delegates to dialog).
+func ApplyRenameSanitize(s string, dotsToSpace, underscoresToSpace bool) string {
+	return dialog.ApplyRenameSanitize(s, dotsToSpace, underscoresToSpace)
+}
+
+// ApplyRenameSlugify replaces ASCII spaces with the chosen separator (delegates to dialog).
+func ApplyRenameSlugify(s string, sep RenameSlugifySep) string {
+	return dialog.ApplyRenameSlugify(s, dialog.RenameSlugifySep(sep))
 }

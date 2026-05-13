@@ -18,7 +18,7 @@ const (
 	fileName   = "config.toml"
 
 	// actionKeysTable, jobsActionKeysTable, commandsActionKeysTable,
-	// pathPickerHostActionKeysTable, and dialogInputActionKeysTable are
+	// pathPickerHostActionKeysTable, dialogInputActionKeysTable, and renameDialogActionKeysTable are
 	// optional top-level TOML tables holding keybindings inside config.toml.
 	// They mirror the canonical contents of keybindings.toml and are owned
 	// by the keymap package; config only tolerates them as pass-through so
@@ -29,6 +29,7 @@ const (
 	commandsActionKeysTable       = "commands_action_keys"
 	pathPickerHostActionKeysTable = "path_picker_host_action_keys"
 	dialogInputActionKeysTable    = "dialog_input_action_keys"
+	renameDialogActionKeysTable   = "rename_dialog_action_keys"
 
 	ThemeDefault    = "default"
 	StartupPathCWD  = "cwd"
@@ -403,6 +404,12 @@ func ReadDialogInputActionKeys(filename string) (map[string][]string, error) {
 	return readShortcutTable(filename, dialogInputActionKeysTable)
 }
 
+// ReadRenameDialogActionKeys parses the optional [rename_dialog_action_keys] table from a
+// config.toml style file. Same nil/error semantics as ReadActionKeys.
+func ReadRenameDialogActionKeys(filename string) (map[string][]string, error) {
+	return readShortcutTable(filename, renameDialogActionKeysTable)
+}
+
 // readShortcutTable extracts a single named keybindings table from a
 // TOML file. It is shared by ReadActionKeys / ReadJobsActionKeys so that
 // adding a future bundle (another top-level "*_action_keys" table) is a
@@ -440,7 +447,7 @@ func readShortcutTable(filename, table string) (map[string][]string, error) {
 // keybindings pass-through tables tolerated inside config.toml.
 func isShortcutTable(name string) bool {
 	switch name {
-	case actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, pathPickerHostActionKeysTable, dialogInputActionKeysTable:
+	case actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, pathPickerHostActionKeysTable, dialogInputActionKeysTable, renameDialogActionKeysTable:
 		return true
 	}
 	return false

@@ -957,7 +957,7 @@ func TestClearSelection(t *testing.T) {
 	}
 }
 
-func TestClearSelectionLeavesOtherDirectoriesSelected(t *testing.T) {
+func TestClearSelectionClearsAllDirectories(t *testing.T) {
 	state := State{
 		Path: "/tmp/here",
 		Entries: []localfs.Entry{
@@ -967,17 +967,15 @@ func TestClearSelectionLeavesOtherDirectoriesSelected(t *testing.T) {
 			"/tmp/here/a.txt":  true,
 			"/tmp/other/b.txt": true,
 		},
+		SelectionsStripOrder: []string{"/tmp/other/b.txt"},
 	}
 
 	state.ClearSelection()
-	if state.SelectedPaths == nil {
-		t.Fatal("SelectedPaths should keep off-directory selection")
+	if state.SelectedPaths != nil {
+		t.Fatalf("SelectedPaths should be nil, got %#v", state.SelectedPaths)
 	}
-	if state.SelectedPaths["/tmp/other/b.txt"] != true {
-		t.Fatal("off-directory path should stay selected")
-	}
-	if state.SelectedPaths["/tmp/here/a.txt"] {
-		t.Fatal("current-directory path should be cleared")
+	if len(state.SelectionsStripOrder) != 0 {
+		t.Fatalf("SelectionsStripOrder should be empty, got %v", state.SelectionsStripOrder)
 	}
 }
 

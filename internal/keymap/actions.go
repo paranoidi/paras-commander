@@ -51,7 +51,11 @@ const (
 
 	// File operations
 	ActionFileRename   = "file.rename"
-	ActionFileDelete   = "file.delete"
+	// ActionFileRenameOpenSanitize / ActionFileRenameOpenSlugify are bound via
+	// [rename_dialog_action_keys], not [action_keys].
+	ActionFileRenameOpenSanitize = "file.rename.open-sanitize"
+	ActionFileRenameOpenSlugify  = "file.rename.open-slugify"
+	ActionFileDelete             = "file.delete"
 	ActionFileMkdir    = "file.mkdir"
 	ActionFileChmod    = "file.chmod"
 	ActionFileChown    = "file.chown"
@@ -166,6 +170,8 @@ var KnownActions = map[string]struct{}{
 	ActionDialogPrev:    {},
 
 	ActionFileRename:   {},
+	ActionFileRenameOpenSanitize: {},
+	ActionFileRenameOpenSlugify:  {},
 	ActionFileDelete:   {},
 	ActionFileMkdir:    {},
 	ActionFileChmod:    {},

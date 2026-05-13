@@ -988,22 +988,11 @@ func (s *State) InvertSelection() {
 	s.normalizeSelectionsStripCursor()
 }
 
-// ClearSelection removes all selections in the current directory.
+// ClearSelection removes all tagged paths on this panel (any directory) and clears the
+// selections strip order.
 func (s *State) ClearSelection() {
-	if s.SelectedPaths == nil {
-		return
-	}
-	cur := cleanPath(s.Path)
-	for p := range s.SelectedPaths {
-		if cleanPath(filepath.Dir(p)) != cur {
-			continue
-		}
-		delete(s.SelectedPaths, p)
-		s.removePathFromSelectionsStripOrder(p)
-	}
-	if len(s.SelectedPaths) == 0 {
-		s.SelectedPaths = nil
-	}
+	s.SelectedPaths = nil
+	s.SelectionsStripOrder = nil
 	s.normalizeSelectionsStripCursor()
 }
 

@@ -65,6 +65,7 @@ type App struct {
 	keysCommands       *keymap.Map // chords active only in Commands view (overlay)
 	keysPathPickerHost *keymap.Map // copy/move dest + symlink/hardlink path-picker host overlay
 	keysDialogInput    *keymap.Map // chords active only while a dialog input field is focused
+	keysRenameDialog   *keymap.Map // sanitize/slugify while main rename dialog is focused
 	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
@@ -194,6 +195,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		kmDialogInput = m
 	}
+	kmRenameDialog := bundle.RenameDialog
+	if kmRenameDialog == nil {
+		m, err := keymap.Build(keymap.DefaultRenameDialogOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build rename dialog overlay map: %w", err)
+		}
+		kmRenameDialog = m
+	}
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -284,6 +293,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysCommands:       kmCommands,
 		keysPathPickerHost: kmPathPickerHost,
 		keysDialogInput:    kmDialogInput,
+		keysRenameDialog:   kmRenameDialog,
 		commandsCtx:        cmdCtx,
 		commandsCancel:     cmdCancel,
 		model: ui.Model{

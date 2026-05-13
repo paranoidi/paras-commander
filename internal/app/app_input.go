@@ -110,6 +110,14 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Default"}}, rest...)
 			}
 		}
+		if a.renameDialogFooterEligible() {
+			if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify); lbl != "" {
+				rest = append([]menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: lbl, Hint: "Slugify"}}, rest...)
+			}
+			if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize); lbl != "" {
+				rest = append([]menu.FunctionKey{{Key: tcell.KeyF2, KeyLabel: lbl, Hint: "Sanitize"}}, rest...)
+			}
+		}
 		return footerWithEscClose(rest)
 	}
 	if a.model.Menu.Open {

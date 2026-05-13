@@ -560,6 +560,102 @@ func TestEnqueueMoveJobSameDirUnsupportedDoesNotClearSelection(t *testing.T) {
 	}
 }
 
+func TestEnqueueCopyJobClearsCrossDirectorySelections(t *testing.T) {
+	dir := t.TempDir()
+	here := filepath.Join(dir, "here")
+	other := filepath.Join(dir, "other")
+	dst := filepath.Join(dir, "dest")
+	if err := os.MkdirAll(here, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(here, "here.txt"))
+	writeFile(t, filepath.Join(other, "other.txt"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+	defer flushBackgroundJobs(t, app)
+
+	if err := app.activePanel().Load(here); err != nil {
+		t.Fatalf("Load here: %v", err)
+	}
+	if err := app.inactivePanel().Load(dst); err != nil {
+		t.Fatalf("Load dest: %v", err)
+	}
+
+	p := app.activePanel()
+	hereTxt := filepath.Join(here, "here.txt")
+	otherTxt := filepath.Join(other, "other.txt")
+	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
+	p.SelectionsStripOrder = []string{otherTxt}
+
+	app.enqueueCopyJob()
+
+	if p.SelectedPaths != nil {
+		t.Fatalf("expected all queued sources removed from selection, got %#v", p.SelectedPaths)
+	}
+	if len(p.SelectionsStripOrder) != 0 {
+		t.Fatalf("expected selections strip order cleared, got %v", p.SelectionsStripOrder)
+	}
+	if len(app.jobState.AllJobs()) != 1 {
+		t.Fatalf("expected one job, got %d", len(app.jobState.AllJobs()))
+	}
+}
+
+func TestEnqueueMoveJobClearsCrossDirectorySelections(t *testing.T) {
+	dir := t.TempDir()
+	here := filepath.Join(dir, "here")
+	other := filepath.Join(dir, "other")
+	dst := filepath.Join(dir, "dest")
+	if err := os.MkdirAll(here, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(here, "here.txt"))
+	writeFile(t, filepath.Join(other, "other.txt"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+	defer flushBackgroundJobs(t, app)
+
+	if err := app.activePanel().Load(here); err != nil {
+		t.Fatalf("Load here: %v", err)
+	}
+	if err := app.inactivePanel().Load(dst); err != nil {
+		t.Fatalf("Load dest: %v", err)
+	}
+
+	p := app.activePanel()
+	hereTxt := filepath.Join(here, "here.txt")
+	otherTxt := filepath.Join(other, "other.txt")
+	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
+	p.SelectionsStripOrder = []string{otherTxt}
+
+	app.enqueueMoveJob()
+
+	if p.SelectedPaths != nil {
+		t.Fatalf("expected all queued sources removed from selection, got %#v", p.SelectedPaths)
+	}
+	if len(p.SelectionsStripOrder) != 0 {
+		t.Fatalf("expected selections strip order cleared, got %v", p.SelectionsStripOrder)
+	}
+	if len(app.jobState.AllJobs()) != 1 {
+		t.Fatalf("expected one job, got %d", len(app.jobState.AllJobs()))
+	}
+}
+
 func TestHelpViewEnterJobsCancelNoOpWhileBrowser(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 24)
@@ -2928,21 +3024,93 @@ func TestRenameDialogFooterListsRestoreDefaultShortcut(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	keys := app.activeFooterKeys()
-	if len(keys) != 3 {
-		t.Fatalf("footer len = %d, want Esc + Default + F10", len(keys))
+	if len(keys) != 5 {
+		t.Fatalf("footer len = %d, want Esc + Sanitize + Slugify + Default + F10", len(keys))
 	}
-	if keys[1].Hint != "Default" || keys[1].KeyLabel != "C-r" {
-		t.Fatalf("footer restore = %+v, want C-r Default", keys[1])
+	if keys[1].Hint != "Sanitize" || keys[1].Key != tcell.KeyF2 {
+		t.Fatalf("footer sanitize = %+v, want F2 Sanitize", keys[1])
 	}
-	if keys[2].Key != tcell.KeyF10 {
-		t.Fatalf("last footer = %+v, want F10 Quit", keys[2])
+	if keys[2].Hint != "Slugify" || keys[2].Key != tcell.KeyF3 {
+		t.Fatalf("footer slugify = %+v, want F3 Slugify", keys[2])
+	}
+	if keys[3].Hint != "Default" || keys[3].KeyLabel != "C-r" {
+		t.Fatalf("footer restore = %+v, want C-r Default", keys[3])
+	}
+	if keys[4].Key != tcell.KeyF10 {
+		t.Fatalf("last footer = %+v, want F10 Quit", keys[4])
 	}
 
 	// On OK button the restore hint is hidden (no prefill field focused).
 	app.model.FileDialog.FocusedField = 1
 	keys = app.activeFooterKeys()
-	if len(keys) != 2 {
-		t.Fatalf("on OK footer len = %d, want Esc + F10", len(keys))
+	if len(keys) != 4 {
+		t.Fatalf("on OK footer len = %d, want Esc + Sanitize + Slugify + F10", len(keys))
+	}
+}
+
+func TestRenameDialogSanitizeF2ApplyTransformsName(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "x.y_z"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileRename)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	if app.model.FileDialog.RenamePhase != ui.RenamePhaseSanitize {
+		t.Fatalf("phase = %v, want Sanitize", app.model.FileDialog.RenamePhase)
+	}
+	if got, want := app.model.FileDialog.FocusedField, ui.FileDialogOKFocusIndex(app.model.FileDialog); got != want {
+		t.Fatalf("sanitize open focus = %d, want OK (%d)", got, want)
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+		t.Fatalf("want back on main rename, got phase %v", app.model.FileDialog.RenamePhase)
+	}
+	if got := app.model.FileDialog.Fields[0].Value; got != "x y z" {
+		t.Fatalf("name = %q, want %q", got, "x y z")
+	}
+}
+
+func TestRenameDialogSlugifyF3ApplyTransformsName(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "my file"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileRename)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	if app.model.FileDialog.RenamePhase != ui.RenamePhaseSlugify {
+		t.Fatalf("phase = %v, want Slugify", app.model.FileDialog.RenamePhase)
+	}
+	if got, want := app.model.FileDialog.FocusedField, ui.FileDialogOKFocusIndex(app.model.FileDialog); got != want {
+		t.Fatalf("slugify open focus = %d, want OK (%d)", got, want)
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+		t.Fatalf("want back on main rename, got phase %v", app.model.FileDialog.RenamePhase)
+	}
+	if got := app.model.FileDialog.Fields[0].Value; got != "my.file" {
+		t.Fatalf("name = %q, want %q", got, "my.file")
+	}
+}
+
+func TestRenameDialogSanitizeEscReturnsWithoutApply(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.b"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileRename)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+		t.Fatalf("phase = %v, want Main", app.model.FileDialog.RenamePhase)
+	}
+	if got := app.model.FileDialog.Fields[0].Value; got != "a.b" {
+		t.Fatalf("name = %q, want unchanged a.b", got)
 	}
 }
 

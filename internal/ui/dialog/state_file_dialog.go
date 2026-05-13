@@ -42,6 +42,15 @@ const (
 	MkdirActionCreateMoveSelect                    // create and queue move of current selection into it
 )
 
+// RenamePhase selects the rename dialog screen (main name field vs tool sub-dialogs).
+type RenamePhase int
+
+const (
+	RenamePhaseMain RenamePhase = iota
+	RenamePhaseSanitize
+	RenamePhaseSlugify
+)
+
 // FileDialogState holds state for any file operation dialog.
 type FileDialogState struct {
 	Open         bool
@@ -57,4 +66,10 @@ type FileDialogState struct {
 	MkdirShowActions bool
 	// MkdirAction is the currently selected mkdir post-action (only meaningful when MkdirShowActions is true).
 	MkdirAction MkdirAction
+
+	// RenamePhase and the following fields apply when DialogType == FileDialogRename.
+	RenamePhase             RenamePhase
+	RenameSanitizeDots      bool
+	RenameSanitizeUnderscores bool
+	RenameSlugifySep        RenameSlugifySep
 }

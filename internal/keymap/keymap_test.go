@@ -261,6 +261,35 @@ func TestDialogInputOverlayRejectsNonInputActions(t *testing.T) {
 	}
 }
 
+func TestRenameDialogOverlayRejectsNonRenameActions(t *testing.T) {
+	dir := t.TempDir()
+	keybindings := filepath.Join(dir, "keybindings.toml")
+	body := "[rename_dialog_action_keys]\n" +
+		"jobs.cancel = [\"C-r\"]\n"
+	if err := os.WriteFile(keybindings, []byte(body), 0o600); err != nil {
+		t.Fatalf("write keybindings: %v", err)
+	}
+	_, err := LoadFromPaths(config.Paths{ConfigDir: dir, KeybindingsFile: keybindings})
+	if err == nil {
+		t.Fatal("LoadFromPaths: want error for invalid action in [rename_dialog_action_keys]")
+	}
+}
+
+func TestDefaultBundleRenameDialogOverlayF2F3(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	id, ok := bundle.RenameDialog.Lookup(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	if !ok || id != ActionFileRenameOpenSanitize {
+		t.Fatalf("RenameDialog F2 = %q %v, want %q", id, ok, ActionFileRenameOpenSanitize)
+	}
+	id, ok = bundle.RenameDialog.Lookup(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	if !ok || id != ActionFileRenameOpenSlugify {
+		t.Fatalf("RenameDialog F3 = %q %v, want %q", id, ok, ActionFileRenameOpenSlugify)
+	}
+}
+
 func TestParseKeyAltBang(t *testing.T) {
 	if _, err := ParseKey("M-!"); err != nil {
 		t.Fatalf("ParseKey(M-!): %v", err)

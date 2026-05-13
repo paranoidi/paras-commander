@@ -464,6 +464,36 @@ func TestReadDialogInputActionKeysExtractsTable(t *testing.T) {
 	}
 }
 
+func TestLoadFromPathsAcceptsRenameDialogActionKeysTable(t *testing.T) {
+	path := writeConfig(t, `theme = "default"
+[action_keys]
+"app.quit" = ["F12"]
+[rename_dialog_action_keys]
+"file.rename.open-sanitize" = ["C-s"]
+`)
+	cfg, err := LoadFromPaths(Paths{ConfigFile: path})
+	if err != nil {
+		t.Fatalf("LoadFromPaths() error = %v, want success with [rename_dialog_action_keys]", err)
+	}
+	if cfg.Theme != "default" {
+		t.Fatalf("Theme = %q, want default", cfg.Theme)
+	}
+}
+
+func TestReadRenameDialogActionKeysExtractsTable(t *testing.T) {
+	path := writeConfig(t, `theme = "default"
+[rename_dialog_action_keys]
+"file.rename.open-slugify" = ["C-g"]
+`)
+	keys, err := ReadRenameDialogActionKeys(path)
+	if err != nil {
+		t.Fatalf("ReadRenameDialogActionKeys() error = %v", err)
+	}
+	if got, want := keys["file.rename.open-slugify"], []string{"C-g"}; !equalStringSlice(got, want) {
+		t.Fatalf("file.rename.open-slugify = %v, want %v", got, want)
+	}
+}
+
 func TestReadActionKeysReturnsNilWhenMissing(t *testing.T) {
 	keys, err := ReadActionKeys(filepath.Join(t.TempDir(), "missing.toml"))
 	if err != nil {

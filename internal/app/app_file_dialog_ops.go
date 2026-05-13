@@ -32,9 +32,11 @@ func (a *App) openRenameDialog(p *panel.State) {
 		{Label: "Name", Value: name, Prefill: name, Cursor: nameRunes, PrefillPending: true},
 	}
 	a.model.FileDialog = ui.FileDialogState{
-		Open:       true,
-		DialogType: ui.FileDialogRename,
-		Fields:     fields,
+		Open:             true,
+		DialogType:       ui.FileDialogRename,
+		Fields:           fields,
+		RenamePhase:      ui.RenamePhaseMain,
+		RenameSlugifySep: ui.RenameSlugifyDot,
 	}
 }
 
