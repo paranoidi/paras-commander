@@ -1,4 +1,4 @@
-package dialog
+package draw
 
 import "github.com/gdamore/tcell/v2"
 

@@ -4,6 +4,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
+	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
 )
 
 // Dialog types and helpers are implemented in package dialog; these aliases and
@@ -37,7 +39,7 @@ type (
 	DialogTrailingButtonsForm = dialog.DialogTrailingButtonsForm
 	DialogLinearForm          = dialog.DialogLinearForm
 	TransferDialogLinearForm  = dialog.TransferDialogLinearForm
-	DialogButtonSpec          = dialog.DialogButtonSpec
+	DialogButtonSpec          = draw.DialogButtonSpec
 )
 
 const (
@@ -83,7 +85,7 @@ var (
 	ListClampedSelectionDelta         = dialog.ListClampedSelectionDelta
 	EnsurePathPickerListScroll        = dialog.EnsurePathPickerListScroll
 	EnsureHistoryListScroll           = dialog.EnsureHistoryListScroll
-	EnsureScrollInputVisible          = dialog.EnsureScrollInputVisible
+	EnsureScrollInputVisible          = draw.EnsureScrollInputVisible
 	NewDialogLinearForm               = dialog.NewDialogLinearForm
 	NewDialogTrailingButtonsForm      = dialog.NewDialogTrailingButtonsForm
 	NewTransferDialogLinearForm       = dialog.NewTransferDialogLinearForm
@@ -92,13 +94,13 @@ var (
 	TransferDialogMoveFocus           = dialog.TransferDialogMoveFocus
 	DialogPairLeftRight               = dialog.DialogPairLeftRight
 	ThemeDialogListViewportRows       = dialog.ThemeDialogListViewportRows
-	IsWordRune                        = dialog.IsWordRune
-	BackwardWordIndex                 = dialog.BackwardWordIndex
-	ForwardWordIndex                  = dialog.ForwardWordIndex
-	KillWordBackward                  = dialog.KillWordBackward
+	IsWordRune                        = lineedit.IsWordRune
+	BackwardWordIndex                 = lineedit.BackwardWordIndex
+	ForwardWordIndex                  = lineedit.ForwardWordIndex
+	KillWordBackward                  = lineedit.KillWordBackward
 )
 
-// AccentGlyphStyle applies menu/dialog shortcut accent styling (delegates to dialog).
+// AccentGlyphStyle applies menu/dialog shortcut accent styling (delegates to draw).
 func AccentGlyphStyle(base, accent tcell.Style) tcell.Style {
-	return dialog.AccentGlyphStyle(base, accent)
+	return draw.AccentGlyphStyle(base, accent)
 }

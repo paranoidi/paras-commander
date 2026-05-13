@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
 	"github.com/gdamore/tcell/v2"
 
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -10,9 +11,9 @@ import (
 func DrawQuitConfirmDialog(screen tcell.Screen, layout Layout, state QuitConfirmState, styles theme.Theme) {
 	width := 50
 	height := 8
-	rect := centeredDialogRect(layout, width, height)
+	rect := draw.CenteredDialogRect(layout, width, height)
 
-	borderStyle := DrawDialogFrame(screen, rect, "Quit", styles)
+	borderStyle := draw.DrawDialogFrame(screen, rect, "Quit", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 
 	msg := state.WarnLine1
@@ -27,8 +28,8 @@ func DrawQuitConfirmDialog(screen tcell.Screen, layout Layout, state QuitConfirm
 	primitive.Text(screen, rect.X+2, rect.Y+2, rect.Width-4, msg2, styles.StatusWarn.Background(dbg))
 
 	buttonY := rect.Y + rect.Height - 2
-	DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
-	DrawDialogButtonRowCentered(screen, rect, buttonY, []DialogButtonSpec{
+	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
+	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 		{Label: "Stay", Shortcut: 'S', Focused: state.Focus == 0},
 		{Label: "Quit Anyway", Shortcut: 'Q', Focused: state.Focus == 1},
 	}, styles)

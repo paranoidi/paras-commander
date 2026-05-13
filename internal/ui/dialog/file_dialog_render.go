@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
 	"strings"
 	"unicode/utf8"
 
@@ -62,7 +63,7 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 		Width:  width,
 		Height: height,
 	}
-	borderStyle := DrawDialogFrame(screen, rect, dialogTitle, styles)
+	borderStyle := draw.DrawDialogFrame(screen, rect, dialogTitle, styles)
 
 	switch state.DialogType {
 	case FileDialogDelete:
@@ -84,7 +85,7 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 
 	// Draw buttons at the bottom.
 	buttonY := rect.Y + rect.Height - 2
-	DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
 	if state.DialogType == FileDialogDelete {
 		drawDeleteButtons(screen, rect, buttonY, state, styles)
 	} else {
@@ -200,7 +201,7 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 			}
 			y++
 		}
-		DrawDialogHSeparator(screen, rect, y, borderStyle)
+		draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 		fieldStartY = y + 1
 	}
 	for i, field := range state.Fields {
@@ -269,7 +270,7 @@ func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 
 	runes := []rune(field.Value)
 	length := len(runes)
-	cursor, scroll := EnsureScrollInputVisible(length, field.Cursor, 0, width)
+	cursor, scroll := draw.EnsureScrollInputVisible(length, field.Cursor, 0, width)
 
 	for i := 0; i < width; i++ {
 		idx := scroll + i
@@ -320,7 +321,7 @@ func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogFiel
 	runes := []rune(field.Value)
 	length := len(runes)
 	textFocused := rowFocused && !pickerFocused
-	cursor, scroll := EnsureScrollInputVisible(length, field.Cursor, 0, textW)
+	cursor, scroll := draw.EnsureScrollInputVisible(length, field.Cursor, 0, textW)
 
 	for i := 0; i < textW; i++ {
 		idx := scroll + i
@@ -425,7 +426,7 @@ func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, 
 	if sepY >= rect.Y+rect.Height-2 {
 		return
 	}
-	DrawDialogHSeparator(screen, rect, sepY, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
 	leftCol := rect.X + 2
 	radios := mkdirActionRadios()
 	baseFocus := len(state.Fields)
@@ -434,7 +435,7 @@ func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, 
 		if y >= rect.Y+rect.Height-2 {
 			break
 		}
-		DrawDialogRadio(screen, leftCol, y, r.Label, r.Shortcut, state.MkdirAction == r.Action, state.FocusedField == baseFocus+i, styles)
+		draw.DrawDialogRadio(screen, leftCol, y, r.Label, r.Shortcut, state.MkdirAction == r.Action, state.FocusedField == baseFocus+i, styles)
 	}
 }
 
@@ -442,14 +443,14 @@ func drawOkCancelButtons(screen tcell.Screen, rect Rect, y int, state FileDialog
 	okFocusIdx := fileDialogOKFocusIndex(state)
 	cancelFocusIdx := fileDialogCancelFocusIndex(state)
 
-	DrawDialogButtonRowCentered(screen, rect, y, []DialogButtonSpec{
+	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: state.FocusedField == okFocusIdx},
 		{Label: "Cancel", Shortcut: 'C', Focused: state.FocusedField == cancelFocusIdx},
 	}, styles)
 }
 
 func drawDeleteButtons(screen tcell.Screen, rect Rect, y int, state FileDialogState, styles theme.Theme) {
-	DrawDialogButtonRowCentered(screen, rect, y, []DialogButtonSpec{
+	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
 		{Label: "Yes", Shortcut: 'Y', Focused: state.FocusedField == 0},
 		{Label: "No", Shortcut: 'N', Focused: state.FocusedField == 1},
 	}, styles)
@@ -471,7 +472,7 @@ func drawAddBookmarkDialogContent(screen tcell.Screen, rect Rect, state FileDial
 	}
 	primitive.Text(screen, leftCol, rect.Y+2, innerWidth, pathValue, textStyle)
 
-	DrawDialogHSeparator(screen, rect, rect.Y+3, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, rect.Y+3, borderStyle)
 
 	primitive.Text(screen, leftCol, rect.Y+4, innerWidth, "Name:", textStyle)
 

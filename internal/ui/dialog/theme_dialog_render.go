@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
 	"fmt"
 	"unicode/utf8"
 
@@ -67,8 +68,8 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 		return
 	}
 
-	rect := centeredDialogRect(layout, dialogWidth, dialogHeight)
-	borderStyle := DrawDialogFrame(screen, rect, "Theme", styles)
+	rect := draw.CenteredDialogRect(layout, dialogWidth, dialogHeight)
+	borderStyle := draw.DrawDialogFrame(screen, rect, "Theme", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	// Layout columns.
 	leftCol := rect.X + 2 // 1 space margin at left
@@ -92,9 +93,9 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 		idx := start + row
 		y := listTopY + row
 
-		style := dialogOptionRowStyle(false, idx == state.Selected, styles)
+		style := draw.DialogOptionRowStyle(false, idx == state.Selected, styles)
 		if state.Focus == 0 && idx == state.Selected {
-			style = dialogOptionRowStyle(true, true, styles)
+			style = draw.DialogOptionRowStyle(true, true, styles)
 		}
 		marker := "( )"
 		if idx == state.Selected {
@@ -161,9 +162,9 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	}, true)
 
 	// --- Checkboxes ---
-	DrawDialogCheckbox(screen, previewLeft, previewY, "Selected", 'S', true, false, styles)
+	draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Selected", 'S', true, false, styles)
 	previewY++
-	DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, styles)
+	draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, styles)
 	previewY++
 
 	// --- Separator ---
@@ -185,19 +186,19 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 
 	// --- Buttons ---
 	const btnGap = 2
-	btnWidth := dialogButtonWidth("Selected") + btnGap + dialogButtonWidth("Unselected")
+	btnWidth := draw.DialogButtonWidth("Selected") + btnGap + draw.DialogButtonWidth("Unselected")
 	btnStartX := previewLeft + (previewWidth-btnWidth)/2
 	if btnStartX < previewLeft {
 		btnStartX = previewLeft
 	}
-	DrawDialogButton(screen, btnStartX, previewY, "Selected", 'S', false, styles)
-	btnStartX += dialogButtonWidth("Selected") + btnGap
-	DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', true, styles)
+	draw.DrawDialogButton(screen, btnStartX, previewY, "Selected", 'S', false, styles)
+	btnStartX += draw.DialogButtonWidth("Selected") + btnGap
+	draw.DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', true, styles)
 
 	// ============================================================
 	// OUTER SEPARATOR
 	// ============================================================
-	DrawDialogHSeparator(screen, rect, outerSepY, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, outerSepY, borderStyle)
 
 	// ============================================================
 	// OUTER BUTTONS
@@ -205,7 +206,7 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	btnY := outerSepY + 1
 	okFocused := state.Focus == 1
 	cancelFocused := state.Focus == 2
-	DrawDialogButtonRowCentered(screen, rect, btnY, []DialogButtonSpec{
+	draw.DrawDialogButtonRowCentered(screen, rect, btnY, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: okFocused},
 		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
 	}, styles)

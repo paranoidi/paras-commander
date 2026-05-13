@@ -1,6 +1,17 @@
-package dialog
+package lineedit
 
 import "unicode"
+
+// ClampRuneCursor clamps pos to [0, length] for rune-indexed cursors.
+func ClampRuneCursor(pos, length int) int {
+	if pos < 0 {
+		return 0
+	}
+	if pos > length {
+		return length
+	}
+	return pos
+}
 
 // IsWordRune reports readline-style word constituents (letters, digits, underscore).
 // Slashes, dots, hyphens, spaces, and other runes act as delimiters between words.
@@ -11,7 +22,7 @@ func IsWordRune(r rune) bool {
 // BackwardWordIndex returns the cursor index after moving backward by one word from pos.
 // pos is in rune indices; result is clamped to [0, len(runes)].
 func BackwardWordIndex(runes []rune, pos int) int {
-	pos = clampRuneCursor(pos, len(runes))
+	pos = ClampRuneCursor(pos, len(runes))
 	if pos == 0 {
 		return 0
 	}
@@ -27,7 +38,7 @@ func BackwardWordIndex(runes []rune, pos int) int {
 
 // ForwardWordIndex returns the cursor index after moving forward by one word from pos.
 func ForwardWordIndex(runes []rune, pos int) int {
-	pos = clampRuneCursor(pos, len(runes))
+	pos = ClampRuneCursor(pos, len(runes))
 	if pos >= len(runes) {
 		return len(runes)
 	}
@@ -44,7 +55,7 @@ func ForwardWordIndex(runes []rune, pos int) int {
 // KillWordBackward removes the runes from the backward-word boundary up to (but not including) pos.
 // It returns the new rune slice and the new cursor (start of deleted region).
 func KillWordBackward(runes []rune, pos int) ([]rune, int) {
-	pos = clampRuneCursor(pos, len(runes))
+	pos = ClampRuneCursor(pos, len(runes))
 	start := BackwardWordIndex(runes, pos)
 	if start == pos {
 		return runes, pos

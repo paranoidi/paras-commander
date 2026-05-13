@@ -3407,6 +3407,36 @@ func TestToggleSyncEnablesAndImmediatelyMirrorsHighlightedFolder(t *testing.T) {
 	}
 }
 
+// Regression: key handling calls render() before the Run loop's trailing reconcileAfterEvent(),
+// so latched sync must run inside render(); otherwise the follower updates one tick late and
+// the UI tracks the previous directory highlight.
+func TestSyncFollowAppliesBeforeRenderAfterNav(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"alpha", "beta", "gamma"} {
+		if err := os.Mkdir(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.dispatch(keymap.ActionPanelToggleSync)
+
+	app.dispatch(keymap.ActionNavDown)
+	app.render()
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "beta")); got != want {
+		t.Fatalf("after down+render follower path = %q, want %q", got, want)
+	}
+
+	app.dispatch(keymap.ActionNavDown)
+	app.render()
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "gamma")); got != want {
+		t.Fatalf("after second down+render follower path = %q, want %q", got, want)
+	}
+}
+
 // Regression: with selections-strip focus, sync must follow the strip row (what the user
 // is steering), not the file-list cursor — otherwise the other panel shows a stale directory.
 func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {

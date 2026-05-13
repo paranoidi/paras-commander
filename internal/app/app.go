@@ -2146,6 +2146,12 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 }
 func (a *App) render() {
 	a.stopDiskUsageRedrawDebounce()
+	// Reconcile derived model (latched panel sync, disk-usage idle-sort hooks, etc.)
+	// before painting so the frame matches post-mutation state. The Run loop also calls
+	// reconcileAfterEvent() after each event; without this ordering, render() would run
+	// first on key handling and latched sync would appear one selection behind until the
+	// next redraw.
+	a.reconcileAfterEvent()
 	a.model.MenuBarPermission = a.menuBarPermissionText()
 	a.model.MenuBarJobsAttention = a.menuBarJobsAttentionText()
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()

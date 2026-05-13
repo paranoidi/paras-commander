@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -39,8 +40,8 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 		}
 	}
 
-	rect := centeredDialogRect(layout, maxW, height)
-	borderStyle := DrawDialogFrame(screen, rect, "Help", styles)
+	rect := draw.CenteredDialogRect(layout, maxW, height)
+	borderStyle := draw.DrawDialogFrame(screen, rect, "Help", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
 	leftCol := rect.X + 2
@@ -53,11 +54,11 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	primitive.Text(screen, leftCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
 
 	filterFocused := state.Focus == 0
-	DrawSimpleDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, filterFocused, false, styles)
+	draw.DrawSimpleDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, filterFocused, false, styles)
 
 	// Separator before list.
 	sepBeforeList := rect.Y + 4
-	DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
 
 	// List header.
 	listTop := rect.Y + 5
@@ -114,12 +115,12 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 
 	// Separator after list.
 	sepAfterList := listTop + 1 + listH
-	DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)
 
 	// Button row: single Close button.
 	buttonY := rect.Y + rect.Height - 2
 	closeFocused := state.Focus == 1
-	DrawDialogButtonRowCentered(screen, rect, buttonY, []DialogButtonSpec{
+	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 		{Label: "Close", Shortcut: 'C', Focused: closeFocused},
 	}, styles)
 }

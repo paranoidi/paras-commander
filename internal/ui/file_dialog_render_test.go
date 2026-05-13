@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -61,7 +62,7 @@ func TestRenderAddBookmarkDialogShowsTitlePathAndName(t *testing.T) {
 
 func findRow(screen tcell.SimulationScreen, width, height int, needle string) bool {
 	for y := 0; y < height; y++ {
-		if strings.Contains(textAt(screen, 0, y, width), needle) {
+		if strings.Contains(tcelltest.TextAt(screen, 0, y, width), needle) {
 			return true
 		}
 	}

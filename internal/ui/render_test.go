@@ -9,6 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -186,7 +187,7 @@ func TestRenderPanelTitleLeavesBorderAfterSingleTrailingSpace(t *testing.T) {
 	styles := theme.Default()
 	Render(screen, model, styles)
 
-	titlePrefix := textAt(screen, 0, 1, 9)
+	titlePrefix := tcelltest.TextAt(screen, 0, 1, 9)
 	if titlePrefix != "┌─ /tmp ─" {
 		t.Fatalf("panel title prefix = %q, want border immediately after title padding", titlePrefix)
 	}
@@ -218,11 +219,11 @@ func TestRenderDrawsLeftPanelPulldownWithKeymapLabels(t *testing.T) {
 	styles := theme.Default()
 	Render(screen, model, styles)
 
-	rowSort := strings.TrimSpace(textAt(screen, 1, 2, 72))
+	rowSort := strings.TrimSpace(tcelltest.TextAt(screen, 1, 2, 72))
 	if !strings.Contains(rowSort, "Sort") || !strings.Contains(rowSort, "C-s") {
 		t.Fatalf("sort row = %q, want Sort with C-s", rowSort)
 	}
-	rowHidden := strings.TrimSpace(textAt(screen, 1, 3, 72))
+	rowHidden := strings.TrimSpace(tcelltest.TextAt(screen, 1, 3, 72))
 	if !strings.Contains(rowHidden, "Toggle hidden") || !strings.Contains(rowHidden, "M-.") {
 		t.Fatalf("hidden row = %q, want Toggle hidden with M-.", rowHidden)
 	}
@@ -251,7 +252,7 @@ func TestRenderDrawsFilePulldownMenu(t *testing.T) {
 	styles := theme.Default()
 	Render(screen, model, styles)
 
-	menuText := textAt(screen, 8, 2, 40)
+	menuText := tcelltest.TextAt(screen, 8, 2, 40)
 	if !strings.Contains(menuText, "View") || !strings.Contains(menuText, "F3") {
 		t.Fatalf("first file menu row = %q, want View with F3", menuText)
 	}
@@ -260,7 +261,7 @@ func TestRenderDrawsFilePulldownMenu(t *testing.T) {
 	if pulldownBorder != styles.MenuDropdownFrame {
 		t.Fatalf("pulldown border style = %v, want menu.dropdown.frame %v", pulldownBorder, styles.MenuDropdownFrame)
 	}
-	menuText = textAt(screen, 8, 6, 40)
+	menuText = tcelltest.TextAt(screen, 8, 6, 40)
 	if !strings.Contains(menuText, "Copy") || !strings.Contains(menuText, "F5") {
 		t.Fatalf("copy file menu row = %q, want Copy with F5", menuText)
 	}
@@ -398,7 +399,7 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 
 	// Dialog now has dual-column layout with preview.
 	// Theme list is left column, second item at row 3.
-	row := textAt(screen, 0, 3, width)
+	row := tcelltest.TextAt(screen, 0, 3, width)
 	if !strings.Contains(row, "Test Theme") {
 		t.Fatalf("theme dialog row = %q, want Test Theme", strings.TrimRight(row, " "))
 	}
@@ -438,7 +439,7 @@ func TestRenderDrawsMessageDialog(t *testing.T) {
 
 	found := false
 	for y := 0; y < 20; y++ {
-		line := textAt(screen, 0, y, width)
+		line := tcelltest.TextAt(screen, 0, y, width)
 		if strings.Contains(line, "theme reload failed") {
 			found = true
 			break
@@ -449,7 +450,7 @@ func TestRenderDrawsMessageDialog(t *testing.T) {
 	}
 	foundOK := false
 	for y := 0; y < 20; y++ {
-		line := textAt(screen, 0, y, width)
+		line := tcelltest.TextAt(screen, 0, y, width)
 		if strings.Contains(line, "OK") && strings.Contains(line, "[") {
 			foundOK = true
 			break
@@ -483,7 +484,7 @@ func TestRenderBlankMenuBarRowWhenModalDialogOpen(t *testing.T) {
 
 	Render(screen, model, styles)
 
-	top := textAt(screen, 0, 0, width)
+	top := tcelltest.TextAt(screen, 0, 0, width)
 	if strings.Contains(top, "File") || strings.Contains(top, "Left") {
 		t.Fatalf("menu row = %q, want blank (no menu labels)", top)
 	}
@@ -491,7 +492,7 @@ func TestRenderBlankMenuBarRowWhenModalDialogOpen(t *testing.T) {
 	if menuStyle != styles.MenuBar {
 		t.Fatalf("top-left cell style = %v, want MenuBar %v", menuStyle, styles.MenuBar)
 	}
-	titlePrefix := textAt(screen, 0, 1, 9)
+	titlePrefix := tcelltest.TextAt(screen, 0, 1, 9)
 	if titlePrefix != "┌─ /tmp ─" {
 		t.Fatalf("panel title prefix = %q, want border on row below menu", titlePrefix)
 	}
@@ -558,7 +559,7 @@ func TestRenderMenuBarShowsActiveFilePermissionString(t *testing.T) {
 
 	Render(screen, model, styles)
 
-	row := textAt(screen, 0, 0, width)
+	row := tcelltest.TextAt(screen, 0, 0, width)
 	trimmed := strings.TrimRight(row, " ")
 	if !strings.HasSuffix(trimmed, want) {
 		t.Fatalf("menu row trimmed = %q, want suffix %q", trimmed, want)
@@ -661,7 +662,7 @@ func TestRenderTransientStatusOnMenuBarAfterThemeDialog(t *testing.T) {
 
 	Render(screen, model, styles)
 
-	top := textAt(screen, 0, 0, width)
+	top := tcelltest.TextAt(screen, 0, 0, width)
 	if !strings.Contains(top, "theme-reload") {
 		t.Fatalf("menu row = %q, want transient status visible after theme dialog", top)
 	}
@@ -683,7 +684,7 @@ func TestDrawFooterShowsViewEditAndOmitsUnusedFKeys(t *testing.T) {
 		t.Fatalf("footer must start flush-left with F1 key at col 0, got %q style %v", str0, st0)
 	}
 
-	line := textAt(screen, 0, 0, 70)
+	line := tcelltest.TextAt(screen, 0, 0, 70)
 	if !strings.Contains(line, "View") || !strings.Contains(line, "Edit") {
 		t.Fatalf("footer = %q, want F3 View and F4 Edit placeholders", line)
 	}
@@ -720,7 +721,7 @@ func TestDrawFooterSpacesKeyHintWithLabelStyle(t *testing.T) {
 	styles := theme.Default()
 	drawFooter(screen, Rect{X: 0, Y: 0, Width: 80, Height: 1}, styles, []menu.FunctionKey{menu.FooterEscClose})
 
-	line := textAt(screen, 0, 0, 80)
+	line := tcelltest.TextAt(screen, 0, 0, 80)
 	idx := strings.Index(line, "Esc")
 	if idx < 0 {
 		t.Fatalf("footer line = %q, want Esc", line)
@@ -770,7 +771,7 @@ func TestRenderDrawsStatusMessage(t *testing.T) {
 	styles := theme.Default()
 	Render(screen, model, styles)
 
-	menuRow := textAt(screen, 0, 0, width)
+	menuRow := tcelltest.TextAt(screen, 0, 0, width)
 	if !strings.Contains(menuRow, "Refreshed") {
 		t.Fatalf("menu row = %q, want status message overlay", menuRow)
 	}
@@ -783,7 +784,7 @@ func TestRenderDrawsStatusMessage(t *testing.T) {
 	if msgSt != styles.StatusInfo {
 		t.Fatalf("status message style = %v, want StatusInfo", msgSt)
 	}
-	footerText := textAt(screen, 0, 11, width)
+	footerText := tcelltest.TextAt(screen, 0, 11, width)
 	if strings.Contains(footerText, "Refreshed") {
 		t.Fatalf("footer line should not duplicate status message, got %q", footerText)
 	}
@@ -907,11 +908,11 @@ func TestRenderDrawsPanelLocalFuzzyInputOverlay(t *testing.T) {
 
 	Render(screen, model, theme.Default())
 
-	filterText := textAt(screen, 2, 1, 20)
+	filterText := tcelltest.TextAt(screen, 2, 1, 20)
 	if !strings.Contains(filterText, "> ma") {
 		t.Fatalf("filter row = %q, want fuzzy query with > prefix", filterText)
 	}
-	rightPanelText := textAt(screen, 42, 7, 10)
+	rightPanelText := tcelltest.TextAt(screen, 42, 7, 10)
 	if strings.Contains(rightPanelText, "ma") {
 		t.Fatalf("right panel text = %q, want fuzzy input scoped to active panel", rightPanelText)
 	}
@@ -984,23 +985,6 @@ func TestRenderHighlightsFilterMatches(t *testing.T) {
 	}
 }
 
-func textAt(screen tcell.SimulationScreen, x, y, width int) string {
-	runes := make([]rune, 0, width)
-	for col := 0; col < width; {
-		str, _, cw := screen.Get(x+col, y)
-		if cw < 1 {
-			cw = 1
-		}
-		var r = ' '
-		if str != "" {
-			r, _ = utf8.DecodeRuneInString(str)
-		}
-		runes = append(runes, r)
-		col += cw
-	}
-	return string(runes)
-}
-
 func TestRenderDrawsSyncIndicatorOnLeftDriverBottomBorder(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -1021,11 +1005,11 @@ func TestRenderDrawsSyncIndicatorOnLeftDriverBottomBorder(t *testing.T) {
 
 	leftWidth := width / 2
 	bottomY := height - 2
-	leftBottom := textAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
 	if !strings.Contains(leftBottom, "Sync →") {
 		t.Fatalf("left bottom border = %q, want it to contain %q", leftBottom, "Sync →")
 	}
-	rightBottom := textAt(screen, leftWidth, bottomY, width-leftWidth)
+	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
 	if strings.Contains(rightBottom, "Sync") {
 		t.Fatalf("right bottom border = %q, want no Sync indicator on the follower", rightBottom)
 	}
@@ -1051,11 +1035,11 @@ func TestRenderDrawsSyncIndicatorOnRightDriverBottomBorder(t *testing.T) {
 
 	leftWidth := width / 2
 	bottomY := height - 2
-	rightBottom := textAt(screen, leftWidth, bottomY, width-leftWidth)
+	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
 	if !strings.Contains(rightBottom, "← Sync") {
 		t.Fatalf("right bottom border = %q, want it to contain %q", rightBottom, "← Sync")
 	}
-	leftBottom := textAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
 	if strings.Contains(leftBottom, "Sync") {
 		t.Fatalf("left bottom border = %q, want no Sync indicator on the follower", leftBottom)
 	}
@@ -1081,7 +1065,7 @@ func TestRenderOmitsSyncIndicatorWhenDisabled(t *testing.T) {
 
 	leftWidth := width / 2
 	bottomY := height - 2
-	leftBottom := textAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
 	if strings.Contains(leftBottom, "Sync") {
 		t.Fatalf("left bottom border = %q, want no Sync indicator when sync is off", leftBottom)
 	}

@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
 	"strings"
 	"unicode/utf8"
 
@@ -157,8 +158,8 @@ func DrawMessageDialog(screen tcell.Screen, layout Layout, state MessageDialogSt
 		height = maxH
 	}
 
-	rect := centeredDialogRect(layout, dialogW, height)
-	borderStyle := DrawDialogFrame(screen, rect, title, styles)
+	rect := draw.CenteredDialogRect(layout, dialogW, height)
+	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	bodyStyle := styles.StatusError.Background(dbg)
 
@@ -174,17 +175,17 @@ func DrawMessageDialog(screen tcell.Screen, layout Layout, state MessageDialogSt
 	}
 
 	buttonY := rect.Y + rect.Height - 2
-	DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
 	if state.TwoButtons {
 		f0 := state.ButtonFocus == 0
 		f1 := state.ButtonFocus == 1
-		DrawDialogButtonRowCentered(screen, rect, buttonY, []DialogButtonSpec{
+		draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 			{Label: "OK", Shortcut: 'O', Focused: f0},
 			{Label: "Cancel", Shortcut: 'C', Focused: f1},
 		}, styles)
 		return
 	}
-	DrawDialogButtonRowCentered(screen, rect, buttonY, []DialogButtonSpec{
+	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: true},
 	}, styles)
 }

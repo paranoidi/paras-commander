@@ -1,4 +1,4 @@
-package dialog
+package draw
 
 import (
 	"unicode"
@@ -9,7 +9,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-func checkboxText(label string, checked bool) string {
+// CheckboxText returns the marker+label string used for width calculations (matches draw row text).
+func CheckboxText(label string, checked bool) string {
 	if checked {
 		return "[x] " + label
 	}
@@ -26,7 +27,7 @@ func DrawDialogCheckbox(
 	focused bool,
 	styles theme.Theme,
 ) {
-	style := dialogOptionRowStyle(focused, checked, styles)
+	style := DialogOptionRowStyle(focused, checked, styles)
 	marker := " [ ] "
 	if checked {
 		marker = " [x] "
@@ -45,7 +46,7 @@ func DrawDialogRadio(
 	focused bool,
 	styles theme.Theme,
 ) {
-	style := dialogOptionRowStyle(focused, selected, styles)
+	style := DialogOptionRowStyle(focused, selected, styles)
 	marker := " ( ) "
 	if selected {
 		marker = " (*) "
@@ -68,7 +69,8 @@ func drawDialogItem(screen tcell.Screen, x, y int, label string, shortcut rune, 
 	}
 }
 
-func dialogOptionRowStyle(focused, selected bool, styles theme.Theme) tcell.Style {
+// DialogOptionRowStyle returns the theme style for a dialog option row (radio/checkbox).
+func DialogOptionRowStyle(focused, selected bool, styles theme.Theme) tcell.Style {
 	if focused {
 		return styles.DialogOptionActive
 	}

@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -53,8 +54,8 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 		}
 	}
 
-	rect := centeredDialogRect(layout, width, height)
-	borderStyle := DrawDialogFrame(screen, rect, "History", styles)
+	rect := draw.CenteredDialogRect(layout, width, height)
+	borderStyle := draw.DrawDialogFrame(screen, rect, "History", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
 	leftCol := rect.X + 2
@@ -63,10 +64,10 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 	primitive.Text(screen, leftCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
 
 	filterFocused := state.Focus == 0
-	DrawSimpleDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, filterFocused, false, styles)
+	draw.DrawSimpleDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, filterFocused, false, styles)
 
 	sepBeforeList := rect.Y + 4
-	DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
 
 	listTop := rect.Y + 5
 	rowWidth := inputWidth
@@ -99,12 +100,12 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 	}
 
 	sepAfterList := listTop + listH
-	DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)
 
 	buttonY := rect.Y + rect.Height - 2
 	okFocused := state.Focus == 1
 	cancelFocused := state.Focus == 2
-	DrawDialogButtonRowCentered(screen, rect, buttonY, []DialogButtonSpec{
+	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: okFocused},
 		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
 	}, styles)

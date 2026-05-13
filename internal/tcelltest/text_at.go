@@ -1,4 +1,5 @@
-package dialog
+// Package tcelltest holds small helpers for tests that drive tcell.SimulationScreen.
+package tcelltest
 
 import (
 	"unicode/utf8"
@@ -6,7 +7,9 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-func textAt(screen tcell.SimulationScreen, x, y, width int) string {
+// TextAt reads up to width terminal cells starting at (x, y), returning one rune per
+// logical cell (wide glyphs consume their full width).
+func TextAt(screen tcell.SimulationScreen, x, y, width int) string {
 	runes := make([]rune, 0, width)
 	for col := 0; col < width; {
 		str, _, cw := screen.Get(x+col, y)

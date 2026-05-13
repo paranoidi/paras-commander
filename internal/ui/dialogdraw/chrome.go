@@ -1,4 +1,4 @@
-package dialog
+package draw
 
 import (
 	"strings"
@@ -167,9 +167,9 @@ type DialogButtonSpec struct {
 	Focused  bool
 }
 
-// centeredDialogRect returns a rectangle of the given size centered in the layout.
+// CenteredDialogRect returns a rectangle of the given size centered in the layout.
 // Width and height are clamped to the layout; coordinates are clamped to non-negative.
-func centeredDialogRect(layout Layout, width, height int) Rect {
+func CenteredDialogRect(layout Layout, width, height int) Rect {
 	if width > layout.Width {
 		width = layout.Width
 	}
@@ -197,10 +197,10 @@ func centeredDialogRect(layout Layout, width, height int) Rect {
 // DialogFrame on that background, and paints the title row per AGENTS.md.
 // Returns borderStyle (for horizontal rules inside the dialog).
 func DrawDialogFrame(screen tcell.Screen, rect Rect, title string, styles theme.Theme) tcell.Style {
-	primitive.Fill(screen, primitive.Rect(rect), ' ', styles.DialogSurface)
+	primitive.Fill(screen, primitive.Rect{X: rect.X, Y: rect.Y, Width: rect.Width, Height: rect.Height}, ' ', styles.DialogSurface)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	borderStyle := styles.DialogFrame.Background(dbg)
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
+	primitive.Box(screen, primitive.Rect{X: rect.X, Y: rect.Y, Width: rect.Width, Height: rect.Height}, borderStyle)
 
 	bfg, _, _ := styles.DialogFrame.Decompose()
 	titleStyle := styles.DialogTitle.Foreground(bfg).Background(dbg)

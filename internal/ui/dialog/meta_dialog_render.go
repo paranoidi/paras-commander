@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
 	"fmt"
 
 	"github.com/gdamore/tcell/v2"
@@ -27,8 +28,8 @@ func DrawMetaDialog(screen tcell.Screen, layout Layout, state MetaDialogState, s
 		return
 	}
 
-	rect := centeredDialogRect(layout, width, height)
-	borderStyle := DrawDialogFrame(screen, rect, "Meta", styles)
+	rect := draw.CenteredDialogRect(layout, width, height)
+	borderStyle := draw.DrawDialogFrame(screen, rect, "Meta", styles)
 
 	leftCol := rect.X + 2
 	y := rect.Y + 1
@@ -42,16 +43,16 @@ func DrawMetaDialog(screen tcell.Screen, layout Layout, state MetaDialogState, s
 		if len([]rune(entry.Name)) > 0 {
 			shortcut = []rune(entry.Name)[0]
 		}
-		DrawDialogRadio(screen, leftCol, y, label, shortcut, state.Selected == i, state.Focus == i, styles)
+		draw.DrawDialogRadio(screen, leftCol, y, label, shortcut, state.Selected == i, state.Focus == i, styles)
 		y++
 	}
 
-	DrawDialogHSeparator(screen, rect, y, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
 
 	okFocused := state.Focus == form.OKIndex()
 	cancelFocused := state.Focus == form.CancelIndex()
-	DrawDialogButtonRowCentered(screen, rect, y, []DialogButtonSpec{
+	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: okFocused},
 		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
 	}, styles)

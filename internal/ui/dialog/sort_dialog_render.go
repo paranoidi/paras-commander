@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -24,8 +25,8 @@ func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, s
 		return
 	}
 
-	rect := centeredDialogRect(layout, width, height)
-	borderStyle := DrawDialogFrame(screen, rect, "Sort order", styles)
+	rect := draw.CenteredDialogRect(layout, width, height)
+	borderStyle := draw.DrawDialogFrame(screen, rect, "Sort order", styles)
 
 	leftCol := rect.X + 2
 	y := rect.Y + 1 // first content row
@@ -42,7 +43,7 @@ func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, s
 		{panel.SortMtime, "Modify time", 'm'},
 	}
 	for i, m := range modes {
-		DrawDialogRadio(screen, leftCol, y, m.Label, m.Shortcut, state.SortMode == m.Mode, state.Focus == i, styles)
+		draw.DrawDialogRadio(screen, leftCol, y, m.Label, m.Shortcut, state.SortMode == m.Mode, state.Focus == i, styles)
 		y++
 	}
 
@@ -57,19 +58,19 @@ func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, s
 		{"Reverse", 'r', state.SortReverse, state.Focus == 5},
 		{"Directories first", 'd', state.DirectoriesFirst, state.Focus == 6},
 	} {
-		DrawDialogCheckbox(screen, leftCol, y, cb.label, cb.shortcut, cb.checked, cb.isFocus, styles)
+		draw.DrawDialogCheckbox(screen, leftCol, y, cb.label, cb.shortcut, cb.checked, cb.isFocus, styles)
 		y++
 	}
 
 	// Separator
-	DrawDialogHSeparator(screen, rect, y, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
 
 	// Buttons (immediately after separator, no blank row)
 	okFocused := state.Focus == 7
 	cancelFocused := state.Focus == 8
 
-	DrawDialogButtonRowCentered(screen, rect, y, []DialogButtonSpec{
+	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: okFocused},
 		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
 	}, styles)

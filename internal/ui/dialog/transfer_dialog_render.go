@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -23,8 +24,8 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 		}
 	}
 
-	rect := centeredDialogRect(layout, width, height)
-	borderStyle := DrawDialogFrame(screen, rect, title, styles)
+	rect := draw.CenteredDialogRect(layout, width, height)
+	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 
 	if state.Phase == TransferPhaseSelfCopyRename {
@@ -42,11 +43,11 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 		drawInputField(screen, rect.X+2, inputY, inputWidth, state.SelfCopyNewName, state.FocusField == 0, styles)
 
 		sepY := rect.Y + 6
-		DrawDialogHSeparator(screen, rect, sepY, borderStyle)
+		draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
 
 		tform := NewTransferDialogLinearForm(TransferDialogEffectiveNumContent(state))
 		buttonY := rect.Y + rect.Height - 2
-		DrawDialogButtonRowCentered(screen, rect, buttonY, []DialogButtonSpec{
+		draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 			{Label: "OK", Shortcut: 'O', Focused: state.FocusField == tform.OKIndex()},
 			{Label: "Add paused", Shortcut: 'p', Focused: state.FocusField == tform.AddPausedIndex()},
 			{Label: "Cancel", Shortcut: 'C', Focused: state.FocusField == tform.CancelIndex()},
@@ -66,17 +67,17 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 
 	if state.Kind == TransferKindCopy {
 		sep1Y := rect.Y + 4
-		DrawDialogHSeparator(screen, rect, sep1Y, borderStyle)
+		draw.DrawDialogHSeparator(screen, rect, sep1Y, borderStyle)
 
-		DrawDialogCheckbox(screen, rect.X+2, sep1Y+1, "Preserve permissions", 0, state.PreservePermissions, state.FocusField == 1, styles)
-		DrawDialogCheckbox(screen, rect.X+2, sep1Y+2, "Preserve timestamps", 0, state.PreserveTimestamps, state.FocusField == 2, styles)
+		draw.DrawDialogCheckbox(screen, rect.X+2, sep1Y+1, "Preserve permissions", 0, state.PreservePermissions, state.FocusField == 1, styles)
+		draw.DrawDialogCheckbox(screen, rect.X+2, sep1Y+2, "Preserve timestamps", 0, state.PreserveTimestamps, state.FocusField == 2, styles)
 
 		sep2Y := sep1Y + 3
-		DrawDialogHSeparator(screen, rect, sep2Y, borderStyle)
+		draw.DrawDialogHSeparator(screen, rect, sep2Y, borderStyle)
 
 		tform := NewTransferDialogLinearForm(TransferDialogEffectiveNumContent(state))
 		buttonY := rect.Y + rect.Height - 2
-		DrawDialogButtonRowCentered(screen, rect, buttonY, []DialogButtonSpec{
+		draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 			{Label: "OK", Shortcut: 'O', Focused: state.FocusField == tform.OKIndex()},
 			{Label: "Add paused", Shortcut: 'p', Focused: state.FocusField == tform.AddPausedIndex()},
 			{Label: "Cancel", Shortcut: 'C', Focused: state.FocusField == tform.CancelIndex()},
@@ -85,11 +86,11 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 	}
 
 	sepY := rect.Y + 4
-	DrawDialogHSeparator(screen, rect, sepY, borderStyle)
+	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
 
 	tform := NewTransferDialogLinearForm(TransferDialogEffectiveNumContent(state))
 	buttonY := rect.Y + rect.Height - 2
-	DrawDialogButtonRowCentered(screen, rect, buttonY, []DialogButtonSpec{
+	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: state.FocusField == tform.OKIndex()},
 		{Label: "Add paused", Shortcut: 'p', Focused: state.FocusField == tform.AddPausedIndex()},
 		{Label: "Cancel", Shortcut: 'C', Focused: state.FocusField == tform.CancelIndex()},

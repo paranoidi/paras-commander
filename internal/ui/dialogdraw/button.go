@@ -1,4 +1,4 @@
-package dialog
+package draw
 
 import (
 	"unicode"
@@ -9,14 +9,19 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// dialogButtonLabelRunePadding is extra width beyond utf8.RuneCountInString(label) for drawDialogButton (spaces and brackets).
+// dialogButtonLabelRunePadding is extra width beyond utf8.RuneCountInString(label) for DrawDialogButton (spaces and brackets).
 const dialogButtonLabelRunePadding = 6
 
 func dialogButtonWidth(label string) int {
 	return utf8.RuneCountInString(label) + dialogButtonLabelRunePadding
 }
 
-// drawDialogButton renders a single button with its shortcut letter highlighted.
+// DialogButtonWidth returns the rune width occupied by DrawDialogButton for label.
+func DialogButtonWidth(label string) int {
+	return dialogButtonWidth(label)
+}
+
+// DrawDialogButton renders a single button with its shortcut letter highlighted.
 // shortcut is the letter inside label to highlight (e.g. 'O' for "OK").
 // Output shape: space, "[", space, label, space, "]", space so theme backgrounds cover the chrome.
 // Returns the rendered width in rune columns.

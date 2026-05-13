@@ -1,4 +1,4 @@
-package dialog
+package draw
 
 import "github.com/paranoidi/paras-commander/internal/ui/geom"
 

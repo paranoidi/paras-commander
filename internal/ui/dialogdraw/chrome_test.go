@@ -1,4 +1,4 @@
-package dialog
+package draw
 
 import (
 	"strings"
@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -27,7 +28,7 @@ func TestDrawDialogFrameCentersTitleInTopBorder(t *testing.T) {
 		t.Fatalf("corners = %q %q, want ┌ and ┐", gotUL, gotUR)
 	}
 
-	inner := textAt(screen, rect.X+1, rect.Y, rect.Width-2)
+	inner := tcelltest.TextAt(screen, rect.X+1, rect.Y, rect.Width-2)
 	innerW := rect.Width - 2
 	padded := " " + strings.TrimSpace(title) + " "
 	tlen := utf8.RuneCountInString(padded)
@@ -81,7 +82,7 @@ func TestDrawScrollingDialogInputShowsTailWhenCursorAtEnd(t *testing.T) {
 	cursor := utf8.RuneCountInString(value)
 	DrawScrollingDialogInput(screen, 2, 2, width, value, cursor, 0, true, false, theme.Default())
 
-	got := textAt(screen, 2, 2, width)
+	got := tcelltest.TextAt(screen, 2, 2, width)
 	want := "◀CDEFGHIJ " // scroll=11 hides 0..A; overflow marker on first cell, cursor blank tail
 	if got != want {
 		t.Fatalf("visible row = %q want %q", got, want)
@@ -99,7 +100,7 @@ func TestDrawDialogFrameCentersShortTitle(t *testing.T) {
 	rect := Rect{X: 5, Y: 2, Width: 40, Height: 6}
 	DrawDialogFrame(screen, rect, "Copy", theme.Default())
 
-	inner := textAt(screen, rect.X+1, rect.Y, rect.Width-2)
+	inner := tcelltest.TextAt(screen, rect.X+1, rect.Y, rect.Width-2)
 	innerW := rect.Width - 2
 	padded := " Copy "
 	tlen := utf8.RuneCountInString(padded)

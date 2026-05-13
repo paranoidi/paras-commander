@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -23,7 +24,7 @@ func TestDrawInputFieldScrollsHorizontallyForLongValue(t *testing.T) {
 
 	drawInputField(screen, 1, 1, width, field, true, styles)
 
-	got := textAt(screen, 1, 1, width)
+	got := tcelltest.TextAt(screen, 1, 1, width)
 	if strings.Contains(got, "~") {
 		t.Fatalf("did not expect ~ truncation marker, got %q", got)
 	}
@@ -51,7 +52,7 @@ func TestDrawPathInputRowScrollsHorizontallyForLongValue(t *testing.T) {
 
 	drawPathInputRow(screen, 1, 1, width, field, true, false, false, styles)
 
-	got := textAt(screen, 1, 1, width-2)
+	got := tcelltest.TextAt(screen, 1, 1, width-2)
 	if strings.Contains(got, "~") {
 		t.Fatalf("did not expect ~ truncation marker, got %q", got)
 	}

@@ -1,5 +1,7 @@
 package dialog
 
+import "github.com/paranoidi/paras-commander/internal/ui/lineedit"
+
 // InsertRune inserts r at the field cursor. If the field is still showing a
 // suggested prefill, the first printable input replaces the suggestion.
 func (f *FileDialogField) InsertRune(r rune) {
@@ -12,7 +14,7 @@ func (f *FileDialogField) InsertRune(r rune) {
 		f.PrefillPending = false
 	}
 	runes := []rune(f.Value)
-	pos := clampRuneCursor(f.Cursor, len(runes))
+	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
 	newRunes := make([]rune, 0, len(runes)+1)
 	newRunes = append(newRunes, runes[:pos]...)
 	newRunes = append(newRunes, r)
@@ -28,7 +30,7 @@ func (f *FileDialogField) Backspace() {
 	}
 	f.commitPrefill()
 	runes := []rune(f.Value)
-	pos := clampRuneCursor(f.Cursor, len(runes))
+	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
 	if pos <= 0 || len(runes) == 0 {
 		return
 	}
@@ -46,7 +48,7 @@ func (f *FileDialogField) Delete() {
 	}
 	f.commitPrefill()
 	runes := []rune(f.Value)
-	pos := clampRuneCursor(f.Cursor, len(runes))
+	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
 	if pos >= len(runes) {
 		return
 	}
@@ -88,7 +90,7 @@ func (f *FileDialogField) MoveCursor(delta int) {
 	}
 	f.commitPrefill()
 	runes := []rune(f.Value)
-	f.Cursor = clampRuneCursor(f.Cursor+delta, len(runes))
+	f.Cursor = lineedit.ClampRuneCursor(f.Cursor+delta, len(runes))
 }
 
 // MoveCursorStart moves the cursor to the beginning and commits pending prefill text.
@@ -116,8 +118,8 @@ func (f *FileDialogField) MoveWordBackward() {
 	}
 	f.commitPrefill()
 	runes := []rune(f.Value)
-	pos := clampRuneCursor(f.Cursor, len(runes))
-	f.Cursor = BackwardWordIndex(runes, pos)
+	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
+	f.Cursor = lineedit.BackwardWordIndex(runes, pos)
 }
 
 // MoveWordForward moves the cursor past the end of the next word (readline-style).
@@ -127,8 +129,8 @@ func (f *FileDialogField) MoveWordForward() {
 	}
 	f.commitPrefill()
 	runes := []rune(f.Value)
-	pos := clampRuneCursor(f.Cursor, len(runes))
-	f.Cursor = ForwardWordIndex(runes, pos)
+	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
+	f.Cursor = lineedit.ForwardWordIndex(runes, pos)
 }
 
 // KillWordBackward deletes from the backward-word boundary up to the cursor.
@@ -138,8 +140,8 @@ func (f *FileDialogField) KillWordBackward() {
 	}
 	f.commitPrefill()
 	runes := []rune(f.Value)
-	pos := clampRuneCursor(f.Cursor, len(runes))
-	newRunes, newPos := KillWordBackward(runes, pos)
+	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
+	newRunes, newPos := lineedit.KillWordBackward(runes, pos)
 	f.Value = string(newRunes)
 	f.Cursor = newPos
 }
@@ -157,14 +159,4 @@ func (f *FileDialogField) CommitPrefill() {
 		return
 	}
 	f.commitPrefill()
-}
-
-func clampRuneCursor(pos, length int) int {
-	if pos < 0 {
-		return 0
-	}
-	if pos > length {
-		return length
-	}
-	return pos
 }
