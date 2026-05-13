@@ -361,6 +361,25 @@ func (m Model) ModalDialogOpen() bool {
 	return false
 }
 
+// QuickFilterStartBlocked reports UI states where the quick filter must not open from a plain printable key
+// in normal input mode (same modal/menu set as the legacy shouldStartFilter guard).
+func (m Model) QuickFilterStartBlocked() bool {
+	if m.Menu.Open {
+		return true
+	}
+	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
+		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
+		m.ConfigDialog.Open || m.GroupSelect.Open || m.FileDialog.Open ||
+		m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open
+}
+
+// AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
+// dedicated Jobs/Commands view keyboard handling. inputMode checks this only after earlier cases have ruled
+// out other modals.
+func (m Model) AuxiliaryViewDialogKeysBlocked() bool {
+	return m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.Menu.Open
+}
+
 // MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config show_menu_bar).
 func (m Model) MenuBarLayoutReserved() bool {
 	return !m.HideMenuBar

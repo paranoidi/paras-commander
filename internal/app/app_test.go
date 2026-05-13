@@ -3407,6 +3407,46 @@ func TestToggleSyncEnablesAndImmediatelyMirrorsHighlightedFolder(t *testing.T) {
 	}
 }
 
+// Regression: with selections-strip focus, sync must follow the strip row (what the user
+// is steering), not the file-list cursor — otherwise the other panel shows a stale directory.
+func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(beta, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActiveSubFocus = ui.SubFocusFileList
+	left := app.panelByID(ui.LeftPanel)
+	selectPanelEntryByName(t, left, "beta")
+	if !left.ToggleSelection() {
+		t.Fatal("toggle selection on beta")
+	}
+	selectPanelEntryByName(t, left, "alpha")
+	if err := left.NavigateTo(alpha, "", 20); err != nil {
+		t.Fatalf("NavigateTo alpha: %v", err)
+	}
+	if left.SelectionsStripCount() == 0 {
+		t.Fatal("expected selections strip to list beta while cwd is alpha")
+	}
+	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	left.SelectionsStripCursor = 0
+
+	app.dispatch(keymap.ActionPanelToggleSync)
+
+	want := filepath.Clean(beta)
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path); got != want {
+		t.Fatalf("follower path = %q want %q (strip row should drive sync, not file-list cursor)", got, want)
+	}
+}
+
 func TestToggleSyncDisablesWhenAlreadyDriving(t *testing.T) {
 	root := t.TempDir()
 	if err := os.Mkdir(filepath.Join(root, "alpha"), 0o755); err != nil {

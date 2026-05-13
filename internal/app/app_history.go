@@ -139,15 +139,13 @@ func (a *App) activateHistorySelection() {
 }
 
 func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
-		switch event.Rune() {
-		case 'o', 'O':
-			a.activateHistorySelection()
-			return
-		case 'c', 'C':
-			a.closeHistoryDialog()
-			return
-		}
+	if ui.AltDialogOK(event) {
+		a.activateHistorySelection()
+		return
+	}
+	if ui.AltDialogCancel(event) {
+		a.closeHistoryDialog()
+		return
 	}
 
 	switch event.Key() {
@@ -160,34 +158,24 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 		default:
 			a.activateHistorySelection()
 		}
-	case tcell.KeyTab:
-		a.model.HistoryDialog.Focus = (a.model.HistoryDialog.Focus + 1) % 3
-	case tcell.KeyBacktab:
-		a.model.HistoryDialog.Focus = (a.model.HistoryDialog.Focus + 2) % 3
-	case tcell.KeyUp:
-		switch a.model.HistoryDialog.Focus {
-		case 0:
-			if len(a.model.HistoryDialog.Ranked) > 0 {
-				if a.model.HistoryDialog.Selected > 0 {
-					a.model.HistoryDialog.Selected--
-				}
-				ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
+	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
+		st := &a.model.HistoryDialog
+		if nf, ok := ui.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+			st.Focus = nf
+			if st.Focus == 0 && event.Key() == tcell.KeyUp {
+				ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
 			}
-		default:
-			a.model.HistoryDialog.Focus = 0
-			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
+			break
 		}
-	case tcell.KeyDown:
-		switch a.model.HistoryDialog.Focus {
-		case 0:
-			if len(a.model.HistoryDialog.Ranked) > 0 {
-				if a.model.HistoryDialog.Selected < len(a.model.HistoryDialog.Ranked)-1 {
-					a.model.HistoryDialog.Selected++
-				}
-				ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
+		if st.Focus == 0 && len(st.Ranked) > 0 {
+			switch event.Key() {
+			case tcell.KeyUp:
+				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
+				ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
+			case tcell.KeyDown:
+				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
+				ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
 			}
-		case 1:
-			a.model.HistoryDialog.Focus = 2
 		}
 	case tcell.KeyHome:
 		if a.model.HistoryDialog.Focus == 0 && len(a.model.HistoryDialog.Ranked) > 0 {
@@ -202,26 +190,16 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 	case tcell.KeyPgUp:
 		if a.model.HistoryDialog.Focus == 0 && len(a.model.HistoryDialog.Ranked) > 0 {
 			step := max(1, a.historyDialogListRows()-1)
-			a.model.HistoryDialog.Selected = max(0, a.model.HistoryDialog.Selected-step)
+			a.model.HistoryDialog.Selected = ui.ListClampedSelectionDelta(
+				a.model.HistoryDialog.Selected, len(a.model.HistoryDialog.Ranked), -step)
 			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
 		}
 	case tcell.KeyPgDn:
 		if a.model.HistoryDialog.Focus == 0 && len(a.model.HistoryDialog.Ranked) > 0 {
 			step := max(1, a.historyDialogListRows()-1)
-			maxSel := len(a.model.HistoryDialog.Ranked) - 1
-			a.model.HistoryDialog.Selected = min(maxSel, a.model.HistoryDialog.Selected+step)
+			a.model.HistoryDialog.Selected = ui.ListClampedSelectionDelta(
+				a.model.HistoryDialog.Selected, len(a.model.HistoryDialog.Ranked), step)
 			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
-		}
-	case tcell.KeyLeft:
-		switch a.model.HistoryDialog.Focus {
-		case 1:
-			a.model.HistoryDialog.Focus = 0
-		case 2:
-			a.model.HistoryDialog.Focus = 1
-		}
-	case tcell.KeyRight:
-		if a.model.HistoryDialog.Focus == 1 {
-			a.model.HistoryDialog.Focus = 2
 		}
 	case tcell.KeyRune:
 		if event.Modifiers() != tcell.ModNone {

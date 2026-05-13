@@ -277,8 +277,8 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 		st.Focus = (st.Focus + 1) % 2 // same as Tab for simple 2-focus dialog
 	case tcell.KeyUp:
 		if st.Focus == 0 {
-			if len(st.Ranked) > 0 && st.Selected > 0 {
-				st.Selected--
+			if len(st.Ranked) > 0 {
+				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
 				ensureHelpListScroll(st, a.helpListRows())
 			}
 		} else {
@@ -290,24 +290,26 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 		}
 	case tcell.KeyDown:
 		if st.Focus == 0 {
-			if len(st.Ranked) > 0 && st.Selected < len(st.Ranked)-1 {
-				st.Selected++
-				ensureHelpListScroll(st, a.helpListRows())
-			} else {
-				st.Focus = 1 // move to Close button
+			if len(st.Ranked) > 0 {
+				next := ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
+				if next != st.Selected {
+					st.Selected = next
+					ensureHelpListScroll(st, a.helpListRows())
+				} else if st.Selected == len(st.Ranked)-1 {
+					st.Focus = 1 // move to Close button
+				}
 			}
 		} // on Close button, Down does nothing
 	case tcell.KeyPgUp:
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			step := max(1, a.helpListRows()-1)
-			st.Selected = max(0, st.Selected-step)
+			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
 			ensureHelpListScroll(st, a.helpListRows())
 		}
 	case tcell.KeyPgDn:
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			step := max(1, a.helpListRows()-1)
-			maxSel := len(st.Ranked) - 1
-			st.Selected = min(maxSel, st.Selected+step)
+			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
 			ensureHelpListScroll(st, a.helpListRows())
 		}
 	case tcell.KeyHome:

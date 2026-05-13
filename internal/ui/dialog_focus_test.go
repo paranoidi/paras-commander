@@ -25,6 +25,43 @@ func TestDialogLinearForm(t *testing.T) {
 	}
 }
 
+func TestDialogTrailingButtonsFormTwoButtons(t *testing.T) {
+	t.Parallel()
+	form := NewDialogTrailingButtonsForm(3, 2)
+	if g, w := form.TotalFocus(), 5; g != w {
+		t.Fatalf("TotalFocus: got %d want %d", g, w)
+	}
+	if g, w := form.MiddleButtonIndex(), -1; g != w {
+		t.Fatalf("MiddleButtonIndex 2-button: got %d want %d", g, w)
+	}
+	if g, w := form.Down(2), 3; g != w {
+		t.Fatalf("Down last content -> OK: got %d want %d", g, w)
+	}
+	if g, w := form.Left(4), 3; g != w {
+		t.Fatalf("Left Cancel->OK: got %d want %d", g, w)
+	}
+}
+
+func TestDialogTrailingButtonsFormThreeButtons(t *testing.T) {
+	t.Parallel()
+	form := NewDialogTrailingButtonsForm(3, 3)
+	if g, w := form.TotalFocus(), 6; g != w {
+		t.Fatalf("TotalFocus: got %d want %d", g, w)
+	}
+	if g, w := form.MiddleButtonIndex(), 4; g != w {
+		t.Fatalf("MiddleButtonIndex: got %d want %d", g, w)
+	}
+	if g, w := form.Right(form.OKIndex()), form.MiddleButtonIndex(); g != w {
+		t.Fatalf("Right OK->middle: got %d want %d", g, w)
+	}
+	if g, w := form.Right(form.MiddleButtonIndex()), form.CancelIndex(); g != w {
+		t.Fatalf("Right middle->Cancel: got %d want %d", g, w)
+	}
+	if g, w := form.Left(form.CancelIndex()), form.MiddleButtonIndex(); g != w {
+		t.Fatalf("Left Cancel->middle: got %d want %d", g, w)
+	}
+}
+
 func TestTransferDialogLinearForm(t *testing.T) {
 	t.Parallel()
 	form := NewTransferDialogLinearForm(3)

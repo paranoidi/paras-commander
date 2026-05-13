@@ -1178,13 +1178,13 @@ func (a *App) closeMessageDialog() {
 func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
 	d := &a.model.MessageDialog
 	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
-		switch event.Rune() {
-		case 'o', 'O':
+		if ui.AltDialogOK(event) {
 			a.closeMessageDialog()
-		case 'c', 'C':
-			if d.TwoButtons {
-				a.closeMessageDialog()
-			}
+			return
+		}
+		if ui.AltDialogCancel(event) && d.TwoButtons {
+			a.closeMessageDialog()
+			return
 		}
 		return
 	}
@@ -1218,16 +1218,14 @@ func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
 
 func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
 	// Alt+O = OK, Alt+C = Cancel
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
-		switch event.Rune() {
-		case 'o', 'O':
-			a.activateThemeDialogSelection()
-			return
-		case 'c', 'C':
-			a.styles = a.themeAtDialogOpen
-			a.closeThemeDialog()
-			return
-		}
+	if ui.AltDialogOK(event) {
+		a.activateThemeDialogSelection()
+		return
+	}
+	if ui.AltDialogCancel(event) {
+		a.styles = a.themeAtDialogOpen
+		a.closeThemeDialog()
+		return
 	}
 
 	switch event.Key() {
@@ -1244,25 +1242,20 @@ func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
 		default: // list or OK
 			a.activateThemeDialogSelection()
 		}
-	case tcell.KeyTab:
-		a.model.ThemeDialog.Focus = (a.model.ThemeDialog.Focus + 1) % 3
-	case tcell.KeyBacktab:
-		a.model.ThemeDialog.Focus = (a.model.ThemeDialog.Focus + 2) % 3
-	case tcell.KeyUp:
-		switch a.model.ThemeDialog.Focus {
-		case 0:
+	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
+		td := &a.model.ThemeDialog
+		if nf, ok := ui.ListOKCancelNavFocusKey(td.Focus, event.Key()); ok {
+			td.Focus = nf
+			break
+		}
+		if td.Focus == 0 && event.Key() == tcell.KeyUp {
 			a.moveThemeDialog(-1)
-		default:
-			a.model.ThemeDialog.Focus = 0 // Up from buttons goes to list
+			break
 		}
-	case tcell.KeyDown:
-		switch a.model.ThemeDialog.Focus {
-		case 0:
+		if td.Focus == 0 && event.Key() == tcell.KeyDown {
 			a.moveThemeDialog(1)
-		case 1:
-			a.model.ThemeDialog.Focus = 2 // OK -> Cancel
+			break
 		}
-		// Down from Cancel stays on Cancel (no wrap)
 	case tcell.KeyHome:
 		if a.model.ThemeDialog.Focus == 0 && len(a.model.ThemeDialog.Choices) > 0 {
 			a.model.ThemeDialog.Selected = 0
@@ -1281,18 +1274,6 @@ func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
 		if a.model.ThemeDialog.Focus == 0 && len(a.model.ThemeDialog.Choices) > 0 {
 			a.moveThemeDialog(a.themeDialogListViewportRows())
 		}
-	case tcell.KeyLeft:
-		switch a.model.ThemeDialog.Focus {
-		case 1:
-			a.model.ThemeDialog.Focus = 0 // Left from OK goes to list
-		case 2:
-			a.model.ThemeDialog.Focus = 1 // Left from Cancel goes to OK
-		}
-	case tcell.KeyRight:
-		if a.model.ThemeDialog.Focus == 1 {
-			a.model.ThemeDialog.Focus = 2 // Right from OK goes to Cancel
-		}
-		// Right from Cancel: stay
 	case tcell.KeyRune:
 		if event.Modifiers() != tcell.ModNone {
 			break
@@ -1741,11 +1722,49 @@ func (a *App) toggleSyncFollow() {
 // consistent). New invariants belong here, not sprinkled at call sites: any code path
 // that mutates panel state automatically triggers them via the Run-loop chokepoint.
 func (a *App) reconcileAfterEvent() {
-	a.syncFollowFromActive()
 	a.handlePanelDirChanged(ui.LeftPanel)
 	a.handlePanelDirChanged(ui.RightPanel)
 	a.handleMetaPanelDirChanged(ui.LeftPanel)
 	a.handleMetaPanelDirChanged(ui.RightPanel)
+	// Panel sync reads the driver's highlight after idle-sort / meta hooks may adjust cursors.
+	a.syncFollowFromActive()
+}
+
+// syncFollowTargetPath returns the absolute directory path the follower should mirror when
+// the driver panel is active. When keyboard focus is on the selections strip, the strip row
+// wins so sync matches what the user is steering; otherwise the file-list cursor row is used.
+func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
+	if a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip && driver.SelectionsStripCount() > 0 {
+		p, ok := driver.SelectedPathAtStripIndex(driver.SelectionsStripCursor)
+		if !ok {
+			return "", false
+		}
+		p = filepath.Clean(p)
+		if p == "" || p == "." {
+			return "", false
+		}
+		fi, err := os.Stat(p)
+		if err != nil {
+			return "", false
+		}
+		if fi.IsDir() {
+			return p, true
+		}
+		// Strip row is a file: mirror its parent directory (common "work here" intent).
+		parent := filepath.Clean(filepath.Dir(p))
+		if parent == "" || parent == p {
+			return "", false
+		}
+		if fi2, err2 := os.Stat(parent); err2 != nil || !fi2.IsDir() {
+			return "", false
+		}
+		return parent, true
+	}
+	entry, ok := driver.CurrentEntry()
+	if !ok || entry.Type != localfs.EntryDirectory {
+		return "", false
+	}
+	return filepath.Clean(entry.Path), true
 }
 
 // syncFollowFromActive mirrors the active panel's highlighted directory into the inactive panel
@@ -1759,16 +1778,17 @@ func (a *App) syncFollowFromActive() {
 	if !a.model.SyncFollowEnabled || a.model.SyncFollowPanel != a.model.ActivePanel {
 		return
 	}
-	entry, ok := a.activePanel().CurrentEntry()
-	if !ok || entry.Type != localfs.EntryDirectory {
+	driver := a.panelByID(a.model.SyncFollowPanel)
+	targetPath, ok := a.syncFollowTargetPath(driver)
+	if !ok {
 		return
 	}
 	followerID := a.inactivePanelID()
 	follower := a.panelByID(followerID)
-	if filepath.Clean(follower.Path) == filepath.Clean(entry.Path) {
+	if filepath.Clean(follower.Path) == targetPath {
 		return
 	}
-	if err := follower.Load(entry.Path); err != nil {
+	if err := follower.Load(targetPath); err != nil {
 		return
 	}
 	follower.EnsureCursorVisible(a.panelViewportRows(followerID))
@@ -1875,15 +1895,13 @@ func (a *App) applySortDialog() {
 func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 	form := ui.NewDialogLinearForm(7)
 	// Alt+O = OK, Alt+C = Cancel
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
-		switch event.Rune() {
-		case 'o', 'O':
-			a.applySortDialog()
-			return
-		case 'c', 'C':
-			a.closeSortDialog()
-			return
-		}
+	if ui.AltDialogOK(event) {
+		a.applySortDialog()
+		return
+	}
+	if ui.AltDialogCancel(event) {
+		a.closeSortDialog()
+		return
 	}
 
 	switch event.Key() {
@@ -1978,15 +1996,13 @@ func (a *App) applyConfigDialog() {
 }
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 	form := ui.NewDialogLinearForm(1)
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
-		switch event.Rune() {
-		case 'o', 'O':
-			a.applyConfigDialog()
-			return
-		case 'c', 'C':
-			a.closeConfigDialog()
-			return
-		}
+	if ui.AltDialogOK(event) {
+		a.applyConfigDialog()
+		return
+	}
+	if ui.AltDialogCancel(event) {
+		a.closeConfigDialog()
+		return
 	}
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyF9:

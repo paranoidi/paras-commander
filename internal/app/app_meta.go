@@ -170,15 +170,13 @@ func (a *App) handleMetaDialogKey(event *tcell.EventKey) {
 	form := ui.NewDialogLinearForm(n)
 
 	// Alt+O = OK, Alt+C = Cancel
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
-		switch event.Rune() {
-		case 'o', 'O':
-			a.activateMetaSelection()
-			return
-		case 'c', 'C':
-			a.closeMetaDialog()
-			return
-		}
+	if ui.AltDialogOK(event) {
+		a.activateMetaSelection()
+		return
+	}
+	if ui.AltDialogCancel(event) {
+		a.closeMetaDialog()
+		return
 	}
 
 	switch event.Key() {

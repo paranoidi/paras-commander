@@ -56,15 +56,11 @@ func (a *App) inputMode() InputMode {
 	case a.model.FileDialog.Open:
 		return InputModeFileDialog
 	case a.model.ViewMode == ui.ViewCommands &&
-		!a.model.MessageDialog.Open && !a.model.PathPicker.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
-		!a.model.TransferDialog.Open &&
-		!a.model.ConflictDialog.Open && !a.model.QuitConfirm.Open && !a.model.Menu.Open &&
+		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
 		return InputModeCommandsView
 	case a.model.ViewMode == ui.ViewJobs &&
-		!a.model.MessageDialog.Open && !a.model.PathPicker.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
-		!a.model.TransferDialog.Open &&
-		!a.model.ConflictDialog.Open && !a.model.QuitConfirm.Open && !a.model.Menu.Open &&
+		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
 		return InputModeJobsView
 	case a.model.TransferDialog.Open, a.model.ConflictDialog.Open, a.model.QuitConfirm.Open:
@@ -156,14 +152,15 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return a.handleQuit(), false
 	}
 
-	if nextAction := a.actionFromKeyEvent(event); nextAction == keymap.ActionPanelDiskUsageAbortAll {
+	resolvedAction := a.actionFromKeyEvent(event)
+	if resolvedAction == keymap.ActionPanelDiskUsageAbortAll {
 		a.abortAllDiskUsageScans()
 		a.render()
 		return false, true
 	}
 
 	// Global show-help (F1 by default). Closes menu or quick filter first.
-	if nextAction := a.actionFromKeyEvent(event); nextAction == keymap.ActionAppShowHelp && !a.model.HelpView.Open {
+	if resolvedAction == keymap.ActionAppShowHelp && !a.model.HelpView.Open {
 		// Do not open help from modal dialogs.
 		if a.model.ModalDialogOpen() {
 			return false, false
@@ -265,7 +262,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 	}
 	// Action dispatch path for normal mode and unhandled filter keys.
-	nextAction := a.actionFromKeyEvent(event)
+	nextAction := resolvedAction
 	if nextAction == "" {
 		// Alt+letter opens the corresponding pulldown menu directly.
 		if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
@@ -303,11 +300,9 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 		// Printable keys bound in the keymap run their action instead of opening quick filter (e.g. '-' unselect group).
 		return false
 	}
-	return !ui.IsAuxiliaryView(a.model.ViewMode) && !a.model.Menu.Open &&
+	return !ui.IsAuxiliaryView(a.model.ViewMode) &&
 		(a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusSelectionsStrip) &&
-		!a.model.MessageDialog.Open && !a.model.PathPicker.Open && !a.model.HistoryDialog.Open && !a.model.MetaDialog.Open && !a.model.ThemeDialog.Open && !a.model.SortDialog.Open && !a.model.ConfigDialog.Open && !a.model.GroupSelect.Open &&
-		!a.model.FileDialog.Open && !a.model.TransferDialog.Open &&
-		!a.model.ConflictDialog.Open && !a.model.QuitConfirm.Open
+		!a.model.QuickFilterStartBlocked()
 }
 
 func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {

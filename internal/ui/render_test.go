@@ -497,6 +497,38 @@ func TestRenderBlankMenuBarRowWhenModalDialogOpen(t *testing.T) {
 	}
 }
 
+func TestQuickFilterStartBlocked(t *testing.T) {
+	t.Parallel()
+	var m Model
+	if m.QuickFilterStartBlocked() {
+		t.Fatal("empty model should not block quick filter")
+	}
+	m.Menu.Open = true
+	if !m.QuickFilterStartBlocked() {
+		t.Fatal("open menu should block")
+	}
+	m = Model{MessageDialog: MessageDialogState{Open: true}}
+	if !m.QuickFilterStartBlocked() {
+		t.Fatal("message dialog should block")
+	}
+	m = Model{HelpView: HelpViewState{Open: true}}
+	if m.QuickFilterStartBlocked() {
+		t.Fatal("help view alone should not block (legacy parity with shouldStartFilter)")
+	}
+}
+
+func TestAuxiliaryViewDialogKeysBlocked(t *testing.T) {
+	t.Parallel()
+	var m Model
+	if m.AuxiliaryViewDialogKeysBlocked() {
+		t.Fatal("empty model should not block")
+	}
+	m.TransferDialog.Open = true
+	if !m.AuxiliaryViewDialogKeysBlocked() {
+		t.Fatal("transfer dialog should block")
+	}
+}
+
 func TestRenderMenuBarShowsActiveFilePermissionString(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

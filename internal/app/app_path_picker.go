@@ -130,15 +130,13 @@ func (a *App) activatePathPickerSelection() {
 
 func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 	st := &a.model.PathPicker
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
-		switch event.Rune() {
-		case 'o', 'O':
-			a.activatePathPickerSelection()
-			return
-		case 'c', 'C':
-			a.closePathPicker()
-			return
-		}
+	if ui.AltDialogOK(event) {
+		a.activatePathPickerSelection()
+		return
+	}
+	if ui.AltDialogCancel(event) {
+		a.closePathPicker()
+		return
 	}
 
 	if a.tryDialogInputPathPickerQuery(event) {
@@ -163,9 +161,7 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 		switch st.Focus {
 		case 0:
 			if len(st.Ranked) > 0 {
-				if st.Selected > 0 {
-					st.Selected--
-				}
+				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
 				ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 			}
 		default:
@@ -176,9 +172,7 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 		switch st.Focus {
 		case 0:
 			if len(st.Ranked) > 0 {
-				if st.Selected < len(st.Ranked)-1 {
-					st.Selected++
-				}
+				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
 				ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 			}
 		case 1:
@@ -197,14 +191,13 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 	case tcell.KeyPgUp:
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			step := max(1, a.pathPickerListRows()-1)
-			st.Selected = max(0, st.Selected-step)
+			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
 			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 		}
 	case tcell.KeyPgDn:
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			step := max(1, a.pathPickerListRows()-1)
-			maxSel := len(st.Ranked) - 1
-			st.Selected = min(maxSel, st.Selected+step)
+			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
 			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 		}
 	case tcell.KeyLeft:
