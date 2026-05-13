@@ -80,7 +80,8 @@ type HelpEntry struct {
 	Keys     string // "F5"
 	Section  string // "File operations"
 	Context  string // optional context, e.g. "Browser"
-	Search   string // concatenated text for fuzzy matching
+	// FuzzyExtra is action id and keywords for the rank-only corpus (after Title), space-separated.
+	FuzzyExtra string
 }
 
 // HelpViewState holds state for the centered help dialog with fuzzy search.
@@ -89,7 +90,7 @@ type HelpViewState struct {
 	Query       string
 	Entries     []HelpEntry
 	Ranked      []int            // indices into Entries (rank order)
-	MatchRanges [][]search.Range // len == len(Entries); highlight ranges on Search
+	MatchRanges [][]search.Range // len == len(Entries); rune ranges on the painted padded row
 	Selected    int              // index into Ranked
 	ListScroll  int              // first visible row index into Ranked
 	Focus       int              // 0=list+fiter, 1=Close button

@@ -1,13 +1,14 @@
 package app
 
 import (
-	"fmt"
+	"strings"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) openHelpDialog() {
@@ -38,23 +39,31 @@ func (a *App) syncHelpRanks() {
 	if !st.Open {
 		return
 	}
-	searchTexts := make([]string, len(st.Entries))
+	rankTexts := make([]string, len(st.Entries))
 	for i, e := range st.Entries {
-		searchTexts[i] = e.Search
+		rankTexts[i] = helpCanonicalRankText(e)
 	}
 	q := search.Parse(st.Query)
 	opts := search.Options{CaseInsensitive: a.config.CaseInsensitiveFilter}
-	ranked := q.Rank(searchTexts, opts)
+	ranked := q.Rank(rankTexts, opts)
 	st.Ranked = make([]int, len(ranked))
 	st.MatchRanges = make([][]search.Range, len(st.Entries))
 	for i := range st.MatchRanges {
 		st.MatchRanges[i] = nil
 	}
+	w, h := a.screen.Size()
+	metrics, metricsOK := dialog.ComputeHelpDialogListMetrics(dialog.Layout{Width: w, Height: h})
 	for i, r := range ranked {
 		st.Ranked[i] = r.Index
-		if r.Index >= 0 && r.Index < len(st.MatchRanges) {
-			st.MatchRanges[r.Index] = r.Result.Ranges
+		idx := r.Index
+		if idx < 0 || idx >= len(st.Entries) {
+			continue
 		}
+		if !metricsOK {
+			continue
+		}
+		painted := dialog.FormatHelpRow(st.Entries[idx], 0, metrics.KeyPad, metrics.KeyPad+metrics.SecPad, metrics.InputWidth)
+		st.MatchRanges[idx] = q.Match(painted, opts).Ranges
 	}
 	if st.Selected >= len(st.Ranked) {
 		if len(st.Ranked) == 0 {
@@ -122,11 +131,11 @@ func (a *App) buildHelpEntries() []ui.HelpEntry {
 		}
 		displayKeys := joinKeyDisplay(keys, spec.PreferredKey)
 		entries = append(entries, ui.HelpEntry{
-			ActionID: spec.ID,
-			Title:    spec.Title,
-			Keys:     displayKeys,
-			Section:  spec.Section,
-			Search:   fmt.Sprintf("%s %s %s %s %s", spec.Title, displayKeys, spec.Section, spec.ID, concatKeywords(spec.Keywords)),
+			ActionID:   spec.ID,
+			Title:      spec.Title,
+			Keys:       displayKeys,
+			Section:    spec.Section,
+			FuzzyExtra: strings.TrimSpace(spec.ID + concatKeywords(spec.Keywords)),
 		})
 	}
 	return entries
@@ -223,6 +232,16 @@ func concatKeywords(kw []string) string {
 		out += " " + k
 	}
 	return out
+}
+
+// helpCanonicalRankText is the terminal-agnostic corpus for help filtering and rank scores
+// (Keys, Section, Title, then FuzzyExtra). Highlights use FormatHelpRow on the padded line.
+func helpCanonicalRankText(ent ui.HelpEntry) string {
+	s := strings.Join([]string{ent.Keys, ent.Section, ent.Title}, " ")
+	if ent.FuzzyExtra != "" {
+		s += " " + ent.FuzzyExtra
+	}
+	return s
 }
 
 // helpActionRunnableInBrowser is false for jobs-only shortcuts that no-op outside the jobs view.

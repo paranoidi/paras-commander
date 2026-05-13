@@ -10,45 +10,17 @@ import (
 
 // drawHelpDialog renders the centered help dialog with fuzzy shortcut search.
 func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, styles theme.Theme) {
-	// Compute dialog size with 7-char margins left/right and ~7 rows margin top/bottom.
-	maxW := layout.Width - 14
-	if maxW < 40 {
-		maxW = 40
+	metrics, ok := ComputeHelpDialogListMetrics(layout)
+	if !ok {
+		return
 	}
-	if maxW > 90 {
-		maxW = 90
-	}
-	maxH := layout.Height - 14
-	if maxH < 12 {
-		maxH = 12
-	}
-	if maxH > 36 {
-		maxH = 36
-	}
-
-	// Chrome: title(1) + sep(1) + filter label(1) + blank(1) + filter input(1) + sep(1) + header(1) + button row(2) = 9
-	listH := maxH - 9
-	if listH < 4 {
-		listH = 4
-	}
-	height := 9 + listH
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-		listH = height - 9
-		if listH < 4 {
-			return
-		}
-	}
-
-	rect := draw.CenteredDialogRect(layout, maxW, height)
+	rect := metrics.Rect
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Help", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
 	leftCol := rect.X + 2
-	inputWidth := rect.Width - 4
-	if inputWidth < 10 {
-		return
-	}
+	inputWidth := metrics.InputWidth
+	listH := metrics.ListH
 
 	// Filter label.
 	primitive.Text(screen, leftCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
@@ -63,16 +35,7 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	// List header.
 	listTop := rect.Y + 5
 	headerStyle := styles.DialogText.Background(itemBg)
-	colKey := leftCol
-	colSection := leftCol + 28
-	if colSection > rect.X+rect.Width-3 {
-		colSection = rect.X + rect.Width - 3
-	}
-	colTitle := leftCol + 50
-	if colTitle > rect.X+rect.Width-3 {
-		colTitle = rect.X + rect.Width - 3
-	}
-	headerLine := padRight("Key", colSection-colKey) + padRight("Section", colTitle-colSection) + "Action"
+	headerLine := padRight("Key", metrics.KeyPad) + padRight("Section", metrics.SecPad) + "Action"
 	if n := len([]rune(headerLine)); n > inputWidth {
 		headerLine = string([]rune(headerLine)[:inputWidth])
 	}
@@ -94,7 +57,7 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 			entIdx := state.Ranked[idxInRank]
 			if entIdx >= 0 && entIdx < len(state.Entries) {
 				ent := state.Entries[entIdx]
-				line = formatHelpRow(ent, colKey, colSection, colTitle, rowWidth)
+				line = FormatHelpRow(ent, 0, metrics.KeyPad, metrics.KeyPad+metrics.SecPad, rowWidth)
 				if entIdx < len(state.MatchRanges) {
 					ranges = state.MatchRanges[entIdx]
 				}
@@ -125,8 +88,10 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	}, styles)
 }
 
-// formatHelpRow builds a single text line for a help entry.
-func formatHelpRow(ent HelpEntry, colKey, colSection, colTitle, width int) string {
+// FormatHelpRow builds a single text line for a help entry (padded columns then title).
+// colKey/colSection/colTitle are absolute column indices only for computing pad widths:
+// use colKey=0, colSection=keyPad, colTitle=keyPad+secPad when callers have pad widths.
+func FormatHelpRow(ent HelpEntry, colKey, colSection, colTitle, width int) string {
 	keys := ent.Keys
 	section := ent.Section
 	row := padRight(keys, colSection-colKey)
