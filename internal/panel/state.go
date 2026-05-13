@@ -42,6 +42,8 @@ type State struct {
 	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
 	DiskSorter func(absPath string) (int64, bool)
 	Sort       SortState
+	// ListFormat controls trailing columns after size (Modified / Permissions / none). Per-panel; see config default_listing_format.
+	ListFormat ListFormat
 	// IdleDiskTotalsSort is set after disk scan completes and idle-sort delay elapses (DiskUsageIdleSizeSort).
 	IdleDiskTotalsSort bool
 	// DiskUsageIdleSortActivated mirrors the disk-usage sort checkbox lifecycle (config/dialog apply).
@@ -1154,6 +1156,20 @@ func (s *State) CycleSort(viewportRows int) {
 		}
 	}
 	s.SetSortMode(modes[next], s.Sort.Reverse, s.Sort.DirectoriesFirst, viewportRows)
+}
+
+// CycleListingFormat cycles listing format: mtime → perm → brief → mtime.
+func (s *State) CycleListingFormat() {
+	formats := IterateListFormats()
+	cur := EffectiveListFormat(s.ListFormat)
+	next := 0
+	for i, f := range formats {
+		if f == cur {
+			next = (i + 1) % len(formats)
+			break
+		}
+	}
+	s.ListFormat = formats[next]
 }
 
 // ToggleSortReverse flips the reverse flag and re-sorts.

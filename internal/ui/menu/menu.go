@@ -108,6 +108,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionPanelHistoryDialog, Label: "History...", Shortcut: 'y'},
 				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
 				{Action: keymap.ActionPanelMeta, Label: "Meta", Shortcut: 'm'},
+				{Action: keymap.ActionPanelListingFormatDialog, Label: "Listing format", Shortcut: 'f'},
 			},
 		},
 		{
@@ -176,6 +177,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionPanelHistoryDialog, Label: "History...", Shortcut: 'y'},
 				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
 				{Action: keymap.ActionPanelMeta, Label: "Meta", Shortcut: 'm'},
+				{Action: keymap.ActionPanelListingFormatDialog, Label: "Listing format", Shortcut: 'f'},
 			},
 		},
 	}

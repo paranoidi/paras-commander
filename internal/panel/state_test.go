@@ -1137,6 +1137,22 @@ func TestCycleSort(t *testing.T) {
 	}
 }
 
+func TestCycleListingFormat(t *testing.T) {
+	state := State{}
+	state.CycleListingFormat()
+	if state.ListFormat != ListFormatPerm {
+		t.Fatalf("ListFormat = %v, want ListFormatPerm", state.ListFormat)
+	}
+	state.CycleListingFormat()
+	if state.ListFormat != ListFormatBrief {
+		t.Fatalf("ListFormat = %v, want ListFormatBrief", state.ListFormat)
+	}
+	state.CycleListingFormat()
+	if state.ListFormat != ListFormatMtime {
+		t.Fatalf("ListFormat = %v, want ListFormatMtime", state.ListFormat)
+	}
+}
+
 func TestLoadAppliesDiskTotalsSortImmediatelyWhenListingFullyCached(t *testing.T) {
 	dir := t.TempDir()
 	smallDir := filepath.Join(dir, "aaa")

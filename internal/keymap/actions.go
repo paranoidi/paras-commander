@@ -26,7 +26,9 @@ const (
 	ActionPanelInvertSelection       = "panel.invert-selection"
 	ActionPanelClearSelection        = "panel.clear-selection"
 	ActionPanelSortDialog            = "panel.sort-dialog"
+	ActionPanelListingFormatDialog   = "panel.listing-format-dialog"
 	ActionPanelCycleSort             = "panel.cycle-sort"
+	ActionPanelCycleListingFormat    = "panel.cycle-listing-format"
 	ActionPanelReverseSort           = "panel.reverse-sort"
 	ActionPanelFilterOpen            = "panel.filter-open"
 	ActionPanelToggleHidden          = "panel.toggle-hidden"
@@ -141,7 +143,9 @@ var KnownActions = map[string]struct{}{
 	ActionPanelInvertSelection:       {},
 	ActionPanelClearSelection:        {},
 	ActionPanelSortDialog:            {},
+	ActionPanelListingFormatDialog:   {},
 	ActionPanelCycleSort:             {},
+	ActionPanelCycleListingFormat:    {},
 	ActionPanelReverseSort:           {},
 	ActionPanelFilterOpen:            {},
 	ActionPanelToggleHidden:          {},

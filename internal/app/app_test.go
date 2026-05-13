@@ -22,6 +22,26 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
+// waitUntilAppJobsFinished polls until every job in app.jobState is finished or d elapses.
+func waitUntilAppJobsFinished(t *testing.T, app *App, d time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(d)
+	for time.Now().Before(deadline) {
+		idle := true
+		for _, j := range app.jobState.AllJobs() {
+			if j != nil && !j.Status.IsFinished() {
+				idle = false
+				break
+			}
+		}
+		if idle {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("timeout waiting for jobs to finish")
+}
+
 func TestTransientErrorTextPermissionDenied(t *testing.T) {
 	wrapped := fmt.Errorf(`read directory "/home/nella": %w`, fs.ErrPermission)
 	if got := transientErrorText(wrapped); got != "permission denied" {
@@ -4190,6 +4210,7 @@ func TestMkdirActionCreateAndCopyQueuesCopyJob(t *testing.T) {
 	if len(p.SelectedPaths) != 0 {
 		t.Fatalf("selection should be cleared after queueing copy job, got %d", len(p.SelectedPaths))
 	}
+	waitUntilAppJobsFinished(t, app, 5*time.Second)
 }
 
 func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
@@ -4232,4 +4253,5 @@ func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
 	if len(p.SelectedPaths) != 0 {
 		t.Fatalf("selection should be cleared after queueing move job, got %d", len(p.SelectedPaths))
 	}
+	waitUntilAppJobsFinished(t, app, 5*time.Second)
 }

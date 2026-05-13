@@ -278,6 +278,9 @@ func TestMenuBindingLabelUsesDefaultsAndPreferredKey(t *testing.T) {
 	if got := m.MenuBindingLabel(ActionPanelToggleHidden); got != "M-." {
 		t.Fatalf("toggle hidden = %q, want M-.", got)
 	}
+	if got := m.MenuBindingLabel(ActionPanelListingFormatDialog); got != "M-t" {
+		t.Fatalf("listing format dialog = %q, want M-t", got)
+	}
 	if got := m.MenuBindingLabel(ActionPanelHistoryDialog); got != "M-h" {
 		t.Fatalf("history = %q, want preferred M-h", got)
 	}

@@ -19,6 +19,7 @@ const (
 	InputModeMessageDialog
 	InputModeThemeDialog
 	InputModeSortDialog
+	InputModeListingFormatDialog
 	InputModeConfigDialog
 	InputModeGroupSelect
 	InputModeMenu
@@ -49,6 +50,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeThemeDialog
 	case a.model.SortDialog.Open:
 		return InputModeSortDialog
+	case a.model.ListingFormatDialog.Open:
+		return InputModeListingFormatDialog
 	case a.model.ConfigDialog.Open:
 		return InputModeConfigDialog
 	case a.model.GroupSelect.Open:
@@ -94,7 +97,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		})
 	}
 	if a.model.PrimaryModal() != ui.PrimaryModalNone ||
-		a.model.SortDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
+		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		if a.pathPickerHostFooterEligible() {
 			if lbl := a.keysPathPickerHost.MenuBindingLabel(keymap.ActionUIOpenPathPicker); lbl != "" {
@@ -203,6 +206,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return false, true
 	case InputModeSortDialog:
 		a.handleSortDialogKey(event)
+		a.render()
+		return false, true
+	case InputModeListingFormatDialog:
+		a.handleListingFormatDialogKey(event)
 		a.render()
 		return false, true
 	case InputModeConfigDialog:
@@ -401,11 +408,16 @@ func (a *App) dispatch(actionID string) {
 		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
 	case keymap.ActionPanelSortDialog:
 		a.openSortDialog()
+	case keymap.ActionPanelListingFormatDialog:
+		a.openListingFormatDialog()
 	case keymap.ActionPanelMeta:
 		a.openMetaDialog(a.model.ActivePanel)
 	case keymap.ActionPanelCycleSort:
 		activePanel.CycleSort(viewportRows)
 		a.setTransientMessage(fmt.Sprintf("Sort: %s", activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
+	case keymap.ActionPanelCycleListingFormat:
+		activePanel.CycleListingFormat()
+		a.setTransientMessage(fmt.Sprintf("Listing: %s", activePanel.ListFormat.String()), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelReverseSort:
 		activePanel.ToggleSortReverse(viewportRows)
 		direction := "ascending"

@@ -282,6 +282,8 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		a.openHistoryDialog(panelScope)
 	case keymap.ActionPanelExternalBrowser:
 		a.openPanelPathInExternalBrowser(panelScope)
+	case keymap.ActionPanelListingFormatDialog:
+		a.openListingFormatDialogForPanel(panelScope)
 	case keymap.ActionPanelMeta:
 		a.openMetaDialog(panelScope)
 	default:

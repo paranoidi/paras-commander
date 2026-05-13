@@ -223,6 +223,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, fmt.Errorf("get working directory: %w", err)
 	}
 	sortMode, _ := panel.ParseSortMode(cfg.DefaultSort)
+	listingFormat, _ := panel.ParseListFormat(cfg.DefaultListingFormat)
 	listOptions := localfs.ListOptions{
 		ShowHidden: cfg.ShowHidden,
 	}
@@ -237,6 +238,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	left.Sort.DirectoriesFirst = cfg.DirectoriesFirst
 	left.Sort.DiskUsageIdleSizeSort = cfg.DiskUsageIdleSizeSort
 	left.DiskUsageIdleSortActivated = cfg.DiskUsageIdleSizeSort
+	left.ListFormat = listingFormat
 	left.DiskSorter = duEngine.Size
 	left.ApplySort()
 	left.Filter.CaseInsensitive = cfg.CaseInsensitiveFilter
@@ -250,6 +252,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	right.Sort.DirectoriesFirst = cfg.DirectoriesFirst
 	right.Sort.DiskUsageIdleSizeSort = cfg.DiskUsageIdleSizeSort
 	right.DiskUsageIdleSortActivated = cfg.DiskUsageIdleSizeSort
+	right.ListFormat = listingFormat
 	right.DiskSorter = duEngine.Size
 	right.ApplySort()
 	right.Filter.CaseInsensitive = cfg.CaseInsensitiveFilter

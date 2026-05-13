@@ -15,12 +15,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// Layout after the name column: one space, size (panelListSizeCells), two spaces, modified time.
-// When meta is active the column order is: name | meta | size | modtime.
+// Layout after the name column: one space, size (panelListSizeCells), optional two spaces + third column.
+// When meta is active the column order is: name | meta | size | (mtime | perm | none).
 const (
 	panelListModTimeCells = 16
+	panelListPermCells    = 10
 	panelListSizeCells    = 5
-	panelListAfterName    = 1 + panelListSizeCells + 2 + panelListModTimeCells
 	// panelListMetaMax is the maximum display width (terminal cells) for the rendered Meta column
 	// (single-cell legacy or tab/newline multi-field layout; see layoutMetaCells).
 	panelListMetaMax = 20
@@ -28,13 +28,35 @@ const (
 	panelListMetaMinCells = 4
 )
 
-func panelListNameWidth(rowTextWidth int) int {
-	return max(1, rowTextWidth-panelListAfterName)
+func panelListReservedAfterName(f panel.ListFormat) int {
+	switch panel.EffectiveListFormat(f) {
+	case panel.ListFormatBrief:
+		return 1 + panelListSizeCells
+	case panel.ListFormatPerm:
+		return 1 + panelListSizeCells + 2 + panelListPermCells
+	default:
+		return 1 + panelListSizeCells + 2 + panelListModTimeCells
+	}
+}
+
+func panelListThirdColumnWidth(f panel.ListFormat) int {
+	switch panel.EffectiveListFormat(f) {
+	case panel.ListFormatBrief:
+		return 0
+	case panel.ListFormatPerm:
+		return panelListPermCells
+	default:
+		return panelListModTimeCells
+	}
+}
+
+func panelListNameWidth(rowTextWidth int, f panel.ListFormat) int {
+	return max(1, rowTextWidth-panelListReservedAfterName(f))
 }
 
 // panelListNameWidthWithMeta returns name width when the Meta column is shown.
-func panelListNameWidthWithMeta(rowTextWidth, metaColW int) int {
-	return max(1, rowTextWidth-panelListAfterName-2-metaColW)
+func panelListNameWidthWithMeta(rowTextWidth, metaColW int, f panel.ListFormat) int {
+	return max(1, rowTextWidth-panelListReservedAfterName(f)-2-metaColW)
 }
 
 func truncateHeaderRunes(max int, s string) string {
@@ -157,9 +179,10 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	}
 	primitive.Text(screen, contentStart+iconStrip, headerY, rowTextWidth, header, headerStyle)
 
-	nameWidth := panelListNameWidth(rowTextWidth)
+	listFmt := panel.EffectiveListFormat(state.ListFormat)
+	nameWidth := panelListNameWidth(rowTextWidth, listFmt)
 	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaColW)
+		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaColW, listFmt)
 	}
 	markSource := styles.PanelRowSelected
 	if chromeBlocked {
@@ -230,7 +253,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			if showMeta {
 				metaText = metaFormatted[entry.Path]
 			}
-			text = formatEntry(entry, rowTextWidth, showIcons, jobMarkGlyph, subtreeMark, painter, showMeta, metaColW, metaText)
+			text = formatEntry(entry, rowTextWidth, showIcons, jobMarkGlyph, subtreeMark, painter, showMeta, metaColW, metaText, listFmt)
 			if showDiskUsage && painter != nil && diskDenom > 0 {
 				fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, painter), diskDenom, fullRowCells)
 			}
@@ -244,7 +267,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		}
 
 		if hasEntry {
-			spans = matchSpans(cur, rowTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, styles, showIcons, jobMarkGlyph, subtreeMark, showMeta, metaColW, func(di int) tcell.Style {
+			spans = matchSpans(cur, rowTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, styles, showIcons, jobMarkGlyph, subtreeMark, showMeta, metaColW, listFmt, func(di int) tcell.Style {
 				return blendCell(di + leftGutter + iconStrip)
 			})
 			if jobMark || subtreeMark {
@@ -354,19 +377,28 @@ func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cur
 }
 
 func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMeta bool, metaColW int) string {
-	nameWidth := panelListNameWidth(rowTextWidth)
+	listFmt := panel.EffectiveListFormat(state.ListFormat)
+	tw := panelListThirdColumnWidth(listFmt)
+	nameWidth := panelListNameWidth(rowTextWidth, listFmt)
 	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaColW)
+		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaColW, listFmt)
 	}
-	nameTitle, sizeTitle, modTitle := state.ListColumnTitles(showIcons)
+	nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 	nameTitle = truncateHeaderRunes(nameWidth, nameTitle)
 	sizeTitle = truncateHeaderRunes(panelListSizeCells, sizeTitle)
-	modTitle = truncateHeaderRunes(panelListModTimeCells, modTitle)
+	if tw == 0 {
+		if showMeta {
+			metaHdr := padMetaLineToWidth("Meta", metaColW)
+			return fmt.Sprintf("%-*s  %s %*s", nameWidth, nameTitle, metaHdr, panelListSizeCells, sizeTitle)
+		}
+		return fmt.Sprintf("%-*s %*s", nameWidth, nameTitle, panelListSizeCells, sizeTitle)
+	}
+	thirdTitle = truncateHeaderRunes(tw, thirdTitle)
 	if showMeta {
 		metaHdr := padMetaLineToWidth("Meta", metaColW)
-		return fmt.Sprintf("%-*s  %s %*s  %-*s", nameWidth, nameTitle, metaHdr, panelListSizeCells, sizeTitle, panelListModTimeCells, modTitle)
+		return fmt.Sprintf("%-*s  %s %*s  %-*s", nameWidth, nameTitle, metaHdr, panelListSizeCells, sizeTitle, tw, thirdTitle)
 	}
-	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, nameTitle, panelListSizeCells, sizeTitle, panelListModTimeCells, modTitle)
+	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, nameTitle, panelListSizeCells, sizeTitle, tw, thirdTitle)
 }
 
 func panelEntryStyle(entry localfs.Entry, chromeBlocked bool, styles theme.Theme) tcell.Style {
@@ -397,18 +429,34 @@ type displayRune struct {
 	NameIdx int // -1 for prefix/suffix decoration
 }
 
-func formatEntry(entry localfs.Entry, width int, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, painter DiskUsagePainter, showMeta bool, metaColW int, metaText string) string {
-	nameWidth := panelListNameWidth(width)
+func formatEntry(entry localfs.Entry, width int, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, painter DiskUsagePainter, showMeta bool, metaColW int, metaText string, listFmt panel.ListFormat) string {
+	listFmt = panel.EffectiveListFormat(listFmt)
+	tw := panelListThirdColumnWidth(listFmt)
+	nameWidth := panelListNameWidth(width, listFmt)
 	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(width, metaColW)
+		nameWidth = panelListNameWidthWithMeta(width, metaColW, listFmt)
 	}
 	display := entryDisplayRunes(entry, nameWidth, showFileIcons, jobMarkRune, subtreeSelectionMark)
 	name := string(runesFromDisplay(display))
+	if tw == 0 {
+		if showMeta {
+			metaPadded := padMetaLineToWidth(metaText, metaColW)
+			return fmt.Sprintf("%-*s  %s %*s", nameWidth, name, metaPadded, panelListSizeCells, formatListedSize(entry, painter))
+		}
+		return fmt.Sprintf("%-*s %*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter))
+	}
+	var third string
+	switch listFmt {
+	case panel.ListFormatPerm:
+		third = formatListedPerm(entry)
+	default:
+		third = formatTime(entry.ModifiedAt)
+	}
 	if showMeta {
 		metaPadded := padMetaLineToWidth(metaText, metaColW)
-		return fmt.Sprintf("%-*s  %s %*s  %-*s", nameWidth, name, metaPadded, panelListSizeCells, formatListedSize(entry, painter), panelListModTimeCells, formatTime(entry.ModifiedAt))
+		return fmt.Sprintf("%-*s  %s %*s  %-*s", nameWidth, name, metaPadded, panelListSizeCells, formatListedSize(entry, painter), tw, third)
 	}
-	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter), panelListModTimeCells, formatTime(entry.ModifiedAt))
+	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter), tw, third)
 }
 
 // entryListingSuffixDecorationLen returns how many trailing runes are reserved for job + subtree selection marks.
@@ -496,13 +544,14 @@ func runesFromDisplay(display []displayRune) []rune {
 	return runes
 }
 
-func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, showMeta bool, metaColW int, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
+func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, showMeta bool, metaColW int, listFmt panel.ListFormat, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
 	if len(ranges) == 0 {
 		return nil
 	}
-	nameWidth := panelListNameWidth(rowWidth)
+	listFmt = panel.EffectiveListFormat(listFmt)
+	nameWidth := panelListNameWidth(rowWidth, listFmt)
 	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(rowWidth, metaColW)
+		nameWidth = panelListNameWidthWithMeta(rowWidth, metaColW, listFmt)
 	}
 	display := entryDisplayRunes(entry, nameWidth, showFileIcons, jobMarkRune, subtreeSelectionMark)
 	matchStyle := styles.FuzzyHighlight
@@ -707,6 +756,14 @@ func FormatByteSize(n int64) string {
 	default:
 		return fmt.Sprintf("%.1f TiB", float64(n)/float64(TiB))
 	}
+}
+
+func formatListedPerm(entry localfs.Entry) string {
+	s := entry.Mode.String()
+	if len(s) > panelListPermCells {
+		s = s[:panelListPermCells]
+	}
+	return fmt.Sprintf("%-*s", panelListPermCells, s)
 }
 
 func formatTime(value time.Time) string {

@@ -64,16 +64,17 @@ type Model struct {
 	// MenuBarActivitySpinner requests the busy spinner glyph at the menu-bar trailing edge (set by App.render).
 	MenuBarActivitySpinner bool
 	// SpinPhase advances while the menu-bar activity spinner animates (braille glyph sequence).
-	SpinPhase       uint8
-	Menu            menu.State
-	MenuDefinitions []menu.Definition
-	ThemeDialog     ThemeDialogState
-	ConfigDialog    ConfigDialogState
-	SortDialog      SortDialogState
-	GroupSelect     GroupSelectState
-	PathPicker      PathPickerState
-	HistoryDialog   HistoryDialogState
-	MetaDialog      MetaDialogState
+	SpinPhase           uint8
+	Menu                menu.State
+	MenuDefinitions     []menu.Definition
+	ThemeDialog         ThemeDialogState
+	ConfigDialog        ConfigDialogState
+	SortDialog          SortDialogState
+	ListingFormatDialog ListingFormatDialogState
+	GroupSelect         GroupSelectState
+	PathPicker          PathPickerState
+	HistoryDialog       HistoryDialogState
+	MetaDialog          MetaDialogState
 	// MetaResults holds per-panel command output keyed by entry path (nil = meta not active).
 	MetaResults    [2]map[string]string
 	HelpView       HelpViewState
@@ -140,7 +141,7 @@ func (m Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open {
 		return true
 	}
 	return false
@@ -154,6 +155,7 @@ func (m Model) QuickFilterStartBlocked() bool {
 	}
 	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
+		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.GroupSelect.Open || m.FileDialog.Open ||
 		m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open
 }
@@ -250,6 +252,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	if model.SortDialog.Open {
 		dialog.DrawSortDialog(screen, layout, model.SortDialog, styles)
+	}
+	if model.ListingFormatDialog.Open {
+		dialog.DrawListingFormatDialog(screen, layout, model.ListingFormatDialog, styles)
 	}
 	if model.GroupSelect.Open {
 		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)

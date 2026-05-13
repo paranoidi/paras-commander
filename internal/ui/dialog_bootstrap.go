@@ -16,6 +16,7 @@ type (
 	ThemeDialogState          = dialog.ThemeDialogState
 	ConfigDialogState         = dialog.ConfigDialogState
 	SortDialogState           = dialog.SortDialogState
+	ListingFormatDialogState  = dialog.ListingFormatDialogState
 	GroupSelectState          = dialog.GroupSelectState
 	PathPickerPurpose         = dialog.PathPickerPurpose
 	PathPickerItem            = dialog.PathPickerItem

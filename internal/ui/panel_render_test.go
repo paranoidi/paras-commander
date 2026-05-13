@@ -104,8 +104,8 @@ func TestFormatByteSizeBinaryOneDecimal(t *testing.T) {
 func TestPanelListHeaderWidthMatchesFormatEntryLayout(t *testing.T) {
 	rowText := 50
 	hdr := panelListHeader(rowText, panel.State{}, false, false, 0)
-	nameW := panelListNameWidth(rowText)
-	wantLen := nameW + panelListAfterName
+	nameW := panelListNameWidth(rowText, panel.ListFormatMtime)
+	wantLen := nameW + panelListReservedAfterName(panel.ListFormatMtime)
 	if utf8.RuneCountInString(hdr) != wantLen {
 		t.Fatalf("header display width = %d, want %d", utf8.RuneCountInString(hdr), wantLen)
 	}
@@ -113,7 +113,7 @@ func TestPanelListHeaderWidthMatchesFormatEntryLayout(t *testing.T) {
 
 func TestPanelListHeaderIconsLeadingSpaceMatchesNamePrefix(t *testing.T) {
 	const rowText = 50
-	nameW := panelListNameWidth(rowText)
+	nameW := panelListNameWidth(rowText, panel.ListFormatMtime)
 	hdr := panelListHeader(rowText, panel.State{}, true, false, 0)
 	nameField := strings.TrimRight(hdr[:nameW], " ")
 	want := "↑ Name"

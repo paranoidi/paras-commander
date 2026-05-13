@@ -184,29 +184,63 @@ func compareDiskUsagePrimary(left, right localfs.Entry, diskSorter func(string) 
 }
 
 // ListColumnTitles builds panel header labels with ↑/↓ on the active sort column.
-func (s State) ListColumnTitles(showIcons bool) (nameTitle, sizeTitle, modTitle string) {
+func (s State) ListColumnTitles(showIcons bool) (nameTitle, sizeTitle, thirdTitle string) {
 	const asc = '↑'
 	const desc = '↓'
 	nameBase := "Name"
 	if showIcons {
 		nameBase = " Name"
 	}
+	f := EffectiveListFormat(s.ListFormat)
 	if s.primarySortUsesDiskTotals() {
-		return nameBase, fmt.Sprintf("%cSize", desc), "Modified"
+		switch f {
+		case ListFormatBrief:
+			return nameBase, fmt.Sprintf("%cSize", desc), ""
+		case ListFormatPerm:
+			return nameBase, fmt.Sprintf("%cSize", desc), "Permissions"
+		default:
+			return nameBase, fmt.Sprintf("%cSize", desc), "Modified"
+		}
 	}
 	arrow := asc
 	if s.Sort.Reverse {
 		arrow = desc
 	}
+	const lblMod = "Modified"
+	const lblPerm = "Permissions"
+	if f == ListFormatBrief {
+		switch s.Sort.Mode {
+		case SortName, SortExtension:
+			return fmt.Sprintf("%c%s", arrow, nameBase), "Size", ""
+		case SortSize:
+			return nameBase, fmt.Sprintf("%cSize", arrow), ""
+		case SortMtime:
+			return nameBase, fmt.Sprintf("%cSize", arrow), ""
+		default:
+			return fmt.Sprintf("%c%s", arrow, nameBase), "Size", ""
+		}
+	}
+	if f == ListFormatPerm {
+		switch s.Sort.Mode {
+		case SortName, SortExtension:
+			return fmt.Sprintf("%c%s", arrow, nameBase), "Size", lblPerm
+		case SortSize:
+			return nameBase, fmt.Sprintf("%cSize", arrow), lblPerm
+		case SortMtime:
+			return nameBase, "Size", fmt.Sprintf("%c%s", arrow, lblPerm)
+		default:
+			return fmt.Sprintf("%c%s", arrow, nameBase), "Size", lblPerm
+		}
+	}
 	switch s.Sort.Mode {
 	case SortName, SortExtension:
-		return fmt.Sprintf("%c%s", arrow, nameBase), "Size", "Modified"
+		return fmt.Sprintf("%c%s", arrow, nameBase), "Size", lblMod
 	case SortSize:
-		return nameBase, fmt.Sprintf("%cSize", arrow), "Modified"
+		return nameBase, fmt.Sprintf("%cSize", arrow), lblMod
 	case SortMtime:
-		return nameBase, "Size", fmt.Sprintf("%cModified", arrow)
+		return nameBase, "Size", fmt.Sprintf("%c%s", arrow, lblMod)
 	default:
-		return fmt.Sprintf("%c%s", arrow, nameBase), "Size", "Modified"
+		return fmt.Sprintf("%c%s", arrow, nameBase), "Size", lblMod
 	}
 }
 

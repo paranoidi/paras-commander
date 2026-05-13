@@ -17,6 +17,7 @@ func (a *App) openSortDialog() {
 }
 
 func (a *App) openSortDialogForPanel(panelID int) {
+	a.closeListingFormatDialog()
 	target := a.panelByID(panelID)
 	a.model.SortDialog = ui.SortDialogState{
 		Open:                  true,
@@ -117,6 +118,93 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 	}
 	if focus, ok := form.MoveFocus(a.model.SortDialog.Focus, event.Key()); ok {
 		a.model.SortDialog.Focus = focus
+	}
+}
+
+func (a *App) openListingFormatDialog() {
+	a.openListingFormatDialogForPanel(a.model.ActivePanel)
+}
+
+func (a *App) openListingFormatDialogForPanel(panelID int) {
+	a.closeSortDialog()
+	a.clearTransientMessage()
+	target := a.panelByID(panelID)
+	a.model.ListingFormatDialog = ui.ListingFormatDialogState{
+		Open:       true,
+		ListFormat: panel.EffectiveListFormat(target.ListFormat),
+		Focus:      0,
+		PanelID:    panelID,
+	}
+}
+
+func (a *App) closeListingFormatDialog() {
+	a.model.ListingFormatDialog.Open = false
+}
+
+func (a *App) applyListingFormatDialog() {
+	st := a.model.ListingFormatDialog
+	target := a.panelByID(st.PanelID)
+	target.ListFormat = panel.EffectiveListFormat(st.ListFormat)
+	a.setTransientMessage(fmt.Sprintf("%s listing: %s", panelLabel(st.PanelID), target.ListFormat.String()), ui.MessageUrgencyInfo)
+	a.closeListingFormatDialog()
+}
+
+func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
+	form := ui.NewDialogLinearForm(3)
+	radios := panel.ListFormatDialogRadios()
+	if ui.AltDialogOK(event) {
+		a.applyListingFormatDialog()
+		return
+	}
+	if ui.AltDialogCancel(event) {
+		a.closeListingFormatDialog()
+		return
+	}
+	switch event.Key() {
+	case tcell.KeyEsc, tcell.KeyF9:
+		a.closeListingFormatDialog()
+	case tcell.KeyEnter:
+		switch a.model.ListingFormatDialog.Focus {
+		case form.CancelIndex():
+			a.closeListingFormatDialog()
+		default:
+			a.applyListingFormatDialog()
+		}
+	case tcell.KeyRune:
+		if event.Modifiers() != tcell.ModNone {
+			break
+		}
+		ch := event.Rune()
+		matchedRadio := false
+		for i, row := range radios {
+			if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
+				a.model.ListingFormatDialog.ListFormat = row.Format
+				a.model.ListingFormatDialog.Focus = i
+				matchedRadio = true
+				break
+			}
+		}
+		if matchedRadio {
+			break
+		}
+		switch ch {
+		case 'o', 'O':
+			a.applyListingFormatDialog()
+		case 'c', 'C':
+			a.closeListingFormatDialog()
+		case ' ':
+			switch a.model.ListingFormatDialog.Focus {
+			case 0, 1, 2:
+				a.model.ListingFormatDialog.ListFormat = radios[a.model.ListingFormatDialog.Focus].Format
+			case form.OKIndex():
+				a.applyListingFormatDialog()
+			case form.CancelIndex():
+				a.closeListingFormatDialog()
+			}
+		}
+	}
+	if focus, ok := form.MoveFocus(a.model.ListingFormatDialog.Focus, event.Key()); ok {
+		a.model.ListingFormatDialog.Focus = focus
 	}
 }
 

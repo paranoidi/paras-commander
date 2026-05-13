@@ -222,6 +222,15 @@ func TestLoadFromPathsClampsUnsupportedValuesToDefaults(t *testing.T) {
 			},
 		},
 		{
+			name:    "listing format invalid",
+			content: `default_listing_format = "wide"`,
+			testFn: func(t *testing.T, cfg Config) {
+				if cfg.DefaultListingFormat != ListingFormatMtime {
+					t.Fatalf("DefaultListingFormat = %q, want clamped to %q", cfg.DefaultListingFormat, ListingFormatMtime)
+				}
+			},
+		},
+		{
 			name:    "job concurrency",
 			content: `job_concurrency = 2`,
 			testFn: func(t *testing.T, cfg Config) {

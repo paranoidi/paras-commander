@@ -44,6 +44,14 @@ type SortDialogState struct {
 	PanelID               int // LeftPanel or RightPanel
 }
 
+// ListingFormatDialogState is the renderable state for the panel listing format modal.
+type ListingFormatDialogState struct {
+	Open       bool
+	ListFormat panel.ListFormat
+	Focus      int // 0-2=radios, 3=OK, 4=Cancel
+	PanelID    int // LeftPanel or RightPanel
+}
+
 // GroupSelectState is the renderable state for the group selection input modal.
 type GroupSelectState struct {
 	Open             bool

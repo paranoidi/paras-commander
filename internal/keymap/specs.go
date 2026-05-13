@@ -253,11 +253,25 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"order"},
 		},
 		{
+			ID:          ActionPanelListingFormatDialog,
+			Title:       "Listing format dialog",
+			Section:     "Sort & display",
+			DefaultKeys: []string{"M-t"},
+			Keywords:    []string{"columns", "listing", "mtime", "permissions", "brief", "radio"},
+		},
+		{
 			ID:          ActionPanelCycleSort,
 			Title:       "Cycle sort mode",
 			Section:     "Sort & display",
 			DefaultKeys: nil, // unbound by default
 			Keywords:    []string{"order"},
+		},
+		{
+			ID:          ActionPanelCycleListingFormat,
+			Title:       "Cycle listing format",
+			Section:     "Sort & display",
+			DefaultKeys: nil, // opt-in under [action_keys]; M-t defaults to listing-format-dialog
+			Keywords:    []string{"columns", "listing", "mtime", "permissions", "brief"},
 		},
 		{
 			ID:          ActionPanelReverseSort,

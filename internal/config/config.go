@@ -36,7 +36,11 @@ const (
 	SortExtension   = "extension"
 	SortSize        = "size"
 	SortMtime       = "mtime"
-	SortDiskUsage   = "disk_usage"
+	// Listing format root keys (default_listing_format).
+	ListingFormatMtime = "mtime"
+	ListingFormatPerm  = "perm"
+	ListingFormatBrief = "brief"
+	SortDiskUsage      = "disk_usage"
 	DeletePermanent = "permanent"
 	FilterModeFuzzy = "fuzzy"
 	FilterSyntaxFZF = "subset-fzf"
@@ -92,6 +96,7 @@ type Config struct {
 	JobConcurrency                  int    `toml:"job_concurrency"`
 	StartupPathMode                 string `toml:"startup_path_mode"`
 	DefaultSort                     string `toml:"default_sort"`
+	DefaultListingFormat            string `toml:"default_listing_format"`
 	SortReverse                     bool   `toml:"sort_reverse"`
 	DirectoriesFirst                bool   `toml:"directories_first"`
 	DiskUsageIdleSizeSort           bool   `toml:"disk_usage_idle_size_sort"`
@@ -205,6 +210,7 @@ func Default() Config {
 		JobConcurrency:                  1,
 		StartupPathMode:                 StartupPathCWD,
 		DefaultSort:                     SortName,
+		DefaultListingFormat:            ListingFormatMtime,
 		SortReverse:                     false,
 		DirectoriesFirst:                true,
 		DiskUsageIdleSizeSort:           true,
@@ -629,6 +635,9 @@ func (c *Config) Validate() error {
 	if !c.sortModeValid(c.DefaultSort) {
 		c.DefaultSort = builtin.DefaultSort
 	}
+	if !c.listingFormatValid(c.DefaultListingFormat) {
+		c.DefaultListingFormat = builtin.DefaultListingFormat
+	}
 	// SortReverse is now supported, no clamping needed
 	if !c.FollowSymlinksOnNavigation {
 		c.FollowSymlinksOnNavigation = builtin.FollowSymlinksOnNavigation
@@ -714,6 +723,15 @@ func (c *Config) Validate() error {
 func (c Config) sortModeValid(value string) bool {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case SortName, SortExtension, SortSize, SortMtime:
+		return true
+	default:
+		return false
+	}
+}
+
+func (c Config) listingFormatValid(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case ListingFormatMtime, "modified", ListingFormatPerm, "permissions", "mode", ListingFormatBrief, "minimal":
 		return true
 	default:
 		return false
