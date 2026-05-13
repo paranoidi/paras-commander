@@ -1,7 +1,7 @@
 package dialog
 
 import (
-	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"fmt"
 
 	"github.com/gdamore/tcell/v2"

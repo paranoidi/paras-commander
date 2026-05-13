@@ -4,7 +4,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
-	"github.com/paranoidi/paras-commander/internal/ui/dialogdraw"
 	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
 )
 
@@ -39,7 +38,7 @@ type (
 	DialogTrailingButtonsForm = dialog.DialogTrailingButtonsForm
 	DialogLinearForm          = dialog.DialogLinearForm
 	TransferDialogLinearForm  = dialog.TransferDialogLinearForm
-	DialogButtonSpec          = draw.DialogButtonSpec
+	DialogButtonSpec          = dialog.DialogButtonSpec
 )
 
 const (
@@ -85,7 +84,7 @@ var (
 	ListClampedSelectionDelta         = dialog.ListClampedSelectionDelta
 	EnsurePathPickerListScroll        = dialog.EnsurePathPickerListScroll
 	EnsureHistoryListScroll           = dialog.EnsureHistoryListScroll
-	EnsureScrollInputVisible          = draw.EnsureScrollInputVisible
+	EnsureScrollInputVisible          = dialog.EnsureScrollInputVisible
 	NewDialogLinearForm               = dialog.NewDialogLinearForm
 	NewDialogTrailingButtonsForm      = dialog.NewDialogTrailingButtonsForm
 	NewTransferDialogLinearForm       = dialog.NewTransferDialogLinearForm
@@ -100,7 +99,7 @@ var (
 	KillWordBackward                  = lineedit.KillWordBackward
 )
 
-// AccentGlyphStyle applies menu/dialog shortcut accent styling (delegates to draw).
+// AccentGlyphStyle applies menu/dialog shortcut accent styling (delegates to dialog).
 func AccentGlyphStyle(base, accent tcell.Style) tcell.Style {
-	return draw.AccentGlyphStyle(base, accent)
+	return dialog.AccentGlyphStyle(base, accent)
 }
