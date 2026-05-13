@@ -14,6 +14,8 @@ When user request shortcut to be added it needs to be configurable in the config
 
 When new colors are being added be sure to update any existing themes to use these new colors (including `dialog.input.active.placeholder` / `dialog.input.inactive.placeholder` for dimmed suggested input text when applicable).
 
+Always aim to have ONE source for the truth. This applies to keybindings, theme usage, padding and margin values.
+
 # Backwards compatibility (CRITICAL)
 
 The application is in prototyping phase. There is no need to make anything backwards compatible. Update all existing code to

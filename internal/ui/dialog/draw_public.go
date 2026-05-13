@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
 // DialogButtonSpec describes one rendered dialog button (label, Alt shortcut, focus).
@@ -18,11 +19,11 @@ func AccentGlyphStyle(base, accent tcell.Style) tcell.Style {
 }
 
 // DrawDialogHSeparator draws a horizontal rule inside a dialog frame (re-export for callers outside package dialog).
-func DrawDialogHSeparator(screen tcell.Screen, rect Rect, y int, borderStyle tcell.Style) {
+func DrawDialogHSeparator(screen tcell.Screen, rect geom.Rect, y int, borderStyle tcell.Style) {
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 }
 
 // DrawDialogButtonRowCentered draws a centered row of dialog buttons (re-export for callers outside package dialog).
-func DrawDialogButtonRowCentered(screen tcell.Screen, rect Rect, y int, buttons []DialogButtonSpec, styles theme.Theme) {
+func DrawDialogButtonRowCentered(screen tcell.Screen, rect geom.Rect, y int, buttons []DialogButtonSpec, styles theme.Theme) {
 	draw.DrawDialogButtonRowCentered(screen, rect, y, buttons, styles)
 }

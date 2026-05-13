@@ -19,7 +19,7 @@ const (
 )
 
 // ThemeDialogListViewportRows is how many theme rows fit in the left column; use for PageUp/PageDown in the theme dialog.
-func ThemeDialogListViewportRows(layout Layout, choiceCount int) int {
+func ThemeDialogListViewportRows(layout geom.Layout, choiceCount int) int {
 	dh := themeDialogClampedHeight(layout, choiceCount)
 	if dh < 8 {
 		return 1
@@ -27,7 +27,7 @@ func ThemeDialogListViewportRows(layout Layout, choiceCount int) int {
 	return dh - themeDialogListViewportExtra
 }
 
-func themeDialogClampedHeight(layout Layout, choiceCount int) int {
+func themeDialogClampedHeight(layout geom.Layout, choiceCount int) int {
 	const chromeHeight = 5 // border(1) + blank(1) + outer-sep(1) + outer-buttons(1) + border(1)
 	dialogHeight := max(choiceCount, themeDialogPreviewRows) + chromeHeight
 	if dialogHeight > layout.Height-2 {

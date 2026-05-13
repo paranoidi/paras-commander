@@ -120,14 +120,15 @@ func fileDialogTitle(dialogType FileDialogType) string {
 
 func fileDialogWidth(screenWidth int, state FileDialogState) int {
 	minWidth := 30
-	// Compute the widest field label + value.
+	// Field row width follows labels only; values scroll in drawInputField / drawPathInputRow.
 	for _, field := range state.Fields {
-		labelLength := utf8.RuneCountInString(field.Label)
-		contentWidth := max(labelLength, utf8.RuneCountInString(field.Value))
-		fw := contentWidth + 6
+		fw := utf8.RuneCountInString(field.Label) + 6
 		if fw > minWidth {
 			minWidth = fw
 		}
+	}
+	if len(state.Fields) > 0 {
+		minWidth = max(minWidth, PreferredFormDialogWidth)
 	}
 	// For delete dialog, use the message.
 	if state.DialogType == FileDialogDelete {
@@ -138,13 +139,6 @@ func fileDialogWidth(screenWidth int, state FileDialogState) int {
 				lineWidth = lw
 			}
 		}
-		if lineWidth > minWidth {
-			minWidth = lineWidth
-		}
-	}
-	// For add-bookmark dialog, also fit the read-only path line stored in Message.
-	if state.DialogType == FileDialogAddBookmark {
-		lineWidth := utf8.RuneCountInString(state.Message) + 4
 		if lineWidth > minWidth {
 			minWidth = lineWidth
 		}

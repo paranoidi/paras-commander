@@ -377,7 +377,7 @@ func (a *App) pathPickerForwardDelete() {
 // pathPickerItemsHistoryAndBookmarks returns merged passive-first panel histories plus
 // bookmarks (deduped by cleaned path), each with a display line for fuzzy matching.
 func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) {
-	passive := a.passivePanel()
+	passive := a.inactivePanel()
 	active := a.activePanel()
 	seen := make(map[string]struct{})
 	var items []ui.PathPickerItem

@@ -92,7 +92,6 @@ var (
 	TransferDialogEffectiveNumContent = dialog.TransferDialogEffectiveNumContent
 	TransferDialogMoveFocus           = dialog.TransferDialogMoveFocus
 	DialogPairLeftRight               = dialog.DialogPairLeftRight
-	ThemeDialogListViewportRows       = dialog.ThemeDialogListViewportRows
 	IsWordRune                        = lineedit.IsWordRune
 	BackwardWordIndex                 = lineedit.BackwardWordIndex
 	ForwardWordIndex                  = lineedit.ForwardWordIndex
@@ -102,4 +101,9 @@ var (
 // AccentGlyphStyle applies menu/dialog shortcut accent styling (delegates to dialog).
 func AccentGlyphStyle(base, accent tcell.Style) tcell.Style {
 	return dialog.AccentGlyphStyle(base, accent)
+}
+
+// ThemeDialogListViewportRows is how many theme rows fit in the theme dialog list column (delegates to dialog).
+func ThemeDialogListViewportRows(layout Layout, choiceCount int) int {
+	return dialog.ThemeDialogListViewportRows(layout, choiceCount)
 }

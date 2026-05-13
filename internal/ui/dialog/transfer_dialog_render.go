@@ -8,7 +8,7 @@ import (
 )
 
 func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialogState, styles theme.Theme) {
-	width := 60
+	width := PreferredFormDialogWidth
 	height := 10
 	title := "Copy"
 	if state.Kind == TransferKindMove {
