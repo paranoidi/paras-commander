@@ -94,7 +94,7 @@ func (a *App) handleMenuKey(event *tcell.EventKey) bool {
 			}
 			break
 		}
-		if event.Modifiers() == tcell.ModAlt {
+		if keymap.AltLetterModifiers(event.Modifiers()) {
 			if a.selectTopMenuShortcut(event.Rune()) {
 				a.model.Menu.PulldownOpen = true
 				break

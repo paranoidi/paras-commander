@@ -5,6 +5,7 @@ import (
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -254,7 +255,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 		}
 	case tcell.KeyRune:
 		// Mnemonics follow dialog standards: Alt+letter only (plain typing goes into the pattern).
-		if event.Modifiers() == tcell.ModAlt {
+		if keymap.AltLetterModifiers(event.Modifiers()) {
 			switch event.Rune() {
 			case 'o', 'O':
 				a.executeGroupSelect()

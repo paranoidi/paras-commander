@@ -14,10 +14,16 @@ func TestAltDialogOKCancel(t *testing.T) {
 	if !AltDialogOK(tcell.NewEventKey(tcell.KeyRune, 'O', tcell.ModAlt)) {
 		t.Fatal("Alt+O")
 	}
+	if !AltDialogOK(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModMeta)) {
+		t.Fatal("Meta+o should match dialog OK (Meta as Alt)")
+	}
 	if AltDialogOK(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone)) {
 		t.Fatal("plain o")
 	}
 	if !AltDialogCancel(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt)) {
 		t.Fatal("Alt+c")
+	}
+	if !AltDialogCancel(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModMeta)) {
+		t.Fatal("Meta+c should match dialog Cancel")
 	}
 }

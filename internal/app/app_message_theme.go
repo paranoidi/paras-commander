@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -35,7 +36,7 @@ func (a *App) closeMessageDialog() {
 
 func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
 	d := &a.model.MessageDialog
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		if ui.AltDialogOK(event) {
 			a.closeMessageDialog()
 			return

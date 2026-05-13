@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -95,7 +96,7 @@ func (a *App) closeTransferDialog() {
 func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	d := &a.model.TransferDialog
 	// Alt+O = OK, Alt+C = Cancel, Alt+P = Add paused (mnemonics; must run before field edit).
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 'o', 'O':
 			a.confirmTransfer()

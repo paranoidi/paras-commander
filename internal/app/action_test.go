@@ -118,6 +118,24 @@ func TestActionFromKeyMapsAltOToOpenDirInOtherPanel(t *testing.T) {
 	}
 }
 
+func TestActionFromKeyMapsAltIToOpenActivePathInOtherPanel(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt)
+	got := lookupActionForView(event, km, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionPanelOpenActivePathInOther {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelOpenActivePathInOther", got)
+	}
+}
+
+func TestActionFromKeyMapsMetaIToOpenActivePathInOtherPanel(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModMeta)
+	got := lookupActionForView(event, km, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionPanelOpenActivePathInOther {
+		t.Fatalf("Meta+i = %v, want ActionPanelOpenActivePathInOther", got)
+	}
+}
+
 func TestActionFromKeyMapsCtrlAltOToToggleSync(t *testing.T) {
 	km := defaultKeymap(t)
 	event := tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt|tcell.ModCtrl)

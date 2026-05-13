@@ -2,12 +2,13 @@ package app
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
 func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	// Alt+O = OK, Alt+C = Cancel
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 'o', 'O':
 			a.executeFileDialog()

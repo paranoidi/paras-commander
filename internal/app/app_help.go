@@ -19,12 +19,12 @@ func (a *App) openHelpDialog() {
 		entries = []ui.HelpEntry{}
 	}
 	a.model.HelpView = ui.HelpViewState{
-		Open:      true,
-		Query:     "",
-		Entries:   entries,
-		Selected:  0,
+		Open:       true,
+		Query:      "",
+		Entries:    entries,
+		Selected:   0,
 		ListScroll: 0,
-		Focus:     0,
+		Focus:      0,
 	}
 	a.syncHelpRanks()
 }
@@ -239,7 +239,7 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 	st := &a.model.HelpView
 
 	// Alt+O and Alt+C close the dialog.
-	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 'o', 'O', 'c', 'C':
 			a.closeHelpDialog()

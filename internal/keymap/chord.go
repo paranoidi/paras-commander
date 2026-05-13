@@ -12,12 +12,28 @@ type Chord struct {
 	Mod  tcell.ModMask
 }
 
+// NormalizeAltMeta maps ModMeta into ModAlt. Many terminals encode the physical
+// Alt/Option key as ModMeta (or Meta+Alt together) while our TOML "M-" prefix
+// parses as ModAlt only, so lookup would otherwise miss those chords.
+func NormalizeAltMeta(m tcell.ModMask) tcell.ModMask {
+	if m&tcell.ModMeta != 0 {
+		m = (m &^ tcell.ModMeta) | tcell.ModAlt
+	}
+	return m
+}
+
+// AltLetterModifiers reports whether m is Alt-only for a letter mnemonic after
+// normalizing Meta→Alt (no Ctrl/Shift).
+func AltLetterModifiers(m tcell.ModMask) bool {
+	return NormalizeAltMeta(m) == tcell.ModAlt
+}
+
 // EventChord returns a normalized chord representation of ev for reverse-map keys.
 func EventChord(ev *tcell.EventKey) Chord {
 	if ev == nil {
 		return Chord{}
 	}
-	mod := ev.Modifiers()
+	mod := NormalizeAltMeta(ev.Modifiers())
 	key := ev.Key()
 	if key == tcell.KeyBackspace2 {
 		key = tcell.KeyBackspace

@@ -265,7 +265,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	nextAction := resolvedAction
 	if nextAction == "" {
 		// Alt+letter opens the corresponding pulldown menu directly.
-		if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
+		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 			if a.openMenuByShortcut(event.Rune()) {
 				a.render()
 				return false, true
@@ -444,6 +444,14 @@ func (a *App) dispatch(actionID string) {
 		}
 		if err := a.navigatePanelToDirectory(a.inactivePanelID(), entry.Path, ""); err != nil {
 			a.setErrorMessage("Open in other panel failed", err)
+			return
+		}
+	case keymap.ActionPanelOpenActivePathInOther:
+		if a.model.ViewMode != ui.ViewBrowser {
+			return
+		}
+		if err := a.navigatePanelToDirectory(a.inactivePanelID(), activePanel.Path, ""); err != nil {
+			a.setErrorMessage("Open current path in other panel failed", err)
 			return
 		}
 	case keymap.ActionNavParent:

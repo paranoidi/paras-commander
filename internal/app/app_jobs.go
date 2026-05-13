@@ -159,7 +159,7 @@ func (a *App) handleJobsViewKey(event *tcell.EventKey) bool {
 		maxB := ui.JobsBlockerMaxButtonIndex(sel)
 		disk := sel.PendingBlocker != nil && sel.PendingBlocker.Kind == jobs.BlockerKindDiskSpace
 
-		if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModAlt {
+		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 			if disk {
 				switch event.Rune() {
 				case 'r', 'R':

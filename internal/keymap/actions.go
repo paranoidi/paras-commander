@@ -6,39 +6,40 @@ const (
 	ActionAppOpenMenu = "app.open-menu"
 	ActionAppShowHelp = "app.show-help"
 
-	ActionPanelSwitch        = "panel.switch"
-	ActionNavUp              = "nav.up"
-	ActionNavDown            = "nav.down"
-	ActionNavPageUp          = "nav.page-up"
-	ActionNavPageDown        = "nav.page-down"
-	ActionNavTop             = "nav.top"
-	ActionNavBottom          = "nav.bottom"
-	ActionNavOpen            = "nav.open"
-	ActionNavParent          = "nav.parent"
-	ActionNavHome            = "nav.home"
-	ActionNavForward         = "nav.forward"
-	ActionNavBackward        = "nav.backward"
-	ActionPanelHistoryDialog = "panel.history-dialog"
-	ActionPanelRefresh           = "panel.refresh"
-	ActionPanelSelectToggle      = "panel.select-toggle"
-	ActionPanelSelectGroup       = "panel.select-group"
-	ActionPanelUnselectGroup     = "panel.unselect-group"
-	ActionPanelInvertSelection   = "panel.invert-selection"
-	ActionPanelClearSelection    = "panel.clear-selection"
-	ActionPanelSortDialog        = "panel.sort-dialog"
-	ActionPanelCycleSort         = "panel.cycle-sort"
-	ActionPanelReverseSort       = "panel.reverse-sort"
-	ActionPanelFilterOpen        = "panel.filter-open"
-	ActionPanelToggleHidden      = "panel.toggle-hidden"
-	ActionBookmarkOpen           = "bookmark.open"
-	ActionBookmarkAdd            = "bookmark.add"
-	ActionPanelDiskUsageScan     = "panel.disk-usage-scan"
-	ActionPanelDiskUsageAbortAll = "panel.disk-usage-abort-all"
-	ActionPanelFocusSelections   = "panel.focus-selections"
-	ActionPanelExternalBrowser   = "panel.external-browser"
-	ActionPanelOpenDirInOther    = "panel.open-dir-in-other"
-	ActionPanelToggleSync        = "panel.toggle-sync"
-	ActionPanelMeta              = "panel.meta"
+	ActionPanelSwitch                = "panel.switch"
+	ActionNavUp                      = "nav.up"
+	ActionNavDown                    = "nav.down"
+	ActionNavPageUp                  = "nav.page-up"
+	ActionNavPageDown                = "nav.page-down"
+	ActionNavTop                     = "nav.top"
+	ActionNavBottom                  = "nav.bottom"
+	ActionNavOpen                    = "nav.open"
+	ActionNavParent                  = "nav.parent"
+	ActionNavHome                    = "nav.home"
+	ActionNavForward                 = "nav.forward"
+	ActionNavBackward                = "nav.backward"
+	ActionPanelHistoryDialog         = "panel.history-dialog"
+	ActionPanelRefresh               = "panel.refresh"
+	ActionPanelSelectToggle          = "panel.select-toggle"
+	ActionPanelSelectGroup           = "panel.select-group"
+	ActionPanelUnselectGroup         = "panel.unselect-group"
+	ActionPanelInvertSelection       = "panel.invert-selection"
+	ActionPanelClearSelection        = "panel.clear-selection"
+	ActionPanelSortDialog            = "panel.sort-dialog"
+	ActionPanelCycleSort             = "panel.cycle-sort"
+	ActionPanelReverseSort           = "panel.reverse-sort"
+	ActionPanelFilterOpen            = "panel.filter-open"
+	ActionPanelToggleHidden          = "panel.toggle-hidden"
+	ActionBookmarkOpen               = "bookmark.open"
+	ActionBookmarkAdd                = "bookmark.add"
+	ActionPanelDiskUsageScan         = "panel.disk-usage-scan"
+	ActionPanelDiskUsageAbortAll     = "panel.disk-usage-abort-all"
+	ActionPanelFocusSelections       = "panel.focus-selections"
+	ActionPanelExternalBrowser       = "panel.external-browser"
+	ActionPanelOpenDirInOther        = "panel.open-dir-in-other"
+	ActionPanelOpenActivePathInOther = "panel.open-active-path-in-other"
+	ActionPanelToggleSync            = "panel.toggle-sync"
+	ActionPanelMeta                  = "panel.meta"
 
 	// Dialog actions
 	ActionDialogConfirm = "ui.confirm"
@@ -75,8 +76,8 @@ const (
 	ActionJobsQueueDown     = "jobs.queue-down"
 
 	// Commands screen + external command execution
-	ActionCommandsOpen = "commands.open"
-	ActionCommandsClose = "commands.close"
+	ActionCommandsOpen   = "commands.open"
+	ActionCommandsClose  = "commands.close"
 	ActionFileRunForEach = "file.run-for-each"
 
 	// UI dialog controls (handled internally, not in keybindings.toml)
@@ -120,39 +121,40 @@ var KnownActions = map[string]struct{}{
 	ActionAppOpenMenu: {},
 	ActionAppShowHelp: {},
 
-	ActionPanelSwitch:        {},
-	ActionNavUp:              {},
-	ActionNavDown:            {},
-	ActionNavPageUp:          {},
-	ActionNavPageDown:        {},
-	ActionNavTop:             {},
-	ActionNavBottom:          {},
-	ActionNavOpen:            {},
-	ActionNavParent:          {},
-	ActionNavHome:            {},
-	ActionNavForward:         {},
-	ActionNavBackward:        {},
-	ActionPanelHistoryDialog: {},
-	ActionPanelRefresh:           {},
-	ActionPanelSelectToggle:      {},
-	ActionPanelSelectGroup:       {},
-	ActionPanelUnselectGroup:     {},
-	ActionPanelInvertSelection:   {},
-	ActionPanelClearSelection:    {},
-	ActionPanelSortDialog:        {},
-	ActionPanelCycleSort:         {},
-	ActionPanelReverseSort:       {},
-	ActionPanelFilterOpen:        {},
-	ActionPanelToggleHidden:      {},
-	ActionBookmarkOpen:           {},
-	ActionBookmarkAdd:            {},
-	ActionPanelDiskUsageScan:     {},
-	ActionPanelDiskUsageAbortAll: {},
-	ActionPanelFocusSelections:   {},
-	ActionPanelExternalBrowser:   {},
-	ActionPanelOpenDirInOther:    {},
-	ActionPanelToggleSync:        {},
-	ActionPanelMeta:              {},
+	ActionPanelSwitch:                {},
+	ActionNavUp:                      {},
+	ActionNavDown:                    {},
+	ActionNavPageUp:                  {},
+	ActionNavPageDown:                {},
+	ActionNavTop:                     {},
+	ActionNavBottom:                  {},
+	ActionNavOpen:                    {},
+	ActionNavParent:                  {},
+	ActionNavHome:                    {},
+	ActionNavForward:                 {},
+	ActionNavBackward:                {},
+	ActionPanelHistoryDialog:         {},
+	ActionPanelRefresh:               {},
+	ActionPanelSelectToggle:          {},
+	ActionPanelSelectGroup:           {},
+	ActionPanelUnselectGroup:         {},
+	ActionPanelInvertSelection:       {},
+	ActionPanelClearSelection:        {},
+	ActionPanelSortDialog:            {},
+	ActionPanelCycleSort:             {},
+	ActionPanelReverseSort:           {},
+	ActionPanelFilterOpen:            {},
+	ActionPanelToggleHidden:          {},
+	ActionBookmarkOpen:               {},
+	ActionBookmarkAdd:                {},
+	ActionPanelDiskUsageScan:         {},
+	ActionPanelDiskUsageAbortAll:     {},
+	ActionPanelFocusSelections:       {},
+	ActionPanelExternalBrowser:       {},
+	ActionPanelOpenDirInOther:        {},
+	ActionPanelOpenActivePathInOther: {},
+	ActionPanelToggleSync:            {},
+	ActionPanelMeta:                  {},
 
 	ActionDialogConfirm: {},
 	ActionDialogCancel:  {},
@@ -191,8 +193,8 @@ var KnownActions = map[string]struct{}{
 	ActionJobsQueueUp:       {},
 	ActionJobsQueueDown:     {},
 
-	ActionCommandsOpen:  {},
-	ActionCommandsClose: {},
+	ActionCommandsOpen:   {},
+	ActionCommandsClose:  {},
 	ActionFileRunForEach: {},
 
 	ActionUIOpenTheme:  {},

@@ -175,6 +175,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"inactive", "split", "cd", "other panel"},
 		},
 		{
+			ID:           ActionPanelOpenActivePathInOther,
+			Title:        "Open current path in other panel",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"M-i"},
+			PreferredKey: "M-i",
+			Keywords:     []string{"inactive", "split", "cd", "cwd", "other panel"},
+		},
+		{
 			ID:           ActionPanelToggleSync,
 			Title:        "Toggle panel sync",
 			Section:      "Navigation",

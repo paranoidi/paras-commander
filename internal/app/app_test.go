@@ -958,6 +958,46 @@ func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
 	}
 }
 
+func TestOpenActivePathInInactivePanel(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	gamma := filepath.Join(alpha, "gamma")
+	if err := os.MkdirAll(gamma, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	for i := 0; i < left.VisibleEntryCount(); i++ {
+		entry, _, ok := left.VisibleEntry(i)
+		if ok && entry.Name == "alpha" {
+			left.Cursor = i
+			break
+		}
+	}
+	app.model.ActivePanel = ui.LeftPanel
+	app.dispatch(keymap.ActionNavOpen)
+
+	for i := 0; i < left.VisibleEntryCount(); i++ {
+		entry, _, ok := left.VisibleEntry(i)
+		if ok && entry.Name == "gamma" {
+			left.Cursor = i
+			break
+		}
+	}
+	wantAlpha := filepath.Clean(alpha)
+	if got := filepath.Clean(left.Path); got != wantAlpha {
+		t.Fatalf("left cwd = %q want %q", got, wantAlpha)
+	}
+
+	app.dispatch(keymap.ActionPanelOpenActivePathInOther)
+
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path); got != wantAlpha {
+		t.Fatalf("right panel path = %q want active cwd %q", got, wantAlpha)
+	}
+}
+
 func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")
@@ -4193,4 +4233,3 @@ func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
 		t.Fatalf("selection should be cleared after queueing move job, got %d", len(p.SelectedPaths))
 	}
 }
-
