@@ -212,10 +212,12 @@ func (a *App) openConfigDialog() {
 	a.clearTransientMessage()
 	lf, _ := panel.ParseListFormat(a.config.DefaultListingFormat)
 	a.model.ConfigDialog = ui.ConfigDialogState{
-		Open:          true,
-		ShowFileIcons: a.config.UI.ShowFileIcons,
-		ListFormat:    panel.EffectiveListFormat(lf),
-		Focus:         0,
+		Open:                  true,
+		ShowFileIcons:         a.config.UI.ShowFileIcons,
+		ZoomActivePanel:       a.config.UI.ZoomActivePanel,
+		ShrunkenShowsNameOnly: a.config.UI.ShrunkenShowsNameOnly,
+		ListFormat:            panel.EffectiveListFormat(lf),
+		Focus:                 0,
 	}
 }
 
@@ -224,18 +226,26 @@ func (a *App) closeConfigDialog() {
 }
 
 func (a *App) applyConfigDialog() {
+	a.zoomActivePanelOverride = nil
 	val := a.model.ConfigDialog.ShowFileIcons
+	zoom := a.model.ConfigDialog.ZoomActivePanel
+	shrunken := a.model.ConfigDialog.ShrunkenShowsNameOnly
 	lf := panel.EffectiveListFormat(a.model.ConfigDialog.ListFormat)
 	a.config.UI.ShowFileIcons = val
+	a.config.UI.ZoomActivePanel = zoom
+	a.config.UI.ShrunkenShowsNameOnly = shrunken
 	a.config.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
 	a.model.ShowFileIcons = val
+	a.model.ShrunkenShowsNameOnly = shrunken
 	a.model.Left.ListFormat = lf
 	a.model.Right.ListFormat = lf
 	a.closeConfigDialog()
 	msg := "Configuration saved"
 	patch := map[string]interface{}{
 		"ui": map[string]interface{}{
-			"show_file_icons": val,
+			"show_file_icons":          val,
+			"zoom_active_panel":        zoom,
+			"shrunken_shows_name_only": shrunken,
 		},
 		"default_listing_format": panel.ListingFormatTOMLValue(lf),
 	}
@@ -246,7 +256,7 @@ func (a *App) applyConfigDialog() {
 }
 
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
-	form := ui.NewDialogLinearForm(4)
+	form := ui.NewDialogLinearForm(6)
 	if ui.AltDialogOK(event) {
 		a.applyConfigDialog()
 		return
@@ -275,7 +285,7 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 		for i, row := range radios {
 			if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
 				a.model.ConfigDialog.ListFormat = row.Format
-				a.model.ConfigDialog.Focus = 1 + i
+				a.model.ConfigDialog.Focus = 3 + i
 				matchedRadio = true
 				break
 			}
@@ -287,6 +297,12 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 		case 'f', 'F':
 			a.model.ConfigDialog.ShowFileIcons = !a.model.ConfigDialog.ShowFileIcons
 			a.model.ConfigDialog.Focus = 0
+		case 'z', 'Z':
+			a.model.ConfigDialog.ZoomActivePanel = !a.model.ConfigDialog.ZoomActivePanel
+			a.model.ConfigDialog.Focus = 1
+		case 's', 'S':
+			a.model.ConfigDialog.ShrunkenShowsNameOnly = !a.model.ConfigDialog.ShrunkenShowsNameOnly
+			a.model.ConfigDialog.Focus = 2
 		case 'o', 'O':
 			a.applyConfigDialog()
 		case 'c', 'C':
@@ -295,8 +311,12 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 			switch a.model.ConfigDialog.Focus {
 			case 0:
 				a.model.ConfigDialog.ShowFileIcons = !a.model.ConfigDialog.ShowFileIcons
-			case 1, 2, 3:
-				a.model.ConfigDialog.ListFormat = radios[a.model.ConfigDialog.Focus-1].Format
+			case 1:
+				a.model.ConfigDialog.ZoomActivePanel = !a.model.ConfigDialog.ZoomActivePanel
+			case 2:
+				a.model.ConfigDialog.ShrunkenShowsNameOnly = !a.model.ConfigDialog.ShrunkenShowsNameOnly
+			case 3, 4, 5:
+				a.model.ConfigDialog.ListFormat = radios[a.model.ConfigDialog.Focus-3].Format
 			case form.OKIndex():
 				a.applyConfigDialog()
 			case form.CancelIndex():

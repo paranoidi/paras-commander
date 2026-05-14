@@ -55,17 +55,17 @@ type jobsWakePayload struct{}
 
 // App owns lifecycle, state, and input dispatch.
 type App struct {
-	screen             tcell.Screen
-	config             config.Config
-	styles             theme.Theme
-	themes             map[string]theme.Theme
-	paths              config.Paths
-	keys               *keymap.Map
-	keysJobs           *keymap.Map // chords active only in jobs view (overlay)
-	keysCommands       *keymap.Map // chords active only in Commands view (overlay)
-	keysDialogInput    *keymap.Map // chords active only while a dialog input field is focused
-	keysRenameDialog   *keymap.Map // sanitize/slugify while main rename dialog is focused
-	model              ui.Model
+	screen           tcell.Screen
+	config           config.Config
+	styles           theme.Theme
+	themes           map[string]theme.Theme
+	paths            config.Paths
+	keys             *keymap.Map
+	keysJobs         *keymap.Map // chords active only in jobs view (overlay)
+	keysCommands     *keymap.Map // chords active only in Commands view (overlay)
+	keysDialogInput  *keymap.Map // chords active only while a dialog input field is focused
+	keysRenameDialog *keymap.Map // sanitize/slugify while main rename dialog is focused
+	model            ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
 	// jobState manages background job queue and worker lifecycle.
@@ -94,6 +94,10 @@ type App struct {
 	// changes or the host dialog closes before the timer fires (avoids stale AfterFunc callbacks).
 	pathPickerValidateGen   atomic.Uint64
 	transferDestValidateGen atomic.Uint64
+	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
+	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on
+	// Configuration OK so saved TOML is the sole persisted source of truth.
+	zoomActivePanelOverride *bool
 
 	commandsMu              sync.RWMutex
 	commandsBatchesInflight atomic.Int32
@@ -281,18 +285,18 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	cmdCtx, cmdCancel := context.WithCancel(context.Background())
 	app := &App{
-		screen:             screen,
-		config:             cfg,
-		styles:             styles,
-		themes:             availableThemes,
-		paths:              opts.Paths.WithResolvedLocations(),
-		keys:               km,
-		keysJobs:           kmJobs,
-		keysCommands:       kmCommands,
-		keysDialogInput:    kmDialogInput,
-		keysRenameDialog:   kmRenameDialog,
-		commandsCtx:        cmdCtx,
-		commandsCancel:     cmdCancel,
+		screen:           screen,
+		config:           cfg,
+		styles:           styles,
+		themes:           availableThemes,
+		paths:            opts.Paths.WithResolvedLocations(),
+		keys:             km,
+		keysJobs:         kmJobs,
+		keysCommands:     kmCommands,
+		keysDialogInput:  kmDialogInput,
+		keysRenameDialog: kmRenameDialog,
+		commandsCtx:      cmdCtx,
+		commandsCancel:   cmdCancel,
 		model: ui.Model{
 			Left:                   left,
 			Right:                  right,
@@ -300,6 +304,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			SelectionsPanelMaxRows: cfg.UI.SelectionsPanelMaxRows,
 			HideMenuBar:            !cfg.UI.ShowMenuBar,
 			ShowFileIcons:          cfg.UI.ShowFileIcons,
+			ShrunkenShowsNameOnly:  cfg.UI.ShrunkenShowsNameOnly,
 			UserHomeDir:            homeDir,
 			DiskUsage:              duEngine,
 			DiskUsageShown:         false,

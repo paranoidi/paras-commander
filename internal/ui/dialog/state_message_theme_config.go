@@ -28,10 +28,12 @@ type ThemeDialogState struct {
 
 // ConfigDialogState is the Options → Configuration modal (runtime UI toggles persisted to config.toml).
 type ConfigDialogState struct {
-	Open          bool
-	ShowFileIcons bool
-	ListFormat    panel.ListFormat
-	Focus         int // 0=checkbox, 1-3=listing format radios, 4=OK, 5=Cancel
+	Open                  bool
+	ShowFileIcons         bool
+	ZoomActivePanel       bool
+	ShrunkenShowsNameOnly bool
+	ListFormat            panel.ListFormat
+	Focus                 int // 0=file icons, 1=zoom, 2=shrunken name-only, 3-5=listing format radios, 6=OK, 7=Cancel
 }
 
 // SortDialogState is the renderable state for the sort configuration modal.

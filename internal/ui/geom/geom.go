@@ -34,17 +34,52 @@ const (
 	minHeight = 8
 )
 
+// PanelWidthSplit controls the horizontal split between the two browser columns.
+// ActivePanel uses the same values as ui.LeftPanel (0) and ui.RightPanel (1).
+// When Zoom is false, ActivePercent and InactivePercent are ignored (even 50/50 split).
+// When Zoom is true, the active column receives ActivePercent of the total width and
+// the inactive column receives InactivePercent; both must be positive and sum to 100
+// or the layout falls back to an even split.
+type PanelWidthSplit struct {
+	Zoom            bool
+	ActivePanel     int
+	ActivePercent   int
+	InactivePercent int
+}
+
+func mainPanelColumnWidths(total int, split PanelWidthSplit) (leftW, rightW int) {
+	leftW = total / 2
+	rightW = total - leftW
+	if !split.Zoom {
+		return leftW, rightW
+	}
+	ap, ip := split.ActivePercent, split.InactivePercent
+	if ap <= 0 || ip <= 0 || ap+ip != 100 {
+		return leftW, rightW
+	}
+	leftPct := ap
+	if split.ActivePanel != 0 {
+		leftPct = ip
+	}
+	leftW = (total * leftPct) / 100
+	rightW = total - leftW
+	const minSplitColumnWidth = 10 // cells; if zoomed split is too narrow, fall back to 50/50
+	if leftW < minSplitColumnWidth || rightW < minSplitColumnWidth {
+		return total / 2, total - total/2
+	}
+	return leftW, rightW
+}
+
 // CalculateLayout returns deterministic regions for the current terminal size.
 // When showMenuBar is false, the menu row is omitted and panels extend to the top row.
-func CalculateLayout(width, height int, showMenuBar bool) Layout {
+func CalculateLayout(width, height int, showMenuBar bool, split PanelWidthSplit) Layout {
 	layout := Layout{Width: width, Height: height}
 	if width < minWidth || height < minHeight {
 		layout.TooSmall = true
 		return layout
 	}
 
-	leftWidth := width / 2
-	rightWidth := width - leftWidth
+	leftWidth, rightWidth := mainPanelColumnWidths(width, split)
 
 	if !showMenuBar {
 		panelHeight := height - 1

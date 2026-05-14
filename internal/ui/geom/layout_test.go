@@ -3,7 +3,7 @@ package geom
 import "testing"
 
 func TestCalculateLayoutSplitsScreenIntoExpectedRegions(t *testing.T) {
-	layout := CalculateLayout(100, 30, true)
+	layout := CalculateLayout(100, 30, true, PanelWidthSplit{})
 
 	if layout.TooSmall {
 		t.Fatal("TooSmall = true, want false")
@@ -23,7 +23,7 @@ func TestCalculateLayoutSplitsScreenIntoExpectedRegions(t *testing.T) {
 }
 
 func TestCalculateLayoutHandlesOddWidth(t *testing.T) {
-	layout := CalculateLayout(101, 20, true)
+	layout := CalculateLayout(101, 20, true, PanelWidthSplit{})
 
 	if layout.Left.Width != 50 {
 		t.Fatalf("Left.Width = %d, want 50", layout.Left.Width)
@@ -34,19 +34,19 @@ func TestCalculateLayoutHandlesOddWidth(t *testing.T) {
 }
 
 func TestCalculateLayoutMarksSmallTerminal(t *testing.T) {
-	layout := CalculateLayout(39, 8, true)
+	layout := CalculateLayout(39, 8, true, PanelWidthSplit{})
 	if !layout.TooSmall {
 		t.Fatal("TooSmall = false, want true")
 	}
 
-	layout = CalculateLayout(40, 7, true)
+	layout = CalculateLayout(40, 7, true, PanelWidthSplit{})
 	if !layout.TooSmall {
 		t.Fatal("TooSmall = false, want true")
 	}
 }
 
 func TestCalculateLayoutOmitsMenuRowWhenShowMenuBarFalse(t *testing.T) {
-	layout := CalculateLayout(100, 30, false)
+	layout := CalculateLayout(100, 30, false, PanelWidthSplit{})
 
 	if layout.TooSmall {
 		t.Fatal("TooSmall = true, want false")
@@ -62,6 +62,30 @@ func TestCalculateLayoutOmitsMenuRowWhenShowMenuBarFalse(t *testing.T) {
 	}
 	if layout.Footer.Y != 29 {
 		t.Fatalf("footer = %+v, want y=29", layout.Footer)
+	}
+}
+
+func TestCalculateLayoutZoomWidensActiveLeftColumn(t *testing.T) {
+	layout := CalculateLayout(100, 30, true, PanelWidthSplit{
+		Zoom: true, ActivePanel: 0, ActivePercent: 70, InactivePercent: 30,
+	})
+	if layout.Left.Width != 70 || layout.Right.Width != 30 {
+		t.Fatalf("Left=%+v Right=%+v want widths 70/30", layout.Left, layout.Right)
+	}
+	if layout.Right.X != 70 {
+		t.Fatalf("Right.X = %d, want 70", layout.Right.X)
+	}
+}
+
+func TestCalculateLayoutZoomWidensActiveRightColumn(t *testing.T) {
+	layout := CalculateLayout(100, 30, true, PanelWidthSplit{
+		Zoom: true, ActivePanel: 1, ActivePercent: 70, InactivePercent: 30,
+	})
+	if layout.Left.Width != 30 || layout.Right.Width != 70 {
+		t.Fatalf("Left=%+v Right=%+v want widths 30/70", layout.Left, layout.Right)
+	}
+	if layout.Right.X != 30 {
+		t.Fatalf("Right.X = %d, want 30", layout.Right.X)
 	}
 }
 

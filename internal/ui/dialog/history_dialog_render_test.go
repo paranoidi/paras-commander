@@ -17,7 +17,7 @@ func TestDrawHistoryDialogSmoke(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 24)
 	styles := theme.Default()
-	layout := geom.CalculateLayout(80, 24, true)
+	layout := geom.CalculateLayout(80, 24, true, geom.PanelWidthSplit{})
 	state := HistoryDialogState{
 		Open:         true,
 		PanelID:      0,

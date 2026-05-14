@@ -21,4 +21,18 @@ const (
 
 	// DefaultListingFormat is the persisted default_listing_format value (Modified time column).
 	DefaultListingFormat = ListingFormatMtime
+
+	// Panel zoom: widen the active browser column when [ui].zoom_active_panel is true.
+	DefaultZoomActivePanel          = false
+	DefaultPanelZoomActivePercent   = 70
+	DefaultPanelZoomInactivePercent = 30
+
+	// DefaultShrunkenShowsNameOnly: when true, file panels whose list row text width is below
+	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
+	DefaultShrunkenShowsNameOnly = false
+	// ShrunkenListingRowTextWidthThreshold is the row text width (cells) below which a panel counts as
+	// "shrunken" for optional name-only listing (see [ui].shrunken_shows_name_only).
+	// 40 targets a 50/50 split on an 80-column terminal (inner listing width 38) with file icons off;
+	// with icons on, the text budget is three cells narrower so the gate still trips.
+	ShrunkenListingRowTextWidthThreshold = 40
 )

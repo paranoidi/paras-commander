@@ -29,6 +29,7 @@ const (
 	ActionPanelListingFormatDialog   = "panel.listing-format-dialog"
 	ActionPanelCycleSort             = "panel.cycle-sort"
 	ActionPanelCycleListingFormat    = "panel.cycle-listing-format"
+	ActionPanelToggleZoomActivePanel = "panel.toggle-zoom-active-panel"
 	ActionPanelReverseSort           = "panel.reverse-sort"
 	ActionPanelFilterOpen            = "panel.filter-open"
 	ActionPanelToggleHidden          = "panel.toggle-hidden"
@@ -50,19 +51,19 @@ const (
 	ActionDialogPrev    = "ui.prev-field"
 
 	// File operations
-	ActionFileRename   = "file.rename"
+	ActionFileRename = "file.rename"
 	// ActionFileRenameOpenSanitize / ActionFileRenameOpenSlugify are bound via
 	// [rename_dialog_action_keys], not [action_keys].
 	ActionFileRenameOpenSanitize = "file.rename.open-sanitize"
 	ActionFileRenameOpenSlugify  = "file.rename.open-slugify"
 	ActionFileDelete             = "file.delete"
-	ActionFileMkdir    = "file.mkdir"
-	ActionFileChmod    = "file.chmod"
-	ActionFileChown    = "file.chown"
-	ActionFileSymlink  = "file.symlink"
-	ActionFileHardlink = "file.hardlink"
-	ActionFileView     = "file.view"
-	ActionFileEdit     = "file.edit"
+	ActionFileMkdir              = "file.mkdir"
+	ActionFileChmod              = "file.chmod"
+	ActionFileChown              = "file.chown"
+	ActionFileSymlink            = "file.symlink"
+	ActionFileHardlink           = "file.hardlink"
+	ActionFileView               = "file.view"
+	ActionFileEdit               = "file.edit"
 
 	// Copy/Move
 	ActionCopy = "file.copy"
@@ -148,6 +149,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelListingFormatDialog:   {},
 	ActionPanelCycleSort:             {},
 	ActionPanelCycleListingFormat:    {},
+	ActionPanelToggleZoomActivePanel: {},
 	ActionPanelReverseSort:           {},
 	ActionPanelFilterOpen:            {},
 	ActionPanelToggleHidden:          {},
@@ -167,17 +169,17 @@ var KnownActions = map[string]struct{}{
 	ActionDialogNext:    {},
 	ActionDialogPrev:    {},
 
-	ActionFileRename:   {},
+	ActionFileRename:             {},
 	ActionFileRenameOpenSanitize: {},
 	ActionFileRenameOpenSlugify:  {},
-	ActionFileDelete:   {},
-	ActionFileMkdir:    {},
-	ActionFileChmod:    {},
-	ActionFileChown:    {},
-	ActionFileSymlink:  {},
-	ActionFileHardlink: {},
-	ActionFileView:     {},
-	ActionFileEdit:     {},
+	ActionFileDelete:             {},
+	ActionFileMkdir:              {},
+	ActionFileChmod:              {},
+	ActionFileChown:              {},
+	ActionFileSymlink:            {},
+	ActionFileHardlink:           {},
+	ActionFileView:               {},
+	ActionFileEdit:               {},
 
 	ActionCopy: {},
 	ActionMove: {},

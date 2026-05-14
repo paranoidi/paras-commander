@@ -9,6 +9,10 @@ import (
 
 func (a *App) render() {
 	a.stopDiskUsageRedrawDebounce()
+	a.model.PanelZoomEnabled = a.effectiveZoomActivePanel()
+	a.model.PanelZoomActivePercent = a.config.UI.PanelZoomActivePercent
+	a.model.PanelZoomInactivePercent = a.config.UI.PanelZoomInactivePercent
+	a.model.ShrunkenShowsNameOnly = a.config.UI.ShrunkenShowsNameOnly
 	// Reconcile derived model (latched panel sync, disk-usage idle-sort hooks, etc.)
 	// before painting so the frame matches post-mutation state. The Run loop also calls
 	// reconcileAfterEvent() after each event; without this ordering, render() would run
@@ -56,5 +60,37 @@ func (a *App) menuBarPermissionText() string {
 }
 
 func (a *App) layoutForTerminalSize(width, height int) ui.Layout {
-	return ui.CalculateLayout(width, height, a.model.MenuBarLayoutReserved())
+	return ui.CalculateLayout(width, height, a.model.MenuBarLayoutReserved(), ui.PanelWidthSplit{
+		Zoom:            a.effectiveZoomActivePanel(),
+		ActivePanel:     a.model.ActivePanel,
+		ActivePercent:   a.config.UI.PanelZoomActivePercent,
+		InactivePercent: a.config.UI.PanelZoomInactivePercent,
+	})
+}
+
+func (a *App) effectiveZoomActivePanel() bool {
+	if a.zoomActivePanelOverride != nil {
+		return *a.zoomActivePanelOverride
+	}
+	return a.config.UI.ZoomActivePanel
+}
+
+// toggleRuntimeZoomActivePanel flips the zoom split the user currently sees (saved
+// [ui].zoom_active_panel plus optional runtime-only override). When the flipped state
+// matches the saved config value, the override is cleared so nil always means "follow saved".
+func (a *App) toggleRuntimeZoomActivePanel() {
+	effective := a.effectiveZoomActivePanel()
+	next := !effective
+	saved := a.config.UI.ZoomActivePanel
+	if next == saved {
+		a.zoomActivePanelOverride = nil
+	} else {
+		v := next
+		a.zoomActivePanelOverride = &v
+	}
+	if next {
+		a.setTransientMessage("Panel zoom: on", ui.MessageUrgencyInfo)
+	} else {
+		a.setTransientMessage("Panel zoom: off", ui.MessageUrgencyInfo)
+	}
 }

@@ -69,6 +69,30 @@ func TestDefaultPathPickerValidateDelayMS(t *testing.T) {
 	if got := Default().UI.PathPickerValidateDelayMS; got != DefaultPathPickerValidateDelayMS {
 		t.Fatalf("PathPickerValidateDelayMS = %d, want %d", got, DefaultPathPickerValidateDelayMS)
 	}
+	if got := Default().UI.PanelZoomActivePercent; got != DefaultPanelZoomActivePercent {
+		t.Fatalf("PanelZoomActivePercent = %d, want %d", got, DefaultPanelZoomActivePercent)
+	}
+	if got := Default().UI.PanelZoomInactivePercent; got != DefaultPanelZoomInactivePercent {
+		t.Fatalf("PanelZoomInactivePercent = %d, want %d", got, DefaultPanelZoomInactivePercent)
+	}
+	if got := Default().UI.ShrunkenShowsNameOnly; got != DefaultShrunkenShowsNameOnly {
+		t.Fatalf("ShrunkenShowsNameOnly = %v, want %v", got, DefaultShrunkenShowsNameOnly)
+	}
+}
+
+func TestValidateResetsInvalidPanelZoomPercents(t *testing.T) {
+	cfg := Default()
+	cfg.UI.PanelZoomActivePercent = 60
+	cfg.UI.PanelZoomInactivePercent = 50
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.PanelZoomActivePercent != DefaultPanelZoomActivePercent ||
+		cfg.UI.PanelZoomInactivePercent != DefaultPanelZoomInactivePercent {
+		t.Fatalf("got %d/%d, want defaults %d/%d",
+			cfg.UI.PanelZoomActivePercent, cfg.UI.PanelZoomInactivePercent,
+			DefaultPanelZoomActivePercent, DefaultPanelZoomInactivePercent)
+	}
 }
 
 func TestValidateClampsPathPickerValidateDelayMS(t *testing.T) {

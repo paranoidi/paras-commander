@@ -516,6 +516,7 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		if len(p.SelectedPaths) != 0 {
 			t.Fatal("selection cleared after queue")
 		}
+		waitUntilAppJobsFinished(t, app, 5*time.Second)
 	})
 }
 
@@ -1516,6 +1517,125 @@ func TestConfigDialogApplyPersistsShowFileIcons(t *testing.T) {
 	}
 	if reloaded.UI.ShowFileIcons {
 		t.Fatalf("persisted show_file_icons = true, want false")
+	}
+}
+
+func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-zoom")}.WithResolvedLocations()
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Paths:  appPaths,
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openConfigDialog()
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if !app.config.UI.ZoomActivePanel {
+		t.Fatal("ZoomActivePanel = false, want true after toggle")
+	}
+	reloaded, err := config.LoadFromPaths(appPaths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths after persist: %v", err)
+	}
+	if !reloaded.UI.ZoomActivePanel {
+		t.Fatalf("persisted zoom_active_panel = false, want true")
+	}
+}
+
+func TestRuntimeZoomToggleChangesLayoutAndDoesNotPersist(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(100, 30)
+
+	cfg := config.Default()
+	cfg.UI.ZoomActivePanel = false
+	cfg.UI.PanelZoomActivePercent = 70
+	cfg.UI.PanelZoomInactivePercent = 30
+
+	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "runtime-zoom-persist")}.WithResolvedLocations()
+	if err := os.MkdirAll(appPaths.ConfigDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	initToml := `[ui]
+zoom_active_panel = false
+panel_zoom_active_percent = 70
+panel_zoom_inactive_percent = 30
+`
+	if err := os.WriteFile(appPaths.ConfigFile, []byte(initToml), 0o644); err != nil {
+		t.Fatalf("WriteFile config: %v", err)
+	}
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Paths:  appPaths,
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	layBefore := app.layoutForTerminalSize(100, 30)
+	if layBefore.Left.Width != 50 || layBefore.Right.Width != 50 {
+		t.Fatalf("before toggle Left=%d Right=%d want 50/50", layBefore.Left.Width, layBefore.Right.Width)
+	}
+
+	app.dispatch(keymap.ActionPanelToggleZoomActivePanel)
+	if app.zoomActivePanelOverride == nil || !*app.zoomActivePanelOverride {
+		t.Fatal("expected runtime override zoom on")
+	}
+	if app.config.UI.ZoomActivePanel {
+		t.Fatal("saved ZoomActivePanel must stay false")
+	}
+
+	layAfter := app.layoutForTerminalSize(100, 30)
+	if layAfter.Left.Width != 70 || layAfter.Right.Width != 30 {
+		t.Fatalf("after toggle Left=%d Right=%d want 70/30", layAfter.Left.Width, layAfter.Right.Width)
+	}
+
+	app.openConfigDialog()
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
+		t.Fatal("handleKey quit")
+	}
+	if app.zoomActivePanelOverride != nil {
+		t.Fatal("override should clear after Configuration OK")
+	}
+
+	reloaded, err := config.LoadFromPaths(appPaths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths: %v", err)
+	}
+	if reloaded.UI.ZoomActivePanel {
+		t.Fatalf("persisted zoom_active_panel leaked true, want false")
 	}
 }
 

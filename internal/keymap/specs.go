@@ -274,6 +274,13 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"columns", "listing", "mtime", "permissions", "brief"},
 		},
 		{
+			ID:          ActionPanelToggleZoomActivePanel,
+			Title:       "Toggle zoom active panel (runtime)",
+			Section:     "Sort & display",
+			DefaultKeys: []string{"M-z"},
+			Keywords:    []string{"zoom", "layout", "wide", "column", "split"},
+		},
+		{
 			ID:          ActionPanelReverseSort,
 			Title:       "Reverse sort",
 			Section:     "Sort & display",

@@ -31,20 +31,20 @@ const (
 	dialogInputActionKeysTable    = "dialog_input_action_keys"
 	renameDialogActionKeysTable   = "rename_dialog_action_keys"
 
-	ThemeDefault    = "default"
-	StartupPathCWD  = "cwd"
-	SortName        = "name"
-	SortExtension   = "extension"
-	SortSize        = "size"
-	SortMtime       = "mtime"
+	ThemeDefault   = "default"
+	StartupPathCWD = "cwd"
+	SortName       = "name"
+	SortExtension  = "extension"
+	SortSize       = "size"
+	SortMtime      = "mtime"
 	// Listing format root keys (default_listing_format).
 	ListingFormatMtime = "mtime"
 	ListingFormatPerm  = "perm"
 	ListingFormatBrief = "brief"
 	SortDiskUsage      = "disk_usage"
-	DeletePermanent = "permanent"
-	FilterModeFuzzy = "fuzzy"
-	FilterSyntaxFZF = "subset-fzf"
+	DeletePermanent    = "permanent"
+	FilterModeFuzzy    = "fuzzy"
+	FilterSyntaxFZF    = "subset-fzf"
 	// FilterCycleMatchesVisual orders ↑/↓ among matches by panel row (basename sort order).
 	FilterCycleMatchesVisual = "visual"
 	// FilterCycleMatchesRanked orders ↑/↓ by fuzzy rank (best match first).
@@ -159,6 +159,14 @@ type UIConfig struct {
 	// PathPickerValidateDelayMS waits after the filter changes before checking whether the typed path exists.
 	// Default DefaultPathPickerValidateDelayMS. Use 0 to validate on the next scheduler tick (still not per-key synchronous).
 	PathPickerValidateDelayMS int `toml:"path_picker_validate_delay_ms"`
+	// ZoomActivePanel widens the active browser column; inactive column uses the remainder (see panel_zoom_*_percent).
+	ZoomActivePanel bool `toml:"zoom_active_panel"`
+	// PanelZoomActivePercent and PanelZoomInactivePercent are the width shares (must sum to 100) when ZoomActivePanel is true.
+	PanelZoomActivePercent   int `toml:"panel_zoom_active_percent"`
+	PanelZoomInactivePercent int `toml:"panel_zoom_inactive_percent"`
+	// ShrunkenShowsNameOnly: when true, narrow panels hide trailing listing columns and show only names
+	// (sort and default_listing_format are unchanged; see ShrunkenListingRowTextWidthThreshold in builtin.go).
+	ShrunkenShowsNameOnly bool `toml:"shrunken_shows_name_only"`
 }
 
 type FilterConfig struct {
@@ -231,6 +239,10 @@ func Default() Config {
 			Clock:                     false,
 			StatusMessageTTLSeconds:   3.5,
 			PathPickerValidateDelayMS: DefaultPathPickerValidateDelayMS,
+			ZoomActivePanel:           DefaultZoomActivePanel,
+			PanelZoomActivePercent:    DefaultPanelZoomActivePercent,
+			PanelZoomInactivePercent:  DefaultPanelZoomInactivePercent,
+			ShrunkenShowsNameOnly:     DefaultShrunkenShowsNameOnly,
 		},
 		Filter: FilterConfig{
 			Mode:              FilterModeFuzzy,
@@ -664,6 +676,11 @@ func (c *Config) Validate() error {
 	const pathPickerValidateMaxMS = 30_000
 	if c.UI.PathPickerValidateDelayMS > pathPickerValidateMaxMS {
 		c.UI.PathPickerValidateDelayMS = pathPickerValidateMaxMS
+	}
+	if c.UI.PanelZoomActivePercent <= 0 || c.UI.PanelZoomInactivePercent <= 0 ||
+		c.UI.PanelZoomActivePercent+c.UI.PanelZoomInactivePercent != 100 {
+		c.UI.PanelZoomActivePercent = DefaultPanelZoomActivePercent
+		c.UI.PanelZoomInactivePercent = DefaultPanelZoomInactivePercent
 	}
 	if c.Filter.Mode != FilterModeFuzzy {
 		c.Filter.Mode = builtin.Filter.Mode

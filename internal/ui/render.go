@@ -48,6 +48,13 @@ type Model struct {
 	HideMenuBar bool
 	// ShowFileIcons mirrors ui.show_file_icons (Nerd Font glyphs before file names).
 	ShowFileIcons bool
+	// PanelZoomEnabled mirrors effective zoom for layout (saved [ui].zoom_active_panel plus optional runtime-only override in App.render).
+	PanelZoomEnabled bool
+	// PanelZoomActivePercent / PanelZoomInactivePercent mirror [ui] panel_zoom_* (sum 100 when zoom enabled).
+	PanelZoomActivePercent   int
+	PanelZoomInactivePercent int
+	// ShrunkenShowsNameOnly mirrors ui.shrunken_shows_name_only (narrow panels may hide trailing listing columns).
+	ShrunkenShowsNameOnly bool
 	// UserHomeDir is filepath.Clean(os.UserHomeDir()); empty skips ~ substitution in panel titles.
 	UserHomeDir string
 	// DiskUsageShown enables proportional disk-usage bars after the user starts a scan.
@@ -180,7 +187,12 @@ func (m Model) MenuBarInteractive() bool {
 // Render draws the full screen.
 func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	width, height := screen.Size()
-	layout := CalculateLayout(width, height, model.MenuBarLayoutReserved())
+	layout := CalculateLayout(width, height, model.MenuBarLayoutReserved(), PanelWidthSplit{
+		Zoom:            model.PanelZoomEnabled,
+		ActivePanel:     model.ActivePanel,
+		ActivePercent:   model.PanelZoomActivePercent,
+		InactivePercent: model.PanelZoomInactivePercent,
+	})
 	primitive.Fill(screen, primitive.Rect{Width: width, Height: height}, ' ', tcell.StyleDefault)
 
 	if layout.TooSmall {
@@ -224,12 +236,12 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		rightFile, rightStrip := SplitPanelColumn(layout.Right, rightStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
 
 		syncDriver := model.SyncDriverPanelID()
-		drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobsList, syncDriver, model.MetaResults[LeftPanel])
+		drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobsList, syncDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly)
 		if leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
 			drawSelectionsStrip(screen, leftStrip, model.Left, leftStripFocused, leftChromeBlocked, styles, model.UserHomeDir)
 		}
-		drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobsList, syncDriver, model.MetaResults[RightPanel])
+		drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobsList, syncDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly)
 		if rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
 			drawSelectionsStrip(screen, rightStrip, model.Right, rightStripFocused, chromeBlocked, styles, model.UserHomeDir)

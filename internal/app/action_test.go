@@ -109,6 +109,15 @@ func TestActionFromKeyMapsAltEToExternalBrowser(t *testing.T) {
 	}
 }
 
+func TestActionFromKeyMapsAltZToToggleZoomActivePanel(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModAlt)
+	got := lookupActionForView(event, km, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionPanelToggleZoomActivePanel {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelToggleZoomActivePanel", got)
+	}
+}
+
 func TestActionFromKeyMapsAltOToOpenDirInOtherPanel(t *testing.T) {
 	km := defaultKeymap(t)
 	event := tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt)

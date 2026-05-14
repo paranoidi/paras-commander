@@ -472,6 +472,8 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionPanelCycleListingFormat:
 		activePanel.CycleListingFormat()
 		a.setTransientMessage(fmt.Sprintf("Listing: %s", activePanel.ListFormat.String()), ui.MessageUrgencyInfo)
+	case keymap.ActionPanelToggleZoomActivePanel:
+		a.toggleRuntimeZoomActivePanel()
 	case keymap.ActionPanelReverseSort:
 		activePanel.ToggleSortReverse(viewportRows)
 		direction := "ascending"

@@ -9,9 +9,12 @@ type (
 )
 
 // CalculateLayout returns deterministic regions for the current terminal size.
-func CalculateLayout(width, height int, showMenuBar bool) Layout {
-	return geom.CalculateLayout(width, height, showMenuBar)
+func CalculateLayout(width, height int, showMenuBar bool, split geom.PanelWidthSplit) Layout {
+	return geom.CalculateLayout(width, height, showMenuBar, split)
 }
+
+// PanelWidthSplit controls horizontal browser column widths (see geom.PanelWidthSplit).
+type PanelWidthSplit = geom.PanelWidthSplit
 
 // PanelListRows returns the number of entry rows inside a file panel frame.
 func PanelListRows(rect Rect) int {
