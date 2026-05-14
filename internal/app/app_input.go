@@ -152,6 +152,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	a.deferDiskIdleSortOnUserActivity()
 	// Global F10 quit - works from any mode, any dialog, any menu.
 	if event.Key() == tcell.KeyF10 {
+		a.clearPanelSyncFollowNavCoalesce()
 		// Clear active filter before quit (preserves existing behavior).
 		if a.inQuickFilterUI() {
 			a.activePanel().CancelFilter(a.activeViewportRows())
@@ -165,6 +166,9 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	}
 
 	resolvedAction := a.actionFromKeyEvent(event)
+	if !a.panelSyncFollowHeldListNav(resolvedAction, event) {
+		a.clearPanelSyncFollowNavCoalesce()
+	}
 	if resolvedAction == keymap.ActionPanelDiskUsageAbortAll {
 		a.abortAllDiskUsageScans()
 		a.render()
@@ -438,16 +442,22 @@ func (a *App) dispatch(actionID string) {
 		a.toggleSelectionsStripFocus()
 	case keymap.ActionNavUp:
 		activePanel.Move(-1, viewportRows)
+		a.armPanelSyncFollowNavCoalesceAfterListNav()
 	case keymap.ActionNavDown:
 		activePanel.Move(1, viewportRows)
+		a.armPanelSyncFollowNavCoalesceAfterListNav()
 	case keymap.ActionNavPageUp:
 		activePanel.Page(-1, viewportRows)
+		a.armPanelSyncFollowNavCoalesceAfterListNav()
 	case keymap.ActionNavPageDown:
 		activePanel.Page(1, viewportRows)
+		a.armPanelSyncFollowNavCoalesceAfterListNav()
 	case keymap.ActionNavTop:
 		activePanel.Top(viewportRows)
+		a.armPanelSyncFollowNavCoalesceAfterListNav()
 	case keymap.ActionNavBottom:
 		activePanel.Bottom(viewportRows)
+		a.armPanelSyncFollowNavCoalesceAfterListNav()
 	case keymap.ActionPanelSelectToggle:
 		activePanel.ToggleSelectionAndAdvance(viewportRows)
 	case keymap.ActionPanelSelectGroup:

@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -148,9 +150,11 @@ func (a *App) toggleSyncFollow() {
 	active := a.model.ActivePanel
 	if a.model.SyncFollowEnabled && a.model.SyncFollowPanel == active {
 		a.model.SyncFollowEnabled = false
+		a.clearPanelSyncFollowNavCoalesce()
 		a.setTransientMessage("Sync disabled", ui.MessageUrgencyInfo)
 		return
 	}
+	a.clearPanelSyncFollowNavCoalesce()
 	a.model.SyncFollowEnabled = true
 	a.model.SyncFollowPanel = active
 	arrow := "→"
@@ -175,7 +179,9 @@ func (a *App) reconcileAfterEvent() {
 	a.handleMetaPanelDirChanged(ui.LeftPanel)
 	a.handleMetaPanelDirChanged(ui.RightPanel)
 	// Panel sync reads the driver's highlight after idle-sort / meta hooks may adjust cursors.
-	a.syncFollowFromActive()
+	if !a.syncFollowNavSkipReconcile.Load() {
+		a.syncFollowFromActive()
+	}
 }
 
 // syncFollowTargetPath returns the absolute directory path the follower should mirror when
@@ -240,6 +246,104 @@ func (a *App) syncFollowFromActive() {
 		return
 	}
 	follower.EnsureCursorVisible(a.panelViewportRows(followerID))
+}
+
+func panelSyncFollowListNavAction(actionID string) bool {
+	switch actionID {
+	case keymap.ActionNavUp, keymap.ActionNavDown,
+		keymap.ActionNavPageUp, keymap.ActionNavPageDown,
+		keymap.ActionNavTop, keymap.ActionNavBottom:
+		return true
+	default:
+		return false
+	}
+}
+
+// panelSyncFollowNavCoalesceContext is true when latched sync should mirror the file-list cursor
+// (not the selections strip) from the active driver panel.
+func (a *App) panelSyncFollowNavCoalesceContext() bool {
+	return a.model.ViewMode == ui.ViewBrowser &&
+		a.model.SyncFollowEnabled &&
+		a.model.SyncFollowPanel == a.model.ActivePanel &&
+		a.model.ActiveSubFocus == ui.SubFocusFileList &&
+		!a.inQuickFilterUI()
+}
+
+// panelSyncFollowHeldListNav is true when this key event will move the file-list cursor via
+// the normal browser dispatch path (used to extend debounced sync vs clearing it).
+func (a *App) panelSyncFollowHeldListNav(resolvedAction string, event *tcell.EventKey) bool {
+	if !panelSyncFollowListNavAction(resolvedAction) {
+		return false
+	}
+	if a.inputMode() != InputModeNormal {
+		return false
+	}
+	if a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusFileList {
+		return false
+	}
+	if a.inQuickFilterUI() {
+		return false
+	}
+	if a.shouldStartFilter(event) {
+		return false
+	}
+	return true
+}
+
+// clearPanelSyncFollowNavCoalesce stops pending follower sync and allows reconcile to mirror again.
+func (a *App) clearPanelSyncFollowNavCoalesce() {
+	a.syncFollowNavMu.Lock()
+	if a.syncFollowNavTimer != nil {
+		if !a.syncFollowNavTimer.Stop() {
+			select {
+			case <-a.syncFollowNavTimer.C:
+			default:
+			}
+		}
+		a.syncFollowNavTimer = nil
+	}
+	a.syncFollowNavMu.Unlock()
+	a.syncFollowNavGen.Add(1)
+	a.syncFollowNavSkipReconcile.Store(false)
+}
+
+func (a *App) armPanelSyncFollowNavCoalesceAfterListNav() {
+	if a.config.UI.PanelSyncFollowNavDebounceMS <= 0 {
+		return
+	}
+	if !a.panelSyncFollowNavCoalesceContext() {
+		return
+	}
+	gen := a.syncFollowNavGen.Add(1)
+	delay := time.Duration(a.config.UI.PanelSyncFollowNavDebounceMS) * time.Millisecond
+	a.syncFollowNavMu.Lock()
+	defer a.syncFollowNavMu.Unlock()
+	if a.syncFollowNavTimer != nil {
+		if !a.syncFollowNavTimer.Stop() {
+			select {
+			case <-a.syncFollowNavTimer.C:
+			default:
+			}
+		}
+		a.syncFollowNavTimer = nil
+	}
+	a.syncFollowNavSkipReconcile.Store(true)
+	a.syncFollowNavTimer = time.AfterFunc(delay, func() {
+		a.syncFollowNavMu.Lock()
+		a.syncFollowNavTimer = nil
+		a.syncFollowNavMu.Unlock()
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(syncFollowNavFlushPayload{gen: gen}))
+	})
+}
+
+// applyPanelSyncFollowNavFlush runs after the nav debounce elapses; returns whether a repaint is needed.
+func (a *App) applyPanelSyncFollowNavFlush(p syncFollowNavFlushPayload) bool {
+	if p.gen != a.syncFollowNavGen.Load() {
+		return false
+	}
+	a.syncFollowNavSkipReconcile.Store(false)
+	a.syncFollowFromActive()
+	return true
 }
 
 // tryDispatchSelectionsStrip handles actions while the selections strip has keyboard focus.

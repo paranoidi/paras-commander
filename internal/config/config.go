@@ -159,6 +159,10 @@ type UIConfig struct {
 	// PathPickerValidateDelayMS waits after the filter changes before checking whether the typed path exists.
 	// Default DefaultPathPickerValidateDelayMS. Use 0 to validate on the next scheduler tick (still not per-key synchronous).
 	PathPickerValidateDelayMS int `toml:"path_picker_validate_delay_ms"`
+	// PanelSyncFollowNavDebounceMS, when latched panel sync is on, waits this long after the last file-list
+	// cursor step (Up/Down/PgUp/PgDn/Home/End) before loading the follower's directory. Zero syncs every tick.
+	// Default DefaultPanelSyncFollowNavDebounceMS.
+	PanelSyncFollowNavDebounceMS int `toml:"panel_sync_follow_nav_debounce_ms"`
 	// ZoomActivePanel widens the active browser column; inactive column uses the remainder (see panel_zoom_*_percent).
 	ZoomActivePanel bool `toml:"zoom_active_panel"`
 	// PanelZoomActivePercent and PanelZoomInactivePercent are the width shares (must sum to 100) when ZoomActivePanel is true.
@@ -237,9 +241,10 @@ func Default() Config {
 			ShowFileIcons:             true,
 			BorderStyle:               BorderStyleSingle,
 			Clock:                     false,
-			StatusMessageTTLSeconds:   3.5,
-			PathPickerValidateDelayMS: DefaultPathPickerValidateDelayMS,
-			ZoomActivePanel:           DefaultZoomActivePanel,
+			StatusMessageTTLSeconds:           3.5,
+			PathPickerValidateDelayMS:         DefaultPathPickerValidateDelayMS,
+			PanelSyncFollowNavDebounceMS:      DefaultPanelSyncFollowNavDebounceMS,
+			ZoomActivePanel:                   DefaultZoomActivePanel,
 			PanelZoomActivePercent:    DefaultPanelZoomActivePercent,
 			PanelZoomInactivePercent:  DefaultPanelZoomInactivePercent,
 			ShrunkenShowsNameOnly:     DefaultShrunkenShowsNameOnly,
@@ -676,6 +681,13 @@ func (c *Config) Validate() error {
 	const pathPickerValidateMaxMS = 30_000
 	if c.UI.PathPickerValidateDelayMS > pathPickerValidateMaxMS {
 		c.UI.PathPickerValidateDelayMS = pathPickerValidateMaxMS
+	}
+	if c.UI.PanelSyncFollowNavDebounceMS < 0 {
+		c.UI.PanelSyncFollowNavDebounceMS = builtin.UI.PanelSyncFollowNavDebounceMS
+	}
+	const panelSyncFollowNavDebounceMaxMS = 10_000
+	if c.UI.PanelSyncFollowNavDebounceMS > panelSyncFollowNavDebounceMaxMS {
+		c.UI.PanelSyncFollowNavDebounceMS = panelSyncFollowNavDebounceMaxMS
 	}
 	if c.UI.PanelZoomActivePercent <= 0 || c.UI.PanelZoomInactivePercent <= 0 ||
 		c.UI.PanelZoomActivePercent+c.UI.PanelZoomInactivePercent != 100 {

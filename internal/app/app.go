@@ -53,6 +53,11 @@ type diskIdleSortPanel struct {
 // jobsWakePayload wakes PollEvent so job channel updates can drain and repaint.
 type jobsWakePayload struct{}
 
+// syncFollowNavFlushPayload applies latched panel sync after file-list cursor debounce elapses.
+type syncFollowNavFlushPayload struct {
+	gen uint64
+}
+
 // App owns lifecycle, state, and input dispatch.
 type App struct {
 	screen           tcell.Screen
@@ -94,6 +99,13 @@ type App struct {
 	// changes or the host dialog closes before the timer fires (avoids stale AfterFunc callbacks).
 	pathPickerValidateGen   atomic.Uint64
 	transferDestValidateGen atomic.Uint64
+	// syncFollowNavGen invalidates in-flight debounce callbacks for latched panel sync (file-list cursor).
+	syncFollowNavGen atomic.Uint64
+	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent
+	// until the debounce flush runs or coalesce is cleared.
+	syncFollowNavSkipReconcile atomic.Bool
+	syncFollowNavMu          sync.Mutex
+	syncFollowNavTimer       *time.Timer
 	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
 	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on
 	// Configuration OK so saved TOML is the sole persisted source of truth.
@@ -346,6 +358,7 @@ func (a *App) Run() error {
 
 		switch event := event.(type) {
 		case *tcell.EventResize:
+			a.clearPanelSyncFollowNavCoalesce()
 			a.screen.Sync()
 			a.ensurePanelsVisible()
 			a.render()
@@ -396,6 +409,11 @@ func (a *App) Run() error {
 			case transferDestValidatePayload:
 				a.render()
 				didRender = true
+			case syncFollowNavFlushPayload:
+				if a.applyPanelSyncFollowNavFlush(d) {
+					a.render()
+					didRender = true
+				}
 			}
 		}
 

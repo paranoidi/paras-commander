@@ -11,6 +11,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
+const (
+	// panelSelectionsChromeName is the cross-directory selections title word (strip + inactive file-panel bottom hint).
+	panelSelectionsChromeName = "Selections"
+	// panelSelectionsChromePadded is the strip title / bottom-hint segment with one space on each side of the name.
+	panelSelectionsChromePadded = " " + panelSelectionsChromeName + " "
+)
+
 // drawSelectionsStrip renders the per-panel list of selected paths outside the current directory.
 // The title is always "Selections"; stripFocused only affects title active vs inactive color.
 func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stripFocused, chromeBlocked bool, styles theme.Theme, userHomeDir string) {
@@ -45,8 +52,7 @@ func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stri
 
 	titleX := rect.X + 2
 	titleWidth := rect.Width - 4
-	panelLabel := " Selections "
-	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, panelLabel, titleStyle)
+	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, panelSelectionsChromePadded, titleStyle)
 
 	visibleRows := SelectionsStripListRows(rect)
 	if visibleRows == 0 {

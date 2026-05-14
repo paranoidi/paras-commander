@@ -7,6 +7,12 @@ const (
 	// DefaultPathPickerValidateDelayMS is the debounce before filesystem checks on the path-picker filter.
 	DefaultPathPickerValidateDelayMS = 200
 
+	// DefaultPanelSyncFollowNavDebounceMS delays mirroring the driver's file-list highlight into the
+	// follower while latched panel sync is on. Terminals do not report key-up; after this many
+	// milliseconds without another list cursor step, one sync runs (reduces disk I/O during key repeat).
+	// Zero disables coalescing (sync every event, previous behavior).
+	DefaultPanelSyncFollowNavDebounceMS = 100
+
 	DefaultDiskUsageWalkConcurrency = 4
 
 	DefaultProgressEmitMinBytes      = 512 * 1024

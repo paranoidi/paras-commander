@@ -87,7 +87,7 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 	return strings.TrimSpace(nameTitle)
 }
 
-func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobs []JobEntry, syncDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool) {
+func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobs []JobEntry, syncDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool) {
 	var borderStyle tcell.Style
 	var titleStyle tcell.Style
 	var headerStyle tcell.Style
@@ -107,6 +107,9 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	if syncDriverPanelID == panelID && !chromeBlocked {
 		drawPanelSyncIndicator(screen, rect, panelID, styles.PanelSyncIndicator)
+	}
+	if selectionsBottomHint {
+		drawPanelSelectionsBottomHint(screen, rect, panelID, titleStyle, borderStyle)
 	}
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
 	if inner.Width > 0 && inner.Height > 0 {
@@ -370,6 +373,33 @@ func drawPanelSyncIndicator(screen tcell.Screen, rect Rect, panelID int, style t
 		x = rect.X + rect.Width - 1 - labelW
 	}
 	primitive.TextOverlay(screen, x, y, labelW, label, style)
+}
+
+// drawPanelSelectionsBottomHint mirrors drawPanelSyncIndicator: it overlays compact chrome on the
+// bottom frame so an inactive column still signals hidden cross-directory selections.
+// One frame "─" uses borderStyle; panelSelectionsChromePadded uses titleStyle (same as the strip title).
+func drawPanelSelectionsBottomHint(screen tcell.Screen, rect Rect, panelID int, titleStyle, borderStyle tcell.Style) {
+	if rect.Width <= 4 || rect.Height < 2 {
+		return
+	}
+	padW := utf8.RuneCountInString(panelSelectionsChromePadded)
+	// Leading (left) or trailing (right) frame dash plus padded title.
+	need := 1 + padW
+	available := rect.Width - 2
+	if need > available {
+		return
+	}
+	y := rect.Y + rect.Height - 1
+	lastIn := rect.X + rect.Width - 2
+	if panelID == RightPanel {
+		xTitle := lastIn - padW
+		primitive.TextOverlay(screen, xTitle, y, padW, panelSelectionsChromePadded, titleStyle)
+		screen.SetContent(lastIn, y, '─', nil, borderStyle)
+		return
+	}
+	x0 := rect.X + 1
+	screen.SetContent(x0, y, '─', nil, borderStyle)
+	primitive.TextOverlay(screen, x0+1, y, padW, panelSelectionsChromePadded, titleStyle)
 }
 
 // panelCursorIconThemeKey is the semantic style key for Theme.PanelFileIconFG on the cursor row; empty otherwise.

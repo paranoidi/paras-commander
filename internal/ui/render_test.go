@@ -1138,3 +1138,144 @@ func TestRenderOmitsSyncIndicatorWhenDisabled(t *testing.T) {
 		t.Fatalf("left bottom border = %q, want no Sync indicator when sync is off", leftBottom)
 	}
 }
+
+func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	crossDir := "/var/other.txt"
+	left := panel.State{
+		Path:    "/tmp",
+		Entries: []localfs.Entry{{Name: "here.txt", Path: "/tmp/here.txt"}},
+		SelectedPaths: map[string]bool{
+			crossDir: true,
+		},
+	}
+	right := panel.State{
+		Path:          "/var",
+		Entries:       []localfs.Entry{{Name: "other.txt", Path: crossDir}},
+		SelectedPaths: map[string]bool{crossDir: true},
+	}
+
+	model := Model{
+		Left:        left,
+		Right:       right,
+		ActivePanel: RightPanel,
+	}
+	styles := theme.Default()
+	Render(screen, model, styles)
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if !strings.Contains(leftBottom, " Selections ") {
+		t.Fatalf("inactive left bottom = %q, want substring %q", leftBottom, " Selections ")
+	}
+	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	if strings.Contains(rightBottom, " Selections ") {
+		t.Fatalf("active right bottom = %q, want no selections hint on active column", rightBottom)
+	}
+
+	// Frame "─" uses panel frame style; padded title uses inactive title style (not merged into one overlay).
+	dashR, dashSt, _ := screen.Get(1, bottomY)
+	if dashR != "─" {
+		t.Fatalf("left bottom frame dash = %q, want '─'", dashR)
+	}
+	if dashSt != styles.PanelFrame {
+		t.Fatalf("left bottom frame dash style = %v, want PanelFrame", dashSt)
+	}
+	_, titleSt, _ := screen.Get(2, bottomY)
+	if titleSt != styles.PanelTitleInactive {
+		t.Fatalf("selections hint padded segment style = %v, want PanelTitleInactive", titleSt)
+	}
+}
+
+func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	outsideSel := "/tmp/outside.txt"
+	left := panel.State{
+		Path:    "/tmp",
+		Entries: []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
+	}
+	right := panel.State{
+		Path:    "/var",
+		Entries: []localfs.Entry{{Name: "r.txt", Path: "/var/r.txt"}},
+		SelectedPaths: map[string]bool{
+			outsideSel: true,
+		},
+	}
+
+	model := Model{
+		Left:        left,
+		Right:       right,
+		ActivePanel: LeftPanel,
+	}
+	styles := theme.Default()
+	Render(screen, model, styles)
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	if !strings.Contains(rightBottom, " Selections ") {
+		t.Fatalf("inactive right bottom = %q, want substring %q", rightBottom, " Selections ")
+	}
+
+	// Trailing frame dash before ┘ uses PanelFrame; padded title uses inactive title style.
+	lastIn := width - 2
+	dashR, dashSt, _ := screen.Get(lastIn, bottomY)
+	if dashR != "─" {
+		t.Fatalf("right bottom frame dash = %q, want '─'", dashR)
+	}
+	if dashSt != styles.PanelFrame {
+		t.Fatalf("right bottom frame dash style = %v, want PanelFrame", dashSt)
+	}
+	_, titleSt, _ := screen.Get(lastIn-1, bottomY)
+	if titleSt != styles.PanelTitleInactive {
+		t.Fatalf("selections hint padded last cell style = %v, want PanelTitleInactive", titleSt)
+	}
+}
+
+func TestRenderOmitsSelectionsBottomHintWhenStripVisible(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	crossDir := "/var/other.txt"
+	left := panel.State{
+		Path:    "/tmp",
+		Entries: []localfs.Entry{{Name: "here.txt", Path: "/tmp/here.txt"}},
+		SelectedPaths: map[string]bool{
+			crossDir: true,
+		},
+	}
+
+	model := Model{
+		Left:        left,
+		Right:       panel.State{Path: "/var"},
+		ActivePanel: LeftPanel,
+	}
+	Render(screen, model, theme.Default())
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if strings.Contains(leftBottom, " Selections ") {
+		t.Fatalf("left column bottom = %q, want no file-panel selections hint when strip is visible", leftBottom)
+	}
+}

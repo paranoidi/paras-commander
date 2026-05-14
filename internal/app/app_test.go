@@ -3650,6 +3650,9 @@ func newApp(t *testing.T, screen tcell.SimulationScreen, dir string) *App {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
+	// Tests expect immediate latched sync after each dispatch+render; production debounces
+	// follower directory loads during repeated file-list cursor keys (see panel_sync_follow_nav_debounce_ms).
+	app.config.UI.PanelSyncFollowNavDebounceMS = 0
 	return app
 }
 
@@ -3906,6 +3909,34 @@ func TestSyncFollowAppliesBeforeRenderAfterNav(t *testing.T) {
 	app.render()
 	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "gamma")); got != want {
 		t.Fatalf("after second down+render follower path = %q, want %q", got, want)
+	}
+}
+
+func TestPanelSyncFollowNavDebounceDefersFollowerUntilCleared(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"alpha", "beta"} {
+		if err := os.Mkdir(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.dispatch(keymap.ActionPanelToggleSync)
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "alpha")); got != want {
+		t.Fatalf("right after sync enable = %q, want %q", got, want)
+	}
+	app.config.UI.PanelSyncFollowNavDebounceMS = 500
+	app.dispatch(keymap.ActionNavDown)
+	app.reconcileAfterEvent()
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "alpha")); got != want {
+		t.Fatalf("follower path after debounced nav+reconcile = %q, want %q (still coalescing)", got, want)
+	}
+	app.clearPanelSyncFollowNavCoalesce()
+	app.reconcileAfterEvent()
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "beta")); got != want {
+		t.Fatalf("follower path after clear+reconcile = %q, want %q", got, want)
 	}
 }
 
