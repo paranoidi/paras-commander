@@ -945,7 +945,7 @@ func TestLeftMenuToggleHiddenTargetsLeftPanel(t *testing.T) {
 	app.moveMenu(-1)
 	// Open pulldown for Left menu.
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	app.moveMenuItem(1)
+	app.moveMenuItem(2)
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if quit {
@@ -1672,12 +1672,153 @@ func TestLayoutForTerminalSizeIgnoresZoomInAuxiliaryViews(t *testing.T) {
 		t.Fatalf("browser Left=%d Right=%d want 70/30", layBrowser.Left.Width, layBrowser.Right.Width)
 	}
 
-	for _, vm := range []ui.ViewMode{ui.ViewJobs, ui.ViewCommands, ui.ViewMessages} {
+	for _, vm := range []ui.ViewMode{ui.ViewJobs, ui.ViewCommands, ui.ViewMessages, ui.ViewFilePreview} {
 		app.model.ViewMode = vm
 		lay := app.layoutForTerminalSize(100, 30)
 		if lay.Left.Width != 50 || lay.Right.Width != 50 {
 			t.Fatalf("view %v with zoom on: Left=%d Right=%d want 50/50", vm, lay.Left.Width, lay.Right.Width)
 		}
+	}
+}
+
+func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(100, 30)
+
+	cfg := config.Default()
+	cfg.UI.ZoomActivePanel = true
+	cfg.UI.PanelZoomActivePercent = 70
+	cfg.UI.PanelZoomInactivePercent = 30
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Paths:  config.Paths{}.WithResolvedLocations(),
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	layZoomed := app.layoutForTerminalSize(100, 30)
+	if layZoomed.Left.Width != 70 || layZoomed.Right.Width != 30 {
+		t.Fatalf("without preview Left=%d Right=%d want 70/30", layZoomed.Left.Width, layZoomed.Right.Width)
+	}
+
+	app.commandsMu.Lock()
+	app.model.FilePreview.Open = true
+	app.model.FilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FilePreview.CombinedText = "hello"
+	app.commandsMu.Unlock()
+
+	layEven := app.layoutForTerminalSize(100, 30)
+	if layEven.Left.Width != 50 || layEven.Right.Width != 50 {
+		t.Fatalf("with preview Left=%d Right=%d want 50/50", layEven.Left.Width, layEven.Right.Width)
+	}
+
+	app.commandsMu.Lock()
+	app.model.FilePreview = ui.FilePreviewState{}
+	app.commandsMu.Unlock()
+	app.model.QuickViewEnabled = true
+	layQV := app.layoutForTerminalSize(100, 30)
+	if layQV.Left.Width != 50 || layQV.Right.Width != 50 {
+		t.Fatalf("with quick view armed Left=%d Right=%d want 50/50", layQV.Left.Width, layQV.Right.Width)
+	}
+}
+
+func TestFilePreviewFocusScrollAndTabReturnsToActivePanelFileList(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(100, 30)
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Paths:  config.Paths{}.WithResolvedLocations(),
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.patchFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = strings.Repeat("line\n", 40)
+		st.Scroll = 0
+	})
+	app.model.ActiveSubFocus = ui.SubFocusInactivePreview
+
+	app.dispatch(keymap.ActionNavDown)
+	if app.model.FilePreview.Scroll != 1 {
+		t.Fatalf("FilePreview.Scroll = %d, want 1", app.model.FilePreview.Scroll)
+	}
+
+	prevActive := app.model.ActivePanel
+	app.dispatch(keymap.ActionPanelSwitch)
+	if app.model.ActivePanel != prevActive {
+		t.Fatalf("ActivePanel = %d, want unchanged %d after Tab from preview", app.model.ActivePanel, prevActive)
+	}
+	if app.model.ActiveSubFocus != ui.SubFocusFileList {
+		t.Fatalf("ActiveSubFocus = %v, want SubFocusFileList", app.model.ActiveSubFocus)
+	}
+}
+
+func TestPanelToggleZoomNoOpWhileFilePreviewOpen(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(100, 30)
+
+	cfg := config.Default()
+	cfg.UI.ZoomActivePanel = false
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Paths:  config.Paths{}.WithResolvedLocations(),
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.commandsMu.Lock()
+	app.model.FilePreview.Open = true
+	app.model.FilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FilePreview.CombinedText = "x"
+	app.commandsMu.Unlock()
+
+	app.dispatch(keymap.ActionPanelToggleZoomActivePanel)
+	if app.zoomActivePanelOverride != nil {
+		t.Fatalf("zoom override = %v, want nil (toggle ignored)", app.zoomActivePanelOverride)
+	}
+	if !strings.Contains(app.model.Message, "Zoom disabled") {
+		t.Fatalf("transient message = %q, want mention of zoom disabled", app.model.Message)
 	}
 }
 
@@ -2222,7 +2363,7 @@ func TestFirstMessageLine(t *testing.T) {
 	}
 }
 
-func TestMenuShortcutActivatesCopyMessage(t *testing.T) {
+func TestMenuShortcutActivatesFullscreenFileView(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -2240,20 +2381,176 @@ func TestMenuShortcutActivatesCopyMessage(t *testing.T) {
 		t.Fatalf("New() error = %v", err)
 	}
 
-	app.dispatch(keymap.ActionAppOpenMenu)
-	// Open pulldown first, then press shortcut.
-	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	// 'v' is View's shortcut, which is still not implemented.
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
+	app.dispatch(keymap.ActionFileView)
+	if app.model.ViewMode != ui.ViewFilePreview {
+		t.Fatalf("ViewMode = %v, want ViewFilePreview after file.view", app.model.ViewMode)
+	}
+	app.commandsMu.RLock()
+	open := app.model.FullscreenFilePreview.Open
+	app.commandsMu.RUnlock()
+	if !open {
+		t.Fatal("FullscreenFilePreview.Open = false, want true after file.view")
+	}
+}
 
-	if quit {
-		t.Fatal("handleKey() quit = true, want false")
+func TestFullscreenFilePreviewArrowDownScrollsWithoutNavigatingList(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
+		writeFile(t, filepath.Join(dir, name))
 	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = strings.Repeat("x\n", 200)
+		st.Scroll = 0
+	})
+
+	cursorBefore := app.activePanel().Cursor
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if got := app.activePanel().Cursor; got != cursorBefore {
+		t.Fatalf("list cursor moved %d -> %d; Down must scroll preview, not nav.down", cursorBefore, got)
+	}
+	app.commandsMu.RLock()
+	scroll := app.model.FullscreenFilePreview.Scroll
+	app.commandsMu.RUnlock()
+	if scroll != 1 {
+		t.Fatalf("FullscreenFilePreview.Scroll = %d, want 1 after first Down", scroll)
+	}
+}
+
+func TestFullscreenFilePreviewLeftBackspaceDoNotChangePanelPath(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("mkdir sub: %v", err)
+	}
+	writeFile(t, filepath.Join(sub, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if err := app.activePanel().Load(sub); err != nil {
+		t.Fatalf("Load(sub): %v", err)
+	}
+	pathBefore := app.activePanel().Path
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = "x\n"
+		st.Scroll = 0
+	})
+
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if got := app.activePanel().Path; got != pathBefore {
+		t.Fatalf("KeyLeft changed path %q -> %q", pathBefore, got)
+	}
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
+	if got := app.activePanel().Path; got != pathBefore {
+		t.Fatalf("Backspace changed path %q -> %q", pathBefore, got)
+	}
+}
+
+func TestFullscreenFilePreviewRightDoesNotMoveListCursor(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
+		writeFile(t, filepath.Join(dir, name))
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = strings.Repeat("x\n", 200)
+		st.Scroll = 0
+	})
+
+	cursorBefore := app.activePanel().Cursor
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if got := app.activePanel().Cursor; got != cursorBefore {
+		t.Fatalf("list cursor moved %d -> %d; Right must not nav.open", cursorBefore, got)
+	}
+}
+
+func TestFullscreenFilePreviewDoesNotOpenMenuFromDispatchOrF9(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = "x\n"
+		st.Scroll = 0
+	})
+
+	app.dispatch(keymap.ActionAppOpenMenu)
 	if app.model.Menu.Open {
-		t.Fatal("menu open = true, want closed")
+		t.Fatal("ActionAppOpenMenu must not open menu during fullscreen file preview")
 	}
-	if app.model.Message != "View is not implemented yet" {
-		t.Fatalf("Message = %q, want unsupported message", app.model.Message)
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	if app.model.Menu.Open {
+		t.Fatal("F9 must not open menu during fullscreen file preview")
+	}
+	for _, fk := range app.activeFooterKeys() {
+		if fk.Key == tcell.KeyF9 {
+			t.Fatalf("footer must not list F9, got %+v", app.activeFooterKeys())
+		}
 	}
 }
 
@@ -2326,7 +2623,7 @@ func TestFileMenuExitQuits(t *testing.T) {
 	}
 }
 
-func TestQuickFilterFunctionKeyClosesFuzzyAndRunsUnsupportedFooterBinding(t *testing.T) {
+func TestQuickFilterFunctionKeyClosesFuzzyAndRunsFullscreenFileView(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -2347,7 +2644,7 @@ func TestQuickFilterFunctionKeyClosesFuzzyAndRunsUnsupportedFooterBinding(t *tes
 	app.activePanel().OpenFilter(app.activeViewportRows())
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
 
-	// F3 is View, which is still unsupported.
+	// F3 runs file.view (full-screen file view) after the bound action clears the filter.
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
@@ -2356,8 +2653,14 @@ func TestQuickFilterFunctionKeyClosesFuzzyAndRunsUnsupportedFooterBinding(t *tes
 		t.Fatalf("filter should be cleared, got editing=%v active=%v query=%q",
 			app.model.Left.Filter.Editing, app.model.Left.Filter.Active, app.model.Left.Filter.Query)
 	}
-	if app.model.Message != "View is not implemented yet" {
-		t.Fatalf("Message = %q, want unsupported View message", app.model.Message)
+	if app.model.ViewMode != ui.ViewFilePreview {
+		t.Fatalf("ViewMode = %v, want ViewFilePreview after F3 from quick filter", app.model.ViewMode)
+	}
+	app.commandsMu.RLock()
+	open := app.model.FullscreenFilePreview.Open
+	app.commandsMu.RUnlock()
+	if !open {
+		t.Fatal("FullscreenFilePreview.Open = false, want true after F3 from quick filter")
 	}
 }
 

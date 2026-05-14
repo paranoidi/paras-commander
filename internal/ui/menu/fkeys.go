@@ -77,6 +77,14 @@ var FunctionKeysMessages = []FunctionKey{
 // FunctionKeysMessagesView returns hints for the Messages screen footer.
 func FunctionKeysMessagesView() []FunctionKey { return FunctionKeysMessages }
 
+// FunctionKeysFilePreviewView is the footer legend while the full-screen file view is active.
+func FunctionKeysFilePreviewView() []FunctionKey {
+	return []FunctionKey{
+		FooterEscClose,
+		{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+	}
+}
+
 // FunctionKeyHints returns a label list suitable for footer rendering.
 func FunctionKeyHints() []FunctionKey { return FunctionKeys }
 

@@ -114,6 +114,7 @@ func Definitions() []Definition {
 			Label:      "Left",
 			Shortcut:   'l',
 			Items: []Item{
+				{Action: keymap.ActionFileQuickView, Label: "Quick view", Shortcut: 'q'},
 				{Action: keymap.ActionPanelSortDialog, Label: "Sort...", Shortcut: 's'},
 				{Action: keymap.ActionPanelToggleHidden, Label: "Toggle hidden", Shortcut: 'h'},
 				{Action: keymap.ActionPanelRefresh, Label: "Refresh", Shortcut: 'r'},
@@ -130,7 +131,7 @@ func Definitions() []Definition {
 			Label:      "File",
 			Shortcut:   'f',
 			Items: []Item{
-				{Action: keymap.ActionFileView, Label: "View", Shortcut: 'v'},
+				{Action: keymap.ActionFileView, Label: "View", Shortcut: 'V'},
 				{Action: keymap.ActionMenuFileViewPath, Label: "View file...", Shortcut: 'w'},
 				{Action: keymap.ActionMenuFileFilteredView, Label: "Filtered view", Shortcut: 'f'},
 				{Action: keymap.ActionFileEdit, Label: "Edit", Shortcut: 'e'},
@@ -185,6 +186,7 @@ func Definitions() []Definition {
 			Label:      "Right",
 			Shortcut:   'r',
 			Items: []Item{
+				{Action: keymap.ActionFileQuickView, Label: "Quick view", Shortcut: 'q'},
 				{Action: keymap.ActionPanelSortDialog, Label: "Sort...", Shortcut: 's'},
 				{Action: keymap.ActionPanelToggleHidden, Label: "Toggle hidden", Shortcut: 'h'},
 				{Action: keymap.ActionPanelRefresh, Label: "Refresh", Shortcut: 'r'},

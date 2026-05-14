@@ -184,6 +184,7 @@ func (a *App) reconcileAfterEvent() {
 	if !a.syncFollowNavSkipReconcile.Load() {
 		a.syncFollowFromActive()
 	}
+	a.reconcileQuickViewPreview()
 }
 
 // syncFollowTargetPath returns the absolute directory path the follower should mirror when
@@ -229,6 +230,12 @@ func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
 // Idempotent: when the follower already sits at the target path it returns without work.
 func (a *App) syncFollowFromActive() {
 	if a.model.ViewMode != ui.ViewBrowser {
+		return
+	}
+	a.commandsMu.RLock()
+	previewOpen := a.model.FilePreview.Open || a.model.QuickViewEnabled
+	a.commandsMu.RUnlock()
+	if previewOpen {
 		return
 	}
 	if !a.model.SyncFollowEnabled || a.model.SyncFollowPanel != a.model.ActivePanel {
@@ -384,7 +391,11 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 	case keymap.ActionPanelFocusSelections:
 		a.toggleSelectionsStripFocus()
 	case keymap.ActionPanelSwitch:
-		a.switchPanel()
+		if a.filePreviewOpen() {
+			a.model.ActiveSubFocus = ui.SubFocusInactivePreview
+		} else {
+			a.switchPanel()
+		}
 	case keymap.ActionAppOpenMenu:
 		a.openMenu()
 	case keymap.ActionNavOpen:

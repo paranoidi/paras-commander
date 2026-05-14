@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 )
 
 const (
@@ -118,6 +119,7 @@ type Config struct {
 	Logging                    LoggingConfig    `toml:"logging"`
 	Bookmarks                  BookmarksConfig  `toml:"bookmarks"`
 	UserMenu                   UserMenuConfig   `toml:"user_menu"`
+	Preview                    PreviewConfig    `toml:"preview"`
 	// Meta holds named per-entry shell commands shown in the panel Meta column.
 	// Each key is the command name; command receives the entry path as $1.
 	Meta map[string]MetaCommandDef `toml:"meta"`
@@ -155,6 +157,13 @@ type UserMenuConfig struct {
 	LocalNames []string `toml:"local_names"`
 }
 
+// PreviewConfig controls inactive-panel file preview (external highlighter command).
+type PreviewConfig struct {
+	// Command is a single-line argv template parsed like shellwords (see cmdrun.ParseCommandArgv).
+	// Use {path} once to insert the absolute file path as one token; if omitted, the path is appended.
+	Command string `toml:"command"`
+}
+
 type UIConfig struct {
 	ShowMenuBar    bool   `toml:"show_menu_bar"`
 	ShowFooter     bool   `toml:"show_footer"`
@@ -175,6 +184,9 @@ type UIConfig struct {
 	// cursor step (Up/Down/PgUp/PgDn/Home/End) before loading the follower's directory. Zero syncs every tick.
 	// Default DefaultPanelSyncFollowNavDebounceMS.
 	PanelSyncFollowNavDebounceMS int `toml:"panel_sync_follow_nav_debounce_ms"`
+	// QuickViewPreviewDebounceMS waits after the last highlight change before re-running the preview
+	// subprocess while Quick view is enabled. Zero disables debouncing. Default DefaultQuickViewPreviewDebounceMS.
+	QuickViewPreviewDebounceMS int `toml:"quick_view_preview_debounce_ms"`
 	// ZoomActivePanel widens the active browser column; inactive column uses the remainder (see panel_zoom_*_percent).
 	ZoomActivePanel bool `toml:"zoom_active_panel"`
 	// PanelZoomActivePercent and PanelZoomInactivePercent are the width shares (must sum to 100) when ZoomActivePanel is true.
@@ -259,6 +271,7 @@ func Default() Config {
 			StatusMessageTTLSeconds:           3.5,
 			PathPickerValidateDelayMS:         DefaultPathPickerValidateDelayMS,
 			PanelSyncFollowNavDebounceMS:      DefaultPanelSyncFollowNavDebounceMS,
+			QuickViewPreviewDebounceMS:        DefaultQuickViewPreviewDebounceMS,
 			ZoomActivePanel:                   DefaultZoomActivePanel,
 			PanelZoomActivePercent:    DefaultPanelZoomActivePercent,
 			PanelZoomInactivePercent:  DefaultPanelZoomInactivePercent,
@@ -299,6 +312,9 @@ func Default() Config {
 		UserMenu: UserMenuConfig{
 			File:       "",
 			LocalNames: []string{DefaultUserMenuFileName},
+		},
+		Preview: PreviewConfig{
+			Command: DefaultFilePreviewCommand,
 		},
 		Meta: map[string]MetaCommandDef{
 			"count-items": {
@@ -715,6 +731,12 @@ func (c *Config) Validate() error {
 	if c.UI.PanelSyncFollowNavDebounceMS > panelSyncFollowNavDebounceMaxMS {
 		c.UI.PanelSyncFollowNavDebounceMS = panelSyncFollowNavDebounceMaxMS
 	}
+	if c.UI.QuickViewPreviewDebounceMS < 0 {
+		c.UI.QuickViewPreviewDebounceMS = builtin.UI.QuickViewPreviewDebounceMS
+	}
+	if c.UI.QuickViewPreviewDebounceMS > panelSyncFollowNavDebounceMaxMS {
+		c.UI.QuickViewPreviewDebounceMS = panelSyncFollowNavDebounceMaxMS
+	}
 	if c.UI.PanelZoomActivePercent <= 0 || c.UI.PanelZoomInactivePercent <= 0 ||
 		c.UI.PanelZoomActivePercent+c.UI.PanelZoomInactivePercent != 100 {
 		c.UI.PanelZoomActivePercent = DefaultPanelZoomActivePercent
@@ -788,6 +810,12 @@ func (c *Config) Validate() error {
 	}
 	if len(c.UserMenu.LocalNames) == 0 {
 		c.UserMenu.LocalNames = append([]string(nil), builtin.UserMenu.LocalNames...)
+	}
+	if strings.TrimSpace(c.Preview.Command) == "" {
+		c.Preview.Command = builtin.Preview.Command
+	}
+	if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/paras-commander-preview-validate", 80); err != nil {
+		c.Preview.Command = builtin.Preview.Command
 	}
 	return nil
 }

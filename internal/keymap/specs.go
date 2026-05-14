@@ -380,10 +380,17 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileView,
-			Title:       "View file",
+			Title:       "Full screen file view",
 			Section:     "File operations",
 			DefaultKeys: []string{"F3"},
-			Keywords:    []string{"viewer", "view"},
+			Keywords:    []string{"viewer", "view", "fullscreen", "bat"},
+		},
+		{
+			ID:          ActionFileQuickView,
+			Title:       "Quick view",
+			Section:     "File operations",
+			DefaultKeys: []string{"S-F3"},
+			Keywords:    []string{"preview", "inactive", "bat"},
 		},
 		{
 			ID:          ActionMenuFileViewPath,

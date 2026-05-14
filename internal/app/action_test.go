@@ -207,6 +207,7 @@ func TestActionFromKeyMapsF3F4AndFilteredViewChord(t *testing.T) {
 		want string
 	}{
 		{"F3 view", tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone), keymap.ActionFileView},
+		{"S-F3 quick view", tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModShift), keymap.ActionFileQuickView},
 		{"F4 edit", tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone), keymap.ActionFileEdit},
 		{"M-! filtered", tcell.NewEventKey(tcell.KeyRune, '!', tcell.ModAlt), keymap.ActionMenuFileFilteredView},
 	}

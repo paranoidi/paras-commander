@@ -13,7 +13,7 @@ func TestPanelZoomSplitsColumnsOnlyInBrowser(t *testing.T) {
 	if PanelZoomSplitsColumns(ViewBrowser, false) {
 		t.Fatal("browser + zoom off: no split")
 	}
-	for _, vm := range []ViewMode{ViewJobs, ViewCommands, ViewMessages} {
+	for _, vm := range []ViewMode{ViewJobs, ViewCommands, ViewMessages, ViewFilePreview} {
 		if PanelZoomSplitsColumns(vm, true) {
 			t.Fatalf("%v + zoom: auxiliary views must not use zoomed split", vm)
 		}

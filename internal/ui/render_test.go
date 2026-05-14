@@ -260,11 +260,15 @@ func TestRenderDrawsLeftPanelPulldownWithKeymapLabels(t *testing.T) {
 	styles := theme.Default()
 	Render(screen, model, styles)
 
-	rowSort := strings.TrimSpace(tcelltest.TextAt(screen, 1, 2, 72))
+	rowQuick := strings.TrimSpace(tcelltest.TextAt(screen, 1, 2, 72))
+	if !strings.Contains(rowQuick, "Quick view") || !strings.Contains(rowQuick, "S-F3") {
+		t.Fatalf("quick view row = %q, want Quick view with S-F3", rowQuick)
+	}
+	rowSort := strings.TrimSpace(tcelltest.TextAt(screen, 1, 3, 72))
 	if !strings.Contains(rowSort, "Sort") || !strings.Contains(rowSort, "C-s") {
 		t.Fatalf("sort row = %q, want Sort with C-s", rowSort)
 	}
-	rowHidden := strings.TrimSpace(tcelltest.TextAt(screen, 1, 3, 72))
+	rowHidden := strings.TrimSpace(tcelltest.TextAt(screen, 1, 4, 72))
 	if !strings.Contains(rowHidden, "Toggle hidden") || !strings.Contains(rowHidden, "M-.") {
 		t.Fatalf("hidden row = %q, want Toggle hidden with M-.", rowHidden)
 	}
@@ -526,6 +530,40 @@ func TestRenderDrawsMessageDialog(t *testing.T) {
 	}
 	if !foundOK {
 		t.Fatal("expected OK button row")
+	}
+}
+
+func TestMenuBarInteractiveFalseWhenFullscreenFilePreview(t *testing.T) {
+	t.Parallel()
+	m := Model{ViewMode: ViewFilePreview}
+	if m.MenuBarInteractive() {
+		t.Fatal("fullscreen file preview must not use interactive menu bar")
+	}
+}
+
+func TestRenderBlankMenuBarRowWhenFullscreenFilePreview(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 12)
+	const width = 80
+
+	styles := theme.Default()
+	model := Model{
+		Left:              panel.State{Path: "/tmp"},
+		Right:             panel.State{Path: "/var"},
+		ActivePanel:       LeftPanel,
+		ViewMode:          ViewFilePreview,
+		FullscreenFilePreviewDraw: FilePreviewState{Open: true, Phase: FilePreviewPhaseDone, CombinedText: "hi\n"},
+	}
+
+	Render(screen, model, styles)
+
+	top := tcelltest.TextAt(screen, 0, 0, width)
+	if strings.Contains(top, "File") || strings.Contains(top, "Left") {
+		t.Fatalf("menu row = %q, want blank (no pulldown menu labels)", top)
 	}
 }
 

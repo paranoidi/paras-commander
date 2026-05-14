@@ -30,6 +30,7 @@ const (
 	InputModeJobsView
 	InputModeCommandsView
 	InputModeMessagesView
+	InputModeFilePreviewView
 	InputModePathPicker
 	InputModeHistoryDialog
 	InputModeMetaDialog
@@ -63,6 +64,10 @@ func (a *App) inputMode() InputMode {
 		return InputModeGroupSelect
 	case a.model.FileDialog.Open:
 		return InputModeFileDialog
+	case a.model.ViewMode == ui.ViewFilePreview &&
+		!a.model.AuxiliaryViewDialogKeysBlocked() &&
+		!a.inQuickFilterUI():
+		return InputModeFilePreviewView
 	case a.model.ViewMode == ui.ViewCommands &&
 		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
@@ -134,6 +139,9 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
+	}
+	if a.model.ViewMode == ui.ViewFilePreview && !a.inQuickFilterUI() {
+		return menu.FunctionKeysFilePreviewView()
 	}
 	if a.model.ViewMode == ui.ViewCommands && !a.inQuickFilterUI() {
 		return menu.FunctionKeysCommandsView()
@@ -264,6 +272,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		quit := a.handleMessagesViewKey(event)
 		a.render()
 		return quit, true
+	case InputModeFilePreviewView:
+		quit := a.handleFilePreviewViewKey(event)
+		a.render()
+		return quit, true
 	case InputModeDialog:
 		quit := a.handleDialogKey(event)
 		a.render()
@@ -381,7 +393,8 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 		return false
 	}
 	return !ui.IsAuxiliaryView(a.model.ViewMode) &&
-		(a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusSelectionsStrip) &&
+		(a.model.ViewMode != ui.ViewBrowser ||
+			(a.model.ActiveSubFocus != ui.SubFocusSelectionsStrip && a.model.ActiveSubFocus != ui.SubFocusInactivePreview)) &&
 		!a.model.QuickFilterStartBlocked()
 }
 
@@ -435,6 +448,9 @@ func (a *App) dispatchActionLikeKeyboardShortcut(actionID string) bool {
 }
 
 func (a *App) dispatch(actionID string) {
+	if a.tryDispatchFilePreviewFocus(actionID) {
+		return
+	}
 	if a.tryDispatchSelectionsStrip(actionID) {
 		return
 	}
@@ -459,7 +475,11 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionPanelDiskUsageScan:
 		a.startDiskUsageScan()
 	case keymap.ActionPanelSwitch:
-		a.switchPanel()
+		if a.filePreviewOpen() {
+			a.cycleSubFocusForTabWithPreview()
+		} else {
+			a.switchPanel()
+		}
 	case keymap.ActionPanelFocusSelections:
 		a.toggleSelectionsStripFocus()
 	case keymap.ActionNavUp:
@@ -505,6 +525,10 @@ func (a *App) dispatch(actionID string) {
 		activePanel.CycleListingFormat()
 		a.setTransientMessage(fmt.Sprintf("Listing: %s", activePanel.ListFormat.String()), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelToggleZoomActivePanel:
+		if a.filePreviewOpen() || a.model.QuickViewEnabled {
+			a.setTransientMessage("Zoom disabled while quick view or file view is active", ui.MessageUrgencyInfo)
+			break
+		}
 		a.toggleRuntimeZoomActivePanel()
 	case keymap.ActionPanelReverseSort:
 		activePanel.ToggleSortReverse(viewportRows)
@@ -610,7 +634,9 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionUIOpenConfig:
 		a.openConfigDialog()
 	case keymap.ActionFileView:
-		a.setUnsupportedMessage("View")
+		a.openFilePreviewFullscreen()
+	case keymap.ActionFileQuickView:
+		a.handleQuickViewToggle()
 	case keymap.ActionMenuFileViewPath:
 		a.setUnsupportedMessage("View file...")
 	case keymap.ActionMenuFileFilteredView:

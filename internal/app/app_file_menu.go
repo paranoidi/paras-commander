@@ -15,6 +15,7 @@ func (a *App) dispatchFileMenuItem(item menu.Item) {
 		keymap.ActionFileHardlink,
 		keymap.ActionBookmarkOpen,
 		keymap.ActionFileView,
+		keymap.ActionFileQuickView,
 		keymap.ActionMenuFileViewPath,
 		keymap.ActionMenuFileFilteredView,
 		keymap.ActionFileEdit,

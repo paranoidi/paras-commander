@@ -35,11 +35,12 @@ const (
 	ViewJobs
 	ViewCommands
 	ViewMessages
+	ViewFilePreview
 )
 
 // IsAuxiliaryView reports vm is a full-screen meta view rather than the file browser.
 func IsAuxiliaryView(vm ViewMode) bool {
-	return vm == ViewJobs || vm == ViewCommands || vm == ViewMessages
+	return vm == ViewJobs || vm == ViewCommands || vm == ViewMessages || vm == ViewFilePreview
 }
 
 // PanelZoomSplitsColumns reports whether [ui].zoom_active_panel widens the active column.

@@ -121,6 +121,9 @@ func (a *App) handleMenuKey(event *tcell.EventKey) bool {
 }
 
 func (a *App) openMenu() {
+	if a.model.ViewMode == ui.ViewFilePreview {
+		return
+	}
 	menus := menu.ActiveDefinitions(a.model.MenuDefinitions)
 	if a.model.Menu.ActiveMenu < 0 || a.model.Menu.ActiveMenu >= len(menus) {
 		a.model.Menu.ActiveMenu = menu.DefaultIndex()
@@ -131,6 +134,9 @@ func (a *App) openMenu() {
 }
 
 func (a *App) openMenuByShortcut(shortcut rune) bool {
+	if a.model.ViewMode == ui.ViewFilePreview {
+		return false
+	}
 	menus := menu.ActiveDefinitions(a.model.MenuDefinitions)
 	for index, def := range menus {
 		if def.Shortcut != 0 && unicode.ToLower(def.Shortcut) == unicode.ToLower(shortcut) {
@@ -295,6 +301,8 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		a.openListingFormatDialogForPanel(panelScope)
 	case keymap.ActionPanelMeta:
 		a.openMetaDialog(panelScope)
+	case keymap.ActionFileQuickView:
+		a.handleQuickViewToggle()
 	default:
 		a.setUnsupportedMessage(item.Label)
 	}

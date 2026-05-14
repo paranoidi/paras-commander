@@ -119,6 +119,7 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRune, '*', tcell.ModNone), ActionPanelInvertSelection, true},
 		{tcell.NewEventKey(tcell.KeyRune, '*', tcell.ModShift), ActionPanelInvertSelection, true},
 		{tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone), ActionFileView, true},
+		{tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModShift), ActionFileQuickView, true},
 		{tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone), ActionFileEdit, true},
 		{tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone), ActionMove, true},
 		{tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModShift), ActionFileRename, true},
@@ -321,6 +322,9 @@ func TestMenuBindingLabelUsesDefaultsAndPreferredKey(t *testing.T) {
 	}
 	if got := m.MenuBindingLabel(ActionFileView); got != "F3" {
 		t.Fatalf("menu file view = %q, want F3", got)
+	}
+	if got := m.MenuBindingLabel(ActionFileQuickView); got != "S-F3" {
+		t.Fatalf("menu quick view = %q, want S-F3", got)
 	}
 	if got := m.MenuBindingLabel(ActionMenuFileFilteredView); got != "M-!" {
 		t.Fatalf("filtered view = %q, want M-!", got)

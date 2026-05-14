@@ -17,10 +17,13 @@ const (
 	RightPanel
 )
 
-// SubFocus areas within the active browser column (file list vs selections strip).
+// SubFocus areas within the active browser column (file list vs selections strip),
+// or keyboard focus on the inactive-column file preview when it is open.
 const (
 	SubFocusFileList = iota
 	SubFocusSelectionsStrip
+	// SubFocusInactivePreview is only used while FilePreview is open (inactive column shows preview).
+	SubFocusInactivePreview
 )
 
 // Model is the renderable subset of application state.
@@ -87,8 +90,18 @@ type Model struct {
 	MetaDialog          MetaDialogState
 	UserMenu            UserMenuDialogState
 	// MetaResults holds per-panel command output keyed by entry path (nil = meta not active).
-	MetaResults    [2]map[string]string
-	HelpView       HelpViewState
+	MetaResults [2]map[string]string
+	// FilePreview is the live inactive-panel preview state (mutate only under App.commandsMu).
+	FilePreview FilePreviewState
+	// FilePreviewDraw is a snapshot copied in App.render before ui.Render (no locks in ui).
+	FilePreviewDraw FilePreviewState
+	// QuickViewEnabled mirrors whether Shift+F3 / menu "Quick view" keeps the inactive column in preview mode.
+	QuickViewEnabled bool
+	// FullscreenFilePreview is the full-screen file view state (mutate only under App.commandsMu).
+	FullscreenFilePreview FilePreviewState
+	// FullscreenFilePreviewDraw is a snapshot for ViewFilePreview rendering.
+	FullscreenFilePreviewDraw FilePreviewState
+	HelpView HelpViewState
 	FileDialog     FileDialogState
 	TransferDialog TransferDialogState
 	ConflictDialog ConflictDialogState
@@ -183,9 +196,10 @@ func (m Model) MenuBarLayoutReserved() bool {
 	return !m.HideMenuBar
 }
 
-// MenuBarInteractive is true when menu labels and pulldown may be shown (blocked by modal dialogs).
+// MenuBarInteractive is true when menu labels and pulldown may be shown (blocked by modal dialogs
+// and by the fullscreen file preview, which has no pulldown menus).
 func (m Model) MenuBarInteractive() bool {
-	return !m.HideMenuBar && !m.ModalDialogOpen()
+	return !m.HideMenuBar && !m.ModalDialogOpen() && m.ViewMode != ViewFilePreview
 }
 
 // Render draws the full screen.
@@ -209,7 +223,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	showMenuBarSpinner := model.MenuBarActivitySpinner
 	permW := menuBarRightTailRuneCount(model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner)
 	if model.MenuBarLayoutReserved() {
-		if model.ModalDialogOpen() {
+		if model.ModalDialogOpen() || model.ViewMode == ViewFilePreview {
 			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
 		} else {
 			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
@@ -218,6 +232,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	msg := strings.TrimSpace(model.Message)
 	chromeBlocked := model.PanelsChromeBlocked()
 	switch model.ViewMode {
+	case ViewFilePreview:
+		union := MergeTwinPanelRects(layout.Left, layout.Right)
+		drawFilePreviewPanel(screen, union, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true)
 	case ViewJobs:
 		now := time.Now()
 		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobActivity, styles, now, chromeBlocked, model.UserHomeDir)
@@ -244,13 +261,30 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		leftSelectionsBottomHint := model.Left.SelectionsStripCount() > 0 && leftStripN == 0
 		rightSelectionsBottomHint := model.Right.SelectionsStripCount() > 0 && rightStripN == 0
 
+		inactiveID := RightPanel
+		if model.ActivePanel == RightPanel {
+			inactiveID = LeftPanel
+		}
+		showLeftPreview := model.FilePreviewDraw.Open && inactiveID == LeftPanel
+		showRightPreview := model.FilePreviewDraw.Open && inactiveID == RightPanel
+
 		syncDriver := model.SyncDriverPanelID()
-		drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobsList, syncDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint)
+		if showLeftPreview {
+			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
+			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused)
+		} else {
+			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobsList, syncDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint)
+		}
 		if leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
 			drawSelectionsStrip(screen, leftStrip, model.Left, leftStripFocused, leftChromeBlocked, styles, model.UserHomeDir)
 		}
-		drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobsList, syncDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint)
+		if showRightPreview {
+			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
+			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused)
+		} else {
+			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobsList, syncDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint)
+		}
 		if rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
 			drawSelectionsStrip(screen, rightStrip, model.Right, rightStripFocused, chromeBlocked, styles, model.UserHomeDir)
@@ -305,7 +339,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	if msg != "" {
 		if model.MenuBarLayoutReserved() && layout.Menu.Width > 0 {
 			reserveEnd := layout.Menu.X
-			if !model.ModalDialogOpen() {
+			if !model.ModalDialogOpen() && model.ViewMode != ViewFilePreview {
 				reserveEnd = menuBarMenusEndX(layout.Menu, menus, permW)
 			}
 			// Use full menu row width so the banner reaches the right edge; it paints over permission text.

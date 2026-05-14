@@ -9,7 +9,6 @@ import (
 
 func (a *App) render() {
 	a.stopDiskUsageRedrawDebounce()
-	a.model.PanelZoomEnabled = a.effectiveZoomActivePanel()
 	a.model.PanelZoomActivePercent = a.config.UI.PanelZoomActivePercent
 	a.model.PanelZoomInactivePercent = a.config.UI.PanelZoomInactivePercent
 	a.model.ShrunkenShowsNameOnly = a.config.UI.ShrunkenShowsNameOnly
@@ -25,6 +24,15 @@ func (a *App) render() {
 	a.model.FooterKeys = a.activeFooterKeys()
 	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsageDescendIntoMountPoints
 	a.model.DiskUsageGoduIgnore = a.diskUsageIgnore
+	a.commandsMu.RLock()
+	a.model.FilePreviewDraw = a.model.FilePreview
+	previewOpen := a.model.FilePreviewDraw.Open || a.model.QuickViewEnabled
+	a.model.FullscreenFilePreviewDraw = a.model.FullscreenFilePreview
+	a.commandsMu.RUnlock()
+	if a.model.ViewMode == ui.ViewFilePreview {
+		a.clampFullscreenFilePreviewScroll()
+	}
+	a.model.PanelZoomEnabled = a.effectiveZoomActivePanel() && !previewOpen
 	if a.model.ViewMode == ui.ViewCommands {
 		a.commandsMu.RLock()
 		a.model.CommandsDisplay = append([]ui.CommandRunEntry(nil), a.model.CommandsList...)
@@ -59,13 +67,20 @@ func (a *App) menuBarPermissionText() string {
 	return localfs.UnixModeString(entry.Mode)
 }
 
-func (a *App) layoutForTerminalSize(width, height int) ui.Layout {
+// layoutForTerminalSizePreview computes the browser layout. When filePreviewOpen is true, the
+// twin-column split treats panel zoom as off (same rule as when preview is actually open) so
+// callers can size subprocess output (e.g. bat --terminal-width) before preview state is toggled.
+func (a *App) layoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout {
 	return ui.CalculateLayout(width, height, a.model.MenuBarLayoutReserved(), ui.PanelWidthSplit{
-		Zoom:            ui.PanelZoomSplitsColumns(a.model.ViewMode, a.effectiveZoomActivePanel()),
+		Zoom:            ui.PanelZoomSplitsColumns(a.model.ViewMode, a.effectiveZoomActivePanel() && !filePreviewOpen),
 		ActivePanel:     a.model.ActivePanel,
 		ActivePercent:   a.config.UI.PanelZoomActivePercent,
 		InactivePercent: a.config.UI.PanelZoomInactivePercent,
 	})
+}
+
+func (a *App) layoutForTerminalSize(width, height int) ui.Layout {
+	return a.layoutForTerminalSizePreview(width, height, a.filePreviewOpen() || a.model.QuickViewEnabled)
 }
 
 func (a *App) effectiveZoomActivePanel() bool {

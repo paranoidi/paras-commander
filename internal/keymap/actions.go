@@ -64,6 +64,7 @@ const (
 	ActionFileSymlink            = "file.symlink"
 	ActionFileHardlink           = "file.hardlink"
 	ActionFileView               = "file.view"
+	ActionFileQuickView          = "file.quick-view"
 	ActionFileEdit               = "file.edit"
 
 	// Copy/Move
@@ -185,6 +186,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileSymlink:            {},
 	ActionFileHardlink:           {},
 	ActionFileView:               {},
+	ActionFileQuickView:          {},
 	ActionFileEdit:               {},
 
 	ActionCopy: {},

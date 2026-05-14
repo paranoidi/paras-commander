@@ -13,6 +13,10 @@ const (
 	// Zero disables coalescing (sync every event, previous behavior).
 	DefaultPanelSyncFollowNavDebounceMS = 100
 
+	// DefaultQuickViewPreviewDebounceMS waits after the last listing highlight change before
+	// re-running the preview command while Quick view is on. Zero runs immediately every reconcile.
+	DefaultQuickViewPreviewDebounceMS = 75
+
 	DefaultDiskUsageWalkConcurrency = 4
 
 	DefaultProgressEmitMinBytes      = 512 * 1024
@@ -48,4 +52,8 @@ const (
 
 	// DefaultMessageLogMaxEntries caps status/toast lines retained for the Messages view (oldest dropped).
 	DefaultMessageLogMaxEntries = 500
+
+	// DefaultFilePreviewCommand runs bat with paging disabled, colors forced on (non-TTY stdout),
+	// and wrap/width driven by {terminal_width} so output matches the inactive preview column.
+	DefaultFilePreviewCommand = "bat --paging=never --color=always --wrap=auto --terminal-width={terminal_width}"
 )

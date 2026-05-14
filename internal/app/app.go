@@ -107,6 +107,12 @@ type App struct {
 	syncFollowNavSkipReconcile atomic.Bool
 	syncFollowNavMu          sync.Mutex
 	syncFollowNavTimer       *time.Timer
+	// quickViewDebounceGen invalidates in-flight quick view preview debounce callbacks.
+	quickViewDebounceGen     atomic.Uint64
+	quickViewDebounceMu      sync.Mutex
+	quickViewDebounceTimer   *time.Timer
+	quickViewLastFingerprint string
+
 	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
 	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on
 	// Configuration OK so saved TOML is the sole persisted source of truth.
@@ -414,6 +420,11 @@ func (a *App) Run() error {
 				didRender = true
 			case syncFollowNavFlushPayload:
 				if a.applyPanelSyncFollowNavFlush(d) {
+					a.render()
+					didRender = true
+				}
+			case quickViewFlushPayload:
+				if a.applyQuickViewPreviewFlush(d) {
 					a.render()
 					didRender = true
 				}

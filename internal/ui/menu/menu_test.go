@@ -3,6 +3,7 @@ package menu
 import (
 	"testing"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 )
 
@@ -70,6 +71,7 @@ func TestFileMenuItemsHaveShortcutKeys(t *testing.T) {
 
 func TestFileMenuShortcutExceptions(t *testing.T) {
 	tests := map[string]rune{
+		"View":             'V',
 		"View file...":     'w',
 		"Chmod":            'h',
 		"Relative symlink": 'k',
@@ -180,6 +182,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	}
 
 	assertLabels(t, left, map[string]string{
+		"Quick view":    "S-F3",
 		"Sort...":       "C-s",
 		"Toggle hidden": "M-.",
 		"Refresh":       "M-C-r",
@@ -282,5 +285,18 @@ func TestOptionsMenuKeepsThemeChoicesOutOfPulldown(t *testing.T) {
 	}
 	if items[0].Action != keymap.ActionUIOpenConfig || items[1].Action != keymap.ActionUIOpenTheme {
 		t.Fatalf("unexpected Options actions: %+v / %+v", items[0].Action, items[1].Action)
+	}
+}
+
+func TestFunctionKeysFilePreviewViewExcludesMenuF9(t *testing.T) {
+	t.Parallel()
+	keys := FunctionKeysFilePreviewView()
+	for _, fk := range keys {
+		if fk.Key == tcell.KeyF9 {
+			t.Fatalf("fullscreen file preview footer must not advertise F9 Menu, got %+v", keys)
+		}
+	}
+	if len(keys) != 2 {
+		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F10 only", len(keys))
 	}
 }
