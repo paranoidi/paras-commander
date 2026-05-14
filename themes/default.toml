@@ -22,12 +22,12 @@ bright_white = 15
 
 [styles]
 menu.bar = { fg = "default", bg = "default" }
-menu.bar.accent = { fg = "magenta", bg = "black", bold = true }
-menu.bar.alert = { fg = "bright_red", bg = "default", bold = true }
+menu.bar.accent = { fg = "magenta", bold = true }
+menu.bar.alert = { fg = "bright_red", bold = true }
 menu.bar.selected = { fg = "black", bg = "cyan", bold = true }
 menu.dropdown = { fg = "black", bg = "blue" }
 menu.dropdown.frame = { fg = "bright_blue", bg = "blue" }
-menu.dropdown.accent = { fg = "white", bg = "black", bold = false }
+menu.dropdown.accent = { fg = "white", bold = false }
 menu.dropdown.selected = { fg = "black", bg = "bright_blue", bold = true }
 menu.detail = { fg = "white", bg = "default" }
 
@@ -78,13 +78,14 @@ panel.usage.prefix.cursor.selected = { fg = "yellow", bg = "bright_blue", bold =
 
 fuzzy.input = { fg = "bright_yellow", bg = "default", bold = true }
 fuzzy.input.nomatch = { fg = "bright_red", bg = "default", bold = true }
-fuzzy.highlight = { fg = "magenta", bg = "black", bold = true }
-fuzzy.highlight.cursor = { fg = "red", bg = "cyan", bold = true }
+fuzzy.highlight = { fg = "magenta", bold = true }
+fuzzy.highlight.cursor = { fg = "red", bold = true }
 
-dialog.frame = { fg = "white", bg = "black" }
-dialog.title = { fg = "yellow", bg = "black", bold = true }
-dialog.text = { fg = "white", bg = "black" }
+dialog.frame = { fg = "white" }
+dialog.title = { bold = true }
+dialog.text = { fg = "white" }
 dialog.surface = { fg = "white", bg = "bright_black" }
+# bg matters for the path-picker trailing glyph when that control is focused; shortcut letters use fg+bold only.
 dialog.accent = { fg = "white", bg = "black", bold = true }
 dialog.input.active = { fg = "bright_white", bg = "default", bold = true }
 dialog.input.active.placeholder = { fg = "default", bg = "default" }
@@ -98,23 +99,23 @@ dialog.option.inactive = { fg = "white", bg = "bright_black" }
 dialog.option.active = { fg = "yellow", bg = "bright_black", bold = true }
 dialog.option.selected = { fg = "yellow", bg = "bright_black" }
 
-jobs.row = { fg = "white", bg = "black" }
-jobs.running = { fg = "bright_cyan", bg = "black", bold = true }
-jobs.done = { fg = "bright_green", bg = "black", bold = true }
-jobs.failed = { fg = "bright_red", bg = "black", bold = true }
+jobs.row = { fg = "white" }
+jobs.running = { fg = "bright_cyan", bold = true }
+jobs.done = { fg = "bright_green", bold = true }
+jobs.failed = { fg = "bright_red", bold = true }
 
 jobs.progress.track = { fg = "bright_black", bg = "black" }
 jobs.progress.fill = { fg = "black", bg = "bright_green" }
-jobs.progress.label.on_fill = { fg = "black", bg = "bright_green", bold = true }
-jobs.progress.label.on_track = { fg = "bright_white", bg = "bright_black", bold = true }
+jobs.progress.label.on_fill = { fg = "black", bold = true }
+jobs.progress.label.on_track = { fg = "bright_white", bold = true }
 
-jobs.icons.queued = { fg = "yellow", bg = "black", bold = true }
-jobs.icons.ongoing = { fg = "bright_green", bg = "black", bold = true }
-jobs.icons.paused = { fg = "yellow", bg = "black", bold = true }
-jobs.icons.stopped = { fg = "bright_red", bg = "black", bold = true }
-jobs.icons.error = { fg = "bright_red", bg = "black", bold = true }
-jobs.icons.input_required = { fg = "cyan", bg = "black", bold = true }
-jobs.icons.completed = { fg = "bright_green", bg = "black", bold = true }
+jobs.icons.queued = { fg = "yellow", bold = true }
+jobs.icons.ongoing = { fg = "bright_green", bold = true }
+jobs.icons.paused = { fg = "yellow", bold = true }
+jobs.icons.stopped = { fg = "bright_red", bold = true }
+jobs.icons.error = { fg = "bright_red", bold = true }
+jobs.icons.input_required = { fg = "cyan", bold = true }
+jobs.icons.completed = { fg = "bright_green", bold = true }
 
 [symbols]
 queued = "\uf1af"

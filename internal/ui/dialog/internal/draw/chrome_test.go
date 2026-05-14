@@ -89,6 +89,43 @@ func TestDrawScrollingDialogInputShowsTailWhenCursorAtEnd(t *testing.T) {
 	}
 }
 
+func TestDrawDialogFrameTitleTextUsesFrameForegroundAndSurfaceBackground(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(60, 20)
+
+	th := theme.Default()
+	bfg, _, _ := th.DialogFrame.Decompose()
+	_, dbg, _ := th.DialogSurface.Decompose()
+	wantSt := th.DialogTitle.Foreground(bfg).Background(dbg)
+
+	rect := Rect{X: 5, Y: 2, Width: 40, Height: 6}
+	title := "Hi"
+	DrawDialogFrame(screen, rect, title, th)
+
+	innerW := rect.Width - 2
+	tr := strings.TrimSpace(title)
+	var titleRunes []rune
+	titleRunes = append(append(titleRunes, ' '), []rune(tr)...)
+	titleRunes = append(titleRunes, ' ')
+	tlen := len(titleRunes)
+	leftPad := (innerW - tlen) / 2
+	x := rect.X + 1 + leftPad + 1
+
+	str, st, width := screen.Get(x, rect.Y)
+	r, _ := utf8.DecodeRuneInString(str)
+	if r != 'H' || width < 1 {
+		inner := tcelltest.TextAt(screen, rect.X+1, rect.Y, rect.Width-2)
+		t.Fatalf("at x=%d want H width>=1; rune=%q str=%q width=%d inner=%q", x, r, str, width, inner)
+	}
+	if st != wantSt {
+		t.Fatalf("title cell style = %v, want composed title style %v", st, wantSt)
+	}
+}
+
 func TestDrawDialogFrameCentersShortTitle(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

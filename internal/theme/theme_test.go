@@ -79,6 +79,20 @@ func TestParseRejectsMissingRequiredStyle(t *testing.T) {
 	}
 }
 
+func TestParseAllowsDialogTitleBoldOnly(t *testing.T) {
+	data := testTheme(t, "boldtitle", nil, map[string]string{
+		"dialog.title": `{ bold = true }`,
+	})
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, _, attrs := th.DialogTitle.Decompose()
+	if attrs&tcell.AttrBold == 0 {
+		t.Fatal("dialog.title: want bold from minimal style entry")
+	}
+}
+
 func TestParseLoadsPanelCursorIconFG(t *testing.T) {
 	for _, key := range []string{
 		"panel.row.cursor.active",

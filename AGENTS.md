@@ -62,7 +62,7 @@ All dialogs (modal overlays) must follow these navigation and rendering rules:
 
 - All dialogs use `styles.DialogSurface` as the fill color, not `styles.DialogText`.
 - The border uses `styles.DialogFrame` on the dialog background.
-- The title uses `styles.DialogTitle` (foreground from border, background from dialog background).
+- The title row is built from `styles.DialogTitle` **attributes** (`bold`, etc.) with **glyph foreground** taken from `dialog.frame` and **glyph background** from `dialog.surface` (see `DrawDialogFrame` in `internal/ui/dialog/internal/draw/chrome.go`).
 - All content rows and help text use the dialog background as their background color.
 - Buttons use `drawDialogButton()` helper which renders ` [ label ] ` (outer spaces plus single spaces inside brackets) using `DialogButtonActive` / `DialogButtonNormal` **as defined in the theme** (foreground and background; do not substitute `dialog.surface` for button fill).
   - Shortcut letter in `dialog.accent` foreground color (`Theme.DialogAccent`), bold

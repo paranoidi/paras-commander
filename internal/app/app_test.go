@@ -2334,8 +2334,8 @@ func TestThemeDialogF5ReloadsMenuDropdownAccentFromDisk(t *testing.T) {
 	}
 	writeAccentFG := func(paletteName string) {
 		content := strings.Replace(string(base),
-			`menu.dropdown.accent = { fg = "white", bg = "black", bold = false }`,
-			fmt.Sprintf(`menu.dropdown.accent = { fg = %q, bg = "black", bold = true }`, paletteName), 1)
+			`menu.dropdown.accent = { fg = "white", bold = false }`,
+			fmt.Sprintf(`menu.dropdown.accent = { fg = %q, bold = true }`, paletteName), 1)
 		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
 		}
