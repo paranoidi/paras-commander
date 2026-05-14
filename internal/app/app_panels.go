@@ -28,6 +28,7 @@ func (a *App) reloadActive(successMessage string) {
 			a.setErrorMessage("Refresh failed", err)
 			return
 		}
+		a.model.Right.RefreshVolumeSpace()
 		a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 		return
 	}
@@ -35,6 +36,7 @@ func (a *App) reloadActive(successMessage string) {
 		a.setErrorMessage("Refresh failed", err)
 		return
 	}
+	a.model.Left.RefreshVolumeSpace()
 	a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 }
 

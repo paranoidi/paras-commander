@@ -279,6 +279,11 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 			a.setErrorMessage(label+" refresh failed", err)
 			return
 		}
+		if panelScope == ui.LeftPanel {
+			a.model.Right.RefreshVolumeSpace()
+		} else {
+			a.model.Left.RefreshVolumeSpace()
+		}
 		a.setTransientMessage(label+" refreshed", ui.MessageUrgencyInfo)
 	case keymap.ActionPanelDiskUsageScan:
 		a.startDiskUsageScanForPanel(panelScope)

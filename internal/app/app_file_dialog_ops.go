@@ -20,6 +20,11 @@ func (a *App) refreshBothPanels() {
 	_ = a.model.Right.Refresh(viewportRows)
 }
 
+func (a *App) refreshBothPanelsVolumeSpace() {
+	a.model.Left.RefreshVolumeSpace()
+	a.model.Right.RefreshVolumeSpace()
+}
+
 func (a *App) openRenameDialog(p *panel.State) {
 	entry, err := ops.ResolveSourceSingle(p)
 	if err != nil {

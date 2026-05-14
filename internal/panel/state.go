@@ -662,6 +662,11 @@ func (s *State) refreshVolumeSpace(forPath string) {
 	s.VolumeTotalBytes = 0
 }
 
+// RefreshVolumeSpace re-samples free/total bytes for the volume containing Path without reloading the directory listing.
+func (s *State) RefreshVolumeSpace() {
+	s.refreshVolumeSpace(s.Path)
+}
+
 func (s *State) notifyChdir(oldPath, newPath string) {
 	oldC := cleanPath(oldPath)
 	newC := cleanPath(newPath)

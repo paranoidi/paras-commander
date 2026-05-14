@@ -32,6 +32,32 @@ func TestNewLoadsAbsolutePathAndEntries(t *testing.T) {
 	}
 }
 
+func TestRefreshVolumeSpacePreservesListing(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	n := len(state.Entries)
+	cur := state.Cursor
+	okBefore := state.VolumeSpaceOK
+
+	state.RefreshVolumeSpace()
+
+	if len(state.Entries) != n {
+		t.Fatalf("len(Entries) after RefreshVolumeSpace = %d, want %d", len(state.Entries), n)
+	}
+	if state.Cursor != cur {
+		t.Fatalf("Cursor after RefreshVolumeSpace = %d, want %d", state.Cursor, cur)
+	}
+	if state.VolumeSpaceOK != okBefore {
+		t.Fatalf("VolumeSpaceOK flipped from %v to %v (unexpected)", okBefore, state.VolumeSpaceOK)
+	}
+}
+
 func TestLoadClampsCursorAfterReload(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "file.txt"), []byte("content"), 0o644); err != nil {

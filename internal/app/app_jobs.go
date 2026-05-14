@@ -588,7 +588,7 @@ func (a *App) pollJobEvents() bool {
 				return false
 			}
 			viewJobs := a.model.ViewMode == ui.ViewJobs
-			var sawTerminal bool
+			var sawTerminal, sawProgress bool
 			for _, ev := range batch {
 				a.jobState.ApplyEvent(ev)
 				a.appendJobActivity(ev)
@@ -596,11 +596,15 @@ func (a *App) pollJobEvents() bool {
 				switch ev.Type {
 				case jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled:
 					sawTerminal = true
+				case jobs.EventProgress:
+					sawProgress = true
 				}
 			}
 			if sawTerminal {
 				a.applyJobsRetention()
 				a.refreshBothPanels()
+			} else if sawProgress {
+				a.refreshBothPanelsVolumeSpace()
 			}
 			a.syncJobsList()
 			if viewJobs {
