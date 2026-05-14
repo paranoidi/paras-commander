@@ -24,6 +24,42 @@ func TestQueueRemoveJobByID(t *testing.T) {
 	}
 }
 
+func TestQueueCancelQueuedJobByIDKeepsEntry(t *testing.T) {
+	q := NewQueue()
+	j := &Job{ID: "x", Status: StatusQueued}
+	q.Enqueue(j)
+	if !q.CancelQueuedJobByID("x") {
+		t.Fatal("CancelQueuedJobByID")
+	}
+	if q.Len() != 1 {
+		t.Fatalf("len = %d, want 1", q.Len())
+	}
+	if q.Peek().Status != StatusCanceled {
+		t.Fatalf("status = %q", q.Peek().Status)
+	}
+	if q.CancelQueuedJobByID("x") {
+		t.Fatal("second cancel should be false")
+	}
+	if q.CancelQueuedJobByID("missing") {
+		t.Fatal("cancel missing should be false")
+	}
+}
+
+func TestQueueCancelPausedJob(t *testing.T) {
+	q := NewQueue()
+	j := &Job{ID: "p", Status: StatusQueued}
+	q.Enqueue(j)
+	if !q.PauseQueuedJob("p") {
+		t.Fatal("pause")
+	}
+	if !q.CancelQueuedJobByID("p") {
+		t.Fatal("CancelQueuedJobByID paused")
+	}
+	if j.Status != StatusCanceled {
+		t.Fatalf("status = %q", j.Status)
+	}
+}
+
 func TestQueuePauseQueuedJob(t *testing.T) {
 	q := NewQueue()
 	j := &Job{ID: "x", Status: StatusQueued}

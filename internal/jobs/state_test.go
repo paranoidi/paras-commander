@@ -206,6 +206,25 @@ func TestStateEventFailed(t *testing.T) {
 	}
 }
 
+func TestStateCancelQueuedJobKeepsInQueue(t *testing.T) {
+	s := NewState()
+	job := &Job{ID: "queued-cancel", Type: TypeCopy, Status: StatusQueued}
+	s.AddJob(job)
+	if !s.CancelJob("queued-cancel") {
+		t.Fatal("CancelJob should succeed for queued job")
+	}
+	all := s.AllJobs()
+	if len(all) != 1 {
+		t.Fatalf("AllJobs len = %d, want 1", len(all))
+	}
+	if all[0].Status != StatusCanceled {
+		t.Fatalf("status = %q, want canceled", all[0].Status)
+	}
+	if all[0].FinishedAt.IsZero() {
+		t.Fatal("expected FinishedAt set")
+	}
+}
+
 func TestStateCanceled(t *testing.T) {
 	s := NewState()
 	job := &Job{ID: "test-3", Type: TypeCopy, Status: StatusQueued}
@@ -282,6 +301,9 @@ func TestWorkerArchivesFinishedToHistory(t *testing.T) {
 	}
 	if all[0].ID != job.ID || all[0].Status != StatusCompleted {
 		t.Fatalf("unexpected job: %+v", all[0])
+	}
+	if all[0].FinishedAt.IsZero() {
+		t.Fatal("expected FinishedAt on archived completed job")
 	}
 
 	s.ApplyRetention(RetentionPolicy{ShowFinished: false})

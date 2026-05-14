@@ -243,6 +243,9 @@ func (s *State) ApplyEvent(ev Event) {
 		if j := s.findJobUnlocked(ev.JobID); j != nil {
 			j.Status = StatusCompleted
 			j.PendingBlocker = nil
+			if j.FinishedAt.IsZero() {
+				j.FinishedAt = time.Now()
+			}
 		}
 	case EventFailed:
 		if s.active != nil && s.active.ID == ev.JobID {
@@ -255,6 +258,12 @@ func (s *State) ApplyEvent(ev Event) {
 		if j := s.findJobUnlocked(ev.JobID); j != nil {
 			j.Status = StatusFailed
 			j.PendingBlocker = nil
+			if j.Error == "" && ev.Error != "" {
+				j.Error = ev.Error
+			}
+			if j.FinishedAt.IsZero() {
+				j.FinishedAt = time.Now()
+			}
 		}
 	case EventCanceled:
 		if s.active != nil && s.active.ID == ev.JobID {
@@ -267,6 +276,9 @@ func (s *State) ApplyEvent(ev Event) {
 		if job := s.findJobUnlocked(ev.JobID); job != nil {
 			job.Status = StatusCanceled
 			job.PendingBlocker = nil
+			if job.FinishedAt.IsZero() {
+				job.FinishedAt = time.Now()
+			}
 		}
 	}
 }
@@ -348,16 +360,16 @@ func (s *State) CancelJob(id string) bool {
 		s.SubmitBlockerDecision(id, DecisionCancel)
 		return true
 	}
-	removed := s.queue.RemoveJobByID(id)
+	canceled := s.queue.CancelQueuedJobByID(id)
 	s.mu.Unlock()
-	if removed {
+	if canceled {
 		s.emit(Event{
 			Type:   EventCanceled,
 			JobID:  id,
 			Status: StatusCanceled,
 		})
 	}
-	return removed
+	return canceled
 }
 
 // StartWorker launches the background worker goroutine. It returns immediately.

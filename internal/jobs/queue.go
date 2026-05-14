@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"sync"
+	"time"
 )
 
 // Queue is a thread-safe FIFO job queue.
@@ -84,6 +85,28 @@ func (q *Queue) Peek() *Job {
 		return nil
 	}
 	return q.jobs[0]
+}
+
+// CancelQueuedJobByID marks a queued or paused job as canceled without removing it.
+// Returns false if the job is missing or already finished.
+func (q *Queue) CancelQueuedJobByID(id string) bool {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	for _, job := range q.jobs {
+		if job == nil || job.ID != id {
+			continue
+		}
+		if job.Status.IsFinished() {
+			return false
+		}
+		if job.Status != StatusQueued && job.Status != StatusPaused {
+			return false
+		}
+		job.Status = StatusCanceled
+		job.FinishedAt = time.Now()
+		return true
+	}
+	return false
 }
 
 // RemoveJobByID removes a queued job by ID. The job must be queued (not running).

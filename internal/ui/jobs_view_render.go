@@ -390,21 +390,21 @@ func jobsDetailPathBudget(pathMax int, linePrefix string) int {
 	return b
 }
 
-func jobFinishedWallDuration(j JobEntry, now time.Time) time.Duration {
+func jobFinishedWallDuration(j JobEntry) time.Duration {
 	if j.StartedAt.IsZero() {
 		return 0
 	}
 	end := j.FinishedAt
 	if end.IsZero() || end.Before(j.StartedAt) {
-		end = now
+		return 0
 	}
 	return end.Sub(j.StartedAt)
 }
 
 func detailDurationOrETALine(j JobEntry, now time.Time) string {
 	if jobs.Status(j.Status).IsFinished() {
-		label := jobs.FormatHumanDuration(jobFinishedWallDuration(j, now))
-		if j.StartedAt.IsZero() {
+		label := jobs.FormatHumanDuration(jobFinishedWallDuration(j))
+		if j.StartedAt.IsZero() || j.FinishedAt.IsZero() || j.FinishedAt.Before(j.StartedAt) {
 			label = "—"
 		}
 		return fmt.Sprintf(" Took:        %s", label)

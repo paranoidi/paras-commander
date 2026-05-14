@@ -103,3 +103,199 @@ func TestEntryPathMarkedByJobs_destinationSubtree(t *testing.T) {
 		t.Fatal("sibling under dst parent not part of this job")
 	}
 }
+
+func TestEntryPathJobMarkStatus_moveListedBeforeDeleteNestedChildPrefersDelete(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	parent := filepath.Join(tmp, "proj")
+	child := filepath.Join(parent, "nested")
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(tmp, "out")
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	move := JobEntry{
+		Type:        string(jobs.TypeMove),
+		Status:      string(jobs.StatusQueued),
+		Sources:     []string{parent},
+		Destination: dst,
+		DestIsDir:   true,
+	}
+	del := JobEntry{
+		Type:     string(jobs.TypeDelete),
+		Status:   string(jobs.StatusQueued),
+		Sources:  []string{child},
+	}
+	// Same ordering issue as user report: transfer job appears first in JobsList.
+	list := []JobEntry{move, del}
+	marked, st := EntryPathJobMarkStatus(child, list)
+	if !marked {
+		t.Fatal("expected child path marked")
+	}
+	if st != string(jobs.StatusQueued) {
+		t.Fatalf("status = %q, want queued (delete job wins over ancestor move)", st)
+	}
+}
+
+func TestEntryPathJobMarkStatus_finishedDeleteQueuedMoveOverlappingUsesMove(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	parent := filepath.Join(tmp, "proj")
+	child := filepath.Join(parent, "nested")
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(tmp, "out")
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Mirrors AllJobs(): queued jobs first, then finished archive.
+	move := JobEntry{
+		Type:        string(jobs.TypeMove),
+		Status:      string(jobs.StatusQueued),
+		Sources:     []string{parent},
+		Destination: dst,
+		DestIsDir:   true,
+	}
+	delDone := JobEntry{
+		Type:     string(jobs.TypeDelete),
+		Status:   string(jobs.StatusCompleted),
+		Sources:  []string{child},
+	}
+	list := []JobEntry{move, delDone}
+	marked, st := EntryPathJobMarkStatus(child, list)
+	if !marked {
+		t.Fatal("expected child path still marked by queued move (ancestor source)")
+	}
+	if st != string(jobs.StatusQueued) {
+		t.Fatalf("status = %q, want queued from move job", st)
+	}
+}
+
+func TestEntryPathJobMarkStatus_twoMovesSameTypeMoreSpecificSourceWins(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	parent := filepath.Join(tmp, "tree")
+	child := filepath.Join(parent, "sub")
+	deep := filepath.Join(child, "leaf")
+	if err := os.MkdirAll(deep, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dstA := filepath.Join(tmp, "outA")
+	dstB := filepath.Join(tmp, "outB")
+	if err := os.MkdirAll(dstA, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(dstB, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	moveWide := JobEntry{
+		Type:        string(jobs.TypeMove),
+		Status:      string(jobs.StatusPaused),
+		Sources:     []string{parent},
+		Destination: dstA,
+		DestIsDir:   true,
+	}
+	moveNarrow := JobEntry{
+		Type:        string(jobs.TypeMove),
+		Status:      string(jobs.StatusQueued),
+		Sources:     []string{child},
+		Destination: dstB,
+		DestIsDir:   true,
+	}
+	// Wider job first; row is under the narrower source only.
+	list := []JobEntry{moveWide, moveNarrow}
+	marked, st := EntryPathJobMarkStatus(deep, list)
+	if !marked {
+		t.Fatal("expected row marked")
+	}
+	if st != string(jobs.StatusQueued) {
+		t.Fatalf("status = %q, want queued (narrower move source should win)", st)
+	}
+}
+
+func TestEntryPathJobMarkStatus_copyListedBeforeMoveSameSubtreePrefersMove(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	src := filepath.Join(tmp, "src")
+	if err := os.MkdirAll(filepath.Join(src, "x"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dstA := filepath.Join(tmp, "da")
+	dstB := filepath.Join(tmp, "db")
+	if err := os.MkdirAll(dstA, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(dstB, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	copyJ := JobEntry{
+		Type:        string(jobs.TypeCopy),
+		Status:      string(jobs.StatusQueued),
+		Sources:     []string{src},
+		Destination: dstA,
+		DestIsDir:   true,
+	}
+	moveJ := JobEntry{
+		Type:        string(jobs.TypeMove),
+		Status:      string(jobs.StatusPaused),
+		Sources:     []string{src},
+		Destination: dstB,
+		DestIsDir:   true,
+	}
+	row := filepath.Join(src, "x")
+	list := []JobEntry{copyJ, moveJ}
+	marked, st := EntryPathJobMarkStatus(row, list)
+	if !marked {
+		t.Fatal("expected row marked")
+	}
+	if st != string(jobs.StatusPaused) {
+		t.Fatalf("status = %q, want paused (move beats copy at same specificity)", st)
+	}
+}
+
+// JobEntriesFromJobs is what the browser passes into drawPanel as JobsList; both
+// queued delete and move remain present after enqueue—marker logic must not imply
+// the delete row vanished from the queue.
+func TestEntryPathJobMarkStatus_jobEntriesFromJobsKeepsBothQueuedJobs(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	parent := filepath.Join(tmp, "proj")
+	child := filepath.Join(parent, "nested")
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(tmp, "out")
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	move := &jobs.Job{
+		ID:          "job-move",
+		Type:        jobs.TypeMove,
+		Status:      jobs.StatusQueued,
+		Sources:     []string{parent},
+		Destination: dst,
+		DestIsDir:   true,
+	}
+	del := &jobs.Job{
+		ID:         "job-del",
+		Type:       jobs.TypeDelete,
+		Status:     jobs.StatusQueued,
+		Sources:    []string{child},
+		TotalFiles: 1,
+	}
+	// Same slice order as AllJobs queue FIFO when move was reordered before delete.
+	list := JobEntriesFromJobs([]*jobs.Job{move, del})
+	if len(list) != 2 {
+		t.Fatalf("JobsList len = %d, want 2 (delete not removed when move exists)", len(list))
+	}
+	marked, st := EntryPathJobMarkStatus(child, list)
+	if !marked {
+		t.Fatal("expected child path marked")
+	}
+	if st != string(jobs.StatusQueued) {
+		t.Fatalf("status = %q, want queued (delete should win for nested path)", st)
+	}
+}
