@@ -7,9 +7,6 @@ import (
 )
 
 func (a *App) pathPickerHostFooterEligible() bool {
-	if a.keysPathPickerHost == nil {
-		return false
-	}
 	if a.model.FileDialog.Open {
 		if a.fileDialogOnButton() {
 			return false
@@ -25,14 +22,14 @@ func (a *App) pathPickerHostFooterEligible() bool {
 	return false
 }
 
-// tryPathPickerHostShortcut handles [path_picker_host_action_keys] (default F9 → open path picker)
-// while copy/move or symlink/hardlink dialogs host a path row.
+// tryPathPickerHostShortcut opens the fuzzy path/history picker when the user presses
+// a chord bound to bookmark.open (Open bookmarks) while a path-picker host row is focused.
 func (a *App) tryPathPickerHostShortcut(ev *tcell.EventKey) bool {
-	if a.keysPathPickerHost == nil {
+	if a.keys == nil {
 		return false
 	}
-	id, ok := a.keysPathPickerHost.Lookup(ev)
-	if !ok || id != keymap.ActionUIOpenPathPicker {
+	id, ok := a.keys.Lookup(ev)
+	if !ok || id != keymap.ActionBookmarkOpen {
 		return false
 	}
 	if a.model.FileDialog.Open {

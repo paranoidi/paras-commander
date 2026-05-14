@@ -404,16 +404,15 @@ func TestLoadFromPathsAcceptsJobsActionKeysTable(t *testing.T) {
 	}
 }
 
-func TestLoadFromPathsAcceptsPathPickerHostActionKeysTable(t *testing.T) {
+func TestLoadFromPathsAcceptsEmptyPathPickerHostActionKeysTable(t *testing.T) {
 	path := writeConfig(t, `theme = "default"
 [action_keys]
 "app.quit" = ["F12"]
 [path_picker_host_action_keys]
-"ui.open-path-picker" = ["C-p"]
 `)
 	cfg, err := LoadFromPaths(Paths{ConfigFile: path})
 	if err != nil {
-		t.Fatalf("LoadFromPaths() error = %v, want success with [path_picker_host_action_keys]", err)
+		t.Fatalf("LoadFromPaths() error = %v, want success with empty [path_picker_host_action_keys]", err)
 	}
 	if cfg.Theme != "default" {
 		t.Fatalf("Theme = %q, want default", cfg.Theme)

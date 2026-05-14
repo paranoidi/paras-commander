@@ -48,6 +48,9 @@ type Job struct {
 	Status      Status
 	Sources     []string
 	Destination string
+	// DestIsDir is whether Destination was an existing directory at enqueue time (same as ops.ResolveDestination Stat semantics).
+	// Used by UI path marks so listing render does not Stat the destination per row.
+	DestIsDir   bool
 	TotalFiles  int
 	DoneFiles   int
 	TotalBytes  int64
@@ -67,8 +70,8 @@ type Job struct {
 	ThroughputSamples []ThroughputSample
 	// LastProgressSnapshotAt, LastProgressDoneBytes, and LastProgressDoneFiles sample progress for ETA smoothing.
 	LastProgressSnapshotAt time.Time
-	LastProgressDoneBytes int64
-	LastProgressDoneFiles int
+	LastProgressDoneBytes  int64
+	LastProgressDoneFiles  int
 
 	// PendingBlocker is non-nil while the job waits for user resolution (conflict or disk space).
 	PendingBlocker *BlockerDetails

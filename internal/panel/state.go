@@ -13,6 +13,10 @@ import (
 
 const maxNavHistory = 200
 
+// noIndexCursorFallback is passed to load as indexFallback to keep cursor at 0 when the
+// preserve-by-name step cannot resolve (directory changes, initial load, history navigation).
+const noIndexCursorFallback = -1
+
 // State contains all panel data needed by the App and renderer.
 type State struct {
 	Path string
@@ -102,28 +106,31 @@ func NewWithOptions(path string, opts localfs.ListOptions) (State, error) {
 
 // Load replaces the panel contents with a fresh directory snapshot.
 func (s *State) Load(path string) error {
-	return s.load(path, "", 0)
+	return s.load(path, "", 0, noIndexCursorFallback)
 }
 
-// Refresh reloads the current path while preserving the selected entry by name.
+// Refresh reloads the current path. When the entry under the cursor still exists, it is re-selected by name;
+// otherwise the prior row index is restored (clamped), matching MC-style behavior after moves/deletes.
 func (s *State) Refresh(viewportRows int) error {
+	priorCursor := s.Cursor
 	entry, ok := s.CurrentEntry()
 	selectedName := ""
 	if ok {
 		selectedName = entry.Name
 	}
-	return s.load(s.Path, selectedName, viewportRows)
+	return s.load(s.Path, selectedName, viewportRows, priorCursor)
 }
 
-// ToggleHidden flips hidden-file visibility and reloads the current directory.
+// ToggleHidden flips hidden-file visibility and reloads the current directory using the same cursor rules as Refresh.
 func (s *State) ToggleHidden(viewportRows int) error {
+	priorCursor := s.Cursor
 	entry, ok := s.CurrentEntry()
 	selectedName := ""
 	if ok {
 		selectedName = entry.Name
 	}
 	s.ShowHidden = !s.ShowHidden
-	return s.load(s.Path, selectedName, viewportRows)
+	return s.load(s.Path, selectedName, viewportRows, priorCursor)
 }
 
 // Move changes the cursor by delta and keeps it visible.
@@ -300,7 +307,7 @@ func (s *State) Parent(viewportRows int) error {
 // NavigateTo loads path after recording it in navigation history (MRU timeline).
 func (s *State) NavigateTo(path string, selectedName string, viewportRows int) error {
 	s.recordVisit(path)
-	if err := s.load(path, selectedName, viewportRows); err != nil {
+	if err := s.load(path, selectedName, viewportRows, noIndexCursorFallback); err != nil {
 		return err
 	}
 	if s.HistoryIndex == 0 && len(s.History) > 0 {
@@ -321,7 +328,7 @@ func (s *State) HistoryBackward(viewportRows int) (bool, error) {
 	}
 	prevIdx := s.HistoryIndex
 	s.HistoryIndex = nextIdx
-	if err := s.load(target, "", viewportRows); err != nil {
+	if err := s.load(target, "", viewportRows, noIndexCursorFallback); err != nil {
 		s.HistoryIndex = prevIdx
 		return false, err
 	}
@@ -340,7 +347,7 @@ func (s *State) HistoryForward(viewportRows int) (bool, error) {
 	target := cleanPath(s.History[nextIdx])
 	prevIdx := s.HistoryIndex
 	s.HistoryIndex = nextIdx
-	if err := s.load(target, "", viewportRows); err != nil {
+	if err := s.load(target, "", viewportRows, noIndexCursorFallback); err != nil {
 		s.HistoryIndex = prevIdx
 		return false, err
 	}
@@ -461,7 +468,7 @@ func (s *State) SetFilterCaseInsensitive(value bool, viewportRows int) {
 	s.Filter.CaseInsensitive = value
 	selectedName := s.currentEntryName()
 	s.rebuildFilter()
-	s.SelectVisibleEntry(selectedName)
+	_ = s.SelectVisibleEntry(selectedName)
 	s.clampCursor()
 	s.EnsureCursorVisible(viewportRows)
 }
@@ -584,7 +591,7 @@ func previousFilterMatchIndex(results []filterResult, cursor int) int {
 	return len(results) - 1
 }
 
-func (s *State) load(path string, selectedName string, viewportRows int) error {
+func (s *State) load(path string, selectedName string, viewportRows int, indexFallback int) error {
 	listing, err := localfs.ListDir(path, localfs.ListOptions{ShowHidden: s.ShowHidden})
 	if err != nil {
 		return err
@@ -610,8 +617,16 @@ func (s *State) load(path string, selectedName string, viewportRows int) error {
 	}
 	s.ApplySort()
 	s.rebuildFilter()
+	found := false
 	if selectedName != "" {
-		s.SelectVisibleEntry(selectedName)
+		found = s.SelectVisibleEntry(selectedName)
+	}
+	if !found && indexFallback >= 0 && len(s.Entries) > 0 {
+		if indexFallback >= len(s.Entries) {
+			s.Cursor = len(s.Entries) - 1
+		} else {
+			s.Cursor = indexFallback
+		}
 	}
 	s.clampCursor()
 	s.EnsureCursorVisible(viewportRows)
@@ -859,7 +874,7 @@ func (s *State) ToggleOrRemoveStripSelection() bool {
 	return true
 }
 
-func (s *State) SelectVisibleEntry(name string) {
+func (s *State) SelectVisibleEntry(name string) bool {
 	for i := 0; i < s.VisibleEntryCount(); i++ {
 		entry, _, ok := s.VisibleEntry(i)
 		if !ok {
@@ -867,9 +882,10 @@ func (s *State) SelectVisibleEntry(name string) {
 		}
 		if entry.Name == name {
 			s.Cursor = i
-			return
+			return true
 		}
 	}
+	return false
 }
 
 func (s *State) selectVisibleEntryByPath(absPath string) {
@@ -1095,7 +1111,7 @@ func (s *State) ApplySortFromDialog(sort SortState, viewportRows int) {
 	s.ApplySort()
 	s.rebuildFilter()
 	if selectedName != "" {
-		s.SelectVisibleEntry(selectedName)
+		_ = s.SelectVisibleEntry(selectedName)
 	}
 	s.clampCursor()
 	s.EnsureCursorVisible(viewportRows)
@@ -1128,7 +1144,7 @@ func (s *State) SetSortMode(mode SortMode, reverse bool, dirsFirst bool, viewpor
 	s.ApplySort()
 	s.rebuildFilter()
 	if selectedName != "" {
-		s.SelectVisibleEntry(selectedName)
+		_ = s.SelectVisibleEntry(selectedName)
 	}
 	s.clampCursor()
 	s.EnsureCursorVisible(viewportRows)

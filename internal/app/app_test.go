@@ -1356,6 +1356,37 @@ func TestNewWithOptionsSetsShowFileIconsFromConfig(t *testing.T) {
 	}
 }
 
+func TestNewWithOptionsAppliesDefaultListingFormatFromConfig(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	cfg := config.Default()
+	cfg.DefaultListingFormat = config.ListingFormatBrief
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+	if app.model.Left.ListFormat != panel.ListFormatBrief || app.model.Right.ListFormat != panel.ListFormatBrief {
+		t.Fatalf("panels ListFormat = %v/%v, want brief", app.model.Left.ListFormat, app.model.Right.ListFormat)
+	}
+}
+
 func TestNewWithOptionsAppliesFilterCycleMatchesToPanels(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
@@ -1401,11 +1432,16 @@ func TestOptionsMenuOpensConfigurationDialog(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
+	cfg := config.Default()
+	cfg.DefaultListingFormat = config.ListingFormatPerm
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
-		Config: config.Default(),
+		Config: cfg,
 		Theme:  theme.Default(),
 	})
 	if err != nil {
@@ -1428,6 +1464,9 @@ func TestOptionsMenuOpensConfigurationDialog(t *testing.T) {
 	}
 	if !app.model.ConfigDialog.ShowFileIcons {
 		t.Fatal("working copy ShowFileIcons = false, want default true")
+	}
+	if app.model.ConfigDialog.ListFormat != panel.ListFormatPerm {
+		t.Fatalf("ConfigDialog.ListFormat = %v, want perm", app.model.ConfigDialog.ListFormat)
 	}
 }
 
@@ -1477,6 +1516,49 @@ func TestConfigDialogApplyPersistsShowFileIcons(t *testing.T) {
 	}
 	if reloaded.UI.ShowFileIcons {
 		t.Fatalf("persisted show_file_icons = true, want false")
+	}
+}
+
+func TestConfigDialogApplyPersistsDefaultListingFormat(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-lf")}.WithResolvedLocations()
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Paths:  appPaths,
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openConfigDialog()
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.model.Left.ListFormat != panel.ListFormatPerm || app.model.Right.ListFormat != panel.ListFormatPerm {
+		t.Fatalf("panels ListFormat = %v/%v, want perm", app.model.Left.ListFormat, app.model.Right.ListFormat)
+	}
+	reloaded, err := config.LoadFromPaths(appPaths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths after persist: %v", err)
+	}
+	if reloaded.DefaultListingFormat != config.ListingFormatPerm {
+		t.Fatalf("persisted default_listing_format = %q, want %q", reloaded.DefaultListingFormat, config.ListingFormatPerm)
 	}
 }
 
@@ -2725,8 +2807,8 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 	if keys[1].Hint != "Default" || keys[1].KeyLabel != "C-r" {
 		t.Fatalf("restore footer = %+v, want C-r Default", keys[1])
 	}
-	if keys[2].Hint != "Paths" || keys[2].KeyLabel != "F9" {
-		t.Fatalf("paths footer = %+v, want F9 Paths", keys[2])
+	if keys[2].Hint != "Bookmarks" || keys[2].KeyLabel != "C-g" {
+		t.Fatalf("bookmarks footer = %+v, want C-g Bookmarks", keys[2])
 	}
 
 	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
@@ -2738,12 +2820,12 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 	if len(keys) != 3 {
 		t.Fatalf("symlink footer len = %d, want Esc + Paths + F10", len(keys))
 	}
-	if keys[1].Hint != "Paths" {
-		t.Fatalf("symlink footer middle = %+v, want Paths hint", keys[1])
+	if keys[1].Hint != "Bookmarks" {
+		t.Fatalf("symlink footer middle = %+v, want Bookmarks hint", keys[1])
 	}
 }
 
-func TestPathPickerHostF9OpensPickerFromCopyAndSymlinkDialogs(t *testing.T) {
+func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "a.txt"))
 	dst := filepath.Join(root, "dst")
@@ -2778,7 +2860,7 @@ func TestPathPickerHostF9OpensPickerFromCopyAndSymlinkDialogs(t *testing.T) {
 	if app.model.TransferDialog.FocusField != 0 {
 		t.Fatalf("FocusField = %d, want 0", app.model.TransferDialog.FocusField)
 	}
-	app.handleKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyCtrlG, 0, tcell.ModNone))
 	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != ui.PathPickerPurposeApplyTransferDestination {
 		t.Fatalf("path picker = open %v purpose %v, want ApplyTransferDestination",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
@@ -2793,7 +2875,7 @@ func TestPathPickerHostF9OpensPickerFromCopyAndSymlinkDialogs(t *testing.T) {
 	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogSymlink {
 		t.Fatal("symlink dialog should be open")
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlG, 0, tcell.ModNone))
 	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != ui.PathPickerPurposeApplyFileDialogField {
 		t.Fatalf("path picker = open %v purpose %v, want ApplyFileDialogField",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)

@@ -218,8 +218,10 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		leftFileListFocus := previewTheme || (model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusFileList)
 		rightFileListFocus := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusFileList
 
-		leftFile, leftStrip := SplitPanelColumn(layout.Left, model.Left.SelectionsStripCount(), model.SelectionsPanelMaxRows, MinFileListContentRows)
-		rightFile, rightStrip := SplitPanelColumn(layout.Right, model.Right.SelectionsStripCount(), model.SelectionsPanelMaxRows, MinFileListContentRows)
+		leftStripN := SelectionsStripLayoutItemCount(&model.Left, LeftPanel, model.ActivePanel, previewTheme)
+		rightStripN := SelectionsStripLayoutItemCount(&model.Right, RightPanel, model.ActivePanel, previewTheme)
+		leftFile, leftStrip := SplitPanelColumn(layout.Left, leftStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
+		rightFile, rightStrip := SplitPanelColumn(layout.Right, rightStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
 
 		syncDriver := model.SyncDriverPanelID()
 		drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobsList, syncDriver, model.MetaResults[LeftPanel])

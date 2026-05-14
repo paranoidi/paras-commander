@@ -9,7 +9,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/fsvol"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -579,25 +578,35 @@ func (a *App) stopJobsWakeTimer() {
 // pollJobEvents drains pending worker events into UI model state.
 // It returns whether any event was processed (caller should repaint when appropriate).
 func (a *App) pollJobEvents() bool {
-	drained := false
+	var batch []jobs.Event
 	for {
 		select {
 		case ev := <-a.jobState.Events():
-			drained = true
-			a.jobState.ApplyEvent(ev)
-			a.appendJobActivity(ev)
-			a.updateJobMessage(ev)
-			switch ev.Type {
-			case jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled:
+			batch = append(batch, ev)
+		default:
+			if len(batch) == 0 {
+				return false
+			}
+			viewJobs := a.model.ViewMode == ui.ViewJobs
+			var sawTerminal bool
+			for _, ev := range batch {
+				a.jobState.ApplyEvent(ev)
+				a.appendJobActivity(ev)
+				a.updateJobMessage(ev)
+				switch ev.Type {
+				case jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled:
+					sawTerminal = true
+				}
+			}
+			if sawTerminal {
 				a.applyJobsRetention()
 				a.refreshBothPanels()
 			}
 			a.syncJobsList()
-			if a.model.ViewMode == ui.ViewJobs {
+			if viewJobs {
 				a.ensureJobsViewSelectionVisible()
 			}
-		default:
-			return drained
+			return true
 		}
 	}
 }
@@ -810,9 +819,6 @@ func (a *App) enqueueCopyJob() {
 		a.openTransferDialogSelfCopyRename(ui.TransferKindCopy, absDest, sources[0])
 		return
 	}
-	if a.rejectCopyIfInsufficientDisk(sources, dest) {
-		return
-	}
 	a.activePanel().ClearSelection()
 	a.addTransferJob(jobs.TypeCopy, sources, dest, false)
 	a.setTransientMessage(fmt.Sprintf("Copy queued (%d %s)", len(sources), plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
@@ -850,35 +856,19 @@ func (a *App) enqueueMoveJob() {
 	a.setTransientMessage(fmt.Sprintf("Move queued (%d %s)", len(sources), plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 }
 
-// rejectCopyIfInsufficientDisk opens a modal and returns true when a copy plan does not fit the destination volume.
-func (a *App) rejectCopyIfInsufficientDisk(sources []string, dest string) bool {
-	absDest := absPathClean(dest)
-	_, totalBytes, planErr := ops.CopyPlanTotals(sources, dest)
-	if planErr != nil || totalBytes <= 0 {
-		return false
-	}
-	avail, _, ok := fsvol.VolumeBytes(absDest)
-	if !ok || int64(avail) >= totalBytes {
-		return false
-	}
-	msg := "Not enough free space on the destination volume.\n\nRequired: " +
-		ui.FormatByteSize(totalBytes) + "\nAvailable: " +
-		ui.FormatByteSize(int64(avail))
-	a.openMessageDialogTwoButton("Not enough free space", msg)
-	return true
-}
-
 func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool) {
 	st := jobs.StatusQueued
 	if startPaused {
 		st = jobs.StatusPaused
 	}
+	absDest := absPathClean(dest)
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        jobType,
 		Status:      st,
 		Sources:     sources,
 		Destination: dest,
+		DestIsDir:   ops.DestinationIsDirAtEnqueue(absDest),
 		TotalFiles:  len(sources),
 	}
 	a.jobState.AddJob(job)

@@ -13,6 +13,8 @@ type JobEntry struct {
 	Status      string
 	Sources     []string
 	Destination string
+	// DestIsDir matches jobs.Job.DestIsDir (destination was a directory when the job was queued).
+	DestIsDir   bool
 	CurrentPath string
 	DoneFiles   int
 	TotalFiles  int

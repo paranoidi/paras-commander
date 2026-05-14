@@ -61,11 +61,12 @@ func (a *App) panelViewportRows(panelID int) int {
 		return 0
 	}
 	col := layout.Left
-	stripN := a.model.Left.SelectionsStripCount()
+	p := &a.model.Left
 	if panelID == ui.RightPanel {
 		col = layout.Right
-		stripN = a.model.Right.SelectionsStripCount()
+		p = &a.model.Right
 	}
+	stripN := ui.SelectionsStripLayoutItemCount(p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open)
 	fileCol, _ := ui.SplitPanelColumn(col, stripN, a.model.SelectionsPanelMaxRows, 3)
 	return ui.PanelListRows(fileCol)
 }
@@ -77,11 +78,12 @@ func (a *App) selectionsStripViewportRows(panelID int) int {
 		return 0
 	}
 	col := layout.Left
-	stripN := a.model.Left.SelectionsStripCount()
+	p := &a.model.Left
 	if panelID == ui.RightPanel {
 		col = layout.Right
-		stripN = a.model.Right.SelectionsStripCount()
+		p = &a.model.Right
 	}
+	stripN := ui.SelectionsStripLayoutItemCount(p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open)
 	_, stripCol := ui.SplitPanelColumn(col, stripN, a.model.SelectionsPanelMaxRows, 3)
 	return ui.SelectionsStripListRows(stripCol)
 }
@@ -295,8 +297,10 @@ func (a *App) ensurePanelsVisible() {
 		a.model.Right.EnsureCursorVisible(0)
 		return
 	}
-	leftFile, _ := ui.SplitPanelColumn(layout.Left, a.model.Left.SelectionsStripCount(), a.model.SelectionsPanelMaxRows, 3)
-	rightFile, _ := ui.SplitPanelColumn(layout.Right, a.model.Right.SelectionsStripCount(), a.model.SelectionsPanelMaxRows, 3)
+	leftN := ui.SelectionsStripLayoutItemCount(&a.model.Left, ui.LeftPanel, a.model.ActivePanel, a.model.ThemeDialog.Open)
+	rightN := ui.SelectionsStripLayoutItemCount(&a.model.Right, ui.RightPanel, a.model.ActivePanel, a.model.ThemeDialog.Open)
+	leftFile, _ := ui.SplitPanelColumn(layout.Left, leftN, a.model.SelectionsPanelMaxRows, 3)
+	rightFile, _ := ui.SplitPanelColumn(layout.Right, rightN, a.model.SelectionsPanelMaxRows, 3)
 	a.model.Left.EnsureCursorVisible(ui.PanelListRows(leftFile))
 	a.model.Right.EnsureCursorVisible(ui.PanelListRows(rightFile))
 }

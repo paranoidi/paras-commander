@@ -210,9 +210,11 @@ func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
 
 func (a *App) openConfigDialog() {
 	a.clearTransientMessage()
+	lf, _ := panel.ParseListFormat(a.config.DefaultListingFormat)
 	a.model.ConfigDialog = ui.ConfigDialogState{
 		Open:          true,
 		ShowFileIcons: a.config.UI.ShowFileIcons,
+		ListFormat:    panel.EffectiveListFormat(lf),
 		Focus:         0,
 	}
 }
@@ -223,14 +225,19 @@ func (a *App) closeConfigDialog() {
 
 func (a *App) applyConfigDialog() {
 	val := a.model.ConfigDialog.ShowFileIcons
+	lf := panel.EffectiveListFormat(a.model.ConfigDialog.ListFormat)
 	a.config.UI.ShowFileIcons = val
+	a.config.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
 	a.model.ShowFileIcons = val
+	a.model.Left.ListFormat = lf
+	a.model.Right.ListFormat = lf
 	a.closeConfigDialog()
 	msg := "Configuration saved"
 	patch := map[string]interface{}{
 		"ui": map[string]interface{}{
 			"show_file_icons": val,
 		},
+		"default_listing_format": panel.ListingFormatTOMLValue(lf),
 	}
 	if err := a.persistPartial(patch); err != nil {
 		msg = fmt.Sprintf("Configuration saved (could not write config: %v)", err)
@@ -239,7 +246,7 @@ func (a *App) applyConfigDialog() {
 }
 
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
-	form := ui.NewDialogLinearForm(1)
+	form := ui.NewDialogLinearForm(4)
 	if ui.AltDialogOK(event) {
 		a.applyConfigDialog()
 		return
@@ -262,7 +269,21 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 		if event.Modifiers() != tcell.ModNone {
 			break
 		}
-		switch event.Rune() {
+		radios := panel.ListFormatDialogRadios()
+		ch := event.Rune()
+		matchedRadio := false
+		for i, row := range radios {
+			if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
+				a.model.ConfigDialog.ListFormat = row.Format
+				a.model.ConfigDialog.Focus = 1 + i
+				matchedRadio = true
+				break
+			}
+		}
+		if matchedRadio {
+			break
+		}
+		switch ch {
 		case 'f', 'F':
 			a.model.ConfigDialog.ShowFileIcons = !a.model.ConfigDialog.ShowFileIcons
 			a.model.ConfigDialog.Focus = 0
@@ -274,6 +295,8 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 			switch a.model.ConfigDialog.Focus {
 			case 0:
 				a.model.ConfigDialog.ShowFileIcons = !a.model.ConfigDialog.ShowFileIcons
+			case 1, 2, 3:
+				a.model.ConfigDialog.ListFormat = radios[a.model.ConfigDialog.Focus-1].Format
 			case form.OKIndex():
 				a.applyConfigDialog()
 			case form.CancelIndex():

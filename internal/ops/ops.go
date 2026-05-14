@@ -82,6 +82,14 @@ func ResolveDestination(src, dest string) string {
 	return dest
 }
 
+// DestinationIsDirAtEnqueue reports whether dest names an existing directory,
+// using the same os.Stat semantics as ResolveDestination. Call once when
+// queueing a job so UI listing markers avoid per-row Stat on the destination.
+func DestinationIsDirAtEnqueue(dest string) bool {
+	fi, err := os.Stat(dest)
+	return err == nil && fi.IsDir()
+}
+
 // RenameFastPath attempts an os.Rename and returns true on success.
 // If the rename fails due to a cross-device link, it returns false and nil error
 // so the caller can fall back to copy+delete.

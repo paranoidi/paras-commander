@@ -332,9 +332,6 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 		a.closeTransferDialog()
 		return
 	}
-	if jobType == jobs.TypeCopy && a.rejectCopyIfInsufficientDisk(sources, dest) {
-		return
-	}
 	sourcesCopy := append([]string(nil), sources...)
 	a.activePanel().ClearSelection()
 	a.addTransferJob(jobType, sourcesCopy, dest, startPaused)
@@ -369,9 +366,6 @@ func (a *App) confirmTransferSelfCopyRename(sources []string, startPaused bool) 
 		return
 	}
 	finalDest := filepath.Join(d.SelfCopyDestDir, trimmed)
-	if jobType == jobs.TypeCopy && a.rejectCopyIfInsufficientDisk(sources, finalDest) {
-		return
-	}
 	sourcesCopy := append([]string(nil), sources...)
 	a.activePanel().ClearSelection()
 	a.addTransferJob(jobType, sourcesCopy, finalDest, startPaused)

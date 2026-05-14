@@ -255,9 +255,6 @@ func (a *App) executeMkdir() {
 			return
 		}
 		sources = ops.SourcePaths(src)
-		if action == ui.MkdirActionCreateCopySelect && a.rejectCopyIfInsufficientDisk(sources, plan.Path) {
-			return
-		}
 	}
 
 	if err := ops.ExecuteMkdir(plan); err != nil {

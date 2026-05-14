@@ -129,7 +129,7 @@ func TestSourcePathsPreservesEntryOrder(t *testing.T) {
 	}
 	for i := range want {
 		if paths[i] != want[i] {
-			t.Fatalf("paths[%d] = %q, want %q", i, paths[i], want[i])
+			t.Fatalf("bookmarks[%d] = %q, want %q", i, paths[i], want[i])
 		}
 	}
 }
@@ -1019,6 +1019,24 @@ func TestResolveDestination(t *testing.T) {
 	dst = ResolveDestination("/src/file.txt", "/some/path/newfile.txt")
 	if dst != "/some/path/newfile.txt" {
 		t.Fatalf("file dest = %q, want /some/path/newfile.txt", dst)
+	}
+}
+
+func TestDestinationIsDirAtEnqueue(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "f")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !DestinationIsDirAtEnqueue(dir) {
+		t.Fatal("existing directory should report true")
+	}
+	if DestinationIsDirAtEnqueue(file) {
+		t.Fatal("regular file should report false")
+	}
+	missing := filepath.Join(dir, "nope")
+	if DestinationIsDirAtEnqueue(missing) {
+		t.Fatal("missing path should report false")
 	}
 }
 

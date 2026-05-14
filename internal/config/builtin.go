@@ -18,4 +18,7 @@ const (
 	DefaultSyncAfterEachFile          = true
 	DefaultDiskSpaceCheckMinFileBytes = 50 * 1024 * 1024
 	DefaultCowFileCloning             = true
+
+	// DefaultListingFormat is the persisted default_listing_format value (Modified time column).
+	DefaultListingFormat = ListingFormatMtime
 )

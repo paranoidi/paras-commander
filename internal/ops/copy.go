@@ -108,6 +108,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 	var doneBytes int64
 	var bytesSinceEmit int64
 	var lastEmit time.Time
+	var lastMetaEmit time.Time // mkdir/symlink progress (no byte deltas): throttle by MinInterval only
 
 	emitProgress := func(srcPath, dstPath string, doneF int, doneB int64, force bool) {
 		if progress == nil {
@@ -124,6 +125,17 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 			lastEmit = now
 		}
 	}
+	emitMetaProgress := func(srcPath, dstPath string, doneF int, doneB int64) {
+		if progress == nil {
+			return
+		}
+		now := time.Now()
+		if !lastMetaEmit.IsZero() && now.Sub(lastMetaEmit) < th.MinInterval {
+			return
+		}
+		lastMetaEmit = now
+		progress(srcPath, dstPath, doneF, doneB)
+	}
 
 	for _, item := range plan {
 		if err := ctx.Err(); err != nil {
@@ -134,9 +146,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 				return doneFiles, doneBytes, fmt.Errorf("create directory %q: %w", item.Dst, err)
 			}
 			doneFiles++
-			if progress != nil {
-				progress(item.Src, item.Dst, doneFiles, doneBytes)
-			}
+			emitMetaProgress(item.Src, item.Dst, doneFiles, doneBytes)
 			continue
 		}
 
@@ -145,9 +155,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 				return doneFiles, doneBytes, err
 			}
 			doneFiles++
-			if progress != nil {
-				progress(item.Src, item.Dst, doneFiles, doneBytes)
-			}
+			emitMetaProgress(item.Src, item.Dst, doneFiles, doneBytes)
 			continue
 		}
 

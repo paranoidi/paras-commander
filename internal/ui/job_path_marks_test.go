@@ -58,6 +58,7 @@ func TestEntryPathMarkedByJobs_sourceSubtree(t *testing.T) {
 		Status:      string(jobs.StatusQueued),
 		Sources:     []string{root},
 		Destination: dst,
+		DestIsDir:   true,
 	}
 	if !EntryPathMarkedByJobs(root, []JobEntry{j}) {
 		t.Fatal("source root")
@@ -90,6 +91,7 @@ func TestEntryPathMarkedByJobs_destinationSubtree(t *testing.T) {
 		Status:      string(jobs.StatusRunning),
 		Sources:     []string{src},
 		Destination: dstParent,
+		DestIsDir:   true,
 	}
 	if !EntryPathMarkedByJobs(dstRoot, []JobEntry{j}) {
 		t.Fatal("resolved dest root")

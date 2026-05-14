@@ -19,7 +19,7 @@ import (
 //  1. built-in defaults (DefaultActionKeys / DefaultJobsOverlayKeys / DefaultCommandsOverlayKeys /
 //     DefaultPathPickerHostOverlayKeys / DefaultDialogInputOverlayKeys / DefaultRenameDialogOverlayKeys)
 //  2. config.toml's [action_keys] / [jobs_action_keys] / [commands_action_keys] /
-//     [path_picker_host_action_keys] / [dialog_input_action_keys] / [rename_dialog_action_keys] (when present)
+//     [path_picker_host_action_keys] (must be empty) / [dialog_input_action_keys] / [rename_dialog_action_keys] (when present)
 //  3. keybindings.toml's matching tables (when present) — wins over config.toml
 //
 // Any source can be absent without failing startup; built-in defaults
@@ -171,7 +171,7 @@ func validatePathPickerHostOverlayKeys(keys map[string][]string, source string) 
 			return fmt.Errorf("parse config %q: [path_picker_host_action_keys] action %q has empty key list", source, action)
 		}
 		if !AllowedInPathPickerHostOverlay(action) {
-			return fmt.Errorf("parse config %q: [path_picker_host_action_keys] action %q is not allowed (ui.open-path-picker only)", source, action)
+			return fmt.Errorf("parse config %q: [path_picker_host_action_keys] must be empty (got action %q); fuzzy path picker on destination/symlink path rows uses bookmark.open from [action_keys]", source, action)
 		}
 	}
 	return nil
@@ -309,7 +309,7 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, comma
 				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] action %q has empty key list", label, action)
 			}
 			if !AllowedInPathPickerHostOverlay(action) {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] action %q is not allowed (ui.open-path-picker only)", label, action)
+				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] must be empty (got action %q); fuzzy path picker on destination/symlink path rows uses bookmark.open from [action_keys]", label, action)
 			}
 		}
 	}
@@ -429,8 +429,9 @@ func EncodeDefaultStub(w io.Writer) error {
 		"# Commands-view-only chords under [commands_action_keys] take precedence\n" +
 		"# while the Commands view is focused. Only commands.* action IDs are accepted.\n" +
 		"#\n" +
-		"# Path-picker host dialogs (copy/move destination, symlink/hardlink path rows)\n" +
-		"# use [path_picker_host_action_keys]. Only ui.open-path-picker is accepted.\n" +
+		"# [path_picker_host_action_keys] must stay empty: opening the fuzzy path picker\n" +
+		"# from copy/move destination or symlink/hardlink path rows uses the same chords\n" +
+		"# as bookmark.open under [action_keys].\n" +
 		"#\n" +
 		"# Dialog input field actions (e.g. restore default placeholder) use\n" +
 		"# [dialog_input_action_keys]. Only ui.input.* action IDs are accepted.\n" +

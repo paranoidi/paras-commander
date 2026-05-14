@@ -30,7 +30,8 @@ type ThemeDialogState struct {
 type ConfigDialogState struct {
 	Open          bool
 	ShowFileIcons bool
-	Focus         int // 0=checkbox, 1=OK, 2=Cancel
+	ListFormat    panel.ListFormat
+	Focus         int // 0=checkbox, 1-3=listing format radios, 4=OK, 5=Cancel
 }
 
 // SortDialogState is the renderable state for the sort configuration modal.

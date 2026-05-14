@@ -60,6 +60,18 @@ func EffectiveListFormat(f ListFormat) ListFormat {
 	}
 }
 
+// ListingFormatTOMLValue returns the canonical default_listing_format string for TOML persistence.
+func ListingFormatTOMLValue(f ListFormat) string {
+	switch EffectiveListFormat(f) {
+	case ListFormatPerm:
+		return "perm"
+	case ListFormatBrief:
+		return "brief"
+	default:
+		return "mtime"
+	}
+}
+
 // ListFormatDialogRadio describes one row in the listing format dialog (label must include shortcut rune).
 type ListFormatDialogRadio struct {
 	Format   ListFormat

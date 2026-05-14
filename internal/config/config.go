@@ -211,7 +211,7 @@ func Default() Config {
 		JobConcurrency:                  1,
 		StartupPathMode:                 StartupPathCWD,
 		DefaultSort:                     SortName,
-		DefaultListingFormat:            ListingFormatMtime,
+		DefaultListingFormat:            DefaultListingFormat,
 		SortReverse:                     false,
 		DirectoriesFirst:                true,
 		DiskUsageIdleSizeSort:           true,
@@ -643,7 +643,7 @@ func (c *Config) Validate() error {
 		c.DefaultSort = builtin.DefaultSort
 	}
 	if !c.listingFormatValid(c.DefaultListingFormat) {
-		c.DefaultListingFormat = builtin.DefaultListingFormat
+		c.DefaultListingFormat = DefaultListingFormat
 	}
 	// SortReverse is now supported, no clamping needed
 	if !c.FollowSymlinksOnNavigation {

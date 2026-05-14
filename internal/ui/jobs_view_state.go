@@ -18,6 +18,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job) []JobEntry {
 			Status:            string(j.Status),
 			Sources:           sources,
 			Destination:       j.Destination,
+			DestIsDir:         j.DestIsDir,
 			CurrentPath:       j.CurrentPath,
 			DoneFiles:         j.DoneFiles,
 			TotalFiles:        j.TotalFiles,

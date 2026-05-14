@@ -302,7 +302,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:      "Bookmarks",
 			DefaultKeys:  []string{"C-g", "C-e"},
 			PreferredKey: "C-g",
-			Keywords:     []string{"fzf-marks", "marks", "picker"},
+			Keywords:     []string{"fzf-marks", "marks", "picker", "path-picker", "history", "destination"},
 		},
 		{
 			ID:          ActionBookmarkAdd,
@@ -526,14 +526,6 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "UI",
 			DefaultKeys: nil,
 			Keywords:    []string{"settings", "toml"},
-		},
-		{
-			ID:           ActionUIOpenPathPicker,
-			Title:        "Open path picker",
-			Section:      "UI",
-			DefaultKeys:  nil, // bound only via [path_picker_host_action_keys] (default F9 there)
-			PreferredKey: "F9",
-			Keywords:     []string{"history", "bookmarks", "destination"},
 		},
 		{
 			ID:           ActionDialogInputRestoreDefault,

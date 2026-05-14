@@ -53,6 +53,36 @@ func TestLoadClampsCursorAfterReload(t *testing.T) {
 	}
 }
 
+func TestRefreshRestoresCursorByIndexWhenCurrentEntryRemoved(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	bPath := filepath.Join(dir, "b.txt")
+	writeFile(t, bPath)
+	writeFile(t, filepath.Join(dir, "c.txt"))
+
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	state.Cursor = 1
+	if name, ok := state.CurrentEntry(); !ok || name.Name != "b.txt" {
+		t.Fatalf("precondition cursor entry = %v ok=%v, want b.txt", name, ok)
+	}
+	if err := os.Remove(bPath); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if err := state.Refresh(10); err != nil {
+		t.Fatalf("Refresh() error = %v", err)
+	}
+	if state.Cursor != 1 {
+		t.Fatalf("Cursor = %d, want 1 (same row index after middle file removed)", state.Cursor)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "c.txt" {
+		t.Fatalf("CurrentEntry = %v ok=%v, want c.txt under cursor", entry, ok)
+	}
+}
+
 func TestLoadRejectsNonDirectory(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "initial.txt"))
@@ -1184,7 +1214,7 @@ func TestLoadAppliesDiskTotalsSortImmediatelyWhenListingFullyCached(t *testing.T
 		}
 	}
 
-	if err := state.load(dir, "", 10); err != nil {
+	if err := state.load(dir, "", 10, noIndexCursorFallback); err != nil {
 		t.Fatalf("load: %v", err)
 	}
 	if !state.IdleDiskTotalsSort {

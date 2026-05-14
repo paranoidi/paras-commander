@@ -97,8 +97,6 @@ const (
 
 	ActionUIOpenTheme  = "ui.open-theme"
 	ActionUIOpenConfig = "ui.open-config"
-	// ActionUIOpenPathPicker is bound via [path_picker_host_action_keys], not [action_keys].
-	ActionUIOpenPathPicker = "ui.open-path-picker"
 
 	// ActionDialogInputRestoreDefault restores a focused dialog input field's suggested default
 	// (Prefill) and is bound via [dialog_input_action_keys], not [action_keys].
@@ -209,8 +207,6 @@ var KnownActions = map[string]struct{}{
 
 	ActionUIOpenTheme:  {},
 	ActionUIOpenConfig: {},
-
-	ActionUIOpenPathPicker: {},
 
 	ActionDialogInputRestoreDefault: {},
 

@@ -101,8 +101,8 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		if a.pathPickerHostFooterEligible() {
-			if lbl := a.keysPathPickerHost.MenuBindingLabel(keymap.ActionUIOpenPathPicker); lbl != "" {
-				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Paths"}}, rest...)
+			if lbl := a.keys.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
+				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Bookmarks"}}, rest...)
 			}
 		}
 		if a.dialogInputRestoreFooterEligible() {

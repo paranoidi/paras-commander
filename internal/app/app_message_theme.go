@@ -18,14 +18,6 @@ func (a *App) openMessageDialog(title, message string) {
 	a.model.MessageDialog.Open = true
 }
 
-func (a *App) openMessageDialogTwoButton(title, message string) {
-	a.model.MessageDialog.Title = title
-	a.model.MessageDialog.Message = message
-	a.model.MessageDialog.TwoButtons = true
-	a.model.MessageDialog.ButtonFocus = 0
-	a.model.MessageDialog.Open = true
-}
-
 func (a *App) closeMessageDialog() {
 	a.model.MessageDialog.Open = false
 	a.model.MessageDialog.Title = ""

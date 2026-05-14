@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	"github.com/paranoidi/paras-commander/internal/ops"
 )
 
 func pathEqualOrUnder(root, p string) bool {
@@ -22,6 +21,16 @@ func pathEqualOrUnder(root, p string) bool {
 		return false
 	}
 	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// resolvedJobDestinationPath matches ops.ResolveDestination for a fixed dest-is-dir flag
+// without calling Stat (see jobs.Job.DestIsDir at enqueue time).
+func resolvedJobDestinationPath(src, dest string, destIsDir bool) string {
+	d := filepath.Clean(dest)
+	if destIsDir {
+		return filepath.Clean(filepath.Join(d, filepath.Base(src)))
+	}
+	return d
 }
 
 // EntryPathJobMarkStatus returns the job status of the first non-finished job that
@@ -46,7 +55,7 @@ func EntryPathJobMarkStatus(absPath string, jobList []JobEntry) (bool, string) {
 			if j.Destination == "" {
 				continue
 			}
-			dst := filepath.Clean(ops.ResolveDestination(cs, j.Destination))
+			dst := resolvedJobDestinationPath(cs, j.Destination, j.DestIsDir)
 			if dst != "" && dst != "." && pathEqualOrUnder(dst, p) {
 				return true, j.Status
 			}
