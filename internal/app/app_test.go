@@ -3536,6 +3536,80 @@ func TestFileDialogEnterExecutesRename(t *testing.T) {
 	}
 }
 
+func TestMassRenameTwoSelectedFiles(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "foo_a.txt")
+	bPath := filepath.Join(dir, "foo_b.txt")
+	writeFile(t, aPath)
+	writeFile(t, bPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true, bPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogMassRename {
+		t.Fatalf("expected mass rename dialog, open=%v type=%v", app.model.FileDialog.Open, app.model.FileDialog.DialogType)
+	}
+	d := &app.model.FileDialog
+	d.FocusedField = 2
+	for _, r := range "foo_" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.FocusedField = 3
+	for _, r := range "bar_" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.FocusedField = ui.FileDialogOKFocusIndex(*d)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after Enter")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "bar_a.txt")); err != nil {
+		t.Fatalf("bar_a.txt: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "bar_b.txt")); err != nil {
+		t.Fatalf("bar_b.txt: %v", err)
+	}
+	if _, err := os.Stat(aPath); !os.IsNotExist(err) {
+		t.Fatal("old path foo_a.txt should not exist")
+	}
+}
+
+func TestMassRenameEnterCancelClosesWithInvalidRegex(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "x.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	if !d.Open || d.DialogType != ui.FileDialogMassRename {
+		t.Fatalf("expected mass rename dialog")
+	}
+	// Regex mode + invalid pattern
+	d.FocusedField = 1
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	d.FocusedField = 2
+	for _, r := range "a++" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if !d.Fields[0].InputInvalid {
+		t.Fatal("expected invalid pattern")
+	}
+	d.FocusedField = ui.FileDialogCancelFocusIndex(*d)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.FileDialog.Open {
+		t.Fatal("Enter on Cancel should close dialog even when regexp is invalid")
+	}
+}
+
 func TestFileDialogMkdirCreatesDirectory(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 20)

@@ -33,6 +33,8 @@ type (
 	RenamePhase               = dialog.RenamePhase
 	RenameSlugifySep          = dialog.RenameSlugifySep
 	FileDialogState           = dialog.FileDialogState
+	MassRenameModeUI          = dialog.MassRenameModeUI
+	MassRenameSource          = dialog.MassRenameSource
 	PrimaryModal              = dialog.PrimaryModal
 	TransferKind              = dialog.TransferKind
 	TransferDialogPhase       = dialog.TransferDialogPhase
@@ -60,6 +62,10 @@ const (
 	FileDialogHardlink    = dialog.FileDialogHardlink
 	FileDialogAddBookmark = dialog.FileDialogAddBookmark
 	FileDialogRunForEach  = dialog.FileDialogRunForEach
+	FileDialogMassRename  = dialog.FileDialogMassRename
+
+	MassRenameModeUISimple = dialog.MassRenameModeUISimple
+	MassRenameModeUIRegex  = dialog.MassRenameModeUIRegex
 
 	MkdirActionCreate           = dialog.MkdirActionCreate
 	MkdirActionCreateCopySelect = dialog.MkdirActionCreateCopySelect
@@ -127,6 +133,16 @@ func FileDialogOKFocusIndex(st FileDialogState) int {
 // FileDialogCancelFocusIndex returns the FocusedField index of the Cancel button (delegates to dialog).
 func FileDialogCancelFocusIndex(st FileDialogState) int {
 	return dialog.FileDialogCancelFocusIndex(st)
+}
+
+// MassRenamePreviewViewportRows returns how many preview lines fit for a terminal height.
+func MassRenamePreviewViewportRows(layoutHeight int) int {
+	return dialog.MassRenamePreviewViewportRows(layoutHeight)
+}
+
+// MassRenameEnsurePreviewScroll clamps MassRenamePreviewScroll to keep the viewport valid.
+func MassRenameEnsurePreviewScroll(st *FileDialogState, viewportRows, totalRows int) {
+	dialog.MassRenameEnsurePreviewScroll(st, viewportRows, totalRows)
 }
 
 // ApplyRenameSanitize applies dot/underscore-to-space cleanups (delegates to dialog).

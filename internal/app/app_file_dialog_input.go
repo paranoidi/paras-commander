@@ -14,6 +14,47 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	if a.tryRenameDialogShortcut(event) {
 		return false
 	}
+	if d.Open && d.DialogType == ui.FileDialogMassRename && event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		switch event.Rune() {
+		case 's', 'S':
+			d.MassRenameMode = ui.MassRenameModeUISimple
+			d.FocusedField = 0
+			a.massRenameSyncFieldLabels()
+			a.recomputeMassRenamePreview()
+			return false
+		case 'r', 'R':
+			d.MassRenameMode = ui.MassRenameModeUIRegex
+			d.FocusedField = 1
+			a.massRenameSyncFieldLabels()
+			a.recomputeMassRenamePreview()
+			return false
+		case 'i', 'I':
+			if d.MassRenameMode == ui.MassRenameModeUISimple {
+				d.MassRenameCaseFold = !d.MassRenameCaseFold
+				a.recomputeMassRenamePreview()
+			}
+			return false
+		}
+	}
+	if d.Open && d.DialogType == ui.FileDialogMassRename {
+		switch event.Key() {
+		case tcell.KeyPgUp:
+			_, h := a.screen.Size()
+			vp := ui.MassRenamePreviewViewportRows(h)
+			d.MassRenamePreviewScroll -= vp
+			if d.MassRenamePreviewScroll < 0 {
+				d.MassRenamePreviewScroll = 0
+			}
+			return false
+		case tcell.KeyPgDn:
+			_, h := a.screen.Size()
+			vp := ui.MassRenamePreviewViewportRows(h)
+			ui.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
+			d.MassRenamePreviewScroll += vp
+			ui.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
+			return false
+		}
+	}
 	// Alt+O = OK, Alt+C = Cancel
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
@@ -41,6 +82,8 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	}
 
 	onRadio := a.fileDialogOnRadio()
+	onMkdirRadio := a.fileDialogOnMkdirRadio()
+	onMassRenameRadio := a.fileDialogOnMassRenameRadio()
 
 	f := a.focusedField()
 	if !onRadio && f != nil {
@@ -49,6 +92,9 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 				return false
 			}
 		} else if a.tryDialogInputFieldActions(event, f) {
+			if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+				a.recomputeMassRenamePreview()
+			}
 			return false
 		}
 	}
@@ -70,8 +116,23 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			a.openPathPickerForFileField(a.model.FileDialog.FocusedField)
 			return false
 		}
-		if onRadio {
+		if onMassRenameRadio {
+			a.applyMassRenameModeFromFocus()
+			return false
+		}
+		if a.fileDialogOnMassRenameCaseCheckbox() {
+			d := &a.model.FileDialog
+			d.MassRenameCaseFold = !d.MassRenameCaseFold
+			a.recomputeMassRenamePreview()
+			return false
+		}
+		if onMkdirRadio {
 			a.selectFocusedMkdirRadio()
+		}
+		if a.fileDialogOnButton() && d.DialogType != ui.FileDialogDelete &&
+			d.FocusedField == ui.FileDialogCancelFocusIndex(*d) {
+			a.closeFileDialog()
+			return false
 		}
 		a.executeFileDialog()
 		return false
@@ -85,7 +146,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		// On button: move between buttons; on radio: no-op; on field: move cursor
 		if a.fileDialogOnButton() {
 			a.fileDialogFocusButton(-1)
-		} else if onRadio {
+		} else if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		} else if f := a.focusedField(); f != nil && f.PathPicker && f.PickerFocused {
 			f.PickerFocused = false
@@ -98,7 +159,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	case tcell.KeyRight:
 		if a.fileDialogOnButton() {
 			a.fileDialogFocusButton(1)
-		} else if onRadio {
+		} else if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		} else if f := a.focusedField(); f != nil && f.PathPicker && !f.PickerFocused {
 			runes := []rune(f.Value)
@@ -123,13 +184,13 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		}
 		return false
 	case tcell.KeyHome:
-		if onRadio {
+		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		}
 		a.fileDialogMoveCursorStart()
 		return false
 	case tcell.KeyEnd:
-		if onRadio {
+		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		}
 		a.fileDialogMoveCursorEnd()
@@ -141,25 +202,39 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		a.fileDialogFocusPrev()
 		return false
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		if onRadio {
+		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		}
 		a.fileDialogBackspace()
 		return false
 	case tcell.KeyDelete:
-		if onRadio {
+		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		}
 		a.fileDialogDelete()
 		return false
 	case tcell.KeyCtrlL:
-		if onRadio {
+		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		}
 		a.fileDialogClearField()
 		return false
 	case tcell.KeyRune:
-		if onRadio {
+		if onMassRenameRadio {
+			if isPlainPrintableRune(event) && event.Rune() == ' ' {
+				a.applyMassRenameModeFromFocus()
+			}
+			return false
+		}
+		if a.fileDialogOnMassRenameCaseCheckbox() {
+			if isPlainPrintableRune(event) && event.Rune() == ' ' {
+				d := &a.model.FileDialog
+				d.MassRenameCaseFold = !d.MassRenameCaseFold
+				a.recomputeMassRenamePreview()
+			}
+			return false
+		}
+		if onMkdirRadio {
 			if isPlainPrintableRune(event) && event.Rune() == ' ' {
 				a.selectFocusedMkdirRadio()
 			}
@@ -176,6 +251,9 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 // selectFocusedMkdirRadio commits the currently focused mkdir radio row as the
 // active MkdirAction. No-op when focus is not on a radio row.
 func (a *App) selectFocusedMkdirRadio() {
+	if a.model.FileDialog.DialogType != ui.FileDialogMkdir {
+		return
+	}
 	idx := a.fileDialogRadioIndex()
 	if idx < 0 {
 		return
@@ -195,6 +273,16 @@ func (a *App) focusedField() *ui.FileDialogField {
 	if d.DialogType == ui.FileDialogRename && d.RenamePhase != ui.RenamePhaseMain {
 		return nil
 	}
+	if d.DialogType == ui.FileDialogMassRename {
+		switch d.FocusedField {
+		case 2:
+			return &d.Fields[0]
+		case 3:
+			return &d.Fields[1]
+		default:
+			return nil
+		}
+	}
 	if d.FocusedField < 0 || d.FocusedField >= len(d.Fields) {
 		return nil
 	}
@@ -203,48 +291,94 @@ func (a *App) focusedField() *ui.FileDialogField {
 
 func (a *App) fileDialogInsertRune(r rune) {
 	field := a.focusedField()
+	if field == nil {
+		return
+	}
 	field.InsertRune(r)
+	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+		a.recomputeMassRenamePreview()
+	}
 }
 
 func (a *App) fileDialogBackspace() {
 	field := a.focusedField()
+	if field == nil {
+		return
+	}
 	field.Backspace()
+	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+		a.recomputeMassRenamePreview()
+	}
 }
 
 func (a *App) fileDialogDelete() {
 	field := a.focusedField()
+	if field == nil {
+		return
+	}
 	field.Delete()
+	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+		a.recomputeMassRenamePreview()
+	}
 }
 
 func (a *App) fileDialogClearField() {
 	field := a.focusedField()
+	if field == nil {
+		return
+	}
 	field.Clear()
+	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+		a.recomputeMassRenamePreview()
+	}
 }
 
 func (a *App) fileDialogMoveCursor(delta int) {
 	field := a.focusedField()
+	if field == nil {
+		return
+	}
 	field.MoveCursor(delta)
+	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+		a.recomputeMassRenamePreview()
+	}
 }
 
 func (a *App) fileDialogMoveCursorStart() {
 	field := a.focusedField()
+	if field == nil {
+		return
+	}
 	field.MoveCursorStart()
+	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+		a.recomputeMassRenamePreview()
+	}
 }
 
 func (a *App) fileDialogMoveCursorEnd() {
 	field := a.focusedField()
+	if field == nil {
+		return
+	}
 	field.MoveCursorEnd()
+	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+		a.recomputeMassRenamePreview()
+	}
 }
 
 // fileDialogFocusCount returns total focusable items in file dialog.
 func (a *App) fileDialogFocusCount() int {
-	if a.model.FileDialog.DialogType == ui.FileDialogDelete {
+	d := a.model.FileDialog
+	if d.DialogType == ui.FileDialogDelete {
 		return 2 // Yes, No
 	}
-	if a.model.FileDialog.DialogType == ui.FileDialogRename && a.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+	if d.DialogType == ui.FileDialogRename && d.RenamePhase != ui.RenamePhaseMain {
 		return 4 // 2 options + OK + Cancel
 	}
-	return len(a.model.FileDialog.Fields) + a.mkdirExtraFocusRows() + 2 // fields + (optional) mkdir radios + OK + Cancel
+	if d.DialogType == ui.FileDialogMassRename {
+		return ui.FileDialogCancelFocusIndex(d) + 1
+	}
+	return len(d.Fields) + a.mkdirExtraFocusRows() + 2 // fields + (optional) mkdir radios + OK + Cancel
 }
 
 // mkdirExtraFocusRows returns the number of extra focus rows contributed by the
@@ -257,22 +391,43 @@ func (a *App) mkdirExtraFocusRows() int {
 	return 0
 }
 
-// fileDialogOnRadio returns true when focus sits on the mkdir post-action radio
-// section (between text fields and the OK button).
+// fileDialogOnRadio returns true when focus is on a mkdir post-action radio or a mass-rename mode radio.
 func (a *App) fileDialogOnRadio() bool {
+	return a.fileDialogOnMkdirRadio() || a.fileDialogOnMassRenameRadio()
+}
+
+// fileDialogOnMkdirRadio returns true when focus is on the mkdir-with-selections radio rows.
+func (a *App) fileDialogOnMkdirRadio() bool {
 	d := &a.model.FileDialog
 	extra := a.mkdirExtraFocusRows()
 	if extra == 0 {
 		return false
 	}
 	base := len(d.Fields)
-	return d.FocusedField >= base && d.FocusedField < base+extra
+	return d.DialogType == ui.FileDialogMkdir && d.FocusedField >= base && d.FocusedField < base+extra
+}
+
+// fileDialogOnMassRenameRadio returns true when focus is on Simple / Regex mode radios.
+func (a *App) fileDialogOnMassRenameRadio() bool {
+	d := &a.model.FileDialog
+	if d.DialogType != ui.FileDialogMassRename {
+		return false
+	}
+	return d.FocusedField >= 0 && d.FocusedField < 2
+}
+
+// fileDialogOnMassRenameCaseCheckbox returns true when focus is on the case-insensitive checkbox.
+func (a *App) fileDialogOnMassRenameCaseCheckbox() bool {
+	d := &a.model.FileDialog
+	return d.DialogType == ui.FileDialogMassRename &&
+		d.MassRenameMode == ui.MassRenameModeUISimple &&
+		d.FocusedField == 4
 }
 
 // fileDialogRadioIndex returns the 0-based radio index when focus is on a
 // mkdir radio row, or -1 otherwise.
 func (a *App) fileDialogRadioIndex() int {
-	if !a.fileDialogOnRadio() {
+	if !a.fileDialogOnMkdirRadio() {
 		return -1
 	}
 	return a.model.FileDialog.FocusedField - len(a.model.FileDialog.Fields)
@@ -287,7 +442,7 @@ func (a *App) fileDialogOnButton() bool {
 	if d.DialogType == ui.FileDialogRename && d.RenamePhase != ui.RenamePhaseMain {
 		return d.FocusedField >= 2
 	}
-	return d.FocusedField >= len(d.Fields)+a.mkdirExtraFocusRows()
+	return d.FocusedField >= ui.FileDialogOKFocusIndex(*d)
 }
 
 // fileDialogFocusNext moves focus to next item. Down on last button = no-op.
@@ -340,8 +495,8 @@ func (a *App) fileDialogFocusButton(delta int) {
 		return
 	}
 	// Fields + (optional radios) + OK + Cancel: move between OK/Cancel only
-	okIdx := len(d.Fields) + a.mkdirExtraFocusRows()
-	cancelIdx := okIdx + 1
+	okIdx := ui.FileDialogOKFocusIndex(*d)
+	cancelIdx := ui.FileDialogCancelFocusIndex(*d)
 	if d.FocusedField == okIdx && delta == 1 {
 		d.FocusedField = cancelIdx
 	} else if d.FocusedField == cancelIdx && delta == -1 {

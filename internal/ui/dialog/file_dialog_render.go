@@ -34,6 +34,8 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 		}
 		// Help block + separator + fields (label / blank / input per field) + separator + buttons row.
 		height = helpLines + 1 + len(state.Fields)*4 + 4
+	case FileDialogMassRename:
+		height = massRenameDialogHeight(layout.Height, state)
 	default:
 		if renameToolActive(state) {
 			// Preview label + blank + preview row + separator + options + separator + buttons.
@@ -77,6 +79,8 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 		if len(state.Fields) > 0 {
 			drawRunForEachDialogFields(screen, rect, borderStyle, state, styles)
 		}
+	case FileDialogMassRename:
+		drawMassRenameDialog(screen, rect, state, borderStyle, styles)
 	default:
 		if renameToolActive(state) {
 			drawRenameToolContent(screen, rect, state, borderStyle, styles)
@@ -138,6 +142,8 @@ func fileDialogTitle(dialogType FileDialogType) string {
 		return "Add bookmark"
 	case FileDialogRunForEach:
 		return "Run for each"
+	case FileDialogMassRename:
+		return "Mass rename"
 	default:
 		return ""
 	}
@@ -201,6 +207,39 @@ func fileDialogWidth(screenWidth int, state FileDialogState) int {
 			pl := utf8.RuneCountInString("Preview:") + 4
 			if pl > minWidth {
 				minWidth = pl
+			}
+		}
+	}
+	if state.DialogType == FileDialogMassRename {
+		for _, label := range []string{
+			"Simple (replace text)",
+			"Regular expression",
+			"Case insensitive find",
+			"Pattern",
+			"Replacement",
+			"PgUp/PgDn scroll preview",
+		} {
+			lw := utf8.RuneCountInString(label) + 8
+			if lw > minWidth {
+				minWidth = lw
+			}
+		}
+		for i := 0; i < len(state.MassRenamePreviewBefore); i++ {
+			lw := utf8.RuneCountInString(state.MassRenamePreviewBefore[i])
+			rw := 0
+			if i < len(state.MassRenamePreviewAfter) {
+				rw = utf8.RuneCountInString(state.MassRenamePreviewAfter[i])
+			}
+			// Two equal columns plus one space between: inner >= 2*max(lw,rw)+1; outer adds horizontal padding.
+			pairOuter := 2*max(lw, rw) + 1 + 4
+			if pairOuter > minWidth {
+				minWidth = pairOuter
+			}
+		}
+		if h := strings.TrimSpace(state.MassRenamePatternCompileHint); h != "" {
+			hw := utf8.RuneCountInString(h) + 4
+			if hw > minWidth {
+				minWidth = hw
 			}
 		}
 	}
@@ -298,10 +337,17 @@ func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 	if width <= 0 {
 		return
 	}
-	style, placeholderStyle := styles.DialogInputPair(focused)
+	invalid := field.InputInvalid
+	var style, placeholderStyle tcell.Style
+	if invalid {
+		style = styles.DialogInputBaseStyle(focused, true)
+		placeholderStyle = style
+	} else {
+		style, placeholderStyle = styles.DialogInputPair(focused)
+	}
 	prefillPending := field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill
 	textStyle := style
-	if prefillPending {
+	if prefillPending && !invalid {
 		textStyle = placeholderStyle
 	}
 
@@ -401,6 +447,9 @@ func fileDialogOKFocusIndex(state FileDialogState) int {
 	if state.DialogType == FileDialogDelete {
 		return 0
 	}
+	if state.DialogType == FileDialogMassRename {
+		return massRenameContentEnd(state)
+	}
 	if renameToolActive(state) {
 		return renameToolOptionCount()
 	}
@@ -411,6 +460,9 @@ func fileDialogOKFocusIndex(state FileDialogState) int {
 func fileDialogCancelFocusIndex(state FileDialogState) int {
 	if state.DialogType == FileDialogDelete {
 		return 1
+	}
+	if state.DialogType == FileDialogMassRename {
+		return massRenameContentEnd(state) + 1
 	}
 	if renameToolActive(state) {
 		return renameToolOptionCount() + 1

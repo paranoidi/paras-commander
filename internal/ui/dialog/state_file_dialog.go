@@ -14,7 +14,22 @@ const (
 	FileDialogHardlink
 	FileDialogAddBookmark
 	FileDialogRunForEach
+	FileDialogMassRename
 )
+
+// MassRenameModeUI selects literal vs regexp transform in the mass rename dialog.
+type MassRenameModeUI int
+
+const (
+	MassRenameModeUISimple MassRenameModeUI = iota
+	MassRenameModeUIRegex
+)
+
+// MassRenameSource is one selected file (absolute path resolved when the dialog opens).
+type MassRenameSource struct {
+	Path string
+	Name string // basename
+}
 
 // FileDialogField is a single input field in a file operation dialog.
 type FileDialogField struct {
@@ -30,6 +45,8 @@ type FileDialogField struct {
 	PathPicker bool
 	// PickerFocused is true when the trailing path-picker glyph has sub-focus (file dialogs).
 	PickerFocused bool
+	// InputInvalid paints the row with dialog.input.*.error (e.g. mass rename regexp compile error).
+	InputInvalid bool
 }
 
 // MkdirAction identifies the post-mkdir action chosen via radio buttons in the mkdir dialog.
@@ -72,4 +89,16 @@ type FileDialogState struct {
 	RenameSanitizeDots        bool
 	RenameSanitizeUnderscores bool
 	RenameSlugifySep          RenameSlugifySep
+
+	// Mass rename (DialogType == FileDialogMassRename).
+	MassRenameMode          MassRenameModeUI
+	MassRenameCaseFold      bool
+	MassRenamePreviewScroll int
+	MassRenameSources []MassRenameSource
+	// MassRenamePreviewBefore / After are paired basename preview columns (recomputed in app).
+	// Rows with Before starting with "!" are full-width error lines (After empty).
+	MassRenamePreviewBefore []string
+	MassRenamePreviewAfter  []string
+	// MassRenamePatternCompileHint is a short regexp compile error shown under the Pattern field (regex mode).
+	MassRenamePatternCompileHint string
 }

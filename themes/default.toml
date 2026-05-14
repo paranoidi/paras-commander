@@ -117,7 +117,7 @@ jobs.icons.input_required = { fg = "cyan", bg = "black", bold = true }
 jobs.icons.completed = { fg = "bright_green", bg = "black", bold = true }
 
 [symbols]
-queued = "\uf1af9"
+queued = "\uf1af"
 running = "\uf144"
 paused = "\uf28b"
 canceled = "\uf28d"

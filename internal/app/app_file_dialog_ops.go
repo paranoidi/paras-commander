@@ -26,6 +26,10 @@ func (a *App) refreshBothPanelsVolumeSpace() {
 }
 
 func (a *App) openRenameDialog(p *panel.State) {
+	if len(p.SelectedPaths) > 0 {
+		a.openMassRenameDialog(p)
+		return
+	}
 	entry, err := ops.ResolveSourceSingle(p)
 	if err != nil {
 		a.setErrorMessage("Rename", err)
@@ -172,6 +176,8 @@ func (a *App) executeFileDialog() {
 	switch a.model.FileDialog.DialogType {
 	case ui.FileDialogRunForEach:
 		a.executeRunForEach()
+	case ui.FileDialogMassRename:
+		a.executeMassRename()
 	case ui.FileDialogRename:
 		a.executeRename()
 	case ui.FileDialogMkdir:
