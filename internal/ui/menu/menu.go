@@ -74,6 +74,19 @@ func ApplyCommandsMenuKeyLabels(defs []Definition, global, commands *keymap.Map)
 	}
 }
 
+// ApplyMessagesMenuKeyLabels sets Item.KeyLabel using the Messages overlay chords before global.
+func ApplyMessagesMenuKeyLabels(defs []Definition, global, messages *keymap.Map) {
+	for i := range defs {
+		for j := range defs[i].Items {
+			item := &defs[i].Items[j]
+			if item.Separator || item.Action == "" {
+				continue
+			}
+			item.KeyLabel = keymap.MenuBindingLabelPreferMessages(global, messages, item.Action)
+		}
+	}
+}
+
 // ApplyJobsMenuKeyLabels sets Item.KeyLabel using jobs overlay chords before global (jobs pulldown).
 func ApplyJobsMenuKeyLabels(defs []Definition, global, jobs *keymap.Map) {
 	for i := range defs {
@@ -148,7 +161,9 @@ func Definitions() []Definition {
 			Label:      "Command",
 			Shortcut:   'c',
 			Items: []Item{
+				{Action: keymap.ActionAppUserMenu, Label: "User menu", Shortcut: 'U'},
 				{Action: keymap.ActionCommandsOpen, Label: "Commands", Shortcut: 'm'},
+				{Action: keymap.ActionMessagesOpen, Label: "Messages", Shortcut: 's'},
 				{Action: keymap.ActionJobsOpen, Label: "Jobs", Shortcut: 'j'},
 				{Action: keymap.ActionFileRunForEach, Label: "Run for each...", Shortcut: 'f'},
 				{Action: keymap.ActionBookmarkOpen, Label: "Bookmarks", Shortcut: 'b'},

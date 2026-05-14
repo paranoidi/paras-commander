@@ -3759,8 +3759,15 @@ func TestAddBookmarkExecuteAppendsToMarksFile(t *testing.T) {
 	if !strings.Contains(app.model.Message, "Bookmark added") {
 		t.Fatalf("transient message = %q, want it to mention bookmark added", app.model.Message)
 	}
-	if !strings.Contains(app.model.Message, marksPath) {
-		t.Fatalf("transient message = %q, want it to include marks file path %q", app.model.Message, marksPath)
+	foundMarks := false
+	for _, e := range app.model.MessageLog {
+		if strings.Contains(e.Text, marksPath) {
+			foundMarks = true
+			break
+		}
+	}
+	if !foundMarks {
+		t.Fatalf("message log should include marks file path %q (first banner line is wrapped); log=%#v", marksPath, app.model.MessageLog)
 	}
 	if app.model.MessageUrgency != ui.MessageUrgencyInfo {
 		t.Fatalf("message urgency = %v, want info", app.model.MessageUrgency)

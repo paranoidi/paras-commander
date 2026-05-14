@@ -61,6 +61,11 @@ func (m *Map) ActionBindings() []Binding {
 			rememberCanonical(ks)
 		}
 	}
+	for _, chords := range DefaultMessagesOverlayKeys() {
+		for _, ks := range chords {
+			rememberCanonical(ks)
+		}
+	}
 	for _, chords := range DefaultPathPickerHostOverlayKeys() {
 		for _, ks := range chords {
 			rememberCanonical(ks)
@@ -146,6 +151,21 @@ func MenuBindingLabelPreferCommands(global, commands *Map, actionID string) stri
 	spec, hasSpec := SpecForAction(actionID)
 	if commands != nil {
 		if ks := commands.BindingsForAction(actionID); len(ks) > 0 {
+			return menuBindingLabelPick(spec, hasSpec, ks)
+		}
+	}
+	if global != nil {
+		return global.MenuBindingLabel(actionID)
+	}
+	return ""
+}
+
+// MenuBindingLabelPreferMessages resolves a menu hint using the Messages overlay when present,
+// otherwise falls back to the global map.
+func MenuBindingLabelPreferMessages(global, messages *Map, actionID string) string {
+	spec, hasSpec := SpecForAction(actionID)
+	if messages != nil {
+		if ks := messages.BindingsForAction(actionID); len(ks) > 0 {
 			return menuBindingLabelPick(spec, hasSpec, ks)
 		}
 	}

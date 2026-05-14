@@ -68,6 +68,7 @@ type App struct {
 	keys             *keymap.Map
 	keysJobs         *keymap.Map // chords active only in jobs view (overlay)
 	keysCommands     *keymap.Map // chords active only in Commands view (overlay)
+	keysMessages     *keymap.Map // chords active only in Messages view (overlay)
 	keysDialogInput  *keymap.Map // chords active only while a dialog input field is focused
 	keysRenameDialog *keymap.Map // sanitize/slugify while main rename dialog is focused
 	model            ui.Model
@@ -201,6 +202,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	km := bundle.Global
 	kmJobs := bundle.Jobs
 	kmCommands := bundle.Commands
+	kmMessages := bundle.Messages
 	kmDialogInput := bundle.DialogInput
 	if kmDialogInput == nil {
 		m, err := keymap.Build(map[string][]string{})
@@ -305,6 +307,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keys:             km,
 		keysJobs:         kmJobs,
 		keysCommands:     kmCommands,
+		keysMessages:     kmMessages,
 		keysDialogInput:  kmDialogInput,
 		keysRenameDialog: kmRenameDialog,
 		commandsCtx:      cmdCtx,

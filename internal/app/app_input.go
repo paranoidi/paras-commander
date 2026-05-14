@@ -29,9 +29,11 @@ const (
 	InputModeDialog
 	InputModeJobsView
 	InputModeCommandsView
+	InputModeMessagesView
 	InputModePathPicker
 	InputModeHistoryDialog
 	InputModeMetaDialog
+	InputModeUserMenu
 	InputModeHelpView
 )
 
@@ -45,6 +47,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeHistoryDialog
 	case a.model.MetaDialog.Open:
 		return InputModeMetaDialog
+	case a.model.UserMenu.Open:
+		return InputModeUserMenu
 	case a.model.HelpView.Open:
 		return InputModeHelpView
 	case a.model.ThemeDialog.Open:
@@ -63,6 +67,10 @@ func (a *App) inputMode() InputMode {
 		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
 		return InputModeCommandsView
+	case a.model.ViewMode == ui.ViewMessages &&
+		!a.model.AuxiliaryViewDialogKeysBlocked() &&
+		!a.inQuickFilterUI():
+		return InputModeMessagesView
 	case a.model.ViewMode == ui.ViewJobs &&
 		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
@@ -98,7 +106,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		})
 	}
 	if a.model.PrimaryModal() != ui.PrimaryModalNone ||
-		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
+		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		if a.pathPickerHostFooterEligible() {
 			if lbl := a.keys.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
@@ -129,6 +137,9 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	}
 	if a.model.ViewMode == ui.ViewCommands && !a.inQuickFilterUI() {
 		return menu.FunctionKeysCommandsView()
+	}
+	if a.model.ViewMode == ui.ViewMessages && !a.inQuickFilterUI() {
+		return menu.FunctionKeysMessagesView()
 	}
 	if a.model.ViewMode == ui.ViewJobs && !a.inQuickFilterUI() {
 		return menu.FunctionKeysJobsView()
@@ -209,6 +220,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.handleMetaDialogKey(event)
 		a.render()
 		return false, true
+	case InputModeUserMenu:
+		a.handleUserMenuDialogKey(event)
+		a.render()
+		return false, true
 	case InputModeHelpView:
 		quit := a.handleHelpDialogKey(event)
 		a.render()
@@ -243,6 +258,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return quit, true
 	case InputModeCommandsView:
 		quit := a.handleCommandsViewKey(event)
+		a.render()
+		return quit, true
+	case InputModeMessagesView:
+		quit := a.handleMessagesViewKey(event)
 		a.render()
 		return quit, true
 	case InputModeDialog:
@@ -422,6 +441,9 @@ func (a *App) dispatch(actionID string) {
 	if a.tryDispatchJobs(actionID) {
 		return
 	}
+	if a.tryDispatchMessages(actionID) {
+		return
+	}
 	if a.tryDispatchCommands(actionID) {
 		return
 	}
@@ -581,6 +603,8 @@ func (a *App) dispatch(actionID string) {
 			return
 		}
 		a.openRunForEachDialog()
+	case keymap.ActionAppUserMenu:
+		a.openUserMenu()
 	case keymap.ActionUIOpenTheme:
 		a.openThemeDialog()
 	case keymap.ActionUIOpenConfig:

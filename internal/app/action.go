@@ -7,7 +7,7 @@ import (
 )
 
 // lookupActionForView resolves an action from global and optional view overlays.
-func lookupActionForView(ev *tcell.EventKey, global, jobs, commands *keymap.Map, vm ui.ViewMode) string {
+func lookupActionForView(ev *tcell.EventKey, global, jobs, commands, messages *keymap.Map, vm ui.ViewMode) string {
 	if ev == nil || global == nil {
 		return ""
 	}
@@ -24,6 +24,12 @@ func lookupActionForView(ev *tcell.EventKey, global, jobs, commands *keymap.Map,
 				return id
 			}
 		}
+	case ui.ViewMessages:
+		if messages != nil {
+			if id, ok := messages.Lookup(ev); ok {
+				return id
+			}
+		}
 	}
 	id, ok := global.Lookup(ev)
 	if !ok {
@@ -36,5 +42,5 @@ func (a *App) actionFromKeyEvent(ev *tcell.EventKey) string {
 	if a == nil {
 		return ""
 	}
-	return lookupActionForView(ev, a.keys, a.keysJobs, a.keysCommands, a.model.ViewMode)
+	return lookupActionForView(ev, a.keys, a.keysJobs, a.keysCommands, a.keysMessages, a.model.ViewMode)
 }

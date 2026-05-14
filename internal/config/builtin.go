@@ -41,4 +41,11 @@ const (
 	// 40 targets a 50/50 split on an 80-column terminal (inner listing width 38) with file icons off;
 	// with icons on, the text budget is three cells narrower so the gate still trips.
 	ShrunkenListingRowTextWidthThreshold = 40
+
+	// DefaultUserMenuFileName is the basename of the user menu definition under the config directory
+	// when [user_menu].file is empty.
+	DefaultUserMenuFileName = "menu.toml"
+
+	// DefaultMessageLogMaxEntries caps status/toast lines retained for the Messages view (oldest dropped).
+	DefaultMessageLogMaxEntries = 500
 )

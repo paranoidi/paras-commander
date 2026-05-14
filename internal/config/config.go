@@ -17,7 +17,7 @@ const (
 	appDirName = "paras-commander"
 	fileName   = "config.toml"
 
-	// actionKeysTable, jobsActionKeysTable, commandsActionKeysTable,
+	// actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, messagesActionKeysTable,
 	// pathPickerHostActionKeysTable, dialogInputActionKeysTable, and renameDialogActionKeysTable are
 	// optional top-level TOML tables holding keybindings inside config.toml.
 	// They mirror the canonical contents of keybindings.toml and are owned
@@ -27,6 +27,7 @@ const (
 	actionKeysTable               = "action_keys"
 	jobsActionKeysTable           = "jobs_action_keys"
 	commandsActionKeysTable       = "commands_action_keys"
+	messagesActionKeysTable       = "messages_action_keys"
 	pathPickerHostActionKeysTable = "path_picker_host_action_keys"
 	dialogInputActionKeysTable    = "dialog_input_action_keys"
 	renameDialogActionKeysTable   = "rename_dialog_action_keys"
@@ -116,6 +117,7 @@ type Config struct {
 	Operations                 OperationsConfig `toml:"operations"`
 	Logging                    LoggingConfig    `toml:"logging"`
 	Bookmarks                  BookmarksConfig  `toml:"bookmarks"`
+	UserMenu                   UserMenuConfig   `toml:"user_menu"`
 	// Meta holds named per-entry shell commands shown in the panel Meta column.
 	// Each key is the command name; command receives the entry path as $1.
 	Meta map[string]MetaCommandDef `toml:"meta"`
@@ -141,6 +143,16 @@ type MetaCommandDef struct {
 type BookmarksConfig struct {
 	// File is the marks file path. Empty uses FZF_MARKS_FILE or ~/.fzf-marks.
 	File string `toml:"file"`
+}
+
+// UserMenuConfig controls discovery of the separate menu.toml (F2 user menu).
+type UserMenuConfig struct {
+	// File is an absolute path or ~/… to the global menu.toml. Empty uses
+	// filepath.Join(configDir, DefaultUserMenuFileName) after paths are resolved.
+	File string `toml:"file"`
+	// LocalNames lists basenames probed in the active panel directory before the global file.
+	// Empty in config means use built-in default (see Default().UserMenu).
+	LocalNames []string `toml:"local_names"`
 }
 
 type UIConfig struct {
@@ -171,6 +183,9 @@ type UIConfig struct {
 	// ShrunkenShowsNameOnly: when true, narrow panels hide trailing listing columns and show only names
 	// (sort and default_listing_format are unchanged; see ShrunkenListingRowTextWidthThreshold in builtin.go).
 	ShrunkenShowsNameOnly bool `toml:"shrunken_shows_name_only"`
+	// MessageLogMaxEntries caps how many status/toast lines are retained for the Messages view (oldest dropped).
+	// Zero means use the built-in default (see DefaultMessageLogMaxEntries).
+	MessageLogMaxEntries int `toml:"message_log_max_entries"`
 }
 
 type FilterConfig struct {
@@ -248,6 +263,7 @@ func Default() Config {
 			PanelZoomActivePercent:    DefaultPanelZoomActivePercent,
 			PanelZoomInactivePercent:  DefaultPanelZoomInactivePercent,
 			ShrunkenShowsNameOnly:     DefaultShrunkenShowsNameOnly,
+			MessageLogMaxEntries:      DefaultMessageLogMaxEntries,
 		},
 		Filter: FilterConfig{
 			Mode:              FilterModeFuzzy,
@@ -279,6 +295,10 @@ func Default() Config {
 		},
 		Bookmarks: BookmarksConfig{
 			File: "",
+		},
+		UserMenu: UserMenuConfig{
+			File:       "",
+			LocalNames: []string{DefaultUserMenuFileName},
 		},
 		Meta: map[string]MetaCommandDef{
 			"count-items": {
@@ -406,6 +426,12 @@ func ReadCommandsActionKeys(filename string) (map[string][]string, error) {
 	return readShortcutTable(filename, commandsActionKeysTable)
 }
 
+// ReadMessagesActionKeys parses the optional [messages_action_keys] table from a config.toml
+// style file. Same nil/error semantics as ReadActionKeys.
+func ReadMessagesActionKeys(filename string) (map[string][]string, error) {
+	return readShortcutTable(filename, messagesActionKeysTable)
+}
+
 // ReadPathPickerHostActionKeys parses the optional [path_picker_host_action_keys] table from a
 // config.toml style file. Same nil/error semantics as ReadActionKeys.
 func ReadPathPickerHostActionKeys(filename string) (map[string][]string, error) {
@@ -464,7 +490,7 @@ func readShortcutTable(filename, table string) (map[string][]string, error) {
 // keybindings pass-through tables tolerated inside config.toml.
 func isShortcutTable(name string) bool {
 	switch name {
-	case actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, pathPickerHostActionKeysTable, dialogInputActionKeysTable, renameDialogActionKeysTable:
+	case actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, messagesActionKeysTable, pathPickerHostActionKeysTable, dialogInputActionKeysTable, renameDialogActionKeysTable:
 		return true
 	}
 	return false
@@ -694,6 +720,13 @@ func (c *Config) Validate() error {
 		c.UI.PanelZoomActivePercent = DefaultPanelZoomActivePercent
 		c.UI.PanelZoomInactivePercent = DefaultPanelZoomInactivePercent
 	}
+	if c.UI.MessageLogMaxEntries <= 0 {
+		c.UI.MessageLogMaxEntries = builtin.UI.MessageLogMaxEntries
+	}
+	const messageLogMaxCap = 50_000
+	if c.UI.MessageLogMaxEntries > messageLogMaxCap {
+		c.UI.MessageLogMaxEntries = messageLogMaxCap
+	}
 	if c.Filter.Mode != FilterModeFuzzy {
 		c.Filter.Mode = builtin.Filter.Mode
 	}
@@ -752,6 +785,9 @@ func (c *Config) Validate() error {
 	}
 	if !validLoggingLevel(c.Logging.Level) {
 		c.Logging.Level = builtin.Logging.Level
+	}
+	if len(c.UserMenu.LocalNames) == 0 {
+		c.UserMenu.LocalNames = append([]string(nil), builtin.UserMenu.LocalNames...)
 	}
 	return nil
 }

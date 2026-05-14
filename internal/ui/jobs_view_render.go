@@ -34,11 +34,12 @@ const (
 	ViewBrowser ViewMode = iota
 	ViewJobs
 	ViewCommands
+	ViewMessages
 )
 
 // IsAuxiliaryView reports vm is a full-screen meta view rather than the file browser.
 func IsAuxiliaryView(vm ViewMode) bool {
-	return vm == ViewJobs || vm == ViewCommands
+	return vm == ViewJobs || vm == ViewCommands || vm == ViewMessages
 }
 
 // JobsViewState holds focus and scroll positions for the jobs view screen.

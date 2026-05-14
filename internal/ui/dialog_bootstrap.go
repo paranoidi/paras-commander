@@ -24,6 +24,7 @@ type (
 	HistoryDialogState        = dialog.HistoryDialogState
 	MetaEntry                 = dialog.MetaEntry
 	MetaDialogState           = dialog.MetaDialogState
+	UserMenuDialogState       = dialog.UserMenuDialogState
 	HelpEntry                 = dialog.HelpEntry
 	HelpViewState             = dialog.HelpViewState
 	FileDialogType            = dialog.FileDialogType

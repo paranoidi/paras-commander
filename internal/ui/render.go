@@ -44,6 +44,8 @@ type Model struct {
 	CommandsList           []CommandRunEntry
 	// CommandsDisplay is a mutex-backed snapshot refreshed in App.render for ViewCommands (avoids races with worker updates).
 	CommandsDisplay []CommandRunEntry
+	MessagesView    MessagesViewState
+	MessageLog      []MessageLogEntry
 	// HideMenuBar mirrors !ui.show_menu_bar: when true, the top menu row is omitted and panels extend upward.
 	HideMenuBar bool
 	// ShowFileIcons mirrors ui.show_file_icons (Nerd Font glyphs before file names).
@@ -82,6 +84,7 @@ type Model struct {
 	PathPicker          PathPickerState
 	HistoryDialog       HistoryDialogState
 	MetaDialog          MetaDialogState
+	UserMenu            UserMenuDialogState
 	// MetaResults holds per-panel command output keyed by entry path (nil = meta not active).
 	MetaResults    [2]map[string]string
 	HelpView       HelpViewState
@@ -148,7 +151,7 @@ func (m Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open || m.UserMenu.Open {
 		return true
 	}
 	return false
@@ -164,7 +167,7 @@ func (m Model) QuickFilterStartBlocked() bool {
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.GroupSelect.Open || m.FileDialog.Open ||
-		m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open
+		m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.UserMenu.Open
 }
 
 // AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
@@ -223,6 +226,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			cmdEntries = model.CommandsDisplay
 		}
 		drawCommandsView(screen, layout, model.CommandsView, cmdEntries, styles, chromeBlocked, model.UserHomeDir)
+	case ViewMessages:
+		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked)
 	default:
 		// Theme picker: show the real left panel (normal chrome, always active) so preview matches in-browser use.
 		previewTheme := model.ThemeDialog.Open
@@ -269,6 +274,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	if model.SortDialog.Open {
 		dialog.DrawSortDialog(screen, layout, model.SortDialog, styles)
+	}
+	if model.UserMenu.Open {
+		dialog.DrawUserMenuDialog(screen, layout, model.UserMenu, styles)
 	}
 	if model.ListingFormatDialog.Open {
 		dialog.DrawListingFormatDialog(screen, layout, model.ListingFormatDialog, styles)

@@ -2,9 +2,10 @@ package keymap
 
 // Action identifiers match docs/keybindings.md (single-stroke bindings only in v1).
 const (
-	ActionAppQuit     = "app.quit"
-	ActionAppOpenMenu = "app.open-menu"
-	ActionAppShowHelp = "app.show-help"
+	ActionAppQuit       = "app.quit"
+	ActionAppOpenMenu    = "app.open-menu"
+	ActionAppShowHelp    = "app.show-help"
+	ActionAppUserMenu    = "app.user-menu"
 
 	ActionPanelSwitch                = "panel.switch"
 	ActionNavUp                      = "nav.up"
@@ -87,6 +88,10 @@ const (
 	ActionCommandsClose  = "commands.close"
 	ActionFileRunForEach = "file.run-for-each"
 
+	// Messages view (status / toast log)
+	ActionMessagesOpen  = "messages.open"
+	ActionMessagesClose = "messages.close"
+
 	// UI dialog controls (handled internally, not in keybindings.toml)
 	ActionUIConfirm   = "ui.confirm"
 	ActionUICancel    = "ui.cancel"
@@ -122,9 +127,10 @@ const (
 
 // KnownActions lists action IDs accepted in keybindings.toml for the current app.
 var KnownActions = map[string]struct{}{
-	ActionAppQuit:     {},
-	ActionAppOpenMenu: {},
-	ActionAppShowHelp: {},
+	ActionAppQuit:       {},
+	ActionAppOpenMenu:   {},
+	ActionAppShowHelp:   {},
+	ActionAppUserMenu:   {},
 
 	ActionPanelSwitch:                {},
 	ActionNavUp:                      {},
@@ -206,6 +212,9 @@ var KnownActions = map[string]struct{}{
 	ActionCommandsOpen:   {},
 	ActionCommandsClose:  {},
 	ActionFileRunForEach: {},
+
+	ActionMessagesOpen:  {},
+	ActionMessagesClose: {},
 
 	ActionUIOpenTheme:  {},
 	ActionUIOpenConfig: {},

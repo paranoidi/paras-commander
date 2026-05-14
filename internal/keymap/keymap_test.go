@@ -345,7 +345,7 @@ func TestLoadFromPathsMergesUserFile(t *testing.T) {
 	content := `
 [action_keys]
 app.quit = ["F12"]
-panel.refresh = ["F2"]
+panel.refresh = ["F11"]
 `
 	if err := writeFile(path, content); err != nil {
 		t.Fatalf("writeFile: %v", err)
@@ -363,9 +363,9 @@ panel.refresh = ["F2"]
 	if okF10 {
 		t.Fatal("F10 should not quit after user remapped quit to F12")
 	}
-	id, ok = m.Lookup(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	id, ok = m.Lookup(tcell.NewEventKey(tcell.KeyF11, 0, tcell.ModNone))
 	if !ok || id != ActionPanelRefresh {
-		t.Fatalf("F2 = %q %v, want panel.refresh", id, ok)
+		t.Fatalf("F11 = %q %v, want panel.refresh", id, ok)
 	}
 }
 
@@ -572,7 +572,7 @@ func TestExplicitJobsOpenInActionKeysOverridesDefaultChord(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "keybindings.toml")
 	if err := writeFile(path, `[action_keys]
-"jobs.open" = ["F2"]
+"jobs.open" = ["F11"]
 `); err != nil {
 		t.Fatalf("writeFile: %v", err)
 	}
@@ -580,9 +580,9 @@ func TestExplicitJobsOpenInActionKeysOverridesDefaultChord(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadFromPaths: %v", err)
 	}
-	id, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	id, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyF11, 0, tcell.ModNone))
 	if !ok || id != ActionJobsOpen {
-		t.Fatalf("F2 = %q %v, want jobs.open from explicit [action_keys]", id, ok)
+		t.Fatalf("F11 = %q %v, want jobs.open from explicit [action_keys]", id, ok)
 	}
 	if _, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModNone)); ok {
 		t.Fatal("Ctrl+J should not bind: [action_keys] replaced default jobs.open chords")

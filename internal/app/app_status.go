@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -26,13 +27,20 @@ func (a *App) statusMessageTTL() time.Duration {
 }
 
 func (a *App) setTransientMessage(msg string, urgency ui.MessageUrgency) {
-	if strings.TrimSpace(msg) == "" {
+	msg = strings.TrimSpace(msg)
+	if msg == "" {
+		a.clearTransientMessage()
+		return
+	}
+	lines := ui.WrapWordsToWidth(msg, ui.MessageLogWrapRunes)
+	if len(lines) == 0 {
 		a.clearTransientMessage()
 		return
 	}
 	gen := a.messageExpiryGen.Add(1)
-	a.model.Message = msg
+	a.model.Message = lines[0]
 	a.model.MessageUrgency = urgency
+	a.appendMessageLog(msg, urgency)
 	ttl := a.statusMessageTTL()
 	if ttl <= 0 {
 		return
@@ -52,6 +60,49 @@ func (a *App) applyStatusMessageExpiry(p statusMessageExpiryPayload) {
 	}
 	a.model.Message = ""
 	a.model.MessageUrgency = ui.MessageUrgencyInfo
+}
+
+func (a *App) appendMessageLog(text string, urgency ui.MessageUrgency) {
+	t := strings.TrimSpace(strings.ReplaceAll(text, "\n", " "))
+	if t == "" {
+		return
+	}
+	lines := ui.WrapWordsToWidth(t, ui.MessageLogWrapRunes)
+	if len(lines) == 0 {
+		return
+	}
+	max := a.config.UI.MessageLogMaxEntries
+	if max <= 0 {
+		max = config.DefaultMessageLogMaxEntries
+	}
+	wasAtEnd := a.model.ViewMode == ui.ViewMessages && len(a.model.MessageLog) > 0 &&
+		a.model.MessagesView.Selected == len(a.model.MessageLog)-1
+
+	ts := time.Now().Format("15:04:05")
+	for i, line := range lines {
+		tm := ""
+		if i == 0 {
+			tm = ts
+		}
+		a.model.MessageLog = append(a.model.MessageLog, ui.MessageLogEntry{
+			Time: tm,
+			Text: line,
+			Urg:  urgency,
+		})
+	}
+	for len(a.model.MessageLog) > max {
+		a.model.MessageLog = a.model.MessageLog[1:]
+		if a.model.MessagesView.Selected > 0 {
+			a.model.MessagesView.Selected--
+		}
+		if a.model.MessagesView.ListScroll > 0 {
+			a.model.MessagesView.ListScroll--
+		}
+	}
+	if wasAtEnd && len(a.model.MessageLog) > 0 {
+		a.model.MessagesView.Selected = len(a.model.MessageLog) - 1
+	}
+	a.ensureMessagesViewSelectionVisible()
 }
 
 func (a *App) setUnsupportedMessage(label string) {

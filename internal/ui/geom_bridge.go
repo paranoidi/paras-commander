@@ -46,6 +46,16 @@ func SplitJobsRightColumn(column Rect, detailLineCount int) (detail Rect, activi
 	return geom.SplitJobsRightColumn(column, detailLineCount)
 }
 
+// MergeTwinPanelRects returns one rectangle spanning the browser's left and right columns (same height).
+func MergeTwinPanelRects(left, right Rect) Rect {
+	return Rect{
+		X:      left.X,
+		Y:      left.Y,
+		Width:  left.Width + right.Width,
+		Height: left.Height,
+	}
+}
+
 // JobsPanelContentRows returns scrollable text lines inside a jobs detail/activity frame (inner height).
 func JobsPanelContentRows(rect Rect) int {
 	return geom.JobsPanelContentRows(rect)

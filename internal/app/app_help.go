@@ -161,6 +161,12 @@ func (a *App) effectiveKeyStrings(actionID string, defaults []string) []string {
 	if a.keysJobs != nil {
 		add(a.keysJobs.BindingsForAction(actionID))
 	}
+	if a.keysCommands != nil {
+		add(a.keysCommands.BindingsForAction(actionID))
+	}
+	if a.keysMessages != nil {
+		add(a.keysMessages.BindingsForAction(actionID))
+	}
 	if len(out) > 0 {
 		return out
 	}

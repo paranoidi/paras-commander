@@ -13,12 +13,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 )
 
-// LoadFromPaths resolves the full Bundle (global + jobs-view + Commands-view +
+// LoadFromPaths resolves the full Bundle (global + jobs-view + Commands-view + Messages-view +
 // path-picker-host + dialog-input + rename-dialog overlays) using a layered merge per table:
 //
 //  1. built-in defaults (DefaultActionKeys / DefaultJobsOverlayKeys / DefaultCommandsOverlayKeys /
-//     DefaultPathPickerHostOverlayKeys / DefaultDialogInputOverlayKeys / DefaultRenameDialogOverlayKeys)
-//  2. config.toml's [action_keys] / [jobs_action_keys] / [commands_action_keys] /
+//     DefaultMessagesOverlayKeys / DefaultPathPickerHostOverlayKeys / DefaultDialogInputOverlayKeys /
+//     DefaultRenameDialogOverlayKeys)
+//  2. config.toml's [action_keys] / [jobs_action_keys] / [commands_action_keys] / [messages_action_keys] /
 //     [path_picker_host_action_keys] (must be empty) / [dialog_input_action_keys] / [rename_dialog_action_keys] (when present)
 //  3. keybindings.toml's matching tables (when present) — wins over config.toml
 //
@@ -30,6 +31,7 @@ func LoadFromPaths(paths config.Paths) (*Bundle, error) {
 	globalLayer := DefaultActionKeys()
 	jobsLayer := DefaultJobsOverlayKeys()
 	commandsLayer := DefaultCommandsOverlayKeys()
+	messagesLayer := DefaultMessagesOverlayKeys()
 	pathPickerHostLayer := DefaultPathPickerHostOverlayKeys()
 	dialogInputLayer := DefaultDialogInputOverlayKeys()
 	renameDialogLayer := DefaultRenameDialogOverlayKeys()
@@ -57,6 +59,15 @@ func LoadFromPaths(paths config.Paths) (*Bundle, error) {
 		return nil, err
 	}
 	commandsLayer = mergeBindings(commandsLayer, configCommandsKeys)
+
+	configMessagesKeys, err := config.ReadMessagesActionKeys(paths.ConfigFile)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateMessagesOverlayKeys(configMessagesKeys, paths.ConfigFile); err != nil {
+		return nil, err
+	}
+	messagesLayer = mergeBindings(messagesLayer, configMessagesKeys)
 
 	configPathPickerHostKeys, err := config.ReadPathPickerHostActionKeys(paths.ConfigFile)
 	if err != nil {
@@ -90,36 +101,37 @@ func LoadFromPaths(paths config.Paths) (*Bundle, error) {
 		file = filepath.Join(paths.ConfigDir, "keybindings.toml")
 	}
 	if file == "" {
-		return buildBundle(globalLayer, jobsLayer, commandsLayer, pathPickerHostLayer, dialogInputLayer, renameDialogLayer)
+		return buildBundle(globalLayer, jobsLayer, commandsLayer, messagesLayer, pathPickerHostLayer, dialogInputLayer, renameDialogLayer)
 	}
 
 	raw, err := os.ReadFile(file)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return buildBundle(globalLayer, jobsLayer, commandsLayer, pathPickerHostLayer, dialogInputLayer, renameDialogLayer)
+			return buildBundle(globalLayer, jobsLayer, commandsLayer, messagesLayer, pathPickerHostLayer, dialogInputLayer, renameDialogLayer)
 		}
 		return nil, fmt.Errorf("read keybindings %q: %w", file, err)
 	}
 
-	actionUser, jobsUser, commandsUser, pathPickerHostUser, dialogInputUser, renameDialogUser, err := parseKeybindingsFile(raw, file)
+	actionUser, jobsUser, commandsUser, messagesUser, pathPickerHostUser, dialogInputUser, renameDialogUser, err := parseKeybindingsFile(raw, file)
 	if err != nil {
 		return nil, err
 	}
 	globalLayer = mergeBindings(globalLayer, actionUser)
 	jobsLayer = mergeBindings(jobsLayer, jobsUser)
 	commandsLayer = mergeBindings(commandsLayer, commandsUser)
+	messagesLayer = mergeBindings(messagesLayer, messagesUser)
 	pathPickerHostLayer = mergeBindings(pathPickerHostLayer, pathPickerHostUser)
 	dialogInputLayer = mergeBindings(dialogInputLayer, dialogInputUser)
 	renameDialogLayer = mergeBindings(renameDialogLayer, renameDialogUser)
-	return buildBundle(globalLayer, jobsLayer, commandsLayer, pathPickerHostLayer, dialogInputLayer, renameDialogLayer)
+	return buildBundle(globalLayer, jobsLayer, commandsLayer, messagesLayer, pathPickerHostLayer, dialogInputLayer, renameDialogLayer)
 }
 
 // DefaultBundle returns built-in global + overlay defaults (no keybindings file).
 func DefaultBundle() (*Bundle, error) {
-	return buildBundle(DefaultActionKeys(), DefaultJobsOverlayKeys(), DefaultCommandsOverlayKeys(), DefaultPathPickerHostOverlayKeys(), DefaultDialogInputOverlayKeys(), DefaultRenameDialogOverlayKeys())
+	return buildBundle(DefaultActionKeys(), DefaultJobsOverlayKeys(), DefaultCommandsOverlayKeys(), DefaultMessagesOverlayKeys(), DefaultPathPickerHostOverlayKeys(), DefaultDialogInputOverlayKeys(), DefaultRenameDialogOverlayKeys())
 }
 
-func buildBundle(global, jobs, commands, pathPickerHost, dialogInput, renameDialog map[string][]string) (*Bundle, error) {
+func buildBundle(global, jobs, commands, messages, pathPickerHost, dialogInput, renameDialog map[string][]string) (*Bundle, error) {
 	gMap, err := Build(global)
 	if err != nil {
 		return nil, err
@@ -129,6 +141,10 @@ func buildBundle(global, jobs, commands, pathPickerHost, dialogInput, renameDial
 		return nil, err
 	}
 	cMap, err := Build(commands)
+	if err != nil {
+		return nil, err
+	}
+	msgMap, err := Build(messages)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +160,7 @@ func buildBundle(global, jobs, commands, pathPickerHost, dialogInput, renameDial
 	if err != nil {
 		return nil, err
 	}
-	return &Bundle{Global: gMap, Jobs: jMap, Commands: cMap, PathPickerHost: phMap, DialogInput: diMap, RenameDialog: rdMap}, nil
+	return &Bundle{Global: gMap, Jobs: jMap, Commands: cMap, Messages: msgMap, PathPickerHost: phMap, DialogInput: diMap, RenameDialog: rdMap}, nil
 }
 
 func validateCommandsOverlayKeys(keys map[string][]string, source string) error {
@@ -157,6 +173,21 @@ func validateCommandsOverlayKeys(keys map[string][]string, source string) error 
 		}
 		if !AllowedInCommandsOverlay(action) {
 			return fmt.Errorf("parse config %q: [commands_action_keys] action %q is not allowed (commands.* only)", source, action)
+		}
+	}
+	return nil
+}
+
+func validateMessagesOverlayKeys(keys map[string][]string, source string) error {
+	if keys == nil {
+		return nil
+	}
+	for action, chords := range keys {
+		if len(chords) == 0 {
+			return fmt.Errorf("parse config %q: [messages_action_keys] action %q has empty key list", source, action)
+		}
+		if !AllowedInMessagesOverlay(action) {
+			return fmt.Errorf("parse config %q: [messages_action_keys] action %q is not allowed (messages.* only)", source, action)
 		}
 	}
 	return nil
@@ -227,17 +258,17 @@ func validateJobsOverlayKeys(keys map[string][]string, source string) error {
 	return nil
 }
 
-func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, commandsKeys, pathPickerHostKeys, dialogInputKeys, renameDialogKeys map[string][]string, err error) {
+func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, commandsKeys, messagesKeys, pathPickerHostKeys, dialogInputKeys, renameDialogKeys map[string][]string, err error) {
 	var top map[string]interface{}
 	if err := toml.Unmarshal(raw, &top); err != nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+		return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 	}
 	if len(top) == 0 {
-		return map[string][]string{}, map[string][]string{}, map[string][]string{}, map[string][]string{}, map[string][]string{}, map[string][]string{}, nil
+		return map[string][]string{}, map[string][]string{}, map[string][]string{}, map[string][]string{}, map[string][]string{}, map[string][]string{}, map[string][]string{}, nil
 	}
 	for k := range top {
-		if k != "action_keys" && k != "jobs_action_keys" && k != "commands_action_keys" && k != "path_picker_host_action_keys" && k != "dialog_input_action_keys" && k != "rename_dialog_action_keys" {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: unknown field %q (allowed: action_keys, jobs_action_keys, commands_action_keys, path_picker_host_action_keys, dialog_input_action_keys, rename_dialog_action_keys)", label, k)
+		if k != "action_keys" && k != "jobs_action_keys" && k != "commands_action_keys" && k != "messages_action_keys" && k != "path_picker_host_action_keys" && k != "dialog_input_action_keys" && k != "rename_dialog_action_keys" {
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: unknown field %q (allowed: action_keys, jobs_action_keys, commands_action_keys, messages_action_keys, path_picker_host_action_keys, dialog_input_action_keys, rename_dialog_action_keys)", label, k)
 		}
 	}
 
@@ -245,14 +276,14 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, comma
 	if rawAK, ok := top["action_keys"]; ok {
 		table, ok := rawAK.(map[string]interface{})
 		if !ok {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [action_keys] must be a table", label)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [action_keys] must be a table", label)
 		}
 		if err := collectActionKeys(table, "", actionKeys); err != nil {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		for action, keys := range actionKeys {
 			if len(keys) == 0 {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: action %q has empty key list", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: action %q has empty key list", label, action)
 			}
 		}
 	}
@@ -261,17 +292,17 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, comma
 	if rawJK, ok := top["jobs_action_keys"]; ok {
 		table, ok := rawJK.(map[string]interface{})
 		if !ok {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] must be a table", label)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] must be a table", label)
 		}
 		if err := collectActionKeys(table, "", jobsKeys); err != nil {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		for action, keys := range jobsKeys {
 			if len(keys) == 0 {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] action %q has empty key list", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] action %q has empty key list", label, action)
 			}
 			if !AllowedInJobsOverlay(action) {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] action %q is not allowed (jobs.* only)", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [jobs_action_keys] action %q is not allowed (jobs.* only)", label, action)
 			}
 		}
 	}
@@ -280,17 +311,36 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, comma
 	if rawCK, ok := top["commands_action_keys"]; ok {
 		table, ok := rawCK.(map[string]interface{})
 		if !ok {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] must be a table", label)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] must be a table", label)
 		}
 		if err := collectActionKeys(table, "", commandsKeys); err != nil {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		for action, keys := range commandsKeys {
 			if len(keys) == 0 {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] action %q has empty key list", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] action %q has empty key list", label, action)
 			}
 			if !AllowedInCommandsOverlay(action) {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] action %q is not allowed (commands.* only)", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [commands_action_keys] action %q is not allowed (commands.* only)", label, action)
+			}
+		}
+	}
+
+	messagesKeys = map[string][]string{}
+	if rawMK, ok := top["messages_action_keys"]; ok {
+		table, ok := rawMK.(map[string]interface{})
+		if !ok {
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [messages_action_keys] must be a table", label)
+		}
+		if err := collectActionKeys(table, "", messagesKeys); err != nil {
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+		}
+		for action, keys := range messagesKeys {
+			if len(keys) == 0 {
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [messages_action_keys] action %q has empty key list", label, action)
+			}
+			if !AllowedInMessagesOverlay(action) {
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [messages_action_keys] action %q is not allowed (messages.* only)", label, action)
 			}
 		}
 	}
@@ -299,17 +349,17 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, comma
 	if rawPP, ok := top["path_picker_host_action_keys"]; ok {
 		table, ok := rawPP.(map[string]interface{})
 		if !ok {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] must be a table", label)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] must be a table", label)
 		}
 		if err := collectActionKeys(table, "", pathPickerHostKeys); err != nil {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		for action, keys := range pathPickerHostKeys {
 			if len(keys) == 0 {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] action %q has empty key list", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] action %q has empty key list", label, action)
 			}
 			if !AllowedInPathPickerHostOverlay(action) {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] must be empty (got action %q); fuzzy path picker on destination/symlink path rows uses bookmark.open from [action_keys]", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [path_picker_host_action_keys] must be empty (got action %q); fuzzy path picker on destination/symlink path rows uses bookmark.open from [action_keys]", label, action)
 			}
 		}
 	}
@@ -318,17 +368,17 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, comma
 	if rawDI, ok := top["dialog_input_action_keys"]; ok {
 		table, ok := rawDI.(map[string]interface{})
 		if !ok {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [dialog_input_action_keys] must be a table", label)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [dialog_input_action_keys] must be a table", label)
 		}
 		if err := collectActionKeys(table, "", dialogInputKeys); err != nil {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		for action, keys := range dialogInputKeys {
 			if len(keys) == 0 {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [dialog_input_action_keys] action %q has empty key list", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [dialog_input_action_keys] action %q has empty key list", label, action)
 			}
 			if !AllowedInDialogInputOverlay(action) {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [dialog_input_action_keys] action %q is not allowed (ui.input.* only)", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [dialog_input_action_keys] action %q is not allowed (ui.input.* only)", label, action)
 			}
 		}
 	}
@@ -337,22 +387,22 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys, jobsKeys, comma
 	if rawRD, ok := top["rename_dialog_action_keys"]; ok {
 		table, ok := rawRD.(map[string]interface{})
 		if !ok {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [rename_dialog_action_keys] must be a table", label)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [rename_dialog_action_keys] must be a table", label)
 		}
 		if err := collectActionKeys(table, "", renameDialogKeys); err != nil {
-			return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		for action, keys := range renameDialogKeys {
 			if len(keys) == 0 {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [rename_dialog_action_keys] action %q has empty key list", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [rename_dialog_action_keys] action %q has empty key list", label, action)
 			}
 			if !AllowedInRenameDialogOverlay(action) {
-				return nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [rename_dialog_action_keys] action %q is not allowed (file.rename.open-* only)", label, action)
+				return nil, nil, nil, nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [rename_dialog_action_keys] action %q is not allowed (file.rename.open-* only)", label, action)
 			}
 		}
 	}
 
-	return actionKeys, jobsKeys, commandsKeys, pathPickerHostKeys, dialogInputKeys, renameDialogKeys, nil
+	return actionKeys, jobsKeys, commandsKeys, messagesKeys, pathPickerHostKeys, dialogInputKeys, renameDialogKeys, nil
 }
 
 func collectActionKeys(node map[string]interface{}, prefix string, out map[string][]string) error {
@@ -429,6 +479,9 @@ func EncodeDefaultStub(w io.Writer) error {
 		"# Commands-view-only chords under [commands_action_keys] take precedence\n" +
 		"# while the Commands view is focused. Only commands.* action IDs are accepted.\n" +
 		"#\n" +
+		"# Messages-view-only chords under [messages_action_keys] take precedence\n" +
+		"# while the Messages view is focused. Only messages.* action IDs are accepted.\n" +
+		"#\n" +
 		"# [path_picker_host_action_keys] must stay empty: opening the fuzzy path picker\n" +
 		"# from copy/move destination or symlink/hardlink path rows uses the same chords\n" +
 		"# as bookmark.open under [action_keys].\n" +
@@ -445,6 +498,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		ActionKeys               map[string][]string `toml:"action_keys"`
 		JobsActionKeys           map[string][]string `toml:"jobs_action_keys"`
 		CommandsActionKeys       map[string][]string `toml:"commands_action_keys"`
+		MessagesActionKeys       map[string][]string `toml:"messages_action_keys"`
 		PathPickerHostActionKeys map[string][]string `toml:"path_picker_host_action_keys"`
 		DialogInputActionKeys    map[string][]string `toml:"dialog_input_action_keys"`
 		RenameDialogActionKeys   map[string][]string `toml:"rename_dialog_action_keys"`
@@ -452,6 +506,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		ActionKeys:               DefaultActionKeys(),
 		JobsActionKeys:           DefaultJobsOverlayKeys(),
 		CommandsActionKeys:       DefaultCommandsOverlayKeys(),
+		MessagesActionKeys:       DefaultMessagesOverlayKeys(),
 		PathPickerHostActionKeys: DefaultPathPickerHostOverlayKeys(),
 		DialogInputActionKeys:    DefaultDialogInputOverlayKeys(),
 		RenameDialogActionKeys:   DefaultRenameDialogOverlayKeys(),

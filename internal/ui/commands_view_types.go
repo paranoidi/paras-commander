@@ -15,6 +15,8 @@ type CommandRunKind string
 const (
 	// CommandRunKindRunForEach is one invocation per source path with argv prefix + path.
 	CommandRunKindRunForEach CommandRunKind = "run_for_each"
+	// CommandRunKindUserMenu is a single argv invocation from the F2 user menu (menu.toml).
+	CommandRunKindUserMenu CommandRunKind = "user_menu"
 )
 
 // CommandRunEntry is one row in the Commands screen list plus captured output.

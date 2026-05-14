@@ -46,6 +46,14 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "F1",
 			Keywords:     []string{"help screen"},
 		},
+		{
+			ID:           ActionAppUserMenu,
+			Title:        "User menu",
+			Section:      "App",
+			DefaultKeys:  []string{"F2"},
+			PreferredKey: "F2",
+			Keywords:     []string{"menu.toml", "custom commands"},
+		},
 
 		// ── Panel navigation ──
 		{
@@ -463,6 +471,23 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Commands",
 			DefaultKeys: nil,
 			Keywords:    []string{"exec", "subprocess", "batch"},
+		},
+
+		// ── Messages (status / toast log) ──
+		{
+			ID:           ActionMessagesOpen,
+			Title:        "Open Messages view",
+			Section:      "Messages",
+			DefaultKeys:  []string{"C-M-l"},
+			PreferredKey: "C-M-l",
+			Keywords:     []string{"log", "toast", "status", "banner"},
+		},
+		{
+			ID:          ActionMessagesClose,
+			Title:       "Close Messages view",
+			Section:     "Messages",
+			DefaultKeys: nil,
+			Keywords:    []string{"back", "browser"},
 		},
 
 		// ── Jobs ──

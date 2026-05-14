@@ -20,6 +20,7 @@ var FooterEscClose = FunctionKey{Key: tcell.KeyEsc, KeyLabel: "Esc", Hint: "Clos
 // and used to route quick-filter function-key presses to menu items.
 var FunctionKeys = []FunctionKey{
 	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
+	{Key: tcell.KeyF2, KeyLabel: "F2", Hint: "User menu"},
 	{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "View"},
 	{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
 	{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Copy"},
@@ -65,6 +66,16 @@ var FunctionKeysCommands = []FunctionKey{
 
 // FunctionKeysCommandsView returns hints for the Commands screen footer.
 func FunctionKeysCommandsView() []FunctionKey { return FunctionKeysCommands }
+
+// FunctionKeysMessagesView is the footer legend while the Messages screen is active.
+var FunctionKeysMessages = []FunctionKey{
+	FooterEscClose,
+	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
+	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+}
+
+// FunctionKeysMessagesView returns hints for the Messages screen footer.
+func FunctionKeysMessagesView() []FunctionKey { return FunctionKeysMessages }
 
 // FunctionKeyHints returns a label list suitable for footer rendering.
 func FunctionKeyHints() []FunctionKey { return FunctionKeys }

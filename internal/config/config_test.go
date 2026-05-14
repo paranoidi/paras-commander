@@ -357,7 +357,7 @@ func TestEncodeDefaultStubWritesLoadableDefaults(t *testing.T) {
 	}
 
 	content := buffer.String()
-	for _, want := range []string{"theme = \"default\"", "show_hidden = false", "[ui]", "status_message_ttl_seconds", "[filter]", "[jobs]", "[operations]", "[logging]"} {
+	for _, want := range []string{"theme = \"default\"", "show_hidden = false", "[ui]", "status_message_ttl_seconds", "message_log_max_entries", "[filter]", "[jobs]", "[operations]", "[logging]"} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("encoded config missing %q:\n%s", want, content)
 		}

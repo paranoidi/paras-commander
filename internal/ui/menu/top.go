@@ -11,6 +11,7 @@ const (
 	TopOptions    TopID = "top.options"
 	TopJobs       TopID = "top.jobs"
 	TopCommands   TopID = "top.commands-screen"
+	TopMessages   TopID = "top.messages-screen"
 )
 
 // PanelScope selects left/right panel for scoped pulldowns; PanelScopeNone means not panel-bound.

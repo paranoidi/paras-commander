@@ -394,6 +394,10 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 }
 
 func (a *App) ensurePanelsVisible() {
+	if a.model.ViewMode == ui.ViewMessages {
+		a.ensureMessagesViewSelectionVisible()
+		return
+	}
 	width, height := a.screen.Size()
 	layout := a.layoutForTerminalSize(width, height)
 	if layout.TooSmall {
