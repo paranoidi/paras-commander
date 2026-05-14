@@ -68,8 +68,8 @@ type FileDialogState struct {
 	MkdirAction MkdirAction
 
 	// RenamePhase and the following fields apply when DialogType == FileDialogRename.
-	RenamePhase             RenamePhase
-	RenameSanitizeDots      bool
+	RenamePhase               RenamePhase
+	RenameSanitizeDots        bool
 	RenameSanitizeUnderscores bool
-	RenameSlugifySep        RenameSlugifySep
+	RenameSlugifySep          RenameSlugifySep
 }

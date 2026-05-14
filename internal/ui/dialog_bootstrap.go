@@ -69,7 +69,7 @@ const (
 	RenamePhaseSanitize = dialog.RenamePhaseSanitize
 	RenamePhaseSlugify  = dialog.RenamePhaseSlugify
 
-	RenameSlugifyDot         = dialog.RenameSlugifyDot
+	RenameSlugifyDot        = dialog.RenameSlugifyDot
 	RenameSlugifyUnderscore = dialog.RenameSlugifyUnderscore
 
 	PrimaryModalNone     = dialog.PrimaryModalNone

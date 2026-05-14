@@ -9,6 +9,16 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander, written
 - Go 1.26+
 - Linux
 
+## Install
+
+Install the `pc` binary into `$GOBIN` if that environment variable is set; otherwise into `$(go env GOPATH)/bin` (often `~/go/bin`). Put that directory on your `PATH`.
+
+```bash
+go install github.com/paranoidi/paras-commander/cmd/pc@latest
+```
+
+To install from a specific version tag or commit, replace `@latest` with that ref (for example `@v0.1.0` or `@main`).
+
 ## Build
 
 ```bash
@@ -19,8 +29,16 @@ This produces a `pc` binary in the repo root.
 
 ## Run
 
+After a local `go build` (binary in the current directory):
+
 ```bash
 ./pc
+```
+
+After `go install`, with your Go `bin` directory on `PATH`:
+
+```bash
+pc
 ```
 
 ## Test

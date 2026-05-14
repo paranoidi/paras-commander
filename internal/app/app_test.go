@@ -1735,6 +1735,121 @@ func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 	}
 }
 
+func TestLayoutForTerminalSizeDisablesZoomAtOrAboveDisabledAboveWidth(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(160, 30)
+
+	cfg := config.Default()
+	cfg.UI.ZoomActivePanel = true
+	cfg.UI.ZoomActivePanelDisabledAboveWidth = 155
+	cfg.UI.PanelZoomActivePercent = 70
+	cfg.UI.PanelZoomInactivePercent = 30
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Paths:  config.Paths{}.WithResolvedLocations(),
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	lay := app.layoutForTerminalSize(160, 30)
+	if lay.Left.Width != 80 || lay.Right.Width != 80 {
+		t.Fatalf("wide terminal Left=%d Right=%d want 50/50", lay.Left.Width, lay.Right.Width)
+	}
+
+	layNarrow := app.layoutForTerminalSize(154, 30)
+	if layNarrow.Left.Width != 107 || layNarrow.Right.Width != 47 {
+		t.Fatalf("below gate Left=%d Right=%d want 70%%/30%% of width", layNarrow.Left.Width, layNarrow.Right.Width)
+	}
+
+	layBoundary := app.layoutForTerminalSize(155, 30)
+	if layBoundary.Left.Width != 77 || layBoundary.Right.Width != 78 {
+		t.Fatalf("width == gate Left=%d Right=%d want ~50/50", layBoundary.Left.Width, layBoundary.Right.Width)
+	}
+}
+
+func TestLayoutForTerminalSizeZoomNotSuppressedWhenDisabledAboveWidthIsZero(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(300, 30)
+
+	cfg := config.Default()
+	cfg.UI.ZoomActivePanel = true
+	cfg.UI.ZoomActivePanelDisabledAboveWidth = 0
+	cfg.UI.PanelZoomActivePercent = 70
+	cfg.UI.PanelZoomInactivePercent = 30
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Paths:  config.Paths{}.WithResolvedLocations(),
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	lay := app.layoutForTerminalSize(300, 30)
+	if lay.Left.Width != 210 || lay.Right.Width != 90 {
+		t.Fatalf("Left=%d Right=%d want 70/30 split", lay.Left.Width, lay.Right.Width)
+	}
+}
+
+func TestPanelToggleZoomNoOpOnWideTerminal(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(160, 30)
+
+	cfg := config.Default()
+	cfg.UI.ZoomActivePanelDisabledAboveWidth = 155
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Paths:  config.Paths{}.WithResolvedLocations(),
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.dispatch(keymap.ActionPanelToggleZoomActivePanel)
+	if app.zoomActivePanelOverride != nil {
+		t.Fatalf("zoom override = %v, want nil (toggle ignored)", app.zoomActivePanelOverride)
+	}
+	if !strings.Contains(app.model.Message, "≥ 155") {
+		t.Fatalf("transient message = %q, want threshold mention", app.model.Message)
+	}
+}
+
 func TestFilePreviewFocusScrollAndTabReturnsToActivePanelFileList(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))

@@ -80,6 +80,7 @@ func UserMenuListViewportRows(layout Layout, entryCount int) int {
 	}
 	return maxBody
 }
+
 // UserMenuEnsureScroll keeps ScrollOffset consistent with Selected and viewport.
 func UserMenuEnsureScroll(state *UserMenuDialogState, visibleRows int) {
 	if visibleRows < 1 {

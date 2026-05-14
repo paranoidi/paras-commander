@@ -529,6 +529,14 @@ func (a *App) dispatch(actionID string) {
 			a.setTransientMessage("Zoom disabled while quick view or file view is active", ui.MessageUrgencyInfo)
 			break
 		}
+		tw, _ := a.screen.Size()
+		if a.zoomActivePanelSuppressedByTerminalWidth(tw) {
+			a.setTransientMessage(fmt.Sprintf(
+				"Panel zoom unavailable (terminal width ≥ %d)",
+				a.config.UI.ZoomActivePanelDisabledAboveWidth,
+			), ui.MessageUrgencyInfo)
+			break
+		}
 		a.toggleRuntimeZoomActivePanel()
 	case keymap.ActionPanelReverseSort:
 		activePanel.ToggleSortReverse(viewportRows)

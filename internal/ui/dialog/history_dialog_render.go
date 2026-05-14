@@ -1,11 +1,11 @@
 package dialog
 
 import (
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 // EnsureHistoryListScroll keeps Selected row visible in a list of height listRows.

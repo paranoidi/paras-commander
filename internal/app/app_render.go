@@ -32,7 +32,8 @@ func (a *App) render() {
 	if a.model.ViewMode == ui.ViewFilePreview {
 		a.clampFullscreenFilePreviewScroll()
 	}
-	a.model.PanelZoomEnabled = a.effectiveZoomActivePanel() && !previewOpen
+	w, _ := a.screen.Size()
+	a.model.PanelZoomEnabled = a.effectiveZoomActivePanelLayout(w, previewOpen)
 	if a.model.ViewMode == ui.ViewCommands {
 		a.commandsMu.RLock()
 		a.model.CommandsDisplay = append([]ui.CommandRunEntry(nil), a.model.CommandsList...)
@@ -72,7 +73,7 @@ func (a *App) menuBarPermissionText() string {
 // callers can size subprocess output (e.g. bat --terminal-width) before preview state is toggled.
 func (a *App) layoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout {
 	return ui.CalculateLayout(width, height, a.model.MenuBarLayoutReserved(), ui.PanelWidthSplit{
-		Zoom:            ui.PanelZoomSplitsColumns(a.model.ViewMode, a.effectiveZoomActivePanel() && !filePreviewOpen),
+		Zoom:            ui.PanelZoomSplitsColumns(a.model.ViewMode, a.effectiveZoomActivePanelLayout(width, filePreviewOpen)),
 		ActivePanel:     a.model.ActivePanel,
 		ActivePercent:   a.config.UI.PanelZoomActivePercent,
 		InactivePercent: a.config.UI.PanelZoomInactivePercent,
@@ -83,11 +84,31 @@ func (a *App) layoutForTerminalSize(width, height int) ui.Layout {
 	return a.layoutForTerminalSizePreview(width, height, a.filePreviewOpen() || a.model.QuickViewEnabled)
 }
 
+// effectiveZoomActivePanel returns the saved zoom preference plus optional session-only override
+// (Alt+Z). It does not consider terminal width or file preview; see effectiveZoomActivePanelLayout.
 func (a *App) effectiveZoomActivePanel() bool {
 	if a.zoomActivePanelOverride != nil {
 		return *a.zoomActivePanelOverride
 	}
 	return a.config.UI.ZoomActivePanel
+}
+
+func (a *App) zoomActivePanelSuppressedByTerminalWidth(width int) bool {
+	n := a.config.UI.ZoomActivePanelDisabledAboveWidth
+	return n > 0 && width >= n
+}
+
+// effectiveZoomActivePanelLayout is the zoom flag used for layout and Model.PanelZoomEnabled:
+// preference from effectiveZoomActivePanel, disabled while preview/quick view owns the split,
+// and disabled on wide terminals when [ui].zoom_active_panel_disabled_above_width is > 0.
+func (a *App) effectiveZoomActivePanelLayout(width int, filePreviewOpen bool) bool {
+	if filePreviewOpen {
+		return false
+	}
+	if a.zoomActivePanelSuppressedByTerminalWidth(width) {
+		return false
+	}
+	return a.effectiveZoomActivePanel()
 }
 
 // toggleRuntimeZoomActivePanel flips the zoom split the user currently sees (saved

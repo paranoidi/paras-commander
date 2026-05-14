@@ -11,15 +11,15 @@ import (
 
 // AnsiCell is one display rune with a resolved style (after SGR interpretation).
 type AnsiCell struct {
-	R rune
+	R  rune
 	St tcell.Style
 }
 
 type sgrBuilder struct {
-	fgSet, bgSet       bool
-	fg, bg             tcell.Color
-	bold, dim          bool
-	italic, underline  bool
+	fgSet, bgSet      bool
+	fg, bg            tcell.Color
+	bold, dim         bool
+	italic, underline bool
 }
 
 func clamp8(n int) int32 {

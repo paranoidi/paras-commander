@@ -43,7 +43,8 @@ func IsAuxiliaryView(vm ViewMode) bool {
 	return vm == ViewJobs || vm == ViewCommands || vm == ViewMessages || vm == ViewFilePreview
 }
 
-// PanelZoomSplitsColumns reports whether [ui].zoom_active_panel widens the active column.
+// PanelZoomSplitsColumns reports whether the browser uses an asymmetric column split
+// (Model.PanelZoomEnabled, from [ui].zoom_active_panel plus session override, preview suppression, and width gate).
 // It applies only to the twin file browser; jobs/commands/messages use an even split.
 func PanelZoomSplitsColumns(vm ViewMode, zoomEnabled bool) bool {
 	return zoomEnabled && !IsAuxiliaryView(vm)

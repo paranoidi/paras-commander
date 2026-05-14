@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	previewPathPlaceholder            = "{path}"
+	previewPathPlaceholder          = "{path}"
 	previewTerminalWidthPlaceholder = "{terminal_width}"
 )
 

@@ -211,12 +211,12 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		}
 	}
 	assertLabels(t, cmd, map[string]string{
-		"Commands":   "C-k",
-		"Messages":   "C-M-l",
-		"Jobs":       "C-j",
-		"Bookmarks":  "C-g",
+		"Commands":     "C-k",
+		"Messages":     "C-M-l",
+		"Jobs":         "C-j",
+		"Bookmarks":    "C-g",
 		"Add bookmark": "M-m",
-		"Refresh":    "M-C-r",
+		"Refresh":      "M-C-r",
 	})
 }
 

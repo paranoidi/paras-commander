@@ -43,7 +43,7 @@ func TestWorkerYieldsTransferLeaseWhileWaitingConflictDecision(t *testing.T) {
 		case "job-a":
 			order <- "a-start"
 			_ = waitBlocker(BlockerRequest{
-				Kind: BlockerKindConflict,
+				Kind:     BlockerKindConflict,
 				Conflict: &ConflictRequest{JobID: job.ID, Source: "/a", Destination: "/b", ExistingDetails: "file exists"},
 			})
 			order <- "a-after"

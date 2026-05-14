@@ -1,10 +1,10 @@
 package dialog
 
 import (
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, styles theme.Theme) {

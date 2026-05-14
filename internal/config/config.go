@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	appDirName = "paras-commander"
+	appDirName = "pc"
 	fileName   = "config.toml"
 
 	// actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, messagesActionKeysTable,
@@ -189,6 +189,10 @@ type UIConfig struct {
 	QuickViewPreviewDebounceMS int `toml:"quick_view_preview_debounce_ms"`
 	// ZoomActivePanel widens the active browser column; inactive column uses the remainder (see panel_zoom_*_percent).
 	ZoomActivePanel bool `toml:"zoom_active_panel"`
+	// ZoomActivePanelDisabledAboveWidth: when > 0 and terminal width (cells) is >= this value, zoom is not applied
+	// (50/50 split). Zero disables this gate (zoom follows zoom_active_panel and runtime toggle only).
+	// Default DefaultZoomActivePanelDisabledAboveWidth.
+	ZoomActivePanelDisabledAboveWidth int `toml:"zoom_active_panel_disabled_above_width"`
 	// PanelZoomActivePercent and PanelZoomInactivePercent are the width shares (must sum to 100) when ZoomActivePanel is true.
 	PanelZoomActivePercent   int `toml:"panel_zoom_active_percent"`
 	PanelZoomInactivePercent int `toml:"panel_zoom_inactive_percent"`
@@ -261,22 +265,23 @@ func Default() Config {
 		OpenFilesExternally:             true,
 		DeleteMode:                      DeletePermanent,
 		UI: UIConfig{
-			ShowMenuBar:               true,
-			ShowFooter:                true,
-			ShowStatusLine:            true,
-			ShowJobsLine:              true,
-			ShowFileIcons:             true,
-			BorderStyle:               BorderStyleSingle,
-			Clock:                     false,
-			StatusMessageTTLSeconds:           3.5,
-			PathPickerValidateDelayMS:         DefaultPathPickerValidateDelayMS,
-			PanelSyncFollowNavDebounceMS:      DefaultPanelSyncFollowNavDebounceMS,
-			QuickViewPreviewDebounceMS:        DefaultQuickViewPreviewDebounceMS,
-			ZoomActivePanel:                   DefaultZoomActivePanel,
-			PanelZoomActivePercent:    DefaultPanelZoomActivePercent,
-			PanelZoomInactivePercent:  DefaultPanelZoomInactivePercent,
-			ShrunkenShowsNameOnly:     DefaultShrunkenShowsNameOnly,
-			MessageLogMaxEntries:      DefaultMessageLogMaxEntries,
+			ShowMenuBar:                  true,
+			ShowFooter:                   true,
+			ShowStatusLine:               true,
+			ShowJobsLine:                 true,
+			ShowFileIcons:                true,
+			BorderStyle:                  BorderStyleSingle,
+			Clock:                        false,
+			StatusMessageTTLSeconds:      3.5,
+			PathPickerValidateDelayMS:    DefaultPathPickerValidateDelayMS,
+			PanelSyncFollowNavDebounceMS: DefaultPanelSyncFollowNavDebounceMS,
+			QuickViewPreviewDebounceMS:   DefaultQuickViewPreviewDebounceMS,
+			ZoomActivePanel:                      DefaultZoomActivePanel,
+			ZoomActivePanelDisabledAboveWidth:    DefaultZoomActivePanelDisabledAboveWidth,
+			PanelZoomActivePercent:               DefaultPanelZoomActivePercent,
+			PanelZoomInactivePercent:             DefaultPanelZoomInactivePercent,
+			ShrunkenShowsNameOnly:        DefaultShrunkenShowsNameOnly,
+			MessageLogMaxEntries:         DefaultMessageLogMaxEntries,
 		},
 		Filter: FilterConfig{
 			Mode:              FilterModeFuzzy,
@@ -742,6 +747,9 @@ func (c *Config) Validate() error {
 		c.UI.PanelZoomActivePercent = DefaultPanelZoomActivePercent
 		c.UI.PanelZoomInactivePercent = DefaultPanelZoomInactivePercent
 	}
+	if c.UI.ZoomActivePanelDisabledAboveWidth < 0 {
+		c.UI.ZoomActivePanelDisabledAboveWidth = builtin.UI.ZoomActivePanelDisabledAboveWidth
+	}
 	if c.UI.MessageLogMaxEntries <= 0 {
 		c.UI.MessageLogMaxEntries = builtin.UI.MessageLogMaxEntries
 	}
@@ -814,7 +822,7 @@ func (c *Config) Validate() error {
 	if strings.TrimSpace(c.Preview.Command) == "" {
 		c.Preview.Command = builtin.Preview.Command
 	}
-	if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/paras-commander-preview-validate", 80); err != nil {
+	if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/pc-preview-validate", 80); err != nil {
 		c.Preview.Command = builtin.Preview.Command
 	}
 	return nil

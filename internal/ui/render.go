@@ -53,7 +53,9 @@ type Model struct {
 	HideMenuBar bool
 	// ShowFileIcons mirrors ui.show_file_icons (Nerd Font glyphs before file names).
 	ShowFileIcons bool
-	// PanelZoomEnabled mirrors effective zoom preference (saved [ui].zoom_active_panel plus optional runtime-only override in App.render).
+	// PanelZoomEnabled mirrors effective zoom for layout (saved [ui].zoom_active_panel plus optional
+	// runtime-only override in App.render), suppressed while quick view / file preview uses the split,
+	// and suppressed on wide terminals when [ui].zoom_active_panel_disabled_above_width > 0.
 	// Layout uses it only in the file browser; see PanelZoomSplitsColumns.
 	PanelZoomEnabled bool
 	// PanelZoomActivePercent / PanelZoomInactivePercent mirror [ui] panel_zoom_* (sum 100 when zoom enabled).
@@ -101,15 +103,15 @@ type Model struct {
 	FullscreenFilePreview FilePreviewState
 	// FullscreenFilePreviewDraw is a snapshot for ViewFilePreview rendering.
 	FullscreenFilePreviewDraw FilePreviewState
-	HelpView HelpViewState
-	FileDialog     FileDialogState
-	TransferDialog TransferDialogState
-	ConflictDialog ConflictDialogState
-	QuitConfirm    QuitConfirmState
-	MessageDialog  MessageDialogState
-	Message        string
-	MessageUrgency MessageUrgency
-	FooterKeys     []menu.FunctionKey
+	HelpView                  HelpViewState
+	FileDialog                FileDialogState
+	TransferDialog            TransferDialogState
+	ConflictDialog            ConflictDialogState
+	QuitConfirm               QuitConfirmState
+	MessageDialog             MessageDialogState
+	Message                   string
+	MessageUrgency            MessageUrgency
+	FooterKeys                []menu.FunctionKey
 	// MenuBarPermission is Unix mode text for the active panel cursor row (e.g. "drwxr-xr-x"); empty when none.
 	MenuBarPermission string
 	// MenuBarJobsAttention is the core jobs/conflict label (e.g. "! 1"); the menu bar pads it with

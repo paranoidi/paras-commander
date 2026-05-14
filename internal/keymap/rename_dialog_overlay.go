@@ -5,7 +5,7 @@ package keymap
 func DefaultRenameDialogOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionFileRenameOpenSanitize: {"F2"},
-		ActionFileRenameOpenSlugify: {"F3"},
+		ActionFileRenameOpenSlugify:  {"F3"},
 	}
 }
 

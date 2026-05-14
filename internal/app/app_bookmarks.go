@@ -31,13 +31,13 @@ func (a *App) openBookmarkDialog() {
 		items[i] = ui.PathPickerItem{Line: marks[i].Line, Path: marks[i].Path}
 	}
 	a.model.PathPicker = ui.PathPickerState{
-		Open:    true,
-		Title:   "Bookmarks",
-		Purpose: ui.PathPickerPurposeNavigate,
-		Query:   "",
-		Items:   items,
-		Focus:   0,
-		Selected: 0,
+		Open:       true,
+		Title:      "Bookmarks",
+		Purpose:    ui.PathPickerPurposeNavigate,
+		Query:      "",
+		Items:      items,
+		Focus:      0,
+		Selected:   0,
 		ListScroll: 0,
 	}
 	a.syncPathPickerRanks()

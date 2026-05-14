@@ -21,7 +21,7 @@ type FilePreviewState struct {
 	TitleBase string
 	// CombinedText is stdout plus optional stderr section (UTF-8), may contain ANSI escapes.
 	CombinedText string
-	Scroll int
+	Scroll       int
 	// ExitCode is the subprocess exit code when Phase == FilePreviewPhaseDone and ErrorMsg == "".
 	ExitCode int
 	// ErrorMsg is set for launch failures or when PhaseDone with non-zero exit (optional message).

@@ -43,11 +43,11 @@ func Run(ctx context.Context, argv []string, dir string, maxStreamBytes int) Run
 
 	err := cmd.Run()
 	out := RunResult{
-		Stdout:    stdoutBuf.Bytes(),
-		Stderr:    stderrBuf.Bytes(),
+		Stdout:     stdoutBuf.Bytes(),
+		Stderr:     stderrBuf.Bytes(),
 		StdoutTrim: stdoutBuf.trimmed,
 		StderrTrim: stderrBuf.trimmed,
-		ExitCode:  -1,
+		ExitCode:   -1,
 	}
 	if err != nil {
 		var exitErr *exec.ExitError

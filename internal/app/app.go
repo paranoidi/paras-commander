@@ -105,8 +105,8 @@ type App struct {
 	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent
 	// until the debounce flush runs or coalesce is cleared.
 	syncFollowNavSkipReconcile atomic.Bool
-	syncFollowNavMu          sync.Mutex
-	syncFollowNavTimer       *time.Timer
+	syncFollowNavMu            sync.Mutex
+	syncFollowNavTimer         *time.Timer
 	// quickViewDebounceGen invalidates in-flight quick view preview debounce callbacks.
 	quickViewDebounceGen     atomic.Uint64
 	quickViewDebounceMu      sync.Mutex
@@ -115,7 +115,8 @@ type App struct {
 
 	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
 	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on
-	// Configuration OK so saved TOML is the sole persisted source of truth.
+	// Configuration OK so saved TOML is the sole persisted source of truth. Layout still suppresses
+	// zoom while quick view / file preview is active and when terminal width ≥ cfg.UI.ZoomActivePanelDisabledAboveWidth (when > 0).
 	zoomActivePanelOverride *bool
 
 	commandsMu              sync.RWMutex

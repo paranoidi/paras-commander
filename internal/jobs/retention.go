@@ -16,4 +16,3 @@ func (p RetentionPolicy) Apply(q *Queue) {
 		q.RetainLastN(p.KeepFinished)
 	}
 }
-

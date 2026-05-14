@@ -2,10 +2,10 @@ package keymap
 
 // Action identifiers match docs/keybindings.md (single-stroke bindings only in v1).
 const (
-	ActionAppQuit       = "app.quit"
-	ActionAppOpenMenu    = "app.open-menu"
-	ActionAppShowHelp    = "app.show-help"
-	ActionAppUserMenu    = "app.user-menu"
+	ActionAppQuit     = "app.quit"
+	ActionAppOpenMenu = "app.open-menu"
+	ActionAppShowHelp = "app.show-help"
+	ActionAppUserMenu = "app.user-menu"
 
 	ActionPanelSwitch                = "panel.switch"
 	ActionNavUp                      = "nav.up"
@@ -128,10 +128,10 @@ const (
 
 // KnownActions lists action IDs accepted in keybindings.toml for the current app.
 var KnownActions = map[string]struct{}{
-	ActionAppQuit:       {},
-	ActionAppOpenMenu:   {},
-	ActionAppShowHelp:   {},
-	ActionAppUserMenu:   {},
+	ActionAppQuit:     {},
+	ActionAppOpenMenu: {},
+	ActionAppShowHelp: {},
+	ActionAppUserMenu: {},
 
 	ActionPanelSwitch:                {},
 	ActionNavUp:                      {},

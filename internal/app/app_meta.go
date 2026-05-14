@@ -221,4 +221,3 @@ func (a *App) handleMetaDialogKey(event *tcell.EventKey) {
 		st.Focus = focus
 	}
 }
-

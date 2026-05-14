@@ -10,9 +10,9 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
@@ -552,10 +552,10 @@ func TestRenderBlankMenuBarRowWhenFullscreenFilePreview(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:              panel.State{Path: "/tmp"},
-		Right:             panel.State{Path: "/var"},
-		ActivePanel:       LeftPanel,
-		ViewMode:          ViewFilePreview,
+		Left:                      panel.State{Path: "/tmp"},
+		Right:                     panel.State{Path: "/var"},
+		ActivePanel:               LeftPanel,
+		ViewMode:                  ViewFilePreview,
 		FullscreenFilePreviewDraw: FilePreviewState{Open: true, Phase: FilePreviewPhaseDone, CombinedText: "hi\n"},
 	}
 

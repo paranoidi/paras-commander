@@ -490,7 +490,6 @@ func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState
 	}
 }
 
-
 // mkdirActionRowCount is the number of radio rows shown for mkdir post-actions
 // when MkdirShowActions is enabled.
 const mkdirActionRowCount = 3

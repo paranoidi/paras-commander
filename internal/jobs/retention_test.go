@@ -46,4 +46,3 @@ func TestRetentionPolicyKeepFinished(t *testing.T) {
 		t.Fatalf("expected 'b','c','d', got %v", jobIDs(remaining))
 	}
 }
-

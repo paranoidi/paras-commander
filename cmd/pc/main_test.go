@@ -1,10 +1,10 @@
 package main
 
 import (
-	"reflect"
 	"bytes"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
