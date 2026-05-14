@@ -61,7 +61,7 @@ func (a *App) menuBarPermissionText() string {
 
 func (a *App) layoutForTerminalSize(width, height int) ui.Layout {
 	return ui.CalculateLayout(width, height, a.model.MenuBarLayoutReserved(), ui.PanelWidthSplit{
-		Zoom:            a.effectiveZoomActivePanel(),
+		Zoom:            ui.PanelZoomSplitsColumns(a.model.ViewMode, a.effectiveZoomActivePanel()),
 		ActivePanel:     a.model.ActivePanel,
 		ActivePercent:   a.config.UI.PanelZoomActivePercent,
 		InactivePercent: a.config.UI.PanelZoomInactivePercent,

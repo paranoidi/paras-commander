@@ -6,6 +6,20 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
+func TestPanelZoomSplitsColumnsOnlyInBrowser(t *testing.T) {
+	if !PanelZoomSplitsColumns(ViewBrowser, true) {
+		t.Fatal("browser + zoom: want split columns")
+	}
+	if PanelZoomSplitsColumns(ViewBrowser, false) {
+		t.Fatal("browser + zoom off: no split")
+	}
+	for _, vm := range []ViewMode{ViewJobs, ViewCommands, ViewMessages} {
+		if PanelZoomSplitsColumns(vm, true) {
+			t.Fatalf("%v + zoom: auxiliary views must not use zoomed split", vm)
+		}
+	}
+}
+
 func TestJobPercentDoneCompletedReportsFull(t *testing.T) {
 	p := jobPercentDone(JobEntry{Status: "completed", DoneFiles: 99, TotalFiles: 100})
 	if p != 100 {

@@ -50,7 +50,8 @@ type Model struct {
 	HideMenuBar bool
 	// ShowFileIcons mirrors ui.show_file_icons (Nerd Font glyphs before file names).
 	ShowFileIcons bool
-	// PanelZoomEnabled mirrors effective zoom for layout (saved [ui].zoom_active_panel plus optional runtime-only override in App.render).
+	// PanelZoomEnabled mirrors effective zoom preference (saved [ui].zoom_active_panel plus optional runtime-only override in App.render).
+	// Layout uses it only in the file browser; see PanelZoomSplitsColumns.
 	PanelZoomEnabled bool
 	// PanelZoomActivePercent / PanelZoomInactivePercent mirror [ui] panel_zoom_* (sum 100 when zoom enabled).
 	PanelZoomActivePercent   int
@@ -191,7 +192,7 @@ func (m Model) MenuBarInteractive() bool {
 func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	width, height := screen.Size()
 	layout := CalculateLayout(width, height, model.MenuBarLayoutReserved(), PanelWidthSplit{
-		Zoom:            model.PanelZoomEnabled,
+		Zoom:            PanelZoomSplitsColumns(model.ViewMode, model.PanelZoomEnabled),
 		ActivePanel:     model.ActivePanel,
 		ActivePercent:   model.PanelZoomActivePercent,
 		InactivePercent: model.PanelZoomInactivePercent,

@@ -1639,6 +1639,48 @@ panel_zoom_inactive_percent = 30
 	}
 }
 
+func TestLayoutForTerminalSizeIgnoresZoomInAuxiliaryViews(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(100, 30)
+
+	cfg := config.Default()
+	cfg.UI.ZoomActivePanel = true
+	cfg.UI.PanelZoomActivePercent = 70
+	cfg.UI.PanelZoomInactivePercent = 30
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Paths:  config.Paths{}.WithResolvedLocations(),
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	layBrowser := app.layoutForTerminalSize(100, 30)
+	if layBrowser.Left.Width != 70 || layBrowser.Right.Width != 30 {
+		t.Fatalf("browser Left=%d Right=%d want 70/30", layBrowser.Left.Width, layBrowser.Right.Width)
+	}
+
+	for _, vm := range []ui.ViewMode{ui.ViewJobs, ui.ViewCommands, ui.ViewMessages} {
+		app.model.ViewMode = vm
+		lay := app.layoutForTerminalSize(100, 30)
+		if lay.Left.Width != 50 || lay.Right.Width != 50 {
+			t.Fatalf("view %v with zoom on: Left=%d Right=%d want 50/50", vm, lay.Left.Width, lay.Right.Width)
+		}
+	}
+}
+
 func TestConfigDialogApplyPersistsDefaultListingFormat(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))

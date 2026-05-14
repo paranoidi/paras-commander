@@ -42,6 +42,12 @@ func IsAuxiliaryView(vm ViewMode) bool {
 	return vm == ViewJobs || vm == ViewCommands || vm == ViewMessages
 }
 
+// PanelZoomSplitsColumns reports whether [ui].zoom_active_panel widens the active column.
+// It applies only to the twin file browser; jobs/commands/messages use an even split.
+func PanelZoomSplitsColumns(vm ViewMode, zoomEnabled bool) bool {
+	return zoomEnabled && !IsAuxiliaryView(vm)
+}
+
 // JobsViewState holds focus and scroll positions for the jobs view screen.
 type JobsViewState struct {
 	Selected       int
