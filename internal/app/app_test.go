@@ -1532,11 +1532,13 @@ func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-zoom")}.WithResolvedLocations()
+	cfg := config.Default()
+	cfg.UI.ZoomActivePanel = false
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
-		Config: config.Default(),
+		Config: cfg,
 		Paths:  appPaths,
 		Theme:  theme.Default(),
 	})

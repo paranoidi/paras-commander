@@ -33,7 +33,7 @@ const (
 	DefaultListingFormat = ListingFormatMtime
 
 	// Panel zoom: widen the active browser column when [ui].zoom_active_panel is true.
-	DefaultZoomActivePanel          = false
+	DefaultZoomActivePanel          = true
 	DefaultPanelZoomActivePercent   = 70
 	DefaultPanelZoomInactivePercent = 30
 	// DefaultZoomActivePanelDisabledAboveWidth: when > 0 and terminal width (cells) is >= this value,
@@ -42,7 +42,7 @@ const (
 
 	// DefaultShrunkenShowsNameOnly: when true, file panels whose list row text width is below
 	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
-	DefaultShrunkenShowsNameOnly = false
+	DefaultShrunkenShowsNameOnly = true
 	// ShrunkenListingRowTextWidthThreshold is the row text width (cells) below which a panel counts as
 	// "shrunken" for optional name-only listing (see [ui].shrunken_shows_name_only).
 	// 40 targets a 50/50 split on an 80-column terminal (inner listing width 38) with file icons off;
