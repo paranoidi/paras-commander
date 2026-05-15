@@ -55,9 +55,6 @@ func TestApplyProgressETAUpdatesSmoothedRate(t *testing.T) {
 	if j.DisplaySpeedBPS <= 0 {
 		t.Fatal("expected positive DisplaySpeedBPS")
 	}
-	if len(j.ThroughputSamples) != 1 || j.ThroughputSamples[0].BPS != wantApprox {
-		t.Fatalf("ThroughputSamples = %v, want one sample BPS %v", j.ThroughputSamples, wantApprox)
-	}
 }
 
 func TestApplyProgressETAFileOnlyStepsAdvanceSnapshot(t *testing.T) {
@@ -106,7 +103,7 @@ func TestResetProgressETA(t *testing.T) {
 		ETABytesPerSec:         123,
 		ETAFilesPerSec:         77,
 		DisplaySpeedBPS:        55,
-		ThroughputSamples:      []ThroughputSample{{BPS: 1}, {BPS: 2}},
+		ThroughputStrip:        []float64{1, 2},
 		LastProgressSnapshotAt: time.Now(),
 		LastProgressDoneBytes:  99,
 		LastProgressDoneFiles:  8,
@@ -115,7 +112,7 @@ func TestResetProgressETA(t *testing.T) {
 	if j.ETABytesPerSec != 0 || j.ETAFilesPerSec != 0 || !j.LastProgressSnapshotAt.IsZero() || j.LastProgressDoneBytes != 0 || j.LastProgressDoneFiles != 0 {
 		t.Fatal("ResetProgressETA did not clear ETA fields")
 	}
-	if j.DisplaySpeedBPS != 0 || len(j.ThroughputSamples) != 0 {
+	if j.DisplaySpeedBPS != 0 || len(j.ThroughputStrip) != 0 {
 		t.Fatal("ResetProgressETA did not clear display throughput fields")
 	}
 }

@@ -125,7 +125,7 @@ jobs.icons.completed = { fg = "bright_green", bold = true }
 queued = "\uf1af"
 running = "\uf144"
 paused = "\uf28b"
-canceled = "\uf28d"
+canceled = "\uf52f"
 failed = "\uf06a"
 decision = "\uf059"
 completed = "\uf05d"

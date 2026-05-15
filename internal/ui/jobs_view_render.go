@@ -79,13 +79,14 @@ func drawJobsView(
 	now time.Time,
 	chromeBlocked bool,
 	userHomeDir string,
+	throughputChartEnabled bool,
 ) {
 	drawJobsListPanel(screen, layout.Left, state, jobs, styles, now, chromeBlocked)
 	var sel JobEntry
 	if state.Selected >= 0 && state.Selected < len(jobs) {
 		sel = jobs[state.Selected]
 	}
-	detailLines := JobDetailLineCount(sel, now)
+	detailLines := JobDetailLineCount(sel, now, throughputChartEnabled)
 	showConflict := JobEntryShowsConflictPanel(sel)
 	conflictRect, detailRect, activityRect := SplitJobsRightPanels(layout.Right, showConflict, detailLines)
 	detailFocused := jobsDetailPaneFocused(state, showConflict)
@@ -94,7 +95,7 @@ func drawJobsView(
 	if conflictRect.Height > 0 {
 		drawJobsConflictPanel(screen, conflictRect, state, sel, styles, chromeBlocked, conflictFocused, userHomeDir)
 	}
-	drawJobsDetailPanel(screen, detailRect, state, jobs, styles, now, chromeBlocked, detailFocused, userHomeDir)
+	drawJobsDetailPanel(screen, detailRect, state, jobs, styles, now, chromeBlocked, detailFocused, userHomeDir, throughputChartEnabled)
 	if activityRect.Height > 0 {
 		drawJobsActivityPanel(screen, activityRect, state, jobs, activity, styles, chromeBlocked, activityFocused)
 	}
@@ -230,7 +231,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 	}
 }
 
-func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, focused bool, userHomeDir string) {
+func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, focused bool, userHomeDir string, throughputChartEnabled bool) {
 	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
@@ -286,7 +287,7 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 		sel = jobs[state.Selected]
 	}
 
-	all := detailStaticLines(sel, now, textW, userHomeDir)
+	all := detailStaticLines(sel, now, textW, userHomeDir, throughputChartEnabled)
 
 	scroll := state.DetailScroll
 	if scroll < 0 {
@@ -420,7 +421,7 @@ func detailDurationOrETALine(j JobEntry, now time.Time) string {
 	return fmt.Sprintf(" ETA:         %s", formatJobETAFull(j, now))
 }
 
-func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir string) []string {
+func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir string, throughputChartEnabled bool) []string {
 	if pathMax < 1 {
 		pathMax = jobsDetailLineBudgetFallback
 	}
@@ -471,13 +472,15 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	lines = append(lines, fmt.Sprintf(" Progress:    %d / %s files   %s / %s bytes",
 		j.DoneFiles, tfLabel, formatJobBytes(j.DoneBytes), formatJobBytes(j.TotalBytes)))
 	lines = append(lines, detailDurationOrETALine(j, now))
-	lines = append(lines, ThroughputDetailLines(j.ThroughputSamples, now, pathMax, j.Status == "running")...)
+	if throughputChartEnabled {
+		lines = append(lines, ThroughputDetailLines(j.ThroughputStrip, pathMax, j.Status == "running")...)
+	}
 	return lines
 }
 
 // JobDetailLineCount returns the number of lines in the jobs Details panel for scroll bounds.
-func JobDetailLineCount(j JobEntry, now time.Time) int {
-	return len(detailStaticLines(j, now, jobsDetailLineBudgetFallback, ""))
+func JobDetailLineCount(j JobEntry, now time.Time, throughputChartEnabled bool) int {
+	return len(detailStaticLines(j, now, jobsDetailLineBudgetFallback, "", throughputChartEnabled))
 }
 
 // JobActivityLineCount returns the number of lines in the jobs Activity panel for scroll bounds.

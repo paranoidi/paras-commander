@@ -3,7 +3,8 @@ package ui
 import "github.com/paranoidi/paras-commander/internal/jobs"
 
 // JobEntriesFromJobs converts domain jobs to the render DTO used by the jobs view.
-func JobEntriesFromJobs(jobList []*jobs.Job) []JobEntry {
+// When includeThroughputStrip is false, ThroughputStrip is left nil so progress does not copy strip memory for the UI.
+func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool) []JobEntry {
 	entries := make([]JobEntry, 0, len(jobList))
 	for _, j := range jobList {
 		sources := append([]string(nil), j.Sources...)
@@ -12,26 +13,30 @@ func JobEntriesFromJobs(jobList []*jobs.Job) []JobEntry {
 			b := *j.PendingBlocker
 			pending = &b
 		}
+		var strip []float64
+		if includeThroughputStrip && len(j.ThroughputStrip) > 0 {
+			strip = append([]float64(nil), j.ThroughputStrip...)
+		}
 		entries = append(entries, JobEntry{
-			ID:                j.ID,
-			Type:              string(j.Type),
-			Status:            string(j.Status),
-			Sources:           sources,
-			Destination:       j.Destination,
-			DestIsDir:         j.DestIsDir,
-			CurrentPath:       j.CurrentPath,
-			DoneFiles:         j.DoneFiles,
-			TotalFiles:        j.TotalFiles,
-			DoneBytes:         j.DoneBytes,
-			TotalBytes:        j.TotalBytes,
-			Error:             j.Error,
-			StartedAt:         j.StartedAt,
-			FinishedAt:        j.FinishedAt,
-			ETABytesPerSec:    j.ETABytesPerSec,
-			ETAFilesPerSec:    j.ETAFilesPerSec,
-			DisplaySpeedBPS:   j.DisplaySpeedBPS,
-			ThroughputSamples: append([]jobs.ThroughputSample(nil), j.ThroughputSamples...),
-			PendingBlocker:    pending,
+			ID:              j.ID,
+			Type:            string(j.Type),
+			Status:          string(j.Status),
+			Sources:         sources,
+			Destination:     j.Destination,
+			DestIsDir:       j.DestIsDir,
+			CurrentPath:     j.CurrentPath,
+			DoneFiles:       j.DoneFiles,
+			TotalFiles:      j.TotalFiles,
+			DoneBytes:       j.DoneBytes,
+			TotalBytes:      j.TotalBytes,
+			Error:           j.Error,
+			StartedAt:       j.StartedAt,
+			FinishedAt:      j.FinishedAt,
+			ETABytesPerSec:  j.ETABytesPerSec,
+			ETAFilesPerSec:  j.ETAFilesPerSec,
+			DisplaySpeedBPS: j.DisplaySpeedBPS,
+			ThroughputStrip: strip,
+			PendingBlocker:  pending,
 		})
 	}
 	return entries

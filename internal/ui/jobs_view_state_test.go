@@ -1,6 +1,10 @@
 package ui
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/jobs"
+)
 
 func TestJobsViewStateEnsureSelectionVisible(t *testing.T) {
 	state := JobsViewState{Selected: 9, ListScroll: 0}
@@ -22,5 +26,24 @@ func TestJobsViewStateEnsureSelectionVisibleEmpty(t *testing.T) {
 
 	if state.Selected != 0 || state.ListScroll != 0 {
 		t.Fatalf("state = %+v, want zero selection and scroll", state)
+	}
+}
+
+func TestJobEntriesFromJobsOmitsThroughputStripWhenDisabled(t *testing.T) {
+	t.Parallel()
+	j := &jobs.Job{
+		ID:              "1",
+		Type:            jobs.TypeCopy,
+		Status:          jobs.StatusRunning,
+		Sources:         []string{"/a"},
+		Destination:     "/b",
+		ThroughputStrip: []float64{1, 2, 3},
+	}
+	got := JobEntriesFromJobs([]*jobs.Job{j}, false)
+	if len(got) != 1 {
+		t.Fatalf("len = %d", len(got))
+	}
+	if got[0].ThroughputStrip != nil {
+		t.Fatalf("ThroughputStrip = %v, want nil", got[0].ThroughputStrip)
 	}
 }

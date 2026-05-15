@@ -298,6 +298,11 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	right.Filter.CycleMatches = cfg.Filter.CycleMatches
 	jobState := jobs.NewState()
 	jobState.SetTransferFunc(jobTransferFunc(cfg.Operations, cfg.Jobs))
+	jobState.SetThroughputChart(
+		time.Duration(cfg.Jobs.ThroughputChartBinMS)*time.Millisecond,
+		time.Duration(cfg.Jobs.ThroughputChartWindowSec)*time.Second,
+		cfg.Jobs.ThroughputChartEnabled,
+	)
 	homeDir, _ := os.UserHomeDir()
 	if homeDir != "" {
 		homeDir = filepath.Clean(homeDir)
@@ -332,9 +337,10 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			ActivePanel:            ui.LeftPanel,
 			SelectionsPanelMaxRows: cfg.UI.SelectionsPanelMaxRows,
 			HideMenuBar:            !cfg.UI.ShowMenuBar,
-			ShowFileIcons:          cfg.UI.ShowFileIcons,
-			ShrunkenShowsNameOnly:  cfg.UI.ShrunkenShowsNameOnly,
-			UserHomeDir:            homeDir,
+			ShowFileIcons:                 cfg.UI.ShowFileIcons,
+			ShrunkenShowsNameOnly:         cfg.UI.ShrunkenShowsNameOnly,
+			JobsThroughputChartEnabled:    cfg.Jobs.ThroughputChartEnabled,
+			UserHomeDir:                   homeDir,
 			DiskUsage:              duEngine,
 			DiskUsageShown:         false,
 			ViewMode:               ui.ViewBrowser,

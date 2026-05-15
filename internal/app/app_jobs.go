@@ -52,7 +52,7 @@ func (a *App) applyJobsRetention() {
 
 func (a *App) syncJobsList() {
 	a.applyJobsRetention()
-	a.model.JobsList = ui.JobEntriesFromJobs(a.jobState.AllJobs())
+	a.model.JobsList = ui.JobEntriesFromJobs(a.jobState.AllJobs(), a.config.Jobs.ThroughputChartEnabled)
 }
 
 func (a *App) ensureJobsViewSelectionVisible() {
@@ -333,7 +333,7 @@ func (a *App) jobsDetailLineCountForSelection() int {
 	if a.model.JobsView.Selected >= 0 && a.model.JobsView.Selected < len(a.model.JobsList) {
 		sel = a.model.JobsList[a.model.JobsView.Selected]
 	}
-	return ui.JobDetailLineCount(sel, time.Now())
+	return ui.JobDetailLineCount(sel, time.Now(), a.config.Jobs.ThroughputChartEnabled)
 }
 
 func (a *App) jobsViewFocusPaneCount() int {
@@ -392,7 +392,7 @@ func (a *App) maxDetailScroll(contentH int) int {
 	if a.model.JobsView.Selected >= 0 && a.model.JobsView.Selected < len(a.model.JobsList) {
 		sel = a.model.JobsList[a.model.JobsView.Selected]
 	}
-	total := ui.JobDetailLineCount(sel, time.Now())
+	total := ui.JobDetailLineCount(sel, time.Now(), a.config.Jobs.ThroughputChartEnabled)
 	return max(0, total-contentH)
 }
 

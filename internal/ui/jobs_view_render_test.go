@@ -2,6 +2,7 @@ package ui
 
 import (
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
@@ -61,6 +62,25 @@ func TestJobPercentDoneCapsByteRatioAt100(t *testing.T) {
 	})
 	if p != 100 {
 		t.Fatalf("got %v, want 100", p)
+	}
+}
+
+func TestJobDetailLineCountOmitsThroughputGraphWhenDisabled(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	j := JobEntry{
+		ID:              "x",
+		Type:            "copy",
+		Status:          "running",
+		StartedAt:       now.Add(-time.Minute),
+		Sources:         []string{"/tmp/a"},
+		Destination:     "/tmp/b",
+		ThroughputStrip: []float64{1, 2, 3, 4, 5},
+	}
+	on := JobDetailLineCount(j, now, true)
+	off := JobDetailLineCount(j, now, false)
+	if d := on - off; d != throughputGraphBodyRows {
+		t.Fatalf("line delta = %d want %d (graph body rows)", d, throughputGraphBodyRows)
 	}
 }
 

@@ -63,6 +63,8 @@ type Model struct {
 	PanelZoomInactivePercent int
 	// ShrunkenShowsNameOnly mirrors ui.shrunken_shows_name_only (narrow panels may hide trailing listing columns).
 	ShrunkenShowsNameOnly bool
+	// JobsThroughputChartEnabled mirrors [jobs].throughput_chart_enabled (strip + graph off when false).
+	JobsThroughputChartEnabled bool
 	// UserHomeDir is filepath.Clean(os.UserHomeDir()); empty skips ~ substitution in panel titles.
 	UserHomeDir string
 	// DiskUsageShown enables proportional disk-usage bars after the user starts a scan.
@@ -239,7 +241,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		drawFilePreviewPanel(screen, union, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true)
 	case ViewJobs:
 		now := time.Now()
-		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobActivity, styles, now, chromeBlocked, model.UserHomeDir)
+		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobActivity, styles, now, chromeBlocked, model.UserHomeDir, model.JobsThroughputChartEnabled)
 	case ViewCommands:
 		cmdEntries := model.CommandsList
 		if len(model.CommandsDisplay) > 0 {

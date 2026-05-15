@@ -2,7 +2,6 @@ package ui
 
 import (
 	"math"
-	"time"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
 )
@@ -17,79 +16,6 @@ var brailleGraphUp = [25]rune{
 	'⡄', '⣄', '⣤', '⣴', '⣼',
 	'⡆', '⣆', '⣦', '⣶', '⣾',
 	'⡇', '⣇', '⣧', '⣷', '⣿',
-}
-
-// throughputBucketMax aggregates samples into fixed buckets using max within each bucket.
-func throughputBucketMax(samples []float64, buckets int) []float64 {
-	if buckets <= 0 {
-		return nil
-	}
-	out := make([]float64, buckets)
-	if len(samples) == 0 {
-		return out
-	}
-	n := len(samples)
-	for i := range out {
-		start := i * n / buckets
-		end := (i + 1) * n / buckets
-		if end <= start {
-			end = start + 1
-		}
-		if end > n {
-			end = n
-		}
-		maxv := samples[start]
-		for k := start; k < end; k++ {
-			if samples[k] > maxv {
-				maxv = samples[k]
-			}
-		}
-		out[i] = maxv
-	}
-	return out
-}
-
-// throughputBucketsWindow maps each chart column to an equal wall-time slice of [now-window, now).
-// The max BPS within each slice becomes that column's value (0 if no sample fell in the slice).
-func throughputBucketsWindow(samples []jobs.ThroughputSample, now time.Time, cols int, window time.Duration) []float64 {
-	if cols <= 0 || window <= 0 {
-		return nil
-	}
-	out := make([]float64, cols)
-	if len(samples) == 0 {
-		return out
-	}
-	start := now.Add(-window)
-	winNs := window.Nanoseconds()
-	if winNs <= 0 {
-		return out
-	}
-	for col := 0; col < cols; col++ {
-		slotStart := start.Add(time.Duration(winNs * int64(col) / int64(cols)))
-		slotEnd := start.Add(time.Duration(winNs * int64(col+1) / int64(cols)))
-		var maxv float64
-		found := false
-		for _, s := range samples {
-			if s.At.Before(slotStart) {
-				continue
-			}
-			if col == cols-1 {
-				if s.At.After(now) {
-					continue
-				}
-			} else if !s.At.Before(slotEnd) {
-				continue
-			}
-			if !found || s.BPS > maxv {
-				maxv = s.BPS
-				found = true
-			}
-		}
-		if found {
-			out[col] = maxv
-		}
-	}
-	return out
 }
 
 func throughputYCap(bucketMax []float64) float64 {
@@ -194,7 +120,8 @@ func throughputGraphBodyBraille(bucketMax []float64, graphHeight int) []string {
 
 // ThroughputDetailLines returns detail-panel lines for the throughput chart section.
 // width is the interior content width in runes (one leading margin space is added per line).
-func ThroughputDetailLines(samples []jobs.ThroughputSample, now time.Time, width int, running bool) []string {
+// strip holds one fixed-clock B/s sample per column (oldest left, newest right); see jobs.AdvanceJobThroughputStrip.
+func ThroughputDetailLines(strip []float64, width int, running bool) []string {
 	if !running {
 		return nil
 	}
@@ -206,11 +133,11 @@ func ThroughputDetailLines(samples []jobs.ThroughputSample, now time.Time, width
 		chartCols = 1
 	}
 
-	if len(samples) < 2 {
+	if len(strip) == 0 {
 		return []string{" " + truncateRunes("(collecting samples…)", width-1)}
 	}
 
-	buckets := throughputBucketsWindow(samples, now, chartCols, jobs.ThroughputDetailChartWindow)
+	buckets := jobs.ThroughputChartColumnBuckets(strip, chartCols)
 	body := throughputGraphBodyBraille(buckets, throughputGraphBodyRows)
 	if len(body) == 0 {
 		return []string{" (graph error)"}

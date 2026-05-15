@@ -222,6 +222,12 @@ type JobsConfig struct {
 	ProgressEmitMinBytes int `toml:"progress_emit_min_bytes"`
 	// ProgressEmitMinIntervalMS is the minimum milliseconds between optional progress events when copying.
 	ProgressEmitMinIntervalMS int `toml:"progress_emit_min_interval_ms"`
+	// ThroughputChartWindowSec is the wall-time span shown by the jobs details throughput chart (20–120).
+	ThroughputChartWindowSec int `toml:"throughput_chart_window_sec"`
+	// ThroughputChartBinMS is fixed milliseconds per chart column (strip scroll step); 80–2000 after Validate.
+	ThroughputChartBinMS int `toml:"throughput_chart_bin_ms"`
+	// ThroughputChartEnabled controls the details-panel throughput strip: progress does not update strip data and the chart is not rendered when false.
+	ThroughputChartEnabled bool `toml:"throughput_chart_enabled"`
 }
 
 type OperationsConfig struct {
@@ -297,6 +303,9 @@ func Default() Config {
 			RefreshDebounceMS:         150,
 			ProgressEmitMinBytes:      DefaultProgressEmitMinBytes,
 			ProgressEmitMinIntervalMS: DefaultProgressEmitMinIntervalMS,
+			ThroughputChartWindowSec:  DefaultThroughputChartWindowSec,
+			ThroughputChartBinMS:      DefaultThroughputChartBinMS,
+			ThroughputChartEnabled:    DefaultThroughputChartEnabled,
 		},
 		Operations: OperationsConfig{
 			PreservePermissions:        DefaultPreservePermissions,
@@ -806,6 +815,28 @@ func (c *Config) Validate() error {
 	}
 	if c.Jobs.ProgressEmitMinIntervalMS > jobsRefreshMaxMS {
 		c.Jobs.ProgressEmitMinIntervalMS = jobsRefreshMaxMS
+	}
+	const throughputChartWindowMinSec = 20
+	const throughputChartWindowMaxSec = 120
+	if c.Jobs.ThroughputChartWindowSec <= 0 {
+		c.Jobs.ThroughputChartWindowSec = builtin.Jobs.ThroughputChartWindowSec
+	}
+	if c.Jobs.ThroughputChartWindowSec < throughputChartWindowMinSec {
+		c.Jobs.ThroughputChartWindowSec = throughputChartWindowMinSec
+	}
+	if c.Jobs.ThroughputChartWindowSec > throughputChartWindowMaxSec {
+		c.Jobs.ThroughputChartWindowSec = throughputChartWindowMaxSec
+	}
+	const throughputChartBinMinMS = 80
+	const throughputChartBinMaxMS = 2000
+	if c.Jobs.ThroughputChartBinMS <= 0 {
+		c.Jobs.ThroughputChartBinMS = builtin.Jobs.ThroughputChartBinMS
+	}
+	if c.Jobs.ThroughputChartBinMS < throughputChartBinMinMS {
+		c.Jobs.ThroughputChartBinMS = throughputChartBinMinMS
+	}
+	if c.Jobs.ThroughputChartBinMS > throughputChartBinMaxMS {
+		c.Jobs.ThroughputChartBinMS = throughputChartBinMaxMS
 	}
 	if c.Operations.CopyBufferKiB <= 0 {
 		c.Operations.CopyBufferKiB = builtin.Operations.CopyBufferKiB

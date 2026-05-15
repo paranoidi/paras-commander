@@ -22,6 +22,13 @@ const (
 	DefaultProgressEmitMinBytes      = 512 * 1024
 	DefaultProgressEmitMinIntervalMS = 200
 
+	// DefaultThroughputChartWindowSec is the jobs details throughput strip span (clamped 20–120 in Validate).
+	DefaultThroughputChartWindowSec = 45
+	// DefaultThroughputChartBinMS is wall time per chart column (clamped in Validate).
+	DefaultThroughputChartBinMS = 400
+	// DefaultThroughputChartEnabled turns on the jobs details throughput strip + chart rendering.
+	DefaultThroughputChartEnabled = true
+
 	DefaultPreservePermissions        = true
 	DefaultPreserveTimestamps         = true
 	DefaultCopyBufferKiB              = 256

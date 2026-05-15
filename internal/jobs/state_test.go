@@ -184,6 +184,26 @@ func TestStateEventApplication(t *testing.T) {
 	}
 }
 
+func TestStateThroughputChartDisabledSkipsStrip(t *testing.T) {
+	t.Parallel()
+	s := NewState()
+	s.SetThroughputChart(time.Second, 30*time.Second, false)
+	job := &Job{ID: "chart-off", Type: TypeCopy, Status: StatusQueued, Sources: []string{"/a"}, Destination: "/b"}
+	s.AddJob(job)
+	s.ApplyEvent(Event{Type: EventStarted, JobID: job.ID})
+	s.ApplyEvent(Event{Type: EventProgress, JobID: job.ID, DoneBytes: 1_000_000, DoneFiles: 1})
+	active := s.ActiveJob()
+	if active == nil {
+		t.Fatal("expected active job")
+	}
+	if len(active.ThroughputStrip) != 0 {
+		t.Fatalf("ThroughputStrip = %v, want empty when chart disabled", active.ThroughputStrip)
+	}
+	if active.throughputStripOpenSet {
+		t.Fatal("strip anchor should not be set when chart disabled")
+	}
+}
+
 func TestStateEventFailed(t *testing.T) {
 	s := NewState()
 	job := &Job{ID: "test-2", Type: TypeCopy, Status: StatusQueued}

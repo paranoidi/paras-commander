@@ -3,31 +3,8 @@ package ui
 import (
 	"strings"
 	"testing"
-	"time"
 	"unicode/utf8"
-
-	"github.com/paranoidi/paras-commander/internal/jobs"
 )
-
-func TestThroughputBucketMaxMonotonic(t *testing.T) {
-	samples := []float64{10, 10, 10, 1000, 10, 10}
-	b := throughputBucketMax(samples, 6)
-	lowCount, highCount := 0, 0
-	for _, v := range b {
-		if v <= 50 {
-			lowCount++
-		}
-		if v >= 500 {
-			highCount++
-		}
-	}
-	if highCount < 1 {
-		t.Fatalf("expected at least one bucket with peak ~1000: %#v", b)
-	}
-	if lowCount == 0 {
-		t.Fatalf("expected some low buckets: %#v", b)
-	}
-}
 
 func TestThroughputGraphBodyBrailleFlatSeries(t *testing.T) {
 	buckets := []float64{5, 5, 5, 5}
@@ -47,28 +24,8 @@ func TestThroughputGraphBodyBrailleFlatSeries(t *testing.T) {
 	}
 }
 
-func TestThroughputBucketsWindowFixedWallTime(t *testing.T) {
-	now := time.Date(2022, 3, 4, 5, 6, 7, 0, time.UTC)
-	start := now.Add(-jobs.ThroughputDetailChartWindow)
-	// 30 columns × 30s window → 1s per column; sample must fall strictly inside [slotStart, slotEnd).
-	samples := []jobs.ThroughputSample{
-		{At: start.Add(500 * time.Millisecond), BPS: 100},
-		{At: start.Add(19*time.Second + 500*time.Millisecond), BPS: 200},
-	}
-	b := throughputBucketsWindow(samples, now, 30, jobs.ThroughputDetailChartWindow)
-	if len(b) != 30 {
-		t.Fatalf("len %d", len(b))
-	}
-	if b[0] != 100 {
-		t.Fatalf("col0 = %v want 100", b[0])
-	}
-	if b[19] != 200 {
-		t.Fatalf("col19 = %v want 200", b[19])
-	}
-}
-
 func TestThroughputDetailLinesRunningPlaceholder(t *testing.T) {
-	lines := ThroughputDetailLines([]jobs.ThroughputSample{{BPS: 10}}, time.Now(), 40, true)
+	lines := ThroughputDetailLines(nil, 40, true)
 	if len(lines) != 1 {
 		t.Fatalf("len = %d want 1", len(lines))
 	}
@@ -78,15 +35,11 @@ func TestThroughputDetailLinesRunningPlaceholder(t *testing.T) {
 }
 
 func TestThroughputDetailLinesGraphShape(t *testing.T) {
-	now := time.Date(2024, 6, 1, 12, 0, 45, 0, time.UTC)
-	samples := make([]jobs.ThroughputSample, 30)
-	for i := range samples {
-		samples[i] = jobs.ThroughputSample{
-			At:  now.Add(time.Duration(-29+i) * time.Second),
-			BPS: float64(i+1) * 1e6,
-		}
+	strip := make([]float64, 30)
+	for i := range strip {
+		strip[i] = float64(i+1) * 1e6
 	}
-	lines := ThroughputDetailLines(samples, now, 50, true)
+	lines := ThroughputDetailLines(strip, 50, true)
 	if len(lines) != throughputGraphBodyRows {
 		t.Fatalf("len(lines) = %d want %d", len(lines), throughputGraphBodyRows)
 	}

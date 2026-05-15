@@ -17,11 +17,6 @@ const etaBlendTransitionSecs = 45.0
 // etaBlendEMAFloor is the minimum weight kept on EMA after blending fully ramps (rest is cumulative).
 const etaBlendEMAFloor = 0.25
 
-// ThroughputDetailChartWindow is the wall-time span shown across the details panel throughput chart.
-const ThroughputDetailChartWindow = 30 * time.Second
-
-const maxThroughputSamples = 400 // ~30s at fine-grained progress updates; older samples are dropped by time first.
-
 // ApplyProgressETA updates smoothed bytes/sec and files/sec from monotonic DoneBytes and DoneFiles samples.
 func ApplyProgressETA(job *Job, doneBytes int64, doneFiles int, now time.Time) {
 	if job == nil {
@@ -56,7 +51,6 @@ func ApplyProgressETA(job *Job, doneBytes int64, doneFiles int, now time.Time) {
 		} else {
 			job.DisplaySpeedBPS = displaySpeedEMAAlpha*instantB + (1-displaySpeedEMAAlpha)*job.DisplaySpeedBPS
 		}
-		appendThroughputSample(job, now, instantB)
 		processed = true
 	}
 	if deltaF > 0 {
@@ -78,20 +72,6 @@ func ApplyProgressETA(job *Job, doneBytes int64, doneFiles int, now time.Time) {
 	job.LastProgressDoneFiles = doneFiles
 }
 
-func appendThroughputSample(job *Job, now time.Time, instant float64) {
-	if instant <= 0 || job == nil {
-		return
-	}
-	job.ThroughputSamples = append(job.ThroughputSamples, ThroughputSample{At: now, BPS: instant})
-	cutoff := now.Add(-ThroughputDetailChartWindow)
-	for len(job.ThroughputSamples) > 0 && job.ThroughputSamples[0].At.Before(cutoff) {
-		job.ThroughputSamples = job.ThroughputSamples[1:]
-	}
-	if len(job.ThroughputSamples) > maxThroughputSamples {
-		job.ThroughputSamples = job.ThroughputSamples[len(job.ThroughputSamples)-maxThroughputSamples:]
-	}
-}
-
 // ResetProgressETA clears ETA smoothing state (call when a job starts running).
 func ResetProgressETA(job *Job) {
 	if job == nil {
@@ -103,7 +83,10 @@ func ResetProgressETA(job *Job) {
 	job.ETABytesPerSec = 0
 	job.ETAFilesPerSec = 0
 	job.DisplaySpeedBPS = 0
-	job.ThroughputSamples = nil
+	job.ThroughputStrip = nil
+	job.ThroughputStripOpenBin = 0
+	job.throughputStripOpenSet = false
+	job.ThroughputStripDoneAtOpen = 0
 }
 
 // blendedETARate mixes EMA with cumulative average; shifts toward cumulative over elapsed wall time.

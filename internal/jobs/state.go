@@ -38,15 +38,45 @@ type State struct {
 
 	emitMu   sync.RWMutex
 	emitHook func(Event)
+
+	throughputChartBin      time.Duration
+	throughputChartWindow   time.Duration
+	throughputChartEnabled  bool
+}
+
+// SetThroughputChart configures fixed-bin scrolling for the jobs details throughput strip.
+// When enabled is false, progress no longer advances strip state (no chart backend work).
+func (s *State) SetThroughputChart(bin, window time.Duration, enabled bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.throughputChartBin = bin
+	s.throughputChartWindow = window
+	s.throughputChartEnabled = enabled
+}
+
+func (s *State) advanceThroughputStrip(job *Job, now time.Time, doneBytes int64) {
+	if !s.throughputChartEnabled {
+		return
+	}
+	bin := s.throughputChartBin
+	if bin <= 0 {
+		bin = 400 * time.Millisecond
+	}
+	win := s.throughputChartWindow
+	if win <= 0 {
+		win = 45 * time.Second
+	}
+	AdvanceJobThroughputStrip(job, now, doneBytes, bin, win)
 }
 
 // NewState creates a job state manager connected to a fresh queue and worker.
 func NewState() *State {
 	return &State{
-		queue:       NewQueue(),
-		events:      make(chan Event, 100),
-		wake:        make(chan struct{}, 1),
-		blockerWait: make(map[string]chan ConflictDecision),
+		queue:                  NewQueue(),
+		events:                 make(chan Event, 100),
+		wake:                   make(chan struct{}, 1),
+		blockerWait:            make(map[string]chan ConflictDecision),
+		throughputChartEnabled: true,
 	}
 }
 
@@ -230,7 +260,9 @@ func (s *State) ApplyEvent(ev Event) {
 			j.DoneFiles = ev.DoneFiles
 			j.DoneBytes = ev.DoneBytes
 			j.CurrentPath = ev.CurrentPath
-			ApplyProgressETA(j, ev.DoneBytes, ev.DoneFiles, time.Now())
+			now := time.Now()
+			s.advanceThroughputStrip(j, now, j.DoneBytes)
+			ApplyProgressETA(j, ev.DoneBytes, ev.DoneFiles, now)
 			j.PendingBlocker = nil
 		}
 	case EventCompleted:

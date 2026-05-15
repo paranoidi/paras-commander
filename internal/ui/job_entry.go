@@ -29,8 +29,8 @@ type JobEntry struct {
 	ETAFilesPerSec float64
 	// DisplaySpeedBPS is slower-smoothed B/s for the Queue Speed column.
 	DisplaySpeedBPS float64
-	// ThroughputSamples is a snapshot of recent instantaneous B/s with timestamps (details chart).
-	ThroughputSamples []jobs.ThroughputSample
+	// ThroughputStrip is a snapshot of fixed-clock B/s columns for the details chart (oldest left).
+	ThroughputStrip []float64
 	// PendingBlocker is set when the job waits on a conflict or disk-space prompt.
 	PendingBlocker *jobs.BlockerDetails
 }
