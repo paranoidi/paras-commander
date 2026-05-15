@@ -30,7 +30,7 @@ func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune
 	if focused {
 		baseStyle = styles.DialogButtonActive
 	} else {
-		baseStyle = styles.DialogButtonNormal
+		baseStyle = styles.DialogButtonInactive
 	}
 	out := x
 	primitive.Text(screen, out, y, 1, " ", baseStyle)

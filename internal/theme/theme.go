@@ -39,13 +39,17 @@ type Theme struct {
 	MenuDropdownAccent   tcell.Style
 	MenuDetail           tcell.Style
 
-	PanelFrame         tcell.Style
-	PanelSurface       tcell.Style
-	PanelTitleActive   tcell.Style
-	PanelTitleInactive tcell.Style
-	// PanelTitleVolumeFree styles the panel top-row volume summary (free / total + percent).
-	PanelTitleVolumeFree tcell.Style
-	PanelHeader          tcell.Style
+	PanelActiveFrame   tcell.Style
+	PanelInactiveFrame tcell.Style
+	PanelActiveSurface   tcell.Style
+	PanelInactiveSurface tcell.Style
+	PanelActiveTitle   tcell.Style
+	PanelInactiveTitle tcell.Style
+	// PanelActiveSpace / PanelInactiveSpace style the panel top-row volume summary (free / total + percent).
+	PanelActiveSpace   tcell.Style
+	PanelInactiveSpace tcell.Style
+	PanelActiveHeader   tcell.Style
+	PanelInactiveHeader tcell.Style
 	PanelRowNormal       tcell.Style
 	PanelRowDirectory    tcell.Style
 	PanelRowSymlink      tcell.Style
@@ -76,7 +80,8 @@ type Theme struct {
 	// Disk usage overlays (proportionally painted under listing rows once a scan ran).
 	PanelFolderDiskscan            tcell.Style
 	PanelFolderDiskscanExcluded    tcell.Style // directory rows skipped by disk-usage traversal (devicons)
-	PanelSpinner                   tcell.Style // menu-bar activity spinner (braille dot spinner)
+	// MenuSpinner styles the menu-bar activity spinner (braille dot spinner).
+	MenuSpinner tcell.Style
 	PanelUsagePrefixNormal         tcell.Style
 	PanelUsagePrefixSelected       tcell.Style
 	PanelUsagePrefixCursorActive   tcell.Style
@@ -99,7 +104,7 @@ type Theme struct {
 	DialogInputInactive            tcell.Style
 	DialogInputInactivePlaceholder tcell.Style
 	DialogInputInactiveError       tcell.Style
-	DialogButtonNormal             tcell.Style
+	DialogButtonInactive             tcell.Style
 	DialogButtonActive             tcell.Style
 	DialogOptionInactive           tcell.Style
 	DialogOptionActive             tcell.Style
@@ -193,12 +198,16 @@ var requiredStyleKeys = []string{
 	"menu.bar.alert",
 	"menu.dropdown.accent",
 	"menu.detail",
-	"panel.frame",
-	"panel.surface",
-	"panel.title.active",
-	"panel.title.inactive",
-	"panel.title.volume_free",
-	"panel.header",
+	"panel.active.frame",
+	"panel.inactive.frame",
+	"panel.active.surface",
+	"panel.inactive.surface",
+	"panel.active.title",
+	"panel.inactive.title",
+	"panel.active.space",
+	"panel.inactive.space",
+	"panel.active.header",
+	"panel.inactive.header",
 	"panel.row.normal",
 	"panel.row.directory",
 	"panel.row.symlink",
@@ -219,7 +228,7 @@ var requiredStyleKeys = []string{
 	"panel.blocked.row.cursor.selected",
 	"panel.folder.diskscan",
 	"panel.folder.diskscan_excluded",
-	"panel.spinner",
+	"menu.spinner",
 	"panel.usage.prefix.normal",
 	"panel.usage.prefix.selected",
 	"panel.usage.prefix.cursor.active",
@@ -240,7 +249,7 @@ var requiredStyleKeys = []string{
 	"dialog.input.inactive",
 	"dialog.input.inactive.placeholder",
 	"dialog.input.inactive.error",
-	"dialog.button.normal",
+	"dialog.button.inactive",
 	"dialog.button.active",
 	"dialog.option.inactive",
 	"dialog.option.active",
@@ -563,12 +572,16 @@ func parse(data []byte) (Theme, error) {
 		MenuDropdownAccent:   styles["menu.dropdown.accent"],
 		MenuDetail:           styles["menu.detail"],
 
-		PanelFrame:           styles["panel.frame"],
-		PanelSurface:         styles["panel.surface"],
-		PanelTitleActive:     styles["panel.title.active"],
-		PanelTitleInactive:   styles["panel.title.inactive"],
-		PanelTitleVolumeFree: styles["panel.title.volume_free"],
-		PanelHeader:          styles["panel.header"],
+		PanelActiveFrame:     styles["panel.active.frame"],
+		PanelInactiveFrame:   styles["panel.inactive.frame"],
+		PanelActiveSurface:   styles["panel.active.surface"],
+		PanelInactiveSurface: styles["panel.inactive.surface"],
+		PanelActiveTitle:     styles["panel.active.title"],
+		PanelInactiveTitle:   styles["panel.inactive.title"],
+		PanelActiveSpace:     styles["panel.active.space"],
+		PanelInactiveSpace:   styles["panel.inactive.space"],
+		PanelActiveHeader:    styles["panel.active.header"],
+		PanelInactiveHeader:  styles["panel.inactive.header"],
 		PanelRowNormal:       styles["panel.row.normal"],
 		PanelRowDirectory:    styles["panel.row.directory"],
 		PanelRowSymlink:      styles["panel.row.symlink"],
@@ -592,7 +605,7 @@ func parse(data []byte) (Theme, error) {
 
 		PanelFolderDiskscan:            styles["panel.folder.diskscan"],
 		PanelFolderDiskscanExcluded:    styles["panel.folder.diskscan_excluded"],
-		PanelSpinner:                   styles["panel.spinner"],
+		MenuSpinner:                    styles["menu.spinner"],
 		PanelUsagePrefixNormal:         styles["panel.usage.prefix.normal"],
 		PanelUsagePrefixSelected:       styles["panel.usage.prefix.selected"],
 		PanelUsagePrefixCursorActive:   styles["panel.usage.prefix.cursor.active"],
@@ -615,7 +628,7 @@ func parse(data []byte) (Theme, error) {
 		DialogInputInactive:            styles["dialog.input.inactive"],
 		DialogInputInactivePlaceholder: styles["dialog.input.inactive.placeholder"],
 		DialogInputInactiveError:       styles["dialog.input.inactive.error"],
-		DialogButtonNormal:             styles["dialog.button.normal"],
+		DialogButtonInactive:             styles["dialog.button.inactive"],
 		DialogButtonActive:             styles["dialog.button.active"],
 		DialogOptionInactive:           styles["dialog.option.inactive"],
 		DialogOptionActive:             styles["dialog.option.active"],

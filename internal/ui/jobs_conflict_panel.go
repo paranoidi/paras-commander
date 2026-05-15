@@ -91,7 +91,7 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 	if d == nil {
 		return
 	}
-	_, bg, _ := styles.PanelSurface.Decompose()
+	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
@@ -100,12 +100,12 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 	if chromeBlocked {
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
+	} else if focused {
+		borderStyle = styles.PanelActiveFrame
+		titleStyle = styles.PanelActiveTitle
 	} else {
-		borderStyle = styles.PanelFrame
-		titleStyle = styles.PanelTitleInactive
-		if focused {
-			titleStyle = styles.PanelTitleActive
-		}
+		borderStyle = styles.PanelInactiveFrame
+		titleStyle = styles.PanelInactiveTitle
 	}
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -113,8 +113,10 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
+		} else if focused {
+			surface = styles.PanelActiveSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelInactiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}
@@ -193,7 +195,7 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 }
 
 func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewState, c *jobs.ConflictEvent, styles theme.Theme, chromeBlocked, focused bool, userHomeDir string) {
-	_, bg, _ := styles.PanelSurface.Decompose()
+	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
@@ -202,12 +204,12 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	if chromeBlocked {
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
+	} else if focused {
+		borderStyle = styles.PanelActiveFrame
+		titleStyle = styles.PanelActiveTitle
 	} else {
-		borderStyle = styles.PanelFrame
-		titleStyle = styles.PanelTitleInactive
-		if focused {
-			titleStyle = styles.PanelTitleActive
-		}
+		borderStyle = styles.PanelInactiveFrame
+		titleStyle = styles.PanelInactiveTitle
 	}
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -215,8 +217,10 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
+		} else if focused {
+			surface = styles.PanelActiveSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelInactiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}

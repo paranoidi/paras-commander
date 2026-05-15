@@ -20,7 +20,7 @@ func drawMessagesView(
 	chromeBlocked bool,
 ) {
 	rect := MergeTwinPanelRects(layout.Left, layout.Right)
-	_, bg, _ := styles.PanelSurface.Decompose()
+	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
@@ -30,8 +30,8 @@ func drawMessagesView(
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
 	} else {
-		borderStyle = styles.PanelFrame
-		titleStyle = styles.PanelTitleActive
+		borderStyle = styles.PanelActiveFrame
+		titleStyle = styles.PanelActiveTitle
 	}
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -40,7 +40,7 @@ func drawMessagesView(
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelActiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}
@@ -64,7 +64,7 @@ func drawMessagesView(
 	}
 
 	hdr := fmt.Sprintf("%-*s%s", messagesListColTime, "Time", "Message")
-	headerStyle := styles.PanelHeader.Background(bg)
+	headerStyle := styles.PanelActiveHeader.Background(bg)
 	if chromeBlocked {
 		headerStyle = styles.PanelBlockedHeader
 	}

@@ -433,8 +433,8 @@ func TestRenderThemeDialogPreviewShowsActiveUnblockedLeftPanel(t *testing.T) {
 	Render(screen, model, styles)
 
 	_, leftBorder, _ := screen.Get(0, 1)
-	if leftBorder != styles.PanelFrame {
-		t.Fatalf("left panel border = %v, want normal panel border for theme preview", leftBorder)
+	if leftBorder != styles.PanelActiveFrame {
+		t.Fatalf("left panel border = %v, want active panel border for theme preview", leftBorder)
 	}
 	_, rowStyle, _ := screen.Get(1, 3)
 	if rowStyle != styles.PanelCursorActive {
@@ -717,8 +717,8 @@ func TestRenderMenuBarShowsActivitySpinnerAfterPermission(t *testing.T) {
 	if rFirst != wantSpinner {
 		t.Fatalf("menu row spinner rune = %q (%U), want %q (%U)", rFirst, rFirst, wantSpinner, wantSpinner)
 	}
-	if st != styles.PanelSpinner {
-		t.Fatalf("spinner style = %v, want PanelSpinner %v", st, styles.PanelSpinner)
+	if st != styles.MenuSpinner {
+		t.Fatalf("spinner style = %v, want MenuSpinner %v", st, styles.MenuSpinner)
 	}
 	gapCol := spinnerCol - 1
 	grCell, _, _ := screen.Get(gapCol, 0)
@@ -1224,12 +1224,12 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
 	if dashR != "─" {
 		t.Fatalf("left bottom frame dash = %q, want '─'", dashR)
 	}
-	if dashSt != styles.PanelFrame {
-		t.Fatalf("left bottom frame dash style = %v, want PanelFrame", dashSt)
+	if dashSt != styles.PanelInactiveFrame {
+		t.Fatalf("left bottom frame dash style = %v, want PanelInactiveFrame", dashSt)
 	}
 	_, titleSt, _ := screen.Get(2, bottomY)
-	if titleSt != styles.PanelTitleInactive {
-		t.Fatalf("selections hint padded segment style = %v, want PanelTitleInactive", titleSt)
+	if titleSt != styles.PanelInactiveTitle {
+		t.Fatalf("selections hint padded segment style = %v, want PanelInactiveTitle", titleSt)
 	}
 }
 
@@ -1276,12 +1276,12 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
 	if dashR != "─" {
 		t.Fatalf("right bottom frame dash = %q, want '─'", dashR)
 	}
-	if dashSt != styles.PanelFrame {
-		t.Fatalf("right bottom frame dash style = %v, want PanelFrame", dashSt)
+	if dashSt != styles.PanelInactiveFrame {
+		t.Fatalf("right bottom frame dash style = %v, want PanelInactiveFrame", dashSt)
 	}
 	_, titleSt, _ := screen.Get(lastIn-1, bottomY)
-	if titleSt != styles.PanelTitleInactive {
-		t.Fatalf("selections hint padded last cell style = %v, want PanelTitleInactive", titleSt)
+	if titleSt != styles.PanelInactiveTitle {
+		t.Fatalf("selections hint padded last cell style = %v, want PanelInactiveTitle", titleSt)
 	}
 }
 

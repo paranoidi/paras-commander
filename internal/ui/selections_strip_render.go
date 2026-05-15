@@ -30,12 +30,12 @@ func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stri
 	if chromeBlocked {
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
+	} else if stripFocused {
+		borderStyle = styles.PanelActiveFrame
+		titleStyle = styles.PanelActiveTitle
 	} else {
-		borderStyle = styles.PanelFrame
-		titleStyle = styles.PanelTitleInactive
-		if stripFocused {
-			titleStyle = styles.PanelTitleActive
-		}
+		borderStyle = styles.PanelInactiveFrame
+		titleStyle = styles.PanelInactiveTitle
 	}
 
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
@@ -44,8 +44,10 @@ func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stri
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
+		} else if stripFocused {
+			surface = styles.PanelActiveSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelInactiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}

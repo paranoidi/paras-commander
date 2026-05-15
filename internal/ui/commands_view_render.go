@@ -39,7 +39,7 @@ func drawCommandsView(
 }
 
 func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewState, entries []CommandRunEntry, styles theme.Theme, chromeBlocked bool, userHomeDir string) {
-	_, bg, _ := styles.PanelSurface.Decompose()
+	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
@@ -49,12 +49,12 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 	if chromeBlocked {
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
+	} else if active {
+		borderStyle = styles.PanelActiveFrame
+		titleStyle = styles.PanelActiveTitle
 	} else {
-		borderStyle = styles.PanelFrame
-		titleStyle = styles.PanelTitleInactive
-		if active {
-			titleStyle = styles.PanelTitleActive
-		}
+		borderStyle = styles.PanelInactiveFrame
+		titleStyle = styles.PanelInactiveTitle
 	}
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -62,8 +62,10 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
+		} else if active {
+			surface = styles.PanelActiveSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelInactiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}
@@ -91,9 +93,11 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 		commandsListColMarker, "",
 		cmdHdrW, "Command",
 		"Target")
-	headerStyle := styles.PanelHeader.Background(bg)
+	headerStyle := styles.PanelActiveHeader.Background(bg)
 	if chromeBlocked {
 		headerStyle = styles.PanelBlockedHeader
+	} else if !active {
+		headerStyle = styles.PanelInactiveHeader.Background(bg)
 	}
 	primitive.Text(screen, contentX, rect.Y+1, contentW, hdr, headerStyle)
 
@@ -220,7 +224,7 @@ func fitCommandOutputLine(line string, width int) string {
 }
 
 func drawCommandsStreamPanel(screen tcell.Screen, rect Rect, title string, scroll int, lines []string, styles theme.Theme, chromeBlocked bool, focused bool) {
-	_, bg, _ := styles.PanelSurface.Decompose()
+	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
@@ -230,12 +234,12 @@ func drawCommandsStreamPanel(screen tcell.Screen, rect Rect, title string, scrol
 	if chromeBlocked {
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
+	} else if active {
+		borderStyle = styles.PanelActiveFrame
+		titleStyle = styles.PanelActiveTitle
 	} else {
-		borderStyle = styles.PanelFrame
-		titleStyle = styles.PanelTitleInactive
-		if active {
-			titleStyle = styles.PanelTitleActive
-		}
+		borderStyle = styles.PanelInactiveFrame
+		titleStyle = styles.PanelInactiveTitle
 	}
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -243,8 +247,10 @@ func drawCommandsStreamPanel(screen tcell.Screen, rect Rect, title string, scrol
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
+		} else if active {
+			surface = styles.PanelActiveSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelInactiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}

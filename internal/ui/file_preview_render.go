@@ -13,7 +13,7 @@ import (
 // drawFilePreviewPanel paints the inactive-column file preview (ANSI output).
 // previewFocused highlights the preview title when keyboard focus is on the preview pane.
 func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused bool) {
-	_, bg, _ := styles.PanelSurface.Decompose()
+	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
@@ -22,12 +22,12 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 	if chromeBlocked {
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
+	} else if previewFocused {
+		borderStyle = styles.PanelActiveFrame
+		titleStyle = styles.PanelActiveTitle
 	} else {
-		borderStyle = styles.PanelFrame
-		titleStyle = styles.PanelTitleInactive
-		if previewFocused {
-			titleStyle = styles.PanelTitleActive
-		}
+		borderStyle = styles.PanelInactiveFrame
+		titleStyle = styles.PanelInactiveTitle
 	}
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -35,8 +35,10 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
+		} else if previewFocused {
+			surface = styles.PanelActiveSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelInactiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}

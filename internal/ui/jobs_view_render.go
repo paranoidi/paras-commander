@@ -101,7 +101,7 @@ func drawJobsView(
 }
 
 func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool) {
-	_, bg, _ := styles.PanelSurface.Decompose()
+	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
@@ -111,12 +111,12 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 	if chromeBlocked {
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
+	} else if active {
+		borderStyle = styles.PanelActiveFrame
+		titleStyle = styles.PanelActiveTitle
 	} else {
-		borderStyle = styles.PanelFrame
-		titleStyle = styles.PanelTitleInactive
-		if active {
-			titleStyle = styles.PanelTitleActive
-		}
+		borderStyle = styles.PanelInactiveFrame
+		titleStyle = styles.PanelInactiveTitle
 	}
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -124,8 +124,10 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
+		} else if active {
+			surface = styles.PanelActiveSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelInactiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}
@@ -149,9 +151,11 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 	}
 
 	hdr := fmt.Sprintf("%-2s%-*s %-10s%-10s%-10sProgress", "", jobsListColTypeRunes, "Type", "Status", "ETA", "Speed")
-	headerStyle := styles.PanelHeader.Background(bg)
+	headerStyle := styles.PanelActiveHeader.Background(bg)
 	if chromeBlocked {
 		headerStyle = styles.PanelBlockedHeader
+	} else if !active {
+		headerStyle = styles.PanelInactiveHeader.Background(bg)
 	}
 	primitive.Text(screen, contentX, rect.Y+1, contentW, hdr, headerStyle)
 
@@ -227,7 +231,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 }
 
 func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, focused bool, userHomeDir string) {
-	_, bg, _ := styles.PanelSurface.Decompose()
+	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
@@ -237,12 +241,12 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 	if chromeBlocked {
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
+	} else if active {
+		borderStyle = styles.PanelActiveFrame
+		titleStyle = styles.PanelActiveTitle
 	} else {
-		borderStyle = styles.PanelFrame
-		titleStyle = styles.PanelTitleInactive
-		if active {
-			titleStyle = styles.PanelTitleActive
-		}
+		borderStyle = styles.PanelInactiveFrame
+		titleStyle = styles.PanelInactiveTitle
 	}
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -250,8 +254,10 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
+		} else if active {
+			surface = styles.PanelActiveSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelInactiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}
@@ -301,7 +307,7 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 }
 
 func drawJobsActivityPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, activity map[string][]string, styles theme.Theme, chromeBlocked bool, focused bool) {
-	_, bg, _ := styles.PanelSurface.Decompose()
+	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
@@ -311,12 +317,12 @@ func drawJobsActivityPanel(screen tcell.Screen, rect Rect, state JobsViewState, 
 	if chromeBlocked {
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
+	} else if active {
+		borderStyle = styles.PanelActiveFrame
+		titleStyle = styles.PanelActiveTitle
 	} else {
-		borderStyle = styles.PanelFrame
-		titleStyle = styles.PanelTitleInactive
-		if active {
-			titleStyle = styles.PanelTitleActive
-		}
+		borderStyle = styles.PanelInactiveFrame
+		titleStyle = styles.PanelInactiveTitle
 	}
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -324,8 +330,10 @@ func drawJobsActivityPanel(screen tcell.Screen, rect Rect, state JobsViewState, 
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
+		} else if active {
+			surface = styles.PanelActiveSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelInactiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}

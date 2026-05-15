@@ -96,11 +96,14 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		titleStyle = styles.PanelBlockedTitle
 		headerStyle = styles.PanelBlockedHeader
 	} else {
-		borderStyle = styles.PanelFrame
-		headerStyle = styles.PanelHeader
-		titleStyle = styles.PanelTitleInactive
 		if fileListActive {
-			titleStyle = styles.PanelTitleActive
+			borderStyle = styles.PanelActiveFrame
+			titleStyle = styles.PanelActiveTitle
+			headerStyle = styles.PanelActiveHeader
+		} else {
+			borderStyle = styles.PanelInactiveFrame
+			titleStyle = styles.PanelInactiveTitle
+			headerStyle = styles.PanelInactiveHeader
 		}
 	}
 
@@ -116,8 +119,10 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
+		} else if fileListActive {
+			surface = styles.PanelActiveSurface
 		} else {
-			surface = styles.PanelSurface
+			surface = styles.PanelInactiveSurface
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}
@@ -159,7 +164,19 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
 	}
 	if showVolume {
-		primitive.TextOverlay(screen, volumeStartX, rect.Y, volRunes, volumeLabel, styles.PanelTitleVolumeFree)
+		spaceStyle := styles.PanelInactiveSpace
+		if fileListActive {
+			spaceStyle = styles.PanelActiveSpace
+		}
+		leaderRunes := utf8.RuneCountInString(panelVolumeTitleLeader)
+		trailerRunes := utf8.RuneCountInString(panelVolumeTitleTrailer)
+		// Decorative dashes in leader/trailer keep the border/frame colour.
+		primitive.TextOverlay(screen, volumeStartX, rect.Y, leaderRunes, panelVolumeTitleLeader, borderStyle)
+		contentX := volumeStartX + leaderRunes
+		contentLen := volRunes - leaderRunes - trailerRunes
+		contentText := string([]rune(volumeLabel)[leaderRunes : leaderRunes+contentLen])
+		primitive.TextOverlay(screen, contentX, rect.Y, contentLen, contentText, spaceStyle)
+		primitive.TextOverlay(screen, volumeStartX+volRunes-trailerRunes, rect.Y, trailerRunes, panelVolumeTitleTrailer, borderStyle)
 	}
 
 	visibleRows := PanelListRows(rect)
