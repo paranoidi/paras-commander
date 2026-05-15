@@ -2840,6 +2840,30 @@ func TestQuickFilterF10Quits(t *testing.T) {
 	}
 }
 
+func TestQuitImmediateSkipsConfirmation(t *testing.T) {
+	t.Parallel()
+	app := testAppMinimal(t)
+	root := t.TempDir()
+	job := &jobs.Job{ID: "j", Type: jobs.TypeCopy, Status: jobs.StatusRunning, Sources: []string{root}}
+	app.jobState.Queue().Enqueue(job)
+
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModNone))
+	if quit {
+		t.Fatal("F10 with active job should not quit immediately")
+	}
+	if !app.model.QuitConfirm.Open {
+		t.Fatal("expected quit confirmation dialog")
+	}
+
+	quit2, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModShift))
+	if !quit2 {
+		t.Fatal("Shift+F10 should quit immediately")
+	}
+	if app.model.QuitConfirm.Open {
+		t.Fatal("quit confirm should be cleared on immediate quit")
+	}
+}
+
 func TestQuickFilterEmptyOverlayThenTypingEnterOnFileClearsFuzzy(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "alpha.txt"))
@@ -4136,7 +4160,10 @@ yellow = "#ffff00"
 		"panel.blocked.header", "panel.blocked.row.normal", "panel.blocked.row.directory",
 		"panel.blocked.row.symlink", "panel.blocked.row.selected", "panel.blocked.row.cursor",
 		"panel.blocked.row.cursor.selected", "panel.folder.diskscan", "panel.folder.diskscan_excluded",
-		"menu.spinner", "panel.usage.prefix.normal", "panel.usage.prefix.selected",
+		"menu.spinner", "menu.progress.done", "menu.progress.remaining",
+		"menu.job.queued", "menu.job.running", "menu.job.paused", "menu.job.canceled",
+		"menu.job.failed", "menu.job.decision", "menu.job.completed",
+		"panel.usage.prefix.normal", "panel.usage.prefix.selected",
 		"panel.usage.prefix.cursor.active", "panel.usage.prefix.cursor.inactive",
 		"panel.usage.prefix.cursor.selected",
 		"fuzzy.input", "fuzzy.input.nomatch", "fuzzy.highlight", "fuzzy.highlight.cursor",

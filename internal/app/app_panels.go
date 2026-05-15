@@ -28,7 +28,7 @@ func (a *App) reloadActive(successMessage string) {
 			a.setErrorMessage("Refresh failed", err)
 			return
 		}
-		a.model.Right.RefreshVolumeSpace()
+		a.requestVolumeSpaceRefreshAsync(ui.RightPanel)
 		a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 		return
 	}
@@ -36,7 +36,7 @@ func (a *App) reloadActive(successMessage string) {
 		a.setErrorMessage("Refresh failed", err)
 		return
 	}
-	a.model.Left.RefreshVolumeSpace()
+	a.requestVolumeSpaceRefreshAsync(ui.LeftPanel)
 	a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 }
 
@@ -200,6 +200,13 @@ func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
 		if p == "" || p == "." {
 			return "", false
 		}
+		if a.pathVolumeContendsWithActiveJob(p) {
+			parent := filepath.Clean(filepath.Dir(p))
+			if parent != "" && parent != "." && parent != p {
+				return parent, true
+			}
+			return p, true
+		}
 		fi, err := os.Stat(p)
 		if err != nil {
 			return "", false
@@ -249,6 +256,9 @@ func (a *App) syncFollowFromActive() {
 	followerID := a.inactivePanelID()
 	follower := a.panelByID(followerID)
 	if filepath.Clean(follower.Path) == targetPath {
+		return
+	}
+	if a.pathVolumeContendsWithActiveJob(targetPath) {
 		return
 	}
 	if err := follower.Load(targetPath); err != nil {

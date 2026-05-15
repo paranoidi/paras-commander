@@ -63,12 +63,19 @@ func menuBarRightTailRuneCount(attention, perm string, showMenuBarSpinner bool) 
 }
 
 // drawMenuBarBlank fills the menu row with menu background and no labels (modal overlays block the menu).
-func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
+func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
 	primitive.Text(screen, rect.X, rect.Y, rect.Width, "", styles.MenuBar)
+	tailW := menuBarRightTailRuneCount(attention, perm, showMenuBarSpinner)
+	clipExclusive := menuBarMenusClipExclusive(rect, tailW)
+	gapStart := rect.X
+	gapWidth := clipExclusive - gapStart
+	if gapWidth > 0 {
+		DrawMenuBarJobsGap(screen, rect.Y, gapStart, gapWidth, jobsStrip, styles)
+	}
 	drawMenuBarRightTail(screen, rect, attention, perm, styles.StatusWaitingInput, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
 }
 
-func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.Definition, styles theme.Theme, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
+func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
 	x := rect.X
 	primitive.Text(screen, x, rect.Y, rect.Width, "", styles.MenuBar)
 	tailW := menuBarRightTailRuneCount(attention, perm, showMenuBarSpinner)
@@ -94,6 +101,11 @@ func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.
 			break
 		}
 		x += labelW + 1
+	}
+	gapStart := min(x, clipExclusive)
+	gapWidth := clipExclusive - gapStart
+	if gapWidth > 0 {
+		DrawMenuBarJobsGap(screen, rect.Y, gapStart, gapWidth, jobsStrip, styles)
 	}
 	drawMenuBarRightTail(screen, rect, attention, perm, styles.StatusWaitingInput, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
 }
@@ -127,6 +139,45 @@ func menuBarMenusEndX(rect Rect, menus []menu.Definition, permissionTailRunes in
 		x += labelW + 1
 	}
 	return min(x, clip)
+}
+
+// DrawMenuBarJobsGapOnly repaints the jobs queue/progress gap between menu labels and the right tail.
+// It does not redraw menu labels, the tail, or the rest of the frame — use after job progress updates.
+func DrawMenuBarJobsGapOnly(screen tcell.Screen, layout Layout, model Model, menus []menu.Definition, styles theme.Theme) bool {
+	if !model.MenuBarLayoutReserved() || layout.Menu.Width <= 0 {
+		return false
+	}
+	showMenuBarSpinner := model.MenuBarActivitySpinner
+	tailW := menuBarRightTailRuneCount(model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner)
+	rect := layout.Menu
+	clipEx := menuBarMenusClipExclusive(rect, tailW)
+	var gapStart, gapWidth int
+	if model.ModalDialogOpen() || model.ViewMode == ViewFilePreview {
+		gapStart = rect.X
+	} else {
+		gapStart = menuBarMenusEndX(rect, menus, tailW)
+	}
+	gapWidth = clipEx - gapStart
+	if gapWidth <= 0 {
+		return false
+	}
+	DrawMenuBarJobsGap(screen, rect.Y, gapStart, gapWidth, model.MenuBarJobs, styles)
+	return true
+}
+
+// DrawMenuBarSpinnerOnly updates the single activity-spinner cell on the menu row without a full repaint.
+func DrawMenuBarSpinnerOnly(screen tcell.Screen, layout Layout, model Model, styles theme.Theme) bool {
+	if !model.MenuBarLayoutReserved() || layout.Menu.Width <= 0 {
+		return false
+	}
+	showSpinner := model.MenuBarActivitySpinner
+	rect := layout.Menu
+	last := rect.X + rect.Width - menuBarPermRightMargin - 1
+	if !showSpinner || last < rect.X || last >= rect.X+rect.Width {
+		return false
+	}
+	screen.SetContent(last, rect.Y, MenuBarSpinnerGlyph(model.SpinPhase), nil, styles.MenuSpinner)
+	return true
 }
 
 func drawMenuBarRightTail(screen tcell.Screen, rect Rect, attention, perm string, alertStyle, detailStyle, spinnerStyle tcell.Style, showMenuBarSpinner bool, spinPhase uint8) {

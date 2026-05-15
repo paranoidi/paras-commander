@@ -5,6 +5,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
 func (a *App) render() {
@@ -20,6 +21,7 @@ func (a *App) render() {
 	a.reconcileAfterEvent()
 	a.model.MenuBarPermission = a.menuBarPermissionText()
 	a.model.MenuBarJobsAttention = a.menuBarJobsAttentionText()
+	a.model.MenuBarJobs = a.menuBarJobsStripSnapshot()
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
 	a.model.FooterKeys = a.activeFooterKeys()
 	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsageDescendIntoMountPoints
@@ -42,7 +44,52 @@ func (a *App) render() {
 		a.model.CommandsDisplay = nil
 	}
 	ui.Render(a.screen, a.model, a.styles)
+	a.emitScreenAfterFullRender()
 	a.armSpinnerRedrawTimer()
+}
+
+// emitScreenAfterFullRender flushes the terminal after ui.Render. When ScreenRenderHashCache is on,
+// identical consecutive frames skip Show() to reduce redundant terminal traffic.
+func (a *App) emitScreenAfterFullRender() {
+	if !a.config.UI.ScreenRenderHashCache {
+		a.screen.Show()
+		return
+	}
+	h := ui.HashScreenLogical(a.screen)
+	if h == a.lastScreenContentHash {
+		return
+	}
+	a.lastScreenContentHash = h
+	a.screen.Show()
+}
+
+// emitScreenAfterPartialPaint runs after targeted SetContent calls (e.g. menu-bar spinner) so
+// the hash cache stays aligned with what the terminal displays.
+func (a *App) emitScreenAfterPartialPaint() {
+	a.screen.Show()
+	if a.config.UI.ScreenRenderHashCache {
+		a.lastScreenContentHash = ui.HashScreenLogical(a.screen)
+	}
+}
+
+// paintMenuBarJobsStripOnly updates Model.MenuBarJobs and repaints only the menu-bar jobs gap
+// (queue + progress between labels and permission tail). Caller sets lastJobBatchMenuBarStripOnly.
+func (a *App) paintMenuBarJobsStripOnly() bool {
+	if !a.model.MenuBarLayoutReserved() {
+		return false
+	}
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if layout.TooSmall {
+		return false
+	}
+	a.model.MenuBarJobs = a.menuBarJobsStripSnapshot()
+	menus := menu.ActiveDefinitions(a.model.MenuDefinitions)
+	if !ui.DrawMenuBarJobsGapOnly(a.screen, layout, a.model, menus, a.styles) {
+		return false
+	}
+	a.emitScreenAfterPartialPaint()
+	return true
 }
 
 func (a *App) menuBarJobsAttentionText() string {

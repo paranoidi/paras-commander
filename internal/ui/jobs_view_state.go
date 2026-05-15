@@ -7,6 +7,9 @@ import "github.com/paranoidi/paras-commander/internal/jobs"
 func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool) []JobEntry {
 	entries := make([]JobEntry, 0, len(jobList))
 	for _, j := range jobList {
+		if j == nil {
+			continue
+		}
 		sources := append([]string(nil), j.Sources...)
 		var pending *jobs.BlockerDetails
 		if j.PendingBlocker != nil {

@@ -245,6 +245,9 @@ func (a *App) handleCommandsViewKey(event *tcell.EventKey) bool {
 	if nextAction == keymap.ActionAppQuit {
 		return a.handleQuit()
 	}
+	if nextAction == keymap.ActionAppQuitImmediate {
+		return a.handleQuitImmediate()
+	}
 	if nextAction == keymap.ActionAppOpenMenu {
 		a.openMenu()
 		return false

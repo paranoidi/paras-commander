@@ -40,6 +40,7 @@ func TestParseKeyNamedAndModifiers(t *testing.T) {
 	}{
 		{input: "F10", want: Chord{Key: tcell.KeyF10}},
 		{input: "S-F6", want: Chord{Key: tcell.KeyF6, Mod: tcell.ModShift}},
+		{input: "S-F10", want: Chord{Key: tcell.KeyF10, Mod: tcell.ModShift}},
 		{input: "pgup", want: Chord{Key: tcell.KeyPgUp}},
 		{input: "C-d", want: Chord{Key: tcell.KeyCtrlD}},
 		{input: "C-M-d", want: Chord{Key: tcell.KeyCtrlD, Mod: tcell.ModAlt}},
@@ -101,6 +102,7 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		wantBool bool
 	}{
 		{tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModNone), ActionAppQuit, true},
+		{tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModShift), ActionAppQuitImmediate, true},
 		{tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModNone), ActionPanelDiskUsageScan, true},
 		{tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModCtrl), ActionPanelDiskUsageScan, true},
 		{tcell.NewEventKey(tcell.KeyRune, 0x04, tcell.ModCtrl), ActionPanelDiskUsageScan, true},

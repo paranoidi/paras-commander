@@ -202,6 +202,9 @@ type UIConfig struct {
 	// MessageLogMaxEntries caps how many status/toast lines are retained for the Messages view (oldest dropped).
 	// Zero means use the built-in default (see DefaultMessageLogMaxEntries).
 	MessageLogMaxEntries int `toml:"message_log_max_entries"`
+	// ScreenRenderHashCache, when true, hashes the logical cell buffer after each full render and skips
+	// screen.Show when unchanged from the last flush. Default DefaultScreenRenderHashCache.
+	ScreenRenderHashCache bool `toml:"screen_render_hash_cache"`
 }
 
 type FilterConfig struct {
@@ -228,6 +231,10 @@ type JobsConfig struct {
 	ThroughputChartBinMS int `toml:"throughput_chart_bin_ms"`
 	// ThroughputChartEnabled controls the details-panel throughput strip: progress does not update strip data and the chart is not rendered when false.
 	ThroughputChartEnabled bool `toml:"throughput_chart_enabled"`
+	// RefreshVolumeSpaceOnProgress runs async statfs on both panels when a progress job wake is applied (see applyJobRefreshes).
+	RefreshVolumeSpaceOnProgress bool `toml:"refresh_volume_space_on_progress"`
+	// VolumeSpaceRefreshIntervalSecs is how often to refresh panel free space while any job is unfinished (0 disables periodic refresh).
+	VolumeSpaceRefreshIntervalSecs int `toml:"volume_space_refresh_interval_secs"`
 }
 
 type OperationsConfig struct {
@@ -288,6 +295,7 @@ func Default() Config {
 			PanelZoomInactivePercent:             DefaultPanelZoomInactivePercent,
 			ShrunkenShowsNameOnly:        DefaultShrunkenShowsNameOnly,
 			MessageLogMaxEntries:         DefaultMessageLogMaxEntries,
+			ScreenRenderHashCache:       DefaultScreenRenderHashCache,
 		},
 		Filter: FilterConfig{
 			Mode:              FilterModeFuzzy,
@@ -305,7 +313,9 @@ func Default() Config {
 			ProgressEmitMinIntervalMS: DefaultProgressEmitMinIntervalMS,
 			ThroughputChartWindowSec:  DefaultThroughputChartWindowSec,
 			ThroughputChartBinMS:      DefaultThroughputChartBinMS,
-			ThroughputChartEnabled:    DefaultThroughputChartEnabled,
+			ThroughputChartEnabled:          DefaultThroughputChartEnabled,
+			RefreshVolumeSpaceOnProgress:    DefaultRefreshVolumeSpaceOnProgress,
+			VolumeSpaceRefreshIntervalSecs:  DefaultVolumeSpaceRefreshIntervalSecs,
 		},
 		Operations: OperationsConfig{
 			PreservePermissions:        DefaultPreservePermissions,
@@ -837,6 +847,13 @@ func (c *Config) Validate() error {
 	}
 	if c.Jobs.ThroughputChartBinMS > throughputChartBinMaxMS {
 		c.Jobs.ThroughputChartBinMS = throughputChartBinMaxMS
+	}
+	if c.Jobs.VolumeSpaceRefreshIntervalSecs < 0 {
+		c.Jobs.VolumeSpaceRefreshIntervalSecs = builtin.Jobs.VolumeSpaceRefreshIntervalSecs
+	}
+	const volumeSpaceIntervalMaxSecs = 3600
+	if c.Jobs.VolumeSpaceRefreshIntervalSecs > volumeSpaceIntervalMaxSecs {
+		c.Jobs.VolumeSpaceRefreshIntervalSecs = volumeSpaceIntervalMaxSecs
 	}
 	if c.Operations.CopyBufferKiB <= 0 {
 		c.Operations.CopyBufferKiB = builtin.Operations.CopyBufferKiB

@@ -47,3 +47,22 @@ func TestJobEntriesFromJobsOmitsThroughputStripWhenDisabled(t *testing.T) {
 		t.Fatalf("ThroughputStrip = %v, want nil", got[0].ThroughputStrip)
 	}
 }
+
+func TestJobEntriesFromJobsOneEntryPerJobWithMultipleSources(t *testing.T) {
+	t.Parallel()
+	j := &jobs.Job{
+		ID:          "j1",
+		Type:        jobs.TypeCopy,
+		Status:      jobs.StatusQueued,
+		Sources:     []string{"/a/1", "/a/2", "/a/3"},
+		Destination: "/dst",
+		TotalFiles:  3,
+	}
+	got := JobEntriesFromJobs([]*jobs.Job{j}, false)
+	if len(got) != 1 {
+		t.Fatalf("len = %d, want 1 job row for a multi-source transfer", len(got))
+	}
+	if len(got[0].Sources) != len(j.Sources) {
+		t.Fatalf("Sources = %v", got[0].Sources)
+	}
+}

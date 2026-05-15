@@ -31,6 +31,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"exit", "close"},
 		},
 		{
+			ID:           ActionAppQuitImmediate,
+			Title:        "Quit without confirmation",
+			Section:      "App",
+			DefaultKeys:  []string{"S-F10"},
+			PreferredKey: "S-F10",
+			Keywords:     []string{"exit", "close", "force", "kill"},
+		},
+		{
 			ID:           ActionAppOpenMenu,
 			Title:        "Open menu",
 			Section:      "App",

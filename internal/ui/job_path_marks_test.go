@@ -38,7 +38,7 @@ func TestEntryPathMarkedByJobs_finishedIgnored(t *testing.T) {
 		Sources:     []string{root},
 		Destination: t.TempDir(),
 	}
-	if EntryPathMarkedByJobs(child, []JobEntry{j}) {
+	if EntryPathMarkedByJobsFromEntries(child, []JobEntry{j}) {
 		t.Fatal("finished job should not mark")
 	}
 }
@@ -60,13 +60,13 @@ func TestEntryPathMarkedByJobs_sourceSubtree(t *testing.T) {
 		Destination: dst,
 		DestIsDir:   true,
 	}
-	if !EntryPathMarkedByJobs(root, []JobEntry{j}) {
+	if !EntryPathMarkedByJobsFromEntries(root, []JobEntry{j}) {
 		t.Fatal("source root")
 	}
-	if !EntryPathMarkedByJobs(filepath.Join(root, "bar", "asdf"), []JobEntry{j}) {
+	if !EntryPathMarkedByJobsFromEntries(filepath.Join(root, "bar", "asdf"), []JobEntry{j}) {
 		t.Fatal("nested under source")
 	}
-	if EntryPathMarkedByJobs(filepath.Join(tmp, "other"), []JobEntry{j}) {
+	if EntryPathMarkedByJobsFromEntries(filepath.Join(tmp, "other"), []JobEntry{j}) {
 		t.Fatal("outside tree")
 	}
 }
@@ -93,13 +93,13 @@ func TestEntryPathMarkedByJobs_destinationSubtree(t *testing.T) {
 		Destination: dstParent,
 		DestIsDir:   true,
 	}
-	if !EntryPathMarkedByJobs(dstRoot, []JobEntry{j}) {
+	if !EntryPathMarkedByJobsFromEntries(dstRoot, []JobEntry{j}) {
 		t.Fatal("resolved dest root")
 	}
-	if !EntryPathMarkedByJobs(filepath.Join(dstRoot, "nested"), []JobEntry{j}) {
+	if !EntryPathMarkedByJobsFromEntries(filepath.Join(dstRoot, "nested"), []JobEntry{j}) {
 		t.Fatal("under resolved dest root")
 	}
-	if EntryPathMarkedByJobs(filepath.Join(dstParent, "unrelated"), []JobEntry{j}) {
+	if EntryPathMarkedByJobsFromEntries(filepath.Join(dstParent, "unrelated"), []JobEntry{j}) {
 		t.Fatal("sibling under dst parent not part of this job")
 	}
 }
@@ -130,7 +130,7 @@ func TestEntryPathJobMarkStatus_moveListedBeforeDeleteNestedChildPrefersDelete(t
 	}
 	// Same ordering issue as user report: transfer job appears first in JobsList.
 	list := []JobEntry{move, del}
-	marked, st := EntryPathJobMarkStatus(child, list)
+	marked, st := EntryPathJobMarkStatusFromEntries(child, list)
 	if !marked {
 		t.Fatal("expected child path marked")
 	}
@@ -165,7 +165,7 @@ func TestEntryPathJobMarkStatus_finishedDeleteQueuedMoveOverlappingUsesMove(t *t
 		Sources:  []string{child},
 	}
 	list := []JobEntry{move, delDone}
-	marked, st := EntryPathJobMarkStatus(child, list)
+	marked, st := EntryPathJobMarkStatusFromEntries(child, list)
 	if !marked {
 		t.Fatal("expected child path still marked by queued move (ancestor source)")
 	}
@@ -207,7 +207,7 @@ func TestEntryPathJobMarkStatus_twoMovesSameTypeMoreSpecificSourceWins(t *testin
 	}
 	// Wider job first; row is under the narrower source only.
 	list := []JobEntry{moveWide, moveNarrow}
-	marked, st := EntryPathJobMarkStatus(deep, list)
+	marked, st := EntryPathJobMarkStatusFromEntries(deep, list)
 	if !marked {
 		t.Fatal("expected row marked")
 	}
@@ -247,7 +247,7 @@ func TestEntryPathJobMarkStatus_copyListedBeforeMoveSameSubtreePrefersMove(t *te
 	}
 	row := filepath.Join(src, "x")
 	list := []JobEntry{copyJ, moveJ}
-	marked, st := EntryPathJobMarkStatus(row, list)
+	marked, st := EntryPathJobMarkStatusFromEntries(row, list)
 	if !marked {
 		t.Fatal("expected row marked")
 	}
@@ -291,7 +291,7 @@ func TestEntryPathJobMarkStatus_jobEntriesFromJobsKeepsBothQueuedJobs(t *testing
 	if len(list) != 2 {
 		t.Fatalf("JobsList len = %d, want 2 (delete not removed when move exists)", len(list))
 	}
-	marked, st := EntryPathJobMarkStatus(child, list)
+	marked, st := EntryPathJobMarkStatusFromEntries(child, list)
 	if !marked {
 		t.Fatal("expected child path marked")
 	}

@@ -130,6 +130,21 @@ type App struct {
 	// (readdir, statfs) from key-press handling so selections stay sub-millisecond.
 	jobRefreshTerminal bool
 	jobRefreshProgress bool
+
+	volumeRefreshInFlight [2]atomic.Bool
+
+	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
+	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
+	lastScreenContentHash uint64
+
+	// jobsAffectVisible is set by pollJobEvents when a repaint may change the browser/jobs UI.
+	jobsAffectVisible bool
+	// lastJobBatchMenuBarStripOnly is set when applyJobEventBatch can satisfy the repaint by
+	// painting only the menu-bar jobs gap (browser, progress-only, no listing/marks changes).
+	lastJobBatchMenuBarStripOnly bool
+	jobsListStale                bool
+	jobPathMarksVersion          uint64
+	jobsListVersion              uint64
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -332,20 +347,20 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		commandsCtx:      cmdCtx,
 		commandsCancel:   cmdCancel,
 		model: ui.Model{
-			Left:                   left,
-			Right:                  right,
-			ActivePanel:            ui.LeftPanel,
-			SelectionsPanelMaxRows: cfg.UI.SelectionsPanelMaxRows,
-			HideMenuBar:            !cfg.UI.ShowMenuBar,
-			ShowFileIcons:                 cfg.UI.ShowFileIcons,
-			ShrunkenShowsNameOnly:         cfg.UI.ShrunkenShowsNameOnly,
-			JobsThroughputChartEnabled:    cfg.Jobs.ThroughputChartEnabled,
-			UserHomeDir:                   homeDir,
-			DiskUsage:              duEngine,
-			DiskUsageShown:         false,
-			ViewMode:               ui.ViewBrowser,
-			JobActivity:            make(map[string][]string),
-			MenuDefinitions:        menu.BrowserDefinitions(km),
+			Left:                       left,
+			Right:                      right,
+			ActivePanel:                ui.LeftPanel,
+			SelectionsPanelMaxRows:     cfg.UI.SelectionsPanelMaxRows,
+			HideMenuBar:                !cfg.UI.ShowMenuBar,
+			ShowFileIcons:              cfg.UI.ShowFileIcons,
+			ShrunkenShowsNameOnly:      cfg.UI.ShrunkenShowsNameOnly,
+			JobsThroughputChartEnabled: cfg.Jobs.ThroughputChartEnabled,
+			UserHomeDir:                homeDir,
+			DiskUsage:                  duEngine,
+			DiskUsageShown:             false,
+			ViewMode:                   ui.ViewBrowser,
+			JobActivity:                make(map[string][]string),
+			MenuDefinitions:            menu.BrowserDefinitions(km),
 			ThemeDialog: ui.ThemeDialogState{
 				CurrentName: styles.Name,
 				Choices:     uiThemeChoices(themeChoices),
@@ -366,6 +381,15 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	// App.reconcileAfterEvent(), which runs at the end of every Run-loop iteration.
 	jobState.SetEmitHook(app.onJobEmitted)
 	jobState.StartWorker(app.jobStopCh)
+	suppressHeavyPathProbes := func(path string) bool {
+		return app.pathVolumeContendsWithActiveJob(path)
+	}
+	app.model.Left.SuppressHeavyPathProbes = suppressHeavyPathProbes
+	app.model.Right.SuppressHeavyPathProbes = suppressHeavyPathProbes
+	app.syncJobPathMarks()
+	if secs := cfg.Jobs.VolumeSpaceRefreshIntervalSecs; secs > 0 {
+		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
+	}
 	return app, nil
 }
 
@@ -376,17 +400,27 @@ func (a *App) Run() error {
 	a.render()
 	for {
 		event := a.screen.PollEvent()
-		jobsDirty := a.pollJobEvents()
+		var jobsDirty bool
+		var shouldRenderJobs bool
 		didRender := false
+		pollJobsAfter := false
+		applyJobRefreshesAfter := false
+		pollDiskUsageAfter := true
 
 		switch event := event.(type) {
 		case *tcell.EventResize:
+			pollJobsAfter = true
 			a.clearPanelSyncFollowNavCoalesce()
 			a.screen.Sync()
 			a.ensurePanelsVisible()
 			a.render()
 			didRender = true
 		case *tcell.EventKey:
+			if a.model.ViewMode != ui.ViewJobs {
+				a.drainDiscardProgressEvents()
+			} else {
+				pollJobsAfter = true
+			}
 			quit, keyRendered := a.handleKey(event)
 			if quit {
 				a.stopWorker()
@@ -397,14 +431,24 @@ func (a *App) Run() error {
 			}
 		case *tcell.EventInterrupt:
 			switch d := event.Data().(type) {
+			case jobsWakePayload:
+				pollJobsAfter = true
+				applyJobRefreshesAfter = true
+				// Progress wakes are frequent; reconciling both panels here caused
+				// extra sync/stat work and starved spinner ticks on slow mounts.
+				pollDiskUsageAfter = false
 			case statusMessageExpiryPayload:
 				a.applyStatusMessageExpiry(d)
 				a.render()
 				didRender = true
 			case spinnerTickPayload:
+				pollDiskUsageAfter = false
 				if a.menuBarSpinnerBusy() {
 					a.model.SpinPhase++
-					a.render()
+					w, h := a.screen.Size()
+					if ui.DrawMenuBarSpinnerOnly(a.screen, a.layoutForTerminalSize(w, h), a.model, a.styles) {
+						a.emitScreenAfterPartialPaint()
+					}
 					didRender = true
 				}
 			case diskIdleSortPayload:
@@ -415,9 +459,9 @@ func (a *App) Run() error {
 				a.resortPanelsDiskUsageSorted()
 				a.render()
 				didRender = true
-			case jobsWakePayload:
-				a.applyJobRefreshes()
-				if jobsDirty {
+			case volumeSpaceRefreshPayload:
+				pollDiskUsageAfter = false
+				if a.applyVolumeSpaceRefresh(d) && a.model.ViewMode == ui.ViewJobs {
 					a.render()
 					didRender = true
 				}
@@ -446,11 +490,26 @@ func (a *App) Run() error {
 			}
 		}
 
-		if jobsDirty && !didRender {
-			a.render()
+		if pollJobsAfter {
+			jobsDirty = a.pollJobEvents()
+			shouldRenderJobs = jobsDirty && a.jobsAffectVisible
 		}
-		a.reconcileAfterEvent()
-		a.pollDiskUsageUpdates()
+		if applyJobRefreshesAfter {
+			a.applyJobRefreshes()
+		}
+		if shouldRenderJobs && !didRender {
+			if !a.lastJobBatchMenuBarStripOnly || !a.paintMenuBarJobsStripOnly() {
+				a.render()
+			}
+			didRender = true
+		}
+		if a.menuBarSpinnerBusy() {
+			a.armSpinnerRedrawTimer()
+		}
+		if pollDiskUsageAfter {
+			a.reconcileAfterEvent()
+			a.pollDiskUsageUpdates()
+		}
 	}
 }
 

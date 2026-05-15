@@ -14,6 +14,15 @@ func (a *App) handleQuit() bool {
 	return true
 }
 
+// handleQuitImmediate exits without prompting, stopping background jobs and command batches.
+func (a *App) handleQuitImmediate() bool {
+	if a.model.QuitConfirm.Open {
+		a.model.QuitConfirm = ui.QuitConfirmState{}
+	}
+	a.stopWorker()
+	return true
+}
+
 func (a *App) hasActiveJobs() bool {
 	for _, j := range a.jobState.AllJobs() {
 		if j.Status == jobs.StatusQueued || j.Status == jobs.StatusPaused || j.Status == jobs.StatusRunning || j.Status == jobs.StatusWaitingDecision {
@@ -36,6 +45,7 @@ func (a *App) openQuitConfirm() {
 		st.WarnLine2 = "Quitting will cancel running subprocesses."
 	}
 	a.model.QuitConfirm = st
+	a.render()
 }
 
 func (a *App) handleQuitConfirmKey(event *tcell.EventKey) bool {

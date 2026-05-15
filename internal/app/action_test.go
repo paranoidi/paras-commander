@@ -53,6 +53,15 @@ func TestActionFromKeyMapsNavigationKeys(t *testing.T) {
 	}
 }
 
+func TestActionFromKeyMapsQuitImmediate(t *testing.T) {
+	km := defaultKeymap(t)
+	ev := tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModShift)
+	got := lookupActionForView(ev, km, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionAppQuitImmediate {
+		t.Fatalf("Shift+F10 = %v, want %v", got, keymap.ActionAppQuitImmediate)
+	}
+}
+
 // TestActionFromKeyMapsCtrlCToJobsCancel verifies that Ctrl+C triggers
 // jobs.cancel only while the jobs view is focused. After the unification
 // of jobs.* shortcuts under [jobs_action_keys], Ctrl+C is no longer in

@@ -167,21 +167,37 @@ func footerWithEscClose(rest []menu.FunctionKey) []menu.FunctionKey {
 	return out
 }
 
+func (a *App) prepareGlobalQuitShortcutCleanup() {
+	a.clearPanelSyncFollowNavCoalesce()
+	if a.inQuickFilterUI() {
+		a.activePanel().CancelFilter(a.activeViewportRows())
+	}
+}
+
 func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	a.deferDiskIdleSortOnUserActivity()
 	// Global F10 quit - works from any mode, any dialog, any menu.
+	// Shift+F10 defaults to app.quit-immediate and must not fall through to plain F10.
 	if event.Key() == tcell.KeyF10 {
-		a.clearPanelSyncFollowNavCoalesce()
-		// Clear active filter before quit (preserves existing behavior).
-		if a.inQuickFilterUI() {
-			a.activePanel().CancelFilter(a.activeViewportRows())
+		if event.Modifiers()&tcell.ModShift != 0 {
+			if id, ok := a.keys.Lookup(event); ok && id == keymap.ActionAppQuitImmediate {
+				a.prepareGlobalQuitShortcutCleanup()
+				return a.handleQuitImmediate(), false
+			}
+		} else {
+			a.prepareGlobalQuitShortcutCleanup()
+			if a.model.QuitConfirm.Open {
+				a.model.QuitConfirm = ui.QuitConfirmState{}
+				a.stopWorker()
+				return true, false
+			}
+			return a.handleQuit(), false
 		}
-		if a.model.QuitConfirm.Open {
-			a.model.QuitConfirm = ui.QuitConfirmState{}
-			a.stopWorker()
-			return true, false
-		}
-		return a.handleQuit(), false
+	}
+
+	if id, ok := a.keys.Lookup(event); ok && id == keymap.ActionAppQuitImmediate {
+		a.prepareGlobalQuitShortcutCleanup()
+		return a.handleQuitImmediate(), false
 	}
 
 	resolvedAction := a.actionFromKeyEvent(event)
@@ -377,6 +393,8 @@ func (a *App) finishResolvedKeyboardAction(nextAction string) (quit bool, render
 		return false, true
 	case keymap.ActionAppQuit:
 		return a.handleQuit(), false
+	case keymap.ActionAppQuitImmediate:
+		return a.handleQuitImmediate(), false
 	default:
 		a.dispatch(nextAction)
 		return false, true
@@ -441,6 +459,8 @@ func (a *App) dispatchActionLikeKeyboardShortcut(actionID string) bool {
 		return false
 	case keymap.ActionAppQuit:
 		return a.handleQuit()
+	case keymap.ActionAppQuitImmediate:
+		return a.handleQuitImmediate()
 	default:
 		a.dispatch(actionID)
 		return false

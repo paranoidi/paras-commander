@@ -176,6 +176,9 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 	if nextAction == keymap.ActionAppQuit {
 		return a.handleQuit()
 	}
+	if nextAction == keymap.ActionAppQuitImmediate {
+		return a.handleQuitImmediate()
+	}
 	if nextAction != "" {
 		if nextAction == keymap.ActionFileView || nextAction == keymap.ActionFileQuickView {
 			return false

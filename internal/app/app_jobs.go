@@ -31,7 +31,11 @@ func (a *App) openJobsView() {
 	a.model.MenuDefinitions = menu.JobsDefinitions(a.keys, a.keysJobs)
 	a.model.Menu.ActiveMenu = menu.DefaultIndexJobs()
 	a.model.JobsView = ui.JobsViewState{Selected: 0, FocusPane: 0, ListScroll: 0, DetailScroll: 0, ActivityScroll: 0, ConflictButtonFocus: 0}
-	a.syncJobsList()
+	if a.jobsListStale {
+		a.syncJobsList()
+	} else if len(a.model.JobsList) == 0 {
+		a.syncJobsList()
+	}
 	a.ensureJobsViewSelectionVisible()
 }
 
@@ -53,6 +57,22 @@ func (a *App) applyJobsRetention() {
 func (a *App) syncJobsList() {
 	a.applyJobsRetention()
 	a.model.JobsList = ui.JobEntriesFromJobs(a.jobState.AllJobs(), a.config.Jobs.ThroughputChartEnabled)
+	a.jobsListStale = false
+	a.jobsListVersion++
+}
+
+func (a *App) syncJobPathMarks() {
+	a.model.JobPathMarks = ui.JobPathMarksFromJobs(a.jobState.AllJobs())
+	a.jobPathMarksVersion++
+}
+
+func jobEventUpdatesMarks(t jobs.EventType) bool {
+	switch t {
+	case jobs.EventEnqueued, jobs.EventStarted, jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled, jobs.EventJobBlockerRequest:
+		return true
+	default:
+		return false
+	}
 }
 
 func (a *App) ensureJobsViewSelectionVisible() {
@@ -130,6 +150,9 @@ func (a *App) handleJobsViewKey(event *tcell.EventKey) bool {
 	nextAction := a.actionFromKeyEvent(event)
 	if nextAction == keymap.ActionAppQuit {
 		return a.handleQuit()
+	}
+	if nextAction == keymap.ActionAppQuitImmediate {
+		return a.handleQuitImmediate()
 	}
 	if nextAction == keymap.ActionAppOpenMenu {
 		a.openMenu()
@@ -429,22 +452,20 @@ func (a *App) moveJobInQueue(delta int) {
 
 func (a *App) selectedQueueIndex() (qi int, ok bool) {
 	row := a.model.JobsView.Selected
-	if row < 0 {
+	if row < 0 || row >= len(a.model.JobsList) {
 		return 0, false
 	}
-	active := a.jobState.ActiveJob()
-	if active != nil {
-		if row == 0 {
-			return 0, false
+	id := a.model.JobsList[row].ID
+	q := a.jobQueue()
+	for i, j := range q.AllJobs() {
+		if j != nil && j.ID == id {
+			if j.Status.IsFinished() {
+				return 0, false
+			}
+			return i, true
 		}
-		qi = row - 1
-	} else {
-		qi = row
 	}
-	if qi < 0 || qi >= a.jobQueue().Len() {
-		return 0, false
-	}
-	return qi, true
+	return 0, false
 }
 
 func (a *App) cancelSelectedJob() {
@@ -462,6 +483,7 @@ func (a *App) cancelSelectedJob() {
 		return
 	}
 	a.syncJobsList()
+	a.syncJobPathMarks()
 	a.ensureJobsViewSelectionVisible()
 }
 
@@ -484,6 +506,7 @@ func (a *App) pauseSelectedQueuedJob() {
 		return
 	}
 	a.syncJobsList()
+	a.syncJobPathMarks()
 	a.ensureJobsViewSelectionVisible()
 }
 
@@ -506,6 +529,7 @@ func (a *App) resumeSelectedPausedJob() {
 		return
 	}
 	a.syncJobsList()
+	a.syncJobPathMarks()
 	a.ensureJobsViewSelectionVisible()
 }
 
@@ -513,6 +537,7 @@ func (a *App) clearFinishedJobs() {
 	a.jobQueue().ClearFinished()
 	a.jobState.ClearFinishedArchive()
 	a.syncJobsList()
+	a.syncJobPathMarks()
 	if a.model.ViewMode == ui.ViewJobs {
 		a.ensureJobsViewSelectionVisible()
 	}
@@ -527,7 +552,8 @@ func (a *App) jobsWakeDebounce() time.Duration {
 }
 
 // onJobEmitted wakes PollEvent so the main loop can drain jobs.Events().
-// Progress emits are debounced; other emits wake immediately.
+// Progress emits use [jobs].refresh_debounce_ms for all views so the menu-bar strip can update
+// without blocking the event loop; other event types wake immediately.
 func (a *App) onJobEmitted(ev jobs.Event) {
 	if ev.Type == jobs.EventProgress {
 		a.armJobsWakeDebounced()
@@ -575,48 +601,143 @@ func (a *App) stopJobsWakeTimer() {
 	a.jobsWakeTimer = nil
 }
 
-// pollJobEvents drains pending worker events into UI model state.
-// It returns whether any event was processed (caller should repaint when appropriate).
-func (a *App) pollJobEvents() bool {
+// coalesceJobEventBatch keeps the last EventProgress per job ID so a drained channel
+// does not apply hundreds of ETA/strip updates in one PollEvent iteration.
+func coalesceJobEventBatch(batch []jobs.Event) []jobs.Event {
+	if len(batch) <= 1 {
+		return batch
+	}
+	progressSlot := make(map[string]int)
+	out := make([]jobs.Event, 0, len(batch))
+	for _, ev := range batch {
+		if ev.Type != jobs.EventProgress {
+			out = append(out, ev)
+			continue
+		}
+		if idx, ok := progressSlot[ev.JobID]; ok {
+			out[idx] = ev
+			continue
+		}
+		progressSlot[ev.JobID] = len(out)
+		out = append(out, ev)
+	}
+	return out
+}
+
+func (a *App) drainJobEventChannel() []jobs.Event {
 	var batch []jobs.Event
 	for {
 		select {
 		case ev := <-a.jobState.Events():
 			batch = append(batch, ev)
 		default:
-			if len(batch) == 0 {
-				return false
-			}
-			viewJobs := a.model.ViewMode == ui.ViewJobs
-			var sawTerminal, sawProgress bool
-			for _, ev := range batch {
-				a.jobState.ApplyEvent(ev)
-				a.appendJobActivity(ev)
-				a.updateJobMessage(ev)
-				switch ev.Type {
-				case jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled:
-					sawTerminal = true
-				case jobs.EventProgress:
-					sawProgress = true
-				}
-			}
-			// Accumulate which panel refresh is owed — actual filesystem I/O is
-			// deferred to applyJobRefreshes() which runs only on jobsWakePayload,
-			// never on key-press events. This prevents statfs/readdir syscalls from
-			// blocking the UI event loop and causing visible selection lag.
-			if sawTerminal {
-				a.jobRefreshTerminal = true
-				a.jobRefreshProgress = false
-			} else if sawProgress && !a.jobRefreshTerminal {
-				a.jobRefreshProgress = true
-			}
-			a.syncJobsList()
-			if viewJobs {
-				a.ensureJobsViewSelectionVisible()
-			}
-			return true
+			return coalesceJobEventBatch(batch)
 		}
 	}
+}
+
+// maxProgressEventsDiscardPerDrain bounds how many progress events the browser discards per
+// key/drain call so a full channel cannot starve navigation and other PollEvent work.
+const maxProgressEventsDiscardPerDrain = 64
+
+// drainDiscardProgressEvents pulls progress events from the channel during key handling so the UI
+// stays responsive; progress is applied in coalesced batches (see maxProgressEventsDiscardPerDrain).
+// Non-progress events are applied immediately after flushing any pending progress.
+func (a *App) drainDiscardProgressEvents() {
+	if a.model.ViewMode == ui.ViewJobs {
+		return
+	}
+	var pending []jobs.Event
+	var progressBuf []jobs.Event
+	for {
+		select {
+		case ev := <-a.jobState.Events():
+			if ev.Type == jobs.EventProgress {
+				progressBuf = append(progressBuf, ev)
+				if len(progressBuf) >= maxProgressEventsDiscardPerDrain {
+					a.applyJobEventBatch(coalesceJobEventBatch(progressBuf))
+					if len(pending) > 0 {
+						a.applyJobEventBatch(coalesceJobEventBatch(pending))
+					}
+					return
+				}
+				continue
+			}
+			if len(progressBuf) > 0 {
+				a.applyJobEventBatch(coalesceJobEventBatch(progressBuf))
+				progressBuf = progressBuf[:0]
+			}
+			pending = append(pending, ev)
+		default:
+			if len(progressBuf) > 0 {
+				a.applyJobEventBatch(coalesceJobEventBatch(progressBuf))
+			}
+			if len(pending) > 0 {
+				a.applyJobEventBatch(coalesceJobEventBatch(pending))
+			}
+			return
+		}
+	}
+}
+
+// applyJobEventBatch merges worker events into UI model state and sets refresh/repaint flags.
+func (a *App) applyJobEventBatch(batch []jobs.Event) {
+	if len(batch) == 0 {
+		return
+	}
+	viewJobs := a.model.ViewMode == ui.ViewJobs
+	var sawTerminal, sawProgress, sawBlocker, sawMarkUpdate bool
+	for _, ev := range batch {
+		a.jobState.ApplyEvent(ev)
+		a.appendJobActivity(ev)
+		a.updateJobMessage(ev)
+		switch ev.Type {
+		case jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled:
+			sawTerminal = true
+		case jobs.EventProgress:
+			sawProgress = true
+		case jobs.EventJobBlockerRequest:
+			sawBlocker = true
+		}
+		if jobEventUpdatesMarks(ev.Type) {
+			sawMarkUpdate = true
+		}
+	}
+	if sawTerminal {
+		a.jobRefreshTerminal = true
+		a.jobRefreshProgress = false
+	} else if sawProgress && !a.jobRefreshTerminal {
+		a.jobRefreshProgress = true
+	}
+	if sawMarkUpdate {
+		a.syncJobPathMarks()
+	}
+	if viewJobs {
+		a.syncJobsList()
+		a.ensureJobsViewSelectionVisible()
+	} else if sawTerminal || sawBlocker || sawMarkUpdate || sawProgress {
+		a.jobsListStale = true
+	}
+	a.jobsAffectVisible = viewJobs || sawTerminal || sawBlocker ||
+		(sawMarkUpdate && (ui.PanelTouchedByJobs(a.model.Left.Path, a.model.JobPathMarks) ||
+			ui.PanelTouchedByJobs(a.model.Right.Path, a.model.JobPathMarks) ||
+			a.jobState.JobsWaitingDecision() > 0)) ||
+		(sawProgress && a.model.MenuBarLayoutReserved() && a.jobState.HasNonFinishedJob())
+	a.lastJobBatchMenuBarStripOnly = !viewJobs && sawProgress && !sawTerminal && !sawBlocker && !sawMarkUpdate &&
+		a.model.MenuBarLayoutReserved() && a.jobState.HasNonFinishedJob()
+}
+
+// pollJobEvents drains pending worker events into UI model state.
+// It returns whether any event was processed (caller should repaint when appropriate).
+func (a *App) pollJobEvents() bool {
+	a.jobsAffectVisible = false
+	a.lastJobBatchMenuBarStripOnly = false
+	batch := a.drainJobEventChannel()
+	if len(batch) == 0 {
+		return false
+	}
+	a.applyJobEventBatch(batch)
+	return true
 }
 
 // applyJobRefreshes executes the filesystem I/O side-effects that were deferred
@@ -632,7 +753,9 @@ func (a *App) applyJobRefreshes() {
 		a.refreshBothPanels()
 	case a.jobRefreshProgress:
 		a.jobRefreshProgress = false
-		a.refreshBothPanelsVolumeSpace()
+		if a.config.Jobs.RefreshVolumeSpaceOnProgress {
+			a.requestBothPanelsVolumeSpaceRefreshAsync()
+		}
 	}
 }
 
@@ -898,6 +1021,7 @@ func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, s
 	}
 	a.jobState.AddJob(job)
 	a.syncJobsList()
+	a.syncJobPathMarks()
 }
 
 func (a *App) enqueueDeleteJob(sources []string) {
@@ -910,6 +1034,7 @@ func (a *App) enqueueDeleteJob(sources []string) {
 	}
 	a.jobState.AddJob(job)
 	a.syncJobsList()
+	a.syncJobPathMarks()
 }
 
 func (a *App) sourceAndDestination() (sources []string, dest string) {

@@ -39,24 +39,24 @@ type Theme struct {
 	MenuDropdownAccent   tcell.Style
 	MenuDetail           tcell.Style
 
-	PanelActiveFrame   tcell.Style
-	PanelInactiveFrame tcell.Style
+	PanelActiveFrame     tcell.Style
+	PanelInactiveFrame   tcell.Style
 	PanelActiveSurface   tcell.Style
 	PanelInactiveSurface tcell.Style
-	PanelActiveTitle   tcell.Style
-	PanelInactiveTitle tcell.Style
+	PanelActiveTitle     tcell.Style
+	PanelInactiveTitle   tcell.Style
 	// PanelActiveSpace / PanelInactiveSpace style the panel top-row volume summary (free / total + percent).
-	PanelActiveSpace   tcell.Style
-	PanelInactiveSpace tcell.Style
+	PanelActiveSpace    tcell.Style
+	PanelInactiveSpace  tcell.Style
 	PanelActiveHeader   tcell.Style
 	PanelInactiveHeader tcell.Style
-	PanelRowNormal       tcell.Style
-	PanelRowDirectory    tcell.Style
-	PanelRowSymlink      tcell.Style
-	PanelRowSelected     tcell.Style
-	PanelCursorActive    tcell.Style
-	PanelCursorInactive  tcell.Style
-	PanelCursorSelected  tcell.Style
+	PanelRowNormal      tcell.Style
+	PanelRowDirectory   tcell.Style
+	PanelRowSymlink     tcell.Style
+	PanelRowSelected    tcell.Style
+	PanelCursorActive   tcell.Style
+	PanelCursorInactive tcell.Style
+	PanelCursorSelected tcell.Style
 	// PanelSyncIndicator styles the "Sync →" / "← Sync" overlay drawn on the
 	// bottom border of the panel that drives latched panel sync.
 	PanelSyncIndicator tcell.Style
@@ -78,10 +78,21 @@ type Theme struct {
 	PanelBlockedCursorSelected tcell.Style
 
 	// Disk usage overlays (proportionally painted under listing rows once a scan ran).
-	PanelFolderDiskscan            tcell.Style
-	PanelFolderDiskscanExcluded    tcell.Style // directory rows skipped by disk-usage traversal (devicons)
+	PanelFolderDiskscan         tcell.Style
+	PanelFolderDiskscanExcluded tcell.Style // directory rows skipped by disk-usage traversal (devicons)
 	// MenuSpinner styles the menu-bar activity spinner (braille dot spinner).
 	MenuSpinner tcell.Style
+	// MenuProgress* styles segmented progress in the menu-bar jobs strip.
+	MenuProgressDone      tcell.Style
+	MenuProgressRemaining tcell.Style
+	// MenuJob* styles one-cell queue glyph per live job status in the menu bar.
+	MenuJobQueued                  tcell.Style
+	MenuJobRunning                 tcell.Style
+	MenuJobPaused                  tcell.Style
+	MenuJobCanceled                tcell.Style
+	MenuJobFailed                  tcell.Style
+	MenuJobDecision                tcell.Style
+	MenuJobCompleted               tcell.Style
 	PanelUsagePrefixNormal         tcell.Style
 	PanelUsagePrefixSelected       tcell.Style
 	PanelUsagePrefixCursorActive   tcell.Style
@@ -104,7 +115,7 @@ type Theme struct {
 	DialogInputInactive            tcell.Style
 	DialogInputInactivePlaceholder tcell.Style
 	DialogInputInactiveError       tcell.Style
-	DialogButtonInactive             tcell.Style
+	DialogButtonInactive           tcell.Style
 	DialogButtonActive             tcell.Style
 	DialogOptionInactive           tcell.Style
 	DialogOptionActive             tcell.Style
@@ -168,6 +179,19 @@ func (t Theme) DialogInputBaseStyle(focused, invalid bool) tcell.Style {
 // SymbolKeyPathPicker is the [symbols] table key for the path-picker affordance glyph.
 const SymbolKeyPathPicker = "path_picker"
 
+// Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
+const (
+	SymbolKeyMenuProgressDone      = "menu.progress.done"
+	SymbolKeyMenuProgressRemaining = "menu.progress.remaining"
+	SymbolKeyMenuJobQueued         = "menu.job.queued"
+	SymbolKeyMenuJobRunning        = "menu.job.running"
+	SymbolKeyMenuJobPaused         = "menu.job.paused"
+	SymbolKeyMenuJobCanceled       = "menu.job.canceled"
+	SymbolKeyMenuJobFailed         = "menu.job.failed"
+	SymbolKeyMenuJobDecision       = "menu.job.decision"
+	SymbolKeyMenuJobCompleted      = "menu.job.completed"
+)
+
 // SymbolPathPicker returns the trailing path-picker glyph from the theme, with a default
 // Nerd-Font private-use fallback when the key is absent.
 func (t Theme) SymbolPathPicker() string {
@@ -177,6 +201,86 @@ func (t Theme) SymbolPathPicker() string {
 		}
 	}
 	return "\uef0d"
+}
+
+// SymbolMenuProgressDone returns the filled segment glyph for the menu-bar progress bar.
+func (t Theme) SymbolMenuProgressDone() rune {
+	if g := t.menuBarSymbolTrim(SymbolKeyMenuProgressDone); g != 0 {
+		return g
+	}
+	return '\u25cf' // ●
+}
+
+// SymbolMenuProgressRemaining returns the empty segment glyph for the menu-bar progress bar.
+func (t Theme) SymbolMenuProgressRemaining() rune {
+	if g := t.menuBarSymbolTrim(SymbolKeyMenuProgressRemaining); g != 0 {
+		return g
+	}
+	return '\u25cb' // ○
+}
+
+func (t Theme) menuBarSymbolTrim(key string) rune {
+	if t.Symbols == nil {
+		return 0
+	}
+	s := strings.TrimSpace(t.Symbols[key])
+	if s == "" {
+		return 0
+	}
+	for _, r := range s {
+		return r
+	}
+	return 0
+}
+
+// SymbolMenuJob returns the queue glyph for a job status string (e.g. "queued", "running").
+// Uses [symbols] "menu.job.<status>" when set, otherwise compact Unicode (does not fall back to
+// the jobs-list Nerd Font keys like symbols.running — those are too wide/noisy on the menu bar).
+func (t Theme) SymbolMenuJob(status string) rune {
+	key := "menu.job." + status
+	if g := t.menuBarSymbolTrim(key); g != 0 {
+		return g
+	}
+	switch status {
+	case "queued":
+		return '\u25cb'
+	case "running":
+		return '\u25cf'
+	case "paused":
+		return '\u25d8'
+	case "canceled":
+		return '\u00d7'
+	case "failed":
+		return '!'
+	case "decision":
+		return '?'
+	case "completed":
+		return '\u2713'
+	default:
+		return '\u00b7'
+	}
+}
+
+// MenuJobStyle returns the style for one queue cell by job status string.
+func (t Theme) MenuJobStyle(status string) tcell.Style {
+	switch status {
+	case "queued":
+		return t.MenuJobQueued
+	case "running":
+		return t.MenuJobRunning
+	case "paused":
+		return t.MenuJobPaused
+	case "canceled":
+		return t.MenuJobCanceled
+	case "failed":
+		return t.MenuJobFailed
+	case "decision":
+		return t.MenuJobDecision
+	case "completed":
+		return t.MenuJobCompleted
+	default:
+		return t.MenuDetail
+	}
 }
 
 type styleSpec struct {
@@ -273,6 +377,15 @@ var requiredStyleKeys = []string{
 	"jobs.icons.error",
 	"jobs.icons.input_required",
 	"jobs.icons.completed",
+	"menu.progress.done",
+	"menu.progress.remaining",
+	"menu.job.queued",
+	"menu.job.running",
+	"menu.job.paused",
+	"menu.job.canceled",
+	"menu.job.failed",
+	"menu.job.decision",
+	"menu.job.completed",
 	"footer.key",
 	"footer.label",
 }
@@ -606,6 +719,15 @@ func parse(data []byte) (Theme, error) {
 		PanelFolderDiskscan:            styles["panel.folder.diskscan"],
 		PanelFolderDiskscanExcluded:    styles["panel.folder.diskscan_excluded"],
 		MenuSpinner:                    styles["menu.spinner"],
+		MenuProgressDone:               styles["menu.progress.done"],
+		MenuProgressRemaining:          styles["menu.progress.remaining"],
+		MenuJobQueued:                  styles["menu.job.queued"],
+		MenuJobRunning:                 styles["menu.job.running"],
+		MenuJobPaused:                  styles["menu.job.paused"],
+		MenuJobCanceled:                styles["menu.job.canceled"],
+		MenuJobFailed:                  styles["menu.job.failed"],
+		MenuJobDecision:                styles["menu.job.decision"],
+		MenuJobCompleted:               styles["menu.job.completed"],
 		PanelUsagePrefixNormal:         styles["panel.usage.prefix.normal"],
 		PanelUsagePrefixSelected:       styles["panel.usage.prefix.selected"],
 		PanelUsagePrefixCursorActive:   styles["panel.usage.prefix.cursor.active"],
@@ -628,7 +750,7 @@ func parse(data []byte) (Theme, error) {
 		DialogInputInactive:            styles["dialog.input.inactive"],
 		DialogInputInactivePlaceholder: styles["dialog.input.inactive.placeholder"],
 		DialogInputInactiveError:       styles["dialog.input.inactive.error"],
-		DialogButtonInactive:             styles["dialog.button.inactive"],
+		DialogButtonInactive:           styles["dialog.button.inactive"],
 		DialogButtonActive:             styles["dialog.button.active"],
 		DialogOptionInactive:           styles["dialog.option.inactive"],
 		DialogOptionActive:             styles["dialog.option.active"],

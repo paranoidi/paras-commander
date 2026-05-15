@@ -87,7 +87,7 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 	return strings.TrimSpace(nameTitle)
 }
 
-func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobs []JobEntry, syncDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool) {
+func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool) {
 	var borderStyle tcell.Style
 	var titleStyle tcell.Style
 	var headerStyle tcell.Style
@@ -277,7 +277,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				}
 			}
 			subtreeMark = entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
-			jobMark, jobStatus = EntryPathJobMarkStatus(entry.Path, jobs)
+			jobMark, jobStatus = EntryPathJobMarkStatus(entry.Path, jobMarks)
 			if jobMark {
 				glyphStr := jobRowLeadingIcon(jobStatus, styles)
 				if glyphStr != "" {
@@ -341,8 +341,11 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		var diskExcluded bool
 		if hasEntry {
 			iconKey = panelCursorIconThemeKey(fileListActive, chromeBlocked, entryIndex, state.Cursor, selected)
-			diskPending = showDiskUsage && painter != nil && cur.Type == localfs.EntryDirectory && painter.PendingForPanel(cur.Path, panelID)
-			if painter != nil && cur.Type == localfs.EntryDirectory {
+			// Mount-boundary / godu-excluded folder icons and tints are disk-usage UI only.
+			// DiskScanExcluded Stat's each directory row; on a network panel that runs even when the
+			// user navigates the other column and dominates latency during background copy I/O.
+			if showDiskUsage && painter != nil && cur.Type == localfs.EntryDirectory {
+				diskPending = painter.PendingForPanel(cur.Path, panelID)
 				diskExcluded = painter.DiskScanExcluded(cur.Path, diskUsageDescendIntoMountPoints, state.ListingDevice, state.ListingDeviceValid, diskUsageGoduIgnore)
 			}
 		}

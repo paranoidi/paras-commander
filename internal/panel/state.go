@@ -58,6 +58,9 @@ type State struct {
 	// HistoryBackward/Forward, Refresh, ToggleHidden, etc.). The app uses this to check whether disk-usage idle sorting
 	// can be applied immediately or needs to be deferred.
 	OnDirectoryChange func()
+	// SuppressHeavyPathProbes, when set, skips statfs and device lookup in load() for paths
+	// where those syscalls would contend with active background job I/O on the same volume.
+	SuppressHeavyPathProbes func(path string) bool
 }
 
 // FilterState tracks panel-local quick filter state.
@@ -599,10 +602,14 @@ func (s *State) load(path string, selectedName string, viewportRows int, indexFa
 
 	previousPath := s.Path
 	s.Path = listing.Path
-	s.refreshVolumeSpace(listing.Path)
-	dev, devOK := diskusage.PathDevice(listing.Path)
-	s.ListingDevice = dev
-	s.ListingDeviceValid = devOK
+	if s.SuppressHeavyPathProbes == nil || !s.SuppressHeavyPathProbes(listing.Path) {
+		s.refreshVolumeSpace(listing.Path)
+		dev, devOK := diskusage.PathDevice(listing.Path)
+		s.ListingDevice = dev
+		s.ListingDeviceValid = devOK
+	} else {
+		s.ListingDeviceValid = false
+	}
 	s.Entries = listing.Entries
 	s.Cursor = 0
 	s.ScrollOffset = 0

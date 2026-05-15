@@ -432,3 +432,52 @@ func TestStateHasUnfinishedWork(t *testing.T) {
 		}
 	})
 }
+
+func TestAllJobsIncludesEveryDequeuedRunnableBeforeLease(t *testing.T) {
+	s := NewState()
+	for _, id := range []string{"j0", "j1", "j2"} {
+		s.AddJob(&Job{ID: id, Type: TypeCopy, Status: StatusQueued, Sources: []string{"/x"}, Destination: "/y"})
+	}
+	_ = s.dequeueJob()
+	_ = s.dequeueJob()
+	s.mu.Lock()
+	pendN := len(s.pendingDequeued)
+	s.mu.Unlock()
+	if pendN != 2 {
+		t.Fatalf("len(pendingDequeued)=%d want 2", pendN)
+	}
+	if n := s.Queue().Len(); n != 1 {
+		t.Fatalf("queue.Len()=%d want 1", n)
+	}
+	if n := len(s.AllJobs()); n != 3 {
+		t.Fatalf("AllJobs() len=%d want 3", n)
+	}
+}
+
+func TestMenuBarStripStatusesOrderDoneOngoingQueued(t *testing.T) {
+	s := NewState()
+	s.mu.Lock()
+	s.finished = []*Job{
+		{ID: "d1", Status: StatusCompleted},
+		{ID: "d2", Status: StatusFailed},
+	}
+	s.active = &Job{ID: "run", Status: StatusRunning}
+	s.mu.Unlock()
+	s.queue.Enqueue(&Job{ID: "q1", Status: StatusQueued, Type: TypeCopy, Sources: []string{"/a"}, Destination: "/b"})
+	s.queue.Enqueue(&Job{ID: "q2", Status: StatusPaused, Type: TypeCopy, Sources: []string{"/c"}, Destination: "/d"})
+
+	got := s.MenuBarStripStatuses()
+	want := []string{
+		string(StatusCompleted), string(StatusFailed),
+		string(StatusRunning),
+		string(StatusQueued), string(StatusPaused),
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got len %d %#v, want len %d", len(got), got, len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("idx %d: got %q want %q (full %#v)", i, got[i], want[i], got)
+		}
+	}
+}

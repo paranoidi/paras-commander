@@ -27,10 +27,10 @@ type State struct {
 	blockerRegMu sync.Mutex
 	blockerWait  map[string]chan ConflictDecision
 
-	// pendingActive holds a job dequeued from the queue but not yet holding the transfer lease.
-	// It is set in dequeueJob() (called from runWorker) and nil'd in runJob after s.active is set.
-	// This prevents the job from being invisible in AllJobs() between dequeue and lease acquisition.
-	pendingActive *Job
+	// pendingDequeued lists jobs removed from the FIFO queue but not yet holding the transfer lease.
+	// runWorker may dequeue the next runnable job before an earlier runJob goroutine acquires the lease;
+	// keeping every dequeued job here ensures AllJobs() stays complete until each runJob claims s.active.
+	pendingDequeued []*Job
 
 	// TransferFunc is called by the worker to copy/move files, allowing tests to inject
 	// custom implementations. emit must be used for all job-related UI events (same path as State.emit).
@@ -39,9 +39,9 @@ type State struct {
 	emitMu   sync.RWMutex
 	emitHook func(Event)
 
-	throughputChartBin      time.Duration
-	throughputChartWindow   time.Duration
-	throughputChartEnabled  bool
+	throughputChartBin     time.Duration
+	throughputChartWindow  time.Duration
+	throughputChartEnabled bool
 }
 
 // SetThroughputChart configures fixed-bin scrolling for the jobs details throughput strip.
@@ -98,16 +98,25 @@ func (s *State) SetEmitHook(fn func(Event)) {
 	s.emitMu.Unlock()
 }
 
-// dequeueJob removes the first runnable job from the queue and sets it as pendingActive
+// dequeueJob removes the first runnable job from the queue and appends it to pendingDequeued
 // while it waits for the transfer lease. Caller must not be holding s.mu.
 func (s *State) dequeueJob() *Job {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	job := s.queue.DequeueRunnable()
 	if job != nil {
-		s.pendingActive = job
+		s.pendingDequeued = append(s.pendingDequeued, job)
 	}
 	return job
+}
+
+func (s *State) removePendingDequeuedByID(id string) {
+	for i, j := range s.pendingDequeued {
+		if j != nil && j.ID == id {
+			s.pendingDequeued = append(s.pendingDequeued[:i], s.pendingDequeued[i+1:]...)
+			return
+		}
+	}
 }
 
 // AddJob adds a job to the queue and emits an enqueued event.
@@ -162,8 +171,10 @@ func (s *State) HasUnfinishedWork() bool {
 			return true
 		}
 	}
-	if s.pendingActive != nil && !s.pendingActive.Status.IsFinished() {
-		return true
+	for _, j := range s.pendingDequeued {
+		if j != nil && !j.Status.IsFinished() {
+			return true
+		}
 	}
 	for _, j := range s.queue.AllJobs() {
 		if !j.Status.IsFinished() {
@@ -201,14 +212,79 @@ func (s *State) AllJobs() []*Job {
 			all = append(all, j)
 		}
 	}
-	if s.pendingActive != nil {
-		all = append(all, s.pendingActive)
+	for _, j := range s.pendingDequeued {
+		if j != nil {
+			all = append(all, j)
+		}
 	}
 	all = append(all, s.queue.AllJobs()...)
 	if len(s.finished) > 0 {
 		all = append(all, s.finished...)
 	}
 	return all
+}
+
+// MenuBarStripStatuses returns job statuses for the menu-bar strip: finished retention
+// (left), then in-flight work (active, blocker, pending dequeue), then FIFO queued/paused
+// jobs (right)—matching a left-to-right “past → current → waiting” progress metaphor.
+func (s *State) MenuBarStripStatuses() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := len(s.finished)
+	if s.active != nil {
+		n++
+	}
+	for _, j := range s.waitingBlocker {
+		if j != nil && !j.Status.IsFinished() {
+			n++
+		}
+	}
+	for _, j := range s.pendingDequeued {
+		if j != nil && !j.Status.IsFinished() {
+			n++
+		}
+	}
+	for _, j := range s.queue.AllJobs() {
+		if j != nil && !j.Status.IsFinished() {
+			n++
+		}
+	}
+	out := make([]string, 0, n)
+	for _, j := range s.finished {
+		if j != nil {
+			out = append(out, string(j.Status))
+		}
+	}
+	if s.active != nil {
+		out = append(out, string(s.active.Status))
+	}
+	for _, j := range s.waitingBlocker {
+		if j != nil && !j.Status.IsFinished() {
+			out = append(out, string(j.Status))
+		}
+	}
+	for _, j := range s.pendingDequeued {
+		if j != nil && !j.Status.IsFinished() {
+			out = append(out, string(j.Status))
+		}
+	}
+	for _, j := range s.queue.AllJobs() {
+		if j == nil || j.Status.IsFinished() {
+			continue
+		}
+		out = append(out, string(j.Status))
+	}
+	return out
+}
+
+// HasNonFinishedJob reports whether any known job is not in a terminal state.
+func (s *State) HasNonFinishedJob() bool {
+	for _, j := range s.AllJobs() {
+		if j != nil && !j.Status.IsFinished() {
+			return true
+		}
+	}
+	return false
 }
 
 // Snapshot returns a copy of all jobs (queued + active) for rendering.
@@ -374,18 +450,20 @@ func (s *State) CancelJob(id string) bool {
 		s.mu.Unlock()
 		return true
 	}
-	if s.pendingActive != nil && s.pendingActive.ID == id {
-		job := s.pendingActive
-		s.pendingActive = nil
-		job.Status = StatusCanceled
-		job.FinishedAt = time.Now()
-		s.mu.Unlock()
-		s.emit(Event{
-			Type:   EventCanceled,
-			JobID:  id,
-			Status: StatusCanceled,
-		})
-		return true
+	for i, pj := range s.pendingDequeued {
+		if pj != nil && pj.ID == id {
+			job := pj
+			s.pendingDequeued = append(s.pendingDequeued[:i], s.pendingDequeued[i+1:]...)
+			job.Status = StatusCanceled
+			job.FinishedAt = time.Now()
+			s.mu.Unlock()
+			s.emit(Event{
+				Type:   EventCanceled,
+				JobID:  id,
+				Status: StatusCanceled,
+			})
+			return true
+		}
 	}
 	if s.removeWaitingBlockerUnlocked(id) {
 		s.mu.Unlock()
@@ -491,8 +569,8 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	jobCtx, cancel := context.WithCancel(context.Background())
 	s.mu.Lock()
 	job.Status = StatusRunning
+	s.removePendingDequeuedByID(job.ID)
 	s.active = job
-	s.pendingActive = nil
 	s.cancelRun = cancel
 	s.mu.Unlock()
 
@@ -567,14 +645,21 @@ func (s *State) workerShutdown() {
 		}
 	}
 	s.waitingBlocker = nil
-	if s.pendingActive != nil && !s.pendingActive.Status.IsFinished() {
-		s.pendingActive.Status = StatusCanceled
+	for _, j := range s.pendingDequeued {
+		if j != nil && !j.Status.IsFinished() {
+			j.Status = StatusCanceled
+		}
 	}
-	s.pendingActive = nil
+	s.pendingDequeued = nil
 	if s.active != nil && !s.active.Status.IsFinished() {
 		s.active.Status = StatusCanceled
 	}
 	s.mu.Unlock()
+}
+
+// QueueTestEvent enqueues ev on the events channel (for tests).
+func (s *State) QueueTestEvent(ev Event) {
+	s.emit(ev)
 }
 
 func (s *State) emit(ev Event) {
@@ -603,8 +688,10 @@ func (s *State) findJobUnlocked(id string) *Job {
 			return job
 		}
 	}
-	if s.pendingActive != nil && s.pendingActive.ID == id {
-		return s.pendingActive
+	for _, j := range s.pendingDequeued {
+		if j != nil && j.ID == id {
+			return j
+		}
 	}
 	if s.active != nil && s.active.ID == id {
 		return s.active

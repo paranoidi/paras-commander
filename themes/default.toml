@@ -31,6 +31,15 @@ menu.dropdown.accent = { fg = "white", bold = false }
 menu.dropdown.frame = { fg = "bright_blue", bg = "blue" }
 menu.dropdown.selected = { fg = "black", bg = "bright_blue", bold = true }
 menu.spinner = { fg = "bright_magenta", bg = "default", bold = true }
+menu.progress.done = { fg = "green", bg = "default" }
+menu.progress.remaining = { fg = "bright_black", bg = "default" }
+menu.job.queued = { fg = "yellow", bg = "default" }
+menu.job.running = { fg = "green", bg = "default" }
+menu.job.paused = { fg = "yellow", bg = "default" }
+menu.job.canceled = { fg = "red", bg = "default" }
+menu.job.failed = { fg = "bright_red", bg = "default" }
+menu.job.decision = { fg = "cyan", bg = "default" }
+menu.job.completed = { fg = "green", bg = "default" }
 
 status.info = { fg = "white", bg = "default" }
 status.warn = { fg = "yellow", bg = "default", bold = true }
@@ -130,3 +139,12 @@ failed = "\uf06a"
 decision = "\uf059"
 completed = "\uf05d"
 path_picker = "\uf0ca"
+"menu.progress.done" = "─"
+"menu.progress.remaining" = "─"
+"menu.job.queued" = "○"
+"menu.job.running" = "◎"
+"menu.job.paused" = "●"
+"menu.job.canceled" = "●"
+"menu.job.failed" = "●"
+"menu.job.decision" = "●"
+"menu.job.completed" = "●"

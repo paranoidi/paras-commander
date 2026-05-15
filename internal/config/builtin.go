@@ -29,6 +29,11 @@ const (
 	// DefaultThroughputChartEnabled turns on the jobs details throughput strip + chart rendering.
 	DefaultThroughputChartEnabled = true
 
+	// DefaultRefreshVolumeSpaceOnProgress triggers async statfs on both panels when copy progress wakes the UI.
+	DefaultRefreshVolumeSpaceOnProgress = true
+	// DefaultVolumeSpaceRefreshIntervalSecs is the period for background volume free-space refresh while jobs run (0 disables).
+	DefaultVolumeSpaceRefreshIntervalSecs = 5
+
 	DefaultPreservePermissions        = true
 	DefaultPreserveTimestamps         = true
 	DefaultCopyBufferKiB              = 256
@@ -50,6 +55,10 @@ const (
 	// DefaultShrunkenShowsNameOnly: when true, file panels whose list row text width is below
 	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
 	DefaultShrunkenShowsNameOnly = true
+
+	// DefaultScreenRenderHashCache skips terminal Show when the logical screen buffer matches the
+	// last pushed frame (reduces flicker and I/O on slow links). Set [ui].screen_render_hash_cache = false to always flush.
+	DefaultScreenRenderHashCache = true
 	// ShrunkenListingRowTextWidthThreshold is the row text width (cells) below which a panel counts as
 	// "shrunken" for optional name-only listing (see [ui].shrunken_shows_name_only).
 	// 40 targets a 50/50 split on an 80-column terminal (inner listing width 38) with file icons off;

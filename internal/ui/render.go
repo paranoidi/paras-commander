@@ -42,9 +42,11 @@ type Model struct {
 	ViewMode               ViewMode
 	JobsView               JobsViewState
 	JobsList               []JobEntry
-	JobActivity            map[string][]string
-	CommandsView           CommandsViewState
-	CommandsList           []CommandRunEntry
+	// JobPathMarks is the browser file-list job glyph snapshot (progress fields omitted).
+	JobPathMarks []JobPathMark
+	JobActivity  map[string][]string
+	CommandsView CommandsViewState
+	CommandsList []CommandRunEntry
 	// CommandsDisplay is a mutex-backed snapshot refreshed in App.render for ViewCommands (avoids races with worker updates).
 	CommandsDisplay []CommandRunEntry
 	MessagesView    MessagesViewState
@@ -119,6 +121,8 @@ type Model struct {
 	// MenuBarJobsAttention is the core jobs/conflict label (e.g. "! 1"); the menu bar pads it with
 	// spaces on both sides for themed backgrounds and separates it from the activity spinner.
 	MenuBarJobsAttention string
+	// MenuBarJobs is the jobs queue + progress snapshot for the menu-bar gap (App.render).
+	MenuBarJobs MenuBarJobsStrip
 }
 
 // PrimaryModal identifies which exclusive modal occupies the primary dialog layer (see package dialog).
@@ -206,7 +210,8 @@ func (m Model) MenuBarInteractive() bool {
 	return !m.HideMenuBar && !m.ModalDialogOpen() && m.ViewMode != ViewFilePreview
 }
 
-// Render draws the full screen.
+// Render paints model into the screen's logical cell buffer. The caller must invoke
+// screen.Show() (or screen.Sync()) to flush to the terminal.
 func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	width, height := screen.Size()
 	layout := CalculateLayout(width, height, model.MenuBarLayoutReserved(), PanelWidthSplit{
@@ -219,7 +224,6 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 
 	if layout.TooSmall {
 		primitive.Text(screen, 0, 0, width, "Terminal too small", styles.StatusInfo)
-		screen.Show()
 		return
 	}
 
@@ -228,9 +232,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	permW := menuBarRightTailRuneCount(model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner)
 	if model.MenuBarLayoutReserved() {
 		if model.ModalDialogOpen() || model.ViewMode == ViewFilePreview {
-			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
+			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
 		} else {
-			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
+			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
 		}
 	}
 	msg := strings.TrimSpace(model.Message)
@@ -277,7 +281,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused)
 		} else {
-			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobsList, syncDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint)
+			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobPathMarks, syncDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint)
 		}
 		if leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
@@ -287,7 +291,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused)
 		} else {
-			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobsList, syncDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint)
+			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobPathMarks, syncDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint)
 		}
 		if rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
@@ -355,5 +359,5 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	if model.MessageDialog.Open {
 		dialog.DrawMessageDialog(screen, layout, model.MessageDialog, styles)
 	}
-	screen.Show()
+	// Caller must invoke screen.Show() or screen.Sync() so the terminal updates.
 }

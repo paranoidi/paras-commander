@@ -48,7 +48,7 @@ func jobTypeMarkPriority(t string) int {
 
 // longestMatchingRootLen returns the maximum length of a clean path (source or
 // resolved destination) that matches absPath as root-of-subtree, or 0 if none.
-func longestMatchingRootLen(j JobEntry, absPath string) int {
+func longestMatchingRootLen(j JobPathMark, absPath string) int {
 	p := filepath.Clean(absPath)
 	maxLen := 0
 	for _, src := range j.Sources {
@@ -79,8 +79,8 @@ func longestMatchingRootLen(j JobEntry, absPath string) int {
 // delete is preferred over move over copy; among jobs of the same type, the
 // match with the longest source/destination root wins; further ties keep the
 // earliest job in jobList.
-func EntryPathJobMarkStatus(absPath string, jobList []JobEntry) (bool, string) {
-	if absPath == "" || len(jobList) == 0 {
+func EntryPathJobMarkStatus(absPath string, jobMarks []JobPathMark) (bool, string) {
+	if absPath == "" || len(jobMarks) == 0 {
 		return false, ""
 	}
 	p := filepath.Clean(absPath)
@@ -88,7 +88,7 @@ func EntryPathJobMarkStatus(absPath string, jobList []JobEntry) (bool, string) {
 	bestLen := -1
 	bestIdx := -1
 	var bestStatus string
-	for i, j := range jobList {
+	for i, j := range jobMarks {
 		if jobs.Status(j.Status).IsFinished() {
 			continue
 		}
@@ -113,8 +113,50 @@ func EntryPathJobMarkStatus(absPath string, jobList []JobEntry) (bool, string) {
 }
 
 // EntryPathMarkedByJobs reports whether absPath is a source or destination tree root
-// for any non-finished job in jobList (queued, running, or waiting on conflict).
-func EntryPathMarkedByJobs(absPath string, jobList []JobEntry) bool {
-	marked, _ := EntryPathJobMarkStatus(absPath, jobList)
+// for any non-finished job in jobMarks (queued, running, or waiting on conflict).
+func EntryPathMarkedByJobs(absPath string, jobMarks []JobPathMark) bool {
+	marked, _ := EntryPathJobMarkStatus(absPath, jobMarks)
 	return marked
+}
+
+// PanelTouchedByJobs reports whether panelPath overlaps any non-finished job source or destination tree.
+func PanelTouchedByJobs(panelPath string, jobMarks []JobPathMark) bool {
+	if panelPath == "" || len(jobMarks) == 0 {
+		return false
+	}
+	p := filepath.Clean(panelPath)
+	for _, j := range jobMarks {
+		if jobs.Status(j.Status).IsFinished() {
+			continue
+		}
+		for _, src := range j.Sources {
+			if src == "" {
+				continue
+			}
+			cs := filepath.Clean(src)
+			if pathEqualOrUnder(p, cs) || pathEqualOrUnder(cs, p) {
+				return true
+			}
+			if j.Destination == "" {
+				continue
+			}
+			dst := resolvedJobDestinationPath(cs, j.Destination, j.DestIsDir)
+			if dst != "" && dst != "." {
+				if pathEqualOrUnder(p, dst) || pathEqualOrUnder(dst, p) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// EntryPathJobMarkStatusFromEntries is a test helper that maps JobEntry slices to path marks.
+func EntryPathJobMarkStatusFromEntries(absPath string, jobList []JobEntry) (bool, string) {
+	return EntryPathJobMarkStatus(absPath, JobPathMarksFromEntries(jobList))
+}
+
+// EntryPathMarkedByJobsFromEntries is a test helper that maps JobEntry slices to path marks.
+func EntryPathMarkedByJobsFromEntries(absPath string, jobList []JobEntry) bool {
+	return EntryPathMarkedByJobs(absPath, JobPathMarksFromEntries(jobList))
 }

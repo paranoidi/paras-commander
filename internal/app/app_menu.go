@@ -219,6 +219,8 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 		switch item.Action {
 		case keymap.ActionAppQuit:
 			return a.handleQuit()
+		case keymap.ActionAppQuitImmediate:
+			return a.handleQuitImmediate()
 		case keymap.ActionPanelSelectGroup:
 			a.openGroupSelect("select")
 		case keymap.ActionPanelUnselectGroup:
@@ -286,9 +288,9 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 			return
 		}
 		if panelScope == ui.LeftPanel {
-			a.model.Right.RefreshVolumeSpace()
+			a.requestVolumeSpaceRefreshAsync(ui.RightPanel)
 		} else {
-			a.model.Left.RefreshVolumeSpace()
+			a.requestVolumeSpaceRefreshAsync(ui.LeftPanel)
 		}
 		a.setTransientMessage(label+" refreshed", ui.MessageUrgencyInfo)
 	case keymap.ActionPanelDiskUsageScan:

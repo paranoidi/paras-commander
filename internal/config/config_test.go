@@ -81,6 +81,9 @@ func TestDefaultPathPickerValidateDelayMS(t *testing.T) {
 	if got := Default().UI.ShrunkenShowsNameOnly; got != DefaultShrunkenShowsNameOnly {
 		t.Fatalf("ShrunkenShowsNameOnly = %v, want %v", got, DefaultShrunkenShowsNameOnly)
 	}
+	if got := Default().UI.ScreenRenderHashCache; got != DefaultScreenRenderHashCache {
+		t.Fatalf("ScreenRenderHashCache = %v, want %v", got, DefaultScreenRenderHashCache)
+	}
 }
 
 func TestValidateResetsInvalidPanelZoomPercents(t *testing.T) {

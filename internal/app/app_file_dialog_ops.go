@@ -20,11 +20,6 @@ func (a *App) refreshBothPanels() {
 	_ = a.model.Right.Refresh(viewportRows)
 }
 
-func (a *App) refreshBothPanelsVolumeSpace() {
-	a.model.Left.RefreshVolumeSpace()
-	a.model.Right.RefreshVolumeSpace()
-}
-
 func (a *App) openRenameDialog(p *panel.State) {
 	if len(p.SelectedPaths) > 0 {
 		a.openMassRenameDialog(p)
