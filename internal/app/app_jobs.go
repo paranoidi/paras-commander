@@ -600,11 +600,15 @@ func (a *App) pollJobEvents() bool {
 					sawProgress = true
 				}
 			}
+			// Accumulate which panel refresh is owed — actual filesystem I/O is
+			// deferred to applyJobRefreshes() which runs only on jobsWakePayload,
+			// never on key-press events. This prevents statfs/readdir syscalls from
+			// blocking the UI event loop and causing visible selection lag.
 			if sawTerminal {
-				a.applyJobsRetention()
-				a.refreshBothPanels()
-			} else if sawProgress {
-				a.refreshBothPanelsVolumeSpace()
+				a.jobRefreshTerminal = true
+				a.jobRefreshProgress = false
+			} else if sawProgress && !a.jobRefreshTerminal {
+				a.jobRefreshProgress = true
 			}
 			a.syncJobsList()
 			if viewJobs {
@@ -612,6 +616,23 @@ func (a *App) pollJobEvents() bool {
 			}
 			return true
 		}
+	}
+}
+
+// applyJobRefreshes executes the filesystem I/O side-effects that were deferred
+// by pollJobEvents(). It must only be called from the jobsWakePayload handler in
+// Run() — never during key-event handling — so that statfs/readdir syscalls never
+// block the UI event loop while the user is navigating or making selections.
+func (a *App) applyJobRefreshes() {
+	switch {
+	case a.jobRefreshTerminal:
+		a.jobRefreshTerminal = false
+		a.jobRefreshProgress = false
+		a.applyJobsRetention()
+		a.refreshBothPanels()
+	case a.jobRefreshProgress:
+		a.jobRefreshProgress = false
+		a.refreshBothPanelsVolumeSpace()
 	}
 }
 

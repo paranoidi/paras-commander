@@ -123,6 +123,13 @@ type App struct {
 	commandsBatchesInflight atomic.Int32
 	commandsCtx             context.Context
 	commandsCancel          context.CancelFunc
+
+	// jobRefreshTerminal / jobRefreshProgress are set by pollJobEvents() when job events
+	// indicate a panel refresh is needed, and consumed by applyJobRefreshes() which is
+	// called ONLY from the jobsWakePayload handler. This decouples heavy filesystem I/O
+	// (readdir, statfs) from key-press handling so selections stay sub-millisecond.
+	jobRefreshTerminal bool
+	jobRefreshProgress bool
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -403,6 +410,7 @@ func (a *App) Run() error {
 				a.render()
 				didRender = true
 			case jobsWakePayload:
+				a.applyJobRefreshes()
 				if jobsDirty {
 					a.render()
 					didRender = true
