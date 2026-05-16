@@ -234,7 +234,7 @@ func (t Theme) menuBarSymbolTrim(key string) rune {
 }
 
 // SymbolMenuJob returns the queue glyph for a job status string (e.g. "queued", "running").
-// Uses [symbols] "menu.job.<status>" when set, otherwise compact Unicode (does not fall back to
+// Uses [symbols] menu.job.<status> when set, otherwise compact Unicode (does not fall back to
 // the jobs-list Nerd Font keys like symbols.running — those are too wide/noisy on the menu bar).
 func (t Theme) SymbolMenuJob(status string) rune {
 	key := "menu.job." + status
@@ -809,24 +809,44 @@ func symbolsField(raw map[string]any) (map[string]string, error) {
 	}
 	symbols := map[string]string{}
 	for name, rawValue := range table {
-		switch v := rawValue.(type) {
-		case string:
-			symbols[name] = v
-		case map[string]any:
-			sym, ok := v["symbol"]
-			if !ok {
-				return nil, fmt.Errorf("symbols.%s: missing 'symbol' field", name)
-			}
-			symStr, ok := sym.(string)
-			if !ok {
-				return nil, fmt.Errorf("symbols.%s.symbol must be a string", name)
-			}
-			symbols[name] = symStr
-		default:
-			return nil, fmt.Errorf("symbols.%s: must be a string or inline table with 'symbol' field", name)
+		if err := collectSymbolEntry(name, rawValue, symbols); err != nil {
+			return nil, err
 		}
 	}
 	return symbols, nil
+}
+
+// collectSymbolEntry stores one leaf string at fullKey, or recurses into nested tables.
+// A value of { symbol = "…" } (only key) remains supported as a leaf for a single entry.
+func collectSymbolEntry(fullKey string, rawValue any, symbols map[string]string) error {
+	switch v := rawValue.(type) {
+	case string:
+		symbols[fullKey] = v
+		return nil
+	case map[string]any:
+		if len(v) == 0 {
+			return fmt.Errorf("symbols.%s: empty table", fullKey)
+		}
+		if sym, ok := v["symbol"]; ok {
+			if len(v) != 1 {
+				return fmt.Errorf("symbols.%s: use nested tables when defining multiple keys; { symbol = \"...\" } must be the only entry", fullKey)
+			}
+			symStr, ok := sym.(string)
+			if !ok {
+				return fmt.Errorf("symbols.%s.symbol must be a string", fullKey)
+			}
+			symbols[fullKey] = symStr
+			return nil
+		}
+		for childName, childVal := range v {
+			if err := collectSymbolEntry(fullKey+"."+childName, childVal, symbols); err != nil {
+				return err
+			}
+		}
+		return nil
+	default:
+		return fmt.Errorf("symbols.%s: must be a string, nested table of strings, or inline { symbol = \"...\" }", fullKey)
+	}
 }
 
 func paletteField(raw map[string]any) (map[string]tcell.Color, error) {
