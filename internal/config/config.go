@@ -236,6 +236,14 @@ type JobsConfig struct {
 	FreeSpaceOnProgressWake bool `toml:"free_space_on_progress_wake"`
 	// FreeSpacePollIntervalSecs is how often to refresh panel free space while any job is unfinished (0 disables).
 	FreeSpacePollIntervalSecs int `toml:"free_space_poll_interval_secs"`
+	// ScanYieldIntervalMS is cooperative sleep during pre-scan while a transfer job is running.
+	ScanYieldIntervalMS int `toml:"scan_yield_interval_ms"`
+	// ScanYieldEveryN triggers cooperative yield every N walk entries during pre-scan while a transfer is active.
+	ScanYieldEveryN int `toml:"scan_yield_every_n"`
+	// ScanNiceIncrement is added to nice on Linux for pre-scan when a transfer is active (0 uses builtin default).
+	ScanNiceIncrement int `toml:"scan_nice_increment"`
+	// ScanProgressMinIntervalMS throttles scan-progress events during pre-scan.
+	ScanProgressMinIntervalMS int `toml:"scan_progress_min_interval_ms"`
 }
 
 type OperationsConfig struct {
@@ -317,6 +325,10 @@ func Default() Config {
 			ThroughputChartEnabled:      DefaultThroughputChartEnabled,
 			FreeSpaceOnProgressWake:     DefaultFreeSpaceOnProgressWake,
 			FreeSpacePollIntervalSecs:   DefaultFreeSpacePollIntervalSecs,
+			ScanYieldIntervalMS:         DefaultScanYieldIntervalMS,
+			ScanYieldEveryN:             DefaultScanYieldEveryN,
+			ScanNiceIncrement:           DefaultScanNiceIncrement,
+			ScanProgressMinIntervalMS:   DefaultScanProgressMinIntervalMS,
 		},
 		Operations: OperationsConfig{
 			PreservePermissions:        DefaultPreservePermissions,
@@ -855,6 +867,36 @@ func (c *Config) Validate() error {
 	const freeSpacePollIntervalMaxSecs = 3600
 	if c.Jobs.FreeSpacePollIntervalSecs > freeSpacePollIntervalMaxSecs {
 		c.Jobs.FreeSpacePollIntervalSecs = freeSpacePollIntervalMaxSecs
+	}
+	if c.Jobs.ScanYieldIntervalMS <= 0 {
+		c.Jobs.ScanYieldIntervalMS = builtin.Jobs.ScanYieldIntervalMS
+	}
+	if c.Jobs.ScanYieldIntervalMS < jobsProgressTimingMinMS {
+		c.Jobs.ScanYieldIntervalMS = jobsProgressTimingMinMS
+	}
+	if c.Jobs.ScanYieldIntervalMS > jobsProgressTimingMaxMS {
+		c.Jobs.ScanYieldIntervalMS = jobsProgressTimingMaxMS
+	}
+	if c.Jobs.ScanYieldEveryN <= 0 {
+		c.Jobs.ScanYieldEveryN = builtin.Jobs.ScanYieldEveryN
+	}
+	if c.Jobs.ScanYieldEveryN > 4096 {
+		c.Jobs.ScanYieldEveryN = 4096
+	}
+	if c.Jobs.ScanNiceIncrement < 0 {
+		c.Jobs.ScanNiceIncrement = builtin.Jobs.ScanNiceIncrement
+	}
+	if c.Jobs.ScanNiceIncrement > 19 {
+		c.Jobs.ScanNiceIncrement = 19
+	}
+	if c.Jobs.ScanProgressMinIntervalMS <= 0 {
+		c.Jobs.ScanProgressMinIntervalMS = builtin.Jobs.ScanProgressMinIntervalMS
+	}
+	if c.Jobs.ScanProgressMinIntervalMS < jobsProgressTimingMinMS {
+		c.Jobs.ScanProgressMinIntervalMS = jobsProgressTimingMinMS
+	}
+	if c.Jobs.ScanProgressMinIntervalMS > jobsProgressTimingMaxMS {
+		c.Jobs.ScanProgressMinIntervalMS = jobsProgressTimingMaxMS
 	}
 	if c.Operations.CopyBufferKiB <= 0 {
 		c.Operations.CopyBufferKiB = builtin.Operations.CopyBufferKiB

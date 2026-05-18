@@ -18,6 +18,7 @@ type JobEntry struct {
 	CurrentPath string
 	DoneFiles   int
 	TotalFiles  int
+	TotalDirs   int
 	DoneBytes   int64
 	TotalBytes  int64
 	Error       string
@@ -29,6 +30,8 @@ type JobEntry struct {
 	ETAFilesPerSec float64
 	// DisplaySpeedBPS is slower-smoothed B/s for the Queue Speed column.
 	DisplaySpeedBPS float64
+	// QueueETA is cumulative ETA including prior unfinished jobs (from jobs.ComputeQueueETAs).
+	QueueETA string
 	// ThroughputStrip is a snapshot of fixed-clock B/s columns for the details chart (oldest left).
 	ThroughputStrip []float64
 	// PendingBlocker is set when the job waits on a conflict or disk-space prompt.

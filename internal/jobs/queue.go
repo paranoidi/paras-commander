@@ -99,7 +99,7 @@ func (q *Queue) CancelQueuedJobByID(id string) bool {
 		if job.Status.IsFinished() {
 			return false
 		}
-		if job.Status != StatusQueued && job.Status != StatusPaused {
+		if job.Status != StatusQueued && job.Status != StatusPaused && job.Status != StatusScanning {
 			return false
 		}
 		job.Status = StatusCanceled

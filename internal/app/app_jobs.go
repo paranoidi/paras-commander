@@ -56,7 +56,10 @@ func (a *App) applyJobsRetention() {
 
 func (a *App) syncJobsList() {
 	a.applyJobsRetention()
-	a.model.JobsList = ui.JobEntriesFromJobs(a.jobState.AllJobs(), a.config.Jobs.ThroughputChartEnabled)
+	all := a.jobState.AllJobs()
+	now := time.Now()
+	queueETAs := jobs.ComputeQueueETAs(all, now)
+	a.model.JobsList = ui.JobEntriesFromJobs(all, a.config.Jobs.ThroughputChartEnabled, queueETAs)
 	a.jobsListStale = false
 	a.jobsListVersion++
 }
@@ -68,7 +71,7 @@ func (a *App) syncJobPathMarks() {
 
 func jobEventUpdatesMarks(t jobs.EventType) bool {
 	switch t {
-	case jobs.EventEnqueued, jobs.EventStarted, jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled, jobs.EventJobBlockerRequest:
+	case jobs.EventEnqueued, jobs.EventScanTotals, jobs.EventStarted, jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled, jobs.EventJobBlockerRequest:
 		return true
 	default:
 		return false
@@ -694,7 +697,7 @@ func (a *App) applyJobEventBatch(batch []jobs.Event) {
 		switch ev.Type {
 		case jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled:
 			sawTerminal = true
-		case jobs.EventProgress:
+		case jobs.EventProgress, jobs.EventScanProgress:
 			sawProgress = true
 		case jobs.EventJobBlockerRequest:
 			sawBlocker = true
@@ -871,12 +874,12 @@ func jobTransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) 
 				return false, nil
 			}
 		}
-		var plan []ops.PlanItem
+		opsPlan := planItemsToOps(job.Plan)
 		var planErr error
-		if job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove {
+		if (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove) && len(opsPlan) == 0 {
 			var tf int
 			var tb int64
-			plan, tf, tb, planErr = ops.BuildCopyPlanWithTotals(job.Sources, job.Destination)
+			opsPlan, tf, _, tb, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{})
 			if planErr == nil {
 				emit(jobs.Event{
 					Type:       jobs.EventPlanTotals,
@@ -885,10 +888,16 @@ func jobTransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) 
 					TotalFiles: tf,
 					TotalBytes: tb,
 				})
-				if job.Type == jobs.TypeCopy && tb > 0 {
-					if err := ops.EnsureDiskSpace(waitBlocker, job.Destination, tb, ""); err != nil {
-						return err
-					}
+			}
+		}
+		if planErr == nil && (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove) {
+			tb := job.TotalBytes
+			if tb <= 0 && len(opsPlan) > 0 {
+				_, _, tb = ops.SummarizePlan(opsPlan)
+			}
+			if job.Type == jobs.TypeCopy && tb > 0 {
+				if err := ops.EnsureDiskSpace(waitBlocker, job.Destination, tb, ""); err != nil {
+					return err
 				}
 			}
 		}
@@ -911,10 +920,14 @@ func jobTransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) 
 			if planErr != nil {
 				doneFiles, doneBytes, err = ops.ExecuteCopy(ctx, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
 			} else {
-				doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlan(ctx, plan, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
+				doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlan(ctx, opsPlan, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
 			}
 		case jobs.TypeMove:
-			doneFiles, doneBytes, err = ops.ExecuteMove(ctx, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
+			if len(opsPlan) > 0 {
+				doneFiles, doneBytes, err = ops.ExecuteMoveWithPlan(ctx, opsPlan, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
+			} else {
+				doneFiles, doneBytes, err = ops.ExecuteMove(ctx, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
+			}
 		case jobs.TypeDelete:
 			emit(jobs.Event{
 				Type:       jobs.EventPlanTotals,
@@ -1005,19 +1018,15 @@ func (a *App) enqueueMoveJob() {
 }
 
 func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool) {
-	st := jobs.StatusQueued
-	if startPaused {
-		st = jobs.StatusPaused
-	}
 	absDest := absPathClean(dest)
 	job := &jobs.Job{
-		ID:          jobs.NewJobID(),
-		Type:        jobType,
-		Status:      st,
-		Sources:     sources,
-		Destination: dest,
-		DestIsDir:   ops.DestinationIsDirAtEnqueue(absDest),
-		TotalFiles:  len(sources),
+		ID:              jobs.NewJobID(),
+		Type:            jobType,
+		Status:          jobs.StatusScanning,
+		Sources:         sources,
+		Destination:     dest,
+		DestIsDir:       ops.DestinationIsDirAtEnqueue(absDest),
+		PausedAfterScan: startPaused,
 	}
 	a.jobState.AddJob(job)
 	a.syncJobsList()

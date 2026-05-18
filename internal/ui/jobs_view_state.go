@@ -4,7 +4,8 @@ import "github.com/paranoidi/paras-commander/internal/jobs"
 
 // JobEntriesFromJobs converts domain jobs to the render DTO used by the jobs view.
 // When includeThroughputStrip is false, ThroughputStrip is left nil so progress does not copy strip memory for the UI.
-func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool) []JobEntry {
+// queueETAs maps job ID to cumulative queue ETA strings from jobs.ComputeQueueETAs.
+func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueETAs map[string]string) []JobEntry {
 	entries := make([]JobEntry, 0, len(jobList))
 	for _, j := range jobList {
 		if j == nil {
@@ -20,6 +21,10 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool) []JobE
 		if includeThroughputStrip && len(j.ThroughputStrip) > 0 {
 			strip = append([]float64(nil), j.ThroughputStrip...)
 		}
+		queueETA := ""
+		if queueETAs != nil {
+			queueETA = queueETAs[j.ID]
+		}
 		entries = append(entries, JobEntry{
 			ID:              j.ID,
 			Type:            string(j.Type),
@@ -30,6 +35,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool) []JobE
 			CurrentPath:     j.CurrentPath,
 			DoneFiles:       j.DoneFiles,
 			TotalFiles:      j.TotalFiles,
+			TotalDirs:       j.TotalDirs,
 			DoneBytes:       j.DoneBytes,
 			TotalBytes:      j.TotalBytes,
 			Error:           j.Error,
@@ -38,6 +44,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool) []JobE
 			ETABytesPerSec:  j.ETABytesPerSec,
 			ETAFilesPerSec:  j.ETAFilesPerSec,
 			DisplaySpeedBPS: j.DisplaySpeedBPS,
+			QueueETA:        queueETA,
 			ThroughputStrip: strip,
 			PendingBlocker:  pending,
 		})

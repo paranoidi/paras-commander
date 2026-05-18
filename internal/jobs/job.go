@@ -21,6 +21,7 @@ const (
 type Status string
 
 const (
+	StatusScanning        Status = "scanning"
 	StatusQueued          Status = "queued"
 	StatusPaused          Status = "paused"
 	StatusRunning         Status = "running"
@@ -46,13 +47,20 @@ type Job struct {
 	// Used by UI path marks so listing render does not Stat the destination per row.
 	DestIsDir   bool
 	TotalFiles  int
+	TotalDirs   int
 	DoneFiles   int
 	TotalBytes  int64
 	DoneBytes   int64
 	CurrentPath string
 	Error       string
+	ScanStartedAt time.Time
 	StartedAt   time.Time
 	FinishedAt  time.Time
+
+	// Plan is the pre-built copy/move plan from pre-scan; nil until scan completes or for delete jobs.
+	Plan []PlanItem
+	// PausedAfterScan when true transitions to StatusPaused instead of StatusQueued when pre-scan completes.
+	PausedAfterScan bool
 
 	// ETABytesPerSec is an EMA-smoothed recent transfer rate (bytes/s) for ETA display.
 	ETABytesPerSec float64
@@ -89,4 +97,12 @@ func NewJobID() string {
 // FinishedStatuses returns all terminal job statuses.
 func FinishedStatuses() []Status {
 	return []Status{StatusCompleted, StatusFailed, StatusCanceled}
+}
+
+// NeedsPreScan reports whether the job type requires a background plan walk before running.
+func (j *Job) NeedsPreScan() bool {
+	if j == nil {
+		return false
+	}
+	return j.Type == TypeCopy || j.Type == TypeMove
 }

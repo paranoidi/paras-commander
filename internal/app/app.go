@@ -392,6 +392,13 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	// (panel sync, disk-usage idle-sort arming) are reconciled centrally in
 	// App.reconcileAfterEvent(), which runs at the end of every Run-loop iteration.
 	jobState.SetEmitHook(app.onJobEmitted)
+	jobState.SetScanConfig(jobs.ScanConfig{
+		YieldInterval:       time.Duration(cfg.Jobs.ScanYieldIntervalMS) * time.Millisecond,
+		YieldEveryN:         cfg.Jobs.ScanYieldEveryN,
+		NiceIncrement:       cfg.Jobs.ScanNiceIncrement,
+		ProgressMinInterval: time.Duration(cfg.Jobs.ScanProgressMinIntervalMS) * time.Millisecond,
+	})
+	jobState.SetScanFunc(jobScanFunc())
 	jobState.StartWorker(app.jobStopCh)
 	suppressHeavyPathProbes := func(path string) bool {
 		return app.pathVolumeContendsWithActiveJob(path)

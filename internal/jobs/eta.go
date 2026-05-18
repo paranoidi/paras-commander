@@ -116,46 +116,32 @@ func roundRemainSecs(remain float64, rate float64) float64 {
 	return remain / rate
 }
 
-// FormatETA returns a human-readable ETA label for the jobs UI.
+// FormatETA returns a human-readable ETA label for a single running job (no queue offset).
 func FormatETA(status Status, startedAt, now time.Time, totalBytes, doneBytes int64, totalFiles, doneFiles int, etaBytesPerSec, etaFilesPerSec float64) string {
-	if status != StatusRunning && status != StatusQueued {
+	if status != StatusRunning {
 		return "—"
 	}
 	if startedAt.IsZero() {
 		return "—"
 	}
-	elapsed := now.Sub(startedAt)
-	if elapsed < time.Second {
+	if now.Sub(startedAt) < time.Second {
 		return "…"
 	}
-
-	maxSecs := -1.0
-
-	if totalBytes > 0 && doneBytes > 0 {
-		cumB := float64(doneBytes) / elapsed.Seconds()
-		rateB := blendedETARate(etaBytesPerSec, cumB, elapsed)
-		if rateB > 0 {
-			remain := float64(totalBytes - doneBytes)
-			if secs := roundRemainSecs(remain, rateB); secs >= 0 {
-				maxSecs = max64(maxSecs, secs)
-			}
-		}
+	j := &Job{
+		Status:         StatusRunning,
+		StartedAt:      startedAt,
+		TotalBytes:     totalBytes,
+		DoneBytes:      doneBytes,
+		TotalFiles:     totalFiles,
+		DoneFiles:      doneFiles,
+		ETABytesPerSec: etaBytesPerSec,
+		ETAFilesPerSec: etaFilesPerSec,
 	}
-	if totalFiles > 0 && doneFiles > 0 {
-		cumF := float64(doneFiles) / elapsed.Seconds()
-		rateF := blendedETARate(etaFilesPerSec, cumF, elapsed)
-		if rateF > 0 {
-			remain := float64(totalFiles - doneFiles)
-			if secs := roundRemainSecs(remain, rateF); secs >= 0 {
-				maxSecs = max64(maxSecs, secs)
-			}
-		}
-	}
-
-	if maxSecs < 0 {
+	remain := estimateRunningRemainSecs(j, now)
+	if remain < 0 {
 		return "—"
 	}
-	return (time.Duration(maxSecs) * time.Second).Round(time.Second).String()
+	return formatETADuration(remain)
 }
 
 func max64(a, b float64) float64 {

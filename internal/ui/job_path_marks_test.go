@@ -287,7 +287,7 @@ func TestEntryPathJobMarkStatus_jobEntriesFromJobsKeepsBothQueuedJobs(t *testing
 		TotalFiles: 1,
 	}
 	// Same slice order as AllJobs queue FIFO when move was reordered before delete.
-	list := JobEntriesFromJobs([]*jobs.Job{move, del}, true)
+	list := JobEntriesFromJobs([]*jobs.Job{move, del}, true, nil)
 	if len(list) != 2 {
 		t.Fatalf("JobsList len = %d, want 2 (delete not removed when move exists)", len(list))
 	}

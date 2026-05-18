@@ -25,7 +25,7 @@ func (a *App) handleQuitImmediate() bool {
 
 func (a *App) hasActiveJobs() bool {
 	for _, j := range a.jobState.AllJobs() {
-		if j.Status == jobs.StatusQueued || j.Status == jobs.StatusPaused || j.Status == jobs.StatusRunning || j.Status == jobs.StatusWaitingDecision {
+		if j.Status == jobs.StatusScanning || j.Status == jobs.StatusQueued || j.Status == jobs.StatusPaused || j.Status == jobs.StatusRunning || j.Status == jobs.StatusWaitingDecision {
 			return true
 		}
 	}

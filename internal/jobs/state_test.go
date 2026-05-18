@@ -463,6 +463,7 @@ func TestMenuBarStripStatusesOrderDoneOngoingQueued(t *testing.T) {
 	}
 	s.active = &Job{ID: "run", Status: StatusRunning}
 	s.mu.Unlock()
+	s.queue.Enqueue(&Job{ID: "scan", Status: StatusScanning, Type: TypeCopy, Sources: []string{"/s"}, Destination: "/t"})
 	s.queue.Enqueue(&Job{ID: "q1", Status: StatusQueued, Type: TypeCopy, Sources: []string{"/a"}, Destination: "/b"})
 	s.queue.Enqueue(&Job{ID: "q2", Status: StatusPaused, Type: TypeCopy, Sources: []string{"/c"}, Destination: "/d"})
 
@@ -470,7 +471,7 @@ func TestMenuBarStripStatusesOrderDoneOngoingQueued(t *testing.T) {
 	want := []string{
 		string(StatusCompleted), string(StatusFailed),
 		string(StatusRunning),
-		string(StatusQueued), string(StatusPaused),
+		string(StatusScanning), string(StatusQueued), string(StatusPaused),
 	}
 	if len(got) != len(want) {
 		t.Fatalf("got len %d %#v, want len %d", len(got), got, len(want))

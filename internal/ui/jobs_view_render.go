@@ -469,8 +469,16 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	if tf <= 0 {
 		tfLabel = "?"
 	}
-	lines = append(lines, fmt.Sprintf(" Progress:    %d / %s files   %s / %s bytes",
-		j.DoneFiles, tfLabel, formatJobBytes(j.DoneBytes), formatJobBytes(j.TotalBytes)))
+	progressLine := fmt.Sprintf(" Progress:    %d / %s items   %s / %s bytes",
+		j.DoneFiles, tfLabel, formatJobBytes(j.DoneBytes), formatJobBytes(j.TotalBytes))
+	if j.TotalDirs > 0 || j.Status == "scanning" {
+		tdLabel := "?"
+		if j.TotalDirs > 0 {
+			tdLabel = fmt.Sprintf("%d", j.TotalDirs)
+		}
+		progressLine += fmt.Sprintf("   (%s dirs)", tdLabel)
+	}
+	lines = append(lines, progressLine)
 	lines = append(lines, detailDurationOrETALine(j, now))
 	if throughputChartEnabled {
 		lines = append(lines, ThroughputDetailLines(j.ThroughputStrip, pathMax, j.Status == "running")...)
@@ -579,6 +587,9 @@ func composeJobsProgressLabelCell(barCell tcell.Style, labelStyle tcell.Style) t
 
 // formatJobETAFull returns the computed ETA string without column truncation (for the Details panel).
 func formatJobETAFull(j JobEntry, now time.Time) string {
+	if j.QueueETA != "" {
+		return j.QueueETA
+	}
 	return jobs.FormatETA(jobs.Status(j.Status), j.StartedAt, now, j.TotalBytes, j.DoneBytes, j.TotalFiles, j.DoneFiles, j.ETABytesPerSec, j.ETAFilesPerSec)
 }
 
@@ -640,8 +651,10 @@ func jobRowLeadingIcon(status string, th theme.Theme) string {
 		return sym
 	}
 	switch status {
+	case "scanning":
+		return "\uf110" //  spinner
 	case "queued":
-		return "\uf1af9" // ⏳ Queued (clock face)
+		return "\u231B" // ⏳ Queued (clock face)
 	case "running":
 		return "\uf144" //  Ongoing (play circle)
 	case "decision":
@@ -662,6 +675,8 @@ func jobRowLeadingIcon(status string, th theme.Theme) string {
 // jobIconStyle returns the themed style for the leading icon of a job status.
 func jobIconStyle(status string, styles theme.Theme) tcell.Style {
 	switch status {
+	case "scanning":
+		return styles.JobsIconsScanning
 	case "queued":
 		return styles.JobsIconsQueued
 	case "running":
@@ -683,7 +698,7 @@ func jobIconStyle(status string, styles theme.Theme) tcell.Style {
 
 func jobStatusStyle(status string, styles theme.Theme) tcell.Style {
 	switch status {
-	case "running", "queued", "paused", "decision":
+	case "running", "queued", "scanning", "paused", "decision":
 		return styles.JobsRunning
 	case "completed":
 		return styles.JobsDone

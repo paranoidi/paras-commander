@@ -39,6 +39,15 @@ const (
 	// DefaultFreeSpacePollIntervalSecs is the period for background volume free-space refresh while jobs run (0 disables).
 	DefaultFreeSpacePollIntervalSecs = 5
 
+	// DefaultScanYieldIntervalMS is cooperative sleep duration during pre-scan while a transfer is active.
+	DefaultScanYieldIntervalMS = 50
+	// DefaultScanYieldEveryN invokes cooperative yield every N plan walk entries while a transfer is active.
+	DefaultScanYieldEveryN = 64
+	// DefaultScanNiceIncrement is added to the process nice value for pre-scan on Linux when a transfer is active.
+	DefaultScanNiceIncrement = 10
+	// DefaultScanProgressMinIntervalMS throttles scan-progress UI events during pre-scan walks.
+	DefaultScanProgressMinIntervalMS = 200
+
 	DefaultPreservePermissions        = true
 	DefaultPreserveTimestamps         = true
 	DefaultCopyBufferKiB              = 256

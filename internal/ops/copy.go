@@ -10,6 +10,15 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
+// PlanBuildOptions configures optional hooks during copy/move plan walks.
+type PlanBuildOptions struct {
+	// OnPath is invoked for each visited source path during directory walks (and top-level sources).
+	OnPath func(path string) error
+	// YieldEveryN invokes Yield after every N walk callbacks when Yield is non-nil.
+	YieldEveryN int
+	Yield       func()
+}
+
 // ConflictResolver is called when a destination path already exists.
 // It receives source and destination paths plus file metadata and returns true to overwrite,
 // false to skip, and an error to abort.
@@ -17,22 +26,37 @@ type ConflictResolver func(src, dest string, facts FileConflictFacts) (overwrite
 
 // BuildCopyPlanWithTotals prepares the destination (when needed), walks sources, and returns the flat plan plus totals.
 func BuildCopyPlanWithTotals(sources []string, destination string) (plan []PlanItem, totalFiles int, totalBytes int64, err error) {
+	p, tf, _, tb, err := BuildCopyPlanWithTotalsCtx(context.Background(), sources, destination, PlanBuildOptions{})
+	return p, tf, tb, err
+}
+
+// BuildCopyPlanWithTotalsCtx is like BuildCopyPlanWithTotals but honors ctx cancellation and plan walk hooks.
+func BuildCopyPlanWithTotalsCtx(ctx context.Context, sources []string, destination string, opts PlanBuildOptions) (plan []PlanItem, totalItems, totalDirs int, totalBytes int64, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, 0, 0, 0, err
+	}
 	if err := prepareCopyDestination(sources, destination); err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, 0, err
 	}
-	p, err := BuildPlan(sources, destination, true)
+	p, err := BuildPlanCtx(ctx, sources, destination, true, opts)
 	if err != nil {
-		return nil, 0, 0, fmt.Errorf("build copy plan: %w", err)
+		return nil, 0, 0, 0, fmt.Errorf("build copy plan: %w", err)
 	}
-	tf, tb := summarizePlan(p)
-	return p, tf, tb, nil
+	ti, td, tb := SummarizePlan(p)
+	return p, ti, td, tb, nil
 }
 
 // CopyPlanTotals returns the file count and byte sum for a copy plan after the same
 // destination validation as ExecuteCopy. Used to populate job totals before transfer.
 func CopyPlanTotals(sources []string, destination string) (totalFiles int, totalBytes int64, err error) {
-	_, tf, tb, err := BuildCopyPlanWithTotals(sources, destination)
+	tf, _, tb, err := CopyPlanTotalsDetailed(sources, destination)
 	return tf, tb, err
+}
+
+// CopyPlanTotalsDetailed returns item count, directory count, and byte sum for a copy plan.
+func CopyPlanTotalsDetailed(sources []string, destination string) (totalItems, totalDirs int, totalBytes int64, err error) {
+	_, ti, td, tb, err := BuildCopyPlanWithTotalsCtx(context.Background(), sources, destination, PlanBuildOptions{})
+	return ti, td, tb, err
 }
 
 func prepareCopyDestination(sources []string, destination string) error {
@@ -60,14 +84,18 @@ func prepareCopyDestination(sources []string, destination string) error {
 	return nil
 }
 
-func summarizePlan(plan []PlanItem) (totalFiles int, totalBytes int64) {
+// SummarizePlan returns plan item count, directory count, and regular-file byte sum.
+func SummarizePlan(plan []PlanItem) (totalItems, totalDirs int, totalBytes int64) {
 	for _, item := range plan {
-		totalFiles++
+		totalItems++
+		if item.IsDir {
+			totalDirs++
+		}
 		if !item.IsDir && !item.IsSymlink {
 			totalBytes += item.FileSize
 		}
 	}
-	return totalFiles, totalBytes
+	return totalItems, totalDirs, totalBytes
 }
 
 // ExecuteCopy copies a set of source paths to a destination.

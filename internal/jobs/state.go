@@ -42,6 +42,11 @@ type State struct {
 	throughputChartBin     time.Duration
 	throughputChartWindow  time.Duration
 	throughputChartEnabled bool
+
+	scanConfig ScanConfig
+	scanFunc   ScanFunc
+	scanMu     sync.Mutex
+	scanCancel map[string]context.CancelFunc
 }
 
 // SetThroughputChart configures column duration and history window for the jobs details throughput strip.
@@ -87,6 +92,13 @@ func NewState() *State {
 		wake:                   make(chan struct{}, 1),
 		blockerWait:            make(map[string]chan ConflictDecision),
 		throughputChartEnabled: true,
+		scanCancel:             make(map[string]context.CancelFunc),
+		scanConfig: ScanConfig{
+			YieldInterval:       50 * time.Millisecond,
+			YieldEveryN:         64,
+			NiceIncrement:       10,
+			ProgressMinInterval: 200 * time.Millisecond,
+		},
 	}
 }
 
@@ -140,6 +152,10 @@ func (s *State) AddJob(job *Job) {
 		JobID:  job.ID,
 		Status: job.Status,
 	})
+	if job.NeedsPreScan() && job.Status == StatusScanning {
+		s.startJobScan(job)
+		return
+	}
 	s.signalWorker()
 }
 
@@ -325,10 +341,27 @@ func (s *State) ApplyEvent(ev Event) {
 			ResetProgressETA(job)
 			s.active = job
 		}
+	case EventScanProgress:
+		job := s.findJobUnlocked(ev.JobID)
+		if job != nil && job.Status == StatusScanning {
+			job.CurrentPath = ev.CurrentPath
+		}
+	case EventScanTotals:
+		job := s.findJobUnlocked(ev.JobID)
+		if job != nil {
+			job.TotalFiles = ev.TotalFiles
+			job.TotalDirs = ev.TotalDirs
+			job.TotalBytes = ev.TotalBytes
+			job.Status = ev.Status
+			job.CurrentPath = ""
+		}
 	case EventPlanTotals:
 		job := s.findJobUnlocked(ev.JobID)
 		if job != nil {
 			job.TotalFiles = ev.TotalFiles
+			if ev.TotalDirs > 0 {
+				job.TotalDirs = ev.TotalDirs
+			}
 			job.TotalBytes = ev.TotalBytes
 		}
 	case EventJobBlockerRequest:
@@ -479,16 +512,26 @@ func (s *State) CancelJob(id string) bool {
 		s.SubmitBlockerDecision(id, DecisionCancel)
 		return true
 	}
-	canceled := s.queue.CancelQueuedJobByID(id)
-	s.mu.Unlock()
-	if canceled {
+	if job := s.findJobUnlocked(id); job != nil && job.Status == StatusScanning {
+		s.mu.Unlock()
+		s.cancelJobScan(id)
+		return true
+	}
+	if s.queue.CancelQueuedJobByID(id) {
+		s.mu.Unlock()
 		s.emit(Event{
 			Type:   EventCanceled,
 			JobID:  id,
 			Status: StatusCanceled,
 		})
+		return true
 	}
-	return canceled
+	if s.cancelJobScan(id) {
+		s.mu.Unlock()
+		return true
+	}
+	s.mu.Unlock()
+	return false
 }
 
 // StartWorker launches the background worker goroutine. It returns immediately.

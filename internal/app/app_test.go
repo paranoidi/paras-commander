@@ -4186,7 +4186,7 @@ yellow = "#ffff00"
 		"panel.blocked.row.symlink", "panel.blocked.row.selected", "panel.blocked.row.cursor",
 		"panel.blocked.row.cursor.selected", "panel.folder.diskscan", "panel.folder.diskscan_excluded",
 		"menu.spinner", "menu.progress.done", "menu.progress.remaining",
-		"menu.job.queued", "menu.job.running", "menu.job.paused", "menu.job.canceled",
+		"menu.job.scanning", "menu.job.queued", "menu.job.running", "menu.job.paused", "menu.job.canceled",
 		"menu.job.failed", "menu.job.decision", "menu.job.completed",
 		"panel.usage.prefix.normal", "panel.usage.prefix.selected",
 		"panel.usage.prefix.cursor.active", "panel.usage.prefix.cursor.inactive",
@@ -4200,7 +4200,7 @@ yellow = "#ffff00"
 		"jobs.row", "jobs.running", "jobs.done", "jobs.failed",
 		"jobs.progress.track", "jobs.progress.fill", "jobs.progress.label.on_fill",
 		"jobs.progress.label.on_track",
-		"jobs.icons.queued", "jobs.icons.ongoing", "jobs.icons.paused", "jobs.icons.stopped",
+		"jobs.icons.scanning", "jobs.icons.queued", "jobs.icons.ongoing", "jobs.icons.paused", "jobs.icons.stopped",
 		"jobs.icons.error", "jobs.icons.input_required", "jobs.icons.completed",
 		"footer.key", "footer.label",
 	} {
@@ -4272,7 +4272,7 @@ func flushBackgroundJobs(t *testing.T, app *App) {
 		busy := false
 		for _, j := range app.jobState.AllJobs() {
 			switch j.Status {
-			case jobs.StatusQueued, jobs.StatusRunning, jobs.StatusWaitingDecision:
+			case jobs.StatusScanning, jobs.StatusQueued, jobs.StatusRunning, jobs.StatusWaitingDecision:
 				busy = true
 			}
 			if busy {

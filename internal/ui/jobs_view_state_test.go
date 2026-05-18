@@ -39,7 +39,7 @@ func TestJobEntriesFromJobsOmitsThroughputStripWhenDisabled(t *testing.T) {
 		Destination:     "/b",
 		ThroughputStrip: []float64{1, 2, 3},
 	}
-	got := JobEntriesFromJobs([]*jobs.Job{j}, false)
+	got := JobEntriesFromJobs([]*jobs.Job{j}, false, nil)
 	if len(got) != 1 {
 		t.Fatalf("len = %d", len(got))
 	}
@@ -58,7 +58,7 @@ func TestJobEntriesFromJobsOneEntryPerJobWithMultipleSources(t *testing.T) {
 		Destination: "/dst",
 		TotalFiles:  3,
 	}
-	got := JobEntriesFromJobs([]*jobs.Job{j}, false)
+	got := JobEntriesFromJobs([]*jobs.Job{j}, false, nil)
 	if len(got) != 1 {
 		t.Fatalf("len = %d, want 1 job row for a multi-source transfer", len(got))
 	}

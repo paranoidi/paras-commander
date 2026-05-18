@@ -162,8 +162,35 @@ type PlanItem struct {
 
 // BuildPlan walks sources and creates a flat list of files to copy/move.
 func BuildPlan(sources []string, destination string, followDirChildren bool) ([]PlanItem, error) {
+	return BuildPlanCtx(context.Background(), sources, destination, followDirChildren, PlanBuildOptions{})
+}
+
+// BuildPlanCtx is BuildPlan with context cancellation and optional walk hooks.
+func BuildPlanCtx(ctx context.Context, sources []string, destination string, followDirChildren bool, opts PlanBuildOptions) ([]PlanItem, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	var items []PlanItem
+	var visitCount int
+	afterVisit := func(path string) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if opts.OnPath != nil {
+			if err := opts.OnPath(path); err != nil {
+				return err
+			}
+		}
+		visitCount++
+		if opts.Yield != nil && opts.YieldEveryN > 0 && visitCount%opts.YieldEveryN == 0 {
+			opts.Yield()
+		}
+		return nil
+	}
 	for _, src := range sources {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		srcInfo, err := os.Lstat(src)
 		if err != nil {
 			return nil, fmt.Errorf("stat %q: %w", src, err)
@@ -173,8 +200,10 @@ func BuildPlan(sources []string, destination string, followDirChildren bool) ([]
 				continue
 			}
 			dst := ResolveDestination(src, destination)
-			// Walk directory children.
 			err := localfs.WalkDirRecursive(src, func(path string, info os.FileInfo) error {
+				if err := afterVisit(path); err != nil {
+					return err
+				}
 				rel, err := filepath.Rel(src, path)
 				if err != nil {
 					return fmt.Errorf("compute relative path for %q: %w", path, err)
@@ -212,6 +241,9 @@ func BuildPlan(sources []string, destination string, followDirChildren bool) ([]
 				return nil, err
 			}
 		} else {
+			if err := afterVisit(src); err != nil {
+				return nil, err
+			}
 			dst := ResolveDestination(src, destination)
 			switch {
 			case localfs.IsSymlink(srcInfo):

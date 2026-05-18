@@ -33,6 +33,7 @@ menu.dropdown.selected = { fg = "black", bg = "bright_blue", bold = true }
 menu.spinner = { fg = "bright_magenta", bg = "default", bold = true }
 menu.progress.done = { fg = "green", bg = "default" }
 menu.progress.remaining = { fg = "bright_black", bg = "default" }
+menu.job.scanning = { fg = "bright_cyan", bg = "default" }
 menu.job.queued = { fg = "yellow", bg = "default" }
 menu.job.running = { fg = "green", bg = "default" }
 menu.job.paused = { fg = "yellow", bg = "default" }
@@ -122,6 +123,7 @@ jobs.progress.fill = { fg = "black", bg = "bright_green" }
 jobs.progress.label.on_fill = { fg = "black", bold = true }
 jobs.progress.label.on_track = { fg = "bright_white", bold = true }
 
+jobs.icons.scanning = { fg = "bright_cyan", bold = true }
 jobs.icons.queued = { fg = "yellow", bold = true }
 jobs.icons.ongoing = { fg = "bright_green", bold = true }
 jobs.icons.paused = { fg = "yellow", bold = true }
@@ -131,6 +133,7 @@ jobs.icons.input_required = { fg = "cyan", bold = true }
 jobs.icons.completed = { fg = "bright_green", bold = true }
 
 [symbols]
+scanning = "\uf110"
 queued = "\uf1af"
 running = "\uf144"
 paused = "\uf28b"
@@ -145,6 +148,7 @@ done = "─"
 remaining = "─"
 
 [symbols.menu.job]
+scanning = "◌"
 queued = "○"
 running = "◎"
 paused = "●"

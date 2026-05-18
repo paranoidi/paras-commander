@@ -6,6 +6,8 @@ type EventType string
 const (
 	EventEnqueued          EventType = "enqueued"
 	EventStarted           EventType = "started"
+	EventScanProgress      EventType = "scan-progress"
+	EventScanTotals        EventType = "scan-totals"
 	EventPlanTotals        EventType = "plan-totals"
 	EventProgress          EventType = "progress"
 	EventJobBlockerRequest EventType = "job-blocker-request"
@@ -21,8 +23,9 @@ type Event struct {
 	Status    Status
 	DoneFiles int
 	DoneBytes int64
-	// TotalFiles, TotalBytes are set for EventPlanTotals (after building copy plan).
+	// TotalFiles, TotalDirs, TotalBytes are set for EventScanTotals and EventPlanTotals.
 	TotalFiles int
+	TotalDirs  int
 	TotalBytes int64
 	// CurrentPath is set for EventProgress (source path being processed).
 	CurrentPath string

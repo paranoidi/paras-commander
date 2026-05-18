@@ -86,6 +86,7 @@ type Theme struct {
 	MenuProgressDone      tcell.Style
 	MenuProgressRemaining tcell.Style
 	// MenuJob* styles one-cell queue glyph per live job status in the menu bar.
+	MenuJobScanning                tcell.Style
 	MenuJobQueued                  tcell.Style
 	MenuJobRunning                 tcell.Style
 	MenuJobPaused                  tcell.Style
@@ -137,6 +138,7 @@ type Theme struct {
 	JobsProgressLabelOnTrack tcell.Style
 
 	// JobsIcon* styles for the leading icon column in the jobs list.
+	JobsIconsScanning      tcell.Style
 	JobsIconsQueued        tcell.Style
 	JobsIconsOngoing       tcell.Style
 	JobsIconsPaused        tcell.Style
@@ -183,6 +185,7 @@ const SymbolKeyPathPicker = "path_picker"
 const (
 	SymbolKeyMenuProgressDone      = "menu.progress.done"
 	SymbolKeyMenuProgressRemaining = "menu.progress.remaining"
+	SymbolKeyMenuJobScanning       = "menu.job.scanning"
 	SymbolKeyMenuJobQueued         = "menu.job.queued"
 	SymbolKeyMenuJobRunning        = "menu.job.running"
 	SymbolKeyMenuJobPaused         = "menu.job.paused"
@@ -242,6 +245,8 @@ func (t Theme) SymbolMenuJob(status string) rune {
 		return g
 	}
 	switch status {
+	case "scanning":
+		return '\u25cc'
 	case "queued":
 		return '\u25cb'
 	case "running":
@@ -264,6 +269,8 @@ func (t Theme) SymbolMenuJob(status string) rune {
 // MenuJobStyle returns the style for one queue cell by job status string.
 func (t Theme) MenuJobStyle(status string) tcell.Style {
 	switch status {
+	case "scanning":
+		return t.MenuJobScanning
 	case "queued":
 		return t.MenuJobQueued
 	case "running":
@@ -370,6 +377,7 @@ var requiredStyleKeys = []string{
 	"jobs.progress.fill",
 	"jobs.progress.label.on_fill",
 	"jobs.progress.label.on_track",
+	"jobs.icons.scanning",
 	"jobs.icons.queued",
 	"jobs.icons.ongoing",
 	"jobs.icons.paused",
@@ -379,6 +387,7 @@ var requiredStyleKeys = []string{
 	"jobs.icons.completed",
 	"menu.progress.done",
 	"menu.progress.remaining",
+	"menu.job.scanning",
 	"menu.job.queued",
 	"menu.job.running",
 	"menu.job.paused",
@@ -721,6 +730,7 @@ func parse(data []byte) (Theme, error) {
 		MenuSpinner:                    styles["menu.spinner"],
 		MenuProgressDone:               styles["menu.progress.done"],
 		MenuProgressRemaining:          styles["menu.progress.remaining"],
+		MenuJobScanning:                styles["menu.job.scanning"],
 		MenuJobQueued:                  styles["menu.job.queued"],
 		MenuJobRunning:                 styles["menu.job.running"],
 		MenuJobPaused:                  styles["menu.job.paused"],
@@ -771,6 +781,7 @@ func parse(data []byte) (Theme, error) {
 		JobsProgressLabelOnFill:  styles["jobs.progress.label.on_fill"],
 		JobsProgressLabelOnTrack: styles["jobs.progress.label.on_track"],
 
+		JobsIconsScanning:      styles["jobs.icons.scanning"],
 		JobsIconsQueued:        styles["jobs.icons.queued"],
 		JobsIconsOngoing:       styles["jobs.icons.ongoing"],
 		JobsIconsPaused:        styles["jobs.icons.paused"],
