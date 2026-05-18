@@ -29,6 +29,7 @@ type (
 	UserMenuDialogState       = dialog.UserMenuDialogState
 	HelpEntry                 = dialog.HelpEntry
 	HelpViewState             = dialog.HelpViewState
+	ScrollingQuery            = dialog.ScrollingQuery
 	FileDialogType            = dialog.FileDialogType
 	FileDialogField           = dialog.FileDialogField
 	MkdirAction               = dialog.MkdirAction
@@ -104,6 +105,7 @@ var (
 	EnsurePathPickerListScroll        = dialog.EnsurePathPickerListScroll
 	EnsureHistoryListScroll           = dialog.EnsureHistoryListScroll
 	EnsureFindListScroll              = dialog.EnsureFindListScroll
+	ComputeHelpDialogListMetrics      = dialog.ComputeHelpDialogListMetrics
 	FindDialogNavFocusKey             = dialog.FindDialogNavFocusKey
 	EnsureScrollInputVisible          = dialog.EnsureScrollInputVisible
 	NewDialogLinearForm               = dialog.NewDialogLinearForm

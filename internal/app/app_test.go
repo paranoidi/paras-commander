@@ -124,6 +124,31 @@ func TestFilePanelPlusMinusStarSelectionShortcuts(t *testing.T) {
 	})
 }
 
+func TestGroupSelectPatternCtrlLAndWordNav(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openGroupSelect("select")
+
+	for _, r := range "ab cd" {
+		app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	gs := &app.model.GroupSelect
+	if gs.Text != "ab cd" || gs.TextCursor != 5 {
+		t.Fatalf("after type: text=%q cursor=%d", gs.Text, gs.TextCursor)
+	}
+
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt))
+	if gs.TextCursor != 3 {
+		t.Fatalf("after Alt+b: cursor=%d want 3", gs.TextCursor)
+	}
+
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
+	if gs.Text != "" || gs.TextCursor != 0 || gs.TextScroll != 0 {
+		t.Fatalf("after Ctrl+L: text=%q cursor=%d scroll=%d", gs.Text, gs.TextCursor, gs.TextScroll)
+	}
+}
+
 func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 24)

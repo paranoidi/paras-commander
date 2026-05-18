@@ -38,6 +38,50 @@ func waitFindIndexDone(t *testing.T, app *App) {
 	t.Fatal("find index did not finish in time")
 }
 
+func TestFindDialogQueryAltBAltFCtrlL(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "alpha.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+
+	for _, r := range "foo bar" {
+		app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	st := &app.model.FindDialog
+	if st.Query != "foo bar" || st.QueryCursor != 7 {
+		t.Fatalf("after type: query=%q cursor=%d", st.Query, st.QueryCursor)
+	}
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt))
+	if st.QueryCursor != 4 {
+		t.Fatalf("after Alt+b: cursor=%d want 4", st.QueryCursor)
+	}
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	if st.QueryCursor != 7 {
+		t.Fatalf("after Alt+f: cursor=%d want 7", st.QueryCursor)
+	}
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
+	if st.Query != "" || st.QueryCursor != 0 || st.QueryScroll != 0 {
+		t.Fatalf("after Ctrl+L: query=%q cursor=%d scroll=%d", st.Query, st.QueryCursor, st.QueryScroll)
+	}
+}
+
 func TestFindDialogSelectsFile(t *testing.T) {
 	root := t.TempDir()
 	sub := filepath.Join(root, "pkg")

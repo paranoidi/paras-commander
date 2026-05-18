@@ -367,6 +367,12 @@ func (a *App) executeGroupSelect() {
 func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	gs := &a.model.GroupSelect
 	form := ui.NewDialogLinearForm(4)
+	if gs.Focus == 0 {
+		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && groupSelectAltIsDialogMnemonic(event.Rune())
+		if !skipScrolling && a.handleScrollingQueryKey(event, true, groupSelectScrollingQuery(gs, a.groupSelectQueryWidth())) {
+			return
+		}
+	}
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyF9:
 		a.closeGroupSelect()
@@ -376,13 +382,6 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			a.closeGroupSelect()
 		default: // pattern input, checkboxes, or OK -> execute
 			a.executeGroupSelect()
-		}
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		if gs.Focus == 0 {
-			runes := []rune(gs.Text)
-			if len(runes) > 0 {
-				gs.Text = string(runes[:len(runes)-1])
-			}
 		}
 	case tcell.KeyRune:
 		// Mnemonics follow dialog standards: Alt+letter only (plain typing goes into the pattern).
@@ -427,11 +426,17 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			}
 			break
 		}
-		if gs.Focus == 0 && unicode.IsPrint(event.Rune()) {
-			gs.Text += string(event.Rune())
-		}
 	}
 	if focus, ok := form.MoveFocus(gs.Focus, event.Key()); ok {
 		gs.Focus = focus
+	}
+}
+
+func groupSelectAltIsDialogMnemonic(r rune) bool {
+	switch r {
+	case 'o', 'O', 'c', 'C', 'f', 'F', 's', 'S', 'u', 'U':
+		return true
+	default:
+		return false
 	}
 }

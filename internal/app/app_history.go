@@ -2,7 +2,6 @@ package app
 
 import (
 	"path/filepath"
-	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -148,6 +147,18 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 		return
 	}
 
+	st := &a.model.HistoryDialog
+	if st.Focus == 0 {
+		onChange := func() {
+			a.syncHistoryDialogRanks()
+			st.Selected = 0
+			ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
+		}
+		if a.handleScrollingQueryKey(event, true, historyDialogScrollingQuery(st, a.historyDialogQueryWidth(), onChange)) {
+			return
+		}
+	}
+
 	switch event.Key() {
 	case tcell.KeyEsc:
 		a.closeHistoryDialog()
@@ -206,12 +217,6 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			break
 		}
 		if a.model.HistoryDialog.Focus == 0 {
-			if unicode.IsPrint(event.Rune()) {
-				a.model.HistoryDialog.Query += string(event.Rune())
-				a.syncHistoryDialogRanks()
-				a.model.HistoryDialog.Selected = 0
-				ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
-			}
 			break
 		}
 		switch event.Rune() {
@@ -226,27 +231,6 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			case 2:
 				a.closeHistoryDialog()
 			}
-		}
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		if a.model.HistoryDialog.Focus != 0 {
-			break
-		}
-		r := []rune(a.model.HistoryDialog.Query)
-		if len(r) > 0 {
-			a.model.HistoryDialog.Query = string(r[:len(r)-1])
-			a.syncHistoryDialogRanks()
-			a.model.HistoryDialog.Selected = 0
-			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
-		}
-	case tcell.KeyCtrlU:
-		if a.model.HistoryDialog.Focus != 0 {
-			break
-		}
-		if a.model.HistoryDialog.Query != "" {
-			a.model.HistoryDialog.Query = ""
-			a.syncHistoryDialogRanks()
-			a.model.HistoryDialog.Selected = 0
-			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
 		}
 	}
 }

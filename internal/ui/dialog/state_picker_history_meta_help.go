@@ -71,6 +71,8 @@ type FindDialogState struct {
 	SelectionDirRoots []string
 	Entries      []FindEntry
 	Query        string
+	QueryCursor  int // rune offset of caret within Query (0..len(runes))
+	QueryScroll  int // first visible rune offset for horizontal scrolling
 	Ranked       []int
 	MatchRanges  [][]search.Range
 	Selected     int
@@ -118,6 +120,8 @@ type HistoryDialogState struct {
 	CurrentIndex int      // snapshot HistoryIndex when dialog opened
 	DisplayLines []string // per-row UI text ("* path" / "  path"); len == len(Paths)
 	Query        string
+	QueryCursor  int // rune offset of caret within Query (0..len(runes))
+	QueryScroll  int // first visible rune offset for horizontal scrolling
 	Ranked       []int            // indices into Paths / DisplayLines
 	MatchRanges  [][]search.Range // len == len(Paths); highlights on DisplayLines
 	Selected     int              // index into Ranked
@@ -157,6 +161,8 @@ type HelpEntry struct {
 type HelpViewState struct {
 	Open        bool
 	Query       string
+	QueryCursor int // rune offset of caret within Query (0..len(runes))
+	QueryScroll int // first visible rune offset for horizontal scrolling
 	Entries     []HelpEntry
 	Ranked      []int            // indices into Entries (rank order)
 	MatchRanges [][]search.Range // len == len(Entries); rune ranges on the painted padded row

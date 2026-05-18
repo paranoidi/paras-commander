@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
@@ -667,6 +666,17 @@ func (a *App) handleFindDialogKey(event *tcell.EventKey) {
 		return
 	}
 
+	if st.Focus == 0 {
+		onChange := func() {
+			a.syncFindDialogRanks()
+			st.Selected = 0
+			ui.EnsureFindListScroll(st, a.findDialogListRows())
+		}
+		if a.handleScrollingQueryKey(event, true, findDialogScrollingQuery(st, a.findDialogQueryWidth(), onChange)) {
+			return
+		}
+	}
+
 	switch event.Key() {
 	case tcell.KeyInsert:
 		a.findDialogToggleSelectionAndAdvance()
@@ -732,12 +742,6 @@ func (a *App) handleFindDialogKey(event *tcell.EventKey) {
 			break
 		}
 		if st.Focus == 0 {
-			if unicode.IsPrint(event.Rune()) {
-				st.Query += string(event.Rune())
-				a.syncFindDialogRanks()
-				st.Selected = 0
-				ui.EnsureFindListScroll(st, a.findDialogListRows())
-			}
 			break
 		}
 		switch event.Rune() {
@@ -774,27 +778,6 @@ func (a *App) handleFindDialogKey(event *tcell.EventKey) {
 					a.closeFindDialog()
 				}
 			}
-		}
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		if st.Focus != 0 {
-			break
-		}
-		r := []rune(st.Query)
-		if len(r) > 0 {
-			st.Query = string(r[:len(r)-1])
-			a.syncFindDialogRanks()
-			st.Selected = 0
-			ui.EnsureFindListScroll(st, a.findDialogListRows())
-		}
-	case tcell.KeyCtrlU:
-		if st.Focus != 0 {
-			break
-		}
-		if st.Query != "" {
-			st.Query = ""
-			a.syncFindDialogRanks()
-			st.Selected = 0
-			ui.EnsureFindListScroll(st, a.findDialogListRows())
 		}
 	}
 }

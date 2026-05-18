@@ -2,7 +2,6 @@ package app
 
 import (
 	"strings"
-	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -263,6 +262,17 @@ func helpActionRunnableInBrowser(actionID string) bool {
 func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 	st := &a.model.HelpView
 
+	if st.Focus == 0 {
+		onChange := func() {
+			a.syncHelpRanks()
+			st.Selected = 0
+			ensureHelpListScroll(st, a.helpListRows())
+		}
+		if a.handleScrollingQueryKey(event, true, helpViewScrollingQuery(st, a.helpDialogQueryWidth(), onChange)) {
+			return false
+		}
+	}
+
 	// Alt+O and Alt+C close the dialog.
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
@@ -351,33 +361,6 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 		// Only one button (Close), no-op between buttons.
 	case tcell.KeyRight:
 		// Only one button, no-op.
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		if st.Focus == 0 {
-			r := []rune(st.Query)
-			if len(r) > 0 {
-				st.Query = string(r[:len(r)-1])
-				a.syncHelpRanks()
-				st.Selected = 0
-				ensureHelpListScroll(st, a.helpListRows())
-			}
-		}
-	case tcell.KeyCtrlU:
-		if st.Focus == 0 && st.Query != "" {
-			st.Query = ""
-			a.syncHelpRanks()
-			st.Selected = 0
-			ensureHelpListScroll(st, a.helpListRows())
-		}
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		if st.Focus == 0 && unicode.IsPrint(event.Rune()) {
-			st.Query += string(event.Rune())
-			a.syncHelpRanks()
-			st.Selected = 0
-			ensureHelpListScroll(st, a.helpListRows())
-		}
 	}
 	return false
 }

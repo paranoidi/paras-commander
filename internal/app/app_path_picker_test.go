@@ -275,6 +275,11 @@ func TestPathPickerQueryCtrlWAndAltBWordNav(t *testing.T) {
 	if st.QueryCursor != 1 {
 		t.Fatalf("after Alt+b: cursor=%d want 1", st.QueryCursor)
 	}
+
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
+	if st.Query != "" || st.QueryCursor != 0 || st.QueryScroll != 0 {
+		t.Fatalf("after Ctrl+L: query=%q cursor=%d scroll=%d", st.Query, st.QueryCursor, st.QueryScroll)
+	}
 }
 
 func TestPathPickerValidateArmIncrementsGeneration(t *testing.T) {
