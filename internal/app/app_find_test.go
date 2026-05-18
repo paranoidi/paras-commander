@@ -82,6 +82,66 @@ func TestFindDialogQueryAltBAltFCtrlL(t *testing.T) {
 	}
 }
 
+func TestFindDialogQueryHomeEndAndCtrlHomeEndList(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "alpha.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beta.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+	st := &app.model.FindDialog
+	if len(st.Ranked) < 2 {
+		t.Fatalf("ranked len = %d, want at least 2 entries", len(st.Ranked))
+	}
+
+	for _, r := range "ab" {
+		app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if st.QueryCursor != 2 {
+		t.Fatalf("cursor after type = %d want 2", st.QueryCursor)
+	}
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
+	if st.QueryCursor != 0 {
+		t.Fatalf("after Home: cursor=%d want 0", st.QueryCursor)
+	}
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	if st.QueryCursor != 2 {
+		t.Fatalf("after End: cursor=%d want 2", st.QueryCursor)
+	}
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
+	if len(st.Ranked) < 2 {
+		t.Fatalf("ranked len after clear = %d, want at least 2", len(st.Ranked))
+	}
+	st.Selected = len(st.Ranked) - 1
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModCtrl))
+	if st.Selected != 0 {
+		t.Fatalf("after Ctrl+Home: selected=%d want 0", st.Selected)
+	}
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModCtrl))
+	if st.Selected != len(st.Ranked)-1 {
+		t.Fatalf("after Ctrl+End: selected=%d want %d", st.Selected, len(st.Ranked)-1)
+	}
+}
+
 func TestFindDialogSelectsFile(t *testing.T) {
 	root := t.TempDir()
 	sub := filepath.Join(root, "pkg")

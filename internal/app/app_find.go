@@ -612,7 +612,6 @@ func (a *App) navigateFindCursor() {
 	a.model.ActiveSubFocus = ui.SubFocusFileList
 	a.panelByID(panelID).EnsureCursorVisible(a.panelViewportRows(panelID))
 	a.closeFindDialog()
-	a.setTransientMessage(path, ui.MessageUrgencyInfo)
 }
 
 func (a *App) findDialogToggleSelectionAndAdvance() {
@@ -716,12 +715,12 @@ func (a *App) handleFindDialogKey(event *tcell.EventKey) {
 			}
 		}
 	case tcell.KeyHome:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
+		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
 			st.Selected = 0
 			ui.EnsureFindListScroll(st, a.findDialogListRows())
 		}
 	case tcell.KeyEnd:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
+		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
 			st.Selected = len(st.Ranked) - 1
 			ui.EnsureFindListScroll(st, a.findDialogListRows())
 		}

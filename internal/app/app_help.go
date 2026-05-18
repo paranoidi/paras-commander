@@ -348,12 +348,12 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 			ensureHelpListScroll(st, a.helpListRows())
 		}
 	case tcell.KeyHome:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
+		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
 			st.Selected = 0
 			ensureHelpListScroll(st, a.helpListRows())
 		}
 	case tcell.KeyEnd:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
+		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
 			st.Selected = len(st.Ranked) - 1
 			ensureHelpListScroll(st, a.helpListRows())
 		}

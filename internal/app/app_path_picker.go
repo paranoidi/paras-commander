@@ -178,12 +178,12 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 			st.Focus = 2
 		}
 	case tcell.KeyHome:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
+		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
 			st.Selected = 0
 			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 		}
 	case tcell.KeyEnd:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
+		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
 			st.Selected = len(st.Ranked) - 1
 			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 		}

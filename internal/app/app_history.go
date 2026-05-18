@@ -189,12 +189,12 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			}
 		}
 	case tcell.KeyHome:
-		if a.model.HistoryDialog.Focus == 0 && len(a.model.HistoryDialog.Ranked) > 0 {
+		if a.model.HistoryDialog.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(a.model.HistoryDialog.Ranked) > 0 {
 			a.model.HistoryDialog.Selected = 0
 			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
 		}
 	case tcell.KeyEnd:
-		if a.model.HistoryDialog.Focus == 0 && len(a.model.HistoryDialog.Ranked) > 0 {
+		if a.model.HistoryDialog.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(a.model.HistoryDialog.Ranked) > 0 {
 			a.model.HistoryDialog.Selected = len(a.model.HistoryDialog.Ranked) - 1
 			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
 		}

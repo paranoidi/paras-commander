@@ -160,6 +160,20 @@ func (a *App) handleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, e s
 		e.q.MoveCursor(1)
 		e.applyVisibleOnly()
 		return true
+	case tcell.KeyHome:
+		if ev.Modifiers()&tcell.ModCtrl != 0 {
+			return false
+		}
+		e.q.MoveCursorStart()
+		e.applyVisibleOnly()
+		return true
+	case tcell.KeyEnd:
+		if ev.Modifiers()&tcell.ModCtrl != 0 {
+			return false
+		}
+		e.q.MoveCursorEnd()
+		e.applyVisibleOnly()
+		return true
 	case tcell.KeyCtrlA:
 		e.q.MoveCursorStart()
 		e.applyVisibleOnly()
