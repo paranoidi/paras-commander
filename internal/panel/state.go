@@ -210,6 +210,21 @@ func (s State) MatchRanges(index int) []search.Range {
 	return nil
 }
 
+// AddSelection marks path as selected without changing the file-list cursor.
+func (s *State) AddSelection(path string) {
+	path = cleanPath(path)
+	if path == "" {
+		return
+	}
+	if s.SelectedPaths == nil {
+		s.SelectedPaths = make(map[string]bool)
+	}
+	if s.SelectedPaths[path] {
+		return
+	}
+	s.SelectedPaths[path] = true
+}
+
 // ToggleSelection toggles the current entry in the panel-local selection set.
 func (s *State) ToggleSelection() bool {
 	entry, ok := s.CurrentEntry()
@@ -266,6 +281,11 @@ func (s State) HasSelectionInSubtree(dirPath string) bool {
 	return false
 }
 
+// IsStrictPathDescendant reports whether child is a strict descendant of parent (different paths, child under parent).
+func IsStrictPathDescendant(parent, child string) bool {
+	return isStrictPathDescendant(cleanPath(parent), cleanPath(child))
+}
+
 func isStrictPathDescendant(parent, child string) bool {
 	if parent == "" || child == "" || child == parent {
 		return false
@@ -278,6 +298,87 @@ func isStrictPathDescendant(parent, child string) bool {
 		return false
 	}
 	return !strings.HasPrefix(rel, "..")
+}
+
+// SelectedDirectoryPaths returns absolute paths of selected directories in stable sorted order.
+func (s State) SelectedDirectoryPaths() []string {
+	if len(s.SelectedPaths) == 0 {
+		return nil
+	}
+	byPath := make(map[string]localfs.Entry, len(s.Entries))
+	for _, entry := range s.Entries {
+		byPath[entry.Path] = entry
+	}
+	out := make([]string, 0)
+	for path, on := range s.SelectedPaths {
+		if !on {
+			continue
+		}
+		path = cleanPath(path)
+		if path == "" {
+			continue
+		}
+		if e, ok := byPath[path]; ok {
+			if e.Type == localfs.EntryDirectory {
+				out = append(out, path)
+			}
+			continue
+		}
+		e, err := localfs.EntryFromPath(path)
+		if err != nil {
+			continue
+		}
+		if e.Type == localfs.EntryDirectory {
+			out = append(out, path)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	sort.Strings(out)
+	return out
+}
+
+// PruneNestedPaths drops paths that are strict descendants of another path in the slice.
+func PruneNestedPaths(paths []string) []string {
+	if len(paths) <= 1 {
+		if len(paths) == 1 {
+			return []string{cleanPath(paths[0])}
+		}
+		return nil
+	}
+	sorted := make([]string, len(paths))
+	for i, p := range paths {
+		sorted[i] = cleanPath(p)
+	}
+	sort.Strings(sorted)
+	out := make([]string, 0, len(sorted))
+	for _, p := range sorted {
+		if p == "" {
+			continue
+		}
+		nested := false
+		for _, kept := range out {
+			if isStrictPathDescendant(kept, p) {
+				nested = true
+				break
+			}
+		}
+		if nested {
+			continue
+		}
+		trimmed := out[:0]
+		for _, kept := range out {
+			if !isStrictPathDescendant(p, kept) {
+				trimmed = append(trimmed, kept)
+			}
+		}
+		out = append(trimmed, p)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // Enter opens the selected directory. Regular files are intentionally inert.

@@ -95,7 +95,7 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 		}
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)
-		text, spans := historyRowContent(line, ranges, rowWidth, matchStyle)
+		text, spans := fuzzyRowContent(line, ranges, rowWidth, matchStyle, false)
 		primitive.StyledText(screen, leftCol, y, rowWidth, text, baseStyle, spans)
 	}
 
@@ -111,38 +111,3 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 	}, styles)
 }
 
-func historyRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style) (string, []primitive.Span) {
-	if width <= 0 {
-		return "", nil
-	}
-	orig := []rune(line)
-	var disp []rune
-	switch {
-	case len(orig) <= width:
-		disp = orig
-	case width == 1:
-		disp = orig[:1]
-	default:
-		disp = append(append([]rune{}, orig[:width-1]...), '~')
-	}
-	spans := make([]primitive.Span, 0, len(ranges))
-	truncated := len(orig) > width
-	for i := range disp {
-		if truncated && i == len(disp)-1 && disp[i] == '~' {
-			continue
-		}
-		if historyRangeContains(ranges, i) {
-			spans = append(spans, primitive.Span{Start: i, End: i + 1, Style: matchStyle})
-		}
-	}
-	return string(disp), spans
-}
-
-func historyRangeContains(ranges []search.Range, index int) bool {
-	for _, r := range ranges {
-		if index >= r.Start && index < r.End {
-			return true
-		}
-	}
-	return false
-}

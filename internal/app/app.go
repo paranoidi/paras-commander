@@ -13,6 +13,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/find"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -145,6 +146,17 @@ type App struct {
 	jobsListStale                bool
 	jobPathMarksVersion          uint64
 	jobsListVersion              uint64
+
+	findSessionMu      sync.Mutex
+	findWalks          map[string]*findWalk
+	findBatchCh        chan []find.Entry
+	findIndexedPaths   map[string]struct{}
+	findCompletedRoots map[string]struct{}
+}
+
+type findWalk struct {
+	root string
+	sess *find.Session
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -490,6 +502,11 @@ func (a *App) Run() error {
 				}
 			case quickViewFlushPayload:
 				if a.applyQuickViewPreviewFlush(d) {
+					a.render()
+					didRender = true
+				}
+			case findWakePayload:
+				if a.pollFindUpdates(d) {
 					a.render()
 					didRender = true
 				}

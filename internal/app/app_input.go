@@ -33,6 +33,7 @@ const (
 	InputModeFilePreviewView
 	InputModePathPicker
 	InputModeHistoryDialog
+	InputModeFindDialog
 	InputModeMetaDialog
 	InputModeUserMenu
 	InputModeHelpView
@@ -46,6 +47,8 @@ func (a *App) inputMode() InputMode {
 		return InputModePathPicker
 	case a.model.HistoryDialog.Open:
 		return InputModeHistoryDialog
+	case a.model.FindDialog.Open:
+		return InputModeFindDialog
 	case a.model.MetaDialog.Open:
 		return InputModeMetaDialog
 	case a.model.UserMenu.Open:
@@ -105,13 +108,13 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
-	if a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
+	if a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open {
 		return footerWithEscClose([]menu.FunctionKey{
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
 	if a.model.PrimaryModal() != ui.PrimaryModalNone ||
-		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open {
+		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		if a.pathPickerHostFooterEligible() {
 			if lbl := a.keys.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
@@ -238,6 +241,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return false, true
 	case InputModeHistoryDialog:
 		a.handleHistoryDialogKey(event)
+		a.render()
+		return false, true
+	case InputModeFindDialog:
+		a.handleFindDialogKey(event)
 		a.render()
 		return false, true
 	case InputModeMetaDialog:
@@ -631,6 +638,8 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionPanelHistoryDialog:
 		// Keyboard/menu shortcut targets whichever panel is active (left vs right).
 		a.openHistoryDialog(a.model.ActivePanel)
+	case keymap.ActionPanelFindDialog:
+		a.openFindDialog(a.model.ActivePanel)
 		// File operation actions
 	case keymap.ActionFileRename:
 		a.openRenameDialog(activePanel)

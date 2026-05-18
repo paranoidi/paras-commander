@@ -93,6 +93,7 @@ type Model struct {
 	GroupSelect         GroupSelectState
 	PathPicker          PathPickerState
 	HistoryDialog       HistoryDialogState
+	FindDialog          FindDialogState
 	MetaDialog          MetaDialogState
 	UserMenu            UserMenuDialogState
 	// MetaResults holds per-panel command output keyed by entry path (nil = meta not active).
@@ -173,7 +174,7 @@ func (m Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open || m.UserMenu.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open || m.UserMenu.Open {
 		return true
 	}
 	return false
@@ -185,7 +186,7 @@ func (m Model) QuickFilterStartBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
-	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
+	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.FindDialog.Open ||
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.GroupSelect.Open || m.FileDialog.Open ||
@@ -332,6 +333,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	if model.HistoryDialog.Open {
 		dialog.DrawHistoryDialog(screen, layout, model.HistoryDialog, styles)
+	}
+	if model.FindDialog.Open {
+		dialog.DrawFindDialog(screen, layout, model.FindDialog, styles, model.ShowFileIcons, FindListIconLeadingWidth(model.ShowFileIcons), PaintFindDialogRowIcon)
 	}
 	if model.MetaDialog.Open {
 		dialog.DrawMetaDialog(screen, layout, model.MetaDialog, styles)

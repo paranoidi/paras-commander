@@ -22,6 +22,8 @@ type (
 	PathPickerItem            = dialog.PathPickerItem
 	PathPickerState           = dialog.PathPickerState
 	HistoryDialogState        = dialog.HistoryDialogState
+	FindEntry                 = dialog.FindEntry
+	FindDialogState           = dialog.FindDialogState
 	MetaEntry                 = dialog.MetaEntry
 	MetaDialogState           = dialog.MetaDialogState
 	UserMenuDialogState       = dialog.UserMenuDialogState
@@ -101,6 +103,8 @@ var (
 	ListClampedSelectionDelta         = dialog.ListClampedSelectionDelta
 	EnsurePathPickerListScroll        = dialog.EnsurePathPickerListScroll
 	EnsureHistoryListScroll           = dialog.EnsureHistoryListScroll
+	EnsureFindListScroll              = dialog.EnsureFindListScroll
+	FindDialogNavFocusKey             = dialog.FindDialogNavFocusKey
 	EnsureScrollInputVisible          = dialog.EnsureScrollInputVisible
 	NewDialogLinearForm               = dialog.NewDialogLinearForm
 	NewDialogTrailingButtonsForm      = dialog.NewDialogTrailingButtonsForm

@@ -1,6 +1,9 @@
 package dialog
 
-import "github.com/paranoidi/paras-commander/internal/search"
+import (
+	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/search"
+)
 
 // PathPickerPurpose selects what happens when the user confirms a path in the picker.
 type PathPickerPurpose int
@@ -39,6 +42,72 @@ type PathPickerState struct {
 	QueryPathInvalid bool
 	// QueryPathCheckPending is true until debounced validation runs after Query changed.
 	QueryPathCheckPending bool
+}
+
+// FindEntry is one indexed path in the recursive find dialog.
+type FindEntry struct {
+	Path    string
+	RelLine string
+	IsDir   bool
+	Type    localfs.EntryType
+}
+
+// FindDialogState is a fuzzy picker over recursively indexed paths under a panel root.
+// Focus without selections checkbox: 0=list+filter, 1=stay-on-volume, 2=OK, 3=Cancel.
+// With selections checkbox: 0=list+filter, 1=stay-on-volume, 2=search-selections, 3=OK, 4=Cancel.
+type FindDialogState struct {
+	Open         bool
+	PanelID      int
+	RootPath     string
+	ShowHidden   bool
+	StayOnCurrentVolume bool
+	ListingDevice      uint64
+	ListingDeviceValid bool
+	// ShowSearchSelectionsOption is true when the panel had selected directories at open.
+	ShowSearchSelectionsOption bool
+	// SearchOnlySelections limits indexing to SelectionDirRoots when true.
+	SearchOnlySelections bool
+	// SelectionDirRoots is a pruned snapshot of selected directory paths at dialog open.
+	SelectionDirRoots []string
+	Entries      []FindEntry
+	Query        string
+	Ranked       []int
+	MatchRanges  [][]search.Range
+	Selected     int
+	ListScroll   int
+	Focus        int
+	Indexing     bool
+	IndexedCount int
+	IndexDone    bool
+	IndexErr     string
+	// MarkedPaths holds paths toggled selected in the dialog (applied to the panel on OK).
+	MarkedPaths map[string]bool
+}
+
+// FindDialogHasSelectionsCheckbox reports whether the search-selections row is shown.
+func (s FindDialogState) FindDialogHasSelectionsCheckbox() bool {
+	return s.ShowSearchSelectionsOption
+}
+
+// FindDialogOKFocus returns the focus index for the OK button.
+func (s FindDialogState) FindDialogOKFocus() int {
+	if s.FindDialogHasSelectionsCheckbox() {
+		return 3
+	}
+	return 2
+}
+
+// FindDialogCancelFocus returns the focus index for the Cancel button.
+func (s FindDialogState) FindDialogCancelFocus() int {
+	if s.FindDialogHasSelectionsCheckbox() {
+		return 4
+	}
+	return 3
+}
+
+// FindDialogMaxFocus returns the highest focus index (Cancel).
+func (s FindDialogState) FindDialogMaxFocus() int {
+	return s.FindDialogCancelFocus()
 }
 
 // HistoryDialogState is a fuzzy picker over one panel’s navigation history paths.

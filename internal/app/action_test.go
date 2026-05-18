@@ -181,6 +181,15 @@ func TestActionFromKeyMapsCtrlHToHistoryDialog(t *testing.T) {
 	}
 }
 
+func TestActionFromKeyMapsCtrlFToFindDialog(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModCtrl)
+	got := lookupActionForView(event, km, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionPanelFindDialog {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelFindDialog", got)
+	}
+}
+
 func TestActionFromKeyMapsCtrlAltDToAbortDiskUsageScans(t *testing.T) {
 	km := defaultKeymap(t)
 	ev := tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModAlt)

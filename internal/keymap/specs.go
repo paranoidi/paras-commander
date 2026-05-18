@@ -167,6 +167,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"history", "picker", "navigate", "alt-h"},
 		},
 		{
+			ID:           ActionPanelFindDialog,
+			Title:        "Find files",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"C-f"},
+			PreferredKey: "C-f",
+			Keywords:     []string{"find", "search", "recursive", "fuzzy", "locate"},
+		},
+		{
 			ID:           ActionPanelRefresh,
 			Title:        "Refresh panel",
 			Section:      "Navigation",

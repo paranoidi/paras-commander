@@ -18,6 +18,8 @@ const (
 	DefaultQuickViewPreviewDebounceMS = 75
 
 	DefaultDiskUsageWalkConcurrency = 4
+	// DefaultFindWalkConcurrency limits concurrent directory reads during panel find indexing.
+	DefaultFindWalkConcurrency = 4
 
 	DefaultWorkerProgressMinBytes      = 512 * 1024
 	DefaultWorkerProgressMinIntervalMS = 200

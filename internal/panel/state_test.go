@@ -244,6 +244,18 @@ func TestToggleHiddenPreservesCurrentEntryWhenStillVisible(t *testing.T) {
 	}
 }
 
+func TestAddSelectionMarksPath(t *testing.T) {
+	state := State{Path: "/tmp"}
+	state.AddSelection("/tmp/a.txt")
+	if state.SelectedPaths == nil || !state.SelectedPaths["/tmp/a.txt"] {
+		t.Fatal("AddSelection did not mark path")
+	}
+	state.AddSelection("/tmp/a.txt")
+	if len(state.SelectedPaths) != 1 {
+		t.Fatalf("duplicate AddSelection grew map: %v", state.SelectedPaths)
+	}
+}
+
 func TestToggleSelectionSelectsAndUnselectsCurrentEntry(t *testing.T) {
 	state := State{
 		Entries: []localfs.Entry{
@@ -1527,6 +1539,51 @@ func TestQuickFilterStillWorksAfterSortChange(t *testing.T) {
 		name := state.Entries[res.Index].Name
 		if !expectedNames[name] {
 			t.Fatalf("Filter result name = %q, want only alpha.txt or abeta.txt", name)
+		}
+	}
+}
+
+func TestSelectedDirectoryPaths(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(root, "f.txt")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s := State{
+		SelectedPaths: map[string]bool{
+			sub:  true,
+			file: true,
+		},
+	}
+	got := s.SelectedDirectoryPaths()
+	if len(got) != 1 || got[0] != filepath.Clean(sub) {
+		t.Fatalf("SelectedDirectoryPaths() = %v, want [%s]", got, filepath.Clean(sub))
+	}
+}
+
+func TestPruneNestedPaths(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "a")
+	child := filepath.Join(parent, "b")
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	sibling := filepath.Join(root, "c")
+	if err := os.Mkdir(sibling, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got := PruneNestedPaths([]string{child, parent, sibling})
+	want := []string{filepath.Clean(parent), filepath.Clean(sibling)}
+	if len(got) != len(want) {
+		t.Fatalf("PruneNestedPaths() = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("PruneNestedPaths() = %v, want %v", got, want)
 		}
 	}
 }
