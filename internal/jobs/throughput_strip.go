@@ -2,46 +2,44 @@ package jobs
 
 import "time"
 
-// AdvanceJobThroughputStrip records one wall-clock-aligned throughput sample per completed bin.
-// New bins are appended on the right; the slice is trimmed from the left to maxBins (scroll).
-// When several bins elapse between progress events, the byte delta is spread evenly across those
-// bins (constant B/s per closed bin) so idle gaps stay at zero without stretching one sample across the chart.
-func AdvanceJobThroughputStrip(job *Job, now time.Time, doneBytes int64, binDur, window time.Duration) {
-	if job == nil || binDur <= 0 || window <= 0 {
-		return
+// CloseOneThroughputColumn closes at most one fixed-duration column on the throughput strip.
+// The first call anchors the open column; later calls append one B/s sample when columnDur has elapsed.
+// Returns true when a sample was appended.
+func CloseOneThroughputColumn(job *Job, now time.Time, doneBytes int64, columnDur, window time.Duration) bool {
+	if job == nil || columnDur <= 0 || window <= 0 {
+		return false
 	}
-	binNs := binDur.Nanoseconds()
-	maxBins := int(window/binDur) + 10
+	maxBins := int(window/columnDur) + 10
 	const maxStripCap = 640
 	if maxBins > maxStripCap {
 		maxBins = maxStripCap
 	}
-	curBin := (now.UnixNano() / binNs) * binNs
 	if !job.throughputStripOpenSet {
 		job.throughputStripOpenSet = true
-		job.ThroughputStripOpenBin = curBin
+		job.ThroughputStripOpenBin = now.UnixNano()
 		job.ThroughputStripDoneAtOpen = doneBytes
-		return
+		return false
 	}
-	if curBin < job.ThroughputStripOpenBin {
-		job.ThroughputStripOpenBin = curBin
+	openStart := time.Unix(0, job.ThroughputStripOpenBin)
+	if now.Before(openStart) {
+		job.ThroughputStripOpenBin = now.UnixNano()
 		job.ThroughputStripDoneAtOpen = doneBytes
-		return
+		return false
 	}
-	if curBin == job.ThroughputStripOpenBin {
-		return
+	if now.Sub(openStart) < columnDur {
+		return false
 	}
 	db := doneBytes - job.ThroughputStripDoneAtOpen
-	nClose := int((curBin - job.ThroughputStripOpenBin) / binNs)
-	if nClose <= 0 {
-		return
-	}
-	perSec := float64(db) / (float64(nClose) * binDur.Seconds())
-	for i := 0; i < nClose; i++ {
-		throughputStripAppend(job, perSec, maxBins)
-	}
-	job.ThroughputStripOpenBin = curBin
+	nextOpen := openStart.Add(columnDur)
+	job.ThroughputStripOpenBin = nextOpen.UnixNano()
 	job.ThroughputStripDoneAtOpen = doneBytes
+	if db <= 0 {
+		// Advance the column clock without recording a sample (metadata / idle gaps).
+		return false
+	}
+	bps := float64(db) / columnDur.Seconds()
+	throughputStripAppend(job, bps, maxBins)
+	return true
 }
 
 func throughputStripAppend(job *Job, bps float64, maxBins int) {
@@ -51,20 +49,18 @@ func throughputStripAppend(job *Job, bps float64, maxBins int) {
 	}
 }
 
-// ThroughputChartColumnBuckets maps strip samples to exactly cols columns: right-padded with zeros
-// when short, or the cols newest samples when long. No rescaling of values (only braille Y scaling).
+// ThroughputChartColumnBuckets returns the newest strip samples up to cols entries.
+// It does not left-pad with zeros (padding would look like empty time periods on the chart).
 func ThroughputChartColumnBuckets(strip []float64, cols int) []float64 {
-	if cols <= 0 {
+	if cols <= 0 || len(strip) == 0 {
 		return nil
 	}
+	if len(strip) <= cols {
+		out := make([]float64, len(strip))
+		copy(out, strip)
+		return out
+	}
 	out := make([]float64, cols)
-	if len(strip) == 0 {
-		return out
-	}
-	if len(strip) >= cols {
-		copy(out, strip[len(strip)-cols:])
-		return out
-	}
-	copy(out[cols-len(strip):], strip)
+	copy(out, strip[len(strip)-cols:])
 	return out
 }

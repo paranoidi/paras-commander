@@ -44,29 +44,39 @@ type State struct {
 	throughputChartEnabled bool
 }
 
-// SetThroughputChart configures fixed-bin scrolling for the jobs details throughput strip.
-// When enabled is false, progress no longer advances strip state (no chart backend work).
-func (s *State) SetThroughputChart(bin, window time.Duration, enabled bool) {
+// SetThroughputChart configures column duration and history window for the jobs details throughput strip.
+// When enabled is false, the chart ticker does not advance strip state.
+func (s *State) SetThroughputChart(columnDur, window time.Duration, enabled bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.throughputChartBin = bin
+	s.throughputChartBin = columnDur
 	s.throughputChartWindow = window
 	s.throughputChartEnabled = enabled
 }
 
-func (s *State) advanceThroughputStrip(job *Job, now time.Time, doneBytes int64) {
+// CloseActiveJobThroughputColumn closes at most one throughput column for the active running job.
+// Returns true when a new strip sample was appended.
+func (s *State) CloseActiveJobThroughputColumn(now time.Time) bool {
 	if !s.throughputChartEnabled {
-		return
+		return false
 	}
-	bin := s.throughputChartBin
-	if bin <= 0 {
-		bin = 400 * time.Millisecond
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job := s.active
+	if job == nil || job.Status != StatusRunning {
+		return false
+	}
+	columnDur := s.throughputChartBin
+	if columnDur <= 0 {
+		columnDur = 400 * time.Millisecond
 	}
 	win := s.throughputChartWindow
 	if win <= 0 {
 		win = 45 * time.Second
 	}
-	AdvanceJobThroughputStrip(job, now, doneBytes, bin, win)
+	before := len(job.ThroughputStrip)
+	CloseOneThroughputColumn(job, now, job.DoneBytes, columnDur, win)
+	return len(job.ThroughputStrip) > before
 }
 
 // NewState creates a job state manager connected to a fresh queue and worker.
@@ -337,7 +347,6 @@ func (s *State) ApplyEvent(ev Event) {
 			j.DoneBytes = ev.DoneBytes
 			j.CurrentPath = ev.CurrentPath
 			now := time.Now()
-			s.advanceThroughputStrip(j, now, j.DoneBytes)
 			ApplyProgressETA(j, ev.DoneBytes, ev.DoneFiles, now)
 			j.PendingBlocker = nil
 		}

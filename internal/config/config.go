@@ -220,21 +220,22 @@ type JobsConfig struct {
 	KeepFinished      int  `toml:"keep_finished"`
 	AutoshowOnError   bool `toml:"autoshow_on_error"`
 	AutoshowOnStart   bool `toml:"autoshow_on_start"`
-	RefreshDebounceMS int  `toml:"refresh_debounce_ms"`
-	// ProgressEmitMinBytes is the minimum bytes copied between optional worker progress events.
-	ProgressEmitMinBytes int `toml:"progress_emit_min_bytes"`
-	// ProgressEmitMinIntervalMS is the minimum milliseconds between optional progress events when copying.
-	ProgressEmitMinIntervalMS int `toml:"progress_emit_min_interval_ms"`
+	// ProgressUIWakeDebounceMS is minimum spacing between jobsWakePayload interrupts after worker EventProgress.
+	ProgressUIWakeDebounceMS int `toml:"progress_ui_wake_debounce_ms"`
+	// WorkerProgressMinBytes is the minimum bytes copied between worker EventProgress emits.
+	WorkerProgressMinBytes int `toml:"worker_progress_min_bytes"`
+	// WorkerProgressMinIntervalMS is the minimum milliseconds between worker EventProgress emits when copying.
+	WorkerProgressMinIntervalMS int `toml:"worker_progress_min_interval_ms"`
 	// ThroughputChartWindowSec is the wall-time span shown by the jobs details throughput chart (20–120).
 	ThroughputChartWindowSec int `toml:"throughput_chart_window_sec"`
-	// ThroughputChartBinMS is fixed milliseconds per chart column (strip scroll step); 80–2000 after Validate.
-	ThroughputChartBinMS int `toml:"throughput_chart_bin_ms"`
-	// ThroughputChartEnabled controls the details-panel throughput strip: progress does not update strip data and the chart is not rendered when false.
+	// ThroughputChartColumnMS is milliseconds per chart column and chart ticker interval; 80–2000 after Validate.
+	ThroughputChartColumnMS int `toml:"throughput_chart_column_ms"`
+	// ThroughputChartEnabled controls the details-panel throughput strip and chart rendering.
 	ThroughputChartEnabled bool `toml:"throughput_chart_enabled"`
-	// RefreshVolumeSpaceOnProgress runs async statfs on both panels when a progress job wake is applied (see applyJobRefreshes).
-	RefreshVolumeSpaceOnProgress bool `toml:"refresh_volume_space_on_progress"`
-	// VolumeSpaceRefreshIntervalSecs is how often to refresh panel free space while any job is unfinished (0 disables periodic refresh).
-	VolumeSpaceRefreshIntervalSecs int `toml:"volume_space_refresh_interval_secs"`
+	// FreeSpaceOnProgressWake runs async statfs on both panels when a progress UI wake is applied (see applyJobRefreshes).
+	FreeSpaceOnProgressWake bool `toml:"free_space_on_progress_wake"`
+	// FreeSpacePollIntervalSecs is how often to refresh panel free space while any job is unfinished (0 disables).
+	FreeSpacePollIntervalSecs int `toml:"free_space_poll_interval_secs"`
 }
 
 type OperationsConfig struct {
@@ -308,14 +309,14 @@ func Default() Config {
 			KeepFinished:              20,
 			AutoshowOnError:           true,
 			AutoshowOnStart:           false,
-			RefreshDebounceMS:         150,
-			ProgressEmitMinBytes:      DefaultProgressEmitMinBytes,
-			ProgressEmitMinIntervalMS: DefaultProgressEmitMinIntervalMS,
-			ThroughputChartWindowSec:  DefaultThroughputChartWindowSec,
-			ThroughputChartBinMS:      DefaultThroughputChartBinMS,
-			ThroughputChartEnabled:          DefaultThroughputChartEnabled,
-			RefreshVolumeSpaceOnProgress:    DefaultRefreshVolumeSpaceOnProgress,
-			VolumeSpaceRefreshIntervalSecs:  DefaultVolumeSpaceRefreshIntervalSecs,
+			ProgressUIWakeDebounceMS:    DefaultProgressUIWakeDebounceMS,
+			WorkerProgressMinBytes:      DefaultWorkerProgressMinBytes,
+			WorkerProgressMinIntervalMS: DefaultWorkerProgressMinIntervalMS,
+			ThroughputChartWindowSec:    DefaultThroughputChartWindowSec,
+			ThroughputChartColumnMS:     DefaultThroughputChartColumnMS,
+			ThroughputChartEnabled:      DefaultThroughputChartEnabled,
+			FreeSpaceOnProgressWake:     DefaultFreeSpaceOnProgressWake,
+			FreeSpacePollIntervalSecs:   DefaultFreeSpacePollIntervalSecs,
 		},
 		Operations: OperationsConfig{
 			PreservePermissions:        DefaultPreservePermissions,
@@ -795,36 +796,36 @@ func (c *Config) Validate() error {
 	if c.Jobs.KeepFinished <= 0 {
 		c.Jobs.KeepFinished = builtin.Jobs.KeepFinished
 	}
-	if c.Jobs.RefreshDebounceMS <= 0 {
-		c.Jobs.RefreshDebounceMS = builtin.Jobs.RefreshDebounceMS
+	if c.Jobs.ProgressUIWakeDebounceMS <= 0 {
+		c.Jobs.ProgressUIWakeDebounceMS = builtin.Jobs.ProgressUIWakeDebounceMS
 	}
-	const jobsRefreshMinMS = 50
-	const jobsRefreshMaxMS = 5000
-	if c.Jobs.RefreshDebounceMS < jobsRefreshMinMS {
-		c.Jobs.RefreshDebounceMS = jobsRefreshMinMS
+	const jobsProgressTimingMinMS = 50
+	const jobsProgressTimingMaxMS = 5000
+	if c.Jobs.ProgressUIWakeDebounceMS < jobsProgressTimingMinMS {
+		c.Jobs.ProgressUIWakeDebounceMS = jobsProgressTimingMinMS
 	}
-	if c.Jobs.RefreshDebounceMS > jobsRefreshMaxMS {
-		c.Jobs.RefreshDebounceMS = jobsRefreshMaxMS
+	if c.Jobs.ProgressUIWakeDebounceMS > jobsProgressTimingMaxMS {
+		c.Jobs.ProgressUIWakeDebounceMS = jobsProgressTimingMaxMS
 	}
-	const progressEmitBytesMin = 64 * 1024
-	const progressEmitBytesMax = 64 * 1024 * 1024
-	if c.Jobs.ProgressEmitMinBytes <= 0 {
-		c.Jobs.ProgressEmitMinBytes = builtin.Jobs.ProgressEmitMinBytes
+	const workerProgressBytesMin = 64 * 1024
+	const workerProgressBytesMax = 64 * 1024 * 1024
+	if c.Jobs.WorkerProgressMinBytes <= 0 {
+		c.Jobs.WorkerProgressMinBytes = builtin.Jobs.WorkerProgressMinBytes
 	}
-	if c.Jobs.ProgressEmitMinBytes < progressEmitBytesMin {
-		c.Jobs.ProgressEmitMinBytes = progressEmitBytesMin
+	if c.Jobs.WorkerProgressMinBytes < workerProgressBytesMin {
+		c.Jobs.WorkerProgressMinBytes = workerProgressBytesMin
 	}
-	if c.Jobs.ProgressEmitMinBytes > progressEmitBytesMax {
-		c.Jobs.ProgressEmitMinBytes = progressEmitBytesMax
+	if c.Jobs.WorkerProgressMinBytes > workerProgressBytesMax {
+		c.Jobs.WorkerProgressMinBytes = workerProgressBytesMax
 	}
-	if c.Jobs.ProgressEmitMinIntervalMS <= 0 {
-		c.Jobs.ProgressEmitMinIntervalMS = builtin.Jobs.ProgressEmitMinIntervalMS
+	if c.Jobs.WorkerProgressMinIntervalMS <= 0 {
+		c.Jobs.WorkerProgressMinIntervalMS = builtin.Jobs.WorkerProgressMinIntervalMS
 	}
-	if c.Jobs.ProgressEmitMinIntervalMS < jobsRefreshMinMS {
-		c.Jobs.ProgressEmitMinIntervalMS = jobsRefreshMinMS
+	if c.Jobs.WorkerProgressMinIntervalMS < jobsProgressTimingMinMS {
+		c.Jobs.WorkerProgressMinIntervalMS = jobsProgressTimingMinMS
 	}
-	if c.Jobs.ProgressEmitMinIntervalMS > jobsRefreshMaxMS {
-		c.Jobs.ProgressEmitMinIntervalMS = jobsRefreshMaxMS
+	if c.Jobs.WorkerProgressMinIntervalMS > jobsProgressTimingMaxMS {
+		c.Jobs.WorkerProgressMinIntervalMS = jobsProgressTimingMaxMS
 	}
 	const throughputChartWindowMinSec = 20
 	const throughputChartWindowMaxSec = 120
@@ -837,23 +838,23 @@ func (c *Config) Validate() error {
 	if c.Jobs.ThroughputChartWindowSec > throughputChartWindowMaxSec {
 		c.Jobs.ThroughputChartWindowSec = throughputChartWindowMaxSec
 	}
-	const throughputChartBinMinMS = 80
-	const throughputChartBinMaxMS = 2000
-	if c.Jobs.ThroughputChartBinMS <= 0 {
-		c.Jobs.ThroughputChartBinMS = builtin.Jobs.ThroughputChartBinMS
+	const throughputChartColumnMinMS = 80
+	const throughputChartColumnMaxMS = 2000
+	if c.Jobs.ThroughputChartColumnMS <= 0 {
+		c.Jobs.ThroughputChartColumnMS = builtin.Jobs.ThroughputChartColumnMS
 	}
-	if c.Jobs.ThroughputChartBinMS < throughputChartBinMinMS {
-		c.Jobs.ThroughputChartBinMS = throughputChartBinMinMS
+	if c.Jobs.ThroughputChartColumnMS < throughputChartColumnMinMS {
+		c.Jobs.ThroughputChartColumnMS = throughputChartColumnMinMS
 	}
-	if c.Jobs.ThroughputChartBinMS > throughputChartBinMaxMS {
-		c.Jobs.ThroughputChartBinMS = throughputChartBinMaxMS
+	if c.Jobs.ThroughputChartColumnMS > throughputChartColumnMaxMS {
+		c.Jobs.ThroughputChartColumnMS = throughputChartColumnMaxMS
 	}
-	if c.Jobs.VolumeSpaceRefreshIntervalSecs < 0 {
-		c.Jobs.VolumeSpaceRefreshIntervalSecs = builtin.Jobs.VolumeSpaceRefreshIntervalSecs
+	if c.Jobs.FreeSpacePollIntervalSecs < 0 {
+		c.Jobs.FreeSpacePollIntervalSecs = builtin.Jobs.FreeSpacePollIntervalSecs
 	}
-	const volumeSpaceIntervalMaxSecs = 3600
-	if c.Jobs.VolumeSpaceRefreshIntervalSecs > volumeSpaceIntervalMaxSecs {
-		c.Jobs.VolumeSpaceRefreshIntervalSecs = volumeSpaceIntervalMaxSecs
+	const freeSpacePollIntervalMaxSecs = 3600
+	if c.Jobs.FreeSpacePollIntervalSecs > freeSpacePollIntervalMaxSecs {
+		c.Jobs.FreeSpacePollIntervalSecs = freeSpacePollIntervalMaxSecs
 	}
 	if c.Operations.CopyBufferKiB <= 0 {
 		c.Operations.CopyBufferKiB = builtin.Operations.CopyBufferKiB

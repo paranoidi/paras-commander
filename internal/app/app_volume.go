@@ -143,7 +143,7 @@ func (a *App) runVolumeSpaceTicker(interval time.Duration, stop <-chan struct{})
 			}
 			// Avoid periodic statfs + EventInterrupt while browsing during copy unless the user
 			// opted into progress-driven refresh (same mount contention as copy I/O).
-			if a.model.ViewMode != ui.ViewJobs && !a.config.Jobs.RefreshVolumeSpaceOnProgress {
+			if a.model.ViewMode != ui.ViewJobs && !a.config.Jobs.FreeSpaceOnProgressWake {
 				continue
 			}
 			a.requestBothPanelsVolumeSpaceRefreshAsync()

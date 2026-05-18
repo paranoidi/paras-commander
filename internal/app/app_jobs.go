@@ -547,12 +547,12 @@ func (a *App) jobQueue() *jobs.Queue {
 	return a.jobState.Queue()
 }
 
-func (a *App) jobsWakeDebounce() time.Duration {
-	return time.Duration(a.config.Jobs.RefreshDebounceMS) * time.Millisecond
+func (a *App) progressUIWakeDebounce() time.Duration {
+	return time.Duration(a.config.Jobs.ProgressUIWakeDebounceMS) * time.Millisecond
 }
 
 // onJobEmitted wakes PollEvent so the main loop can drain jobs.Events().
-// Progress emits use [jobs].refresh_debounce_ms for all views so the menu-bar strip can update
+// Progress emits use [jobs].progress_ui_wake_debounce_ms so the menu-bar strip can update
 // without blocking the event loop; other event types wake immediately.
 func (a *App) onJobEmitted(ev jobs.Event) {
 	if ev.Type == jobs.EventProgress {
@@ -573,7 +573,7 @@ func (a *App) armJobsWakeDebounced() {
 			}
 		}
 	}
-	a.jobsWakeTimer = time.AfterFunc(a.jobsWakeDebounce(), func() {
+	a.jobsWakeTimer = time.AfterFunc(a.progressUIWakeDebounce(), func() {
 		a.jobsWakeMu.Lock()
 		a.jobsWakeTimer = nil
 		a.jobsWakeMu.Unlock()
@@ -753,7 +753,7 @@ func (a *App) applyJobRefreshes() {
 		a.refreshBothPanels()
 	case a.jobRefreshProgress:
 		a.jobRefreshProgress = false
-		if a.config.Jobs.RefreshVolumeSpaceOnProgress {
+		if a.config.Jobs.FreeSpaceOnProgressWake {
 			a.requestBothPanelsVolumeSpaceRefreshAsync()
 		}
 	}
@@ -836,8 +836,8 @@ func jobTransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) 
 			CowFileCloning:             opsCfg.CowFileCloning,
 		}
 		throttle := ops.ProgressEmitThrottle{
-			MinBytes:    int64(jobsCfg.ProgressEmitMinBytes),
-			MinInterval: time.Duration(jobsCfg.ProgressEmitMinIntervalMS) * time.Millisecond,
+			MinBytes:    int64(jobsCfg.WorkerProgressMinBytes),
+			MinInterval: time.Duration(jobsCfg.WorkerProgressMinIntervalMS) * time.Millisecond,
 		}
 		resolver := func(src, dst string, facts ops.FileConflictFacts) (bool, error) {
 			kind := facts.Kind

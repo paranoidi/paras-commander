@@ -314,7 +314,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	jobState := jobs.NewState()
 	jobState.SetTransferFunc(jobTransferFunc(cfg.Operations, cfg.Jobs))
 	jobState.SetThroughputChart(
-		time.Duration(cfg.Jobs.ThroughputChartBinMS)*time.Millisecond,
+		time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
 		time.Duration(cfg.Jobs.ThroughputChartWindowSec)*time.Second,
 		cfg.Jobs.ThroughputChartEnabled,
 	)
@@ -387,8 +387,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	app.model.Left.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.model.Right.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.syncJobPathMarks()
-	if secs := cfg.Jobs.VolumeSpaceRefreshIntervalSecs; secs > 0 {
+	if secs := cfg.Jobs.FreeSpacePollIntervalSecs; secs > 0 {
 		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
+	}
+	if cfg.Jobs.ThroughputChartEnabled {
+		go app.runThroughputChartTicker(
+			time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
+			app.jobStopCh,
+		)
 	}
 	return app, nil
 }
@@ -484,6 +490,12 @@ func (a *App) Run() error {
 				}
 			case quickViewFlushPayload:
 				if a.applyQuickViewPreviewFlush(d) {
+					a.render()
+					didRender = true
+				}
+			case throughputChartTickPayload:
+				pollDiskUsageAfter = false
+				if a.applyThroughputChartTick() {
 					a.render()
 					didRender = true
 				}

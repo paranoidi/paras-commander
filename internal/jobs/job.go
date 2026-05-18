@@ -60,11 +60,11 @@ type Job struct {
 	ETAFilesPerSec float64
 	// DisplaySpeedBPS is a slower EMA for queue throughput column display (bytes/s).
 	DisplaySpeedBPS float64
-	// ThroughputStrip holds one B/s sample per completed wall-clock bin (oldest index 0, newest appended).
+	// ThroughputStrip holds one B/s sample per completed chart column (oldest index 0, newest appended).
 	ThroughputStrip []float64
-	// ThroughputStripOpenBin is Unix-nano-aligned start of the open bin (valid when throughputStripOpenSet).
+	// ThroughputStripOpenBin is Unix-nano start of the open column (valid when throughputStripOpenSet).
 	ThroughputStripOpenBin int64
-	// throughputStripOpenSet is true after AdvanceJobThroughputStrip anchors the open bin once.
+	// throughputStripOpenSet is true after CloseOneThroughputColumn anchors the open column once.
 	throughputStripOpenSet bool
 	// ThroughputStripDoneAtOpen is DoneBytes when the current open bin started.
 	ThroughputStripDoneAtOpen int64

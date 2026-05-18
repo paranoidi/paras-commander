@@ -21,10 +21,10 @@ type ProgressEmitThrottle struct {
 
 func effectiveProgressThrottle(t ProgressEmitThrottle) ProgressEmitThrottle {
 	if t.MinBytes <= 0 {
-		t.MinBytes = int64(config.DefaultProgressEmitMinBytes)
+		t.MinBytes = int64(config.DefaultWorkerProgressMinBytes)
 	}
 	if t.MinInterval <= 0 {
-		t.MinInterval = time.Duration(config.DefaultProgressEmitMinIntervalMS) * time.Millisecond
+		t.MinInterval = time.Duration(config.DefaultWorkerProgressMinIntervalMS) * time.Millisecond
 	}
 	return t
 }

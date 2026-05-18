@@ -19,20 +19,23 @@ const (
 
 	DefaultDiskUsageWalkConcurrency = 4
 
-	DefaultProgressEmitMinBytes      = 512 * 1024
-	DefaultProgressEmitMinIntervalMS = 200
+	DefaultWorkerProgressMinBytes      = 512 * 1024
+	DefaultWorkerProgressMinIntervalMS = 200
+
+	// DefaultProgressUIWakeDebounceMS is minimum spacing between main-loop wakes after worker EventProgress.
+	DefaultProgressUIWakeDebounceMS = 150
 
 	// DefaultThroughputChartWindowSec is the jobs details throughput strip span (clamped 20–120 in Validate).
 	DefaultThroughputChartWindowSec = 45
-	// DefaultThroughputChartBinMS is wall time per chart column (clamped in Validate).
-	DefaultThroughputChartBinMS = 400
+	// DefaultThroughputChartColumnMS is wall time per chart column and chart ticker interval (clamped in Validate).
+	DefaultThroughputChartColumnMS = 400
 	// DefaultThroughputChartEnabled turns on the jobs details throughput strip + chart rendering.
 	DefaultThroughputChartEnabled = true
 
-	// DefaultRefreshVolumeSpaceOnProgress triggers async statfs on both panels when copy progress wakes the UI.
-	DefaultRefreshVolumeSpaceOnProgress = true
-	// DefaultVolumeSpaceRefreshIntervalSecs is the period for background volume free-space refresh while jobs run (0 disables).
-	DefaultVolumeSpaceRefreshIntervalSecs = 5
+	// DefaultFreeSpaceOnProgressWake schedules async statfs on both panels after each progress UI wake.
+	DefaultFreeSpaceOnProgressWake = true
+	// DefaultFreeSpacePollIntervalSecs is the period for background volume free-space refresh while jobs run (0 disables).
+	DefaultFreeSpacePollIntervalSecs = 5
 
 	DefaultPreservePermissions        = true
 	DefaultPreserveTimestamps         = true
