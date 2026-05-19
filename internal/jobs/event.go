@@ -11,9 +11,11 @@ const (
 	EventPlanTotals        EventType = "plan-totals"
 	EventProgress          EventType = "progress"
 	EventJobBlockerRequest EventType = "job-blocker-request"
-	EventCompleted         EventType = "completed"
-	EventFailed            EventType = "failed"
-	EventCanceled          EventType = "canceled"
+	// EventJobResumed is emitted when a job resumes transfer after a blocker decision.
+	EventJobResumed EventType = "job-resumed"
+	EventCompleted  EventType = "completed"
+	EventFailed     EventType = "failed"
+	EventCanceled   EventType = "canceled"
 )
 
 // Event is a structured message emitted by the worker to report job state changes.

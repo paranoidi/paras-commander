@@ -373,6 +373,15 @@ func (s *State) ApplyEvent(ev Event) {
 				job.PendingBlocker = &b
 			}
 		}
+	case EventJobResumed:
+		job := s.findJobUnlocked(ev.JobID)
+		if job != nil {
+			job.Status = StatusRunning
+			job.PendingBlocker = nil
+			if s.active == nil || s.active.ID == ev.JobID {
+				s.active = job
+			}
+		}
 	case EventProgress:
 		j := s.findJobUnlocked(ev.JobID)
 		if j != nil {
@@ -608,6 +617,12 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		s.active = job
 		job.Status = StatusRunning
 		s.mu.Unlock()
+
+		s.emit(Event{
+			Type:   EventJobResumed,
+			JobID:  job.ID,
+			Status: StatusRunning,
+		})
 
 		if req.Kind == BlockerKindConflict {
 			_, _, _, policy = ApplyDecision(policy, d)

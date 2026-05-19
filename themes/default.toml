@@ -145,7 +145,7 @@ path_picker = "\uf0ca"
 
 [symbols.menu.progress]
 done = "─"
-remaining = "─"
+remaining = "-"
 
 [symbols.menu.job]
 scanning = "◌"

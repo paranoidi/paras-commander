@@ -299,3 +299,32 @@ func TestEntryPathJobMarkStatus_jobEntriesFromJobsKeepsBothQueuedJobs(t *testing
 		t.Fatalf("status = %q, want queued (delete should win for nested path)", st)
 	}
 }
+
+func TestEntryPathJobMarkStatus_decisionThenRunning(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	dstRoot := filepath.Join(tmp, "dest", "pinmonitor")
+	if err := os.MkdirAll(dstRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	srcRoot := filepath.Join(tmp, "src", "pinmonitor")
+	if err := os.MkdirAll(srcRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marks := []JobPathMark{{
+		Type:        string(jobs.TypeCopy),
+		Status:      string(jobs.StatusWaitingDecision),
+		Sources:     []string{srcRoot},
+		Destination: filepath.Join(tmp, "dest"),
+		DestIsDir:   true,
+	}}
+	marked, st := EntryPathJobMarkStatus(dstRoot, marks)
+	if !marked || st != string(jobs.StatusWaitingDecision) {
+		t.Fatalf("marked=%v status=%q, want decision on destination dir", marked, st)
+	}
+	marks[0].Status = string(jobs.StatusRunning)
+	marked, st = EntryPathJobMarkStatus(dstRoot, marks)
+	if !marked || st != string(jobs.StatusRunning) {
+		t.Fatalf("marked=%v status=%q, want running after resume", marked, st)
+	}
+}

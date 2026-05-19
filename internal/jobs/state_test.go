@@ -93,6 +93,54 @@ func TestWorkerYieldsTransferLeaseWhileWaitingConflictDecision(t *testing.T) {
 	wg.Wait()
 }
 
+func TestWorkerEmitsJobResumedAfterBlockerDecision(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	blockerEntered := make(chan struct{})
+	var wg sync.WaitGroup
+
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		if job.ID != "job-a" {
+			return nil
+		}
+		close(blockerEntered)
+		_ = waitBlocker(BlockerRequest{
+			Kind:     BlockerKindConflict,
+			Conflict: &ConflictRequest{JobID: job.ID, Source: "/a", Destination: "/b", ExistingDetails: "file exists"},
+		})
+		return nil
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.AddJob(&Job{ID: "job-a", Type: TypeCopy, Status: StatusQueued, Sources: []string{"/x"}, Destination: "/y"})
+	}()
+
+	deadline := time.After(5 * time.Second)
+	select {
+	case <-deadline:
+		t.Fatal("timeout waiting for blocker")
+	case <-blockerEntered:
+	}
+	s.SubmitConflictDecision("job-a", DecisionOverwriteAll)
+
+	var gotResumed bool
+	for !gotResumed {
+		select {
+		case <-deadline:
+			t.Fatal("timeout waiting EventJobResumed")
+		case ev := <-s.Events():
+			if ev.Type == EventJobResumed && ev.JobID == "job-a" && ev.Status == StatusRunning {
+				gotResumed = true
+			}
+		}
+	}
+	wg.Wait()
+}
+
 func TestStateEmitHook(t *testing.T) {
 	var n atomic.Int32
 	s := NewState()
