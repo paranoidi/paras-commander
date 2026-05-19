@@ -13,15 +13,12 @@ func (a *App) dispatchFileMenuItem(item menu.Item) {
 		keymap.ActionFileChown,
 		keymap.ActionFileSymlink,
 		keymap.ActionFileHardlink,
-		keymap.ActionBookmarkOpen,
 		keymap.ActionFileView,
 		keymap.ActionFileQuickView,
 		keymap.ActionMenuFileViewPath,
-		keymap.ActionMenuFileFilteredView,
 		keymap.ActionFileEdit,
 		keymap.ActionMenuFileRelativeSymlink,
 		keymap.ActionMenuFileEditSymlink,
-		keymap.ActionMenuFileAdvancedChown,
 		keymap.ActionMenuFileChattr:
 		a.dispatch(item.Action)
 	default:

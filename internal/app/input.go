@@ -676,16 +676,12 @@ func (a *App) dispatch(actionID string) {
 		a.handleQuickViewToggle()
 	case keymap.ActionMenuFileViewPath:
 		a.setUnsupportedMessage("View file...")
-	case keymap.ActionMenuFileFilteredView:
-		a.setUnsupportedMessage("Filtered view")
 	case keymap.ActionFileEdit:
 		a.setUnsupportedMessage("Edit")
 	case keymap.ActionMenuFileRelativeSymlink:
 		a.setUnsupportedMessage("Relative symlink")
 	case keymap.ActionMenuFileEditSymlink:
 		a.setUnsupportedMessage("Edit symlink")
-	case keymap.ActionMenuFileAdvancedChown:
-		a.setUnsupportedMessage("Advanced chown")
 	case keymap.ActionMenuFileChattr:
 		a.setUnsupportedMessage("Chattr")
 	}

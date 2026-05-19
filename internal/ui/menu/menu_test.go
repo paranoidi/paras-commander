@@ -191,12 +191,10 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	})
 	assertLabels(t, file, map[string]string{
 		"View":             "F3",
-		"Filtered view":    "M-!",
 		"Edit":             "F4",
 		"Copy":             "F5",
 		"Rename/Move":      "F6",
 		"Mkdir":            "F7",
-		"Quick cd":         "C-g",
 		"Select group":     "+",
 		"Unselect group":   "-",
 		"Invert selection": "*",

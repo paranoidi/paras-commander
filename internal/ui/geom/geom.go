@@ -214,6 +214,32 @@ func SplitJobsRightColumn(column Rect, detailLineCount int) (detail Rect, activi
 	return detail, activity
 }
 
+// SplitJobsRightColumnFlexTop divides a column into a top panel that receives all remaining
+// vertical space and a bottom panel sized to bottomLineCount text rows (plus panel chrome).
+// When the column is too short for two usable panels, the bottom panel is omitted.
+func SplitJobsRightColumnFlexTop(column Rect, bottomLineCount int) (top Rect, bottom Rect) {
+	compactMin := jobsSubpanelMinFrameH
+	minBottomFrame := max(bottomLineCount+jobsDetailChromeRows, 3)
+	if column.Height < compactMin+3 {
+		return column, Rect{X: column.X, Y: column.Y + column.Height, Width: column.Width, Height: 0}
+	}
+	if minBottomFrame+compactMin <= column.Height {
+		bottomH := minBottomFrame
+		topH := column.Height - bottomH
+		top = Rect{X: column.X, Y: column.Y, Width: column.Width, Height: topH}
+		bottom = Rect{X: column.X, Y: column.Y + topH, Width: column.Width, Height: bottomH}
+		return top, bottom
+	}
+	bottomH := compactMin
+	topH := column.Height - bottomH
+	if topH < 3 {
+		return column, Rect{X: column.X, Y: column.Y + column.Height, Width: column.Width, Height: 0}
+	}
+	top = Rect{X: column.X, Y: column.Y, Width: column.Width, Height: topH}
+	bottom = Rect{X: column.X, Y: column.Y + topH, Width: column.Width, Height: bottomH}
+	return top, bottom
+}
+
 // JobsPanelContentRows returns scrollable text lines inside a jobs detail/activity frame (inner height).
 func JobsPanelContentRows(rect Rect) int {
 	h := rect.Height - 2

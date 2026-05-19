@@ -366,7 +366,7 @@ func (a *App) commandsViewFocusPaneCount() int {
 	if layout.TooSmall {
 		return 2
 	}
-	_, stderrRect := ui.SplitJobsRightColumn(layout.Right, 8)
+	_, stderrRect := ui.SplitJobsRightColumnFlexTop(layout.Right, 8)
 	if stderrRect.Height == 0 {
 		return 2
 	}
@@ -397,7 +397,7 @@ func (a *App) maxCommandsStdoutScroll() int {
 	if layout.TooSmall {
 		return 0
 	}
-	stdoutRect, _ := ui.SplitJobsRightColumn(layout.Right, 8)
+	stdoutRect, _ := ui.SplitJobsRightColumnFlexTop(layout.Right, 8)
 	contentH := ui.JobsPanelContentRows(stdoutRect)
 	lines := commandOutputLineCount(sel.Stdout)
 	return max(0, lines-contentH)
@@ -410,7 +410,7 @@ func (a *App) maxCommandsStderrScroll() int {
 	if layout.TooSmall {
 		return 0
 	}
-	_, stderrRect := ui.SplitJobsRightColumn(layout.Right, 8)
+	_, stderrRect := ui.SplitJobsRightColumnFlexTop(layout.Right, 8)
 	contentH := ui.JobsPanelContentRows(stderrRect)
 	lines := commandOutputLineCount(sel.Stderr)
 	return max(0, lines-contentH)

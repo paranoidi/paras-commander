@@ -46,6 +46,11 @@ func SplitJobsRightColumn(column Rect, detailLineCount int) (detail Rect, activi
 	return geom.SplitJobsRightColumn(column, detailLineCount)
 }
 
+// SplitJobsRightColumnFlexTop divides a column into a flexible top panel and a compact bottom panel.
+func SplitJobsRightColumnFlexTop(column Rect, bottomLineCount int) (top Rect, bottom Rect) {
+	return geom.SplitJobsRightColumnFlexTop(column, bottomLineCount)
+}
+
 // MergeTwinPanelRects returns one rectangle spanning the browser's left and right columns (same height).
 func MergeTwinPanelRects(left, right Rect) Rect {
 	return Rect{

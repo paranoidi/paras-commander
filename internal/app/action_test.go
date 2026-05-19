@@ -217,7 +217,7 @@ func TestActionFromKeyIgnoresUnknownKey(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsF3F4AndFilteredViewChord(t *testing.T) {
+func TestActionFromKeyMapsF3F4(t *testing.T) {
 	km := defaultKeymap(t)
 	tests := []struct {
 		name string
@@ -227,7 +227,6 @@ func TestActionFromKeyMapsF3F4AndFilteredViewChord(t *testing.T) {
 		{"F3 view", tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone), keymap.ActionFileView},
 		{"S-F3 quick view", tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModShift), keymap.ActionFileQuickView},
 		{"F4 edit", tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone), keymap.ActionFileEdit},
-		{"M-! filtered", tcell.NewEventKey(tcell.KeyRune, '!', tcell.ModAlt), keymap.ActionMenuFileFilteredView},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

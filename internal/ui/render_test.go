@@ -306,7 +306,7 @@ func TestRenderDrawsFilePulldownMenu(t *testing.T) {
 	if pulldownBorder != styles.MenuDropdownFrame {
 		t.Fatalf("pulldown border style = %v, want menu.dropdown.frame %v", pulldownBorder, styles.MenuDropdownFrame)
 	}
-	menuText = tcelltest.TextAt(screen, 8, 6, 40)
+	menuText = tcelltest.TextAt(screen, 8, 5, 40)
 	if !strings.Contains(menuText, "Copy") || !strings.Contains(menuText, "F5") {
 		t.Fatalf("copy file menu row = %q, want Copy with F5", menuText)
 	}

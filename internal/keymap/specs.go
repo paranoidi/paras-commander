@@ -416,13 +416,6 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"menu"},
 		},
 		{
-			ID:          ActionMenuFileFilteredView,
-			Title:       "Filtered view",
-			Section:     "File operations",
-			DefaultKeys: []string{"M-!"},
-			Keywords:    []string{"menu"},
-		},
-		{
 			ID:          ActionFileEdit,
 			Title:       "Edit file",
 			Section:     "File operations",
@@ -439,13 +432,6 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:          ActionMenuFileEditSymlink,
 			Title:       "Edit symlink",
-			Section:     "File operations",
-			DefaultKeys: nil,
-			Keywords:    []string{"menu"},
-		},
-		{
-			ID:          ActionMenuFileAdvancedChown,
-			Title:       "Advanced chown",
 			Section:     "File operations",
 			DefaultKeys: nil,
 			Keywords:    []string{"menu"},

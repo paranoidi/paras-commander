@@ -29,12 +29,12 @@ func drawCommandsView(
 		sel = entries[state.Selected]
 	}
 	stdoutLines := commandPanelLines(sel.Stdout, layout.Right.Width-4)
-	stdLineBudget := max(8, min(len(stdoutLines)+2, 24))
-	stdoutRect, stderrRect := SplitJobsRightColumn(layout.Right, stdLineBudget)
+	stderrLines := commandPanelLines(sel.Stderr, layout.Right.Width-4)
+	stderrLineBudget := max(8, min(len(stderrLines)+2, 24))
+	stdoutRect, stderrRect := SplitJobsRightColumnFlexTop(layout.Right, stderrLineBudget)
 	stdoutFocused := state.FocusPane == 1
 	stderrFocused := state.FocusPane == 2
 	drawCommandsStreamPanel(screen, stdoutRect, " Stdout ", state.StdoutScroll, stdoutLines, styles, chromeBlocked, stdoutFocused)
-	stderrLines := commandPanelLines(sel.Stderr, layout.Right.Width-4)
 	drawCommandsStreamPanel(screen, stderrRect, " Stderr ", state.StderrScroll, stderrLines, styles, chromeBlocked, stderrFocused)
 }
 

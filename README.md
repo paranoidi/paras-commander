@@ -1,8 +1,22 @@
 # Paras Commander
 
-A Linux terminal twin-panel file manager inspired by Midnight Commander, written in Go using a TUI.
+A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf, written in Go using a TUI.
 
-> ⚠️ **Not yet stable or usable.** Copy/move commands may cause data loss.
+> ⚠️ **Not yet stable** Copy/move commands may cause data loss.
+
+## Features
+
+- Practically everything is based on fzf style searching. Filelist navigation, keybind help, etc.
+- All jobs are queued into background by default.
+- Jobs view with queue management and transfer graphs.
+- Integrated disk usage scanning and reporting.
+- Supports selections across multiple paths.
+- Integrated mass rename.
+- Rename supports slugify and clean.
+- Read bookmarks from ~/.fzf-marks and gnome gtk files. Writes bookmarks to ~/.fzf-marks.
+- Find files / paths recursively.
+- Meta column can be used to provide data from external commands.
+- Execute command for selected files.
 
 ## Requirements
 

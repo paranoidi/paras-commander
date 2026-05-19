@@ -121,10 +121,8 @@ const (
 // Menu routing identifiers for File pulldown entries (bindable in keybindings.toml).
 const (
 	ActionMenuFileViewPath        = "menu.file.view-path"
-	ActionMenuFileFilteredView    = "menu.file.filtered-view"
 	ActionMenuFileRelativeSymlink = "menu.file.relative-symlink"
 	ActionMenuFileEditSymlink     = "menu.file.edit-symlink"
-	ActionMenuFileAdvancedChown   = "menu.file.advanced-chown"
 	ActionMenuFileChattr          = "menu.file.chattr"
 )
 
@@ -197,10 +195,8 @@ var KnownActions = map[string]struct{}{
 	ActionMove: {},
 
 	ActionMenuFileViewPath:        {},
-	ActionMenuFileFilteredView:    {},
 	ActionMenuFileRelativeSymlink: {},
 	ActionMenuFileEditSymlink:     {},
-	ActionMenuFileAdvancedChown:   {},
 	ActionMenuFileChattr:          {},
 
 	ActionJobsOpen:          {},

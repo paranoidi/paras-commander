@@ -176,6 +176,32 @@ func TestSplitJobsRightColumnOmitsActivityWhenTooShort(t *testing.T) {
 	}
 }
 
+func TestSplitJobsRightColumnFlexTopSizesBottomToLineCount(t *testing.T) {
+	col := Rect{X: 0, Y: 0, Width: 50, Height: 28}
+	top, bottom := SplitJobsRightColumnFlexTop(col, 10)
+	wantBottomH := 10 + jobsDetailChromeRows
+	if bottom.Height != wantBottomH {
+		t.Fatalf("bottom.Height = %d, want %d (lines + chrome)", bottom.Height, wantBottomH)
+	}
+	if top.Height != col.Height-wantBottomH {
+		t.Fatalf("top.Height = %d, want %d", top.Height, col.Height-wantBottomH)
+	}
+	if top.Height+bottom.Height != col.Height {
+		t.Fatal("heights must fill column")
+	}
+}
+
+func TestSplitJobsRightColumnFlexTopReservesBottomMinimumWhenCramped(t *testing.T) {
+	col := Rect{X: 0, Y: 0, Width: 50, Height: 12}
+	top, bottom := SplitJobsRightColumnFlexTop(col, 100)
+	if bottom.Height != jobsSubpanelMinFrameH {
+		t.Fatalf("bottom.Height = %d, want minimum %d", bottom.Height, jobsSubpanelMinFrameH)
+	}
+	if top.Height != col.Height-bottom.Height {
+		t.Fatalf("top.Height = %d", top.Height)
+	}
+}
+
 func TestSplitJobsRightPanelsReservesConflictAboveDetail(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 30}
 	conflict, detail, activity := SplitJobsRightPanels(col, true, 8)
