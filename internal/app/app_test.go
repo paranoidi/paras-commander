@@ -16,11 +16,89 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
+
+func TestSetErrorMessageOpsErrorNoDuplicatePrefix(t *testing.T) {
+	t.Parallel()
+	app := testAppMinimal(t)
+	err := &ops.Error{Op: "mkdir", Text: "target already exists"}
+	app.setErrorMessage("Mkdir", err)
+	if app.model.Message != "mkdir: target already exists" {
+		t.Fatalf("message = %q, want mkdir: target already exists", app.model.Message)
+	}
+}
+
+func TestSetErrorMessageExecuteFailureNoDuplicatePrefix(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		prefix string
+		err    error
+		want   string
+	}{
+		{
+			prefix: "Mkdir failed",
+			err:    fmt.Errorf(`mkdir "/tmp/x": file exists`),
+			want:   `mkdir "/tmp/x": file exists`,
+		},
+		{
+			prefix: "Rename failed",
+			err:    fmt.Errorf(`rename "/a" to "/b": permission denied`),
+			want:   `rename "/a" to "/b": permission denied`,
+		},
+		{
+			prefix: "Hardlink failed",
+			err:    fmt.Errorf(`link "/dst" -> "/src": file exists`),
+			want:   `link "/dst" -> "/src": file exists`,
+		},
+		{
+			prefix: "Mass rename failed",
+			err:    fmt.Errorf(`mass rename stage1 "/a": permission denied`),
+			want:   `mass rename stage1 "/a": permission denied`,
+		},
+		{
+			prefix: "Chmod failed",
+			err:    &ops.Error{Op: "chmod", Text: "failed to change mode for foo", Err: errors.New(`chmod "/p": permission denied`)},
+			want:   `chmod: failed to change mode for foo (chmod "/p": permission denied)`,
+		},
+	}
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.prefix, func(t *testing.T) {
+			t.Parallel()
+			app := testAppMinimal(t)
+			app.setErrorMessage(tc.prefix, tc.err)
+			if app.model.Message != tc.want {
+				t.Fatalf("message = %q, want %q", app.model.Message, tc.want)
+			}
+		})
+	}
+}
+
+func TestSetErrorMessageKeepsUnrelatedPrefix(t *testing.T) {
+	t.Parallel()
+	app := testAppMinimal(t)
+	err := fmt.Errorf(`read directory "/tmp": permission denied`)
+	app.setErrorMessage("Enter failed", err)
+	want := `Enter failed: read directory "/tmp": permission denied`
+	if app.model.Message != want {
+		t.Fatalf("message = %q, want %q", app.model.Message, want)
+	}
+}
+
+func TestShouldOmitErrorPrefix(t *testing.T) {
+	t.Parallel()
+	if !shouldOmitErrorPrefix("Mkdir failed", fmt.Errorf(`mkdir "/x": exists`)) {
+		t.Fatal("expected omit for mkdir execute error")
+	}
+	if shouldOmitErrorPrefix("Enter failed", fmt.Errorf(`read directory "/x": denied`)) {
+		t.Fatal("expected keep prefix for unrelated enter error")
+	}
+}
 
 func TestTransientErrorTextPermissionDenied(t *testing.T) {
 	wrapped := fmt.Errorf(`read directory "/home/nella": %w`, fs.ErrPermission)
@@ -126,6 +204,31 @@ func TestGroupSelectPatternCtrlLAndWordNav(t *testing.T) {
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
 	if gs.Text != "" || gs.TextCursor != 0 || gs.TextScroll != 0 {
 		t.Fatalf("after Ctrl+L: text=%q cursor=%d scroll=%d", gs.Text, gs.TextCursor, gs.TextScroll)
+	}
+}
+
+func TestGroupSelectEnterOnPatternInputConfirms(t *testing.T) {
+	dir := t.TempDir()
+	foo := filepath.Join(dir, "foo.txt")
+	bar := filepath.Join(dir, "bar.txt")
+	writeFile(t, foo)
+	writeFile(t, bar)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openGroupSelect("select")
+	for _, r := range "*.txt" {
+		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if app.model.GroupSelect.Focus != 0 {
+		t.Fatalf("focus = %d, want 0 (pattern input)", app.model.GroupSelect.Focus)
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.GroupSelect.Open {
+		t.Fatal("Enter on pattern input should close dialog")
+	}
+	p := app.activePanel()
+	if p.SelectedPaths == nil || !p.SelectedPaths[foo] || !p.SelectedPaths[bar] {
+		t.Fatalf("selection after Enter = %v, want foo.txt and bar.txt", p.SelectedPaths)
 	}
 }
 

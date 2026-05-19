@@ -9,6 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -117,7 +118,53 @@ func (a *App) setErrorMessage(prefix string, err error) {
 		a.setTransientMessage(short, ui.MessageUrgencyError)
 		return
 	}
+	if shouldOmitErrorPrefix(prefix, err) {
+		a.setTransientMessage(err.Error(), ui.MessageUrgencyError)
+		return
+	}
 	a.setTransientMessage(fmt.Sprintf("%s: %v", prefix, err), ui.MessageUrgencyError)
+}
+
+// shouldOmitErrorPrefix reports whether err.Error() already identifies the operation
+// named in prefix (e.g. ops.Error, localfs mkdir/rename wrappers, mass-rename stages).
+func shouldOmitErrorPrefix(prefix string, err error) bool {
+	var opErr *ops.Error
+	if errors.As(err, &opErr) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	for _, verb := range errorPrefixVerbs(prefix) {
+		if strings.HasPrefix(msg, verb) {
+			return true
+		}
+	}
+	return false
+}
+
+func errorPrefixVerbs(prefix string) []string {
+	p := strings.TrimSpace(strings.ToLower(prefix))
+	p = strings.TrimSuffix(p, " failed")
+	p = strings.TrimSuffix(p, " source")
+	switch p {
+	case "mkdir":
+		return []string{"mkdir"}
+	case "rename":
+		return []string{"rename"}
+	case "chmod":
+		return []string{"chmod"}
+	case "chown":
+		return []string{"chown"}
+	case "symlink":
+		return []string{"symlink"}
+	case "hardlink":
+		return []string{"hardlink", "link"}
+	case "mass rename":
+		return []string{"mass rename", "mass-rename"}
+	case "delete":
+		return []string{"delete", "remove"}
+	default:
+		return nil
+	}
 }
 
 // transientErrorText maps common filesystem errors to compact status-banner text.

@@ -364,33 +364,54 @@ func (a *App) executeGroupSelect() {
 	a.closeGroupSelect()
 }
 
+// confirmGroupSelectFromInput applies the pattern row then runs OK (Enter / Alt+O).
+func (a *App) confirmGroupSelectFromInput() {
+	gs := &a.model.GroupSelect
+	if gs.Focus == 0 {
+		e := groupSelectScrollingQuery(gs, a.groupSelectQueryWidth())
+		e.apply()
+	}
+	a.executeGroupSelect()
+}
+
 func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	gs := &a.model.GroupSelect
 	form := ui.NewDialogLinearForm(4)
+
+	if ui.AltDialogOK(event) {
+		a.confirmGroupSelectFromInput()
+		return
+	}
+	if ui.AltDialogCancel(event) {
+		a.closeGroupSelect()
+		return
+	}
+
+	switch event.Key() {
+	case tcell.KeyEsc, tcell.KeyF9:
+		a.closeGroupSelect()
+		return
+	case tcell.KeyEnter:
+		if gs.Focus == form.CancelIndex() {
+			a.closeGroupSelect()
+		} else {
+			a.confirmGroupSelectFromInput()
+		}
+		return
+	}
+
 	if gs.Focus == 0 {
 		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && groupSelectAltIsDialogMnemonic(event.Rune())
 		if !skipScrolling && a.handleScrollingQueryKey(event, true, groupSelectScrollingQuery(gs, a.groupSelectQueryWidth())) {
 			return
 		}
 	}
+
 	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyF9:
-		a.closeGroupSelect()
-	case tcell.KeyEnter:
-		switch gs.Focus {
-		case 5: // Cancel
-			a.closeGroupSelect()
-		default: // pattern input, checkboxes, or OK -> execute
-			a.executeGroupSelect()
-		}
 	case tcell.KeyRune:
 		// Mnemonics follow dialog standards: Alt+letter only (plain typing goes into the pattern).
 		if keymap.AltLetterModifiers(event.Modifiers()) {
 			switch event.Rune() {
-			case 'o', 'O':
-				a.executeGroupSelect()
-			case 'c', 'C':
-				a.closeGroupSelect()
 			case 'f', 'F':
 				gs.FilesOnly = !gs.FilesOnly
 				gs.Focus = 1
@@ -408,10 +429,6 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			break
 		}
 		if event.Rune() == ' ' {
-			if gs.Focus == 0 {
-				gs.Text += " "
-				break
-			}
 			switch gs.Focus {
 			case 1:
 				gs.FilesOnly = !gs.FilesOnly
@@ -419,9 +436,9 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 				gs.CaseSensitive = !gs.CaseSensitive
 			case 3:
 				gs.UseShellPatterns = !gs.UseShellPatterns
-			case 4:
-				a.executeGroupSelect()
-			case 5:
+			case form.OKIndex():
+				a.confirmGroupSelectFromInput()
+			case form.CancelIndex():
 				a.closeGroupSelect()
 			}
 			break
@@ -434,7 +451,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 
 func groupSelectAltIsDialogMnemonic(r rune) bool {
 	switch r {
-	case 'o', 'O', 'c', 'C', 'f', 'F', 's', 'S', 'u', 'U':
+	case 'f', 'F', 's', 'S', 'u', 'U':
 		return true
 	default:
 		return false
