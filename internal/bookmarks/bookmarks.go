@@ -62,10 +62,14 @@ func Load(path string) ([]Mark, error) {
 
 // ParseReader parses marks from a reader (line-based).
 func ParseReader(r io.Reader) ([]Mark, error) {
+	return parseLines(r, ParseLine)
+}
+
+func parseLines(r io.Reader, parse func(string) (Mark, bool)) ([]Mark, error) {
 	var out []Mark
 	sc := bufio.NewScanner(r)
 	for sc.Scan() {
-		if m, ok := ParseLine(sc.Text()); ok {
+		if m, ok := parse(sc.Text()); ok {
 			out = append(out, m)
 		}
 	}
@@ -73,6 +77,49 @@ func ParseReader(r io.Reader) ([]Mark, error) {
 		return nil, err
 	}
 	return out, nil
+}
+
+// LoadAll reads the primary fzf-marks file plus GTK 3 bookmarks from
+// $XDG_CONFIG_HOME/gtk-3.0/bookmarks (read-only). Primary entries are listed first;
+// GTK paths already present in the primary file are skipped.
+func LoadAll(cfgFile, homeDir string) ([]Mark, error) {
+	primaryPath, err := ResolveFile(cfgFile, homeDir)
+	if err != nil {
+		return nil, err
+	}
+	primary, err := Load(primaryPath)
+	if err != nil {
+		return nil, err
+	}
+	gtkPath, err := ResolveGTKFile(homeDir)
+	if err != nil {
+		return nil, err
+	}
+	gtkMarks, err := LoadGTK(gtkPath)
+	if err != nil {
+		return nil, err
+	}
+	return mergeByPath(primary, gtkMarks), nil
+}
+
+func mergeByPath(primary, extra []Mark) []Mark {
+	if len(extra) == 0 {
+		return primary
+	}
+	seen := make(map[string]struct{}, len(primary))
+	for _, m := range primary {
+		seen[filepath.Clean(m.Path)] = struct{}{}
+	}
+	out := append([]Mark(nil), primary...)
+	for _, m := range extra {
+		cp := filepath.Clean(m.Path)
+		if _, ok := seen[cp]; ok {
+			continue
+		}
+		seen[cp] = struct{}{}
+		out = append(out, m)
+	}
+	return out
 }
 
 // ResolveFile returns the path to the marks file: cfgFile if non-empty, else

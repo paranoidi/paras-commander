@@ -16,12 +16,7 @@ func (a *App) openBookmarkDialog() {
 	if a.inQuickFilterUI() {
 		a.activePanel().CancelFilter(a.activeViewportRows())
 	}
-	path, err := bookmarks.ResolveFile(a.config.Bookmarks.File, a.model.UserHomeDir)
-	if err != nil {
-		a.setErrorMessage("Bookmarks", err)
-		return
-	}
-	marks, err := bookmarks.Load(path)
+	marks, err := bookmarks.LoadAll(a.config.Bookmarks.File, a.model.UserHomeDir)
 	if err != nil {
 		a.setErrorMessage("Bookmarks", err)
 		return

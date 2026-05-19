@@ -279,11 +279,7 @@ func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) 
 		addPath(p)
 	}
 
-	marksPath, err := bookmarks.ResolveFile(a.config.Bookmarks.File, a.model.UserHomeDir)
-	if err != nil {
-		return items, err
-	}
-	marks, err := bookmarks.Load(marksPath)
+	marks, err := bookmarks.LoadAll(a.config.Bookmarks.File, a.model.UserHomeDir)
 	if err != nil {
 		return items, err
 	}
