@@ -3,6 +3,7 @@ package app
 import (
 	"testing"
 
+	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -12,7 +13,7 @@ func TestDrainDiscardProgressEventsCapsDiscards(t *testing.T) {
 	app := testAppMinimal(t)
 	app.model.ViewMode = ui.ViewBrowser
 	ch := app.jobState.Events()
-	for i := 0; i < maxProgressEventsDiscardPerDrain+20; i++ {
+	for i := 0; i < jobsctrl.MaxProgressEventsDiscardPerDrain+20; i++ {
 		app.jobState.QueueTestEvent(jobs.Event{Type: jobs.EventProgress, JobID: "j1"})
 	}
 	app.drainDiscardProgressEvents()

@@ -13,9 +13,10 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
-	"github.com/paranoidi/paras-commander/internal/find"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
+	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -51,9 +52,6 @@ type diskIdleSortPanel struct {
 	epoch uint64
 }
 
-// jobsWakePayload wakes PollEvent so job channel updates can drain and repaint.
-type jobsWakePayload struct{}
-
 // syncFollowNavFlushPayload applies latched panel sync after file-list cursor debounce elapses.
 type syncFollowNavFlushPayload struct {
 	gen uint64
@@ -76,9 +74,11 @@ type App struct {
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
 	// jobState manages background job queue and worker lifecycle.
-	jobState        *jobs.State
-	jobStopCh       chan struct{}
-	jobStopOnce     bool
+	jobState  *jobs.State
+	jobsCtrl  *jobsctrl.Handler
+	findCtrl  *findctrl.Handler
+	jobStopCh chan struct{}
+	jobStopOnce bool
 	diskUsage       *diskusage.Engine
 	diskUsageIgnore diskusage.ShouldIgnoreFolder
 	diskIdleSort    [2]diskIdleSortPanel // indexed by ui.LeftPanel / ui.RightPanel (0/1)
@@ -93,8 +93,6 @@ type App struct {
 	messageExpiryGen          atomic.Uint64
 	spinnerRedrawTimer        *time.Timer
 	diskUsageRedrawTimer      *time.Timer
-	jobsWakeMu                sync.Mutex
-	jobsWakeTimer             *time.Timer
 	pathPickerValidateTimer   *time.Timer
 	transferDestValidateTimer *time.Timer
 	// pathPickerValidateGen / transferDestValidateGen invalidate debounced path checks when input
@@ -125,38 +123,12 @@ type App struct {
 	commandsCtx             context.Context
 	commandsCancel          context.CancelFunc
 
-	// jobRefreshTerminal / jobRefreshProgress are set by pollJobEvents() when job events
-	// indicate a panel refresh is needed, and consumed by applyJobRefreshes() which is
-	// called ONLY from the jobsWakePayload handler. This decouples heavy filesystem I/O
-	// (readdir, statfs) from key-press handling so selections stay sub-millisecond.
-	jobRefreshTerminal bool
-	jobRefreshProgress bool
-
 	volumeRefreshInFlight [2]atomic.Bool
 
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
 	lastScreenContentHash uint64
 
-	// jobsAffectVisible is set by pollJobEvents when a repaint may change the browser/jobs UI.
-	jobsAffectVisible bool
-	// lastJobBatchMenuBarStripOnly is set when applyJobEventBatch can satisfy the repaint by
-	// painting only the menu-bar jobs gap (browser, progress-only, no listing/marks changes).
-	lastJobBatchMenuBarStripOnly bool
-	jobsListStale                bool
-	jobPathMarksVersion          uint64
-	jobsListVersion              uint64
-
-	findSessionMu      sync.Mutex
-	findWalks          map[string]*findWalk
-	findBatchCh        chan []find.Entry
-	findIndexedPaths   map[string]struct{}
-	findCompletedRoots map[string]struct{}
-}
-
-type findWalk struct {
-	root string
-	sess *find.Session
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -405,6 +377,22 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	app.model.Left.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.model.Right.SuppressHeavyPathProbes = suppressHeavyPathProbes
+	app.jobsCtrl = jobsctrl.New(jobsctrl.Deps{
+		Host:     jobsHost{app: app},
+		Screen:   screen,
+		Model:    &app.model,
+		State:    jobState,
+		Config:   cfg,
+		Keys:     km,
+		KeysJobs: kmJobs,
+	})
+	app.findCtrl = findctrl.New(findctrl.Deps{
+		Host:   findHost{app: app},
+		Screen: screen,
+		Model:  &app.model,
+		Config: cfg,
+		Keys:   km,
+	})
 	app.syncJobPathMarks()
 	if secs := cfg.Jobs.FreeSpacePollIntervalSecs; secs > 0 {
 		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
@@ -512,7 +500,7 @@ func (a *App) Run() error {
 					a.render()
 					didRender = true
 				}
-			case findWakePayload:
+			case findctrl.WakePayload:
 				if a.pollFindUpdates(d) {
 					a.render()
 					didRender = true
@@ -528,13 +516,13 @@ func (a *App) Run() error {
 
 		if pollJobsAfter {
 			jobsDirty = a.pollJobEvents()
-			shouldRenderJobs = jobsDirty && a.jobsAffectVisible
+			shouldRenderJobs = jobsDirty && a.jobsCtrl.AffectVisible()
 		}
 		if applyJobRefreshesAfter {
 			a.applyJobRefreshes()
 		}
 		if shouldRenderJobs && !didRender {
-			if !a.lastJobBatchMenuBarStripOnly || !a.paintMenuBarJobsStripOnly() {
+			if !a.jobsCtrl.LastBatchMenuBarStripOnly() || !a.paintMenuBarJobsStripOnly() {
 				a.render()
 			}
 			didRender = true

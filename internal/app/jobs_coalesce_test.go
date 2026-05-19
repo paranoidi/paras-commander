@@ -3,6 +3,7 @@ package app
 import (
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/app/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 )
 
@@ -15,7 +16,7 @@ func TestCoalesceJobEventBatchKeepsLastProgressPerJob(t *testing.T) {
 		{Type: jobs.EventProgress, JobID: "b", DoneBytes: 5},
 		{Type: jobs.EventProgress, JobID: "b", DoneBytes: 50},
 	}
-	got := coalesceJobEventBatch(batch)
+	got := jobbridge.CoalesceEventBatch(batch)
 	if len(got) != 3 {
 		t.Fatalf("len = %d, want 3 (latest progress per job + started)", len(got))
 	}

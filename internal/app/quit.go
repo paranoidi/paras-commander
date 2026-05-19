@@ -23,6 +23,25 @@ func (a *App) handleQuitImmediate() bool {
 	return true
 }
 
+func (a *App) stopWorker() {
+	if a.commandsCancel != nil {
+		a.commandsCancel()
+	}
+	if !a.jobStopOnce {
+		a.jobStopOnce = true
+		close(a.jobStopCh)
+	}
+	if a.jobsCtrl != nil {
+		a.jobsCtrl.StopWakeTimer()
+	}
+	a.stopSpinnerRedrawTimer()
+	a.stopDiskUsageRedrawDebounce()
+	a.invalidateIdleDiskSortBothPanels()
+	if a.diskUsage != nil {
+		a.diskUsage.Abort()
+	}
+}
+
 func (a *App) hasActiveJobs() bool {
 	for _, j := range a.jobState.AllJobs() {
 		if j.Status == jobs.StatusScanning || j.Status == jobs.StatusQueued || j.Status == jobs.StatusPaused || j.Status == jobs.StatusRunning || j.Status == jobs.StatusWaitingDecision {

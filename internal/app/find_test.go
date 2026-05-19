@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -26,7 +27,7 @@ func waitFindIndexDone(t *testing.T, app *App) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		app.pollFindUpdates(findWakePayload{})
+		app.pollFindUpdates(findctrl.WakePayload{})
 		if !app.model.FindDialog.Open {
 			t.Fatal("find dialog closed unexpectedly")
 		}

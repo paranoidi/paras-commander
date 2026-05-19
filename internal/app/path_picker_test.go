@@ -9,48 +9,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 )
 
-func TestPathPickerQueryLooksPathlike(t *testing.T) {
-	t.Parallel()
-	for _, tc := range []struct {
-		q    string
-		want bool
-	}{
-		{"", false},
-		{"  ", false},
-		{"foo", false},
-		{"foo bar", false},
-		{"/abs", true},
-		{"./here", true},
-		{"../up", true},
-		{".hidden", true},
-		{"rel/sub", true},
-		{"~", true},
-		{"~/x", true},
-	} {
-		if got := pathPickerQueryLooksPathlike(tc.q); got != tc.want {
-			t.Fatalf("pathPickerQueryLooksPathlike(%q) = %v want %v", tc.q, got, tc.want)
-		}
-	}
-}
-
-func TestResolvePathPickerQuery(t *testing.T) {
-	t.Parallel()
-	panel := "/tmp/panel"
-	home := "/home/u"
-	if got := resolvePathPickerQuery(panel, home, "~/doc"); got != filepath.Join(home, "doc") {
-		t.Fatalf("resolve ~/ = %q want %q", got, filepath.Join(home, "doc"))
-	}
-	if got := resolvePathPickerQuery(panel, home, "~"); got != home {
-		t.Fatalf("resolve ~ = %q want %q", got, home)
-	}
-	if got := resolvePathPickerQuery(panel, home, "/etc"); got != "/etc" {
-		t.Fatalf("resolve abs = %q", got)
-	}
-	if got := resolvePathPickerQuery(panel, home, "sub"); got != filepath.Join(panel, "sub") {
-		t.Fatalf("resolve rel = %q want %q", got, filepath.Join(panel, "sub"))
-	}
-}
-
 func TestApplyPathPickerPathValidation(t *testing.T) {
 	root := t.TempDir()
 	real := filepath.Join(root, "exists")

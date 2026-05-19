@@ -1,12 +1,11 @@
 package app
 
 import (
-	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/app/pathpick"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -388,66 +387,7 @@ func (a *App) applyPathPickerPathValidation() {
 	}
 	st.QueryPathCheckPending = false
 	panel := a.activePanel()
-	st.QueryPathInvalid = typedPathDoesNotExist(panel.Path, a.model.UserHomeDir, st.Query)
-}
-
-func typedPathDoesNotExist(panelPath, home, raw string) bool {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return false
-	}
-	if !pathPickerQueryLooksPathlike(raw) {
-		return false
-	}
-	resolved := resolvePathPickerQuery(panelPath, home, raw)
-	_, err := os.Lstat(resolved)
-	return err != nil
-}
-
-func pathPickerQueryLooksPathlike(q string) bool {
-	q = strings.TrimSpace(q)
-	if q == "" {
-		return false
-	}
-	if strings.HasPrefix(q, "~") {
-		return true
-	}
-	if filepath.IsAbs(q) {
-		return true
-	}
-	for _, r := range q {
-		if r == '/' || r == filepath.Separator {
-			return true
-		}
-	}
-	return strings.HasPrefix(q, ".")
-}
-
-func expandPathPickerTilde(home, q string) string {
-	q = strings.TrimSpace(q)
-	switch {
-	case q == "~":
-		if home == "" {
-			return q
-		}
-		return home
-	case strings.HasPrefix(q, "~/"):
-		if home == "" {
-			return filepath.Clean(q)
-		}
-		return filepath.Join(home, q[len("~/"):])
-	default:
-		return q
-	}
-}
-
-func resolvePathPickerQuery(panelPath, home, raw string) string {
-	q := expandPathPickerTilde(home, raw)
-	q = strings.TrimSpace(q)
-	if filepath.IsAbs(q) {
-		return filepath.Clean(q)
-	}
-	return filepath.Clean(filepath.Join(panelPath, q))
+	st.QueryPathInvalid = pathpick.TypedDoesNotExist(panel.Path, a.model.UserHomeDir, st.Query)
 }
 
 func (a *App) stopTransferDestinationValidateTimer() {
@@ -492,5 +432,5 @@ func (a *App) applyTransferDestinationPathValidation() {
 	}
 	d.DestPathCheckPending = false
 	panel := a.activePanel()
-	d.DestPathInvalid = typedPathDoesNotExist(panel.Path, a.model.UserHomeDir, d.Destination.Value)
+	d.DestPathInvalid = pathpick.TypedDoesNotExist(panel.Path, a.model.UserHomeDir, d.Destination.Value)
 }

@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -40,7 +41,7 @@ func (a *App) syncHelpRanks() {
 	}
 	rankTexts := make([]string, len(st.Entries))
 	for i, e := range st.Entries {
-		rankTexts[i] = helpCanonicalRankText(e)
+		rankTexts[i] = helpkeys.CanonicalRankText(e)
 	}
 	q := search.Parse(st.Query)
 	opts := search.Options{CaseInsensitive: a.config.CaseInsensitiveFilter}
@@ -128,13 +129,13 @@ func (a *App) buildHelpEntries() []ui.HelpEntry {
 		if len(keys) == 0 {
 			continue // unbound
 		}
-		displayKeys := joinKeyDisplay(keys, spec.PreferredKey)
+		displayKeys := helpkeys.JoinDisplay(keys, spec.PreferredKey)
 		entries = append(entries, ui.HelpEntry{
 			ActionID:   spec.ID,
 			Title:      spec.Title,
 			Keys:       displayKeys,
 			Section:    spec.Section,
-			FuzzyExtra: strings.TrimSpace(spec.ID + concatKeywords(spec.Keywords)),
+			FuzzyExtra: strings.TrimSpace(spec.ID + helpkeys.ConcatKeywords(spec.Keywords)),
 		})
 	}
 	return entries
@@ -179,86 +180,6 @@ func (a *App) effectiveKeyStrings(actionID string, defaults []string) []string {
 	return out
 }
 
-// joinKeyDisplay joins every binding into one readable string (comma-separated).
-// When preferredKey is non-empty and appears in keys, it is listed first; remaining
-// bindings keep their order from keys (deduped upstream).
-func joinKeyDisplay(keys []string, preferredKey string) string {
-	if len(keys) == 0 {
-		return ""
-	}
-	ordered := keysForHelpDisplay(keys, preferredKey)
-	out := ""
-	for i, k := range ordered {
-		if i > 0 {
-			out += ", "
-		}
-		out += humanKeyStr(k)
-	}
-	return out
-}
-
-func keysForHelpDisplay(keys []string, preferredKey string) []string {
-	if preferredKey == "" {
-		return append([]string(nil), keys...)
-	}
-	prefPresent := false
-	for _, k := range keys {
-		if k == preferredKey {
-			prefPresent = true
-			break
-		}
-	}
-	if !prefPresent {
-		return append([]string(nil), keys...)
-	}
-	out := make([]string, 0, len(keys))
-	out = append(out, preferredKey)
-	for _, k := range keys {
-		if k == preferredKey {
-			continue
-		}
-		out = append(out, k)
-	}
-	return out
-}
-
-// humanKeyStr converts a TOML key string to a human-readable form.
-func humanKeyStr(s string) string {
-	ch, err := keymap.ParseKey(s)
-	if err != nil {
-		return s
-	}
-	return keymap.FormatChord(ch)
-}
-
-func concatKeywords(kw []string) string {
-	out := ""
-	for _, k := range kw {
-		out += " " + k
-	}
-	return out
-}
-
-// helpCanonicalRankText is the terminal-agnostic corpus for help filtering and rank scores
-// (Keys, Section, Title, then FuzzyExtra). Highlights use FormatHelpRow on the padded line.
-func helpCanonicalRankText(ent ui.HelpEntry) string {
-	s := strings.Join([]string{ent.Keys, ent.Section, ent.Title}, " ")
-	if ent.FuzzyExtra != "" {
-		s += " " + ent.FuzzyExtra
-	}
-	return s
-}
-
-// helpActionRunnableInBrowser is false for jobs-only shortcuts that no-op outside the jobs view.
-func helpActionRunnableInBrowser(actionID string) bool {
-	switch actionID {
-	case keymap.ActionJobsCancel, keymap.ActionJobsPause, keymap.ActionJobsResume, keymap.ActionJobsQueueUp, keymap.ActionJobsQueueDown, keymap.ActionJobsClearFinished:
-		return false
-	default:
-		return true
-	}
-}
-
 func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 	st := &a.model.HelpView
 
@@ -301,7 +222,7 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 			return false
 		}
 		actionID := st.Entries[entIdx].ActionID
-		if !helpActionRunnableInBrowser(actionID) {
+		if !helpkeys.ActionRunnableInBrowser(actionID) {
 			return false
 		}
 		a.closeHelpDialog()

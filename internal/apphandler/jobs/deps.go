@@ -1,0 +1,46 @@
+package jobs
+
+import (
+	"sync"
+	"time"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ui"
+)
+
+// Deps wires the jobs handler at app construction.
+type Deps struct {
+	Host     Host
+	Screen   tcell.Screen
+	Model    *ui.Model
+	State    *jobs.State
+	Config   config.Config
+	Keys     *keymap.Map
+	KeysJobs *keymap.Map
+}
+
+// Handler owns jobs-view UI orchestration and job event draining.
+type Handler struct {
+	host     Host
+	screen   tcell.Screen
+	model    *ui.Model
+	state    *jobs.State
+	config   config.Config
+	keys     *keymap.Map
+	keysJobs *keymap.Map
+
+	wakeMu    sync.Mutex
+	wakeTimer *time.Timer
+
+	refreshTerminal bool
+	refreshProgress bool
+
+	affectVisible             bool
+	lastBatchMenuBarStripOnly bool
+	listStale                 bool
+	listVersion               uint64
+	pathMarksVersion          uint64
+}

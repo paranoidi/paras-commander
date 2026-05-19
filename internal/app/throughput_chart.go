@@ -50,6 +50,6 @@ func (a *App) applyThroughputChartTick() bool {
 		a.syncJobsList()
 		return true
 	}
-	a.jobsListStale = true
+	a.jobsCtrl.SetListStale(true)
 	return false
 }

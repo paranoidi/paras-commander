@@ -16,6 +16,18 @@ When new colors are being added be sure to update any existing themes to use the
 
 Always aim to have ONE source for the truth. This applies to keybindings, theme usage, padding and margin values.
 
+# App package layout
+
+- **`internal/app`**: `App` struct, `Run()` event loop, input dispatch, render/reconcile, and thin `*_bridge.go` / `*_host.go` files that wire feature handlers. Modal file-dialog orchestration lives in `dialog_*.go` (rendering/state remains in `internal/ui/dialog`).
+- **`internal/apphandler/*`**: feature handlers (`jobs`, `find`; `dialog` reserved for future path-picker / transfer extraction). Each handler takes a `Deps` struct and a `Host` interface for cross-cutting app services.
+- **`internal/app/helpkeys`**, **`internal/app/pathpick`**, **`internal/app/jobbridge`**: stateless helpers extracted from the app layer (phase 1).
+
+## Import rule (apphandler)
+
+**`internal/apphandler/*` must not import `internal/app` (avoid import cycles). `internal/app` imports handlers only.**
+
+Handlers call back into the shell via `Host` methods (layout, messages, panel navigation, etc.). Wake/event payload types used by `Run()` may live in the handler package (e.g. `jobsctrl.WakePayload`, `findctrl.WakePayload`).
+
 # Backwards compatibility (CRITICAL)
 
 The application is in prototyping phase. There is no need to make anything backwards compatible. Update all existing code to
@@ -72,7 +84,7 @@ All dialogs (modal overlays) must follow these navigation and rendering rules:
 ## Code Structure
 
 - Button rendering: `drawDialogButton()` in `internal/ui/dialog.go`.
-- Focus management per dialog type is handled in `internal/app/app.go`.
+- Focus management per dialog type is handled in `internal/app` (`input.go` and `dialog_*.go`).
 - File dialogs (`FileDialogState`) use `FocusedField` for focus tracking; button focus indexes = len(Fields)+0 for OK and len(Fields)+1 for Cancel.
 
 ## Input Area Rendering / Styling

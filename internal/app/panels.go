@@ -442,3 +442,17 @@ func panelLabel(panelID int) string {
 	}
 	return "Right panel"
 }
+
+func (a *App) inactivePanel() *panel.State {
+	if a.model.ActivePanel == ui.LeftPanel {
+		return &a.model.Right
+	}
+	return &a.model.Left
+}
+
+func (a *App) inactivePanelID() int {
+	if a.model.ActivePanel == ui.LeftPanel {
+		return ui.RightPanel
+	}
+	return ui.LeftPanel
+}

@@ -22,26 +22,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
-// waitUntilAppJobsFinished polls until every job in app.jobState is finished or d elapses.
-func waitUntilAppJobsFinished(t *testing.T, app *App, d time.Duration) {
-	t.Helper()
-	deadline := time.Now().Add(d)
-	for time.Now().Before(deadline) {
-		idle := true
-		for _, j := range app.jobState.AllJobs() {
-			if j != nil && !j.Status.IsFinished() {
-				idle = false
-				break
-			}
-		}
-		if idle {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatal("timeout waiting for jobs to finish")
-}
-
 func TestTransientErrorTextPermissionDenied(t *testing.T) {
 	wrapped := fmt.Errorf(`read directory "/home/nella": %w`, fs.ErrPermission)
 	if got := transientErrorText(wrapped); got != "permission denied" {
@@ -4141,152 +4121,6 @@ func TestDeleteDialogWarningPluralDirectories(t *testing.T) {
 	}
 }
 
-func activateFileMenuItem(t *testing.T, app *App, shortcut rune) {
-	t.Helper()
-	app.dispatch(keymap.ActionAppOpenMenu)
-	// F9 opens menu bar only (no pulldown). Open pulldown first.
-	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	// File menu should be at index 1 (default).
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, shortcut, tcell.ModNone))
-	if quit {
-		t.Fatal("menu item should not quit")
-	}
-	if app.model.Menu.Open {
-		t.Fatal("menu should be closed after activation")
-	}
-}
-
-// loadTestTheme creates a minimal theme file in a temp directory and returns the parsed theme
-// along with config.Paths whose ThemesDir points to the temp directory (so theme.Resolve can
-// find it). The theme uses "test-theme" as its name.
-func loadTestTheme(t *testing.T) (theme.Theme, config.Paths) {
-	t.Helper()
-
-	var buf strings.Builder
-	buf.WriteString(`name = "test-theme"
-
-[palette]
-black = "#000000"
-white = "#ffffff"
-yellow = "#ffff00"
-
-[styles]
-`)
-	for _, key := range []string{
-		"menu.bar", "menu.bar.selected", "menu.dropdown", "menu.dropdown.selected",
-		"menu.dropdown.frame", "menu.bar.accent", "menu.bar.alert", "menu.dropdown.accent",
-		"menu.detail",
-		"panel.active.frame", "panel.inactive.frame", "panel.active.surface", "panel.inactive.surface",
-		"panel.active.title", "panel.inactive.title", "panel.active.space", "panel.inactive.space",
-		"panel.active.header", "panel.inactive.header", "panel.row.normal", "panel.row.directory",
-		"panel.row.symlink", "panel.row.selected", "panel.row.cursor.active",
-		"panel.row.cursor.inactive", "panel.row.cursor.selected", "panel.sync.indicator",
-		"panel.blocked.frame", "panel.blocked.surface", "panel.blocked.title",
-		"panel.blocked.header", "panel.blocked.row.normal", "panel.blocked.row.directory",
-		"panel.blocked.row.symlink", "panel.blocked.row.selected", "panel.blocked.row.cursor",
-		"panel.blocked.row.cursor.selected", "panel.folder.diskscan", "panel.folder.diskscan_excluded",
-		"menu.spinner", "menu.progress.done", "menu.progress.remaining",
-		"menu.job.scanning", "menu.job.queued", "menu.job.running", "menu.job.paused", "menu.job.canceled",
-		"menu.job.failed", "menu.job.decision", "menu.job.completed",
-		"panel.usage.prefix.normal", "panel.usage.prefix.selected",
-		"panel.usage.prefix.cursor.active", "panel.usage.prefix.cursor.inactive",
-		"panel.usage.prefix.cursor.selected",
-		"fuzzy.input", "fuzzy.input.nomatch", "fuzzy.highlight", "fuzzy.highlight.cursor",
-		"dialog.frame", "dialog.title", "dialog.text", "dialog.surface", "dialog.accent",
-		"dialog.input.active", "dialog.input.active.placeholder", "dialog.input.active.error", "dialog.input.inactive",
-		"dialog.input.inactive.placeholder", "dialog.input.inactive.error", "dialog.button.inactive", "dialog.button.active",
-		"dialog.option.inactive", "dialog.option.active", "dialog.option.selected",
-		"status.info", "status.warn", "status.error", "status.waiting_input",
-		"jobs.row", "jobs.running", "jobs.done", "jobs.failed",
-		"jobs.progress.track", "jobs.progress.fill", "jobs.progress.label.on_fill",
-		"jobs.progress.label.on_track",
-		"jobs.icons.scanning", "jobs.icons.queued", "jobs.icons.ongoing", "jobs.icons.paused", "jobs.icons.stopped",
-		"jobs.icons.error", "jobs.icons.input_required", "jobs.icons.completed",
-		"footer.key", "footer.label",
-	} {
-		fmt.Fprintf(&buf, "%s = { fg = \"white\", bg = \"black\" }\n", key)
-	}
-
-	dir := t.TempDir()
-	path := filepath.Join(dir, "test-theme.toml")
-	if err := os.WriteFile(path, []byte(buf.String()), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-	th, err := theme.LoadFile(path)
-	if err != nil {
-		t.Fatalf("LoadFile: %v", err)
-	}
-	paths := config.Paths{ThemesDir: dir}.WithResolvedLocations()
-	return th, paths
-}
-
-func newScreen(t *testing.T, w, h int) tcell.SimulationScreen {
-	t.Helper()
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("screen.Init() error = %v", err)
-	}
-	t.Cleanup(screen.Fini)
-	screen.SetSize(w, h)
-	return screen
-}
-
-func newApp(t *testing.T, screen tcell.SimulationScreen, dir string) *App {
-	t.Helper()
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
-	// Tests expect immediate latched sync after each dispatch+render; production debounces
-	// follower directory loads during repeated file-list cursor keys (see panel_sync_follow_nav_debounce_ms).
-	app.config.UI.PanelSyncFollowNavDebounceMS = 0
-	return app
-}
-
-func screenLine(screen tcell.SimulationScreen, y, width int) string {
-	var builder strings.Builder
-	for x := range width {
-		cell, _, _ := screen.Get(x, y)
-		if cell == "" {
-			cell = " "
-		}
-		builder.WriteString(cell)
-	}
-	return builder.String()
-}
-
-func writeFile(t *testing.T, path string) {
-	t.Helper()
-	if err := os.WriteFile(path, []byte("content"), 0o644); err != nil {
-		t.Fatalf("WriteFile(%q) error = %v", path, err)
-	}
-}
-
-func flushBackgroundJobs(t *testing.T, app *App) {
-	t.Helper()
-	const maxIter = 2000
-	for i := 0; i < maxIter; i++ {
-		app.pollJobEvents()
-		busy := false
-		for _, j := range app.jobState.AllJobs() {
-			switch j.Status {
-			case jobs.StatusScanning, jobs.StatusQueued, jobs.StatusRunning, jobs.StatusWaitingDecision:
-				busy = true
-			}
-			if busy {
-				break
-			}
-		}
-		if !busy {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatal("timed out waiting for jobs to finish")
-}
-
 func TestAddBookmarkDialogOpenPrefillsBasename(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 24)
@@ -4437,20 +4271,6 @@ func TestAddBookmarkDefaultName(t *testing.T) {
 			t.Fatalf("defaultBookmarkName(%q) = %q, want %q", tt.path, got, tt.want)
 		}
 	}
-}
-
-// selectPanelEntryByName moves the panel cursor to the entry with the given name.
-// Fails the test if no such entry is visible.
-func selectPanelEntryByName(t *testing.T, p *panel.State, name string) {
-	t.Helper()
-	for i := 0; i < p.VisibleEntryCount(); i++ {
-		entry, _, ok := p.VisibleEntry(i)
-		if ok && entry.Name == name {
-			p.Cursor = i
-			return
-		}
-	}
-	t.Fatalf("entry %q not visible in panel %q", name, p.Path)
 }
 
 func TestToggleSyncEnablesAndImmediatelyMirrorsHighlightedFolder(t *testing.T) {
