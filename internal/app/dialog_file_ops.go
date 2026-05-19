@@ -187,6 +187,8 @@ func (a *App) executeFileDialog() {
 		a.executeSymlink()
 	case ui.FileDialogHardlink:
 		a.executeHardlink()
+	case ui.FileDialogExtract:
+		a.executeExtract()
 	case ui.FileDialogAddBookmark:
 		a.executeAddBookmark()
 	default:

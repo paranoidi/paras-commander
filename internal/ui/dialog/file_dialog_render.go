@@ -144,6 +144,8 @@ func fileDialogTitle(dialogType FileDialogType) string {
 		return "Run for each"
 	case FileDialogMassRename:
 		return "Mass rename"
+	case FileDialogExtract:
+		return "Extract"
 	default:
 		return ""
 	}

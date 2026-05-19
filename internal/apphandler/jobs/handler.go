@@ -859,6 +859,22 @@ func (h *Handler) EnqueueDeleteJob(sources []string) {
 	h.SyncJobPathMarks()
 }
 
+func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
+	absDest := absPathClean(dest)
+	job := &jobs.Job{
+		ID:          jobs.NewJobID(),
+		Type:        jobs.TypeExtract,
+		Status:      jobs.StatusQueued,
+		Sources:     sources,
+		Destination: dest,
+		DestIsDir:   ops.DestinationIsDirAtEnqueue(absDest),
+		TotalFiles:  len(sources),
+	}
+	h.state.AddJob(job)
+	h.SyncJobsList()
+	h.SyncJobPathMarks()
+}
+
 func (h *Handler) sourceAndDestination() (sources []string, dest string) {
 	sources = h.host.ActivePanelSources()
 	if sources == nil {

@@ -36,6 +36,8 @@ func resolvedJobDestinationPath(src, dest string, destIsDir bool) string {
 func jobTypeMarkPriority(t string) int {
 	switch jobs.Type(t) {
 	case jobs.TypeDelete:
+		return 4
+	case jobs.TypeExtract:
 		return 3
 	case jobs.TypeMove:
 		return 2

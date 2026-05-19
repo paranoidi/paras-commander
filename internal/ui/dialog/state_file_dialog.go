@@ -15,6 +15,7 @@ const (
 	FileDialogAddBookmark
 	FileDialogRunForEach
 	FileDialogMassRename
+	FileDialogExtract
 )
 
 // MassRenameModeUI selects literal vs regexp transform in the mass rename dialog.
@@ -78,6 +79,8 @@ type FileDialogState struct {
 	// RunForEachPaths / RunForEachDir apply when DialogType == FileDialogRunForEach (targets resolved at dialog open).
 	RunForEachPaths []string
 	RunForEachDir   string
+	// ExtractSources apply when DialogType == FileDialogExtract (archive paths resolved at dialog open).
+	ExtractSources []string
 	// MkdirShowActions enables the extra "Create / Create and copy selected / Create and move selected" radio
 	// rows below the directory-name input. Set by openMkdirDialog when the active panel has selections.
 	MkdirShowActions bool

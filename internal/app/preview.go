@@ -359,7 +359,7 @@ func (a *App) applyQuickViewPreviewNow() {
 		if !layOK {
 			tw = 1
 		}
-		argv, err := cmdrun.PreviewCommandArgv(a.config.Preview.Command, path, tw)
+		argv, err := cmdrun.BuildFilePreviewArgv(a.config.Preview.Command, path, tw)
 		if err != nil {
 			a.patchColumnPreviewMessage(filepath.Base(path), "Preview command: "+err.Error())
 			return

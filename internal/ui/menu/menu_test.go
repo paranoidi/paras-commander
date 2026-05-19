@@ -71,6 +71,7 @@ func TestFileMenuItemsHaveShortcutKeys(t *testing.T) {
 
 func TestFileMenuShortcutExceptions(t *testing.T) {
 	tests := map[string]rune{
+		"Extract":          'x',
 		"View":             'V',
 		"View file...":     'w',
 		"Chmod":            'h',
@@ -80,7 +81,8 @@ func TestFileMenuShortcutExceptions(t *testing.T) {
 		"Chattr":           't',
 		"Select group":     'g',
 		"Unselect group":   'n',
-		"Exit":             'x',
+		"Invert selection": 'I',
+		"Exit":             'i',
 	}
 
 	fileMenu := Definitions()[DefaultIndex()]
@@ -166,7 +168,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		}
 	}
 
-	var left, file, cmd *Definition
+	var left, file, cmd, display *Definition
 	for i := range defs {
 		switch defs[i].ID {
 		case TopPanelLeft:
@@ -175,10 +177,12 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 			file = &defs[i]
 		case TopCommand:
 			cmd = &defs[i]
+		case TopDisplay:
+			display = &defs[i]
 		}
 	}
-	if left == nil || file == nil || cmd == nil {
-		t.Fatalf("missing menu: left=%v file=%v cmd=%v", left != nil, file != nil, cmd != nil)
+	if left == nil || file == nil || cmd == nil || display == nil {
+		t.Fatalf("missing menu: left=%v file=%v cmd=%v display=%v", left != nil, file != nil, cmd != nil, display != nil)
 	}
 
 	assertLabels(t, left, map[string]string{
@@ -209,12 +213,14 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		}
 	}
 	assertLabels(t, cmd, map[string]string{
-		"Commands":     "C-k",
-		"Messages":     "C-M-l",
-		"Jobs":         "C-j",
 		"Bookmarks":    "C-g",
 		"Add bookmark": "M-m",
 		"Refresh":      "M-C-r",
+	})
+	assertLabels(t, display, map[string]string{
+		"Commands": "C-k",
+		"Messages": "C-M-l",
+		"Jobs":     "C-j",
 	})
 }
 
@@ -270,7 +276,7 @@ func TestLeftAndRightPanelMenusShareItemActions(t *testing.T) {
 }
 
 func TestOptionsMenuKeepsThemeChoicesOutOfPulldown(t *testing.T) {
-	options := Definitions()[3]
+	options := Definitions()[4]
 	if options.ID != TopOptions {
 		t.Fatalf("index 3 ID = %q, want TopOptions", options.ID)
 	}

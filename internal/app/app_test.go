@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -1558,7 +1559,7 @@ func TestOptionsMenuOpensConfigurationDialog(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionAppOpenMenu)
-	app.moveMenu(2)
+	app.moveMenu(3) // File → Command → Display → Options
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
 
@@ -2117,7 +2118,7 @@ func TestOptionsMenuOpensThemeDialog(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionAppOpenMenu)
-	app.moveMenu(2)
+	app.moveMenu(3) // File → Command → Display → Options
 	// Open pulldown for Options menu, then press shortcut.
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
@@ -3419,6 +3420,74 @@ func TestFileMenuDeleteOpensDeleteConfirmation(t *testing.T) {
 	}
 	if app.model.FileDialog.FocusedField != 1 {
 		t.Fatalf("FocusedField = %d, want 1 (No)", app.model.FileDialog.FocusedField)
+	}
+}
+
+func TestFileMenuExtractOpensExtractDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "archive.zip"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	activateFileMenuItem(t, app, 'E')
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("File dialog not open")
+	}
+	if app.model.FileDialog.DialogType != ui.FileDialogExtract {
+		t.Fatalf("dialog type = %d, want FileDialogExtract", app.model.FileDialog.DialogType)
+	}
+	if len(app.model.FileDialog.ExtractSources) != 1 {
+		t.Fatalf("ExtractSources len = %d, want 1", len(app.model.FileDialog.ExtractSources))
+	}
+}
+
+func TestExtractDialogEnqueuesJob(t *testing.T) {
+	if _, err := exec.LookPath("tar"); err != nil {
+		t.Skip("tar not in PATH")
+	}
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+	inner := filepath.Join(srcDir, "hello.txt")
+	writeFile(t, inner)
+	archivePath := filepath.Join(srcDir, "pack.tar.gz")
+	cmd := exec.Command("tar", "-czf", archivePath, "-C", srcDir, "hello.txt")
+	if err := cmd.Run(); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, srcDir)
+	app.model.Right.Path = destDir
+	_ = app.model.Right.Refresh(20)
+	if !app.activePanel().SelectVisibleEntry("pack.tar.gz") {
+		t.Fatal("pack.tar.gz not visible in panel")
+	}
+
+	app.dispatch(keymap.ActionFileExtract)
+	if !app.model.FileDialog.Open {
+		t.Fatal("extract dialog not open")
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	flushBackgroundJobs(t, app)
+
+	all := app.jobState.AllJobs()
+	if len(all) != 1 {
+		t.Fatalf("jobs len = %d, want 1", len(all))
+	}
+	if all[0].Type != jobs.TypeExtract {
+		t.Fatalf("job type = %v, want TypeExtract", all[0].Type)
+	}
+	if all[0].Destination != destDir {
+		t.Fatalf("destination = %q, want %q", all[0].Destination, destDir)
+	}
+	waitUntilAppJobsFinished(t, app, 5*time.Second)
+	if all[0].Status != jobs.StatusCompleted {
+		t.Fatalf("status = %q, want completed (%s)", all[0].Status, all[0].Error)
+	}
+	if _, err := os.Stat(filepath.Join(destDir, "hello.txt")); err != nil {
+		t.Fatalf("extracted file missing: %v", err)
 	}
 }
 

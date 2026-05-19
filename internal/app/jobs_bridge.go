@@ -37,6 +37,10 @@ func (a *App) enqueueMoveJob() { a.jobsCtrl.EnqueueMoveJob() }
 
 func (a *App) enqueueDeleteJob(sources []string) { a.jobsCtrl.EnqueueDeleteJob(sources) }
 
+func (a *App) enqueueExtractJob(sources []string, dest string) {
+	a.jobsCtrl.EnqueueExtractJob(sources, dest)
+}
+
 func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool) {
 	a.jobsCtrl.AddTransferJob(jobType, sources, dest, startPaused)
 }

@@ -236,7 +236,7 @@ func (a *App) openFilePreviewFullscreen() {
 	if tw < 1 {
 		tw = 1
 	}
-	argv, err := cmdrun.PreviewCommandArgv(a.config.Preview.Command, path, tw)
+	argv, err := cmdrun.BuildFilePreviewArgv(a.config.Preview.Command, path, tw)
 	if err != nil {
 		a.setErrorMessage("Preview command", err)
 		return

@@ -66,6 +66,7 @@ const (
 	FileDialogAddBookmark = dialog.FileDialogAddBookmark
 	FileDialogRunForEach  = dialog.FileDialogRunForEach
 	FileDialogMassRename  = dialog.FileDialogMassRename
+	FileDialogExtract     = dialog.FileDialogExtract
 
 	MassRenameModeUISimple = dialog.MassRenameModeUISimple
 	MassRenameModeUIRegex  = dialog.MassRenameModeUIRegex

@@ -19,7 +19,7 @@ const jobsDetailLineBudgetFallback = 4096
 // Jobs list column layout to the Status column: icon, type (widest jobs.Type is "delete"), separator space.
 const (
 	jobsListColIcon      = 2
-	jobsListColTypeRunes = 6 // internal/jobs.Type: copy, move, delete
+	jobsListColTypeRunes = 7 // internal/jobs.Type: extract (longest)
 	jobsListColTypeCell  = jobsListColTypeRunes + 1
 	jobsListColPrefix    = jobsListColIcon + jobsListColTypeCell // offset from row start to Status column
 )

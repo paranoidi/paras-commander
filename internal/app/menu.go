@@ -213,7 +213,7 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 		return false
 	}
 	switch def.ID {
-	case menu.TopCommand:
+	case menu.TopCommand, menu.TopDisplay:
 		a.dispatch(item.Action)
 	case menu.TopFile:
 		switch item.Action {
@@ -329,14 +329,22 @@ func (a *App) selectMenuShortcut(shortcut rune) bool {
 	if a.model.Menu.ActiveMenu < 0 || a.model.Menu.ActiveMenu >= len(menus) {
 		return false
 	}
+	var caseInsensitive = -1
 	for index, item := range menus[a.model.Menu.ActiveMenu].Items {
 		if item.Separator || item.Shortcut == 0 {
 			continue
 		}
-		if unicode.ToLower(item.Shortcut) == unicode.ToLower(shortcut) {
+		if item.Shortcut == shortcut {
 			a.model.Menu.SelectedItem = index
 			return true
 		}
+		if caseInsensitive < 0 && unicode.ToLower(item.Shortcut) == unicode.ToLower(shortcut) {
+			caseInsensitive = index
+		}
+	}
+	if caseInsensitive >= 0 {
+		a.model.Menu.SelectedItem = caseInsensitive
+		return true
 	}
 	return false
 }

@@ -8,6 +8,7 @@ const (
 	TopPanelRight TopID = "top.panel-right"
 	TopFile       TopID = "top.file"
 	TopCommand    TopID = "top.command"
+	TopDisplay    TopID = "top.display"
 	TopOptions    TopID = "top.options"
 	TopJobs       TopID = "top.jobs"
 	TopCommands   TopID = "top.commands-screen"

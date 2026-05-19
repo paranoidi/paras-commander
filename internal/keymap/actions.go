@@ -65,6 +65,7 @@ const (
 	ActionFileChown              = "file.chown"
 	ActionFileSymlink            = "file.symlink"
 	ActionFileHardlink           = "file.hardlink"
+	ActionFileExtract            = "file.extract"
 	ActionFileView               = "file.view"
 	ActionFileQuickView          = "file.quick-view"
 	ActionFileEdit               = "file.edit"
@@ -187,6 +188,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileChown:              {},
 	ActionFileSymlink:            {},
 	ActionFileHardlink:           {},
+	ActionFileExtract:            {},
 	ActionFileView:               {},
 	ActionFileQuickView:          {},
 	ActionFileEdit:               {},

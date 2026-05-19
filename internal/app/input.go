@@ -655,6 +655,8 @@ func (a *App) dispatch(actionID string) {
 		a.openSymlinkDialog(activePanel)
 	case keymap.ActionFileHardlink:
 		a.openHardlinkDialog(activePanel)
+	case keymap.ActionFileExtract:
+		a.openExtractDialog(activePanel)
 	case keymap.ActionCopy:
 		a.enqueueCopyJob()
 	case keymap.ActionMove:

@@ -451,6 +451,13 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"duplicate"},
 		},
 		{
+			ID:          ActionFileExtract,
+			Title:       "Extract archives",
+			Section:     "File operations",
+			DefaultKeys: nil,
+			Keywords:    []string{"unpack", "unzip", "tar", "archive", "decompress"},
+		},
+		{
 			ID:          ActionMove,
 			Title:       "Move",
 			Section:     "File operations",

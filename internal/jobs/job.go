@@ -12,9 +12,10 @@ import (
 type Type string
 
 const (
-	TypeCopy   Type = "copy"
-	TypeMove   Type = "move"
-	TypeDelete Type = "delete"
+	TypeCopy    Type = "copy"
+	TypeMove    Type = "move"
+	TypeDelete  Type = "delete"
+	TypeExtract Type = "extract"
 )
 
 // Status represents the lifecycle state of a Job.

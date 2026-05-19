@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -244,6 +245,32 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 				})
 			}
 			doneFiles, doneBytes, err = ops.ExecuteDeletePaths(ctx, job.Sources, deleteProgress)
+		case jobs.TypeExtract:
+			emit(jobs.Event{
+				Type:       jobs.EventPlanTotals,
+				JobID:      job.ID,
+				Status:     jobs.StatusRunning,
+				TotalFiles: len(job.Sources),
+				TotalBytes: 0,
+			})
+			tc := archive.ProbeToolchain()
+			plan, _, extractPlanErr := ops.PlanExtract(job.Sources, job.Destination, tc)
+			if extractPlanErr != nil {
+				err = extractPlanErr
+			} else {
+				extractProgress := func(path string, df int) {
+					emit(jobs.Event{
+						Type:        jobs.EventProgress,
+						JobID:       job.ID,
+						Status:      jobs.StatusRunning,
+						DoneFiles:   df,
+						DoneBytes:   0,
+						CurrentPath: path,
+					})
+				}
+				doneFiles, err = ops.ExecuteExtract(ctx, plan, extractProgress)
+				doneBytes = 0
+			}
 		default:
 			return fmt.Errorf("unknown job type: %s", job.Type)
 		}
