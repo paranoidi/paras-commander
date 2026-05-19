@@ -75,16 +75,19 @@ func (s *Session) Close() {
 
 func (s *Session) run(ctx context.Context, opts Options) {
 	defer s.wg.Done()
-	defer close(s.results)
 	defer close(s.done)
 
 	var pending []Entry
+	var pendingMu sync.Mutex
 	flush := func() {
+		pendingMu.Lock()
 		if len(pending) == 0 {
+			pendingMu.Unlock()
 			return
 		}
 		batch := append([]Entry(nil), pending...)
 		pending = pending[:0]
+		pendingMu.Unlock()
 		select {
 		case s.results <- batch:
 		case <-ctx.Done():
@@ -94,7 +97,9 @@ func (s *Session) run(ctx context.Context, opts Options) {
 	ticker := time.NewTicker(batchInterval)
 	defer ticker.Stop()
 
+	tickDone := make(chan struct{})
 	go func() {
+		defer close(tickDone)
 		for {
 			select {
 			case <-ctx.Done():
@@ -144,13 +149,20 @@ func (s *Session) run(ctx context.Context, opts Options) {
 			entryType = localfs.EntryFile
 		}
 
-		pending = append(pending, Entry{
+		entry := Entry{
 			Path:    filepath.Clean(path),
 			RelLine: rel,
 			IsDir:   isDir,
 			Type:    entryType,
-		})
+		}
+		shouldFlush := false
+		pendingMu.Lock()
+		pending = append(pending, entry)
 		if len(pending) >= batchEntryThreshold {
+			shouldFlush = true
+		}
+		pendingMu.Unlock()
+		if shouldFlush {
 			flush()
 		}
 
@@ -161,6 +173,9 @@ func (s *Session) run(ctx context.Context, opts Options) {
 	})
 
 	flush()
+	s.cancel()
+	<-tickDone
+	close(s.results)
 	if walkErr != nil && ctx.Err() == nil {
 		s.err = walkErr
 	}

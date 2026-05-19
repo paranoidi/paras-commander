@@ -175,7 +175,7 @@ type UIConfig struct {
 	// SelectionsPanelMaxRows caps visible rows in the cross-directory selections strip (0 = default 5).
 	SelectionsPanelMaxRows int `toml:"selections_panel_max_rows"`
 	// StatusMessageTTLSeconds is how long transient status banners stay visible before clearing.
-	// Default 3.5. Use 0 to keep messages until replaced or cleared by another action.
+	// Default 4.5. Use 0 to keep messages until replaced or cleared by another action.
 	StatusMessageTTLSeconds float64 `toml:"status_message_ttl_seconds"`
 	// PathPickerValidateDelayMS waits after the filter changes before checking whether the typed path exists.
 	// Default DefaultPathPickerValidateDelayMS. Use 0 to validate on the next scheduler tick (still not per-key synchronous).
@@ -294,7 +294,7 @@ func Default() Config {
 			ShowFileIcons:                     true,
 			BorderStyle:                       BorderStyleSingle,
 			Clock:                             false,
-			StatusMessageTTLSeconds:           3.5,
+			StatusMessageTTLSeconds:           4.5,
 			PathPickerValidateDelayMS:         DefaultPathPickerValidateDelayMS,
 			PanelSyncFollowNavDebounceMS:      DefaultPanelSyncFollowNavDebounceMS,
 			QuickViewPreviewDebounceMS:        DefaultQuickViewPreviewDebounceMS,

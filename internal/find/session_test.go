@@ -2,6 +2,7 @@ package find
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -92,6 +93,21 @@ func TestSessionShouldSkipDir(t *testing.T) {
 	}
 	if !foundSkip {
 		t.Fatal("skipme directory itself should appear in results")
+	}
+}
+
+func TestSessionConcurrentFlushStress(t *testing.T) {
+	root := t.TempDir()
+	for i := range 300 {
+		name := filepath.Join(root, fmt.Sprintf("dir%d", i))
+		mustMkdir(t, name)
+		for j := range 8 {
+			mustWrite(t, filepath.Join(name, fmt.Sprintf("f%d.txt", j)), "x")
+		}
+	}
+	entries := collectSession(t, root, Options{})
+	if len(entries) < 300*8 {
+		t.Fatalf("expected many entries, got %d", len(entries))
 	}
 }
 

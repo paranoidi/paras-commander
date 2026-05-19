@@ -9,7 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-func TestDrawStatusMessageTruncatesLeadingRunesWithoutTilde(t *testing.T) {
+func TestDrawStatusMessageTruncatesCenteredRunesWithoutTilde(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -18,17 +18,38 @@ func TestDrawStatusMessageTruncatesLeadingRunesWithoutTilde(t *testing.T) {
 	screen.SetSize(40, 12)
 
 	styles := theme.Default()
-	// maxStart = reserveExclusiveEnd + leftGap = 20 + 1 => message starts at column 21; width 19 runes.
-	drawStatusMessageOverlay(screen, Rect{X: 0, Y: 0, Width: 40, Height: 1}, 20, 1, 0, "abcdefghijklmnopqrstuvwxyz", MessageUrgencyInfo, styles)
+	msg := "abcdefghijklmnopqrstuvwxyz"
+	drawStatusMessageOverlay(screen, Rect{X: 0, Y: 0, Width: 40, Height: 1}, msg, MessageUrgencyInfo, styles)
 
-	firstStr, _, _ := screen.Get(21, 0)
+	msgRunes := []rune(msg)
+	wantStart := (40 - len(msgRunes)) / 2
+	firstStr, _, _ := screen.Get(wantStart, 0)
 	firstR, _ := utf8.DecodeRuneInString(firstStr)
 	if firstR != 'a' {
-		t.Fatalf("first visible rune = %q, want 'a'", firstR)
+		t.Fatalf("first visible rune = %q at col %d, want 'a'", firstR, wantStart)
 	}
-	lastStr, _, _ := screen.Get(39, 0)
+	lastStr, _, _ := screen.Get(wantStart+len(msgRunes)-1, 0)
 	lastR, _ := utf8.DecodeRuneInString(lastStr)
-	if lastR != 's' {
-		t.Fatalf("last visible rune = %q, want 's' (first 19 letters)", lastR)
+	if lastR != 'z' {
+		t.Fatalf("last visible rune = %q, want 'z'", lastR)
+	}
+}
+
+func TestDrawStatusMessageCentersShortText(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 12)
+
+	styles := theme.Default()
+	drawStatusMessageOverlay(screen, Rect{X: 0, Y: 5, Width: 80, Height: 1}, "Hi", MessageUrgencyInfo, styles)
+
+	wantCol := (80 - 2) / 2
+	str, st, _ := screen.Get(wantCol, 5)
+	r, _ := utf8.DecodeRuneInString(str)
+	if r != 'H' || st != styles.StatusInfo {
+		t.Fatalf("message at col %d = %q style %v, want H with StatusInfo", wantCol, r, st)
 	}
 }

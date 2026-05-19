@@ -31,21 +31,15 @@ func statusUrgencyStyle(styles theme.Theme, u MessageUrgency) tcell.Style {
 	}
 }
 
-// drawStatusMessageOverlay draws a right-aligned status message in the given row, using only as
-// many columns as the text needs (after reserveExclusiveEnd+leftGap). It does not erase the rest
-// of the row (menu labels or footer keys remain visible outside the message cells).
-// reserveRightColumns reserves space on the right before the exclusive edge (use 0 to align to rect's right edge).
-func drawStatusMessageOverlay(screen tcell.Screen, rect Rect, reserveExclusiveEnd, leftGap int, reserveRightColumns int, message string, urgency MessageUrgency, styles theme.Theme) {
+// drawStatusMessageOverlay draws a horizontally centered status message in the given row.
+// It paints only the message cells and does not erase the rest of the row (panel chrome remains visible outside the text).
+func drawStatusMessageOverlay(screen tcell.Screen, rect Rect, message string, urgency MessageUrgency, styles theme.Theme) {
 	msg := strings.TrimSpace(message)
 	if msg == "" || rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
-	maxStart := max(reserveExclusiveEnd, rect.X) + leftGap
-	rightExclusive := rect.X + rect.Width - max(0, reserveRightColumns)
-	if maxStart >= rightExclusive {
-		return
-	}
-	maxW := rightExclusive - maxStart
+	rowY := rect.Y
+	maxW := rect.Width
 	if maxW < 1 {
 		return
 	}
@@ -54,11 +48,8 @@ func drawStatusMessageOverlay(screen tcell.Screen, rect Rect, reserveExclusiveEn
 	if len(msgRunes) > maxW {
 		msgRunes = msgRunes[:maxW]
 	}
-	startCol := rightExclusive - len(msgRunes)
-	if startCol < maxStart {
-		startCol = maxStart
-	}
+	startCol := rect.X + (maxW-len(msgRunes))/2
 	for i, r := range msgRunes {
-		screen.SetContent(startCol+i, rect.Y, r, nil, st)
+		screen.SetContent(startCol+i, rowY, r, nil, st)
 	}
 }

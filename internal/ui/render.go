@@ -230,7 +230,6 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 
 	menus := menu.ActiveDefinitions(model.MenuDefinitions)
 	showMenuBarSpinner := model.MenuBarActivitySpinner
-	permW := menuBarRightTailRuneCount(model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner)
 	if model.MenuBarLayoutReserved() {
 		if model.ModalDialogOpen() || model.ViewMode == ViewFilePreview {
 			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
@@ -348,17 +347,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	// Transient status must be drawn after modal chrome so it is not overwritten (e.g. theme picker).
 	// Draw before the generic message dialog so that modal stays the topmost curated surface when both apply.
-	if msg != "" {
-		if model.MenuBarLayoutReserved() && layout.Menu.Width > 0 {
-			reserveEnd := layout.Menu.X
-			if !model.ModalDialogOpen() && model.ViewMode != ViewFilePreview {
-				reserveEnd = menuBarMenusEndX(layout.Menu, menus, permW)
-			}
-			// Use full menu row width so the banner reaches the right edge; it paints over permission text.
-			drawStatusMessageOverlay(screen, layout.Menu, reserveEnd, 1, 0, msg, model.MessageUrgency, styles)
-		} else if !model.MenuBarLayoutReserved() || layout.Menu.Width == 0 {
-			drawStatusMessageOverlay(screen, layout.Footer, layout.Footer.X, 0, 0, msg, model.MessageUrgency, styles)
-		}
+	if msg != "" && layout.Footer.Height > 0 {
+		row := Rect{X: 0, Y: layout.Footer.Y - 1, Width: layout.Width, Height: 1}
+		drawStatusMessageOverlay(screen, row, msg, model.MessageUrgency, styles)
 	}
 	if model.MessageDialog.Open {
 		dialog.DrawMessageDialog(screen, layout, model.MessageDialog, styles)

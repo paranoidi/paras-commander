@@ -27,6 +27,7 @@ func New(d Deps) *Handler {
 // WakePayload wakes PollEvent when find indexer batches arrive or finish.
 type WakePayload struct {
 	Finished bool
+	WalkErr  string // set when a walk goroutine exits with an error (applied on main thread)
 }
 
 func (h *Handler) OpenDialog(panelID int) {
@@ -280,11 +281,11 @@ func (h *Handler) readFindSession(sess *findpkg.Session, ch chan []findpkg.Entry
 	}
 	h.completedRoots[root] = struct{}{}
 	h.sessionMu.Unlock()
-	st := &h.model.FindDialog
-	if st.Open && err != nil {
-		st.IndexErr = err.Error()
+	payload := WakePayload{Finished: true}
+	if err != nil {
+		payload.WalkErr = err.Error()
 	}
-	_ = h.screen.PostEvent(tcell.NewEventInterrupt(WakePayload{Finished: true}))
+	_ = h.screen.PostEvent(tcell.NewEventInterrupt(payload))
 }
 
 func (h *Handler) findAllWalksDone() bool {
@@ -467,6 +468,10 @@ func (h *Handler) PollUpdates(payload WakePayload) bool {
 	}
 drained:
 	st := &h.model.FindDialog
+	if st.Open && payload.WalkErr != "" {
+		st.IndexErr = payload.WalkErr
+		needRender = true
+	}
 	if st.Open && (st.Indexing || payload.Finished) {
 		if h.findAllWalksDone() {
 			if st.Indexing || !st.IndexDone {

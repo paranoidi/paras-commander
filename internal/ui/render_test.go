@@ -742,7 +742,7 @@ func TestRenderMenuBarShowsActivitySpinnerAfterPermission(t *testing.T) {
 	}
 }
 
-func TestRenderTransientStatusOnMenuBarAfterThemeDialog(t *testing.T) {
+func TestRenderTransientStatusAboveFooterAfterThemeDialog(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -768,9 +768,14 @@ func TestRenderTransientStatusOnMenuBarAfterThemeDialog(t *testing.T) {
 
 	Render(screen, model, styles)
 
+	statusRow := layoutStatusMessageRowY(24)
+	banner := tcelltest.TextAt(screen, 0, statusRow, width)
+	if !strings.Contains(banner, "theme-reload") {
+		t.Fatalf("status row %d = %q, want transient status visible after theme dialog", statusRow, banner)
+	}
 	top := tcelltest.TextAt(screen, 0, 0, width)
-	if !strings.Contains(top, "theme-reload") {
-		t.Fatalf("menu row = %q, want transient status visible after theme dialog", top)
+	if strings.Contains(top, "theme-reload") {
+		t.Fatalf("menu row = %q, status should not be on top row", top)
 	}
 }
 
@@ -877,18 +882,23 @@ func TestRenderDrawsStatusMessage(t *testing.T) {
 	styles := theme.Default()
 	Render(screen, model, styles)
 
-	menuRow := tcelltest.TextAt(screen, 0, 0, width)
-	if !strings.Contains(menuRow, "Refreshed") {
-		t.Fatalf("menu row = %q, want status message overlay", menuRow)
+	statusRow := layoutStatusMessageRowY(12)
+	banner := tcelltest.TextAt(screen, 0, statusRow, width)
+	if !strings.Contains(banner, "Refreshed") {
+		t.Fatalf("status row %d = %q, want status message overlay", statusRow, banner)
 	}
-	lastMsgRuneCol := width - len([]rune("Refreshed"))
-	msgStr, msgSt, _ := screen.Get(lastMsgRuneCol, 0)
+	wantStart := (width - len([]rune("Refreshed"))) / 2
+	msgStr, msgSt, _ := screen.Get(wantStart, statusRow)
 	msgR, _ := utf8.DecodeRuneInString(msgStr)
 	if msgR != 'R' {
-		t.Fatalf("status message should be right-aligned (starts at col %d); got %q style %v", lastMsgRuneCol, msgR, msgSt)
+		t.Fatalf("status message should be centered (starts at col %d); got %q style %v", wantStart, msgR, msgSt)
 	}
 	if msgSt != styles.StatusInfo {
 		t.Fatalf("status message style = %v, want StatusInfo", msgSt)
+	}
+	menuRow := tcelltest.TextAt(screen, 0, 0, width)
+	if strings.Contains(menuRow, "Refreshed") {
+		t.Fatalf("menu row should not show status message, got %q", menuRow)
 	}
 	footerText := tcelltest.TextAt(screen, 0, 11, width)
 	if strings.Contains(footerText, "Refreshed") {
@@ -896,7 +906,7 @@ func TestRenderDrawsStatusMessage(t *testing.T) {
 	}
 }
 
-func TestRenderStatusMessageRightAlignsThroughPermissionArea(t *testing.T) {
+func TestRenderStatusMessageDoesNotOverlayMenuBarPermission(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -924,14 +934,16 @@ func TestRenderStatusMessageRightAlignsThroughPermissionArea(t *testing.T) {
 	styles := theme.Default()
 	Render(screen, model, styles)
 
+	statusRow := layoutStatusMessageRowY(12)
+	banner := tcelltest.TextAt(screen, 0, statusRow, width)
+	if !strings.Contains(banner, "Saved") {
+		t.Fatalf("status row = %q, want message above footer", banner)
+	}
 	wantLastCol := width - 1
 	lastStr, lastSt, _ := screen.Get(wantLastCol, 0)
 	lastR, _ := utf8.DecodeRuneInString(lastStr)
-	if lastR != 'd' {
-		t.Fatalf("last menu-row rune = %q want %q (message should reach screen right edge)", lastR, 'd')
-	}
-	if lastSt != styles.StatusInfo {
-		t.Fatalf("last column style = %v, want StatusInfo (overlay covers permission area)", lastSt)
+	if lastR == 'd' && lastSt == styles.StatusInfo {
+		t.Fatalf("menu permission area should not be covered by status message")
 	}
 }
 
@@ -953,8 +965,9 @@ func TestRenderStatusMessageUsesUrgencyStyle(t *testing.T) {
 	styles := theme.Default()
 	Render(screen, model, styles)
 
-	lastCol := 80 - len([]rune("o_O"))
-	_, st, _ := screen.Get(lastCol+2, 0) // last rune column
+	statusRow := layoutStatusMessageRowY(12)
+	col := (80 - len([]rune("o_O"))) / 2
+	_, st, _ := screen.Get(col, statusRow)
 	if st != styles.StatusWarn {
 		t.Fatalf("urgency style = %v, want StatusWarn", st)
 	}
@@ -983,10 +996,17 @@ func TestRenderStatusMessageLeavesMenuLabelsVisible(t *testing.T) {
 	if st != styles.MenuBar {
 		t.Fatalf("col 1 style = %v, want Menu (menu not covered by status fill)", st)
 	}
-	_, msgSt, _ := screen.Get(80-len([]rune("Hi")), 0)
+	statusRow := layoutStatusMessageRowY(12)
+	col := (80 - len([]rune("Hi"))) / 2
+	_, msgSt, _ := screen.Get(col, statusRow)
 	if msgSt != styles.StatusInfo {
 		t.Fatalf("message cell style = %v, want StatusInfo", msgSt)
 	}
+}
+
+// layoutStatusMessageRowY is the row immediately above the footer for a terminal height.
+func layoutStatusMessageRowY(height int) int {
+	return height - 2
 }
 
 func TestRenderDrawsPanelLocalFuzzyInputOverlay(t *testing.T) {
