@@ -56,32 +56,32 @@ type FindEntry struct {
 // Focus without selections checkbox: 0=list+filter, 1=stay-on-volume, 2=OK, 3=Cancel.
 // With selections checkbox: 0=list+filter, 1=stay-on-volume, 2=search-selections, 3=OK, 4=Cancel.
 type FindDialogState struct {
-	Open         bool
-	PanelID      int
-	RootPath     string
-	ShowHidden   bool
+	Open                bool
+	PanelID             int
+	RootPath            string
+	ShowHidden          bool
 	StayOnCurrentVolume bool
-	ListingDevice      uint64
-	ListingDeviceValid bool
+	ListingDevice       uint64
+	ListingDeviceValid  bool
 	// ShowSearchSelectionsOption is true when the panel had selected directories at open.
 	ShowSearchSelectionsOption bool
 	// SearchOnlySelections limits indexing to SelectionDirRoots when true.
 	SearchOnlySelections bool
 	// SelectionDirRoots is a pruned snapshot of selected directory paths at dialog open.
 	SelectionDirRoots []string
-	Entries      []FindEntry
-	Query        string
-	QueryCursor  int // rune offset of caret within Query (0..len(runes))
-	QueryScroll  int // first visible rune offset for horizontal scrolling
-	Ranked       []int
-	MatchRanges  [][]search.Range
-	Selected     int
-	ListScroll   int
-	Focus        int
-	Indexing     bool
-	IndexedCount int
-	IndexDone    bool
-	IndexErr     string
+	Entries           []FindEntry
+	Query             string
+	QueryCursor       int // rune offset of caret within Query (0..len(runes))
+	QueryScroll       int // first visible rune offset for horizontal scrolling
+	Ranked            []int
+	MatchRanges       [][]search.Range
+	Selected          int
+	ListScroll        int
+	Focus             int
+	Indexing          bool
+	IndexedCount      int
+	IndexDone         bool
+	IndexErr          string
 	// MarkedPaths holds paths toggled selected in the dialog (applied to the panel on OK).
 	MarkedPaths map[string]bool
 }
@@ -120,8 +120,8 @@ type HistoryDialogState struct {
 	CurrentIndex int      // snapshot HistoryIndex when dialog opened
 	DisplayLines []string // per-row UI text ("* path" / "  path"); len == len(Paths)
 	Query        string
-	QueryCursor  int // rune offset of caret within Query (0..len(runes))
-	QueryScroll  int // first visible rune offset for horizontal scrolling
+	QueryCursor  int              // rune offset of caret within Query (0..len(runes))
+	QueryScroll  int              // first visible rune offset for horizontal scrolling
 	Ranked       []int            // indices into Paths / DisplayLines
 	MatchRanges  [][]search.Range // len == len(Paths); highlights on DisplayLines
 	Selected     int              // index into Ranked

@@ -56,7 +56,7 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	if state.MassRenameMode == MassRenameModeUISimple {
 		fixed += 1 + 1 // checkbox + sep
 	}
-	fixed += 1 // hint line after preview
+	fixed += 1                   // hint line after preview
 	height := 1 + fixed + vp + 2 // inner top pad + body + buttons row + bottom
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2

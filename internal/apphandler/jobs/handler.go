@@ -1,6 +1,5 @@
 package jobs
 
-
 import (
 	"fmt"
 	"path/filepath"
@@ -15,15 +14,14 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
-
 func New(d Deps) *Handler {
 	return &Handler{
-		host: d.Host,
-		screen: d.Screen,
-		model: d.Model,
-		state: d.State,
-		config: d.Config,
-		keys: d.Keys,
+		host:     d.Host,
+		screen:   d.Screen,
+		model:    d.Model,
+		state:    d.State,
+		config:   d.Config,
+		keys:     d.Keys,
 		keysJobs: d.KeysJobs,
 	}
 }
@@ -81,7 +79,6 @@ func (h *Handler) SyncJobPathMarks() {
 	h.model.JobPathMarks = ui.JobPathMarksFromJobs(h.state.AllJobs())
 	h.pathMarksVersion++
 }
-
 
 func (h *Handler) ensureJobsViewSelectionVisible() {
 	n := len(h.model.JobsList)
@@ -871,11 +868,11 @@ func (h *Handler) sourceAndDestination() (sources []string, dest string) {
 	return sources, dest
 }
 
-func (h *Handler) AffectVisible() bool { return h.affectVisible }
+func (h *Handler) AffectVisible() bool             { return h.affectVisible }
 func (h *Handler) LastBatchMenuBarStripOnly() bool { return h.lastBatchMenuBarStripOnly }
-func (h *Handler) ListStale() bool { return h.listStale }
-func (h *Handler) SetListStale(v bool) { h.listStale = v }
-func (h *Handler) StopWakeTimer() { h.stopJobsWakeTimer() }
+func (h *Handler) ListStale() bool                 { return h.listStale }
+func (h *Handler) SetListStale(v bool)             { h.listStale = v }
+func (h *Handler) StopWakeTimer()                  { h.stopJobsWakeTimer() }
 
 func absPathClean(p string) string {
 	if p == "" {

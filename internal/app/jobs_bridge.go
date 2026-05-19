@@ -5,9 +5,9 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/app/jobbridge"
+	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -15,7 +15,9 @@ func (a *App) openJobsView() { a.jobsCtrl.OpenJobsView() }
 
 func (a *App) tryDispatchJobs(actionID string) bool { return a.jobsCtrl.TryDispatch(actionID) }
 
-func (a *App) handleJobsViewKey(event *tcell.EventKey) bool { return a.jobsCtrl.HandleJobsViewKey(event) }
+func (a *App) handleJobsViewKey(event *tcell.EventKey) bool {
+	return a.jobsCtrl.HandleJobsViewKey(event)
+}
 
 func (a *App) pollJobEvents() bool { return a.jobsCtrl.PollEvents() }
 

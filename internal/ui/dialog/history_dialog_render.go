@@ -110,4 +110,3 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
 	}, styles)
 }
-

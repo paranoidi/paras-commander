@@ -1,7 +1,5 @@
 package find
 
-
-
 import (
 	"context"
 	"fmt"

@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
+	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
-	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -74,11 +74,11 @@ type App struct {
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
 	// jobState manages background job queue and worker lifecycle.
-	jobState  *jobs.State
-	jobsCtrl  *jobsctrl.Handler
-	findCtrl  *findctrl.Handler
-	jobStopCh chan struct{}
-	jobStopOnce bool
+	jobState        *jobs.State
+	jobsCtrl        *jobsctrl.Handler
+	findCtrl        *findctrl.Handler
+	jobStopCh       chan struct{}
+	jobStopOnce     bool
 	diskUsage       *diskusage.Engine
 	diskUsageIgnore diskusage.ShouldIgnoreFolder
 	diskIdleSort    [2]diskIdleSortPanel // indexed by ui.LeftPanel / ui.RightPanel (0/1)
@@ -128,7 +128,6 @@ type App struct {
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
 	lastScreenContentHash uint64
-
 }
 
 // Options controls app construction while keeping startup behavior testable.

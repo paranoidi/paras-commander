@@ -94,4 +94,3 @@ func (a *App) tryDialogInputFieldActions(ev *tcell.EventKey, f *ui.FileDialogFie
 		return false
 	}
 }
-

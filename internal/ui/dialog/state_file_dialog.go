@@ -94,7 +94,7 @@ type FileDialogState struct {
 	MassRenameMode          MassRenameModeUI
 	MassRenameCaseFold      bool
 	MassRenamePreviewScroll int
-	MassRenameSources []MassRenameSource
+	MassRenameSources       []MassRenameSource
 	// MassRenamePreviewBefore / After are paired basename preview columns (recomputed in app).
 	// Rows with Before starting with "!" are full-width error lines (After empty).
 	MassRenamePreviewBefore []string

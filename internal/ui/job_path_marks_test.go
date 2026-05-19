@@ -124,9 +124,9 @@ func TestEntryPathJobMarkStatus_moveListedBeforeDeleteNestedChildPrefersDelete(t
 		DestIsDir:   true,
 	}
 	del := JobEntry{
-		Type:     string(jobs.TypeDelete),
-		Status:   string(jobs.StatusQueued),
-		Sources:  []string{child},
+		Type:    string(jobs.TypeDelete),
+		Status:  string(jobs.StatusQueued),
+		Sources: []string{child},
 	}
 	// Same ordering issue as user report: transfer job appears first in JobsList.
 	list := []JobEntry{move, del}
@@ -160,9 +160,9 @@ func TestEntryPathJobMarkStatus_finishedDeleteQueuedMoveOverlappingUsesMove(t *t
 		DestIsDir:   true,
 	}
 	delDone := JobEntry{
-		Type:     string(jobs.TypeDelete),
-		Status:   string(jobs.StatusCompleted),
-		Sources:  []string{child},
+		Type:    string(jobs.TypeDelete),
+		Status:  string(jobs.StatusCompleted),
+		Sources: []string{child},
 	}
 	list := []JobEntry{move, delDone}
 	marked, st := EntryPathJobMarkStatusFromEntries(child, list)

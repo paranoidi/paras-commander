@@ -216,10 +216,10 @@ type FilterConfig struct {
 }
 
 type JobsConfig struct {
-	ShowFinished      bool `toml:"show_finished"`
-	KeepFinished      int  `toml:"keep_finished"`
-	AutoshowOnError   bool `toml:"autoshow_on_error"`
-	AutoshowOnStart   bool `toml:"autoshow_on_start"`
+	ShowFinished    bool `toml:"show_finished"`
+	KeepFinished    int  `toml:"keep_finished"`
+	AutoshowOnError bool `toml:"autoshow_on_error"`
+	AutoshowOnStart bool `toml:"autoshow_on_start"`
 	// ProgressUIWakeDebounceMS is minimum spacing between jobsWakePayload interrupts after worker EventProgress.
 	ProgressUIWakeDebounceMS int `toml:"progress_ui_wake_debounce_ms"`
 	// WorkerProgressMinBytes is the minimum bytes copied between worker EventProgress emits.
@@ -287,24 +287,24 @@ func Default() Config {
 		OpenFilesExternally:             true,
 		DeleteMode:                      DeletePermanent,
 		UI: UIConfig{
-			ShowMenuBar:                  true,
-			ShowFooter:                   true,
-			ShowStatusLine:               true,
-			ShowJobsLine:                 true,
-			ShowFileIcons:                true,
-			BorderStyle:                  BorderStyleSingle,
-			Clock:                        false,
-			StatusMessageTTLSeconds:      3.5,
-			PathPickerValidateDelayMS:    DefaultPathPickerValidateDelayMS,
-			PanelSyncFollowNavDebounceMS: DefaultPanelSyncFollowNavDebounceMS,
-			QuickViewPreviewDebounceMS:   DefaultQuickViewPreviewDebounceMS,
-			ZoomActivePanel:                      DefaultZoomActivePanel,
-			ZoomActivePanelDisabledAboveWidth:    DefaultZoomActivePanelDisabledAboveWidth,
-			PanelZoomActivePercent:               DefaultPanelZoomActivePercent,
-			PanelZoomInactivePercent:             DefaultPanelZoomInactivePercent,
-			ShrunkenShowsNameOnly:        DefaultShrunkenShowsNameOnly,
-			MessageLogMaxEntries:         DefaultMessageLogMaxEntries,
-			ScreenRenderHashCache:       DefaultScreenRenderHashCache,
+			ShowMenuBar:                       true,
+			ShowFooter:                        true,
+			ShowStatusLine:                    true,
+			ShowJobsLine:                      true,
+			ShowFileIcons:                     true,
+			BorderStyle:                       BorderStyleSingle,
+			Clock:                             false,
+			StatusMessageTTLSeconds:           3.5,
+			PathPickerValidateDelayMS:         DefaultPathPickerValidateDelayMS,
+			PanelSyncFollowNavDebounceMS:      DefaultPanelSyncFollowNavDebounceMS,
+			QuickViewPreviewDebounceMS:        DefaultQuickViewPreviewDebounceMS,
+			ZoomActivePanel:                   DefaultZoomActivePanel,
+			ZoomActivePanelDisabledAboveWidth: DefaultZoomActivePanelDisabledAboveWidth,
+			PanelZoomActivePercent:            DefaultPanelZoomActivePercent,
+			PanelZoomInactivePercent:          DefaultPanelZoomInactivePercent,
+			ShrunkenShowsNameOnly:             DefaultShrunkenShowsNameOnly,
+			MessageLogMaxEntries:              DefaultMessageLogMaxEntries,
+			ScreenRenderHashCache:             DefaultScreenRenderHashCache,
 		},
 		Filter: FilterConfig{
 			Mode:              FilterModeFuzzy,
@@ -313,10 +313,10 @@ func Default() Config {
 			CycleMatches:      FilterCycleMatchesVisual,
 		},
 		Jobs: JobsConfig{
-			ShowFinished:              true,
-			KeepFinished:              20,
-			AutoshowOnError:           true,
-			AutoshowOnStart:           false,
+			ShowFinished:                true,
+			KeepFinished:                20,
+			AutoshowOnError:             true,
+			AutoshowOnStart:             false,
 			ProgressUIWakeDebounceMS:    DefaultProgressUIWakeDebounceMS,
 			WorkerProgressMinBytes:      DefaultWorkerProgressMinBytes,
 			WorkerProgressMinIntervalMS: DefaultWorkerProgressMinIntervalMS,

@@ -59,8 +59,8 @@ type ListingFormatDialogState struct {
 type GroupSelectState struct {
 	Open             bool
 	Text             string
-	TextCursor       int // rune offset of caret within Text (0..len(runes))
-	TextScroll       int // first visible rune offset for horizontal scrolling
+	TextCursor       int    // rune offset of caret within Text (0..len(runes))
+	TextScroll       int    // first visible rune offset for horizontal scrolling
 	Mode             string // "select" or "unselect"
 	FilesOnly        bool
 	CaseSensitive    bool

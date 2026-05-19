@@ -45,17 +45,17 @@ type Job struct {
 	Destination string
 	// DestIsDir is whether Destination was an existing directory at enqueue time (same as ops.ResolveDestination Stat semantics).
 	// Used by UI path marks so listing render does not Stat the destination per row.
-	DestIsDir   bool
-	TotalFiles  int
-	TotalDirs   int
-	DoneFiles   int
-	TotalBytes  int64
-	DoneBytes   int64
-	CurrentPath string
-	Error       string
+	DestIsDir     bool
+	TotalFiles    int
+	TotalDirs     int
+	DoneFiles     int
+	TotalBytes    int64
+	DoneBytes     int64
+	CurrentPath   string
+	Error         string
 	ScanStartedAt time.Time
-	StartedAt   time.Time
-	FinishedAt  time.Time
+	StartedAt     time.Time
+	FinishedAt    time.Time
 
 	// Plan is the pre-built copy/move plan from pre-scan; nil until scan completes or for delete jobs.
 	Plan []PlanItem
