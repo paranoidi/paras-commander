@@ -23,4 +23,5 @@ type Host interface {
 	Dispatch(actionID string)
 	ActionFromKeyEvent(ev *tcell.EventKey) string
 	JobFailureBannerDetail(err error, fallback string) string
+	DevMode() bool
 }

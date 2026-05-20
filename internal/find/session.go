@@ -5,11 +5,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
@@ -29,6 +29,7 @@ type Entry struct {
 // Options configures a find session walk.
 type Options struct {
 	ShowHidden    bool
+	Gitignore     *gitignore.Cache             // nil disables .gitignore filtering
 	ShouldSkipDir diskusage.ShouldIgnoreFolder // skip descending into matching dirs (volume gate, etc.)
 }
 
@@ -110,6 +111,16 @@ func (s *Session) run(ctx context.Context, opts Options) {
 		}
 	}()
 
+	listOpts := localfs.ListOptions{ShowHidden: opts.ShowHidden}
+	if !opts.ShowHidden {
+		matcher, matcherErr := localfs.MatcherForListing(false, opts.Gitignore, s.root)
+		if matcherErr != nil {
+			s.err = matcherErr
+			return
+		}
+		listOpts.Gitignore = matcher
+	}
+
 	walkErr := filepath.WalkDir(s.root, func(path string, d fs.DirEntry, err error) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -122,8 +133,9 @@ func (s *Session) run(ctx context.Context, opts Options) {
 		}
 
 		name := d.Name()
-		if !opts.ShowHidden && strings.HasPrefix(name, ".") {
-			if d.IsDir() {
+		isDir := d.IsDir()
+		if !localfs.EntryVisible(name, filepath.Dir(path), isDir, listOpts) {
+			if isDir {
 				return filepath.SkipDir
 			}
 			return nil
@@ -135,7 +147,6 @@ func (s *Session) run(ctx context.Context, opts Options) {
 		}
 		rel = filepath.ToSlash(rel)
 
-		isDir := d.IsDir()
 		entryType := localfs.EntryFile
 		if d.Type()&fs.ModeSymlink != 0 {
 			entryType = localfs.EntrySymlink

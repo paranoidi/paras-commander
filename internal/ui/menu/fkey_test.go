@@ -11,7 +11,7 @@ func TestFindItemByFKeyLabel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Default: %v", err)
 	}
-	defs := BrowserDefinitions(km)
+	defs := BrowserDefinitions(km, false)
 	if def, item, ok := FindItemByFKeyLabel(defs, "F5"); !ok || def.ID != TopFile || item.Action != keymap.ActionCopy {
 		t.Fatalf("F5: ok=%v menu=%q item.Action=%q", ok, def.ID, item.Action)
 	}

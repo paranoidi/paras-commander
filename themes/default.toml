@@ -42,9 +42,9 @@ menu.job.failed = { fg = "bright_red", bg = "default" }
 menu.job.decision = { fg = "cyan", bg = "default" }
 menu.job.completed = { fg = "green", bg = "default" }
 
-status.info = { fg = "white", bg = "default" }
-status.warn = { fg = "yellow", bg = "default", bold = true }
-status.error = { fg = "bright_red", bg = "default", bold = true }
+status.info = { fg = "black", bg = "white" }
+status.warn = { fg = "black", bg = "yellow", bold = true }
+status.error = { fg = "bright_white", bg = "red", bold = true }
 status.waiting_input = { fg = "bright_red", bg = "default", bold = true }
 
 footer.key = { fg = "magenta", bg = "default", bold = true }

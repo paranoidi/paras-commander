@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -23,7 +24,7 @@ func testBrowserMenuDefinitions(tb testing.TB) []menu.Definition {
 	if err != nil {
 		tb.Fatalf("keymap.Default: %v", err)
 	}
-	return menu.BrowserDefinitions(km)
+	return menu.BrowserDefinitions(km, false)
 }
 
 func TestFormatEntryPrefixesDirectoriesAndNonDirectories(t *testing.T) {
@@ -250,7 +251,7 @@ func TestRenderDrawsLeftPanelPulldownWithKeymapLabels(t *testing.T) {
 		Left:            panel.State{Path: "/tmp"},
 		Right:           panel.State{Path: "/tmp"},
 		ActivePanel:     LeftPanel,
-		MenuDefinitions: menu.BrowserDefinitions(km),
+		MenuDefinitions: menu.BrowserDefinitions(km, false),
 		Menu: menu.State{
 			Open:         true,
 			PulldownOpen: true,
@@ -887,7 +888,7 @@ func TestRenderDrawsStatusMessage(t *testing.T) {
 	if !strings.Contains(banner, "Refreshed") {
 		t.Fatalf("status row %d = %q, want status message overlay", statusRow, banner)
 	}
-	wantStart := (width - len([]rune("Refreshed"))) / 2
+	wantStart := (width-len([]rune(FormatToastDisplay("Refreshed"))))/2 + 1
 	msgStr, msgSt, _ := screen.Get(wantStart, statusRow)
 	msgR, _ := utf8.DecodeRuneInString(msgStr)
 	if msgR != 'R' {
@@ -966,7 +967,7 @@ func TestRenderStatusMessageUsesUrgencyStyle(t *testing.T) {
 	Render(screen, model, styles)
 
 	statusRow := layoutStatusMessageRowY(12)
-	col := (80 - len([]rune("o_O"))) / 2
+	col := (80-len([]rune(FormatToastDisplay("o_O"))))/2 + 1
 	_, st, _ := screen.Get(col, statusRow)
 	if st != styles.StatusWarn {
 		t.Fatalf("urgency style = %v, want StatusWarn", st)
@@ -1335,5 +1336,77 @@ func TestRenderOmitsSelectionsBottomHintWhenStripVisible(t *testing.T) {
 	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
 	if strings.Contains(leftBottom, " Selections ") {
 		t.Fatalf("left column bottom = %q, want no file-panel selections hint when strip is visible", leftBottom)
+	}
+}
+
+func TestRenderDrawsGitignoreBottomHint(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	left := panel.State{
+		Path:      "/tmp",
+		Entries:   []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
+		Gitignore: gitignore.NewCache(),
+	}
+	model := Model{
+		Left:        left,
+		Right:       panel.State{Path: "/var"},
+		ActivePanel: RightPanel,
+	}
+	styles := theme.Default()
+	Render(screen, model, styles)
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if !strings.Contains(leftBottom, " Gitignore ") {
+		t.Fatalf("left bottom = %q, want substring %q", leftBottom, " Gitignore ")
+	}
+
+	dashR, dashSt, _ := screen.Get(1, bottomY)
+	if dashR != "─" {
+		t.Fatalf("left bottom frame dash = %q, want '─'", dashR)
+	}
+	if dashSt != styles.PanelInactiveFrame {
+		t.Fatalf("left bottom frame dash style = %v, want PanelInactiveFrame", dashSt)
+	}
+	_, labelSt, _ := screen.Get(2, bottomY)
+	if labelSt != styles.PanelInactiveFrame {
+		t.Fatalf("gitignore hint label style = %v, want PanelInactiveFrame", labelSt)
+	}
+}
+
+func TestRenderOmitsGitignoreBottomHintWhenShowHidden(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	left := panel.State{
+		Path:       "/tmp",
+		Entries:    []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
+		ShowHidden: true,
+		Gitignore:  gitignore.NewCache(),
+	}
+	model := Model{
+		Left:        left,
+		Right:       panel.State{Path: "/var"},
+		ActivePanel: RightPanel,
+	}
+	Render(screen, model, theme.Default())
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if strings.Contains(leftBottom, " Gitignore ") {
+		t.Fatalf("left bottom = %q, want no gitignore hint when show hidden is on", leftBottom)
 	}
 }

@@ -52,7 +52,7 @@ func (h *Handler) OpenJobsView() {
 func (h *Handler) closeJobsView() {
 	h.model.ViewMode = ui.ViewBrowser
 	h.model.ActiveSubFocus = ui.SubFocusFileList
-	h.model.MenuDefinitions = menu.BrowserDefinitions(h.keys)
+	h.model.MenuDefinitions = menu.BrowserDefinitions(h.keys, h.host.DevMode())
 	h.model.Menu.ActiveMenu = menu.DefaultIndex()
 	h.model.JobsView = ui.JobsViewState{}
 }

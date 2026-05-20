@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -118,7 +117,7 @@ func drawMessagesView(
 		timeCell := truncateRunes(timeShow+" ", messagesListColTime)
 		primitive.Text(screen, contentX, y, messagesListColTime, timeCell, timeStyle)
 
-		shown := truncateRunes(strings.TrimSpace(entry.Text), msgW-1)
+		shown := truncateRunes(FormatToastDisplay(entry.Text), msgW-1)
 		primitive.Text(screen, msgStart, y, msgW, shown, urgStyle)
 	}
 }

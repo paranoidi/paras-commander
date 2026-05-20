@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 )
 
 func collectSession(t *testing.T, root string, opts Options) []Entry {
@@ -65,6 +67,25 @@ func TestSessionSkipsHidden(t *testing.T) {
 	for _, e := range entries {
 		if filepath.Base(e.Path) == ".hidden" {
 			t.Fatalf("unexpected hidden entry %q", e.Path)
+		}
+	}
+}
+
+func TestSessionSkipsGitignoredDir(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mustWrite(t, filepath.Join(root, ".gitignore"), "skipdir/\n")
+	mustMkdir(t, filepath.Join(root, "skipdir"))
+	mustWrite(t, filepath.Join(root, "skipdir", "inner.txt"), "x")
+	mustWrite(t, filepath.Join(root, "outer.txt"), "y")
+
+	cache := gitignore.NewCache()
+	entries := collectSession(t, root, Options{Gitignore: cache})
+	for _, e := range entries {
+		if strings.Contains(e.RelLine, "skipdir") {
+			t.Fatalf("unexpected gitignored path in index: %q", e.RelLine)
 		}
 	}
 }

@@ -18,6 +18,16 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 - Meta column can be used to provide data from external commands.
 - Execute command for selected files.
 
+### To be implemented
+
+- Remote host browsing and copying.
+
+### Outscoped compared to MC
+
+- No EXT2 recovery.
+- No SFTP.
+- No embedded shell.
+
 ## Requirements
 
 - Go 1.26+
@@ -47,6 +57,12 @@ After a local `go build` (binary in the current directory):
 
 ```bash
 ./pc
+```
+
+With test helpers (Dev pulldown menu for status toasts):
+
+```bash
+./pc -dev
 ```
 
 After `go install`, with your Go `bin` directory on `PATH`:

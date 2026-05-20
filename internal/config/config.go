@@ -93,6 +93,7 @@ func (paths Paths) withDerivedThemesDir() Paths {
 type Config struct {
 	Theme                           string `toml:"theme"`
 	ShowHidden                      bool   `toml:"show_hidden"`
+	RespectGitignore                bool   `toml:"respect_gitignore"`
 	ConfirmDelete                   bool   `toml:"confirm_delete"`
 	ConfirmOverwrite                bool   `toml:"confirm_overwrite"`
 	CaseInsensitiveFilter           bool   `toml:"case_insensitive_filter"`
@@ -270,6 +271,7 @@ func Default() Config {
 	return Config{
 		Theme:                           ThemeDefault,
 		ShowHidden:                      false,
+		RespectGitignore:                true,
 		ConfirmDelete:                   true,
 		ConfirmOverwrite:                true,
 		CaseInsensitiveFilter:           true,

@@ -21,14 +21,14 @@ func TestDrawStatusMessageTruncatesCenteredRunesWithoutTilde(t *testing.T) {
 	msg := "abcdefghijklmnopqrstuvwxyz"
 	drawStatusMessageOverlay(screen, Rect{X: 0, Y: 0, Width: 40, Height: 1}, msg, MessageUrgencyInfo, styles)
 
-	msgRunes := []rune(msg)
+	msgRunes := []rune(FormatToastDisplay(msg))
 	wantStart := (40 - len(msgRunes)) / 2
-	firstStr, _, _ := screen.Get(wantStart, 0)
+	firstStr, _, _ := screen.Get(wantStart+1, 0)
 	firstR, _ := utf8.DecodeRuneInString(firstStr)
 	if firstR != 'a' {
-		t.Fatalf("first visible rune = %q at col %d, want 'a'", firstR, wantStart)
+		t.Fatalf("first content rune = %q at col %d, want 'a'", firstR, wantStart+1)
 	}
-	lastStr, _, _ := screen.Get(wantStart+len(msgRunes)-1, 0)
+	lastStr, _, _ := screen.Get(wantStart+len(msgRunes)-2, 0)
 	lastR, _ := utf8.DecodeRuneInString(lastStr)
 	if lastR != 'z' {
 		t.Fatalf("last visible rune = %q, want 'z'", lastR)
@@ -46,7 +46,7 @@ func TestDrawStatusMessageCentersShortText(t *testing.T) {
 	styles := theme.Default()
 	drawStatusMessageOverlay(screen, Rect{X: 0, Y: 5, Width: 80, Height: 1}, "Hi", MessageUrgencyInfo, styles)
 
-	wantCol := (80 - 2) / 2
+	wantCol := (80-len([]rune(FormatToastDisplay("Hi"))))/2 + 1
 	str, st, _ := screen.Get(wantCol, 5)
 	r, _ := utf8.DecodeRuneInString(str)
 	if r != 'H' || st != styles.StatusInfo {

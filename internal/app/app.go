@@ -15,6 +15,7 @@ import (
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -70,6 +71,7 @@ type App struct {
 	keysMessages     *keymap.Map // chords active only in Messages view (overlay)
 	keysDialogInput  *keymap.Map // chords active only while a dialog input field is focused
 	keysRenameDialog *keymap.Map // sanitize/slugify while main rename dialog is focused
+	devMode          bool
 	model            ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
@@ -81,6 +83,7 @@ type App struct {
 	jobStopOnce     bool
 	diskUsage       *diskusage.Engine
 	diskUsageIgnore diskusage.ShouldIgnoreFolder
+	gitignoreCache  *gitignore.Cache
 	diskIdleSort    [2]diskIdleSortPanel // indexed by ui.LeftPanel / ui.RightPanel (0/1)
 	// diskIdleNavPath records last reconciled panel cwd so idle-sort debounce survives benign reconcile but resets on chdir.
 	diskIdleNavPath [2]string
@@ -139,10 +142,13 @@ type Options struct {
 	Paths        config.Paths
 	Keymap       *keymap.Map    // optional global-only override for tests (ignored when Bundle set)
 	KeymapBundle *keymap.Bundle // optional full bundle override for tests
+	// DevMode appends the Dev pulldown menu with test helpers (pc -dev).
+	DevMode bool
 }
 
 // Run initializes and starts the terminal application.
-func Run() error {
+// When devMode is true, the Dev pulldown menu is available (see pc -dev).
+func Run(devMode bool) error {
 	paths, err := config.DefaultPaths()
 	if err != nil {
 		return err
@@ -170,6 +176,7 @@ func Run() error {
 		Theme:        styles,
 		ThemeChoices: themeChoices,
 		Paths:        paths,
+		DevMode:      devMode,
 	})
 	if err != nil {
 		return err
@@ -294,6 +301,12 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	right.ApplySort()
 	right.Filter.CaseInsensitive = cfg.CaseInsensitiveFilter
 	right.Filter.CycleMatches = cfg.Filter.CycleMatches
+	var giCache *gitignore.Cache
+	if cfg.RespectGitignore {
+		giCache = gitignore.NewCache()
+		left.Gitignore = giCache
+		right.Gitignore = giCache
+	}
 	jobState := jobs.NewState()
 	jobState.SetTransferFunc(jobTransferFunc(cfg.Operations, cfg.Jobs))
 	jobState.SetThroughputChart(
@@ -327,6 +340,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysMessages:     kmMessages,
 		keysDialogInput:  kmDialogInput,
 		keysRenameDialog: kmRenameDialog,
+		devMode:          opts.DevMode,
 		commandsCtx:      cmdCtx,
 		commandsCancel:   cmdCancel,
 		model: ui.Model{
@@ -343,7 +357,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			DiskUsageShown:             false,
 			ViewMode:                   ui.ViewBrowser,
 			JobActivity:                make(map[string][]string),
-			MenuDefinitions:            menu.BrowserDefinitions(km),
+			MenuDefinitions:            menu.BrowserDefinitions(km, opts.DevMode),
 			ThemeDialog: ui.ThemeDialogState{
 				CurrentName: styles.Name,
 				Choices:     uiThemeChoices(themeChoices),
@@ -358,6 +372,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 
 		diskUsage:       duEngine,
 		diskUsageIgnore: duIgnorer,
+		gitignoreCache:  giCache,
 	}
 	// OnDirectoryChange hooks are intentionally left unset: derived UI invariants
 	// (panel sync, disk-usage idle-sort arming) are reconciled centrally in

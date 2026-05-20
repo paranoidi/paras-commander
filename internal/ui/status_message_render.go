@@ -34,10 +34,10 @@ func statusUrgencyStyle(styles theme.Theme, u MessageUrgency) tcell.Style {
 // drawStatusMessageOverlay draws a horizontally centered status message in the given row.
 // It paints only the message cells and does not erase the rest of the row (panel chrome remains visible outside the text).
 func drawStatusMessageOverlay(screen tcell.Screen, rect Rect, message string, urgency MessageUrgency, styles theme.Theme) {
-	msg := strings.TrimSpace(message)
-	if msg == "" || rect.Width <= 0 || rect.Height <= 0 {
+	if strings.TrimSpace(message) == "" || rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
+	msg := FormatToastDisplay(message)
 	rowY := rect.Y
 	maxW := rect.Width
 	if maxW < 1 {

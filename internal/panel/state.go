@@ -7,6 +7,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fsvol"
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/search"
 )
@@ -42,7 +43,9 @@ type State struct {
 	SelectionsStripCursor int
 	SelectionsStripScroll int
 	ShowHidden            bool
-	Filter                FilterState
+	// Gitignore is a shared cache for .gitignore filtering when ShowHidden is false; nil disables.
+	Gitignore *gitignore.Cache
+	Filter    FilterState
 	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
 	DiskSorter func(absPath string) (int64, bool)
 	Sort       SortState
@@ -696,7 +699,14 @@ func previousFilterMatchIndex(results []filterResult, cursor int) int {
 }
 
 func (s *State) load(path string, selectedName string, viewportRows int, indexFallback int) error {
-	listing, err := localfs.ListDir(path, localfs.ListOptions{ShowHidden: s.ShowHidden})
+	gitMatcher, err := localfs.MatcherForListing(s.ShowHidden, s.Gitignore, path)
+	if err != nil {
+		return err
+	}
+	listing, err := localfs.ListDir(path, localfs.ListOptions{
+		ShowHidden: s.ShowHidden,
+		Gitignore:  gitMatcher,
+	})
 	if err != nil {
 		return err
 	}

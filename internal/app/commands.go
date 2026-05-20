@@ -189,7 +189,7 @@ func (a *App) openCommandsView() {
 func (a *App) closeCommandsView() {
 	a.model.ViewMode = ui.ViewBrowser
 	a.model.ActiveSubFocus = ui.SubFocusFileList
-	a.model.MenuDefinitions = menu.BrowserDefinitions(a.keys)
+	a.model.MenuDefinitions = a.browserMenuDefinitions()
 	a.model.Menu.ActiveMenu = menu.DefaultIndex()
 	a.model.CommandsView = ui.CommandsViewState{}
 }

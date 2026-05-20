@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
@@ -191,6 +192,30 @@ func TestRefreshPreservesSelectedEntryByName(t *testing.T) {
 	}
 	if entry.Name != "b.txt" {
 		t.Fatalf("selected entry = %q, want b.txt", entry.Name)
+	}
+}
+
+func TestLoadHidesGitignoredEntries(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored.txt\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(dir, "ignored.txt"))
+	writeFile(t, filepath.Join(dir, "visible.txt"))
+
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	state.Gitignore = gitignore.NewCache()
+	if err := state.Refresh(5); err != nil {
+		t.Fatalf("Refresh() error = %v", err)
+	}
+	if len(state.Entries) != 1 || state.Entries[0].Name != "visible.txt" {
+		t.Fatalf("entries = %v, want only visible.txt", entryNames(state.Entries))
 	}
 }
 

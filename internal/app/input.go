@@ -577,11 +577,8 @@ func (a *App) dispatch(actionID string) {
 			a.setErrorMessage("Toggle hidden failed", err)
 			return
 		}
-		visibility := "hidden"
-		if a.activePanel().ShowHidden {
-			visibility = "shown"
-		}
-		a.setTransientMessage(fmt.Sprintf("%s hidden files %s", panelLabel(a.model.ActivePanel), visibility), ui.MessageUrgencyInfo)
+		label := panelLabel(a.model.ActivePanel)
+		a.setTransientMessage(a.panelHiddenVisibilityMessage(label, a.activePanel().ShowHidden), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelFilterOpen:
 		activePanel.OpenFilter(viewportRows)
 		a.clearTransientMessage()
@@ -686,6 +683,12 @@ func (a *App) dispatch(actionID string) {
 		a.setUnsupportedMessage("Edit symlink")
 	case keymap.ActionMenuFileChattr:
 		a.setUnsupportedMessage("Chattr")
+	case keymap.ActionDevShowInfo:
+		a.setTransientMessage("Example info message", ui.MessageUrgencyInfo)
+	case keymap.ActionDevShowWarn:
+		a.setTransientMessage("Example warn message", ui.MessageUrgencyWarn)
+	case keymap.ActionDevShowError:
+		a.setTransientMessage("Example error message", ui.MessageUrgencyError)
 	}
 }
 

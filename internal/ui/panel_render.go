@@ -108,11 +108,14 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	}
 
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	if syncDriverPanelID == panelID && !chromeBlocked {
-		drawPanelSyncIndicator(screen, rect, panelID, styles.PanelSyncIndicator)
-	}
 	if selectionsBottomHint {
 		drawPanelSelectionsBottomHint(screen, rect, panelID, titleStyle, borderStyle)
+	}
+	if panelGitignoreBottomHintActive(state) {
+		drawPanelGitignoreBottomHint(screen, rect, borderStyle, selectionsBottomHint, syncDriverPanelID, panelID)
+	}
+	if syncDriverPanelID == panelID && !chromeBlocked {
+		drawPanelSyncIndicator(screen, rect, panelID, styles.PanelSyncIndicator)
 	}
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
 	if inner.Width > 0 && inner.Height > 0 {
@@ -393,6 +396,65 @@ func drawPanelSyncIndicator(screen tcell.Screen, rect Rect, panelID int, style t
 		x = rect.X + rect.Width - 1 - labelW
 	}
 	primitive.TextOverlay(screen, x, y, labelW, label, style)
+}
+
+const (
+	panelGitignoreChromeName   = "Gitignore"
+	panelGitignoreChromePadded = " " + panelGitignoreChromeName + " "
+)
+
+func panelGitignoreBottomHintActive(state panel.State) bool {
+	return state.Gitignore != nil && !state.ShowHidden
+}
+
+// panelGitignoreBottomHintEndX is the last column (inclusive) for trailing frame dashes on the
+// bottom row, stopping before the latched-sync overlay when this panel is the sync driver.
+func panelGitignoreBottomHintEndX(rect Rect, panelID, syncDriverPanelID int) int {
+	lastIn := rect.X + rect.Width - 2
+	if syncDriverPanelID != panelID {
+		return lastIn
+	}
+	labelW := utf8.RuneCountInString(panelSyncIndicatorLabel(panelID))
+	if labelW > rect.Width-2 {
+		return lastIn
+	}
+	if panelID == RightPanel {
+		return rect.X + labelW
+	}
+	return lastIn - labelW
+}
+
+// drawPanelGitignoreBottomHint paints " Gitignore " on the bottom border at the panel's left
+// corner (└─ Gitignore ─…), entirely in borderStyle (same frame colour as volume free-space dashes).
+// Omitted when ShowHidden is true or gitignore filtering is disabled (Gitignore nil).
+func drawPanelGitignoreBottomHint(screen tcell.Screen, rect Rect, borderStyle tcell.Style, selectionsBottomHint bool, syncDriverPanelID, panelID int) {
+	if rect.Width <= 4 || rect.Height < 2 {
+		return
+	}
+	padW := utf8.RuneCountInString(panelGitignoreChromePadded)
+	endX := panelGitignoreBottomHintEndX(rect, panelID, syncDriverPanelID)
+	y := rect.Y + rect.Height - 1
+	x := rect.X + 1
+	if selectionsBottomHint {
+		selPadW := utf8.RuneCountInString(panelSelectionsChromePadded)
+		x += 1 + selPadW
+		if x > endX {
+			return
+		}
+		screen.SetContent(x, y, '─', nil, borderStyle)
+		x++
+	} else {
+		screen.SetContent(x, y, '─', nil, borderStyle)
+		x++
+	}
+	if x+padW-1 > endX {
+		return
+	}
+	primitive.TextOverlay(screen, x, y, padW, panelGitignoreChromePadded, borderStyle)
+	x += padW
+	for xi := x; xi <= endX; xi++ {
+		screen.SetContent(xi, y, '─', nil, borderStyle)
+	}
 }
 
 // drawPanelSelectionsBottomHint mirrors drawPanelSyncIndicator: it overlays compact chrome on the

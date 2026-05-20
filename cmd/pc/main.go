@@ -24,6 +24,7 @@ func run(args []string, stderr io.Writer) error {
 	flags.SetOutput(stderr)
 	configStub := flags.String("config-stub", "", "write default configuration TOML (general settings + [action_keys] + [jobs_action_keys]) to filename and exit")
 	keybindingsStub := flags.String("keybindings-stub", "", "write default keybindings TOML to filename and exit")
+	devMode := flags.Bool("dev", false, "enable Dev pulldown menu with test helpers")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -37,7 +38,7 @@ func run(args []string, stderr io.Writer) error {
 	if *keybindingsStub != "" {
 		return keymap.WriteDefaultStub(*keybindingsStub)
 	}
-	return app.Run()
+	return app.Run(*devMode)
 }
 
 // writeConfigStub renders a single bootstrap file containing the full

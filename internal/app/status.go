@@ -27,13 +27,16 @@ func (a *App) statusMessageTTL() time.Duration {
 	return time.Duration(sec * float64(time.Second))
 }
 
-func (a *App) setTransientMessage(msg string, urgency ui.MessageUrgency) {
+func toastWrapLines(msg string) []string {
 	msg = strings.TrimSpace(msg)
 	if msg == "" {
-		a.clearTransientMessage()
-		return
+		return nil
 	}
-	lines := ui.WrapWordsToWidth(msg, ui.MessageLogWrapRunes)
+	return ui.WrapWordsToWidth(msg, ui.MessageLogWrapRunes)
+}
+
+func (a *App) setTransientMessage(msg string, urgency ui.MessageUrgency) {
+	lines := toastWrapLines(msg)
 	if len(lines) == 0 {
 		a.clearTransientMessage()
 		return
@@ -64,11 +67,7 @@ func (a *App) applyStatusMessageExpiry(p statusMessageExpiryPayload) {
 }
 
 func (a *App) appendMessageLog(text string, urgency ui.MessageUrgency) {
-	t := strings.TrimSpace(strings.ReplaceAll(text, "\n", " "))
-	if t == "" {
-		return
-	}
-	lines := ui.WrapWordsToWidth(t, ui.MessageLogWrapRunes)
+	lines := toastWrapLines(text)
 	if len(lines) == 0 {
 		return
 	}

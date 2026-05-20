@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"path/filepath"
 	"unicode"
 
@@ -213,7 +212,7 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 		return false
 	}
 	switch def.ID {
-	case menu.TopCommand, menu.TopDisplay:
+	case menu.TopCommand, menu.TopDisplay, menu.TopDev:
 		a.dispatch(item.Action)
 	case menu.TopFile:
 		switch item.Action {
@@ -277,11 +276,7 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 			a.setErrorMessage(label+" toggle hidden failed", err)
 			return
 		}
-		visibility := "hidden"
-		if target.ShowHidden {
-			visibility = "shown"
-		}
-		a.setTransientMessage(fmt.Sprintf("%s hidden files %s", label, visibility), ui.MessageUrgencyInfo)
+		a.setTransientMessage(a.panelHiddenVisibilityMessage(label, target.ShowHidden), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelRefresh:
 		if err := target.Refresh(a.panelViewportRows(panelScope)); err != nil {
 			a.setErrorMessage(label+" refresh failed", err)

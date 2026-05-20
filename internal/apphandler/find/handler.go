@@ -240,6 +240,7 @@ func (h *Handler) startFindWalk(root string, skipIndexedSelectionSubtrees bool) 
 
 	sess := findpkg.Start(context.Background(), root, findpkg.Options{
 		ShowHidden:    st.ShowHidden,
+		Gitignore:     h.host.GitignoreCache(),
 		ShouldSkipDir: shouldSkip,
 	})
 	h.sessionMu.Lock()

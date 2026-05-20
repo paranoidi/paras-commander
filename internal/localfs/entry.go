@@ -5,8 +5,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 )
 
 // EntryType is the file kind the UI needs for Phase 1 rendering.
@@ -32,6 +33,7 @@ type Entry struct {
 // ListOptions controls directory listing behavior.
 type ListOptions struct {
 	ShowHidden bool
+	Gitignore  *gitignore.Matcher // nil = no gitignore filtering
 }
 
 // DirectoryListing is a normalized local directory snapshot.
@@ -70,7 +72,8 @@ func ListDir(path string, opts ListOptions) (DirectoryListing, error) {
 	entries := make([]Entry, 0, len(dirEntries))
 	for _, dirEntry := range dirEntries {
 		name := dirEntry.Name()
-		if !opts.ShowHidden && strings.HasPrefix(name, ".") {
+		isDir := dirEntry.IsDir()
+		if !EntryVisible(name, cleanPath, isDir, opts) {
 			continue
 		}
 

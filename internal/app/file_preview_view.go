@@ -19,7 +19,7 @@ func (a *App) closeFilePreviewFullscreen() {
 	a.model.FullscreenFilePreview = ui.FilePreviewState{}
 	a.commandsMu.Unlock()
 	a.model.ViewMode = ui.ViewBrowser
-	a.model.MenuDefinitions = menu.BrowserDefinitions(a.keys)
+	a.model.MenuDefinitions = a.browserMenuDefinitions()
 	a.model.Menu.ActiveMenu = menu.DefaultIndex()
 }
 
@@ -245,7 +245,7 @@ func (a *App) openFilePreviewFullscreen() {
 	a.model.ViewMode = ui.ViewFilePreview
 	a.model.Menu.Open = false
 	a.model.Menu.PulldownOpen = false
-	a.model.MenuDefinitions = menu.BrowserDefinitions(a.keys)
+	a.model.MenuDefinitions = a.browserMenuDefinitions()
 	a.model.Menu.ActiveMenu = menu.DefaultIndex()
 	a.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
 		st.Open = true

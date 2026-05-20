@@ -316,7 +316,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Title:       "Toggle hidden files",
 			Section:     "Sort & display",
 			DefaultKeys: []string{"M-."},
-			Keywords:    []string{"show", "hide", "dotfiles"},
+			Keywords:    []string{"show", "hide", "dotfiles", "gitignore", "ignored"},
 		},
 		{
 			ID:          ActionPanelMeta,

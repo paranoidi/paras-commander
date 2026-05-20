@@ -50,3 +50,5 @@ func (h jobsHost) ActionFromKeyEvent(ev *tcell.EventKey) string { return h.app.a
 func (h jobsHost) JobFailureBannerDetail(err error, fallback string) string {
 	return jobFailureBannerDetail(err, fallback)
 }
+
+func (h jobsHost) DevMode() bool { return h.app.devMode }

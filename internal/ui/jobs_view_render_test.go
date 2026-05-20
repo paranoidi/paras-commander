@@ -112,7 +112,7 @@ func TestJobRowLeadingIconDecisionUsesInputRequiredGlyph(t *testing.T) {
 }
 
 func TestJobRowLeadingIconQueuedUsesClockGlyph(t *testing.T) {
-	want := "\uf1af9"
+	want := "\u231B" // ⌛ queued (hourglass)
 	if got := jobRowLeadingIcon("queued", theme.Theme{}); got != want {
 		t.Fatalf("queued icon = %q, want %q", got, want)
 	}

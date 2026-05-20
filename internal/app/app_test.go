@@ -1072,7 +1072,7 @@ func TestLeftMenuToggleHiddenTargetsLeftPanel(t *testing.T) {
 	if len(app.model.Left.Entries) != 2 {
 		t.Fatalf("left len(Entries) = %d, want hidden and visible entries", len(app.model.Left.Entries))
 	}
-	if app.model.Message != "Left panel hidden files shown" {
+	if app.model.Message != "Left panel hidden and ignored files shown" {
 		t.Fatalf("Message = %q, want left panel hidden visibility message", app.model.Message)
 	}
 }
@@ -2842,7 +2842,7 @@ func TestFileMenuExitQuits(t *testing.T) {
 	app.dispatch(keymap.ActionAppOpenMenu)
 	// Open pulldown first, then press shortcut.
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModNone))
 
 	if !quit {
 		t.Fatal("handleKey() quit = false, want true")
@@ -3430,7 +3430,7 @@ func TestFileMenuExtractOpensExtractDialog(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	activateFileMenuItem(t, app, 'E')
+	activateFileMenuItem(t, app, 'x')
 
 	if !app.model.FileDialog.Open {
 		t.Fatal("File dialog not open")

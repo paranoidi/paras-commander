@@ -55,8 +55,12 @@ func ApplyMenuKeyLabels(defs []Definition, km *keymap.Map) {
 }
 
 // BrowserDefinitions returns Definitions() with KeyLabels resolved from km.
-func BrowserDefinitions(km *keymap.Map) []Definition {
+// When dev is true, the Dev pulldown is appended (see DevDefinition).
+func BrowserDefinitions(km *keymap.Map, dev bool) []Definition {
 	defs := Definitions()
+	if dev {
+		defs = append(defs, DevDefinition())
+	}
 	ApplyMenuKeyLabels(defs, km)
 	return defs
 }

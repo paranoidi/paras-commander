@@ -150,7 +150,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Default: %v", err)
 	}
-	defs := BrowserDefinitions(km)
+	defs := BrowserDefinitions(km, false)
 
 	assertLabels := func(t *testing.T, def *Definition, want map[string]string) {
 		t.Helper()

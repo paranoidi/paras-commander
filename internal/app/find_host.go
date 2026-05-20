@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -38,6 +39,8 @@ func (h findHost) FindDialogScrollingQuery(st *ui.FindDialogState, width int, on
 func (h findHost) FindDialogQueryWidth() int { return h.app.findDialogQueryWidth() }
 
 func (h findHost) DiskUsageIgnore() diskusage.ShouldIgnoreFolder { return h.app.diskUsageIgnore }
+
+func (h findHost) GitignoreCache() *gitignore.Cache { return h.app.gitignoreCache }
 
 func (h findHost) LayoutForTerminalSize(w, height int) ui.Layout {
 	return h.app.layoutForTerminalSize(w, height)
