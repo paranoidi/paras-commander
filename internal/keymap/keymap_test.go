@@ -199,8 +199,9 @@ func TestLoadFromPathsUsesDefaultsWhenMissing(t *testing.T) {
 	if !ok || id != ActionJobsResume {
 		t.Fatalf("Jobs.Lookup(ctrl-r) = %q %v, want jobs.resume", id, ok)
 	}
-	if _, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModNone)); ok {
-		t.Fatal("Ctrl+R must not be bound globally now that jobs.resume lives in [jobs_action_keys]")
+	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModNone))
+	if !ok || id != ActionRemoteSFTPLink {
+		t.Fatalf("Global.Lookup(ctrl-r) = %q %v, want %q", id, ok, ActionRemoteSFTPLink)
 	}
 	// Alt+Ctrl+R remains panel.refresh on the global map.
 	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModAlt))
@@ -306,6 +307,9 @@ func TestMenuBindingLabelUsesDefaultsAndPreferredKey(t *testing.T) {
 	}
 	if got := m.MenuBindingLabel(ActionPanelSortDialog); got != "C-s" {
 		t.Fatalf("sort dialog = %q, want C-s", got)
+	}
+	if got := m.MenuBindingLabel(ActionRemoteSFTPLink); got != "C-r" {
+		t.Fatalf("SFTP dialog = %q, want C-r", got)
 	}
 	if got := m.MenuBindingLabel(ActionPanelToggleHidden); got != "M-." {
 		t.Fatalf("toggle hidden = %q, want M-.", got)

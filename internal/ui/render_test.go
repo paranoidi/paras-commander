@@ -1350,9 +1350,10 @@ func TestRenderDrawsGitignoreBottomHint(t *testing.T) {
 	screen.SetSize(width, height)
 
 	left := panel.State{
-		Path:      pathloc.MustParse("/tmp"),
-		Entries:   []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
-		Gitignore: gitignore.NewCache(),
+		Path:            pathloc.MustParse("/tmp"),
+		Entries:         []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
+		Gitignore:       gitignore.NewCache(),
+		GitignoreActive: true,
 	}
 	model := Model{
 		Left:        left,
@@ -1382,6 +1383,36 @@ func TestRenderDrawsGitignoreBottomHint(t *testing.T) {
 	}
 }
 
+func TestRenderOmitsGitignoreBottomHintOutsideWorkTree(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	left := panel.State{
+		Path:            pathloc.MustParse("/tmp"),
+		Entries:         []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
+		Gitignore:       gitignore.NewCache(),
+		GitignoreActive: false,
+	}
+	model := Model{
+		Left:        left,
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: RightPanel,
+	}
+	Render(screen, model, theme.Default())
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if strings.Contains(leftBottom, " Gitignore ") {
+		t.Fatalf("left bottom = %q, want no gitignore hint outside a Git work tree", leftBottom)
+	}
+}
+
 func TestRenderOmitsGitignoreBottomHintWhenShowHidden(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -1392,10 +1423,11 @@ func TestRenderOmitsGitignoreBottomHintWhenShowHidden(t *testing.T) {
 	screen.SetSize(width, height)
 
 	left := panel.State{
-		Path:       pathloc.MustParse("/tmp"),
-		Entries:    []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
-		ShowHidden: true,
-		Gitignore:  gitignore.NewCache(),
+		Path:            pathloc.MustParse("/tmp"),
+		Entries:         []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
+		ShowHidden:      true,
+		Gitignore:       gitignore.NewCache(),
+		GitignoreActive: false,
 	}
 	model := Model{
 		Left:        left,

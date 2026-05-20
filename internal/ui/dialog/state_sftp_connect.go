@@ -2,7 +2,7 @@ package dialog
 
 import "github.com/paranoidi/paras-commander/internal/search"
 
-// SFTPConnectDialogState is the SSH/SFTP link dialog (known hosts + manual URI).
+// SFTPConnectDialogState is the SSH/SFTP connect dialog (known hosts + manual URI).
 type SFTPConnectDialogState struct {
 	Open         bool
 	PanelID      int

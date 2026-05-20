@@ -147,7 +147,7 @@ func fileDialogTitle(dialogType FileDialogType) string {
 	case FileDialogExtract:
 		return "Extract"
 	case FileDialogSFTPConnect:
-		return "SFTP link"
+		return "SFTP"
 	case FileDialogSFTPPassword:
 		return "SSH password"
 	default:

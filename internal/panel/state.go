@@ -49,7 +49,9 @@ type State struct {
 	ShowHidden            bool
 	// Gitignore is a shared cache for .gitignore filtering when ShowHidden is false; nil disables.
 	Gitignore *gitignore.Cache
-	Filter    FilterState
+	// GitignoreActive is true when the current listing applies Git ignore rules (inside a work tree).
+	GitignoreActive bool
+	Filter          FilterState
 	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
 	DiskSorter func(absPath string) (int64, bool)
 	Sort       SortState
@@ -753,32 +755,33 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 			return nil
 		}
 	}
-	backendEntries, listingLoc, err := s.fetchBackendEntries(loc)
+	backendEntries, listingLoc, gitignoreActive, err := s.fetchBackendEntries(loc)
 	if err != nil {
 		return err
 	}
+	s.GitignoreActive = gitignoreActive
 	return s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, indexFallback)
 }
 
-func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathloc.Path, error) {
+func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathloc.Path, bool, error) {
 	if loc.IsRemote() {
 		be, berr := fsbackend.Default().Backend(loc)
 		if berr != nil {
-			return nil, pathloc.Path{}, berr
+			return nil, pathloc.Path{}, false, berr
 		}
 		entries, err := be.List(context.Background(), loc)
 		if err != nil {
-			return nil, pathloc.Path{}, err
+			return nil, pathloc.Path{}, false, err
 		}
-		return fsbackend.FilterHidden(entries, s.ShowHidden), loc, nil
+		return fsbackend.FilterHidden(entries, s.ShowHidden), loc, false, nil
 	}
 	host, ferr := loc.FilePath()
 	if ferr != nil {
-		return nil, pathloc.Path{}, ferr
+		return nil, pathloc.Path{}, false, ferr
 	}
 	gitMatcher, gerr := localfs.MatcherForListing(s.ShowHidden, s.Gitignore, host)
 	if gerr != nil {
-		return nil, pathloc.Path{}, gerr
+		return nil, pathloc.Path{}, false, gerr
 	}
 	be := file.New()
 	entries, err := be.ListWithOptions(context.Background(), loc, localfs.ListOptions{
@@ -786,13 +789,13 @@ func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathlo
 		Gitignore:  gitMatcher,
 	})
 	if err != nil {
-		return nil, pathloc.Path{}, err
+		return nil, pathloc.Path{}, false, err
 	}
 	listingLoc, err := pathloc.File(host)
 	if err != nil {
-		return nil, pathloc.Path{}, err
+		return nil, pathloc.Path{}, false, err
 	}
-	return entries, listingLoc, nil
+	return entries, listingLoc, gitMatcher != nil, nil
 }
 
 // ApplyListing commits backend entries into panel state (used after sync or async remote list).
@@ -805,6 +808,7 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	previousPath := s.Path
 	s.Path = listingLoc
 	if listingLoc.IsRemote() {
+		s.GitignoreActive = false
 		s.VolumeSpaceOK = false
 		s.VolumeAvailBytes = 0
 		s.VolumeTotalBytes = 0

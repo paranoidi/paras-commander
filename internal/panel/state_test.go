@@ -218,6 +218,26 @@ func TestLoadHidesGitignoredEntries(t *testing.T) {
 	if len(state.Entries) != 1 || state.Entries[0].Name != "visible.txt" {
 		t.Fatalf("entries = %v, want only visible.txt", entryNames(state.Entries))
 	}
+	if !state.GitignoreActive {
+		t.Fatal("GitignoreActive = false, want true inside Git work tree")
+	}
+}
+
+func TestLoadClearsGitignoreActiveOutsideWorkTree(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "visible.txt"))
+
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	state.Gitignore = gitignore.NewCache()
+	if err := state.Refresh(5); err != nil {
+		t.Fatalf("Refresh() error = %v", err)
+	}
+	if state.GitignoreActive {
+		t.Fatal("GitignoreActive = true, want false outside Git work tree")
+	}
 }
 
 func TestToggleHiddenReloadsPanelEntries(t *testing.T) {

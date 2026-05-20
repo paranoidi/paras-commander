@@ -115,7 +115,7 @@ func (a *App) applySFTPConnectHostToLocation() {
 	}
 	uri, err := a.sftpConnectHosts[idx].BuildSFTPURI("")
 	if err != nil {
-		a.setErrorMessage("SFTP link", err)
+		a.setErrorMessage("SFTP", err)
 		return
 	}
 	st.Location.Value = uri
@@ -133,7 +133,7 @@ func (a *App) executeSFTPConnectDialog() {
 	panelID := st.PanelID
 	a.closeSFTPConnectDialog()
 	if raw == "" {
-		a.setErrorMessage("SFTP link", fmt.Errorf("empty location"))
+		a.setErrorMessage("SFTP", fmt.Errorf("empty location"))
 		return
 	}
 	a.executeSFTPConnectURI(panelID, raw)

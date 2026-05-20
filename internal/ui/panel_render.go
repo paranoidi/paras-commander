@@ -404,7 +404,7 @@ const (
 )
 
 func panelGitignoreBottomHintActive(state panel.State) bool {
-	return state.Gitignore != nil && !state.ShowHidden
+	return state.GitignoreActive
 }
 
 // panelGitignoreBottomHintEndX is the last column (inclusive) for trailing frame dashes on the
@@ -426,7 +426,7 @@ func panelGitignoreBottomHintEndX(rect Rect, panelID, syncDriverPanelID int) int
 
 // drawPanelGitignoreBottomHint paints " Gitignore " on the bottom border at the panel's left
 // corner (└─ Gitignore ─…), entirely in borderStyle (same frame colour as volume free-space dashes).
-// Omitted when ShowHidden is true or gitignore filtering is disabled (Gitignore nil).
+// Omitted when the current listing does not apply Git ignore rules (GitignoreActive false).
 func drawPanelGitignoreBottomHint(screen tcell.Screen, rect Rect, borderStyle tcell.Style, selectionsBottomHint bool, syncDriverPanelID, panelID int) {
 	if rect.Width <= 4 || rect.Height < 2 {
 		return

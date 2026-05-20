@@ -55,7 +55,7 @@ func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnect
 	}
 
 	rect := draw.CenteredDialogRect(layout, width, height)
-	borderStyle := draw.DrawDialogFrame(screen, rect, "SFTP link", styles)
+	borderStyle := draw.DrawDialogFrame(screen, rect, "SFTP", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
 	leftCol := rect.X + 2

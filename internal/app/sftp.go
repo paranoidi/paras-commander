@@ -52,11 +52,11 @@ func (a *App) openSFTPConnectDialog() {
 func (a *App) executeSFTPConnectURI(panelID int, raw string) {
 	loc, err := pathloc.Parse(raw)
 	if err != nil {
-		a.setErrorMessage("SFTP link", err)
+		a.setErrorMessage("SFTP", err)
 		return
 	}
 	if loc.Scheme() != pathloc.SchemeSFTP {
-		a.setErrorMessage("SFTP link", fmt.Errorf("expected sftp:// URI, got %s", loc.Scheme()))
+		a.setErrorMessage("SFTP", fmt.Errorf("expected sftp:// URI, got %s", loc.Scheme()))
 		return
 	}
 	if panelID != ui.LeftPanel && panelID != ui.RightPanel {

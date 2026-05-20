@@ -128,7 +128,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
 				{Action: keymap.ActionPanelMeta, Label: "Meta", Shortcut: 'm'},
 				{Action: keymap.ActionPanelListingFormatDialog, Label: "Listing format", Shortcut: 'f'},
-				{Action: keymap.ActionRemoteSFTPLink, Label: "SFTP link", Shortcut: 'L'},
+				{Action: keymap.ActionRemoteSFTPLink, Label: "SFTP ...", Shortcut: 'T'},
 			},
 		},
 		{
@@ -198,7 +198,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
 				{Action: keymap.ActionPanelMeta, Label: "Meta", Shortcut: 'm'},
 				{Action: keymap.ActionPanelListingFormatDialog, Label: "Listing format", Shortcut: 'f'},
-				{Action: keymap.ActionRemoteSFTPLink, Label: "SFTP link", Shortcut: 'L'},
+				{Action: keymap.ActionRemoteSFTPLink, Label: "SFTP ...", Shortcut: 'T'},
 			},
 		},
 	}
