@@ -62,6 +62,14 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "F2",
 			Keywords:     []string{"menu.toml", "custom commands"},
 		},
+		{
+			ID:           ActionAppUserMenuEdit,
+			Title:        "Edit user menu",
+			Section:      "App",
+			DefaultKeys:  []string{"S-F2"},
+			PreferredKey: "S-F2",
+			Keywords:     []string{"menu.toml", "editor", "custom commands"},
+		},
 
 		// ── Panel navigation ──
 		{

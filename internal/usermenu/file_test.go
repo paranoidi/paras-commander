@@ -48,15 +48,12 @@ command = "true"
 	}
 }
 
-func TestDecodeDefaultMenuTOML(t *testing.T) {
-	mf, err := Decode([]byte(DefaultMenuTOML))
+func TestDecodeMenuStubTOML(t *testing.T) {
+	mf, err := Decode([]byte(MenuStubTOML))
 	if err != nil {
-		t.Fatalf("DefaultMenuTOML: %v", err)
+		t.Fatalf("MenuStubTOML: %v", err)
 	}
-	if !mf.ShellPatterns {
-		t.Fatal("embedded default uses shell_patterns = 1, want true")
-	}
-	if len(mf.Entries) < 1 {
-		t.Fatal("expected entries")
+	if len(mf.Entries) != 0 {
+		t.Fatalf("stub should decode to zero entries, got %d", len(mf.Entries))
 	}
 }

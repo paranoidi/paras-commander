@@ -48,7 +48,7 @@ func ResolveUserMenuGlobalPath(cfg config.Config, homeDir, configDir string) str
 }
 
 // ResolveMenuTOML finds the first readable trusted menu.toml: cwd candidates then global.
-// Returns empty path when none found (caller should use embedded default).
+// Returns empty path when none found (caller may bootstrap a global menu.toml stub).
 // Warnings describe skipped untrusted or missing hops (informational).
 func ResolveMenuTOML(cfg config.Config, homeDir, configDir, panelPath string) (path string, warnings []string) {
 	panelPath = filepath.Clean(panelPath)

@@ -681,6 +681,8 @@ func (a *App) dispatch(actionID string) {
 		a.openRunForEachDialog()
 	case keymap.ActionAppUserMenu:
 		a.openUserMenu()
+	case keymap.ActionAppUserMenuEdit:
+		a.editUserMenu()
 	case keymap.ActionUIOpenTheme:
 		a.openThemeDialog()
 	case keymap.ActionUIOpenConfig:
@@ -692,7 +694,11 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionMenuFileViewPath:
 		a.setUnsupportedMessage("View file...")
 	case keymap.ActionFileEdit:
-		a.setUnsupportedMessage("Edit")
+		if a.model.ViewMode == ui.ViewFilePreview && a.model.FullscreenFilePreview.Open {
+			a.editFullscreenPreviewFile()
+		} else {
+			a.editActiveFile()
+		}
 	case keymap.ActionMenuFileRelativeSymlink:
 		a.setUnsupportedMessage("Relative symlink")
 	case keymap.ActionMenuFileEditSymlink:

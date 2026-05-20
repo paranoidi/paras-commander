@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -11,34 +12,82 @@ import (
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
+func (a *App) userMenuConfigDir() string {
+	return strings.TrimSpace(a.paths.ConfigDir)
+}
+
+func (a *App) resolveUserMenuContext() (menuPath string, warns []string) {
+	return usermenu.ResolveMenuTOML(a.config, a.model.UserHomeDir, a.userMenuConfigDir(), a.activePanel().PathString())
+}
+
+func (a *App) ensureGlobalUserMenuStub() (path string, err error) {
+	path = usermenu.ResolveUserMenuGlobalPath(a.config, a.model.UserHomeDir, a.userMenuConfigDir())
+	if path == "" {
+		return "", fmt.Errorf("user menu: no global menu path configured")
+	}
+	if _, err := usermenu.WriteMenuStub(path); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func (a *App) openUserMenuEditor(path string) {
+	if err := a.openFileInExternalEditor(path); err != nil {
+		a.setErrorMessage("User menu", err)
+		return
+	}
+	a.setTransientMessage("User menu: edited "+path, ui.MessageUrgencyInfo)
+	a.render()
+}
+
+func (a *App) editUserMenu() {
+	if a.model.ViewMode != ui.ViewBrowser {
+		return
+	}
+	menuPath, warns := a.resolveUserMenuContext()
+	for _, w := range warns {
+		a.setTransientMessage(w, ui.MessageUrgencyWarn)
+	}
+	if menuPath == "" {
+		path, err := a.ensureGlobalUserMenuStub()
+		if err != nil {
+			a.setErrorMessage("User menu", err)
+			return
+		}
+		a.openUserMenuEditor(path)
+		return
+	}
+	a.openUserMenuEditor(menuPath)
+}
+
 func (a *App) openUserMenu() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	cfgDir := strings.TrimSpace(a.paths.ConfigDir)
-	menuPath, warns := usermenu.ResolveMenuTOML(a.config, a.model.UserHomeDir, cfgDir, a.activePanel().PathString())
+	menuPath, warns := a.resolveUserMenuContext()
 	for _, w := range warns {
 		a.setTransientMessage(w, ui.MessageUrgencyWarn)
 	}
-	var mf *usermenu.MenuFile
-	var title string
-	if menuPath != "" {
-		var err error
-		mf, err = usermenu.LoadFile(menuPath)
+	if menuPath == "" {
+		path, err := a.ensureGlobalUserMenuStub()
 		if err != nil {
 			a.setErrorMessage("User menu", err)
 			return
 		}
-		title = "User menu — " + menuPath
-	} else {
-		var err error
-		mf, err = usermenu.Decode([]byte(usermenu.DefaultMenuTOML))
-		if err != nil {
-			a.setErrorMessage("User menu", err)
-			return
-		}
-		title = "User menu (default)"
+		a.openUserMenuEditor(path)
+		return
 	}
+
+	mf, err := usermenu.LoadFile(menuPath)
+	if err != nil {
+		a.setErrorMessage("User menu", err)
+		return
+	}
+	if len(mf.Entries) == 0 {
+		a.openUserMenuEditor(menuPath)
+		return
+	}
+
 	active := a.panelByID(a.model.ActivePanel)
 	other := a.panelByID(a.inactivePanelID())
 	ctx := &usermenu.EvalContext{Active: active, Other: other}
@@ -53,7 +102,7 @@ func (a *App) openUserMenu() {
 	}
 	a.model.UserMenu = ui.UserMenuDialogState{
 		Open:         true,
-		Title:        title,
+		Title:        "User menu — " + menuPath,
 		Entries:      visible,
 		Selected:     defIdx,
 		Focus:        defIdx,
@@ -129,7 +178,6 @@ func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
 			}
 			return
 		default:
-			// accelerator: first rune of Key field
 			for i := range st.Entries {
 				k := []rune(st.Entries[i].Key)
 				if len(k) == 0 {
