@@ -20,12 +20,12 @@ func DrawQuitConfirmDialog(screen tcell.Screen, layout Layout, state QuitConfirm
 	if msg == "" {
 		msg = "Active jobs are queued or running."
 	}
-	primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, msg, styles.StatusWarn.Background(dbg))
+	primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, msg, styles.MessageWarn.Background(dbg))
 	msg2 := state.WarnLine2
 	if msg2 == "" {
 		msg2 = "Quitting will interrupt these operations."
 	}
-	primitive.Text(screen, rect.X+2, rect.Y+2, rect.Width-4, msg2, styles.StatusWarn.Background(dbg))
+	primitive.Text(screen, rect.X+2, rect.Y+2, rect.Width-4, msg2, styles.MessageWarn.Background(dbg))
 
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)

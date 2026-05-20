@@ -122,10 +122,9 @@ type Theme struct {
 	DialogOptionActive             tcell.Style
 	DialogOptionSelected           tcell.Style
 
-	StatusInfo         tcell.Style
-	StatusWarn         tcell.Style
-	StatusError        tcell.Style
-	StatusWaitingInput tcell.Style
+	MessageInfo  tcell.Style
+	MessageWarn  tcell.Style
+	MessageError tcell.Style
 
 	JobsRow     tcell.Style
 	JobsRunning tcell.Style
@@ -365,10 +364,9 @@ var requiredStyleKeys = []string{
 	"dialog.option.inactive",
 	"dialog.option.active",
 	"dialog.option.selected",
-	"status.info",
-	"status.warn",
-	"status.error",
-	"status.waiting_input",
+	"message.info",
+	"message.warn",
+	"message.error",
 	"jobs.row",
 	"jobs.running",
 	"jobs.done",
@@ -400,6 +398,11 @@ var requiredStyleKeys = []string{
 }
 
 var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
+
+// styleSectionRoots are top-level TOML tables for semantic styles (keys inside omit this prefix).
+var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy"}
+
+var styleSectionRootSet = makeStyleKeySet(styleSectionRoots)
 
 var builtInThemeOrder = []string{
 	defaultName,
@@ -614,10 +617,17 @@ func parse(data []byte) (Theme, error) {
 	if _, err := toml.Decode(string(data), &raw); err != nil {
 		return Theme{}, err
 	}
+	if _, ok := raw["styles"]; ok {
+		return Theme{}, fmt.Errorf("[styles] is not supported; use [menu], [panel], [dialog], [jobs], [message], [footer], and [fuzzy] sections")
+	}
 	for key := range raw {
-		if key != "name" && key != "palette" && key != "styles" && key != "symbols" {
-			return Theme{}, fmt.Errorf("unknown field %q", key)
+		if key == "name" || key == "palette" || key == "symbols" {
+			continue
 		}
+		if styleSectionRootSet[key] {
+			continue
+		}
+		return Theme{}, fmt.Errorf("unknown field %q", key)
 	}
 
 	name, err := stringField(raw, "name")
@@ -632,7 +642,7 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
-	specs, err := styleSpecs(raw)
+	specs, err := collectStyleSpecs(raw)
 	if err != nil {
 		return Theme{}, err
 	}
@@ -766,10 +776,9 @@ func parse(data []byte) (Theme, error) {
 		DialogOptionActive:             styles["dialog.option.active"],
 		DialogOptionSelected:           styles["dialog.option.selected"],
 
-		StatusInfo:         styles["status.info"],
-		StatusWarn:         styles["status.warn"],
-		StatusError:        styles["status.error"],
-		StatusWaitingInput: styles["status.waiting_input"],
+		MessageInfo:  styles["message.info"],
+		MessageWarn:  styles["message.warn"],
+		MessageError: styles["message.error"],
 
 		JobsRow:     styles["jobs.row"],
 		JobsRunning: styles["jobs.running"],
@@ -902,18 +911,25 @@ func parsePaletteEntry(rawValue any) (tcell.Color, error) {
 	}
 }
 
-func styleSpecs(raw map[string]any) (map[string]styleSpec, error) {
-	value, ok := raw["styles"]
-	if !ok {
-		return nil, fmt.Errorf("styles is required")
-	}
-	table, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("styles must be a table")
-	}
+func collectStyleSpecs(raw map[string]any) (map[string]styleSpec, error) {
 	specs := map[string]styleSpec{}
-	if err := flattenStyleSpecs("", table, specs); err != nil {
-		return nil, err
+	found := false
+	for _, root := range styleSectionRoots {
+		value, ok := raw[root]
+		if !ok {
+			continue
+		}
+		table, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("%s must be a table", root)
+		}
+		if err := flattenStyleSpecs(root, table, specs); err != nil {
+			return nil, err
+		}
+		found = true
+	}
+	if !found {
+		return nil, fmt.Errorf("theme must define at least one style section ([menu], [panel], [dialog], [jobs], [message], [footer], or [fuzzy])")
 	}
 	for key := range specs {
 		if !requiredStyleKeySet[key] {

@@ -49,7 +49,7 @@ func TestDrawStatusMessageCentersShortText(t *testing.T) {
 	wantCol := (80-len([]rune(FormatToastDisplay("Hi"))))/2 + 1
 	str, st, _ := screen.Get(wantCol, 5)
 	r, _ := utf8.DecodeRuneInString(str)
-	if r != 'H' || st != styles.StatusInfo {
-		t.Fatalf("message at col %d = %q style %v, want H with StatusInfo", wantCol, r, st)
+	if r != 'H' || st != styles.MessageInfo {
+		t.Fatalf("message at col %d = %q style %v, want H with MessageInfo", wantCol, r, st)
 	}
 }

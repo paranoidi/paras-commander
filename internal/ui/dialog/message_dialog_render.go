@@ -161,7 +161,7 @@ func DrawMessageDialog(screen tcell.Screen, layout Layout, state MessageDialogSt
 	rect := draw.CenteredDialogRect(layout, dialogW, height)
 	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
-	bodyStyle := styles.StatusError.Background(dbg)
+	bodyStyle := styles.MessageError.Background(dbg)
 
 	y := rect.Y + 1
 	innerX := rect.X + 2

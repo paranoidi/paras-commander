@@ -224,7 +224,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	primitive.Fill(screen, primitive.Rect{Width: width, Height: height}, ' ', tcell.StyleDefault)
 
 	if layout.TooSmall {
-		primitive.Text(screen, 0, 0, width, "Terminal too small", styles.StatusInfo)
+		primitive.Text(screen, 0, 0, width, "Terminal too small", styles.MessageInfo)
 		return
 	}
 

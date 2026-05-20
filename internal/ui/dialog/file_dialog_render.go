@@ -315,7 +315,7 @@ func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		}
 		fieldStyle := styles.DialogText
 		if state.Message != "" && i == state.FocusedField {
-			fieldStyle = styles.StatusWarn
+			fieldStyle = styles.MessageWarn
 		}
 		_, dbg, _ := styles.DialogSurface.Decompose()
 		fieldStyle = fieldStyle.Background(dbg)
@@ -669,7 +669,7 @@ func drawFileDeleteDialogContent(screen tcell.Screen, rect Rect, state FileDialo
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	style := styles.DialogText.Background(dbg)
 	if state.DialogType == FileDialogDelete {
-		style = styles.StatusWarn.Background(dbg)
+		style = styles.MessageWarn.Background(dbg)
 	}
 	for i, line := range lines {
 		y := rect.Y + 1 + i

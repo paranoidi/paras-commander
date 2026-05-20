@@ -86,7 +86,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	}
 	y := rect.Y + 1
 	innerBottom := rect.Y + rect.Height - 2
-	warnStyle := styles.StatusWarn.Background(dbg)
+	warnStyle := styles.MessageWarn.Background(dbg)
 
 	draw.DrawDialogRadio(screen, leftCol, y, "Simple (replace text)", 'S', state.MassRenameMode == MassRenameModeUISimple, state.FocusedField == 0, styles)
 	y++

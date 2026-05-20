@@ -8,26 +8,26 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// MessageUrgency selects status.info / status.warn / status.error for the transient banner
-// (MessageUrgencyCritical uses status.error like MessageUrgencyError).
+// MessageUrgency selects message.info / message.warn / message.error for the transient banner
+// (MessageUrgencyCritical uses message.error like MessageUrgencyError).
 type MessageUrgency int
 
 const (
 	MessageUrgencyInfo MessageUrgency = iota
 	MessageUrgencyWarn
 	MessageUrgencyError
-	// MessageUrgencyCritical uses the same palette as MessageUrgencyError (status.error).
+	// MessageUrgencyCritical uses the same palette as MessageUrgencyError (message.error).
 	MessageUrgencyCritical
 )
 
-func statusUrgencyStyle(styles theme.Theme, u MessageUrgency) tcell.Style {
+func messageUrgencyStyle(styles theme.Theme, u MessageUrgency) tcell.Style {
 	switch u {
 	case MessageUrgencyWarn:
-		return styles.StatusWarn
+		return styles.MessageWarn
 	case MessageUrgencyError, MessageUrgencyCritical:
-		return styles.StatusError
+		return styles.MessageError
 	default:
-		return styles.StatusInfo
+		return styles.MessageInfo
 	}
 }
 
@@ -43,7 +43,7 @@ func drawStatusMessageOverlay(screen tcell.Screen, rect Rect, message string, ur
 	if maxW < 1 {
 		return
 	}
-	st := statusUrgencyStyle(styles, urgency)
+	st := messageUrgencyStyle(styles, urgency)
 	msgRunes := []rune(msg)
 	if len(msgRunes) > maxW {
 		msgRunes = msgRunes[:maxW]

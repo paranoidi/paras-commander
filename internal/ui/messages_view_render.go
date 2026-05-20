@@ -104,7 +104,7 @@ func drawMessagesView(
 		}
 
 		timeStyle := styles.JobsRow.Background(bg)
-		urgStyle := statusUrgencyStyle(styles, entry.Urg).Background(bg)
+		urgStyle := messageUrgencyStyle(styles, entry.Urg).Background(bg)
 		if idx == state.Selected {
 			timeStyle = lineStyle
 			_, rowBg, _ := lineStyle.Decompose()

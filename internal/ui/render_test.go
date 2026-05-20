@@ -894,8 +894,8 @@ func TestRenderDrawsStatusMessage(t *testing.T) {
 	if msgR != 'R' {
 		t.Fatalf("status message should be centered (starts at col %d); got %q style %v", wantStart, msgR, msgSt)
 	}
-	if msgSt != styles.StatusInfo {
-		t.Fatalf("status message style = %v, want StatusInfo", msgSt)
+	if msgSt != styles.MessageInfo {
+		t.Fatalf("status message style = %v, want MessageInfo", msgSt)
 	}
 	menuRow := tcelltest.TextAt(screen, 0, 0, width)
 	if strings.Contains(menuRow, "Refreshed") {
@@ -943,7 +943,7 @@ func TestRenderStatusMessageDoesNotOverlayMenuBarPermission(t *testing.T) {
 	wantLastCol := width - 1
 	lastStr, lastSt, _ := screen.Get(wantLastCol, 0)
 	lastR, _ := utf8.DecodeRuneInString(lastStr)
-	if lastR == 'd' && lastSt == styles.StatusInfo {
+	if lastR == 'd' && lastSt == styles.MessageInfo {
 		t.Fatalf("menu permission area should not be covered by status message")
 	}
 }
@@ -969,8 +969,8 @@ func TestRenderStatusMessageUsesUrgencyStyle(t *testing.T) {
 	statusRow := layoutStatusMessageRowY(12)
 	col := (80-len([]rune(FormatToastDisplay("o_O"))))/2 + 1
 	_, st, _ := screen.Get(col, statusRow)
-	if st != styles.StatusWarn {
-		t.Fatalf("urgency style = %v, want StatusWarn", st)
+	if st != styles.MessageWarn {
+		t.Fatalf("urgency style = %v, want MessageWarn", st)
 	}
 }
 
@@ -1000,8 +1000,8 @@ func TestRenderStatusMessageLeavesMenuLabelsVisible(t *testing.T) {
 	statusRow := layoutStatusMessageRowY(12)
 	col := (80 - len([]rune("Hi"))) / 2
 	_, msgSt, _ := screen.Get(col, statusRow)
-	if msgSt != styles.StatusInfo {
-		t.Fatalf("message cell style = %v, want StatusInfo", msgSt)
+	if msgSt != styles.MessageInfo {
+		t.Fatalf("message cell style = %v, want MessageInfo", msgSt)
 	}
 }
 

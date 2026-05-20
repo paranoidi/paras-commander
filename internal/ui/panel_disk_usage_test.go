@@ -71,7 +71,7 @@ func TestMenuBarRightTailJobsAttentionPaddingAndSpinnerGap(t *testing.T) {
 
 	styles := theme.Default()
 	drawMenuBarRightTail(screen, Rect{X: 0, Y: 0, Width: width, Height: 1},
-		"󰋗 1 job waiting", "", styles.StatusWaitingInput, styles.MenuDetail, styles.MenuSpinner, true, 0)
+		"󰋗 1 job waiting", "", styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, true, 0)
 
 	spinnerCol := width - menuBarPermRightMargin - 1
 	gapCol := spinnerCol - 1
@@ -85,8 +85,8 @@ func TestMenuBarRightTailJobsAttentionPaddingAndSpinnerGap(t *testing.T) {
 	attStart := 100
 	for col := attStart; col < attStart+len(paddedRunes); col++ {
 		_, st, _ := screen.Get(col, 0)
-		if st != styles.StatusWaitingInput {
-			t.Fatalf("attention cell style at %d = %v, want StatusWaitingInput", col, st)
+		if st != styles.MenuBarAlert {
+			t.Fatalf("attention cell style at %d = %v, want MenuBarAlert", col, st)
 		}
 	}
 

@@ -51,20 +51,12 @@ func activateFileMenuItem(t *testing.T, app *App, shortcut rune) {
 func loadTestTheme(t *testing.T) (theme.Theme, config.Paths) {
 	t.Helper()
 
-	var buf strings.Builder
-	buf.WriteString(`name = "test-theme"
-
-[palette]
-black = "#000000"
-white = "#ffffff"
-yellow = "#ffff00"
-
-[styles]
-`)
-	for _, key := range []string{
+	styleKeys := []string{
 		"menu.bar", "menu.bar.selected", "menu.dropdown", "menu.dropdown.selected",
 		"menu.dropdown.frame", "menu.bar.accent", "menu.bar.alert", "menu.dropdown.accent",
-		"menu.detail",
+		"menu.detail", "menu.spinner", "menu.progress.done", "menu.progress.remaining",
+		"menu.job.scanning", "menu.job.queued", "menu.job.running", "menu.job.paused", "menu.job.canceled",
+		"menu.job.failed", "menu.job.decision", "menu.job.completed",
 		"panel.active.frame", "panel.inactive.frame", "panel.active.surface", "panel.inactive.surface",
 		"panel.active.title", "panel.inactive.title", "panel.active.space", "panel.inactive.space",
 		"panel.active.header", "panel.inactive.header", "panel.row.normal", "panel.row.directory",
@@ -74,9 +66,6 @@ yellow = "#ffff00"
 		"panel.blocked.header", "panel.blocked.row.normal", "panel.blocked.row.directory",
 		"panel.blocked.row.symlink", "panel.blocked.row.selected", "panel.blocked.row.cursor",
 		"panel.blocked.row.cursor.selected", "panel.folder.diskscan", "panel.folder.diskscan_excluded",
-		"menu.spinner", "menu.progress.done", "menu.progress.remaining",
-		"menu.job.scanning", "menu.job.queued", "menu.job.running", "menu.job.paused", "menu.job.canceled",
-		"menu.job.failed", "menu.job.decision", "menu.job.completed",
 		"panel.usage.prefix.normal", "panel.usage.prefix.selected",
 		"panel.usage.prefix.cursor.active", "panel.usage.prefix.cursor.inactive",
 		"panel.usage.prefix.cursor.selected",
@@ -85,16 +74,24 @@ yellow = "#ffff00"
 		"dialog.input.active", "dialog.input.active.placeholder", "dialog.input.active.error", "dialog.input.inactive",
 		"dialog.input.inactive.placeholder", "dialog.input.inactive.error", "dialog.button.inactive", "dialog.button.active",
 		"dialog.option.inactive", "dialog.option.active", "dialog.option.selected",
-		"status.info", "status.warn", "status.error", "status.waiting_input",
+		"message.info", "message.warn", "message.error",
 		"jobs.row", "jobs.running", "jobs.done", "jobs.failed",
 		"jobs.progress.track", "jobs.progress.fill", "jobs.progress.label.on_fill",
 		"jobs.progress.label.on_track",
 		"jobs.icons.scanning", "jobs.icons.queued", "jobs.icons.ongoing", "jobs.icons.paused", "jobs.icons.stopped",
 		"jobs.icons.error", "jobs.icons.input_required", "jobs.icons.completed",
 		"footer.key", "footer.label",
-	} {
-		fmt.Fprintf(&buf, "%s = { fg = \"white\", bg = \"black\" }\n", key)
 	}
+	var buf strings.Builder
+	buf.WriteString(`name = "test-theme"
+
+[palette]
+black = "#000000"
+white = "#ffffff"
+yellow = "#ffff00"
+
+`)
+	writeTestThemeStyleSections(&buf, styleKeys)
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test-theme.toml")
@@ -172,6 +169,31 @@ func flushBackgroundJobs(t *testing.T, app *App) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	t.Fatal("timed out waiting for jobs to finish")
+}
+
+func writeTestThemeStyleSections(buf *strings.Builder, fullKeys []string) {
+	sectionOrder := []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy"}
+	bySection := map[string][]string{}
+	for _, key := range fullKeys {
+		for _, root := range sectionOrder {
+			prefix := root + "."
+			if strings.HasPrefix(key, prefix) {
+				bySection[root] = append(bySection[root], strings.TrimPrefix(key, prefix))
+				break
+			}
+		}
+	}
+	for _, root := range sectionOrder {
+		keys := bySection[root]
+		if len(keys) == 0 {
+			continue
+		}
+		fmt.Fprintf(buf, "[%s]\n", root)
+		for _, rel := range keys {
+			fmt.Fprintf(buf, "%s = { fg = \"white\", bg = \"black\" }\n", rel)
+		}
+		buf.WriteString("\n")
+	}
 }
 
 func selectPanelEntryByName(t *testing.T, p *panel.State, name string) {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -132,11 +133,45 @@ func TestParseRejectsIconOnNonCursorStyle(t *testing.T) {
 }
 
 func TestParseRejectsUnknownStyle(t *testing.T) {
-	data := append(testTheme(t, "custom", nil, nil), []byte(`unknown.token = { fg = "white", bg = "black" }`+"\n")...)
+	data := testTheme(t, "custom", nil, map[string]string{
+		"fuzzy.unknown.token": `{ fg = "white", bg = "black" }`,
+	})
 
 	_, err := parse(data)
-	if err == nil || !strings.Contains(err.Error(), `unknown style "unknown.token"`) {
+	if err == nil || !strings.Contains(err.Error(), `unknown style "fuzzy.unknown.token"`) {
 		t.Fatalf("parse() error = %v, want unknown style", err)
+	}
+}
+
+func TestParseRejectsStylesSection(t *testing.T) {
+	data := []byte(`name = "legacy"
+
+[palette]
+black = "#040506"
+
+[styles]
+menu.bar = { fg = "white", bg = "black" }
+`)
+	_, err := parse(data)
+	if err == nil || !strings.Contains(err.Error(), "[styles] is not supported") {
+		t.Fatalf("parse() error = %v, want reject [styles]", err)
+	}
+}
+
+func TestParseDialogSectionFlatKeys(t *testing.T) {
+	data := testTheme(t, "dialogflat", nil, map[string]string{
+		"dialog.input.active": `{ fg = "white", bg = "default", bold = true }`,
+	})
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	fg, _, attrs := th.DialogInputActive.Decompose()
+	if fg != tcell.NewRGBColor(0x01, 0x02, 0x03) {
+		t.Fatalf("DialogInputActive fg = %v, want palette white", fg)
+	}
+	if attrs&tcell.AttrBold == 0 {
+		t.Fatal("DialogInputActive: want bold")
 	}
 }
 
@@ -318,8 +353,45 @@ func TestResolveSkipsBrokenSiblingTomlFiles(t *testing.T) {
 	}
 }
 
+func styleSectionRelative(fullKey string) (section, relative string) {
+	for _, root := range styleSectionRoots {
+		prefix := root + "."
+		if strings.HasPrefix(fullKey, prefix) {
+			return root, strings.TrimPrefix(fullKey, prefix)
+		}
+	}
+	return "", fullKey
+}
+
 func testTheme(t *testing.T, name string, skip map[string]bool, overrides map[string]string) []byte {
 	t.Helper()
+
+	bySection := map[string]map[string]string{}
+	for _, key := range requiredStyleKeys {
+		if skip[key] {
+			continue
+		}
+		section, relative := styleSectionRelative(key)
+		spec := `{ fg = "white", bg = "black" }`
+		if override, ok := overrides[key]; ok {
+			spec = override
+		}
+		if bySection[section] == nil {
+			bySection[section] = map[string]string{}
+		}
+		bySection[section][relative] = spec
+	}
+	requiredSet := makeStyleKeySet(requiredStyleKeys)
+	for key, spec := range overrides {
+		if skip[key] || requiredSet[key] {
+			continue
+		}
+		section, relative := styleSectionRelative(key)
+		if bySection[section] == nil {
+			bySection[section] = map[string]string{}
+		}
+		bySection[section][relative] = spec
+	}
 
 	var builder strings.Builder
 	fmt.Fprintf(&builder, "name = %q\n\n", name)
@@ -327,16 +399,21 @@ func testTheme(t *testing.T, name string, skip map[string]bool, overrides map[st
 	builder.WriteString("black = \"#040506\"\n")
 	builder.WriteString("white = \"#010203\"\n")
 	builder.WriteString("yellow = \"#ffff00\"\n\n")
-	builder.WriteString("[styles]\n")
-	for _, key := range requiredStyleKeys {
-		if skip[key] {
+	for _, root := range styleSectionRoots {
+		entries, ok := bySection[root]
+		if !ok || len(entries) == 0 {
 			continue
 		}
-		spec := `{ fg = "white", bg = "black" }`
-		if override, ok := overrides[key]; ok {
-			spec = override
+		fmt.Fprintf(&builder, "[%s]\n", root)
+		keys := make([]string, 0, len(entries))
+		for k := range entries {
+			keys = append(keys, k)
 		}
-		fmt.Fprintf(&builder, "%s = %s\n", key, spec)
+		sort.Strings(keys)
+		for _, k := range keys {
+			fmt.Fprintf(&builder, "%s = %s\n", k, entries[k])
+		}
+		builder.WriteString("\n")
 	}
 	return []byte(builder.String())
 }

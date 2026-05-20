@@ -2377,8 +2377,8 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 	}
 	writeDiskDefault := func(hex string) {
 		content := strings.Replace(string(base),
-			`menu.bar = { fg = "default", bg = "default" }`,
-			fmt.Sprintf(`menu.bar = { fg = "white", bg = %q }`, hex), 1)
+			`bar = { fg = "default", bg = "default" }`,
+			fmt.Sprintf(`bar = { fg = "white", bg = %q }`, hex), 1)
 		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
 		}
@@ -2443,8 +2443,8 @@ func TestThemeDialogF5ReloadsMenuDropdownAccentFromDisk(t *testing.T) {
 	}
 	writeAccentFG := func(paletteName string) {
 		content := strings.Replace(string(base),
-			`menu.dropdown.accent = { fg = "white", bold = false }`,
-			fmt.Sprintf(`menu.dropdown.accent = { fg = %q, bold = true }`, paletteName), 1)
+			`dropdown.accent = { fg = "white", bold = false }`,
+			fmt.Sprintf(`dropdown.accent = { fg = %q, bold = true }`, paletteName), 1)
 		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
 		}
@@ -2511,8 +2511,8 @@ func TestThemePreviewReloadErrorSetsCriticalStatusMessage(t *testing.T) {
 		t.Fatalf("read default theme fixture: %v", err)
 	}
 	content := strings.Replace(string(base),
-		`menu.bar = { fg = "default", bg = "default" }`,
-		`menu.bar = { fg = "white", bg = "#111111" }`, 1)
+		`bar = { fg = "default", bg = "default" }`,
+		`bar = { fg = "white", bg = "#111111" }`, 1)
 	if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}

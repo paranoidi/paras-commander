@@ -72,9 +72,9 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 	}
 
 	if msg := strings.TrimSpace(st.ErrorMsg); msg != "" {
-		errSt := styles.StatusError.Background(bg)
+		errSt := styles.MessageError.Background(bg)
 		if chromeBlocked {
-			_, efg, _ := styles.StatusError.Decompose()
+			_, efg, _ := styles.MessageError.Decompose()
 			errSt = styles.PanelBlockedRowNormal.Foreground(efg)
 		}
 		primitive.Text(screen, textX, contentTop, textW, msg, errSt)

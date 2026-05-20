@@ -72,7 +72,7 @@ func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsSt
 	if gapWidth > 0 {
 		DrawMenuBarJobsGap(screen, rect.Y, gapStart, gapWidth, jobsStrip, styles)
 	}
-	drawMenuBarRightTail(screen, rect, attention, perm, styles.StatusWaitingInput, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
+	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
 }
 
 func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
@@ -107,7 +107,7 @@ func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.
 	if gapWidth > 0 {
 		DrawMenuBarJobsGap(screen, rect.Y, gapStart, gapWidth, jobsStrip, styles)
 	}
-	drawMenuBarRightTail(screen, rect, attention, perm, styles.StatusWaitingInput, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
+	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
 }
 
 // menuBarMenusClipExclusive is the first column after the menu label area (before permission tail).

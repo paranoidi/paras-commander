@@ -131,7 +131,7 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 	if chromeBlocked {
 		body = styles.PanelBlockedRowNormal
 	}
-	warn := styles.StatusWarn.Background(bg)
+	warn := styles.MessageWarn.Background(bg)
 
 	textW := rect.Width - 4
 	if textW < 1 {
@@ -235,9 +235,9 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	if chromeBlocked {
 		body = styles.PanelBlockedRowNormal
 	}
-	warn := styles.StatusWarn.Background(bg)
+	warn := styles.MessageWarn.Background(bg)
 	if chromeBlocked {
-		warn = styles.StatusWarn.Background(bg)
+		warn = styles.MessageWarn.Background(bg)
 	}
 
 	textW := rect.Width - 4

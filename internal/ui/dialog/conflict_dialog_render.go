@@ -19,7 +19,7 @@ func DrawConflictDialog(screen tcell.Screen, layout Layout, state ConflictDialog
 	_, dbg, _ := styles.DialogSurface.Decompose()
 
 	warnLine := "Destination already exists."
-	primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, warnLine, styles.StatusWarn.Background(dbg))
+	primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, warnLine, styles.MessageWarn.Background(dbg))
 	srcLine := "Source: " + state.Source
 	dstLine := "Dest:   " + state.Destination
 	primitive.Text(screen, rect.X+2, rect.Y+2, rect.Width-4, truncateStr(srcLine, rect.Width-4), styles.DialogText.Background(dbg))
