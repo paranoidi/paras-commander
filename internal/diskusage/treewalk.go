@@ -115,14 +115,19 @@ func walkSubFolderConcurrently(
 	wg *sync.WaitGroup,
 	progress chan<- int,
 ) *File {
-	result := &File{}
+	dirName, leafName := filepath.Split(path)
+	result := &File{IsDir: true}
+	if parent != nil {
+		result.Name = leafName
+		result.Parent = parent
+	} else {
+		result.Name = filepath.Join(dirName, leafName)
+	}
 
 	entries, err := readDir(path)
 	if err != nil {
 		return result
 	}
-
-	dirName, leafName := filepath.Split(path)
 
 	result.Files = make([]*File, 0, len(entries))
 
@@ -161,15 +166,6 @@ func walkSubFolderConcurrently(
 		})
 		mu.Unlock()
 	}
-
-	if parent != nil {
-		result.Name = leafName
-		result.Parent = parent
-	} else {
-		result.Name = filepath.Join(dirName, leafName)
-	}
-
-	result.IsDir = true
 
 	return result
 }

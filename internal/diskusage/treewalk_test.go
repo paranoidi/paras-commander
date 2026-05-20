@@ -8,6 +8,34 @@ import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 )
 
+// TestWalkFolderUnreadableDirCachesZeroNotDot verifies that when a top-level scan root
+// cannot be read (e.g. permission denied), FlattenSizes still records the entry under
+// its real path (not "."), so ListingFullyDiskCached can detect full coverage.
+func TestWalkFolderUnreadableDirCachesZeroNotDot(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	locked := filepath.Join(root, "locked")
+	if err := os.Mkdir(locked, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+
+	// WalkFolder on the locked directory should return a node whose Path() == locked.
+	tree := diskusage.WalkFolder(locked, nil, nil, nil, 1)
+	got := map[string]int64{}
+	diskusage.FlattenSizes(tree, got)
+
+	if _, ok := got[filepath.Clean(locked)]; !ok {
+		t.Fatalf("locked dir key missing; got keys: %v", got)
+	}
+	if got[filepath.Clean(locked)] != 0 {
+		t.Fatalf("expected size 0 for unreadable dir, got %d", got[filepath.Clean(locked)])
+	}
+	if _, hasDot := got["."]; hasDot {
+		t.Fatal(`cache must not contain "." — unreadable root was not named properly`)
+	}
+}
+
 func TestWalkFolderFlatSizes(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()

@@ -531,8 +531,14 @@ func (a *App) Run() error {
 		}
 		if pollDiskUsageAfter {
 			a.reconcileAfterEvent()
-			a.pollDiskUsageUpdates()
 		}
+		// Always drain disk-usage events regardless of pollDiskUsageAfter.
+		// pollDiskUsageAfter only suppresses the expensive reconcileAfterEvent()
+		// on high-frequency ticks (spinner, jobs progress). Without this, a
+		// spinnerTickPayload arriving after scan completion leaves EventJobFinished
+		// unread in the engine channel, so maybeScheduleIdleDiskSortBothPanels()
+		// is never called and the idle-sort timer is never armed.
+		a.pollDiskUsageUpdates()
 	}
 }
 
