@@ -342,6 +342,13 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: []string{"M-m"},
 			Keywords:    []string{"mark", "save"},
 		},
+		{
+			ID:          ActionRemoteSFTPLink,
+			Title:       "SFTP link",
+			Section:     "Remote",
+			DefaultKeys: nil,
+			Keywords:    []string{"ssh", "sftp", "remote", "connect"},
+		},
 
 		// ── File operations ──
 		{

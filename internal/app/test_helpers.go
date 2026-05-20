@@ -205,5 +205,5 @@ func selectPanelEntryByName(t *testing.T, p *panel.State, name string) {
 			return
 		}
 	}
-	t.Fatalf("entry %q not visible in panel %q", name, p.Path)
+	t.Fatalf("entry %q not visible in panel %q", name, p.PathString())
 }

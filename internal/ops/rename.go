@@ -1,17 +1,19 @@
 package ops
 
 import (
-	"os"
+	"context"
 	"path/filepath"
+	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // RenamePlan describes a validated same-directory rename.
 type RenamePlan struct {
-	SourcePath string // current absolute path
+	SourcePath string // current canonical path
 	NewName    string // new basename
-	NewPath    string // new absolute path
+	NewPath    string // new canonical path
 }
 
 // PlanRename validates an in-place rename operation.
@@ -23,39 +25,57 @@ func PlanRename(source localfs.Entry, newName string, panelPath string) (RenameP
 	if newName == "" {
 		return RenamePlan{}, &Error{Op: "rename", Text: "name is empty"}
 	}
-	if filepath.Base(newName) != newName {
+	if strings.Contains(newName, "/") || strings.Contains(newName, string(filepath.Separator)) {
 		return RenamePlan{}, &Error{Op: "rename", Text: "name must be a single filename without path separators"}
 	}
 
-	// If the source is a non-absolute path, resolve it relative to the panel.
-	sourcePath := source.Path
-	if !filepath.IsAbs(sourcePath) {
-		sourcePath = filepath.Join(panelPath, sourcePath)
+	srcLoc, err := pathloc.Parse(source.Path)
+	if err != nil {
+		return RenamePlan{}, &Error{Op: "rename", Text: "invalid source path", Err: err}
 	}
-	sourcePath = filepath.Clean(sourcePath)
-
-	curBase := filepath.Base(sourcePath)
-	if curBase == newName {
+	if srcLoc.Base() == newName {
 		return RenamePlan{}, &Error{Op: "rename", Text: "new name is the same as the current name"}
 	}
 
-	newPath := filepath.Clean(filepath.Join(filepath.Dir(sourcePath), newName))
+	parent := srcLoc.Parent()
+	if parent.IsZero() {
+		panel, err := pathloc.Parse(panelPath)
+		if err != nil {
+			return RenamePlan{}, &Error{Op: "rename", Text: "invalid panel path", Err: err}
+		}
+		parent = panel
+	}
+	newLoc, err := parent.Join(newName)
+	if err != nil {
+		return RenamePlan{}, &Error{Op: "rename", Text: err.Error(), Err: err}
+	}
 
-	// Check if target already exists.
-	if _, err := os.Stat(newPath); err == nil {
+	if _, err := statEntry(context.Background(), newLoc); err == nil {
 		return RenamePlan{}, &Error{Op: "rename", Text: "target already exists"}
-	} else if !os.IsNotExist(err) {
+	} else if !isNotExist(err) {
 		return RenamePlan{}, &Error{Op: "rename", Text: "cannot stat target", Err: err}
 	}
 
 	return RenamePlan{
-		SourcePath: sourcePath,
+		SourcePath: srcLoc.String(),
 		NewName:    newName,
-		NewPath:    newPath,
+		NewPath:    newLoc.String(),
 	}, nil
 }
 
 // ExecuteRename performs the rename.
 func ExecuteRename(plan RenamePlan) error {
-	return localfs.Rename(plan.SourcePath, plan.NewPath)
+	oldLoc, err := pathloc.Parse(plan.SourcePath)
+	if err != nil {
+		return err
+	}
+	newLoc, err := pathloc.Parse(plan.NewPath)
+	if err != nil {
+		return err
+	}
+	be, err := backendFor(oldLoc)
+	if err != nil {
+		return err
+	}
+	return be.Rename(context.Background(), oldLoc, newLoc)
 }

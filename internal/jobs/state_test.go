@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -19,8 +20,8 @@ func TestWorkerSkipsPausedJobInFavorOfQueued(t *testing.T) {
 	s.StartWorker(stop)
 	defer close(stop)
 
-	s.AddJob(&Job{ID: "paused-front", Type: TypeCopy, Status: StatusPaused, Sources: []string{"/x"}, Destination: "/y"})
-	s.AddJob(&Job{ID: "run-second", Type: TypeCopy, Status: StatusQueued, Sources: []string{"/p"}, Destination: "/q"})
+	s.AddJob(&Job{ID: "paused-front", Type: TypeCopy, Status: StatusPaused, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
+	s.AddJob(&Job{ID: "run-second", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/p"), Destination: pathloc.MustParse("/q")})
 
 	select {
 	case <-time.After(3 * time.Second):
@@ -59,14 +60,14 @@ func TestWorkerYieldsTransferLeaseWhileWaitingConflictDecision(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.AddJob(&Job{ID: "job-a", Type: TypeCopy, Status: StatusQueued, Sources: []string{"/x"}, Destination: "/y"})
+		s.AddJob(&Job{ID: "job-a", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		time.Sleep(20 * time.Millisecond)
-		s.AddJob(&Job{ID: "job-b", Type: TypeCopy, Status: StatusQueued, Sources: []string{"/p"}, Destination: "/q"})
+		s.AddJob(&Job{ID: "job-b", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/p"), Destination: pathloc.MustParse("/q")})
 	}()
 
 	deadline := time.After(5 * time.Second)
@@ -116,7 +117,7 @@ func TestWorkerEmitsJobResumedAfterBlockerDecision(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.AddJob(&Job{ID: "job-a", Type: TypeCopy, Status: StatusQueued, Sources: []string{"/x"}, Destination: "/y"})
+		s.AddJob(&Job{ID: "job-a", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
 	}()
 
 	deadline := time.After(5 * time.Second)
@@ -149,7 +150,7 @@ func TestStateEmitHook(t *testing.T) {
 			n.Add(1)
 		}
 	})
-	job := &Job{ID: NewJobID(), Type: TypeCopy, Status: StatusQueued, Sources: []string{"/a"}, Destination: "/b"}
+	job := &Job{ID: NewJobID(), Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
 	s.AddJob(job)
 	if n.Load() != 1 {
 		t.Fatalf("emit hook calls = %d, want 1", n.Load())
@@ -158,7 +159,7 @@ func TestStateEmitHook(t *testing.T) {
 
 func TestStateAddJob(t *testing.T) {
 	s := NewState()
-	job := &Job{ID: NewJobID(), Type: TypeCopy, Status: StatusQueued, Sources: []string{"/a"}, Destination: "/b"}
+	job := &Job{ID: NewJobID(), Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
 	s.AddJob(job)
 
 	// Job should be in queue.
@@ -236,7 +237,7 @@ func TestStateThroughputChartDisabledSkipsStrip(t *testing.T) {
 	t.Parallel()
 	s := NewState()
 	s.SetThroughputChart(time.Second, 30*time.Second, false)
-	job := &Job{ID: "chart-off", Type: TypeCopy, Status: StatusQueued, Sources: []string{"/a"}, Destination: "/b"}
+	job := &Job{ID: "chart-off", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
 	s.AddJob(job)
 	s.ApplyEvent(Event{Type: EventStarted, JobID: job.ID})
 	s.ApplyEvent(Event{Type: EventProgress, JobID: job.ID, DoneBytes: 1_000_000, DoneFiles: 1})
@@ -347,7 +348,7 @@ func TestWorkerArchivesFinishedToHistory(t *testing.T) {
 	s.StartWorker(stop)
 	defer close(stop)
 
-	job := &Job{ID: "arch-1", Type: TypeCopy, Status: StatusQueued, Sources: []string{"/a"}, Destination: "/b"}
+	job := &Job{ID: "arch-1", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
 	s.AddJob(job)
 
 	deadline := time.After(3 * time.Second)
@@ -405,14 +406,14 @@ func TestStateHasUnfinishedWork(t *testing.T) {
 	})
 	t.Run("queued", func(t *testing.T) {
 		s := NewState()
-		s.AddJob(&Job{ID: NewJobID(), Type: TypeCopy, Status: StatusQueued, Sources: []string{"/a"}, Destination: "/b"})
+		s.AddJob(&Job{ID: NewJobID(), Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")})
 		if !s.HasUnfinishedWork() {
 			t.Fatal("HasUnfinishedWork() = false, want true")
 		}
 	})
 	t.Run("paused_in_queue", func(t *testing.T) {
 		s := NewState()
-		s.AddJob(&Job{ID: NewJobID(), Type: TypeCopy, Status: StatusPaused, Sources: []string{"/a"}, Destination: "/b"})
+		s.AddJob(&Job{ID: NewJobID(), Type: TypeCopy, Status: StatusPaused, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")})
 		if !s.HasUnfinishedWork() {
 			t.Fatal("HasUnfinishedWork() = false, want true")
 		}
@@ -445,7 +446,7 @@ func TestStateHasUnfinishedWork(t *testing.T) {
 	})
 	t.Run("queued_and_running_active", func(t *testing.T) {
 		s := NewState()
-		s.AddJob(&Job{ID: "q2", Type: TypeMove, Status: StatusQueued, Sources: []string{"/x"}, Destination: "/y"})
+		s.AddJob(&Job{ID: "q2", Type: TypeMove, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
 		j := s.Queue().Dequeue()
 		s.setActiveForTest(j)
 		if !s.HasUnfinishedWork() {
@@ -461,7 +462,7 @@ func TestStateHasUnfinishedWork(t *testing.T) {
 		s.StartWorker(stop)
 		defer close(stop)
 
-		job := &Job{ID: "arch-spinner", Type: TypeCopy, Status: StatusQueued, Sources: []string{"/a"}, Destination: "/b"}
+		job := &Job{ID: "arch-spinner", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
 		s.AddJob(job)
 
 		deadline := time.After(3 * time.Second)
@@ -484,7 +485,7 @@ func TestStateHasUnfinishedWork(t *testing.T) {
 func TestAllJobsIncludesEveryDequeuedRunnableBeforeLease(t *testing.T) {
 	s := NewState()
 	for _, id := range []string{"j0", "j1", "j2"} {
-		s.AddJob(&Job{ID: id, Type: TypeCopy, Status: StatusQueued, Sources: []string{"/x"}, Destination: "/y"})
+		s.AddJob(&Job{ID: id, Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
 	}
 	_ = s.dequeueJob()
 	_ = s.dequeueJob()
@@ -511,9 +512,9 @@ func TestMenuBarStripStatusesOrderDoneOngoingQueued(t *testing.T) {
 	}
 	s.active = &Job{ID: "run", Status: StatusRunning}
 	s.mu.Unlock()
-	s.queue.Enqueue(&Job{ID: "scan", Status: StatusScanning, Type: TypeCopy, Sources: []string{"/s"}, Destination: "/t"})
-	s.queue.Enqueue(&Job{ID: "q1", Status: StatusQueued, Type: TypeCopy, Sources: []string{"/a"}, Destination: "/b"})
-	s.queue.Enqueue(&Job{ID: "q2", Status: StatusPaused, Type: TypeCopy, Sources: []string{"/c"}, Destination: "/d"})
+	s.queue.Enqueue(&Job{ID: "scan", Status: StatusScanning, Type: TypeCopy, Sources: pathloc.PathsForTest("/s"), Destination: pathloc.MustParse("/t")})
+	s.queue.Enqueue(&Job{ID: "q1", Status: StatusQueued, Type: TypeCopy, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")})
+	s.queue.Enqueue(&Job{ID: "q2", Status: StatusPaused, Type: TypeCopy, Sources: pathloc.PathsForTest("/c"), Destination: pathloc.MustParse("/d")})
 
 	got := s.MenuBarStripStatuses()
 	want := []string{

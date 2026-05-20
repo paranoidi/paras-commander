@@ -21,7 +21,7 @@ func (a *App) openExtractDialog(p *panel.State) {
 		a.setTransientMessage("No supported archives selected", ui.MessageUrgencyWarn)
 		return
 	}
-	dest := transferPrefilledDestination(a.inactivePanel().Path)
+	dest := transferPrefilledDestination(a.inactivePanel().PathString())
 	dest.Label = "Destination"
 	dest.PathPicker = true
 	fields := []ui.FileDialogField{dest}

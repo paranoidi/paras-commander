@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync/atomic"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // Type identifies the kind of filesystem operation a Job represents.
@@ -42,8 +44,8 @@ type Job struct {
 	ID          string
 	Type        Type
 	Status      Status
-	Sources     []string
-	Destination string
+	Sources     []pathloc.Path
+	Destination pathloc.Path
 	// DestIsDir is whether Destination was an existing directory at enqueue time (same as ops.ResolveDestination Stat semantics).
 	// Used by UI path marks so listing render does not Stat the destination per row.
 	DestIsDir     bool

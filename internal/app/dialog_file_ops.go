@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -96,6 +97,10 @@ func (a *App) openDeleteDialog(p *panel.State) {
 }
 
 func (a *App) openChmodDialog(p *panel.State) {
+	if p.Path.IsRemote() {
+		a.setTransientMessage("Chmod is not available on remote panels", ui.MessageUrgencyWarn)
+		return
+	}
 	_, err := ops.ResolveSource(p)
 	if err != nil {
 		a.setErrorMessage("Chmod", err)
@@ -113,6 +118,10 @@ func (a *App) openChmodDialog(p *panel.State) {
 }
 
 func (a *App) openChownDialog(p *panel.State) {
+	if p.Path.IsRemote() {
+		a.setTransientMessage("Chown is not available on remote panels", ui.MessageUrgencyWarn)
+		return
+	}
 	_, err := ops.ResolveSource(p)
 	if err != nil {
 		a.setErrorMessage("Chown", err)
@@ -130,13 +139,17 @@ func (a *App) openChownDialog(p *panel.State) {
 }
 
 func (a *App) openSymlinkDialog(p *panel.State) {
+	if p.Path.IsRemote() {
+		a.setTransientMessage("Symlink is not available on remote panels", ui.MessageUrgencyWarn)
+		return
+	}
 	entry, err := ops.ResolveSourceSingle(p)
 	if err != nil {
 		a.setErrorMessage("Symlink", err)
 		return
 	}
 	targetPath := entry.Path
-	defaultLink := filepath.Join(a.inactivePanel().Path, entry.Name)
+	defaultLink := filepath.Join(a.inactivePanel().PathString(), entry.Name)
 	fields := []ui.FileDialogField{
 		{Label: "Target", Value: targetPath, Cursor: len([]rune(targetPath)), PathPicker: true},
 		{Label: "Link path", Value: defaultLink, Cursor: len([]rune(defaultLink)), PathPicker: true},
@@ -149,13 +162,17 @@ func (a *App) openSymlinkDialog(p *panel.State) {
 }
 
 func (a *App) openHardlinkDialog(p *panel.State) {
+	if p.Path.IsRemote() {
+		a.setTransientMessage("Hardlink is not available on remote panels", ui.MessageUrgencyWarn)
+		return
+	}
 	entry, err := ops.ResolveSourceSingle(p)
 	if err != nil {
 		a.setErrorMessage("Hardlink", err)
 		return
 	}
 	sourcePath := entry.Path
-	defaultDest := filepath.Join(a.inactivePanel().Path, entry.Name)
+	defaultDest := filepath.Join(a.inactivePanel().PathString(), entry.Name)
 	fields := []ui.FileDialogField{
 		{Label: "Source", Value: sourcePath, Cursor: len([]rune(sourcePath)), PathPicker: true},
 		{Label: "New path", Value: defaultDest, Cursor: len([]rune(defaultDest)), PathPicker: true},
@@ -191,6 +208,8 @@ func (a *App) executeFileDialog() {
 		a.executeExtract()
 	case ui.FileDialogAddBookmark:
 		a.executeAddBookmark()
+	case ui.FileDialogSFTPPassword:
+		a.executeSFTPPassword()
 	default:
 		a.closeFileDialog()
 	}
@@ -210,7 +229,7 @@ func (a *App) executeRename() {
 		a.closeFileDialog()
 		return
 	}
-	plan, err := ops.PlanRename(entry, newName, p.Path)
+	plan, err := ops.PlanRename(entry, newName, p.PathString())
 	if err != nil {
 		a.setErrorMessage("Rename", err)
 		a.closeFileDialog()
@@ -240,7 +259,7 @@ func (a *App) executeMkdir() {
 		action = d.MkdirAction
 	}
 
-	plan, err := ops.PlanMkdir(input, p.Path)
+	plan, err := ops.PlanMkdir(input, p.PathString())
 	if err != nil {
 		a.setErrorMessage("Mkdir", err)
 		a.closeFileDialog()
@@ -273,7 +292,11 @@ func (a *App) executeMkdir() {
 
 	a.closeFileDialog()
 	a.refreshBothPanels()
-	a.activePanel().SelectVisibleEntry(filepath.Base(plan.Path))
+	selectName := plan.Name
+	if loc, err := pathloc.Parse(plan.Path); err == nil {
+		selectName = loc.Base()
+	}
+	a.activePanel().SelectVisibleEntry(selectName)
 
 	switch action {
 	case ui.MkdirActionCreate:
@@ -385,7 +408,7 @@ func (a *App) executeSymlink() {
 	}
 	target := a.model.FileDialog.Fields[0].Value
 	linkPath := a.model.FileDialog.Fields[1].Value
-	plan, err := ops.PlanSymlink(target, linkPath, p.Path, a.inactivePanel().Path)
+	plan, err := ops.PlanSymlink(target, linkPath, p.PathString(), a.inactivePanel().PathString())
 	if err != nil {
 		a.setErrorMessage("Symlink", err)
 		a.closeFileDialog()
@@ -409,7 +432,7 @@ func (a *App) executeHardlink() {
 	}
 	source := a.model.FileDialog.Fields[0].Value
 	newPath := a.model.FileDialog.Fields[1].Value
-	plan, err := ops.PlanHardlink(source, newPath, p.Path, a.inactivePanel().Path)
+	plan, err := ops.PlanHardlink(source, newPath, p.PathString(), a.inactivePanel().PathString())
 	if err != nil {
 		a.setErrorMessage("Hardlink", err)
 		a.closeFileDialog()

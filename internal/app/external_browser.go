@@ -21,7 +21,7 @@ func runDetachedXDGOpen(path string) error {
 
 // openPanelPathInExternalBrowser runs xdg-open on the given panel's directory (freedesktop GUI file manager).
 func (a *App) openPanelPathInExternalBrowser(panelID int) {
-	p := filepath.Clean(a.panelByID(panelID).Path)
+	p := filepath.Clean(a.panelByID(panelID).PathString())
 	if p == "" || p == "." {
 		a.setErrorMessage("External browser", fmt.Errorf("no panel path"))
 		return

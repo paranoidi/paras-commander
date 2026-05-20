@@ -43,6 +43,8 @@ type (
 	TransferDialogPhase       = dialog.TransferDialogPhase
 	TransferDialogState       = dialog.TransferDialogState
 	ConflictDialogState       = dialog.ConflictDialogState
+	HostKeyDialogState        = dialog.HostKeyDialogState
+	SFTPConnectDialogState    = dialog.SFTPConnectDialogState
 	QuitConfirmState          = dialog.QuitConfirmState
 	DialogTrailingButtonsForm = dialog.DialogTrailingButtonsForm
 	DialogLinearForm          = dialog.DialogLinearForm
@@ -55,18 +57,20 @@ const (
 	PathPickerPurposeApplyTransferDestination = dialog.PathPickerPurposeApplyTransferDestination
 	PathPickerPurposeApplyFileDialogField     = dialog.PathPickerPurposeApplyFileDialogField
 
-	FileDialogNone        = dialog.FileDialogNone
-	FileDialogRename      = dialog.FileDialogRename
-	FileDialogMkdir       = dialog.FileDialogMkdir
-	FileDialogDelete      = dialog.FileDialogDelete
-	FileDialogChmod       = dialog.FileDialogChmod
-	FileDialogChown       = dialog.FileDialogChown
-	FileDialogSymlink     = dialog.FileDialogSymlink
-	FileDialogHardlink    = dialog.FileDialogHardlink
-	FileDialogAddBookmark = dialog.FileDialogAddBookmark
-	FileDialogRunForEach  = dialog.FileDialogRunForEach
-	FileDialogMassRename  = dialog.FileDialogMassRename
-	FileDialogExtract     = dialog.FileDialogExtract
+	FileDialogNone         = dialog.FileDialogNone
+	FileDialogRename       = dialog.FileDialogRename
+	FileDialogMkdir        = dialog.FileDialogMkdir
+	FileDialogDelete       = dialog.FileDialogDelete
+	FileDialogChmod        = dialog.FileDialogChmod
+	FileDialogChown        = dialog.FileDialogChown
+	FileDialogSymlink      = dialog.FileDialogSymlink
+	FileDialogHardlink     = dialog.FileDialogHardlink
+	FileDialogAddBookmark  = dialog.FileDialogAddBookmark
+	FileDialogRunForEach   = dialog.FileDialogRunForEach
+	FileDialogMassRename   = dialog.FileDialogMassRename
+	FileDialogExtract      = dialog.FileDialogExtract
+	FileDialogSFTPConnect  = dialog.FileDialogSFTPConnect
+	FileDialogSFTPPassword = dialog.FileDialogSFTPPassword
 
 	MassRenameModeUISimple = dialog.MassRenameModeUISimple
 	MassRenameModeUIRegex  = dialog.MassRenameModeUIRegex
@@ -105,6 +109,7 @@ var (
 	ListClampedSelectionDelta         = dialog.ListClampedSelectionDelta
 	EnsurePathPickerListScroll        = dialog.EnsurePathPickerListScroll
 	EnsureHistoryListScroll           = dialog.EnsureHistoryListScroll
+	EnsureSFTPConnectListScroll       = dialog.EnsureSFTPConnectListScroll
 	EnsureFindListScroll              = dialog.EnsureFindListScroll
 	ComputeHelpDialogListMetrics      = dialog.ComputeHelpDialogListMetrics
 	FindDialogNavFocusKey             = dialog.FindDialogNavFocusKey

@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"testing"
 	"time"
 )
@@ -10,8 +11,8 @@ func TestJobLifecycle(t *testing.T) {
 		ID:          NewJobID(),
 		Type:        TypeCopy,
 		Status:      StatusQueued,
-		Sources:     []string{"/src/a.txt"},
-		Destination: "/dst",
+		Sources:     pathloc.PathsForTest("/src/a.txt"),
+		Destination: pathloc.MustParse("/dst"),
 		TotalFiles:  1,
 	}
 

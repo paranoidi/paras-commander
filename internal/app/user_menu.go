@@ -16,7 +16,7 @@ func (a *App) openUserMenu() {
 		return
 	}
 	cfgDir := strings.TrimSpace(a.paths.ConfigDir)
-	menuPath, warns := usermenu.ResolveMenuTOML(a.config, a.model.UserHomeDir, cfgDir, a.activePanel().Path)
+	menuPath, warns := usermenu.ResolveMenuTOML(a.config, a.model.UserHomeDir, cfgDir, a.activePanel().PathString())
 	for _, w := range warns {
 		a.setTransientMessage(w, ui.MessageUrgencyWarn)
 	}
@@ -188,7 +188,7 @@ func (a *App) executeUserMenuSelection() {
 	a.ensureCommandsViewSelectionVisible()
 
 	a.commandsBatchesInflight.Add(1)
-	go a.runUserMenuCommand(a.commandsCtx, idx, argv, active.Path)
+	go a.runUserMenuCommand(a.commandsCtx, idx, argv, active.PathString())
 }
 
 func (a *App) appendUserMenuCommandRow(cmdLine, expanded string) int {

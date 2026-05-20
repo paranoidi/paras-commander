@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,8 +25,8 @@ func TestPanelSharesVolumeWithJobSameDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	job := &jobs.Job{
-		Sources:     []string{src},
-		Destination: dst,
+		Sources:     pathloc.PathsForTest(src),
+		Destination: pathloc.MustParse(dst),
 	}
 	if !panelSharesVolumeWithJob(panel, job) {
 		t.Fatal("panel on same volume as job sources should conflict")
@@ -37,8 +38,8 @@ func TestPanelSharesVolumeWithJobDifferentTempDirs(t *testing.T) {
 	panel := t.TempDir()
 	other := t.TempDir()
 	job := &jobs.Job{
-		Sources:     []string{filepath.Join(other, "file.dat")},
-		Destination: filepath.Join(other, "dst"),
+		Sources:     pathloc.PathsForTest(filepath.Join(other, "file.dat")),
+		Destination: pathloc.MustParse(filepath.Join(other, "dst")),
 	}
 	if panelSharesVolumeWithJob(panel, job) {
 		t.Fatal("unrelated temp dirs should not share volume conflict on typical setups")

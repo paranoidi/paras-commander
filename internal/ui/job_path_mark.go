@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // JobPathMark is the minimal job snapshot needed for file-list trailing glyphs in the browser.
@@ -25,8 +26,8 @@ func JobPathMarksFromJobs(jobList []*jobs.Job) []JobPathMark {
 			ID:          j.ID,
 			Type:        string(j.Type),
 			Status:      string(j.Status),
-			Sources:     append([]string(nil), j.Sources...),
-			Destination: j.Destination,
+			Sources:     pathloc.Strings(j.Sources),
+			Destination: j.Destination.String(),
 			DestIsDir:   j.DestIsDir,
 		})
 	}

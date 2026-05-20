@@ -258,5 +258,5 @@ func (a *App) openFilePreviewFullscreen() {
 		st.ErrorMsg = ""
 	})
 	a.postCommandWake()
-	go a.runFilePreview(a.commandsCtx, path, argv, active.Path, true)
+	go a.runFilePreview(a.commandsCtx, path, argv, active.PathString(), true)
 }

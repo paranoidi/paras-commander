@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
@@ -10,7 +11,7 @@ func TestArmSpinnerRedrawTimerRearmsAfterBusyTick(t *testing.T) {
 	t.Parallel()
 	app := testAppMinimal(t)
 	root := t.TempDir()
-	job := &jobs.Job{ID: "spin", Type: jobs.TypeCopy, Status: jobs.StatusRunning, Sources: []string{root}}
+	job := &jobs.Job{ID: "spin", Type: jobs.TypeCopy, Status: jobs.StatusRunning, Sources: pathloc.PathsForTest(root)}
 	app.jobState.Queue().Enqueue(job)
 	if !app.menuBarSpinnerBusy() {
 		t.Fatal("expected spinner busy with running job")

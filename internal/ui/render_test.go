@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -195,12 +196,12 @@ func TestRenderUsesYellowForegroundForSelectedEntry(t *testing.T) {
 	selected := localfs.Entry{Name: "a.txt", Path: "/tmp/a.txt"}
 	model := Model{
 		Left: panel.State{
-			Path:          "/tmp",
+			Path:          pathloc.MustParse("/tmp"),
 			Entries:       []localfs.Entry{selected, localfs.Entry{Name: "b.txt", Path: "/tmp/b.txt"}},
 			Cursor:        1,
 			SelectedPaths: map[string]bool{selected.Path: true},
 		},
-		Right:       panel.State{Path: "/tmp"},
+		Right:       panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel: LeftPanel,
 	}
 
@@ -221,8 +222,8 @@ func TestRenderPanelTitleLeavesBorderAfterSingleTrailingSpace(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 	}
 
@@ -248,8 +249,8 @@ func TestRenderDrawsLeftPanelPulldownWithKeymapLabels(t *testing.T) {
 		t.Fatalf("keymap.Default: %v", err)
 	}
 	model := Model{
-		Left:            panel.State{Path: "/tmp"},
-		Right:           panel.State{Path: "/tmp"},
+		Left:            panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:           panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel:     LeftPanel,
 		MenuDefinitions: menu.BrowserDefinitions(km, false),
 		Menu: menu.State{
@@ -284,8 +285,8 @@ func TestRenderDrawsFilePulldownMenu(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	model := Model{
-		Left:            panel.State{Path: "/tmp"},
-		Right:           panel.State{Path: "/tmp"},
+		Left:            panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:           panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel:     LeftPanel,
 		MenuDefinitions: testBrowserMenuDefinitions(t),
 		Menu: menu.State{
@@ -335,8 +336,8 @@ func TestRenderUsesBlockedPanelFrameWhenMenuOpen(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/tmp"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel: LeftPanel,
 		Menu: menu.State{
 			Open: true,
@@ -361,8 +362,8 @@ func TestRenderUsesBlockedPanelFrameWhenSortDialogOpen(t *testing.T) {
 	screen.SetSize(80, 24)
 
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/tmp"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel: LeftPanel,
 		SortDialog: SortDialogState{
 			Open:    true,
@@ -388,8 +389,8 @@ func TestRenderUsesBlockedPanelFrameWhenListingFormatDialogOpen(t *testing.T) {
 	screen.SetSize(80, 24)
 
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/tmp"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel: LeftPanel,
 		ListingFormatDialog: ListingFormatDialogState{
 			Open:    true,
@@ -418,11 +419,11 @@ func TestRenderThemeDialogPreviewShowsActiveUnblockedLeftPanel(t *testing.T) {
 	leftEntry := localfs.Entry{Name: "a.txt", Path: "/tmp/a.txt"}
 	model := Model{
 		Left: panel.State{
-			Path:    "/tmp",
+			Path:    pathloc.MustParse("/tmp"),
 			Entries: []localfs.Entry{leftEntry},
 			Cursor:  0,
 		},
-		Right:       panel.State{Path: "/var"},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: RightPanel,
 		ThemeDialog: ThemeDialogState{
 			Open:        true,
@@ -453,8 +454,8 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 	width, _ := screen.Size()
 
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 		ThemeDialog: ThemeDialogState{
 			Open:        true,
@@ -497,8 +498,8 @@ func TestRenderDrawsMessageDialog(t *testing.T) {
 	width, _ := screen.Size()
 
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 		MessageDialog: MessageDialogState{
 			Open:    true,
@@ -553,8 +554,8 @@ func TestRenderBlankMenuBarRowWhenFullscreenFilePreview(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:                      panel.State{Path: "/tmp"},
-		Right:                     panel.State{Path: "/var"},
+		Left:                      panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:                     panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel:               LeftPanel,
 		ViewMode:                  ViewFilePreview,
 		FullscreenFilePreviewDraw: FilePreviewState{Open: true, Phase: FilePreviewPhaseDone, CombinedText: "hi\n"},
@@ -579,8 +580,8 @@ func TestRenderBlankMenuBarRowWhenModalDialogOpen(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 		FileDialog: FileDialogState{
 			Open:       true,
@@ -653,11 +654,11 @@ func TestRenderMenuBarShowsActiveFilePermissionString(t *testing.T) {
 	styles := theme.Default()
 	model := Model{
 		Left: panel.State{
-			Path:    "/tmp",
+			Path:    pathloc.MustParse("/tmp"),
 			Entries: []localfs.Entry{{Name: "d", Path: "/tmp/d", Type: localfs.EntryDirectory, Mode: mode}},
 			Cursor:  0,
 		},
-		Right:             panel.State{Path: "/var"},
+		Right:             panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel:       LeftPanel,
 		MenuDefinitions:   testBrowserMenuDefinitions(t),
 		Menu:              menu.State{ActiveMenu: menu.DefaultIndex()},
@@ -695,11 +696,11 @@ func TestRenderMenuBarShowsActivitySpinnerAfterPermission(t *testing.T) {
 	styles := theme.Default()
 	model := Model{
 		Left: panel.State{
-			Path:    "/tmp",
+			Path:    pathloc.MustParse("/tmp"),
 			Entries: []localfs.Entry{{Name: "d", Path: "/tmp/d", Type: localfs.EntryDirectory, Mode: mode}},
 			Cursor:  0,
 		},
-		Right:                  panel.State{Path: "/var"},
+		Right:                  panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel:            LeftPanel,
 		MenuDefinitions:        testBrowserMenuDefinitions(t),
 		Menu:                   menu.State{ActiveMenu: menu.DefaultIndex()},
@@ -754,8 +755,8 @@ func TestRenderTransientStatusAboveFooterAfterThemeDialog(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 		ThemeDialog: ThemeDialogState{
 			Open:     true,
@@ -874,8 +875,8 @@ func TestRenderDrawsStatusMessage(t *testing.T) {
 	const width = 80
 
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 		Message:     "Refreshed",
 	}
@@ -921,11 +922,11 @@ func TestRenderStatusMessageDoesNotOverlayMenuBarPermission(t *testing.T) {
 
 	model := Model{
 		Left: panel.State{
-			Path:    "/tmp",
+			Path:    pathloc.MustParse("/tmp"),
 			Entries: []localfs.Entry{{Name: "d", Path: "/tmp/d", Type: localfs.EntryDirectory, Mode: mode}},
 			Cursor:  0,
 		},
-		Right:             panel.State{Path: "/var"},
+		Right:             panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel:       LeftPanel,
 		MenuDefinitions:   testBrowserMenuDefinitions(t),
 		Menu:              menu.State{ActiveMenu: menu.DefaultIndex()},
@@ -957,8 +958,8 @@ func TestRenderStatusMessageUsesUrgencyStyle(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	model := Model{
-		Left:           panel.State{Path: "/tmp"},
-		Right:          panel.State{Path: "/var"},
+		Left:           panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:          panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel:    LeftPanel,
 		Message:        "o_O",
 		MessageUrgency: MessageUrgencyWarn,
@@ -983,8 +984,8 @@ func TestRenderStatusMessageLeavesMenuLabelsVisible(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 		Message:     "Hi",
 	}
@@ -1019,7 +1020,7 @@ func TestRenderDrawsPanelLocalFuzzyInputOverlay(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	left := panel.State{
-		Path:    "/tmp",
+		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: "main.go", Path: "/tmp/main.go"}},
 		Filter:  panel.FilterState{CaseInsensitive: true},
 	}
@@ -1029,7 +1030,7 @@ func TestRenderDrawsPanelLocalFuzzyInputOverlay(t *testing.T) {
 	}
 	model := Model{
 		Left:        left,
-		Right:       panel.State{Path: "/var"},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 	}
 
@@ -1054,7 +1055,7 @@ func TestRenderFuzzyInputUsesNomatchStyleWhenNoMatches(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	left := panel.State{
-		Path:    "/tmp",
+		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: "main.go", Path: "/tmp/main.go"}},
 		Filter:  panel.FilterState{CaseInsensitive: true},
 	}
@@ -1065,7 +1066,7 @@ func TestRenderFuzzyInputUsesNomatchStyleWhenNoMatches(t *testing.T) {
 	styles := theme.Default()
 	model := Model{
 		Left:        left,
-		Right:       panel.State{Path: "/var"},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 	}
 
@@ -1087,7 +1088,7 @@ func TestRenderHighlightsFilterMatches(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	left := panel.State{
-		Path:    "/tmp",
+		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: "main.go", Path: "/tmp/main.go"}},
 		Filter:  panel.FilterState{CaseInsensitive: true},
 	}
@@ -1098,7 +1099,7 @@ func TestRenderHighlightsFilterMatches(t *testing.T) {
 	styles := theme.Default()
 	model := Model{
 		Left:        left,
-		Right:       panel.State{Path: "/var"},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 	}
 
@@ -1122,8 +1123,8 @@ func TestRenderDrawsSyncIndicatorOnLeftDriverBottomBorder(t *testing.T) {
 	screen.SetSize(width, height)
 
 	model := Model{
-		Left:              panel.State{Path: "/tmp"},
-		Right:             panel.State{Path: "/var"},
+		Left:              panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:             panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel:       LeftPanel,
 		SyncFollowEnabled: true,
 		SyncFollowPanel:   LeftPanel,
@@ -1152,8 +1153,8 @@ func TestRenderDrawsSyncIndicatorOnRightDriverBottomBorder(t *testing.T) {
 	screen.SetSize(width, height)
 
 	model := Model{
-		Left:              panel.State{Path: "/tmp"},
-		Right:             panel.State{Path: "/var"},
+		Left:              panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:             panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel:       RightPanel,
 		SyncFollowEnabled: true,
 		SyncFollowPanel:   RightPanel,
@@ -1184,8 +1185,8 @@ func TestRenderOmitsSyncIndicatorWhenDisabled(t *testing.T) {
 	// Note: zero value of SyncFollowEnabled is false; SyncFollowPanel zero value
 	// (== LeftPanel) must NOT trigger the indicator on its own.
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 	}
 	Render(screen, model, theme.Default())
@@ -1209,14 +1210,14 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
 
 	crossDir := "/var/other.txt"
 	left := panel.State{
-		Path:    "/tmp",
+		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: "here.txt", Path: "/tmp/here.txt"}},
 		SelectedPaths: map[string]bool{
 			crossDir: true,
 		},
 	}
 	right := panel.State{
-		Path:          "/var",
+		Path:          pathloc.MustParse("/var"),
 		Entries:       []localfs.Entry{{Name: "other.txt", Path: crossDir}},
 		SelectedPaths: map[string]bool{crossDir: true},
 	}
@@ -1265,11 +1266,11 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
 
 	outsideSel := "/tmp/outside.txt"
 	left := panel.State{
-		Path:    "/tmp",
+		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
 	}
 	right := panel.State{
-		Path:    "/var",
+		Path:    pathloc.MustParse("/var"),
 		Entries: []localfs.Entry{{Name: "r.txt", Path: "/var/r.txt"}},
 		SelectedPaths: map[string]bool{
 			outsideSel: true,
@@ -1317,7 +1318,7 @@ func TestRenderOmitsSelectionsBottomHintWhenStripVisible(t *testing.T) {
 
 	crossDir := "/var/other.txt"
 	left := panel.State{
-		Path:    "/tmp",
+		Path:    pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{{Name: "here.txt", Path: "/tmp/here.txt"}},
 		SelectedPaths: map[string]bool{
 			crossDir: true,
@@ -1326,7 +1327,7 @@ func TestRenderOmitsSelectionsBottomHintWhenStripVisible(t *testing.T) {
 
 	model := Model{
 		Left:        left,
-		Right:       panel.State{Path: "/var"},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 	}
 	Render(screen, model, theme.Default())
@@ -1349,13 +1350,13 @@ func TestRenderDrawsGitignoreBottomHint(t *testing.T) {
 	screen.SetSize(width, height)
 
 	left := panel.State{
-		Path:      "/tmp",
+		Path:      pathloc.MustParse("/tmp"),
 		Entries:   []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
 		Gitignore: gitignore.NewCache(),
 	}
 	model := Model{
 		Left:        left,
-		Right:       panel.State{Path: "/var"},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: RightPanel,
 	}
 	styles := theme.Default()
@@ -1391,14 +1392,14 @@ func TestRenderOmitsGitignoreBottomHintWhenShowHidden(t *testing.T) {
 	screen.SetSize(width, height)
 
 	left := panel.State{
-		Path:       "/tmp",
+		Path:       pathloc.MustParse("/tmp"),
 		Entries:    []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
 		ShowHidden: true,
 		Gitignore:  gitignore.NewCache(),
 	}
 	model := Model{
 		Left:        left,
-		Right:       panel.State{Path: "/var"},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: RightPanel,
 	}
 	Render(screen, model, theme.Default())

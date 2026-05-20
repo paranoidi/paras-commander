@@ -14,6 +14,7 @@ func DefinitionsMessages() []Definition {
 				{Action: keymap.ActionMessagesClose, Label: "Back to file view", Shortcut: 'b'},
 			},
 		},
+		DisplayDefinition(),
 		{
 			ID:         TopFile,
 			PanelScope: PanelScopeNone,

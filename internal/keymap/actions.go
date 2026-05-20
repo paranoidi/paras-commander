@@ -74,6 +74,9 @@ const (
 	ActionCopy = "file.copy"
 	ActionMove = "file.move"
 
+	// Remote
+	ActionRemoteSFTPLink = "remote.sftp-link"
+
 	// Jobs dialog
 	ActionJobsOpen          = "jobs.open"
 	ActionJobsClose         = "jobs.close"
@@ -202,6 +205,8 @@ var KnownActions = map[string]struct{}{
 
 	ActionCopy: {},
 	ActionMove: {},
+
+	ActionRemoteSFTPLink: {},
 
 	ActionMenuFileViewPath:        {},
 	ActionMenuFileRelativeSymlink: {},

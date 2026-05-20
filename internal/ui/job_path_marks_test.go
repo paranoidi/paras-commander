@@ -6,22 +6,23 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 func TestPathEqualOrUnder(t *testing.T) {
 	t.Parallel()
 	root := filepath.Join("/tmp", "example", "foo")
-	if !pathEqualOrUnder(root, root) {
+	if !pathloc.EqualOrUnderStrings(root, root) {
 		t.Fatal("root should match itself")
 	}
 	child := filepath.Join(root, "bar", "asdf")
-	if !pathEqualOrUnder(root, child) {
+	if !pathloc.EqualOrUnderStrings(root, child) {
 		t.Fatal("child under root")
 	}
-	if pathEqualOrUnder(root, filepath.Join("/tmp", "example", "other")) {
+	if pathloc.EqualOrUnderStrings(root, filepath.Join("/tmp", "example", "other")) {
 		t.Fatal("sibling path should not match")
 	}
-	if pathEqualOrUnder(filepath.Join("/tmp", "example", "foobar"), filepath.Join("/tmp", "example", "foo")) {
+	if pathloc.EqualOrUnderStrings(filepath.Join("/tmp", "example", "foobar"), filepath.Join("/tmp", "example", "foo")) {
 		t.Fatal("prefix segment boundary: foobar is not under foo")
 	}
 }
@@ -275,15 +276,15 @@ func TestEntryPathJobMarkStatus_jobEntriesFromJobsKeepsBothQueuedJobs(t *testing
 		ID:          "job-move",
 		Type:        jobs.TypeMove,
 		Status:      jobs.StatusQueued,
-		Sources:     []string{parent},
-		Destination: dst,
+		Sources:     pathloc.PathsForTest(parent),
+		Destination: pathloc.MustParse(dst),
 		DestIsDir:   true,
 	}
 	del := &jobs.Job{
 		ID:         "job-del",
 		Type:       jobs.TypeDelete,
 		Status:     jobs.StatusQueued,
-		Sources:    []string{child},
+		Sources:    pathloc.PathsForTest(child),
 		TotalFiles: 1,
 	}
 	// Same slice order as AllJobs queue FIFO when move was reordered before delete.

@@ -89,4 +89,11 @@ const (
 	// DefaultFilePreviewCommand runs bat with paging disabled, colors forced on (non-TTY stdout),
 	// and wrap/width driven by {terminal_width} so output matches the inactive preview column.
 	DefaultFilePreviewCommand = "bat --paging=never --color=always --wrap=auto --terminal-width={terminal_width}"
+
+	// DefaultSFTPIdleTimeoutSecs is how long an unused SFTP connection stays open in the pool.
+	DefaultSFTPIdleTimeoutSecs = 60
+	// DefaultSFTPDialTimeoutSecs limits connect/handshake time.
+	DefaultSFTPDialTimeoutSecs = 30
+	// DefaultSFTPListTimeoutSecs limits remote panel directory listing (ReadDir).
+	DefaultSFTPListTimeoutSecs = 60
 )

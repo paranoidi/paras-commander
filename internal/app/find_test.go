@@ -182,7 +182,7 @@ func TestFindDialogSelectsFile(t *testing.T) {
 		t.Fatal("expected dialog closed")
 	}
 	wantDir := filepath.Clean(sub)
-	if got := filepath.Clean(app.activePanel().Path); got != wantDir {
+	if got := filepath.Clean(app.activePanel().Path.String()); got != wantDir {
 		t.Fatalf("panel dir = %q want %q", got, wantDir)
 	}
 	entry, ok := app.activePanel().CurrentEntry()

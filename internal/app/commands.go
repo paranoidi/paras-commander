@@ -29,7 +29,7 @@ func (a *App) openRunForEachDialog() {
 		return
 	}
 	paths := ops.SourcePaths(src)
-	dir := a.activePanel().Path
+	dir := a.activePanel().PathString()
 	msg := "Runs once per selected item; each path is appended as a separate argument.\nUses POSIX-style quoting (no shell)."
 	fields := []ui.FileDialogField{{Label: "Command", Value: "", Cursor: 0}}
 	a.model.FileDialog = ui.FileDialogState{
@@ -252,7 +252,13 @@ func (a *App) handleCommandsViewKey(event *tcell.EventKey) bool {
 		a.openMenu()
 		return false
 	}
+	if a.tryOpenMenuByShortcut(event) {
+		return false
+	}
 	if nextAction != "" && a.tryDispatchCommands(nextAction) {
+		return false
+	}
+	if nextAction != "" && a.tryDispatchAuxiliaryScreens(nextAction) {
 		return false
 	}
 	if nextAction == keymap.ActionPanelExternalBrowser {

@@ -234,7 +234,7 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 			p := a.activePanel()
 			if len(p.SelectedPaths) == 0 {
 				if entry, ok := p.CurrentEntry(); ok {
-					dest := a.inactivePanel().Path
+					dest := a.inactivePanel().PathString()
 					if entry.Path == filepath.Join(dest, entry.Name) {
 						a.dispatch(keymap.ActionFileRename)
 						return false
@@ -255,9 +255,7 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 		default:
 			a.setUnsupportedMessage(item.Label)
 		}
-	case menu.TopJobs:
-		a.dispatch(item.Action)
-	case menu.TopCommands:
+	case menu.TopJobs, menu.TopCommands, menu.TopMessages:
 		a.dispatch(item.Action)
 	default:
 		a.setUnsupportedMessage(item.Label)
@@ -302,6 +300,8 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		a.openMetaDialog(panelScope)
 	case keymap.ActionFileQuickView:
 		a.handleQuickViewToggle()
+	case keymap.ActionRemoteSFTPLink:
+		a.openSFTPConnectDialogForPanel(panelScope)
 	default:
 		a.setUnsupportedMessage(item.Label)
 	}

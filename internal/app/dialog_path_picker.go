@@ -387,7 +387,7 @@ func (a *App) applyPathPickerPathValidation() {
 	}
 	st.QueryPathCheckPending = false
 	panel := a.activePanel()
-	st.QueryPathInvalid = pathpick.TypedDoesNotExist(panel.Path, a.model.UserHomeDir, st.Query)
+	st.QueryPathInvalid = pathpick.TypedDoesNotExist(panel.PathString(), a.model.UserHomeDir, st.Query)
 }
 
 func (a *App) stopTransferDestinationValidateTimer() {
@@ -432,5 +432,5 @@ func (a *App) applyTransferDestinationPathValidation() {
 	}
 	d.DestPathCheckPending = false
 	panel := a.activePanel()
-	d.DestPathInvalid = pathpick.TypedDoesNotExist(panel.Path, a.model.UserHomeDir, d.Destination.Value)
+	d.DestPathInvalid = pathpick.TypedDoesNotExist(panel.PathString(), a.model.UserHomeDir, d.Destination.Value)
 }

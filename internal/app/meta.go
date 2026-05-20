@@ -94,7 +94,7 @@ func (a *App) activateMetaSelection() {
 		return
 	}
 	a.metaActiveCmd[panelID] = entry.Name
-	a.metaNavPath[panelID] = filepath.Clean(a.panelByID(panelID).Path)
+	a.metaNavPath[panelID] = filepath.Clean(a.panelByID(panelID).PathString())
 	a.runMetaForPanel(panelID, cmdDef)
 }
 
@@ -107,7 +107,7 @@ func (a *App) handleMetaPanelDirChanged(panelID int) {
 	if cmdName == "" {
 		return
 	}
-	cur := filepath.Clean(a.panelByID(panelID).Path)
+	cur := filepath.Clean(a.panelByID(panelID).PathString())
 	if a.metaNavPath[panelID] == cur {
 		return
 	}
@@ -123,7 +123,7 @@ func (a *App) handleMetaPanelDirChanged(panelID int) {
 func (a *App) runMetaForPanel(panelID int, cmdDef config.MetaCommandDef) {
 	panel := a.panelByID(panelID)
 	entries := append([]localfs.Entry(nil), panel.Entries...)
-	dir := panel.Path
+	dir := panel.PathString()
 
 	// Initialize results map (empty string = not yet computed).
 	results := make(map[string]string, len(entries))

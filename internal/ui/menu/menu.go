@@ -128,6 +128,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
 				{Action: keymap.ActionPanelMeta, Label: "Meta", Shortcut: 'm'},
 				{Action: keymap.ActionPanelListingFormatDialog, Label: "Listing format", Shortcut: 'f'},
+				{Action: keymap.ActionRemoteSFTPLink, Label: "SFTP link", Shortcut: 'L'},
 			},
 		},
 		{
@@ -173,17 +174,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
 			},
 		},
-		{
-			ID:         TopDisplay,
-			PanelScope: PanelScopeNone,
-			Label:      "Display",
-			Shortcut:   'd',
-			Items: []Item{
-				{Action: keymap.ActionCommandsOpen, Label: "Commands", Shortcut: 'c'},
-				{Action: keymap.ActionMessagesOpen, Label: "Messages", Shortcut: 'm'},
-				{Action: keymap.ActionJobsOpen, Label: "Jobs", Shortcut: 'j'},
-			},
-		},
+		DisplayDefinition(),
 		{
 			ID:         TopOptions,
 			PanelScope: PanelScopeNone,
@@ -207,6 +198,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionPanelExternalBrowser, Label: "External browser", Shortcut: 'e'},
 				{Action: keymap.ActionPanelMeta, Label: "Meta", Shortcut: 'm'},
 				{Action: keymap.ActionPanelListingFormatDialog, Label: "Listing format", Shortcut: 'f'},
+				{Action: keymap.ActionRemoteSFTPLink, Label: "SFTP link", Shortcut: 'L'},
 			},
 		},
 	}

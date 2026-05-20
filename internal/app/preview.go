@@ -265,7 +265,7 @@ func (a *App) quickViewFingerprint() string {
 		return "f:" + path
 	case quickViewWantDir:
 		p := a.activePanel()
-		return fmt.Sprintf("d:%d:%d:%s", a.model.ActivePanel, a.model.ActiveSubFocus, p.Path)
+		return fmt.Sprintf("d:%d:%d:%s", a.model.ActivePanel, a.model.ActiveSubFocus, p.PathString())
 	case quickViewWantStatErr:
 		return "e:stat"
 	}
@@ -284,7 +284,7 @@ const (
 // quickViewWantFile returns an absolute file path to preview when mode == quickViewWantFile.
 func (a *App) quickViewWantFile() (path string, workDir string, mode quickViewWantMode) {
 	p := a.activePanel()
-	workDir = p.Path
+	workDir = p.PathString()
 	if a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip && p.SelectionsStripCount() > 0 {
 		selPath, ok := p.SelectedPathAtStripIndex(p.SelectionsStripCursor)
 		if !ok {

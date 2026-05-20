@@ -1,36 +1,20 @@
 package ui
 
 import (
-	"path/filepath"
-	"strings"
-
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
-
-func pathEqualOrUnder(root, p string) bool {
-	root = filepath.Clean(root)
-	p = filepath.Clean(p)
-	if root == "" || root == "." {
-		return false
-	}
-	if p == root {
-		return true
-	}
-	rel, err := filepath.Rel(root, p)
-	if err != nil {
-		return false
-	}
-	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
-}
 
 // resolvedJobDestinationPath matches ops.ResolveDestination for a fixed dest-is-dir flag
 // without calling Stat (see jobs.Job.DestIsDir at enqueue time).
 func resolvedJobDestinationPath(src, dest string, destIsDir bool) string {
-	d := filepath.Clean(dest)
-	if destIsDir {
-		return filepath.Clean(filepath.Join(d, filepath.Base(src)))
+	srcLoc, err1 := pathloc.Parse(src)
+	destLoc, err2 := pathloc.Parse(dest)
+	if err1 != nil || err2 != nil {
+		return dest
 	}
-	return d
+	return ops.ResolveDestination(srcLoc, destLoc).String()
 }
 
 func jobTypeMarkPriority(t string) int {
@@ -51,23 +35,21 @@ func jobTypeMarkPriority(t string) int {
 // longestMatchingRootLen returns the maximum length of a clean path (source or
 // resolved destination) that matches absPath as root-of-subtree, or 0 if none.
 func longestMatchingRootLen(j JobPathMark, absPath string) int {
-	p := filepath.Clean(absPath)
 	maxLen := 0
 	for _, src := range j.Sources {
 		if src == "" {
 			continue
 		}
-		cs := filepath.Clean(src)
-		if pathEqualOrUnder(cs, p) {
-			if n := len(cs); n > maxLen {
+		if pathloc.EqualOrUnderStrings(src, absPath) {
+			if n := len(src); n > maxLen {
 				maxLen = n
 			}
 		}
 		if j.Destination == "" {
 			continue
 		}
-		dst := resolvedJobDestinationPath(cs, j.Destination, j.DestIsDir)
-		if dst != "" && dst != "." && pathEqualOrUnder(dst, p) {
+		dst := resolvedJobDestinationPath(src, j.Destination, j.DestIsDir)
+		if dst != "" && dst != "." && pathloc.EqualOrUnderStrings(dst, absPath) {
 			if n := len(dst); n > maxLen {
 				maxLen = n
 			}
@@ -85,7 +67,7 @@ func EntryPathJobMarkStatus(absPath string, jobMarks []JobPathMark) (bool, strin
 	if absPath == "" || len(jobMarks) == 0 {
 		return false, ""
 	}
-	p := filepath.Clean(absPath)
+	p := absPath
 	bestPri := -1
 	bestLen := -1
 	bestIdx := -1
@@ -126,7 +108,7 @@ func PanelTouchedByJobs(panelPath string, jobMarks []JobPathMark) bool {
 	if panelPath == "" || len(jobMarks) == 0 {
 		return false
 	}
-	p := filepath.Clean(panelPath)
+	p := panelPath
 	for _, j := range jobMarks {
 		if jobs.Status(j.Status).IsFinished() {
 			continue
@@ -135,16 +117,15 @@ func PanelTouchedByJobs(panelPath string, jobMarks []JobPathMark) bool {
 			if src == "" {
 				continue
 			}
-			cs := filepath.Clean(src)
-			if pathEqualOrUnder(p, cs) || pathEqualOrUnder(cs, p) {
+			if pathloc.TreesOverlapStrings(p, src) {
 				return true
 			}
 			if j.Destination == "" {
 				continue
 			}
-			dst := resolvedJobDestinationPath(cs, j.Destination, j.DestIsDir)
+			dst := resolvedJobDestinationPath(src, j.Destination, j.DestIsDir)
 			if dst != "" && dst != "." {
-				if pathEqualOrUnder(p, dst) || pathEqualOrUnder(dst, p) {
+				if pathloc.TreesOverlapStrings(p, dst) {
 					return true
 				}
 			}

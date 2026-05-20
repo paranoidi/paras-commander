@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // PlanBuildOptions configures optional hooks during copy/move plan walks.
@@ -25,17 +27,17 @@ type PlanBuildOptions struct {
 type ConflictResolver func(src, dest string, facts FileConflictFacts) (overwrite bool, err error)
 
 // BuildCopyPlanWithTotals prepares the destination (when needed), walks sources, and returns the flat plan plus totals.
-func BuildCopyPlanWithTotals(sources []string, destination string) (plan []PlanItem, totalFiles int, totalBytes int64, err error) {
+func BuildCopyPlanWithTotals(sources []pathloc.Path, destination pathloc.Path) (plan []PlanItem, totalFiles int, totalBytes int64, err error) {
 	p, tf, _, tb, err := BuildCopyPlanWithTotalsCtx(context.Background(), sources, destination, PlanBuildOptions{})
 	return p, tf, tb, err
 }
 
 // BuildCopyPlanWithTotalsCtx is like BuildCopyPlanWithTotals but honors ctx cancellation and plan walk hooks.
-func BuildCopyPlanWithTotalsCtx(ctx context.Context, sources []string, destination string, opts PlanBuildOptions) (plan []PlanItem, totalItems, totalDirs int, totalBytes int64, err error) {
+func BuildCopyPlanWithTotalsCtx(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, opts PlanBuildOptions) (plan []PlanItem, totalItems, totalDirs int, totalBytes int64, err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, 0, 0, 0, err
 	}
-	if err := prepareCopyDestination(sources, destination); err != nil {
+	if err := prepareCopyDestinationCtx(ctx, sources, destination); err != nil {
 		return nil, 0, 0, 0, err
 	}
 	p, err := BuildPlanCtx(ctx, sources, destination, true, opts)
@@ -48,40 +50,43 @@ func BuildCopyPlanWithTotalsCtx(ctx context.Context, sources []string, destinati
 
 // CopyPlanTotals returns the file count and byte sum for a copy plan after the same
 // destination validation as ExecuteCopy. Used to populate job totals before transfer.
-func CopyPlanTotals(sources []string, destination string) (totalFiles int, totalBytes int64, err error) {
+func CopyPlanTotals(sources []pathloc.Path, destination pathloc.Path) (totalFiles int, totalBytes int64, err error) {
 	tf, _, tb, err := CopyPlanTotalsDetailed(sources, destination)
 	return tf, tb, err
 }
 
 // CopyPlanTotalsDetailed returns item count, directory count, and byte sum for a copy plan.
-func CopyPlanTotalsDetailed(sources []string, destination string) (totalItems, totalDirs int, totalBytes int64, err error) {
+func CopyPlanTotalsDetailed(sources []pathloc.Path, destination pathloc.Path) (totalItems, totalDirs int, totalBytes int64, err error) {
 	_, ti, td, tb, err := BuildCopyPlanWithTotalsCtx(context.Background(), sources, destination, PlanBuildOptions{})
 	return ti, td, tb, err
 }
 
-func prepareCopyDestination(sources []string, destination string) error {
-	destInfo, err := os.Stat(destination)
+func prepareCopyDestinationCtx(ctx context.Context, sources []pathloc.Path, destination pathloc.Path) error {
+	isDir, err := destinationIsDir(ctx, destination)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return fmt.Errorf("stat destination %q: %w", destination, err)
-		}
-		if len(sources) == 1 {
-			srcInfo, statErr := os.Lstat(sources[0])
-			if statErr != nil {
-				return fmt.Errorf("stat source %q: %w", sources[0], statErr)
-			}
-			if srcInfo.IsDir() {
-				if err := os.MkdirAll(destination, 0o755); err != nil {
-					return fmt.Errorf("create destination dir %q: %w", destination, err)
-				}
-			}
-		} else {
-			return fmt.Errorf("destination directory %q does not exist", destination)
-		}
-	} else if !destInfo.IsDir() {
-		return fmt.Errorf("destination %q is not a directory", destination)
+		return fmt.Errorf("stat destination %q: %w", destination, err)
 	}
-	return nil
+	if isDir {
+		return nil
+	}
+	if len(sources) == 1 {
+		srcEnt, err := statEntry(ctx, sources[0])
+		if err != nil {
+			return fmt.Errorf("stat source %q: %w", sources[0], err)
+		}
+		if srcEnt.Type == fsbackend.EntryDirectory {
+			be, err := backendFor(destination)
+			if err != nil {
+				return err
+			}
+			if err := be.Mkdir(ctx, destination, 0o755); err != nil {
+				return fmt.Errorf("create destination dir %q: %w", destination, err)
+			}
+			return nil
+		}
+		return nil
+	}
+	return fmt.Errorf("destination directory %q does not exist", destination)
 }
 
 // SummarizePlan returns plan item count, directory count, and regular-file byte sum.
@@ -102,26 +107,26 @@ func SummarizePlan(plan []PlanItem) (totalItems, totalDirs int, totalBytes int64
 // It handles regular files, directories, and symlinks.
 // Returns (doneFiles, doneBytes, error).
 // diskWait is optional; when set, regular file copies wait until there is enough free space on the destination volume.
-func ExecuteCopy(ctx context.Context, sources []string, destination string, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+func ExecuteCopy(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
 	return executeCopyWithPlan(ctx, nil, sources, destination, opts, throttle, progress, resolver, diskWait)
 }
 
 // ExecuteCopyUsingPlan runs the copy loop using a plan from BuildCopyPlanWithTotals for the same sources and destination
 // (prepareCopyDestination and BuildPlan are skipped). Caller must not mutate the plan slice during the call.
-func ExecuteCopyUsingPlan(ctx context.Context, plan []PlanItem, sources []string, destination string, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+func ExecuteCopyUsingPlan(ctx context.Context, plan []PlanItem, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
 	if plan == nil {
 		return 0, 0, fmt.Errorf("ExecuteCopyUsingPlan: plan is nil")
 	}
 	return executeCopyWithPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
 }
 
-func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources []string, destination string, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
 	var plan []PlanItem
 	var err error
 	if planOptional != nil {
 		plan = planOptional
 	} else {
-		if err := prepareCopyDestination(sources, destination); err != nil {
+		if err := prepareCopyDestinationCtx(ctx, sources, destination); err != nil {
 			return 0, 0, err
 		}
 		plan, err = BuildPlan(sources, destination, true)
@@ -169,35 +174,58 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
 		}
+		srcStr := item.Src.String()
+		dstStr := item.Dst.String()
 		if item.IsDir && !item.IsSymlink {
-			if err := os.MkdirAll(item.Dst, 0o755); err != nil {
-				return doneFiles, doneBytes, fmt.Errorf("create directory %q: %w", item.Dst, err)
+			if _, err := statEntry(ctx, item.Dst); isNotExist(err) {
+				be, err := backendFor(item.Dst)
+				if err != nil {
+					return doneFiles, doneBytes, err
+				}
+				if err := be.Mkdir(ctx, item.Dst, 0o755); err != nil {
+					return doneFiles, doneBytes, fmt.Errorf("create directory %q: %w", dstStr, err)
+				}
+			} else if err != nil {
+				return doneFiles, doneBytes, fmt.Errorf("stat directory %q: %w", dstStr, err)
 			}
 			doneFiles++
-			emitMetaProgress(item.Src, item.Dst, doneFiles, doneBytes)
+			emitMetaProgress(srcStr, dstStr, doneFiles, doneBytes)
 			continue
 		}
 
 		if item.IsSymlink {
-			if err := copySymlinkWithConflict(item.Src, item.Dst, resolver); err != nil {
-				return doneFiles, doneBytes, err
+			if useLocalFastPath(item.Src, item.Dst) {
+				if err := copySymlinkWithConflict(srcStr, dstStr, resolver); err != nil {
+					return doneFiles, doneBytes, err
+				}
 			}
 			doneFiles++
-			emitMetaProgress(item.Src, item.Dst, doneFiles, doneBytes)
+			emitMetaProgress(srcStr, dstStr, doneFiles, doneBytes)
 			continue
 		}
 
-		if diskWait != nil && (opts.DiskSpaceCheckMinFileBytes <= 0 || item.FileSize >= opts.DiskSpaceCheckMinFileBytes) {
+		if diskWait != nil && destination.Scheme() == pathloc.SchemeFile &&
+			(opts.DiskSpaceCheckMinFileBytes <= 0 || item.FileSize >= opts.DiskSpaceCheckMinFileBytes) {
 			if err := EnsureDiskSpace(diskWait, destination, item.FileSize, item.Src); err != nil {
 				return doneFiles, doneBytes, err
 			}
 		}
 
-		copied, err := copyFileWithConflict(ctx, item.Src, item.Dst, opts, resolver, func(delta int64) {
-			doneBytes += delta
-			bytesSinceEmit += delta
-			emitProgress(item.Src, item.Dst, doneFiles, doneBytes, false)
-		})
+		var copied bool
+		var err error
+		if useLocalFastPath(item.Src, item.Dst) {
+			copied, err = copyFileWithConflict(ctx, srcStr, dstStr, opts, resolver, func(delta int64) {
+				doneBytes += delta
+				bytesSinceEmit += delta
+				emitProgress(srcStr, dstStr, doneFiles, doneBytes, false)
+			})
+		} else {
+			copied, err = copyFileTransfer(ctx, item.Src, item.Dst, opts, resolver, func(delta int64) {
+				doneBytes += delta
+				bytesSinceEmit += delta
+				emitProgress(srcStr, dstStr, doneFiles, doneBytes, false)
+			})
+		}
 		if err != nil {
 			return doneFiles, doneBytes, err
 		}
@@ -206,7 +234,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 		}
 
 		doneFiles++
-		emitProgress(item.Src, item.Dst, doneFiles, doneBytes, true)
+		emitProgress(srcStr, dstStr, doneFiles, doneBytes, true)
 	}
 
 	return doneFiles, doneBytes, nil

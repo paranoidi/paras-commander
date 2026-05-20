@@ -134,6 +134,7 @@ Pay attention to following details:
   - **placeholder**: dimmed suggested/default glyphs
 - Do not override the input row background with `DialogSurface` or chrome-derived `.Background(...)`; the theme’s input row background is intentional.
 - Labels stay on the dialog surface (`DialogText` on `DialogSurface` background).
+- When adding or correcting alignment avoid using empty spaces to do it. Like string " value" or " value ". Instead adjust rendering position or formatting. Spaces are good only when the background matters.
 
 ### Suggested default / prefill (`FileDialogField`)
 

@@ -208,6 +208,10 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 		return
 	}
 	p := a.panelByID(panelID)
+	if p.Path.IsRemote() {
+		a.setTransientMessage("Disk usage is not available on remote panels", ui.MessageUrgencyWarn)
+		return
+	}
 	p.IdleDiskTotalsSort = false
 	a.invalidateIdleDiskSortPanel(panelID)
 
@@ -220,7 +224,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 	a.model.DiskUsageShown = true
 	a.model.DiskUsagePanelID = panelID
 	a.model.DiskUsage = a.diskUsage
-	a.setTransientMessage("Disk usage scan started ("+filepath.Clean(p.Path)+")", ui.MessageUrgencyInfo)
+	a.setTransientMessage("Disk usage scan started ("+filepath.Clean(p.PathString())+")", ui.MessageUrgencyInfo)
 }
 
 func (a *App) diskUsageScanBusy() bool {
@@ -292,7 +296,7 @@ func (a *App) handlePanelDirChanged(panelID int) {
 	if !p.Sort.DiskUsageIdleSizeSort {
 		return
 	}
-	cur := filepath.Clean(p.Path)
+	cur := filepath.Clean(p.PathString())
 	if a.diskIdleNavPath[panelID] != cur {
 		a.invalidateIdleDiskSortPanel(panelID)
 		a.diskIdleNavPath[panelID] = cur

@@ -26,7 +26,7 @@ func (a *App) openMassRenameDialog(p *panel.State) {
 	for _, e := range src.Entries {
 		ap := e.Path
 		if !filepath.IsAbs(ap) {
-			ap = filepath.Join(p.Path, ap)
+			ap = filepath.Join(p.PathString(), ap)
 		}
 		ap = filepath.Clean(ap)
 		sources = append(sources, ui.MassRenameSource{Path: ap, Name: filepath.Base(ap)})
@@ -84,7 +84,7 @@ func (a *App) recomputeMassRenamePreview() {
 	for i, s := range d.MassRenameSources {
 		entries[i] = localfs.Entry{Name: s.Name, Path: s.Path, Type: localfs.EntryFile}
 	}
-	panelPath := a.activePanel().Path
+	panelPath := a.activePanel().PathString()
 	find, replace := "", ""
 	if len(d.Fields) > 0 {
 		find = d.Fields[0].Value
@@ -183,7 +183,7 @@ func (a *App) executeMassRename() {
 	for i, s := range d.MassRenameSources {
 		entries[i] = localfs.Entry{Name: s.Name, Path: s.Path, Type: localfs.EntryFile}
 	}
-	panelPath := a.activePanel().Path
+	panelPath := a.activePanel().PathString()
 	find, replace := "", ""
 	if len(d.Fields) > 0 {
 		find = d.Fields[0].Value

@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -10,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
@@ -163,8 +163,16 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 		h.host.OpenMenu()
 		return false
 	}
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		if h.host.OpenMenuByShortcut(event.Rune()) {
+			return false
+		}
+	}
 
 	if nextAction != "" && h.TryDispatch(nextAction) {
+		return false
+	}
+	if nextAction != "" && h.host.TryDispatchAuxiliaryScreens(nextAction) {
 		return false
 	}
 	if nextAction == keymap.ActionPanelExternalBrowser {
@@ -702,8 +710,8 @@ func (h *Handler) applyJobEventBatch(batch []jobs.Event) {
 		h.listStale = true
 	}
 	h.affectVisible = viewJobs || sawTerminal || sawBlocker ||
-		(sawMarkUpdate && (ui.PanelTouchedByJobs(h.model.Left.Path, h.model.JobPathMarks) ||
-			ui.PanelTouchedByJobs(h.model.Right.Path, h.model.JobPathMarks) ||
+		(sawMarkUpdate && (ui.PanelTouchedByJobs(h.model.Left.PathString(), h.model.JobPathMarks) ||
+			ui.PanelTouchedByJobs(h.model.Right.PathString(), h.model.JobPathMarks) ||
 			h.state.JobsWaitingDecision() > 0)) ||
 		(sawProgress && h.model.MenuBarLayoutReserved() && h.state.HasNonFinishedJob())
 	h.lastBatchMenuBarStripOnly = !viewJobs && sawProgress && !sawTerminal && !sawBlocker && !sawMarkUpdate &&
@@ -777,10 +785,16 @@ func (h *Handler) EnqueueCopyJob() {
 		h.host.SetTransientMessage("No source files selected", ui.MessageUrgencyWarn)
 		return
 	}
-	absDest := absPathClean(dest)
+	destLoc, err := pathloc.Parse(dest)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Invalid destination: %v", err), ui.MessageUrgencyWarn)
+		return
+	}
+	absDest := destLoc.String()
 	nSelf := 0
 	for _, src := range sources {
-		if ops.ResolvedSameAsSource(src, absDest) {
+		srcLoc := pathloc.MustParse(src)
+		if ops.ResolvedSameAsSource(srcLoc, destLoc) {
 			nSelf++
 		}
 	}
@@ -805,14 +819,20 @@ func (h *Handler) EnqueueMoveJob() {
 	}
 	// Same-directory move: treat as unsupported for foreground rename (plan 04).
 	active := h.host.ActivePanel()
-	if len(sources) == 1 && dest == active.Path {
+	if len(sources) == 1 && dest == active.PathString() {
 		h.host.SetUnsupportedMessage("Rename/Move (same-directory rename not supported yet)")
 		return
 	}
-	absDest := absPathClean(dest)
+	destLoc, err := pathloc.Parse(dest)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Invalid destination: %v", err), ui.MessageUrgencyWarn)
+		return
+	}
+	absDest := destLoc.String()
 	nSelf := 0
 	for _, src := range sources {
-		if ops.ResolvedSameAsSource(src, absDest) {
+		srcLoc := pathloc.MustParse(src)
+		if ops.ResolvedSameAsSource(srcLoc, destLoc) {
 			nSelf++
 		}
 	}
@@ -831,14 +851,23 @@ func (h *Handler) EnqueueMoveJob() {
 
 // AddTransferJob enqueues a copy or move job after scanning.
 func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool) {
-	absDest := absPathClean(dest)
+	srcLocs, err := pathloc.ParseAll(sources)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
+		return
+	}
+	destLoc, err := pathloc.Parse(dest)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
+		return
+	}
 	job := &jobs.Job{
 		ID:              jobs.NewJobID(),
 		Type:            jobType,
 		Status:          jobs.StatusScanning,
-		Sources:         sources,
-		Destination:     dest,
-		DestIsDir:       ops.DestinationIsDirAtEnqueue(absDest),
+		Sources:         srcLocs,
+		Destination:     destLoc,
+		DestIsDir:       ops.DestinationIsDirAtEnqueue(destLoc),
 		PausedAfterScan: startPaused,
 	}
 	h.state.AddJob(job)
@@ -847,11 +876,16 @@ func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest strin
 }
 
 func (h *Handler) EnqueueDeleteJob(sources []string) {
+	srcLocs, err := pathloc.ParseAll(sources)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue delete: %v", err), ui.MessageUrgencyError)
+		return
+	}
 	job := &jobs.Job{
 		ID:         jobs.NewJobID(),
 		Type:       jobs.TypeDelete,
 		Status:     jobs.StatusQueued,
-		Sources:    sources,
+		Sources:    srcLocs,
 		TotalFiles: len(sources),
 	}
 	h.state.AddJob(job)
@@ -860,14 +894,23 @@ func (h *Handler) EnqueueDeleteJob(sources []string) {
 }
 
 func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
-	absDest := absPathClean(dest)
+	srcLocs, err := pathloc.ParseAll(sources)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue extract: %v", err), ui.MessageUrgencyError)
+		return
+	}
+	destLoc, err := pathloc.Parse(dest)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue extract: %v", err), ui.MessageUrgencyError)
+		return
+	}
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),
 		Type:        jobs.TypeExtract,
 		Status:      jobs.StatusQueued,
-		Sources:     sources,
-		Destination: dest,
-		DestIsDir:   ops.DestinationIsDirAtEnqueue(absDest),
+		Sources:     srcLocs,
+		Destination: destLoc,
+		DestIsDir:   ops.DestinationIsDirAtEnqueue(destLoc),
 		TotalFiles:  len(sources),
 	}
 	h.state.AddJob(job)
@@ -880,7 +923,7 @@ func (h *Handler) sourceAndDestination() (sources []string, dest string) {
 	if sources == nil {
 		return nil, ""
 	}
-	dest = h.host.InactivePanel().Path
+	dest = h.host.InactivePanel().PathString()
 	return sources, dest
 }
 
@@ -889,10 +932,3 @@ func (h *Handler) LastBatchMenuBarStripOnly() bool { return h.lastBatchMenuBarSt
 func (h *Handler) ListStale() bool                 { return h.listStale }
 func (h *Handler) SetListStale(v bool)             { h.listStale = v }
 func (h *Handler) StopWakeTimer()                  { h.stopJobsWakeTimer() }
-
-func absPathClean(p string) string {
-	if p == "" {
-		return ""
-	}
-	return filepath.Clean(p)
-}

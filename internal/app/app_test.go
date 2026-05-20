@@ -19,6 +19,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -619,7 +620,7 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		}
 		j := app.jobState.AllJobs()[0]
 		wantDest := filepath.Join(dir, "aaa2")
-		if filepath.Clean(j.Destination) != filepath.Clean(wantDest) {
+		if filepath.Clean(j.Destination.String()) != filepath.Clean(wantDest) {
 			t.Fatalf("Destination = %q, want %q", j.Destination, wantDest)
 		}
 		if len(p.SelectedPaths) != 0 {
@@ -1113,7 +1114,7 @@ func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
 	if app.model.PathPicker.Open {
 		t.Fatal("expected dialog closed")
 	}
-	if got := app.activePanel().Path; got != filepath.Clean(target) {
+	if got := app.activePanel().Path.String(); got != filepath.Clean(target) {
 		t.Fatalf("panel path = %q want %q", got, filepath.Clean(target))
 	}
 }
@@ -1157,10 +1158,10 @@ func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
 
 	wantRoot := filepath.Clean(root)
 	wantAlpha := filepath.Clean(alpha)
-	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path); got != wantRoot {
+	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()); got != wantRoot {
 		t.Fatalf("left panel path = %q want %q", got, wantRoot)
 	}
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path); got != wantAlpha {
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != wantAlpha {
 		t.Fatalf("right panel path = %q want %q", got, wantAlpha)
 	}
 
@@ -1175,11 +1176,11 @@ func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
 	app.model.ActivePanel = ui.RightPanel
 	app.dispatch(keymap.ActionPanelOpenDirInOther)
 
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path); got != wantAlpha {
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != wantAlpha {
 		t.Fatalf("right panel path = %q want %q after second open", got, wantAlpha)
 	}
 	wantGamma := filepath.Clean(gamma)
-	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path); got != wantGamma {
+	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()); got != wantGamma {
 		t.Fatalf("left panel path = %q want %q", got, wantGamma)
 	}
 }
@@ -1213,13 +1214,13 @@ func TestOpenActivePathInInactivePanel(t *testing.T) {
 		}
 	}
 	wantAlpha := filepath.Clean(alpha)
-	if got := filepath.Clean(left.Path); got != wantAlpha {
+	if got := filepath.Clean(left.PathString()); got != wantAlpha {
 		t.Fatalf("left cwd = %q want %q", got, wantAlpha)
 	}
 
 	app.dispatch(keymap.ActionPanelOpenActivePathInOther)
 
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path); got != wantAlpha {
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != wantAlpha {
 		t.Fatalf("right panel path = %q want active cwd %q", got, wantAlpha)
 	}
 }
@@ -1281,7 +1282,7 @@ func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 		t.Fatal("expected dialog closed")
 	}
 	want := filepath.Clean(alpha)
-	if got := filepath.Clean(app.activePanel().Path); got != want {
+	if got := filepath.Clean(app.activePanel().Path.String()); got != want {
 		t.Fatalf("panel path = %q want %q", got, want)
 	}
 }
@@ -1331,7 +1332,7 @@ func TestBookmarkDialogFilterSelectsRankedFirst(t *testing.T) {
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
-	if got := app.activePanel().Path; got != filepath.Clean(tBeta) {
+	if got := app.activePanel().Path.String(); got != filepath.Clean(tBeta) {
 		t.Fatalf("panel path = %q want %q", got, filepath.Clean(tBeta))
 	}
 }
@@ -1373,7 +1374,7 @@ func TestBookmarkDialogTypingODoesNotActivateWithoutEnter(t *testing.T) {
 		t.Fatalf("query = %q want o", app.model.PathPicker.Query)
 	}
 	if app.activePanel().Path != startPath {
-		t.Fatalf("panel path changed without Enter: %q", app.activePanel().Path)
+		t.Fatalf("panel path changed without Enter: %q", app.activePanel().Path.String())
 	}
 }
 
@@ -2695,11 +2696,11 @@ func TestFullscreenFilePreviewLeftBackspaceDoNotChangePanelPath(t *testing.T) {
 	})
 
 	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
-	if got := app.activePanel().Path; got != pathBefore {
+	if got := app.activePanel().Path; !got.Equal(pathBefore) {
 		t.Fatalf("KeyLeft changed path %q -> %q", pathBefore, got)
 	}
 	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
-	if got := app.activePanel().Path; got != pathBefore {
+	if got := app.activePanel().Path; !got.Equal(pathBefore) {
 		t.Fatalf("Backspace changed path %q -> %q", pathBefore, got)
 	}
 }
@@ -2953,7 +2954,7 @@ func TestQuitImmediateSkipsConfirmation(t *testing.T) {
 	t.Parallel()
 	app := testAppMinimal(t)
 	root := t.TempDir()
-	job := &jobs.Job{ID: "j", Type: jobs.TypeCopy, Status: jobs.StatusRunning, Sources: []string{root}}
+	job := &jobs.Job{ID: "j", Type: jobs.TypeCopy, Status: jobs.StatusRunning, Sources: pathloc.PathsForTest(root)}
 	app.jobState.Queue().Enqueue(job)
 
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModNone))
@@ -3101,7 +3102,7 @@ func TestQuickFilterEnterOpensDirectoryAndClearsQuery(t *testing.T) {
 	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	wantPath := filepath.Clean(sub)
-	if got := filepath.Clean(app.model.Left.Path); got != wantPath {
+	if got := filepath.Clean(app.model.Left.Path.String()); got != wantPath {
 		t.Fatalf("left path=%q after Enter want %q", got, wantPath)
 	}
 	if app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" || app.model.Left.Filter.Editing {
@@ -3247,7 +3248,7 @@ func TestQuickFilterKeymapActionClosesFilterAndOpensDirInOtherPanel(t *testing.T
 			app.model.Left.Filter.Editing, app.model.Left.Filter.Active, app.model.Left.Filter.Query)
 	}
 	want := filepath.Clean(sub)
-	if got := filepath.Clean(app.model.Right.Path); got != want {
+	if got := filepath.Clean(app.model.Right.Path.String()); got != want {
 		t.Fatalf("right panel path=%q want %q", got, want)
 	}
 }
@@ -3459,7 +3460,7 @@ func TestExtractDialogEnqueuesJob(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, srcDir)
-	app.model.Right.Path = destDir
+	app.model.Right.Path = pathloc.MustParse(destDir)
 	_ = app.model.Right.Refresh(20)
 	if !app.activePanel().SelectVisibleEntry("pack.tar.gz") {
 		t.Fatal("pack.tar.gz not visible in panel")
@@ -3479,7 +3480,7 @@ func TestExtractDialogEnqueuesJob(t *testing.T) {
 	if all[0].Type != jobs.TypeExtract {
 		t.Fatalf("job type = %v, want TypeExtract", all[0].Type)
 	}
-	if all[0].Destination != destDir {
+	if all[0].Destination.String() != destDir {
 		t.Fatalf("destination = %q, want %q", all[0].Destination, destDir)
 	}
 	waitUntilAppJobsFinished(t, app, 5*time.Second)
@@ -4462,7 +4463,7 @@ func TestToggleSyncEnablesAndImmediatelyMirrorsHighlightedFolder(t *testing.T) {
 	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.LeftPanel {
 		t.Fatalf("Sync state after enable = (enabled=%v panel=%d), want (true, LeftPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
 	}
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel path after enable = %q, want %q", got, want)
 	}
 	if !strings.Contains(app.model.Message, "Sync") {
@@ -4489,13 +4490,13 @@ func TestSyncFollowAppliesBeforeRenderAfterNav(t *testing.T) {
 
 	app.dispatch(keymap.ActionNavDown)
 	app.render()
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "beta")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
 		t.Fatalf("after down+render follower path = %q, want %q", got, want)
 	}
 
 	app.dispatch(keymap.ActionNavDown)
 	app.render()
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "gamma")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "gamma")); got != want {
 		t.Fatalf("after second down+render follower path = %q, want %q", got, want)
 	}
 }
@@ -4512,18 +4513,18 @@ func TestPanelSyncFollowNavDebounceDefersFollowerUntilCleared(t *testing.T) {
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "alpha")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
 		t.Fatalf("right after sync enable = %q, want %q", got, want)
 	}
 	app.config.UI.PanelSyncFollowNavDebounceMS = 500
 	app.dispatch(keymap.ActionNavDown)
 	app.reconcileAfterEvent()
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "alpha")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
 		t.Fatalf("follower path after debounced nav+reconcile = %q, want %q (still coalescing)", got, want)
 	}
 	app.clearPanelSyncFollowNavCoalesce()
 	app.reconcileAfterEvent()
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "beta")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
 		t.Fatalf("follower path after clear+reconcile = %q, want %q", got, want)
 	}
 }
@@ -4563,7 +4564,7 @@ func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {
 	app.dispatch(keymap.ActionPanelToggleSync)
 
 	want := filepath.Clean(beta)
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path); got != want {
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != want {
 		t.Fatalf("follower path = %q want %q (strip row should drive sync, not file-list cursor)", got, want)
 	}
 }
@@ -4609,7 +4610,7 @@ func TestToggleSyncFromOtherPanelClearsPreviousDriverFirst(t *testing.T) {
 		t.Fatalf("Sync state after left enable = (enabled=%v panel=%d), want (true, LeftPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
 	}
 	// Right panel should now be inside /alpha (synced from left).
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after left enable = %q, want %q", got, want)
 	}
 
@@ -4621,7 +4622,7 @@ func TestToggleSyncFromOtherPanelClearsPreviousDriverFirst(t *testing.T) {
 	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.RightPanel {
 		t.Fatalf("Sync state after right toggle = (enabled=%v panel=%d), want (true, RightPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
 	}
-	if got, want := filepath.Clean(app.panelByID(ui.LeftPanel).Path), filepath.Clean(gamma); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()), filepath.Clean(gamma); got != want {
 		t.Fatalf("left panel path after right takes over = %q, want %q", got, want)
 	}
 }
@@ -4641,7 +4642,7 @@ func TestSyncFollowsCursorMovementOverDirectory(t *testing.T) {
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
 
@@ -4649,7 +4650,7 @@ func TestSyncFollowsCursorMovementOverDirectory(t *testing.T) {
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
 	app.reconcileAfterEvent()
 
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(beta); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(beta); got != want {
 		t.Fatalf("right panel after move = %q, want %q", got, want)
 	}
 }
@@ -4667,14 +4668,14 @@ func TestSyncSkipsCursorMovementOverFile(t *testing.T) {
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
 
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
 	app.reconcileAfterEvent()
 
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after non-dir hover = %q, want unchanged %q", got, want)
 	}
 }
@@ -4694,7 +4695,7 @@ func TestSyncDoesNotFollowFromNonDriverActivePanel(t *testing.T) {
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	rightAfterEnable := filepath.Clean(app.panelByID(ui.RightPanel).Path)
+	rightAfterEnable := filepath.Clean(app.panelByID(ui.RightPanel).Path.String())
 
 	// Switch focus to the non-driver (right) panel and move its cursor.
 	app.dispatch(keymap.ActionPanelSwitch)
@@ -4707,7 +4708,7 @@ func TestSyncDoesNotFollowFromNonDriverActivePanel(t *testing.T) {
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
 	app.reconcileAfterEvent()
 
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path); got != rightAfterEnable {
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != rightAfterEnable {
 		t.Fatalf("right panel changed while non-driver was active: got %q, want unchanged %q", got, rightAfterEnable)
 	}
 }
@@ -4733,7 +4734,7 @@ func TestSyncFollowsBookmarkLikeNavigationFromActivePanel(t *testing.T) {
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
 
@@ -4745,7 +4746,7 @@ func TestSyncFollowsBookmarkLikeNavigationFromActivePanel(t *testing.T) {
 	app.reconcileAfterEvent()
 
 	// Cursor in /beta lands on "child" (only entry); sync should mirror it.
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(betaChild); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(betaChild); got != want {
 		t.Fatalf("right panel after bookmark-like jump = %q, want %q (sync should re-mirror)", got, want)
 	}
 }
@@ -4768,7 +4769,7 @@ func TestSyncDoesNotFollowWhenInactivePanelChangesDirectory(t *testing.T) {
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	leftBefore := filepath.Clean(app.panelByID(ui.LeftPanel).Path)
+	leftBefore := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String())
 
 	// Mutate the follower (right) panel directly. The driver (left) is still active and
 	// has not moved its cursor, so the left panel should stay put even after reconcile.
@@ -4777,7 +4778,7 @@ func TestSyncDoesNotFollowWhenInactivePanelChangesDirectory(t *testing.T) {
 	}
 	app.reconcileAfterEvent()
 
-	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path); got != leftBefore {
+	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()); got != leftBefore {
 		t.Fatalf("left panel changed because follower moved: got %q, want %q", got, leftBefore)
 	}
 }
@@ -4799,7 +4800,7 @@ func TestSyncFollowsAfterSelectToggleAdvance(t *testing.T) {
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "alpha")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
 
@@ -4807,7 +4808,7 @@ func TestSyncFollowsAfterSelectToggleAdvance(t *testing.T) {
 	app.dispatch(keymap.ActionPanelSelectToggle)
 	app.reconcileAfterEvent()
 
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path), filepath.Clean(filepath.Join(root, "beta")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
 		t.Fatalf("right panel after Insert advance = %q, want %q (reconciler should mirror new highlight)", got, want)
 	}
 }
@@ -4888,7 +4889,7 @@ func TestHandlePanelDirChangedRightDoesNotInvalidateLeftIdleTimer(t *testing.T) 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	leftRoot := filepath.Clean(app.panelByID(ui.LeftPanel).Path)
+	leftRoot := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String())
 	left := app.panelByID(ui.LeftPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	left.DiskUsageIdleSortActivated = true
@@ -4929,7 +4930,7 @@ func TestHandlePanelDirChangedLeftClearsIdleTimerOnChdir(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	leftRoot := filepath.Clean(app.panelByID(ui.LeftPanel).Path)
+	leftRoot := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String())
 
 	left := app.panelByID(ui.LeftPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
@@ -5049,7 +5050,7 @@ func TestSyncFollowSkipsHistoryRecordingOnFollower(t *testing.T) {
 	app.reconcileAfterEvent()
 
 	right := app.panelByID(ui.RightPanel)
-	if got, want := filepath.Clean(right.Path), filepath.Clean(beta); got != want {
+	if got, want := filepath.Clean(right.PathString()), filepath.Clean(beta); got != want {
 		t.Fatalf("right panel path = %q, want %q", got, want)
 	}
 	// Sync hops use Load (not NavigateTo), so the follower's directory history must remain untouched
@@ -5232,10 +5233,10 @@ func TestMkdirActionCreateAndCopyQueuesCopyJob(t *testing.T) {
 	if j.Type != jobs.TypeCopy {
 		t.Fatalf("job type = %v, want TypeCopy", j.Type)
 	}
-	if filepath.Clean(j.Destination) != filepath.Clean(created) {
+	if filepath.Clean(j.Destination.String()) != filepath.Clean(created) {
 		t.Fatalf("job destination = %q, want %q", j.Destination, created)
 	}
-	if len(j.Sources) != 1 || filepath.Clean(j.Sources[0]) != filepath.Clean(src) {
+	if len(j.Sources) != 1 || filepath.Clean(j.Sources[0].String()) != filepath.Clean(src) {
 		t.Fatalf("job sources = %v, want [%q]", j.Sources, src)
 	}
 	if len(p.SelectedPaths) != 0 {
@@ -5278,7 +5279,7 @@ func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
 	if j.Type != jobs.TypeMove {
 		t.Fatalf("job type = %v, want TypeMove", j.Type)
 	}
-	if filepath.Clean(j.Destination) != filepath.Clean(created) {
+	if filepath.Clean(j.Destination.String()) != filepath.Clean(created) {
 		t.Fatalf("job destination = %q, want %q", j.Destination, created)
 	}
 	if len(p.SelectedPaths) != 0 {

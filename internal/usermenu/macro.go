@@ -44,13 +44,13 @@ func ExpandCommand(cmd string, active, other *panel.State) (string, error) {
 			b.WriteString(strconv.Quote(ent.Name))
 			i++
 		case 'd':
-			b.WriteString(strconv.Quote(filepath.Clean(active.Path)))
+			b.WriteString(strconv.Quote(filepath.Clean(active.PathString())))
 			i++
 		case 'D':
 			if other == nil {
 				return "", fmt.Errorf("user menu: %%D: no other panel")
 			}
-			b.WriteString(strconv.Quote(filepath.Clean(other.Path)))
+			b.WriteString(strconv.Quote(filepath.Clean(other.PathString())))
 			i++
 		case 't':
 			s, err := quotedTaggedInDir(active)
@@ -80,7 +80,7 @@ func quotedTaggedInDir(ps *panel.State) (string, error) {
 	if len(ps.SelectedPaths) == 0 {
 		return "", fmt.Errorf("user menu: %%t: no tagged files in panel")
 	}
-	base := filepath.Clean(ps.Path)
+	base := filepath.Clean(ps.PathString())
 	var paths []string
 	for p := range ps.SelectedPaths {
 		if filepath.Clean(filepath.Dir(p)) != base {

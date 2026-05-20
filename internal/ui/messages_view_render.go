@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -62,12 +63,19 @@ func drawMessagesView(
 		return
 	}
 
-	hdr := fmt.Sprintf("%-*s%s", messagesListColTime, "Time", "Message")
+	msgStart := contentX + messagesListColTime
+	msgW := contentW - messagesListColTime
+	if msgW < 1 {
+		msgW = 1
+	}
+
+	hdrTime := fmt.Sprintf("%-*s", messagesListColTime, "Time")
 	headerStyle := styles.PanelActiveHeader.Background(bg)
 	if chromeBlocked {
 		headerStyle = styles.PanelBlockedHeader
 	}
-	primitive.Text(screen, contentX, rect.Y+1, contentW, hdr, headerStyle)
+	primitive.Text(screen, contentX, rect.Y+1, messagesListColTime, hdrTime, headerStyle)
+	primitive.TextOverlay(screen, msgStart, rect.Y+1, msgW, "Message", headerStyle)
 
 	n := len(entries)
 	scroll := state.ListScroll
@@ -79,12 +87,6 @@ func drawMessagesView(
 	}
 	if scroll+visibleRows > n {
 		scroll = max(0, n-visibleRows)
-	}
-
-	msgStart := contentX + messagesListColTime
-	msgW := contentW - messagesListColTime
-	if msgW < 1 {
-		msgW = 1
 	}
 
 	for row := 0; row < visibleRows; row++ {
@@ -104,7 +106,7 @@ func drawMessagesView(
 		}
 
 		timeStyle := styles.JobsRow.Background(bg)
-		urgStyle := messageUrgencyStyle(styles, entry.Urg).Background(bg)
+		urgStyle := messageUrgencyListStyle(styles, entry.Urg, bg)
 		if idx == state.Selected {
 			timeStyle = lineStyle
 			_, rowBg, _ := lineStyle.Decompose()
@@ -117,7 +119,7 @@ func drawMessagesView(
 		timeCell := truncateRunes(timeShow+" ", messagesListColTime)
 		primitive.Text(screen, contentX, y, messagesListColTime, timeCell, timeStyle)
 
-		shown := truncateRunes(FormatToastDisplay(entry.Text), msgW-1)
+		shown := truncateRunes(strings.TrimSpace(entry.Text), msgW)
 		primitive.Text(screen, msgStart, y, msgW, shown, urgStyle)
 	}
 }

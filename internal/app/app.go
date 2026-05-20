@@ -15,11 +15,15 @@ import (
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	_ "github.com/paranoidi/paras-commander/internal/fsbackend/file"
+	_ "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -127,6 +131,14 @@ type App struct {
 	commandsCancel          context.CancelFunc
 
 	volumeRefreshInFlight [2]atomic.Bool
+
+	sftpMu                 sync.Mutex
+	sftpHostKeyWait        *sftpHostKeyWait
+	sftpPasswordWait       *sftpPasswordWait
+	sftpConnectTargetPanel int
+	sftpConnectHosts       []sshconfig.HostEntry
+
+	remotePanelLoadGen [2]atomic.Uint64
 
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
@@ -386,8 +398,15 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	})
 	jobState.SetScanFunc(jobScanFunc())
 	jobState.StartWorker(app.jobStopCh)
-	suppressHeavyPathProbes := func(path string) bool {
-		return app.pathVolumeContendsWithActiveJob(path)
+	suppressHeavyPathProbes := func(loc pathloc.Path) bool {
+		if loc.IsRemote() {
+			return true
+		}
+		host, err := loc.FilePath()
+		if err != nil {
+			return false
+		}
+		return app.pathVolumeContendsWithActiveJob(host)
 	}
 	app.model.Left.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.model.Right.SuppressHeavyPathProbes = suppressHeavyPathProbes
@@ -407,6 +426,11 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Config: cfg,
 		Keys:   km,
 	})
+	if err := app.configureSFTP(); err != nil {
+		app.stopWorker()
+		return nil, fmt.Errorf("configure sftp: %w", err)
+	}
+	app.wireRemotePanelLoaders()
 	app.syncJobPathMarks()
 	if secs := cfg.Jobs.FreeSpacePollIntervalSecs; secs > 0 {
 		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
@@ -522,6 +546,22 @@ func (a *App) Run() error {
 			case throughputChartTickPayload:
 				pollDiskUsageAfter = false
 				if a.applyThroughputChartTick() {
+					a.render()
+					didRender = true
+				}
+			case sftpConnectPayload:
+				a.applySFTPConnect(d)
+				didRender = true
+			case sftpHostKeyOpenPayload:
+				a.openHostKeyDialog(d.prompt)
+				a.render()
+				didRender = true
+			case sftpPasswordOpenPayload:
+				a.openSFTPPasswordDialog(d.prompt)
+				a.render()
+				didRender = true
+			case remotePanelLoadPayload:
+				if a.applyRemotePanelLoad(d) {
 					a.render()
 					didRender = true
 				}

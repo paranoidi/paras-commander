@@ -163,7 +163,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		if pathMax < 0 {
 			pathMax = 0
 		}
-		title := " " + PanelTitlePath(state.Path, userHomeDir, pathMax) + " "
+		title := " " + PanelTitlePath(state.PathString(), userHomeDir, pathMax) + " "
 		primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
 	}
 	if showVolume {

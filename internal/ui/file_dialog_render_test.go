@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
@@ -25,8 +26,8 @@ func TestRenderAddBookmarkDialogShowsTitlePathAndName(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 		FileDialog: FileDialogState{
 			Open:       true,
@@ -82,8 +83,8 @@ func TestRenderMkdirDialogWithoutSelectionHidesActionRadios(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 		FileDialog: FileDialogState{
 			Open:       true,
@@ -118,8 +119,8 @@ func TestRenderMkdirDialogWithSelectionShowsActionRadios(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:        panel.State{Path: "/tmp"},
-		Right:       panel.State{Path: "/var"},
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: LeftPanel,
 		FileDialog: FileDialogState{
 			Open:             true,

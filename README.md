@@ -2,7 +2,7 @@
 
 A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf, written in Go using a TUI.
 
-> ⚠️ **Not yet stable** Copy/move commands may cause data loss.
+> ⚠️ **Not yet stable** Use at your own risk.
 
 ## Features
 
@@ -17,16 +17,13 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 - Find files / paths recursively.
 - Meta column can be used to provide data from external commands.
 - Execute command for selected files.
-
-### To be implemented
-
-- Remote host browsing and copying.
+- SFTP remote panel browsing.
 
 ### Outscoped compared to MC
 
 - No EXT2 recovery.
-- No SFTP.
-- No embedded shell.
+- No embedded shell (FISH/subshell).
+- No shell link.
 
 ## Requirements
 

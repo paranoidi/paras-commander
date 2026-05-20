@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/priority"
 )
 
@@ -24,7 +25,7 @@ type ScanWalkHooks struct {
 }
 
 // ScanFunc builds a transfer plan and totals; wired by the app using internal/ops.
-type ScanFunc func(ctx context.Context, sources []string, destination string, hooks ScanWalkHooks) (ScanResult, error)
+type ScanFunc func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks ScanWalkHooks) (ScanResult, error)
 
 // ScanConfig tunes background pre-scan walks for queued copy/move jobs.
 type ScanConfig struct {

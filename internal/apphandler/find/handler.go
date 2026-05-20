@@ -41,7 +41,7 @@ func (h *Handler) OpenDialog(panelID int) {
 		h.CloseDialog()
 	}
 	p := h.host.PanelByID(panelID)
-	root := filepath.Clean(p.Path)
+	root := filepath.Clean(p.PathString())
 	selRoots := panel.PruneNestedPaths(p.SelectedDirectoryPaths())
 	h.model.FindDialog = ui.FindDialogState{
 		Open:                       true,

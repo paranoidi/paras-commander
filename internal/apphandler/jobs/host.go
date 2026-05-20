@@ -20,7 +20,9 @@ type Host interface {
 	HandleQuit() bool
 	HandleQuitImmediate() bool
 	OpenMenu()
+	OpenMenuByShortcut(shortcut rune) bool
 	Dispatch(actionID string)
+	TryDispatchAuxiliaryScreens(actionID string) bool
 	ActionFromKeyEvent(ev *tcell.EventKey) string
 	JobFailureBannerDetail(err error, fallback string) string
 	DevMode() bool

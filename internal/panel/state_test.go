@@ -9,6 +9,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 func TestNewLoadsAbsolutePathAndEntries(t *testing.T) {
@@ -22,7 +23,7 @@ func TestNewLoadsAbsolutePathAndEntries(t *testing.T) {
 		t.Fatalf("New() error = %v", err)
 	}
 
-	if !filepath.IsAbs(state.Path) {
+	if !filepath.IsAbs(state.Path.String()) {
 		t.Fatalf("Path = %q, want absolute path", state.Path)
 	}
 	if len(state.Entries) != 1 {
@@ -124,7 +125,7 @@ func TestLoadRejectsNonDirectory(t *testing.T) {
 	if err := state.Load(filePath); err == nil {
 		t.Fatal("Load() error = nil, want error")
 	}
-	if state.Path != dir {
+	if state.Path.String() != dir {
 		t.Fatalf("Path = %q, want unchanged %q", state.Path, dir)
 	}
 }
@@ -270,7 +271,7 @@ func TestToggleHiddenPreservesCurrentEntryWhenStillVisible(t *testing.T) {
 }
 
 func TestAddSelectionMarksPath(t *testing.T) {
-	state := State{Path: "/tmp"}
+	state := State{Path: pathloc.MustParse("/tmp")}
 	state.AddSelection("/tmp/a.txt")
 	if state.SelectedPaths == nil || !state.SelectedPaths["/tmp/a.txt"] {
 		t.Fatal("AddSelection did not mark path")
@@ -401,14 +402,14 @@ func TestEnterDirectoryAndParentPreservesExitedDirectory(t *testing.T) {
 	if !entered {
 		t.Fatal("Enter() entered = false, want true")
 	}
-	if filepath.Base(state.Path) != "sub" {
+	if filepath.Base(state.Path.String()) != "sub" {
 		t.Fatalf("Path = %q, want sub directory", state.Path)
 	}
 
 	if err := state.Parent(5); err != nil {
 		t.Fatalf("Parent() error = %v", err)
 	}
-	if state.Path != root {
+	if state.Path.String() != root {
 		t.Fatalf("Path = %q, want %q", state.Path, root)
 	}
 
@@ -417,7 +418,7 @@ func TestEnterDirectoryAndParentPreservesExitedDirectory(t *testing.T) {
 		t.Fatalf("selected entry = %q ok=%v, want sub", entry.Name, ok)
 	}
 	subPath := filepath.Join(root, "sub")
-	if len(state.History) < 2 || cleanPath(state.History[0]) != cleanPath(root) || cleanPath(state.History[1]) != cleanPath(subPath) {
+	if len(state.History) < 2 || cleanPathString(state.History[0]) != cleanPathString(root) || cleanPathString(state.History[1]) != cleanPathString(subPath) {
 		t.Fatalf("History = %v, want [%q %q] (MRU first)", state.History, root, subPath)
 	}
 	if state.HistoryIndex != 0 {
@@ -452,7 +453,7 @@ func TestHistoryBackwardReentersDirectoryLeftByParent(t *testing.T) {
 	if err := state.Parent(5); err != nil {
 		t.Fatalf("Parent from sub error = %v", err)
 	}
-	if state.Path != root {
+	if state.Path.String() != root {
 		t.Fatalf("Path = %q, want root %q", state.Path, root)
 	}
 
@@ -460,7 +461,7 @@ func TestHistoryBackwardReentersDirectoryLeftByParent(t *testing.T) {
 	if err != nil || !moved {
 		t.Fatalf("HistoryBackward to sub: moved=%v err=%v", moved, err)
 	}
-	if state.Path != sub {
+	if state.Path.String() != sub {
 		t.Fatalf("Path = %q, want sub %q", state.Path, sub)
 	}
 
@@ -468,7 +469,7 @@ func TestHistoryBackwardReentersDirectoryLeftByParent(t *testing.T) {
 	if err != nil || !moved {
 		t.Fatalf("HistoryBackward to nested: moved=%v err=%v", moved, err)
 	}
-	if state.Path != nested {
+	if state.Path.String() != nested {
 		t.Fatalf("Path = %q, want nested %q", state.Path, nested)
 	}
 
@@ -538,7 +539,7 @@ func TestEnterRegularFileIsInert(t *testing.T) {
 	if entered {
 		t.Fatal("Enter() entered = true, want false")
 	}
-	if state.Path != dir {
+	if state.Path.String() != dir {
 		t.Fatalf("Path = %q, want unchanged %q", state.Path, dir)
 	}
 }
@@ -1033,7 +1034,7 @@ func TestInvertSelectionWithEmptyPreservesNil(t *testing.T) {
 
 func TestClearSelection(t *testing.T) {
 	state := State{
-		Path: "/tmp",
+		Path: pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{
 			{Name: "a.txt", Path: "/tmp/a.txt"},
 			{Name: "b.txt", Path: "/tmp/b.txt"},
@@ -1052,7 +1053,7 @@ func TestClearSelection(t *testing.T) {
 
 func TestClearSelectionClearsAllDirectories(t *testing.T) {
 	state := State{
-		Path: "/tmp/here",
+		Path: pathloc.MustParse("/tmp/here"),
 		Entries: []localfs.Entry{
 			{Name: "a.txt", Path: "/tmp/here/a.txt"},
 		},
@@ -1277,7 +1278,7 @@ func TestLoadAppliesDiskTotalsSortImmediatelyWhenListingFullyCached(t *testing.T
 		}
 	}
 
-	if err := state.load(dir, "", 10, noIndexCursorFallback); err != nil {
+	if err := state.load(pathloc.MustParse(dir), "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
 		t.Fatalf("load: %v", err)
 	}
 	if !state.IdleDiskTotalsSort {
@@ -1366,7 +1367,7 @@ func TestRefreshDiskUsageOrderingKeepsCursor(t *testing.T) {
 		filepath.Clean(pathB): 10,
 	}
 	state := State{
-		Path: "/tmp",
+		Path: pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{
 			{Name: "a.bin", Path: pathA},
 			{Name: "b.bin", Path: pathB},
@@ -1414,7 +1415,7 @@ func TestEnsureCursorCentered(t *testing.T) {
 		entries[i] = localfs.Entry{Name: name, Path: filepath.Join("/tmp", name)}
 	}
 	state := State{
-		Path:    "/tmp",
+		Path:    pathloc.MustParse("/tmp"),
 		Entries: entries,
 		Sort:    SortState{Mode: SortName, DirectoriesFirst: false},
 	}
@@ -1439,7 +1440,7 @@ func TestRefreshDiskUsageOrderingCentersCursorWhenRequested(t *testing.T) {
 		sizes[p] = int64(i)
 	}
 	state := State{
-		Path:               "/tmp",
+		Path:               pathloc.MustParse("/tmp"),
 		Entries:            entries,
 		Sort:               SortState{Mode: SortName, DirectoriesFirst: false, DiskUsageIdleSizeSort: true},
 		IdleDiskTotalsSort: true,
@@ -1471,7 +1472,7 @@ func TestListingFullyDiskCached(t *testing.T) {
 		filepath.Clean("/tmp/b"): 2,
 	}
 	s := State{
-		Path: "/tmp",
+		Path: pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{
 			{Name: "a", Path: "/tmp/a"},
 			{Name: "b", Path: "/tmp/b"},
@@ -1485,7 +1486,7 @@ func TestListingFullyDiskCached(t *testing.T) {
 		t.Fatal("expected fully cached")
 	}
 	partial := State{
-		Path: "/tmp",
+		Path: pathloc.MustParse("/tmp"),
 		Entries: []localfs.Entry{
 			{Name: "a", Path: "/tmp/a"},
 			{Name: "b", Path: "/tmp/b"},

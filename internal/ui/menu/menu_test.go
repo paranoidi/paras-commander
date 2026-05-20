@@ -145,28 +145,28 @@ func TestMenuItemsHaveStableActions(t *testing.T) {
 	})
 }
 
+func assertMenuItemKeyLabels(t *testing.T, def *Definition, want map[string]string) {
+	t.Helper()
+	for _, item := range def.Items {
+		if item.Separator {
+			continue
+		}
+		w, ok := want[item.Label]
+		if !ok {
+			continue
+		}
+		if item.KeyLabel != w {
+			t.Fatalf("%s / %q KeyLabel = %q, want %q", def.Label, item.Label, item.KeyLabel, w)
+		}
+	}
+}
+
 func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	km, err := keymap.Default()
 	if err != nil {
 		t.Fatalf("Default: %v", err)
 	}
 	defs := BrowserDefinitions(km, false)
-
-	assertLabels := func(t *testing.T, def *Definition, want map[string]string) {
-		t.Helper()
-		for _, item := range def.Items {
-			if item.Separator {
-				continue
-			}
-			w, ok := want[item.Label]
-			if !ok {
-				continue
-			}
-			if item.KeyLabel != w {
-				t.Fatalf("%s / %q KeyLabel = %q, want %q", def.Label, item.Label, item.KeyLabel, w)
-			}
-		}
-	}
 
 	var left, file, cmd, display *Definition
 	for i := range defs {
@@ -185,7 +185,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		t.Fatalf("missing menu: left=%v file=%v cmd=%v display=%v", left != nil, file != nil, cmd != nil, display != nil)
 	}
 
-	assertLabels(t, left, map[string]string{
+	assertMenuItemKeyLabels(t, left, map[string]string{
 		"Quick view":    "S-F3",
 		"Sort...":       "C-s",
 		"Toggle hidden": "M-.",
@@ -193,7 +193,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Disk usage":    "C-d",
 		"History...":    "M-h",
 	})
-	assertLabels(t, file, map[string]string{
+	assertMenuItemKeyLabels(t, file, map[string]string{
 		"View":             "F3",
 		"Edit":             "F4",
 		"Copy":             "F5",
@@ -212,12 +212,12 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 			break
 		}
 	}
-	assertLabels(t, cmd, map[string]string{
+	assertMenuItemKeyLabels(t, cmd, map[string]string{
 		"Bookmarks":    "C-g",
 		"Add bookmark": "M-m",
 		"Refresh":      "M-C-r",
 	})
-	assertLabels(t, display, map[string]string{
+	assertMenuItemKeyLabels(t, display, map[string]string{
 		"Commands": "C-k",
 		"Messages": "C-M-l",
 		"Jobs":     "C-j",
@@ -248,8 +248,61 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 			t.Fatalf("%q KeyLabel = %q, want %q", item.Label, item.KeyLabel, w)
 		}
 	}
-	if got := defs[1].Items[0].KeyLabel; got != "F10" {
-		t.Fatalf("jobs File Exit KeyLabel = %q, want F10", got)
+	var display, file *Definition
+	for i := range defs {
+		switch defs[i].ID {
+		case TopDisplay:
+			display = &defs[i]
+		case TopFile:
+			file = &defs[i]
+		}
+	}
+	if display == nil {
+		t.Fatal("jobs view menus missing Display")
+	}
+	assertMenuItemKeyLabels(t, display, map[string]string{
+		"Commands": "C-k",
+		"Messages": "C-M-l",
+		"Jobs":     "C-j",
+	})
+	if file == nil {
+		t.Fatal("jobs view menus missing File")
+	}
+	if file.Items[0].KeyLabel != "F10" {
+		t.Fatalf("jobs File Exit KeyLabel = %q, want F10", file.Items[0].KeyLabel)
+	}
+}
+
+func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	for name, defs := range map[string][]Definition{
+		"jobs":     JobsDefinitions(bundle.Global, bundle.Jobs),
+		"commands": CommandsDefinitions(bundle.Global, bundle.Commands),
+		"messages": MessagesDefinitions(bundle.Global, bundle.Messages),
+	} {
+		t.Run(name, func(t *testing.T) {
+			var display *Definition
+			for i := range defs {
+				if defs[i].ID == TopDisplay {
+					display = &defs[i]
+					break
+				}
+			}
+			if display == nil {
+				t.Fatalf("%s view menus missing Display", name)
+			}
+			if display.Shortcut != 'd' {
+				t.Fatalf("Display shortcut = %q, want d", display.Shortcut)
+			}
+			assertMenuItemKeyLabels(t, display, map[string]string{
+				"Commands": "C-k",
+				"Messages": "C-M-l",
+				"Jobs":     "C-j",
+			})
+		})
 	}
 }
 

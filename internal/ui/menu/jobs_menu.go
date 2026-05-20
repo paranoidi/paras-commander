@@ -19,6 +19,7 @@ func DefinitionsJobs() []Definition {
 				{Action: keymap.ActionJobsClose, Label: "Back to file view", Shortcut: 'b'},
 			},
 		},
+		DisplayDefinition(),
 		{
 			ID:         TopFile,
 			PanelScope: PanelScopeNone,

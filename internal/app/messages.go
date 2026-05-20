@@ -83,7 +83,13 @@ func (a *App) handleMessagesViewKey(event *tcell.EventKey) bool {
 		a.openMenu()
 		return false
 	}
+	if a.tryOpenMenuByShortcut(event) {
+		return false
+	}
 	if nextAction != "" && a.tryDispatchMessages(nextAction) {
+		return false
+	}
+	if nextAction != "" && a.tryDispatchAuxiliaryScreens(nextAction) {
 		return false
 	}
 	if nextAction == keymap.ActionPanelExternalBrowser {

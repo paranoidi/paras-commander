@@ -121,6 +121,7 @@ type Config struct {
 	Bookmarks                  BookmarksConfig  `toml:"bookmarks"`
 	UserMenu                   UserMenuConfig   `toml:"user_menu"`
 	Preview                    PreviewConfig    `toml:"preview"`
+	SFTP                       SFTPConfig       `toml:"sftp"`
 	// Meta holds named per-entry shell commands shown in the panel Meta column.
 	// Each key is the command name; command receives the entry path as $1.
 	Meta map[string]MetaCommandDef `toml:"meta"`
@@ -354,6 +355,11 @@ func Default() Config {
 		},
 		Preview: PreviewConfig{
 			Command: DefaultFilePreviewCommand,
+		},
+		SFTP: SFTPConfig{
+			IdleTimeoutSecs: DefaultSFTPIdleTimeoutSecs,
+			DialTimeoutSecs: DefaultSFTPDialTimeoutSecs,
+			ListTimeoutSecs: DefaultSFTPListTimeoutSecs,
 		},
 		Meta: map[string]MetaCommandDef{
 			"count-items": {
@@ -917,6 +923,24 @@ func (c *Config) Validate() error {
 	}
 	if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/pc-preview-validate", 80); err != nil {
 		c.Preview.Command = builtin.Preview.Command
+	}
+	if c.SFTP.IdleTimeoutSecs < 15 {
+		c.SFTP.IdleTimeoutSecs = builtin.SFTP.IdleTimeoutSecs
+	}
+	if c.SFTP.IdleTimeoutSecs > 3600 {
+		c.SFTP.IdleTimeoutSecs = 3600
+	}
+	if c.SFTP.DialTimeoutSecs < 5 {
+		c.SFTP.DialTimeoutSecs = builtin.SFTP.DialTimeoutSecs
+	}
+	if c.SFTP.DialTimeoutSecs > 300 {
+		c.SFTP.DialTimeoutSecs = 300
+	}
+	if c.SFTP.ListTimeoutSecs < 5 {
+		c.SFTP.ListTimeoutSecs = builtin.SFTP.ListTimeoutSecs
+	}
+	if c.SFTP.ListTimeoutSecs > 300 {
+		c.SFTP.ListTimeoutSecs = 300
 	}
 	return nil
 }

@@ -48,7 +48,7 @@ func (a *App) openAddBookmarkDialog() {
 	if a.inQuickFilterUI() {
 		a.activePanel().CancelFilter(a.activeViewportRows())
 	}
-	path := a.activePanel().Path
+	path := a.activePanel().PathString()
 	if strings.TrimSpace(path) == "" {
 		a.setErrorMessage("Add bookmark", fmt.Errorf("no active panel path"))
 		return

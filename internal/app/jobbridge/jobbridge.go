@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // CoalesceEventBatch keeps the last EventProgress per job ID so a drained channel
@@ -49,7 +50,7 @@ func EventUpdatesMarks(t jobs.EventType) bool {
 
 // ScanFunc returns the jobs scan function wired to ops plan building.
 func ScanFunc() jobs.ScanFunc {
-	return func(ctx context.Context, sources []string, destination string, hooks jobs.ScanWalkHooks) (jobs.ScanResult, error) {
+	return func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks jobs.ScanWalkHooks) (jobs.ScanResult, error) {
 		opts := ops.PlanBuildOptions{
 			YieldEveryN: hooks.YieldEveryN,
 			Yield:       hooks.Yield,
@@ -109,15 +110,41 @@ func PlanItemsToOps(items []jobs.PlanItem) []ops.PlanItem {
 // ActivityDetailLabel formats the activity line for a progress event.
 func ActivityDetailLabel(active *jobs.Job, ev jobs.Event) string {
 	if active != nil && active.ID == ev.JobID &&
-		ev.CurrentDestPath != "" && active.Destination != "" {
-		root := filepath.Clean(active.Destination)
-		dst := filepath.Clean(ev.CurrentDestPath)
+		ev.CurrentDestPath != "" && !active.Destination.IsZero() {
+		rootLoc, err1 := pathloc.Parse(active.Destination.String())
+		dstLoc, err2 := pathloc.Parse(ev.CurrentDestPath)
+		if err1 != nil || err2 != nil {
+			goto baseLabel
+		}
+		if rootLoc.IsRemote() || dstLoc.IsRemote() {
+			if dstLoc.HasPrefix(rootLoc) && !dstLoc.Equal(rootLoc) {
+				rootS := rootLoc.String()
+				dstS := dstLoc.String()
+				if strings.HasPrefix(dstS, rootS) {
+					rel := strings.TrimPrefix(dstS, rootS)
+					rel = strings.TrimPrefix(rel, "/")
+					if rel != "" && rel != "." {
+						return rel
+					}
+				}
+			}
+			goto baseLabel
+		}
+		root, err := rootLoc.FilePath()
+		if err != nil {
+			goto baseLabel
+		}
+		dst, err := dstLoc.FilePath()
+		if err != nil {
+			goto baseLabel
+		}
 		rel, err := filepath.Rel(root, dst)
 		if err == nil && rel != "." &&
 			rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			return rel
 		}
 	}
+baseLabel:
 	label := filepath.Base(ev.CurrentPath)
 	if label == "." || label == "/" {
 		return ev.CurrentPath
@@ -135,6 +162,15 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 			SyncAfterEachFile:          opsCfg.SyncAfterEachFile,
 			DiskSpaceCheckMinFileBytes: opsCfg.DiskSpaceCheckMinFileBytes,
 			CowFileCloning:             opsCfg.CowFileCloning,
+		}
+		if job.Destination.IsRemote() {
+			opts.CowFileCloning = false
+		}
+		for _, src := range job.Sources {
+			if src.IsRemote() {
+				opts.CowFileCloning = false
+				break
+			}
 		}
 		throttle := ops.ProgressEmitThrottle{
 			MinBytes:    int64(jobsCfg.WorkerProgressMinBytes),
@@ -194,7 +230,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 				_, _, tb = ops.SummarizePlan(opsPlan)
 			}
 			if job.Type == jobs.TypeCopy && tb > 0 {
-				if err := ops.EnsureDiskSpace(waitBlocker, job.Destination, tb, ""); err != nil {
+				if err := ops.EnsureDiskSpace(waitBlocker, job.Destination, tb, pathloc.Path{}); err != nil {
 					return err
 				}
 			}
@@ -244,7 +280,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 					CurrentPath: path,
 				})
 			}
-			doneFiles, doneBytes, err = ops.ExecuteDeletePaths(ctx, job.Sources, deleteProgress)
+			doneFiles, doneBytes, err = ops.ExecuteDeletePaths(ctx, pathloc.Strings(job.Sources), deleteProgress)
 		case jobs.TypeExtract:
 			emit(jobs.Event{
 				Type:       jobs.EventPlanTotals,
@@ -254,7 +290,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 				TotalBytes: 0,
 			})
 			tc := archive.ProbeToolchain()
-			plan, _, extractPlanErr := ops.PlanExtract(job.Sources, job.Destination, tc)
+			plan, _, extractPlanErr := ops.PlanExtract(pathloc.Strings(job.Sources), job.Destination.String(), tc)
 			if extractPlanErr != nil {
 				err = extractPlanErr
 			} else {

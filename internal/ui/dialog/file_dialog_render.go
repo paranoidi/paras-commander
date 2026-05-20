@@ -146,6 +146,10 @@ func fileDialogTitle(dialogType FileDialogType) string {
 		return "Mass rename"
 	case FileDialogExtract:
 		return "Extract"
+	case FileDialogSFTPConnect:
+		return "SFTP link"
+	case FileDialogSFTPPassword:
+		return "SSH password"
 	default:
 		return ""
 	}

@@ -4,10 +4,11 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 func TestSelectionsStripLayoutItemCount(t *testing.T) {
-	st := &panel.State{Path: "/cwd/here"}
+	st := &panel.State{Path: pathloc.MustParse("/cwd/here")}
 	st.SelectedPaths = map[string]bool{"/other/a": true}
 	st.SelectionsStripOrder = []string{"/other/a"}
 	if got := SelectionsStripLayoutItemCount(st, LeftPanel, RightPanel, false); got != 0 {

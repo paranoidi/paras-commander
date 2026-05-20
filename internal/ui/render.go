@@ -93,6 +93,7 @@ type Model struct {
 	GroupSelect         GroupSelectState
 	PathPicker          PathPickerState
 	HistoryDialog       HistoryDialogState
+	SFTPConnectDialog   SFTPConnectDialogState
 	FindDialog          FindDialogState
 	MetaDialog          MetaDialogState
 	UserMenu            UserMenuDialogState
@@ -112,6 +113,7 @@ type Model struct {
 	FileDialog                FileDialogState
 	TransferDialog            TransferDialogState
 	ConflictDialog            ConflictDialogState
+	HostKeyDialog             HostKeyDialogState
 	QuitConfirm               QuitConfirmState
 	MessageDialog             MessageDialogState
 	Message                   string
@@ -174,7 +176,7 @@ func (m Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.MessageDialog.Open || m.UserMenu.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.UserMenu.Open {
 		return true
 	}
 	return false
@@ -186,10 +188,10 @@ func (m Model) QuickFilterStartBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
-	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.FindDialog.Open ||
+	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open ||
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
-		m.ConfigDialog.Open || m.GroupSelect.Open || m.FileDialog.Open ||
+		m.ConfigDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
 		m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.UserMenu.Open
 }
 
@@ -333,6 +335,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	if model.HistoryDialog.Open {
 		dialog.DrawHistoryDialog(screen, layout, model.HistoryDialog, styles)
 	}
+	if model.SFTPConnectDialog.Open {
+		dialog.DrawSFTPConnectDialog(screen, layout, model.SFTPConnectDialog, styles)
+	}
 	if model.FindDialog.Open {
 		dialog.DrawFindDialog(screen, layout, model.FindDialog, styles, model.ShowFileIcons, FindListIconLeadingWidth(model.ShowFileIcons), PaintFindDialogRowIcon)
 	}
@@ -341,6 +346,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	if model.FileDialog.Open {
 		dialog.DrawFileDialog(screen, layout, model.FileDialog, styles)
+	}
+	if model.HostKeyDialog.Open {
+		dialog.DrawHostKeyDialog(screen, layout, model.HostKeyDialog, styles)
 	}
 	if model.HelpView.Open {
 		dialog.DrawHelpDialog(screen, layout, model.HelpView, styles)

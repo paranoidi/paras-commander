@@ -16,6 +16,8 @@ const (
 	FileDialogRunForEach
 	FileDialogMassRename
 	FileDialogExtract
+	FileDialogSFTPConnect
+	FileDialogSFTPPassword
 )
 
 // MassRenameModeUI selects literal vs regexp transform in the mass rename dialog.

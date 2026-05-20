@@ -2,10 +2,9 @@ package ops
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // DeletePlan describes a validated delete operation.
@@ -64,7 +63,7 @@ func entryPaths(entries []localfs.Entry) []string {
 	return paths
 }
 
-// ExecuteDeletePaths deletes the given paths, stat-ing each to determine file vs directory.
+// ExecuteDeletePaths deletes the given canonical path strings.
 // ctx is checked before each entry. progress is called after each successful deletion
 // with the deleted path, cumulative file count, and cumulative deleted bytes.
 func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path string, doneFiles int, doneBytes int64)) (int, int64, error) {
@@ -74,34 +73,24 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
 		}
-		info, err := os.Lstat(path)
+		loc, err := pathloc.Parse(path)
 		if err != nil {
-			if os.IsNotExist(err) {
+			return doneFiles, doneBytes, &Error{Op: "delete", Text: "invalid path " + path, Err: err}
+		}
+		ent, err := statEntry(ctx, loc)
+		if err != nil {
+			if isNotExist(err) {
 				doneFiles++
 				if progress != nil {
 					progress(path, doneFiles, doneBytes)
 				}
 				continue
 			}
-			return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to stat " + filepath.Base(path), Err: err}
+			return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to stat " + loc.Base(), Err: err}
 		}
-		size := info.Size()
-		if info.IsDir() {
-			if err := localfs.RemoveAll(path); err != nil {
-				return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to delete directory " + info.Name(), Err: err}
-			}
-		} else {
-			if err := localfs.Remove(path); err != nil {
-				// Check if it's actually a directory (e.g., symlink to dir).
-				dirInfo, statErr := os.Stat(path)
-				if statErr == nil && dirInfo.IsDir() {
-					if err := localfs.RemoveAll(path); err != nil {
-						return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to delete " + info.Name(), Err: err}
-					}
-				} else {
-					return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to delete " + info.Name(), Err: err}
-				}
-			}
+		size := ent.Size
+		if err := removePathRecursive(ctx, loc); err != nil {
+			return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to delete " + ent.Name, Err: err}
 		}
 		doneFiles++
 		doneBytes += size

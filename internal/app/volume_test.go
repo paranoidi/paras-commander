@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -32,7 +33,7 @@ func testAppMinimal(t *testing.T) *App {
 func TestApplyVolumeSpaceRefreshStalePathDropped(t *testing.T) {
 	t.Parallel()
 	app := testAppMinimal(t)
-	app.model.Left.Path = "/panel/current"
+	app.model.Left.Path = pathloc.MustParse("/panel/current")
 	app.model.Left.VolumeAvailBytes = 100
 	app.model.Left.VolumeTotalBytes = 200
 	app.model.Left.VolumeSpaceOK = true
@@ -55,7 +56,7 @@ func TestApplyVolumeSpaceRefreshStalePathDropped(t *testing.T) {
 func TestApplyVolumeSpaceRefreshUpdatesPanel(t *testing.T) {
 	t.Parallel()
 	app := testAppMinimal(t)
-	path := filepath.Clean(app.model.Left.Path)
+	path := filepath.Clean(app.model.Left.Path.String())
 	changed := app.applyVolumeSpaceRefresh(volumeSpaceRefreshPayload{
 		PanelID: ui.LeftPanel,
 		Path:    path,

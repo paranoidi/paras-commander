@@ -196,7 +196,7 @@ func matchDirPattern(ps *panel.State, pattern string, shell bool) (bool, error) 
 	if ps == nil {
 		return false, nil
 	}
-	dir := filepath.Clean(ps.Path)
+	dir := filepath.Clean(ps.PathString())
 	return matchPattern(dir, pattern, shell)
 }
 
@@ -266,7 +266,7 @@ func hasTaggedInPanelDir(ps *panel.State) bool {
 	if ps == nil || len(ps.SelectedPaths) == 0 {
 		return false
 	}
-	base := filepath.Clean(ps.Path)
+	base := filepath.Clean(ps.PathString())
 	for p := range ps.SelectedPaths {
 		if filepath.Clean(filepath.Dir(p)) == base {
 			return true

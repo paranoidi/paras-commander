@@ -1,0 +1,447 @@
+package ops
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
+)
+
+func defaultRegistry() *fsbackend.Registry {
+	return fsbackend.Default()
+}
+
+func backendFor(loc pathloc.Path) (fsbackend.Backend, error) {
+	return defaultRegistry().Backend(loc)
+}
+
+func useLocalFastPath(src, dst pathloc.Path) bool {
+	return src.Scheme() == pathloc.SchemeFile && dst.Scheme() == pathloc.SchemeFile
+}
+
+func sameSFTPHost(a, b pathloc.Path) bool {
+	if a.Scheme() != pathloc.SchemeSFTP || b.Scheme() != pathloc.SchemeSFTP {
+		return false
+	}
+	ha, err := pathloc.SFTPHostPart(a)
+	if err != nil {
+		return false
+	}
+	hb, err := pathloc.SFTPHostPart(b)
+	if err != nil {
+		return false
+	}
+	return ha == hb
+}
+
+func statEntry(ctx context.Context, loc pathloc.Path) (fsbackend.Entry, error) {
+	be, err := backendFor(loc)
+	if err != nil {
+		return fsbackend.Entry{}, err
+	}
+	return be.Stat(ctx, loc)
+}
+
+func destinationIsDir(ctx context.Context, dest pathloc.Path) (bool, error) {
+	ent, err := statEntry(ctx, dest)
+	if err != nil {
+		if isNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return ent.Type == fsbackend.EntryDirectory, nil
+}
+
+func isNotExist(err error) bool {
+	if err == nil {
+		return false
+	}
+	if os.IsNotExist(err) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "no such file") || strings.Contains(msg, "not found")
+}
+
+func resolveChild(parent pathloc.Path, name string) (pathloc.Path, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return pathloc.Path{}, errors.New("empty name")
+	}
+	if strings.HasPrefix(name, "sftp://") {
+		return pathloc.Parse(name)
+	}
+	if parent.IsRemote() {
+		if strings.Contains(name, "/") || strings.Contains(name, string(filepath.Separator)) {
+			return pathloc.Path{}, fmt.Errorf("name must be a single path element")
+		}
+		return parent.Join(name)
+	}
+	if filepath.IsAbs(name) {
+		return pathloc.File(name)
+	}
+	host, err := parent.FilePath()
+	if err != nil {
+		return pathloc.Path{}, err
+	}
+	return pathloc.File(filepath.Join(host, name))
+}
+
+func ensureParentDirs(ctx context.Context, loc pathloc.Path) error {
+	parent := loc.Parent()
+	if parent.IsZero() || parent.Equal(loc) {
+		return nil
+	}
+	if _, err := statEntry(ctx, parent); err == nil {
+		return nil
+	} else if !isNotExist(err) {
+		return err
+	}
+	if err := ensureParentDirs(ctx, parent); err != nil {
+		return err
+	}
+	be, err := backendFor(parent)
+	if err != nil {
+		return err
+	}
+	return be.Mkdir(ctx, parent, 0o755)
+}
+
+func removePathRecursive(ctx context.Context, loc pathloc.Path) error {
+	ent, err := statEntry(ctx, loc)
+	if err != nil {
+		if isNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	be, err := backendFor(loc)
+	if err != nil {
+		return err
+	}
+	if ent.Type != fsbackend.EntryDirectory {
+		return be.Remove(ctx, loc)
+	}
+	children, err := be.List(ctx, loc)
+	if err != nil {
+		return err
+	}
+	for _, child := range children {
+		if child.Name == "." || child.Name == ".." {
+			continue
+		}
+		if err := removePathRecursive(ctx, child.Loc); err != nil {
+			return err
+		}
+	}
+	return be.Remove(ctx, loc)
+}
+
+func countTransferNodes(ctx context.Context, loc pathloc.Path) (int, error) {
+	ent, err := statEntry(ctx, loc)
+	if err != nil {
+		return 0, err
+	}
+	if ent.Type != fsbackend.EntryDirectory {
+		return 1, nil
+	}
+	n := 0
+	var countDir func(pathloc.Path) error
+	countDir = func(dir pathloc.Path) error {
+		n++
+		be, err := backendFor(dir)
+		if err != nil {
+			return err
+		}
+		children, err := be.List(ctx, dir)
+		if err != nil {
+			return err
+		}
+		for _, c := range children {
+			if c.Name == "." || c.Name == ".." {
+				continue
+			}
+			if c.Type == fsbackend.EntryDirectory {
+				if err := countDir(c.Loc); err != nil {
+					return err
+				}
+			} else {
+				n++
+			}
+		}
+		return nil
+	}
+	if err := countDir(loc); err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+func statConflictFacts(ctx context.Context, src, dst pathloc.Path) (FileConflictFacts, error) {
+	if useLocalFastPath(src, dst) {
+		sh, err := src.FilePath()
+		if err != nil {
+			return FileConflictFacts{}, err
+		}
+		dh, err := dst.FilePath()
+		if err != nil {
+			return FileConflictFacts{}, err
+		}
+		return StatFileConflictFacts(sh, dh)
+	}
+	se, err := statEntry(ctx, src)
+	if err != nil {
+		return FileConflictFacts{}, err
+	}
+	de, err := statEntry(ctx, dst)
+	if err != nil {
+		return FileConflictFacts{}, err
+	}
+	kind := "file"
+	if se.Type == fsbackend.EntrySymlink {
+		kind = "symlink"
+	}
+	return FileConflictFacts{
+		Kind:       kind,
+		SourceSize: se.Size,
+		SourceMod:  se.ModifiedAt,
+		DestSize:   de.Size,
+		DestMod:    de.ModifiedAt,
+	}, nil
+}
+
+func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, resolver ConflictResolver, onWritten func(int64)) (copied bool, err error) {
+	if err := ensureParentDirs(ctx, dst); err != nil {
+		return false, fmt.Errorf("create parent for %q: %w", dst, err)
+	}
+	if _, err := statEntry(ctx, dst); err == nil {
+		if resolver == nil {
+			return false, fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
+		}
+		facts, err := statConflictFacts(ctx, src, dst)
+		if err != nil {
+			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
+		}
+		overwrite, err := resolver(src.String(), dst.String(), facts)
+		if err != nil {
+			return false, err
+		}
+		if !overwrite {
+			return false, nil
+		}
+		if err := removePathRecursive(ctx, dst); err != nil {
+			return false, fmt.Errorf("remove existing %q: %w", dst, err)
+		}
+	} else if !isNotExist(err) {
+		return false, fmt.Errorf("stat destination %q: %w", dst, err)
+	}
+
+	srcBE, err := backendFor(src)
+	if err != nil {
+		return false, err
+	}
+	dstBE, err := backendFor(dst)
+	if err != nil {
+		return false, err
+	}
+	srcEnt, err := statEntry(ctx, src)
+	if err != nil {
+		return false, err
+	}
+	rc, err := srcBE.OpenRead(ctx, src)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = rc.Close() }()
+
+	wc, err := dstBE.OpenWrite(ctx, dst, srcEnt.Size, fsbackend.CreateOpts{Truncate: true})
+	if err != nil {
+		return false, err
+	}
+
+	buf := make([]byte, BufferSize(opts.CopyBufferKiB))
+	cw := &countingWriter{w: wc, fn: onWritten}
+	_, err = io.CopyBuffer(cw, &ctxReader{ctx: ctx, r: rc}, buf)
+	if closeErr := wc.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return false, err
+	}
+
+	if opts.PreservePermissions && dst.Scheme() == pathloc.SchemeFile {
+		if host, err := dst.FilePath(); err == nil {
+			_ = os.Chmod(host, srcEnt.Mode.Perm())
+		}
+	}
+	if opts.PreserveTimestamps && dst.Scheme() == pathloc.SchemeFile {
+		if host, err := dst.FilePath(); err == nil {
+			_ = os.Chtimes(host, srcEnt.ModifiedAt, srcEnt.ModifiedAt)
+		}
+	}
+	if opts.SyncAfterEachFile && dst.Scheme() == pathloc.SchemeFile {
+		if host, err := dst.FilePath(); err == nil {
+			if f, err := os.OpenFile(host, os.O_RDONLY, 0); err == nil {
+				_ = f.Sync()
+				_ = f.Close()
+			}
+		}
+	}
+	return true, nil
+}
+
+type countingWriter struct {
+	w  io.Writer
+	fn func(int64)
+}
+
+func (cw *countingWriter) Write(p []byte) (int, error) {
+	n, err := cw.w.Write(p)
+	if n > 0 && cw.fn != nil {
+		cw.fn(int64(n))
+	}
+	return n, err
+}
+
+type ctxReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (cr *ctxReader) Read(p []byte) (int, error) {
+	if err := cr.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return cr.r.Read(p)
+}
+
+func entryFromPathString(path string) (localfs.Entry, error) {
+	loc, err := pathloc.Parse(path)
+	if err != nil {
+		return localfs.Entry{}, err
+	}
+	if loc.IsRemote() {
+		ent, err := statEntry(context.Background(), loc)
+		if err != nil {
+			return localfs.Entry{}, err
+		}
+		return backendEntryToLocal(ent), nil
+	}
+	return localfs.EntryFromPath(path)
+}
+
+func backendEntryToLocal(ent fsbackend.Entry) localfs.Entry {
+	t := localfs.EntryFile
+	switch ent.Type {
+	case fsbackend.EntryDirectory:
+		t = localfs.EntryDirectory
+	case fsbackend.EntrySymlink:
+		t = localfs.EntrySymlink
+	case fsbackend.EntryOther:
+		t = localfs.EntryOther
+	}
+	return localfs.Entry{
+		Name:       ent.Name,
+		Path:       ent.Loc.String(),
+		Type:       t,
+		Size:       ent.Size,
+		Mode:       ent.Mode,
+		ModifiedAt: ent.ModifiedAt,
+	}
+}
+
+func planItemFromEntry(srcLoc, dstLoc pathloc.Path, ent fsbackend.Entry) (PlanItem, error) {
+	switch ent.Type {
+	case fsbackend.EntryDirectory:
+		return PlanItem{Src: srcLoc, Dst: dstLoc, IsDir: true, IsSymlink: ent.Mode&fs.ModeSymlink != 0}, nil
+	case fsbackend.EntrySymlink:
+		return PlanItem{Src: srcLoc, Dst: dstLoc, IsSymlink: true}, nil
+	case fsbackend.EntryFile:
+		return PlanItem{Src: srcLoc, Dst: dstLoc, FileSize: ent.Size}, nil
+	default:
+		return PlanItem{}, fmt.Errorf("unsupported file type for %q", srcLoc)
+	}
+}
+
+func walkBackendTree(ctx context.Context, rootSrc, rootDst pathloc.Path, items *[]PlanItem, afterVisit func(string) error) error {
+	rootEnt, err := statEntry(ctx, rootSrc)
+	if err != nil {
+		return err
+	}
+	if rootEnt.Type != fsbackend.EntryDirectory {
+		return fmt.Errorf("%q is not a directory", rootSrc)
+	}
+	if err := appendBackendWalk(ctx, rootSrc, rootDst, items, afterVisit); err != nil {
+		return err
+	}
+	return nil
+}
+
+func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, items *[]PlanItem, afterVisit func(string) error) error {
+	be, err := backendFor(dirSrc)
+	if err != nil {
+		return err
+	}
+	entries, err := be.List(ctx, dirSrc)
+	if err != nil {
+		return fmt.Errorf("list %q: %w", dirSrc, err)
+	}
+	dirEnt, err := statEntry(ctx, dirSrc)
+	if err != nil {
+		return err
+	}
+	item, err := planItemFromEntry(dirSrc, dirDst, dirEnt)
+	if err != nil {
+		return err
+	}
+	*items = append(*items, item)
+	if afterVisit != nil {
+		if err := afterVisit(dirSrc.String()); err != nil {
+			return err
+		}
+	}
+	for _, e := range entries {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if e.Name == "." || e.Name == ".." {
+			continue
+		}
+		childDst, err := dirDst.Join(e.Name)
+		if err != nil {
+			return err
+		}
+		switch e.Type {
+		case fsbackend.EntryDirectory:
+			if err := appendBackendWalk(ctx, e.Loc, childDst, items, afterVisit); err != nil {
+				return err
+			}
+		case fsbackend.EntrySymlink:
+			*items = append(*items, PlanItem{Src: e.Loc, Dst: childDst, IsSymlink: true})
+			if afterVisit != nil {
+				if err := afterVisit(e.Loc.String()); err != nil {
+					return err
+				}
+			}
+		case fsbackend.EntryFile:
+			*items = append(*items, PlanItem{Src: e.Loc, Dst: childDst, FileSize: e.Size})
+			if afterVisit != nil {
+				if err := afterVisit(e.Loc.String()); err != nil {
+					return err
+				}
+			}
+		default:
+			return fmt.Errorf("unsupported file type for %q", e.Loc)
+		}
+	}
+	return nil
+}

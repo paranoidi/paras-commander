@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -28,7 +29,7 @@ func TestDrawPanelSkipsDiskScanExcludedWhenMeteringOff(t *testing.T) {
 	screen.SetSize(40, 12)
 
 	state := panel.State{
-		Path: "/mnt/nas",
+		Path: pathloc.MustParse("/mnt/nas"),
 		Entries: []localfs.Entry{
 			{Name: "dirA", Path: "/mnt/nas/dirA", Type: localfs.EntryDirectory},
 			{Name: "file", Path: "/mnt/nas/file", Type: localfs.EntryFile},

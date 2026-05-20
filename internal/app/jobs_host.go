@@ -43,7 +43,13 @@ func (h jobsHost) HandleQuitImmediate() bool { return h.app.handleQuitImmediate(
 
 func (h jobsHost) OpenMenu() { h.app.openMenu() }
 
+func (h jobsHost) OpenMenuByShortcut(shortcut rune) bool { return h.app.openMenuByShortcut(shortcut) }
+
 func (h jobsHost) Dispatch(actionID string) { h.app.dispatch(actionID) }
+
+func (h jobsHost) TryDispatchAuxiliaryScreens(actionID string) bool {
+	return h.app.tryDispatchAuxiliaryScreens(actionID)
+}
 
 func (h jobsHost) ActionFromKeyEvent(ev *tcell.EventKey) string { return h.app.actionFromKeyEvent(ev) }
 

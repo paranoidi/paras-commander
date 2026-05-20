@@ -48,10 +48,13 @@ func (a *App) panelVolumeRefreshSuppressed(panelID int) bool {
 	if p == nil {
 		return false
 	}
-	return a.pathVolumeContendsWithActiveJob(p.Path)
+	return a.pathVolumeContendsWithActiveJob(p.PathString())
 }
 
 func panelSharesVolumeWithJob(panelPath string, job *jobs.Job) bool {
+	if job.Destination.IsRemote() {
+		return false
+	}
 	panelDev, panelOK := diskusage.PathDevice(panelPath)
 	if !panelOK {
 		return false
@@ -65,11 +68,19 @@ func panelSharesVolumeWithJob(panelPath string, job *jobs.Job) bool {
 		return ok && dev == panelDev
 	}
 	for _, src := range job.Sources {
-		if check(src) {
+		host, err := src.FilePath()
+		if err != nil {
+			continue
+		}
+		if check(host) {
 			return true
 		}
 	}
-	return check(job.Destination)
+	destHost, err := job.Destination.FilePath()
+	if err != nil {
+		return false
+	}
+	return check(destHost)
 }
 
 func (a *App) requestVolumeSpaceRefreshAsync(panelID int) {
@@ -80,7 +91,7 @@ func (a *App) requestVolumeSpaceRefreshAsync(panelID int) {
 	if a.panelVolumeRefreshSuppressed(panelID) {
 		return
 	}
-	path := filepath.Clean(p.Path)
+	path := filepath.Clean(p.PathString())
 	if path == "" || path == "." {
 		return
 	}
@@ -115,7 +126,7 @@ func (a *App) applyVolumeSpaceRefresh(d volumeSpaceRefreshPayload) bool {
 	if p == nil {
 		return false
 	}
-	if filepath.Clean(p.Path) != filepath.Clean(d.Path) {
+	if filepath.Clean(p.PathString()) != filepath.Clean(d.Path) {
 		return false
 	}
 	if p.VolumeSpaceOK == d.OK && p.VolumeAvailBytes == d.Avail && p.VolumeTotalBytes == d.Total {

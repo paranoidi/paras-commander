@@ -1,6 +1,9 @@
 package ui
 
-import "github.com/paranoidi/paras-commander/internal/jobs"
+import (
+	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
+)
 
 // JobEntriesFromJobs converts domain jobs to the render DTO used by the jobs view.
 // When includeThroughputStrip is false, ThroughputStrip is left nil so progress does not copy strip memory for the UI.
@@ -11,7 +14,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 		if j == nil {
 			continue
 		}
-		sources := append([]string(nil), j.Sources...)
+		sources := pathloc.Strings(j.Sources)
 		var pending *jobs.BlockerDetails
 		if j.PendingBlocker != nil {
 			b := *j.PendingBlocker
@@ -30,7 +33,7 @@ func JobEntriesFromJobs(jobList []*jobs.Job, includeThroughputStrip bool, queueE
 			Type:            string(j.Type),
 			Status:          string(j.Status),
 			Sources:         sources,
-			Destination:     j.Destination,
+			Destination:     j.Destination.String(),
 			DestIsDir:       j.DestIsDir,
 			CurrentPath:     j.CurrentPath,
 			DoneFiles:       j.DoneFiles,

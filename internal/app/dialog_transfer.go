@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -42,7 +43,7 @@ func (a *App) openTransferDialog(kind ui.TransferKind) {
 	st := ui.TransferDialogState{
 		Open:         true,
 		Kind:         kind,
-		Destination:  transferPrefilledDestination(passive.Path),
+		Destination:  transferPrefilledDestination(passive.PathString()),
 		DestSubFocus: ui.TransferDestSubFocusText,
 		FocusField:   0, // destination path row
 	}
@@ -296,11 +297,16 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 		a.setTransientMessage("Destination required", ui.MessageUrgencyWarn)
 		return
 	}
-	absDest := absPathClean(dest)
+	destLoc, err := pathloc.Parse(dest)
+	if err != nil {
+		a.setTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
+		return
+	}
+	absDest := destLoc.String()
 
 	nSelf := 0
 	for _, src := range sources {
-		if ops.ResolvedSameAsSource(src, absDest) {
+		if ops.ResolvedSameAsSource(pathloc.MustParse(src), destLoc) {
 			nSelf++
 		}
 	}
@@ -365,7 +371,17 @@ func (a *App) confirmTransferSelfCopyRename(sources []string, startPaused bool) 
 		a.closeTransferDialog()
 		return
 	}
-	finalDest := filepath.Join(d.SelfCopyDestDir, trimmed)
+	destDir, err := pathloc.Parse(d.SelfCopyDestDir)
+	if err != nil {
+		a.setTransientMessage("Invalid destination directory", ui.MessageUrgencyWarn)
+		return
+	}
+	finalLoc, err := destDir.Join(trimmed)
+	if err != nil {
+		a.setTransientMessage(err.Error(), ui.MessageUrgencyWarn)
+		return
+	}
+	finalDest := finalLoc.String()
 	sourcesCopy := append([]string(nil), sources...)
 	a.activePanel().ClearSelection()
 	a.addTransferJob(jobType, sourcesCopy, finalDest, startPaused)

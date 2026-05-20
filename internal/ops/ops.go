@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // ProgressEmitThrottle limits how often transfer progress callbacks fire during file copies.
@@ -56,46 +58,81 @@ func DefaultOptions() Options {
 	}
 }
 
-// PathsEquivalent reports whether two filesystem paths refer to the same location.
-func PathsEquivalent(a, b string) bool {
-	aa, err1 := filepath.Abs(a)
-	bb, err2 := filepath.Abs(b)
-	if err1 != nil || err2 != nil {
-		return filepath.Clean(a) == filepath.Clean(b)
-	}
-	return filepath.Clean(aa) == filepath.Clean(bb)
+// PathsEquivalent reports whether two locations refer to the same path.
+func PathsEquivalent(a, b pathloc.Path) bool {
+	return a.Equal(b)
 }
 
 // ResolvedSameAsSource reports whether transferring src into destDir would place
 // the item at the same path as src (copy/move onto itself).
-func ResolvedSameAsSource(src, destDir string) bool {
+func ResolvedSameAsSource(src, destDir pathloc.Path) bool {
 	return PathsEquivalent(src, ResolveDestination(src, destDir))
 }
 
 // ResolveDestination resolves the full destination path for a source path
 // given a user-supplied destination (which may be a directory or a file path).
-func ResolveDestination(src, dest string) string {
-	destInfo, err := os.Stat(dest)
-	if err == nil && destInfo.IsDir() {
-		return filepath.Join(dest, filepath.Base(src))
+func ResolveDestination(src, dest pathloc.Path) pathloc.Path {
+	resolved, err := ResolveDestinationCtx(context.Background(), src, dest)
+	if err != nil {
+		return dest
 	}
-	return dest
+	return resolved
+}
+
+// ResolveDestinationCtx is ResolveDestination with backend Stat for remote paths.
+func ResolveDestinationCtx(ctx context.Context, src, dest pathloc.Path) (pathloc.Path, error) {
+	isDir, err := destinationIsDir(ctx, dest)
+	if err != nil {
+		return dest, err
+	}
+	if isDir {
+		child, err := dest.Join(src.Base())
+		if err != nil {
+			return dest, err
+		}
+		return child, nil
+	}
+	return dest, nil
 }
 
 // DestinationIsDirAtEnqueue reports whether dest names an existing directory,
-// using the same os.Stat semantics as ResolveDestination. Call once when
+// using the same Stat semantics as ResolveDestination. Call once when
 // queueing a job so UI listing markers avoid per-row Stat on the destination.
-func DestinationIsDirAtEnqueue(dest string) bool {
-	fi, err := os.Stat(dest)
-	return err == nil && fi.IsDir()
+func DestinationIsDirAtEnqueue(dest pathloc.Path) bool {
+	isDir, err := destinationIsDir(context.Background(), dest)
+	return err == nil && isDir
 }
 
-// RenameFastPath attempts an os.Rename and returns true on success.
-// If the rename fails due to a cross-device link, it returns false and nil error
+// RenameFastPath attempts a backend rename and returns true on success.
+// If the rename fails due to a cross-device link (local), it returns false and nil error
 // so the caller can fall back to copy+delete.
 // Other errors are returned as-is.
-func RenameFastPath(src, dest string) (ok bool, err error) {
-	err = os.Rename(src, dest)
+func RenameFastPath(src, dest pathloc.Path) (ok bool, err error) {
+	if src.Scheme() != dest.Scheme() {
+		return false, nil
+	}
+	if src.IsRemote() {
+		if !sameSFTPHost(src, dest) {
+			return false, nil
+		}
+		be, err := backendFor(src)
+		if err != nil {
+			return false, err
+		}
+		if err := be.Rename(context.Background(), src, dest); err == nil {
+			return true, nil
+		}
+		return false, err
+	}
+	srcHost, err := src.FilePath()
+	if err != nil {
+		return false, err
+	}
+	destHost, err := dest.FilePath()
+	if err != nil {
+		return false, err
+	}
+	err = os.Rename(srcHost, destHost)
 	if err == nil {
 		return true, nil
 	}
@@ -153,20 +190,20 @@ func CopySymlink(src, dest string, progress ProgressCallback) error {
 
 // PlanItem describes a single file to copy/move.
 type PlanItem struct {
-	Src       string
-	Dst       string
+	Src       pathloc.Path
+	Dst       pathloc.Path
 	IsDir     bool
 	IsSymlink bool
 	FileSize  int64
 }
 
 // BuildPlan walks sources and creates a flat list of files to copy/move.
-func BuildPlan(sources []string, destination string, followDirChildren bool) ([]PlanItem, error) {
+func BuildPlan(sources []pathloc.Path, destination pathloc.Path, followDirChildren bool) ([]PlanItem, error) {
 	return BuildPlanCtx(context.Background(), sources, destination, followDirChildren, PlanBuildOptions{})
 }
 
 // BuildPlanCtx is BuildPlan with context cancellation and optional walk hooks.
-func BuildPlanCtx(ctx context.Context, sources []string, destination string, followDirChildren bool, opts PlanBuildOptions) ([]PlanItem, error) {
+func BuildPlanCtx(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, followDirChildren bool, opts PlanBuildOptions) ([]PlanItem, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -187,8 +224,40 @@ func BuildPlanCtx(ctx context.Context, sources []string, destination string, fol
 		}
 		return nil
 	}
-	for _, src := range sources {
+	for _, srcLoc := range sources {
 		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		dstLoc, err := ResolveDestinationCtx(ctx, srcLoc, destination)
+		if err != nil {
+			return nil, err
+		}
+		if srcLoc.IsRemote() || destination.IsRemote() || !useLocalFastPath(srcLoc, dstLoc) {
+			srcEnt, err := statEntry(ctx, srcLoc)
+			if err != nil {
+				return nil, fmt.Errorf("stat %q: %w", srcLoc, err)
+			}
+			if srcEnt.Type == fsbackend.EntryDirectory {
+				if !followDirChildren {
+					continue
+				}
+				if err := walkBackendTree(ctx, srcLoc, dstLoc, &items, afterVisit); err != nil {
+					return nil, err
+				}
+				continue
+			}
+			if err := afterVisit(srcLoc.String()); err != nil {
+				return nil, err
+			}
+			item, err := planItemFromEntry(srcLoc, dstLoc, srcEnt)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, item)
+			continue
+		}
+		src, err := srcLoc.FilePath()
+		if err != nil {
 			return nil, err
 		}
 		srcInfo, err := os.Lstat(src)
@@ -199,8 +268,11 @@ func BuildPlanCtx(ctx context.Context, sources []string, destination string, fol
 			if !followDirChildren {
 				continue
 			}
-			dst := ResolveDestination(src, destination)
-			err := localfs.WalkDirRecursive(src, func(path string, info os.FileInfo) error {
+			dst, err := dstLoc.FilePath()
+			if err != nil {
+				return nil, err
+			}
+			err = localfs.WalkDirRecursive(src, func(path string, info os.FileInfo) error {
 				if err := afterVisit(path); err != nil {
 					return err
 				}
@@ -208,26 +280,34 @@ func BuildPlanCtx(ctx context.Context, sources []string, destination string, fol
 				if err != nil {
 					return fmt.Errorf("compute relative path for %q: %w", path, err)
 				}
-				childDst := filepath.Join(dst, rel)
+				childDstHost := filepath.Join(dst, rel)
+				srcItem, err := pathloc.File(path)
+				if err != nil {
+					return err
+				}
+				dstItem, err := pathloc.File(childDstHost)
+				if err != nil {
+					return err
+				}
 				if info.IsDir() {
 					items = append(items, PlanItem{
-						Src:       path,
-						Dst:       childDst,
+						Src:       srcItem,
+						Dst:       dstItem,
 						IsDir:     true,
 						IsSymlink: localfs.IsSymlink(info),
 					})
 				} else if localfs.IsSymlink(info) {
 					items = append(items, PlanItem{
-						Src:       path,
-						Dst:       childDst,
+						Src:       srcItem,
+						Dst:       dstItem,
 						IsDir:     false,
 						IsSymlink: true,
 						FileSize:  0,
 					})
 				} else if info.Mode().IsRegular() {
 					items = append(items, PlanItem{
-						Src:       path,
-						Dst:       childDst,
+						Src:       srcItem,
+						Dst:       dstItem,
 						IsDir:     false,
 						IsSymlink: false,
 						FileSize:  localfs.GetFileSize(info),
@@ -244,20 +324,19 @@ func BuildPlanCtx(ctx context.Context, sources []string, destination string, fol
 			if err := afterVisit(src); err != nil {
 				return nil, err
 			}
-			dst := ResolveDestination(src, destination)
 			switch {
 			case localfs.IsSymlink(srcInfo):
 				items = append(items, PlanItem{
-					Src:       src,
-					Dst:       dst,
+					Src:       srcLoc,
+					Dst:       dstLoc,
 					IsDir:     false,
 					IsSymlink: true,
 					FileSize:  0,
 				})
 			case srcInfo.Mode().IsRegular():
 				items = append(items, PlanItem{
-					Src:       src,
-					Dst:       dst,
+					Src:       srcLoc,
+					Dst:       dstLoc,
 					IsDir:     false,
 					IsSymlink: false,
 					FileSize:  localfs.GetFileSize(srcInfo),

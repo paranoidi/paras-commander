@@ -1,14 +1,18 @@
 package panel
 
 import (
+	"context"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/fsbackend/file"
 	"github.com/paranoidi/paras-commander/internal/fsvol"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/search"
 )
 
@@ -20,7 +24,7 @@ const noIndexCursorFallback = -1
 
 // State contains all panel data needed by the App and renderer.
 type State struct {
-	Path string
+	Path pathloc.Path
 	// VolumeAvailBytes / VolumeTotalBytes describe the file system backing Path after the last successful load.
 	VolumeSpaceOK    bool
 	VolumeAvailBytes uint64
@@ -63,7 +67,16 @@ type State struct {
 	OnDirectoryChange func()
 	// SuppressHeavyPathProbes, when set, skips statfs and device lookup in load() for paths
 	// where those syscalls would contend with active background job I/O on the same volume.
-	SuppressHeavyPathProbes func(path string) bool
+	SuppressHeavyPathProbes func(pathloc.Path) bool
+	// ScheduleRemoteLoad runs remote directory listing off the UI thread (set by app; nil = synchronous).
+	ScheduleRemoteLoad RemoteLoadScheduler
+	// ListingPending is true while an asynchronous remote listing is in flight.
+	ListingPending bool
+}
+
+// PathString returns the canonical path string (history, status bar, host APIs).
+func (s *State) PathString() string {
+	return s.Path.String()
 }
 
 // FilterState tracks panel-local quick filter state.
@@ -112,7 +125,7 @@ func NewWithOptions(path string, opts localfs.ListOptions) (State, error) {
 
 // Load replaces the panel contents with a fresh directory snapshot.
 func (s *State) Load(path string) error {
-	return s.load(path, "", 0, noIndexCursorFallback)
+	return s.loadPathString(path, "", 0, noIndexCursorFallback, remoteLoadOpts{})
 }
 
 // Refresh reloads the current path. When the entry under the cursor still exists, it is re-selected by name;
@@ -124,7 +137,7 @@ func (s *State) Refresh(viewportRows int) error {
 	if ok {
 		selectedName = entry.Name
 	}
-	return s.load(s.Path, selectedName, viewportRows, priorCursor)
+	return s.load(s.Path, selectedName, viewportRows, priorCursor, remoteLoadOpts{})
 }
 
 // ToggleHidden flips hidden-file visibility and reloads the current directory using the same cursor rules as Refresh.
@@ -136,7 +149,7 @@ func (s *State) ToggleHidden(viewportRows int) error {
 		selectedName = entry.Name
 	}
 	s.ShowHidden = !s.ShowHidden
-	return s.load(s.Path, selectedName, viewportRows, priorCursor)
+	return s.load(s.Path, selectedName, viewportRows, priorCursor, remoteLoadOpts{})
 }
 
 // Move changes the cursor by delta and keeps it visible.
@@ -215,7 +228,7 @@ func (s State) MatchRanges(index int) []search.Range {
 
 // AddSelection marks path as selected without changing the file-list cursor.
 func (s *State) AddSelection(path string) {
-	path = cleanPath(path)
+	path = cleanPathString(path)
 	if path == "" {
 		return
 	}
@@ -269,7 +282,7 @@ func (s State) HasSelectionInSubtree(dirPath string) bool {
 	if s.SelectedPaths == nil {
 		return false
 	}
-	dir := cleanPath(dirPath)
+	dir := cleanPathString(dirPath)
 	if dir == "" {
 		return false
 	}
@@ -277,7 +290,7 @@ func (s State) HasSelectionInSubtree(dirPath string) bool {
 		if !on {
 			continue
 		}
-		if isStrictPathDescendant(dir, cleanPath(p)) {
+		if isStrictPathDescendant(dir, cleanPathString(p)) {
 			return true
 		}
 	}
@@ -286,21 +299,19 @@ func (s State) HasSelectionInSubtree(dirPath string) bool {
 
 // IsStrictPathDescendant reports whether child is a strict descendant of parent (different paths, child under parent).
 func IsStrictPathDescendant(parent, child string) bool {
-	return isStrictPathDescendant(cleanPath(parent), cleanPath(child))
+	return isStrictPathDescendant(cleanPathString(parent), cleanPathString(child))
 }
 
 func isStrictPathDescendant(parent, child string) bool {
-	if parent == "" || child == "" || child == parent {
+	p, err1 := pathloc.Parse(parent)
+	c, err2 := pathloc.Parse(child)
+	if err1 != nil || err2 != nil || p.Scheme() != c.Scheme() {
 		return false
 	}
-	rel, err := filepath.Rel(parent, child)
-	if err != nil {
+	if p.Equal(c) {
 		return false
 	}
-	if rel == "." {
-		return false
-	}
-	return !strings.HasPrefix(rel, "..")
+	return c.HasPrefix(p)
 }
 
 // SelectedDirectoryPaths returns absolute paths of selected directories in stable sorted order.
@@ -317,7 +328,7 @@ func (s State) SelectedDirectoryPaths() []string {
 		if !on {
 			continue
 		}
-		path = cleanPath(path)
+		path = cleanPathString(path)
 		if path == "" {
 			continue
 		}
@@ -346,13 +357,13 @@ func (s State) SelectedDirectoryPaths() []string {
 func PruneNestedPaths(paths []string) []string {
 	if len(paths) <= 1 {
 		if len(paths) == 1 {
-			return []string{cleanPath(paths[0])}
+			return []string{cleanPathString(paths[0])}
 		}
 		return nil
 	}
 	sorted := make([]string, len(paths))
 	for i, p := range paths {
-		sorted[i] = cleanPath(p)
+		sorted[i] = cleanPathString(p)
 	}
 	sort.Strings(sorted)
 	out := make([]string, 0, len(sorted))
@@ -398,27 +409,39 @@ func (s *State) Enter(viewportRows int) (bool, error) {
 
 // Parent opens the parent directory and selects the directory just exited.
 func (s *State) Parent(viewportRows int) error {
-	if s.Path == "" {
+	if s.Path.IsZero() {
 		return nil
 	}
-
-	currentPath := s.Path
-	parentPath := filepath.Dir(currentPath)
-	selectedName := filepath.Base(currentPath)
-	if parentPath == currentPath {
+	current := s.Path
+	parent := current.Parent()
+	selectedName := current.Base()
+	if parent.Equal(current) {
 		selectedName = ""
 	}
-	return s.NavigateTo(parentPath, selectedName, viewportRows)
+	return s.NavigateToPath(parent, selectedName, viewportRows)
 }
 
 // NavigateTo loads path after recording it in navigation history (MRU timeline).
 func (s *State) NavigateTo(path string, selectedName string, viewportRows int) error {
-	s.recordVisit(path)
-	if err := s.load(path, selectedName, viewportRows, noIndexCursorFallback); err != nil {
+	loc, err := pathloc.Parse(path)
+	if err != nil {
 		return err
 	}
-	if s.HistoryIndex == 0 && len(s.History) > 0 {
-		s.History[0] = cleanPath(s.Path)
+	return s.NavigateToPath(loc, selectedName, viewportRows)
+}
+
+// NavigateToPath loads loc after recording it in navigation history (MRU timeline).
+func (s *State) NavigateToPath(loc pathloc.Path, selectedName string, viewportRows int) error {
+	target := loc.String()
+	s.recordVisit(target)
+	if err := s.load(loc, selectedName, viewportRows, noIndexCursorFallback, remoteLoadOpts{
+		rollback:        func() { s.revertRecordedVisit(target) },
+		syncHistoryHead: true,
+	}); err != nil {
+		return err
+	}
+	if !s.ListingPending && s.HistoryIndex == 0 && len(s.History) > 0 {
+		s.History[0] = cleanPathString(s.Path.String())
 	}
 	return nil
 }
@@ -429,18 +452,23 @@ func (s *State) HistoryBackward(viewportRows int) (bool, error) {
 		return false, nil
 	}
 	nextIdx := s.HistoryIndex + 1
-	target := cleanPath(s.History[nextIdx])
+	target := cleanPathString(s.History[nextIdx])
 	if target == "" {
 		return false, nil
 	}
 	prevIdx := s.HistoryIndex
 	s.HistoryIndex = nextIdx
-	if err := s.load(target, "", viewportRows, noIndexCursorFallback); err != nil {
+	if err := s.loadPathString(target, "", viewportRows, noIndexCursorFallback, remoteLoadOpts{
+		rollback: func() { s.HistoryIndex = prevIdx },
+	}); err != nil {
 		s.HistoryIndex = prevIdx
 		return false, err
 	}
+	if s.ListingPending {
+		return true, nil
+	}
 	if s.HistoryIndex >= 0 && s.HistoryIndex < len(s.History) {
-		s.History[s.HistoryIndex] = cleanPath(s.Path)
+		s.History[s.HistoryIndex] = cleanPathString(s.Path.String())
 	}
 	return true, nil
 }
@@ -451,25 +479,30 @@ func (s *State) HistoryForward(viewportRows int) (bool, error) {
 		return false, nil
 	}
 	nextIdx := s.HistoryIndex - 1
-	target := cleanPath(s.History[nextIdx])
+	target := cleanPathString(s.History[nextIdx])
 	prevIdx := s.HistoryIndex
 	s.HistoryIndex = nextIdx
-	if err := s.load(target, "", viewportRows, noIndexCursorFallback); err != nil {
+	if err := s.loadPathString(target, "", viewportRows, noIndexCursorFallback, remoteLoadOpts{
+		rollback: func() { s.HistoryIndex = prevIdx },
+	}); err != nil {
 		s.HistoryIndex = prevIdx
 		return false, err
 	}
+	if s.ListingPending {
+		return true, nil
+	}
 	if s.HistoryIndex >= 0 && s.HistoryIndex < len(s.History) {
-		s.History[s.HistoryIndex] = cleanPath(s.Path)
+		s.History[s.HistoryIndex] = cleanPathString(s.Path.String())
 	}
 	return true, nil
 }
 
 func (s *State) recordVisit(target string) {
-	target = cleanPath(target)
+	target = cleanPathString(target)
 	if target == "" {
 		return
 	}
-	cur := cleanPath(s.Path)
+	cur := cleanPathString(s.Path.String())
 	if target == cur {
 		return
 	}
@@ -491,13 +524,13 @@ func (s *State) recordVisit(target string) {
 }
 
 func removePathFromSlice(slice []string, target string) []string {
-	want := cleanPath(target)
+	want := cleanPathString(target)
 	if want == "" {
 		return slice
 	}
 	out := slice[:0]
 	for _, p := range slice {
-		if cleanPath(p) != want {
+		if cleanPathString(p) != want {
 			out = append(out, p)
 		}
 	}
@@ -508,10 +541,10 @@ func removeStrictDescendantsOf(slice []string, parent string) []string {
 	if parent == "" {
 		return slice
 	}
-	par := cleanPath(parent)
+	par := cleanPathString(parent)
 	out := slice[:0]
 	for _, item := range slice {
-		pc := cleanPath(item)
+		pc := cleanPathString(item)
 		if isStrictPathDescendant(par, pc) {
 			continue
 		}
@@ -698,34 +731,98 @@ func previousFilterMatchIndex(results []filterResult, cursor int) int {
 	return len(results) - 1
 }
 
-func (s *State) load(path string, selectedName string, viewportRows int, indexFallback int) error {
-	gitMatcher, err := localfs.MatcherForListing(s.ShowHidden, s.Gitignore, path)
+func (s *State) loadPathString(path string, selectedName string, viewportRows int, indexFallback int, remote remoteLoadOpts) error {
+	loc, err := pathloc.Parse(path)
 	if err != nil {
 		return err
 	}
-	listing, err := localfs.ListDir(path, localfs.ListOptions{
+	return s.load(loc, selectedName, viewportRows, indexFallback, remote)
+}
+
+func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, indexFallback int, remote remoteLoadOpts) error {
+	if loc.IsRemote() && s.ScheduleRemoteLoad != nil {
+		if s.ScheduleRemoteLoad(RemoteLoadRequest{
+			Loc:             loc,
+			SelectedName:    selectedName,
+			ViewportRows:    viewportRows,
+			IndexFallback:   indexFallback,
+			Rollback:        remote.rollback,
+			SyncHistoryHead: remote.syncHistoryHead,
+		}) {
+			s.ListingPending = true
+			return nil
+		}
+	}
+	backendEntries, listingLoc, err := s.fetchBackendEntries(loc)
+	if err != nil {
+		return err
+	}
+	return s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, indexFallback)
+}
+
+func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathloc.Path, error) {
+	if loc.IsRemote() {
+		be, berr := fsbackend.Default().Backend(loc)
+		if berr != nil {
+			return nil, pathloc.Path{}, berr
+		}
+		entries, err := be.List(context.Background(), loc)
+		if err != nil {
+			return nil, pathloc.Path{}, err
+		}
+		return fsbackend.FilterHidden(entries, s.ShowHidden), loc, nil
+	}
+	host, ferr := loc.FilePath()
+	if ferr != nil {
+		return nil, pathloc.Path{}, ferr
+	}
+	gitMatcher, gerr := localfs.MatcherForListing(s.ShowHidden, s.Gitignore, host)
+	if gerr != nil {
+		return nil, pathloc.Path{}, gerr
+	}
+	be := file.New()
+	entries, err := be.ListWithOptions(context.Background(), loc, localfs.ListOptions{
 		ShowHidden: s.ShowHidden,
 		Gitignore:  gitMatcher,
 	})
+	if err != nil {
+		return nil, pathloc.Path{}, err
+	}
+	listingLoc, err := pathloc.File(host)
+	if err != nil {
+		return nil, pathloc.Path{}, err
+	}
+	return entries, listingLoc, nil
+}
+
+// ApplyListing commits backend entries into panel state (used after sync or async remote list).
+func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int) error {
+	localEntries, err := fsbackend.ToPanelEntries(backendEntries)
 	if err != nil {
 		return err
 	}
 
 	previousPath := s.Path
-	s.Path = listing.Path
-	if s.SuppressHeavyPathProbes == nil || !s.SuppressHeavyPathProbes(listing.Path) {
-		s.refreshVolumeSpace(listing.Path)
-		dev, devOK := diskusage.PathDevice(listing.Path)
+	s.Path = listingLoc
+	if listingLoc.IsRemote() {
+		s.VolumeSpaceOK = false
+		s.VolumeAvailBytes = 0
+		s.VolumeTotalBytes = 0
+		s.ListingDeviceValid = false
+	} else if s.SuppressHeavyPathProbes == nil || !s.SuppressHeavyPathProbes(listingLoc) {
+		s.refreshVolumeSpace(listingLoc)
+		host := listingLoc.FilePathMust()
+		dev, devOK := diskusage.PathDevice(host)
 		s.ListingDevice = dev
 		s.ListingDeviceValid = devOK
 	} else {
 		s.ListingDeviceValid = false
 	}
-	s.Entries = listing.Entries
+	s.Entries = localEntries
 	s.Cursor = 0
 	s.ScrollOffset = 0
-	if cleanPath(previousPath) != cleanPath(listing.Path) {
-		s.notifyChdir(previousPath, listing.Path)
+	if !previousPath.Equal(listingLoc) {
+		s.notifyChdir(previousPath, listingLoc)
 	}
 	// Activate disk-total primary sort before ApplySort so the first paint matches MC-style
 	// disk ordering when cache already covers this listing (no idle timer / reconcile delay).
@@ -749,7 +846,7 @@ func (s *State) load(path string, selectedName string, viewportRows int, indexFa
 	s.clampCursor()
 	s.EnsureCursorVisible(viewportRows)
 	if len(s.History) == 0 {
-		cp := cleanPath(listing.Path)
+		cp := cleanPathString(listingLoc.String())
 		if cp != "" {
 			s.History = []string{cp}
 			s.HistoryIndex = 0
@@ -761,15 +858,30 @@ func (s *State) load(path string, selectedName string, viewportRows int, indexFa
 	return nil
 }
 
-func cleanPath(p string) string {
+func cleanPathString(p string) string {
 	if p == "" {
 		return ""
 	}
-	return filepath.Clean(p)
+	loc, err := pathloc.Parse(p)
+	if err != nil {
+		return ""
+	}
+	return loc.String()
 }
 
-func (s *State) refreshVolumeSpace(forPath string) {
-	avail, total, ok := fsvol.VolumeBytes(forPath)
+func (s *State) refreshVolumeSpace(forPath pathloc.Path) {
+	if forPath.IsRemote() {
+		s.VolumeSpaceOK = false
+		s.VolumeAvailBytes = 0
+		s.VolumeTotalBytes = 0
+		return
+	}
+	host, err := forPath.FilePath()
+	if err != nil {
+		s.VolumeSpaceOK = false
+		return
+	}
+	avail, total, ok := fsvol.VolumeBytes(host)
 	s.VolumeSpaceOK = ok
 	if ok {
 		s.VolumeAvailBytes = avail
@@ -785,9 +897,9 @@ func (s *State) RefreshVolumeSpace() {
 	s.refreshVolumeSpace(s.Path)
 }
 
-func (s *State) notifyChdir(oldPath, newPath string) {
-	oldC := cleanPath(oldPath)
-	newC := cleanPath(newPath)
+func (s *State) notifyChdir(oldPath, newPath pathloc.Path) {
+	oldC := cleanPathString(oldPath.String())
+	newC := cleanPathString(newPath.String())
 	if oldC != newC {
 		s.IdleDiskTotalsSort = false
 	}
@@ -809,7 +921,7 @@ func (s *State) appendLeftBehindSelectionsToStripOrder(leftDir string) {
 	}
 	batch := make([]string, 0)
 	for p := range s.SelectedPaths {
-		if cleanPath(filepath.Dir(p)) == leftDir {
+		if cleanPathString(filepath.Dir(p)) == leftDir {
 			batch = append(batch, p)
 		}
 	}
@@ -829,7 +941,7 @@ func (s *State) stripSelectionsOrderForEnteredDir(dir string) {
 	}
 	out := s.SelectionsStripOrder[:0]
 	for _, p := range s.SelectionsStripOrder {
-		if cleanPath(filepath.Dir(p)) == dir {
+		if cleanPathString(filepath.Dir(p)) == dir {
 			continue
 		}
 		out = append(out, p)
@@ -852,14 +964,14 @@ func (s *State) removePathFromSelectionsStripOrder(path string) {
 
 // SelectionsStripPaths returns selected paths shown in the selections sub-pane (not in the current directory).
 func (s *State) SelectionsStripPaths() []string {
-	cur := cleanPath(s.Path)
+	cur := cleanPathString(s.Path.String())
 	seen := make(map[string]bool)
 	out := make([]string, 0, len(s.SelectionsStripOrder))
 	for _, p := range s.SelectionsStripOrder {
 		if s.SelectedPaths == nil || !s.SelectedPaths[p] {
 			continue
 		}
-		if cleanPath(filepath.Dir(p)) == cur {
+		if cleanPathString(filepath.Dir(p)) == cur {
 			continue
 		}
 		if seen[p] {
@@ -871,7 +983,7 @@ func (s *State) SelectionsStripPaths() []string {
 	if s.SelectedPaths != nil {
 		extra := make([]string, 0)
 		for p := range s.SelectedPaths {
-			if cleanPath(filepath.Dir(p)) == cur {
+			if cleanPathString(filepath.Dir(p)) == cur {
 				continue
 			}
 			if seen[p] {
@@ -1015,13 +1127,19 @@ func (s *State) selectVisibleEntryByPath(absPath string) {
 	if absPath == "" {
 		return
 	}
-	want := filepath.Clean(absPath)
+	wantLoc, wantErr := pathloc.Parse(absPath)
 	for i := 0; i < s.VisibleEntryCount(); i++ {
 		entry, _, ok := s.VisibleEntry(i)
 		if !ok {
 			continue
 		}
-		if filepath.Clean(entry.Path) == want {
+		if wantErr == nil {
+			if entLoc, err := pathloc.Parse(entry.Path); err == nil && entLoc.Equal(wantLoc) {
+				s.Cursor = i
+				return
+			}
+		}
+		if filepath.Clean(entry.Path) == filepath.Clean(absPath) {
 			s.Cursor = i
 			return
 		}

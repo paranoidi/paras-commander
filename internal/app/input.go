@@ -37,6 +37,8 @@ const (
 	InputModeMetaDialog
 	InputModeUserMenu
 	InputModeHelpView
+	InputModeHostKeyDialog
+	InputModeSFTPConnectDialog
 )
 
 func (a *App) inputMode() InputMode {
@@ -47,6 +49,8 @@ func (a *App) inputMode() InputMode {
 		return InputModePathPicker
 	case a.model.HistoryDialog.Open:
 		return InputModeHistoryDialog
+	case a.model.SFTPConnectDialog.Open:
+		return InputModeSFTPConnectDialog
 	case a.model.FindDialog.Open:
 		return InputModeFindDialog
 	case a.model.MetaDialog.Open:
@@ -65,6 +69,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeConfigDialog
 	case a.model.GroupSelect.Open:
 		return InputModeGroupSelect
+	case a.model.HostKeyDialog.Open:
+		return InputModeHostKeyDialog
 	case a.model.FileDialog.Open:
 		return InputModeFileDialog
 	case a.model.ViewMode == ui.ViewFilePreview &&
@@ -114,7 +120,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		})
 	}
 	if a.model.PrimaryModal() != ui.PrimaryModalNone ||
-		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open {
+		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.SFTPConnectDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		if a.pathPickerHostFooterEligible() {
 			if lbl := a.keys.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
@@ -243,6 +249,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.handleHistoryDialogKey(event)
 		a.render()
 		return false, true
+	case InputModeSFTPConnectDialog:
+		a.handleSFTPConnectDialogKey(event)
+		a.render()
+		return false, true
 	case InputModeFindDialog:
 		a.handleFindDialogKey(event)
 		a.render()
@@ -277,6 +287,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return false, true
 	case InputModeGroupSelect:
 		a.handleGroupSelectKey(event)
+		a.render()
+		return false, true
+	case InputModeHostKeyDialog:
+		_ = a.handleHostKeyDialogKey(event)
 		a.render()
 		return false, true
 	case InputModeFileDialog:
@@ -586,6 +600,8 @@ func (a *App) dispatch(actionID string) {
 		a.openBookmarkDialog()
 	case keymap.ActionBookmarkAdd:
 		a.openAddBookmarkDialog()
+	case keymap.ActionRemoteSFTPLink:
+		a.openSFTPConnectDialog()
 	case keymap.ActionNavOpen:
 		a.handleNavOpen(activePanel, viewportRows)
 	case keymap.ActionPanelToggleSync:
@@ -606,7 +622,7 @@ func (a *App) dispatch(actionID string) {
 		if a.model.ViewMode != ui.ViewBrowser {
 			return
 		}
-		if err := a.navigatePanelToDirectory(a.inactivePanelID(), activePanel.Path, ""); err != nil {
+		if err := a.navigatePanelToDirectory(a.inactivePanelID(), activePanel.PathString(), ""); err != nil {
 			a.setErrorMessage("Open current path in other panel failed", err)
 			return
 		}

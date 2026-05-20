@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ func TestCloseActiveJobThroughputColumn_onePerTick(t *testing.T) {
 	s := jobs.NewState()
 	col := 100 * time.Millisecond
 	s.SetThroughputChart(col, 10*time.Second, true)
-	job := &jobs.Job{ID: "j1", Type: jobs.TypeCopy, Status: jobs.StatusQueued, Sources: []string{"/a"}, Destination: "/b"}
+	job := &jobs.Job{ID: "j1", Type: jobs.TypeCopy, Status: jobs.StatusQueued, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
 	s.AddJob(job)
 	s.ApplyEvent(jobs.Event{Type: jobs.EventStarted, JobID: job.ID})
 

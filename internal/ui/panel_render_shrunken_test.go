@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -57,11 +58,11 @@ func TestRenderShrunkenNameOnlyOmitsMtimeOnFirstListRow(t *testing.T) {
 	}
 	model := Model{
 		Left: panel.State{
-			Path:    "/tmp",
+			Path:    pathloc.MustParse("/tmp"),
 			Entries: []localfs.Entry{entry},
 			Cursor:  0,
 		},
-		Right:                 panel.State{Path: "/tmp"},
+		Right:                 panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel:           LeftPanel,
 		ActiveSubFocus:        SubFocusFileList,
 		HideMenuBar:           false,

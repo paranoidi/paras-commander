@@ -81,6 +81,22 @@ func historyDialogScrollingQuery(st *ui.HistoryDialogState, width int, onChange 
 	}
 }
 
+func sftpConnectDialogScrollingQuery(st *ui.SFTPConnectDialogState, width int, onChange func()) scrollingQueryEdit {
+	q := &ui.ScrollingQuery{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll}
+	return scrollingQueryEdit{
+		q:     q,
+		width: width,
+		onChange: func() {
+			st.Query = q.Value
+			st.QueryCursor = q.Cursor
+			st.QueryScroll = q.Scroll
+			if onChange != nil {
+				onChange()
+			}
+		},
+	}
+}
+
 func groupSelectScrollingQuery(gs *ui.GroupSelectState, width int) scrollingQueryEdit {
 	q := &ui.ScrollingQuery{Value: gs.Text, Cursor: gs.TextCursor, Scroll: gs.TextScroll}
 	return scrollingQueryEdit{
@@ -250,6 +266,18 @@ func (a *App) historyDialogQueryWidth() int {
 	}
 	if width < 36 {
 		width = 36
+	}
+	return dialogInputWidthFromFrame(width)
+}
+
+func (a *App) sftpConnectDialogQueryWidth() int {
+	termW, _ := a.screen.Size()
+	width := 78
+	if width > termW-4 {
+		width = termW - 4
+	}
+	if width < 40 {
+		width = 40
 	}
 	return dialogInputWidthFromFrame(width)
 }

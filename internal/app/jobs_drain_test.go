@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"testing"
 
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
@@ -37,7 +38,7 @@ func TestDrainDiscardProgressEventsAppliesNonProgress(t *testing.T) {
 	app := testAppMinimal(t)
 	app.model.ViewMode = ui.ViewBrowser
 	root := t.TempDir()
-	job := &jobs.Job{ID: "j1", Type: jobs.TypeCopy, Status: jobs.StatusRunning, Sources: []string{root}}
+	job := &jobs.Job{ID: "j1", Type: jobs.TypeCopy, Status: jobs.StatusRunning, Sources: pathloc.PathsForTest(root)}
 	app.jobState.Queue().Enqueue(job)
 	app.jobState.QueueTestEvent(jobs.Event{Type: jobs.EventProgress, JobID: "j1"})
 	app.jobState.QueueTestEvent(jobs.Event{

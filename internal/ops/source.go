@@ -69,7 +69,7 @@ func ResolveSource(p *panel.State) (Source, error) {
 				entries = append(entries, e)
 				continue
 			}
-			e, err := localfs.EntryFromPath(path)
+			e, err := entryFromPathString(path)
 			if err != nil {
 				return Source{}, &Error{Op: "source", Text: fmt.Sprintf("selected path %q: %v", path, err), Err: err}
 			}

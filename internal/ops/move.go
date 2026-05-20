@@ -7,11 +7,12 @@ import (
 	"os"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // MovePlanTotals returns a file/byte estimate consistent with the copy fallback path.
 // Rename fast path does not read bytes; totals still give a useful upper bound for UI.
-func MovePlanTotals(sources []string, destination string) (totalFiles int, totalBytes int64, err error) {
+func MovePlanTotals(sources []pathloc.Path, destination pathloc.Path) (totalFiles int, totalBytes int64, err error) {
 	return CopyPlanTotals(sources, destination)
 }
 
@@ -21,8 +22,31 @@ type renamePair struct {
 
 func renamePairsRollback(pairs []renamePair) {
 	for i := len(pairs) - 1; i >= 0; i-- {
+		srcLoc, err1 := pathloc.Parse(pairs[i].src)
+		dstLoc, err2 := pathloc.Parse(pairs[i].dst)
+		if err1 == nil && err2 == nil && srcLoc.IsRemote() {
+			if be, err := backendFor(dstLoc); err == nil {
+				_ = be.Rename(context.Background(), dstLoc, srcLoc)
+			}
+			continue
+		}
 		_ = os.Rename(pairs[i].dst, pairs[i].src)
 	}
+}
+
+func countTransferNodesAfterRename(dst string) (int, error) {
+	loc, err := pathloc.Parse(dst)
+	if err != nil {
+		return countWalkNodes(dst)
+	}
+	if loc.IsRemote() {
+		return countTransferNodes(context.Background(), loc)
+	}
+	host, err := loc.FilePath()
+	if err != nil {
+		return 0, err
+	}
+	return countWalkNodes(host)
 }
 
 func countWalkNodes(root string) (int, error) {
@@ -37,7 +61,7 @@ func countWalkNodes(root string) (int, error) {
 // ExecuteMove moves sources to destination using the rename fast path when
 // possible for every source, falling back to copy + delete for cross-device moves
 // or when any rename in the batch cannot use the fast path.
-func ExecuteMove(ctx context.Context, sources []string, destination string, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, 0, err
 	}
@@ -60,7 +84,7 @@ func ExecuteMove(ctx context.Context, sources []string, destination string, opts
 			fallbackToCopy = true
 			break
 		}
-		renamed = append(renamed, renamePair{src, dst})
+		renamed = append(renamed, renamePair{src.String(), dst.String()})
 	}
 
 	if !fallbackToCopy && len(renamed) == len(sources) {
@@ -69,7 +93,7 @@ func ExecuteMove(ctx context.Context, sources []string, destination string, opts
 			if err := ctx.Err(); err != nil {
 				return 0, 0, err
 			}
-			nf, err := countWalkNodes(p.dst)
+			nf, err := countTransferNodesAfterRename(p.dst)
 			if err != nil {
 				return 0, 0, fmt.Errorf("walk after rename %q: %w", p.dst, err)
 			}
@@ -84,7 +108,7 @@ func ExecuteMove(ctx context.Context, sources []string, destination string, opts
 	return executeMoveCopyPhase(ctx, nil, sources, destination, opts, throttle, progress, resolver, diskWait)
 }
 
-func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources []string, destination string, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
 	var plan []PlanItem
 	var tb int64
 	var planErr error
@@ -97,7 +121,7 @@ func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources 
 			return 0, 0, fmt.Errorf("move copy phase plan: %w", planErr)
 		}
 	}
-	if err := EnsureDiskSpace(diskWait, destination, tb, ""); err != nil {
+	if err := EnsureDiskSpace(diskWait, destination, tb, pathloc.Path{}); err != nil {
 		return 0, 0, err
 	}
 
@@ -110,7 +134,7 @@ func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources 
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
 		}
-		if err := localfs.RemoveAll(src); err != nil {
+		if err := removePathRecursive(ctx, src); err != nil {
 			return doneFiles, doneBytes, fmt.Errorf("move remove source %q: %w", src, err)
 		}
 	}
@@ -119,7 +143,7 @@ func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources 
 }
 
 // ExecuteMoveWithPlan tries the rename fast path, then uses plan for the copy+delete fallback without rebuilding it.
-func ExecuteMoveWithPlan(ctx context.Context, plan []PlanItem, sources []string, destination string, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+func ExecuteMoveWithPlan(ctx context.Context, plan []PlanItem, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
 	if plan == nil {
 		return ExecuteMove(ctx, sources, destination, opts, throttle, progress, resolver, diskWait)
 	}
@@ -145,7 +169,7 @@ func ExecuteMoveWithPlan(ctx context.Context, plan []PlanItem, sources []string,
 			fallbackToCopy = true
 			break
 		}
-		renamed = append(renamed, renamePair{src, dst})
+		renamed = append(renamed, renamePair{src.String(), dst.String()})
 	}
 
 	if !fallbackToCopy && len(renamed) == len(sources) {
@@ -154,7 +178,7 @@ func ExecuteMoveWithPlan(ctx context.Context, plan []PlanItem, sources []string,
 			if err := ctx.Err(); err != nil {
 				return 0, 0, err
 			}
-			nf, err := countWalkNodes(p.dst)
+			nf, err := countTransferNodesAfterRename(p.dst)
 			if err != nil {
 				return 0, 0, fmt.Errorf("walk after rename %q: %w", p.dst, err)
 			}

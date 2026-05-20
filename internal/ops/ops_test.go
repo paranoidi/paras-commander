@@ -3,6 +3,7 @@ package ops
 import (
 	"context"
 	"errors"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"os"
 	"path/filepath"
 	"testing"
@@ -96,7 +97,7 @@ func TestResolvedSameAsSource(t *testing.T) {
 	if err := os.Mkdir(aaa, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if !ResolvedSameAsSource(aaa, dir) {
+	if !ResolvedSameAsSource(MustPath(aaa), MustPath(dir)) {
 		t.Fatal("copy into parent dir with same basename should resolve to source path")
 	}
 	nested := filepath.Join(dir, "nested")
@@ -107,7 +108,7 @@ func TestResolvedSameAsSource(t *testing.T) {
 	if err := os.Mkdir(other, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if ResolvedSameAsSource(other, nested) {
+	if ResolvedSameAsSource(MustPath(other), MustPath(nested)) {
 		t.Fatal("different destination directory should not resolve to source path")
 	}
 }
@@ -692,7 +693,7 @@ func TestCopyRegularFile(t *testing.T) {
 		progressCalls++
 	}
 
-	done, bytes, err := ExecuteCopy(context.Background(), []string{srcFile}, dstDir, opts, ProgressEmitThrottle{}, progress, nil, nil)
+	done, bytes, err := ExecuteCopy(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, progress, nil, nil)
 	if err != nil {
 		t.Fatalf("ExecuteCopy error = %v", err)
 	}
@@ -732,15 +733,15 @@ func TestExecuteCopyUsingPlanMatchesExecuteCopy(t *testing.T) {
 	}
 	opts := Options{PreservePermissions: false, PreserveTimestamps: false, CopyBufferKiB: 8, CowFileCloning: false}
 
-	plan, _, _, err := BuildCopyPlanWithTotals([]string{srcFile}, dstA)
+	plan, _, _, err := BuildCopyPlanWithTotals(MustPaths(srcFile), MustPath(dstA))
 	if err != nil {
 		t.Fatalf("BuildCopyPlanWithTotals: %v", err)
 	}
-	da, ba, err := ExecuteCopyUsingPlan(context.Background(), plan, []string{srcFile}, dstA, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	da, ba, err := ExecuteCopyUsingPlan(context.Background(), plan, MustPaths(srcFile), MustPath(dstA), opts, ProgressEmitThrottle{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ExecuteCopyUsingPlan: %v", err)
 	}
-	db, bb, err := ExecuteCopy(context.Background(), []string{srcFile}, dstB, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	db, bb, err := ExecuteCopy(context.Background(), MustPaths(srcFile), MustPath(dstB), opts, ProgressEmitThrottle{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ExecuteCopy: %v", err)
 	}
@@ -755,7 +756,7 @@ func TestExecuteCopyUsingPlanMatchesExecuteCopy(t *testing.T) {
 }
 
 func TestExecuteCopyUsingPlanNilPlanErrors(t *testing.T) {
-	_, _, err := ExecuteCopyUsingPlan(context.Background(), nil, nil, "", DefaultOptions(), ProgressEmitThrottle{}, nil, nil, nil)
+	_, _, err := ExecuteCopyUsingPlan(context.Background(), nil, nil, pathloc.Path{}, DefaultOptions(), ProgressEmitThrottle{}, nil, nil, nil)
 	if err == nil {
 		t.Fatal("ExecuteCopyUsingPlan(nil plan) error = nil, want error")
 	}
@@ -783,7 +784,7 @@ func TestCopyGranularProgressMultipleEmits(t *testing.T) {
 		lastBytes = bytes
 		progressCalls++
 	}
-	done, gotBytes, err := ExecuteCopy(context.Background(), []string{srcFile}, dstDir, opts, throttle, progress, nil, nil)
+	done, gotBytes, err := ExecuteCopy(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, throttle, progress, nil, nil)
 	if err != nil {
 		t.Fatalf("ExecuteCopy: %v", err)
 	}
@@ -805,7 +806,7 @@ func TestExecuteCopyCanceledBeforeFirstItem(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	opts := Options{CopyBufferKiB: 4}
-	_, _, err := ExecuteCopy(ctx, []string{srcFile}, dstDir, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	_, _, err := ExecuteCopy(ctx, MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, nil, nil)
 	if err == nil || !errors.Is(err, context.Canceled) {
 		t.Fatalf("err = %v, want context.Canceled", err)
 	}
@@ -827,7 +828,7 @@ func TestCopyDirectoryRecursively(t *testing.T) {
 	}
 
 	opts := Options{PreservePermissions: false, PreserveTimestamps: false, CopyBufferKiB: 4}
-	done, _, err := ExecuteCopy(context.Background(), []string{srcDir}, dstDir, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	done, _, err := ExecuteCopy(context.Background(), MustPaths(srcDir), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ExecuteCopy error = %v", err)
 	}
@@ -860,7 +861,7 @@ func TestCopySymlinkAsSymlink(t *testing.T) {
 	}
 
 	opts := Options{CopyBufferKiB: 4}
-	done, _, err := ExecuteCopy(context.Background(), []string{linkPath}, dstDir, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	done, _, err := ExecuteCopy(context.Background(), MustPaths(linkPath), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ExecuteCopy error = %v", err)
 	}
@@ -889,7 +890,7 @@ func TestMoveRenameFastPath(t *testing.T) {
 	}
 
 	opts := Options{CopyBufferKiB: 4}
-	done, _, err := ExecuteMove(context.Background(), []string{srcFile}, dstDir, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	done, _, err := ExecuteMove(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ExecuteMove error = %v", err)
 	}
@@ -923,7 +924,7 @@ func TestMoveMultiSourceRenameFastPath(t *testing.T) {
 	}
 
 	opts := Options{CopyBufferKiB: 4}
-	done, _, err := ExecuteMove(context.Background(), []string{a, b}, dstDir, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	done, _, err := ExecuteMove(context.Background(), MustPaths(a, b), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ExecuteMove: %v", err)
 	}
@@ -958,7 +959,7 @@ func TestMoveRenameProgressUsesLogicalPaths(t *testing.T) {
 		gotSrc, gotDst = srcPath, dstPath
 	}
 	opts := Options{CopyBufferKiB: 4}
-	if _, _, err := ExecuteMove(context.Background(), []string{srcFile}, dstDir, opts, ProgressEmitThrottle{}, progress, nil, nil); err != nil {
+	if _, _, err := ExecuteMove(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, progress, nil, nil); err != nil {
 		t.Fatalf("ExecuteMove: %v", err)
 	}
 	if gotSrc != srcFile {
@@ -984,7 +985,7 @@ func TestMoveOverwriteExistingDestViaRename(t *testing.T) {
 
 	opts := Options{CopyBufferKiB: 4}
 	// Linux rename(2) replaces an existing regular file atomically; fast path runs without copy-phase resolver.
-	done, doneBytes, err := ExecuteMove(context.Background(), []string{srcFile}, dstDir, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	done, doneBytes, err := ExecuteMove(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ExecuteMove error = %v", err)
 	}
@@ -1010,14 +1011,14 @@ func TestResolveDestination(t *testing.T) {
 	dir := t.TempDir()
 
 	// Destination is a directory.
-	dst := ResolveDestination("/src/file.txt", dir)
-	if dst != filepath.Join(dir, "file.txt") {
+	dst := ResolveDestination(MustPath("/src/file.txt"), MustPath(dir))
+	if dst.String() != filepath.Join(dir, "file.txt") {
 		t.Fatalf("dir dest = %q, want %q", dst, filepath.Join(dir, "file.txt"))
 	}
 
 	// Destination is a full path (non-existent).
-	dst = ResolveDestination("/src/file.txt", "/some/path/newfile.txt")
-	if dst != "/some/path/newfile.txt" {
+	dst = ResolveDestination(MustPath("/src/file.txt"), MustPath("/some/path/newfile.txt"))
+	if dst.String() != "/some/path/newfile.txt" {
 		t.Fatalf("file dest = %q, want /some/path/newfile.txt", dst)
 	}
 }
@@ -1028,14 +1029,14 @@ func TestDestinationIsDirAtEnqueue(t *testing.T) {
 	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if !DestinationIsDirAtEnqueue(dir) {
+	if !DestinationIsDirAtEnqueue(MustPath(dir)) {
 		t.Fatal("existing directory should report true")
 	}
-	if DestinationIsDirAtEnqueue(file) {
+	if DestinationIsDirAtEnqueue(MustPath(file)) {
 		t.Fatal("regular file should report false")
 	}
 	missing := filepath.Join(dir, "nope")
-	if DestinationIsDirAtEnqueue(missing) {
+	if DestinationIsDirAtEnqueue(MustPath(missing)) {
 		t.Fatal("missing path should report false")
 	}
 }
@@ -1061,7 +1062,7 @@ func TestConflictResolverOverwrite(t *testing.T) {
 	}
 
 	opts := Options{CopyBufferKiB: 4}
-	done, doneBytes, err := ExecuteCopy(context.Background(), []string{srcFile}, dstDir, opts, ProgressEmitThrottle{}, nil, resolver, nil)
+	done, doneBytes, err := ExecuteCopy(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, resolver, nil)
 	if err != nil {
 		t.Fatalf("ExecuteCopy error = %v", err)
 	}
@@ -1102,7 +1103,7 @@ func TestConflictResolverSkip(t *testing.T) {
 	}
 
 	opts := Options{CopyBufferKiB: 4}
-	done, doneBytes, err := ExecuteCopy(context.Background(), []string{srcFile}, dstDir, opts, ProgressEmitThrottle{}, nil, resolver, nil)
+	done, doneBytes, err := ExecuteCopy(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, resolver, nil)
 	if err != nil {
 		t.Fatalf("ExecuteCopy error = %v", err)
 	}
@@ -1132,7 +1133,7 @@ func TestCopyRejectsSpecialFiles(t *testing.T) {
 	dstDir := t.TempDir()
 
 	opts := Options{CopyBufferKiB: 4}
-	_, _, err := ExecuteCopy(context.Background(), []string{"/dev/null"}, dstDir, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	_, _, err := ExecuteCopy(context.Background(), MustPaths("/dev/null"), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, nil, nil)
 	if err == nil {
 		t.Fatal("expected error for special file, got nil")
 	}

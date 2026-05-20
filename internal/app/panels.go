@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -138,7 +139,11 @@ func (a *App) navigateFromSelectionsStrip() {
 func (a *App) navigatePanelToDirectory(panelID int, dirPath, selectedName string) error {
 	p := a.panelByID(panelID)
 	vr := a.panelViewportRows(panelID)
-	return p.NavigateTo(filepath.Clean(dirPath), selectedName, vr)
+	loc, err := pathloc.Parse(dirPath)
+	if err != nil {
+		return err
+	}
+	return p.NavigateToPath(loc, selectedName, vr)
 }
 
 // toggleSyncFollow flips latched panel sync on the active panel with mutual exclusion:
@@ -255,7 +260,7 @@ func (a *App) syncFollowFromActive() {
 	}
 	followerID := a.inactivePanelID()
 	follower := a.panelByID(followerID)
-	if filepath.Clean(follower.Path) == targetPath {
+	if filepath.Clean(follower.PathString()) == targetPath {
 		return
 	}
 	if a.pathVolumeContendsWithActiveJob(targetPath) {

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 func TestJobsViewStateEnsureSelectionVisible(t *testing.T) {
@@ -35,8 +36,8 @@ func TestJobEntriesFromJobsOmitsThroughputStripWhenDisabled(t *testing.T) {
 		ID:              "1",
 		Type:            jobs.TypeCopy,
 		Status:          jobs.StatusRunning,
-		Sources:         []string{"/a"},
-		Destination:     "/b",
+		Sources:         pathloc.PathsForTest("/a"),
+		Destination:     pathloc.MustParse("/b"),
 		ThroughputStrip: []float64{1, 2, 3},
 	}
 	got := JobEntriesFromJobs([]*jobs.Job{j}, false, nil)
@@ -54,8 +55,8 @@ func TestJobEntriesFromJobsOneEntryPerJobWithMultipleSources(t *testing.T) {
 		ID:          "j1",
 		Type:        jobs.TypeCopy,
 		Status:      jobs.StatusQueued,
-		Sources:     []string{"/a/1", "/a/2", "/a/3"},
-		Destination: "/dst",
+		Sources:     pathloc.PathsForTest("/a/1", "/a/2", "/a/3"),
+		Destination: pathloc.MustParse("/dst"),
 		TotalFiles:  3,
 	}
 	got := JobEntriesFromJobs([]*jobs.Job{j}, false, nil)

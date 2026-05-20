@@ -2,9 +2,13 @@
 package pathpick
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // QueryLooksPathlike reports whether q should be validated with Lstat.
@@ -56,11 +60,19 @@ func ResolveQuery(panelPath, home, raw string) string {
 	return filepath.Clean(filepath.Join(panelPath, q))
 }
 
-// TypedDoesNotExist returns true when raw looks like a path and Lstat reports missing.
+// TypedDoesNotExist returns true when raw looks like a path and Stat reports missing.
 func TypedDoesNotExist(panelPath, home, raw string) bool {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return false
+	}
+	if strings.HasPrefix(raw, "sftp://") {
+		loc, err := pathloc.Parse(raw)
+		if err != nil {
+			return true
+		}
+		_, err = fsbackend.Default().Stat(context.Background(), loc)
+		return err != nil
 	}
 	if !QueryLooksPathlike(raw) {
 		return false
