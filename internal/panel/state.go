@@ -529,11 +529,8 @@ func (s *State) recordVisit(target string) {
 	}
 	var base []string
 	if len(s.History) > 0 && s.HistoryIndex < len(s.History) {
+		// Drop the forward branch when navigating after history-back/forward.
 		base = append([]string(nil), s.History[s.HistoryIndex:]...)
-	}
-	// When moving up (Parent), keep deeper timeline entries so history-back can re-walk the chain.
-	if cur == "" || target == "" || !isStrictPathDescendant(target, cur) {
-		base = removeStrictDescendantsOf(base, cur)
 	}
 	base = removePathFromSlice(base, target)
 	hist := append([]string{target}, base...)
@@ -554,22 +551,6 @@ func removePathFromSlice(slice []string, target string) []string {
 		if cleanPathString(p) != want {
 			out = append(out, p)
 		}
-	}
-	return out
-}
-
-func removeStrictDescendantsOf(slice []string, parent string) []string {
-	if parent == "" {
-		return slice
-	}
-	par := cleanPathString(parent)
-	out := slice[:0]
-	for _, item := range slice {
-		pc := cleanPathString(item)
-		if isStrictPathDescendant(par, pc) {
-			continue
-		}
-		out = append(out, item)
 	}
 	return out
 }

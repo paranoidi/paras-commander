@@ -544,7 +544,7 @@ func TestHistoryBackwardReentersDirectoryLeftByParent(t *testing.T) {
 	}
 }
 
-func TestEnterSiblingPrunesDescendantHistoryEntries(t *testing.T) {
+func TestEnterSiblingRetainsPriorDescendantInHistory(t *testing.T) {
 	root := t.TempDir()
 	sub := filepath.Join(root, "sub")
 	other := filepath.Join(root, "other")
@@ -559,30 +559,80 @@ func TestEnterSiblingPrunesDescendantHistoryEntries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	state.Cursor = 1
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "sub" {
+			state.Cursor = i
+			break
+		}
+	}
 	if _, err := state.Enter(5); err != nil {
 		t.Fatalf("Enter(sub) error = %v", err)
 	}
 	if err := state.Parent(5); err != nil {
 		t.Fatalf("Parent() error = %v", err)
 	}
-	if len(state.History) < 2 {
-		t.Fatalf("History = %v, want parent visit recorded", state.History)
-	}
+	subPath := cleanPathString(sub)
 
-	state.Cursor = 0
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "other" {
+			state.Cursor = i
+			break
+		}
+	}
 	if _, err := state.Enter(5); err != nil {
 		t.Fatalf("Enter(other) error = %v", err)
-	}
-	subPath := filepath.Clean(sub)
-	for _, p := range state.History {
-		if filepath.Clean(p) == subPath {
-			t.Fatalf("History = %v, should not retain exited subdirectory after sibling enter", state.History)
-		}
 	}
 	if filepath.Clean(state.History[0]) != filepath.Clean(other) {
 		t.Fatalf("History[0] = %q, want other dir %q", state.History[0], other)
 	}
+	foundSub := false
+	for _, p := range state.History {
+		if cleanPathString(p) == subPath {
+			foundSub = true
+			break
+		}
+	}
+	if !foundSub {
+		t.Fatalf("History = %v, want prior subdirectory %q retained", state.History, subPath)
+	}
+}
+
+func TestParentThenSiblingRetainsPriorProjectDir(t *testing.T) {
+	projects := t.TempDir()
+	paras := filepath.Join(projects, "paras-commander")
+	mc := filepath.Join(projects, "mc")
+	for _, p := range []string{paras, mc} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatalf("Mkdir(%q) error = %v", p, err)
+		}
+	}
+
+	state, err := New(paras)
+	if err != nil {
+		t.Fatalf("New(paras) error = %v", err)
+	}
+	if err := state.Parent(5); err != nil {
+		t.Fatalf("Parent to projects error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "mc" {
+			state.Cursor = i
+			break
+		}
+	}
+	if _, err := state.Enter(5); err != nil {
+		t.Fatalf("Enter(mc) error = %v", err)
+	}
+	wantParas := cleanPathString(paras)
+	for _, p := range state.History {
+		if cleanPathString(p) == wantParas {
+			return
+		}
+	}
+	t.Fatalf("History = %v, want %q retained after projects -> mc", state.History, wantParas)
 }
 
 func TestEnterRegularFileIsInert(t *testing.T) {
@@ -1834,4 +1884,24 @@ func writeFile(t *testing.T, path string) {
 	if err := os.WriteFile(path, []byte("content"), 0o644); err != nil {
 		t.Fatalf("WriteFile(%q) error = %v", path, err)
 	}
+}
+
+func TestNavigateFromRootPreservesPriorDirs(t *testing.T) {
+	state, err := New("/tmp")
+	if err != nil {
+		t.Fatalf("New(/tmp): %v", err)
+	}
+	if err := state.NavigateTo("/", "", 10); err != nil {
+		t.Fatalf("NavigateTo(/): %v", err)
+	}
+	if err := state.NavigateTo("/var", "", 10); err != nil {
+		t.Fatalf("NavigateTo(/var): %v", err)
+	}
+	want := cleanPathString("/tmp")
+	for _, p := range state.History {
+		if cleanPathString(p) == want {
+			return
+		}
+	}
+	t.Fatalf("history lost /tmp after / -> /var: %v", state.History)
 }
