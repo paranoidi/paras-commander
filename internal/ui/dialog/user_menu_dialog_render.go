@@ -8,19 +8,21 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
-// DrawUserMenuDialog draws the F2 user menu list with OK/Cancel.
+// DrawUserMenuDialog draws the F2 user menu list with Cancel (entry keys run immediately).
 func DrawUserMenuDialog(screen tcell.Screen, layout Layout, state UserMenuDialogState, styles theme.Theme) {
 	n := len(state.Entries)
 	if n == 0 {
 		return
 	}
-	form := NewDialogLinearForm(n)
+	form := NewUserMenuDialogForm(n)
 	visibleRows := UserMenuListViewportRows(layout, n)
-	height := visibleRows + 4
+	// Title row + entry rows + separator + button row + bottom border.
+	minHeight := visibleRows + 4
+	height := minHeight
 	if height > layout.Height-2 {
 		height = layout.Height - 2
 	}
-	if height < 6 {
+	if height < minHeight {
 		return
 	}
 	width := 64
@@ -58,12 +60,15 @@ func DrawUserMenuDialog(screen tcell.Screen, layout Layout, state UserMenuDialog
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
 
-	okFocused := state.Focus == form.OKIndex()
 	cancelFocused := state.Focus == form.CancelIndex()
 	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: okFocused},
 		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
 	}, styles)
+}
+
+// NewUserMenuDialogForm returns focus layout for the user menu (entries + Cancel only).
+func NewUserMenuDialogForm(numEntries int) UserMenuDialogForm {
+	return UserMenuDialogForm{NumEntries: numEntries}
 }
 
 // UserMenuListViewportRows returns how many entry rows fit in the user menu dialog body.

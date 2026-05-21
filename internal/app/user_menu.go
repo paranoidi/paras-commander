@@ -12,6 +12,14 @@ import (
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
+var userMenuInteractiveRunner = func(ctx context.Context, argv []string, dir string) error {
+	return cmdrun.RunInteractive(ctx, argv, dir)
+}
+
+var userMenuDetachRunner = func(argv []string, dir string) error {
+	return cmdrun.StartDetached(argv, dir)
+}
+
 func (a *App) userMenuConfigDir() string {
 	return strings.TrimSpace(a.paths.ConfigDir)
 }
@@ -29,6 +37,13 @@ func (a *App) ensureGlobalUserMenuStub() (path string, err error) {
 		return "", err
 	}
 	return path, nil
+}
+
+func (a *App) setUserMenuCritical(err error) {
+	if err == nil {
+		return
+	}
+	a.setTransientMessage(usermenu.ShortLoadError(err), ui.MessageUrgencyCritical)
 }
 
 func (a *App) openUserMenuEditor(path string) {
@@ -80,11 +95,11 @@ func (a *App) openUserMenu() {
 
 	mf, err := usermenu.LoadFile(menuPath)
 	if err != nil {
-		a.setErrorMessage("User menu", err)
+		a.setUserMenuCritical(err)
 		return
 	}
 	if len(mf.Entries) == 0 {
-		a.openUserMenuEditor(menuPath)
+		a.setTransientMessage("User menu: no entries (edit with Shift+F2)", ui.MessageUrgencyWarn)
 		return
 	}
 
@@ -93,7 +108,7 @@ func (a *App) openUserMenu() {
 	ctx := &usermenu.EvalContext{Active: active, Other: other}
 	visible, defIdx, err := usermenu.FilterVisible(mf, ctx)
 	if err != nil {
-		a.setErrorMessage("User menu", err)
+		a.setUserMenuCritical(err)
 		return
 	}
 	if len(visible) == 0 {
@@ -127,15 +142,11 @@ func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
 		a.closeUserMenu()
 		return
 	}
-	form := ui.NewDialogLinearForm(n)
+	form := dialog.NewUserMenuDialogForm(n)
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
 	vr := dialog.UserMenuListViewportRows(layout, n)
 
-	if ui.AltDialogOK(event) {
-		a.executeUserMenuSelection()
-		return
-	}
 	if ui.AltDialogCancel(event) {
 		a.closeUserMenu()
 		return
@@ -145,51 +156,26 @@ func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
 	case tcell.KeyEsc:
 		a.closeUserMenu()
 	case tcell.KeyEnter:
-		switch st.Focus {
-		case form.CancelIndex():
+		if st.Focus == form.CancelIndex() {
 			a.closeUserMenu()
-		case form.OKIndex():
-			a.executeUserMenuSelection()
-		default:
-			if st.Focus >= 0 && st.Focus < n {
-				st.Selected = st.Focus
-				a.executeUserMenuSelection()
-			}
+			return
+		}
+		if st.Focus >= 0 && st.Focus < n {
+			a.executeUserMenuEntry(st.Focus)
+			return
 		}
 	case tcell.KeyRune:
 		if event.Modifiers() != tcell.ModNone {
 			break
 		}
 		switch event.Rune() {
-		case 'o', 'O':
-			a.executeUserMenuSelection()
-			return
 		case 'c', 'C':
 			a.closeUserMenu()
 			return
-		case ' ':
-			switch {
-			case st.Focus >= 0 && st.Focus < n:
-				st.Selected = st.Focus
-			case st.Focus == form.OKIndex():
-				a.executeUserMenuSelection()
-			case st.Focus == form.CancelIndex():
-				a.closeUserMenu()
-			}
-			return
 		default:
-			for i := range st.Entries {
-				k := []rune(st.Entries[i].Key)
-				if len(k) == 0 {
-					continue
-				}
-				if k[0] == event.Rune() || (k[0] >= 'A' && k[0] <= 'Z' && k[0]+32 == event.Rune()) ||
-					(k[0] >= 'a' && k[0] <= 'z' && k[0]-32 == event.Rune()) {
-					st.Selected = i
-					st.Focus = i
-					dialog.UserMenuEnsureScroll(st, vr)
-					return
-				}
+			if i, ok := usermenu.EntryIndexForKey(st.Entries, event.Rune()); ok {
+				a.executeUserMenuEntry(i)
+				return
 			}
 		}
 	}
@@ -202,13 +188,13 @@ func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
 	}
 }
 
-func (a *App) executeUserMenuSelection() {
+func (a *App) executeUserMenuEntry(idx int) {
 	st := a.model.UserMenu
-	if !st.Open || st.Selected < 0 || st.Selected >= len(st.Entries) {
+	if !st.Open || idx < 0 || idx >= len(st.Entries) {
 		a.closeUserMenu()
 		return
 	}
-	entry := st.Entries[st.Selected]
+	entry := st.Entries[idx]
 	a.closeUserMenu()
 
 	active := a.activePanel()
@@ -228,15 +214,49 @@ func (a *App) executeUserMenuSelection() {
 		return
 	}
 
-	cmdLine := entry.Command
-	idx := a.appendUserMenuCommandRow(cmdLine, expanded)
-	a.openCommandsView()
-	a.model.CommandsView.Selected = idx
-	a.model.CommandsView.FocusPane = 0
-	a.ensureCommandsViewSelectionVisible()
+	workDir := active.PathString()
+	switch {
+	case entry.Interactive:
+		a.runUserMenuInteractive(argv, workDir)
+	case entry.Detach:
+		a.runUserMenuDetached(argv, workDir)
+	default:
+		cmdLine := entry.Command
+		rowIdx := a.appendUserMenuCommandRow(cmdLine, expanded)
+		a.openCommandsView()
+		a.model.CommandsView.Selected = rowIdx
+		a.model.CommandsView.FocusPane = 0
+		a.ensureCommandsViewSelectionVisible()
 
-	a.commandsBatchesInflight.Add(1)
-	go a.runUserMenuCommand(a.commandsCtx, idx, argv, active.PathString())
+		a.commandsBatchesInflight.Add(1)
+		go a.runUserMenuCommand(a.commandsCtx, rowIdx, argv, workDir)
+	}
+}
+
+func (a *App) runUserMenuInteractive(argv []string, workDir string) {
+	if err := a.withTerminalReleased(func() error {
+		return userMenuInteractiveRunner(context.Background(), argv, workDir)
+	}); err != nil {
+		a.setErrorMessage("User menu", err)
+		return
+	}
+	a.refreshAfterUserMenuCommand()
+}
+
+func (a *App) runUserMenuDetached(argv []string, workDir string) {
+	if err := userMenuDetachRunner(argv, workDir); err != nil {
+		a.setErrorMessage("User menu", err)
+		return
+	}
+	a.setTransientMessage("Started "+cmdrun.FormatArgvDisplay(argv), ui.MessageUrgencyInfo)
+}
+
+func (a *App) refreshAfterUserMenuCommand() {
+	if a.model.ViewMode == ui.ViewBrowser {
+		if err := a.activePanel().Refresh(a.activeViewportRows()); err != nil {
+			a.setErrorMessage("User menu", err)
+		}
+	}
 }
 
 func (a *App) appendUserMenuCommandRow(cmdLine, expanded string) int {

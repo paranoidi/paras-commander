@@ -57,3 +57,43 @@ func TestDecodeMenuStubTOML(t *testing.T) {
 		t.Fatalf("stub should decode to zero entries, got %d", len(mf.Entries))
 	}
 }
+
+func TestDecodeEntryInteractiveDetach(t *testing.T) {
+	mf, err := Decode([]byte(`[[entry]]
+key = "g"
+title = "lazygit"
+command = "lazygit"
+interactive = 1
+
+[[entry]]
+key = "o"
+title = "Open"
+command = "xdg-open %d"
+detach = true
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mf.Entries) != 2 {
+		t.Fatalf("entries = %d, want 2", len(mf.Entries))
+	}
+	if !mf.Entries[0].Interactive || mf.Entries[0].Detach {
+		t.Fatalf("entry 0: interactive=%v detach=%v", mf.Entries[0].Interactive, mf.Entries[0].Detach)
+	}
+	if mf.Entries[1].Interactive || !mf.Entries[1].Detach {
+		t.Fatalf("entry 1: interactive=%v detach=%v", mf.Entries[1].Interactive, mf.Entries[1].Detach)
+	}
+}
+
+func TestDecodeEntryInteractiveDetachMutuallyExclusive(t *testing.T) {
+	_, err := Decode([]byte(`[[entry]]
+key = "x"
+title = "Bad"
+command = "true"
+interactive = true
+detach = true
+`))
+	if err == nil {
+		t.Fatal("expected mutual exclusion error")
+	}
+}

@@ -98,6 +98,77 @@ command = "true"
 	}
 }
 
+func TestOpenUserMenuInvalidFileCritical(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(menuPath, []byte("shell_patterns = []\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app := testUserMenuApp(t, dir, cfgDir)
+
+	prev := externalEditorRunner
+	var called bool
+	externalEditorRunner = func(_ context.Context, _ string) error {
+		called = true
+		return nil
+	}
+	t.Cleanup(func() { externalEditorRunner = prev })
+
+	app.openUserMenu()
+
+	if called {
+		t.Fatal("editor should not run for invalid menu.toml")
+	}
+	if app.model.UserMenu.Open {
+		t.Fatal("user menu dialog should not open")
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
+		t.Fatalf("MessageUrgency = %v, want critical", app.model.MessageUrgency)
+	}
+	if app.model.Message == "" {
+		t.Fatal("expected critical status message")
+	}
+}
+
+func TestOpenUserMenuExistingStubNoEditor(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(menuPath, []byte(usermenu.MenuStubTOML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app := testUserMenuApp(t, dir, cfgDir)
+
+	prev := externalEditorRunner
+	var called bool
+	externalEditorRunner = func(_ context.Context, _ string) error {
+		called = true
+		return nil
+	}
+	t.Cleanup(func() { externalEditorRunner = prev })
+
+	app.openUserMenu()
+
+	if called {
+		t.Fatal("editor should not run when menu file exists but has no entries")
+	}
+	if app.model.UserMenu.Open {
+		t.Fatal("user menu dialog should not open without entries")
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyWarn {
+		t.Fatalf("MessageUrgency = %v, want warn", app.model.MessageUrgency)
+	}
+}
+
 func TestOpenUserMenuOpensDialogWhenEntriesExist(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
@@ -136,6 +207,40 @@ command = "true"
 	}
 }
 
+func TestUserMenuEntryKeyRunsImmediately(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(menuPath, []byte(`[[entry]]
+key = "a"
+title = "Always"
+command = "true"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+	if !app.model.UserMenu.Open {
+		t.Fatal("user menu should be open")
+	}
+
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
+
+	if app.model.UserMenu.Open {
+		t.Fatal("user menu should close after entry key")
+	}
+	if app.model.ViewMode != ui.ViewCommands {
+		t.Fatalf("ViewMode = %v, want ViewCommands", app.model.ViewMode)
+	}
+	if len(app.model.CommandsList) != 1 {
+		t.Fatalf("CommandsList len = %d, want 1", len(app.model.CommandsList))
+	}
+}
+
 func TestShiftF2MapsToEditUserMenu(t *testing.T) {
 	km := defaultKeymap(t)
 	got := lookupActionForView(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModShift), km, nil, nil, nil, ui.ViewBrowser)
@@ -147,5 +252,99 @@ func TestShiftF2MapsToEditUserMenu(t *testing.T) {
 func TestWriteMenuStubMatchesPackage(t *testing.T) {
 	if usermenu.MenuStubTOML == "" {
 		t.Fatal("MenuStubTOML empty")
+	}
+}
+
+func writeUserMenuFile(t *testing.T, menuPath, body string) {
+	t.Helper()
+	if err := os.WriteFile(menuPath, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUserMenuInteractiveDoesNotOpenCommandsView(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeUserMenuFile(t, menuPath, `[[entry]]
+key = "g"
+title = "lazygit"
+command = "lazygit"
+interactive = true
+`)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+
+	var gotArgv []string
+	var gotDir string
+	prev := userMenuInteractiveRunner
+	userMenuInteractiveRunner = func(_ context.Context, argv []string, dir string) error {
+		gotArgv = append([]string(nil), argv...)
+		gotDir = dir
+		return nil
+	}
+	t.Cleanup(func() { userMenuInteractiveRunner = prev })
+
+	app.openUserMenu()
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
+
+	if app.model.ViewMode == ui.ViewCommands {
+		t.Fatal("interactive user menu should not open commands view")
+	}
+	if len(app.model.CommandsList) != 0 {
+		t.Fatalf("CommandsList len = %d, want 0", len(app.model.CommandsList))
+	}
+	if len(gotArgv) != 1 || gotArgv[0] != "lazygit" {
+		t.Fatalf("argv = %v, want [lazygit]", gotArgv)
+	}
+	if gotDir != dir {
+		t.Fatalf("workDir = %q, want %q", gotDir, dir)
+	}
+}
+
+func TestUserMenuDetachDoesNotOpenCommandsView(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeUserMenuFile(t, menuPath, `[[entry]]
+key = "o"
+title = "Open"
+command = "xdg-open ."
+detach = true
+`)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+
+	var gotArgv []string
+	var gotDir string
+	wantDir := dir
+	prev := userMenuDetachRunner
+	userMenuDetachRunner = func(argv []string, workDir string) error {
+		gotArgv = append([]string(nil), argv...)
+		gotDir = workDir
+		return nil
+	}
+	t.Cleanup(func() { userMenuDetachRunner = prev })
+
+	app.openUserMenu()
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
+
+	if app.model.ViewMode == ui.ViewCommands {
+		t.Fatal("detach user menu should not open commands view")
+	}
+	if len(app.model.CommandsList) != 0 {
+		t.Fatalf("CommandsList len = %d, want 0", len(app.model.CommandsList))
+	}
+	if len(gotArgv) != 2 || gotArgv[0] != "xdg-open" || gotArgv[1] != "." {
+		t.Fatalf("argv = %v", gotArgv)
+	}
+	if gotDir != wantDir {
+		t.Fatalf("workDir = %q, want %q", gotDir, wantDir)
 	}
 }

@@ -3,6 +3,8 @@ package cmdrun
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -100,4 +102,40 @@ func (w *cappedWriter) Bytes() []byte {
 // FormatArgvDisplay returns a compact human string for list titles (not shell-safe).
 func FormatArgvDisplay(argv []string) string {
 	return strings.Join(argv, " ")
+}
+
+// RunInteractive runs argv with stdin/stdout/stderr attached to the terminal.
+func RunInteractive(ctx context.Context, argv []string, dir string) error {
+	if len(argv) == 0 {
+		return errors.New("empty argv")
+	}
+	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if dir != "" {
+		cmd.Dir = dir
+	}
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("run command: %w", err)
+	}
+	return nil
+}
+
+// StartDetached starts argv in the background and releases the process handle.
+func StartDetached(argv []string, dir string) error {
+	if len(argv) == 0 {
+		return errors.New("empty argv")
+	}
+	cmd := exec.Command(argv[0], argv[1:]...)
+	if dir != "" {
+		cmd.Dir = dir
+	}
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start command: %w", err)
+	}
+	if err := cmd.Process.Release(); err != nil {
+		return fmt.Errorf("release process: %w", err)
+	}
+	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
@@ -43,14 +42,7 @@ func RunInteractive(ctx context.Context, argv []string, dir string) error {
 	if len(argv) == 0 {
 		return fmt.Errorf("editor argv is empty")
 	}
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if dir != "" {
-		cmd.Dir = dir
-	}
-	if err := cmd.Run(); err != nil {
+	if err := cmdrun.RunInteractive(ctx, argv, dir); err != nil {
 		return fmt.Errorf("run editor: %w", err)
 	}
 	return nil

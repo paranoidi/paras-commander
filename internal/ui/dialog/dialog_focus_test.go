@@ -62,6 +62,23 @@ func TestDialogTrailingButtonsFormThreeButtons(t *testing.T) {
 	}
 }
 
+func TestUserMenuDialogForm(t *testing.T) {
+	t.Parallel()
+	form := NewUserMenuDialogForm(2)
+	if g, w := form.CancelIndex(), 2; g != w {
+		t.Fatalf("CancelIndex: got %d want %d", g, w)
+	}
+	if g, w := form.Down(1), 2; g != w {
+		t.Fatalf("Down last entry -> Cancel: got %d want %d", g, w)
+	}
+	if g, w := form.Up(2), 1; g != w {
+		t.Fatalf("Up Cancel -> last entry: got %d want %d", g, w)
+	}
+	if g, w := form.Down(2), 2; g != w {
+		t.Fatalf("Down on Cancel: got %d want %d", g, w)
+	}
+}
+
 func TestTransferDialogLinearForm(t *testing.T) {
 	t.Parallel()
 	form := NewTransferDialogLinearForm(3)

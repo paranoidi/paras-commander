@@ -212,6 +212,87 @@ func (d DialogLinearForm) MoveFocus(focus int, key tcell.Key) (int, bool) {
 	return d.trailing().MoveFocus(focus, key)
 }
 
+// UserMenuDialogForm is focus for N menu rows plus a single Cancel button (no OK).
+type UserMenuDialogForm struct {
+	NumEntries int
+}
+
+// CancelIndex is the focus index of the Cancel button.
+func (d UserMenuDialogForm) CancelIndex() int {
+	return d.NumEntries
+}
+
+// TotalFocus is entries plus Cancel.
+func (d UserMenuDialogForm) TotalFocus() int {
+	if d.NumEntries < 0 {
+		return 1
+	}
+	return d.NumEntries + 1
+}
+
+func (d UserMenuDialogForm) Tab(focus int) int {
+	total := d.TotalFocus()
+	if total <= 0 {
+		return 0
+	}
+	return (focus + 1) % total
+}
+
+func (d UserMenuDialogForm) Backtab(focus int) int {
+	total := d.TotalFocus()
+	if total <= 0 {
+		return 0
+	}
+	if focus <= 0 {
+		return total - 1
+	}
+	return focus - 1
+}
+
+func (d UserMenuDialogForm) Down(focus int) int {
+	if d.NumEntries == 0 {
+		return d.CancelIndex()
+	}
+	if focus < d.NumEntries-1 {
+		return focus + 1
+	}
+	if focus == d.NumEntries-1 {
+		return d.CancelIndex()
+	}
+	return focus
+}
+
+func (d UserMenuDialogForm) Up(focus int) int {
+	if focus == d.CancelIndex() {
+		if d.NumEntries > 0 {
+			return d.NumEntries - 1
+		}
+		return focus
+	}
+	if focus > 0 {
+		return focus - 1
+	}
+	return focus
+}
+
+// MoveFocus applies user-menu dialog navigation (entries + Cancel only).
+func (d UserMenuDialogForm) MoveFocus(focus int, key tcell.Key) (int, bool) {
+	switch key {
+	case tcell.KeyTab:
+		return d.Tab(focus), true
+	case tcell.KeyBacktab:
+		return d.Backtab(focus), true
+	case tcell.KeyDown:
+		return d.Down(focus), true
+	case tcell.KeyUp:
+		return d.Up(focus), true
+	case tcell.KeyLeft, tcell.KeyRight:
+		return focus, true
+	default:
+		return focus, false
+	}
+}
+
 // TransferDialogLinearForm is focus navigation for the copy/move destination dialog:
 // NumContent fields, then OK, Add paused, Cancel.
 type TransferDialogLinearForm struct {

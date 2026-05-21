@@ -8,7 +8,7 @@ type UserMenuDialogState struct {
 	Title        string
 	Entries      []usermenu.MenuEntry
 	Selected     int
-	Focus        int // 0..len(Entries)-1 list, OK, Cancel (DialogLinearForm)
+	Focus        int // 0..len(Entries)-1 list, Cancel (UserMenuDialogForm)
 	ScrollOffset int
 	SourcePath   string
 }
