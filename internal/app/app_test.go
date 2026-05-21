@@ -4680,6 +4680,102 @@ func TestSyncSkipsCursorMovementOverFile(t *testing.T) {
 	}
 }
 
+func TestQuickViewFollowsDirectoryHighlight(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.QuickViewEnabled = true
+	app.reconcileAfterEvent()
+
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
+		t.Fatalf("inactive panel path = %q, want %q", got, want)
+	}
+	if app.filePreviewOpen() {
+		t.Fatal("file preview should be closed while quick view shows directory listing")
+	}
+}
+
+func TestQuickViewFollowsCursorBetweenSubdirectories(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	for _, p := range []string{alpha, beta} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.QuickViewEnabled = true
+	app.reconcileAfterEvent()
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
+		t.Fatalf("inactive after alpha = %q, want %q", got, want)
+	}
+
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
+	app.reconcileAfterEvent()
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(beta); got != want {
+		t.Fatalf("inactive after beta = %q, want %q", got, want)
+	}
+}
+
+func TestQuickViewShowsPreviewOnFileHighlight(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "notes.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
+	app.model.QuickViewEnabled = true
+	app.reconcileAfterEvent()
+
+	if !app.filePreviewOpen() {
+		t.Fatal("file preview should open for a highlighted file with quick view on")
+	}
+}
+
+func TestQuickViewOffRetainsInactivePath(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.QuickViewEnabled = true
+	app.reconcileAfterEvent()
+	inactiveAfterDir := filepath.Clean(app.panelByID(ui.RightPanel).Path.String())
+
+	app.dispatch(keymap.ActionFileQuickView)
+	if app.model.QuickViewEnabled {
+		t.Fatal("quick view should be disabled after toggle")
+	}
+	if app.filePreviewOpen() {
+		t.Fatal("file preview should be closed after quick view off")
+	}
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), inactiveAfterDir; got != want {
+		t.Fatalf("inactive path after quick view off = %q, want retained %q", got, want)
+	}
+}
+
 func TestSyncDoesNotFollowFromNonDriverActivePanel(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")

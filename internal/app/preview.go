@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -264,8 +263,10 @@ func (a *App) quickViewFingerprint() string {
 	case quickViewWantFile:
 		return "f:" + path
 	case quickViewWantDir:
-		p := a.activePanel()
-		return fmt.Sprintf("d:%d:%d:%s", a.model.ActivePanel, a.model.ActiveSubFocus, p.PathString())
+		if path, ok := a.syncFollowTargetPath(a.activePanel()); ok {
+			return "d:" + path
+		}
+		return "d:none"
 	case quickViewWantStatErr:
 		return "e:stat"
 	}
@@ -317,6 +318,31 @@ func (a *App) quickViewWantFile() (path string, workDir string, mode quickViewWa
 	return path, workDir, quickViewWantFile
 }
 
+// quickViewFollowDirectory loads the highlighted directory into the inactive panel (same
+// target-path rules and Load semantics as latched panel sync).
+func (a *App) quickViewFollowDirectory() {
+	driver := a.activePanel()
+	targetPath, ok := a.syncFollowTargetPath(driver)
+	if !ok {
+		a.patchColumnPreviewMessage("", "Quick view: select a folder")
+		return
+	}
+	a.closeFilePreview()
+	followerID := a.inactivePanelID()
+	follower := a.panelByID(followerID)
+	if filepath.Clean(follower.PathString()) == targetPath {
+		follower.EnsureCursorVisible(a.panelViewportRows(followerID))
+		return
+	}
+	if a.pathVolumeContendsWithActiveJob(targetPath) {
+		return
+	}
+	if err := follower.Load(targetPath); err != nil {
+		return
+	}
+	follower.EnsureCursorVisible(a.panelViewportRows(followerID))
+}
+
 func (a *App) applyQuickViewPreviewImmediately() {
 	if !a.model.QuickViewEnabled || a.model.ViewMode != ui.ViewBrowser {
 		return
@@ -340,7 +366,7 @@ func (a *App) applyQuickViewPreviewNow() {
 	case quickViewWantNone:
 		a.patchColumnPreviewMessage("", "Quick view: no file")
 	case quickViewWantDir:
-		a.patchColumnPreviewMessage("", "Quick view: select a file")
+		a.quickViewFollowDirectory()
 	case quickViewWantStatErr:
 		a.patchColumnPreviewMessage("", "Quick view: cannot read selection")
 	case quickViewWantFile:
