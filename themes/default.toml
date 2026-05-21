@@ -51,6 +51,29 @@ error = { fg = "bright_white", bg = "red", bold = true }
 key = { fg = "magenta", bg = "default", bold = true }
 label = { fg = "default", bg = "default" }
 
+[panel]
+row.directory = { fg = "blue", bg = "default", bold = true }
+row.file = { fg = "white", bg = "default" }
+row.selected = { fg = "yellow", bg = "default", bold = true }
+row.symlink = { fg = "bright_cyan", bg = "default" }
+sync.indicator = { fg = "green", bg = "default", bold = true }
+text = { fg = "white", bg = "default" }
+
+git.conflicted = { fg = "red", bg = "default" }
+git.deleted = { fg = "red", bg = "default" }
+git.ignored = { fg = "bright_black", bg = "default" }
+git.modified = { fg = "blue", bg = "default" }
+git.new = { fg = "green", bg = "default" }
+git.not_modified = { fg = "bright_black", bg = "default", bold = true }
+git.renamed = { fg = "yellow", bg = "default" }
+git.typechange = { fg = "magenta", bg = "default" }
+
+folder.diskscan = { fg = "bright_magenta", bg = "default" }
+folder.diskscan_excluded = { fg = "black", bg = "default" }
+
+usage.normal = { fg = "white", bg = "bright_black" }
+usage.selected = { fg = "yellow", bg = "bright_black" }
+
 [panel.active]
 disk_usage_overview = { fg = "blue", bg = "default"}
 frame = { fg = "blue", bg = "default" }
@@ -86,29 +109,6 @@ row.symlink = { fg = "cyan", bg = "default" }
 surface = { fg = "bright_black", bg = "default" }
 text = { fg = "bright_black", bg = "default" }
 title = { fg = "bright_black", bg = "default" }
-
-[panel]
-row.directory = { fg = "blue", bg = "default", bold = true }
-row.file = { fg = "white", bg = "default" }
-row.selected = { fg = "yellow", bg = "default", bold = true }
-row.symlink = { fg = "bright_cyan", bg = "default" }
-sync.indicator = { fg = "green", bg = "default", bold = true }
-text = { fg = "white", bg = "default" }
-
-git.conflicted = { fg = "red", bg = "default" }
-git.deleted = { fg = "red", bg = "default" }
-git.ignored = { fg = "bright_black", bg = "default" }
-git.modified = { fg = "blue", bg = "default" }
-git.new = { fg = "green", bg = "default" }
-git.not_modified = { fg = "bright_black", bg = "default", bold = true }
-git.renamed = { fg = "yellow", bg = "default" }
-git.typechange = { fg = "magenta", bg = "default" }
-
-folder.diskscan = { fg = "bright_magenta", bg = "default" }
-folder.diskscan_excluded = { fg = "black", bg = "default" }
-
-usage.normal = { fg = "white", bg = "bright_black" }
-usage.selected = { fg = "yellow", bg = "bright_black" }
 
 [fuzzy]
 highlight = { fg = "magenta", bold = true }
