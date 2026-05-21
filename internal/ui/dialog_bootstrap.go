@@ -46,6 +46,7 @@ type (
 	HostKeyDialogState        = dialog.HostKeyDialogState
 	SFTPConnectDialogState    = dialog.SFTPConnectDialogState
 	QuitConfirmState          = dialog.QuitConfirmState
+	StashRestoreDialogState   = dialog.StashRestoreDialogState
 	DialogTrailingButtonsForm = dialog.DialogTrailingButtonsForm
 	DialogLinearForm          = dialog.DialogLinearForm
 	TransferDialogLinearForm  = dialog.TransferDialogLinearForm

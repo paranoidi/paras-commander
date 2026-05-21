@@ -66,6 +66,7 @@ func loadTestTheme(t *testing.T) (theme.Theme, config.Paths) {
 		"panel.inactive.usage.cursor", "panel.inactive.usage.cursor.selected",
 		"panel.row.file", "panel.row.directory", "panel.row.symlink", "panel.row.selected",
 		"panel.text", "panel.sync.indicator",
+		"panel.bottom.indicator.selections", "panel.bottom.indicator.gitignore", "panel.bottom.indicator.stash",
 		"panel.blocked.frame", "panel.blocked.surface", "panel.blocked.title",
 		"panel.blocked.disk_usage_overview",
 		"panel.blocked.header", "panel.blocked.row.file", "panel.blocked.row.directory",

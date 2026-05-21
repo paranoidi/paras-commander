@@ -89,7 +89,7 @@ func (a *App) inputMode() InputMode {
 		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
 		return InputModeJobsView
-	case a.model.TransferDialog.Open, a.model.ConflictDialog.Open, a.model.QuitConfirm.Open:
+	case a.model.TransferDialog.Open, a.model.ConflictDialog.Open, a.model.QuitConfirm.Open, a.model.StashRestoreDialog.Open:
 		return InputModeDialog
 	case a.model.Menu.Open:
 		return InputModeMenu
@@ -561,6 +561,8 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionPanelClearSelection:
 		activePanel.ClearSelection()
 		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
+	case keymap.ActionPanelStashToggle:
+		a.togglePanelSelectionStash()
 	case keymap.ActionPanelSortDialog:
 		a.openSortDialog()
 	case keymap.ActionPanelListingFormatDialog:

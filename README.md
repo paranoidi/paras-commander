@@ -12,13 +12,14 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 - Gitignore and git statuses using eza notation.
 - Integrated disk usage scanning and reporting.
 - Supports selections across multiple paths.
+- Selections can be stashed and restored (1 slot).
 - Integrated mass rename.
 - Rename supports slugify and clean.
 - Read bookmarks from ~/.fzf-marks and gnome gtk files. Writes bookmarks to ~/.fzf-marks.
 - Find files / paths recursively.
 - Meta column can be used to provide data from external commands.
 - Execute command for selected files.
-- SFTP remote panel browsing.
+- SFTP remote panel browsing. Parses ~/.ssh/config for quick access.
 
 ### Outscoped compared to MC
 

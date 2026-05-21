@@ -108,12 +108,17 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	}
 
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	if selectionsBottomHint {
-		drawPanelSelectionsBottomHint(screen, rect, panelID, titleStyle, borderStyle)
-	}
-	if panelGitignoreBottomHintActive(state) {
-		drawPanelGitignoreBottomHint(screen, rect, borderStyle, selectionsBottomHint, syncDriverPanelID, panelID)
-	}
+	drawPanelBottomIndicators(screen, rect, PanelBottomIndicatorContext{
+		PanelID:              panelID,
+		State:                state,
+		SelectionsBottomHint: selectionsBottomHint,
+		SyncDriverPanelID:    syncDriverPanelID,
+		FileListActive:       fileListActive,
+		ChromeBlocked:        chromeBlocked,
+		BorderStyle:          borderStyle,
+		TitleStyle:           titleStyle,
+		Styles:               styles,
+	})
 	if syncDriverPanelID == panelID && !chromeBlocked {
 		drawPanelSyncIndicator(screen, rect, panelID, styles.PanelSyncIndicator)
 	}
@@ -428,87 +433,6 @@ const (
 	panelGitignoreChromeName   = "Gitignore"
 	panelGitignoreChromePadded = " " + panelGitignoreChromeName + " "
 )
-
-func panelGitignoreBottomHintActive(state panel.State) bool {
-	return state.GitignoreActive
-}
-
-// panelGitignoreBottomHintEndX is the last column (inclusive) for trailing frame dashes on the
-// bottom row, stopping before the latched-sync overlay when this panel is the sync driver.
-func panelGitignoreBottomHintEndX(rect Rect, panelID, syncDriverPanelID int) int {
-	lastIn := rect.X + rect.Width - 2
-	if syncDriverPanelID != panelID {
-		return lastIn
-	}
-	labelW := utf8.RuneCountInString(panelSyncIndicatorLabel(panelID))
-	if labelW > rect.Width-2 {
-		return lastIn
-	}
-	if panelID == RightPanel {
-		return rect.X + labelW
-	}
-	return lastIn - labelW
-}
-
-// drawPanelGitignoreBottomHint paints " Gitignore " on the bottom border at the panel's left
-// corner (└─ Gitignore ─…), entirely in borderStyle (same frame colour as volume free-space dashes).
-// Omitted when the current listing does not apply Git ignore rules (GitignoreActive false).
-func drawPanelGitignoreBottomHint(screen tcell.Screen, rect Rect, borderStyle tcell.Style, selectionsBottomHint bool, syncDriverPanelID, panelID int) {
-	if rect.Width <= 4 || rect.Height < 2 {
-		return
-	}
-	padW := utf8.RuneCountInString(panelGitignoreChromePadded)
-	endX := panelGitignoreBottomHintEndX(rect, panelID, syncDriverPanelID)
-	y := rect.Y + rect.Height - 1
-	x := rect.X + 1
-	if selectionsBottomHint {
-		selPadW := utf8.RuneCountInString(panelSelectionsChromePadded)
-		x += 1 + selPadW
-		if x > endX {
-			return
-		}
-		screen.SetContent(x, y, '─', nil, borderStyle)
-		x++
-	} else {
-		screen.SetContent(x, y, '─', nil, borderStyle)
-		x++
-	}
-	if x+padW-1 > endX {
-		return
-	}
-	primitive.TextOverlay(screen, x, y, padW, panelGitignoreChromePadded, borderStyle)
-	x += padW
-	for xi := x; xi <= endX; xi++ {
-		screen.SetContent(xi, y, '─', nil, borderStyle)
-	}
-}
-
-// drawPanelSelectionsBottomHint mirrors drawPanelSyncIndicator: it overlays compact chrome on the
-// bottom frame so an inactive column still signals hidden cross-directory selections.
-// One frame "─" uses borderStyle; panelSelectionsChromePadded uses titleStyle (same as the strip title).
-func drawPanelSelectionsBottomHint(screen tcell.Screen, rect Rect, panelID int, titleStyle, borderStyle tcell.Style) {
-	if rect.Width <= 4 || rect.Height < 2 {
-		return
-	}
-	padW := utf8.RuneCountInString(panelSelectionsChromePadded)
-	// Leading (left) or trailing (right) frame dash plus padded title.
-	need := 1 + padW
-	available := rect.Width - 2
-	if need > available {
-		return
-	}
-	y := rect.Y + rect.Height - 1
-	lastIn := rect.X + rect.Width - 2
-	if panelID == RightPanel {
-		xTitle := lastIn - padW
-		primitive.TextOverlay(screen, xTitle, y, padW, panelSelectionsChromePadded, titleStyle)
-		screen.SetContent(lastIn, y, '─', nil, borderStyle)
-		return
-	}
-	x0 := rect.X + 1
-	screen.SetContent(x0, y, '─', nil, borderStyle)
-	primitive.TextOverlay(screen, x0+1, y, padW, panelSelectionsChromePadded, titleStyle)
-}
 
 // panelCursorIconThemeKey is the semantic style key for Theme.PanelFileIconFG on the cursor row; empty otherwise.
 func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cursor int, selected bool) string {

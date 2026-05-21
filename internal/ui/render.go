@@ -115,6 +115,7 @@ type Model struct {
 	ConflictDialog            ConflictDialogState
 	HostKeyDialog             HostKeyDialogState
 	QuitConfirm               QuitConfirmState
+	StashRestoreDialog        StashRestoreDialogState
 	MessageDialog             MessageDialogState
 	Message                   string
 	MessageUrgency            MessageUrgency
@@ -176,7 +177,7 @@ func (m Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.UserMenu.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.StashRestoreDialog.Open || m.UserMenu.Open {
 		return true
 	}
 	return false
@@ -192,14 +193,14 @@ func (m Model) QuickFilterStartBlocked() bool {
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
-		m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.UserMenu.Open
+		m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.UserMenu.Open
 }
 
 // AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
 // dedicated Jobs/Commands view keyboard handling. inputMode checks this only after earlier cases have ruled
 // out other modals.
 func (m Model) AuxiliaryViewDialogKeysBlocked() bool {
-	return m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.Menu.Open
+	return m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.Menu.Open
 }
 
 // MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config show_menu_bar).
@@ -358,6 +359,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	if msg != "" && layout.Footer.Height > 0 {
 		row := Rect{X: 0, Y: layout.Footer.Y - 1, Width: layout.Width, Height: 1}
 		drawStatusMessageOverlay(screen, row, msg, model.MessageUrgency, styles)
+	}
+	if model.StashRestoreDialog.Open {
+		dialog.DrawStashRestoreDialog(screen, layout, model.StashRestoreDialog, styles)
 	}
 	if model.MessageDialog.Open {
 		dialog.DrawMessageDialog(screen, layout, model.MessageDialog, styles)

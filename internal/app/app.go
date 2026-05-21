@@ -291,9 +291,13 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	listOptions := localfs.ListOptions{
 		ShowHidden: cfg.ShowHidden,
 	}
+	var giCache *gitignore.Cache
+	if cfg.RespectGitignore {
+		giCache = gitignore.NewCache()
+	}
 	duEngine := diskusage.NewWithWalkConcurrency(cfg.DiskUsageWalkConcurrency)
 
-	left, err := panel.NewWithOptions(path, listOptions)
+	left, err := panel.NewWithOptions(path, listOptions, giCache)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +311,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	left.ApplySort()
 	left.Filter.CaseInsensitive = cfg.CaseInsensitiveFilter
 	left.Filter.CycleMatches = cfg.Filter.CycleMatches
-	right, err := panel.NewWithOptions(path, listOptions)
+	right, err := panel.NewWithOptions(path, listOptions, giCache)
 	if err != nil {
 		return nil, err
 	}
@@ -321,12 +325,6 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	right.ApplySort()
 	right.Filter.CaseInsensitive = cfg.CaseInsensitiveFilter
 	right.Filter.CycleMatches = cfg.Filter.CycleMatches
-	var giCache *gitignore.Cache
-	if cfg.RespectGitignore {
-		giCache = gitignore.NewCache()
-		left.Gitignore = giCache
-		right.Gitignore = giCache
-	}
 	jobState := jobs.NewState()
 	jobState.SetTransferFunc(jobTransferFunc(cfg.Operations, cfg.Jobs))
 	jobState.SetThroughputChart(
@@ -624,6 +622,9 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 		return false
 	case a.model.QuitConfirm.Open:
 		return a.handleQuitConfirmKey(event)
+	case a.model.StashRestoreDialog.Open:
+		a.handleStashRestoreDialogKey(event)
+		return false
 	}
 	return false
 }

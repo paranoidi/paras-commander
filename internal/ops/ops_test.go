@@ -39,7 +39,7 @@ func TestResolveSourceWithSelectionUsesSelected(t *testing.T) {
 	writeFile(t, aPath)
 	writeFile(t, bPath)
 
-	p, err := panel.NewWithOptions(dir, localfs.DefaultListOptions())
+	p, err := panel.NewWithOptions(dir, localfs.DefaultListOptions(), nil)
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestResolveSourceSelectedIncludesPathNotInListing(t *testing.T) {
 	writeFile(t, aPath)
 	writeFile(t, remotePath)
 
-	p, err := panel.NewWithOptions(dir, localfs.DefaultListOptions())
+	p, err := panel.NewWithOptions(dir, localfs.DefaultListOptions(), nil)
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
@@ -155,7 +155,7 @@ func TestResolveSourceSingleWithSelectionReturnsError(t *testing.T) {
 	writeFile(t, aPath)
 	writeFile(t, bPath)
 
-	p, err := panel.NewWithOptions(dir, localfs.DefaultListOptions())
+	p, err := panel.NewWithOptions(dir, localfs.DefaultListOptions(), nil)
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}

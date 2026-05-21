@@ -63,6 +63,10 @@ type Theme struct {
 	// PanelSyncIndicator styles the "Sync →" / "← Sync" overlay drawn on the
 	// bottom border of the panel that drives latched panel sync.
 	PanelSyncIndicator tcell.Style
+	// PanelBottomIndicator* style Start/PhysicalLeft bottom-border segments (see ui panel_bottom_indicators).
+	PanelBottomIndicatorSelections tcell.Style
+	PanelBottomIndicatorGitignore  tcell.Style
+	PanelBottomIndicatorStash      tcell.Style
 	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
 	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
 	PanelFileIconFG map[string]tcell.Color
@@ -192,10 +196,67 @@ func (t Theme) DialogInputBaseStyle(focused, invalid bool) tcell.Style {
 	return t.DialogInputInactive
 }
 
+// Panel bottom-indicator style keys ([panel.bottom.indicator] in TOML).
+const (
+	PanelBottomIndicatorKeySelections = "selections"
+	PanelBottomIndicatorKeyGitignore  = "gitignore"
+	PanelBottomIndicatorKeyStash      = "stash"
+)
+
+// PanelBottomIndicator returns the style for a file-panel bottom-border segment.
+// id is one of PanelBottomIndicatorKey* constants. When the theme omits a dedicated key,
+// selections falls back to panel title styles and gitignore to panel frame styles.
+func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked bool) tcell.Style {
+	switch id {
+	case PanelBottomIndicatorKeySelections:
+		if t.PanelBottomIndicatorSelections != (tcell.Style{}) {
+			return t.PanelBottomIndicatorSelections
+		}
+		if chromeBlocked {
+			return t.PanelBlockedTitle
+		}
+		if fileListActive {
+			return t.PanelActiveTitle
+		}
+		return t.PanelInactiveTitle
+	case PanelBottomIndicatorKeyGitignore:
+		if t.PanelBottomIndicatorGitignore != (tcell.Style{}) {
+			return t.PanelBottomIndicatorGitignore
+		}
+		if chromeBlocked {
+			return t.PanelBlockedFrame
+		}
+		if fileListActive {
+			return t.PanelActiveFrame
+		}
+		return t.PanelInactiveFrame
+	case PanelBottomIndicatorKeyStash:
+		if t.PanelBottomIndicatorStash != (tcell.Style{}) {
+			return t.PanelBottomIndicatorStash
+		}
+		if chromeBlocked {
+			return t.PanelBlockedTitle
+		}
+		if fileListActive {
+			return t.PanelActiveTitle
+		}
+		return t.PanelInactiveTitle
+	default:
+		if chromeBlocked {
+			return t.PanelBlockedFrame
+		}
+		if fileListActive {
+			return t.PanelActiveFrame
+		}
+		return t.PanelInactiveFrame
+	}
+}
+
 // Symbol keys in the [symbols] table (optional entries — see accessors for defaults).
 const (
 	SymbolKeyPathPicker = "path_picker"
 	SymbolKeyGit        = "git"
+	SymbolKeyStash      = "stash"
 )
 
 // Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
@@ -211,6 +272,16 @@ const (
 	SymbolKeyMenuJobDecision       = "menu.job.decision"
 	SymbolKeyMenuJobCompleted      = "menu.job.completed"
 )
+
+// SymbolStash returns the selection-stash bottom-indicator glyph from [symbols] stash.
+func (t Theme) SymbolStash() string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[SymbolKeyStash]); s != "" {
+			return s
+		}
+	}
+	return "\ue73d"
+}
 
 // SymbolGit returns the panel Git column header glyph from [symbols] git.
 func (t Theme) SymbolGit() string {
@@ -360,6 +431,9 @@ var requiredStyleKeys = []string{
 	"panel.row.selected",
 	"panel.text",
 	"panel.sync.indicator",
+	"panel.bottom.indicator.selections",
+	"panel.bottom.indicator.gitignore",
+	"panel.bottom.indicator.stash",
 	"panel.blocked.frame",
 	"panel.blocked.surface",
 	"panel.blocked.title",
@@ -766,6 +840,9 @@ func parse(data []byte) (Theme, error) {
 		PanelActiveCursorSelected:      styles["panel.active.row.cursor.selected"],
 		PanelInactiveCursorSelected:    styles["panel.inactive.row.cursor.selected"],
 		PanelSyncIndicator:             styles["panel.sync.indicator"],
+		PanelBottomIndicatorSelections: styles["panel.bottom.indicator.selections"],
+		PanelBottomIndicatorGitignore:  styles["panel.bottom.indicator.gitignore"],
+		PanelBottomIndicatorStash:      styles["panel.bottom.indicator.stash"],
 		PanelFileIconFG:                panelFileIconFG,
 
 		PanelBlockedFrame:             styles["panel.blocked.frame"],

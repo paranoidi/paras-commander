@@ -275,6 +275,14 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: []string{"C-u"},
 			Keywords:    []string{"deselect", "unmark"},
 		},
+		{
+			ID:           ActionPanelStashToggle,
+			Title:        "Toggle selection stash",
+			Section:      "Selection",
+			DefaultKeys:  []string{"M-insert"},
+			PreferredKey: "M-insert",
+			Keywords:     []string{"stash", "clipboard", "buffer", "selection"},
+		},
 
 		// ── Sort & display ──
 		{

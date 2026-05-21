@@ -57,6 +57,9 @@ row.file = { fg = "white", bg = "default" }
 row.selected = { fg = "yellow", bg = "default", bold = true }
 row.symlink = { fg = "bright_cyan", bg = "default" }
 sync.indicator = { fg = "green", bg = "default", bold = true }
+bottom.indicator.selections = { fg = "white", bg = "default" }
+bottom.indicator.gitignore = { fg = "bright_black", bg = "default" }
+bottom.indicator.stash = { fg = "yellow", bg = "default", bold = true }
 text = { fg = "white", bg = "default" }
 
 git.conflicted = { fg = "red", bg = "default" }
@@ -166,6 +169,7 @@ decision = "\uf059"
 completed = "\uf05d"
 path_picker = "\uf0ca"
 git = "\uf1d3"
+stash = "\uef0d"
 
 [symbols.menu.progress]
 done = "─"

@@ -29,6 +29,7 @@ const (
 	ActionPanelUnselectGroup         = "panel.unselect-group"
 	ActionPanelInvertSelection       = "panel.invert-selection"
 	ActionPanelClearSelection        = "panel.clear-selection"
+	ActionPanelStashToggle           = "panel.stash-toggle"
 	ActionPanelSortDialog            = "panel.sort-dialog"
 	ActionPanelListingFormatDialog   = "panel.listing-format-dialog"
 	ActionPanelCycleSort             = "panel.cycle-sort"
@@ -167,6 +168,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelUnselectGroup:         {},
 	ActionPanelInvertSelection:       {},
 	ActionPanelClearSelection:        {},
+	ActionPanelStashToggle:           {},
 	ActionPanelSortDialog:            {},
 	ActionPanelListingFormatDialog:   {},
 	ActionPanelCycleSort:             {},

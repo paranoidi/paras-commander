@@ -47,7 +47,11 @@ type State struct {
 	SelectionsStripOrder  []string
 	SelectionsStripCursor int
 	SelectionsStripScroll int
-	ShowHidden            bool
+	// SelectionStashPaths holds stashed selection paths (empty/nil = no stash).
+	SelectionStashPaths []string
+	// SelectionStashStripOrder mirrors SelectionsStripOrder at stash time.
+	SelectionStashStripOrder []string
+	ShowHidden               bool
 	// Gitignore is a shared cache for .gitignore filtering when ShowHidden is false; nil disables.
 	Gitignore *gitignore.Cache
 	// GitignoreActive is true when the current listing applies Git ignore rules (inside a work tree).
@@ -120,15 +124,17 @@ type filterResult struct {
 
 // New loads a panel rooted at path.
 func New(path string) (State, error) {
-	return NewWithOptions(path, localfs.DefaultListOptions())
+	return NewWithOptions(path, localfs.DefaultListOptions(), nil)
 }
 
 // NewWithOptions loads a panel rooted at path with configured listing defaults.
-func NewWithOptions(path string, opts localfs.ListOptions) (State, error) {
+// gitignoreCache is optional; when set it is used for the initial listing (and later reloads).
+func NewWithOptions(path string, opts localfs.ListOptions, gitignoreCache *gitignore.Cache) (State, error) {
 	state := State{
 		Cursor:       0,
 		ScrollOffset: 0,
 		ShowHidden:   opts.ShowHidden,
+		Gitignore:    gitignoreCache,
 		Filter: FilterState{
 			CaseInsensitive: true,
 		},

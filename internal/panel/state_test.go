@@ -207,19 +207,16 @@ func TestLoadHidesGitignoredEntries(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "ignored.txt"))
 	writeFile(t, filepath.Join(dir, "visible.txt"))
 
-	state, err := New(dir)
+	cache := gitignore.NewCache()
+	state, err := NewWithOptions(dir, localfs.ListOptions{ShowHidden: false}, cache)
 	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
-	state.Gitignore = gitignore.NewCache()
-	if err := state.Refresh(5); err != nil {
-		t.Fatalf("Refresh() error = %v", err)
+		t.Fatalf("NewWithOptions() error = %v", err)
 	}
 	if len(state.Entries) != 1 || state.Entries[0].Name != "visible.txt" {
 		t.Fatalf("entries = %v, want only visible.txt", entryNames(state.Entries))
 	}
 	if !state.GitignoreActive {
-		t.Fatal("GitignoreActive = false, want true inside Git work tree")
+		t.Fatal("GitignoreActive = false, want true inside Git work tree on first load")
 	}
 }
 
