@@ -653,15 +653,12 @@ func drawFileDeleteDialogContent(screen tcell.Screen, rect Rect, state FileDialo
 	}
 	lines := strings.Split(state.Message, "\n")
 	_, dbg, _ := styles.DialogSurface.Decompose()
-	style := styles.DialogText.Background(dbg)
-	if state.DialogType == FileDialogDelete {
-		style = styles.MessageWarn.Background(dbg)
-	}
+	textStyle := styles.DialogText.Background(dbg)
 	for i, line := range lines {
 		y := rect.Y + 1 + i
 		if y >= rect.Y+rect.Height-3 {
 			break
 		}
-		primitive.Text(screen, rect.X+2, y, rect.Width-4, line, style)
+		primitive.Text(screen, rect.X+2, y, rect.Width-4, line, textStyle)
 	}
 }

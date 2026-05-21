@@ -3417,7 +3417,7 @@ func TestFileMenuDeleteOpensDeleteConfirmation(t *testing.T) {
 	if app.model.FileDialog.DialogType != ui.FileDialogDelete {
 		t.Fatalf("dialog type = %d, want FileDialogDelete", app.model.FileDialog.DialogType)
 	}
-	if got, want := app.model.FileDialog.Message, "Delete 1 item?"; got != want {
+	if got, want := app.model.FileDialog.Message, "Delete file\ntest.txt"; got != want {
 		t.Fatalf("Message = %q, want %q", got, want)
 	}
 	if app.model.FileDialog.FocusedField != 1 {
@@ -4289,7 +4289,7 @@ func TestDeleteDialogWarningPluralDirectories(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionFileDelete)
-	want := "Delete 2 items?\nWarning: 2 directories will be removed recursively!"
+	want := "Delete 2 selections?\nWarning: 2 directories will be removed recursively!"
 	if got := app.model.FileDialog.Message; got != want {
 		t.Fatalf("Message = %q, want %q", got, want)
 	}

@@ -74,24 +74,10 @@ func (a *App) openDeleteDialog(p *panel.State) {
 		a.setErrorMessage("Delete", err)
 		return
 	}
-	dirCount := ops.CountDirectories(source.Entries)
-	n := len(source.Entries)
-	itemNoun := "items"
-	if n == 1 {
-		itemNoun = "item"
-	}
-	msg := fmt.Sprintf("Delete %d %s?", n, itemNoun)
-	if dirCount > 0 {
-		dirNoun := "directories"
-		if dirCount == 1 {
-			dirNoun = "directory"
-		}
-		msg += fmt.Sprintf("\nWarning: %d %s will be removed recursively!", dirCount, dirNoun)
-	}
 	a.model.FileDialog = ui.FileDialogState{
 		Open:         true,
 		DialogType:   ui.FileDialogDelete,
-		Message:      msg,
+		Message:      ops.DeleteConfirmMessage(source),
 		FocusedField: 1, // No (safe default); Yes stays index 0.
 	}
 }
