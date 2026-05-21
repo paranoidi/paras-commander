@@ -78,10 +78,10 @@ disk_usage_overview = { fg = "bright_black", bg = "default" }
 frame = { fg = "bright_black", bg = "default" }
 header = { fg = "bright_black", bg = "default", bold = true }
 row.cursor = { fg = "white", bg = "black" }
-row.cursor.selected = { fg = "bright_yellow", bg = "bright_black", bold = true }
+row.cursor.selected = { fg = "white", bg = "default" }
 row.directory = { fg = "bright_black", bg = "default", bold = true }
 row.file = { fg = "bright_black", bg = "default" }
-row.selected = { fg = "bright_yellow", bg = "bright_black", bold = true }
+row.selected = { fg = "white", bg = "default" }
 row.symlink = { fg = "cyan", bg = "default" }
 surface = { fg = "bright_black", bg = "default" }
 text = { fg = "bright_black", bg = "default" }
