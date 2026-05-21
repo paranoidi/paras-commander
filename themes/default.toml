@@ -27,20 +27,20 @@ bar.alert = { fg = "bright_red", bold = true }
 bar.selected = { fg = "black", bg = "cyan", bold = true }
 detail = { fg = "white", bg = "default" }
 dropdown = { fg = "black", bg = "blue" }
-dropdown.accent = { fg = "white", bold = false }
+dropdown.accent = { fg = "white"}
 dropdown.frame = { fg = "bright_blue", bg = "blue" }
 dropdown.selected = { fg = "black", bg = "bright_blue", bold = true }
-spinner = { fg = "bright_magenta", bg = "default", bold = true }
-progress.done = { fg = "green", bg = "default" }
-progress.remaining = { fg = "bright_black", bg = "default" }
-job.scanning = { fg = "bright_cyan", bg = "default" }
+job.canceled = { fg = "red", bg = "default" }
+job.completed = { fg = "green", bg = "default" }
+job.decision = { fg = "cyan", bg = "default" }
+job.failed = { fg = "bright_red", bg = "default" }
+job.paused = { fg = "yellow", bg = "default" }
 job.queued = { fg = "yellow", bg = "default" }
 job.running = { fg = "green", bg = "default" }
-job.paused = { fg = "yellow", bg = "default" }
-job.canceled = { fg = "red", bg = "default" }
-job.failed = { fg = "bright_red", bg = "default" }
-job.decision = { fg = "cyan", bg = "default" }
-job.completed = { fg = "green", bg = "default" }
+job.scanning = { fg = "bright_cyan", bg = "default" }
+progress.done = { fg = "green", bg = "default" }
+progress.remaining = { fg = "bright_black", bg = "default" }
+spinner = { fg = "bright_magenta", bg = "default", bold = true }
 
 [message]
 info = { fg = "black", bg = "white" }
@@ -51,100 +51,109 @@ error = { fg = "bright_white", bg = "red", bold = true }
 key = { fg = "magenta", bg = "default", bold = true }
 label = { fg = "default", bg = "default" }
 
-[panel]
-active.frame = { fg = "blue", bg = "default" }
-active.header = { fg = "bright_white", bg = "blue", bold = true }
-active.space = { fg = "blue", bg = "default", bold = false }
-active.surface = { fg = "white", bg = "default" }
-active.title = { fg = "white", bg = "default", bold = true }
-inactive.frame = { fg = "bright_black", bg = "default" }
-inactive.header = { fg = "bright_white", bg = "blue", bold = true }
-inactive.space = { fg = "bright_black", bg = "default", bold = false }
-inactive.surface = { fg = "white", bg = "default" }
-inactive.title = { fg = "white", bg = "default" }
-
-row.cursor.active = { fg = "black", bg = "cyan", icon = "black" }
-row.cursor.inactive = { fg = "white", bg = "black" }
+[panel.active]
+disk_usage_overview = { fg = "blue", bg = "default"}
+frame = { fg = "blue", bg = "default" }
+header = { fg = "bright_white", bg = "blue", bold = true }
+row.cursor = { fg = "black", bg = "cyan", icon = "black" }
 row.cursor.selected = { fg = "yellow", bg = "cyan", bold = true, icon = "black" }
+surface = { fg = "white", bg = "default" }
+title = { fg = "white", bg = "default", bold = true }
+usage.cursor = { fg = "black", bg = "bright_cyan" }
+usage.cursor.selected = { fg = "yellow", bg = "bright_blue", bold = true }
+
+[panel.inactive]
+disk_usage_overview = { fg = "bright_black", bg = "default"}
+frame = { fg = "bright_black", bg = "default" }
+header = { fg = "bright_white", bg = "blue", bold = true }
+row.cursor = { fg = "white", bg = "black" }
+row.cursor.selected = { fg = "yellow", bg = "cyan", bold = true }
+surface = { fg = "white", bg = "default" }
+title = { fg = "white", bg = "default" }
+usage.cursor = { fg = "white", bg = "black" }
+usage.cursor.selected = { fg = "yellow", bg = "bright_blue", bold = true }
+
+[panel.blocked]
+disk_usage_overview = { fg = "bright_black", bg = "default" }
+frame = { fg = "bright_black", bg = "default" }
+header = { fg = "bright_black", bg = "default", bold = true }
+row.cursor = { fg = "white", bg = "black" }
+row.cursor.selected = { fg = "bright_yellow", bg = "bright_black", bold = true }
+row.directory = { fg = "bright_black", bg = "default", bold = true }
+row.file = { fg = "bright_black", bg = "default" }
+row.selected = { fg = "bright_yellow", bg = "bright_black", bold = true }
+row.symlink = { fg = "cyan", bg = "default" }
+surface = { fg = "bright_black", bg = "default" }
+text = { fg = "bright_black", bg = "default" }
+title = { fg = "bright_black", bg = "default" }
+
+[panel]
 row.directory = { fg = "blue", bg = "default", bold = true }
-row.normal = { fg = "white", bg = "default" }
+row.file = { fg = "white", bg = "default" }
 row.selected = { fg = "yellow", bg = "default", bold = true }
 row.symlink = { fg = "bright_cyan", bg = "default" }
 sync.indicator = { fg = "green", bg = "default", bold = true }
+text = { fg = "white", bg = "default" }
 
-git.not_modified = { fg = "bright_black", bg = "default", bold = true }
-git.new = { fg = "green", bg = "default" }
-git.modified = { fg = "blue", bg = "default" }
+git.conflicted = { fg = "red", bg = "default" }
 git.deleted = { fg = "red", bg = "default" }
+git.ignored = { fg = "bright_black", bg = "default" }
+git.modified = { fg = "blue", bg = "default" }
+git.new = { fg = "green", bg = "default" }
+git.not_modified = { fg = "bright_black", bg = "default", bold = true }
 git.renamed = { fg = "yellow", bg = "default" }
 git.typechange = { fg = "magenta", bg = "default" }
-git.ignored = { fg = "bright_black", bg = "default" }
-git.conflicted = { fg = "red", bg = "default" }
-
-blocked.frame = { fg = "bright_black", bg = "default" }
-blocked.header = { fg = "bright_black", bg = "default", bold = true }
-blocked.row.cursor = { fg = "white", bg = "black" }
-blocked.row.cursor.selected = { fg = "bright_yellow", bg = "bright_black", bold = true }
-blocked.row.directory = { fg = "bright_black", bg = "default", bold = true }
-blocked.row.normal = { fg = "bright_black", bg = "default" }
-blocked.row.selected = { fg = "bright_yellow", bg = "bright_black", bold = true }
-blocked.row.symlink = { fg = "cyan", bg = "default" }
-blocked.surface = { fg = "bright_black", bg = "default" }
-blocked.title = { fg = "bright_black", bg = "default" }
 
 folder.diskscan = { fg = "bright_magenta", bg = "default" }
 folder.diskscan_excluded = { fg = "black", bg = "default" }
 
-usage.prefix.cursor.active = { fg = "black", bg = "bright_cyan" }
-usage.prefix.cursor.inactive = { fg = "white", bg = "black" }
-usage.prefix.cursor.selected = { fg = "yellow", bg = "bright_blue", bold = true }
-usage.prefix.normal = { fg = "white", bg = "bright_black" }
-usage.prefix.selected = { fg = "yellow", bg = "bright_black" }
+usage.normal = { fg = "white", bg = "bright_black" }
+usage.selected = { fg = "yellow", bg = "bright_black" }
 
 [fuzzy]
-input = { fg = "bright_yellow", bg = "default", bold = true }
-input.nomatch = { fg = "bright_red", bg = "default", bold = true }
 highlight = { fg = "magenta", bold = true }
 highlight.cursor = { fg = "red", bold = true }
+input = { fg = "bright_yellow", bg = "default", bold = true }
+input.nomatch = { fg = "bright_red", bg = "default", bold = true }
 
 [dialog]
 frame = { fg = "white" }
-title = { bold = true }
-text = { fg = "white" }
 surface = { fg = "white", bg = "bright_black" }
+text = { fg = "white" }
+title = { bold = true }
 # bg matters for the path-picker trailing glyph when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "white", bg = "black", bold = true }
-input.active = { fg = "bright_white", bg = "default", bold = true }
-input.active.placeholder = { fg = "default", bg = "default" }
-input.active.error = { fg = "red", bg = "default" }
-input.inactive = { fg = "white", bg = "black" }
-input.inactive.placeholder = { fg = "white", bg = "black" }
-input.inactive.error = { fg = "red", bg = "black" }
-button.inactive = { fg = "white", bg = "black" }
 button.active = { fg = "black", bg = "cyan" }
-option.inactive = { fg = "white", bg = "bright_black" }
+button.inactive = { fg = "white", bg = "black" }
+input.active = { fg = "bright_white", bg = "default", bold = true }
+input.active.error = { fg = "red", bg = "default" }
+input.active.placeholder = { fg = "default", bg = "default" }
+input.inactive = { fg = "white", bg = "black" }
+input.inactive.error = { fg = "red", bg = "black" }
+input.inactive.placeholder = { fg = "white", bg = "black" }
 option.active = { fg = "yellow", bg = "bright_black", bold = true }
+option.inactive = { fg = "white", bg = "bright_black" }
 option.selected = { fg = "yellow", bg = "bright_black" }
 
 [jobs]
-row = { fg = "white" }
-running = { fg = "bright_cyan", bold = true }
 done = { fg = "bright_green", bold = true }
 failed = { fg = "bright_red", bold = true }
+row = { fg = "white" }
+running = { fg = "bright_cyan", bold = true }
 
-progress.track = { fg = "bright_black", bg = "black" }
 progress.fill = { fg = "black", bg = "bright_green" }
 progress.label.on_fill = { fg = "black", bold = true }
 progress.label.on_track = { fg = "bright_white", bold = true }
+progress.track = { fg = "bright_black", bg = "black" }
 
-icons.scanning = { fg = "bright_cyan", bold = true }
-icons.queued = { fg = "yellow", bold = true }
-icons.ongoing = { fg = "bright_green", bold = true }
-icons.paused = { fg = "yellow", bold = true }
-icons.stopped = { fg = "bright_red", bold = true }
+icons.completed = { fg = "bright_green", bold = true }
 icons.error = { fg = "bright_red", bold = true }
 icons.input_required = { fg = "cyan", bold = true }
-icons.completed = { fg = "bright_green", bold = true }
+icons.ongoing = { fg = "bright_green", bold = true }
+icons.paused = { fg = "yellow", bold = true }
+icons.queued = { fg = "yellow", bold = true }
+icons.scanning = { fg = "bright_cyan", bold = true }
+icons.stopped = { fg = "bright_red", bold = true }
 
 [symbols]
 scanning = "\uf110"

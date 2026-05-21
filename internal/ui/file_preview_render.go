@@ -50,9 +50,9 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 	titleWidth := rect.Width - 4
 	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
 
-	body := styles.PanelRowNormal.Background(bg)
+	body := styles.PanelText.Background(bg)
 	if chromeBlocked {
-		body = styles.PanelBlockedRowNormal
+		body = styles.PanelBlockedText
 	}
 	contentTop := rect.Y + 1
 	contentH := JobsPanelContentRows(rect)
@@ -75,7 +75,7 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 		errSt := styles.MessageError.Background(bg)
 		if chromeBlocked {
 			_, efg, _ := styles.MessageError.Decompose()
-			errSt = styles.PanelBlockedRowNormal.Foreground(efg)
+			errSt = styles.PanelBlockedText.Foreground(efg)
 		}
 		primitive.Text(screen, textX, contentTop, textW, msg, errSt)
 		return

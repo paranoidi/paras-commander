@@ -11,17 +11,17 @@ func (t Theme) DiskUsageBarStyle(fileListActive, cursor, selected bool) tcell.St
 	if cursor {
 		if fileListActive {
 			if selected {
-				return t.PanelUsagePrefixCursorSelected
+				return t.PanelActiveUsageCursorSelected
 			}
-			return t.PanelUsagePrefixCursorActive
+			return t.PanelUsageCursorActive
 		}
 		if selected {
-			return t.PanelUsagePrefixCursorSelected
+			return t.PanelInactiveUsageCursorSelected
 		}
-		return t.PanelUsagePrefixCursorInactive
+		return t.PanelUsageCursorInactive
 	}
 	if selected {
-		return t.PanelUsagePrefixSelected
+		return t.PanelUsageSelected
 	}
-	return t.PanelUsagePrefixNormal
+	return t.PanelUsageNormal
 }

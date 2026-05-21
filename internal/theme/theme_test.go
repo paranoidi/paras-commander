@@ -96,9 +96,10 @@ func TestParseAllowsDialogTitleBoldOnly(t *testing.T) {
 
 func TestParseLoadsPanelCursorIconFG(t *testing.T) {
 	for _, key := range []string{
-		"panel.row.cursor.active",
-		"panel.row.cursor.inactive",
-		"panel.row.cursor.selected",
+		"panel.active.row.cursor",
+		"panel.active.row.cursor.selected",
+		"panel.inactive.row.cursor",
+		"panel.inactive.row.cursor.selected",
 		"panel.blocked.row.cursor",
 		"panel.blocked.row.cursor.selected",
 	} {

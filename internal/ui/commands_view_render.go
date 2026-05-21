@@ -258,9 +258,9 @@ func drawCommandsStreamPanel(screen tcell.Screen, rect Rect, title string, scrol
 	titleWidth := rect.Width - 4
 	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
 
-	body := styles.PanelRowNormal.Background(bg)
+	body := styles.PanelText.Background(bg)
 	if chromeBlocked {
-		body = styles.PanelBlockedRowNormal
+		body = styles.PanelBlockedText
 	}
 	contentTop := rect.Y + 1
 	contentH := JobsPanelContentRows(rect)

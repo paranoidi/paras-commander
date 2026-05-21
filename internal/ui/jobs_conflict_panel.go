@@ -127,9 +127,9 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 	}
 	primitive.TextOverlay(screen, titleX, rect.Y, titleW, " Disk space ", titleStyle)
 
-	body := styles.PanelRowNormal.Background(bg)
+	body := styles.PanelText.Background(bg)
 	if chromeBlocked {
-		body = styles.PanelBlockedRowNormal
+		body = styles.PanelBlockedText
 	}
 	warn := styles.MessageWarn.Background(bg)
 
@@ -231,9 +231,9 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	}
 	primitive.TextOverlay(screen, titleX, rect.Y, titleW, " File exists ", titleStyle)
 
-	body := styles.PanelRowNormal.Background(bg)
+	body := styles.PanelText.Background(bg)
 	if chromeBlocked {
-		body = styles.PanelBlockedRowNormal
+		body = styles.PanelBlockedText
 	}
 	warn := styles.MessageWarn.Background(bg)
 	if chromeBlocked {

@@ -266,9 +266,9 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 	titleWidth := rect.Width - 4
 	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, " Details ", titleStyle)
 
-	body := styles.PanelRowNormal.Background(bg)
+	body := styles.PanelText.Background(bg)
 	if chromeBlocked {
-		body = styles.PanelBlockedRowNormal
+		body = styles.PanelBlockedText
 	}
 	contentTop := rect.Y + 1
 	contentH := rect.Height - 2
@@ -342,9 +342,9 @@ func drawJobsActivityPanel(screen tcell.Screen, rect Rect, state JobsViewState, 
 	titleWidth := rect.Width - 4
 	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, " Activity ", titleStyle)
 
-	body := styles.PanelRowNormal.Background(bg)
+	body := styles.PanelText.Background(bg)
 	if chromeBlocked {
-		body = styles.PanelBlockedRowNormal
+		body = styles.PanelBlockedText
 	}
 	contentTop := rect.Y + 1
 	contentH := rect.Height - 2

@@ -83,9 +83,9 @@ func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stri
 	for row := 0; row < visibleRows; row++ {
 		y := rect.Y + 1 + row
 		idx := scroll + row
-		baseStyle := styles.PanelRowNormal
+		baseStyle := styles.PanelRowFile
 		if chromeBlocked {
-			baseStyle = styles.PanelBlockedRowNormal
+			baseStyle = styles.PanelBlockedRowFile
 		}
 		if stripFocused && idx == state.SelectionsStripCursor {
 			if chromeBlocked {

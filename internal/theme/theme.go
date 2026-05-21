@@ -45,37 +45,42 @@ type Theme struct {
 	PanelInactiveSurface tcell.Style
 	PanelActiveTitle     tcell.Style
 	PanelInactiveTitle   tcell.Style
-	// PanelActiveSpace / PanelInactiveSpace style the panel top-row volume summary (free / total + percent).
-	PanelActiveSpace    tcell.Style
-	PanelInactiveSpace  tcell.Style
-	PanelActiveHeader   tcell.Style
-	PanelInactiveHeader tcell.Style
-	PanelRowNormal      tcell.Style
-	PanelRowDirectory   tcell.Style
-	PanelRowSymlink     tcell.Style
-	PanelRowSelected    tcell.Style
-	PanelCursorActive   tcell.Style
-	PanelCursorInactive tcell.Style
-	PanelCursorSelected tcell.Style
+	// PanelActiveDiskUsageOverview / PanelInactiveDiskUsageOverview style the panel top-row volume summary (free / total + percent).
+	PanelActiveDiskUsageOverview   tcell.Style
+	PanelInactiveDiskUsageOverview tcell.Style
+	PanelActiveHeader              tcell.Style
+	PanelInactiveHeader            tcell.Style
+	PanelRowFile                   tcell.Style
+	PanelRowDirectory              tcell.Style
+	PanelRowSymlink                tcell.Style
+	PanelRowSelected               tcell.Style
+	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
+	PanelText                   tcell.Style
+	PanelCursorActive           tcell.Style
+	PanelCursorInactive         tcell.Style
+	PanelActiveCursorSelected   tcell.Style
+	PanelInactiveCursorSelected tcell.Style
 	// PanelSyncIndicator styles the "Sync →" / "← Sync" overlay drawn on the
 	// bottom border of the panel that drives latched panel sync.
 	PanelSyncIndicator tcell.Style
-	// PanelFileIconFG maps cursor-row style keys (e.g. panel.row.cursor.active) to file-devicon FG
+	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
 	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
 	PanelFileIconFG map[string]tcell.Color
 
 	// PanelBlocked* is used for both file panels when a modal or pulldown menu
 	// has focus so the file browser reads visually behind the overlay.
-	PanelBlockedFrame          tcell.Style
-	PanelBlockedSurface        tcell.Style
-	PanelBlockedTitle          tcell.Style
-	PanelBlockedHeader         tcell.Style
-	PanelBlockedRowNormal      tcell.Style
-	PanelBlockedRowDirectory   tcell.Style
-	PanelBlockedRowSymlink     tcell.Style
-	PanelBlockedRowSelected    tcell.Style
-	PanelBlockedCursor         tcell.Style
-	PanelBlockedCursorSelected tcell.Style
+	PanelBlockedFrame             tcell.Style
+	PanelBlockedSurface           tcell.Style
+	PanelBlockedTitle             tcell.Style
+	PanelBlockedDiskUsageOverview tcell.Style
+	PanelBlockedHeader            tcell.Style
+	PanelBlockedRowFile           tcell.Style
+	PanelBlockedRowDirectory      tcell.Style
+	PanelBlockedRowSymlink        tcell.Style
+	PanelBlockedRowSelected       tcell.Style
+	PanelBlockedText              tcell.Style
+	PanelBlockedCursor            tcell.Style
+	PanelBlockedCursorSelected    tcell.Style
 
 	// Disk usage overlays (proportionally painted under listing rows once a scan ran).
 	PanelFolderDiskscan         tcell.Style
@@ -86,19 +91,20 @@ type Theme struct {
 	MenuProgressDone      tcell.Style
 	MenuProgressRemaining tcell.Style
 	// MenuJob* styles one-cell queue glyph per live job status in the menu bar.
-	MenuJobScanning                tcell.Style
-	MenuJobQueued                  tcell.Style
-	MenuJobRunning                 tcell.Style
-	MenuJobPaused                  tcell.Style
-	MenuJobCanceled                tcell.Style
-	MenuJobFailed                  tcell.Style
-	MenuJobDecision                tcell.Style
-	MenuJobCompleted               tcell.Style
-	PanelUsagePrefixNormal         tcell.Style
-	PanelUsagePrefixSelected       tcell.Style
-	PanelUsagePrefixCursorActive   tcell.Style
-	PanelUsagePrefixCursorInactive tcell.Style
-	PanelUsagePrefixCursorSelected tcell.Style
+	MenuJobScanning                  tcell.Style
+	MenuJobQueued                    tcell.Style
+	MenuJobRunning                   tcell.Style
+	MenuJobPaused                    tcell.Style
+	MenuJobCanceled                  tcell.Style
+	MenuJobFailed                    tcell.Style
+	MenuJobDecision                  tcell.Style
+	MenuJobCompleted                 tcell.Style
+	PanelUsageNormal                 tcell.Style
+	PanelUsageSelected               tcell.Style
+	PanelUsageCursorActive           tcell.Style
+	PanelUsageCursorInactive         tcell.Style
+	PanelActiveUsageCursorSelected   tcell.Style
+	PanelInactiveUsageCursorSelected tcell.Style
 
 	PanelGitNotModified tcell.Style
 	PanelGitNew         tcell.Style
@@ -336,36 +342,41 @@ var requiredStyleKeys = []string{
 	"panel.inactive.surface",
 	"panel.active.title",
 	"panel.inactive.title",
-	"panel.active.space",
-	"panel.inactive.space",
+	"panel.active.disk_usage_overview",
+	"panel.inactive.disk_usage_overview",
 	"panel.active.header",
 	"panel.inactive.header",
-	"panel.row.normal",
+	"panel.active.row.cursor",
+	"panel.active.row.cursor.selected",
+	"panel.active.usage.cursor",
+	"panel.active.usage.cursor.selected",
+	"panel.inactive.row.cursor",
+	"panel.inactive.row.cursor.selected",
+	"panel.inactive.usage.cursor",
+	"panel.inactive.usage.cursor.selected",
+	"panel.row.file",
 	"panel.row.directory",
 	"panel.row.symlink",
 	"panel.row.selected",
-	"panel.row.cursor.active",
-	"panel.row.cursor.inactive",
-	"panel.row.cursor.selected",
+	"panel.text",
 	"panel.sync.indicator",
 	"panel.blocked.frame",
 	"panel.blocked.surface",
 	"panel.blocked.title",
+	"panel.blocked.disk_usage_overview",
 	"panel.blocked.header",
-	"panel.blocked.row.normal",
+	"panel.blocked.row.file",
 	"panel.blocked.row.directory",
 	"panel.blocked.row.symlink",
 	"panel.blocked.row.selected",
 	"panel.blocked.row.cursor",
 	"panel.blocked.row.cursor.selected",
+	"panel.blocked.text",
 	"panel.folder.diskscan",
 	"panel.folder.diskscan_excluded",
 	"menu.spinner",
-	"panel.usage.prefix.normal",
-	"panel.usage.prefix.selected",
-	"panel.usage.prefix.cursor.active",
-	"panel.usage.prefix.cursor.inactive",
-	"panel.usage.prefix.cursor.selected",
+	"panel.usage.normal",
+	"panel.usage.selected",
 	"panel.git.not_modified",
 	"panel.git.new",
 	"panel.git.modified",
@@ -697,11 +708,12 @@ func parse(data []byte) (Theme, error) {
 
 	panelFileIcons := map[string]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
-		"panel.row.cursor.active":           {},
-		"panel.row.cursor.inactive":         {},
-		"panel.row.cursor.selected":         {},
-		"panel.blocked.row.cursor":          {},
-		"panel.blocked.row.cursor.selected": {},
+		"panel.active.row.cursor":            {},
+		"panel.active.row.cursor.selected":   {},
+		"panel.inactive.row.cursor":          {},
+		"panel.inactive.row.cursor.selected": {},
+		"panel.blocked.row.cursor":           {},
+		"panel.blocked.row.cursor.selected":  {},
 	}
 	for key, spec := range specs {
 		if spec.Icon == "" {
@@ -734,55 +746,60 @@ func parse(data []byte) (Theme, error) {
 		MenuDropdownAccent:   styles["menu.dropdown.accent"],
 		MenuDetail:           styles["menu.detail"],
 
-		PanelActiveFrame:     styles["panel.active.frame"],
-		PanelInactiveFrame:   styles["panel.inactive.frame"],
-		PanelActiveSurface:   styles["panel.active.surface"],
-		PanelInactiveSurface: styles["panel.inactive.surface"],
-		PanelActiveTitle:     styles["panel.active.title"],
-		PanelInactiveTitle:   styles["panel.inactive.title"],
-		PanelActiveSpace:     styles["panel.active.space"],
-		PanelInactiveSpace:   styles["panel.inactive.space"],
-		PanelActiveHeader:    styles["panel.active.header"],
-		PanelInactiveHeader:  styles["panel.inactive.header"],
-		PanelRowNormal:       styles["panel.row.normal"],
-		PanelRowDirectory:    styles["panel.row.directory"],
-		PanelRowSymlink:      styles["panel.row.symlink"],
-		PanelRowSelected:     styles["panel.row.selected"],
-		PanelCursorActive:    styles["panel.row.cursor.active"],
-		PanelCursorInactive:  styles["panel.row.cursor.inactive"],
-		PanelCursorSelected:  styles["panel.row.cursor.selected"],
-		PanelSyncIndicator:   styles["panel.sync.indicator"],
-		PanelFileIconFG:      panelFileIconFG,
+		PanelActiveFrame:               styles["panel.active.frame"],
+		PanelInactiveFrame:             styles["panel.inactive.frame"],
+		PanelActiveSurface:             styles["panel.active.surface"],
+		PanelInactiveSurface:           styles["panel.inactive.surface"],
+		PanelActiveTitle:               styles["panel.active.title"],
+		PanelInactiveTitle:             styles["panel.inactive.title"],
+		PanelActiveDiskUsageOverview:   styles["panel.active.disk_usage_overview"],
+		PanelInactiveDiskUsageOverview: styles["panel.inactive.disk_usage_overview"],
+		PanelActiveHeader:              styles["panel.active.header"],
+		PanelInactiveHeader:            styles["panel.inactive.header"],
+		PanelRowFile:                   styles["panel.row.file"],
+		PanelRowDirectory:              styles["panel.row.directory"],
+		PanelRowSymlink:                styles["panel.row.symlink"],
+		PanelRowSelected:               styles["panel.row.selected"],
+		PanelText:                      styles["panel.text"],
+		PanelCursorActive:              styles["panel.active.row.cursor"],
+		PanelCursorInactive:            styles["panel.inactive.row.cursor"],
+		PanelActiveCursorSelected:      styles["panel.active.row.cursor.selected"],
+		PanelInactiveCursorSelected:    styles["panel.inactive.row.cursor.selected"],
+		PanelSyncIndicator:             styles["panel.sync.indicator"],
+		PanelFileIconFG:                panelFileIconFG,
 
-		PanelBlockedFrame:          styles["panel.blocked.frame"],
-		PanelBlockedSurface:        styles["panel.blocked.surface"],
-		PanelBlockedTitle:          styles["panel.blocked.title"],
-		PanelBlockedHeader:         styles["panel.blocked.header"],
-		PanelBlockedRowNormal:      styles["panel.blocked.row.normal"],
-		PanelBlockedRowDirectory:   styles["panel.blocked.row.directory"],
-		PanelBlockedRowSymlink:     styles["panel.blocked.row.symlink"],
-		PanelBlockedRowSelected:    styles["panel.blocked.row.selected"],
-		PanelBlockedCursor:         styles["panel.blocked.row.cursor"],
-		PanelBlockedCursorSelected: styles["panel.blocked.row.cursor.selected"],
+		PanelBlockedFrame:             styles["panel.blocked.frame"],
+		PanelBlockedSurface:           styles["panel.blocked.surface"],
+		PanelBlockedTitle:             styles["panel.blocked.title"],
+		PanelBlockedDiskUsageOverview: styles["panel.blocked.disk_usage_overview"],
+		PanelBlockedHeader:            styles["panel.blocked.header"],
+		PanelBlockedRowFile:           styles["panel.blocked.row.file"],
+		PanelBlockedRowDirectory:      styles["panel.blocked.row.directory"],
+		PanelBlockedRowSymlink:        styles["panel.blocked.row.symlink"],
+		PanelBlockedRowSelected:       styles["panel.blocked.row.selected"],
+		PanelBlockedText:              styles["panel.blocked.text"],
+		PanelBlockedCursor:            styles["panel.blocked.row.cursor"],
+		PanelBlockedCursorSelected:    styles["panel.blocked.row.cursor.selected"],
 
-		PanelFolderDiskscan:            styles["panel.folder.diskscan"],
-		PanelFolderDiskscanExcluded:    styles["panel.folder.diskscan_excluded"],
-		MenuSpinner:                    styles["menu.spinner"],
-		MenuProgressDone:               styles["menu.progress.done"],
-		MenuProgressRemaining:          styles["menu.progress.remaining"],
-		MenuJobScanning:                styles["menu.job.scanning"],
-		MenuJobQueued:                  styles["menu.job.queued"],
-		MenuJobRunning:                 styles["menu.job.running"],
-		MenuJobPaused:                  styles["menu.job.paused"],
-		MenuJobCanceled:                styles["menu.job.canceled"],
-		MenuJobFailed:                  styles["menu.job.failed"],
-		MenuJobDecision:                styles["menu.job.decision"],
-		MenuJobCompleted:               styles["menu.job.completed"],
-		PanelUsagePrefixNormal:         styles["panel.usage.prefix.normal"],
-		PanelUsagePrefixSelected:       styles["panel.usage.prefix.selected"],
-		PanelUsagePrefixCursorActive:   styles["panel.usage.prefix.cursor.active"],
-		PanelUsagePrefixCursorInactive: styles["panel.usage.prefix.cursor.inactive"],
-		PanelUsagePrefixCursorSelected: styles["panel.usage.prefix.cursor.selected"],
+		PanelFolderDiskscan:              styles["panel.folder.diskscan"],
+		PanelFolderDiskscanExcluded:      styles["panel.folder.diskscan_excluded"],
+		MenuSpinner:                      styles["menu.spinner"],
+		MenuProgressDone:                 styles["menu.progress.done"],
+		MenuProgressRemaining:            styles["menu.progress.remaining"],
+		MenuJobScanning:                  styles["menu.job.scanning"],
+		MenuJobQueued:                    styles["menu.job.queued"],
+		MenuJobRunning:                   styles["menu.job.running"],
+		MenuJobPaused:                    styles["menu.job.paused"],
+		MenuJobCanceled:                  styles["menu.job.canceled"],
+		MenuJobFailed:                    styles["menu.job.failed"],
+		MenuJobDecision:                  styles["menu.job.decision"],
+		MenuJobCompleted:                 styles["menu.job.completed"],
+		PanelUsageNormal:                 styles["panel.usage.normal"],
+		PanelUsageSelected:               styles["panel.usage.selected"],
+		PanelUsageCursorActive:           styles["panel.active.usage.cursor"],
+		PanelUsageCursorInactive:         styles["panel.inactive.usage.cursor"],
+		PanelActiveUsageCursorSelected:   styles["panel.active.usage.cursor.selected"],
+		PanelInactiveUsageCursorSelected: styles["panel.inactive.usage.cursor.selected"],
 
 		PanelGitNotModified: styles["panel.git.not_modified"],
 		PanelGitNew:         styles["panel.git.new"],

@@ -12,18 +12,18 @@ func TestPanelDeviconForegroundThemeOverridesDeviconHex(t *testing.T) {
 	rowStyle := tcell.StyleDefault.Foreground(rowFG)
 	th := theme.Theme{
 		PanelFileIconFG: map[string]tcell.Color{
-			"panel.row.cursor.active": tcell.NewRGBColor(44, 55, 66),
+			"panel.active.row.cursor": tcell.NewRGBColor(44, 55, 66),
 		},
 	}
 
-	got := panelDeviconForeground(rowStyle, "#aabbcc", th, "panel.row.cursor.active", false, false)
-	want := th.PanelFileIconFG["panel.row.cursor.active"]
+	got := panelDeviconForeground(rowStyle, "#aabbcc", th, "panel.active.row.cursor", false, false)
+	want := th.PanelFileIconFG["panel.active.row.cursor"]
 	if got != want {
 		t.Fatalf("got %v, want theme override %v", got, want)
 	}
 
 	// Wrong key falls back to devicon hex then row FG (see below).
-	got2 := panelDeviconForeground(rowStyle, "#112233", th, "panel.row.cursor.inactive", false, false)
+	got2 := panelDeviconForeground(rowStyle, "#112233", th, "panel.inactive.row.cursor", false, false)
 	if wantHex, _ := deviconHexForeground("#112233"); got2 != wantHex {
 		t.Fatalf("inactive cursor: got %v want hex %v", got2, wantHex)
 	}

@@ -167,9 +167,11 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
 	}
 	if showVolume {
-		spaceStyle := styles.PanelInactiveSpace
-		if fileListActive {
-			spaceStyle = styles.PanelActiveSpace
+		overviewStyle := styles.PanelInactiveDiskUsageOverview
+		if chromeBlocked {
+			overviewStyle = styles.PanelBlockedDiskUsageOverview
+		} else if fileListActive {
+			overviewStyle = styles.PanelActiveDiskUsageOverview
 		}
 		leaderRunes := utf8.RuneCountInString(panelVolumeTitleLeader)
 		trailerRunes := utf8.RuneCountInString(panelVolumeTitleTrailer)
@@ -178,7 +180,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		contentX := volumeStartX + leaderRunes
 		contentLen := volRunes - leaderRunes - trailerRunes
 		contentText := string([]rune(volumeLabel)[leaderRunes : leaderRunes+contentLen])
-		primitive.TextOverlay(screen, contentX, rect.Y, contentLen, contentText, spaceStyle)
+		primitive.TextOverlay(screen, contentX, rect.Y, contentLen, contentText, overviewStyle)
 		primitive.TextOverlay(screen, volumeStartX+volRunes-trailerRunes, rect.Y, trailerRunes, panelVolumeTitleTrailer, borderStyle)
 	}
 
@@ -249,7 +251,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 
 	for row := 0; row < visibleRows; row++ {
 		y := rect.Y + 2 + row
-		style := styles.PanelRowNormal
+		style := styles.PanelRowFile
 		text := ""
 		entryIndex := state.ScrollOffset + row
 		var spans []primitive.Span
@@ -285,12 +287,12 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				} else if fileListActive {
 					style = styles.PanelCursorActive
 					if selected {
-						style = styles.PanelCursorSelected
+						style = styles.PanelActiveCursorSelected
 					}
 				} else {
 					style = styles.PanelCursorInactive
 					if selected {
-						style = styles.PanelCursorSelected
+						style = styles.PanelInactiveCursorSelected
 					}
 				}
 			}
@@ -521,14 +523,14 @@ func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cur
 	}
 	if fileListActive {
 		if selected {
-			return "panel.row.cursor.selected"
+			return "panel.active.row.cursor.selected"
 		}
-		return "panel.row.cursor.active"
+		return "panel.active.row.cursor"
 	}
 	if selected {
-		return "panel.row.cursor.selected"
+		return "panel.inactive.row.cursor.selected"
 	}
-	return "panel.row.cursor.inactive"
+	return "panel.inactive.row.cursor"
 }
 
 func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMeta bool, metaColW int, nameOnly, showGit bool) string {
@@ -570,7 +572,7 @@ func panelEntryStyle(entry localfs.Entry, chromeBlocked bool, styles theme.Theme
 		case localfs.EntrySymlink:
 			return styles.PanelBlockedRowSymlink
 		default:
-			return styles.PanelBlockedRowNormal
+			return styles.PanelBlockedRowFile
 		}
 	}
 	switch entry.Type {
@@ -579,7 +581,7 @@ func panelEntryStyle(entry localfs.Entry, chromeBlocked bool, styles theme.Theme
 	case localfs.EntrySymlink:
 		return styles.PanelRowSymlink
 	default:
-		return styles.PanelRowNormal
+		return styles.PanelRowFile
 	}
 }
 
