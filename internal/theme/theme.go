@@ -100,6 +100,15 @@ type Theme struct {
 	PanelUsagePrefixCursorInactive tcell.Style
 	PanelUsagePrefixCursorSelected tcell.Style
 
+	PanelGitNotModified tcell.Style
+	PanelGitNew         tcell.Style
+	PanelGitModified    tcell.Style
+	PanelGitDeleted     tcell.Style
+	PanelGitRenamed     tcell.Style
+	PanelGitTypechange  tcell.Style
+	PanelGitIgnored     tcell.Style
+	PanelGitConflicted  tcell.Style
+
 	FuzzyInput           tcell.Style
 	FuzzyInputNomatch    tcell.Style
 	FuzzyHighlight       tcell.Style
@@ -177,8 +186,11 @@ func (t Theme) DialogInputBaseStyle(focused, invalid bool) tcell.Style {
 	return t.DialogInputInactive
 }
 
-// SymbolKeyPathPicker is the [symbols] table key for the path-picker affordance glyph.
-const SymbolKeyPathPicker = "path_picker"
+// Symbol keys in the [symbols] table (optional entries — see accessors for defaults).
+const (
+	SymbolKeyPathPicker = "path_picker"
+	SymbolKeyGit        = "git"
+)
 
 // Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
 const (
@@ -193,6 +205,16 @@ const (
 	SymbolKeyMenuJobDecision       = "menu.job.decision"
 	SymbolKeyMenuJobCompleted      = "menu.job.completed"
 )
+
+// SymbolGit returns the panel Git column header glyph from [symbols] git.
+func (t Theme) SymbolGit() string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[SymbolKeyGit]); s != "" {
+			return s
+		}
+	}
+	return "\uf1d3" // Font Awesome git (Nerd Fonts)
+}
 
 // SymbolPathPicker returns the trailing path-picker glyph from the theme, with a default
 // Nerd-Font private-use fallback when the key is absent.
@@ -344,6 +366,14 @@ var requiredStyleKeys = []string{
 	"panel.usage.prefix.cursor.active",
 	"panel.usage.prefix.cursor.inactive",
 	"panel.usage.prefix.cursor.selected",
+	"panel.git.not_modified",
+	"panel.git.new",
+	"panel.git.modified",
+	"panel.git.deleted",
+	"panel.git.renamed",
+	"panel.git.typechange",
+	"panel.git.ignored",
+	"panel.git.conflicted",
 	"fuzzy.input",
 	"fuzzy.input.nomatch",
 	"fuzzy.highlight",
@@ -753,6 +783,15 @@ func parse(data []byte) (Theme, error) {
 		PanelUsagePrefixCursorActive:   styles["panel.usage.prefix.cursor.active"],
 		PanelUsagePrefixCursorInactive: styles["panel.usage.prefix.cursor.inactive"],
 		PanelUsagePrefixCursorSelected: styles["panel.usage.prefix.cursor.selected"],
+
+		PanelGitNotModified: styles["panel.git.not_modified"],
+		PanelGitNew:         styles["panel.git.new"],
+		PanelGitModified:    styles["panel.git.modified"],
+		PanelGitDeleted:     styles["panel.git.deleted"],
+		PanelGitRenamed:     styles["panel.git.renamed"],
+		PanelGitTypechange:  styles["panel.git.typechange"],
+		PanelGitIgnored:     styles["panel.git.ignored"],
+		PanelGitConflicted:  styles["panel.git.conflicted"],
 
 		FuzzyInput:           styles["fuzzy.input"],
 		FuzzyInputNomatch:    styles["fuzzy.input.nomatch"],

@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/fsbackend/file"
 	"github.com/paranoidi/paras-commander/internal/fsvol"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
+	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -51,7 +52,13 @@ type State struct {
 	Gitignore *gitignore.Cache
 	// GitignoreActive is true when the current listing applies Git ignore rules (inside a work tree).
 	GitignoreActive bool
-	Filter          FilterState
+	// GitColumnActive is true when the listing path is inside a Git work tree (local panels only).
+	GitColumnActive bool
+	// GitPending is true while async git status is in flight for this listing.
+	GitPending bool
+	// GitByPath maps absolute entry paths to eza-style staged/unstaged cells; nil until loaded.
+	GitByPath map[string]gitstatus.Cell
+	Filter    FilterState
 	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
 	DiskSorter func(absPath string) (int64, bool)
 	Sort       SortState
@@ -74,7 +81,19 @@ type State struct {
 	ScheduleRemoteLoad RemoteLoadScheduler
 	// ListingPending is true while an asynchronous remote listing is in flight.
 	ListingPending bool
+	// ScheduleGitStatus runs git status for the current listing off the UI thread (set by app).
+	ScheduleGitStatus GitStatusScheduler
 }
+
+// GitStatusRequest describes one async git status fetch for the current listing.
+type GitStatusRequest struct {
+	WorkRoot string
+	ListDir  string
+	Paths    []gitstatus.ListingPaths
+}
+
+// GitStatusScheduler returns true when a background git status fetch was started.
+type GitStatusScheduler func(req GitStatusRequest) bool
 
 // PathString returns the canonical path string (history, status bar, host APIs).
 func (s *State) PathString() string {
@@ -809,6 +828,9 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	s.Path = listingLoc
 	if listingLoc.IsRemote() {
 		s.GitignoreActive = false
+		s.GitColumnActive = false
+		s.GitPending = false
+		s.GitByPath = nil
 		s.VolumeSpaceOK = false
 		s.VolumeAvailBytes = 0
 		s.VolumeTotalBytes = 0
@@ -822,6 +844,7 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	} else {
 		s.ListingDeviceValid = false
 	}
+	s.prepareGitColumn(listingLoc, localEntries)
 	s.Entries = localEntries
 	s.Cursor = 0
 	s.ScrollOffset = 0
@@ -860,6 +883,43 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 		s.OnDirectoryChange()
 	}
 	return nil
+}
+
+func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entry) {
+	if listingLoc.IsRemote() {
+		return
+	}
+	host, err := listingLoc.FilePath()
+	if err != nil {
+		s.GitColumnActive = false
+		s.GitPending = false
+		s.GitByPath = nil
+		return
+	}
+	workRoot := gitignore.WorkTreeRoot(host)
+	s.GitColumnActive = workRoot != ""
+	if !s.GitColumnActive {
+		s.GitPending = false
+		s.GitByPath = nil
+		return
+	}
+	s.GitPending = true
+	s.GitByPath = nil
+	if s.ScheduleGitStatus == nil {
+		return
+	}
+	paths := make([]gitstatus.ListingPaths, len(entries))
+	for i, e := range entries {
+		paths[i] = gitstatus.ListingPaths{
+			AbsPath: filepath.Clean(e.Path),
+			IsDir:   e.Type == localfs.EntryDirectory,
+		}
+	}
+	s.ScheduleGitStatus(GitStatusRequest{
+		WorkRoot: workRoot,
+		ListDir:  host,
+		Paths:    paths,
+	})
 }
 
 func cleanPathString(p string) string {

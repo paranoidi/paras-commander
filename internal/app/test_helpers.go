@@ -69,6 +69,8 @@ func loadTestTheme(t *testing.T) (theme.Theme, config.Paths) {
 		"panel.usage.prefix.normal", "panel.usage.prefix.selected",
 		"panel.usage.prefix.cursor.active", "panel.usage.prefix.cursor.inactive",
 		"panel.usage.prefix.cursor.selected",
+		"panel.git.not_modified", "panel.git.new", "panel.git.modified", "panel.git.deleted",
+		"panel.git.renamed", "panel.git.typechange", "panel.git.ignored", "panel.git.conflicted",
 		"fuzzy.input", "fuzzy.input.nomatch", "fuzzy.highlight", "fuzzy.highlight.cursor",
 		"dialog.frame", "dialog.title", "dialog.text", "dialog.surface", "dialog.accent",
 		"dialog.input.active", "dialog.input.active.placeholder", "dialog.input.active.error", "dialog.input.inactive",

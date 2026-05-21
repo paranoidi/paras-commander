@@ -18,6 +18,7 @@ import (
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/file"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
+	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -88,6 +89,7 @@ type App struct {
 	diskUsage       *diskusage.Engine
 	diskUsageIgnore diskusage.ShouldIgnoreFolder
 	gitignoreCache  *gitignore.Cache
+	gitStatusCache  *gitstatus.Cache
 	diskIdleSort    [2]diskIdleSortPanel // indexed by ui.LeftPanel / ui.RightPanel (0/1)
 	// diskIdleNavPath records last reconciled panel cwd so idle-sort debounce survives benign reconcile but resets on chdir.
 	diskIdleNavPath [2]string
@@ -139,6 +141,7 @@ type App struct {
 	sftpConnectHosts       []sshconfig.HostEntry
 
 	remotePanelLoadGen [2]atomic.Uint64
+	gitStatusLoadGen   [2]atomic.Uint64
 
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
@@ -385,6 +388,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		diskUsage:       duEngine,
 		diskUsageIgnore: duIgnorer,
 		gitignoreCache:  giCache,
+		gitStatusCache:  gitstatus.NewCache(),
 	}
 	// OnDirectoryChange hooks are intentionally left unset: derived UI invariants
 	// (panel sync, disk-usage idle-sort arming) are reconciled centrally in
@@ -431,6 +435,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, fmt.Errorf("configure sftp: %w", err)
 	}
 	app.wireRemotePanelLoaders()
+	app.wireGitStatusLoaders()
 	app.syncJobPathMarks()
 	if secs := cfg.Jobs.FreeSpacePollIntervalSecs; secs > 0 {
 		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
@@ -562,6 +567,11 @@ func (a *App) Run() error {
 				didRender = true
 			case remotePanelLoadPayload:
 				if a.applyRemotePanelLoad(d) {
+					a.render()
+					didRender = true
+				}
+			case gitStatusPayload:
+				if a.applyGitStatusLoad(d) {
 					a.render()
 					didRender = true
 				}

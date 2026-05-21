@@ -9,6 +9,7 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 - Practically everything is based on fzf style searching. Filelist navigation, keybind help, etc.
 - All jobs are queued into background by default.
 - Jobs view with queue management and transfer graphs.
+- Gitignore and git statuses using eza notation.
 - Integrated disk usage scanning and reporting.
 - Supports selections across multiple paths.
 - Integrated mass rename.

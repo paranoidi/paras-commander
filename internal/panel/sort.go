@@ -183,14 +183,24 @@ func compareDiskUsagePrimary(left, right localfs.Entry, diskSorter func(string) 
 	return intCompare(rv, lv)
 }
 
+// listNameColumnTitle returns the name-column header. With icons, a leading space
+// aligns "Name" with entry names (icon strip is separate). The sort arrow replaces
+// that space so "↑Name" lines up with " filename", not "↑ Name".
+func listNameColumnTitle(showIcons bool, arrow rune) string {
+	if arrow != 0 {
+		return fmt.Sprintf("%cName", arrow)
+	}
+	if showIcons {
+		return " Name"
+	}
+	return "Name"
+}
+
 // ListColumnTitles builds panel header labels with ↑/↓ on the active sort column.
 func (s State) ListColumnTitles(showIcons bool) (nameTitle, sizeTitle, thirdTitle string) {
 	const asc = '↑'
 	const desc = '↓'
-	nameBase := "Name"
-	if showIcons {
-		nameBase = " Name"
-	}
+	nameBase := listNameColumnTitle(showIcons, 0)
 	f := EffectiveListFormat(s.ListFormat)
 	if s.primarySortUsesDiskTotals() {
 		switch f {
@@ -211,36 +221,36 @@ func (s State) ListColumnTitles(showIcons bool) (nameTitle, sizeTitle, thirdTitl
 	if f == ListFormatBrief {
 		switch s.Sort.Mode {
 		case SortName, SortExtension:
-			return fmt.Sprintf("%c%s", arrow, nameBase), "Size", ""
+			return listNameColumnTitle(showIcons, arrow), "Size", ""
 		case SortSize:
 			return nameBase, fmt.Sprintf("%cSize", arrow), ""
 		case SortMtime:
 			return nameBase, fmt.Sprintf("%cSize", arrow), ""
 		default:
-			return fmt.Sprintf("%c%s", arrow, nameBase), "Size", ""
+			return listNameColumnTitle(showIcons, arrow), "Size", ""
 		}
 	}
 	if f == ListFormatPerm {
 		switch s.Sort.Mode {
 		case SortName, SortExtension:
-			return fmt.Sprintf("%c%s", arrow, nameBase), "Size", lblPerm
+			return listNameColumnTitle(showIcons, arrow), "Size", lblPerm
 		case SortSize:
 			return nameBase, fmt.Sprintf("%cSize", arrow), lblPerm
 		case SortMtime:
 			return nameBase, "Size", fmt.Sprintf("%c%s", arrow, lblPerm)
 		default:
-			return fmt.Sprintf("%c%s", arrow, nameBase), "Size", lblPerm
+			return listNameColumnTitle(showIcons, arrow), "Size", lblPerm
 		}
 	}
 	switch s.Sort.Mode {
 	case SortName, SortExtension:
-		return fmt.Sprintf("%c%s", arrow, nameBase), "Size", lblMod
+		return listNameColumnTitle(showIcons, arrow), "Size", lblMod
 	case SortSize:
 		return nameBase, fmt.Sprintf("%cSize", arrow), lblMod
 	case SortMtime:
 		return nameBase, "Size", fmt.Sprintf("%c%s", arrow, lblMod)
 	default:
-		return fmt.Sprintf("%c%s", arrow, nameBase), "Size", lblMod
+		return listNameColumnTitle(showIcons, arrow), "Size", lblMod
 	}
 }
 

@@ -72,6 +72,15 @@ row.selected = { fg = "yellow", bg = "default", bold = true }
 row.symlink = { fg = "bright_cyan", bg = "default" }
 sync.indicator = { fg = "green", bg = "default", bold = true }
 
+git.not_modified = { fg = "bright_black", bg = "default", bold = true }
+git.new = { fg = "green", bg = "default" }
+git.modified = { fg = "blue", bg = "default" }
+git.deleted = { fg = "red", bg = "default" }
+git.renamed = { fg = "yellow", bg = "default" }
+git.typechange = { fg = "magenta", bg = "default" }
+git.ignored = { fg = "bright_black", bg = "default" }
+git.conflicted = { fg = "red", bg = "default" }
+
 blocked.frame = { fg = "bright_black", bg = "default" }
 blocked.header = { fg = "bright_black", bg = "default", bold = true }
 blocked.row.cursor = { fg = "white", bg = "black" }
@@ -147,6 +156,7 @@ failed = "\uf06a"
 decision = "\uf059"
 completed = "\uf05d"
 path_picker = "\uf0ca"
+git = "\uf1d3"
 
 [symbols.menu.progress]
 done = "─"

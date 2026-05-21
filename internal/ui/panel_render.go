@@ -58,13 +58,13 @@ func panelListThirdColumnWidth(f panel.ListFormat, nameOnly bool) int {
 	}
 }
 
-func panelListNameWidth(rowTextWidth int, f panel.ListFormat, nameOnly bool) int {
-	return max(1, rowTextWidth-panelListReservedAfterName(f, nameOnly))
+func panelListNameWidth(rowTextWidth int, f panel.ListFormat, nameOnly, showGit bool) int {
+	return max(1, rowTextWidth-panelListReservedBeforeName(showGit, nameOnly)-panelListReservedAfterName(f, nameOnly))
 }
 
 // panelListNameWidthWithMeta returns name width when the Meta column is shown.
-func panelListNameWidthWithMeta(rowTextWidth, metaColW int, f panel.ListFormat, nameOnly bool) int {
-	return max(1, rowTextWidth-panelListReservedAfterName(f, nameOnly)-2-metaColW)
+func panelListNameWidthWithMeta(rowTextWidth, metaColW int, f panel.ListFormat, nameOnly, showGit bool) int {
+	return max(1, rowTextWidth-panelListReservedBeforeName(showGit, nameOnly)-panelListReservedAfterName(f, nameOnly)-2-metaColW)
 }
 
 func truncateHeaderRunes(max int, s string) string {
@@ -196,9 +196,20 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	if showIcons {
 		iconStrip = panelIconStripCells
 	}
-	rowTextWidth := interior - leftGutter - iconStrip
-	contentStart := rect.X + 1 + leftGutter
-	fullRowCells := leftGutter + iconStrip + rowTextWidth
+	baseListWidth := interior - leftGutter - iconStrip
+	nameOnlyDisplay := shrunkenShowsNameOnly && baseListWidth < config.ShrunkenListingRowTextWidthThreshold
+	showGit := panelListGitColumnActive(state, nameOnlyDisplay)
+	gitStrip := 0
+	if showGit {
+		gitStrip = panelListGitStripWidth()
+	}
+	rowTextWidth := baseListWidth - gitStrip
+	if rowTextWidth < 1 {
+		rowTextWidth = 1
+	}
+	gitStart := rect.X + 1 + leftGutter
+	iconStart := gitStart + gitStrip
+	fullRowCells := leftGutter + gitStrip + iconStrip + rowTextWidth
 	diskDenom := panelDiskUsageDenom(showDiskUsage, painter, state.Entries)
 
 	showMeta := metaResults != nil
@@ -207,24 +218,28 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	if showMeta {
 		metaColW, metaFormatted = layoutMetaCells(metaResults)
 	}
-	nameOnlyDisplay := shrunkenShowsNameOnly && rowTextWidth < config.ShrunkenListingRowTextWidthThreshold
 	showMetaEffective := showMeta && !nameOnlyDisplay
-	header := panelListHeader(rowTextWidth, state, showIcons, showMetaEffective, metaColW, nameOnlyDisplay)
+	listTextWidth := rowTextWidth
+	header := panelListHeader(listTextWidth, state, showIcons, showMetaEffective, metaColW, nameOnlyDisplay, showGit)
 	headerY := rect.Y + 1
 	if leftGutter > 0 {
 		for i := 0; i < leftGutter; i++ {
 			screen.SetContent(rect.X+1+i, headerY, ' ', nil, headerStyle)
 		}
 	}
-	if showIcons {
-		paintPanelIconStripBlank(screen, contentStart, headerY, headerStyle)
+	if showGit {
+		paintGitHeader(screen, gitStart, headerY, headerStyle, styles)
 	}
-	primitive.Text(screen, contentStart+iconStrip, headerY, rowTextWidth, header, headerStyle)
+	if showIcons {
+		paintPanelIconStripBlank(screen, iconStart, headerY, headerStyle)
+	}
+	listContentStart := iconStart + iconStrip
+	primitive.Text(screen, listContentStart, headerY, listTextWidth, header, headerStyle)
 
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
-	nameWidth := panelListNameWidth(rowTextWidth, listFmt, nameOnlyDisplay)
+	nameWidth := panelListNameWidth(listTextWidth, listFmt, nameOnlyDisplay, showGit)
 	if showMetaEffective {
-		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaColW, listFmt, nameOnlyDisplay)
+		nameWidth = panelListNameWidthWithMeta(listTextWidth, metaColW, listFmt, nameOnlyDisplay, showGit)
 	}
 	markSource := styles.PanelRowSelected
 	if chromeBlocked {
@@ -295,7 +310,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			if showMetaEffective {
 				metaText = metaFormatted[entry.Path]
 			}
-			text = formatEntry(entry, rowTextWidth, showIcons, jobMarkGlyph, subtreeMark, painter, showMetaEffective, metaColW, metaText, listFmt, nameOnlyDisplay)
+			text = formatEntry(entry, listTextWidth, showIcons, jobMarkGlyph, subtreeMark, painter, showMetaEffective, metaColW, metaText, listFmt, nameOnlyDisplay)
 			if showDiskUsage && painter != nil && diskDenom > 0 {
 				fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, painter), diskDenom, fullRowCells)
 			}
@@ -309,8 +324,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		}
 
 		if hasEntry {
-			spans = matchSpans(cur, rowTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, styles, showIcons, jobMarkGlyph, subtreeMark, showMetaEffective, metaColW, listFmt, nameOnlyDisplay, func(di int) tcell.Style {
-				return blendCell(di + leftGutter + iconStrip)
+			spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, styles, showIcons, jobMarkGlyph, subtreeMark, showMetaEffective, metaColW, listFmt, nameOnlyDisplay, showGit, func(di int) tcell.Style {
+				return blendCell(di + leftGutter + gitStrip + iconStrip)
 			})
 			if jobMark || subtreeMark {
 				display := entryDisplayRunes(cur, nameWidth, showIcons, jobMarkGlyph, subtreeMark)
@@ -352,16 +367,25 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				diskExcluded = painter.DiskScanExcluded(cur.Path, diskUsageDescendIntoMountPoints, state.ListingDevice, state.ListingDeviceValid, diskUsageGoduIgnore)
 			}
 		}
-		if showIcons {
+		if showGit {
+			gitStyle := blendCell(leftGutter)
 			if hasEntry {
-				iconStripStyle := blendCell(leftGutter)
-				paintPanelIconStrip(screen, contentStart, y, cur, iconStripStyle, styles, iconKey, diskPending, diskExcluded, showDiskUsage)
+				paintGitColumn(screen, gitStart, y, panelGitCell(cur, state.GitByPath), gitStyle, styles, entryIndex == state.Cursor)
+				paintGitRowTrailingGap(screen, gitStart, y, gitStyle)
 			} else {
-				paintPanelIconStripBlank(screen, contentStart, y, style)
+				paintGitStripBlank(screen, gitStart, y, gitStyle)
 			}
 		}
-		primitive.StyledTextCellwise(screen, contentStart+iconStrip, y, rowTextWidth, text, func(ci int) tcell.Style {
-			return blendCell(leftGutter + iconStrip + ci)
+		if showIcons {
+			if hasEntry {
+				iconStripStyle := blendCell(leftGutter + gitStrip)
+				paintPanelIconStrip(screen, iconStart, y, cur, iconStripStyle, styles, iconKey, diskPending, diskExcluded, showDiskUsage)
+			} else {
+				paintPanelIconStripBlank(screen, iconStart, y, style)
+			}
+		}
+		primitive.StyledTextCellwise(screen, listContentStart, y, listTextWidth, text, func(ci int) tcell.Style {
+			return blendCell(leftGutter + gitStrip + iconStrip + ci)
 		}, spans)
 	}
 }
@@ -507,7 +531,7 @@ func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cur
 	return "panel.row.cursor.inactive"
 }
 
-func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMeta bool, metaColW int, nameOnly bool) string {
+func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMeta bool, metaColW int, nameOnly, showGit bool) string {
 	if nameOnly {
 		nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 		title := panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle)
@@ -516,9 +540,9 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 	}
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
 	tw := panelListThirdColumnWidth(listFmt, false)
-	nameWidth := panelListNameWidth(rowTextWidth, listFmt, false)
+	nameWidth := panelListNameWidth(rowTextWidth, listFmt, false, showGit)
 	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaColW, listFmt, false)
+		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaColW, listFmt, false, showGit)
 	}
 	nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 	nameTitle = truncateHeaderRunes(nameWidth, nameTitle)
@@ -569,9 +593,9 @@ type displayRune struct {
 func formatEntry(entry localfs.Entry, width int, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, painter DiskUsagePainter, showMeta bool, metaColW int, metaText string, listFmt panel.ListFormat, nameOnly bool) string {
 	listFmt = panel.EffectiveListFormat(listFmt)
 	tw := panelListThirdColumnWidth(listFmt, nameOnly)
-	nameWidth := panelListNameWidth(width, listFmt, nameOnly)
+	nameWidth := panelListNameWidth(width, listFmt, nameOnly, false)
 	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(width, metaColW, listFmt, nameOnly)
+		nameWidth = panelListNameWidthWithMeta(width, metaColW, listFmt, nameOnly, false)
 	}
 	display := entryDisplayRunes(entry, nameWidth, showFileIcons, jobMarkRune, subtreeSelectionMark)
 	name := string(runesFromDisplay(display))
@@ -684,14 +708,14 @@ func runesFromDisplay(display []displayRune) []rune {
 	return runes
 }
 
-func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, showMeta bool, metaColW int, listFmt panel.ListFormat, nameOnly bool, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
+func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool, showMeta bool, metaColW int, listFmt panel.ListFormat, nameOnly, showGit bool, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
 	if len(ranges) == 0 {
 		return nil
 	}
 	listFmt = panel.EffectiveListFormat(listFmt)
-	nameWidth := panelListNameWidth(rowWidth, listFmt, nameOnly)
+	nameWidth := panelListNameWidth(rowWidth, listFmt, nameOnly, showGit)
 	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(rowWidth, metaColW, listFmt, nameOnly)
+		nameWidth = panelListNameWidthWithMeta(rowWidth, metaColW, listFmt, nameOnly, showGit)
 	}
 	display := entryDisplayRunes(entry, nameWidth, showFileIcons, jobMarkRune, subtreeSelectionMark)
 	matchStyle := styles.FuzzyHighlight

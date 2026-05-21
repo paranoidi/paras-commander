@@ -49,7 +49,7 @@ func TestFormatEntryPrefixesDirectoriesAndNonDirectories(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := formatEntry(tt.entry, 50, false, 0, false, nil, false, 0, "", panel.ListFormatMtime, false)
-			nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false)
+			nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 			if nameColumn := strings.TrimRight(got[:nameWidth], " "); nameColumn != tt.want {
 				t.Fatalf("name column = %q, want %q", nameColumn, tt.want)
 			}
@@ -60,7 +60,7 @@ func TestFormatEntryPrefixesDirectoriesAndNonDirectories(t *testing.T) {
 func TestFormatEntryFileIconsOmitsDirectorySlash(t *testing.T) {
 	entry := localfs.Entry{Name: "src", Type: localfs.EntryDirectory}
 	got := formatEntry(entry, 50, true, 0, false, nil, false, 0, "", panel.ListFormatMtime, false)
-	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false)
+	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
 	if nameColumn != " src" {
 		t.Fatalf("icons mode name column = %q, want space-prefixed dir name without slash", nameColumn)
@@ -70,7 +70,7 @@ func TestFormatEntryFileIconsOmitsDirectorySlash(t *testing.T) {
 func TestFormatEntrySubtreeSelectionMark(t *testing.T) {
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
 	got := formatEntry(entry, 50, false, 0, true, nil, false, 0, "", panel.ListFormatMtime, false)
-	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false)
+	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
 	if nameColumn != "/sub ○" {
 		t.Fatalf("name column = %q, want trailing mark after dir slash prefix", nameColumn)
@@ -86,7 +86,7 @@ func TestFormatEntryJobQueueMark(t *testing.T) {
 	entry := localfs.Entry{Name: "file.txt", Path: "/tmp/file.txt", Type: localfs.EntryFile}
 	glyph := rune('\uf144')
 	got := formatEntry(entry, 50, false, glyph, false, nil, false, 0, "", panel.ListFormatMtime, false)
-	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false)
+	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
 	want := " file.txt " + string(glyph)
 	if nameColumn != want {
@@ -98,7 +98,7 @@ func TestFormatEntryJobQueueMarkBeforeSubtreeSelectionMark(t *testing.T) {
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
 	glyph := rune('\uf144')
 	got := formatEntry(entry, 50, false, glyph, true, nil, false, 0, "", panel.ListFormatMtime, false)
-	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false)
+	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
 	want := "/sub " + string(glyph) + " ○"
 	if nameColumn != want {
@@ -124,8 +124,8 @@ func TestFormatEntryListingFormats(t *testing.T) {
 	if !strings.Contains(permRow, "-rw") && !strings.Contains(permRow, "rw-") {
 		t.Fatalf("perm format row = %q, want mode substring", permRow)
 	}
-	nwBrief := panelListNameWidth(rowW, panel.ListFormatBrief, false)
-	nwMtime := panelListNameWidth(rowW, panel.ListFormatMtime, false)
+	nwBrief := panelListNameWidth(rowW, panel.ListFormatBrief, false, false)
+	nwMtime := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)
 	if nwBrief <= nwMtime {
 		t.Fatalf("brief name width %d should exceed mtime name width %d", nwBrief, nwMtime)
 	}
@@ -163,7 +163,7 @@ func (testDiskUsageMap) DiskScanExcluded(string, bool, uint64, bool, func(string
 
 func TestFormatEntryDirectorySizeUsesDiskUsageCache(t *testing.T) {
 	const rowW = 50
-	nameWidth := panelListNameWidth(rowW, panel.ListFormatMtime, false)
+	nameWidth := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)
 	dir := localfs.Entry{Name: "projects", Path: "/home/u/projects", Type: localfs.EntryDirectory}
 	cache := testDiskUsageMap{"/home/u/projects": 5000}
 	got := formatEntry(dir, rowW, false, 0, false, cache, false, 0, "", panel.ListFormatMtime, false)
@@ -175,7 +175,7 @@ func TestFormatEntryDirectorySizeUsesDiskUsageCache(t *testing.T) {
 
 func TestFormatEntryDirectorySizeEmptyWithoutCache(t *testing.T) {
 	const rowW = 50
-	nameWidth := panelListNameWidth(rowW, panel.ListFormatMtime, false)
+	nameWidth := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)
 	dir := localfs.Entry{Name: "empty", Path: "/tmp/empty", Type: localfs.EntryDirectory}
 	got := formatEntry(dir, rowW, false, 0, false, nil, false, 0, "", panel.ListFormatMtime, false)
 	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/empty", panelListSizeCells, "", panelListModTimeCells, "")

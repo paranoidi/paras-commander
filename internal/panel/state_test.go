@@ -223,6 +223,48 @@ func TestLoadHidesGitignoredEntries(t *testing.T) {
 	}
 }
 
+func TestLoadSetsGitColumnActiveInsideWorkTree(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(dir, "visible.txt"))
+
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	state.ScheduleGitStatus = func(GitStatusRequest) bool { return true }
+	if err := state.Refresh(5); err != nil {
+		t.Fatalf("Refresh() error = %v", err)
+	}
+	if !state.GitColumnActive {
+		t.Fatal("GitColumnActive = false, want true inside Git work tree")
+	}
+	if !state.GitPending {
+		t.Fatal("GitPending = false, want true before async status completes")
+	}
+	if state.GitByPath != nil {
+		t.Fatal("GitByPath should be nil until async status completes")
+	}
+}
+
+func TestLoadClearsGitColumnOutsideWorkTree(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "visible.txt"))
+
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if err := state.Refresh(5); err != nil {
+		t.Fatalf("Refresh() error = %v", err)
+	}
+	if state.GitColumnActive {
+		t.Fatal("GitColumnActive = true, want false outside Git work tree")
+	}
+}
+
 func TestLoadClearsGitignoreActiveOutsideWorkTree(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "visible.txt"))
