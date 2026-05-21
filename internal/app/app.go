@@ -120,6 +120,11 @@ type App struct {
 	quickViewDebounceMu      sync.Mutex
 	quickViewDebounceTimer   *time.Timer
 	quickViewLastFingerprint string
+	// quickViewNavSkipReconcile suppresses reconcileQuickViewPreview while file-list nav coalesce
+	// is holding a pending preview flush (mirrors syncFollowNavSkipReconcile).
+	quickViewNavSkipReconcile atomic.Bool
+	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postCommandWake).
+	filePreviewRunGen atomic.Uint64
 
 	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
 	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on
@@ -467,6 +472,7 @@ func (a *App) Run() error {
 		case *tcell.EventResize:
 			pollJobsAfter = true
 			a.clearPanelSyncFollowNavCoalesce()
+			a.clearQuickViewNavCoalesce()
 			a.screen.Sync()
 			a.ensurePanelsVisible()
 			a.render()

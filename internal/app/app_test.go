@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -4745,6 +4746,77 @@ func TestQuickViewShowsPreviewOnFileHighlight(t *testing.T) {
 
 	if !app.filePreviewOpen() {
 		t.Fatal("file preview should open for a highlighted file with quick view on")
+	}
+}
+
+func TestQuickViewPreviewNavDebounceDefersPreviewUntilFlush(t *testing.T) {
+	root := t.TempDir()
+	notes := filepath.Join(root, "notes.txt")
+	readme := filepath.Join(root, "readme.txt")
+	writeFile(t, notes)
+	writeFile(t, readme)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 500
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
+	app.model.QuickViewEnabled = true
+	app.applyQuickViewPreviewImmediately()
+
+	app.commandsMu.RLock()
+	firstPath := app.model.FilePreview.Path
+	app.commandsMu.RUnlock()
+	if firstPath != notes {
+		t.Fatalf("preview path = %q, want %q", firstPath, notes)
+	}
+
+	app.dispatch(keymap.ActionNavDown)
+	app.reconcileAfterEvent()
+
+	app.commandsMu.RLock()
+	stillPath := app.model.FilePreview.Path
+	app.commandsMu.RUnlock()
+	if stillPath != notes {
+		t.Fatalf("preview path after debounced nav+reconcile = %q, want %q (still coalescing)", stillPath, notes)
+	}
+
+	app.clearQuickViewNavCoalesce()
+	app.reconcileAfterEvent()
+	if !app.applyQuickViewPreviewFlush(quickViewFlushPayload{gen: app.quickViewDebounceGen.Load()}) {
+		t.Fatal("applyQuickViewPreviewFlush should apply deferred preview")
+	}
+
+	app.commandsMu.RLock()
+	gotPath := app.model.FilePreview.Path
+	app.commandsMu.RUnlock()
+	if gotPath != readme {
+		t.Fatalf("preview path after flush = %q, want %q", gotPath, readme)
+	}
+}
+
+func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "notes.txt")
+	writeFile(t, path)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.patchFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhasePending
+		st.Path = path
+	})
+	staleGen := app.filePreviewRunGen.Add(1)
+	app.filePreviewRunGen.Add(1)
+
+	app.runFilePreview(context.Background(), path, []string{"/bin/true"}, root, false, staleGen)
+
+	app.commandsMu.RLock()
+	ph := app.model.FilePreview.Phase
+	app.commandsMu.RUnlock()
+	if ph != ui.FilePreviewPhasePending {
+		t.Fatalf("Phase = %v, want Pending when run gen is stale at start", ph)
 	}
 }
 

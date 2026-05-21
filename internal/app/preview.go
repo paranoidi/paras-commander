@@ -402,7 +402,8 @@ func (a *App) applyQuickViewPreviewNow() {
 			st.ErrorMsg = ""
 		})
 		a.postCommandWake()
-		go a.runFilePreview(a.commandsCtx, path, argv, workDir, false)
+		gen := a.filePreviewRunGen.Add(1)
+		go a.runFilePreview(a.commandsCtx, path, argv, workDir, false, gen)
 	}
 }
 
@@ -419,15 +420,25 @@ func (a *App) clearQuickViewDebounce() {
 	}
 	a.quickViewDebounceMu.Unlock()
 	a.quickViewDebounceGen.Add(1)
+	a.quickViewNavSkipReconcile.Store(false)
 }
 
-func (a *App) armQuickViewPreviewDebounce() {
-	if a.config.UI.QuickViewPreviewDebounceMS <= 0 {
-		a.applyQuickViewPreviewNow()
-		a.quickViewLastFingerprint = a.quickViewFingerprint()
-		return
-	}
-	gen := a.quickViewDebounceGen.Add(1)
+// quickViewNavCoalesceContext is true when file-list nav should coalesce quick view preview updates.
+func (a *App) quickViewNavCoalesceContext() bool {
+	return a.model.ViewMode == ui.ViewBrowser &&
+		a.model.QuickViewEnabled &&
+		a.model.ActiveSubFocus == ui.SubFocusFileList &&
+		!a.model.Menu.Open &&
+		!a.model.ModalDialogOpen() &&
+		!a.inQuickFilterUI()
+}
+
+// clearQuickViewNavCoalesce stops pending file-list nav coalesce and allows reconcile to preview again.
+func (a *App) clearQuickViewNavCoalesce() {
+	a.clearQuickViewDebounce()
+}
+
+func (a *App) scheduleQuickViewDebounceTimer(gen uint64) {
 	delay := time.Duration(a.config.UI.QuickViewPreviewDebounceMS) * time.Millisecond
 	a.quickViewDebounceMu.Lock()
 	defer a.quickViewDebounceMu.Unlock()
@@ -448,10 +459,33 @@ func (a *App) armQuickViewPreviewDebounce() {
 	})
 }
 
+func (a *App) armQuickViewNavCoalesceAfterListNav() {
+	if a.config.UI.QuickViewPreviewDebounceMS <= 0 {
+		return
+	}
+	if !a.quickViewNavCoalesceContext() {
+		return
+	}
+	gen := a.quickViewDebounceGen.Add(1)
+	a.quickViewNavSkipReconcile.Store(true)
+	a.scheduleQuickViewDebounceTimer(gen)
+}
+
+func (a *App) armQuickViewPreviewDebounce() {
+	if a.config.UI.QuickViewPreviewDebounceMS <= 0 {
+		a.applyQuickViewPreviewNow()
+		a.quickViewLastFingerprint = a.quickViewFingerprint()
+		return
+	}
+	gen := a.quickViewDebounceGen.Add(1)
+	a.scheduleQuickViewDebounceTimer(gen)
+}
+
 func (a *App) applyQuickViewPreviewFlush(p quickViewFlushPayload) bool {
 	if p.gen != a.quickViewDebounceGen.Load() {
 		return false
 	}
+	a.quickViewNavSkipReconcile.Store(false)
 	if !a.model.QuickViewEnabled || a.model.ViewMode != ui.ViewBrowser {
 		return false
 	}
@@ -468,6 +502,9 @@ func (a *App) reconcileQuickViewPreview() {
 		a.clearQuickViewDebounce()
 		return
 	}
+	if a.quickViewNavSkipReconcile.Load() {
+		return
+	}
 	if a.model.Menu.Open || a.model.ModalDialogOpen() || a.inQuickFilterUI() {
 		return
 	}
@@ -478,29 +515,43 @@ func (a *App) reconcileQuickViewPreview() {
 	a.armQuickViewPreviewDebounce()
 }
 
-func (a *App) runFilePreview(ctx context.Context, path string, argv []string, workDir string, fullscreen bool) {
+func (a *App) runFilePreview(ctx context.Context, path string, argv []string, workDir string, fullscreen bool, runGen uint64) {
+	if runGen != a.filePreviewRunGen.Load() {
+		return
+	}
+	runningApplied := false
 	a.patchFilePreviewTarget(fullscreen, func(st *ui.FilePreviewState) {
 		if !st.Open || st.Path != path {
 			return
 		}
 		st.Phase = ui.FilePreviewPhaseRunning
+		runningApplied = true
 	})
-	a.postCommandWake()
+	if runningApplied && runGen == a.filePreviewRunGen.Load() {
+		a.postCommandWake()
+	}
 
 	select {
 	case <-ctx.Done():
+		if runGen != a.filePreviewRunGen.Load() {
+			return
+		}
+		canceledApplied := false
 		a.patchFilePreviewTarget(fullscreen, func(st *ui.FilePreviewState) {
 			if st.Path != path {
 				return
 			}
 			st.Phase = ui.FilePreviewPhaseDone
 			st.ErrorMsg = "Canceled"
+			canceledApplied = true
 		})
-		a.postCommandWake()
-		if fullscreen {
-			a.clampFullscreenFilePreviewScroll()
-		} else {
-			a.clampFilePreviewScroll()
+		if canceledApplied && runGen == a.filePreviewRunGen.Load() {
+			a.postCommandWake()
+			if fullscreen {
+				a.clampFullscreenFilePreviewScroll()
+			} else {
+				a.clampFilePreviewScroll()
+			}
 		}
 		return
 	default:
@@ -508,6 +559,10 @@ func (a *App) runFilePreview(ctx context.Context, path string, argv []string, wo
 
 	res := cmdrun.Run(ctx, argv, workDir, cmdrun.MaxStreamBytes)
 
+	if runGen != a.filePreviewRunGen.Load() {
+		return
+	}
+	doneApplied := false
 	a.patchFilePreviewTarget(fullscreen, func(st *ui.FilePreviewState) {
 		if !st.Open || st.Path != path {
 			return
@@ -516,6 +571,7 @@ func (a *App) runFilePreview(ctx context.Context, path string, argv []string, wo
 		if res.LaunchErr != nil {
 			st.ErrorMsg = res.LaunchErr.Error()
 			st.ExitCode = -1
+			doneApplied = true
 			return
 		}
 		st.ExitCode = res.ExitCode
@@ -532,11 +588,14 @@ func (a *App) runFilePreview(ctx context.Context, path string, argv []string, wo
 		if res.StdoutTrim || res.StderrTrim {
 			st.CombinedText += "\n\n[output truncated]\n"
 		}
+		doneApplied = true
 	})
-	a.postCommandWake()
-	if fullscreen {
-		a.clampFullscreenFilePreviewScroll()
-	} else {
-		a.clampFilePreviewScroll()
+	if doneApplied && runGen == a.filePreviewRunGen.Load() {
+		a.postCommandWake()
+		if fullscreen {
+			a.clampFullscreenFilePreviewScroll()
+		} else {
+			a.clampFilePreviewScroll()
+		}
 	}
 }

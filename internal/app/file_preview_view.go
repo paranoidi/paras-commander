@@ -259,6 +259,7 @@ func (a *App) openFilePreviewFullscreen() {
 		st.ExitCode = 0
 		st.ErrorMsg = ""
 	})
+	gen := a.filePreviewRunGen.Add(1)
 	a.postCommandWake()
-	go a.runFilePreview(a.commandsCtx, path, argv, active.PathString(), true)
+	go a.runFilePreview(a.commandsCtx, path, argv, active.PathString(), true, gen)
 }

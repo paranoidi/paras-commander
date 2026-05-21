@@ -15,7 +15,8 @@ const (
 
 	// DefaultQuickViewPreviewDebounceMS waits after the last listing highlight change before
 	// re-running the preview command while Quick view is on. Zero runs immediately every reconcile.
-	DefaultQuickViewPreviewDebounceMS = 75
+	// Default matches DefaultPanelSyncFollowNavDebounceMS for consistent file-list scroll coalescing.
+	DefaultQuickViewPreviewDebounceMS = 100
 
 	DefaultDiskUsageWalkConcurrency = 4
 	// DefaultFindWalkConcurrency limits concurrent directory reads during panel find indexing.
