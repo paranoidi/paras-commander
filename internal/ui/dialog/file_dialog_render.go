@@ -191,7 +191,7 @@ func fileDialogWidth(screenWidth int, state FileDialogState) int {
 	if mkdirHasActions(state) {
 		// Radios render as " (*) Label" with a leading marker; reserve room for the
 		// widest label plus the marker glyphs and outer dialog padding (1+marker+label+1+border).
-		for _, r := range mkdirActionRadios() {
+		for _, r := range MkdirActionRadioSpecs() {
 			lw := utf8.RuneCountInString(r.Label) + 8
 			if lw > minWidth {
 				minWidth = lw
@@ -567,24 +567,6 @@ func mkdirExtraFocusRows(state FileDialogState) int {
 	return 0
 }
 
-// mkdirActionRadios returns the static radio specs rendered below the directory-name input.
-// The order matches MkdirAction iota values.
-func mkdirActionRadios() []struct {
-	Action   MkdirAction
-	Label    string
-	Shortcut rune
-} {
-	return []struct {
-		Action   MkdirAction
-		Label    string
-		Shortcut rune
-	}{
-		{MkdirActionCreate, "Create", 'r'},
-		{MkdirActionCreateCopySelect, "and copy selected", 'c'},
-		{MkdirActionCreateMoveSelect, "and move selected", 'm'},
-	}
-}
-
 // drawMkdirActionRows draws the radio button section under the directory-name input
 // for the mkdir-with-selections dialog. Focus indices for the radio rows start
 // immediately after len(state.Fields).
@@ -601,7 +583,7 @@ func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, 
 	}
 	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
 	leftCol := rect.X + 2
-	radios := mkdirActionRadios()
+	radios := MkdirActionRadioSpecs()
 	baseFocus := len(state.Fields)
 	for i, r := range radios {
 		y := sepY + 1 + i

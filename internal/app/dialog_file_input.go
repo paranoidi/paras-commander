@@ -55,15 +55,19 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			return false
 		}
 	}
-	// Alt+O = OK, Alt+C = Cancel
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'o', 'O':
+		if a.tryMkdirActionAltShortcut(event.Rune()) {
+			return false
+		}
+		if ui.AltDialogOK(event) {
 			a.executeFileDialog()
 			return false
-		case 'c', 'C':
+		}
+		if ui.AltDialogCancel(event) {
 			a.closeFileDialog()
 			return false
+		}
+		switch event.Rune() {
 		case 'y', 'Y':
 			if a.model.FileDialog.DialogType == ui.FileDialogDelete {
 				a.executeDelete()
@@ -246,6 +250,22 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 	return false
+}
+
+// tryMkdirActionAltShortcut selects a mkdir post-action via Alt+mnemonic. Works while
+// the directory-name field is focused. Alt+C selects copy (not Cancel) in this mode.
+func (a *App) tryMkdirActionAltShortcut(r rune) bool {
+	d := &a.model.FileDialog
+	if d.DialogType != ui.FileDialogMkdir || !d.MkdirShowActions {
+		return false
+	}
+	action, radioIdx, ok := ui.MkdirActionForAltShortcut(r)
+	if !ok {
+		return false
+	}
+	d.MkdirAction = action
+	d.FocusedField = len(d.Fields) + radioIdx
+	return true
 }
 
 // selectFocusedMkdirRadio commits the currently focused mkdir radio row as the

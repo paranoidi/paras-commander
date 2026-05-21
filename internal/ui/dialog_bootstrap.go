@@ -33,6 +33,7 @@ type (
 	FileDialogType            = dialog.FileDialogType
 	FileDialogField           = dialog.FileDialogField
 	MkdirAction               = dialog.MkdirAction
+	MkdirActionRadioSpec      = dialog.MkdirActionRadioSpec
 	RenamePhase               = dialog.RenamePhase
 	RenameSlugifySep          = dialog.RenameSlugifySep
 	FileDialogState           = dialog.FileDialogState
@@ -106,6 +107,8 @@ const (
 var (
 	AltDialogOK                       = dialog.AltDialogOK
 	AltDialogCancel                   = dialog.AltDialogCancel
+	MkdirActionRadioSpecs             = dialog.MkdirActionRadioSpecs
+	MkdirActionForAltShortcut         = dialog.MkdirActionForAltShortcut
 	ListOKCancelNavFocusKey           = dialog.ListOKCancelNavFocusKey
 	ListClampedSelectionDelta         = dialog.ListClampedSelectionDelta
 	EnsurePathPickerListScroll        = dialog.EnsurePathPickerListScroll

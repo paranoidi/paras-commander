@@ -5300,6 +5300,52 @@ func TestMkdirDialogWithSelectionShowsActionRadiosAndNav(t *testing.T) {
 	}
 }
 
+func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "a.txt")
+	writeFile(t, src)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{src: true}
+
+	app.dispatch(keymap.ActionFileMkdir)
+	if app.model.FileDialog.FocusedField != 0 {
+		t.Fatalf("initial focus = %d, want 0 (directory name field)", app.model.FileDialog.FocusedField)
+	}
+
+	alt := tcell.ModAlt
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'c', alt))
+	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreateCopySelect {
+		t.Fatalf("Alt+c: MkdirAction = %v, want copy", app.model.FileDialog.MkdirAction)
+	}
+	if app.model.FileDialog.FocusedField != 2 {
+		t.Fatalf("Alt+c: focus = %d, want 2 (copy radio)", app.model.FileDialog.FocusedField)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'm', alt))
+	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreateMoveSelect {
+		t.Fatalf("Alt+m: MkdirAction = %v, want move", app.model.FileDialog.MkdirAction)
+	}
+	if app.model.FileDialog.FocusedField != 3 {
+		t.Fatalf("Alt+m: focus = %d, want 3 (move radio)", app.model.FileDialog.FocusedField)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', alt))
+	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreate {
+		t.Fatalf("Alt+r: MkdirAction = %v, want create", app.model.FileDialog.MkdirAction)
+	}
+	if app.model.FileDialog.FocusedField != 1 {
+		t.Fatalf("Alt+r: focus = %d, want 1 (create radio)", app.model.FileDialog.FocusedField)
+	}
+
+	// Alt+C must not close the dialog in mkdir-with-actions mode.
+	if !app.model.FileDialog.Open {
+		t.Fatal("dialog closed after Alt+c; want copy selection")
+	}
+}
+
 func TestMkdirDialogRadioRowsRejectTextInput(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "a.txt")
