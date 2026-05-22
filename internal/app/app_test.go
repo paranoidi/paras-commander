@@ -132,6 +132,60 @@ func TestJobFailureBannerDetail(t *testing.T) {
 	}
 }
 
+func TestJobFailureLogDetailKeepsFullError(t *testing.T) {
+	t.Parallel()
+	errText := `delete: failed to delete _nocc (remove "/home/paranoidi/projects/_nocc": directory not empty)`
+	err := errors.New(errText)
+	if got := jobFailureLogDetail(err, errText); got != errText {
+		t.Fatalf("jobFailureLogDetail() = %q, want full error", got)
+	}
+}
+
+func TestMessageLogNewestFirst(t *testing.T) {
+	t.Parallel()
+	app := testAppMinimal(t)
+	app.setTransientMessage("first", ui.MessageUrgencyInfo)
+	app.setTransientMessage("second", ui.MessageUrgencyInfo)
+	if len(app.model.MessageLog) < 2 {
+		t.Fatalf("log len = %d, want at least 2", len(app.model.MessageLog))
+	}
+	if app.model.MessageLog[0].Text != "second" {
+		t.Fatalf("log[0] = %q, want newest message first", app.model.MessageLog[0].Text)
+	}
+	if app.model.MessageLog[len(app.model.MessageLog)-1].Text != "first" {
+		t.Fatalf("log[last] = %q, want oldest message last", app.model.MessageLog[len(app.model.MessageLog)-1].Text)
+	}
+}
+
+func TestSetJobFailedTransientMessageLogsFullError(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 120, 24)
+	app := newApp(t, screen, dir)
+
+	errText := `delete: failed to delete _nocc (remove "/home/paranoidi/projects/_nocc": directory not empty)`
+	app.setTransientMessageBanner(
+		fmt.Sprintf("Job failed: %s", jobFailureLogDetail(errors.New(errText), errText)),
+		fmt.Sprintf("Job failed: %s", jobFailureBannerDetail(errors.New(errText), errText)),
+		ui.MessageUrgencyError,
+	)
+	if len(app.model.MessageLog) == 0 {
+		t.Fatal("expected message log entry")
+	}
+	full := strings.Join(func() []string {
+		var parts []string
+		for _, e := range app.model.MessageLog {
+			parts = append(parts, e.Text)
+		}
+		return parts
+	}(), " ")
+	if !strings.Contains(full, "directory not empty") {
+		t.Fatalf("log = %q, want full error including reason", full)
+	}
+	if strings.Contains(app.model.Message, "directory not empty") {
+		t.Fatalf("banner should stay short, got %q", app.model.Message)
+	}
+}
+
 func TestFilePanelPlusMinusStarSelectionShortcuts(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
@@ -4356,15 +4410,12 @@ func TestAddBookmarkExecuteAppendsToMarksFile(t *testing.T) {
 	if !strings.Contains(app.model.Message, "Bookmark added") {
 		t.Fatalf("transient message = %q, want it to mention bookmark added", app.model.Message)
 	}
-	foundMarks := false
+	var logText strings.Builder
 	for _, e := range app.model.MessageLog {
-		if strings.Contains(e.Text, marksPath) {
-			foundMarks = true
-			break
-		}
+		logText.WriteString(e.Text)
 	}
-	if !foundMarks {
-		t.Fatalf("message log should include marks file path %q (first banner line is wrapped); log=%#v", marksPath, app.model.MessageLog)
+	if !strings.Contains(logText.String(), marksPath) {
+		t.Fatalf("message log should include marks file path %q; log=%#v", marksPath, app.model.MessageLog)
 	}
 	if app.model.MessageUrgency != ui.MessageUrgencyInfo {
 		t.Fatalf("message urgency = %v, want info", app.model.MessageUrgency)

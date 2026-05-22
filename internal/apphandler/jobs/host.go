@@ -24,6 +24,6 @@ type Host interface {
 	Dispatch(actionID string)
 	TryDispatchAuxiliaryScreens(actionID string) bool
 	ActionFromKeyEvent(ev *tcell.EventKey) string
-	JobFailureBannerDetail(err error, fallback string) string
+	SetJobFailedTransientMessage(err error, fallback string)
 	DevMode() bool
 }

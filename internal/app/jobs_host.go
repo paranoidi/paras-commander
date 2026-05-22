@@ -1,6 +1,8 @@
 package app
 
 import (
+	"fmt"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -53,8 +55,10 @@ func (h jobsHost) TryDispatchAuxiliaryScreens(actionID string) bool {
 
 func (h jobsHost) ActionFromKeyEvent(ev *tcell.EventKey) string { return h.app.actionFromKeyEvent(ev) }
 
-func (h jobsHost) JobFailureBannerDetail(err error, fallback string) string {
-	return jobFailureBannerDetail(err, fallback)
+func (h jobsHost) SetJobFailedTransientMessage(err error, fallback string) {
+	log := fmt.Sprintf("Job failed: %s", jobFailureLogDetail(err, fallback))
+	banner := fmt.Sprintf("Job failed: %s", jobFailureBannerDetail(err, fallback))
+	h.app.setTransientMessageBanner(log, banner, ui.MessageUrgencyError)
 }
 
 func (h jobsHost) DevMode() bool { return h.app.devMode }

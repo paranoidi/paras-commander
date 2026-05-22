@@ -20,11 +20,7 @@ func (a *App) openMessagesView() {
 	a.model.ActiveSubFocus = ui.SubFocusFileList
 	a.model.MenuDefinitions = menu.MessagesDefinitions(a.keys, a.keysMessages)
 	a.model.Menu.ActiveMenu = menu.DefaultIndexMessages()
-	if n := len(a.model.MessageLog); n > 0 {
-		a.model.MessagesView.Selected = n - 1
-	} else {
-		a.model.MessagesView.Selected = 0
-	}
+	a.model.MessagesView.Selected = 0
 	a.model.MessagesView.ListScroll = 0
 	a.ensureMessagesViewSelectionVisible()
 }

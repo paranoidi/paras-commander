@@ -773,7 +773,7 @@ func (h *Handler) updateJobMessage(ev jobs.Event) {
 	case jobs.EventCompleted:
 		h.host.SetTransientMessage("Job completed", ui.MessageUrgencyInfo)
 	case jobs.EventFailed:
-		h.host.SetTransientMessage(fmt.Sprintf("Job failed: %s", h.host.JobFailureBannerDetail(ev.Err, ev.Error)), ui.MessageUrgencyError)
+		h.host.SetJobFailedTransientMessage(ev.Err, ev.Error)
 	case jobs.EventCanceled:
 		h.host.SetTransientMessage("Job canceled", ui.MessageUrgencyInfo)
 	}

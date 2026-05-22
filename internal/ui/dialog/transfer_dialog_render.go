@@ -13,14 +13,14 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 	title := "Copy"
 	if state.Kind == TransferKindMove {
 		height = 8
-		title = "Move/Rename"
+		title = "Move"
 	}
 	if state.Phase == TransferPhaseSelfCopyRename {
 		height = 9
 		if state.Kind == TransferKindCopy {
 			title = "Copy — New name"
 		} else {
-			title = "Move/Rename — New name"
+			title = "Move — New name"
 		}
 	}
 

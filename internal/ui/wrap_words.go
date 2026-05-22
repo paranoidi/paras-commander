@@ -5,8 +5,8 @@ import (
 	"unicode/utf8"
 )
 
-// MessageLogWrapRunes is the target maximum line length when wrapping status/toast text
-// at spaces for the Messages log (and the first banner line).
+// MessageLogWrapRunes is the fallback maximum line length when wrapping status/toast text
+// for the Messages log on terminals too small for a layout (see MessageLogWrapColsForLayout).
 const MessageLogWrapRunes = 80
 
 // WrapWordsToWidth splits text into lines of at most maxCols runes, breaking at spaces between words.

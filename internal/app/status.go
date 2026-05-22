@@ -27,24 +27,61 @@ func (a *App) statusMessageTTL() time.Duration {
 	return time.Duration(sec * float64(time.Second))
 }
 
-func toastWrapLines(msg string) []string {
+func (a *App) messageLogWrapCols() int {
+	w, h := a.screen.Size()
+	if w <= 0 || h <= 0 {
+		return ui.MessageLogWrapRunes
+	}
+	return ui.MessageLogWrapColsForLayout(a.layoutForTerminalSize(w, h))
+}
+
+// statusMessageWrapCols is the max runes for one status-banner line (full terminal width).
+func (a *App) statusMessageWrapCols() int {
+	w, _ := a.screen.Size()
+	if w < 1 {
+		return ui.MessageLogWrapRunes
+	}
+	// drawStatusMessageOverlay applies FormatToastDisplay (+2 runes) then clips to rect.Width.
+	if w > 2 {
+		return w - 2
+	}
+	return 1
+}
+
+func toastWrapLines(msg string, maxCols int) []string {
 	msg = strings.TrimSpace(msg)
 	if msg == "" {
 		return nil
 	}
-	return ui.WrapWordsToWidth(msg, ui.MessageLogWrapRunes)
+	if maxCols < 1 {
+		maxCols = ui.MessageLogWrapRunes
+	}
+	return ui.WrapWordsToWidth(msg, maxCols)
 }
 
 func (a *App) setTransientMessage(msg string, urgency ui.MessageUrgency) {
-	lines := toastWrapLines(msg)
+	a.setTransientMessageBanner(msg, "", urgency)
+}
+
+// setTransientMessageBanner logs logMsg (wrapped to the Messages column width) and shows bannerMsg
+// on the status banner when non-empty, otherwise the first wrapped log line.
+func (a *App) setTransientMessageBanner(logMsg, bannerMsg string, urgency ui.MessageUrgency) {
+	lines := toastWrapLines(logMsg, a.messageLogWrapCols())
 	if len(lines) == 0 {
 		a.clearTransientMessage()
 		return
 	}
+	banner := strings.TrimSpace(bannerMsg)
+	if banner == "" {
+		bannerLines := toastWrapLines(logMsg, a.statusMessageWrapCols())
+		if len(bannerLines) > 0 {
+			banner = bannerLines[0]
+		}
+	}
 	gen := a.messageExpiryGen.Add(1)
-	a.model.Message = lines[0]
+	a.model.Message = banner
 	a.model.MessageUrgency = urgency
-	a.appendMessageLog(msg, urgency)
+	a.appendMessageLogLines(lines, urgency)
 	ttl := a.statusMessageTTL()
 	if ttl <= 0 {
 		return
@@ -66,8 +103,7 @@ func (a *App) applyStatusMessageExpiry(p statusMessageExpiryPayload) {
 	a.model.MessageUrgency = ui.MessageUrgencyInfo
 }
 
-func (a *App) appendMessageLog(text string, urgency ui.MessageUrgency) {
-	lines := toastWrapLines(text)
+func (a *App) appendMessageLogLines(lines []string, urgency ui.MessageUrgency) {
 	if len(lines) == 0 {
 		return
 	}
@@ -75,32 +111,32 @@ func (a *App) appendMessageLog(text string, urgency ui.MessageUrgency) {
 	if max <= 0 {
 		max = config.DefaultMessageLogMaxEntries
 	}
-	wasAtEnd := a.model.ViewMode == ui.ViewMessages && len(a.model.MessageLog) > 0 &&
-		a.model.MessagesView.Selected == len(a.model.MessageLog)-1
+	wasAtTop := a.model.ViewMode == ui.ViewMessages && len(a.model.MessageLog) > 0 &&
+		a.model.MessagesView.Selected == 0
 
 	ts := time.Now().Format("15:04:05")
+	batch := make([]ui.MessageLogEntry, len(lines))
 	for i, line := range lines {
 		tm := ""
 		if i == 0 {
 			tm = ts
 		}
-		a.model.MessageLog = append(a.model.MessageLog, ui.MessageLogEntry{
+		batch[i] = ui.MessageLogEntry{
 			Time: tm,
 			Text: line,
 			Urg:  urgency,
-		})
+		}
+	}
+	a.model.MessageLog = append(batch, a.model.MessageLog...)
+	if !wasAtTop && len(batch) > 0 {
+		a.model.MessagesView.Selected += len(batch)
 	}
 	for len(a.model.MessageLog) > max {
-		a.model.MessageLog = a.model.MessageLog[1:]
-		if a.model.MessagesView.Selected > 0 {
-			a.model.MessagesView.Selected--
-		}
-		if a.model.MessagesView.ListScroll > 0 {
-			a.model.MessagesView.ListScroll--
-		}
+		a.model.MessageLog = a.model.MessageLog[:max]
 	}
-	if wasAtEnd && len(a.model.MessageLog) > 0 {
-		a.model.MessagesView.Selected = len(a.model.MessageLog) - 1
+	if wasAtTop && len(a.model.MessageLog) > 0 {
+		a.model.MessagesView.Selected = 0
+		a.model.MessagesView.ListScroll = 0
 	}
 	a.ensureMessagesViewSelectionVisible()
 }
@@ -179,8 +215,15 @@ func transientErrorText(err error) string {
 
 const jobFailureBannerMaxRunes = 72
 
+// jobFailureLogDetail returns full text for the Messages log on job failure.
+func jobFailureLogDetail(err error, fallback string) string {
+	if err != nil {
+		return firstMessageLine(err.Error())
+	}
+	return firstMessageLine(fallback)
+}
+
 // jobFailureBannerDetail returns short text for the status banner on job failure.
-// Full detail remains on the job record (jobs panel).
 func jobFailureBannerDetail(err error, fallback string) string {
 	if err != nil {
 		if short := transientErrorText(err); short != err.Error() {
