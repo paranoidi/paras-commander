@@ -273,6 +273,27 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	}
 }
 
+func TestMessagesDefinitionsFillsMenuKeyLabels(t *testing.T) {
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	defs := MessagesDefinitions(bundle.Global, bundle.Messages)
+	if defs[0].ID != TopMessages {
+		t.Fatalf("first menu = %s, want TopMessages", defs[0].ID)
+	}
+	want := map[string]string{
+		"Clear messages":    "F8",
+		"Back to file view": "",
+	}
+	for _, item := range defs[0].Items {
+		w := want[item.Label]
+		if item.KeyLabel != w {
+			t.Fatalf("%q KeyLabel = %q, want %q", item.Label, item.KeyLabel, w)
+		}
+	}
+}
+
 func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 	bundle, err := keymap.DefaultBundle()
 	if err != nil {

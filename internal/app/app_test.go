@@ -157,6 +157,19 @@ func TestMessageLogNewestFirst(t *testing.T) {
 	}
 }
 
+func TestClearMessageLog(t *testing.T) {
+	t.Parallel()
+	app := testAppMinimal(t)
+	app.setTransientMessage("hello", ui.MessageUrgencyInfo)
+	app.clearMessageLog()
+	if len(app.model.MessageLog) != 0 {
+		t.Fatalf("MessageLog len = %d, want 0", len(app.model.MessageLog))
+	}
+	if app.model.Message != "" {
+		t.Fatalf("banner = %q, want empty", app.model.Message)
+	}
+}
+
 func TestSetJobFailedTransientMessageLogsFullError(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 120, 24)

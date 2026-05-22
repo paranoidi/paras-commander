@@ -100,6 +100,7 @@ const (
 	// Messages view (status / toast log)
 	ActionMessagesOpen  = "messages.open"
 	ActionMessagesClose = "messages.close"
+	ActionMessagesClear = "messages.clear"
 
 	// UI dialog controls (handled internally, not in keybindings.toml)
 	ActionUIConfirm   = "ui.confirm"
@@ -235,6 +236,7 @@ var KnownActions = map[string]struct{}{
 
 	ActionMessagesOpen:  {},
 	ActionMessagesClose: {},
+	ActionMessagesClear: {},
 
 	ActionUIOpenTheme:  {},
 	ActionUIOpenConfig: {},

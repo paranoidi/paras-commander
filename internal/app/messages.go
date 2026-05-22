@@ -25,6 +25,12 @@ func (a *App) openMessagesView() {
 	a.ensureMessagesViewSelectionVisible()
 }
 
+func (a *App) clearMessageLog() {
+	a.model.MessageLog = nil
+	a.model.MessagesView = ui.MessagesViewState{}
+	a.clearTransientMessage()
+}
+
 func (a *App) closeMessagesView() {
 	a.model.ViewMode = ui.ViewBrowser
 	a.model.ActiveSubFocus = ui.SubFocusFileList
@@ -55,6 +61,9 @@ func (a *App) tryDispatchMessages(actionID string) bool {
 		if a.model.ViewMode == ui.ViewMessages {
 			a.closeMessagesView()
 		}
+		return true
+	case keymap.ActionMessagesClear:
+		a.clearMessageLog()
 		return true
 	default:
 		return false

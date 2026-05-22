@@ -250,3 +250,17 @@ func TestLookupF8BrowserVsJobsOverlay(t *testing.T) {
 		t.Fatalf("jobs view F8 = %q, want jobs.clear-finished", got)
 	}
 }
+
+func TestLookupF8BrowserVsMessagesOverlay(t *testing.T) {
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	f8 := tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)
+	if got := lookupActionForView(f8, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, ui.ViewBrowser); got != keymap.ActionFileDelete {
+		t.Fatalf("browser F8 = %q, want file.delete", got)
+	}
+	if got := lookupActionForView(f8, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, ui.ViewMessages); got != keymap.ActionMessagesClear {
+		t.Fatalf("messages view F8 = %q, want messages.clear", got)
+	}
+}

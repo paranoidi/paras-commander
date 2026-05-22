@@ -161,6 +161,21 @@ func TestDefaultJobsOverlayMapsF8ToClearFinished(t *testing.T) {
 	}
 }
 
+func TestDefaultMessagesOverlayMapsF8ToClear(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	id, ok := bundle.Messages.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+	if !ok || id != ActionMessagesClear {
+		t.Fatalf("messages overlay F8 = %q %v, want messages.clear", id, ok)
+	}
+	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+	if !ok || id != ActionFileDelete {
+		t.Fatalf("global F8 = %q %v, want file.delete", id, ok)
+	}
+}
+
 func TestDefaultBundlePathPickerHostOverlayEmpty(t *testing.T) {
 	bundle, err := DefaultBundle()
 	if err != nil {

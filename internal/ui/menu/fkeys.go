@@ -70,6 +70,7 @@ func FunctionKeysCommandsView() []FunctionKey { return FunctionKeysCommands }
 // FunctionKeysMessagesView is the footer legend while the Messages screen is active.
 var FunctionKeysMessages = []FunctionKey{
 	FooterEscClose,
+	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear"},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 }

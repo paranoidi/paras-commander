@@ -82,7 +82,8 @@ func CanonicalRankText(ent ui.HelpEntry) string {
 func ActionRunnableInBrowser(actionID string) bool {
 	switch actionID {
 	case keymap.ActionJobsCancel, keymap.ActionJobsPause, keymap.ActionJobsResume,
-		keymap.ActionJobsQueueUp, keymap.ActionJobsQueueDown, keymap.ActionJobsClearFinished:
+		keymap.ActionJobsQueueUp, keymap.ActionJobsQueueDown, keymap.ActionJobsClearFinished,
+		keymap.ActionMessagesClear:
 		return false
 	default:
 		return true

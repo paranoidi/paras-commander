@@ -528,6 +528,13 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil,
 			Keywords:    []string{"back", "browser"},
 		},
+		{
+			ID:          ActionMessagesClear,
+			Title:       "Clear messages",
+			Section:     "Messages",
+			DefaultKeys: nil,
+			Keywords:    []string{"log", "toast", "status"},
+		},
 
 		// ── Jobs ──
 		// jobs.open defaults belong in [action_keys] (global). Other
