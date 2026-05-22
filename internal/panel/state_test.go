@@ -541,6 +541,117 @@ func TestHistoryBackwardReentersDirectoryLeftByParent(t *testing.T) {
 	}
 }
 
+func TestHistoryNavigationRestoresPriorHighlightedEntry(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("Mkdir(sub) error = %v", err)
+	}
+	writeFile(t, filepath.Join(sub, "aaa.txt"))
+	writeFile(t, filepath.Join(sub, "zzz.txt"))
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "sub" {
+			state.Cursor = i
+			break
+		}
+	}
+	entered, err := state.Enter(5)
+	if err != nil || !entered {
+		t.Fatalf("Enter(sub): entered=%v err=%v", entered, err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "zzz.txt" {
+			state.Cursor = i
+			break
+		}
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "zzz.txt" {
+		t.Fatalf("cursor on sub before leave = %q ok=%v, want zzz.txt", entry.Name, ok)
+	}
+
+	if err := state.Parent(5); err != nil {
+		t.Fatalf("Parent() error = %v", err)
+	}
+
+	moved, err := state.HistoryBackward(5)
+	if err != nil || !moved {
+		t.Fatalf("HistoryBackward: moved=%v err=%v", moved, err)
+	}
+	entry, ok = state.CurrentEntry()
+	if !ok || entry.Name != "zzz.txt" {
+		t.Fatalf("after HistoryBackward entry = %q ok=%v, want zzz.txt", entry.Name, ok)
+	}
+	if state.Cursor == 0 {
+		t.Fatal("cursor reset to row 0 after HistoryBackward, want prior highlight")
+	}
+
+	moved, err = state.HistoryForward(5)
+	if err != nil || !moved {
+		t.Fatalf("HistoryForward: moved=%v err=%v", moved, err)
+	}
+	entry, ok = state.CurrentEntry()
+	if !ok || entry.Name != "sub" {
+		t.Fatalf("after HistoryForward entry = %q ok=%v, want sub", entry.Name, ok)
+	}
+}
+
+func TestNavigateToReenteredDirectoryRestoresHighlight(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("Mkdir(sub) error = %v", err)
+	}
+	writeFile(t, filepath.Join(sub, "keep.txt"))
+	writeFile(t, filepath.Join(sub, "target.txt"))
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "sub" {
+			state.Cursor = i
+			break
+		}
+	}
+	if _, err := state.Enter(5); err != nil {
+		t.Fatalf("Enter(sub) error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "target.txt" {
+			state.Cursor = i
+			break
+		}
+	}
+	if err := state.Parent(5); err != nil {
+		t.Fatalf("Parent() error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "sub" {
+			state.Cursor = i
+			break
+		}
+	}
+	if _, err := state.Enter(5); err != nil {
+		t.Fatalf("re-Enter(sub) error = %v", err)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "target.txt" {
+		t.Fatalf("re-entered sub highlight = %q ok=%v, want target.txt", entry.Name, ok)
+	}
+}
+
 func TestEnterSiblingRetainsPriorDescendantInHistory(t *testing.T) {
 	root := t.TempDir()
 	sub := filepath.Join(root, "sub")

@@ -20,8 +20,14 @@ import (
 const maxNavHistory = 200
 
 // noIndexCursorFallback is passed to load as indexFallback to keep cursor at 0 when the
-// preserve-by-name step cannot resolve (directory changes, initial load, history navigation).
+// preserve-by-name step cannot resolve (directory changes, initial load).
 const noIndexCursorFallback = -1
+
+// historyCursorSnapshot stores the highlighted row when leaving a directory so re-entry can restore it.
+type historyCursorSnapshot struct {
+	EntryName string
+	Index     int
+}
 
 // State contains all panel data needed by the App and renderer.
 type State struct {
@@ -38,9 +44,11 @@ type State struct {
 	ScrollOffset       int
 	// History lists visited directories (most recent first). HistoryIndex is the timeline offset:
 	// 0 = newest/current slot in the list (matches Path after navigation).
-	History       []string
-	HistoryIndex  int
-	SelectedPaths map[string]bool
+	History      []string
+	HistoryIndex int
+	// HistoryCursorByPath maps canonical directory paths to the last highlighted entry when leaving.
+	HistoryCursorByPath map[string]historyCursorSnapshot
+	SelectedPaths       map[string]bool
 	// SelectionsStripOrder lists selected paths that belong in the bottom “selections” strip:
 	// off-current-directory order is tracked here; on chdir into dir D those paths are removed;
 	// on chdir away from D, selected paths under D are appended (deduped).
@@ -545,6 +553,58 @@ func (s *State) recordVisit(target string) {
 	}
 	s.History = hist
 	s.HistoryIndex = 0
+	s.pruneHistoryCursors()
+}
+
+func (s *State) rememberCursorForPath(dir string) {
+	dir = cleanPathString(dir)
+	if dir == "" {
+		return
+	}
+	name := ""
+	if entry, ok := s.CurrentEntry(); ok {
+		name = entry.Name
+	}
+	if s.HistoryCursorByPath == nil {
+		s.HistoryCursorByPath = make(map[string]historyCursorSnapshot)
+	}
+	s.HistoryCursorByPath[dir] = historyCursorSnapshot{EntryName: name, Index: s.Cursor}
+}
+
+func (s *State) recalledCursorFor(dir string) (selectedName string, indexFallback int) {
+	dir = cleanPathString(dir)
+	if dir == "" {
+		return "", noIndexCursorFallback
+	}
+	snap, ok := s.HistoryCursorByPath[dir]
+	if !ok {
+		return "", noIndexCursorFallback
+	}
+	return snap.EntryName, snap.Index
+}
+
+func (s *State) resolveLoadCursor(loc pathloc.Path, selectedName string, indexFallback int) (string, int) {
+	if selectedName != "" || indexFallback != noIndexCursorFallback {
+		return selectedName, indexFallback
+	}
+	return s.recalledCursorFor(loc.String())
+}
+
+func (s *State) pruneHistoryCursors() {
+	if len(s.HistoryCursorByPath) <= maxNavHistory {
+		return
+	}
+	keep := make(map[string]struct{}, len(s.History))
+	for _, p := range s.History {
+		if cp := cleanPathString(p); cp != "" {
+			keep[cp] = struct{}{}
+		}
+	}
+	for dir := range s.HistoryCursorByPath {
+		if _, ok := keep[dir]; !ok {
+			delete(s.HistoryCursorByPath, dir)
+		}
+	}
 }
 
 func removePathFromSlice(slice []string, target string) []string {
@@ -748,6 +808,10 @@ func (s *State) loadPathString(path string, selectedName string, viewportRows in
 }
 
 func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, indexFallback int, remote remoteLoadOpts) error {
+	if !loc.Equal(s.Path) {
+		s.rememberCursorForPath(s.Path.String())
+	}
+	selectedName, indexFallback = s.resolveLoadCursor(loc, selectedName, indexFallback)
 	if loc.IsRemote() && s.ScheduleRemoteLoad != nil {
 		if s.ScheduleRemoteLoad(RemoteLoadRequest{
 			Loc:             loc,
