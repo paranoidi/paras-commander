@@ -42,8 +42,9 @@ func (a *App) openPanelPathInExternalBrowser(panelID int) {
 	a.setTransientMessage("Opened folder in external browser", ui.MessageUrgencyInfo)
 }
 
-// handleNavOpen enters directories via panel.Enter; when the selection is not a directory and
-// open_files_externally is enabled, launches xdg-open on the path.
+// handleNavOpen enters directories via panel.Enter; when the selection is a POSIX-executable
+// regular file and run_executables_on_enter is enabled, runs it in the Commands view; otherwise
+// when open_files_externally is enabled, launches xdg-open on the path.
 func (a *App) handleNavOpen(activePanel *panel.State, viewportRows int) {
 	entered, err := activePanel.Enter(viewportRows)
 	if err != nil {
@@ -54,6 +55,10 @@ func (a *App) handleNavOpen(activePanel *panel.State, viewportRows int) {
 		return
 	}
 	if a.model.ViewMode != ui.ViewBrowser {
+		return
+	}
+	if path, ok := a.resolveExecutableOpenPath(activePanel); ok {
+		a.runExecutableFromPanel(path)
 		return
 	}
 	if !a.config.OpenFilesExternally {

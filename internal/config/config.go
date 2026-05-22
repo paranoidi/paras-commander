@@ -112,6 +112,7 @@ type Config struct {
 	DiskUsageWalkConcurrency   int              `toml:"disk_usage_walk_concurrency"`
 	FollowSymlinksOnNavigation bool             `toml:"follow_symlinks_on_navigation"`
 	OpenFilesExternally        bool             `toml:"open_files_externally"`
+	RunExecutablesOnEnter      bool             `toml:"run_executables_on_enter"`
 	DeleteMode                 string           `toml:"delete_mode"`
 	UI                         UIConfig         `toml:"ui"`
 	Filter                     FilterConfig     `toml:"filter"`
@@ -288,6 +289,7 @@ func Default() Config {
 		DiskUsageWalkConcurrency:        DefaultDiskUsageWalkConcurrency,
 		FollowSymlinksOnNavigation:      true,
 		OpenFilesExternally:             true,
+		RunExecutablesOnEnter:           true,
 		DeleteMode:                      DeletePermanent,
 		UI: UIConfig{
 			ShowMenuBar:                       true,

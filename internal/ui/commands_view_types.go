@@ -17,6 +17,8 @@ const (
 	CommandRunKindRunForEach CommandRunKind = "run_for_each"
 	// CommandRunKindUserMenu is a single argv invocation from the F2 user menu (menu.toml).
 	CommandRunKindUserMenu CommandRunKind = "user_menu"
+	// CommandRunKindFileExecute is Enter on a POSIX-executable regular file in the file browser.
+	CommandRunKindFileExecute CommandRunKind = "file_execute"
 )
 
 // CommandRunEntry is one row in the Commands screen list plus captured output.
