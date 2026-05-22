@@ -50,6 +50,12 @@ type FileDialogField struct {
 	PickerFocused bool
 	// InputInvalid paints the row with dialog.input.*.error (e.g. mass rename regexp compile error).
 	InputInvalid bool
+	// CompletionSuffix is ghost filesystem completion after the caret (Tab accepts).
+	CompletionSuffix string
+	// CompletionIsDir is true when accepting completion should append a trailing slash.
+	CompletionIsDir bool
+	// Scroll is the first visible rune offset for path rows with horizontal overflow.
+	Scroll int
 }
 
 // MkdirAction identifies the post-mkdir action chosen via radio buttons in the mkdir dialog.

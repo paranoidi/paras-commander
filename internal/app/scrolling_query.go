@@ -10,27 +10,57 @@ import (
 
 // scrollingQueryEdit binds a ScrollingQuery view to mutable string/cursor/scroll fields.
 type scrollingQueryEdit struct {
-	q        *ui.ScrollingQuery
-	width    int
-	onChange func()
+	q             *ui.ScrollingQuery
+	width         int
+	onChange      func()
+	ensureVisible func() // when nil, uses q.EnsureVisible(width)
+	// applyVisibleAfterErase runs completion + scroll-reveal after deletions (path picker).
+	applyVisibleAfterErase func()
+	// maxScrollAfterErase caps scroll raised by completion sync in onChange after reveal.
+	maxScrollAfterErase *int
 }
 
 func (a *App) pathPickerScrollingQuery() scrollingQueryEdit {
 	st := &a.model.PathPicker
 	q := &ui.ScrollingQuery{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll}
-	return scrollingQueryEdit{
+	width := a.pathPickerQueryWidth()
+	edit := scrollingQueryEdit{
 		q:     q,
-		width: a.pathPickerQueryWidth(),
-		onChange: func() {
-			st.Query = q.Value
-			st.QueryCursor = q.Cursor
-			st.QueryScroll = q.Scroll
-			a.syncPathPickerRanks()
-			a.armPathPickerValidateTimer()
-			st.Selected = 0
-			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+		width: width,
+		ensureVisible: func() {
+			valueLen := len([]rune(q.Value))
+			suffixLen := len([]rune(st.QueryCompletionSuffix))
+			q.Cursor, q.Scroll = ui.EnsurePathInputScroll(valueLen, q.Cursor, q.Scroll, width, suffixLen)
 		},
 	}
+	edit.applyVisibleAfterErase = func() {
+		valueLen := len([]rune(q.Value))
+		suffixLen := len([]rune(st.QueryCompletionSuffix))
+		if ui.ScrollContentLen(valueLen, q.Cursor) <= width {
+			q.Scroll = 0
+		} else if q.Scroll > 0 {
+			q.Cursor, q.Scroll = ui.AdjustScrollRevealOnErase(q.Value, q.Cursor, q.Scroll, width, suffixLen)
+		}
+		q.Cursor, q.Scroll = ui.EnsurePathInputScroll(valueLen, q.Cursor, q.Scroll, width, suffixLen)
+		max := q.Scroll
+		edit.maxScrollAfterErase = &max
+	}
+	edit.onChange = func() {
+		st.Query = q.Value
+		st.QueryCursor = q.Cursor
+		st.QueryScroll = q.Scroll
+		a.syncPathPickerRanks()
+		a.syncPathPickerCompletion()
+		if edit.maxScrollAfterErase != nil && st.QueryScroll > *edit.maxScrollAfterErase {
+			st.QueryScroll = *edit.maxScrollAfterErase
+			q.Scroll = *edit.maxScrollAfterErase
+		}
+		edit.maxScrollAfterErase = nil
+		a.armPathPickerValidateTimer()
+		st.Selected = 0
+		ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+	}
+	return edit
 }
 
 func findDialogScrollingQuery(st *ui.FindDialogState, width int, onChange func()) scrollingQueryEdit {
@@ -110,11 +140,22 @@ func groupSelectScrollingQuery(gs *ui.GroupSelectState, width int) scrollingQuer
 	}
 }
 
+func (e *scrollingQueryEdit) applyVisible() {
+	if e == nil || e.q == nil {
+		return
+	}
+	if e.ensureVisible != nil {
+		e.ensureVisible()
+		return
+	}
+	e.q.EnsureVisible(e.width)
+}
+
 func (e *scrollingQueryEdit) apply() {
 	if e == nil || e.q == nil || e.onChange == nil {
 		return
 	}
-	e.q.EnsureVisible(e.width)
+	e.applyVisible()
 	e.onChange()
 }
 
@@ -122,7 +163,21 @@ func (e *scrollingQueryEdit) applyVisibleOnly() {
 	if e == nil || e.q == nil {
 		return
 	}
-	e.q.EnsureVisible(e.width)
+	e.applyVisible()
+	if e.onChange != nil {
+		e.onChange()
+	}
+}
+
+func (e *scrollingQueryEdit) applyAfterErase() {
+	if e == nil || e.q == nil {
+		return
+	}
+	if e.applyVisibleAfterErase != nil {
+		e.applyVisibleAfterErase()
+	} else {
+		e.applyVisible()
+	}
 	if e.onChange != nil {
 		e.onChange()
 	}
@@ -141,7 +196,7 @@ func (a *App) tryScrollingQueryDialogInputActions(ev *tcell.EventKey, e scrollin
 	switch id {
 	case keymap.ActionDialogInputKillWordBackward:
 		e.q.KillWordBackward()
-		e.apply()
+		e.applyAfterErase()
 		return true
 	case keymap.ActionDialogInputBackwardWord:
 		e.q.MoveWordBackward()
@@ -200,11 +255,11 @@ func (a *App) handleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, e s
 		return true
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		e.q.Backspace()
-		e.apply()
+		e.applyAfterErase()
 		return true
 	case tcell.KeyDelete:
 		e.q.Delete()
-		e.apply()
+		e.applyAfterErase()
 		return true
 	case tcell.KeyCtrlL, tcell.KeyCtrlU:
 		if e.q.Value == "" {

@@ -64,7 +64,7 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 	primitive.Text(screen, leftCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
 
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, "", filterFocused, false, styles)
 
 	sepBeforeList := rect.Y + 4
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)

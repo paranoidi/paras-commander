@@ -10,8 +10,23 @@ import (
 // DialogButtonSpec describes one rendered dialog button (label, Alt shortcut, focus).
 type DialogButtonSpec = draw.DialogButtonSpec
 
+// ScrollContentLen is the horizontal extent for overflow markers (see draw package).
+var ScrollContentLen = draw.ScrollContentLen
+
 // EnsureScrollInputVisible adjusts input scroll so the cursor stays visible (see draw package).
 var EnsureScrollInputVisible = draw.EnsureScrollInputVisible
+
+// AdjustScrollForCompletion updates scroll for ghost completion visibility (see draw package).
+var AdjustScrollForCompletion = draw.AdjustScrollForCompletion
+
+// EnsurePathInputScroll keeps the caret visible for path-shaped dialog inputs (see draw package).
+var EnsurePathInputScroll = draw.EnsurePathInputScroll
+
+// ShouldPreemptiveScrollRevealOnErase reports imminent deletion of the viewport's last visible rune.
+var ShouldPreemptiveScrollRevealOnErase = draw.ShouldPreemptiveScrollRevealOnErase
+
+// AdjustScrollRevealOnErase decreases scroll after deletions to reveal hidden prefix text.
+var AdjustScrollRevealOnErase = draw.AdjustScrollRevealOnErase
 
 // AccentGlyphStyle applies menu/dialog shortcut accent styling on top of a base row or label style.
 func AccentGlyphStyle(base, accent tcell.Style) tcell.Style {

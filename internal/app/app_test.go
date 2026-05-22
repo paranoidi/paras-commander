@@ -134,7 +134,7 @@ func TestJobFailureBannerDetail(t *testing.T) {
 
 func TestJobFailureLogDetailKeepsFullError(t *testing.T) {
 	t.Parallel()
-	errText := `delete: failed to delete _nocc (remove "/home/paranoidi/projects/_nocc": directory not empty)`
+	errText := `delete: failed to delete stale-node (remove "/tmp/synthetic/workspace/stale-node": directory not empty)`
 	err := errors.New(errText)
 	if got := jobFailureLogDetail(err, errText); got != errText {
 		t.Fatalf("jobFailureLogDetail() = %q, want full error", got)
@@ -175,7 +175,7 @@ func TestSetJobFailedTransientMessageLogsFullError(t *testing.T) {
 	screen := newScreen(t, 120, 24)
 	app := newApp(t, screen, dir)
 
-	errText := `delete: failed to delete _nocc (remove "/home/paranoidi/projects/_nocc": directory not empty)`
+	errText := `delete: failed to delete stale-node (remove "/tmp/synthetic/workspace/stale-node": directory not empty)`
 	app.setTransientMessageBanner(
 		fmt.Sprintf("Job failed: %s", jobFailureLogDetail(errors.New(errText), errText)),
 		fmt.Sprintf("Job failed: %s", jobFailureBannerDetail(errors.New(errText), errText)),

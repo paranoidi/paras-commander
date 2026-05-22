@@ -87,6 +87,10 @@ All dialogs (modal overlays) must follow these navigation and rendering rules:
 - Focus management per dialog type is handled in `internal/app` (`input.go` and `dialog_*.go`).
 - File dialogs (`FileDialogState`) use `FocusedField` for focus tracking; button focus indexes = len(Fields)+0 for OK and len(Fields)+1 for Cancel.
 
+## Testing
+
+- Do not use my local files or filenames as a basis for tests. Generate equivalent length of filenames using random english words.
+
 ## Input Area Rendering / Styling
 
 All dialogs with user text input fields must follow these rules:

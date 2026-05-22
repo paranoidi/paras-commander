@@ -240,6 +240,117 @@ func TestPathPickerQueryCtrlWAndAltBWordNav(t *testing.T) {
 	}
 }
 
+func TestPathPickerTabAcceptsFilesystemCompletion(t *testing.T) {
+	root := t.TempDir()
+	fooDir := filepath.Join(root, "foo")
+	if err := os.MkdirAll(fooDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	if err := os.WriteFile(marksPath, []byte("m : "+fooDir+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	app.openBookmarkDialog()
+	st := &app.model.PathPicker
+
+	prefix := filepath.Join(root, "f")
+	for _, r := range prefix {
+		app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if st.QueryCompletionSuffix != "oo" {
+		t.Fatalf("suffix = %q want oo", st.QueryCompletionSuffix)
+	}
+	if !st.QueryCompletionIsDir {
+		t.Fatal("expected directory completion")
+	}
+
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	want := filepath.Join(root, "foo") + "/"
+	if st.Query != want {
+		t.Fatalf("Query = %q want %q", st.Query, want)
+	}
+	if st.QueryCursor != len([]rune(want)) {
+		t.Fatalf("QueryCursor = %d want %d", st.QueryCursor, len([]rune(want)))
+	}
+	if st.QueryCompletionSuffix != "" {
+		t.Fatalf("suffix should be cleared after accept, got %q", st.QueryCompletionSuffix)
+	}
+}
+
+func TestPathPickerBackspaceRevealScrollOnLastVisible(t *testing.T) {
+	root := t.TempDir()
+	real := filepath.Join(root, "exists")
+	if err := os.MkdirAll(real, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	if err := os.WriteFile(marksPath, []byte("m : "+real+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	app.openBookmarkDialog()
+	st := &app.model.PathPicker
+
+	query := "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/~/projects/paras-commander/"
+	for _, r := range query {
+		app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.syncPathPickerScroll()
+	width := app.pathPickerQueryWidth()
+	runes := []rune(st.Query)
+	if len(runes) <= width {
+		t.Fatalf("test path must exceed input width %d", width)
+	}
+	if st.QueryScroll == 0 {
+		t.Fatal("expected scrolled query before backspace")
+	}
+	scrollBefore := st.QueryScroll
+	if st.QueryCursor != len(runes) {
+		t.Fatalf("cursor = %d want %d", st.QueryCursor, len(runes))
+	}
+	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
+	if st.QueryScroll >= scrollBefore {
+		t.Fatalf("QueryScroll = %d want < %d after backspace on last visible char", st.QueryScroll, scrollBefore)
+	}
+	wantQuery := string(runes[:len(runes)-1])
+	if st.Query != wantQuery {
+		t.Fatalf("Query = %q want %q", st.Query, wantQuery)
+	}
+}
+
 func TestPathPickerValidateArmIncrementsGeneration(t *testing.T) {
 	root := t.TempDir()
 	real := filepath.Join(root, "exists")

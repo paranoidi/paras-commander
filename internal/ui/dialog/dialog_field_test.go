@@ -2,6 +2,28 @@ package dialog
 
 import "testing"
 
+func TestFileDialogFieldAcceptCompletion(t *testing.T) {
+	field := FileDialogField{
+		Value:            "/tmp/f",
+		Cursor:           6,
+		CompletionSuffix: "oo",
+		CompletionIsDir:  true,
+	}
+	if !field.AcceptCompletion() {
+		t.Fatal("AcceptCompletion = false, want true")
+	}
+	want := "/tmp/foo/"
+	if field.Value != want {
+		t.Fatalf("Value = %q want %q", field.Value, want)
+	}
+	if field.Cursor != len([]rune(want)) {
+		t.Fatalf("Cursor = %d want %d", field.Cursor, len([]rune(want)))
+	}
+	if field.CompletionSuffix != "" {
+		t.Fatalf("CompletionSuffix = %q want empty", field.CompletionSuffix)
+	}
+}
+
 func TestFileDialogFieldInsertClearsPendingPrefill(t *testing.T) {
 	field := FileDialogField{
 		Value:          "suggested",

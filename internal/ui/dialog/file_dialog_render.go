@@ -352,34 +352,43 @@ func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 		style, placeholderStyle = styles.DialogInputPair(focused)
 	}
 	prefillPending := field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill
-	textStyle := style
-	if prefillPending && !invalid {
-		textStyle = placeholderStyle
-	}
-
-	runes := []rune(field.Value)
-	length := len(runes)
-	cursor, scroll := draw.EnsureScrollInputVisible(length, field.Cursor, 0, width)
-
-	for i := 0; i < width; i++ {
-		idx := scroll + i
-		ch := ' '
-		if idx < length {
-			ch = runes[idx]
+	if prefillPending {
+		textStyle := placeholderStyle
+		if invalid {
+			textStyle = style
 		}
-		st := textStyle
-		if focused && idx == cursor {
-			st = textStyle.Reverse(true)
+		markerStyle := styles.DialogInputBaseStyle(focused, false)
+		runes := []rune(field.Value)
+		length := len(runes)
+		cursor, scroll := draw.EnsureScrollInputVisible(length, field.Cursor, field.Scroll, width)
+		lay := draw.ScrollingInputLayoutFor(scroll, width, length)
+		for i := 0; i < lay.TextCols; i++ {
+			idx := scroll + i
+			ch := ' '
+			if idx < length {
+				ch = runes[idx]
+			}
+			st := textStyle
+			if focused && idx == cursor {
+				st = textStyle.Reverse(true)
+			}
+			screen.SetContent(x+lay.LeftPad+i, y, ch, nil, st)
 		}
-		screen.SetContent(x+i, y, ch, nil, st)
+		if lay.LeftPad > 0 {
+			screen.SetContent(x, y, '◀', nil, markerStyle)
+		}
+		if lay.RightPad > 0 {
+			screen.SetContent(x+width-1, y, '▶', nil, markerStyle)
+		}
+		return
 	}
-
-	if scroll > 0 && (!focused || cursor != scroll) {
-		screen.SetContent(x, y, '◀', nil, style)
-	}
-	if scroll+width < length && (!focused || cursor != scroll+width-1) {
-		screen.SetContent(x+width-1, y, '▶', nil, style)
-	}
+	draw.PaintScrollingInputContent(
+		screen, x, y, width,
+		field.Value, "",
+		field.Cursor, field.Scroll,
+		focused, invalid, focused,
+		styles,
+	)
 }
 
 // drawPathInputRow draws text in the first width-2 cells, the path-picker glyph in the
@@ -392,44 +401,50 @@ func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogFiel
 		return
 	}
 	textW := width - 2
-	var style, placeholderStyle tcell.Style
-	if pathInvalid {
-		style = styles.DialogInputBaseStyle(rowFocused, true)
-		placeholderStyle = style
-	} else {
-		style, placeholderStyle = styles.DialogInputPair(rowFocused)
-	}
+	rowStyle := styles.DialogInputBaseStyle(rowFocused, false)
+	committedStyle := styles.DialogInputBaseStyle(rowFocused, pathInvalid)
+	_, placeholderStyle := styles.DialogInputPair(rowFocused)
 	prefillPending := field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill
-	textStyle := style
-	if prefillPending && !pathInvalid {
-		textStyle = placeholderStyle
-	}
-
-	primitive.Text(screen, x, y, width, "", style)
-
-	runes := []rune(field.Value)
-	length := len(runes)
 	textFocused := rowFocused && !pickerFocused
-	cursor, scroll := draw.EnsureScrollInputVisible(length, field.Cursor, 0, textW)
 
-	for i := 0; i < textW; i++ {
-		idx := scroll + i
-		ch := ' '
-		if idx < length {
-			ch = runes[idx]
-		}
-		st := textStyle
-		if textFocused && idx == cursor {
-			st = textStyle.Reverse(true)
-		}
-		screen.SetContent(x+i, y, ch, nil, st)
-	}
+	primitive.Text(screen, x, y, width, "", rowStyle)
 
-	if scroll > 0 && (!textFocused || cursor != scroll) {
-		screen.SetContent(x, y, '◀', nil, style)
-	}
-	if scroll+textW < length && (!textFocused || cursor != scroll+textW-1) {
-		screen.SetContent(x+textW-1, y, '▶', nil, style)
+	if prefillPending {
+		textStyle := placeholderStyle
+		if pathInvalid {
+			textStyle = committedStyle
+		}
+		markerStyle := styles.DialogInputBaseStyle(rowFocused, false)
+		runes := []rune(field.Value)
+		length := len(runes)
+		cursor, scroll := draw.EnsureScrollInputVisible(length, field.Cursor, field.Scroll, textW)
+		lay := draw.ScrollingInputLayoutFor(scroll, textW, length)
+		for i := 0; i < lay.TextCols; i++ {
+			idx := scroll + i
+			ch := ' '
+			if idx < length {
+				ch = runes[idx]
+			}
+			st := textStyle
+			if textFocused && idx == cursor {
+				st = textStyle.Reverse(true)
+			}
+			screen.SetContent(x+lay.LeftPad+i, y, ch, nil, st)
+		}
+		if lay.LeftPad > 0 {
+			screen.SetContent(x, y, '◀', nil, markerStyle)
+		}
+		if lay.RightPad > 0 {
+			screen.SetContent(x+textW-1, y, '▶', nil, markerStyle)
+		}
+	} else {
+		draw.PaintScrollingInputContent(
+			screen, x, y, textW,
+			field.Value, field.CompletionSuffix,
+			field.Cursor, field.Scroll,
+			textFocused, pathInvalid, rowFocused,
+			styles,
+		)
 	}
 
 	glyphX := x + textW
@@ -438,14 +453,17 @@ func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogFiel
 	if sr := []rune(symStr); len(sr) > 0 {
 		symR = sr[0]
 	}
-	glyphStyle := textStyle
+	glyphStyle := rowStyle
+	if prefillPending && !pathInvalid {
+		glyphStyle = placeholderStyle
+	}
 	if rowFocused && pickerFocused {
 		glyphStyle = styles.DialogAccent
 	}
 	screen.SetContent(glyphX, y, symR, nil, glyphStyle)
 
 	tailX := x + width - 1
-	screen.SetContent(tailX, y, ' ', nil, style)
+	screen.SetContent(tailX, y, ' ', nil, rowStyle)
 }
 
 // fileDialogFocusIndex returns the focus index for the OK/Yes button.

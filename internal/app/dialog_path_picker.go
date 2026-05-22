@@ -1,7 +1,9 @@
 package app
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -55,6 +57,80 @@ func (a *App) syncPathPickerRanks() {
 	if st.Selected < 0 {
 		st.Selected = 0
 	}
+	ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+}
+
+func (a *App) syncPathPickerCompletion() {
+	st := &a.model.PathPicker
+	if !st.Open {
+		return
+	}
+	panel := a.activePanel()
+	c, ok := pathpick.SuggestAtCursor(panel.PathString(), a.model.UserHomeDir, st.Query, st.QueryCursor, a.config.ShowHidden)
+	if !ok {
+		st.QueryCompletionSuffix = ""
+		st.QueryCompletionIsDir = false
+		a.syncPathPickerScroll()
+		return
+	}
+	st.QueryCompletionSuffix = c.Suffix
+	st.QueryCompletionIsDir = c.IsDir
+	a.syncPathPickerScroll()
+}
+
+func (a *App) syncPathPickerScroll() {
+	st := &a.model.PathPicker
+	if !st.Open {
+		return
+	}
+	width := a.pathPickerQueryWidth()
+	valueLen := len([]rune(st.Query))
+	suffixLen := len([]rune(st.QueryCompletionSuffix))
+	st.QueryCursor, st.QueryScroll = ui.EnsurePathInputScroll(valueLen, st.QueryCursor, st.QueryScroll, width, suffixLen)
+}
+
+func (a *App) pathPickerScrollToCaret() {
+	st := &a.model.PathPicker
+	if !st.Open {
+		return
+	}
+	width := a.pathPickerQueryWidth()
+	valueLen := len([]rune(st.Query))
+	suffixLen := len([]rune(st.QueryCompletionSuffix))
+	st.QueryCursor, st.QueryScroll = ui.EnsurePathInputScroll(valueLen, st.QueryCursor, st.QueryScroll, width, suffixLen)
+}
+
+func (a *App) acceptPathPickerCompletion() {
+	st := &a.model.PathPicker
+	if st.QueryCompletionSuffix == "" {
+		return
+	}
+	runes := []rune(st.Query)
+	pos := st.QueryCursor
+	if pos < 0 {
+		pos = 0
+	}
+	if pos > len(runes) {
+		pos = len(runes)
+	}
+	suffix := []rune(st.QueryCompletionSuffix)
+	newRunes := make([]rune, 0, len(runes)+len(suffix)+1)
+	newRunes = append(newRunes, runes[:pos]...)
+	newRunes = append(newRunes, suffix...)
+	newRunes = append(newRunes, runes[pos:]...)
+	st.Query = string(newRunes)
+	if st.QueryCompletionIsDir {
+		st.Query += "/"
+	}
+	st.QueryCursor = len([]rune(st.Query))
+	st.QueryCompletionSuffix = ""
+	st.QueryCompletionIsDir = false
+	a.pathPickerScrollToCaret()
+
+	a.syncPathPickerRanks()
+	a.syncPathPickerCompletion()
+	a.armPathPickerValidateTimer()
+	st.Selected = 0
 	ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 }
 
@@ -152,6 +228,10 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 			a.activatePathPickerSelection()
 		}
 	case tcell.KeyTab:
+		if st.Focus == 0 && st.QueryCompletionSuffix != "" {
+			a.acceptPathPickerCompletion()
+			return
+		}
 		st.Focus = (st.Focus + 1) % 3
 	case tcell.KeyBacktab:
 		st.Focus = (st.Focus + 2) % 3
@@ -255,9 +335,14 @@ func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) 
 	seen := make(map[string]struct{})
 	var items []ui.PathPickerItem
 
+	panelPath := active.PathString()
+	home := a.model.UserHomeDir
 	addPath := func(p string) {
 		cp := filepath.Clean(p)
 		if cp == "." || cp == "" {
+			return
+		}
+		if pathpick.QueryLooksPathlike(p) && pathEntryMissing(panelPath, home, cp) {
 			return
 		}
 		key := cp
@@ -294,6 +379,14 @@ func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) 
 		})
 	}
 	return items, nil
+}
+
+func pathEntryMissing(panelPath, home, path string) bool {
+	if strings.HasPrefix(path, "sftp://") {
+		return pathpick.TypedDoesNotExist(panelPath, home, path)
+	}
+	_, err := os.Lstat(path)
+	return err != nil
 }
 
 func (a *App) openPathPickerForTransfer() {
@@ -388,6 +481,7 @@ func (a *App) applyPathPickerPathValidation() {
 	st.QueryPathCheckPending = false
 	panel := a.activePanel()
 	st.QueryPathInvalid = pathpick.TypedDoesNotExist(panel.PathString(), a.model.UserHomeDir, st.Query)
+	a.syncOpenPathInputsAfterFSChange()
 }
 
 func (a *App) stopTransferDestinationValidateTimer() {
@@ -433,4 +527,5 @@ func (a *App) applyTransferDestinationPathValidation() {
 	d.DestPathCheckPending = false
 	panel := a.activePanel()
 	d.DestPathInvalid = pathpick.TypedDoesNotExist(panel.PathString(), a.model.UserHomeDir, d.Destination.Value)
+	a.syncOpenPathInputsAfterFSChange()
 }

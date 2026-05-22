@@ -285,6 +285,7 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		} else {
 			a.requestVolumeSpaceRefreshAsync(ui.LeftPanel)
 		}
+		a.syncOpenPathInputsAfterFSChange()
 		a.setTransientMessage(label+" refreshed", ui.MessageUrgencyInfo)
 	case keymap.ActionPanelDiskUsageScan:
 		a.startDiskUsageScanForPanel(panelScope)

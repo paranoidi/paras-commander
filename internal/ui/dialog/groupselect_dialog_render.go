@@ -44,7 +44,7 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	primitive.Text(screen, leftCol, rect.Y+2, inputWidth, "Pattern:", styles.DialogText.Background(itemBg))
 
 	// Input row (rect.Y+4, blank row Y+3)
-	draw.DrawScrollingDialogInput(screen, leftCol, rect.Y+4, inputWidth, state.Text, state.TextCursor, state.TextScroll, state.Focus == 0, false, styles)
+	draw.DrawScrollingDialogInput(screen, leftCol, rect.Y+4, inputWidth, state.Text, state.TextCursor, state.TextScroll, "", state.Focus == 0, false, styles)
 
 	// Checkbox row 1: Files only (focus 1), Case sensitive (focus 2)
 	cbRow1Y := rect.Y + 6

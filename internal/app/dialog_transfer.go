@@ -29,6 +29,13 @@ func absPathClean(p string) string {
 }
 
 func transferPrefilledDestination(path string) ui.FileDialogField {
+	path = strings.TrimSpace(path)
+	if path != "" {
+		sep := string(filepath.Separator)
+		if !strings.HasSuffix(path, sep) {
+			path += sep
+		}
+	}
 	rn := len([]rune(path))
 	return ui.FileDialogField{
 		Value:          path,
@@ -117,6 +124,16 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	if a.tryPathPickerHostShortcut(event) {
 		return
 	}
+	if d.FocusField == 0 && d.Phase == ui.TransferPhaseDestination &&
+		d.DestSubFocus == ui.TransferDestSubFocusText &&
+		event.Key() == tcell.KeyTab && d.Destination.CompletionSuffix != "" {
+		if d.Destination.AcceptCompletion() {
+			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
+			a.armTransferDestinationValidateTimer()
+			return
+		}
+		return
+	}
 	if d.FocusField == 0 && d.Phase == ui.TransferPhaseSelfCopyRename {
 		if a.editTransferFieldKey(event, &d.SelfCopyNewName) {
 			return
@@ -160,9 +177,11 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 					return
 				}
 				dest.MoveCursor(1)
+				a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
 				return
 			case tcell.KeyLeft:
 				d.Destination.MoveCursor(-1)
+				a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
 				return
 			}
 		}
@@ -199,6 +218,7 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	}
 	if d.FocusField == 0 && d.Phase != ui.TransferPhaseSelfCopyRename {
 		if a.editTransferFieldKey(event, &d.Destination) {
+			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
 			a.armTransferDestinationValidateTimer()
 			return
 		}
@@ -223,15 +243,19 @@ func (a *App) editTransferFieldKey(event *tcell.EventKey, f *ui.FileDialogField)
 	switch event.Key() {
 	case tcell.KeyLeft:
 		f.MoveCursor(-1)
+		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
 		return true
 	case tcell.KeyRight:
 		f.MoveCursor(1)
+		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
 		return true
 	case tcell.KeyHome:
 		f.MoveCursorStart()
+		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
 		return true
 	case tcell.KeyEnd:
 		f.MoveCursorEnd()
+		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
 		return true
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		f.Backspace()

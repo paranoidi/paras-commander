@@ -3,14 +3,14 @@ package primitive
 import "testing"
 
 func TestPathWithHomeTilde(t *testing.T) {
-	home := "/home/paranoidi"
+	home := "/home/testuser"
 	tests := []struct {
 		path string
 		want string
 	}{
-		{"/home/paranoidi", "~/"},
-		{"/home/paranoidi/", "~/"},
-		{"/home/paranoidi/projects/foo", "~/projects/foo"},
+		{"/home/testuser", "~/"},
+		{"/home/testuser/", "~/"},
+		{"/home/testuser/volumes/foo", "~/volumes/foo"},
 		{"/other/foo", "/other/foo"},
 	}
 	for _, tc := range tests {
@@ -22,7 +22,7 @@ func TestPathWithHomeTilde(t *testing.T) {
 }
 
 func TestPathWithHomeTildeEmptyHome(t *testing.T) {
-	path := "/home/paranoidi/foo"
+	path := "/home/testuser/foo"
 	got := PathWithHomeTilde(path, "")
 	if got != path {
 		t.Fatalf("got %q, want %q", got, path)

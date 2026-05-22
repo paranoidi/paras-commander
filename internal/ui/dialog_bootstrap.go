@@ -10,6 +10,8 @@ import (
 // Dialog types and helpers are implemented in package dialog; these aliases and
 // function bindings keep a single stable import path (ui) for application code.
 
+const PreferredFormDialogWidth = dialog.PreferredFormDialogWidth
+
 type (
 	ThemeChoice               = dialog.ThemeChoice
 	MessageDialogState        = dialog.MessageDialogState
@@ -105,30 +107,35 @@ const (
 )
 
 var (
-	AltDialogOK                       = dialog.AltDialogOK
-	AltDialogCancel                   = dialog.AltDialogCancel
-	MkdirActionRadioSpecs             = dialog.MkdirActionRadioSpecs
-	MkdirActionForAltShortcut         = dialog.MkdirActionForAltShortcut
-	ListOKCancelNavFocusKey           = dialog.ListOKCancelNavFocusKey
-	ListClampedSelectionDelta         = dialog.ListClampedSelectionDelta
-	EnsurePathPickerListScroll        = dialog.EnsurePathPickerListScroll
-	EnsureHistoryListScroll           = dialog.EnsureHistoryListScroll
-	EnsureSFTPConnectListScroll       = dialog.EnsureSFTPConnectListScroll
-	EnsureFindListScroll              = dialog.EnsureFindListScroll
-	ComputeHelpDialogListMetrics      = dialog.ComputeHelpDialogListMetrics
-	FindDialogNavFocusKey             = dialog.FindDialogNavFocusKey
-	EnsureScrollInputVisible          = dialog.EnsureScrollInputVisible
-	NewDialogLinearForm               = dialog.NewDialogLinearForm
-	NewDialogTrailingButtonsForm      = dialog.NewDialogTrailingButtonsForm
-	NewTransferDialogLinearForm       = dialog.NewTransferDialogLinearForm
-	TransferDialogNumContent          = dialog.TransferDialogNumContent
-	TransferDialogEffectiveNumContent = dialog.TransferDialogEffectiveNumContent
-	TransferDialogMoveFocus           = dialog.TransferDialogMoveFocus
-	DialogPairLeftRight               = dialog.DialogPairLeftRight
-	IsWordRune                        = lineedit.IsWordRune
-	BackwardWordIndex                 = lineedit.BackwardWordIndex
-	ForwardWordIndex                  = lineedit.ForwardWordIndex
-	KillWordBackward                  = lineedit.KillWordBackward
+	AltDialogOK                         = dialog.AltDialogOK
+	AltDialogCancel                     = dialog.AltDialogCancel
+	MkdirActionRadioSpecs               = dialog.MkdirActionRadioSpecs
+	MkdirActionForAltShortcut           = dialog.MkdirActionForAltShortcut
+	ListOKCancelNavFocusKey             = dialog.ListOKCancelNavFocusKey
+	ListClampedSelectionDelta           = dialog.ListClampedSelectionDelta
+	EnsurePathPickerListScroll          = dialog.EnsurePathPickerListScroll
+	EnsureHistoryListScroll             = dialog.EnsureHistoryListScroll
+	EnsureSFTPConnectListScroll         = dialog.EnsureSFTPConnectListScroll
+	EnsureFindListScroll                = dialog.EnsureFindListScroll
+	ComputeHelpDialogListMetrics        = dialog.ComputeHelpDialogListMetrics
+	FindDialogNavFocusKey               = dialog.FindDialogNavFocusKey
+	ScrollContentLen                    = dialog.ScrollContentLen
+	EnsureScrollInputVisible            = dialog.EnsureScrollInputVisible
+	AdjustScrollForCompletion           = dialog.AdjustScrollForCompletion
+	EnsurePathInputScroll               = dialog.EnsurePathInputScroll
+	ShouldPreemptiveScrollRevealOnErase = dialog.ShouldPreemptiveScrollRevealOnErase
+	AdjustScrollRevealOnErase           = dialog.AdjustScrollRevealOnErase
+	NewDialogLinearForm                 = dialog.NewDialogLinearForm
+	NewDialogTrailingButtonsForm        = dialog.NewDialogTrailingButtonsForm
+	NewTransferDialogLinearForm         = dialog.NewTransferDialogLinearForm
+	TransferDialogNumContent            = dialog.TransferDialogNumContent
+	TransferDialogEffectiveNumContent   = dialog.TransferDialogEffectiveNumContent
+	TransferDialogMoveFocus             = dialog.TransferDialogMoveFocus
+	DialogPairLeftRight                 = dialog.DialogPairLeftRight
+	IsWordRune                          = lineedit.IsWordRune
+	BackwardWordIndex                   = lineedit.BackwardWordIndex
+	ForwardWordIndex                    = lineedit.ForwardWordIndex
+	KillWordBackward                    = lineedit.KillWordBackward
 )
 
 // AccentGlyphStyle applies menu/dialog shortcut accent styling (delegates to dialog).

@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
 )
 
 // DrawCenteredDialogTitle overwrites the top border row between corners with '─'
@@ -89,23 +90,62 @@ func DrawSimpleDialogInput(screen tcell.Screen, x, y, width int, value string, f
 	}
 }
 
-// EnsureScrollInputVisible adjusts scroll so that cursor is within [scroll, scroll+width-1]
-// for an input rendered with width cells. cursor and length are rune counts.
-// Returns the (possibly clamped) cursor and updated scroll values.
-func EnsureScrollInputVisible(length, cursor, scroll, width int) (int, int) {
+// ScrollingInputLayout reserves screen columns for ◀/▶ overflow markers.
+type ScrollingInputLayout struct {
+	TextCols int // rune columns painted between markers
+	LeftPad  int // screen columns before text (0 or 1)
+	RightPad int // screen columns after text (0 or 1)
+}
+
+// ScrollContentLen is the horizontal extent for overflow markers and scroll limits.
+// When the caret is after the last rune (cursor == valueLen), one extra column is
+// counted so trailing text is not hidden behind the empty caret cell.
+func ScrollContentLen(valueLen, cursor int) int {
+	if cursor > valueLen {
+		cursor = valueLen
+	}
+	if valueLen > 0 && cursor == valueLen {
+		return valueLen + 1
+	}
+	return valueLen
+}
+
+// ScrollingInputLayoutFor computes text column reservation for contentLen runes at scroll.
+func ScrollingInputLayoutFor(scroll, width, contentLen int) ScrollingInputLayout {
+	if width < 1 {
+		width = 1
+	}
+	leftPad := 0
+	if scroll > 0 {
+		leftPad = 1
+	}
+	tentative := width - leftPad
+	rightPad := 0
+	if scroll+tentative < contentLen {
+		rightPad = 1
+	}
+	textCols := width - leftPad - rightPad
+	if textCols < 1 {
+		textCols = 1
+	}
+	return ScrollingInputLayout{TextCols: textCols, LeftPad: leftPad, RightPad: rightPad}
+}
+
+func ensureScrollInputVisible(valueLen, cursor, scroll, width, contentLen int) (int, int) {
 	if width < 1 {
 		width = 1
 	}
 	if cursor < 0 {
 		cursor = 0
 	}
-	if cursor > length {
-		cursor = length
+	if cursor > valueLen {
+		cursor = valueLen
 	}
 	if scroll < 0 {
 		scroll = 0
 	}
-	maxScroll := length - width + 1
+	lay := ScrollingInputLayoutFor(scroll, width, contentLen)
+	maxScroll := contentLen - lay.TextCols
 	if maxScroll < 0 {
 		maxScroll = 0
 	}
@@ -114,8 +154,8 @@ func EnsureScrollInputVisible(length, cursor, scroll, width int) (int, int) {
 	}
 	if cursor < scroll {
 		scroll = cursor
-	} else if cursor >= scroll+width {
-		scroll = cursor - width + 1
+	} else if cursor >= scroll+lay.TextCols {
+		scroll = cursor - lay.TextCols + 1
 	}
 	if scroll < 0 {
 		scroll = 0
@@ -123,41 +163,237 @@ func EnsureScrollInputVisible(length, cursor, scroll, width int) (int, int) {
 	return cursor, scroll
 }
 
+// EnsureScrollInputVisible adjusts scroll so the caret stays in the text area between
+// overflow markers. cursor and length are rune counts.
+func EnsureScrollInputVisible(length, cursor, scroll, width int) (int, int) {
+	return ensureScrollInputVisible(length, cursor, scroll, width, ScrollContentLen(length, cursor))
+}
+
+// AdjustScrollForCompletion updates scroll so the caret stays visible. When suffixLen > 0
+// and the ghost suffix does not fit, scroll increases by suffixLen (viewport shifts left).
+// When suffixLen is 0, scroll is not decreased so ignoring a suggestion does not snap back.
+func AdjustScrollForCompletion(valueLen, cursor, scroll, width, suffixLen int) (int, int) {
+	if width < 1 {
+		width = 1
+	}
+	if cursor < 0 {
+		cursor = 0
+	}
+	if cursor > valueLen {
+		cursor = valueLen
+	}
+	if scroll < 0 {
+		scroll = 0
+	}
+	if suffixLen > 0 {
+		if valueLen <= width {
+			return cursor, 0
+		}
+		combinedLen := valueLen + suffixLen
+		cursor, scroll = ensureScrollInputVisible(valueLen, cursor, scroll, width, combinedLen)
+		lay := ScrollingInputLayoutFor(scroll, width, combinedLen)
+		suffixEnd := cursor + suffixLen
+		if suffixEnd > scroll+lay.TextCols {
+			scroll += suffixLen
+			maxScroll := combinedLen - lay.TextCols
+			if maxScroll < 0 {
+				maxScroll = 0
+			}
+			if scroll > maxScroll {
+				scroll = maxScroll
+			}
+		}
+		return cursor, scroll
+	}
+	if cursor < scroll {
+		scroll = cursor
+	}
+	lay := ScrollingInputLayoutFor(scroll, width, ScrollContentLen(valueLen, cursor))
+	if cursor >= scroll+lay.TextCols {
+		scroll = cursor - lay.TextCols + 1
+		if scroll < 0 {
+			scroll = 0
+		}
+	}
+	return cursor, scroll
+}
+
+// EnsurePathInputScroll keeps the caret visible in a path-shaped input row.
+// When the committed value fits in width, scroll is always 0 (ghost text may clip on the right).
+func EnsurePathInputScroll(valueLen, cursor, scroll, width, suffixLen int) (int, int) {
+	if width < 1 {
+		width = 1
+	}
+	if cursor < 0 {
+		cursor = 0
+	}
+	if cursor > valueLen {
+		cursor = valueLen
+	}
+	if ScrollContentLen(valueLen, cursor) <= width {
+		return cursor, 0
+	}
+	return AdjustScrollForCompletion(valueLen, cursor, scroll, width, suffixLen)
+}
+
+// ShouldPreemptiveScrollRevealOnErase reports whether the next backspace/delete removes the
+// rightmost visible rune in the viewport (value plus ghost completion at the caret).
+func ShouldPreemptiveScrollRevealOnErase(valueLen, cursor, scroll, width, suffixLen int, isBackspace bool) bool {
+	if width < 1 || scroll < 0 {
+		return false
+	}
+	var deleteIdx int
+	if isBackspace {
+		if cursor <= 0 {
+			return false
+		}
+		deleteIdx = cursor - 1
+		if deleteIdx < scroll {
+			return true
+		}
+	} else {
+		if cursor >= valueLen {
+			return false
+		}
+		deleteIdx = cursor
+		if deleteIdx < scroll {
+			return true
+		}
+	}
+	combinedLen := valueLen + suffixLen
+	if combinedLen == 0 || valueLen == 0 {
+		return false
+	}
+	windowEnd := scroll + width - 1
+	if windowEnd >= combinedLen {
+		windowEnd = combinedLen - 1
+	}
+	lastValueVisible := windowEnd
+	if lastValueVisible >= valueLen {
+		lastValueVisible = valueLen - 1
+	}
+	if lastValueVisible < scroll {
+		return false
+	}
+	return deleteIdx == lastValueVisible
+}
+
+// AdjustScrollRevealOnErase moves the viewport right (decreases scroll) after deletions in a
+// scrolled field. When value plus completion suffix fits in width, scroll becomes 0.
+// Otherwise scroll steps right by one readline word boundary at the first visible index.
+func AdjustScrollRevealOnErase(value string, cursor, scroll, width, suffixLen int) (int, int) {
+	if width < 1 {
+		width = 1
+	}
+	valueRunes := []rune(value)
+	valueLen := len(valueRunes)
+	if cursor < 0 {
+		cursor = 0
+	}
+	if cursor > valueLen {
+		cursor = valueLen
+	}
+	if scroll <= 0 {
+		return cursor, 0
+	}
+	if ScrollContentLen(valueLen, cursor) <= width {
+		return cursor, 0
+	}
+	newScroll := lineedit.BackwardWordIndex(valueRunes, scroll)
+	if newScroll >= scroll {
+		newScroll = scroll - 1
+	}
+	if newScroll < 0 {
+		newScroll = 0
+	}
+	lay := ScrollingInputLayoutFor(newScroll, width, ScrollContentLen(valueLen, cursor))
+	maxScroll := ScrollContentLen(valueLen, cursor) - lay.TextCols
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if newScroll > maxScroll {
+		newScroll = maxScroll
+	}
+	return cursor, newScroll
+}
+
+// PaintScrollingInputContent paints a horizontally scrolling input slice with optional
+// ghost completion at the caret (value[:cursor]+suffix+value[cursor:]).
+// Ghost text always uses dialog input placeholder styling, not error styles.
+// textFocused controls caret reverse-video highlighting.
+func PaintScrollingInputContent(
+	screen tcell.Screen, x, y, width int,
+	value, completionSuffix string,
+	cursor, scroll int,
+	textFocused, invalid, focused bool,
+	styles theme.Theme,
+) (int, int) {
+	if width <= 0 {
+		return cursor, scroll
+	}
+	committedStyle := styles.DialogInputBaseStyle(focused, invalid)
+	markerStyle := styles.DialogInputBaseStyle(focused, false)
+	_, ghostStyle := styles.DialogInputPair(focused)
+	valueRunes := []rune(value)
+	suffixRunes := []rune(completionSuffix)
+	valueLen := len(valueRunes)
+	combinedLen := valueLen + len(suffixRunes)
+
+	layoutLen := combinedLen
+	if extra := ScrollContentLen(valueLen, cursor); extra > layoutLen {
+		layoutLen = extra
+	}
+	if layoutLen <= width {
+		scroll = 0
+	} else {
+		cursor, scroll = ensureScrollInputVisible(valueLen, cursor, scroll, width, layoutLen)
+	}
+	lay := ScrollingInputLayoutFor(scroll, width, layoutLen)
+
+	for i := 0; i < lay.TextCols; i++ {
+		idx := scroll + i
+		ch := ' '
+		ghost := false
+		if idx < combinedLen {
+			switch {
+			case idx < cursor:
+				ch = valueRunes[idx]
+			case idx < cursor+len(suffixRunes):
+				ch = suffixRunes[idx-cursor]
+				ghost = true
+			default:
+				ch = valueRunes[cursor+(idx-cursor-len(suffixRunes))]
+			}
+		}
+		st := committedStyle
+		if ghost {
+			st = ghostStyle
+		}
+		if textFocused && idx == cursor {
+			if ghost {
+				st = ghostStyle.Reverse(true)
+			} else {
+				st = committedStyle.Reverse(true)
+			}
+		}
+		screen.SetContent(x+lay.LeftPad+i, y, ch, nil, st)
+	}
+
+	if lay.LeftPad > 0 {
+		screen.SetContent(x, y, '◀', nil, markerStyle)
+	}
+	if lay.RightPad > 0 {
+		screen.SetContent(x+width-1, y, '▶', nil, markerStyle)
+	}
+	return cursor, scroll
+}
+
 // DrawScrollingDialogInput paints a dialog input row with horizontal scrolling.
-// The input renders the slice value[scroll : scroll+width] (rune-wise) and shows
-// a reversed cell at cursor-scroll when focused. Overflow markers ('◀'/'▶') are
-// drawn on the edge cells when content is hidden in that direction.
-// Callers should ensure (cursor, scroll) are kept in range via EnsureScrollInputVisible.
-func DrawScrollingDialogInput(screen tcell.Screen, x, y, width int, value string, cursor, scroll int, focused, invalid bool, styles theme.Theme) {
+func DrawScrollingDialogInput(screen tcell.Screen, x, y, width int, value string, cursor, scroll int, completionSuffix string, focused, invalid bool, styles theme.Theme) {
 	if width <= 0 {
 		return
 	}
-	style := styles.DialogInputBaseStyle(focused, invalid)
-	runes := []rune(value)
-	length := len(runes)
-
-	cursor, scroll = EnsureScrollInputVisible(length, cursor, scroll, width)
-
-	for i := 0; i < width; i++ {
-		idx := scroll + i
-		ch := ' '
-		if idx < length {
-			ch = runes[idx]
-		}
-		st := style
-		if focused && idx == cursor {
-			st = style.Reverse(true)
-		}
-		screen.SetContent(x+i, y, ch, nil, st)
-	}
-
-	// Overflow markers: only when not hiding the cursor cell and there's hidden content.
-	if scroll > 0 && (!focused || cursor != scroll) {
-		screen.SetContent(x, y, '◀', nil, style)
-	}
-	if scroll+width < length && (!focused || cursor != scroll+width-1) {
-		screen.SetContent(x+width-1, y, '▶', nil, style)
-	}
+	PaintScrollingInputContent(screen, x, y, width, value, completionSuffix, cursor, scroll, focused, invalid, focused, styles)
 }
 
 // DialogButtonSpec describes one rendered dialog button (label, Alt shortcut, focus).

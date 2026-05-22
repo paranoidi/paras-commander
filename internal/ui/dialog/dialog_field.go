@@ -146,6 +146,38 @@ func (f *FileDialogField) KillWordBackward() {
 	f.Cursor = newPos
 }
 
+// ClearCompletion drops any active filesystem completion ghost text.
+func (f *FileDialogField) ClearCompletion() {
+	if f == nil {
+		return
+	}
+	f.CompletionSuffix = ""
+	f.CompletionIsDir = false
+}
+
+// AcceptCompletion inserts CompletionSuffix at the caret and appends "/" when CompletionIsDir.
+// Returns false when there is nothing to accept.
+func (f *FileDialogField) AcceptCompletion() bool {
+	if f == nil || f.CompletionSuffix == "" {
+		return false
+	}
+	f.commitPrefill()
+	runes := []rune(f.Value)
+	pos := lineedit.ClampRuneCursor(f.Cursor, len(runes))
+	suffix := []rune(f.CompletionSuffix)
+	newRunes := make([]rune, 0, len(runes)+len(suffix)+1)
+	newRunes = append(newRunes, runes[:pos]...)
+	newRunes = append(newRunes, suffix...)
+	newRunes = append(newRunes, runes[pos:]...)
+	f.Value = string(newRunes)
+	if f.CompletionIsDir {
+		f.Value += "/"
+	}
+	f.Cursor = len([]rune(f.Value))
+	f.ClearCompletion()
+	return true
+}
+
 func (f *FileDialogField) commitPrefill() {
 	if f.Prefill != "" && f.PrefillPending {
 		f.PrefillPending = false

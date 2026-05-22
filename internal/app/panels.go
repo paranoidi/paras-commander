@@ -30,6 +30,7 @@ func (a *App) reloadActive(successMessage string) {
 			return
 		}
 		a.requestVolumeSpaceRefreshAsync(ui.RightPanel)
+		a.syncOpenPathInputsAfterFSChange()
 		a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 		return
 	}
@@ -38,6 +39,7 @@ func (a *App) reloadActive(successMessage string) {
 		return
 	}
 	a.requestVolumeSpaceRefreshAsync(ui.LeftPanel)
+	a.syncOpenPathInputsAfterFSChange()
 	a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 }
 
