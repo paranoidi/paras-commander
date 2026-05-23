@@ -2446,7 +2446,7 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 	}
 	writeDiskDefault := func(hex string) {
 		content := strings.Replace(string(base),
-			`bar = { fg = "default", bg = "default" }`,
+			`bar = { fg = "default" }`,
 			fmt.Sprintf(`bar = { fg = "white", bg = %q }`, hex), 1)
 		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
@@ -2580,7 +2580,7 @@ func TestThemePreviewReloadErrorSetsCriticalStatusMessage(t *testing.T) {
 		t.Fatalf("read default theme fixture: %v", err)
 	}
 	content := strings.Replace(string(base),
-		`bar = { fg = "default", bg = "default" }`,
+		`bar = { fg = "default" }`,
 		`bar = { fg = "white", bg = "#111111" }`, 1)
 	if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
