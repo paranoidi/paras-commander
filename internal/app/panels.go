@@ -163,6 +163,13 @@ func (a *App) toggleSyncFollow() {
 		a.setTransientMessage("Sync disabled", ui.MessageUrgencyInfo)
 		return
 	}
+	displacedQuickView := a.model.QuickViewEnabled
+	if displacedQuickView {
+		a.model.QuickViewEnabled = false
+		a.clearQuickViewDebounce()
+		a.closeFilePreview()
+		a.quickViewLastFingerprint = ""
+	}
 	a.clearPanelSyncFollowNavCoalesce()
 	a.model.SyncFollowEnabled = true
 	a.model.SyncFollowPanel = active
@@ -174,7 +181,11 @@ func (a *App) toggleSyncFollow() {
 		driver = "Right"
 		follower = "Left"
 	}
-	a.setTransientMessage(fmt.Sprintf("Sync: %s %s %s", driver, arrow, follower), ui.MessageUrgencyInfo)
+	if displacedQuickView {
+		a.setTransientMessage(fmt.Sprintf("Sync: %s %s %s — quick view disabled", driver, arrow, follower), ui.MessageUrgencyWarn)
+	} else {
+		a.setTransientMessage(fmt.Sprintf("Sync: %s %s %s", driver, arrow, follower), ui.MessageUrgencyInfo)
+	}
 	a.syncFollowFromActive()
 }
 

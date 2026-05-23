@@ -12,7 +12,8 @@ import (
 
 // drawFilePreviewPanel paints the inactive-column file preview (ANSI output).
 // previewFocused highlights the preview title when keyboard focus is on the preview pane.
-func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused bool) {
+// When quickViewChrome is true, the title shows panelPath on the start and TitleBase on the end (no volume stats).
+func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome bool, panelPath, userHomeDir string) {
 	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
@@ -42,13 +43,27 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 		}
 		primitive.Fill(screen, inner, ' ', surface)
 	}
-	title := " Preview "
-	if tb := strings.TrimSpace(st.TitleBase); tb != "" {
-		title = " " + tb + " "
-	}
 	titleX := rect.X + 2
-	titleWidth := rect.Width - 4
-	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
+	innerRight := rect.X + rect.Width - 2
+	contentCols := innerRight - titleX + 1
+	if contentCols < 1 {
+		contentCols = 1
+	}
+	if quickViewChrome {
+		endLabel := ""
+		if tb := strings.TrimSpace(st.TitleBase); tb != "" {
+			endLabel = " " + tb + " "
+		}
+		paintPanelTopTitleRow(screen, titleX, innerRight, contentCols, rect.Y,
+			panelPath, userHomeDir, titleStyle, endLabel, titleStyle, borderStyle, false)
+	} else {
+		title := " Preview "
+		if tb := strings.TrimSpace(st.TitleBase); tb != "" {
+			title = " " + tb + " "
+		}
+		titleWidth := rect.Width - 4
+		primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
+	}
 
 	body := styles.PanelText.Background(bg)
 	if chromeBlocked {

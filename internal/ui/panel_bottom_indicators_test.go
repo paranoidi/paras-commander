@@ -50,7 +50,7 @@ func TestDropPanelBottomIndicatorsForWidthDropsHigherOrderFirst(t *testing.T) {
 func TestPanelBottomEndEdgeReservedStartReservesSyncOnLeftDriver(t *testing.T) {
 	t.Parallel()
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 10}
-	endX := panelBottomEndEdgeReservedStart(rect, LeftPanel, LeftPanel)
+	endX := panelBottomEndEdgeReservedStart(rect, LeftPanel, LeftPanel, -1)
 	lastIn := rect.X + rect.Width - 2
 	syncW := len([]rune(panelSyncIndicatorLabel(LeftPanel)))
 	want := lastIn - syncW

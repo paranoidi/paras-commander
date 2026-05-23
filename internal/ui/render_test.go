@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -1170,6 +1171,126 @@ func TestRenderDrawsSyncIndicatorOnRightDriverBottomBorder(t *testing.T) {
 	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
 	if strings.Contains(leftBottom, "Sync") {
 		t.Fatalf("left bottom border = %q, want no Sync indicator on the follower", leftBottom)
+	}
+}
+
+func TestRenderDrawsQuickViewIndicatorOnLeftActivePanel(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	model := Model{
+		Left:             panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:            panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:      LeftPanel,
+		QuickViewEnabled: true,
+	}
+	Render(screen, model, theme.Default())
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if !strings.Contains(leftBottom, "Quick view →") {
+		t.Fatalf("left bottom border = %q, want it to contain %q", leftBottom, "Quick view →")
+	}
+	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	if strings.Contains(rightBottom, "Quick view") {
+		t.Fatalf("right bottom border = %q, want no Quick view indicator on inactive panel", rightBottom)
+	}
+}
+
+func TestRenderDrawsQuickViewIndicatorOnRightActivePanel(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	model := Model{
+		Left:             panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:            panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:      RightPanel,
+		QuickViewEnabled: true,
+	}
+	Render(screen, model, theme.Default())
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	if !strings.Contains(rightBottom, "← Quick view") {
+		t.Fatalf("right bottom border = %q, want it to contain %q", rightBottom, "← Quick view")
+	}
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if strings.Contains(leftBottom, "Quick view") {
+		t.Fatalf("left bottom border = %q, want no Quick view indicator on inactive panel", leftBottom)
+	}
+}
+
+func TestRenderOmitsQuickViewIndicatorWhenDisabled(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	model := Model{
+		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: LeftPanel,
+	}
+	Render(screen, model, theme.Default())
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if strings.Contains(leftBottom, "Quick view") {
+		t.Fatalf("left bottom border = %q, want no Quick view indicator when off", leftBottom)
+	}
+}
+
+func TestRenderQuickViewPreviewTitleShowsPathAndFilename(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	projects := "/home/user/projects"
+	model := Model{
+		Left:             panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:            panel.State{Path: pathloc.MustParse(projects)},
+		ActivePanel:      LeftPanel,
+		QuickViewEnabled: true,
+		FilePreviewDraw: FilePreviewState{
+			Open:      true,
+			Phase:     FilePreviewPhaseDone,
+			TitleBase: "readme.md",
+			Path:      filepath.Join(projects, "readme.md"),
+		},
+		UserHomeDir: "/home/user",
+	}
+	Render(screen, model, theme.Default())
+
+	leftWidth := width / 2
+	topRow := tcelltest.TextAt(screen, leftWidth, 1, width-leftWidth)
+	if !strings.Contains(topRow, "projects") {
+		t.Fatalf("inactive title row = %q, want directory path segment", topRow)
+	}
+	if !strings.Contains(topRow, "readme.md") {
+		t.Fatalf("inactive title row = %q, want filename", topRow)
+	}
+	if strings.Contains(topRow, " / ") && strings.Contains(topRow, "%") {
+		t.Fatalf("inactive title row = %q, want no free-space volume stats", topRow)
 	}
 }
 

@@ -87,7 +87,7 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 	return strings.TrimSpace(nameTitle)
 }
 
-func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool) {
+func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool) {
 	var borderStyle tcell.Style
 	var titleStyle tcell.Style
 	var headerStyle tcell.Style
@@ -109,18 +109,24 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	drawPanelBottomIndicators(screen, rect, PanelBottomIndicatorContext{
-		PanelID:              panelID,
-		State:                state,
-		SelectionsBottomHint: selectionsBottomHint,
-		SyncDriverPanelID:    syncDriverPanelID,
-		FileListActive:       fileListActive,
-		ChromeBlocked:        chromeBlocked,
-		BorderStyle:          borderStyle,
-		TitleStyle:           titleStyle,
-		Styles:               styles,
+		PanelID:                panelID,
+		State:                  state,
+		SelectionsBottomHint:   selectionsBottomHint,
+		SyncDriverPanelID:      syncDriverPanelID,
+		QuickViewDriverPanelID: quickViewDriverPanelID,
+		FileListActive:         fileListActive,
+		ChromeBlocked:          chromeBlocked,
+		BorderStyle:            borderStyle,
+		TitleStyle:             titleStyle,
+		Styles:                 styles,
 	})
-	if syncDriverPanelID == panelID && !chromeBlocked {
-		drawPanelSyncIndicator(screen, rect, panelID, styles.PanelSyncIndicator)
+	if !chromeBlocked {
+		switch {
+		case quickViewDriverPanelID == panelID:
+			drawPanelQuickViewIndicator(screen, rect, panelID, styles.PanelQuickViewIndicator)
+		case syncDriverPanelID == panelID:
+			drawPanelSyncIndicator(screen, rect, panelID, styles.PanelSyncIndicator)
+		}
 	}
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
 	if inner.Width > 0 && inner.Height > 0 {
@@ -140,53 +146,23 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	if contentCols < 1 {
 		contentCols = 1
 	}
-	const gapBeforeVolumeTitle = 2
-	volumeLabel := panelVolumeFreeSpaceTitle(state.VolumeSpaceOK, state.VolumeAvailBytes, state.VolumeTotalBytes)
-	volRunes := utf8.RuneCountInString(volumeLabel)
-	showVolume := volumeLabel != "" && volRunes > 0 &&
-		contentCols >= volRunes+gapBeforeVolumeTitle+3
-	pathSlotCols := contentCols
-	volumeStartX := 0
-	if showVolume {
-		volumeStartX = innerRight - volRunes + 1
-		pathSlotCols = volumeStartX - titleX - gapBeforeVolumeTitle
-		if pathSlotCols < 3 {
-			showVolume = false
-			pathSlotCols = contentCols
-		}
-	}
-	titleWidth := pathSlotCols
-
 	if fileListActive && (state.Filter.Active || state.Filter.Editing) {
 		inputStyle := styles.FuzzyInput
 		if state.Filter.Active && !state.FilterHasMatches() {
 			inputStyle = styles.FuzzyInputNomatch
 		}
-		primitive.Text(screen, titleX, rect.Y, titleWidth, "> "+state.Filter.Query, inputStyle)
+		primitive.Text(screen, titleX, rect.Y, contentCols, "> "+state.Filter.Query, inputStyle)
 	} else {
-		pathMax := titleWidth - 2
-		if pathMax < 0 {
-			pathMax = 0
-		}
-		title := " " + PanelTitlePath(state.PathString(), userHomeDir, pathMax) + " "
-		primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
-	}
-	if showVolume {
+		volumeLabel := panelVolumeFreeSpaceTitle(state.VolumeSpaceOK, state.VolumeAvailBytes, state.VolumeTotalBytes)
 		overviewStyle := styles.PanelInactiveDiskUsageOverview
 		if chromeBlocked {
 			overviewStyle = styles.PanelBlockedDiskUsageOverview
 		} else if fileListActive {
 			overviewStyle = styles.PanelActiveDiskUsageOverview
 		}
-		leaderRunes := utf8.RuneCountInString(panelVolumeTitleLeader)
-		trailerRunes := utf8.RuneCountInString(panelVolumeTitleTrailer)
-		// Decorative dashes in leader/trailer keep the border/frame colour.
-		primitive.TextOverlay(screen, volumeStartX, rect.Y, leaderRunes, panelVolumeTitleLeader, borderStyle)
-		contentX := volumeStartX + leaderRunes
-		contentLen := volRunes - leaderRunes - trailerRunes
-		contentText := string([]rune(volumeLabel)[leaderRunes : leaderRunes+contentLen])
-		primitive.TextOverlay(screen, contentX, rect.Y, contentLen, contentText, overviewStyle)
-		primitive.TextOverlay(screen, volumeStartX+volRunes-trailerRunes, rect.Y, trailerRunes, panelVolumeTitleTrailer, borderStyle)
+		paintPanelTopTitleRow(screen, titleX, innerRight, contentCols, rect.Y,
+			state.PathString(), userHomeDir, titleStyle,
+			volumeLabel, overviewStyle, borderStyle, true)
 	}
 
 	visibleRows := PanelListRows(rect)
@@ -397,6 +373,47 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	}
 }
 
+const gapBeforePanelTitleEnd = 2
+
+// paintPanelTopTitleRow paints the panel top border path on the start and an optional end label
+// (volume overview with decorative dashes, or a plain title-styled suffix such as a filename).
+func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols, y int,
+	panelPath, userHomeDir string, pathStyle tcell.Style, endLabel string, endStyle, borderStyle tcell.Style, volumeDecorated bool) {
+	pathSlotCols := contentCols
+	endRunes := utf8.RuneCountInString(endLabel)
+	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+3
+	endStartX := 0
+	if showEnd {
+		endStartX = innerRight - endRunes + 1
+		pathSlotCols = endStartX - titleX - gapBeforePanelTitleEnd
+		if pathSlotCols < 3 {
+			showEnd = false
+			pathSlotCols = contentCols
+		}
+	}
+	pathMax := pathSlotCols - 2
+	if pathMax < 0 {
+		pathMax = 0
+	}
+	left := " " + PanelTitlePath(panelPath, userHomeDir, pathMax) + " "
+	primitive.TextOverlay(screen, titleX, y, pathSlotCols, left, pathStyle)
+	if !showEnd {
+		return
+	}
+	if volumeDecorated {
+		leaderRunes := utf8.RuneCountInString(panelVolumeTitleLeader)
+		trailerRunes := utf8.RuneCountInString(panelVolumeTitleTrailer)
+		primitive.TextOverlay(screen, endStartX, y, leaderRunes, panelVolumeTitleLeader, borderStyle)
+		contentX := endStartX + leaderRunes
+		contentLen := endRunes - leaderRunes - trailerRunes
+		contentText := string([]rune(endLabel)[leaderRunes : leaderRunes+contentLen])
+		primitive.TextOverlay(screen, contentX, y, contentLen, contentText, endStyle)
+		primitive.TextOverlay(screen, endStartX+endRunes-trailerRunes, y, trailerRunes, panelVolumeTitleTrailer, borderStyle)
+		return
+	}
+	primitive.TextOverlay(screen, endStartX, y, endRunes, endLabel, endStyle)
+}
+
 // panelSyncIndicatorLabel returns the label rendered on the bottom border of the sync driver.
 // Left driver points right (toward the right panel); right driver points left.
 func panelSyncIndicatorLabel(panelID int) string {
@@ -404,6 +421,14 @@ func panelSyncIndicatorLabel(panelID int) string {
 		return " ← Sync "
 	}
 	return " Sync → "
+}
+
+// panelQuickViewIndicatorLabel returns the bottom-border label on the active panel while quick view is on.
+func panelQuickViewIndicatorLabel(panelID int) string {
+	if panelID == RightPanel {
+		return " ← Quick view "
+	}
+	return " Quick view → "
 }
 
 // drawPanelSyncIndicator overlays the latched-sync label on the bottom border of the driver panel,
@@ -414,6 +439,27 @@ func drawPanelSyncIndicator(screen tcell.Screen, rect Rect, panelID int, style t
 		return
 	}
 	label := panelSyncIndicatorLabel(panelID)
+	labelW := utf8.RuneCountInString(label)
+	available := rect.Width - 2
+	if labelW > available {
+		return
+	}
+	y := rect.Y + rect.Height - 1
+	var x int
+	if panelID == RightPanel {
+		x = rect.X + 1
+	} else {
+		x = rect.X + rect.Width - 1 - labelW
+	}
+	primitive.TextOverlay(screen, x, y, labelW, label, style)
+}
+
+// drawPanelQuickViewIndicator overlays the quick-view label on the bottom border of the active panel.
+func drawPanelQuickViewIndicator(screen tcell.Screen, rect Rect, panelID int, style tcell.Style) {
+	if rect.Width <= 4 || rect.Height < 2 {
+		return
+	}
+	label := panelQuickViewIndicatorLabel(panelID)
 	labelW := utf8.RuneCountInString(label)
 	available := rect.Width - 2
 	if labelW > available {

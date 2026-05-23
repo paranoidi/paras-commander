@@ -160,6 +160,18 @@ func (m Model) SyncDriverPanelID() int {
 	return m.SyncFollowPanel
 }
 
+// QuickViewDriverPanelID returns the LeftPanel/RightPanel id that shows the quick-view
+// bottom indicator (the active panel while quick view is on), or -1 when disabled.
+func (m Model) QuickViewDriverPanelID() int {
+	if !m.QuickViewEnabled {
+		return -1
+	}
+	if m.ActivePanel != LeftPanel && m.ActivePanel != RightPanel {
+		return -1
+	}
+	return m.ActivePanel
+}
+
 // PanelsChromeBlocked reports when file/jobs panel chrome should use panel.blocked.*
 // styles because a menu or modal has taken focus.
 func (m Model) PanelsChromeBlocked() bool {
@@ -245,7 +257,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	switch model.ViewMode {
 	case ViewFilePreview:
 		union := MergeTwinPanelRects(layout.Left, layout.Right)
-		drawFilePreviewPanel(screen, union, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true)
+		drawFilePreviewPanel(screen, union, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, "", "")
 	case ViewJobs:
 		now := time.Now()
 		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobActivity, styles, now, chromeBlocked, model.UserHomeDir, model.JobsThroughputChartEnabled)
@@ -280,11 +292,13 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		showRightPreview := model.FilePreviewDraw.Open && inactiveID == RightPanel
 
 		syncDriver := model.SyncDriverPanelID()
+		quickViewDriver := model.QuickViewDriverPanelID()
 		if showLeftPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
-			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused)
+			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused,
+				model.QuickViewEnabled, model.Left.PathString(), model.UserHomeDir)
 		} else {
-			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobPathMarks, syncDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint)
+			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint)
 		}
 		if leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
@@ -292,9 +306,10 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		}
 		if showRightPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
-			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused)
+			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
+				model.QuickViewEnabled, model.Right.PathString(), model.UserHomeDir)
 		} else {
-			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobPathMarks, syncDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint)
+			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint)
 		}
 		if rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip

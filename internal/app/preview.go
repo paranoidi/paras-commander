@@ -227,15 +227,22 @@ func (a *App) handleQuickViewToggle() {
 	if a.inQuickFilterUI() {
 		return
 	}
-	a.model.QuickViewEnabled = !a.model.QuickViewEnabled
-	if !a.model.QuickViewEnabled {
+	enabling := !a.model.QuickViewEnabled
+	a.model.QuickViewEnabled = enabling
+	if !enabling {
 		a.clearQuickViewDebounce()
 		a.quickViewLastFingerprint = ""
 		a.closeFilePreview()
 		a.setTransientMessage("Quick view off", ui.MessageUrgencyInfo)
 		return
 	}
-	a.setTransientMessage("Quick view on", ui.MessageUrgencyInfo)
+	if a.model.SyncFollowEnabled {
+		a.model.SyncFollowEnabled = false
+		a.clearPanelSyncFollowNavCoalesce()
+		a.setTransientMessage("Quick view on — sync disabled", ui.MessageUrgencyWarn)
+	} else {
+		a.setTransientMessage("Quick view on", ui.MessageUrgencyInfo)
+	}
 	a.applyQuickViewPreviewImmediately()
 }
 

@@ -4511,6 +4511,58 @@ func TestAddBookmarkDefaultName(t *testing.T) {
 	}
 }
 
+func TestQuickViewDisablesSyncWithWarn(t *testing.T) {
+	root := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	app.model.SyncFollowEnabled = true
+	app.model.SyncFollowPanel = ui.LeftPanel
+
+	app.dispatch(keymap.ActionFileQuickView)
+
+	if !app.model.QuickViewEnabled {
+		t.Fatal("quick view should be enabled")
+	}
+	if app.model.SyncFollowEnabled {
+		t.Fatal("sync should be disabled when quick view is enabled")
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyWarn {
+		t.Fatalf("message urgency = %v, want warn", app.model.MessageUrgency)
+	}
+	if !strings.Contains(app.model.Message, "sync disabled") {
+		t.Fatalf("message = %q, want sync disabled notice", app.model.Message)
+	}
+}
+
+func TestSyncDisablesQuickViewWithWarn(t *testing.T) {
+	root := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.LeftPanel
+	app.model.QuickViewEnabled = true
+
+	app.dispatch(keymap.ActionPanelToggleSync)
+
+	if !app.model.SyncFollowEnabled {
+		t.Fatal("sync should be enabled")
+	}
+	if app.model.QuickViewEnabled {
+		t.Fatal("quick view should be disabled when sync is enabled")
+	}
+	if app.filePreviewOpen() {
+		t.Fatal("file preview should be closed when sync displaces quick view")
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyWarn {
+		t.Fatalf("message urgency = %v, want warn", app.model.MessageUrgency)
+	}
+	if !strings.Contains(app.model.Message, "quick view disabled") {
+		t.Fatalf("message = %q, want quick view disabled notice", app.model.Message)
+	}
+}
+
 func TestToggleSyncEnablesAndImmediatelyMirrorsHighlightedFolder(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")

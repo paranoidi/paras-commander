@@ -63,6 +63,9 @@ type Theme struct {
 	// PanelSyncIndicator styles the "Sync →" / "← Sync" overlay drawn on the
 	// bottom border of the panel that drives latched panel sync.
 	PanelSyncIndicator tcell.Style
+	// PanelQuickViewIndicator styles the "Quick view →" / "← Quick view" overlay on the
+	// active panel bottom border while quick view is enabled.
+	PanelQuickViewIndicator tcell.Style
 	// PanelBottomIndicator* style Start/PhysicalLeft bottom-border segments (see ui panel_bottom_indicators).
 	PanelBottomIndicatorSelections tcell.Style
 	PanelBottomIndicatorGitignore  tcell.Style
@@ -196,7 +199,7 @@ func (t Theme) DialogInputBaseStyle(focused, invalid bool) tcell.Style {
 	return t.DialogInputInactive
 }
 
-// Panel bottom-indicator style keys ([panel.bottom.indicator] in TOML).
+// Panel bottom-indicator style keys ([panel.indicator] in TOML).
 const (
 	PanelBottomIndicatorKeySelections = "selections"
 	PanelBottomIndicatorKeyGitignore  = "gitignore"
@@ -430,10 +433,11 @@ var requiredStyleKeys = []string{
 	"panel.row.symlink",
 	"panel.row.selected",
 	"panel.text",
-	"panel.sync.indicator",
-	"panel.bottom.indicator.selections",
-	"panel.bottom.indicator.gitignore",
-	"panel.bottom.indicator.stash",
+	"panel.indicator.sync",
+	"panel.indicator.quick_view",
+	"panel.indicator.selections",
+	"panel.indicator.gitignore",
+	"panel.indicator.stash",
 	"panel.blocked.frame",
 	"panel.blocked.surface",
 	"panel.blocked.title",
@@ -839,10 +843,11 @@ func parse(data []byte) (Theme, error) {
 		PanelCursorInactive:            styles["panel.inactive.row.cursor"],
 		PanelActiveCursorSelected:      styles["panel.active.row.cursor.selected"],
 		PanelInactiveCursorSelected:    styles["panel.inactive.row.cursor.selected"],
-		PanelSyncIndicator:             styles["panel.sync.indicator"],
-		PanelBottomIndicatorSelections: styles["panel.bottom.indicator.selections"],
-		PanelBottomIndicatorGitignore:  styles["panel.bottom.indicator.gitignore"],
-		PanelBottomIndicatorStash:      styles["panel.bottom.indicator.stash"],
+		PanelSyncIndicator:             styles["panel.indicator.sync"],
+		PanelQuickViewIndicator:        styles["panel.indicator.quick_view"],
+		PanelBottomIndicatorSelections: styles["panel.indicator.selections"],
+		PanelBottomIndicatorGitignore:  styles["panel.indicator.gitignore"],
+		PanelBottomIndicatorStash:      styles["panel.indicator.stash"],
 		PanelFileIconFG:                panelFileIconFG,
 
 		PanelBlockedFrame:             styles["panel.blocked.frame"],

@@ -39,15 +39,16 @@ const (
 
 // PanelBottomIndicatorContext carries panel chrome inputs for visibility and styling.
 type PanelBottomIndicatorContext struct {
-	PanelID              int
-	State                panel.State
-	SelectionsBottomHint bool
-	SyncDriverPanelID    int
-	FileListActive       bool
-	ChromeBlocked        bool
-	BorderStyle          tcell.Style
-	TitleStyle           tcell.Style
-	Styles               theme.Theme
+	PanelID                int
+	State                  panel.State
+	SelectionsBottomHint   bool
+	SyncDriverPanelID      int
+	QuickViewDriverPanelID int
+	FileListActive         bool
+	ChromeBlocked          bool
+	BorderStyle            tcell.Style
+	TitleStyle             tcell.Style
+	Styles                 theme.Theme
 }
 
 type panelBottomIndicatorSpec struct {
@@ -72,7 +73,7 @@ type panelBottomIndicatorSegment struct {
 }
 
 // panelBottomIndicatorStyle resolves segment paint style. Selections and gitignore follow panel
-// title/frame chrome (active/inactive/blocked); other ids use theme panel.bottom.indicator.*.
+// title/frame chrome (active/inactive/blocked); other ids use theme panel.indicator.*.
 func panelBottomIndicatorStyle(ctx PanelBottomIndicatorContext, id PanelBottomIndicatorID) tcell.Style {
 	switch id {
 	case PanelBottomIndicatorSelections:
@@ -131,15 +132,24 @@ func panelBottomPhysicalLeftChainStartX(rect Rect, selectionsBottomHint bool) in
 	return x
 }
 
-// panelBottomEndEdgeReservedStart returns the first column (inclusive) still available on the
-// bottom interior row before the sync-driver overlay on the End edge.
-func panelBottomEndEdgeReservedStart(rect Rect, panelID, syncDriverPanelID int) int {
-	lastIn := rect.X + rect.Width - 2
-	if syncDriverPanelID != panelID {
-		return lastIn
+// panelBottomEndEdgeDriverLabelWidth returns rune width reserved on the End edge for sync or quick view.
+func panelBottomEndEdgeDriverLabelWidth(panelID, syncDriverPanelID, quickViewDriverPanelID int) int {
+	switch {
+	case syncDriverPanelID == panelID:
+		return utf8.RuneCountInString(panelSyncIndicatorLabel(panelID))
+	case quickViewDriverPanelID == panelID:
+		return utf8.RuneCountInString(panelQuickViewIndicatorLabel(panelID))
+	default:
+		return 0
 	}
-	labelW := utf8.RuneCountInString(panelSyncIndicatorLabel(panelID))
-	if labelW > rect.Width-2 {
+}
+
+// panelBottomEndEdgeReservedStart returns the first column (inclusive) still available on the
+// bottom interior row before the sync- or quick-view-driver overlay on the End edge.
+func panelBottomEndEdgeReservedStart(rect Rect, panelID, syncDriverPanelID, quickViewDriverPanelID int) int {
+	lastIn := rect.X + rect.Width - 2
+	labelW := panelBottomEndEdgeDriverLabelWidth(panelID, syncDriverPanelID, quickViewDriverPanelID)
+	if labelW == 0 || labelW > rect.Width-2 {
 		return lastIn
 	}
 	if panelID == RightPanel {
@@ -219,7 +229,7 @@ func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIn
 	}
 	y := rect.Y + rect.Height - 1
 	lastIn := rect.X + rect.Width - 2
-	endX := panelBottomEndEdgeReservedStart(rect, ctx.PanelID, ctx.SyncDriverPanelID)
+	endX := panelBottomEndEdgeReservedStart(rect, ctx.PanelID, ctx.SyncDriverPanelID, ctx.QuickViewDriverPanelID)
 
 	var startEdge, physicalLeft []panelBottomIndicatorSegment
 	for _, seg := range all {

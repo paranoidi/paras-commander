@@ -56,10 +56,11 @@ row.directory = { fg = "blue", bg = "default", bold = true }
 row.file = { fg = "white", bg = "default" }
 row.selected = { fg = "yellow", bg = "default", bold = true }
 row.symlink = { fg = "bright_cyan", bg = "default" }
-sync.indicator = { fg = "green", bg = "default", bold = true }
-bottom.indicator.selections = { fg = "white", bg = "default" }
-bottom.indicator.gitignore = { fg = "bright_black", bg = "default" }
-bottom.indicator.stash = { fg = "yellow", bg = "default", bold = true }
+indicator.sync = { fg = "green", bg = "default", bold = true }
+indicator.quick_view = { fg = "green", bg = "default", bold = true }
+indicator.selections = { fg = "white", bg = "default" }
+indicator.gitignore = { fg = "bright_black", bg = "default" }
+indicator.stash = { fg = "yellow", bg = "default", bold = true }
 text = { fg = "white", bg = "default" }
 
 git.conflicted = { fg = "red", bg = "default" }
