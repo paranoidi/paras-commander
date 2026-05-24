@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	sftpb "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -187,6 +188,22 @@ func (a *App) handleHostKeyDialogKey(ev *tcell.EventKey) bool {
 		return false
 	}
 	d := &a.model.HostKeyDialog
+	if ev.Key() == tcell.KeyRune && keymap.AltLetterModifiers(ev.Modifiers()) {
+		switch ev.Rune() {
+		case 'a', 'A':
+			a.finishHostKeyDialog(sftpb.HostKeyTrustSession)
+			a.render()
+			return true
+		case 's', 'S':
+			a.finishHostKeyDialog(sftpb.HostKeyTrustPersist)
+			a.render()
+			return true
+		case 'r', 'R':
+			a.finishHostKeyDialog(sftpb.HostKeyReject)
+			a.render()
+			return true
+		}
+	}
 	switch ev.Key() {
 	case tcell.KeyEsc:
 		a.finishHostKeyDialog(sftpb.HostKeyReject)

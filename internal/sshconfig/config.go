@@ -307,6 +307,7 @@ func (e HostEntry) BuildSFTPURI(remoteDir string) (string, error) {
 	if remoteDir == "" {
 		remoteDir = "~"
 	}
+	// "/~" is the URI path suffix for remote home (sftp://host/~), not an on-server path.
 	if remoteDir == "~" {
 		remoteDir = "/~"
 	} else if !strings.HasPrefix(remoteDir, "/") {

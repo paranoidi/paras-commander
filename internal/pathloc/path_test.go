@@ -47,6 +47,73 @@ func TestParseSFTP(t *testing.T) {
 	}
 }
 
+func TestSFTPRemotePathHome(t *testing.T) {
+	t.Parallel()
+	p := MustParse("sftp://user@host/~")
+	remote, err := SFTPRemotePath(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if remote != "~" {
+		t.Fatalf("SFTPRemotePath = %q, want ~", remote)
+	}
+}
+
+func TestSFTPJoinFromHome(t *testing.T) {
+	t.Parallel()
+	home := MustParse("sftp://user@host/~")
+	child, err := home.Join("apps")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "sftp://user@host/~/apps"
+	if child.String() != want {
+		t.Fatalf("Join from home: got %q want %q", child.String(), want)
+	}
+	remote, err := SFTPRemotePath(child)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if remote != "~/apps" {
+		t.Fatalf("SFTPRemotePath = %q, want ~/apps", remote)
+	}
+	nested, err := child.Join("bin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nested.String() != "sftp://user@host/~/apps/bin" {
+		t.Fatalf("nested join: got %q", nested.String())
+	}
+}
+
+func TestSFTPParentFromHomeSubdir(t *testing.T) {
+	t.Parallel()
+	sub := MustParse("sftp://user@host/~/apps")
+	parent := sub.Parent()
+	if parent.String() != "sftp://user@host/~" {
+		t.Fatalf("parent = %q, want sftp://user@host/~", parent.String())
+	}
+}
+
+func TestSFTPTildeRoundTrip(t *testing.T) {
+	t.Parallel()
+	for _, in := range []string{
+		"sftp://user@host/~",
+		"sftp://user@host/~/apps",
+		"sftp://user@host/~/apps/bin",
+		"sftp://user@host/var",
+	} {
+		p := MustParse(in)
+		if p.String() != in {
+			t.Fatalf("parse round-trip %q got %q", in, p.String())
+		}
+		again := MustParse(p.String())
+		if !again.Equal(p) {
+			t.Fatalf("re-parse %q: got %q", in, again.String())
+		}
+	}
+}
+
 func TestHasPrefixFile(t *testing.T) {
 	root := FileMust("/tmp/a")
 	child := FileMust("/tmp/a/b/c.txt")
