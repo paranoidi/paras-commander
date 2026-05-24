@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
@@ -62,6 +64,41 @@ func TestJobPercentDoneCapsByteRatioAt100(t *testing.T) {
 	})
 	if p != 100 {
 		t.Fatalf("got %v, want 100", p)
+	}
+}
+
+func TestJobDetailLinesOmitDestinationForDelete(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	del := JobEntry{
+		ID:      "del",
+		Type:    string(jobs.TypeDelete),
+		Status:  "running",
+		Sources: []string{"/tmp/remove-me"},
+	}
+	copyJob := JobEntry{
+		ID:          "cp",
+		Type:        string(jobs.TypeCopy),
+		Status:      "running",
+		Sources:     []string{"/tmp/a"},
+		Destination: "/tmp/b",
+	}
+	delLines := detailStaticLines(del, now, 80, "", false)
+	for _, line := range delLines {
+		if strings.Contains(line, "Destination:") {
+			t.Fatalf("delete job details must not include destination row; got %q", line)
+		}
+	}
+	copyLines := detailStaticLines(copyJob, now, 80, "", false)
+	found := false
+	for _, line := range copyLines {
+		if strings.Contains(line, "Destination:") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("copy job details should include destination row")
 	}
 }
 

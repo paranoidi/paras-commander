@@ -75,9 +75,15 @@ func (a *App) openDeleteDialog(p *panel.State) {
 		return
 	}
 	summary, warning := ops.DeleteConfirmContent(source)
+	panelPath := p.PathString()
+	homeDir := a.model.UserHomeDir
 	entries := make([]ui.DeleteListEntry, len(source.Entries))
 	for i, e := range source.Entries {
-		entries[i] = ui.DeleteListEntry{Name: e.Name, Path: e.Path, Type: e.Type}
+		entries[i] = ui.DeleteListEntry{
+			Name: ui.DeleteListEntryName(panelPath, homeDir, e.Path, e.Name),
+			Path: e.Path,
+			Type: e.Type,
+		}
 	}
 	a.model.FileDialog = ui.FileDialogState{
 		Open:          true,

@@ -143,7 +143,8 @@ func drawFileDeleteDialogContent(screen tcell.Screen, rect Rect, state FileDialo
 		if showIcons && paintIcon != nil && iconLead > 0 {
 			paintIcon(screen, listCol, y, entry, styles)
 		}
-		primitive.Text(screen, textX, y, textW, entry.Name, listStyle)
+		line := DeleteListEntryNameFitsWidth(entry.Name, entry.Path, textW)
+		primitive.Text(screen, textX, y, textW, line, listStyle)
 		y++
 	}
 	if y >= bottom {

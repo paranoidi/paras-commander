@@ -185,6 +185,11 @@ func DeleteEnsureListScroll(st *FileDialogState, viewportRows, totalRows int) {
 	dialog.DeleteEnsureListScroll(st, viewportRows, totalRows)
 }
 
+// DeleteListEntryName returns the delete confirmation list label for one entry.
+func DeleteListEntryName(panelPath, homeDir, entryPath, entryName string) string {
+	return dialog.DeleteListEntryName(panelPath, homeDir, entryPath, entryName)
+}
+
 // MassRenameDiff returns highlight ranges for mass-rename preview columns.
 func MassRenameDiff(old, new string) ([]search.Range, []search.Range) {
 	return dialog.MassRenameDiff(old, new)

@@ -4560,6 +4560,37 @@ func TestDeleteDialogWarningPluralDirectories(t *testing.T) {
 	}
 }
 
+func TestDeleteDialogShowsContextPathWhenSelectionOffPanel(t *testing.T) {
+	dir := t.TempDir()
+	series := filepath.Join(dir, "Some Series")
+	season := filepath.Join(series, "Season 01")
+	other := filepath.Join(dir, "Other")
+	if err := os.MkdirAll(season, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(other, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	if err := p.Load(other); err != nil {
+		t.Fatal(err)
+	}
+	p.SelectedPaths = map[string]bool{season: true}
+	p.SelectionsStripOrder = []string{season}
+
+	app.dispatch(keymap.ActionFileDelete)
+	if !app.model.FileDialog.Open {
+		t.Fatal("delete dialog should be open")
+	}
+	want := filepath.Join("Some Series", "Season 01")
+	if len(app.model.FileDialog.DeleteEntries) != 1 || app.model.FileDialog.DeleteEntries[0].Name != want {
+		t.Fatalf("DeleteEntries = %#v, want Name %q", app.model.FileDialog.DeleteEntries, want)
+	}
+}
+
 func TestDeleteDialogListScrollsWithPageDown(t *testing.T) {
 	dir := t.TempDir()
 	for i := range 25 {

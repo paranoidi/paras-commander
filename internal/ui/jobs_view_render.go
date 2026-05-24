@@ -461,12 +461,14 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 		src = primitive.FitPathForWidth(displaySrc, budget) + suffix
 	}
 	lines = append(lines, fmt.Sprintf(prefixSources+"%s", src))
-	dest := " —"
-	if j.Destination != "" {
-		destDisplay := primitive.PathWithHomeTilde(j.Destination, userHomeDir)
-		dest = primitive.FitPathForWidth(destDisplay, jobsDetailPathBudget(pathMax, prefixDestination))
+	if j.Type != string(jobs.TypeDelete) {
+		dest := " —"
+		if j.Destination != "" {
+			destDisplay := primitive.PathWithHomeTilde(j.Destination, userHomeDir)
+			dest = primitive.FitPathForWidth(destDisplay, jobsDetailPathBudget(pathMax, prefixDestination))
+		}
+		lines = append(lines, fmt.Sprintf(prefixDestination+"%s", dest))
 	}
-	lines = append(lines, fmt.Sprintf(prefixDestination+"%s", dest))
 	if j.CurrentPath != "" {
 		curDisplay := primitive.PathWithHomeTilde(j.CurrentPath, userHomeDir)
 		lines = append(lines, fmt.Sprintf(prefixCurrent+"%s", primitive.FitPathForWidth(curDisplay, jobsDetailPathBudget(pathMax, prefixCurrent))))
