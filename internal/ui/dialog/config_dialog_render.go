@@ -17,7 +17,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 		return
 	}
 
-	const minHeight = 13
+	const minHeight = 14
 	height := minHeight
 	if height > layout.Height-2 {
 		height = layout.Height - 2
@@ -38,6 +38,8 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	y++
 	draw.DrawDialogCheckbox(screen, leftCol, y, "Shrunken shows only name", 's', state.ShrunkenShowsNameOnly, state.Focus == 2, styles)
 	y++
+	draw.DrawDialogCheckbox(screen, leftCol, y, "Center scrolling", 'e', state.CenterScrolling, state.Focus == 3, styles)
+	y++
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
 
@@ -47,14 +49,14 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	lf := panel.EffectiveListFormat(state.ListFormat)
 	radios := panel.ListFormatDialogRadios()
 	for i, r := range radios {
-		draw.DrawDialogRadio(screen, leftCol, y, r.Label, r.Shortcut, lf == r.Format, state.Focus == 3+i, styles)
+		draw.DrawDialogRadio(screen, leftCol, y, r.Label, r.Shortcut, lf == r.Format, state.Focus == 4+i, styles)
 		y++
 	}
 
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
-	okFocused := state.Focus == 6
-	cancelFocused := state.Focus == 7
+	okFocused := state.Focus == 7
+	cancelFocused := state.Focus == 8
 	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: okFocused},
 		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},

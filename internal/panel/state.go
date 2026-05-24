@@ -76,6 +76,8 @@ type State struct {
 	Sort       SortState
 	// ListFormat controls trailing columns after size (Modified / Permissions / none). Per-panel; see config default_listing_format.
 	ListFormat ListFormat
+	// CenterScrolling mirrors [ui].center_scrolling: navigation keeps the highlight row centered when true.
+	CenterScrolling bool
 	// CarouselMode shows a three-column parent | current | child preview inside this panel.
 	CarouselMode bool
 	// CarouselChildPreviewCoalesce skips child-directory reads during scroll and reuses CarouselSideCache.Child.
@@ -202,7 +204,7 @@ func (s *State) ToggleHidden(viewportRows int) error {
 func (s *State) Move(delta int, viewportRows int) {
 	s.Cursor += delta
 	s.clampCursor()
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 // Page moves the cursor by a viewport-sized delta.
@@ -217,7 +219,7 @@ func (s *State) Page(delta int, viewportRows int) {
 // Top moves the cursor to the first entry.
 func (s *State) Top(viewportRows int) {
 	s.Cursor = 0
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 // Bottom moves the cursor to the last entry.
@@ -228,7 +230,7 @@ func (s *State) Bottom(viewportRows int) {
 		return
 	}
 	s.Cursor = s.VisibleEntryCount() - 1
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 // CurrentEntry returns the entry under the cursor.
@@ -693,6 +695,15 @@ func (s *State) EnsureCursorCentered(viewportRows int) {
 	s.ScrollOffset = target
 }
 
+// EnsureCursorInViewport scrolls so the cursor stays visible, or centered when CenterScrolling is set.
+func (s *State) EnsureCursorInViewport(viewportRows int) {
+	if s.CenterScrolling {
+		s.EnsureCursorCentered(viewportRows)
+		return
+	}
+	s.EnsureCursorVisible(viewportRows)
+}
+
 // SetFilterCaseInsensitive configures the quick filter case behavior.
 func (s *State) SetFilterCaseInsensitive(value bool, viewportRows int) {
 	s.Filter.CaseInsensitive = value
@@ -700,7 +711,7 @@ func (s *State) SetFilterCaseInsensitive(value bool, viewportRows int) {
 	s.rebuildFilter()
 	_ = s.SelectVisibleEntry(selectedName)
 	s.clampCursor()
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 // OpenFilter starts editing the panel-local quick filter.
@@ -708,7 +719,7 @@ func (s *State) OpenFilter(viewportRows int) {
 	s.Filter.Editing = true
 	s.rebuildFilter()
 	s.clampCursor()
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 // AcceptFilter exits editing while keeping the current filtered view.
@@ -719,7 +730,7 @@ func (s *State) AcceptFilter(viewportRows int) {
 		s.Filter.results = nil
 	}
 	s.clampCursor()
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 // CancelFilter exits editing and restores the unfiltered panel view.
@@ -784,7 +795,7 @@ func (s *State) CycleFilterMatch(delta int, viewportRows int) {
 	}
 	s.Cursor = order[cur].Index
 	s.clampCursor()
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 func (s *State) filterResultsCycleOrder() []filterResult {
@@ -945,7 +956,9 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 		}
 	}
 	s.clampCursor()
-	if shouldCenterCursorOnListing(previousPath, listingLoc, centerRecalled, selectedName, indexFallback) {
+	if s.CenterScrolling {
+		s.EnsureCursorCentered(viewportRows)
+	} else if shouldCenterCursorOnListing(previousPath, listingLoc, centerRecalled, selectedName, indexFallback) {
 		s.EnsureCursorCentered(viewportRows)
 	} else {
 		s.EnsureCursorVisible(viewportRows)
@@ -1311,7 +1324,7 @@ func (s *State) applyFilterQuery(query string, viewportRows int) {
 		s.Cursor = primaryFilterMatchIndex(query, s.Filter.results)
 	}
 	s.clampCursor()
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 // primaryFilterMatchIndex picks the cursor row after the query changes.
@@ -1470,7 +1483,7 @@ func (s *State) RefreshDiskUsageOrdering(viewportRows int, centerCursor bool) {
 		s.selectVisibleEntryByPath(selectedPath)
 	}
 	s.clampCursor()
-	if centerCursor {
+	if centerCursor || s.CenterScrolling {
 		s.EnsureCursorCentered(viewportRows)
 	} else {
 		s.EnsureCursorVisible(viewportRows)
@@ -1501,7 +1514,7 @@ func (s *State) ApplySortFromDialog(sort SortState, viewportRows int) {
 		_ = s.SelectVisibleEntry(selectedName)
 	}
 	s.clampCursor()
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 // ListingFullyDiskCached reports whether every listed entry has a disk-total/file aggregate in DiskSorter.
@@ -1534,7 +1547,7 @@ func (s *State) SetSortMode(mode SortMode, reverse bool, dirsFirst bool, viewpor
 		_ = s.SelectVisibleEntry(selectedName)
 	}
 	s.clampCursor()
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 // CycleSort cycles through sort modes (name → extension → size → mtime → name).

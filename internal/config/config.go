@@ -205,6 +205,8 @@ type UIConfig struct {
 	// ShrunkenShowsNameOnly: when true, narrow panels hide trailing listing columns and show only names
 	// (sort and default_listing_format are unchanged; see ShrunkenListingRowTextWidthThreshold in builtin.go).
 	ShrunkenShowsNameOnly bool `toml:"shrunken_shows_name_only"`
+	// CenterScrolling: when true, file-list navigation keeps the highlight row centered in the viewport.
+	CenterScrolling bool `toml:"center_scrolling"`
 	// MessageLogMaxEntries caps how many status/toast lines are retained for the Messages view (oldest dropped).
 	// Zero means use the built-in default (see DefaultMessageLogMaxEntries).
 	MessageLogMaxEntries int `toml:"message_log_max_entries"`
@@ -316,6 +318,7 @@ func Default() Config {
 			PanelZoomActivePercent:            DefaultPanelZoomActivePercent,
 			PanelZoomInactivePercent:          DefaultPanelZoomInactivePercent,
 			ShrunkenShowsNameOnly:             DefaultShrunkenShowsNameOnly,
+			CenterScrolling:                   DefaultCenterScrolling,
 			MessageLogMaxEntries:              DefaultMessageLogMaxEntries,
 			ScreenRenderHashCache:             DefaultScreenRenderHashCache,
 		},

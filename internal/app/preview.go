@@ -338,7 +338,7 @@ func (a *App) quickViewFollowDirectory() {
 	followerID := a.inactivePanelID()
 	follower := a.panelByID(followerID)
 	if filepath.Clean(follower.PathString()) == targetPath {
-		follower.EnsureCursorVisible(a.panelViewportRows(followerID))
+		follower.EnsureCursorInViewport(a.panelViewportRows(followerID))
 		return
 	}
 	if a.pathVolumeContendsWithActiveJob(targetPath) {
@@ -347,7 +347,7 @@ func (a *App) quickViewFollowDirectory() {
 	if err := follower.Load(targetPath); err != nil {
 		return
 	}
-	follower.EnsureCursorVisible(a.panelViewportRows(followerID))
+	follower.EnsureCursorInViewport(a.panelViewportRows(followerID))
 }
 
 func (a *App) applyQuickViewPreviewImmediately() {

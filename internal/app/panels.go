@@ -14,6 +14,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
+func (a *App) syncCenterScrollingFromConfig() {
+	v := a.config.UI.CenterScrolling
+	a.model.Left.CenterScrolling = v
+	a.model.Right.CenterScrolling = v
+}
+
 func (a *App) switchPanel() {
 	if a.model.HideInactivePanel {
 		a.model.HideInactivePanel = false
@@ -178,7 +184,7 @@ func (a *App) navigateFromSelectionsStrip() {
 		a.setErrorMessage("Open failed", err)
 		return
 	}
-	p.EnsureCursorVisible(vr)
+	p.EnsureCursorInViewport(vr)
 	a.model.ActiveSubFocus = ui.SubFocusFileList
 }
 
@@ -327,7 +333,7 @@ func (a *App) syncFollowFromActive() {
 	if err := follower.Load(targetPath); err != nil {
 		return
 	}
-	follower.EnsureCursorVisible(a.panelViewportRows(followerID))
+	follower.EnsureCursorInViewport(a.panelViewportRows(followerID))
 }
 
 func panelSyncFollowListNavAction(actionID string) bool {
@@ -487,16 +493,16 @@ func (a *App) ensurePanelsVisible() {
 	width, height := a.screen.Size()
 	layout := a.layoutForTerminalSize(width, height)
 	if layout.TooSmall {
-		a.model.Left.EnsureCursorVisible(0)
-		a.model.Right.EnsureCursorVisible(0)
+		a.model.Left.EnsureCursorInViewport(0)
+		a.model.Right.EnsureCursorInViewport(0)
 		return
 	}
 	leftN := ui.SelectionsStripLayoutItemCount(&a.model.Left, ui.LeftPanel, a.model.ActivePanel, a.model.ThemeDialog.Open)
 	rightN := ui.SelectionsStripLayoutItemCount(&a.model.Right, ui.RightPanel, a.model.ActivePanel, a.model.ThemeDialog.Open)
 	leftFile, _ := ui.SplitPanelColumn(layout.Left, leftN, a.model.SelectionsPanelMaxRows, 3)
 	rightFile, _ := ui.SplitPanelColumn(layout.Right, rightN, a.model.SelectionsPanelMaxRows, 3)
-	a.model.Left.EnsureCursorVisible(ui.PanelListRows(leftFile))
-	a.model.Right.EnsureCursorVisible(ui.PanelListRows(rightFile))
+	a.model.Left.EnsureCursorInViewport(ui.PanelListRows(leftFile))
+	a.model.Right.EnsureCursorInViewport(ui.PanelListRows(rightFile))
 }
 
 func panelLabel(panelID int) string {

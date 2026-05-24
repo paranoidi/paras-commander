@@ -1783,6 +1783,57 @@ func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
 	}
 }
 
+func TestConfigDialogApplyPersistsCenterScrolling(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-center")}.WithResolvedLocations()
+	cfg := config.Default()
+	cfg.UI.CenterScrolling = false
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Paths:  appPaths,
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+	if app.model.Left.CenterScrolling {
+		t.Fatal("Left.CenterScrolling = true, want false from config")
+	}
+
+	app.openConfigDialog()
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if !app.config.UI.CenterScrolling {
+		t.Fatal("CenterScrolling = false, want true after toggle")
+	}
+	if !app.model.Left.CenterScrolling || !app.model.Right.CenterScrolling {
+		t.Fatal("panel CenterScrolling not synced after apply")
+	}
+	reloaded, err := config.LoadFromPaths(appPaths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths after persist: %v", err)
+	}
+	if !reloaded.UI.CenterScrolling {
+		t.Fatalf("persisted center_scrolling = false, want true")
+	}
+}
+
 func TestRuntimeZoomToggleChangesLayoutAndDoesNotPersist(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))

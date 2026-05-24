@@ -32,8 +32,9 @@ type ConfigDialogState struct {
 	ShowFileIcons         bool
 	ZoomActivePanel       bool
 	ShrunkenShowsNameOnly bool
+	CenterScrolling       bool
 	ListFormat            panel.ListFormat
-	Focus                 int // 0=file icons, 1=zoom, 2=shrunken name-only, 3-5=listing format radios, 6=OK, 7=Cancel
+	Focus                 int // 0=file icons, 1=zoom, 2=shrunken, 3=center scroll, 4-6=listing format radios, 7=OK, 8=Cancel
 }
 
 // SortDialogState is the renderable state for the sort configuration modal.

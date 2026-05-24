@@ -1855,6 +1855,52 @@ func TestEnsureCursorCentered(t *testing.T) {
 	}
 }
 
+func TestMoveWithCenterScrolling(t *testing.T) {
+	entries := make([]localfs.Entry, 20)
+	for i := range entries {
+		name := strconv.Itoa(i) + ".txt"
+		entries[i] = localfs.Entry{Name: name, Path: filepath.Join("/tmp", name)}
+	}
+	state := State{
+		Path:            pathloc.MustParse("/tmp"),
+		Entries:         entries,
+		Sort:            SortState{Mode: SortName, DirectoriesFirst: false},
+		CenterScrolling: true,
+	}
+	state.ApplySort()
+	state.Cursor = 9
+	state.Move(1, 5)
+	if state.Cursor != 10 {
+		t.Fatalf("Cursor = %d, want 10", state.Cursor)
+	}
+	if state.ScrollOffset != 8 {
+		t.Fatalf("ScrollOffset = %d, want 8", state.ScrollOffset)
+	}
+}
+
+func TestMoveWithoutCenterScrollingUsesMinimalScroll(t *testing.T) {
+	entries := make([]localfs.Entry, 20)
+	for i := range entries {
+		name := strconv.Itoa(i) + ".txt"
+		entries[i] = localfs.Entry{Name: name, Path: filepath.Join("/tmp", name)}
+	}
+	state := State{
+		Path:    pathloc.MustParse("/tmp"),
+		Entries: entries,
+		Sort:    SortState{Mode: SortName, DirectoriesFirst: false},
+	}
+	state.ApplySort()
+	state.Cursor = 0
+	state.ScrollOffset = 0
+	state.Move(4, 5)
+	if state.Cursor != 4 {
+		t.Fatalf("Cursor = %d, want 4", state.Cursor)
+	}
+	if state.ScrollOffset != 0 {
+		t.Fatalf("ScrollOffset = %d, want 0 (still visible without centering)", state.ScrollOffset)
+	}
+}
+
 func TestRefreshDiskUsageOrderingCentersCursorWhenRequested(t *testing.T) {
 	entries := make([]localfs.Entry, 15)
 	sizes := map[string]int64{}

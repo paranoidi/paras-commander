@@ -80,6 +80,9 @@ const (
 	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
 	DefaultShrunkenShowsNameOnly = true
 
+	// DefaultCenterScrolling: when true, file-list navigation keeps the highlight row centered in the viewport.
+	DefaultCenterScrolling = false
+
 	// DefaultScreenRenderHashCache skips terminal Show when the logical screen buffer matches the
 	// last pushed frame (reduces flicker and I/O on slow links). Set [ui].screen_render_hash_cache = false to always flush.
 	DefaultScreenRenderHashCache = true
