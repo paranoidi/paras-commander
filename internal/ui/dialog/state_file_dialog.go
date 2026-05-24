@@ -1,5 +1,7 @@
 package dialog
 
+import "github.com/paranoidi/paras-commander/internal/search"
+
 // FileDialogType identifies which file operation dialog is active.
 type FileDialogType int
 
@@ -48,7 +50,7 @@ type FileDialogField struct {
 	PathPicker bool
 	// PickerFocused is true when the trailing path-picker glyph has sub-focus (file dialogs).
 	PickerFocused bool
-	// InputInvalid paints the row with dialog.input.*.error (e.g. mass rename regexp compile error).
+	// InputInvalid paints the row with dialog.input.*.error (e.g. mass rename regexp compile error or no matches).
 	InputInvalid bool
 	// CompletionSuffix is ghost filesystem completion after the caret (Tab accepts).
 	CompletionSuffix string
@@ -108,8 +110,10 @@ type FileDialogState struct {
 	MassRenameSources       []MassRenameSource
 	// MassRenamePreviewBefore / After are paired basename preview columns (recomputed in app).
 	// Rows with Before starting with "!" are full-width error lines (After empty).
-	MassRenamePreviewBefore []string
-	MassRenamePreviewAfter  []string
+	MassRenamePreviewBefore        []string
+	MassRenamePreviewAfter         []string
+	MassRenamePreviewBeforeRemoved [][]search.Range
+	MassRenamePreviewAfterAdded    [][]search.Range
 	// MassRenamePatternCompileHint is a short regexp compile error shown under the Pattern field (regex mode).
 	MassRenamePatternCompileHint string
 }

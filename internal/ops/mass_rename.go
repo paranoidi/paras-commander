@@ -226,6 +226,42 @@ func MassRenameValidateRows(rows []MassRenameRow) error {
 	return nil
 }
 
+// MassRenameFindMatchesAny reports whether find (simple) or rx (regex) matches at least one row basename.
+// An empty simple find or nil regexp matches all rows (identity preview; no error state).
+func MassRenameFindMatchesAny(rows []MassRenameRow, mode MassRenameMode, find string, simpleCaseFold bool, rx *regexp.Regexp) bool {
+	switch mode {
+	case MassRenameModeSimple:
+		if find == "" {
+			return true
+		}
+		for _, r := range rows {
+			if massRenameSimpleFindMatches(r.OldBase, find, simpleCaseFold) {
+				return true
+			}
+		}
+		return false
+	case MassRenameModeRegex:
+		if rx == nil {
+			return true
+		}
+		for _, r := range rows {
+			if rx.MatchString(r.OldBase) {
+				return true
+			}
+		}
+		return false
+	default:
+		return true
+	}
+}
+
+func massRenameSimpleFindMatches(oldBase, find string, caseFold bool) bool {
+	if caseFold {
+		return indexFold([]rune(oldBase), []rune(find)) >= 0
+	}
+	return strings.Contains(oldBase, find)
+}
+
 // MassRenameHasWork returns true if at least one row would change its basename.
 func MassRenameHasWork(rows []MassRenameRow) bool {
 	for _, r := range rows {

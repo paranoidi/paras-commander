@@ -18,13 +18,17 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		switch event.Rune() {
 		case 's', 'S':
 			d.MassRenameMode = ui.MassRenameModeUISimple
-			d.FocusedField = 0
+			if d.FocusedField != massRenameFindFieldFocus {
+				d.FocusedField = 0
+			}
 			a.massRenameSyncFieldLabels()
 			a.recomputeMassRenamePreview()
 			return false
 		case 'r', 'R':
 			d.MassRenameMode = ui.MassRenameModeUIRegex
-			d.FocusedField = 1
+			if d.FocusedField != massRenameFindFieldFocus {
+				d.FocusedField = 1
+			}
 			a.massRenameSyncFieldLabels()
 			a.recomputeMassRenamePreview()
 			return false

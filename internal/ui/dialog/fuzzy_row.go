@@ -67,6 +67,12 @@ func alignOrigToDisp(orig, disp []rune) []int {
 	for i := range m {
 		m[i] = -1
 	}
+	if len(disp) > 0 && disp[len(disp)-1] == '~' && len(orig) > len(disp)-1 {
+		for i := 0; i < len(disp)-1 && i < len(orig); i++ {
+			m[i] = i
+		}
+		return m
+	}
 	oi, di := 0, 0
 	for oi < len(orig) && di < len(disp) {
 		if orig[oi] == disp[di] {

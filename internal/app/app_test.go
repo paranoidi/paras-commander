@@ -3863,7 +3863,9 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 		t.Fatalf("expected mass rename dialog, open=%v type=%v", app.model.FileDialog.Open, app.model.FileDialog.DialogType)
 	}
 	d := &app.model.FileDialog
-	d.FocusedField = 2
+	if d.FocusedField != massRenameFindFieldFocus {
+		t.Fatalf("FocusedField = %d, want %d (Find)", d.FocusedField, massRenameFindFieldFocus)
+	}
 	for _, r := range "foo_" {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
@@ -3885,6 +3887,68 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 	}
 	if _, err := os.Stat(aPath); !os.IsNotExist(err) {
 		t.Fatal("old path foo_a.txt should not exist")
+	}
+}
+
+func TestMassRenameNoMatchMarksFindInvalid(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "foo_a.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	for _, r := range "nomatch" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if !d.Fields[0].InputInvalid {
+		t.Fatal("expected Find input invalid when nothing matches")
+	}
+}
+
+func TestMassRenameModeShortcutKeepsFindFocus(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "x.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	if !d.Open || d.DialogType != ui.FileDialogMassRename {
+		t.Fatalf("expected mass rename dialog")
+	}
+	if d.FocusedField != massRenameFindFieldFocus {
+		t.Fatalf("FocusedField = %d, want %d (Find)", d.FocusedField, massRenameFindFieldFocus)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	if d.MassRenameMode != ui.MassRenameModeUIRegex {
+		t.Fatalf("mode = %v, want regex", d.MassRenameMode)
+	}
+	if d.FocusedField != massRenameFindFieldFocus {
+		t.Fatalf("after Alt+R: focus = %d, want %d", d.FocusedField, massRenameFindFieldFocus)
+	}
+	if d.Fields[0].Label != "Pattern" {
+		t.Fatalf("label = %q, want Pattern", d.Fields[0].Label)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
+	if d.MassRenameMode != ui.MassRenameModeUISimple {
+		t.Fatalf("mode = %v, want simple", d.MassRenameMode)
+	}
+	if d.FocusedField != massRenameFindFieldFocus {
+		t.Fatalf("after Alt+S: focus = %d, want %d", d.FocusedField, massRenameFindFieldFocus)
+	}
+	if d.Fields[0].Label != "Find" {
+		t.Fatalf("label = %q, want Find", d.Fields[0].Label)
 	}
 }
 

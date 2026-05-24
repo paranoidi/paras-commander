@@ -147,6 +147,12 @@ option.active = { fg = "yellow", bg = "bright_black", bold = true }
 option.inactive = { fg = "white", bg = "bright_black" }
 option.selected = { fg = "yellow", bg = "bright_black" }
 
+[dialog.massrename]
+before = { fg = "white" }
+before.removed = { fg = "red", bold = true }
+after = { fg = "yellow" }
+after.added = { fg = "green", bold = true }
+
 [jobs]
 done = { fg = "bright_green", bold = true }
 failed = { fg = "bright_red", bold = true }

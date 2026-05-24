@@ -188,6 +188,49 @@ func TestMassRenameComputeSimpleEmptyFindIsIdentity(t *testing.T) {
 	}
 }
 
+func TestMassRenameFindMatchesAnySimple(t *testing.T) {
+	rows := []MassRenameRow{
+		{OldBase: "foo_a.txt", NewBase: "foo_a.txt"},
+		{OldBase: "bar_b.txt", NewBase: "bar_b.txt"},
+	}
+	if !MassRenameFindMatchesAny(rows, MassRenameModeSimple, "foo", false, nil) {
+		t.Fatal("expected match for foo")
+	}
+	if MassRenameFindMatchesAny(rows, MassRenameModeSimple, "zzz", false, nil) {
+		t.Fatal("expected no match for zzz")
+	}
+	if !MassRenameFindMatchesAny(rows, MassRenameModeSimple, "", false, nil) {
+		t.Fatal("empty find should match")
+	}
+}
+
+func TestMassRenameFindMatchesAnySimpleCaseFold(t *testing.T) {
+	rows := []MassRenameRow{{OldBase: "Alpha.txt", NewBase: "Alpha.txt"}}
+	if !MassRenameFindMatchesAny(rows, MassRenameModeSimple, "alpha", true, nil) {
+		t.Fatal("expected case-fold match")
+	}
+	if MassRenameFindMatchesAny(rows, MassRenameModeSimple, "alpha", false, nil) {
+		t.Fatal("expected no case-sensitive match")
+	}
+}
+
+func TestMassRenameFindMatchesAnyRegex(t *testing.T) {
+	re, err := MassRenameCompileRegex(`\.txt$`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := []MassRenameRow{{OldBase: "a.txt", NewBase: "a.txt"}}
+	if !MassRenameFindMatchesAny(rows, MassRenameModeRegex, "", false, re) {
+		t.Fatal("expected regex match")
+	}
+	if !MassRenameFindMatchesAny(rows, MassRenameModeRegex, "", false, nil) {
+		t.Fatal("nil regex should match all")
+	}
+	if MassRenameFindMatchesAny([]MassRenameRow{{OldBase: "a.dat", NewBase: "a.dat"}}, MassRenameModeRegex, "", false, re) {
+		t.Fatal("expected no regex match on .dat")
+	}
+}
+
 func TestMassRenameComputeRegexNilIsIdentity(t *testing.T) {
 	dir := t.TempDir()
 	entries := []localfs.Entry{

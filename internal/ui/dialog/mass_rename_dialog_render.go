@@ -2,10 +2,10 @@ package dialog
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
@@ -48,7 +48,7 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	if previewCount < vp {
 		vp = previewCount
 	}
-	// Radios(2) + sep + two fields (label+input each) + [regex pattern compile hint] + [checkbox+sep in simple] + sep + vp + hint + buttons (global sep above buttons only).
+	// Radios(2) + sep + two fields (label+input each) + [regex pattern compile hint] + [checkbox+sep in simple] + sep + vp + buttons (global sep above buttons only).
 	fixed := 2 + 1 + 4 + 1
 	if state.MassRenameMode == MassRenameModeUIRegex && strings.TrimSpace(state.MassRenamePatternCompileHint) != "" {
 		fixed++
@@ -56,7 +56,6 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	if state.MassRenameMode == MassRenameModeUISimple {
 		fixed += 1 + 1 // checkbox + sep
 	}
-	fixed += 1                   // hint line after preview
 	height := 1 + fixed + vp + 2 // inner top pad + body + buttons row + bottom
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2
@@ -69,7 +68,7 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 
 // MassRenamePreviewViewportRows returns the number of preview lines shown for a terminal height.
 func MassRenamePreviewViewportRows(layoutHeight int) int {
-	maxBody := layoutHeight - 14
+	maxBody := layoutHeight - 13
 	if maxBody < 3 {
 		maxBody = 3
 	}
@@ -79,7 +78,10 @@ func MassRenamePreviewViewportRows(layoutHeight int) int {
 func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	labelStyle := styles.DialogText.Background(dbg)
-	newNameStyle := styles.DialogOptionSelected
+	beforeBase := styles.DialogMassRenameBefore.Background(dbg)
+	beforeRemoved := styles.DialogMassRenameBeforeRemoved
+	afterBase := styles.DialogMassRenameAfter.Background(dbg)
+	afterAdded := styles.DialogMassRenameAfterAdded
 	leftCol := rect.X + 2
 	innerW := rect.Width - 4
 	if innerW <= 0 {
@@ -147,12 +149,14 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		return
 	}
 
-	vp := innerBottom - y - 2 // hint row below preview; row innerBottom-1 is the global separator above buttons
+	vp := innerBottom - y - 1 // row innerBottom-1 is the global separator above buttons
 	if vp < 1 {
 		vp = 1
 	}
 	before := state.MassRenamePreviewBefore
 	after := state.MassRenamePreviewAfter
+	beforeRemovedRanges := state.MassRenamePreviewBeforeRemoved
+	afterAddedRanges := state.MassRenamePreviewAfterAdded
 	n := len(before)
 	if len(after) < n {
 		n = len(after)
@@ -199,43 +203,20 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			y++
 			continue
 		}
-		if utf8.RuneCountInString(lb) > leftW {
-			lb = primitive.TruncateRight(lb, leftW)
+		var removed, added []search.Range
+		if i < len(beforeRemovedRanges) {
+			removed = beforeRemovedRanges[i]
 		}
-		if utf8.RuneCountInString(rb) > rightW {
-			rb = primitive.TruncateRight(rb, rightW)
+		if i < len(afterAddedRanges) {
+			added = afterAddedRanges[i]
 		}
-		primitive.Text(screen, leftCol, y, leftW, lb, labelStyle)
+		lbText, lbSpans := massRenamePreviewRow(lb, removed, leftW, beforeBase, beforeRemoved)
+		rbText, rbSpans := massRenamePreviewRow(rb, added, rightW, afterBase, afterAdded)
+		primitive.StyledText(screen, leftCol, y, leftW, lbText, beforeBase, lbSpans)
 		if sepW == 1 {
-			screen.SetContent(leftCol+leftW, y, ' ', nil, labelStyle)
+			screen.SetContent(leftCol+leftW, y, ' ', nil, beforeBase)
 		}
-		primitive.Text(screen, leftCol+leftW+sepW, y, rightW, rb, newNameStyle)
+		primitive.StyledText(screen, leftCol+leftW+sepW, y, rightW, rbText, afterBase, rbSpans)
 		y++
 	}
-	if y >= innerBottom {
-		return
-	}
-	hint := "PgUp/PgDn scroll"
-	hintX := leftCol + 1
-	lineW := innerW - 2 // one column inset on the left + one on the right
-	if lineW < 1 {
-		lineW = 1
-		hintX = leftCol
-	}
-	if hintX+lineW > leftCol+innerW {
-		hintX = leftCol + innerW - lineW
-	}
-	if hintX < leftCol {
-		hintX = leftCol
-	}
-	hl := utf8.RuneCountInString(hint)
-	if hl > lineW {
-		hint = primitive.TruncateRight(hint, lineW)
-		hl = utf8.RuneCountInString(hint)
-	}
-	pad := lineW - hl
-	if pad < 0 {
-		pad = 0
-	}
-	primitive.Text(screen, hintX, y, lineW, strings.Repeat(" ", pad)+hint, labelStyle)
 }

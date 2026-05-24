@@ -9,8 +9,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
+
+// massRenameFindFieldFocus is FocusedField for the Find / Pattern input (0–1 are mode radios).
+const massRenameFindFieldFocus = 2
 
 func (a *App) openMassRenameDialog(p *panel.State) {
 	src, err := ops.ResolveSource(p)
@@ -39,7 +43,7 @@ func (a *App) openMassRenameDialog(p *panel.State) {
 		Open:                    true,
 		DialogType:              ui.FileDialogMassRename,
 		Fields:                  fields,
-		FocusedField:            0,
+		FocusedField:            massRenameFindFieldFocus,
 		MassRenameMode:          ui.MassRenameModeUISimple,
 		MassRenameCaseFold:      false,
 		MassRenamePreviewScroll: 0,
@@ -78,6 +82,8 @@ func (a *App) recomputeMassRenamePreview() {
 	if len(d.MassRenameSources) == 0 {
 		d.MassRenamePreviewBefore = nil
 		d.MassRenamePreviewAfter = nil
+		d.MassRenamePreviewBeforeRemoved = nil
+		d.MassRenamePreviewAfterAdded = nil
 		return
 	}
 	entries := make([]localfs.Entry, len(d.MassRenameSources))
@@ -116,23 +122,37 @@ func (a *App) recomputeMassRenamePreview() {
 		d.Message = err.Error()
 		d.MassRenamePreviewBefore = []string{"! " + err.Error()}
 		d.MassRenamePreviewAfter = []string{""}
+		d.MassRenamePreviewBeforeRemoved = nil
+		d.MassRenamePreviewAfterAdded = nil
 		return
+	}
+	if len(d.Fields) > 0 && !d.Fields[0].InputInvalid && !ops.MassRenameFindMatchesAny(rows, mode, find, caseFold, rx) {
+		d.Fields[0].InputInvalid = true
 	}
 	if err := ops.MassRenameValidateRows(rows); err != nil {
 		d.Message = err.Error()
 	}
 	before := make([]string, 0, len(rows)+1)
 	after := make([]string, 0, len(rows)+1)
+	beforeRemoved := make([][]search.Range, 0, len(rows)+1)
+	afterAdded := make([][]search.Range, 0, len(rows)+1)
 	if d.Message != "" {
 		before = append(before, "! "+d.Message)
 		after = append(after, "")
+		beforeRemoved = append(beforeRemoved, nil)
+		afterAdded = append(afterAdded, nil)
 	}
 	for _, r := range rows {
+		removed, added := ui.MassRenameDiff(r.OldBase, r.NewBase)
 		before = append(before, r.OldBase)
 		after = append(after, r.NewBase)
+		beforeRemoved = append(beforeRemoved, removed)
+		afterAdded = append(afterAdded, added)
 	}
 	d.MassRenamePreviewBefore = before
 	d.MassRenamePreviewAfter = after
+	d.MassRenamePreviewBeforeRemoved = beforeRemoved
+	d.MassRenamePreviewAfterAdded = afterAdded
 	_, h := a.screen.Size()
 	vp := ui.MassRenamePreviewViewportRows(h)
 	ui.MassRenameEnsurePreviewScroll(&a.model.FileDialog, vp, len(before))
@@ -156,19 +176,19 @@ func (a *App) applyMassRenameModeFromFocus() {
 func (a *App) executeMassRename() {
 	d := &a.model.FileDialog
 	a.recomputeMassRenamePreview()
-	if d.DialogType == ui.FileDialogMassRename &&
-		d.MassRenameMode == ui.MassRenameModeUIRegex &&
-		len(d.Fields) > 0 && d.Fields[0].InputInvalid {
+	if d.DialogType == ui.FileDialogMassRename && len(d.Fields) > 0 && d.Fields[0].InputInvalid {
 		find := d.Fields[0].Value
-		if _, err := ops.MassRenameCompileRegex(find); err != nil {
-			msg := ops.MassRenameRegexCompileUserMessage(err)
-			if msg == "" {
-				msg = err.Error()
+		if d.MassRenameMode == ui.MassRenameModeUIRegex {
+			if _, err := ops.MassRenameCompileRegex(find); err != nil {
+				msg := ops.MassRenameRegexCompileUserMessage(err)
+				if msg == "" {
+					msg = err.Error()
+				}
+				a.setTransientMessage(msg, ui.MessageUrgencyWarn)
+				return
 			}
-			a.setTransientMessage(msg, ui.MessageUrgencyWarn)
-		} else {
-			a.setTransientMessage("Invalid regular expression", ui.MessageUrgencyWarn)
 		}
+		a.setTransientMessage("No selected file names match", ui.MessageUrgencyWarn)
 		return
 	}
 	if strings.TrimSpace(d.Message) != "" {

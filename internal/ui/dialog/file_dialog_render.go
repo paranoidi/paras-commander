@@ -223,7 +223,6 @@ func fileDialogWidth(screenWidth int, state FileDialogState) int {
 			"Case insensitive find",
 			"Pattern",
 			"Replacement",
-			"PgUp/PgDn scroll preview",
 		} {
 			lw := utf8.RuneCountInString(label) + 8
 			if lw > minWidth {

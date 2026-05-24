@@ -3,6 +3,7 @@ package ui
 import (
 	"github.com/gdamore/tcell/v2"
 
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
 )
@@ -171,6 +172,11 @@ func MassRenamePreviewViewportRows(layoutHeight int) int {
 // MassRenameEnsurePreviewScroll clamps MassRenamePreviewScroll to keep the viewport valid.
 func MassRenameEnsurePreviewScroll(st *FileDialogState, viewportRows, totalRows int) {
 	dialog.MassRenameEnsurePreviewScroll(st, viewportRows, totalRows)
+}
+
+// MassRenameDiff returns highlight ranges for mass-rename preview columns.
+func MassRenameDiff(old, new string) ([]search.Range, []search.Range) {
+	return dialog.MassRenameDiff(old, new)
 }
 
 // ApplyRenameSanitize applies dot/underscore-to-space cleanups (delegates to dialog).
