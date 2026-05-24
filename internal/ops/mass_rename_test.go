@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/search"
 )
 
 func TestMassRenameComputeSimple(t *testing.T) {
@@ -243,4 +244,132 @@ func TestMassRenameComputeRegexNilIsIdentity(t *testing.T) {
 	if len(rows) != 1 || rows[0].NewBase != "x.txt" {
 		t.Fatalf("got %#v", rows)
 	}
+}
+
+func TestMassRenameMatchRangesSimple(t *testing.T) {
+	got := MassRenameMatchRanges("foo_a_foo.txt", MassRenameModeSimple, "foo", false, nil)
+	want := []search.Range{{Start: 0, End: 3}, {Start: 6, End: 9}}
+	if !massRenameRangesEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestMassRenameMatchRangesSimpleCaseFold(t *testing.T) {
+	got := MassRenameMatchRanges("Alpha.txt", MassRenameModeSimple, "alpha", true, nil)
+	want := []search.Range{{Start: 0, End: 5}}
+	if !massRenameRangesEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestMassRenameMatchRangesRegex(t *testing.T) {
+	re, err := MassRenameCompileRegex(`\.txt$`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := MassRenameMatchRanges("a.txt", MassRenameModeRegex, "", false, re)
+	want := []search.Range{{Start: 1, End: 5}}
+	if !massRenameRangesEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestMassRenameMatchRangesEmptyFind(t *testing.T) {
+	if got := MassRenameMatchRanges("a.txt", MassRenameModeSimple, "", false, nil); got != nil {
+		t.Fatalf("got %v, want nil", got)
+	}
+}
+
+func TestMassRenameBeforePreviewHighlightRanges_emptyReplace(t *testing.T) {
+	match := []search.Range{{Start: 0, End: 3}, {Start: 6, End: 9}}
+	removed, replaced := MassRenameBeforePreviewHighlightRanges(nil, match, "")
+	wantRemoved := match
+	if !massRenameRangesEqual(removed, wantRemoved) {
+		t.Fatalf("removed: got %v, want %v", removed, wantRemoved)
+	}
+	if replaced != nil {
+		t.Fatalf("replaced: got %v, want nil", replaced)
+	}
+}
+
+func TestMassRenameBeforePreviewHighlightRanges_emptyReplaceMergesLCS(t *testing.T) {
+	lcs := []search.Range{{Start: 0, End: 2}}
+	match := []search.Range{{Start: 1, End: 4}}
+	removed, replaced := MassRenameBeforePreviewHighlightRanges(lcs, match, "")
+	wantRemoved := []search.Range{{Start: 0, End: 4}}
+	if !massRenameRangesEqual(removed, wantRemoved) {
+		t.Fatalf("removed: got %v, want %v", removed, wantRemoved)
+	}
+	if replaced != nil {
+		t.Fatalf("replaced: got %v, want nil", replaced)
+	}
+}
+
+func TestMassRenameBeforePreviewHighlightRanges_nonemptyReplace(t *testing.T) {
+	lcs := []search.Range{{Start: 4, End: 5}}
+	match := []search.Range{{Start: 0, End: 3}}
+	removed, replaced := MassRenameBeforePreviewHighlightRanges(lcs, match, "bar")
+	if !massRenameRangesEqual(removed, lcs) {
+		t.Fatalf("removed: got %v, want %v", removed, lcs)
+	}
+	if !massRenameRangesEqual(replaced, match) {
+		t.Fatalf("replaced: got %v, want %v", replaced, match)
+	}
+}
+
+func TestMassRenameBeforePreviewHighlightRanges_whitespaceReplace(t *testing.T) {
+	match := []search.Range{{Start: 0, End: 3}}
+	removed, replaced := MassRenameBeforePreviewHighlightRanges(nil, match, " ")
+	if removed != nil {
+		t.Fatalf("removed: got %v, want nil", removed)
+	}
+	if !massRenameRangesEqual(replaced, match) {
+		t.Fatalf("replaced: got %v, want %v", replaced, match)
+	}
+}
+
+func TestMassRenameReplacementRangesSharedRune(t *testing.T) {
+	old := "Season 11M"
+	got := MassRenameReplacementRanges(old, MassRenameModeSimple, "M", "xMissing", false, nil)
+	want := []search.Range{{Start: 9, End: 17}}
+	if !massRenameRangesEqual(got, want) {
+		t.Fatalf("xMissing: got %v, want %v", got, want)
+	}
+	got = MassRenameReplacementRanges(old, MassRenameModeSimple, "M", "Missing", false, nil)
+	want = []search.Range{{Start: 9, End: 16}}
+	if !massRenameRangesEqual(got, want) {
+		t.Fatalf("Missing: got %v, want %v", got, want)
+	}
+}
+
+func TestMassRenameReplacementRangesMultiple(t *testing.T) {
+	got := MassRenameReplacementRanges("foo_foo.txt", MassRenameModeSimple, "foo", "x", false, nil)
+	want := []search.Range{{Start: 0, End: 1}, {Start: 2, End: 3}}
+	if !massRenameRangesEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestMassRenameReplacementRangesRegex(t *testing.T) {
+	re, err := MassRenameCompileRegex(`M`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := MassRenameReplacementRanges("Season 11M", MassRenameModeRegex, "", "Missing", false, re)
+	want := []search.Range{{Start: 9, End: 16}}
+	if !massRenameRangesEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func massRenameRangesEqual(a, b []search.Range) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

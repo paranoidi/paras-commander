@@ -150,6 +150,7 @@ option.selected = { fg = "yellow", bg = "bright_black" }
 [dialog.massrename]
 before = { fg = "white" }
 before.removed = { fg = "red", bold = true }
+before.replaced = { fg = "yellow", bold = true }
 after = { fg = "yellow" }
 after.added = { fg = "green", bold = true }
 

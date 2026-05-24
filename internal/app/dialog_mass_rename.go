@@ -83,6 +83,7 @@ func (a *App) recomputeMassRenamePreview() {
 		d.MassRenamePreviewBefore = nil
 		d.MassRenamePreviewAfter = nil
 		d.MassRenamePreviewBeforeRemoved = nil
+		d.MassRenamePreviewBeforeReplaced = nil
 		d.MassRenamePreviewAfterAdded = nil
 		return
 	}
@@ -123,6 +124,7 @@ func (a *App) recomputeMassRenamePreview() {
 		d.MassRenamePreviewBefore = []string{"! " + err.Error()}
 		d.MassRenamePreviewAfter = []string{""}
 		d.MassRenamePreviewBeforeRemoved = nil
+		d.MassRenamePreviewBeforeReplaced = nil
 		d.MassRenamePreviewAfterAdded = nil
 		return
 	}
@@ -135,23 +137,29 @@ func (a *App) recomputeMassRenamePreview() {
 	before := make([]string, 0, len(rows)+1)
 	after := make([]string, 0, len(rows)+1)
 	beforeRemoved := make([][]search.Range, 0, len(rows)+1)
+	beforeReplaced := make([][]search.Range, 0, len(rows)+1)
 	afterAdded := make([][]search.Range, 0, len(rows)+1)
 	if d.Message != "" {
 		before = append(before, "! "+d.Message)
 		after = append(after, "")
 		beforeRemoved = append(beforeRemoved, nil)
+		beforeReplaced = append(beforeReplaced, nil)
 		afterAdded = append(afterAdded, nil)
 	}
 	for _, r := range rows {
-		removed, added := ui.MassRenameDiff(r.OldBase, r.NewBase)
+		lcsRemoved, _ := ui.MassRenameDiff(r.OldBase, r.NewBase)
+		matchRanges := ops.MassRenameMatchRanges(r.OldBase, mode, find, caseFold, rx)
+		removed, replaced := ops.MassRenameBeforePreviewHighlightRanges(lcsRemoved, matchRanges, replace)
 		before = append(before, r.OldBase)
 		after = append(after, r.NewBase)
 		beforeRemoved = append(beforeRemoved, removed)
-		afterAdded = append(afterAdded, added)
+		beforeReplaced = append(beforeReplaced, replaced)
+		afterAdded = append(afterAdded, ops.MassRenameReplacementRanges(r.OldBase, mode, find, replace, caseFold, rx))
 	}
 	d.MassRenamePreviewBefore = before
 	d.MassRenamePreviewAfter = after
 	d.MassRenamePreviewBeforeRemoved = beforeRemoved
+	d.MassRenamePreviewBeforeReplaced = beforeReplaced
 	d.MassRenamePreviewAfterAdded = afterAdded
 	_, h := a.screen.Size()
 	vp := ui.MassRenamePreviewViewportRows(h)

@@ -96,6 +96,26 @@ func massRenameAppendRange(ranges []search.Range, start, end int) []search.Range
 	return append(ranges, search.Range{Start: start, End: end})
 }
 
+// massRenameBeforePreviewRow prepares display text and highlight spans for the before preview column.
+func massRenameBeforePreviewRow(line string, removed, replaced []search.Range, width int, base, removedStyle, replacedStyle tcell.Style) (string, []primitive.Span) {
+	if width <= 0 {
+		return "", nil
+	}
+	orig := []rune(line)
+	dispStr := line
+	if len(orig) > width {
+		dispStr = primitive.TruncateRight(line, width)
+	}
+	disp := []rune(dispStr)
+	_, bg, _ := base.Decompose()
+	removedStyle = removedStyle.Background(bg)
+	replacedStyle = replacedStyle.Background(bg)
+	var spans []primitive.Span
+	spans = append(spans, fuzzyHighlightSpans(orig, disp, replaced, replacedStyle)...)
+	spans = append(spans, fuzzyHighlightSpans(orig, disp, removed, removedStyle)...)
+	return dispStr, spans
+}
+
 // massRenamePreviewRow prepares display text and highlight spans for one preview column.
 func massRenamePreviewRow(line string, ranges []search.Range, width int, base, highlight tcell.Style) (string, []primitive.Span) {
 	if width <= 0 {

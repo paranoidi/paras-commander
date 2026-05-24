@@ -80,6 +80,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	labelStyle := styles.DialogText.Background(dbg)
 	beforeBase := styles.DialogMassRenameBefore.Background(dbg)
 	beforeRemoved := styles.DialogMassRenameBeforeRemoved
+	beforeReplaced := styles.DialogMassRenameBeforeReplaced
 	afterBase := styles.DialogMassRenameAfter.Background(dbg)
 	afterAdded := styles.DialogMassRenameAfterAdded
 	leftCol := rect.X + 2
@@ -156,6 +157,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	before := state.MassRenamePreviewBefore
 	after := state.MassRenamePreviewAfter
 	beforeRemovedRanges := state.MassRenamePreviewBeforeRemoved
+	beforeReplacedRanges := state.MassRenamePreviewBeforeReplaced
 	afterAddedRanges := state.MassRenamePreviewAfterAdded
 	n := len(before)
 	if len(after) < n {
@@ -203,14 +205,17 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			y++
 			continue
 		}
-		var removed, added []search.Range
+		var removed, replaced, added []search.Range
 		if i < len(beforeRemovedRanges) {
 			removed = beforeRemovedRanges[i]
+		}
+		if i < len(beforeReplacedRanges) {
+			replaced = beforeReplacedRanges[i]
 		}
 		if i < len(afterAddedRanges) {
 			added = afterAddedRanges[i]
 		}
-		lbText, lbSpans := massRenamePreviewRow(lb, removed, leftW, beforeBase, beforeRemoved)
+		lbText, lbSpans := massRenameBeforePreviewRow(lb, removed, replaced, leftW, beforeBase, beforeRemoved, beforeReplaced)
 		rbText, rbSpans := massRenamePreviewRow(rb, added, rightW, afterBase, afterAdded)
 		primitive.StyledText(screen, leftCol, y, leftW, lbText, beforeBase, lbSpans)
 		if sepW == 1 {

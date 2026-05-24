@@ -6,11 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/search"
 )
 
 // MassRenameMode selects literal vs regexp basename transform.
@@ -260,6 +262,201 @@ func massRenameSimpleFindMatches(oldBase, find string, caseFold bool) bool {
 		return indexFold([]rune(oldBase), []rune(find)) >= 0
 	}
 	return strings.Contains(oldBase, find)
+}
+
+// MassRenameBeforePreviewHighlightRanges splits before-column preview highlights.
+// When replace is empty, find/regex match ranges use before.removed (red); otherwise matches
+// use before.replaced (yellow) and lcsRemoved continues to use before.removed for other deletions.
+func MassRenameBeforePreviewHighlightRanges(lcsRemoved, matchRanges []search.Range, replace string) (removed, replaced []search.Range) {
+	if replace == "" {
+		return massRenameMergeRanges(append(append([]search.Range(nil), lcsRemoved...), matchRanges...)), nil
+	}
+	return lcsRemoved, matchRanges
+}
+
+func massRenameMergeRanges(ranges []search.Range) []search.Range {
+	if len(ranges) == 0 {
+		return nil
+	}
+	sort.Slice(ranges, func(i, j int) bool {
+		if ranges[i].Start == ranges[j].Start {
+			return ranges[i].End < ranges[j].End
+		}
+		return ranges[i].Start < ranges[j].Start
+	})
+	merged := []search.Range{ranges[0]}
+	for _, current := range ranges[1:] {
+		last := &merged[len(merged)-1]
+		if current.Start <= last.End {
+			if current.End > last.End {
+				last.End = current.End
+			}
+			continue
+		}
+		merged = append(merged, current)
+	}
+	return merged
+}
+
+// MassRenameMatchRanges returns rune-index half-open ranges in oldBase matched by find (simple) or rx (regex).
+func MassRenameMatchRanges(oldBase string, mode MassRenameMode, find string, simpleCaseFold bool, rx *regexp.Regexp) []search.Range {
+	switch mode {
+	case MassRenameModeSimple:
+		if find == "" {
+			return nil
+		}
+		return massRenameSimpleFindRanges(oldBase, find, simpleCaseFold)
+	case MassRenameModeRegex:
+		if rx == nil {
+			return nil
+		}
+		return massRenameRegexFindRanges(oldBase, rx)
+	default:
+		return nil
+	}
+}
+
+func massRenameSimpleFindRanges(oldBase, find string, caseFold bool) []search.Range {
+	h := []rune(oldBase)
+	n := []rune(find)
+	if len(n) == 0 {
+		return nil
+	}
+	var ranges []search.Range
+	pos := 0
+	for {
+		var rel int
+		if caseFold {
+			rel = indexFold(h[pos:], n)
+		} else {
+			rel = indexRunes(h[pos:], n)
+		}
+		if rel < 0 {
+			break
+		}
+		abs := pos + rel
+		ranges = massRenameAppendRange(ranges, abs, abs+len(n))
+		pos = abs + len(n)
+	}
+	return ranges
+}
+
+func indexRunes(haystack, needle []rune) int {
+	if len(needle) == 0 {
+		return 0
+	}
+	last := len(haystack) - len(needle)
+	if last < 0 {
+		return -1
+	}
+	for i := 0; i <= last; i++ {
+		match := true
+		for j := range needle {
+			if haystack[i+j] != needle[j] {
+				match = false
+				break
+			}
+		}
+		if match {
+			return i
+		}
+	}
+	return -1
+}
+
+func massRenameRegexFindRanges(oldBase string, rx *regexp.Regexp) []search.Range {
+	idxs := rx.FindAllStringIndex(oldBase, -1)
+	if len(idxs) == 0 {
+		return nil
+	}
+	ranges := make([]search.Range, 0, len(idxs))
+	for _, pair := range idxs {
+		start := utf8.RuneCountInString(oldBase[:pair[0]])
+		end := utf8.RuneCountInString(oldBase[:pair[1]])
+		ranges = massRenameAppendRange(ranges, start, end)
+	}
+	return ranges
+}
+
+func massRenameAppendRange(ranges []search.Range, start, end int) []search.Range {
+	if start >= end {
+		return ranges
+	}
+	if n := len(ranges); n > 0 && ranges[n-1].End == start {
+		ranges[n-1].End = end
+		return ranges
+	}
+	return append(ranges, search.Range{Start: start, End: end})
+}
+
+// MassRenameReplacementRanges returns rune-index half-open ranges in the transformed basename
+// where replacement text was inserted (simple find/replace or expanded regex template).
+func MassRenameReplacementRanges(oldBase string, mode MassRenameMode, find, replace string, simpleCaseFold bool, rx *regexp.Regexp) []search.Range {
+	switch mode {
+	case MassRenameModeSimple:
+		if find == "" {
+			return nil
+		}
+		return massRenameSimpleReplacementRanges(oldBase, find, replace, simpleCaseFold)
+	case MassRenameModeRegex:
+		if rx == nil {
+			return nil
+		}
+		return massRenameRegexReplacementRanges(oldBase, rx, replace)
+	default:
+		return nil
+	}
+}
+
+func massRenameSimpleReplacementRanges(oldBase, find, replace string, caseFold bool) []search.Range {
+	h := []rune(oldBase)
+	n := []rune(find)
+	repl := []rune(replace)
+	if len(n) == 0 {
+		return nil
+	}
+	var ranges []search.Range
+	pos, outPos := 0, 0
+	for {
+		var rel int
+		if caseFold {
+			rel = indexFold(h[pos:], n)
+		} else {
+			rel = indexRunes(h[pos:], n)
+		}
+		if rel < 0 {
+			break
+		}
+		abs := pos + rel
+		outPos += abs - pos
+		ranges = massRenameAppendRange(ranges, outPos, outPos+len(repl))
+		outPos += len(repl)
+		pos = abs + len(n)
+	}
+	return ranges
+}
+
+func massRenameRegexReplacementRanges(oldBase string, rx *regexp.Regexp, replace string) []search.Range {
+	locs := rx.FindAllStringSubmatchIndex(oldBase, -1)
+	if len(locs) == 0 {
+		return nil
+	}
+	var ranges []search.Range
+	outPos := 0
+	lastByte := 0
+	for _, loc := range locs {
+		if len(loc) < 2 {
+			continue
+		}
+		start, end := loc[0], loc[1]
+		outPos += utf8.RuneCountInString(oldBase[lastByte:start])
+		repl := string(rx.ExpandString(nil, replace, oldBase, loc))
+		replRunes := utf8.RuneCountInString(repl)
+		ranges = massRenameAppendRange(ranges, outPos, outPos+replRunes)
+		outPos += replRunes
+		lastByte = end
+	}
+	return ranges
 }
 
 // MassRenameHasWork returns true if at least one row would change its basename.
