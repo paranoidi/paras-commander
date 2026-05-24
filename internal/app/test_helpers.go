@@ -84,6 +84,7 @@ func loadTestTheme(t *testing.T) (theme.Theme, config.Paths) {
 		"dialog.frame", "dialog.title", "dialog.text", "dialog.surface", "dialog.accent",
 		"dialog.input.active", "dialog.input.active.placeholder", "dialog.input.active.error", "dialog.input.inactive",
 		"dialog.input.inactive.placeholder", "dialog.input.inactive.error", "dialog.button.inactive", "dialog.button.active",
+		"dialog.button.active_destructive",
 		"dialog.option.inactive", "dialog.option.active", "dialog.option.selected",
 		"dialog.massrename.before", "dialog.massrename.before.removed", "dialog.massrename.before.replaced",
 		"dialog.massrename.after", "dialog.massrename.after.added",

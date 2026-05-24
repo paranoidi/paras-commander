@@ -25,11 +25,14 @@ func DialogButtonWidth(label string) int {
 // shortcut is the letter inside label to highlight (e.g. 'O' for "OK").
 // Output shape: space, "[", space, label, space, "]", space so theme backgrounds cover the chrome.
 // Returns the rendered width in rune columns.
-func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune, focused bool, styles theme.Theme) int {
+func DrawDialogButton(screen tcell.Screen, x, y int, label string, shortcut rune, focused, destructive bool, styles theme.Theme) int {
 	var baseStyle tcell.Style
-	if focused {
+	switch {
+	case focused && destructive:
+		baseStyle = styles.DialogButtonActiveDestructive
+	case focused:
 		baseStyle = styles.DialogButtonActive
-	} else {
+	default:
 		baseStyle = styles.DialogButtonInactive
 	}
 	out := x

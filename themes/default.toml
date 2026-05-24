@@ -136,6 +136,7 @@ title = { bold = true }
 # bg matters for the path-picker trailing glyph when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "white", bg = "black", bold = true }
 button.active = { fg = "black", bg = "cyan" }
+button.active_destructive = { fg = "white", bg = "red" }
 button.inactive = { fg = "white", bg = "black" }
 input.active = { fg = "bright_white", bold = true }
 input.active.error = { fg = "red" }

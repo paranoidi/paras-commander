@@ -3559,7 +3559,7 @@ func TestFileMenuDeleteOpensDeleteConfirmation(t *testing.T) {
 	if app.model.FileDialog.DialogType != ui.FileDialogDelete {
 		t.Fatalf("dialog type = %d, want FileDialogDelete", app.model.FileDialog.DialogType)
 	}
-	if got, want := app.model.FileDialog.DeleteSummary, "Delete file"; got != want {
+	if got, want := app.model.FileDialog.DeleteSummary, "Delete file?"; got != want {
 		t.Fatalf("DeleteSummary = %q, want %q", got, want)
 	}
 	if len(app.model.FileDialog.DeleteEntries) != 1 || app.model.FileDialog.DeleteEntries[0].Name != "test.txt" {

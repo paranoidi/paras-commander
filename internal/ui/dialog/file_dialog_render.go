@@ -18,7 +18,7 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 		return
 	}
 
-	width := fileDialogWidth(layout.Width, state)
+	width := fileDialogWidth(layout.Width, state, deleteIconLead)
 	if width < 20 {
 		return
 	}
@@ -158,7 +158,7 @@ func fileDialogTitle(dialogType FileDialogType) string {
 	}
 }
 
-func fileDialogWidth(screenWidth int, state FileDialogState) int {
+func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead int) int {
 	minWidth := 30
 	// Field row width follows labels only; values scroll in drawInputField / drawPathInputRow.
 	for _, field := range state.Fields {
@@ -170,8 +170,12 @@ func fileDialogWidth(screenWidth int, state FileDialogState) int {
 	if len(state.Fields) > 0 {
 		minWidth = max(minWidth, PreferredFormDialogWidth)
 	}
-	// For delete dialog, use summary, warning, and listed names.
+	// For delete dialog, use summary, warning, and listed names (plus devicon strip when shown).
 	if state.DialogType == FileDialogDelete {
+		iconLead := deleteListIconLead
+		if iconLead < 0 {
+			iconLead = 0
+		}
 		lineWidth := 30
 		for _, line := range []string{state.DeleteSummary, state.DeleteWarning} {
 			if line == "" {
@@ -183,7 +187,7 @@ func fileDialogWidth(screenWidth int, state FileDialogState) int {
 			}
 		}
 		for _, entry := range state.DeleteEntries {
-			lw := utf8.RuneCountInString(entry.Name) + 4
+			lw := utf8.RuneCountInString(entry.Name) + 4 + iconLead
 			if lw > lineWidth {
 				lineWidth = lw
 			}
@@ -633,7 +637,7 @@ func FileDialogCancelFocusIndex(state FileDialogState) int {
 
 func drawDeleteButtons(screen tcell.Screen, rect Rect, y int, state FileDialogState, styles theme.Theme) {
 	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
-		{Label: "Yes", Shortcut: 'Y', Focused: state.FocusedField == 0},
+		{Label: "Yes", Shortcut: 'Y', Focused: state.FocusedField == 0, Destructive: true},
 		{Label: "No", Shortcut: 'N', Focused: state.FocusedField == 1},
 	}, styles)
 }

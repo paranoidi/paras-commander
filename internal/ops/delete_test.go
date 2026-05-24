@@ -9,8 +9,8 @@ import (
 func TestDeleteConfirmContentSingleFile(t *testing.T) {
 	source := Source{Entries: []localfs.Entry{{Name: "keep.txt", Type: localfs.EntryFile}}}
 	summary, warning := DeleteConfirmContent(source)
-	if summary != "Delete file" {
-		t.Fatalf("summary = %q, want %q", summary, "Delete file")
+	if summary != "Delete file?" {
+		t.Fatalf("summary = %q, want %q", summary, "Delete file?")
 	}
 	if warning != "" {
 		t.Fatalf("warning = %q, want empty", warning)
@@ -20,8 +20,8 @@ func TestDeleteConfirmContentSingleFile(t *testing.T) {
 func TestDeleteConfirmContentSingleDirectory(t *testing.T) {
 	source := Source{Entries: []localfs.Entry{{Name: "proj", Type: localfs.EntryDirectory}}}
 	summary, warning := DeleteConfirmContent(source)
-	if summary != "Delete directory" {
-		t.Fatalf("summary = %q, want %q", summary, "Delete directory")
+	if summary != "Delete directory?" {
+		t.Fatalf("summary = %q, want %q", summary, "Delete directory?")
 	}
 	if warning != "" {
 		t.Fatalf("warning = %q, want empty", warning)

@@ -191,9 +191,9 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	if btnStartX < previewLeft {
 		btnStartX = previewLeft
 	}
-	draw.DrawDialogButton(screen, btnStartX, previewY, "Selected", 'S', false, styles)
+	draw.DrawDialogButton(screen, btnStartX, previewY, "Selected", 'S', false, false, styles)
 	btnStartX += draw.DialogButtonWidth("Selected") + btnGap
-	draw.DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', true, styles)
+	draw.DrawDialogButton(screen, btnStartX, previewY, "Unselected", 'U', true, false, styles)
 
 	// ============================================================
 	// OUTER SEPARATOR

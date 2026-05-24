@@ -76,7 +76,7 @@ All dialogs (modal overlays) must follow these navigation and rendering rules:
 - The border uses `styles.DialogFrame` on the dialog background.
 - The title row is built from `styles.DialogTitle` **attributes** (`bold`, etc.) with **glyph foreground** taken from `dialog.frame` and **glyph background** from `dialog.surface` (see `DrawDialogFrame` in `internal/ui/dialog/internal/draw/chrome.go`).
 - All content rows and help text use the dialog background as their background color.
-- Buttons use `drawDialogButton()` helper which renders ` [ label ] ` (outer spaces plus single spaces inside brackets) using `DialogButtonActive` / `DialogButtonNormal` **as defined in the theme** (foreground and background; do not substitute `dialog.surface` for button fill).
+- Buttons use `drawDialogButton()` helper which renders ` [ label ] ` (outer spaces plus single spaces inside brackets) using `DialogButtonActive` / `DialogButtonInactive` (and `DialogButtonActiveDestructive` when `DialogButtonSpec.Destructive` is set) **as defined in the theme** (foreground and background; do not substitute `dialog.surface` for button fill).
   - Shortcut letter in `dialog.accent` foreground color (`Theme.DialogAccent`), bold
 - Checkbox and radio rows use `dialog.option.inactive`, `dialog.option.active` (focused row), and `dialog.option.selected` (checked radio or checked checkbox when the row is not focused).
 - Do not use `styles.DialogText` for input row fill; input rows use `theme.Theme.DialogInputPair(focused)` (resolved from `dialog.input.active` / `dialog.input.inactive` and their `.placeholder` entries). Those styles carry both foreground and background for the input row—do not substitute `DialogText` for fill.

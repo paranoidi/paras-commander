@@ -49,11 +49,11 @@ func TestFileDialogWidthIgnoresFieldValueLength(t *testing.T) {
 			for i := range s.Fields {
 				s.Fields[i].Value = shortVal
 			}
-			wShort := fileDialogWidth(screenW, s)
+			wShort := fileDialogWidth(screenW, s, 0)
 			for i := range s.Fields {
 				s.Fields[i].Value = longVal
 			}
-			wLong := fileDialogWidth(screenW, s)
+			wLong := fileDialogWidth(screenW, s, 0)
 			if wShort != wLong {
 				t.Fatalf("width short=%d long=%d (must not depend on value length)", wShort, wLong)
 			}
@@ -70,7 +70,7 @@ func TestFileDialogWidthClampsToScreen(t *testing.T) {
 		Fields:     []FileDialogField{{Label: "Name", Value: "x"}},
 	}
 	const screenW = 50
-	got := fileDialogWidth(screenW, s)
+	got := fileDialogWidth(screenW, s, 0)
 	want := screenW - 4
 	if got != want {
 		t.Fatalf("fileDialogWidth(%d, rename) = %d, want %d", screenW, got, want)
@@ -85,8 +85,8 @@ func TestFileDialogAddBookmarkWidthIgnoresMessagePathLength(t *testing.T) {
 		Fields:     []FileDialogField{{Label: "Name", Value: "n"}},
 		Message:    "",
 	}
-	wShort := fileDialogWidth(80, withMessage(base, shortPath))
-	wLong := fileDialogWidth(80, withMessage(base, longPath))
+	wShort := fileDialogWidth(80, withMessage(base, shortPath), 0)
+	wLong := fileDialogWidth(80, withMessage(base, longPath), 0)
 	if wShort != wLong {
 		t.Fatalf("add-bookmark width depends on Message length: short=%d long=%d", wShort, wLong)
 	}
@@ -95,4 +95,34 @@ func TestFileDialogAddBookmarkWidthIgnoresMessagePathLength(t *testing.T) {
 func withMessage(s FileDialogState, msg string) FileDialogState {
 	s.Message = msg
 	return s
+}
+
+func TestFileDialogDeleteWidthReservesIconStrip(t *testing.T) {
+	const name = "45.Years.2015.LIMITED.1080p.BluRay.X264-XXX"
+	const iconLead = 2
+	state := FileDialogState{
+		DialogType:    FileDialogDelete,
+		DeleteSummary: "Delete file",
+		DeleteEntries: []DeleteListEntry{{Name: name}},
+	}
+	const screenW = 120
+	got := fileDialogWidth(screenW, state, iconLead)
+	want := len([]rune(name)) + 4 + iconLead
+	if got != want {
+		t.Fatalf("width = %d, want %d (name + padding + icon strip)", got, want)
+	}
+}
+
+func TestFileDialogDeleteWidthNoIconStripWhenLeadZero(t *testing.T) {
+	const name = "short.txt"
+	state := FileDialogState{
+		DialogType:    FileDialogDelete,
+		DeleteSummary: "Delete file",
+		DeleteEntries: []DeleteListEntry{{Name: name}},
+	}
+	got := fileDialogWidth(80, state, 0)
+	want := len([]rune(name)) + 4
+	if got < want {
+		t.Fatalf("width = %d, want at least %d", got, want)
+	}
 }

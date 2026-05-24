@@ -148,6 +148,7 @@ type Theme struct {
 	DialogInputInactiveError       tcell.Style
 	DialogButtonInactive           tcell.Style
 	DialogButtonActive             tcell.Style
+	DialogButtonActiveDestructive  tcell.Style
 	DialogOptionInactive           tcell.Style
 	DialogOptionActive             tcell.Style
 	DialogOptionSelected           tcell.Style
@@ -517,6 +518,7 @@ var requiredStyleKeys = []string{
 	"dialog.input.inactive.error",
 	"dialog.button.inactive",
 	"dialog.button.active",
+	"dialog.button.active_destructive",
 	"dialog.option.inactive",
 	"dialog.option.active",
 	"dialog.option.selected",
@@ -960,6 +962,7 @@ func parse(data []byte) (Theme, error) {
 		DialogInputInactiveError:       styles["dialog.input.inactive.error"],
 		DialogButtonInactive:           styles["dialog.button.inactive"],
 		DialogButtonActive:             styles["dialog.button.active"],
+		DialogButtonActiveDestructive:  styles["dialog.button.active_destructive"],
 		DialogOptionInactive:           styles["dialog.option.inactive"],
 		DialogOptionActive:             styles["dialog.option.active"],
 		DialogOptionSelected:           styles["dialog.option.selected"],

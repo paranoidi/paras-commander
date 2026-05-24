@@ -2,7 +2,6 @@ package dialog
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -144,11 +143,7 @@ func drawFileDeleteDialogContent(screen tcell.Screen, rect Rect, state FileDialo
 		if showIcons && paintIcon != nil && iconLead > 0 {
 			paintIcon(screen, listCol, y, entry, styles)
 		}
-		line := entry.Name
-		if utf8.RuneCountInString(line) > textW {
-			line = primitive.TruncateRight(line, textW)
-		}
-		primitive.Text(screen, textX, y, textW, line, listStyle)
+		primitive.Text(screen, textX, y, textW, entry.Name, listStyle)
 		y++
 	}
 	if y >= bottom {

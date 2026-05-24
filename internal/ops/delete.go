@@ -25,7 +25,7 @@ func DeleteConfirmContent(source Source) (summary, warning string) {
 		if source.Entries[0].Type == localfs.EntryDirectory {
 			kind = "directory"
 		}
-		return fmt.Sprintf("Delete %s", kind), ""
+		return fmt.Sprintf("Delete %s?", kind), ""
 	}
 	summary = fmt.Sprintf("Delete %d selections?", n)
 	dirCount := CountDirectories(source.Entries)

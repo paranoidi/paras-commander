@@ -398,9 +398,10 @@ func DrawScrollingDialogInput(screen tcell.Screen, x, y, width int, value string
 
 // DialogButtonSpec describes one rendered dialog button (label, Alt shortcut, focus).
 type DialogButtonSpec struct {
-	Label    string
-	Shortcut rune
-	Focused  bool
+	Label       string
+	Shortcut    rune
+	Focused     bool
+	Destructive bool
 }
 
 // CenteredDialogRect returns a rectangle of the given size centered in the layout.
@@ -466,6 +467,6 @@ func DrawDialogButtonRowCentered(screen tcell.Screen, rect Rect, y int, buttons 
 		if i > 0 {
 			x += gap
 		}
-		x += DrawDialogButton(screen, x, y, b.Label, b.Shortcut, b.Focused, styles)
+		x += DrawDialogButton(screen, x, y, b.Label, b.Shortcut, b.Focused, b.Destructive, styles)
 	}
 }
