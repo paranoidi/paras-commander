@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"fmt"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -97,8 +98,11 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, s
 
 	cbY := rect.Y + 5
 	draw.DrawDialogCheckbox(screen, cbCol, cbY, "Stay on current volume", 'V', state.StayOnCurrentVolume, state.Focus == 1, styles)
+	cb1W := utf8.RuneCountInString(draw.CheckboxText("Stay on current volume", state.StayOnCurrentVolume)) + 1
+	const cbGap = 4
+	draw.DrawDialogCheckbox(screen, cbCol+cb1W+cbGap, cbY, "Only directories", 'D', state.OnlyDirectories, state.Focus == state.FindDialogOnlyDirsFocus(), styles)
 	if state.ShowSearchSelectionsOption {
-		draw.DrawDialogCheckbox(screen, cbCol, cbY+1, "Search only from selections", 'S', state.SearchOnlySelections, state.Focus == 2, styles)
+		draw.DrawDialogCheckbox(screen, cbCol, cbY+1, "Search only from selections", 'S', state.SearchOnlySelections, state.Focus == state.FindDialogSelectionsFocus(), styles)
 	}
 
 	sepAfterCheckbox := rect.Y + 5 + checkboxRows

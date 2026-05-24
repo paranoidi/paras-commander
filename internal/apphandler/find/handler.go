@@ -512,6 +512,15 @@ func (h *Handler) syncFindDialogRanks() {
 			st.MatchRanges[r.Index] = r.Result.Ranges
 		}
 	}
+	if st.OnlyDirectories {
+		filtered := st.Ranked[:0]
+		for _, idx := range st.Ranked {
+			if idx >= 0 && idx < len(st.Entries) && st.Entries[idx].IsDir {
+				filtered = append(filtered, idx)
+			}
+		}
+		st.Ranked = filtered
+	}
 	if st.Selected >= len(st.Ranked) {
 		if len(st.Ranked) == 0 {
 			st.Selected = 0
@@ -671,6 +680,13 @@ func (h *Handler) ToggleStayOnVolume() {
 	h.restartFindIndexer()
 }
 
+// ToggleOnlyDirectories toggles the only-directories result filter.
+func (h *Handler) ToggleOnlyDirectories() {
+	st := &h.model.FindDialog
+	st.OnlyDirectories = !st.OnlyDirectories
+	h.syncFindDialogRanks()
+}
+
 func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	st := &h.model.FindDialog
 	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle {
@@ -684,6 +700,22 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	if ui.AltDialogCancel(event) {
 		h.CloseDialog()
 		return
+	}
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		switch event.Rune() {
+		case 'v', 'V':
+			h.ToggleStayOnVolume()
+			return
+		case 'd', 'D':
+			h.ToggleOnlyDirectories()
+			return
+		case 's', 'S':
+			if st.FindDialogHasSelectionsCheckbox() {
+				h.ToggleSearchOnlySelections()
+				st.Focus = st.FindDialogSelectionsFocus()
+			}
+			return
+		}
 	}
 
 	if st.Focus == 0 {
@@ -708,12 +740,10 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			h.CloseDialog()
 		case 1:
 			h.ToggleStayOnVolume()
-		case 2:
-			if st.FindDialogHasSelectionsCheckbox() {
-				h.ToggleSearchOnlySelections()
-			} else {
-				h.ActivateDialogOK()
-			}
+		case st.FindDialogOnlyDirsFocus():
+			h.ToggleOnlyDirectories()
+		case st.FindDialogSelectionsFocus():
+			h.ToggleSearchOnlySelections()
 		default:
 			h.ActivateDialogOK()
 		}
@@ -769,8 +799,12 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			if st.Focus == 1 {
 				h.ToggleStayOnVolume()
 			}
+		case 'd', 'D':
+			if st.Focus == st.FindDialogOnlyDirsFocus() {
+				h.ToggleOnlyDirectories()
+			}
 		case 's', 'S':
-			if st.Focus == 2 && st.FindDialogHasSelectionsCheckbox() {
+			if st.Focus == st.FindDialogSelectionsFocus() {
 				h.ToggleSearchOnlySelections()
 			}
 		case 'o', 'O':
@@ -781,22 +815,14 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			switch st.Focus {
 			case 1:
 				h.ToggleStayOnVolume()
-			case 2:
-				if st.FindDialogHasSelectionsCheckbox() {
-					h.ToggleSearchOnlySelections()
-				} else {
-					h.ActivateDialogOK()
-				}
-			case 3:
-				if st.FindDialogHasSelectionsCheckbox() {
-					h.ActivateDialogOK()
-				} else {
-					h.CloseDialog()
-				}
-			case 4:
-				if st.FindDialogHasSelectionsCheckbox() {
-					h.CloseDialog()
-				}
+			case st.FindDialogOnlyDirsFocus():
+				h.ToggleOnlyDirectories()
+			case st.FindDialogSelectionsFocus():
+				h.ToggleSearchOnlySelections()
+			case st.FindDialogOKFocus():
+				h.ActivateDialogOK()
+			case st.FindDialogCancelFocus():
+				h.CloseDialog()
 			}
 		}
 	}

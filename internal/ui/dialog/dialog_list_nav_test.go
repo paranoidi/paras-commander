@@ -45,15 +45,26 @@ func TestFindDialogNavFocusKey(t *testing.T) {
 	}
 	for _, tt := range []row{
 		{0, false, tcell.KeyTab, 1, true},
-		{3, false, tcell.KeyTab, 0, true},
-		{1, false, tcell.KeyDown, 2, true},
-		{2, false, tcell.KeyUp, 1, true},
+		{4, false, tcell.KeyTab, 0, true},
+		{1, false, tcell.KeyRight, 2, true},
+		{2, false, tcell.KeyLeft, 1, true},
+		{1, false, tcell.KeyDown, 3, true},
+		{2, false, tcell.KeyDown, 3, true},
+		{1, false, tcell.KeyUp, 0, true},
+		{2, false, tcell.KeyUp, 0, true},
+		{3, false, tcell.KeyUp, 2, true},
+		{4, false, tcell.KeyUp, 2, true},
 		{0, false, tcell.KeyDown, 0, false},
 		{0, true, tcell.KeyTab, 1, true},
-		{4, true, tcell.KeyTab, 0, true},
-		{1, true, tcell.KeyDown, 2, true},
+		{5, true, tcell.KeyTab, 0, true},
+		{1, true, tcell.KeyRight, 2, true},
+		{2, true, tcell.KeyLeft, 1, true},
+		{1, true, tcell.KeyDown, 3, true},
 		{2, true, tcell.KeyDown, 3, true},
-		{3, true, tcell.KeyUp, 2, true},
+		{3, true, tcell.KeyDown, 4, true},
+		{3, true, tcell.KeyUp, 1, true},
+		{4, true, tcell.KeyUp, 3, true},
+		{5, true, tcell.KeyUp, 3, true},
 	} {
 		gotF, gotH := FindDialogNavFocusKey(tt.focus, tt.hasSelectionsCheckbox, tt.key)
 		if gotF != tt.wantF || gotH != tt.wantH {

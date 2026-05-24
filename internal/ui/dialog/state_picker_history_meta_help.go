@@ -57,16 +57,18 @@ type FindEntry struct {
 }
 
 // FindDialogState is a fuzzy picker over recursively indexed paths under a panel root.
-// Focus without selections checkbox: 0=list+filter, 1=stay-on-volume, 2=OK, 3=Cancel.
-// With selections checkbox: 0=list+filter, 1=stay-on-volume, 2=search-selections, 3=OK, 4=Cancel.
+// Focus without selections checkbox: 0=list+filter, 1=stay-on-volume, 2=only-directories, 3=OK, 4=Cancel.
+// With selections checkbox: 0=list+filter, 1=stay-on-volume, 2=only-directories, 3=search-selections, 4=OK, 5=Cancel.
 type FindDialogState struct {
 	Open                bool
 	PanelID             int
 	RootPath            string
 	ShowHidden          bool
 	StayOnCurrentVolume bool
-	ListingDevice       uint64
-	ListingDeviceValid  bool
+	// OnlyDirectories hides non-directory entries from the ranked result list (instant filter).
+	OnlyDirectories    bool
+	ListingDevice      uint64
+	ListingDeviceValid bool
 	// ShowSearchSelectionsOption is true when the panel had selected directories at open.
 	ShowSearchSelectionsOption bool
 	// SearchOnlySelections limits indexing to SelectionDirRoots when true.
@@ -95,20 +97,33 @@ func (s FindDialogState) FindDialogHasSelectionsCheckbox() bool {
 	return s.ShowSearchSelectionsOption
 }
 
-// FindDialogOKFocus returns the focus index for the OK button.
-func (s FindDialogState) FindDialogOKFocus() int {
+// FindDialogOnlyDirsFocus returns the focus index for the only-directories checkbox.
+func (s FindDialogState) FindDialogOnlyDirsFocus() int {
+	return 2
+}
+
+// FindDialogSelectionsFocus returns the focus index for search-only-selections, or -1 when hidden.
+func (s FindDialogState) FindDialogSelectionsFocus() int {
 	if s.FindDialogHasSelectionsCheckbox() {
 		return 3
 	}
-	return 2
+	return -1
+}
+
+// FindDialogOKFocus returns the focus index for the OK button.
+func (s FindDialogState) FindDialogOKFocus() int {
+	if s.FindDialogHasSelectionsCheckbox() {
+		return 4
+	}
+	return 3
 }
 
 // FindDialogCancelFocus returns the focus index for the Cancel button.
 func (s FindDialogState) FindDialogCancelFocus() int {
 	if s.FindDialogHasSelectionsCheckbox() {
-		return 4
+		return 5
 	}
-	return 3
+	return 4
 }
 
 // FindDialogMaxFocus returns the highest focus index (Cancel).

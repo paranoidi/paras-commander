@@ -21,4 +21,6 @@ func (a *App) toggleFindStayOnVolume() { a.findCtrl.ToggleStayOnVolume() }
 
 func (a *App) toggleFindSearchOnlySelections() { a.findCtrl.ToggleSearchOnlySelections() }
 
+func (a *App) toggleFindOnlyDirectories() { a.findCtrl.ToggleOnlyDirectories() }
+
 func (a *App) navigateFindCursor() { a.findCtrl.NavigateFindCursor() }
