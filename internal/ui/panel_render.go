@@ -213,6 +213,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				paintPanelIconStrip(sc, x, y, entry, rowStyle, styles, cursorKey, diskPending, diskExcluded, showDiskUsage)
 			},
 		})
+		drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, panelcarousel.CenterNameWidth(rect, showIcons), jobMarks)
 		return
 	}
 
@@ -423,6 +424,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			return blendCell(leftGutter + gitStrip + iconStrip + ci)
 		}, spans)
 	}
+
+	drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, jobMarks)
 }
 
 const gapBeforePanelTitleEnd = 2

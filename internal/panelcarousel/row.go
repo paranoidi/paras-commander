@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
 const listSizeCells = 5
@@ -218,6 +219,15 @@ func nameWidthForColumn(colWidth int, showIcons bool) int {
 	rowTextWidth := columnListTextWidth(colWidth, showIcons)
 	nw := rowTextWidth - 1 - listSizeCells
 	return max(1, nw)
+}
+
+// CenterNameWidth returns the name-column width for the carousel center column.
+func CenterNameWidth(frame geom.Rect, showIcons bool) int {
+	cols := SplitColumns(frame)
+	if len(cols) < 2 {
+		return 1
+	}
+	return nameWidthForColumn(cols[1].Width, showIcons)
 }
 
 func max(a, b int) int {
