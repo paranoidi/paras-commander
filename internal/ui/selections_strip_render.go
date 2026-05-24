@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"os"
-	"path/filepath"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -77,8 +75,8 @@ func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stri
 	}
 	markFG, _, _ := markSource.Decompose()
 
-	const selectionsStripDirMarkPrefix = " ○ "
-	dirMarkCols := utf8.RuneCountInString(selectionsStripDirMarkPrefix)
+	const selectionsStripMarkPrefix = " ○ "
+	markCols := utf8.RuneCountInString(selectionsStripMarkPrefix)
 
 	for row := 0; row < visibleRows; row++ {
 		y := rect.Y + 1 + row
@@ -97,9 +95,9 @@ func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stri
 
 		prefix := ""
 		textCols := rowTextWidth
-		if idx < len(paths) && selectionStripPathIsDir(paths[idx]) {
-			prefix = selectionsStripDirMarkPrefix
-			textCols = rowTextWidth - dirMarkCols
+		if idx < len(paths) {
+			prefix = selectionsStripMarkPrefix
+			textCols = rowTextWidth - markCols
 			if textCols < 0 {
 				textCols = 0
 			}
@@ -121,11 +119,6 @@ func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stri
 		}
 		primitive.StyledText(screen, contentStart, y, rowTextWidth, text, baseStyle, spans)
 	}
-}
-
-func selectionStripPathIsDir(abs string) bool {
-	info, err := os.Stat(filepath.Clean(abs))
-	return err == nil && info.IsDir()
 }
 
 func selectionStripDisplayPath(absPath, userHomeDir string, width int) string {
