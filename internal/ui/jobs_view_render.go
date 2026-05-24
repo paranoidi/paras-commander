@@ -50,6 +50,13 @@ func PanelZoomSplitsColumns(vm ViewMode, zoomEnabled bool) bool {
 	return zoomEnabled && !IsAuxiliaryView(vm)
 }
 
+// LayoutHideInactivePanel reports whether layout should give the active browser column
+// full width and omit the inactive file panel. Model.HideInactivePanel is retained across
+// view switches but affects layout only in ViewBrowser.
+func LayoutHideInactivePanel(vm ViewMode, hideInactivePanel bool) bool {
+	return hideInactivePanel && vm == ViewBrowser
+}
+
 // JobsViewState holds focus and scroll positions for the jobs view screen.
 type JobsViewState struct {
 	Selected       int

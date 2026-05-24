@@ -1901,6 +1901,41 @@ func TestLayoutForTerminalSizeIgnoresZoomInAuxiliaryViews(t *testing.T) {
 	}
 }
 
+func TestLayoutForTerminalSizeIgnoresHideInactivePanelInAuxiliaryViews(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(100, 30)
+
+	app, err := New(screen, func() (string, error) {
+		return t.TempDir(), nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.HideInactivePanel = true
+	app.model.ActivePanel = ui.LeftPanel
+
+	layBrowser := app.layoutForTerminalSize(100, 30)
+	if layBrowser.Left.Width != 100 || layBrowser.Right.Width != 0 {
+		t.Fatalf("browser with hide: Left=%d Right=%d want 100/0", layBrowser.Left.Width, layBrowser.Right.Width)
+	}
+
+	for _, vm := range []ui.ViewMode{ui.ViewJobs, ui.ViewCommands, ui.ViewMessages} {
+		app.model.ViewMode = vm
+		lay := app.layoutForTerminalSize(100, 30)
+		if lay.Left.Width != 50 || lay.Right.Width != 50 {
+			t.Fatalf("view %v with hide inactive: Left=%d Right=%d want 50/50", vm, lay.Left.Width, lay.Right.Width)
+		}
+	}
+	if !app.model.HideInactivePanel {
+		t.Fatal("HideInactivePanel cleared when switching auxiliary views")
+	}
+}
+
 func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))

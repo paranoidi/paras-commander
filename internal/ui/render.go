@@ -241,7 +241,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		ActivePanel:       model.ActivePanel,
 		ActivePercent:     model.PanelZoomActivePercent,
 		InactivePercent:   model.PanelZoomInactivePercent,
-		HideInactivePanel: model.HideInactivePanel,
+		HideInactivePanel: LayoutHideInactivePanel(model.ViewMode, model.HideInactivePanel),
 	})
 	primitive.Fill(screen, primitive.Rect{Width: width, Height: height}, ' ', tcell.StyleDefault)
 
