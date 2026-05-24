@@ -10,7 +10,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, styles theme.Theme) {
+// DeleteRowIconPainter draws file-list devicons for one delete dialog row; nil skips icons.
+type DeleteRowIconPainter func(screen tcell.Screen, x, y int, entry DeleteListEntry, styles theme.Theme)
+
+func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, styles theme.Theme, showIcons bool, deleteIconLead int, paintDeleteIcon DeleteRowIconPainter) {
 	if !state.Open {
 		return
 	}
@@ -24,7 +27,7 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 	var height int
 	switch state.DialogType {
 	case FileDialogDelete:
-		height = fileDeleteDialogHeight(state)
+		height = fileDeleteDialogHeight(layout.Height, state)
 	case FileDialogAddBookmark:
 		height = 10
 	case FileDialogRunForEach:
@@ -72,7 +75,7 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 
 	switch state.DialogType {
 	case FileDialogDelete:
-		drawFileDeleteDialogContent(screen, rect, state, styles)
+		drawFileDeleteDialogContent(screen, rect, state, styles, showIcons, deleteIconLead, paintDeleteIcon)
 	case FileDialogAddBookmark:
 		drawAddBookmarkDialogContent(screen, rect, state, borderStyle, styles)
 	case FileDialogRunForEach:
@@ -167,11 +170,20 @@ func fileDialogWidth(screenWidth int, state FileDialogState) int {
 	if len(state.Fields) > 0 {
 		minWidth = max(minWidth, PreferredFormDialogWidth)
 	}
-	// For delete dialog, use the message.
+	// For delete dialog, use summary, warning, and listed names.
 	if state.DialogType == FileDialogDelete {
 		lineWidth := 30
-		for _, line := range strings.Split(state.Message, "\n") {
+		for _, line := range []string{state.DeleteSummary, state.DeleteWarning} {
+			if line == "" {
+				continue
+			}
 			lw := utf8.RuneCountInString(line) + 4
+			if lw > lineWidth {
+				lineWidth = lw
+			}
+		}
+		for _, entry := range state.DeleteEntries {
+			lw := utf8.RuneCountInString(entry.Name) + 4
 			if lw > lineWidth {
 				lineWidth = lw
 			}
@@ -252,18 +264,6 @@ func fileDialogWidth(screenWidth int, state FileDialogState) int {
 		minWidth = screenWidth - 4
 	}
 	return max(20, minWidth)
-}
-
-func fileDeleteDialogHeight(state FileDialogState) int {
-	lineCount := 1
-	if state.Message != "" {
-		lineCount = strings.Count(state.Message, "\n") + 1
-	}
-	height := lineCount + 4 // message + top/bottom borders + separator + buttons
-	if height < 5 {
-		height = 5
-	}
-	return height
 }
 
 func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcell.Style, state FileDialogState, styles theme.Theme) {
@@ -661,21 +661,5 @@ func drawAddBookmarkDialogContent(screen tcell.Screen, rect Rect, state FileDial
 	if len(state.Fields) > 0 {
 		focused := state.FocusedField == 0
 		drawInputField(screen, leftCol, rect.Y+6, innerWidth, state.Fields[0], focused, styles)
-	}
-}
-
-func drawFileDeleteDialogContent(screen tcell.Screen, rect Rect, state FileDialogState, styles theme.Theme) {
-	if state.Message == "" {
-		return
-	}
-	lines := strings.Split(state.Message, "\n")
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	textStyle := styles.DialogText.Background(dbg)
-	for i, line := range lines {
-		y := rect.Y + 1 + i
-		if y >= rect.Y+rect.Height-3 {
-			break
-		}
-		primitive.Text(screen, rect.X+2, y, rect.Width-4, line, textStyle)
 	}
 }

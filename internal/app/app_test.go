@@ -3559,8 +3559,11 @@ func TestFileMenuDeleteOpensDeleteConfirmation(t *testing.T) {
 	if app.model.FileDialog.DialogType != ui.FileDialogDelete {
 		t.Fatalf("dialog type = %d, want FileDialogDelete", app.model.FileDialog.DialogType)
 	}
-	if got, want := app.model.FileDialog.Message, "Delete file\ntest.txt"; got != want {
-		t.Fatalf("Message = %q, want %q", got, want)
+	if got, want := app.model.FileDialog.DeleteSummary, "Delete file"; got != want {
+		t.Fatalf("DeleteSummary = %q, want %q", got, want)
+	}
+	if len(app.model.FileDialog.DeleteEntries) != 1 || app.model.FileDialog.DeleteEntries[0].Name != "test.txt" {
+		t.Fatalf("DeleteEntries = %v, want [test.txt]", app.model.FileDialog.DeleteEntries)
 	}
 	if app.model.FileDialog.FocusedField != 1 {
 		t.Fatalf("FocusedField = %d, want 1 (No)", app.model.FileDialog.FocusedField)
@@ -4495,9 +4498,41 @@ func TestDeleteDialogWarningPluralDirectories(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionFileDelete)
-	want := "Delete 2 selections?\nWarning: 2 directories will be removed recursively!"
-	if got := app.model.FileDialog.Message; got != want {
-		t.Fatalf("Message = %q, want %q", got, want)
+	if got, want := app.model.FileDialog.DeleteSummary, "Delete 2 selections?"; got != want {
+		t.Fatalf("DeleteSummary = %q, want %q", got, want)
+	}
+	if got, want := app.model.FileDialog.DeleteWarning, "Warning: 2 directories will be removed recursively!"; got != want {
+		t.Fatalf("DeleteWarning = %q, want %q", got, want)
+	}
+	if len(app.model.FileDialog.DeleteEntries) != 2 || app.model.FileDialog.DeleteEntries[0].Name != "a" || app.model.FileDialog.DeleteEntries[1].Name != "b" {
+		t.Fatalf("DeleteEntries = %v, want [a b]", app.model.FileDialog.DeleteEntries)
+	}
+}
+
+func TestDeleteDialogListScrollsWithPageDown(t *testing.T) {
+	dir := t.TempDir()
+	for i := range 25 {
+		writeFile(t, filepath.Join(dir, fmt.Sprintf("selection-%02d.txt", i)))
+	}
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = make(map[string]bool)
+	for i := range 25 {
+		p.SelectedPaths[filepath.Join(dir, fmt.Sprintf("selection-%02d.txt", i))] = true
+	}
+	if err := p.Refresh(app.activeViewportRows()); err != nil {
+		t.Fatal(err)
+	}
+
+	app.dispatch(keymap.ActionFileDelete)
+	if app.model.FileDialog.DeleteListScroll != 0 {
+		t.Fatalf("DeleteListScroll = %d, want 0 on open", app.model.FileDialog.DeleteListScroll)
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyPgDn, 0, tcell.ModNone))
+	if app.model.FileDialog.DeleteListScroll == 0 {
+		t.Fatal("PgDn should advance DeleteListScroll when list is clipped")
 	}
 }
 

@@ -6,44 +6,53 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
-func TestDeleteConfirmMessageSingleFile(t *testing.T) {
+func TestDeleteConfirmContentSingleFile(t *testing.T) {
 	source := Source{Entries: []localfs.Entry{{Name: "keep.txt", Type: localfs.EntryFile}}}
-	got := DeleteConfirmMessage(source)
-	want := "Delete file\nkeep.txt"
-	if got != want {
-		t.Fatalf("got %q, want %q", got, want)
+	summary, warning := DeleteConfirmContent(source)
+	if summary != "Delete file" {
+		t.Fatalf("summary = %q, want %q", summary, "Delete file")
+	}
+	if warning != "" {
+		t.Fatalf("warning = %q, want empty", warning)
 	}
 }
 
-func TestDeleteConfirmMessageSingleDirectory(t *testing.T) {
+func TestDeleteConfirmContentSingleDirectory(t *testing.T) {
 	source := Source{Entries: []localfs.Entry{{Name: "proj", Type: localfs.EntryDirectory}}}
-	got := DeleteConfirmMessage(source)
-	want := "Delete directory\nproj"
-	if got != want {
-		t.Fatalf("got %q, want %q", got, want)
+	summary, warning := DeleteConfirmContent(source)
+	if summary != "Delete directory" {
+		t.Fatalf("summary = %q, want %q", summary, "Delete directory")
+	}
+	if warning != "" {
+		t.Fatalf("warning = %q, want empty", warning)
 	}
 }
 
-func TestDeleteConfirmMessageMultipleSelections(t *testing.T) {
+func TestDeleteConfirmContentMultipleSelections(t *testing.T) {
 	source := Source{Entries: []localfs.Entry{
 		{Name: "a.txt", Type: localfs.EntryFile},
 		{Name: "b.txt", Type: localfs.EntryFile},
 	}}
-	got := DeleteConfirmMessage(source)
-	want := "Delete 2 selections?"
-	if got != want {
-		t.Fatalf("got %q, want %q", got, want)
+	summary, warning := DeleteConfirmContent(source)
+	if summary != "Delete 2 selections?" {
+		t.Fatalf("summary = %q, want %q", summary, "Delete 2 selections?")
+	}
+	if warning != "" {
+		t.Fatalf("warning = %q, want empty", warning)
 	}
 }
 
-func TestDeleteConfirmMessageMultipleWithDirectoriesWarns(t *testing.T) {
+func TestDeleteConfirmContentMultipleWithDirectoriesWarns(t *testing.T) {
 	source := Source{Entries: []localfs.Entry{
 		{Name: "a", Type: localfs.EntryDirectory},
 		{Name: "b", Type: localfs.EntryDirectory},
 	}}
-	got := DeleteConfirmMessage(source)
-	want := "Delete 2 selections?\nWarning: 2 directories will be removed recursively!"
-	if got != want {
-		t.Fatalf("got %q, want %q", got, want)
+	summary, warning := DeleteConfirmContent(source)
+	if summary != "Delete 2 selections?" {
+		t.Fatalf("summary = %q, want %q", summary, "Delete 2 selections?")
+	}
+	want := "Warning: 2 directories will be removed recursively!"
+	if warning != want {
+		t.Fatalf("warning = %q, want %q", warning, want)
 	}
 }

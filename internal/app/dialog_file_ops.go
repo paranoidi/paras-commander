@@ -74,11 +74,18 @@ func (a *App) openDeleteDialog(p *panel.State) {
 		a.setErrorMessage("Delete", err)
 		return
 	}
+	summary, warning := ops.DeleteConfirmContent(source)
+	entries := make([]ui.DeleteListEntry, len(source.Entries))
+	for i, e := range source.Entries {
+		entries[i] = ui.DeleteListEntry{Name: e.Name, Path: e.Path, Type: e.Type}
+	}
 	a.model.FileDialog = ui.FileDialogState{
-		Open:         true,
-		DialogType:   ui.FileDialogDelete,
-		Message:      ops.DeleteConfirmMessage(source),
-		FocusedField: 1, // No (safe default); Yes stays index 0.
+		Open:          true,
+		DialogType:    ui.FileDialogDelete,
+		DeleteSummary: summary,
+		DeleteWarning: warning,
+		DeleteEntries: entries,
+		FocusedField:  1, // No (safe default); Yes stays index 0.
 	}
 }
 

@@ -16,30 +16,27 @@ type DeletePlan struct {
 	ConfirmFirst bool   // whether to confirm before executing
 }
 
-// DeleteConfirmMessage returns the delete confirmation dialog body text.
-// A single entry shows "Delete file|directory" plus its basename on the next line.
-// Multiple entries show "Delete N selections?" and, when any are directories,
-// an extra warning line about recursive removal.
-func DeleteConfirmMessage(source Source) string {
+// DeleteConfirmContent returns the delete confirmation dialog summary line and
+// optional recursive-directory warning. Basenames and entry types come from source.Entries.
+func DeleteConfirmContent(source Source) (summary, warning string) {
 	n := len(source.Entries)
 	if n == 1 {
-		e := source.Entries[0]
 		kind := "file"
-		if e.Type == localfs.EntryDirectory {
+		if source.Entries[0].Type == localfs.EntryDirectory {
 			kind = "directory"
 		}
-		return fmt.Sprintf("Delete %s\n%s", kind, e.Name)
+		return fmt.Sprintf("Delete %s", kind), ""
 	}
-	msg := fmt.Sprintf("Delete %d selections?", n)
+	summary = fmt.Sprintf("Delete %d selections?", n)
 	dirCount := CountDirectories(source.Entries)
 	if dirCount > 0 {
 		dirNoun := "directories"
 		if dirCount == 1 {
 			dirNoun = "directory"
 		}
-		msg += fmt.Sprintf("\nWarning: %d %s will be removed recursively!", dirCount, dirNoun)
+		warning = fmt.Sprintf("Warning: %d %s will be removed recursively!", dirCount, dirNoun)
 	}
-	return msg
+	return summary, warning
 }
 
 // PlanDelete validates a delete operation.

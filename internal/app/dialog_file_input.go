@@ -59,6 +59,25 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			return false
 		}
 	}
+	if d.Open && d.DialogType == ui.FileDialogDelete {
+		switch event.Key() {
+		case tcell.KeyPgUp:
+			_, h := a.screen.Size()
+			vp := ui.DeleteDialogListViewportRows(h, *d)
+			d.DeleteListScroll -= vp
+			if d.DeleteListScroll < 0 {
+				d.DeleteListScroll = 0
+			}
+			return false
+		case tcell.KeyPgDn:
+			_, h := a.screen.Size()
+			vp := ui.DeleteDialogListViewportRows(h, *d)
+			ui.DeleteEnsureListScroll(d, vp, len(d.DeleteEntries))
+			d.DeleteListScroll += vp
+			ui.DeleteEnsureListScroll(d, vp, len(d.DeleteEntries))
+			return false
+		}
+	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		if a.tryMkdirActionAltShortcut(event.Rune()) {
 			return false

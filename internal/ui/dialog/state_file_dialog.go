@@ -1,6 +1,9 @@
 package dialog
 
-import "github.com/paranoidi/paras-commander/internal/search"
+import (
+	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/search"
+)
 
 // FileDialogType identifies which file operation dialog is active.
 type FileDialogType int
@@ -117,4 +120,17 @@ type FileDialogState struct {
 	MassRenamePreviewAfterAdded     [][]search.Range
 	// MassRenamePatternCompileHint is a short regexp compile error shown under the Pattern field (regex mode).
 	MassRenamePatternCompileHint string
+
+	// Delete confirmation (DialogType == FileDialogDelete).
+	DeleteSummary    string
+	DeleteWarning    string
+	DeleteEntries    []DeleteListEntry
+	DeleteListScroll int
+}
+
+// DeleteListEntry is one row in the delete confirmation name list.
+type DeleteListEntry struct {
+	Name string
+	Path string
+	Type localfs.EntryType
 }

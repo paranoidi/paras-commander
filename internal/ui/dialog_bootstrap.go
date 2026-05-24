@@ -42,6 +42,7 @@ type (
 	FileDialogState           = dialog.FileDialogState
 	MassRenameModeUI          = dialog.MassRenameModeUI
 	MassRenameSource          = dialog.MassRenameSource
+	DeleteListEntry           = dialog.DeleteListEntry
 	PrimaryModal              = dialog.PrimaryModal
 	TransferKind              = dialog.TransferKind
 	TransferDialogPhase       = dialog.TransferDialogPhase
@@ -172,6 +173,16 @@ func MassRenamePreviewViewportRows(layoutHeight int) int {
 // MassRenameEnsurePreviewScroll clamps MassRenamePreviewScroll to keep the viewport valid.
 func MassRenameEnsurePreviewScroll(st *FileDialogState, viewportRows, totalRows int) {
 	dialog.MassRenameEnsurePreviewScroll(st, viewportRows, totalRows)
+}
+
+// DeleteDialogListViewportRows returns how many delete-list name rows fit for a terminal height.
+func DeleteDialogListViewportRows(layoutHeight int, state FileDialogState) int {
+	return dialog.DeleteDialogListViewportRows(layoutHeight, state)
+}
+
+// DeleteEnsureListScroll clamps DeleteListScroll to keep the viewport valid.
+func DeleteEnsureListScroll(st *FileDialogState, viewportRows, totalRows int) {
+	dialog.DeleteEnsureListScroll(st, viewportRows, totalRows)
 }
 
 // MassRenameDiff returns highlight ranges for mass-rename preview columns.

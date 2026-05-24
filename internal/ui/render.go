@@ -379,7 +379,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		dialog.DrawMetaDialog(screen, layout, model.MetaDialog, styles)
 	}
 	if model.FileDialog.Open {
-		dialog.DrawFileDialog(screen, layout, model.FileDialog, styles)
+		dialog.DrawFileDialog(screen, layout, model.FileDialog, styles, model.ShowFileIcons, DeleteListIconLeadingWidth(model.ShowFileIcons), PaintDeleteDialogRowIcon)
 	}
 	if model.HostKeyDialog.Open {
 		dialog.DrawHostKeyDialog(screen, layout, model.HostKeyDialog, styles)
