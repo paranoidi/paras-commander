@@ -15,12 +15,57 @@ import (
 )
 
 func (a *App) switchPanel() {
+	if a.model.HideInactivePanel {
+		a.model.HideInactivePanel = false
+		if a.model.ActivePanel == ui.LeftPanel {
+			a.model.ActivePanel = ui.RightPanel
+		} else {
+			a.model.ActivePanel = ui.LeftPanel
+		}
+		a.model.ActiveSubFocus = ui.SubFocusFileList
+		return
+	}
 	if a.model.ActivePanel == ui.LeftPanel {
 		a.model.ActivePanel = ui.RightPanel
 	} else {
 		a.model.ActivePanel = ui.LeftPanel
 	}
 	a.model.ActiveSubFocus = ui.SubFocusFileList
+}
+
+// toggleHideInactivePanel hides or shows the inactive twin panel (browser only).
+func (a *App) toggleHideInactivePanel() {
+	if a.model.ViewMode != ui.ViewBrowser {
+		return
+	}
+	if a.model.HideInactivePanel {
+		a.model.HideInactivePanel = false
+		a.setTransientMessage("Inactive panel shown", ui.MessageUrgencyInfo)
+		return
+	}
+	hadSync := a.model.SyncFollowEnabled
+	hadQuickView := a.model.QuickViewEnabled
+	if hadSync {
+		a.model.SyncFollowEnabled = false
+		a.clearPanelSyncFollowNavCoalesce()
+	}
+	if hadQuickView {
+		a.model.QuickViewEnabled = false
+		a.clearQuickViewDebounce()
+		a.closeFilePreview()
+		a.quickViewLastFingerprint = ""
+	}
+	a.model.HideInactivePanel = true
+	switch {
+	case hadSync && hadQuickView:
+		a.setTransientMessage("Inactive panel hidden — sync and quick view disabled", ui.MessageUrgencyWarn)
+	case hadSync:
+		a.setTransientMessage("Inactive panel hidden — sync disabled", ui.MessageUrgencyWarn)
+	case hadQuickView:
+		a.setTransientMessage("Inactive panel hidden — quick view disabled", ui.MessageUrgencyWarn)
+	default:
+		a.setTransientMessage("Inactive panel hidden", ui.MessageUrgencyInfo)
+	}
 }
 
 func (a *App) reloadActive(successMessage string) {

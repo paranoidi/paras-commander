@@ -525,6 +525,8 @@ func (a *App) dispatch(actionID string) {
 		}
 	case keymap.ActionPanelFocusSelections:
 		a.toggleSelectionsStripFocus()
+	case keymap.ActionPanelToggleHideInactive:
+		a.toggleHideInactivePanel()
 	case keymap.ActionNavUp:
 		activePanel.Move(-1, viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()

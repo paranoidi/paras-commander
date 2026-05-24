@@ -44,6 +44,7 @@ const (
 	ActionPanelDiskUsageScan         = "panel.disk-usage-scan"
 	ActionPanelDiskUsageAbortAll     = "panel.disk-usage-abort-all"
 	ActionPanelFocusSelections       = "panel.focus-selections"
+	ActionPanelToggleHideInactive    = "panel.toggle-hide-inactive"
 	ActionPanelExternalBrowser       = "panel.external-browser"
 	ActionPanelOpenDirInOther        = "panel.open-dir-in-other"
 	ActionPanelOpenActivePathInOther = "panel.open-active-path-in-other"
@@ -185,6 +186,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelDiskUsageScan:         {},
 	ActionPanelDiskUsageAbortAll:     {},
 	ActionPanelFocusSelections:       {},
+	ActionPanelToggleHideInactive:    {},
 	ActionPanelExternalBrowser:       {},
 	ActionPanelOpenDirInOther:        {},
 	ActionPanelOpenActivePathInOther: {},

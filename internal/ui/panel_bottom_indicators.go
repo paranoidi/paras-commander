@@ -17,10 +17,10 @@ type PanelBottomIndicatorID string
 const (
 	PanelBottomIndicatorSelections PanelBottomIndicatorID = "selections"
 	PanelBottomIndicatorGitignore  PanelBottomIndicatorID = "gitignore"
-	// PanelBottomIndicatorSync is reserved for a future End-edge registration (drawn separately today).
-	PanelBottomIndicatorSync PanelBottomIndicatorID = "sync"
-	// PanelBottomIndicatorStash is registered in phase 2.
-	PanelBottomIndicatorStash PanelBottomIndicatorID = "stash"
+	PanelBottomIndicatorStash      PanelBottomIndicatorID = "stash"
+	PanelBottomIndicatorSync       PanelBottomIndicatorID = "sync"
+	PanelBottomIndicatorQuickView  PanelBottomIndicatorID = "quick_view"
+	PanelBottomIndicatorOtherPanel PanelBottomIndicatorID = "other_panel"
 )
 
 // PanelBottomEdge names which horizontal edge of the panel bottom row an indicator uses.
@@ -33,7 +33,7 @@ const (
 	// PanelBottomEdgePhysicalLeft chains segments from the physical left interior column
 	// (Gitignore and trailing frame dashes on both panels).
 	PanelBottomEdgePhysicalLeft
-	// PanelBottomEdgeEnd is the panel-relative end corner (Sync today). Not drawn here yet.
+	// PanelBottomEdgeEnd is the panel-relative end corner (sync, quick view, hidden other path).
 	PanelBottomEdgeEnd
 )
 
@@ -44,6 +44,11 @@ type PanelBottomIndicatorContext struct {
 	SelectionsBottomHint   bool
 	SyncDriverPanelID      int
 	QuickViewDriverPanelID int
+	HideInactivePanel      bool
+	ActivePanel            int
+	OtherPanelPath         string
+	UserHomeDir            string
+	EndEdgePathMaxRunes    int
 	FileListActive         bool
 	ChromeBlocked          bool
 	BorderStyle            tcell.Style
@@ -62,6 +67,9 @@ var panelBottomIndicatorRegistry = []panelBottomIndicatorSpec{
 	{ID: PanelBottomIndicatorSelections, Edge: PanelBottomEdgeStart, Order: 0},
 	{ID: PanelBottomIndicatorGitignore, Edge: PanelBottomEdgePhysicalLeft, Order: 0},
 	{ID: PanelBottomIndicatorStash, Edge: PanelBottomEdgePhysicalLeft, Order: 1},
+	{ID: PanelBottomIndicatorSync, Edge: PanelBottomEdgeEnd, Order: 0},
+	{ID: PanelBottomIndicatorQuickView, Edge: PanelBottomEdgeEnd, Order: 0},
+	{ID: PanelBottomIndicatorOtherPanel, Edge: PanelBottomEdgeEnd, Order: 1},
 }
 
 type panelBottomIndicatorSegment struct {
@@ -94,9 +102,27 @@ func panelBottomIndicatorVisible(id PanelBottomIndicatorID, ctx PanelBottomIndic
 		return ctx.State.GitignoreActive
 	case PanelBottomIndicatorStash:
 		return ctx.State.StashPathCount() > 0
+	case PanelBottomIndicatorSync:
+		return ctx.SyncDriverPanelID == ctx.PanelID
+	case PanelBottomIndicatorQuickView:
+		return ctx.QuickViewDriverPanelID == ctx.PanelID
+	case PanelBottomIndicatorOtherPanel:
+		return ctx.HideInactivePanel && ctx.PanelID == ctx.ActivePanel && ctx.OtherPanelPath != ""
 	default:
 		return false
 	}
+}
+
+func panelOtherPanelIndicatorLabel(panelID int, ctx PanelBottomIndicatorContext) string {
+	max := ctx.EndEdgePathMaxRunes
+	if max <= 0 {
+		max = 12
+	}
+	path := PanelTitlePath(ctx.OtherPanelPath, ctx.UserHomeDir, max)
+	if panelID == RightPanel {
+		return " ← " + path + " "
+	}
+	return " → " + path + " "
 }
 
 func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicatorContext) string {
@@ -116,6 +142,12 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 			word = "selections"
 		}
 		return fmt.Sprintf(" %s %d %s stashed ", sym, n, word)
+	case PanelBottomIndicatorSync:
+		return panelSyncIndicatorLabel(ctx.PanelID)
+	case PanelBottomIndicatorQuickView:
+		return panelQuickViewIndicatorLabel(ctx.PanelID)
+	case PanelBottomIndicatorOtherPanel:
+		return panelOtherPanelIndicatorLabel(ctx.PanelID, ctx)
 	default:
 		return ""
 	}
@@ -132,30 +164,103 @@ func panelBottomPhysicalLeftChainStartX(rect Rect, selectionsBottomHint bool) in
 	return x
 }
 
-// panelBottomEndEdgeDriverLabelWidth returns rune width reserved on the End edge for sync or quick view.
-func panelBottomEndEdgeDriverLabelWidth(panelID, syncDriverPanelID, quickViewDriverPanelID int) int {
-	switch {
-	case syncDriverPanelID == panelID:
-		return utf8.RuneCountInString(panelSyncIndicatorLabel(panelID))
-	case quickViewDriverPanelID == panelID:
-		return utf8.RuneCountInString(panelQuickViewIndicatorLabel(panelID))
-	default:
-		return 0
+func panelBottomEndEdgeSegments(ctx PanelBottomIndicatorContext) []panelBottomIndicatorSegment {
+	var end []panelBottomIndicatorSegment
+	for _, spec := range panelBottomIndicatorRegistry {
+		if spec.Edge != PanelBottomEdgeEnd {
+			continue
+		}
+		if !panelBottomIndicatorVisible(spec.ID, ctx) {
+			continue
+		}
+		label := panelBottomIndicatorLabel(spec.ID, ctx)
+		if label == "" {
+			continue
+		}
+		end = append(end, panelBottomIndicatorSegment{
+			ID:    spec.ID,
+			Edge:  spec.Edge,
+			Order: spec.Order,
+			Label: label,
+			Style: panelBottomIndicatorStyle(ctx, spec.ID),
+		})
 	}
+	sort.SliceStable(end, func(i, j int) bool {
+		return end[i].Order < end[j].Order
+	})
+	return end
+}
+
+// panelBottomEndEdgeTotalWidth returns rune width reserved on the End edge for all visible segments.
+func panelBottomEndEdgeTotalWidth(ctx PanelBottomIndicatorContext) int {
+	total := 0
+	for _, seg := range panelBottomEndEdgeSegments(ctx) {
+		total += utf8.RuneCountInString(seg.Label)
+	}
+	return total
 }
 
 // panelBottomEndEdgeReservedStart returns the first column (inclusive) still available on the
-// bottom interior row before the sync- or quick-view-driver overlay on the End edge.
-func panelBottomEndEdgeReservedStart(rect Rect, panelID, syncDriverPanelID, quickViewDriverPanelID int) int {
+// bottom interior row before End-edge indicator overlays.
+func panelBottomEndEdgeReservedStart(rect Rect, ctx PanelBottomIndicatorContext) int {
 	lastIn := rect.X + rect.Width - 2
-	labelW := panelBottomEndEdgeDriverLabelWidth(panelID, syncDriverPanelID, quickViewDriverPanelID)
+	labelW := panelBottomEndEdgeTotalWidth(ctx)
 	if labelW == 0 || labelW > rect.Width-2 {
 		return lastIn
 	}
-	if panelID == RightPanel {
+	if ctx.PanelID == RightPanel {
 		return rect.X + labelW
 	}
 	return lastIn - labelW
+}
+
+// panelBottomIndicatorContextForRect builds indicator context with path budget for the other-panel label.
+func panelBottomIndicatorContextForRect(
+	rect Rect,
+	panelID int,
+	state panel.State,
+	selectionsBottomHint bool,
+	syncDriverPanelID, quickViewDriverPanelID int,
+	hideInactivePanel bool,
+	activePanel int,
+	otherPanelPath, userHomeDir string,
+	fileListActive, chromeBlocked bool,
+	borderStyle, titleStyle tcell.Style,
+	styles theme.Theme,
+) PanelBottomIndicatorContext {
+	ctx := PanelBottomIndicatorContext{
+		PanelID:                panelID,
+		State:                  state,
+		SelectionsBottomHint:   selectionsBottomHint,
+		SyncDriverPanelID:      syncDriverPanelID,
+		QuickViewDriverPanelID: quickViewDriverPanelID,
+		HideInactivePanel:      hideInactivePanel,
+		ActivePanel:            activePanel,
+		OtherPanelPath:         otherPanelPath,
+		UserHomeDir:            userHomeDir,
+		FileListActive:         fileListActive,
+		ChromeBlocked:          chromeBlocked,
+		BorderStyle:            borderStyle,
+		TitleStyle:             titleStyle,
+		Styles:                 styles,
+	}
+	avail := rect.Width - 2
+	fixed := 0
+	for _, spec := range panelBottomIndicatorRegistry {
+		if spec.Edge != PanelBottomEdgeEnd || spec.ID == PanelBottomIndicatorOtherPanel {
+			continue
+		}
+		if !panelBottomIndicatorVisible(spec.ID, ctx) {
+			continue
+		}
+		fixed += utf8.RuneCountInString(panelBottomIndicatorLabel(spec.ID, ctx))
+	}
+	if hideInactivePanel && panelID == activePanel && otherPanelPath != "" {
+		ctx.EndEdgePathMaxRunes = max(0, avail-fixed-4)
+	} else {
+		ctx.EndEdgePathMaxRunes = max(0, avail-fixed)
+	}
+	return ctx
 }
 
 // collectPanelBottomIndicators returns visible segments sorted by edge then order.
@@ -218,18 +323,59 @@ func dropPanelBottomIndicatorsForWidth(segs []panelBottomIndicatorSegment, maxCo
 	return nil
 }
 
-// drawPanelBottomIndicators paints Start-edge and PhysicalLeft-edge registry segments.
+// drawPanelBottomEndEdgeIndicators paints End-edge registry segments (sync, quick view, hidden other path).
+func drawPanelBottomEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID int, ctx PanelBottomIndicatorContext) {
+	if ctx.ChromeBlocked {
+		return
+	}
+	segs := panelBottomEndEdgeSegments(ctx)
+	if len(segs) == 0 {
+		return
+	}
+	available := rect.Width - 2
+	totalW := panelBottomEndEdgeTotalWidth(ctx)
+	if totalW > available {
+		segs = dropPanelBottomIndicatorsForWidth(segs, available, false)
+	}
+	if len(segs) == 0 {
+		return
+	}
+	y := rect.Y + rect.Height - 1
+	if panelID == RightPanel {
+		// End edge on the inner-left; higher Order extends toward physical right.
+		x := rect.X + 1
+		for _, seg := range segs {
+			w := utf8.RuneCountInString(seg.Label)
+			if x+w-1 > rect.X+rect.Width-2 {
+				return
+			}
+			primitive.TextOverlay(screen, x, y, w, seg.Label, seg.Style)
+			x += w
+		}
+		return
+	}
+	// Left panel: anchor at physical right; higher Order is rightmost (at the corner).
+	x := rect.X + rect.Width - 1
+	for i := len(segs) - 1; i >= 0; i-- {
+		seg := segs[i]
+		w := utf8.RuneCountInString(seg.Label)
+		x -= w
+		if x < rect.X+1 {
+			return
+		}
+		primitive.TextOverlay(screen, x, y, w, seg.Label, seg.Style)
+	}
+}
+
+// drawPanelBottomIndicators paints Start-edge, PhysicalLeft-edge, and End-edge registry segments.
 func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIndicatorContext) {
 	if rect.Width <= 4 || rect.Height < 2 {
 		return
 	}
 	all := collectPanelBottomIndicators(ctx)
-	if len(all) == 0 {
-		return
-	}
 	y := rect.Y + rect.Height - 1
 	lastIn := rect.X + rect.Width - 2
-	endX := panelBottomEndEdgeReservedStart(rect, ctx.PanelID, ctx.SyncDriverPanelID, ctx.QuickViewDriverPanelID)
+	endX := panelBottomEndEdgeReservedStart(rect, ctx)
 
 	var startEdge, physicalLeft []panelBottomIndicatorSegment
 	for _, seg := range all {
@@ -243,48 +389,43 @@ func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIn
 
 	drawPanelBottomStartEdgeIndicators(screen, rect, ctx.PanelID, y, lastIn, startEdge, ctx.BorderStyle)
 
-	if len(physicalLeft) == 0 {
-		return
-	}
-	x := panelBottomPhysicalLeftChainStartX(rect, ctx.SelectionsBottomHint)
-	if x > endX {
-		return
-	}
-	// Legacy: when no selections hint, the chain still opens with a frame dash at physical left.
-	leadingDash := !ctx.SelectionsBottomHint
-	maxCols := endX - x + 1
-	physicalLeft = dropPanelBottomIndicatorsForWidth(physicalLeft, maxCols, leadingDash)
-	if len(physicalLeft) == 0 {
-		return
-	}
-	if ctx.SelectionsBottomHint {
-		if x > endX {
-			return
-		}
-		screen.SetContent(x, y, '─', nil, ctx.BorderStyle)
-		x++
-	} else {
-		screen.SetContent(x, y, '─', nil, ctx.BorderStyle)
-		x++
-	}
-	for i, seg := range physicalLeft {
-		if i > 0 {
-			if x > endX {
-				return
+	if len(physicalLeft) > 0 {
+		x := panelBottomPhysicalLeftChainStartX(rect, ctx.SelectionsBottomHint)
+		if x <= endX {
+			leadingDash := !ctx.SelectionsBottomHint
+			maxCols := endX - x + 1
+			physicalLeft = dropPanelBottomIndicatorsForWidth(physicalLeft, maxCols, leadingDash)
+			if len(physicalLeft) > 0 {
+				if ctx.SelectionsBottomHint {
+					screen.SetContent(x, y, '─', nil, ctx.BorderStyle)
+					x++
+				} else {
+					screen.SetContent(x, y, '─', nil, ctx.BorderStyle)
+					x++
+				}
+				for i, seg := range physicalLeft {
+					if i > 0 {
+						if x > endX {
+							break
+						}
+						screen.SetContent(x, y, '─', nil, ctx.BorderStyle)
+						x++
+					}
+					padW := utf8.RuneCountInString(seg.Label)
+					if x+padW-1 > endX {
+						break
+					}
+					primitive.TextOverlay(screen, x, y, padW, seg.Label, seg.Style)
+					x += padW
+				}
+				for xi := x; xi <= endX; xi++ {
+					screen.SetContent(xi, y, '─', nil, ctx.BorderStyle)
+				}
 			}
-			screen.SetContent(x, y, '─', nil, ctx.BorderStyle)
-			x++
 		}
-		padW := utf8.RuneCountInString(seg.Label)
-		if x+padW-1 > endX {
-			return
-		}
-		primitive.TextOverlay(screen, x, y, padW, seg.Label, seg.Style)
-		x += padW
 	}
-	for xi := x; xi <= endX; xi++ {
-		screen.SetContent(xi, y, '─', nil, ctx.BorderStyle)
-	}
+
+	drawPanelBottomEndEdgeIndicators(screen, rect, ctx.PanelID, ctx)
 }
 
 // drawPanelBottomStartEdgeIndicators paints corner-anchored segments (Selections).

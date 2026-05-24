@@ -41,13 +41,20 @@ const (
 // the inactive column receives InactivePercent; both must be positive and sum to 100
 // or the layout falls back to an even split.
 type PanelWidthSplit struct {
-	Zoom            bool
-	ActivePanel     int
-	ActivePercent   int
-	InactivePercent int
+	Zoom              bool
+	ActivePanel       int
+	ActivePercent     int
+	InactivePercent   int
+	HideInactivePanel bool
 }
 
 func mainPanelColumnWidths(total int, split PanelWidthSplit) (leftW, rightW int) {
+	if split.HideInactivePanel {
+		if split.ActivePanel == 0 {
+			return total, 0
+		}
+		return 0, total
+	}
 	leftW = total / 2
 	rightW = total - leftW
 	if !split.Zoom {

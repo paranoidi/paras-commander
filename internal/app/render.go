@@ -152,10 +152,11 @@ func (a *App) panelWidthSplit(width int, filePreviewOpen bool) ui.PanelWidthSpli
 		}
 	}
 	return ui.PanelWidthSplit{
-		Zoom:            ui.PanelZoomSplitsColumns(a.model.ViewMode, zoom),
-		ActivePanel:     a.model.ActivePanel,
-		ActivePercent:   activePct,
-		InactivePercent: inactivePct,
+		Zoom:              ui.PanelZoomSplitsColumns(a.model.ViewMode, zoom),
+		ActivePanel:       a.model.ActivePanel,
+		ActivePercent:     activePct,
+		InactivePercent:   inactivePct,
+		HideInactivePanel: a.model.HideInactivePanel,
 	}
 }
 
@@ -182,7 +183,7 @@ func (a *App) zoomActivePanelSuppressedByTerminalWidth(width int) bool {
 // and disabled on wide terminals when [ui].zoom_active_panel_disabled_above_width is > 0.
 // Carousel view on the active panel always enables zoom (ignores saved preference, runtime override, and width gate).
 func (a *App) effectiveZoomActivePanelLayout(width int, filePreviewOpen bool) bool {
-	if filePreviewOpen {
+	if filePreviewOpen || a.model.HideInactivePanel {
 		return false
 	}
 	if a.activePanel().CarouselMode {

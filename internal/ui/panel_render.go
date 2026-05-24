@@ -88,7 +88,10 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 	return strings.TrimSpace(nameTitle)
 }
 
-func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool) {
+func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string) {
+	if rect.Width <= 0 || rect.Height <= 0 {
+		return
+	}
 	var borderStyle tcell.Style
 	var titleStyle tcell.Style
 	var headerStyle, headerCarouselStyle tcell.Style
@@ -112,26 +115,14 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	}
 
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	drawPanelBottomIndicators(screen, rect, PanelBottomIndicatorContext{
-		PanelID:                panelID,
-		State:                  state,
-		SelectionsBottomHint:   selectionsBottomHint,
-		SyncDriverPanelID:      syncDriverPanelID,
-		QuickViewDriverPanelID: quickViewDriverPanelID,
-		FileListActive:         fileListActive,
-		ChromeBlocked:          chromeBlocked,
-		BorderStyle:            borderStyle,
-		TitleStyle:             titleStyle,
-		Styles:                 styles,
-	})
-	if !chromeBlocked {
-		switch {
-		case quickViewDriverPanelID == panelID:
-			drawPanelQuickViewIndicator(screen, rect, panelID, styles.PanelQuickViewIndicator)
-		case syncDriverPanelID == panelID:
-			drawPanelSyncIndicator(screen, rect, panelID, styles.PanelSyncIndicator)
-		}
-	}
+	bottomCtx := panelBottomIndicatorContextForRect(
+		rect, panelID, state, selectionsBottomHint,
+		syncDriverPanelID, quickViewDriverPanelID,
+		hideInactivePanel, activePanel, otherPanelPath, userHomeDir,
+		fileListActive, chromeBlocked,
+		borderStyle, titleStyle, styles,
+	)
+	drawPanelBottomIndicators(screen, rect, bottomCtx)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
 	if inner.Width > 0 && inner.Height > 0 {
 		var surface tcell.Style
@@ -484,50 +475,6 @@ func panelQuickViewIndicatorLabel(panelID int) string {
 		return " ← Quick view "
 	}
 	return " Quick view → "
-}
-
-// drawPanelSyncIndicator overlays the latched-sync label on the bottom border of the driver panel,
-// reserving the corner glyph. Left driver paints flush to the right (next to the ┘ corner);
-// right driver paints flush to the left (next to the └ corner).
-func drawPanelSyncIndicator(screen tcell.Screen, rect Rect, panelID int, style tcell.Style) {
-	if rect.Width <= 4 || rect.Height < 2 {
-		return
-	}
-	label := panelSyncIndicatorLabel(panelID)
-	labelW := utf8.RuneCountInString(label)
-	available := rect.Width - 2
-	if labelW > available {
-		return
-	}
-	y := rect.Y + rect.Height - 1
-	var x int
-	if panelID == RightPanel {
-		x = rect.X + 1
-	} else {
-		x = rect.X + rect.Width - 1 - labelW
-	}
-	primitive.TextOverlay(screen, x, y, labelW, label, style)
-}
-
-// drawPanelQuickViewIndicator overlays the quick-view label on the bottom border of the active panel.
-func drawPanelQuickViewIndicator(screen tcell.Screen, rect Rect, panelID int, style tcell.Style) {
-	if rect.Width <= 4 || rect.Height < 2 {
-		return
-	}
-	label := panelQuickViewIndicatorLabel(panelID)
-	labelW := utf8.RuneCountInString(label)
-	available := rect.Width - 2
-	if labelW > available {
-		return
-	}
-	y := rect.Y + rect.Height - 1
-	var x int
-	if panelID == RightPanel {
-		x = rect.X + 1
-	} else {
-		x = rect.X + rect.Width - 1 - labelW
-	}
-	primitive.TextOverlay(screen, x, y, labelW, label, style)
 }
 
 const (

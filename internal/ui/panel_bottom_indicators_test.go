@@ -3,7 +3,6 @@ package ui
 import (
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -12,8 +11,9 @@ import (
 func TestCollectPanelBottomIndicatorsOrder(t *testing.T) {
 	t.Parallel()
 	ctx := PanelBottomIndicatorContext{
-		PanelID:              LeftPanel,
-		SelectionsBottomHint: true,
+		PanelID:                LeftPanel,
+		SelectionsBottomHint:   true,
+		QuickViewDriverPanelID: -1,
 		State: panel.State{
 			Path:            pathloc.MustParse("/tmp"),
 			GitignoreActive: true,
@@ -21,9 +21,16 @@ func TestCollectPanelBottomIndicatorsOrder(t *testing.T) {
 		Styles: theme.Default(),
 	}
 	got := collectPanelBottomIndicators(ctx)
-	if len(got) != 2 {
-		t.Fatalf("len = %d, want 2", len(got))
+	var nonEnd []panelBottomIndicatorSegment
+	for _, seg := range got {
+		if seg.Edge != PanelBottomEdgeEnd {
+			nonEnd = append(nonEnd, seg)
+		}
 	}
+	if len(nonEnd) != 2 {
+		t.Fatalf("len = %d, want 2 (start + physical left)", len(nonEnd))
+	}
+	got = nonEnd
 	if got[0].ID != PanelBottomIndicatorSelections || got[0].Edge != PanelBottomEdgeStart {
 		t.Fatalf("first = %+v, want selections on start edge", got[0])
 	}
@@ -50,12 +57,39 @@ func TestDropPanelBottomIndicatorsForWidthDropsHigherOrderFirst(t *testing.T) {
 func TestPanelBottomEndEdgeReservedStartReservesSyncOnLeftDriver(t *testing.T) {
 	t.Parallel()
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 10}
-	endX := panelBottomEndEdgeReservedStart(rect, LeftPanel, LeftPanel, -1)
+	ctx := PanelBottomIndicatorContext{
+		PanelID:                LeftPanel,
+		SyncDriverPanelID:      LeftPanel,
+		QuickViewDriverPanelID: -1,
+	}
+	endX := panelBottomEndEdgeReservedStart(rect, ctx)
 	lastIn := rect.X + rect.Width - 2
 	syncW := len([]rune(panelSyncIndicatorLabel(LeftPanel)))
 	want := lastIn - syncW
 	if endX != want {
 		t.Fatalf("endX = %d, want %d", endX, want)
+	}
+}
+
+func TestPanelBottomEndEdgeSegmentsOrdersOtherPanelLast(t *testing.T) {
+	t.Parallel()
+	ctx := PanelBottomIndicatorContext{
+		PanelID:                LeftPanel,
+		ActivePanel:            LeftPanel,
+		HideInactivePanel:      true,
+		OtherPanelPath:         "/var/log",
+		UserHomeDir:            "",
+		SyncDriverPanelID:      LeftPanel,
+		QuickViewDriverPanelID: -1,
+		EndEdgePathMaxRunes:    20,
+		Styles:                 theme.Default(),
+	}
+	end := panelBottomEndEdgeSegments(ctx)
+	if len(end) != 2 {
+		t.Fatalf("len = %d, want sync + other_panel", len(end))
+	}
+	if end[0].ID != PanelBottomIndicatorSync || end[1].ID != PanelBottomIndicatorOtherPanel {
+		t.Fatalf("order = %+v, want sync then other_panel", end)
 	}
 }
 
@@ -92,7 +126,8 @@ func TestPanelBottomPhysicalLeftChainStartXOffsetWithSelectionsHint(t *testing.T
 func TestCollectPanelBottomIndicatorsStashAfterGitignore(t *testing.T) {
 	t.Parallel()
 	ctx := PanelBottomIndicatorContext{
-		PanelID: LeftPanel,
+		PanelID:                LeftPanel,
+		QuickViewDriverPanelID: -1,
 		State: panel.State{
 			Path:                pathloc.MustParse("/tmp"),
 			GitignoreActive:     true,
@@ -101,9 +136,16 @@ func TestCollectPanelBottomIndicatorsStashAfterGitignore(t *testing.T) {
 		Styles: theme.Default(),
 	}
 	got := collectPanelBottomIndicators(ctx)
-	if len(got) != 2 {
-		t.Fatalf("len = %d, want gitignore + stash", len(got))
+	var physical []panelBottomIndicatorSegment
+	for _, seg := range got {
+		if seg.Edge == PanelBottomEdgePhysicalLeft {
+			physical = append(physical, seg)
+		}
 	}
+	if len(physical) != 2 {
+		t.Fatalf("len = %d, want gitignore + stash", len(physical))
+	}
+	got = physical
 	if got[0].ID != PanelBottomIndicatorGitignore || got[1].ID != PanelBottomIndicatorStash {
 		t.Fatalf("order = %+v, want gitignore then stash", got)
 	}
@@ -112,13 +154,20 @@ func TestCollectPanelBottomIndicatorsStashAfterGitignore(t *testing.T) {
 	}
 }
 
-func TestPanelBottomIndicatorRegistryIncludesSyncReserved(t *testing.T) {
+func TestPanelBottomIndicatorRegistryIncludesEndEdgeIndicators(t *testing.T) {
 	t.Parallel()
-	// Sync is not in the drawable registry yet.
+	var hasSync, hasQuickView, hasOther bool
 	for _, spec := range panelBottomIndicatorRegistry {
-		if spec.ID == PanelBottomIndicatorSync {
-			t.Fatal("sync must not be in drawable registry until End edge is unified")
+		switch spec.ID {
+		case PanelBottomIndicatorSync:
+			hasSync = spec.Edge == PanelBottomEdgeEnd
+		case PanelBottomIndicatorQuickView:
+			hasQuickView = spec.Edge == PanelBottomEdgeEnd
+		case PanelBottomIndicatorOtherPanel:
+			hasOther = spec.Edge == PanelBottomEdgeEnd
 		}
 	}
-	_ = tcell.Style{}
+	if !hasSync || !hasQuickView || !hasOther {
+		t.Fatalf("registry end edge: sync=%v quick_view=%v other_panel=%v", hasSync, hasQuickView, hasOther)
+	}
 }

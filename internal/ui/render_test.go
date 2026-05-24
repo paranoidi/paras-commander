@@ -1294,6 +1294,33 @@ func TestRenderQuickViewPreviewTitleShowsPathAndFilename(t *testing.T) {
 	}
 }
 
+func TestRenderHideInactivePanelFullWidthAndOtherPathIndicator(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	model := Model{
+		Left:              panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:             panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:       LeftPanel,
+		HideInactivePanel: true,
+	}
+	Render(screen, model, theme.Default())
+
+	bottomY := height - 2
+	fullBottom := tcelltest.TextAt(screen, 0, bottomY, width)
+	if !strings.Contains(fullBottom, "/var") && !strings.Contains(fullBottom, "var") {
+		t.Fatalf("bottom border = %q, want inactive path indicator", fullBottom)
+	}
+	if strings.Contains(fullBottom, "Sync") {
+		t.Fatalf("bottom border = %q, want no sync while hidden", fullBottom)
+	}
+}
+
 func TestRenderOmitsSyncIndicatorWhenDisabled(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

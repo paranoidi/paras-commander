@@ -32,6 +32,8 @@ type Model struct {
 	Right          panel.State
 	ActivePanel    int
 	ActiveSubFocus int // SubFocus*; applies to ActivePanel when ViewBrowser.
+	// HideInactivePanel gives the active column full width and hides the inactive twin panel.
+	HideInactivePanel bool
 	// SyncFollowEnabled gates latched panel sync. When true, SyncFollowPanel
 	// (LeftPanel or RightPanel) names the driver whose caret moves auto-load
 	// the highlighted directory into the inactive panel.
@@ -232,10 +234,11 @@ func (m Model) MenuBarInteractive() bool {
 func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	width, height := screen.Size()
 	layout := CalculateLayout(width, height, model.MenuBarLayoutReserved(), PanelWidthSplit{
-		Zoom:            PanelZoomSplitsColumns(model.ViewMode, model.PanelZoomEnabled),
-		ActivePanel:     model.ActivePanel,
-		ActivePercent:   model.PanelZoomActivePercent,
-		InactivePercent: model.PanelZoomInactivePercent,
+		Zoom:              PanelZoomSplitsColumns(model.ViewMode, model.PanelZoomEnabled),
+		ActivePanel:       model.ActivePanel,
+		ActivePercent:     model.PanelZoomActivePercent,
+		InactivePercent:   model.PanelZoomInactivePercent,
+		HideInactivePanel: model.HideInactivePanel,
 	})
 	primitive.Fill(screen, primitive.Rect{Width: width, Height: height}, ' ', tcell.StyleDefault)
 
@@ -289,30 +292,39 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if model.ActivePanel == RightPanel {
 			inactiveID = LeftPanel
 		}
-		showLeftPreview := model.FilePreviewDraw.Open && inactiveID == LeftPanel
-		showRightPreview := model.FilePreviewDraw.Open && inactiveID == RightPanel
+		showLeftPreview := !model.HideInactivePanel && model.FilePreviewDraw.Open && inactiveID == LeftPanel
+		showRightPreview := !model.HideInactivePanel && model.FilePreviewDraw.Open && inactiveID == RightPanel
+
+		otherPanelPath := ""
+		if model.HideInactivePanel {
+			if inactiveID == LeftPanel {
+				otherPanelPath = model.Left.PathString()
+			} else {
+				otherPanelPath = model.Right.PathString()
+			}
+		}
 
 		syncDriver := model.SyncDriverPanelID()
 		quickViewDriver := model.QuickViewDriverPanelID()
-		if showLeftPreview {
+		if layout.Left.Width > 0 && showLeftPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused,
 				model.QuickViewEnabled, model.Left.PathString(), model.UserHomeDir)
-		} else {
-			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint)
+		} else if layout.Left.Width > 0 {
+			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, otherPanelPath)
 		}
-		if leftStrip.Height > 0 {
+		if layout.Left.Width > 0 && leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
 			drawSelectionsStrip(screen, leftStrip, model.Left, leftStripFocused, leftChromeBlocked, styles, model.UserHomeDir)
 		}
-		if showRightPreview {
+		if layout.Right.Width > 0 && showRightPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
 				model.QuickViewEnabled, model.Right.PathString(), model.UserHomeDir)
-		} else {
-			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint)
+		} else if layout.Right.Width > 0 {
+			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, otherPanelPath)
 		}
-		if rightStrip.Height > 0 {
+		if layout.Right.Width > 0 && rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
 			drawSelectionsStrip(screen, rightStrip, model.Right, rightStripFocused, chromeBlocked, styles, model.UserHomeDir)
 		}

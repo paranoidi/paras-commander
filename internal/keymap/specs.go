@@ -83,8 +83,15 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionPanelFocusSelections,
 			Title:       "Focus selections panel",
 			Section:     "Navigation",
-			DefaultKeys: []string{"S-tab"},
+			DefaultKeys: nil,
 			Keywords:    []string{"shift-tab", "selections"},
+		},
+		{
+			ID:          ActionPanelToggleHideInactive,
+			Title:       "Hide inactive panel",
+			Section:     "Navigation",
+			DefaultKeys: []string{"S-tab"},
+			Keywords:    []string{"shift-tab", "single panel", "hide panel"},
 		},
 		{
 			ID:          ActionNavUp,

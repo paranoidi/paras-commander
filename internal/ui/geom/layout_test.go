@@ -77,6 +77,23 @@ func TestCalculateLayoutZoomWidensActiveLeftColumn(t *testing.T) {
 	}
 }
 
+func TestCalculateLayoutHideInactivePanelGivesActiveFullWidth(t *testing.T) {
+	layout := CalculateLayout(100, 30, true, PanelWidthSplit{
+		HideInactivePanel: true,
+		ActivePanel:       0,
+	})
+	if layout.Left.Width != 100 || layout.Right.Width != 0 {
+		t.Fatalf("Left=%+v Right=%+v want widths 100/0", layout.Left, layout.Right)
+	}
+	layout = CalculateLayout(100, 30, true, PanelWidthSplit{
+		HideInactivePanel: true,
+		ActivePanel:       1,
+	})
+	if layout.Left.Width != 0 || layout.Right.Width != 100 {
+		t.Fatalf("Left=%+v Right=%+v want widths 0/100", layout.Left, layout.Right)
+	}
+}
+
 func TestCalculateLayoutZoomWidensActiveRightColumn(t *testing.T) {
 	layout := CalculateLayout(100, 30, true, PanelWidthSplit{
 		Zoom: true, ActivePanel: 1, ActivePercent: 70, InactivePercent: 30,

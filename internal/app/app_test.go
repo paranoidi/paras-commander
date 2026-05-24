@@ -981,6 +981,46 @@ func TestDispatchMovesOnlyActivePanel(t *testing.T) {
 	}
 }
 
+func TestHideInactivePanelToggleAndTabShow(t *testing.T) {
+	dir := t.TempDir()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.SyncFollowEnabled = true
+	app.model.SyncFollowPanel = ui.LeftPanel
+	app.model.QuickViewEnabled = true
+
+	app.dispatch(keymap.ActionPanelToggleHideInactive)
+	if !app.model.HideInactivePanel {
+		t.Fatal("HideInactivePanel = false, want true")
+	}
+	if app.model.SyncFollowEnabled {
+		t.Fatal("sync still enabled after hiding inactive panel")
+	}
+	if app.model.QuickViewEnabled {
+		t.Fatal("quick view still enabled after hiding inactive panel")
+	}
+
+	app.dispatch(keymap.ActionPanelSwitch)
+	if app.model.HideInactivePanel {
+		t.Fatal("HideInactivePanel = true after Tab, want shown")
+	}
+	if app.model.ActivePanel != ui.RightPanel {
+		t.Fatalf("ActivePanel = %d, want right", app.model.ActivePanel)
+	}
+}
+
 func TestDispatchTogglesSelectionOnlyInActivePanel(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))

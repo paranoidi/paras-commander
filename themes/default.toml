@@ -61,6 +61,7 @@ indicator.quick_view = { fg = "green", bold = true }
 indicator.selections = { fg = "white" }
 indicator.gitignore = { fg = "bright_black" }
 indicator.stash = { fg = "yellow", bold = true }
+indicator.other_panel = { fg = "cyan", bold = true }
 text = { fg = "white" }
 
 git.conflicted = { fg = "red" }

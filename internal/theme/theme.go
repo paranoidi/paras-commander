@@ -76,6 +76,7 @@ type Theme struct {
 	PanelBottomIndicatorSelections tcell.Style
 	PanelBottomIndicatorGitignore  tcell.Style
 	PanelBottomIndicatorStash      tcell.Style
+	PanelBottomIndicatorOtherPanel tcell.Style
 	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
 	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
 	PanelFileIconFG map[string]tcell.Color
@@ -211,6 +212,9 @@ const (
 	PanelBottomIndicatorKeySelections = "selections"
 	PanelBottomIndicatorKeyGitignore  = "gitignore"
 	PanelBottomIndicatorKeyStash      = "stash"
+	PanelBottomIndicatorKeySync       = "sync"
+	PanelBottomIndicatorKeyQuickView  = "quick_view"
+	PanelBottomIndicatorKeyOtherPanel = "other_panel"
 )
 
 // PanelBottomIndicator returns the style for a file-panel bottom-border segment.
@@ -251,6 +255,21 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 			return t.PanelActiveTitle
 		}
 		return t.PanelInactiveTitle
+	case PanelBottomIndicatorKeySync:
+		if t.PanelSyncIndicator != (tcell.Style{}) {
+			return t.PanelSyncIndicator
+		}
+		fallthrough
+	case PanelBottomIndicatorKeyQuickView:
+		if t.PanelQuickViewIndicator != (tcell.Style{}) {
+			return t.PanelQuickViewIndicator
+		}
+		fallthrough
+	case PanelBottomIndicatorKeyOtherPanel:
+		if t.PanelBottomIndicatorOtherPanel != (tcell.Style{}) {
+			return t.PanelBottomIndicatorOtherPanel
+		}
+		fallthrough
 	default:
 		if chromeBlocked {
 			return t.PanelBlockedFrame
@@ -449,6 +468,7 @@ var requiredStyleKeys = []string{
 	"panel.indicator.selections",
 	"panel.indicator.gitignore",
 	"panel.indicator.stash",
+	"panel.indicator.other_panel",
 	"panel.blocked.frame",
 	"panel.blocked.surface",
 	"panel.blocked.title",
@@ -866,6 +886,7 @@ func parse(data []byte) (Theme, error) {
 		PanelBottomIndicatorSelections:      styles["panel.indicator.selections"],
 		PanelBottomIndicatorGitignore:       styles["panel.indicator.gitignore"],
 		PanelBottomIndicatorStash:           styles["panel.indicator.stash"],
+		PanelBottomIndicatorOtherPanel:      styles["panel.indicator.other_panel"],
 		PanelFileIconFG:                     panelFileIconFG,
 
 		PanelBlockedFrame:             styles["panel.blocked.frame"],

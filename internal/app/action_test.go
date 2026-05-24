@@ -36,7 +36,7 @@ func TestActionFromKeyMapsNavigationKeys(t *testing.T) {
 		{name: "right", key: tcell.KeyRight, want: keymap.ActionNavOpen},
 		{name: "backspace", key: tcell.KeyBackspace, want: keymap.ActionNavParent},
 		{name: "tab", key: tcell.KeyTab, want: keymap.ActionPanelSwitch},
-		{name: "focus selections", key: tcell.KeyBacktab, want: keymap.ActionPanelFocusSelections},
+		{name: "hide inactive panel", key: tcell.KeyBacktab, want: keymap.ActionPanelToggleHideInactive},
 		{name: "disk usage", key: tcell.KeyCtrlD, want: keymap.ActionPanelDiskUsageScan},
 		{name: "open menu", key: tcell.KeyF9, want: keymap.ActionAppOpenMenu},
 		{name: "quit", key: tcell.KeyF10, want: keymap.ActionAppQuit},
