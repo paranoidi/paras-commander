@@ -361,7 +361,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				suf := entryListingSuffixDecorationLen(nameWidth, jobMarkGlyph, subtreeMark && cur.Type == localfs.EntryDirectory)
 				decStart := len(display) - suf
 				if decStart >= 0 && decStart < len(display) {
-					_, rowBG, _ := style.Decompose()
+					nameColBase := leftGutter + gitStrip + iconStrip
 					jobIconFG, _, _ := jobIconStyle(jobStatus, styles).Decompose()
 					for i := decStart; i < len(display); i++ {
 						r := display[i].Rune
@@ -370,6 +370,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 							if r == '○' {
 								fg = listingMarkFG
 							}
+							_, rowBG, _ := blendCell(nameColBase + i).Decompose()
 							spanStyle := tcell.StyleDefault.Foreground(fg).Background(rowBG)
 							spans = append([]primitive.Span{{Start: i, End: i + 1, Style: spanStyle}}, spans...)
 						}
