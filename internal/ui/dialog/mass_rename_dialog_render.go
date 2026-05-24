@@ -50,7 +50,7 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	}
 	// Radios(2) + sep + two fields (label+input each) + [regex pattern compile hint] + [checkbox+sep in simple] + sep + vp + buttons (global sep above buttons only).
 	fixed := 2 + 1 + 4 + 1
-	if state.MassRenameMode == MassRenameModeUIRegex && strings.TrimSpace(state.MassRenamePatternCompileHint) != "" {
+	if massRenameShowsPatternHint(state) {
 		fixed++
 	}
 	if state.MassRenameMode == MassRenameModeUISimple {
@@ -83,6 +83,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	beforeReplaced := styles.DialogMassRenameBeforeReplaced
 	afterBase := styles.DialogMassRenameAfter.Background(dbg)
 	afterAdded := styles.DialogMassRenameAfterAdded
+	afterError := styles.DialogMassRenameAfterError
 	leftCol := rect.X + 2
 	innerW := rect.Width - 4
 	if innerW <= 0 {
@@ -122,11 +123,8 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		drawInputField(screen, leftCol, y, innerW, field, state.FocusedField == focusIdx, styles)
 		y++
 		if fi == 0 && state.MassRenameMode == MassRenameModeUIRegex {
-			if hint := strings.TrimSpace(state.MassRenamePatternCompileHint); hint != "" {
-				if y >= innerBottom {
-					return
-				}
-				primitive.Text(screen, leftCol, y, innerW, hint, warnStyle)
+			if hint := massRenamePatternHintText(state); hint != "" && y < innerBottom {
+				primitive.Text(screen, leftCol, y, innerW, hint, massRenamePatternHintStyle(styles, dbg))
 				y++
 			}
 		}
@@ -159,6 +157,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	beforeRemovedRanges := state.MassRenamePreviewBeforeRemoved
 	beforeReplacedRanges := state.MassRenamePreviewBeforeReplaced
 	afterAddedRanges := state.MassRenamePreviewAfterAdded
+	afterErrorRows := state.MassRenamePreviewAfterError
 	n := len(before)
 	if len(after) < n {
 		n = len(after)
@@ -216,7 +215,8 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			added = afterAddedRanges[i]
 		}
 		lbText, lbSpans := massRenameBeforePreviewRow(lb, removed, replaced, leftW, beforeBase, beforeRemoved, beforeReplaced)
-		rbText, rbSpans := massRenamePreviewRow(rb, added, rightW, afterBase, afterAdded)
+		rowError := i < len(afterErrorRows) && afterErrorRows[i]
+		rbText, rbSpans := massRenameAfterPreviewRow(rb, added, rightW, afterBase, afterAdded, afterError.Background(dbg), rowError)
 		primitive.StyledText(screen, leftCol, y, leftW, lbText, beforeBase, lbSpans)
 		if sepW == 1 {
 			screen.SetContent(leftCol+leftW, y, ' ', nil, beforeBase)

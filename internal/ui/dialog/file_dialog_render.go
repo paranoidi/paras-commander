@@ -246,7 +246,11 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 			}
 		}
 		for i := 0; i < len(state.MassRenamePreviewBefore); i++ {
-			lw := utf8.RuneCountInString(state.MassRenamePreviewBefore[i])
+			lb := state.MassRenamePreviewBefore[i]
+			if strings.HasPrefix(lb, "!") {
+				continue
+			}
+			lw := utf8.RuneCountInString(lb)
 			rw := 0
 			if i < len(state.MassRenamePreviewAfter) {
 				rw = utf8.RuneCountInString(state.MassRenamePreviewAfter[i])
@@ -257,7 +261,7 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 				minWidth = pairOuter
 			}
 		}
-		if h := strings.TrimSpace(state.MassRenamePatternCompileHint); h != "" {
+		if h := massRenamePatternHintText(state); h != "" {
 			hw := utf8.RuneCountInString(h) + 4
 			if hw > minWidth {
 				minWidth = hw
@@ -618,9 +622,10 @@ func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, 
 func drawOkCancelButtons(screen tcell.Screen, rect Rect, y int, state FileDialogState, styles theme.Theme) {
 	okFocusIdx := fileDialogOKFocusIndex(state)
 	cancelFocusIdx := fileDialogCancelFocusIndex(state)
+	okDisabled := state.DialogType == FileDialogMassRename && !FileDialogMassRenameOKEnabled(state)
 
 	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: state.FocusedField == okFocusIdx},
+		{Label: "OK", Shortcut: 'O', Focused: state.FocusedField == okFocusIdx, Disabled: okDisabled},
 		{Label: "Cancel", Shortcut: 'C', Focused: state.FocusedField == cancelFocusIdx},
 	}, styles)
 }

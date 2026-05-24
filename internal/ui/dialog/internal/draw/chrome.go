@@ -402,6 +402,7 @@ type DialogButtonSpec struct {
 	Shortcut    rune
 	Focused     bool
 	Destructive bool
+	Disabled    bool
 }
 
 // CenteredDialogRect returns a rectangle of the given size centered in the layout.
@@ -467,6 +468,6 @@ func DrawDialogButtonRowCentered(screen tcell.Screen, rect Rect, y int, buttons 
 		if i > 0 {
 			x += gap
 		}
-		x += DrawDialogButton(screen, x, y, b.Label, b.Shortcut, b.Focused, b.Destructive, styles)
+		x += DrawDialogButton(screen, x, y, b.Label, b.Shortcut, b.Focused, b.Destructive, b.Disabled, styles)
 	}
 }

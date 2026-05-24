@@ -175,6 +175,11 @@ func MassRenameEnsurePreviewScroll(st *FileDialogState, viewportRows, totalRows 
 	dialog.MassRenameEnsurePreviewScroll(st, viewportRows, totalRows)
 }
 
+// FileDialogMassRenameOKEnabled reports whether mass rename OK may run (no preview conflicts / invalid find).
+func FileDialogMassRenameOKEnabled(st FileDialogState) bool {
+	return dialog.FileDialogMassRenameOKEnabled(st)
+}
+
 // DeleteDialogListViewportRows returns how many delete-list name rows fit for a terminal height.
 func DeleteDialogListViewportRows(layoutHeight int, state FileDialogState) int {
 	return dialog.DeleteDialogListViewportRows(layoutHeight, state)

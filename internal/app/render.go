@@ -46,6 +46,9 @@ func (a *App) render() {
 	} else {
 		a.model.CommandsDisplay = nil
 	}
+	if a.model.FileDialog.Open && a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+		a.recomputeMassRenamePreview()
+	}
 	ui.Render(a.screen, a.model, a.styles)
 	a.emitScreenAfterFullRender()
 	a.armSpinnerRedrawTimer()

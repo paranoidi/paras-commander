@@ -149,6 +149,36 @@ func TestMassRenameValidateExternalCollision(t *testing.T) {
 	}
 }
 
+func TestMassRenameRowErrorsMarksConflictingRows(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "Season2"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rows := []MassRenameRow{
+		{SourcePath: filepath.Join(dir, "Season1"), OldBase: "Season1", NewBase: "Season2"},
+		{SourcePath: filepath.Join(dir, "Season3"), OldBase: "Season3", NewBase: "Season3"},
+	}
+	errs := MassRenameRowErrors(rows)
+	if errs[0] == nil {
+		t.Fatal("expected Season1 row error")
+	}
+	if errs[1] != nil {
+		t.Fatalf("Season3 should be valid, got %v", errs[1])
+	}
+}
+
+func TestMassRenameRowErrorsDuplicateTargetsBothRows(t *testing.T) {
+	dir := t.TempDir()
+	rows := []MassRenameRow{
+		{SourcePath: filepath.Join(dir, "a.txt"), OldBase: "a.txt", NewBase: "z.txt"},
+		{SourcePath: filepath.Join(dir, "b.txt"), OldBase: "b.txt", NewBase: "z.txt"},
+	}
+	errs := MassRenameRowErrors(rows)
+	if errs[0] == nil || errs[1] == nil {
+		t.Fatalf("expected both rows invalid, got %#v", errs)
+	}
+}
+
 func TestMassRenameRegexCompileUserMessage(t *testing.T) {
 	_, err := MassRenameCompileRegex("a++")
 	if err == nil {
@@ -166,6 +196,17 @@ func TestMassRenameRegexCompileUserMessage(t *testing.T) {
 	}
 	if !strings.Contains(got, "nested repetition") {
 		t.Fatalf("unexpected detail: %q", got)
+	}
+}
+
+func TestMassRenameRegexCompileUserMessageBackslash(t *testing.T) {
+	_, err := MassRenameCompileRegex(`\`)
+	if err == nil {
+		t.Fatal("expected compile error")
+	}
+	got := MassRenameRegexCompileUserMessage(err)
+	if got == "" {
+		t.Fatal("empty message for trailing backslash pattern")
 	}
 }
 

@@ -112,12 +112,14 @@ type FileDialogState struct {
 	MassRenamePreviewScroll int
 	MassRenameSources       []MassRenameSource
 	// MassRenamePreviewBefore / After are paired basename preview columns (recomputed in app).
-	// Rows with Before starting with "!" are full-width error lines (After empty).
+	// Rows with Before starting with "!" are full-width compute-error lines (After empty).
 	MassRenamePreviewBefore         []string
 	MassRenamePreviewAfter          []string
 	MassRenamePreviewBeforeRemoved  [][]search.Range
 	MassRenamePreviewBeforeReplaced [][]search.Range
 	MassRenamePreviewAfterAdded     [][]search.Range
+	// MassRenamePreviewAfterError marks after-column rows with a validation conflict (per-row).
+	MassRenamePreviewAfterError []bool
 	// MassRenamePatternCompileHint is a short regexp compile error shown under the Pattern field (regex mode).
 	MassRenamePatternCompileHint string
 

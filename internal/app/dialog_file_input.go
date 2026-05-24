@@ -18,7 +18,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		switch event.Rune() {
 		case 's', 'S':
 			d.MassRenameMode = ui.MassRenameModeUISimple
-			if d.FocusedField != massRenameFindFieldFocus {
+			if d.FocusedField == 1 {
 				d.FocusedField = 0
 			}
 			a.massRenameSyncFieldLabels()
@@ -26,8 +26,11 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			return false
 		case 'r', 'R':
 			d.MassRenameMode = ui.MassRenameModeUIRegex
-			if d.FocusedField != massRenameFindFieldFocus {
+			switch d.FocusedField {
+			case 0:
 				d.FocusedField = 1
+			case 4:
+				d.FocusedField = 3
 			}
 			a.massRenameSyncFieldLabels()
 			a.recomputeMassRenamePreview()

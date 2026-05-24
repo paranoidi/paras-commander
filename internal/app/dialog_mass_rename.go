@@ -113,6 +113,9 @@ func (a *App) recomputeMassRenamePreview() {
 					d.Fields[0].InputInvalid = true
 				}
 				d.MassRenamePatternCompileHint = ops.MassRenameRegexCompileUserMessage(err)
+				if strings.TrimSpace(d.MassRenamePatternCompileHint) == "" {
+					d.MassRenamePatternCompileHint = strings.TrimSpace(err.Error())
+				}
 				rx = nil // preview as no-op transform; error is shown on the pattern field only
 			}
 		}
@@ -131,21 +134,16 @@ func (a *App) recomputeMassRenamePreview() {
 	if len(d.Fields) > 0 && !d.Fields[0].InputInvalid && !ops.MassRenameFindMatchesAny(rows, mode, find, caseFold, rx) {
 		d.Fields[0].InputInvalid = true
 	}
-	if err := ops.MassRenameValidateRows(rows); err != nil {
-		d.Message = err.Error()
+	rowErrs := ops.MassRenameRowErrors(rows)
+	afterError := make([]bool, len(rows))
+	for i, err := range rowErrs {
+		afterError[i] = err != nil
 	}
-	before := make([]string, 0, len(rows)+1)
-	after := make([]string, 0, len(rows)+1)
-	beforeRemoved := make([][]search.Range, 0, len(rows)+1)
-	beforeReplaced := make([][]search.Range, 0, len(rows)+1)
-	afterAdded := make([][]search.Range, 0, len(rows)+1)
-	if d.Message != "" {
-		before = append(before, "! "+d.Message)
-		after = append(after, "")
-		beforeRemoved = append(beforeRemoved, nil)
-		beforeReplaced = append(beforeReplaced, nil)
-		afterAdded = append(afterAdded, nil)
-	}
+	before := make([]string, 0, len(rows))
+	after := make([]string, 0, len(rows))
+	beforeRemoved := make([][]search.Range, 0, len(rows))
+	beforeReplaced := make([][]search.Range, 0, len(rows))
+	afterAdded := make([][]search.Range, 0, len(rows))
 	for _, r := range rows {
 		lcsRemoved, _ := ui.MassRenameDiff(r.OldBase, r.NewBase)
 		matchRanges := ops.MassRenameMatchRanges(r.OldBase, mode, find, caseFold, rx)
@@ -161,6 +159,7 @@ func (a *App) recomputeMassRenamePreview() {
 	d.MassRenamePreviewBeforeRemoved = beforeRemoved
 	d.MassRenamePreviewBeforeReplaced = beforeReplaced
 	d.MassRenamePreviewAfterAdded = afterAdded
+	d.MassRenamePreviewAfterError = afterError
 	_, h := a.screen.Size()
 	vp := ui.MassRenamePreviewViewportRows(h)
 	ui.MassRenameEnsurePreviewScroll(&a.model.FileDialog, vp, len(before))
@@ -181,31 +180,48 @@ func (a *App) applyMassRenameModeFromFocus() {
 	a.recomputeMassRenamePreview()
 }
 
-func (a *App) executeMassRename() {
-	d := &a.model.FileDialog
-	a.recomputeMassRenamePreview()
-	if d.DialogType == ui.FileDialogMassRename && len(d.Fields) > 0 && d.Fields[0].InputInvalid {
+func (a *App) tryRejectMassRenameOK(d *ui.FileDialogState) bool {
+	if d.DialogType != ui.FileDialogMassRename || ui.FileDialogMassRenameOKEnabled(*d) {
+		return false
+	}
+	msg := a.massRenameOKBlockedMessage(d)
+	if msg == "" {
+		msg = "Mass rename cannot be applied"
+	}
+	a.setTransientMessage(msg, ui.MessageUrgencyCritical)
+	return true
+}
+
+func (a *App) massRenameOKBlockedMessage(d *ui.FileDialogState) string {
+	if len(d.Fields) > 0 && d.Fields[0].InputInvalid {
 		find := d.Fields[0].Value
 		if d.MassRenameMode == ui.MassRenameModeUIRegex {
 			if _, err := ops.MassRenameCompileRegex(find); err != nil {
 				msg := ops.MassRenameRegexCompileUserMessage(err)
-				if msg == "" {
-					msg = err.Error()
+				if msg != "" {
+					return msg
 				}
-				a.setTransientMessage(msg, ui.MessageUrgencyWarn)
-				return
+				return strings.TrimSpace(err.Error())
+			}
+			if hint := strings.TrimSpace(d.MassRenamePatternCompileHint); hint != "" {
+				return hint
 			}
 		}
-		a.setTransientMessage("No selected file names match", ui.MessageUrgencyWarn)
-		return
+		return "No selected file names match"
 	}
-	if strings.TrimSpace(d.Message) != "" {
-		a.setTransientMessage(d.Message, ui.MessageUrgencyWarn)
-		return
+	rows, err := a.massRenameComputeRows(d)
+	if err != nil {
+		return err.Error()
 	}
+	if vErr := ops.MassRenameValidateRows(rows); vErr != nil {
+		return vErr.Error()
+	}
+	return ""
+}
+
+func (a *App) massRenameComputeRows(d *ui.FileDialogState) ([]ops.MassRenameRow, error) {
 	if len(d.MassRenameSources) == 0 {
-		a.closeFileDialog()
-		return
+		return nil, fmt.Errorf("no files to rename")
 	}
 	entries := make([]localfs.Entry, len(d.MassRenameSources))
 	for i, s := range d.MassRenameSources {
@@ -227,17 +243,25 @@ func (a *App) executeMassRename() {
 			var err error
 			rx, err = ops.MassRenameCompileRegex(find)
 			if err != nil {
-				msg := ops.MassRenameRegexCompileUserMessage(err)
-				if msg == "" {
-					msg = err.Error()
-				}
-				a.setTransientMessage(msg, ui.MessageUrgencyWarn)
-				return
+				return nil, err
 			}
 		}
 	}
 	caseFold := d.MassRenameCaseFold && d.MassRenameMode == ui.MassRenameModeUISimple
-	rows, err := ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, rx)
+	return ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, rx)
+}
+
+func (a *App) executeMassRename() {
+	d := &a.model.FileDialog
+	a.recomputeMassRenamePreview()
+	if a.tryRejectMassRenameOK(d) {
+		return
+	}
+	if len(d.MassRenameSources) == 0 {
+		a.closeFileDialog()
+		return
+	}
+	rows, err := a.massRenameComputeRows(d)
 	if err != nil {
 		a.setTransientMessage(err.Error(), ui.MessageUrgencyWarn)
 		return

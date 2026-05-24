@@ -4041,6 +4041,72 @@ func TestMassRenameModeShortcutKeepsFindFocus(t *testing.T) {
 	}
 }
 
+func TestMassRenameModeShortcutKeepsReplaceFocus(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "x.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	const replaceFocus = 3
+	d.FocusedField = replaceFocus
+	for _, r := range "y" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if d.FocusedField != replaceFocus {
+		t.Fatalf("setup: focus = %d, want %d (Replace)", d.FocusedField, replaceFocus)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	if d.MassRenameMode != ui.MassRenameModeUIRegex {
+		t.Fatalf("mode = %v, want regex", d.MassRenameMode)
+	}
+	if d.FocusedField != replaceFocus {
+		t.Fatalf("after Alt+R: focus = %d, want %d (Replace)", d.FocusedField, replaceFocus)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
+	if d.MassRenameMode != ui.MassRenameModeUISimple {
+		t.Fatalf("mode = %v, want simple", d.MassRenameMode)
+	}
+	if d.FocusedField != replaceFocus {
+		t.Fatalf("after Alt+S: focus = %d, want %d (Replace)", d.FocusedField, replaceFocus)
+	}
+}
+
+func TestMassRenameRegexpCompileHintForBackslashPattern(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "x.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	d.FocusedField = 2
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '\\', tcell.ModNone))
+
+	if !d.Fields[0].InputInvalid {
+		t.Fatal("expected invalid pattern field")
+	}
+	hint := strings.TrimSpace(d.MassRenamePatternCompileHint)
+	if hint == "" {
+		t.Fatal("expected regexp compile hint under pattern field")
+	}
+	if !strings.Contains(hint, "backslash") {
+		t.Fatalf("hint = %q, want backslash detail", hint)
+	}
+}
+
 func TestMassRenameEnterCancelClosesWithInvalidRegex(t *testing.T) {
 	dir := t.TempDir()
 	aPath := filepath.Join(dir, "x.txt")
@@ -4070,6 +4136,83 @@ func TestMassRenameEnterCancelClosesWithInvalidRegex(t *testing.T) {
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.Open {
 		t.Fatal("Enter on Cancel should close dialog even when regexp is invalid")
+	}
+}
+
+func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
+	dir := t.TempDir()
+	names := []string{"Season1", "Season2", "Season3", "Season4"}
+	paths := make([]string, len(names))
+	for i, name := range names {
+		p := filepath.Join(dir, name)
+		paths[i] = p
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = make(map[string]bool, len(paths))
+	for _, path := range paths {
+		p.SelectedPaths[path] = true
+	}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	if !d.Open || d.DialogType != ui.FileDialogMassRename {
+		t.Fatalf("expected mass rename dialog")
+	}
+	for _, r := range "1" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.FocusedField = 3
+	for _, r := range "2" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if len(d.MassRenamePreviewBefore) != len(paths) {
+		t.Fatalf("preview rows = %d, want %d (no banner row)", len(d.MassRenamePreviewBefore), len(paths))
+	}
+	for _, lb := range d.MassRenamePreviewBefore {
+		if strings.HasPrefix(lb, "!") {
+			t.Fatalf("unexpected banner row %q", lb)
+		}
+	}
+	conflictIdx := -1
+	for i, lb := range d.MassRenamePreviewBefore {
+		if lb == "Season1" {
+			conflictIdx = i
+			break
+		}
+	}
+	if conflictIdx < 0 {
+		t.Fatal("Season1 preview row missing")
+	}
+	if len(d.MassRenamePreviewAfterError) != len(paths) || !d.MassRenamePreviewAfterError[conflictIdx] {
+		t.Fatalf("after error flags = %v, want index %d set", d.MassRenamePreviewAfterError, conflictIdx)
+	}
+	if ui.FileDialogMassRenameOKEnabled(*d) {
+		t.Fatal("OK action should be blocked when preview has conflicts")
+	}
+	okIdx := ui.FileDialogOKFocusIndex(*d)
+	d.FocusedField = 4
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if d.FocusedField != okIdx {
+		t.Fatalf("Down from checkbox: focus = %d, want OK %d", d.FocusedField, okIdx)
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if !app.model.FileDialog.Open {
+		t.Fatal("Enter on OK with conflicts should not close dialog")
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
+		t.Fatalf("MessageUrgency = %v, want MessageUrgencyCritical", app.model.MessageUrgency)
+	}
+	if strings.TrimSpace(app.model.Message) == "" {
+		t.Fatal("expected critical toast explaining the conflict")
+	}
+	if !strings.Contains(app.model.Message, "Season2") {
+		t.Fatalf("message = %q, want conflict detail mentioning Season2", app.model.Message)
 	}
 }
 

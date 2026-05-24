@@ -116,8 +116,15 @@ func massRenameBeforePreviewRow(line string, removed, replaced []search.Range, w
 	return dispStr, spans
 }
 
-// massRenamePreviewRow prepares display text and highlight spans for one preview column.
-func massRenamePreviewRow(line string, ranges []search.Range, width int, base, highlight tcell.Style) (string, []primitive.Span) {
+// massRenameAfterPreviewRow prepares the after preview column, including validation error styling.
+func massRenameAfterPreviewRow(line string, ranges []search.Range, width int, base, added, errorStyle tcell.Style, hasError bool) (string, []primitive.Span) {
+	if hasError {
+		return massRenamePreviewRowStyled(line, nil, width, base, errorStyle, true, errorStyle)
+	}
+	return massRenamePreviewRowStyled(line, ranges, width, base, added, false, added)
+}
+
+func massRenamePreviewRowStyled(line string, ranges []search.Range, width int, base, highlight tcell.Style, fullLine bool, highlightStyle tcell.Style) (string, []primitive.Span) {
 	if width <= 0 {
 		return "", nil
 	}
@@ -128,7 +135,17 @@ func massRenamePreviewRow(line string, ranges []search.Range, width int, base, h
 	}
 	disp := []rune(dispStr)
 	_, bg, _ := base.Decompose()
-	highlight = highlight.Background(bg)
-	spans := fuzzyHighlightSpans(orig, disp, ranges, highlight)
+	highlightStyle = highlightStyle.Background(bg)
+	var spans []primitive.Span
+	if fullLine && len(orig) > 0 {
+		end := len(orig)
+		if end > len(disp) {
+			end = len(disp)
+		}
+		spans = fuzzyHighlightSpans(orig, disp, []search.Range{{Start: 0, End: end}}, highlightStyle)
+	} else {
+		highlight = highlight.Background(bg)
+		spans = fuzzyHighlightSpans(orig, disp, ranges, highlight)
+	}
 	return dispStr, spans
 }

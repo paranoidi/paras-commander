@@ -172,60 +172,100 @@ func trimRegexpParseDetail(err error) string {
 	return s
 }
 
-// MassRenameValidateRows checks duplicate targets, illegal names, and conflicts with paths
-// outside the batch. rows must come from MassRenameCompute with the same panelPath resolution.
-func MassRenameValidateRows(rows []MassRenameRow) error {
+// MassRenameRowErrors returns per-row validation errors aligned with rows. A nil entry means the
+// row is valid. rows must come from MassRenameCompute with the same panelPath resolution.
+func MassRenameRowErrors(rows []MassRenameRow) []error {
+	out := make([]error, len(rows))
 	if len(rows) == 0 {
-		return nil
+		return out
 	}
 	dir := filepath.Dir(rows[0].SourcePath)
-	for _, r := range rows {
+	mixedDir := &Error{Op: "mass-rename", Text: "all selected files must be in the same directory"}
+	for i, r := range rows {
 		if filepath.Dir(r.SourcePath) != dir {
-			return &Error{Op: "mass-rename", Text: "all selected files must be in the same directory"}
+			out[i] = mixedDir
 		}
+	}
+	if mixedDirErr := firstMassRenameRowError(out); mixedDirErr != nil {
+		for i := range out {
+			if out[i] == nil {
+				out[i] = mixedDirErr
+			}
+		}
+		return out
 	}
 	sourceSet := make(map[string]struct{}, len(rows))
 	for _, r := range rows {
 		sourceSet[r.SourcePath] = struct{}{}
 	}
-	// Duplicate new basename?
-	seenNew := make(map[string]string, len(rows))
-	for _, r := range rows {
+	newToIndices := make(map[string][]int, len(rows))
+	for i, r := range rows {
 		if r.NewBase == r.OldBase {
 			continue
 		}
 		if r.NewBase == "" {
-			return &Error{Op: "mass-rename", Text: fmt.Sprintf("resulting name is empty for %q", r.OldBase)}
+			out[i] = &Error{Op: "mass-rename", Text: fmt.Sprintf("resulting name is empty for %q", r.OldBase)}
+			continue
 		}
 		if filepath.Base(r.NewBase) != r.NewBase || strings.ContainsRune(r.NewBase, filepath.Separator) {
-			return &Error{Op: "mass-rename", Text: fmt.Sprintf("resulting name must be a single path segment: %q", r.NewBase)}
+			out[i] = &Error{Op: "mass-rename", Text: fmt.Sprintf("resulting name must be a single path segment: %q", r.NewBase)}
+			continue
 		}
-		// Reject NUL etc. (single-segment check already covers path separators).
 		if !utf8.ValidString(r.NewBase) {
-			return &Error{Op: "mass-rename", Text: fmt.Sprintf("resulting name is not valid UTF-8: %q", r.NewBase)}
+			out[i] = &Error{Op: "mass-rename", Text: fmt.Sprintf("resulting name is not valid UTF-8: %q", r.NewBase)}
+			continue
 		}
-		if prev, ok := seenNew[r.NewBase]; ok {
-			return &Error{Op: "mass-rename", Text: fmt.Sprintf("duplicate target name %q (from %q and %q)", r.NewBase, prev, r.OldBase)}
-		}
-		seenNew[r.NewBase] = r.OldBase
+		newToIndices[r.NewBase] = append(newToIndices[r.NewBase], i)
 	}
-	for _, r := range rows {
-		if r.NewBase == r.OldBase {
+	for newBase, indices := range newToIndices {
+		if len(indices) < 2 {
+			continue
+		}
+		prev := rows[indices[0]].OldBase
+		dup := &Error{Op: "mass-rename", Text: fmt.Sprintf("duplicate target name %q (from %q and %q)", newBase, prev, rows[indices[1]].OldBase)}
+		for _, i := range indices {
+			massRenameSetRowError(out, i, dup)
+		}
+	}
+	for i, r := range rows {
+		if r.NewBase == r.OldBase || out[i] != nil {
 			continue
 		}
 		dst := filepath.Join(dir, r.NewBase)
 		if fi, err := os.Lstat(dst); err == nil {
 			if fi.IsDir() {
-				return &Error{Op: "mass-rename", Text: fmt.Sprintf("target %q is a directory", r.NewBase)}
+				massRenameSetRowError(out, i, &Error{Op: "mass-rename", Text: fmt.Sprintf("target %q already exists", r.NewBase)})
+				continue
 			}
 			if _, ok := sourceSet[dst]; !ok {
-				return &Error{Op: "mass-rename", Text: fmt.Sprintf("target already exists: %q", r.NewBase)}
+				massRenameSetRowError(out, i, &Error{Op: "mass-rename", Text: fmt.Sprintf("target %q already exists", r.NewBase)})
 			}
 		} else if !os.IsNotExist(err) {
-			return &Error{Op: "mass-rename", Text: fmt.Sprintf("cannot stat %q", r.NewBase), Err: err}
+			massRenameSetRowError(out, i, &Error{Op: "mass-rename", Text: fmt.Sprintf("cannot stat %q", r.NewBase), Err: err})
+		}
+	}
+	return out
+}
+
+func massRenameSetRowError(out []error, i int, err error) {
+	if out[i] == nil {
+		out[i] = err
+	}
+}
+
+func firstMassRenameRowError(errs []error) error {
+	for _, err := range errs {
+		if err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+// MassRenameValidateRows checks duplicate targets, illegal names, and conflicts with paths
+// outside the batch. rows must come from MassRenameCompute with the same panelPath resolution.
+func MassRenameValidateRows(rows []MassRenameRow) error {
+	return firstMassRenameRowError(MassRenameRowErrors(rows))
 }
 
 // MassRenameFindMatchesAny reports whether find (simple) or rx (regex) matches at least one row basename.

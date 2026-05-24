@@ -157,6 +157,7 @@ type Theme struct {
 	DialogMassRenameBeforeReplaced tcell.Style
 	DialogMassRenameAfter          tcell.Style
 	DialogMassRenameAfterAdded     tcell.Style
+	DialogMassRenameAfterError     tcell.Style
 
 	MessageInfo  tcell.Style
 	MessageWarn  tcell.Style
@@ -527,6 +528,7 @@ var requiredStyleKeys = []string{
 	"dialog.massrename.before.replaced",
 	"dialog.massrename.after",
 	"dialog.massrename.after.added",
+	"dialog.massrename.after.error",
 	"message.info",
 	"message.warn",
 	"message.error",
@@ -971,6 +973,7 @@ func parse(data []byte) (Theme, error) {
 		DialogMassRenameBeforeReplaced: styles["dialog.massrename.before.replaced"],
 		DialogMassRenameAfter:          styles["dialog.massrename.after"],
 		DialogMassRenameAfterAdded:     styles["dialog.massrename.after.added"],
+		DialogMassRenameAfterError:     styles["dialog.massrename.after.error"],
 
 		MessageInfo:  styles["message.info"],
 		MessageWarn:  styles["message.warn"],
