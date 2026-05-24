@@ -207,13 +207,39 @@ func parseSFTP(raw string) (Path, error) {
 		b.WriteString(":")
 		b.WriteString(port)
 	}
-	remote := path.Clean("/" + strings.TrimPrefix(u.EscapedPath(), "/"))
-	if remote == "/" {
-		b.WriteString("/")
-	} else {
-		b.WriteString(remote)
-	}
+	remote := remoteFromURIPath(u.EscapedPath())
+	b.WriteString(remoteToURIPath(remote))
 	return Path{scheme: SchemeSFTP, s: b.String()}, nil
+}
+
+// remoteFromURIPath maps an SFTP URI path (from url.EscapedPath) to the internal remote segment.
+// Internal form uses ~ and ~/… for home; / for filesystem root; /var for absolutes.
+// Do not use path.Clean on tilde-bearing URI paths — it produces invalid segments like /~.
+func remoteFromURIPath(uriPath string) string {
+	if uriPath == "" || uriPath == "/" {
+		return "/"
+	}
+	if uriPath == "/~" {
+		return "~"
+	}
+	if strings.HasPrefix(uriPath, "/~/") {
+		return strings.TrimPrefix(uriPath, "/")
+	}
+	return path.Clean(uriPath)
+}
+
+// remoteToURIPath maps the internal remote segment to the URI path suffix (always starts with /).
+func remoteToURIPath(remote string) string {
+	switch {
+	case remote == "/":
+		return "/"
+	case remote == "~":
+		return "/~"
+	case strings.HasPrefix(remote, "~/"):
+		return "/" + remote
+	default:
+		return path.Clean(remote)
+	}
 }
 
 // splitSFTP parses canonical sftp://user@host:port/remote/path into host part and remote path.
@@ -233,7 +259,7 @@ func splitSFTP(canonical string) (hostPart string, remotePath string, err error)
 	if remotePath == "" {
 		remotePath = "/"
 	}
-	return hostPart, path.Clean(remotePath), nil
+	return hostPart, remoteFromURIPath(remotePath), nil
 }
 
 func hasFilePrefix(p, prefix string) bool {
@@ -281,17 +307,16 @@ func sftpParent(p Path) Path {
 		return Path{}
 	}
 	parentRemote := path.Dir(remote)
-	if parentRemote == remote {
+	switch {
+	case remote == "~":
+		parentRemote = "/"
+	case parentRemote == remote || parentRemote == ".":
 		return p
 	}
 	var b strings.Builder
 	b.WriteString("sftp://")
 	b.WriteString(hostPart)
-	if parentRemote == "/" {
-		b.WriteString("/")
-	} else {
-		b.WriteString(parentRemote)
-	}
+	b.WriteString(remoteToURIPath(parentRemote))
 	return Path{scheme: SchemeSFTP, s: b.String()}
 }
 
@@ -304,7 +329,7 @@ func sftpJoin(p Path, name string) (Path, error) {
 	var b strings.Builder
 	b.WriteString("sftp://")
 	b.WriteString(hostPart)
-	b.WriteString(joined)
+	b.WriteString(remoteToURIPath(joined))
 	return Path{scheme: SchemeSFTP, s: b.String()}, nil
 }
 
@@ -334,10 +359,7 @@ func SFTPEndpoint(p Path) (user, host, port, remoteDir string, err error) {
 	if port == "" {
 		port = "22"
 	}
-	remoteDir = path.Clean("/" + strings.TrimPrefix(u.EscapedPath(), "/"))
-	if remoteDir == "." {
-		remoteDir = "/"
-	}
+	remoteDir = remoteFromURIPath(u.EscapedPath())
 	return user, host, port, remoteDir, nil
 }
 

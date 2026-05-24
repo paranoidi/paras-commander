@@ -23,14 +23,11 @@ type hostKeyStore struct {
 }
 
 func newHostKeyStore(path string, prompts Prompts) (*hostKeyStore, error) {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("resolve home for known_hosts: %w", err)
-		}
-		path = filepath.Join(home, ".ssh", "known_hosts")
+	resolved, err := resolveKnownHostsPath(path)
+	if err != nil {
+		return nil, err
 	}
+	path = resolved
 	var base ssh.HostKeyCallback
 	if _, err := os.Stat(path); err == nil {
 		cb, err := knownhosts.New(path)
@@ -47,6 +44,44 @@ func newHostKeyStore(path string, prompts Prompts) (*hostKeyStore, error) {
 		base:           base,
 		sessionTrusted: make(map[string]string),
 	}, nil
+}
+
+func resolveKnownHostsPath(path string) (string, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("resolve home for known_hosts: %w", err)
+		}
+		return filepath.Join(home, ".ssh", "known_hosts"), nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = ""
+	}
+	if strings.HasPrefix(path, "~/") && home != "" {
+		return filepath.Clean(filepath.Join(home, path[2:])), nil
+	}
+	if strings.HasPrefix(path, "~") && home != "" {
+		return filepath.Clean(filepath.Join(home, strings.TrimPrefix(path, "~"))), nil
+	}
+	return filepath.Clean(path), nil
+}
+
+func (s *hostKeyStore) reloadBaseLocked() error {
+	if _, err := os.Stat(s.knownHostsPath); err != nil {
+		if os.IsNotExist(err) {
+			s.base = nil
+			return nil
+		}
+		return fmt.Errorf("stat known_hosts %q: %w", s.knownHostsPath, err)
+	}
+	cb, err := knownhosts.New(s.knownHostsPath)
+	if err != nil {
+		return fmt.Errorf("load known_hosts %q: %w", s.knownHostsPath, err)
+	}
+	s.base = cb
+	return nil
 }
 
 func (s *hostKeyStore) callback() ssh.HostKeyCallback {
@@ -93,10 +128,14 @@ func (s *hostKeyStore) callback() ssh.HostKeyCallback {
 			s.mu.Unlock()
 			return nil
 		case HostKeyTrustPersist:
-			if err := appendKnownHost(s.knownHostsPath, hostPart, key); err != nil {
+			if err := appendKnownHost(s.knownHostsPath, hostname, key); err != nil {
 				return err
 			}
 			s.mu.Lock()
+			if err := s.reloadBaseLocked(); err != nil {
+				s.mu.Unlock()
+				return err
+			}
 			s.sessionTrusted[hostPart] = fp
 			s.mu.Unlock()
 			return nil
@@ -106,8 +145,8 @@ func (s *hostKeyStore) callback() ssh.HostKeyCallback {
 	}
 }
 
-func appendKnownHost(path string, hostPart string, key ssh.PublicKey) error {
-	line := knownhosts.Line([]string{hostPart}, key)
+func appendKnownHost(path string, hostname string, key ssh.PublicKey) error {
+	line := knownhosts.Line([]string{hostname}, key)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}

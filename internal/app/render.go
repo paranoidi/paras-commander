@@ -191,6 +191,9 @@ func (a *App) effectiveZoomActivePanelLayout(width int, filePreviewOpen bool) bo
 	if a.zoomActivePanelSuppressedByTerminalWidth(width) {
 		return false
 	}
+	if a.activePanel().CarouselMode {
+		return true
+	}
 	return a.effectiveZoomActivePanel()
 }
 
