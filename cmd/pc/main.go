@@ -10,18 +10,22 @@ import (
 	"github.com/paranoidi/paras-commander/internal/app"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/version"
 )
 
 func main() {
-	if err := run(os.Args[1:], os.Stderr); err != nil {
+	if err := run(os.Args[1:], os.Stderr, os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "pc: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string, stderr io.Writer) error {
+func run(args []string, stderr, stdout io.Writer) error {
 	flags := flag.NewFlagSet("pc", flag.ContinueOnError)
 	flags.SetOutput(stderr)
+	var showVersion bool
+	flags.BoolVar(&showVersion, "version", false, "print version and exit")
+	flags.BoolVar(&showVersion, "v", false, "print version and exit")
 	configStub := flags.String("config-stub", "", "write default configuration TOML (general settings + [action_keys] + [jobs_action_keys]) to filename and exit")
 	keybindingsStub := flags.String("keybindings-stub", "", "write default keybindings TOML to filename and exit")
 	devMode := flags.Bool("dev", false, "enable Dev pulldown menu with test helpers")
@@ -30,6 +34,11 @@ func run(args []string, stderr io.Writer) error {
 	}
 	if flags.NArg() > 0 {
 		return fmt.Errorf("unexpected argument %q", flags.Arg(0))
+	}
+
+	if showVersion {
+		_, err := fmt.Fprintln(stdout, version.Line())
+		return err
 	}
 
 	if *configStub != "" {
