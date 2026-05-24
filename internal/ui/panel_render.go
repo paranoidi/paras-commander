@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -90,20 +91,23 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool) {
 	var borderStyle tcell.Style
 	var titleStyle tcell.Style
-	var headerStyle tcell.Style
+	var headerStyle, headerCarouselStyle tcell.Style
 	if chromeBlocked {
 		borderStyle = styles.PanelBlockedFrame
 		titleStyle = styles.PanelBlockedTitle
 		headerStyle = styles.PanelBlockedHeader
+		headerCarouselStyle = styles.PanelBlockedHeaderCarousel
 	} else {
 		if fileListActive {
 			borderStyle = styles.PanelActiveFrame
 			titleStyle = styles.PanelActiveTitle
 			headerStyle = styles.PanelActiveHeader
+			headerCarouselStyle = styles.PanelActiveHeaderCarousel
 		} else {
 			borderStyle = styles.PanelInactiveFrame
 			titleStyle = styles.PanelInactiveTitle
 			headerStyle = styles.PanelInactiveHeader
+			headerCarouselStyle = styles.PanelInactiveHeaderCarousel
 		}
 	}
 
@@ -167,6 +171,57 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 
 	visibleRows := PanelListRows(rect)
 	if visibleRows == 0 {
+		return
+	}
+
+	if state.CarouselMode && panelcarousel.LayoutFits(rect, 0, 0) {
+		parent, _, child := panelcarousel.BuildColumns(state, visibleRows)
+		var surface tcell.Style
+		if chromeBlocked {
+			surface = styles.PanelBlockedSurface
+		} else if fileListActive {
+			surface = styles.PanelActiveSurface
+		} else {
+			surface = styles.PanelInactiveSurface
+		}
+		carouselDisk := panelcarousel.DiskUsage{
+			Active:                 showDiskUsage,
+			PanelID:                panelID,
+			ListingDevice:          state.ListingDevice,
+			ListingDeviceValid:     state.ListingDeviceValid,
+			DescendIntoMountPoints: diskUsageDescendIntoMountPoints,
+			GoduIgnore:             diskUsageGoduIgnore,
+			Source:                 painter,
+		}
+		panelcarousel.DrawBody(screen, panelcarousel.BodyParams{
+			Frame:               rect,
+			Center:              state,
+			Parent:              parent,
+			Child:               child,
+			Styles:              styles,
+			ChromeBlocked:       chromeBlocked,
+			FileListActive:      fileListActive,
+			ShowIcons:           showIcons,
+			HeaderStyle:         headerStyle,
+			HeaderCarouselStyle: headerCarouselStyle,
+			SurfaceStyle:        surface,
+			DiskUsage:           carouselDisk,
+			JobMark: func(path string) (rune, bool) {
+				marked, st := EntryPathJobMarkStatus(path, jobMarks)
+				if !marked {
+					return 0, false
+				}
+				glyphStr := jobRowLeadingIcon(st, styles)
+				if glyphStr == "" {
+					return 0, false
+				}
+				r, _ := utf8.DecodeRuneInString(glyphStr)
+				return r, true
+			},
+			PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
+				paintPanelIconStrip(sc, x, y, entry, rowStyle, styles, cursorKey, diskPending, diskExcluded, showDiskUsage)
+			},
+		})
 		return
 	}
 

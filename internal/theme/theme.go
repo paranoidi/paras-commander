@@ -50,16 +50,22 @@ type Theme struct {
 	PanelInactiveDiskUsageOverview tcell.Style
 	PanelActiveHeader              tcell.Style
 	PanelInactiveHeader            tcell.Style
-	PanelRowFile                   tcell.Style
-	PanelRowDirectory              tcell.Style
-	PanelRowSymlink                tcell.Style
-	PanelRowSelected               tcell.Style
+	// Panel*HeaderCarousel styles parent/child column headers in carousel view.
+	PanelActiveHeaderCarousel   tcell.Style
+	PanelInactiveHeaderCarousel tcell.Style
+	PanelRowFile                tcell.Style
+	PanelRowDirectory           tcell.Style
+	PanelRowSymlink             tcell.Style
+	PanelRowSelected            tcell.Style
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
 	PanelText                   tcell.Style
 	PanelCursorActive           tcell.Style
 	PanelCursorInactive         tcell.Style
 	PanelActiveCursorSelected   tcell.Style
 	PanelInactiveCursorSelected tcell.Style
+	// PanelCarouselInactiveCursor* styles preview-pane cursors in carousel mode.
+	PanelCarouselInactiveCursor         tcell.Style
+	PanelCarouselInactiveCursorSelected tcell.Style
 	// PanelSyncIndicator styles the "Sync →" / "← Sync" overlay drawn on the
 	// bottom border of the panel that drives latched panel sync.
 	PanelSyncIndicator tcell.Style
@@ -81,6 +87,7 @@ type Theme struct {
 	PanelBlockedTitle             tcell.Style
 	PanelBlockedDiskUsageOverview tcell.Style
 	PanelBlockedHeader            tcell.Style
+	PanelBlockedHeaderCarousel    tcell.Style
 	PanelBlockedRowFile           tcell.Style
 	PanelBlockedRowDirectory      tcell.Style
 	PanelBlockedRowSymlink        tcell.Style
@@ -419,13 +426,17 @@ var requiredStyleKeys = []string{
 	"panel.active.disk_usage_overview",
 	"panel.inactive.disk_usage_overview",
 	"panel.active.header",
+	"panel.active.header.carousel",
 	"panel.inactive.header",
+	"panel.inactive.header.carousel",
 	"panel.active.row.cursor",
 	"panel.active.row.cursor.selected",
 	"panel.active.usage.cursor",
 	"panel.active.usage.cursor.selected",
 	"panel.inactive.row.cursor",
 	"panel.inactive.row.cursor.selected",
+	"panel.carousel.inactive.row.cursor",
+	"panel.carousel.inactive.row.cursor.selected",
 	"panel.inactive.usage.cursor",
 	"panel.inactive.usage.cursor.selected",
 	"panel.row.file",
@@ -443,6 +454,7 @@ var requiredStyleKeys = []string{
 	"panel.blocked.title",
 	"panel.blocked.disk_usage_overview",
 	"panel.blocked.header",
+	"panel.blocked.header.carousel",
 	"panel.blocked.row.file",
 	"panel.blocked.row.directory",
 	"panel.blocked.row.symlink",
@@ -786,12 +798,14 @@ func parse(data []byte) (Theme, error) {
 
 	panelFileIcons := map[string]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
-		"panel.active.row.cursor":            {},
-		"panel.active.row.cursor.selected":   {},
-		"panel.inactive.row.cursor":          {},
-		"panel.inactive.row.cursor.selected": {},
-		"panel.blocked.row.cursor":           {},
-		"panel.blocked.row.cursor.selected":  {},
+		"panel.active.row.cursor":                     {},
+		"panel.active.row.cursor.selected":            {},
+		"panel.inactive.row.cursor":                   {},
+		"panel.inactive.row.cursor.selected":          {},
+		"panel.carousel.inactive.row.cursor":          {},
+		"panel.carousel.inactive.row.cursor.selected": {},
+		"panel.blocked.row.cursor":                    {},
+		"panel.blocked.row.cursor.selected":           {},
 	}
 	for key, spec := range specs {
 		if spec.Icon == "" {
@@ -824,37 +838,42 @@ func parse(data []byte) (Theme, error) {
 		MenuDropdownAccent:   styles["menu.dropdown.accent"],
 		MenuDetail:           styles["menu.detail"],
 
-		PanelActiveFrame:               styles["panel.active.frame"],
-		PanelInactiveFrame:             styles["panel.inactive.frame"],
-		PanelActiveSurface:             styles["panel.active.surface"],
-		PanelInactiveSurface:           styles["panel.inactive.surface"],
-		PanelActiveTitle:               styles["panel.active.title"],
-		PanelInactiveTitle:             styles["panel.inactive.title"],
-		PanelActiveDiskUsageOverview:   styles["panel.active.disk_usage_overview"],
-		PanelInactiveDiskUsageOverview: styles["panel.inactive.disk_usage_overview"],
-		PanelActiveHeader:              styles["panel.active.header"],
-		PanelInactiveHeader:            styles["panel.inactive.header"],
-		PanelRowFile:                   styles["panel.row.file"],
-		PanelRowDirectory:              styles["panel.row.directory"],
-		PanelRowSymlink:                styles["panel.row.symlink"],
-		PanelRowSelected:               styles["panel.row.selected"],
-		PanelText:                      styles["panel.text"],
-		PanelCursorActive:              styles["panel.active.row.cursor"],
-		PanelCursorInactive:            styles["panel.inactive.row.cursor"],
-		PanelActiveCursorSelected:      styles["panel.active.row.cursor.selected"],
-		PanelInactiveCursorSelected:    styles["panel.inactive.row.cursor.selected"],
-		PanelSyncIndicator:             styles["panel.indicator.sync"],
-		PanelQuickViewIndicator:        styles["panel.indicator.quick_view"],
-		PanelBottomIndicatorSelections: styles["panel.indicator.selections"],
-		PanelBottomIndicatorGitignore:  styles["panel.indicator.gitignore"],
-		PanelBottomIndicatorStash:      styles["panel.indicator.stash"],
-		PanelFileIconFG:                panelFileIconFG,
+		PanelActiveFrame:                    styles["panel.active.frame"],
+		PanelInactiveFrame:                  styles["panel.inactive.frame"],
+		PanelActiveSurface:                  styles["panel.active.surface"],
+		PanelInactiveSurface:                styles["panel.inactive.surface"],
+		PanelActiveTitle:                    styles["panel.active.title"],
+		PanelInactiveTitle:                  styles["panel.inactive.title"],
+		PanelActiveDiskUsageOverview:        styles["panel.active.disk_usage_overview"],
+		PanelInactiveDiskUsageOverview:      styles["panel.inactive.disk_usage_overview"],
+		PanelActiveHeader:                   styles["panel.active.header"],
+		PanelActiveHeaderCarousel:           styles["panel.active.header.carousel"],
+		PanelInactiveHeader:                 styles["panel.inactive.header"],
+		PanelInactiveHeaderCarousel:         styles["panel.inactive.header.carousel"],
+		PanelRowFile:                        styles["panel.row.file"],
+		PanelRowDirectory:                   styles["panel.row.directory"],
+		PanelRowSymlink:                     styles["panel.row.symlink"],
+		PanelRowSelected:                    styles["panel.row.selected"],
+		PanelText:                           styles["panel.text"],
+		PanelCursorActive:                   styles["panel.active.row.cursor"],
+		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],
+		PanelActiveCursorSelected:           styles["panel.active.row.cursor.selected"],
+		PanelInactiveCursorSelected:         styles["panel.inactive.row.cursor.selected"],
+		PanelCarouselInactiveCursor:         styles["panel.carousel.inactive.row.cursor"],
+		PanelCarouselInactiveCursorSelected: styles["panel.carousel.inactive.row.cursor.selected"],
+		PanelSyncIndicator:                  styles["panel.indicator.sync"],
+		PanelQuickViewIndicator:             styles["panel.indicator.quick_view"],
+		PanelBottomIndicatorSelections:      styles["panel.indicator.selections"],
+		PanelBottomIndicatorGitignore:       styles["panel.indicator.gitignore"],
+		PanelBottomIndicatorStash:           styles["panel.indicator.stash"],
+		PanelFileIconFG:                     panelFileIconFG,
 
 		PanelBlockedFrame:             styles["panel.blocked.frame"],
 		PanelBlockedSurface:           styles["panel.blocked.surface"],
 		PanelBlockedTitle:             styles["panel.blocked.title"],
 		PanelBlockedDiskUsageOverview: styles["panel.blocked.disk_usage_overview"],
 		PanelBlockedHeader:            styles["panel.blocked.header"],
+		PanelBlockedHeaderCarousel:    styles["panel.blocked.header.carousel"],
 		PanelBlockedRowFile:           styles["panel.blocked.row.file"],
 		PanelBlockedRowDirectory:      styles["panel.blocked.row.directory"],
 		PanelBlockedRowSymlink:        styles["panel.blocked.row.symlink"],

@@ -58,6 +58,7 @@ type Model struct {
 	// PanelZoomEnabled mirrors effective zoom for layout (saved [ui].zoom_active_panel plus optional
 	// runtime-only override in App.render), suppressed while quick view / file preview uses the split,
 	// and suppressed on wide terminals when [ui].zoom_active_panel_disabled_above_width > 0.
+	// Carousel view on the active panel always enables zoom (ignores preference, override, and width gate).
 	// Layout uses it only in the file browser; see PanelZoomSplitsColumns.
 	PanelZoomEnabled bool
 	// PanelZoomActivePercent / PanelZoomInactivePercent mirror [ui] panel_zoom_* (sum 100 when zoom enabled).

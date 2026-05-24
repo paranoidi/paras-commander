@@ -1995,9 +1995,10 @@ func writeFile(t *testing.T, path string) {
 }
 
 func TestNavigateFromRootPreservesPriorDirs(t *testing.T) {
-	state, err := New("/tmp")
+	start := t.TempDir()
+	state, err := New(start)
 	if err != nil {
-		t.Fatalf("New(/tmp): %v", err)
+		t.Fatalf("New(%q): %v", start, err)
 	}
 	if err := state.NavigateTo("/", "", 10); err != nil {
 		t.Fatalf("NavigateTo(/): %v", err)
@@ -2005,11 +2006,11 @@ func TestNavigateFromRootPreservesPriorDirs(t *testing.T) {
 	if err := state.NavigateTo("/var", "", 10); err != nil {
 		t.Fatalf("NavigateTo(/var): %v", err)
 	}
-	want := cleanPathString("/tmp")
+	want := cleanPathString(start)
 	for _, p := range state.History {
 		if cleanPathString(p) == want {
 			return
 		}
 	}
-	t.Fatalf("history lost /tmp after / -> /var: %v", state.History)
+	t.Fatalf("history lost %q after / -> /var: %v", start, state.History)
 }

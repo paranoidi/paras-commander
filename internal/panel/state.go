@@ -76,6 +76,8 @@ type State struct {
 	Sort       SortState
 	// ListFormat controls trailing columns after size (Modified / Permissions / none). Per-panel; see config default_listing_format.
 	ListFormat ListFormat
+	// CarouselMode shows a three-column parent | current | child preview inside this panel.
+	CarouselMode bool
 	// IdleDiskTotalsSort is set after disk scan completes and idle-sort delay elapses (DiskUsageIdleSizeSort).
 	IdleDiskTotalsSort bool
 	// DiskUsageIdleSortActivated mirrors the disk-usage sort checkbox lifecycle (config/dialog apply).

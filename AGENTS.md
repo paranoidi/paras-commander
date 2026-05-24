@@ -31,7 +31,7 @@ Handlers call back into the shell via `Host` methods (layout, messages, panel na
 # Backwards compatibility (CRITICAL)
 
 The application is in prototyping phase. There is no need to make anything backwards compatible. Update all existing code to
-new requirements. Remember to update themes (themes/default.toml) and catppuccin templates (themes/catppuccin) as well.
+new requirements. Remember to update theme (themes/default.toml).
 
 # Menus
 

@@ -100,6 +100,8 @@ func TestParseLoadsPanelCursorIconFG(t *testing.T) {
 		"panel.active.row.cursor.selected",
 		"panel.inactive.row.cursor",
 		"panel.inactive.row.cursor.selected",
+		"panel.carousel.inactive.row.cursor",
+		"panel.carousel.inactive.row.cursor.selected",
 		"panel.blocked.row.cursor",
 		"panel.blocked.row.cursor.selected",
 	} {
