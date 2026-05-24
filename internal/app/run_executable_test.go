@@ -87,6 +87,29 @@ func TestNavOpenRunsExecutableInCommandsView(t *testing.T) {
 	}
 }
 
+func TestNavOpenFalseExecutableBitDoesNotRun(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "clip.mkv")
+	if err := os.WriteFile(path, []byte{0x1a, 0x45, 0xdf, 0xa3}, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.OpenFilesExternally = true
+	app.config.RunExecutablesOnEnter = true
+	selectEntryByName(t, app, "clip.mkv")
+
+	app.dispatch(keymap.ActionNavOpen)
+
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser", app.model.ViewMode)
+	}
+	if len(app.model.CommandsList) != 0 {
+		t.Fatalf("CommandsList len = %d, want 0 for +x non-runnable file", len(app.model.CommandsList))
+	}
+}
+
 func TestNavOpenNonExecutableDoesNotRunWhenExternalOpenDisabled(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "plain.txt"))

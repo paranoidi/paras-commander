@@ -38,21 +38,8 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 			return "", false
 		}
 		path = filepath.Clean(entry.Path)
-		if entry.Type == localfs.EntrySymlink {
-			exec, err := localfs.PathIsExecutable(path)
-			if err != nil {
-				return "", false
-			}
-			if !exec {
-				return "", false
-			}
-			return path, true
-		}
-		if entry.Type == localfs.EntryFile && localfs.ModeIsExecutable(entry.Mode) {
-			return path, true
-		}
-		exec, err := localfs.PathIsExecutable(path)
-		if err != nil || !exec {
+		runnable, err := localfs.PathLooksRunnable(path)
+		if err != nil || !runnable {
 			return "", false
 		}
 		return path, true
@@ -62,8 +49,8 @@ func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
 	case editTargetDir, editTargetNone, editTargetMissing:
 		return "", false
 	case editTargetFile:
-		exec, err := localfs.PathIsExecutable(path)
-		if err != nil || !exec {
+		runnable, err := localfs.PathLooksRunnable(path)
+		if err != nil || !runnable {
 			return "", false
 		}
 		return path, true

@@ -418,6 +418,6 @@ func (a *App) maxCommandsStderrScroll() int {
 	}
 	_, stderrRect := ui.SplitJobsRightColumnFlexTop(layout.Right, 8)
 	contentH := ui.JobsPanelContentRows(stderrRect)
-	lines := commandOutputLineCount(sel.Stderr)
+	lines := commandOutputLineCount(ui.CommandStderrDisplay(sel))
 	return max(0, lines-contentH)
 }

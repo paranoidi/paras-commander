@@ -66,6 +66,70 @@ func TestPathIsExecutable(t *testing.T) {
 	}
 }
 
+func TestPathLooksRunnable(t *testing.T) {
+	dir := t.TempDir()
+
+	script := filepath.Join(dir, "run.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho ok\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ok, err := PathLooksRunnable(script)
+	if err != nil {
+		t.Fatalf("PathLooksRunnable script: %v", err)
+	}
+	if !ok {
+		t.Fatal("shebang script with +x should be runnable")
+	}
+
+	plain := filepath.Join(dir, "plain.txt")
+	if err := os.WriteFile(plain, []byte("not a script\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ok, err = PathLooksRunnable(plain)
+	if err != nil {
+		t.Fatalf("PathLooksRunnable plain: %v", err)
+	}
+	if ok {
+		t.Fatal("+x text without shebang/ELF should not be runnable")
+	}
+
+	fakeMedia := filepath.Join(dir, "clip.mkv")
+	if err := os.WriteFile(fakeMedia, []byte{0x1a, 0x45, 0xdf, 0xa3}, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ok, err = PathLooksRunnable(fakeMedia)
+	if err != nil {
+		t.Fatalf("PathLooksRunnable mkv: %v", err)
+	}
+	if ok {
+		t.Fatal("+x mkv-like bytes should not be runnable")
+	}
+
+	elfStub := filepath.Join(dir, "binstub")
+	if err := os.WriteFile(elfStub, []byte("\x7fELF\x02\x01"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ok, err = PathLooksRunnable(elfStub)
+	if err != nil {
+		t.Fatalf("PathLooksRunnable elf: %v", err)
+	}
+	if !ok {
+		t.Fatal("ELF header with +x should be runnable")
+	}
+
+	noExec := filepath.Join(dir, "locked.sh")
+	if err := os.WriteFile(noExec, []byte("#!/bin/sh\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ok, err = PathLooksRunnable(noExec)
+	if err != nil {
+		t.Fatalf("PathLooksRunnable no x: %v", err)
+	}
+	if ok {
+		t.Fatal("shebang without +x should not be runnable")
+	}
+}
+
 func TestPathIsExecutableSymlinkToExecutable(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "target.sh")

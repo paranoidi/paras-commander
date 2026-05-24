@@ -1,5 +1,7 @@
 package ui
 
+import "strings"
+
 // CommandRunPhase is the lifecycle state of one subprocess row.
 type CommandRunPhase int
 
@@ -32,6 +34,20 @@ type CommandRunEntry struct {
 	Stdout          string
 	Stderr          string
 	ErrorMsg        string // launch failure or context cancellation
+}
+
+// CommandStderrDisplay returns stderr text for the Commands view, falling back to ErrorMsg when
+// both stdout and stderr are empty (e.g. launch failures before the subprocess starts).
+func CommandStderrDisplay(e CommandRunEntry) string {
+	if strings.TrimSpace(e.Stderr) != "" {
+		return e.Stderr
+	}
+	if strings.TrimSpace(e.Stdout) == "" {
+		if msg := strings.TrimSpace(e.ErrorMsg); msg != "" {
+			return msg
+		}
+	}
+	return e.Stderr
 }
 
 // CommandsViewState tracks focus and scrolling for the Commands screen.

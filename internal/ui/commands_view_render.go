@@ -29,7 +29,7 @@ func drawCommandsView(
 		sel = entries[state.Selected]
 	}
 	stdoutLines := commandPanelLines(sel.Stdout, layout.Right.Width-4)
-	stderrLines := commandPanelLines(sel.Stderr, layout.Right.Width-4)
+	stderrLines := commandPanelLines(CommandStderrDisplay(sel), layout.Right.Width-4)
 	stderrLineBudget := max(8, min(len(stderrLines)+2, 24))
 	stdoutRect, stderrRect := SplitJobsRightColumnFlexTop(layout.Right, stderrLineBudget)
 	stdoutFocused := state.FocusPane == 1
