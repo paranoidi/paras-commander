@@ -18,6 +18,10 @@ const (
 	// Default matches DefaultPanelSyncFollowNavDebounceMS for consistent file-list scroll coalescing.
 	DefaultQuickViewPreviewDebounceMS = 100
 
+	// DefaultCarouselPreviewDebounceMS waits after the last file-list cursor step before reloading
+	// the carousel child (next) column preview. Zero loads on every render (previous behavior).
+	DefaultCarouselPreviewDebounceMS = 100
+
 	DefaultDiskUsageWalkConcurrency = 4
 	// DefaultFindWalkConcurrency limits concurrent directory reads during panel find indexing.
 	DefaultFindWalkConcurrency = 4

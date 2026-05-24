@@ -123,6 +123,12 @@ type App struct {
 	// quickViewNavSkipReconcile suppresses reconcileQuickViewPreview while file-list nav coalesce
 	// is holding a pending preview flush (mirrors syncFollowNavSkipReconcile).
 	quickViewNavSkipReconcile atomic.Bool
+	// carouselPreviewDebounceGen invalidates in-flight carousel side-preview debounce callbacks.
+	carouselPreviewDebounceGen   atomic.Uint64
+	carouselPreviewDebounceMu    sync.Mutex
+	carouselPreviewDebounceTimer *time.Timer
+	// carouselPreviewNavSkipSnapshot, when true, reuses cached carousel parent/child snapshots during render.
+	carouselPreviewNavSkipSnapshot atomic.Bool
 	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postCommandWake).
 	filePreviewRunGen atomic.Uint64
 
@@ -471,6 +477,7 @@ func (a *App) Run() error {
 			pollJobsAfter = true
 			a.clearPanelSyncFollowNavCoalesce()
 			a.clearQuickViewNavCoalesce()
+			a.clearCarouselPreviewNavCoalesce()
 			a.screen.Sync()
 			a.ensurePanelsVisible()
 			a.render()
@@ -544,6 +551,11 @@ func (a *App) Run() error {
 				}
 			case quickViewFlushPayload:
 				if a.applyQuickViewPreviewFlush(d) {
+					a.render()
+					didRender = true
+				}
+			case carouselPreviewFlushPayload:
+				if a.applyCarouselPreviewFlush(d) {
 					a.render()
 					didRender = true
 				}

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -109,5 +110,54 @@ func TestToggleZoomIgnoredInCarouselView(t *testing.T) {
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleZoomActivePanel)
 	if !strings.Contains(app.model.Message, "carousel") {
 		t.Fatalf("message = %q, want carousel zoom hint", app.model.Message)
+	}
+}
+
+func TestCarouselPreviewNavDebounceDefersSideSnapshotUntilFlush(t *testing.T) {
+	root := t.TempDir()
+	maple := filepath.Join(root, "maple")
+	oak := filepath.Join(root, "oak")
+	for _, dir := range []string{maple, oak} {
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 160, 30)
+	app := newApp(t, screen, root)
+	app.config.UI.CarouselPreviewDebounceMS = 500
+	app.model.Left.CarouselMode = true
+
+	left := app.panelByID(ui.LeftPanel)
+	selectPanelEntryByName(t, left, "maple")
+	if _, ok := left.SnapshotChild(20); !ok {
+		t.Fatal("SnapshotChild on maple = false, want true")
+	}
+	first := app.model.Left.CarouselSideCache.Child
+	if !app.model.Left.CarouselSideCache.ChildOK || first.Path.String() != maple {
+		t.Fatalf("initial child cache = %+v ok=%v, want maple dir cached", first, app.model.Left.CarouselSideCache.ChildOK)
+	}
+
+	app.dispatch(keymap.ActionNavDown)
+	app.syncCarouselChildPreviewCoalesceFlags()
+
+	if !app.model.Left.CarouselChildPreviewCoalesce {
+		t.Fatal("CarouselChildPreviewCoalesce = false, want true during debounce")
+	}
+	still := app.model.Left.CarouselSideCache.Child
+	if !app.model.Left.CarouselSideCache.ChildOK || still.Path.String() != maple {
+		t.Fatalf("child cache after debounced nav = %+v ok=%v, want still maple", still, app.model.Left.CarouselSideCache.ChildOK)
+	}
+
+	app.clearCarouselPreviewNavCoalesce()
+	if !app.applyCarouselPreviewFlush(carouselPreviewFlushPayload{gen: app.carouselPreviewDebounceGen.Load()}) {
+		t.Fatal("applyCarouselPreviewFlush should clear coalesce")
+	}
+	app.syncCarouselChildPreviewCoalesceFlags()
+	if _, ok := left.SnapshotChild(20); !ok {
+		t.Fatal("SnapshotChild on oak after flush = false, want true")
+	}
+	after := app.model.Left.CarouselSideCache.Child
+	if !app.model.Left.CarouselSideCache.ChildOK || after.Path.String() != oak {
+		t.Fatalf("child cache after flush = %+v ok=%v, want oak", after, app.model.Left.CarouselSideCache.ChildOK)
 	}
 }

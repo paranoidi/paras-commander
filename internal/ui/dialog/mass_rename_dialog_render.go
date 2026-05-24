@@ -79,6 +79,7 @@ func MassRenamePreviewViewportRows(layoutHeight int) int {
 func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	labelStyle := styles.DialogText.Background(dbg)
+	newNameStyle := styles.DialogOptionSelected
 	leftCol := rect.X + 2
 	innerW := rect.Width - 4
 	if innerW <= 0 {
@@ -208,7 +209,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		if sepW == 1 {
 			screen.SetContent(leftCol+leftW, y, ' ', nil, labelStyle)
 		}
-		primitive.Text(screen, leftCol+leftW+sepW, y, rightW, rb, labelStyle)
+		primitive.Text(screen, leftCol+leftW+sepW, y, rightW, rb, newNameStyle)
 		y++
 	}
 	if y >= innerBottom {

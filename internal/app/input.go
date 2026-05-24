@@ -179,6 +179,7 @@ func footerWithEscClose(rest []menu.FunctionKey) []menu.FunctionKey {
 func (a *App) prepareGlobalQuitShortcutCleanup() {
 	a.clearPanelSyncFollowNavCoalesce()
 	a.clearQuickViewNavCoalesce()
+	a.clearCarouselPreviewNavCoalesce()
 	if a.inQuickFilterUI() {
 		a.activePanel().CancelFilter(a.activeViewportRows())
 	}
@@ -214,6 +215,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	if !a.panelSyncFollowHeldListNav(resolvedAction, event) {
 		a.clearPanelSyncFollowNavCoalesce()
 		a.clearQuickViewNavCoalesce()
+		a.clearCarouselPreviewNavCoalesce()
 	}
 	if resolvedAction == keymap.ActionPanelDiskUsageAbortAll {
 		a.abortAllDiskUsageScans()
@@ -531,26 +533,32 @@ func (a *App) dispatch(actionID string) {
 		activePanel.Move(-1, viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
+		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionNavDown:
 		activePanel.Move(1, viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
+		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionNavPageUp:
 		activePanel.Page(-1, viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
+		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionNavPageDown:
 		activePanel.Page(1, viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
+		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionNavTop:
 		activePanel.Top(viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
+		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionNavBottom:
 		activePanel.Bottom(viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
+		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionPanelSelectToggle:
 		activePanel.ToggleSelectionAndAdvance(viewportRows)
 	case keymap.ActionPanelSelectGroup:

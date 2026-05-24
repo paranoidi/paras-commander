@@ -19,39 +19,72 @@ type ListingSnapshot struct {
 // The second bool is false when the pane should be blank (filesystem root, load error, pending listing).
 func (s *State) SnapshotParent(viewportRows int) (ListingSnapshot, bool) {
 	if s.Path.IsZero() || s.ListingPending {
+		s.storeCarouselParentCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
 	parent := s.Path.Parent()
 	if parent.Equal(s.Path) {
+		s.storeCarouselParentCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
 	snap, err := s.buildListingSnapshot(parent, s.Path.Base(), noIndexCursorFallback, viewportRows)
 	if err != nil {
+		s.storeCarouselParentCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
+	s.storeCarouselParentCache(snap, true)
 	return snap, true
 }
 
 // SnapshotChild returns a child-directory preview when the cursor is on a directory.
 // The second bool is false when the pane should be blank (file under cursor, load error, pending listing).
 func (s *State) SnapshotChild(viewportRows int) (ListingSnapshot, bool) {
+	if s.CarouselChildPreviewCoalesce {
+		if s.CarouselSideCache.ChildOK {
+			return s.CarouselSideCache.Child, true
+		}
+		return ListingSnapshot{}, false
+	}
 	if s.ListingPending {
+		s.storeCarouselChildCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
 	entry, ok := s.CurrentEntry()
 	if !ok || entry.Type != localfs.EntryDirectory {
+		s.storeCarouselChildCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
 	child, err := pathloc.Parse(entry.Path)
 	if err != nil {
+		s.storeCarouselChildCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
 	selectedName, indexFallback := s.recalledCursorFor(child.String())
 	snap, err := s.buildListingSnapshot(child, selectedName, indexFallback, viewportRows)
 	if err != nil {
+		s.storeCarouselChildCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
+	s.storeCarouselChildCache(snap, true)
 	return snap, true
+}
+
+func (s *State) storeCarouselParentCache(snap ListingSnapshot, ok bool) {
+	if ok {
+		s.CarouselSideCache.Parent = snap
+		s.CarouselSideCache.ParentOK = true
+		return
+	}
+	s.CarouselSideCache.ParentOK = false
+}
+
+func (s *State) storeCarouselChildCache(snap ListingSnapshot, ok bool) {
+	if ok {
+		s.CarouselSideCache.Child = snap
+		s.CarouselSideCache.ChildOK = true
+		return
+	}
+	s.CarouselSideCache.ChildOK = false
 }
 
 func (s *State) buildListingSnapshot(loc pathloc.Path, selectedName string, indexFallback int, viewportRows int) (ListingSnapshot, error) {

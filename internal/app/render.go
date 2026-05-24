@@ -11,6 +11,7 @@ import (
 
 func (a *App) render() {
 	a.stopDiskUsageRedrawDebounce()
+	a.syncCarouselChildPreviewCoalesceFlags()
 	a.model.PanelZoomActivePercent = a.config.UI.PanelZoomActivePercent
 	a.model.PanelZoomInactivePercent = a.config.UI.PanelZoomInactivePercent
 	a.model.ShrunkenShowsNameOnly = a.config.UI.ShrunkenShowsNameOnly

@@ -99,6 +99,63 @@ func TestSnapshotChildAppliesIdleDiskTotalsSort(t *testing.T) {
 	}
 }
 
+func TestSnapshotParentIgnoresChildCoalesce(t *testing.T) {
+	root := t.TempDir()
+	child := filepath.Join(root, "walnut")
+	if err := os.Mkdir(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	state, err := New(child)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.CarouselChildPreviewCoalesce = true
+	state.CarouselSideCache.ParentOK = false
+	snap, ok := state.SnapshotParent(10)
+	if !ok {
+		t.Fatal("SnapshotParent during child coalesce = false, want true")
+	}
+	if snap.Path.String() != root {
+		t.Fatalf("parent path = %q, want %q", snap.Path.String(), root)
+	}
+}
+
+func TestSnapshotChildCoalesceUsesCache(t *testing.T) {
+	root := t.TempDir()
+	maple := filepath.Join(root, "maple")
+	oak := filepath.Join(root, "oak")
+	for _, dir := range []string{maple, oak} {
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !state.SelectVisibleEntry("maple") {
+		t.Fatal("maple not found")
+	}
+	first, ok := state.SnapshotChild(10)
+	if !ok {
+		t.Fatal("SnapshotChild = false, want true")
+	}
+	if first.Path.String() != maple {
+		t.Fatalf("child path = %q, want %q", first.Path.String(), maple)
+	}
+	state.CarouselChildPreviewCoalesce = true
+	if !state.SelectVisibleEntry("oak") {
+		t.Fatal("oak not found")
+	}
+	cached, ok := state.SnapshotChild(10)
+	if !ok {
+		t.Fatal("coalesced SnapshotChild = false, want cached true")
+	}
+	if cached.Path.String() != maple {
+		t.Fatalf("coalesced child path = %q, want cached %q", cached.Path.String(), maple)
+	}
+}
+
 func TestSnapshotChildRecallsCursor(t *testing.T) {
 	root := t.TempDir()
 	child := filepath.Join(root, "maple")

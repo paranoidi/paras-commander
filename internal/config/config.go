@@ -190,6 +190,9 @@ type UIConfig struct {
 	// QuickViewPreviewDebounceMS waits after the last highlight change before re-running the preview
 	// subprocess while Quick view is enabled. Zero disables debouncing. Default DefaultQuickViewPreviewDebounceMS.
 	QuickViewPreviewDebounceMS int `toml:"quick_view_preview_debounce_ms"`
+	// CarouselPreviewDebounceMS waits after the last file-list cursor step before reloading carousel
+	// parent/child directory previews. Zero disables debouncing. Default DefaultCarouselPreviewDebounceMS.
+	CarouselPreviewDebounceMS int `toml:"carousel_preview_debounce_ms"`
 	// ZoomActivePanel widens the active browser column; inactive column uses the remainder (see panel_zoom_*_percent).
 	ZoomActivePanel bool `toml:"zoom_active_panel"`
 	// ZoomActivePanelDisabledAboveWidth: when > 0 and terminal width (cells) is >= this value, zoom is not applied
@@ -303,6 +306,7 @@ func Default() Config {
 			PathPickerValidateDelayMS:         DefaultPathPickerValidateDelayMS,
 			PanelSyncFollowNavDebounceMS:      DefaultPanelSyncFollowNavDebounceMS,
 			QuickViewPreviewDebounceMS:        DefaultQuickViewPreviewDebounceMS,
+			CarouselPreviewDebounceMS:         DefaultCarouselPreviewDebounceMS,
 			ZoomActivePanel:                   DefaultZoomActivePanel,
 			ZoomActivePanelDisabledAboveWidth: DefaultZoomActivePanelDisabledAboveWidth,
 			PanelZoomActivePercent:            DefaultPanelZoomActivePercent,
@@ -783,6 +787,12 @@ func (c *Config) Validate() error {
 	}
 	if c.UI.QuickViewPreviewDebounceMS > panelSyncFollowNavDebounceMaxMS {
 		c.UI.QuickViewPreviewDebounceMS = panelSyncFollowNavDebounceMaxMS
+	}
+	if c.UI.CarouselPreviewDebounceMS < 0 {
+		c.UI.CarouselPreviewDebounceMS = builtin.UI.CarouselPreviewDebounceMS
+	}
+	if c.UI.CarouselPreviewDebounceMS > panelSyncFollowNavDebounceMaxMS {
+		c.UI.CarouselPreviewDebounceMS = panelSyncFollowNavDebounceMaxMS
 	}
 	if c.UI.PanelZoomActivePercent <= 0 || c.UI.PanelZoomInactivePercent <= 0 ||
 		c.UI.PanelZoomActivePercent+c.UI.PanelZoomInactivePercent != 100 {

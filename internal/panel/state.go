@@ -78,6 +78,15 @@ type State struct {
 	ListFormat ListFormat
 	// CarouselMode shows a three-column parent | current | child preview inside this panel.
 	CarouselMode bool
+	// CarouselChildPreviewCoalesce skips child-directory reads during scroll and reuses CarouselSideCache.Child.
+	CarouselChildPreviewCoalesce bool
+	// CarouselSideCache holds the last-built parent/child listing snapshots for carousel side columns.
+	CarouselSideCache struct {
+		Parent   ListingSnapshot
+		ParentOK bool
+		Child    ListingSnapshot
+		ChildOK  bool
+	}
 	// IdleDiskTotalsSort is set after disk scan completes and idle-sort delay elapses (DiskUsageIdleSizeSort).
 	IdleDiskTotalsSort bool
 	// DiskUsageIdleSortActivated mirrors the disk-usage sort checkbox lifecycle (config/dialog apply).
