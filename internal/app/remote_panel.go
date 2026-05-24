@@ -56,7 +56,7 @@ func (a *App) applyRemotePanelLoad(p remotePanelLoadPayload) bool {
 		a.setErrorMessage("Remote list failed", p.err)
 		return true
 	}
-	if err := pan.ApplyListing(p.req.Loc, p.entries, p.req.SelectedName, p.req.ViewportRows, p.req.IndexFallback); err != nil {
+	if err := pan.ApplyListing(p.req.Loc, p.entries, p.req.SelectedName, p.req.ViewportRows, p.req.IndexFallback, p.req.CenterRecalledCursor); err != nil {
 		if p.req.Rollback != nil {
 			p.req.Rollback()
 		}

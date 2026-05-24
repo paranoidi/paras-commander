@@ -27,7 +27,7 @@ func (s *State) SnapshotParent(viewportRows int) (ListingSnapshot, bool) {
 		s.storeCarouselParentCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
-	snap, err := s.buildListingSnapshot(parent, s.Path.Base(), noIndexCursorFallback, viewportRows)
+	snap, err := s.buildListingSnapshot(parent, s.Path.Base(), noIndexCursorFallback, viewportRows, false)
 	if err != nil {
 		s.storeCarouselParentCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
@@ -59,8 +59,8 @@ func (s *State) SnapshotChild(viewportRows int) (ListingSnapshot, bool) {
 		s.storeCarouselChildCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
-	selectedName, indexFallback := s.recalledCursorFor(child.String())
-	snap, err := s.buildListingSnapshot(child, selectedName, indexFallback, viewportRows)
+	selectedName, indexFallback, centerRecalled := s.recalledCursorFor(child.String())
+	snap, err := s.buildListingSnapshot(child, selectedName, indexFallback, viewportRows, centerRecalled)
 	if err != nil {
 		s.storeCarouselChildCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
@@ -87,7 +87,7 @@ func (s *State) storeCarouselChildCache(snap ListingSnapshot, ok bool) {
 	s.CarouselSideCache.ChildOK = false
 }
 
-func (s *State) buildListingSnapshot(loc pathloc.Path, selectedName string, indexFallback int, viewportRows int) (ListingSnapshot, error) {
+func (s *State) buildListingSnapshot(loc pathloc.Path, selectedName string, indexFallback int, viewportRows int, centerRecalled bool) (ListingSnapshot, error) {
 	backendEntries, listingLoc, _, err := s.fetchBackendEntries(loc)
 	if err != nil {
 		return ListingSnapshot{}, err
@@ -118,7 +118,11 @@ func (s *State) buildListingSnapshot(loc pathloc.Path, selectedName string, inde
 		}
 	}
 	temp.clampCursor()
-	temp.EnsureCursorVisible(viewportRows)
+	if centerRecalled || selectedName != "" || indexFallback >= 0 {
+		temp.EnsureCursorCentered(viewportRows)
+	} else {
+		temp.EnsureCursorVisible(viewportRows)
+	}
 	return ListingSnapshot{
 		Path:    listingLoc,
 		Entries: temp.Entries,

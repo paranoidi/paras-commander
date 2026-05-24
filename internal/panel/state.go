@@ -582,23 +582,24 @@ func (s *State) rememberCursorForPath(dir string) {
 	s.HistoryCursorByPath[dir] = historyCursorSnapshot{EntryName: name, Index: s.Cursor}
 }
 
-func (s *State) recalledCursorFor(dir string) (selectedName string, indexFallback int) {
+func (s *State) recalledCursorFor(dir string) (selectedName string, indexFallback int, recalled bool) {
 	dir = cleanPathString(dir)
 	if dir == "" {
-		return "", noIndexCursorFallback
+		return "", noIndexCursorFallback, false
 	}
 	snap, ok := s.HistoryCursorByPath[dir]
 	if !ok {
-		return "", noIndexCursorFallback
+		return "", noIndexCursorFallback, false
 	}
-	return snap.EntryName, snap.Index
+	return snap.EntryName, snap.Index, true
 }
 
-func (s *State) resolveLoadCursor(loc pathloc.Path, selectedName string, indexFallback int) (string, int) {
+func (s *State) resolveLoadCursor(loc pathloc.Path, selectedName string, indexFallback int) (string, int, bool) {
 	if selectedName != "" || indexFallback != noIndexCursorFallback {
-		return selectedName, indexFallback
+		return selectedName, indexFallback, false
 	}
-	return s.recalledCursorFor(loc.String())
+	sn, idx, ok := s.recalledCursorFor(loc.String())
+	return sn, idx, ok
 }
 
 func (s *State) pruneHistoryCursors() {
@@ -630,6 +631,16 @@ func removePathFromSlice(slice []string, target string) []string {
 		}
 	}
 	return out
+}
+
+// shouldCenterCursorOnListing reports whether ApplyListing should center the cursor after
+// restoring a highlight. Recall and explicit selections (e.g. Parent) center on chdir;
+// same-directory reloads (Refresh, ToggleHidden) keep minimal scroll.
+func shouldCenterCursorOnListing(previousPath, listingLoc pathloc.Path, centerRecalled bool, selectedName string, indexFallback int) bool {
+	if previousPath.Equal(listingLoc) {
+		return false
+	}
+	return centerRecalled || selectedName != "" || indexFallback >= 0
 }
 
 // EnsureCursorVisible updates ScrollOffset so Cursor is in the viewport.
@@ -822,15 +833,16 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 	if !loc.Equal(s.Path) {
 		s.rememberCursorForPath(s.Path.String())
 	}
-	selectedName, indexFallback = s.resolveLoadCursor(loc, selectedName, indexFallback)
+	selectedName, indexFallback, centerRecalled := s.resolveLoadCursor(loc, selectedName, indexFallback)
 	if loc.IsRemote() && s.ScheduleRemoteLoad != nil {
 		if s.ScheduleRemoteLoad(RemoteLoadRequest{
-			Loc:             loc,
-			SelectedName:    selectedName,
-			ViewportRows:    viewportRows,
-			IndexFallback:   indexFallback,
-			Rollback:        remote.rollback,
-			SyncHistoryHead: remote.syncHistoryHead,
+			Loc:                  loc,
+			SelectedName:         selectedName,
+			ViewportRows:         viewportRows,
+			IndexFallback:        indexFallback,
+			CenterRecalledCursor: centerRecalled,
+			Rollback:             remote.rollback,
+			SyncHistoryHead:      remote.syncHistoryHead,
 		}) {
 			s.ListingPending = true
 			return nil
@@ -841,7 +853,7 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 		return err
 	}
 	s.GitignoreActive = gitignoreActive
-	return s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, indexFallback)
+	return s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, indexFallback, centerRecalled)
 }
 
 func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathloc.Path, bool, error) {
@@ -880,7 +892,7 @@ func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathlo
 }
 
 // ApplyListing commits backend entries into panel state (used after sync or async remote list).
-func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int) error {
+func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int, centerRecalled bool) error {
 	localEntries, err := fsbackend.ToPanelEntries(backendEntries)
 	if err != nil {
 		return err
@@ -933,7 +945,11 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 		}
 	}
 	s.clampCursor()
-	s.EnsureCursorVisible(viewportRows)
+	if shouldCenterCursorOnListing(previousPath, listingLoc, centerRecalled, selectedName, indexFallback) {
+		s.EnsureCursorCentered(viewportRows)
+	} else {
+		s.EnsureCursorVisible(viewportRows)
+	}
 	if len(s.History) == 0 {
 		cp := cleanPathString(listingLoc.String())
 		if cp != "" {

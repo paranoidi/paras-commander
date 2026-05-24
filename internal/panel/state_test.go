@@ -1,6 +1,7 @@
 package panel
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -649,6 +650,170 @@ func TestNavigateToReenteredDirectoryRestoresHighlight(t *testing.T) {
 	entry, ok := state.CurrentEntry()
 	if !ok || entry.Name != "target.txt" {
 		t.Fatalf("re-entered sub highlight = %q ok=%v, want target.txt", entry.Name, ok)
+	}
+}
+
+func TestReenterDirectoryCentersRecalledCursor(t *testing.T) {
+	const viewportRows = 5
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("Mkdir(sub) error = %v", err)
+	}
+	for i := 0; i < 20; i++ {
+		name := strconv.Itoa(i) + ".txt"
+		writeFile(t, filepath.Join(sub, name))
+	}
+	target := "10.txt"
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "sub" {
+			state.Cursor = i
+			break
+		}
+	}
+	if _, err := state.Enter(viewportRows); err != nil {
+		t.Fatalf("Enter(sub) error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == target {
+			state.Cursor = i
+			break
+		}
+	}
+	if err := state.Parent(viewportRows); err != nil {
+		t.Fatalf("Parent() error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "sub" {
+			state.Cursor = i
+			break
+		}
+	}
+	if _, err := state.Enter(viewportRows); err != nil {
+		t.Fatalf("re-Enter(sub) error = %v", err)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != target {
+		t.Fatalf("re-entered highlight = %q ok=%v, want %s", entry.Name, ok, target)
+	}
+	row := state.Cursor - state.ScrollOffset
+	if row != viewportRows/2 {
+		t.Fatalf("cursor viewport row = %d, want %d (centered)", row, viewportRows/2)
+	}
+}
+
+func TestReenterDirectoryPinsTailWhenCenteringImpossible(t *testing.T) {
+	const viewportRows = 5
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("Mkdir(sub) error = %v", err)
+	}
+	for i := 0; i < 20; i++ {
+		name := strconv.Itoa(i) + ".txt"
+		writeFile(t, filepath.Join(sub, name))
+	}
+	target := "9.txt"
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "sub" {
+			state.Cursor = i
+			break
+		}
+	}
+	if _, err := state.Enter(viewportRows); err != nil {
+		t.Fatalf("Enter(sub) error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == target {
+			state.Cursor = i
+			break
+		}
+	}
+	if err := state.Parent(viewportRows); err != nil {
+		t.Fatalf("Parent() error = %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "sub" {
+			state.Cursor = i
+			break
+		}
+	}
+	if _, err := state.Enter(viewportRows); err != nil {
+		t.Fatalf("re-Enter(sub) error = %v", err)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != target {
+		t.Fatalf("re-entered highlight = %q ok=%v, want %s", entry.Name, ok, target)
+	}
+	wantScroll := state.VisibleEntryCount() - viewportRows
+	if state.ScrollOffset != wantScroll {
+		t.Fatalf("ScrollOffset = %d, want %d (tail pinned)", state.ScrollOffset, wantScroll)
+	}
+	row := state.Cursor - state.ScrollOffset
+	if row != viewportRows-1 {
+		t.Fatalf("cursor viewport row = %d, want %d (last row)", row, viewportRows-1)
+	}
+}
+
+func TestParentCentersExitedDirectoryInListing(t *testing.T) {
+	const viewportRows = 5
+	root := t.TempDir()
+	bar := filepath.Join(root, "bar")
+	asdf := filepath.Join(bar, "asdf")
+	if err := os.MkdirAll(asdf, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	for i := 0; i < 20; i++ {
+		name := fmt.Sprintf("%02d_dir", i)
+		if err := os.Mkdir(filepath.Join(bar, name), 0o755); err != nil {
+			t.Fatalf("Mkdir(%s): %v", name, err)
+		}
+	}
+
+	state, err := New(bar)
+	if err != nil {
+		t.Fatalf("New(bar): %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "asdf" {
+			state.Cursor = i
+			if _, err := state.Enter(viewportRows); err != nil {
+				t.Fatalf("Enter(asdf): %v", err)
+			}
+			break
+		}
+	}
+	if state.PathString() != asdf {
+		t.Fatalf("path = %q, want %q", state.PathString(), asdf)
+	}
+	if err := state.Parent(viewportRows); err != nil {
+		t.Fatalf("Parent(): %v", err)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "asdf" {
+		t.Fatalf("highlight = %q ok=%v, want asdf", entry.Name, ok)
+	}
+	row := state.Cursor - state.ScrollOffset
+	wantMid := viewportRows / 2
+	if row != wantMid && row != viewportRows-1 {
+		t.Fatalf("cursor viewport row = %d, want %d (centered) or %d (tail)", row, wantMid, viewportRows-1)
 	}
 }
 

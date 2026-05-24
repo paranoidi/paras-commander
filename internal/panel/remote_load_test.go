@@ -23,7 +23,7 @@ func TestScheduleRemoteLoadReturnsBeforeListingCompletes(t *testing.T) {
 		started.Store(true)
 		go func() {
 			<-block
-			_ = state.ApplyListing(req.Loc, []fsbackend.Entry{}, req.SelectedName, req.ViewportRows, req.IndexFallback)
+			_ = state.ApplyListing(req.Loc, []fsbackend.Entry{}, req.SelectedName, req.ViewportRows, req.IndexFallback, req.CenterRecalledCursor)
 			state.ListingPending = false
 		}()
 		return true

@@ -13,6 +13,8 @@ type RemoteLoadRequest struct {
 	SelectedName  string
 	ViewportRows  int
 	IndexFallback int
+	// CenterRecalledCursor scrolls to center the restored highlight when re-entering a directory.
+	CenterRecalledCursor bool
 	// Rollback runs on the main thread when listing fails (e.g. revert history index).
 	Rollback func()
 	// SyncHistoryHead, when true, sets History[0] to Path after a successful load (NavigateToPath).
