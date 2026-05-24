@@ -1381,8 +1381,8 @@ func (s *State) ClearSelection() {
 
 // SelectGroup selects entries whose basename matches the pattern.
 // filesOnly: when true, only regular files are matched (directories skipped).
-// caseSensitive: when true, matching is case-sensitive (only relevant for non-shell-pattern mode).
-// useShellPatterns: when true, uses filepath.Match; otherwise uses case-insensitive substring match.
+// caseSensitive: when true, matching is case-sensitive.
+// useShellPatterns: when true, uses filepath.Match; otherwise substring match.
 func (s *State) SelectGroup(pattern string, filesOnly, caseSensitive, useShellPatterns bool) {
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool)
@@ -1420,7 +1420,11 @@ func (s *State) UnselectGroup(pattern string, filesOnly, caseSensitive, useShell
 // groupMatch returns true if name matches pattern according to the given options.
 func groupMatch(name, pattern string, caseSensitive, useShellPatterns bool) bool {
 	if useShellPatterns {
-		matched, _ := filepath.Match(pattern, name)
+		if caseSensitive {
+			matched, _ := filepath.Match(pattern, name)
+			return matched
+		}
+		matched, _ := filepath.Match(strings.ToLower(pattern), strings.ToLower(name))
 		return matched
 	}
 	// Simple substring match

@@ -1319,6 +1319,46 @@ func TestSelectGroupByGlob(t *testing.T) {
 	}
 }
 
+func TestSelectGroupByGlobCaseInsensitive(t *testing.T) {
+	state := State{
+		Entries: []localfs.Entry{
+			{Name: "file.go", Path: "/tmp/file.go"},
+			{Name: "FILE.go", Path: "/tmp/FILE.go"},
+			{Name: "readme.md", Path: "/tmp/readme.md"},
+		},
+	}
+
+	state.SelectGroup("*.GO", false, false, true)
+
+	if !state.IsSelected(state.Entries[0]) {
+		t.Fatal("file.go should be selected (case-insensitive glob)")
+	}
+	if !state.IsSelected(state.Entries[1]) {
+		t.Fatal("FILE.go should be selected (case-insensitive glob)")
+	}
+	if state.IsSelected(state.Entries[2]) {
+		t.Fatal("readme.md should not be selected")
+	}
+}
+
+func TestSelectGroupByGlobCaseSensitive(t *testing.T) {
+	state := State{
+		Entries: []localfs.Entry{
+			{Name: "file.go", Path: "/tmp/file.go"},
+			{Name: "file.GO", Path: "/tmp/file.GO"},
+		},
+	}
+
+	state.SelectGroup("*.go", false, true, true)
+
+	if !state.IsSelected(state.Entries[0]) {
+		t.Fatal("file.go should be selected")
+	}
+	if state.IsSelected(state.Entries[1]) {
+		t.Fatal("file.GO should NOT be selected with case-sensitive glob")
+	}
+}
+
 func TestUnselectGroupByGlob(t *testing.T) {
 	state := State{
 		Entries: []localfs.Entry{
