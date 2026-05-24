@@ -8,6 +8,7 @@ const (
 	PrimaryModalNone PrimaryModal = iota
 	PrimaryModalTheme
 	PrimaryModalTransfer
+	PrimaryModalFlatten
 	PrimaryModalConflict
 	PrimaryModalQuit
 )

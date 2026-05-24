@@ -16,6 +16,7 @@ type Type string
 const (
 	TypeCopy    Type = "copy"
 	TypeMove    Type = "move"
+	TypeFlatten Type = "flatten"
 	TypeDelete  Type = "delete"
 	TypeExtract Type = "extract"
 )
@@ -86,6 +87,11 @@ type Job struct {
 
 	// PendingBlocker is non-nil while the job waits for user resolution (conflict or disk space).
 	PendingBlocker *BlockerDetails
+
+	// FlattenRemoveEmpty enables post-move removal of empty directories under FlattenRoots.
+	FlattenRemoveEmpty bool
+	// FlattenRoots are the selected directory roots for flatten cleanup (TypeFlatten only).
+	FlattenRoots []pathloc.Path
 }
 
 // jobIDCounter provides unique job IDs within a runtime session.
@@ -107,5 +113,5 @@ func (j *Job) NeedsPreScan() bool {
 	if j == nil {
 		return false
 	}
-	return j.Type == TypeCopy || j.Type == TypeMove
+	return j.Type == TypeCopy || j.Type == TypeMove || j.Type == TypeFlatten
 }

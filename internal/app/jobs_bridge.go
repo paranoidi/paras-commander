@@ -45,6 +45,10 @@ func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, s
 	a.jobsCtrl.AddTransferJob(jobType, sources, dest, startPaused)
 }
 
+func (a *App) addFlattenJob(sources []string, dest string, removeEmpty bool, flattenRoots []string) {
+	a.jobsCtrl.AddFlattenJob(sources, dest, removeEmpty, flattenRoots)
+}
+
 func plural(n int, singular, pluralForm string) string {
 	return jobbridge.Plural(n, singular, pluralForm)
 }

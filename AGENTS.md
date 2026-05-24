@@ -130,6 +130,7 @@ Pay attention to following details:
 - Input text area is in it's own line. It should cover the all avaialable space in the dialog (respecting 1 space margin).
 - Buttons should be visually centered.
 - Separation lines between sections.
+- Do not add empty lines above buttons.
 
 ### Styling
 

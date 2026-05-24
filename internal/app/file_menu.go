@@ -8,6 +8,7 @@ import (
 func (a *App) dispatchFileMenuItem(item menu.Item) {
 	switch item.Action {
 	case keymap.ActionFileExtract,
+		keymap.ActionFileFlatten,
 		keymap.ActionFileDelete,
 		keymap.ActionFileMkdir,
 		keymap.ActionFileChmod,

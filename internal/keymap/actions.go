@@ -73,6 +73,7 @@ const (
 	ActionFileView               = "file.view"
 	ActionFileQuickView          = "file.quick-view"
 	ActionFileEdit               = "file.edit"
+	ActionFileFlatten            = "file.flatten"
 
 	// Copy/Move
 	ActionCopy = "file.copy"
@@ -211,6 +212,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileView:               {},
 	ActionFileQuickView:          {},
 	ActionFileEdit:               {},
+	ActionFileFlatten:            {},
 
 	ActionCopy: {},
 	ActionMove: {},

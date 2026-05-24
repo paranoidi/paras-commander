@@ -918,6 +918,38 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
 	h.SyncJobPathMarks()
 }
 
+// AddFlattenJob enqueues a flatten (move children + optional empty-dir cleanup) job.
+func (h *Handler) AddFlattenJob(sources []string, dest string, removeEmpty bool, flattenRoots []string) {
+	srcLocs, err := pathloc.ParseAll(sources)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
+		return
+	}
+	destLoc, err := pathloc.Parse(dest)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
+		return
+	}
+	rootLocs, err := pathloc.ParseAll(flattenRoots)
+	if err != nil {
+		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
+		return
+	}
+	job := &jobs.Job{
+		ID:                 jobs.NewJobID(),
+		Type:               jobs.TypeFlatten,
+		Status:             jobs.StatusScanning,
+		Sources:            srcLocs,
+		Destination:        destLoc,
+		DestIsDir:          ops.DestinationIsDirAtEnqueue(destLoc),
+		FlattenRemoveEmpty: removeEmpty,
+		FlattenRoots:       rootLocs,
+	}
+	h.state.AddJob(job)
+	h.SyncJobsList()
+	h.SyncJobPathMarks()
+}
+
 func (h *Handler) sourceAndDestination() (sources []string, dest string) {
 	sources = h.host.ActivePanelSources()
 	if sources == nil {

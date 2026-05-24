@@ -60,6 +60,11 @@ const (
 	DefaultDiskSpaceCheckMinFileBytes = 50 * 1024 * 1024
 	DefaultCowFileCloning             = true
 
+	// DefaultFlattenRecursive is the initial state of the flatten dialog recursive checkbox.
+	DefaultFlattenRecursive = false
+	// DefaultFlattenRemoveEmptyDirs is the initial state of the flatten dialog remove-empty checkbox.
+	DefaultFlattenRemoveEmptyDirs = true
+
 	// DefaultListingFormat is the persisted default_listing_format value (Modified time column).
 	DefaultListingFormat = ListingFormatMtime
 

@@ -115,6 +115,7 @@ type Model struct {
 	HelpView                  HelpViewState
 	FileDialog                FileDialogState
 	TransferDialog            TransferDialogState
+	FlattenDialog             FlattenDialogState
 	ConflictDialog            ConflictDialogState
 	HostKeyDialog             HostKeyDialogState
 	QuitConfirm               QuitConfirmState
@@ -141,6 +142,8 @@ func (m Model) PrimaryModal() PrimaryModal {
 		return PrimaryModalTheme
 	case m.TransferDialog.Open:
 		return PrimaryModalTransfer
+	case m.FlattenDialog.Open:
+		return PrimaryModalFlatten
 	case m.ConflictDialog.Open:
 		return PrimaryModalConflict
 	case m.QuitConfirm.Open:
@@ -208,14 +211,14 @@ func (m Model) QuickFilterStartBlocked() bool {
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
-		m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.UserMenu.Open
+		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.UserMenu.Open
 }
 
 // AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
 // dedicated Jobs/Commands view keyboard handling. inputMode checks this only after earlier cases have ruled
 // out other modals.
 func (m Model) AuxiliaryViewDialogKeysBlocked() bool {
-	return m.TransferDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.Menu.Open
+	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.Menu.Open
 }
 
 // MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config show_menu_bar).
@@ -338,6 +341,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		dialog.DrawThemeDialog(screen, layout, model.ThemeDialog, styles)
 	case PrimaryModalTransfer:
 		dialog.DrawTransferDialog(screen, layout, model.TransferDialog, styles)
+	case PrimaryModalFlatten:
+		dialog.DrawFlattenDialog(screen, layout, model.FlattenDialog, styles)
 	case PrimaryModalConflict:
 		dialog.DrawConflictDialog(screen, layout, model.ConflictDialog, styles)
 	case PrimaryModalQuit:

@@ -151,6 +151,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionFileChown, Label: "Chown", Shortcut: 'o'},
 				{Action: keymap.ActionMenuFileChattr, Label: "Chattr", Shortcut: 't'},
 				{Action: keymap.ActionMove, Label: "Rename/Move", Shortcut: 'r'},
+				{Action: keymap.ActionFileFlatten, Label: "Flatten", Shortcut: 'F'},
 				{Action: keymap.ActionFileMkdir, Label: "Mkdir", Shortcut: 'm'},
 				{Action: keymap.ActionFileDelete, Label: "Delete", Shortcut: 'd'},
 				{Separator: true},

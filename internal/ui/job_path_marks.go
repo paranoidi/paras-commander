@@ -23,7 +23,7 @@ func jobTypeMarkPriority(t string) int {
 		return 4
 	case jobs.TypeExtract:
 		return 3
-	case jobs.TypeMove:
+	case jobs.TypeMove, jobs.TypeFlatten:
 		return 2
 	case jobs.TypeCopy:
 		return 1

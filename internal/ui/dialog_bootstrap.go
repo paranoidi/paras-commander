@@ -45,6 +45,8 @@ type (
 	TransferKind              = dialog.TransferKind
 	TransferDialogPhase       = dialog.TransferDialogPhase
 	TransferDialogState       = dialog.TransferDialogState
+	FlattenDialogState        = dialog.FlattenDialogState
+	FlattenDialogLinearForm   = dialog.FlattenDialogLinearForm
 	ConflictDialogState       = dialog.ConflictDialogState
 	HostKeyDialogState        = dialog.HostKeyDialogState
 	SFTPConnectDialogState    = dialog.SFTPConnectDialogState
@@ -93,6 +95,7 @@ const (
 	PrimaryModalNone     = dialog.PrimaryModalNone
 	PrimaryModalTheme    = dialog.PrimaryModalTheme
 	PrimaryModalTransfer = dialog.PrimaryModalTransfer
+	PrimaryModalFlatten  = dialog.PrimaryModalFlatten
 	PrimaryModalConflict = dialog.PrimaryModalConflict
 	PrimaryModalQuit     = dialog.PrimaryModalQuit
 
@@ -131,6 +134,8 @@ var (
 	TransferDialogNumContent            = dialog.TransferDialogNumContent
 	TransferDialogEffectiveNumContent   = dialog.TransferDialogEffectiveNumContent
 	TransferDialogMoveFocus             = dialog.TransferDialogMoveFocus
+	FlattenDialogMoveFocus              = dialog.FlattenDialogMoveFocus
+	NewFlattenDialogLinearForm          = dialog.NewFlattenDialogLinearForm
 	DialogPairLeftRight                 = dialog.DialogPairLeftRight
 	IsWordRune                          = lineedit.IsWordRune
 	BackwardWordIndex                   = lineedit.BackwardWordIndex

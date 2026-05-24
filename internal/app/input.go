@@ -89,7 +89,7 @@ func (a *App) inputMode() InputMode {
 		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
 		return InputModeJobsView
-	case a.model.TransferDialog.Open, a.model.ConflictDialog.Open, a.model.QuitConfirm.Open, a.model.StashRestoreDialog.Open:
+	case a.model.TransferDialog.Open, a.model.FlattenDialog.Open, a.model.ConflictDialog.Open, a.model.QuitConfirm.Open, a.model.StashRestoreDialog.Open:
 		return InputModeDialog
 	case a.model.Menu.Open:
 		return InputModeMenu
@@ -709,6 +709,8 @@ func (a *App) dispatch(actionID string) {
 		a.openHardlinkDialog(activePanel)
 	case keymap.ActionFileExtract:
 		a.openExtractDialog(activePanel)
+	case keymap.ActionFileFlatten:
+		a.openFlattenDialog()
 	case keymap.ActionCopy:
 		a.enqueueCopyJob()
 	case keymap.ActionMove:

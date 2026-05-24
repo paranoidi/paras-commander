@@ -210,7 +210,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 		}
 		opsPlan := PlanItemsToOps(job.Plan)
 		var planErr error
-		if (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove) && len(opsPlan) == 0 {
+		if (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) && len(opsPlan) == 0 {
 			var tf int
 			var tb int64
 			opsPlan, tf, _, tb, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{})
@@ -224,7 +224,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 				})
 			}
 		}
-		if planErr == nil && (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove) {
+		if planErr == nil && (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) {
 			tb := job.TotalBytes
 			if tb <= 0 && len(opsPlan) > 0 {
 				_, _, tb = ops.SummarizePlan(opsPlan)
@@ -256,11 +256,16 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 			} else {
 				doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlan(ctx, opsPlan, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
 			}
-		case jobs.TypeMove:
+		case jobs.TypeMove, jobs.TypeFlatten:
 			if len(opsPlan) > 0 {
 				doneFiles, doneBytes, err = ops.ExecuteMoveWithPlan(ctx, opsPlan, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
 			} else {
 				doneFiles, doneBytes, err = ops.ExecuteMove(ctx, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
+			}
+			if err == nil && job.Type == jobs.TypeFlatten && job.FlattenRemoveEmpty {
+				if cleanErr := ops.RemoveEmptyDirsUnder(ctx, job.FlattenRoots); cleanErr != nil {
+					err = cleanErr
+				}
 			}
 		case jobs.TypeDelete:
 			emit(jobs.Event{

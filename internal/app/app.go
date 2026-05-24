@@ -629,6 +629,9 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 	case a.model.TransferDialog.Open:
 		a.handleTransferDialogKey(event)
 		return false
+	case a.model.FlattenDialog.Open:
+		a.handleFlattenDialogKey(event)
+		return false
 	case a.model.ConflictDialog.Open:
 		a.handleConflictDialogKey(event)
 		return false
