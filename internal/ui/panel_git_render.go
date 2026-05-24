@@ -40,19 +40,27 @@ func panelGitCell(entry localfs.Entry, byPath map[string]gitstatus.Cell) gitstat
 	return gitstatus.Cell{Staged: gitstatus.NotModified, Unstaged: gitstatus.NotModified}
 }
 
-func gitStatusCellStyle(st gitstatus.Status, rowStyle tcell.Style, styles theme.Theme, cursorRow bool) tcell.Style {
+func gitStatusDimOnUsageBar(st gitstatus.Status) bool {
+	return st == gitstatus.NotModified || st == gitstatus.Ignored
+}
+
+func gitStatusCellStyle(st gitstatus.Status, rowStyle tcell.Style, styles theme.Theme, cursorRow, diskUsageOverlay bool, usageAccent tcell.Style) tcell.Style {
 	_, rowBG, rowAttrs := rowStyle.Decompose()
 	if cursorRow {
 		fg, _, _ := rowStyle.Decompose()
 		return tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(rowAttrs)
 	}
+	if diskUsageOverlay && gitStatusDimOnUsageBar(st) {
+		fg, _, attrs := usageAccent.Decompose()
+		return tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(attrs)
+	}
 	fg, _, attrs := styles.PanelGitStyle(st.ThemeKey()).Decompose()
 	return tcell.StyleDefault.Foreground(fg).Background(rowBG).Attributes(attrs)
 }
 
-func paintGitColumn(screen tcell.Screen, x, y int, cell gitstatus.Cell, rowStyle tcell.Style, styles theme.Theme, cursorRow bool) {
+func paintGitColumn(screen tcell.Screen, x, y int, cell gitstatus.Cell, rowStyle tcell.Style, styles theme.Theme, cursorRow, diskUsageOverlay bool, usageAccent tcell.Style) {
 	for i, st := range []gitstatus.Status{cell.Staged, cell.Unstaged} {
-		s := gitStatusCellStyle(st, rowStyle, styles, cursorRow)
+		s := gitStatusCellStyle(st, rowStyle, styles, cursorRow, diskUsageOverlay, usageAccent)
 		screen.SetContent(x+i, y, st.Rune(), nil, s)
 	}
 }

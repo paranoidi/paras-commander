@@ -399,8 +399,13 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		}
 		if showGit {
 			gitStyle := blendCell(leftGutter)
+			gitUnderUsage := !chromeBlocked && fillCols > leftGutter
+			var gitUsageAccent tcell.Style
+			if gitUnderUsage {
+				gitUsageAccent = styles.DiskUsageBarStyle(fileListActive, entryIndex == state.Cursor, selected)
+			}
 			if hasEntry {
-				paintGitColumn(screen, gitStart, y, panelGitCell(cur, state.GitByPath), gitStyle, styles, entryIndex == state.Cursor)
+				paintGitColumn(screen, gitStart, y, panelGitCell(cur, state.GitByPath), gitStyle, styles, entryIndex == state.Cursor, gitUnderUsage, gitUsageAccent)
 				paintGitRowTrailingGap(screen, gitStart, y, gitStyle)
 			} else {
 				paintGitStripBlank(screen, gitStart, y, gitStyle)
