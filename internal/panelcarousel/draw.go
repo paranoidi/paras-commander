@@ -150,11 +150,17 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			text := formatBriefRow(entry, col.Width, p.ShowIcons, jobGlyph, subtree, diskSrc)
 			listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons)
 			nameColOffset := listStart - col.X
+			nameWidth := nameWidthForColumn(col.Width, p.ShowIcons)
 			var spans []primitive.Span
 			if c.Active && (p.Center.Filter.Active || p.Center.Filter.Editing) {
 				spans = fuzzySpans(entry, col.Width, p.Center.MatchRanges(entryIndex), isCursor && p.FileListActive, p.Styles, p.ShowIcons, jobGlyph, subtree, func(di int) tcell.Style {
 					return blendCell(nameColOffset + di)
 				})
+			}
+			if suffixSpans := listingSuffixSpans(entry, nameWidth, p.ShowIcons, jobGlyph, subtree, p.Styles, p.ChromeBlocked, func(di int) tcell.Style {
+				return blendCell(nameColOffset + di)
+			}); len(suffixSpans) > 0 {
+				spans = append(suffixSpans, spans...)
 			}
 			if p.ShowIcons {
 				leftGutter := columnListLeadingGutter()
@@ -208,6 +214,45 @@ func entryStyle(entry localfs.Entry, blocked bool, styles theme.Theme) tcell.Sty
 	default:
 		return styles.PanelRowFile
 	}
+}
+
+func listingSuffixSpans(
+	entry localfs.Entry,
+	nameWidth int,
+	showIcons bool,
+	jobGlyph rune,
+	subtree bool,
+	styles theme.Theme,
+	chromeBlocked bool,
+	nameBGAt func(displayIndex int) tcell.Style,
+) []primitive.Span {
+	if jobGlyph == 0 && !subtree {
+		return nil
+	}
+	display := entryDisplayRunes(entry, nameWidth, showIcons, jobGlyph, subtree)
+	suf := entryListingSuffixDecorationLen(nameWidth, jobGlyph, subtree && entry.Type == localfs.EntryDirectory)
+	decStart := len(display) - suf
+	if decStart < 0 || decStart >= len(display) {
+		return nil
+	}
+	markSource := styles.PanelRowSelected
+	if chromeBlocked {
+		markSource = styles.PanelBlockedRowSelected
+	}
+	listingMarkFG, _, _ := markSource.Decompose()
+	var spans []primitive.Span
+	for i := decStart; i < len(display); i++ {
+		if display[i].Rune != '\u25cb' { // ○
+			continue
+		}
+		_, rowBG, _ := nameBGAt(i).Decompose()
+		spans = append(spans, primitive.Span{
+			Start: i,
+			End:   i + 1,
+			Style: tcell.StyleDefault.Foreground(listingMarkFG).Background(rowBG),
+		})
+	}
+	return spans
 }
 
 func cursorStyle(p BodyParams, inactive, selected bool) tcell.Style {
