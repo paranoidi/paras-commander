@@ -34,6 +34,7 @@ const (
 	ActionPanelListingFormatDialog   = "panel.listing-format-dialog"
 	ActionPanelCycleSort             = "panel.cycle-sort"
 	ActionPanelCycleListingFormat    = "panel.cycle-listing-format"
+	ActionPanelToggleCarousel        = "panel.toggle-carousel"
 	ActionPanelToggleZoomActivePanel = "panel.toggle-zoom-active-panel"
 	ActionPanelReverseSort           = "panel.reverse-sort"
 	ActionPanelFilterOpen            = "panel.filter-open"
@@ -174,6 +175,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelListingFormatDialog:   {},
 	ActionPanelCycleSort:             {},
 	ActionPanelCycleListingFormat:    {},
+	ActionPanelToggleCarousel:        {},
 	ActionPanelToggleZoomActivePanel: {},
 	ActionPanelReverseSort:           {},
 	ActionPanelFilterOpen:            {},

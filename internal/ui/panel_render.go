@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -167,6 +168,46 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 
 	visibleRows := PanelListRows(rect)
 	if visibleRows == 0 {
+		return
+	}
+
+	if state.CarouselMode && panelcarousel.LayoutFits(rect, 0, 0) {
+		parent, _, child := panelcarousel.BuildColumns(state, visibleRows)
+		var surface tcell.Style
+		if chromeBlocked {
+			surface = styles.PanelBlockedSurface
+		} else if fileListActive {
+			surface = styles.PanelActiveSurface
+		} else {
+			surface = styles.PanelInactiveSurface
+		}
+		panelcarousel.DrawBody(screen, panelcarousel.BodyParams{
+			Frame:          rect,
+			Center:         state,
+			Parent:         parent,
+			Child:          child,
+			Styles:         styles,
+			ChromeBlocked:  chromeBlocked,
+			FileListActive: fileListActive,
+			ShowIcons:      showIcons,
+			HeaderStyle:    headerStyle,
+			SurfaceStyle:   surface,
+			JobMark: func(path string) (rune, bool) {
+				marked, st := EntryPathJobMarkStatus(path, jobMarks)
+				if !marked {
+					return 0, false
+				}
+				glyphStr := jobRowLeadingIcon(st, styles)
+				if glyphStr == "" {
+					return 0, false
+				}
+				r, _ := utf8.DecodeRuneInString(glyphStr)
+				return r, true
+			},
+			PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string) {
+				paintPanelIconStrip(sc, x, y, entry, rowStyle, styles, cursorKey, false, false, false)
+			},
+		})
 		return
 	}
 

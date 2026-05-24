@@ -80,6 +80,11 @@ const (
 	// with icons on, the text budget is three cells narrower so the gate still trips.
 	ShrunkenListingRowTextWidthThreshold = 40
 
+	// MinCarouselPanelInnerWidth is the minimum interior width (cells inside the panel frame) for carousel mode.
+	MinCarouselPanelInnerWidth = 72 // 3 × MinCarouselColumnWidth
+	// MinCarouselColumnWidth is the minimum width per carousel column (parent, center, child).
+	MinCarouselColumnWidth = 24
+
 	// DefaultUserMenuFileName is the basename of the user menu definition under the config directory
 	// when [user_menu].file is empty.
 	DefaultUserMenuFileName = "menu.toml"

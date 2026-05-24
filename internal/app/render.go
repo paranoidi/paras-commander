@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
@@ -36,6 +37,7 @@ func (a *App) render() {
 	}
 	w, _ := a.screen.Size()
 	a.model.PanelZoomEnabled = a.effectiveZoomActivePanelLayout(w, previewOpen)
+	a.applyCarouselPanelZoomPercents(w)
 	if a.model.ViewMode == ui.ViewCommands {
 		a.commandsMu.RLock()
 		a.model.CommandsDisplay = append([]ui.CommandRunEntry(nil), a.model.CommandsList...)
@@ -119,12 +121,42 @@ func (a *App) menuBarPermissionText() string {
 // twin-column split treats panel zoom as off (same rule as when preview is actually open) so
 // callers can size subprocess output (e.g. bat --terminal-width) before preview state is toggled.
 func (a *App) layoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout {
-	return ui.CalculateLayout(width, height, a.model.MenuBarLayoutReserved(), ui.PanelWidthSplit{
-		Zoom:            ui.PanelZoomSplitsColumns(a.model.ViewMode, a.effectiveZoomActivePanelLayout(width, filePreviewOpen)),
+	return ui.CalculateLayout(width, height, a.model.MenuBarLayoutReserved(), a.panelWidthSplit(width, filePreviewOpen))
+}
+
+// applyCarouselPanelZoomPercents widens the active column when carousel view is on so three panes fit.
+func (a *App) applyCarouselPanelZoomPercents(totalWidth int) {
+	if !a.activePanel().CarouselMode || !a.model.PanelZoomEnabled {
+		return
+	}
+	minPct := panelcarousel.MinActiveWidthPercent(totalWidth)
+	if a.model.PanelZoomActivePercent < minPct {
+		a.model.PanelZoomActivePercent = minPct
+		a.model.PanelZoomInactivePercent = 100 - minPct
+	}
+}
+
+func (a *App) panelWidthSplit(width int, filePreviewOpen bool) ui.PanelWidthSplit {
+	zoom := a.effectiveZoomActivePanelLayout(width, filePreviewOpen)
+	activePct := a.model.PanelZoomActivePercent
+	inactivePct := a.model.PanelZoomInactivePercent
+	if activePct <= 0 || inactivePct <= 0 {
+		activePct = a.config.UI.PanelZoomActivePercent
+		inactivePct = a.config.UI.PanelZoomInactivePercent
+	}
+	if zoom && a.activePanel().CarouselMode {
+		minPct := panelcarousel.MinActiveWidthPercent(width)
+		if activePct < minPct {
+			activePct = minPct
+			inactivePct = 100 - activePct
+		}
+	}
+	return ui.PanelWidthSplit{
+		Zoom:            ui.PanelZoomSplitsColumns(a.model.ViewMode, zoom),
 		ActivePanel:     a.model.ActivePanel,
-		ActivePercent:   a.config.UI.PanelZoomActivePercent,
-		InactivePercent: a.config.UI.PanelZoomInactivePercent,
-	})
+		ActivePercent:   activePct,
+		InactivePercent: inactivePct,
+	}
 }
 
 func (a *App) layoutForTerminalSize(width, height int) ui.Layout {
@@ -154,6 +186,9 @@ func (a *App) effectiveZoomActivePanelLayout(width int, filePreviewOpen bool) bo
 	}
 	if a.zoomActivePanelSuppressedByTerminalWidth(width) {
 		return false
+	}
+	if a.activePanel().CarouselMode {
+		return true
 	}
 	return a.effectiveZoomActivePanel()
 }

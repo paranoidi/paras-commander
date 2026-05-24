@@ -566,6 +566,10 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionPanelSortDialog:
 		a.openSortDialog()
 	case keymap.ActionPanelListingFormatDialog:
+		if activePanel.CarouselMode {
+			a.setTransientMessage("Listing format is not available in carousel view", ui.MessageUrgencyInfo)
+			break
+		}
 		a.openListingFormatDialog()
 	case keymap.ActionPanelMeta:
 		a.openMetaDialog(a.model.ActivePanel)
@@ -573,8 +577,19 @@ func (a *App) dispatch(actionID string) {
 		activePanel.CycleSort(viewportRows)
 		a.setTransientMessage(fmt.Sprintf("Sort: %s", activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelCycleListingFormat:
+		if activePanel.CarouselMode {
+			a.setTransientMessage("Listing format is not available in carousel view", ui.MessageUrgencyInfo)
+			break
+		}
 		activePanel.CycleListingFormat()
 		a.setTransientMessage(fmt.Sprintf("Listing: %s", activePanel.ListFormat.String()), ui.MessageUrgencyInfo)
+	case keymap.ActionPanelToggleCarousel:
+		activePanel.CarouselMode = !activePanel.CarouselMode
+		onOff := "off"
+		if activePanel.CarouselMode {
+			onOff = "on"
+		}
+		a.setTransientMessage(fmt.Sprintf("Carousel view: %s", onOff), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelToggleZoomActivePanel:
 		if a.filePreviewOpen() || a.model.QuickViewEnabled {
 			a.setTransientMessage("Zoom disabled while quick view or file view is active", ui.MessageUrgencyInfo)

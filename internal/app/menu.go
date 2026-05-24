@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"path/filepath"
 	"unicode"
 
@@ -296,7 +297,24 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 	case keymap.ActionPanelExternalBrowser:
 		a.openPanelPathInExternalBrowser(panelScope)
 	case keymap.ActionPanelListingFormatDialog:
+		p := a.panelByID(panelScope)
+		if p.CarouselMode {
+			a.setTransientMessage("Listing format is not available in carousel view", ui.MessageUrgencyInfo)
+			break
+		}
 		a.openListingFormatDialogForPanel(panelScope)
+	case keymap.ActionPanelToggleCarousel:
+		p := a.panelByID(panelScope)
+		p.CarouselMode = !p.CarouselMode
+		if p.CarouselMode {
+			a.model.ActivePanel = panelScope
+		}
+		onOff := "off"
+		if p.CarouselMode {
+			onOff = "on"
+		}
+		label := panelLabel(panelScope)
+		a.setTransientMessage(fmt.Sprintf("%s carousel view: %s", label, onOff), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelMeta:
 		a.openMetaDialog(panelScope)
 	case keymap.ActionFileQuickView:

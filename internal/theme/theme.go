@@ -60,6 +60,9 @@ type Theme struct {
 	PanelCursorInactive         tcell.Style
 	PanelActiveCursorSelected   tcell.Style
 	PanelInactiveCursorSelected tcell.Style
+	// PanelCarouselInactiveCursor* styles preview-pane cursors in carousel mode.
+	PanelCarouselInactiveCursor         tcell.Style
+	PanelCarouselInactiveCursorSelected tcell.Style
 	// PanelSyncIndicator styles the "Sync →" / "← Sync" overlay drawn on the
 	// bottom border of the panel that drives latched panel sync.
 	PanelSyncIndicator tcell.Style
@@ -426,6 +429,8 @@ var requiredStyleKeys = []string{
 	"panel.active.usage.cursor.selected",
 	"panel.inactive.row.cursor",
 	"panel.inactive.row.cursor.selected",
+	"panel.carousel.inactive.row.cursor",
+	"panel.carousel.inactive.row.cursor.selected",
 	"panel.inactive.usage.cursor",
 	"panel.inactive.usage.cursor.selected",
 	"panel.row.file",
@@ -786,12 +791,14 @@ func parse(data []byte) (Theme, error) {
 
 	panelFileIcons := map[string]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
-		"panel.active.row.cursor":            {},
-		"panel.active.row.cursor.selected":   {},
-		"panel.inactive.row.cursor":          {},
-		"panel.inactive.row.cursor.selected": {},
-		"panel.blocked.row.cursor":           {},
-		"panel.blocked.row.cursor.selected":  {},
+		"panel.active.row.cursor":                     {},
+		"panel.active.row.cursor.selected":            {},
+		"panel.inactive.row.cursor":                   {},
+		"panel.inactive.row.cursor.selected":          {},
+		"panel.carousel.inactive.row.cursor":          {},
+		"panel.carousel.inactive.row.cursor.selected": {},
+		"panel.blocked.row.cursor":                    {},
+		"panel.blocked.row.cursor.selected":           {},
 	}
 	for key, spec := range specs {
 		if spec.Icon == "" {
@@ -824,31 +831,33 @@ func parse(data []byte) (Theme, error) {
 		MenuDropdownAccent:   styles["menu.dropdown.accent"],
 		MenuDetail:           styles["menu.detail"],
 
-		PanelActiveFrame:               styles["panel.active.frame"],
-		PanelInactiveFrame:             styles["panel.inactive.frame"],
-		PanelActiveSurface:             styles["panel.active.surface"],
-		PanelInactiveSurface:           styles["panel.inactive.surface"],
-		PanelActiveTitle:               styles["panel.active.title"],
-		PanelInactiveTitle:             styles["panel.inactive.title"],
-		PanelActiveDiskUsageOverview:   styles["panel.active.disk_usage_overview"],
-		PanelInactiveDiskUsageOverview: styles["panel.inactive.disk_usage_overview"],
-		PanelActiveHeader:              styles["panel.active.header"],
-		PanelInactiveHeader:            styles["panel.inactive.header"],
-		PanelRowFile:                   styles["panel.row.file"],
-		PanelRowDirectory:              styles["panel.row.directory"],
-		PanelRowSymlink:                styles["panel.row.symlink"],
-		PanelRowSelected:               styles["panel.row.selected"],
-		PanelText:                      styles["panel.text"],
-		PanelCursorActive:              styles["panel.active.row.cursor"],
-		PanelCursorInactive:            styles["panel.inactive.row.cursor"],
-		PanelActiveCursorSelected:      styles["panel.active.row.cursor.selected"],
-		PanelInactiveCursorSelected:    styles["panel.inactive.row.cursor.selected"],
-		PanelSyncIndicator:             styles["panel.indicator.sync"],
-		PanelQuickViewIndicator:        styles["panel.indicator.quick_view"],
-		PanelBottomIndicatorSelections: styles["panel.indicator.selections"],
-		PanelBottomIndicatorGitignore:  styles["panel.indicator.gitignore"],
-		PanelBottomIndicatorStash:      styles["panel.indicator.stash"],
-		PanelFileIconFG:                panelFileIconFG,
+		PanelActiveFrame:                    styles["panel.active.frame"],
+		PanelInactiveFrame:                  styles["panel.inactive.frame"],
+		PanelActiveSurface:                  styles["panel.active.surface"],
+		PanelInactiveSurface:                styles["panel.inactive.surface"],
+		PanelActiveTitle:                    styles["panel.active.title"],
+		PanelInactiveTitle:                  styles["panel.inactive.title"],
+		PanelActiveDiskUsageOverview:        styles["panel.active.disk_usage_overview"],
+		PanelInactiveDiskUsageOverview:      styles["panel.inactive.disk_usage_overview"],
+		PanelActiveHeader:                   styles["panel.active.header"],
+		PanelInactiveHeader:                 styles["panel.inactive.header"],
+		PanelRowFile:                        styles["panel.row.file"],
+		PanelRowDirectory:                   styles["panel.row.directory"],
+		PanelRowSymlink:                     styles["panel.row.symlink"],
+		PanelRowSelected:                    styles["panel.row.selected"],
+		PanelText:                           styles["panel.text"],
+		PanelCursorActive:                   styles["panel.active.row.cursor"],
+		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],
+		PanelActiveCursorSelected:           styles["panel.active.row.cursor.selected"],
+		PanelInactiveCursorSelected:         styles["panel.inactive.row.cursor.selected"],
+		PanelCarouselInactiveCursor:         styles["panel.carousel.inactive.row.cursor"],
+		PanelCarouselInactiveCursorSelected: styles["panel.carousel.inactive.row.cursor.selected"],
+		PanelSyncIndicator:                  styles["panel.indicator.sync"],
+		PanelQuickViewIndicator:             styles["panel.indicator.quick_view"],
+		PanelBottomIndicatorSelections:      styles["panel.indicator.selections"],
+		PanelBottomIndicatorGitignore:       styles["panel.indicator.gitignore"],
+		PanelBottomIndicatorStash:           styles["panel.indicator.stash"],
+		PanelFileIconFG:                     panelFileIconFG,
 
 		PanelBlockedFrame:             styles["panel.blocked.frame"],
 		PanelBlockedSurface:           styles["panel.blocked.surface"],

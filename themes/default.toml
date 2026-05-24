@@ -89,6 +89,10 @@ title = { fg = "white", bold = true }
 usage.cursor = { fg = "black", bg = "bright_cyan" }
 usage.cursor.selected = { fg = "yellow", bg = "bright_blue", bold = true }
 
+[panel.carousel.inactive]
+row.cursor = { fg = "white", bg = "black" }
+row.cursor.selected = { fg = "yellow", bg = "black", bold = true }
+
 [panel.inactive]
 disk_usage_overview = { fg = "bright_black"}
 frame = { fg = "bright_black" }

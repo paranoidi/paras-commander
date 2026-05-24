@@ -314,6 +314,13 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"columns", "listing", "mtime", "permissions", "brief"},
 		},
 		{
+			ID:          ActionPanelToggleCarousel,
+			Title:       "Toggle carousel view",
+			Section:     "Sort & display",
+			DefaultKeys: []string{"M-c"},
+			Keywords:    []string{"carousel", "columns", "preview", "parent", "child", "godu"},
+		},
+		{
 			ID:          ActionPanelToggleZoomActivePanel,
 			Title:       "Toggle zoom active panel (runtime)",
 			Section:     "Sort & display",
