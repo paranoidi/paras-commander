@@ -270,9 +270,10 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	primitive.Text(screen, listContentStart, headerY, listTextWidth, header, headerStyle)
 
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
-	nameWidth := panelListNameWidth(listTextWidth, listFmt, nameOnlyDisplay, showGit)
+	// listTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
+	nameWidth := panelListNameWidth(listTextWidth, listFmt, nameOnlyDisplay, false)
 	if showMetaEffective {
-		nameWidth = panelListNameWidthWithMeta(listTextWidth, metaColW, listFmt, nameOnlyDisplay, showGit)
+		nameWidth = panelListNameWidthWithMeta(listTextWidth, metaColW, listFmt, nameOnlyDisplay, false)
 	}
 	markSource := styles.PanelRowSelected
 	if chromeBlocked {
@@ -526,9 +527,10 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 	}
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
 	tw := panelListThirdColumnWidth(listFmt, false)
-	nameWidth := panelListNameWidth(rowTextWidth, listFmt, false, showGit)
+	// rowTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
+	nameWidth := panelListNameWidth(rowTextWidth, listFmt, false, false)
 	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaColW, listFmt, false, showGit)
+		nameWidth = panelListNameWidthWithMeta(rowTextWidth, metaColW, listFmt, false, false)
 	}
 	nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 	nameTitle = truncateHeaderRunes(nameWidth, nameTitle)
@@ -699,9 +701,10 @@ func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highli
 		return nil
 	}
 	listFmt = panel.EffectiveListFormat(listFmt)
-	nameWidth := panelListNameWidth(rowWidth, listFmt, nameOnly, showGit)
+	// rowWidth already has the git strip excluded; pass false to avoid double-subtracting.
+	nameWidth := panelListNameWidth(rowWidth, listFmt, nameOnly, false)
 	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(rowWidth, metaColW, listFmt, nameOnly, showGit)
+		nameWidth = panelListNameWidthWithMeta(rowWidth, metaColW, listFmt, nameOnly, false)
 	}
 	display := entryDisplayRunes(entry, nameWidth, showFileIcons, jobMarkRune, subtreeSelectionMark)
 	matchStyle := styles.FuzzyHighlight
