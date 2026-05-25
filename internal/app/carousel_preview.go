@@ -70,8 +70,8 @@ func (a *App) armCarouselPreviewNavCoalesceAfterListNav() {
 	if !a.carouselPreviewNavCoalesceContext() {
 		return
 	}
-	gen := a.carouselPreviewDebounceGen.Add(1)
 	a.carouselPreviewNavSkipSnapshot.Store(true)
+	gen := a.carouselPreviewDebounceGen.Add(1)
 	a.scheduleCarouselPreviewDebounceTimer(gen)
 }
 
@@ -80,7 +80,26 @@ func (a *App) applyCarouselPreviewFlush(p carouselPreviewFlushPayload) bool {
 		return false
 	}
 	a.carouselPreviewNavSkipSnapshot.Store(false)
+	a.loadCarouselChildPreviewFromDisk()
 	return true
+}
+
+// loadCarouselChildPreviewFromDisk reads the child preview listing after nav coalesce ends.
+func (a *App) loadCarouselChildPreviewFromDisk() {
+	if !a.carouselPreviewNavCoalesceContext() {
+		return
+	}
+	p := a.activePanel()
+	p.CarouselChildPreviewCoalesce = false
+	_, _ = p.SnapshotChild(a.activeViewportRows())
+}
+
+// carouselPreviewHeldListNav reports file-list nav keys while carousel child preview coalesce may apply.
+func (a *App) carouselPreviewHeldListNav(resolvedAction string, event *tcell.EventKey) bool {
+	if a.config.UI.CarouselPreviewDebounceMS <= 0 || !a.activePanel().CarouselMode {
+		return false
+	}
+	return a.panelSyncFollowHeldListNav(resolvedAction, event)
 }
 
 // syncCarouselChildPreviewCoalesceFlags sets child-preview coalesce before painting carousel columns.

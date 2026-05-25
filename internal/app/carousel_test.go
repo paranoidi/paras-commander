@@ -148,13 +148,12 @@ func TestCarouselPreviewNavDebounceDefersSideSnapshotUntilFlush(t *testing.T) {
 		t.Fatalf("child cache after debounced nav = %+v ok=%v, want still maple", still, app.model.Left.CarouselSideCache.ChildOK)
 	}
 
-	app.clearCarouselPreviewNavCoalesce()
 	if !app.applyCarouselPreviewFlush(carouselPreviewFlushPayload{gen: app.carouselPreviewDebounceGen.Load()}) {
-		t.Fatal("applyCarouselPreviewFlush should clear coalesce")
+		t.Fatal("applyCarouselPreviewFlush should accept flush and load child preview")
 	}
 	app.syncCarouselChildPreviewCoalesceFlags()
-	if _, ok := left.SnapshotChild(20); !ok {
-		t.Fatal("SnapshotChild on oak after flush = false, want true")
+	if app.model.Left.CarouselChildPreviewCoalesce {
+		t.Fatal("coalesce should be off after flush")
 	}
 	after := app.model.Left.CarouselSideCache.Child
 	if !app.model.Left.CarouselSideCache.ChildOK || after.Path.String() != oak {

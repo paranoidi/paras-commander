@@ -38,6 +38,7 @@ func (s *State) SnapshotParent(viewportRows int) (ListingSnapshot, bool) {
 
 // SnapshotChild returns a child-directory preview when the cursor is on a directory.
 // The second bool is false when the pane should be blank (file under cursor, load error, pending listing).
+// While CarouselChildPreviewCoalesce is set, BuildColumns uses the cache only; this method is not called.
 func (s *State) SnapshotChild(viewportRows int) (ListingSnapshot, bool) {
 	if s.CarouselChildPreviewCoalesce {
 		if s.CarouselSideCache.ChildOK {

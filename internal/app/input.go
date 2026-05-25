@@ -215,6 +215,8 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	if !a.panelSyncFollowHeldListNav(resolvedAction, event) {
 		a.clearPanelSyncFollowNavCoalesce()
 		a.clearQuickViewNavCoalesce()
+	}
+	if !a.carouselPreviewHeldListNav(resolvedAction, event) {
 		a.clearCarouselPreviewNavCoalesce()
 	}
 	if resolvedAction == keymap.ActionPanelDiskUsageAbortAll {

@@ -20,10 +20,22 @@ type Column struct {
 }
 
 // BuildColumns constructs parent/center/child column descriptors from the live panel state.
+// While CarouselChildPreviewCoalesce is set, the child column reuses the last cached snapshot
+// and does not read the filesystem; callers paint the child column only after coalesce ends.
 func BuildColumns(center panel.State, viewportRows int) (parent, mid, child Column) {
 	mid = Column{Kind: ColumnCenter, Populated: true, Active: true}
 	if snap, ok := center.SnapshotParent(viewportRows); ok {
 		parent = Column{Kind: ColumnParent, Populated: true, Snapshot: snap}
+	}
+	if center.CarouselChildPreviewCoalesce {
+		if center.CarouselSideCache.ChildOK {
+			child = Column{
+				Kind:      ColumnChild,
+				Populated: true,
+				Snapshot:  center.CarouselSideCache.Child,
+			}
+		}
+		return parent, mid, child
 	}
 	if snap, ok := center.SnapshotChild(viewportRows); ok {
 		child = Column{Kind: ColumnChild, Populated: true, Snapshot: snap}
