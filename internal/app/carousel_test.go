@@ -157,7 +157,7 @@ func TestFirstListNavAfterChdirPaintsCachedChildDuringCoalesce(t *testing.T) {
 	if !app.model.Left.CarouselChildPreviewCoalesce {
 		t.Fatal("coalesce should stay on after first nav arm")
 	}
-	_, _, child := panelcarousel.BuildColumns(app.model.Left, 20)
+	_, _, child := panelcarousel.BuildColumns(app.model.Left, 20, false)
 	if !child.Populated {
 		t.Fatal("first coalesced frame should repaint cached child column, not leave it blank")
 	}

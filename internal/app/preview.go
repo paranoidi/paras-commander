@@ -243,6 +243,7 @@ func (a *App) handleQuickViewToggle() {
 	} else {
 		a.setTransientMessage("Quick view on", ui.MessageUrgencyInfo)
 	}
+	a.clearCarouselPreviewNavCoalesce()
 	a.applyQuickViewPreviewImmediately()
 }
 

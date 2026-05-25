@@ -36,13 +36,13 @@ func TestBuildColumnsSkipsChildDiskReadDuringCoalesce(t *testing.T) {
 		t.Fatal("oak not found")
 	}
 	state.CarouselChildPreviewCoalesce = true
-	_, _, child := BuildColumns(state, 10)
+	_, _, child := BuildColumns(state, 10, false)
 	if !child.Populated || child.Snapshot.Path.String() != maple {
 		t.Fatalf("coalesced child = %+v populated=%v, want cached maple until flush", child.Snapshot, child.Populated)
 	}
 
 	state.CarouselChildPreviewCoalesce = false
-	_, _, fresh := BuildColumns(state, 10)
+	_, _, fresh := BuildColumns(state, 10, false)
 	if !fresh.Populated || fresh.Snapshot.Path.String() != oak {
 		t.Fatalf("fresh child = %+v populated=%v, want oak from disk", fresh.Snapshot, fresh.Populated)
 	}

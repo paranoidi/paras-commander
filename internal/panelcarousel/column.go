@@ -19,15 +19,22 @@ type Column struct {
 	Snapshot  panel.ListingSnapshot
 }
 
+// ShowChildPreviewColumn reports whether the carousel child (preview) column should be built and painted.
+// It is omitted when the center listing has no subdirectories or when Quick view already previews
+// the inactive panel (same two-pane layout as the no-subdirectories case).
+func ShowChildPreviewColumn(center panel.State, quickViewEnabled bool) bool {
+	return center.CarouselCenterHasSubdirectories() && !quickViewEnabled
+}
+
 // BuildColumns constructs parent/center/child column descriptors from the live panel state.
 // While CarouselChildPreviewCoalesce is set, the child column reuses the last cached snapshot
 // and does not read the filesystem; callers paint the child column only after coalesce ends.
-func BuildColumns(center panel.State, viewportRows int) (parent, mid, child Column) {
+func BuildColumns(center panel.State, viewportRows int, quickViewEnabled bool) (parent, mid, child Column) {
 	mid = Column{Kind: ColumnCenter, Populated: true, Active: true}
 	if snap, ok := center.SnapshotParent(viewportRows); ok {
 		parent = Column{Kind: ColumnParent, Populated: true, Snapshot: snap}
 	}
-	if !center.CarouselCenterHasSubdirectories() {
+	if !ShowChildPreviewColumn(center, quickViewEnabled) {
 		return parent, mid, child
 	}
 	if center.CarouselChildPreviewCoalesce {

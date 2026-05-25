@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -36,7 +37,7 @@ func (a *App) clearCarouselPreviewNavCoalesce() {
 func (a *App) carouselPreviewNavCoalesceContext() bool {
 	return a.model.ViewMode == ui.ViewBrowser &&
 		a.activePanel().CarouselMode &&
-		a.activePanel().CarouselCenterHasSubdirectories() &&
+		panelcarousel.ShowChildPreviewColumn(*a.activePanel(), a.model.QuickViewEnabled) &&
 		a.model.ActiveSubFocus == ui.SubFocusFileList &&
 		!a.model.Menu.Open &&
 		!a.model.ModalDialogOpen() &&

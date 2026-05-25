@@ -166,8 +166,9 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	}
 
 	if state.CarouselMode && panelcarousel.LayoutFits(rect, 0, 0) {
-		showChildCol := state.CarouselCenterHasSubdirectories()
-		parent, _, child := panelcarousel.BuildColumns(state, visibleRows)
+		quickViewOn := quickViewDriverPanelID >= 0
+		showChildCol := panelcarousel.ShowChildPreviewColumn(state, quickViewOn)
+		parent, _, child := panelcarousel.BuildColumns(state, visibleRows, quickViewOn)
 		var surface tcell.Style
 		if chromeBlocked {
 			surface = styles.PanelBlockedSurface
