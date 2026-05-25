@@ -123,25 +123,21 @@ type Config struct {
 	UserMenu                   UserMenuConfig   `toml:"user_menu"`
 	Preview                    PreviewConfig    `toml:"preview"`
 	SFTP                       SFTPConfig       `toml:"sftp"`
-	// Meta holds named per-entry shell commands shown in the panel Meta column.
-	// Each key is the command name; command receives the entry path as $1.
-	Meta map[string]MetaCommandDef `toml:"meta"`
+	// Meta configures the separate meta.toml command definitions file and execution settings.
+	Meta MetaConfig `toml:"meta"`
 }
 
-// MetaCommandDef is one named meta command entry.
-// File runs for regular files; Dirs runs for directories; $1 = absolute path.
-//
-// Stdout is shown in the panel Meta column. If the trimmed output contains no tab or newline,
-// it is one cell (legacy): display width over the panel meta budget is replaced with "too long".
-// Otherwise fields are split on tab and line feed (after \r\n/\r normalization to \n, then \n→\t),
-// up to 8 fields; empty fields are preserved. Column widths are the max display width per column
-// across all rows (so the column count grows when a later row has more delimiters); cells are
-// joined with a single space for display. Digit-only cells are right-aligned; others left-aligned.
-// The rendered line is capped to the panel meta column display budget (see internal/ui panel list constants).
-type MetaCommandDef struct {
-	Description string `toml:"description"`
-	File        string `toml:"file"`
-	Dirs        string `toml:"dirs"`
+// MetaConfig controls discovery of the separate meta.toml and execution settings.
+type MetaConfig struct {
+	// File is an absolute path or ~/… to the global meta.toml. Empty uses
+	// filepath.Join(configDir, DefaultMetaFileName) after paths are resolved.
+	File string `toml:"file"`
+	// LocalNames lists basenames probed in the active panel directory before the global file.
+	// Empty in config means use built-in default (see Default().Meta).
+	LocalNames []string `toml:"local_names"`
+	// Workers is the number of concurrent background goroutines used to run meta column
+	// commands. Minimum 1 after Validate. Default DefaultMetaWorkers.
+	Workers int `toml:"workers"`
 }
 
 // BookmarksConfig controls fzf-marks compatible directory marks.
@@ -376,15 +372,10 @@ func Default() Config {
 			DialTimeoutSecs: DefaultSFTPDialTimeoutSecs,
 			ListTimeoutSecs: DefaultSFTPListTimeoutSecs,
 		},
-		Meta: map[string]MetaCommandDef{
-			"count-items": {
-				Description: "Count files and folders",
-				Dirs:        `f=$(find "$1" -maxdepth 1 -mindepth 1 -type f | wc -l | awk '{print $1}'); d=$(find "$1" -maxdepth 1 -mindepth 1 -type d | wc -l | awk '{print $1}'); printf '\t%s\t\t%s\n' "$f" "$d"`,
-			},
-			"mkvinfo": {
-				Description: "MKV Info (length, resolution)",
-				File:        `case $(printf '%s' "${1##*.}" | tr '[:upper:]' '[:lower:]') in mkv) ;; *) exit 0;; esac; mkvinfo "$1" 2>/dev/null | awk '!/Default/&&/Duration/{split($4,d,":");dur=d[1]":"d[2]} /Pixel/{if(/width/)w=$NF;else h=$NF} END{print dur"\t"w"x"h}'`,
-			},
+		Meta: MetaConfig{
+			File:       "",
+			LocalNames: []string{DefaultMetaFileName},
+			Workers:    DefaultMetaWorkers,
 		},
 	}
 }
@@ -962,6 +953,16 @@ func (c *Config) Validate() error {
 	}
 	if c.SFTP.ListTimeoutSecs > 300 {
 		c.SFTP.ListTimeoutSecs = 300
+	}
+	if len(c.Meta.LocalNames) == 0 {
+		c.Meta.LocalNames = append([]string(nil), builtin.Meta.LocalNames...)
+	}
+	if c.Meta.Workers < 1 {
+		c.Meta.Workers = builtin.Meta.Workers
+	}
+	const metaWorkersMax = 64
+	if c.Meta.Workers > metaWorkersMax {
+		c.Meta.Workers = metaWorkersMax
 	}
 	return nil
 }

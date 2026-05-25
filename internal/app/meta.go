@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -9,8 +10,8 @@ import (
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -21,12 +22,76 @@ func (a *App) postMetaWake() {
 	_ = a.screen.PostEvent(tcell.NewEventInterrupt(metaWakePayload{}))
 }
 
+func (a *App) metaConfigDir() string {
+	return strings.TrimSpace(a.paths.ConfigDir)
+}
+
+// loadMetaFile resolves and loads the meta.toml for the active panel path.
+// Returns nil when no file is found (not an error). Warnings are shown as transient messages.
+func (a *App) loadMetaFile() *metacmds.MetaFile {
+	path, warns := metacmds.ResolveMetaTOML(a.config, a.model.UserHomeDir, a.metaConfigDir(), a.activePanel().PathString())
+	for _, w := range warns {
+		a.setTransientMessage(w, ui.MessageUrgencyWarn)
+	}
+	if path == "" {
+		return nil
+	}
+	mf, err := metacmds.LoadFile(path)
+	if err != nil {
+		a.setTransientMessage("meta: "+err.Error(), ui.MessageUrgencyCritical)
+		return nil
+	}
+	return mf
+}
+
+func (a *App) ensureGlobalMetaStub() (path string, err error) {
+	path = metacmds.ResolveMetaGlobalPath(a.config, a.model.UserHomeDir, a.metaConfigDir())
+	if path == "" {
+		return "", fmt.Errorf("meta: no global meta path configured")
+	}
+	if _, err := metacmds.WriteMetaStub(path); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func (a *App) openMetaFileEditor(path string) {
+	if err := a.openFileInExternalEditor(path); err != nil {
+		a.setErrorMessage("Meta commands", err)
+		return
+	}
+	a.setTransientMessage("Meta commands: edited "+path, ui.MessageUrgencyInfo)
+	a.render()
+}
+
+// editMetaFile opens the meta.toml in an external editor, creating a stub if it does not exist.
+func (a *App) editMetaFile() {
+	if a.model.ViewMode != ui.ViewBrowser {
+		return
+	}
+	metaPath, warns := metacmds.ResolveMetaTOML(a.config, a.model.UserHomeDir, a.metaConfigDir(), a.activePanel().PathString())
+	for _, w := range warns {
+		a.setTransientMessage(w, ui.MessageUrgencyWarn)
+	}
+	if metaPath == "" {
+		path, err := a.ensureGlobalMetaStub()
+		if err != nil {
+			a.setErrorMessage("Meta commands", err)
+			return
+		}
+		a.openMetaFileEditor(path)
+		return
+	}
+	a.openMetaFileEditor(metaPath)
+}
+
 // openMetaDialog opens the radio-button meta command picker for the given panel.
 func (a *App) openMetaDialog(panelID int) {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	cmds := sortedMetaEntries(a.config.Meta)
+	mf := a.loadMetaFile()
+	cmds := metaEntries(mf)
 	// "None" is always the first choice.
 	entries := make([]ui.MetaEntry, 0, 1+len(cmds))
 	entries = append(entries, ui.MetaEntry{Name: "none", Description: "None (clear)"})
@@ -55,19 +120,16 @@ func (a *App) closeMetaDialog() {
 	a.model.MetaDialog = ui.MetaDialogState{}
 }
 
-// sortedMetaEntries returns MetaEntry slice sorted by name from the config map.
-func sortedMetaEntries(meta map[string]config.MetaCommandDef) []ui.MetaEntry {
-	if len(meta) == 0 {
+// metaEntries returns MetaEntry slice sorted by name from a MetaFile (nil-safe).
+func metaEntries(mf *metacmds.MetaFile) []ui.MetaEntry {
+	if mf == nil || len(mf.Entries) == 0 {
 		return nil
 	}
-	names := make([]string, 0, len(meta))
-	for k := range meta {
-		names = append(names, k)
-	}
-	sort.Strings(names)
-	out := make([]ui.MetaEntry, len(names))
-	for i, n := range names {
-		out[i] = ui.MetaEntry{Name: n, Description: meta[n].Description}
+	sorted := append([]metacmds.MetaEntry(nil), mf.Entries...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+	out := make([]ui.MetaEntry, len(sorted))
+	for i, e := range sorted {
+		out[i] = ui.MetaEntry{Name: e.Name, Description: e.Description}
 	}
 	return out
 }
@@ -89,7 +151,11 @@ func (a *App) activateMetaSelection() {
 		return
 	}
 
-	cmdDef, ok := a.config.Meta[entry.Name]
+	mf := a.loadMetaFile()
+	if mf == nil {
+		return
+	}
+	cmdDef, ok := mf.EntryByName(entry.Name)
 	if !ok {
 		return
 	}
@@ -112,29 +178,74 @@ func (a *App) handleMetaPanelDirChanged(panelID int) {
 		return
 	}
 	a.metaNavPath[panelID] = cur
-	cmdDef, ok := a.config.Meta[cmdName]
+
+	mf := a.loadMetaFile()
+	if mf == nil {
+		return
+	}
+	cmdDef, ok := mf.EntryByName(cmdName)
 	if !ok {
 		return
 	}
 	a.runMetaForPanel(panelID, cmdDef)
 }
 
-// runMetaForPanel runs the meta command for every entry in panelID in background.
-func (a *App) runMetaForPanel(panelID int, cmdDef config.MetaCommandDef) {
+// runMetaForPanel runs the meta command for every entry in panelID using a worker pool.
+// When cmdDef.Cache is true, cached results from previous runs are reused and only
+// uncached entries are dispatched to workers.
+func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
 	panel := a.panelByID(panelID)
 	entries := append([]localfs.Entry(nil), panel.Entries...)
 	dir := panel.PathString()
+	workers := a.config.Meta.Workers
+	if workers < 1 {
+		workers = 1
+	}
 
-	// Initialize results map (empty string = not yet computed).
+	// Initialize results map. Pre-populate with cached values when caching is on.
 	results := make(map[string]string, len(entries))
 	for _, e := range entries {
 		results[e.Path] = ""
+	}
+	if cmdDef.Cache {
+		a.metaCacheMu.RLock()
+		if a.metaCache != nil {
+			if cmdCache := a.metaCache[cmdDef.Name]; cmdCache != nil {
+				for _, e := range entries {
+					if v, ok := cmdCache[e.Path]; ok {
+						results[e.Path] = v
+					}
+				}
+			}
+		}
+		a.metaCacheMu.RUnlock()
 	}
 	a.model.MetaResults[panelID] = results
 
 	go func() {
 		var mu sync.Mutex
+		sem := make(chan struct{}, workers)
+		var wg sync.WaitGroup
+
 		for _, e := range entries {
+			// Skip entries that don't match the extension filter.
+			if !cmdDef.MatchesPath(e.Path) {
+				continue
+			}
+			// Skip entries already resolved from cache.
+			if cmdDef.Cache {
+				a.metaCacheMu.RLock()
+				var hit bool
+				if a.metaCache != nil {
+					if cmdCache := a.metaCache[cmdDef.Name]; cmdCache != nil {
+						_, hit = cmdCache[e.Path]
+					}
+				}
+				a.metaCacheMu.RUnlock()
+				if hit {
+					continue
+				}
+			}
 			var cmd string
 			if e.Type == localfs.EntryDirectory {
 				cmd = cmdDef.Dirs
@@ -144,12 +255,31 @@ func (a *App) runMetaForPanel(panelID int, cmdDef config.MetaCommandDef) {
 			if cmd == "" {
 				continue
 			}
-			out := runMetaCommand(cmd, e.Path, dir)
-			mu.Lock()
-			results[e.Path] = out
-			mu.Unlock()
-			a.postMetaWake()
+			e := e
+			wg.Add(1)
+			sem <- struct{}{}
+			go func() {
+				defer wg.Done()
+				defer func() { <-sem }()
+				out := runMetaCommand(cmd, e.Path, dir)
+				mu.Lock()
+				results[e.Path] = out
+				mu.Unlock()
+				if cmdDef.Cache {
+					a.metaCacheMu.Lock()
+					if a.metaCache == nil {
+						a.metaCache = make(map[string]map[string]string)
+					}
+					if a.metaCache[cmdDef.Name] == nil {
+						a.metaCache[cmdDef.Name] = make(map[string]string)
+					}
+					a.metaCache[cmdDef.Name][e.Path] = out
+					a.metaCacheMu.Unlock()
+				}
+				a.postMetaWake()
+			}()
 		}
+		wg.Wait()
 	}()
 }
 

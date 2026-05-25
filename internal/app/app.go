@@ -97,6 +97,10 @@ type App struct {
 	metaActiveCmd [2]string
 	// metaNavPath holds the last panel path for which meta was run (used to detect navigation).
 	metaNavPath [2]string
+	// metaCache stores computed meta results by [cmdName][absPath] for entries with cache = true.
+	// Nil until first caching write. Protected by metaCacheMu.
+	metaCache   map[string]map[string]string
+	metaCacheMu sync.RWMutex
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
 	messageExpiryGen          atomic.Uint64
