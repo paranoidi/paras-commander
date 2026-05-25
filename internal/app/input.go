@@ -597,6 +597,8 @@ func (a *App) dispatch(actionID string) {
 		a.openListingFormatDialog()
 	case keymap.ActionPanelMeta:
 		a.openMetaDialog(a.model.ActivePanel)
+	case keymap.ActionPanelMetaEdit:
+		a.editMetaFile()
 	case keymap.ActionPanelCycleSort:
 		activePanel.CycleSort(viewportRows)
 		a.setTransientMessage(fmt.Sprintf("Sort: %s", activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)

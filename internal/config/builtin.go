@@ -120,6 +120,14 @@ const (
 	// when [user_menu].file is empty.
 	DefaultUserMenuFileName = "menu.toml"
 
+	// DefaultMetaFileName is the basename of the meta column command definitions file under the
+	// config directory when [meta].file is empty.
+	DefaultMetaFileName = "meta.toml"
+
+	// DefaultMetaWorkers is the number of concurrent background workers used to run meta column
+	// commands. Each worker processes one entry (file or directory) at a time.
+	DefaultMetaWorkers = 4
+
 	// DefaultMessageLogMaxEntries caps status/toast lines retained for the Messages view (oldest dropped).
 	DefaultMessageLogMaxEntries = 500
 

@@ -50,6 +50,7 @@ const (
 	ActionPanelOpenActivePathInOther = "panel.open-active-path-in-other"
 	ActionPanelToggleSync            = "panel.toggle-sync"
 	ActionPanelMeta                  = "panel.meta"
+	ActionPanelMetaEdit              = "panel.meta-edit"
 
 	// Dialog actions
 	ActionDialogConfirm = "ui.confirm"
@@ -193,6 +194,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelOpenActivePathInOther: {},
 	ActionPanelToggleSync:            {},
 	ActionPanelMeta:                  {},
+	ActionPanelMetaEdit:              {},
 
 	ActionDialogConfirm: {},
 	ActionDialogCancel:  {},
