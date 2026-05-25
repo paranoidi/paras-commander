@@ -41,32 +41,37 @@ func (s *State) SnapshotParent(viewportRows int) (ListingSnapshot, bool) {
 // While CarouselChildPreviewCoalesce is set, BuildColumns uses the cache only; this method is not called.
 func (s *State) SnapshotChild(viewportRows int) (ListingSnapshot, bool) {
 	if s.CarouselChildPreviewCoalesce {
-		if s.CarouselSideCache.ChildOK {
+		if s.CarouselChildCacheValid() {
 			return s.CarouselSideCache.Child, true
 		}
 		return ListingSnapshot{}, false
 	}
 	if s.ListingPending {
-		s.storeCarouselChildCache(ListingSnapshot{}, false)
+		s.invalidateCarouselChildCache()
 		return ListingSnapshot{}, false
 	}
 	entry, ok := s.CurrentEntry()
 	if !ok || entry.Type != localfs.EntryDirectory {
-		s.storeCarouselChildCache(ListingSnapshot{}, false)
+		s.invalidateCarouselChildCache()
 		return ListingSnapshot{}, false
 	}
 	child, err := pathloc.Parse(entry.Path)
 	if err != nil {
-		s.storeCarouselChildCache(ListingSnapshot{}, false)
+		s.invalidateCarouselChildCache()
 		return ListingSnapshot{}, false
 	}
 	selectedName, indexFallback, centerRecalled := s.recalledCursorFor(child.String())
 	snap, err := s.buildListingSnapshot(child, selectedName, indexFallback, viewportRows, centerRecalled)
 	if err != nil {
-		s.storeCarouselChildCache(ListingSnapshot{}, false)
+		s.invalidateCarouselChildCache()
 		return ListingSnapshot{}, false
 	}
-	s.storeCarouselChildCache(snap, true)
+	target, okTarget := s.carouselChildPreviewTarget()
+	if !okTarget {
+		s.invalidateCarouselChildCache()
+		return ListingSnapshot{}, false
+	}
+	s.storeCarouselChildCache(snap, true, target)
 	return snap, true
 }
 
@@ -79,13 +84,14 @@ func (s *State) storeCarouselParentCache(snap ListingSnapshot, ok bool) {
 	s.CarouselSideCache.ParentOK = false
 }
 
-func (s *State) storeCarouselChildCache(snap ListingSnapshot, ok bool) {
+func (s *State) storeCarouselChildCache(snap ListingSnapshot, ok bool, cursorDir string) {
 	if ok {
 		s.CarouselSideCache.Child = snap
 		s.CarouselSideCache.ChildOK = true
+		s.CarouselSideCache.ChildCursorDir = cursorDir
 		return
 	}
-	s.CarouselSideCache.ChildOK = false
+	s.invalidateCarouselChildCache()
 }
 
 func (s *State) buildListingSnapshot(loc pathloc.Path, selectedName string, indexFallback int, viewportRows int, centerRecalled bool) (ListingSnapshot, error) {

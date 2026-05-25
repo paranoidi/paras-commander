@@ -88,6 +88,9 @@ type State struct {
 		ParentOK bool
 		Child    ListingSnapshot
 		ChildOK  bool
+		// ChildCursorDir is the absolute path of the directory entry under the center cursor when
+		// Child was cached; used to reject stale previews during nav coalesce.
+		ChildCursorDir string
 	}
 	// IdleDiskTotalsSort is set after disk scan completes and idle-sort delay elapses (DiskUsageIdleSizeSort).
 	IdleDiskTotalsSort bool
@@ -934,6 +937,7 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	s.Cursor = 0
 	s.ScrollOffset = 0
 	if !previousPath.Equal(listingLoc) {
+		s.invalidateCarouselChildCache()
 		s.notifyChdir(previousPath, listingLoc)
 	}
 	// Activate disk-total primary sort before ApplySort so the first paint matches MC-style

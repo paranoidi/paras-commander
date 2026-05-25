@@ -147,12 +147,60 @@ func TestSnapshotChildCoalesceUsesCache(t *testing.T) {
 	if !state.SelectVisibleEntry("oak") {
 		t.Fatal("oak not found")
 	}
-	cached, ok := state.SnapshotChild(10)
-	if !ok {
-		t.Fatal("coalesced SnapshotChild = false, want cached true")
+	if state.CarouselChildCacheValid() {
+		t.Fatal("cache should be stale after cursor moved to oak")
 	}
-	if cached.Path.String() != maple {
-		t.Fatalf("coalesced child path = %q, want cached %q", cached.Path.String(), maple)
+	if _, ok := state.SnapshotChild(10); ok {
+		t.Fatal("coalesced SnapshotChild = true, want false for stale cache")
+	}
+}
+
+func TestCarouselChildCacheInvalidatedOnChdir(t *testing.T) {
+	root := t.TempDir()
+	inner := filepath.Join(root, "maple")
+	if err := os.Mkdir(inner, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !state.SelectVisibleEntry("maple") {
+		t.Fatal("maple not found")
+	}
+	if _, ok := state.SnapshotChild(10); !ok {
+		t.Fatal("SnapshotChild = false, want true")
+	}
+	if !state.CarouselSideCache.ChildOK {
+		t.Fatal("child cache should be warm")
+	}
+	if _, err := state.Enter(10); err != nil {
+		t.Fatal(err)
+	}
+	if state.CarouselSideCache.ChildOK {
+		t.Fatal("child cache should be cleared after entering maple")
+	}
+}
+
+func TestCarouselChildCacheValidOnlyOnDirectoryCursor(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "cedar.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, e := range state.Entries {
+		if e.Name == "cedar.txt" {
+			state.Cursor = i
+			break
+		}
+	}
+	state.CarouselSideCache.ChildOK = true
+	state.CarouselSideCache.ChildCursorDir = filepath.Join(root, "cedar.txt")
+	if state.CarouselChildCacheValid() {
+		t.Fatal("file under cursor should not validate child cache")
 	}
 }
 
