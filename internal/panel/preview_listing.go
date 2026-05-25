@@ -41,7 +41,7 @@ func (s *State) SnapshotParent(viewportRows int) (ListingSnapshot, bool) {
 // While CarouselChildPreviewCoalesce is set, BuildColumns uses the cache only; this method is not called.
 func (s *State) SnapshotChild(viewportRows int) (ListingSnapshot, bool) {
 	if s.CarouselChildPreviewCoalesce {
-		if s.CarouselChildCacheValid() {
+		if s.CarouselChildCachePaintDuringCoalesce() {
 			return s.CarouselSideCache.Child, true
 		}
 		return ListingSnapshot{}, false

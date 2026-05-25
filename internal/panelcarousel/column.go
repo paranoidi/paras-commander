@@ -31,7 +31,7 @@ func BuildColumns(center panel.State, viewportRows int) (parent, mid, child Colu
 		return parent, mid, child
 	}
 	if center.CarouselChildPreviewCoalesce {
-		if center.CarouselChildCacheValid() {
+		if center.CarouselChildCachePaintDuringCoalesce() {
 			child = Column{
 				Kind:      ColumnChild,
 				Populated: true,

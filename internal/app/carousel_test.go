@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -110,6 +111,58 @@ func TestToggleZoomIgnoredInCarouselView(t *testing.T) {
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleZoomActivePanel)
 	if !strings.Contains(app.model.Message, "carousel") {
 		t.Fatalf("message = %q, want carousel zoom hint", app.model.Message)
+	}
+}
+
+func TestFirstListNavAfterChdirPaintsCachedChildDuringCoalesce(t *testing.T) {
+	root := t.TempDir()
+	season01 := filepath.Join(root, "Season 01")
+	season02 := filepath.Join(root, "Season 02")
+	for _, dir := range []string{season01, season02} {
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "episode.mkv"), nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 160, 30)
+	app := newApp(t, screen, root)
+	app.config.UI.CarouselPreviewDebounceMS = 500
+	app.model.Left.CarouselMode = true
+
+	left := app.panelByID(ui.LeftPanel)
+	if _, ok := left.SnapshotChild(20); !ok {
+		t.Fatal("SnapshotChild on Season 01 = false, want true")
+	}
+	if !left.CarouselSideCache.ChildOK {
+		t.Fatal("child cache should be warm before first list nav")
+	}
+	app.carouselPreviewNavSkipSnapshot.Store(false)
+	app.syncCarouselChildPreviewCoalesceFlags()
+	if app.model.Left.CarouselChildPreviewCoalesce {
+		t.Fatal("coalesce should be off before first debounced nav")
+	}
+
+	app.ensureCarouselChildCacheBeforeListNav()
+	app.beginCarouselPreviewNavCoalesce()
+	if !app.model.Left.CarouselChildPreviewCoalesce {
+		t.Fatal("coalesce should be on before Move on first debounced nav")
+	}
+	if !left.SelectVisibleEntry("Season 02") {
+		t.Fatal("Season 02 not found")
+	}
+	app.armCarouselPreviewNavCoalesceAfterListNav()
+
+	if !app.model.Left.CarouselChildPreviewCoalesce {
+		t.Fatal("coalesce should stay on after first nav arm")
+	}
+	_, _, child := panelcarousel.BuildColumns(app.model.Left, 20)
+	if !child.Populated {
+		t.Fatal("first coalesced frame should repaint cached child column, not leave it blank")
+	}
+	if child.Snapshot.Path.String() != season01 {
+		t.Fatalf("coalesced child path = %q, want cached %q", child.Snapshot.Path.String(), season01)
 	}
 }
 

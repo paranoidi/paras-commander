@@ -64,14 +64,41 @@ func (a *App) scheduleCarouselPreviewDebounceTimer(gen uint64) {
 	})
 }
 
-func (a *App) armCarouselPreviewNavCoalesceAfterListNav() {
+// beginCarouselPreviewNavCoalesce marks the next paint(s) to reuse the cached child listing.
+// Call before moving the file-list cursor so the first coalesced frame after a non-coalesced period
+// (e.g. Enter into a directory) does not paint an empty child column.
+func (a *App) beginCarouselPreviewNavCoalesce() bool {
 	if a.config.UI.CarouselPreviewDebounceMS <= 0 {
-		return
+		return false
 	}
+	if !a.carouselPreviewNavCoalesceContext() {
+		return false
+	}
+	a.carouselPreviewNavSkipSnapshot.Store(true)
+	a.syncCarouselChildPreviewCoalesceFlags()
+	return true
+}
+
+// ensureCarouselChildCacheBeforeListNav builds the child preview cache when the center cursor
+// is on a directory but the cache is cold (common right after chdir invalidation).
+func (a *App) ensureCarouselChildCacheBeforeListNav() {
 	if !a.carouselPreviewNavCoalesceContext() {
 		return
 	}
-	a.carouselPreviewNavSkipSnapshot.Store(true)
+	p := a.activePanel()
+	if p.CarouselSideCache.ChildOK {
+		return
+	}
+	wasCoalesce := p.CarouselChildPreviewCoalesce
+	p.CarouselChildPreviewCoalesce = false
+	_, _ = p.SnapshotChild(a.activeViewportRows())
+	p.CarouselChildPreviewCoalesce = wasCoalesce
+}
+
+func (a *App) armCarouselPreviewNavCoalesceAfterListNav() {
+	if !a.beginCarouselPreviewNavCoalesce() {
+		return
+	}
 	gen := a.carouselPreviewDebounceGen.Add(1)
 	a.scheduleCarouselPreviewDebounceTimer(gen)
 }
@@ -90,9 +117,8 @@ func (a *App) loadCarouselChildPreviewFromDisk() {
 	if !a.carouselPreviewNavCoalesceContext() {
 		return
 	}
-	p := a.activePanel()
-	p.CarouselChildPreviewCoalesce = false
-	_, _ = p.SnapshotChild(a.activeViewportRows())
+	a.syncCarouselChildPreviewCoalesceFlags()
+	_, _ = a.activePanel().SnapshotChild(a.activeViewportRows())
 }
 
 // carouselPreviewHeldListNav reports file-list nav keys while carousel child preview coalesce may apply.

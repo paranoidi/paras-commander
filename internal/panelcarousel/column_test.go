@@ -37,8 +37,8 @@ func TestBuildColumnsSkipsChildDiskReadDuringCoalesce(t *testing.T) {
 	}
 	state.CarouselChildPreviewCoalesce = true
 	_, _, child := BuildColumns(state, 10)
-	if child.Populated {
-		t.Fatalf("coalesced child = %+v, want empty when cache is stale for oak cursor", child.Snapshot)
+	if !child.Populated || child.Snapshot.Path.String() != maple {
+		t.Fatalf("coalesced child = %+v populated=%v, want cached maple until flush", child.Snapshot, child.Populated)
 	}
 
 	state.CarouselChildPreviewCoalesce = false

@@ -47,6 +47,15 @@ func (s *State) CarouselChildCacheValid() bool {
 	return s.CarouselSideCache.ChildCursorDir == target
 }
 
+// CarouselChildCachePaintDuringCoalesce reports whether the child column should be repainted
+// from the in-memory cache while file-list nav coalesce is active. The cursor may have moved
+// (including onto a file); the cache is kept visible until the debounce flush reloads it.
+func (s *State) CarouselChildCachePaintDuringCoalesce() bool {
+	return s.CarouselChildPreviewCoalesce &&
+		s.CarouselSideCache.ChildOK &&
+		s.CarouselCenterHasSubdirectories()
+}
+
 func (s *State) invalidateCarouselChildCache() {
 	s.CarouselSideCache.ChildOK = false
 	s.CarouselSideCache.ChildCursorDir = ""

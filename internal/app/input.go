@@ -532,31 +532,43 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionPanelToggleHideInactive:
 		a.toggleHideInactivePanel()
 	case keymap.ActionNavUp:
+		a.ensureCarouselChildCacheBeforeListNav()
+		a.beginCarouselPreviewNavCoalesce()
 		activePanel.Move(-1, viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
 		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionNavDown:
+		a.ensureCarouselChildCacheBeforeListNav()
+		a.beginCarouselPreviewNavCoalesce()
 		activePanel.Move(1, viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
 		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionNavPageUp:
+		a.ensureCarouselChildCacheBeforeListNav()
+		a.beginCarouselPreviewNavCoalesce()
 		activePanel.Page(-1, viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
 		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionNavPageDown:
+		a.ensureCarouselChildCacheBeforeListNav()
+		a.beginCarouselPreviewNavCoalesce()
 		activePanel.Page(1, viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
 		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionNavTop:
+		a.ensureCarouselChildCacheBeforeListNav()
+		a.beginCarouselPreviewNavCoalesce()
 		activePanel.Top(viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()
 		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionNavBottom:
+		a.ensureCarouselChildCacheBeforeListNav()
+		a.beginCarouselPreviewNavCoalesce()
 		activePanel.Bottom(viewportRows)
 		a.armPanelSyncFollowNavCoalesceAfterListNav()
 		a.armQuickViewNavCoalesceAfterListNav()

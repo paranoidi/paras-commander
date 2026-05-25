@@ -148,10 +148,17 @@ func TestSnapshotChildCoalesceUsesCache(t *testing.T) {
 		t.Fatal("oak not found")
 	}
 	if state.CarouselChildCacheValid() {
-		t.Fatal("cache should be stale after cursor moved to oak")
+		t.Fatal("strict cache valid should be false after cursor moved to oak")
 	}
-	if _, ok := state.SnapshotChild(10); ok {
-		t.Fatal("coalesced SnapshotChild = true, want false for stale cache")
+	if !state.CarouselChildCachePaintDuringCoalesce() {
+		t.Fatal("coalesce should still paint cached child until flush")
+	}
+	cached, ok := state.SnapshotChild(10)
+	if !ok {
+		t.Fatal("coalesced SnapshotChild = false, want cached paint")
+	}
+	if cached.Path.String() != maple {
+		t.Fatalf("coalesced child path = %q, want cached %q", cached.Path.String(), maple)
 	}
 }
 
@@ -179,6 +186,40 @@ func TestCarouselChildCacheInvalidatedOnChdir(t *testing.T) {
 	}
 	if state.CarouselSideCache.ChildOK {
 		t.Fatal("child cache should be cleared after entering maple")
+	}
+}
+
+func TestCarouselChildCachePaintDuringCoalesceOnFileCursor(t *testing.T) {
+	root := t.TempDir()
+	maple := filepath.Join(root, "maple")
+	if err := os.Mkdir(maple, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "cedar.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !state.SelectVisibleEntry("maple") {
+		t.Fatal("maple not found")
+	}
+	if _, ok := state.SnapshotChild(10); !ok {
+		t.Fatal("SnapshotChild = false, want true")
+	}
+	for i, e := range state.Entries {
+		if e.Name == "cedar.txt" {
+			state.Cursor = i
+			break
+		}
+	}
+	state.CarouselChildPreviewCoalesce = true
+	if !state.CarouselChildCachePaintDuringCoalesce() {
+		t.Fatal("coalesce should paint cached child while cursor is on a file")
+	}
+	if _, ok := state.SnapshotChild(10); !ok {
+		t.Fatal("coalesced SnapshotChild = false, want cached maple listing")
 	}
 }
 
