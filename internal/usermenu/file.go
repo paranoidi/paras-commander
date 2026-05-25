@@ -83,9 +83,6 @@ func Decode(data []byte) (*MenuFile, error) {
 		out.ShellPatterns = raw.ShellPatterns.Value
 	}
 	for i, e := range raw.Entry {
-		if strings.TrimSpace(e.Key) == "" {
-			return nil, fmt.Errorf("menu.toml: entry %d: key is required", i)
-		}
 		if strings.TrimSpace(e.Title) == "" {
 			return nil, fmt.Errorf("menu.toml: entry %d: title is required", i)
 		}

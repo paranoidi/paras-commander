@@ -85,6 +85,19 @@ detach = true
 	}
 }
 
+func TestDecodeOptionalKey(t *testing.T) {
+	mf, err := Decode([]byte(`[[entry]]
+title = "Always"
+command = "true"
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mf.Entries) != 1 || mf.Entries[0].Key != "" {
+		t.Fatalf("entries = %+v, want one entry with empty key", mf.Entries)
+	}
+}
+
 func TestDecodeEntryInteractiveDetachMutuallyExclusive(t *testing.T) {
 	_, err := Decode([]byte(`[[entry]]
 key = "x"

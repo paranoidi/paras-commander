@@ -114,10 +114,18 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
-	if a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open {
+	if a.model.UserMenu.Open {
 		return footerWithEscClose([]menu.FunctionKey{
+			menu.FunctionKeyEditConfig,
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
+	}
+	if a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open {
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		if a.model.MetaDialog.Open {
+			rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
+		}
+		return footerWithEscClose(rest)
 	}
 	if a.model.PrimaryModal() != ui.PrimaryModalNone ||
 		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.SFTPConnectDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open {

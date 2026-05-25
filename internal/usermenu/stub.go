@@ -13,18 +13,19 @@ const MenuStubTOML = `# F2 user menu — see docs/config.md
 #
 # Each action is a [[entry]] table. Keep the table name "entry" for every
 # action (e.g. [[toolname]] is ignored — only [[entry]] is loaded).
-# Press the entry key in the F2 menu to run the command immediately.
+# Press Alt+the highlighted letter in the F2 menu to run an entry immediately.
 #
 # [[entry]]
-# key = "p"
 # title = "Print working directory"
 # command = "pwd"
 # default = true
 #
 # [[entry]]
-# key = "e"
 # title = "Echo active panel directory"
 # command = "echo %d"
+#
+# Optional: pin a shortcut letter (otherwise assigned from the title, like the meta picker)
+# key = "p"
 #
 # Options:
 #

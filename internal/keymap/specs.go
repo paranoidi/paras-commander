@@ -357,12 +357,12 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"meta", "column", "command", "count"},
 		},
 		{
-			ID:          ActionPanelMetaEdit,
-			Title:       "Edit meta commands",
-			Section:     "Sort & display",
-			DefaultKeys: []string{"S-M-,"},
+			ID:           ActionPanelMetaEdit,
+			Title:        "Edit meta commands",
+			Section:      "Sort & display",
+			DefaultKeys:  []string{"S-M-,", "M-;"},
 			PreferredKey: "S-M-,",
-			Keywords:    []string{"meta", "meta.toml", "editor", "column", "command"},
+			Keywords:     []string{"meta", "meta.toml", "editor", "column", "command"},
 		},
 
 		// ── Bookmarks ──

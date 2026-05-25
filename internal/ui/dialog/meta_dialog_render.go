@@ -1,7 +1,6 @@
 package dialog
 
 import (
-	"fmt"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 
 	"github.com/gdamore/tcell/v2"
@@ -34,16 +33,9 @@ func DrawMetaDialog(screen tcell.Screen, layout Layout, state MetaDialogState, s
 	leftCol := rect.X + 2
 	y := rect.Y + 1
 
+	shortcuts := MetaEntryShortcuts(state.Entries)
 	for i, entry := range state.Entries {
-		label := entry.Name
-		if entry.Description != "" {
-			label = fmt.Sprintf("%s — %s", entry.Name, entry.Description)
-		}
-		var shortcut rune
-		if len([]rune(entry.Name)) > 0 {
-			shortcut = []rune(entry.Name)[0]
-		}
-		draw.DrawDialogRadio(screen, leftCol, y, label, shortcut, state.Selected == i, state.Focus == i, styles)
+		draw.DrawDialogRadio(screen, leftCol, y, metaEntryDisplayLabel(entry), shortcuts[i], state.Selected == i, state.Focus == i, styles)
 		y++
 	}
 

@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -69,20 +70,12 @@ func (a *App) editMetaFile() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	metaPath, warns := metacmds.ResolveMetaTOML(a.config, a.model.UserHomeDir, a.metaConfigDir(), a.activePanel().PathString())
-	for _, w := range warns {
-		a.setTransientMessage(w, ui.MessageUrgencyWarn)
-	}
-	if metaPath == "" {
-		path, err := a.ensureGlobalMetaStub()
-		if err != nil {
-			a.setErrorMessage("Meta commands", err)
-			return
-		}
-		a.openMetaFileEditor(path)
+	path, err := a.resolveMetaEditPath()
+	if err != nil {
+		a.setErrorMessage("Meta commands", err)
 		return
 	}
-	a.openMetaFileEditor(metaPath)
+	a.openMetaFileEditor(path)
 }
 
 // openMetaDialog opens the radio-button meta command picker for the given panel.
@@ -91,11 +84,7 @@ func (a *App) openMetaDialog(panelID int) {
 		return
 	}
 	mf := a.loadMetaFile()
-	cmds := metaEntries(mf)
-	// "None" is always the first choice.
-	entries := make([]ui.MetaEntry, 0, 1+len(cmds))
-	entries = append(entries, ui.MetaEntry{Name: "none", Description: "None (clear)"})
-	entries = append(entries, cmds...)
+	entries := metaDialogEntries(mf)
 
 	// Pre-select the currently active command.
 	selected := 0
@@ -309,7 +298,18 @@ func (a *App) handleMetaDialogKey(event *tcell.EventKey) {
 		return
 	}
 
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		if i, ok := ui.MetaEntryIndexForAltShortcut(st.Entries, event.Rune()); ok {
+			st.Selected = i
+			st.Focus = i
+			return
+		}
+	}
+
 	switch event.Key() {
+	case tcell.KeyF4:
+		a.editMetaConfigFromDialog()
+		return
 	case tcell.KeyEsc:
 		a.closeMetaDialog()
 	case tcell.KeyEnter:

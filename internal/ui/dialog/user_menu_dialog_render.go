@@ -1,8 +1,6 @@
 package dialog
 
 import (
-	"fmt"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
@@ -42,18 +40,14 @@ func DrawUserMenuDialog(screen tcell.Screen, layout Layout, state UserMenuDialog
 	leftCol := rect.X + 2
 	y := rect.Y + 1
 
+	shortcuts := UserMenuEntryShortcuts(state.Entries)
 	for row := 0; row < visibleRows; row++ {
 		idx := state.ScrollOffset + row
 		if idx >= n {
 			break
 		}
 		e := state.Entries[idx]
-		label := fmt.Sprintf("%s  %s", e.Key, e.Title)
-		var sh rune
-		if k := []rune(e.Key); len(k) > 0 {
-			sh = k[0]
-		}
-		draw.DrawDialogRadio(screen, leftCol, y, label, sh, state.Selected == idx, state.Focus == idx, styles)
+		draw.DrawDialogRadio(screen, leftCol, y, e.Title, shortcuts[idx], state.Selected == idx, state.Focus == idx, styles)
 		y++
 	}
 

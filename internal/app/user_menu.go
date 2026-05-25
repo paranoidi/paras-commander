@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
@@ -59,20 +60,12 @@ func (a *App) editUserMenu() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	menuPath, warns := a.resolveUserMenuContext()
-	for _, w := range warns {
-		a.setTransientMessage(w, ui.MessageUrgencyWarn)
-	}
-	if menuPath == "" {
-		path, err := a.ensureGlobalUserMenuStub()
-		if err != nil {
-			a.setErrorMessage("User menu", err)
-			return
-		}
-		a.openUserMenuEditor(path)
+	path, err := a.resolveUserMenuEditPath()
+	if err != nil {
+		a.setErrorMessage("User menu", err)
 		return
 	}
-	a.openUserMenuEditor(menuPath)
+	a.openUserMenuEditor(path)
 }
 
 func (a *App) openUserMenu() {
@@ -117,7 +110,7 @@ func (a *App) openUserMenu() {
 	}
 	a.model.UserMenu = ui.UserMenuDialogState{
 		Open:         true,
-		Title:        "User menu — " + menuPath,
+		Title:        "User menu",
 		Entries:      visible,
 		Selected:     defIdx,
 		Focus:        defIdx,
@@ -153,6 +146,9 @@ func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
 	}
 
 	switch event.Key() {
+	case tcell.KeyF4:
+		a.editUserMenuConfigFromDialog()
+		return
 	case tcell.KeyEsc:
 		a.closeUserMenu()
 	case tcell.KeyEnter:
@@ -165,15 +161,8 @@ func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
 			return
 		}
 	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		switch event.Rune() {
-		case 'c', 'C':
-			a.closeUserMenu()
-			return
-		default:
-			if i, ok := usermenu.EntryIndexForKey(st.Entries, event.Rune()); ok {
+		if keymap.AltLetterModifiers(event.Modifiers()) {
+			if i, ok := ui.UserMenuEntryIndexForAltShortcut(st.Entries, event.Rune()); ok {
 				a.executeUserMenuEntry(i)
 				return
 			}

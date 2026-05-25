@@ -16,6 +16,9 @@ type FunctionKey struct {
 // FooterEscClose is prepended to dialog and menu footers where Esc dismisses the overlay.
 var FooterEscClose = FunctionKey{Key: tcell.KeyEsc, KeyLabel: "Esc", Hint: "Close"}
 
+// FunctionKeyEditConfig opens meta.toml or menu.toml from meta/user-menu dialogs.
+var FunctionKeyEditConfig = FunctionKey{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit config"}
+
 // FunctionKeys is the single source of truth for all F-keys shown in the footer
 // and used to route quick-filter function-key presses to menu items.
 var FunctionKeys = []FunctionKey{

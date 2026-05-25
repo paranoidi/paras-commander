@@ -137,6 +137,9 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModMeta), ActionPanelOpenDirInOther, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModMeta), ActionPanelOpenActivePathInOther, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModMeta|tcell.ModAlt), ActionPanelOpenDirInOther, true},
+		{tcell.NewEventKey(tcell.KeyRune, ',', tcell.ModAlt|tcell.ModShift), ActionPanelMetaEdit, true},
+		{tcell.NewEventKey(tcell.KeyRune, ';', tcell.ModAlt), ActionPanelMetaEdit, true},
+		{tcell.NewEventKey(tcell.KeyRune, ',', tcell.ModAlt), ActionPanelMeta, true},
 	}
 	for _, tt := range tests {
 		id, ok := m.Lookup(tt.ev)

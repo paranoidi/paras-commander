@@ -228,7 +228,7 @@ command = "true"
 		t.Fatal("user menu should be open")
 	}
 
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
 
 	if app.model.UserMenu.Open {
 		t.Fatal("user menu should close after entry key")
@@ -289,7 +289,7 @@ interactive = true
 	t.Cleanup(func() { userMenuInteractiveRunner = prev })
 
 	app.openUserMenu()
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModAlt))
 
 	if app.model.ViewMode == ui.ViewCommands {
 		t.Fatal("interactive user menu should not open commands view")
@@ -333,7 +333,7 @@ detach = true
 	t.Cleanup(func() { userMenuDetachRunner = prev })
 
 	app.openUserMenu()
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModAlt))
 
 	if app.model.ViewMode == ui.ViewCommands {
 		t.Fatal("detach user menu should not open commands view")

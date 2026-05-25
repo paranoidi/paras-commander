@@ -116,6 +116,8 @@ var (
 	AltDialogCancel                     = dialog.AltDialogCancel
 	MkdirActionRadioSpecs               = dialog.MkdirActionRadioSpecs
 	MkdirActionForAltShortcut           = dialog.MkdirActionForAltShortcut
+	MetaEntryIndexForAltShortcut        = dialog.MetaEntryIndexForAltShortcut
+	UserMenuEntryIndexForAltShortcut    = dialog.UserMenuEntryIndexForAltShortcut
 	ListOKCancelNavFocusKey             = dialog.ListOKCancelNavFocusKey
 	ListClampedSelectionDelta           = dialog.ListClampedSelectionDelta
 	EnsurePathPickerListScroll          = dialog.EnsurePathPickerListScroll
