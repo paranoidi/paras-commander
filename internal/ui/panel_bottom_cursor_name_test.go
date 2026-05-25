@@ -150,9 +150,12 @@ func TestDrawPanelCarouselCursorNameHint(t *testing.T) {
 	longName := strings.Repeat("v", 30) + ".txt"
 	rect := Rect{X: 0, Y: 0, Width: 80, Height: 12}
 	state := panel.State{
-		Path:         pathloc.MustParse("/tmp"),
-		Entries:      []localfs.Entry{{Name: longName, Path: "/tmp/" + longName}},
-		Cursor:       0,
+		Path: pathloc.MustParse("/tmp"),
+		Entries: []localfs.Entry{
+			{Name: "otherdir", Path: "/tmp/otherdir", Type: localfs.EntryDirectory},
+			{Name: longName, Path: "/tmp/" + longName, Type: localfs.EntryFile},
+		},
+		Cursor:       1,
 		CarouselMode: true,
 	}
 	styles := theme.Default()

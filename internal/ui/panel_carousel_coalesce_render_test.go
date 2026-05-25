@@ -54,7 +54,7 @@ func TestCarouselCoalesceRepaintsCachedChildAfterFullScreenClear(t *testing.T) {
 	drawPanel(screen, rect, state, true, false, styles, false, "",
 		nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "")
 
-	cols := panelcarousel.SplitColumns(rect)
+	cols := panelcarousel.SplitColumns(rect, true)
 	childCol := cols[2]
 	headerY := rect.Y + 1
 	foundHeader := false

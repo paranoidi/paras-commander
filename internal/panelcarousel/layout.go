@@ -37,21 +37,29 @@ func MinActiveWidthPercent(totalWidth int) int {
 	return pct
 }
 
-// SplitColumns divides the panel interior (below title + header rows) into three list columns.
-func SplitColumns(rect geom.Rect) [3]geom.Rect {
+// SplitColumns divides the panel interior (below title + header rows) into carousel panes.
+// Parent always receives one third of the inner width. When showChild is false the center
+// column receives the remaining two thirds; otherwise parent, center, and child split evenly.
+func SplitColumns(rect geom.Rect, showChild bool) [3]geom.Rect {
 	var cols [3]geom.Rect
 	innerX := rect.X + 1
 	innerW := rect.Width - 2
-	if innerW < 3 {
+	if innerW < 2 {
 		return cols
 	}
-	w0 := innerW / 3
-	w1 := innerW / 3
-	w2 := innerW - w0 - w1
 	listY := rect.Y + 2
 	listH := geom.PanelListRows(rect)
+	w0 := innerW / 3
+	if showChild && innerW >= 3 {
+		w1 := innerW / 3
+		w2 := innerW - w0 - w1
+		cols[0] = geom.Rect{X: innerX, Y: listY, Width: w0, Height: listH}
+		cols[1] = geom.Rect{X: innerX + w0, Y: listY, Width: w1, Height: listH}
+		cols[2] = geom.Rect{X: innerX + w0 + w1, Y: listY, Width: w2, Height: listH}
+		return cols
+	}
+	w1 := innerW - w0
 	cols[0] = geom.Rect{X: innerX, Y: listY, Width: w0, Height: listH}
 	cols[1] = geom.Rect{X: innerX + w0, Y: listY, Width: w1, Height: listH}
-	cols[2] = geom.Rect{X: innerX + w0 + w1, Y: listY, Width: w2, Height: listH}
 	return cols
 }

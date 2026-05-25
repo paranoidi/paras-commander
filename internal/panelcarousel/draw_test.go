@@ -49,7 +49,7 @@ func TestSubtreeSelectionMarkUsesSelectedForeground(t *testing.T) {
 		SurfaceStyle:        styles.PanelActiveSurface,
 	})
 
-	cols := SplitColumns(frame)
+	cols := SplitColumns(frame, true)
 	centerCol := cols[1]
 	rowY := centerCol.Y
 	markCol := -1

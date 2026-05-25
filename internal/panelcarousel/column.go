@@ -27,6 +27,9 @@ func BuildColumns(center panel.State, viewportRows int) (parent, mid, child Colu
 	if snap, ok := center.SnapshotParent(viewportRows); ok {
 		parent = Column{Kind: ColumnParent, Populated: true, Snapshot: snap}
 	}
+	if !center.CarouselCenterHasSubdirectories() {
+		return parent, mid, child
+	}
 	if center.CarouselChildPreviewCoalesce {
 		if center.CarouselChildCacheValid() {
 			child = Column{

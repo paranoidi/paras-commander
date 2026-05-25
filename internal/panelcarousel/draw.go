@@ -31,6 +31,7 @@ type BodyParams struct {
 	JobMark             JobMarkFunc
 	PaintIcon           IconPaintFunc
 	DiskUsage           DiskUsage
+	ShowChildColumn     bool
 }
 
 // DrawBody paints the column header row and three listing columns.
@@ -39,7 +40,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 	if visibleRows == 0 {
 		return
 	}
-	cols := SplitColumns(p.Frame)
+	cols := SplitColumns(p.Frame, p.ShowChildColumn)
 	headerY := p.Frame.Y + 1
 
 	centerName, centerSize, _ := p.Center.ListColumnTitles(p.ShowIcons)
@@ -59,7 +60,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			}
 			hdr = briefHeader(sideNameTitle, "Size", listTextWidth)
 		case 2:
-			if !p.Child.Populated {
+			if !p.ShowChildColumn || !p.Child.Populated {
 				continue
 			}
 			hdr = briefHeader(sideNameTitle, "Size", listTextWidth)
@@ -192,7 +193,9 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 
 	drawColumn(cols[0], p.Parent, true)
 	drawColumn(cols[1], Column{Kind: ColumnCenter, Populated: true, Active: true}, false)
-	drawColumn(cols[2], p.Child, true)
+	if p.ShowChildColumn {
+		drawColumn(cols[2], p.Child, true)
+	}
 }
 
 func entryStyle(entry localfs.Entry, blocked bool, styles theme.Theme) tcell.Style {

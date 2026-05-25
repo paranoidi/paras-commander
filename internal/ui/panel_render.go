@@ -166,6 +166,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	}
 
 	if state.CarouselMode && panelcarousel.LayoutFits(rect, 0, 0) {
+		showChildCol := state.CarouselCenterHasSubdirectories()
 		parent, _, child := panelcarousel.BuildColumns(state, visibleRows)
 		var surface tcell.Style
 		if chromeBlocked {
@@ -196,6 +197,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			HeaderStyle:         headerStyle,
 			HeaderCarouselStyle: headerCarouselStyle,
 			SurfaceStyle:        surface,
+			ShowChildColumn:     showChildCol,
 			DiskUsage:           carouselDisk,
 			JobMark: func(path string) (rune, bool) {
 				marked, st := EntryPathJobMarkStatus(path, jobMarks)
@@ -213,7 +215,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				paintPanelIconStrip(sc, x, y, entry, rowStyle, styles, cursorKey, diskPending, diskExcluded, showDiskUsage)
 			},
 		})
-		drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, panelcarousel.CenterNameWidth(rect, showIcons), jobMarks)
+		drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, panelcarousel.CenterNameWidth(rect, showIcons, showChildCol), jobMarks)
 		return
 	}
 

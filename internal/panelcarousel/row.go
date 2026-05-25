@@ -222,8 +222,8 @@ func nameWidthForColumn(colWidth int, showIcons bool) int {
 }
 
 // CenterNameWidth returns the name-column width for the carousel center column.
-func CenterNameWidth(frame geom.Rect, showIcons bool) int {
-	cols := SplitColumns(frame)
+func CenterNameWidth(frame geom.Rect, showIcons bool, showChild bool) int {
+	cols := SplitColumns(frame, showChild)
 	if len(cols) < 2 {
 		return 1
 	}

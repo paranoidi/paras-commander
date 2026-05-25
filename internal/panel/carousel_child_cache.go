@@ -6,6 +6,21 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
+// CarouselCenterHasSubdirectories reports whether the center listing has any child
+// directory entries (the carousel child preview column is only useful then).
+func (s *State) CarouselCenterHasSubdirectories() bool {
+	for _, e := range s.Entries {
+		if e.Type != localfs.EntryDirectory {
+			continue
+		}
+		if e.Name == "." || e.Name == ".." {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 // carouselChildPreviewTarget returns the directory path for the child preview column when the
 // center cursor is on a directory entry.
 func (s *State) carouselChildPreviewTarget() (string, bool) {

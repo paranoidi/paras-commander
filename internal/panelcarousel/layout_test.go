@@ -20,10 +20,25 @@ func TestLayoutFits(t *testing.T) {
 
 func TestSplitColumnsWidths(t *testing.T) {
 	rect := geom.Rect{X: 1, Y: 2, Width: 92, Height: 18}
-	cols := SplitColumns(rect)
+	cols := SplitColumns(rect, true)
 	sum := cols[0].Width + cols[1].Width + cols[2].Width
 	if sum != rect.Width-2 {
 		t.Fatalf("column widths sum %d, want inner %d", sum, rect.Width-2)
+	}
+}
+
+func TestSplitColumnsWidensCenterWithoutChild(t *testing.T) {
+	rect := geom.Rect{X: 0, Y: 0, Width: 92, Height: 18}
+	innerW := rect.Width - 2
+	cols := SplitColumns(rect, false)
+	if cols[0].Width != innerW/3 {
+		t.Fatalf("parent width = %d, want %d", cols[0].Width, innerW/3)
+	}
+	if cols[1].Width != innerW-cols[0].Width {
+		t.Fatalf("center width = %d, want %d", cols[1].Width, innerW-cols[0].Width)
+	}
+	if cols[2].Width != 0 {
+		t.Fatalf("child width = %d, want 0", cols[2].Width)
 	}
 }
 
