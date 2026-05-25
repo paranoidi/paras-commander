@@ -193,6 +193,19 @@ type UIConfig struct {
 	// CarouselPreviewDebounceMS waits after the last file-list cursor step before reloading carousel
 	// parent/child directory previews. Zero disables debouncing. Default DefaultCarouselPreviewDebounceMS.
 	CarouselPreviewDebounceMS int `toml:"carousel_preview_debounce_ms"`
+	// FindQueryDebounceMS waits after the last keystroke in the find dialog query field before
+	// re-ranking the result list. Reducing this to 0 ranks on every keystroke (no debounce).
+	// Default DefaultFindQueryDebounceMS.
+	FindQueryDebounceMS int `toml:"find_query_debounce_ms"`
+	// FindMaxResults caps the number of ranked results shown in the find dialog. The full index
+	// is always retained; only the top-N scored entries are kept after each rank.
+	// Default DefaultFindMaxResults.
+	FindMaxResults int `toml:"find_max_results"`
+	// FindListNavIdleMS is the navigation-idle delay before a background rank update is applied
+	// to the find result list. Resets on every Up/Down/PgUp/PgDn movement. Zero applies updates
+	// immediately regardless of navigation.
+	// Default DefaultFindListNavIdleMS.
+	FindListNavIdleMS int `toml:"find_list_nav_idle_ms"`
 	// ZoomActivePanel widens the active browser column; inactive column uses the remainder (see panel_zoom_*_percent).
 	ZoomActivePanel bool `toml:"zoom_active_panel"`
 	// ZoomActivePanelDisabledAboveWidth: when > 0 and terminal width (cells) is >= this value, zoom is not applied
@@ -313,6 +326,9 @@ func Default() Config {
 			PanelSyncFollowNavDebounceMS:      DefaultPanelSyncFollowNavDebounceMS,
 			QuickViewPreviewDebounceMS:        DefaultQuickViewPreviewDebounceMS,
 			CarouselPreviewDebounceMS:         DefaultCarouselPreviewDebounceMS,
+			FindQueryDebounceMS:               DefaultFindQueryDebounceMS,
+			FindMaxResults:                    DefaultFindMaxResults,
+			FindListNavIdleMS:                 DefaultFindListNavIdleMS,
 			ZoomActivePanel:                   DefaultZoomActivePanel,
 			ZoomActivePanelDisabledAboveWidth: DefaultZoomActivePanelDisabledAboveWidth,
 			PanelZoomActivePercent:            DefaultPanelZoomActivePercent,
@@ -802,6 +818,18 @@ func (c *Config) Validate() error {
 	}
 	if c.UI.CarouselPreviewDebounceMS > panelSyncFollowNavDebounceMaxMS {
 		c.UI.CarouselPreviewDebounceMS = panelSyncFollowNavDebounceMaxMS
+	}
+	if c.UI.FindQueryDebounceMS < 0 {
+		c.UI.FindQueryDebounceMS = builtin.UI.FindQueryDebounceMS
+	}
+	if c.UI.FindQueryDebounceMS > panelSyncFollowNavDebounceMaxMS {
+		c.UI.FindQueryDebounceMS = panelSyncFollowNavDebounceMaxMS
+	}
+	if c.UI.FindMaxResults <= 0 {
+		c.UI.FindMaxResults = builtin.UI.FindMaxResults
+	}
+	if c.UI.FindListNavIdleMS < 0 {
+		c.UI.FindListNavIdleMS = builtin.UI.FindListNavIdleMS
 	}
 	if c.UI.PanelZoomActivePercent <= 0 || c.UI.PanelZoomInactivePercent <= 0 ||
 		c.UI.PanelZoomActivePercent+c.UI.PanelZoomInactivePercent != 100 {

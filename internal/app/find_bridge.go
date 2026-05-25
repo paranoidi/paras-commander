@@ -15,6 +15,22 @@ func (a *App) pollFindUpdates(payload findctrl.WakePayload) bool {
 	return a.findCtrl.PollUpdates(payload)
 }
 
+func (a *App) applyFindRank() bool {
+	return a.findCtrl.ApplyPendingRank()
+}
+
+func (a *App) handleFindThrottleRankWake() bool {
+	return a.findCtrl.HandleThrottleRankWake()
+}
+
+func (a *App) handleFindDebounceRankWake() bool {
+	return a.findCtrl.HandleDebounceRankWake()
+}
+
+func (a *App) handleFindNavIdle(epoch uint64) bool {
+	return a.findCtrl.HandleFindNavIdle(epoch)
+}
+
 func (a *App) activateFindDialogOK() { a.findCtrl.ActivateDialogOK() }
 
 func (a *App) toggleFindStayOnVolume() { a.findCtrl.ToggleStayOnVolume() }

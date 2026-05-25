@@ -1,6 +1,8 @@
 package dialog
 
 import (
+	"path/filepath"
+
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/search"
 )
@@ -50,10 +52,14 @@ type PathPickerState struct {
 
 // FindEntry is one indexed path in the recursive find dialog.
 type FindEntry struct {
-	Path    string
 	RelLine string
 	IsDir   bool
 	Type    localfs.EntryType
+}
+
+// AbsPath reconstructs the absolute path of the entry from the dialog's root path.
+func (e FindEntry) AbsPath(rootPath string) string {
+	return filepath.Join(rootPath, filepath.FromSlash(e.RelLine))
 }
 
 // FindDialogState is a fuzzy picker over recursively indexed paths under a panel root.
@@ -80,7 +86,7 @@ type FindDialogState struct {
 	QueryCursor       int // rune offset of caret within Query (0..len(runes))
 	QueryScroll       int // first visible rune offset for horizontal scrolling
 	Ranked            []int
-	MatchRanges       [][]search.Range
+	MatchRanges       map[int][]search.Range // sparse: only entries with actual match ranges
 	Selected          int
 	ListScroll        int
 	Focus             int
@@ -88,6 +94,8 @@ type FindDialogState struct {
 	IndexedCount      int
 	IndexDone         bool
 	IndexErr          string
+	// RankPending is true while an async background rank is in progress or scheduled.
+	RankPending bool
 	// MarkedPaths holds paths toggled selected in the dialog (applied to the panel on OK).
 	MarkedPaths map[string]bool
 }

@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	findpkg "github.com/paranoidi/paras-commander/internal/find"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -15,13 +17,17 @@ import (
 )
 
 func New(d Deps) *Handler {
-	return &Handler{
-		host:   d.Host,
-		screen: d.Screen,
-		model:  d.Model,
-		config: d.Config,
-		keys:   d.Keys,
+	h := &Handler{
+		host:       d.Host,
+		screen:     d.Screen,
+		model:      d.Model,
+		config:     d.Config,
+		keys:       d.Keys,
+		rankReady:  make(chan rankResult, 1),
+		rankWorkCh: make(chan rankInput, 1),
 	}
+	go h.rankWorkerLoop()
+	return h
 }
 
 // WakePayload wakes PollEvent when find indexer batches arrive or finish.
@@ -62,6 +68,7 @@ func (h *Handler) OpenDialog(panelID int) {
 
 func (h *Handler) CloseDialog() {
 	h.stopFindIndexer()
+	h.cancelPendingRank()
 	h.model.FindDialog = ui.FindDialogState{}
 }
 
@@ -106,6 +113,7 @@ func (h *Handler) startFindIndexer() {
 
 func (h *Handler) restartFindIndexer() {
 	h.stopFindIndexer()
+	h.cancelPendingRank()
 	st := &h.model.FindDialog
 	if !st.Open || st.RootPath == "" {
 		return
@@ -117,8 +125,8 @@ func (h *Handler) restartFindIndexer() {
 	st.MatchRanges = nil
 	st.Selected = 0
 	st.ListScroll = 0
+	st.RankPending = false
 	h.startFindIndexer()
-	h.syncFindDialogRanks()
 }
 
 func (h *Handler) stopFindIndexer() {
@@ -269,7 +277,12 @@ func (h *Handler) readFindSession(sess *findpkg.Session, ch chan []findpkg.Entry
 		default:
 			ch <- batch
 		}
-		_ = h.screen.PostEvent(tcell.NewEventInterrupt(WakePayload{}))
+		// Only post one WakePayload at a time. PollUpdates drains ALL queued batches in a
+		// single call, so multiple WakePayloads just flood the event queue and push key
+		// events further back, causing visible input lag.
+		if h.wakePending.CompareAndSwap(false, true) {
+			_ = h.screen.PostEvent(tcell.NewEventInterrupt(WakePayload{}))
+		}
 	}
 	<-sess.Done()
 	err := sess.Err()
@@ -302,7 +315,10 @@ func (h *Handler) updateFindIndexingState() {
 	}
 	if h.findAllWalksDone() {
 		st.Indexing = false
-		st.IndexDone = true
+		if !st.IndexDone {
+			st.IndexDone = true
+			h.indexedPaths = nil
+		}
 	} else {
 		st.Indexing = true
 		st.IndexDone = false
@@ -339,7 +355,6 @@ func (h *Handler) appendFindBatch(st *ui.FindDialogState, batch []findpkg.Entry)
 		h.indexedPaths[p] = struct{}{}
 		h.sessionMu.Unlock()
 		st.Entries = append(st.Entries, ui.FindEntry{
-			Path:    p,
 			RelLine: findRelLine(st.RootPath, p),
 			IsDir:   e.IsDir,
 			Type:    e.Type,
@@ -369,10 +384,10 @@ func (h *Handler) filterFindEntriesToSelectionScope() {
 	h.indexedPaths = make(map[string]struct{})
 	h.sessionMu.Unlock()
 	for _, e := range st.Entries {
-		if pathInFindSelectionScope(e.Path, st.SelectionDirRoots) {
+		if pathInFindSelectionScope(e.AbsPath(st.RootPath), st.SelectionDirRoots) {
 			filtered = append(filtered, e)
 			h.sessionMu.Lock()
-			h.indexedPaths[filepath.Clean(e.Path)] = struct{}{}
+			h.indexedPaths[e.AbsPath(st.RootPath)] = struct{}{}
 			h.sessionMu.Unlock()
 		}
 	}
@@ -445,6 +460,9 @@ func (h *Handler) ToggleSearchOnlySelections() {
 
 func (h *Handler) PollUpdates(payload WakePayload) bool {
 	needRender := false
+	needSync := false
+	// Clear the dedup flag so the next batch from readFindSession can post a new WakePayload.
+	h.wakePending.Store(false)
 	h.sessionMu.Lock()
 	ch := h.batchCh
 	h.sessionMu.Unlock()
@@ -460,7 +478,7 @@ func (h *Handler) PollUpdates(payload WakePayload) bool {
 					continue
 				}
 				h.appendFindBatch(st, batch)
-				h.syncFindDialogRanks()
+				needSync = true
 				needRender = true
 			default:
 				goto drained
@@ -468,6 +486,14 @@ func (h *Handler) PollUpdates(payload WakePayload) bool {
 		}
 	}
 drained:
+	if needSync {
+		throttle := 0
+		st := &h.model.FindDialog
+		if st.Open && st.Indexing {
+			throttle = config.DefaultFindIndexingRankThrottleMS
+		}
+		h.scheduleFindRank(throttle)
+	}
 	st := &h.model.FindDialog
 	if st.Open && payload.WalkErr != "" {
 		st.IndexErr = payload.WalkErr
@@ -478,6 +504,7 @@ drained:
 			if st.Indexing || !st.IndexDone {
 				st.Indexing = false
 				st.IndexDone = true
+				h.indexedPaths = nil
 				needRender = true
 			}
 		} else if !st.Indexing {
@@ -502,13 +529,14 @@ func (h *Handler) syncFindDialogRanks() {
 	opts := search.Options{CaseInsensitive: h.config.CaseInsensitiveFilter}
 	ranked := q.Rank(lines, opts)
 	st.Ranked = make([]int, len(ranked))
-	st.MatchRanges = make([][]search.Range, len(st.Entries))
-	for i := range st.MatchRanges {
-		st.MatchRanges[i] = nil
+	if q.Empty() {
+		st.MatchRanges = nil
+	} else {
+		st.MatchRanges = make(map[int][]search.Range)
 	}
 	for i, r := range ranked {
 		st.Ranked[i] = r.Index
-		if r.Index >= 0 && r.Index < len(st.MatchRanges) {
+		if st.MatchRanges != nil && r.Index >= 0 && r.Index < len(lines) && len(r.Result.Ranges) > 0 {
 			st.MatchRanges[r.Index] = r.Result.Ranges
 		}
 	}
@@ -532,6 +560,397 @@ func (h *Handler) syncFindDialogRanks() {
 		st.Selected = 0
 	}
 	ui.EnsureFindListScroll(st, h.findDialogListRows())
+}
+
+// cancelPendingRank increments the generation counter so any in-flight or scheduled rank is discarded.
+func (h *Handler) cancelPendingRank() {
+	h.rankMu.Lock()
+	h.rankGen++
+	if h.rankTimer != nil {
+		h.rankTimer.Stop()
+		h.rankTimer = nil
+	}
+	h.rankMu.Unlock()
+}
+
+// rankWorkerLoop is the single rank worker goroutine. It processes one rank computation at a time,
+// eliminating the memory spike from many concurrent goroutines each holding a large snapshot.
+func (h *Handler) rankWorkerLoop() {
+	for input := range h.rankWorkCh {
+		h.doRank(input)
+	}
+}
+
+// sendRankWork delivers input to the rank worker, replacing any pending (unconsumed) input.
+// rankSendMu ensures concurrent callers (main thread + timer goroutine) don't interleave.
+func (h *Handler) sendRankWork(input rankInput) {
+	h.rankSendMu.Lock()
+	defer h.rankSendMu.Unlock()
+	// Drain any pending input that hasn't been picked up yet (frees its snapshot memory).
+	select {
+	case <-h.rankWorkCh:
+	default:
+	}
+	h.rankWorkCh <- input
+}
+
+// buildRankInput takes a compact snapshot from the main-thread dialog state.
+// lines/isDirs share string data with st.Entries; no extra string allocations.
+func (h *Handler) buildRankInput(gen int, st *ui.FindDialogState) rankInput {
+	n := len(st.Entries)
+	lines := make([]string, n)
+	isDirs := make([]bool, n)
+	for i, e := range st.Entries {
+		lines[i] = e.RelLine
+		isDirs[i] = e.IsDir
+	}
+	return rankInput{
+		gen:      gen,
+		lines:    lines,
+		isDirs:   isDirs,
+		query:    st.Query,
+		onlyDirs: st.OnlyDirectories,
+		opts:     search.Options{CaseInsensitive: h.config.CaseInsensitiveFilter},
+	}
+}
+
+// scheduleFindRank takes a snapshot on the main thread and schedules a rank computation.
+//
+// ms == 0: send immediately, cancel any pending timer/wake.
+//
+// ms > 0: throttle mode (for indexing batches). Dispatch immediately if the cooldown has
+// elapsed; otherwise ensure a single trailing-edge timer is running (never reset it — that
+// would turn throttle into debounce). The timer posts ThrottleRankWakePayload so the main
+// thread re-snapshots with the freshest data in HandleThrottleRankWake.
+//
+// ms < 0: debounce mode (for query-typing). Reset the timer on every call so the rank fires
+// abs(ms) milliseconds after the last keystroke. Uses ThrottleRankWakePayload as the wake.
+//
+// rankGen is incremented only when work is actually dispatched (immediate paths); the timer
+// paths leave gen unchanged so in-flight computations are not prematurely cancelled.
+//
+// Called only from the main thread.
+func (h *Handler) scheduleFindRank(ms int) {
+	st := &h.model.FindDialog
+	if !st.Open {
+		return
+	}
+
+	st.RankPending = true
+
+	if ms == 0 {
+		// Immediate: cancel any pending timer/wake, increment gen, send now.
+		// Also clears nav-idle debounce so the result is applied without delay.
+		h.clearFindNavIdle()
+		h.rankMu.Lock()
+		if h.rankTimer != nil {
+			h.rankTimer.Stop()
+			h.rankTimer = nil
+		}
+		h.throttleWakePending = false
+		h.debouncePending = false
+		h.rankGen++
+		gen := h.rankGen
+		h.lastRankSentAt = time.Now()
+		h.rankMu.Unlock()
+		h.sendRankWork(h.buildRankInput(gen, st))
+		return
+	}
+
+	if ms < 0 {
+		// Debounce: reset timer on every call. When the timer fires it posts
+		// DebounceRankWakePayload, which increments gen to cancel any in-flight
+		// computation for the previous query before dispatching fresh work.
+		delay := time.Duration(-ms) * time.Millisecond
+		h.rankMu.Lock()
+		if h.rankTimer != nil {
+			h.rankTimer.Stop()
+		}
+		h.rankTimer = time.AfterFunc(delay, func() {
+			h.rankMu.Lock()
+			h.rankTimer = nil
+			h.debouncePending = true
+			h.rankMu.Unlock()
+			_ = h.screen.PostEvent(tcell.NewEventInterrupt(DebounceRankWakePayload{}))
+		})
+		h.rankMu.Unlock()
+		return
+	}
+
+	// Throttle (ms > 0): fire immediately if the cooldown has elapsed; otherwise ensure a
+	// single trailing-edge timer is running. Gen is NOT incremented — indexing batches only
+	// bring fresher data for the same query; only query changes (debounce) need gen bumps.
+	interval := time.Duration(ms) * time.Millisecond
+	h.rankMu.Lock()
+	elapsed := time.Since(h.lastRankSentAt)
+	if elapsed >= interval {
+		if h.rankTimer != nil {
+			h.rankTimer.Stop()
+			h.rankTimer = nil
+		}
+		h.throttleWakePending = false
+		gen := h.rankGen // do NOT increment; let in-flight work for the current query finish
+		h.lastRankSentAt = time.Now()
+		h.rankMu.Unlock()
+		h.sendRankWork(h.buildRankInput(gen, st))
+		return
+	}
+	// Within cooldown: start a trailing-edge timer once (never reset).
+	if h.rankTimer == nil && !h.throttleWakePending {
+		remaining := interval - elapsed
+		h.rankTimer = time.AfterFunc(remaining, func() {
+			h.rankMu.Lock()
+			h.rankTimer = nil
+			h.throttleWakePending = true
+			h.rankMu.Unlock()
+			_ = h.screen.PostEvent(tcell.NewEventInterrupt(ThrottleRankWakePayload{}))
+		})
+	}
+	h.rankMu.Unlock()
+}
+
+// HandleThrottleRankWake is called by the main thread when a ThrottleRankWakePayload event
+// arrives (indexing-batch trailing-edge timer). It takes a fresh snapshot and sends it to
+// the rank worker WITHOUT incrementing rankGen, so any in-flight computation is allowed to
+// finish and deliver its partial result before the worker picks up the fresher snapshot.
+// Returns true when the dialog is open, a wake was pending, and a rank was scheduled.
+func (h *Handler) HandleThrottleRankWake() bool {
+	st := &h.model.FindDialog
+	if !st.Open {
+		return false
+	}
+	h.rankMu.Lock()
+	if !h.throttleWakePending {
+		h.rankMu.Unlock()
+		return false
+	}
+	h.throttleWakePending = false
+	gen := h.rankGen // do NOT increment: let in-flight work deliver its partial result
+	h.lastRankSentAt = time.Now()
+	h.rankMu.Unlock()
+	st.RankPending = true
+	h.sendRankWork(h.buildRankInput(gen, st))
+	return true
+}
+
+// HandleDebounceRankWake is called by the main thread when a DebounceRankWakePayload event
+// arrives (query-typing debounce timer). It increments rankGen to cancel any in-flight rank
+// for the old query, then dispatches fresh work for the new query.
+// Returns true when the dialog is open, a wake was pending, and a rank was scheduled.
+func (h *Handler) HandleDebounceRankWake() bool {
+	st := &h.model.FindDialog
+	if !st.Open {
+		return false
+	}
+	h.rankMu.Lock()
+	if !h.debouncePending {
+		h.rankMu.Unlock()
+		return false
+	}
+	h.debouncePending = false
+	h.rankGen++ // cancel in-flight work for the previous query
+	gen := h.rankGen
+	h.lastRankSentAt = time.Now()
+	h.rankMu.Unlock()
+	// A query change implies the user wants fresh results — bypass nav-idle debounce.
+	h.clearFindNavIdle()
+	st.RankPending = true
+	h.sendRankWork(h.buildRankInput(gen, st))
+	return true
+}
+
+// armFindNavIdleTimer resets the navigation-idle debounce timer. While the timer is
+// running ApplyPendingRank defers applying background rank updates to keep the view
+// stable during fast navigation. Called only from the main thread.
+func (h *Handler) armFindNavIdleTimer() {
+	if h.findNavTimer != nil {
+		h.findNavTimer.Stop()
+		h.findNavTimer = nil
+	}
+	idleMS := h.config.UI.FindListNavIdleMS
+	if idleMS <= 0 {
+		h.findNavActive = false
+		return
+	}
+	h.findNavEpoch++
+	h.findNavActive = true
+	epochSnap := h.findNavEpoch
+	delay := time.Duration(idleMS) * time.Millisecond
+	h.findNavTimer = time.AfterFunc(delay, func() {
+		_ = h.screen.PostEvent(tcell.NewEventInterrupt(FindNavIdlePayload{Epoch: epochSnap}))
+	})
+}
+
+// clearFindNavIdle cancels any pending nav-idle timer and clears the active flag.
+// Call this whenever rank results must be applied immediately (query change, option toggle).
+// Called only from the main thread.
+func (h *Handler) clearFindNavIdle() {
+	if h.findNavTimer != nil {
+		h.findNavTimer.Stop()
+		h.findNavTimer = nil
+	}
+	h.findNavActive = false
+	h.findNavEpoch++
+}
+
+// HandleFindNavIdle is called by the main thread when a FindNavIdlePayload event arrives.
+// It clears the nav-active flag and applies any deferred rank result.
+// Returns true if a result was applied and the UI needs a re-render.
+func (h *Handler) HandleFindNavIdle(epoch uint64) bool {
+	st := &h.model.FindDialog
+	if !st.Open {
+		return false
+	}
+	if epoch != h.findNavEpoch {
+		return false // stale timer from before a query change or explicit clear
+	}
+	if h.findNavTimer != nil {
+		h.findNavTimer.Stop()
+		h.findNavTimer = nil
+	}
+	h.findNavActive = false
+	return h.ApplyPendingRank()
+}
+
+// doRank is called by the rank worker goroutine. It computes the ranked result for the given
+// input snapshot, then delivers it via rankReady and wakes the event loop.
+func (h *Handler) doRank(input rankInput) {
+	h.rankMu.Lock()
+	if h.rankGen != input.gen {
+		h.rankMu.Unlock()
+		return
+	}
+	h.rankMu.Unlock()
+
+	q := search.Parse(input.query)
+	maxResults := h.config.UI.FindMaxResults
+
+	var raw []search.RankedResult
+	if q.Empty() {
+		// No filter: all entries match with equal score. Take the first maxResults directly
+		// rather than allocating a full-corpus slice just to cap it.
+		n := len(input.lines)
+		if maxResults > 0 && n > maxResults {
+			n = maxResults
+		}
+		raw = make([]search.RankedResult, n)
+		for i := range raw {
+			raw[i] = search.RankedResult{Index: i, Result: search.Result{Matched: true}}
+		}
+	} else {
+		var cancelled bool
+		raw, cancelled = q.RankCancellable(input.lines, input.opts, func() bool {
+			h.rankMu.Lock()
+			stale := h.rankGen != input.gen
+			h.rankMu.Unlock()
+			return stale
+		})
+		if cancelled {
+			return // new query superseded this one; worker will pick up the next input
+		}
+		// Cap results to FindMaxResults.
+		if maxResults > 0 && len(raw) > maxResults {
+			raw = raw[:maxResults]
+		}
+	}
+
+	result := rankResult{gen: input.gen, ranked: make([]int, len(raw))}
+	if !q.Empty() {
+		result.matchRanges = make(map[int][]search.Range)
+	}
+	for i, r := range raw {
+		result.ranked[i] = r.Index
+		if result.matchRanges != nil && r.Index >= 0 && r.Index < len(input.lines) && len(r.Result.Ranges) > 0 {
+			result.matchRanges[r.Index] = r.Result.Ranges
+		}
+	}
+	if input.onlyDirs {
+		filtered := result.ranked[:0]
+		for _, idx := range result.ranked {
+			if idx >= 0 && idx < len(input.isDirs) && input.isDirs[idx] {
+				filtered = append(filtered, idx)
+			}
+		}
+		result.ranked = filtered
+	}
+
+	h.rankMu.Lock()
+	if h.rankGen != input.gen {
+		h.rankMu.Unlock()
+		return
+	}
+	// Drain any stale result before delivering the fresh one.
+	select {
+	case <-h.rankReady:
+	default:
+	}
+	h.rankReady <- result
+	h.rankMu.Unlock()
+
+	_ = h.screen.PostEvent(tcell.NewEventInterrupt(RankWakePayload{}))
+}
+
+// ApplyPendingRank applies the latest completed rank result (if any) to the dialog state.
+// Returns true if a result was applied and the UI needs a re-render.
+// Defers applying when the user is actively navigating the list (nav-idle debounce).
+// Called only from the main thread.
+func (h *Handler) ApplyPendingRank() bool {
+	st := &h.model.FindDialog
+	if !st.Open {
+		return false
+	}
+	if h.findNavActive {
+		return false // nav-idle debounce: wait until user stops scrolling
+	}
+	h.rankMu.Lock()
+	gen := h.rankGen
+	var result rankResult
+	var ok bool
+	select {
+	case result = <-h.rankReady:
+		ok = true
+	default:
+	}
+	h.rankMu.Unlock()
+
+	if !ok || result.gen != gen {
+		return false
+	}
+
+	// Remember the currently selected entry so we can restore the selection after re-ranking.
+	var selectedRelLine string
+	if st.Selected >= 0 && st.Selected < len(st.Ranked) {
+		if entIdx := st.Ranked[st.Selected]; entIdx >= 0 && entIdx < len(st.Entries) {
+			selectedRelLine = st.Entries[entIdx].RelLine
+		}
+	}
+
+	st.Ranked = result.ranked
+	st.MatchRanges = result.matchRanges // sparse map; nil for empty query
+
+	// Restore selection by identity (RelLine) so the same item stays highlighted.
+	if selectedRelLine != "" {
+		for i, entIdx := range st.Ranked {
+			if entIdx >= 0 && entIdx < len(st.Entries) && st.Entries[entIdx].RelLine == selectedRelLine {
+				st.Selected = i
+				break
+			}
+		}
+	}
+	if st.Selected >= len(st.Ranked) {
+		if len(st.Ranked) == 0 {
+			st.Selected = 0
+		} else {
+			st.Selected = len(st.Ranked) - 1
+		}
+	}
+	if st.Selected < 0 {
+		st.Selected = 0
+	}
+	// Center the selected item so updates don't jump the view.
+	ui.CenterFindListScroll(st, h.findDialogListRows())
+	st.RankPending = false
+	return true
 }
 
 func (h *Handler) findDialogListRows() int {
@@ -621,7 +1040,7 @@ func (h *Handler) NavigateFindCursor() {
 		return
 	}
 	ent := st.Entries[entIdx]
-	path := filepath.Clean(ent.Path)
+	path := ent.AbsPath(st.RootPath)
 	panelID := st.PanelID
 
 	if ent.IsDir {
@@ -652,7 +1071,7 @@ func (h *Handler) findDialogToggleSelectionAndAdvance() {
 	if entIdx < 0 || entIdx >= len(st.Entries) {
 		return
 	}
-	path := filepath.Clean(st.Entries[entIdx].Path)
+	path := st.Entries[entIdx].AbsPath(st.RootPath)
 	if path == "" {
 		return
 	}
@@ -684,6 +1103,7 @@ func (h *Handler) ToggleStayOnVolume() {
 func (h *Handler) ToggleOnlyDirectories() {
 	st := &h.model.FindDialog
 	st.OnlyDirectories = !st.OnlyDirectories
+	h.clearFindNavIdle()
 	h.syncFindDialogRanks()
 }
 
@@ -720,9 +1140,8 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 
 	if st.Focus == 0 {
 		onChange := func() {
-			h.syncFindDialogRanks()
 			st.Selected = 0
-			ui.EnsureFindListScroll(st, h.findDialogListRows())
+			h.scheduleFindRank(-h.config.UI.FindQueryDebounceMS)
 		}
 		if h.host.HandleScrollingQueryKey(event, true, h.host.FindDialogScrollingQuery(st, h.host.FindDialogQueryWidth(), onChange)) {
 			return
@@ -760,32 +1179,38 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			case tcell.KeyUp:
 				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
 				ui.EnsureFindListScroll(st, h.findDialogListRows())
+				h.armFindNavIdleTimer()
 			case tcell.KeyDown:
 				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
 				ui.EnsureFindListScroll(st, h.findDialogListRows())
+				h.armFindNavIdleTimer()
 			}
 		}
 	case tcell.KeyHome:
 		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
 			st.Selected = 0
 			ui.EnsureFindListScroll(st, h.findDialogListRows())
+			h.armFindNavIdleTimer()
 		}
 	case tcell.KeyEnd:
 		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
 			st.Selected = len(st.Ranked) - 1
 			ui.EnsureFindListScroll(st, h.findDialogListRows())
+			h.armFindNavIdleTimer()
 		}
 	case tcell.KeyPgUp:
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			step := max(1, h.findDialogListRows()-1)
 			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
 			ui.EnsureFindListScroll(st, h.findDialogListRows())
+			h.armFindNavIdleTimer()
 		}
 	case tcell.KeyPgDn:
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			step := max(1, h.findDialogListRows()-1)
 			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
 			ui.EnsureFindListScroll(st, h.findDialogListRows())
+			h.armFindNavIdleTimer()
 		}
 	case tcell.KeyRune:
 		if event.Modifiers() != tcell.ModNone {
@@ -861,7 +1286,7 @@ func clearFindMarkedConflicts(st *ui.FindDialogState, path string, isDir bool) b
 
 func findMarkedPathIsDir(st *ui.FindDialogState, path string) bool {
 	for _, e := range st.Entries {
-		if filepath.Clean(e.Path) == path {
+		if e.AbsPath(st.RootPath) == path {
 			return e.IsDir
 		}
 	}

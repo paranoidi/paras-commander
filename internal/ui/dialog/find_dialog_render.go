@@ -32,6 +32,34 @@ func EnsureFindListScroll(state *FindDialogState, listRows int) {
 	}
 }
 
+// CenterFindListScroll scrolls the list so Selected is vertically centered in the viewport.
+// Use this after applying a rank update to avoid jarring jumps.
+func CenterFindListScroll(state *FindDialogState, listRows int) {
+	n := len(state.Ranked)
+	if n == 0 || listRows <= 0 {
+		state.ListScroll = 0
+		return
+	}
+	if state.Selected < 0 {
+		state.Selected = 0
+	}
+	if state.Selected >= n {
+		state.Selected = n - 1
+	}
+	scroll := state.Selected - listRows/2
+	if scroll < 0 {
+		scroll = 0
+	}
+	maxScroll := n - listRows
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if scroll > maxScroll {
+		scroll = maxScroll
+	}
+	state.ListScroll = scroll
+}
+
 func findDialogTitle(state FindDialogState) string {
 	title := "Find"
 	if state.Indexing {
@@ -133,11 +161,9 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, s
 				ent = state.Entries[entIdx]
 				hasEntry = true
 				line = ent.RelLine
-				if entIdx < len(state.MatchRanges) {
-					ranges = state.MatchRanges[entIdx]
-				}
+				ranges = state.MatchRanges[entIdx]
 				if state.MarkedPaths != nil {
-					marked = state.MarkedPaths[ent.Path]
+					marked = state.MarkedPaths[ent.AbsPath(state.RootPath)]
 				}
 			}
 			isCursor = listFocused && idxInRank == state.Selected

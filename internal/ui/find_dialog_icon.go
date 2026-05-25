@@ -26,8 +26,8 @@ func findEntryLocalfs(e FindEntry) localfs.Entry {
 		}
 	}
 	return localfs.Entry{
-		Name: filepath.Base(e.Path),
-		Path: e.Path,
+		Name: filepath.Base(filepath.FromSlash(e.RelLine)),
+		Path: e.RelLine,
 		Type: t,
 	}
 }

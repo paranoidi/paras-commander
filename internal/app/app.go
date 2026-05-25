@@ -566,6 +566,26 @@ func (a *App) Run() error {
 					a.render()
 					didRender = true
 				}
+			case findctrl.RankWakePayload:
+				if a.applyFindRank() {
+					a.render()
+					didRender = true
+				}
+			case findctrl.ThrottleRankWakePayload:
+				if a.handleFindThrottleRankWake() {
+					a.render()
+					didRender = true
+				}
+			case findctrl.DebounceRankWakePayload:
+				if a.handleFindDebounceRankWake() {
+					a.render()
+					didRender = true
+				}
+			case findctrl.FindNavIdlePayload:
+				if a.handleFindNavIdle(d.Epoch) {
+					a.render()
+					didRender = true
+				}
 			case throughputChartTickPayload:
 				pollDiskUsageAfter = false
 				if a.applyThroughputChartTick() {

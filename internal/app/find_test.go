@@ -16,7 +16,7 @@ import (
 func findRankedIndexForPath(st *ui.FindDialogState, absPath string) int {
 	want := filepath.Clean(absPath)
 	for i, entIdx := range st.Ranked {
-		if entIdx >= 0 && entIdx < len(st.Entries) && filepath.Clean(st.Entries[entIdx].Path) == want {
+		if entIdx >= 0 && entIdx < len(st.Entries) && filepath.Clean(st.Entries[entIdx].AbsPath(st.RootPath)) == want {
 			return i
 		}
 	}
@@ -28,15 +28,35 @@ func waitFindIndexDone(t *testing.T, app *App) {
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollFindUpdates(findctrl.WakePayload{})
+		app.handleFindThrottleRankWake()
+		app.handleFindDebounceRankWake()
+		app.applyFindRank()
 		if !app.model.FindDialog.Open {
 			t.Fatal("find dialog closed unexpectedly")
 		}
-		if app.model.FindDialog.IndexDone {
+		if app.model.FindDialog.IndexDone && !app.model.FindDialog.RankPending {
 			return
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
 	t.Fatal("find index did not finish in time")
+}
+
+func waitFindRankDone(t *testing.T, app *App) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		app.handleFindThrottleRankWake()
+		app.handleFindDebounceRankWake()
+		if app.applyFindRank() {
+			return
+		}
+		if !app.model.FindDialog.RankPending {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("find rank did not finish in time")
 }
 
 func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
@@ -228,6 +248,7 @@ func TestFindDialogSelectsFile(t *testing.T) {
 	for _, r := range "target" {
 		app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
+	waitFindRankDone(t, app)
 	if len(app.model.FindDialog.Ranked) == 0 {
 		t.Fatal("expected fuzzy matches for target")
 	}
@@ -487,7 +508,7 @@ func TestFindDialogMarkFileRemovesAncestorDirMarks(t *testing.T) {
 func findIndexedUnder(st *ui.FindDialogState, dir string) bool {
 	dir = filepath.Clean(dir)
 	for _, e := range st.Entries {
-		p := filepath.Clean(e.Path)
+		p := filepath.Clean(e.AbsPath(st.RootPath))
 		if p == dir || panel.IsStrictPathDescendant(dir, p) {
 			return true
 		}

@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // Range identifies a half-open rune range in the matched value.
@@ -100,16 +101,27 @@ func (q Query) Match(value string, opts Options) Result {
 
 // Rank filters values by query and orders matches by descending score.
 func (q Query) Rank(values []string, opts Options) []RankedResult {
+	results, _ := q.RankCancellable(values, opts, nil)
+	return results
+}
+
+// RankCancellable is like Rank but calls shouldCancel() every ~10 000 items.
+// If shouldCancel returns true the computation is abandoned and (nil, true) is returned.
+// Pass nil for shouldCancel to disable cancellation (equivalent to Rank).
+func (q Query) RankCancellable(values []string, opts Options, shouldCancel func() bool) ([]RankedResult, bool) {
 	if len(q.terms) == 0 {
 		results := make([]RankedResult, len(values))
 		for i := range values {
 			results[i] = RankedResult{Index: i, Result: Result{Matched: true}}
 		}
-		return results
+		return results, false
 	}
 
 	results := make([]RankedResult, 0, len(values))
 	for i, value := range values {
+		if shouldCancel != nil && i%10000 == 0 && i > 0 && shouldCancel() {
+			return nil, true
+		}
 		result := q.Match(value, opts)
 		if result.Matched {
 			results = append(results, RankedResult{Index: i, Result: result})
@@ -118,7 +130,7 @@ func (q Query) Rank(values []string, opts Options) []RankedResult {
 	sort.SliceStable(results, func(i, j int) bool {
 		return results[i].Result.Score > results[j].Result.Score
 	})
-	return results
+	return results, false
 }
 
 func parseTerm(field string) (term, bool) {
@@ -162,151 +174,181 @@ func matchTerm(term term, value string, opts Options) Result {
 }
 
 func matchPrefix(needle, value string, opts Options) Result {
-	p := prepared(value, opts)
 	needleRunes := normalizeRunes(needle, opts)
-	if len(needleRunes) > len(p.match) || !sameRunes(p.match[:len(needleRunes)], needleRunes) {
+	if len(needleRunes) == 0 {
+		return Result{Matched: true}
+	}
+	i := 0
+	for _, r := range value {
+		if i >= len(needleRunes) {
+			break
+		}
+		if lowerRune(r, opts.CaseInsensitive) != needleRunes[i] {
+			return Result{}
+		}
+		i++
+	}
+	if i < len(needleRunes) {
 		return Result{}
 	}
 	return Result{
 		Matched: true,
-		Score:   900 + boundaryBonus(p.original, 0) + len(needleRunes)*4,
+		Score:   900 + 30 + len(needleRunes)*4, // boundary at position 0 is always +30
 		Ranges:  []Range{{Start: 0, End: len(needleRunes)}},
 	}
 }
 
 func matchSuffix(needle, value string, opts Options) Result {
-	p := prepared(value, opts)
 	needleRunes := normalizeRunes(needle, opts)
-	if len(needleRunes) > len(p.match) {
+	if len(needleRunes) == 0 {
+		return Result{Matched: true}
+	}
+	nRunes := utf8.RuneCountInString(value)
+	start := nRunes - len(needleRunes)
+	if start < 0 {
 		return Result{}
 	}
-	start := len(p.match) - len(needleRunes)
-	if !sameRunes(p.match[start:], needleRunes) {
+	i := 0
+	runePos := 0
+	for _, r := range value {
+		if runePos >= start {
+			if lowerRune(r, opts.CaseInsensitive) != needleRunes[i] {
+				return Result{}
+			}
+			i++
+		}
+		runePos++
+	}
+	if i < len(needleRunes) {
 		return Result{}
 	}
 	return Result{
 		Matched: true,
 		Score:   800 + len(needleRunes)*4 - start,
-		Ranges:  []Range{{Start: start, End: len(p.match)}},
+		Ranges:  []Range{{Start: start, End: nRunes}},
 	}
 }
 
 func matchExact(needle, value string, opts Options) Result {
-	p := prepared(value, opts)
 	needleRunes := normalizeRunes(needle, opts)
-	start := indexRunes(p.match, needleRunes)
+	if len(needleRunes) == 0 {
+		return Result{Matched: true}
+	}
+	start, prevR, firstR := indexRunesInString(value, needleRunes, opts)
 	if start < 0 {
 		return Result{}
 	}
+	bonus := boundaryBonus(prevR, firstR, start == 0)
 	return Result{
 		Matched: true,
-		Score:   700 + boundaryBonus(p.original, start) + len(needleRunes)*5 - start*2,
+		Score:   700 + bonus + len(needleRunes)*5 - start*2,
 		Ranges:  []Range{{Start: start, End: start + len(needleRunes)}},
 	}
 }
 
 func matchFuzzy(needle, value string, opts Options) Result {
-	p := prepared(value, opts)
 	needleRunes := normalizeRunes(needle, opts)
-	positions := make([]int, 0, len(needleRunes))
-	next := 0
-	for _, needleRune := range needleRunes {
-		found := -1
-		for i := next; i < len(p.match); i++ {
-			if p.match[i] == needleRune {
-				found = i
-				break
-			}
-		}
-		if found < 0 {
-			return Result{}
-		}
-		positions = append(positions, found)
-		next = found + 1
-	}
-	if len(positions) == 0 {
+	if len(needleRunes) == 0 {
 		return Result{Matched: true}
 	}
 
-	first := positions[0]
-	span := positions[len(positions)-1] - first + 1
-	score := 1000 - first*10 - span*5 + len(positions)*10
-	for i, position := range positions {
-		score += boundaryBonus(p.original, position)
-		if i > 0 && position == positions[i-1]+1 {
-			score += 15
+	// hit records one matched needle rune and its context for scoring.
+	type hit struct {
+		runeIdx  int
+		prevRune rune // rune before this position (-1 if at start)
+		currRune rune // rune at this position (original casing, for boundary detection)
+	}
+	hits := make([]hit, 0, len(needleRunes))
+
+	ni := 0
+	runePos := 0
+	prevRune := rune(-1)
+	for _, r := range value {
+		if lowerRune(r, opts.CaseInsensitive) == needleRunes[ni] {
+			hits = append(hits, hit{runePos, prevRune, r})
+			ni++
+			if ni >= len(needleRunes) {
+				break
+			}
 		}
+		prevRune = r
+		runePos++
+	}
+	if ni < len(needleRunes) {
+		return Result{}
+	}
+	if len(hits) == 0 {
+		return Result{Matched: true}
 	}
 
-	ranges := make([]Range, 0, len(positions))
-	for _, position := range positions {
-		ranges = append(ranges, Range{Start: position, End: position + 1})
+	first := hits[0].runeIdx
+	span := hits[len(hits)-1].runeIdx - first + 1
+	score := 1000 - first*10 - span*5 + len(hits)*10
+
+	ranges := make([]Range, 0, len(hits))
+	for i, h := range hits {
+		score += boundaryBonus(h.prevRune, h.currRune, h.runeIdx == 0)
+		if i > 0 && h.runeIdx == hits[i-1].runeIdx+1 {
+			score += 15
+		}
+		ranges = append(ranges, Range{Start: h.runeIdx, End: h.runeIdx + 1})
 	}
 	return Result{Matched: true, Score: score, Ranges: mergeRanges(ranges)}
 }
 
-type preparedValue struct {
-	original []rune
-	match    []rune
+// lowerRune returns unicode.ToLower(r) when ci is true, otherwise r unchanged.
+func lowerRune(r rune, ci bool) rune {
+	if ci {
+		return unicode.ToLower(r)
+	}
+	return r
 }
 
-func prepared(value string, opts Options) preparedValue {
-	original := []rune(value)
-	if !opts.CaseInsensitive {
-		return preparedValue{original: original, match: original}
+// indexRunesInString returns the rune index of the first occurrence of needle in value
+// (using opts for case comparison), the rune immediately before that position, and the
+// rune at that position (both needed by boundaryBonus). Returns -1 if not found.
+func indexRunesInString(value string, needle []rune, opts Options) (runeIdx int, prevR rune, firstR rune) {
+	if len(needle) == 0 {
+		return 0, -1, 0
 	}
-	match := make([]rune, len(original))
-	for i, r := range original {
-		match[i] = unicode.ToLower(r)
+	prev := rune(-1)
+	runePos := 0
+	for bytePos, r := range value {
+		if lowerRune(r, opts.CaseInsensitive) == needle[0] && matchesNeedle(value[bytePos:], needle, opts) {
+			return runePos, prev, r
+		}
+		prev = r
+		runePos++
 	}
-	return preparedValue{original: original, match: match}
+	return -1, -1, 0
 }
 
-func normalizeRunes(value string, opts Options) []rune {
-	runes := []rune(value)
-	if !opts.CaseInsensitive {
-		return runes
-	}
-	for i, r := range runes {
-		runes[i] = unicode.ToLower(r)
-	}
-	return runes
-}
-
-func sameRunes(left, right []rune) bool {
-	if len(left) != len(right) {
-		return false
-	}
-	for i := range left {
-		if left[i] != right[i] {
+// matchesNeedle reports whether value starts with needle (using opts for case comparison).
+func matchesNeedle(value string, needle []rune, opts Options) bool {
+	i := 0
+	for _, r := range value {
+		if i >= len(needle) {
+			return true
+		}
+		if lowerRune(r, opts.CaseInsensitive) != needle[i] {
 			return false
 		}
+		i++
 	}
-	return true
+	return i >= len(needle)
 }
 
-func indexRunes(value, needle []rune) int {
-	if len(needle) == 0 || len(needle) > len(value) {
-		return -1
-	}
-	for i := 0; i <= len(value)-len(needle); i++ {
-		if sameRunes(value[i:i+len(needle)], needle) {
-			return i
-		}
-	}
-	return -1
-}
-
-func boundaryBonus(value []rune, position int) int {
-	if position <= 0 || position >= len(value) {
+// boundaryBonus returns a score bonus for a match character based on its context.
+// prevR is the rune immediately before the match (-1 if the match is at the start).
+// currR is the matched rune (original casing). atStart must be true when runeIdx == 0.
+func boundaryBonus(prevR, currR rune, atStart bool) int {
+	if atStart || prevR < 0 {
 		return 30
 	}
-	previous := value[position-1]
-	current := value[position]
-	if previous == '-' || previous == '_' || previous == '.' || previous == ' ' {
+	if prevR == '-' || prevR == '_' || prevR == '.' || prevR == ' ' {
 		return 30
 	}
-	if unicode.IsLower(previous) && unicode.IsUpper(current) {
+	if unicode.IsLower(prevR) && unicode.IsUpper(currR) {
 		return 25
 	}
 	return 0
@@ -334,4 +376,18 @@ func mergeRanges(ranges []Range) []Range {
 		merged = append(merged, current)
 	}
 	return merged
+}
+
+// normalizeRunes converts needle to a rune slice, lowercased when opts.CaseInsensitive is true.
+// This is called only on the query needle (short, typically 1–20 chars), so allocating once
+// per term per Match call is acceptable.
+func normalizeRunes(value string, opts Options) []rune {
+	runes := []rune(value)
+	if !opts.CaseInsensitive {
+		return runes
+	}
+	for i, r := range runes {
+		runes[i] = unicode.ToLower(r)
+	}
+	return runes
 }

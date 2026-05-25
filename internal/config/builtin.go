@@ -29,6 +29,25 @@ const (
 	DefaultWorkerProgressMinBytes      = 512 * 1024
 	DefaultWorkerProgressMinIntervalMS = 200
 
+	// DefaultFindQueryDebounceMS waits after the last keystroke in the find dialog query field
+	// before re-ranking the indexed entries. Zero ranks on every keystroke (no debounce).
+	DefaultFindQueryDebounceMS = 150
+
+	// DefaultFindIndexingRankThrottleMS is the minimum interval between background re-ranking
+	// operations while the find indexer walk is still running. The first rank fires immediately;
+	// subsequent batches are coalesced until the interval expires, then one more rank fires.
+	DefaultFindIndexingRankThrottleMS = 200
+
+	// DefaultFindMaxResults caps the number of ranked results the find dialog keeps after each
+	// rank computation. Only the top-N scored entries are kept; the full index is always retained.
+	// Bounding results limits the size of the ranked/matchRanges data regardless of index size.
+	DefaultFindMaxResults = 200
+
+	// DefaultFindListNavIdleMS is how long the result list must be idle (no Up/Down/PgUp/PgDn)
+	// before a background rank update is applied. This keeps the view stable while the user is
+	// navigating, matching the behaviour of disk-usage idle sort in the file listing.
+	DefaultFindListNavIdleMS = 400
+
 	// DefaultProgressUIWakeDebounceMS is minimum spacing between main-loop wakes after worker EventProgress.
 	DefaultProgressUIWakeDebounceMS = 150
 

@@ -122,6 +122,7 @@ var (
 	EnsureHistoryListScroll             = dialog.EnsureHistoryListScroll
 	EnsureSFTPConnectListScroll         = dialog.EnsureSFTPConnectListScroll
 	EnsureFindListScroll                = dialog.EnsureFindListScroll
+	CenterFindListScroll                = dialog.CenterFindListScroll
 	ComputeHelpDialogListMetrics        = dialog.ComputeHelpDialogListMetrics
 	FindDialogNavFocusKey               = dialog.FindDialogNavFocusKey
 	ScrollContentLen                    = dialog.ScrollContentLen
