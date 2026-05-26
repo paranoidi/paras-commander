@@ -129,7 +129,7 @@ func (a *App) appendMessageLogLines(lines []string, urgency ui.MessageUrgency) {
 	}
 	a.model.MessageLog = append(batch, a.model.MessageLog...)
 	if !wasAtTop && len(batch) > 0 {
-		a.model.MessagesView.Selected += len(batch)
+		a.model.MessagesView.Selected++
 	}
 	for len(a.model.MessageLog) > max {
 		a.model.MessageLog = a.model.MessageLog[:max]
@@ -228,6 +228,15 @@ func jobFailureBannerDetail(err error, fallback string) string {
 	if err != nil {
 		if short := transientErrorText(err); short != err.Error() {
 			return short
+		}
+		var opErr *ops.Error
+		if errors.As(err, &opErr) && opErr.Err != nil {
+			if inner := ops.NestedErrorText(opErr.Err); inner != "" {
+				if short := transientErrorText(errors.New(inner)); short != inner {
+					return short
+				}
+				return truncateStatusBannerRunes(inner, jobFailureBannerMaxRunes)
+			}
 		}
 		return truncateStatusBannerRunes(firstMessageLine(err.Error()), jobFailureBannerMaxRunes)
 	}

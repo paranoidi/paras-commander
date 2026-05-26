@@ -102,32 +102,42 @@ func (a *App) handleMessagesViewKey(event *tcell.EventKey) bool {
 		return false
 	}
 
-	n := len(a.model.MessageLog)
+	log := a.model.MessageLog
 	switch event.Key() {
 	case tcell.KeyUp:
-		if a.model.MessagesView.Selected > 0 {
-			a.model.MessagesView.Selected--
-		}
+		a.model.MessagesView.Selected = ui.AdjacentMessageLogIndex(log, a.model.MessagesView.Selected, -1)
 		a.ensureMessagesViewSelectionVisible()
 	case tcell.KeyDown:
-		if n > 0 && a.model.MessagesView.Selected < n-1 {
-			a.model.MessagesView.Selected++
-		}
+		a.model.MessagesView.Selected = ui.AdjacentMessageLogIndex(log, a.model.MessagesView.Selected, 1)
 		a.ensureMessagesViewSelectionVisible()
 	case tcell.KeyPgUp:
-		a.model.MessagesView.Selected = max(0, a.model.MessagesView.Selected-5)
+		sel := a.model.MessagesView.Selected
+		for range 5 {
+			next := ui.AdjacentMessageLogIndex(log, sel, -1)
+			if next == sel {
+				break
+			}
+			sel = next
+		}
+		a.model.MessagesView.Selected = sel
 		a.ensureMessagesViewSelectionVisible()
 	case tcell.KeyPgDn:
-		if n > 0 {
-			a.model.MessagesView.Selected = min(n-1, a.model.MessagesView.Selected+5)
+		sel := a.model.MessagesView.Selected
+		for range 5 {
+			next := ui.AdjacentMessageLogIndex(log, sel, 1)
+			if next == sel {
+				break
+			}
+			sel = next
 		}
+		a.model.MessagesView.Selected = sel
 		a.ensureMessagesViewSelectionVisible()
 	case tcell.KeyHome:
 		a.model.MessagesView.Selected = 0
 		a.ensureMessagesViewSelectionVisible()
 	case tcell.KeyEnd:
-		if n > 0 {
-			a.model.MessagesView.Selected = n - 1
+		if len(log) > 0 {
+			a.model.MessagesView.Selected = len(log) - 1
 		}
 		a.ensureMessagesViewSelectionVisible()
 	}

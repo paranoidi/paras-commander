@@ -3,6 +3,7 @@ package ops
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"os"
 	"path/filepath"
@@ -385,6 +386,41 @@ func TestExecuteDeleteDirectory(t *testing.T) {
 	}
 	if _, err := os.Stat(subDir); !os.IsNotExist(err) {
 		t.Fatal("directory still exists after delete")
+	}
+}
+
+func TestExecuteDeleteDirectoryWithHiddenFile(t *testing.T) {
+	dir := t.TempDir()
+	subDir := filepath.Join(dir, "nested")
+	if err := os.Mkdir(subDir, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	writeFile(t, filepath.Join(subDir, ".hidden"))
+	writeFile(t, filepath.Join(subDir, "visible.txt"))
+
+	entry := localfs.Entry{Name: "nested", Path: subDir, Type: localfs.EntryDirectory}
+	plan := DeletePlan{
+		Entries:      []localfs.Entry{entry},
+		DeleteMode:   "permanent",
+		ConfirmFirst: false,
+	}
+	if err := ExecuteDelete(plan); err != nil {
+		t.Fatalf("ExecuteDelete() error = %v", err)
+	}
+	if _, err := os.Stat(subDir); !os.IsNotExist(err) {
+		t.Fatal("directory still exists after delete with hidden child")
+	}
+}
+
+func TestOpsErrorNestedDeleteMessage(t *testing.T) {
+	t.Parallel()
+	inner := &os.PathError{Op: "remove", Path: "/tmp/x", Err: errors.New("directory not empty")}
+	wrapped := fmt.Errorf(`remove "/tmp/x": %w`, inner)
+	opErr := &Error{Op: "delete", Text: "failed to delete leaf", Err: wrapped}
+	got := opErr.Error()
+	want := "delete: failed to delete leaf (directory not empty)"
+	if got != want {
+		t.Fatalf("Error() = %q, want %q", got, want)
 	}
 }
 

@@ -751,14 +751,25 @@ func (h *Handler) ApplyRefreshes() {
 }
 
 func (h *Handler) appendJobActivity(ev jobs.Event) {
-	if ev.Type != jobs.EventProgress || ev.CurrentPath == "" {
+	var label string
+	switch ev.Type {
+	case jobs.EventProgress:
+		if ev.CurrentPath == "" {
+			return
+		}
+		label = jobbridge.ActivityDetailLabel(h.state.ActiveJob(), ev)
+	case jobs.EventFailed:
+		label = jobbridge.ActivityFailureLabel(ev)
+		if label == "" {
+			return
+		}
+	default:
 		return
 	}
 	if h.model.JobActivity == nil {
 		h.model.JobActivity = make(map[string][]string)
 	}
 	lines := h.model.JobActivity[ev.JobID]
-	label := jobbridge.ActivityDetailLabel(h.state.ActiveJob(), ev)
 	if len(lines) > 0 && lines[len(lines)-1] == label {
 		return
 	}

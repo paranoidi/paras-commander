@@ -1,7 +1,9 @@
 package ops
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"sort"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -31,9 +33,30 @@ type Error struct {
 
 func (e *Error) Error() string {
 	if e.Err != nil {
-		return fmt.Sprintf("%s: %s (%v)", e.Op, e.Text, e.Err)
+		return fmt.Sprintf("%s: %s (%s)", e.Op, e.Text, nestedErrorText(e.Err))
 	}
 	return fmt.Sprintf("%s: %s", e.Op, e.Text)
+}
+
+// NestedErrorText returns a short underlying reason without repeated paths from remove wrappers.
+func NestedErrorText(err error) string {
+	return nestedErrorText(err)
+}
+
+func nestedErrorText(err error) string {
+	if err == nil {
+		return ""
+	}
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) && pathErr.Err != nil {
+		return pathErr.Err.Error()
+	}
+	if u := errors.Unwrap(err); u != nil {
+		if tail := nestedErrorText(u); tail != "" {
+			return tail
+		}
+	}
+	return err.Error()
 }
 
 // Unwrap returns the underlying error.

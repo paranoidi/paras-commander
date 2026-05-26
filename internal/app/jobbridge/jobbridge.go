@@ -152,6 +152,24 @@ baseLabel:
 	return label
 }
 
+// ActivityFailureLabel formats a terminal failure line for the jobs Activity panel.
+func ActivityFailureLabel(ev jobs.Event) string {
+	if ev.Type != jobs.EventFailed {
+		return ""
+	}
+	msg := strings.TrimSpace(ev.Error)
+	if ev.Err != nil {
+		msg = strings.TrimSpace(ev.Err.Error())
+	}
+	if msg == "" {
+		return "Failed"
+	}
+	if i := strings.IndexByte(msg, '\n'); i >= 0 {
+		msg = strings.TrimSpace(msg[:i])
+	}
+	return "Failed: " + msg
+}
+
 // TransferFunc builds the job worker transfer function from config.
 func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {

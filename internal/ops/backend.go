@@ -131,6 +131,13 @@ func removePathRecursive(ctx context.Context, loc pathloc.Path) error {
 	if ent.Type != fsbackend.EntryDirectory {
 		return be.Remove(ctx, loc)
 	}
+	if loc.Scheme() == pathloc.SchemeFile {
+		host, err := loc.FilePath()
+		if err != nil {
+			return err
+		}
+		return localfs.RemoveAll(host)
+	}
 	children, err := be.List(ctx, loc)
 	if err != nil {
 		return err

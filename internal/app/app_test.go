@@ -134,10 +134,14 @@ func TestJobFailureBannerDetail(t *testing.T) {
 
 func TestJobFailureLogDetailKeepsFullError(t *testing.T) {
 	t.Parallel()
-	errText := `delete: failed to delete stale-node (remove "/tmp/synthetic/workspace/stale-node": directory not empty)`
-	err := errors.New(errText)
+	err := &ops.Error{
+		Op:   "delete",
+		Text: "failed to delete stale-node",
+		Err:  errors.New("directory not empty"),
+	}
+	errText := err.Error()
 	if got := jobFailureLogDetail(err, errText); got != errText {
-		t.Fatalf("jobFailureLogDetail() = %q, want full error", got)
+		t.Fatalf("jobFailureLogDetail() = %q, want %q", got, errText)
 	}
 }
 
@@ -175,10 +179,15 @@ func TestSetJobFailedTransientMessageLogsFullError(t *testing.T) {
 	screen := newScreen(t, 120, 24)
 	app := newApp(t, screen, dir)
 
-	errText := `delete: failed to delete stale-node (remove "/tmp/synthetic/workspace/stale-node": directory not empty)`
+	err := &ops.Error{
+		Op:   "delete",
+		Text: "failed to delete stale-node",
+		Err:  errors.New("directory not empty"),
+	}
+	errText := err.Error()
 	app.setTransientMessageBanner(
-		fmt.Sprintf("Job failed: %s", jobFailureLogDetail(errors.New(errText), errText)),
-		fmt.Sprintf("Job failed: %s", jobFailureBannerDetail(errors.New(errText), errText)),
+		fmt.Sprintf("Job failed: %s", jobFailureLogDetail(err, errText)),
+		fmt.Sprintf("Job failed: %s", jobFailureBannerDetail(err, errText)),
 		ui.MessageUrgencyError,
 	)
 	if len(app.model.MessageLog) == 0 {
@@ -194,8 +203,11 @@ func TestSetJobFailedTransientMessageLogsFullError(t *testing.T) {
 	if !strings.Contains(full, "directory not empty") {
 		t.Fatalf("log = %q, want full error including reason", full)
 	}
-	if strings.Contains(app.model.Message, "directory not empty") {
-		t.Fatalf("banner should stay short, got %q", app.model.Message)
+	if strings.Contains(app.model.Message, "remove \"") {
+		t.Fatalf("banner should omit repeated remove paths, got %q", app.model.Message)
+	}
+	if utf8.RuneCountInString(app.model.Message) > jobFailureBannerMaxRunes+len("Job failed: ") {
+		t.Fatalf("banner too long, got %q", app.model.Message)
 	}
 }
 
