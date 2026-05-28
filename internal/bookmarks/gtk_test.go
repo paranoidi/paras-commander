@@ -9,7 +9,7 @@ import (
 
 func TestParseGTKLine(t *testing.T) {
 	m, ok := ParseGTKLine("file:///home/user/Documents")
-	if !ok || m.Path != "/home/user/Documents" || m.Name != "Documents" {
+	if !ok || m.Path != "/home/user/Documents" || m.Name != "Documents" || m.Origin != OriginGTK {
 		t.Fatalf("uri only: got %#v ok=%v", m, ok)
 	}
 	m, ok = ParseGTKLine("file:///home/user/Downloads My Downloads")
@@ -86,7 +86,10 @@ func TestLoadAllMergesAndDedupes(t *testing.T) {
 	if marks[0].Name != "mine" || marks[1].Name != "first" {
 		t.Fatalf("fzf order: %+v", marks)
 	}
-	if marks[2].Path != "/b" {
+	if marks[2].Path != "/b" || marks[2].Origin != OriginGTK {
 		t.Fatalf("gtk append: %+v", marks[2])
+	}
+	if marks[0].Origin != OriginFZFMarks || marks[1].Origin != OriginFZFMarks {
+		t.Fatalf("fzf origins: %+v", marks[:2])
 	}
 }

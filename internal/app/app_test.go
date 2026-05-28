@@ -3180,6 +3180,40 @@ func TestQuitImmediateSkipsConfirmation(t *testing.T) {
 	}
 }
 
+func TestQuitConfirmDialogAltShortcuts(t *testing.T) {
+	t.Parallel()
+	app := testAppMinimal(t)
+	root := t.TempDir()
+	job := &jobs.Job{ID: "j", Type: jobs.TypeCopy, Status: jobs.StatusRunning, Sources: pathloc.PathsForTest(root)}
+	app.jobState.Queue().Enqueue(job)
+
+	_, _ = app.handleKey(tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModNone))
+	if !app.model.QuitConfirm.Open {
+		t.Fatal("expected quit confirmation dialog")
+	}
+
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
+	if quit {
+		t.Fatal("Alt+S should stay in the app")
+	}
+	if app.model.QuitConfirm.Open {
+		t.Fatal("Alt+S should close quit confirmation")
+	}
+
+	_, _ = app.handleKey(tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModNone))
+	if !app.model.QuitConfirm.Open {
+		t.Fatal("expected quit confirmation dialog again")
+	}
+
+	quit, _ = app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'Q', tcell.ModAlt))
+	if !quit {
+		t.Fatal("Alt+Q should quit")
+	}
+	if app.model.QuitConfirm.Open {
+		t.Fatal("Alt+Q should close quit confirmation")
+	}
+}
+
 func TestQuickFilterEmptyOverlayThenTypingEnterOnFileClearsFuzzy(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "alpha.txt"))

@@ -127,9 +127,21 @@ func (s *State) dequeueJob() *Job {
 	defer s.mu.Unlock()
 	job := s.queue.DequeueRunnable()
 	if job != nil {
-		s.pendingDequeued = append(s.pendingDequeued, job)
+		s.appendPendingDequeuedUnlocked(job)
 	}
 	return job
+}
+
+func (s *State) appendPendingDequeuedUnlocked(job *Job) {
+	if job == nil {
+		return
+	}
+	for _, j := range s.pendingDequeued {
+		if j != nil && j.ID == job.ID {
+			return
+		}
+	}
+	s.pendingDequeued = append(s.pendingDequeued, job)
 }
 
 func (s *State) removePendingDequeuedByID(id string) {
@@ -225,80 +237,26 @@ func (s *State) PauseQueuedJob(id string) bool {
 }
 
 // AllJobs returns active job (if any), jobs waiting for blocker input, queued jobs, then recently finished jobs.
+// Each job ID appears at most once even if internal buckets overlap during worker transitions.
 func (s *State) AllJobs() []*Job {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	var all []*Job
-	if s.active != nil {
-		all = append(all, s.active)
-	}
-	for _, j := range s.waitingBlocker {
-		if j != nil {
-			all = append(all, j)
-		}
-	}
-	for _, j := range s.pendingDequeued {
-		if j != nil {
-			all = append(all, j)
-		}
-	}
-	all = append(all, s.queue.AllJobs()...)
-	if len(s.finished) > 0 {
-		all = append(all, s.finished...)
-	}
-	return all
+	return dedupeJobsByID(s.collectAllJobsUnlocked())
 }
 
 // MenuBarStripStatuses returns job statuses for the menu-bar strip: finished retention
 // (left), then in-flight work (active, blocker, pending dequeue), then FIFO queued/paused
 // jobs (right)—matching a left-to-right “past → current → waiting” progress metaphor.
+// Each job ID appears at most once (same dedup rule as AllJobs).
 func (s *State) MenuBarStripStatuses() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	n := len(s.finished)
-	if s.active != nil {
-		n++
-	}
-	for _, j := range s.waitingBlocker {
-		if j != nil && !j.Status.IsFinished() {
-			n++
-		}
-	}
-	for _, j := range s.pendingDequeued {
-		if j != nil && !j.Status.IsFinished() {
-			n++
-		}
-	}
-	for _, j := range s.queue.AllJobs() {
-		if j != nil && !j.Status.IsFinished() {
-			n++
-		}
-	}
-	out := make([]string, 0, n)
-	for _, j := range s.finished {
+	jobs := dedupeJobsByID(s.collectMenuBarStripJobsUnlocked())
+	out := make([]string, 0, len(jobs))
+	for _, j := range jobs {
 		if j != nil {
 			out = append(out, string(j.Status))
 		}
-	}
-	if s.active != nil {
-		out = append(out, string(s.active.Status))
-	}
-	for _, j := range s.waitingBlocker {
-		if j != nil && !j.Status.IsFinished() {
-			out = append(out, string(j.Status))
-		}
-	}
-	for _, j := range s.pendingDequeued {
-		if j != nil && !j.Status.IsFinished() {
-			out = append(out, string(j.Status))
-		}
-	}
-	for _, j := range s.queue.AllJobs() {
-		if j == nil || j.Status.IsFinished() {
-			continue
-		}
-		out = append(out, string(j.Status))
 	}
 	return out
 }
@@ -583,13 +541,16 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		s.blockerRegMu.Unlock()
 
 		s.mu.Lock()
-		if s.active == job {
+		if s.active != nil && s.active.ID == job.ID {
 			s.active = nil
 		}
+		s.removePendingDequeuedByID(job.ID)
 		job.Status = StatusWaitingDecision
 		job.PendingBlocker = &jobSnap
 		s.appendWaitingBlockerUnlocked(job)
 		s.mu.Unlock()
+		// A dequeued job must not remain in the FIFO; drop a stray queue entry if present.
+		s.queue.RemoveJobByID(job.ID)
 
 		s.emit(Event{
 			Type:    EventJobBlockerRequest,

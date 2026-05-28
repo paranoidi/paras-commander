@@ -1561,6 +1561,99 @@ func TestRenderOmitsGitignoreBottomHintOutsideWorkTree(t *testing.T) {
 	}
 }
 
+func TestRenderDrawsDotfilesHiddenBottomHint(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	styles := theme.Default()
+	sym := styles.SymbolHiddenDotfiles()
+	left := panel.State{
+		Path:                 pathloc.MustParse("/tmp"),
+		Entries:              []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
+		DotfilesHiddenActive: true,
+	}
+	model := Model{
+		Left:        left,
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: RightPanel,
+	}
+	Render(screen, model, styles)
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if !strings.Contains(leftBottom, sym) {
+		t.Fatalf("left bottom = %q, want dotfiles-hidden glyph %q", leftBottom, sym)
+	}
+}
+
+func TestRenderOmitsDotfilesHiddenBottomHintWhenShowHidden(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	styles := theme.Default()
+	sym := styles.SymbolHiddenDotfiles()
+	left := panel.State{
+		Path:                 pathloc.MustParse("/tmp"),
+		Entries:              []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
+		ShowHidden:           true,
+		DotfilesHiddenActive: true,
+	}
+	model := Model{
+		Left:        left,
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: RightPanel,
+	}
+	Render(screen, model, styles)
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if strings.Contains(leftBottom, sym) {
+		t.Fatalf("left bottom = %q, want no dotfiles-hidden glyph when show hidden is on", leftBottom)
+	}
+}
+
+func TestRenderOmitsDotfilesHiddenBottomHintWhenInactive(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	styles := theme.Default()
+	sym := styles.SymbolHiddenDotfiles()
+	left := panel.State{
+		Path:    pathloc.MustParse("/tmp"),
+		Entries: []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
+	}
+	model := Model{
+		Left:        left,
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: RightPanel,
+	}
+	Render(screen, model, styles)
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if strings.Contains(leftBottom, sym) {
+		t.Fatalf("left bottom = %q, want no dotfiles-hidden glyph when inactive", leftBottom)
+	}
+}
+
 func TestRenderOmitsGitignoreBottomHintWhenShowHidden(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

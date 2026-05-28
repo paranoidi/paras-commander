@@ -73,10 +73,11 @@ type Theme struct {
 	// active panel bottom border while quick view is enabled.
 	PanelQuickViewIndicator tcell.Style
 	// PanelBottomIndicator* style Start/PhysicalLeft bottom-border segments (see ui panel_bottom_indicators).
-	PanelBottomIndicatorSelections tcell.Style
-	PanelBottomIndicatorGitignore  tcell.Style
-	PanelBottomIndicatorStash      tcell.Style
-	PanelBottomIndicatorOtherPanel tcell.Style
+	PanelBottomIndicatorSelections     tcell.Style
+	PanelBottomIndicatorDotfilesHidden tcell.Style
+	PanelBottomIndicatorGitignore      tcell.Style
+	PanelBottomIndicatorStash          tcell.Style
+	PanelBottomIndicatorOtherPanel     tcell.Style
 	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
 	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
 	PanelFileIconFG map[string]tcell.Color
@@ -216,17 +217,18 @@ func (t Theme) DialogInputBaseStyle(focused, invalid bool) tcell.Style {
 
 // Panel bottom-indicator style keys ([panel.indicator] in TOML).
 const (
-	PanelBottomIndicatorKeySelections = "selections"
-	PanelBottomIndicatorKeyGitignore  = "gitignore"
-	PanelBottomIndicatorKeyStash      = "stash"
-	PanelBottomIndicatorKeySync       = "sync"
-	PanelBottomIndicatorKeyQuickView  = "quick_view"
-	PanelBottomIndicatorKeyOtherPanel = "other_panel"
+	PanelBottomIndicatorKeySelections     = "selections"
+	PanelBottomIndicatorKeyDotfilesHidden = "dotfiles_hidden"
+	PanelBottomIndicatorKeyGitignore      = "gitignore"
+	PanelBottomIndicatorKeyStash          = "stash"
+	PanelBottomIndicatorKeySync           = "sync"
+	PanelBottomIndicatorKeyQuickView      = "quick_view"
+	PanelBottomIndicatorKeyOtherPanel     = "other_panel"
 )
 
 // PanelBottomIndicator returns the style for a file-panel bottom-border segment.
 // id is one of PanelBottomIndicatorKey* constants. When the theme omits a dedicated key,
-// selections falls back to panel title styles and gitignore to panel frame styles.
+// selections falls back to panel title styles; dotfiles_hidden and gitignore fall back to panel frame styles.
 func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked bool) tcell.Style {
 	switch id {
 	case PanelBottomIndicatorKeySelections:
@@ -240,6 +242,11 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 			return t.PanelActiveTitle
 		}
 		return t.PanelInactiveTitle
+	case PanelBottomIndicatorKeyDotfilesHidden:
+		if t.PanelBottomIndicatorDotfilesHidden != (tcell.Style{}) {
+			return t.PanelBottomIndicatorDotfilesHidden
+		}
+		fallthrough
 	case PanelBottomIndicatorKeyGitignore:
 		if t.PanelBottomIndicatorGitignore != (tcell.Style{}) {
 			return t.PanelBottomIndicatorGitignore
@@ -290,9 +297,10 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 
 // Symbol keys in the [symbols] table (optional entries — see accessors for defaults).
 const (
-	SymbolKeyPathPicker = "path_picker"
-	SymbolKeyGit        = "git"
-	SymbolKeyStash      = "stash"
+	SymbolKeyPathPicker     = "path_picker"
+	SymbolKeyGit            = "git"
+	SymbolKeyStash          = "stash"
+	SymbolKeyHiddenDotfiles = "hidden_dotfiles"
 )
 
 // Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
@@ -308,6 +316,16 @@ const (
 	SymbolKeyMenuJobDecision       = "menu.job.decision"
 	SymbolKeyMenuJobCompleted      = "menu.job.completed"
 )
+
+// SymbolHiddenDotfiles returns the dotfiles-hidden bottom-indicator glyph from [symbols] hidden_dotfiles.
+func (t Theme) SymbolHiddenDotfiles() string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[SymbolKeyHiddenDotfiles]); s != "" {
+			return s
+		}
+	}
+	return "\U000F06D1" // nf-md-eye_off_outline (Material Design / Nerd Fonts PUA)
+}
 
 // SymbolStash returns the selection-stash bottom-indicator glyph from [symbols] stash.
 func (t Theme) SymbolStash() string {
@@ -473,6 +491,7 @@ var requiredStyleKeys = []string{
 	"panel.indicator.sync",
 	"panel.indicator.quick_view",
 	"panel.indicator.selections",
+	"panel.indicator.dotfiles_hidden",
 	"panel.indicator.gitignore",
 	"panel.indicator.stash",
 	"panel.indicator.other_panel",
@@ -898,6 +917,7 @@ func parse(data []byte) (Theme, error) {
 		PanelSyncIndicator:                  styles["panel.indicator.sync"],
 		PanelQuickViewIndicator:             styles["panel.indicator.quick_view"],
 		PanelBottomIndicatorSelections:      styles["panel.indicator.selections"],
+		PanelBottomIndicatorDotfilesHidden:  styles["panel.indicator.dotfiles_hidden"],
 		PanelBottomIndicatorGitignore:       styles["panel.indicator.gitignore"],
 		PanelBottomIndicatorStash:           styles["panel.indicator.stash"],
 		PanelBottomIndicatorOtherPanel:      styles["panel.indicator.other_panel"],

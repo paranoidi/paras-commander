@@ -142,6 +142,47 @@ func TestWorkerEmitsJobResumedAfterBlockerDecision(t *testing.T) {
 	wg.Wait()
 }
 
+func TestWorkerBlockerAllJobsListsSingleEntry(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	blockerEntered := make(chan struct{})
+	var wg sync.WaitGroup
+
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		if job.ID != "job-a" {
+			return nil
+		}
+		close(blockerEntered)
+		_ = waitBlocker(BlockerRequest{
+			Kind:     BlockerKindConflict,
+			Conflict: &ConflictRequest{JobID: job.ID, Source: "/a", Destination: "/b", ExistingDetails: "file exists"},
+		})
+		return nil
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.AddJob(&Job{ID: "job-a", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
+	}()
+
+	deadline := time.After(5 * time.Second)
+	select {
+	case <-deadline:
+		t.Fatal("timeout waiting for blocker")
+	case <-blockerEntered:
+	}
+	if all := s.AllJobs(); len(all) != 1 {
+		t.Fatalf("AllJobs() len = %d, want 1 while blocked", len(all))
+	} else if all[0].ID != "job-a" {
+		t.Fatalf("job ID = %q, want job-a", all[0].ID)
+	}
+	s.SubmitConflictDecision("job-a", DecisionSkip)
+	wg.Wait()
+}
+
 func TestStateEmitHook(t *testing.T) {
 	var n atomic.Int32
 	s := NewState()

@@ -16,11 +16,30 @@ const (
 	envMarksFile  = "FZF_MARKS_FILE"
 )
 
+// Origin identifies where a bookmark was loaded from.
+type Origin int
+
+const (
+	OriginFZFMarks Origin = iota
+	OriginGTK
+)
+
+// PathPickerSource returns the path-picker Source column label for this origin.
+func (o Origin) PathPickerSource() string {
+	switch o {
+	case OriginGTK:
+		return "gnome"
+	default:
+		return "fzf-marks"
+	}
+}
+
 // Mark is one fzf-marks entry: name, path, and the canonical line for display/serialization.
 type Mark struct {
-	Name string
-	Path string
-	Line string
+	Name   string
+	Path   string
+	Line   string
+	Origin Origin
 }
 
 // ParseLine parses a single fzf-marks line. It returns false if the line should be skipped
@@ -41,9 +60,10 @@ func ParseLine(raw string) (Mark, bool) {
 		return Mark{}, false
 	}
 	return Mark{
-		Name: name,
-		Path: path,
-		Line: name + lineDelimiter + path,
+		Name:   name,
+		Path:   path,
+		Line:   name + lineDelimiter + path,
+		Origin: OriginFZFMarks,
 	}, true
 }
 

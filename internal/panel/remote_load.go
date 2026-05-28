@@ -32,16 +32,18 @@ type remoteLoadOpts struct {
 }
 
 // FetchRemoteListing reads a remote directory via fsbackend.
-func FetchRemoteListing(ctx context.Context, loc pathloc.Path, showHidden bool) ([]fsbackend.Entry, error) {
+// The second return value is true when showHidden is false and the directory contains dot-prefixed names.
+func FetchRemoteListing(ctx context.Context, loc pathloc.Path, showHidden bool) ([]fsbackend.Entry, bool, error) {
 	be, err := fsbackend.Default().Backend(loc)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	entries, err := be.List(ctx, loc)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return fsbackend.FilterHidden(entries, showHidden), nil
+	dotfilesHiddenActive := !showHidden && fsbackend.HasDotfileNames(entries)
+	return fsbackend.FilterHidden(entries, showHidden), dotfilesHiddenActive, nil
 }
 
 func (s *State) revertRecordedVisit(attempted string) {

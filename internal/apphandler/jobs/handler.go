@@ -46,6 +46,17 @@ func (h *Handler) OpenJobsView() {
 	} else if len(h.model.JobsList) == 0 {
 		h.SyncJobsList()
 	}
+	h.focusJobsViewOnFirstPendingBlocker()
+}
+
+func (h *Handler) focusJobsViewOnFirstPendingBlocker() {
+	if idx := ui.FirstJobEntryWaitingDecisionIndex(h.model.JobsList); idx >= 0 {
+		h.model.JobsView.Selected = idx
+		h.model.JobsView.FocusPane = 1
+		h.model.JobsView.ConflictButtonFocus = 0
+		h.model.JobsView.DetailScroll = 0
+		h.model.JobsView.ActivityScroll = 0
+	}
 	h.ensureJobsViewSelectionVisible()
 }
 

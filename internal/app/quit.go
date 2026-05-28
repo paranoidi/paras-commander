@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -68,6 +69,16 @@ func (a *App) openQuitConfirm() {
 }
 
 func (a *App) handleQuitConfirmKey(event *tcell.EventKey) bool {
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		switch event.Rune() {
+		case 's', 'S':
+			a.model.QuitConfirm = ui.QuitConfirmState{}
+			return false
+		case 'q', 'Q':
+			a.model.QuitConfirm = ui.QuitConfirmState{}
+			return true
+		}
+	}
 	switch event.Key() {
 	case tcell.KeyEsc:
 		a.model.QuitConfirm = ui.QuitConfirmState{}

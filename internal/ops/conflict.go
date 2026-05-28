@@ -40,9 +40,33 @@ func StatFileConflictFacts(src, dst string) (FileConflictFacts, error) {
 	}, nil
 }
 
-// FormatConflictSize renders a byte size for conflict panels (compact decimal).
+// FormatConflictSize renders a byte size for conflict panels: decimal bytes plus a binary unit suffix.
 func FormatConflictSize(n int64) string {
-	return fmt.Sprintf("%d", n)
+	if n < 0 {
+		return "—"
+	}
+	return fmt.Sprintf("%d (%s)", n, formatByteSizeBinary(n))
+}
+
+func formatByteSizeBinary(n int64) string {
+	const (
+		KiB = int64(1024)
+		MiB = KiB * 1024
+		GiB = MiB * 1024
+		TiB = GiB * 1024
+	)
+	switch {
+	case n < KiB:
+		return fmt.Sprintf("%d B", n)
+	case n < MiB:
+		return fmt.Sprintf("%.1f KiB", float64(n)/float64(KiB))
+	case n < GiB:
+		return fmt.Sprintf("%.1f MiB", float64(n)/float64(MiB))
+	case n < TiB:
+		return fmt.Sprintf("%.1f GiB", float64(n)/float64(GiB))
+	default:
+		return fmt.Sprintf("%.1f TiB", float64(n)/float64(TiB))
+	}
 }
 
 // FormatConflictTime renders a modification time similar to classic file managers.

@@ -77,17 +77,18 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 
 	listTop := rect.Y + 5
 	rowWidth := inputWidth
+	sourceW, nameW, pathW := pathPickerColumnWidths(state.Items, rowWidth)
 	for row := 0; row < listH; row++ {
 		y := listTop + row
 		idxInRank := state.ListScroll + row
 		baseStyle := styles.DialogText.Background(itemBg)
-		line := ""
+		var item PathPickerItem
 		var ranges []search.Range
 		isCursor := false
 		if idxInRank < len(state.Ranked) {
 			entIdx := state.Ranked[idxInRank]
 			if entIdx >= 0 && entIdx < len(state.Items) {
-				line = state.Items[entIdx].Line
+				item = state.Items[entIdx]
 				if entIdx < len(state.MatchRanges) {
 					ranges = state.MatchRanges[entIdx]
 				}
@@ -101,7 +102,7 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 		}
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)
-		text, spans := pathPickerRowContent(line, ranges, rowWidth, matchStyle)
+		text, spans := pathPickerRowContent(item, ranges, sourceW, nameW, pathW, matchStyle)
 		primitive.StyledText(screen, leftCol, y, rowWidth, text, baseStyle, spans)
 	}
 
@@ -115,40 +116,4 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 		{Label: "OK", Shortcut: 'O', Focused: okFocused},
 		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
 	}, styles)
-}
-
-func pathPickerRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style) (string, []primitive.Span) {
-	if width <= 0 {
-		return "", nil
-	}
-	orig := []rune(line)
-	var disp []rune
-	switch {
-	case len(orig) <= width:
-		disp = orig
-	case width == 1:
-		disp = orig[:1]
-	default:
-		disp = append(append([]rune{}, orig[:width-1]...), '~')
-	}
-	spans := make([]primitive.Span, 0, len(ranges))
-	truncated := len(orig) > width
-	for i := range disp {
-		if truncated && i == len(disp)-1 && disp[i] == '~' {
-			continue
-		}
-		if pathPickerRangeContains(ranges, i) {
-			spans = append(spans, primitive.Span{Start: i, End: i + 1, Style: matchStyle})
-		}
-	}
-	return string(disp), spans
-}
-
-func pathPickerRangeContains(ranges []search.Range, index int) bool {
-	for _, r := range ranges {
-		if index >= r.Start && index < r.End {
-			return true
-		}
-	}
-	return false
 }

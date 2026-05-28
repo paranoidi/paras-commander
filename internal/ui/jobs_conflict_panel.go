@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -11,9 +10,27 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
+const (
+	jobsConflictLabelNew      = "New:      "
+	jobsConflictLabelExisting = "Existing: "
+	jobsConflictLabelSize     = "Size:     "
+	jobsConflictLabelModified = "Modified: "
+)
+
 // JobEntryShowsConflictPanel reports whether the jobs blocker UI should be shown for this row.
 func JobEntryShowsConflictPanel(j JobEntry) bool {
 	return j.Status == string(jobs.StatusWaitingDecision) && j.PendingBlocker != nil
+}
+
+// FirstJobEntryWaitingDecisionIndex returns the list index of the first job awaiting
+// blocker input, or -1 when none.
+func FirstJobEntryWaitingDecisionIndex(entries []JobEntry) int {
+	for i, e := range entries {
+		if JobEntryShowsConflictPanel(e) {
+			return i
+		}
+	}
+	return -1
 }
 
 // JobsBlockerMaxButtonIndex returns the maximum focused button index for the blocker panel.
@@ -235,10 +252,7 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	if chromeBlocked {
 		body = styles.PanelBlockedText
 	}
-	warn := styles.MessageWarn.Background(bg)
-	if chromeBlocked {
-		warn = styles.MessageWarn.Background(bg)
-	}
+	prompt := styles.DialogText.Background(bg)
 
 	textW := rect.Width - 4
 	if textW < 1 {
@@ -247,28 +261,17 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	textX := rect.X + 2
 	y := rect.Y + 1
 
-	prefixNew := "New:      "
-	lineNewPath := prefixNew + primitive.FitPathForWidth(primitive.PathWithHomeTilde(c.Source, userHomeDir), max(1, textW-utf8.RuneCountInString(prefixNew)))
-	primitive.Text(screen, textX, y, textW, lineNewPath, body)
+	y = drawJobsConflictFileGroup(screen, textX, y, textW, jobsConflictLabelNew, c.Source, c.SourceSize, c.SourceTime, body, userHomeDir)
 	y++
-	sizeLine := fmt.Sprintf("%s %s", padOrDash(c.SourceSize, 12), padOrDash(c.SourceTime, 14))
-	primitive.Text(screen, textX, y, textW, sizeLine, body)
-	y++
-
-	prefixEx := "Existing: "
-	lineExPath := prefixEx + primitive.FitPathForWidth(primitive.PathWithHomeTilde(c.Destination, userHomeDir), max(1, textW-utf8.RuneCountInString(prefixEx)))
-	primitive.Text(screen, textX, y, textW, lineExPath, body)
-	y++
-	sizeLine2 := fmt.Sprintf("%s %s", padOrDash(c.DestSize, 12), padOrDash(c.DestTime, 14))
-	primitive.Text(screen, textX, y, textW, sizeLine2, body)
-	y++
+	y = drawJobsConflictFileGroup(screen, textX, y, textW, jobsConflictLabelExisting, c.Destination, c.DestSize, c.DestTime, body, userHomeDir)
 
 	if y < rect.Y+rect.Height-1 {
 		dialog.DrawDialogHSeparator(screen, rect, y, borderStyle)
 		y++
 	}
 
-	primitive.Text(screen, textX, y, textW, "Overwrite this file?", warn)
+	primitive.Text(screen, textX, y, textW, "Overwrite this file?", prompt)
+	y++
 	y++
 
 	f := state.ConflictButtonFocus
@@ -280,9 +283,9 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	}
 
 	row1 := []DialogButtonSpec{
-		{Label: "Overwrite", Shortcut: 'O', Focused: focused && f == 0},
+		{Label: "Overwrite", Shortcut: 'O', Focused: focused && f == 0, Destructive: true},
 		{Label: "Skip", Shortcut: 'S', Focused: focused && f == 1},
-		{Label: "Overwrite All", Shortcut: 'A', Focused: focused && f == 2},
+		{Label: "Overwrite All", Shortcut: 'A', Focused: focused && f == 2, Destructive: true},
 	}
 	row2 := []DialogButtonSpec{
 		{Label: "Skip All", Shortcut: 'L', Focused: focused && f == 3},
@@ -297,17 +300,28 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	}
 }
 
-func padOrDash(s string, w int) string {
-	r := []rune(s)
-	if len(r) >= w {
-		return string(r[:w])
-	}
+func drawJobsConflictFileGroup(screen tcell.Screen, textX, y, textW int, pathLabel, path, size, modified string, body tcell.Style, userHomeDir string) int {
+	pathAvail := max(1, textW-utf8.RuneCountInString(pathLabel))
+	pathLine := pathLabel + primitive.FitPathForWidth(primitive.PathWithHomeTilde(path, userHomeDir), pathAvail)
+	primitive.Text(screen, textX, y, textW, pathLine, body)
+	y++
+	primitive.Text(screen, textX, y, textW, jobsConflictLabelSize+jobsConflictDisplaySize(size), body)
+	y++
+	primitive.Text(screen, textX, y, textW, jobsConflictLabelModified+jobsConflictDisplayText(modified), body)
+	y++
+	return y
+}
+
+func jobsConflictDisplaySize(s string) string {
 	if s == "" {
-		s = "—"
-		r = []rune(s)
+		return "—"
 	}
-	for len(r) < w {
-		r = append(r, ' ')
+	return s
+}
+
+func jobsConflictDisplayText(s string) string {
+	if s == "" {
+		return "—"
 	}
-	return string(r[:w])
+	return s
 }

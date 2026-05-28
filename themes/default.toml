@@ -32,7 +32,7 @@ dropdown.frame = { fg = "bright_blue", bg = "blue" }
 dropdown.selected = { fg = "black", bg = "bright_blue", bold = true }
 job.canceled = { fg = "red" }
 job.completed = { fg = "green" }
-job.decision = { fg = "cyan" }
+job.decision = { fg = "bright_blue" }
 job.failed = { fg = "bright_red" }
 job.paused = { fg = "yellow" }
 job.queued = { fg = "yellow" }
@@ -59,6 +59,7 @@ row.symlink = { fg = "bright_cyan" }
 indicator.sync = { fg = "green", bold = true }
 indicator.quick_view = { fg = "green", bold = true }
 indicator.selections = { fg = "white" }
+indicator.dotfiles_hidden = { fg = "bright_black" }
 indicator.gitignore = { fg = "bright_black" }
 indicator.stash = { fg = "yellow", bold = true }
 indicator.other_panel = { fg = "cyan", bold = true }
@@ -188,6 +189,8 @@ completed = "\uf05d"
 path_picker = "\uf0ca"
 git = "\uf1d3"
 stash = "\uef0d"
+# U+F06D1 (nf-md-eye_off_outline); use 8-digit escape — \uf06d1 is U+F06D + "1"
+hidden_dotfiles = "\U000F06D1"
 
 [symbols.menu.progress]
 done = "─"

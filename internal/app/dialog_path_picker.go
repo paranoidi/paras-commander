@@ -31,7 +31,7 @@ func (a *App) syncPathPickerRanks() {
 	}
 	lines := make([]string, len(st.Items))
 	for i, e := range st.Items {
-		lines[i] = e.Line
+		lines[i] = e.SearchLine()
 	}
 	q := search.Parse(st.Query)
 	opts := search.Options{CaseInsensitive: a.config.CaseInsensitiveFilter}
@@ -351,8 +351,8 @@ func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) 
 		}
 		seen[key] = struct{}{}
 		items = append(items, ui.PathPickerItem{
-			Line: "  " + p,
-			Path: cp,
+			Source: "history",
+			Path:   cp,
 		})
 	}
 
@@ -374,8 +374,9 @@ func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) 
 		}
 		seen[cp] = struct{}{}
 		items = append(items, ui.PathPickerItem{
-			Line: marks[i].Line,
-			Path: cp,
+			Source: marks[i].Origin.PathPickerSource(),
+			Name:   marks[i].Name,
+			Path:   cp,
 		})
 	}
 	return items, nil

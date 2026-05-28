@@ -114,6 +114,12 @@ func TestPathPickerItemsSkipMissingHistoryPaths(t *testing.T) {
 		}
 		if it.Path == cleanExists {
 			foundExists = true
+			if it.Source != "history" {
+				t.Fatalf("history item Source = %q, want history", it.Source)
+			}
+			if it.Name != "" {
+				t.Fatalf("history item Name = %q, want empty", it.Name)
+			}
 		}
 	}
 	if !foundExists {

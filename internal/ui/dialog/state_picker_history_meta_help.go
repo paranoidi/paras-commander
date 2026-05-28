@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -19,10 +20,31 @@ const (
 	PathPickerPurposeApplyFileDialogField
 )
 
-// PathPickerItem is one fuzzy-listed row (display Line + filesystem Path).
+// PathPickerItem is one fuzzy-listed row with source, optional name, and filesystem path.
 type PathPickerItem struct {
-	Line string
-	Path string
+	Source string // "history", "fzf-marks", or "gnome"
+	Name   string
+	Path   string
+}
+
+// SearchLine returns the fuzzy-filter key for this item.
+func (i PathPickerItem) SearchLine() string {
+	parts := make([]string, 0, 3)
+	if i.Source != "" {
+		parts = append(parts, i.Source)
+	}
+	if i.Name != "" {
+		parts = append(parts, i.Name)
+	}
+	if i.Path != "" {
+		parts = append(parts, i.Path)
+	}
+	return strings.Join(parts, " ")
+}
+
+// Empty reports whether the item carries no list-row content.
+func (i PathPickerItem) Empty() bool {
+	return i.Source == "" && i.Name == "" && i.Path == ""
 }
 
 // PathPickerState is a fuzzy-filtered list dialog (bookmarks, quick path, etc.).

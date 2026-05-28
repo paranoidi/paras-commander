@@ -123,15 +123,44 @@ func TestPanelBottomPhysicalLeftChainStartXOffsetWithSelectionsHint(t *testing.T
 	}
 }
 
+func TestCollectPanelBottomIndicatorsDotfilesHiddenVisible(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	ctx := PanelBottomIndicatorContext{
+		PanelID:                LeftPanel,
+		QuickViewDriverPanelID: -1,
+		State: panel.State{
+			Path:                 pathloc.MustParse("/tmp"),
+			DotfilesHiddenActive: true,
+		},
+		Styles: styles,
+	}
+	got := collectPanelBottomIndicators(ctx)
+	var physical []panelBottomIndicatorSegment
+	for _, seg := range got {
+		if seg.Edge == PanelBottomEdgePhysicalLeft {
+			physical = append(physical, seg)
+		}
+	}
+	if len(physical) != 1 || physical[0].ID != PanelBottomIndicatorDotfilesHidden {
+		t.Fatalf("physical = %+v, want dotfiles_hidden only", physical)
+	}
+	want := " " + styles.SymbolHiddenDotfiles() + " "
+	if physical[0].Label != want {
+		t.Fatalf("label = %q, want %q", physical[0].Label, want)
+	}
+}
+
 func TestCollectPanelBottomIndicatorsStashAfterGitignore(t *testing.T) {
 	t.Parallel()
 	ctx := PanelBottomIndicatorContext{
 		PanelID:                LeftPanel,
 		QuickViewDriverPanelID: -1,
 		State: panel.State{
-			Path:                pathloc.MustParse("/tmp"),
-			GitignoreActive:     true,
-			SelectionStashPaths: []string{"/tmp/a.txt"},
+			Path:                 pathloc.MustParse("/tmp"),
+			GitignoreActive:      true,
+			DotfilesHiddenActive: true,
+			SelectionStashPaths:  []string{"/tmp/a.txt"},
 		},
 		Styles: theme.Default(),
 	}
@@ -142,12 +171,12 @@ func TestCollectPanelBottomIndicatorsStashAfterGitignore(t *testing.T) {
 			physical = append(physical, seg)
 		}
 	}
-	if len(physical) != 2 {
-		t.Fatalf("len = %d, want gitignore + stash", len(physical))
+	if len(physical) != 3 {
+		t.Fatalf("len = %d, want dotfiles_hidden + gitignore + stash", len(physical))
 	}
 	got = physical
-	if got[0].ID != PanelBottomIndicatorGitignore || got[1].ID != PanelBottomIndicatorStash {
-		t.Fatalf("order = %+v, want gitignore then stash", got)
+	if got[0].ID != PanelBottomIndicatorDotfilesHidden || got[1].ID != PanelBottomIndicatorGitignore || got[2].ID != PanelBottomIndicatorStash {
+		t.Fatalf("order = %+v, want dotfiles_hidden then gitignore then stash", got)
 	}
 	if got[1].Label == "" || got[1].Label[0] != ' ' {
 		t.Fatalf("stash label = %q", got[1].Label)

@@ -280,6 +280,33 @@ func TestLoadClearsGitignoreActiveOutsideWorkTree(t *testing.T) {
 	}
 }
 
+func TestLoadSetsDotfilesHiddenActiveWhenDotfilesPresent(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, ".hidden"))
+	writeFile(t, filepath.Join(dir, "visible.txt"))
+
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if !state.DotfilesHiddenActive {
+		t.Fatal("DotfilesHiddenActive = false, want true when dotfiles are hidden and present")
+	}
+}
+
+func TestLoadClearsDotfilesHiddenActiveWhenNoDotfiles(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "visible.txt"))
+
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if state.DotfilesHiddenActive {
+		t.Fatal("DotfilesHiddenActive = true, want false when directory has no dotfiles")
+	}
+}
+
 func TestToggleHiddenReloadsPanelEntries(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, ".hidden"))
@@ -299,6 +326,9 @@ func TestToggleHiddenReloadsPanelEntries(t *testing.T) {
 
 	if !state.ShowHidden {
 		t.Fatal("ShowHidden = false, want true")
+	}
+	if state.DotfilesHiddenActive {
+		t.Fatal("DotfilesHiddenActive = true, want false when show hidden is on")
 	}
 	if len(state.Entries) != 2 {
 		t.Fatalf("len(Entries) = %d, want hidden and visible entries", len(state.Entries))

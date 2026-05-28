@@ -95,7 +95,7 @@ func (s *State) storeCarouselChildCache(snap ListingSnapshot, ok bool, cursorDir
 }
 
 func (s *State) buildListingSnapshot(loc pathloc.Path, selectedName string, indexFallback int, viewportRows int, centerRecalled bool) (ListingSnapshot, error) {
-	backendEntries, listingLoc, _, err := s.fetchBackendEntries(loc)
+	backendEntries, listingLoc, _, _, err := s.fetchBackendEntries(loc)
 	if err != nil {
 		return ListingSnapshot{}, err
 	}

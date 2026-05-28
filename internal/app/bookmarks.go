@@ -23,7 +23,11 @@ func (a *App) openBookmarkDialog() {
 	}
 	items := make([]ui.PathPickerItem, len(marks))
 	for i := range marks {
-		items[i] = ui.PathPickerItem{Line: marks[i].Line, Path: marks[i].Path}
+		items[i] = ui.PathPickerItem{
+			Source: marks[i].Origin.PathPickerSource(),
+			Name:   marks[i].Name,
+			Path:   marks[i].Path,
+		}
 	}
 	a.model.PathPicker = ui.PathPickerState{
 		Open:       true,

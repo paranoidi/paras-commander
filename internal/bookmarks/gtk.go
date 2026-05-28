@@ -56,9 +56,10 @@ func ParseGTKLine(raw string) (Mark, bool) {
 		}
 	}
 	return Mark{
-		Name: name,
-		Path: path,
-		Line: name + lineDelimiter + path,
+		Name:   name,
+		Path:   path,
+		Line:   name + lineDelimiter + path,
+		Origin: OriginGTK,
 	}, true
 }
 

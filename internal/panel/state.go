@@ -64,6 +64,8 @@ type State struct {
 	Gitignore *gitignore.Cache
 	// GitignoreActive is true when the current listing applies Git ignore rules (inside a work tree).
 	GitignoreActive bool
+	// DotfilesHiddenActive is true when dotfiles are hidden and the current directory has dot-prefixed names.
+	DotfilesHiddenActive bool
 	// GitColumnActive is true when the listing path is inside a Git work tree (local panels only).
 	GitColumnActive bool
 	// GitPending is true while async git status is in flight for this listing.
@@ -862,33 +864,35 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 			return nil
 		}
 	}
-	backendEntries, listingLoc, gitignoreActive, err := s.fetchBackendEntries(loc)
+	backendEntries, listingLoc, gitignoreActive, dotfilesHiddenActive, err := s.fetchBackendEntries(loc)
 	if err != nil {
 		return err
 	}
 	s.GitignoreActive = gitignoreActive
+	s.DotfilesHiddenActive = dotfilesHiddenActive
 	return s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, indexFallback, centerRecalled)
 }
 
-func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathloc.Path, bool, error) {
+func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
 	if loc.IsRemote() {
 		be, berr := fsbackend.Default().Backend(loc)
 		if berr != nil {
-			return nil, pathloc.Path{}, false, berr
+			return nil, pathloc.Path{}, false, false, berr
 		}
 		entries, err := be.List(context.Background(), loc)
 		if err != nil {
-			return nil, pathloc.Path{}, false, err
+			return nil, pathloc.Path{}, false, false, err
 		}
-		return fsbackend.FilterHidden(entries, s.ShowHidden), loc, false, nil
+		dotfilesHiddenActive := !s.ShowHidden && fsbackend.HasDotfileNames(entries)
+		return fsbackend.FilterHidden(entries, s.ShowHidden), loc, false, dotfilesHiddenActive, nil
 	}
 	host, ferr := loc.FilePath()
 	if ferr != nil {
-		return nil, pathloc.Path{}, false, ferr
+		return nil, pathloc.Path{}, false, false, ferr
 	}
 	gitMatcher, gerr := localfs.MatcherForListing(s.ShowHidden, s.Gitignore, host)
 	if gerr != nil {
-		return nil, pathloc.Path{}, false, gerr
+		return nil, pathloc.Path{}, false, false, gerr
 	}
 	be := file.New()
 	entries, err := be.ListWithOptions(context.Background(), loc, localfs.ListOptions{
@@ -896,13 +900,20 @@ func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathlo
 		Gitignore:  gitMatcher,
 	})
 	if err != nil {
-		return nil, pathloc.Path{}, false, err
+		return nil, pathloc.Path{}, false, false, err
+	}
+	dotfilesHiddenActive := false
+	if !s.ShowHidden {
+		dotfilesHiddenActive, err = localfs.DirHasDotfileNames(host)
+		if err != nil {
+			return nil, pathloc.Path{}, false, false, err
+		}
 	}
 	listingLoc, err := pathloc.File(host)
 	if err != nil {
-		return nil, pathloc.Path{}, false, err
+		return nil, pathloc.Path{}, false, false, err
 	}
-	return entries, listingLoc, gitMatcher != nil, nil
+	return entries, listingLoc, gitMatcher != nil, dotfilesHiddenActive, nil
 }
 
 // ApplyListing commits backend entries into panel state (used after sync or async remote list).

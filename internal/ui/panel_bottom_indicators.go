@@ -15,12 +15,13 @@ import (
 type PanelBottomIndicatorID string
 
 const (
-	PanelBottomIndicatorSelections PanelBottomIndicatorID = "selections"
-	PanelBottomIndicatorGitignore  PanelBottomIndicatorID = "gitignore"
-	PanelBottomIndicatorStash      PanelBottomIndicatorID = "stash"
-	PanelBottomIndicatorSync       PanelBottomIndicatorID = "sync"
-	PanelBottomIndicatorQuickView  PanelBottomIndicatorID = "quick_view"
-	PanelBottomIndicatorOtherPanel PanelBottomIndicatorID = "other_panel"
+	PanelBottomIndicatorSelections     PanelBottomIndicatorID = "selections"
+	PanelBottomIndicatorDotfilesHidden PanelBottomIndicatorID = "dotfiles_hidden"
+	PanelBottomIndicatorGitignore      PanelBottomIndicatorID = "gitignore"
+	PanelBottomIndicatorStash          PanelBottomIndicatorID = "stash"
+	PanelBottomIndicatorSync           PanelBottomIndicatorID = "sync"
+	PanelBottomIndicatorQuickView      PanelBottomIndicatorID = "quick_view"
+	PanelBottomIndicatorOtherPanel     PanelBottomIndicatorID = "other_panel"
 )
 
 // PanelBottomEdge names which horizontal edge of the panel bottom row an indicator uses.
@@ -31,7 +32,7 @@ const (
 	// physical right on RightPanel). Used for cross-directory Selections.
 	PanelBottomEdgeStart PanelBottomEdge = iota
 	// PanelBottomEdgePhysicalLeft chains segments from the physical left interior column
-	// (Gitignore and trailing frame dashes on both panels).
+	// (dotfiles-hidden glyph, Gitignore, stash, and trailing frame dashes on both panels).
 	PanelBottomEdgePhysicalLeft
 	// PanelBottomEdgeEnd is the panel-relative end corner (sync, quick view, hidden other path).
 	PanelBottomEdgeEnd
@@ -65,8 +66,9 @@ type panelBottomIndicatorSpec struct {
 // panelBottomIndicatorRegistry is the single source of truth for segment order.
 var panelBottomIndicatorRegistry = []panelBottomIndicatorSpec{
 	{ID: PanelBottomIndicatorSelections, Edge: PanelBottomEdgeStart, Order: 0},
-	{ID: PanelBottomIndicatorGitignore, Edge: PanelBottomEdgePhysicalLeft, Order: 0},
-	{ID: PanelBottomIndicatorStash, Edge: PanelBottomEdgePhysicalLeft, Order: 1},
+	{ID: PanelBottomIndicatorDotfilesHidden, Edge: PanelBottomEdgePhysicalLeft, Order: 0},
+	{ID: PanelBottomIndicatorGitignore, Edge: PanelBottomEdgePhysicalLeft, Order: 1},
+	{ID: PanelBottomIndicatorStash, Edge: PanelBottomEdgePhysicalLeft, Order: 2},
 	{ID: PanelBottomIndicatorSync, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorQuickView, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorOtherPanel, Edge: PanelBottomEdgeEnd, Order: 1},
@@ -80,13 +82,13 @@ type panelBottomIndicatorSegment struct {
 	Style tcell.Style
 }
 
-// panelBottomIndicatorStyle resolves segment paint style. Selections and gitignore follow panel
-// title/frame chrome (active/inactive/blocked); other ids use theme panel.indicator.*.
+// panelBottomIndicatorStyle resolves segment paint style. Selections, dotfiles-hidden, and gitignore
+// follow panel title/frame chrome (active/inactive/blocked); other ids use theme panel.indicator.*.
 func panelBottomIndicatorStyle(ctx PanelBottomIndicatorContext, id PanelBottomIndicatorID) tcell.Style {
 	switch id {
 	case PanelBottomIndicatorSelections:
 		return ctx.TitleStyle
-	case PanelBottomIndicatorGitignore:
+	case PanelBottomIndicatorGitignore, PanelBottomIndicatorDotfilesHidden:
 		return ctx.BorderStyle
 	default:
 		return ctx.Styles.PanelBottomIndicator(string(id), ctx.FileListActive, ctx.ChromeBlocked)
@@ -98,6 +100,8 @@ func panelBottomIndicatorVisible(id PanelBottomIndicatorID, ctx PanelBottomIndic
 	switch id {
 	case PanelBottomIndicatorSelections:
 		return ctx.SelectionsBottomHint
+	case PanelBottomIndicatorDotfilesHidden:
+		return !ctx.State.ShowHidden && ctx.State.DotfilesHiddenActive
 	case PanelBottomIndicatorGitignore:
 		return ctx.State.GitignoreActive
 	case PanelBottomIndicatorStash:
@@ -129,6 +133,8 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 	switch id {
 	case PanelBottomIndicatorSelections:
 		return panelSelectionsChromePadded
+	case PanelBottomIndicatorDotfilesHidden:
+		return panelDotfilesHiddenChromePadded(ctx.Styles)
 	case PanelBottomIndicatorGitignore:
 		return panelGitignoreChromePadded
 	case PanelBottomIndicatorStash:
@@ -151,6 +157,10 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 	default:
 		return ""
 	}
+}
+
+func panelDotfilesHiddenChromePadded(styles theme.Theme) string {
+	return " " + styles.SymbolHiddenDotfiles() + " "
 }
 
 // panelBottomPhysicalLeftChainStartX is the first column for the physical-left chain after any

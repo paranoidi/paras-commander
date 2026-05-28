@@ -7,9 +7,18 @@ import (
 	"testing"
 )
 
+func TestOriginPathPickerSource(t *testing.T) {
+	if got := OriginFZFMarks.PathPickerSource(); got != "fzf-marks" {
+		t.Fatalf("FZF = %q", got)
+	}
+	if got := OriginGTK.PathPickerSource(); got != "gnome" {
+		t.Fatalf("GTK = %q", got)
+	}
+}
+
 func TestParseLine(t *testing.T) {
 	m, ok := ParseLine("proj : /home/user/proj")
-	if !ok || m.Name != "proj" || m.Path != "/home/user/proj" || m.Line != "proj : /home/user/proj" {
+	if !ok || m.Name != "proj" || m.Path != "/home/user/proj" || m.Line != "proj : /home/user/proj" || m.Origin != OriginFZFMarks {
 		t.Fatalf("got %#v ok=%v", m, ok)
 	}
 	_, ok = ParseLine("")
@@ -37,7 +46,7 @@ func TestParseLine(t *testing.T) {
 		t.Fatalf("CRLF: got %#v", m)
 	}
 	m, ok = ParseLine(" : /home/user/unnamed")
-	if !ok || m.Name != "" || m.Path != "/home/user/unnamed" || m.Line != " : /home/user/unnamed" {
+	if !ok || m.Name != "" || m.Path != "/home/user/unnamed" || m.Line != " : /home/user/unnamed" || m.Origin != OriginFZFMarks {
 		t.Fatalf("empty label: got %#v ok=%v", m, ok)
 	}
 	m, ok = ParseLine("  spaced : /tmp/z  ")

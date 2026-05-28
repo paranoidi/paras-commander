@@ -171,7 +171,7 @@ const jobsSubpanelMinFrameH = 4 // activity panel: title row + bottom border + a
 const jobsDetailChromeRows = 2
 
 // jobsConflictPanelMinFrameH is the minimum frame height for the file-exists conflict panel above Details.
-const jobsConflictPanelMinFrameH = 14
+const jobsConflictPanelMinFrameH = 17
 
 // SplitJobsRightPanels splits the right column into optional conflict (top), detail, then activity.
 // When showConflict is false, conflict has zero height and detail+activity use the full column.

@@ -11,11 +11,12 @@ import (
 )
 
 type remotePanelLoadPayload struct {
-	panelID int
-	gen     uint64
-	req     panel.RemoteLoadRequest
-	entries []fsbackend.Entry
-	err     error
+	panelID              int
+	gen                  uint64
+	req                  panel.RemoteLoadRequest
+	entries              []fsbackend.Entry
+	dotfilesHiddenActive bool
+	err                  error
 }
 
 func (a *App) wireRemotePanelLoaders() {
@@ -30,13 +31,14 @@ func (a *App) remoteLoadScheduler(panelID int) panel.RemoteLoadScheduler {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.config.SFTP.ListTimeoutSecs)*time.Second)
 			defer cancel()
-			entries, err := panel.FetchRemoteListing(ctx, req.Loc, showHidden)
+			entries, dotfilesHiddenActive, err := panel.FetchRemoteListing(ctx, req.Loc, showHidden)
 			_ = a.screen.PostEvent(tcell.NewEventInterrupt(remotePanelLoadPayload{
-				panelID: panelID,
-				gen:     gen,
-				req:     req,
-				entries: entries,
-				err:     err,
+				panelID:              panelID,
+				gen:                  gen,
+				req:                  req,
+				entries:              entries,
+				dotfilesHiddenActive: dotfilesHiddenActive,
+				err:                  err,
 			}))
 		}()
 		return true
@@ -56,6 +58,7 @@ func (a *App) applyRemotePanelLoad(p remotePanelLoadPayload) bool {
 		a.setErrorMessage("Remote list failed", p.err)
 		return true
 	}
+	pan.DotfilesHiddenActive = p.dotfilesHiddenActive
 	if err := pan.ApplyListing(p.req.Loc, p.entries, p.req.SelectedName, p.req.ViewportRows, p.req.IndexFallback, p.req.CenterRecalledCursor); err != nil {
 		if p.req.Rollback != nil {
 			p.req.Rollback()

@@ -19,10 +19,14 @@ func TestDrawPathPickerDialogSmoke(t *testing.T) {
 	styles := theme.Default()
 	layout := geom.CalculateLayout(80, 24, true, geom.PanelWidthSplit{})
 	state := PathPickerState{
-		Open:   true,
-		Title:  "Bookmarks",
-		Query:  "pro",
-		Items:  []PathPickerItem{{Line: "proj : /tmp/x", Path: "/tmp/x"}},
+		Open:  true,
+		Title: "Bookmarks",
+		Query: "pro",
+		Items: []PathPickerItem{{
+			Source: "fzf-marks",
+			Name:   "proj",
+			Path:   "/tmp/x",
+		}},
 		Ranked: []int{0},
 		MatchRanges: [][]search.Range{
 			{{Start: 0, End: 1}},

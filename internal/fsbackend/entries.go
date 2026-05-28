@@ -36,6 +36,16 @@ func localTypeFromBackend(t EntryType) localfs.EntryType {
 	}
 }
 
+// HasDotfileNames reports whether any entry name is dot-prefixed.
+func HasDotfileNames(entries []Entry) bool {
+	for _, e := range entries {
+		if len(e.Name) > 0 && e.Name[0] == '.' {
+			return true
+		}
+	}
+	return false
+}
+
 // FilterHidden drops dotfile names when showHidden is false.
 func FilterHidden(entries []Entry, showHidden bool) []Entry {
 	if showHidden {
