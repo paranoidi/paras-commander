@@ -246,6 +246,13 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: []string{"C-M-d"},
 			Keywords:    []string{"cancel", "stop"},
 		},
+		{
+			ID:          ActionPanelDiskUsageClear,
+			Title:       "Clear disk usage data",
+			Section:     "Disk usage",
+			DefaultKeys: []string{"M-d"},
+			Keywords:    []string{"reset", "forget", "cache"},
+		},
 
 		// ── Selection ──
 		{
@@ -414,7 +421,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFileMkdirOpenInOther,
-			Title:        "Create directory in other panel",
+			Title:        "Create directory and open in other",
 			Section:      "File operations",
 			DefaultKeys:  []string{"S-F7"},
 			PreferredKey: "S-F7",

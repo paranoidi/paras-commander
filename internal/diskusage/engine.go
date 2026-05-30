@@ -257,6 +257,20 @@ func (e *Engine) DiskScanExcluded(absPath string, descendIntoMountPoints bool, l
 	return ScanExcluded(absPath, descendIntoMountPoints, listingDev, listingDevValid, gi)
 }
 
+// ClearCache aborts in-flight scans and removes all cached subtree sizes.
+func (e *Engine) ClearCache() {
+	if e == nil {
+		return
+	}
+	e.Abort()
+	e.mu.Lock()
+	for k := range e.cache {
+		delete(e.cache, k)
+	}
+	e.mu.Unlock()
+	e.poke()
+}
+
 // Abort invalidates in-flight scan work; results from walks already running are dropped if they finish after this bump.
 func (e *Engine) Abort() {
 	e.gen.Add(1)

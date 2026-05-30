@@ -237,6 +237,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return false, true
 	}
+	if resolvedAction == keymap.ActionPanelDiskUsageClear {
+		a.clearAllDiskUsageData()
+		a.render()
+		return false, true
+	}
 
 	// Global show-help (F1 by default). Closes menu or quick filter first.
 	if resolvedAction == keymap.ActionAppShowHelp && !a.model.HelpView.Open {
@@ -490,6 +495,9 @@ func (a *App) dispatchActionLikeKeyboardShortcut(actionID string) bool {
 	switch actionID {
 	case keymap.ActionPanelDiskUsageAbortAll:
 		a.abortAllDiskUsageScans()
+		return false
+	case keymap.ActionPanelDiskUsageClear:
+		a.clearAllDiskUsageData()
 		return false
 	case keymap.ActionCopy:
 		a.openCopyDialog()

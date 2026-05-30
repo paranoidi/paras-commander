@@ -5787,6 +5787,7 @@ func TestHandlePanelDirChangedRightDoesNotInvalidateLeftIdleTimer(t *testing.T) 
 	left.DiskUsageIdleSortActivated = true
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
+	app.setDiskUsageScanScope(leftRoot, []string{filepath.Clean(alpha)})
 
 	app.diskIdleNavPath[ui.LeftPanel] = leftRoot
 	app.armIdleDiskSortTimer(ui.LeftPanel)
@@ -5829,6 +5830,7 @@ func TestHandlePanelDirChangedLeftClearsIdleTimerOnChdir(t *testing.T) {
 	left.DiskUsageIdleSortActivated = true
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
+	app.setDiskUsageScanScope(leftRoot, []string{filepath.Clean(alpha)})
 
 	app.diskIdleNavPath[ui.LeftPanel] = leftRoot
 	app.armIdleDiskSortTimer(ui.LeftPanel)
@@ -5894,11 +5896,115 @@ func TestHandlePanelDirChangedAppliesDiskSortWhenUsageSortEnabledWithoutActivate
 	left.DiskUsageIdleSortActivated = false // must not deadlock idle disk ordering
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
+	app.setDiskUsageScanScope(left.PathString(), []string{filepath.Join(left.PathString(), "x")})
 
 	app.handlePanelDirChanged(ui.LeftPanel)
 
 	if !left.IdleDiskTotalsSort {
 		t.Fatal("expected IdleDiskTotalsSort when DiskUsageIdleSizeSort is on and listing is fully cached")
+	}
+}
+
+func TestNavigateOutsideDiskUsageScanScopeClearsIdleSort(t *testing.T) {
+	root := t.TempDir()
+	scanned := filepath.Join(root, "scanned")
+	other := filepath.Join(root, "other")
+	for _, p := range []string{scanned, other} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeFile(t, filepath.Join(scanned, "in-scan.dat"))
+	writeFile(t, filepath.Join(other, "out-scan.dat"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	app.setDiskUsageScanScope(root, []string{scanned})
+	app.model.DiskUsageShown = true
+	app.model.DiskUsagePanelID = ui.LeftPanel
+
+	left.DiskSorter = app.diskUsage.Size
+	left.IdleDiskTotalsSort = true
+	left.ApplySort()
+
+	vr := app.panelViewportRows(ui.LeftPanel)
+	if err := left.NavigateTo(other, "", vr); err != nil {
+		t.Fatalf("NavigateTo other: %v", err)
+	}
+	app.handlePanelDirChanged(ui.LeftPanel)
+
+	if left.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort should be false outside scan scope")
+	}
+	if app.listingInDiskUsageScanScope(other) {
+		t.Fatal("other directory should be outside scan scope")
+	}
+
+	if err := left.NavigateTo(scanned, "", vr); err != nil {
+		t.Fatalf("NavigateTo scanned: %v", err)
+	}
+	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	app.handlePanelDirChanged(ui.LeftPanel)
+	if !left.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort should apply inside scan scope when fully cached")
+	}
+	if !app.listingInDiskUsageScanScope(scanned) {
+		t.Fatal("scanned subtree should be in scope")
+	}
+}
+
+func TestDiskUsageScanScopeAppliesOnEitherPanel(t *testing.T) {
+	root := t.TempDir()
+	scanned := filepath.Join(root, "scanned")
+	if err := os.Mkdir(scanned, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(scanned, "a.dat"))
+	writeFile(t, filepath.Join(scanned, "b.dat"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+
+	right := app.panelByID(ui.RightPanel)
+	right.Sort.DiskUsageIdleSizeSort = true
+	vrRight := app.panelViewportRows(ui.RightPanel)
+	if err := right.NavigateTo(scanned, "", vrRight); err != nil {
+		t.Fatalf("NavigateTo scanned on right: %v", err)
+	}
+	app.handlePanelDirChanged(ui.RightPanel)
+
+	if !app.listingInDiskUsageScanScope(scanned) {
+		t.Fatal("scanned path should be in global scan scope")
+	}
+	if !right.IdleDiskTotalsSort {
+		t.Fatal("right panel should idle-sort by disk totals inside scan scope")
+	}
+	if !app.model.DiskUsageShown ||
+		!panel.ListingPathInDiskUsageScanScope(right.PathString(), app.model.DiskUsageScanOrigin, app.model.DiskUsageScanRoots) {
+		t.Fatal("right panel listing should be eligible for disk usage display inside scan scope")
 	}
 }
 
@@ -5918,6 +6024,56 @@ func TestApplyIdleDiskSortIgnoresStaleEpoch(t *testing.T) {
 
 	if left.IdleDiskTotalsSort {
 		t.Fatal("stale epoch must not apply idle disk sort")
+	}
+}
+
+func TestClearAllDiskUsageData(t *testing.T) {
+	root := t.TempDir()
+	scanned := filepath.Join(root, "scanned")
+	if err := os.Mkdir(scanned, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(scanned, "a.dat"))
+	writeFile(t, filepath.Join(scanned, "b.dat"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	if !app.model.DiskUsageShown {
+		t.Fatal("expected disk usage to be shown after scan")
+	}
+	if _, ok := app.diskUsage.Size(scanned); !ok {
+		t.Fatal("expected cached size for scanned directory")
+	}
+
+	left.IdleDiskTotalsSort = true
+	app.clearAllDiskUsageData()
+
+	if app.model.DiskUsageShown {
+		t.Fatal("DiskUsageShown should be false after clear")
+	}
+	if app.model.DiskUsageScanOrigin != "" || len(app.model.DiskUsageScanRoots) > 0 {
+		t.Fatal("scan scope should be cleared")
+	}
+	if left.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort should be false after clear")
+	}
+	if _, ok := app.diskUsage.Size(scanned); ok {
+		t.Fatal("engine cache should be empty after clear")
+	}
+	if app.model.Message != "Disk usage data cleared" {
+		t.Fatalf("message = %q, want Disk usage data cleared", app.model.Message)
 	}
 }
 

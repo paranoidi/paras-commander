@@ -436,6 +436,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	app.model.Left.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.model.Right.SuppressHeavyPathProbes = suppressHeavyPathProbes
+	app.wireDiskUsageScanScopeChecks()
 	app.jobsCtrl = jobsctrl.New(jobsctrl.Deps{
 		Host:     jobsHost{appShellHost: appShellHost{app: app}},
 		Screen:   screen,

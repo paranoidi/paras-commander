@@ -44,6 +44,7 @@ const (
 	ActionBookmarkDelete             = "bookmark.delete"
 	ActionPanelDiskUsageScan         = "panel.disk-usage-scan"
 	ActionPanelDiskUsageAbortAll     = "panel.disk-usage-abort-all"
+	ActionPanelDiskUsageClear        = "panel.disk-usage-clear"
 	ActionPanelFocusSelections       = "panel.focus-selections"
 	ActionPanelToggleHideInactive    = "panel.toggle-hide-inactive"
 	ActionPanelExternalBrowser       = "panel.external-browser"
@@ -190,6 +191,7 @@ var KnownActions = map[string]struct{}{
 	ActionBookmarkDelete:             {},
 	ActionPanelDiskUsageScan:         {},
 	ActionPanelDiskUsageAbortAll:     {},
+	ActionPanelDiskUsageClear:        {},
 	ActionPanelFocusSelections:       {},
 	ActionPanelToggleHideInactive:    {},
 	ActionPanelExternalBrowser:       {},

@@ -10,7 +10,7 @@ Once new feature is implemented update docs/features-done.md
 
 Leave compiled binary after running tests.
 
-When user request shortcut to be added it needs to be configurable in the configuration file (toml).
+When user request shortcut to be added it needs to be configurable in the configuration file (toml). Check if requested shortcut works in terminal. Many shortcut combinations do not.
 
 When new colors are being added be sure to update any existing themes to use these new colors (including `dialog.input.active.placeholder` / `dialog.input.inactive.placeholder` for dimmed suggested input text when applicable).
 

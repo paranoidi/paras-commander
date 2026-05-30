@@ -199,6 +199,31 @@ func TestAbortClearsQueuedJobs(t *testing.T) {
 	}
 }
 
+func TestClearCacheRemovesSizes(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	f := filepath.Join(root, "file.dat")
+	if err := os.WriteFile(f, []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	e := New()
+	e.StartScanFromListing([]string{f}, nil, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool {
+		_, ok := e.Size(f)
+		return ok
+	}, 5*time.Second, "file size not cached")
+
+	e.ClearCache()
+	if _, ok := e.Size(f); ok {
+		t.Fatal("size should be gone after ClearCache")
+	}
+	if e.DiskScanBusy() {
+		t.Fatal("ClearCache should abort busy scans")
+	}
+}
+
 func TestPendingForPanelOtherPanelNotTinted(t *testing.T) {
 	t.Parallel()
 

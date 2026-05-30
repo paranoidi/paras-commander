@@ -122,6 +122,7 @@ func fullscreenFilePreviewKeyboardDispatchAllowed(id string) bool {
 		keymap.ActionUIOpenTheme,
 		keymap.ActionUIOpenConfig,
 		keymap.ActionPanelDiskUsageAbortAll,
+		keymap.ActionPanelDiskUsageClear,
 		keymap.ActionJobsOpen,
 		keymap.ActionCommandsOpen,
 		keymap.ActionMessagesOpen:

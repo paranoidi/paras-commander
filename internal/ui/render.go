@@ -74,9 +74,12 @@ type Model struct {
 	UserHomeDir string
 	// DiskUsageShown enables proportional disk-usage bars after the user starts a scan.
 	DiskUsageShown bool
-	// DiskUsagePanelID stores the panel (LeftPanel/RightPanel) that initiated the current disk usage scan.
-	// Only this panel renders disk-usage bars.
+	// DiskUsagePanelID stores the panel (LeftPanel/RightPanel) that initiated the current disk usage scan (pending tint only).
 	DiskUsagePanelID int
+	// DiskUsageScanOrigin / DiskUsageScanRoots define the active scan scope (origin listing + queued child roots).
+	// Bars and idle disk-total sort apply on either panel while its cwd is in this scope.
+	DiskUsageScanOrigin string
+	DiskUsageScanRoots  []string
 	// DiskUsage provides cached sizes (nil disables painting even when DiskUsageShown is true).
 	DiskUsage DiskUsagePainter
 	// DiskUsageDescendIntoMountPoints mirrors config disk_usage_descend_into_mount_points (cross-mount subtree scans).
@@ -164,6 +167,23 @@ func (m Model) SyncDriverPanelID() int {
 		return -1
 	}
 	return m.SyncFollowPanel
+}
+
+// showPanelDiskUsage is true when proportional disk-usage bars apply to panelID's listing.
+func (m Model) showPanelDiskUsage(panelID int) bool {
+	if !m.DiskUsageShown || m.DiskUsage == nil {
+		return false
+	}
+	listingPath := ""
+	switch panelID {
+	case LeftPanel:
+		listingPath = m.Left.PathString()
+	case RightPanel:
+		listingPath = m.Right.PathString()
+	default:
+		return false
+	}
+	return panel.ListingPathInDiskUsageScanScope(listingPath, m.DiskUsageScanOrigin, m.DiskUsageScanRoots)
 }
 
 // QuickViewDriverPanelID returns the LeftPanel/RightPanel id that shows the quick-view
@@ -314,7 +334,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused,
 				model.QuickViewEnabled, model.Left.PathString(), model.UserHomeDir)
 		} else if layout.Left.Width > 0 {
-			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == LeftPanel, LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, otherPanelPath)
+			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, otherPanelPath)
 		}
 		if layout.Left.Width > 0 && leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
@@ -325,7 +345,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
 				model.QuickViewEnabled, model.Right.PathString(), model.UserHomeDir)
 		} else if layout.Right.Width > 0 {
-			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.DiskUsageShown && model.DiskUsagePanelID == RightPanel, RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, otherPanelPath)
+			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, otherPanelPath)
 		}
 		if layout.Right.Width > 0 && rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
