@@ -10,6 +10,11 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
+type footerHintLayout struct {
+	primary    string
+	showPrefix bool
+}
+
 func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu.FunctionKey) {
 	keyRegionWidth := rect.Width
 
@@ -25,15 +30,19 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 	}
 	n := len(visible)
 	if n > 0 && keyRegionWidth > 0 {
-		hints, sumW := footerHintStringsFittingWidth(visible, keyRegionWidth)
+		layouts, sumW := footerHintStringsFittingWidth(visible, keyRegionWidth)
 		remaining := keyRegionWidth - sumW
 		x := rect.X
 		gapsBetween := n - 1
 		for i, item := range visible {
+			layout := layouts[i]
 			keyRunes := utf8.RuneCountInString(item.KeyLabel)
-			hintPrimary := hints[i]
-			prefixRunes := utf8.RuneCountInString(item.HintShiftPrefix)
-			primaryRunes := utf8.RuneCountInString(hintPrimary)
+			prefix := ""
+			if layout.showPrefix {
+				prefix = item.HintShiftPrefix
+			}
+			prefixRunes := utf8.RuneCountInString(prefix)
+			primaryRunes := utf8.RuneCountInString(layout.primary)
 			hintRunes := prefixRunes + primaryRunes
 			primitive.TextOverlay(screen, x, rect.Y, keyRunes, item.KeyLabel, styles.FooterKey)
 			x += keyRunes
@@ -41,11 +50,11 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 				screen.SetContent(x, rect.Y, ' ', nil, styles.FooterLabel)
 				x++
 				if prefixRunes > 0 {
-					primitive.TextOverlay(screen, x, rect.Y, prefixRunes, item.HintShiftPrefix, styles.FooterLabelShift)
+					primitive.TextOverlay(screen, x, rect.Y, prefixRunes, prefix, styles.FooterLabelShift)
 					x += prefixRunes
 				}
 				if primaryRunes > 0 {
-					primitive.TextOverlay(screen, x, rect.Y, primaryRunes, hintPrimary, styles.FooterLabel)
+					primitive.TextOverlay(screen, x, rect.Y, primaryRunes, layout.primary, styles.FooterLabel)
 					x += primaryRunes
 				}
 			}
@@ -60,65 +69,73 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 	}
 }
 
-// footerHintStringsFittingWidth returns per-item primary hint strings (possibly truncated) and total width
-// (key + space + hint for each item). Extra horizontal space is for gaps between items, not padding
-// inside columns. maxHintWidth -1 means do not truncate.
-func footerHintStringsFittingWidth(visible []menu.FunctionKey, keyRegionWidth int) ([]string, int) {
-	_, sumFull := footerMeasureWithMaxHint(visible, -1)
-	if sumFull <= keyRegionWidth {
-		return footerMeasureWithMaxHint(visible, -1)
+// footerHintStringsFittingWidth returns per-item hint layouts (possibly without shift
+// prefixes and/or truncated primary text) and total width (key + space + hint for each
+// item). Extra horizontal space is for gaps between items, not padding inside columns.
+func footerHintStringsFittingWidth(visible []menu.FunctionKey, keyRegionWidth int) ([]footerHintLayout, int) {
+	layouts, sum := footerMeasureLayouts(visible, true, -1)
+	if sum <= keyRegionWidth {
+		return layouts, sum
 	}
-	hi := maxFooterHintRunes(visible)
+	layouts, sum = footerMeasureLayouts(visible, false, -1)
+	if sum <= keyRegionWidth {
+		return layouts, sum
+	}
+	hi := maxFooterPrimaryRunes(visible)
 	lo := 0
 	for lo < hi {
 		mid := (lo + hi + 1) / 2
-		_, s := footerMeasureWithMaxHint(visible, mid)
+		_, s := footerMeasureLayouts(visible, false, mid)
 		if s <= keyRegionWidth {
 			lo = mid
 		} else {
 			hi = mid - 1
 		}
 	}
-	return footerMeasureWithMaxHint(visible, lo)
+	return footerMeasureLayouts(visible, false, lo)
 }
 
-func maxFooterHintRunes(visible []menu.FunctionKey) int {
+func maxFooterPrimaryRunes(visible []menu.FunctionKey) int {
 	m := 0
 	for _, v := range visible {
-		if n := utf8.RuneCountInString(v.FullHint()); n > m {
+		if n := utf8.RuneCountInString(v.Hint); n > m {
 			m = n
 		}
 	}
 	return m
 }
 
-func footerMeasureWithMaxHint(visible []menu.FunctionKey, maxHintRunes int) ([]string, int) {
-	hints := make([]string, len(visible))
+func footerMeasureLayouts(visible []menu.FunctionKey, showPrefix bool, maxPrimaryRunes int) ([]footerHintLayout, int) {
+	layouts := make([]footerHintLayout, len(visible))
 	sum := 0
 	for i, item := range visible {
-		keyRunes := utf8.RuneCountInString(item.KeyLabel)
-		hintPrimary := footerHintPrimaryTruncated(item, maxHintRunes)
-		hintRunes := utf8.RuneCountInString(item.HintShiftPrefix) + utf8.RuneCountInString(hintPrimary)
-		innerSpace := 0
-		if hintRunes > 0 {
-			innerSpace = 1
-		}
-		hints[i] = hintPrimary
-		sum += keyRunes + innerSpace + hintRunes
+		layout := footerHintLayoutForItem(item, showPrefix, maxPrimaryRunes)
+		layouts[i] = layout
+		sum += footerItemWidth(item, layout)
 	}
-	return hints, sum
+	return layouts, sum
 }
 
-func footerHintPrimaryTruncated(item menu.FunctionKey, maxHintRunes int) string {
-	prefix := item.HintShiftPrefix
+func footerHintLayoutForItem(item menu.FunctionKey, showPrefix bool, maxPrimaryRunes int) footerHintLayout {
 	primary := item.Hint
-	full := prefix + primary
-	if maxHintRunes < 0 || utf8.RuneCountInString(full) <= maxHintRunes {
-		return primary
+	if maxPrimaryRunes >= 0 && utf8.RuneCountInString(primary) > maxPrimaryRunes {
+		primary = primitive.TruncateRight(primary, maxPrimaryRunes)
 	}
-	prefixRunes := utf8.RuneCountInString(prefix)
-	if maxHintRunes <= prefixRunes {
-		return ""
+	return footerHintLayout{
+		primary:    primary,
+		showPrefix: showPrefix && item.HintShiftPrefix != "",
 	}
-	return primitive.TruncateRight(primary, maxHintRunes-prefixRunes)
+}
+
+func footerItemWidth(item menu.FunctionKey, layout footerHintLayout) int {
+	keyRunes := utf8.RuneCountInString(item.KeyLabel)
+	hintRunes := utf8.RuneCountInString(layout.primary)
+	if layout.showPrefix {
+		hintRunes += utf8.RuneCountInString(item.HintShiftPrefix)
+	}
+	innerSpace := 0
+	if hintRunes > 0 {
+		innerSpace = 1
+	}
+	return keyRunes + innerSpace + hintRunes
 }

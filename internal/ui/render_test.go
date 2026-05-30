@@ -800,8 +800,11 @@ func TestDrawFooterShowsViewEditAndOmitsUnusedFKeys(t *testing.T) {
 	}
 
 	line := tcelltest.TextAt(screen, 0, 0, 80)
-	if !strings.Contains(line, "Quick") || !strings.Contains(line, "Edit") {
-		t.Fatalf("footer = %q, want F3 QuickView and F4 Edit placeholders", line)
+	if !strings.Contains(line, "View") || !strings.Contains(line, "Edit") {
+		t.Fatalf("footer = %q, want F3 View and F4 Edit placeholders", line)
+	}
+	if strings.Contains(line, "Quick") || strings.Contains(line, "EditUserCmd") {
+		t.Fatalf("footer = %q, shift prefixes should be dropped before ~ truncation at this width", line)
 	}
 	if strings.Contains(line, "F11") || strings.Contains(line, "F12") {
 		t.Fatalf("footer should not list empty F11/F12 slots, got %q", line)
@@ -814,10 +817,10 @@ func TestDrawFooterShiftHintPrefixUsesShiftLabelStyle(t *testing.T) {
 		t.Fatalf("Init() error = %v", err)
 	}
 	defer screen.Fini()
-	screen.SetSize(80, 12)
+	screen.SetSize(120, 12)
 
 	styles := theme.Default()
-	drawFooter(screen, Rect{X: 0, Y: 0, Width: 80, Height: 1}, styles, []menu.FunctionKey{
+	drawFooter(screen, Rect{X: 0, Y: 0, Width: 120, Height: 1}, styles, []menu.FunctionKey{
 		{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", Hint: "View"},
 	})
 
@@ -837,16 +840,29 @@ func TestDrawFooterShiftHintPrefixUsesShiftLabelStyle(t *testing.T) {
 	}
 }
 
-func TestFooterHintPrimaryTruncatedPreservesShiftPrefix(t *testing.T) {
-	item := menu.FunctionKey{HintShiftPrefix: "Open", Hint: "Mkdir"}
-	if got := footerHintPrimaryTruncated(item, -1); got != "Mkdir" {
-		t.Fatalf("no limit: got %q, want Mkdir", got)
+func TestFooterHintLayoutsDropPrefixBeforeTruncating(t *testing.T) {
+	item := menu.FunctionKey{KeyLabel: "F7", HintShiftPrefix: "Open", Hint: "Mkdir"}
+	visible := []menu.FunctionKey{item}
+
+	layouts, sum := footerHintStringsFittingWidth(visible, 12)
+	if sum != 12 || !layouts[0].showPrefix || layouts[0].primary != "Mkdir" {
+		t.Fatalf("wide: layout=%+v sum=%d, want prefix+Mkdir width 12", layouts[0], sum)
 	}
-	if got := footerHintPrimaryTruncated(item, 6); got != "M~" {
-		t.Fatalf("truncate primary only: got %q, want M~", got)
+
+	layouts, _ = footerHintStringsFittingWidth(visible, 8)
+	if layouts[0].showPrefix {
+		t.Fatalf("medium: want prefix dropped before truncation")
 	}
-	if got := footerHintPrimaryTruncated(item, 4); got != "" {
-		t.Fatalf("prefix only: got %q, want empty primary", got)
+	if layouts[0].primary != "Mkdir" {
+		t.Fatalf("medium: got primary %q, want Mkdir", layouts[0].primary)
+	}
+
+	layouts, _ = footerHintStringsFittingWidth(visible, 6)
+	if layouts[0].showPrefix {
+		t.Fatalf("narrow: want prefix dropped")
+	}
+	if layouts[0].primary != "Mk~" {
+		t.Fatalf("narrow: got primary %q, want Mk~", layouts[0].primary)
 	}
 }
 
