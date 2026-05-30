@@ -180,7 +180,11 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 		}
 	}
 
-	if nextAction != "" && h.TryDispatch(nextAction) {
+	skipJobsClose := nextAction == keymap.ActionJobsClose &&
+		event.Key() == tcell.KeyLeft &&
+		h.jobsViewConflictVisible() &&
+		h.model.JobsView.FocusPane == 1
+	if nextAction != "" && !skipJobsClose && h.TryDispatch(nextAction) {
 		return false
 	}
 	if nextAction != "" && h.host.TryDispatchAuxiliaryScreens(nextAction) {

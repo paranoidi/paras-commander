@@ -164,6 +164,31 @@ func TestDefaultJobsOverlayMapsF8ToClearFinished(t *testing.T) {
 	}
 }
 
+func TestDefaultOverlayMapsLeftToCloseView(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	left := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone)
+	cases := []struct {
+		name string
+		m    *Map
+		want string
+	}{
+		{"jobs", bundle.Jobs, ActionJobsClose},
+		{"commands", bundle.Commands, ActionCommandsClose},
+		{"messages", bundle.Messages, ActionMessagesClose},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			id, ok := tc.m.Lookup(left)
+			if !ok || id != tc.want {
+				t.Fatalf("overlay left = %q %v, want %q", id, ok, tc.want)
+			}
+		})
+	}
+}
+
 func TestDefaultMessagesOverlayMapsF8ToClear(t *testing.T) {
 	bundle, err := DefaultBundle()
 	if err != nil {

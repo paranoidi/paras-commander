@@ -935,6 +935,15 @@ func TestActiveFooterKeysBrowserShowsF7JobsViewUsesJobsLegend(t *testing.T) {
 }
 
 func TestJobsViewEscClosesViewDoesNotQuit(t *testing.T) {
+	testJobsViewDismissKeyClosesViewDoesNotQuit(t, tcell.KeyEsc)
+}
+
+func TestJobsViewLeftClosesViewDoesNotQuit(t *testing.T) {
+	testJobsViewDismissKeyClosesViewDoesNotQuit(t, tcell.KeyLeft)
+}
+
+func testJobsViewDismissKeyClosesViewDoesNotQuit(t *testing.T, key tcell.Key) {
+	t.Helper()
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
@@ -944,12 +953,44 @@ func TestJobsViewEscClosesViewDoesNotQuit(t *testing.T) {
 		t.Fatalf("ViewMode = %v, want ViewJobs", app.model.ViewMode)
 	}
 
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(key, 0, tcell.ModNone))
 	if quit {
-		t.Fatal("Esc in jobs view must not quit the application")
+		t.Fatalf("%v in jobs view must not quit the application", key)
 	}
 	if app.model.ViewMode != ui.ViewBrowser {
-		t.Fatalf("ViewMode = %v, want browser after Esc", app.model.ViewMode)
+		t.Fatalf("ViewMode = %v, want browser after %v", app.model.ViewMode, key)
+	}
+}
+
+func TestMessagesViewLeftClosesView(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	app.openMessagesView()
+	if app.model.ViewMode != ui.ViewMessages {
+		t.Fatalf("ViewMode = %v, want ViewMessages", app.model.ViewMode)
+	}
+
+	_, _ = app.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want browser after Left", app.model.ViewMode)
+	}
+}
+
+func TestCommandsViewLeftClosesView(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	app.openCommandsView()
+	if app.model.ViewMode != ui.ViewCommands {
+		t.Fatalf("ViewMode = %v, want ViewCommands", app.model.ViewMode)
+	}
+
+	_, _ = app.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want browser after Left", app.model.ViewMode)
 	}
 }
 

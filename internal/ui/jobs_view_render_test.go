@@ -102,6 +102,62 @@ func TestJobDetailLinesOmitDestinationForDelete(t *testing.T) {
 	}
 }
 
+func TestJobDetailProgressLineDeleteOmitsByteRatio(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	delNoBytes := JobEntry{
+		ID:         "del",
+		Type:       string(jobs.TypeDelete),
+		Status:     "running",
+		DoneFiles:  2,
+		TotalFiles: 5,
+	}
+	line := jobDetailProgressLine(delNoBytes)
+	if strings.Contains(line, "bytes") || strings.Contains(line, "deleted") {
+		t.Fatalf("delete with no DoneBytes should not show byte suffix; got %q", line)
+	}
+	if !strings.Contains(line, "2 / 5 items") {
+		t.Fatalf("expected item progress; got %q", line)
+	}
+
+	delWithBytes := JobEntry{
+		ID:         "del2",
+		Type:       string(jobs.TypeDelete),
+		Status:     "completed",
+		DoneFiles:  5,
+		TotalFiles: 5,
+		DoneBytes:  19_000_000_000,
+		TotalBytes: 0,
+	}
+	line = jobDetailProgressLine(delWithBytes)
+	if strings.Contains(line, "/ 0") {
+		t.Fatalf("delete must not show zero total bytes; got %q", line)
+	}
+	if !strings.Contains(line, "deleted") {
+		t.Fatalf("expected deleted byte label; got %q", line)
+	}
+
+	copyLine := jobDetailProgressLine(JobEntry{
+		Type:       string(jobs.TypeCopy),
+		Status:     "running",
+		DoneFiles:  1,
+		TotalFiles: 10,
+		DoneBytes:  500,
+		TotalBytes: 1000,
+	})
+	if !strings.Contains(copyLine, "500 / 1000 bytes") {
+		t.Fatalf("copy should keep byte ratio; got %q", copyLine)
+	}
+
+	lines := detailStaticLines(delWithBytes, now, 80, "", false)
+	for _, l := range lines {
+		if strings.Contains(l, "/ 0") && strings.Contains(l, "bytes") {
+			t.Fatalf("detailStaticLines must not show / 0 bytes for delete; got %q", l)
+		}
+	}
+}
+
 func TestJobDetailLineCountOmitsThroughputGraphWhenDisabled(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)

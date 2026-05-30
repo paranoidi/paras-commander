@@ -428,6 +428,30 @@ func detailDurationOrETALine(j JobEntry, now time.Time) string {
 	return fmt.Sprintf(" ETA:         %s", formatJobETAFull(j, now))
 }
 
+// jobDetailProgressLine formats the Details panel progress row. Byte totals are shown
+// only when TotalBytes is known (copy/move scan). Delete jobs omit the ratio and may
+// show cumulative deleted size instead.
+func jobDetailProgressLine(j JobEntry) string {
+	tfLabel := fmt.Sprintf("%d", j.TotalFiles)
+	if j.TotalFiles <= 0 {
+		tfLabel = "?"
+	}
+	line := fmt.Sprintf(" Progress:    %d / %s items", j.DoneFiles, tfLabel)
+	if j.TotalBytes > 0 {
+		line += fmt.Sprintf("   %s / %s bytes", formatJobBytes(j.DoneBytes), formatJobBytes(j.TotalBytes))
+	} else if j.Type == string(jobs.TypeDelete) && j.DoneBytes > 0 {
+		line += fmt.Sprintf("   %s deleted", formatJobBytes(j.DoneBytes))
+	}
+	if j.TotalDirs > 0 || j.Status == "scanning" {
+		tdLabel := "?"
+		if j.TotalDirs > 0 {
+			tdLabel = fmt.Sprintf("%d", j.TotalDirs)
+		}
+		line += fmt.Sprintf("   (%s dirs)", tdLabel)
+	}
+	return line
+}
+
 func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir string, throughputChartEnabled bool) []string {
 	if pathMax < 1 {
 		pathMax = jobsDetailLineBudgetFallback
@@ -473,21 +497,7 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 		curDisplay := primitive.PathWithHomeTilde(j.CurrentPath, userHomeDir)
 		lines = append(lines, fmt.Sprintf(prefixCurrent+"%s", primitive.FitPathForWidth(curDisplay, jobsDetailPathBudget(pathMax, prefixCurrent))))
 	}
-	tf := j.TotalFiles
-	tfLabel := fmt.Sprintf("%d", tf)
-	if tf <= 0 {
-		tfLabel = "?"
-	}
-	progressLine := fmt.Sprintf(" Progress:    %d / %s items   %s / %s bytes",
-		j.DoneFiles, tfLabel, formatJobBytes(j.DoneBytes), formatJobBytes(j.TotalBytes))
-	if j.TotalDirs > 0 || j.Status == "scanning" {
-		tdLabel := "?"
-		if j.TotalDirs > 0 {
-			tdLabel = fmt.Sprintf("%d", j.TotalDirs)
-		}
-		progressLine += fmt.Sprintf("   (%s dirs)", tdLabel)
-	}
-	lines = append(lines, progressLine)
+	lines = append(lines, jobDetailProgressLine(j))
 	lines = append(lines, detailDurationOrETALine(j, now))
 	if throughputChartEnabled {
 		lines = append(lines, ThroughputDetailLines(j.ThroughputStrip, pathMax, j.Status == "running")...)

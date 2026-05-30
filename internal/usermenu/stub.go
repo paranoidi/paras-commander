@@ -44,13 +44,13 @@ const MenuStubTOML = `# F2 user menu — see docs/config.md
 #
 # Macros (expanded in command before run):
 #
-# %%  literal % character
-# %f  basename of the highlighted file on the active panel
-# %F  basename of the highlighted file on the other panel
-# %d  directory path of the active panel
-# %D  directory path of the other panel
-# %t  quoted paths of tagged files in the active panel's current directory (space-separated)
-# %T  quoted paths of tagged files in the other panel's current directory (space-separated)
+#     %%  literal % character
+#     %f  basename of the highlighted file on the active panel
+#     %F  basename of the highlighted file on the other panel
+#     %d  directory path of the active panel
+#     %D  directory path of the other panel
+#     %t  quoted paths of tagged files in the active panel's current directory (space-separated)
+#     %T  quoted paths of tagged files in the other panel's current directory (space-separated)
 `
 
 // WriteMenuStub creates path with MenuStubTOML when the file does not exist yet.

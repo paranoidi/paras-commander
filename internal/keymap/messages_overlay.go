@@ -7,6 +7,7 @@ import "strings"
 // DefaultActionSpecs → [action_keys] (global), same pattern as jobs.open / commands.open.
 func DefaultMessagesOverlayKeys() map[string][]string {
 	return map[string][]string{
+		ActionMessagesClose: {"left"},
 		ActionMessagesClear: {"F8"},
 	}
 }

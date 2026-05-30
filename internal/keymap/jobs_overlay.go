@@ -11,6 +11,7 @@ import "strings"
 // delete on panels).
 func DefaultJobsOverlayKeys() map[string][]string {
 	return map[string][]string{
+		ActionJobsClose:         {"left"},
 		ActionJobsCancel:        {"C-c"},
 		ActionJobsPause:         {"C-p"},
 		ActionJobsResume:        {"C-r"},

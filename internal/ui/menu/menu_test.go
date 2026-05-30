@@ -241,7 +241,7 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Move up in queue":   "C-up",
 		"Move down in queue": "C-down",
 		"Clear finished":     "F8",
-		"Back to file view":  "",
+		"Back to file view":  "left",
 	}
 	for _, item := range defs[0].Items {
 		w := want[item.Label]
@@ -285,7 +285,7 @@ func TestMessagesDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	}
 	want := map[string]string{
 		"Clear messages":    "F8",
-		"Back to file view": "",
+		"Back to file view": "left",
 	}
 	for _, item := range defs[0].Items {
 		w := want[item.Label]

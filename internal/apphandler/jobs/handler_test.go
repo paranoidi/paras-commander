@@ -111,3 +111,94 @@ func TestOpenJobsViewFocusesFirstPendingBlocker(t *testing.T) {
 		t.Fatalf("ConflictButtonFocus = %d, want 0 (Overwrite)", model.JobsView.ConflictButtonFocus)
 	}
 }
+
+type jobsHostKeymapStub struct {
+	jobsHostStub
+	lookup func(*tcell.EventKey) string
+}
+
+func (s jobsHostKeymapStub) ActionFromKeyEvent(ev *tcell.EventKey) string {
+	if s.lookup != nil {
+		return s.lookup(ev)
+	}
+	return ""
+}
+
+func TestJobsViewLeftInConflictPanelNavigatesButtonsNotClose(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(100, 30)
+
+	state := jobs.NewState()
+	waiting := &jobs.Job{
+		ID:          "wait",
+		Type:        jobs.TypeCopy,
+		Status:      jobs.StatusRunning,
+		Sources:     pathloc.PathsForTest("/src2"),
+		Destination: pathloc.MustParse("/dst2"),
+	}
+	state.AddJob(waiting)
+	state.ApplyEvent(jobs.Event{
+		Type:   jobs.EventJobBlockerRequest,
+		JobID:  "wait",
+		Status: jobs.StatusWaitingDecision,
+		Blocker: &jobs.BlockerDetails{
+			Kind: jobs.BlockerKindConflict,
+			Conflict: &jobs.ConflictEvent{
+				Source:      "/src2/file",
+				Destination: "/dst2/file",
+			},
+		},
+	})
+
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+
+	model := &ui.Model{}
+	host := jobsHostKeymapStub{
+		lookup: func(ev *tcell.EventKey) string {
+			id, ok := bundle.Jobs.Lookup(ev)
+			if ok {
+				return id
+			}
+			return ""
+		},
+	}
+	h := New(Deps{
+		Host:     host,
+		Screen:   screen,
+		Model:    model,
+		State:    state,
+		Config:   config.Default(),
+		Keys:     bundle.Global,
+		KeysJobs: bundle.Jobs,
+	})
+	h.OpenJobsView()
+	if model.JobsView.FocusPane != 1 {
+		t.Fatalf("FocusPane = %d, want 1 (conflict panel)", model.JobsView.FocusPane)
+	}
+
+	// Move focus right among conflict buttons.
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if model.JobsView.ConflictButtonFocus != 1 {
+		t.Fatalf("ConflictButtonFocus = %d, want 1 after Right", model.JobsView.ConflictButtonFocus)
+	}
+	if model.ViewMode != ui.ViewJobs {
+		t.Fatal("jobs view closed after Right in conflict panel")
+	}
+
+	// Left navigates buttons; it must not close the jobs view while conflict UI is focused.
+	h.HandleJobsViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if model.ViewMode != ui.ViewJobs {
+		t.Fatal("jobs view closed after Left in conflict panel")
+	}
+	if model.JobsView.ConflictButtonFocus != 0 {
+		t.Fatalf("ConflictButtonFocus = %d, want 0 after Left", model.JobsView.ConflictButtonFocus)
+	}
+}

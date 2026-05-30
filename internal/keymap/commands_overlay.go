@@ -6,7 +6,9 @@ import "strings"
 // Commands view is focused ([commands_action_keys]). commands.open defaults live in
 // DefaultActionSpecs → [action_keys] (global), same pattern as jobs.open.
 func DefaultCommandsOverlayKeys() map[string][]string {
-	return map[string][]string{}
+	return map[string][]string{
+		ActionCommandsClose: {"left"},
+	}
 }
 
 // AllowedInCommandsOverlay reports whether actionID may appear under [commands_action_keys].

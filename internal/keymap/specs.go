@@ -531,8 +531,8 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionCommandsClose,
 			Title:       "Close Commands view",
 			Section:     "Commands",
-			DefaultKeys: nil,
-			Keywords:    []string{"back", "browser"},
+			DefaultKeys: nil, // overlay: DefaultCommandsOverlayKeys
+			Keywords:    []string{"back", "browser", "esc"},
 		},
 		{
 			ID:          ActionFileRunForEach,
@@ -555,8 +555,8 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionMessagesClose,
 			Title:       "Close Messages view",
 			Section:     "Messages",
-			DefaultKeys: nil,
-			Keywords:    []string{"back", "browser"},
+			DefaultKeys: nil, // overlay: DefaultMessagesOverlayKeys
+			Keywords:    []string{"back", "browser", "esc"},
 		},
 		{
 			ID:          ActionMessagesClear,
@@ -611,6 +611,13 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Jobs",
 			DefaultKeys: nil,
 			Keywords:    []string{"reorder"},
+		},
+		{
+			ID:          ActionJobsClose,
+			Title:       "Close jobs view",
+			Section:     "Jobs",
+			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
+			Keywords:    []string{"back", "browser", "esc"},
 		},
 		{
 			ID:          ActionJobsClearFinished,
