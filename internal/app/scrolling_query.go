@@ -63,81 +63,41 @@ func (a *App) pathPickerScrollingQuery() scrollingQueryEdit {
 	return edit
 }
 
-func findDialogScrollingQuery(st *ui.FindDialogState, width int, onChange func()) scrollingQueryEdit {
-	q := &ui.ScrollingQuery{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll}
-	return scrollingQueryEdit{
+func newScrollingQueryEdit(value *string, cursor, scroll *int, width int, onChange func()) scrollingQueryEdit {
+	q := &ui.ScrollingQuery{Value: *value, Cursor: *cursor, Scroll: *scroll}
+	edit := scrollingQueryEdit{
 		q:     q,
 		width: width,
 		onChange: func() {
-			st.Query = q.Value
-			st.QueryCursor = q.Cursor
-			st.QueryScroll = q.Scroll
+			*value = q.Value
+			*cursor = q.Cursor
+			*scroll = q.Scroll
 			if onChange != nil {
 				onChange()
 			}
 		},
 	}
+	return edit
+}
+
+func findDialogScrollingQuery(st *ui.FindDialogState, width int, onChange func()) scrollingQueryEdit {
+	return newScrollingQueryEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
 }
 
 func helpViewScrollingQuery(st *ui.HelpViewState, width int, onChange func()) scrollingQueryEdit {
-	q := &ui.ScrollingQuery{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll}
-	return scrollingQueryEdit{
-		q:     q,
-		width: width,
-		onChange: func() {
-			st.Query = q.Value
-			st.QueryCursor = q.Cursor
-			st.QueryScroll = q.Scroll
-			if onChange != nil {
-				onChange()
-			}
-		},
-	}
+	return newScrollingQueryEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
 }
 
 func historyDialogScrollingQuery(st *ui.HistoryDialogState, width int, onChange func()) scrollingQueryEdit {
-	q := &ui.ScrollingQuery{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll}
-	return scrollingQueryEdit{
-		q:     q,
-		width: width,
-		onChange: func() {
-			st.Query = q.Value
-			st.QueryCursor = q.Cursor
-			st.QueryScroll = q.Scroll
-			if onChange != nil {
-				onChange()
-			}
-		},
-	}
+	return newScrollingQueryEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
 }
 
 func sftpConnectDialogScrollingQuery(st *ui.SFTPConnectDialogState, width int, onChange func()) scrollingQueryEdit {
-	q := &ui.ScrollingQuery{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll}
-	return scrollingQueryEdit{
-		q:     q,
-		width: width,
-		onChange: func() {
-			st.Query = q.Value
-			st.QueryCursor = q.Cursor
-			st.QueryScroll = q.Scroll
-			if onChange != nil {
-				onChange()
-			}
-		},
-	}
+	return newScrollingQueryEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
 }
 
 func groupSelectScrollingQuery(gs *ui.GroupSelectState, width int) scrollingQueryEdit {
-	q := &ui.ScrollingQuery{Value: gs.Text, Cursor: gs.TextCursor, Scroll: gs.TextScroll}
-	return scrollingQueryEdit{
-		q:     q,
-		width: width,
-		onChange: func() {
-			gs.Text = q.Value
-			gs.TextCursor = q.Cursor
-			gs.TextScroll = q.Scroll
-		},
-	}
+	return newScrollingQueryEdit(&gs.Text, &gs.TextCursor, &gs.TextScroll, width, nil)
 }
 
 func (e *scrollingQueryEdit) applyVisible() {

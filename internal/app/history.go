@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -70,30 +69,8 @@ func (a *App) syncHistoryDialogRanks() {
 	}
 	lines := make([]string, len(st.DisplayLines))
 	copy(lines, st.DisplayLines)
-	q := search.Parse(st.Query)
-	opts := search.Options{CaseInsensitive: a.config.CaseInsensitiveFilter}
-	ranked := q.Rank(lines, opts)
-	st.Ranked = make([]int, len(ranked))
-	st.MatchRanges = make([][]search.Range, len(st.Paths))
-	for i := range st.MatchRanges {
-		st.MatchRanges[i] = nil
-	}
-	for i, r := range ranked {
-		st.Ranked[i] = r.Index
-		if r.Index >= 0 && r.Index < len(st.MatchRanges) {
-			st.MatchRanges[r.Index] = r.Result.Ranges
-		}
-	}
-	if st.Selected >= len(st.Ranked) {
-		if len(st.Ranked) == 0 {
-			st.Selected = 0
-		} else {
-			st.Selected = len(st.Ranked) - 1
-		}
-	}
-	if st.Selected < 0 {
-		st.Selected = 0
-	}
+	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.Paths), a.config.CaseInsensitiveFilter)
+	clampFilteredListSelection(&st.Selected, len(st.Ranked))
 	ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
 }
 
@@ -138,12 +115,7 @@ func (a *App) activateHistorySelection() {
 }
 
 func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
-	if ui.AltDialogOK(event) {
-		a.activateHistorySelection()
-		return
-	}
-	if ui.AltDialogCancel(event) {
-		a.closeHistoryDialog()
+	if a.tryStandardDialogActions(event, a.activateHistorySelection, a.closeHistoryDialog, nil) {
 		return
 	}
 
@@ -170,7 +142,6 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			a.activateHistorySelection()
 		}
 	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		st := &a.model.HistoryDialog
 		if nf, ok := ui.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
 			st.Focus = nf
 			if st.Focus == 0 && event.Key() == tcell.KeyUp {
@@ -178,39 +149,16 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			}
 			break
 		}
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			switch event.Key() {
-			case tcell.KeyUp:
-				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
-				ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
-			case tcell.KeyDown:
-				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
-				ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
-			}
+		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.historyDialogListRows, func() {
+			ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
+		}) {
+			break
 		}
-	case tcell.KeyHome:
-		if a.model.HistoryDialog.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(a.model.HistoryDialog.Ranked) > 0 {
-			a.model.HistoryDialog.Selected = 0
-			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
-		}
-	case tcell.KeyEnd:
-		if a.model.HistoryDialog.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(a.model.HistoryDialog.Ranked) > 0 {
-			a.model.HistoryDialog.Selected = len(a.model.HistoryDialog.Ranked) - 1
-			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
-		}
-	case tcell.KeyPgUp:
-		if a.model.HistoryDialog.Focus == 0 && len(a.model.HistoryDialog.Ranked) > 0 {
-			step := max(1, a.historyDialogListRows()-1)
-			a.model.HistoryDialog.Selected = ui.ListClampedSelectionDelta(
-				a.model.HistoryDialog.Selected, len(a.model.HistoryDialog.Ranked), -step)
-			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
-		}
-	case tcell.KeyPgDn:
-		if a.model.HistoryDialog.Focus == 0 && len(a.model.HistoryDialog.Ranked) > 0 {
-			step := max(1, a.historyDialogListRows()-1)
-			a.model.HistoryDialog.Selected = ui.ListClampedSelectionDelta(
-				a.model.HistoryDialog.Selected, len(a.model.HistoryDialog.Ranked), step)
-			ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
+	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
+		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.historyDialogListRows, func() {
+			ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
+		}) {
+			break
 		}
 	case tcell.KeyRune:
 		if event.Modifiers() != tcell.ModNone {

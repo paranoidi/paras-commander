@@ -5966,7 +5966,7 @@ func TestMkdirDialogWithoutSelectionHidesActionRadios(t *testing.T) {
 	if app.model.FileDialog.MkdirShowActions {
 		t.Fatal("MkdirShowActions should be false without selections")
 	}
-	if got, want := app.fileDialogFocusCount(), 3; got != want {
+	if got, want := ui.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 3; got != want {
 		t.Fatalf("focus count = %d, want %d (field + OK + Cancel)", got, want)
 	}
 }
@@ -5991,7 +5991,7 @@ func TestMkdirDialogWithSelectionShowsActionRadiosAndNav(t *testing.T) {
 	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreate {
 		t.Fatalf("MkdirAction = %v, want MkdirActionCreate (default)", app.model.FileDialog.MkdirAction)
 	}
-	if got, want := app.fileDialogFocusCount(), 6; got != want {
+	if got, want := ui.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 6; got != want {
 		t.Fatalf("focus count = %d, want %d (field + 3 radios + OK + Cancel)", got, want)
 	}
 

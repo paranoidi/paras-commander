@@ -9,7 +9,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/app/pathpick"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -32,30 +31,8 @@ func (a *App) syncPathPickerRanks() {
 	for i, e := range st.Items {
 		lines[i] = e.SearchLine()
 	}
-	q := search.Parse(st.Query)
-	opts := search.Options{CaseInsensitive: a.config.CaseInsensitiveFilter}
-	ranked := q.Rank(lines, opts)
-	st.Ranked = make([]int, len(ranked))
-	st.MatchRanges = make([][]search.Range, len(st.Items))
-	for i := range st.MatchRanges {
-		st.MatchRanges[i] = nil
-	}
-	for i, r := range ranked {
-		st.Ranked[i] = r.Index
-		if r.Index >= 0 && r.Index < len(st.MatchRanges) {
-			st.MatchRanges[r.Index] = r.Result.Ranges
-		}
-	}
-	if st.Selected >= len(st.Ranked) {
-		if len(st.Ranked) == 0 {
-			st.Selected = 0
-		} else {
-			st.Selected = len(st.Ranked) - 1
-		}
-	}
-	if st.Selected < 0 {
-		st.Selected = 0
-	}
+	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.Items), a.config.CaseInsensitiveFilter)
+	clampFilteredListSelection(&st.Selected, len(st.Ranked))
 	ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 }
 
@@ -206,12 +183,7 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 	if a.tryBookmarkDialogShortcut(event) {
 		return
 	}
-	if ui.AltDialogOK(event) {
-		a.activatePathPickerSelection()
-		return
-	}
-	if ui.AltDialogCancel(event) {
-		a.closePathPicker()
+	if a.tryStandardDialogActions(event, a.activatePathPickerSelection, a.closePathPicker, nil) {
 		return
 	}
 
@@ -234,62 +206,31 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 			a.acceptPathPickerCompletion()
 			return
 		}
-		st.Focus = (st.Focus + 1) % 3
+		if nf, ok := ui.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+			st.Focus = nf
+		}
 	case tcell.KeyBacktab:
-		st.Focus = (st.Focus + 2) % 3
-	case tcell.KeyUp:
-		switch st.Focus {
-		case 0:
-			if len(st.Ranked) > 0 {
-				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
+		if nf, ok := ui.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+			st.Focus = nf
+		}
+	case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
+		if nf, ok := ui.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+			st.Focus = nf
+			if st.Focus == 0 && event.Key() == tcell.KeyUp {
 				ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 			}
-		default:
-			st.Focus = 0
+			break
+		}
+		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.pathPickerListRows, func() {
 			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+		}) {
+			break
 		}
-	case tcell.KeyDown:
-		switch st.Focus {
-		case 0:
-			if len(st.Ranked) > 0 {
-				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
-				ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
-			}
-		case 1:
-			st.Focus = 2
-		}
-	case tcell.KeyHome:
-		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
-			st.Selected = 0
+	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
+		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.pathPickerListRows, func() {
 			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
-		}
-	case tcell.KeyEnd:
-		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
-			st.Selected = len(st.Ranked) - 1
-			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
-		}
-	case tcell.KeyPgUp:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			step := max(1, a.pathPickerListRows()-1)
-			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
-			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
-		}
-	case tcell.KeyPgDn:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			step := max(1, a.pathPickerListRows()-1)
-			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
-			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
-		}
-	case tcell.KeyLeft:
-		switch st.Focus {
-		case 1:
-			st.Focus = 0
-		case 2:
-			st.Focus = 1
-		}
-	case tcell.KeyRight:
-		if st.Focus == 1 {
-			st.Focus = 2
+		}) {
+			break
 		}
 	case tcell.KeyRune:
 		if event.Modifiers() != tcell.ModNone {

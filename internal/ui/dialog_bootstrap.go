@@ -168,6 +168,11 @@ func FileDialogCancelFocusIndex(st FileDialogState) int {
 	return dialog.FileDialogCancelFocusIndex(st)
 }
 
+// FileDialogFocusForm returns trailing-button focus layout for a file dialog (delegates to dialog).
+func FileDialogFocusForm(st FileDialogState) dialog.DialogTrailingButtonsForm {
+	return dialog.FileDialogFocusForm(st)
+}
+
 // MassRenamePreviewViewportRows returns how many preview lines fit for a terminal height.
 func MassRenamePreviewViewportRows(layoutHeight int) int {
 	return dialog.MassRenamePreviewViewportRows(layoutHeight)

@@ -85,26 +85,16 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		if a.tryMkdirActionAltShortcut(event.Rune()) {
 			return false
 		}
-		if ui.AltDialogOK(event) {
-			a.executeFileDialog()
-			return false
+	}
+	var altExtras []dialogExtraMnemonic
+	if d.DialogType == ui.FileDialogDelete {
+		altExtras = []dialogExtraMnemonic{
+			{'y', a.executeDelete},
+			{'n', a.closeFileDialog},
 		}
-		if ui.AltDialogCancel(event) {
-			a.closeFileDialog()
-			return false
-		}
-		switch event.Rune() {
-		case 'y', 'Y':
-			if a.model.FileDialog.DialogType == ui.FileDialogDelete {
-				a.executeDelete()
-				return false
-			}
-		case 'n', 'N':
-			if a.model.FileDialog.DialogType == ui.FileDialogDelete {
-				a.closeFileDialog()
-				return false
-			}
-		}
+	}
+	if a.tryStandardDialogActions(event, a.executeFileDialog, a.closeFileDialog, altExtras) {
+		return false
 	}
 
 	if a.tryPathPickerHostShortcut(event) {
@@ -121,10 +111,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			if a.tryDialogInputRestore(event, f) {
 				return false
 			}
-		} else if a.tryDialogInputFieldActions(event, f) {
-			if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
-				a.recomputeMassRenamePreview()
-			}
+		} else if a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit()) {
 			return false
 		}
 	}
@@ -167,28 +154,30 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		a.executeFileDialog()
 		return false
 	case tcell.KeyDown:
-		a.fileDialogFocusNext()
-		return false
+		if a.fileDialogMoveFocusKey(event) {
+			return false
+		}
 	case tcell.KeyUp:
-		a.fileDialogFocusPrev()
-		return false
+		if a.fileDialogMoveFocusKey(event) {
+			return false
+		}
 	case tcell.KeyLeft:
 		// On button: move between buttons; on radio: no-op; on field: move cursor
 		if a.fileDialogOnButton() {
-			a.fileDialogFocusButton(-1)
+			a.fileDialogMoveFocusKey(event)
 		} else if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		} else if f := a.focusedField(); f != nil && f.PathPicker && f.PickerFocused {
 			f.PickerFocused = false
 			runes := []rune(f.Value)
 			f.Cursor = len(runes)
-		} else {
-			a.fileDialogMoveCursor(-1)
+		} else if f := a.focusedField(); f != nil {
+			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
 		}
 		return false
 	case tcell.KeyRight:
 		if a.fileDialogOnButton() {
-			a.fileDialogFocusButton(1)
+			a.fileDialogMoveFocusKey(event)
 		} else if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		} else if f := a.focusedField(); f != nil && f.PathPicker && !f.PickerFocused {
@@ -207,47 +196,57 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			if c >= len(runes) {
 				f.PickerFocused = true
 			} else {
-				a.fileDialogMoveCursor(1)
+				a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
 			}
-		} else {
-			a.fileDialogMoveCursor(1)
+		} else if f := a.focusedField(); f != nil {
+			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
 		}
 		return false
 	case tcell.KeyHome:
 		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		}
-		a.fileDialogMoveCursorStart()
+		if f := a.focusedField(); f != nil {
+			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
+		}
 		return false
 	case tcell.KeyEnd:
 		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		}
-		a.fileDialogMoveCursorEnd()
+		if f := a.focusedField(); f != nil {
+			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
+		}
 		return false
 	case tcell.KeyTab:
-		a.fileDialogFocusNext()
+		a.fileDialogMoveFocusKey(event)
 		return false
 	case tcell.KeyBacktab:
-		a.fileDialogFocusPrev()
+		a.fileDialogMoveFocusKey(event)
 		return false
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		}
-		a.fileDialogBackspace()
+		if f := a.focusedField(); f != nil {
+			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
+		}
 		return false
 	case tcell.KeyDelete:
 		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		}
-		a.fileDialogDelete()
+		if f := a.focusedField(); f != nil {
+			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
+		}
 		return false
 	case tcell.KeyCtrlL:
 		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
 			return false
 		}
-		a.fileDialogClearField()
+		if f := a.focusedField(); f != nil {
+			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
+		}
 		return false
 	case tcell.KeyRune:
 		if onMassRenameRadio {
@@ -271,7 +270,9 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			return false
 		}
 		if isPlainPrintableRune(event) {
-			a.fileDialogInsertRune(event.Rune())
+			if f := a.focusedField(); f != nil {
+				a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
+			}
 		}
 		return false
 	}
@@ -335,96 +336,21 @@ func (a *App) focusedField() *ui.FileDialogField {
 	return &d.Fields[d.FocusedField]
 }
 
-func (a *App) fileDialogInsertRune(r rune) {
-	field := a.focusedField()
-	if field == nil {
-		return
-	}
-	field.InsertRune(r)
-	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
-		a.recomputeMassRenamePreview()
+func (a *App) clearFileDialogPickerSubfocus() {
+	for i := range a.model.FileDialog.Fields {
+		a.model.FileDialog.Fields[i].PickerFocused = false
 	}
 }
 
-func (a *App) fileDialogBackspace() {
-	field := a.focusedField()
-	if field == nil {
-		return
+func (a *App) fileDialogMoveFocusKey(event *tcell.EventKey) bool {
+	d := &a.model.FileDialog
+	form := ui.FileDialogFocusForm(*d)
+	if nf, ok := form.MoveFocus(d.FocusedField, event.Key()); ok {
+		a.clearFileDialogPickerSubfocus()
+		d.FocusedField = nf
+		return true
 	}
-	field.Backspace()
-	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
-		a.recomputeMassRenamePreview()
-	}
-}
-
-func (a *App) fileDialogDelete() {
-	field := a.focusedField()
-	if field == nil {
-		return
-	}
-	field.Delete()
-	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
-		a.recomputeMassRenamePreview()
-	}
-}
-
-func (a *App) fileDialogClearField() {
-	field := a.focusedField()
-	if field == nil {
-		return
-	}
-	field.Clear()
-	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
-		a.recomputeMassRenamePreview()
-	}
-}
-
-func (a *App) fileDialogMoveCursor(delta int) {
-	field := a.focusedField()
-	if field == nil {
-		return
-	}
-	field.MoveCursor(delta)
-	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
-		a.recomputeMassRenamePreview()
-	}
-}
-
-func (a *App) fileDialogMoveCursorStart() {
-	field := a.focusedField()
-	if field == nil {
-		return
-	}
-	field.MoveCursorStart()
-	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
-		a.recomputeMassRenamePreview()
-	}
-}
-
-func (a *App) fileDialogMoveCursorEnd() {
-	field := a.focusedField()
-	if field == nil {
-		return
-	}
-	field.MoveCursorEnd()
-	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
-		a.recomputeMassRenamePreview()
-	}
-}
-
-// fileDialogFocusCount returns total focusable items in file dialog.
-func (a *App) fileDialogFocusCount() int {
-	d := a.model.FileDialog
-	if d.DialogType == ui.FileDialogDelete {
-		return 2 // Yes, No
-	}
-	if d.DialogType == ui.FileDialogRename && d.RenamePhase != ui.RenamePhaseMain {
-		return 4 // 2 options + OK + Cancel
-	}
-	if d.DialogType == ui.FileDialogMassRename {
-		return ui.FileDialogCancelFocusIndex(d) + 1
-	}
-	return len(d.Fields) + a.mkdirExtraFocusRows() + 2 // fields + (optional) mkdir radios + OK + Cancel
+	return false
 }
 
 // mkdirExtraFocusRows returns the number of extra focus rows contributed by the
@@ -491,75 +417,10 @@ func (a *App) fileDialogOnButton() bool {
 	return d.FocusedField >= ui.FileDialogOKFocusIndex(*d)
 }
 
-// fileDialogFocusNext moves focus to next item. Down on last button = no-op.
-func (a *App) fileDialogFocusNext() {
-	for i := range a.model.FileDialog.Fields {
-		a.model.FileDialog.Fields[i].PickerFocused = false
-	}
-	count := a.fileDialogFocusCount()
-	if count <= 1 {
-		return
-	}
-	next := a.model.FileDialog.FocusedField + 1
-	if next >= count {
-		return // no wrap from last button
-	}
-	a.model.FileDialog.FocusedField = next
-}
-
-// fileDialogFocusPrev moves focus to previous item. Up on first item = no-op.
-func (a *App) fileDialogFocusPrev() {
-	for i := range a.model.FileDialog.Fields {
-		a.model.FileDialog.Fields[i].PickerFocused = false
-	}
-	if a.model.FileDialog.FocusedField <= 0 {
-		return // no wrap from first field
-	}
-	a.model.FileDialog.FocusedField--
-}
-
-// fileDialogFocusButton moves focus between buttons only (Left/Right).
-func (a *App) fileDialogFocusButton(delta int) {
-	d := &a.model.FileDialog
-	if d.DialogType == ui.FileDialogDelete {
-		// Yes(0), No(1): move between them, no wrap
-		next := d.FocusedField + delta
-		if next < 0 || next >= 2 {
-			return
-		}
-		d.FocusedField = next
-		return
-	}
-	if d.DialogType == ui.FileDialogRename && d.RenamePhase != ui.RenamePhaseMain {
-		okIdx := ui.FileDialogOKFocusIndex(*d)
-		cancelIdx := ui.FileDialogCancelFocusIndex(*d)
-		if d.FocusedField == okIdx && delta == 1 {
-			d.FocusedField = cancelIdx
-		} else if d.FocusedField == cancelIdx && delta == -1 {
-			d.FocusedField = okIdx
-		}
-		return
-	}
-	// Fields + (optional radios) + OK + Cancel: move between OK/Cancel only
-	okIdx := ui.FileDialogOKFocusIndex(*d)
-	cancelIdx := ui.FileDialogCancelFocusIndex(*d)
-	if d.FocusedField == okIdx && delta == 1 {
-		d.FocusedField = cancelIdx
-	} else if d.FocusedField == cancelIdx && delta == -1 {
-		d.FocusedField = okIdx
-	}
-	// Otherwise stay
-}
-
 func (a *App) handleRenameToolKey(event *tcell.EventKey) bool {
 	d := &a.model.FileDialog
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'o', 'O':
-			a.applyRenameToolAndReturnMain()
-			return false
-		case 'c', 'C':
-			a.closeRenameToolPhase()
+		if a.tryStandardDialogActions(event, a.applyRenameToolAndReturnMain, a.closeRenameToolPhase, nil) {
 			return false
 		}
 		if d.RenamePhase == ui.RenamePhaseSanitize {
@@ -608,19 +469,14 @@ func (a *App) handleRenameToolKey(event *tcell.EventKey) bool {
 		}
 		return false
 	case tcell.KeyDown, tcell.KeyTab:
-		a.renameToolFocusNext()
+		a.fileDialogMoveFocusKey(event)
 		return false
 	case tcell.KeyUp, tcell.KeyBacktab:
-		a.renameToolFocusPrev()
+		a.fileDialogMoveFocusKey(event)
 		return false
-	case tcell.KeyLeft:
+	case tcell.KeyLeft, tcell.KeyRight:
 		if a.fileDialogOnButton() {
-			a.fileDialogFocusButton(-1)
-		}
-		return false
-	case tcell.KeyRight:
-		if a.fileDialogOnButton() {
-			a.fileDialogFocusButton(1)
+			a.fileDialogMoveFocusKey(event)
 		}
 		return false
 	case tcell.KeyRune:
@@ -654,21 +510,4 @@ func (a *App) selectRenameSlugifyAtFocus() {
 	case 1:
 		d.RenameSlugifySep = ui.RenameSlugifyUnderscore
 	}
-}
-
-func (a *App) renameToolFocusNext() {
-	d := &a.model.FileDialog
-	count := 4
-	if d.FocusedField+1 >= count {
-		return
-	}
-	d.FocusedField++
-}
-
-func (a *App) renameToolFocusPrev() {
-	d := &a.model.FileDialog
-	if d.FocusedField <= 0 {
-		return
-	}
-	d.FocusedField--
 }

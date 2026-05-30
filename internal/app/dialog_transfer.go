@@ -6,7 +6,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -103,18 +102,10 @@ func (a *App) closeTransferDialog() {
 func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	d := &a.model.TransferDialog
 	// Alt+O = OK, Alt+C = Cancel, Alt+P = Add paused (mnemonics; must run before field edit).
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'o', 'O':
-			a.confirmTransfer()
-			return
-		case 'c', 'C':
-			a.closeTransferDialog()
-			return
-		case 'p', 'P':
-			a.confirmTransferPaused()
-			return
-		}
+	if a.tryStandardDialogActions(event, a.confirmTransfer, a.closeTransferDialog, []dialogExtraMnemonic{
+		{'p', a.confirmTransferPaused},
+	}) {
+		return
 	}
 	if event.Key() == tcell.KeyEsc {
 		a.closeTransferDialog()
@@ -233,47 +224,9 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 }
 
 func (a *App) editTransferFieldKey(event *tcell.EventKey, f *ui.FileDialogField) bool {
-	if f == nil {
-		return false
-	}
-	if a.tryDialogInputFieldActions(event, f) {
-		return true
-	}
-	switch event.Key() {
-	case tcell.KeyLeft:
-		f.MoveCursor(-1)
+	return a.handleFileDialogFieldKey(event, f, func() {
 		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
-		return true
-	case tcell.KeyRight:
-		f.MoveCursor(1)
-		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
-		return true
-	case tcell.KeyHome:
-		f.MoveCursorStart()
-		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
-		return true
-	case tcell.KeyEnd:
-		f.MoveCursorEnd()
-		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
-		return true
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		f.Backspace()
-		return true
-	case tcell.KeyDelete:
-		f.Delete()
-		return true
-	case tcell.KeyCtrlL:
-		f.Clear()
-		return true
-	case tcell.KeyRune:
-		if isPlainPrintableRune(event) {
-			f.InsertRune(event.Rune())
-			return true
-		}
-		return false
-	default:
-		return false
-	}
+	})
 }
 
 func transferBasenameIssue(name string) string {

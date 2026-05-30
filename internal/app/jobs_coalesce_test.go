@@ -3,7 +3,7 @@ package app
 import (
 	"testing"
 
-	"github.com/paranoidi/paras-commander/internal/app/jobbridge"
+	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 )
 

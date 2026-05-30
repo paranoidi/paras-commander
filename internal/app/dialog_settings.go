@@ -48,77 +48,103 @@ func (a *App) applySortDialog() {
 
 func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 	form := ui.NewDialogLinearForm(7)
-	// Alt+O = OK, Alt+C = Cancel
-	if ui.AltDialogOK(event) {
-		a.applySortDialog()
-		return
-	}
-	if ui.AltDialogCancel(event) {
-		a.closeSortDialog()
-		return
-	}
-
-	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyF9:
-		a.closeSortDialog()
-	case tcell.KeyEnter:
-		switch a.model.SortDialog.Focus {
-		case form.CancelIndex():
-			a.closeSortDialog()
-		default: // OK button or any radio/checkbox -> apply
-			a.applySortDialog()
-		}
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		switch event.Rune() {
-		case 'n', 'N':
-			a.model.SortDialog.SortMode = panel.SortName
-			a.model.SortDialog.Focus = 0
-		case 'e', 'E':
-			a.model.SortDialog.SortMode = panel.SortExtension
-			a.model.SortDialog.Focus = 1
-		case 's', 'S':
-			a.model.SortDialog.SortMode = panel.SortSize
-			a.model.SortDialog.Focus = 2
-		case 'm', 'M':
-			a.model.SortDialog.SortMode = panel.SortMtime
-			a.model.SortDialog.Focus = 3
-		case 'u', 'U':
-			a.model.SortDialog.DiskUsageIdleSizeSort = !a.model.SortDialog.DiskUsageIdleSizeSort
-			a.model.SortDialog.Focus = 4
-		case 'r', 'R':
-			a.model.SortDialog.SortReverse = !a.model.SortDialog.SortReverse
-			a.model.SortDialog.Focus = 5
-		case 'd', 'D':
-			a.model.SortDialog.DirectoriesFirst = !a.model.SortDialog.DirectoriesFirst
-			a.model.SortDialog.Focus = 6
-		case 'o', 'O':
-			a.applySortDialog()
-		case 'c', 'C':
-			a.closeSortDialog()
-		case ' ':
-			switch a.model.SortDialog.Focus {
+	st := &a.model.SortDialog
+	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
+		focus:              &st.Focus,
+		onApply:            a.applySortDialog,
+		onCancel:           a.closeSortDialog,
+		allowPlainOKCancel: true,
+		onMnemonic: func(r rune) bool {
+			switch r {
+			case 'n', 'N':
+				st.SortMode = panel.SortName
+				st.Focus = 0
+			case 'e', 'E':
+				st.SortMode = panel.SortExtension
+				st.Focus = 1
+			case 's', 'S':
+				st.SortMode = panel.SortSize
+				st.Focus = 2
+			case 'm', 'M':
+				st.SortMode = panel.SortMtime
+				st.Focus = 3
+			case 'u', 'U':
+				st.DiskUsageIdleSizeSort = !st.DiskUsageIdleSizeSort
+				st.Focus = 4
+			case 'r', 'R':
+				st.SortReverse = !st.SortReverse
+				st.Focus = 5
+			case 'd', 'D':
+				st.DirectoriesFirst = !st.DirectoriesFirst
+				st.Focus = 6
+			default:
+				return false
+			}
+			return true
+		},
+		onSpace: func(focus int) bool {
+			switch focus {
 			case 0, 1, 2, 3:
 				modes := []panel.SortMode{panel.SortName, panel.SortExtension, panel.SortSize, panel.SortMtime}
-				a.model.SortDialog.SortMode = modes[a.model.SortDialog.Focus]
+				st.SortMode = modes[focus]
 			case 4:
-				a.model.SortDialog.DiskUsageIdleSizeSort = !a.model.SortDialog.DiskUsageIdleSizeSort
+				st.DiskUsageIdleSizeSort = !st.DiskUsageIdleSizeSort
 			case 5:
-				a.model.SortDialog.SortReverse = !a.model.SortDialog.SortReverse
+				st.SortReverse = !st.SortReverse
 			case 6:
-				a.model.SortDialog.DirectoriesFirst = !a.model.SortDialog.DirectoriesFirst
-			case 7:
+				st.DirectoriesFirst = !st.DirectoriesFirst
+			case form.OKIndex():
 				a.applySortDialog()
-			case 8:
+			case form.CancelIndex():
 				a.closeSortDialog()
+			default:
+				return false
 			}
+			return true
+		},
+	})
+}
+
+func listingFormatFromShortcut(ch rune, focus *int) (panel.ListFormat, bool) {
+	for i, row := range panel.ListFormatDialogRadios() {
+		if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
+			*focus = i
+			return row.Format, true
 		}
 	}
-	if focus, ok := form.MoveFocus(a.model.SortDialog.Focus, event.Key()); ok {
-		a.model.SortDialog.Focus = focus
-	}
+	return 0, false
+}
+
+func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
+	form := ui.NewDialogLinearForm(3)
+	st := &a.model.ListingFormatDialog
+	radios := panel.ListFormatDialogRadios()
+	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
+		focus:              &st.Focus,
+		onApply:            a.applyListingFormatDialog,
+		onCancel:           a.closeListingFormatDialog,
+		allowPlainOKCancel: true,
+		onMnemonic: func(r rune) bool {
+			if format, ok := listingFormatFromShortcut(r, &st.Focus); ok {
+				st.ListFormat = format
+				return true
+			}
+			return false
+		},
+		onSpace: func(focus int) bool {
+			switch focus {
+			case 0, 1, 2:
+				st.ListFormat = radios[focus].Format
+			case form.OKIndex():
+				a.applyListingFormatDialog()
+			case form.CancelIndex():
+				a.closeListingFormatDialog()
+			default:
+				return false
+			}
+			return true
+		},
+	})
 }
 
 func (a *App) openListingFormatDialog() {
@@ -147,65 +173,6 @@ func (a *App) applyListingFormatDialog() {
 	target.ListFormat = panel.EffectiveListFormat(st.ListFormat)
 	a.setTransientMessage(fmt.Sprintf("%s listing: %s", panelLabel(st.PanelID), target.ListFormat.String()), ui.MessageUrgencyInfo)
 	a.closeListingFormatDialog()
-}
-
-func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
-	form := ui.NewDialogLinearForm(3)
-	radios := panel.ListFormatDialogRadios()
-	if ui.AltDialogOK(event) {
-		a.applyListingFormatDialog()
-		return
-	}
-	if ui.AltDialogCancel(event) {
-		a.closeListingFormatDialog()
-		return
-	}
-	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyF9:
-		a.closeListingFormatDialog()
-	case tcell.KeyEnter:
-		switch a.model.ListingFormatDialog.Focus {
-		case form.CancelIndex():
-			a.closeListingFormatDialog()
-		default:
-			a.applyListingFormatDialog()
-		}
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		ch := event.Rune()
-		matchedRadio := false
-		for i, row := range radios {
-			if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
-				a.model.ListingFormatDialog.ListFormat = row.Format
-				a.model.ListingFormatDialog.Focus = i
-				matchedRadio = true
-				break
-			}
-		}
-		if matchedRadio {
-			break
-		}
-		switch ch {
-		case 'o', 'O':
-			a.applyListingFormatDialog()
-		case 'c', 'C':
-			a.closeListingFormatDialog()
-		case ' ':
-			switch a.model.ListingFormatDialog.Focus {
-			case 0, 1, 2:
-				a.model.ListingFormatDialog.ListFormat = radios[a.model.ListingFormatDialog.Focus].Format
-			case form.OKIndex():
-				a.applyListingFormatDialog()
-			case form.CancelIndex():
-				a.closeListingFormatDialog()
-			}
-		}
-	}
-	if focus, ok := form.MoveFocus(a.model.ListingFormatDialog.Focus, event.Key()); ok {
-		a.model.ListingFormatDialog.Focus = focus
-	}
 }
 
 func (a *App) openConfigDialog() {
@@ -263,81 +230,59 @@ func (a *App) applyConfigDialog() {
 
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 	form := ui.NewDialogLinearForm(7)
-	if ui.AltDialogOK(event) {
-		a.applyConfigDialog()
-		return
-	}
-	if ui.AltDialogCancel(event) {
-		a.closeConfigDialog()
-		return
-	}
-	switch event.Key() {
-	case tcell.KeyEsc, tcell.KeyF9:
-		a.closeConfigDialog()
-	case tcell.KeyEnter:
-		switch a.model.ConfigDialog.Focus {
-		case form.CancelIndex():
-			a.closeConfigDialog()
-		default:
-			a.applyConfigDialog()
-		}
-	case tcell.KeyRune:
-		if event.Modifiers() != tcell.ModNone {
-			break
-		}
-		radios := panel.ListFormatDialogRadios()
-		ch := event.Rune()
-		matchedRadio := false
-		for i, row := range radios {
-			if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
-				a.model.ConfigDialog.ListFormat = row.Format
-				a.model.ConfigDialog.Focus = 4 + i
-				matchedRadio = true
-				break
+	st := &a.model.ConfigDialog
+	radios := panel.ListFormatDialogRadios()
+	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
+		focus:              &st.Focus,
+		onApply:            a.applyConfigDialog,
+		onCancel:           a.closeConfigDialog,
+		allowPlainOKCancel: true,
+		onMnemonic: func(r rune) bool {
+			if format, ok := listingFormatFromShortcut(r, &st.Focus); ok {
+				st.ListFormat = format
+				st.Focus = 4 + st.Focus
+				return true
 			}
-		}
-		if matchedRadio {
-			break
-		}
-		switch ch {
-		case 'f', 'F':
-			a.model.ConfigDialog.ShowFileIcons = !a.model.ConfigDialog.ShowFileIcons
-			a.model.ConfigDialog.Focus = 0
-		case 'z', 'Z':
-			a.model.ConfigDialog.ZoomActivePanel = !a.model.ConfigDialog.ZoomActivePanel
-			a.model.ConfigDialog.Focus = 1
-		case 's', 'S':
-			a.model.ConfigDialog.ShrunkenShowsNameOnly = !a.model.ConfigDialog.ShrunkenShowsNameOnly
-			a.model.ConfigDialog.Focus = 2
-		case 'e', 'E':
-			a.model.ConfigDialog.CenterScrolling = !a.model.ConfigDialog.CenterScrolling
-			a.model.ConfigDialog.Focus = 3
-		case 'o', 'O':
-			a.applyConfigDialog()
-		case 'c', 'C':
-			a.closeConfigDialog()
-		case ' ':
-			switch a.model.ConfigDialog.Focus {
+			switch r {
+			case 'f', 'F':
+				st.ShowFileIcons = !st.ShowFileIcons
+				st.Focus = 0
+			case 'z', 'Z':
+				st.ZoomActivePanel = !st.ZoomActivePanel
+				st.Focus = 1
+			case 's', 'S':
+				st.ShrunkenShowsNameOnly = !st.ShrunkenShowsNameOnly
+				st.Focus = 2
+			case 'e', 'E':
+				st.CenterScrolling = !st.CenterScrolling
+				st.Focus = 3
+			default:
+				return false
+			}
+			return true
+		},
+		onSpace: func(focus int) bool {
+			switch focus {
 			case 0:
-				a.model.ConfigDialog.ShowFileIcons = !a.model.ConfigDialog.ShowFileIcons
+				st.ShowFileIcons = !st.ShowFileIcons
 			case 1:
-				a.model.ConfigDialog.ZoomActivePanel = !a.model.ConfigDialog.ZoomActivePanel
+				st.ZoomActivePanel = !st.ZoomActivePanel
 			case 2:
-				a.model.ConfigDialog.ShrunkenShowsNameOnly = !a.model.ConfigDialog.ShrunkenShowsNameOnly
+				st.ShrunkenShowsNameOnly = !st.ShrunkenShowsNameOnly
 			case 3:
-				a.model.ConfigDialog.CenterScrolling = !a.model.ConfigDialog.CenterScrolling
+				st.CenterScrolling = !st.CenterScrolling
 			case 4, 5, 6:
-				a.model.ConfigDialog.ListFormat = radios[a.model.ConfigDialog.Focus-4].Format
+				st.ListFormat = radios[focus-4].Format
 			case form.OKIndex():
 				a.applyConfigDialog()
 			case form.CancelIndex():
 				a.closeConfigDialog()
+			default:
+				return false
 			}
-		}
-	}
-	if focus, ok := form.MoveFocus(a.model.ConfigDialog.Focus, event.Key()); ok {
-		a.model.ConfigDialog.Focus = focus
-	}
+			return true
+		},
+	})
 }
 
 // Group selection dialog handlers

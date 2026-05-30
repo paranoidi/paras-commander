@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -65,30 +64,8 @@ func (a *App) syncSFTPConnectDialogRanks() {
 	}
 	lines := make([]string, len(st.DisplayLines))
 	copy(lines, st.DisplayLines)
-	q := search.Parse(st.Query)
-	opts := search.Options{CaseInsensitive: a.config.CaseInsensitiveFilter}
-	ranked := q.Rank(lines, opts)
-	st.Ranked = make([]int, len(ranked))
-	st.MatchRanges = make([][]search.Range, len(st.DisplayLines))
-	for i := range st.MatchRanges {
-		st.MatchRanges[i] = nil
-	}
-	for i, r := range ranked {
-		st.Ranked[i] = r.Index
-		if r.Index >= 0 && r.Index < len(st.MatchRanges) {
-			st.MatchRanges[r.Index] = r.Result.Ranges
-		}
-	}
-	if st.Selected >= len(st.Ranked) {
-		if len(st.Ranked) == 0 {
-			st.Selected = 0
-		} else {
-			st.Selected = len(st.Ranked) - 1
-		}
-	}
-	if st.Selected < 0 {
-		st.Selected = 0
-	}
+	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.DisplayLines), a.config.CaseInsensitiveFilter)
+	clampFilteredListSelection(&st.Selected, len(st.Ranked))
 	ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
 }
 
@@ -140,12 +117,7 @@ func (a *App) executeSFTPConnectDialog() {
 }
 
 func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
-	if ui.AltDialogOK(event) {
-		a.executeSFTPConnectDialog()
-		return
-	}
-	if ui.AltDialogCancel(event) {
-		a.closeSFTPConnectDialog()
+	if a.tryStandardDialogActions(event, a.executeSFTPConnectDialog, a.closeSFTPConnectDialog, nil) {
 		return
 	}
 
@@ -160,10 +132,11 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if st.Focus == 1 && a.editTransferFieldKey(event, &st.Location) {
+	if st.Focus == 1 && a.handleFileDialogFieldKey(event, &st.Location, nil) {
 		return
 	}
 
+	form := ui.NewDialogLinearForm(2)
 	switch event.Key() {
 	case tcell.KeyEsc:
 		a.closeSFTPConnectDialog()
@@ -181,91 +154,49 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 				st.Focus = 1
 			}
 		}
-	case tcell.KeyTab:
-		st.Focus = (st.Focus + 1) % 4
-		if st.Focus == 0 && len(st.Ranked) == 0 {
-			st.Focus = 1
-		}
-	case tcell.KeyBacktab:
-		st.Focus--
-		if st.Focus < 0 {
-			st.Focus = 3
-		}
-		if st.Focus == 0 && len(st.Ranked) == 0 {
-			st.Focus = 3
-		}
-	case tcell.KeyLeft:
-		if st.Focus >= 2 {
-			if st.Focus > 2 {
-				st.Focus--
+	case tcell.KeyTab, tcell.KeyBacktab:
+		if nf, ok := form.MoveFocus(st.Focus, event.Key()); ok {
+			st.Focus = nf
+			if st.Focus == 0 && len(st.Ranked) == 0 {
+				st.Focus = 1
 			}
 		}
-	case tcell.KeyRight:
-		if st.Focus >= 2 && st.Focus < 3 {
-			st.Focus++
-		}
-	case tcell.KeyUp:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
-			ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
-		} else {
-			a.sftpConnectDialogMoveFocus(-1)
-		}
-	case tcell.KeyDown:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
-			ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
-		} else {
-			a.sftpConnectDialogMoveFocus(1)
-		}
-	case tcell.KeyHome:
-		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
-			st.Selected = 0
-			ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
-		}
-	case tcell.KeyEnd:
-		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
-			st.Selected = len(st.Ranked) - 1
-			ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
-		}
-	case tcell.KeyPgUp:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			step := max(1, a.sftpConnectListRows()-1)
-			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
-			ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
-		}
-	case tcell.KeyPgDn:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			step := max(1, a.sftpConnectListRows()-1)
-			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
-			ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
-		}
-	}
-}
-
-func (a *App) sftpConnectDialogMoveFocus(delta int) {
-	st := &a.model.SFTPConnectDialog
-	if delta < 0 {
-		switch st.Focus {
-		case 0:
-			return
-		case 1:
-			if len(st.Ranked) > 0 {
-				st.Focus = 0
+	case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
+		if st.Focus >= form.OKIndex() {
+			if nf, ok := form.MoveFocus(st.Focus, event.Key()); ok {
+				st.Focus = nf
 			}
-		case 2:
-			st.Focus = 1
-		case 3:
-			st.Focus = 2
+			break
 		}
-		return
-	}
-	switch st.Focus {
-	case 0:
-		st.Focus = 1
-	case 1:
-		st.Focus = 2
-	case 2, 3:
-		return
+		if st.Focus == 0 {
+			if event.Key() == tcell.KeyDown && len(st.Ranked) == 0 {
+				st.Focus = 1
+				break
+			}
+			if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.sftpConnectListRows, func() {
+				ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
+			}) {
+				break
+			}
+			if event.Key() == tcell.KeyUp {
+				break
+			}
+		}
+		if nf, ok := form.MoveFocus(st.Focus, event.Key()); ok {
+			st.Focus = nf
+			if st.Focus == 0 && len(st.Ranked) == 0 {
+				if event.Key() == tcell.KeyUp {
+					st.Focus = form.CancelIndex()
+				} else {
+					st.Focus = 1
+				}
+			}
+		}
+	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
+		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.sftpConnectListRows, func() {
+			ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
+		}) {
+			break
+		}
 	}
 }
