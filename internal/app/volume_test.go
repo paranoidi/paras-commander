@@ -4,31 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
-
-func testAppMinimal(t *testing.T) *App {
-	t.Helper()
-	root := t.TempDir()
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("Init: %v", err)
-	}
-	t.Cleanup(screen.Fini)
-	screen.SetSize(80, 24)
-	app, err := NewWithOptions(screen, Options{
-		CWD:    func() (string, error) { return root, nil },
-		Config: config.Default(),
-	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
-	return app
-}
 
 func TestApplyVolumeSpaceRefreshStalePathDropped(t *testing.T) {
 	t.Parallel()

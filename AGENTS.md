@@ -20,6 +20,8 @@ Always aim to have ONE source for the truth. This applies to keybindings, theme 
 
 - **`internal/app`**: `App` struct, `Run()` event loop, input dispatch, render/reconcile, and thin `*_bridge.go` / `*_host.go` files that wire feature handlers. Modal file-dialog orchestration lives in `dialog_*.go` (rendering/state remains in `internal/ui/dialog`).
 - **`internal/apphandler/*`**: feature handlers (`jobs`, `find`; `dialog` reserved for future path-picker / transfer extraction). Each handler takes a `Deps` struct and a `Host` interface for cross-cutting app services.
+- **`internal/apphandler/host/`**: decomposed host facets (`LayoutHost`, `MessageHost`, `PanelHost`, `ShellHost`) composed into each handler's `Host` interface.
+- **`internal/app/shell_host.go`**: shared `appShellHost` embedded by `jobs_host.go` and `find_host.go`.
 - **`internal/app/helpkeys`**, **`internal/app/pathpick`**, **`internal/app/jobbridge`**: stateless helpers extracted from the app layer (phase 1).
 
 ## Import rule (apphandler)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +11,8 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/testutil"
 )
 
 func TestResolveSourceNoSelectionUsesCursor(t *testing.T) {
@@ -37,8 +38,8 @@ func TestResolveSourceWithSelectionUsesSelected(t *testing.T) {
 	dir := t.TempDir()
 	aPath := filepath.Join(dir, "a.txt")
 	bPath := filepath.Join(dir, "b.txt")
-	writeFile(t, aPath)
-	writeFile(t, bPath)
+	testutil.WriteFile(t, aPath)
+	testutil.WriteFile(t, bPath)
 
 	p, err := panel.NewWithOptions(dir, localfs.DefaultListOptions(), nil)
 	if err != nil {
@@ -63,8 +64,8 @@ func TestResolveSourceSelectedIncludesPathNotInListing(t *testing.T) {
 	otherDir := t.TempDir()
 	aPath := filepath.Join(dir, "a.txt")
 	remotePath := filepath.Join(otherDir, "remote.txt")
-	writeFile(t, aPath)
-	writeFile(t, remotePath)
+	testutil.WriteFile(t, aPath)
+	testutil.WriteFile(t, remotePath)
 
 	p, err := panel.NewWithOptions(dir, localfs.DefaultListOptions(), nil)
 	if err != nil {
@@ -153,8 +154,8 @@ func TestResolveSourceSingleWithSelectionReturnsError(t *testing.T) {
 	dir := t.TempDir()
 	aPath := filepath.Join(dir, "a.txt")
 	bPath := filepath.Join(dir, "b.txt")
-	writeFile(t, aPath)
-	writeFile(t, bPath)
+	testutil.WriteFile(t, aPath)
+	testutil.WriteFile(t, bPath)
 
 	p, err := panel.NewWithOptions(dir, localfs.DefaultListOptions(), nil)
 	if err != nil {
@@ -171,7 +172,7 @@ func TestResolveSourceSingleWithSelectionReturnsError(t *testing.T) {
 func TestPlanRenameValid(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "old.txt")
-	writeFile(t, srcPath)
+	testutil.WriteFile(t, srcPath)
 
 	entry := localfs.Entry{Name: "old.txt", Path: srcPath}
 	plan, err := PlanRename(entry, "new.txt", dir)
@@ -189,7 +190,7 @@ func TestPlanRenameValid(t *testing.T) {
 func TestPlanRenameSameNameErrors(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "a.txt")
-	writeFile(t, srcPath)
+	testutil.WriteFile(t, srcPath)
 
 	entry := localfs.Entry{Name: "a.txt", Path: srcPath}
 	_, err := PlanRename(entry, "a.txt", dir)
@@ -201,7 +202,7 @@ func TestPlanRenameSameNameErrors(t *testing.T) {
 func TestPlanRenameEmptyName(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "a.txt")
-	writeFile(t, srcPath)
+	testutil.WriteFile(t, srcPath)
 
 	entry := localfs.Entry{Name: "a.txt", Path: srcPath}
 	_, err := PlanRename(entry, "", dir)
@@ -213,7 +214,7 @@ func TestPlanRenameEmptyName(t *testing.T) {
 func TestPlanRenameWithPathSeparator(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "a.txt")
-	writeFile(t, srcPath)
+	testutil.WriteFile(t, srcPath)
 
 	entry := localfs.Entry{Name: "a.txt", Path: srcPath}
 	_, err := PlanRename(entry, "sub/new.txt", dir)
@@ -225,7 +226,7 @@ func TestPlanRenameWithPathSeparator(t *testing.T) {
 func TestExecuteRename(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "old.txt")
-	writeFile(t, srcPath)
+	testutil.WriteFile(t, srcPath)
 
 	entry := localfs.Entry{Name: "old.txt", Path: srcPath}
 	plan, err := PlanRename(entry, "new.txt", dir)
@@ -249,8 +250,8 @@ func TestPlanRenameTargetAlreadyExists(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "a.txt")
 	dstPath := filepath.Join(dir, "b.txt")
-	writeFile(t, srcPath)
-	writeFile(t, dstPath)
+	testutil.WriteFile(t, srcPath)
+	testutil.WriteFile(t, dstPath)
 
 	entry := localfs.Entry{Name: "a.txt", Path: srcPath}
 	_, err := PlanRename(entry, "b.txt", dir)
@@ -329,7 +330,7 @@ func TestPlanMkdirExisting(t *testing.T) {
 func TestPlanDelete(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "a.txt")
-	writeFile(t, filePath)
+	testutil.WriteFile(t, filePath)
 
 	entry := localfs.Entry{Name: "a.txt", Path: filePath}
 	source := Source{Kind: SourceCursor, Entries: []localfs.Entry{entry}}
@@ -349,7 +350,7 @@ func TestPlanDelete(t *testing.T) {
 func TestExecuteDeleteFile(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "a.txt")
-	writeFile(t, filePath)
+	testutil.WriteFile(t, filePath)
 
 	entry := localfs.Entry{Name: "a.txt", Path: filePath}
 	plan := DeletePlan{
@@ -372,7 +373,7 @@ func TestExecuteDeleteDirectory(t *testing.T) {
 	if err := os.Mkdir(subDir, 0o755); err != nil {
 		t.Fatalf("Mkdir: %v", err)
 	}
-	writeFile(t, filepath.Join(subDir, "inside.txt"))
+	testutil.WriteFile(t, filepath.Join(subDir, "inside.txt"))
 
 	entry := localfs.Entry{Name: "subdir", Path: subDir, Type: localfs.EntryDirectory}
 	plan := DeletePlan{
@@ -395,8 +396,8 @@ func TestExecuteDeleteDirectoryWithHiddenFile(t *testing.T) {
 	if err := os.Mkdir(subDir, 0o755); err != nil {
 		t.Fatalf("Mkdir: %v", err)
 	}
-	writeFile(t, filepath.Join(subDir, ".hidden"))
-	writeFile(t, filepath.Join(subDir, "visible.txt"))
+	testutil.WriteFile(t, filepath.Join(subDir, ".hidden"))
+	testutil.WriteFile(t, filepath.Join(subDir, "visible.txt"))
 
 	entry := localfs.Entry{Name: "nested", Path: subDir, Type: localfs.EntryDirectory}
 	plan := DeletePlan{
@@ -542,7 +543,7 @@ func TestParseMode(t *testing.T) {
 func TestPlanChmod(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "a.txt")
-	writeFile(t, filePath)
+	testutil.WriteFile(t, filePath)
 
 	entry := localfs.Entry{Name: "a.txt", Path: filePath}
 	source := Source{Kind: SourceCursor, Entries: []localfs.Entry{entry}}
@@ -568,7 +569,7 @@ func TestPlanChmodEmptyMode(t *testing.T) {
 func TestPlanChownValid(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "a.txt")
-	writeFile(t, filePath)
+	testutil.WriteFile(t, filePath)
 
 	entry := localfs.Entry{Name: "a.txt", Path: filePath}
 	source := Source{Kind: SourceCursor, Entries: []localfs.Entry{entry}}
@@ -587,7 +588,7 @@ func TestPlanChownValid(t *testing.T) {
 func TestPlanChownBlankField(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "a.txt")
-	writeFile(t, filePath)
+	testutil.WriteFile(t, filePath)
 
 	entry := localfs.Entry{Name: "a.txt", Path: filePath}
 	source := Source{Kind: SourceCursor, Entries: []localfs.Entry{entry}}
@@ -604,7 +605,7 @@ func TestPlanChownBlankField(t *testing.T) {
 func TestPlanSymlink(t *testing.T) {
 	dir := t.TempDir()
 	targetPath := filepath.Join(dir, "target.txt")
-	writeFile(t, targetPath)
+	testutil.WriteFile(t, targetPath)
 	linkDir := filepath.Join(t.TempDir(), "link.txt")
 
 	plan, err := PlanSymlink(targetPath, linkDir, dir, filepath.Dir(linkDir))
@@ -642,7 +643,7 @@ func TestPlanSymlinkEmptyFields(t *testing.T) {
 func TestExecuteSymlink(t *testing.T) {
 	dir := t.TempDir()
 	targetPath := filepath.Join(dir, "target.txt")
-	writeFile(t, targetPath)
+	testutil.WriteFile(t, targetPath)
 	linkPath := filepath.Join(dir, "mylink")
 
 	plan, err := PlanSymlink(targetPath, linkPath, dir, dir)
@@ -666,7 +667,7 @@ func TestExecuteSymlink(t *testing.T) {
 func TestPlanHardlink(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "source.txt")
-	writeFile(t, srcPath)
+	testutil.WriteFile(t, srcPath)
 	destPath := filepath.Join(dir, "hardlink.txt")
 
 	plan, err := PlanHardlink(srcPath, destPath, dir, dir)
@@ -697,7 +698,7 @@ func TestPlanHardlinkToDirectory(t *testing.T) {
 func TestPlanHardlinkSamePath(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "a.txt")
-	writeFile(t, filePath)
+	testutil.WriteFile(t, filePath)
 
 	_, err := PlanHardlink(filePath, filePath, dir, dir)
 	if err == nil {
@@ -1180,18 +1181,11 @@ func TestCopyRejectsSpecialFiles(t *testing.T) {
 func newTestPanel(t *testing.T, dir string, filenames ...string) panel.State {
 	t.Helper()
 	for _, name := range filenames {
-		writeFile(t, filepath.Join(dir, name))
+		testutil.WriteFile(t, filepath.Join(dir, name))
 	}
 	p, err := panel.New(dir)
 	if err != nil {
 		t.Fatalf("panel.New(%q): %v", dir, err)
 	}
 	return p
-}
-
-func writeFile(t *testing.T, path string) {
-	t.Helper()
-	if err := os.WriteFile(path, []byte("content"), 0o644); err != nil {
-		t.Fatalf("WriteFile(%q): %v", path, err)
-	}
 }

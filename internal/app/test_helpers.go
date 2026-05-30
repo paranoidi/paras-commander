@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +12,9 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/testutil"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uitest"
 )
 
 func waitUntilAppJobsFinished(t *testing.T, app *App, d time.Duration) {
@@ -50,67 +51,10 @@ func activateFileMenuItem(t *testing.T, app *App, shortcut rune) {
 
 func loadTestTheme(t *testing.T) (theme.Theme, config.Paths) {
 	t.Helper()
-
-	styleKeys := []string{
-		"menu.bar", "menu.bar.selected", "menu.dropdown", "menu.dropdown.selected",
-		"menu.dropdown.frame", "menu.bar.accent", "menu.bar.alert", "menu.dropdown.accent",
-		"menu.detail", "menu.spinner", "menu.progress.done", "menu.progress.remaining",
-		"menu.job.scanning", "menu.job.queued", "menu.job.running", "menu.job.paused", "menu.job.canceled",
-		"menu.job.failed", "menu.job.decision", "menu.job.completed",
-		"panel.active.frame", "panel.inactive.frame", "panel.active.surface", "panel.inactive.surface",
-		"panel.active.title", "panel.inactive.title", "panel.active.disk_usage_overview", "panel.inactive.disk_usage_overview",
-		"panel.active.header", "panel.active.header.carousel",
-		"panel.inactive.header", "panel.inactive.header.carousel",
-		"panel.active.row.cursor", "panel.active.row.cursor.selected",
-		"panel.active.usage.cursor", "panel.active.usage.cursor.selected",
-		"panel.inactive.row.cursor", "panel.inactive.row.cursor.selected",
-		"panel.carousel.inactive.row.cursor", "panel.carousel.inactive.row.cursor.selected",
-		"panel.inactive.usage.cursor", "panel.inactive.usage.cursor.selected",
-		"panel.row.file", "panel.row.directory", "panel.row.symlink", "panel.row.selected",
-		"panel.row.indicator.selection_subtree", "panel.row.indicator.new",
-		"panel.text", "panel.indicator.sync", "panel.indicator.quick_view",
-		"panel.indicator.selections", "panel.indicator.dotfiles_hidden", "panel.indicator.gitignore", "panel.indicator.stash",
-		"panel.indicator.other_panel",
-		"panel.blocked.frame", "panel.blocked.surface", "panel.blocked.title",
-		"panel.blocked.disk_usage_overview",
-		"panel.blocked.header", "panel.blocked.header.carousel",
-		"panel.blocked.row.file", "panel.blocked.row.directory",
-		"panel.blocked.row.symlink", "panel.blocked.row.selected", "panel.blocked.row.cursor",
-		"panel.blocked.row.cursor.selected", "panel.blocked.text",
-		"panel.folder.diskscan", "panel.folder.diskscan_excluded",
-		"panel.usage.normal", "panel.usage.selected",
-		"panel.git.not_modified", "panel.git.new", "panel.git.modified", "panel.git.deleted",
-		"panel.git.renamed", "panel.git.typechange", "panel.git.ignored", "panel.git.conflicted",
-		"fuzzy.input", "fuzzy.input.nomatch", "fuzzy.highlight", "fuzzy.highlight.cursor",
-		"dialog.frame", "dialog.title", "dialog.text", "dialog.surface", "dialog.accent",
-		"dialog.input.active", "dialog.input.active.placeholder", "dialog.input.active.error", "dialog.input.inactive",
-		"dialog.input.inactive.placeholder", "dialog.input.inactive.error", "dialog.button.inactive", "dialog.button.active",
-		"dialog.button.active_destructive",
-		"dialog.option.inactive", "dialog.option.active", "dialog.option.selected", "dialog.option.invalid",
-		"dialog.massrename.before", "dialog.massrename.before.removed", "dialog.massrename.before.replaced",
-		"dialog.massrename.after", "dialog.massrename.after.added", "dialog.massrename.after.error",
-		"message.info", "message.warn", "message.error",
-		"jobs.row", "jobs.running", "jobs.done", "jobs.failed",
-		"jobs.progress.track", "jobs.progress.fill", "jobs.progress.label.on_fill",
-		"jobs.progress.label.on_track",
-		"jobs.icons.scanning", "jobs.icons.queued", "jobs.icons.ongoing", "jobs.icons.paused", "jobs.icons.stopped",
-		"jobs.icons.error", "jobs.icons.input_required", "jobs.icons.completed",
-		"footer.key", "footer.label",
-	}
-	var buf strings.Builder
-	buf.WriteString(`name = "test-theme"
-
-[palette]
-black = "#000000"
-white = "#ffffff"
-yellow = "#ffff00"
-
-`)
-	writeTestThemeStyleSections(&buf, styleKeys)
-
+	data := theme.TestThemeBytes(t, nil)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test-theme.toml")
-	if err := os.WriteFile(path, []byte(buf.String()), 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	th, err := theme.LoadFile(path)
@@ -121,15 +65,23 @@ yellow = "#ffff00"
 	return th, paths
 }
 
-func newScreen(t *testing.T, w, h int) tcell.SimulationScreen {
+func testAppMinimal(t *testing.T) *App {
 	t.Helper()
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("screen.Init() error = %v", err)
+	root := t.TempDir()
+	screen := uitest.Screen(t, 80, 24)
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: config.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
 	}
-	t.Cleanup(screen.Fini)
-	screen.SetSize(w, h)
-	return screen
+	t.Cleanup(app.stopWorker)
+	return app
+}
+
+func newScreen(t *testing.T, w, h int) tcell.SimulationScreen {
+	return uitest.Screen(t, w, h)
 }
 
 func newApp(t *testing.T, screen tcell.SimulationScreen, dir string) *App {
@@ -157,10 +109,7 @@ func screenLine(screen tcell.SimulationScreen, y, width int) string {
 }
 
 func writeFile(t *testing.T, path string) {
-	t.Helper()
-	if err := os.WriteFile(path, []byte("content"), 0o644); err != nil {
-		t.Fatalf("WriteFile(%q) error = %v", path, err)
-	}
+	testutil.WriteFile(t, path)
 }
 
 func flushBackgroundJobs(t *testing.T, app *App) {
@@ -184,35 +133,6 @@ func flushBackgroundJobs(t *testing.T, app *App) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	t.Fatal("timed out waiting for jobs to finish")
-}
-
-func writeTestThemeStyleSections(buf *strings.Builder, fullKeys []string) {
-	sectionOrder := []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy"}
-	bySection := map[string][]string{}
-	for _, key := range fullKeys {
-		for _, root := range sectionOrder {
-			prefix := root + "."
-			if strings.HasPrefix(key, prefix) {
-				bySection[root] = append(bySection[root], strings.TrimPrefix(key, prefix))
-				break
-			}
-		}
-	}
-	for _, root := range sectionOrder {
-		keys := bySection[root]
-		if len(keys) == 0 {
-			continue
-		}
-		fmt.Fprintf(buf, "[%s]\n", root)
-		for _, rel := range keys {
-			spec := `{ fg = "white", bg = "black" }`
-			if strings.HasPrefix(rel, "option.") {
-				spec = `{ fg = "white" }`
-			}
-			fmt.Fprintf(buf, "%s = %s\n", rel, spec)
-		}
-		buf.WriteString("\n")
-	}
 }
 
 func selectPanelEntryByName(t *testing.T, p *panel.State, name string) {

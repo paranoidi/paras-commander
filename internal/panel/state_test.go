@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/testutil"
 )
 
 func TestNewLoadsAbsolutePathAndEntries(t *testing.T) {
@@ -84,10 +85,10 @@ func TestLoadClampsCursorAfterReload(t *testing.T) {
 
 func TestRefreshRestoresCursorByIndexWhenCurrentEntryRemoved(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "a.txt"))
 	bPath := filepath.Join(dir, "b.txt")
-	writeFile(t, bPath)
-	writeFile(t, filepath.Join(dir, "c.txt"))
+	testutil.WriteFile(t, bPath)
+	testutil.WriteFile(t, filepath.Join(dir, "c.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -114,9 +115,9 @@ func TestRefreshRestoresCursorByIndexWhenCurrentEntryRemoved(t *testing.T) {
 
 func TestLoadRejectsNonDirectory(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "initial.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "initial.txt"))
 	filePath := filepath.Join(dir, "file.txt")
-	writeFile(t, filePath)
+	testutil.WriteFile(t, filePath)
 
 	state, err := New(dir)
 	if err != nil {
@@ -174,9 +175,9 @@ func TestPageTopAndBottomKeepCursorVisible(t *testing.T) {
 
 func TestRefreshPreservesSelectedEntryByName(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
-	writeFile(t, filepath.Join(dir, "b.txt"))
-	writeFile(t, filepath.Join(dir, "c.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "a.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "b.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "c.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -205,8 +206,8 @@ func TestLoadHidesGitignoredEntries(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored.txt\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, filepath.Join(dir, "ignored.txt"))
-	writeFile(t, filepath.Join(dir, "visible.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "ignored.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "visible.txt"))
 
 	cache := gitignore.NewCache()
 	state, err := NewWithOptions(dir, localfs.ListOptions{ShowHidden: false}, cache)
@@ -226,7 +227,7 @@ func TestLoadSetsGitColumnActiveInsideWorkTree(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(dir, ".git"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeFile(t, filepath.Join(dir, "visible.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "visible.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -249,7 +250,7 @@ func TestLoadSetsGitColumnActiveInsideWorkTree(t *testing.T) {
 
 func TestLoadClearsGitColumnOutsideWorkTree(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "visible.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "visible.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -265,7 +266,7 @@ func TestLoadClearsGitColumnOutsideWorkTree(t *testing.T) {
 
 func TestLoadClearsGitignoreActiveOutsideWorkTree(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "visible.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "visible.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -282,8 +283,8 @@ func TestLoadClearsGitignoreActiveOutsideWorkTree(t *testing.T) {
 
 func TestLoadSetsDotfilesHiddenActiveWhenDotfilesPresent(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, ".hidden"))
-	writeFile(t, filepath.Join(dir, "visible.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, ".hidden"))
+	testutil.WriteFile(t, filepath.Join(dir, "visible.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -296,7 +297,7 @@ func TestLoadSetsDotfilesHiddenActiveWhenDotfilesPresent(t *testing.T) {
 
 func TestLoadClearsDotfilesHiddenActiveWhenNoDotfiles(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "visible.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "visible.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -309,8 +310,8 @@ func TestLoadClearsDotfilesHiddenActiveWhenNoDotfiles(t *testing.T) {
 
 func TestToggleHiddenReloadsPanelEntries(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, ".hidden"))
-	writeFile(t, filepath.Join(dir, "visible.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, ".hidden"))
+	testutil.WriteFile(t, filepath.Join(dir, "visible.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -337,9 +338,9 @@ func TestToggleHiddenReloadsPanelEntries(t *testing.T) {
 
 func TestToggleHiddenPreservesCurrentEntryWhenStillVisible(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, ".hidden"))
-	writeFile(t, filepath.Join(dir, "a.txt"))
-	writeFile(t, filepath.Join(dir, "b.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, ".hidden"))
+	testutil.WriteFile(t, filepath.Join(dir, "a.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "b.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -451,8 +452,8 @@ func TestToggleSelectionAndAdvanceStaysOnLastRow(t *testing.T) {
 
 func TestRefreshPreservesVisibleSelection(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
-	writeFile(t, filepath.Join(dir, "b.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "a.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "b.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -478,7 +479,7 @@ func TestEnterDirectoryAndParentPreservesExitedDirectory(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(root, "sub"), 0o755); err != nil {
 		t.Fatalf("Mkdir() error = %v", err)
 	}
-	writeFile(t, filepath.Join(root, "z.txt"))
+	testutil.WriteFile(t, filepath.Join(root, "z.txt"))
 
 	state, err := New(root)
 	if err != nil {
@@ -578,8 +579,8 @@ func TestHistoryNavigationRestoresPriorHighlightedEntry(t *testing.T) {
 	if err := os.Mkdir(sub, 0o755); err != nil {
 		t.Fatalf("Mkdir(sub) error = %v", err)
 	}
-	writeFile(t, filepath.Join(sub, "aaa.txt"))
-	writeFile(t, filepath.Join(sub, "zzz.txt"))
+	testutil.WriteFile(t, filepath.Join(sub, "aaa.txt"))
+	testutil.WriteFile(t, filepath.Join(sub, "zzz.txt"))
 
 	state, err := New(root)
 	if err != nil {
@@ -640,8 +641,8 @@ func TestNavigateToReenteredDirectoryRestoresHighlight(t *testing.T) {
 	if err := os.Mkdir(sub, 0o755); err != nil {
 		t.Fatalf("Mkdir(sub) error = %v", err)
 	}
-	writeFile(t, filepath.Join(sub, "keep.txt"))
-	writeFile(t, filepath.Join(sub, "target.txt"))
+	testutil.WriteFile(t, filepath.Join(sub, "keep.txt"))
+	testutil.WriteFile(t, filepath.Join(sub, "target.txt"))
 
 	state, err := New(root)
 	if err != nil {
@@ -692,7 +693,7 @@ func TestReenterDirectoryCentersRecalledCursor(t *testing.T) {
 	}
 	for i := 0; i < 20; i++ {
 		name := strconv.Itoa(i) + ".txt"
-		writeFile(t, filepath.Join(sub, name))
+		testutil.WriteFile(t, filepath.Join(sub, name))
 	}
 	target := "10.txt"
 
@@ -749,7 +750,7 @@ func TestReenterDirectoryPinsTailWhenCenteringImpossible(t *testing.T) {
 	}
 	for i := 0; i < 20; i++ {
 		name := strconv.Itoa(i) + ".txt"
-		writeFile(t, filepath.Join(sub, name))
+		testutil.WriteFile(t, filepath.Join(sub, name))
 	}
 	target := "9.txt"
 
@@ -940,7 +941,7 @@ func TestParentThenSiblingRetainsPriorProjectDir(t *testing.T) {
 
 func TestEnterRegularFileIsInert(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "file.txt"))
+	testutil.WriteFile(t, filepath.Join(dir, "file.txt"))
 
 	state, err := New(dir)
 	if err != nil {
@@ -2159,8 +2160,8 @@ func TestCrossDirectorySelectionsAndStripOrder(t *testing.T) {
 	if err := os.Mkdir(sub, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	writeFile(t, filepath.Join(root, "root.txt"))
-	writeFile(t, filepath.Join(sub, "sub.txt"))
+	testutil.WriteFile(t, filepath.Join(root, "root.txt"))
+	testutil.WriteFile(t, filepath.Join(sub, "sub.txt"))
 
 	state, err := New(root)
 	if err != nil {
@@ -2266,13 +2267,6 @@ func testEntries(count int) []localfs.Entry {
 		entries[i] = localfs.Entry{Name: string(rune('a' + i))}
 	}
 	return entries
-}
-
-func writeFile(t *testing.T, path string) {
-	t.Helper()
-	if err := os.WriteFile(path, []byte("content"), 0o644); err != nil {
-		t.Fatalf("WriteFile(%q) error = %v", path, err)
-	}
 }
 
 func TestNavigateFromRootPreservesPriorDirs(t *testing.T) {

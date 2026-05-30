@@ -20,6 +20,7 @@ func (jobsHostStub) LayoutForTerminalSize(w, h int) ui.Layout {
 }
 
 func (jobsHostStub) SetTransientMessage(string, ui.MessageUrgency) {}
+func (jobsHostStub) SetErrorMessage(string, error)                 {}
 func (jobsHostStub) SetUnsupportedMessage(string)                  {}
 func (jobsHostStub) RefreshBothPanels()                            {}
 func (jobsHostStub) RequestBothPanelsVolumeSpaceRefreshAsync()     {}

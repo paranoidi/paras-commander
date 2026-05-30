@@ -437,7 +437,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	app.model.Left.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.model.Right.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.jobsCtrl = jobsctrl.New(jobsctrl.Deps{
-		Host:     jobsHost{app: app},
+		Host:     jobsHost{appShellHost: appShellHost{app: app}},
 		Screen:   screen,
 		Model:    &app.model,
 		State:    jobState,
@@ -446,7 +446,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		KeysJobs: kmJobs,
 	})
 	app.findCtrl = findctrl.New(findctrl.Deps{
-		Host:   findHost{app: app},
+		Host:   findHost{appShellHost: appShellHost{app: app}},
 		Screen: screen,
 		Model:  &app.model,
 		Config: cfg,
