@@ -16,6 +16,8 @@ type Host interface {
 	ActivePanel() *panel.State
 	ActivePanelSources() []string
 	InactivePanel() *panel.State
+	LeftPanel() *panel.State
+	RightPanel() *panel.State
 	OpenTransferDialogSelfCopyRename(kind ui.TransferKind, absDest, source string)
 	HandleQuit() bool
 	HandleQuitImmediate() bool

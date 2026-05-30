@@ -57,6 +57,10 @@ type Theme struct {
 	PanelRowDirectory           tcell.Style
 	PanelRowSymlink             tcell.Style
 	PanelRowSelected            tcell.Style
+	// PanelRowIndicatorSelectionSubtree styles the file-list suffix on directories with nested selections.
+	PanelRowIndicatorSelectionSubtree tcell.Style
+	// PanelRowIndicatorNew styles the file-list suffix for recently transferred entries.
+	PanelRowIndicatorNew tcell.Style
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
 	PanelText                   tcell.Style
 	PanelCursorActive           tcell.Style
@@ -192,6 +196,19 @@ type Theme struct {
 	FooterLabel tcell.Style
 }
 
+// PanelRowSuffixIconForeground returns the foreground for file-list row suffix glyphs
+// ([symbols.filelist]) on the cursor row when the matching panel.*.row.cursor style
+// defines icon; otherwise the base indicator style foreground is used.
+func (t Theme) PanelRowSuffixIconForeground(cursorStyleKey string, base tcell.Style) tcell.Color {
+	if cursorStyleKey != "" && t.PanelFileIconFG != nil {
+		if c, ok := t.PanelFileIconFG[cursorStyleKey]; ok {
+			return c
+		}
+	}
+	fg, _, _ := base.Decompose()
+	return fg
+}
+
 // DialogInputPair returns base (row fill + committed text) and placeholder glyph styles.
 func (t Theme) DialogInputPair(focused bool) (base, placeholder tcell.Style) {
 	if focused {
@@ -297,10 +314,12 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 
 // Symbol keys in the [symbols] table (optional entries — see accessors for defaults).
 const (
-	SymbolKeyPathPicker     = "path_picker"
-	SymbolKeyGit            = "git"
-	SymbolKeyStash          = "stash"
-	SymbolKeyHiddenDotfiles = "hidden_dotfiles"
+	SymbolKeyPathPicker               = "path_picker"
+	SymbolKeyGit                      = "git"
+	SymbolKeyStash                    = "stash"
+	SymbolKeyHiddenDotfiles           = "hidden_dotfiles"
+	SymbolKeyFilelistSelectionSubtree = "filelist.selection_subtree"
+	SymbolKeyFilelistNew              = "filelist.new"
 )
 
 // Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
@@ -345,6 +364,27 @@ func (t Theme) SymbolGit() string {
 		}
 	}
 	return "\uf1d3" // Font Awesome git (Nerd Fonts)
+}
+
+// SymbolFilelistSelectionSubtree returns the directory nested-selection suffix glyph.
+func (t Theme) SymbolFilelistSelectionSubtree() rune {
+	return t.filelistSymbolRune(SymbolKeyFilelistSelectionSubtree, '\u25cb') // ○
+}
+
+// SymbolFilelistNew returns the recently-transferred file suffix glyph.
+func (t Theme) SymbolFilelistNew() rune {
+	return t.filelistSymbolRune(SymbolKeyFilelistNew, '\uea7f')
+}
+
+func (t Theme) filelistSymbolRune(key string, fallback rune) rune {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[key]); s != "" {
+			for _, r := range s {
+				return r
+			}
+		}
+	}
+	return fallback
 }
 
 // SymbolPathPicker returns the trailing path-picker glyph from the theme, with a default
@@ -487,6 +527,8 @@ var requiredStyleKeys = []string{
 	"panel.row.directory",
 	"panel.row.symlink",
 	"panel.row.selected",
+	"panel.row.indicator.selection_subtree",
+	"panel.row.indicator.new",
 	"panel.text",
 	"panel.indicator.sync",
 	"panel.indicator.quick_view",
@@ -907,6 +949,8 @@ func parse(data []byte) (Theme, error) {
 		PanelRowDirectory:                   styles["panel.row.directory"],
 		PanelRowSymlink:                     styles["panel.row.symlink"],
 		PanelRowSelected:                    styles["panel.row.selected"],
+		PanelRowIndicatorSelectionSubtree:   styles["panel.row.indicator.selection_subtree"],
+		PanelRowIndicatorNew:                styles["panel.row.indicator.new"],
 		PanelText:                           styles["panel.text"],
 		PanelCursorActive:                   styles["panel.active.row.cursor"],
 		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],

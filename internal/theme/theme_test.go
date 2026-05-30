@@ -11,6 +11,24 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+func TestDefaultFilelistSymbols(t *testing.T) {
+	th := Default()
+	if g := th.SymbolFilelistSelectionSubtree(); g != '\u25cb' {
+		t.Fatalf("SymbolFilelistSelectionSubtree = %q, want ○", string(g))
+	}
+	if g := th.SymbolFilelistNew(); g != '\uea7f' {
+		t.Fatalf("SymbolFilelistNew = %U, want U+EA7F", g)
+	}
+	newFG, _, _ := th.PanelRowIndicatorNew.Decompose()
+	if newFG != tcell.PaletteColor(10) {
+		t.Fatalf("panel.row.indicator.new fg = %v, want bright_green (index 10)", newFG)
+	}
+	subFG, _, _ := th.PanelRowIndicatorSelectionSubtree.Decompose()
+	if subFG != tcell.PaletteColor(3) {
+		t.Fatalf("panel.row.indicator.selection_subtree fg = %v, want yellow (index 3)", subFG)
+	}
+}
+
 func TestDefaultLoadsEmbeddedTheme(t *testing.T) {
 	styles := Default()
 	if styles.Name != "default" {

@@ -6,15 +6,17 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/primitive"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 // entryDisplayNameTruncated reports whether the listing name column would shorten the entry name.
-func entryDisplayNameTruncated(entry localfs.Entry, nameWidth int, showFileIcons bool, jobMarkRune rune, subtreeSelectionMark bool) bool {
+func entryDisplayNameTruncated(entry localfs.Entry, nameWidth int, showFileIcons bool, suffix panellist.RowSuffix, styles theme.Theme) bool {
 	if nameWidth <= 0 {
 		return false
 	}
-	suffixLen := entryListingSuffixDecorationLen(nameWidth, jobMarkRune, subtreeSelectionMark && entry.Type == localfs.EntryDirectory)
+	suffixLen := panellist.SuffixDecorationLen(nameWidth, suffix, entry, styles)
 	innerW := nameWidth - suffixLen
 	if innerW < 1 {
 		innerW = 1
@@ -152,8 +154,8 @@ func drawPanelBottomCursorNameHint(
 	titleStyle tcell.Style,
 	showIcons bool,
 	nameWidth int,
-	jobMarkGlyph rune,
-	subtreeMark bool,
+	suffix panellist.RowSuffix,
+	styles theme.Theme,
 ) {
 	if !fileListActive || chromeBlocked {
 		return
@@ -162,7 +164,7 @@ func drawPanelBottomCursorNameHint(
 	if !ok {
 		return
 	}
-	if !entryDisplayNameTruncated(entry, nameWidth, showIcons, jobMarkGlyph, subtreeMark) {
+	if !entryDisplayNameTruncated(entry, nameWidth, showIcons, suffix, styles) {
 		return
 	}
 	startX, endX, spanOK := panelBottomCenterOverlaySpan(rect, panelID, ctx)
@@ -209,5 +211,10 @@ func drawPanelCursorNameHintForState(
 			jobMarkGlyph, _ = utf8.DecodeRuneInString(glyphStr)
 		}
 	}
-	drawPanelBottomCursorNameHint(screen, rect, panelID, state, ctx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, jobMarkGlyph, subtreeMark)
+	suffix := panellist.RowSuffix{
+		JobGlyph:         jobMarkGlyph,
+		NewFile:          state.HasNewFileMark(entry),
+		SubtreeSelection: subtreeMark,
+	}
+	drawPanelBottomCursorNameHint(screen, rect, panelID, state, ctx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, suffix, ctx.Styles)
 }

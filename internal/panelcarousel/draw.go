@@ -4,13 +4,17 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
-// JobMarkFunc returns a job-queue glyph for an absolute path, if any.
-type JobMarkFunc func(absPath string) (glyph rune, ok bool)
+// JobMarkFunc returns a job-queue glyph and status for an absolute path, if any.
+type JobMarkFunc func(absPath string) (glyph rune, status string, ok bool)
+
+// NewFileMarkFunc reports whether an entry should show the new-file suffix.
+type NewFileMarkFunc func(entry localfs.Entry) bool
 
 // IconPaintFunc paints the devicon strip for one listing row.
 type IconPaintFunc func(screen tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorThemeKey string, diskPending, diskExcluded bool)
@@ -29,6 +33,7 @@ type BodyParams struct {
 	HeaderCarouselStyle tcell.Style
 	SurfaceStyle        tcell.Style
 	JobMark             JobMarkFunc
+	NewFileMark         NewFileMarkFunc
 	PaintIcon           IconPaintFunc
 	DiskUsage           DiskUsage
 	ShowChildColumn     bool
@@ -138,27 +143,42 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 				return style
 			}
 			var jobGlyph rune
+			var jobStatus string
 			if p.JobMark != nil {
-				if g, ok := p.JobMark(entry.Path); ok {
+				if g, st, ok := p.JobMark(entry.Path); ok {
 					jobGlyph = g
+					jobStatus = st
 				}
 			}
 			subtree := entry.Type == localfs.EntryDirectory && selState.HasSelectionInSubtree(entry.Path)
+			newFile := false
+			if c.Active && p.NewFileMark != nil {
+				newFile = p.NewFileMark(entry)
+			}
+			rowSuffix := panellist.RowSuffix{
+				JobGlyph:         jobGlyph,
+				NewFile:          newFile,
+				SubtreeSelection: subtree,
+			}
 			var diskSrc DiskUsageSource
 			if p.DiskUsage.Active {
 				diskSrc = p.DiskUsage.Source
 			}
-			text := formatBriefRow(entry, col.Width, p.ShowIcons, jobGlyph, subtree, diskSrc)
+			text := formatBriefRow(entry, col.Width, p.ShowIcons, rowSuffix, p.Styles, diskSrc)
 			listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons)
 			nameColOffset := listStart - col.X
 			nameWidth := nameWidthForColumn(col.Width, p.ShowIcons)
 			var spans []primitive.Span
 			if c.Active && (p.Center.Filter.Active || p.Center.Filter.Editing) {
-				spans = fuzzySpans(entry, col.Width, p.Center.MatchRanges(entryIndex), isCursor && p.FileListActive, p.Styles, p.ShowIcons, jobGlyph, subtree, func(di int) tcell.Style {
+				spans = fuzzySpans(entry, col.Width, p.Center.MatchRanges(entryIndex), isCursor && p.FileListActive, p.Styles, p.ShowIcons, rowSuffix, func(di int) tcell.Style {
 					return blendCell(nameColOffset + di)
 				})
 			}
-			if suffixSpans := listingSuffixSpans(entry, nameWidth, p.ShowIcons, jobGlyph, subtree, p.Styles, p.ChromeBlocked, func(di int) tcell.Style {
+			cursorKey := ""
+			if isCursor {
+				cursorKey = cursorIconKey(p, inactive, isCursor, selected)
+			}
+			if suffixSpans := panellist.ListingSuffixSpans(entry, nameWidth, p.ShowIcons, rowSuffix, jobStatus, p.Styles, p.ChromeBlocked, cursorKey, func(di int) tcell.Style {
 				return blendCell(nameColOffset + di)
 			}); len(suffixSpans) > 0 {
 				spans = append(suffixSpans, spans...)
@@ -217,45 +237,6 @@ func entryStyle(entry localfs.Entry, blocked bool, styles theme.Theme) tcell.Sty
 	default:
 		return styles.PanelRowFile
 	}
-}
-
-func listingSuffixSpans(
-	entry localfs.Entry,
-	nameWidth int,
-	showIcons bool,
-	jobGlyph rune,
-	subtree bool,
-	styles theme.Theme,
-	chromeBlocked bool,
-	nameBGAt func(displayIndex int) tcell.Style,
-) []primitive.Span {
-	if jobGlyph == 0 && !subtree {
-		return nil
-	}
-	display := entryDisplayRunes(entry, nameWidth, showIcons, jobGlyph, subtree)
-	suf := entryListingSuffixDecorationLen(nameWidth, jobGlyph, subtree && entry.Type == localfs.EntryDirectory)
-	decStart := len(display) - suf
-	if decStart < 0 || decStart >= len(display) {
-		return nil
-	}
-	markSource := styles.PanelRowSelected
-	if chromeBlocked {
-		markSource = styles.PanelBlockedRowSelected
-	}
-	listingMarkFG, _, _ := markSource.Decompose()
-	var spans []primitive.Span
-	for i := decStart; i < len(display); i++ {
-		if display[i].Rune != '\u25cb' { // ○
-			continue
-		}
-		_, rowBG, _ := nameBGAt(i).Decompose()
-		spans = append(spans, primitive.Span{
-			Start: i,
-			End:   i + 1,
-			Style: tcell.StyleDefault.Foreground(listingMarkFG).Background(rowBG),
-		})
-	}
-	return spans
 }
 
 func cursorStyle(p BodyParams, inactive, selected bool) tcell.Style {

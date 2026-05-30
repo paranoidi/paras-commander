@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panellist"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 func TestCarouselHeaderAlignsWithRowText(t *testing.T) {
@@ -12,7 +14,7 @@ func TestCarouselHeaderAlignsWithRowText(t *testing.T) {
 	showIcons := true
 	listW := columnListTextWidth(colWidth, showIcons)
 	hdr := briefHeader(listNameHeaderTitle(showIcons), "Size", listW)
-	row := formatBriefRow(localfs.Entry{Name: "another", Type: localfs.EntryDirectory}, colWidth, showIcons, 0, false, nil)
+	row := formatBriefRow(localfs.Entry{Name: "another", Type: localfs.EntryDirectory}, colWidth, showIcons, panellist.RowSuffix{}, theme.Default(), nil)
 	if len([]rune(hdr)) != listW {
 		t.Fatalf("header rune width %d, want list text width %d", len([]rune(hdr)), listW)
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -16,11 +17,12 @@ func TestEntryDisplayNameTruncated(t *testing.T) {
 	t.Parallel()
 	long := strings.Repeat("x", 40)
 	entry := localfs.Entry{Name: long, Path: "/tmp/" + long}
-	if !entryDisplayNameTruncated(entry, 10, true, 0, false) {
+	th := theme.Default()
+	if !entryDisplayNameTruncated(entry, 10, true, panellist.RowSuffix{}, th) {
 		t.Fatal("expected truncated for narrow name column")
 	}
 	short := localfs.Entry{Name: "a.txt", Path: "/tmp/a.txt"}
-	if entryDisplayNameTruncated(short, 20, true, 0, false) {
+	if entryDisplayNameTruncated(short, 20, true, panellist.RowSuffix{}, th) {
 		t.Fatal("expected short name to fit")
 	}
 }

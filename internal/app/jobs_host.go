@@ -35,6 +35,10 @@ func (h jobsHost) ActivePanelSources() []string { return h.app.activePanelSource
 
 func (h jobsHost) InactivePanel() *panel.State { return h.app.inactivePanel() }
 
+func (h jobsHost) LeftPanel() *panel.State { return &h.app.model.Left }
+
+func (h jobsHost) RightPanel() *panel.State { return &h.app.model.Right }
+
 func (h jobsHost) OpenTransferDialogSelfCopyRename(kind ui.TransferKind, absDest, source string) {
 	h.app.openTransferDialogSelfCopyRename(kind, absDest, source)
 }

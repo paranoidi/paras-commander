@@ -100,6 +100,10 @@ type State struct {
 	// Idle-sort scheduling keys off Sort.DiskUsageIdleSizeSort; this flag stays in sync for UI/state parity.
 	DiskUsageIdleSortActivated bool
 
+	// NewFileMarksByDir maps listing directory paths to entry base names marked "new"
+	// after a completed copy/move/flatten into that directory. Marks are dropped when leaving the directory.
+	NewFileMarksByDir map[string]map[string]struct{}
+
 	// OnDirectoryChange is called after every successful directory load (Enter, Parent,
 	// HistoryBackward/Forward, Refresh, ToggleHidden, etc.). The app uses this to check whether disk-usage idle sorting
 	// can be applied immediately or needs to be deferred.
@@ -848,6 +852,7 @@ func (s *State) loadPathString(path string, selectedName string, viewportRows in
 func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, indexFallback int, remote remoteLoadOpts) error {
 	if !loc.Equal(s.Path) {
 		s.rememberCursorForPath(s.Path.String())
+		s.dropNewFileMarks(s.Path.String())
 	}
 	selectedName, indexFallback, centerRecalled := s.resolveLoadCursor(loc, selectedName, indexFallback)
 	if loc.IsRemote() && s.ScheduleRemoteLoad != nil {

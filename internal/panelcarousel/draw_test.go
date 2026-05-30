@@ -23,7 +23,10 @@ func TestSubtreeSelectionMarkUsesSelectedForeground(t *testing.T) {
 	screen.SetSize(width, height)
 
 	styles := theme.Default()
-	wantFG, _, _ := styles.PanelRowSelected.Decompose()
+	wantFG, ok := styles.PanelFileIconFG["panel.active.row.cursor"]
+	if !ok {
+		t.Fatal("default theme missing panel.active.row.cursor icon")
+	}
 
 	root := "/vol"
 	parentPath := root + "/parent"
@@ -67,6 +70,6 @@ func TestSubtreeSelectionMarkUsesSelectedForeground(t *testing.T) {
 	_, markStyle, _ := screen.Get(markCol, rowY)
 	gotFG, _, _ := markStyle.Decompose()
 	if gotFG != wantFG {
-		t.Fatalf("○ foreground = %v, want panel.row.selected %v", gotFG, wantFG)
+		t.Fatalf("○ foreground = %v, want cursor-row icon %v", gotFG, wantFG)
 	}
 }

@@ -91,6 +91,17 @@ func (h *Handler) SyncJobPathMarks() {
 	h.pathMarksVersion++
 }
 
+func (h *Handler) applyNewFileMarksForCompletedJob(jobID string) {
+	for _, job := range h.state.AllJobs() {
+		if job == nil || job.ID != jobID {
+			continue
+		}
+		ui.ApplyNewFileMarksFromJob(h.host.LeftPanel(), job)
+		ui.ApplyNewFileMarksFromJob(h.host.RightPanel(), job)
+		return
+	}
+}
+
 func (h *Handler) ensureJobsViewSelectionVisible() {
 	n := len(h.model.JobsList)
 	width, height := h.screen.Size()
@@ -698,7 +709,10 @@ func (h *Handler) applyJobEventBatch(batch []jobs.Event) {
 		h.appendJobActivity(ev)
 		h.updateJobMessage(ev)
 		switch ev.Type {
-		case jobs.EventCompleted, jobs.EventFailed, jobs.EventCanceled:
+		case jobs.EventCompleted:
+			sawTerminal = true
+			h.applyNewFileMarksForCompletedJob(ev.JobID)
+		case jobs.EventFailed, jobs.EventCanceled:
 			sawTerminal = true
 		case jobs.EventProgress, jobs.EventScanProgress:
 			sawProgress = true
