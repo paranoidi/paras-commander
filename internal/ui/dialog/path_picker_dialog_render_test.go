@@ -86,8 +86,8 @@ func TestDrawPathPickerDialogInvalidPathRowStyle(t *testing.T) {
 		t.Fatal("bookmark row not found on screen")
 	}
 	_, rowStyle, _ := screen.Get(nameCol, listY)
-	if rowStyle != styles.DialogOptionInvalid {
-		t.Fatalf("invalid path row style = %v, want dialog.option.invalid %v", rowStyle, styles.DialogOptionInvalid)
+	if rowStyle != styles.DialogOptionInvalidStyle() {
+		t.Fatalf("invalid path row style = %v, want dialog.option.invalid %v", rowStyle, styles.DialogOptionInvalidStyle())
 	}
 }
 

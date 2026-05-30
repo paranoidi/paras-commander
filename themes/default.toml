@@ -147,10 +147,10 @@ input.active.placeholder = { fg = "default" }
 input.inactive = { fg = "white", bg = "black" }
 input.inactive.error = { fg = "red", bg = "black" }
 input.inactive.placeholder = { fg = "white", bg = "black" }
-option.active = { fg = "yellow", bg = "bright_black", bold = true }
-option.inactive = { fg = "white", bg = "bright_black" }
-option.selected = { fg = "yellow", bg = "bright_black" }
-option.invalid = { fg = "red", bg = "bright_black" }
+option.active = { fg = "yellow", bold = true }
+option.inactive = { fg = "white" }
+option.selected = { fg = "yellow" }
+option.invalid = { fg = "red" }
 
 [dialog.massrename]
 before = { fg = "white" }

@@ -27,7 +27,7 @@ func DrawDialogCheckbox(
 	focused bool,
 	styles theme.Theme,
 ) {
-	style := DialogOptionRowStyle(focused, checked, styles)
+	style := styles.DialogOptionRowStyle(focused, checked)
 	marker := " [ ] "
 	if checked {
 		marker = " [x] "
@@ -46,7 +46,7 @@ func DrawDialogRadio(
 	focused bool,
 	styles theme.Theme,
 ) {
-	style := DialogOptionRowStyle(focused, selected, styles)
+	style := styles.DialogOptionRowStyle(focused, selected)
 	marker := " ( ) "
 	if selected {
 		marker = " (*) "
@@ -67,15 +67,4 @@ func drawDialogItem(screen tcell.Screen, x, y int, label string, shortcut rune, 
 		screen.SetContent(x+col, y, r, nil, style)
 		col++
 	}
-}
-
-// DialogOptionRowStyle returns the theme style for a dialog option row (radio/checkbox).
-func DialogOptionRowStyle(focused, selected bool, styles theme.Theme) tcell.Style {
-	if focused {
-		return styles.DialogOptionActive
-	}
-	if selected {
-		return styles.DialogOptionSelected
-	}
-	return styles.DialogOptionInactive
 }

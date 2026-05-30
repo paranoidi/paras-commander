@@ -93,9 +93,9 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 		idx := start + row
 		y := listTopY + row
 
-		style := draw.DialogOptionRowStyle(false, idx == state.Selected, styles)
+		style := styles.DialogOptionRowStyle(false, idx == state.Selected)
 		if state.Focus == 0 && idx == state.Selected {
-			style = draw.DialogOptionRowStyle(true, true, styles)
+			style = styles.DialogOptionRowStyle(true, true)
 		}
 		marker := "( )"
 		if idx == state.Selected {

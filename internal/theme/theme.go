@@ -233,6 +233,40 @@ func (t Theme) DialogInputBaseStyle(focused, invalid bool) tcell.Style {
 	return t.DialogInputInactive
 }
 
+// DialogOptionRowStyle returns the resolved style for a checkbox/radio/list option row.
+// Foreground and attributes come from dialog.option.*; background always matches dialog.surface.
+func (t Theme) DialogOptionRowStyle(focused, selected bool) tcell.Style {
+	switch {
+	case focused:
+		return mergeForegroundOnSurface(t.DialogOptionActive, t.DialogSurface)
+	case selected:
+		return mergeForegroundOnSurface(t.DialogOptionSelected, t.DialogSurface)
+	default:
+		return mergeForegroundOnSurface(t.DialogOptionInactive, t.DialogSurface)
+	}
+}
+
+// DialogOptionInvalidStyle returns the resolved style for invalid/missing option rows.
+func (t Theme) DialogOptionInvalidStyle() tcell.Style {
+	return mergeForegroundOnSurface(t.DialogOptionInvalid, t.DialogSurface)
+}
+
+func mergeForegroundOnSurface(src, surface tcell.Style) tcell.Style {
+	fg, _, attrs := src.Decompose()
+	_, bg, _ := surface.Decompose()
+	s := tcell.StyleDefault.Foreground(fg).Background(bg)
+	if attrs&tcell.AttrBold != 0 {
+		s = s.Bold(true)
+	}
+	if attrs&tcell.AttrUnderline != 0 {
+		s = s.Underline(true)
+	}
+	if attrs&tcell.AttrReverse != 0 {
+		s = s.Reverse(true)
+	}
+	return s
+}
+
 // Panel bottom-indicator style keys ([panel.indicator] in TOML).
 const (
 	PanelBottomIndicatorKeySelections     = "selections"
@@ -873,6 +907,20 @@ func parse(data []byte) (Theme, error) {
 	specs, err := collectStyleSpecs(raw)
 	if err != nil {
 		return Theme{}, err
+	}
+
+	dialogOptionKeys := map[string]struct{}{
+		"dialog.option.inactive": {},
+		"dialog.option.active":   {},
+		"dialog.option.selected": {},
+		"dialog.option.invalid":  {},
+	}
+	for key, spec := range specs {
+		if spec.BG != "" {
+			if _, ok := dialogOptionKeys[key]; ok {
+				return Theme{}, fmt.Errorf(`style %q: field "bg" is not allowed (background comes from dialog.surface)`, key)
+			}
+		}
 	}
 
 	symbols, err := symbolsField(raw)

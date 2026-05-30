@@ -66,7 +66,7 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 		}
 		matchStyle := styles.FuzzyHighlight
 		if isCursor {
-			baseStyle = styles.DialogOptionActive
+			baseStyle = styles.DialogOptionRowStyle(true, false)
 			matchStyle = styles.FuzzyHighlightCursor
 		}
 		_, rowBg, _ := baseStyle.Decompose()

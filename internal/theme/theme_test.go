@@ -127,6 +127,8 @@ func TestParseLoadsPanelCursorIconFG(t *testing.T) {
 		for _, k := range requiredStyleKeys {
 			if k == key {
 				o[k] = `{ fg = "white", bg = "black", icon = "yellow" }`
+			} else if _, isOption := dialogOptionStyleKeys[k]; isOption {
+				o[k] = `{ fg = "white" }`
 			} else {
 				o[k] = `{ fg = "white", bg = "black" }`
 			}
@@ -150,6 +152,40 @@ func TestParseRejectsIconOnNonCursorStyle(t *testing.T) {
 	_, err := parse(data)
 	if err == nil || !strings.Contains(err.Error(), `field "icon" is only allowed on panel cursor row styles`) {
 		t.Fatalf("parse() error = %v, want reject icon on menu", err)
+	}
+}
+
+func TestParseRejectsBGOnDialogOption(t *testing.T) {
+	data := testTheme(t, "badoptionbg", nil, map[string]string{
+		"dialog.option.active": `{ fg = "yellow", bg = "bright_black", bold = true }`,
+	})
+	_, err := parse(data)
+	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background comes from dialog.surface)`) {
+		t.Fatalf("parse() error = %v, want reject bg on dialog.option", err)
+	}
+}
+
+func TestDialogOptionRowStyleUsesSurfaceBackground(t *testing.T) {
+	data := testTheme(t, "optionrow", nil, map[string]string{
+		"dialog.surface":       `{ fg = "white", bg = "yellow" }`,
+		"dialog.option.active": `{ fg = "yellow", bold = true }`,
+	})
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, surfaceBG, _ := th.DialogSurface.Decompose()
+	got := th.DialogOptionRowStyle(true, false)
+	fg, bg, attrs := got.Decompose()
+	if bg != surfaceBG {
+		t.Fatalf("DialogOptionRowStyle bg = %v, want surface bg %v", bg, surfaceBG)
+	}
+	wantFG, _, _ := th.DialogOptionActive.Decompose()
+	if fg != wantFG {
+		t.Fatalf("DialogOptionRowStyle fg = %v, want %v from option.active", fg, wantFG)
+	}
+	if attrs&tcell.AttrBold == 0 {
+		t.Fatal("DialogOptionRowStyle: want bold from option.active")
 	}
 }
 
@@ -384,6 +420,13 @@ func styleSectionRelative(fullKey string) (section, relative string) {
 	return "", fullKey
 }
 
+var dialogOptionStyleKeys = map[string]struct{}{
+	"dialog.option.inactive": {},
+	"dialog.option.active":   {},
+	"dialog.option.selected": {},
+	"dialog.option.invalid":  {},
+}
+
 func testTheme(t *testing.T, name string, skip map[string]bool, overrides map[string]string) []byte {
 	t.Helper()
 
@@ -394,6 +437,9 @@ func testTheme(t *testing.T, name string, skip map[string]bool, overrides map[st
 		}
 		section, relative := styleSectionRelative(key)
 		spec := `{ fg = "white", bg = "black" }`
+		if _, ok := dialogOptionStyleKeys[key]; ok {
+			spec = `{ fg = "white" }`
+		}
 		if override, ok := overrides[key]; ok {
 			spec = override
 		}

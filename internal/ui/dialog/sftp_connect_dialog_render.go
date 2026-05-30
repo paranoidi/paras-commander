@@ -90,7 +90,7 @@ func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnect
 		}
 		matchStyle := styles.FuzzyHighlight
 		if isCursor {
-			baseStyle = styles.DialogOptionActive
+			baseStyle = styles.DialogOptionRowStyle(true, false)
 			matchStyle = styles.FuzzyHighlightCursor
 		}
 		_, bg, _ := baseStyle.Decompose()

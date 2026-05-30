@@ -205,7 +205,11 @@ func writeTestThemeStyleSections(buf *strings.Builder, fullKeys []string) {
 		}
 		fmt.Fprintf(buf, "[%s]\n", root)
 		for _, rel := range keys {
-			fmt.Fprintf(buf, "%s = { fg = \"white\", bg = \"black\" }\n", rel)
+			spec := `{ fg = "white", bg = "black" }`
+			if strings.HasPrefix(rel, "option.") {
+				spec = `{ fg = "white" }`
+			}
+			fmt.Fprintf(buf, "%s = %s\n", rel, spec)
 		}
 		buf.WriteString("\n")
 	}

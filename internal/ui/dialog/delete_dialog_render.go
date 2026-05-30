@@ -92,7 +92,7 @@ func drawFileDeleteDialogContent(screen tcell.Screen, rect Rect, state FileDialo
 	}
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	textStyle := styles.DialogText.Background(dbg)
-	listStyle := styles.DialogOptionInactive.Background(dbg)
+	listStyle := styles.DialogOptionRowStyle(false, false)
 	innerW := rect.Width - 4
 	if innerW <= 0 {
 		return
