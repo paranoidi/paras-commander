@@ -25,6 +25,8 @@ type PathPickerItem struct {
 	Source string // "history", "fzf-marks", or "gnome"
 	Name   string
 	Path   string
+	// PathMissing is true when the path does not exist on disk (or remote VFS).
+	PathMissing bool
 }
 
 // SearchLine returns the fuzzy-filter key for this item.

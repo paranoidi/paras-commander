@@ -150,6 +150,7 @@ input.inactive.placeholder = { fg = "white", bg = "black" }
 option.active = { fg = "yellow", bg = "bright_black", bold = true }
 option.inactive = { fg = "white", bg = "bright_black" }
 option.selected = { fg = "yellow", bg = "bright_black" }
+option.invalid = { fg = "red", bg = "bright_black" }
 
 [dialog.massrename]
 before = { fg = "white" }

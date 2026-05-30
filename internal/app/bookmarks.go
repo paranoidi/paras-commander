@@ -21,12 +21,16 @@ func (a *App) openBookmarkDialog() {
 		a.setErrorMessage("Bookmarks", err)
 		return
 	}
+	panelPath := a.activePanel().PathString()
+	home := a.model.UserHomeDir
 	items := make([]ui.PathPickerItem, len(marks))
 	for i := range marks {
+		cp := filepath.Clean(marks[i].Path)
 		items[i] = ui.PathPickerItem{
-			Source: marks[i].Origin.PathPickerSource(),
-			Name:   marks[i].Name,
-			Path:   marks[i].Path,
+			Source:      marks[i].Origin.PathPickerSource(),
+			Name:        marks[i].Name,
+			Path:        marks[i].Path,
+			PathMissing: pathEntryMissing(panelPath, home, cp),
 		}
 	}
 	a.model.PathPicker = ui.PathPickerState{

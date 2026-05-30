@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
@@ -39,6 +40,54 @@ func TestDrawPathPickerDialogSmoke(t *testing.T) {
 	cell, _, _ := screen.Get(4, layout.Menu.Height+4)
 	if cell == "" || cell == " " {
 		t.Fatal("expected filter row content")
+	}
+}
+
+func TestDrawPathPickerDialogInvalidPathRowStyle(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	styles := theme.Default()
+	layout := geom.CalculateLayout(80, 24, true, geom.PanelWidthSplit{})
+	state := PathPickerState{
+		Open:  true,
+		Title: "Bookmarks",
+		Items: []PathPickerItem{{
+			Source:      "fzf-marks",
+			Name:        "gone",
+			Path:        "/no/such/path",
+			PathMissing: true,
+		}},
+		Ranked:     []int{0},
+		Selected:   1, // no cursor on row
+		ListScroll: 0,
+		Focus:      1, // OK focused, list row not active
+	}
+	DrawPathPickerDialog(screen, layout, state, styles)
+
+	listY := -1
+	nameCol := -1
+	for y := layout.Menu.Height; y < 24; y++ {
+		row := ""
+		for x := 0; x < 80; x++ {
+			cell, _, _ := screen.Get(x, y)
+			row += cell
+		}
+		if idx := strings.Index(row, "gone"); idx >= 0 {
+			listY = y
+			nameCol = idx
+			break
+		}
+	}
+	if listY < 0 {
+		t.Fatal("bookmark row not found on screen")
+	}
+	_, rowStyle, _ := screen.Get(nameCol, listY)
+	if rowStyle != styles.DialogOptionInvalid {
+		t.Fatalf("invalid path row style = %v, want dialog.option.invalid %v", rowStyle, styles.DialogOptionInvalid)
 	}
 }
 

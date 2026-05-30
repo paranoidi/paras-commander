@@ -96,9 +96,12 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 			isCursor = state.Focus == 0 && idxInRank == state.Selected
 		}
 		matchStyle := styles.FuzzyHighlight
-		if isCursor {
+		switch {
+		case isCursor:
 			baseStyle = styles.DialogOptionActive
 			matchStyle = styles.FuzzyHighlightCursor
+		case item.PathMissing:
+			baseStyle = styles.DialogOptionInvalid
 		}
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)

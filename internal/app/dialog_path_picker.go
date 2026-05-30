@@ -351,8 +351,9 @@ func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) 
 		}
 		seen[key] = struct{}{}
 		items = append(items, ui.PathPickerItem{
-			Source: "history",
-			Path:   cp,
+			Source:      "history",
+			Path:        cp,
+			PathMissing: pathEntryMissing(panelPath, home, cp),
 		})
 	}
 
@@ -374,9 +375,10 @@ func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) 
 		}
 		seen[cp] = struct{}{}
 		items = append(items, ui.PathPickerItem{
-			Source: marks[i].Origin.PathPickerSource(),
-			Name:   marks[i].Name,
-			Path:   cp,
+			Source:      marks[i].Origin.PathPickerSource(),
+			Name:        marks[i].Name,
+			Path:        cp,
+			PathMissing: pathEntryMissing(panelPath, home, cp),
 		})
 	}
 	return items, nil

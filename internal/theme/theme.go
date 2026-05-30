@@ -157,6 +157,7 @@ type Theme struct {
 	DialogOptionInactive           tcell.Style
 	DialogOptionActive             tcell.Style
 	DialogOptionSelected           tcell.Style
+	DialogOptionInvalid            tcell.Style
 	DialogMassRenameBefore         tcell.Style
 	DialogMassRenameBeforeRemoved  tcell.Style
 	DialogMassRenameBeforeReplaced tcell.Style
@@ -584,6 +585,7 @@ var requiredStyleKeys = []string{
 	"dialog.option.inactive",
 	"dialog.option.active",
 	"dialog.option.selected",
+	"dialog.option.invalid",
 	"dialog.massrename.before",
 	"dialog.massrename.before.removed",
 	"dialog.massrename.before.replaced",
@@ -1032,6 +1034,7 @@ func parse(data []byte) (Theme, error) {
 		DialogOptionInactive:           styles["dialog.option.inactive"],
 		DialogOptionActive:             styles["dialog.option.active"],
 		DialogOptionSelected:           styles["dialog.option.selected"],
+		DialogOptionInvalid:            styles["dialog.option.invalid"],
 		DialogMassRenameBefore:         styles["dialog.massrename.before"],
 		DialogMassRenameBeforeRemoved:  styles["dialog.massrename.before.removed"],
 		DialogMassRenameBeforeReplaced: styles["dialog.massrename.before.replaced"],
