@@ -41,6 +41,7 @@ const (
 	ActionPanelToggleHidden          = "panel.toggle-hidden"
 	ActionBookmarkOpen               = "bookmark.open"
 	ActionBookmarkAdd                = "bookmark.add"
+	ActionBookmarkDelete             = "bookmark.delete"
 	ActionPanelDiskUsageScan         = "panel.disk-usage-scan"
 	ActionPanelDiskUsageAbortAll     = "panel.disk-usage-abort-all"
 	ActionPanelFocusSelections       = "panel.focus-selections"
@@ -185,6 +186,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelToggleHidden:          {},
 	ActionBookmarkOpen:               {},
 	ActionBookmarkAdd:                {},
+	ActionBookmarkDelete:             {},
 	ActionPanelDiskUsageScan:         {},
 	ActionPanelDiskUsageAbortAll:     {},
 	ActionPanelFocusSelections:       {},

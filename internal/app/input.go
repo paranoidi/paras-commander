@@ -125,6 +125,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		if a.model.MetaDialog.Open {
 			rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
 		}
+		if a.bookmarkDialogDeleteFooterEligible() {
+			if lbl := a.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete); lbl != "" {
+				rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete"}}, rest...)
+			}
+		}
 		return footerWithEscClose(rest)
 	}
 	if a.model.PrimaryModal() != ui.PrimaryModalNone ||

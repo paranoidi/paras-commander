@@ -2,6 +2,7 @@ package bookmarks
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -202,6 +203,51 @@ func Append(path string, m Mark) error {
 	sb.WriteString(line)
 	sb.WriteByte('\n')
 	return atomicWriteFile(path, []byte(sb.String()), 0o644)
+}
+
+// Remove deletes the first fzf-marks line in path that matches m (same name and path).
+func Remove(path string, m Mark) error {
+	base, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("bookmark not found")
+		}
+		return err
+	}
+	var out strings.Builder
+	removed := false
+	first := true
+	sc := bufio.NewScanner(bytes.NewReader(base))
+	for sc.Scan() {
+		line := sc.Text()
+		if !removed {
+			if pm, ok := ParseLine(line); ok && marksEqual(pm, m) {
+				removed = true
+				continue
+			}
+		}
+		if !first {
+			out.WriteByte('\n')
+		}
+		first = false
+		out.WriteString(line)
+	}
+	if err := sc.Err(); err != nil {
+		return err
+	}
+	if !removed {
+		return fmt.Errorf("bookmark not found")
+	}
+	data := []byte(out.String())
+	if len(data) > 0 && data[len(data)-1] != '\n' {
+		data = append(data, '\n')
+	}
+	return atomicWriteFile(path, data, 0o644)
+}
+
+func marksEqual(a, b Mark) bool {
+	return strings.TrimSpace(a.Name) == strings.TrimSpace(b.Name) &&
+		filepath.Clean(a.Path) == filepath.Clean(b.Path)
 }
 
 func atomicWriteFile(dest string, data []byte, perm os.FileMode) error {

@@ -167,6 +167,9 @@ func (a *App) effectiveKeyStrings(actionID string, defaults []string) []string {
 	if a.keysMessages != nil {
 		add(a.keysMessages.BindingsForAction(actionID))
 	}
+	if a.keysBookmarkDialog != nil {
+		add(a.keysBookmarkDialog.BindingsForAction(actionID))
+	}
 	if len(out) > 0 {
 		return out
 	}
@@ -175,6 +178,9 @@ func (a *App) effectiveKeyStrings(actionID string, defaults []string) []string {
 		return out
 	}
 	if od := keymap.DefaultJobsOverlayKeys()[actionID]; len(od) > 0 {
+		add(od)
+	}
+	if od := keymap.DefaultBookmarkDialogOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
 	}
 	return out

@@ -32,6 +32,7 @@ const (
 	pathPickerHostActionKeysTable = "path_picker_host_action_keys"
 	dialogInputActionKeysTable    = "dialog_input_action_keys"
 	renameDialogActionKeysTable   = "rename_dialog_action_keys"
+	bookmarkDialogActionKeysTable = "bookmark_dialog_action_keys"
 
 	ThemeDefault   = "default"
 	StartupPathCWD = "cwd"
@@ -536,6 +537,12 @@ func ReadRenameDialogActionKeys(filename string) (map[string][]string, error) {
 	return readShortcutTable(filename, renameDialogActionKeysTable)
 }
 
+// ReadBookmarkDialogActionKeys parses the optional [bookmark_dialog_action_keys] table from a
+// config.toml style file. Same nil/error semantics as ReadActionKeys.
+func ReadBookmarkDialogActionKeys(filename string) (map[string][]string, error) {
+	return readShortcutTable(filename, bookmarkDialogActionKeysTable)
+}
+
 // readShortcutTable extracts a single named keybindings table from a
 // TOML file. It is shared by ReadActionKeys / ReadJobsActionKeys so that
 // adding a future bundle (another top-level "*_action_keys" table) is a
@@ -573,7 +580,7 @@ func readShortcutTable(filename, table string) (map[string][]string, error) {
 // keybindings pass-through tables tolerated inside config.toml.
 func isShortcutTable(name string) bool {
 	switch name {
-	case actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, messagesActionKeysTable, pathPickerHostActionKeysTable, dialogInputActionKeysTable, renameDialogActionKeysTable:
+	case actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, messagesActionKeysTable, pathPickerHostActionKeysTable, dialogInputActionKeysTable, renameDialogActionKeysTable, bookmarkDialogActionKeysTable:
 		return true
 	}
 	return false

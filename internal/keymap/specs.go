@@ -382,6 +382,13 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"mark", "save"},
 		},
 		{
+			ID:          ActionBookmarkDelete,
+			Title:       "Delete bookmark",
+			Section:     "Bookmarks",
+			DefaultKeys: nil, // overlay: DefaultBookmarkDialogOverlayKeys
+			Keywords:    []string{"fzf-marks", "mark", "remove", "delete"},
+		},
+		{
 			ID:          ActionRemoteSFTPLink,
 			Title:       "SFTP ...",
 			Section:     "Remote",

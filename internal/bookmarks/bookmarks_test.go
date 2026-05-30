@@ -91,6 +91,35 @@ func TestResolveFile(t *testing.T) {
 	}
 }
 
+func TestRemoveFirstMatch(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "marks")
+	if err := os.WriteFile(path, []byte("keep : /a\nproj : /home/user/proj\ndup : /b\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Remove(path, Mark{Name: "proj", Path: "/home/user/proj"}); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "keep : /a\ndup : /b\n"
+	if string(b) != want {
+		t.Fatalf("got %q want %q", string(b), want)
+	}
+}
+
+func TestRemoveMissingReturnsError(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "marks")
+	if err := os.WriteFile(path, []byte("a : /x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Remove(path, Mark{Name: "missing", Path: "/y"}); err == nil {
+		t.Fatal("expected error")
+	}
+}
 func TestAppendAtomic(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "marks")

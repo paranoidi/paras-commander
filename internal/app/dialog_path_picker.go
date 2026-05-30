@@ -204,6 +204,9 @@ func (a *App) activatePathPickerSelection() {
 
 func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 	st := &a.model.PathPicker
+	if a.tryBookmarkDialogShortcut(event) {
+		return
+	}
 	if ui.AltDialogOK(event) {
 		a.activatePathPickerSelection()
 		return

@@ -65,19 +65,20 @@ type syncFollowNavFlushPayload struct {
 
 // App owns lifecycle, state, and input dispatch.
 type App struct {
-	screen           tcell.Screen
-	config           config.Config
-	styles           theme.Theme
-	themes           map[string]theme.Theme
-	paths            config.Paths
-	keys             *keymap.Map
-	keysJobs         *keymap.Map // chords active only in jobs view (overlay)
-	keysCommands     *keymap.Map // chords active only in Commands view (overlay)
-	keysMessages     *keymap.Map // chords active only in Messages view (overlay)
-	keysDialogInput  *keymap.Map // chords active only while a dialog input field is focused
-	keysRenameDialog *keymap.Map // sanitize/slugify while main rename dialog is focused
-	devMode          bool
-	model            ui.Model
+	screen             tcell.Screen
+	config             config.Config
+	styles             theme.Theme
+	themes             map[string]theme.Theme
+	paths              config.Paths
+	keys               *keymap.Map
+	keysJobs           *keymap.Map // chords active only in jobs view (overlay)
+	keysCommands       *keymap.Map // chords active only in Commands view (overlay)
+	keysMessages       *keymap.Map // chords active only in Messages view (overlay)
+	keysDialogInput    *keymap.Map // chords active only while a dialog input field is focused
+	keysRenameDialog   *keymap.Map // sanitize/slugify while main rename dialog is focused
+	keysBookmarkDialog *keymap.Map // delete fzf-marks entry while bookmarks picker is open
+	devMode            bool
+	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
 	// jobState manages background job queue and worker lifecycle.
@@ -268,6 +269,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		kmRenameDialog = m
 	}
+	kmBookmarkDialog := bundle.BookmarkDialog
+	if kmBookmarkDialog == nil {
+		m, err := keymap.Build(keymap.DefaultBookmarkDialogOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build bookmark dialog overlay map: %w", err)
+		}
+		kmBookmarkDialog = m
+	}
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -359,20 +368,21 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	cmdCtx, cmdCancel := context.WithCancel(context.Background())
 	app := &App{
-		screen:           screen,
-		config:           cfg,
-		styles:           styles,
-		themes:           availableThemes,
-		paths:            opts.Paths.WithResolvedLocations(),
-		keys:             km,
-		keysJobs:         kmJobs,
-		keysCommands:     kmCommands,
-		keysMessages:     kmMessages,
-		keysDialogInput:  kmDialogInput,
-		keysRenameDialog: kmRenameDialog,
-		devMode:          opts.DevMode,
-		commandsCtx:      cmdCtx,
-		commandsCancel:   cmdCancel,
+		screen:             screen,
+		config:             cfg,
+		styles:             styles,
+		themes:             availableThemes,
+		paths:              opts.Paths.WithResolvedLocations(),
+		keys:               km,
+		keysJobs:           kmJobs,
+		keysCommands:       kmCommands,
+		keysMessages:       kmMessages,
+		keysDialogInput:    kmDialogInput,
+		keysRenameDialog:   kmRenameDialog,
+		keysBookmarkDialog: kmBookmarkDialog,
+		devMode:            opts.DevMode,
+		commandsCtx:        cmdCtx,
+		commandsCancel:     cmdCancel,
 		model: ui.Model{
 			Left:                       left,
 			Right:                      right,

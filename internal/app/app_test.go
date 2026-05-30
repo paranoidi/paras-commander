@@ -1280,6 +1280,128 @@ func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
 	}
 }
 
+func TestBookmarkDialogF8DeletesFZFMark(t *testing.T) {
+	root := t.TempDir()
+	xdg := filepath.Join(root, "xdg")
+	if err := os.MkdirAll(filepath.Join(xdg, "gtk-3.0"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	target := filepath.Join(root, "marked")
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marksPath := filepath.Join(root, "marks")
+	line := fmt.Sprintf("markone : %s\n", target)
+	if err := os.WriteFile(marksPath, []byte(line), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	app, err := NewWithOptions(screen, Options{
+		CWD:          func() (string, error) { return root, nil },
+		Config:       cfg,
+		KeymapBundle: bundle,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	app.openBookmarkDialog()
+	if len(app.model.PathPicker.Items) != 1 {
+		t.Fatalf("items = %d, want 1", len(app.model.PathPicker.Items))
+	}
+	if !app.bookmarkDialogDeleteFooterEligible() {
+		t.Fatal("expected delete footer for fzf-marks row")
+	}
+	if !app.tryBookmarkDialogShortcut(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)) {
+		t.Fatal("F8 should delete selected fzf-marks bookmark")
+	}
+	if len(app.model.PathPicker.Items) != 0 {
+		t.Fatalf("expected empty picker items, got %d", len(app.model.PathPicker.Items))
+	}
+	data, err := os.ReadFile(marksPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) != 0 {
+		t.Fatalf("marks file = %q, want empty", string(data))
+	}
+	if !strings.Contains(app.model.Message, "Bookmark removed") {
+		t.Fatalf("message = %q, want removal confirmation", app.model.Message)
+	}
+}
+
+func TestBookmarkDialogDeleteFooterSkippedForGnomeMark(t *testing.T) {
+	root := t.TempDir()
+	xdg := filepath.Join(root, "xdg")
+	gtkDir := filepath.Join(xdg, "gtk-3.0")
+	if err := os.MkdirAll(gtkDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gnomePath := filepath.Join(root, "gnome-only")
+	if err := os.MkdirAll(gnomePath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	marksPath := filepath.Join(root, "marks")
+	if err := os.WriteFile(marksPath, []byte{}, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gtkMarks := filepath.Join(gtkDir, "bookmarks")
+	if err := os.WriteFile(gtkMarks, []byte("file://"+gnomePath+" gnomeproj\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	cfg := config.Default()
+	cfg.Bookmarks.File = marksPath
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	app, err := NewWithOptions(screen, Options{
+		CWD:          func() (string, error) { return root, nil },
+		Config:       cfg,
+		KeymapBundle: bundle,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	app.openBookmarkDialog()
+	if len(app.model.PathPicker.Items) != 1 {
+		t.Fatalf("items = %d, want 1 gnome bookmark", len(app.model.PathPicker.Items))
+	}
+	if app.model.PathPicker.Items[0].Source != "gnome" {
+		t.Fatalf("source = %q, want gnome", app.model.PathPicker.Items[0].Source)
+	}
+	if app.bookmarkDialogDeleteFooterEligible() {
+		t.Fatal("delete footer should not show for gnome bookmark")
+	}
+	before, err := os.ReadFile(gtkMarks)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if app.tryBookmarkDialogShortcut(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)) {
+		t.Fatal("F8 should not delete gnome bookmark")
+	}
+	after, err := os.ReadFile(gtkMarks)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatalf("gtk bookmarks changed: before %q after %q", before, after)
+	}
+}
+
 func TestHistoryDialogAltHUsesActivePanel(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 24)

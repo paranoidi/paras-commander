@@ -339,6 +339,17 @@ func TestDefaultBundleRenameDialogOverlayF2F3(t *testing.T) {
 	}
 }
 
+func TestDefaultBundleBookmarkDialogOverlayF8(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	id, ok := bundle.BookmarkDialog.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+	if !ok || id != ActionBookmarkDelete {
+		t.Fatalf("BookmarkDialog F8 = %q %v, want %q", id, ok, ActionBookmarkDelete)
+	}
+}
+
 func TestParseKeyAltBang(t *testing.T) {
 	if _, err := ParseKey("M-!"); err != nil {
 		t.Fatalf("ParseKey(M-!): %v", err)
