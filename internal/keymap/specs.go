@@ -413,6 +413,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"mkdir", "folder"},
 		},
 		{
+			ID:           ActionFileMkdirOpenInOther,
+			Title:        "Create directory in other panel",
+			Section:      "File operations",
+			DefaultKeys:  []string{"S-F7"},
+			PreferredKey: "S-F7",
+			Keywords:     []string{"mkdir", "folder", "other", "inactive"},
+		},
+		{
 			ID:          ActionFileDelete,
 			Title:       "Delete",
 			Section:     "File operations",

@@ -67,6 +67,7 @@ const (
 	ActionFileRenameOpenSlugify  = "file.rename.open-slugify"
 	ActionFileDelete             = "file.delete"
 	ActionFileMkdir              = "file.mkdir"
+	ActionFileMkdirOpenInOther   = "file.mkdir-open-in-other"
 	ActionFileChmod              = "file.chmod"
 	ActionFileChown              = "file.chown"
 	ActionFileSymlink            = "file.symlink"
@@ -208,6 +209,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileRenameOpenSlugify:  {},
 	ActionFileDelete:             {},
 	ActionFileMkdir:              {},
+	ActionFileMkdirOpenInOther:   {},
 	ActionFileChmod:              {},
 	ActionFileChown:              {},
 	ActionFileSymlink:            {},

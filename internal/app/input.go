@@ -727,7 +727,9 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionFileDelete:
 		a.openDeleteDialog(activePanel)
 	case keymap.ActionFileMkdir:
-		a.openMkdirDialog()
+		a.openMkdirDialog(false)
+	case keymap.ActionFileMkdirOpenInOther:
+		a.openMkdirDialog(true)
 	case keymap.ActionFileChmod:
 		a.openChmodDialog(activePanel)
 	case keymap.ActionFileChown:

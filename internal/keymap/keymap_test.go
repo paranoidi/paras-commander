@@ -129,6 +129,8 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone), ActionFileEdit, true},
 		{tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone), ActionMove, true},
 		{tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModShift), ActionFileRename, true},
+		{tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone), ActionFileMkdir, true},
+		{tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModShift), ActionFileMkdirOpenInOther, true},
 		{tcell.NewEventKey(tcell.KeyDelete, 0, tcell.ModNone), ActionFileDelete, true},
 		{tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone), ActionFileDelete, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModAlt), ActionPanelExternalBrowser, true},

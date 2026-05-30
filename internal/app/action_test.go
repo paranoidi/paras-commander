@@ -227,6 +227,8 @@ func TestActionFromKeyMapsF3F4(t *testing.T) {
 		{"F3 view", tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone), keymap.ActionFileView},
 		{"S-F3 quick view", tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModShift), keymap.ActionFileQuickView},
 		{"F4 edit", tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone), keymap.ActionFileEdit},
+		{"F7 mkdir", tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone), keymap.ActionFileMkdir},
+		{"S-F7 mkdir in other", tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModShift), keymap.ActionFileMkdirOpenInOther},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

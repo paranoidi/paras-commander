@@ -45,7 +45,7 @@ func (a *App) openRenameDialog(p *panel.State) {
 	}
 }
 
-func (a *App) openMkdirDialog() {
+func (a *App) openMkdirDialog(openInInactive bool) {
 	p := a.activePanel()
 	name := ""
 	if entry, ok := p.CurrentEntry(); ok {
@@ -60,11 +60,12 @@ func (a *App) openMkdirDialog() {
 		{Label: "Directory name", Value: name, Prefill: name, Cursor: cursor, PrefillPending: pending},
 	}
 	a.model.FileDialog = ui.FileDialogState{
-		Open:             true,
-		DialogType:       ui.FileDialogMkdir,
-		Fields:           fields,
-		MkdirShowActions: len(p.SelectedPaths) > 0,
-		MkdirAction:      ui.MkdirActionCreate,
+		Open:                true,
+		DialogType:          ui.FileDialogMkdir,
+		Fields:              fields,
+		MkdirShowActions:    len(p.SelectedPaths) > 0,
+		MkdirAction:         ui.MkdirActionCreate,
+		MkdirOpenInInactive: openInInactive,
 	}
 }
 
@@ -257,6 +258,11 @@ func (a *App) executeMkdir() {
 	if d.MkdirShowActions {
 		action = d.MkdirAction
 	}
+	openInInactive := d.MkdirOpenInInactive
+	priorEntryName := ""
+	if entry, ok := p.CurrentEntry(); ok {
+		priorEntryName = entry.Name
+	}
 
 	plan, err := ops.PlanMkdir(input, p.PathString())
 	if err != nil {
@@ -291,11 +297,34 @@ func (a *App) executeMkdir() {
 
 	a.closeFileDialog()
 	a.refreshBothPanels()
-	selectName := plan.Name
+	createdName := plan.Name
 	if loc, err := pathloc.Parse(plan.Path); err == nil {
-		selectName = loc.Base()
+		createdName = loc.Base()
 	}
-	a.activePanel().SelectVisibleEntry(selectName)
+	if openInInactive {
+		active := a.activePanel()
+		if priorEntryName != "" && priorEntryName != createdName {
+			active.SelectVisibleEntry(priorEntryName)
+		} else if entry, ok := active.CurrentEntry(); ok && entry.Name == createdName {
+			if !active.SelectVisibleEntry("..") {
+				for i := 0; i < active.VisibleEntryCount(); i++ {
+					e, _, ok := active.VisibleEntry(i)
+					if ok && e.Name != createdName {
+						active.Cursor = i
+						break
+					}
+				}
+			}
+		}
+	} else {
+		a.activePanel().SelectVisibleEntry(createdName)
+	}
+	if openInInactive {
+		if err := a.navigatePanelToDirectory(a.inactivePanelID(), plan.Path, ""); err != nil {
+			a.setErrorMessage("Mkdir", err)
+			return
+		}
+	}
 
 	switch action {
 	case ui.MkdirActionCreate:

@@ -99,6 +99,8 @@ type FileDialogState struct {
 	MkdirShowActions bool
 	// MkdirAction is the currently selected mkdir post-action (only meaningful when MkdirShowActions is true).
 	MkdirAction MkdirAction
+	// MkdirOpenInInactive opens the new directory in the inactive panel after a successful create.
+	MkdirOpenInInactive bool
 
 	// RenamePhase and the following fields apply when DialogType == FileDialogRename.
 	RenamePhase               RenamePhase

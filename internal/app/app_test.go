@@ -6102,6 +6102,48 @@ func TestMkdirDialogRadioRowsRejectTextInput(t *testing.T) {
 	}
 }
 
+func TestMkdirOpenInInactiveOpensOtherPanelAfterCreate(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "keep-cursor.txt"))
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	left := app.panelByID(ui.LeftPanel)
+	for i := 0; i < left.VisibleEntryCount(); i++ {
+		entry, _, ok := left.VisibleEntry(i)
+		if ok && entry.Name == "keep-cursor.txt" {
+			left.Cursor = i
+			break
+		}
+	}
+
+	app.model.ActivePanel = ui.LeftPanel
+	app.dispatch(keymap.ActionFileMkdirOpenInOther)
+	if !app.model.FileDialog.Open {
+		t.Fatal("expected mkdir dialog open")
+	}
+	if !app.model.FileDialog.MkdirOpenInInactive {
+		t.Fatal("MkdirOpenInInactive = false, want true for file.mkdir-open-in-other")
+	}
+	for _, r := range "otherdir" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	wantOther := filepath.Join(dir, "otherdir")
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != filepath.Clean(wantOther) {
+		t.Fatalf("inactive panel path = %q want %q", got, wantOther)
+	}
+	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()); got != filepath.Clean(dir) {
+		t.Fatalf("active panel path = %q want %q", got, dir)
+	}
+	entry, ok := left.CurrentEntry()
+	if !ok || entry.Name != "keep-cursor.txt" {
+		t.Fatalf("active panel cursor = %q, want keep-cursor.txt", entry.Name)
+	}
+}
+
 func TestMkdirActionCreateOnlyDoesNotQueueJob(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "a.txt")
