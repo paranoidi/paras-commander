@@ -50,6 +50,7 @@ error = { fg = "bright_white", bg = "red", bold = true }
 [footer]
 key = { fg = "magenta", bold = true }
 label = { fg = "default" }
+label.shift = { fg = "bright_black" }
 
 [panel]
 row.directory = { fg = "blue", bold = true }

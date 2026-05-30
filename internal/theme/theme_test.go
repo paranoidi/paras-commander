@@ -96,6 +96,15 @@ func TestParseRejectsMissingRequiredStyle(t *testing.T) {
 	}
 }
 
+func TestParseRejectsMissingFooterLabelShift(t *testing.T) {
+	data := testTheme(t, "custom", map[string]bool{"footer.label.shift": true}, nil)
+
+	_, err := parse(data)
+	if err == nil || !strings.Contains(err.Error(), `missing required style "footer.label.shift"`) {
+		t.Fatalf("parse() error = %v, want missing footer.label.shift", err)
+	}
+}
+
 func TestParseAllowsDialogTitleBoldOnly(t *testing.T) {
 	data := testTheme(t, "boldtitle", nil, map[string]string{
 		"dialog.title": `{ bold = true }`,

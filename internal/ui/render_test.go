@@ -799,12 +799,54 @@ func TestDrawFooterShowsViewEditAndOmitsUnusedFKeys(t *testing.T) {
 		t.Fatalf("footer must start flush-left with F1 key at col 0, got %q style %v", str0, st0)
 	}
 
-	line := tcelltest.TextAt(screen, 0, 0, 70)
-	if !strings.Contains(line, "View") || !strings.Contains(line, "Edit") {
-		t.Fatalf("footer = %q, want F3 View and F4 Edit placeholders", line)
+	line := tcelltest.TextAt(screen, 0, 0, 80)
+	if !strings.Contains(line, "Quick") || !strings.Contains(line, "Edit") {
+		t.Fatalf("footer = %q, want F3 QuickView and F4 Edit placeholders", line)
 	}
 	if strings.Contains(line, "F11") || strings.Contains(line, "F12") {
 		t.Fatalf("footer should not list empty F11/F12 slots, got %q", line)
+	}
+}
+
+func TestDrawFooterShiftHintPrefixUsesShiftLabelStyle(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 12)
+
+	styles := theme.Default()
+	drawFooter(screen, Rect{X: 0, Y: 0, Width: 80, Height: 1}, styles, []menu.FunctionKey{
+		{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", Hint: "View"},
+	})
+
+	const prefixStart = 3 // "F3" + space
+	for col := prefixStart; col < prefixStart+len("Quick"); col++ {
+		_, st, _ := screen.Get(col, 0)
+		if st != styles.FooterLabelShift {
+			t.Fatalf("prefix col %d: style = %v, want FooterLabelShift", col, st)
+		}
+	}
+	const primaryStart = prefixStart + len("Quick")
+	for col := primaryStart; col < primaryStart+len("View"); col++ {
+		_, st, _ := screen.Get(col, 0)
+		if st != styles.FooterLabel {
+			t.Fatalf("primary col %d: style = %v, want FooterLabel", col, st)
+		}
+	}
+}
+
+func TestFooterHintPrimaryTruncatedPreservesShiftPrefix(t *testing.T) {
+	item := menu.FunctionKey{HintShiftPrefix: "Open", Hint: "Mkdir"}
+	if got := footerHintPrimaryTruncated(item, -1); got != "Mkdir" {
+		t.Fatalf("no limit: got %q, want Mkdir", got)
+	}
+	if got := footerHintPrimaryTruncated(item, 6); got != "M~" {
+		t.Fatalf("truncate primary only: got %q, want M~", got)
+	}
+	if got := footerHintPrimaryTruncated(item, 4); got != "" {
+		t.Fatalf("prefix only: got %q, want empty primary", got)
 	}
 }
 

@@ -19,7 +19,7 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 
 	visible := make([]menu.FunctionKey, 0, len(fkeys))
 	for _, item := range fkeys {
-		if item.Hint != "" {
+		if item.FullHint() != "" {
 			visible = append(visible, item)
 		}
 	}
@@ -31,15 +31,23 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 		gapsBetween := n - 1
 		for i, item := range visible {
 			keyRunes := utf8.RuneCountInString(item.KeyLabel)
-			hintText := hints[i]
-			hintRunes := utf8.RuneCountInString(hintText)
+			hintPrimary := hints[i]
+			prefixRunes := utf8.RuneCountInString(item.HintShiftPrefix)
+			primaryRunes := utf8.RuneCountInString(hintPrimary)
+			hintRunes := prefixRunes + primaryRunes
 			primitive.TextOverlay(screen, x, rect.Y, keyRunes, item.KeyLabel, styles.FooterKey)
 			x += keyRunes
 			if hintRunes > 0 {
 				screen.SetContent(x, rect.Y, ' ', nil, styles.FooterLabel)
 				x++
-				primitive.TextOverlay(screen, x, rect.Y, hintRunes, hintText, styles.FooterLabel)
-				x += hintRunes
+				if prefixRunes > 0 {
+					primitive.TextOverlay(screen, x, rect.Y, prefixRunes, item.HintShiftPrefix, styles.FooterLabelShift)
+					x += prefixRunes
+				}
+				if primaryRunes > 0 {
+					primitive.TextOverlay(screen, x, rect.Y, primaryRunes, hintPrimary, styles.FooterLabel)
+					x += primaryRunes
+				}
 			}
 			if i < n-1 && gapsBetween > 0 {
 				gap := remaining / gapsBetween
@@ -52,7 +60,7 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 	}
 }
 
-// footerHintStringsFittingWidth returns per-item hint strings (possibly truncated) and total width
+// footerHintStringsFittingWidth returns per-item primary hint strings (possibly truncated) and total width
 // (key + space + hint for each item). Extra horizontal space is for gaps between items, not padding
 // inside columns. maxHintWidth -1 means do not truncate.
 func footerHintStringsFittingWidth(visible []menu.FunctionKey, keyRegionWidth int) ([]string, int) {
@@ -77,7 +85,7 @@ func footerHintStringsFittingWidth(visible []menu.FunctionKey, keyRegionWidth in
 func maxFooterHintRunes(visible []menu.FunctionKey) int {
 	m := 0
 	for _, v := range visible {
-		if n := utf8.RuneCountInString(v.Hint); n > m {
+		if n := utf8.RuneCountInString(v.FullHint()); n > m {
 			m = n
 		}
 	}
@@ -89,17 +97,28 @@ func footerMeasureWithMaxHint(visible []menu.FunctionKey, maxHintRunes int) ([]s
 	sum := 0
 	for i, item := range visible {
 		keyRunes := utf8.RuneCountInString(item.KeyLabel)
-		hintText := item.Hint
-		if maxHintRunes >= 0 && utf8.RuneCountInString(hintText) > maxHintRunes {
-			hintText = primitive.TruncateRight(hintText, maxHintRunes)
-		}
-		hintRunes := utf8.RuneCountInString(hintText)
+		hintPrimary := footerHintPrimaryTruncated(item, maxHintRunes)
+		hintRunes := utf8.RuneCountInString(item.HintShiftPrefix) + utf8.RuneCountInString(hintPrimary)
 		innerSpace := 0
 		if hintRunes > 0 {
 			innerSpace = 1
 		}
-		hints[i] = hintText
+		hints[i] = hintPrimary
 		sum += keyRunes + innerSpace + hintRunes
 	}
 	return hints, sum
+}
+
+func footerHintPrimaryTruncated(item menu.FunctionKey, maxHintRunes int) string {
+	prefix := item.HintShiftPrefix
+	primary := item.Hint
+	full := prefix + primary
+	if maxHintRunes < 0 || utf8.RuneCountInString(full) <= maxHintRunes {
+		return primary
+	}
+	prefixRunes := utf8.RuneCountInString(prefix)
+	if maxHintRunes <= prefixRunes {
+		return ""
+	}
+	return primitive.TruncateRight(primary, maxHintRunes-prefixRunes)
 }

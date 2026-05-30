@@ -8,9 +8,15 @@ import (
 
 // FunctionKey describes a labeled footer key with an optional hint.
 type FunctionKey struct {
-	Key      tcell.Key // tcell.KeyF1 etc.
-	KeyLabel string    // "F1"
-	Hint     string    // "Copy" (footer label or empty)
+	Key             tcell.Key // tcell.KeyF1 etc.
+	KeyLabel        string    // "F1"
+	Hint            string    // primary footer label suffix (e.g. "Mkdir")
+	HintShiftPrefix string    // Shift-alternative prefix shown before Hint (e.g. "Open")
+}
+
+// FullHint returns the combined footer hint text for width layout.
+func (fk FunctionKey) FullHint() string {
+	return fk.HintShiftPrefix + fk.Hint
 }
 
 // FooterEscClose is prepended to dialog and menu footers where Esc dismisses the overlay.
@@ -23,12 +29,12 @@ var FunctionKeyEditConfig = FunctionKey{Key: tcell.KeyF4, KeyLabel: "F4", Hint: 
 // and used to route quick-filter function-key presses to menu items.
 var FunctionKeys = []FunctionKey{
 	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
-	{Key: tcell.KeyF2, KeyLabel: "F2", Hint: "User menu"},
-	{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "View"},
+	{Key: tcell.KeyF2, KeyLabel: "F2", HintShiftPrefix: "Edit", Hint: "UserCmd"},
+	{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", Hint: "View"},
 	{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
 	{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Copy"},
-	{Key: tcell.KeyF6, KeyLabel: "F6", Hint: "RenMov"},
-	{Key: tcell.KeyF7, KeyLabel: "F7", Hint: "Mkdir"},
+	{Key: tcell.KeyF6, KeyLabel: "F6", HintShiftPrefix: "Ren", Hint: "Mov"},
+	{Key: tcell.KeyF7, KeyLabel: "F7", HintShiftPrefix: "Open", Hint: "Mkdir"},
 	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete"},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},

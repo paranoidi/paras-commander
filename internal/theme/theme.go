@@ -193,8 +193,9 @@ type Theme struct {
 	// from the [symbols] section of the theme file.
 	Symbols map[string]string
 
-	FooterKey   tcell.Style
-	FooterLabel tcell.Style
+	FooterKey        tcell.Style
+	FooterLabel      tcell.Style
+	FooterLabelShift tcell.Style
 }
 
 // PanelRowSuffixIconForeground returns the foreground for file-list row suffix glyphs
@@ -657,6 +658,7 @@ var requiredStyleKeys = []string{
 	"menu.job.completed",
 	"footer.key",
 	"footer.label",
+	"footer.label.shift",
 }
 
 var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
@@ -1115,8 +1117,9 @@ func parse(data []byte) (Theme, error) {
 
 		Symbols: symbols,
 
-		FooterKey:   styles["footer.key"],
-		FooterLabel: styles["footer.label"],
+		FooterKey:        styles["footer.key"],
+		FooterLabel:      styles["footer.label"],
+		FooterLabelShift: styles["footer.label.shift"],
 	}, nil
 }
 
