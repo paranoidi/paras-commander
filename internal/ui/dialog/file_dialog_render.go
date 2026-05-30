@@ -65,12 +65,7 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 		return
 	}
 
-	rect := Rect{
-		X:      (layout.Width - width) / 2,
-		Y:      (layout.Height - height) / 2,
-		Width:  width,
-		Height: height,
-	}
+	rect := draw.CenteredDialogRect(layout, width, height)
 	borderStyle := draw.DrawDialogFrame(screen, rect, dialogTitle, styles)
 
 	switch state.DialogType {

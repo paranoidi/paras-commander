@@ -178,49 +178,49 @@ func TestJobDetailLineCountOmitsThroughputGraphWhenDisabled(t *testing.T) {
 }
 
 func TestJobRowLeadingIconCompletedUsesDoneGlyph(t *testing.T) {
-	if got := jobRowLeadingIcon("completed", theme.Theme{}); got != "\uf05d" {
+	if got := (theme.Theme{}).SymbolJobsList("completed"); got != "\uf05d" {
 		t.Fatalf("completed icon = %q, want %q", got, "\uf05d")
 	}
 }
 
 func TestJobRowLeadingIconFailedUsesErrorGlyph(t *testing.T) {
 	want := "\uf06a"
-	if got := jobRowLeadingIcon("failed", theme.Theme{}); got != want {
+	if got := (theme.Theme{}).SymbolJobsList("failed"); got != want {
 		t.Fatalf("failed icon = %q, want %q", got, want)
 	}
 }
 
 func TestJobRowLeadingIconCanceledUsesStoppedGlyph(t *testing.T) {
 	want := "\uf28d"
-	if got := jobRowLeadingIcon("canceled", theme.Theme{}); got != want {
+	if got := (theme.Theme{}).SymbolJobsList("canceled"); got != want {
 		t.Fatalf("canceled icon = %q, want %q", got, want)
 	}
 }
 
 func TestJobRowLeadingIconDecisionUsesInputRequiredGlyph(t *testing.T) {
 	want := "\U000f02d7"
-	if got := jobRowLeadingIcon("decision", theme.Theme{}); got != want {
+	if got := (theme.Theme{}).SymbolJobsList("decision"); got != want {
 		t.Fatalf("decision icon = %q, want %q", got, want)
 	}
 }
 
 func TestJobRowLeadingIconQueuedUsesClockGlyph(t *testing.T) {
 	want := "\u231B" // ⌛ queued (hourglass)
-	if got := jobRowLeadingIcon("queued", theme.Theme{}); got != want {
+	if got := (theme.Theme{}).SymbolJobsList("queued"); got != want {
 		t.Fatalf("queued icon = %q, want %q", got, want)
 	}
 }
 
 func TestJobRowLeadingIconRunningUsesOngoingGlyph(t *testing.T) {
 	want := "\uf144"
-	if got := jobRowLeadingIcon("running", theme.Theme{}); got != want {
+	if got := (theme.Theme{}).SymbolJobsList("running"); got != want {
 		t.Fatalf("running icon = %q, want %q", got, want)
 	}
 }
 
 func TestJobRowLeadingIconPausedUsesPausedGlyph(t *testing.T) {
 	want := "\uf28b"
-	if got := jobRowLeadingIcon("paused", theme.Theme{}); got != want {
+	if got := (theme.Theme{}).SymbolJobsList("paused"); got != want {
 		t.Fatalf("paused icon = %q, want %q", got, want)
 	}
 }

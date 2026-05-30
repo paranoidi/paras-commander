@@ -8,24 +8,15 @@ import (
 )
 
 func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, styles theme.Theme) {
-	width := 56
-	if width > layout.Width-4 {
-		width = layout.Width - 4
-	}
-	if width < 30 {
+	const (
+		width     = 56
+		minWidth  = 30
+		minHeight = 11
+	)
+	rect, ok := draw.ClampCenteredDialogRect(layout, width, minHeight, minWidth, minHeight)
+	if !ok {
 		return
 	}
-	// top(1) + radio(5) + checkboxes(2) + sep(1) + buttons(1) + bot(1) = 11
-	const minHeight = 11
-	height := minHeight
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-	}
-	if height < minHeight {
-		return
-	}
-
-	rect := draw.CenteredDialogRect(layout, width, height)
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Sort order", styles)
 
 	leftCol := rect.X + 2

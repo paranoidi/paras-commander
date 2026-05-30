@@ -207,7 +207,7 @@ func drawPanelCursorNameHintForState(
 	jobMark, jobStatus := EntryPathJobMarkStatus(entry.Path, jobMarks)
 	var jobMarkGlyph rune
 	if jobMark {
-		if glyphStr := jobRowLeadingIcon(jobStatus, ctx.Styles); glyphStr != "" {
+		if glyphStr := ctx.Styles.SymbolJobsList(jobStatus); glyphStr != "" {
 			jobMarkGlyph, _ = utf8.DecodeRuneInString(glyphStr)
 		}
 	}

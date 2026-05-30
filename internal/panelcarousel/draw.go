@@ -120,17 +120,18 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 				continue
 			}
 			entry := entries[entryIndex]
-			style := entryStyle(entry, p.ChromeBlocked, p.Styles)
+			style := p.Styles.PanelListingEntryStyle(entry.Type, p.ChromeBlocked)
 			selected := selState.IsSelected(entry)
 			isCursor := entryIndex == cursor
 			if isCursor {
-				style = cursorStyle(p, inactive, selected)
+				style = p.Styles.PanelListingCursorStyle(theme.PanelListingCursorOpts{
+					ChromeBlocked:    p.ChromeBlocked,
+					FileListActive:   p.FileListActive && !inactive,
+					CarouselInactive: inactive,
+					Selected:         selected,
+				})
 			} else if selected {
-				if p.ChromeBlocked {
-					style = p.Styles.PanelBlockedRowSelected
-				} else {
-					style = p.Styles.PanelRowSelected
-				}
+				style = p.Styles.PanelListingSelectedStyle(p.ChromeBlocked)
 			}
 			fillCols := 0
 			if !p.ChromeBlocked && diskDenom > 0 {
@@ -176,7 +177,12 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			}
 			cursorKey := ""
 			if isCursor {
-				cursorKey = cursorIconKey(p, inactive, isCursor, selected)
+				cursorKey = p.Styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{
+					ChromeBlocked:    p.ChromeBlocked,
+					FileListActive:   p.FileListActive && !inactive,
+					CarouselInactive: inactive,
+					Selected:         selected,
+				})
 			}
 			if suffixSpans := panellist.ListingSuffixSpans(entry, nameWidth, p.ShowIcons, rowSuffix, jobStatus, p.Styles, p.ChromeBlocked, cursorKey, func(di int) tcell.Style {
 				return blendCell(nameColOffset + di)
@@ -189,7 +195,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 					screen.SetContent(col.X+i, y, ' ', nil, blendCell(i))
 				}
 				if p.PaintIcon != nil {
-					key := cursorIconKey(p, inactive, isCursor, selected)
+					key := cursorKey
 					diskPending := false
 					diskExcluded := false
 					if p.DiskUsage.Active && p.DiskUsage.Source != nil && entry.Type == localfs.EntryDirectory {
@@ -218,82 +224,12 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 	}
 }
 
-func entryStyle(entry localfs.Entry, blocked bool, styles theme.Theme) tcell.Style {
-	if blocked {
-		switch entry.Type {
-		case localfs.EntryDirectory:
-			return styles.PanelBlockedRowDirectory
-		case localfs.EntrySymlink:
-			return styles.PanelBlockedRowSymlink
-		default:
-			return styles.PanelBlockedRowFile
-		}
-	}
-	switch entry.Type {
-	case localfs.EntryDirectory:
-		return styles.PanelRowDirectory
-	case localfs.EntrySymlink:
-		return styles.PanelRowSymlink
-	default:
-		return styles.PanelRowFile
-	}
-}
-
-func cursorStyle(p BodyParams, inactive, selected bool) tcell.Style {
-	if p.ChromeBlocked {
-		if selected {
-			return p.Styles.PanelBlockedCursorSelected
-		}
-		return p.Styles.PanelBlockedCursor
-	}
-	if inactive {
-		if selected {
-			return p.Styles.PanelCarouselInactiveCursorSelected
-		}
-		return p.Styles.PanelCarouselInactiveCursor
-	}
-	if p.FileListActive {
-		if selected {
-			return p.Styles.PanelActiveCursorSelected
-		}
-		return p.Styles.PanelCursorActive
-	}
-	if selected {
-		return p.Styles.PanelInactiveCursorSelected
-	}
-	return p.Styles.PanelCursorInactive
-}
-
-func cursorIconKey(p BodyParams, inactive, isCursor, selected bool) string {
-	if !isCursor {
-		return ""
-	}
-	if p.ChromeBlocked {
-		if selected {
-			return "panel.blocked.row.cursor.selected"
-		}
-		return "panel.blocked.row.cursor"
-	}
-	if inactive {
-		if selected {
-			return "panel.carousel.inactive.row.cursor.selected"
-		}
-		return "panel.carousel.inactive.row.cursor"
-	}
-	if p.FileListActive {
-		if selected {
-			return "panel.active.row.cursor.selected"
-		}
-		return "panel.active.row.cursor"
-	}
-	if selected {
-		return "panel.inactive.row.cursor.selected"
-	}
-	return "panel.inactive.row.cursor"
-}
-
 // CursorIconKeyForTest exposes cursor icon theme keys for tests.
 func CursorIconKeyForTest(inactive, selected, fileListActive bool) string {
-	p := BodyParams{FileListActive: fileListActive}
-	return cursorIconKey(p, inactive, true, selected)
+	th := theme.Theme{}
+	return th.PanelListingCursorIconKey(theme.PanelListingCursorOpts{
+		FileListActive:   fileListActive && !inactive,
+		CarouselInactive: inactive,
+		Selected:         selected,
+	})
 }

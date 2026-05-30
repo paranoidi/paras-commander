@@ -8,24 +8,15 @@ import (
 )
 
 func DrawListingFormatDialog(screen tcell.Screen, layout Layout, state ListingFormatDialogState, styles theme.Theme) {
-	width := 44
-	if width > layout.Width-4 {
-		width = layout.Width - 4
-	}
-	if width < 28 {
+	const (
+		width     = 44
+		minWidth  = 28
+		minHeight = 7
+	)
+	rect, ok := draw.ClampCenteredDialogRect(layout, width, minHeight, minWidth, minHeight)
+	if !ok {
 		return
 	}
-	// top(1) + radio(3) + sep(1) + buttons(1) + bot(1) = 7
-	const minHeight = 7
-	height := minHeight
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-	}
-	if height < minHeight {
-		return
-	}
-
-	rect := draw.CenteredDialogRect(layout, width, height)
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Listing format", styles)
 
 	leftCol := rect.X + 2

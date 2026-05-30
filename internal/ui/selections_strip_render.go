@@ -23,36 +23,7 @@ func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stri
 		return
 	}
 
-	var borderStyle tcell.Style
-	var titleStyle tcell.Style
-	if chromeBlocked {
-		borderStyle = styles.PanelBlockedFrame
-		titleStyle = styles.PanelBlockedTitle
-	} else if stripFocused {
-		borderStyle = styles.PanelActiveFrame
-		titleStyle = styles.PanelActiveTitle
-	} else {
-		borderStyle = styles.PanelInactiveFrame
-		titleStyle = styles.PanelInactiveTitle
-	}
-
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-	if inner.Width > 0 && inner.Height > 0 {
-		var surface tcell.Style
-		if chromeBlocked {
-			surface = styles.PanelBlockedSurface
-		} else if stripFocused {
-			surface = styles.PanelActiveSurface
-		} else {
-			surface = styles.PanelInactiveSurface
-		}
-		primitive.Fill(screen, inner, ' ', surface)
-	}
-
-	titleX := rect.X + 2
-	titleWidth := rect.Width - 4
-	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, panelSelectionsChromePadded, titleStyle)
+	drawAuxPanelChrome(screen, rect, panelSelectionsChromePadded, stripFocused, chromeBlocked, styles)
 
 	visibleRows := SelectionsStripListRows(rect)
 	if visibleRows == 0 {

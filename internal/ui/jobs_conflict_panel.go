@@ -108,47 +108,10 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 	if d == nil {
 		return
 	}
-	_, bg, _ := styles.PanelActiveSurface.Decompose()
-	if chromeBlocked {
-		_, bg, _ = styles.PanelBlockedSurface.Decompose()
-	}
-	var titleStyle tcell.Style
-	var borderStyle tcell.Style
-	if chromeBlocked {
-		borderStyle = styles.PanelBlockedFrame
-		titleStyle = styles.PanelBlockedTitle
-	} else if focused {
-		borderStyle = styles.PanelActiveFrame
-		titleStyle = styles.PanelActiveTitle
-	} else {
-		borderStyle = styles.PanelInactiveFrame
-		titleStyle = styles.PanelInactiveTitle
-	}
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-	if inner.Width > 0 && inner.Height > 0 {
-		var surface tcell.Style
-		if chromeBlocked {
-			surface = styles.PanelBlockedSurface
-		} else if focused {
-			surface = styles.PanelActiveSurface
-		} else {
-			surface = styles.PanelInactiveSurface
-		}
-		primitive.Fill(screen, inner, ' ', surface)
-	}
-	titleX := rect.X + 2
-	titleW := rect.Width - 4
-	if titleW < 1 {
-		titleW = 1
-	}
-	primitive.TextOverlay(screen, titleX, rect.Y, titleW, " Disk space ", titleStyle)
-
-	body := styles.PanelText.Background(bg)
-	if chromeBlocked {
-		body = styles.PanelBlockedText
-	}
-	warn := styles.MessageWarn.Background(bg)
+	layout := drawAuxPanelChrome(screen, rect, " Disk space ", focused, chromeBlocked, styles)
+	borderStyle := layout.Chrome.Frame
+	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
+	warn := styles.MessageWarn.Background(layout.ContentBG)
 
 	textW := rect.Width - 4
 	if textW < 1 {
@@ -212,47 +175,10 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 }
 
 func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewState, c *jobs.ConflictEvent, styles theme.Theme, chromeBlocked, focused bool, userHomeDir string) {
-	_, bg, _ := styles.PanelActiveSurface.Decompose()
-	if chromeBlocked {
-		_, bg, _ = styles.PanelBlockedSurface.Decompose()
-	}
-	var titleStyle tcell.Style
-	var borderStyle tcell.Style
-	if chromeBlocked {
-		borderStyle = styles.PanelBlockedFrame
-		titleStyle = styles.PanelBlockedTitle
-	} else if focused {
-		borderStyle = styles.PanelActiveFrame
-		titleStyle = styles.PanelActiveTitle
-	} else {
-		borderStyle = styles.PanelInactiveFrame
-		titleStyle = styles.PanelInactiveTitle
-	}
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-	if inner.Width > 0 && inner.Height > 0 {
-		var surface tcell.Style
-		if chromeBlocked {
-			surface = styles.PanelBlockedSurface
-		} else if focused {
-			surface = styles.PanelActiveSurface
-		} else {
-			surface = styles.PanelInactiveSurface
-		}
-		primitive.Fill(screen, inner, ' ', surface)
-	}
-	titleX := rect.X + 2
-	titleW := rect.Width - 4
-	if titleW < 1 {
-		titleW = 1
-	}
-	primitive.TextOverlay(screen, titleX, rect.Y, titleW, " File exists ", titleStyle)
-
-	body := styles.PanelText.Background(bg)
-	if chromeBlocked {
-		body = styles.PanelBlockedText
-	}
-	prompt := styles.DialogText.Background(bg)
+	layout := drawAuxPanelChrome(screen, rect, " File exists ", focused, chromeBlocked, styles)
+	borderStyle := layout.Chrome.Frame
+	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
+	prompt := styles.DialogText.Background(layout.ContentBG)
 
 	textW := rect.Width - 4
 	if textW < 1 {

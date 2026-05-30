@@ -14,34 +14,17 @@ import (
 // previewFocused highlights the preview title when keyboard focus is on the preview pane.
 // When quickViewChrome is true, the title shows panelPath on the start and TitleBase on the end (no volume stats).
 func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome bool, panelPath, userHomeDir string) {
+	chrome := styles.PanelChrome(previewFocused, chromeBlocked)
 	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
-	var borderStyle tcell.Style
-	var titleStyle tcell.Style
-	if chromeBlocked {
-		borderStyle = styles.PanelBlockedFrame
-		titleStyle = styles.PanelBlockedTitle
-	} else if previewFocused {
-		borderStyle = styles.PanelActiveFrame
-		titleStyle = styles.PanelActiveTitle
-	} else {
-		borderStyle = styles.PanelInactiveFrame
-		titleStyle = styles.PanelInactiveTitle
-	}
+	borderStyle := chrome.Frame
+	titleStyle := chrome.Title
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
 	if inner.Width > 0 && inner.Height > 0 {
-		var surface tcell.Style
-		if chromeBlocked {
-			surface = styles.PanelBlockedSurface
-		} else if previewFocused {
-			surface = styles.PanelActiveSurface
-		} else {
-			surface = styles.PanelInactiveSurface
-		}
-		primitive.Fill(screen, inner, ' ', surface)
+		primitive.Fill(screen, inner, ' ', chrome.Surface)
 	}
 	titleX := rect.X + 2
 	innerRight := rect.X + rect.Width - 2
@@ -65,10 +48,7 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 		primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
 	}
 
-	body := styles.PanelText.Background(bg)
-	if chromeBlocked {
-		body = styles.PanelBlockedText
-	}
+	body := auxPanelBodyText(styles, chromeBlocked, bg)
 	contentTop := rect.Y + 1
 	contentH := JobsPanelContentRows(rect)
 	if contentH <= 0 {

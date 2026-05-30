@@ -39,39 +39,9 @@ func drawCommandsView(
 }
 
 func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewState, entries []CommandRunEntry, styles theme.Theme, chromeBlocked bool, userHomeDir string) {
-	_, bg, _ := styles.PanelActiveSurface.Decompose()
-	if chromeBlocked {
-		_, bg, _ = styles.PanelBlockedSurface.Decompose()
-	}
 	active := state.FocusPane == 0
-	var titleStyle tcell.Style
-	var borderStyle tcell.Style
-	if chromeBlocked {
-		borderStyle = styles.PanelBlockedFrame
-		titleStyle = styles.PanelBlockedTitle
-	} else if active {
-		borderStyle = styles.PanelActiveFrame
-		titleStyle = styles.PanelActiveTitle
-	} else {
-		borderStyle = styles.PanelInactiveFrame
-		titleStyle = styles.PanelInactiveTitle
-	}
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-	if inner.Width > 0 && inner.Height > 0 {
-		var surface tcell.Style
-		if chromeBlocked {
-			surface = styles.PanelBlockedSurface
-		} else if active {
-			surface = styles.PanelActiveSurface
-		} else {
-			surface = styles.PanelInactiveSurface
-		}
-		primitive.Fill(screen, inner, ' ', surface)
-	}
-	titleX := rect.X + 2
-	titleWidth := rect.Width - 4
-	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, " Commands ", titleStyle)
+	layout := drawAuxPanelChrome(screen, rect, " Commands ", active, chromeBlocked, styles)
+	bg := layout.ContentBG
 
 	contentX := rect.X + 2
 	contentW := rect.Width - 4
@@ -224,44 +194,8 @@ func fitCommandOutputLine(line string, width int) string {
 }
 
 func drawCommandsStreamPanel(screen tcell.Screen, rect Rect, title string, scroll int, lines []string, styles theme.Theme, chromeBlocked bool, focused bool) {
-	_, bg, _ := styles.PanelActiveSurface.Decompose()
-	if chromeBlocked {
-		_, bg, _ = styles.PanelBlockedSurface.Decompose()
-	}
-	active := focused
-	var titleStyle tcell.Style
-	var borderStyle tcell.Style
-	if chromeBlocked {
-		borderStyle = styles.PanelBlockedFrame
-		titleStyle = styles.PanelBlockedTitle
-	} else if active {
-		borderStyle = styles.PanelActiveFrame
-		titleStyle = styles.PanelActiveTitle
-	} else {
-		borderStyle = styles.PanelInactiveFrame
-		titleStyle = styles.PanelInactiveTitle
-	}
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-	if inner.Width > 0 && inner.Height > 0 {
-		var surface tcell.Style
-		if chromeBlocked {
-			surface = styles.PanelBlockedSurface
-		} else if active {
-			surface = styles.PanelActiveSurface
-		} else {
-			surface = styles.PanelInactiveSurface
-		}
-		primitive.Fill(screen, inner, ' ', surface)
-	}
-	titleX := rect.X + 2
-	titleWidth := rect.Width - 4
-	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
-
-	body := styles.PanelText.Background(bg)
-	if chromeBlocked {
-		body = styles.PanelBlockedText
-	}
+	layout := drawAuxPanelChrome(screen, rect, title, focused, chromeBlocked, styles)
+	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	contentTop := rect.Y + 1
 	contentH := JobsPanelContentRows(rect)
 	if contentH <= 0 {

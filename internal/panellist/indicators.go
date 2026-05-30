@@ -113,7 +113,7 @@ func RunesFromDisplay(display []DisplayRune) []rune {
 func SuffixSpanStyle(r rune, suffix RowSuffix, jobStatus, cursorStyleKey string, th theme.Theme, chromeBlocked bool) (tcell.Style, bool) {
 	switch {
 	case r == suffix.JobGlyph && suffix.JobGlyph != 0:
-		return jobIconStyle(jobStatus, th), true
+		return th.JobsIconStyle(jobStatus), true
 	case r == th.SymbolFilelistNew() && suffix.NewFile:
 		base := th.PanelRowIndicatorNew
 		return tcell.StyleDefault.Foreground(th.PanelRowSuffixIconForeground(cursorStyleKey, base)), true
@@ -166,27 +166,4 @@ func ListingSuffixSpans(
 		})
 	}
 	return spans
-}
-
-func jobIconStyle(status string, th theme.Theme) tcell.Style {
-	switch status {
-	case "scanning":
-		return th.JobsIconsScanning
-	case "queued":
-		return th.JobsIconsQueued
-	case "running":
-		return th.JobsIconsOngoing
-	case "paused":
-		return th.JobsIconsPaused
-	case "canceled":
-		return th.JobsIconsStopped
-	case "failed":
-		return th.JobsIconsError
-	case "decision":
-		return th.JobsIconsInputRequired
-	case "completed":
-		return th.JobsIconsCompleted
-	default:
-		return th.JobsRow
-	}
 }

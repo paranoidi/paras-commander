@@ -405,6 +405,26 @@ type DialogButtonSpec struct {
 	Disabled    bool
 }
 
+// ClampCenteredDialogRect clamps preferred width/height to the layout margins, then centers.
+// Returns ok false when clamped width or height falls below the corresponding minimum.
+func ClampCenteredDialogRect(layout Layout, prefW, prefH, minW, minH int) (Rect, bool) {
+	w := prefW
+	if w > layout.Width-4 {
+		w = layout.Width - 4
+	}
+	if w < minW {
+		return Rect{}, false
+	}
+	h := prefH
+	if h > layout.Height-2 {
+		h = layout.Height - 2
+	}
+	if h < minH {
+		return Rect{}, false
+	}
+	return CenteredDialogRect(layout, w, h), true
+}
+
 // CenteredDialogRect returns a rectangle of the given size centered in the layout.
 // Width and height are clamped to the layout; coordinates are clamped to non-negative.
 func CenteredDialogRect(layout Layout, width, height int) Rect {

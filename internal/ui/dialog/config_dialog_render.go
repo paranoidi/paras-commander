@@ -9,24 +9,15 @@ import (
 )
 
 func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogState, styles theme.Theme) {
-	width := 54
-	if width > layout.Width-4 {
-		width = layout.Width - 4
-	}
-	if width < 38 {
+	const (
+		width     = 54
+		minWidth  = 38
+		minHeight = 14
+	)
+	rect, ok := draw.ClampCenteredDialogRect(layout, width, minHeight, minWidth, minHeight)
+	if !ok {
 		return
 	}
-
-	const minHeight = 14
-	height := minHeight
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-	}
-	if height < minHeight {
-		return
-	}
-
-	rect := draw.CenteredDialogRect(layout, width, height)
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Configuration", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 

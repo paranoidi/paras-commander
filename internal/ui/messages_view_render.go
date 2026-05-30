@@ -20,33 +20,8 @@ func drawMessagesView(
 	chromeBlocked bool,
 ) {
 	rect := MergeTwinPanelRects(layout.Left, layout.Right)
-	_, bg, _ := styles.PanelActiveSurface.Decompose()
-	if chromeBlocked {
-		_, bg, _ = styles.PanelBlockedSurface.Decompose()
-	}
-	var titleStyle tcell.Style
-	var borderStyle tcell.Style
-	if chromeBlocked {
-		borderStyle = styles.PanelBlockedFrame
-		titleStyle = styles.PanelBlockedTitle
-	} else {
-		borderStyle = styles.PanelActiveFrame
-		titleStyle = styles.PanelActiveTitle
-	}
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-	if inner.Width > 0 && inner.Height > 0 {
-		var surface tcell.Style
-		if chromeBlocked {
-			surface = styles.PanelBlockedSurface
-		} else {
-			surface = styles.PanelActiveSurface
-		}
-		primitive.Fill(screen, inner, ' ', surface)
-	}
-	titleX := rect.X + 2
-	titleWidth := rect.Width - 4
-	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, " Messages ", titleStyle)
+	layoutChrome := drawAuxPanelChrome(screen, rect, " Messages ", true, chromeBlocked, styles)
+	bg := layoutChrome.ContentBG
 
 	contentX := rect.X + 2
 	contentW := rect.Width - 4

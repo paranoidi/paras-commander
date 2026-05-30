@@ -109,39 +109,9 @@ func drawJobsView(
 }
 
 func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool) {
-	_, bg, _ := styles.PanelActiveSurface.Decompose()
-	if chromeBlocked {
-		_, bg, _ = styles.PanelBlockedSurface.Decompose()
-	}
 	active := state.FocusPane == 0
-	var titleStyle tcell.Style
-	var borderStyle tcell.Style
-	if chromeBlocked {
-		borderStyle = styles.PanelBlockedFrame
-		titleStyle = styles.PanelBlockedTitle
-	} else if active {
-		borderStyle = styles.PanelActiveFrame
-		titleStyle = styles.PanelActiveTitle
-	} else {
-		borderStyle = styles.PanelInactiveFrame
-		titleStyle = styles.PanelInactiveTitle
-	}
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-	if inner.Width > 0 && inner.Height > 0 {
-		var surface tcell.Style
-		if chromeBlocked {
-			surface = styles.PanelBlockedSurface
-		} else if active {
-			surface = styles.PanelActiveSurface
-		} else {
-			surface = styles.PanelInactiveSurface
-		}
-		primitive.Fill(screen, inner, ' ', surface)
-	}
-	titleX := rect.X + 2
-	titleWidth := rect.Width - 4
-	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, " Queue ", titleStyle)
+	layout := drawAuxPanelChrome(screen, rect, " Queue ", active, chromeBlocked, styles)
+	bg := layout.ContentBG
 
 	contentX := rect.X + 2
 	contentW := rect.Width - 4
@@ -159,12 +129,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 	}
 
 	hdr := fmt.Sprintf("%-2s%-*s %-10s%-10s%-10sProgress", "", jobsListColTypeRunes, "Type", "Status", "ETA", "Speed")
-	headerStyle := styles.PanelActiveHeader.Background(bg)
-	if chromeBlocked {
-		headerStyle = styles.PanelBlockedHeader
-	} else if !active {
-		headerStyle = styles.PanelInactiveHeader.Background(bg)
-	}
+	headerStyle := auxPanelListHeaderStyle(layout.Chrome, chromeBlocked, bg)
 	primitive.Text(screen, contentX, rect.Y+1, contentW, hdr, headerStyle)
 
 	n := len(jobs)
@@ -199,8 +164,8 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 
 		pct := jobPercentDone(entry)
 		eta := formatJobETA(entry, now)
-		statusStyle := jobStatusStyle(entry.Status, styles).Background(bg)
-		iconStyle := jobIconStyle(entry.Status, styles)
+		statusStyle := styles.JobsStatusStyle(entry.Status).Background(bg)
+		iconStyle := styles.JobsIconStyle(entry.Status)
 		_, lineBG, _ := lineStyle.Decompose()
 		iconFG, _, iconAttrs := iconStyle.Decompose()
 		iconRenderStyle := tcell.StyleDefault.Foreground(iconFG).Background(lineBG)
@@ -213,7 +178,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		if iconAttrs&tcell.AttrReverse != 0 {
 			iconRenderStyle = iconRenderStyle.Reverse(true)
 		}
-		iconGlyph := jobRowLeadingIcon(entry.Status, styles)
+		iconGlyph := styles.SymbolJobsList(entry.Status)
 		primitive.Text(screen, contentX, y, 2, iconGlyph, iconRenderStyle)
 		line := fmt.Sprintf("%-*s ", jobsListColTypeRunes, truncateRunes(entry.Type, jobsListColTypeRunes))
 		primitive.Text(screen, contentX+jobsListColIcon, y, jobsListColTypeCell, line, lineStyle)
@@ -239,44 +204,8 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 }
 
 func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, focused bool, userHomeDir string, throughputChartEnabled bool) {
-	_, bg, _ := styles.PanelActiveSurface.Decompose()
-	if chromeBlocked {
-		_, bg, _ = styles.PanelBlockedSurface.Decompose()
-	}
-	active := focused
-	var titleStyle tcell.Style
-	var borderStyle tcell.Style
-	if chromeBlocked {
-		borderStyle = styles.PanelBlockedFrame
-		titleStyle = styles.PanelBlockedTitle
-	} else if active {
-		borderStyle = styles.PanelActiveFrame
-		titleStyle = styles.PanelActiveTitle
-	} else {
-		borderStyle = styles.PanelInactiveFrame
-		titleStyle = styles.PanelInactiveTitle
-	}
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-	if inner.Width > 0 && inner.Height > 0 {
-		var surface tcell.Style
-		if chromeBlocked {
-			surface = styles.PanelBlockedSurface
-		} else if active {
-			surface = styles.PanelActiveSurface
-		} else {
-			surface = styles.PanelInactiveSurface
-		}
-		primitive.Fill(screen, inner, ' ', surface)
-	}
-	titleX := rect.X + 2
-	titleWidth := rect.Width - 4
-	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, " Details ", titleStyle)
-
-	body := styles.PanelText.Background(bg)
-	if chromeBlocked {
-		body = styles.PanelBlockedText
-	}
+	layout := drawAuxPanelChrome(screen, rect, " Details ", focused, chromeBlocked, styles)
+	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	contentTop := rect.Y + 1
 	contentH := rect.Height - 2
 	if contentH <= 0 {
@@ -315,44 +244,8 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 }
 
 func drawJobsActivityPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, activity map[string][]string, styles theme.Theme, chromeBlocked bool, focused bool) {
-	_, bg, _ := styles.PanelActiveSurface.Decompose()
-	if chromeBlocked {
-		_, bg, _ = styles.PanelBlockedSurface.Decompose()
-	}
-	active := focused
-	var titleStyle tcell.Style
-	var borderStyle tcell.Style
-	if chromeBlocked {
-		borderStyle = styles.PanelBlockedFrame
-		titleStyle = styles.PanelBlockedTitle
-	} else if active {
-		borderStyle = styles.PanelActiveFrame
-		titleStyle = styles.PanelActiveTitle
-	} else {
-		borderStyle = styles.PanelInactiveFrame
-		titleStyle = styles.PanelInactiveTitle
-	}
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-	if inner.Width > 0 && inner.Height > 0 {
-		var surface tcell.Style
-		if chromeBlocked {
-			surface = styles.PanelBlockedSurface
-		} else if active {
-			surface = styles.PanelActiveSurface
-		} else {
-			surface = styles.PanelInactiveSurface
-		}
-		primitive.Fill(screen, inner, ' ', surface)
-	}
-	titleX := rect.X + 2
-	titleWidth := rect.Width - 4
-	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, " Activity ", titleStyle)
-
-	body := styles.PanelText.Background(bg)
-	if chromeBlocked {
-		body = styles.PanelBlockedText
-	}
+	layout := drawAuxPanelChrome(screen, rect, " Activity ", focused, chromeBlocked, styles)
+	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	contentTop := rect.Y + 1
 	contentH := rect.Height - 2
 	if contentH <= 0 {
@@ -654,76 +547,4 @@ func truncateMiddle(s string, max int) string {
 	left := max/2 - 1
 	right := max - left - 1
 	return string(r[:left]) + "…" + string(r[len(r)-right:])
-}
-
-// jobRowLeadingIcon returns the Nerd Font glyph for the given job status.
-// Icons follow the status definitions in AGENTS.md:
-//
-//	  Ongoing (queued / running)
-//	  Paused
-//	  Stopped (canceled)
-//	  Error (failed)
-//	󰋗  Input required (decision)
-//	  Completed
-func jobRowLeadingIcon(status string, th theme.Theme) string {
-	if sym, ok := th.Symbols[status]; ok && sym != "" {
-		return sym
-	}
-	switch status {
-	case "scanning":
-		return "\uf110" //  spinner
-	case "queued":
-		return "\u231B" // ⏳ Queued (clock face)
-	case "running":
-		return "\uf144" //  Ongoing (play circle)
-	case "decision":
-		return "\U000f02d7" // 󰋗 Input required
-	case "paused":
-		return "\uf28b" //  Paused (pause circle)
-	case "canceled":
-		return "\uf28d" //  Stopped (stop circle)
-	case "failed":
-		return "\uf06a" //  Error (exclamation triangle)
-	case "completed":
-		return "\uf05d" //  Completed
-	default:
-		return " "
-	}
-}
-
-// jobIconStyle returns the themed style for the leading icon of a job status.
-func jobIconStyle(status string, styles theme.Theme) tcell.Style {
-	switch status {
-	case "scanning":
-		return styles.JobsIconsScanning
-	case "queued":
-		return styles.JobsIconsQueued
-	case "running":
-		return styles.JobsIconsOngoing
-	case "paused":
-		return styles.JobsIconsPaused
-	case "canceled":
-		return styles.JobsIconsStopped
-	case "failed":
-		return styles.JobsIconsError
-	case "decision":
-		return styles.JobsIconsInputRequired
-	case "completed":
-		return styles.JobsIconsCompleted
-	default:
-		return styles.JobsRow
-	}
-}
-
-func jobStatusStyle(status string, styles theme.Theme) tcell.Style {
-	switch status {
-	case "running", "queued", "scanning", "paused", "decision":
-		return styles.JobsRunning
-	case "completed":
-		return styles.JobsDone
-	case "failed", "canceled":
-		return styles.JobsFailed
-	default:
-		return styles.JobsRow
-	}
 }
