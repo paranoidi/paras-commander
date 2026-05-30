@@ -46,6 +46,7 @@ type MenuEntry struct {
 	Default     bool   `toml:"default"`
 	Interactive bool   `toml:"interactive"`
 	Detach      bool   `toml:"detach"`
+	Background  bool   `toml:"background"`
 }
 
 type menuFileRaw struct {
@@ -61,6 +62,7 @@ type menuEntry struct {
 	Default     bool       `toml:"default"`
 	Interactive *boolField `toml:"interactive"`
 	Detach      *boolField `toml:"detach"`
+	Background  *boolField `toml:"background"`
 }
 
 // LoadFile reads and validates menu.toml from path.
@@ -97,8 +99,22 @@ func Decode(data []byte) (*MenuFile, error) {
 		if e.Detach != nil && e.Detach.Set {
 			detach = e.Detach.Value
 		}
-		if interactive && detach {
-			return nil, fmt.Errorf("menu.toml: entry %d: interactive and detach are mutually exclusive", i)
+		background := false
+		if e.Background != nil && e.Background.Set {
+			background = e.Background.Value
+		}
+		modeCount := 0
+		if interactive {
+			modeCount++
+		}
+		if detach {
+			modeCount++
+		}
+		if background {
+			modeCount++
+		}
+		if modeCount > 1 {
+			return nil, fmt.Errorf("menu.toml: entry %d: interactive, detach, and background are mutually exclusive", i)
 		}
 		out.Entries = append(out.Entries, MenuEntry{
 			Key:         strings.TrimSpace(e.Key),
@@ -108,6 +124,7 @@ func Decode(data []byte) (*MenuFile, error) {
 			Default:     e.Default,
 			Interactive: interactive,
 			Detach:      detach,
+			Background:  background,
 		})
 	}
 	return out, nil

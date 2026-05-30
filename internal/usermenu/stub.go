@@ -24,16 +24,23 @@ const MenuStubTOML = `# F2 user menu — see docs/config.md
 # title = "Echo active panel directory"
 # command = "echo %d"
 #
-# Optional: pin a shortcut letter (otherwise assigned from the title, like the meta picker)
-# key = "p"
-#
 # Options:
-#
-# when = optional visibility (e.g. f *.go)
-# shell_patterns = true   # true/1 = glob in when=; false/0 = regex
-# interactive = true      # suspend TUI, attach terminal (lazygit, vim, htop)
-# detach = true           # start in background (xdg-open, GUI helpers)
-# interactive and detach cannot both be set on one entry
+# 
+# key = "p"
+# 	  pin a shortcut letter (otherwise assigned from the title, like the meta picker)
+# when = "*.go"
+# 	  optional visibility (e.g. *.go)
+# shell_patterns = true   
+#     true = glob patterns in when=; 
+#     false = regex patterns in when=
+# interactive = true
+#     suspend TUI, attach terminal (lazygit, vim, htop)
+# detach = true           
+#     start in background (xdg-open, GUI helpers)
+# background = true       
+#     capture output without opening Commands view; notify on failure/stderr; 
+#     refresh panel when done
+#     interactive, detach, and background cannot be combined on one entry
 #
 # Macros (expanded in command before run):
 #

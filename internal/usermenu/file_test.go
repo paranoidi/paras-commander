@@ -98,15 +98,66 @@ command = "true"
 	}
 }
 
-func TestDecodeEntryInteractiveDetachMutuallyExclusive(t *testing.T) {
-	_, err := Decode([]byte(`[[entry]]
+func TestDecodeEntryBackground(t *testing.T) {
+	mf, err := Decode([]byte(`[[entry]]
+key = "b"
+title = "Background"
+command = "true"
+background = 1
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mf.Entries) != 1 || !mf.Entries[0].Background {
+		t.Fatalf("entries = %+v, want background=true", mf.Entries)
+	}
+	if mf.Entries[0].Interactive || mf.Entries[0].Detach {
+		t.Fatalf("entry 0: interactive=%v detach=%v", mf.Entries[0].Interactive, mf.Entries[0].Detach)
+	}
+}
+
+func TestDecodeEntryExecutionModesMutuallyExclusive(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "interactive and detach",
+			body: `[[entry]]
 key = "x"
 title = "Bad"
 command = "true"
 interactive = true
 detach = true
-`))
-	if err == nil {
-		t.Fatal("expected mutual exclusion error")
+`,
+		},
+		{
+			name: "interactive and background",
+			body: `[[entry]]
+key = "x"
+title = "Bad"
+command = "true"
+interactive = true
+background = true
+`,
+		},
+		{
+			name: "detach and background",
+			body: `[[entry]]
+key = "x"
+title = "Bad"
+command = "true"
+detach = true
+background = true
+`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Decode([]byte(tc.body))
+			if err == nil {
+				t.Fatal("expected mutual exclusion error")
+			}
+		})
 	}
 }

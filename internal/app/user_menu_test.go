@@ -2,12 +2,15 @@ package app
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -347,4 +350,128 @@ detach = true
 	if gotDir != wantDir {
 		t.Fatalf("workDir = %q, want %q", gotDir, wantDir)
 	}
+}
+
+func TestUserMenuBackgroundDoesNotOpenCommandsView(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeUserMenuFile(t, menuPath, `[[entry]]
+key = "a"
+title = "Always"
+command = "true"
+background = true
+`)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+
+	if app.model.ViewMode == ui.ViewCommands {
+		t.Fatal("background user menu should not open commands view")
+	}
+	if len(app.model.CommandsList) != 1 {
+		t.Fatalf("CommandsList len = %d, want 1", len(app.model.CommandsList))
+	}
+	waitCommandsDone(t, app)
+}
+
+func TestUserMenuBackgroundNotifiesOnFailure(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeUserMenuFile(t, menuPath, `[[entry]]
+key = "f"
+title = "Fail"
+command = "false"
+background = true
+`)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	waitCommandsDone(t, app)
+
+	app.applyCommandWake(backgroundWakePayloadForEntry(t, app, "Fail"))
+	if app.model.MessageUrgency != ui.MessageUrgencyError {
+		t.Fatalf("MessageUrgency = %v, want error", app.model.MessageUrgency)
+	}
+	if !strings.Contains(app.model.Message, "Fail") {
+		t.Fatalf("Message = %q, want title in banner", app.model.Message)
+	}
+}
+
+func TestUserMenuBackgroundRefreshesPanelOnCompletion(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	marker := "paras_bg_refresh_marker"
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeUserMenuFile(t, menuPath, `[[entry]]
+key = "t"
+title = "Touch"
+command = "touch `+marker+`"
+background = true
+`)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModAlt))
+	waitCommandsDone(t, app)
+
+	app.applyCommandWake(commandWakePayload{refreshBrowserPanel: true})
+	selectEntryByName(t, app, marker)
+}
+
+func TestUserMenuBackgroundNotify(t *testing.T) {
+	log, banner, urg, ok := userMenuBackgroundNotify("Build", cmdrun.RunResult{LaunchErr: errors.New("executable not found")})
+	if !ok || urg != ui.MessageUrgencyError || !strings.Contains(log, "Build") || banner == "" {
+		t.Fatalf("launch err: ok=%v urg=%v log=%q banner=%q", ok, urg, log, banner)
+	}
+
+	log, _, urg, ok = userMenuBackgroundNotify("Lint", cmdrun.RunResult{ExitCode: 2, Stderr: []byte("syntax error\n")})
+	if !ok || urg != ui.MessageUrgencyError || !strings.Contains(log, "exit 2") {
+		t.Fatalf("exit+stderr: ok=%v urg=%v log=%q", ok, urg, log)
+	}
+
+	log, _, urg, ok = userMenuBackgroundNotify("Warn", cmdrun.RunResult{ExitCode: 0, Stderr: []byte("note\n")})
+	if !ok || urg != ui.MessageUrgencyWarn {
+		t.Fatalf("stderr only: ok=%v urg=%v log=%q", ok, urg, log)
+	}
+
+	_, _, _, ok = userMenuBackgroundNotify("OK", cmdrun.RunResult{ExitCode: 0})
+	if ok {
+		t.Fatal("clean success should not notify")
+	}
+}
+
+func backgroundWakePayloadForEntry(t *testing.T, app *App, title string) commandWakePayload {
+	t.Helper()
+	if len(app.model.CommandsList) == 0 {
+		t.Fatal("no command rows")
+	}
+	e := app.model.CommandsList[len(app.model.CommandsList)-1]
+	res := cmdrun.RunResult{
+		Stdout:   []byte(e.Stdout),
+		Stderr:   []byte(e.Stderr),
+		ExitCode: e.ExitCode,
+	}
+	if e.ErrorMsg != "" {
+		res.LaunchErr = errors.New(e.ErrorMsg)
+	}
+	p := commandWakePayload{refreshBrowserPanel: true}
+	if log, banner, urg, ok := userMenuBackgroundNotify(title, res); ok {
+		p.notifyLog = log
+		p.notifyBanner = banner
+		p.notifyUrg = urg
+	}
+	return p
 }

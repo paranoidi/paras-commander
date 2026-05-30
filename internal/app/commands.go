@@ -13,10 +13,28 @@ import (
 )
 
 // commandWakePayload wakes PollEvent after asynchronous command-run mutations.
-type commandWakePayload struct{}
+type commandWakePayload struct {
+	notifyLog           string
+	notifyBanner        string
+	notifyUrg           ui.MessageUrgency
+	refreshBrowserPanel bool
+}
 
 func (a *App) postCommandWake() {
-	_ = a.screen.PostEvent(tcell.NewEventInterrupt(commandWakePayload{}))
+	a.postCommandWakePayload(commandWakePayload{})
+}
+
+func (a *App) postCommandWakePayload(p commandWakePayload) {
+	_ = a.screen.PostEvent(tcell.NewEventInterrupt(p))
+}
+
+func (a *App) applyCommandWake(p commandWakePayload) {
+	if p.refreshBrowserPanel {
+		a.refreshAfterUserMenuCommand()
+	}
+	if strings.TrimSpace(p.notifyLog) != "" {
+		a.setTransientMessageBanner(p.notifyLog, p.notifyBanner, p.notifyUrg)
+	}
 }
 
 func (a *App) openRunForEachDialog() {

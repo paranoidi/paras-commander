@@ -212,13 +212,15 @@ func (a *App) executeUserMenuEntry(idx int) {
 	default:
 		cmdLine := entry.Command
 		rowIdx := a.appendUserMenuCommandRow(cmdLine, expanded)
-		a.openCommandsView()
-		a.model.CommandsView.Selected = rowIdx
-		a.model.CommandsView.FocusPane = 0
-		a.ensureCommandsViewSelectionVisible()
+		if !entry.Background {
+			a.openCommandsView()
+			a.model.CommandsView.Selected = rowIdx
+			a.model.CommandsView.FocusPane = 0
+			a.ensureCommandsViewSelectionVisible()
+		}
 
 		a.commandsBatchesInflight.Add(1)
-		go a.runUserMenuCommand(a.commandsCtx, rowIdx, argv, workDir)
+		go a.runUserMenuCommand(a.commandsCtx, rowIdx, argv, workDir, entry.Background, entry.Title)
 	}
 }
 
@@ -263,11 +265,22 @@ func (a *App) appendUserMenuCommandRow(cmdLine, expanded string) int {
 	return idx
 }
 
-func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, workDir string) {
-	defer func() {
-		a.commandsBatchesInflight.Add(-1)
-		a.postCommandWake()
-	}()
+func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, workDir string, background bool, title string) {
+	defer a.commandsBatchesInflight.Add(-1)
+
+	postBackgroundFinal := func(res cmdrun.RunResult) {
+		if !background {
+			a.postCommandWake()
+			return
+		}
+		p := commandWakePayload{refreshBrowserPanel: true}
+		if log, banner, urg, ok := userMenuBackgroundNotify(title, res); ok {
+			p.notifyLog = log
+			p.notifyBanner = banner
+			p.notifyUrg = urg
+		}
+		a.postCommandWakePayload(p)
+	}
 	select {
 	case <-ctx.Done():
 		a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
@@ -277,7 +290,11 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 				e.ErrorMsg = "Canceled"
 			}
 		})
-		a.postCommandWake()
+		if background {
+			a.postCommandWakePayload(commandWakePayload{refreshBrowserPanel: true})
+		} else {
+			a.postCommandWake()
+		}
 		return
 	default:
 	}
@@ -298,5 +315,42 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 			e.ExitCode = res.ExitCode
 		}
 	})
-	a.postCommandWake()
+	postBackgroundFinal(res)
+}
+
+// userMenuBackgroundNotify returns status text when a background user-menu run should alert the user.
+func userMenuBackgroundNotify(title string, res cmdrun.RunResult) (log, banner string, urg ui.MessageUrgency, ok bool) {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		title = "command"
+	}
+	prefix := "User menu: " + title
+
+	stderrText := strings.TrimSpace(string(res.Stderr))
+	hasStderr := stderrText != ""
+
+	switch {
+	case res.LaunchErr != nil:
+		detail := res.LaunchErr.Error()
+		log = prefix + ": " + detail
+		banner = prefix + ": " + truncateStatusBannerRunes(firstMessageLine(detail), jobFailureBannerMaxRunes)
+		return log, banner, ui.MessageUrgencyError, true
+	case res.ExitCode != 0:
+		if hasStderr {
+			line := firstMessageLine(stderrText)
+			log = prefix + " (exit " + fmt.Sprint(res.ExitCode) + "): " + stderrText
+			banner = prefix + ": " + truncateStatusBannerRunes(line, jobFailureBannerMaxRunes)
+		} else {
+			log = prefix + ": exit " + fmt.Sprint(res.ExitCode)
+			banner = log
+		}
+		return log, banner, ui.MessageUrgencyError, true
+	case hasStderr:
+		line := firstMessageLine(stderrText)
+		log = prefix + ": " + stderrText
+		banner = prefix + ": " + truncateStatusBannerRunes(line, jobFailureBannerMaxRunes)
+		return log, banner, ui.MessageUrgencyWarn, true
+	default:
+		return "", "", ui.MessageUrgencyInfo, false
+	}
 }

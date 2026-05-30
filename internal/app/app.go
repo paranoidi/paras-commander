@@ -539,6 +539,7 @@ func (a *App) Run() error {
 					didRender = true
 				}
 			case commandWakePayload:
+				a.applyCommandWake(d)
 				a.render()
 				didRender = true
 			case metaWakePayload:
