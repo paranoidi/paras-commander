@@ -819,11 +819,31 @@ func (h *Handler) updateJobMessage(ev jobs.Event) {
 	}
 }
 
-func (h *Handler) EnqueueCopyJob() {
+func (h *Handler) commitJob(job *jobs.Job) {
+	h.state.AddJob(job)
+	h.SyncJobsList()
+	h.SyncJobPathMarks()
+}
+
+type transferEnqueueOpts struct {
+	kind                   ui.TransferKind
+	jobType                jobs.Type
+	unsupportedSameDirMove bool
+	toastVerb              string
+}
+
+func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 	sources, dest := h.sourceAndDestination()
 	if len(sources) == 0 {
 		h.host.SetTransientMessage("No source files selected", ui.MessageUrgencyWarn)
 		return
+	}
+	if opts.unsupportedSameDirMove {
+		active := h.host.ActivePanel()
+		if len(sources) == 1 && dest == active.PathString() {
+			h.host.SetUnsupportedMessage("Rename/Move (same-directory rename not supported yet)")
+			return
+		}
 	}
 	destLoc, err := pathloc.Parse(dest)
 	if err != nil {
@@ -843,50 +863,29 @@ func (h *Handler) EnqueueCopyJob() {
 			h.host.SetTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
 			return
 		}
-		h.host.OpenTransferDialogSelfCopyRename(ui.TransferKindCopy, absDest, sources[0])
+		h.host.OpenTransferDialogSelfCopyRename(opts.kind, absDest, sources[0])
 		return
 	}
 	h.host.ActivePanel().ClearSelection()
-	h.AddTransferJob(jobs.TypeCopy, sources, dest, false)
-	h.host.SetTransientMessage(fmt.Sprintf("Copy queued (%d %s)", len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
+	h.AddTransferJob(opts.jobType, sources, dest, false)
+	h.host.SetTransientMessage(fmt.Sprintf("%s queued (%d %s)", opts.toastVerb, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
+}
+
+func (h *Handler) EnqueueCopyJob() {
+	h.enqueueTransferJob(transferEnqueueOpts{
+		kind:      ui.TransferKindCopy,
+		jobType:   jobs.TypeCopy,
+		toastVerb: "Copy",
+	})
 }
 
 func (h *Handler) EnqueueMoveJob() {
-	sources, dest := h.sourceAndDestination()
-	if len(sources) == 0 {
-		h.host.SetTransientMessage("No source files selected", ui.MessageUrgencyWarn)
-		return
-	}
-	// Same-directory move: treat as unsupported for foreground rename (plan 04).
-	active := h.host.ActivePanel()
-	if len(sources) == 1 && dest == active.PathString() {
-		h.host.SetUnsupportedMessage("Rename/Move (same-directory rename not supported yet)")
-		return
-	}
-	destLoc, err := pathloc.Parse(dest)
-	if err != nil {
-		h.host.SetTransientMessage(fmt.Sprintf("Invalid destination: %v", err), ui.MessageUrgencyWarn)
-		return
-	}
-	absDest := destLoc.String()
-	nSelf := 0
-	for _, src := range sources {
-		srcLoc := pathloc.MustParse(src)
-		if ops.ResolvedSameAsSource(srcLoc, destLoc) {
-			nSelf++
-		}
-	}
-	if nSelf > 0 {
-		if len(sources) > 1 {
-			h.host.SetTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
-			return
-		}
-		h.host.OpenTransferDialogSelfCopyRename(ui.TransferKindMove, absDest, sources[0])
-		return
-	}
-	h.host.ActivePanel().ClearSelection()
-	h.AddTransferJob(jobs.TypeMove, sources, dest, false)
-	h.host.SetTransientMessage(fmt.Sprintf("Move queued (%d %s)", len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
+	h.enqueueTransferJob(transferEnqueueOpts{
+		kind:                   ui.TransferKindMove,
+		jobType:                jobs.TypeMove,
+		unsupportedSameDirMove: true,
+		toastVerb:              "Move",
+	})
 }
 
 // AddTransferJob enqueues a copy or move job after scanning.
@@ -910,9 +909,7 @@ func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest strin
 		DestIsDir:       ops.DestinationIsDirAtEnqueue(destLoc),
 		PausedAfterScan: startPaused,
 	}
-	h.state.AddJob(job)
-	h.SyncJobsList()
-	h.SyncJobPathMarks()
+	h.commitJob(job)
 }
 
 func (h *Handler) EnqueueDeleteJob(sources []string) {
@@ -928,9 +925,7 @@ func (h *Handler) EnqueueDeleteJob(sources []string) {
 		Sources:    srcLocs,
 		TotalFiles: len(sources),
 	}
-	h.state.AddJob(job)
-	h.SyncJobsList()
-	h.SyncJobPathMarks()
+	h.commitJob(job)
 }
 
 func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
@@ -953,9 +948,7 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
 		DestIsDir:   ops.DestinationIsDirAtEnqueue(destLoc),
 		TotalFiles:  len(sources),
 	}
-	h.state.AddJob(job)
-	h.SyncJobsList()
-	h.SyncJobPathMarks()
+	h.commitJob(job)
 }
 
 // AddFlattenJob enqueues a flatten (move children + optional empty-dir cleanup) job.
@@ -985,9 +978,7 @@ func (h *Handler) AddFlattenJob(sources []string, dest string, removeEmpty bool,
 		FlattenRemoveEmpty: removeEmpty,
 		FlattenRoots:       rootLocs,
 	}
-	h.state.AddJob(job)
-	h.SyncJobsList()
-	h.SyncJobPathMarks()
+	h.commitJob(job)
 }
 
 func (h *Handler) sourceAndDestination() (sources []string, dest string) {

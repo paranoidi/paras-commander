@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/priority"
 )
@@ -92,15 +93,15 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 	var lastProgress time.Time
 	yieldInterval := cfg.YieldInterval
 	if yieldInterval <= 0 {
-		yieldInterval = 50 * time.Millisecond
+		yieldInterval = time.Duration(config.DefaultScanYieldIntervalMS) * time.Millisecond
 	}
 	yieldEvery := cfg.YieldEveryN
 	if yieldEvery <= 0 {
-		yieldEvery = 64
+		yieldEvery = config.DefaultScanYieldEveryN
 	}
 	progressMin := cfg.ProgressMinInterval
 	if progressMin <= 0 {
-		progressMin = 200 * time.Millisecond
+		progressMin = time.Duration(config.DefaultScanProgressMinIntervalMS) * time.Millisecond
 	}
 
 	hooks := ScanWalkHooks{

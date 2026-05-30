@@ -96,8 +96,7 @@ func (a *App) openTransferDialogSelfCopyRename(kind ui.TransferKind, absDestDir,
 }
 
 func (a *App) closeTransferDialog() {
-	a.stopTransferDestinationValidateTimer()
-	a.transferDestValidateGen.Add(1)
+	a.transferDestValidate.Invalidate()
 	a.model.TransferDialog = ui.TransferDialogState{}
 }
 
@@ -345,8 +344,7 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 		d.SelfCopyOrigBasename = base
 		d.SelfCopyNewName = transferSelfCopyNewNamePrefilled(base)
 		d.FocusField = 0
-		a.stopTransferDestinationValidateTimer()
-		a.transferDestValidateGen.Add(1)
+		a.transferDestValidate.Invalidate()
 		d.DestPathInvalid = false
 		d.DestPathCheckPending = false
 		return

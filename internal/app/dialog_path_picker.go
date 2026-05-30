@@ -15,8 +15,7 @@ import (
 
 func (a *App) closePathPicker() {
 	purpose := a.model.PathPicker.Purpose
-	a.stopPathPickerValidateTimer()
-	a.pathPickerValidateGen.Add(1)
+	a.pathPickerValidate.Invalidate()
 	a.model.PathPicker = ui.PathPickerState{}
 	if a.model.TransferDialog.Open && a.model.TransferDialog.Phase == ui.TransferPhaseDestination &&
 		purpose == ui.PathPickerPurposeApplyTransferDestination {
@@ -396,8 +395,7 @@ func pathEntryMissing(panelPath, home, path string) bool {
 }
 
 func (a *App) openPathPickerForTransfer() {
-	a.stopTransferDestinationValidateTimer()
-	a.transferDestValidateGen.Add(1)
+	a.transferDestValidate.Invalidate()
 	items, err := a.pathPickerItemsHistoryAndBookmarks()
 	if err != nil {
 		a.setErrorMessage("Choose path", err)
@@ -444,33 +442,14 @@ func (a *App) openPathPickerForFileField(fieldIndex int) {
 	a.syncPathPickerRanks()
 }
 
-func (a *App) stopPathPickerValidateTimer() {
-	if a.pathPickerValidateTimer == nil {
-		return
-	}
-	if !a.pathPickerValidateTimer.Stop() {
-		select {
-		case <-a.pathPickerValidateTimer.C:
-		default:
-		}
-	}
-	a.pathPickerValidateTimer = nil
-}
-
 func (a *App) armPathPickerValidateTimer() {
 	if !a.model.PathPicker.Open {
 		return
 	}
-	a.stopPathPickerValidateTimer()
 	st := &a.model.PathPicker
 	st.QueryPathCheckPending = true
-	gen := a.pathPickerValidateGen.Add(1)
 	delay := time.Duration(a.config.UI.PathPickerValidateDelayMS) * time.Millisecond
-	a.pathPickerValidateTimer = time.AfterFunc(delay, func() {
-		a.pathPickerValidateTimer = nil
-		if a.pathPickerValidateGen.Load() != gen {
-			return
-		}
+	a.pathPickerValidate.Arm(delay, func() {
 		if !a.model.PathPicker.Open {
 			return
 		}
@@ -490,33 +469,14 @@ func (a *App) applyPathPickerPathValidation() {
 	a.syncOpenPathInputsAfterFSChange()
 }
 
-func (a *App) stopTransferDestinationValidateTimer() {
-	if a.transferDestValidateTimer == nil {
-		return
-	}
-	if !a.transferDestValidateTimer.Stop() {
-		select {
-		case <-a.transferDestValidateTimer.C:
-		default:
-		}
-	}
-	a.transferDestValidateTimer = nil
-}
-
 func (a *App) armTransferDestinationValidateTimer() {
 	if !a.model.TransferDialog.Open || a.model.TransferDialog.Phase != ui.TransferPhaseDestination {
 		return
 	}
-	a.stopTransferDestinationValidateTimer()
 	d := &a.model.TransferDialog
 	d.DestPathCheckPending = true
-	gen := a.transferDestValidateGen.Add(1)
 	delay := time.Duration(a.config.UI.PathPickerValidateDelayMS) * time.Millisecond
-	a.transferDestValidateTimer = time.AfterFunc(delay, func() {
-		a.transferDestValidateTimer = nil
-		if a.transferDestValidateGen.Load() != gen {
-			return
-		}
+	a.transferDestValidate.Arm(delay, func() {
 		if !a.model.TransferDialog.Open || a.model.TransferDialog.Phase != ui.TransferPhaseDestination {
 			return
 		}

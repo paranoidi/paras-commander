@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/config"
 )
 
 // State provides a thread-safe view of all tracked jobs for the UI layer.
@@ -94,10 +96,10 @@ func NewState() *State {
 		throughputChartEnabled: true,
 		scanCancel:             make(map[string]context.CancelFunc),
 		scanConfig: ScanConfig{
-			YieldInterval:       50 * time.Millisecond,
-			YieldEveryN:         64,
-			NiceIncrement:       10,
-			ProgressMinInterval: 200 * time.Millisecond,
+			YieldInterval:       time.Duration(config.DefaultScanYieldIntervalMS) * time.Millisecond,
+			YieldEveryN:         config.DefaultScanYieldEveryN,
+			NiceIncrement:       config.DefaultScanNiceIncrement,
+			ProgressMinInterval: time.Duration(config.DefaultScanProgressMinIntervalMS) * time.Millisecond,
 		},
 	}
 }

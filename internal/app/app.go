@@ -24,6 +24,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -104,15 +105,11 @@ type App struct {
 	metaCacheMu sync.RWMutex
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
-	messageExpiryGen          atomic.Uint64
-	spinnerRedrawTimer        *time.Timer
-	diskUsageRedrawTimer      *time.Timer
-	pathPickerValidateTimer   *time.Timer
-	transferDestValidateTimer *time.Timer
-	// pathPickerValidateGen / transferDestValidateGen invalidate debounced path checks when input
-	// changes or the host dialog closes before the timer fires (avoids stale AfterFunc callbacks).
-	pathPickerValidateGen   atomic.Uint64
-	transferDestValidateGen atomic.Uint64
+	messageExpiryGen     atomic.Uint64
+	spinnerRedrawTimer   *time.Timer
+	diskUsageRedrawTimer *time.Timer
+	pathPickerValidate   sched.Debouncer
+	transferDestValidate sched.Debouncer
 	// syncFollowNavGen invalidates in-flight debounce callbacks for latched panel sync (file-list cursor).
 	syncFollowNavGen atomic.Uint64
 	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent

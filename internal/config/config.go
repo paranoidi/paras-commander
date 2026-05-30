@@ -543,6 +543,11 @@ func ReadBookmarkDialogActionKeys(filename string) (map[string][]string, error) 
 	return readShortcutTable(filename, bookmarkDialogActionKeysTable)
 }
 
+// ReadOverlayActionKeys parses a shortcut overlay table from a TOML config file.
+func ReadOverlayActionKeys(filename, tableName string) (map[string][]string, error) {
+	return readShortcutTable(filename, tableName)
+}
+
 // readShortcutTable extracts a single named keybindings table from a
 // TOML file. It is shared by ReadActionKeys / ReadJobsActionKeys so that
 // adding a future bundle (another top-level "*_action_keys" table) is a
@@ -866,16 +871,16 @@ func (c *Config) Validate() error {
 	if c.Jobs.ProgressUIWakeDebounceMS <= 0 {
 		c.Jobs.ProgressUIWakeDebounceMS = builtin.Jobs.ProgressUIWakeDebounceMS
 	}
-	const jobsProgressTimingMinMS = 50
-	const jobsProgressTimingMaxMS = 5000
+	const jobsProgressTimingMinMS = JobsProgressTimingMinMS
+	const jobsProgressTimingMaxMS = JobsProgressTimingMaxMS
 	if c.Jobs.ProgressUIWakeDebounceMS < jobsProgressTimingMinMS {
 		c.Jobs.ProgressUIWakeDebounceMS = jobsProgressTimingMinMS
 	}
 	if c.Jobs.ProgressUIWakeDebounceMS > jobsProgressTimingMaxMS {
 		c.Jobs.ProgressUIWakeDebounceMS = jobsProgressTimingMaxMS
 	}
-	const workerProgressBytesMin = 64 * 1024
-	const workerProgressBytesMax = 64 * 1024 * 1024
+	const workerProgressBytesMin = WorkerProgressMinBytesMin
+	const workerProgressBytesMax = WorkerProgressMinBytesMax
 	if c.Jobs.WorkerProgressMinBytes <= 0 {
 		c.Jobs.WorkerProgressMinBytes = builtin.Jobs.WorkerProgressMinBytes
 	}
@@ -935,8 +940,8 @@ func (c *Config) Validate() error {
 	if c.Jobs.ScanYieldEveryN <= 0 {
 		c.Jobs.ScanYieldEveryN = builtin.Jobs.ScanYieldEveryN
 	}
-	if c.Jobs.ScanYieldEveryN > 4096 {
-		c.Jobs.ScanYieldEveryN = 4096
+	if c.Jobs.ScanYieldEveryN > ScanYieldEveryNMax {
+		c.Jobs.ScanYieldEveryN = ScanYieldEveryNMax
 	}
 	if c.Jobs.ScanNiceIncrement < 0 {
 		c.Jobs.ScanNiceIncrement = builtin.Jobs.ScanNiceIncrement

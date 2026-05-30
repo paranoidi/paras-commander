@@ -91,11 +91,11 @@ func TestPathPickerCloseStopsValidateTimer(t *testing.T) {
 	}
 	app.openBookmarkDialog()
 	app.armPathPickerValidateTimer()
-	if app.pathPickerValidateTimer == nil {
+	if !app.pathPickerValidate.Armed() {
 		t.Fatal("expected timer armed")
 	}
 	app.closePathPicker()
-	if app.pathPickerValidateTimer != nil {
+	if app.pathPickerValidate.Armed() {
 		t.Fatal("closePathPicker should stop validate timer")
 	}
 	if app.model.PathPicker.Open {
@@ -377,15 +377,15 @@ func TestPathPickerValidateArmIncrementsGeneration(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	app.openBookmarkDialog()
-	before := app.pathPickerValidateGen.Load()
+	before := app.pathPickerValidate.Generation()
 	app.armPathPickerValidateTimer()
-	afterArm := app.pathPickerValidateGen.Load()
+	afterArm := app.pathPickerValidate.Generation()
 	if afterArm != before+1 {
-		t.Fatalf("pathPickerValidateGen after arm = %d want %d", afterArm, before+1)
+		t.Fatalf("pathPickerValidate generation after arm = %d want %d", afterArm, before+1)
 	}
 	app.closePathPicker()
-	if app.pathPickerValidateGen.Load() <= afterArm {
-		t.Fatalf("pathPickerValidateGen after close should exceed post-arm value; got %d want > %d",
-			app.pathPickerValidateGen.Load(), afterArm)
+	if app.pathPickerValidate.Generation() <= afterArm {
+		t.Fatalf("pathPickerValidate generation after close should exceed post-arm value; got %d want > %d",
+			app.pathPickerValidate.Generation(), afterArm)
 	}
 }
