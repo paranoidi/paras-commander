@@ -159,7 +159,7 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, s
 		}
 		matchStyle := styles.FuzzyHighlight
 		if isCursor {
-			baseStyle = styles.DialogOptionRowStyle(true, false)
+			baseStyle = styles.DialogOptionRowStyle(true, marked)
 			matchStyle = styles.FuzzyHighlightCursor
 		} else if marked {
 			baseStyle = styles.DialogOptionRowStyle(false, true)

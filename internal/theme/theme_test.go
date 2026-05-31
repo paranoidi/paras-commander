@@ -196,6 +196,30 @@ func TestDialogOptionRowStyleUsesSurfaceBackground(t *testing.T) {
 	}
 }
 
+func TestDialogOptionRowStyleActiveSelected(t *testing.T) {
+	data := testTheme(t, "optionrowactivesel", nil, map[string]string{
+		"dialog.surface":                `{ fg = "white", bg = "yellow" }`,
+		"dialog.option.active.selected": `{ fg = "yellow", bold = true }`,
+	})
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, surfaceBG, _ := th.DialogSurface.Decompose()
+	got := th.DialogOptionRowStyle(true, true)
+	fg, bg, attrs := got.Decompose()
+	if bg != surfaceBG {
+		t.Fatalf("DialogOptionRowStyle bg = %v, want surface bg %v", bg, surfaceBG)
+	}
+	wantFG, _, _ := th.DialogOptionActiveSelected.Decompose()
+	if fg != wantFG {
+		t.Fatalf("DialogOptionRowStyle fg = %v, want %v from option.active.selected", fg, wantFG)
+	}
+	if attrs&tcell.AttrBold == 0 {
+		t.Fatal("DialogOptionRowStyle: want bold from option.active.selected")
+	}
+}
+
 func TestParseRejectsUnknownStyle(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
 		"fuzzy.unknown.token": `{ fg = "white", bg = "black" }`,

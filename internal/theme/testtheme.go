@@ -8,10 +8,11 @@ import (
 )
 
 var dialogOptionStyleKeys = map[string]struct{}{
-	"dialog.option.inactive": {},
-	"dialog.option.active":   {},
-	"dialog.option.selected": {},
-	"dialog.option.invalid":  {},
+	"dialog.option.inactive":        {},
+	"dialog.option.active":          {},
+	"dialog.option.active.selected": {},
+	"dialog.option.selected":        {},
+	"dialog.option.invalid":         {},
 }
 
 // TestThemeBytes builds a minimal valid theme TOML from requiredStyleKeys plus optional overrides.

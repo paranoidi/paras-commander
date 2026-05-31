@@ -486,7 +486,7 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 	_, rowStyle, _ := screen.Get(styleCol, 3)
 	wantStyle := styles.DialogOptionRowStyle(true, true)
 	if rowStyle != wantStyle {
-		t.Fatalf("selected theme row style = %v, want dialog.option.active %v", rowStyle, wantStyle)
+		t.Fatalf("selected theme row style = %v, want dialog.option.active.selected %v", rowStyle, wantStyle)
 	}
 }
 

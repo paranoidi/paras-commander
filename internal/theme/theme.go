@@ -156,6 +156,7 @@ type Theme struct {
 	DialogButtonActiveDestructive  tcell.Style
 	DialogOptionInactive           tcell.Style
 	DialogOptionActive             tcell.Style
+	DialogOptionActiveSelected     tcell.Style
 	DialogOptionSelected           tcell.Style
 	DialogOptionInvalid            tcell.Style
 	DialogMassRenameBefore         tcell.Style
@@ -235,9 +236,12 @@ func (t Theme) DialogInputBaseStyle(focused, invalid bool) tcell.Style {
 }
 
 // DialogOptionRowStyle returns the resolved style for a checkbox/radio/list option row.
-// Foreground and attributes come from dialog.option.*; background always matches dialog.surface.
+// Foreground and attributes come from dialog.option.inactive, .active, .selected,
+// or .active.selected; background always matches dialog.surface.
 func (t Theme) DialogOptionRowStyle(focused, selected bool) tcell.Style {
 	switch {
+	case focused && selected:
+		return mergeForegroundOnSurface(t.DialogOptionActiveSelected, t.DialogSurface)
 	case focused:
 		return mergeForegroundOnSurface(t.DialogOptionActive, t.DialogSurface)
 	case selected:
@@ -619,6 +623,7 @@ var requiredStyleKeys = []string{
 	"dialog.button.active_destructive",
 	"dialog.option.inactive",
 	"dialog.option.active",
+	"dialog.option.active.selected",
 	"dialog.option.selected",
 	"dialog.option.invalid",
 	"dialog.massrename.before",
@@ -912,10 +917,11 @@ func parse(data []byte) (Theme, error) {
 	}
 
 	dialogOptionKeys := map[string]struct{}{
-		"dialog.option.inactive": {},
-		"dialog.option.active":   {},
-		"dialog.option.selected": {},
-		"dialog.option.invalid":  {},
+		"dialog.option.inactive":        {},
+		"dialog.option.active":          {},
+		"dialog.option.active.selected": {},
+		"dialog.option.selected":        {},
+		"dialog.option.invalid":         {},
 	}
 	for key, spec := range specs {
 		if spec.BG != "" {
@@ -1083,6 +1089,7 @@ func parse(data []byte) (Theme, error) {
 		DialogButtonActiveDestructive:  styles["dialog.button.active_destructive"],
 		DialogOptionInactive:           styles["dialog.option.inactive"],
 		DialogOptionActive:             styles["dialog.option.active"],
+		DialogOptionActiveSelected:     styles["dialog.option.active.selected"],
 		DialogOptionSelected:           styles["dialog.option.selected"],
 		DialogOptionInvalid:            styles["dialog.option.invalid"],
 		DialogMassRenameBefore:         styles["dialog.massrename.before"],
