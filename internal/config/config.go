@@ -126,6 +126,15 @@ type Config struct {
 	SFTP                       SFTPConfig       `toml:"sftp"`
 	// Meta configures the separate meta.toml command definitions file and execution settings.
 	Meta MetaConfig `toml:"meta"`
+	// Pools configures discovery of the separate pools.toml work-pool definitions file.
+	Pools PoolsConfig `toml:"pools"`
+}
+
+// PoolsConfig controls discovery of the separate pools.toml file.
+type PoolsConfig struct {
+	// File is an absolute path or ~/… to the global pools.toml. Empty uses
+	// filepath.Join(configDir, DefaultPoolsFileName) after paths are resolved.
+	File string `toml:"file"`
 }
 
 // MetaConfig controls discovery of the separate meta.toml and execution settings.
@@ -393,6 +402,9 @@ func Default() Config {
 			File:       "",
 			LocalNames: []string{DefaultMetaFileName},
 			Workers:    DefaultMetaWorkers,
+		},
+		Pools: PoolsConfig{
+			File: "",
 		},
 	}
 }

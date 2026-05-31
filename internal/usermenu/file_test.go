@@ -116,6 +116,35 @@ background = 1
 	}
 }
 
+func TestDecodeEntryPool(t *testing.T) {
+	mf, err := Decode([]byte(`[[entry]]
+key = "p"
+title = "Pooled"
+command = "true"
+pool = "build"
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mf.Entries) != 1 || mf.Entries[0].Pool != "build" {
+		t.Fatalf("entries = %+v, want pool=build", mf.Entries)
+	}
+
+	mf, err = Decode([]byte(`[[entry]]
+key = "b"
+title = "Pooled background"
+command = "true"
+pool = "build"
+background = true
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mf.Entries) != 1 || mf.Entries[0].Pool != "build" || !mf.Entries[0].Background {
+		t.Fatalf("entries = %+v, want pool=build background=true", mf.Entries)
+	}
+}
+
 func TestDecodeEntryExecutionModesMutuallyExclusive(t *testing.T) {
 	cases := []struct {
 		name string
@@ -149,6 +178,26 @@ title = "Bad"
 command = "true"
 detach = true
 background = true
+`,
+		},
+		{
+			name: "pool and interactive",
+			body: `[[entry]]
+key = "x"
+title = "Bad"
+command = "true"
+pool = "build"
+interactive = true
+`,
+		},
+		{
+			name: "pool and detach",
+			body: `[[entry]]
+key = "x"
+title = "Bad"
+command = "true"
+pool = "build"
+detach = true
 `,
 		},
 	}

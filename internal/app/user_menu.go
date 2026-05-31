@@ -220,7 +220,7 @@ func (a *App) executeUserMenuEntry(idx int) {
 		}
 
 		a.commandsBatchesInflight.Add(1)
-		go a.runUserMenuCommand(a.commandsCtx, rowIdx, argv, workDir, entry.Background, entry.Title)
+		go a.runUserMenuCommand(a.commandsCtx, rowIdx, argv, workDir, entry.Background, entry.Title, entry.Pool)
 	}
 }
 
@@ -265,7 +265,7 @@ func (a *App) appendUserMenuCommandRow(cmdLine, expanded string) int {
 	return idx
 }
 
-func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, workDir string, background bool, title string) {
+func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, workDir string, background bool, title, poolName string) {
 	defer a.commandsBatchesInflight.Add(-1)
 
 	postBackgroundFinal := func(res cmdrun.RunResult) {
@@ -281,8 +281,7 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 		}
 		a.postCommandWakePayload(p)
 	}
-	select {
-	case <-ctx.Done():
+	markCanceled := func() {
 		a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
 			e.Phase = ui.CommandRunDone
 			e.ExitCode = -1
@@ -295,9 +294,37 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 		} else {
 			a.postCommandWake()
 		}
+	}
+
+	select {
+	case <-ctx.Done():
+		markCanceled()
 		return
 	default:
 	}
+
+	var release func()
+	if strings.TrimSpace(poolName) != "" {
+		var err error
+		release, err = a.workPools.Acquire(ctx, poolName)
+		if err != nil {
+			a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+				e.Phase = ui.CommandRunDone
+				e.ExitCode = -1
+				if ctx.Err() != nil {
+					if e.ErrorMsg == "" {
+						e.ErrorMsg = "Canceled"
+					}
+				} else {
+					e.ErrorMsg = err.Error()
+				}
+			})
+			postBackgroundFinal(cmdrun.RunResult{})
+			return
+		}
+		defer release()
+	}
+
 	a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
 		e.Phase = ui.CommandRunRunning
 	})

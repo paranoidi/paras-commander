@@ -24,11 +24,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/pools"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
+	"github.com/paranoidi/paras-commander/internal/workpool"
 )
 
 // statusMessageExpiryPayload is posted through tcell when a transient status banner TTL elapses.
@@ -144,6 +146,8 @@ type App struct {
 	commandsBatchesInflight atomic.Int32
 	commandsCtx             context.Context
 	commandsCancel          context.CancelFunc
+
+	workPools *workpool.Registry
 
 	volumeRefreshInFlight [2]atomic.Bool
 
@@ -363,13 +367,18 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if duIgnorer == nil {
 		duIgnorer = func(string) bool { return false }
 	}
+	resolvedPaths := opts.Paths.WithResolvedLocations()
+	poolDefs, err := pools.LoadGlobal(cfg, homeDir, resolvedPaths.ConfigDir)
+	if err != nil {
+		return nil, err
+	}
 	cmdCtx, cmdCancel := context.WithCancel(context.Background())
 	app := &App{
 		screen:             screen,
 		config:             cfg,
 		styles:             styles,
 		themes:             availableThemes,
-		paths:              opts.Paths.WithResolvedLocations(),
+		paths:              resolvedPaths,
 		keys:               km,
 		keysJobs:           kmJobs,
 		keysCommands:       kmCommands,
@@ -380,6 +389,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		devMode:            opts.DevMode,
 		commandsCtx:        cmdCtx,
 		commandsCancel:     cmdCancel,
+		workPools:          workpool.NewRegistry(poolDefs),
 		model: ui.Model{
 			Left:                       left,
 			Right:                      right,

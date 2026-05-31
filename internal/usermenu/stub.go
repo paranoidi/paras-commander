@@ -41,6 +41,11 @@ const MenuStubTOML = `# F2 user menu — see docs/config.md
 #     capture output without opening Commands view; notify on failure/stderr; 
 #     refresh panel when done
 #     interactive, detach, and background cannot be combined on one entry
+# pool = "build"
+#     optional work pool name (defined in pools.toml [[pools]])
+#     works with default or background mode
+#     omit for unlimited parallelism
+#     cannot be combined with interactive or detach
 #
 # Macros (expanded in command before run):
 #

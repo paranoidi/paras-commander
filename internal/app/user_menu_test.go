@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
@@ -18,10 +19,13 @@ import (
 )
 
 func testUserMenuApp(t *testing.T, dir, cfgDir string) *App {
+	return testUserMenuAppConfig(t, dir, cfgDir, config.Default())
+}
+
+func testUserMenuAppConfig(t *testing.T, dir, cfgDir string, cfg config.Config) *App {
 	t.Helper()
-	th, _ := loadTestTheme(t)
-	cfg := config.Default()
 	cfg.UserMenu = config.UserMenuConfig{LocalNames: []string{"menu.toml"}}
+	th, _ := loadTestTheme(t)
 	screen := newScreen(t, 80, 24)
 	app, err := NewWithOptions(screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
@@ -265,6 +269,13 @@ func writeUserMenuFile(t *testing.T, menuPath, body string) {
 	}
 }
 
+func writePoolsFile(t *testing.T, poolsPath, body string) {
+	t.Helper()
+	if err := os.WriteFile(poolsPath, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestUserMenuInteractiveDoesNotOpenCommandsView(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
@@ -450,6 +461,84 @@ func TestUserMenuBackgroundNotify(t *testing.T) {
 	_, _, _, ok = userMenuBackgroundNotify("OK", cmdrun.RunResult{ExitCode: 0})
 	if ok {
 		t.Fatal("clean success should not notify")
+	}
+}
+
+func TestUserMenuWorkPoolLimitsParallelism(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeUserMenuFile(t, menuPath, `[[entry]]
+key = "s"
+title = "Sleep"
+command = "sleep 0.4"
+pool = "slow"
+background = true
+`)
+	writePoolsFile(t, filepath.Join(cfgDir, config.DefaultPoolsFileName), `[[pools]]
+name = "slow"
+max_parallel = 1
+`)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+
+	app.openUserMenu()
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
+	app.openUserMenu()
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		app.commandsMu.RLock()
+		running, pending := 0, 0
+		for _, e := range app.model.CommandsList {
+			switch e.Phase {
+			case ui.CommandRunRunning:
+				running++
+			case ui.CommandRunPending:
+				pending++
+			}
+		}
+		app.commandsMu.RUnlock()
+		if running == 1 && pending == 1 {
+			waitCommandsDone(t, app)
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("expected one Running and one Pending while pool max_parallel=1")
+}
+
+func TestUserMenuUnknownWorkPool(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeUserMenuFile(t, menuPath, `[[entry]]
+key = "x"
+title = "Bad pool"
+command = "true"
+pool = "missing"
+`)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModAlt))
+	waitCommandsDone(t, app)
+
+	app.commandsMu.RLock()
+	defer app.commandsMu.RUnlock()
+	if len(app.model.CommandsList) != 1 {
+		t.Fatalf("CommandsList len = %d, want 1", len(app.model.CommandsList))
+	}
+	e := app.model.CommandsList[0]
+	if !strings.Contains(e.ErrorMsg, "unknown work pool") {
+		t.Fatalf("ErrorMsg = %q, want unknown work pool", e.ErrorMsg)
 	}
 }
 

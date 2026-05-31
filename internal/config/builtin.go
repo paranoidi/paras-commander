@@ -133,9 +133,16 @@ const (
 	// config directory when [meta].file is empty.
 	DefaultMetaFileName = "meta.toml"
 
+	// DefaultPoolsFileName is the basename of the work-pool definitions file under the config
+	// directory when [pools].file is empty.
+	DefaultPoolsFileName = "pools.toml"
+
 	// DefaultMetaWorkers is the number of concurrent background workers used to run meta column
 	// commands. Each worker processes one entry (file or directory) at a time.
 	DefaultMetaWorkers = 4
+
+	// DefaultPoolMaxParallel is the upper clamp for [[pools]].max_parallel in pools.toml.
+	DefaultPoolMaxParallel = 64
 
 	// DefaultMessageLogMaxEntries caps status/toast lines retained for the Messages view (oldest dropped).
 	DefaultMessageLogMaxEntries = 500
