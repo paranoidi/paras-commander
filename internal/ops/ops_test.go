@@ -1020,11 +1020,22 @@ func TestMoveOverwriteExistingDestViaRename(t *testing.T) {
 		t.Fatalf("write dest: %v", err)
 	}
 
+	resolved := false
+	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+		_ = src
+		_ = dst
+		_ = facts
+		resolved = true
+		return true, nil
+	}
+
 	opts := Options{CopyBufferKiB: 4}
-	// Linux rename(2) replaces an existing regular file atomically; fast path runs without copy-phase resolver.
-	done, doneBytes, err := ExecuteMove(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, nil, nil)
+	done, doneBytes, err := ExecuteMove(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, resolver, nil)
 	if err != nil {
 		t.Fatalf("ExecuteMove error = %v", err)
+	}
+	if !resolved {
+		t.Fatal("conflict resolver was not called")
 	}
 	if done != 1 {
 		t.Fatalf("done files = %d, want 1", done)
@@ -1041,6 +1052,130 @@ func TestMoveOverwriteExistingDestViaRename(t *testing.T) {
 	}
 	if _, err := os.Stat(srcFile); !os.IsNotExist(err) {
 		t.Fatalf("source should be gone after move, err = %v", err)
+	}
+}
+
+func TestMoveExistingDestNoResolver(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+
+	srcFile := filepath.Join(srcDir, "file.txt")
+	if err := os.WriteFile(srcFile, []byte("new"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	dstFile := filepath.Join(dstDir, "file.txt")
+	if err := os.WriteFile(dstFile, []byte("old"), 0o644); err != nil {
+		t.Fatalf("write dest: %v", err)
+	}
+
+	opts := Options{CopyBufferKiB: 4}
+	_, _, err := ExecuteMove(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, nil, nil)
+	if err == nil {
+		t.Fatal("ExecuteMove error = nil, want conflict resolver error")
+	}
+	if _, err := os.Stat(srcFile); err != nil {
+		t.Fatalf("source should remain: %v", err)
+	}
+	data, _ := os.ReadFile(dstFile)
+	if string(data) != "old" {
+		t.Fatalf("dest content = %q, want %q", string(data), "old")
+	}
+}
+
+func TestMoveSkipExistingDestViaRename(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+
+	srcFile := filepath.Join(srcDir, "file.txt")
+	if err := os.WriteFile(srcFile, []byte("new"), 0o644); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	dstFile := filepath.Join(dstDir, "file.txt")
+	if err := os.WriteFile(dstFile, []byte("old"), 0o644); err != nil {
+		t.Fatalf("write dest: %v", err)
+	}
+
+	resolved := false
+	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+		_ = src
+		_ = dst
+		_ = facts
+		resolved = true
+		return false, nil
+	}
+
+	opts := Options{CopyBufferKiB: 4}
+	done, doneBytes, err := ExecuteMove(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, resolver, nil)
+	if err != nil {
+		t.Fatalf("ExecuteMove error = %v", err)
+	}
+	if !resolved {
+		t.Fatal("conflict resolver was not called")
+	}
+	if done != 0 {
+		t.Fatalf("done files = %d, want 0 on skip", done)
+	}
+	if doneBytes != 0 {
+		t.Fatalf("done bytes = %d, want 0 on skip", doneBytes)
+	}
+	if _, err := os.Stat(srcFile); err != nil {
+		t.Fatalf("source should remain after skip: %v", err)
+	}
+	data, err := os.ReadFile(dstFile)
+	if err != nil {
+		t.Fatalf("read dest: %v", err)
+	}
+	if string(data) != "old" {
+		t.Fatalf("dest content = %q, want %q", string(data), "old")
+	}
+}
+
+func TestMoveConflictResolverCancel(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+
+	a := filepath.Join(srcDir, "a.txt")
+	b := filepath.Join(srcDir, "b.txt")
+	if err := os.WriteFile(a, []byte("a"), 0o644); err != nil {
+		t.Fatalf("write a: %v", err)
+	}
+	if err := os.WriteFile(b, []byte("b"), 0o644); err != nil {
+		t.Fatalf("write b: %v", err)
+	}
+	dstB := filepath.Join(dstDir, "b.txt")
+	if err := os.WriteFile(dstB, []byte("old-b"), 0o644); err != nil {
+		t.Fatalf("write dest b: %v", err)
+	}
+
+	calls := 0
+	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+		_ = src
+		_ = dst
+		_ = facts
+		calls++
+		return false, fmt.Errorf("canceled by user")
+	}
+
+	opts := Options{CopyBufferKiB: 4}
+	_, _, err := ExecuteMove(context.Background(), MustPaths(a, b), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, resolver, nil)
+	if err == nil {
+		t.Fatal("ExecuteMove error = nil, want cancel error")
+	}
+	if calls != 1 {
+		t.Fatalf("resolver calls = %d, want 1", calls)
+	}
+	if _, err := os.Stat(a); err != nil {
+		t.Fatalf("source a should remain after rollback: %v", err)
+	}
+	if _, err := os.Stat(b); err != nil {
+		t.Fatalf("source b should remain: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dstDir, "a.txt")); err == nil {
+		t.Fatal("partial rename of a should have been rolled back")
+	}
+	data, _ := os.ReadFile(dstB)
+	if string(data) != "old-b" {
+		t.Fatalf("dest b content = %q, want %q", string(data), "old-b")
 	}
 }
 

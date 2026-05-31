@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"path/filepath"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
@@ -229,20 +228,10 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 			a.activePanel().InvertSelection()
 			a.setTransientMessage("Selection inverted", ui.MessageUrgencyInfo)
 		case keymap.ActionCopy:
-			a.enqueueCopyJob()
+			a.activateCopyAction()
 			return false
 		case keymap.ActionMove:
-			p := a.activePanel()
-			if len(p.SelectedPaths) == 0 {
-				if entry, ok := p.CurrentEntry(); ok {
-					dest := a.inactivePanel().PathString()
-					if entry.Path == filepath.Join(dest, entry.Name) {
-						a.dispatch(keymap.ActionFileRename)
-						return false
-					}
-				}
-			}
-			a.enqueueMoveJob()
+			a.activateMoveAction()
 			return false
 		case keymap.ActionFileFlatten:
 			a.openFlattenDialog()

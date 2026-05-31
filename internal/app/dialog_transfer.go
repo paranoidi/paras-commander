@@ -19,6 +19,27 @@ func (a *App) openMoveDialog() {
 	a.openTransferDialog(ui.TransferKindMove)
 }
 
+// activateCopyAction is the single user-facing entry point for copy (keyboard, menu, F-keys).
+func (a *App) activateCopyAction() {
+	a.openCopyDialog()
+}
+
+// activateMoveAction is the single user-facing entry point for move (keyboard, menu, F-keys).
+// With no selection, a single cursor item already shown in the passive panel opens Rename instead.
+func (a *App) activateMoveAction() {
+	p := a.activePanel()
+	if len(p.SelectedPaths) == 0 {
+		if entry, ok := p.CurrentEntry(); ok {
+			dest := a.inactivePanel().PathString()
+			if entry.Path == filepath.Join(dest, entry.Name) {
+				a.openRenameDialog(p)
+				return
+			}
+		}
+	}
+	a.openMoveDialog()
+}
+
 func absPathClean(p string) string {
 	abs, err := filepath.Abs(p)
 	if err != nil {

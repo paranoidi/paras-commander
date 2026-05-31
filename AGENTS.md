@@ -14,7 +14,7 @@ When user request shortcut to be added it needs to be configurable in the config
 
 When new colors are being added be sure to update any existing themes to use these new colors (including `dialog.input.active.placeholder` / `dialog.input.inactive.placeholder` for dimmed suggested input text when applicable).
 
-Always aim to have ONE source for the truth. This applies to keybindings, theme usage, padding and margin values.
+Always aim to have ONE source for the truth. This applies to keybindings, theme usage, padding and margin values. Similarly operations should ideally have only one entry point.
 
 # App package layout
 

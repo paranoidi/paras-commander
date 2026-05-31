@@ -3150,7 +3150,7 @@ func TestFullscreenFilePreviewDoesNotOpenMenuFromDispatchOrF9(t *testing.T) {
 	}
 }
 
-func TestMenuShortcutCopyQueuedMessage(t *testing.T) {
+func TestMenuShortcutCopyOpensTransferDialog(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 	dstDir := filepath.Join(dir, "dest")
@@ -3186,8 +3186,11 @@ func TestMenuShortcutCopyQueuedMessage(t *testing.T) {
 	if app.model.Menu.Open {
 		t.Fatal("menu open = true, want closed")
 	}
-	if !strings.Contains(app.model.Message, "Copy queued") {
-		t.Fatalf("Message = %q, want 'Copy queued' message", app.model.Message)
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != ui.TransferKindCopy {
+		t.Fatal("File menu Copy shortcut should open transfer dialog")
+	}
+	if len(app.jobState.AllJobs()) != 0 {
+		t.Fatalf("expected no job before confirm, got %d", len(app.jobState.AllJobs()))
 	}
 }
 

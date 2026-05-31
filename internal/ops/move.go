@@ -58,6 +58,91 @@ func countWalkNodes(root string) (int, error) {
 	return n, err
 }
 
+// renameSourceForMove handles conflict resolution then RenameFastPath for one source.
+// Returns renamed when the path was moved, skipped when the user chose not to overwrite,
+// fallbackCopy when cross-device (or non-fast) rename requires copy+delete for the batch.
+func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (renamed, skipped, fallbackCopy bool, err error) {
+	if err := ctx.Err(); err != nil {
+		return false, false, false, err
+	}
+	_, statErr := statEntry(ctx, dst)
+	if isNotExist(statErr) {
+		return renameFastPathOrFallback(src, dst)
+	}
+	if statErr != nil {
+		return false, false, false, fmt.Errorf("stat destination %q: %w", dst, statErr)
+	}
+	if resolver == nil {
+		return false, false, false, fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
+	}
+	facts, err := statConflictFacts(ctx, src, dst)
+	if err != nil {
+		return false, false, false, fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
+	}
+	overwrite, err := resolver(src.String(), dst.String(), facts)
+	if err != nil {
+		return false, false, false, err
+	}
+	if !overwrite {
+		return false, true, false, nil
+	}
+	return renameFastPathOrFallback(src, dst)
+}
+
+func renameFastPathOrFallback(src, dst pathloc.Path) (renamed, skipped, fallbackCopy bool, err error) {
+	ok, err := RenameFastPath(src, dst)
+	if err != nil {
+		return false, false, false, err
+	}
+	if !ok {
+		return false, false, true, nil
+	}
+	return true, false, false, nil
+}
+
+// executeMoveRenamePhase tries rename for each source with conflict checks.
+// When fallbackCopy is true, prior renames in this batch were rolled back.
+func executeMoveRenamePhase(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, resolver ConflictResolver, progress ProgressCallback) (doneFiles int, doneBytes int64, fallbackCopy bool, err error) {
+	var renamed []renamePair
+	for _, src := range sources {
+		if err := ctx.Err(); err != nil {
+			renamePairsRollback(renamed)
+			return 0, 0, false, err
+		}
+		dst := ResolveDestination(src, destination)
+		didRename, skipped, needCopy, renameErr := renameSourceForMove(ctx, src, dst, resolver)
+		if renameErr != nil {
+			renamePairsRollback(renamed)
+			return 0, 0, false, fmt.Errorf("rename %q -> %q: %w", src, dst, renameErr)
+		}
+		if needCopy {
+			renamePairsRollback(renamed)
+			return 0, 0, true, nil
+		}
+		if skipped {
+			continue
+		}
+		if didRename {
+			renamed = append(renamed, renamePair{src.String(), dst.String()})
+		}
+	}
+	cumulative := 0
+	for _, p := range renamed {
+		if err := ctx.Err(); err != nil {
+			return 0, 0, false, err
+		}
+		nf, walkErr := countTransferNodesAfterRename(p.dst)
+		if walkErr != nil {
+			return 0, 0, false, fmt.Errorf("walk after rename %q: %w", p.dst, walkErr)
+		}
+		cumulative += nf
+		if progress != nil {
+			progress(p.src, p.dst, cumulative, 0)
+		}
+	}
+	return cumulative, 0, false, nil
+}
+
 // ExecuteMove moves sources to destination using the rename fast path when
 // possible for every source, falling back to copy + delete for cross-device moves
 // or when any rename in the batch cannot use the fast path.
@@ -66,43 +151,12 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 		return 0, 0, err
 	}
 
-	var renamed []renamePair
-	fallbackToCopy := false
-	for _, src := range sources {
-		if err := ctx.Err(); err != nil {
-			renamePairsRollback(renamed)
-			return 0, 0, err
-		}
-		dst := ResolveDestination(src, destination)
-		ok, err := RenameFastPath(src, dst)
-		if err != nil {
-			renamePairsRollback(renamed)
-			return 0, 0, fmt.Errorf("rename %q -> %q: %w", src, dst, err)
-		}
-		if !ok {
-			renamePairsRollback(renamed)
-			fallbackToCopy = true
-			break
-		}
-		renamed = append(renamed, renamePair{src.String(), dst.String()})
+	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, resolver, progress)
+	if err != nil {
+		return 0, 0, err
 	}
-
-	if !fallbackToCopy && len(renamed) == len(sources) {
-		cumulative := 0
-		for _, p := range renamed {
-			if err := ctx.Err(); err != nil {
-				return 0, 0, err
-			}
-			nf, err := countTransferNodesAfterRename(p.dst)
-			if err != nil {
-				return 0, 0, fmt.Errorf("walk after rename %q: %w", p.dst, err)
-			}
-			cumulative += nf
-			if progress != nil {
-				progress(p.src, p.dst, cumulative, 0)
-			}
-		}
-		return cumulative, 0, nil
+	if !fallbackToCopy {
+		return doneFiles, doneBytes, nil
 	}
 
 	return executeMoveCopyPhase(ctx, nil, sources, destination, opts, throttle, progress, resolver, diskWait)
@@ -151,43 +205,12 @@ func ExecuteMoveWithPlan(ctx context.Context, plan []PlanItem, sources []pathloc
 		return 0, 0, err
 	}
 
-	var renamed []renamePair
-	fallbackToCopy := false
-	for _, src := range sources {
-		if err := ctx.Err(); err != nil {
-			renamePairsRollback(renamed)
-			return 0, 0, err
-		}
-		dst := ResolveDestination(src, destination)
-		ok, err := RenameFastPath(src, dst)
-		if err != nil {
-			renamePairsRollback(renamed)
-			return 0, 0, fmt.Errorf("rename %q -> %q: %w", src, dst, err)
-		}
-		if !ok {
-			renamePairsRollback(renamed)
-			fallbackToCopy = true
-			break
-		}
-		renamed = append(renamed, renamePair{src.String(), dst.String()})
+	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, resolver, progress)
+	if err != nil {
+		return 0, 0, err
 	}
-
-	if !fallbackToCopy && len(renamed) == len(sources) {
-		cumulative := 0
-		for _, p := range renamed {
-			if err := ctx.Err(); err != nil {
-				return 0, 0, err
-			}
-			nf, err := countTransferNodesAfterRename(p.dst)
-			if err != nil {
-				return 0, 0, fmt.Errorf("walk after rename %q: %w", p.dst, err)
-			}
-			cumulative += nf
-			if progress != nil {
-				progress(p.src, p.dst, cumulative, 0)
-			}
-		}
-		return cumulative, 0, nil
+	if !fallbackToCopy {
+		return doneFiles, doneBytes, nil
 	}
 
 	return executeMoveCopyPhase(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)

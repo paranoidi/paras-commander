@@ -431,10 +431,10 @@ func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string
 func (a *App) finishResolvedKeyboardAction(nextAction string) (quit bool, rendered bool) {
 	switch nextAction {
 	case keymap.ActionCopy:
-		a.openCopyDialog()
+		a.activateCopyAction()
 		return false, true
 	case keymap.ActionMove:
-		a.openMoveDialog()
+		a.activateMoveAction()
 		return false, true
 	case keymap.ActionAppQuit:
 		return a.handleQuit(), false
@@ -500,10 +500,10 @@ func (a *App) dispatchActionLikeKeyboardShortcut(actionID string) bool {
 		a.clearAllDiskUsageData()
 		return false
 	case keymap.ActionCopy:
-		a.openCopyDialog()
+		a.activateCopyAction()
 		return false
 	case keymap.ActionMove:
-		a.openMoveDialog()
+		a.activateMoveAction()
 		return false
 	case keymap.ActionAppQuit:
 		return a.handleQuit()
@@ -751,9 +751,9 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionFileFlatten:
 		a.openFlattenDialog()
 	case keymap.ActionCopy:
-		a.enqueueCopyJob()
+		a.activateCopyAction()
 	case keymap.ActionMove:
-		a.enqueueMoveJob()
+		a.activateMoveAction()
 	case keymap.ActionFileRunForEach:
 		if a.model.ViewMode != ui.ViewBrowser {
 			return
