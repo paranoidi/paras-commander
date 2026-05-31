@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	appDirName = "pc"
-	fileName   = "config.toml"
+	appDirName              = "pc"
+	fileName                = "config.toml"
+	keybindingsFileBaseName = "keybindings.toml"
 
 	// actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, messagesActionKeysTable,
 	// pathPickerHostActionKeysTable, dialogInputActionKeysTable, and renameDialogActionKeysTable are
@@ -425,9 +426,15 @@ func DefaultPaths() (Paths, error) {
 		ConfigDir:       configDir,
 		ConfigFile:      filepath.Join(configDir, fileName),
 		ThemesDir:       filepath.Join(configDir, "themes"),
-		KeybindingsFile: filepath.Join(configDir, "keybindings.toml"),
+		KeybindingsFile: filepath.Join(configDir, keybindingsFileBaseName),
 	}, nil
 }
+
+// ConfigFileName returns the basename of the main configuration file (config.toml).
+func ConfigFileName() string { return fileName }
+
+// KeybindingsFileName returns the basename of the keybindings file (keybindings.toml).
+func KeybindingsFileName() string { return keybindingsFileBaseName }
 
 // Load resolves the default XDG paths and loads config.toml if present.
 func Load() (Config, error) {

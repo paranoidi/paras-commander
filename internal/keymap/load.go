@@ -230,8 +230,8 @@ func WriteDefaultStub(filename string) error {
 //
 // The output is sourced from DefaultActionKeys (includes jobs.open and commands.open via
 // specs) and overlay defaults. Adding a new ActionSpec default chord or extending an overlay map is
-// automatically reflected in every stub written via `--keybindings-stub`
-// or `--config-stub` without further plumbing.
+// automatically reflected in every stub written via `--config-stub`
+// without further plumbing.
 func EncodeDefaultStub(w io.Writer) error {
 	header := "# Global shortcuts under [action_keys]. Each value is a list of\n" +
 		"# chord strings (single-stroke). See docs/keybindings.md for syntax.\n" +

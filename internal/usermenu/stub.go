@@ -9,7 +9,7 @@ import (
 
 // MenuStubTOML is written when no menu.toml exists yet. All entries are commented
 // so the user can uncomment and customize.
-const MenuStubTOML = `# F2 user menu — see docs/config.md
+const MenuStubTOML = `# F2 user menu
 #
 # Each action is a [[entry]] table. Keep the table name "entry" for every
 # action (e.g. [[toolname]] is ignored — only [[entry]] is loaded).
@@ -41,7 +41,7 @@ const MenuStubTOML = `# F2 user menu — see docs/config.md
 #     capture output without opening Commands view; notify on failure/stderr; 
 #     refresh panel when done
 #     interactive, detach, and background cannot be combined on one entry
-# pool = "build"
+# pool = "cpu"
 #     optional work pool name (defined in pools.toml [[pools]])
 #     works with default or background mode
 #     omit for unlimited parallelism

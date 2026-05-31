@@ -1,15 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 
 	"github.com/paranoidi/paras-commander/internal/app"
-	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/version"
 )
 
@@ -26,52 +23,33 @@ func run(args []string, stderr, stdout io.Writer) error {
 	var showVersion bool
 	flags.BoolVar(&showVersion, "version", false, "print version and exit")
 	flags.BoolVar(&showVersion, "v", false, "print version and exit")
-	configStub := flags.String("config-stub", "", "write default configuration TOML (general settings + [action_keys] + [jobs_action_keys]) to filename and exit")
-	keybindingsStub := flags.String("keybindings-stub", "", "write default keybindings TOML to filename and exit")
+	configStub := flags.Bool("config-stub", false, "write example config files to ~/.config/pc/ (optional directory argument) and exit")
 	devMode := flags.Bool("dev", false, "enable Dev pulldown menu with test helpers")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if flags.NArg() > 0 {
-		return fmt.Errorf("unexpected argument %q", flags.Arg(0))
-	}
 
 	if showVersion {
+		if flags.NArg() > 0 {
+			return fmt.Errorf("unexpected argument %q", flags.Arg(0))
+		}
 		_, err := fmt.Fprintln(stdout, version.Line())
 		return err
 	}
 
-	if *configStub != "" {
-		return writeConfigStub(*configStub)
+	if *configStub {
+		dir, err := resolveConfigStubDir(flags.Arg(0))
+		if err != nil {
+			return err
+		}
+		if flags.NArg() > 1 {
+			return fmt.Errorf("unexpected argument %q", flags.Arg(1))
+		}
+		return writeConfigDirStubs(dir, stderr)
 	}
-	if *keybindingsStub != "" {
-		return keymap.WriteDefaultStub(*keybindingsStub)
+
+	if flags.NArg() > 0 {
+		return fmt.Errorf("unexpected argument %q", flags.Arg(0))
 	}
 	return app.Run(*devMode)
-}
-
-// writeConfigStub renders a single bootstrap file containing the full
-// default configuration plus the complete shortcut map under
-// [action_keys]. The shortcut block is sourced directly from the keymap
-// package, so any ActionSpec added to keymap.DefaultActionSpecs
-// automatically appears in --config-stub output without further changes.
-func writeConfigStub(filename string) error {
-	if filename == "" {
-		return fmt.Errorf("config stub filename is required")
-	}
-	var buf bytes.Buffer
-	if err := config.EncodeDefaultStub(&buf); err != nil {
-		return err
-	}
-	if !bytes.HasSuffix(buf.Bytes(), []byte{'\n'}) {
-		buf.WriteByte('\n')
-	}
-	buf.WriteByte('\n')
-	if err := keymap.EncodeDefaultStub(&buf); err != nil {
-		return err
-	}
-	if err := os.WriteFile(filename, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("write config stub %q: %w", filename, err)
-	}
-	return nil
 }
