@@ -396,6 +396,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"fzf-marks", "mark", "remove", "delete"},
 		},
 		{
+			ID:           ActionFindSelectAll,
+			Title:        "Select all",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "F5",
+			Keywords:     []string{"find dialog", "mark all"},
+		},
+		{
 			ID:          ActionRemoteSFTPLink,
 			Title:       "SFTP ...",
 			Section:     "Remote",

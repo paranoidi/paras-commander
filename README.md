@@ -10,15 +10,17 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 - All jobs are queued into background by default.
 - Jobs view with queue management and transfer graphs.
 - Gitignore and git statuses using eza notation.
+- Copied / moved files are indicated with an icon for visibility.
 - Integrated disk usage scanning and reporting.
 - Supports selections across multiple paths.
 - Selections can be stashed and restored (1 slot).
 - Integrated mass rename.
 - Rename supports slugify and clean.
 - Read bookmarks from ~/.fzf-marks and gnome gtk files. Writes bookmarks to ~/.fzf-marks.
-- Find files / paths recursively.
+- Find files / paths recursively. Can handle at least 2 million files.
 - Meta column can be used to provide data from external commands.
 - Execute command for selected files.
+- User menu for commands. Supports interactive, background and worker pools.
 - SFTP remote panel browsing. Parses ~/.ssh/config for quick access.
 
 ### Outscoped compared to MC
@@ -31,6 +33,7 @@ A Linux terminal twin-panel file manager inspired by Midnight Commander and fzf,
 
 - Go 1.26+
 - Linux
+- NerdFont or something similar, no fallback implemented yet.
 
 ## Install
 

@@ -120,7 +120,14 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
-	if a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open {
+	if a.model.FindDialog.Open {
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		if fk, ok := findDialogSelectAllFooterKey(a.keysFindDialog); ok {
+			rest = append([]menu.FunctionKey{fk}, rest...)
+		}
+		return footerWithEscClose(rest)
+	}
+	if a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		if a.model.MetaDialog.Open {
 			rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
@@ -278,8 +285,13 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return false, true
 	case InputModeFindDialog:
+		wasOpen := a.model.FindDialog.Open
 		a.handleFindDialogKey(event)
-		a.render()
+		if !wasOpen || !a.model.FindDialog.Open {
+			a.render()
+		} else if !a.paintFindDialogOverlay() {
+			a.render()
+		}
 		return false, true
 	case InputModeMetaDialog:
 		a.handleMetaDialogKey(event)

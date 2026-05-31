@@ -3,7 +3,20 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
+	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
+
+func findDialogSelectAllFooterKey(keys *keymap.Map) (menu.FunctionKey, bool) {
+	if keys == nil {
+		return menu.FunctionKey{}, false
+	}
+	lbl := keys.MenuBindingLabel(keymap.ActionFindSelectAll)
+	if lbl == "" {
+		return menu.FunctionKey{}, false
+	}
+	return menu.FunctionKey{KeyLabel: lbl, Hint: "Select all"}, true
+}
 
 func (a *App) openFindDialog(panelID int) { a.findCtrl.OpenDialog(panelID) }
 

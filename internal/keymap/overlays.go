@@ -70,6 +70,14 @@ var overlayRegistry = []OverlaySpec{
 			return fmt.Errorf("parse config %q: [bookmark_dialog_action_keys] action %q is not allowed (bookmark.delete only)", source, action)
 		},
 	},
+	{
+		TableName: "find_dialog_action_keys",
+		Defaults:  DefaultFindDialogOverlayKeys,
+		Allowed:   AllowedInFindDialogOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [find_dialog_action_keys] action %q is not allowed (find.select-all only)", source, action)
+		},
+	},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.
@@ -127,6 +135,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "file.rename.open-* only"
 	case "bookmark_dialog_action_keys":
 		return "bookmark.delete only"
+	case "find_dialog_action_keys":
+		return "find.select-all only"
 	default:
 		return "not allowed"
 	}

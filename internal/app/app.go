@@ -80,6 +80,7 @@ type App struct {
 	keysDialogInput    *keymap.Map // chords active only while a dialog input field is focused
 	keysRenameDialog   *keymap.Map // sanitize/slugify while main rename dialog is focused
 	keysBookmarkDialog *keymap.Map // delete fzf-marks entry while bookmarks picker is open
+	keysFindDialog     *keymap.Map // select all while find dialog is open
 	devMode            bool
 	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
@@ -278,6 +279,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		kmBookmarkDialog = m
 	}
+	kmFindDialog := bundle.FindDialog
+	if kmFindDialog == nil {
+		m, err := keymap.Build(keymap.DefaultFindDialogOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build find dialog overlay map: %w", err)
+		}
+		kmFindDialog = m
+	}
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -386,6 +395,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysDialogInput:    kmDialogInput,
 		keysRenameDialog:   kmRenameDialog,
 		keysBookmarkDialog: kmBookmarkDialog,
+		keysFindDialog:     kmFindDialog,
 		devMode:            opts.DevMode,
 		commandsCtx:        cmdCtx,
 		commandsCancel:     cmdCancel,
@@ -457,11 +467,12 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		KeysJobs: kmJobs,
 	})
 	app.findCtrl = findctrl.New(findctrl.Deps{
-		Host:   findHost{appShellHost: appShellHost{app: app}},
-		Screen: screen,
-		Model:  &app.model,
-		Config: cfg,
-		Keys:   km,
+		Host:           findHost{appShellHost: appShellHost{app: app}},
+		Screen:         screen,
+		Model:          &app.model,
+		Config:         cfg,
+		Keys:           km,
+		KeysFindDialog: kmFindDialog,
 	})
 	if err := app.configureSFTP(); err != nil {
 		app.stopWorker()
@@ -586,27 +597,27 @@ func (a *App) Run() error {
 				}
 			case findctrl.WakePayload:
 				if a.pollFindUpdates(d) {
-					a.render()
+					a.renderFindDialogUpdate()
 					didRender = true
 				}
 			case findctrl.RankWakePayload:
 				if a.applyFindRank() {
-					a.render()
+					a.renderFindDialogUpdate()
 					didRender = true
 				}
 			case findctrl.ThrottleRankWakePayload:
 				if a.handleFindThrottleRankWake() {
-					a.render()
+					a.renderFindDialogUpdate()
 					didRender = true
 				}
 			case findctrl.DebounceRankWakePayload:
 				if a.handleFindDebounceRankWake() {
-					a.render()
+					a.renderFindDialogUpdate()
 					didRender = true
 				}
 			case findctrl.FindNavIdlePayload:
 				if a.handleFindNavIdle(d.Epoch) {
-					a.render()
+					a.renderFindDialogUpdate()
 					didRender = true
 				}
 			case throughputChartTickPayload:

@@ -18,13 +18,14 @@ import (
 
 func New(d Deps) *Handler {
 	h := &Handler{
-		host:       d.Host,
-		screen:     d.Screen,
-		model:      d.Model,
-		config:     d.Config,
-		keys:       d.Keys,
-		rankReady:  make(chan rankResult, 1),
-		rankWorkCh: make(chan rankInput, 1),
+		host:           d.Host,
+		screen:         d.Screen,
+		model:          d.Model,
+		config:         d.Config,
+		keys:           d.Keys,
+		keysFindDialog: d.KeysFindDialog,
+		rankReady:      make(chan rankResult, 1),
+		rankWorkCh:     make(chan rankInput, 1),
 	}
 	go h.rankWorkerLoop()
 	return h
@@ -956,26 +957,7 @@ func (h *Handler) ApplyPendingRank() bool {
 func (h *Handler) findDialogListRows() int {
 	termW, termH := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(termW, termH)
-	checkboxRows := 1
-	if h.model.FindDialog.ShowSearchSelectionsOption {
-		checkboxRows = 2
-	}
-	baseHeight := 9 + checkboxRows
-	listH := layout.Height - 4 - baseHeight
-	switch {
-	case listH > 18:
-		listH = 18
-	case listH < 4:
-		listH = 4
-	}
-	dialogHeight := baseHeight + listH
-	if dialogHeight > layout.Height-2 {
-		listH = layout.Height - 2 - baseHeight
-		if listH < 4 {
-			return 4
-		}
-	}
-	return listH
+	return ui.FindDialogListRows(layout, h.model.FindDialog.ShowSearchSelectionsOption)
 }
 
 // ActivateDialogOK applies the find dialog OK action (navigate / apply marks).
@@ -1062,6 +1044,34 @@ func (h *Handler) NavigateFindCursor() {
 	h.CloseDialog()
 }
 
+func (h *Handler) findDialogSelectAll() {
+	st := &h.model.FindDialog
+	if len(st.Ranked) == 0 {
+		return
+	}
+	if st.MarkedPaths == nil {
+		st.MarkedPaths = make(map[string]bool)
+	}
+	conflicts := false
+	for _, entIdx := range st.Ranked {
+		if entIdx < 0 || entIdx >= len(st.Entries) {
+			continue
+		}
+		ent := st.Entries[entIdx]
+		path := ent.AbsPath(st.RootPath)
+		if path == "" || st.MarkedPaths[path] {
+			continue
+		}
+		if clearFindMarkedConflicts(st, path, ent.IsDir) {
+			conflicts = true
+		}
+		st.MarkedPaths[path] = true
+	}
+	if conflicts {
+		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+	}
+}
+
 func (h *Handler) findDialogToggleSelectionAndAdvance() {
 	st := &h.model.FindDialog
 	if st.Focus != 0 || len(st.Ranked) == 0 || st.Selected < 0 || st.Selected >= len(st.Ranked) {
@@ -1109,6 +1119,12 @@ func (h *Handler) ToggleOnlyDirectories() {
 
 func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	st := &h.model.FindDialog
+	if h.keysFindDialog != nil {
+		if id, ok := h.keysFindDialog.Lookup(event); ok && id == keymap.ActionFindSelectAll {
+			h.findDialogSelectAll()
+			return
+		}
+	}
 	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle {
 		h.findDialogToggleSelectionAndAdvance()
 		return

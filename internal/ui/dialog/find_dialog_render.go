@@ -76,34 +76,9 @@ const findDialogPreferredWidth = 117 // 50% wider than the history/path picker d
 type FindRowIconPainter func(screen tcell.Screen, x, y int, entry FindEntry, styles theme.Theme)
 
 func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, styles theme.Theme, showIcons bool, iconLead int, paintIcon FindRowIconPainter) {
-	width := findDialogPreferredWidth
-	if width > layout.Width-4 {
-		width = layout.Width - 4
-	}
-	if width < 54 {
+	width, height, listH, ok := FindDialogMetrics(layout, state.ShowSearchSelectionsOption)
+	if !ok {
 		return
-	}
-
-	listH := layout.Height - 14
-	switch {
-	case listH > 18:
-		listH = 18
-	case listH < 4:
-		listH = 4
-	}
-	// top + filter(3) + sep + checkbox(es) + sep + list + sep + buttons
-	checkboxRows := 1
-	if state.ShowSearchSelectionsOption {
-		checkboxRows = 2
-	}
-	baseHeight := 9 + checkboxRows
-	height := baseHeight + listH
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-		listH = height - baseHeight
-		if listH < 4 {
-			return
-		}
 	}
 
 	rect := draw.CenteredDialogRect(layout, width, height)
@@ -133,10 +108,21 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, s
 		draw.DrawDialogCheckbox(screen, cbCol, cbY+1, "Search only from selections", 'S', state.SearchOnlySelections, state.Focus == state.FindDialogSelectionsFocus(), styles)
 	}
 
+	checkboxRows := 1
+	if state.ShowSearchSelectionsOption {
+		checkboxRows = 2
+	}
 	sepAfterCheckbox := rect.Y + 5 + checkboxRows
 	draw.DrawDialogHSeparator(screen, rect, sepAfterCheckbox, borderStyle)
 
 	listTop := sepAfterCheckbox + 1
+	buttonY := rect.Y + rect.Height - 2
+	if maxListH := buttonY - listTop - 1; maxListH < listH {
+		listH = maxListH
+	}
+	if listH < 0 {
+		listH = 0
+	}
 	if !showIcons {
 		iconLead = 0
 	}
@@ -147,6 +133,9 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, s
 	listFocused := state.Focus == 0
 	for row := 0; row < listH; row++ {
 		y := listTop + row
+		if y >= buttonY {
+			break
+		}
 		idxInRank := state.ListScroll + row
 		baseStyle := styles.DialogText.Background(itemBg)
 		line := ""
@@ -189,9 +178,11 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, s
 	}
 
 	sepAfterList := listTop + listH
+	if sepAfterList >= buttonY {
+		sepAfterList = buttonY - 1
+	}
 	draw.DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)
 
-	buttonY := rect.Y + rect.Height - 2
 	okFocused := state.Focus == state.FindDialogOKFocus()
 	cancelFocused := state.Focus == state.FindDialogCancelFocus()
 	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{

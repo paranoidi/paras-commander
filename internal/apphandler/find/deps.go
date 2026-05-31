@@ -15,20 +15,22 @@ import (
 
 // Deps wires the find handler at app construction.
 type Deps struct {
-	Host   Host
-	Screen tcell.Screen
-	Model  *ui.Model
-	Config config.Config
-	Keys   *keymap.Map
+	Host           Host
+	Screen         tcell.Screen
+	Model          *ui.Model
+	Config         config.Config
+	Keys           *keymap.Map
+	KeysFindDialog *keymap.Map
 }
 
 // Handler owns find-dialog indexing and navigation.
 type Handler struct {
-	host   Host
-	screen tcell.Screen
-	model  *ui.Model
-	config config.Config
-	keys   *keymap.Map
+	host           Host
+	screen         tcell.Screen
+	model          *ui.Model
+	config         config.Config
+	keys           *keymap.Map
+	keysFindDialog *keymap.Map
 
 	sessionMu      sync.Mutex
 	walks          map[string]*walk

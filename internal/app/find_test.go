@@ -318,6 +318,49 @@ func TestFindDialogInsertMarksAndOKAddsToPanelSelection(t *testing.T) {
 	}
 }
 
+func TestFindDialogSelectAllMarksRankedResults(t *testing.T) {
+	root := t.TempDir()
+	aPath := filepath.Join(root, "alpha.txt")
+	bPath := filepath.Join(root, "beta.txt")
+	if err := os.WriteFile(aPath, []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bPath, []byte("b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+
+	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)); !ok || id != keymap.ActionFindSelectAll {
+		t.Fatalf("F5 lookup = %q ok=%v", id, ok)
+	}
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if !app.model.FindDialog.MarkedPaths[filepath.Clean(aPath)] || !app.model.FindDialog.MarkedPaths[filepath.Clean(bPath)] {
+		t.Fatalf("select all marks = %v", app.model.FindDialog.MarkedPaths)
+	}
+
+	app.model.FindDialog.MarkedPaths = nil
+	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl)); !ok || id != keymap.ActionFindSelectAll {
+		t.Fatalf("Ctrl+A lookup = %q ok=%v", id, ok)
+	}
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl))
+	if !app.model.FindDialog.MarkedPaths[filepath.Clean(aPath)] || !app.model.FindDialog.MarkedPaths[filepath.Clean(bPath)] {
+		t.Fatalf("Ctrl+A select all marks = %v", app.model.FindDialog.MarkedPaths)
+	}
+}
+
 func findRankedNonDirCount(st *ui.FindDialogState) int {
 	n := 0
 	for _, idx := range st.Ranked {

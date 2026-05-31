@@ -54,6 +54,16 @@ func messageUrgencyListStyle(styles theme.Theme, u MessageUrgency, bg tcell.Colo
 	return st
 }
 
+// PaintTransientStatusMessage redraws the status row above the footer when a banner is active.
+func PaintTransientStatusMessage(screen tcell.Screen, layout Layout, message string, urgency MessageUrgency, styles theme.Theme) {
+	msg := strings.TrimSpace(message)
+	if msg == "" || layout.Footer.Height <= 0 {
+		return
+	}
+	row := Rect{X: 0, Y: layout.Footer.Y - 1, Width: layout.Width, Height: 1}
+	drawStatusMessageOverlay(screen, row, msg, urgency, styles)
+}
+
 // drawStatusMessageOverlay draws a horizontally centered status message in the given row.
 // It paints only the message cells and does not erase the rest of the row (panel chrome remains visible outside the text).
 func drawStatusMessageOverlay(screen tcell.Screen, rect Rect, message string, urgency MessageUrgency, styles theme.Theme) {

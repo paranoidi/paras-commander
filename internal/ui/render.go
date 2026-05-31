@@ -355,7 +355,6 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	if model.Menu.Open && model.MenuBarInteractive() {
 		drawPulldownMenu(screen, layout, model.Menu, menus, styles)
 	}
-	drawFooter(screen, layout.Footer, styles, model.FooterKeys)
 	switch model.PrimaryModal() {
 	case PrimaryModalTheme:
 		dialog.DrawThemeDialog(screen, layout, model.ThemeDialog, styles)
@@ -407,6 +406,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	if model.HelpView.Open {
 		dialog.DrawHelpDialog(screen, layout, model.HelpView, styles)
 	}
+	drawFooter(screen, layout.Footer, styles, model.FooterKeys)
 	// Transient status must be drawn after modal chrome so it is not overwritten (e.g. theme picker).
 	// Draw before the generic message dialog so that modal stays the topmost curated surface when both apply.
 	if msg != "" && layout.Footer.Height > 0 {

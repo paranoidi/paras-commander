@@ -9,6 +9,30 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
+// paintFindDialogOverlay repaints only the find dialog without redrawing panels or the footer.
+func (a *App) paintFindDialogOverlay() bool {
+	if !a.model.FindDialog.Open {
+		return false
+	}
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if layout.TooSmall {
+		return false
+	}
+	ui.PaintFindDialog(a.screen, layout, a.model.FindDialog, a.styles, a.model.ShowFileIcons)
+	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
+	a.emitScreenAfterPartialPaint()
+	return true
+}
+
+// renderFindDialogUpdate repaints the find overlay when it is open; otherwise falls back to a full render.
+func (a *App) renderFindDialogUpdate() {
+	if a.model.FindDialog.Open && a.paintFindDialogOverlay() {
+		return
+	}
+	a.render()
+}
+
 func (a *App) render() {
 	a.stopDiskUsageRedrawDebounce()
 	a.syncCarouselChildPreviewCoalesceFlags()

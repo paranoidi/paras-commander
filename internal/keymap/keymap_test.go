@@ -353,6 +353,24 @@ func TestDefaultBundleBookmarkDialogOverlayF8(t *testing.T) {
 	}
 }
 
+func TestDefaultBundleFindDialogOverlayF5CtrlA(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	if got := bundle.FindDialog.MenuBindingLabel(ActionFindSelectAll); got != "F5" {
+		t.Fatalf("FindDialog MenuBindingLabel = %q, want F5", got)
+	}
+	id, ok := bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if !ok || id != ActionFindSelectAll {
+		t.Fatalf("FindDialog F5 = %q %v, want %q", id, ok, ActionFindSelectAll)
+	}
+	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl))
+	if !ok || id != ActionFindSelectAll {
+		t.Fatalf("FindDialog Ctrl+A = %q %v, want %q", id, ok, ActionFindSelectAll)
+	}
+}
+
 func TestParseKeyAltBang(t *testing.T) {
 	if _, err := ParseKey("M-!"); err != nil {
 		t.Fatalf("ParseKey(M-!): %v", err)

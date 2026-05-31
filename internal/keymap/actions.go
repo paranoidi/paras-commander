@@ -23,6 +23,7 @@ const (
 	ActionNavBackward                = "nav.backward"
 	ActionPanelHistoryDialog         = "panel.history-dialog"
 	ActionPanelFindDialog            = "panel.find-dialog"
+	ActionFindSelectAll              = "find.select-all"
 	ActionPanelRefresh               = "panel.refresh"
 	ActionPanelSelectToggle          = "panel.select-toggle"
 	ActionPanelSelectGroup           = "panel.select-group"
@@ -121,6 +122,8 @@ const (
 	ActionUIOpenTheme  = "ui.open-theme"
 	ActionUIOpenConfig = "ui.open-config"
 
+	// ActionFindSelectAll marks all ranked find-dialog results and is bound via
+	// [find_dialog_action_keys], not [action_keys].
 	// ActionDialogInputRestoreDefault restores a focused dialog input field's suggested default
 	// (Prefill) and is bound via [dialog_input_action_keys], not [action_keys].
 	ActionDialogInputRestoreDefault = "ui.input.restore-default"
@@ -170,6 +173,7 @@ var KnownActions = map[string]struct{}{
 	ActionNavBackward:                {},
 	ActionPanelHistoryDialog:         {},
 	ActionPanelFindDialog:            {},
+	ActionFindSelectAll:              {},
 	ActionPanelRefresh:               {},
 	ActionPanelSelectToggle:          {},
 	ActionPanelSelectGroup:           {},
