@@ -987,6 +987,7 @@ func (h *Handler) applyFindDialogMarkedSelections() {
 	st := &h.model.FindDialog
 	p := h.host.PanelByID(st.PanelID)
 	added := 0
+	conflicts := false
 	for path, on := range st.MarkedPaths {
 		if !on {
 			continue
@@ -998,7 +999,9 @@ func (h *Handler) applyFindDialogMarkedSelections() {
 		if p.SelectedPaths != nil && p.SelectedPaths[path] {
 			continue
 		}
-		p.AddSelection(path)
+		if p.AddSelection(path) {
+			conflicts = true
+		}
 		added++
 	}
 	h.model.ActivePanel = st.PanelID
@@ -1006,6 +1009,10 @@ func (h *Handler) applyFindDialogMarkedSelections() {
 	h.CloseDialog()
 	if added == 0 {
 		h.host.SetTransientMessage("No new selections", ui.MessageUrgencyInfo)
+		return
+	}
+	if conflicts {
+		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 		return
 	}
 	h.host.SetTransientMessage(fmt.Sprintf("Added %d to selection", added), ui.MessageUrgencyInfo)
@@ -1062,7 +1069,7 @@ func (h *Handler) findDialogSelectAll() {
 		if path == "" || st.MarkedPaths[path] {
 			continue
 		}
-		if clearFindMarkedConflicts(st, path, ent.IsDir) {
+		if h.clearFindMarkedConflicts(path, ent.IsDir) {
 			conflicts = true
 		}
 		st.MarkedPaths[path] = true
@@ -1091,7 +1098,7 @@ func (h *Handler) findDialogToggleSelectionAndAdvance() {
 	if st.MarkedPaths[path] {
 		delete(st.MarkedPaths, path)
 	} else {
-		if clearFindMarkedConflicts(st, path, st.Entries[entIdx].IsDir) {
+		if h.clearFindMarkedConflicts(path, st.Entries[entIdx].IsDir) {
 			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 		}
 		st.MarkedPaths[path] = true
@@ -1269,35 +1276,14 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	}
 }
 
-// clearFindMarkedConflicts removes marked paths that conflict with adding path (dir or file).
-// Returns true if any mark was removed.
-func clearFindMarkedConflicts(st *ui.FindDialogState, path string, isDir bool) bool {
+func (h *Handler) clearFindMarkedConflicts(path string, isDir bool) bool {
+	st := &h.model.FindDialog
 	if st.MarkedPaths == nil {
 		return false
 	}
-	added := filepath.Clean(path)
-	var removed bool
-	if isDir {
-		for p := range st.MarkedPaths {
-			clean := filepath.Clean(p)
-			if panel.IsStrictPathDescendant(added, clean) {
-				delete(st.MarkedPaths, p)
-				removed = true
-			}
-		}
-		return removed
-	}
-	for p := range st.MarkedPaths {
-		clean := filepath.Clean(p)
-		if !findMarkedPathIsDir(st, clean) {
-			continue
-		}
-		if panel.IsStrictPathDescendant(clean, added) {
-			delete(st.MarkedPaths, p)
-			removed = true
-		}
-	}
-	return removed
+	return panel.ClearSelectionConflicts(st.MarkedPaths, path, isDir, func(p string) bool {
+		return findMarkedPathIsDir(st, p)
+	})
 }
 
 func findMarkedPathIsDir(st *ui.FindDialogState, path string) bool {

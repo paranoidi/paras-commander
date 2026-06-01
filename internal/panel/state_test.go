@@ -381,7 +381,7 @@ func TestToggleSelectionSelectsAndUnselectsCurrentEntry(t *testing.T) {
 		},
 	}
 
-	selected := state.ToggleSelection()
+	selected, _ := state.ToggleSelection()
 	if !selected {
 		t.Fatal("ToggleSelection() selected = false, want true")
 	}
@@ -389,7 +389,7 @@ func TestToggleSelectionSelectsAndUnselectsCurrentEntry(t *testing.T) {
 		t.Fatal("first entry is not selected after toggle")
 	}
 
-	selected = state.ToggleSelection()
+	selected, _ = state.ToggleSelection()
 	if selected {
 		t.Fatal("ToggleSelection() selected = true, want false after second toggle")
 	}
@@ -401,7 +401,7 @@ func TestToggleSelectionSelectsAndUnselectsCurrentEntry(t *testing.T) {
 func TestToggleSelectionWithEmptyEntriesIsInert(t *testing.T) {
 	state := State{}
 
-	if state.ToggleSelection() {
+	if selected, _ := state.ToggleSelection(); selected {
 		t.Fatal("ToggleSelection() selected = true, want false for empty panel")
 	}
 	if len(state.SelectedPaths) != 0 {
@@ -417,7 +417,7 @@ func TestToggleSelectionAndAdvanceMovesToNextRow(t *testing.T) {
 		},
 	}
 
-	toggled := state.ToggleSelectionAndAdvance(5)
+	toggled, _ := state.ToggleSelectionAndAdvance(5)
 	if !toggled {
 		t.Fatal("ToggleSelectionAndAdvance() toggled = false, want true")
 	}
@@ -438,7 +438,7 @@ func TestToggleSelectionAndAdvanceStaysOnLastRow(t *testing.T) {
 		Cursor: 1,
 	}
 
-	toggled := state.ToggleSelectionAndAdvance(5)
+	toggled, _ := state.ToggleSelectionAndAdvance(5)
 	if !toggled {
 		t.Fatal("ToggleSelectionAndAdvance() toggled = false, want true")
 	}

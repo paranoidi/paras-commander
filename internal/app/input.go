@@ -607,7 +607,10 @@ func (a *App) dispatch(actionID string) {
 		a.armQuickViewNavCoalesceAfterListNav()
 		a.armCarouselPreviewNavCoalesceAfterListNav()
 	case keymap.ActionPanelSelectToggle:
-		activePanel.ToggleSelectionAndAdvance(viewportRows)
+		_, conflicts := activePanel.ToggleSelectionAndAdvance(viewportRows)
+		if conflicts {
+			a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+		}
 	case keymap.ActionPanelSelectGroup:
 		a.openGroupSelect("select")
 	case keymap.ActionPanelUnselectGroup:

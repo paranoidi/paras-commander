@@ -290,25 +290,29 @@ func (s State) MatchRanges(index int) []search.Range {
 }
 
 // AddSelection marks path as selected without changing the file-list cursor.
-func (s *State) AddSelection(path string) {
+// Returns true if conflicting selections were removed before adding path.
+func (s *State) AddSelection(path string) bool {
 	path = cleanPathString(path)
 	if path == "" {
-		return
+		return false
 	}
+	if s.SelectedPaths != nil && s.SelectedPaths[path] {
+		return false
+	}
+	conflicts := s.resolveSelectionConflicts(path, s.selectedPathIsDirectory(path))
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool)
 	}
-	if s.SelectedPaths[path] {
-		return
-	}
 	s.SelectedPaths[path] = true
+	return conflicts
 }
 
 // ToggleSelection toggles the current entry in the panel-local selection set.
-func (s *State) ToggleSelection() bool {
+// The first bool is true when the entry is selected after the call; the second reports conflict removals.
+func (s *State) ToggleSelection() (selected bool, conflictsRemoved bool) {
 	entry, ok := s.CurrentEntry()
 	if !ok {
-		return false
+		return false, false
 	}
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool)
@@ -316,23 +320,31 @@ func (s *State) ToggleSelection() bool {
 	if s.SelectedPaths[entry.Path] {
 		delete(s.SelectedPaths, entry.Path)
 		s.removePathFromSelectionsStripOrder(entry.Path)
+		if len(s.SelectedPaths) == 0 {
+			s.SelectedPaths = nil
+		}
 		s.normalizeSelectionsStripCursor()
-		return false
+		return false, false
+	}
+	conflictsRemoved = s.resolveSelectionConflicts(entry.Path, entry.IsDir())
+	if s.SelectedPaths == nil {
+		s.SelectedPaths = make(map[string]bool)
 	}
 	s.SelectedPaths[entry.Path] = true
-	return true
+	return true, conflictsRemoved
 }
 
 // ToggleSelectionAndAdvance toggles the current entry, then moves to the next row when possible.
-func (s *State) ToggleSelectionAndAdvance(viewportRows int) bool {
+// The first bool is true when toggle ran; the second reports conflict removals.
+func (s *State) ToggleSelectionAndAdvance(viewportRows int) (bool, bool) {
 	if _, ok := s.CurrentEntry(); !ok {
-		return false
+		return false, false
 	}
-	s.ToggleSelection()
+	_, conflictsRemoved := s.ToggleSelection()
 	if s.Cursor < s.VisibleEntryCount()-1 {
 		s.Move(1, viewportRows)
 	}
-	return true
+	return true, conflictsRemoved
 }
 
 // IsSelected reports whether entry is selected in this panel.
@@ -1493,6 +1505,7 @@ func (s *State) SelectGroup(pattern string, filesOnly, caseSensitive, useShellPa
 			continue
 		}
 		if groupMatch(entry.Name, pattern, caseSensitive, useShellPatterns) {
+			s.resolveSelectionConflicts(entry.Path, entry.IsDir())
 			s.SelectedPaths[entry.Path] = true
 		}
 	}

@@ -5468,7 +5468,7 @@ func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {
 	app.model.ActiveSubFocus = ui.SubFocusFileList
 	left := app.panelByID(ui.LeftPanel)
 	selectPanelEntryByName(t, left, "beta")
-	if !left.ToggleSelection() {
+	if selected, _ := left.ToggleSelection(); !selected {
 		t.Fatal("toggle selection on beta")
 	}
 	selectPanelEntryByName(t, left, "alpha")

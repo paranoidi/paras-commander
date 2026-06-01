@@ -548,6 +548,50 @@ func TestFindDialogMarkFileRemovesAncestorDirMarks(t *testing.T) {
 	}
 }
 
+func TestFindDialogMarkParentThenChildDirRemovesParentMark(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	nested := filepath.Join(sub, "nested")
+	for _, d := range []string{sub, nested} {
+		if err := os.Mkdir(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+
+	ev := tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)
+	app.model.FindDialog.Selected = findRankedIndexForPath(&app.model.FindDialog, sub)
+	app.handleFindDialogKey(ev)
+	if !app.model.FindDialog.MarkedPaths[filepath.Clean(sub)] {
+		t.Fatal("sub should be marked")
+	}
+
+	app.model.FindDialog.Selected = findRankedIndexForPath(&app.model.FindDialog, nested)
+	app.handleFindDialogKey(ev)
+	if app.model.FindDialog.MarkedPaths[filepath.Clean(sub)] {
+		t.Fatal("parent dir mark should be removed when nested child dir is marked")
+	}
+	if !app.model.FindDialog.MarkedPaths[filepath.Clean(nested)] {
+		t.Fatal("nested dir should be marked")
+	}
+	if app.model.Message != "Removed conflicting selections" {
+		t.Fatalf("status = %q", app.model.Message)
+	}
+}
+
 func findIndexedUnder(st *ui.FindDialogState, dir string) bool {
 	dir = filepath.Clean(dir)
 	for _, e := range st.Entries {
