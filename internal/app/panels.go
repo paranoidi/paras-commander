@@ -124,9 +124,12 @@ func (a *App) panelViewportRows(panelID int) int {
 		col = layout.Right
 		p = &a.model.Right
 	}
-	stripN := ui.SelectionsStripLayoutItemCount(p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open)
-	fileCol, _ := ui.SplitPanelColumn(col, stripN, a.model.SelectionsPanelMaxRows, 3)
-	return ui.PanelListRows(fileCol)
+	return ui.FileListViewportRows(col, p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open, a.model.SelectionsPanelMaxRows)
+}
+
+func (a *App) wireFileListViewportRows() {
+	a.model.Left.FileListViewportRows = func() int { return a.panelViewportRows(ui.LeftPanel) }
+	a.model.Right.FileListViewportRows = func() int { return a.panelViewportRows(ui.RightPanel) }
 }
 
 func (a *App) selectionsStripViewportRows(panelID int) int {
@@ -245,6 +248,8 @@ func (a *App) toggleSyncFollow() {
 // consistent). New invariants belong here, not sprinkled at call sites: any code path
 // that mutates panel state automatically triggers them via the Run-loop chokepoint.
 func (a *App) reconcileAfterEvent() {
+	a.reconcileSelectionSizeScans(ui.LeftPanel)
+	a.reconcileSelectionSizeScans(ui.RightPanel)
 	a.handlePanelDirChanged(ui.LeftPanel)
 	a.handlePanelDirChanged(ui.RightPanel)
 	a.handleMetaPanelDirChanged(ui.LeftPanel)
@@ -497,12 +502,8 @@ func (a *App) ensurePanelsVisible() {
 		a.model.Right.EnsureCursorInViewport(0)
 		return
 	}
-	leftN := ui.SelectionsStripLayoutItemCount(&a.model.Left, ui.LeftPanel, a.model.ActivePanel, a.model.ThemeDialog.Open)
-	rightN := ui.SelectionsStripLayoutItemCount(&a.model.Right, ui.RightPanel, a.model.ActivePanel, a.model.ThemeDialog.Open)
-	leftFile, _ := ui.SplitPanelColumn(layout.Left, leftN, a.model.SelectionsPanelMaxRows, 3)
-	rightFile, _ := ui.SplitPanelColumn(layout.Right, rightN, a.model.SelectionsPanelMaxRows, 3)
-	a.model.Left.EnsureCursorInViewport(ui.PanelListRows(leftFile))
-	a.model.Right.EnsureCursorInViewport(ui.PanelListRows(rightFile))
+	a.model.Left.EnsureCursorInViewport(a.panelViewportRows(ui.LeftPanel))
+	a.model.Right.EnsureCursorInViewport(a.panelViewportRows(ui.RightPanel))
 }
 
 func panelLabel(panelID int) string {

@@ -54,6 +54,13 @@ type PanelBottomIndicatorContext struct {
 	ChromeBlocked          bool
 	BorderStyle            tcell.Style
 	Styles                 theme.Theme
+	// SelectionSizeLabel is the padded bottom-row text (leading/trailing space included).
+	SelectionSizeLabel string
+	// SelectionSizeWidth is the rune width of SelectionSizeLabel (0 when unset).
+	SelectionSizeWidth int
+	// SelectionSizeCenterStart/End are inclusive screen columns for the centered label.
+	SelectionSizeCenterStart int
+	SelectionSizeCenterEnd   int
 }
 
 type panelBottomIndicatorSpec struct {
@@ -207,6 +214,15 @@ func panelBottomEndEdgeTotalWidth(ctx PanelBottomIndicatorContext) int {
 	return total
 }
 
+// panelBottomEdgeAvailableWidth is interior bottom-row width minus center selection-size reserve.
+func panelBottomEdgeAvailableWidth(rect Rect, ctx PanelBottomIndicatorContext) int {
+	w := rect.Width - 2
+	if ctx.SelectionSizeWidth > 0 {
+		w -= ctx.SelectionSizeWidth
+	}
+	return max(0, w)
+}
+
 // panelBottomEndEdgeReservedStart returns the first column (inclusive) still available on the
 // bottom interior row before End-edge indicator overlays.
 func panelBottomEndEdgeReservedStart(rect Rect, ctx PanelBottomIndicatorContext) int {
@@ -215,10 +231,22 @@ func panelBottomEndEdgeReservedStart(rect Rect, ctx PanelBottomIndicatorContext)
 	if labelW == 0 || labelW > rect.Width-2 {
 		return lastIn
 	}
+	var endReserved int
 	if ctx.PanelID == RightPanel {
-		return rect.X + labelW
+		endReserved = rect.X + labelW
+	} else {
+		endReserved = lastIn - labelW
 	}
-	return lastIn - labelW
+	if ctx.SelectionSizeCenterStart > 0 {
+		if ctx.PanelID == RightPanel {
+			if endReserved > ctx.SelectionSizeCenterStart-1 {
+				endReserved = ctx.SelectionSizeCenterStart - 1
+			}
+		} else if endReserved > ctx.SelectionSizeCenterStart-1 {
+			endReserved = ctx.SelectionSizeCenterStart - 1
+		}
+	}
+	return endReserved
 }
 
 // panelBottomIndicatorContextForRect builds indicator context with path budget for the other-panel label.
@@ -234,6 +262,7 @@ func panelBottomIndicatorContextForRect(
 	fileListActive, chromeBlocked bool,
 	borderStyle tcell.Style,
 	styles theme.Theme,
+	selectionSizeLabel string,
 ) PanelBottomIndicatorContext {
 	ctx := PanelBottomIndicatorContext{
 		PanelID:                panelID,
@@ -249,8 +278,18 @@ func panelBottomIndicatorContextForRect(
 		ChromeBlocked:          chromeBlocked,
 		BorderStyle:            borderStyle,
 		Styles:                 styles,
+		SelectionSizeLabel:     selectionSizeLabel,
 	}
-	avail := rect.Width - 2
+	if selectionSizeLabel != "" {
+		padded, startX, endX, ok := panelSelectionSizeCenterLayout(rect, selectionSizeLabel)
+		if ok {
+			ctx.SelectionSizeLabel = padded
+			ctx.SelectionSizeWidth = utf8.RuneCountInString(padded)
+			ctx.SelectionSizeCenterStart = startX
+			ctx.SelectionSizeCenterEnd = endX
+		}
+	}
+	avail := panelBottomEdgeAvailableWidth(rect, ctx)
 	fixed := 0
 	for _, spec := range panelBottomIndicatorRegistry {
 		if spec.Edge != PanelBottomEdgeEnd || spec.ID == PanelBottomIndicatorOtherPanel {
@@ -338,7 +377,7 @@ func drawPanelBottomEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID in
 	if len(segs) == 0 {
 		return
 	}
-	available := rect.Width - 2
+	available := panelBottomEdgeAvailableWidth(rect, ctx)
 	totalW := panelBottomEndEdgeTotalWidth(ctx)
 	if totalW > available {
 		segs = dropPanelBottomIndicatorsForWidth(segs, available, false)
@@ -393,13 +432,16 @@ func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIn
 		}
 	}
 
-	drawPanelBottomStartEdgeIndicators(screen, rect, ctx.PanelID, y, lastIn, startEdge, ctx.BorderStyle)
+	drawPanelBottomStartEdgeIndicators(screen, rect, ctx, y, lastIn, startEdge)
 
 	if len(physicalLeft) > 0 {
 		x := panelBottomPhysicalLeftChainStartX(rect, ctx.SelectionsBottomHint)
 		if x <= endX {
 			leadingDash := !ctx.SelectionsBottomHint
 			maxCols := endX - x + 1
+			if ctx.SelectionSizeCenterStart > 0 {
+				maxCols = min(maxCols, ctx.SelectionSizeCenterStart-x)
+			}
 			physicalLeft = dropPanelBottomIndicatorsForWidth(physicalLeft, maxCols, leadingDash)
 			if len(physicalLeft) > 0 {
 				if ctx.SelectionsBottomHint {
@@ -435,11 +477,11 @@ func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIn
 }
 
 // drawPanelBottomStartEdgeIndicators paints corner-anchored segments (Selections).
-func drawPanelBottomStartEdgeIndicators(screen tcell.Screen, rect Rect, panelID, y, lastIn int, segs []panelBottomIndicatorSegment, borderStyle tcell.Style) {
+func drawPanelBottomStartEdgeIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIndicatorContext, y, lastIn int, segs []panelBottomIndicatorSegment) {
 	if len(segs) == 0 {
 		return
 	}
-	available := rect.Width - 2
+	available := panelBottomEdgeAvailableWidth(rect, ctx)
 	segs = dropPanelBottomIndicatorsForWidth(segs, available, true)
 	for _, seg := range segs {
 		padW := utf8.RuneCountInString(seg.Label)
@@ -447,14 +489,14 @@ func drawPanelBottomStartEdgeIndicators(screen tcell.Screen, rect Rect, panelID,
 		if need > available {
 			continue
 		}
-		if panelID == RightPanel {
+		if ctx.PanelID == RightPanel {
 			xTitle := lastIn - padW
 			primitive.TextOverlay(screen, xTitle, y, padW, seg.Label, seg.Style)
-			screen.SetContent(lastIn, y, '─', nil, borderStyle)
+			screen.SetContent(lastIn, y, '─', nil, ctx.BorderStyle)
 			continue
 		}
 		x0 := rect.X + 1
-		screen.SetContent(x0, y, '─', nil, borderStyle)
+		screen.SetContent(x0, y, '─', nil, ctx.BorderStyle)
 		primitive.TextOverlay(screen, x0+1, y, padW, seg.Label, seg.Style)
 	}
 }

@@ -42,7 +42,7 @@ func TestSelectionsStripMarkOnFileRow(t *testing.T) {
 		SelectedPaths:        map[string]bool{filePath: true},
 	}
 
-	drawSelectionsStrip(screen, rect, state, true, false, styles, "")
+	drawSelectionsStrip(screen, rect, state, true, false, styles, "", nil, false, nil, true)
 
 	rowY := rect.Y + 1
 	markCol := -1

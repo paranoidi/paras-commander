@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"unicode/utf8"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -16,7 +18,8 @@ type AuxPanelChromeLayout struct {
 }
 
 // drawAuxPanelChrome paints border, surface fill, and title overlay for an auxiliary panel.
-func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title string, active, blocked bool, styles theme.Theme) AuxPanelChromeLayout {
+// When endLabel is non-empty, the top row uses a split layout (title left, endLabel right).
+func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title, endLabel string, active, blocked bool, styles theme.Theme) AuxPanelChromeLayout {
 	chrome := styles.PanelChrome(active, blocked)
 	primitive.Box(screen, primitive.Rect(rect), chrome.Frame)
 	inner := Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -28,7 +31,14 @@ func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title string, active, bl
 	if titleWidth < 1 {
 		titleWidth = 1
 	}
-	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, chrome.Title)
+	innerRight := rect.X + rect.Width - 2
+	contentCols := innerRight - titleX + 1
+	if endLabel != "" {
+		endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, active, blocked)
+		paintAuxPanelTopRowSplit(screen, titleX, innerRight, contentCols, rect.Y, title, endLabel, chrome.Title, endStyle)
+	} else {
+		primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, chrome.Title)
+	}
 	return AuxPanelChromeLayout{
 		Inner:      inner,
 		TitleX:     titleX,
@@ -52,6 +62,27 @@ func auxPanelBodyText(styles theme.Theme, blocked bool, contentBG tcell.Color) t
 		return styles.PanelBlockedText
 	}
 	return styles.PanelText.Background(contentBG)
+}
+
+// paintAuxPanelTopRowSplit paints a top border row with a start title and optional end label (frame dashes between).
+func paintAuxPanelTopRowSplit(screen tcell.Screen, titleX, innerRight, contentCols, y int, leftTitle, endLabel string, titleStyle, endStyle tcell.Style) {
+	endRunes := utf8.RuneCountInString(endLabel)
+	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+3
+	endStartX := 0
+	pathSlotCols := contentCols
+	if showEnd {
+		endStartX = innerRight - endRunes + 1
+		pathSlotCols = endStartX - titleX - gapBeforePanelTitleEnd
+		if pathSlotCols < 3 {
+			showEnd = false
+			pathSlotCols = contentCols
+		}
+	}
+	primitive.TextOverlay(screen, titleX, y, pathSlotCols, leftTitle, titleStyle)
+	if !showEnd {
+		return
+	}
+	primitive.TextOverlay(screen, endStartX, y, endRunes, endLabel, endStyle)
 }
 
 func auxPanelListHeaderStyle(chrome theme.PanelChrome, blocked bool, contentBG tcell.Color) tcell.Style {

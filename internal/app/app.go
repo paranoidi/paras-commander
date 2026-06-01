@@ -98,6 +98,8 @@ type App struct {
 	diskIdleSort    [2]diskIdleSortPanel // indexed by ui.LeftPanel / ui.RightPanel (0/1)
 	// diskIdleNavPath records last reconciled panel cwd so idle-sort debounce survives benign reconcile but resets on chdir.
 	diskIdleNavPath [2]string
+	// selectionSizeScanFP is the last enqueued directory set fingerprint per panel for selection-size scans.
+	selectionSizeScanFP [2]string
 	// metaActiveCmd holds the name of the active meta command per panel (empty = none).
 	metaActiveCmd [2]string
 	// metaNavPath holds the last panel path for which meta was run (used to detect navigation).
@@ -456,6 +458,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	app.model.Left.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.model.Right.SuppressHeavyPathProbes = suppressHeavyPathProbes
+	app.wireFileListViewportRows()
 	app.wireDiskUsageScanScopeChecks()
 	app.jobsCtrl = jobsctrl.New(jobsctrl.Deps{
 		Host:     jobsHost{appShellHost: appShellHost{app: app}},

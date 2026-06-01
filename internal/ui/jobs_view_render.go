@@ -110,7 +110,7 @@ func drawJobsView(
 
 func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool) {
 	active := state.FocusPane == 0
-	layout := drawAuxPanelChrome(screen, rect, " Queue ", active, chromeBlocked, styles)
+	layout := drawAuxPanelChrome(screen, rect, " Queue ", "", active, chromeBlocked, styles)
 	bg := layout.ContentBG
 
 	contentX := rect.X + 2
@@ -204,7 +204,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 }
 
 func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, focused bool, userHomeDir string, throughputChartEnabled bool) {
-	layout := drawAuxPanelChrome(screen, rect, " Details ", focused, chromeBlocked, styles)
+	layout := drawAuxPanelChrome(screen, rect, " Details ", "", focused, chromeBlocked, styles)
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	contentTop := rect.Y + 1
 	contentH := rect.Height - 2
@@ -244,7 +244,7 @@ func drawJobsDetailPanel(screen tcell.Screen, rect Rect, state JobsViewState, jo
 }
 
 func drawJobsActivityPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, activity map[string][]string, styles theme.Theme, chromeBlocked bool, focused bool) {
-	layout := drawAuxPanelChrome(screen, rect, " Activity ", focused, chromeBlocked, styles)
+	layout := drawAuxPanelChrome(screen, rect, " Activity ", "", focused, chromeBlocked, styles)
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	contentTop := rect.Y + 1
 	contentH := rect.Height - 2

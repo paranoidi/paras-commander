@@ -89,7 +89,7 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 	return strings.TrimSpace(nameTitle)
 }
 
-func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string) {
+func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool) {
 	if rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
@@ -100,12 +100,24 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	headerCarouselStyle := chrome.HeaderCarousel
 
 	primitive.Box(screen, primitive.Rect(rect), borderStyle)
+	var selectionSizeLabel string
+	if showSelectionSizeOnBottom && state.SelectedPathCount() > 0 {
+		selectionSizeLabel, _ = SelectionSizeLabel(
+			state,
+			state.Path.IsRemote(),
+			painter,
+			diskUsageDescendIntoMountPoints,
+			diskUsageGoduIgnore,
+			styles.SymbolWorking(),
+		)
+	}
 	bottomCtx := panelBottomIndicatorContextForRect(
 		rect, panelID, state, selectionsBottomHint,
 		syncDriverPanelID, quickViewDriverPanelID,
 		hideInactivePanel, activePanel, otherPanelPath, userHomeDir,
 		fileListActive, chromeBlocked,
 		borderStyle, styles,
+		selectionSizeLabel,
 	)
 	drawPanelBottomIndicators(screen, rect, bottomCtx)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -182,7 +194,11 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				return state.HasNewFileMark(entry)
 			},
 		})
-		drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, panelcarousel.CenterNameWidth(rect, showIcons, showChildCol), jobMarks)
+		if selectionSizeLabel != "" {
+			drawPanelBottomSelectionSize(screen, rect, panelID, bottomCtx)
+		} else {
+			drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, panelcarousel.CenterNameWidth(rect, showIcons, showChildCol), jobMarks)
+		}
 		return
 	}
 
@@ -369,7 +385,11 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		}, spans)
 	}
 
-	drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, jobMarks)
+	if selectionSizeLabel != "" {
+		drawPanelBottomSelectionSize(screen, rect, panelID, bottomCtx)
+	} else {
+		drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, jobMarks)
+	}
 }
 
 const gapBeforePanelTitleEnd = 2

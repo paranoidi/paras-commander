@@ -124,12 +124,8 @@ func (s *State) buildListingSnapshot(loc pathloc.Path, selectedName string, inde
 			temp.Cursor = indexFallback
 		}
 	}
-	temp.clampCursor()
-	if centerRecalled || selectedName != "" || indexFallback >= 0 {
-		temp.EnsureCursorCentered(viewportRows)
-	} else {
-		temp.EnsureCursorVisible(viewportRows)
-	}
+	centerOnHighlight := centerRecalled || selectedName != "" || indexFallback >= 0
+	temp.applyHighlightScroll(viewportRows, centerOnHighlight)
 	return ListingSnapshot{
 		Path:    listingLoc,
 		Entries: temp.Entries,

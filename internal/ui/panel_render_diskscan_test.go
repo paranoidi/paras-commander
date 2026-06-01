@@ -38,5 +38,5 @@ func TestDrawPanelSkipsDiskScanExcludedWhenMeteringOff(t *testing.T) {
 	}
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 12}
 	drawPanel(screen, rect, state, true, false, theme.Default(), true, "",
-		panicDiskScanPainter{}, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "")
+		panicDiskScanPainter{}, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false)
 }

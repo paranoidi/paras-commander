@@ -62,6 +62,7 @@ row.indicator.new = { fg = "bright_green" }
 indicator.sync = { fg = "green", bold = true }
 indicator.quick_view = { fg = "green", bold = true }
 indicator.selections = { fg = "white" }
+indicator.selection_size = { fg = "yellow" }
 indicator.dotfiles_hidden = { fg = "bright_black" }
 indicator.gitignore = { fg = "bright_black" }
 indicator.stash = { fg = "yellow", bold = true }
@@ -183,6 +184,7 @@ icons.scanning = { fg = "bright_cyan", bold = true }
 icons.stopped = { fg = "bright_red", bold = true }
 
 [symbols]
+working = "\uf017"
 path_picker = "\uf0ca"
 git = "\uf1d3"
 stash = "\uef0d"

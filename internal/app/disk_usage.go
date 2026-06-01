@@ -45,7 +45,9 @@ func (a *App) pollDiskUsageUpdates() {
 		}
 	}
 drained:
-	if jobFinishedToast {
+	// Selection-size background walks use the same engine but do not set DiskUsageShown;
+	// skip the toast so it does not cover the bottom-border size indicator.
+	if jobFinishedToast && a.model.DiskUsageShown {
 		a.setTransientMessage("Disk usage scan finished", ui.MessageUrgencyInfo)
 	}
 	if !needRender {

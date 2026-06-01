@@ -63,6 +63,9 @@ func panelBottomCenterOverlaySpan(rect Rect, panelID int, ctx PanelBottomIndicat
 		}
 		leftBound = max(leftBound, panelBottomPhysicalLeftChainEndX(rect, ctx, leftBound, endReserved)+1)
 		rightBound := lastIn - panelBottomStartEdgeUsedWidth(rect, panelID, ctx)
+		if ctx.SelectionSizeCenterEnd > 0 {
+			rightBound = min(rightBound, ctx.SelectionSizeCenterEnd)
+		}
 		if leftBound > rightBound {
 			return 0, 0, false
 		}
@@ -97,7 +100,7 @@ func panelBottomStartEdgeUsedWidth(rect Rect, panelID int, ctx PanelBottomIndica
 			startEdge = append(startEdge, seg)
 		}
 	}
-	available := rect.Width - 2
+	available := panelBottomEdgeAvailableWidth(rect, ctx)
 	startEdge = dropPanelBottomIndicatorsForWidth(startEdge, available, true)
 	if len(startEdge) == 0 {
 		return 0
@@ -121,6 +124,9 @@ func panelBottomPhysicalLeftChainEndX(rect Rect, ctx PanelBottomIndicatorContext
 		return minX - 1
 	}
 	maxCols := maxX - x + 1
+	if ctx.SelectionSizeCenterStart > 0 {
+		maxCols = min(maxCols, ctx.SelectionSizeCenterStart-x)
+	}
 	leadingDash := !ctx.SelectionsBottomHint
 	physicalLeft = dropPanelBottomIndicatorsForWidth(physicalLeft, maxCols, leadingDash)
 	if len(physicalLeft) == 0 {

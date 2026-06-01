@@ -110,6 +110,10 @@ type State struct {
 	// HistoryBackward/Forward, Refresh, ToggleHidden, etc.). The app uses this to check whether disk-usage idle sorting
 	// can be applied immediately or needs to be deferred.
 	OnDirectoryChange func()
+	// FileListViewportRows, when set by the app, returns the live file-list viewport row count
+	// (after selections-strip layout for the current path). ApplyListing uses it when applying scroll
+	// so Parent/Enter stay aligned with paint even when strip height changes on chdir.
+	FileListViewportRows func() int
 	// SuppressHeavyPathProbes, when set, skips statfs and device lookup in load() for paths
 	// where those syscalls would contend with active background job I/O on the same volume.
 	SuppressHeavyPathProbes func(pathloc.Path) bool
@@ -656,6 +660,47 @@ func shouldCenterCursorOnListing(previousPath, listingLoc pathloc.Path, centerRe
 	return centerRecalled || selectedName != "" || indexFallback >= 0
 }
 
+// cursorAppearsCentered reports whether the highlight row sits in the centered (or tail-pinned) viewport
+// position produced by EnsureCursorCentered.
+func (s *State) cursorAppearsCentered(viewportRows int) bool {
+	n := s.VisibleEntryCount()
+	if viewportRows <= 0 || n == 0 {
+		return false
+	}
+	row := s.Cursor - s.ScrollOffset
+	mid := viewportRows / 2
+	if row == mid {
+		return true
+	}
+	if n <= viewportRows {
+		return row == 0
+	}
+	maxOffset := n - viewportRows
+	return s.ScrollOffset == maxOffset && row == viewportRows-1
+}
+
+// applyHighlightScroll is the single scroll policy after the highlight row is chosen (by name, path, or index).
+// When centerOnHighlight is true, the row is centered when possible (Parent, rename recall, history re-entry).
+// fallbackViewportRows may be stale (e.g. captured before chdir); FileListViewportRows is consulted when set.
+func (s *State) applyHighlightScroll(fallbackViewportRows int, centerOnHighlight bool) {
+	vr := s.effectiveFileListViewportRows(fallbackViewportRows)
+	s.clampCursor()
+	if centerOnHighlight {
+		s.EnsureCursorCentered(vr)
+		return
+	}
+	s.EnsureCursorVisible(vr)
+}
+
+func (s *State) effectiveFileListViewportRows(fallback int) int {
+	if s.FileListViewportRows != nil {
+		if vr := s.FileListViewportRows(); vr > 0 {
+			return vr
+		}
+	}
+	return fallback
+}
+
 // EnsureCursorVisible updates ScrollOffset so Cursor is in the viewport.
 func (s *State) EnsureCursorVisible(viewportRows int) {
 	s.clampCursor()
@@ -707,12 +752,13 @@ func (s *State) EnsureCursorCentered(viewportRows int) {
 }
 
 // EnsureCursorInViewport scrolls so the cursor stays visible, or centered when CenterScrolling is set.
-func (s *State) EnsureCursorInViewport(viewportRows int) {
+func (s *State) EnsureCursorInViewport(fallbackViewportRows int) {
+	vr := s.effectiveFileListViewportRows(fallbackViewportRows)
 	if s.CenterScrolling {
-		s.EnsureCursorCentered(viewportRows)
+		s.EnsureCursorCentered(vr)
 		return
 	}
-	s.EnsureCursorVisible(viewportRows)
+	s.EnsureCursorVisible(vr)
 }
 
 // SetFilterCaseInsensitive configures the quick filter case behavior.
@@ -977,14 +1023,8 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 			s.Cursor = indexFallback
 		}
 	}
-	s.clampCursor()
-	if s.CenterScrolling {
-		s.EnsureCursorCentered(viewportRows)
-	} else if shouldCenterCursorOnListing(previousPath, listingLoc, centerRecalled, selectedName, indexFallback) {
-		s.EnsureCursorCentered(viewportRows)
-	} else {
-		s.EnsureCursorVisible(viewportRows)
-	}
+	centerOnHighlight := s.CenterScrolling || shouldCenterCursorOnListing(previousPath, listingLoc, centerRecalled, selectedName, indexFallback)
+	s.applyHighlightScroll(viewportRows, centerOnHighlight)
 	if len(s.History) == 0 {
 		cp := cleanPathString(listingLoc.String())
 		if cp != "" {
@@ -1306,8 +1346,7 @@ func (s *State) SelectVisibleEntryCentered(name string, viewportRows int) bool {
 	if !s.SelectVisibleEntry(name) {
 		return false
 	}
-	s.clampCursor()
-	s.EnsureCursorCentered(viewportRows)
+	s.applyHighlightScroll(viewportRows, true)
 	return true
 }
 
@@ -1510,17 +1549,15 @@ func (s *State) RefreshDiskUsageOrdering(viewportRows int, centerCursor bool) {
 	if ok {
 		selectedPath = filepath.Clean(entry.Path)
 	}
+	liveVR := s.effectiveFileListViewportRows(viewportRows)
+	wasCentered := s.cursorAppearsCentered(liveVR)
 	s.ApplySort()
 	s.rebuildFilter()
 	if selectedPath != "" {
 		s.selectVisibleEntryByPath(selectedPath)
 	}
-	s.clampCursor()
-	if centerCursor || s.CenterScrolling {
-		s.EnsureCursorCentered(viewportRows)
-	} else {
-		s.EnsureCursorVisible(viewportRows)
-	}
+	preserveCenter := centerCursor || s.CenterScrolling || wasCentered
+	s.applyHighlightScroll(viewportRows, preserveCenter)
 }
 
 // ApplySortFromDialog assigns panel SortState from the modal while preserving idle-disk-sort flags sensibly.

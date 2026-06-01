@@ -802,6 +802,50 @@ func TestReenterDirectoryPinsTailWhenCenteringImpossible(t *testing.T) {
 	}
 }
 
+func TestApplyListingScrollUsesFileListViewportRowsCallback(t *testing.T) {
+	const liveVR = 19
+	const staleVR = 5
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 20; i++ {
+		name := fmt.Sprintf("%02d_dir", i)
+		if err := os.Mkdir(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.FileListViewportRows = func() int { return liveVR }
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "sub" {
+			state.Cursor = i
+			break
+		}
+	}
+	if _, err := state.Enter(staleVR); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.Parent(staleVR); err != nil {
+		t.Fatal(err)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "sub" {
+		t.Fatalf("highlight = %q ok=%v, want sub", entry.Name, ok)
+	}
+	row := state.Cursor - state.ScrollOffset
+	mid := liveVR / 2
+	if row != mid && row != liveVR-1 {
+		t.Fatalf("viewport row = %d, want %d or %d; cursor=%d scroll=%d",
+			row, mid, liveVR-1, state.Cursor, state.ScrollOffset)
+	}
+}
+
 func TestParentCentersExitedDirectoryInListing(t *testing.T) {
 	const viewportRows = 5
 	root := t.TempDir()
@@ -1958,6 +2002,49 @@ func TestMoveWithoutCenterScrollingUsesMinimalScroll(t *testing.T) {
 	}
 	if state.ScrollOffset != 0 {
 		t.Fatalf("ScrollOffset = %d, want 0 (still visible without centering)", state.ScrollOffset)
+	}
+}
+
+func TestRefreshDiskUsageOrderingPreservesCenteredScrollWhenNotRequested(t *testing.T) {
+	const viewportRows = 5
+	entries := make([]localfs.Entry, 15)
+	sizes := map[string]int64{}
+	for i := range entries {
+		name := strconv.Itoa(i) + ".dat"
+		p := filepath.Join("/tmp", name)
+		entries[i] = localfs.Entry{Name: name, Path: p}
+		sizes[p] = int64(i)
+	}
+	state := State{
+		Path:               pathloc.MustParse("/tmp"),
+		Entries:            entries,
+		Sort:               SortState{Mode: SortName, DirectoriesFirst: false, DiskUsageIdleSizeSort: true},
+		IdleDiskTotalsSort: true,
+		Cursor:             7,
+	}
+	state.DiskSorter = func(abs string) (int64, bool) {
+		v, ok := sizes[filepath.Clean(abs)]
+		return v, ok
+	}
+	state.ApplySort()
+	state.applyHighlightScroll(viewportRows, true)
+	if !state.cursorAppearsCentered(viewportRows) {
+		t.Fatalf("precondition: scroll=%d cursor=%d not centered", state.ScrollOffset, state.Cursor)
+	}
+	// Reorder neighbors only so the highlighted entry keeps a middle index (regression: resort must not undo Parent-style centering).
+	sizes[filepath.Clean(entries[6].Path)] = 1000
+	sizes[filepath.Clean(entries[8].Path)] = 1
+	state.RefreshDiskUsageOrdering(viewportRows, false)
+	if !state.cursorAppearsCentered(viewportRows) {
+		t.Fatalf("after disk reorder: scroll=%d cursor=%d, want centered viewport", state.ScrollOffset, state.Cursor)
+	}
+	ent, ok := state.CurrentEntry()
+	if !ok || ent.Name != "7.dat" {
+		name := ""
+		if ok {
+			name = ent.Name
+		}
+		t.Fatalf("cursor entry = %q ok=%v want 7.dat", name, ok)
 	}
 }
 

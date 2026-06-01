@@ -18,12 +18,37 @@ const (
 
 // drawSelectionsStrip renders the per-panel list of selected paths outside the current directory.
 // The title is always "Selections"; stripFocused only affects title active vs inactive color.
-func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stripFocused, chromeBlocked bool, styles theme.Theme, userHomeDir string) {
+func drawSelectionsStrip(
+	screen tcell.Screen,
+	rect Rect,
+	state panel.State,
+	stripFocused, chromeBlocked bool,
+	styles theme.Theme,
+	userHomeDir string,
+	painter DiskUsagePainter,
+	diskUsageDescendIntoMountPoints bool,
+	diskUsageGoduIgnore func(string) bool,
+	showSelectionSizeOnBottom bool,
+) {
 	if rect.Height <= 0 || rect.Width < 8 {
 		return
 	}
 
-	drawAuxPanelChrome(screen, rect, panelSelectionsChromePadded, stripFocused, chromeBlocked, styles)
+	chrome := drawAuxPanelChrome(screen, rect, panelSelectionsChromePadded, "", stripFocused, chromeBlocked, styles)
+
+	if showSelectionSizeOnBottom {
+		if raw, ok := SelectionSizeLabel(
+			state,
+			state.Path.IsRemote(),
+			painter,
+			diskUsageDescendIntoMountPoints,
+			diskUsageGoduIgnore,
+			styles.SymbolWorking(),
+		); ok {
+			endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, stripFocused, chromeBlocked)
+			paintSelectionsStripBottomSize(screen, rect, raw, endStyle, chrome.Chrome.Frame)
+		}
+	}
 
 	visibleRows := SelectionsStripListRows(rect)
 	if visibleRows == 0 {
@@ -90,6 +115,37 @@ func drawSelectionsStrip(screen tcell.Screen, rect Rect, state panel.State, stri
 		}
 		primitive.StyledText(screen, contentStart, y, rowTextWidth, text, baseStyle, spans)
 	}
+}
+
+// paintSelectionsStripBottomSize paints the padded selection count/size on the bottom border,
+// right-aligned with a frame dash immediately before the corner (… label ─┘).
+func paintSelectionsStripBottomSize(screen tcell.Screen, rect Rect, rawLabel string, endStyle, borderStyle tcell.Style) {
+	padded := panelSelectionSizePadded(rawLabel)
+	w := utf8.RuneCountInString(padded)
+	if w == 0 {
+		return
+	}
+	y := rect.Y + rect.Height - 1
+	firstIn := rect.X + 1
+	innerRight := rect.X + rect.Width - 2
+	if innerRight < firstIn {
+		return
+	}
+	labelEndX := innerRight - 1
+	if labelEndX < firstIn {
+		return
+	}
+	avail := labelEndX - firstIn + 1
+	if w > avail {
+		padded = primitive.TruncateRight(padded, avail)
+		w = utf8.RuneCountInString(padded)
+		if w == 0 {
+			return
+		}
+	}
+	endStartX := labelEndX - w + 1
+	primitive.TextOverlay(screen, endStartX, y, w, padded, endStyle)
+	screen.SetContent(innerRight, y, '─', nil, borderStyle)
 }
 
 func selectionStripDisplayPath(absPath, userHomeDir string, width int) string {

@@ -1549,6 +1549,82 @@ func TestRenderOmitsSelectionsBottomHintWhenStripVisible(t *testing.T) {
 	}
 }
 
+func TestRenderSelectionSizeOnSelectionsStripBottom(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 24
+	screen.SetSize(width, height)
+
+	crossDir := "/var/other.txt"
+	left := panel.State{
+		Path:    pathloc.MustParse("/tmp"),
+		Entries: []localfs.Entry{{Name: "here.txt", Path: "/tmp/here.txt"}},
+		SelectedPaths: map[string]bool{
+			crossDir:        true,
+			"/tmp/here.txt": true,
+		},
+	}
+
+	model := Model{
+		Left:        left,
+		Right:       panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: LeftPanel,
+	}
+	styles := theme.Default()
+	Render(screen, model, styles)
+
+	layout := CalculateLayout(width, height, true, PanelWidthSplit{})
+	stripN := SelectionsStripLayoutItemCount(&model.Left, LeftPanel, model.ActivePanel, false)
+	if stripN == 0 {
+		t.Fatal("stripN = 0, want selections strip visible")
+	}
+	leftFile, leftStrip := SplitPanelColumn(layout.Left, stripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
+	if leftStrip.Height == 0 {
+		t.Fatal("leftStrip.Height = 0, want visible strip")
+	}
+
+	fileBottomY := leftFile.Y + leftFile.Height - 1
+	stripBottomY := leftStrip.Y + leftStrip.Height - 1
+	stripTopY := leftStrip.Y
+	fileBottom := tcelltest.TextAt(screen, leftFile.X, fileBottomY, leftFile.Width)
+	stripTop := tcelltest.TextAt(screen, leftStrip.X, stripTopY, leftStrip.Width)
+	stripBottom := tcelltest.TextAt(screen, leftStrip.X, stripBottomY, leftStrip.Width)
+	if strings.Contains(fileBottom, " items (") {
+		t.Fatalf("file panel bottom = %q, want no selection size on file panel when strip is visible", fileBottom)
+	}
+	if strings.Contains(stripTop, " items (") {
+		t.Fatalf("strip top = %q, want selection size only on bottom border", stripTop)
+	}
+	if !strings.Contains(stripBottom, " items (") {
+		t.Fatalf("strip bottom = %q, want selection size on selections strip bottom row", stripBottom)
+	}
+	lastIn := leftStrip.X + leftStrip.Width - 2
+	cornerX := leftStrip.X + leftStrip.Width - 1
+	dashR, _, _ := screen.Get(lastIn, stripBottomY)
+	cornerR, _, _ := screen.Get(cornerX, stripBottomY)
+	if dashR != "─" {
+		t.Fatalf("cell before corner = %q, want frame dash '─'", dashR)
+	}
+	if cornerR != "┘" {
+		t.Fatalf("corner = %q, want '┘'", cornerR)
+	}
+	wantStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, true, false)
+	found := false
+	for x := leftStrip.X + 1; x <= lastIn-1; x++ {
+		_, st, _ := screen.Get(x, stripBottomY)
+		if st == wantStyle {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("strip bottom row has no panel.indicator.selection_size style")
+	}
+}
+
 func TestRenderDrawsGitignoreBottomHint(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

@@ -81,6 +81,7 @@ type Theme struct {
 	PanelBottomIndicatorDotfilesHidden tcell.Style
 	PanelBottomIndicatorGitignore      tcell.Style
 	PanelBottomIndicatorStash          tcell.Style
+	PanelBottomIndicatorSelectionSize  tcell.Style
 	PanelBottomIndicatorOtherPanel     tcell.Style
 	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
 	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
@@ -278,6 +279,7 @@ const (
 	PanelBottomIndicatorKeyDotfilesHidden = "dotfiles_hidden"
 	PanelBottomIndicatorKeyGitignore      = "gitignore"
 	PanelBottomIndicatorKeyStash          = "stash"
+	PanelBottomIndicatorKeySelectionSize  = "selection_size"
 	PanelBottomIndicatorKeySync           = "sync"
 	PanelBottomIndicatorKeyQuickView      = "quick_view"
 	PanelBottomIndicatorKeyOtherPanel     = "other_panel"
@@ -326,6 +328,11 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 			return t.PanelActiveTitle
 		}
 		return t.PanelInactiveTitle
+	case PanelBottomIndicatorKeySelectionSize:
+		if t.PanelBottomIndicatorSelectionSize != (tcell.Style{}) {
+			return t.PanelBottomIndicatorSelectionSize
+		}
+		fallthrough
 	case PanelBottomIndicatorKeySync:
 		if t.PanelSyncIndicator != (tcell.Style{}) {
 			return t.PanelSyncIndicator
@@ -357,6 +364,7 @@ const (
 	SymbolKeyPathPicker               = "path_picker"
 	SymbolKeyGit                      = "git"
 	SymbolKeyStash                    = "stash"
+	SymbolKeyWorking                  = "working"
 	SymbolKeyHiddenDotfiles           = "hidden_dotfiles"
 	SymbolKeyFilelistSelectionSubtree = "filelist.selection_subtree"
 	SymbolKeyFilelistNew              = "filelist.new"
@@ -375,6 +383,16 @@ const (
 	SymbolKeyMenuJobDecision       = "menu.job.decision"
 	SymbolKeyMenuJobCompleted      = "menu.job.completed"
 )
+
+// SymbolWorking returns the in-progress glyph appended to selection-size indicators.
+func (t Theme) SymbolWorking() string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[SymbolKeyWorking]); s != "" {
+			return s
+		}
+	}
+	return "\uf017"
+}
 
 // SymbolHiddenDotfiles returns the dotfiles-hidden bottom-indicator glyph from [symbols] hidden_dotfiles.
 func (t Theme) SymbolHiddenDotfiles() string {
@@ -576,6 +594,7 @@ var requiredStyleKeys = []string{
 	"panel.indicator.dotfiles_hidden",
 	"panel.indicator.gitignore",
 	"panel.indicator.stash",
+	"panel.indicator.selection_size",
 	"panel.indicator.other_panel",
 	"panel.blocked.frame",
 	"panel.blocked.surface",
@@ -1022,6 +1041,7 @@ func parse(data []byte) (Theme, error) {
 		PanelBottomIndicatorDotfilesHidden:  styles["panel.indicator.dotfiles_hidden"],
 		PanelBottomIndicatorGitignore:       styles["panel.indicator.gitignore"],
 		PanelBottomIndicatorStash:           styles["panel.indicator.stash"],
+		PanelBottomIndicatorSelectionSize:   styles["panel.indicator.selection_size"],
 		PanelBottomIndicatorOtherPanel:      styles["panel.indicator.other_panel"],
 		PanelFileIconFG:                     panelFileIconFG,
 

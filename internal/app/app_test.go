@@ -5199,6 +5199,198 @@ func TestToggleSyncEnablesAndImmediatelyMirrorsHighlightedFolder(t *testing.T) {
 	}
 }
 
+// Regression: Parent must center the exited directory in the file list on first paint (same as rename recall).
+func TestParentNavigationCentersInAppViewport(t *testing.T) {
+	root := t.TempDir()
+	bar := filepath.Join(root, "bar")
+	asdf := filepath.Join(bar, "asdf")
+	if err := os.MkdirAll(asdf, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 20; i++ {
+		name := fmt.Sprintf("%02d_dir", i)
+		if err := os.Mkdir(filepath.Join(bar, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, bar)
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "asdf")
+	if _, err := app.activePanel().Enter(app.activeViewportRows()); err != nil {
+		t.Fatal(err)
+	}
+	app.dispatch(keymap.ActionNavParent)
+	app.render()
+	p := app.activePanel()
+	vr := app.activeViewportRows()
+	if vr < 1 {
+		t.Fatalf("viewportRows = %d", vr)
+	}
+	entry, ok := p.CurrentEntry()
+	if !ok || entry.Name != "asdf" {
+		t.Fatalf("highlight = %q ok=%v, want asdf", entry.Name, ok)
+	}
+	row := p.Cursor - p.ScrollOffset
+	mid := vr / 2
+	if row != mid && row != vr-1 {
+		t.Fatalf("after Parent: viewport row = %d, want %d (centered) or %d (tail); cursor=%d scroll=%d vr=%d",
+			row, mid, vr-1, p.Cursor, p.ScrollOffset, vr)
+	}
+	app.reconcileAfterEvent()
+	row = p.Cursor - p.ScrollOffset
+	if row != mid && row != vr-1 {
+		t.Fatalf("after second reconcile: viewport row = %d, want %d or %d; cursor=%d scroll=%d",
+			row, mid, vr-1, p.Cursor, p.ScrollOffset)
+	}
+}
+
+// Regression: Parent must re-resolve viewport rows after chdir when the selections strip layout changes.
+func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 20; i++ {
+		name := fmt.Sprintf("%02d_dir", i)
+		if err := os.Mkdir(filepath.Join(root, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	other := filepath.Join(root, "walnut.txt")
+	writeFile(t, other)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	left := app.panelByID(ui.LeftPanel)
+	if left.SelectedPaths == nil {
+		left.SelectedPaths = make(map[string]bool)
+	}
+	for i := 0; i < 4; i++ {
+		p := filepath.Join(root, fmt.Sprintf("peer%d.txt", i))
+		writeFile(t, p)
+		left.SelectedPaths[p] = true
+	}
+	left.SelectedPaths[other] = true
+
+	if ui.SelectionsStripLayoutItemCount(left, ui.LeftPanel, ui.LeftPanel, false) != 0 {
+		t.Fatal("strip should be hidden while cross-dir selections are in the current directory")
+	}
+	selectPanelEntryByName(t, left, "sub")
+	if _, err := left.Enter(app.activeViewportRows()); err != nil {
+		t.Fatal(err)
+	}
+	if ui.SelectionsStripLayoutItemCount(left, ui.LeftPanel, ui.LeftPanel, false) == 0 {
+		t.Fatal("strip should be visible after entering sub with cross-dir selection")
+	}
+
+	if left.FileListViewportRows == nil {
+		t.Fatal("FileListViewportRows callback not wired")
+	}
+	staleVR := app.panelViewportRows(ui.LeftPanel) // still in sub: includes selections strip
+	origViewport := left.FileListViewportRows
+	var scrollPath string
+	var scrollVR int
+	left.FileListViewportRows = func() int {
+		scrollPath = left.PathString()
+		scrollVR = origViewport()
+		return scrollVR
+	}
+	if err := left.Parent(staleVR); err != nil {
+		t.Fatal(err)
+	}
+	vr := app.activeViewportRows()
+	if staleVR >= vr {
+		t.Fatalf("staleVR = %d, want smaller than post-parent %d (strip must shrink file list)", staleVR, vr)
+	}
+	if ui.SelectionsStripLayoutItemCount(left, ui.LeftPanel, ui.LeftPanel, false) != 0 {
+		t.Fatal("strip should be hidden in parent after chdir")
+	}
+	if vr != ui.FileListViewportRows(
+		app.layoutForTerminalSize(80, 24).Left,
+		left,
+		ui.LeftPanel,
+		ui.LeftPanel,
+		false,
+		app.model.SelectionsPanelMaxRows,
+	) {
+		t.Fatalf("viewportRows = %d, want post-parent file list rows %d", vr,
+			ui.FileListViewportRows(app.layoutForTerminalSize(80, 24).Left, left, ui.LeftPanel, ui.LeftPanel, false, app.model.SelectionsPanelMaxRows))
+	}
+	entry, ok := left.CurrentEntry()
+	if !ok || entry.Name != "sub" {
+		t.Fatalf("highlight = %q ok=%v, want sub", entry.Name, ok)
+	}
+	if scrollPath != left.PathString() {
+		t.Fatalf("scrollPath = %q, want parent %q", scrollPath, left.PathString())
+	}
+	if scrollVR != vr {
+		t.Fatalf("scrollVR = %d, want live post-parent %d", scrollVR, vr)
+	}
+	// Regression: first list navigation must not re-scroll using the pre-Parent strip viewport.
+	beforeScroll := left.ScrollOffset
+	left.EnsureCursorInViewport(staleVR)
+	if left.ScrollOffset != beforeScroll {
+		t.Fatalf("stale viewport %d changed ScrollOffset %d -> %d; cursor=%d vr=%d",
+			staleVR, beforeScroll, left.ScrollOffset, left.Cursor, vr)
+	}
+}
+
+// Regression: disk-total resort after Parent must not undo centered scroll from ApplyListing.
+func TestParentStaysCenteredAfterDiskUsageResort(t *testing.T) {
+	root := t.TempDir()
+	bar := filepath.Join(root, "bar")
+	asdf := filepath.Join(bar, "asdf")
+	if err := os.MkdirAll(asdf, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 20; i++ {
+		name := fmt.Sprintf("%02d_dir", i)
+		if err := os.Mkdir(filepath.Join(bar, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeFile(t, filepath.Join(bar, "00_dir", "leaf.dat"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, bar)
+	left := app.panelByID(ui.LeftPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	left.DiskSorter = app.diskUsage.Size
+	app.setDiskUsageScanScope(bar, []string{bar})
+	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	if !left.ListingFullyDiskCached() {
+		t.Fatal("listing not fully disk-cached")
+	}
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, left, "asdf")
+	if _, err := left.Enter(app.activeViewportRows()); err != nil {
+		t.Fatal(err)
+	}
+	app.dispatch(keymap.ActionNavParent)
+	app.resortPanelsDiskUsageSorted()
+
+	vr := app.activeViewportRows()
+	p := app.activePanel()
+	row := p.Cursor - p.ScrollOffset
+	mid := vr / 2
+	if row != mid && row != vr-1 {
+		t.Fatalf("after Parent+disk resort: viewport row = %d, want %d or %d; cursor=%d scroll=%d",
+			row, mid, vr-1, p.Cursor, p.ScrollOffset)
+	}
+}
+
 // Regression: key handling calls render() before the Run loop's trailing reconcileAfterEvent(),
 // so latched sync must run inside render(); otherwise the follower updates one tick late and
 // the UI tracks the previous directory highlight.
