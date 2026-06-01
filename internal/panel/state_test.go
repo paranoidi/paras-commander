@@ -1869,6 +1869,30 @@ func TestRefreshDiskUsageOrderingKeepsCursor(t *testing.T) {
 	}
 }
 
+func TestSelectVisibleEntryCentered(t *testing.T) {
+	entries := make([]localfs.Entry, 20)
+	for i := range entries {
+		name := fmt.Sprintf("%02d.txt", i)
+		entries[i] = localfs.Entry{Name: name, Path: filepath.Join("/tmp", name)}
+	}
+	state := State{
+		Path:         pathloc.MustParse("/tmp"),
+		Entries:      entries,
+		Sort:         SortState{Mode: SortName, DirectoriesFirst: false},
+		ScrollOffset: 0,
+	}
+	state.ApplySort()
+	if !state.SelectVisibleEntryCentered("10.txt", 5) {
+		t.Fatal("SelectVisibleEntryCentered(10.txt) = false, want true")
+	}
+	if state.Cursor != 10 {
+		t.Fatalf("Cursor = %d, want 10", state.Cursor)
+	}
+	if state.ScrollOffset != 8 {
+		t.Fatalf("ScrollOffset = %d, want 8 (centered)", state.ScrollOffset)
+	}
+}
+
 func TestEnsureCursorCentered(t *testing.T) {
 	entries := make([]localfs.Entry, 20)
 	for i := range entries {

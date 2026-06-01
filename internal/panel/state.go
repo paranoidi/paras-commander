@@ -1300,6 +1300,17 @@ func (s *State) SelectVisibleEntry(name string) bool {
 	return false
 }
 
+// SelectVisibleEntryCentered selects by visible name and scrolls to center the row when possible.
+// Used after in-place operations (rename) so scroll matches explicit navigation recall, independent of CenterScrolling.
+func (s *State) SelectVisibleEntryCentered(name string, viewportRows int) bool {
+	if !s.SelectVisibleEntry(name) {
+		return false
+	}
+	s.clampCursor()
+	s.EnsureCursorCentered(viewportRows)
+	return true
+}
+
 func (s *State) selectVisibleEntryByPath(absPath string) {
 	if absPath == "" {
 		return

@@ -242,7 +242,7 @@ func (a *App) executeRename() {
 	}
 	a.closeFileDialog()
 	a.refreshBothPanels()
-	a.activePanel().SelectVisibleEntry(plan.NewName)
+	a.activePanel().SelectVisibleEntryCentered(plan.NewName, a.activeViewportRows())
 	a.setTransientMessage(fmt.Sprintf("Renamed to %s", plan.NewName), ui.MessageUrgencyInfo)
 }
 
