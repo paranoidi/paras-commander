@@ -175,6 +175,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			SurfaceStyle:        chrome.Surface,
 			ShowChildColumn:     showChildCol,
 			DiskUsage:           carouselDisk,
+			OtherPanelPath:      otherPanelPath,
 			JobMark: func(path string) (rune, string, bool) {
 				marked, st := EntryPathJobMarkStatus(path, jobMarks)
 				if !marked {
@@ -312,6 +313,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				JobGlyph:         jobMarkGlyph,
 				NewFile:          newFileMark,
 				SubtreeSelection: subtreeMark,
+				OpenInOtherPanel: entryOpenInOtherPanel(entry, otherPanelPath),
 			}
 			text = formatEntry(entry, listTextWidth, showIcons, rowSuffix, styles, painter, showMetaEffective, metaColW, metaText, listFmt, nameOnlyDisplay)
 			if showDiskUsage && painter != nil && diskDenom > 0 {

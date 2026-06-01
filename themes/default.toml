@@ -59,6 +59,7 @@ row.selected = { fg = "yellow", bold = true }
 row.symlink = { fg = "bright_cyan" }
 row.indicator.selection_subtree = { fg = "yellow" }
 row.indicator.new = { fg = "bright_green" }
+row.indicator.open = { fg = "bright_cyan" }
 indicator.sync = { fg = "green", bold = true }
 indicator.quick_view = { fg = "green", bold = true }
 indicator.selections = { fg = "white" }
@@ -204,6 +205,7 @@ completed = "\uf05d"
 [symbols.filelist]
 selection_subtree = "○"
 new = "\uea7f"
+open = "\U000F0770"
 
 [symbols.menu.progress]
 done = "─"

@@ -1,4 +1,4 @@
-// Package panellist implements shared file-list name-column suffix indicators (job, new, subtree).
+// Package panellist implements shared file-list name-column suffix indicators (job, new, subtree, open).
 package panellist
 
 import (
@@ -19,6 +19,7 @@ type RowSuffix struct {
 	JobGlyph         rune
 	NewFile          bool
 	SubtreeSelection bool
+	OpenInOtherPanel bool
 }
 
 // SuffixDecorationLen returns how many trailing runes are reserved for row suffix indicators.
@@ -34,12 +35,17 @@ func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th th
 	if subtree && width > n+2 {
 		n += 2
 	}
+	openOther := suffix.OpenInOtherPanel && entry.Type == localfs.EntryDirectory
+	if openOther && width > n+2 {
+		n += 2
+	}
 	return n
 }
 
 // EntryDisplayRunes builds the display rune slice for an entry name, including decorations and suffix glyphs.
 func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffix RowSuffix, th theme.Theme) []DisplayRune {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
+	openOther := suffix.OpenInOtherPanel && entry.Type == localfs.EntryDirectory
 	suffixLen := SuffixDecorationLen(width, suffix, entry, th)
 	innerW := width - suffixLen
 	if innerW < 1 {
@@ -96,6 +102,10 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 	}
 	if subtree && width > used+2 {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistSelectionSubtree(), NameIdx: -1})
+		used += 2
+	}
+	if openOther && width > used+2 {
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistOpen(), NameIdx: -1})
 	}
 	return out
 }
@@ -123,6 +133,9 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, jobStatus, cursorStyleKey string,
 			base = th.PanelBlockedRowSelected
 		}
 		return tcell.StyleDefault.Foreground(th.PanelRowSuffixIconForeground(cursorStyleKey, base)), true
+	case r == th.SymbolFilelistOpen() && suffix.OpenInOtherPanel:
+		base := th.PanelRowIndicatorOpen
+		return tcell.StyleDefault.Foreground(th.PanelRowSuffixIconForeground(cursorStyleKey, base)), true
 	default:
 		return tcell.StyleDefault, false
 	}
@@ -141,7 +154,8 @@ func ListingSuffixSpans(
 	nameBGAt func(displayIndex int) tcell.Style,
 ) []primitive.Span {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
-	if suffix.JobGlyph == 0 && !suffix.NewFile && !subtree {
+	openOther := suffix.OpenInOtherPanel && entry.Type == localfs.EntryDirectory
+	if suffix.JobGlyph == 0 && !suffix.NewFile && !subtree && !openOther {
 		return nil
 	}
 	display := EntryDisplayRunes(entry, nameWidth, showIcons, suffix, th)

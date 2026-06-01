@@ -37,6 +37,7 @@ type BodyParams struct {
 	PaintIcon           IconPaintFunc
 	DiskUsage           DiskUsage
 	ShowChildColumn     bool
+	OtherPanelPath      string
 }
 
 // DrawBody paints the column header row and three listing columns.
@@ -160,6 +161,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 				JobGlyph:         jobGlyph,
 				NewFile:          newFile,
 				SubtreeSelection: subtree,
+				OpenInOtherPanel: panellist.EntryOpenInOtherPanel(entry, p.OtherPanelPath),
 			}
 			var diskSrc DiskUsageSource
 			if p.DiskUsage.Active {

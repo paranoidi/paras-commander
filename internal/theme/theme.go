@@ -61,6 +61,8 @@ type Theme struct {
 	PanelRowIndicatorSelectionSubtree tcell.Style
 	// PanelRowIndicatorNew styles the file-list suffix for recently transferred entries.
 	PanelRowIndicatorNew tcell.Style
+	// PanelRowIndicatorOpen styles the file-list suffix when the other panel is in that directory.
+	PanelRowIndicatorOpen tcell.Style
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
 	PanelText                   tcell.Style
 	PanelCursorActive           tcell.Style
@@ -368,6 +370,7 @@ const (
 	SymbolKeyHiddenDotfiles           = "hidden_dotfiles"
 	SymbolKeyFilelistSelectionSubtree = "filelist.selection_subtree"
 	SymbolKeyFilelistNew              = "filelist.new"
+	SymbolKeyFilelistOpen             = "filelist.open"
 )
 
 // Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
@@ -432,6 +435,11 @@ func (t Theme) SymbolFilelistSelectionSubtree() rune {
 // SymbolFilelistNew returns the recently-transferred file suffix glyph.
 func (t Theme) SymbolFilelistNew() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistNew, '\uea7f')
+}
+
+// SymbolFilelistOpen returns the other-panel-open-directory suffix glyph.
+func (t Theme) SymbolFilelistOpen() rune {
+	return t.filelistSymbolRune(SymbolKeyFilelistOpen, '\U000F0770')
 }
 
 func (t Theme) filelistSymbolRune(key string, fallback rune) rune {
@@ -587,6 +595,7 @@ var requiredStyleKeys = []string{
 	"panel.row.selected",
 	"panel.row.indicator.selection_subtree",
 	"panel.row.indicator.new",
+	"panel.row.indicator.open",
 	"panel.text",
 	"panel.indicator.sync",
 	"panel.indicator.quick_view",
@@ -1028,6 +1037,7 @@ func parse(data []byte) (Theme, error) {
 		PanelRowSelected:                    styles["panel.row.selected"],
 		PanelRowIndicatorSelectionSubtree:   styles["panel.row.indicator.selection_subtree"],
 		PanelRowIndicatorNew:                styles["panel.row.indicator.new"],
+		PanelRowIndicatorOpen:               styles["panel.row.indicator.open"],
 		PanelText:                           styles["panel.text"],
 		PanelCursorActive:                   styles["panel.active.row.cursor"],
 		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],

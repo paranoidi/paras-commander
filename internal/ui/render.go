@@ -326,14 +326,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		showLeftPreview := !model.HideInactivePanel && model.FilePreviewDraw.Open && inactiveID == LeftPanel
 		showRightPreview := !model.HideInactivePanel && model.FilePreviewDraw.Open && inactiveID == RightPanel
 
-		otherPanelPath := ""
-		if model.HideInactivePanel {
-			if inactiveID == LeftPanel {
-				otherPanelPath = model.Left.PathString()
-			} else {
-				otherPanelPath = model.Right.PathString()
-			}
-		}
+		leftOtherPanelPath := model.Right.PathString()
+		rightOtherPanelPath := model.Left.PathString()
 
 		syncDriver := model.SyncDriverPanelID()
 		quickViewDriver := model.QuickViewDriverPanelID()
@@ -342,7 +336,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused,
 				model.QuickViewEnabled, model.Left.PathString(), model.UserHomeDir)
 		} else if layout.Left.Width > 0 {
-			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, otherPanelPath, leftSelectionSizeOnFileBottom)
+			drawPanel(screen, leftFile, model.Left, leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, leftOtherPanelPath, leftSelectionSizeOnFileBottom)
 		}
 		if layout.Left.Width > 0 && leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
@@ -353,7 +347,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
 				model.QuickViewEnabled, model.Right.PathString(), model.UserHomeDir)
 		} else if layout.Right.Width > 0 {
-			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, otherPanelPath, rightSelectionSizeOnFileBottom)
+			drawPanel(screen, rightFile, model.Right, rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, rightOtherPanelPath, rightSelectionSizeOnFileBottom)
 		}
 		if layout.Right.Width > 0 && rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip

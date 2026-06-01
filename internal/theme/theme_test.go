@@ -17,9 +17,16 @@ func TestDefaultFilelistSymbols(t *testing.T) {
 	if g := th.SymbolFilelistNew(); g != '\uea7f' {
 		t.Fatalf("SymbolFilelistNew = %U, want U+EA7F", g)
 	}
+	if g := th.SymbolFilelistOpen(); g != '\U000F0770' {
+		t.Fatalf("SymbolFilelistOpen = %U, want U+F0770", g)
+	}
 	newFG, _, _ := th.PanelRowIndicatorNew.Decompose()
 	if newFG != tcell.PaletteColor(10) {
 		t.Fatalf("panel.row.indicator.new fg = %v, want bright_green (index 10)", newFG)
+	}
+	openFG, _, _ := th.PanelRowIndicatorOpen.Decompose()
+	if openFG != tcell.PaletteColor(14) {
+		t.Fatalf("panel.row.indicator.open fg = %v, want bright_cyan (index 14)", openFG)
 	}
 	subFG, _, _ := th.PanelRowIndicatorSelectionSubtree.Decompose()
 	if subFG != tcell.PaletteColor(3) {

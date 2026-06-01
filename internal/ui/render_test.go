@@ -96,6 +96,47 @@ func TestFormatEntryJobQueueMark(t *testing.T) {
 	}
 }
 
+func TestFormatEntryOpenInOtherPanelMark(t *testing.T) {
+	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
+	got := formatEntry(entry, 50, false, panellist.RowSuffix{OpenInOtherPanel: true}, theme.Default(), nil, false, 0, "", panel.ListFormatMtime, false)
+	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
+	openGlyph := string(theme.Default().SymbolFilelistOpen())
+	nameColumn := strings.TrimRight(got[:nameWidth], " ")
+	if nameColumn != "/sub "+openGlyph {
+		t.Fatalf("name column = %q, want trailing open mark after dir slash prefix", nameColumn)
+	}
+}
+
+func TestRenderDrawsOpenInOtherPanelSuffix(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	openGlyph := theme.Default().SymbolFilelistOpen()
+	model := Model{
+		Left: panel.State{
+			Path: pathloc.MustParse("/tmp"),
+			Entries: []localfs.Entry{{
+				Name: "child", Path: "/tmp/child", Type: localfs.EntryDirectory,
+			}},
+			Cursor: 0,
+		},
+		Right:       panel.State{Path: pathloc.MustParse("/tmp/child")},
+		ActivePanel: LeftPanel,
+	}
+	Render(screen, model, theme.Default())
+
+	leftHalf := width / 2
+	row := tcelltest.TextAt(screen, 1, 3, leftHalf-2)
+	if !strings.Contains(row, string(openGlyph)) {
+		t.Fatalf("left listing row = %q, want open-in-other-panel glyph %U", strings.TrimRight(row, " "), openGlyph)
+	}
+}
+
 func TestFormatEntryJobQueueMarkBeforeSubtreeSelectionMark(t *testing.T) {
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
 	glyph := rune('\uf144')
