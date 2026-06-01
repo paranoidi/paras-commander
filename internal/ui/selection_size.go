@@ -111,11 +111,12 @@ func SelectionSizeLabel(
 	var total int64
 	pending := false
 	for _, p := range pruned {
-		n, needScan := selectionPathBytes(
-			p, byPath, remote, state, painter,
-			descendIntoMountPoints, goduIgnore,
+		_, b, needScan := pathImpact(
+			p, byPath, remote,
+			state.ListingDevice, state.ListingDeviceValid,
+			painter, descendIntoMountPoints, goduIgnore,
 		)
-		total += n
+		total += b
 		if needScan {
 			pending = true
 		}
@@ -130,41 +131,6 @@ func SelectionSizeLabel(
 		label += " " + workingSym
 	}
 	return label, true
-}
-
-func selectionPathBytes(
-	path string,
-	byPath map[string]localfs.Entry,
-	remote bool,
-	state panel.State,
-	painter DiskUsagePainter,
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
-) (bytes int64, needScan bool) {
-	entry, found := byPath[path]
-	if !found {
-		var err error
-		entry, err = localfs.EntryFromPath(path)
-		if err != nil {
-			return 0, false
-		}
-	}
-	if entry.Type != localfs.EntryDirectory {
-		return entry.Size, false
-	}
-	if remote {
-		return 0, false
-	}
-	if painter == nil {
-		return 0, true
-	}
-	if sz, ok := painter.ByteSize(path); ok {
-		return sz, false
-	}
-	if painter.DiskScanExcluded(path, descendIntoMountPoints, state.ListingDevice, state.ListingDeviceValid, goduIgnore) {
-		return 0, false
-	}
-	return 0, true
 }
 
 // SelectedPathsSorted returns selected paths in stable sorted order.

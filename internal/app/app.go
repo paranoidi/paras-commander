@@ -100,6 +100,8 @@ type App struct {
 	diskIdleNavPath [2]string
 	// selectionSizeScanFP is the last enqueued directory set fingerprint per panel for selection-size scans.
 	selectionSizeScanFP [2]string
+	// deleteDialogScanFP is the last enqueued directory set fingerprint for the delete confirmation dialog.
+	deleteDialogScanFP string
 	// metaActiveCmd holds the name of the active meta command per panel (empty = none).
 	metaActiveCmd [2]string
 	// metaNavPath holds the last panel path for which meta was run (used to detect navigation).
@@ -562,6 +564,7 @@ func (a *App) Run() error {
 				didRender = true
 			case diskUsageRedrawPayload:
 				a.resortPanelsDiskUsageSorted()
+				a.refreshDeleteDialogSummary()
 				a.render()
 				didRender = true
 			case volumeSpaceRefreshPayload:

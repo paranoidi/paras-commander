@@ -1,6 +1,7 @@
 package localfs
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,6 +84,18 @@ func TestListDirRejectsNonDirectory(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "not a directory") {
 		t.Fatalf("ListDir() error = %v, want not a directory", err)
+	}
+}
+
+func TestListDirMissingDirectoryErrorNoDuplicatePath(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "gone")
+	_, err := ListDir(missing, DefaultListOptions())
+	if err == nil {
+		t.Fatal("ListDir() error = nil, want error")
+	}
+	want := fmt.Sprintf(`stat directory %q: no such file or directory`, missing)
+	if err.Error() != want {
+		t.Fatalf("ListDir() error = %q, want %q", err.Error(), want)
 	}
 }
 

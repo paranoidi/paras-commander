@@ -22,8 +22,18 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		a.selectionSizeScanFP[panelID] = ""
 		return
 	}
-	need := selectedDirectoriesNeedingScan(
-		p,
+	paths := make([]string, 0, p.SelectedPathCount())
+	for path, on := range p.SelectedPaths {
+		if on {
+			paths = append(paths, path)
+		}
+	}
+	byPath := entriesByPath(p)
+	need := directoriesNeedingScan(
+		panel.PruneNestedPaths(paths),
+		byPath,
+		p.ListingDevice,
+		p.ListingDeviceValid,
 		a.diskUsage,
 		a.config.DiskUsageDescendIntoMountPoints,
 		a.diskUsageIgnore,
@@ -45,8 +55,11 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 	)
 }
 
-func selectedDirectoriesNeedingScan(
-	p *panel.State,
+func directoriesNeedingScan(
+	pruned []string,
+	byPath map[string]localfs.Entry,
+	listingDev uint64,
+	listingDevValid bool,
 	du interface {
 		ByteSize(absPath string) (int64, bool)
 		DiskScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore func(string) bool) bool
@@ -54,19 +67,8 @@ func selectedDirectoriesNeedingScan(
 	descendIntoMountPoints bool,
 	goduIgnore func(string) bool,
 ) []string {
-	if p == nil || du == nil || len(p.SelectedPaths) == 0 {
+	if du == nil || len(pruned) == 0 {
 		return nil
-	}
-	paths := make([]string, 0, len(p.SelectedPaths))
-	for path, on := range p.SelectedPaths {
-		if on {
-			paths = append(paths, path)
-		}
-	}
-	pruned := panel.PruneNestedPaths(paths)
-	byPath := make(map[string]localfs.Entry, len(p.Entries))
-	for _, e := range p.Entries {
-		byPath[e.Path] = e
 	}
 	var need []string
 	for _, path := range pruned {
@@ -83,7 +85,7 @@ func selectedDirectoriesNeedingScan(
 		if _, ok := du.ByteSize(path); ok {
 			continue
 		}
-		if du.DiskScanExcluded(path, descendIntoMountPoints, p.ListingDevice, p.ListingDeviceValid, goduIgnore) {
+		if du.DiskScanExcluded(path, descendIntoMountPoints, listingDev, listingDevValid, goduIgnore) {
 			continue
 		}
 		need = append(need, path)

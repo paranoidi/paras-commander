@@ -21,7 +21,8 @@ type scanJob struct {
 type Engine struct {
 	mu sync.RWMutex
 
-	cache map[string]int64
+	cache      map[string]int64
+	fileCounts map[string]int64
 	// activeWalkRoots maps an in-flight walk root to the panel that started that subtree scan.
 	activeWalkRoots map[string]int
 
@@ -67,6 +68,7 @@ func NewWithWalkConcurrency(walkConcurrency int) *Engine {
 	}
 	e := &Engine{
 		cache:           make(map[string]int64),
+		fileCounts:      make(map[string]int64),
 		activeWalkRoots: make(map[string]int),
 		updates:         make(chan struct{}, 1),
 		events:          make(chan Event, 256),
@@ -245,6 +247,17 @@ func (e *Engine) ByteSize(absPath string) (int64, bool) {
 	return e.Size(absPath)
 }
 
+// FileCount returns cached recursive file count for absPath when present.
+func (e *Engine) FileCount(absPath string) (int64, bool) {
+	if e == nil {
+		return 0, false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	n, ok := e.fileCounts[filepath.Clean(absPath)]
+	return n, ok
+}
+
 // DiskScanExcluded implements ui.DiskUsagePainter.
 func (e *Engine) DiskScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore func(string) bool) bool {
 	if e == nil {
@@ -266,6 +279,9 @@ func (e *Engine) ClearCache() {
 	e.mu.Lock()
 	for k := range e.cache {
 		delete(e.cache, k)
+	}
+	for k := range e.fileCounts {
+		delete(e.fileCounts, k)
 	}
 	e.mu.Unlock()
 	e.poke()
@@ -325,8 +341,10 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 	for _, raw := range childAbs {
 		p := filepath.Clean(raw)
 		if _, cached := e.cache[p]; cached {
-			passKnown = append(passKnown, stage{path: p})
-			continue
+			if _, fc := e.fileCounts[p]; fc {
+				passKnown = append(passKnown, stage{path: p})
+				continue
+			}
 		}
 		passUnknown = append(passUnknown, stage{path: p})
 	}
@@ -367,6 +385,7 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 				}
 				e.mu.Lock()
 				e.cache[jobPath] = fi.Size()
+				e.fileCounts[jobPath] = 1
 				delete(e.activeWalkRoots, jobPath)
 				e.mu.Unlock()
 				e.finishCurJobRoot(jobPath)
@@ -388,6 +407,8 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 
 			merged := map[string]int64{}
 			FlattenSizes(tree, merged)
+			mergedFiles := map[string]int64{}
+			FlattenFileCounts(tree, mergedFiles)
 
 			keys := make([]string, 0, len(merged))
 			for k := range merged {
@@ -406,6 +427,9 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 				e.mu.Lock()
 				for _, k := range keys[i:end] {
 					e.cache[k] = merged[k]
+					if fc, ok := mergedFiles[k]; ok {
+						e.fileCounts[k] = fc
+					}
 				}
 				e.mu.Unlock()
 			}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"strings"
 	"time"
 
@@ -149,6 +150,12 @@ func (a *App) setErrorMessage(prefix string, err error) {
 	if err == nil {
 		return
 	}
+	if prefix == "Enter failed" {
+		if msg, ok := enterFailedMessage(err); ok {
+			a.setTransientMessage(msg, ui.MessageUrgencyError)
+			return
+		}
+	}
 	if short := transientErrorText(err); short != err.Error() {
 		a.setTransientMessage(short, ui.MessageUrgencyError)
 		return
@@ -158,6 +165,41 @@ func (a *App) setErrorMessage(prefix string, err error) {
 		return
 	}
 	a.setTransientMessage(fmt.Sprintf("%s: %v", prefix, err), ui.MessageUrgencyError)
+}
+
+// enterFailedMessage formats missing-directory enter failures as:
+// Enter failed: no such directory "/path"
+func enterFailedMessage(err error) (string, bool) {
+	if err == nil || !errors.Is(err, fs.ErrNotExist) {
+		return "", false
+	}
+	path := quotedPathFromError(err)
+	if path == "" {
+		return "", false
+	}
+	return fmt.Sprintf(`Enter failed: no such directory %q`, path), true
+}
+
+func quotedPathFromError(err error) string {
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) && pathErr.Path != "" {
+		return pathErr.Path
+	}
+	msg := err.Error()
+	for _, prefix := range []string{`stat directory "`, `read directory "`, `resolve directory "`} {
+		if rest, ok := strings.CutPrefix(msg, prefix); ok {
+			if path, _, ok := strings.Cut(rest, `"`); ok && path != "" {
+				return path
+			}
+		}
+		if i := strings.Index(msg, prefix); i >= 0 {
+			rest := msg[i+len(prefix):]
+			if path, _, ok := strings.Cut(rest, `"`); ok && path != "" {
+				return path
+			}
+		}
+	}
+	return ""
 }
 
 // shouldOmitErrorPrefix reports whether err.Error() already identifies the operation

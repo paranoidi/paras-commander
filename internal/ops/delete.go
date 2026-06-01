@@ -2,7 +2,6 @@ package ops
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -14,29 +13,6 @@ type DeletePlan struct {
 	IncludeDirs  bool
 	DeleteMode   string // "permanent"
 	ConfirmFirst bool   // whether to confirm before executing
-}
-
-// DeleteConfirmContent returns the delete confirmation dialog summary line and
-// optional recursive-directory warning. Basenames and entry types come from source.Entries.
-func DeleteConfirmContent(source Source) (summary, warning string) {
-	n := len(source.Entries)
-	if n == 1 {
-		kind := "file"
-		if source.Entries[0].Type == localfs.EntryDirectory {
-			kind = "directory"
-		}
-		return fmt.Sprintf("Delete %s?", kind), ""
-	}
-	summary = fmt.Sprintf("Delete %d selections?", n)
-	dirCount := CountDirectories(source.Entries)
-	if dirCount > 0 {
-		dirNoun := "directories"
-		if dirCount == 1 {
-			dirNoun = "directory"
-		}
-		warning = fmt.Sprintf("Warning: %d %s will be removed recursively!", dirCount, dirNoun)
-	}
-	return summary, warning
 }
 
 // PlanDelete validates a delete operation.

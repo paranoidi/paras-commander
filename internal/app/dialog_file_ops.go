@@ -76,7 +76,6 @@ func (a *App) openDeleteDialog(p *panel.State) {
 		a.setErrorMessage("Delete", err)
 		return
 	}
-	summary, warning := ops.DeleteConfirmContent(source)
 	panelPath := p.PathString()
 	homeDir := a.model.UserHomeDir
 	entries := make([]ui.DeleteListEntry, len(source.Entries))
@@ -87,14 +86,15 @@ func (a *App) openDeleteDialog(p *panel.State) {
 			Type: e.Type,
 		}
 	}
+	a.deleteDialogScanFP = ""
 	a.model.FileDialog = ui.FileDialogState{
 		Open:          true,
 		DialogType:    ui.FileDialogDelete,
-		DeleteSummary: summary,
-		DeleteWarning: warning,
+		DeleteSummary: a.deleteDialogSummary(p, source),
 		DeleteEntries: entries,
 		FocusedField:  1, // No (safe default); Yes stays index 0.
 	}
+	a.reconcileDeleteDialogScans()
 }
 
 func (a *App) openChmodDialog(p *panel.State) {

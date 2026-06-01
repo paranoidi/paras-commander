@@ -13,6 +13,7 @@ import (
 type panicDiskScanPainter struct{}
 
 func (panicDiskScanPainter) ByteSize(string) (int64, bool)    { return 0, false }
+func (panicDiskScanPainter) FileCount(string) (int64, bool)   { return 0, false }
 func (panicDiskScanPainter) PendingForPanel(string, int) bool { return false }
 func (panicDiskScanPainter) DiskScanBusy() bool               { return false }
 func (panicDiskScanPainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {

@@ -43,13 +43,21 @@ func NestedErrorText(err error) string {
 	return nestedErrorText(err)
 }
 
+// PathErrorReason returns pathErr.Err when err wraps *os.PathError.
+func PathErrorReason(err error) error {
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) && pathErr.Err != nil {
+		return pathErr.Err
+	}
+	return err
+}
+
 func nestedErrorText(err error) string {
 	if err == nil {
 		return ""
 	}
-	var pathErr *os.PathError
-	if errors.As(err, &pathErr) && pathErr.Err != nil {
-		return pathErr.Err.Error()
+	if reason := PathErrorReason(err); reason != err {
+		return reason.Error()
 	}
 	if u := errors.Unwrap(err); u != nil {
 		if tail := nestedErrorText(u); tail != "" {

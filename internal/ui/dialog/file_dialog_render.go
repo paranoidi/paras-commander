@@ -133,7 +133,7 @@ func fileDialogTitle(dialogType FileDialogType) string {
 	case FileDialogMkdir:
 		return "Create directory"
 	case FileDialogDelete:
-		return "Delete"
+		return "Delete ?"
 	case FileDialogChmod:
 		return "Chmod"
 	case FileDialogChown:

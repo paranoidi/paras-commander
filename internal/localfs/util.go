@@ -2,6 +2,7 @@ package localfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -9,6 +10,16 @@ import (
 	"path/filepath"
 	"time"
 )
+
+// pathErrorReason returns pathErr.Err when err is *os.PathError so wrappers that
+// already include the path (via %q) do not repeat it in the message chain.
+func pathErrorReason(err error) error {
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) && pathErr.Err != nil {
+		return pathErr.Err
+	}
+	return err
+}
 
 type countingWriter struct {
 	w  io.Writer

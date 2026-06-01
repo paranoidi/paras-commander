@@ -1,6 +1,8 @@
 package panel
 
 import (
+	"errors"
+
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -92,6 +94,93 @@ func (s *State) storeCarouselChildCache(snap ListingSnapshot, ok bool, cursorDir
 		return
 	}
 	s.invalidateCarouselChildCache()
+}
+
+// SnapshotDirectory builds a sorted listing for dir using s for list/sort/backend settings and
+// recallSources for HistoryCursorByPath (same highlight rules as Enter / carousel child pane).
+func (s *State) SnapshotDirectory(dir string, viewportRows int, recallSources ...*State) (ListingSnapshot, error) {
+	canonical := cleanPathString(dir)
+	if canonical == "" {
+		return ListingSnapshot{}, errors.New("empty directory path")
+	}
+	loc, err := pathloc.Parse(canonical)
+	if err != nil {
+		return ListingSnapshot{}, err
+	}
+	name, idx, recalled := BestRecalledCursor(canonical, recallSources...)
+	if name == "" && idx == noIndexCursorFallback {
+		if n, ok := selectionBasenameUnderDirectory(s, canonical); ok {
+			name = n
+			recalled = true
+		} else {
+			for _, st := range recallSources {
+				if st == nil {
+					continue
+				}
+				if n, ok := selectionBasenameUnderDirectory(st, canonical); ok {
+					name = n
+					recalled = true
+					break
+				}
+			}
+		}
+	}
+	return s.buildListingSnapshot(loc, name, idx, viewportRows, recalled)
+}
+
+func selectionBasenameUnderDirectory(st *State, dir string) (string, bool) {
+	if st == nil || len(st.SelectedPaths) == 0 {
+		return "", false
+	}
+	dir = cleanPathString(dir)
+	if dir == "" {
+		return "", false
+	}
+	for p := range st.SelectedPaths {
+		cp := cleanPathString(p)
+		if cp == "" || cp == dir {
+			continue
+		}
+		if !isStrictPathDescendant(dir, cp) {
+			continue
+		}
+		loc, err := pathloc.Parse(cp)
+		if err != nil {
+			continue
+		}
+		return loc.Base(), true
+	}
+	return "", false
+}
+
+// ListingAtPath reports whether st is a loaded listing for canonical dir.
+func (s *State) ListingAtPath(dir string) bool {
+	if s == nil || s.ListingPending {
+		return false
+	}
+	return cleanPathString(s.Path.String()) == cleanPathString(dir) && s.VisibleEntryCount() > 0
+}
+
+// CloneListingFrom copies listing rows, cursor, scroll, and volume/git snapshot fields from src.
+func (dst *State) CloneListingFrom(src *State) {
+	if dst == nil || src == nil {
+		return
+	}
+	dst.Path = src.Path
+	dst.Entries = append([]localfs.Entry(nil), src.Entries...)
+	dst.Cursor = src.Cursor
+	dst.ScrollOffset = src.ScrollOffset
+	dst.VolumeSpaceOK = src.VolumeSpaceOK
+	dst.VolumeAvailBytes = src.VolumeAvailBytes
+	dst.VolumeTotalBytes = src.VolumeTotalBytes
+	dst.ListingDevice = src.ListingDevice
+	dst.ListingDeviceValid = src.ListingDeviceValid
+	dst.GitignoreActive = src.GitignoreActive
+	dst.DotfilesHiddenActive = src.DotfilesHiddenActive
+	dst.GitColumnActive = src.GitColumnActive
+	dst.GitPending = src.GitPending
+	dst.GitByPath = src.GitByPath
+	dst.ListingPending = false
 }
 
 func (s *State) buildListingSnapshot(loc pathloc.Path, selectedName string, indexFallback int, viewportRows int, centerRecalled bool) (ListingSnapshot, error) {

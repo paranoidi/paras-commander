@@ -2405,3 +2405,33 @@ func TestNavigateFromRootPreservesPriorDirs(t *testing.T) {
 	}
 	t.Fatalf("history lost %q after / -> /var: %v", start, state.History)
 }
+
+func TestBestRecalledCursorPrefersNonemptyEntryName(t *testing.T) {
+	dir := "/tmp/alpha"
+	driver := &State{
+		HistoryCursorByPath: map[string]historyCursorSnapshot{
+			dir: {EntryName: "", Index: 0},
+		},
+	}
+	follower := &State{
+		HistoryCursorByPath: map[string]historyCursorSnapshot{
+			dir: {EntryName: "b.txt", Index: 2},
+		},
+	}
+	name, idx, ok := BestRecalledCursor(dir, driver, follower)
+	if !ok || name != "b.txt" || idx != 2 {
+		t.Fatalf("BestRecalledCursor = (%q, %d, %v), want (b.txt, 2, true)", name, idx, ok)
+	}
+}
+
+func TestMergeHistoryCursorByPathKeepsNonemptySecondaryName(t *testing.T) {
+	dir := "/tmp/alpha"
+	merged := MergeHistoryCursorByPath(
+		map[string]historyCursorSnapshot{dir: {EntryName: "b.txt", Index: 2}},
+		map[string]historyCursorSnapshot{dir: {EntryName: "", Index: 0}},
+	)
+	snap, ok := merged[dir]
+	if !ok || snap.EntryName != "b.txt" || snap.Index != 2 {
+		t.Fatalf("merged[%q] = %+v ok=%v, want b.txt index 2", dir, snap, ok)
+	}
+}

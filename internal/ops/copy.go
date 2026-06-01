@@ -186,7 +186,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 					return doneFiles, doneBytes, fmt.Errorf("create directory %q: %w", dstStr, err)
 				}
 			} else if err != nil {
-				return doneFiles, doneBytes, fmt.Errorf("stat directory %q: %w", dstStr, err)
+				return doneFiles, doneBytes, fmt.Errorf("stat directory %q: %w", dstStr, PathErrorReason(err))
 			}
 			doneFiles++
 			emitMetaProgress(srcStr, dstStr, doneFiles, doneBytes)

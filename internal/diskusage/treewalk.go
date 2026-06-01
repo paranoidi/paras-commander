@@ -181,6 +181,22 @@ func notifyProgress(progress chan<- int, numSubfolders *int) {
 	progress <- n
 }
 
+// CountFilesInSubtree returns the number of non-directory nodes under root.
+// An empty directory yields 0.
+func CountFilesInSubtree(root *File) int64 {
+	if root == nil {
+		return 0
+	}
+	if !root.IsDir {
+		return 1
+	}
+	var n int64
+	for _, ch := range root.Files {
+		n += CountFilesInSubtree(ch)
+	}
+	return n
+}
+
 // FlattenSizes records every node's Size keyed by filepath.Clean of Path().
 // Call after the root subtree has UpdateSize applied on the subtree root chain.
 func FlattenSizes(root *File, dest map[string]int64) {
@@ -191,5 +207,18 @@ func FlattenSizes(root *File, dest map[string]int64) {
 
 	for _, ch := range root.Files {
 		FlattenSizes(ch, dest)
+	}
+}
+
+// FlattenFileCounts records every node's subtree file count keyed by filepath.Clean of Path().
+// Call after the root subtree has UpdateSize applied on the subtree root chain.
+func FlattenFileCounts(root *File, dest map[string]int64) {
+	if root == nil || dest == nil {
+		return
+	}
+	dest[filepath.Clean(root.Path())] = CountFilesInSubtree(root)
+
+	for _, ch := range root.Files {
+		FlattenFileCounts(ch, dest)
 	}
 }

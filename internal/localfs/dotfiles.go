@@ -10,11 +10,11 @@ import (
 func DirHasDotfileNames(path string) (bool, error) {
 	cleanPath, err := filepath.Abs(path)
 	if err != nil {
-		return false, fmt.Errorf("resolve directory %q: %w", path, err)
+		return false, fmt.Errorf("resolve directory %q: %w", path, pathErrorReason(err))
 	}
 	dirEntries, err := os.ReadDir(cleanPath)
 	if err != nil {
-		return false, fmt.Errorf("read directory %q: %w", cleanPath, err)
+		return false, fmt.Errorf("read directory %q: %w", cleanPath, pathErrorReason(err))
 	}
 	for _, dirEntry := range dirEntries {
 		name := dirEntry.Name()

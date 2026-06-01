@@ -623,6 +623,74 @@ func (s *State) recalledCursorFor(dir string) (selectedName string, indexFallbac
 	return snap.EntryName, snap.Index, true
 }
 
+// RecalledCursorFor returns the saved highlight for dir from this panel's visit history.
+func (s State) RecalledCursorFor(dir string) (entryName string, index int, ok bool) {
+	return s.recalledCursorFor(dir)
+}
+
+// CleanPathString canonicalizes a path string for history and recall map keys (pathloc form).
+func CleanPathString(p string) string {
+	return cleanPathString(p)
+}
+
+// BestRecalledCursor returns the best saved highlight for dir across panels. A non-empty
+// entry name wins over index-only snapshots (e.g. cursor left on ".." when exiting once).
+func BestRecalledCursor(dir string, states ...*State) (entryName string, index int, ok bool) {
+	dir = cleanPathString(dir)
+	if dir == "" {
+		return "", noIndexCursorFallback, false
+	}
+	var indexOnlyIdx int
+	var indexOnly bool
+	for _, st := range states {
+		if st == nil {
+			continue
+		}
+		n, i, found := st.recalledCursorFor(dir)
+		if !found {
+			continue
+		}
+		if n != "" {
+			return n, i, true
+		}
+		if !indexOnly {
+			indexOnlyIdx = i
+			indexOnly = true
+		}
+	}
+	if indexOnly {
+		return "", indexOnlyIdx, true
+	}
+	return "", noIndexCursorFallback, false
+}
+
+// MergeHistoryCursorByPath merges cursor-recall maps. Entries in primary override secondary
+// for the same directory key unless primary has an empty name and secondary does not.
+func MergeHistoryCursorByPath(secondary, primary map[string]historyCursorSnapshot) map[string]historyCursorSnapshot {
+	if len(secondary) == 0 && len(primary) == 0 {
+		return nil
+	}
+	out := make(map[string]historyCursorSnapshot, len(secondary)+len(primary))
+	for k, v := range secondary {
+		out[k] = v
+	}
+	for k, v := range primary {
+		if existing, exists := out[k]; exists && existing.EntryName != "" && v.EntryName == "" {
+			continue
+		}
+		out[k] = v
+	}
+	return out
+}
+
+// NoIndexCursorFallback is the indexFallback value for load that means "use recall or row 0".
+const NoIndexCursorFallback = noIndexCursorFallback
+
+// LoadWithViewport loads path and restores selectedName, indexFallback, or HistoryCursorByPath recall.
+func (s *State) LoadWithViewport(path string, selectedName string, viewportRows int, indexFallback int) error {
+	return s.loadPathString(path, selectedName, viewportRows, indexFallback, remoteLoadOpts{})
+}
+
 func (s *State) resolveLoadCursor(loc pathloc.Path, selectedName string, indexFallback int) (string, int, bool) {
 	if selectedName != "" || indexFallback != noIndexCursorFallback {
 		return selectedName, indexFallback, false

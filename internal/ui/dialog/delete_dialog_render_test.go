@@ -9,7 +9,7 @@ import (
 
 func TestDeleteDialogListViewportRowsNoCap(t *testing.T) {
 	state := FileDialogState{
-		DeleteSummary: "Delete 2 selections?",
+		DeleteSummary: "2 files (300 B)",
 		DeleteEntries: []DeleteListEntry{
 			{Name: "a.txt", Type: localfs.EntryFile},
 			{Name: "b.txt", Type: localfs.EntryFile},
@@ -27,7 +27,7 @@ func TestDeleteDialogListViewportRowsCapsAt80Percent(t *testing.T) {
 		entries[i] = DeleteListEntry{Name: "file-" + strings.Repeat("x", 4) + ".txt", Type: localfs.EntryFile}
 	}
 	state := FileDialogState{
-		DeleteSummary: "Delete 30 selections?",
+		DeleteSummary: "30 files (1.2 GiB)",
 		DeleteEntries: entries,
 	}
 	const layoutH = 20
@@ -52,8 +52,8 @@ func TestDeleteDialogListViewportRowsWithWarning(t *testing.T) {
 		entries[i] = DeleteListEntry{Name: "dir", Type: localfs.EntryDirectory}
 	}
 	state := FileDialogState{
-		DeleteSummary: "Delete 20 selections?",
-		DeleteWarning: "Warning: 20 directories will be removed recursively!",
+		DeleteSummary: "842 files (1.2 GiB)",
+		DeleteWarning: "legacy warning line still reserves a row",
 		DeleteEntries: entries,
 	}
 	const layoutH = 20

@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -183,7 +184,11 @@ func (a *App) tryDispatchFilePreviewFocus(actionID string) bool {
 		a.previewScrollTo(max(0, lc-ch2))
 		return true
 	case keymap.ActionPanelSwitch:
-		a.model.ActiveSubFocus = ui.SubFocusFileList
+		if a.model.QuickViewEnabled {
+			a.switchPanel()
+		} else {
+			a.model.ActiveSubFocus = ui.SubFocusFileList
+		}
 		return true
 	case keymap.ActionNavOpen:
 		return true
@@ -233,6 +238,7 @@ func (a *App) handleQuickViewToggle() {
 		a.clearQuickViewDebounce()
 		a.quickViewLastFingerprint = ""
 		a.closeFilePreview()
+		a.clearQuickViewDirOverlay()
 		a.setTransientMessage("Quick view off", ui.MessageUrgencyInfo)
 		return
 	}
@@ -326,29 +332,153 @@ func (a *App) quickViewWantFile() (path string, workDir string, mode quickViewWa
 	return path, workDir, quickViewWantFile
 }
 
-// quickViewFollowDirectory loads the highlighted directory into the inactive panel (same
-// target-path rules and Load semantics as latched panel sync).
+func (a *App) clearQuickViewDirOverlay() {
+	a.model.QuickViewDirOverlay = panel.State{}
+	a.model.QuickViewDirOverlayActive = false
+	a.model.QuickViewDirOverlayPanelID = -1
+}
+
+// quickViewTabCommitTarget returns the directory overlay path to apply when Tab commits quick view.
+func (a *App) quickViewTabCommitTarget() (path string, ok bool) {
+	if !a.model.QuickViewDirOverlayActive {
+		return "", false
+	}
+	path = panel.CleanPathString(a.model.QuickViewDirOverlay.PathString())
+	if path == "" {
+		return "", false
+	}
+	return path, true
+}
+
+// populateQuickViewDirOverlay fills the inactive-column directory overlay. When driver or
+// follower already lists the target directory, the live cursor is mirrored. Otherwise the
+// listing is built with the same snapshot path as carousel child preview (history recall).
+func (a *App) populateQuickViewDirOverlay(ov *panel.State, driver, follower *panel.State, dir string, panelID int) error {
+	canonical := panel.CleanPathString(dir)
+	if canonical == "" {
+		return errors.New("empty directory path")
+	}
+	a.initQuickViewDirOverlayFromFollower(ov, driver, follower, panelID)
+	if follower != nil && follower.ListingAtPath(canonical) {
+		ov.CloneListingFrom(follower)
+		return nil
+	}
+	if driver != nil && driver.ListingAtPath(canonical) {
+		ov.CloneListingFrom(driver)
+		return nil
+	}
+	vr := a.panelViewportRows(panelID)
+	snap, err := driver.SnapshotDirectory(canonical, vr, driver, follower)
+	if err != nil {
+		return err
+	}
+	if err := ov.Load(canonical); err != nil {
+		return err
+	}
+	ov.Path = snap.Path
+	ov.Entries = snap.Entries
+	ov.Cursor = snap.Cursor
+	ov.ScrollOffset = snap.Scroll
+	ov.EnsureCursorInViewport(vr)
+	return nil
+}
+
+// loadPanelPathRecallingCursor loads dir on target (Tab commit / panel navigation).
+func (a *App) loadPanelPathRecallingCursor(target, driver, follower *panel.State, dir string, panelID int) error {
+	canonical := panel.CleanPathString(dir)
+	if canonical == "" {
+		return errors.New("empty directory path")
+	}
+	if target.ListingAtPath(canonical) {
+		return nil
+	}
+	vr := a.panelViewportRows(panelID)
+	snap, err := driver.SnapshotDirectory(canonical, vr, driver, follower)
+	if err != nil {
+		return err
+	}
+	if err := target.Load(canonical); err != nil {
+		return err
+	}
+	target.Path = snap.Path
+	target.Entries = snap.Entries
+	target.Cursor = snap.Cursor
+	target.ScrollOffset = snap.Scroll
+	target.EnsureCursorInViewport(vr)
+	return nil
+}
+
+// switchPanelFromQuickView disables quick view, swaps to the inactive panel, and loads the
+// previewed directory into that panel when a directory overlay was showing.
+func (a *App) switchPanelFromQuickView() {
+	commitPath, commitDir := a.quickViewTabCommitTarget()
+	driver := a.activePanel()
+
+	a.model.QuickViewEnabled = false
+	a.clearQuickViewDebounce()
+	a.closeFilePreview()
+	a.clearQuickViewDirOverlay()
+	a.quickViewLastFingerprint = ""
+
+	a.switchPanelSwap()
+
+	if !commitDir {
+		return
+	}
+	if a.pathVolumeContendsWithActiveJob(commitPath) {
+		return
+	}
+	follower := a.panelByID(a.inactivePanelID())
+	_ = a.loadPanelPathRecallingCursor(a.activePanel(), driver, follower, commitPath, a.model.ActivePanel)
+}
+
+// initQuickViewDirOverlayFromFollower prepares QuickViewDirOverlay for a directory preview load.
+// The real inactive panel path, cursor, and selection are not modified.
+func (a *App) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, follower *panel.State, followerID int) {
+	*ov = panel.State{
+		Sort:                       driver.Sort,
+		Filter:                     driver.Filter,
+		ShowHidden:                 driver.ShowHidden,
+		ListFormat:                 driver.ListFormat,
+		CenterScrolling:            driver.CenterScrolling,
+		Gitignore:                  follower.Gitignore,
+		DiskSorter:                 follower.DiskSorter,
+		InDiskUsageScanScope:       follower.InDiskUsageScanScope,
+		SuppressHeavyPathProbes:    follower.SuppressHeavyPathProbes,
+		ScheduleRemoteLoad:         follower.ScheduleRemoteLoad,
+		IdleDiskTotalsSort:         follower.IdleDiskTotalsSort,
+		DiskUsageIdleSortActivated: follower.DiskUsageIdleSortActivated,
+		HistoryCursorByPath:        panel.MergeHistoryCursorByPath(follower.HistoryCursorByPath, driver.HistoryCursorByPath),
+	}
+	ov.FileListViewportRows = func() int { return a.panelViewportRows(followerID) }
+}
+
+// quickViewFollowDirectory loads the highlighted directory into the inactive-column overlay
+// (same target-path rules and Load semantics as latched panel sync; real panel unchanged).
 func (a *App) quickViewFollowDirectory() {
 	driver := a.activePanel()
 	targetPath, ok := a.syncFollowTargetPath(driver)
 	if !ok {
+		a.clearQuickViewDirOverlay()
 		a.patchColumnPreviewMessage("", "Quick view: select a folder")
 		return
 	}
 	a.closeFilePreview()
 	followerID := a.inactivePanelID()
 	follower := a.panelByID(followerID)
-	if filepath.Clean(follower.PathString()) == targetPath {
-		follower.EnsureCursorInViewport(a.panelViewportRows(followerID))
+	targetPath = panel.CleanPathString(targetPath)
+	if targetPath == "" {
 		return
 	}
 	if a.pathVolumeContendsWithActiveJob(targetPath) {
 		return
 	}
-	if err := follower.Load(targetPath); err != nil {
+	ov := &a.model.QuickViewDirOverlay
+	a.model.QuickViewDirOverlayPanelID = followerID
+	if err := a.populateQuickViewDirOverlay(ov, driver, follower, targetPath, followerID); err != nil {
 		return
 	}
-	follower.EnsureCursorInViewport(a.panelViewportRows(followerID))
+	a.model.QuickViewDirOverlayActive = true
 }
 
 func (a *App) applyQuickViewPreviewImmediately() {
@@ -372,12 +502,15 @@ func (a *App) applyQuickViewPreviewNow() {
 	path, workDir, mode := a.quickViewWantFile()
 	switch mode {
 	case quickViewWantNone:
+		a.clearQuickViewDirOverlay()
 		a.patchColumnPreviewMessage("", "Quick view: no file")
 	case quickViewWantDir:
 		a.quickViewFollowDirectory()
 	case quickViewWantStatErr:
+		a.clearQuickViewDirOverlay()
 		a.patchColumnPreviewMessage("", "Quick view: cannot read selection")
 	case quickViewWantFile:
+		a.clearQuickViewDirOverlay()
 		if err := localfs.CheckFilePreviewable(path); err != nil {
 			switch {
 			case errors.Is(err, localfs.ErrFilePreviewBinary):

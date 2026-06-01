@@ -39,12 +39,24 @@ func TestFormatSelectionByteSize(t *testing.T) {
 }
 
 type stubSelectionSizePainter struct {
-	sizes map[string]int64
+	sizes      map[string]int64
+	fileCounts map[string]int64
 }
 
 func (s stubSelectionSizePainter) ByteSize(absPath string) (int64, bool) {
 	n, ok := s.sizes[absPath]
 	return n, ok
+}
+
+func (s stubSelectionSizePainter) FileCount(absPath string) (int64, bool) {
+	if s.fileCounts != nil {
+		n, ok := s.fileCounts[absPath]
+		return n, ok
+	}
+	if _, ok := s.sizes[absPath]; ok {
+		return 1, true
+	}
+	return 0, false
 }
 
 func (stubSelectionSizePainter) PendingForPanel(string, int) bool { return false }

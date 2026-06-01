@@ -18,6 +18,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -110,6 +111,67 @@ func TestTransientErrorTextPermissionDenied(t *testing.T) {
 	}
 	if got := transientErrorText(errors.New("other")); got != "other" {
 		t.Fatalf("transientErrorText() = %q, want literal message when not ErrPermission", got)
+	}
+}
+
+func TestSetErrorMessageEnterNotExistNoDuplicatePath(t *testing.T) {
+	t.Parallel()
+	missing := filepath.Join(t.TempDir(), "gone")
+	_, err := localfs.ListDir(missing, localfs.DefaultListOptions())
+	if err == nil {
+		t.Fatal("ListDir() error = nil, want error")
+	}
+	want := fmt.Sprintf(`Enter failed: no such directory %q`, missing)
+	got, ok := enterFailedMessage(err)
+	if !ok {
+		t.Fatalf("enterFailedMessage() ok = false, want true for %v", err)
+	}
+	if got != want {
+		t.Fatalf("enterFailedMessage() = %q, want %q", got, want)
+	}
+}
+
+func TestSetErrorMessageEnterNotExistShowsShortMessage(t *testing.T) {
+	t.Parallel()
+	app := testAppMinimal(t)
+	err := fmt.Errorf(`stat directory "/tmp/missing": %w`, fs.ErrNotExist)
+	want := `Enter failed: no such directory "/tmp/missing"`
+	app.setErrorMessage("Enter failed", err)
+	if app.model.Message != want {
+		t.Fatalf("message = %q, want %q", app.model.Message, want)
+	}
+}
+
+func TestEnterFailedMessage(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		err  error
+		want string
+		ok   bool
+	}{
+		{
+			err:  fmt.Errorf(`stat directory "/tmp/missing": %w`, fs.ErrNotExist),
+			want: `Enter failed: no such directory "/tmp/missing"`,
+			ok:   true,
+		},
+		{
+			err:  &os.PathError{Op: "stat", Path: "/tmp/x", Err: fs.ErrNotExist},
+			want: `Enter failed: no such directory "/tmp/x"`,
+			ok:   true,
+		},
+		{
+			err: fmt.Errorf(`read directory "/tmp": %w`, fs.ErrPermission),
+			ok:  false,
+		},
+	}
+	for _, tc := range cases {
+		got, ok := enterFailedMessage(tc.err)
+		if ok != tc.ok {
+			t.Fatalf("enterFailedMessage(%v) ok = %v, want %v", tc.err, ok, tc.ok)
+		}
+		if got != tc.want {
+			t.Fatalf("enterFailedMessage(%v) = %q, want %q", tc.err, got, tc.want)
+		}
 	}
 }
 
@@ -3822,8 +3884,8 @@ func TestFileMenuDeleteOpensDeleteConfirmation(t *testing.T) {
 	if app.model.FileDialog.DialogType != ui.FileDialogDelete {
 		t.Fatalf("dialog type = %d, want FileDialogDelete", app.model.FileDialog.DialogType)
 	}
-	if got, want := app.model.FileDialog.DeleteSummary, "Delete file?"; got != want {
-		t.Fatalf("DeleteSummary = %q, want %q", got, want)
+	if got := app.model.FileDialog.DeleteSummary; !strings.HasPrefix(got, "1 file (") {
+		t.Fatalf("DeleteSummary = %q, want prefix %q", got, "1 file (")
 	}
 	if len(app.model.FileDialog.DeleteEntries) != 1 || app.model.FileDialog.DeleteEntries[0].Name != "test.txt" {
 		t.Fatalf("DeleteEntries = %v, want [test.txt]", app.model.FileDialog.DeleteEntries)
@@ -5035,14 +5097,17 @@ func TestDeleteDialogWarningPluralDirectories(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionFileDelete)
-	if got, want := app.model.FileDialog.DeleteSummary, "Delete 2 selections?"; got != want {
-		t.Fatalf("DeleteSummary = %q, want %q", got, want)
+	if got := app.model.FileDialog.DeleteSummary; !strings.HasPrefix(got, "0 files (0 B)") {
+		t.Fatalf("DeleteSummary = %q, want prefix %q", got, "0 files (0 B)")
 	}
-	if got, want := app.model.FileDialog.DeleteWarning, "Warning: 2 directories will be removed recursively!"; got != want {
-		t.Fatalf("DeleteWarning = %q, want %q", got, want)
+	if app.model.FileDialog.DeleteWarning != "" {
+		t.Fatalf("DeleteWarning = %q, want empty", app.model.FileDialog.DeleteWarning)
 	}
 	if len(app.model.FileDialog.DeleteEntries) != 2 || app.model.FileDialog.DeleteEntries[0].Name != "a" || app.model.FileDialog.DeleteEntries[1].Name != "b" {
 		t.Fatalf("DeleteEntries = %v, want [a b]", app.model.FileDialog.DeleteEntries)
+	}
+	if app.deleteDialogScanFP == "" {
+		t.Fatal("expected delete dialog scan fingerprint after opening")
 	}
 }
 
@@ -5302,6 +5367,206 @@ func TestSyncDisablesQuickViewWithWarn(t *testing.T) {
 	}
 	if !strings.Contains(app.model.Message, "quick view disabled") {
 		t.Fatalf("message = %q, want quick view disabled notice", app.model.Message)
+	}
+}
+
+func TestQuickViewDirRecallsFromInactivePanelHistory(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(alpha, "a.txt"))
+	writeFile(t, filepath.Join(alpha, "b.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	right := app.panelByID(ui.RightPanel)
+	selectPanelEntryByName(t, right, "alpha")
+	if err := right.NavigateTo(alpha, "", app.panelViewportRows(ui.RightPanel)); err != nil {
+		t.Fatal(err)
+	}
+	selectPanelEntryByName(t, right, "b.txt")
+	if err := right.Parent(app.panelViewportRows(ui.RightPanel)); err != nil {
+		t.Fatal(err)
+	}
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.QuickViewEnabled = true
+	app.reconcileAfterEvent()
+
+	entry, ok := app.model.QuickViewDirOverlay.CurrentEntry()
+	if !ok {
+		t.Fatal("overlay has no current entry")
+	}
+	if entry.Name != "b.txt" {
+		t.Fatalf("overlay cursor entry = %q, want b.txt from inactive panel history", entry.Name)
+	}
+}
+
+func TestQuickViewDirMirrorsInactivePanelWhenAlreadyInDirectory(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(alpha, "a.txt"))
+	writeFile(t, filepath.Join(alpha, "b.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	right := app.panelByID(ui.RightPanel)
+	selectPanelEntryByName(t, right, "alpha")
+	if err := right.NavigateTo(alpha, "", app.panelViewportRows(ui.RightPanel)); err != nil {
+		t.Fatal(err)
+	}
+	selectPanelEntryByName(t, right, "b.txt")
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.QuickViewEnabled = true
+	app.reconcileAfterEvent()
+
+	entry, ok := app.model.QuickViewDirOverlay.CurrentEntry()
+	if !ok {
+		t.Fatal("overlay has no current entry")
+	}
+	if entry.Name != "b.txt" {
+		t.Fatalf("overlay cursor entry = %q, want b.txt from live inactive listing", entry.Name)
+	}
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != filepath.Clean(alpha) {
+		t.Fatalf("inactive panel path = %q, want unchanged %q", got, alpha)
+	}
+}
+
+func TestQuickViewDirRecallsLastSelectedEntry(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(alpha, "a.txt"))
+	writeFile(t, filepath.Join(alpha, "b.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	app.model.ActivePanel = ui.LeftPanel
+	left := app.panelByID(ui.LeftPanel)
+	selectPanelEntryByName(t, left, "alpha")
+	if err := left.NavigateTo(alpha, "", app.panelViewportRows(ui.LeftPanel)); err != nil {
+		t.Fatal(err)
+	}
+	selectPanelEntryByName(t, left, "b.txt")
+	if err := left.Parent(app.panelViewportRows(ui.LeftPanel)); err != nil {
+		t.Fatal(err)
+	}
+	selectPanelEntryByName(t, left, "alpha")
+	app.model.QuickViewEnabled = true
+	app.reconcileAfterEvent()
+
+	entry, ok := app.model.QuickViewDirOverlay.CurrentEntry()
+	if !ok {
+		t.Fatal("overlay has no current entry")
+	}
+	if entry.Name != "b.txt" {
+		t.Fatalf("overlay cursor entry = %q, want b.txt (last selected in alpha)", entry.Name)
+	}
+}
+
+func TestQuickViewTabCommitsDirectoryPreview(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	child := filepath.Join(root, "child")
+	for _, p := range []string{alpha, child} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeFile(t, filepath.Join(alpha, "inside.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	if err := app.panelByID(ui.RightPanel).Load(child); err != nil {
+		t.Fatal(err)
+	}
+	inactiveBefore := filepath.Clean(app.panelByID(ui.RightPanel).Path.String())
+
+	app.model.ActivePanel = ui.LeftPanel
+	left := app.panelByID(ui.LeftPanel)
+	selectPanelEntryByName(t, left, "alpha")
+	if err := left.NavigateTo(alpha, "", app.panelViewportRows(ui.LeftPanel)); err != nil {
+		t.Fatal(err)
+	}
+	selectPanelEntryByName(t, left, "inside.txt")
+	if err := left.Parent(app.panelViewportRows(ui.LeftPanel)); err != nil {
+		t.Fatal(err)
+	}
+	selectPanelEntryByName(t, left, "alpha")
+	app.model.QuickViewEnabled = true
+	app.reconcileAfterEvent()
+	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
+		t.Fatalf("overlay path = %q, want %q", got, want)
+	}
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+		t.Fatalf("inactive path before Tab = %q, want unchanged %q", got, inactiveBefore)
+	}
+
+	app.dispatch(keymap.ActionPanelSwitch)
+
+	if app.model.QuickViewEnabled {
+		t.Fatal("quick view should be disabled after Tab")
+	}
+	if app.model.ActivePanel != ui.RightPanel {
+		t.Fatalf("ActivePanel = %d, want right panel", app.model.ActivePanel)
+	}
+	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
+		t.Fatalf("active panel path after Tab = %q, want committed preview %q", got, want)
+	}
+	entry, ok := app.panelByID(ui.RightPanel).CurrentEntry()
+	if !ok || entry.Name != "inside.txt" {
+		got := ""
+		if ok {
+			got = entry.Name
+		}
+		t.Fatalf("after Tab cursor entry = %q, want inside.txt (recalled from driver visit)", got)
+	}
+	if app.model.ActiveSubFocus != ui.SubFocusFileList {
+		t.Fatalf("ActiveSubFocus = %d, want file list", app.model.ActiveSubFocus)
+	}
+}
+
+func TestQuickViewDisabledOnPanelSwitch(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "notes.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
+	app.dispatch(keymap.ActionFileQuickView)
+	if !app.model.QuickViewEnabled {
+		t.Fatal("quick view should be enabled")
+	}
+	if !app.filePreviewOpen() {
+		t.Fatal("file preview should open for highlighted file with quick view on")
+	}
+
+	app.dispatch(keymap.ActionPanelSwitch)
+
+	if app.model.QuickViewEnabled {
+		t.Fatal("quick view should be disabled after Tab panel switch")
+	}
+	if app.model.ActivePanel != ui.RightPanel {
+		t.Fatalf("ActivePanel = %d, want right panel", app.model.ActivePanel)
+	}
+	if app.filePreviewOpen() {
+		t.Fatal("file preview should be closed after quick view disabled on panel switch")
 	}
 }
 
@@ -5743,11 +6008,18 @@ func TestQuickViewFollowsDirectoryHighlight(t *testing.T) {
 
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	inactiveBefore := filepath.Clean(app.panelByID(ui.RightPanel).Path.String())
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
 
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
-		t.Fatalf("inactive panel path = %q, want %q", got, want)
+	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
+		t.Fatalf("overlay path = %q, want %q", got, want)
+	}
+	if !app.model.QuickViewDirOverlayActive {
+		t.Fatal("quick view dir overlay should be active")
+	}
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+		t.Fatalf("inactive panel path = %q, want unchanged %q", got, inactiveBefore)
 	}
 	if app.filePreviewOpen() {
 		t.Fatal("file preview should be closed while quick view shows directory listing")
@@ -5769,16 +6041,23 @@ func TestQuickViewFollowsCursorBetweenSubdirectories(t *testing.T) {
 
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	inactiveBefore := filepath.Clean(app.panelByID(ui.RightPanel).Path.String())
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
-		t.Fatalf("inactive after alpha = %q, want %q", got, want)
+	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
+		t.Fatalf("overlay after alpha = %q, want %q", got, want)
+	}
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+		t.Fatalf("inactive after alpha = %q, want unchanged %q", got, inactiveBefore)
 	}
 
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
 	app.reconcileAfterEvent()
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(beta); got != want {
-		t.Fatalf("inactive after beta = %q, want %q", got, want)
+	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(beta); got != want {
+		t.Fatalf("overlay after beta = %q, want %q", got, want)
+	}
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+		t.Fatalf("inactive after beta = %q, want unchanged %q", got, inactiveBefore)
 	}
 }
 
@@ -5870,21 +6149,33 @@ func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
 	}
 }
 
-func TestQuickViewOffRetainsInactivePath(t *testing.T) {
+func TestQuickViewOffRestoresInactivePanelState(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")
-	if err := os.Mkdir(alpha, 0o755); err != nil {
-		t.Fatal(err)
+	child := filepath.Join(root, "child")
+	for _, p := range []string{alpha, child} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 	app.config.UI.QuickViewPreviewDebounceMS = 0
 
+	if err := app.panelByID(ui.RightPanel).Load(child); err != nil {
+		t.Fatal(err)
+	}
+	rightBefore := app.panelByID(ui.RightPanel)
+	inactivePathBefore := filepath.Clean(rightBefore.Path.String())
+	inactiveCursorBefore := rightBefore.Cursor
+
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
-	inactiveAfterDir := filepath.Clean(app.panelByID(ui.RightPanel).Path.String())
+	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
+		t.Fatalf("overlay during quick view = %q, want %q", got, want)
+	}
 
 	app.dispatch(keymap.ActionFileQuickView)
 	if app.model.QuickViewEnabled {
@@ -5893,8 +6184,58 @@ func TestQuickViewOffRetainsInactivePath(t *testing.T) {
 	if app.filePreviewOpen() {
 		t.Fatal("file preview should be closed after quick view off")
 	}
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), inactiveAfterDir; got != want {
-		t.Fatalf("inactive path after quick view off = %q, want retained %q", got, want)
+	if app.model.QuickViewDirOverlayActive {
+		t.Fatal("dir overlay should be cleared after quick view off")
+	}
+	rightAfter := app.panelByID(ui.RightPanel)
+	if got, want := filepath.Clean(rightAfter.Path.String()), inactivePathBefore; got != want {
+		t.Fatalf("inactive path after quick view off = %q, want pre-quick-view %q", got, want)
+	}
+	if rightAfter.Cursor != inactiveCursorBefore {
+		t.Fatalf("inactive cursor after quick view off = %d, want %d", rightAfter.Cursor, inactiveCursorBefore)
+	}
+}
+
+func TestQuickViewDirDoesNotMoveOpenInOtherPanelIndicator(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	child := filepath.Join(root, "child")
+	for _, p := range []string{alpha, child} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	if err := app.panelByID(ui.RightPanel).Load(child); err != nil {
+		t.Fatal(err)
+	}
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.QuickViewEnabled = true
+	app.reconcileAfterEvent()
+	app.render()
+
+	openGlyph := string(app.styles.SymbolFilelistOpen())
+	w, _ := screen.Size()
+	leftHalf := w / 2
+	var childRowHasOpen, alphaRowHasOpen bool
+	for y := 1; y < 20; y++ {
+		row := screenLine(screen, y, leftHalf)
+		if strings.Contains(row, "child") && strings.Contains(row, openGlyph) {
+			childRowHasOpen = true
+		}
+		if strings.Contains(row, "alpha") && strings.Contains(row, openGlyph) {
+			alphaRowHasOpen = true
+		}
+	}
+	if !childRowHasOpen {
+		t.Fatal("open-in-other-panel glyph should stay on child row matching real inactive path")
+	}
+	if alphaRowHasOpen {
+		t.Fatal("open-in-other-panel glyph should not move to alpha row while quick view previews alpha on inactive column")
 	}
 }
 

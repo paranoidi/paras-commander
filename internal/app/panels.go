@@ -21,6 +21,14 @@ func (a *App) syncCenterScrollingFromConfig() {
 }
 
 func (a *App) switchPanel() {
+	if a.model.QuickViewEnabled {
+		a.switchPanelFromQuickView()
+		return
+	}
+	a.switchPanelSwap()
+}
+
+func (a *App) switchPanelSwap() {
 	if a.model.HideInactivePanel {
 		a.model.HideInactivePanel = false
 		if a.model.ActivePanel == ui.LeftPanel {
@@ -59,6 +67,7 @@ func (a *App) toggleHideInactivePanel() {
 		a.model.QuickViewEnabled = false
 		a.clearQuickViewDebounce()
 		a.closeFilePreview()
+		a.clearQuickViewDirOverlay()
 		a.quickViewLastFingerprint = ""
 	}
 	a.model.HideInactivePanel = true
@@ -222,6 +231,7 @@ func (a *App) toggleSyncFollow() {
 		a.model.QuickViewEnabled = false
 		a.clearQuickViewDebounce()
 		a.closeFilePreview()
+		a.clearQuickViewDirOverlay()
 		a.quickViewLastFingerprint = ""
 	}
 	a.clearPanelSyncFollowNavCoalesce()
@@ -250,6 +260,7 @@ func (a *App) toggleSyncFollow() {
 func (a *App) reconcileAfterEvent() {
 	a.reconcileSelectionSizeScans(ui.LeftPanel)
 	a.reconcileSelectionSizeScans(ui.RightPanel)
+	a.reconcileDeleteDialogScans()
 	a.handlePanelDirChanged(ui.LeftPanel)
 	a.handlePanelDirChanged(ui.RightPanel)
 	a.handleMetaPanelDirChanged(ui.LeftPanel)
@@ -270,13 +281,13 @@ func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
 		if !ok {
 			return "", false
 		}
-		p = filepath.Clean(p)
-		if p == "" || p == "." {
+		p = panel.CleanPathString(p)
+		if p == "" {
 			return "", false
 		}
 		if a.pathVolumeContendsWithActiveJob(p) {
-			parent := filepath.Clean(filepath.Dir(p))
-			if parent != "" && parent != "." && parent != p {
+			parent := panel.CleanPathString(filepath.Dir(p))
+			if parent != "" && parent != p {
 				return parent, true
 			}
 			return p, true
@@ -289,7 +300,7 @@ func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
 			return p, true
 		}
 		// Strip row is a file: mirror its parent directory (common "work here" intent).
-		parent := filepath.Clean(filepath.Dir(p))
+		parent := panel.CleanPathString(filepath.Dir(p))
 		if parent == "" || parent == p {
 			return "", false
 		}
@@ -302,7 +313,7 @@ func (a *App) syncFollowTargetPath(driver *panel.State) (string, bool) {
 	if !ok || entry.Type != localfs.EntryDirectory {
 		return "", false
 	}
-	return filepath.Clean(entry.Path), true
+	return panel.CleanPathString(entry.Path), true
 }
 
 // syncFollowFromActive mirrors the active panel's highlighted directory into the inactive panel
@@ -475,7 +486,9 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 	case keymap.ActionPanelFocusSelections:
 		a.toggleSelectionsStripFocus()
 	case keymap.ActionPanelSwitch:
-		if a.filePreviewOpen() {
+		if a.model.QuickViewEnabled {
+			a.switchPanel()
+		} else if a.filePreviewOpen() {
 			a.model.ActiveSubFocus = ui.SubFocusInactivePreview
 		} else {
 			a.switchPanel()

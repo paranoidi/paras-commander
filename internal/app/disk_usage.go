@@ -59,6 +59,7 @@ drained:
 	if flushNow {
 		a.stopDiskUsageRedrawDebounce()
 		a.resortPanelsDiskUsageSorted()
+		a.refreshDeleteDialogSummary()
 		a.render()
 		return
 	}

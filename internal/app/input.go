@@ -557,7 +557,9 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionPanelDiskUsageScan:
 		a.startDiskUsageScan()
 	case keymap.ActionPanelSwitch:
-		if a.filePreviewOpen() {
+		if a.model.QuickViewEnabled {
+			a.switchPanel()
+		} else if a.filePreviewOpen() {
 			a.cycleSubFocusForTabWithPreview()
 		} else {
 			a.switchPanel()

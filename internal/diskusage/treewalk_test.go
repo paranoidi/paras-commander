@@ -60,4 +60,16 @@ func TestWalkFolderFlatSizes(t *testing.T) {
 	if got[filepath.Clean(root)] < 7 {
 		t.Fatalf("aggregate too small %d", got[filepath.Clean(root)])
 	}
+
+	fileCounts := map[string]int64{}
+	diskusage.FlattenFileCounts(tree, fileCounts)
+	if fileCounts[filepath.Clean(root)] != 2 {
+		t.Fatalf("root file count = %d, want 2", fileCounts[filepath.Clean(root)])
+	}
+	if fileCounts[filepath.Clean(sub)] != 1 {
+		t.Fatalf("sub file count = %d, want 1", fileCounts[filepath.Clean(sub)])
+	}
+	if diskusage.CountFilesInSubtree(tree) != 2 {
+		t.Fatalf("CountFilesInSubtree = %d, want 2", diskusage.CountFilesInSubtree(tree))
+	}
 }

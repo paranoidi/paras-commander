@@ -53,12 +53,12 @@ func DefaultListOptions() ListOptions {
 func ListDir(path string, opts ListOptions) (DirectoryListing, error) {
 	cleanPath, err := filepath.Abs(path)
 	if err != nil {
-		return DirectoryListing{}, fmt.Errorf("resolve directory %q: %w", path, err)
+		return DirectoryListing{}, fmt.Errorf("resolve directory %q: %w", path, pathErrorReason(err))
 	}
 
 	info, err := os.Stat(cleanPath)
 	if err != nil {
-		return DirectoryListing{}, fmt.Errorf("stat directory %q: %w", cleanPath, err)
+		return DirectoryListing{}, fmt.Errorf("stat directory %q: %w", cleanPath, pathErrorReason(err))
 	}
 	if !info.IsDir() {
 		return DirectoryListing{}, fmt.Errorf("stat directory %q: not a directory", cleanPath)
@@ -66,7 +66,7 @@ func ListDir(path string, opts ListOptions) (DirectoryListing, error) {
 
 	dirEntries, err := os.ReadDir(cleanPath)
 	if err != nil {
-		return DirectoryListing{}, fmt.Errorf("read directory %q: %w", cleanPath, err)
+		return DirectoryListing{}, fmt.Errorf("read directory %q: %w", cleanPath, pathErrorReason(err))
 	}
 
 	entries := make([]Entry, 0, len(dirEntries))
