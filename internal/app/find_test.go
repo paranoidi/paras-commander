@@ -113,6 +113,67 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	}
 }
 
+func TestFindDialogHandleKeyAltDDoesNotClearDiskUsage(t *testing.T) {
+	root := t.TempDir()
+	scanned := filepath.Join(root, "scanned")
+	if err := os.Mkdir(scanned, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(scanned, "a.dat"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	left := app.panelByID(ui.LeftPanel)
+	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	if !app.model.DiskUsageShown {
+		t.Fatal("expected disk usage to be shown after scan")
+	}
+	if _, ok := app.diskUsage.Size(scanned); !ok {
+		t.Fatal("expected cached size for scanned directory")
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+	st := &app.model.FindDialog
+	for _, r := range "find" {
+		if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone)); quit {
+			t.Fatal("handleKey quit while typing find query")
+		}
+	}
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt)); quit {
+		t.Fatal("handleKey quit on Alt+D")
+	}
+	if !st.OnlyDirectories {
+		t.Fatal("Alt+D via handleKey should toggle only-directories")
+	}
+	if !app.model.DiskUsageShown {
+		t.Fatal("disk usage should remain shown after Find Alt+D")
+	}
+	if _, ok := app.diskUsage.Size(scanned); !ok {
+		t.Fatal("disk usage cache should not be cleared by Find Alt+D")
+	}
+	if app.model.Message == "Disk usage data cleared" {
+		t.Fatal("Find Alt+D must not trigger panel.disk-usage-clear")
+	}
+}
+
 func TestFindDialogQueryAltBAltFCtrlL(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "alpha.txt"), []byte("x"), 0o644); err != nil {

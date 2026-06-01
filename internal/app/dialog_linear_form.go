@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -31,6 +32,12 @@ func (a *App) handleLinearFormDialogKey(ev *tcell.EventKey, form ui.DialogLinear
 		}
 		return true
 	case tcell.KeyRune:
+		if keymap.AltLetterModifiers(ev.Modifiers()) {
+			if h.onMnemonic != nil && h.onMnemonic(ev.Rune()) {
+				return true
+			}
+			break
+		}
 		if ev.Modifiers() != tcell.ModNone {
 			break
 		}

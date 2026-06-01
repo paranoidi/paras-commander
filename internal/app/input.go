@@ -239,15 +239,17 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	if !a.carouselPreviewHeldListNav(resolvedAction, event) {
 		a.clearCarouselPreviewNavCoalesce()
 	}
-	if resolvedAction == keymap.ActionPanelDiskUsageAbortAll {
-		a.abortAllDiskUsageScans()
-		a.render()
-		return false, true
-	}
-	if resolvedAction == keymap.ActionPanelDiskUsageClear {
-		a.clearAllDiskUsageData()
-		a.render()
-		return false, true
+	if !a.model.ModalDialogOpen() {
+		if resolvedAction == keymap.ActionPanelDiskUsageAbortAll {
+			a.abortAllDiskUsageScans()
+			a.render()
+			return false, true
+		}
+		if resolvedAction == keymap.ActionPanelDiskUsageClear {
+			a.clearAllDiskUsageData()
+			a.render()
+			return false, true
+		}
 	}
 
 	// Global show-help (F1 by default). Closes menu or quick filter first.

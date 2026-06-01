@@ -6403,6 +6403,57 @@ func TestClearAllDiskUsageData(t *testing.T) {
 	}
 }
 
+func TestSortDialogHandleKeyAltDTogglesDirectoriesFirstWithoutClearingDiskUsage(t *testing.T) {
+	root := t.TempDir()
+	scanned := filepath.Join(root, "scanned")
+	if err := os.Mkdir(scanned, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(scanned, "a.dat"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	if !app.model.DiskUsageShown {
+		t.Fatal("expected disk usage to be shown after scan")
+	}
+
+	left.Sort.DirectoriesFirst = false
+	app.openSortDialog()
+	st := &app.model.SortDialog
+	if !st.Open {
+		t.Fatal("sort dialog should be open")
+	}
+	if st.DirectoriesFirst {
+		t.Fatal("sort dialog should mirror panel directories-first=false")
+	}
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt)); quit {
+		t.Fatal("handleKey quit on Alt+D")
+	}
+	if !st.DirectoriesFirst {
+		t.Fatal("Alt+D should toggle directories-first in sort dialog")
+	}
+	if st.Focus != 6 {
+		t.Fatalf("focus = %d, want 6 (directories-first row)", st.Focus)
+	}
+	if !app.model.DiskUsageShown {
+		t.Fatal("disk usage should remain shown after Sort Alt+D")
+	}
+	if app.model.Message == "Disk usage data cleared" {
+		t.Fatal("Sort Alt+D must not trigger panel.disk-usage-clear")
+	}
+}
+
 func TestSyncFollowSkipsHistoryRecordingOnFollower(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")
