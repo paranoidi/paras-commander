@@ -219,7 +219,7 @@ func drawPanelCursorNameHintForState(
 	}
 	suffix := panellist.RowSuffix{
 		JobGlyph:         jobMarkGlyph,
-		NewFile:          state.HasNewFileMark(entry),
+		NewFileTier:      state.NewFileMarkTier(entry),
 		SubtreeSelection: subtreeMark,
 		OpenInOtherPanel: entryOpenInOtherPanel(entry, ctx.OtherPanelPath),
 	}

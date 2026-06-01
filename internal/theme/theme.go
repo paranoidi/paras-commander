@@ -59,8 +59,10 @@ type Theme struct {
 	PanelRowSelected            tcell.Style
 	// PanelRowIndicatorSelectionSubtree styles the file-list suffix on directories with nested selections.
 	PanelRowIndicatorSelectionSubtree tcell.Style
-	// PanelRowIndicatorNew styles the file-list suffix for recently transferred entries.
+	// PanelRowIndicatorNew styles the file-list suffix for the latest transferred batch.
 	PanelRowIndicatorNew tcell.Style
+	// PanelRowIndicatorNewPrevious styles the file-list suffix for earlier new-file marks in the same directory.
+	PanelRowIndicatorNewPrevious tcell.Style
 	// PanelRowIndicatorOpen styles the file-list suffix when the other panel is in that directory.
 	PanelRowIndicatorOpen tcell.Style
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
@@ -595,6 +597,7 @@ var requiredStyleKeys = []string{
 	"panel.row.selected",
 	"panel.row.indicator.selection_subtree",
 	"panel.row.indicator.new",
+	"panel.row.indicator.new.previous",
 	"panel.row.indicator.open",
 	"panel.text",
 	"panel.indicator.sync",
@@ -1037,6 +1040,7 @@ func parse(data []byte) (Theme, error) {
 		PanelRowSelected:                    styles["panel.row.selected"],
 		PanelRowIndicatorSelectionSubtree:   styles["panel.row.indicator.selection_subtree"],
 		PanelRowIndicatorNew:                styles["panel.row.indicator.new"],
+		PanelRowIndicatorNewPrevious:        styles["panel.row.indicator.new.previous"],
 		PanelRowIndicatorOpen:               styles["panel.row.indicator.open"],
 		PanelText:                           styles["panel.text"],
 		PanelCursorActive:                   styles["panel.active.row.cursor"],

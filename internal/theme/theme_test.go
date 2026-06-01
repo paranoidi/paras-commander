@@ -24,6 +24,10 @@ func TestDefaultFilelistSymbols(t *testing.T) {
 	if newFG != tcell.PaletteColor(10) {
 		t.Fatalf("panel.row.indicator.new fg = %v, want bright_green (index 10)", newFG)
 	}
+	prevFG, _, _ := th.PanelRowIndicatorNewPrevious.Decompose()
+	if prevFG != tcell.PaletteColor(11) {
+		t.Fatalf("panel.row.indicator.new.previous fg = %v, want bright_yellow (index 11)", prevFG)
+	}
 	openFG, _, _ := th.PanelRowIndicatorOpen.Decompose()
 	if openFG != tcell.PaletteColor(14) {
 		t.Fatalf("panel.row.indicator.open fg = %v, want bright_cyan (index 14)", openFG)

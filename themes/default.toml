@@ -59,6 +59,7 @@ row.selected = { fg = "yellow", bold = true }
 row.symlink = { fg = "bright_cyan" }
 row.indicator.selection_subtree = { fg = "yellow" }
 row.indicator.new = { fg = "bright_green" }
+row.indicator.new.previous = { fg = "bright_yellow" }
 row.indicator.open = { fg = "bright_cyan" }
 indicator.sync = { fg = "green", bold = true }
 indicator.quick_view = { fg = "green", bold = true }

@@ -14,10 +14,19 @@ type DisplayRune struct {
 	NameIdx int
 }
 
+// NewFileMarkTier selects new-file suffix coloring (latest vs previous batch).
+type NewFileMarkTier int
+
+const (
+	NewFileMarkNone NewFileMarkTier = iota
+	NewFileMarkLatest
+	NewFileMarkPrevious
+)
+
 // RowSuffix selects which trailing indicators to reserve and paint on a listing row.
 type RowSuffix struct {
 	JobGlyph         rune
-	NewFile          bool
+	NewFileTier      NewFileMarkTier
 	SubtreeSelection bool
 	OpenInOtherPanel bool
 }
@@ -28,7 +37,7 @@ func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th th
 	if suffix.JobGlyph != 0 && width > n+2 {
 		n += 2
 	}
-	if suffix.NewFile && width > n+2 {
+	if suffix.NewFileTier != NewFileMarkNone && width > n+2 {
 		n += 2
 	}
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
@@ -96,7 +105,7 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: suffix.JobGlyph, NameIdx: -1})
 		used += 2
 	}
-	if suffix.NewFile && width > used+2 {
+	if suffix.NewFileTier != NewFileMarkNone && width > used+2 {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistNew(), NameIdx: -1})
 		used += 2
 	}
@@ -124,8 +133,11 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, jobStatus, cursorStyleKey string,
 	switch {
 	case r == suffix.JobGlyph && suffix.JobGlyph != 0:
 		return th.JobsIconStyle(jobStatus), true
-	case r == th.SymbolFilelistNew() && suffix.NewFile:
+	case r == th.SymbolFilelistNew() && suffix.NewFileTier != NewFileMarkNone:
 		base := th.PanelRowIndicatorNew
+		if suffix.NewFileTier == NewFileMarkPrevious {
+			base = th.PanelRowIndicatorNewPrevious
+		}
 		return tcell.StyleDefault.Foreground(th.PanelRowSuffixIconForeground(cursorStyleKey, base)), true
 	case r == th.SymbolFilelistSelectionSubtree() && suffix.SubtreeSelection:
 		base := th.PanelRowIndicatorSelectionSubtree
@@ -155,7 +167,7 @@ func ListingSuffixSpans(
 ) []primitive.Span {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
 	openOther := suffix.OpenInOtherPanel && entry.Type == localfs.EntryDirectory
-	if suffix.JobGlyph == 0 && !suffix.NewFile && !subtree && !openOther {
+	if suffix.JobGlyph == 0 && suffix.NewFileTier == NewFileMarkNone && !subtree && !openOther {
 		return nil
 	}
 	display := EntryDisplayRunes(entry, nameWidth, showIcons, suffix, th)

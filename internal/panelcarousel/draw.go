@@ -13,8 +13,8 @@ import (
 // JobMarkFunc returns a job-queue glyph and status for an absolute path, if any.
 type JobMarkFunc func(absPath string) (glyph rune, status string, ok bool)
 
-// NewFileMarkFunc reports whether an entry should show the new-file suffix.
-type NewFileMarkFunc func(entry localfs.Entry) bool
+// NewFileMarkFunc reports the new-file suffix tier for an entry.
+type NewFileMarkFunc func(entry localfs.Entry) panellist.NewFileMarkTier
 
 // IconPaintFunc paints the devicon strip for one listing row.
 type IconPaintFunc func(screen tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorThemeKey string, diskPending, diskExcluded bool)
@@ -153,13 +153,13 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 				}
 			}
 			subtree := entry.Type == localfs.EntryDirectory && selState.HasSelectionInSubtree(entry.Path)
-			newFile := false
+			newFileTier := panellist.NewFileMarkNone
 			if c.Active && p.NewFileMark != nil {
-				newFile = p.NewFileMark(entry)
+				newFileTier = p.NewFileMark(entry)
 			}
 			rowSuffix := panellist.RowSuffix{
 				JobGlyph:         jobGlyph,
-				NewFile:          newFile,
+				NewFileTier:      newFileTier,
 				SubtreeSelection: subtree,
 				OpenInOtherPanel: panellist.EntryOpenInOtherPanel(entry, p.OtherPanelPath),
 			}

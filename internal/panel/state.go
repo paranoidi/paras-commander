@@ -102,9 +102,9 @@ type State struct {
 	// Idle-sort scheduling keys off Sort.DiskUsageIdleSizeSort; this flag stays in sync for UI/state parity.
 	DiskUsageIdleSortActivated bool
 
-	// NewFileMarksByDir maps listing directory paths to entry base names marked "new"
-	// after a completed copy/move/flatten into that directory. Marks are dropped when leaving the directory.
-	NewFileMarksByDir map[string]map[string]struct{}
+	// NewFileMarksByDir maps listing directory paths to latest/previous new-file marks
+	// after completed copy/move/flatten into that directory. Marks are dropped when leaving the directory.
+	NewFileMarksByDir map[string]*dirNewFileMarks
 
 	// OnDirectoryChange is called after every successful directory load (Enter, Parent,
 	// HistoryBackward/Forward, Refresh, ToggleHidden, etc.). The app uses this to check whether disk-usage idle sorting

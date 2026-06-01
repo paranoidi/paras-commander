@@ -191,8 +191,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
 				paintPanelIconStrip(sc, x, y, entry, rowStyle, styles, cursorKey, diskPending, diskExcluded, showDiskUsage)
 			},
-			NewFileMark: func(entry localfs.Entry) bool {
-				return state.HasNewFileMark(entry)
+			NewFileMark: func(entry localfs.Entry) panellist.NewFileMarkTier {
+				return state.NewFileMarkTier(entry)
 			},
 		})
 		if selectionSizeLabel != "" {
@@ -271,7 +271,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		fillCols := 0
 
 		var subtreeMark bool
-		var newFileMark bool
+		var newFileTier panellist.NewFileMarkTier
 		var jobMark bool
 		var jobStatus string
 		var jobMarkGlyph rune
@@ -293,7 +293,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				})
 			}
 			subtreeMark = entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
-			newFileMark = state.HasNewFileMark(entry)
+			newFileTier = state.NewFileMarkTier(entry)
 			jobMark, jobStatus = EntryPathJobMarkStatus(entry.Path, jobMarks)
 			if jobMark {
 				glyphStr := styles.SymbolJobsList(jobStatus)
@@ -311,7 +311,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			}
 			rowSuffix = panellist.RowSuffix{
 				JobGlyph:         jobMarkGlyph,
-				NewFile:          newFileMark,
+				NewFileTier:      newFileTier,
 				SubtreeSelection: subtreeMark,
 				OpenInOtherPanel: entryOpenInOtherPanel(entry, otherPanelPath),
 			}
