@@ -1,8 +1,6 @@
 package app
 
 import (
-	"unicode"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -229,10 +227,7 @@ func (a *App) handleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, e s
 		e.apply()
 		return true
 	case tcell.KeyRune:
-		if ev.Modifiers() != tcell.ModNone {
-			return false
-		}
-		if unicode.IsPrint(ev.Rune()) {
+		if isDialogInputRune(ev) {
 			e.q.InsertRune(ev.Rune())
 			e.apply()
 			return true

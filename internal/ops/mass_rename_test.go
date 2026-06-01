@@ -60,6 +60,89 @@ func TestMassRenameComputeRegex(t *testing.T) {
 	}
 }
 
+func TestMassRenameComputeRegexSeasonDigitPad(t *testing.T) {
+	dir := t.TempDir()
+	re, err := MassRenameCompileRegex(`(\d)$`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := []localfs.Entry{
+		{Name: "Season 1", Path: filepath.Join(dir, "Season 1"), Type: localfs.EntryFile},
+	}
+	for _, repl := range []string{"0${1}", "0$1", "0${0}"} {
+		rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", repl, false, re)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if rows[0].NewBase != "Season 01" {
+			t.Fatalf("replace %q: got %q, want Season 01", repl, rows[0].NewBase)
+		}
+	}
+}
+
+func TestMassRenameComputeRegexAmbiguousDollarGroup(t *testing.T) {
+	dir := t.TempDir()
+	re, err := MassRenameCompileRegex(`(\d)$`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := []localfs.Entry{
+		{Name: "Season 1", Path: filepath.Join(dir, "Season 1"), Type: localfs.EntryFile},
+	}
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", "0$10", false, re)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].NewBase != "Season 0" {
+		t.Fatalf("0$10: got %q, want Season 0 (group 10 empty)", rows[0].NewBase)
+	}
+	rows, err = MassRenameCompute(entries, dir, MassRenameModeRegex, "", "0${1}0", false, re)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].NewBase != "Season 010" {
+		t.Fatalf("0${1}0: got %q, want Season 010", rows[0].NewBase)
+	}
+}
+
+func TestMassRenameComputeRegexBackslashGroup(t *testing.T) {
+	dir := t.TempDir()
+	re, err := MassRenameCompileRegex(`(\d)$`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := []localfs.Entry{
+		{Name: "Season 1", Path: filepath.Join(dir, "Season 1"), Type: localfs.EntryFile},
+	}
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", `0\1`, false, re)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].NewBase != "Season 01" {
+		t.Fatalf("got %q, want Season 01", rows[0].NewBase)
+	}
+}
+
+func TestMassRenameReplacementSyntaxHint(t *testing.T) {
+	rx, err := MassRenameCompileRegex(`(\d)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := MassRenameReplacementSyntaxHint(rx); got == "" {
+		t.Fatal("expected hint for capture group pattern")
+	}
+	rxPlain, err := MassRenameCompileRegex(`\.txt$`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := MassRenameReplacementSyntaxHint(rxPlain); got != "" {
+		t.Fatalf("expected no hint for pattern without groups, got %q", got)
+	}
+	if got := MassRenameReplacementSyntaxHint(nil); got != "" {
+		t.Fatalf("expected no hint for nil rx, got %q", got)
+	}
+}
+
 func TestMassRenameValidateRowsDuplicate(t *testing.T) {
 	dir := t.TempDir()
 	rows := []MassRenameRow{

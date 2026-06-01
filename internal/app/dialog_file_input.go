@@ -283,7 +283,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			}
 			return false
 		}
-		if isPlainPrintableRune(event) {
+		if isDialogInputRune(event) {
 			if f := a.focusedField(); f != nil {
 				a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
 			}
@@ -375,6 +375,9 @@ func (a *App) fileDialogMoveFocusKey(event *tcell.EventKey) bool {
 	if nf, ok := form.MoveFocus(d.FocusedField, event.Key()); ok {
 		a.clearFileDialogPickerSubfocus()
 		d.FocusedField = nf
+		if d.DialogType == ui.FileDialogMassRename && (nf == 0 || nf == 1) {
+			a.applyMassRenameModeFromFocus()
+		}
 		return true
 	}
 	return false

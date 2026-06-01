@@ -4484,6 +4484,88 @@ func TestMassRenameModeShortcutKeepsReplaceFocus(t *testing.T) {
 	}
 }
 
+func TestMassRenameRadioFocusAppliesRegexMode(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "x.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	if d.MassRenameMode != ui.MassRenameModeUISimple {
+		t.Fatalf("initial mode = %v, want simple", d.MassRenameMode)
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	if d.FocusedField != 1 {
+		t.Fatalf("FocusedField = %d, want 1 (Regex radio)", d.FocusedField)
+	}
+	if d.MassRenameMode != ui.MassRenameModeUIRegex {
+		t.Fatalf("mode = %v, want regex after focusing radio", d.MassRenameMode)
+	}
+	if d.Fields[0].Label != "Pattern" {
+		t.Fatalf("label = %q, want Pattern", d.Fields[0].Label)
+	}
+}
+
+func TestMassRenameRegexCaptureGroupPreviewWithShiftDollar(t *testing.T) {
+	dir := t.TempDir()
+	season1 := filepath.Join(dir, "Season 1")
+	if err := os.Mkdir(season1, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{season1: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	for _, r := range `(\d)$` {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.FocusedField = 3
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '0', tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '$', tcell.ModShift))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '1', tcell.ModNone))
+
+	if d.Fields[1].Value != "0$1" {
+		t.Fatalf("replace = %q, want 0$1", d.Fields[1].Value)
+	}
+	if len(d.MassRenamePreviewAfter) != 1 || d.MassRenamePreviewAfter[0] != "Season 01" {
+		t.Fatalf("preview after = %v, want Season 01", d.MassRenamePreviewAfter)
+	}
+	if d.MassRenameReplacementSyntaxHint == "" {
+		t.Fatal("expected replacement syntax hint for capture group pattern")
+	}
+}
+
+func TestMassRenameReplacementSyntaxHintHiddenWithoutGroups(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "x.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	for _, r := range `\.txt$` {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if d.MassRenameReplacementSyntaxHint != "" {
+		t.Fatalf("hint = %q, want empty for pattern without capture groups", d.MassRenameReplacementSyntaxHint)
+	}
+}
+
 func TestMassRenameRegexpCompileHintForBackslashPattern(t *testing.T) {
 	dir := t.TempDir()
 	aPath := filepath.Join(dir, "x.txt")

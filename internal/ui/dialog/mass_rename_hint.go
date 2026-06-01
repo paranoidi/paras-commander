@@ -42,3 +42,18 @@ func massRenamePatternHintStyle(styles theme.Theme, dbg tcell.Color) tcell.Style
 	errFG, _, _ := styles.DialogInputActiveError.Decompose()
 	return styles.DialogText.Foreground(errFG).Background(dbg)
 }
+
+func massRenameReplacementHintText(state FileDialogState) string {
+	if state.MassRenameMode != MassRenameModeUIRegex {
+		return ""
+	}
+	return strings.TrimSpace(state.MassRenameReplacementSyntaxHint)
+}
+
+func massRenameShowsReplacementHint(state FileDialogState) bool {
+	return massRenameReplacementHintText(state) != ""
+}
+
+func massRenameReplacementHintStyle(styles theme.Theme, dbg tcell.Color) tcell.Style {
+	return styles.DialogText.Background(dbg)
+}

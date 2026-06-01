@@ -53,6 +53,9 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	if massRenameShowsPatternHint(state) {
 		fixed++
 	}
+	if massRenameShowsReplacementHint(state) {
+		fixed++
+	}
 	if state.MassRenameMode == MassRenameModeUISimple {
 		fixed += 1 + 1 // checkbox + sep
 	}
@@ -125,6 +128,12 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		if fi == 0 && state.MassRenameMode == MassRenameModeUIRegex {
 			if hint := massRenamePatternHintText(state); hint != "" && y < innerBottom {
 				primitive.Text(screen, leftCol, y, innerW, hint, massRenamePatternHintStyle(styles, dbg))
+				y++
+			}
+		}
+		if fi == 1 && state.MassRenameMode == MassRenameModeUIRegex {
+			if hint := massRenameReplacementHintText(state); hint != "" && y < innerBottom {
+				primitive.Text(screen, leftCol, y, innerW, hint, massRenameReplacementHintStyle(styles, dbg))
 				y++
 			}
 		}

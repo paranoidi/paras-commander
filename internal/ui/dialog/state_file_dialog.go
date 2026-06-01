@@ -126,6 +126,8 @@ type FileDialogState struct {
 	MassRenamePreviewAfterError []bool
 	// MassRenamePatternCompileHint is a short regexp compile error shown under the Pattern field (regex mode).
 	MassRenamePatternCompileHint string
+	// MassRenameReplacementSyntaxHint is shown under the Replacement field when the pattern has capture groups.
+	MassRenameReplacementSyntaxHint string
 
 	// Delete confirmation (DialogType == FileDialogDelete).
 	DeleteSummary    string

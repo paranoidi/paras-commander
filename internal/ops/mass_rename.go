@@ -76,7 +76,7 @@ func massRenameTransformBase(mode MassRenameMode, oldBase, find, replace string,
 		if rx == nil {
 			return oldBase, nil
 		}
-		return rx.ReplaceAllString(oldBase, replace), nil
+		return massRenameRegexReplace(rx, oldBase, replace), nil
 	default:
 		return "", &Error{Op: "mass-rename", Text: "unknown mass rename mode"}
 	}
@@ -142,6 +142,42 @@ func MassRenameCompileRegex(pattern string) (*regexp.Regexp, error) {
 		return nil, &Error{Op: "mass-rename", Text: "invalid regexp", Err: err}
 	}
 	return re, nil
+}
+
+// MassRenameReplacementSyntaxHint returns a one-line replacement-template hint when the
+// compiled pattern has capture groups, or "" when none or rx is nil.
+func MassRenameReplacementSyntaxHint(rx *regexp.Regexp) string {
+	if rx == nil || rx.NumSubexp() == 0 {
+		return ""
+	}
+	return "Replacement: $n or ${n} for groups; ${0} is full match; use ${n} before digits"
+}
+
+// massRenameNormalizeRegexReplacement converts \1–\9 backrefs to $1–$9 for Go regexp expansion.
+// \\1 is left as a literal backslash followed by a digit.
+func massRenameNormalizeRegexReplacement(template string) string {
+	runes := []rune(template)
+	var b strings.Builder
+	for i := 0; i < len(runes); i++ {
+		if runes[i] == '\\' && i+1 < len(runes) && runes[i+1] >= '1' && runes[i+1] <= '9' {
+			escapes := 0
+			for j := i - 1; j >= 0 && runes[j] == '\\'; j-- {
+				escapes++
+			}
+			if escapes%2 == 0 {
+				b.WriteRune('$')
+				b.WriteRune(runes[i+1])
+				i++
+				continue
+			}
+		}
+		b.WriteRune(runes[i])
+	}
+	return b.String()
+}
+
+func massRenameRegexReplace(rx *regexp.Regexp, oldBase, template string) string {
+	return rx.ReplaceAllString(oldBase, massRenameNormalizeRegexReplacement(template))
 }
 
 const regexpParseErrPrefix = "error parsing regexp: "
@@ -490,7 +526,7 @@ func massRenameRegexReplacementRanges(oldBase string, rx *regexp.Regexp, replace
 		}
 		start, end := loc[0], loc[1]
 		outPos += utf8.RuneCountInString(oldBase[lastByte:start])
-		repl := string(rx.ExpandString(nil, replace, oldBase, loc))
+		repl := string(rx.ExpandString(nil, massRenameNormalizeRegexReplacement(replace), oldBase, loc))
 		replRunes := utf8.RuneCountInString(repl)
 		ranges = massRenameAppendRange(ranges, outPos, outPos+replRunes)
 		outPos += replRunes

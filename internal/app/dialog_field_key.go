@@ -42,7 +42,7 @@ func (a *App) handleFileDialogFieldKey(ev *tcell.EventKey, f *ui.FileDialogField
 		f.Clear()
 		edited = true
 	case tcell.KeyRune:
-		if isPlainPrintableRune(ev) {
+		if isDialogInputRune(ev) {
 			f.InsertRune(ev.Rune())
 			edited = true
 		}

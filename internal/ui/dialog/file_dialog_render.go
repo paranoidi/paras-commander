@@ -274,6 +274,12 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 				minWidth = hw
 			}
 		}
+		if h := massRenameReplacementHintText(state); h != "" {
+			hw := utf8.RuneCountInString(h) + 4
+			if hw > minWidth {
+				minWidth = hw
+			}
+		}
 	}
 	if minWidth > screenWidth-4 {
 		minWidth = screenWidth - 4

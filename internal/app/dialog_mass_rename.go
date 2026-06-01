@@ -76,6 +76,7 @@ func (a *App) recomputeMassRenamePreview() {
 	}
 	d.Message = ""
 	d.MassRenamePatternCompileHint = ""
+	d.MassRenameReplacementSyntaxHint = ""
 	if len(d.Fields) > 0 {
 		d.Fields[0].InputInvalid = false
 	}
@@ -120,6 +121,7 @@ func (a *App) recomputeMassRenamePreview() {
 			}
 		}
 	}
+	d.MassRenameReplacementSyntaxHint = ops.MassRenameReplacementSyntaxHint(rx)
 	caseFold := d.MassRenameCaseFold && d.MassRenameMode == ui.MassRenameModeUISimple
 	rows, err := ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, rx)
 	if err != nil {

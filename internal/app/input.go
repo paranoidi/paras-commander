@@ -898,6 +898,16 @@ func isPlainPrintableRune(event *tcell.EventKey) bool {
 	return event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && unicode.IsPrint(event.Rune())
 }
 
+// isDialogInputRune reports a printable rune suitable for dialog text fields.
+// Shifted punctuation (e.g. Shift+4 → '$') often arrives with ModShift; Alt/Ctrl are rejected.
+func isDialogInputRune(event *tcell.EventKey) bool {
+	if event.Key() != tcell.KeyRune || !unicode.IsPrint(event.Rune()) {
+		return false
+	}
+	mod := event.Modifiers()
+	return mod == tcell.ModNone || mod == tcell.ModShift
+}
+
 func (a *App) inQuickFilterUI() bool {
 	filter := a.activePanel().Filter
 	return filter.Active || filter.Editing
