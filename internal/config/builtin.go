@@ -92,6 +92,8 @@ const (
 	DefaultFlattenRecursive = false
 	// DefaultFlattenRemoveEmptyDirs is the initial state of the flatten dialog remove-empty checkbox.
 	DefaultFlattenRemoveEmptyDirs = true
+	// DefaultRenameFocusAfter is the initial state of the rename dialog focus-after-rename checkbox.
+	DefaultRenameFocusAfter = false
 
 	// DefaultListingFormat is the persisted default_listing_format value (Modified time column).
 	DefaultListingFormat = ListingFormatMtime

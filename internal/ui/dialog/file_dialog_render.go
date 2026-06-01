@@ -52,6 +52,9 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 			// Separator + 3 radio rows added above the buttons separator.
 			height += 1 + mkdirActionRowCount
 		}
+		if renameHasFocusCheckbox(state) {
+			height += 1 + renameFocusCheckboxRowCount
+		}
 	}
 	if height > layout.Height-2 {
 		height = layout.Height - 2
@@ -87,6 +90,9 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 		}
 		if mkdirHasActions(state) {
 			drawMkdirActionRows(screen, rect, state, borderStyle, styles)
+		}
+		if renameHasFocusCheckbox(state) {
+			drawRenameFocusCheckbox(screen, rect, state, borderStyle, styles)
 		}
 	}
 
@@ -207,6 +213,12 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 			if lw > minWidth {
 				minWidth = lw
 			}
+		}
+	}
+	if renameHasFocusCheckbox(state) {
+		lw := utf8.RuneCountInString(draw.CheckboxText("Focus after rename", true)) + 4
+		if lw > minWidth {
+			minWidth = lw
 		}
 	}
 	if renameToolActive(state) {
@@ -479,7 +491,7 @@ func fileDialogOKFocusIndex(state FileDialogState) int {
 	if renameToolActive(state) {
 		return renameToolOptionCount()
 	}
-	return len(state.Fields) + mkdirExtraFocusRows(state)
+	return len(state.Fields) + mkdirExtraFocusRows(state) + renameExtraFocusRows(state)
 }
 
 // fileDialogCancelFocusIndex returns the focus index for the Cancel/No button.
@@ -493,7 +505,7 @@ func fileDialogCancelFocusIndex(state FileDialogState) int {
 	if renameToolActive(state) {
 		return renameToolOptionCount() + 1
 	}
-	return len(state.Fields) + mkdirExtraFocusRows(state) + 1
+	return len(state.Fields) + mkdirExtraFocusRows(state) + renameExtraFocusRows(state) + 1
 }
 
 func renameToolOptionCount() int { return 2 }
@@ -585,6 +597,43 @@ func mkdirExtraFocusRows(state FileDialogState) int {
 		return mkdirActionRowCount
 	}
 	return 0
+}
+
+const renameFocusCheckboxRowCount = 1
+
+// renameHasFocusCheckbox reports whether the single-file rename main dialog
+// should render and accept the focus-after-rename checkbox.
+func renameHasFocusCheckbox(state FileDialogState) bool {
+	return state.DialogType == FileDialogRename && state.RenamePhase == RenamePhaseMain
+}
+
+// renameExtraFocusRows returns the number of focus rows contributed by the
+// rename focus checkbox, or 0 when not applicable.
+func renameExtraFocusRows(state FileDialogState) int {
+	if renameHasFocusCheckbox(state) {
+		return renameFocusCheckboxRowCount
+	}
+	return 0
+}
+
+// drawRenameFocusCheckbox draws the focus-after-rename checkbox under the name input.
+func drawRenameFocusCheckbox(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
+	if !renameHasFocusCheckbox(state) || len(state.Fields) == 0 {
+		return
+	}
+	fieldsBottom := rect.Y + 1 + len(state.Fields)*4
+	sepY := fieldsBottom
+	if sepY >= rect.Y+rect.Height-2 {
+		return
+	}
+	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
+	y := sepY + 1
+	if y >= rect.Y+rect.Height-2 {
+		return
+	}
+	leftCol := rect.X + 1
+	focusIdx := len(state.Fields)
+	draw.DrawDialogCheckbox(screen, leftCol, y, "Focus after rename", 'F', state.RenameFocusAfter, state.FocusedField == focusIdx, styles)
 }
 
 // drawMkdirActionRows draws the radio button section under the directory-name input

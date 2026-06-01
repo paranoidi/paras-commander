@@ -126,6 +126,21 @@ YES:
 │       <area for buttons>         │
 └──────────────────────────────────┘
 
+NO:
+
+┌──────────────────────────────────────────────────────────┐
+│  [x] Focus after rename                          [x] Fail│
+└──────────────────────────────────────────────────────────┘
+
+YES:
+
+┌──────────────────────────────────────────────────────────┐
+│ [x] Focus after rename                          [x] Fail │
+└──────────────────────────────────────────────────────────┘
+
+There should be ONE space after (and before) border.
+
+
 Pay attention to following details:
 - Title Copy is centered. Surrounded with empty spaces.
 - ONE space margin at the left. Dialog is scaled so that there is ONE space margin at the right side.

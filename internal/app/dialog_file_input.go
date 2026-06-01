@@ -85,6 +85,9 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		if a.tryMkdirActionAltShortcut(event.Rune()) {
 			return false
 		}
+		if a.tryRenameFocusAltShortcut(event.Rune()) {
+			return false
+		}
 	}
 	var altExtras []dialogExtraMnemonic
 	if d.DialogType == ui.FileDialogDelete {
@@ -104,9 +107,10 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	onRadio := a.fileDialogOnRadio()
 	onMkdirRadio := a.fileDialogOnMkdirRadio()
 	onMassRenameRadio := a.fileDialogOnMassRenameRadio()
+	onCheckbox := a.fileDialogOnMassRenameCaseCheckbox() || a.fileDialogOnRenameFocusCheckbox()
 
 	f := a.focusedField()
-	if !onRadio && f != nil {
+	if !onRadio && !onCheckbox && f != nil {
 		if f.PathPicker && f.PickerFocused {
 			if a.tryDialogInputRestore(event, f) {
 				return false
@@ -143,6 +147,10 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			a.recomputeMassRenamePreview()
 			return false
 		}
+		if a.fileDialogOnRenameFocusCheckbox() {
+			d.RenameFocusAfter = !d.RenameFocusAfter
+			return false
+		}
 		if onMkdirRadio {
 			a.selectFocusedMkdirRadio()
 		}
@@ -165,7 +173,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		// On button: move between buttons; on radio: no-op; on field: move cursor
 		if a.fileDialogOnButton() {
 			a.fileDialogMoveFocusKey(event)
-		} else if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
+		} else if onRadio || onCheckbox {
 			return false
 		} else if f := a.focusedField(); f != nil && f.PathPicker && f.PickerFocused {
 			f.PickerFocused = false
@@ -178,7 +186,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	case tcell.KeyRight:
 		if a.fileDialogOnButton() {
 			a.fileDialogMoveFocusKey(event)
-		} else if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
+		} else if onRadio || onCheckbox {
 			return false
 		} else if f := a.focusedField(); f != nil && f.PathPicker && !f.PickerFocused {
 			runes := []rune(f.Value)
@@ -203,7 +211,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		}
 		return false
 	case tcell.KeyHome:
-		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
+		if onRadio || onCheckbox {
 			return false
 		}
 		if f := a.focusedField(); f != nil {
@@ -211,7 +219,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		}
 		return false
 	case tcell.KeyEnd:
-		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
+		if onRadio || onCheckbox {
 			return false
 		}
 		if f := a.focusedField(); f != nil {
@@ -225,7 +233,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		a.fileDialogMoveFocusKey(event)
 		return false
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
+		if onRadio || onCheckbox {
 			return false
 		}
 		if f := a.focusedField(); f != nil {
@@ -233,7 +241,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		}
 		return false
 	case tcell.KeyDelete:
-		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
+		if onRadio || onCheckbox {
 			return false
 		}
 		if f := a.focusedField(); f != nil {
@@ -241,7 +249,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		}
 		return false
 	case tcell.KeyCtrlL:
-		if onRadio || a.fileDialogOnMassRenameCaseCheckbox() {
+		if onRadio || onCheckbox {
 			return false
 		}
 		if f := a.focusedField(); f != nil {
@@ -263,6 +271,12 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			}
 			return false
 		}
+		if a.fileDialogOnRenameFocusCheckbox() {
+			if isPlainPrintableRune(event) && event.Rune() == ' ' {
+				d.RenameFocusAfter = !d.RenameFocusAfter
+			}
+			return false
+		}
 		if onMkdirRadio {
 			if isPlainPrintableRune(event) && event.Rune() == ' ' {
 				a.selectFocusedMkdirRadio()
@@ -277,6 +291,19 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 	return false
+}
+
+// tryRenameFocusAltShortcut toggles focus-after-rename via Alt+F on the main rename dialog.
+func (a *App) tryRenameFocusAltShortcut(r rune) bool {
+	d := &a.model.FileDialog
+	if d.DialogType != ui.FileDialogRename || d.RenamePhase != ui.RenamePhaseMain {
+		return false
+	}
+	if r != 'f' && r != 'F' {
+		return false
+	}
+	d.RenameFocusAfter = !d.RenameFocusAfter
+	return true
 }
 
 // tryMkdirActionAltShortcut selects a mkdir post-action via Alt+mnemonic. Works while
@@ -394,6 +421,15 @@ func (a *App) fileDialogOnMassRenameCaseCheckbox() bool {
 	return d.DialogType == ui.FileDialogMassRename &&
 		d.MassRenameMode == ui.MassRenameModeUISimple &&
 		d.FocusedField == 4
+}
+
+// fileDialogOnRenameFocusCheckbox returns true when focus is on the focus-after-rename checkbox.
+func (a *App) fileDialogOnRenameFocusCheckbox() bool {
+	d := &a.model.FileDialog
+	return d.DialogType == ui.FileDialogRename &&
+		d.RenamePhase == ui.RenamePhaseMain &&
+		len(d.Fields) > 0 &&
+		d.FocusedField == len(d.Fields)
 }
 
 // fileDialogRadioIndex returns the 0-based radio index when focus is on a

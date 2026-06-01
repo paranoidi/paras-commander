@@ -4147,6 +4147,137 @@ func TestFileDialogEnterExecutesRename(t *testing.T) {
 	}
 }
 
+func TestRenameDialogFocusCheckboxDefaultOff(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "old.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	app.dispatch(keymap.ActionFileRename)
+
+	if !app.model.FileDialog.Open {
+		t.Fatal("rename dialog should be open")
+	}
+	if app.model.FileDialog.RenameFocusAfter {
+		t.Fatal("RenameFocusAfter = true, want false (default)")
+	}
+	if got, want := ui.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 4; got != want {
+		t.Fatalf("focus count = %d, want %d (field + checkbox + OK + Cancel)", got, want)
+	}
+}
+
+func TestRenameDialogConfigFocusAfterDefaultOn(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "old.txt"))
+
+	screen := newScreen(t, 80, 20)
+	cfg := config.Default()
+	cfg.Operations.RenameFocusAfter = true
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return dir, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	t.Cleanup(app.stopWorker)
+	app.config.UI.PanelSyncFollowNavDebounceMS = 0
+
+	app.dispatch(keymap.ActionFileRename)
+	if !app.model.FileDialog.RenameFocusAfter {
+		t.Fatal("RenameFocusAfter = false, want true from config")
+	}
+}
+
+func TestRenameWithoutFocusAfterDoesNotCenterOnNewFile(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 20; i++ {
+		writeFile(t, filepath.Join(dir, fmt.Sprintf("%02d.txt", i)))
+	}
+	target := filepath.Join(dir, "10.txt")
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	for i := 0; i < p.VisibleEntryCount(); i++ {
+		entry, _, ok := p.VisibleEntry(i)
+		if ok && entry.Path == target {
+			p.Cursor = i
+			break
+		}
+	}
+
+	newName := "99.txt"
+	app.dispatch(keymap.ActionFileRename)
+	for _, r := range newName {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	p = app.activePanel()
+	entry, ok := p.CurrentEntry()
+	if !ok {
+		t.Fatal("CurrentEntry() ok = false after rename")
+	}
+	if entry.Name == newName {
+		t.Fatalf("cursor entry = %q, want index fallback not focus-after selection", entry.Name)
+	}
+	if entry.Name != "11.txt" {
+		t.Fatalf("cursor entry = %q, want 11.txt at prior index", entry.Name)
+	}
+}
+
+func TestRenameWithFocusAfterSelectsAndCentersNewFile(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 20; i++ {
+		writeFile(t, filepath.Join(dir, fmt.Sprintf("%02d.txt", i)))
+	}
+	target := filepath.Join(dir, "10.txt")
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	for i := 0; i < p.VisibleEntryCount(); i++ {
+		entry, _, ok := p.VisibleEntry(i)
+		if ok && entry.Path == target {
+			p.Cursor = i
+			break
+		}
+	}
+
+	newName := "99.txt"
+	app.dispatch(keymap.ActionFileRename)
+	for _, r := range newName {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	p = app.activePanel()
+	entry, ok := p.CurrentEntry()
+	if !ok {
+		t.Fatal("CurrentEntry() ok = false after rename")
+	}
+	if entry.Name != newName {
+		t.Fatalf("cursor entry = %q, want %s", entry.Name, newName)
+	}
+	vp := app.activeViewportRows()
+	wantScroll := p.Cursor - vp/2
+	if wantScroll < 0 {
+		wantScroll = 0
+	}
+	maxOffset := p.VisibleEntryCount() - vp
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	if wantScroll > maxOffset {
+		wantScroll = maxOffset
+	}
+	if p.ScrollOffset != wantScroll {
+		t.Fatalf("ScrollOffset = %d, want %d (centered on renamed entry)", p.ScrollOffset, wantScroll)
+	}
+}
+
 func TestMassRenameTwoSelectedFiles(t *testing.T) {
 	dir := t.TempDir()
 	aPath := filepath.Join(dir, "foo_a.txt")

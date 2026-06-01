@@ -107,6 +107,8 @@ type FileDialogState struct {
 	RenameSanitizeDots        bool
 	RenameSanitizeUnderscores bool
 	RenameSlugifySep          RenameSlugifySep
+	// RenameFocusAfter selects and centers the renamed entry after OK (single-file rename main dialog only).
+	RenameFocusAfter bool
 
 	// Mass rename (DialogType == FileDialogMassRename).
 	MassRenameMode          MassRenameModeUI

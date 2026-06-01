@@ -42,6 +42,7 @@ func (a *App) openRenameDialog(p *panel.State) {
 		Fields:           fields,
 		RenamePhase:      ui.RenamePhaseMain,
 		RenameSlugifySep: ui.RenameSlugifyDot,
+		RenameFocusAfter: a.config.Operations.RenameFocusAfter,
 	}
 }
 
@@ -240,9 +241,12 @@ func (a *App) executeRename() {
 		a.closeFileDialog()
 		return
 	}
+	focusAfter := a.model.FileDialog.RenameFocusAfter
 	a.closeFileDialog()
 	a.refreshBothPanels()
-	a.activePanel().SelectVisibleEntryCentered(plan.NewName, a.activeViewportRows())
+	if focusAfter {
+		a.activePanel().SelectVisibleEntryCentered(plan.NewName, a.activeViewportRows())
+	}
 	a.setTransientMessage(fmt.Sprintf("Renamed to %s", plan.NewName), ui.MessageUrgencyInfo)
 }
 

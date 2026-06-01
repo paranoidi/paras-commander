@@ -290,6 +290,8 @@ type OperationsConfig struct {
 	FlattenRecursive bool `toml:"flatten_recursive"`
 	// FlattenRemoveEmptyDirs is the default for the flatten dialog remove-empty checkbox.
 	FlattenRemoveEmptyDirs bool `toml:"flatten_remove_empty_dirs"`
+	// RenameFocusAfter is the default for the rename dialog focus-after-rename checkbox.
+	RenameFocusAfter bool `toml:"rename_focus_after"`
 }
 
 type LoggingConfig struct {
@@ -379,6 +381,7 @@ func Default() Config {
 			CowFileCloning:             DefaultCowFileCloning,
 			FlattenRecursive:           DefaultFlattenRecursive,
 			FlattenRemoveEmptyDirs:     DefaultFlattenRemoveEmptyDirs,
+			RenameFocusAfter:           DefaultRenameFocusAfter,
 		},
 		Logging: LoggingConfig{
 			Enabled: false,
