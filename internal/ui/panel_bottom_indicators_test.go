@@ -93,19 +93,18 @@ func TestPanelBottomEndEdgeSegmentsOrdersOtherPanelLast(t *testing.T) {
 	}
 }
 
-func TestPanelBottomIndicatorStyleUsesTitleAndFrame(t *testing.T) {
+func TestPanelBottomIndicatorStyleUsesThemeAndFrame(t *testing.T) {
 	t.Parallel()
 	styles := theme.Default()
-	title := styles.PanelActiveTitle
 	frame := styles.PanelActiveFrame
 	ctx := PanelBottomIndicatorContext{
 		FileListActive: true,
-		TitleStyle:     title,
 		BorderStyle:    frame,
 		Styles:         styles,
 	}
-	if got := panelBottomIndicatorStyle(ctx, PanelBottomIndicatorSelections); got != title {
-		t.Fatalf("selections style = %v, want title %v", got, title)
+	wantSel := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelections, true, false)
+	if got := panelBottomIndicatorStyle(ctx, PanelBottomIndicatorSelections); got != wantSel {
+		t.Fatalf("selections style = %v, want %v", got, wantSel)
 	}
 	if got := panelBottomIndicatorStyle(ctx, PanelBottomIndicatorGitignore); got != frame {
 		t.Fatalf("gitignore style = %v, want frame %v", got, frame)

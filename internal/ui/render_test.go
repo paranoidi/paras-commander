@@ -1448,7 +1448,7 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
 		t.Fatalf("active right bottom = %q, want no selections hint on active column", rightBottom)
 	}
 
-	// Frame "─" uses panel frame style; padded title uses inactive title style (not merged into one overlay).
+	// Frame "─" uses panel frame style; Selections segment uses panel.indicator.selections.
 	dashR, dashSt, _ := screen.Get(1, bottomY)
 	if dashR != "─" {
 		t.Fatalf("left bottom frame dash = %q, want '─'", dashR)
@@ -1456,9 +1456,10 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
 	if dashSt != styles.PanelInactiveFrame {
 		t.Fatalf("left bottom frame dash style = %v, want PanelInactiveFrame", dashSt)
 	}
+	wantSel := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelections, false, false)
 	_, titleSt, _ := screen.Get(2, bottomY)
-	if titleSt != styles.PanelInactiveTitle {
-		t.Fatalf("selections hint padded segment style = %v, want PanelInactiveTitle", titleSt)
+	if titleSt != wantSel {
+		t.Fatalf("selections hint padded segment style = %v, want %v", titleSt, wantSel)
 	}
 }
 
@@ -1499,7 +1500,7 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
 		t.Fatalf("inactive right bottom = %q, want substring %q", rightBottom, " Selections ")
 	}
 
-	// Trailing frame dash before ┘ uses PanelFrame; padded title uses inactive title style.
+	// Trailing frame dash before ┘ uses PanelFrame; Selections uses panel.indicator.selections.
 	lastIn := width - 2
 	dashR, dashSt, _ := screen.Get(lastIn, bottomY)
 	if dashR != "─" {
@@ -1508,9 +1509,10 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
 	if dashSt != styles.PanelInactiveFrame {
 		t.Fatalf("right bottom frame dash style = %v, want PanelInactiveFrame", dashSt)
 	}
+	wantSel := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelections, false, false)
 	_, titleSt, _ := screen.Get(lastIn-1, bottomY)
-	if titleSt != styles.PanelInactiveTitle {
-		t.Fatalf("selections hint padded last cell style = %v, want PanelInactiveTitle", titleSt)
+	if titleSt != wantSel {
+		t.Fatalf("selections hint padded last cell style = %v, want %v", titleSt, wantSel)
 	}
 }
 

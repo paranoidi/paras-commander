@@ -105,7 +105,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		syncDriverPanelID, quickViewDriverPanelID,
 		hideInactivePanel, activePanel, otherPanelPath, userHomeDir,
 		fileListActive, chromeBlocked,
-		borderStyle, titleStyle, styles,
+		borderStyle, styles,
 	)
 	drawPanelBottomIndicators(screen, rect, bottomCtx)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}

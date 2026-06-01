@@ -53,7 +53,6 @@ type PanelBottomIndicatorContext struct {
 	FileListActive         bool
 	ChromeBlocked          bool
 	BorderStyle            tcell.Style
-	TitleStyle             tcell.Style
 	Styles                 theme.Theme
 }
 
@@ -82,12 +81,10 @@ type panelBottomIndicatorSegment struct {
 	Style tcell.Style
 }
 
-// panelBottomIndicatorStyle resolves segment paint style. Selections, dotfiles-hidden, and gitignore
-// follow panel title/frame chrome (active/inactive/blocked); other ids use theme panel.indicator.*.
+// panelBottomIndicatorStyle resolves segment paint style via theme panel.indicator.* (with
+// documented fallbacks). Dotfiles-hidden and gitignore still default to panel frame when unset.
 func panelBottomIndicatorStyle(ctx PanelBottomIndicatorContext, id PanelBottomIndicatorID) tcell.Style {
 	switch id {
-	case PanelBottomIndicatorSelections:
-		return ctx.TitleStyle
 	case PanelBottomIndicatorGitignore, PanelBottomIndicatorDotfilesHidden:
 		return ctx.BorderStyle
 	default:
@@ -235,7 +232,7 @@ func panelBottomIndicatorContextForRect(
 	activePanel int,
 	otherPanelPath, userHomeDir string,
 	fileListActive, chromeBlocked bool,
-	borderStyle, titleStyle tcell.Style,
+	borderStyle tcell.Style,
 	styles theme.Theme,
 ) PanelBottomIndicatorContext {
 	ctx := PanelBottomIndicatorContext{
@@ -251,7 +248,6 @@ func panelBottomIndicatorContextForRect(
 		FileListActive:         fileListActive,
 		ChromeBlocked:          chromeBlocked,
 		BorderStyle:            borderStyle,
-		TitleStyle:             titleStyle,
 		Styles:                 styles,
 	}
 	avail := rect.Width - 2
