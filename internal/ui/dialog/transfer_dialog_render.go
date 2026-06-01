@@ -69,8 +69,9 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 		sep1Y := rect.Y + 4
 		draw.DrawDialogHSeparator(screen, rect, sep1Y, borderStyle)
 
-		draw.DrawDialogCheckbox(screen, rect.X+2, sep1Y+1, "Preserve permissions", 0, state.PreservePermissions, state.FocusField == 1, styles)
-		draw.DrawDialogCheckbox(screen, rect.X+2, sep1Y+2, "Preserve timestamps", 0, state.PreserveTimestamps, state.FocusField == 2, styles)
+		// One cell left of labels/fields so "[ ]" aligns with other dialog content (see mass rename).
+		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+1, "Preserve permissions", 'r', state.PreservePermissions, state.FocusField == 1, styles)
+		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+2, "Preserve timestamps", 't', state.PreserveTimestamps, state.FocusField == 2, styles)
 
 		sep2Y := sep1Y + 3
 		draw.DrawDialogHSeparator(screen, rect, sep2Y, borderStyle)

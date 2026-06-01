@@ -37,6 +37,61 @@ func TestTransferDialogPrefillDestinationTrailingSlash(t *testing.T) {
 	}
 }
 
+func TestTransferDialogCopyPreserveAltAndFocusedShortcuts(t *testing.T) {
+	root := t.TempDir()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+
+	cfg := config.Default()
+	cfg.Operations.PreservePermissions = true
+	cfg.Operations.PreserveTimestamps = true
+	app, err := NewWithOptions(screen, Options{
+		CWD:    func() (string, error) { return root, nil },
+		Config: cfg,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+
+	app.openCopyDialog()
+	d := &app.model.TransferDialog
+	if !d.Open || d.Kind != ui.TransferKindCopy {
+		t.Fatal("copy dialog should be open")
+	}
+	if !d.PreservePermissions || !d.PreserveTimestamps {
+		t.Fatal("expected preserve options from config defaults")
+	}
+
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	if d.PreservePermissions {
+		t.Fatal("Alt+R should toggle preserve permissions off")
+	}
+	if !d.PreserveTimestamps {
+		t.Fatal("Alt+T should not affect timestamps yet")
+	}
+
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModAlt))
+	if d.PreserveTimestamps {
+		t.Fatal("Alt+T should toggle preserve timestamps off")
+	}
+
+	d.FocusField = 1
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
+	if !d.PreservePermissions {
+		t.Fatal("r on focused permissions row should toggle on")
+	}
+
+	d.FocusField = 2
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+	if !d.PreserveTimestamps {
+		t.Fatal("t on focused timestamps row should toggle on")
+	}
+}
+
 func TestTransferDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 	root := t.TempDir()
 	fooDir := filepath.Join(root, "foo")

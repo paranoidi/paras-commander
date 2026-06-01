@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -122,6 +123,18 @@ func (a *App) closeTransferDialog() {
 
 func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	d := &a.model.TransferDialog
+	if d.Phase == ui.TransferPhaseDestination && d.Kind == ui.TransferKindCopy {
+		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+			switch event.Rune() {
+			case 'r', 'R':
+				d.PreservePermissions = !d.PreservePermissions
+				return
+			case 't', 'T':
+				d.PreserveTimestamps = !d.PreserveTimestamps
+				return
+			}
+		}
+	}
 	// Alt+O = OK, Alt+C = Cancel, Alt+P = Add paused (mnemonics; must run before field edit).
 	if a.tryStandardDialogActions(event, a.confirmTransfer, a.closeTransferDialog, []dialogExtraMnemonic{
 		{'p', a.confirmTransferPaused},
@@ -234,12 +247,23 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if d.Phase == ui.TransferPhaseDestination && d.Kind == ui.TransferKindCopy && event.Key() == tcell.KeyRune && event.Rune() == ' ' {
-		switch d.FocusField {
-		case 1:
-			d.PreservePermissions = !d.PreservePermissions
-		case 2:
-			d.PreserveTimestamps = !d.PreserveTimestamps
+	if d.Phase == ui.TransferPhaseDestination && d.Kind == ui.TransferKindCopy && event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
+		switch event.Rune() {
+		case 'r', 'R':
+			if d.FocusField == 1 {
+				d.PreservePermissions = !d.PreservePermissions
+			}
+		case 't', 'T':
+			if d.FocusField == 2 {
+				d.PreserveTimestamps = !d.PreserveTimestamps
+			}
+		case ' ':
+			switch d.FocusField {
+			case 1:
+				d.PreservePermissions = !d.PreservePermissions
+			case 2:
+				d.PreserveTimestamps = !d.PreserveTimestamps
+			}
 		}
 	}
 }
