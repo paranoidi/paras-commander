@@ -18,6 +18,18 @@ const (
 	EventCanceled   EventType = "canceled"
 )
 
+// DroppableWhenChannelFull reports whether emit may discard the event when the
+// worker-to-app channel is full. Progress samples are coalesced in the UI; lifecycle
+// and blocker events must always be delivered.
+func (t EventType) DroppableWhenChannelFull() bool {
+	switch t {
+	case EventProgress, EventScanProgress:
+		return true
+	default:
+		return false
+	}
+}
+
 // Event is a structured message emitted by the worker to report job state changes.
 type Event struct {
 	Type      EventType

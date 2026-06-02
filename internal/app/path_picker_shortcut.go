@@ -19,6 +19,9 @@ func (a *App) pathPickerHostFooterEligible() bool {
 		a.model.TransferDialog.FocusField == 0 {
 		return true
 	}
+	if a.model.FlattenDialog.Open && a.model.FlattenDialog.FocusField == 0 {
+		return true
+	}
 	return false
 }
 
@@ -46,6 +49,10 @@ func (a *App) tryPathPickerHostShortcut(ev *tcell.EventKey) bool {
 	d := &a.model.TransferDialog
 	if d.Open && d.Phase == ui.TransferPhaseDestination && d.FocusField == 0 {
 		a.openPathPickerForTransfer()
+		return true
+	}
+	if a.model.FlattenDialog.Open && a.model.FlattenDialog.FocusField == 0 {
+		a.openPathPickerForFlatten()
 		return true
 	}
 	return false

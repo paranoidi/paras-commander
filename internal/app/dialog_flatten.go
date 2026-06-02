@@ -24,14 +24,16 @@ func (a *App) openFlattenDialog() {
 		rootStrs[i] = r.String()
 	}
 	a.model.FlattenDialog = ui.FlattenDialogState{
-		Open:        true,
-		Destination: a.inactivePanel().PathString(),
-		Recursive:   a.config.Operations.FlattenRecursive,
-		RemoveEmpty: a.config.Operations.FlattenRemoveEmptyDirs,
-		FocusField:  0,
-		DirRoots:    rootStrs,
+		Open:         true,
+		Destination:  transferPrefilledDestination(a.inactivePanel().PathString()),
+		DestSubFocus: ui.FlattenDestSubFocusText,
+		Recursive:    a.config.Operations.FlattenRecursive,
+		RemoveEmpty:  a.config.Operations.FlattenRemoveEmptyDirs,
+		FocusField:   0,
+		DirRoots:     rootStrs,
 	}
 	a.clearTransientMessage()
+	a.armFlattenDestinationValidateTimer()
 }
 
 func (a *App) flattenSourceErrorToast(err error) {
@@ -48,6 +50,7 @@ func (a *App) flattenSourceErrorToast(err error) {
 }
 
 func (a *App) closeFlattenDialog() {
+	a.transferDestValidate.Invalidate()
 	a.model.FlattenDialog = ui.FlattenDialogState{}
 }
 
@@ -55,12 +58,6 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 	d := &a.model.FlattenDialog
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
-		case 'o', 'O':
-			a.confirmFlatten()
-			return
-		case 'c', 'C':
-			a.closeFlattenDialog()
-			return
 		case 'r', 'R':
 			d.Recursive = !d.Recursive
 			return
@@ -69,25 +66,113 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if ui.AltDialogOK(event) {
-		a.confirmFlatten()
+	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
+		switch event.Rune() {
+		case 'r', 'R':
+			if d.FocusField == 1 {
+				d.Recursive = !d.Recursive
+				return
+			}
+		case 'e', 'E':
+			if d.FocusField == 2 {
+				d.RemoveEmpty = !d.RemoveEmpty
+				return
+			}
+		case ' ':
+			switch d.FocusField {
+			case 1:
+				d.Recursive = !d.Recursive
+				return
+			case 2:
+				d.RemoveEmpty = !d.RemoveEmpty
+				return
+			}
+		}
+	}
+	if a.tryStandardDialogActions(event, a.confirmFlatten, a.closeFlattenDialog, nil) {
 		return
 	}
-	if ui.AltDialogCancel(event) || event.Key() == tcell.KeyEsc {
+	if event.Key() == tcell.KeyEsc {
 		a.closeFlattenDialog()
 		return
 	}
-	if focus, ok := ui.FlattenDialogMoveFocus(d.FocusField, event.Key()); ok {
-		d.FocusField = focus
+	if a.tryPathPickerHostShortcut(event) {
 		return
 	}
-	tform := ui.NewFlattenDialogLinearForm()
-	if event.Key() == tcell.KeyEnter || event.Key() == ' ' {
+	if d.FocusField == 0 && d.DestSubFocus == ui.FlattenDestSubFocusText &&
+		event.Key() == tcell.KeyTab && d.Destination.CompletionSuffix != "" {
+		if d.Destination.AcceptCompletion() {
+			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
+			a.armFlattenDestinationValidateTimer()
+			return
+		}
+		return
+	}
+	if d.FocusField == 0 {
+		if d.DestSubFocus == ui.FlattenDestSubFocusPicker {
+			switch event.Key() {
+			case tcell.KeyLeft:
+				d.DestSubFocus = ui.FlattenDestSubFocusText
+				runes := []rune(d.Destination.Value)
+				d.Destination.Cursor = len(runes)
+				return
+			case tcell.KeyEnter:
+				a.openPathPickerForFlatten()
+				return
+			case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
+				d.DestSubFocus = ui.FlattenDestSubFocusText
+			default:
+				return
+			}
+		} else {
+			switch event.Key() {
+			case tcell.KeyRight:
+				dest := &d.Destination
+				runes := []rune(dest.Value)
+				c := dest.Cursor
+				if c < 0 {
+					c = 0
+				}
+				if c > len(runes) {
+					c = len(runes)
+				}
+				if dest.Prefill != "" && dest.PrefillPending && dest.Value == dest.Prefill && c >= len(runes) {
+					dest.CommitPrefill()
+					return
+				}
+				if c >= len(runes) {
+					d.DestSubFocus = ui.FlattenDestSubFocusPicker
+					return
+				}
+				dest.MoveCursor(1)
+				a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
+				return
+			case tcell.KeyLeft:
+				d.Destination.MoveCursor(-1)
+				a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
+				return
+			}
+		}
+	}
+	if focus, ok := ui.FlattenDialogMoveFocus(d.FocusField, event.Key()); ok {
+		prev := d.FocusField
+		d.FocusField = focus
+		if prev == 0 && focus != 0 {
+			d.DestSubFocus = ui.FlattenDestSubFocusText
+		}
+		return
+	}
+	if event.Key() == tcell.KeyEnter {
+		tform := ui.NewFlattenDialogLinearForm()
+		if d.FocusField == 0 && d.DestSubFocus == ui.FlattenDestSubFocusText {
+			a.confirmFlatten()
+			return
+		}
 		switch d.FocusField {
-		case 0:
+		case 1:
 			d.Recursive = !d.Recursive
 			return
-		case 1:
+		case 2:
 			d.RemoveEmpty = !d.RemoveEmpty
 			return
 		case tform.OKIndex():
@@ -98,6 +183,19 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
+	if d.FocusField == 0 {
+		if a.editFlattenFieldKey(event, &d.Destination) {
+			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
+			a.armFlattenDestinationValidateTimer()
+			return
+		}
+	}
+}
+
+func (a *App) editFlattenFieldKey(event *tcell.EventKey, f *ui.FileDialogField) bool {
+	return a.handleFileDialogFieldKey(event, f, func() {
+		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
+	})
 }
 
 func (a *App) confirmFlatten() {
@@ -107,7 +205,12 @@ func (a *App) confirmFlatten() {
 		a.setTransientMessage("Invalid flatten source paths", ui.MessageUrgencyWarn)
 		return
 	}
-	destLoc, err := pathloc.Parse(d.Destination)
+	dest := strings.TrimSpace(d.Destination.Value)
+	if dest == "" {
+		a.setTransientMessage("Destination required", ui.MessageUrgencyWarn)
+		return
+	}
+	destLoc, err := pathloc.Parse(dest)
 	if err != nil {
 		a.setTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
 		return
@@ -142,7 +245,7 @@ func (a *App) confirmFlatten() {
 	}
 	a.closeFlattenDialog()
 	a.activePanel().ClearSelection()
-	a.addFlattenJob(sources, d.Destination, d.RemoveEmpty, d.DirRoots)
+	a.addFlattenJob(sources, destLoc.String(), d.RemoveEmpty, d.DirRoots)
 	noun := "items"
 	if len(sources) == 1 {
 		noun = "item"

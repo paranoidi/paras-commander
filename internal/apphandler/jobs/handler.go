@@ -764,18 +764,24 @@ func (h *Handler) PollEvents() bool {
 // by pollJobEvents(). It must only be called from the jobsWakePayload handler in
 // Run() — never during key-event handling — so that statfs/readdir syscalls never
 // block the UI event loop while the user is navigating or making selections.
-func (h *Handler) ApplyRefreshes() {
+// The return value is true when both panels were reloaded after a terminal job event.
+func (h *Handler) ApplyRefreshes() bool {
 	switch {
 	case h.refreshTerminal:
 		h.refreshTerminal = false
 		h.refreshProgress = false
 		h.applyJobsRetention()
+		h.SyncJobPathMarks()
 		h.host.RefreshBothPanels()
+		return true
 	case h.refreshProgress:
 		h.refreshProgress = false
 		if h.config.Jobs.FreeSpaceOnProgressWake {
 			h.host.RequestBothPanelsVolumeSpaceRefreshAsync()
 		}
+		return false
+	default:
+		return false
 	}
 }
 

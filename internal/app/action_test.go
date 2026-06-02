@@ -199,6 +199,15 @@ func TestActionFromKeyMapsCtrlAltDToAbortDiskUsageScans(t *testing.T) {
 	}
 }
 
+func TestActionFromKeyMapsCtrlAltFToFlatten(t *testing.T) {
+	km := defaultKeymap(t)
+	ev := tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModAlt)
+	got := lookupActionForView(ev, km, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionFileFlatten {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionFileFlatten", got)
+	}
+}
+
 func TestActionFromKeyMapsAltDToClearDiskUsageData(t *testing.T) {
 	km := defaultKeymap(t)
 	ev := tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt)

@@ -661,7 +661,10 @@ func (a *App) Run() error {
 			shouldRenderJobs = jobsDirty && a.jobsCtrl.AffectVisible()
 		}
 		if applyJobRefreshesAfter {
-			a.applyJobRefreshes()
+			if a.applyJobRefreshes() && !didRender {
+				a.render()
+				didRender = true
+			}
 		}
 		if shouldRenderJobs && !didRender {
 			if !a.jobsCtrl.LastBatchMenuBarStripOnly() || !a.paintMenuBarJobsStripOnly() {

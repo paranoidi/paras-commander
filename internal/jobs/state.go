@@ -694,12 +694,18 @@ func (s *State) QueueTestEvent(ev Event) {
 
 func (s *State) emit(ev Event) {
 	sent := false
-	select {
-	case s.events <- ev:
+	if ev.Type.DroppableWhenChannelFull() {
+		select {
+		case s.events <- ev:
+			sent = true
+		default:
+			// Progress samples are coalesced in the UI; drop when the channel is full.
+		}
+	} else {
+		// Lifecycle and blocker events block until delivered so completion is never lost
+		// behind a long progress burst (e.g. flatten with many files).
+		s.events <- ev
 		sent = true
-	default:
-		// Channel full; drop event to avoid blocking. This should not happen
-		// with proper event consumption in the app event loop.
 	}
 	if !sent {
 		return

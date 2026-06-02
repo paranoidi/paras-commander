@@ -205,3 +205,57 @@ func TestJobsViewLeftInConflictPanelNavigatesButtonsNotClose(t *testing.T) {
 		t.Fatalf("ConflictButtonFocus = %d, want 0 after Left", model.JobsView.ConflictButtonFocus)
 	}
 }
+
+type jobsHostRefreshStub struct {
+	jobsHostStub
+	refreshed bool
+}
+
+func (h *jobsHostRefreshStub) RefreshBothPanels() { h.refreshed = true }
+
+func TestApplyRefreshesReloadsPanelsAndSyncsJobPathMarks(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+
+	state := jobs.NewState()
+	state.AddJob(&jobs.Job{
+		ID:          "flat",
+		Type:        jobs.TypeFlatten,
+		Status:      jobs.StatusRunning,
+		Sources:     pathloc.PathsForTest("/src/a", "/src/b"),
+		Destination: pathloc.MustParse("/dst"),
+	})
+	state.ApplyEvent(jobs.Event{Type: jobs.EventCompleted, JobID: "flat", Status: jobs.StatusCompleted})
+
+	model := &ui.Model{}
+	host := &jobsHostRefreshStub{}
+	h := New(Deps{
+		Host:   host,
+		Screen: screen,
+		Model:  model,
+		State:  state,
+		Config: config.Default(),
+	})
+	h.refreshTerminal = true
+
+	if !h.ApplyRefreshes() {
+		t.Fatal("ApplyRefreshes should report terminal refresh")
+	}
+	if !host.refreshed {
+		t.Fatal("RefreshBothPanels was not called")
+	}
+	if len(model.JobPathMarks) != 1 {
+		t.Fatalf("JobPathMarks len = %d, want 1", len(model.JobPathMarks))
+	}
+	if model.JobPathMarks[0].Status != string(jobs.StatusCompleted) {
+		t.Fatalf("JobPathMarks status = %q, want completed", model.JobPathMarks[0].Status)
+	}
+	marked, _ := ui.EntryPathJobMarkStatus("/src/a", model.JobPathMarks)
+	if marked {
+		t.Fatal("completed flatten job should not mark source paths")
+	}
+}

@@ -116,6 +116,7 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt), ActionPanelHistoryDialog, true},
 		{tcell.NewEventKey(tcell.KeyCtrlH, 0, tcell.ModCtrl), ActionPanelHistoryDialog, true},
 		{tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModCtrl), ActionPanelFindDialog, true},
+		{tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModAlt), ActionFileFlatten, true},
 		{tcell.NewEventKey(tcell.KeyRune, 0x06, tcell.ModCtrl), ActionPanelFindDialog, true},
 		{tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone), ActionNavParent, true},
 		{tcell.NewEventKey(tcell.KeyRune, '-', tcell.ModNone), ActionPanelUnselectGroup, true},

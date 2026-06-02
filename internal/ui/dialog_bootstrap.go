@@ -63,6 +63,7 @@ type (
 const (
 	PathPickerPurposeNavigate                 = dialog.PathPickerPurposeNavigate
 	PathPickerPurposeApplyTransferDestination = dialog.PathPickerPurposeApplyTransferDestination
+	PathPickerPurposeApplyFlattenDestination  = dialog.PathPickerPurposeApplyFlattenDestination
 	PathPickerPurposeApplyFileDialogField     = dialog.PathPickerPurposeApplyFileDialogField
 
 	FileDialogNone         = dialog.FileDialogNone
@@ -109,6 +110,8 @@ const (
 
 	TransferDestSubFocusText   = dialog.TransferDestSubFocusText
 	TransferDestSubFocusPicker = dialog.TransferDestSubFocusPicker
+	FlattenDestSubFocusText    = dialog.FlattenDestSubFocusText
+	FlattenDestSubFocusPicker  = dialog.FlattenDestSubFocusPicker
 )
 
 var (

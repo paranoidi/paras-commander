@@ -46,6 +46,10 @@ func (a *App) syncOpenPathInputsAfterFSChange() {
 	if d.Open && d.Phase == ui.TransferPhaseDestination {
 		a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
 	}
+	fd := &a.model.FlattenDialog
+	if fd.Open {
+		a.syncPathFieldCompletion(&fd.Destination, a.transferDestinationTextWidth())
+	}
 }
 
 func (a *App) transferDestinationTextWidth() int {

@@ -572,3 +572,58 @@ func TestMenuBarStripStatusesOrderDoneOngoingQueued(t *testing.T) {
 		}
 	}
 }
+
+func TestEmitDropsProgressWhenChannelFull(t *testing.T) {
+	t.Parallel()
+	s := NewState()
+	for i := 0; i < cap(s.events)+5; i++ {
+		s.emit(Event{Type: EventProgress, JobID: "j1", Status: StatusRunning, DoneFiles: i})
+	}
+	if len(s.events) != cap(s.events) {
+		t.Fatalf("channel len = %d, want full %d", len(s.events), cap(s.events))
+	}
+}
+
+func TestEmitBlocksUntilCompletedDelivered(t *testing.T) {
+	t.Parallel()
+	s := NewState()
+	for i := 0; i < cap(s.events); i++ {
+		s.emit(Event{Type: EventProgress, JobID: "j1", Status: StatusRunning, DoneFiles: i})
+	}
+	sent := make(chan struct{})
+	go func() {
+		s.emit(Event{Type: EventCompleted, JobID: "j1", Status: StatusCompleted})
+		close(sent)
+	}()
+	select {
+	case <-sent:
+		t.Fatal("completed send should block until channel has space")
+	case <-time.After(20 * time.Millisecond):
+	}
+	<-s.events // free one slot
+	select {
+	case <-sent:
+	case <-time.After(time.Second):
+		t.Fatal("completed not delivered after making channel space")
+	}
+	found := false
+	for len(s.events) > 0 {
+		ev := <-s.events
+		if ev.Type == EventCompleted {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("completed event not in channel")
+	}
+}
+
+func TestEventTypeDroppableWhenChannelFull(t *testing.T) {
+	t.Parallel()
+	if !EventProgress.DroppableWhenChannelFull() {
+		t.Fatal("progress should be droppable")
+	}
+	if EventCompleted.DroppableWhenChannelFull() {
+		t.Fatal("completed should not be droppable")
+	}
+}

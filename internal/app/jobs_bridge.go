@@ -21,7 +21,7 @@ func (a *App) handleJobsViewKey(event *tcell.EventKey) bool {
 
 func (a *App) pollJobEvents() bool { return a.jobsCtrl.PollEvents() }
 
-func (a *App) applyJobRefreshes() { a.jobsCtrl.ApplyRefreshes() }
+func (a *App) applyJobRefreshes() bool { return a.jobsCtrl.ApplyRefreshes() }
 
 func (a *App) drainDiscardProgressEvents() { a.jobsCtrl.DrainDiscardProgressEvents() }
 

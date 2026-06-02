@@ -66,14 +66,17 @@ func TestFileMenuFlattenOpensDialog(t *testing.T) {
 	if !app.model.FlattenDialog.Open {
 		t.Fatal("flatten dialog should be open")
 	}
-	if app.model.FlattenDialog.Destination != filepath.Clean(dst) {
-		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination, dst)
+	if app.model.FlattenDialog.Destination.Value != transferPrefilledDestination(dst).Value {
+		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, transferPrefilledDestination(dst).Value)
 	}
 	if app.model.FlattenDialog.Recursive {
 		t.Fatal("recursive should default false")
 	}
 	if !app.model.FlattenDialog.RemoveEmpty {
 		t.Fatal("remove empty should default true")
+	}
+	if app.model.FlattenDialog.FocusField != 0 {
+		t.Fatalf("FocusField = %d, want destination row 0", app.model.FlattenDialog.FocusField)
 	}
 }
 
@@ -105,10 +108,10 @@ func TestFlattenConfirmQueuesJob(t *testing.T) {
 	p.SelectedPaths = map[string]bool{filepath.Clean(root): true}
 
 	app.openFlattenDialog()
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRune, 'O', tcell.ModAlt))
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FlattenDialog.Open {
-		t.Fatal("dialog should close after OK")
+		t.Fatal("dialog should close after Enter on OK")
 	}
 	all := app.jobState.AllJobs()
 	if len(all) != 1 {

@@ -541,11 +541,12 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"move"},
 		},
 		{
-			ID:          ActionFileFlatten,
-			Title:       "Flatten directories",
-			Section:     "File operations",
-			DefaultKeys: nil,
-			Keywords:    []string{"flatten", "hoist", "directory"},
+			ID:           ActionFileFlatten,
+			Title:        "Flatten directories",
+			Section:      "File operations",
+			DefaultKeys:  []string{"C-M-f"},
+			PreferredKey: "C-M-f",
+			Keywords:     []string{"flatten", "hoist", "directory"},
 		},
 
 		// ── Commands ──

@@ -7,7 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
-const flattenDialogNumContent = 2
+const flattenDialogNumContent = 3
 
 // DrawFlattenDialog paints the flatten confirmation modal.
 func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogState, styles theme.Theme) {
@@ -17,14 +17,20 @@ func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogSt
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Flatten", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 
-	primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, "Destination:", styles.DialogText.Background(dbg))
-	primitive.Text(screen, rect.X+2, rect.Y+3, rect.Width-4, state.Destination, styles.DialogText.Background(dbg))
+	primitive.Text(screen, draw.DialogTextX(rect), rect.Y+1, draw.DialogContentWidth(rect), "Destination:", styles.DialogText.Background(dbg))
+
+	inputY := rect.Y + 3
+	inputWidth := draw.DialogContentWidth(rect)
+	rowFocused := state.FocusField == 0
+	pickerFocused := rowFocused && state.DestSubFocus == FlattenDestSubFocusPicker
+	destInvalid := state.DestPathInvalid && !state.DestPathCheckPending
+	drawPathInputRow(screen, draw.DialogTextX(rect), inputY, inputWidth, state.Destination, rowFocused, pickerFocused, destInvalid, styles)
 
 	sep1Y := rect.Y + 4
 	draw.DrawDialogHSeparator(screen, rect, sep1Y, borderStyle)
 
-	draw.DrawDialogCheckbox(screen, rect.X+2, sep1Y+1, "Recursive flatten", 'R', state.Recursive, state.FocusField == 0, styles)
-	draw.DrawDialogCheckbox(screen, rect.X+2, sep1Y+2, "Remove empty directories", 'E', state.RemoveEmpty, state.FocusField == 1, styles)
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), sep1Y+1, "Recursive flatten", 'R', state.Recursive, state.FocusField == 1, styles)
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), sep1Y+2, "Remove empty directories", 'E', state.RemoveEmpty, state.FocusField == 2, styles)
 
 	sep2Y := sep1Y + 3
 	draw.DrawDialogHSeparator(screen, rect, sep2Y, borderStyle)
@@ -37,7 +43,7 @@ func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogSt
 	}, styles)
 }
 
-// FlattenDialogLinearForm is focus navigation for the flatten dialog (2 checkboxes + OK/Cancel).
+// FlattenDialogLinearForm is focus navigation for the flatten dialog (destination + 2 checkboxes + OK/Cancel).
 type FlattenDialogLinearForm struct {
 	form DialogTrailingButtonsForm
 }

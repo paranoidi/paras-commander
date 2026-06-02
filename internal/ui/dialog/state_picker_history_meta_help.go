@@ -16,6 +16,8 @@ const (
 	PathPickerPurposeNavigate PathPickerPurpose = iota
 	// PathPickerPurposeApplyTransferDestination writes the path into the copy/move destination field.
 	PathPickerPurposeApplyTransferDestination
+	// PathPickerPurposeApplyFlattenDestination writes the path into the flatten destination field.
+	PathPickerPurposeApplyFlattenDestination
 	// PathPickerPurposeApplyFileDialogField writes the path into FileDialog.Fields[FileFieldIndex].Value.
 	PathPickerPurposeApplyFileDialogField
 )

@@ -20,6 +20,9 @@ func (a *App) closePathPicker() {
 		purpose == ui.PathPickerPurposeApplyTransferDestination {
 		a.armTransferDestinationValidateTimer()
 	}
+	if a.model.FlattenDialog.Open && purpose == ui.PathPickerPurposeApplyFlattenDestination {
+		a.armFlattenDestinationValidateTimer()
+	}
 }
 
 func (a *App) syncPathPickerRanks() {
@@ -159,6 +162,15 @@ func (a *App) activatePathPickerSelection() {
 		d.Destination.Prefill = ""
 		d.Destination.PrefillPending = false
 		d.DestSubFocus = ui.TransferDestSubFocusText
+		a.closePathPicker()
+	case ui.PathPickerPurposeApplyFlattenDestination:
+		d := &a.model.FlattenDialog
+		rn := []rune(path)
+		d.Destination.Value = path
+		d.Destination.Cursor = len(rn)
+		d.Destination.Prefill = ""
+		d.Destination.PrefillPending = false
+		d.DestSubFocus = ui.FlattenDestSubFocusText
 		a.closePathPicker()
 	case ui.PathPickerPurposeApplyFileDialogField:
 		idx := st.FileFieldIndex
@@ -335,6 +347,30 @@ func pathEntryMissing(panelPath, home, path string) bool {
 	return err != nil
 }
 
+func (a *App) openPathPickerForFlatten() {
+	a.transferDestValidate.Invalidate()
+	items, err := a.pathPickerItemsHistoryAndBookmarks()
+	if err != nil {
+		a.setErrorMessage("Choose path", err)
+		return
+	}
+	if len(items) == 0 {
+		a.setTransientMessage("No paths in history or bookmarks", ui.MessageUrgencyInfo)
+		return
+	}
+	a.model.PathPicker = ui.PathPickerState{
+		Open:       true,
+		Title:      "Choose path",
+		Purpose:    ui.PathPickerPurposeApplyFlattenDestination,
+		Query:      "",
+		Items:      items,
+		Focus:      0,
+		Selected:   0,
+		ListScroll: 0,
+	}
+	a.syncPathPickerRanks()
+}
+
 func (a *App) openPathPickerForTransfer() {
 	a.transferDestValidate.Invalidate()
 	items, err := a.pathPickerItemsHistoryAndBookmarks()
@@ -429,6 +465,33 @@ func (a *App) armTransferDestinationValidateTimer() {
 func (a *App) applyTransferDestinationPathValidation() {
 	d := &a.model.TransferDialog
 	if !d.Open || d.Phase != ui.TransferPhaseDestination {
+		return
+	}
+	d.DestPathCheckPending = false
+	panel := a.activePanel()
+	d.DestPathInvalid = pathpick.TypedDoesNotExist(panel.PathString(), a.model.UserHomeDir, d.Destination.Value)
+	a.syncOpenPathInputsAfterFSChange()
+}
+
+func (a *App) armFlattenDestinationValidateTimer() {
+	if !a.model.FlattenDialog.Open {
+		return
+	}
+	d := &a.model.FlattenDialog
+	d.DestPathCheckPending = true
+	delay := time.Duration(a.config.UI.PathPickerValidateDelayMS) * time.Millisecond
+	a.transferDestValidate.Arm(delay, func() {
+		if !a.model.FlattenDialog.Open {
+			return
+		}
+		a.applyFlattenDestinationPathValidation()
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(transferDestValidatePayload{}))
+	})
+}
+
+func (a *App) applyFlattenDestinationPathValidation() {
+	d := &a.model.FlattenDialog
+	if !d.Open {
 		return
 	}
 	d.DestPathCheckPending = false
