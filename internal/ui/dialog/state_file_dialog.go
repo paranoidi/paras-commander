@@ -90,8 +90,14 @@ type FileDialogState struct {
 	FocusedField int
 	Message      string
 	// RunForEachPaths / RunForEachDir apply when DialogType == FileDialogRunForEach (targets resolved at dialog open).
-	RunForEachPaths []string
-	RunForEachDir   string
+	RunForEachEntries []localfs.Entry
+	RunForEachDir     string
+	// RunForEachPools is the configured pool list; when non-empty, the dialog renders a pool selector.
+	RunForEachPools []string
+	// RunForEachPool is the selected pool name; empty means no pool (unlimited parallelism).
+	RunForEachPool string
+	// RunForEachCommandError is shown under the Command input when validation fails.
+	RunForEachCommandError string
 	// ExtractSources apply when DialogType == FileDialogExtract (archive paths resolved at dialog open).
 	ExtractSources []string
 	// MkdirShowActions enables the extra "Create / Create and copy selected / Create and move selected" radio

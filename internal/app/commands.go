@@ -1,12 +1,11 @@
 package app
 
 import (
-	"context"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -46,111 +45,56 @@ func (a *App) openRunForEachDialog() {
 		a.setErrorMessage("Run for each", err)
 		return
 	}
-	paths := ops.SourcePaths(src)
+	entries := append([]localfs.Entry(nil), src.Entries...)
 	dir := a.activePanel().PathString()
-	msg := "Runs once per selected item; each path is appended as a separate argument.\nUses POSIX-style quoting (no shell)."
+	msg := "Runs once per selected item. Command must include %f (iterated item path).\nOther macros: %d active dir, %F/%D other panel, %t/%T tagged paths.\n>> | && etc. run via sh -c; otherwise argv is parsed without a shell."
 	fields := []ui.FileDialogField{{Label: "Command", Value: "", Cursor: 0}}
 	a.model.FileDialog = ui.FileDialogState{
-		Open:            true,
-		DialogType:      ui.FileDialogRunForEach,
-		Fields:          fields,
-		FocusedField:    0,
-		Message:         msg,
-		RunForEachPaths: append([]string(nil), paths...),
-		RunForEachDir:   dir,
+		Open:              true,
+		DialogType:        ui.FileDialogRunForEach,
+		Fields:            fields,
+		FocusedField:      0,
+		Message:           msg,
+		RunForEachEntries: entries,
+		RunForEachDir:     dir,
+		RunForEachPools:   a.workPools.Names(),
+		RunForEachPool:    "",
 	}
+	a.recomputeRunForEachCommandValidation()
 	a.clearTransientMessage()
 }
 
 func (a *App) executeRunForEach() {
-	fd := a.model.FileDialog
+	fd := &a.model.FileDialog
 	field := a.focusedField()
 	if field == nil {
 		a.closeFileDialog()
 		return
 	}
 	cmdLine := strings.TrimSpace(field.Value)
-	paths := append([]string(nil), fd.RunForEachPaths...)
+	entries := append([]localfs.Entry(nil), fd.RunForEachEntries...)
 	workDir := fd.RunForEachDir
+	poolName := strings.TrimSpace(fd.RunForEachPool)
+	active := a.activePanel()
+	other := a.inactivePanel()
+	a.recomputeRunForEachCommandValidation()
+	if strings.TrimSpace(fd.RunForEachCommandError) != "" {
+		return
+	}
 	a.closeFileDialog()
-	if len(paths) == 0 {
-		a.setTransientMessage("No paths to run", ui.MessageUrgencyWarn)
-		return
-	}
-	prefix, err := cmdrun.ParseCommandArgv(cmdLine)
-	if err != nil {
-		a.openMessageDialog("Run for each", err.Error())
-		return
-	}
-	if len(prefix) == 0 {
-		a.setTransientMessage("Command is empty", ui.MessageUrgencyWarn)
-		return
-	}
-	entries := make([]ui.CommandRunEntry, len(paths))
-	for i := range paths {
-		entries[i] = ui.CommandRunEntry{
-			ID:              cmdrun.NewRunID(),
-			Kind:            ui.CommandRunKindRunForEach,
-			UserCommandLine: cmdLine,
-			TargetPath:      absPathClean(paths[i]),
-			Phase:           ui.CommandRunPending,
-			ExitCode:        -1,
-		}
-	}
-	a.commandsMu.Lock()
-	start := len(a.model.CommandsList)
-	a.model.CommandsList = append(a.model.CommandsList, entries...)
-	a.commandsMu.Unlock()
-
-	a.openCommandsView()
-	a.model.CommandsView.Selected = start
-	a.model.CommandsView.FocusPane = 0
-	a.model.CommandsView.ListScroll = 0
-	a.model.CommandsView.StdoutScroll = 0
-	a.model.CommandsView.StderrScroll = 0
-	a.ensureCommandsViewSelectionVisible()
-
-	a.commandsBatchesInflight.Add(1)
-	go a.runForEachBatch(a.commandsCtx, start, paths, prefix, workDir)
-}
-
-func (a *App) runForEachBatch(ctx context.Context, start int, paths []string, prefix []string, workDir string) {
-	defer func() {
-		a.commandsBatchesInflight.Add(-1)
-		a.postCommandWake()
-	}()
-	for i := range paths {
-		select {
-		case <-ctx.Done():
-			a.markCommandsCanceled(start+i, len(paths)-i)
-			a.postCommandWake()
-			return
-		default:
-		}
-		idx := start + i
-		abs := absPathClean(paths[i])
-		argv := append(append([]string(nil), prefix...), abs)
-
-		a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
-			e.Phase = ui.CommandRunRunning
-			e.TargetPath = abs
-		})
-		a.postCommandWake()
-
-		res := cmdrun.Run(ctx, argv, workDir, cmdrun.MaxStreamBytes)
-		a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
-			e.Phase = ui.CommandRunDone
-			e.Stdout = string(res.Stdout)
-			e.Stderr = string(res.Stderr)
-			if res.LaunchErr != nil {
-				e.ErrorMsg = res.LaunchErr.Error()
-				e.ExitCode = -1
-			} else {
-				e.ExitCode = res.ExitCode
-			}
-		})
-		a.postCommandWake()
-	}
+	a.startRunForEachBatch(runForEachBatchSpec{
+		Kind:        ui.CommandRunKindRunForEach,
+		Entries:     entries,
+		AllowDirs:   true,
+		AllowFiles:  true,
+		WorkDir:     workDir,
+		PoolName:    poolName,
+		Background:  false,
+		NotifyLabel: "Run for each",
+		BuildItem: func(ent localfs.Entry) (runForEachBuiltItem, error) {
+			return buildRunForEachItem(cmdLine, ent, active, other)
+		},
+	})
 }
 
 func (a *App) markCommandsCanceled(fromIdx, count int) {

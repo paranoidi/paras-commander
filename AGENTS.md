@@ -83,6 +83,16 @@ All dialogs (modal overlays) must follow these navigation and rendering rules:
 - Checkbox and radio rows use `Theme.DialogOptionRowStyle` (resolved from `dialog.option.inactive`, `dialog.option.active`, `dialog.option.selected`, and `dialog.option.active.selected` when focused and checked/marked; row background always matches `dialog.surface` — do not set `bg` on option keys).
 - Do not use `styles.DialogText` for input row fill; input rows use `theme.Theme.DialogInputPair(focused)` (resolved from `dialog.input.active` / `dialog.input.inactive` and their `.placeholder` entries). Those styles carry both foreground and background for the input row—do not substitute `DialogText` for fill.
 
+### Horizontal columns (do not confuse `rect.X+1` and `rect.X+2`)
+
+Use `draw.DialogTextX(rect)`, `draw.DialogOptionX(rect)`, and `draw.DialogContentWidth(rect)` in `internal/ui/dialog/internal/draw/geom.go` instead of re-deriving offsets.
+
+- `rect.X` — left border (`│`); `rect.X+1` — inner margin (blank dialog surface).
+- **Labels, hints, and input rows** — `DialogTextX(rect)` (`rect.X+2`): first content glyph one space inside the border (e.g. `Destination:`, `/path`, command field).
+- **Checkbox / radio rows** — pass `DialogOptionX(rect)` (`rect.X+1`) to `draw.DrawDialogCheckbox` / `draw.DrawDialogRadio` only. Markers are ` [ ] ` / ` ( ) ` with a **leading space** that fills the margin cell; the visible `[` or `(` must land on `DialogTextX`, not one column to the right.
+- **Common bug:** `DrawDialogRadio(screen, rect.X+2, …)` paints an extra blank column before `( )`, so options look indented relative to labels (seen on Run-for-each pool rows). Copy/move checkboxes in `transfer_dialog_render.go` and Find checkboxes use `rect.X+1` — match that, not `rect.X+2`.
+- **Inner width** — `DialogContentWidth(rect)` (`rect.Width-4`) for full-width text and inputs between margins.
+
 ## Code Structure
 
 - Button rendering: `drawDialogButton()` in `internal/ui/dialog.go`.
@@ -95,13 +105,14 @@ All dialogs (modal overlays) must follow these navigation and rendering rules:
 
 ## Input Area Rendering / Styling
 
-All dialogs with user text input fields must follow these rules:
+All dialogs with labeled content blocks (text inputs, radio groups, checkbox groups under a section label) must follow these rules:
 
 ### Layout
 
-- The label and input field must be on separate rows.
-- A blank (empty) line must exist between the label row and the input field row.
-- Do not place the label and input on the same line, even with visual separators.
+- The label and the content below it must be on separate rows.
+- A blank (empty) line must exist between the label row and the content row(s) below it (text input, first radio/checkbox option, preview value, etc.).
+- Do not place the label and its content on the same line, even with visual separators.
+- Section labels followed by radio or checkbox options use the same pattern as text fields: **label row → blank row → option rows** (e.g. Run-for-each **Worker pool (optional):** then pool radios). Standalone option rows without a section label (e.g. mkdir post-action radios directly under a separator) do not need an extra label row.
 
 - Elements should be spaced and aligned following these examples:
 
@@ -143,7 +154,7 @@ There should be ONE space after (and before) border.
 
 Pay attention to following details:
 - Title Copy is centered. Surrounded with empty spaces.
-- ONE space margin at the left. Dialog is scaled so that there is ONE space margin at the right side.
+- ONE space margin at the left (`rect.X+1`); first label/input glyph at `DialogTextX` (`rect.X+2`). Checkbox/radio helpers at `DialogOptionX` (`rect.X+1`) — see **Horizontal columns** above. Dialog is scaled so that there is ONE space margin at the right side.
 - Input text area is in it's own line. It should cover the all avaialable space in the dialog (respecting 1 space margin).
 - Buttons should be visually centered.
 - Separation lines between sections.

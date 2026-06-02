@@ -11,7 +11,7 @@ func FilterVisible(m *MenuFile, ctx *EvalContext) ([]MenuEntry, int, error) {
 	var out []MenuEntry
 	defaultIdx := -1
 	for _, e := range m.Entries {
-		ok, err := EvalWhen(e.When, &ctxCopy)
+		ok, err := EvalWhenAny(e.When, &ctxCopy)
 		if err != nil {
 			return nil, -1, err
 		}

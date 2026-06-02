@@ -39,15 +39,16 @@ type MenuFile struct {
 
 // MenuEntry is one [[entry]] block.
 type MenuEntry struct {
-	Key         string `toml:"key"`
-	Title       string `toml:"title"`
-	Command     string `toml:"command"`
-	When        string `toml:"when"`
-	Default     bool   `toml:"default"`
-	Interactive bool   `toml:"interactive"`
-	Detach      bool   `toml:"detach"`
-	Background  bool   `toml:"background"`
-	Pool        string `toml:"pool"`
+	Key         string   `toml:"key"`
+	Title       string   `toml:"title"`
+	Command     string   `toml:"command"`
+	When        []string `toml:"when"`
+	RunForEach  []string `toml:"run_for_each"`
+	Default     bool     `toml:"default"`
+	Interactive bool     `toml:"interactive"`
+	Detach      bool     `toml:"detach"`
+	Background  bool     `toml:"background"`
+	Pool        string   `toml:"pool"`
 }
 
 type menuFileRaw struct {
@@ -55,11 +56,40 @@ type menuFileRaw struct {
 	Entry         []menuEntry `toml:"entry"`
 }
 
+// whenField decodes `when` as either a string or a TOML array of strings.
+// A missing value stays unset (empty slice).
+type whenField struct {
+	Set   bool
+	Value []string
+}
+
+func (w *whenField) UnmarshalTOML(data interface{}) error {
+	w.Set = true
+	switch v := data.(type) {
+	case string:
+		w.Value = []string{v}
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, it := range v {
+			s, ok := it.(string)
+			if !ok {
+				return fmt.Errorf("expected string, got %T", it)
+			}
+			out = append(out, s)
+		}
+		w.Value = out
+	default:
+		return fmt.Errorf("expected string or array of strings, got %T", data)
+	}
+	return nil
+}
+
 type menuEntry struct {
 	Key         string     `toml:"key"`
 	Title       string     `toml:"title"`
 	Command     string     `toml:"command"`
-	When        string     `toml:"when"`
+	When        *whenField `toml:"when"`
+	RunForEach  []string   `toml:"run_for_each"`
 	Default     bool       `toml:"default"`
 	Interactive *boolField `toml:"interactive"`
 	Detach      *boolField `toml:"detach"`
@@ -122,11 +152,42 @@ func Decode(data []byte) (*MenuFile, error) {
 		if pool != "" && (interactive || detach) {
 			return nil, fmt.Errorf("menu.toml: entry %d: pool cannot be combined with interactive or detach", i)
 		}
+
+		runForEach := make([]string, 0, len(e.RunForEach))
+		seen := map[string]bool{}
+		for _, raw := range e.RunForEach {
+			v := strings.ToLower(strings.TrimSpace(raw))
+			if v == "" {
+				continue
+			}
+			if v != "files" && v != "dirs" {
+				return nil, fmt.Errorf("menu.toml: entry %d: run_for_each: invalid value %q (want files/dirs)", i, raw)
+			}
+			if !seen[v] {
+				seen[v] = true
+				runForEach = append(runForEach, v)
+			}
+		}
+		if len(runForEach) > 0 && (interactive || detach) {
+			return nil, fmt.Errorf("menu.toml: entry %d: run_for_each cannot be combined with interactive or detach", i)
+		}
+
+		var whenList []string
+		if e.When != nil && e.When.Set {
+			for _, w := range e.When.Value {
+				w = strings.TrimSpace(w)
+				if w == "" {
+					continue
+				}
+				whenList = append(whenList, w)
+			}
+		}
 		out.Entries = append(out.Entries, MenuEntry{
 			Key:         strings.TrimSpace(e.Key),
 			Title:       strings.TrimSpace(e.Title),
 			Command:     strings.TrimSpace(e.Command),
-			When:        strings.TrimSpace(e.When),
+			When:        whenList,
+			RunForEach:  runForEach,
 			Default:     e.Default,
 			Interactive: interactive,
 			Detach:      detach,

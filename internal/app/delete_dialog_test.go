@@ -44,10 +44,6 @@ func TestDeleteDialogSummaryRefreshesAfterDiskScanFlush(t *testing.T) {
 		DeleteSummary: app.deleteDialogSummary(p, source),
 		FocusedField:  1,
 	}
-	if !strings.Contains(app.model.FileDialog.DeleteSummary, "\uf017") &&
-		!strings.Contains(app.model.FileDialog.DeleteSummary, "0 files") {
-		// already resolved (fast cache) — still run scan flush path below
-	}
 
 	app.deleteDialogScanFP = ""
 	app.diskUsage.StartScanFromListing([]string{sub}, app.diskUsageIgnore, app.model.ActivePanel, diskusage.ListingVolumeGate{})

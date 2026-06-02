@@ -3,6 +3,7 @@ package workpool
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/pools"
@@ -36,6 +37,19 @@ func (r *Registry) Pool(name string) (*Pool, bool) {
 	}
 	p, ok := r.pools[strings.TrimSpace(name)]
 	return p, ok
+}
+
+// Names returns configured pool names sorted ascending.
+func (r *Registry) Names() []string {
+	if r == nil || len(r.pools) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(r.pools))
+	for name := range r.pools {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Acquire waits for a slot in the named pool and returns a release function.

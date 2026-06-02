@@ -57,8 +57,12 @@ func (a *App) handleFileDialogFieldKey(ev *tcell.EventKey, f *ui.FileDialogField
 }
 
 func (a *App) fileDialogFieldAfterEdit() func() {
-	if a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+	switch a.model.FileDialog.DialogType {
+	case ui.FileDialogMassRename:
 		return a.recomputeMassRenamePreview
+	case ui.FileDialogRunForEach:
+		return a.recomputeRunForEachCommandValidation
+	default:
+		return nil
 	}
-	return nil
 }

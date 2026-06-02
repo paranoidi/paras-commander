@@ -35,8 +35,12 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 		if msg := strings.TrimSpace(state.Message); msg != "" {
 			helpLines = strings.Count(state.Message, "\n") + 1
 		}
-		// Help block + separator + fields (label / blank / input per field) + separator + buttons row.
-		height = helpLines + 1 + len(state.Fields)*4 + 4
+		// Help block + separator + command block + optional pool section + separator + buttons row.
+		height = helpLines + 1 + runForEachCommandFieldRows(state) + 4
+		if runForEachHasPoolSelector(state) {
+			// Separator + label + blank + pool radios ("No pool" + one per pool).
+			height += 1 + 1 + 1 + (1 + len(state.RunForEachPools))
+		}
 	case FileDialogMassRename:
 		height = massRenameDialogHeight(layout.Height, state)
 	default:
@@ -306,23 +310,69 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 		draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 		fieldStartY = y + 1
 	}
+	y := fieldStartY
+	innerBottom := rect.Y + rect.Height - 2
 	for i, field := range state.Fields {
-		y := fieldStartY + i*4
-		if y >= rect.Y+rect.Height-3 {
+		if y >= innerBottom {
 			break
 		}
 		labelWidth := rect.Width - 4
 		if labelWidth <= 0 {
-			continue
+			break
 		}
 		fieldStyle := styles.DialogText.Background(dbg)
-		primitive.Text(screen, rect.X+2, y, labelWidth, field.Label+":", fieldStyle)
-
-		inputY := y + 2
-		if inputY >= rect.Y+rect.Height-3 {
-			continue
+		primitive.Text(screen, draw.DialogTextX(rect), y, labelWidth, field.Label+":", fieldStyle)
+		y += 2
+		if y >= innerBottom {
+			break
 		}
-		drawInputField(screen, rect.X+2, inputY, rect.Width-4, field, i == state.FocusedField, styles)
+		drawInputField(screen, draw.DialogTextX(rect), y, rect.Width-4, field, i == state.FocusedField, styles)
+		y++
+		if i == 0 {
+			if hint := runForEachCommandErrorText(state); hint != "" && y < innerBottom {
+				primitive.Text(screen, draw.DialogTextX(rect), y, rect.Width-4, hint, runForEachCommandErrorStyle(styles, dbg))
+				y++
+			}
+		}
+	}
+
+	if !runForEachHasPoolSelector(state) {
+		return
+	}
+
+	sectionY := y
+	if sectionY >= rect.Y+rect.Height-3 {
+		return
+	}
+	draw.DrawDialogHSeparator(screen, rect, sectionY, borderStyle)
+
+	y = sectionY + 1
+	if y >= innerBottom {
+		return
+	}
+	labelWidth := rect.Width - 4
+	if labelWidth <= 0 {
+		return
+	}
+	labelStyle := styles.DialogText.Background(dbg)
+	primitive.Text(screen, rect.X+2, y, labelWidth, "Worker pool (optional):", labelStyle)
+	y += 2 // blank line between label and pool radios (AGENTS.md dialog layout)
+
+	baseFocus := len(state.Fields)
+	if y < innerBottom {
+		focused := state.FocusedField == baseFocus
+		selected := strings.TrimSpace(state.RunForEachPool) == ""
+		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "No pool (unlimited)", 0, selected, focused, styles)
+		y++
+	}
+	for i, name := range state.RunForEachPools {
+		if y >= innerBottom {
+			return
+		}
+		focused := state.FocusedField == baseFocus+1+i
+		selected := strings.TrimSpace(state.RunForEachPool) == strings.TrimSpace(name)
+		draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, name, 0, selected, focused, styles)
+		y++
 	}
 }
 
@@ -497,7 +547,7 @@ func fileDialogOKFocusIndex(state FileDialogState) int {
 	if renameToolActive(state) {
 		return renameToolOptionCount()
 	}
-	return len(state.Fields) + mkdirExtraFocusRows(state) + renameExtraFocusRows(state)
+	return len(state.Fields) + mkdirExtraFocusRows(state) + renameExtraFocusRows(state) + runForEachExtraFocusRows(state)
 }
 
 // fileDialogCancelFocusIndex returns the focus index for the Cancel/No button.
@@ -511,7 +561,7 @@ func fileDialogCancelFocusIndex(state FileDialogState) int {
 	if renameToolActive(state) {
 		return renameToolOptionCount() + 1
 	}
-	return len(state.Fields) + mkdirExtraFocusRows(state) + renameExtraFocusRows(state) + 1
+	return len(state.Fields) + mkdirExtraFocusRows(state) + renameExtraFocusRows(state) + runForEachExtraFocusRows(state) + 1
 }
 
 func renameToolOptionCount() int { return 2 }
@@ -622,6 +672,18 @@ func renameExtraFocusRows(state FileDialogState) int {
 	return 0
 }
 
+func runForEachHasPoolSelector(state FileDialogState) bool {
+	return state.DialogType == FileDialogRunForEach && len(state.RunForEachPools) > 0
+}
+
+func runForEachExtraFocusRows(state FileDialogState) int {
+	if !runForEachHasPoolSelector(state) {
+		return 0
+	}
+	// "No pool" + one row per configured pool.
+	return 1 + len(state.RunForEachPools)
+}
+
 // drawRenameFocusCheckbox draws the focus-after-rename checkbox under the name input.
 func drawRenameFocusCheckbox(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
 	if !renameHasFocusCheckbox(state) || len(state.Fields) == 0 {
@@ -637,9 +699,7 @@ func drawRenameFocusCheckbox(screen tcell.Screen, rect Rect, state FileDialogSta
 	if y >= rect.Y+rect.Height-2 {
 		return
 	}
-	leftCol := rect.X + 1
-	focusIdx := len(state.Fields)
-	draw.DrawDialogCheckbox(screen, leftCol, y, "Focus after rename", 'F', state.RenameFocusAfter, state.FocusedField == focusIdx, styles)
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Focus after rename", 'F', state.RenameFocusAfter, state.FocusedField == len(state.Fields), styles)
 }
 
 // drawMkdirActionRows draws the radio button section under the directory-name input
@@ -657,7 +717,7 @@ func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, 
 		return
 	}
 	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
-	leftCol := rect.X + 2
+	optionCol := draw.DialogOptionX(rect)
 	radios := MkdirActionRadioSpecs()
 	baseFocus := len(state.Fields)
 	for i, r := range radios {
@@ -665,7 +725,7 @@ func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, 
 		if y >= rect.Y+rect.Height-2 {
 			break
 		}
-		draw.DrawDialogRadio(screen, leftCol, y, r.Label, r.Shortcut, state.MkdirAction == r.Action, state.FocusedField == baseFocus+i, styles)
+		draw.DrawDialogRadio(screen, optionCol, y, r.Label, r.Shortcut, state.MkdirAction == r.Action, state.FocusedField == baseFocus+i, styles)
 	}
 }
 

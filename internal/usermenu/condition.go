@@ -30,6 +30,34 @@ func EvalWhen(expr string, ctx *EvalContext) (bool, error) {
 	return p.parseOr()
 }
 
+// EvalWhenAny evaluates multiple visibility expressions with OR semantics.
+//
+// Rules:
+//   - Empty slice (or only empty strings) ⇒ true.
+//   - Otherwise returns true if any expression matches.
+//   - If any expression fails to parse/compile, returns an error immediately.
+func EvalWhenAny(exprs []string, ctx *EvalContext) (bool, error) {
+	var any bool
+	for _, expr := range exprs {
+		expr = strings.TrimSpace(expr)
+		if expr == "" {
+			continue
+		}
+		any = true
+		ok, err := EvalWhen(expr, ctx)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
+	if !any {
+		return true, nil
+	}
+	return false, nil
+}
+
 func stripLeadingConditionPrefix(s string) string {
 	s = strings.TrimSpace(s)
 	for strings.HasPrefix(s, "=") || strings.HasPrefix(s, "+") {

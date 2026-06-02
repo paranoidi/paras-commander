@@ -210,3 +210,64 @@ detach = true
 		})
 	}
 }
+
+func TestDecodeWhenStringOrArray(t *testing.T) {
+	mf, err := Decode([]byte(`[[entry]]
+title = "One"
+command = "true"
+when = "*.go"
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mf.Entries) != 1 || len(mf.Entries[0].When) != 1 || mf.Entries[0].When[0] != "*.go" {
+		t.Fatalf("when string: %+v", mf.Entries)
+	}
+
+	mf, err = Decode([]byte(`[[entry]]
+title = "Many"
+command = "true"
+when = ["*.py", "*.go"]
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mf.Entries) != 1 || len(mf.Entries[0].When) != 2 {
+		t.Fatalf("when array: %+v", mf.Entries)
+	}
+}
+
+func TestDecodeRunForEachValidation(t *testing.T) {
+	_, err := Decode([]byte(`[[entry]]
+title = "Bad"
+command = "true"
+run_for_each = ["wat"]
+`))
+	if err == nil {
+		t.Fatal("expected invalid run_for_each error")
+	}
+
+	_, err = Decode([]byte(`[[entry]]
+title = "Bad"
+command = "true"
+run_for_each = ["files"]
+interactive = true
+`))
+	if err == nil {
+		t.Fatal("expected run_for_each + interactive error")
+	}
+
+	mf, err := Decode([]byte(`[[entry]]
+title = "Good"
+command = "echo %f"
+run_for_each = ["files", "dirs"]
+background = true
+pool = "build"
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mf.Entries) != 1 || len(mf.Entries[0].RunForEach) != 2 || !mf.Entries[0].Background || mf.Entries[0].Pool != "build" {
+		t.Fatalf("decoded: %+v", mf.Entries)
+	}
+}

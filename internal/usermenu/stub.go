@@ -28,8 +28,12 @@ const MenuStubTOML = `# F2 user menu
 # 
 # key = "p"
 # 	  pin a shortcut letter (otherwise assigned from the title, like the meta picker)
-# when = "*.go"
-# 	  optional visibility (e.g. *.go)
+# when = ["*.py", "*.go"]
+# 	  OR semantics: visible when any condition matches
+# run_for_each = ["files", "dirs"]
+# 	  run once per selected item (or the cursor item when nothing is selected)
+# 	  command must include %f (iterated item absolute path); paths are not auto-appended
+# 	  interactive/detach are not allowed with run_for_each
 # shell_patterns = true   
 #     true = glob patterns in when=; 
 #     false = regex patterns in when=
@@ -50,7 +54,7 @@ const MenuStubTOML = `# F2 user menu
 # Macros (expanded in command before run):
 #
 #     %%  literal % character
-#     %f  basename of the highlighted file on the active panel
+#     %f  basename of the highlighted file on the active panel (run_for_each: iterated absolute path)
 #     %F  basename of the highlighted file on the other panel
 #     %d  directory path of the active panel
 #     %D  directory path of the other panel

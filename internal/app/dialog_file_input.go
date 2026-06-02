@@ -106,6 +106,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 
 	onRadio := a.fileDialogOnRadio()
 	onMkdirRadio := a.fileDialogOnMkdirRadio()
+	onRunForEachRadio := a.fileDialogOnRunForEachPoolRadio()
 	onMassRenameRadio := a.fileDialogOnMassRenameRadio()
 	onCheckbox := a.fileDialogOnMassRenameCaseCheckbox() || a.fileDialogOnRenameFocusCheckbox()
 
@@ -139,6 +140,10 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		}
 		if onMassRenameRadio {
 			a.applyMassRenameModeFromFocus()
+			return false
+		}
+		if onRunForEachRadio {
+			a.selectFocusedRunForEachPoolRadio()
 			return false
 		}
 		if a.fileDialogOnMassRenameCaseCheckbox() {
@@ -260,6 +265,12 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		if onMassRenameRadio {
 			if isPlainPrintableRune(event) && event.Rune() == ' ' {
 				a.applyMassRenameModeFromFocus()
+			}
+			return false
+		}
+		if onRunForEachRadio {
+			if isPlainPrintableRune(event) && event.Rune() == ' ' {
+				a.selectFocusedRunForEachPoolRadio()
 			}
 			return false
 		}
@@ -395,7 +406,7 @@ func (a *App) mkdirExtraFocusRows() int {
 
 // fileDialogOnRadio returns true when focus is on a mkdir post-action radio or a mass-rename mode radio.
 func (a *App) fileDialogOnRadio() bool {
-	return a.fileDialogOnMkdirRadio() || a.fileDialogOnMassRenameRadio()
+	return a.fileDialogOnMkdirRadio() || a.fileDialogOnMassRenameRadio() || a.fileDialogOnRunForEachPoolRadio()
 }
 
 // fileDialogOnMkdirRadio returns true when focus is on the mkdir-with-selections radio rows.
@@ -407,6 +418,29 @@ func (a *App) fileDialogOnMkdirRadio() bool {
 	}
 	base := len(d.Fields)
 	return d.DialogType == ui.FileDialogMkdir && d.FocusedField >= base && d.FocusedField < base+extra
+}
+
+func (a *App) runForEachExtraFocusRows() int {
+	d := &a.model.FileDialog
+	if d.DialogType != ui.FileDialogRunForEach {
+		return 0
+	}
+	if len(d.RunForEachPools) == 0 {
+		return 0
+	}
+	// "No pool" + one per configured pool.
+	return 1 + len(d.RunForEachPools)
+}
+
+// fileDialogOnRunForEachPoolRadio returns true when focus is on the run-for-each pool selector rows.
+func (a *App) fileDialogOnRunForEachPoolRadio() bool {
+	d := &a.model.FileDialog
+	extra := a.runForEachExtraFocusRows()
+	if extra == 0 {
+		return false
+	}
+	base := len(d.Fields)
+	return d.DialogType == ui.FileDialogRunForEach && d.FocusedField >= base && d.FocusedField < base+extra
 }
 
 // fileDialogOnMassRenameRadio returns true when focus is on Simple / Regex mode radios.
@@ -442,6 +476,32 @@ func (a *App) fileDialogRadioIndex() int {
 		return -1
 	}
 	return a.model.FileDialog.FocusedField - len(a.model.FileDialog.Fields)
+}
+
+func (a *App) runForEachPoolRadioIndex() int {
+	if !a.fileDialogOnRunForEachPoolRadio() {
+		return -1
+	}
+	return a.model.FileDialog.FocusedField - len(a.model.FileDialog.Fields)
+}
+
+func (a *App) selectFocusedRunForEachPoolRadio() {
+	d := &a.model.FileDialog
+	if d.DialogType != ui.FileDialogRunForEach {
+		return
+	}
+	idx := a.runForEachPoolRadioIndex()
+	if idx < 0 {
+		return
+	}
+	if idx == 0 {
+		d.RunForEachPool = ""
+		return
+	}
+	poolIdx := idx - 1
+	if poolIdx >= 0 && poolIdx < len(d.RunForEachPools) {
+		d.RunForEachPool = d.RunForEachPools[poolIdx]
+	}
 }
 
 // fileDialogOnButton returns true if current focus is on a button (not a field/radio).

@@ -14,6 +14,10 @@ func TestEvalWhenEmpty(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("EvalWhen(\"\") = %v %v", ok, err)
 	}
+	ok, err = EvalWhenAny(nil, ctx)
+	if err != nil || !ok {
+		t.Fatalf("EvalWhenAny(nil) = %v %v", ok, err)
+	}
 }
 
 func TestEvalWhenSimpleGlob(t *testing.T) {

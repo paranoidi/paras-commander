@@ -13,6 +13,36 @@ import (
 // ExpandCommand substitutes % macros in a single command line for argv parsing.
 // Recognized: %% %f %F %d %D %t %T (paths are shell-quoted for go-shellwords).
 func ExpandCommand(cmd string, active, other *panel.State) (string, error) {
+	return ExpandCommandWithFOverride(cmd, active, other, "")
+}
+
+// CommandRequiresIteratedF reports whether cmd contains a %f macro (not %%).
+func CommandRequiresIteratedF(cmd string) bool {
+	return commandContainsMacro(cmd, 'f')
+}
+
+func commandContainsMacro(cmd string, letter byte) bool {
+	for i := 0; i < len(cmd)-1; i++ {
+		if cmd[i] != '%' {
+			continue
+		}
+		if cmd[i+1] == '%' {
+			i++
+			continue
+		}
+		if cmd[i+1] == letter {
+			return true
+		}
+	}
+	return false
+}
+
+// ErrRunForEachRequiresF is returned when a run-for-each command omits %f.
+const ErrRunForEachRequiresF = "Command must include %f to represent the selected item"
+
+// ExpandCommandWithFOverride behaves like ExpandCommand, but when fOverride is non-empty,
+// %f expands to that value (shell-quoted) instead of the active panel cursor entry.
+func ExpandCommandWithFOverride(cmd string, active, other *panel.State, fOverride string) (string, error) {
 	if active == nil {
 		return "", fmt.Errorf("user menu: no active panel")
 	}
@@ -27,6 +57,11 @@ func ExpandCommand(cmd string, active, other *panel.State) (string, error) {
 			b.WriteByte('%')
 			i++
 		case 'f':
+			if strings.TrimSpace(fOverride) != "" {
+				b.WriteString(strconv.Quote(fOverride))
+				i++
+				continue
+			}
 			ent, ok := active.CurrentEntry()
 			if !ok {
 				return "", fmt.Errorf("user menu: %%f: no current file")

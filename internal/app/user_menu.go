@@ -8,6 +8,9 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
@@ -188,6 +191,11 @@ func (a *App) executeUserMenuEntry(idx int) {
 
 	active := a.activePanel()
 	other := a.inactivePanel()
+	if len(entry.RunForEach) > 0 {
+		a.executeUserMenuRunForEach(entry, active, other)
+		return
+	}
+
 	expanded, err := usermenu.ExpandCommand(entry.Command, active, other)
 	if err != nil {
 		a.setErrorMessage("User menu", err)
@@ -222,6 +230,48 @@ func (a *App) executeUserMenuEntry(idx int) {
 		a.commandsBatchesInflight.Add(1)
 		go a.runUserMenuCommand(a.commandsCtx, rowIdx, argv, workDir, entry.Background, entry.Title, entry.Pool)
 	}
+}
+
+func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other *panel.State) {
+	src, err := ops.ResolveSource(active)
+	if err != nil {
+		a.setErrorMessage("User menu", err)
+		return
+	}
+	if len(src.Entries) == 0 {
+		a.setTransientMessage("User menu: no paths to run", ui.MessageUrgencyWarn)
+		return
+	}
+
+	var allowFiles, allowDirs bool
+	for _, v := range entry.RunForEach {
+		switch strings.ToLower(strings.TrimSpace(v)) {
+		case "files":
+			allowFiles = true
+		case "dirs":
+			allowDirs = true
+		}
+	}
+
+	cmdTemplate := entry.Command
+	workDir := active.PathString()
+	notifyLabel := "User menu: " + strings.TrimSpace(entry.Title)
+	if notifyLabel == "User menu:" {
+		notifyLabel = "User menu"
+	}
+	a.startRunForEachBatch(runForEachBatchSpec{
+		Kind:        ui.CommandRunKindRunForEach,
+		Entries:     append([]localfs.Entry(nil), src.Entries...),
+		AllowFiles:  allowFiles,
+		AllowDirs:   allowDirs,
+		WorkDir:     workDir,
+		PoolName:    strings.TrimSpace(entry.Pool),
+		Background:  entry.Background,
+		NotifyLabel: notifyLabel,
+		BuildItem: func(ent localfs.Entry) (runForEachBuiltItem, error) {
+			return buildRunForEachItem(cmdTemplate, ent, active, other)
+		},
+	})
 }
 
 func (a *App) runUserMenuInteractive(argv []string, workDir string) {
