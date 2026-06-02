@@ -5559,7 +5559,7 @@ func TestQuickViewDirRecallsLastSelectedEntry(t *testing.T) {
 	}
 }
 
-func TestQuickViewTabCommitsDirectoryPreview(t *testing.T) {
+func TestQuickViewTabPreservesLatchedDirectoryPreview(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")
 	child := filepath.Join(root, "child")
@@ -5600,29 +5600,36 @@ func TestQuickViewTabCommitsDirectoryPreview(t *testing.T) {
 
 	app.dispatch(keymap.ActionPanelSwitch)
 
-	if app.model.QuickViewEnabled {
-		t.Fatal("quick view should be disabled after Tab")
+	if !app.model.QuickViewEnabled || app.model.QuickViewPanel != ui.LeftPanel {
+		t.Fatalf("quick view should stay latched on left driver (enabled=%v panel=%d)", app.model.QuickViewEnabled, app.model.QuickViewPanel)
 	}
 	if app.model.ActivePanel != ui.RightPanel {
 		t.Fatalf("ActivePanel = %d, want right panel", app.model.ActivePanel)
 	}
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
-		t.Fatalf("active panel path after Tab = %q, want committed preview %q", got, want)
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+		t.Fatalf("inactive path after Tab = %q, want unchanged %q", got, inactiveBefore)
 	}
-	entry, ok := app.panelByID(ui.RightPanel).CurrentEntry()
-	if !ok || entry.Name != "inside.txt" {
-		got := ""
-		if ok {
-			got = entry.Name
-		}
-		t.Fatalf("after Tab cursor entry = %q, want inside.txt (recalled from driver visit)", got)
+	if app.model.QuickViewDirOverlayActive {
+		t.Fatal("dir overlay should be hidden while away from driver panel")
 	}
 	if app.model.ActiveSubFocus != ui.SubFocusFileList {
 		t.Fatalf("ActiveSubFocus = %d, want file list", app.model.ActiveSubFocus)
 	}
+
+	app.dispatch(keymap.ActionPanelSwitch)
+
+	if app.model.ActivePanel != ui.LeftPanel {
+		t.Fatalf("ActivePanel = %d, want left panel after second Tab", app.model.ActivePanel)
+	}
+	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
+		t.Fatalf("overlay path after return = %q, want %q", got, want)
+	}
+	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+		t.Fatalf("inactive path after return = %q, want unchanged %q", got, inactiveBefore)
+	}
 }
 
-func TestQuickViewDisabledOnPanelSwitch(t *testing.T) {
+func TestQuickViewPersistsAcrossPanelSwitch(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "notes.txt"))
 	screen := newScreen(t, 80, 24)
@@ -5641,14 +5648,23 @@ func TestQuickViewDisabledOnPanelSwitch(t *testing.T) {
 
 	app.dispatch(keymap.ActionPanelSwitch)
 
-	if app.model.QuickViewEnabled {
-		t.Fatal("quick view should be disabled after Tab panel switch")
+	if !app.model.QuickViewEnabled || app.model.QuickViewPanel != ui.LeftPanel {
+		t.Fatalf("quick view should stay latched on left (enabled=%v panel=%d)", app.model.QuickViewEnabled, app.model.QuickViewPanel)
 	}
 	if app.model.ActivePanel != ui.RightPanel {
 		t.Fatalf("ActivePanel = %d, want right panel", app.model.ActivePanel)
 	}
 	if app.filePreviewOpen() {
-		t.Fatal("file preview should be closed after quick view disabled on panel switch")
+		t.Fatal("file preview should be hidden while away from quick-view driver panel")
+	}
+
+	app.dispatch(keymap.ActionPanelSwitch)
+
+	if app.model.ActivePanel != ui.LeftPanel {
+		t.Fatalf("ActivePanel = %d, want left panel after return", app.model.ActivePanel)
+	}
+	if !app.filePreviewOpen() {
+		t.Fatal("file preview should reopen after returning to quick-view driver panel")
 	}
 }
 

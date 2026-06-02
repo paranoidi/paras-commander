@@ -21,11 +21,14 @@ func (a *App) syncCenterScrollingFromConfig() {
 }
 
 func (a *App) switchPanel() {
-	if a.model.QuickViewEnabled {
-		a.switchPanelFromQuickView()
-		return
-	}
+	leavingDisplay := a.model.QuickViewDisplayActive()
 	a.switchPanelSwap()
+	if leavingDisplay {
+		a.pauseQuickViewDisplay()
+	}
+	if a.model.QuickViewDisplayActive() {
+		a.resumeQuickViewDisplay()
+	}
 }
 
 func (a *App) switchPanelSwap() {
@@ -65,6 +68,7 @@ func (a *App) toggleHideInactivePanel() {
 	}
 	if hadQuickView {
 		a.model.QuickViewEnabled = false
+		a.model.QuickViewPanel = -1
 		a.clearQuickViewDebounce()
 		a.closeFilePreview()
 		a.clearQuickViewDirOverlay()
@@ -229,6 +233,7 @@ func (a *App) toggleSyncFollow() {
 	displacedQuickView := a.model.QuickViewEnabled
 	if displacedQuickView {
 		a.model.QuickViewEnabled = false
+		a.model.QuickViewPanel = -1
 		a.clearQuickViewDebounce()
 		a.closeFilePreview()
 		a.clearQuickViewDirOverlay()
@@ -325,7 +330,7 @@ func (a *App) syncFollowFromActive() {
 		return
 	}
 	a.commandsMu.RLock()
-	previewOpen := a.model.FilePreview.Open || a.model.QuickViewEnabled
+	previewOpen := a.model.FilePreview.Open || a.model.QuickViewDisplayActive()
 	a.commandsMu.RUnlock()
 	if previewOpen {
 		return

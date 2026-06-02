@@ -1290,6 +1290,7 @@ func TestRenderDrawsQuickViewIndicatorOnLeftActivePanel(t *testing.T) {
 		Right:            panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel:      LeftPanel,
 		QuickViewEnabled: true,
+		QuickViewPanel:   LeftPanel,
 	}
 	Render(screen, model, theme.Default())
 
@@ -1302,6 +1303,36 @@ func TestRenderDrawsQuickViewIndicatorOnLeftActivePanel(t *testing.T) {
 	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
 	if strings.Contains(rightBottom, "Quick view") {
 		t.Fatalf("right bottom border = %q, want no Quick view indicator on inactive panel", rightBottom)
+	}
+}
+
+func TestRenderDrawsQuickViewIndicatorOnDriverWhenOtherPanelActive(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	model := Model{
+		Left:             panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:            panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:      RightPanel,
+		QuickViewEnabled: true,
+		QuickViewPanel:   LeftPanel,
+	}
+	Render(screen, model, theme.Default())
+
+	leftWidth := width / 2
+	bottomY := height - 2
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	if !strings.Contains(leftBottom, "Quick view →") {
+		t.Fatalf("left bottom border = %q, want quick view indicator on latched driver panel", leftBottom)
+	}
+	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	if strings.Contains(rightBottom, "Quick view") {
+		t.Fatalf("right bottom border = %q, want no quick view indicator on active non-driver panel", rightBottom)
 	}
 }
 
@@ -1319,6 +1350,7 @@ func TestRenderDrawsQuickViewIndicatorOnRightActivePanel(t *testing.T) {
 		Right:            panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel:      RightPanel,
 		QuickViewEnabled: true,
+		QuickViewPanel:   RightPanel,
 	}
 	Render(screen, model, theme.Default())
 
@@ -1373,6 +1405,7 @@ func TestRenderQuickViewPreviewTitleShowsPathAndFilename(t *testing.T) {
 		Right:            panel.State{Path: pathloc.MustParse(projects)},
 		ActivePanel:      LeftPanel,
 		QuickViewEnabled: true,
+		QuickViewPanel:   LeftPanel,
 		FilePreviewDraw: FilePreviewState{
 			Open:      true,
 			Phase:     FilePreviewPhaseDone,

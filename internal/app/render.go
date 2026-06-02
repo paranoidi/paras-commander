@@ -54,7 +54,7 @@ func (a *App) render() {
 	a.model.DiskUsageGoduIgnore = a.diskUsageIgnore
 	a.commandsMu.RLock()
 	a.model.FilePreviewDraw = a.model.FilePreview
-	previewOpen := a.model.FilePreviewDraw.Open || a.model.QuickViewEnabled
+	previewOpen := a.model.FilePreviewDraw.Open || a.model.QuickViewDisplayActive()
 	a.model.FullscreenFilePreviewDraw = a.model.FullscreenFilePreview
 	a.commandsMu.RUnlock()
 	if a.model.ViewMode == ui.ViewFilePreview {
@@ -189,7 +189,7 @@ func (a *App) panelWidthSplit(width int, filePreviewOpen bool) ui.PanelWidthSpli
 }
 
 func (a *App) layoutForTerminalSize(width, height int) ui.Layout {
-	return a.layoutForTerminalSizePreview(width, height, a.filePreviewOpen() || a.model.QuickViewEnabled)
+	return a.layoutForTerminalSizePreview(width, height, a.filePreviewOpen() || a.model.QuickViewDisplayActive())
 }
 
 // effectiveZoomActivePanel returns the saved zoom preference plus optional session-only override

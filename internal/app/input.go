@@ -657,7 +657,7 @@ func (a *App) dispatch(actionID string) {
 		}
 		a.setTransientMessage(fmt.Sprintf("Carousel view: %s", onOff), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelToggleZoomActivePanel:
-		if a.filePreviewOpen() || a.model.QuickViewEnabled {
+		if a.filePreviewOpen() || a.model.QuickViewDisplayActive() {
 			a.setTransientMessage("Zoom disabled while quick view or file view is active", ui.MessageUrgencyInfo)
 			break
 		}

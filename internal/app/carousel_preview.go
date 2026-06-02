@@ -37,7 +37,7 @@ func (a *App) clearCarouselPreviewNavCoalesce() {
 func (a *App) carouselPreviewNavCoalesceContext() bool {
 	return a.model.ViewMode == ui.ViewBrowser &&
 		a.activePanel().CarouselMode &&
-		panelcarousel.ShowChildPreviewColumn(*a.activePanel(), a.model.QuickViewEnabled) &&
+		panelcarousel.ShowChildPreviewColumn(*a.activePanel(), a.model.QuickViewDisplayActive()) &&
 		a.model.ActiveSubFocus == ui.SubFocusFileList &&
 		!a.model.Menu.Open &&
 		!a.model.ModalDialogOpen() &&

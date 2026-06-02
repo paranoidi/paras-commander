@@ -109,8 +109,10 @@ type Model struct {
 	FilePreview FilePreviewState
 	// FilePreviewDraw is a snapshot copied in App.render before ui.Render (no locks in ui).
 	FilePreviewDraw FilePreviewState
-	// QuickViewEnabled mirrors whether Shift+F3 / menu "Quick view" keeps the inactive column in preview mode.
+	// QuickViewEnabled is true while Shift+F3 / menu "Quick view" is latched for QuickViewPanel.
 	QuickViewEnabled bool
+	// QuickViewPanel is the driver panel (LeftPanel or RightPanel) when QuickViewEnabled, else -1.
+	QuickViewPanel int
 	// QuickViewDirOverlay holds a transient directory listing for quick-view directory preview (paint only).
 	QuickViewDirOverlay panel.State
 	// QuickViewDirOverlayActive is true when QuickViewDirOverlay should replace the inactive file list.
@@ -192,23 +194,40 @@ func (m Model) showPanelDiskUsage(panelID int) bool {
 	return panel.ListingPathInDiskUsageScanScope(listingPath, m.DiskUsageScanOrigin, m.DiskUsageScanRoots)
 }
 
-// QuickViewDriverPanelID returns the LeftPanel/RightPanel id that shows the quick-view
-// bottom indicator (the active panel while quick view is on), or -1 when disabled.
-func (m Model) QuickViewDriverPanelID() int {
+// quickViewDriverPanel resolves the latched quick-view driver panel.
+func (m Model) quickViewDriverPanel() int {
 	if !m.QuickViewEnabled {
 		return -1
 	}
-	if m.ActivePanel != LeftPanel && m.ActivePanel != RightPanel {
-		return -1
+	if m.QuickViewPanel == LeftPanel || m.QuickViewPanel == RightPanel {
+		return m.QuickViewPanel
 	}
-	return m.ActivePanel
+	if m.ActivePanel == LeftPanel || m.ActivePanel == RightPanel {
+		return m.ActivePanel
+	}
+	return -1
+}
+
+// QuickViewDisplayActive is true when the inactive column should show quick-view preview.
+func (m Model) QuickViewDisplayActive() bool {
+	if !m.QuickViewEnabled {
+		return false
+	}
+	driver := m.quickViewDriverPanel()
+	return driver >= 0 && m.ActivePanel == driver
+}
+
+// QuickViewDriverPanelID returns the LeftPanel/RightPanel id that shows the quick-view
+// bottom indicator while quick view is latched, or -1 when disabled.
+func (m Model) QuickViewDriverPanelID() int {
+	return m.quickViewDriverPanel()
 }
 
 // PanelForFileListRender returns the panel state to paint in the file list. During quick-view
 // directory preview the inactive column uses QuickViewDirOverlay; real Left/Right paths stay
 // unchanged for cross-panel open indicators and for restore when quick view is turned off.
 func (m Model) PanelForFileListRender(panelID int) panel.State {
-	if m.QuickViewEnabled && m.QuickViewDirOverlayActive && panelID == m.QuickViewDirOverlayPanelID {
+	if m.QuickViewDisplayActive() && m.QuickViewDirOverlayActive && panelID == m.QuickViewDirOverlayPanelID {
 		return m.QuickViewDirOverlay
 	}
 	switch panelID {
@@ -357,7 +376,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if layout.Left.Width > 0 && showLeftPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused,
-				model.QuickViewEnabled, model.Left.PathString(), model.UserHomeDir)
+				model.QuickViewDisplayActive(), model.Left.PathString(), model.UserHomeDir)
 		} else if layout.Left.Width > 0 {
 			drawPanel(screen, leftFile, model.PanelForFileListRender(LeftPanel), leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, leftOtherPanelPath, leftSelectionSizeOnFileBottom)
 		}
@@ -368,7 +387,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if layout.Right.Width > 0 && showRightPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
-				model.QuickViewEnabled, model.Right.PathString(), model.UserHomeDir)
+				model.QuickViewDisplayActive(), model.Right.PathString(), model.UserHomeDir)
 		} else if layout.Right.Width > 0 {
 			drawPanel(screen, rightFile, model.PanelForFileListRender(RightPanel), rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, rightOtherPanelPath, rightSelectionSizeOnFileBottom)
 		}

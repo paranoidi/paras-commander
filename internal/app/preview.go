@@ -232,9 +232,10 @@ func (a *App) handleQuickViewToggle() {
 	if a.inQuickFilterUI() {
 		return
 	}
-	enabling := !a.model.QuickViewEnabled
-	a.model.QuickViewEnabled = enabling
-	if !enabling {
+	active := a.model.ActivePanel
+	if a.model.QuickViewEnabled && a.model.QuickViewPanel == active {
+		a.model.QuickViewEnabled = false
+		a.model.QuickViewPanel = -1
 		a.clearQuickViewDebounce()
 		a.quickViewLastFingerprint = ""
 		a.closeFilePreview()
@@ -242,6 +243,8 @@ func (a *App) handleQuickViewToggle() {
 		a.setTransientMessage("Quick view off", ui.MessageUrgencyInfo)
 		return
 	}
+	a.model.QuickViewEnabled = true
+	a.model.QuickViewPanel = active
 	if a.model.SyncFollowEnabled {
 		a.model.SyncFollowEnabled = false
 		a.clearPanelSyncFollowNavCoalesce()
@@ -249,6 +252,23 @@ func (a *App) handleQuickViewToggle() {
 	} else {
 		a.setTransientMessage("Quick view on", ui.MessageUrgencyInfo)
 	}
+	a.clearCarouselPreviewNavCoalesce()
+	a.applyQuickViewPreviewImmediately()
+}
+
+// pauseQuickViewDisplay hides inactive-column preview while quick view stays latched on the driver panel.
+func (a *App) pauseQuickViewDisplay() {
+	a.clearQuickViewDebounce()
+	a.quickViewLastFingerprint = ""
+	a.closeFilePreview()
+	a.clearQuickViewDirOverlay()
+	if a.model.ActiveSubFocus == ui.SubFocusInactivePreview {
+		a.model.ActiveSubFocus = ui.SubFocusFileList
+	}
+}
+
+// resumeQuickViewDisplay restores inactive-column preview after returning to the quick-view driver panel.
+func (a *App) resumeQuickViewDisplay() {
 	a.clearCarouselPreviewNavCoalesce()
 	a.applyQuickViewPreviewImmediately()
 }
@@ -338,18 +358,6 @@ func (a *App) clearQuickViewDirOverlay() {
 	a.model.QuickViewDirOverlayPanelID = -1
 }
 
-// quickViewTabCommitTarget returns the directory overlay path to apply when Tab commits quick view.
-func (a *App) quickViewTabCommitTarget() (path string, ok bool) {
-	if !a.model.QuickViewDirOverlayActive {
-		return "", false
-	}
-	path = panel.CleanPathString(a.model.QuickViewDirOverlay.PathString())
-	if path == "" {
-		return "", false
-	}
-	return path, true
-}
-
 // populateQuickViewDirOverlay fills the inactive-column directory overlay. When driver or
 // follower already lists the target directory, the live cursor is mirrored. Otherwise the
 // listing is built with the same snapshot path as carousel child preview (history recall).
@@ -381,55 +389,6 @@ func (a *App) populateQuickViewDirOverlay(ov *panel.State, driver, follower *pan
 	ov.ScrollOffset = snap.Scroll
 	ov.EnsureCursorInViewport(vr)
 	return nil
-}
-
-// loadPanelPathRecallingCursor loads dir on target (Tab commit / panel navigation).
-func (a *App) loadPanelPathRecallingCursor(target, driver, follower *panel.State, dir string, panelID int) error {
-	canonical := panel.CleanPathString(dir)
-	if canonical == "" {
-		return errors.New("empty directory path")
-	}
-	if target.ListingAtPath(canonical) {
-		return nil
-	}
-	vr := a.panelViewportRows(panelID)
-	snap, err := driver.SnapshotDirectory(canonical, vr, driver, follower)
-	if err != nil {
-		return err
-	}
-	if err := target.Load(canonical); err != nil {
-		return err
-	}
-	target.Path = snap.Path
-	target.Entries = snap.Entries
-	target.Cursor = snap.Cursor
-	target.ScrollOffset = snap.Scroll
-	target.EnsureCursorInViewport(vr)
-	return nil
-}
-
-// switchPanelFromQuickView disables quick view, swaps to the inactive panel, and loads the
-// previewed directory into that panel when a directory overlay was showing.
-func (a *App) switchPanelFromQuickView() {
-	commitPath, commitDir := a.quickViewTabCommitTarget()
-	driver := a.activePanel()
-
-	a.model.QuickViewEnabled = false
-	a.clearQuickViewDebounce()
-	a.closeFilePreview()
-	a.clearQuickViewDirOverlay()
-	a.quickViewLastFingerprint = ""
-
-	a.switchPanelSwap()
-
-	if !commitDir {
-		return
-	}
-	if a.pathVolumeContendsWithActiveJob(commitPath) {
-		return
-	}
-	follower := a.panelByID(a.inactivePanelID())
-	_ = a.loadPanelPathRecallingCursor(a.activePanel(), driver, follower, commitPath, a.model.ActivePanel)
 }
 
 // initQuickViewDirOverlayFromFollower prepares QuickViewDirOverlay for a directory preview load.
@@ -482,7 +441,7 @@ func (a *App) quickViewFollowDirectory() {
 }
 
 func (a *App) applyQuickViewPreviewImmediately() {
-	if !a.model.QuickViewEnabled || a.model.ViewMode != ui.ViewBrowser {
+	if !a.model.QuickViewDisplayActive() || a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
 	if a.model.Menu.Open || a.model.ModalDialogOpen() || a.inQuickFilterUI() {
@@ -493,7 +452,7 @@ func (a *App) applyQuickViewPreviewImmediately() {
 }
 
 func (a *App) applyQuickViewPreviewNow() {
-	if !a.model.QuickViewEnabled || a.model.ViewMode != ui.ViewBrowser {
+	if !a.model.QuickViewDisplayActive() || a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
 	if a.model.Menu.Open || a.model.ModalDialogOpen() || a.inQuickFilterUI() {
@@ -567,7 +526,7 @@ func (a *App) clearQuickViewDebounce() {
 // quickViewNavCoalesceContext is true when file-list nav should coalesce quick view preview updates.
 func (a *App) quickViewNavCoalesceContext() bool {
 	return a.model.ViewMode == ui.ViewBrowser &&
-		a.model.QuickViewEnabled &&
+		a.model.QuickViewDisplayActive() &&
 		a.model.ActiveSubFocus == ui.SubFocusFileList &&
 		!a.model.Menu.Open &&
 		!a.model.ModalDialogOpen() &&
@@ -627,7 +586,7 @@ func (a *App) applyQuickViewPreviewFlush(p quickViewFlushPayload) bool {
 		return false
 	}
 	a.quickViewNavSkipReconcile.Store(false)
-	if !a.model.QuickViewEnabled || a.model.ViewMode != ui.ViewBrowser {
+	if !a.model.QuickViewDisplayActive() || a.model.ViewMode != ui.ViewBrowser {
 		return false
 	}
 	if a.model.Menu.Open || a.model.ModalDialogOpen() || a.inQuickFilterUI() {
@@ -639,7 +598,7 @@ func (a *App) applyQuickViewPreviewFlush(p quickViewFlushPayload) bool {
 }
 
 func (a *App) reconcileQuickViewPreview() {
-	if !a.model.QuickViewEnabled || a.model.ViewMode != ui.ViewBrowser {
+	if !a.model.QuickViewDisplayActive() || a.model.ViewMode != ui.ViewBrowser {
 		a.clearQuickViewDebounce()
 		return
 	}
