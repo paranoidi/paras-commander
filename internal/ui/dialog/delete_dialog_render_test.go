@@ -33,7 +33,7 @@ func TestDeleteDialogListViewportRowsCapsAt80Percent(t *testing.T) {
 	const layoutH = 20
 	maxH := layoutH * 80 / 100 // 16
 	got := DeleteDialogListViewportRows(layoutH, state)
-	want := maxH - 7 // fixed summary + blanks + sep/buttons chrome
+	want := maxH - 6 // footer summary block + sep/buttons chrome
 	if got != want {
 		t.Fatalf("viewport = %d, want %d", got, want)
 	}
@@ -41,8 +41,8 @@ func TestDeleteDialogListViewportRowsCapsAt80Percent(t *testing.T) {
 	if height > maxH {
 		t.Fatalf("height = %d, exceeds 80%% max %d", height, maxH)
 	}
-	if height != 7+got {
-		t.Fatalf("height = %d, want %d", height, 7+got)
+	if height != 6+got {
+		t.Fatalf("height = %d, want %d", height, 6+got)
 	}
 }
 
@@ -59,7 +59,7 @@ func TestDeleteDialogListViewportRowsWithWarning(t *testing.T) {
 	const layoutH = 20
 	maxH := layoutH * 80 / 100
 	got := DeleteDialogListViewportRows(layoutH, state)
-	want := maxH - 7 - 1
+	want := maxH - 6 - 1
 	if got != want {
 		t.Fatalf("viewport = %d, want %d", got, want)
 	}
