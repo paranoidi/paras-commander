@@ -350,14 +350,6 @@ func (a *App) selectedCommandEntry() ui.CommandRunEntry {
 	return ui.CommandRunEntry{}
 }
 
-func commandOutputLineCount(text string) int {
-	t := strings.ReplaceAll(text, "\r\n", "\n")
-	if strings.TrimSpace(t) == "" {
-		return 1
-	}
-	return len(strings.Split(t, "\n"))
-}
-
 func (a *App) maxCommandsStdoutScroll() int {
 	sel := a.selectedCommandEntry()
 	width, height := a.screen.Size()
@@ -365,10 +357,9 @@ func (a *App) maxCommandsStdoutScroll() int {
 	if layout.TooSmall {
 		return 0
 	}
-	stdoutRect, _ := ui.SplitJobsRightColumnFlexTop(layout.Right, 8)
+	stdoutRect, _, stdoutLines, _ := ui.CommandsStreamPanels(layout.Right, sel)
 	contentH := ui.JobsPanelContentRows(stdoutRect)
-	lines := commandOutputLineCount(sel.Stdout)
-	return max(0, lines-contentH)
+	return max(0, len(stdoutLines)-contentH)
 }
 
 func (a *App) maxCommandsStderrScroll() int {
@@ -378,8 +369,7 @@ func (a *App) maxCommandsStderrScroll() int {
 	if layout.TooSmall {
 		return 0
 	}
-	_, stderrRect := ui.SplitJobsRightColumnFlexTop(layout.Right, 8)
+	_, stderrRect, _, stderrLines := ui.CommandsStreamPanels(layout.Right, sel)
 	contentH := ui.JobsPanelContentRows(stderrRect)
-	lines := commandOutputLineCount(ui.CommandStderrDisplay(sel))
-	return max(0, lines-contentH)
+	return max(0, len(stderrLines)-contentH)
 }

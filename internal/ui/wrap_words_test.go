@@ -58,3 +58,48 @@ func TestWrapWordsToWidthNarrowWidth(t *testing.T) {
 		}
 	}
 }
+
+func TestWrapTextLinesLongLineWraps(t *testing.T) {
+	t.Parallel()
+	msg := `User menu: menu.toml: toml: line 1 (last key "shell_patterns"): incompatible types: TOML value has type int64; destination has type boolean`
+	got := WrapTextLines(msg, 40)
+	if len(got) < 2 {
+		t.Fatalf("got %d lines, want at least 2: %q", len(got), got)
+	}
+	for _, ln := range got {
+		if utf8.RuneCountInString(ln) > 40 {
+			t.Fatalf("line longer than 40: %q", ln)
+		}
+	}
+	if !strings.Contains(got[0], "User menu:") {
+		t.Fatalf("first line = %q", got[0])
+	}
+}
+
+func TestWrapTextLinesPreservesNewlines(t *testing.T) {
+	t.Parallel()
+	got := WrapTextLines("line one\n\nline two", 20)
+	want := []string{"line one", "", "line two"}
+	if len(got) != len(want) {
+		t.Fatalf("got %#v want %#v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("line %d = %q want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestWrapTextLinesHardBreaksLongWord(t *testing.T) {
+	t.Parallel()
+	got := WrapTextLines("abcdefghijklmnop", 6)
+	want := []string{"abcdef", "ghijkl", "mnop"}
+	if len(got) != len(want) {
+		t.Fatalf("got %#v want %#v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("line %d = %q want %q", i, got[i], want[i])
+		}
+	}
+}

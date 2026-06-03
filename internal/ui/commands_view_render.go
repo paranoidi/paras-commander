@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -28,14 +27,24 @@ func drawCommandsView(
 	if state.Selected >= 0 && state.Selected < len(entries) {
 		sel = entries[state.Selected]
 	}
-	stdoutLines := commandPanelLines(sel.Stdout, layout.Right.Width-4)
-	stderrLines := commandPanelLines(CommandStderrDisplay(sel), layout.Right.Width-4)
-	stderrLineBudget := max(8, min(len(stderrLines)+2, 24))
-	stdoutRect, stderrRect := SplitJobsRightColumnFlexTop(layout.Right, stderrLineBudget)
+	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(layout.Right, sel)
 	stdoutFocused := state.FocusPane == 1
 	stderrFocused := state.FocusPane == 2
 	drawCommandsStreamPanel(screen, stdoutRect, " Stdout ", state.StdoutScroll, stdoutLines, styles, chromeBlocked, stdoutFocused)
 	drawCommandsStreamPanel(screen, stderrRect, " Stderr ", state.StderrScroll, stderrLines, styles, chromeBlocked, stderrFocused)
+}
+
+// CommandsStreamPanels returns stdout/stderr panel geometry and wrapped output lines for one run entry.
+func CommandsStreamPanels(column Rect, entry CommandRunEntry) (stdoutRect, stderrRect Rect, stdoutLines, stderrLines []string) {
+	textW := column.Width - 4
+	if textW < 1 {
+		textW = 1
+	}
+	stdoutLines = CommandPanelLines(entry.Stdout, textW)
+	stderrLines = CommandPanelLines(CommandStderrDisplay(entry), textW)
+	stderrLineBudget := max(8, min(len(stderrLines)+2, 24))
+	stdoutRect, stderrRect = SplitJobsRightColumnFlexTop(column, stderrLineBudget)
+	return stdoutRect, stderrRect, stdoutLines, stderrLines
 }
 
 func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewState, entries []CommandRunEntry, styles theme.Theme, chromeBlocked bool, userHomeDir string) {
@@ -171,7 +180,8 @@ func commandPhaseStyle(e CommandRunEntry, styles theme.Theme) tcell.Style {
 	}
 }
 
-func commandPanelLines(text string, width int) []string {
+// CommandPanelLines splits command stdout/stderr into wrapped display lines for the Commands view.
+func CommandPanelLines(text string, width int) []string {
 	if width < 1 {
 		width = 1
 	}
@@ -179,18 +189,7 @@ func commandPanelLines(text string, width int) []string {
 	if strings.TrimSpace(t) == "" {
 		return []string{" (empty)"}
 	}
-	var out []string
-	for _, line := range strings.Split(t, "\n") {
-		out = append(out, fitCommandOutputLine(line, width))
-	}
-	return out
-}
-
-func fitCommandOutputLine(line string, width int) string {
-	if utf8.RuneCountInString(line) <= width {
-		return line
-	}
-	return primitive.TruncateRight(line, width)
+	return WrapTextLines(t, width)
 }
 
 func drawCommandsStreamPanel(screen tcell.Screen, rect Rect, title string, scroll int, lines []string, styles theme.Theme, chromeBlocked bool, focused bool) {

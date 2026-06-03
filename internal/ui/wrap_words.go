@@ -62,3 +62,46 @@ func WrapWordsToWidth(text string, maxCols int) []string {
 	flush()
 	return lines
 }
+
+// WrapTextLines splits on newlines and wraps each logical line to at most maxCols runes.
+// Explicit newlines are preserved; long lines break at spaces when practical, otherwise hard-break.
+func WrapTextLines(text string, maxCols int) []string {
+	if maxCols < 1 {
+		maxCols = 1
+	}
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	var lines []string
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimRight(line, "\r")
+		lines = append(lines, wrapTextLine(line, maxCols)...)
+	}
+	return lines
+}
+
+func wrapTextLine(line string, maxCols int) []string {
+	if utf8.RuneCountInString(line) <= maxCols {
+		return []string{line}
+	}
+	var out []string
+	runes := []rune(line)
+	for len(runes) > 0 {
+		if len(runes) <= maxCols {
+			out = append(out, string(runes))
+			break
+		}
+		breakAt := maxCols
+		minBreak := max(maxCols/3, 1)
+		for i := maxCols - 1; i >= minBreak; i-- {
+			if runes[i] == ' ' {
+				breakAt = i
+				break
+			}
+		}
+		out = append(out, string(runes[:breakAt]))
+		runes = runes[breakAt:]
+		for len(runes) > 0 && runes[0] == ' ' {
+			runes = runes[1:]
+		}
+	}
+	return out
+}

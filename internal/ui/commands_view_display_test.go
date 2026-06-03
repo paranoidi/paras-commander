@@ -1,6 +1,10 @@
 package ui
 
-import "testing"
+import (
+	"strings"
+	"testing"
+	"unicode/utf8"
+)
 
 func TestCommandStderrDisplay(t *testing.T) {
 	t.Parallel()
@@ -32,5 +36,19 @@ func TestCommandStderrDisplay(t *testing.T) {
 				t.Fatalf("CommandStderrDisplay() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestCommandPanelLinesWrapsLongOutput(t *testing.T) {
+	t.Parallel()
+	long := strings.Repeat("word ", 30)
+	lines := CommandPanelLines(long, 20)
+	if len(lines) < 2 {
+		t.Fatalf("got %d lines, want wrapped output", len(lines))
+	}
+	for _, ln := range lines {
+		if utf8.RuneCountInString(ln) > 20 {
+			t.Fatalf("line longer than width: %q", ln)
+		}
 	}
 }
