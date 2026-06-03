@@ -94,21 +94,23 @@ func (paths Paths) withDerivedThemesDir() Paths {
 
 // Config is the parsed general application configuration.
 type Config struct {
-	Theme                           string `toml:"theme"`
-	ShowHidden                      bool   `toml:"show_hidden"`
-	RespectGitignore                bool   `toml:"respect_gitignore"`
-	ConfirmDelete                   bool   `toml:"confirm_delete"`
-	ConfirmOverwrite                bool   `toml:"confirm_overwrite"`
-	CaseInsensitiveFilter           bool   `toml:"case_insensitive_filter"`
-	JobConcurrency                  int    `toml:"job_concurrency"`
-	StartupPathMode                 string `toml:"startup_path_mode"`
-	DefaultSort                     string `toml:"default_sort"`
-	DefaultListingFormat            string `toml:"default_listing_format"`
-	SortReverse                     bool   `toml:"sort_reverse"`
-	DirectoriesFirst                bool   `toml:"directories_first"`
-	DiskUsageIdleSizeSort           bool   `toml:"disk_usage_idle_size_sort"`
-	DiskUsageIdleSortDelayMS        int    `toml:"disk_usage_idle_sort_delay_ms"`
-	DiskUsageDescendIntoMountPoints bool   `toml:"disk_usage_descend_into_mount_points"`
+	Theme                    string `toml:"theme"`
+	ShowHidden               bool   `toml:"show_hidden"`
+	RespectGitignore         bool   `toml:"respect_gitignore"`
+	ConfirmDelete            bool   `toml:"confirm_delete"`
+	ConfirmOverwrite         bool   `toml:"confirm_overwrite"`
+	CaseInsensitiveFilter    bool   `toml:"case_insensitive_filter"`
+	JobConcurrency           int    `toml:"job_concurrency"`
+	StartupPathMode          string `toml:"startup_path_mode"`
+	DefaultSort              string `toml:"default_sort"`
+	DefaultListingFormat     string `toml:"default_listing_format"`
+	SortReverse              bool   `toml:"sort_reverse"`
+	DirectoriesFirst         bool   `toml:"directories_first"`
+	DiskUsageIdleSizeSort    bool   `toml:"disk_usage_idle_size_sort"`
+	DiskUsageIdleSortDelayMS int    `toml:"disk_usage_idle_sort_delay_ms"`
+	// RefreshIntervalMS re-reads both panel directories on this interval in background goroutines (0 disables).
+	RefreshIntervalMS               int  `toml:"refresh_interval_ms"`
+	DiskUsageDescendIntoMountPoints bool `toml:"disk_usage_descend_into_mount_points"`
 	// DiskUsageWalkConcurrency limits concurrent subdirectory branches during a disk-usage walk (minimum 1 after Validate).
 	// Default is DefaultDiskUsageWalkConcurrency.
 	// Low values spare HDD/NAS; raise for fast local SSDs.
@@ -317,6 +319,7 @@ func Default() Config {
 		DirectoriesFirst:                true,
 		DiskUsageIdleSizeSort:           true,
 		DiskUsageIdleSortDelayMS:        500,
+		RefreshIntervalMS:               DefaultRefreshIntervalMS,
 		DiskUsageDescendIntoMountPoints: false,
 		DiskUsageWalkConcurrency:        DefaultDiskUsageWalkConcurrency,
 		FollowSymlinksOnNavigation:      true,
@@ -801,7 +804,18 @@ func (c *Config) Validate() error {
 		c.StartupPathMode = builtin.StartupPathMode
 	}
 	if c.DiskUsageIdleSortDelayMS <= 0 {
-		c.DiskUsageIdleSortDelayMS = builtin.DiskUsageIdleSortDelayMS
+		c.DiskUsageIdleSortDelayMS = 500
+	}
+	if c.RefreshIntervalMS < 0 {
+		c.RefreshIntervalMS = DefaultRefreshIntervalMS
+	}
+	if c.RefreshIntervalMS > 0 {
+		if c.RefreshIntervalMS < RefreshIntervalMinMS {
+			c.RefreshIntervalMS = RefreshIntervalMinMS
+		}
+		if c.RefreshIntervalMS > RefreshIntervalMaxMS {
+			c.RefreshIntervalMS = RefreshIntervalMaxMS
+		}
 	}
 	if c.DiskUsageWalkConcurrency < 1 {
 		c.DiskUsageWalkConcurrency = builtin.DiskUsageWalkConcurrency

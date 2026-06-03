@@ -24,6 +24,13 @@ const (
 
 	DefaultDiskUsageWalkConcurrency = 4
 
+	// DefaultRefreshIntervalMS is how often both file panels re-read their directories from disk (0 disables).
+	DefaultRefreshIntervalMS = 2500
+
+	// RefreshIntervalMinMS / RefreshIntervalMaxMS clamp active refresh_interval_ms in Config.Validate.
+	RefreshIntervalMinMS = 200
+	RefreshIntervalMaxMS = 60_000
+
 	DefaultWorkerProgressMinBytes      = 512 * 1024
 	DefaultWorkerProgressMinIntervalMS = 200
 

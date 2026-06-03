@@ -8,7 +8,6 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
-	"github.com/paranoidi/paras-commander/internal/fsbackend/file"
 	"github.com/paranoidi/paras-commander/internal/fsvol"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
@@ -201,6 +200,36 @@ func (s *State) Refresh(viewportRows int) error {
 		selectedName = entry.Name
 	}
 	return s.load(s.Path, selectedName, viewportRows, priorCursor, remoteLoadOpts{})
+}
+
+// ApplyPeriodicRefresh commits a same-directory listing when content changed.
+// Selection is restored by name (else prior index). Scroll centers when the restore would move the viewport.
+func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, viewportRows int) (bool, error) {
+	if fsbackend.EntriesListingEqual(backendEntries, BackendEntriesFromPanel(s.Entries)) {
+		return false, nil
+	}
+	priorCursor := s.Cursor
+	priorScroll := s.ScrollOffset
+	entry, ok := s.CurrentEntry()
+	selectedName := ""
+	if ok {
+		selectedName = entry.Name
+	}
+	vr := s.effectiveFileListViewportRows(viewportRows)
+	wasCentered := s.cursorAppearsCentered(vr)
+	if err := s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, priorCursor, false); err != nil {
+		return false, err
+	}
+	scrollNeeded := s.Cursor != priorCursor
+	if !scrollNeeded {
+		saved := s.ScrollOffset
+		s.EnsureCursorVisible(vr)
+		scrollNeeded = s.ScrollOffset != priorScroll
+		s.ScrollOffset = saved
+	}
+	center := s.CenterScrolling || wasCentered || scrollNeeded
+	s.applyHighlightScroll(viewportRows, center)
+	return true, nil
 }
 
 // ToggleHidden flips hidden-file visibility and reloads the current directory using the same cursor rules as Refresh.
@@ -1007,46 +1036,7 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 }
 
 func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
-	if loc.IsRemote() {
-		be, berr := fsbackend.Default().Backend(loc)
-		if berr != nil {
-			return nil, pathloc.Path{}, false, false, berr
-		}
-		entries, err := be.List(context.Background(), loc)
-		if err != nil {
-			return nil, pathloc.Path{}, false, false, err
-		}
-		dotfilesHiddenActive := !s.ShowHidden && fsbackend.HasDotfileNames(entries)
-		return fsbackend.FilterHidden(entries, s.ShowHidden), loc, false, dotfilesHiddenActive, nil
-	}
-	host, ferr := loc.FilePath()
-	if ferr != nil {
-		return nil, pathloc.Path{}, false, false, ferr
-	}
-	gitMatcher, gerr := localfs.MatcherForListing(s.ShowHidden, s.Gitignore, host)
-	if gerr != nil {
-		return nil, pathloc.Path{}, false, false, gerr
-	}
-	be := file.New()
-	entries, err := be.ListWithOptions(context.Background(), loc, localfs.ListOptions{
-		ShowHidden: s.ShowHidden,
-		Gitignore:  gitMatcher,
-	})
-	if err != nil {
-		return nil, pathloc.Path{}, false, false, err
-	}
-	dotfilesHiddenActive := false
-	if !s.ShowHidden {
-		dotfilesHiddenActive, err = localfs.DirHasDotfileNames(host)
-		if err != nil {
-			return nil, pathloc.Path{}, false, false, err
-		}
-	}
-	listingLoc, err := pathloc.File(host)
-	if err != nil {
-		return nil, pathloc.Path{}, false, false, err
-	}
-	return entries, listingLoc, gitMatcher != nil, dotfilesHiddenActive, nil
+	return FetchListing(context.Background(), s.ListingRefreshSnapshot(loc, 0))
 }
 
 // ApplyListing commits backend entries into panel state (used after sync or async remote list).

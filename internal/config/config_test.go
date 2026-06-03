@@ -120,6 +120,38 @@ func TestValidateClampsNegativeZoomActivePanelDisabledAboveWidth(t *testing.T) {
 	}
 }
 
+func TestValidateClampsRefreshIntervalMS(t *testing.T) {
+	cfg := Default()
+	cfg.RefreshIntervalMS = -1
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.RefreshIntervalMS != DefaultRefreshIntervalMS {
+		t.Fatalf("negative = %d, want default %d", cfg.RefreshIntervalMS, DefaultRefreshIntervalMS)
+	}
+	cfg.RefreshIntervalMS = 0
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.RefreshIntervalMS != 0 {
+		t.Fatalf("zero = %d, want 0 (disabled)", cfg.RefreshIntervalMS)
+	}
+	cfg.RefreshIntervalMS = 100
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.RefreshIntervalMS != 200 {
+		t.Fatalf("100 = %d, want clamp 200", cfg.RefreshIntervalMS)
+	}
+	cfg.RefreshIntervalMS = 120_000
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.RefreshIntervalMS != 60_000 {
+		t.Fatalf("120000 = %d, want clamp 60000", cfg.RefreshIntervalMS)
+	}
+}
+
 func TestValidateClampsPathPickerValidateDelayMS(t *testing.T) {
 	cfg := Default()
 	cfg.UI.PathPickerValidateDelayMS = -5

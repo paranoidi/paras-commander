@@ -38,7 +38,7 @@ func commandContainsMacro(cmd string, letter byte) bool {
 }
 
 // ErrRunForEachRequiresF is returned when a run-for-each command omits %f.
-const ErrRunForEachRequiresF = "Command must include %f to represent the selected item"
+const ErrRunForEachRequiresF = "command must include %f to represent the selected item"
 
 // ExpandCommandWithFOverride behaves like ExpandCommand, but when fOverride is non-empty,
 // %f expands to that value (shell-quoted) instead of the active panel cursor entry.

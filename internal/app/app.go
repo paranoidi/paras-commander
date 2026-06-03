@@ -155,6 +155,7 @@ type App struct {
 	workPools *workpool.Registry
 
 	volumeRefreshInFlight [2]atomic.Bool
+	panelRefreshInFlight  [2]atomic.Bool
 
 	sftpMu                 sync.Mutex
 	sftpHostKeyWait        *sftpHostKeyWait
@@ -489,6 +490,9 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if secs := cfg.Jobs.FreeSpacePollIntervalSecs; secs > 0 {
 		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
 	}
+	if ms := cfg.RefreshIntervalMS; ms > 0 {
+		go app.runPanelRefreshTicker(time.Duration(ms)*time.Millisecond, app.jobStopCh)
+	}
 	if cfg.Jobs.ThroughputChartEnabled {
 		go app.runThroughputChartTicker(
 			time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
@@ -650,6 +654,13 @@ func (a *App) Run() error {
 				}
 			case gitStatusPayload:
 				if a.applyGitStatusLoad(d) {
+					a.render()
+					didRender = true
+				}
+			case panelRefreshTickPayload:
+				a.handlePanelRefreshTick()
+			case panelRefreshApplyPayload:
+				if a.applyPanelListingRefresh(d) {
 					a.render()
 					didRender = true
 				}
