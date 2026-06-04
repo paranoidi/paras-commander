@@ -54,7 +54,7 @@ func TestBuildFilePreviewArgvIntegratesTemplate(t *testing.T) {
 		t.Skipf("no preview executable on PATH: %v", err)
 	}
 	got, err := BuildFilePreviewArgv(
-		"bat --paging=never --terminal-width={terminal_width}",
+		"bat --paging=never --terminal-width=%w",
 		"/tmp/x.go",
 		42,
 	)

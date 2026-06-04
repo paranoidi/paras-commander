@@ -2,42 +2,34 @@ package cmdrun
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
-)
 
-const (
-	previewPathPlaceholder          = "{path}"
-	previewTerminalWidthPlaceholder = "{terminal_width}"
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 )
 
 // PreviewCommandArgv builds argv for file preview from a single-line command template.
-// Every previewTerminalWidthPlaceholder is replaced with terminalWidth (clamped to 1..4096) so
-// highlighters can match the inactive column (e.g. bat --terminal-width).
-// If the template contains previewPathPlaceholder exactly once, the absolute path is inserted
-// as one argv token between the left and right sides (each side parsed with ParseCommandArgv).
-// If the placeholder is absent, ParseCommandArgv is applied to the whole line and absPath is
-// appended as the final argument. Multiple path placeholders return an error.
+// Use %w for terminal width and %f for the absolute file path (at most one %f).
+// If %f is absent, the path is appended as the final argument after parsing.
 func PreviewCommandArgv(commandLine, absPath string, terminalWidth int) ([]string, error) {
-	if terminalWidth < 1 {
-		terminalWidth = 1
-	}
-	if terminalWidth > 4096 {
-		terminalWidth = 4096
-	}
 	line := strings.TrimSpace(commandLine)
-	line = strings.ReplaceAll(line, previewTerminalWidthPlaceholder, strconv.Itoa(terminalWidth))
+	if err := cmdmacro.LegacyPreviewPlaceholders(line); err != nil {
+		return nil, err
+	}
+	line = cmdmacro.ReplaceTerminalWidth(line, terminalWidth)
 	if line == "" {
 		return nil, fmt.Errorf("empty preview command")
 	}
-	n := strings.Count(line, previewPathPlaceholder)
+	n := cmdmacro.CountPathMacro(line)
 	if n > 1 {
-		return nil, fmt.Errorf("preview command: at most one %s placeholder", previewPathPlaceholder)
+		return nil, fmt.Errorf("preview command: at most one %%f")
 	}
 	if n == 1 {
-		idx := strings.Index(line, previewPathPlaceholder)
+		idx := indexPathMacro(line)
+		if idx < 0 {
+			return nil, fmt.Errorf("preview command: %%f not found")
+		}
 		left := strings.TrimSpace(line[:idx])
-		right := strings.TrimSpace(line[idx+len(previewPathPlaceholder):])
+		right := strings.TrimSpace(line[idx+2:])
 		var out []string
 		if left != "" {
 			a, err := ParseCommandArgv(left)
@@ -64,4 +56,20 @@ func PreviewCommandArgv(commandLine, absPath string, terminalWidth int) ([]strin
 		return nil, err
 	}
 	return append(argv, absPath), nil
+}
+
+func indexPathMacro(line string) int {
+	for i := 0; i < len(line)-1; i++ {
+		if line[i] != '%' {
+			continue
+		}
+		if line[i+1] == '%' {
+			i++
+			continue
+		}
+		if line[i+1] == 'f' {
+			return i
+		}
+	}
+	return -1
 }

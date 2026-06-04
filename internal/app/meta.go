@@ -10,6 +10,8 @@ import (
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
@@ -217,8 +219,11 @@ func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
 		var wg sync.WaitGroup
 
 		for _, e := range entries {
-			// Skip entries that don't match the extension filter.
-			if !cmdDef.MatchesPath(e.Path) {
+			ok, err := cmdDef.MatchesRow(e, dir)
+			if err != nil {
+				continue
+			}
+			if !ok {
 				continue
 			}
 			// Skip entries already resolved from cache.
@@ -272,9 +277,17 @@ func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
 	}()
 }
 
-// runMetaCommand runs a single shell command with path as $1.
+// runMetaCommand runs a shell command template with %f expanded to path.
 func runMetaCommand(cmd, path, dir string) string {
-	c := exec.CommandContext(context.Background(), "sh", "-c", cmd, "sh", path)
+	built, err := cmdrun.BuildInvocation(cmdrun.InvocationSpec{
+		Template: cmd,
+		Mode:     cmdrun.ModeShellScript,
+		Ctx:      cmdmacro.Context{RowPath: path},
+	})
+	if err != nil {
+		return ""
+	}
+	c := exec.CommandContext(context.Background(), built.Argv[0], built.Argv[1:]...)
 	c.Dir = dir
 	out, err := c.Output()
 	if err != nil {

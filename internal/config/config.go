@@ -173,7 +173,7 @@ type UserMenuConfig struct {
 // PreviewConfig controls inactive-panel file preview (external highlighter command).
 type PreviewConfig struct {
 	// Command is a single-line argv template parsed like shellwords (see cmdrun.ParseCommandArgv).
-	// Use {path} once to insert the absolute file path as one token; if omitted, the path is appended.
+	// Use %f once to insert the absolute file path as one token; use %w for terminal width; if %f is omitted, the path is appended.
 	Command string `toml:"command"`
 }
 

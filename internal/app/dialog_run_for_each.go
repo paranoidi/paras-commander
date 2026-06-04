@@ -38,7 +38,7 @@ func validateRunForEachCommand(cmdLine string, entries []localfs.Entry, active, 
 	if ent.Path == "" && active != nil {
 		ent.Path = active.PathString()
 	}
-	if _, err := buildRunForEachItem(cmdLine, ent, active, other); err != nil {
+	if _, err := buildRunForEachItem(cmdLine, ent, active, other, false); err != nil {
 		return err.Error()
 	}
 	return ""

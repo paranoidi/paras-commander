@@ -196,20 +196,22 @@ func (a *App) executeUserMenuEntry(idx int) {
 		return
 	}
 
-	expanded, err := usermenu.ExpandCommand(entry.Command, active, other)
+	built, err := cmdrun.BuildInvocation(cmdrun.InvocationSpec{
+		Template:   entry.Command,
+		Mode:       cmdrun.ModeAuto,
+		ForceShell: entry.Shell,
+		Ctx:        usermenu.MacroContext(active, other, "", ""),
+	})
 	if err != nil {
-		a.setErrorMessage("User menu", err)
-		return
-	}
-	argv, err := cmdrun.ParseCommandArgv(expanded)
-	if err != nil {
+		if strings.Contains(err.Error(), "cmdmacro:") || strings.Contains(err.Error(), "user menu:") {
+			a.setErrorMessage("User menu", err)
+			return
+		}
 		a.openMessageDialog("User menu", err.Error())
 		return
 	}
-	if len(argv) == 0 {
-		a.setTransientMessage("User menu: command is empty", ui.MessageUrgencyWarn)
-		return
-	}
+	argv := built.Argv
+	expanded := built.Expanded
 
 	workDir := active.PathString()
 	switch {
@@ -269,7 +271,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		Background:  entry.Background,
 		NotifyLabel: notifyLabel,
 		BuildItem: func(ent localfs.Entry) (runForEachBuiltItem, error) {
-			return buildRunForEachItem(cmdTemplate, ent, active, other)
+			return buildRunForEachItem(cmdTemplate, ent, active, other, entry.Shell)
 		},
 	})
 }

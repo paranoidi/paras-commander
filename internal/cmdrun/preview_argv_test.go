@@ -17,7 +17,7 @@ func TestPreviewCommandArgvAppendsPath(t *testing.T) {
 }
 
 func TestPreviewCommandArgvPlaceholder(t *testing.T) {
-	got, err := PreviewCommandArgv(`bat --paging=never {path} --color=always`, "/tmp/x.go", 80)
+	got, err := PreviewCommandArgv(`bat --paging=never %f --color=always`, "/tmp/x.go", 80)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestPreviewCommandArgvPlaceholder(t *testing.T) {
 }
 
 func TestPreviewCommandArgvTerminalWidthPlaceholder(t *testing.T) {
-	got, err := PreviewCommandArgv(`bat --terminal-width={terminal_width} --wrap=auto`, "/tmp/x.go", 42)
+	got, err := PreviewCommandArgv(`bat --terminal-width=%w --wrap=auto`, "/tmp/x.go", 42)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestPreviewCommandArgvTerminalWidthPlaceholder(t *testing.T) {
 }
 
 func TestPreviewCommandArgvTerminalWidthClampedLow(t *testing.T) {
-	got, err := PreviewCommandArgv(`bat --tw={terminal_width}`, "/a", 0)
+	got, err := PreviewCommandArgv(`bat --tw=%w`, "/a", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,8 +50,15 @@ func TestPreviewCommandArgvTerminalWidthClampedLow(t *testing.T) {
 }
 
 func TestPreviewCommandArgvMultiplePlaceholderErrors(t *testing.T) {
-	_, err := PreviewCommandArgv(`bat {path} {path}`, "/x", 80)
+	_, err := PreviewCommandArgv(`bat %f %f`, "/x", 80)
 	if err == nil {
 		t.Fatal("want error")
+	}
+}
+
+func TestPreviewCommandArgvRejectsLegacyPlaceholders(t *testing.T) {
+	_, err := PreviewCommandArgv(`bat {path}`, "/x", 80)
+	if err == nil {
+		t.Fatal("want error for {path}")
 	}
 }

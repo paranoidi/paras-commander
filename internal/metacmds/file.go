@@ -3,50 +3,93 @@ package metacmds
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/paranoidi/paras-commander/internal/entrymatch"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
 // MetaFile is the decoded meta command definition file (meta.toml).
 type MetaFile struct {
-	Entries []MetaEntry
+	ShellPatterns bool
+	Entries       []MetaEntry
 }
 
 // MetaEntry is one [[entry]] block in meta.toml.
-// File runs for regular files; Dirs runs for directories; $1 = absolute path.
-//
-// Stdout is shown in the panel Meta column. If the trimmed output contains no tab or newline,
-// it is one cell (legacy): display width over the panel meta budget is replaced with "too long".
-// Otherwise fields are split on tab and line feed (after \r\n/\r normalization to \n, then \n→\t),
-// up to 8 fields; empty fields are preserved.
+// File runs for regular files; Dirs runs for directories; %f = absolute row path in shell scripts.
 type MetaEntry struct {
-	Name        string
-	Description string
-	File        string
-	Dirs        string
-	// Extensions holds glob patterns (e.g. "*.py", "*.go") matched against the entry basename.
-	// When non-empty, the command is only run for entries whose basename matches at least one pattern.
-	// Empty Extensions means no filter: the command runs for every entry.
-	Extensions []string
-	// Cache, when true, stores each computed result in a session-scoped in-memory cache keyed by
-	// absolute path. Re-entering a directory skips re-running the command for paths already cached.
-	// The cache persists for the lifetime of the application and is never written to disk.
-	Cache bool
+	Name          string
+	Description   string
+	File          string
+	Dirs          string
+	When          []string
+	Cache         bool
+	ShellPatterns bool
 }
 
 type metaFileRaw struct {
-	Entry []metaEntryRaw `toml:"entry"`
+	ShellPatterns *boolField     `toml:"shell_patterns"`
+	Entry         []metaEntryRaw `toml:"entry"`
 }
 
 type metaEntryRaw struct {
-	Name        string   `toml:"name"`
-	Description string   `toml:"description"`
-	File        string   `toml:"file"`
-	Dirs        string   `toml:"dirs"`
-	Extensions  []string `toml:"extensions"`
-	Cache       bool     `toml:"cache"`
+	Name          string     `toml:"name"`
+	Description   string     `toml:"description"`
+	File          string     `toml:"file"`
+	Dirs          string     `toml:"dirs"`
+	When          *whenField `toml:"when"`
+	Cache         bool       `toml:"cache"`
+	ShellPatterns *boolField `toml:"shell_patterns"`
+}
+
+// boolField decodes MC-style 0/1 or a TOML boolean.
+type boolField struct {
+	Set   bool
+	Value bool
+}
+
+func (s *boolField) UnmarshalTOML(data interface{}) error {
+	s.Set = true
+	switch v := data.(type) {
+	case bool:
+		s.Value = v
+	case int64:
+		s.Value = v != 0
+	case uint64:
+		s.Value = v != 0
+	case float64:
+		s.Value = v != 0
+	default:
+		return fmt.Errorf("expected bool or numeric 0/1, got %T", data)
+	}
+	return nil
+}
+
+type whenField struct {
+	Set   bool
+	Value []string
+}
+
+func (w *whenField) UnmarshalTOML(data interface{}) error {
+	w.Set = true
+	switch v := data.(type) {
+	case string:
+		w.Value = []string{v}
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, it := range v {
+			s, ok := it.(string)
+			if !ok {
+				return fmt.Errorf("expected string, got %T", it)
+			}
+			out = append(out, s)
+		}
+		w.Value = out
+	default:
+		return fmt.Errorf("expected string or array of strings, got %T", data)
+	}
+	return nil
 }
 
 // LoadFile reads and validates meta.toml from path.
@@ -64,7 +107,10 @@ func Decode(data []byte) (*MetaFile, error) {
 	if err := toml.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("meta.toml: %w", err)
 	}
-	out := &MetaFile{}
+	out := &MetaFile{ShellPatterns: true}
+	if raw.ShellPatterns != nil && raw.ShellPatterns.Set {
+		out.ShellPatterns = raw.ShellPatterns.Value
+	}
 	for i, e := range raw.Entry {
 		if strings.TrimSpace(e.Name) == "" {
 			return nil, fmt.Errorf("meta.toml: entry %d: name is required", i)
@@ -75,25 +121,24 @@ func Decode(data []byte) (*MetaFile, error) {
 		if strings.TrimSpace(e.File) == "" && strings.TrimSpace(e.Dirs) == "" {
 			return nil, fmt.Errorf("meta.toml: entry %d: at least one of file or dirs command is required", i)
 		}
-		// Validate glob patterns.
-		var exts []string
-		for _, pat := range e.Extensions {
-			pat = strings.TrimSpace(pat)
-			if pat == "" {
-				continue
+		var whenList []string
+		if e.When != nil && e.When.Set {
+			for _, w := range e.When.Value {
+				w = strings.TrimSpace(w)
+				if w == "" {
+					continue
+				}
+				whenList = append(whenList, w)
 			}
-			if _, err := filepath.Match(pat, ""); err != nil {
-				return nil, fmt.Errorf("meta.toml: entry %d: extensions: invalid glob %q: %w", i, pat, err)
-			}
-			exts = append(exts, pat)
 		}
 		out.Entries = append(out.Entries, MetaEntry{
-			Name:        strings.TrimSpace(e.Name),
-			Description: strings.TrimSpace(e.Description),
-			File:        strings.TrimSpace(e.File),
-			Dirs:        strings.TrimSpace(e.Dirs),
-			Extensions:  exts,
-			Cache:       e.Cache,
+			Name:          strings.TrimSpace(e.Name),
+			Description:   strings.TrimSpace(e.Description),
+			File:          strings.TrimSpace(e.File),
+			Dirs:          strings.TrimSpace(e.Dirs),
+			When:          whenList,
+			Cache:         e.Cache,
+			ShellPatterns: resolveShellPatterns(out.ShellPatterns, e.ShellPatterns),
 		})
 	}
 	return out, nil
@@ -109,18 +154,23 @@ func (f *MetaFile) EntryByName(name string) (MetaEntry, bool) {
 	return MetaEntry{}, false
 }
 
-// MatchesPath reports whether path should be processed by this entry.
-// When Extensions is empty every path matches. Otherwise the basename of path
-// must match at least one glob pattern (using filepath.Match semantics).
-func (e *MetaEntry) MatchesPath(path string) bool {
-	if len(e.Extensions) == 0 {
-		return true
+func resolveShellPatterns(fileDefault bool, entry *boolField) bool {
+	if entry != nil && entry.Set {
+		return entry.Value
 	}
-	base := filepath.Base(path)
-	for _, pat := range e.Extensions {
-		if matched, _ := filepath.Match(pat, base); matched {
-			return true
-		}
+	return fileDefault
+}
+
+// MatchesRow reports whether ent in panelDir passes this entry's when filter.
+func (e *MetaEntry) MatchesRow(ent localfs.Entry, panelDir string) (bool, error) {
+	if len(e.When) == 0 {
+		return true, nil
 	}
-	return false
+	row := ent
+	ctx := &entrymatch.Context{
+		ShellPatterns: e.ShellPatterns,
+		Row:           &row,
+		PanelDir:      panelDir,
+	}
+	return entrymatch.EvalWhenAny(e.When, ctx)
 }

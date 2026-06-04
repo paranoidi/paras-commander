@@ -24,42 +24,66 @@ const MenuStubTOML = `# F2 user menu
 # title = "Echo active panel directory"
 # command = "echo %d"
 #
-# Options:
-# 
-# key = "p"
-# 	  pin a shortcut letter (otherwise assigned from the title, like the meta picker)
-# when = ["*.py", "*.go"]
-# 	  OR semantics: visible when any condition matches
-# run_for_each = ["files", "dirs"]
-# 	  run once per selected item (or the cursor item when nothing is selected)
-# 	  command must include %f (iterated item absolute path); paths are not auto-appended
-# 	  interactive/detach are not allowed with run_for_each
-# shell_patterns = true   
-#     true = glob patterns in when=; 
-#     false = regex patterns in when=
-# interactive = true
-#     suspend TUI, attach terminal (lazygit, vim, htop)
-# detach = true           
-#     start in background (xdg-open, GUI helpers)
-# background = true       
-#     capture output without opening Commands view; notify on failure/stderr; 
-#     refresh panel when done
-#     interactive, detach, and background cannot be combined on one entry
-# pool = "cpu"
-#     optional work pool name (defined in pools.toml [[pools]])
-#     works with default or background mode
-#     omit for unlimited parallelism
-#     cannot be combined with interactive or detach
+# ── File-level ─────────────────────────────────────────────────────────────
 #
-# Macros (expanded in command before run):
+# shell_patterns  bool   default: true
+#   Default pattern mode for when= on entries that omit shell_patterns.
+#   true  → glob (bare patterns match basename)
+#   false → regex
+#
+# ── [[entry]] fields ───────────────────────────────────────────────────────
+#
+# title           string   required
+# command         string   required
+#
+# key             string   optional   (single letter)
+#   Pin Alt+letter shortcut; otherwise derived from title.
+#
+# when            string | [string]   optional   default: always visible
+#   Visibility filter; OR semantics across list items.
+#
+# shell_patterns  bool     optional   default: file-level (else true)
+#   Override file default for this entry's when= patterns.
+#   true → glob; false → regex.
+#
+# default         bool     optional   default: false
+#   Highlight this row among visible entries.
+#
+# run_for_each    [string] optional   values: "files" | "dirs"
+#   Run once per selected item (or cursor when nothing selected).
+#   command must include %f; not combinable with interactive or detach.
+#
+# shell           bool     optional   default: false
+#   Force sh -c even without shell operators (>> | && …).
+#
+# interactive     bool     optional   default: false
+#   Suspend TUI and attach terminal (vim, lazygit, htop).
+#   Mutually exclusive with detach, background, and run_for_each.
+#
+# detach          bool     optional   default: false
+#   Start in background (xdg-open, GUI helpers).
+#
+# background      bool     optional   default: false
+#   Capture output without Commands view; notify on failure/stderr;
+#   refresh panel when done.
+#
+# pool            string   optional
+#   Work pool name from pools.toml [[pools]]; default/background mode only.
+#   Omit for unlimited parallelism; not combinable with interactive or detach.
+#
+# Macros (substituted before the command line is parsed into argv):
+#
+#   Do not wrap macros in quotes — the app quotes path/name values when expanding.
+#   Good:  command = "gzip -9 %f"
+#   Bad:   command = "gzip -9 \"%f\""  or  'gzip -9 "%f"'
 #
 #     %%  literal % character
 #     %f  basename of the highlighted file on the active panel (run_for_each: iterated absolute path)
 #     %F  basename of the highlighted file on the other panel
 #     %d  directory path of the active panel
 #     %D  directory path of the other panel
-#     %t  quoted paths of tagged files in the active panel's current directory (space-separated)
-#     %T  quoted paths of tagged files in the other panel's current directory (space-separated)
+#     %t  tagged files in the active panel's current directory (expanded as quoted tokens)
+#     %T  tagged files in the other panel's current directory (expanded as quoted tokens)
 `
 
 // WriteMenuStub creates path with MenuStubTOML when the file does not exist yet.

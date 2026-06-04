@@ -15,30 +15,25 @@ type runForEachBuiltItem struct {
 	UserLine string
 }
 
-func buildRunForEachItem(cmdTemplate string, ent localfs.Entry, active, other *panel.State) (runForEachBuiltItem, error) {
+func buildRunForEachItem(cmdTemplate string, ent localfs.Entry, active, other *panel.State, forceShell bool) (runForEachBuiltItem, error) {
 	if !usermenu.CommandRequiresIteratedF(cmdTemplate) {
 		return runForEachBuiltItem{}, errors.New(usermenu.ErrRunForEachRequiresF)
 	}
-	expanded, err := usermenu.ExpandCommandWithFOverride(cmdTemplate, active, other, absPathClean(ent.Path))
+	built, err := cmdrun.BuildInvocation(cmdrun.InvocationSpec{
+		Template:   cmdTemplate,
+		Mode:       cmdrun.ModeAuto,
+		ForceShell: forceShell,
+		Ctx:        usermenu.MacroContext(active, other, absPathClean(ent.Path), ""),
+	})
 	if err != nil {
 		return runForEachBuiltItem{}, err
 	}
 	display := cmdTemplate
-	if strings.TrimSpace(expanded) != cmdTemplate {
-		display = cmdTemplate + " → " + expanded
-	}
-	if cmdrun.NeedsShellFromLine(expanded) {
-		return runForEachBuiltItem{
-			Argv:     cmdrun.ShellArgv(expanded),
-			UserLine: display,
-		}, nil
-	}
-	argv, err := cmdrun.ParseCommandArgv(expanded)
-	if err != nil {
-		return runForEachBuiltItem{}, err
+	if strings.TrimSpace(built.Expanded) != cmdTemplate {
+		display = built.Display
 	}
 	return runForEachBuiltItem{
-		Argv:     argv,
+		Argv:     built.Argv,
 		UserLine: display,
 	}, nil
 }

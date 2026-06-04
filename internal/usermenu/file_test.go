@@ -16,6 +16,9 @@ command = "true"
 	if mf.ShellPatterns {
 		t.Fatalf("shell_patterns = 0: got ShellPatterns true, want false")
 	}
+	if mf.Entries[0].ShellPatterns {
+		t.Fatalf("entry should inherit file shell_patterns false")
+	}
 
 	mf, err = Decode([]byte(`shell_patterns = 1
 
@@ -45,6 +48,32 @@ command = "true"
 	}
 	if mf.ShellPatterns {
 		t.Fatal("want false")
+	}
+	if mf.Entries[0].ShellPatterns {
+		t.Fatal("entry should inherit file shell_patterns false")
+	}
+}
+
+func TestDecodeShellPatternsEntryOverride(t *testing.T) {
+	mf, err := Decode([]byte(`shell_patterns = false
+
+[[entry]]
+title = "Regex default"
+command = "true"
+
+[[entry]]
+title = "Glob override"
+command = "true"
+shell_patterns = true
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mf.Entries[0].ShellPatterns {
+		t.Fatal("want inherit entry shell_patterns false")
+	}
+	if !mf.Entries[1].ShellPatterns {
+		t.Fatal("want override entry shell_patterns true")
 	}
 }
 

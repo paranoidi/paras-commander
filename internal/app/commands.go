@@ -47,7 +47,7 @@ func (a *App) openRunForEachDialog() {
 	}
 	entries := append([]localfs.Entry(nil), src.Entries...)
 	dir := a.activePanel().PathString()
-	msg := "Runs once per selected item. Command must include %f (iterated item path).\nOther macros: %d active dir, %F/%D other panel, %t/%T tagged paths.\n>> | && etc. run via sh -c; otherwise argv is parsed without a shell."
+	msg := "Runs once per selected item. Command must include %f (iterated item path).\nOther macros: %d active dir, %F/%D other panel, %t/%T tagged paths.\nDo not wrap % macros in quotes.\n>> | && etc. run via sh -c; otherwise argv is parsed without a shell."
 	fields := []ui.FileDialogField{{Label: "Command", Value: "", Cursor: 0}}
 	a.model.FileDialog = ui.FileDialogState{
 		Open:              true,
@@ -92,7 +92,7 @@ func (a *App) executeRunForEach() {
 		Background:  false,
 		NotifyLabel: "Run for each",
 		BuildItem: func(ent localfs.Entry) (runForEachBuiltItem, error) {
-			return buildRunForEachItem(cmdLine, ent, active, other)
+			return buildRunForEachItem(cmdLine, ent, active, other, false)
 		},
 	})
 }

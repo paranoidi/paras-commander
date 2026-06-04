@@ -7,10 +7,10 @@ func FilterVisible(m *MenuFile, ctx *EvalContext) ([]MenuEntry, int, error) {
 		return nil, 0, nil
 	}
 	ctxCopy := *ctx
-	ctxCopy.ShellPatterns = m.ShellPatterns
 	var out []MenuEntry
 	defaultIdx := -1
 	for _, e := range m.Entries {
+		ctxCopy.ShellPatterns = e.ShellPatterns
 		ok, err := EvalWhenAny(e.When, &ctxCopy)
 		if err != nil {
 			return nil, -1, err

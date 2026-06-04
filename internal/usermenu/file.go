@@ -39,16 +39,18 @@ type MenuFile struct {
 
 // MenuEntry is one [[entry]] block.
 type MenuEntry struct {
-	Key         string   `toml:"key"`
-	Title       string   `toml:"title"`
-	Command     string   `toml:"command"`
-	When        []string `toml:"when"`
-	RunForEach  []string `toml:"run_for_each"`
-	Default     bool     `toml:"default"`
-	Interactive bool     `toml:"interactive"`
-	Detach      bool     `toml:"detach"`
-	Background  bool     `toml:"background"`
-	Pool        string   `toml:"pool"`
+	Key           string   `toml:"key"`
+	Title         string   `toml:"title"`
+	Command       string   `toml:"command"`
+	When          []string `toml:"when"`
+	RunForEach    []string `toml:"run_for_each"`
+	Default       bool     `toml:"default"`
+	Interactive   bool     `toml:"interactive"`
+	Detach        bool     `toml:"detach"`
+	Background    bool     `toml:"background"`
+	Pool          string   `toml:"pool"`
+	Shell         bool     `toml:"shell"`
+	ShellPatterns bool     `toml:"shell_patterns"`
 }
 
 type menuFileRaw struct {
@@ -85,16 +87,18 @@ func (w *whenField) UnmarshalTOML(data interface{}) error {
 }
 
 type menuEntry struct {
-	Key         string     `toml:"key"`
-	Title       string     `toml:"title"`
-	Command     string     `toml:"command"`
-	When        *whenField `toml:"when"`
-	RunForEach  []string   `toml:"run_for_each"`
-	Default     bool       `toml:"default"`
-	Interactive *boolField `toml:"interactive"`
-	Detach      *boolField `toml:"detach"`
-	Background  *boolField `toml:"background"`
-	Pool        string     `toml:"pool"`
+	Key           string     `toml:"key"`
+	Title         string     `toml:"title"`
+	Command       string     `toml:"command"`
+	When          *whenField `toml:"when"`
+	RunForEach    []string   `toml:"run_for_each"`
+	Default       bool       `toml:"default"`
+	Interactive   *boolField `toml:"interactive"`
+	Detach        *boolField `toml:"detach"`
+	Background    *boolField `toml:"background"`
+	Pool          string     `toml:"pool"`
+	Shell         *boolField `toml:"shell"`
+	ShellPatterns *boolField `toml:"shell_patterns"`
 }
 
 // LoadFile reads and validates menu.toml from path.
@@ -134,6 +138,10 @@ func Decode(data []byte) (*MenuFile, error) {
 		background := false
 		if e.Background != nil && e.Background.Set {
 			background = e.Background.Value
+		}
+		shell := false
+		if e.Shell != nil && e.Shell.Set {
+			shell = e.Shell.Value
 		}
 		modeCount := 0
 		if interactive {
@@ -183,17 +191,26 @@ func Decode(data []byte) (*MenuFile, error) {
 			}
 		}
 		out.Entries = append(out.Entries, MenuEntry{
-			Key:         strings.TrimSpace(e.Key),
-			Title:       strings.TrimSpace(e.Title),
-			Command:     strings.TrimSpace(e.Command),
-			When:        whenList,
-			RunForEach:  runForEach,
-			Default:     e.Default,
-			Interactive: interactive,
-			Detach:      detach,
-			Background:  background,
-			Pool:        pool,
+			Key:           strings.TrimSpace(e.Key),
+			Title:         strings.TrimSpace(e.Title),
+			Command:       strings.TrimSpace(e.Command),
+			When:          whenList,
+			RunForEach:    runForEach,
+			Default:       e.Default,
+			Interactive:   interactive,
+			Detach:        detach,
+			Background:    background,
+			Pool:          pool,
+			Shell:         shell,
+			ShellPatterns: resolveShellPatterns(out.ShellPatterns, e.ShellPatterns),
 		})
 	}
 	return out, nil
+}
+
+func resolveShellPatterns(fileDefault bool, entry *boolField) bool {
+	if entry != nil && entry.Set {
+		return entry.Value
+	}
+	return fileDefault
 }
