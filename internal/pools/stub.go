@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/configdoc"
 )
 
 // PoolsStubTOML is written when no pools.toml exists yet. All entries are commented
@@ -21,6 +23,8 @@ const PoolsStubTOML = `# pools.toml — work pool concurrency limits
 # [[pools]]
 # name = "io"
 # max_parallel = 2
+#
+# --- end of documentation ---
 `
 
 // WritePoolsStub creates path with PoolsStubTOML when the file does not exist yet.
@@ -41,4 +45,10 @@ func WritePoolsStub(path string) (created bool, err error) {
 		return false, fmt.Errorf("write pools stub %q: %w", path, err)
 	}
 	return true, nil
+}
+
+// RefreshDocumentation replaces the leading documentation block in path with
+// PoolsStubTOML while preserving user [[pools]] configuration.
+func RefreshDocumentation(path string) (bool, error) {
+	return configdoc.RefreshDocumentation(path, PoolsStubTOML)
 }

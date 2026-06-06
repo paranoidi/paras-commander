@@ -4,10 +4,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/configdoc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
@@ -64,6 +66,54 @@ file = "wc -l"
 	}
 }
 
+func TestMetaDialogF4RefreshesDocumentationBeforeEditor(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	metaBody := `[[entry]]
+name = "lines"
+description = "Line count"
+file = "wc -l"
+`
+	if err := os.WriteFile(metaPath, []byte(metaBody), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app := testMetaDialogApp(t, dir, cfgDir)
+	app.openMetaDialog(ui.LeftPanel)
+
+	prev := externalEditorRunner
+	externalEditorRunner = func(_ context.Context, path string) error {
+		if path != metaPath {
+			t.Fatalf("editor path = %q, want %q", path, metaPath)
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), configdoc.DocEndSentinel) {
+			t.Fatalf("file missing doc sentinel before editor:\n%s", b)
+		}
+		if !strings.Contains(string(b), metaBody) {
+			t.Fatalf("user body not preserved before editor:\n%s", b)
+		}
+		if !strings.Contains(string(b), "# meta.toml") {
+			t.Fatalf("canonical meta doc missing before editor:\n%s", b)
+		}
+		return nil
+	}
+	t.Cleanup(func() { externalEditorRunner = prev })
+
+	app.handleMetaDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+
+	if !strings.Contains(app.model.Message, "updated documentation") {
+		t.Fatalf("Message = %q, want updated documentation notice", app.model.Message)
+	}
+}
+
 func TestMetaDialogF4ReloadsEntriesAfterEdit(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
@@ -111,6 +161,54 @@ file = "wc -c"
 	}
 	if app.model.MetaDialog.Entries[2].Name != "size" {
 		t.Fatalf("third entry = %+v, want size", app.model.MetaDialog.Entries[2])
+	}
+}
+
+func TestUserMenuDialogF4RefreshesDocumentationBeforeEditor(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	menuBody := `[[entry]]
+key = "a"
+title = "Always"
+command = "true"
+`
+	if err := os.WriteFile(menuPath, []byte(menuBody), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+
+	prev := externalEditorRunner
+	externalEditorRunner = func(_ context.Context, path string) error {
+		if path != menuPath {
+			t.Fatalf("editor path = %q, want %q", path, menuPath)
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), configdoc.DocEndSentinel) {
+			t.Fatalf("file missing doc sentinel before editor:\n%s", b)
+		}
+		if !strings.Contains(string(b), menuBody) {
+			t.Fatalf("user body not preserved before editor:\n%s", b)
+		}
+		if !strings.Contains(string(b), "# F2 user menu") {
+			t.Fatalf("canonical menu doc missing before editor:\n%s", b)
+		}
+		return nil
+	}
+	t.Cleanup(func() { externalEditorRunner = prev })
+
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+
+	if !strings.Contains(app.model.Message, "updated documentation") {
+		t.Fatalf("Message = %q, want updated documentation notice", app.model.Message)
 	}
 }
 

@@ -50,13 +50,23 @@ func (a *App) setUserMenuCritical(err error) {
 	a.setTransientMessage(usermenu.ShortLoadError(err), ui.MessageUrgencyCritical)
 }
 
-func (a *App) openUserMenuEditor(path string) {
+func (a *App) openUserMenuEditor(path string) bool {
+	changed, err := usermenu.RefreshDocumentation(path)
+	if err != nil {
+		a.setErrorMessage("User menu", err)
+		return false
+	}
 	if err := a.openFileInExternalEditor(path); err != nil {
 		a.setErrorMessage("User menu", err)
-		return
+		return false
 	}
-	a.setTransientMessage("User menu: edited "+path, ui.MessageUrgencyInfo)
+	if changed {
+		a.setTransientMessage("User menu: updated documentation in "+path, ui.MessageUrgencyInfo)
+	} else {
+		a.setTransientMessage("User menu: edited "+path, ui.MessageUrgencyInfo)
+	}
 	a.render()
+	return true
 }
 
 func (a *App) editUserMenu() {

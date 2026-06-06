@@ -36,12 +36,9 @@ func (a *App) editMetaConfigFromDialog() {
 		a.setErrorMessage("Meta commands", err)
 		return
 	}
-	if err := a.openFileInExternalEditor(path); err != nil {
-		a.setErrorMessage("Meta commands", err)
-		return
+	if a.openMetaFileEditor(path) {
+		a.refreshMetaDialogAfterConfigEdit()
 	}
-	a.setTransientMessage("Meta commands: edited "+path, ui.MessageUrgencyInfo)
-	a.refreshMetaDialogAfterConfigEdit()
 }
 
 func (a *App) refreshMetaDialogAfterConfigEdit() {
@@ -148,12 +145,9 @@ func (a *App) editUserMenuConfigFromDialog() {
 			return
 		}
 	}
-	if err := a.openFileInExternalEditor(path); err != nil {
-		a.setErrorMessage("User menu", err)
-		return
+	if a.openUserMenuEditor(path) {
+		a.reloadUserMenuDialog()
 	}
-	a.setTransientMessage("User menu: edited "+path, ui.MessageUrgencyInfo)
-	a.reloadUserMenuDialog()
 }
 
 func (a *App) reloadUserMenuDialog() {

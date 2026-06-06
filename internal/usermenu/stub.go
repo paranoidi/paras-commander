@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/configdoc"
 )
 
 // MenuStubTOML is written when no menu.toml exists yet. All entries are commented
@@ -84,6 +86,8 @@ const MenuStubTOML = `# F2 user menu
 #     %D  directory path of the other panel
 #     %t  tagged files in the active panel's current directory (expanded as quoted tokens)
 #     %T  tagged files in the other panel's current directory (expanded as quoted tokens)
+#
+# --- end of documentation ---
 `
 
 // WriteMenuStub creates path with MenuStubTOML when the file does not exist yet.
@@ -104,4 +108,10 @@ func WriteMenuStub(path string) (created bool, err error) {
 		return false, fmt.Errorf("write menu stub %q: %w", path, err)
 	}
 	return true, nil
+}
+
+// RefreshDocumentation replaces the leading documentation block in path with
+// MenuStubTOML while preserving user [[entry]] configuration.
+func RefreshDocumentation(path string) (bool, error) {
+	return configdoc.RefreshDocumentation(path, MenuStubTOML)
 }

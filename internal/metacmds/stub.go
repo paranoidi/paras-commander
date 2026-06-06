@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/configdoc"
 )
 
 // MetaStubTOML is written when no meta.toml exists yet. All entries are commented
@@ -85,6 +87,8 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 # when = ["*.py", "*.go", "*.js", "*.ts", "*.rs", "*.c", "*.h", "*.cpp"]
 # cache = true
 # file = "wc -l < %f | tr -d ' '"
+#
+# --- end of documentation ---
 `
 
 // WriteMetaStub creates path with MetaStubTOML when the file does not exist yet.
@@ -105,4 +109,10 @@ func WriteMetaStub(path string) (created bool, err error) {
 		return false, fmt.Errorf("write meta stub %q: %w", path, err)
 	}
 	return true, nil
+}
+
+// RefreshDocumentation replaces the leading documentation block in path with
+// MetaStubTOML while preserving user [[entry]] configuration.
+func RefreshDocumentation(path string) (bool, error) {
+	return configdoc.RefreshDocumentation(path, MetaStubTOML)
 }

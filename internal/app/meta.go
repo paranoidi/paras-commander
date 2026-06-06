@@ -68,13 +68,23 @@ func (a *App) ensureGlobalMetaStub() (path string, err error) {
 	return path, nil
 }
 
-func (a *App) openMetaFileEditor(path string) {
+func (a *App) openMetaFileEditor(path string) bool {
+	changed, err := metacmds.RefreshDocumentation(path)
+	if err != nil {
+		a.setErrorMessage("Meta commands", err)
+		return false
+	}
 	if err := a.openFileInExternalEditor(path); err != nil {
 		a.setErrorMessage("Meta commands", err)
-		return
+		return false
 	}
-	a.setTransientMessage("Meta commands: edited "+path, ui.MessageUrgencyInfo)
+	if changed {
+		a.setTransientMessage("Meta commands: updated documentation in "+path, ui.MessageUrgencyInfo)
+	} else {
+		a.setTransientMessage("Meta commands: edited "+path, ui.MessageUrgencyInfo)
+	}
 	a.render()
+	return true
 }
 
 // editMetaFile opens the meta.toml in an external editor, creating a stub if it does not exist.
