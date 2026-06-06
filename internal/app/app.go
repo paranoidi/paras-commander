@@ -106,6 +106,11 @@ type App struct {
 	metaActiveCmd [2]string
 	// metaNavPath holds the last panel path for which meta was run (used to detect navigation).
 	metaNavPath [2]string
+	// metaCancel holds the cancel function for the in-flight meta run per panel (nil if none).
+	metaCancel [2]context.CancelFunc
+	// metaRunGen is a monotonically increasing generation counter per panel for meta runs.
+	// Workers carry the generation; stale (cancelled) results are discarded by the event handler.
+	metaRunGen [2]uint64
 	// metaCache stores computed meta results by [cmdName][absPath] for entries with cache = true.
 	// Nil until first caching write. Protected by metaCacheMu.
 	metaCache   map[string]map[string]string
@@ -582,6 +587,9 @@ func (a *App) Run() error {
 				a.render()
 				didRender = true
 			case metaWakePayload:
+				if d.gen == a.metaRunGen[d.panelID] && a.model.MetaResults[d.panelID] != nil {
+					a.model.MetaResults[d.panelID][d.path] = d.value
+				}
 				a.render()
 				didRender = true
 			case pathPickerValidatePayload:

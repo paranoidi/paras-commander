@@ -28,6 +28,11 @@ func (a *App) stopWorker() {
 	if a.commandsCancel != nil {
 		a.commandsCancel()
 	}
+	for i := range a.metaCancel {
+		if a.metaCancel[i] != nil {
+			a.metaCancel[i]()
+		}
+	}
 	if !a.jobStopOnce {
 		a.jobStopOnce = true
 		close(a.jobStopCh)

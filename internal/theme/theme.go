@@ -373,6 +373,7 @@ const (
 	SymbolKeyFilelistSelectionSubtree = "filelist.selection_subtree"
 	SymbolKeyFilelistNew              = "filelist.new"
 	SymbolKeyFilelistOpen             = "filelist.open"
+	SymbolKeyMetaRunning              = "meta.running"
 )
 
 // Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
@@ -407,6 +408,16 @@ func (t Theme) SymbolHiddenDotfiles() string {
 		}
 	}
 	return "\U000F06D1" // nf-md-eye_off_outline (Material Design / Nerd Fonts PUA)
+}
+
+// SymbolMetaRunning returns the glyph shown in the meta column while a command is executing.
+func (t Theme) SymbolMetaRunning() string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[SymbolKeyMetaRunning]); s != "" {
+			return s
+		}
+	}
+	return "\uf141"
 }
 
 // SymbolStash returns the selection-stash bottom-indicator glyph from [symbols] stash.

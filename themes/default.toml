@@ -208,6 +208,9 @@ selection_subtree = "○"
 new = "\uea7f"
 open = "\U000F0770"
 
+[symbols.meta]
+running = "\uf141"
+
 [symbols.menu.progress]
 done = "─"
 remaining = "-"

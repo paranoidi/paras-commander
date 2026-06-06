@@ -14,6 +14,8 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 # Each command is a [[entry]] block. Shell scripts use %f for the entry absolute path.
 # Commands are run via: sh -c '<expanded script>'
 #
+# If output contains \t or \n the output will be split and aligned.
+#
 # ── File-level ─────────────────────────────────────────────────────────────
 #
 # shell_patterns  bool   default: true
@@ -42,8 +44,15 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 #   Override file default for this entry's when= patterns.
 #   true → glob; false → regex.
 #
+# extensions      [string] optional   default: run for every entry
+#   Glob filter on basename (e.g. ["*.py", "*.go"]). Only entries whose basename
+#   matches at least one pattern get processed. Empty or omitted means no filter.
+#
 # cache           bool     optional   default: false
 #   Session-scoped in-memory cache keyed by absolute path (never on disk).
+#
+# workers         int      optional   default: meta.default_entry_workers (2)
+#   Number of concurrent background goroutines for this entry. Clamped to 64.
 #
 # Do not wrap %f in quotes in the script — the app quotes the path when expanding.
 #

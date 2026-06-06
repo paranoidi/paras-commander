@@ -208,31 +208,6 @@ file = "stat -c '%s' %f"
 	}
 }
 
-func TestDecode_cache(t *testing.T) {
-	toml := `
-[[entry]]
-name = "slow-info"
-description = "Expensive operation"
-cache = true
-file = "sha256sum %f | awk '{print $1}'"
-
-[[entry]]
-name = "fast-info"
-description = "Cheap operation"
-file = "stat -c '%s' %f"
-`
-	mf, err := metacmds.Decode([]byte(toml))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !mf.Entries[0].Cache {
-		t.Error("entry 0: expected Cache=true")
-	}
-	if mf.Entries[1].Cache {
-		t.Error("entry 1: expected Cache=false (default)")
-	}
-}
-
 func TestDecode_shellPatterns(t *testing.T) {
 	mf, err := metacmds.Decode([]byte(`shell_patterns = 0
 [[entry]]
@@ -307,5 +282,174 @@ file = "true"
 		if got != tt.want {
 			t.Errorf("MatchesRow(%q) = %v, want %v", tt.name, got, tt.want)
 		}
+	}
+}
+
+func TestDecode_extensions(t *testing.T) {
+	toml := `
+[[entry]]
+name = "line-count"
+description = "Line count"
+extensions = ["*.py", "*.go"]
+file = "wc -l < %f"
+`
+	mf, err := metacmds.Decode([]byte(toml))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	e := mf.Entries[0]
+	if len(e.Extensions) != 2 {
+		t.Fatalf("expected 2 extensions, got %d", len(e.Extensions))
+	}
+	if e.Extensions[0] != "*.py" || e.Extensions[1] != "*.go" {
+		t.Errorf("unexpected extensions: %v", e.Extensions)
+	}
+}
+
+func TestMetaEntry_MatchesPath(t *testing.T) {
+	toml := `
+[[entry]]
+name = "py-info"
+description = "Python info"
+extensions = ["*.py"]
+file = "python3 -c 'print(1)'"
+`
+	mf, err := metacmds.Decode([]byte(toml))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	e := &mf.Entries[0]
+
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"/home/user/projects/solver.py", true},
+		{"/home/user/projects/main.go", false},
+		{"/home/user/projects/readme.txt", false},
+		{"/home/user/projects/analyze.py", true},
+	}
+	for _, tt := range tests {
+		got := e.MatchesPath(tt.path)
+		if got != tt.want {
+			t.Errorf("MatchesPath(%q) = %v, want %v", tt.path, got, tt.want)
+		}
+	}
+}
+
+func TestMetaEntry_MatchesPath_noFilter(t *testing.T) {
+	toml := `
+[[entry]]
+name = "size"
+description = "File size"
+file = "stat -c '%s' %f"
+`
+	mf, err := metacmds.Decode([]byte(toml))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	e := &mf.Entries[0]
+	// No extensions → all paths match.
+	paths := []string{"/tmp/document.pdf", "/tmp/script.sh", "/tmp/archive.tar.gz", "/tmp/main.go"}
+	for _, p := range paths {
+		if !e.MatchesPath(p) {
+			t.Errorf("MatchesPath(%q) = false, want true (no filter)", p)
+		}
+	}
+}
+
+func TestDecode_invalidGlob(t *testing.T) {
+	toml := `
+[[entry]]
+name = "bad"
+description = "Bad glob"
+extensions = ["[invalid"]
+file = "echo test"
+`
+	_, err := metacmds.Decode([]byte(toml))
+	if err == nil {
+		t.Fatal("expected error for invalid glob, got nil")
+	}
+}
+
+func TestDecode_cache(t *testing.T) {
+	toml := `
+[[entry]]
+name = "slow-info"
+description = "Expensive operation"
+cache = true
+file = "sha256sum %f | awk '{print $1}'"
+
+[[entry]]
+name = "fast-info"
+description = "Cheap operation"
+file = "stat -c '%s' %f"
+`
+	mf, err := metacmds.Decode([]byte(toml))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !mf.Entries[0].Cache {
+		t.Error("entry 0: expected Cache=true")
+	}
+	if mf.Entries[1].Cache {
+		t.Error("entry 1: expected Cache=false (default)")
+	}
+}
+
+func TestDecode_workers(t *testing.T) {
+	toml := `
+[[entry]]
+name = "slow-info"
+description = "Expensive operation"
+cache = true
+workers = 8
+file = "sha256sum %f | awk '{print $1}'"
+
+[[entry]]
+name = "fast-info"
+description = "Cheap operation"
+file = "stat -c '%s' %f"
+`
+	mf, err := metacmds.Decode([]byte(toml))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mf.Entries[0].Workers != 8 {
+		t.Errorf("entry 0: expected Workers=8, got %d", mf.Entries[0].Workers)
+	}
+	if mf.Entries[1].Workers != 0 {
+		t.Errorf("entry 1: expected Workers=0 (default), got %d", mf.Entries[1].Workers)
+	}
+}
+
+func TestDecode_workersNegative(t *testing.T) {
+	toml := `
+[[entry]]
+name = "bad"
+description = "Negative workers"
+workers = -1
+file = "echo test"
+`
+	_, err := metacmds.Decode([]byte(toml))
+	if err == nil {
+		t.Fatal("expected error for negative workers, got nil")
+	}
+}
+
+func TestDecode_workersClamp(t *testing.T) {
+	toml := `
+[[entry]]
+name = "lots"
+description = "Too many workers"
+workers = 999
+file = "echo test"
+`
+	mf, err := metacmds.Decode([]byte(toml))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mf.Entries[0].Workers > 64 {
+		t.Errorf("entry 0: expected Workers clamped to max 64, got %d", mf.Entries[0].Workers)
 	}
 }

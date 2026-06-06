@@ -10,19 +10,29 @@ import (
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/cmdmacro"
-	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// metaWakePayload wakes PollEvent after meta background run mutations.
-type metaWakePayload struct{}
+// metaWakePayload wakes PollEvent after a meta background worker completes one entry.
+// It carries the result so the event handler can apply it on the main goroutine, preventing
+// concurrent map access between background workers and the render path.
+type metaWakePayload struct {
+	panelID int
+	path    string
+	value   string
+	gen     uint64
+}
 
-func (a *App) postMetaWake() {
-	_ = a.screen.PostEvent(tcell.NewEventInterrupt(metaWakePayload{}))
+func (a *App) postMetaResult(panelID int, path, value string, gen uint64) {
+	_ = a.screen.PostEvent(tcell.NewEventInterrupt(metaWakePayload{
+		panelID: panelID,
+		path:    path,
+		value:   value,
+		gen:     gen,
+	}))
 }
 
 func (a *App) metaConfigDir() string {
@@ -135,7 +145,11 @@ func (a *App) activateMetaSelection() {
 	a.closeMetaDialog()
 
 	if entry.Name == "none" {
-		// Clear meta for this panel.
+		// Clear meta for this panel and cancel any in-flight run.
+		if a.metaCancel[panelID] != nil {
+			a.metaCancel[panelID]()
+			a.metaCancel[panelID] = nil
+		}
 		a.model.MetaResults[panelID] = nil
 		a.metaActiveCmd[panelID] = ""
 		a.metaNavPath[panelID] = ""
@@ -181,17 +195,33 @@ func (a *App) handleMetaPanelDirChanged(panelID int) {
 	a.runMetaForPanel(panelID, cmdDef)
 }
 
+// metaDispatchItem holds a single entry selected for meta command execution.
+type metaDispatchItem struct {
+	entry localfs.Entry
+	cmd   string
+}
+
 // runMetaForPanel runs the meta command for every entry in panelID using a worker pool.
 // When cmdDef.Cache is true, cached results from previous runs are reused and only
 // uncached entries are dispatched to workers.
+// Any in-flight run for the same panel is cancelled before the new one starts.
 func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
 	panel := a.panelByID(panelID)
 	entries := append([]localfs.Entry(nil), panel.Entries...)
 	dir := panel.PathString()
-	workers := a.config.Meta.Workers
+	workers := cmdDef.Workers
 	if workers < 1 {
-		workers = 1
+		workers = a.config.Meta.DefaultEntryWorkers
 	}
+
+	// Cancel any in-flight run for this panel and start a new generation.
+	if a.metaCancel[panelID] != nil {
+		a.metaCancel[panelID]()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	a.metaCancel[panelID] = cancel
+	a.metaRunGen[panelID]++
+	gen := a.metaRunGen[panelID]
 
 	// Initialize results map. Pre-populate with cached values when caching is on.
 	results := make(map[string]string, len(entries))
@@ -211,54 +241,37 @@ func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
 		}
 		a.metaCacheMu.RUnlock()
 	}
+
+	// Determine which entries will be dispatched and mark them with the running indicator.
+	// This pre-pass runs on the main goroutine so map writes are safe (no concurrent readers yet).
+	runningMarker := a.styles.SymbolMetaRunning()
+	var items []metaDispatchItem
+	for _, e := range entries {
+		cmd, ok := a.metaEntryCmd(cmdDef, e, dir)
+		if !ok {
+			continue
+		}
+		results[e.Path] = runningMarker
+		items = append(items, metaDispatchItem{entry: e, cmd: cmd})
+	}
+
 	a.model.MetaResults[panelID] = results
 
 	go func() {
-		var mu sync.Mutex
 		sem := make(chan struct{}, workers)
 		var wg sync.WaitGroup
 
-		for _, e := range entries {
-			ok, err := cmdDef.MatchesRow(e, dir)
-			if err != nil {
-				continue
-			}
-			if !ok {
-				continue
-			}
-			// Skip entries already resolved from cache.
-			if cmdDef.Cache {
-				a.metaCacheMu.RLock()
-				var hit bool
-				if a.metaCache != nil {
-					if cmdCache := a.metaCache[cmdDef.Name]; cmdCache != nil {
-						_, hit = cmdCache[e.Path]
-					}
-				}
-				a.metaCacheMu.RUnlock()
-				if hit {
-					continue
-				}
-			}
-			var cmd string
-			if e.Type == localfs.EntryDirectory {
-				cmd = cmdDef.Dirs
-			} else {
-				cmd = cmdDef.File
-			}
-			if cmd == "" {
-				continue
-			}
-			e := e
+		for _, item := range items {
+			item := item
 			wg.Add(1)
 			sem <- struct{}{}
 			go func() {
 				defer wg.Done()
 				defer func() { <-sem }()
-				out := runMetaCommand(cmd, e.Path, dir)
-				mu.Lock()
-				results[e.Path] = out
-				mu.Unlock()
+				out, apply := runMetaCommand(ctx, item.cmd, item.entry.Path, dir)
+				if !apply {
+					return
+				}
 				if cmdDef.Cache {
 					a.metaCacheMu.Lock()
 					if a.metaCache == nil {
@@ -267,33 +280,66 @@ func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
 					if a.metaCache[cmdDef.Name] == nil {
 						a.metaCache[cmdDef.Name] = make(map[string]string)
 					}
-					a.metaCache[cmdDef.Name][e.Path] = out
+					a.metaCache[cmdDef.Name][item.entry.Path] = out
 					a.metaCacheMu.Unlock()
 				}
-				a.postMetaWake()
+				a.postMetaResult(panelID, item.entry.Path, out, gen)
 			}()
 		}
 		wg.Wait()
 	}()
 }
 
-// runMetaCommand runs a shell command template with %f expanded to path.
-func runMetaCommand(cmd, path, dir string) string {
-	built, err := cmdrun.BuildInvocation(cmdrun.InvocationSpec{
-		Template: cmd,
-		Mode:     cmdrun.ModeShellScript,
-		Ctx:      cmdmacro.Context{RowPath: path},
-	})
-	if err != nil {
-		return ""
+// metaEntryCmd returns the shell command to run for entry e under cmdDef.
+// When and extension filters apply only to files; directories bypass them.
+// Returns ("", false) when the entry should not be dispatched (filtered, no command, or cached).
+func (a *App) metaEntryCmd(cmdDef metacmds.MetaEntry, e localfs.Entry, dir string) (cmd string, ok bool) {
+	if e.Type == localfs.EntryDirectory {
+		cmd = cmdDef.Dirs
+	} else {
+		// Check When filter (MatchesRow uses shell_patterns / when field).
+		ok, err := cmdDef.MatchesRow(e, dir)
+		if err != nil || !ok {
+			return "", false
+		}
+		// Check extension filter (MatchesPath uses extensions field).
+		if !cmdDef.MatchesPath(e.Path) {
+			return "", false
+		}
+		cmd = cmdDef.File
 	}
-	c := exec.CommandContext(context.Background(), built.Argv[0], built.Argv[1:]...)
+	if cmd == "" {
+		return "", false
+	}
+	if cmdDef.Cache {
+		a.metaCacheMu.RLock()
+		var hit bool
+		if a.metaCache != nil {
+			if cc := a.metaCache[cmdDef.Name]; cc != nil {
+				_, hit = cc[e.Path]
+			}
+		}
+		a.metaCacheMu.RUnlock()
+		if hit {
+			return "", false
+		}
+	}
+	return cmd, true
+}
+
+// runMetaCommand runs a single shell command with path as $1.
+// Returns (output, true) on success or real error; (_, false) when the context was cancelled.
+func runMetaCommand(ctx context.Context, cmd, path, dir string) (string, bool) {
+	c := exec.CommandContext(ctx, "sh", "-c", cmd, "sh", path)
 	c.Dir = dir
 	out, err := c.Output()
 	if err != nil {
-		return ""
+		if ctx.Err() != nil {
+			return "", false
+		}
+		return "", true
 	}
-	return strings.TrimRight(string(out), "\r\n")
+	return strings.TrimRight(string(out), "\r\n"), true
 }
 
 func (a *App) handleMetaDialogKey(event *tcell.EventKey) {

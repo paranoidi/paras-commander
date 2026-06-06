@@ -149,9 +149,10 @@ type MetaConfig struct {
 	// LocalNames lists basenames probed in the active panel directory before the global file.
 	// Empty in config means use built-in default (see Default().Meta).
 	LocalNames []string `toml:"local_names"`
-	// Workers is the number of concurrent background goroutines used to run meta column
-	// commands. Minimum 1 after Validate. Default DefaultMetaWorkers.
-	Workers int `toml:"workers"`
+	// DefaultEntryWorkers is the number of concurrent background goroutines used per meta
+	// entry when the entry does not specify its own workers value in meta.toml.
+	// Minimum 1 after Validate. Default DefaultMetaEntryWorkers.
+	DefaultEntryWorkers int `toml:"default_entry_workers"`
 }
 
 // BookmarksConfig controls fzf-marks compatible directory marks.
@@ -407,9 +408,9 @@ func Default() Config {
 			ListTimeoutSecs: DefaultSFTPListTimeoutSecs,
 		},
 		Meta: MetaConfig{
-			File:       "",
-			LocalNames: []string{DefaultMetaFileName},
-			Workers:    DefaultMetaWorkers,
+			File:                "",
+			LocalNames:          []string{DefaultMetaFileName},
+			DefaultEntryWorkers: DefaultMetaEntryWorkers,
 		},
 		Pools: PoolsConfig{
 			File: "",
@@ -1040,12 +1041,12 @@ func (c *Config) Validate() error {
 	if len(c.Meta.LocalNames) == 0 {
 		c.Meta.LocalNames = append([]string(nil), builtin.Meta.LocalNames...)
 	}
-	if c.Meta.Workers < 1 {
-		c.Meta.Workers = builtin.Meta.Workers
+	if c.Meta.DefaultEntryWorkers < 1 {
+		c.Meta.DefaultEntryWorkers = builtin.Meta.DefaultEntryWorkers
 	}
 	const metaWorkersMax = 64
-	if c.Meta.Workers > metaWorkersMax {
-		c.Meta.Workers = metaWorkersMax
+	if c.Meta.DefaultEntryWorkers > metaWorkersMax {
+		c.Meta.DefaultEntryWorkers = metaWorkersMax
 	}
 	return nil
 }

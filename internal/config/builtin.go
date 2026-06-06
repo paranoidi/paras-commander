@@ -146,9 +146,9 @@ const (
 	// directory when [pools].file is empty.
 	DefaultPoolsFileName = "pools.toml"
 
-	// DefaultMetaWorkers is the number of concurrent background workers used to run meta column
-	// commands. Each worker processes one entry (file or directory) at a time.
-	DefaultMetaWorkers = 4
+	// DefaultMetaEntryWorkers is the number of concurrent background workers used per meta column
+	// entry when the entry does not specify its own workers value in meta.toml.
+	DefaultMetaEntryWorkers = 2
 
 	// DefaultPoolMaxParallel is the upper clamp for [[pools]].max_parallel in pools.toml.
 	DefaultPoolMaxParallel = 64
