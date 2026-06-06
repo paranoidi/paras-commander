@@ -3,7 +3,6 @@ package metacmds
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
@@ -25,15 +24,11 @@ type MetaFile struct {
 // Otherwise fields are split on tab and line feed (after \r\n/\r normalization to \n, then \n→\t),
 // up to 8 fields; empty fields are preserved.
 type MetaEntry struct {
-	Name        string
-	Description string
-	File        string
-	Dirs        string
-	When        []string
-	// Extensions holds glob patterns (e.g. "*.py", "*.go") matched against the entry basename.
-	// When non-empty, the command is only run for entries whose basename matches at least one pattern.
-	// Empty Extensions means no filter: the command runs for every entry.
-	Extensions    []string
+	Name          string
+	Description   string
+	File          string
+	Dirs          string
+	When          []string
 	Cache         bool
 	ShellPatterns bool
 	// Workers is the number of concurrent background goroutines for this entry.
@@ -52,7 +47,6 @@ type metaEntryRaw struct {
 	File          string     `toml:"file"`
 	Dirs          string     `toml:"dirs"`
 	When          *whenField `toml:"when"`
-	Extensions    []string   `toml:"extensions"`
 	Cache         bool       `toml:"cache"`
 	ShellPatterns *boolField `toml:"shell_patterns"`
 	Workers       int        `toml:"workers"`
@@ -146,18 +140,6 @@ func Decode(data []byte) (*MetaFile, error) {
 				whenList = append(whenList, w)
 			}
 		}
-		// Validate glob patterns.
-		var exts []string
-		for _, pat := range e.Extensions {
-			pat = strings.TrimSpace(pat)
-			if pat == "" {
-				continue
-			}
-			if _, err := filepath.Match(pat, ""); err != nil {
-				return nil, fmt.Errorf("meta.toml: entry %d: extensions: invalid glob %q: %w", i, pat, err)
-			}
-			exts = append(exts, pat)
-		}
 		// Validate workers.
 		if e.Workers < 0 {
 			return nil, fmt.Errorf("meta.toml: entry %d: workers must be >= 0", i)
@@ -173,7 +155,6 @@ func Decode(data []byte) (*MetaFile, error) {
 			File:          strings.TrimSpace(e.File),
 			Dirs:          strings.TrimSpace(e.Dirs),
 			When:          whenList,
-			Extensions:    exts,
 			Cache:         e.Cache,
 			ShellPatterns: resolveShellPatterns(out.ShellPatterns, e.ShellPatterns),
 			Workers:       workers,
@@ -211,20 +192,4 @@ func (e *MetaEntry) MatchesRow(ent localfs.Entry, panelDir string) (bool, error)
 		PanelDir:      panelDir,
 	}
 	return entrymatch.EvalWhenAny(e.When, ctx)
-}
-
-// MatchesPath reports whether path should be processed by this entry.
-// When Extensions is empty every path matches. Otherwise the basename of path
-// must match at least one glob pattern (using filepath.Match semantics).
-func (e *MetaEntry) MatchesPath(path string) bool {
-	if len(e.Extensions) == 0 {
-		return true
-	}
-	base := filepath.Base(path)
-	for _, pat := range e.Extensions {
-		if matched, _ := filepath.Match(pat, base); matched {
-			return true
-		}
-	}
-	return false
 }

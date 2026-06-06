@@ -301,19 +301,14 @@ func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
 }
 
 // metaEntryCmd returns the shell command to run for entry e under cmdDef.
-// When and extension filters apply only to files; directories bypass them.
+// File rows are filtered via when only; directories use dirs.
 // Returns ("", false) when the entry should not be dispatched (filtered, no command, or cached).
 func (a *App) metaEntryCmd(cmdDef metacmds.MetaEntry, e localfs.Entry, dir string) (cmd string, ok bool) {
 	if e.Type == localfs.EntryDirectory {
 		cmd = cmdDef.Dirs
 	} else {
-		// Check When filter (MatchesRow uses shell_patterns / when field).
 		ok, err := cmdDef.MatchesRow(e, dir)
 		if err != nil || !ok {
-			return "", false
-		}
-		// Check extension filter (MatchesPath uses extensions field).
-		if !cmdDef.MatchesPath(e.Path) {
 			return "", false
 		}
 		cmd = cmdDef.File

@@ -39,16 +39,12 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 # dirs            string   optional
 #   Shell script for directories. %f = absolute path.
 #
-# when            string | [string]   optional   default: always visible
-#   Visibility filter; OR semantics across list items.
+# when            string | [string]   optional   default: run for every file row
+#   File-row filter; OR semantics across list items (e.g. ["*.py", "*.go"]).
 #
 # shell_patterns  bool     optional   default: file-level (else true)
 #   Override file default for this entry's when= patterns.
 #   true → glob; false → regex.
-#
-# extensions      [string] optional   default: run for every entry
-#   Glob filter on basename (e.g. ["*.py", "*.go"]). Only entries whose basename
-#   matches at least one pattern get processed. Empty or omitted means no filter.
 #
 # cache           bool     optional   default: false
 #   Session-scoped in-memory cache keyed by absolute path (never on disk).
