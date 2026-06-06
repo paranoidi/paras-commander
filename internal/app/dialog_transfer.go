@@ -430,30 +430,6 @@ func (a *App) confirmCopy() {
 	a.confirmTransfer()
 }
 
-func (a *App) handleConflictDialogKey(event *tcell.EventKey) {
-	switch event.Key() {
-	case tcell.KeyEsc:
-		a.model.ConflictDialog = ui.ConflictDialogState{}
-	case tcell.KeyTab:
-		a.model.ConflictDialog.Focus = (a.model.ConflictDialog.Focus + 1) % 5
-	case tcell.KeyBacktab:
-		a.model.ConflictDialog.Focus = (a.model.ConflictDialog.Focus + 4) % 5
-	case tcell.KeyLeft:
-		if a.model.ConflictDialog.Focus > 0 {
-			a.model.ConflictDialog.Focus--
-		}
-	case tcell.KeyRight:
-		if a.model.ConflictDialog.Focus < 4 {
-			a.model.ConflictDialog.Focus++
-		}
-	case tcell.KeyEnter:
-		// Conflict decisions: 0=overwrite, 1=skip, 2=overwrite-all, 3=skip-all, 4=cancel
-		// Our jobs engine handles these internally via the transfer func.
-		// For v1, just close and re-emit via a pending decision channel (future work).
-		a.model.ConflictDialog = ui.ConflictDialogState{}
-	}
-}
-
 // activePanelSources returns file paths from the active panel: selected entries
 // if any, otherwise the cursor entry. Returns nil if no valid sources exist.
 func (a *App) activePanelSources() []string {

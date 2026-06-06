@@ -121,6 +121,8 @@ func (h *Handler) TryDispatch(actionID string) bool {
 	case keymap.ActionJobsOpen:
 		h.ToggleJobsView()
 		return true
+	case keymap.ActionJobsAnswerBlocker:
+		return true
 	case keymap.ActionJobsClose:
 		if h.model.ViewMode == ui.ViewJobs {
 			h.closeJobsView()

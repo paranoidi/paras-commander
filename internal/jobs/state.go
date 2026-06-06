@@ -198,6 +198,21 @@ func (s *State) JobsWaitingDecision() int {
 	return len(s.waitingBlocker)
 }
 
+// FirstWaitingBlockerJob returns a copy of the oldest job in waitingBlocker, or nil.
+func (s *State) FirstWaitingBlockerJob() *Job {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.waitingBlocker) == 0 {
+		return nil
+	}
+	j := s.waitingBlocker[0]
+	if j == nil {
+		return nil
+	}
+	cp := *j
+	return &cp
+}
+
 // HasUnfinishedWork reports whether any job is running or queued and not in a terminal state.
 // Jobs kept only in the finished archive do not count.
 func (s *State) HasUnfinishedWork() bool {

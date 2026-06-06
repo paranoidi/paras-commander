@@ -254,6 +254,8 @@ type JobsConfig struct {
 	AutoshowOnStart bool `toml:"autoshow_on_start"`
 	// ProgressUIWakeDebounceMS is minimum spacing between jobsWakePayload interrupts after worker EventProgress.
 	ProgressUIWakeDebounceMS int `toml:"progress_ui_wake_debounce_ms"`
+	// BlockerDialogNextDebounceMS is the delay before auto-opening the next quick blocker dialog after an answer (0 = immediate).
+	BlockerDialogNextDebounceMS int `toml:"blocker_dialog_next_debounce_ms"`
 	// WorkerProgressMinBytes is the minimum bytes copied between worker EventProgress emits.
 	WorkerProgressMinBytes int `toml:"worker_progress_min_bytes"`
 	// WorkerProgressMinIntervalMS is the minimum milliseconds between worker EventProgress emits when copying.
@@ -364,6 +366,7 @@ func Default() Config {
 			AutoshowOnError:             true,
 			AutoshowOnStart:             false,
 			ProgressUIWakeDebounceMS:    DefaultProgressUIWakeDebounceMS,
+			BlockerDialogNextDebounceMS: DefaultBlockerDialogNextDebounceMS,
 			WorkerProgressMinBytes:      DefaultWorkerProgressMinBytes,
 			WorkerProgressMinIntervalMS: DefaultWorkerProgressMinIntervalMS,
 			ThroughputChartWindowSec:    DefaultThroughputChartWindowSec,
@@ -922,6 +925,12 @@ func (c *Config) Validate() error {
 	}
 	if c.Jobs.ProgressUIWakeDebounceMS > jobsProgressTimingMaxMS {
 		c.Jobs.ProgressUIWakeDebounceMS = jobsProgressTimingMaxMS
+	}
+	if c.Jobs.BlockerDialogNextDebounceMS < 0 {
+		c.Jobs.BlockerDialogNextDebounceMS = 0
+	}
+	if c.Jobs.BlockerDialogNextDebounceMS > BlockerDialogNextDebounceMaxMS {
+		c.Jobs.BlockerDialogNextDebounceMS = BlockerDialogNextDebounceMaxMS
 	}
 	const workerProgressBytesMin = WorkerProgressMinBytesMin
 	const workerProgressBytesMax = WorkerProgressMinBytesMax

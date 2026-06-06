@@ -171,6 +171,11 @@ type App struct {
 	remotePanelLoadGen [2]atomic.Uint64
 	gitStatusLoadGen   [2]atomic.Uint64
 
+	// jobBlockerNextGen invalidates in-flight quick-blocker chain timers.
+	jobBlockerNextGen   atomic.Uint64
+	jobBlockerNextMu    sync.Mutex
+	jobBlockerNextTimer *time.Timer
+
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
 	lastScreenContentHash uint64
@@ -598,6 +603,11 @@ func (a *App) Run() error {
 			case transferDestValidatePayload:
 				a.render()
 				didRender = true
+			case jobBlockerNextPayload:
+				if a.applyJobBlockerNextPayload(d) {
+					a.render()
+					didRender = true
+				}
 			case syncFollowNavFlushPayload:
 				if a.applyPanelSyncFollowNavFlush(d) {
 					a.render()
@@ -710,14 +720,14 @@ func (a *App) Run() error {
 // handleDialogKey routes keys for modal overlays (transfer, conflict, quit confirm).
 func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 	switch {
+	case a.model.ConflictDialog.Open:
+		a.handleConflictDialogKey(event)
+		return false
 	case a.model.TransferDialog.Open:
 		a.handleTransferDialogKey(event)
 		return false
 	case a.model.FlattenDialog.Open:
 		a.handleFlattenDialogKey(event)
-		return false
-	case a.model.ConflictDialog.Open:
-		a.handleConflictDialogKey(event)
 		return false
 	case a.model.QuitConfirm.Open:
 		return a.handleQuitConfirmKey(event)

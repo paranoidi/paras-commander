@@ -151,12 +151,12 @@ func (m Model) PrimaryModal() PrimaryModal {
 	switch {
 	case m.ThemeDialog.Open:
 		return PrimaryModalTheme
+	case m.ConflictDialog.Open:
+		return PrimaryModalConflict
 	case m.TransferDialog.Open:
 		return PrimaryModalTransfer
 	case m.FlattenDialog.Open:
 		return PrimaryModalFlatten
-	case m.ConflictDialog.Open:
-		return PrimaryModalConflict
 	case m.QuitConfirm.Open:
 		return PrimaryModalQuit
 	default:
@@ -407,7 +407,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	case PrimaryModalFlatten:
 		dialog.DrawFlattenDialog(screen, layout, model.FlattenDialog, styles)
 	case PrimaryModalConflict:
-		dialog.DrawConflictDialog(screen, layout, model.ConflictDialog, styles)
+		dialog.DrawConflictDialog(screen, layout, model.ConflictDialog, styles, model.UserHomeDir)
 	case PrimaryModalQuit:
 		dialog.DrawQuitConfirmDialog(screen, layout, model.QuitConfirm, styles)
 	}

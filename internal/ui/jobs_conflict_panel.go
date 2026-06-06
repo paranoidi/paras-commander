@@ -89,6 +89,155 @@ func JobBlockerDecisionFromFocus(sel JobEntry, btnIdx int) jobs.ConflictDecision
 	return ConflictDecisionFromButtonIndex(btnIdx)
 }
 
+// JobBlockerDialogMaxFocus returns the maximum button focus index for the quick blocker dialog.
+func JobBlockerDialogMaxFocus(b jobs.BlockerDetails) int {
+	if b.Kind == jobs.BlockerKindDiskSpace {
+		return 2
+	}
+	return 5
+}
+
+// JobBlockerDialogPostponeFocus returns the focus index of the Postpone button.
+func JobBlockerDialogPostponeFocus(b jobs.BlockerDetails) int {
+	if b.Kind == jobs.BlockerKindDiskSpace {
+		return 2
+	}
+	return 5
+}
+
+// JobBlockerDialogIsPostpone reports whether focus selects Postpone (not a ConflictDecision).
+func JobBlockerDialogIsPostpone(b jobs.BlockerDetails, focus int) bool {
+	return focus == JobBlockerDialogPostponeFocus(b)
+}
+
+// JobBlockerDialogDecision maps dialog button focus to a blocker decision.
+// The second return is false for Postpone or out-of-range focus.
+func JobBlockerDialogDecision(b jobs.BlockerDetails, focus int) (jobs.ConflictDecision, bool) {
+	if JobBlockerDialogIsPostpone(b, focus) {
+		return "", false
+	}
+	if b.Kind == jobs.BlockerKindDiskSpace {
+		if focus <= 0 {
+			return jobs.DecisionRetry, true
+		}
+		return jobs.DecisionCancel, true
+	}
+	if focus < 0 || focus > 4 {
+		return "", false
+	}
+	return ConflictDecisionFromButtonIndex(focus), true
+}
+
+// JobBlockerDialogFocusFromShortcut maps Alt+letter shortcuts to button focus.
+func JobBlockerDialogFocusFromShortcut(b jobs.BlockerDetails, r rune) (int, bool) {
+	if b.Kind == jobs.BlockerKindDiskSpace {
+		switch r {
+		case 'r', 'R':
+			return 0, true
+		case 'b', 'B':
+			return 1, true
+		case 'p', 'P':
+			return 2, true
+		}
+		return 0, false
+	}
+	switch r {
+	case 'o', 'O':
+		return 0, true
+	case 's', 'S':
+		return 1, true
+	case 'a', 'A':
+		return 2, true
+	case 'l', 'L':
+		return 3, true
+	case 'c', 'C':
+		return 4, true
+	case 'p', 'P':
+		return 5, true
+	default:
+		return 0, false
+	}
+}
+
+// JobBlockerDialogMoveFocus applies dialog navigation keys to button focus.
+func JobBlockerDialogMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) (int, bool) {
+	max := JobBlockerDialogMaxFocus(b)
+	if focus < 0 {
+		focus = 0
+	}
+	if focus > max {
+		focus = max
+	}
+	if b.Kind == jobs.BlockerKindDiskSpace {
+		switch key {
+		case tcell.KeyTab:
+			if focus >= max {
+				return 0, true
+			}
+			return focus + 1, true
+		case tcell.KeyBacktab:
+			if focus <= 0 {
+				return max, true
+			}
+			return focus - 1, true
+		case tcell.KeyLeft:
+			if focus > 0 {
+				return focus - 1, true
+			}
+			return focus, true
+		case tcell.KeyRight:
+			if focus < max {
+				return focus + 1, true
+			}
+			return focus, true
+		case tcell.KeyUp, tcell.KeyDown:
+			return focus, true
+		default:
+			return focus, false
+		}
+	}
+	col := focus % 3
+	row := focus / 3
+	switch key {
+	case tcell.KeyTab:
+		if focus >= max {
+			return 0, true
+		}
+		return focus + 1, true
+	case tcell.KeyBacktab:
+		if focus <= 0 {
+			return max, true
+		}
+		return focus - 1, true
+	case tcell.KeyLeft:
+		if col > 0 {
+			return focus - 1, true
+		}
+		return focus, true
+	case tcell.KeyRight:
+		if col < 2 {
+			return focus + 1, true
+		}
+		return focus, true
+	case tcell.KeyUp:
+		if row > 0 {
+			return focus - 3, true
+		}
+		return focus, true
+	case tcell.KeyDown:
+		if row < 1 {
+			next := focus + 3
+			if next > max {
+				return max, true
+			}
+			return next, true
+		}
+		return focus, true
+	default:
+		return focus, false
+	}
+}
+
 func drawJobsConflictPanel(screen tcell.Screen, rect Rect, state JobsViewState, sel JobEntry, styles theme.Theme, chromeBlocked, focused bool, userHomeDir string) {
 	b := sel.PendingBlocker
 	if b == nil || rect.Height < 3 {

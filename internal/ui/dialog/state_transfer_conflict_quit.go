@@ -1,5 +1,7 @@
 package dialog
 
+import "github.com/paranoidi/paras-commander/internal/jobs"
+
 // PrimaryModal identifies which exclusive modal occupies the primary dialog layer.
 // Overlay modals (Sort, GroupSelect, FileDialog) may draw on top; see Render.
 type PrimaryModal int
@@ -56,13 +58,12 @@ type TransferDialogState struct {
 	DestPathCheckPending bool
 }
 
-// ConflictDialogState holds the conflict resolution dialog.
+// ConflictDialogState holds the quick job-blocker answer dialog (Ctrl+Q).
 type ConflictDialogState struct {
-	Open        bool
-	JobID       string
-	Source      string
-	Destination string
-	Focus       int // 0=overwrite, 1=skip, 2=overwrite-all, 3=skip-all, 4=cancel
+	Open    bool
+	JobID   string
+	Blocker jobs.BlockerDetails
+	Focus   int // button index; see ui.JobBlockerDialogMaxFocus
 }
 
 // QuitConfirmState holds the quit confirmation dialog.

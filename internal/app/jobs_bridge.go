@@ -8,12 +8,18 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
 func (a *App) openJobsView() { a.jobsCtrl.OpenJobsView() }
 
-func (a *App) tryDispatchJobs(actionID string) bool { return a.jobsCtrl.TryDispatch(actionID) }
+func (a *App) tryDispatchJobs(actionID string) bool {
+	if actionID == keymap.ActionJobsAnswerBlocker {
+		return true
+	}
+	return a.jobsCtrl.TryDispatch(actionID)
+}
 
 func (a *App) handleJobsViewKey(event *tcell.EventKey) bool {
 	return a.jobsCtrl.HandleJobsViewKey(event)

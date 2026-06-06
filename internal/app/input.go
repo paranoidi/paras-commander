@@ -252,6 +252,14 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 	}
 
+	if resolvedAction == keymap.ActionJobsAnswerBlocker {
+		if rendered := a.handleJobsAnswerBlockerKey(); rendered {
+			a.render()
+			return false, true
+		}
+		return false, false
+	}
+
 	// Global show-help (F1 by default). Closes menu or quick filter first.
 	if resolvedAction == keymap.ActionAppShowHelp && !a.model.HelpView.Open {
 		// Do not open help from modal dialogs.

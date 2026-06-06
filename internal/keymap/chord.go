@@ -56,11 +56,16 @@ func CanonicalChord(ch Chord) Chord {
 		mod &^= tcell.ModCtrl
 		return Chord{Key: key, Rune: ch.Rune, Mod: mod}
 	}
-	// tcell.NewEventKey(KeyRune, ^letter, Ctrl) collapses Key to legacy codes 1..26 (^A..^Z), whereas
-	// ParseKey("C-letter") yields KeyCtrl* (Ctrl bit dropped). Only remap when ModCtrl indicates a control chord.
-	if key >= 1 && key <= 26 && key != tcell.KeyRune && mod&tcell.ModCtrl != 0 {
+	// Terminals often deliver ^Letter as legacy ASCII control codes (KeySOH..KeySUB) with no ModCtrl
+	// (fish_key_reader \cQ → KeyDC1). ParseKey("C-letter") stores KeyCtrl* instead. Do not remap
+	// KeyBackspace/KeyTab/KeyEnter — tcell uses those same byte values for navigation keys.
+	if key >= tcell.KeySOH && key <= tcell.KeySUB && key != tcell.KeyRune {
+		switch key {
+		case tcell.KeyBackspace, tcell.KeyTab, tcell.KeyEnter:
+			return ch
+		}
 		mod &^= tcell.ModCtrl
-		return Chord{Key: tcell.KeyCtrlA + key - 1, Mod: mod}
+		return Chord{Key: tcell.KeyCtrlA + key - tcell.KeySOH, Rune: 0, Mod: mod}
 	}
 	if key != tcell.KeyRune || mod&tcell.ModCtrl == 0 {
 		return ch

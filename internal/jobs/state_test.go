@@ -627,3 +627,29 @@ func TestEventTypeDroppableWhenChannelFull(t *testing.T) {
 		t.Fatal("completed should not be droppable")
 	}
 }
+
+func TestFirstWaitingBlockerJobFIFO(t *testing.T) {
+	t.Parallel()
+	s := NewState()
+	b1 := &BlockerDetails{Kind: BlockerKindConflict, Conflict: &ConflictEvent{Source: "/a"}}
+	b2 := &BlockerDetails{Kind: BlockerKindConflict, Conflict: &ConflictEvent{Source: "/b"}}
+	j1 := &Job{ID: "first", Status: StatusWaitingDecision, PendingBlocker: b1}
+	j2 := &Job{ID: "second", Status: StatusWaitingDecision, PendingBlocker: b2}
+	s.mu.Lock()
+	s.waitingBlocker = []*Job{j1, j2}
+	s.mu.Unlock()
+
+	got := s.FirstWaitingBlockerJob()
+	if got == nil {
+		t.Fatal("FirstWaitingBlockerJob() = nil, want first job")
+	}
+	if got.ID != "first" {
+		t.Fatalf("FirstWaitingBlockerJob().ID = %q, want first", got.ID)
+	}
+	if got.PendingBlocker == nil || got.PendingBlocker.Conflict == nil || got.PendingBlocker.Conflict.Source != "/a" {
+		t.Fatalf("unexpected blocker snapshot: %+v", got.PendingBlocker)
+	}
+	if s.FirstWaitingBlockerJob() == j1 {
+		t.Fatal("FirstWaitingBlockerJob should return a copy, not the stored pointer")
+	}
+}

@@ -67,6 +67,13 @@ const (
 	// DefaultProgressUIWakeDebounceMS is minimum spacing between main-loop wakes after worker EventProgress.
 	DefaultProgressUIWakeDebounceMS = 150
 
+	// DefaultBlockerDialogNextDebounceMS waits after answering one quick blocker dialog before
+	// opening the next waiting prompt (0 opens immediately).
+	DefaultBlockerDialogNextDebounceMS = 200
+	// BlockerDialogNextDebounceMinMS / BlockerDialogNextDebounceMaxMS clamp jobs.blocker_dialog_next_debounce_ms.
+	BlockerDialogNextDebounceMinMS = 0
+	BlockerDialogNextDebounceMaxMS = 5000
+
 	// DefaultThroughputChartWindowSec is the jobs details throughput strip span (clamped 20–120 in Validate).
 	DefaultThroughputChartWindowSec = 45
 	// DefaultThroughputChartColumnMS is wall time per chart column and chart ticker interval (clamped in Validate).

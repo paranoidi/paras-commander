@@ -621,6 +621,14 @@ func TestDefaultBundleJobsOpenGlobalRestJobsOverlay(t *testing.T) {
 	if !ok || id != ActionJobsOpen {
 		t.Fatalf("global Ctrl+J = %q %v, want jobs.open", id, ok)
 	}
+	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlQ, 0, tcell.ModNone))
+	if !ok || id != ActionJobsAnswerBlocker {
+		t.Fatalf("global Ctrl+Q = %q %v, want jobs.answer-blocker", id, ok)
+	}
+	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModAlt))
+	if !ok || id != ActionJobsAnswerBlocker {
+		t.Fatalf("global Alt+Q = %q %v, want jobs.answer-blocker", id, ok)
+	}
 	if _, ok := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModNone)); ok {
 		t.Fatal("Ctrl+J must not bind in jobs overlay (jobs.open is global-only)")
 	}

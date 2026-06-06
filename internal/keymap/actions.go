@@ -99,6 +99,7 @@ const (
 	ActionJobsResume        = "jobs.resume"
 	ActionJobsQueueUp       = "jobs.queue-up"
 	ActionJobsQueueDown     = "jobs.queue-down"
+	ActionJobsAnswerBlocker = "jobs.answer-blocker"
 
 	// Commands screen + external command execution
 	ActionCommandsOpen   = "commands.open"
@@ -247,6 +248,7 @@ var KnownActions = map[string]struct{}{
 	ActionJobsResume:        {},
 	ActionJobsQueueUp:       {},
 	ActionJobsQueueDown:     {},
+	ActionJobsAnswerBlocker: {},
 
 	ActionCommandsOpen:   {},
 	ActionCommandsClose:  {},

@@ -609,6 +609,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"queue", "background"},
 		},
 		{
+			ID:           ActionJobsAnswerBlocker,
+			Title:        "Answer job blocker",
+			Section:      "Jobs",
+			DefaultKeys:  []string{"C-q", "M-q"},
+			PreferredKey: "C-q",
+			Keywords:     []string{"blocker", "waiting", "conflict"},
+		},
+		{
 			ID:          ActionJobsCancel,
 			Title:       "Cancel job",
 			Section:     "Jobs",
