@@ -65,7 +65,7 @@ type State struct {
 	GitignoreActive bool
 	// DotfilesHiddenActive is true when dotfiles are hidden and the current directory has dot-prefixed names.
 	DotfilesHiddenActive bool
-	// GitColumnActive is true when git status loaded successfully for this listing (local panels only).
+	// GitColumnActive is true when the listing path is inside a Git work tree with valid metadata (local panels only).
 	GitColumnActive bool
 	// GitPending is true while async git status is in flight for this listing.
 	GitPending bool
@@ -1151,10 +1151,10 @@ func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entr
 		s.GitByPath = nil
 		return
 	}
-	workRoot := gitignore.WorkTreeRoot(host)
-	s.GitColumnActive = false
+	workRoot := gitignore.ValidWorkTreeRoot(host)
+	s.GitColumnActive = workRoot != ""
 	s.GitByPath = nil
-	if workRoot == "" {
+	if !s.GitColumnActive {
 		s.GitPending = false
 		return
 	}

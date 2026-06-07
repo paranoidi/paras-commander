@@ -12,14 +12,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-func TestPanelListGitColumnActiveHiddenWhilePending(t *testing.T) {
+func TestPanelListGitColumnActiveVisibleWhilePending(t *testing.T) {
 	state := panel.State{GitColumnActive: true, GitPending: true}
-	if panelListGitColumnActive(state, false) {
-		t.Fatal("git column visible while GitPending")
-	}
-	state.GitPending = false
 	if !panelListGitColumnActive(state, false) {
-		t.Fatal("git column hidden after status load")
+		t.Fatal("git column hidden while GitPending, want stable layout before status cells load")
 	}
 }
 

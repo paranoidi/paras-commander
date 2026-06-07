@@ -60,11 +60,9 @@ func (a *App) applyGitStatusLoad(p gitStatusPayload) bool {
 	}
 	pan.GitPending = false
 	if p.err != nil {
-		pan.GitColumnActive = false
 		pan.GitByPath = nil
 		return true
 	}
-	pan.GitColumnActive = true
 	pan.GitByPath = p.byPath
 	return true
 }

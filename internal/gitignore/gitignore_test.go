@@ -25,6 +25,28 @@ func TestWorkTreeRootOutsideRepo(t *testing.T) {
 	}
 }
 
+func TestValidWorkTreeRootRejectsGitDirWithoutHEAD(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := ValidWorkTreeRoot(root); got != "" {
+		t.Fatalf("ValidWorkTreeRoot(%q) = %q, want empty without HEAD", root, got)
+	}
+}
+
+func TestValidWorkTreeRootAcceptsGitDirWithHEAD(t *testing.T) {
+	root := t.TempDir()
+	gitDir := filepath.Join(root, ".git")
+	if err := os.Mkdir(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mustWriteFile(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/main\n")
+	if got := ValidWorkTreeRoot(root); got != root {
+		t.Fatalf("ValidWorkTreeRoot(%q) = %q, want %q", root, got, root)
+	}
+}
+
 func TestMatcherIgnoresListedPaths(t *testing.T) {
 	root := initGitRepo(t)
 	mustWriteFile(t, filepath.Join(root, ".gitignore"), "ignored.txt\nbuild/\n")

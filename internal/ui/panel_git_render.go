@@ -27,7 +27,7 @@ func panelListReservedBeforeName(showGit, nameOnly bool) int {
 }
 
 func panelListGitColumnActive(state panel.State, nameOnly bool) bool {
-	return state.GitColumnActive && !state.GitPending && !nameOnly
+	return state.GitColumnActive && !nameOnly
 }
 
 func panelGitCell(entry localfs.Entry, byPath map[string]gitstatus.Cell) gitstatus.Cell {
