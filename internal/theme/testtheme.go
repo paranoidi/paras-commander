@@ -7,12 +7,13 @@ import (
 	"testing"
 )
 
-var dialogOptionStyleKeys = map[string]struct{}{
-	"dialog.option.inactive":        {},
-	"dialog.option.active":          {},
-	"dialog.option.active.selected": {},
-	"dialog.option.selected":        {},
-	"dialog.option.invalid":         {},
+var dialogSurfaceForegroundStyleKeys = map[string]struct{}{
+	"dialog.option.inactive":          {},
+	"dialog.option.active":            {},
+	"dialog.option.active.selected":   {},
+	"dialog.option.selected":          {},
+	"dialog.option.invalid":           {},
+	"dialog.indicator.selection_size": {},
 }
 
 // TestThemeBytes builds a minimal valid theme TOML from requiredStyleKeys plus optional overrides.
@@ -35,7 +36,7 @@ func buildTestThemeBytes(name string, skip map[string]bool, overrides map[string
 		}
 		section, relative := styleSectionRelative(key)
 		spec := `{ fg = "white", bg = "black" }`
-		if _, ok := dialogOptionStyleKeys[key]; ok {
+		if _, ok := dialogSurfaceForegroundStyleKeys[key]; ok {
 			spec = `{ fg = "white" }`
 		}
 		if override, ok := overrides[key]; ok {

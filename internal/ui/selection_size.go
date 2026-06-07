@@ -11,6 +11,11 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
+// SelectionSizePadded wraps raw selection-size text with one space on each side for border indicators.
+func SelectionSizePadded(raw string) string {
+	return panelSelectionSizePadded(raw)
+}
+
 // panelSelectionSizePadded wraps raw selection-size text with one space on each side for the bottom row.
 func panelSelectionSizePadded(raw string) string {
 	if raw == "" {
@@ -83,25 +88,22 @@ func formatSelectionUnit(v float64, unit string) string {
 // SelectionSizeLabel builds the selection count/size indicator text for a panel.
 // workingSym is appended (with a leading space) when directory sizes are still being resolved.
 func SelectionSizeLabel(
-	state panel.State,
+	state *panel.State,
 	remote bool,
 	painter DiskUsagePainter,
 	descendIntoMountPoints bool,
 	goduIgnore func(string) bool,
 	workingSym string,
 ) (label string, ok bool) {
+	if state == nil {
+		return "", false
+	}
 	count := state.SelectedPathCount()
 	if count == 0 {
 		return "", false
 	}
 
-	paths := make([]string, 0, count)
-	for p, on := range state.SelectedPaths {
-		if on {
-			paths = append(paths, p)
-		}
-	}
-	pruned := panel.PruneNestedPaths(paths)
+	pruned := state.PrunedSelectionRoots()
 
 	byPath := make(map[string]localfs.Entry, len(state.Entries))
 	for _, e := range state.Entries {
@@ -122,6 +124,56 @@ func SelectionSizeLabel(
 		}
 	}
 
+	word := "items"
+	if count == 1 {
+		word = "item"
+	}
+	label = fmt.Sprintf("%d %s (%s)", count, word, FormatSelectionByteSize(total))
+	if pending && workingSym != "" {
+		label += " " + workingSym
+	}
+	return label, true
+}
+
+// MarkedPathsSelectionSizeLabel builds count/size text for a marked-path set (e.g. find dialog).
+func MarkedPathsSelectionSizeLabel(
+	marked map[string]bool,
+	remote bool,
+	listingDevice uint64,
+	listingDeviceValid bool,
+	painter DiskUsagePainter,
+	descendIntoMountPoints bool,
+	goduIgnore func(string) bool,
+	workingSym string,
+) (label string, ok bool) {
+	if len(marked) == 0 {
+		return "", false
+	}
+	count := 0
+	paths := make([]string, 0, len(marked))
+	for p, on := range marked {
+		if on {
+			count++
+			paths = append(paths, p)
+		}
+	}
+	if count == 0 {
+		return "", false
+	}
+	pruned := panel.PruneNestedPathsForSelection(paths, true, nil)
+	var total int64
+	pending := false
+	for _, p := range pruned {
+		_, b, needScan := pathImpact(
+			p, nil, remote,
+			listingDevice, listingDeviceValid,
+			painter, descendIntoMountPoints, goduIgnore,
+		)
+		total += b
+		if needScan {
+			pending = true
+		}
+	}
 	word := "items"
 	if count == 1 {
 		word = "item"

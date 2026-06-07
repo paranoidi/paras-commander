@@ -465,7 +465,7 @@ func TestFindDialogF8OpensUnselectGroupSelectForFindContext(t *testing.T) {
 	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF8, "unselect")
 }
 
-func TestFindDialogGroupSelectGlobMarksRankedResults(t *testing.T) {
+func TestFindDialogGroupSelectGlobMarksFullCorpusResults(t *testing.T) {
 	root := t.TempDir()
 	aPath := filepath.Join(root, "alpha.txt")
 	bPath := filepath.Join(root, "beta.go")
@@ -507,7 +507,7 @@ func TestFindDialogGroupSelectGlobMarksRankedResults(t *testing.T) {
 	}
 }
 
-func TestFindDialogSelectAllMarksRankedResults(t *testing.T) {
+func TestFindDialogSelectAllMarksFullCorpusResults(t *testing.T) {
 	root := t.TempDir()
 	aPath := filepath.Join(root, "alpha.txt")
 	bPath := filepath.Join(root, "beta.txt")
@@ -585,8 +585,53 @@ func TestFindDialogBulkSelectAllManyFiles(t *testing.T) {
 	if time.Now().After(deadline) {
 		t.Fatal("F5 select-all took too long")
 	}
-	if len(st.MarkedPaths) != len(st.Ranked) {
-		t.Fatalf("marked = %d ranked = %d", len(st.MarkedPaths), len(st.Ranked))
+	if len(st.MarkedPaths) != n {
+		t.Fatalf("marked = %d, want full corpus %d", len(st.MarkedPaths), n)
+	}
+}
+
+func TestFindDialogBulkOKApplyManyFiles(t *testing.T) {
+	const n = 800
+	root := t.TempDir()
+	for i := range n {
+		name := filepath.Join(root, fmt.Sprintf("ok_%04d.txt", i))
+		if err := os.WriteFile(name, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+	waitFindRankDone(t, app)
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	st := &app.model.FindDialog
+	if len(st.MarkedPaths) != n {
+		t.Fatalf("marked = %d, want %d", len(st.MarkedPaths), n)
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	app.activateFindDialogOK()
+	if time.Now().After(deadline) {
+		t.Fatal("OK apply took too long")
+	}
+	if app.model.FindDialog.Open {
+		t.Fatal("expected dialog closed")
+	}
+	p := app.panelByID(ui.LeftPanel)
+	if len(p.SelectedPaths) != n {
+		t.Fatalf("panel selected = %d, want %d", len(p.SelectedPaths), n)
 	}
 }
 
@@ -622,16 +667,6 @@ func TestFindDialogBulkGroupSelectManyFiles(t *testing.T) {
 	if st.IndexedCount != wantEntries {
 		t.Fatalf("indexed = %d, want %d", st.IndexedCount, wantEntries)
 	}
-	wantTxtInRanked := 0
-	for _, entIdx := range st.Ranked {
-		if entIdx >= 0 && entIdx < len(st.Entries) && strings.HasSuffix(st.Entries[entIdx].RelLine, ".txt") {
-			wantTxtInRanked++
-		}
-	}
-	if wantTxtInRanked == 0 {
-		t.Fatal("expected ranked txt entries")
-	}
-
 	deadline := time.Now().Add(3 * time.Second)
 	app.findCtrl.ApplyGroupSelect("select", "*.txt", false, false, true)
 	if time.Now().After(deadline) {
@@ -643,8 +678,8 @@ func TestFindDialogBulkGroupSelectManyFiles(t *testing.T) {
 			marked++
 		}
 	}
-	if marked != wantTxtInRanked {
-		t.Fatalf("marked txt = %d, want %d in ranked list", marked, wantTxtInRanked)
+	if marked != n {
+		t.Fatalf("marked txt = %d, want %d in full corpus", marked, n)
 	}
 }
 

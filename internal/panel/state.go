@@ -48,6 +48,11 @@ type State struct {
 	// HistoryCursorByPath maps canonical directory paths to the last highlighted entry when leaving.
 	HistoryCursorByPath map[string]historyCursorSnapshot
 	SelectedPaths       map[string]bool
+	// selectionDerivedGen bumps on selection mutations; selDerivedCache is rebuilt lazily per cwd.
+	selectionDerivedGen uint64
+	selDerivedCache     selectionDerivedCache
+	// selectionHasDirs is true when any selected path is a directory (avoids stat scans on bulk file sets).
+	selectionHasDirs bool
 	// SelectionsStripOrder lists selected paths that belong in the bottom “selections” strip:
 	// off-current-directory order is tracked here; on chdir into dir D those paths are removed;
 	// on chdir away from D, selected paths under D are appended (deduped).
@@ -353,6 +358,12 @@ func (s *State) AddSelection(path string) bool {
 		s.SelectedPaths = make(map[string]bool)
 	}
 	s.SelectedPaths[path] = true
+	if s.selectedPathIsDirectory(path) {
+		s.selectionHasDirs = true
+	} else if conflicts && s.selectionHasDirs {
+		s.refreshSelectionHasDirs(nil)
+	}
+	s.invalidateSelectionDerived()
 	return conflicts
 }
 
@@ -367,11 +378,16 @@ func (s *State) ToggleSelection() (selected bool, conflictsRemoved bool) {
 		s.SelectedPaths = make(map[string]bool)
 	}
 	if s.SelectedPaths[entry.Path] {
+		wasDir := entry.IsDir()
 		delete(s.SelectedPaths, entry.Path)
 		s.removePathFromSelectionsStripOrder(entry.Path)
 		if len(s.SelectedPaths) == 0 {
 			s.SelectedPaths = nil
+			s.selectionHasDirs = false
+		} else if wasDir && s.selectionHasDirs {
+			s.refreshSelectionHasDirs(nil)
 		}
+		s.invalidateSelectionDerived()
 		s.normalizeSelectionsStripCursor()
 		return false, false
 	}
@@ -380,6 +396,10 @@ func (s *State) ToggleSelection() (selected bool, conflictsRemoved bool) {
 		s.SelectedPaths = make(map[string]bool)
 	}
 	s.SelectedPaths[entry.Path] = true
+	if entry.IsDir() {
+		s.selectionHasDirs = true
+	}
+	s.invalidateSelectionDerived()
 	return true, conflictsRemoved
 }
 
@@ -402,7 +422,7 @@ func (s State) IsSelected(entry localfs.Entry) bool {
 }
 
 // HasSelectionInSubtree reports whether some selected path is a strict descendant of dirPath.
-func (s State) HasSelectionInSubtree(dirPath string) bool {
+func (s *State) HasSelectionInSubtree(dirPath string) bool {
 	if s.SelectedPaths == nil {
 		return false
 	}
@@ -410,15 +430,8 @@ func (s State) HasSelectionInSubtree(dirPath string) bool {
 	if dir == "" {
 		return false
 	}
-	for p, on := range s.SelectedPaths {
-		if !on {
-			continue
-		}
-		if isStrictPathDescendant(dir, cleanPathString(p)) {
-			return true
-		}
-	}
-	return false
+	s.ensureSelectionDerived()
+	return s.selDerivedCache.subtreeAncestors[dir]
 }
 
 // IsStrictPathDescendant reports whether child is a strict descendant of parent (different paths, child under parent).
@@ -1285,44 +1298,14 @@ func (s *State) removePathFromSelectionsStripOrder(path string) {
 
 // SelectionsStripPaths returns selected paths shown in the selections sub-pane (not in the current directory).
 func (s *State) SelectionsStripPaths() []string {
-	cur := cleanPathString(s.Path.String())
-	seen := make(map[string]bool)
-	out := make([]string, 0, len(s.SelectionsStripOrder))
-	for _, p := range s.SelectionsStripOrder {
-		if s.SelectedPaths == nil || !s.SelectedPaths[p] {
-			continue
-		}
-		if cleanPathString(filepath.Dir(p)) == cur {
-			continue
-		}
-		if seen[p] {
-			continue
-		}
-		seen[p] = true
-		out = append(out, p)
-	}
-	if s.SelectedPaths != nil {
-		extra := make([]string, 0)
-		for p := range s.SelectedPaths {
-			if cleanPathString(filepath.Dir(p)) == cur {
-				continue
-			}
-			if seen[p] {
-				continue
-			}
-			extra = append(extra, p)
-		}
-		if len(extra) > 0 {
-			sort.Strings(extra)
-			out = append(out, extra...)
-		}
-	}
-	return out
+	s.ensureSelectionDerived()
+	return s.selDerivedCache.stripPaths
 }
 
 // SelectionsStripCount is the number of rows in the selections sub-pane for the current directory.
 func (s *State) SelectionsStripCount() int {
-	return len(s.SelectionsStripPaths())
+	s.ensureSelectionDerived()
+	return len(s.selDerivedCache.stripPaths)
 }
 
 // MoveSelectionsStrip moves the selections-strip cursor by delta and keeps it visible.
@@ -1426,6 +1409,7 @@ func (s *State) ToggleOrRemoveStripSelection() bool {
 		}
 	}
 	s.removePathFromSelectionsStripOrder(p)
+	s.invalidateSelectionDerived()
 	s.normalizeSelectionsStripCursor()
 	return true
 }
@@ -1572,7 +1556,11 @@ func (s *State) InvertSelection() {
 	}
 	if len(s.SelectedPaths) == 0 {
 		s.SelectedPaths = nil
+		s.selectionHasDirs = false
+	} else {
+		s.refreshSelectionHasDirs(nil)
 	}
+	s.invalidateSelectionDerived()
 	s.normalizeSelectionsStripCursor()
 }
 
@@ -1581,6 +1569,8 @@ func (s *State) InvertSelection() {
 func (s *State) ClearSelection() {
 	s.SelectedPaths = nil
 	s.SelectionsStripOrder = nil
+	s.selectionHasDirs = false
+	s.invalidateSelectionDerived()
 	s.normalizeSelectionsStripCursor()
 }
 
@@ -1603,7 +1593,11 @@ func (s *State) SelectGroup(pattern string, filesOnly, caseSensitive, useShellPa
 	}
 	if len(s.SelectedPaths) == 0 {
 		s.SelectedPaths = nil
+		s.selectionHasDirs = false
+	} else {
+		s.refreshSelectionHasDirs(nil)
 	}
+	s.invalidateSelectionDerived()
 }
 
 // UnselectGroup unselects entries whose basename matches the pattern.
@@ -1619,7 +1613,11 @@ func (s *State) UnselectGroup(pattern string, filesOnly, caseSensitive, useShell
 	}
 	if len(s.SelectedPaths) == 0 {
 		s.SelectedPaths = nil
+		s.selectionHasDirs = false
+	} else if s.selectionHasDirs {
+		s.refreshSelectionHasDirs(nil)
 	}
+	s.invalidateSelectionDerived()
 	s.normalizeSelectionsStripCursor()
 }
 

@@ -345,15 +345,17 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		leftFileListFocus := previewTheme || (model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusFileList)
 		rightFileListFocus := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusFileList
 
-		leftStripN := SelectionsStripLayoutItemCount(&model.Left, LeftPanel, model.ActivePanel, previewTheme)
-		rightStripN := SelectionsStripLayoutItemCount(&model.Right, RightPanel, model.ActivePanel, previewTheme)
-		leftFile := FileListFrame(layout.Left, &model.Left, LeftPanel, model.ActivePanel, previewTheme, model.SelectionsPanelMaxRows)
-		rightFile := FileListFrame(layout.Right, &model.Right, RightPanel, model.ActivePanel, previewTheme, model.SelectionsPanelMaxRows)
+		leftStripCount := model.Left.SelectionsStripCount()
+		rightStripCount := model.Right.SelectionsStripCount()
+		leftStripN := SelectionsStripLayoutItemCountFromCount(leftStripCount, LeftPanel, model.ActivePanel, previewTheme)
+		rightStripN := SelectionsStripLayoutItemCountFromCount(rightStripCount, RightPanel, model.ActivePanel, previewTheme)
+		leftFile := FileListFrameWithStripCount(layout.Left, leftStripN, model.SelectionsPanelMaxRows)
+		rightFile := FileListFrameWithStripCount(layout.Right, rightStripN, model.SelectionsPanelMaxRows)
 		_, leftStrip := SplitPanelColumn(layout.Left, leftStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
 		_, rightStrip := SplitPanelColumn(layout.Right, rightStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
 
-		leftSelectionsBottomHint := model.Left.SelectionsStripCount() > 0 && leftStripN == 0
-		rightSelectionsBottomHint := model.Right.SelectionsStripCount() > 0 && rightStripN == 0
+		leftSelectionsBottomHint := leftStripCount > 0 && leftStripN == 0
+		rightSelectionsBottomHint := rightStripCount > 0 && rightStripN == 0
 		leftStripVisible := leftStrip.Height > 0
 		rightStripVisible := rightStrip.Height > 0
 		leftSelectionSizeOnFileBottom := model.Left.SelectedPathCount() > 0 && !leftStripVisible
@@ -433,7 +435,14 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		dialog.DrawSFTPConnectDialog(screen, layout, model.SFTPConnectDialog, styles)
 	}
 	if model.FindDialog.Open {
-		dialog.DrawFindDialog(screen, layout, model.FindDialog, styles, model.ShowFileIcons, FindListIconLeadingWidth(model.ShowFileIcons), PaintFindDialogRowIcon)
+		selectionLabel := FindDialogSelectionSizePadded(
+			model.FindDialog,
+			model.DiskUsage,
+			model.DiskUsageDescendIntoMountPoints,
+			model.DiskUsageGoduIgnore,
+			styles.SymbolWorking(),
+		)
+		dialog.DrawFindDialog(screen, layout, model.FindDialog, styles, model.ShowFileIcons, FindListIconLeadingWidth(model.ShowFileIcons), PaintFindDialogRowIcon, selectionLabel)
 	}
 	if model.GroupSelect.Open {
 		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)

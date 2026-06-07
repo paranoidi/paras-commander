@@ -14,6 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func New(d Deps) *Handler {
@@ -557,42 +558,13 @@ func (h *Handler) syncFindDialogRanks() {
 	if !st.Open {
 		return
 	}
-	lines := make([]string, len(st.Entries))
-	for i, e := range st.Entries {
-		lines[i] = e.RelLine
-	}
-	q := search.Parse(st.Query)
-	opts := search.Options{CaseInsensitive: h.config.CaseInsensitiveFilter}
-	ranked := q.Rank(lines, opts)
-	st.Ranked = make([]int, len(ranked))
-	if q.Empty() {
-		st.MatchRanges = nil
-	} else {
-		st.MatchRanges = make(map[int][]search.Range)
-	}
-	for i, r := range ranked {
-		st.Ranked[i] = r.Index
-		if st.MatchRanges != nil && r.Index >= 0 && r.Index < len(lines) && len(r.Result.Ranges) > 0 {
-			st.MatchRanges[r.Index] = r.Result.Ranges
-		}
-	}
-	if st.OnlyDirectories {
-		filtered := st.Ranked[:0]
-		for _, idx := range st.Ranked {
-			if idx >= 0 && idx < len(st.Entries) && st.Entries[idx].IsDir {
-				filtered = append(filtered, idx)
-			}
-		}
-		st.Ranked = filtered
-	} else if st.OnlyFiles {
-		filtered := st.Ranked[:0]
-		for _, idx := range st.Ranked {
-			if idx >= 0 && idx < len(st.Entries) && !st.Entries[idx].IsDir {
-				filtered = append(filtered, idx)
-			}
-		}
-		st.Ranked = filtered
-	}
+	st.Ranked, st.MatchRanges = dialog.RankFindEntries(
+		st.Entries,
+		st.Query,
+		st.OnlyDirectories,
+		st.OnlyFiles,
+		h.config.CaseInsensitiveFilter,
+	)
 	if st.Selected >= len(st.Ranked) {
 		if len(st.Ranked) == 0 {
 			st.Selected = 0
@@ -1038,8 +1010,7 @@ func (h *Handler) findDialogMarkedCount() int {
 func (h *Handler) applyFindDialogMarkedSelections() {
 	st := &h.model.FindDialog
 	p := h.host.PanelByID(st.PanelID)
-	added := 0
-	conflicts := false
+	paths := make([]string, 0, len(st.MarkedPaths))
 	for path, on := range st.MarkedPaths {
 		if !on {
 			continue
@@ -1051,10 +1022,13 @@ func (h *Handler) applyFindDialogMarkedSelections() {
 		if p.SelectedPaths != nil && p.SelectedPaths[path] {
 			continue
 		}
-		if p.AddSelection(path) {
-			conflicts = true
-		}
-		added++
+		paths = append(paths, path)
+	}
+	added := len(paths)
+	conflicts := false
+	if added > 0 {
+		isDir := h.findPathIsDir(st)
+		conflicts = p.BulkAddSelections(paths, isDir)
 	}
 	h.model.ActivePanel = st.PanelID
 	h.model.ActiveSubFocus = ui.SubFocusFileList
@@ -1103,16 +1077,28 @@ func (h *Handler) NavigateFindCursor() {
 	h.CloseDialog()
 }
 
+func (h *Handler) findDialogResultIndices(st *ui.FindDialogState) []int {
+	ranked, _ := dialog.RankFindEntries(
+		st.Entries,
+		st.Query,
+		st.OnlyDirectories,
+		st.OnlyFiles,
+		h.config.CaseInsensitiveFilter,
+	)
+	return ranked
+}
+
 func (h *Handler) findDialogSelectAll() {
 	st := &h.model.FindDialog
-	if len(st.Ranked) == 0 {
+	indices := h.findDialogResultIndices(st)
+	if len(indices) == 0 {
 		return
 	}
 	if st.MarkedPaths == nil {
-		st.MarkedPaths = make(map[string]bool, len(st.Ranked))
+		st.MarkedPaths = make(map[string]bool, len(indices))
 	}
-	paths := make([]string, 0, len(st.Ranked))
-	for _, entIdx := range st.Ranked {
+	paths := make([]string, 0, len(indices))
+	for _, entIdx := range indices {
 		if entIdx < 0 || entIdx >= len(st.Entries) {
 			continue
 		}
@@ -1360,18 +1346,19 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	}
 }
 
-// ApplyGroupSelect marks or unmarks ranked find results whose basename matches pattern.
+// ApplyGroupSelect marks or unmarks full-corpus find results whose basename matches pattern.
 func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitive, useShellPatterns bool) {
 	st := &h.model.FindDialog
 	if pattern == "" {
 		return
 	}
+	indices := h.findDialogResultIndices(st)
 	if mode == "select" {
 		if st.MarkedPaths == nil {
-			st.MarkedPaths = make(map[string]bool, len(st.Ranked))
+			st.MarkedPaths = make(map[string]bool, len(indices))
 		}
-		paths := make([]string, 0, len(st.Ranked))
-		for _, entIdx := range st.Ranked {
+		paths := make([]string, 0, len(indices))
+		for _, entIdx := range indices {
 			if entIdx < 0 || entIdx >= len(st.Entries) {
 				continue
 			}
@@ -1403,7 +1390,7 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 		}
 		return
 	}
-	for _, entIdx := range st.Ranked {
+	for _, entIdx := range indices {
 		if entIdx < 0 || entIdx >= len(st.Entries) {
 			continue
 		}

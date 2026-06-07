@@ -60,6 +60,10 @@ drained:
 		a.stopDiskUsageRedrawDebounce()
 		a.resortPanelsDiskUsageSorted()
 		a.refreshDeleteDialogSummary()
+		if a.model.FindDialog.Open {
+			a.renderFindDialogUpdate()
+			return
+		}
 		a.render()
 		return
 	}

@@ -156,6 +156,7 @@ option.active.selected = { fg = "bright_white", bold = true }
 option.inactive = { fg = "white" }
 option.selected = { fg = "yellow" }
 option.invalid = { fg = "red" }
+indicator.selection_size = { fg = "yellow" }
 
 [dialog.massrename]
 before = { fg = "white" }
