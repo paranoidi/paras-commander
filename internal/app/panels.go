@@ -509,11 +509,18 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 		} else {
 			a.switchPanel()
 		}
-	case keymap.ActionAppOpenMenu:
-		a.openMenu()
+	case keymap.ActionPanelClearSelection:
+		p.ClearSelection()
+		a.model.ActiveSubFocus = ui.SubFocusFileList
+		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
 	case keymap.ActionNavOpen:
 		a.navigateFromSelectionsStrip()
+	case keymap.ActionPanelToggleSync:
+		return false
 	default:
+		if actionID != "" {
+			return true
+		}
 		return false
 	}
 	return true

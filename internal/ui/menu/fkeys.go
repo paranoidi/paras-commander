@@ -95,6 +95,18 @@ func FunctionKeysFilePreviewView() []FunctionKey {
 	}
 }
 
+// FunctionKeysSelectionsStripView returns hints for the footer while the selections strip has keyboard focus.
+func FunctionKeysSelectionsStripView(clearSelectionLabel string) []FunctionKey {
+	out := []FunctionKey{
+		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
+	}
+	if clearSelectionLabel != "" {
+		out = append(out, FunctionKey{KeyLabel: clearSelectionLabel, Hint: "Unselect all"})
+	}
+	out = append(out, FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
+	return out
+}
+
 // FunctionKeyHints returns a label list suitable for footer rendering.
 func FunctionKeyHints() []FunctionKey { return FunctionKeys }
 

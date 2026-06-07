@@ -6011,6 +6011,88 @@ func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {
 	}
 }
 
+func setupSelectionsStripFocusTest(t *testing.T) (*App, *panel.State) {
+	t.Helper()
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(beta, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActiveSubFocus = ui.SubFocusFileList
+	left := app.panelByID(ui.LeftPanel)
+	selectPanelEntryByName(t, left, "beta")
+	if selected, _ := left.ToggleSelection(); !selected {
+		t.Fatal("toggle selection on beta")
+	}
+	selectPanelEntryByName(t, left, "alpha")
+	if err := left.NavigateTo(alpha, "", 20); err != nil {
+		t.Fatalf("NavigateTo alpha: %v", err)
+	}
+	if left.SelectionsStripCount() == 0 {
+		t.Fatal("expected selections strip to list beta while cwd is alpha")
+	}
+	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	return app, left
+}
+
+func TestActiveFooterKeysSelectionsStripFocused(t *testing.T) {
+	app, _ := setupSelectionsStripFocusTest(t)
+	want := menu.FunctionKeysSelectionsStripView(app.keys.MenuBindingLabel(keymap.ActionPanelClearSelection))
+	got := app.activeFooterKeys()
+	if len(got) != len(want) {
+		t.Fatalf("footer len = %d, want %d: got %+v", len(got), len(want), got)
+	}
+	for i := range want {
+		if got[i].Key != want[i].Key || got[i].KeyLabel != want[i].KeyLabel || got[i].Hint != want[i].Hint {
+			t.Fatalf("footer key %d = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+	for _, fk := range got {
+		if fk.Key == tcell.KeyEsc || fk.Key == tcell.KeyF9 || fk.Key == tcell.KeyF4 {
+			t.Fatalf("strip footer must not list Esc/F9/F4, got %+v", got)
+		}
+	}
+}
+
+func TestSelectionsStripClearSelectionViaBinding(t *testing.T) {
+	app, left := setupSelectionsStripFocusTest(t)
+	app.dispatch(keymap.ActionPanelClearSelection)
+	if len(left.SelectedPaths) != 0 {
+		t.Fatalf("SelectedPaths len = %d, want 0", len(left.SelectedPaths))
+	}
+	if left.SelectionsStripCount() != 0 {
+		t.Fatalf("SelectionsStripCount = %d, want 0", left.SelectionsStripCount())
+	}
+	if app.model.ActiveSubFocus != ui.SubFocusFileList {
+		t.Fatalf("ActiveSubFocus = %d, want file list", app.model.ActiveSubFocus)
+	}
+	if !strings.Contains(app.model.Message, "Selection cleared") {
+		t.Fatalf("message = %q, want Selection cleared", app.model.Message)
+	}
+}
+
+func TestSelectionsStripIgnoresFileEditOnF4(t *testing.T) {
+	app, left := setupSelectionsStripFocusTest(t)
+	before := len(left.SelectedPaths)
+	app.dispatch(keymap.ActionFileEdit)
+	if len(left.SelectedPaths) != before {
+		t.Fatalf("SelectedPaths changed after F4 dispatch on strip focus")
+	}
+	if app.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
+		t.Fatalf("ActiveSubFocus = %d, want selections strip", app.model.ActiveSubFocus)
+	}
+	if app.model.Menu.Open {
+		t.Fatal("F4 dispatch on strip focus must not open menu")
+	}
+}
+
 func TestToggleSyncDisablesWhenAlreadyDriving(t *testing.T) {
 	root := t.TempDir()
 	if err := os.Mkdir(filepath.Join(root, "alpha"), 0o755); err != nil {
