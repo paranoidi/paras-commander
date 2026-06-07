@@ -94,6 +94,58 @@ func TestToggleSelectionRemovesConflictingNestedDirs(t *testing.T) {
 	}
 }
 
+func TestApplySelectionAddsMatchesSequentialClear(t *testing.T) {
+	_, parent, child, file := testSelectionConflictDirs(t)
+	isDir := testExistingIsDir(t, map[string]bool{
+		filepath.Clean(parent): true,
+		filepath.Clean(child):  true,
+	})
+	orders := [][]string{
+		{file, parent},
+		{parent, file},
+		{child, parent},
+		{parent, child, file},
+	}
+	for _, order := range orders {
+		want := make(map[string]bool)
+		for _, path := range order {
+			path = filepath.Clean(path)
+			ClearSelectionConflicts(want, path, isDir(path), isDir)
+			want[path] = true
+		}
+		got := make(map[string]bool)
+		ApplySelectionAdds(got, order, isDir)
+		for path, on := range want {
+			if got[path] != on {
+				t.Fatalf("order %v: got %v want %v", order, got, want)
+			}
+		}
+		for path := range got {
+			if !want[path] {
+				t.Fatalf("order %v: unexpected %q in %v", order, path, got)
+			}
+		}
+	}
+}
+
+func TestPruneSelectionConflictsRemovesNestedPaths(t *testing.T) {
+	_, parent, _, file := testSelectionConflictDirs(t)
+	selected := map[string]bool{
+		filepath.Clean(parent): true,
+		filepath.Clean(file):   true,
+	}
+	isDir := testExistingIsDir(t, map[string]bool{filepath.Clean(parent): true})
+	if !PruneSelectionConflicts(selected, isDir) {
+		t.Fatal("expected nested conflicts to be pruned")
+	}
+	if !selected[filepath.Clean(parent)] {
+		t.Fatal("parent dir should remain after depth-descending prune")
+	}
+	if selected[filepath.Clean(file)] {
+		t.Fatal("descendant file should be removed when parent dir remains")
+	}
+}
+
 func TestClearSelectionConflictsParentDirRemovesDescendantFile(t *testing.T) {
 	_, parent, _, file := testSelectionConflictDirs(t)
 	selected := map[string]bool{

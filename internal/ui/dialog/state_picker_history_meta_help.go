@@ -126,6 +126,8 @@ type FindDialogState struct {
 	RankPending bool
 	// MarkedPaths holds paths toggled selected in the dialog (applied to the panel on OK).
 	MarkedPaths map[string]bool
+	// PathIsDir maps cleaned absolute path to isDir for O(1) conflict checks during marking.
+	PathIsDir map[string]bool
 }
 
 // FindDialogHasSelectionsCheckbox reports whether the search-selections row is shown.

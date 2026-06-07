@@ -1,8 +1,10 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -545,6 +547,104 @@ func TestFindDialogSelectAllMarksRankedResults(t *testing.T) {
 	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl))
 	if !app.model.FindDialog.MarkedPaths[filepath.Clean(aPath)] || !app.model.FindDialog.MarkedPaths[filepath.Clean(bPath)] {
 		t.Fatalf("Ctrl+A select all marks = %v", app.model.FindDialog.MarkedPaths)
+	}
+}
+
+func TestFindDialogBulkSelectAllManyFiles(t *testing.T) {
+	const n = 800
+	root := t.TempDir()
+	for i := range n {
+		name := filepath.Join(root, fmt.Sprintf("bulk_%04d.txt", i))
+		if err := os.WriteFile(name, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+	waitFindRankDone(t, app)
+
+	st := &app.model.FindDialog
+	if len(st.PathIsDir) < n {
+		t.Fatalf("PathIsDir len = %d, want >= %d", len(st.PathIsDir), n)
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if time.Now().After(deadline) {
+		t.Fatal("F5 select-all took too long")
+	}
+	if len(st.MarkedPaths) != len(st.Ranked) {
+		t.Fatalf("marked = %d ranked = %d", len(st.MarkedPaths), len(st.Ranked))
+	}
+}
+
+func TestFindDialogBulkGroupSelectManyFiles(t *testing.T) {
+	const n = 400
+	root := t.TempDir()
+	for i := range n {
+		if err := os.WriteFile(filepath.Join(root, fmt.Sprintf("match_%04d.txt", i)), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, fmt.Sprintf("skip_%04d.go", i)), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+	waitFindRankDone(t, app)
+
+	st := &app.model.FindDialog
+	wantEntries := n * 2
+	if st.IndexedCount != wantEntries {
+		t.Fatalf("indexed = %d, want %d", st.IndexedCount, wantEntries)
+	}
+	wantTxtInRanked := 0
+	for _, entIdx := range st.Ranked {
+		if entIdx >= 0 && entIdx < len(st.Entries) && strings.HasSuffix(st.Entries[entIdx].RelLine, ".txt") {
+			wantTxtInRanked++
+		}
+	}
+	if wantTxtInRanked == 0 {
+		t.Fatal("expected ranked txt entries")
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	app.findCtrl.ApplyGroupSelect("select", "*.txt", false, false, true)
+	if time.Now().After(deadline) {
+		t.Fatal("group select took too long")
+	}
+	marked := 0
+	for path := range st.MarkedPaths {
+		if strings.HasSuffix(filepath.Base(path), ".txt") {
+			marked++
+		}
+	}
+	if marked != wantTxtInRanked {
+		t.Fatalf("marked txt = %d, want %d in ranked list", marked, wantTxtInRanked)
 	}
 }
 

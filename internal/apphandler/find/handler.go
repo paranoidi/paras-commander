@@ -121,6 +121,7 @@ func (h *Handler) restartFindIndexer() {
 	}
 	st.IndexErr = ""
 	st.Entries = nil
+	st.PathIsDir = nil
 	st.IndexedCount = 0
 	st.Ranked = nil
 	st.MatchRanges = nil
@@ -360,8 +361,41 @@ func (h *Handler) appendFindBatch(st *ui.FindDialogState, batch []findpkg.Entry)
 			IsDir:   e.IsDir,
 			Type:    e.Type,
 		})
+		if st.PathIsDir == nil {
+			st.PathIsDir = make(map[string]bool)
+		}
+		st.PathIsDir[p] = e.IsDir
 	}
 	st.IndexedCount = len(st.Entries)
+}
+
+func rebuildFindPathIsDir(st *ui.FindDialogState) {
+	if len(st.Entries) == 0 {
+		st.PathIsDir = nil
+		return
+	}
+	m := make(map[string]bool, len(st.Entries))
+	root := st.RootPath
+	for _, e := range st.Entries {
+		abs := filepath.Clean(e.AbsPath(root))
+		if abs != "" {
+			m[abs] = e.IsDir
+		}
+	}
+	st.PathIsDir = m
+}
+
+func findEntryAbsPath(st *ui.FindDialogState, ent ui.FindEntry) string {
+	return filepath.Clean(ent.AbsPath(st.RootPath))
+}
+
+func (h *Handler) findPathIsDir(st *ui.FindDialogState) func(string) bool {
+	return func(path string) bool {
+		if st.PathIsDir == nil {
+			return false
+		}
+		return st.PathIsDir[filepath.Clean(path)]
+	}
 }
 
 func pathInFindSelectionScope(path string, roots []string) bool {
@@ -394,6 +428,7 @@ func (h *Handler) filterFindEntriesToSelectionScope() {
 	}
 	st.Entries = filtered
 	st.IndexedCount = len(st.Entries)
+	rebuildFindPathIsDir(st)
 	h.syncFindDialogRanks()
 }
 
@@ -1074,24 +1109,23 @@ func (h *Handler) findDialogSelectAll() {
 		return
 	}
 	if st.MarkedPaths == nil {
-		st.MarkedPaths = make(map[string]bool)
+		st.MarkedPaths = make(map[string]bool, len(st.Ranked))
 	}
-	conflicts := false
+	paths := make([]string, 0, len(st.Ranked))
 	for _, entIdx := range st.Ranked {
 		if entIdx < 0 || entIdx >= len(st.Entries) {
 			continue
 		}
-		ent := st.Entries[entIdx]
-		path := ent.AbsPath(st.RootPath)
+		path := findEntryAbsPath(st, st.Entries[entIdx])
 		if path == "" || st.MarkedPaths[path] {
 			continue
 		}
-		if h.clearFindMarkedConflicts(path, ent.IsDir) {
-			conflicts = true
-		}
-		st.MarkedPaths[path] = true
+		paths = append(paths, path)
 	}
-	if conflicts {
+	if len(paths) == 0 {
+		return
+	}
+	if panel.ApplySelectionAdds(st.MarkedPaths, paths, h.findPathIsDir(st)) {
 		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 	}
 }
@@ -1105,7 +1139,7 @@ func (h *Handler) findDialogToggleSelectionAndAdvance() {
 	if entIdx < 0 || entIdx >= len(st.Entries) {
 		return
 	}
-	path := st.Entries[entIdx].AbsPath(st.RootPath)
+	path := findEntryAbsPath(st, st.Entries[entIdx])
 	if path == "" {
 		return
 	}
@@ -1115,10 +1149,9 @@ func (h *Handler) findDialogToggleSelectionAndAdvance() {
 	if st.MarkedPaths[path] {
 		delete(st.MarkedPaths, path)
 	} else {
-		if h.clearFindMarkedConflicts(path, st.Entries[entIdx].IsDir) {
+		if panel.ApplySelectionAdds(st.MarkedPaths, []string{path}, h.findPathIsDir(st)) {
 			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 		}
-		st.MarkedPaths[path] = true
 	}
 	if st.Selected < len(st.Ranked)-1 {
 		st.Selected++
@@ -1333,11 +1366,11 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 	if pattern == "" {
 		return
 	}
-	conflicts := false
 	if mode == "select" {
 		if st.MarkedPaths == nil {
-			st.MarkedPaths = make(map[string]bool)
+			st.MarkedPaths = make(map[string]bool, len(st.Ranked))
 		}
+		paths := make([]string, 0, len(st.Ranked))
 		for _, entIdx := range st.Ranked {
 			if entIdx < 0 || entIdx >= len(st.Entries) {
 				continue
@@ -1346,18 +1379,19 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 			if filesOnly && ent.IsDir {
 				continue
 			}
-			name := filepath.Base(ent.AbsPath(st.RootPath))
-			if !panel.GroupMatch(name, pattern, caseSensitive, useShellPatterns) {
-				continue
-			}
-			path := ent.AbsPath(st.RootPath)
+			path := findEntryAbsPath(st, ent)
 			if path == "" || st.MarkedPaths[path] {
 				continue
 			}
-			if h.clearFindMarkedConflicts(path, ent.IsDir) {
-				conflicts = true
+			name := filepath.Base(path)
+			if !panel.GroupMatch(name, pattern, caseSensitive, useShellPatterns) {
+				continue
 			}
-			st.MarkedPaths[path] = true
+			paths = append(paths, path)
+		}
+		conflicts := false
+		if len(paths) > 0 {
+			conflicts = panel.ApplySelectionAdds(st.MarkedPaths, paths, h.findPathIsDir(st))
 		}
 		if len(st.MarkedPaths) == 0 {
 			st.MarkedPaths = nil
@@ -1377,12 +1411,12 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 		if filesOnly && ent.IsDir {
 			continue
 		}
-		name := filepath.Base(ent.AbsPath(st.RootPath))
-		if !panel.GroupMatch(name, pattern, caseSensitive, useShellPatterns) {
+		path := findEntryAbsPath(st, ent)
+		if path == "" {
 			continue
 		}
-		path := ent.AbsPath(st.RootPath)
-		if path == "" {
+		name := filepath.Base(path)
+		if !panel.GroupMatch(name, pattern, caseSensitive, useShellPatterns) {
 			continue
 		}
 		delete(st.MarkedPaths, path)
@@ -1391,23 +1425,4 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 		st.MarkedPaths = nil
 	}
 	h.host.SetTransientMessage(fmt.Sprintf("Unselected matching %q", pattern), ui.MessageUrgencyInfo)
-}
-
-func (h *Handler) clearFindMarkedConflicts(path string, isDir bool) bool {
-	st := &h.model.FindDialog
-	if st.MarkedPaths == nil {
-		return false
-	}
-	return panel.ClearSelectionConflicts(st.MarkedPaths, path, isDir, func(p string) bool {
-		return findMarkedPathIsDir(st, p)
-	})
-}
-
-func findMarkedPathIsDir(st *ui.FindDialogState, path string) bool {
-	for _, e := range st.Entries {
-		if e.AbsPath(st.RootPath) == path {
-			return e.IsDir
-		}
-	}
-	return false
 }
