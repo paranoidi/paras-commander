@@ -477,8 +477,6 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
-	defer app.stopWorker()
-	defer flushBackgroundJobs(t, app)
 
 	p := app.activePanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
@@ -570,8 +568,6 @@ func TestTransferDialogEnterFromDestinationConfirms(t *testing.T) {
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
-	defer app.stopWorker()
-	defer flushBackgroundJobs(t, app)
 
 	p := app.activePanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
@@ -606,8 +602,6 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
-	defer app.stopWorker()
-	defer flushBackgroundJobs(t, app)
 
 	p := app.activePanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
@@ -665,7 +659,6 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		}
 		screen := newScreen(t, 80, 24)
 		app := newApp(t, screen, dir)
-		defer app.stopWorker()
 
 		p := app.activePanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
@@ -694,7 +687,6 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		}
 		screen := newScreen(t, 80, 24)
 		app := newApp(t, screen, dir)
-		defer app.stopWorker()
 
 		p := app.activePanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
@@ -715,7 +707,6 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		}
 		screen := newScreen(t, 80, 24)
 		app := newApp(t, screen, dir)
-		defer app.stopWorker()
 
 		p := app.activePanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
@@ -744,7 +735,6 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		}
 		screen := newScreen(t, 80, 24)
 		app := newApp(t, screen, dir)
-		defer app.stopWorker()
 
 		p := app.activePanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
@@ -783,7 +773,6 @@ func TestTransferSelfCopyMultipleSourcesRejected(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{aaa: true, bbb: true}
@@ -832,8 +821,6 @@ func TestEnqueueCopyJobClearsCrossDirectorySelections(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
-	defer flushBackgroundJobs(t, app)
 
 	if err := app.activePanel().Load(here); err != nil {
 		t.Fatalf("Load here: %v", err)
@@ -880,8 +867,6 @@ func TestEnqueueMoveJobClearsCrossDirectorySelections(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
-	defer flushBackgroundJobs(t, app)
 
 	if err := app.activePanel().Load(here); err != nil {
 		t.Fatalf("Load here: %v", err)
@@ -7122,7 +7107,6 @@ func TestMkdirOpenInInactiveOpensOtherPanelAfterCreate(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "keep-cursor.txt"))
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	left := app.panelByID(ui.LeftPanel)
 	for i := 0; i < left.VisibleEntryCount(); i++ {
@@ -7166,7 +7150,6 @@ func TestMkdirActionCreateOnlyDoesNotQueueJob(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{src: true}
@@ -7200,7 +7183,6 @@ func TestMkdirActionCreateAndCopyQueuesCopyJob(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{src: true}
@@ -7247,7 +7229,6 @@ func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
 
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{src: true}
@@ -7291,7 +7272,6 @@ func TestCopyHereOpensRenameLikeDialogForSingleDirectory(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{src: true}
@@ -7322,7 +7302,6 @@ func TestCopyHereRejectsMultipleSelections(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{a: true, b: true}
@@ -7343,7 +7322,6 @@ func TestCopyHereRejectsFile(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{file: true}
@@ -7365,7 +7343,6 @@ func TestCopyHereDialogFocusCheckboxToggle(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{src: true}
@@ -7405,7 +7382,6 @@ func TestCopyHereWithFocusAfterSelectsAfterJob(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	p := app.activePanel()
 	selectPanelEntryByName(t, p, "10")
@@ -7455,7 +7431,6 @@ func TestCopyHereQueuesJobWithNewName(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{src: true}

@@ -21,7 +21,6 @@ func TestAddTransferJobSyncsJobPathMarksWithoutDrainingEvents(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	// Paused jobs stay on the queue so the test does not depend on pollJobEvents / worker timing.
 	app.addTransferJob(jobs.TypeCopy, []string{f1}, dst, true)

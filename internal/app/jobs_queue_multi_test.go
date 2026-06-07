@@ -24,7 +24,6 @@ func TestQueueRetainsMultiplePausedTransferJobs(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
 		p := filepath.Join(dir, name)
@@ -53,7 +52,6 @@ func TestFileMenuCopyOpensTransferDialogWithoutEnqueue(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	if err := app.activePanel().Load(dir); err != nil {
 		t.Fatalf("Load: %v", err)
@@ -94,7 +92,6 @@ func TestQuickFilterF5OpensCopyDialogWithoutEnqueue(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	if err := app.activePanel().Load(dir); err != nil {
 		t.Fatalf("Load: %v", err)

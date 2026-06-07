@@ -21,7 +21,6 @@ func TestPanelStashToggleIndependentPanels(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	left := app.panelByID(ui.LeftPanel)
 	right := app.panelByID(ui.RightPanel)
@@ -50,7 +49,6 @@ func TestPanelStashRestoreWithoutLiveSelection(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	panel := app.activePanel()
 	panel.AddSelection(p)
@@ -75,7 +73,6 @@ func TestPanelStashRestoreDialogMerge(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	defer app.stopWorker()
 
 	panel := app.activePanel()
 	panel.AddSelection(stashed)
