@@ -184,6 +184,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
+	if a.model.ViewMode == ui.ViewBrowser &&
+		a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip &&
+		!a.inQuickFilterUI() {
+		return menu.FunctionKeysSelectionsStripView(a.keys.MenuBindingLabel(keymap.ActionPanelClearSelection))
+	}
 	return menu.FunctionKeys
 }
 
@@ -409,6 +414,9 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	if nextAction == "" {
 		// Alt+letter opens the corresponding pulldown menu directly.
 		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+			if a.model.ViewMode == ui.ViewBrowser && a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip {
+				return false, false
+			}
 			if a.openMenuByShortcut(event.Rune()) {
 				a.render()
 				return false, true

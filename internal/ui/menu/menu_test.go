@@ -379,3 +379,29 @@ func TestFunctionKeysFilePreviewViewExcludesMenuF9(t *testing.T) {
 		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F10 only", len(keys))
 	}
 }
+
+func TestFunctionKeysSelectionsStripView(t *testing.T) {
+	t.Parallel()
+	keys := FunctionKeysSelectionsStripView("C-u")
+	if len(keys) != 3 {
+		t.Fatalf("len = %d, want F1 + clear + F10", len(keys))
+	}
+	if keys[0].KeyLabel != "F1" || keys[0].Hint != "Help" {
+		t.Fatalf("F1 = %+v", keys[0])
+	}
+	if keys[1].KeyLabel != "C-u" || keys[1].Hint != "Unselect all" {
+		t.Fatalf("clear selection = %+v", keys[1])
+	}
+	if keys[2].KeyLabel != "F10" || keys[2].Hint != "Quit" {
+		t.Fatalf("F10 = %+v", keys[2])
+	}
+	for _, fk := range keys {
+		if fk.Key == tcell.KeyEsc || fk.Key == tcell.KeyF9 || fk.Key == tcell.KeyF4 {
+			t.Fatalf("strip footer must not list Esc/F9/F4, got %+v", keys)
+		}
+	}
+	empty := FunctionKeysSelectionsStripView("")
+	if len(empty) != 2 {
+		t.Fatalf("empty clear label len = %d, want F1 + F10 only", len(empty))
+	}
+}
