@@ -1570,6 +1570,49 @@ func TestOpenActivePathInInactivePanel(t *testing.T) {
 	}
 }
 
+func TestOpenInOtherPanelDisablesSync(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	gamma := filepath.Join(alpha, "gamma")
+	if err := os.MkdirAll(gamma, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	selectPanelEntryByName(t, left, "alpha")
+	app.model.ActivePanel = ui.LeftPanel
+	app.model.SyncFollowEnabled = true
+	app.model.SyncFollowPanel = ui.LeftPanel
+
+	app.dispatch(keymap.ActionPanelOpenDirInOther)
+
+	if app.model.SyncFollowEnabled {
+		t.Fatal("sync should be disabled after open-dir-in-other")
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyWarn {
+		t.Fatalf("message urgency = %v, want warn", app.model.MessageUrgency)
+	}
+	if !strings.Contains(app.model.Message, "sync disabled") {
+		t.Fatalf("message = %q, want sync disabled notice", app.model.Message)
+	}
+
+	app.model.SyncFollowEnabled = true
+	app.model.SyncFollowPanel = ui.LeftPanel
+	if _, err := left.Enter(app.activeViewportRows()); err != nil {
+		t.Fatal(err)
+	}
+	app.dispatch(keymap.ActionPanelOpenActivePathInOther)
+
+	if app.model.SyncFollowEnabled {
+		t.Fatal("sync should be disabled after open-active-path-in-other")
+	}
+	if !strings.Contains(app.model.Message, "sync disabled") {
+		t.Fatalf("message after open-active-path = %q, want sync disabled notice", app.model.Message)
+	}
+}
+
 func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")

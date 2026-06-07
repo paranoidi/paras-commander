@@ -215,6 +215,16 @@ func (a *App) navigatePanelToDirectory(panelID int, dirPath, selectedName string
 	return p.NavigateToPath(loc, selectedName, vr)
 }
 
+// disableSyncFollowIfEnabled turns off latched panel sync; returns whether it was on.
+func (a *App) disableSyncFollowIfEnabled() bool {
+	if !a.model.SyncFollowEnabled {
+		return false
+	}
+	a.model.SyncFollowEnabled = false
+	a.clearPanelSyncFollowNavCoalesce()
+	return true
+}
+
 // toggleSyncFollow flips latched panel sync on the active panel with mutual exclusion:
 // if the active panel already drives sync it is disabled; otherwise the other panel's sync
 // (if any) is cleared first and the active panel becomes the new driver. Enabling fires

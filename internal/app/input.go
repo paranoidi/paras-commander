@@ -721,6 +721,9 @@ func (a *App) dispatch(actionID string) {
 			a.setErrorMessage("Open in other panel failed", err)
 			return
 		}
+		if a.disableSyncFollowIfEnabled() {
+			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
+		}
 	case keymap.ActionPanelOpenActivePathInOther:
 		if a.model.ViewMode != ui.ViewBrowser {
 			return
@@ -728,6 +731,9 @@ func (a *App) dispatch(actionID string) {
 		if err := a.navigatePanelToDirectory(a.inactivePanelID(), activePanel.PathString(), ""); err != nil {
 			a.setErrorMessage("Open current path in other panel failed", err)
 			return
+		}
+		if a.disableSyncFollowIfEnabled() {
+			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
 		}
 	case keymap.ActionNavParent:
 		if err := activePanel.Parent(viewportRows); err != nil {
