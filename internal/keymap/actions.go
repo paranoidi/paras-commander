@@ -81,8 +81,9 @@ const (
 	ActionFileFlatten            = "file.flatten"
 
 	// Copy/Move
-	ActionCopy = "file.copy"
-	ActionMove = "file.move"
+	ActionCopy         = "file.copy"
+	ActionFileCopyHere = "file.copy-here"
+	ActionMove         = "file.move"
 
 	// Remote
 	ActionRemoteSFTPLink = "remote.sftp-link"
@@ -227,8 +228,9 @@ var KnownActions = map[string]struct{}{
 	ActionFileEdit:               {},
 	ActionFileFlatten:            {},
 
-	ActionCopy: {},
-	ActionMove: {},
+	ActionCopy:         {},
+	ActionFileCopyHere: {},
+	ActionMove:         {},
 
 	ActionRemoteSFTPLink: {},
 

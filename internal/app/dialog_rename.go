@@ -13,7 +13,7 @@ func (a *App) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
 		return false
 	}
 	d := &a.model.FileDialog
-	if !d.Open || d.DialogType != ui.FileDialogRename || d.RenamePhase != ui.RenamePhaseMain {
+	if !d.Open || !ui.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != ui.RenamePhaseMain {
 		return false
 	}
 	id, ok := a.keysRenameDialog.Lookup(ev)
@@ -42,7 +42,7 @@ func (a *App) renameDialogFooterEligible() bool {
 		return false
 	}
 	d := &a.model.FileDialog
-	if !d.Open || d.DialogType != ui.FileDialogRename || d.RenamePhase != ui.RenamePhaseMain {
+	if !d.Open || !ui.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != ui.RenamePhaseMain {
 		return false
 	}
 	return a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize) != "" ||

@@ -37,7 +37,7 @@ func (a *App) dialogInputRestoreFooterEligible() bool {
 		return false
 	}
 	if a.model.FileDialog.Open {
-		if a.model.FileDialog.DialogType == ui.FileDialogRename && a.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+		if ui.FileDialogHasRenamePhase(a.model.FileDialog.DialogType) && a.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
 			return false
 		}
 		if a.fileDialogOnButton() || a.fileDialogOnRadio() {

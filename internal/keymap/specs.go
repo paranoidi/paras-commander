@@ -527,6 +527,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"duplicate"},
 		},
 		{
+			ID:           ActionFileCopyHere,
+			Title:        "Copy here",
+			Section:      "File operations",
+			DefaultKeys:  []string{"S-F5"},
+			PreferredKey: "S-F5",
+			Keywords:     []string{"duplicate", "directory", "same directory"},
+		},
+		{
 			ID:          ActionFileExtract,
 			Title:       "Extract archives",
 			Section:     "File operations",

@@ -7282,3 +7282,199 @@ func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
 	}
 	waitUntilAppJobsFinished(t, app, 5*time.Second)
 }
+
+func TestCopyHereOpensRenameLikeDialogForSingleDirectory(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "project")
+	if err := os.Mkdir(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{src: true}
+
+	app.dispatch(keymap.ActionFileCopyHere)
+	if !app.model.FileDialog.Open {
+		t.Fatal("expected copy-here dialog open")
+	}
+	if app.model.FileDialog.DialogType != ui.FileDialogCopyHere {
+		t.Fatalf("dialog type = %v, want FileDialogCopyHere", app.model.FileDialog.DialogType)
+	}
+	if app.model.FileDialog.CopyHereSource != src {
+		t.Fatalf("CopyHereSource = %q, want %q", app.model.FileDialog.CopyHereSource, src)
+	}
+	if len(app.model.FileDialog.Fields) != 1 || app.model.FileDialog.Fields[0].Value != "project" {
+		t.Fatalf("name field = %+v, want prefilled project", app.model.FileDialog.Fields)
+	}
+}
+
+func TestCopyHereRejectsMultipleSelections(t *testing.T) {
+	dir := t.TempDir()
+	a := filepath.Join(dir, "a")
+	b := filepath.Join(dir, "b")
+	for _, p := range []string{a, b} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{a: true, b: true}
+
+	app.dispatch(keymap.ActionFileCopyHere)
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should stay closed for multiple selections")
+	}
+	if !strings.Contains(app.model.Message, "single directory") {
+		t.Fatalf("message = %q, want single-directory error", app.model.Message)
+	}
+}
+
+func TestCopyHereRejectsFile(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "note.txt")
+	writeFile(t, file)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{file: true}
+
+	app.dispatch(keymap.ActionFileCopyHere)
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should stay closed for file selection")
+	}
+	if !strings.Contains(app.model.Message, "not a directory") {
+		t.Fatalf("message = %q, want not-a-directory error", app.model.Message)
+	}
+}
+
+func TestCopyHereDialogFocusCheckboxToggle(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "project")
+	if err := os.Mkdir(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{src: true}
+
+	app.dispatch(keymap.ActionFileCopyHere)
+	if app.model.FileDialog.RenameFocusAfter {
+		t.Fatal("RenameFocusAfter = true, want false (default)")
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	if !app.model.FileDialog.RenameFocusAfter {
+		t.Fatal("Alt+F should toggle focus-after checkbox on")
+	}
+	okIdx := ui.FileDialogOKFocusIndex(app.model.FileDialog)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.FileDialog.FocusedField != 1 {
+		t.Fatalf("Down from field: focus = %d, want 1 (checkbox)", app.model.FileDialog.FocusedField)
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.FileDialog.RenameFocusAfter {
+		t.Fatal("Enter on checkbox should toggle focus-after off")
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.FileDialog.FocusedField != okIdx {
+		t.Fatalf("Down from checkbox: focus = %d, want OK %d", app.model.FileDialog.FocusedField, okIdx)
+	}
+}
+
+func TestCopyHereWithFocusAfterSelectsAfterJob(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 20; i++ {
+		name := fmt.Sprintf("%02d", i)
+		if err := os.Mkdir(filepath.Join(dir, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	src := filepath.Join(dir, "10")
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	p := app.activePanel()
+	selectPanelEntryByName(t, p, "10")
+	p.SelectedPaths = map[string]bool{src: true}
+
+	newName := "99"
+	app.dispatch(keymap.ActionFileCopyHere)
+	for _, r := range newName {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	flushBackgroundJobs(t, app)
+	app.applyJobRefreshes()
+
+	p = app.activePanel()
+	entry, ok := p.CurrentEntry()
+	if !ok {
+		t.Fatal("CurrentEntry() ok = false after copy-here job")
+	}
+	if entry.Name != newName {
+		t.Fatalf("cursor entry = %q, want %s", entry.Name, newName)
+	}
+	vp := app.activeViewportRows()
+	wantScroll := p.Cursor - vp/2
+	if wantScroll < 0 {
+		wantScroll = 0
+	}
+	maxOffset := p.VisibleEntryCount() - vp
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	if wantScroll > maxOffset {
+		wantScroll = maxOffset
+	}
+	if p.ScrollOffset != wantScroll {
+		t.Fatalf("ScrollOffset = %d, want %d (centered on copied entry)", p.ScrollOffset, wantScroll)
+	}
+}
+
+func TestCopyHereQueuesJobWithNewName(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "alpha")
+	if err := os.Mkdir(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	defer app.stopWorker()
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{src: true}
+
+	app.dispatch(keymap.ActionFileCopyHere)
+	for _, r := range "beta" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	jobsList := app.jobState.AllJobs()
+	if len(jobsList) != 1 {
+		t.Fatalf("expected 1 copy job, got %d", len(jobsList))
+	}
+	wantDest := filepath.Join(dir, "beta")
+	if got := filepath.Clean(jobsList[0].Destination.String()); got != filepath.Clean(wantDest) {
+		t.Fatalf("job destination = %q, want %q", got, wantDest)
+	}
+	if len(jobsList[0].Sources) != 1 || filepath.Clean(jobsList[0].Sources[0].String()) != filepath.Clean(src) {
+		t.Fatalf("job sources = %+v, want [%q]", jobsList[0].Sources, src)
+	}
+}

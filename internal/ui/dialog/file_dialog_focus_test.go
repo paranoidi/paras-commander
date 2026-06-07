@@ -54,3 +54,19 @@ func TestFileDialogFocusFormRenameWithFocusCheckbox(t *testing.T) {
 		t.Fatalf("OKIndex = %d want %d", form.OKIndex(), wantContent)
 	}
 }
+
+func TestFileDialogFocusFormCopyHereWithFocusCheckbox(t *testing.T) {
+	st := FileDialogState{
+		DialogType:  FileDialogCopyHere,
+		RenamePhase: RenamePhaseMain,
+		Fields:      []FileDialogField{{}},
+	}
+	form := FileDialogFocusForm(st)
+	wantContent := 1 + 1
+	if form.NumContent != wantContent {
+		t.Fatalf("NumContent = %d want %d", form.NumContent, wantContent)
+	}
+	if form.OKIndex() != wantContent {
+		t.Fatalf("OKIndex = %d want %d", form.OKIndex(), wantContent)
+	}
+}

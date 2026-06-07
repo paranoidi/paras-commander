@@ -8,7 +8,7 @@ import (
 
 func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	d := &a.model.FileDialog
-	if d.Open && d.DialogType == ui.FileDialogRename && d.RenamePhase != ui.RenamePhaseMain {
+	if d.Open && ui.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != ui.RenamePhaseMain {
 		return a.handleRenameToolKey(event)
 	}
 	if a.tryRenameDialogShortcut(event) {
@@ -307,7 +307,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 // tryRenameFocusAltShortcut toggles focus-after-rename via Alt+F on the main rename dialog.
 func (a *App) tryRenameFocusAltShortcut(r rune) bool {
 	d := &a.model.FileDialog
-	if d.DialogType != ui.FileDialogRename || d.RenamePhase != ui.RenamePhaseMain {
+	if !ui.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != ui.RenamePhaseMain {
 		return false
 	}
 	if r != 'f' && r != 'F' {
@@ -355,7 +355,7 @@ func (a *App) selectFocusedMkdirRadio() {
 
 func (a *App) focusedField() *ui.FileDialogField {
 	d := &a.model.FileDialog
-	if d.DialogType == ui.FileDialogRename && d.RenamePhase != ui.RenamePhaseMain {
+	if ui.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != ui.RenamePhaseMain {
 		return nil
 	}
 	if d.DialogType == ui.FileDialogMassRename {
@@ -463,7 +463,7 @@ func (a *App) fileDialogOnMassRenameCaseCheckbox() bool {
 // fileDialogOnRenameFocusCheckbox returns true when focus is on the focus-after-rename checkbox.
 func (a *App) fileDialogOnRenameFocusCheckbox() bool {
 	d := &a.model.FileDialog
-	return d.DialogType == ui.FileDialogRename &&
+	return ui.FileDialogHasRenamePhase(d.DialogType) &&
 		d.RenamePhase == ui.RenamePhaseMain &&
 		len(d.Fields) > 0 &&
 		d.FocusedField == len(d.Fields)
@@ -510,7 +510,7 @@ func (a *App) fileDialogOnButton() bool {
 	if d.DialogType == ui.FileDialogDelete {
 		return true // delete only has buttons
 	}
-	if d.DialogType == ui.FileDialogRename && d.RenamePhase != ui.RenamePhaseMain {
+	if ui.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != ui.RenamePhaseMain {
 		return d.FocusedField >= 2
 	}
 	return d.FocusedField >= ui.FileDialogOKFocusIndex(*d)

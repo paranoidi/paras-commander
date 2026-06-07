@@ -68,6 +68,7 @@ const (
 
 	FileDialogNone         = dialog.FileDialogNone
 	FileDialogRename       = dialog.FileDialogRename
+	FileDialogCopyHere     = dialog.FileDialogCopyHere
 	FileDialogMkdir        = dialog.FileDialogMkdir
 	FileDialogDelete       = dialog.FileDialogDelete
 	FileDialogChmod        = dialog.FileDialogChmod
@@ -219,4 +220,9 @@ func ApplyRenameSanitize(s string, dotsToSpace, underscoresToSpace bool) string 
 // ApplyRenameSlugify replaces ASCII spaces with the chosen separator (delegates to dialog).
 func ApplyRenameSlugify(s string, sep RenameSlugifySep) string {
 	return dialog.ApplyRenameSlugify(s, dialog.RenameSlugifySep(sep))
+}
+
+// FileDialogHasRenamePhase reports dialog types that use RenamePhase (rename, copy-here).
+func FileDialogHasRenamePhase(t FileDialogType) bool {
+	return dialog.FileDialogHasRenamePhase(t)
 }
