@@ -846,8 +846,8 @@ func TestDrawFooterShowsViewEditAndOmitsUnusedFKeys(t *testing.T) {
 	if !strings.Contains(line, "View") || !strings.Contains(line, "Edit") {
 		t.Fatalf("footer = %q, want F3 View and F4 Edit placeholders", line)
 	}
-	if strings.Contains(line, "Quick") || strings.Contains(line, "EditUserCmd") {
-		t.Fatalf("footer = %q, shift prefixes should be dropped before ~ truncation at this width", line)
+	if strings.Contains(line, "Quick") || strings.Contains(line, "UserCmdEdit") {
+		t.Fatalf("footer = %q, shift suffixes should be dropped before ~ truncation at this width", line)
 	}
 	if strings.Contains(line, "F11") || strings.Contains(line, "F12") {
 		t.Fatalf("footer should not list empty F11/F12 slots, got %q", line)
@@ -867,18 +867,18 @@ func TestDrawFooterShiftHintPrefixUsesShiftLabelStyle(t *testing.T) {
 		{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", Hint: "View"},
 	})
 
-	const prefixStart = 3 // "F3" + space
-	for col := prefixStart; col < prefixStart+len("Quick"); col++ {
-		_, st, _ := screen.Get(col, 0)
-		if st != styles.FooterLabelShift {
-			t.Fatalf("prefix col %d: style = %v, want FooterLabelShift", col, st)
-		}
-	}
-	const primaryStart = prefixStart + len("Quick")
+	const primaryStart = 3 // "F3" + space
 	for col := primaryStart; col < primaryStart+len("View"); col++ {
 		_, st, _ := screen.Get(col, 0)
 		if st != styles.FooterLabel {
 			t.Fatalf("primary col %d: style = %v, want FooterLabel", col, st)
+		}
+	}
+	const shiftStart = primaryStart + len("View")
+	for col := shiftStart; col < shiftStart+len("Quick"); col++ {
+		_, st, _ := screen.Get(col, 0)
+		if st != styles.FooterLabelShift {
+			t.Fatalf("shift hint col %d: style = %v, want FooterLabelShift", col, st)
 		}
 	}
 }

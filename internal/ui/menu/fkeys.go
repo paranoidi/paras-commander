@@ -11,7 +11,7 @@ type FunctionKey struct {
 	Key             tcell.Key // tcell.KeyF1 etc.
 	KeyLabel        string    // "F1"
 	Hint            string    // primary footer label suffix (e.g. "Mkdir")
-	HintShiftPrefix string    // Shift-alternative prefix shown before Hint (e.g. "Open")
+	HintShiftPrefix string    // Shift-alternative suffix shown after Hint (e.g. "Ren" in MovRen)
 }
 
 // FullHint returns the combined footer hint text for width layout.

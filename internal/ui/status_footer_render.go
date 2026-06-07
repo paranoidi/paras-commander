@@ -49,13 +49,13 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 			if hintRunes > 0 {
 				screen.SetContent(x, rect.Y, ' ', nil, styles.FooterLabel)
 				x++
-				if prefixRunes > 0 {
-					primitive.TextOverlay(screen, x, rect.Y, prefixRunes, prefix, styles.FooterLabelShift)
-					x += prefixRunes
-				}
 				if primaryRunes > 0 {
 					primitive.TextOverlay(screen, x, rect.Y, primaryRunes, layout.primary, styles.FooterLabel)
 					x += primaryRunes
+				}
+				if prefixRunes > 0 {
+					primitive.TextOverlay(screen, x, rect.Y, prefixRunes, prefix, styles.FooterLabelShift)
+					x += prefixRunes
 				}
 			}
 			if i < n-1 && gapsBetween > 0 {
@@ -70,7 +70,7 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 }
 
 // footerHintStringsFittingWidth returns per-item hint layouts (possibly without shift
-// prefixes and/or truncated primary text) and total width (key + space + hint for each
+// suffixes and/or truncated primary text) and total width (key + space + hint for each
 // item). Extra horizontal space is for gaps between items, not padding inside columns.
 func footerHintStringsFittingWidth(visible []menu.FunctionKey, keyRegionWidth int) ([]footerHintLayout, int) {
 	layouts, sum := footerMeasureLayouts(visible, true, -1)
