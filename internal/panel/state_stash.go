@@ -55,6 +55,8 @@ func (s *State) ApplySelectionSnapshot(paths, stripOrder []string) {
 	s.SelectionsStripOrder = nil
 	paths = filterExistingSelectionPaths(paths)
 	if len(paths) == 0 {
+		s.selectionHasDirs = false
+		s.invalidateSelectionDerived()
 		s.normalizeSelectionsStripCursor()
 		return
 	}
@@ -62,12 +64,14 @@ func (s *State) ApplySelectionSnapshot(paths, stripOrder []string) {
 	for _, p := range paths {
 		s.SelectedPaths[p] = true
 	}
+	s.refreshSelectionHasDirs(nil)
 	filteredStrip := filterSelectionsStripOrder(stripOrder, s.SelectedPaths)
 	if len(filteredStrip) != len(stripOrder) {
 		s.SelectionsStripOrder = nil
 	} else {
 		s.SelectionsStripOrder = filteredStrip
 	}
+	s.invalidateSelectionDerived()
 	s.normalizeSelectionsStripCursor()
 }
 
@@ -105,6 +109,8 @@ func (s *State) MergeSelectionSnapshot(paths, stripOrder []string) {
 	} else {
 		s.SelectionsStripOrder = merged
 	}
+	s.refreshSelectionHasDirs(nil)
+	s.invalidateSelectionDerived()
 	s.normalizeSelectionsStripCursor()
 }
 

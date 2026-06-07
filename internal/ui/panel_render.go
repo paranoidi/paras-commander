@@ -103,7 +103,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 	var selectionSizeLabel string
 	if showSelectionSizeOnBottom && state.SelectedPathCount() > 0 {
 		selectionSizeLabel, _ = SelectionSizeLabel(
-			state,
+			&state,
 			state.Path.IsRemote(),
 			painter,
 			diskUsageDescendIntoMountPoints,

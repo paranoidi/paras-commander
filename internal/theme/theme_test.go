@@ -145,7 +145,7 @@ func TestParseLoadsPanelCursorIconFG(t *testing.T) {
 		for _, k := range requiredStyleKeys {
 			if k == key {
 				o[k] = `{ fg = "white", bg = "black", icon = "yellow" }`
-			} else if _, isOption := dialogOptionStyleKeys[k]; isOption {
+			} else if _, isOption := dialogSurfaceForegroundStyleKeys[k]; isOption {
 				o[k] = `{ fg = "white" }`
 			} else {
 				o[k] = `{ fg = "white", bg = "black" }`
@@ -180,6 +180,40 @@ func TestParseRejectsBGOnDialogOption(t *testing.T) {
 	_, err := parse(data)
 	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background comes from dialog.surface)`) {
 		t.Fatalf("parse() error = %v, want reject bg on dialog.option", err)
+	}
+}
+
+func TestParseRejectsBGOnDialogIndicatorSelectionSize(t *testing.T) {
+	data := testTheme(t, "badindicatorbg", nil, map[string]string{
+		"dialog.indicator.selection_size": `{ fg = "yellow", bg = "bright_black" }`,
+	})
+	_, err := parse(data)
+	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background comes from dialog.surface)`) {
+		t.Fatalf("parse() error = %v, want reject bg on dialog.indicator.selection_size", err)
+	}
+}
+
+func TestDialogIndicatorSelectionSizeStyleUsesSurfaceBackground(t *testing.T) {
+	data := testTheme(t, "findselectionsize", nil, map[string]string{
+		"dialog.surface":                  `{ fg = "white", bg = "yellow" }`,
+		"dialog.indicator.selection_size": `{ fg = "yellow", bold = true }`,
+	})
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, surfaceBG, _ := th.DialogSurface.Decompose()
+	got := th.DialogIndicatorSelectionSizeStyle()
+	fg, bg, attrs := got.Decompose()
+	if bg != surfaceBG {
+		t.Fatalf("DialogIndicatorSelectionSizeStyle bg = %v, want surface bg %v", bg, surfaceBG)
+	}
+	wantFG, _, _ := th.DialogIndicatorSelectionSize.Decompose()
+	if fg != wantFG {
+		t.Fatalf("DialogIndicatorSelectionSizeStyle fg = %v, want %v", fg, wantFG)
+	}
+	if attrs&tcell.AttrBold == 0 {
+		t.Fatal("expected bold from dialog.indicator.selection_size")
 	}
 }
 

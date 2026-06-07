@@ -59,6 +59,39 @@ func DrawDialogHSeparator(screen tcell.Screen, rect Rect, y int, borderStyle tce
 	screen.SetContent(rect.X+rect.Width-1, y, '┤', nil, borderStyle)
 }
 
+// DrawDialogHSeparatorWithCenteredLabel draws ├ ─ label ─ ┤ with the label centered on the interior row.
+func DrawDialogHSeparatorWithCenteredLabel(screen tcell.Screen, rect Rect, y int, borderStyle, labelStyle tcell.Style, paddedLabel string) {
+	screen.SetContent(rect.X, y, '├', nil, borderStyle)
+	firstIn := rect.X + 1
+	lastIn := rect.X + rect.Width - 2
+	if lastIn < firstIn {
+		screen.SetContent(rect.X+rect.Width-1, y, '┤', nil, borderStyle)
+		return
+	}
+	labelRunes := []rune(paddedLabel)
+	labelW := len(labelRunes)
+	interiorW := lastIn - firstIn + 1
+	if labelW <= 0 || labelW > interiorW {
+		for x := firstIn; x <= lastIn; x++ {
+			screen.SetContent(x, y, '─', nil, borderStyle)
+		}
+		screen.SetContent(rect.X+rect.Width-1, y, '┤', nil, borderStyle)
+		return
+	}
+	leftPad := (interiorW - labelW) / 2
+	labelStart := firstIn + leftPad
+	for x := firstIn; x < labelStart; x++ {
+		screen.SetContent(x, y, '─', nil, borderStyle)
+	}
+	for i, r := range labelRunes {
+		screen.SetContent(labelStart+i, y, r, nil, labelStyle)
+	}
+	for x := labelStart + labelW; x <= lastIn; x++ {
+		screen.SetContent(x, y, '─', nil, borderStyle)
+	}
+	screen.SetContent(rect.X+rect.Width-1, y, '┤', nil, borderStyle)
+}
+
 // DrawSimpleDialogInput paints a full-width input row with dialog input styles (no DialogSurface override)
 // and shows focus with a reversed cell at the logical cursor (end of value), per AGENTS.md.
 func DrawSimpleDialogInput(screen tcell.Screen, x, y, width int, value string, focused, invalid bool, styles theme.Theme) {

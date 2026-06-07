@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
-	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -16,21 +15,27 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 	p := a.panelByID(panelID)
 	if p.SelectedPathCount() == 0 {
 		a.selectionSizeScanFP[panelID] = ""
+		a.selectionSizeScanGen[panelID] = 0
+		a.selectionSizeScanPath[panelID] = ""
 		return
 	}
 	if p.Path.IsRemote() {
 		a.selectionSizeScanFP[panelID] = ""
+		a.selectionSizeScanGen[panelID] = 0
+		a.selectionSizeScanPath[panelID] = ""
 		return
 	}
-	paths := make([]string, 0, p.SelectedPathCount())
-	for path, on := range p.SelectedPaths {
-		if on {
-			paths = append(paths, path)
-		}
+	path := p.Path.String()
+	gen := p.SelectionDerivedGen()
+	if a.selectionSizeScanGen[panelID] == gen && a.selectionSizeScanPath[panelID] == path {
+		return
 	}
+	a.selectionSizeScanGen[panelID] = gen
+	a.selectionSizeScanPath[panelID] = path
+
 	byPath := entriesByPath(p)
 	need := directoriesNeedingScan(
-		panel.PruneNestedPaths(paths),
+		p.PrunedSelectionRoots(),
 		byPath,
 		p.ListingDevice,
 		p.ListingDeviceValid,

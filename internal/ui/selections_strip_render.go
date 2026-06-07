@@ -38,7 +38,7 @@ func drawSelectionsStrip(
 
 	if showSelectionSizeOnBottom {
 		if raw, ok := SelectionSizeLabel(
-			state,
+			&state,
 			state.Path.IsRemote(),
 			painter,
 			diskUsageDescendIntoMountPoints,

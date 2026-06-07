@@ -164,6 +164,7 @@ type Theme struct {
 	DialogOptionActiveSelected     tcell.Style
 	DialogOptionSelected           tcell.Style
 	DialogOptionInvalid            tcell.Style
+	DialogIndicatorSelectionSize   tcell.Style
 	DialogMassRenameBefore         tcell.Style
 	DialogMassRenameBeforeRemoved  tcell.Style
 	DialogMassRenameBeforeReplaced tcell.Style
@@ -259,6 +260,16 @@ func (t Theme) DialogOptionRowStyle(focused, selected bool) tcell.Style {
 // DialogOptionInvalidStyle returns the resolved style for invalid/missing option rows.
 func (t Theme) DialogOptionInvalidStyle() tcell.Style {
 	return mergeForegroundOnSurface(t.DialogOptionInvalid, t.DialogSurface)
+}
+
+// DialogIndicatorSelectionSizeStyle returns the find-dialog selection count/size label on a horizontal separator.
+// Foreground comes from dialog.indicator.selection_size; background always matches dialog.surface.
+func (t Theme) DialogIndicatorSelectionSizeStyle() tcell.Style {
+	src := t.DialogIndicatorSelectionSize
+	if src == (tcell.Style{}) {
+		src = t.PanelBottomIndicatorSelectionSize
+	}
+	return mergeForegroundOnSurface(src, t.DialogSurface)
 }
 
 func mergeForegroundOnSurface(src, surface tcell.Style) tcell.Style {
@@ -668,6 +679,7 @@ var requiredStyleKeys = []string{
 	"dialog.option.active.selected",
 	"dialog.option.selected",
 	"dialog.option.invalid",
+	"dialog.indicator.selection_size",
 	"dialog.massrename.before",
 	"dialog.massrename.before.removed",
 	"dialog.massrename.before.replaced",
@@ -958,16 +970,17 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
-	dialogOptionKeys := map[string]struct{}{
-		"dialog.option.inactive":        {},
-		"dialog.option.active":          {},
-		"dialog.option.active.selected": {},
-		"dialog.option.selected":        {},
-		"dialog.option.invalid":         {},
+	dialogSurfaceForegroundKeys := map[string]struct{}{
+		"dialog.option.inactive":          {},
+		"dialog.option.active":            {},
+		"dialog.option.active.selected":   {},
+		"dialog.option.selected":          {},
+		"dialog.option.invalid":           {},
+		"dialog.indicator.selection_size": {},
 	}
 	for key, spec := range specs {
 		if spec.BG != "" {
-			if _, ok := dialogOptionKeys[key]; ok {
+			if _, ok := dialogSurfaceForegroundKeys[key]; ok {
 				return Theme{}, fmt.Errorf(`style %q: field "bg" is not allowed (background comes from dialog.surface)`, key)
 			}
 		}
@@ -1137,6 +1150,7 @@ func parse(data []byte) (Theme, error) {
 		DialogOptionActiveSelected:     styles["dialog.option.active.selected"],
 		DialogOptionSelected:           styles["dialog.option.selected"],
 		DialogOptionInvalid:            styles["dialog.option.invalid"],
+		DialogIndicatorSelectionSize:   styles["dialog.indicator.selection_size"],
 		DialogMassRenameBefore:         styles["dialog.massrename.before"],
 		DialogMassRenameBeforeRemoved:  styles["dialog.massrename.before.removed"],
 		DialogMassRenameBeforeReplaced: styles["dialog.massrename.before.replaced"],

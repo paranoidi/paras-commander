@@ -100,8 +100,13 @@ type App struct {
 	diskIdleNavPath [2]string
 	// selectionSizeScanFP is the last enqueued directory set fingerprint per panel for selection-size scans.
 	selectionSizeScanFP [2]string
+	// selectionSizeScanGen / selectionSizeScanPath skip reconcile work when selection-derived input is unchanged.
+	selectionSizeScanGen  [2]uint64
+	selectionSizeScanPath [2]string
 	// deleteDialogScanFP is the last enqueued directory set fingerprint for the delete confirmation dialog.
 	deleteDialogScanFP string
+	// findDialogSelectionScanFP is the last enqueued directory set fingerprint for find-dialog selection-size scans.
+	findDialogSelectionScanFP string
 	// metaActiveCmd holds the name of the active meta command per panel (empty = none).
 	metaActiveCmd [2]string
 	// metaNavPath holds the last panel path for which meta was run (used to detect navigation).

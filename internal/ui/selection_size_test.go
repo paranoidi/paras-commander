@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -106,12 +108,36 @@ func TestSelectionSizeLabelFilesOnly(t *testing.T) {
 			"/tmp/b.txt": true,
 		},
 	}
-	got, ok := SelectionSizeLabel(state, false, nil, false, nil, "")
+	got, ok := SelectionSizeLabel(&state, false, nil, false, nil, "")
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}
 	if got != "2 items (300 B)" {
 		t.Fatalf("label = %q, want %q", got, "2 items (300 B)")
+	}
+}
+
+func TestMarkedPathsSelectionSizeLabelFiles(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	a := filepath.Join(root, "a.txt")
+	b := filepath.Join(root, "b.txt")
+	if err := os.WriteFile(a, []byte("12345"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(b, []byte("67890"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	marked := map[string]bool{
+		filepath.Clean(a): true,
+		filepath.Clean(b): true,
+	}
+	got, ok := MarkedPathsSelectionSizeLabel(marked, false, 0, false, nil, false, nil, "")
+	if !ok {
+		t.Fatal("ok = false, want true")
+	}
+	if got != "2 items (10 B)" {
+		t.Fatalf("label = %q, want %q", got, "2 items (10 B)")
 	}
 }
 
@@ -126,7 +152,7 @@ func TestSelectionSizeLabelPendingWorkingGlyph(t *testing.T) {
 		SelectedPaths: map[string]bool{dir: true},
 	}
 	painter := stubSelectionSizePainter{sizes: map[string]int64{}}
-	got, ok := SelectionSizeLabel(state, false, painter, false, nil, "\uf017")
+	got, ok := SelectionSizeLabel(&state, false, painter, false, nil, "\uf017")
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}
