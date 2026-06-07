@@ -37,12 +37,14 @@ func BuildCopyPlanWithTotalsCtx(ctx context.Context, sources []pathloc.Path, des
 	if err := ctx.Err(); err != nil {
 		return nil, 0, 0, 0, err
 	}
-	if err := prepareCopyDestinationCtx(ctx, sources, destination); err != nil {
-		return nil, 0, 0, 0, err
-	}
+	// Resolve destinations before prepareCopyDestination: mkdir for a single-directory
+	// copy to a new sibling name must not make ResolveDestination treat dest as a container.
 	p, err := BuildPlanCtx(ctx, sources, destination, true, opts)
 	if err != nil {
 		return nil, 0, 0, 0, fmt.Errorf("build copy plan: %w", err)
+	}
+	if err := prepareCopyDestinationCtx(ctx, sources, destination); err != nil {
+		return nil, 0, 0, 0, err
 	}
 	ti, td, tb := SummarizePlan(p)
 	return p, ti, td, tb, nil
@@ -126,12 +128,12 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 	if planOptional != nil {
 		plan = planOptional
 	} else {
-		if err := prepareCopyDestinationCtx(ctx, sources, destination); err != nil {
-			return 0, 0, err
-		}
 		plan, err = BuildPlan(sources, destination, true)
 		if err != nil {
 			return 0, 0, fmt.Errorf("build copy plan: %w", err)
+		}
+		if err := prepareCopyDestinationCtx(ctx, sources, destination); err != nil {
+			return 0, 0, err
 		}
 	}
 
