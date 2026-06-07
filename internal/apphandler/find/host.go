@@ -25,4 +25,5 @@ type Host interface {
 	DiskUsageIgnore() diskusage.ShouldIgnoreFolder
 	GitignoreCache() *gitignore.Cache
 	PanelViewportRows(panelID int) int
+	OpenGroupSelectDialog(mode string, forFind bool)
 }

@@ -287,11 +287,15 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 
 // Group selection dialog handlers
 
-func (a *App) openGroupSelect(mode string) {
+func (a *App) openGroupSelect(mode string, context string) {
+	if context == "" {
+		context = "panel"
+	}
 	a.model.GroupSelect = ui.GroupSelectState{
 		Open:             true,
 		Text:             "",
 		Mode:             mode,
+		Context:          context,
 		FilesOnly:        false,
 		CaseSensitive:    false,
 		UseShellPatterns: true,
@@ -309,15 +313,27 @@ func (a *App) executeGroupSelect() {
 	if gs.Text == "" {
 		return
 	}
-	p := a.activePanel()
-	if gs.Mode == "select" {
-		p.SelectGroup(gs.Text, gs.FilesOnly, gs.CaseSensitive, gs.UseShellPatterns)
-		a.setTransientMessage(fmt.Sprintf("Selected matching %q", gs.Text), ui.MessageUrgencyInfo)
-	} else {
-		p.UnselectGroup(gs.Text, gs.FilesOnly, gs.CaseSensitive, gs.UseShellPatterns)
-		a.setTransientMessage(fmt.Sprintf("Unselected matching %q", gs.Text), ui.MessageUrgencyInfo)
+	context := gs.Context
+	if context == "" {
+		context = "panel"
+	}
+	switch context {
+	case "find":
+		a.findCtrl.ApplyGroupSelect(gs.Mode, gs.Text, gs.FilesOnly, gs.CaseSensitive, gs.UseShellPatterns)
+	default:
+		p := a.activePanel()
+		if gs.Mode == "select" {
+			p.SelectGroup(gs.Text, gs.FilesOnly, gs.CaseSensitive, gs.UseShellPatterns)
+			a.setTransientMessage(fmt.Sprintf("Selected matching %q", gs.Text), ui.MessageUrgencyInfo)
+		} else {
+			p.UnselectGroup(gs.Text, gs.FilesOnly, gs.CaseSensitive, gs.UseShellPatterns)
+			a.setTransientMessage(fmt.Sprintf("Unselected matching %q", gs.Text), ui.MessageUrgencyInfo)
+		}
 	}
 	a.closeGroupSelect()
+	if context == "find" && a.model.FindDialog.Open {
+		a.paintFindDialogOverlay()
+	}
 }
 
 // confirmGroupSelectFromInput applies the pattern row then runs OK (Enter / Alt+O).

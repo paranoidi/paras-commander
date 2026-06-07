@@ -330,7 +330,7 @@ func TestGroupSelectPatternCtrlLAndWordNav(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	app.openGroupSelect("select")
+	app.openGroupSelect("select", "panel")
 
 	for _, r := range "ab cd" {
 		app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
@@ -359,7 +359,7 @@ func TestGroupSelectEnterOnPatternInputConfirms(t *testing.T) {
 	writeFile(t, bar)
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	app.openGroupSelect("select")
+	app.openGroupSelect("select", "panel")
 	for _, r := range "*.txt" {
 		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
@@ -380,7 +380,7 @@ func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	app.openGroupSelect("select")
+	app.openGroupSelect("select", "panel")
 
 	for _, r := range "focus" {
 		app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))

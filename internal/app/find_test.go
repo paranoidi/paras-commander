@@ -379,6 +379,115 @@ func TestFindDialogInsertMarksAndOKAddsToPanelSelection(t *testing.T) {
 	}
 }
 
+func newFindDialogTestApp(t *testing.T) *App {
+	t.Helper()
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "alpha.txt"), []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+	return app
+}
+
+func assertFindDialogGroupSelectViaKey(t *testing.T, app *App, key tcell.Key, wantMode string) {
+	t.Helper()
+	if quit, _ := app.handleKey(tcell.NewEventKey(key, 0, tcell.ModNone)); quit {
+		t.Fatalf("%v: handleKey quit", key)
+	}
+	if !app.model.GroupSelect.Open || app.model.GroupSelect.Mode != wantMode || app.model.GroupSelect.Context != "find" {
+		t.Fatalf("%v: group select = %+v", key, app.model.GroupSelect)
+	}
+	if !app.model.FindDialog.Open {
+		t.Fatal("find dialog should stay open under group select")
+	}
+	for _, r := range "*.txt" {
+		if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone)); quit {
+			t.Fatalf("handleKey(%q) quit", r)
+		}
+	}
+	if got := app.model.GroupSelect.Text; got != "*.txt" {
+		t.Fatalf("pattern after single key open = %q, want *.txt", got)
+	}
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone)); quit {
+		t.Fatal("Esc quit")
+	}
+	if app.model.GroupSelect.Open {
+		t.Fatal("Esc should close group select")
+	}
+	if !app.model.FindDialog.Open {
+		t.Fatal("find dialog should stay open after Esc on group select")
+	}
+}
+
+func TestFindDialogF6OpensGroupSelectForFindContext(t *testing.T) {
+	app := newFindDialogTestApp(t)
+	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone)); !ok || id != keymap.ActionFindSelectGroup {
+		t.Fatalf("F6 lookup = %q ok=%v", id, ok)
+	}
+	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF6, "select")
+}
+
+func TestFindDialogF8OpensUnselectGroupSelectForFindContext(t *testing.T) {
+	app := newFindDialogTestApp(t)
+	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)); !ok || id != keymap.ActionFindUnselectGroup {
+		t.Fatalf("F8 lookup = %q ok=%v", id, ok)
+	}
+	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF8, "unselect")
+}
+
+func TestFindDialogGroupSelectGlobMarksRankedResults(t *testing.T) {
+	root := t.TempDir()
+	aPath := filepath.Join(root, "alpha.txt")
+	bPath := filepath.Join(root, "beta.go")
+	if err := os.WriteFile(aPath, []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bPath, []byte("b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	for _, r := range "*.txt" {
+		app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.GroupSelect.Open {
+		t.Fatal("group select should close after OK")
+	}
+	if !app.model.FindDialog.MarkedPaths[filepath.Clean(aPath)] {
+		t.Fatalf("alpha.txt should be marked: %v", app.model.FindDialog.MarkedPaths)
+	}
+	if app.model.FindDialog.MarkedPaths[filepath.Clean(bPath)] {
+		t.Fatalf("beta.go should not be marked: %v", app.model.FindDialog.MarkedPaths)
+	}
+}
+
 func TestFindDialogSelectAllMarksRankedResults(t *testing.T) {
 	root := t.TempDir()
 	aPath := filepath.Join(root, "alpha.txt")

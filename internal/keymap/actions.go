@@ -24,6 +24,8 @@ const (
 	ActionPanelHistoryDialog         = "panel.history-dialog"
 	ActionPanelFindDialog            = "panel.find-dialog"
 	ActionFindSelectAll              = "find.select-all"
+	ActionFindSelectGroup            = "find.select-group"
+	ActionFindUnselectGroup          = "find.unselect-group"
 	ActionPanelRefresh               = "panel.refresh"
 	ActionPanelSelectToggle          = "panel.select-toggle"
 	ActionPanelSelectGroup           = "panel.select-group"
@@ -176,6 +178,8 @@ var KnownActions = map[string]struct{}{
 	ActionPanelHistoryDialog:         {},
 	ActionPanelFindDialog:            {},
 	ActionFindSelectAll:              {},
+	ActionFindSelectGroup:            {},
+	ActionFindUnselectGroup:          {},
 	ActionPanelRefresh:               {},
 	ActionPanelSelectToggle:          {},
 	ActionPanelSelectGroup:           {},

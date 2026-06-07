@@ -404,6 +404,22 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"find dialog", "mark all"},
 		},
 		{
+			ID:           ActionFindSelectGroup,
+			Title:        "Select group",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "F6",
+			Keywords:     []string{"find dialog", "pattern", "glob", "mark"},
+		},
+		{
+			ID:           ActionFindUnselectGroup,
+			Title:        "Unselect group",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "F8",
+			Keywords:     []string{"find dialog", "pattern", "glob", "deselect"},
+		},
+		{
 			ID:          ActionRemoteSFTPLink,
 			Title:       "SFTP ...",
 			Section:     "Remote",

@@ -1596,7 +1596,7 @@ func (s *State) SelectGroup(pattern string, filesOnly, caseSensitive, useShellPa
 		if filesOnly && entry.IsDir() {
 			continue
 		}
-		if groupMatch(entry.Name, pattern, caseSensitive, useShellPatterns) {
+		if GroupMatch(entry.Name, pattern, caseSensitive, useShellPatterns) {
 			s.resolveSelectionConflicts(entry.Path, entry.IsDir())
 			s.SelectedPaths[entry.Path] = true
 		}
@@ -1612,7 +1612,7 @@ func (s *State) UnselectGroup(pattern string, filesOnly, caseSensitive, useShell
 		if filesOnly && entry.IsDir() {
 			continue
 		}
-		if groupMatch(entry.Name, pattern, caseSensitive, useShellPatterns) {
+		if GroupMatch(entry.Name, pattern, caseSensitive, useShellPatterns) {
 			delete(s.SelectedPaths, entry.Path)
 			s.removePathFromSelectionsStripOrder(entry.Path)
 		}
@@ -1623,8 +1623,8 @@ func (s *State) UnselectGroup(pattern string, filesOnly, caseSensitive, useShell
 	s.normalizeSelectionsStripCursor()
 }
 
-// groupMatch returns true if name matches pattern according to the given options.
-func groupMatch(name, pattern string, caseSensitive, useShellPatterns bool) bool {
+// GroupMatch returns true if name matches pattern according to the given options.
+func GroupMatch(name, pattern string, caseSensitive, useShellPatterns bool) bool {
 	if useShellPatterns {
 		if caseSensitive {
 			matched, _ := filepath.Match(pattern, name)

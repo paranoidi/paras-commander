@@ -1127,9 +1127,18 @@ func (h *Handler) ToggleOnlyDirectories() {
 func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	st := &h.model.FindDialog
 	if h.keysFindDialog != nil {
-		if id, ok := h.keysFindDialog.Lookup(event); ok && id == keymap.ActionFindSelectAll {
-			h.findDialogSelectAll()
-			return
+		if id, ok := h.keysFindDialog.Lookup(event); ok {
+			switch id {
+			case keymap.ActionFindSelectAll:
+				h.findDialogSelectAll()
+				return
+			case keymap.ActionFindSelectGroup:
+				h.host.OpenGroupSelectDialog("select", true)
+				return
+			case keymap.ActionFindUnselectGroup:
+				h.host.OpenGroupSelectDialog("unselect", true)
+				return
+			}
 		}
 	}
 	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle {
@@ -1274,6 +1283,72 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			}
 		}
 	}
+}
+
+// ApplyGroupSelect marks or unmarks ranked find results whose basename matches pattern.
+func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitive, useShellPatterns bool) {
+	st := &h.model.FindDialog
+	if pattern == "" {
+		return
+	}
+	conflicts := false
+	if mode == "select" {
+		if st.MarkedPaths == nil {
+			st.MarkedPaths = make(map[string]bool)
+		}
+		for _, entIdx := range st.Ranked {
+			if entIdx < 0 || entIdx >= len(st.Entries) {
+				continue
+			}
+			ent := st.Entries[entIdx]
+			if filesOnly && ent.IsDir {
+				continue
+			}
+			name := filepath.Base(ent.AbsPath(st.RootPath))
+			if !panel.GroupMatch(name, pattern, caseSensitive, useShellPatterns) {
+				continue
+			}
+			path := ent.AbsPath(st.RootPath)
+			if path == "" || st.MarkedPaths[path] {
+				continue
+			}
+			if h.clearFindMarkedConflicts(path, ent.IsDir) {
+				conflicts = true
+			}
+			st.MarkedPaths[path] = true
+		}
+		if len(st.MarkedPaths) == 0 {
+			st.MarkedPaths = nil
+		}
+		if conflicts {
+			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+		} else {
+			h.host.SetTransientMessage(fmt.Sprintf("Selected matching %q", pattern), ui.MessageUrgencyInfo)
+		}
+		return
+	}
+	for _, entIdx := range st.Ranked {
+		if entIdx < 0 || entIdx >= len(st.Entries) {
+			continue
+		}
+		ent := st.Entries[entIdx]
+		if filesOnly && ent.IsDir {
+			continue
+		}
+		name := filepath.Base(ent.AbsPath(st.RootPath))
+		if !panel.GroupMatch(name, pattern, caseSensitive, useShellPatterns) {
+			continue
+		}
+		path := ent.AbsPath(st.RootPath)
+		if path == "" {
+			continue
+		}
+		delete(st.MarkedPaths, path)
+	}
+	if len(st.MarkedPaths) == 0 {
+		st.MarkedPaths = nil
+	}
+	h.host.SetTransientMessage(fmt.Sprintf("Unselected matching %q", pattern), ui.MessageUrgencyInfo)
 }
 
 func (h *Handler) clearFindMarkedConflicts(path string, isDir bool) bool {

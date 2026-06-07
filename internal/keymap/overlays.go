@@ -75,7 +75,7 @@ var overlayRegistry = []OverlaySpec{
 		Defaults:  DefaultFindDialogOverlayKeys,
 		Allowed:   AllowedInFindDialogOverlay,
 		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [find_dialog_action_keys] action %q is not allowed (find.select-all only)", source, action)
+			return fmt.Errorf("parse config %q: [find_dialog_action_keys] action %q is not allowed (find.select-all, find.select-group, find.unselect-group only)", source, action)
 		},
 	},
 }
@@ -136,7 +136,7 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 	case "bookmark_dialog_action_keys":
 		return "bookmark.delete only"
 	case "find_dialog_action_keys":
-		return "find.select-all only"
+		return "find.select-all, find.select-group, find.unselect-group only"
 	default:
 		return "not allowed"
 	}

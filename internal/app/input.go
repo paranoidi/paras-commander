@@ -51,6 +51,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeHistoryDialog
 	case a.model.SFTPConnectDialog.Open:
 		return InputModeSFTPConnectDialog
+	case a.model.GroupSelect.Open:
+		return InputModeGroupSelect
 	case a.model.FindDialog.Open:
 		return InputModeFindDialog
 	case a.model.MetaDialog.Open:
@@ -67,8 +69,6 @@ func (a *App) inputMode() InputMode {
 		return InputModeListingFormatDialog
 	case a.model.ConfigDialog.Open:
 		return InputModeConfigDialog
-	case a.model.GroupSelect.Open:
-		return InputModeGroupSelect
 	case a.model.HostKeyDialog.Open:
 		return InputModeHostKeyDialog
 	case a.model.FileDialog.Open:
@@ -122,9 +122,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	}
 	if a.model.FindDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		if fk, ok := findDialogSelectAllFooterKey(a.keysFindDialog); ok {
-			rest = append([]menu.FunctionKey{fk}, rest...)
-		}
+		rest = append(findDialogOverlayFooterKeys(a.keysFindDialog), rest...)
 		return footerWithEscClose(rest)
 	}
 	if a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
@@ -296,8 +294,9 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return false, true
 	case InputModeFindDialog:
 		wasOpen := a.model.FindDialog.Open
+		gsWasOpen := a.model.GroupSelect.Open
 		a.handleFindDialogKey(event)
-		if !wasOpen || !a.model.FindDialog.Open {
+		if !wasOpen || !a.model.FindDialog.Open || (!gsWasOpen && a.model.GroupSelect.Open) {
 			a.render()
 		} else if !a.paintFindDialogOverlay() {
 			a.render()
@@ -624,9 +623,9 @@ func (a *App) dispatch(actionID string) {
 			a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 		}
 	case keymap.ActionPanelSelectGroup:
-		a.openGroupSelect("select")
+		a.openGroupSelect("select", "panel")
 	case keymap.ActionPanelUnselectGroup:
-		a.openGroupSelect("unselect")
+		a.openGroupSelect("unselect", "panel")
 	case keymap.ActionPanelInvertSelection:
 		activePanel.InvertSelection()
 		a.setTransientMessage("Selection inverted", ui.MessageUrgencyInfo)

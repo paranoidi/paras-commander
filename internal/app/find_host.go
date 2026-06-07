@@ -37,3 +37,11 @@ func (h findHost) DiskUsageIgnore() diskusage.ShouldIgnoreFolder { return h.app.
 func (h findHost) GitignoreCache() *gitignore.Cache { return h.app.gitignoreCache }
 
 func (h findHost) PanelViewportRows(panelID int) int { return h.app.panelViewportRows(panelID) }
+
+func (h findHost) OpenGroupSelectDialog(mode string, forFind bool) {
+	context := "panel"
+	if forFind {
+		context = "find"
+	}
+	h.app.openGroupSelect(mode, context)
+}

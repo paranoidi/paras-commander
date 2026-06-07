@@ -423,9 +423,6 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	if model.ListingFormatDialog.Open {
 		dialog.DrawListingFormatDialog(screen, layout, model.ListingFormatDialog, styles)
 	}
-	if model.GroupSelect.Open {
-		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)
-	}
 	if model.PathPicker.Open {
 		dialog.DrawPathPickerDialog(screen, layout, model.PathPicker, styles)
 	}
@@ -437,6 +434,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	if model.FindDialog.Open {
 		dialog.DrawFindDialog(screen, layout, model.FindDialog, styles, model.ShowFileIcons, FindListIconLeadingWidth(model.ShowFileIcons), PaintFindDialogRowIcon)
+	}
+	if model.GroupSelect.Open {
+		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)
 	}
 	if model.MetaDialog.Open {
 		dialog.DrawMetaDialog(screen, layout, model.MetaDialog, styles)

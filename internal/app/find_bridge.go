@@ -7,15 +7,21 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
-func findDialogSelectAllFooterKey(keys *keymap.Map) (menu.FunctionKey, bool) {
+func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	if keys == nil {
-		return menu.FunctionKey{}, false
+		return nil
 	}
-	lbl := keys.MenuBindingLabel(keymap.ActionFindSelectAll)
-	if lbl == "" {
-		return menu.FunctionKey{}, false
+	var out []menu.FunctionKey
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectAll); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Select all"})
 	}
-	return menu.FunctionKey{KeyLabel: lbl, Hint: "Select all"}, true
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectGroup); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Select group"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindUnselectGroup); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect group"})
+	}
+	return out
 }
 
 func (a *App) openFindDialog(panelID int) { a.findCtrl.OpenDialog(panelID) }

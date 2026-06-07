@@ -371,6 +371,14 @@ func TestDefaultBundleFindDialogOverlayF5CtrlA(t *testing.T) {
 	if !ok || id != ActionFindSelectAll {
 		t.Fatalf("FindDialog Ctrl+A = %q %v, want %q", id, ok, ActionFindSelectAll)
 	}
+	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	if !ok || id != ActionFindSelectGroup {
+		t.Fatalf("FindDialog F6 = %q %v, want %q", id, ok, ActionFindSelectGroup)
+	}
+	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+	if !ok || id != ActionFindUnselectGroup {
+		t.Fatalf("FindDialog F8 = %q %v, want %q", id, ok, ActionFindUnselectGroup)
+	}
 }
 
 func TestParseKeyAltBang(t *testing.T) {
