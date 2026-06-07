@@ -24,6 +24,7 @@ type Entry struct {
 	RelLine string // path relative to root (display / fuzzy match)
 	IsDir   bool
 	Type    localfs.EntryType
+	Size    int64 // file byte size from walk; 0 for directories
 }
 
 // Options configures a find session walk.
@@ -154,10 +155,14 @@ func (s *Session) run(ctx context.Context, opts Options) {
 				isDir = info.IsDir()
 			}
 		}
+		var size int64
 		if isDir {
 			entryType = localfs.EntryDirectory
 		} else if entryType != localfs.EntrySymlink {
 			entryType = localfs.EntryFile
+			if info, infoErr := d.Info(); infoErr == nil {
+				size = info.Size()
+			}
 		}
 
 		entry := Entry{
@@ -165,6 +170,7 @@ func (s *Session) run(ctx context.Context, opts Options) {
 			RelLine: rel,
 			IsDir:   isDir,
 			Type:    entryType,
+			Size:    size,
 		}
 		shouldFlush := false
 		pendingMu.Lock()

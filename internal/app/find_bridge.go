@@ -12,6 +12,9 @@ func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 		return nil
 	}
 	var out []menu.FunctionKey
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindUnselectAll); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect all"})
+	}
 	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectAll); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Select all"})
 	}

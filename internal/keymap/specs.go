@@ -396,6 +396,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"fzf-marks", "mark", "remove", "delete"},
 		},
 		{
+			ID:           ActionFindUnselectAll,
+			Title:        "Unselect all",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "F4",
+			Keywords:     []string{"find dialog", "clear marks", "deselect all"},
+		},
+		{
 			ID:           ActionFindSelectAll,
 			Title:        "Select all",
 			Section:      "Find",
@@ -416,7 +424,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Title:        "Unselect group",
 			Section:      "Find",
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
-			PreferredKey: "F8",
+			PreferredKey: "F7",
 			Keywords:     []string{"find dialog", "pattern", "glob", "deselect"},
 		},
 		{

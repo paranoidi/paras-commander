@@ -17,20 +17,17 @@ func FindDialogListRows(layout Layout, showSearchSelectionsOption bool) int {
 
 // FindDialogSelectionSizePadded returns the padded selection count/size label for the find dialog separator, or "".
 func FindDialogSelectionSizePadded(
-	state FindDialogState,
+	state *FindDialogState,
 	painter DiskUsagePainter,
 	descendIntoMountPoints bool,
 	goduIgnore func(string) bool,
 	workingSym string,
 ) string {
-	if !dialog.FindDialogSelectionSizeEnabled {
+	if state == nil {
 		return ""
 	}
-	raw, ok := MarkedPathsSelectionSizeLabel(
-		state.MarkedPaths,
+	raw, ok := state.MarkedSelectionSizeLabel(
 		false,
-		state.ListingDevice,
-		state.ListingDeviceValid,
 		painter,
 		descendIntoMountPoints,
 		goduIgnore,
@@ -46,16 +43,16 @@ func FindDialogSelectionSizePadded(
 func PaintFindDialog(
 	screen tcell.Screen,
 	layout Layout,
-	state FindDialogState,
+	state *FindDialogState,
 	styles theme.Theme,
 	showIcons bool,
 	painter DiskUsagePainter,
 	descendIntoMountPoints bool,
 	goduIgnore func(string) bool,
 ) {
-	if !state.Open {
+	if state == nil || !state.Open {
 		return
 	}
 	selectionLabel := FindDialogSelectionSizePadded(state, painter, descendIntoMountPoints, goduIgnore, styles.SymbolWorking())
-	dialog.DrawFindDialog(screen, layout, state, styles, showIcons, FindListIconLeadingWidth(showIcons), PaintFindDialogRowIcon, selectionLabel)
+	dialog.DrawFindDialog(screen, layout, *state, styles, showIcons, FindListIconLeadingWidth(showIcons), PaintFindDialogRowIcon, selectionLabel)
 }

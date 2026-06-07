@@ -361,29 +361,47 @@ func (h *Handler) appendFindBatch(st *ui.FindDialogState, batch []findpkg.Entry)
 			RelLine: findRelLine(st.RootPath, p),
 			IsDir:   e.IsDir,
 			Type:    e.Type,
+			Size:    e.Size,
 		})
 		if st.PathIsDir == nil {
 			st.PathIsDir = make(map[string]bool)
 		}
 		st.PathIsDir[p] = e.IsDir
+		if !e.IsDir && e.Size > 0 {
+			if st.PathSize == nil {
+				st.PathSize = make(map[string]int64)
+			}
+			st.PathSize[p] = e.Size
+		}
 	}
 	st.IndexedCount = len(st.Entries)
 }
 
-func rebuildFindPathIsDir(st *ui.FindDialogState) {
+func rebuildFindPathIndex(st *ui.FindDialogState) {
 	if len(st.Entries) == 0 {
 		st.PathIsDir = nil
+		st.PathSize = nil
 		return
 	}
-	m := make(map[string]bool, len(st.Entries))
+	isDir := make(map[string]bool, len(st.Entries))
+	sizes := make(map[string]int64)
 	root := st.RootPath
 	for _, e := range st.Entries {
 		abs := filepath.Clean(e.AbsPath(root))
-		if abs != "" {
-			m[abs] = e.IsDir
+		if abs == "" {
+			continue
+		}
+		isDir[abs] = e.IsDir
+		if !e.IsDir && e.Size > 0 {
+			sizes[abs] = e.Size
 		}
 	}
-	st.PathIsDir = m
+	st.PathIsDir = isDir
+	if len(sizes) == 0 {
+		st.PathSize = nil
+	} else {
+		st.PathSize = sizes
+	}
 }
 
 func findEntryAbsPath(st *ui.FindDialogState, ent ui.FindEntry) string {
@@ -429,7 +447,7 @@ func (h *Handler) filterFindEntriesToSelectionScope() {
 	}
 	st.Entries = filtered
 	st.IndexedCount = len(st.Entries)
-	rebuildFindPathIsDir(st)
+	rebuildFindPathIndex(st)
 	h.syncFindDialogRanks()
 }
 
@@ -558,13 +576,22 @@ func (h *Handler) syncFindDialogRanks() {
 	if !st.Open {
 		return
 	}
-	st.Ranked, st.MatchRanges = dialog.RankFindEntries(
+	ranked, matchRanges := dialog.RankFindEntries(
 		st.Entries,
 		st.Query,
 		st.OnlyDirectories,
 		st.OnlyFiles,
 		h.config.CaseInsensitiveFilter,
 	)
+	st.Ranked = ranked
+	st.MatchRanges = matchRanges
+	h.rankMu.Lock()
+	st.FullRanked = ranked
+	st.FullRankedGen = h.rankGen
+	h.rankMu.Unlock()
+	st.FullRankedEntriesLen = len(st.Entries)
+	st.FullRankedOnlyDirs = st.OnlyDirectories
+	st.FullRankedOnlyFiles = st.OnlyFiles
 	if st.Selected >= len(st.Ranked) {
 		if len(st.Ranked) == 0 {
 			st.Selected = 0
@@ -842,21 +869,18 @@ func (h *Handler) doRank(input rankInput) {
 	q := search.Parse(input.query)
 	maxResults := h.config.UI.FindMaxResults
 
-	var raw []search.RankedResult
+	var result rankResult
+	result.gen = input.gen
+
 	if q.Empty() {
-		// No filter: all entries match with equal score. Take the first maxResults directly
-		// rather than allocating a full-corpus slice just to cap it.
-		n := len(input.lines)
-		if maxResults > 0 && n > maxResults {
-			n = maxResults
+		result.fullRanked = filterFindRankIndices(allFindEntryIndices(len(input.lines)), input.onlyDirs, input.onlyFiles, input.isDirs)
+		displayN := len(result.fullRanked)
+		if maxResults > 0 && displayN > maxResults {
+			displayN = maxResults
 		}
-		raw = make([]search.RankedResult, n)
-		for i := range raw {
-			raw[i] = search.RankedResult{Index: i, Result: search.Result{Matched: true}}
-		}
+		result.ranked = append([]int(nil), result.fullRanked[:displayN]...)
 	} else {
-		var cancelled bool
-		raw, cancelled = q.RankCancellable(input.lines, input.opts, func() bool {
+		rawFull, cancelled := q.RankCancellable(input.lines, input.opts, func() bool {
 			h.rankMu.Lock()
 			stale := h.rankGen != input.gen
 			h.rankMu.Unlock()
@@ -865,38 +889,29 @@ func (h *Handler) doRank(input rankInput) {
 		if cancelled {
 			return // new query superseded this one; worker will pick up the next input
 		}
-		// Cap results to FindMaxResults.
+		result.fullRanked = filterFindRankIndices(rankedIndicesFromResults(rawFull), input.onlyDirs, input.onlyFiles, input.isDirs)
+
+		raw := rawFull
 		if maxResults > 0 && len(raw) > maxResults {
 			raw = raw[:maxResults]
 		}
-	}
-
-	result := rankResult{gen: input.gen, ranked: make([]int, len(raw))}
-	if !q.Empty() {
+		result.ranked = filterFindRankIndices(rankedIndicesFromResults(raw), input.onlyDirs, input.onlyFiles, input.isDirs)
 		result.matchRanges = make(map[int][]search.Range)
-	}
-	for i, r := range raw {
-		result.ranked[i] = r.Index
-		if result.matchRanges != nil && r.Index >= 0 && r.Index < len(input.lines) && len(r.Result.Ranges) > 0 {
-			result.matchRanges[r.Index] = r.Result.Ranges
-		}
-	}
-	if input.onlyDirs {
-		filtered := result.ranked[:0]
-		for _, idx := range result.ranked {
-			if idx >= 0 && idx < len(input.isDirs) && input.isDirs[idx] {
-				filtered = append(filtered, idx)
+		for _, r := range raw {
+			idx := r.Index
+			if idx >= 0 && idx < len(input.lines) && len(r.Result.Ranges) > 0 {
+				if input.onlyDirs && (idx >= len(input.isDirs) || !input.isDirs[idx]) {
+					continue
+				}
+				if input.onlyFiles && (idx >= len(input.isDirs) || input.isDirs[idx]) {
+					continue
+				}
+				result.matchRanges[idx] = r.Result.Ranges
 			}
 		}
-		result.ranked = filtered
-	} else if input.onlyFiles {
-		filtered := result.ranked[:0]
-		for _, idx := range result.ranked {
-			if idx >= 0 && idx < len(input.isDirs) && !input.isDirs[idx] {
-				filtered = append(filtered, idx)
-			}
+		if len(result.matchRanges) == 0 {
+			result.matchRanges = nil
 		}
-		result.ranked = filtered
 	}
 
 	h.rankMu.Lock()
@@ -913,6 +928,46 @@ func (h *Handler) doRank(input rankInput) {
 	h.rankMu.Unlock()
 
 	_ = h.screen.PostEvent(tcell.NewEventInterrupt(RankWakePayload{}))
+}
+
+func allFindEntryIndices(n int) []int {
+	if n == 0 {
+		return nil
+	}
+	out := make([]int, n)
+	for i := range out {
+		out[i] = i
+	}
+	return out
+}
+
+func rankedIndicesFromResults(raw []search.RankedResult) []int {
+	out := make([]int, len(raw))
+	for i, r := range raw {
+		out[i] = r.Index
+	}
+	return out
+}
+
+func filterFindRankIndices(indices []int, onlyDirs, onlyFiles bool, isDirs []bool) []int {
+	if !onlyDirs && !onlyFiles {
+		out := append([]int(nil), indices...)
+		return out
+	}
+	filtered := make([]int, 0, len(indices))
+	for _, idx := range indices {
+		if idx < 0 || idx >= len(isDirs) {
+			continue
+		}
+		if onlyDirs && !isDirs[idx] {
+			continue
+		}
+		if onlyFiles && isDirs[idx] {
+			continue
+		}
+		filtered = append(filtered, idx)
+	}
+	return filtered
 }
 
 // ApplyPendingRank applies the latest completed rank result (if any) to the dialog state.
@@ -952,6 +1007,11 @@ func (h *Handler) ApplyPendingRank() bool {
 
 	st.Ranked = result.ranked
 	st.MatchRanges = result.matchRanges // sparse map; nil for empty query
+	st.FullRanked = result.fullRanked
+	st.FullRankedGen = gen
+	st.FullRankedEntriesLen = len(st.Entries)
+	st.FullRankedOnlyDirs = st.OnlyDirectories
+	st.FullRankedOnlyFiles = st.OnlyFiles
 
 	// Restore selection by identity (RelLine) so the same item stays highlighted.
 	if selectedRelLine != "" {
@@ -1078,6 +1138,30 @@ func (h *Handler) NavigateFindCursor() {
 }
 
 func (h *Handler) findDialogResultIndices(st *ui.FindDialogState) []int {
+	q := search.Parse(st.Query)
+	if q.Empty() {
+		indices := make([]int, 0, len(st.Entries))
+		for i, e := range st.Entries {
+			if st.OnlyDirectories && !e.IsDir {
+				continue
+			}
+			if st.OnlyFiles && e.IsDir {
+				continue
+			}
+			indices = append(indices, i)
+		}
+		return indices
+	}
+	h.rankMu.Lock()
+	gen := h.rankGen
+	h.rankMu.Unlock()
+	if st.FullRankedGen == gen &&
+		st.FullRankedEntriesLen == len(st.Entries) &&
+		st.FullRankedOnlyDirs == st.OnlyDirectories &&
+		st.FullRankedOnlyFiles == st.OnlyFiles &&
+		len(st.FullRanked) > 0 {
+		return st.FullRanked
+	}
 	ranked, _ := dialog.RankFindEntries(
 		st.Entries,
 		st.Query,
@@ -1094,6 +1178,7 @@ func (h *Handler) findDialogSelectAll() {
 	if len(indices) == 0 {
 		return
 	}
+	walkOrder := len(st.MarkedPaths) == 0
 	if st.MarkedPaths == nil {
 		st.MarkedPaths = make(map[string]bool, len(indices))
 	}
@@ -1111,9 +1196,26 @@ func (h *Handler) findDialogSelectAll() {
 	if len(paths) == 0 {
 		return
 	}
-	if panel.ApplySelectionAdds(st.MarkedPaths, paths, h.findPathIsDir(st)) {
+	isDir := h.findPathIsDir(st)
+	var conflicts bool
+	if walkOrder {
+		conflicts = panel.BulkApplySelectionAddsWalkOrder(st.MarkedPaths, paths, isDir)
+	} else {
+		conflicts = panel.BulkApplySelectionAdds(st.MarkedPaths, paths, isDir)
+	}
+	if conflicts {
 		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
 	}
+	st.InvalidateMarkedSelectionDerived()
+}
+
+func (h *Handler) findDialogUnselectAll() {
+	st := &h.model.FindDialog
+	if len(st.MarkedPaths) == 0 {
+		return
+	}
+	st.MarkedPaths = nil
+	st.InvalidateMarkedSelectionDerived()
 }
 
 func (h *Handler) findDialogToggleSelectionAndAdvance() {
@@ -1143,6 +1245,7 @@ func (h *Handler) findDialogToggleSelectionAndAdvance() {
 		st.Selected++
 		ui.EnsureFindListScroll(st, h.findDialogListRows())
 	}
+	st.InvalidateMarkedSelectionDerived()
 }
 
 // ToggleStayOnVolume toggles stay-on-volume and restarts indexing when needed.
@@ -1179,6 +1282,9 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	if h.keysFindDialog != nil {
 		if id, ok := h.keysFindDialog.Lookup(event); ok {
 			switch id {
+			case keymap.ActionFindUnselectAll:
+				h.findDialogUnselectAll()
+				return
 			case keymap.ActionFindSelectAll:
 				h.findDialogSelectAll()
 				return
@@ -1354,6 +1460,7 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 	}
 	indices := h.findDialogResultIndices(st)
 	if mode == "select" {
+		walkOrder := len(st.MarkedPaths) == 0
 		if st.MarkedPaths == nil {
 			st.MarkedPaths = make(map[string]bool, len(indices))
 		}
@@ -1378,7 +1485,12 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 		}
 		conflicts := false
 		if len(paths) > 0 {
-			conflicts = panel.ApplySelectionAdds(st.MarkedPaths, paths, h.findPathIsDir(st))
+			isDir := h.findPathIsDir(st)
+			if walkOrder {
+				conflicts = panel.BulkApplySelectionAddsWalkOrder(st.MarkedPaths, paths, isDir)
+			} else {
+				conflicts = panel.BulkApplySelectionAdds(st.MarkedPaths, paths, isDir)
+			}
 		}
 		if len(st.MarkedPaths) == 0 {
 			st.MarkedPaths = nil
@@ -1388,6 +1500,7 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 		} else {
 			h.host.SetTransientMessage(fmt.Sprintf("Selected matching %q", pattern), ui.MessageUrgencyInfo)
 		}
+		st.InvalidateMarkedSelectionDerived()
 		return
 	}
 	for _, entIdx := range indices {
@@ -1411,5 +1524,6 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 	if len(st.MarkedPaths) == 0 {
 		st.MarkedPaths = nil
 	}
+	st.InvalidateMarkedSelectionDerived()
 	h.host.SetTransientMessage(fmt.Sprintf("Unselected matching %q", pattern), ui.MessageUrgencyInfo)
 }

@@ -9,9 +9,6 @@ import (
 )
 
 func TestDrawFindDialogSelectionSizeOnSeparator(t *testing.T) {
-	if !FindDialogSelectionSizeEnabled {
-		t.Skip("find dialog selection size temporarily disabled")
-	}
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init: %v", err)

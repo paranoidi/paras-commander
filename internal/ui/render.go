@@ -436,7 +436,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	if model.FindDialog.Open {
 		selectionLabel := FindDialogSelectionSizePadded(
-			model.FindDialog,
+			&model.FindDialog,
 			model.DiskUsage,
 			model.DiskUsageDescendIntoMountPoints,
 			model.DiskUsageGoduIgnore,

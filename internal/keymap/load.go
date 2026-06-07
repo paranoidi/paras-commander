@@ -260,8 +260,8 @@ func EncodeDefaultStub(w io.Writer) error {
 		"# Bookmarks dialog uses [bookmark_dialog_action_keys] for delete (fzf-marks only).\n" +
 		"# Only bookmark.delete is accepted.\n" +
 		"#\n" +
-		"# Find dialog uses [find_dialog_action_keys] for select-all / select-group / unselect-group.\n" +
-		"# Only find.select-all, find.select-group, and find.unselect-group are accepted.\n\n"
+		"# Find dialog uses [find_dialog_action_keys] for unselect-all / select-all / select-group / unselect-group.\n" +
+		"# Only find.select-all, find.unselect-all, find.select-group, and find.unselect-group are accepted.\n\n"
 	if _, err := io.WriteString(w, header); err != nil {
 		return fmt.Errorf("encode keybindings stub header: %w", err)
 	}

@@ -457,12 +457,12 @@ func TestFindDialogF6OpensGroupSelectForFindContext(t *testing.T) {
 	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF6, "select")
 }
 
-func TestFindDialogF8OpensUnselectGroupSelectForFindContext(t *testing.T) {
+func TestFindDialogF7OpensUnselectGroupSelectForFindContext(t *testing.T) {
 	app := newFindDialogTestApp(t)
-	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)); !ok || id != keymap.ActionFindUnselectGroup {
-		t.Fatalf("F8 lookup = %q ok=%v", id, ok)
+	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone)); !ok || id != keymap.ActionFindUnselectGroup {
+		t.Fatalf("F7 lookup = %q ok=%v", id, ok)
 	}
-	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF8, "unselect")
+	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF7, "unselect")
 }
 
 func TestFindDialogGroupSelectGlobMarksFullCorpusResults(t *testing.T) {
@@ -504,6 +504,45 @@ func TestFindDialogGroupSelectGlobMarksFullCorpusResults(t *testing.T) {
 	}
 	if app.model.FindDialog.MarkedPaths[filepath.Clean(bPath)] {
 		t.Fatalf("beta.go should not be marked: %v", app.model.FindDialog.MarkedPaths)
+	}
+}
+
+func TestFindDialogUnselectAllClearsMarks(t *testing.T) {
+	root := t.TempDir()
+	aPath := filepath.Join(root, "alpha.txt")
+	bPath := filepath.Join(root, "beta.txt")
+	if err := os.WriteFile(aPath, []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bPath, []byte("b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if len(app.model.FindDialog.MarkedPaths) != 2 {
+		t.Fatalf("select all marks = %v", app.model.FindDialog.MarkedPaths)
+	}
+
+	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone)); !ok || id != keymap.ActionFindUnselectAll {
+		t.Fatalf("F4 lookup = %q ok=%v", id, ok)
+	}
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	if app.model.FindDialog.MarkedPaths != nil {
+		t.Fatalf("unselect all cleared marks = %v", app.model.FindDialog.MarkedPaths)
 	}
 }
 
@@ -551,10 +590,10 @@ func TestFindDialogSelectAllMarksFullCorpusResults(t *testing.T) {
 }
 
 func TestFindDialogBulkSelectAllManyFiles(t *testing.T) {
-	const n = 800
+	const n = 10000
 	root := t.TempDir()
 	for i := range n {
-		name := filepath.Join(root, fmt.Sprintf("bulk_%04d.txt", i))
+		name := filepath.Join(root, fmt.Sprintf("bulk_%05d.txt", i))
 		if err := os.WriteFile(name, []byte("x"), 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -580,13 +619,61 @@ func TestFindDialogBulkSelectAllManyFiles(t *testing.T) {
 		t.Fatalf("PathIsDir len = %d, want >= %d", len(st.PathIsDir), n)
 	}
 
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(time.Second)
 	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if time.Now().After(deadline) {
 		t.Fatal("F5 select-all took too long")
 	}
 	if len(st.MarkedPaths) != n {
 		t.Fatalf("marked = %d, want full corpus %d", len(st.MarkedPaths), n)
+	}
+}
+
+func TestFindDialogBulkSelectAllMixedTree(t *testing.T) {
+	const dirs = 100
+	const filesPerDir = 100
+	wantMarked := dirs * filesPerDir // walk-order: dirs replaced by descendant files
+	root := t.TempDir()
+	for d := range dirs {
+		dir := filepath.Join(root, fmt.Sprintf("mixed_%03d", d))
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		for f := range filesPerDir {
+			name := filepath.Join(dir, fmt.Sprintf("file_%03d.txt", f))
+			if err := os.WriteFile(name, []byte("x"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+	waitFindRankDone(t, app)
+
+	st := &app.model.FindDialog
+	if len(st.Entries) < dirs+wantMarked {
+		t.Fatalf("entries = %d, want >= %d", len(st.Entries), dirs+wantMarked)
+	}
+
+	deadline := time.Now().Add(time.Second)
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if time.Now().After(deadline) {
+		t.Fatal("F5 select-all on mixed tree took too long")
+	}
+	if len(st.MarkedPaths) != wantMarked {
+		t.Fatalf("marked = %d, want full corpus %d", len(st.MarkedPaths), wantMarked)
 	}
 }
 

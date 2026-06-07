@@ -97,3 +97,34 @@ func directoriesNeedingScan(
 	}
 	return need
 }
+
+func directoriesNeedingScanFromPathIsDir(
+	pruned []string,
+	pathIsDir map[string]bool,
+	listingDev uint64,
+	listingDevValid bool,
+	du interface {
+		ByteSize(absPath string) (int64, bool)
+		DiskScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore func(string) bool) bool
+	},
+	descendIntoMountPoints bool,
+	goduIgnore func(string) bool,
+) []string {
+	if du == nil || len(pruned) == 0 {
+		return nil
+	}
+	var need []string
+	for _, path := range pruned {
+		if pathIsDir == nil || !pathIsDir[path] {
+			continue
+		}
+		if _, ok := du.ByteSize(path); ok {
+			continue
+		}
+		if du.DiskScanExcluded(path, descendIntoMountPoints, listingDev, listingDevValid, goduIgnore) {
+			continue
+		}
+		need = append(need, path)
+	}
+	return need
+}
