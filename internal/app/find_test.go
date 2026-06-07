@@ -88,6 +88,9 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	if st.OnlyDirectories {
 		t.Fatal("expected only-directories default off")
 	}
+	if st.OnlyFiles {
+		t.Fatal("expected only-files default off")
+	}
 
 	for _, r := range "find" {
 		app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
@@ -108,8 +111,22 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	if !st.OnlyDirectories {
 		t.Fatal("Alt+D should toggle only-directories while typing filter")
 	}
+	if st.OnlyFiles {
+		t.Fatal("Alt+D should not enable only-files")
+	}
 	if st.Focus != 0 {
 		t.Fatalf("focus = %d want 0 after Alt+D", st.Focus)
+	}
+
+	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt))
+	if !st.OnlyFiles {
+		t.Fatal("Alt+L should toggle only-files while typing filter")
+	}
+	if st.OnlyDirectories {
+		t.Fatal("Alt+L should clear only-directories")
+	}
+	if st.Focus != 0 {
+		t.Fatalf("focus = %d want 0 after Alt+L", st.Focus)
 	}
 }
 
@@ -541,6 +558,16 @@ func findRankedNonDirCount(st *ui.FindDialogState) int {
 	return n
 }
 
+func findRankedDirCount(st *ui.FindDialogState) int {
+	n := 0
+	for _, idx := range st.Ranked {
+		if idx >= 0 && idx < len(st.Entries) && st.Entries[idx].IsDir {
+			n++
+		}
+	}
+	return n
+}
+
 func TestFindDialogOnlyDirectoriesFiltersResults(t *testing.T) {
 	root := t.TempDir()
 	sub := filepath.Join(root, "pkg")
@@ -590,6 +617,61 @@ func TestFindDialogOnlyDirectoriesFiltersResults(t *testing.T) {
 	}
 	if findRankedNonDirCount(st) == 0 {
 		t.Fatal("expected file entries back after clearing filter")
+	}
+	if len(st.Ranked) != totalRanked {
+		t.Fatalf("ranked len = %d want %d after filter off", len(st.Ranked), totalRanked)
+	}
+}
+
+func TestFindDialogOnlyFilesFiltersResults(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "pkg")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "module.go"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "readme.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.openFindDialog(ui.LeftPanel)
+	waitFindIndexDone(t, app)
+	st := &app.model.FindDialog
+	if findRankedDirCount(st) == 0 {
+		t.Fatal("expected directory entries in ranked list before filter")
+	}
+	totalRanked := len(st.Ranked)
+
+	app.toggleFindOnlyFiles()
+	if !st.OnlyFiles {
+		t.Fatal("expected only-files on")
+	}
+	if findRankedDirCount(st) != 0 {
+		t.Fatalf("ranked still has %d directory entries after filter", findRankedDirCount(st))
+	}
+	if len(st.Ranked) >= totalRanked {
+		t.Fatalf("ranked len = %d want fewer than %d", len(st.Ranked), totalRanked)
+	}
+
+	app.toggleFindOnlyFiles()
+	if st.OnlyFiles {
+		t.Fatal("expected only-files off")
+	}
+	if findRankedDirCount(st) == 0 {
+		t.Fatal("expected directory entries back after clearing filter")
 	}
 	if len(st.Ranked) != totalRanked {
 		t.Fatalf("ranked len = %d want %d after filter off", len(st.Ranked), totalRanked)

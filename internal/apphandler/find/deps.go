@@ -81,12 +81,13 @@ type Handler struct {
 // from ~48 bytes/entry (struct) to ~17 bytes/entry, and string data is shared with
 // the live st.Entries slice (no extra string allocations).
 type rankInput struct {
-	gen      int
-	lines    []string // RelLine per entry; string data shared with st.Entries
-	isDirs   []bool
-	query    string
-	onlyDirs bool
-	opts     search.Options
+	gen       int
+	lines     []string // RelLine per entry; string data shared with st.Entries
+	isDirs    []bool
+	query     string
+	onlyDirs  bool
+	onlyFiles bool
+	opts      search.Options
 }
 
 // rankResult carries the output of a background rank computation.

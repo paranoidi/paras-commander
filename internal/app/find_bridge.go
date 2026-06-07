@@ -58,4 +58,6 @@ func (a *App) toggleFindSearchOnlySelections() { a.findCtrl.ToggleSearchOnlySele
 
 func (a *App) toggleFindOnlyDirectories() { a.findCtrl.ToggleOnlyDirectories() }
 
+func (a *App) toggleFindOnlyFiles() { a.findCtrl.ToggleOnlyFiles() }
+
 func (a *App) navigateFindCursor() { a.findCtrl.NavigateFindCursor() }

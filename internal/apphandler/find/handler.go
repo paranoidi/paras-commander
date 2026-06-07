@@ -549,6 +549,14 @@ func (h *Handler) syncFindDialogRanks() {
 			}
 		}
 		st.Ranked = filtered
+	} else if st.OnlyFiles {
+		filtered := st.Ranked[:0]
+		for _, idx := range st.Ranked {
+			if idx >= 0 && idx < len(st.Entries) && !st.Entries[idx].IsDir {
+				filtered = append(filtered, idx)
+			}
+		}
+		st.Ranked = filtered
 	}
 	if st.Selected >= len(st.Ranked) {
 		if len(st.Ranked) == 0 {
@@ -606,12 +614,13 @@ func (h *Handler) buildRankInput(gen int, st *ui.FindDialogState) rankInput {
 		isDirs[i] = e.IsDir
 	}
 	return rankInput{
-		gen:      gen,
-		lines:    lines,
-		isDirs:   isDirs,
-		query:    st.Query,
-		onlyDirs: st.OnlyDirectories,
-		opts:     search.Options{CaseInsensitive: h.config.CaseInsensitiveFilter},
+		gen:       gen,
+		lines:     lines,
+		isDirs:    isDirs,
+		query:     st.Query,
+		onlyDirs:  st.OnlyDirectories,
+		onlyFiles: st.OnlyFiles,
+		opts:      search.Options{CaseInsensitive: h.config.CaseInsensitiveFilter},
 	}
 }
 
@@ -873,6 +882,14 @@ func (h *Handler) doRank(input rankInput) {
 			}
 		}
 		result.ranked = filtered
+	} else if input.onlyFiles {
+		filtered := result.ranked[:0]
+		for _, idx := range result.ranked {
+			if idx >= 0 && idx < len(input.isDirs) && !input.isDirs[idx] {
+				filtered = append(filtered, idx)
+			}
+		}
+		result.ranked = filtered
 	}
 
 	h.rankMu.Lock()
@@ -1120,6 +1137,20 @@ func (h *Handler) ToggleStayOnVolume() {
 func (h *Handler) ToggleOnlyDirectories() {
 	st := &h.model.FindDialog
 	st.OnlyDirectories = !st.OnlyDirectories
+	if st.OnlyDirectories {
+		st.OnlyFiles = false
+	}
+	h.clearFindNavIdle()
+	h.syncFindDialogRanks()
+}
+
+// ToggleOnlyFiles toggles the only-files result filter.
+func (h *Handler) ToggleOnlyFiles() {
+	st := &h.model.FindDialog
+	st.OnlyFiles = !st.OnlyFiles
+	if st.OnlyFiles {
+		st.OnlyDirectories = false
+	}
 	h.clearFindNavIdle()
 	h.syncFindDialogRanks()
 }
@@ -1161,6 +1192,9 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		case 'd', 'D':
 			h.ToggleOnlyDirectories()
 			return
+		case 'l', 'L':
+			h.ToggleOnlyFiles()
+			return
 		case 's', 'S':
 			if st.FindDialogHasSelectionsCheckbox() {
 				h.ToggleSearchOnlySelections()
@@ -1193,6 +1227,8 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			h.ToggleStayOnVolume()
 		case st.FindDialogOnlyDirsFocus():
 			h.ToggleOnlyDirectories()
+		case st.FindDialogOnlyFilesFocus():
+			h.ToggleOnlyFiles()
 		case st.FindDialogSelectionsFocus():
 			h.ToggleSearchOnlySelections()
 		default:
@@ -1260,6 +1296,10 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			if st.Focus == st.FindDialogOnlyDirsFocus() {
 				h.ToggleOnlyDirectories()
 			}
+		case 'l', 'L':
+			if st.Focus == st.FindDialogOnlyFilesFocus() {
+				h.ToggleOnlyFiles()
+			}
 		case 's', 'S':
 			if st.Focus == st.FindDialogSelectionsFocus() {
 				h.ToggleSearchOnlySelections()
@@ -1274,6 +1314,8 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 				h.ToggleStayOnVolume()
 			case st.FindDialogOnlyDirsFocus():
 				h.ToggleOnlyDirectories()
+			case st.FindDialogOnlyFilesFocus():
+				h.ToggleOnlyFiles()
 			case st.FindDialogSelectionsFocus():
 				h.ToggleSearchOnlySelections()
 			case st.FindDialogOKFocus():
