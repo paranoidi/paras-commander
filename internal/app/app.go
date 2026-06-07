@@ -107,6 +107,8 @@ type App struct {
 	deleteDialogScanFP string
 	// findDialogSelectionScanFP is the last enqueued directory set fingerprint for find-dialog selection-size scans.
 	findDialogSelectionScanFP string
+	// findDialogSelectionScanGen skips reconcile work when marked-selection derived input is unchanged.
+	findDialogSelectionScanGen uint64
 	// metaActiveCmd holds the name of the active meta command per panel (empty = none).
 	metaActiveCmd [2]string
 	// metaNavPath holds the last panel path for which meta was run (used to detect navigation).
@@ -586,7 +588,12 @@ func (a *App) Run() error {
 			case diskUsageRedrawPayload:
 				a.resortPanelsDiskUsageSorted()
 				a.refreshDeleteDialogSummary()
-				a.render()
+				if a.model.FindDialog.Open {
+					a.model.FindDialog.InvalidateMarkedSelectionSizeLabel()
+					a.renderFindDialogUpdate()
+				} else {
+					a.render()
+				}
 				didRender = true
 			case volumeSpaceRefreshPayload:
 				pollDiskUsageAfter = false

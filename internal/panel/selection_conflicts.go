@@ -5,14 +5,70 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
+
+// clearSelectionDirAncestors removes selected directory ancestors of path.
+func clearSelectionDirAncestors(selected map[string]bool, path string, isDir func(string) bool) bool {
+	if len(selected) == 0 {
+		return false
+	}
+	path = cleanPathString(path)
+	if path == "" {
+		return false
+	}
+	if isDir == nil {
+		isDir = func(string) bool { return false }
+	}
+	loc, err := pathloc.Parse(path)
+	if err != nil {
+		return false
+	}
+	var removed bool
+	for {
+		parent := loc.Parent()
+		if parent.Equal(loc) || parent.IsZero() {
+			break
+		}
+		ps := cleanPathString(parent.String())
+		if ps != "" && selected[ps] && isDir(ps) {
+			delete(selected, ps)
+			removed = true
+		}
+		loc = parent
+	}
+	return removed
+}
+
+// clearSelectionStrictDescendants removes selected paths strictly under parent.
+func clearSelectionStrictDescendants(selected map[string]bool, parent string) bool {
+	if len(selected) == 0 {
+		return false
+	}
+	parent = cleanPathString(parent)
+	if parent == "" {
+		return false
+	}
+	prefix := filepath.ToSlash(parent) + "/"
+	var removed bool
+	for p := range selected {
+		clean := cleanPathString(p)
+		if clean == "" {
+			continue
+		}
+		if strings.HasPrefix(filepath.ToSlash(clean), prefix) {
+			delete(selected, p)
+			removed = true
+		}
+	}
+	return removed
+}
 
 // ClearSelectionConflicts removes paths in selected that conflict with adding path.
 // When adding path P: strict descendants of P are removed; selected directory ancestors of P are removed.
 // addedIsDir is the type of P (reserved for future rules). existingIsDir reports whether a selected path is a directory.
 // Returns true if any path was removed.
 func ClearSelectionConflicts(selected map[string]bool, path string, addedIsDir bool, existingIsDir func(string) bool) bool {
-	_ = addedIsDir
 	if len(selected) == 0 {
 		return false
 	}
@@ -24,20 +80,83 @@ func ClearSelectionConflicts(selected map[string]bool, path string, addedIsDir b
 		existingIsDir = func(string) bool { return false }
 	}
 	var removed bool
-	for p := range selected {
-		clean := cleanPathString(p)
-		if clean == "" {
-			continue
-		}
-		if IsStrictPathDescendant(added, clean) {
-			delete(selected, p)
-			removed = true
-			continue
-		}
-		if existingIsDir(clean) && IsStrictPathDescendant(clean, added) {
-			delete(selected, p)
+	if addedIsDir {
+		if clearSelectionStrictDescendants(selected, added) {
 			removed = true
 		}
+	}
+	if clearSelectionDirAncestors(selected, added, existingIsDir) {
+		removed = true
+	}
+	return removed
+}
+
+// selectionMapHasDirs reports whether selected contains any marked directory path.
+func selectionMapHasDirs(selected map[string]bool, isDir func(string) bool) bool {
+	if len(selected) == 0 {
+		return false
+	}
+	if isDir == nil {
+		isDir = func(string) bool { return false }
+	}
+	for p, on := range selected {
+		if on && isDir(p) {
+			return true
+		}
+	}
+	return false
+}
+
+// BulkApplySelectionAdds marks paths using the same conflict rules as ApplySelectionAdds.
+// When all new paths are files and selected has no directories, uses O(n) direct inserts.
+// Returns true if any conflicting path was removed from selected.
+func BulkApplySelectionAdds(selected map[string]bool, paths []string, isDir func(string) bool) bool {
+	if len(paths) == 0 {
+		return false
+	}
+	if isDir == nil {
+		isDir = func(string) bool { return false }
+	}
+	allNewFiles := true
+	for _, path := range paths {
+		if isDir(path) {
+			allNewFiles = false
+			break
+		}
+	}
+	if allNewFiles && !selectionMapHasDirs(selected, isDir) {
+		for _, path := range paths {
+			path = cleanPathString(path)
+			if path == "" {
+				continue
+			}
+			selected[path] = true
+		}
+		return false
+	}
+	return ApplySelectionAdds(selected, paths, isDir)
+}
+
+// BulkApplySelectionAddsWalkOrder marks paths assuming parents appear before descendants
+// (find WalkDir index order). Only valid when selected starts empty or caller accepts walk-order semantics.
+// Returns true if any conflicting path was removed from selected.
+func BulkApplySelectionAddsWalkOrder(selected map[string]bool, paths []string, isDir func(string) bool) bool {
+	if len(paths) == 0 {
+		return false
+	}
+	if isDir == nil {
+		isDir = func(string) bool { return false }
+	}
+	var removed bool
+	for _, path := range paths {
+		path = cleanPathString(path)
+		if path == "" {
+			continue
+		}
+		if clearSelectionDirAncestors(selected, path, isDir) {
+			removed = true
+		}
+		selected[path] = true
 	}
 	return removed
 }

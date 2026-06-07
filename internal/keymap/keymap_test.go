@@ -360,10 +360,17 @@ func TestDefaultBundleFindDialogOverlayF5CtrlA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
+	if got := bundle.FindDialog.MenuBindingLabel(ActionFindUnselectAll); got != "F4" {
+		t.Fatalf("FindDialog UnselectAll MenuBindingLabel = %q, want F4", got)
+	}
+	id, ok := bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	if !ok || id != ActionFindUnselectAll {
+		t.Fatalf("FindDialog F4 = %q %v, want %q", id, ok, ActionFindUnselectAll)
+	}
 	if got := bundle.FindDialog.MenuBindingLabel(ActionFindSelectAll); got != "F5" {
 		t.Fatalf("FindDialog MenuBindingLabel = %q, want F5", got)
 	}
-	id, ok := bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if !ok || id != ActionFindSelectAll {
 		t.Fatalf("FindDialog F5 = %q %v, want %q", id, ok, ActionFindSelectAll)
 	}
@@ -375,9 +382,9 @@ func TestDefaultBundleFindDialogOverlayF5CtrlA(t *testing.T) {
 	if !ok || id != ActionFindSelectGroup {
 		t.Fatalf("FindDialog F6 = %q %v, want %q", id, ok, ActionFindSelectGroup)
 	}
-	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+	id, ok = bundle.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
 	if !ok || id != ActionFindUnselectGroup {
-		t.Fatalf("FindDialog F8 = %q %v, want %q", id, ok, ActionFindUnselectGroup)
+		t.Fatalf("FindDialog F7 = %q %v, want %q", id, ok, ActionFindUnselectGroup)
 	}
 }
 

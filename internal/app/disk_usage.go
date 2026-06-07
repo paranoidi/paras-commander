@@ -61,6 +61,7 @@ drained:
 		a.resortPanelsDiskUsageSorted()
 		a.refreshDeleteDialogSummary()
 		if a.model.FindDialog.Open {
+			a.model.FindDialog.InvalidateMarkedSelectionSizeLabel()
 			a.renderFindDialogUpdate()
 			return
 		}

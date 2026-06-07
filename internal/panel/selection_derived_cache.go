@@ -102,25 +102,6 @@ func (s *State) buildPrunedSelectionRoots() []string {
 	return PruneNestedPathsForSelection(paths, filesOnly, s.selectedPathIsDirectory)
 }
 
-func (s *State) selectionExistingHasDirs(isDir func(string) bool) bool {
-	if s.selectionHasDirs {
-		return true
-	}
-	if len(s.SelectedPaths) == 0 {
-		return false
-	}
-	if isDir == nil {
-		isDir = s.selectedPathIsDirectory
-	}
-	for p, on := range s.SelectedPaths {
-		if on && isDir(p) {
-			s.selectionHasDirs = true
-			return true
-		}
-	}
-	return false
-}
-
 func (s *State) refreshSelectionHasDirs(isDir func(string) bool) {
 	if isDir == nil {
 		isDir = s.selectedPathIsDirectory
@@ -232,26 +213,7 @@ func (s *State) BulkAddSelections(paths []string, isDir func(string) bool) bool 
 		s.SelectedPaths = make(map[string]bool, len(paths))
 	}
 
-	allNewFiles := true
-	for _, path := range paths {
-		if isDir(path) {
-			allNewFiles = false
-			break
-		}
-	}
-	if allNewFiles && !s.selectionExistingHasDirs(isDir) {
-		for _, path := range paths {
-			path = cleanPathString(path)
-			if path == "" {
-				continue
-			}
-			s.SelectedPaths[path] = true
-		}
-		s.invalidateSelectionDerived()
-		return false
-	}
-
-	removed := ApplySelectionAdds(s.SelectedPaths, paths, isDir)
+	removed := BulkApplySelectionAdds(s.SelectedPaths, paths, isDir)
 	s.refreshSelectionHasDirs(isDir)
 	s.invalidateSelectionDerived()
 	return removed

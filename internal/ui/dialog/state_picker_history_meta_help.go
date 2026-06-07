@@ -81,6 +81,7 @@ type FindEntry struct {
 	RelLine string
 	IsDir   bool
 	Type    localfs.EntryType
+	Size    int64 // file byte size from index walk; 0 for directories
 }
 
 // AbsPath reconstructs the absolute path of the entry from the dialog's root path.
@@ -124,10 +125,21 @@ type FindDialogState struct {
 	IndexErr          string
 	// RankPending is true while an async background rank is in progress or scheduled.
 	RankPending bool
+	// FullRanked holds uncapped query-filtered entry indices for bulk select-all / group select.
+	FullRanked           []int
+	FullRankedGen        int
+	FullRankedEntriesLen int
+	FullRankedOnlyDirs   bool
+	FullRankedOnlyFiles  bool
 	// MarkedPaths holds paths toggled selected in the dialog (applied to the panel on OK).
 	MarkedPaths map[string]bool
 	// PathIsDir maps cleaned absolute path to isDir for O(1) conflict checks during marking.
 	PathIsDir map[string]bool
+	// PathSize maps cleaned absolute path to file byte size from the index walk.
+	PathSize map[string]int64
+	// markedSelGen bumps on MarkedPaths mutations; drives selection-size derived cache.
+	markedSelGen   uint64
+	markedSelCache findMarkedSelCache
 }
 
 // FindDialogHasSelectionsCheckbox reports whether the search-selections row is shown.

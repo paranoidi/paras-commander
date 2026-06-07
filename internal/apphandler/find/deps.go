@@ -94,6 +94,7 @@ type rankInput struct {
 type rankResult struct {
 	gen         int
 	ranked      []int
+	fullRanked  []int
 	matchRanges map[int][]search.Range // sparse: nil when query is empty
 }
 
