@@ -12,6 +12,17 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
+func TestPanelListGitColumnActiveHiddenWhilePending(t *testing.T) {
+	state := panel.State{GitColumnActive: true, GitPending: true}
+	if panelListGitColumnActive(state, false) {
+		t.Fatal("git column visible while GitPending")
+	}
+	state.GitPending = false
+	if !panelListGitColumnActive(state, false) {
+		t.Fatal("git column hidden after status load")
+	}
+}
+
 func TestPanelListNameWidthReservesGitColumn(t *testing.T) {
 	const rowW = 40
 	noGit := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)

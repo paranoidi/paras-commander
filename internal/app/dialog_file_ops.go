@@ -17,8 +17,14 @@ func (a *App) closeFileDialog() {
 
 func (a *App) refreshBothPanels() {
 	viewportRows := a.activeViewportRows()
-	_ = a.model.Left.Refresh(viewportRows)
-	_ = a.model.Right.Refresh(viewportRows)
+	if a.model.ActivePanel == ui.LeftPanel {
+		_ = a.model.Left.Refresh(viewportRows)
+		_ = a.model.Right.RefreshOrNavigateToExistingAncestor(viewportRows)
+	} else {
+		_ = a.model.Right.Refresh(viewportRows)
+		_ = a.model.Left.RefreshOrNavigateToExistingAncestor(viewportRows)
+	}
+	a.applyQuickViewPreviewImmediately()
 }
 
 func (a *App) openRenameDialog(p *panel.State) {

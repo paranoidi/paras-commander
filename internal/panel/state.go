@@ -65,7 +65,7 @@ type State struct {
 	GitignoreActive bool
 	// DotfilesHiddenActive is true when dotfiles are hidden and the current directory has dot-prefixed names.
 	DotfilesHiddenActive bool
-	// GitColumnActive is true when the listing path is inside a Git work tree (local panels only).
+	// GitColumnActive is true when git status loaded successfully for this listing (local panels only).
 	GitColumnActive bool
 	// GitPending is true while async git status is in flight for this listing.
 	GitPending bool
@@ -200,6 +200,26 @@ func (s *State) Refresh(viewportRows int) error {
 		selectedName = entry.Name
 	}
 	return s.load(s.Path, selectedName, viewportRows, priorCursor, remoteLoadOpts{})
+}
+
+// RefreshOrNavigateToExistingAncestor reloads the current directory when it still exists.
+// When the current path is missing, it walks up to the nearest existing ancestor and navigates
+// there in one step (highlighting the first missing child name when possible).
+func (s *State) RefreshOrNavigateToExistingAncestor(viewportRows int) error {
+	if s.Path.IsZero() || DirectoryExists(s.Path) {
+		return s.Refresh(viewportRows)
+	}
+	current := s.Path
+	for {
+		parent := current.Parent()
+		if parent.Equal(current) {
+			return s.Refresh(viewportRows)
+		}
+		if DirectoryExists(parent) {
+			return s.NavigateToPath(parent, current.Base(), viewportRows)
+		}
+		current = parent
+	}
 }
 
 // ApplyPeriodicRefresh commits a same-directory listing when content changed.
@@ -1039,6 +1059,18 @@ func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathlo
 	return FetchListing(context.Background(), s.ListingRefreshSnapshot(loc, 0))
 }
 
+// DirectoryExists reports whether loc is an existing directory on the backing VFS.
+func DirectoryExists(loc pathloc.Path) bool {
+	if loc.IsZero() {
+		return false
+	}
+	entry, err := fsbackend.Default().Stat(context.Background(), loc)
+	if err != nil {
+		return false
+	}
+	return entry.Type == fsbackend.EntryDirectory
+}
+
 // ApplyListing commits backend entries into panel state (used after sync or async remote list).
 func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend.Entry, selectedName string, viewportRows int, indexFallback int, centerRecalled bool) error {
 	localEntries, err := fsbackend.ToPanelEntries(backendEntries)
@@ -1120,17 +1152,17 @@ func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entr
 		return
 	}
 	workRoot := gitignore.WorkTreeRoot(host)
-	s.GitColumnActive = workRoot != ""
-	if !s.GitColumnActive {
+	s.GitColumnActive = false
+	s.GitByPath = nil
+	if workRoot == "" {
 		s.GitPending = false
-		s.GitByPath = nil
+		return
+	}
+	if s.ScheduleGitStatus == nil {
+		s.GitPending = false
 		return
 	}
 	s.GitPending = true
-	s.GitByPath = nil
-	if s.ScheduleGitStatus == nil {
-		return
-	}
 	paths := make([]gitstatus.ListingPaths, len(entries))
 	for i, e := range entries {
 		paths[i] = gitstatus.ListingPaths{
@@ -1138,11 +1170,13 @@ func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entr
 			IsDir:   e.Type == localfs.EntryDirectory,
 		}
 	}
-	s.ScheduleGitStatus(GitStatusRequest{
+	if !s.ScheduleGitStatus(GitStatusRequest{
 		WorkRoot: workRoot,
 		ListDir:  host,
 		Paths:    paths,
-	})
+	}) {
+		s.GitPending = false
+	}
 }
 
 func cleanPathString(p string) string {

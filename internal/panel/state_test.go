@@ -198,6 +198,52 @@ func TestRefreshPreservesSelectedEntryByName(t *testing.T) {
 	}
 }
 
+func TestRefreshOrNavigateToExistingAncestorWalksUpOnce(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "parent")
+	child := filepath.Join(parent, "child")
+	grandchild := filepath.Join(child, "grandchild")
+	for _, p := range []string{parent, child, grandchild} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	state, err := New(grandchild)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if err := os.RemoveAll(child); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.RefreshOrNavigateToExistingAncestor(5); err != nil {
+		t.Fatalf("RefreshOrNavigateToExistingAncestor() error = %v", err)
+	}
+	want := filepath.Clean(parent)
+	if got := state.Path.String(); got != want {
+		t.Fatalf("Path = %q, want %q", got, want)
+	}
+}
+
+func TestRefreshOrNavigateToExistingAncestorRefreshesWhenPathExists(t *testing.T) {
+	dir := t.TempDir()
+	testutil.WriteFile(t, filepath.Join(dir, "keep.txt"))
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	state.Cursor = 0
+	if err := state.RefreshOrNavigateToExistingAncestor(5); err != nil {
+		t.Fatalf("RefreshOrNavigateToExistingAncestor() error = %v", err)
+	}
+	if state.Path.String() != filepath.Clean(dir) {
+		t.Fatalf("Path = %q, want %q", state.Path.String(), dir)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "keep.txt" {
+		t.Fatalf("CurrentEntry() = %v, want keep.txt", entry)
+	}
+}
+
 func TestLoadHidesGitignoredEntries(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, ".git"), 0o755); err != nil {
@@ -222,7 +268,7 @@ func TestLoadHidesGitignoredEntries(t *testing.T) {
 	}
 }
 
-func TestLoadSetsGitColumnActiveInsideWorkTree(t *testing.T) {
+func TestLoadDefersGitColumnUntilStatusLoadsInsideWorkTree(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, ".git"), 0o755); err != nil {
 		t.Fatal(err)
@@ -237,8 +283,8 @@ func TestLoadSetsGitColumnActiveInsideWorkTree(t *testing.T) {
 	if err := state.Refresh(5); err != nil {
 		t.Fatalf("Refresh() error = %v", err)
 	}
-	if !state.GitColumnActive {
-		t.Fatal("GitColumnActive = false, want true inside Git work tree")
+	if state.GitColumnActive {
+		t.Fatal("GitColumnActive = true, want false before async status completes")
 	}
 	if !state.GitPending {
 		t.Fatal("GitPending = false, want true before async status completes")

@@ -64,6 +64,7 @@ func (a *App) applyGitStatusLoad(p gitStatusPayload) bool {
 		pan.GitByPath = nil
 		return true
 	}
+	pan.GitColumnActive = true
 	pan.GitByPath = p.byPath
 	return true
 }
