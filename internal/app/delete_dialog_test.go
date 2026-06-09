@@ -104,3 +104,69 @@ func TestDeleteDialogSummaryRefreshesWhenScanNoLongerNeeded(t *testing.T) {
 		t.Fatalf("reconcile should refresh summary from cache, still %q", got)
 	}
 }
+
+func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
+	root := t.TempDir()
+	sub := filepath.Join(root, "payload")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	f1 := filepath.Join(sub, "one.dat")
+	f2 := filepath.Join(sub, "two.dat")
+	writeFile(t, f1)
+	writeFile(t, f2)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.diskUsage.StartScanFromListing([]string{sub}, app.diskUsageIgnore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() {
+			if n, ok := app.diskUsage.FileCount(sub); ok && n >= 2 {
+				break
+			}
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	if n, ok := app.diskUsage.FileCount(sub); !ok || n < 2 {
+		t.Fatalf("expected cached file count >= 2, got ok=%v n=%d", ok, n)
+	}
+
+	dest := filepath.Join(root, "elsewhere")
+	if err := os.Mkdir(dest, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(f1, filepath.Join(dest, "one.dat")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(f2, filepath.Join(dest, "two.dat")); err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := app.diskUsage.FileCount(sub); n < 2 {
+		t.Fatalf("precondition: cache should still report stale count, got %d", n)
+	}
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{sub: true}
+	app.openDeleteDialog(p)
+
+	if strings.HasPrefix(app.model.FileDialog.DeleteSummary, "2 files") {
+		t.Fatalf("summary = %q; should not trust stale cache after files moved out", app.model.FileDialog.DeleteSummary)
+	}
+
+	deadline = time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		app.reconcileDeleteDialogScans()
+		if !app.diskUsageScanBusy() {
+			if n, ok := app.diskUsage.FileCount(sub); ok && n == 0 {
+				break
+			}
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	if got := app.model.FileDialog.DeleteSummary; !strings.HasPrefix(got, "0 files") {
+		t.Fatalf("summary = %q after rescan; want 0 files", got)
+	}
+}

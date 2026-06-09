@@ -199,6 +199,48 @@ func TestAbortClearsQueuedJobs(t *testing.T) {
 	}
 }
 
+func TestInvalidateSubtreeRemovesRootAndDescendants(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	nested := filepath.Join(sub, "nested")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{
+		filepath.Join(sub, "a.dat"),
+		filepath.Join(nested, "b.dat"),
+	} {
+		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	other := filepath.Join(root, "other.dat")
+	if err := os.WriteFile(other, []byte("y"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	e := New()
+	e.StartScanFromListing([]string{sub, other}, nil, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool {
+		_, okSub := e.Size(sub)
+		_, okOther := e.Size(other)
+		return okSub && okOther
+	}, 5*time.Second, "sizes not cached")
+
+	e.InvalidateSubtree(sub)
+	if _, ok := e.Size(sub); ok {
+		t.Fatal("sub size should be gone after InvalidateSubtree")
+	}
+	if _, ok := e.Size(nested); ok {
+		t.Fatal("nested size should be gone after InvalidateSubtree")
+	}
+	if _, ok := e.Size(other); !ok {
+		t.Fatal("unrelated path should remain cached")
+	}
+}
+
 func TestClearCacheRemovesSizes(t *testing.T) {
 	t.Parallel()
 

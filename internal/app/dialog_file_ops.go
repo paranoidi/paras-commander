@@ -94,6 +94,7 @@ func (a *App) openDeleteDialog(p *panel.State) {
 		}
 	}
 	a.deleteDialogScanFP = ""
+	a.invalidateDeleteDialogDiskCache(p, source)
 	a.model.FileDialog = ui.FileDialogState{
 		Open:          true,
 		DialogType:    ui.FileDialogDelete,

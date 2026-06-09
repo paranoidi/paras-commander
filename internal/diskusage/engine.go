@@ -270,6 +270,23 @@ func (e *Engine) DiskScanExcluded(absPath string, descendIntoMountPoints bool, l
 	return ScanExcluded(absPath, descendIntoMountPoints, listingDev, listingDevValid, gi)
 }
 
+// InvalidateSubtree drops cached sizes and file counts for rootAbs and every indexed path under it.
+func (e *Engine) InvalidateSubtree(rootAbs string) {
+	if e == nil {
+		return
+	}
+	root := filepath.Clean(rootAbs)
+	e.mu.Lock()
+	for k := range e.cache {
+		if pathIsOrUnder(k, root) {
+			delete(e.cache, k)
+			delete(e.fileCounts, k)
+		}
+	}
+	e.mu.Unlock()
+	e.poke()
+}
+
 // ClearCache aborts in-flight scans and removes all cached subtree sizes.
 func (e *Engine) ClearCache() {
 	if e == nil {

@@ -31,6 +31,27 @@ func (a *App) deleteDialogSummary(p *panel.State, source ops.Source) string {
 	return ui.FormatDeleteImpactSummary(files, bytes, pending, a.styles.SymbolWorking())
 }
 
+func (a *App) invalidateDeleteDialogDiskCache(p *panel.State, source ops.Source) {
+	if a.diskUsage == nil || p.Path.IsRemote() {
+		return
+	}
+	pruned := panel.PruneNestedPaths(ops.SourcePaths(source))
+	byPath := entriesByPath(p)
+	for _, path := range pruned {
+		entry, found := byPath[path]
+		if !found {
+			var err error
+			entry, err = localfs.EntryFromPath(path)
+			if err != nil || entry.Type != localfs.EntryDirectory {
+				continue
+			}
+		} else if entry.Type != localfs.EntryDirectory {
+			continue
+		}
+		a.diskUsage.InvalidateSubtree(path)
+	}
+}
+
 func entriesByPath(p *panel.State) map[string]localfs.Entry {
 	byPath := make(map[string]localfs.Entry, len(p.Entries))
 	for _, e := range p.Entries {
