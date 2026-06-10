@@ -55,7 +55,11 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 	}
 
 	rect := draw.CenteredDialogRect(layout, width, height)
-	borderStyle := draw.DrawDialogFrame(screen, rect, "History", styles)
+	title := "History"
+	if state.BothPanels {
+		title = "History - Both panels"
+	}
+	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
 	leftCol := rect.X + 2

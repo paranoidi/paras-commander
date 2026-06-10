@@ -81,6 +81,7 @@ type App struct {
 	keysRenameDialog   *keymap.Map // sanitize/slugify while main rename dialog is focused
 	keysBookmarkDialog *keymap.Map // delete fzf-marks entry while bookmarks picker is open
 	keysFindDialog     *keymap.Map // select all while find dialog is open
+	keysHistoryDialog  *keymap.Map // both-panels toggle while history dialog is open
 	devMode            bool
 	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
@@ -311,6 +312,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		kmFindDialog = m
 	}
+	kmHistoryDialog := bundle.HistoryDialog
+	if kmHistoryDialog == nil {
+		m, err := keymap.Build(keymap.DefaultHistoryDialogOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build history dialog overlay map: %w", err)
+		}
+		kmHistoryDialog = m
+	}
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -420,6 +429,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysRenameDialog:   kmRenameDialog,
 		keysBookmarkDialog: kmBookmarkDialog,
 		keysFindDialog:     kmFindDialog,
+		keysHistoryDialog:  kmHistoryDialog,
 		devMode:            opts.DevMode,
 		commandsCtx:        cmdCtx,
 		commandsCancel:     cmdCancel,

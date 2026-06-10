@@ -695,6 +695,34 @@ func CleanPathString(p string) string {
 	return cleanPathString(p)
 }
 
+// MergeNavigationHistories combines passive-first then active navigation histories,
+// deduplicating by cleaned path and skipping empty paths.
+func MergeNavigationHistories(passive, active []string) []string {
+	seen := make(map[string]struct{})
+	var out []string
+	add := func(p string) {
+		if p == "" || p == "." {
+			return
+		}
+		cp := cleanPathString(p)
+		if cp == "" {
+			return
+		}
+		if _, ok := seen[cp]; ok {
+			return
+		}
+		seen[cp] = struct{}{}
+		out = append(out, cp)
+	}
+	for _, p := range passive {
+		add(p)
+	}
+	for _, p := range active {
+		add(p)
+	}
+	return out
+}
+
 // BestRecalledCursor returns the best saved highlight for dir across panels. A non-empty
 // entry name wins over index-only snapshots (e.g. cursor left on ".." when exiting once).
 func BestRecalledCursor(dir string, states ...*State) (entryName string, index int, ok bool) {

@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/app/pathpick"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -287,36 +288,24 @@ func (a *App) pathPickerQueryWidth() int {
 func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) {
 	passive := a.inactivePanel()
 	active := a.activePanel()
+	panelPath := active.PathString()
+	home := a.model.UserHomeDir
 	seen := make(map[string]struct{})
 	var items []ui.PathPickerItem
 
-	panelPath := active.PathString()
-	home := a.model.UserHomeDir
-	addPath := func(p string) {
-		cp := filepath.Clean(p)
-		if cp == "." || cp == "" {
-			return
+	for _, cp := range panel.MergeNavigationHistories(passive.History, active.History) {
+		if pathpick.QueryLooksPathlike(cp) && pathEntryMissing(panelPath, home, cp) {
+			continue
 		}
-		if pathpick.QueryLooksPathlike(p) && pathEntryMissing(panelPath, home, cp) {
-			return
+		if _, ok := seen[cp]; ok {
+			continue
 		}
-		key := cp
-		if _, ok := seen[key]; ok {
-			return
-		}
-		seen[key] = struct{}{}
+		seen[cp] = struct{}{}
 		items = append(items, ui.PathPickerItem{
 			Source:      "history",
 			Path:        cp,
 			PathMissing: pathEntryMissing(panelPath, home, cp),
 		})
-	}
-
-	for _, p := range passive.History {
-		addPath(p)
-	}
-	for _, p := range active.History {
-		addPath(p)
 	}
 
 	marks, err := bookmarks.LoadAll(a.config.Bookmarks.File, a.model.UserHomeDir)

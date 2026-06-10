@@ -19,13 +19,13 @@ func TestDrawHistoryDialogSmoke(t *testing.T) {
 	styles := theme.Default()
 	layout := geom.CalculateLayout(80, 24, true, geom.PanelWidthSplit{})
 	state := HistoryDialogState{
-		Open:         true,
-		PanelID:      0,
-		Paths:        []string{"/tmp/a", "/tmp/b"},
-		CurrentIndex: 0,
-		DisplayLines: []string{"* /tmp/a", "  /tmp/b"},
-		Query:        "tmp",
-		Ranked:       []int{0, 1},
+		Open:              true,
+		PanelID:           0,
+		Paths:             []string{"/tmp/a", "/tmp/b"},
+		PanelCurrentIndex: 0,
+		DisplayLines:      []string{"* /tmp/a", "  /tmp/b"},
+		Query:             "tmp",
+		Ranked:            []int{0, 1},
 		MatchRanges: [][]search.Range{
 			{{Start: 2, End: 5}},
 			{{Start: 2, End: 5}},

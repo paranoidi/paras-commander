@@ -22,6 +22,7 @@ const (
 	ActionNavForward                 = "nav.forward"
 	ActionNavBackward                = "nav.backward"
 	ActionPanelHistoryDialog         = "panel.history-dialog"
+	ActionPanelHistoryBothPanels     = "panel.history-both-panels"
 	ActionPanelFindDialog            = "panel.find-dialog"
 	ActionFindSelectAll              = "find.select-all"
 	ActionFindUnselectAll            = "find.unselect-all"
@@ -177,6 +178,7 @@ var KnownActions = map[string]struct{}{
 	ActionNavForward:                 {},
 	ActionNavBackward:                {},
 	ActionPanelHistoryDialog:         {},
+	ActionPanelHistoryBothPanels:     {},
 	ActionPanelFindDialog:            {},
 	ActionFindSelectAll:              {},
 	ActionFindUnselectAll:            {},

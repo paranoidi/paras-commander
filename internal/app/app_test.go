@@ -1660,6 +1660,170 @@ func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 	}
 }
 
+func navigatePanelIntoDir(t *testing.T, app *App, panelID int, name string) {
+	t.Helper()
+	p := app.panelByID(panelID)
+	selectPanelEntryByName(t, p, name)
+	app.model.ActivePanel = panelID
+	app.dispatch(keymap.ActionNavOpen)
+}
+
+func TestHistoryDialogF5TogglesBothPanels(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	gamma := filepath.Join(root, "gamma")
+	for _, p := range []string{alpha, beta, gamma} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	navigatePanelIntoDir(t, app, ui.LeftPanel, "alpha")
+	app.model.ActivePanel = ui.RightPanel
+	navigatePanelIntoDir(t, app, ui.RightPanel, "beta")
+
+	app.openHistoryDialog(ui.LeftPanel)
+	if !app.model.HistoryDialog.Open {
+		t.Fatal("expected history dialog open")
+	}
+	singleCount := len(app.model.HistoryDialog.Paths)
+	if singleCount == 0 {
+		t.Fatal("expected left panel history")
+	}
+	if app.model.HistoryDialog.BothPanels {
+		t.Fatal("expected single-panel mode on open")
+	}
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if !app.model.HistoryDialog.BothPanels {
+		t.Fatal("expected both-panels mode after F5")
+	}
+	if len(app.model.HistoryDialog.Paths) <= singleCount {
+		t.Fatalf("merged paths = %d want > single %d", len(app.model.HistoryDialog.Paths), singleCount)
+	}
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if app.model.HistoryDialog.BothPanels {
+		t.Fatal("expected single-panel mode after second F5")
+	}
+	if len(app.model.HistoryDialog.Paths) != singleCount {
+		t.Fatalf("paths = %d want restored single count %d", len(app.model.HistoryDialog.Paths), singleCount)
+	}
+}
+
+func TestHistoryDialogBothPanelsOKNavigatesPanelID(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	beta := filepath.Join(root, "beta")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(beta, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	navigatePanelIntoDir(t, app, ui.LeftPanel, "alpha")
+	app.model.ActivePanel = ui.RightPanel
+	navigatePanelIntoDir(t, app, ui.RightPanel, "beta")
+
+	app.openHistoryDialog(ui.LeftPanel)
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	wantBeta := filepath.Clean(beta)
+	for i, p := range app.model.HistoryDialog.Paths {
+		if filepath.Clean(p) == wantBeta {
+			for _, r := range app.model.HistoryDialog.Ranked {
+				if r == i {
+					app.model.HistoryDialog.Selected = 0
+					for si, idx := range app.model.HistoryDialog.Ranked {
+						if idx == i {
+							app.model.HistoryDialog.Selected = si
+							break
+						}
+					}
+					break
+				}
+			}
+			break
+		}
+	}
+	app.activateHistorySelection()
+	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()); got != wantBeta {
+		t.Fatalf("left panel path = %q want %q", got, wantBeta)
+	}
+}
+
+func TestHistoryDialogBothEmptyInfoNoDialog(t *testing.T) {
+	root := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.panelByID(ui.LeftPanel).History = nil
+	app.panelByID(ui.RightPanel).History = nil
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if app.model.HistoryDialog.Open {
+		t.Fatal("expected dialog closed")
+	}
+	if app.model.Message != "No directory history yet" {
+		t.Fatalf("message = %q", app.model.Message)
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyInfo {
+		t.Fatalf("urgency = %v want info", app.model.MessageUrgency)
+	}
+}
+
+func TestHistoryDialogFooterF5Hints(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	if err := os.Mkdir(alpha, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	navigatePanelIntoDir(t, app, ui.LeftPanel, "alpha")
+
+	app.openHistoryDialog(ui.LeftPanel)
+	keys := app.activeFooterKeys()
+	var foundBoth bool
+	for _, fk := range keys {
+		if fk.KeyLabel == "F5" && fk.Hint == "Both Panels" {
+			foundBoth = true
+			break
+		}
+	}
+	if !foundBoth {
+		t.Fatalf("footer keys missing F5 Both Panels: %+v", keys)
+	}
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	keys = app.activeFooterKeys()
+	var foundThis bool
+	for _, fk := range keys {
+		if fk.KeyLabel == "F5" && fk.Hint == "Active panel" {
+			foundThis = true
+			break
+		}
+	}
+	if !foundThis {
+		t.Fatalf("footer keys missing F5 Active panel: %+v", keys)
+	}
+}
+
 func TestBookmarkDialogFilterSelectsRankedFirst(t *testing.T) {
 	root := t.TempDir()
 	tAlpha := filepath.Join(root, "alpha")

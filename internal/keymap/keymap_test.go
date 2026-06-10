@@ -355,6 +355,20 @@ func TestDefaultBundleBookmarkDialogOverlayF8(t *testing.T) {
 	}
 }
 
+func TestDefaultBundleHistoryDialogOverlayF5(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	if got := bundle.HistoryDialog.MenuBindingLabel(ActionPanelHistoryBothPanels); got != "F5" {
+		t.Fatalf("HistoryDialog MenuBindingLabel = %q, want F5", got)
+	}
+	id, ok := bundle.HistoryDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if !ok || id != ActionPanelHistoryBothPanels {
+		t.Fatalf("HistoryDialog F5 = %q %v, want %q", id, ok, ActionPanelHistoryBothPanels)
+	}
+}
+
 func TestDefaultBundleFindDialogOverlayF5CtrlA(t *testing.T) {
 	bundle, err := DefaultBundle()
 	if err != nil {

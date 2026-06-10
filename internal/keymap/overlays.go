@@ -78,6 +78,14 @@ var overlayRegistry = []OverlaySpec{
 			return fmt.Errorf("parse config %q: [find_dialog_action_keys] action %q is not allowed (find.select-all, find.unselect-all, find.select-group, find.unselect-group only)", source, action)
 		},
 	},
+	{
+		TableName: "history_dialog_action_keys",
+		Defaults:  DefaultHistoryDialogOverlayKeys,
+		Allowed:   AllowedInHistoryDialogOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [history_dialog_action_keys] action %q is not allowed (panel.history-both-panels only)", source, action)
+		},
+	},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.
@@ -137,6 +145,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "bookmark.delete only"
 	case "find_dialog_action_keys":
 		return "find.select-all, find.unselect-all, find.select-group, find.unselect-group only"
+	case "history_dialog_action_keys":
+		return "panel.history-both-panels only"
 	default:
 		return "not allowed"
 	}

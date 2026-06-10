@@ -173,6 +173,9 @@ func (a *App) effectiveKeyStrings(actionID string, defaults []string) []string {
 	if a.keysFindDialog != nil {
 		add(a.keysFindDialog.BindingsForAction(actionID))
 	}
+	if a.keysHistoryDialog != nil {
+		add(a.keysHistoryDialog.BindingsForAction(actionID))
+	}
 	if len(out) > 0 {
 		return out
 	}
@@ -187,6 +190,9 @@ func (a *App) effectiveKeyStrings(actionID string, defaults []string) []string {
 		add(od)
 	}
 	if od := keymap.DefaultFindDialogOverlayKeys()[actionID]; len(od) > 0 {
+		add(od)
+	}
+	if od := keymap.DefaultHistoryDialogOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
 	}
 	return out

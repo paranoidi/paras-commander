@@ -12,4 +12,5 @@ type Bundle struct {
 	RenameDialog   *Map // main rename dialog (sanitize/slugify shortcuts)
 	BookmarkDialog *Map // bookmarks path picker (delete fzf-marks entry)
 	FindDialog     *Map // find dialog (select all ranked results)
+	HistoryDialog  *Map // history dialog (toggle both panels)
 }

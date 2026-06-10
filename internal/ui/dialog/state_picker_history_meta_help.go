@@ -188,19 +188,22 @@ func (s FindDialogState) FindDialogMaxFocus() int {
 
 // HistoryDialogState is a fuzzy picker over one panel’s navigation history paths.
 type HistoryDialogState struct {
-	Open         bool
-	PanelID      int      // LeftPanel or RightPanel
-	Paths        []string // snapshot when dialog opened
-	CurrentIndex int      // snapshot HistoryIndex when dialog opened
-	DisplayLines []string // per-row UI text ("* path" / "  path"); len == len(Paths)
-	Query        string
-	QueryCursor  int              // rune offset of caret within Query (0..len(runes))
-	QueryScroll  int              // first visible rune offset for horizontal scrolling
-	Ranked       []int            // indices into Paths / DisplayLines
-	MatchRanges  [][]search.Range // len == len(Paths); highlights on DisplayLines
-	Selected     int              // index into Ranked
-	ListScroll   int
-	Focus        int // 0=list+query, 1=OK, 2=Cancel
+	Open              bool
+	PanelID           int      // LeftPanel or RightPanel
+	Paths             []string // current list (single panel or merged)
+	CurrentIndex      int      // snapshot HistoryIndex when dialog opened
+	BothPanels        bool     // true when showing merged list
+	PanelPaths        []string // snapshot of PanelID history at open (for F5 toggle back)
+	PanelCurrentIndex int      // snapshot HistoryIndex at open
+	DisplayLines      []string // per-row UI text ("* path" / "  path"); len == len(Paths)
+	Query             string
+	QueryCursor       int              // rune offset of caret within Query (0..len(runes))
+	QueryScroll       int              // first visible rune offset for horizontal scrolling
+	Ranked            []int            // indices into Paths / DisplayLines
+	MatchRanges       [][]search.Range // len == len(Paths); highlights on DisplayLines
+	Selected          int              // index into Ranked
+	ListScroll        int
+	Focus             int // 0=list+query, 1=OK, 2=Cancel
 }
 
 // MetaEntry is one selectable command in the meta picker dialog.

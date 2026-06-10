@@ -125,7 +125,12 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		rest = append(findDialogOverlayFooterKeys(a.keysFindDialog), rest...)
 		return footerWithEscClose(rest)
 	}
-	if a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.MetaDialog.Open {
+	if a.model.HistoryDialog.Open {
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		rest = append(historyDialogOverlayFooterKeys(a.keysHistoryDialog, a.model.HistoryDialog.BothPanels), rest...)
+		return footerWithEscClose(rest)
+	}
+	if a.model.PathPicker.Open || a.model.MetaDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		if a.model.MetaDialog.Open {
 			rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)

@@ -183,6 +183,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"history", "picker", "navigate", "alt-h"},
 		},
 		{
+			ID:           ActionPanelHistoryBothPanels,
+			Title:        "Both panels history",
+			Section:      "Navigation",
+			DefaultKeys:  nil, // overlay: DefaultHistoryDialogOverlayKeys
+			PreferredKey: "F5",
+			Keywords:     []string{"history dialog", "merge", "both panels", "toggle"},
+		},
+		{
 			ID:           ActionPanelFindDialog,
 			Title:        "Find files",
 			Section:      "Navigation",
