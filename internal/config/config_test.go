@@ -263,6 +263,58 @@ func TestLoadFromPathsRejectsUnknownFields(t *testing.T) {
 	}
 }
 
+func TestIsShortcutPassThroughTable(t *testing.T) {
+	passThrough := []string{
+		ActionKeysTable,
+		JobsActionKeysTable,
+		CommandsActionKeysTable,
+		MessagesActionKeysTable,
+		PathPickerHostActionKeysTable,
+		DialogInputActionKeysTable,
+		RenameDialogActionKeysTable,
+		BookmarkDialogActionKeysTable,
+		FindDialogActionKeysTable,
+		HistoryDialogActionKeysTable,
+		FlattenDialogActionKeysTable,
+	}
+	for _, name := range passThrough {
+		if !IsShortcutPassThroughTable(name) {
+			t.Fatalf("IsShortcutPassThroughTable(%q) = false, want true", name)
+		}
+	}
+	if IsShortcutPassThroughTable("not_a_shortcut_table") {
+		t.Fatal("IsShortcutPassThroughTable(unknown) = true, want false")
+	}
+}
+
+func TestLoadFromPathsAcceptsAllShortcutPassThroughTables(t *testing.T) {
+	tables := []string{
+		ActionKeysTable,
+		JobsActionKeysTable,
+		CommandsActionKeysTable,
+		MessagesActionKeysTable,
+		PathPickerHostActionKeysTable,
+		DialogInputActionKeysTable,
+		RenameDialogActionKeysTable,
+		BookmarkDialogActionKeysTable,
+		FindDialogActionKeysTable,
+		HistoryDialogActionKeysTable,
+		FlattenDialogActionKeysTable,
+	}
+	for _, table := range tables {
+		t.Run(table, func(t *testing.T) {
+			path := writeConfig(t, "theme = \"default\"\n["+table+"]\n")
+			cfg, err := LoadFromPaths(Paths{ConfigFile: path})
+			if err != nil {
+				t.Fatalf("LoadFromPaths() error = %v, want success with [%s]", err, table)
+			}
+			if cfg.Theme != "default" {
+				t.Fatalf("Theme = %q, want default", cfg.Theme)
+			}
+		})
+	}
+}
+
 func TestLoadFromPathsClampsUnsupportedValuesToDefaults(t *testing.T) {
 	tests := []struct {
 		name    string

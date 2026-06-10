@@ -19,25 +19,6 @@ const (
 	fileName                = "config.toml"
 	keybindingsFileBaseName = "keybindings.toml"
 
-	// actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, messagesActionKeysTable,
-	// pathPickerHostActionKeysTable, dialogInputActionKeysTable, and renameDialogActionKeysTable are
-	// optional top-level TOML tables holding keybindings inside config.toml.
-	// They mirror the canonical contents of keybindings.toml and are owned
-	// by the keymap package; config only tolerates them as pass-through so
-	// a single bootstrap file can carry both general settings and the full
-	// shortcut map (global plus per-view overlays).
-	actionKeysTable               = "action_keys"
-	jobsActionKeysTable           = "jobs_action_keys"
-	commandsActionKeysTable       = "commands_action_keys"
-	messagesActionKeysTable       = "messages_action_keys"
-	pathPickerHostActionKeysTable = "path_picker_host_action_keys"
-	dialogInputActionKeysTable    = "dialog_input_action_keys"
-	renameDialogActionKeysTable   = "rename_dialog_action_keys"
-	bookmarkDialogActionKeysTable = "bookmark_dialog_action_keys"
-	findDialogActionKeysTable     = "find_dialog_action_keys"
-	historyDialogActionKeysTable  = "history_dialog_action_keys"
-	flattenDialogActionKeysTable  = "flatten_dialog_action_keys"
-
 	ThemeDefault   = "default"
 	StartupPathCWD = "cwd"
 	SortName       = "name"
@@ -480,7 +461,7 @@ func LoadFromPaths(paths Paths) (Config, error) {
 		return Config{}, fmt.Errorf("load config %q: %w", configFile, err)
 	}
 	for _, key := range meta.Undecoded() {
-		if len(key) > 0 && isShortcutTable(key[0]) {
+		if len(key) > 0 && IsShortcutPassThroughTable(key[0]) {
 			continue
 		}
 		return Config{}, fmt.Errorf("load config %q: unknown field %q", configFile, key.String())
@@ -525,7 +506,7 @@ func EncodeDefaultStub(w io.Writer) error {
 // settings and shortcut overrides; the keymap loader prefers a dedicated
 // keybindings.toml when present and falls back to this table otherwise.
 func ReadActionKeys(filename string) (map[string][]string, error) {
-	return readShortcutTable(filename, actionKeysTable)
+	return readShortcutTable(filename, ActionKeysTable)
 }
 
 // ReadJobsActionKeys parses the optional [jobs_action_keys] table from a
@@ -536,25 +517,25 @@ func ReadActionKeys(filename string) (map[string][]string, error) {
 // file contains and leaves validation to the keymap loader so error
 // messages remain centralized in one place.
 func ReadJobsActionKeys(filename string) (map[string][]string, error) {
-	return readShortcutTable(filename, jobsActionKeysTable)
+	return readShortcutTable(filename, JobsActionKeysTable)
 }
 
 // ReadCommandsActionKeys parses the optional [commands_action_keys] table from a config.toml
 // style file. Same nil/error semantics as ReadActionKeys.
 func ReadCommandsActionKeys(filename string) (map[string][]string, error) {
-	return readShortcutTable(filename, commandsActionKeysTable)
+	return readShortcutTable(filename, CommandsActionKeysTable)
 }
 
 // ReadMessagesActionKeys parses the optional [messages_action_keys] table from a config.toml
 // style file. Same nil/error semantics as ReadActionKeys.
 func ReadMessagesActionKeys(filename string) (map[string][]string, error) {
-	return readShortcutTable(filename, messagesActionKeysTable)
+	return readShortcutTable(filename, MessagesActionKeysTable)
 }
 
 // ReadPathPickerHostActionKeys parses the optional [path_picker_host_action_keys] table from a
 // config.toml style file. Same nil/error semantics as ReadActionKeys.
 func ReadPathPickerHostActionKeys(filename string) (map[string][]string, error) {
-	return readShortcutTable(filename, pathPickerHostActionKeysTable)
+	return readShortcutTable(filename, PathPickerHostActionKeysTable)
 }
 
 // ReadDialogInputActionKeys parses the optional [dialog_input_action_keys] table from a
@@ -563,31 +544,31 @@ func ReadPathPickerHostActionKeys(filename string) (map[string][]string, error) 
 // The dialog-input overlay only accepts ui.input.* action IDs; validation
 // remains centralized in the keymap loader.
 func ReadDialogInputActionKeys(filename string) (map[string][]string, error) {
-	return readShortcutTable(filename, dialogInputActionKeysTable)
+	return readShortcutTable(filename, DialogInputActionKeysTable)
 }
 
 // ReadRenameDialogActionKeys parses the optional [rename_dialog_action_keys] table from a
 // config.toml style file. Same nil/error semantics as ReadActionKeys.
 func ReadRenameDialogActionKeys(filename string) (map[string][]string, error) {
-	return readShortcutTable(filename, renameDialogActionKeysTable)
+	return readShortcutTable(filename, RenameDialogActionKeysTable)
 }
 
 // ReadBookmarkDialogActionKeys parses the optional [bookmark_dialog_action_keys] table from a
 // config.toml style file. Same nil/error semantics as ReadActionKeys.
 func ReadBookmarkDialogActionKeys(filename string) (map[string][]string, error) {
-	return readShortcutTable(filename, bookmarkDialogActionKeysTable)
+	return readShortcutTable(filename, BookmarkDialogActionKeysTable)
 }
 
 // ReadHistoryDialogActionKeys parses the optional [history_dialog_action_keys] table from a
 // config.toml style file. Same nil/error semantics as ReadActionKeys.
 func ReadHistoryDialogActionKeys(filename string) (map[string][]string, error) {
-	return readShortcutTable(filename, historyDialogActionKeysTable)
+	return readShortcutTable(filename, HistoryDialogActionKeysTable)
 }
 
 // ReadFindDialogActionKeys parses the optional [find_dialog_action_keys] table from a
 // config.toml style file. Same nil/error semantics as ReadActionKeys.
 func ReadFindDialogActionKeys(filename string) (map[string][]string, error) {
-	return readShortcutTable(filename, findDialogActionKeysTable)
+	return readShortcutTable(filename, FindDialogActionKeysTable)
 }
 
 // ReadOverlayActionKeys parses a shortcut overlay table from a TOML config file.
@@ -626,16 +607,6 @@ func readShortcutTable(filename, table string) (map[string][]string, error) {
 		return nil, nil
 	}
 	return out, nil
-}
-
-// isShortcutTable reports whether a top-level TOML key is one of the
-// keybindings pass-through tables tolerated inside config.toml.
-func isShortcutTable(name string) bool {
-	switch name {
-	case actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, messagesActionKeysTable, pathPickerHostActionKeysTable, dialogInputActionKeysTable, renameDialogActionKeysTable, bookmarkDialogActionKeysTable, findDialogActionKeysTable, historyDialogActionKeysTable, flattenDialogActionKeysTable:
-		return true
-	}
-	return false
 }
 
 // flattenShortcutTable converts the nested map produced by TOML's

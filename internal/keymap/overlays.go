@@ -1,6 +1,10 @@
 package keymap
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/paranoidi/paras-commander/internal/config"
+)
 
 // OverlaySpec describes one keymap overlay table (e.g. [jobs_action_keys]).
 type OverlaySpec struct {
@@ -15,7 +19,7 @@ type OverlaySpec struct {
 // Order matches Bundle overlay field assignment in buildBundle.
 var overlayRegistry = []OverlaySpec{
 	{
-		TableName: "jobs_action_keys",
+		TableName: config.JobsActionKeysTable,
 		Defaults:  DefaultJobsOverlayKeys,
 		Allowed:   AllowedInJobsOverlay,
 		DisallowedActionError: func(source, action string) error {
@@ -23,7 +27,7 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
-		TableName: "commands_action_keys",
+		TableName: config.CommandsActionKeysTable,
 		Defaults:  DefaultCommandsOverlayKeys,
 		Allowed:   AllowedInCommandsOverlay,
 		DisallowedActionError: func(source, action string) error {
@@ -31,7 +35,7 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
-		TableName: "messages_action_keys",
+		TableName: config.MessagesActionKeysTable,
 		Defaults:  DefaultMessagesOverlayKeys,
 		Allowed:   AllowedInMessagesOverlay,
 		DisallowedActionError: func(source, action string) error {
@@ -39,7 +43,7 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
-		TableName: "path_picker_host_action_keys",
+		TableName: config.PathPickerHostActionKeysTable,
 		Defaults:  DefaultPathPickerHostOverlayKeys,
 		Allowed:   AllowedInPathPickerHostOverlay,
 		DisallowedActionError: func(source, action string) error {
@@ -47,7 +51,7 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
-		TableName: "dialog_input_action_keys",
+		TableName: config.DialogInputActionKeysTable,
 		Defaults:  DefaultDialogInputOverlayKeys,
 		Allowed:   AllowedInDialogInputOverlay,
 		DisallowedActionError: func(source, action string) error {
@@ -55,7 +59,7 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
-		TableName: "rename_dialog_action_keys",
+		TableName: config.RenameDialogActionKeysTable,
 		Defaults:  DefaultRenameDialogOverlayKeys,
 		Allowed:   AllowedInRenameDialogOverlay,
 		DisallowedActionError: func(source, action string) error {
@@ -63,7 +67,7 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
-		TableName: "bookmark_dialog_action_keys",
+		TableName: config.BookmarkDialogActionKeysTable,
 		Defaults:  DefaultBookmarkDialogOverlayKeys,
 		Allowed:   AllowedInBookmarkDialogOverlay,
 		DisallowedActionError: func(source, action string) error {
@@ -71,7 +75,7 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
-		TableName: "find_dialog_action_keys",
+		TableName: config.FindDialogActionKeysTable,
 		Defaults:  DefaultFindDialogOverlayKeys,
 		Allowed:   AllowedInFindDialogOverlay,
 		DisallowedActionError: func(source, action string) error {
@@ -79,7 +83,7 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
-		TableName: "history_dialog_action_keys",
+		TableName: config.HistoryDialogActionKeysTable,
 		Defaults:  DefaultHistoryDialogOverlayKeys,
 		Allowed:   AllowedInHistoryDialogOverlay,
 		DisallowedActionError: func(source, action string) error {
@@ -87,7 +91,7 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
-		TableName: "flatten_dialog_action_keys",
+		TableName: config.FlattenDialogActionKeysTable,
 		Defaults:  DefaultFlattenDialogOverlayKeys,
 		Allowed:   AllowedInFlattenDialogOverlay,
 		DisallowedActionError: func(source, action string) error {
@@ -137,25 +141,25 @@ func validateOverlayKeysFromFile(keys map[string][]string, label string, spec Ov
 
 func overlayNotAllowedHint(spec OverlaySpec) string {
 	switch spec.TableName {
-	case "jobs_action_keys":
+	case config.JobsActionKeysTable:
 		return "jobs.* only"
-	case "commands_action_keys":
+	case config.CommandsActionKeysTable:
 		return "commands.* only"
-	case "messages_action_keys":
+	case config.MessagesActionKeysTable:
 		return "messages.* only"
-	case "path_picker_host_action_keys":
+	case config.PathPickerHostActionKeysTable:
 		return "must be empty; fuzzy path picker uses bookmark.open from [action_keys]"
-	case "dialog_input_action_keys":
+	case config.DialogInputActionKeysTable:
 		return "ui.input.* only"
-	case "rename_dialog_action_keys":
+	case config.RenameDialogActionKeysTable:
 		return "file.rename.open-* only"
-	case "bookmark_dialog_action_keys":
+	case config.BookmarkDialogActionKeysTable:
 		return "bookmark.delete only"
-	case "find_dialog_action_keys":
+	case config.FindDialogActionKeysTable:
 		return "find.select-all, find.unselect-all, find.select-group, find.unselect-group only"
-	case "history_dialog_action_keys":
+	case config.HistoryDialogActionKeysTable:
 		return "panel.history-both-panels only"
-	case "flatten_dialog_action_keys":
+	case config.FlattenDialogActionKeysTable:
 		return "flatten.destination-active, flatten.destination-inactive only"
 	default:
 		return "not allowed"

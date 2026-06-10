@@ -9,6 +9,17 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 )
 
+func TestOverlayTableNamesAreShortcutPassThrough(t *testing.T) {
+	if !config.IsShortcutPassThroughTable(config.ActionKeysTable) {
+		t.Fatalf("%q must be a shortcut pass-through table", config.ActionKeysTable)
+	}
+	for _, name := range OverlayTableNames() {
+		if !config.IsShortcutPassThroughTable(name) {
+			t.Fatalf("overlay table %q is not registered in config shortcut pass-through set", name)
+		}
+	}
+}
+
 func TestParseKeyRejectsMultiStroke(t *testing.T) {
 	_, err := ParseKey("C-x c")
 	if err == nil {

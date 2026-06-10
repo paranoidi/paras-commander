@@ -126,7 +126,7 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys map[string][]str
 		}
 		return map[string][]string{}, emptyOverlays, nil
 	}
-	allowedTables := map[string]struct{}{"action_keys": {}}
+	allowedTables := map[string]struct{}{config.ActionKeysTable: {}}
 	for _, spec := range overlayRegistry {
 		allowedTables[spec.TableName] = struct{}{}
 	}
@@ -137,7 +137,7 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys map[string][]str
 	}
 
 	actionKeys = map[string][]string{}
-	if rawAK, ok := top["action_keys"]; ok {
+	if rawAK, ok := top[config.ActionKeysTable]; ok {
 		table, ok := rawAK.(map[string]interface{})
 		if !ok {
 			return nil, nil, fmt.Errorf("parse keybindings %q: [action_keys] must be a table", label)
