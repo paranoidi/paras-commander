@@ -662,8 +662,8 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 
 		// ── Jobs ──
-		// jobs.open defaults belong in [action_keys] (global). Other
-		// jobs.* defaults live in DefaultJobsOverlayKeys ([jobs_action_keys]).
+		// jobs.open defaults belong in [main] (global). Other
+		// jobs.* defaults live in DefaultJobsOverlayKeys ([jobs]).
 		{
 			ID:           ActionJobsOpen,
 			Title:        "Open jobs view",
@@ -749,7 +749,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionDialogInputRestoreDefault,
 			Title:        "Restore default placeholder",
 			Section:      "UI",
-			DefaultKeys:  nil, // bound only via [dialog_input_action_keys] (defaults C-r and C-d)
+			DefaultKeys:  nil, // bound only via [dialog.input] (defaults C-r and C-d)
 			PreferredKey: "C-r",
 			Keywords:     []string{"restore", "default", "placeholder", "prefill", "suggested"},
 		},

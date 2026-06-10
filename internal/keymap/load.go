@@ -13,43 +13,21 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 )
 
-// LoadFromPaths resolves the full Bundle (global + jobs-view + Commands-view + Messages-view +
-// path-picker-host + dialog-input + rename-dialog overlays) using a layered merge per table:
+// LoadFromPaths resolves the full Bundle (global + view + dialog overlays) using a layered merge per table:
 //
 //  1. built-in defaults (DefaultActionKeys / DefaultJobsOverlayKeys / DefaultCommandsOverlayKeys /
-//     DefaultMessagesOverlayKeys / DefaultPathPickerHostOverlayKeys / DefaultDialogInputOverlayKeys /
-//     DefaultRenameDialogOverlayKeys / DefaultBookmarkDialogOverlayKeys / DefaultFindDialogOverlayKeys /
-//     DefaultHistoryDialogOverlayKeys / DefaultFlattenDialogOverlayKeys)
-//  2. config.toml's [action_keys] / [jobs_action_keys] / [commands_action_keys] / [messages_action_keys] /
-//     [path_picker_host_action_keys] (must be empty) / [dialog_input_action_keys] / [rename_dialog_action_keys] /
-//     [bookmark_dialog_action_keys] / [find_dialog_action_keys] / [history_dialog_action_keys] /
-//     [flatten_dialog_action_keys] (when present)
-//  3. keybindings.toml's matching tables (when present) — wins over config.toml
+//     DefaultMessagesOverlayKeys / DefaultDialogInputOverlayKeys / DefaultRenameDialogOverlayKeys /
+//     DefaultBookmarkDialogOverlayKeys / DefaultFindDialogOverlayKeys / DefaultHistoryDialogOverlayKeys /
+//     DefaultFlattenDialogOverlayKeys)
+//  2. keybindings.toml's matching tables (when present)
 //
-// Any source can be absent without failing startup; built-in defaults
-// remain wherever no overrides are supplied. Layering applies
-// independently per table so a user can override only the global map,
-// only one overlay, or any combination.
+// keybindings.toml can be absent without failing startup; built-in defaults
+// remain wherever no overrides are supplied. Layering applies independently
+// per table so a user can override only the global map, only one overlay,
+// or any combination.
 func LoadFromPaths(paths config.Paths) (*Bundle, error) {
 	globalLayer := DefaultActionKeys()
 	overlayLayers := defaultOverlayLayers()
-
-	configActionKeys, err := config.ReadActionKeys(paths.ConfigFile)
-	if err != nil {
-		return nil, err
-	}
-	globalLayer = mergeBindings(globalLayer, configActionKeys)
-
-	for i, spec := range overlayRegistry {
-		configKeys, err := config.ReadOverlayActionKeys(paths.ConfigFile, spec.TableName)
-		if err != nil {
-			return nil, err
-		}
-		if err := validateOverlayKeys(configKeys, paths.ConfigFile, spec); err != nil {
-			return nil, err
-		}
-		overlayLayers[i] = mergeBindings(overlayLayers[i], configKeys)
-	}
 
 	file := strings.TrimSpace(paths.KeybindingsFile)
 	if file == "" && strings.TrimSpace(paths.ConfigDir) != "" {
@@ -67,11 +45,11 @@ func LoadFromPaths(paths config.Paths) (*Bundle, error) {
 		return nil, fmt.Errorf("read keybindings %q: %w", file, err)
 	}
 
-	actionUser, overlayUser, err := parseKeybindingsFile(raw, file)
+	mainUser, overlayUser, err := parseKeybindingsFile(raw, file)
 	if err != nil {
 		return nil, err
 	}
-	globalLayer = mergeBindings(globalLayer, actionUser)
+	globalLayer = mergeBindings(globalLayer, mainUser)
 	for i, userKeys := range overlayUser {
 		overlayLayers[i] = mergeBindings(overlayLayers[i], userKeys)
 	}
@@ -104,17 +82,16 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		Jobs:           overlayMaps[0],
 		Commands:       overlayMaps[1],
 		Messages:       overlayMaps[2],
-		PathPickerHost: overlayMaps[3],
-		DialogInput:    overlayMaps[4],
-		RenameDialog:   overlayMaps[5],
-		BookmarkDialog: overlayMaps[6],
-		FindDialog:     overlayMaps[7],
-		HistoryDialog:  overlayMaps[8],
-		FlattenDialog:  overlayMaps[9],
+		DialogInput:    overlayMaps[3],
+		RenameDialog:   overlayMaps[4],
+		BookmarkDialog: overlayMaps[5],
+		FindDialog:     overlayMaps[6],
+		HistoryDialog:  overlayMaps[7],
+		FlattenDialog:  overlayMaps[8],
 	}, nil
 }
 
-func parseKeybindingsFile(raw []byte, label string) (actionKeys map[string][]string, overlayKeys []map[string][]string, err error) {
+func parseKeybindingsFile(raw []byte, label string) (mainKeys map[string][]string, overlayKeys []map[string][]string, err error) {
 	var top map[string]interface{}
 	if err := toml.Unmarshal(raw, &top); err != nil {
 		return nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
@@ -126,26 +103,20 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys map[string][]str
 		}
 		return map[string][]string{}, emptyOverlays, nil
 	}
-	allowedTables := map[string]struct{}{config.ActionKeysTable: {}}
-	for _, spec := range overlayRegistry {
-		allowedTables[spec.TableName] = struct{}{}
-	}
-	for k := range top {
-		if _, ok := allowedTables[k]; !ok {
-			return nil, nil, fmt.Errorf("parse keybindings %q: unknown field %q (allowed: action_keys and overlay tables)", label, k)
-		}
+	if err := validateKeybindingsTopLevel(top, label); err != nil {
+		return nil, nil, err
 	}
 
-	actionKeys = map[string][]string{}
-	if rawAK, ok := top[config.ActionKeysTable]; ok {
-		table, ok := rawAK.(map[string]interface{})
+	mainKeys = map[string][]string{}
+	if rawMain, ok := top[MainShortcutsTable]; ok {
+		table, ok := rawMain.(map[string]interface{})
 		if !ok {
-			return nil, nil, fmt.Errorf("parse keybindings %q: [action_keys] must be a table", label)
+			return nil, nil, fmt.Errorf("parse keybindings %q: [main] must be a table", label)
 		}
-		if err := collectActionKeys(table, "", actionKeys); err != nil {
+		if err := collectActionKeys(table, "", mainKeys); err != nil {
 			return nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
-		for action, keys := range actionKeys {
+		for action, keys := range mainKeys {
 			if len(keys) == 0 {
 				return nil, nil, fmt.Errorf("parse keybindings %q: action %q has empty key list", label, action)
 			}
@@ -155,15 +126,11 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys map[string][]str
 	overlayKeys = make([]map[string][]string, len(overlayRegistry))
 	for i, spec := range overlayRegistry {
 		overlayKeys[i] = map[string][]string{}
-		rawTable, ok := top[spec.TableName]
+		rawTable, ok := resolveShortcutTableNode(top, spec.TableName)
 		if !ok {
 			continue
 		}
-		table, ok := rawTable.(map[string]interface{})
-		if !ok {
-			return nil, nil, fmt.Errorf("parse keybindings %q: [%s] must be a table", label, spec.TableName)
-		}
-		if err := collectActionKeys(table, "", overlayKeys[i]); err != nil {
+		if err := collectActionKeys(rawTable, "", overlayKeys[i]); err != nil {
 			return nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		if err := validateOverlayKeysFromFile(overlayKeys[i], label, spec); err != nil {
@@ -171,7 +138,34 @@ func parseKeybindingsFile(raw []byte, label string) (actionKeys map[string][]str
 		}
 	}
 
-	return actionKeys, overlayKeys, nil
+	return mainKeys, overlayKeys, nil
+}
+
+func validateKeybindingsTopLevel(top map[string]interface{}, label string) error {
+	for k, v := range top {
+		switch k {
+		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable:
+			if _, ok := v.(map[string]interface{}); !ok {
+				return fmt.Errorf("parse keybindings %q: [%s] must be a table", label, k)
+			}
+		case DialogShortcutsGroup:
+			dialogTable, ok := v.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("parse keybindings %q: [dialog] must be a table", label)
+			}
+			for sub, subVal := range dialogTable {
+				if !IsDialogShortcutSubtable(sub) {
+					return fmt.Errorf("parse keybindings %q: unknown [dialog.%s] sub-table", label, sub)
+				}
+				if _, ok := subVal.(map[string]interface{}); !ok {
+					return fmt.Errorf("parse keybindings %q: [dialog.%s] must be a table", label, sub)
+				}
+			}
+		default:
+			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, jobs, commands, messages, dialog)", label, k)
+		}
+	}
+	return nil
 }
 
 func collectActionKeys(node map[string]interface{}, prefix string, out map[string][]string) error {
@@ -229,6 +223,15 @@ func WriteDefaultStub(filename string) error {
 	return nil
 }
 
+type dialogShortcuts struct {
+	Input    map[string][]string `toml:"input"`
+	Rename   map[string][]string `toml:"rename"`
+	Bookmark map[string][]string `toml:"bookmark"`
+	Find     map[string][]string `toml:"find"`
+	History  map[string][]string `toml:"history"`
+	Flatten  map[string][]string `toml:"flatten"`
+}
+
 // EncodeDefaultStub writes the canonical keybindings TOML: a leading
 // comment block describing the file and then shortcut tables as
 // real (uncommented) entries.
@@ -238,67 +241,46 @@ func WriteDefaultStub(filename string) error {
 // automatically reflected in every stub written via `--config-stub`
 // without further plumbing.
 func EncodeDefaultStub(w io.Writer) error {
-	header := "# Global shortcuts under [action_keys]. Each value is a list of\n" +
+	header := "# Global shortcuts under [main]. Each value is a list of\n" +
 		"# chord strings (single-stroke). See docs/keybindings.md for syntax.\n" +
 		"#\n" +
-		"# Jobs-view-only chords under [jobs_action_keys] take precedence over\n" +
-		"# [action_keys] while the jobs view is focused. Only jobs.* action IDs\n" +
-		"# are accepted there.\n" +
+		"# View overlays ([jobs], [commands], [messages]) take precedence over\n" +
+		"# [main] while that view is focused.\n" +
 		"#\n" +
-		"# Commands-view-only chords under [commands_action_keys] take precedence\n" +
-		"# while the Commands view is focused. Only commands.* action IDs are accepted.\n" +
+		"# Dialog overlays ([dialog.input], [dialog.rename], …) apply only while\n" +
+		"# the matching dialog context is focused.\n" +
 		"#\n" +
-		"# Messages-view-only chords under [messages_action_keys] take precedence\n" +
-		"# while the Messages view is focused. Only messages.* action IDs are accepted.\n" +
+		"# Fuzzy path picker on copy/move destination or symlink/hardlink path rows\n" +
+		"# uses the same chords as bookmark.open under [main].\n" +
 		"#\n" +
-		"# [path_picker_host_action_keys] must stay empty: opening the fuzzy path picker\n" +
-		"# from copy/move destination or symlink/hardlink path rows uses the same chords\n" +
-		"# as bookmark.open under [action_keys].\n" +
-		"#\n" +
-		"# Dialog input field actions (e.g. restore default placeholder) use\n" +
-		"# [dialog_input_action_keys]. Only ui.input.* action IDs are accepted.\n" +
-		"#\n" +
-		"# Rename dialog (main name field only) uses [rename_dialog_action_keys] for\n" +
-		"# sanitize/slugify helpers. Only file.rename.open-sanitize and file.rename.open-slugify.\n" +
-		"#\n" +
-		"# Bookmarks dialog uses [bookmark_dialog_action_keys] for delete (fzf-marks only).\n" +
-		"# Only bookmark.delete is accepted.\n" +
-		"#\n" +
-		"# Find dialog uses [find_dialog_action_keys] for unselect-all / select-all / select-group / unselect-group.\n" +
-		"# Only find.select-all, find.unselect-all, find.select-group, and find.unselect-group are accepted.\n" +
-		"#\n" +
-		"# History dialog uses [history_dialog_action_keys] for toggling both panels' histories.\n" +
-		"# Only panel.history-both-panels is accepted.\n" +
-		"#\n" +
-		"# Flatten dialog uses [flatten_dialog_action_keys] for destination panel shortcuts.\n" +
-		"# Only flatten.destination-active and flatten.destination-inactive are accepted.\n\n"
+		"# [dialog.input] — ui.input.* only (e.g. restore default placeholder).\n" +
+		"# [dialog.rename] — file.rename.open-sanitize and file.rename.open-slugify.\n" +
+		"# [dialog.bookmark] — bookmark.delete (fzf-marks only).\n" +
+		"# [dialog.find] — find.select-all, find.unselect-all, find.select-group, find.unselect-group.\n" +
+		"# [dialog.history] — panel.history-both-panels.\n" +
+		"# [dialog.flatten] — flatten.destination-active and flatten.destination-inactive.\n\n"
 	if _, err := io.WriteString(w, header); err != nil {
 		return fmt.Errorf("encode keybindings stub header: %w", err)
 	}
 	payload := struct {
-		ActionKeys               map[string][]string `toml:"action_keys"`
-		JobsActionKeys           map[string][]string `toml:"jobs_action_keys"`
-		CommandsActionKeys       map[string][]string `toml:"commands_action_keys"`
-		MessagesActionKeys       map[string][]string `toml:"messages_action_keys"`
-		PathPickerHostActionKeys map[string][]string `toml:"path_picker_host_action_keys"`
-		DialogInputActionKeys    map[string][]string `toml:"dialog_input_action_keys"`
-		RenameDialogActionKeys   map[string][]string `toml:"rename_dialog_action_keys"`
-		BookmarkDialogActionKeys map[string][]string `toml:"bookmark_dialog_action_keys"`
-		FindDialogActionKeys     map[string][]string `toml:"find_dialog_action_keys"`
-		HistoryDialogActionKeys  map[string][]string `toml:"history_dialog_action_keys"`
-		FlattenDialogActionKeys  map[string][]string `toml:"flatten_dialog_action_keys"`
+		Main     map[string][]string `toml:"main"`
+		Jobs     map[string][]string `toml:"jobs"`
+		Commands map[string][]string `toml:"commands"`
+		Messages map[string][]string `toml:"messages"`
+		Dialog   dialogShortcuts     `toml:"dialog"`
 	}{
-		ActionKeys:               DefaultActionKeys(),
-		JobsActionKeys:           DefaultJobsOverlayKeys(),
-		CommandsActionKeys:       DefaultCommandsOverlayKeys(),
-		MessagesActionKeys:       DefaultMessagesOverlayKeys(),
-		PathPickerHostActionKeys: DefaultPathPickerHostOverlayKeys(),
-		DialogInputActionKeys:    DefaultDialogInputOverlayKeys(),
-		RenameDialogActionKeys:   DefaultRenameDialogOverlayKeys(),
-		BookmarkDialogActionKeys: DefaultBookmarkDialogOverlayKeys(),
-		FindDialogActionKeys:     DefaultFindDialogOverlayKeys(),
-		HistoryDialogActionKeys:  DefaultHistoryDialogOverlayKeys(),
-		FlattenDialogActionKeys:  DefaultFlattenDialogOverlayKeys(),
+		Main:     DefaultActionKeys(),
+		Jobs:     DefaultJobsOverlayKeys(),
+		Commands: DefaultCommandsOverlayKeys(),
+		Messages: DefaultMessagesOverlayKeys(),
+		Dialog: dialogShortcuts{
+			Input:    DefaultDialogInputOverlayKeys(),
+			Rename:   DefaultRenameDialogOverlayKeys(),
+			Bookmark: DefaultBookmarkDialogOverlayKeys(),
+			Find:     DefaultFindDialogOverlayKeys(),
+			History:  DefaultHistoryDialogOverlayKeys(),
+			Flatten:  DefaultFlattenDialogOverlayKeys(),
+		},
 	}
 	if err := toml.NewEncoder(w).Encode(payload); err != nil {
 		return fmt.Errorf("encode keybindings stub: %w", err)

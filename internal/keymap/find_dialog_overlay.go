@@ -11,7 +11,7 @@ func DefaultFindDialogOverlayKeys() map[string][]string {
 }
 
 // AllowedInFindDialogOverlay reports whether actionID may appear under
-// [find_dialog_action_keys].
+// [dialog.find].
 func AllowedInFindDialogOverlay(actionID string) bool {
 	switch actionID {
 	case ActionFindSelectAll, ActionFindUnselectAll, ActionFindSelectGroup, ActionFindUnselectGroup:

@@ -6,7 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// tryDialogInputRestore handles [dialog_input_action_keys] chords while a
+// tryDialogInputRestore handles [dialog.input] chords while a
 // dialog input field is focused. Currently the only action is
 // ui.input.restore-default, which restores the focused field's suggested
 // default (Prefill) and re-arms PrefillPending so the next printable rune
@@ -73,7 +73,7 @@ func (a *App) dialogInputRestoreFooterEligible() bool {
 	return false
 }
 
-// tryDialogInputFieldActions handles [dialog_input_action_keys] for focused
+// tryDialogInputFieldActions handles [dialog.input] for focused
 // dialog text fields (restore default, word motion, backward kill word).
 // Returns true when the chord matched a dialog-input action (even when the
 // edit was a no-op), so the caller should not fall through to generic key handling.

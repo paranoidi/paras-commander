@@ -263,58 +263,6 @@ func TestLoadFromPathsRejectsUnknownFields(t *testing.T) {
 	}
 }
 
-func TestIsShortcutPassThroughTable(t *testing.T) {
-	passThrough := []string{
-		ActionKeysTable,
-		JobsActionKeysTable,
-		CommandsActionKeysTable,
-		MessagesActionKeysTable,
-		PathPickerHostActionKeysTable,
-		DialogInputActionKeysTable,
-		RenameDialogActionKeysTable,
-		BookmarkDialogActionKeysTable,
-		FindDialogActionKeysTable,
-		HistoryDialogActionKeysTable,
-		FlattenDialogActionKeysTable,
-	}
-	for _, name := range passThrough {
-		if !IsShortcutPassThroughTable(name) {
-			t.Fatalf("IsShortcutPassThroughTable(%q) = false, want true", name)
-		}
-	}
-	if IsShortcutPassThroughTable("not_a_shortcut_table") {
-		t.Fatal("IsShortcutPassThroughTable(unknown) = true, want false")
-	}
-}
-
-func TestLoadFromPathsAcceptsAllShortcutPassThroughTables(t *testing.T) {
-	tables := []string{
-		ActionKeysTable,
-		JobsActionKeysTable,
-		CommandsActionKeysTable,
-		MessagesActionKeysTable,
-		PathPickerHostActionKeysTable,
-		DialogInputActionKeysTable,
-		RenameDialogActionKeysTable,
-		BookmarkDialogActionKeysTable,
-		FindDialogActionKeysTable,
-		HistoryDialogActionKeysTable,
-		FlattenDialogActionKeysTable,
-	}
-	for _, table := range tables {
-		t.Run(table, func(t *testing.T) {
-			path := writeConfig(t, "theme = \"default\"\n["+table+"]\n")
-			cfg, err := LoadFromPaths(Paths{ConfigFile: path})
-			if err != nil {
-				t.Fatalf("LoadFromPaths() error = %v, want success with [%s]", err, table)
-			}
-			if cfg.Theme != "default" {
-				t.Fatalf("Theme = %q, want default", cfg.Theme)
-			}
-		})
-	}
-}
-
 func TestLoadFromPathsClampsUnsupportedValuesToDefaults(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -515,215 +463,21 @@ func TestWriteDefaultStubWritesFile(t *testing.T) {
 	}
 }
 
-// TestLoadFromPathsAcceptsActionKeysTable verifies that an [action_keys]
-// table inside config.toml is tolerated (not flagged as an unknown
-// field). The table is owned by the keymap package and consumed via
-// ReadActionKeys; config only needs to pass it through cleanly.
-func TestLoadFromPathsAcceptsActionKeysTable(t *testing.T) {
+func TestLoadFromPathsAcceptsJobsSettingsTable(t *testing.T) {
 	path := writeConfig(t, `theme = "default"
-[action_keys]
-"app.quit" = ["F12"]
-"panel.refresh" = ["F2"]
+[jobs]
+keep_finished = 25
 `)
 	cfg, err := LoadFromPaths(Paths{ConfigFile: path})
 	if err != nil {
-		t.Fatalf("LoadFromPaths() error = %v, want success with [action_keys]", err)
+		t.Fatalf("LoadFromPaths() error = %v, want success with [jobs] settings", err)
 	}
 	if cfg.Theme != "default" {
 		t.Fatalf("Theme = %q, want default", cfg.Theme)
 	}
-}
-
-// TestLoadFromPathsAcceptsJobsActionKeysTable verifies the same
-// pass-through tolerance for [jobs_action_keys] (the jobs-view overlay
-// added with the keymap Bundle feature). Without this, a stub written
-// by --config-stub could not be loaded once the user starts customising
-// jobs-view chords inside config.toml.
-func TestLoadFromPathsAcceptsJobsActionKeysTable(t *testing.T) {
-	path := writeConfig(t, `theme = "default"
-[action_keys]
-"app.quit" = ["F12"]
-[jobs_action_keys]
-"jobs.clear-finished" = ["C-k"]
-`)
-	cfg, err := LoadFromPaths(Paths{ConfigFile: path})
-	if err != nil {
-		t.Fatalf("LoadFromPaths() error = %v, want success with [jobs_action_keys]", err)
+	if cfg.Jobs.KeepFinished != 25 {
+		t.Fatalf("Jobs.KeepFinished = %d, want 25", cfg.Jobs.KeepFinished)
 	}
-	if cfg.Theme != "default" {
-		t.Fatalf("Theme = %q, want default", cfg.Theme)
-	}
-}
-
-func TestLoadFromPathsAcceptsEmptyPathPickerHostActionKeysTable(t *testing.T) {
-	path := writeConfig(t, `theme = "default"
-[action_keys]
-"app.quit" = ["F12"]
-[path_picker_host_action_keys]
-`)
-	cfg, err := LoadFromPaths(Paths{ConfigFile: path})
-	if err != nil {
-		t.Fatalf("LoadFromPaths() error = %v, want success with empty [path_picker_host_action_keys]", err)
-	}
-	if cfg.Theme != "default" {
-		t.Fatalf("Theme = %q, want default", cfg.Theme)
-	}
-}
-
-func TestReadPathPickerHostActionKeysExtractsTable(t *testing.T) {
-	path := writeConfig(t, `theme = "default"
-[path_picker_host_action_keys]
-"ui.open-path-picker" = ["C-p"]
-`)
-	keys, err := ReadPathPickerHostActionKeys(path)
-	if err != nil {
-		t.Fatalf("ReadPathPickerHostActionKeys() error = %v", err)
-	}
-	if got, want := keys["ui.open-path-picker"], []string{"C-p"}; !equalStringSlice(got, want) {
-		t.Fatalf("ui.open-path-picker = %v, want %v", got, want)
-	}
-}
-
-func TestLoadFromPathsAcceptsDialogInputActionKeysTable(t *testing.T) {
-	path := writeConfig(t, `theme = "default"
-[action_keys]
-"app.quit" = ["F12"]
-[dialog_input_action_keys]
-"ui.input.backward-word" = ["M-B"]
-`)
-	cfg, err := LoadFromPaths(Paths{ConfigFile: path})
-	if err != nil {
-		t.Fatalf("LoadFromPaths() error = %v, want success with [dialog_input_action_keys]", err)
-	}
-	if cfg.Theme != "default" {
-		t.Fatalf("Theme = %q, want default", cfg.Theme)
-	}
-}
-
-func TestReadDialogInputActionKeysExtractsTable(t *testing.T) {
-	path := writeConfig(t, `theme = "default"
-[dialog_input_action_keys]
-"ui.input.forward-word" = ["M-f", "C-M-f"]
-`)
-	keys, err := ReadDialogInputActionKeys(path)
-	if err != nil {
-		t.Fatalf("ReadDialogInputActionKeys() error = %v", err)
-	}
-	if got, want := keys["ui.input.forward-word"], []string{"M-f", "C-M-f"}; !equalStringSlice(got, want) {
-		t.Fatalf("ui.input.forward-word = %v, want %v", got, want)
-	}
-}
-
-func TestLoadFromPathsAcceptsRenameDialogActionKeysTable(t *testing.T) {
-	path := writeConfig(t, `theme = "default"
-[action_keys]
-"app.quit" = ["F12"]
-[rename_dialog_action_keys]
-"file.rename.open-sanitize" = ["C-s"]
-`)
-	cfg, err := LoadFromPaths(Paths{ConfigFile: path})
-	if err != nil {
-		t.Fatalf("LoadFromPaths() error = %v, want success with [rename_dialog_action_keys]", err)
-	}
-	if cfg.Theme != "default" {
-		t.Fatalf("Theme = %q, want default", cfg.Theme)
-	}
-}
-
-func TestReadRenameDialogActionKeysExtractsTable(t *testing.T) {
-	path := writeConfig(t, `theme = "default"
-[rename_dialog_action_keys]
-"file.rename.open-slugify" = ["C-g"]
-`)
-	keys, err := ReadRenameDialogActionKeys(path)
-	if err != nil {
-		t.Fatalf("ReadRenameDialogActionKeys() error = %v", err)
-	}
-	if got, want := keys["file.rename.open-slugify"], []string{"C-g"}; !equalStringSlice(got, want) {
-		t.Fatalf("file.rename.open-slugify = %v, want %v", got, want)
-	}
-}
-
-func TestReadActionKeysReturnsNilWhenMissing(t *testing.T) {
-	keys, err := ReadActionKeys(filepath.Join(t.TempDir(), "missing.toml"))
-	if err != nil {
-		t.Fatalf("ReadActionKeys() error = %v", err)
-	}
-	if keys != nil {
-		t.Fatalf("ReadActionKeys = %v, want nil for missing file", keys)
-	}
-}
-
-func TestReadActionKeysReturnsNilWhenTableAbsent(t *testing.T) {
-	path := writeConfig(t, `theme = "default"`)
-	keys, err := ReadActionKeys(path)
-	if err != nil {
-		t.Fatalf("ReadActionKeys() error = %v", err)
-	}
-	if keys != nil {
-		t.Fatalf("ReadActionKeys = %v, want nil when [action_keys] missing", keys)
-	}
-}
-
-func TestReadActionKeysExtractsDottedActionIDs(t *testing.T) {
-	path := writeConfig(t, `theme = "default"
-[action_keys]
-"app.quit" = ["F12"]
-"panel.refresh" = ["F2", "C-r"]
-`)
-	keys, err := ReadActionKeys(path)
-	if err != nil {
-		t.Fatalf("ReadActionKeys() error = %v", err)
-	}
-	if got, want := keys["app.quit"], []string{"F12"}; !equalStringSlice(got, want) {
-		t.Fatalf("app.quit = %v, want %v", got, want)
-	}
-	if got, want := keys["panel.refresh"], []string{"F2", "C-r"}; !equalStringSlice(got, want) {
-		t.Fatalf("panel.refresh = %v, want %v", got, want)
-	}
-}
-
-func TestReadJobsActionKeysReturnsNilWhenMissing(t *testing.T) {
-	keys, err := ReadJobsActionKeys(filepath.Join(t.TempDir(), "missing.toml"))
-	if err != nil {
-		t.Fatalf("ReadJobsActionKeys() error = %v", err)
-	}
-	if keys != nil {
-		t.Fatalf("ReadJobsActionKeys = %v, want nil for missing file", keys)
-	}
-}
-
-func TestReadJobsActionKeysExtractsTable(t *testing.T) {
-	path := writeConfig(t, `theme = "default"
-[jobs_action_keys]
-"jobs.clear-finished" = ["C-k"]
-`)
-	keys, err := ReadJobsActionKeys(path)
-	if err != nil {
-		t.Fatalf("ReadJobsActionKeys() error = %v", err)
-	}
-	if got, want := keys["jobs.clear-finished"], []string{"C-k"}; !equalStringSlice(got, want) {
-		t.Fatalf("jobs.clear-finished = %v, want %v", got, want)
-	}
-	plainKeys, err := ReadActionKeys(path)
-	if err != nil {
-		t.Fatalf("ReadActionKeys() error = %v", err)
-	}
-	if plainKeys != nil {
-		t.Fatalf("ReadActionKeys = %v, want nil when only [jobs_action_keys] present", plainKeys)
-	}
-}
-
-func equalStringSlice(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func TestWriteMergedPartialRequiresPersistPaths(t *testing.T) {

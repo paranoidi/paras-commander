@@ -8,7 +8,7 @@ func DefaultHistoryDialogOverlayKeys() map[string][]string {
 }
 
 // AllowedInHistoryDialogOverlay reports whether actionID may appear under
-// [history_dialog_action_keys].
+// [dialog.history].
 func AllowedInHistoryDialogOverlay(actionID string) bool {
 	switch actionID {
 	case ActionPanelHistoryBothPanels:

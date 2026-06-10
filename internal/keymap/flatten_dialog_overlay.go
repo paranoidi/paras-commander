@@ -10,7 +10,7 @@ func DefaultFlattenDialogOverlayKeys() map[string][]string {
 }
 
 // AllowedInFlattenDialogOverlay reports whether actionID may appear under
-// [flatten_dialog_action_keys].
+// [dialog.flatten].
 func AllowedInFlattenDialogOverlay(actionID string) bool {
 	switch actionID {
 	case ActionFlattenDestinationActive, ActionFlattenDestinationInactive:

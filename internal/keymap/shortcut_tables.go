@@ -1,0 +1,47 @@
+package keymap
+
+// TOML table names for keybindings.toml shortcut sections.
+const (
+	MainShortcutsTable           = "main"
+	JobsShortcutsTable           = "jobs"
+	CommandsShortcutsTable       = "commands"
+	MessagesShortcutsTable       = "messages"
+	DialogShortcutsGroup         = "dialog"
+	DialogInputShortcutsTable    = "dialog.input"
+	DialogRenameShortcutsTable   = "dialog.rename"
+	DialogBookmarkShortcutsTable = "dialog.bookmark"
+	DialogFindShortcutsTable     = "dialog.find"
+	DialogHistoryShortcutsTable  = "dialog.history"
+	DialogFlattenShortcutsTable  = "dialog.flatten"
+)
+
+var dialogShortcutSubtables = map[string]struct{}{
+	"input":    {},
+	"rename":   {},
+	"bookmark": {},
+	"find":     {},
+	"history":  {},
+	"flatten":  {},
+}
+
+// AllShortcutTablePaths returns every shortcut table path (top-level and dialog.*).
+func AllShortcutTablePaths() []string {
+	return []string{
+		MainShortcutsTable,
+		JobsShortcutsTable,
+		CommandsShortcutsTable,
+		MessagesShortcutsTable,
+		DialogInputShortcutsTable,
+		DialogRenameShortcutsTable,
+		DialogBookmarkShortcutsTable,
+		DialogFindShortcutsTable,
+		DialogHistoryShortcutsTable,
+		DialogFlattenShortcutsTable,
+	}
+}
+
+// IsDialogShortcutSubtable reports whether name is a valid sub-table under [dialog].
+func IsDialogShortcutSubtable(name string) bool {
+	_, ok := dialogShortcutSubtables[name]
+	return ok
+}

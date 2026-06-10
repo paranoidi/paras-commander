@@ -141,7 +141,7 @@ func (e *scrollingQueryEdit) applyAfterErase() {
 	}
 }
 
-// tryScrollingQueryDialogInputActions applies [dialog_input_action_keys] word/kill
+// tryScrollingQueryDialogInputActions applies [dialog.input] word/kill
 // actions to a scrolling query field. Restore-default is a no-op (no prefill).
 func (a *App) tryScrollingQueryDialogInputActions(ev *tcell.EventKey, e scrollingQueryEdit) bool {
 	if a.keysDialogInput == nil || e.q == nil {

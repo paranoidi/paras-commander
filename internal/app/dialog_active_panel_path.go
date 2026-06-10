@@ -26,7 +26,7 @@ func flattenDialogOverlayFooterKeys(a *App, keys *keymap.Map) []menu.FunctionKey
 }
 
 // tryFlattenDialogDestinationShortcut sets the flatten destination to the active or
-// inactive panel path when the user presses a chord from [flatten_dialog_action_keys]
+// inactive panel path when the user presses a chord from [dialog.flatten]
 // while the destination row is focused.
 func (a *App) tryFlattenDialogDestinationShortcut(ev *tcell.EventKey) bool {
 	if a.keysFlattenDialog == nil || !a.flattenDialogDestinationFooterEligible() {

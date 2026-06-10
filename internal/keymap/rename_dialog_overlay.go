@@ -10,7 +10,7 @@ func DefaultRenameDialogOverlayKeys() map[string][]string {
 }
 
 // AllowedInRenameDialogOverlay reports whether actionID may appear under
-// [rename_dialog_action_keys].
+// [dialog.rename].
 func AllowedInRenameDialogOverlay(actionID string) bool {
 	switch actionID {
 	case ActionFileRenameOpenSanitize, ActionFileRenameOpenSlugify:

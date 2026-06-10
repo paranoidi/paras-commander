@@ -6,7 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// tryRenameDialogShortcut handles [rename_dialog_action_keys] while the main
+// tryRenameDialogShortcut handles [dialog.rename] while the main
 // rename dialog (name field) is active. Returns true when the event was consumed.
 func (a *App) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
 	if a.keysRenameDialog == nil {

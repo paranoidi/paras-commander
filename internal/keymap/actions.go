@@ -69,7 +69,7 @@ const (
 	// File operations
 	ActionFileRename = "file.rename"
 	// ActionFileRenameOpenSanitize / ActionFileRenameOpenSlugify are bound via
-	// [rename_dialog_action_keys], not [action_keys].
+	// [dialog.rename], not [main].
 	ActionFileRenameOpenSanitize = "file.rename.open-sanitize"
 	ActionFileRenameOpenSlugify  = "file.rename.open-slugify"
 	ActionFileDelete             = "file.delete"
@@ -85,7 +85,7 @@ const (
 	ActionFileEdit               = "file.edit"
 	ActionFileFlatten            = "file.flatten"
 	// ActionFlattenDestinationActive / ActionFlattenDestinationInactive are bound via
-	// [flatten_dialog_action_keys], not [action_keys].
+	// [dialog.flatten], not [main].
 	ActionFlattenDestinationActive   = "flatten.destination-active"
 	ActionFlattenDestinationInactive = "flatten.destination-inactive"
 
@@ -134,9 +134,9 @@ const (
 	ActionUIOpenConfig = "ui.open-config"
 
 	// ActionFindSelectAll marks all ranked find-dialog results and is bound via
-	// [find_dialog_action_keys], not [action_keys].
+	// [dialog.find], not [main].
 	// ActionDialogInputRestoreDefault restores a focused dialog input field's suggested default
-	// (Prefill) and is bound via [dialog_input_action_keys], not [action_keys].
+	// (Prefill) and is bound via [dialog.input], not [main].
 	ActionDialogInputRestoreDefault = "ui.input.restore-default"
 	// ActionDialogInputKillWordBackward deletes back to the previous word boundary (readline C-w).
 	ActionDialogInputKillWordBackward = "ui.input.kill-word-backward"

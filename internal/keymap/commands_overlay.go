@@ -3,15 +3,15 @@ package keymap
 import "strings"
 
 // DefaultCommandsOverlayKeys holds built-in chords that apply only while the
-// Commands view is focused ([commands_action_keys]). commands.open defaults live in
-// DefaultActionSpecs → [action_keys] (global), same pattern as jobs.open.
+// Commands view is focused ([commands]). commands.open defaults live in
+// DefaultActionSpecs → [main] (global), same pattern as jobs.open.
 func DefaultCommandsOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionCommandsClose: {"left"},
 	}
 }
 
-// AllowedInCommandsOverlay reports whether actionID may appear under [commands_action_keys].
+// AllowedInCommandsOverlay reports whether actionID may appear under [commands].
 func AllowedInCommandsOverlay(actionID string) bool {
 	if _, ok := KnownActions[actionID]; !ok {
 		return false

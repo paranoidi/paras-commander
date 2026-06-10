@@ -9,7 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// tryBookmarkDialogShortcut handles [bookmark_dialog_action_keys] while the bookmarks
+// tryBookmarkDialogShortcut handles [dialog.bookmark] while the bookmarks
 // path picker is open. Returns true when the event was consumed.
 func (a *App) tryBookmarkDialogShortcut(ev *tcell.EventKey) bool {
 	if a.keysBookmarkDialog == nil {

@@ -3,19 +3,36 @@ package keymap
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 )
 
-func TestOverlayTableNamesAreShortcutPassThrough(t *testing.T) {
-	if !config.IsShortcutPassThroughTable(config.ActionKeysTable) {
-		t.Fatalf("%q must be a shortcut pass-through table", config.ActionKeysTable)
+func TestAllShortcutTablePathsMatchOverlayRegistry(t *testing.T) {
+	overlaySet := make(map[string]struct{}, len(overlayRegistry))
+	for _, spec := range overlayRegistry {
+		overlaySet[spec.TableName] = struct{}{}
+	}
+	for _, path := range AllShortcutTablePaths() {
+		if path == MainShortcutsTable {
+			continue
+		}
+		if _, ok := overlaySet[path]; !ok {
+			t.Fatalf("shortcut table %q missing from overlay registry", path)
+		}
 	}
 	for _, name := range OverlayTableNames() {
-		if !config.IsShortcutPassThroughTable(name) {
-			t.Fatalf("overlay table %q is not registered in config shortcut pass-through set", name)
+		found := false
+		for _, path := range AllShortcutTablePaths() {
+			if path == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("overlay table %q missing from AllShortcutTablePaths", name)
 		}
 	}
 }
@@ -223,34 +240,6 @@ func TestDefaultMessagesOverlayMapsF8ToClear(t *testing.T) {
 	}
 }
 
-func TestDefaultBundlePathPickerHostOverlayEmpty(t *testing.T) {
-	bundle, err := DefaultBundle()
-	if err != nil {
-		t.Fatalf("DefaultBundle: %v", err)
-	}
-	if _, ok := bundle.PathPickerHost.Lookup(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone)); ok {
-		t.Fatal("PathPickerHost should not bind F9")
-	}
-	id, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
-	if !ok || id != ActionAppOpenMenu {
-		t.Fatalf("global F9 = %q %v, want app.open-menu", id, ok)
-	}
-}
-
-func TestLoadFromPathsRejectsPathPickerHostOpenPathPickerBinding(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "kb.toml")
-	if err := writeFile(path, `[path_picker_host_action_keys]
-"ui.open-path-picker" = ["F2"]
-`); err != nil {
-		t.Fatal(err)
-	}
-	_, err := LoadFromPaths(config.Paths{KeybindingsFile: path})
-	if err == nil {
-		t.Fatal("LoadFromPaths: want error for non-empty path_picker_host_action_keys")
-	}
-}
-
 func TestLoadFromPathsUsesDefaultsWhenMissing(t *testing.T) {
 	dir := t.TempDir()
 	bundle, err := LoadFromPaths(config.Paths{ConfigDir: dir, KeybindingsFile: filepath.Join(dir, "absent.toml")})
@@ -318,28 +307,42 @@ func TestDialogInputOverlayDefaultsResolveCtrlRAndCtrlD(t *testing.T) {
 func TestDialogInputOverlayRejectsNonInputActions(t *testing.T) {
 	dir := t.TempDir()
 	keybindings := filepath.Join(dir, "keybindings.toml")
-	body := "[dialog_input_action_keys]\n" +
+	body := "[dialog.input]\n" +
 		"jobs.cancel = [\"C-r\"]\n"
 	if err := os.WriteFile(keybindings, []byte(body), 0o600); err != nil {
 		t.Fatalf("write keybindings: %v", err)
 	}
 	_, err := LoadFromPaths(config.Paths{ConfigDir: dir, KeybindingsFile: keybindings})
 	if err == nil {
-		t.Fatal("LoadFromPaths: want error for non-ui.input.* action in [dialog_input_action_keys]")
+		t.Fatal("LoadFromPaths: want error for non-ui.input.* action in [dialog.input]")
 	}
 }
 
 func TestRenameDialogOverlayRejectsNonRenameActions(t *testing.T) {
 	dir := t.TempDir()
 	keybindings := filepath.Join(dir, "keybindings.toml")
-	body := "[rename_dialog_action_keys]\n" +
+	body := "[dialog.rename]\n" +
 		"jobs.cancel = [\"C-r\"]\n"
 	if err := os.WriteFile(keybindings, []byte(body), 0o600); err != nil {
 		t.Fatalf("write keybindings: %v", err)
 	}
 	_, err := LoadFromPaths(config.Paths{ConfigDir: dir, KeybindingsFile: keybindings})
 	if err == nil {
-		t.Fatal("LoadFromPaths: want error for invalid action in [rename_dialog_action_keys]")
+		t.Fatal("LoadFromPaths: want error for invalid action in [dialog.rename]")
+	}
+}
+
+func TestParseKeybindingsRejectsLegacyActionKeys(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "keybindings.toml")
+	if err := writeFile(path, `[action_keys]
+"app.quit" = ["F10"]
+`); err != nil {
+		t.Fatal(err)
+	}
+	_, err := LoadFromPaths(config.Paths{KeybindingsFile: path})
+	if err == nil {
+		t.Fatal("LoadFromPaths: want error for legacy [action_keys] section")
 	}
 }
 
@@ -494,7 +497,7 @@ func TestLoadFromPathsMergesUserFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "keybindings.toml")
 	content := `
-[action_keys]
+[main]
 app.quit = ["F12"]
 panel.refresh = ["F11"]
 `
@@ -532,129 +535,55 @@ func TestLoadFromPathsRejectsUnknownTOMLField(t *testing.T) {
 	}
 }
 
-// TestLoadFromPathsUsesConfigActionKeysWhenKeybindingsMissing verifies
-// the layered fallback: when keybindings.toml is absent, the
-// [action_keys] table inside config.toml acts as the user override
-// layer over built-in defaults. This lets a single --config-stub file
-// fully bootstrap shortcuts.
-func TestLoadFromPathsUsesConfigActionKeysWhenKeybindingsMissing(t *testing.T) {
+func TestConfigLoadRejectsShortcutTablesInConfigToml(t *testing.T) {
 	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.toml")
-	content := `theme = "default"
-[action_keys]
-"app.quit" = ["F12"]
-`
-	if err := writeFile(configPath, content); err != nil {
-		t.Fatalf("writeFile: %v", err)
-	}
-
-	bundle, err := LoadFromPaths(config.Paths{ConfigFile: configPath, KeybindingsFile: filepath.Join(dir, "keybindings.toml")})
-	if err != nil {
-		t.Fatalf("LoadFromPaths() error = %v", err)
-	}
-	m := bundle.Global
-	id, ok := m.Lookup(tcell.NewEventKey(tcell.KeyF12, 0, tcell.ModNone))
-	if !ok || id != ActionAppQuit {
-		t.Fatalf("F12 -> %q %v, want app.quit from config.toml override", id, ok)
-	}
-	if _, ok := m.Lookup(tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModNone)); ok {
-		t.Fatal("F10 should not quit after config.toml remapped quit to F12")
-	}
-	id, ok = m.Lookup(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
-	if !ok || id != ActionPanelSwitch {
-		t.Fatalf("Tab -> %q %v, want panel.switch (default preserved)", id, ok)
+	for _, table := range AllShortcutTablePaths() {
+		t.Run(table, func(t *testing.T) {
+			configPath := filepath.Join(dir, table+".toml")
+			content := shortcutTableFixtureInConfig(table)
+			if err := writeFile(configPath, content); err != nil {
+				t.Fatalf("writeFile: %v", err)
+			}
+			_, err := config.LoadFromPaths(config.Paths{ConfigFile: configPath})
+			if err == nil {
+				t.Fatalf("config.LoadFromPaths() error = nil, want unknown field for [%s]", table)
+			}
+			if !strings.Contains(err.Error(), "unknown field") {
+				t.Fatalf("config.LoadFromPaths() error = %v, want unknown field", err)
+			}
+		})
 	}
 }
 
-// TestLoadFromPathsKeybindingsOverridesConfigActionKeys verifies the
-// precedence rule: keybindings.toml wins over config.toml when both
-// rebind the same action.
-func TestLoadFromPathsKeybindingsOverridesConfigActionKeys(t *testing.T) {
+func shortcutTableFixtureInConfig(table string) string {
+	switch table {
+	case JobsShortcutsTable:
+		return "theme = \"default\"\n[jobs]\n\"jobs.clear-finished\" = [\"C-k\"]\n"
+	case MainShortcutsTable:
+		return "theme = \"default\"\n[main]\n\"app.quit\" = [\"F12\"]\n"
+	case DialogInputShortcutsTable:
+		return "theme = \"default\"\n[dialog.input]\n\"ui.input.backward-word\" = [\"M-B\"]\n"
+	case DialogRenameShortcutsTable:
+		return "theme = \"default\"\n[dialog.rename]\n\"file.rename.open-sanitize\" = [\"C-s\"]\n"
+	default:
+		return "theme = \"default\"\n[" + table + "]\n\"noop.action\" = [\"F1\"]\n"
+	}
+}
+
+// TestLoadFromPathsUsesKeybindingsJobsShortcuts verifies jobs-view overlay
+// shortcuts load from keybindings.toml ([jobs] cannot live in config.toml
+// because that table holds JobsConfig settings).
+func TestLoadFromPathsUsesKeybindingsJobsShortcuts(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "config.toml")
 	if err := writeFile(configPath, `theme = "default"
-[action_keys]
-"app.quit" = ["F11"]
+[jobs]
+keep_finished = 25
 `); err != nil {
 		t.Fatalf("writeFile config: %v", err)
 	}
 	keybindingsPath := filepath.Join(dir, "keybindings.toml")
-	if err := writeFile(keybindingsPath, `[action_keys]
-"app.quit" = ["F12"]
-`); err != nil {
-		t.Fatalf("writeFile keybindings: %v", err)
-	}
-
-	bundle, err := LoadFromPaths(config.Paths{ConfigFile: configPath, KeybindingsFile: keybindingsPath})
-	if err != nil {
-		t.Fatalf("LoadFromPaths() error = %v", err)
-	}
-	m := bundle.Global
-	id, ok := m.Lookup(tcell.NewEventKey(tcell.KeyF12, 0, tcell.ModNone))
-	if !ok || id != ActionAppQuit {
-		t.Fatalf("F12 -> %q %v, want app.quit from keybindings.toml", id, ok)
-	}
-	if _, ok := m.Lookup(tcell.NewEventKey(tcell.KeyF11, 0, tcell.ModNone)); ok {
-		t.Fatal("F11 should not quit: keybindings.toml must override config.toml")
-	}
-}
-
-// TestLoadFromPathsUsesConfigJobsActionKeysWhenKeybindingsMissing
-// verifies the same layered fallback for the jobs-view overlay.
-func TestLoadFromPathsUsesConfigJobsActionKeysWhenKeybindingsMissing(t *testing.T) {
-	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.toml")
-	if err := writeFile(configPath, `theme = "default"
-[jobs_action_keys]
-"jobs.clear-finished" = ["C-k"]
-`); err != nil {
-		t.Fatalf("writeFile config: %v", err)
-	}
-
-	bundle, err := LoadFromPaths(config.Paths{ConfigFile: configPath, KeybindingsFile: filepath.Join(dir, "keybindings.toml")})
-	if err != nil {
-		t.Fatalf("LoadFromPaths() error = %v", err)
-	}
-	id, ok := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModNone))
-	if !ok || id != ActionJobsClearFinished {
-		t.Fatalf("C-k -> %q %v, want jobs.clear-finished from config.toml override", id, ok)
-	}
-	if _, ok := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)); ok {
-		t.Fatal("F8 jobs overlay should be replaced when config.toml sets C-k only")
-	}
-}
-
-// TestLoadFromPathsRejectsConfigJobsActionKeysWithNonJobsAction
-// guarantees the jobs.* restriction is enforced even when the overlay
-// table arrives via config.toml. This mirrors the keybindings.toml
-// validation so error messages stay consistent across both sources.
-func TestLoadFromPathsRejectsConfigJobsActionKeysWithNonJobsAction(t *testing.T) {
-	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.toml")
-	if err := writeFile(configPath, `theme = "default"
-[jobs_action_keys]
-"file.delete" = ["F8"]
-`); err != nil {
-		t.Fatalf("writeFile config: %v", err)
-	}
-	if _, err := LoadFromPaths(config.Paths{ConfigFile: configPath, KeybindingsFile: filepath.Join(dir, "keybindings.toml")}); err == nil {
-		t.Fatal("expected error: non-jobs.* action under config.toml [jobs_action_keys]")
-	}
-}
-
-// TestLoadFromPathsKeybindingsOverridesConfigJobsActionKeys mirrors the
-// global precedence rule for the jobs-view overlay.
-func TestLoadFromPathsKeybindingsOverridesConfigJobsActionKeys(t *testing.T) {
-	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.toml")
-	if err := writeFile(configPath, `theme = "default"
-[jobs_action_keys]
-"jobs.clear-finished" = ["C-l"]
-`); err != nil {
-		t.Fatalf("writeFile config: %v", err)
-	}
-	keybindingsPath := filepath.Join(dir, "keybindings.toml")
-	if err := writeFile(keybindingsPath, `[jobs_action_keys]
+	if err := writeFile(keybindingsPath, `[jobs]
 "jobs.clear-finished" = ["C-k"]
 `); err != nil {
 		t.Fatalf("writeFile keybindings: %v", err)
@@ -668,14 +597,29 @@ func TestLoadFromPathsKeybindingsOverridesConfigJobsActionKeys(t *testing.T) {
 	if !ok || id != ActionJobsClearFinished {
 		t.Fatalf("C-k -> %q %v, want jobs.clear-finished from keybindings.toml", id, ok)
 	}
-	if _, ok := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone)); ok {
-		t.Fatal("C-l should not bind: keybindings.toml must override config.toml [jobs_action_keys]")
+	if _, ok := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)); ok {
+		t.Fatal("F8 jobs overlay should be replaced when keybindings.toml sets C-k only")
+	}
+}
+
+// TestLoadFromPathsRejectsNonJobsActionInJobsOverlay guarantees the jobs.*
+// restriction is enforced in keybindings.toml.
+func TestLoadFromPathsRejectsNonJobsActionInJobsOverlayFromKeybindings(t *testing.T) {
+	dir := t.TempDir()
+	keybindingsPath := filepath.Join(dir, "keybindings.toml")
+	if err := writeFile(keybindingsPath, `[jobs]
+"file.delete" = ["F8"]
+`); err != nil {
+		t.Fatalf("writeFile keybindings: %v", err)
+	}
+	if _, err := LoadFromPaths(config.Paths{KeybindingsFile: keybindingsPath}); err == nil {
+		t.Fatal("expected error: non-jobs.* action under [jobs]")
 	}
 }
 
 // TestDefaultBundleJobsOpenGlobalRestJobsOverlay verifies semantics:
-// jobs.open is bound on the global map ([action_keys]); other jobs.*
-// defaults bind only in the overlay ([jobs_action_keys]).
+// jobs.open is bound on the global map ([main]); other jobs.*
+// defaults bind only in the overlay ([jobs]).
 func TestDefaultBundleJobsOpenGlobalRestJobsOverlay(t *testing.T) {
 	bundle, err := DefaultBundle()
 	if err != nil {
@@ -725,12 +669,12 @@ func TestDefaultBundleJobsOpenGlobalRestJobsOverlay(t *testing.T) {
 	}
 }
 
-// TestExplicitJobsOpenInActionKeysOverridesDefaultChord verifies that an
-// explicit [action_keys] binding for jobs.open replaces the built-in C-j.
-func TestExplicitJobsOpenInActionKeysOverridesDefaultChord(t *testing.T) {
+// TestExplicitJobsOpenInMainOverridesDefaultChord verifies that an
+// explicit [main] binding for jobs.open replaces the built-in C-j.
+func TestExplicitJobsOpenInMainOverridesDefaultChord(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "keybindings.toml")
-	if err := writeFile(path, `[action_keys]
+	if err := writeFile(path, `[main]
 "jobs.open" = ["F11"]
 `); err != nil {
 		t.Fatalf("writeFile: %v", err)
@@ -741,10 +685,10 @@ func TestExplicitJobsOpenInActionKeysOverridesDefaultChord(t *testing.T) {
 	}
 	id, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyF11, 0, tcell.ModNone))
 	if !ok || id != ActionJobsOpen {
-		t.Fatalf("F11 = %q %v, want jobs.open from explicit [action_keys]", id, ok)
+		t.Fatalf("F11 = %q %v, want jobs.open from explicit [main]", id, ok)
 	}
 	if _, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModNone)); ok {
-		t.Fatal("Ctrl+J should not bind: [action_keys] replaced default jobs.open chords")
+		t.Fatal("Ctrl+J should not bind: [main] replaced default jobs.open chords")
 	}
 }
 
@@ -784,11 +728,11 @@ func TestEncodeDefaultStubRoundTrip(t *testing.T) {
 	}
 }
 
-func TestLoadFromPathsMergesJobsActionKeys(t *testing.T) {
+func TestLoadFromPathsMergesJobsShortcuts(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "keybindings.toml")
 	content := `
-[jobs_action_keys]
+[jobs]
 jobs.clear-finished = ["C-k"]
 `
 	if err := writeFile(path, content); err != nil {
@@ -812,7 +756,7 @@ func TestLoadFromPathsRejectsNonJobsActionInJobsOverlay(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "keybindings.toml")
 	content := `
-[jobs_action_keys]
+[jobs]
 file.delete = ["F8"]
 `
 	if err := writeFile(path, content); err != nil {
@@ -820,8 +764,134 @@ file.delete = ["F8"]
 	}
 	_, err := LoadFromPaths(config.Paths{KeybindingsFile: path})
 	if err == nil {
-		t.Fatal("expected error for non-jobs action under jobs_action_keys")
+		t.Fatal("expected error for non-jobs action under [jobs]")
 	}
+}
+
+func TestReadMainShortcutsReturnsNilWhenMissing(t *testing.T) {
+	keys, err := ReadMainShortcuts(filepath.Join(t.TempDir(), "missing.toml"))
+	if err != nil {
+		t.Fatalf("ReadMainShortcuts() error = %v", err)
+	}
+	if keys != nil {
+		t.Fatalf("ReadMainShortcuts = %v, want nil for missing file", keys)
+	}
+}
+
+func TestReadMainShortcutsReturnsNilWhenTableAbsent(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "keybindings.toml")
+	if err := writeFile(path, `theme = "default"`); err != nil {
+		t.Fatalf("writeFile: %v", err)
+	}
+	keys, err := ReadMainShortcuts(path)
+	if err != nil {
+		t.Fatalf("ReadMainShortcuts() error = %v", err)
+	}
+	if keys != nil {
+		t.Fatalf("ReadMainShortcuts = %v, want nil when [main] missing", keys)
+	}
+}
+
+func TestReadMainShortcutsExtractsDottedActionIDs(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "keybindings.toml")
+	if err := writeFile(path, `[main]
+"app.quit" = ["F12"]
+"panel.refresh" = ["F2", "C-r"]
+`); err != nil {
+		t.Fatalf("writeFile: %v", err)
+	}
+	keys, err := ReadMainShortcuts(path)
+	if err != nil {
+		t.Fatalf("ReadMainShortcuts() error = %v", err)
+	}
+	if got, want := keys["app.quit"], []string{"F12"}; !equalStringSlice(got, want) {
+		t.Fatalf("app.quit = %v, want %v", got, want)
+	}
+	if got, want := keys["panel.refresh"], []string{"F2", "C-r"}; !equalStringSlice(got, want) {
+		t.Fatalf("panel.refresh = %v, want %v", got, want)
+	}
+}
+
+func TestReadJobsShortcutsReturnsNilWhenMissing(t *testing.T) {
+	keys, err := ReadJobsShortcuts(filepath.Join(t.TempDir(), "missing.toml"))
+	if err != nil {
+		t.Fatalf("ReadJobsShortcuts() error = %v", err)
+	}
+	if keys != nil {
+		t.Fatalf("ReadJobsShortcuts = %v, want nil for missing file", keys)
+	}
+}
+
+func TestReadJobsShortcutsExtractsTable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "keybindings.toml")
+	if err := writeFile(path, `[jobs]
+"jobs.clear-finished" = ["C-k"]
+`); err != nil {
+		t.Fatalf("writeFile: %v", err)
+	}
+	keys, err := ReadJobsShortcuts(path)
+	if err != nil {
+		t.Fatalf("ReadJobsShortcuts() error = %v", err)
+	}
+	if got, want := keys["jobs.clear-finished"], []string{"C-k"}; !equalStringSlice(got, want) {
+		t.Fatalf("jobs.clear-finished = %v, want %v", got, want)
+	}
+	plainKeys, err := ReadMainShortcuts(path)
+	if err != nil {
+		t.Fatalf("ReadMainShortcuts() error = %v", err)
+	}
+	if plainKeys != nil {
+		t.Fatalf("ReadMainShortcuts = %v, want nil when only [jobs] present", plainKeys)
+	}
+}
+
+func TestReadDialogInputShortcutsResolvesNestedTable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "keybindings.toml")
+	if err := writeFile(path, `[dialog.input]
+"ui.input.forward-word" = ["M-f", "C-M-f"]
+`); err != nil {
+		t.Fatalf("writeFile: %v", err)
+	}
+	keys, err := ReadDialogInputShortcuts(path)
+	if err != nil {
+		t.Fatalf("ReadDialogInputShortcuts() error = %v", err)
+	}
+	if got, want := keys["ui.input.forward-word"], []string{"M-f", "C-M-f"}; !equalStringSlice(got, want) {
+		t.Fatalf("ui.input.forward-word = %v, want %v", got, want)
+	}
+}
+
+func TestReadDialogRenameShortcutsExtractsTable(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "keybindings.toml")
+	if err := writeFile(path, `[dialog.rename]
+"file.rename.open-slugify" = ["C-g"]
+`); err != nil {
+		t.Fatalf("writeFile: %v", err)
+	}
+	keys, err := ReadDialogRenameShortcuts(path)
+	if err != nil {
+		t.Fatalf("ReadDialogRenameShortcuts() error = %v", err)
+	}
+	if got, want := keys["file.rename.open-slugify"], []string{"C-g"}; !equalStringSlice(got, want) {
+		t.Fatalf("file.rename.open-slugify = %v, want %v", got, want)
+	}
+}
+
+func equalStringSlice(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func writeFile(path, content string) error {

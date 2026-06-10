@@ -66,11 +66,6 @@ func (m *Map) ActionBindings() []Binding {
 			rememberCanonical(ks)
 		}
 	}
-	for _, chords := range DefaultPathPickerHostOverlayKeys() {
-		for _, ks := range chords {
-			rememberCanonical(ks)
-		}
-	}
 	for _, chords := range DefaultDialogInputOverlayKeys() {
 		for _, ks := range chords {
 			rememberCanonical(ks)

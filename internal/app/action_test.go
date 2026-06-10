@@ -64,7 +64,7 @@ func TestActionFromKeyMapsQuitImmediate(t *testing.T) {
 
 // TestActionFromKeyMapsCtrlCToJobsCancel verifies that Ctrl+C triggers
 // jobs.cancel only while the jobs view is focused. After the unification
-// of jobs.* shortcuts under [jobs_action_keys], Ctrl+C is no longer in
+// of jobs.* shortcuts under [jobs], Ctrl+C is no longer in
 // the global map: it must resolve via the overlay when viewJobs=true,
 // and stay unbound in browser mode (so a stray Ctrl+C never silently
 // triggers a job cancel from outside the jobs screen).
