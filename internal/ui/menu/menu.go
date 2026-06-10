@@ -170,6 +170,7 @@ func Definitions() []Definition {
 			Items: []Item{
 				{Action: keymap.ActionAppUserMenu, Label: "User menu", Shortcut: 'U'},
 				{Action: keymap.ActionFileRunForEach, Label: "Run for each...", Shortcut: 'f'},
+				{Action: keymap.ActionAppDropToShell, Label: "Shell", Shortcut: 's'},
 				{Action: keymap.ActionBookmarkOpen, Label: "Bookmarks", Shortcut: 'b'},
 				{Action: keymap.ActionBookmarkAdd, Label: "Add bookmark", Shortcut: 'a'},
 				{Action: keymap.ActionPanelRefresh, Label: "Refresh", Shortcut: 'r'},

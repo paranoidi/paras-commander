@@ -180,4 +180,7 @@ const (
 	DefaultSFTPDialTimeoutSecs = 30
 	// DefaultSFTPListTimeoutSecs limits remote panel directory listing (ReadDir).
 	DefaultSFTPListTimeoutSecs = 60
+
+	// DefaultShellSyncCwdOnReturn navigates the active panel to the process cwd after drop-to-shell exits.
+	DefaultShellSyncCwdOnReturn = true
 )

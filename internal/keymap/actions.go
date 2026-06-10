@@ -8,6 +8,7 @@ const (
 	ActionAppShowHelp      = "app.show-help"
 	ActionAppUserMenu      = "app.user-menu"
 	ActionAppUserMenuEdit  = "app.user-menu-edit"
+	ActionAppDropToShell   = "app.drop-to-shell"
 
 	ActionPanelSwitch                = "panel.switch"
 	ActionNavUp                      = "nav.up"
@@ -168,6 +169,7 @@ var KnownActions = map[string]struct{}{
 	ActionAppShowHelp:      {},
 	ActionAppUserMenu:      {},
 	ActionAppUserMenuEdit:  {},
+	ActionAppDropToShell:   {},
 
 	ActionPanelSwitch:                {},
 	ActionNavUp:                      {},

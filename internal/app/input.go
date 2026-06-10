@@ -573,6 +573,8 @@ func (a *App) dispatch(actionID string) {
 	switch actionID {
 	case keymap.ActionAppOpenMenu:
 		a.openMenu()
+	case keymap.ActionAppDropToShell:
+		a.dropToShell()
 	case keymap.ActionPanelRefresh:
 		a.reloadActive("Panel refreshed")
 	case keymap.ActionPanelExternalBrowser:

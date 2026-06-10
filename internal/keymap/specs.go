@@ -70,6 +70,14 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "S-F2",
 			Keywords:     []string{"menu.toml", "editor", "custom commands"},
 		},
+		{
+			ID:           ActionAppDropToShell,
+			Title:        "Drop to shell",
+			Section:      "App",
+			DefaultKeys:  []string{"C-o"},
+			PreferredKey: "C-o",
+			Keywords:     []string{"shell", "subshell", "ctrl-o", "terminal"},
+		},
 
 		// ── Panel navigation ──
 		{

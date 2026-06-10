@@ -111,6 +111,7 @@ type Config struct {
 	UserMenu                   UserMenuConfig   `toml:"user_menu"`
 	Preview                    PreviewConfig    `toml:"preview"`
 	SFTP                       SFTPConfig       `toml:"sftp"`
+	Shell                      ShellConfig      `toml:"shell"`
 	// Meta configures the separate meta.toml command definitions file and execution settings.
 	Meta MetaConfig `toml:"meta"`
 	// Pools configures discovery of the separate pools.toml work-pool definitions file.
@@ -152,6 +153,15 @@ type UserMenuConfig struct {
 	// LocalNames lists basenames probed in the active panel directory before the global file.
 	// Empty in config means use built-in default (see Default().UserMenu).
 	LocalNames []string `toml:"local_names"`
+}
+
+// ShellConfig controls drop-to-shell (suspend TUI, run interactive shell, resume).
+type ShellConfig struct {
+	// Command is an optional argv template parsed like shellwords (see cmdrun.ParseCommandArgv).
+	// Empty uses $SHELL then bash fallback.
+	Command string `toml:"command"`
+	// SyncCwdOnReturn navigates the active panel to the process cwd after the shell exits.
+	SyncCwdOnReturn bool `toml:"sync_cwd_on_return"`
 }
 
 // PreviewConfig controls inactive-panel file preview (external highlighter command).
@@ -395,6 +405,9 @@ func Default() Config {
 			IdleTimeoutSecs: DefaultSFTPIdleTimeoutSecs,
 			DialTimeoutSecs: DefaultSFTPDialTimeoutSecs,
 			ListTimeoutSecs: DefaultSFTPListTimeoutSecs,
+		},
+		Shell: ShellConfig{
+			SyncCwdOnReturn: DefaultShellSyncCwdOnReturn,
 		},
 		Meta: MetaConfig{
 			File:                "",
