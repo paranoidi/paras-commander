@@ -125,7 +125,7 @@ const (
 	DefaultPanelZoomInactivePercent = 30
 	// DefaultZoomActivePanelDisabledAboveWidth: when > 0 and terminal width (cells) is >= this value,
 	// panel zoom is suppressed (even split). Use 0 to never disable zoom based on width.
-	DefaultZoomActivePanelDisabledAboveWidth = 155
+	DefaultZoomActivePanelDisabledAboveWidth = 140
 
 	// DefaultShrunkenShowsNameOnly: when true, file panels whose list row text width is below
 	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
