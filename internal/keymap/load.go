@@ -19,10 +19,11 @@ import (
 //  1. built-in defaults (DefaultActionKeys / DefaultJobsOverlayKeys / DefaultCommandsOverlayKeys /
 //     DefaultMessagesOverlayKeys / DefaultPathPickerHostOverlayKeys / DefaultDialogInputOverlayKeys /
 //     DefaultRenameDialogOverlayKeys / DefaultBookmarkDialogOverlayKeys / DefaultFindDialogOverlayKeys /
-//     DefaultHistoryDialogOverlayKeys)
+//     DefaultHistoryDialogOverlayKeys / DefaultFlattenDialogOverlayKeys)
 //  2. config.toml's [action_keys] / [jobs_action_keys] / [commands_action_keys] / [messages_action_keys] /
 //     [path_picker_host_action_keys] (must be empty) / [dialog_input_action_keys] / [rename_dialog_action_keys] /
-//     [bookmark_dialog_action_keys] / [find_dialog_action_keys] / [history_dialog_action_keys] (when present)
+//     [bookmark_dialog_action_keys] / [find_dialog_action_keys] / [history_dialog_action_keys] /
+//     [flatten_dialog_action_keys] (when present)
 //  3. keybindings.toml's matching tables (when present) — wins over config.toml
 //
 // Any source can be absent without failing startup; built-in defaults
@@ -109,6 +110,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		BookmarkDialog: overlayMaps[6],
 		FindDialog:     overlayMaps[7],
 		HistoryDialog:  overlayMaps[8],
+		FlattenDialog:  overlayMaps[9],
 	}, nil
 }
 
@@ -266,7 +268,10 @@ func EncodeDefaultStub(w io.Writer) error {
 		"# Only find.select-all, find.unselect-all, find.select-group, and find.unselect-group are accepted.\n" +
 		"#\n" +
 		"# History dialog uses [history_dialog_action_keys] for toggling both panels' histories.\n" +
-		"# Only panel.history-both-panels is accepted.\n\n"
+		"# Only panel.history-both-panels is accepted.\n" +
+		"#\n" +
+		"# Flatten dialog uses [flatten_dialog_action_keys] for destination panel shortcuts.\n" +
+		"# Only flatten.destination-active and flatten.destination-inactive are accepted.\n\n"
 	if _, err := io.WriteString(w, header); err != nil {
 		return fmt.Errorf("encode keybindings stub header: %w", err)
 	}
@@ -281,6 +286,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		BookmarkDialogActionKeys map[string][]string `toml:"bookmark_dialog_action_keys"`
 		FindDialogActionKeys     map[string][]string `toml:"find_dialog_action_keys"`
 		HistoryDialogActionKeys  map[string][]string `toml:"history_dialog_action_keys"`
+		FlattenDialogActionKeys  map[string][]string `toml:"flatten_dialog_action_keys"`
 	}{
 		ActionKeys:               DefaultActionKeys(),
 		JobsActionKeys:           DefaultJobsOverlayKeys(),
@@ -292,6 +298,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		BookmarkDialogActionKeys: DefaultBookmarkDialogOverlayKeys(),
 		FindDialogActionKeys:     DefaultFindDialogOverlayKeys(),
 		HistoryDialogActionKeys:  DefaultHistoryDialogOverlayKeys(),
+		FlattenDialogActionKeys:  DefaultFlattenDialogOverlayKeys(),
 	}
 	if err := toml.NewEncoder(w).Encode(payload); err != nil {
 		return fmt.Errorf("encode keybindings stub: %w", err)

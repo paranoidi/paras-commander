@@ -8,7 +8,44 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
+
+func flattenDialogTestSetup(t *testing.T) (app *App, activeDir, inactiveDir string) {
+	t.Helper()
+	dir := t.TempDir()
+	activeDir = filepath.Join(dir, "active")
+	inactiveDir = filepath.Join(dir, "inactive")
+	root := filepath.Join(dir, "source")
+	for _, p := range []string{activeDir, inactiveDir, root} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app = newApp(t, screen, dir)
+	if err := app.activePanel().Load(activeDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.inactivePanel().Load(inactiveDir); err != nil {
+		t.Fatal(err)
+	}
+	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
+	app.openFlattenDialog()
+	if !app.model.FlattenDialog.Open {
+		t.Fatal("flatten dialog should be open")
+	}
+	return app, activeDir, inactiveDir
+}
+
+func footerHasHint(keys []menu.FunctionKey, hint, keyLabel string) bool {
+	for _, fk := range keys {
+		if fk.Hint == hint && fk.KeyLabel == keyLabel {
+			return true
+		}
+	}
+	return false
+}
 
 func TestFlattenMixedSelectionShowsError(t *testing.T) {
 	t.Parallel()
@@ -122,5 +159,95 @@ func TestFlattenConfirmQueuesJob(t *testing.T) {
 	}
 	if len(all[0].Sources) != 1 {
 		t.Fatalf("sources = %d, want 1 child", len(all[0].Sources))
+	}
+}
+
+func TestFlattenDestinationFooterShowsActiveAndInactive(t *testing.T) {
+	t.Parallel()
+	app, _, _ := flattenDialogTestSetup(t)
+	if app.model.FlattenDialog.FocusField != 0 {
+		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.FlattenDialog.FocusField)
+	}
+	keys := app.activeFooterKeys()
+	if !footerHasHint(keys, "Active", "F5") {
+		t.Fatalf("footer = %+v, want Active F5 hint", keys)
+	}
+	if !footerHasHint(keys, "Inactive", "F6") {
+		t.Fatalf("footer = %+v, want Inactive F6 hint", keys)
+	}
+}
+
+func TestFlattenDestinationShortcutF5SetsActivePath(t *testing.T) {
+	t.Parallel()
+	app, activeDir, inactiveDir := flattenDialogTestSetup(t)
+	wantInactive := transferPrefilledDestination(inactiveDir).Value
+	if app.model.FlattenDialog.Destination.Value != wantInactive {
+		t.Fatalf("initial destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
+	}
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	wantActive := transferPrefilledDestination(activeDir).Value
+	if app.model.FlattenDialog.Destination.Value != wantActive {
+		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantActive)
+	}
+}
+
+func TestFlattenDestinationShortcutF6SetsInactivePath(t *testing.T) {
+	t.Parallel()
+	app, _, inactiveDir := flattenDialogTestSetup(t)
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	wantInactive := transferPrefilledDestination(inactiveDir).Value
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	if app.model.FlattenDialog.Destination.Value != wantInactive {
+		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
+	}
+}
+
+func TestFlattenDestinationShortcutsNoOpWhenUnfocused(t *testing.T) {
+	t.Parallel()
+	app, _, _ := flattenDialogTestSetup(t)
+	want := app.model.FlattenDialog.Destination.Value
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.FlattenDialog.FocusField != 1 {
+		t.Fatalf("FocusField = %d, want 1 (recursive)", app.model.FlattenDialog.FocusField)
+	}
+	keys := app.activeFooterKeys()
+	if footerHasHint(keys, "Active", "F5") || footerHasHint(keys, "Inactive", "F6") {
+		t.Fatalf("footer = %+v, must not show Active/Inactive when destination unfocused", keys)
+	}
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if app.model.FlattenDialog.Destination.Value != want {
+		t.Fatalf("F5 destination = %q, want unchanged %q", app.model.FlattenDialog.Destination.Value, want)
+	}
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	if app.model.FlattenDialog.Destination.Value != want {
+		t.Fatalf("F6 destination = %q, want unchanged %q", app.model.FlattenDialog.Destination.Value, want)
+	}
+}
+
+func TestFlattenDefaultLocationActivePrefill(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	activeDir := filepath.Join(dir, "active")
+	inactiveDir := filepath.Join(dir, "inactive")
+	root := filepath.Join(dir, "source")
+	for _, p := range []string{activeDir, inactiveDir, root} {
+		if err := os.Mkdir(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.config.Operations.FlattenDefaultLocation = "active"
+	if err := app.activePanel().Load(activeDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.inactivePanel().Load(inactiveDir); err != nil {
+		t.Fatal(err)
+	}
+	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
+	app.openFlattenDialog()
+	want := transferPrefilledDestination(activeDir).Value
+	if app.model.FlattenDialog.Destination.Value != want {
+		t.Fatalf("destination = %q, want active panel %q", app.model.FlattenDialog.Destination.Value, want)
 	}
 }

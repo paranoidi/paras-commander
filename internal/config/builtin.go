@@ -102,6 +102,13 @@ const (
 	DefaultDiskSpaceCheckMinFileBytes = 50 * 1024 * 1024
 	DefaultCowFileCloning             = true
 
+	// FlattenDefaultLocationActive is the active panel path for flatten dialog default destination.
+	FlattenDefaultLocationActive = "active"
+	// FlattenDefaultLocationInactive is the inactive panel path for flatten dialog default destination.
+	FlattenDefaultLocationInactive = "inactive"
+	// DefaultFlattenDefaultLocation is the initial flatten destination prefill panel.
+	DefaultFlattenDefaultLocation = FlattenDefaultLocationInactive
+
 	// DefaultFlattenRecursive is the initial state of the flatten dialog recursive checkbox.
 	DefaultFlattenRecursive = false
 	// DefaultFlattenRemoveEmptyDirs is the initial state of the flatten dialog remove-empty checkbox.

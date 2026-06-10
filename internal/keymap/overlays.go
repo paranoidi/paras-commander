@@ -86,6 +86,14 @@ var overlayRegistry = []OverlaySpec{
 			return fmt.Errorf("parse config %q: [history_dialog_action_keys] action %q is not allowed (panel.history-both-panels only)", source, action)
 		},
 	},
+	{
+		TableName: "flatten_dialog_action_keys",
+		Defaults:  DefaultFlattenDialogOverlayKeys,
+		Allowed:   AllowedInFlattenDialogOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [flatten_dialog_action_keys] action %q is not allowed (flatten.destination-active, flatten.destination-inactive only)", source, action)
+		},
+	},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.
@@ -147,6 +155,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "find.select-all, find.unselect-all, find.select-group, find.unselect-group only"
 	case "history_dialog_action_keys":
 		return "panel.history-both-panels only"
+	case "flatten_dialog_action_keys":
+		return "flatten.destination-active, flatten.destination-inactive only"
 	default:
 		return "not allowed"
 	}

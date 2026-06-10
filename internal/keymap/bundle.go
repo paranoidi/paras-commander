@@ -13,4 +13,5 @@ type Bundle struct {
 	BookmarkDialog *Map // bookmarks path picker (delete fzf-marks entry)
 	FindDialog     *Map // find dialog (select all ranked results)
 	HistoryDialog  *Map // history dialog (toggle both panels)
+	FlattenDialog  *Map // flatten dialog (destination active/inactive panel)
 }

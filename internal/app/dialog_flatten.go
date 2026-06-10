@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -23,9 +24,13 @@ func (a *App) openFlattenDialog() {
 	for i, r := range roots {
 		rootStrs[i] = r.String()
 	}
+	destPanel := a.inactivePanel()
+	if a.config.Operations.FlattenDefaultLocation == config.FlattenDefaultLocationActive {
+		destPanel = a.activePanel()
+	}
 	a.model.FlattenDialog = ui.FlattenDialogState{
 		Open:         true,
-		Destination:  transferPrefilledDestination(a.inactivePanel().PathString()),
+		Destination:  transferPrefilledDestination(destPanel.PathString()),
 		DestSubFocus: ui.FlattenDestSubFocusText,
 		Recursive:    a.config.Operations.FlattenRecursive,
 		RemoveEmpty:  a.config.Operations.FlattenRemoveEmptyDirs,
@@ -97,6 +102,9 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if a.tryPathPickerHostShortcut(event) {
+		return
+	}
+	if a.tryFlattenDialogDestinationShortcut(event) {
 		return
 	}
 	if d.FocusField == 0 && d.DestSubFocus == ui.FlattenDestSubFocusText &&

@@ -82,6 +82,7 @@ type App struct {
 	keysBookmarkDialog *keymap.Map // delete fzf-marks entry while bookmarks picker is open
 	keysFindDialog     *keymap.Map // select all while find dialog is open
 	keysHistoryDialog  *keymap.Map // both-panels toggle while history dialog is open
+	keysFlattenDialog  *keymap.Map // destination panel shortcuts while flatten dialog is open
 	devMode            bool
 	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
@@ -320,6 +321,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		kmHistoryDialog = m
 	}
+	kmFlattenDialog := bundle.FlattenDialog
+	if kmFlattenDialog == nil {
+		m, err := keymap.Build(keymap.DefaultFlattenDialogOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build flatten dialog overlay map: %w", err)
+		}
+		kmFlattenDialog = m
+	}
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -430,6 +439,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysBookmarkDialog: kmBookmarkDialog,
 		keysFindDialog:     kmFindDialog,
 		keysHistoryDialog:  kmHistoryDialog,
+		keysFlattenDialog:  kmFlattenDialog,
 		devMode:            opts.DevMode,
 		commandsCtx:        cmdCtx,
 		commandsCancel:     cmdCancel,

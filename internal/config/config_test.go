@@ -330,6 +330,24 @@ func TestLoadFromPathsClampsUnsupportedValuesToDefaults(t *testing.T) {
 			},
 		},
 		{
+			name:    "flatten default location invalid",
+			content: "[operations]\nflatten_default_location = \"other\"\n",
+			testFn: func(t *testing.T, cfg Config) {
+				if cfg.Operations.FlattenDefaultLocation != FlattenDefaultLocationInactive {
+					t.Fatalf("FlattenDefaultLocation = %q, want clamped to %q", cfg.Operations.FlattenDefaultLocation, FlattenDefaultLocationInactive)
+				}
+			},
+		},
+		{
+			name:    "flatten default location active",
+			content: "[operations]\nflatten_default_location = \"active\"\n",
+			testFn: func(t *testing.T, cfg Config) {
+				if cfg.Operations.FlattenDefaultLocation != FlattenDefaultLocationActive {
+					t.Fatalf("FlattenDefaultLocation = %q, want %q", cfg.Operations.FlattenDefaultLocation, FlattenDefaultLocationActive)
+				}
+			},
+		},
+		{
 			name:    "path filter",
 			content: "[filter]\nmatch_path_segments = true\n",
 			testFn: func(t *testing.T, cfg Config) {

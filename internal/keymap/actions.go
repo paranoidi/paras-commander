@@ -83,6 +83,10 @@ const (
 	ActionFileQuickView          = "file.quick-view"
 	ActionFileEdit               = "file.edit"
 	ActionFileFlatten            = "file.flatten"
+	// ActionFlattenDestinationActive / ActionFlattenDestinationInactive are bound via
+	// [flatten_dialog_action_keys], not [action_keys].
+	ActionFlattenDestinationActive   = "flatten.destination-active"
+	ActionFlattenDestinationInactive = "flatten.destination-inactive"
 
 	// Copy/Move
 	ActionCopy         = "file.copy"
@@ -220,21 +224,23 @@ var KnownActions = map[string]struct{}{
 	ActionDialogNext:    {},
 	ActionDialogPrev:    {},
 
-	ActionFileRename:             {},
-	ActionFileRenameOpenSanitize: {},
-	ActionFileRenameOpenSlugify:  {},
-	ActionFileDelete:             {},
-	ActionFileMkdir:              {},
-	ActionFileMkdirOpenInOther:   {},
-	ActionFileChmod:              {},
-	ActionFileChown:              {},
-	ActionFileSymlink:            {},
-	ActionFileHardlink:           {},
-	ActionFileExtract:            {},
-	ActionFileView:               {},
-	ActionFileQuickView:          {},
-	ActionFileEdit:               {},
-	ActionFileFlatten:            {},
+	ActionFileRename:                 {},
+	ActionFileRenameOpenSanitize:     {},
+	ActionFileRenameOpenSlugify:      {},
+	ActionFileDelete:                 {},
+	ActionFileMkdir:                  {},
+	ActionFileMkdirOpenInOther:       {},
+	ActionFileChmod:                  {},
+	ActionFileChown:                  {},
+	ActionFileSymlink:                {},
+	ActionFileHardlink:               {},
+	ActionFileExtract:                {},
+	ActionFileView:                   {},
+	ActionFileQuickView:              {},
+	ActionFileEdit:                   {},
+	ActionFileFlatten:                {},
+	ActionFlattenDestinationActive:   {},
+	ActionFlattenDestinationInactive: {},
 
 	ActionCopy:         {},
 	ActionFileCopyHere: {},

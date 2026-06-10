@@ -436,6 +436,22 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"find dialog", "pattern", "glob", "deselect"},
 		},
 		{
+			ID:           ActionFlattenDestinationActive,
+			Title:        "Flatten destination: active panel",
+			Section:      "File operations",
+			DefaultKeys:  nil, // overlay: DefaultFlattenDialogOverlayKeys
+			PreferredKey: "F5",
+			Keywords:     []string{"flatten dialog", "destination", "active panel"},
+		},
+		{
+			ID:           ActionFlattenDestinationInactive,
+			Title:        "Flatten destination: inactive panel",
+			Section:      "File operations",
+			DefaultKeys:  nil, // overlay: DefaultFlattenDialogOverlayKeys
+			PreferredKey: "F6",
+			Keywords:     []string{"flatten dialog", "destination", "inactive panel", "passive"},
+		},
+		{
 			ID:          ActionRemoteSFTPLink,
 			Title:       "SFTP ...",
 			Section:     "Remote",

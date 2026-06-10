@@ -36,6 +36,7 @@ const (
 	bookmarkDialogActionKeysTable = "bookmark_dialog_action_keys"
 	findDialogActionKeysTable     = "find_dialog_action_keys"
 	historyDialogActionKeysTable  = "history_dialog_action_keys"
+	flattenDialogActionKeysTable  = "flatten_dialog_action_keys"
 
 	ThemeDefault   = "default"
 	StartupPathCWD = "cwd"
@@ -292,6 +293,8 @@ type OperationsConfig struct {
 	DiskSpaceCheckMinFileBytes int64 `toml:"disk_space_check_min_file_bytes"`
 	// CowFileCloning enables Linux FICLONE (CoW) when supported (similar to Midnight Commander file cloning).
 	CowFileCloning bool `toml:"cow_file_cloning"`
+	// FlattenDefaultLocation is the default destination prefill panel: "active" or "inactive".
+	FlattenDefaultLocation string `toml:"flatten_default_location"`
 	// FlattenRecursive is the default for the flatten dialog recursive checkbox.
 	FlattenRecursive bool `toml:"flatten_recursive"`
 	// FlattenRemoveEmptyDirs is the default for the flatten dialog remove-empty checkbox.
@@ -387,6 +390,7 @@ func Default() Config {
 			SyncAfterEachFile:          DefaultSyncAfterEachFile,
 			DiskSpaceCheckMinFileBytes: DefaultDiskSpaceCheckMinFileBytes,
 			CowFileCloning:             DefaultCowFileCloning,
+			FlattenDefaultLocation:     DefaultFlattenDefaultLocation,
 			FlattenRecursive:           DefaultFlattenRecursive,
 			FlattenRemoveEmptyDirs:     DefaultFlattenRemoveEmptyDirs,
 			RenameFocusAfter:           DefaultRenameFocusAfter,
@@ -628,7 +632,7 @@ func readShortcutTable(filename, table string) (map[string][]string, error) {
 // keybindings pass-through tables tolerated inside config.toml.
 func isShortcutTable(name string) bool {
 	switch name {
-	case actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, messagesActionKeysTable, pathPickerHostActionKeysTable, dialogInputActionKeysTable, renameDialogActionKeysTable, bookmarkDialogActionKeysTable, findDialogActionKeysTable, historyDialogActionKeysTable:
+	case actionKeysTable, jobsActionKeysTable, commandsActionKeysTable, messagesActionKeysTable, pathPickerHostActionKeysTable, dialogInputActionKeysTable, renameDialogActionKeysTable, bookmarkDialogActionKeysTable, findDialogActionKeysTable, historyDialogActionKeysTable, flattenDialogActionKeysTable:
 		return true
 	}
 	return false
@@ -1023,6 +1027,12 @@ func (c *Config) Validate() error {
 	}
 	if c.Operations.DiskSpaceCheckMinFileBytes < 0 {
 		c.Operations.DiskSpaceCheckMinFileBytes = builtin.Operations.DiskSpaceCheckMinFileBytes
+	}
+	loc := strings.ToLower(strings.TrimSpace(c.Operations.FlattenDefaultLocation))
+	if loc != FlattenDefaultLocationActive && loc != FlattenDefaultLocationInactive {
+		c.Operations.FlattenDefaultLocation = builtin.Operations.FlattenDefaultLocation
+	} else {
+		c.Operations.FlattenDefaultLocation = loc
 	}
 	if !validLoggingLevel(c.Logging.Level) {
 		c.Logging.Level = builtin.Logging.Level
