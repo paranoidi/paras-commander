@@ -127,12 +127,12 @@ func TestApplyPeriodicRefreshMinimalScrollWhenHighlightUnchanged(t *testing.T) {
 		fresh[i] = fsbackend.Entry{Name: name, Type: fsbackend.EntryFile, Size: int64(i), ModifiedAt: t0}
 	}
 	state := State{
-		Path:            loc,
-		Entries:         entries,
-		Sort:            SortState{Mode: SortName, DirectoriesFirst: false},
-		Cursor:          4,
-		ScrollOffset:    0,
-		CenterScrolling: false,
+		Path:         loc,
+		Entries:      entries,
+		Sort:         SortState{Mode: SortName, DirectoriesFirst: false},
+		Cursor:       4,
+		ScrollOffset: 0,
+		ScrollMode:   ScrollModeMinimal,
 	}
 	state.ApplySort()
 	state.Move(0, viewportRows)

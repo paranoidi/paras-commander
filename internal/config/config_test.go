@@ -152,6 +152,42 @@ func TestValidateClampsRefreshIntervalMS(t *testing.T) {
 	}
 }
 
+func TestValidateClampsScrollMode(t *testing.T) {
+	cfg := Default()
+	cfg.UI.ScrollMode = "bogus"
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.ScrollMode != ScrollModeEdge {
+		t.Fatalf("ScrollMode = %q, want %q", cfg.UI.ScrollMode, ScrollModeEdge)
+	}
+	cfg.UI.ScrollMode = ScrollModeEdge
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.ScrollMode != ScrollModeEdge {
+		t.Fatalf("ScrollMode = %q, want %q", cfg.UI.ScrollMode, ScrollModeEdge)
+	}
+}
+
+func TestValidateClampsScrollEdgeMargin(t *testing.T) {
+	cfg := Default()
+	cfg.UI.ScrollEdgeMargin = -3
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.ScrollEdgeMargin != DefaultScrollEdgeMargin {
+		t.Fatalf("ScrollEdgeMargin = %d, want %d", cfg.UI.ScrollEdgeMargin, DefaultScrollEdgeMargin)
+	}
+	cfg.UI.ScrollEdgeMargin = 999
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.ScrollEdgeMargin != ScrollEdgeMarginMax {
+		t.Fatalf("ScrollEdgeMargin = %d, want %d", cfg.UI.ScrollEdgeMargin, ScrollEdgeMarginMax)
+	}
+}
+
 func TestValidateClampsPathPickerValidateDelayMS(t *testing.T) {
 	cfg := Default()
 	cfg.UI.PathPickerValidateDelayMS = -5

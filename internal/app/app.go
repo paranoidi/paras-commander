@@ -396,8 +396,11 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	right.ApplySort()
 	right.Filter.CaseInsensitive = cfg.CaseInsensitiveFilter
 	right.Filter.CycleMatches = cfg.Filter.CycleMatches
-	left.CenterScrolling = cfg.UI.CenterScrolling
-	right.CenterScrolling = cfg.UI.CenterScrolling
+	scrollMode := scrollModeFromConfig(cfg.UI.ScrollMode)
+	left.ScrollMode = scrollMode
+	right.ScrollMode = scrollMode
+	left.ScrollEdgeMargin = cfg.UI.ScrollEdgeMargin
+	right.ScrollEdgeMargin = cfg.UI.ScrollEdgeMargin
 	jobState := jobs.NewState()
 	jobState.SetTransferFunc(jobTransferFunc(cfg.Operations, cfg.Jobs))
 	jobState.SetThroughputChart(

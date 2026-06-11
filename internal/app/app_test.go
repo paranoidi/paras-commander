@@ -2212,7 +2212,7 @@ func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
 	}
 }
 
-func TestConfigDialogApplyPersistsCenterScrolling(t *testing.T) {
+func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -2223,9 +2223,9 @@ func TestConfigDialogApplyPersistsCenterScrolling(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-center")}.WithResolvedLocations()
+	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-scroll")}.WithResolvedLocations()
 	cfg := config.Default()
-	cfg.UI.CenterScrolling = false
+	cfg.UI.ScrollMode = config.DefaultScrollMode
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
@@ -2237,29 +2237,29 @@ func TestConfigDialogApplyPersistsCenterScrolling(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)
 	}
-	if app.model.Left.CenterScrolling {
-		t.Fatal("Left.CenterScrolling = true, want false from config")
+	if app.model.Left.ScrollMode != panel.ScrollModeEdge {
+		t.Fatalf("Left.ScrollMode = %q, want edge from config default", app.model.Left.ScrollMode)
 	}
 
 	app.openConfigDialog()
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
-	if !app.config.UI.CenterScrolling {
-		t.Fatal("CenterScrolling = false, want true after toggle")
+	if app.config.UI.ScrollMode != config.ScrollModeCenter {
+		t.Fatalf("ScrollMode = %q, want center after selection", app.config.UI.ScrollMode)
 	}
-	if !app.model.Left.CenterScrolling || !app.model.Right.CenterScrolling {
-		t.Fatal("panel CenterScrolling not synced after apply")
+	if app.model.Left.ScrollMode != panel.ScrollModeCenter || app.model.Right.ScrollMode != panel.ScrollModeCenter {
+		t.Fatal("panel ScrollMode not synced after apply")
 	}
 	reloaded, err := config.LoadFromPaths(appPaths)
 	if err != nil {
 		t.Fatalf("LoadFromPaths after persist: %v", err)
 	}
-	if !reloaded.UI.CenterScrolling {
-		t.Fatalf("persisted center_scrolling = false, want true")
+	if reloaded.UI.ScrollMode != config.ScrollModeCenter {
+		t.Fatalf("persisted scroll_mode = %q, want center", reloaded.UI.ScrollMode)
 	}
 }
 
@@ -5168,7 +5168,7 @@ func TestMkdirScrollsToCreatedDirectory(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 	p := app.activePanel()
-	p.CenterScrolling = false
+	p.ScrollMode = panel.ScrollModeMinimal
 	vr := app.activeViewportRows()
 	p.Cursor = 20
 	p.ScrollOffset = 15

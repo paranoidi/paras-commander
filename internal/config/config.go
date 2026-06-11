@@ -38,6 +38,9 @@ const (
 	// FilterCycleMatchesRanked orders ↑/↓ by fuzzy rank (best match first).
 	FilterCycleMatchesRanked = "ranked"
 	BorderStyleSingle        = "single"
+	ScrollModeMinimal        = "minimal"
+	ScrollModeCenter         = "center"
+	ScrollModeEdge           = "edge"
 )
 
 // Paths identifies configuration files discovered from XDG paths.
@@ -222,8 +225,10 @@ type UIConfig struct {
 	// ShrunkenShowsNameOnly: when true, narrow panels hide trailing listing columns and show only names
 	// (sort and default_listing_format are unchanged; see ShrunkenListingRowTextWidthThreshold in builtin.go).
 	ShrunkenShowsNameOnly bool `toml:"shrunken_shows_name_only"`
-	// CenterScrolling: when true, file-list navigation keeps the highlight row centered in the viewport.
-	CenterScrolling bool `toml:"center_scrolling"`
+	// ScrollMode selects file-list scroll policy: minimal, center, or edge.
+	ScrollMode string `toml:"scroll_mode"`
+	// ScrollEdgeMargin is rows of buffer above/below the cursor before edge mode scrolls.
+	ScrollEdgeMargin int `toml:"scroll_edge_margin"`
 	// MessageLogMaxEntries caps how many status/toast lines are retained for the Messages view (oldest dropped).
 	// Zero means use the built-in default (see DefaultMessageLogMaxEntries).
 	MessageLogMaxEntries int `toml:"message_log_max_entries"`
@@ -345,7 +350,8 @@ func Default() Config {
 			PanelZoomActivePercent:            DefaultPanelZoomActivePercent,
 			PanelZoomInactivePercent:          DefaultPanelZoomInactivePercent,
 			ShrunkenShowsNameOnly:             DefaultShrunkenShowsNameOnly,
-			CenterScrolling:                   DefaultCenterScrolling,
+			ScrollMode:                        DefaultScrollMode,
+			ScrollEdgeMargin:                  DefaultScrollEdgeMargin,
 			MessageLogMaxEntries:              DefaultMessageLogMaxEntries,
 			ScreenRenderHashCache:             DefaultScreenRenderHashCache,
 		},
@@ -737,6 +743,15 @@ func (c *Config) Validate() error {
 	if c.UI.ZoomActivePanelDisabledAboveWidth < 0 {
 		c.UI.ZoomActivePanelDisabledAboveWidth = builtin.UI.ZoomActivePanelDisabledAboveWidth
 	}
+	if !c.scrollModeValid(c.UI.ScrollMode) {
+		c.UI.ScrollMode = DefaultScrollMode
+	}
+	if c.UI.ScrollEdgeMargin < 0 {
+		c.UI.ScrollEdgeMargin = DefaultScrollEdgeMargin
+	}
+	if c.UI.ScrollEdgeMargin > ScrollEdgeMarginMax {
+		c.UI.ScrollEdgeMargin = ScrollEdgeMarginMax
+	}
 	if c.UI.MessageLogMaxEntries <= 0 {
 		c.UI.MessageLogMaxEntries = builtin.UI.MessageLogMaxEntries
 	}
@@ -917,6 +932,15 @@ func (c *Config) Validate() error {
 func (c Config) sortModeValid(value string) bool {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case SortName, SortExtension, SortSize, SortMtime:
+		return true
+	default:
+		return false
+	}
+}
+
+func (c Config) scrollModeValid(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case ScrollModeMinimal, ScrollModeCenter, ScrollModeEdge:
 		return true
 	default:
 		return false

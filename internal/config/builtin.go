@@ -131,8 +131,12 @@ const (
 	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
 	DefaultShrunkenShowsNameOnly = true
 
-	// DefaultCenterScrolling: when true, file-list navigation keeps the highlight row centered in the viewport.
-	DefaultCenterScrolling = false
+	// DefaultScrollMode is the file-list scroll policy (minimal, center, or edge).
+	DefaultScrollMode = "edge"
+	// DefaultScrollEdgeMargin is rows of buffer above/below the cursor before edge mode scrolls.
+	DefaultScrollEdgeMargin = 5
+	// ScrollEdgeMarginMax is the upper bound for [ui].scroll_edge_margin after Validate.
+	ScrollEdgeMarginMax = 50
 
 	// DefaultScreenRenderHashCache skips terminal Show when the logical screen buffer matches the
 	// last pushed frame (reduces flicker and I/O on slow links). Set [ui].screen_render_hash_cache = false to always flush.

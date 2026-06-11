@@ -14,10 +14,21 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-func (a *App) syncCenterScrollingFromConfig() {
-	v := a.config.UI.CenterScrolling
-	a.model.Left.CenterScrolling = v
-	a.model.Right.CenterScrolling = v
+func scrollModeFromConfig(scrollMode string) panel.ScrollMode {
+	m, err := panel.ParseScrollMode(scrollMode)
+	if err != nil {
+		return panel.ScrollModeEdge
+	}
+	return panel.EffectiveScrollMode(m)
+}
+
+func (a *App) syncScrollFromConfig() {
+	mode := scrollModeFromConfig(a.config.UI.ScrollMode)
+	margin := a.config.UI.ScrollEdgeMargin
+	a.model.Left.ScrollMode = mode
+	a.model.Right.ScrollMode = mode
+	a.model.Left.ScrollEdgeMargin = margin
+	a.model.Right.ScrollEdgeMargin = margin
 }
 
 func (a *App) switchPanel() {

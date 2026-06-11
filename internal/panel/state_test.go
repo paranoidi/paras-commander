@@ -124,7 +124,7 @@ func TestRefreshPreservesScrollWhenCursorIndexUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	state.CenterScrolling = false
+	state.ScrollMode = ScrollModeMinimal
 	for i := 0; i < state.VisibleEntryCount(); i++ {
 		entry, _, ok := state.VisibleEntry(i)
 		if ok && entry.Name == "10.dat" {
@@ -167,7 +167,7 @@ func TestRefreshAdjustsScrollWhenListShrinksBelowPriorOffset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	state.CenterScrolling = false
+	state.ScrollMode = ScrollModeMinimal
 	for i := 0; i < state.VisibleEntryCount(); i++ {
 		entry, _, ok := state.VisibleEntry(i)
 		if ok && entry.Name == "10.dat" {
@@ -2141,10 +2141,10 @@ func TestMoveWithCenterScrolling(t *testing.T) {
 		entries[i] = localfs.Entry{Name: name, Path: filepath.Join("/tmp", name)}
 	}
 	state := State{
-		Path:            pathloc.MustParse("/tmp"),
-		Entries:         entries,
-		Sort:            SortState{Mode: SortName, DirectoriesFirst: false},
-		CenterScrolling: true,
+		Path:       pathloc.MustParse("/tmp"),
+		Entries:    entries,
+		Sort:       SortState{Mode: SortName, DirectoriesFirst: false},
+		ScrollMode: ScrollModeCenter,
 	}
 	state.ApplySort()
 	state.Cursor = 9
@@ -2177,6 +2177,67 @@ func TestMoveWithoutCenterScrollingUsesMinimalScroll(t *testing.T) {
 	}
 	if state.ScrollOffset != 0 {
 		t.Fatalf("ScrollOffset = %d, want 0 (still visible without centering)", state.ScrollOffset)
+	}
+}
+
+func TestEnsureCursorEdge(t *testing.T) {
+	entries := make([]localfs.Entry, 40)
+	for i := range entries {
+		name := strconv.Itoa(i) + ".txt"
+		entries[i] = localfs.Entry{Name: name, Path: filepath.Join("/tmp", name)}
+	}
+	state := State{
+		Path:             pathloc.MustParse("/tmp"),
+		Entries:          entries,
+		Sort:             SortState{Mode: SortName, DirectoriesFirst: false},
+		ScrollMode:       ScrollModeEdge,
+		ScrollEdgeMargin: 5,
+	}
+	const viewportRows = 20
+	state.ApplySort()
+	state.Cursor = 5
+	state.ScrollOffset = 0
+	state.EnsureCursorEdge(viewportRows)
+	if state.ScrollOffset != 0 {
+		t.Fatalf("ScrollOffset = %d, want 0 inside edge margin", state.ScrollOffset)
+	}
+	state.Cursor = 15
+	state.EnsureCursorEdge(viewportRows)
+	if state.ScrollOffset != 1 {
+		t.Fatalf("ScrollOffset = %d, want 1 after crossing bottom margin", state.ScrollOffset)
+	}
+}
+
+func TestMoveWithEdgeScrolling(t *testing.T) {
+	entries := make([]localfs.Entry, 40)
+	for i := range entries {
+		name := strconv.Itoa(i) + ".txt"
+		entries[i] = localfs.Entry{Name: name, Path: filepath.Join("/tmp", name)}
+	}
+	state := State{
+		Path:             pathloc.MustParse("/tmp"),
+		Entries:          entries,
+		Sort:             SortState{Mode: SortName, DirectoriesFirst: false},
+		ScrollMode:       ScrollModeEdge,
+		ScrollEdgeMargin: 5,
+	}
+	const viewportRows = 20
+	state.ApplySort()
+	state.Cursor = 5
+	state.ScrollOffset = 0
+	state.Move(9, viewportRows)
+	if state.Cursor != 14 {
+		t.Fatalf("Cursor = %d, want 14", state.Cursor)
+	}
+	if state.ScrollOffset != 0 {
+		t.Fatalf("ScrollOffset = %d, want 0 (small moves stay put)", state.ScrollOffset)
+	}
+	state.Move(1, viewportRows)
+	if state.Cursor != 15 {
+		t.Fatalf("Cursor = %d, want 15", state.Cursor)
+	}
+	if state.ScrollOffset != 1 {
+		t.Fatalf("ScrollOffset = %d, want 1 after crossing bottom margin", state.ScrollOffset)
 	}
 }
 

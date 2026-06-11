@@ -14,6 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
 const maxNavHistory = 200
@@ -84,8 +85,10 @@ type State struct {
 	Sort                 SortState
 	// ListFormat controls trailing columns after size (Modified / Permissions / none). Per-panel; see config default_listing_format.
 	ListFormat ListFormat
-	// CenterScrolling mirrors [ui].center_scrolling: navigation keeps the highlight row centered when true.
-	CenterScrolling bool
+	// ScrollMode mirrors [ui].scroll_mode: minimal, center, or edge scroll policy.
+	ScrollMode ScrollMode
+	// ScrollEdgeMargin mirrors [ui].scroll_edge_margin for edge mode.
+	ScrollEdgeMargin int
 	// CarouselMode shows a three-column parent | current | child preview inside this panel.
 	CarouselMode bool
 	// CarouselChildPreviewCoalesce skips child-directory reads during scroll and reuses CarouselSideCache.Child.
@@ -837,6 +840,29 @@ func (s *State) cursorAppearsCentered(viewportRows int) bool {
 	return s.ScrollOffset == maxOffset && row == viewportRows-1
 }
 
+// cursorAppearsEdged reports whether the highlight row sits at the edge-margin viewport position.
+func (s *State) cursorAppearsEdged(viewportRows int) bool {
+	n := s.VisibleEntryCount()
+	if viewportRows <= 0 || n == 0 || EffectiveScrollMode(s.ScrollMode) != ScrollModeEdge {
+		return false
+	}
+	eff := geom.EffectiveEdgeMargin(viewportRows, s.ScrollEdgeMargin)
+	pos := s.Cursor - s.ScrollOffset
+	topMargin := pos
+	bottomMargin := viewportRows - 1 - pos
+	if n <= viewportRows {
+		return true
+	}
+	maxOffset := n - viewportRows
+	if s.ScrollOffset == 0 && topMargin < eff {
+		return true
+	}
+	if s.ScrollOffset == maxOffset && bottomMargin < eff {
+		return true
+	}
+	return topMargin >= eff && bottomMargin >= eff
+}
+
 // applyHighlightScroll is the single scroll policy after the highlight row is chosen (by name, path, or index).
 // When centerOnHighlight is true, the row is centered when possible (Parent, rename recall, history re-entry).
 // fallbackViewportRows may be stale (e.g. captured before chdir); FileListViewportRows is consulted when set.
@@ -847,7 +873,14 @@ func (s *State) applyHighlightScroll(fallbackViewportRows int, centerOnHighlight
 		s.EnsureCursorCentered(vr)
 		return
 	}
-	s.EnsureCursorVisible(vr)
+	switch EffectiveScrollMode(s.ScrollMode) {
+	case ScrollModeCenter:
+		s.EnsureCursorCentered(vr)
+	case ScrollModeEdge:
+		s.EnsureCursorEdge(vr)
+	default:
+		s.EnsureCursorVisible(vr)
+	}
 }
 
 func (s *State) effectiveFileListViewportRows(fallback int) int {
@@ -890,7 +923,7 @@ func (s *State) finishSameDirectoryReloadScroll(priorCursor, priorScroll, viewpo
 	s.clampCursor()
 	n := s.VisibleEntryCount()
 
-	if s.CenterScrolling {
+	if s.ScrollMode == ScrollModeCenter {
 		s.applyHighlightScroll(viewportRows, true)
 		return
 	}
@@ -952,14 +985,28 @@ func (s *State) EnsureCursorCentered(viewportRows int) {
 	s.ScrollOffset = target
 }
 
-// EnsureCursorInViewport scrolls so the cursor stays visible, or centered when CenterScrolling is set.
-func (s *State) EnsureCursorInViewport(fallbackViewportRows int) {
-	vr := s.effectiveFileListViewportRows(fallbackViewportRows)
-	if s.CenterScrolling {
-		s.EnsureCursorCentered(vr)
+// EnsureCursorEdge updates ScrollOffset only when the cursor is within scroll_edge_margin rows of the viewport edge.
+func (s *State) EnsureCursorEdge(viewportRows int) {
+	s.clampCursor()
+	n := s.VisibleEntryCount()
+	if viewportRows <= 0 || n == 0 {
+		s.ScrollOffset = 0
 		return
 	}
-	s.EnsureCursorVisible(vr)
+	s.ScrollOffset = geom.ScrollOffsetEdge(s.Cursor, s.ScrollOffset, viewportRows, n, s.ScrollEdgeMargin)
+}
+
+// EnsureCursorInViewport scrolls according to ScrollMode.
+func (s *State) EnsureCursorInViewport(fallbackViewportRows int) {
+	vr := s.effectiveFileListViewportRows(fallbackViewportRows)
+	switch EffectiveScrollMode(s.ScrollMode) {
+	case ScrollModeCenter:
+		s.EnsureCursorCentered(vr)
+	case ScrollModeEdge:
+		s.EnsureCursorEdge(vr)
+	default:
+		s.EnsureCursorVisible(vr)
+	}
 }
 
 // SetFilterCaseInsensitive configures the quick filter case behavior.
@@ -1207,7 +1254,7 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	if sameDirReload {
 		s.finishSameDirectoryReloadScroll(priorCursor, priorScroll, viewportRows, wasCentered)
 	} else {
-		centerOnHighlight := s.CenterScrolling || shouldCenterCursorOnListing(previousPath, listingLoc, centerRecalled, selectedName, indexFallback)
+		centerOnHighlight := s.ScrollMode == ScrollModeCenter || shouldCenterCursorOnListing(previousPath, listingLoc, centerRecalled, selectedName, indexFallback)
 		s.applyHighlightScroll(viewportRows, centerOnHighlight)
 	}
 	if len(s.History) == 0 {
@@ -1498,7 +1545,7 @@ func (s *State) SelectVisibleEntry(name string) bool {
 	return false
 }
 
-// SelectVisibleEntryInViewport selects by visible name and scrolls so the row is visible (or centered when CenterScrolling).
+// SelectVisibleEntryInViewport selects by visible name and scrolls according to ScrollMode.
 func (s *State) SelectVisibleEntryInViewport(name string, viewportRows int) bool {
 	if !s.SelectVisibleEntry(name) {
 		return false
@@ -1508,7 +1555,7 @@ func (s *State) SelectVisibleEntryInViewport(name string, viewportRows int) bool
 }
 
 // SelectVisibleEntryCentered selects by visible name and scrolls to center the row when possible.
-// Used after in-place operations (rename) so scroll matches explicit navigation recall, independent of CenterScrolling.
+// Used after in-place operations (rename) so scroll matches explicit navigation recall, independent of ScrollMode.
 func (s *State) SelectVisibleEntryCentered(name string, viewportRows int) bool {
 	if !s.SelectVisibleEntry(name) {
 		return false
@@ -1733,13 +1780,20 @@ func (s *State) RefreshDiskUsageOrdering(viewportRows int, centerCursor bool) {
 	}
 	liveVR := s.effectiveFileListViewportRows(viewportRows)
 	wasCentered := s.cursorAppearsCentered(liveVR)
+	wasEdged := s.cursorAppearsEdged(liveVR)
 	s.ApplySort()
 	s.rebuildFilter()
 	if selectedPath != "" {
 		s.selectVisibleEntryByPath(selectedPath)
 	}
-	preserveCenter := centerCursor || s.CenterScrolling || wasCentered
-	s.applyHighlightScroll(viewportRows, preserveCenter)
+	switch {
+	case centerCursor || s.ScrollMode == ScrollModeCenter || wasCentered:
+		s.applyHighlightScroll(viewportRows, true)
+	case s.ScrollMode == ScrollModeEdge && wasEdged:
+		s.EnsureCursorEdge(liveVR)
+	default:
+		s.applyHighlightScroll(viewportRows, false)
+	}
 }
 
 // ApplySortFromDialog assigns panel SortState from the modal while preserving idle-disk-sort flags sensibly.

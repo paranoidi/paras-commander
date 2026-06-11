@@ -115,6 +115,16 @@ func listingFormatFromShortcut(ch rune, focus *int) (panel.ListFormat, bool) {
 	return 0, false
 }
 
+func scrollModeFromShortcut(ch rune, focus *int) (panel.ScrollMode, bool) {
+	for i, row := range panel.ScrollModeDialogRadios() {
+		if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
+			*focus = 3 + i
+			return row.Mode, true
+		}
+	}
+	return "", false
+}
+
 func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
 	form := ui.NewDialogLinearForm(3)
 	st := &a.model.ListingFormatDialog
@@ -178,12 +188,13 @@ func (a *App) applyListingFormatDialog() {
 func (a *App) openConfigDialog() {
 	a.clearTransientMessage()
 	lf, _ := panel.ParseListFormat(a.config.DefaultListingFormat)
+	sm, _ := panel.ParseScrollMode(a.config.UI.ScrollMode)
 	a.model.ConfigDialog = ui.ConfigDialogState{
 		Open:                  true,
 		ShowFileIcons:         a.config.UI.ShowFileIcons,
 		ZoomActivePanel:       a.config.UI.ZoomActivePanel,
 		ShrunkenShowsNameOnly: a.config.UI.ShrunkenShowsNameOnly,
-		CenterScrolling:       a.config.UI.CenterScrolling,
+		ScrollMode:            panel.EffectiveScrollMode(sm),
 		ListFormat:            panel.EffectiveListFormat(lf),
 		Focus:                 0,
 	}
@@ -198,18 +209,18 @@ func (a *App) applyConfigDialog() {
 	val := a.model.ConfigDialog.ShowFileIcons
 	zoom := a.model.ConfigDialog.ZoomActivePanel
 	shrunken := a.model.ConfigDialog.ShrunkenShowsNameOnly
-	center := a.model.ConfigDialog.CenterScrolling
+	scrollMode := panel.ScrollModeTOMLValue(a.model.ConfigDialog.ScrollMode)
 	lf := panel.EffectiveListFormat(a.model.ConfigDialog.ListFormat)
 	a.config.UI.ShowFileIcons = val
 	a.config.UI.ZoomActivePanel = zoom
 	a.config.UI.ShrunkenShowsNameOnly = shrunken
-	a.config.UI.CenterScrolling = center
+	a.config.UI.ScrollMode = scrollMode
 	a.config.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
 	a.model.ShowFileIcons = val
 	a.model.ShrunkenShowsNameOnly = shrunken
 	a.model.Left.ListFormat = lf
 	a.model.Right.ListFormat = lf
-	a.syncCenterScrollingFromConfig()
+	a.syncScrollFromConfig()
 	a.closeConfigDialog()
 	msg := "Configuration saved"
 	patch := map[string]interface{}{
@@ -217,7 +228,7 @@ func (a *App) applyConfigDialog() {
 			"show_file_icons":          val,
 			"zoom_active_panel":        zoom,
 			"shrunken_shows_name_only": shrunken,
-			"center_scrolling":         center,
+			"scroll_mode":              scrollMode,
 		},
 		"default_listing_format": panel.ListingFormatTOMLValue(lf),
 	}
@@ -229,19 +240,26 @@ func (a *App) applyConfigDialog() {
 }
 
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
-	form := ui.NewDialogLinearForm(7)
+	form := ui.NewDialogLinearForm(9)
 	st := &a.model.ConfigDialog
-	radios := panel.ListFormatDialogRadios()
+	listRadios := panel.ListFormatDialogRadios()
+	scrollRadios := panel.ScrollModeDialogRadios()
 	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
 		focus:              &st.Focus,
 		onApply:            a.applyConfigDialog,
 		onCancel:           a.closeConfigDialog,
 		allowPlainOKCancel: true,
 		onMnemonic: func(r rune) bool {
-			if format, ok := listingFormatFromShortcut(r, &st.Focus); ok {
-				st.ListFormat = format
-				st.Focus = 4 + st.Focus
+			if mode, ok := scrollModeFromShortcut(r, &st.Focus); ok {
+				st.ScrollMode = mode
 				return true
+			}
+			for i, row := range listRadios {
+				if unicode.ToLower(r) == unicode.ToLower(row.Shortcut) {
+					st.ListFormat = row.Format
+					st.Focus = 6 + i
+					return true
+				}
 			}
 			switch r {
 			case 'f', 'F':
@@ -253,9 +271,6 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 			case 's', 'S':
 				st.ShrunkenShowsNameOnly = !st.ShrunkenShowsNameOnly
 				st.Focus = 2
-			case 'e', 'E':
-				st.CenterScrolling = !st.CenterScrolling
-				st.Focus = 3
 			default:
 				return false
 			}
@@ -269,10 +284,10 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 				st.ZoomActivePanel = !st.ZoomActivePanel
 			case 2:
 				st.ShrunkenShowsNameOnly = !st.ShrunkenShowsNameOnly
-			case 3:
-				st.CenterScrolling = !st.CenterScrolling
-			case 4, 5, 6:
-				st.ListFormat = radios[focus-4].Format
+			case 3, 4, 5:
+				st.ScrollMode = scrollRadios[focus-3].Mode
+			case 6, 7, 8:
+				st.ListFormat = listRadios[focus-6].Format
 			case form.OKIndex():
 				a.applyConfigDialog()
 			case form.CancelIndex():
