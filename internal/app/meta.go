@@ -10,6 +10,8 @@ import (
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/cmdmacro"
+	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
@@ -26,11 +28,24 @@ type metaWakePayload struct {
 	gen     uint64
 }
 
+// metaExecFailedPayload notifies the main goroutine once per meta run when a shell command fails.
+type metaExecFailedPayload struct {
+	panelID int
+	gen     uint64
+}
+
 func (a *App) postMetaResult(panelID int, path, value string, gen uint64) {
 	_ = a.screen.PostEvent(tcell.NewEventInterrupt(metaWakePayload{
 		panelID: panelID,
 		path:    path,
 		value:   value,
+		gen:     gen,
+	}))
+}
+
+func (a *App) postMetaExecFailed(panelID int, gen uint64) {
+	_ = a.screen.PostEvent(tcell.NewEventInterrupt(metaExecFailedPayload{
+		panelID: panelID,
 		gen:     gen,
 	}))
 }
@@ -270,6 +285,7 @@ func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
 	go func() {
 		sem := make(chan struct{}, workers)
 		var wg sync.WaitGroup
+		var notifyExecFailed sync.Once
 
 		for _, item := range items {
 			item := item
@@ -278,8 +294,13 @@ func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
 			go func() {
 				defer wg.Done()
 				defer func() { <-sem }()
-				out, apply := runMetaCommand(ctx, item.cmd, item.entry.Path, dir)
-				if !apply {
+				out, err := runMetaCommand(ctx, item.cmd, item.entry.Path, dir)
+				if err != nil {
+					if ctx.Err() != nil {
+						return
+					}
+					notifyExecFailed.Do(func() { a.postMetaExecFailed(panelID, gen) })
+					a.postMetaResult(panelID, item.entry.Path, "", gen)
 					return
 				}
 				if cmdDef.Cache {
@@ -332,19 +353,24 @@ func (a *App) metaEntryCmd(cmdDef metacmds.MetaEntry, e localfs.Entry, dir strin
 	return cmd, true
 }
 
-// runMetaCommand runs a single shell command with path as $1.
-// Returns (output, true) on success or real error; (_, false) when the context was cancelled.
-func runMetaCommand(ctx context.Context, cmd, path, dir string) (string, bool) {
-	c := exec.CommandContext(ctx, "sh", "-c", cmd, "sh", path)
+// runMetaCommand runs a shell command template with %f expanded to path.
+// Returns trimmed stdout on success. On failure returns a non-nil error (including context cancellation).
+func runMetaCommand(ctx context.Context, cmd, path, dir string) (string, error) {
+	built, err := cmdrun.BuildInvocation(cmdrun.InvocationSpec{
+		Template: cmd,
+		Mode:     cmdrun.ModeShellScript,
+		Ctx:      cmdmacro.Context{RowPath: path},
+	})
+	if err != nil {
+		return "", err
+	}
+	c := exec.CommandContext(ctx, built.Argv[0], built.Argv[1:]...)
 	c.Dir = dir
 	out, err := c.Output()
 	if err != nil {
-		if ctx.Err() != nil {
-			return "", false
-		}
-		return "", true
+		return "", err
 	}
-	return strings.TrimRight(string(out), "\r\n"), true
+	return strings.TrimRight(string(out), "\r\n"), nil
 }
 
 func (a *App) handleMetaDialogKey(event *tcell.EventKey) {

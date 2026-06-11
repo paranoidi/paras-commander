@@ -631,6 +631,12 @@ func (a *App) Run() error {
 				}
 				a.render()
 				didRender = true
+			case metaExecFailedPayload:
+				if d.gen == a.metaRunGen[d.panelID] {
+					a.setTransientMessage("meta: command failed to execute", ui.MessageUrgencyCritical)
+				}
+				a.render()
+				didRender = true
 			case pathPickerValidatePayload:
 				a.render()
 				didRender = true
