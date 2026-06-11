@@ -80,11 +80,7 @@ func ExecuteDeletePaths(ctx context.Context, paths []string, progress func(path 
 		ent, err := statEntry(ctx, loc)
 		if err != nil {
 			if isNotExist(err) {
-				doneFiles++
-				if progress != nil {
-					progress(path, doneFiles, doneBytes)
-				}
-				continue
+				return doneFiles, doneBytes, &Error{Op: "delete", Text: loc.Base() + " does not exist", Err: err}
 			}
 			return doneFiles, doneBytes, &Error{Op: "delete", Text: "failed to stat " + loc.Base(), Err: err}
 		}

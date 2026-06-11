@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -387,6 +388,22 @@ func TestExecuteDeleteDirectory(t *testing.T) {
 	}
 	if _, err := os.Stat(subDir); !os.IsNotExist(err) {
 		t.Fatal("directory still exists after delete")
+	}
+}
+
+func TestExecuteDeleteMissingPath(t *testing.T) {
+	t.Parallel()
+	missing := filepath.Join(t.TempDir(), "gone.txt")
+	_, _, err := ExecuteDeletePaths(context.Background(), []string{missing}, nil)
+	if err == nil {
+		t.Fatal("ExecuteDeletePaths() error = nil, want does not exist")
+	}
+	opErr, ok := err.(*Error)
+	if !ok {
+		t.Fatalf("error type = %T, want *ops.Error", err)
+	}
+	if !strings.Contains(opErr.Text, "does not exist") {
+		t.Fatalf("Error.Text = %q, want does not exist", opErr.Text)
 	}
 }
 
