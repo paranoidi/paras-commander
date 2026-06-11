@@ -5160,6 +5160,40 @@ func TestRenameDialogPrefillClearsOnType(t *testing.T) {
 	}
 }
 
+func TestMkdirScrollsToCreatedDirectory(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 25; i++ {
+		writeFile(t, filepath.Join(dir, fmt.Sprintf("%02d.dat", i)))
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.CenterScrolling = false
+	vr := app.activeViewportRows()
+	p.Cursor = 20
+	p.ScrollOffset = 15
+
+	app.dispatch(keymap.ActionFileMkdir)
+	for _, r := range "zz-new" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	p = app.activePanel()
+	entry, ok := p.CurrentEntry()
+	if !ok || entry.Name != "zz-new" {
+		name := ""
+		if ok {
+			name = entry.Name
+		}
+		t.Fatalf("cursor entry = %q ok=%v, want zz-new", name, ok)
+	}
+	row := p.Cursor - p.ScrollOffset
+	if row < 0 || row >= vr {
+		t.Fatalf("cursor row %d outside viewport [0,%d), scroll=%d cursor=%d", row, vr, p.ScrollOffset, p.Cursor)
+	}
+}
+
 func TestMkdirDialogPrefillsFromCursorEntry(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "cursor-name.txt"))

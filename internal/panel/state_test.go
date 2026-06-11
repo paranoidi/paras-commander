@@ -113,6 +113,86 @@ func TestRefreshRestoresCursorByIndexWhenCurrentEntryRemoved(t *testing.T) {
 	}
 }
 
+func TestRefreshPreservesScrollWhenCursorIndexUnchanged(t *testing.T) {
+	const viewportRows = 5
+	dir := t.TempDir()
+	for i := 0; i < 20; i++ {
+		name := fmt.Sprintf("%02d.dat", i)
+		testutil.WriteFile(t, filepath.Join(dir, name))
+	}
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	state.CenterScrolling = false
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "10.dat" {
+			state.Cursor = i
+			break
+		}
+	}
+	state.ScrollOffset = 8
+	priorScroll := state.ScrollOffset
+	priorRow := state.Cursor - state.ScrollOffset
+	entry, ok := state.CurrentEntry()
+	if !ok {
+		t.Fatal("CurrentEntry() ok = false")
+	}
+	if err := os.Remove(entry.Path); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if err := state.Refresh(viewportRows); err != nil {
+		t.Fatalf("Refresh() error = %v", err)
+	}
+	if state.ScrollOffset != priorScroll {
+		t.Fatalf("ScrollOffset = %d, want %d (preserved)", state.ScrollOffset, priorScroll)
+	}
+	if row := state.Cursor - state.ScrollOffset; row != priorRow {
+		t.Fatalf("cursor row in viewport = %d, want %d", row, priorRow)
+	}
+}
+
+func TestRefreshAdjustsScrollWhenListShrinksBelowPriorOffset(t *testing.T) {
+	const viewportRows = 5
+	dir := t.TempDir()
+	paths := make([]string, 20)
+	for i := 0; i < 20; i++ {
+		name := fmt.Sprintf("%02d.dat", i)
+		p := filepath.Join(dir, name)
+		testutil.WriteFile(t, p)
+		paths[i] = p
+	}
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	state.CenterScrolling = false
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		entry, _, ok := state.VisibleEntry(i)
+		if ok && entry.Name == "10.dat" {
+			state.Cursor = i
+			break
+		}
+	}
+	state.ScrollOffset = 8
+	for i := 11; i < 20; i++ {
+		if err := os.Remove(paths[i]); err != nil {
+			t.Fatalf("Remove: %v", err)
+		}
+	}
+	if err := state.Refresh(viewportRows); err != nil {
+		t.Fatalf("Refresh() error = %v", err)
+	}
+	wantScroll := clampScrollKeepingCursorVisible(8, state.Cursor, viewportRows, state.VisibleEntryCount())
+	if state.ScrollOffset != wantScroll {
+		t.Fatalf("ScrollOffset = %d, want %d (clamped, not reset to 0)", state.ScrollOffset, wantScroll)
+	}
+	if state.ScrollOffset == 0 && wantScroll != 0 {
+		t.Fatal("ScrollOffset reset to 0 when prior offset should be preserved/clamped")
+	}
+}
+
 func TestLoadRejectsNonDirectory(t *testing.T) {
 	dir := t.TempDir()
 	testutil.WriteFile(t, filepath.Join(dir, "initial.txt"))
@@ -1981,6 +2061,30 @@ func TestRefreshDiskUsageOrderingKeepsCursor(t *testing.T) {
 			k = ent.Name
 		}
 		t.Fatalf("cursor name = %q ok=%v, want preserved b.bin", k, ok)
+	}
+}
+
+func TestSelectVisibleEntryInViewport(t *testing.T) {
+	const viewportRows = 5
+	entries := make([]localfs.Entry, 20)
+	for i := range entries {
+		name := fmt.Sprintf("%02d.dat", i)
+		entries[i] = localfs.Entry{Name: name, Path: filepath.Join("/tmp", name)}
+	}
+	state := State{
+		Path:         pathloc.MustParse("/tmp"),
+		Entries:      entries,
+		Sort:         SortState{Mode: SortName, DirectoriesFirst: false},
+		Cursor:       0,
+		ScrollOffset: 12,
+	}
+	state.ApplySort()
+	if !state.SelectVisibleEntryInViewport("19.dat", viewportRows) {
+		t.Fatal("SelectVisibleEntryInViewport(19.dat) = false, want true")
+	}
+	row := state.Cursor - state.ScrollOffset
+	if row < 0 || row >= viewportRows {
+		t.Fatalf("cursor row %d outside viewport, scroll=%d cursor=%d", row, state.ScrollOffset, state.Cursor)
 	}
 }
 

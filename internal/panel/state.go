@@ -234,26 +234,14 @@ func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []f
 		return false, nil
 	}
 	priorCursor := s.Cursor
-	priorScroll := s.ScrollOffset
 	entry, ok := s.CurrentEntry()
 	selectedName := ""
 	if ok {
 		selectedName = entry.Name
 	}
-	vr := s.effectiveFileListViewportRows(viewportRows)
-	wasCentered := s.cursorAppearsCentered(vr)
 	if err := s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, priorCursor, false); err != nil {
 		return false, err
 	}
-	scrollNeeded := s.Cursor != priorCursor
-	if !scrollNeeded {
-		saved := s.ScrollOffset
-		s.EnsureCursorVisible(vr)
-		scrollNeeded = s.ScrollOffset != priorScroll
-		s.ScrollOffset = saved
-	}
-	center := s.CenterScrolling || wasCentered || scrollNeeded
-	s.applyHighlightScroll(viewportRows, center)
 	return true, nil
 }
 
@@ -871,6 +859,49 @@ func (s *State) effectiveFileListViewportRows(fallback int) int {
 	return fallback
 }
 
+// clampScrollKeepingCursorVisible returns a scroll offset that prefers preferredScroll while keeping cursor visible.
+func clampScrollKeepingCursorVisible(preferredScroll, cursor, viewportRows, entryCount int) int {
+	if viewportRows <= 0 || entryCount == 0 {
+		return 0
+	}
+	scroll := preferredScroll
+	maxOffset := entryCount - viewportRows
+	if maxOffset < 0 {
+		maxOffset = 0
+	}
+	if scroll > maxOffset {
+		scroll = maxOffset
+	}
+	if scroll < 0 {
+		scroll = 0
+	}
+	if cursor < scroll {
+		scroll = cursor
+	}
+	if cursor >= scroll+viewportRows {
+		scroll = cursor - viewportRows + 1
+	}
+	return scroll
+}
+
+// finishSameDirectoryReloadScroll applies scroll policy after a same-directory listing reload.
+func (s *State) finishSameDirectoryReloadScroll(priorCursor, priorScroll, viewportRows int, wasCentered bool) {
+	vr := s.effectiveFileListViewportRows(viewportRows)
+	s.clampCursor()
+	n := s.VisibleEntryCount()
+
+	if s.CenterScrolling {
+		s.applyHighlightScroll(viewportRows, true)
+		return
+	}
+	if s.Cursor == priorCursor {
+		s.ScrollOffset = clampScrollKeepingCursorVisible(priorScroll, s.Cursor, vr, n)
+		return
+	}
+	center := wasCentered || s.Cursor != priorCursor
+	s.applyHighlightScroll(viewportRows, center)
+}
+
 // EnsureCursorVisible updates ScrollOffset so Cursor is in the viewport.
 func (s *State) EnsureCursorVisible(viewportRows int) {
 	s.clampCursor()
@@ -1120,6 +1151,13 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	}
 
 	previousPath := s.Path
+	sameDirReload := previousPath.Equal(listingLoc)
+	priorCursor := s.Cursor
+	priorScroll := s.ScrollOffset
+	wasCentered := false
+	if sameDirReload {
+		wasCentered = s.cursorAppearsCentered(s.effectiveFileListViewportRows(viewportRows))
+	}
 	s.Path = listingLoc
 	if listingLoc.IsRemote() {
 		s.GitignoreActive = false
@@ -1166,8 +1204,12 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 			s.Cursor = indexFallback
 		}
 	}
-	centerOnHighlight := s.CenterScrolling || shouldCenterCursorOnListing(previousPath, listingLoc, centerRecalled, selectedName, indexFallback)
-	s.applyHighlightScroll(viewportRows, centerOnHighlight)
+	if sameDirReload {
+		s.finishSameDirectoryReloadScroll(priorCursor, priorScroll, viewportRows, wasCentered)
+	} else {
+		centerOnHighlight := s.CenterScrolling || shouldCenterCursorOnListing(previousPath, listingLoc, centerRecalled, selectedName, indexFallback)
+		s.applyHighlightScroll(viewportRows, centerOnHighlight)
+	}
 	if len(s.History) == 0 {
 		cp := cleanPathString(listingLoc.String())
 		if cp != "" {
@@ -1454,6 +1496,15 @@ func (s *State) SelectVisibleEntry(name string) bool {
 		}
 	}
 	return false
+}
+
+// SelectVisibleEntryInViewport selects by visible name and scrolls so the row is visible (or centered when CenterScrolling).
+func (s *State) SelectVisibleEntryInViewport(name string, viewportRows int) bool {
+	if !s.SelectVisibleEntry(name) {
+		return false
+	}
+	s.EnsureCursorInViewport(viewportRows)
+	return true
 }
 
 // SelectVisibleEntryCentered selects by visible name and scrolls to center the row when possible.

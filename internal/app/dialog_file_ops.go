@@ -315,8 +315,9 @@ func (a *App) executeMkdir() {
 	if loc, err := pathloc.Parse(plan.Path); err == nil {
 		createdName = loc.Base()
 	}
+	active := a.activePanel()
+	viewportRows := a.activeViewportRows()
 	if openInInactive {
-		active := a.activePanel()
 		if priorEntryName != "" && priorEntryName != createdName {
 			active.SelectVisibleEntry(priorEntryName)
 		} else if entry, ok := active.CurrentEntry(); ok && entry.Name == createdName {
@@ -331,7 +332,10 @@ func (a *App) executeMkdir() {
 			}
 		}
 	} else {
-		a.activePanel().SelectVisibleEntry(createdName)
+		active.SelectVisibleEntryInViewport(createdName, viewportRows)
+	}
+	if openInInactive {
+		active.EnsureCursorInViewport(viewportRows)
 	}
 	if openInInactive {
 		if err := a.navigatePanelToDirectory(a.inactivePanelID(), plan.Path, ""); err != nil {

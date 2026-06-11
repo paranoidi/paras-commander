@@ -78,7 +78,8 @@ func TestApplyPeriodicRefreshCentersWhenCursorIndexShifts(t *testing.T) {
 		entries[i] = localfs.Entry{Name: name, Path: "/tmp/" + name, ModifiedAt: t0}
 		fresh[i+1] = fsbackend.Entry{Name: name, Type: fsbackend.EntryFile, ModifiedAt: t0}
 	}
-	fresh[0] = fsbackend.Entry{Name: "new.dat", Type: fsbackend.EntryFile, ModifiedAt: t0}
+	// "6x.dat" sorts between "6.dat" and "7.dat" under lexicographic name order, shifting 7.dat down one row.
+	fresh[0] = fsbackend.Entry{Name: "6x.dat", Type: fsbackend.EntryFile, ModifiedAt: t0}
 	state := State{
 		Path:         loc,
 		Entries:      entries,
