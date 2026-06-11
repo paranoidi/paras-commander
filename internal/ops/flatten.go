@@ -42,7 +42,9 @@ func ValidateFlattenSource(p *panel.State) ([]pathloc.Path, error) {
 }
 
 // CollectFlattenSources lists move sources for flatten into dest.
-// When recursive is false, immediate children of each root are returned.
+// When recursive is false, immediate children of each root are returned; child directories
+// whose resolved destination equals a flatten root are expanded to their immediate children
+// (recursively while the collision persists) so same-name nesting does not move onto the root.
 // When recursive is true, every file and symlink under each root is returned (directories are not move roots).
 func CollectFlattenSources(ctx context.Context, roots []pathloc.Path, dest pathloc.Path, recursive bool) ([]string, error) {
 	if len(roots) == 0 {
@@ -63,7 +65,7 @@ func CollectFlattenSources(ctx context.Context, roots []pathloc.Path, dest pathl
 		if recursive {
 			part, err = collectRecursiveFlattenFiles(ctx, root)
 		} else {
-			part, err = collectImmediateFlattenChildren(ctx, root)
+			part, err = collectNonRecursiveFlattenSources(ctx, root, dest, roots)
 		}
 		if err != nil {
 			return nil, err
@@ -87,7 +89,20 @@ func destStrictlyUnderRoot(dest, root pathloc.Path) bool {
 	return dest.HasPrefix(root)
 }
 
-func collectImmediateFlattenChildren(ctx context.Context, dir pathloc.Path) ([]string, error) {
+func flattenDestEqualsRoot(ctx context.Context, child, dest pathloc.Path, roots []pathloc.Path) (bool, error) {
+	resolved, err := ResolveDestinationCtx(ctx, child, dest)
+	if err != nil {
+		return false, err
+	}
+	for _, root := range roots {
+		if resolved.Equal(root) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func collectNonRecursiveFlattenSources(ctx context.Context, dir, dest pathloc.Path, roots []pathloc.Path) ([]string, error) {
 	be, err := backendFor(dir)
 	if err != nil {
 		return nil, err
@@ -100,6 +115,20 @@ func collectImmediateFlattenChildren(ctx context.Context, dir pathloc.Path) ([]s
 	for _, e := range entries {
 		if e.Name == "." || e.Name == ".." {
 			continue
+		}
+		if e.Type == fsbackend.EntryDirectory {
+			collides, err := flattenDestEqualsRoot(ctx, e.Loc, dest, roots)
+			if err != nil {
+				return nil, err
+			}
+			if collides {
+				part, err := collectNonRecursiveFlattenSources(ctx, e.Loc, dest, roots)
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, part...)
+				continue
+			}
 		}
 		out = append(out, e.Loc.String())
 	}

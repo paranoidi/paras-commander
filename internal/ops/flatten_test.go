@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -60,6 +61,114 @@ func TestCollectFlattenSourcesImmediate(t *testing.T) {
 	}
 	if len(got) != 2 {
 		t.Fatalf("sources = %v, want 2 immediate children", got)
+	}
+}
+
+func TestCollectFlattenSourcesExpandsSameNameNestedDir(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	root := filepath.Join(dir, "quebec")
+	dest := dir
+	nested := filepath.Join(root, "quebec")
+	innerFile := filepath.Join(nested, "romeo.txt")
+	siblingFile := filepath.Join(root, "sierra.txt")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(innerFile, []byte("1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(siblingFile, []byte("2"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rootLoc := pathloc.MustParse(root)
+	destLoc := pathloc.MustParse(dest)
+	got, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{filepath.Clean(innerFile), filepath.Clean(siblingFile)}
+	if len(got) != len(want) {
+		t.Fatalf("sources = %v, want %v", got, want)
+	}
+	for _, w := range want {
+		if !slices.Contains(got, w) {
+			t.Fatalf("sources = %v, missing %q", got, w)
+		}
+	}
+	nestedDir := filepath.Clean(nested)
+	for _, s := range got {
+		if s == nestedDir {
+			t.Fatalf("sources = %v, must not include colliding directory %q", got, nestedDir)
+		}
+	}
+}
+
+func TestCollectFlattenSourcesExpandsDeepSameNameChain(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	root := filepath.Join(dir, "tango")
+	dest := dir
+	leaf := filepath.Join(root, "tango", "tango", "uniform.txt")
+	if err := os.MkdirAll(filepath.Dir(leaf), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(leaf, []byte("1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rootLoc := pathloc.MustParse(root)
+	destLoc := pathloc.MustParse(dest)
+	got, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Clean(leaf)
+	if len(got) != 1 || got[0] != want {
+		t.Fatalf("sources = %v, want [%q]", got, want)
+	}
+}
+
+func TestFlattenSameNameNestedDirMove(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	root := filepath.Join(dir, "victor")
+	dest := dir
+	nested := filepath.Join(root, "victor")
+	innerFile := filepath.Join(nested, "whiskey.txt")
+	siblingFile := filepath.Join(root, "xray.txt")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(innerFile, []byte("1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(siblingFile, []byte("2"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rootLoc := pathloc.MustParse(root)
+	destLoc := pathloc.MustParse(dest)
+	sources, err := CollectFlattenSources(context.Background(), []pathloc.Path{rootLoc}, destLoc, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opts := Options{CopyBufferKiB: 4}
+	done, _, err := ExecuteMove(context.Background(), MustPaths(sources...), destLoc, opts, ProgressEmitThrottle{}, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("ExecuteMove: %v", err)
+	}
+	if done < 2 {
+		t.Fatalf("done files = %d, want >= 2", done)
+	}
+	for _, name := range []string{"whiskey.txt", "xray.txt"} {
+		if _, err := os.Stat(filepath.Join(dest, name)); err != nil {
+			t.Fatalf("expected %q in destination: %v", name, err)
+		}
+	}
+	if _, err := os.Stat(innerFile); !os.IsNotExist(err) {
+		t.Fatalf("inner source should be moved: %v", err)
+	}
+	if _, err := os.Stat(siblingFile); !os.IsNotExist(err) {
+		t.Fatalf("sibling source should be moved: %v", err)
 	}
 }
 
