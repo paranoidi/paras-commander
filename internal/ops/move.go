@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -34,28 +35,55 @@ func renamePairsRollback(pairs []renamePair) {
 	}
 }
 
-func countTransferNodesAfterRename(dst string) (int, error) {
+func countWalkNodesWithProgress(ctx context.Context, root string, baseFiles int, baseBytes int64, srcPath, dstPath string, throttle ProgressEmitThrottle, progress ProgressCallback) (int, error) {
+	th := effectiveProgressThrottle(throttle)
+	n := 0
+	var lastEmit time.Time
+	err := localfs.WalkDirRecursive(root, func(path string, info fs.FileInfo) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		_ = path
+		_ = info
+		n++
+		if progress != nil {
+			now := time.Now()
+			if lastEmit.IsZero() || now.Sub(lastEmit) >= th.MinInterval {
+				progress(srcPath, dstPath, baseFiles+n, baseBytes)
+				lastEmit = now
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	if progress != nil && n > 0 {
+		progress(srcPath, dstPath, baseFiles+n, baseBytes)
+	}
+	return n, nil
+}
+
+func countTransferNodesAfterRenameWithProgress(ctx context.Context, dst string, baseFiles int, baseBytes int64, srcPath, dstPath string, throttle ProgressEmitThrottle, progress ProgressCallback) (int, error) {
 	loc, err := pathloc.Parse(dst)
 	if err != nil {
-		return countWalkNodes(dst)
+		return countWalkNodesWithProgress(ctx, dst, baseFiles, baseBytes, srcPath, dstPath, throttle, progress)
 	}
 	if loc.IsRemote() {
-		return countTransferNodes(context.Background(), loc)
+		n, countErr := countTransferNodes(ctx, loc)
+		if countErr != nil {
+			return 0, countErr
+		}
+		if progress != nil {
+			progress(srcPath, dstPath, baseFiles+n, baseBytes)
+		}
+		return n, nil
 	}
 	host, err := loc.FilePath()
 	if err != nil {
 		return 0, err
 	}
-	return countWalkNodes(host)
-}
-
-func countWalkNodes(root string) (int, error) {
-	n := 0
-	err := localfs.WalkDirRecursive(root, func(string, fs.FileInfo) error {
-		n++
-		return nil
-	})
-	return n, err
+	return countWalkNodesWithProgress(ctx, host, baseFiles, baseBytes, srcPath, dstPath, throttle, progress)
 }
 
 // renameSourceForMove handles conflict resolution then RenameFastPath for one source.
@@ -102,8 +130,13 @@ func renameFastPathOrFallback(src, dst pathloc.Path) (renamed, skipped, fallback
 
 // executeMoveRenamePhase tries rename for each source with conflict checks.
 // When fallbackCopy is true, prior renames in this batch were rolled back.
-func executeMoveRenamePhase(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, resolver ConflictResolver, progress ProgressCallback) (doneFiles int, doneBytes int64, fallbackCopy bool, err error) {
+// When plan is non-nil, per-source progress uses pre-scan counts and post-rename walks are skipped.
+func executeMoveRenamePhase(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, plan []PlanItem, throttle ProgressEmitThrottle, resolver ConflictResolver, progress ProgressCallback) (doneFiles int, doneBytes int64, fallbackCopy bool, err error) {
+	usePlan := len(plan) > 0
 	var renamed []renamePair
+	var cumulativeFiles int
+	var cumulativeBytes int64
+
 	for _, src := range sources {
 		if err := ctx.Err(); err != nil {
 			renamePairsRollback(renamed)
@@ -123,24 +156,34 @@ func executeMoveRenamePhase(ctx context.Context, sources []pathloc.Path, destina
 			continue
 		}
 		if didRename {
-			renamed = append(renamed, renamePair{src.String(), dst.String()})
+			pair := renamePair{src.String(), dst.String()}
+			renamed = append(renamed, pair)
+			if usePlan {
+				nf, nb := SummarizePlanForSource(plan, src)
+				cumulativeFiles += nf
+				cumulativeBytes += nb
+				if progress != nil {
+					progress(pair.src, pair.dst, cumulativeFiles, cumulativeBytes)
+				}
+			}
 		}
 	}
-	cumulative := 0
+
+	if usePlan {
+		return cumulativeFiles, cumulativeBytes, false, nil
+	}
+
 	for _, p := range renamed {
 		if err := ctx.Err(); err != nil {
 			return 0, 0, false, err
 		}
-		nf, walkErr := countTransferNodesAfterRename(p.dst)
+		nf, walkErr := countTransferNodesAfterRenameWithProgress(ctx, p.dst, cumulativeFiles, cumulativeBytes, p.src, p.dst, throttle, progress)
 		if walkErr != nil {
 			return 0, 0, false, fmt.Errorf("walk after rename %q: %w", p.dst, walkErr)
 		}
-		cumulative += nf
-		if progress != nil {
-			progress(p.src, p.dst, cumulative, 0)
-		}
+		cumulativeFiles += nf
 	}
-	return cumulative, 0, false, nil
+	return cumulativeFiles, cumulativeBytes, false, nil
 }
 
 // ExecuteMove moves sources to destination using the rename fast path when
@@ -151,7 +194,7 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 		return 0, 0, err
 	}
 
-	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, resolver, progress)
+	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, nil, throttle, resolver, progress)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -205,7 +248,7 @@ func ExecuteMoveWithPlan(ctx context.Context, plan []PlanItem, sources []pathloc
 		return 0, 0, err
 	}
 
-	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, resolver, progress)
+	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, plan, throttle, resolver, progress)
 	if err != nil {
 		return 0, 0, err
 	}

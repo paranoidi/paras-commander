@@ -105,6 +105,20 @@ func SummarizePlan(plan []PlanItem) (totalItems, totalDirs int, totalBytes int64
 	return totalItems, totalDirs, totalBytes
 }
 
+// SummarizePlanForSource returns plan item and regular-file byte counts for entries under root.
+func SummarizePlanForSource(plan []PlanItem, root pathloc.Path) (items int, bytes int64) {
+	for _, item := range plan {
+		if !pathloc.EqualOrUnder(root, item.Src) {
+			continue
+		}
+		items++
+		if !item.IsDir && !item.IsSymlink {
+			bytes += item.FileSize
+		}
+	}
+	return items, bytes
+}
+
 // ExecuteCopy copies a set of source paths to a destination.
 // It handles regular files, directories, and symlinks.
 // Returns (doneFiles, doneBytes, error).

@@ -990,10 +990,11 @@ func TestMoveRenameProgressUsesLogicalPaths(t *testing.T) {
 	}
 	wantDst := filepath.Join(dstDir, "x.txt")
 	var gotSrc, gotDst string
+	var gotDoneFiles int
 	progress := func(srcPath, dstPath string, doneFiles int, doneBytes int64) {
-		_ = doneFiles
 		_ = doneBytes
 		gotSrc, gotDst = srcPath, dstPath
+		gotDoneFiles = doneFiles
 	}
 	opts := Options{CopyBufferKiB: 4}
 	if _, _, err := ExecuteMove(context.Background(), MustPaths(srcFile), MustPath(dstDir), opts, ProgressEmitThrottle{}, progress, nil, nil); err != nil {
@@ -1004,6 +1005,9 @@ func TestMoveRenameProgressUsesLogicalPaths(t *testing.T) {
 	}
 	if gotDst != wantDst {
 		t.Fatalf("progress dest = %q, want %q", gotDst, wantDst)
+	}
+	if gotDoneFiles != 1 {
+		t.Fatalf("progress doneFiles = %d, want 1", gotDoneFiles)
 	}
 }
 
