@@ -1,6 +1,9 @@
 package dialog
 
-import "github.com/paranoidi/paras-commander/internal/panel"
+import (
+	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
+)
 
 // ThemeChoice describes a theme option rendered in the selection dialog.
 type ThemeChoice struct {
@@ -28,13 +31,15 @@ type ThemeDialogState struct {
 
 // ConfigDialogState is the Options → Configuration modal (runtime UI toggles persisted to config.toml).
 type ConfigDialogState struct {
-	Open                  bool
-	ShowFileIcons         bool
-	ZoomActivePanel       bool
-	ShrunkenShowsNameOnly bool
-	ScrollMode            panel.ScrollMode
-	ListFormat            panel.ListFormat
-	Focus                 int // 0=file icons, 1=zoom, 2=shrunken, 3-5=scroll mode radios, 6-8=listing format radios, 9=OK, 10=Cancel
+	Open                   bool
+	ShowFileIcons          bool
+	ZoomActivePanel        bool
+	ShrunkenShowsNameOnly  bool
+	ScrollMode             panel.ScrollMode
+	PanelScrollbar         uiscrollbar.Style
+	PanelScrollbarInactive bool
+	ListFormat             panel.ListFormat
+	Focus                  int // 0=file icons, 1=zoom, 2=shrunken, 3/5/7=scroll mode (left), 4/6/8/9=scrollbar style (right), 10-12=listing format, 13=OK, 14=Cancel
 }
 
 // SortDialogState is the renderable state for the sort configuration modal.

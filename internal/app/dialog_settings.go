@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // Sort dialog handlers
@@ -118,8 +119,18 @@ func listingFormatFromShortcut(ch rune, focus *int) (panel.ListFormat, bool) {
 func scrollModeFromShortcut(ch rune, focus *int) (panel.ScrollMode, bool) {
 	for i, row := range panel.ScrollModeDialogRadios() {
 		if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
-			*focus = 3 + i
+			*focus = ui.ConfigDialogScrollModeFocus(i)
 			return row.Mode, true
+		}
+	}
+	return "", false
+}
+
+func panelScrollbarFromShortcut(ch rune, focus *int) (uiscrollbar.Style, bool) {
+	for i, row := range uiscrollbar.DialogRadios() {
+		if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
+			*focus = ui.ConfigDialogScrollbarFocus(i)
+			return row.Style, true
 		}
 	}
 	return "", false
@@ -189,14 +200,17 @@ func (a *App) openConfigDialog() {
 	a.clearTransientMessage()
 	lf, _ := panel.ParseListFormat(a.config.DefaultListingFormat)
 	sm, _ := panel.ParseScrollMode(a.config.UI.ScrollMode)
+	sb, _ := uiscrollbar.ParseStyle(a.config.UI.PanelScrollbar)
 	a.model.ConfigDialog = ui.ConfigDialogState{
-		Open:                  true,
-		ShowFileIcons:         a.config.UI.ShowFileIcons,
-		ZoomActivePanel:       a.config.UI.ZoomActivePanel,
-		ShrunkenShowsNameOnly: a.config.UI.ShrunkenShowsNameOnly,
-		ScrollMode:            panel.EffectiveScrollMode(sm),
-		ListFormat:            panel.EffectiveListFormat(lf),
-		Focus:                 0,
+		Open:                   true,
+		ShowFileIcons:          a.config.UI.ShowFileIcons,
+		ZoomActivePanel:        a.config.UI.ZoomActivePanel,
+		ShrunkenShowsNameOnly:  a.config.UI.ShrunkenShowsNameOnly,
+		ScrollMode:             panel.EffectiveScrollMode(sm),
+		PanelScrollbar:         uiscrollbar.EffectiveStyle(sb),
+		PanelScrollbarInactive: a.config.UI.PanelScrollbarInactive,
+		ListFormat:             panel.EffectiveListFormat(lf),
+		Focus:                  0,
 	}
 }
 
@@ -210,14 +224,17 @@ func (a *App) applyConfigDialog() {
 	zoom := a.model.ConfigDialog.ZoomActivePanel
 	shrunken := a.model.ConfigDialog.ShrunkenShowsNameOnly
 	scrollMode := panel.ScrollModeTOMLValue(a.model.ConfigDialog.ScrollMode)
+	sb := uiscrollbar.TOMLValue(a.model.ConfigDialog.PanelScrollbar)
 	lf := panel.EffectiveListFormat(a.model.ConfigDialog.ListFormat)
 	a.config.UI.ShowFileIcons = val
 	a.config.UI.ZoomActivePanel = zoom
 	a.config.UI.ShrunkenShowsNameOnly = shrunken
 	a.config.UI.ScrollMode = scrollMode
+	a.config.UI.PanelScrollbar = sb
 	a.config.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
 	a.model.ShowFileIcons = val
 	a.model.ShrunkenShowsNameOnly = shrunken
+	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(a.model.ConfigDialog.PanelScrollbar)
 	a.model.Left.ListFormat = lf
 	a.model.Right.ListFormat = lf
 	a.syncScrollFromConfig()
@@ -229,6 +246,7 @@ func (a *App) applyConfigDialog() {
 			"zoom_active_panel":        zoom,
 			"shrunken_shows_name_only": shrunken,
 			"scroll_mode":              scrollMode,
+			"panel_scrollbar":          sb,
 		},
 		"default_listing_format": panel.ListingFormatTOMLValue(lf),
 	}
@@ -240,24 +258,30 @@ func (a *App) applyConfigDialog() {
 }
 
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
-	form := ui.NewDialogLinearForm(9)
+	form := ui.NewDialogLinearForm(12)
 	st := &a.model.ConfigDialog
 	listRadios := panel.ListFormatDialogRadios()
 	scrollRadios := panel.ScrollModeDialogRadios()
+	sbRadios := uiscrollbar.DialogRadios()
 	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
 		focus:              &st.Focus,
 		onApply:            a.applyConfigDialog,
 		onCancel:           a.closeConfigDialog,
 		allowPlainOKCancel: true,
+		onMoveFocus:        ui.ConfigDialogMoveScrollFocus,
 		onMnemonic: func(r rune) bool {
 			if mode, ok := scrollModeFromShortcut(r, &st.Focus); ok {
 				st.ScrollMode = mode
 				return true
 			}
+			if style, ok := panelScrollbarFromShortcut(r, &st.Focus); ok {
+				st.PanelScrollbar = style
+				return true
+			}
 			for i, row := range listRadios {
 				if unicode.ToLower(r) == unicode.ToLower(row.Shortcut) {
 					st.ListFormat = row.Format
-					st.Focus = 6 + i
+					st.Focus = 9 + i
 					return true
 				}
 			}
@@ -284,15 +308,21 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 				st.ZoomActivePanel = !st.ZoomActivePanel
 			case 2:
 				st.ShrunkenShowsNameOnly = !st.ShrunkenShowsNameOnly
-			case 3, 4, 5:
-				st.ScrollMode = scrollRadios[focus-3].Mode
-			case 6, 7, 8:
-				st.ListFormat = listRadios[focus-6].Format
+			case 9, 10, 11:
+				st.ListFormat = listRadios[focus-9].Format
 			case form.OKIndex():
 				a.applyConfigDialog()
 			case form.CancelIndex():
 				a.closeConfigDialog()
 			default:
+				if idx, ok := ui.ConfigDialogScrollModeIndex(focus); ok {
+					st.ScrollMode = scrollRadios[idx].Mode
+					return true
+				}
+				if idx, ok := ui.ConfigDialogScrollbarIndex(focus); ok {
+					st.PanelScrollbar = sbRadios[idx].Style
+					return true
+				}
 				return false
 			}
 			return true

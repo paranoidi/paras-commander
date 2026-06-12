@@ -131,6 +131,11 @@ const (
 	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
 	DefaultShrunkenShowsNameOnly = true
 
+	// DefaultPanelScrollbar is the file-list scrollbar indicator style (none, thumb, or bar).
+	DefaultPanelScrollbar = "thumb"
+	// DefaultPanelScrollbarInactive shows scrollbars on the inactive panel when true.
+	DefaultPanelScrollbarInactive = false
+
 	// DefaultScrollMode is the file-list scroll policy (minimal, center, or edge).
 	DefaultScrollMode = "edge"
 	// DefaultScrollEdgeMargin is rows of buffer above/below the cursor before edge mode scrolls.

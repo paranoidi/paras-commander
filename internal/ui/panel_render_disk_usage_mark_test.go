@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 type fixedSizeDiskPainter struct {
@@ -62,7 +63,7 @@ func TestSubtreeSelectionMarkUsesDiskUsageBarBackground(t *testing.T) {
 	}
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	drawPanel(screen, rect, state, true, false, styles, false, "",
-		painter, false, nil, true, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false)
+		painter, false, nil, true, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, uiscrollbar.StyleNone, true)
 
 	rowY := rect.Y + 2
 	markCol := -1

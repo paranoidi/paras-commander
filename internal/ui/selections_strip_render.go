@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 const (
@@ -29,6 +30,9 @@ func drawSelectionsStrip(
 	diskUsageDescendIntoMountPoints bool,
 	diskUsageGoduIgnore func(string) bool,
 	showSelectionSizeOnBottom bool,
+	scrollbarStyle uiscrollbar.Style,
+	scrollbarShowInactive bool,
+	panelFileListActive bool,
 ) {
 	if rect.Height <= 0 || rect.Width < 8 {
 		return
@@ -115,6 +119,10 @@ func drawSelectionsStrip(
 		}
 		primitive.StyledText(screen, contentStart, y, rowTextWidth, text, baseStyle, spans)
 	}
+
+	drawPanelListScrollbar(screen, rect, rect.Y+1, visibleRows, len(paths), scroll,
+		scrollbarStyle, panelScrollbarShow(panelFileListActive, scrollbarShowInactive),
+		stripFocused, chromeBlocked, chrome.Chrome.Frame, styles)
 }
 
 // paintSelectionsStripBottomSize paints the padded selection count/size on the bottom border,

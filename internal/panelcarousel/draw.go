@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // JobMarkFunc returns a job-queue glyph and status for an absolute path, if any.
@@ -21,23 +22,26 @@ type IconPaintFunc func(screen tcell.Screen, x, y int, entry localfs.Entry, rowS
 
 // BodyParams holds carousel list rendering inputs (title row is painted by the caller).
 type BodyParams struct {
-	Frame               geom.Rect
-	Center              panel.State
-	Parent              Column
-	Child               Column
-	Styles              theme.Theme
-	ChromeBlocked       bool
-	FileListActive      bool
-	ShowIcons           bool
-	HeaderStyle         tcell.Style
-	HeaderCarouselStyle tcell.Style
-	SurfaceStyle        tcell.Style
-	JobMark             JobMarkFunc
-	NewFileMark         NewFileMarkFunc
-	PaintIcon           IconPaintFunc
-	DiskUsage           DiskUsage
-	ShowChildColumn     bool
-	OtherPanelPath      string
+	Frame                 geom.Rect
+	Center                panel.State
+	Parent                Column
+	Child                 Column
+	Styles                theme.Theme
+	ChromeBlocked         bool
+	FileListActive        bool
+	ShowIcons             bool
+	HeaderStyle           tcell.Style
+	HeaderCarouselStyle   tcell.Style
+	SurfaceStyle          tcell.Style
+	JobMark               JobMarkFunc
+	NewFileMark           NewFileMarkFunc
+	PaintIcon             IconPaintFunc
+	DiskUsage             DiskUsage
+	ShowChildColumn       bool
+	OtherPanelPath        string
+	ScrollbarStyle        uiscrollbar.Style
+	ScrollbarShowInactive bool
+	FrameStyle            tcell.Style
 }
 
 // DrawBody paints the column header row and three listing columns.
@@ -216,6 +220,32 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			primitive.StyledTextCellwise(screen, listStart, y, listW, text, func(ci int) tcell.Style {
 				return blendCell(nameColOffset + ci)
 			}, spans)
+		}
+		if c.Populated {
+			var total, offset int
+			if c.Active {
+				total = len(p.Center.Entries)
+				offset = p.Center.ScrollOffset
+			} else {
+				total = len(c.Snapshot.Entries)
+				offset = c.Snapshot.Scroll
+			}
+			columnActive := p.FileListActive && c.Active && !inactive
+			show := columnActive || p.ScrollbarShowInactive
+			if metrics, ok := uiscrollbar.ComputeMetrics(total, visibleRows, offset); ok && show && p.ScrollbarStyle != uiscrollbar.StyleNone {
+				uiscrollbar.Draw(uiscrollbar.DrawParams{
+					Screen:     screen,
+					X:          col.X + col.Width - 1,
+					ListTopY:   col.Y,
+					Visible:    visibleRows,
+					Metrics:    metrics,
+					Style:      p.ScrollbarStyle,
+					Active:     columnActive,
+					Blocked:    p.ChromeBlocked,
+					FrameStyle: p.FrameStyle,
+					Theme:      p.Styles,
+				})
+			}
 		}
 	}
 

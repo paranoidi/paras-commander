@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // paintFindDialogOverlay repaints only the find dialog without redrawing panels or the footer.
@@ -39,6 +40,9 @@ func (a *App) render() {
 	a.model.PanelZoomActivePercent = a.config.UI.PanelZoomActivePercent
 	a.model.PanelZoomInactivePercent = a.config.UI.PanelZoomInactivePercent
 	a.model.ShrunkenShowsNameOnly = a.config.UI.ShrunkenShowsNameOnly
+	sb, _ := uiscrollbar.ParseStyle(a.config.UI.PanelScrollbar)
+	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(sb)
+	a.model.PanelScrollbarInactive = a.config.UI.PanelScrollbarInactive
 	// Reconcile derived model (latched panel sync, disk-usage idle-sort hooks, etc.)
 	// before painting so the frame matches post-mutation state. The Run loop also calls
 	// reconcileAfterEvent() after each event; without this ordering, render() would run

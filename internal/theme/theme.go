@@ -87,6 +87,8 @@ type Theme struct {
 	PanelBottomIndicatorStash          tcell.Style
 	PanelBottomIndicatorSelectionSize  tcell.Style
 	PanelBottomIndicatorOtherPanel     tcell.Style
+	PanelScrollbarTrack                tcell.Style
+	PanelScrollbarThumb                tcell.Style
 	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
 	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
 	PanelFileIconFG map[string]tcell.Color
@@ -384,6 +386,7 @@ const (
 	SymbolKeyFilelistSelectionSubtree = "filelist.selection_subtree"
 	SymbolKeyFilelistNew              = "filelist.new"
 	SymbolKeyFilelistOpen             = "filelist.open"
+	SymbolKeyScrollbarThumb           = "scrollbar.thumb"
 	SymbolKeyMetaRunning              = "meta.running"
 )
 
@@ -464,6 +467,11 @@ func (t Theme) SymbolFilelistNew() rune {
 // SymbolFilelistOpen returns the other-panel-open-directory suffix glyph.
 func (t Theme) SymbolFilelistOpen() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistOpen, '\U000F0770')
+}
+
+// SymbolScrollbarThumb returns the panel scrollbar thumb-style position glyph.
+func (t Theme) SymbolScrollbarThumb() rune {
+	return t.filelistSymbolRune(SymbolKeyScrollbarThumb, '\u25cf') // ●
 }
 
 func (t Theme) filelistSymbolRune(key string, fallback rune) rune {
@@ -630,6 +638,8 @@ var requiredStyleKeys = []string{
 	"panel.indicator.stash",
 	"panel.indicator.selection_size",
 	"panel.indicator.other_panel",
+	"panel.scrollbar.track",
+	"panel.scrollbar.thumb",
 	"panel.blocked.frame",
 	"panel.blocked.surface",
 	"panel.blocked.title",
@@ -1081,6 +1091,8 @@ func parse(data []byte) (Theme, error) {
 		PanelBottomIndicatorStash:           styles["panel.indicator.stash"],
 		PanelBottomIndicatorSelectionSize:   styles["panel.indicator.selection_size"],
 		PanelBottomIndicatorOtherPanel:      styles["panel.indicator.other_panel"],
+		PanelScrollbarTrack:                 styles["panel.scrollbar.track"],
+		PanelScrollbarThumb:                 styles["panel.scrollbar.thumb"],
 		PanelFileIconFG:                     panelFileIconFG,
 
 		PanelBlockedFrame:             styles["panel.blocked.frame"],

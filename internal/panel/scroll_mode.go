@@ -64,6 +64,6 @@ func ScrollModeDialogRadios() []ScrollModeDialogRadio {
 	return []ScrollModeDialogRadio{
 		{ScrollModeMinimal, "Minimal", 'i'},
 		{ScrollModeEdge, "Edge", 'e'},
-		{ScrollModeCenter, "Center", 'n'},
+		{ScrollModeCenter, "Center", 't'},
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 const (
@@ -68,6 +69,10 @@ type Model struct {
 	PanelZoomInactivePercent int
 	// ShrunkenShowsNameOnly mirrors ui.shrunken_shows_name_only (narrow panels may hide trailing listing columns).
 	ShrunkenShowsNameOnly bool
+	// PanelScrollbar mirrors [ui].panel_scrollbar (none, thumb, bar).
+	PanelScrollbar uiscrollbar.Style
+	// PanelScrollbarInactive mirrors [ui].panel_scrollbar_inactive.
+	PanelScrollbarInactive bool
 	// JobsThroughputChartEnabled mirrors [jobs].throughput_chart_enabled (strip + graph off when false).
 	JobsThroughputChartEnabled bool
 	// UserHomeDir is filepath.Clean(os.UserHomeDir()); empty skips ~ substitution in panel titles.
@@ -380,22 +385,22 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused,
 				model.QuickViewDisplayActive(), model.Left.PathString(), model.UserHomeDir)
 		} else if layout.Left.Width > 0 {
-			drawPanel(screen, leftFile, model.PanelForFileListRender(LeftPanel), leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, leftOtherPanelPath, leftSelectionSizeOnFileBottom)
+			drawPanel(screen, leftFile, model.PanelForFileListRender(LeftPanel), leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, leftOtherPanelPath, leftSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive)
 		}
 		if layout.Left.Width > 0 && leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
-			drawSelectionsStrip(screen, leftStrip, model.Left, leftStripFocused, leftChromeBlocked, styles, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, leftSelectionSizeOnStripBottom)
+			drawSelectionsStrip(screen, leftStrip, model.Left, leftStripFocused, leftChromeBlocked, styles, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, leftSelectionSizeOnStripBottom, model.PanelScrollbar, model.PanelScrollbarInactive, leftFileListFocus)
 		}
 		if layout.Right.Width > 0 && showRightPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
 				model.QuickViewDisplayActive(), model.Right.PathString(), model.UserHomeDir)
 		} else if layout.Right.Width > 0 {
-			drawPanel(screen, rightFile, model.PanelForFileListRender(RightPanel), rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, rightOtherPanelPath, rightSelectionSizeOnFileBottom)
+			drawPanel(screen, rightFile, model.PanelForFileListRender(RightPanel), rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, rightOtherPanelPath, rightSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive)
 		}
 		if layout.Right.Width > 0 && rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
-			drawSelectionsStrip(screen, rightStrip, model.Right, rightStripFocused, chromeBlocked, styles, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, rightSelectionSizeOnStripBottom)
+			drawSelectionsStrip(screen, rightStrip, model.Right, rightStripFocused, chromeBlocked, styles, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, rightSelectionSizeOnStripBottom, model.PanelScrollbar, model.PanelScrollbarInactive, rightFileListFocus)
 		}
 	}
 	if model.Menu.Open && model.MenuBarInteractive() {

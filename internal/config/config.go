@@ -41,6 +41,9 @@ const (
 	ScrollModeMinimal        = "minimal"
 	ScrollModeCenter         = "center"
 	ScrollModeEdge           = "edge"
+	PanelScrollbarNone       = "none"
+	PanelScrollbarThumb      = "thumb"
+	PanelScrollbarBar        = "bar"
 )
 
 // Paths identifies configuration files discovered from XDG paths.
@@ -229,6 +232,10 @@ type UIConfig struct {
 	ScrollMode string `toml:"scroll_mode"`
 	// ScrollEdgeMargin is rows of buffer above/below the cursor before edge mode scrolls.
 	ScrollEdgeMargin int `toml:"scroll_edge_margin"`
+	// PanelScrollbar selects the vertical scroll indicator style for panel lists (none, thumb, bar).
+	PanelScrollbar string `toml:"panel_scrollbar"`
+	// PanelScrollbarInactive shows scroll indicators on the inactive panel when true.
+	PanelScrollbarInactive bool `toml:"panel_scrollbar_inactive"`
 	// MessageLogMaxEntries caps how many status/toast lines are retained for the Messages view (oldest dropped).
 	// Zero means use the built-in default (see DefaultMessageLogMaxEntries).
 	MessageLogMaxEntries int `toml:"message_log_max_entries"`
@@ -352,6 +359,8 @@ func Default() Config {
 			ShrunkenShowsNameOnly:             DefaultShrunkenShowsNameOnly,
 			ScrollMode:                        DefaultScrollMode,
 			ScrollEdgeMargin:                  DefaultScrollEdgeMargin,
+			PanelScrollbar:                    DefaultPanelScrollbar,
+			PanelScrollbarInactive:            DefaultPanelScrollbarInactive,
 			MessageLogMaxEntries:              DefaultMessageLogMaxEntries,
 			ScreenRenderHashCache:             DefaultScreenRenderHashCache,
 		},
@@ -746,6 +755,9 @@ func (c *Config) Validate() error {
 	if !c.scrollModeValid(c.UI.ScrollMode) {
 		c.UI.ScrollMode = DefaultScrollMode
 	}
+	if !c.panelScrollbarValid(c.UI.PanelScrollbar) {
+		c.UI.PanelScrollbar = DefaultPanelScrollbar
+	}
 	if c.UI.ScrollEdgeMargin < 0 {
 		c.UI.ScrollEdgeMargin = DefaultScrollEdgeMargin
 	}
@@ -941,6 +953,15 @@ func (c Config) sortModeValid(value string) bool {
 func (c Config) scrollModeValid(value string) bool {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case ScrollModeMinimal, ScrollModeCenter, ScrollModeEdge:
+		return true
+	default:
+		return false
+	}
+}
+
+func (c Config) panelScrollbarValid(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case PanelScrollbarNone, PanelScrollbarThumb, PanelScrollbarBar:
 		return true
 	default:
 		return false

@@ -101,6 +101,17 @@ func TestValidateResetsInvalidPanelZoomPercents(t *testing.T) {
 	}
 }
 
+func TestValidateResetsInvalidPanelScrollbar(t *testing.T) {
+	cfg := Default()
+	cfg.UI.PanelScrollbar = "invalid"
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.PanelScrollbar != DefaultPanelScrollbar {
+		t.Fatalf("PanelScrollbar = %q, want %q", cfg.UI.PanelScrollbar, DefaultPanelScrollbar)
+	}
+}
+
 func TestValidateClampsNegativeZoomActivePanelDisabledAboveWidth(t *testing.T) {
 	cfg := Default()
 	cfg.UI.ZoomActivePanelDisabledAboveWidth = -10

@@ -137,6 +137,11 @@ var (
 	EnsurePathInputScroll               = dialog.EnsurePathInputScroll
 	ShouldPreemptiveScrollRevealOnErase = dialog.ShouldPreemptiveScrollRevealOnErase
 	AdjustScrollRevealOnErase           = dialog.AdjustScrollRevealOnErase
+	ConfigDialogScrollModeFocus         = dialog.ConfigDialogScrollModeFocus
+	ConfigDialogScrollbarFocus          = dialog.ConfigDialogScrollbarFocus
+	ConfigDialogScrollModeIndex         = dialog.ConfigDialogScrollModeIndex
+	ConfigDialogScrollbarIndex          = dialog.ConfigDialogScrollbarIndex
+	ConfigDialogMoveScrollFocus         = dialog.ConfigDialogMoveScrollFocus
 	NewDialogLinearForm                 = dialog.NewDialogLinearForm
 	NewDialogTrailingButtonsForm        = dialog.NewDialogTrailingButtonsForm
 	NewTransferDialogLinearForm         = dialog.NewTransferDialogLinearForm

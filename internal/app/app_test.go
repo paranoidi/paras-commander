@@ -2242,7 +2242,7 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 	}
 
 	app.openConfigDialog()
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if quit {

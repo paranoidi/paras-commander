@@ -17,6 +17,14 @@ func CheckboxText(label string, checked bool) string {
 	return "[ ] " + label
 }
 
+// RadioText returns the marker+label string used for width calculations (matches draw row text).
+func RadioText(label string, selected bool) string {
+	if selected {
+		return " (*) " + label
+	}
+	return " ( ) " + label
+}
+
 func DrawDialogCheckbox(
 	screen tcell.Screen,
 	x int,

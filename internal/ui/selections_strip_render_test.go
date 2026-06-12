@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 func TestSelectionsStripMarkOnFileRow(t *testing.T) {
@@ -42,7 +43,7 @@ func TestSelectionsStripMarkOnFileRow(t *testing.T) {
 		SelectedPaths:        map[string]bool{filePath: true},
 	}
 
-	drawSelectionsStrip(screen, rect, state, true, false, styles, "", nil, false, nil, true)
+	drawSelectionsStrip(screen, rect, state, true, false, styles, "", nil, false, nil, true, uiscrollbar.StyleNone, true, true)
 
 	rowY := rect.Y + 1
 	markCol := -1

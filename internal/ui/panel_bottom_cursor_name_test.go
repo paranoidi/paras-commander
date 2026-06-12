@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 func TestEntryDisplayNameTruncated(t *testing.T) {
@@ -67,7 +68,7 @@ func TestDrawPanelBottomCursorNameHintOnActiveRightPanel(t *testing.T) {
 		Cursor:  0,
 	}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, RightPanel, nil, -1, -1, nil, false, false, false, RightPanel, "", false)
+	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, RightPanel, nil, -1, -1, nil, false, false, false, RightPanel, "", false, uiscrollbar.StyleNone, true)
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)
@@ -107,7 +108,7 @@ func TestDrawPanelBottomCursorNameHintOnActivePanel(t *testing.T) {
 		Cursor:  0,
 	}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false)
+	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, uiscrollbar.StyleNone, true)
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)
@@ -132,7 +133,7 @@ func TestDrawPanelBottomCursorNameHintOmittedWhenWiderThanOverlaySpan(t *testing
 		Cursor:  0,
 	}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, LeftPanel, nil, LeftPanel, -1, nil, false, false, false, LeftPanel, "", false)
+	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, LeftPanel, nil, LeftPanel, -1, nil, false, false, false, LeftPanel, "", false, uiscrollbar.StyleNone, true)
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)
@@ -161,7 +162,7 @@ func TestDrawPanelCarouselCursorNameHint(t *testing.T) {
 		CarouselMode: true,
 	}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false)
+	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, uiscrollbar.StyleNone, true)
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)
@@ -186,7 +187,7 @@ func TestDrawPanelBottomCursorNameHintHiddenOnInactivePanel(t *testing.T) {
 		Cursor:  0,
 	}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, false, false, styles, true, "", nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, RightPanel, "", false)
+	drawPanel(screen, rect, state, false, false, styles, true, "", nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, RightPanel, "", false, uiscrollbar.StyleNone, true)
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)

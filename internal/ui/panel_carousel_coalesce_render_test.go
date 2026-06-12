@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // Regression: ui.Render clears the full screen each frame, so carousel child preview must be
@@ -52,7 +53,7 @@ func TestCarouselCoalesceRepaintsCachedChildAfterFullScreenClear(t *testing.T) {
 	rect := Rect{X: 0, Y: 1, Width: width, Height: height - 3}
 	styles := theme.Default()
 	drawPanel(screen, rect, state, true, false, styles, false, "",
-		nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false)
+		nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, uiscrollbar.StyleNone, true)
 
 	cols := panelcarousel.SplitColumns(rect, true)
 	childCol := cols[2]

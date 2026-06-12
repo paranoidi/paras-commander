@@ -13,6 +13,7 @@ type linearFormHandlers struct {
 	onCancel           func()
 	onMnemonic         func(rune) bool
 	onSpace            func(focus int) bool
+	onMoveFocus        func(focus int, key tcell.Key) (int, bool)
 	allowPlainOKCancel bool
 }
 
@@ -55,6 +56,12 @@ func (a *App) handleLinearFormDialogKey(ev *tcell.EventKey, form ui.DialogLinear
 			}
 		}
 		if ev.Rune() == ' ' && h.onSpace != nil && h.onSpace(*h.focus) {
+			return true
+		}
+	}
+	if h.onMoveFocus != nil {
+		if nf, ok := h.onMoveFocus(*h.focus, ev.Key()); ok {
+			*h.focus = nf
 			return true
 		}
 	}

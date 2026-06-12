@@ -20,6 +20,9 @@ func TestDefaultFilelistSymbols(t *testing.T) {
 	if g := th.SymbolFilelistOpen(); g != '\U000F0770' {
 		t.Fatalf("SymbolFilelistOpen = %U, want U+F0770", g)
 	}
+	if g := th.SymbolScrollbarThumb(); g != '\u2503' {
+		t.Fatalf("SymbolScrollbarThumb = %q, want ┃", string(g))
+	}
 	newFG, _, _ := th.PanelRowIndicatorNew.Decompose()
 	if newFG != tcell.PaletteColor(10) {
 		t.Fatalf("panel.row.indicator.new fg = %v, want bright_green (index 10)", newFG)

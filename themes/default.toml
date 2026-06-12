@@ -69,6 +69,8 @@ indicator.dotfiles_hidden = { fg = "bright_black" }
 indicator.gitignore = { fg = "bright_black" }
 indicator.stash = { fg = "yellow", bold = true }
 indicator.other_panel = { fg = "cyan", bold = true }
+scrollbar.track = { fg = "bright_black" }
+scrollbar.thumb = { fg = "white" }
 text = { fg = "white" }
 
 git.conflicted = { fg = "red" }
@@ -208,6 +210,9 @@ completed = "\uf05d"
 selection_subtree = "○"
 new = "\uea7f"
 open = "\U000F0770"
+
+[symbols.scrollbar]
+thumb = "┃"
 
 [symbols.meta]
 running = "\uf141"

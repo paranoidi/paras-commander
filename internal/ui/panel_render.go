@@ -17,6 +17,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // Layout after the name column: one space, size (panelListSizeCells), optional two spaces + third column.
@@ -89,7 +90,7 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 	return strings.TrimSpace(nameTitle)
 }
 
-func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool) {
+func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaResults map[string]string, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool, scrollbarStyle uiscrollbar.Style, scrollbarShowInactive bool) {
 	if rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
@@ -162,20 +163,23 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			Source:                 painter,
 		}
 		panelcarousel.DrawBody(screen, panelcarousel.BodyParams{
-			Frame:               rect,
-			Center:              state,
-			Parent:              parent,
-			Child:               child,
-			Styles:              styles,
-			ChromeBlocked:       chromeBlocked,
-			FileListActive:      fileListActive,
-			ShowIcons:           showIcons,
-			HeaderStyle:         headerStyle,
-			HeaderCarouselStyle: headerCarouselStyle,
-			SurfaceStyle:        chrome.Surface,
-			ShowChildColumn:     showChildCol,
-			DiskUsage:           carouselDisk,
-			OtherPanelPath:      otherPanelPath,
+			Frame:                 rect,
+			Center:                state,
+			Parent:                parent,
+			Child:                 child,
+			Styles:                styles,
+			ChromeBlocked:         chromeBlocked,
+			FileListActive:        fileListActive,
+			ShowIcons:             showIcons,
+			HeaderStyle:           headerStyle,
+			HeaderCarouselStyle:   headerCarouselStyle,
+			SurfaceStyle:          chrome.Surface,
+			ShowChildColumn:       showChildCol,
+			DiskUsage:             carouselDisk,
+			OtherPanelPath:        otherPanelPath,
+			ScrollbarStyle:        scrollbarStyle,
+			ScrollbarShowInactive: scrollbarShowInactive,
+			FrameStyle:            borderStyle,
 			JobMark: func(path string) (rune, string, bool) {
 				marked, st := EntryPathJobMarkStatus(path, jobMarks)
 				if !marked {
@@ -386,6 +390,10 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			return blendCell(leftGutter + gitStrip + iconStrip + ci)
 		}, spans)
 	}
+
+	drawPanelListScrollbar(screen, rect, rect.Y+2, visibleRows, state.VisibleEntryCount(), state.ScrollOffset,
+		scrollbarStyle, panelScrollbarShow(fileListActive, scrollbarShowInactive),
+		fileListActive, chromeBlocked, borderStyle, styles)
 
 	if selectionSizeLabel != "" {
 		drawPanelBottomSelectionSize(screen, rect, panelID, bottomCtx)
