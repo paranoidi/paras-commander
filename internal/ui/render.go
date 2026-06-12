@@ -27,6 +27,14 @@ const (
 	SubFocusInactivePreview
 )
 
+// MetaColumnState is one active meta column on a panel.
+type MetaColumnState struct {
+	EntryName   string
+	ColumnTitle string
+	Order       int
+	Results     map[string]string // abs path → raw stdout
+}
+
 // Model is the renderable subset of application state.
 type Model struct {
 	Left           panel.State
@@ -108,8 +116,8 @@ type Model struct {
 	FindDialog          FindDialogState
 	MetaDialog          MetaDialogState
 	UserMenu            UserMenuDialogState
-	// MetaResults holds per-panel command output keyed by entry path (nil = meta not active).
-	MetaResults [2]map[string]string
+	// MetaResults holds per-panel active meta columns (nil/empty = meta not active).
+	MetaResults [2][]MetaColumnState
 	// FilePreview is the live inactive-panel preview state (mutate only under App.commandsMu).
 	FilePreview FilePreviewState
 	// FilePreviewDraw is a snapshot copied in App.render before ui.Render (no locks in ui).

@@ -84,6 +84,31 @@ func TestLayoutMetaCells_mixedLegacyAndDelimitedUsesMaxColumns(t *testing.T) {
 	}
 }
 
+func TestLayoutMetaColumns_twoColumns(t *testing.T) {
+	cols := []MetaColumnState{
+		{ColumnTitle: "Lines", Results: map[string]string{"/p": "42"}},
+		{ColumnTitle: "Size", Results: map[string]string{"/p": "1K"}},
+	}
+	layouts, totalW := LayoutMetaColumns(cols)
+	if len(layouts) != 2 {
+		t.Fatalf("layouts len = %d, want 2", len(layouts))
+	}
+	if layouts[0].Title != "Lines" || layouts[1].Title != "Size" {
+		t.Fatalf("titles = %q, %q", layouts[0].Title, layouts[1].Title)
+	}
+	if totalW != layouts[0].Width+2+layouts[1].Width {
+		t.Fatalf("totalW = %d, want %d", totalW, layouts[0].Width+2+layouts[1].Width)
+	}
+	hdr := MetaHeaderText(layouts)
+	if !strings.Contains(hdr, "Line") || !strings.Contains(hdr, "Size") {
+		t.Fatalf("header = %q", hdr)
+	}
+	row := MetaRowText(layouts, "/p")
+	if !strings.Contains(row, "42") || !strings.Contains(row, "1K") {
+		t.Fatalf("row = %q", row)
+	}
+}
+
 func TestLayoutMetaCells_rawTooLarge(t *testing.T) {
 	s := strings.Repeat("x", panelMetaRawMaxBytes+1)
 	_, m := layoutMetaCells(map[string]string{"p": s})

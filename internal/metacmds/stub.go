@@ -33,6 +33,13 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 # description     string   required
 #   Human-readable label in the picker.
 #
+# column          string   optional   default: name
+#   Panel list header text for this meta column.
+#
+# order           int      optional   default: 0
+#   Left-to-right column order (lower = closer to the name column).
+#
+#
 # file            string   optional   (at least one of file | dirs required)
 #   Shell script for regular files. %f = absolute path.
 #
@@ -79,6 +86,8 @@ const MetaStubTOML = `# meta.toml — Meta column commands
 #
 # [[entry]]
 # name = "line-count"
+# column = "Lines"
+# order = 10
 # description = "Line count (text files)"
 # when = ["*.py", "*.go", "*.js", "*.ts", "*.rs", "*.c", "*.h", "*.cpp"]
 # cache = true

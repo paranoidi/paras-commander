@@ -212,15 +212,14 @@ type MetaEntry struct {
 	Description string
 }
 
-// MetaDialogState is the radio-button picker for selecting a meta command to run on panel entries.
-// Entries always has "None" as first item (index 0). Focus 0..len(Entries)-1 are radio rows;
-// len(Entries) is OK; len(Entries)+1 is Cancel.
+// MetaDialogState is the checkbox picker for toggling meta columns on panel entries.
+// Focus 0..len(Entries)-1 are checkbox rows; len(Entries) is OK; len(Entries)+1 is Cancel.
 type MetaDialogState struct {
-	Open     bool
-	PanelID  int
-	Entries  []MetaEntry // first entry is always {Name:"none", Description:"None (clear)"}
-	Selected int         // index into Entries (0 = None)
-	Focus    int         // 0..len(Entries)-1 radio items, len = OK, len+1 = Cancel
+	Open    bool
+	PanelID int
+	Entries []MetaEntry
+	Checked []bool // parallel to Entries
+	Focus   int    // 0..len(Entries)-1 checkbox items, len = OK, len+1 = Cancel
 }
 
 // HelpEntry is one row in the full-screen help view.

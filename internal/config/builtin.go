@@ -173,6 +173,9 @@ const (
 	// entry when the entry does not specify its own workers value in meta.toml.
 	DefaultMetaEntryWorkers = 2
 
+	// DefaultMetaMaxActiveColumns caps how many meta columns may be active per panel at once.
+	DefaultMetaMaxActiveColumns = 8
+
 	// DefaultPoolMaxParallel is the upper clamp for [[pools]].max_parallel in pools.toml.
 	DefaultPoolMaxParallel = 64
 

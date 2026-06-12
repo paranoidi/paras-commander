@@ -111,8 +111,8 @@ type App struct {
 	findDialogSelectionScanFP string
 	// findDialogSelectionScanGen skips reconcile work when marked-selection derived input is unchanged.
 	findDialogSelectionScanGen uint64
-	// metaActiveCmd holds the name of the active meta command per panel (empty = none).
-	metaActiveCmd [2]string
+	// metaActiveEntries holds ordered entry names for active meta columns per panel.
+	metaActiveEntries [2][]string
 	// metaNavPath holds the last panel path for which meta was run (used to detect navigation).
 	metaNavPath [2]string
 	// metaCancel holds the cancel function for the in-flight meta run per panel (nil if none).
@@ -629,8 +629,8 @@ func (a *App) Run() error {
 				a.render()
 				didRender = true
 			case metaWakePayload:
-				if d.gen == a.metaRunGen[d.panelID] && a.model.MetaResults[d.panelID] != nil {
-					a.model.MetaResults[d.panelID][d.path] = d.value
+				if d.gen == a.metaRunGen[d.panelID] {
+					a.applyMetaWakeResult(d)
 				}
 				a.render()
 				didRender = true

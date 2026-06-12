@@ -9,14 +9,11 @@ import (
 )
 
 func metaDialogEntries(mf *metacmds.MetaFile) []ui.MetaEntry {
-	entries := make([]ui.MetaEntry, 0, 1)
-	entries = append(entries, ui.MetaEntry{Name: "none", Description: "None (clear)"})
-	entries = append(entries, metaEntries(mf)...)
-	return entries
+	return metaEntries(mf)
 }
 
-func (a *App) resolveMetaEditPath() (string, error) {
-	metaPath, warns := metacmds.ResolveMetaTOML(a.config, a.model.UserHomeDir, a.metaConfigDir(), a.activePanel().PathString())
+func (a *App) resolveMetaEditPath(panelID int) (string, error) {
+	metaPath, warns := metacmds.ResolveMetaTOML(a.config, a.model.UserHomeDir, a.metaConfigDir(), a.panelByID(panelID).PathString())
 	for _, w := range warns {
 		a.setTransientMessage(w, ui.MessageUrgencyWarn)
 	}
@@ -31,7 +28,7 @@ func (a *App) editMetaConfigFromDialog() {
 	if !st.Open {
 		return
 	}
-	path, err := a.resolveMetaEditPath()
+	path, err := a.resolveMetaEditPath(st.PanelID)
 	if err != nil {
 		a.setErrorMessage("Meta commands", err)
 		return
@@ -47,44 +44,40 @@ func (a *App) refreshMetaDialogAfterConfigEdit() {
 		return
 	}
 	panelID := st.PanelID
-	prevSelectedName := metaEntryNameAt(st.Entries, st.Selected)
+	prevChecked := make(map[string]bool, len(st.Entries))
+	for i, e := range st.Entries {
+		if i < len(st.Checked) && st.Checked[i] {
+			prevChecked[e.Name] = true
+		}
+	}
 	prevFocusName, prevFocusButton := metaDialogFocusTarget(st.Entries, st.Focus)
 
-	mf := a.loadMetaFile()
+	mf := a.loadMetaFile(panelID)
 	entries := metaDialogEntries(mf)
-	selected := metaEntryIndexByName(entries, prevSelectedName)
-	if selected == 0 && prevSelectedName != "" && prevSelectedName != "none" {
-		if i := metaEntryIndexByName(entries, a.metaActiveCmd[panelID]); i >= 0 {
-			selected = i
-		}
+	checked := make([]bool, len(entries))
+	for i, e := range entries {
+		checked[i] = prevChecked[e.Name]
 	}
 
 	n := len(entries)
 	form := ui.NewDialogLinearForm(n)
-	focus := metaDialogFocusFromTarget(entries, form, prevFocusName, prevFocusButton, selected)
+	focus := metaDialogFocusFromTarget(entries, form, prevFocusName, prevFocusButton, 0)
 
 	st.Entries = entries
-	st.Selected = selected
+	st.Checked = checked
 	st.Focus = focus
-}
-
-func metaEntryNameAt(entries []ui.MetaEntry, idx int) string {
-	if idx < 0 || idx >= len(entries) {
-		return ""
-	}
-	return entries[idx].Name
 }
 
 func metaEntryIndexByName(entries []ui.MetaEntry, name string) int {
 	if name == "" {
-		return 0
+		return -1
 	}
 	for i, e := range entries {
 		if e.Name == name {
 			return i
 		}
 	}
-	return 0
+	return -1
 }
 
 func metaDialogFocusTarget(entries []ui.MetaEntry, focus int) (entryName string, button tcell.Key) {
@@ -102,7 +95,7 @@ func metaDialogFocusTarget(entries []ui.MetaEntry, focus int) (entryName string,
 	}
 }
 
-func metaDialogFocusFromTarget(entries []ui.MetaEntry, form ui.DialogLinearForm, entryName string, button tcell.Key, selected int) int {
+func metaDialogFocusFromTarget(entries []ui.MetaEntry, form ui.DialogLinearForm, entryName string, button tcell.Key, _ int) int {
 	switch button {
 	case tcell.KeyEnter:
 		return form.OKIndex()
@@ -113,9 +106,6 @@ func metaDialogFocusFromTarget(entries []ui.MetaEntry, form ui.DialogLinearForm,
 		if i := metaEntryIndexByName(entries, entryName); i >= 0 {
 			return i
 		}
-	}
-	if selected >= 0 && selected < len(entries) {
-		return selected
 	}
 	return 0
 }

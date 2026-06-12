@@ -132,8 +132,8 @@ file = "wc -l"
 
 	app := testMetaDialogApp(t, dir, cfgDir)
 	app.openMetaDialog(ui.LeftPanel)
-	if len(app.model.MetaDialog.Entries) != 2 {
-		t.Fatalf("entries len = %d, want none + lines", len(app.model.MetaDialog.Entries))
+	if len(app.model.MetaDialog.Entries) != 1 {
+		t.Fatalf("entries len = %d, want lines", len(app.model.MetaDialog.Entries))
 	}
 
 	prev := externalEditorRunner
@@ -156,11 +156,11 @@ file = "wc -c"
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open after F4 edit")
 	}
-	if len(app.model.MetaDialog.Entries) != 3 {
-		t.Fatalf("entries len = %d, want none + lines + size", len(app.model.MetaDialog.Entries))
+	if len(app.model.MetaDialog.Entries) != 2 {
+		t.Fatalf("entries len = %d, want lines + size", len(app.model.MetaDialog.Entries))
 	}
-	if app.model.MetaDialog.Entries[2].Name != "size" {
-		t.Fatalf("third entry = %+v, want size", app.model.MetaDialog.Entries[2])
+	if app.model.MetaDialog.Entries[1].Name != "size" {
+		t.Fatalf("second entry = %+v, want size", app.model.MetaDialog.Entries[1])
 	}
 }
 
@@ -299,7 +299,7 @@ command = "true"
 	}
 }
 
-func TestMetaDialogF4KeepsNoneWhenFileInvalid(t *testing.T) {
+func TestMetaDialogF4KeepsCheckedWhenFileInvalid(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -308,6 +308,7 @@ func TestMetaDialogF4KeepsNoneWhenFileInvalid(t *testing.T) {
 	}
 	if err := os.WriteFile(metaPath, []byte(`[[entry]]
 name = "lines"
+description = "Line count"
 file = "wc -l"
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -315,8 +316,8 @@ file = "wc -l"
 
 	app := testMetaDialogApp(t, dir, cfgDir)
 	app.openMetaDialog(ui.LeftPanel)
-	app.model.MetaDialog.Selected = 1
-	app.model.MetaDialog.Focus = 1
+	app.model.MetaDialog.Checked[0] = true
+	app.model.MetaDialog.Focus = 0
 
 	prev := externalEditorRunner
 	externalEditorRunner = func(_ context.Context, path string) error {
@@ -329,7 +330,7 @@ file = "wc -l"
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open")
 	}
-	if len(app.model.MetaDialog.Entries) != 1 || app.model.MetaDialog.Entries[0].Name != "none" {
-		t.Fatalf("entries = %+v, want only none after invalid meta.toml", app.model.MetaDialog.Entries)
+	if len(app.model.MetaDialog.Entries) != 0 {
+		t.Fatalf("entries = %+v, want empty after invalid meta.toml", app.model.MetaDialog.Entries)
 	}
 }

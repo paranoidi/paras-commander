@@ -26,6 +26,8 @@ type MetaFile struct {
 type MetaEntry struct {
 	Name          string
 	Description   string
+	Column        string // panel header; empty means use Name
+	Order         int    // left-to-right sort key (lower = closer to name)
 	File          string
 	Dirs          string
 	When          []string
@@ -44,6 +46,8 @@ type metaFileRaw struct {
 type metaEntryRaw struct {
 	Name          string     `toml:"name"`
 	Description   string     `toml:"description"`
+	Column        string     `toml:"column"`
+	Order         int        `toml:"order"`
 	File          string     `toml:"file"`
 	Dirs          string     `toml:"dirs"`
 	When          *whenField `toml:"when"`
@@ -140,6 +144,9 @@ func Decode(data []byte) (*MetaFile, error) {
 				whenList = append(whenList, w)
 			}
 		}
+		if e.Order < 0 {
+			return nil, fmt.Errorf("meta.toml: entry %d: order must be >= 0", i)
+		}
 		// Validate workers.
 		if e.Workers < 0 {
 			return nil, fmt.Errorf("meta.toml: entry %d: workers must be >= 0", i)
@@ -149,9 +156,16 @@ func Decode(data []byte) (*MetaFile, error) {
 		if workers > metaEntryWorkersMax {
 			workers = metaEntryWorkersMax
 		}
+		name := strings.TrimSpace(e.Name)
+		column := strings.TrimSpace(e.Column)
+		if column == "" {
+			column = name
+		}
 		out.Entries = append(out.Entries, MetaEntry{
-			Name:          strings.TrimSpace(e.Name),
+			Name:          name,
 			Description:   strings.TrimSpace(e.Description),
+			Column:        column,
+			Order:         e.Order,
 			File:          strings.TrimSpace(e.File),
 			Dirs:          strings.TrimSpace(e.Dirs),
 			When:          whenList,

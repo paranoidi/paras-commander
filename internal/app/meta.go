@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
@@ -22,10 +22,11 @@ import (
 // It carries the result so the event handler can apply it on the main goroutine, preventing
 // concurrent map access between background workers and the render path.
 type metaWakePayload struct {
-	panelID int
-	path    string
-	value   string
-	gen     uint64
+	panelID   int
+	entryName string
+	path      string
+	value     string
+	gen       uint64
 }
 
 // metaExecFailedPayload notifies the main goroutine once per meta run when a shell command fails.
@@ -34,12 +35,13 @@ type metaExecFailedPayload struct {
 	gen     uint64
 }
 
-func (a *App) postMetaResult(panelID int, path, value string, gen uint64) {
+func (a *App) postMetaResult(panelID int, entryName, path, value string, gen uint64) {
 	_ = a.screen.PostEvent(tcell.NewEventInterrupt(metaWakePayload{
-		panelID: panelID,
-		path:    path,
-		value:   value,
-		gen:     gen,
+		panelID:   panelID,
+		entryName: entryName,
+		path:      path,
+		value:     value,
+		gen:       gen,
 	}))
 }
 
@@ -50,14 +52,28 @@ func (a *App) postMetaExecFailed(panelID int, gen uint64) {
 	}))
 }
 
+func (a *App) applyMetaWakeResult(d metaWakePayload) {
+	cols := a.model.MetaResults[d.panelID]
+	for i := range cols {
+		if cols[i].EntryName != d.entryName {
+			continue
+		}
+		if cols[i].Results == nil {
+			cols[i].Results = make(map[string]string)
+		}
+		cols[i].Results[d.path] = d.value
+		return
+	}
+}
+
 func (a *App) metaConfigDir() string {
 	return strings.TrimSpace(a.paths.ConfigDir)
 }
 
-// loadMetaFile resolves and loads the meta.toml for the active panel path.
+// loadMetaFile resolves and loads the meta.toml for the given panel path.
 // Returns nil when no file is found (not an error). Warnings are shown as transient messages.
-func (a *App) loadMetaFile() *metacmds.MetaFile {
-	path, warns := metacmds.ResolveMetaTOML(a.config, a.model.UserHomeDir, a.metaConfigDir(), a.activePanel().PathString())
+func (a *App) loadMetaFile(panelID int) *metacmds.MetaFile {
+	path, warns := metacmds.ResolveMetaTOML(a.config, a.model.UserHomeDir, a.metaConfigDir(), a.panelByID(panelID).PathString())
 	for _, w := range warns {
 		a.setTransientMessage(w, ui.MessageUrgencyWarn)
 	}
@@ -83,6 +99,38 @@ func (a *App) ensureGlobalMetaStub() (path string, err error) {
 	return path, nil
 }
 
+func (a *App) clearMetaCache() {
+	a.metaCacheMu.Lock()
+	a.metaCache = nil
+	a.metaCacheMu.Unlock()
+}
+
+func (a *App) rerunActiveMetaPanels() {
+	for panelID := range a.metaActiveEntries {
+		if len(a.metaActiveEntries[panelID]) == 0 {
+			continue
+		}
+		mf := a.loadMetaFile(panelID)
+		if mf == nil {
+			continue
+		}
+		sorted := metacmds.SortEntriesForDisplay(a.metaActiveEntries[panelID], mf)
+		if len(sorted) == 0 {
+			continue
+		}
+		cols := make([]ui.MetaColumnState, len(sorted))
+		for i, e := range sorted {
+			cols[i] = ui.MetaColumnState{
+				EntryName:   e.Name,
+				ColumnTitle: e.Column,
+				Order:       e.Order,
+				Results:     nil,
+			}
+		}
+		a.runMetaForPanel(panelID, sorted, cols)
+	}
+}
+
 func (a *App) openMetaFileEditor(path string) bool {
 	changed, err := metacmds.RefreshDocumentation(path)
 	if err != nil {
@@ -93,6 +141,8 @@ func (a *App) openMetaFileEditor(path string) bool {
 		a.setErrorMessage("Meta commands", err)
 		return false
 	}
+	a.clearMetaCache()
+	a.rerunActiveMetaPanels()
 	if changed {
 		a.setTransientMessage("Meta commands: updated documentation in "+path, ui.MessageUrgencyInfo)
 	} else {
@@ -107,7 +157,7 @@ func (a *App) editMetaFile() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	path, err := a.resolveMetaEditPath()
+	path, err := a.resolveMetaEditPath(a.model.ActivePanel)
 	if err != nil {
 		a.setErrorMessage("Meta commands", err)
 		return
@@ -115,29 +165,29 @@ func (a *App) editMetaFile() {
 	a.openMetaFileEditor(path)
 }
 
-// openMetaDialog opens the radio-button meta command picker for the given panel.
+// openMetaDialog opens the checkbox meta command picker for the given panel.
 func (a *App) openMetaDialog(panelID int) {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	mf := a.loadMetaFile()
+	mf := a.loadMetaFile(panelID)
 	entries := metaDialogEntries(mf)
 
-	// Pre-select the currently active command.
-	selected := 0
+	activeSet := make(map[string]struct{}, len(a.metaActiveEntries[panelID]))
+	for _, n := range a.metaActiveEntries[panelID] {
+		activeSet[n] = struct{}{}
+	}
+	checked := make([]bool, len(entries))
 	for i, e := range entries {
-		if e.Name == a.metaActiveCmd[panelID] {
-			selected = i
-			break
-		}
+		_, checked[i] = activeSet[e.Name]
 	}
 
 	a.model.MetaDialog = ui.MetaDialogState{
-		Open:     true,
-		PanelID:  panelID,
-		Entries:  entries,
-		Selected: selected,
-		Focus:    selected,
+		Open:    true,
+		PanelID: panelID,
+		Entries: entries,
+		Checked: checked,
+		Focus:   0,
 	}
 	a.clearTransientMessage()
 }
@@ -146,13 +196,12 @@ func (a *App) closeMetaDialog() {
 	a.model.MetaDialog = ui.MetaDialogState{}
 }
 
-// metaEntries returns MetaEntry slice sorted by name from a MetaFile (nil-safe).
+// metaEntries returns MetaEntry slice sorted by order+name from a MetaFile (nil-safe).
 func metaEntries(mf *metacmds.MetaFile) []ui.MetaEntry {
 	if mf == nil || len(mf.Entries) == 0 {
 		return nil
 	}
-	sorted := append([]metacmds.MetaEntry(nil), mf.Entries...)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+	sorted := metacmds.SortedEntries(mf)
 	out := make([]ui.MetaEntry, len(sorted))
 	for i, e := range sorted {
 		out[i] = ui.MetaEntry{Name: e.Name, Description: e.Description}
@@ -161,46 +210,64 @@ func metaEntries(mf *metacmds.MetaFile) []ui.MetaEntry {
 }
 
 func (a *App) activateMetaSelection() {
-	st := &a.model.MetaDialog
-	if st.Selected < 0 || st.Selected >= len(st.Entries) {
-		return
-	}
+	st := a.model.MetaDialog
 	panelID := st.PanelID
-	entry := st.Entries[st.Selected]
+	checked := append([]bool(nil), st.Checked...)
+	entries := append([]ui.MetaEntry(nil), st.Entries...)
 	a.closeMetaDialog()
 
-	if entry.Name == "none" {
-		// Clear meta for this panel and cancel any in-flight run.
+	var activeNames []string
+	for i, on := range checked {
+		if on && i < len(entries) {
+			activeNames = append(activeNames, entries[i].Name)
+		}
+	}
+
+	if len(activeNames) == 0 {
 		if a.metaCancel[panelID] != nil {
 			a.metaCancel[panelID]()
 			a.metaCancel[panelID] = nil
 		}
 		a.model.MetaResults[panelID] = nil
-		a.metaActiveCmd[panelID] = ""
+		a.metaActiveEntries[panelID] = nil
 		a.metaNavPath[panelID] = ""
 		return
 	}
 
-	mf := a.loadMetaFile()
+	mf := a.loadMetaFile(panelID)
 	if mf == nil {
 		return
 	}
-	cmdDef, ok := mf.EntryByName(entry.Name)
-	if !ok {
-		return
+
+	maxCols := config.DefaultMetaMaxActiveColumns
+	if len(activeNames) > maxCols {
+		a.setTransientMessage(fmt.Sprintf("meta: showing first %d of %d selected columns", maxCols, len(activeNames)), ui.MessageUrgencyWarn)
+		activeNames = activeNames[:maxCols]
 	}
-	a.metaActiveCmd[panelID] = entry.Name
+
+	sorted := metacmds.SortEntriesForDisplay(activeNames, mf)
+	names := make([]string, len(sorted))
+	cols := make([]ui.MetaColumnState, len(sorted))
+	for i, e := range sorted {
+		names[i] = e.Name
+		cols[i] = ui.MetaColumnState{
+			EntryName:   e.Name,
+			ColumnTitle: e.Column,
+			Order:       e.Order,
+			Results:     nil,
+		}
+	}
+	a.metaActiveEntries[panelID] = names
 	a.metaNavPath[panelID] = filepath.Clean(a.panelByID(panelID).PathString())
-	a.runMetaForPanel(panelID, cmdDef)
+	a.runMetaForPanel(panelID, sorted, cols)
 }
 
-// handleMetaPanelDirChanged re-runs the active meta command when the panel navigates to a new directory.
+// handleMetaPanelDirChanged re-runs active meta commands when the panel navigates to a new directory.
 func (a *App) handleMetaPanelDirChanged(panelID int) {
-	if a.model.MetaResults[panelID] == nil {
+	if len(a.model.MetaResults[panelID]) == 0 {
 		return
 	}
-	cmdName := a.metaActiveCmd[panelID]
-	if cmdName == "" {
+	if len(a.metaActiveEntries[panelID]) == 0 {
 		return
 	}
 	cur := filepath.Clean(a.panelByID(panelID).PathString())
@@ -209,15 +276,24 @@ func (a *App) handleMetaPanelDirChanged(panelID int) {
 	}
 	a.metaNavPath[panelID] = cur
 
-	mf := a.loadMetaFile()
+	mf := a.loadMetaFile(panelID)
 	if mf == nil {
 		return
 	}
-	cmdDef, ok := mf.EntryByName(cmdName)
-	if !ok {
+	sorted := metacmds.SortEntriesForDisplay(a.metaActiveEntries[panelID], mf)
+	if len(sorted) == 0 {
 		return
 	}
-	a.runMetaForPanel(panelID, cmdDef)
+	cols := make([]ui.MetaColumnState, len(sorted))
+	for i, e := range sorted {
+		cols[i] = ui.MetaColumnState{
+			EntryName:   e.Name,
+			ColumnTitle: e.Column,
+			Order:       e.Order,
+			Results:     nil,
+		}
+	}
+	a.runMetaForPanel(panelID, sorted, cols)
 }
 
 // metaDispatchItem holds a single entry selected for meta command execution.
@@ -226,20 +302,12 @@ type metaDispatchItem struct {
 	cmd   string
 }
 
-// runMetaForPanel runs the meta command for every entry in panelID using a worker pool.
-// When cmdDef.Cache is true, cached results from previous runs are reused and only
-// uncached entries are dispatched to workers.
-// Any in-flight run for the same panel is cancelled before the new one starts.
-func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
+// runMetaForPanel runs meta commands for every active entry on panelID using worker pools.
+func (a *App) runMetaForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []ui.MetaColumnState) {
 	panel := a.panelByID(panelID)
 	entries := append([]localfs.Entry(nil), panel.Entries...)
 	dir := panel.PathString()
-	workers := cmdDef.Workers
-	if workers < 1 {
-		workers = a.config.Meta.DefaultEntryWorkers
-	}
 
-	// Cancel any in-flight run for this panel and start a new generation.
 	if a.metaCancel[panelID] != nil {
 		a.metaCancel[panelID]()
 	}
@@ -248,74 +316,89 @@ func (a *App) runMetaForPanel(panelID int, cmdDef metacmds.MetaEntry) {
 	a.metaRunGen[panelID]++
 	gen := a.metaRunGen[panelID]
 
-	// Initialize results map. Pre-populate with cached values when caching is on.
-	results := make(map[string]string, len(entries))
-	for _, e := range entries {
-		results[e.Path] = ""
-	}
-	if cmdDef.Cache {
-		a.metaCacheMu.RLock()
-		if a.metaCache != nil {
-			if cmdCache := a.metaCache[cmdDef.Name]; cmdCache != nil {
-				for _, e := range entries {
-					if v, ok := cmdCache[e.Path]; ok {
-						results[e.Path] = v
+	runningMarker := a.styles.SymbolMetaRunning()
+
+	for i, cmdDef := range cmdDefs {
+		results := make(map[string]string, len(entries))
+		for _, e := range entries {
+			results[e.Path] = ""
+		}
+		if cmdDef.Cache {
+			a.metaCacheMu.RLock()
+			if a.metaCache != nil {
+				if cmdCache := a.metaCache[cmdDef.Name]; cmdCache != nil {
+					for _, e := range entries {
+						if v, ok := cmdCache[e.Path]; ok {
+							results[e.Path] = v
+						}
 					}
 				}
 			}
+			a.metaCacheMu.RUnlock()
 		}
-		a.metaCacheMu.RUnlock()
+
+		for _, e := range entries {
+			if _, ok := a.metaEntryCmd(cmdDef, e, dir); !ok {
+				continue
+			}
+			results[e.Path] = runningMarker
+		}
+		cols[i].Results = results
 	}
 
-	// Determine which entries will be dispatched and mark them with the running indicator.
-	// This pre-pass runs on the main goroutine so map writes are safe (no concurrent readers yet).
-	runningMarker := a.styles.SymbolMetaRunning()
-	var items []metaDispatchItem
-	for _, e := range entries {
-		cmd, ok := a.metaEntryCmd(cmdDef, e, dir)
-		if !ok {
-			continue
-		}
-		results[e.Path] = runningMarker
-		items = append(items, metaDispatchItem{entry: e, cmd: cmd})
-	}
-
-	a.model.MetaResults[panelID] = results
+	a.model.MetaResults[panelID] = cols
 
 	go func() {
-		sem := make(chan struct{}, workers)
 		var wg sync.WaitGroup
 		var notifyExecFailed sync.Once
 
-		for _, item := range items {
-			item := item
-			wg.Add(1)
-			sem <- struct{}{}
-			go func() {
-				defer wg.Done()
-				defer func() { <-sem }()
-				out, err := runMetaCommand(ctx, item.cmd, item.entry.Path, dir)
-				if err != nil {
-					if ctx.Err() != nil {
+		for _, cmdDef := range cmdDefs {
+			cmdDef := cmdDef
+			workers := cmdDef.Workers
+			if workers < 1 {
+				workers = a.config.Meta.DefaultEntryWorkers
+			}
+
+			var items []metaDispatchItem
+			for _, e := range entries {
+				cmd, ok := a.metaEntryCmd(cmdDef, e, dir)
+				if !ok {
+					continue
+				}
+				items = append(items, metaDispatchItem{entry: e, cmd: cmd})
+			}
+
+			sem := make(chan struct{}, workers)
+			for _, item := range items {
+				item := item
+				wg.Add(1)
+				sem <- struct{}{}
+				go func() {
+					defer wg.Done()
+					defer func() { <-sem }()
+					out, err := runMetaCommand(ctx, item.cmd, item.entry.Path, dir)
+					if err != nil {
+						if ctx.Err() != nil {
+							return
+						}
+						notifyExecFailed.Do(func() { a.postMetaExecFailed(panelID, gen) })
+						a.postMetaResult(panelID, cmdDef.Name, item.entry.Path, "", gen)
 						return
 					}
-					notifyExecFailed.Do(func() { a.postMetaExecFailed(panelID, gen) })
-					a.postMetaResult(panelID, item.entry.Path, "", gen)
-					return
-				}
-				if cmdDef.Cache {
-					a.metaCacheMu.Lock()
-					if a.metaCache == nil {
-						a.metaCache = make(map[string]map[string]string)
+					if cmdDef.Cache {
+						a.metaCacheMu.Lock()
+						if a.metaCache == nil {
+							a.metaCache = make(map[string]map[string]string)
+						}
+						if a.metaCache[cmdDef.Name] == nil {
+							a.metaCache[cmdDef.Name] = make(map[string]string)
+						}
+						a.metaCache[cmdDef.Name][item.entry.Path] = out
+						a.metaCacheMu.Unlock()
 					}
-					if a.metaCache[cmdDef.Name] == nil {
-						a.metaCache[cmdDef.Name] = make(map[string]string)
-					}
-					a.metaCache[cmdDef.Name][item.entry.Path] = out
-					a.metaCacheMu.Unlock()
-				}
-				a.postMetaResult(panelID, item.entry.Path, out, gen)
-			}()
+					a.postMetaResult(panelID, cmdDef.Name, item.entry.Path, out, gen)
+				}()
+			}
 		}
 		wg.Wait()
 	}()
@@ -378,7 +461,6 @@ func (a *App) handleMetaDialogKey(event *tcell.EventKey) {
 	n := len(st.Entries)
 	form := ui.NewDialogLinearForm(n)
 
-	// Alt+O = OK, Alt+C = Cancel
 	if ui.AltDialogOK(event) {
 		a.activateMetaSelection()
 		return
@@ -390,7 +472,7 @@ func (a *App) handleMetaDialogKey(event *tcell.EventKey) {
 
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		if i, ok := ui.MetaEntryIndexForAltShortcut(st.Entries, event.Rune()); ok {
-			st.Selected = i
+			st.Checked[i] = !st.Checked[i]
 			st.Focus = i
 			return
 		}
@@ -406,12 +488,12 @@ func (a *App) handleMetaDialogKey(event *tcell.EventKey) {
 		switch st.Focus {
 		case form.CancelIndex():
 			a.closeMetaDialog()
-		default:
-			// Enter on radio item selects it; Enter on OK confirms.
-			if st.Focus < n {
-				st.Selected = st.Focus
-			}
+		case form.OKIndex():
 			a.activateMetaSelection()
+		default:
+			if st.Focus < n {
+				st.Checked[st.Focus] = !st.Checked[st.Focus]
+			}
 		}
 	case tcell.KeyRune:
 		if event.Modifiers() != tcell.ModNone {
@@ -425,10 +507,9 @@ func (a *App) handleMetaDialogKey(event *tcell.EventKey) {
 			a.closeMetaDialog()
 			return
 		case ' ':
-			// Space on a radio item selects it; on buttons activates.
 			switch {
 			case st.Focus < n:
-				st.Selected = st.Focus
+				st.Checked[st.Focus] = !st.Checked[st.Focus]
 			case st.Focus == form.OKIndex():
 				a.activateMetaSelection()
 			case st.Focus == form.CancelIndex():

@@ -6,6 +6,63 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+// MetaColumnLayout is a rendered meta column ready for panel list rows.
+type MetaColumnLayout struct {
+	Title     string
+	Width     int
+	Formatted map[string]string
+}
+
+// LayoutMetaColumns formats each active meta column and returns layouts plus total terminal width
+// (including two-cell gaps between columns).
+func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, totalWidth int) {
+	if len(cols) == 0 {
+		return nil, 0
+	}
+	layouts = make([]MetaColumnLayout, len(cols))
+	for i, col := range cols {
+		w, formatted := layoutMetaCells(col.Results)
+		layouts[i] = MetaColumnLayout{
+			Title:     col.ColumnTitle,
+			Width:     w,
+			Formatted: formatted,
+		}
+		if i > 0 {
+			totalWidth += 2
+		}
+		totalWidth += w
+	}
+	return layouts, totalWidth
+}
+
+// MetaHeaderText returns the padded header segment for meta columns.
+func MetaHeaderText(layouts []MetaColumnLayout) string {
+	if len(layouts) == 0 {
+		return ""
+	}
+	parts := make([]string, len(layouts))
+	for i, lay := range layouts {
+		parts[i] = padMetaLineToWidth(lay.Title, lay.Width)
+	}
+	return strings.Join(parts, "  ")
+}
+
+// MetaRowText returns the padded meta segment for one file row.
+func MetaRowText(layouts []MetaColumnLayout, path string) string {
+	if len(layouts) == 0 {
+		return ""
+	}
+	parts := make([]string, len(layouts))
+	for i, lay := range layouts {
+		text := ""
+		if lay.Formatted != nil {
+			text = lay.Formatted[path]
+		}
+		parts[i] = padMetaLineToWidth(text, lay.Width)
+	}
+	return strings.Join(parts, "  ")
+}
+
 const (
 	// panelListMetaMaxFields caps how many tab/newline-delimited fields a meta command may emit.
 	panelListMetaMaxFields = 8
