@@ -4,6 +4,8 @@ package uiscrollbar
 type Metrics struct {
 	Total, Visible, Offset int
 	ThumbStart, ThumbSize  int
+	// ThumbDotRow is the StyleThumb indicator row mapped across the full track height.
+	ThumbDotRow int
 }
 
 // ComputeMetrics returns scroll metrics for total items, visible rows, and scroll offset.
@@ -36,11 +38,22 @@ func ComputeMetrics(total, visible, offset int) (Metrics, bool) {
 	if thumbStart+thumbSize > visible {
 		thumbStart = visible - thumbSize
 	}
+	dotRow := 0
+	if maxOffset > 0 {
+		dotRow = offset * (visible - 1) / maxOffset
+	}
+	if dotRow < 0 {
+		dotRow = 0
+	}
+	if dotRow >= visible {
+		dotRow = visible - 1
+	}
 	return Metrics{
-		Total:      total,
-		Visible:    visible,
-		Offset:     offset,
-		ThumbStart: thumbStart,
-		ThumbSize:  thumbSize,
+		Total:       total,
+		Visible:     visible,
+		Offset:      offset,
+		ThumbStart:  thumbStart,
+		ThumbSize:   thumbSize,
+		ThumbDotRow: dotRow,
 	}, true
 }

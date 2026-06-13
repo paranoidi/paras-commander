@@ -36,14 +36,14 @@ func Draw(p DrawParams) {
 
 func drawThumb(p DrawParams, thumbStyle, frameStyle tcell.Style) {
 	m := p.Metrics
-	thumbRow := m.ThumbStart + m.ThumbSize/2
+	thumbRow := m.ThumbDotRow
 	if thumbRow < 0 {
 		thumbRow = 0
 	}
-	if thumbRow >= m.Visible {
-		thumbRow = m.Visible - 1
+	if thumbRow >= p.Visible {
+		thumbRow = p.Visible - 1
 	}
-	for row := 0; row < m.Visible; row++ {
+	for row := 0; row < p.Visible; row++ {
 		y := p.ListTopY + row
 		if row == thumbRow {
 			p.Screen.SetContent(p.X, y, p.Theme.SymbolScrollbarThumb(), nil, thumbStyle)
@@ -56,7 +56,7 @@ func drawThumb(p DrawParams, thumbStyle, frameStyle tcell.Style) {
 func drawBar(p DrawParams, trackStyle, thumbStyle tcell.Style) {
 	m := p.Metrics
 	thumbEnd := m.ThumbStart + m.ThumbSize
-	for row := 0; row < m.Visible; row++ {
+	for row := 0; row < p.Visible; row++ {
 		y := p.ListTopY + row
 		if row >= m.ThumbStart && row < thumbEnd {
 			p.Screen.SetContent(p.X, y, '█', nil, thumbStyle)

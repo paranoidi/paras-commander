@@ -304,13 +304,13 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	return false
 }
 
-// tryRenameFocusAltShortcut toggles focus-after-rename via Alt+F on the main rename dialog.
+// tryRenameFocusAltShortcut toggles focus-after-rename via Alt+A on the main rename dialog.
 func (a *App) tryRenameFocusAltShortcut(r rune) bool {
 	d := &a.model.FileDialog
 	if !ui.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != ui.RenamePhaseMain {
 		return false
 	}
-	if r != 'f' && r != 'F' {
+	if r != 'a' && r != 'A' {
 		return false
 	}
 	d.RenameFocusAfter = !d.RenameFocusAfter

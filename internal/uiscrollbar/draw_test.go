@@ -40,7 +40,7 @@ func TestDraw_thumbOnBorder(t *testing.T) {
 		Theme:      styles,
 	})
 
-	thumbRow := listTop + m.ThumbStart + m.ThumbSize/2
+	thumbRow := listTop + m.ThumbDotRow
 	got, _, _ := screen.Get(x, thumbRow)
 	wantThumb := styles.SymbolScrollbarThumb()
 	gotR, _ := utf8.DecodeRuneInString(got)

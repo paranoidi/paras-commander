@@ -4504,7 +4504,7 @@ func TestRenameWithFocusAfterSelectsAndCentersNewFile(t *testing.T) {
 	for _, r := range newName {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	p = app.activePanel()
@@ -7631,9 +7631,9 @@ func TestCopyHereDialogFocusCheckboxToggle(t *testing.T) {
 	if app.model.FileDialog.RenameFocusAfter {
 		t.Fatal("RenameFocusAfter = true, want false (default)")
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
 	if !app.model.FileDialog.RenameFocusAfter {
-		t.Fatal("Alt+F should toggle focus-after checkbox on")
+		t.Fatal("Alt+A should toggle focus-after checkbox on")
 	}
 	okIdx := ui.FileDialogOKFocusIndex(app.model.FileDialog)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
@@ -7672,7 +7672,7 @@ func TestCopyHereWithFocusAfterSelectsAfterJob(t *testing.T) {
 	for _, r := range newName {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	flushBackgroundJobs(t, app)

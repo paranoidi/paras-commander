@@ -712,7 +712,7 @@ func drawRenameFocusCheckbox(screen tcell.Screen, rect Rect, state FileDialogSta
 	if y >= rect.Y+rect.Height-2 {
 		return
 	}
-	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, renameFocusCheckboxLabel(state), 'F', state.RenameFocusAfter, state.FocusedField == len(state.Fields), styles)
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, renameFocusCheckboxLabel(state), 'A', state.RenameFocusAfter, state.FocusedField == len(state.Fields), styles)
 }
 
 // drawMkdirActionRows draws the radio button section under the directory-name input
