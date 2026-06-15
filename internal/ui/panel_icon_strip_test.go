@@ -13,17 +13,17 @@ func TestDirectoryIconGlyphPriority(t *testing.T) {
 	th := theme.Default()
 	dir := localfs.Entry{Name: "alpha", Path: "/tmp/alpha", Type: localfs.EntryDirectory}
 
-	if got := directoryIconGlyph(dir, th, "/tmp/alpha", false, 0, false, false, false, true); got != th.SymbolFoldersOpen() {
-		t.Fatalf("open glyph = %q, want %q", got, th.SymbolFoldersOpen())
+	if got := directoryIconGlyph(dir, th, "/tmp/alpha", false, 0, false, false, false, true); got != th.FolderIconGlyph(theme.FolderIconOpen) {
+		t.Fatalf("open glyph = %q, want %q", got, th.FolderIconGlyph(theme.FolderIconOpen))
 	}
-	if got := directoryIconGlyph(dir, th, "/tmp/alpha", false, 0, false, true, false, true); got != th.SymbolFoldersScanning() {
-		t.Fatalf("scanning wins over open: got %q, want %q", got, th.SymbolFoldersScanning())
+	if got := directoryIconGlyph(dir, th, "/tmp/alpha", false, 0, false, true, false, true); got != th.FolderIconGlyph(theme.FolderIconScanning) {
+		t.Fatalf("scanning wins over open: got %q, want %q", got, th.FolderIconGlyph(theme.FolderIconScanning))
 	}
-	if got := directoryIconGlyph(dir, th, "", false, 0, false, false, false, true); got != th.SymbolFoldersFolder() {
-		t.Fatalf("default folder glyph = %q, want %q", got, th.SymbolFoldersFolder())
+	if got := directoryIconGlyph(dir, th, "", false, 0, false, false, false, true); got != th.FolderIconGlyph(theme.FolderIconDefault) {
+		t.Fatalf("default folder glyph = %q, want %q", got, th.FolderIconGlyph(theme.FolderIconDefault))
 	}
-	if got := directoryIconGlyph(dir, th, "", false, 0, false, false, true, true); got != diskUsageExcludedFolderGlyph {
-		t.Fatalf("excluded glyph = %q, want %q", got, diskUsageExcludedFolderGlyph)
+	if got := directoryIconGlyph(dir, th, "", false, 0, false, false, true, true); got != th.FolderIconGlyph(theme.FolderIconExcluded) {
+		t.Fatalf("excluded glyph = %q, want %q", got, th.FolderIconGlyph(theme.FolderIconExcluded))
 	}
 }
 
@@ -70,7 +70,7 @@ func TestPaintPanelIconStripOpenDirectory(t *testing.T) {
 	rowStyle := th.PanelListingEntryStyle(localfs.EntryDirectory, false)
 	paintPanelIconStrip(screen, 0, 1, entry, rowStyle, th, "", false, false, false, "/tmp/child", false, 0, false)
 
-	openRune := []rune(th.SymbolFoldersOpen())[0]
+	openRune := []rune(th.FolderIconGlyph(theme.FolderIconOpen))[0]
 	main, style, _ := screen.Get(0, 1)
 	gotRune, _ := utf8.DecodeRuneInString(main)
 	if gotRune != openRune {
@@ -96,7 +96,7 @@ func TestPaintPanelIconStripDefaultDirectory(t *testing.T) {
 	rowStyle := th.PanelListingEntryStyle(localfs.EntryDirectory, false)
 	paintPanelIconStrip(screen, 0, 1, entry, rowStyle, th, "", false, false, false, "", false, 0, false)
 
-	folderRune := []rune(th.SymbolFoldersFolder())[0]
+	folderRune := []rune(th.FolderIconGlyph(theme.FolderIconDefault))[0]
 	main, _, _ := screen.Get(0, 1)
 	gotRune, _ := utf8.DecodeRuneInString(main)
 	if gotRune != folderRune {
@@ -119,7 +119,7 @@ func TestPaintPanelIconStripFileStillUsesDevicon(t *testing.T) {
 
 	main, _, _ := screen.Get(0, 1)
 	gotRune, _ := utf8.DecodeRuneInString(main)
-	if gotRune == []rune(th.SymbolFoldersFolder())[0] {
+	if gotRune == []rune(th.FolderIconGlyph(theme.FolderIconDefault))[0] {
 		t.Fatal("file row should not use folder theme glyph")
 	}
 }

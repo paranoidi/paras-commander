@@ -6624,7 +6624,7 @@ func TestQuickViewDirDoesNotMoveOpenInOtherPanelIndicator(t *testing.T) {
 	app.reconcileAfterEvent()
 	app.render()
 
-	openGlyph := app.styles.SymbolFoldersOpen()
+	openGlyph := app.styles.FolderIconGlyph(theme.FolderIconOpen)
 	w, _ := screen.Size()
 	leftHalf := w / 2
 	var childRowHasOpen, alphaRowHasOpen bool

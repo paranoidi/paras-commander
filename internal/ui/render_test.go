@@ -115,7 +115,7 @@ func TestRenderDrawsOpenInOtherPanelIcon(t *testing.T) {
 	const width, height = 80, 12
 	screen.SetSize(width, height)
 
-	openGlyph := theme.Default().SymbolFoldersOpen()
+	openGlyph := theme.Default().FolderIconGlyph(theme.FolderIconOpen)
 	model := Model{
 		Left: panel.State{
 			Path: pathloc.MustParse("/tmp"),

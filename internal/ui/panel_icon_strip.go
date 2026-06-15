@@ -15,10 +15,6 @@ const panelIconStripCells = 2
 // panelIconListLeadingGutter is blank cells between the left panel border and the icon strip when icons are on.
 const panelIconListLeadingGutter = 1
 
-// diskUsageExcludedFolderGlyph marks directories skipped by disk-usage traversal (always this glyph).
-// panel.folder.diskscan_excluded grey applies only when disk-usage metering is active for the panel.
-const diskUsageExcludedFolderGlyph = "\uf114"
-
 // panelDeviconForeground picks the file-icon color: theme cursor override, else devicon hex, else row FG.
 // diskExcludedGrey applies panel.folder.diskscan_excluded only when disk-usage metering is active for this panel.
 func panelDeviconForeground(rowStyle tcell.Style, deviconHex string, th theme.Theme, cursorStyleKey string, diskPending, diskExcludedGrey, openInOther, onOtherMount bool) tcell.Color {
@@ -63,19 +59,19 @@ func directoryIconGlyph(
 	listingDevValid bool,
 	diskPending, diskExcluded, diskUsageChrome bool,
 ) string {
-	if diskExcluded && diskUsageChrome {
-		return diskUsageExcludedFolderGlyph
+	kind, ok := panellist.ResolveFolderIconKind(entry, panellist.FolderIconContext{
+		OtherPanelPath:         otherPanelPath,
+		DescendIntoMountPoints: descendIntoMountPoints,
+		ListingDev:             listingDev,
+		ListingDevValid:        listingDevValid,
+		DiskPending:            diskPending,
+		DiskExcluded:           diskExcluded,
+		DiskUsageChrome:        diskUsageChrome,
+	})
+	if !ok {
+		return ""
 	}
-	if diskPending {
-		return th.SymbolFoldersScanning()
-	}
-	if panellist.EntryOpenInOtherPanel(entry, otherPanelPath) {
-		return th.SymbolFoldersOpen()
-	}
-	if panellist.EntryOnOtherMount(entry, descendIntoMountPoints, listingDev, listingDevValid) {
-		return th.SymbolFoldersMount()
-	}
-	return th.SymbolFoldersFolder()
+	return th.FolderIconGlyph(kind)
 }
 
 func paintPanelIconStrip(

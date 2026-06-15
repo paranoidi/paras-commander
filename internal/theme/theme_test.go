@@ -17,17 +17,20 @@ func TestDefaultFilelistSymbols(t *testing.T) {
 	if g := th.SymbolFilelistNew(); g != '\uea7f' {
 		t.Fatalf("SymbolFilelistNew = %U, want U+EA7F", g)
 	}
-	if g := th.SymbolFoldersFolder(); g != "\U000F024B" {
-		t.Fatalf("SymbolFoldersFolder = %q, want U+F024B", g)
+	if g := th.FolderIconGlyph(FolderIconDefault); g != "\U000F024B" {
+		t.Fatalf("FolderIconGlyph(Default) = %q, want U+F024B", g)
 	}
-	if g := th.SymbolFoldersOpen(); g != "\U000F0770" {
-		t.Fatalf("SymbolFoldersOpen = %q, want U+F0770", g)
+	if g := th.FolderIconGlyph(FolderIconOpen); g != "\U000F0770" {
+		t.Fatalf("FolderIconGlyph(Open) = %q, want U+F0770", g)
 	}
-	if g := th.SymbolFoldersScanning(); g != "\U000F0D0B" {
-		t.Fatalf("SymbolFoldersScanning = %q, want U+F0D0B", g)
+	if g := th.FolderIconGlyph(FolderIconScanning); g != "\U000F0D0B" {
+		t.Fatalf("FolderIconGlyph(Scanning) = %q, want U+F0D0B", g)
 	}
-	if g := th.SymbolFoldersMount(); g != "\U000F0256" {
-		t.Fatalf("SymbolFoldersMount = %q, want U+F0256", g)
+	if g := th.FolderIconGlyph(FolderIconMount); g != "\U000F0256" {
+		t.Fatalf("FolderIconGlyph(Mount) = %q, want U+F0256", g)
+	}
+	if g := th.FolderIconGlyph(FolderIconExcluded); g != "\uf114" {
+		t.Fatalf("FolderIconGlyph(Excluded) = %q, want U+F114", g)
 	}
 	if g := th.SymbolScrollbarThumb(); g != '\u2503' {
 		t.Fatalf("SymbolScrollbarThumb = %q, want ┃", string(g))

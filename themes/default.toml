@@ -216,6 +216,7 @@ folder = "\U000F024B"
 open = "\U000F0770"
 scanning = "\U000F0D0B"
 mount = "\U000F0256"
+excluded = "\uf114"
 
 [symbols.scrollbar]
 thumb = "┃"

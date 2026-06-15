@@ -391,6 +391,7 @@ const (
 	SymbolKeyFoldersOpen              = "folders.open"
 	SymbolKeyFoldersScanning          = "folders.scanning"
 	SymbolKeyFoldersMount             = "folders.mount"
+	SymbolKeyFoldersExcluded          = "folders.excluded"
 	SymbolKeyScrollbarThumb           = "scrollbar.thumb"
 	SymbolKeyMetaRunning              = "meta.running"
 )
@@ -467,26 +468,6 @@ func (t Theme) SymbolFilelistSelectionSubtree() rune {
 // SymbolFilelistNew returns the recently-transferred file suffix glyph.
 func (t Theme) SymbolFilelistNew() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistNew, '\uea7f')
-}
-
-// SymbolFoldersFolder returns the default closed-directory icon-strip glyph.
-func (t Theme) SymbolFoldersFolder() string {
-	return t.foldersSymbol(SymbolKeyFoldersFolder, "\U000F024B")
-}
-
-// SymbolFoldersOpen returns the other-panel-open directory icon-strip glyph.
-func (t Theme) SymbolFoldersOpen() string {
-	return t.foldersSymbol(SymbolKeyFoldersOpen, "\U000F0770")
-}
-
-// SymbolFoldersScanning returns the disk-scan-pending directory icon-strip glyph.
-func (t Theme) SymbolFoldersScanning() string {
-	return t.foldersSymbol(SymbolKeyFoldersScanning, "\U000F0D0B")
-}
-
-// SymbolFoldersMount returns the other-mount directory icon-strip glyph.
-func (t Theme) SymbolFoldersMount() string {
-	return t.foldersSymbol(SymbolKeyFoldersMount, "\U000F0256")
 }
 
 // SymbolScrollbarThumb returns the panel scrollbar thumb-style position glyph.
