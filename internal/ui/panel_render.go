@@ -179,7 +179,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			OtherPanelPath:        otherPanelPath,
 			ScrollbarStyle:        scrollbarStyle,
 			ScrollbarShowInactive: scrollbarShowInactive,
-			FrameStyle:            borderStyle,
+			InactiveFrameStyle:    styles.PanelInactiveFrame,
 			JobMark: func(path string) (rune, string, bool) {
 				marked, st := EntryPathJobMarkStatus(path, jobMarks)
 				if !marked {
@@ -199,6 +199,11 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				return state.NewFileMarkTier(entry)
 			},
 		})
+		if !showChildCol {
+			drawPanelListScrollbar(screen, rect, rect.Y+2, visibleRows, state.VisibleEntryCount(), state.ScrollOffset,
+				scrollbarStyle, panelScrollbarShow(fileListActive, scrollbarShowInactive),
+				fileListActive, chromeBlocked, borderStyle, styles)
+		}
 		if selectionSizeLabel != "" {
 			drawPanelBottomSelectionSize(screen, rect, panelID, bottomCtx)
 		} else {

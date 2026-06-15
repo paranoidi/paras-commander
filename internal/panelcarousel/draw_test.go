@@ -1,6 +1,7 @@
 package panelcarousel
 
 import (
+	"fmt"
 	"testing"
 	"unicode/utf8"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 func TestSubtreeSelectionMarkUsesSelectedForeground(t *testing.T) {
@@ -71,5 +73,117 @@ func TestSubtreeSelectionMarkUsesSelectedForeground(t *testing.T) {
 	gotFG, _, _ := markStyle.Decompose()
 	if gotFG != wantFG {
 		t.Fatalf("○ foreground = %v, want cursor-row icon %v", gotFG, wantFG)
+	}
+}
+
+func TestCenterScrollbarUsesInactiveFrameBetweenColumns(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	wantInactiveFG, _, _ := styles.PanelInactiveFrame.Decompose()
+
+	scrollableEntries := func(withSubdir bool) []localfs.Entry {
+		entries := make([]localfs.Entry, 40)
+		for i := range entries {
+			name := fmt.Sprintf("file-%03d", i)
+			entries[i] = localfs.Entry{Name: name, Path: "/vol/" + name, Type: localfs.EntryFile}
+		}
+		if withSubdir {
+			return append([]localfs.Entry{
+				{Name: "birch", Path: "/vol/birch", Type: localfs.EntryDirectory},
+			}, entries...)
+		}
+		return entries
+	}
+
+	frame := geom.Rect{X: 0, Y: 0, Width: 92, Height: 18}
+	centerTrackFG := func(t *testing.T, center panel.State, showChild bool) tcell.Color {
+		t.Helper()
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init: %v", err)
+		}
+		t.Cleanup(screen.Fini)
+		screen.SetSize(frame.Width, frame.Height)
+
+		DrawBody(screen, BodyParams{
+			Frame:                 frame,
+			Center:                center,
+			Styles:                styles,
+			FileListActive:        true,
+			ShowIcons:             false,
+			HeaderStyle:           styles.PanelActiveHeader,
+			HeaderCarouselStyle:   styles.PanelActiveHeaderCarousel,
+			SurfaceStyle:          styles.PanelActiveSurface,
+			ShowChildColumn:       showChild,
+			ScrollbarStyle:        uiscrollbar.StyleThumb,
+			ScrollbarShowInactive: true,
+			InactiveFrameStyle:    styles.PanelInactiveFrame,
+		})
+
+		cols := SplitColumns(frame, showChild)
+		sbX := cols[1].X + cols[1].Width - 1
+		listY := cols[1].Y
+		for row := 0; row < geom.PanelListRows(frame); row++ {
+			ch, style, _ := screen.Get(sbX, listY+row)
+			r, _ := utf8.DecodeRuneInString(ch)
+			if r == '│' {
+				fg, _, _ := style.Decompose()
+				return fg
+			}
+		}
+		t.Fatal("center scrollbar track │ not found")
+		return tcell.ColorDefault
+	}
+
+	filesOnly := panel.State{
+		Path:         pathloc.MustParse("/vol"),
+		Entries:      scrollableEntries(false),
+		Cursor:       20,
+		ScrollOffset: 15,
+	}
+	if ShowChildPreviewColumn(filesOnly, false) {
+		t.Fatal("files-only fixture should hide child column")
+	}
+	cols := SplitColumns(frame, false)
+	sbX := cols[1].X + cols[1].Width - 1
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(frame.Width, frame.Height)
+	DrawBody(screen, BodyParams{
+		Frame:                 frame,
+		Center:                filesOnly,
+		Styles:                styles,
+		FileListActive:        true,
+		ShowIcons:             false,
+		HeaderStyle:           styles.PanelActiveHeader,
+		HeaderCarouselStyle:   styles.PanelActiveHeaderCarousel,
+		SurfaceStyle:          styles.PanelActiveSurface,
+		ShowChildColumn:       false,
+		ScrollbarStyle:        uiscrollbar.StyleThumb,
+		ScrollbarShowInactive: true,
+		InactiveFrameStyle:    styles.PanelInactiveFrame,
+	})
+	for row := 0; row < geom.PanelListRows(frame); row++ {
+		ch, _, _ := screen.Get(sbX, cols[1].Y+row)
+		r, _ := utf8.DecodeRuneInString(ch)
+		if r == '│' || r == styles.SymbolScrollbarThumb() {
+			t.Fatalf("two-column DrawBody should not paint scrollbar at center column edge, got %q", ch)
+		}
+	}
+
+	withSubdir := panel.State{
+		Path:         pathloc.MustParse("/vol"),
+		Entries:      scrollableEntries(true),
+		Cursor:       20,
+		ScrollOffset: 15,
+	}
+	if !ShowChildPreviewColumn(withSubdir, false) {
+		t.Fatal("subdir fixture should show child column")
+	}
+	if got := centerTrackFG(t, withSubdir, true); got != wantInactiveFG {
+		t.Fatalf("three-column center track fg = %v, want inactive frame %v", got, wantInactiveFG)
 	}
 }

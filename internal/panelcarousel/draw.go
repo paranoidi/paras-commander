@@ -41,7 +41,7 @@ type BodyParams struct {
 	OtherPanelPath        string
 	ScrollbarStyle        uiscrollbar.Style
 	ScrollbarShowInactive bool
-	FrameStyle            tcell.Style
+	InactiveFrameStyle    tcell.Style
 }
 
 // DrawBody paints the column header row and three listing columns.
@@ -220,7 +220,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 				return blendCell(nameColOffset + ci)
 			}, spans)
 		}
-		if c.Populated {
+		if c.Populated && (!c.Active || inactive || p.ShowChildColumn) {
 			var total, offset int
 			if c.Active {
 				total = len(p.Center.Entries)
@@ -241,7 +241,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 					Style:      p.ScrollbarStyle,
 					Active:     columnActive,
 					Blocked:    p.ChromeBlocked,
-					FrameStyle: p.FrameStyle,
+					FrameStyle: p.InactiveFrameStyle,
 					Theme:      p.Styles,
 				})
 			}

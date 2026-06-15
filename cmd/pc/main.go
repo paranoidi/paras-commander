@@ -43,7 +43,7 @@ func run(args []string, stderr, stdout io.Writer) error {
 	flags.BoolVar(&showVersion, "v", false, "print version and exit")
 	configStub := flags.Bool("config-stub", false, "write example config files to ~/.config/pc/ (optional directory argument) and exit")
 	devMode := flags.Bool("dev", false, "enable Dev pulldown menu with test helpers")
-	chooserFile := flags.String("chooser-file", "", "write selected file path on Enter and exit (Helix integration)")
+	chooserFile := flags.String("chooser-file", "", "write selected file path on Enter and exit (integration with other tools)")
 	selectPath := flags.String("select", "", "file or directory to open and highlight at startup (chooser mode)")
 	noCarousel := flags.Bool("no-carousel", false, "disable carousel view on the left panel at startup (chooser mode only)")
 	if err := flags.Parse(args); err != nil {
