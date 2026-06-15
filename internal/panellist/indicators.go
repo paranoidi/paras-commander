@@ -128,13 +128,13 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, jobStatus, cursorStyleKey string,
 		if suffix.NewFileTier == NewFileMarkPrevious {
 			base = th.PanelRowIndicatorNewPrevious
 		}
-		return tcell.StyleDefault.Foreground(th.PanelRowSuffixIconForeground(cursorStyleKey, base)), true
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == th.SymbolFilelistSelectionSubtree() && suffix.SubtreeSelection:
 		base := th.PanelRowIndicatorSelectionSubtree
 		if chromeBlocked {
 			base = th.PanelBlockedRowSelected
 		}
-		return tcell.StyleDefault.Foreground(th.PanelRowSuffixIconForeground(cursorStyleKey, base)), true
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	default:
 		return tcell.StyleDefault, false
 	}

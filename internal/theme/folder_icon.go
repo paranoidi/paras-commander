@@ -45,9 +45,9 @@ func (t Theme) FolderIconForeground(kind FolderIconKind, cursorStyleKey string, 
 			return dfg
 		}
 	case FolderIconOpen:
-		return t.PanelRowSuffixIconForeground(cursorStyleKey, t.PanelIconFolderOpen)
+		return t.PanelRowIconForeground(cursorStyleKey, t.PanelIconFolderOpen)
 	case FolderIconMount:
-		return t.PanelRowSuffixIconForeground(cursorStyleKey, t.PanelIconFolderMount)
+		return t.PanelRowIconForeground(cursorStyleKey, t.PanelIconFolderMount)
 	case FolderIconExcluded:
 		efg, _, _ := t.PanelIconFolderExcluded.Decompose()
 		if efg != tcell.ColorDefault {
@@ -55,7 +55,7 @@ func (t Theme) FolderIconForeground(kind FolderIconKind, cursorStyleKey string, 
 		}
 	case FolderIconDefault:
 		if dfg, _, _ := t.PanelIconFolderDefault.Decompose(); dfg != tcell.ColorDefault {
-			return t.PanelRowSuffixIconForeground(cursorStyleKey, t.PanelIconFolderDefault)
+			return t.PanelRowIconForeground(cursorStyleKey, t.PanelIconFolderDefault)
 		}
 		return rowFG
 	}

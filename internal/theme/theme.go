@@ -212,10 +212,10 @@ type Theme struct {
 	FooterLabelShift tcell.Style
 }
 
-// PanelRowSuffixIconForeground returns the foreground for file-list row suffix glyphs
-// ([symbols.filelist]) on the cursor row when the matching panel.*.row.cursor style
-// defines icon; otherwise the base indicator style foreground is used.
-func (t Theme) PanelRowSuffixIconForeground(cursorStyleKey string, base tcell.Style) tcell.Color {
+// PanelRowIconForeground returns the foreground for cursor-row adornment icons: file-list
+// suffix glyphs, folder icon strip, and file devicons when the matching panel.*.row.cursor
+// style defines icon; otherwise the base indicator style foreground is used.
+func (t Theme) PanelRowIconForeground(cursorStyleKey string, base tcell.Style) tcell.Color {
 	if cursorStyleKey != "" && t.PanelFileIconFG != nil {
 		if c, ok := t.PanelFileIconFG[cursorStyleKey]; ok {
 			return c
