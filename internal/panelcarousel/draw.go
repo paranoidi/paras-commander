@@ -73,7 +73,8 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 		hasLane := columnHasScrollbarLane(c, inactive, p.ShowChildColumn)
 		columnActive := p.FileListActive && c.Active && !inactive
 		showSB := columnActive || p.ScrollbarShowInactive
-		reserve := columnScrollbarReserve(hasLane && showSB, p.ScrollbarStyle != uiscrollbar.StyleNone)
+		total, offset := columnListingMetrics(c, p.Center)
+		reserve := columnScrollbarReserve(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset)
 		listTextWidth := columnListTextWidth(col.Width, p.ShowIcons, reserve)
 		var hdr string
 		switch i {
@@ -117,7 +118,8 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 		hasLane := columnHasScrollbarLane(c, inactive, p.ShowChildColumn)
 		columnActive := p.FileListActive && c.Active && !inactive
 		showSB := columnActive || p.ScrollbarShowInactive
-		reserve := columnScrollbarReserve(hasLane && showSB, p.ScrollbarStyle != uiscrollbar.StyleNone)
+		total, offset := columnListingMetrics(c, p.Center)
+		reserve := columnScrollbarReserve(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset)
 		var diskDenom int64
 		if p.DiskUsage.Active && p.DiskUsage.Source != nil {
 			var denomEntries []localfs.Entry
@@ -248,29 +250,20 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 				return blendCell(nameColOffset + ci)
 			}, spans)
 		}
-		if hasLane && showSB && p.ScrollbarStyle != uiscrollbar.StyleNone {
-			var total, offset int
-			if c.Active {
-				total = len(p.Center.Entries)
-				offset = p.Center.ScrollOffset
-			} else {
-				total = len(c.Snapshot.Entries)
-				offset = c.Snapshot.Scroll
-			}
-			if metrics, ok := uiscrollbar.ComputeMetrics(total, visibleRows, offset); ok {
-				uiscrollbar.Draw(uiscrollbar.DrawParams{
-					Screen:     screen,
-					X:          col.X + col.Width - 1,
-					ListTopY:   col.Y,
-					Visible:    visibleRows,
-					Metrics:    metrics,
-					Style:      p.ScrollbarStyle,
-					Active:     columnActive,
-					Blocked:    p.ChromeBlocked,
-					FrameStyle: p.InactiveFrameStyle,
-					Theme:      p.Styles,
-				})
-			}
+		if columnScrollbarNeeded(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset) {
+			metrics, _ := uiscrollbar.ComputeMetrics(total, visibleRows, offset)
+			uiscrollbar.Draw(uiscrollbar.DrawParams{
+				Screen:     screen,
+				X:          col.X + col.Width - 1,
+				ListTopY:   col.Y,
+				Visible:    visibleRows,
+				Metrics:    metrics,
+				Style:      p.ScrollbarStyle,
+				Active:     columnActive,
+				Blocked:    p.ChromeBlocked,
+				FrameStyle: p.InactiveFrameStyle,
+				Theme:      p.Styles,
+			})
 		}
 	}
 

@@ -52,14 +52,22 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 	if quickViewChrome {
 		endLabel := ""
 		if tb := strings.TrimSpace(st.TitleBase); tb != "" {
-			endLabel = " " + tb + " "
+			if st.BodyHeld {
+				endLabel = " " + tb + "… "
+			} else {
+				endLabel = " " + tb + " "
+			}
 		}
 		paintPanelTopTitleRow(screen, titleX, innerRight, contentCols, rect.Y,
 			panelPath, userHomeDir, titleStyle, endLabel, titleStyle, borderStyle, false)
 	} else {
 		title := " Preview "
 		if tb := strings.TrimSpace(st.TitleBase); tb != "" {
-			title = " " + tb + " "
+			if st.BodyHeld {
+				title = " " + tb + "… "
+			} else {
+				title = " " + tb + " "
+			}
 		}
 		titleWidth := rect.Width - 4
 		if embedded {
@@ -89,8 +97,10 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 
 	switch st.Phase {
 	case FilePreviewPhasePending, FilePreviewPhaseRunning:
-		primitive.Text(screen, textX, contentTop, textW, "Loading…", body)
-		return
+		if !st.BodyHeld {
+			primitive.Text(screen, textX, contentTop, textW, "Loading…", body)
+			return
+		}
 	}
 
 	if msg := strings.TrimSpace(st.ErrorMsg); msg != "" {

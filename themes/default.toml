@@ -109,7 +109,7 @@ row.cursor.selected = { fg = "yellow", bg = "black", bold = true }
 disk_usage_overview = { fg = "bright_black"}
 frame = { fg = "bright_black" }
 header = { fg = "bright_white", bg = "blue", bold = true }
-header.carousel = { fg = "bright_white", bg = "bright_black", bold = true }
+header.carousel = { fg = "black", bg = "bright_black" }
 row.cursor = { fg = "white", bg = "black" }
 row.cursor.selected = { fg = "yellow", bg = "cyan", bold = true }
 surface = { fg = "white" }
@@ -121,7 +121,7 @@ usage.cursor.selected = { fg = "yellow", bg = "bright_blue", bold = true }
 disk_usage_overview = { fg = "bright_black" }
 frame = { fg = "bright_black" }
 header = { fg = "bright_black", bold = true }
-header.carousel = { fg = "bright_black", bg = "bright_black", bold = true }
+header.carousel = { fg = "bright_black", bg = "default", bold = true }
 row.cursor = { fg = "white", bg = "black" }
 row.cursor.selected = { fg = "white" }
 row.directory = { fg = "bright_black", bold = true }

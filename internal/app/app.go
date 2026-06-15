@@ -154,6 +154,12 @@ type App struct {
 	carouselPreviewNavSkipSnapshot atomic.Bool
 	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postCommandWake).
 	filePreviewRunGen atomic.Uint64
+	// filePreviewHold keeps the last completed inactive-column preview for stale-while-revalidate draws.
+	filePreviewHold ui.FilePreviewState
+	// fullscreenFilePreviewHold keeps the last completed F3 preview body while the next file loads.
+	fullscreenFilePreviewHold ui.FilePreviewState
+	// carouselFilePreviewHold keeps the last completed carousel child preview body while loading.
+	carouselFilePreviewHold ui.FilePreviewState
 	// carouselFilePreviewRunGen invalidates in-flight carousel child-column preview subprocess completions.
 	carouselFilePreviewRunGen atomic.Uint64
 	// carouselFilePreviewLastFingerprint tracks the last carousel file preview highlight for debouncing.

@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 func TestCarouselHeaderAlignsWithRowText(t *testing.T) {
@@ -54,5 +55,15 @@ func TestColumnListTextWidthReservesScrollbarLane(t *testing.T) {
 	const colWidth = 30
 	if got := columnListTextWidth(colWidth, false, 1); got != colWidth-1 {
 		t.Fatalf("with scrollbar reserve got %d, want %d", got, colWidth-1)
+	}
+}
+
+func TestColumnScrollbarReserveOnlyWhenScrollNeeded(t *testing.T) {
+	t.Parallel()
+	if got := columnScrollbarReserve(true, true, uiscrollbar.StyleThumb, 5, 10, 0); got != 0 {
+		t.Fatalf("short list reserve = %d, want 0", got)
+	}
+	if got := columnScrollbarReserve(true, true, uiscrollbar.StyleThumb, 40, 10, 15); got != 1 {
+		t.Fatalf("scrollable list reserve = %d, want 1", got)
 	}
 }

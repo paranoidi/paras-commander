@@ -1,8 +1,6 @@
 package app
 
 import (
-	"strings"
-
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -38,13 +36,7 @@ func (a *App) fullscreenFilePreviewLayoutMetrics() (textW, contentH int, ok bool
 }
 
 func filePreviewWarmCandidate(st ui.FilePreviewState) bool {
-	if !st.Open || st.Phase != ui.FilePreviewPhaseDone || strings.TrimSpace(st.ErrorMsg) != "" {
-		return false
-	}
-	if strings.TrimSpace(st.CombinedText) == "" && st.ExitCode == 0 {
-		return false
-	}
-	return true
+	return ui.FilePreviewDrawWarmCandidate(st)
 }
 
 func warmFilePreviewCopy(st ui.FilePreviewState, textW int, base tcell.Style) ui.FilePreviewState {
@@ -66,6 +58,10 @@ func (a *App) snapshotPreviewDrawStates() {
 	fullscreen = a.model.FullscreenFilePreview
 	carousel = a.model.CarouselFilePreview
 	a.commandsMu.RUnlock()
+
+	inactive = ui.MergeFilePreviewDrawWithHold(inactive, a.filePreviewHold)
+	fullscreen = ui.MergeFilePreviewDrawWithHold(fullscreen, a.fullscreenFilePreviewHold)
+	carousel = ui.MergeFilePreviewDrawWithHold(carousel, a.carouselFilePreviewHold)
 
 	if inactive.Open {
 		tw, _, ok := a.inactivePanelPreviewLayoutMetrics(inactive.Open || a.model.QuickViewDisplayActive())
@@ -112,9 +108,9 @@ func (a *App) snapshotPreviewDrawStates() {
 	if warmCarousel {
 		a.model.CarouselFilePreview.WrapCacheSnapshot(carousel)
 	}
-	a.model.FilePreviewDraw = a.model.FilePreview
-	a.model.CarouselFilePreviewDraw = a.model.CarouselFilePreview
-	a.model.FullscreenFilePreviewDraw = a.model.FullscreenFilePreview
+	a.model.FilePreviewDraw = inactive
+	a.model.CarouselFilePreviewDraw = carousel
+	a.model.FullscreenFilePreviewDraw = fullscreen
 	a.commandsMu.Unlock()
 }
 

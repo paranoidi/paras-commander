@@ -55,6 +55,7 @@ func (a *App) closeFilePreview() {
 	a.commandsMu.Lock()
 	a.model.FilePreview = ui.FilePreviewState{}
 	a.commandsMu.Unlock()
+	a.clearFilePreviewHold(previewTargetInactive)
 	if a.model.ActiveSubFocus == ui.SubFocusInactivePreview {
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 	}
@@ -514,6 +515,7 @@ func (a *App) applyQuickViewPreviewNow() {
 			return
 		}
 		titleBase := filepath.Base(path)
+		a.captureFilePreviewHold(previewTargetInactive)
 		a.patchFilePreview(func(st *ui.FilePreviewState) {
 			st.Open = true
 			st.Phase = ui.FilePreviewPhasePending

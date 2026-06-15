@@ -187,3 +187,76 @@ func TestCenterScrollbarUsesInactiveFrameBetweenColumns(t *testing.T) {
 		t.Fatalf("three-column center track fg = %v, want inactive frame %v", got, wantInactiveFG)
 	}
 }
+
+func TestCarouselNoScrollbarLaneWhenListFits(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+
+	entries := []localfs.Entry{
+		{Name: "birch", Path: "/vol/birch", Type: localfs.EntryDirectory},
+		{Name: "cedar.txt", Path: "/vol/cedar.txt", Type: localfs.EntryFile, Size: 1024},
+	}
+	center := panel.State{
+		Path:    pathloc.MustParse("/vol"),
+		Entries: entries,
+		Cursor:  0,
+	}
+	frame := geom.Rect{X: 0, Y: 0, Width: 92, Height: 18}
+	screen.SetSize(frame.Width, frame.Height)
+	styles := theme.Default()
+	parent := Column{Kind: ColumnParent, Populated: true, Snapshot: panel.ListingSnapshot{Entries: entries}}
+	child := Column{Kind: ColumnChild, Populated: true, Snapshot: panel.ListingSnapshot{Entries: entries}}
+
+	DrawBody(screen, BodyParams{
+		Frame:                 frame,
+		Center:                center,
+		Parent:                parent,
+		Child:                 child,
+		Styles:                styles,
+		FileListActive:        true,
+		ShowIcons:             false,
+		HeaderStyle:           styles.PanelActiveHeader,
+		HeaderCarouselStyle:   styles.PanelActiveHeaderCarousel,
+		SurfaceStyle:          styles.PanelActiveSurface,
+		ShowChildColumn:       true,
+		ScrollbarStyle:        uiscrollbar.StyleThumb,
+		ScrollbarShowInactive: true,
+		InactiveFrameStyle:    styles.PanelInactiveFrame,
+	})
+
+	cols := SplitColumns(frame, true)
+	col := cols[1]
+	reserve := columnScrollbarReserve(
+		columnHasScrollbarLane(Column{Kind: ColumnCenter, Populated: true, Active: true}, false, true),
+		true,
+		uiscrollbar.StyleThumb,
+		len(center.Entries),
+		geom.PanelListRows(frame),
+		center.ScrollOffset,
+	)
+	if reserve != 0 {
+		t.Fatalf("center reserve = %d, want 0 when list fits", reserve)
+	}
+	listW := columnListTextWidth(col.Width, false, reserve)
+	if listW != col.Width {
+		t.Fatalf("center list width = %d, want full column width %d", listW, col.Width)
+	}
+	rowY := col.Y
+	rightX := col.X + col.Width - 1
+	cell, style, _ := screen.Get(rightX, rowY)
+	r, _ := utf8.DecodeRuneInString(cell)
+	if r == '│' || r == styles.SymbolScrollbarThumb() {
+		t.Fatalf("center column right edge at (%d,%d) is scrollbar %q", rightX, rowY, cell)
+	}
+	_, surfaceBG, _ := styles.PanelActiveSurface.Decompose()
+	_, rightBG, _ := style.Decompose()
+	_, innerStyle, _ := screen.Get(rightX-1, rowY)
+	_, innerBG, _ := innerStyle.Decompose()
+	if rightBG == surfaceBG && innerBG != surfaceBG {
+		t.Fatalf("center column right edge looks like an empty scrollbar lane")
+	}
+}

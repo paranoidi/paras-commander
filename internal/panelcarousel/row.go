@@ -6,9 +6,11 @@ import (
 	"strconv"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 const listSizeCells = 5
@@ -121,9 +123,26 @@ func columnHasScrollbarLane(c Column, inactive, showChild bool) bool {
 	return c.Populated && (!c.Active || inactive || showChild)
 }
 
+// columnListingMetrics returns scroll inputs for one carousel column.
+func columnListingMetrics(c Column, center panel.State) (total, offset int) {
+	if c.Active {
+		return len(center.Entries), center.ScrollOffset
+	}
+	return len(c.Snapshot.Entries), c.Snapshot.Scroll
+}
+
+// columnScrollbarNeeded reports whether a vertical scrollbar is painted in the column lane.
+func columnScrollbarNeeded(hasLane, showSB bool, style uiscrollbar.Style, total, visibleRows, offset int) bool {
+	if !hasLane || !showSB || style == uiscrollbar.StyleNone {
+		return false
+	}
+	_, ok := uiscrollbar.ComputeMetrics(total, visibleRows, offset)
+	return ok
+}
+
 // columnScrollbarReserve returns list cells withheld for the column scrollbar (0 or 1).
-func columnScrollbarReserve(hasLane bool, scrollbarEnabled bool) int {
-	if hasLane && scrollbarEnabled {
+func columnScrollbarReserve(hasLane, showSB bool, style uiscrollbar.Style, total, visibleRows, offset int) int {
+	if columnScrollbarNeeded(hasLane, showSB, style, total, visibleRows, offset) {
 		return 1
 	}
 	return 0
@@ -147,11 +166,14 @@ func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int) int 
 }
 
 // CenterNameWidth returns the name-column width for the carousel center column.
-func CenterNameWidth(frame geom.Rect, showIcons bool, showChild bool) int {
+func CenterNameWidth(frame geom.Rect, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int) int {
 	cols := SplitColumns(frame, showChild)
 	if len(cols) < 2 {
 		return 1
 	}
-	reserve := columnScrollbarReserve(showChild, true)
+	c := Column{Kind: ColumnCenter, Populated: true, Active: true}
+	hasLane := columnHasScrollbarLane(c, false, showChild)
+	total, offset := columnListingMetrics(c, center)
+	reserve := columnScrollbarReserve(hasLane, true, style, total, visibleRows, offset)
 	return nameWidthForColumn(cols[1].Width, showIcons, reserve)
 }

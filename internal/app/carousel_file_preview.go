@@ -15,6 +15,7 @@ func (a *App) closeCarouselFilePreview() {
 	a.commandsMu.Lock()
 	a.model.CarouselFilePreview = ui.FilePreviewState{}
 	a.commandsMu.Unlock()
+	a.clearFilePreviewHold(previewTargetCarousel)
 	a.carouselFilePreviewRunGen.Add(1)
 	a.carouselFilePreviewLastFingerprint = ""
 }
@@ -177,6 +178,7 @@ func (a *App) applyCarouselFilePreviewNow() {
 		return
 	}
 	titleBase := filepath.Base(path)
+	a.captureFilePreviewHold(previewTargetCarousel)
 	a.patchCarouselFilePreview(func(st *ui.FilePreviewState) {
 		st.Open = true
 		st.Phase = ui.FilePreviewPhasePending

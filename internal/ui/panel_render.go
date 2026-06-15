@@ -225,7 +225,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		if selectionSizeLabel != "" {
 			drawPanelBottomSelectionSize(screen, rect, panelID, bottomCtx)
 		} else {
-			drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, panelcarousel.CenterNameWidth(rect, showIcons, showChildCol), jobMarks)
+			drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, panelcarousel.CenterNameWidth(rect, state, showIcons, showChildCol, scrollbarStyle, visibleRows), jobMarks)
 		}
 		return
 	}

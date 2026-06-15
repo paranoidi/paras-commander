@@ -26,6 +26,9 @@ type FilePreviewState struct {
 	ExitCode int
 	// ErrorMsg is set for launch failures or when PhaseDone with non-zero exit (optional message).
 	ErrorMsg string
+	// BodyHeld is set on draw snapshots while a new file loads: body text comes from the previous
+	// preview and TitleBase reflects the file being loaded (with a loading suffix in the title row).
+	BodyHeld bool
 
 	// Wrapped-line cache (invalid when CombinedText, wrapWidth, or wrapStyleKey mismatch).
 	wrappedLines     [][]AnsiCell
