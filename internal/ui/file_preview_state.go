@@ -26,4 +26,29 @@ type FilePreviewState struct {
 	ExitCode int
 	// ErrorMsg is set for launch failures or when PhaseDone with non-zero exit (optional message).
 	ErrorMsg string
+
+	// Wrapped-line cache (invalid when CombinedText, wrapWidth, or wrapStyleKey mismatch).
+	wrappedLines     [][]AnsiCell
+	wrapWidth        int
+	wrapStyleKey     uint64
+	wrapCombinedText string
+}
+
+// WrapCacheSnapshot copies the wrapped-line cache from src when it matches this state's CombinedText.
+func (st *FilePreviewState) WrapCacheSnapshot(src FilePreviewState) {
+	if src.wrapCombinedText != st.CombinedText {
+		return
+	}
+	st.wrappedLines = src.wrappedLines
+	st.wrapWidth = src.wrapWidth
+	st.wrapStyleKey = src.wrapStyleKey
+	st.wrapCombinedText = src.wrapCombinedText
+}
+
+// CachedWrappedLineCount returns len(wrappedLines) when the layout cache matches textWidth.
+func (st *FilePreviewState) CachedWrappedLineCount(textWidth int) (count int, ok bool) {
+	if st.wrappedLines != nil && st.wrapWidth == textWidth && st.wrapCombinedText == st.CombinedText {
+		return len(st.wrappedLines), true
+	}
+	return 0, false
 }

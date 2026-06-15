@@ -109,8 +109,7 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 		return
 	}
 
-	cells := AnsiStyledCells(st.CombinedText, body)
-	lines := WrapAnsiCells(cells, textW)
+	lines := previewWrappedLines(st, textW, body)
 	scroll := st.Scroll
 	if scroll < 0 {
 		scroll = 0
@@ -157,11 +156,10 @@ func FilePreviewTotalLines(combinedText string, textWidth int) int {
 	if textWidth < 1 {
 		textWidth = 1
 	}
-	t := strings.TrimSpace(combinedText)
-	if t == "" {
+	if strings.TrimSpace(combinedText) == "" {
 		return 0
 	}
-	cells := AnsiStyledCells(t, tcell.StyleDefault)
+	cells := AnsiStyledCells(combinedText, tcell.StyleDefault)
 	return len(WrapAnsiCells(cells, textWidth))
 }
 

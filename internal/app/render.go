@@ -56,12 +56,8 @@ func (a *App) render() {
 	a.model.FooterKeys = a.activeFooterKeys()
 	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsageDescendIntoMountPoints
 	a.model.DiskUsageGoduIgnore = a.diskUsageIgnore
-	a.commandsMu.RLock()
-	a.model.FilePreviewDraw = a.model.FilePreview
-	a.model.CarouselFilePreviewDraw = a.model.CarouselFilePreview
+	a.snapshotPreviewDrawStates()
 	previewOpen := a.model.FilePreviewDraw.Open || a.model.QuickViewDisplayActive()
-	a.model.FullscreenFilePreviewDraw = a.model.FullscreenFilePreview
-	a.commandsMu.RUnlock()
 	if a.model.ViewMode == ui.ViewFilePreview {
 		a.clampFullscreenFilePreviewScroll()
 	}

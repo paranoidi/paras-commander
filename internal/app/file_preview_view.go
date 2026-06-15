@@ -24,20 +24,12 @@ func (a *App) closeFilePreviewFullscreen() {
 }
 
 func (a *App) fullscreenFilePreviewScrollMetrics() (textW, contentH, lineCount int) {
-	w, h := a.screen.Size()
-	lay := a.layoutForTerminalSize(w, h)
-	if lay.TooSmall {
-		return 1, 0, 0
+	tw, ch, layOK := a.fullscreenFilePreviewLayoutMetrics()
+	if !layOK {
+		return tw, ch, 0
 	}
-	union := ui.MergeTwinPanelRects(lay.Left, lay.Right)
-	tw := union.Width - 4
-	if tw < 1 {
-		tw = 1
-	}
-	ch := ui.JobsPanelContentRows(union)
 	textW, contentH = tw, ch
 	a.commandsMu.RLock()
-	t := a.model.FullscreenFilePreview.CombinedText
 	ph := a.model.FullscreenFilePreview.Phase
 	em := a.model.FullscreenFilePreview.ErrorMsg
 	a.commandsMu.RUnlock()
@@ -49,7 +41,7 @@ func (a *App) fullscreenFilePreviewScrollMetrics() (textW, contentH, lineCount i
 			lineCount = 1
 			break
 		}
-		lineCount = ui.FilePreviewTotalLines(t, textW)
+		lineCount = a.fullscreenFilePreviewLineCount(textW)
 		if lineCount < 1 {
 			lineCount = 1
 		}

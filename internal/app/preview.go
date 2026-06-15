@@ -98,7 +98,6 @@ func (a *App) filePreviewScrollMetrics() (textW, contentH, lineCount int) {
 	}
 	textW, contentH = tw, ch
 	a.commandsMu.RLock()
-	t := a.model.FilePreview.CombinedText
 	ph := a.model.FilePreview.Phase
 	em := a.model.FilePreview.ErrorMsg
 	a.commandsMu.RUnlock()
@@ -110,7 +109,7 @@ func (a *App) filePreviewScrollMetrics() (textW, contentH, lineCount int) {
 			lineCount = 1
 			break
 		}
-		lineCount = ui.FilePreviewTotalLines(t, textW)
+		lineCount = a.filePreviewLineCount(textW)
 		if lineCount < 1 {
 			lineCount = 1
 		}
