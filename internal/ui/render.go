@@ -455,7 +455,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			model.DiskUsageGoduIgnore,
 			styles.SymbolWorking(),
 		)
-		dialog.DrawFindDialog(screen, layout, model.FindDialog, styles, model.ShowFileIcons, FindListIconLeadingWidth(model.ShowFileIcons), PaintFindDialogRowIcon, selectionLabel)
+		dialog.DrawFindDialog(screen, layout, model.FindDialog, styles, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintFindDialogRowIcon, selectionLabel)
 	}
 	if model.GroupSelect.Open {
 		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)
@@ -464,7 +464,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		dialog.DrawMetaDialog(screen, layout, model.MetaDialog, styles)
 	}
 	if model.FileDialog.Open {
-		dialog.DrawFileDialog(screen, layout, model.FileDialog, styles, model.ShowFileIcons, DeleteListIconLeadingWidth(model.ShowFileIcons), PaintDeleteDialogRowIcon)
+		dialog.DrawFileDialog(screen, layout, model.FileDialog, styles, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintDeleteDialogRowIcon)
 	}
 	if model.HostKeyDialog.Open {
 		dialog.DrawHostKeyDialog(screen, layout, model.HostKeyDialog, styles)

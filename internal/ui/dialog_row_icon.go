@@ -44,17 +44,9 @@ func DialogListIconLeadingWidth(showIcons bool) int {
 	return panelIconStripCells
 }
 
-// FindListIconLeadingWidth is an alias for DialogListIconLeadingWidth (find dialog).
-func FindListIconLeadingWidth(showIcons bool) int {
-	return DialogListIconLeadingWidth(showIcons)
-}
-
-// DeleteListIconLeadingWidth is an alias for DialogListIconLeadingWidth (delete dialog).
-func DeleteListIconLeadingWidth(showIcons bool) int {
-	return DialogListIconLeadingWidth(showIcons)
-}
-
 // PaintDialogRowIcon draws the same devicon strip as the panel file list (no cursor/selection tint).
+// Find and delete dialog lists pass a zero PanelIconStripContext so directories always use the
+// default closed-folder glyph and color—no other-panel, mount, or disk-usage icon semantics.
 func PaintDialogRowIcon(screen tcell.Screen, x, y int, entry localfs.Entry, styles theme.Theme) {
 	typeStyle := styles.PanelListingEntryStyle(entry.Type, false)
 	typeFG, _, _ := typeStyle.Decompose()
