@@ -63,10 +63,12 @@ type Theme struct {
 	PanelRowIndicatorNew tcell.Style
 	// PanelRowIndicatorNewPrevious styles the file-list suffix for earlier new-file marks in the same directory.
 	PanelRowIndicatorNewPrevious tcell.Style
-	// PanelRowFolderOpen styles the open-folder icon strip when the other panel is in that directory.
-	PanelRowFolderOpen tcell.Style
-	// PanelRowFolderMount styles the other-mount directory icon strip.
-	PanelRowFolderMount tcell.Style
+	// PanelIconFolderOpen styles the open-folder icon strip when the other panel is in that directory.
+	PanelIconFolderOpen tcell.Style
+	// PanelIconFolderMount styles the other-mount directory icon strip.
+	PanelIconFolderMount tcell.Style
+	// PanelIconFolderDefault optionally styles the default closed-folder icon strip; unset uses row FG.
+	PanelIconFolderDefault tcell.Style
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
 	PanelText                   tcell.Style
 	PanelCursorActive           tcell.Style
@@ -111,9 +113,10 @@ type Theme struct {
 	PanelBlockedCursor            tcell.Style
 	PanelBlockedCursorSelected    tcell.Style
 
-	// Disk usage overlays (proportionally painted under listing rows once a scan ran).
-	PanelFolderDiskscan         tcell.Style
-	PanelFolderDiskscanExcluded tcell.Style // directory rows skipped by disk-usage traversal (devicons)
+	// PanelIconFolderScanning styles disk-scan-pending directory icon strip.
+	PanelIconFolderScanning tcell.Style
+	// PanelIconFolderExcluded styles directory rows skipped by disk-usage traversal (devicons).
+	PanelIconFolderExcluded tcell.Style
 	// MenuSpinner styles the menu-bar activity spinner (braille dot spinner).
 	MenuSpinner tcell.Style
 	// MenuProgress* styles segmented progress in the menu-bar jobs strip.
@@ -638,8 +641,8 @@ var requiredStyleKeys = []string{
 	"panel.row.indicator.selection_subtree",
 	"panel.row.indicator.new",
 	"panel.row.indicator.new.previous",
-	"panel.row.folder.open",
-	"panel.row.folder.mount",
+	"panel.icon.folder.open",
+	"panel.icon.folder.mount",
 	"panel.text",
 	"panel.indicator.sync",
 	"panel.indicator.quick_view",
@@ -664,8 +667,8 @@ var requiredStyleKeys = []string{
 	"panel.blocked.row.cursor",
 	"panel.blocked.row.cursor.selected",
 	"panel.blocked.text",
-	"panel.folder.diskscan",
-	"panel.folder.diskscan_excluded",
+	"panel.icon.folder.scanning",
+	"panel.icon.folder.excluded",
 	"menu.spinner",
 	"panel.usage.normal",
 	"panel.usage.selected",
@@ -1025,6 +1028,15 @@ func parse(data []byte) (Theme, error) {
 		styles[key] = style
 	}
 
+	panelIconFolderDefault := tcell.StyleDefault
+	if spec, ok := specs["panel.icon.folder.default"]; ok {
+		style, err := buildStyle(spec, palette)
+		if err != nil {
+			return Theme{}, fmt.Errorf("style %q: %w", "panel.icon.folder.default", err)
+		}
+		panelIconFolderDefault = style
+	}
+
 	panelFileIcons := map[string]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
 		"panel.active.row.cursor":                     {},
@@ -1086,8 +1098,9 @@ func parse(data []byte) (Theme, error) {
 		PanelRowIndicatorSelectionSubtree:   styles["panel.row.indicator.selection_subtree"],
 		PanelRowIndicatorNew:                styles["panel.row.indicator.new"],
 		PanelRowIndicatorNewPrevious:        styles["panel.row.indicator.new.previous"],
-		PanelRowFolderOpen:                  styles["panel.row.folder.open"],
-		PanelRowFolderMount:                 styles["panel.row.folder.mount"],
+		PanelIconFolderOpen:                 styles["panel.icon.folder.open"],
+		PanelIconFolderMount:                styles["panel.icon.folder.mount"],
+		PanelIconFolderDefault:              panelIconFolderDefault,
 		PanelText:                           styles["panel.text"],
 		PanelCursorActive:                   styles["panel.active.row.cursor"],
 		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],
@@ -1121,8 +1134,8 @@ func parse(data []byte) (Theme, error) {
 		PanelBlockedCursor:            styles["panel.blocked.row.cursor"],
 		PanelBlockedCursorSelected:    styles["panel.blocked.row.cursor.selected"],
 
-		PanelFolderDiskscan:              styles["panel.folder.diskscan"],
-		PanelFolderDiskscanExcluded:      styles["panel.folder.diskscan_excluded"],
+		PanelIconFolderScanning:          styles["panel.icon.folder.scanning"],
+		PanelIconFolderExcluded:          styles["panel.icon.folder.excluded"],
 		MenuSpinner:                      styles["menu.spinner"],
 		MenuProgressDone:                 styles["menu.progress.done"],
 		MenuProgressRemaining:            styles["menu.progress.remaining"],
@@ -1354,6 +1367,12 @@ func flattenStyleSpecs(prefix string, table map[string]any, specs map[string]sty
 			nextKey = prefix + "." + key
 		}
 		if isStyleField(key) {
+			if child, ok := value.(map[string]any); ok && isNestedStyleSubtree(child) {
+				if err := flattenStyleSpecs(nextKey, child, specs); err != nil {
+					return err
+				}
+				continue
+			}
 			specFields[key] = value
 			continue
 		}
@@ -1376,6 +1395,18 @@ func flattenStyleSpecs(prefix string, table map[string]any, specs map[string]sty
 		specs[prefix] = spec
 	}
 	return nil
+}
+
+func isNestedStyleSubtree(table map[string]any) bool {
+	for key, value := range table {
+		if isStyleField(key) {
+			return false
+		}
+		if _, ok := value.(map[string]any); !ok {
+			return false
+		}
+	}
+	return len(table) > 0
 }
 
 func isStyleField(key string) bool {

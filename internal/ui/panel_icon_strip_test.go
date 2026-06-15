@@ -14,9 +14,9 @@ func TestFolderIconForegroundOpenUsesIndicatorColor(t *testing.T) {
 	th := theme.Default()
 	rowStyle := th.PanelListingEntryStyle(localfs.EntryDirectory, false)
 	fg := th.FolderIconForeground(theme.FolderIconOpen, "", rowStyle)
-	wantFG, _, _ := th.PanelRowFolderOpen.Decompose()
+	wantFG, _, _ := th.PanelIconFolderOpen.Decompose()
 	if fg != wantFG {
-		t.Fatalf("open fg = %v, want panel.row.folder.open %v", fg, wantFG)
+		t.Fatalf("open fg = %v, want panel.icon.folder.open %v", fg, wantFG)
 	}
 }
 
@@ -24,9 +24,9 @@ func TestFolderIconForegroundMountUsesIndicatorColor(t *testing.T) {
 	th := theme.Default()
 	rowStyle := th.PanelListingEntryStyle(localfs.EntryDirectory, false)
 	fg := th.FolderIconForeground(theme.FolderIconMount, "", rowStyle)
-	wantFG, _, _ := th.PanelRowFolderMount.Decompose()
+	wantFG, _, _ := th.PanelIconFolderMount.Decompose()
 	if fg != wantFG {
-		t.Fatalf("mount fg = %v, want panel.row.folder.mount %v", fg, wantFG)
+		t.Fatalf("mount fg = %v, want panel.icon.folder.mount %v", fg, wantFG)
 	}
 }
 
@@ -34,9 +34,9 @@ func TestFolderIconForegroundScanningUsesDiskscanColor(t *testing.T) {
 	th := theme.Default()
 	rowStyle := th.PanelListingEntryStyle(localfs.EntryDirectory, false)
 	fg := th.FolderIconForeground(theme.FolderIconScanning, "", rowStyle)
-	wantFG, _, _ := th.PanelFolderDiskscan.Decompose()
+	wantFG, _, _ := th.PanelIconFolderScanning.Decompose()
 	if fg != wantFG {
-		t.Fatalf("scanning fg = %v, want panel.folder.diskscan %v", fg, wantFG)
+		t.Fatalf("scanning fg = %v, want panel.icon.folder.scanning %v", fg, wantFG)
 	}
 }
 
@@ -61,7 +61,7 @@ func TestPaintPanelIconStripOpenDirectory(t *testing.T) {
 	if gotRune != openRune {
 		t.Fatalf("icon rune = %U, want open folder %U", gotRune, openRune)
 	}
-	openFG, _, _ := th.PanelRowFolderOpen.Decompose()
+	openFG, _, _ := th.PanelIconFolderOpen.Decompose()
 	gotFG, _, _ := style.Decompose()
 	if gotFG != openFG {
 		t.Fatalf("icon fg = %v, want %v", gotFG, openFG)

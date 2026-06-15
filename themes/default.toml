@@ -60,8 +60,8 @@ row.symlink = { fg = "bright_cyan" }
 row.indicator.selection_subtree = { fg = "yellow" }
 row.indicator.new = { fg = "bright_green" }
 row.indicator.new.previous = { fg = "bright_yellow" }
-row.folder.open = { fg = "bright_cyan" }
-row.folder.mount = { fg = "bright_blue" }
+icon.folder.open = { fg = "bright_cyan" }
+icon.folder.mount = { fg = "bright_blue" }
 indicator.sync = { fg = "green", bold = true }
 indicator.quick_view = { fg = "green", bold = true }
 indicator.selections = { fg = "white" }
@@ -83,8 +83,8 @@ git.not_modified = { fg = "bright_black", bold = true }
 git.renamed = { fg = "yellow" }
 git.typechange = { fg = "magenta" }
 
-folder.diskscan = { fg = "bright_magenta" }
-folder.diskscan_excluded = { fg = "black" }
+icon.folder.scanning = { fg = "bright_magenta" }
+icon.folder.excluded = { fg = "black" }
 
 usage.normal = { fg = "white", bg = "bright_black" }
 usage.selected = { fg = "yellow", bg = "bright_black" }
