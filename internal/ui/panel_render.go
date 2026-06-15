@@ -193,7 +193,18 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				return r, st, true
 			},
 			PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
-				paintPanelIconStrip(sc, x, y, entry, rowStyle, styles, cursorKey, diskPending, diskExcluded, showDiskUsage, otherPanelPath, diskUsageDescendIntoMountPoints, state.ListingDevice, state.ListingDeviceValid)
+				paintPanelIconStrip(sc, x, y, entry, rowStyle, styles, PanelIconStripContext{
+					CursorStyleKey: cursorKey,
+					Folder: panellist.FolderIconContext{
+						OtherPanelPath:         otherPanelPath,
+						DescendIntoMountPoints: diskUsageDescendIntoMountPoints,
+						ListingDev:             state.ListingDevice,
+						ListingDevValid:        state.ListingDeviceValid,
+						DiskPending:            diskPending,
+						DiskExcluded:           diskExcluded,
+						DiskUsageChrome:        showDiskUsage,
+					},
+				})
 			},
 			NewFileMark: func(entry localfs.Entry) panellist.NewFileMarkTier {
 				return state.NewFileMarkTier(entry)
@@ -381,7 +392,18 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		if showIcons {
 			if hasEntry {
 				iconStripStyle := blendCell(leftGutter + gitStrip)
-				paintPanelIconStrip(screen, iconStart, y, cur, iconStripStyle, styles, iconKey, diskPending, diskExcluded, showDiskUsage, otherPanelPath, diskUsageDescendIntoMountPoints, state.ListingDevice, state.ListingDeviceValid)
+				paintPanelIconStrip(screen, iconStart, y, cur, iconStripStyle, styles, PanelIconStripContext{
+					CursorStyleKey: iconKey,
+					Folder: panellist.FolderIconContext{
+						OtherPanelPath:         otherPanelPath,
+						DescendIntoMountPoints: diskUsageDescendIntoMountPoints,
+						ListingDev:             state.ListingDevice,
+						ListingDevValid:        state.ListingDeviceValid,
+						DiskPending:            diskPending,
+						DiskExcluded:           diskExcluded,
+						DiskUsageChrome:        showDiskUsage,
+					},
+				})
 			} else {
 				paintPanelIconStripBlank(screen, iconStart, y, style)
 			}

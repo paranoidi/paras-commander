@@ -60,7 +60,7 @@ func PaintDialogRowIcon(screen tcell.Screen, x, y int, entry localfs.Entry, styl
 	typeFG, _, _ := typeStyle.Decompose()
 	_, surfBg, _ := styles.DialogSurface.Decompose()
 	iconStyle := typeStyle.Foreground(typeFG).Background(surfBg)
-	paintPanelIconStrip(screen, x, y, entry, iconStyle, styles, "", false, false, false, "", false, 0, false)
+	paintPanelIconStrip(screen, x, y, entry, iconStyle, styles, PanelIconStripContext{})
 }
 
 // PaintFindDialogRowIcon draws file-list devicons for one find dialog row.

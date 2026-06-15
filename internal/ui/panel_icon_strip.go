@@ -15,31 +15,18 @@ const panelIconStripCells = 2
 // panelIconListLeadingGutter is blank cells between the left panel border and the icon strip when icons are on.
 const panelIconListLeadingGutter = 1
 
-// panelDeviconForeground picks the file-icon color: theme cursor override, else devicon hex, else row FG.
-// diskExcludedGrey applies panel.folder.diskscan_excluded only when disk-usage metering is active for this panel.
-func panelDeviconForeground(rowStyle tcell.Style, deviconHex string, th theme.Theme, cursorStyleKey string, diskPending, diskExcludedGrey, openInOther, onOtherMount bool) tcell.Color {
+// PanelIconStripContext carries panel state for painting one icon-strip cell.
+type PanelIconStripContext struct {
+	CursorStyleKey string
+	Folder         panellist.FolderIconContext
+}
+
+// fileDeviconForeground picks the file-icon color: cursor override, else devicon hex, else row FG.
+func fileDeviconForeground(rowStyle tcell.Style, deviconHex string, th theme.Theme, cursorStyleKey string) tcell.Color {
 	rowFG, _, _ := rowStyle.Decompose()
 	if cursorStyleKey != "" && th.PanelFileIconFG != nil {
 		if c, ok := th.PanelFileIconFG[cursorStyleKey]; ok {
 			return c
-		}
-	}
-	if diskPending {
-		dfg, _, _ := th.PanelFolderDiskscan.Decompose()
-		if dfg != tcell.ColorDefault {
-			return dfg
-		}
-	}
-	if openInOther {
-		return th.PanelRowSuffixIconForeground(cursorStyleKey, th.PanelRowFolderOpen)
-	}
-	if onOtherMount {
-		return th.PanelRowSuffixIconForeground(cursorStyleKey, th.PanelRowFolderMount)
-	}
-	if diskExcludedGrey {
-		efg, _, _ := th.PanelFolderDiskscanExcluded.Decompose()
-		if efg != tcell.ColorDefault {
-			return efg
 		}
 	}
 	if deviconHex != "" {
@@ -50,62 +37,33 @@ func panelDeviconForeground(rowStyle tcell.Style, deviconHex string, th theme.Th
 	return rowFG
 }
 
-func directoryIconGlyph(
-	entry localfs.Entry,
-	th theme.Theme,
-	otherPanelPath string,
-	descendIntoMountPoints bool,
-	listingDev uint64,
-	listingDevValid bool,
-	diskPending, diskExcluded, diskUsageChrome bool,
-) string {
-	kind, ok := panellist.ResolveFolderIconKind(entry, panellist.FolderIconContext{
-		OtherPanelPath:         otherPanelPath,
-		DescendIntoMountPoints: descendIntoMountPoints,
-		ListingDev:             listingDev,
-		ListingDevValid:        listingDevValid,
-		DiskPending:            diskPending,
-		DiskExcluded:           diskExcluded,
-		DiskUsageChrome:        diskUsageChrome,
-	})
-	if !ok {
-		return ""
-	}
-	return th.FolderIconGlyph(kind)
-}
-
 func paintPanelIconStrip(
 	screen tcell.Screen,
 	x, y int,
 	entry localfs.Entry,
 	rowStyle tcell.Style,
 	th theme.Theme,
-	cursorStyleKey string,
-	diskPending, diskExcluded bool,
-	diskUsageChrome bool,
-	otherPanelPath string,
-	descendIntoMountPoints bool,
-	listingDev uint64,
-	listingDevValid bool,
+	ctx PanelIconStripContext,
 ) {
 	var icon string
-	var deviconHex string
-	openInOther := false
-	onOtherMount := false
+	var fg tcell.Color
 	if entry.Type == localfs.EntryDirectory {
-		icon = directoryIconGlyph(entry, th, otherPanelPath, descendIntoMountPoints, listingDev, listingDevValid, diskPending, diskExcluded, diskUsageChrome)
-		openInOther = panellist.EntryOpenInOtherPanel(entry, otherPanelPath) && !diskPending
-		onOtherMount = panellist.EntryOnOtherMount(entry, descendIntoMountPoints, listingDev, listingDevValid) && !diskPending && !openInOther
+		kind, ok := panellist.ResolveFolderIconKind(entry, ctx.Folder)
+		if !ok {
+			icon = " "
+			fg, _, _ = rowStyle.Decompose()
+		} else {
+			icon = th.FolderIconGlyph(kind)
+			fg = th.FolderIconForeground(kind, ctx.CursorStyleKey, rowStyle)
+		}
 	} else {
 		st := devicons.IconForInfo(fileInfoFromEntry(entry))
 		icon = st.Icon
-		deviconHex = st.Color
+		if icon == "" {
+			icon = " "
+		}
+		fg = fileDeviconForeground(rowStyle, st.Color, th, ctx.CursorStyleKey)
 	}
-	if icon == "" {
-		icon = " "
-	}
-	excludedGrey := diskExcluded && diskUsageChrome
-	fg := panelDeviconForeground(rowStyle, deviconHex, th, cursorStyleKey, diskPending, excludedGrey, openInOther, onOtherMount)
 	iconStyle := rowStyle.Foreground(fg)
 
 	col := 0
