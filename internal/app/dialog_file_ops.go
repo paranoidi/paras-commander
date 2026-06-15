@@ -168,6 +168,7 @@ func (a *App) openSymlinkDialog(p *panel.State) {
 		DialogType: ui.FileDialogSymlink,
 		Fields:     fields,
 	}
+	a.syncFocusedFileDialogPathFieldCompletion()
 }
 
 func (a *App) openHardlinkDialog(p *panel.State) {
@@ -191,6 +192,7 @@ func (a *App) openHardlinkDialog(p *panel.State) {
 		DialogType: ui.FileDialogHardlink,
 		Fields:     fields,
 	}
+	a.syncFocusedFileDialogPathFieldCompletion()
 }
 
 func (a *App) executeFileDialog() {

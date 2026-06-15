@@ -50,6 +50,14 @@ func (a *App) syncOpenPathInputsAfterFSChange() {
 	if fd.Open {
 		a.syncPathFieldCompletion(&fd.Destination, a.transferDestinationTextWidth())
 	}
+	if a.model.FileDialog.Open {
+		for i := range a.model.FileDialog.Fields {
+			f := &a.model.FileDialog.Fields[i]
+			if f.PathPicker {
+				a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
+			}
+		}
+	}
 }
 
 func (a *App) transferDestinationTextWidth() int {

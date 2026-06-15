@@ -104,6 +104,16 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 
+	if f := a.focusedField(); f != nil && f.PathPicker && !f.PickerFocused &&
+		event.Key() == tcell.KeyTab && f.CompletionSuffix != "" {
+		if f.AcceptCompletion() {
+			if after := a.fileDialogFieldAfterEdit(); after != nil {
+				after()
+			}
+		}
+		return false
+	}
+
 	onRadio := a.fileDialogOnRadio()
 	onMkdirRadio := a.fileDialogOnMkdirRadio()
 	onRunForEachRadio := a.fileDialogOnRunForEachPoolRadio()
@@ -111,12 +121,13 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	onCheckbox := a.fileDialogOnMassRenameCaseCheckbox() || a.fileDialogOnRenameFocusCheckbox()
 
 	f := a.focusedField()
+	skipEarlyFieldKey := f != nil && f.PathPicker && !f.PickerFocused && event.Key() == tcell.KeyRight
 	if !onRadio && !onCheckbox && f != nil {
 		if f.PathPicker && f.PickerFocused {
 			if a.tryDialogInputRestore(event, f) {
 				return false
 			}
-		} else if a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit()) {
+		} else if !skipEarlyFieldKey && a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit()) {
 			return false
 		}
 	}

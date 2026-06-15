@@ -57,12 +57,30 @@ func (a *App) handleFileDialogFieldKey(ev *tcell.EventKey, f *ui.FileDialogField
 }
 
 func (a *App) fileDialogFieldAfterEdit() func() {
+	var extra func()
 	switch a.model.FileDialog.DialogType {
 	case ui.FileDialogMassRename:
-		return a.recomputeMassRenamePreview
+		extra = a.recomputeMassRenamePreview
 	case ui.FileDialogRunForEach:
-		return a.recomputeRunForEachCommandValidation
-	default:
-		return nil
+		extra = a.recomputeRunForEachCommandValidation
 	}
+	f := a.focusedField()
+	if f == nil || !f.PathPicker {
+		return extra
+	}
+	textWidth := a.transferDestinationTextWidth()
+	return func() {
+		if extra != nil {
+			extra()
+		}
+		a.syncPathFieldCompletion(f, textWidth)
+	}
+}
+
+func (a *App) syncFocusedFileDialogPathFieldCompletion() {
+	f := a.focusedField()
+	if f == nil || !f.PathPicker {
+		return
+	}
+	a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
 }

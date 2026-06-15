@@ -37,6 +37,7 @@ func (a *App) openExtractDialog(p *panel.State) {
 		Message:        msg,
 		ExtractSources: append([]string(nil), paths...),
 	}
+	a.syncFocusedFileDialogPathFieldCompletion()
 	a.clearTransientMessage()
 }
 
