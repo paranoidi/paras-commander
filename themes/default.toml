@@ -198,7 +198,7 @@ hidden_dotfiles = "\U000F06D1"
 
 [symbols.jobs.list]
 scanning = "\uf110"
-queued = "\uf1af"
+queued = "\u23F3"
 running = "\uf144"
 paused = "\uf28b"
 canceled = "\uf52f"
