@@ -156,6 +156,9 @@ const (
 	MinCarouselPanelInnerWidth = 72 // 3 × MinCarouselColumnWidth
 	// MinCarouselColumnWidth is the minimum width per carousel column (parent, center, child).
 	MinCarouselColumnWidth = 24
+	// MinCarouselFilePreviewColumnWidth is the minimum child-column width for carousel file preview
+	// (unless HideInactivePanel gives the active panel full terminal width).
+	MinCarouselFilePreviewColumnWidth = 32
 
 	// DefaultUserMenuFileName is the basename of the user menu definition under the config directory
 	// when [user_menu].file is empty.

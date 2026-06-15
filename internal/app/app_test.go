@@ -6545,7 +6545,7 @@ func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
 	staleGen := app.filePreviewRunGen.Add(1)
 	app.filePreviewRunGen.Add(1)
 
-	app.runFilePreview(context.Background(), path, []string{"/bin/true"}, root, false, staleGen)
+	app.runFilePreview(context.Background(), path, []string{"/bin/true"}, root, previewTargetInactive, staleGen)
 
 	app.commandsMu.RLock()
 	ph := app.model.FilePreview.Phase

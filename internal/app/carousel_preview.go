@@ -35,13 +35,21 @@ func (a *App) clearCarouselPreviewNavCoalesce() {
 }
 
 func (a *App) carouselPreviewNavCoalesceContext() bool {
-	return a.model.ViewMode == ui.ViewBrowser &&
-		a.activePanel().CarouselMode &&
-		panelcarousel.ShowChildPreviewColumn(*a.activePanel(), a.model.QuickViewDisplayActive()) &&
-		a.model.ActiveSubFocus == ui.SubFocusFileList &&
-		!a.model.Menu.Open &&
-		!a.model.ModalDialogOpen() &&
-		!a.inQuickFilterUI()
+	if a.model.ViewMode != ui.ViewBrowser ||
+		!a.activePanel().CarouselMode ||
+		a.model.ActiveSubFocus != ui.SubFocusFileList ||
+		a.model.Menu.Open ||
+		a.model.ModalDialogOpen() ||
+		a.inQuickFilterUI() {
+		return false
+	}
+	p := a.activePanel()
+	eligible := a.carouselFilePreviewEligible()
+	if !panelcarousel.ShowChildPreviewColumn(*p, a.model.QuickViewDisplayActive(), eligible) {
+		return false
+	}
+	kind := panelcarousel.ChildPreviewKindFor(*p, a.model.QuickViewDisplayActive(), eligible)
+	return kind == panelcarousel.ChildPreviewDirectoryListing || kind == panelcarousel.ChildPreviewFile
 }
 
 func (a *App) scheduleCarouselPreviewDebounceTimer(gen uint64) {
@@ -87,6 +95,10 @@ func (a *App) ensureCarouselChildCacheBeforeListNav() {
 		return
 	}
 	p := a.activePanel()
+	eligible := a.carouselFilePreviewEligible()
+	if panelcarousel.ChildPreviewKindFor(*p, a.model.QuickViewDisplayActive(), eligible) != panelcarousel.ChildPreviewDirectoryListing {
+		return
+	}
 	if p.CarouselSideCache.ChildOK {
 		return
 	}
@@ -113,13 +125,21 @@ func (a *App) applyCarouselPreviewFlush(p carouselPreviewFlushPayload) bool {
 	return true
 }
 
-// loadCarouselChildPreviewFromDisk reads the child preview listing after nav coalesce ends.
+// loadCarouselChildPreviewFromDisk reloads the carousel child preview after nav coalesce ends.
 func (a *App) loadCarouselChildPreviewFromDisk() {
 	if !a.carouselPreviewNavCoalesceContext() {
 		return
 	}
 	a.syncCarouselChildPreviewCoalesceFlags()
-	_, _ = a.activePanel().SnapshotChild(a.activeViewportRows())
+	p := a.activePanel()
+	eligible := a.carouselFilePreviewEligible()
+	kind := panelcarousel.ChildPreviewKindFor(*p, a.model.QuickViewDisplayActive(), eligible)
+	switch kind {
+	case panelcarousel.ChildPreviewDirectoryListing:
+		_, _ = p.SnapshotChild(a.activeViewportRows())
+	case panelcarousel.ChildPreviewFile:
+		a.applyCarouselFilePreviewAfterFlush()
+	}
 }
 
 // carouselPreviewHeldListNav reports file-list nav keys while carousel child preview coalesce may apply.

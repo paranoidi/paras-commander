@@ -262,5 +262,5 @@ func (a *App) openFilePreviewFullscreen() {
 	})
 	gen := a.filePreviewRunGen.Add(1)
 	a.postCommandWake()
-	go a.runFilePreview(a.commandsCtx, path, argv, active.PathString(), true, gen)
+	go a.runFilePreview(a.commandsCtx, path, argv, active.PathString(), previewTargetFullscreen, gen)
 }

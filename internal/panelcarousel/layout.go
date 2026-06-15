@@ -63,3 +63,38 @@ func SplitColumns(rect geom.Rect, showChild bool) [3]geom.Rect {
 	cols[1] = geom.Rect{X: innerX + w0, Y: listY, Width: w1, Height: listH}
 	return cols
 }
+
+// ChildColumnWidth returns the inner width of one carousel third column (matches SplitColumns).
+func ChildColumnWidth(rect geom.Rect) int {
+	innerW := rect.Width - 2
+	if innerW < 3 {
+		return 0
+	}
+	return innerW / 3
+}
+
+// FilePreviewEligible reports whether the carousel child column is wide enough for file preview,
+// or the inactive twin panel is hidden so the active panel has full width.
+func FilePreviewEligible(rect geom.Rect, hideInactive bool) bool {
+	if hideInactive {
+		return true
+	}
+	return ChildColumnWidth(rect) >= config.MinCarouselFilePreviewColumnWidth
+}
+
+// ChildPreviewPaintRect returns the rect for embedded file preview in the child column (header + list rows).
+func ChildPreviewPaintRect(frame geom.Rect, showChild bool) (geom.Rect, bool) {
+	if !showChild {
+		return geom.Rect{}, false
+	}
+	cols := SplitColumns(frame, true)
+	if cols[2].Width <= 0 {
+		return geom.Rect{}, false
+	}
+	return geom.Rect{
+		X:      cols[2].X,
+		Y:      frame.Y + 1,
+		Width:  cols[2].Width,
+		Height: cols[2].Height + 1,
+	}, true
+}

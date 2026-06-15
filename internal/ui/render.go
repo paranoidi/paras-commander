@@ -122,6 +122,10 @@ type Model struct {
 	FilePreview FilePreviewState
 	// FilePreviewDraw is a snapshot copied in App.render before ui.Render (no locks in ui).
 	FilePreviewDraw FilePreviewState
+	// CarouselFilePreview is the live carousel child-column file preview (mutate only under App.commandsMu).
+	CarouselFilePreview FilePreviewState
+	// CarouselFilePreviewDraw is a snapshot copied in App.render before ui.Render.
+	CarouselFilePreviewDraw FilePreviewState
 	// QuickViewEnabled is true while Shift+F3 / menu "Quick view" is latched for QuickViewPanel.
 	QuickViewEnabled bool
 	// QuickViewPanel is the driver panel (LeftPanel or RightPanel) when QuickViewEnabled, else -1.
@@ -339,7 +343,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	switch model.ViewMode {
 	case ViewFilePreview:
 		union := MergeTwinPanelRects(layout.Left, layout.Right)
-		drawFilePreviewPanel(screen, union, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, "", "")
+		drawFilePreviewPanel(screen, union, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, "", "")
 	case ViewJobs:
 		now := time.Now()
 		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobActivity, styles, now, chromeBlocked, model.UserHomeDir, model.JobsThroughputChartEnabled)
@@ -391,9 +395,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if layout.Left.Width > 0 && showLeftPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused,
-				model.QuickViewDisplayActive(), model.Left.PathString(), model.UserHomeDir)
+				model.QuickViewDisplayActive(), false, model.Left.PathString(), model.UserHomeDir)
 		} else if layout.Left.Width > 0 {
-			drawPanel(screen, leftFile, model.PanelForFileListRender(LeftPanel), leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, leftOtherPanelPath, leftSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive)
+			drawPanel(screen, leftFile, model.PanelForFileListRender(LeftPanel), leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, leftOtherPanelPath, leftSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselFilePreviewDraw)
 		}
 		if layout.Left.Width > 0 && leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
@@ -402,9 +406,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if layout.Right.Width > 0 && showRightPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
-				model.QuickViewDisplayActive(), model.Right.PathString(), model.UserHomeDir)
+				model.QuickViewDisplayActive(), false, model.Right.PathString(), model.UserHomeDir)
 		} else if layout.Right.Width > 0 {
-			drawPanel(screen, rightFile, model.PanelForFileListRender(RightPanel), rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, rightOtherPanelPath, rightSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive)
+			drawPanel(screen, rightFile, model.PanelForFileListRender(RightPanel), rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, rightOtherPanelPath, rightSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselFilePreviewDraw)
 		}
 		if layout.Right.Width > 0 && rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip

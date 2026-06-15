@@ -298,6 +298,10 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 	case keymap.ActionPanelToggleCarousel:
 		p := a.panelByID(panelScope)
 		p.CarouselMode = !p.CarouselMode
+		if !p.CarouselMode {
+			a.clearCarouselPreviewNavCoalesce()
+			a.closeCarouselFilePreview()
+		}
 		if p.CarouselMode {
 			a.model.ActivePanel = panelScope
 		}

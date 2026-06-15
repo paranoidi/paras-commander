@@ -38,6 +38,7 @@ type BodyParams struct {
 	PaintIcon             IconPaintFunc
 	DiskUsage             DiskUsage
 	ShowChildColumn       bool
+	ChildPreviewKind      ChildPreviewKind
 	OtherPanelPath        string
 	ScrollbarStyle        uiscrollbar.Style
 	ScrollbarShowInactive bool
@@ -59,7 +60,21 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 		if col.Width <= 0 {
 			continue
 		}
-		listTextWidth := columnListTextWidth(col.Width, p.ShowIcons)
+		var c Column
+		inactive := false
+		switch i {
+		case 0:
+			c, inactive = p.Parent, true
+		case 1:
+			c = Column{Kind: ColumnCenter, Populated: true, Active: true}
+		case 2:
+			c, inactive = p.Child, true
+		}
+		hasLane := columnHasScrollbarLane(c, inactive, p.ShowChildColumn)
+		columnActive := p.FileListActive && c.Active && !inactive
+		showSB := columnActive || p.ScrollbarShowInactive
+		reserve := columnScrollbarReserve(hasLane && showSB, p.ScrollbarStyle != uiscrollbar.StyleNone)
+		listTextWidth := columnListTextWidth(col.Width, p.ShowIcons, reserve)
 		var hdr string
 		switch i {
 		case 1:
@@ -70,7 +85,13 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			}
 			hdr = briefHeader(sideNameTitle, "Size", listTextWidth)
 		case 2:
-			if !p.ShowChildColumn || !p.Child.Populated {
+			if !p.ShowChildColumn {
+				continue
+			}
+			if p.ChildPreviewKind == ChildPreviewFile {
+				continue
+			}
+			if !p.Child.Populated {
 				continue
 			}
 			hdr = briefHeader(sideNameTitle, "Size", listTextWidth)
@@ -79,17 +100,24 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 		if i == 1 {
 			hdrStyle = p.HeaderStyle
 		}
-		hdrX, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons)
+		hdrX, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
 		for x := col.X; x < hdrX; x++ {
 			screen.SetContent(x, headerY, ' ', nil, hdrStyle)
 		}
 		primitive.Text(screen, hdrX, headerY, listW, hdr, hdrStyle)
+		for x := hdrX + listW; x < col.X+col.Width; x++ {
+			screen.SetContent(x, headerY, ' ', nil, hdrStyle)
+		}
 	}
 
 	drawColumn := func(col geom.Rect, c Column, inactive bool) {
 		if col.Width <= 0 {
 			return
 		}
+		hasLane := columnHasScrollbarLane(c, inactive, p.ShowChildColumn)
+		columnActive := p.FileListActive && c.Active && !inactive
+		showSB := columnActive || p.ScrollbarShowInactive
+		reserve := columnScrollbarReserve(hasLane && showSB, p.ScrollbarStyle != uiscrollbar.StyleNone)
 		var diskDenom int64
 		if p.DiskUsage.Active && p.DiskUsage.Source != nil {
 			var denomEntries []localfs.Entry
@@ -170,13 +198,13 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			if p.DiskUsage.Active {
 				diskSrc = p.DiskUsage.Source
 			}
-			text := formatBriefRow(entry, col.Width, p.ShowIcons, rowSuffix, p.Styles, diskSrc)
-			listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons)
+			text := formatBriefRow(entry, col.Width, p.ShowIcons, rowSuffix, p.Styles, diskSrc, reserve)
+			listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
 			nameColOffset := listStart - col.X
-			nameWidth := nameWidthForColumn(col.Width, p.ShowIcons)
+			nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve)
 			var spans []primitive.Span
 			if c.Active && (p.Center.Filter.Active || p.Center.Filter.Editing) {
-				spans = fuzzySpans(entry, col.Width, p.Center.MatchRanges(entryIndex), isCursor && p.FileListActive, p.Styles, p.ShowIcons, rowSuffix, func(di int) tcell.Style {
+				spans = fuzzySpans(entry, col.Width, p.Center.MatchRanges(entryIndex), isCursor && p.FileListActive, p.Styles, p.ShowIcons, rowSuffix, reserve, func(di int) tcell.Style {
 					return blendCell(nameColOffset + di)
 				})
 			}
@@ -220,7 +248,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 				return blendCell(nameColOffset + ci)
 			}, spans)
 		}
-		if c.Populated && (!c.Active || inactive || p.ShowChildColumn) {
+		if hasLane && showSB && p.ScrollbarStyle != uiscrollbar.StyleNone {
 			var total, offset int
 			if c.Active {
 				total = len(p.Center.Entries)
@@ -229,9 +257,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 				total = len(c.Snapshot.Entries)
 				offset = c.Snapshot.Scroll
 			}
-			columnActive := p.FileListActive && c.Active && !inactive
-			show := columnActive || p.ScrollbarShowInactive
-			if metrics, ok := uiscrollbar.ComputeMetrics(total, visibleRows, offset); ok && show && p.ScrollbarStyle != uiscrollbar.StyleNone {
+			if metrics, ok := uiscrollbar.ComputeMetrics(total, visibleRows, offset); ok {
 				uiscrollbar.Draw(uiscrollbar.DrawParams{
 					Screen:     screen,
 					X:          col.X + col.Width - 1,
@@ -250,7 +276,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 
 	drawColumn(cols[0], p.Parent, true)
 	drawColumn(cols[1], Column{Kind: ColumnCenter, Populated: true, Active: true}, false)
-	if p.ShowChildColumn {
+	if p.ShowChildColumn && p.ChildPreviewKind == ChildPreviewDirectoryListing {
 		drawColumn(cols[2], p.Child, true)
 	}
 }

@@ -154,6 +154,10 @@ type App struct {
 	carouselPreviewNavSkipSnapshot atomic.Bool
 	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postCommandWake).
 	filePreviewRunGen atomic.Uint64
+	// carouselFilePreviewRunGen invalidates in-flight carousel child-column preview subprocess completions.
+	carouselFilePreviewRunGen atomic.Uint64
+	// carouselFilePreviewLastFingerprint tracks the last carousel file preview highlight for debouncing.
+	carouselFilePreviewLastFingerprint string
 
 	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
 	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on

@@ -677,6 +677,10 @@ func (a *App) dispatch(actionID string) bool {
 		a.setTransientMessage(fmt.Sprintf("Listing: %s", activePanel.ListFormat.String()), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelToggleCarousel:
 		activePanel.CarouselMode = !activePanel.CarouselMode
+		if !activePanel.CarouselMode {
+			a.clearCarouselPreviewNavCoalesce()
+			a.closeCarouselFilePreview()
+		}
 		onOff := "off"
 		if activePanel.CarouselMode {
 			onOff = "on"

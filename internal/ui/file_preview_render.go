@@ -13,21 +13,38 @@ import (
 // drawFilePreviewPanel paints the inactive-column file preview (ANSI output).
 // previewFocused highlights the preview title when keyboard focus is on the preview pane.
 // When quickViewChrome is true, the title shows panelPath on the start and TitleBase on the end (no volume stats).
-func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome bool, panelPath, userHomeDir string) {
+// When embedded is true, the preview is painted inside a carousel child column (no panel border box).
+func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome, embedded bool, panelPath, userHomeDir string) {
 	chrome := styles.PanelChrome(previewFocused, chromeBlocked)
+	embeddedChrome := chrome
+	if embedded {
+		// Carousel child column lives inside the active panel; match DrawBody side-column chrome.
+		embeddedChrome = styles.PanelChrome(true, chromeBlocked)
+	}
 	_, bg, _ := styles.PanelActiveSurface.Decompose()
 	if chromeBlocked {
 		_, bg, _ = styles.PanelBlockedSurface.Decompose()
 	}
-	borderStyle := chrome.Frame
+	borderStyle := embeddedChrome.Frame
 	titleStyle := chrome.Title
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
-	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-	if inner.Width > 0 && inner.Height > 0 {
-		primitive.Fill(screen, inner, ' ', chrome.Surface)
+	if embedded {
+		titleStyle = embeddedChrome.HeaderCarousel
+		for x := rect.X; x < rect.X+rect.Width; x++ {
+			screen.SetContent(x, rect.Y, ' ', nil, titleStyle)
+		}
+	} else {
+		primitive.Box(screen, primitive.Rect(rect), borderStyle)
+		inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
+		if inner.Width > 0 && inner.Height > 0 {
+			primitive.Fill(screen, inner, ' ', chrome.Surface)
+		}
 	}
 	titleX := rect.X + 2
 	innerRight := rect.X + rect.Width - 2
+	if embedded {
+		titleX = rect.X + 1
+		innerRight = rect.X + rect.Width - 2
+	}
 	contentCols := innerRight - titleX + 1
 	if contentCols < 1 {
 		contentCols = 1
@@ -45,17 +62,27 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 			title = " " + tb + " "
 		}
 		titleWidth := rect.Width - 4
+		if embedded {
+			titleWidth = rect.Width - 2
+		}
 		primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, titleStyle)
 	}
 
 	body := auxPanelBodyText(styles, chromeBlocked, bg)
 	contentTop := rect.Y + 1
-	contentH := JobsPanelContentRows(rect)
+	contentH := rect.Height - 1
+	if !embedded {
+		contentH = JobsPanelContentRows(rect)
+	}
 	if contentH <= 0 {
 		return
 	}
 	textX := rect.X + 2
 	textW := rect.Width - 4
+	if embedded {
+		textX = rect.X + 1
+		textW = rect.Width - 2
+	}
 	if textW < 1 {
 		textW = 1
 	}

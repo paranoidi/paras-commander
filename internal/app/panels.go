@@ -297,6 +297,7 @@ func (a *App) reconcileAfterEvent() {
 		a.syncFollowFromActive()
 	}
 	a.reconcileQuickViewPreview()
+	a.reconcileCarouselFilePreview()
 }
 
 // syncFollowTargetPath returns the absolute directory path the follower should mirror when

@@ -12,9 +12,9 @@ import (
 func TestCarouselHeaderAlignsWithRowText(t *testing.T) {
 	const colWidth = 28
 	showIcons := true
-	listW := columnListTextWidth(colWidth, showIcons)
+	listW := columnListTextWidth(colWidth, showIcons, 0)
 	hdr := briefHeader(listNameHeaderTitle(showIcons), "Size", listW)
-	row := formatBriefRow(localfs.Entry{Name: "another", Type: localfs.EntryDirectory}, colWidth, showIcons, panellist.RowSuffix{}, theme.Default(), nil)
+	row := formatBriefRow(localfs.Entry{Name: "another", Type: localfs.EntryDirectory}, colWidth, showIcons, panellist.RowSuffix{}, theme.Default(), nil, 0)
 	if len([]rune(hdr)) != listW {
 		t.Fatalf("header rune width %d, want list text width %d", len([]rune(hdr)), listW)
 	}
@@ -41,11 +41,18 @@ func TestBriefHeaderKeepsDiskUsageSortArrow(t *testing.T) {
 func TestColumnListContentOriginSkipsIconStrip(t *testing.T) {
 	const colX = 10
 	const colWidth = 20
-	x, w := columnListContentOrigin(colX, colWidth, true)
+	x, w := columnListContentOrigin(colX, colWidth, true, 0)
 	if x != colX+3 {
 		t.Fatalf("list X = %d, want %d (gutter+icon strip)", x, colX+3)
 	}
 	if w != colWidth-3 {
 		t.Fatalf("list width = %d, want %d", w, colWidth-3)
+	}
+}
+
+func TestColumnListTextWidthReservesScrollbarLane(t *testing.T) {
+	const colWidth = 30
+	if got := columnListTextWidth(colWidth, false, 1); got != colWidth-1 {
+		t.Fatalf("with scrollbar reserve got %d, want %d", got, colWidth-1)
 	}
 }

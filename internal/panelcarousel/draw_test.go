@@ -141,7 +141,7 @@ func TestCenterScrollbarUsesInactiveFrameBetweenColumns(t *testing.T) {
 		Cursor:       20,
 		ScrollOffset: 15,
 	}
-	if ShowChildPreviewColumn(filesOnly, false) {
+	if ShowChildPreviewColumn(filesOnly, false, false) {
 		t.Fatal("files-only fixture should hide child column")
 	}
 	cols := SplitColumns(frame, false)
@@ -180,7 +180,7 @@ func TestCenterScrollbarUsesInactiveFrameBetweenColumns(t *testing.T) {
 		Cursor:       20,
 		ScrollOffset: 15,
 	}
-	if !ShowChildPreviewColumn(withSubdir, false) {
+	if !ShowChildPreviewColumn(withSubdir, false, false) {
 		t.Fatal("subdir fixture should show child column")
 	}
 	if got := centerTrackFG(t, withSubdir, true); got != wantInactiveFG {

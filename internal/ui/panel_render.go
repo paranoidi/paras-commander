@@ -90,7 +90,7 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 	return strings.TrimSpace(nameTitle)
 }
 
-func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaColumns []MetaColumnState, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool, scrollbarStyle uiscrollbar.Style, scrollbarShowInactive bool) {
+func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaColumns []MetaColumnState, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool, scrollbarStyle uiscrollbar.Style, scrollbarShowInactive bool, carouselFilePreview FilePreviewState) {
 	if rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
@@ -151,8 +151,9 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 
 	if state.CarouselMode && panelcarousel.LayoutFits(rect, 0, 0) {
 		quickViewOn := quickViewDriverPanelID >= 0
-		showChildCol := panelcarousel.ShowChildPreviewColumn(state, quickViewOn)
-		parent, _, child := panelcarousel.BuildColumns(state, visibleRows, quickViewOn)
+		filePreviewEligible := panelcarousel.FilePreviewEligible(rect, hideInactivePanel)
+		showChildCol := panelcarousel.ShowChildPreviewColumn(state, quickViewOn, filePreviewEligible)
+		parent, _, child, childKind := panelcarousel.BuildColumns(state, visibleRows, quickViewOn, filePreviewEligible)
 		carouselDisk := panelcarousel.DiskUsage{
 			Active:                 showDiskUsage,
 			PanelID:                panelID,
@@ -175,6 +176,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			HeaderCarouselStyle:   headerCarouselStyle,
 			SurfaceStyle:          chrome.Surface,
 			ShowChildColumn:       showChildCol,
+			ChildPreviewKind:      childKind,
 			DiskUsage:             carouselDisk,
 			OtherPanelPath:        otherPanelPath,
 			ScrollbarStyle:        scrollbarStyle,
@@ -210,6 +212,11 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				return state.NewFileMarkTier(entry)
 			},
 		})
+		if childKind == panelcarousel.ChildPreviewFile && carouselFilePreview.Open {
+			if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, showChildCol); ok {
+				drawFilePreviewPanel(screen, Rect(previewRect), carouselFilePreview, styles, chromeBlocked, false, true, true, state.PathString(), userHomeDir)
+			}
+		}
 		if !showChildCol {
 			drawPanelListScrollbar(screen, rect, rect.Y+2, visibleRows, state.VisibleEntryCount(), state.ScrollOffset,
 				scrollbarStyle, panelScrollbarShow(fileListActive, scrollbarShowInactive),

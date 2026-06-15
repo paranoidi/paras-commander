@@ -14,8 +14,8 @@ import (
 const listSizeCells = 5
 
 // formatBriefRow formats icon+name+size for carousel columns.
-func formatBriefRow(entry localfs.Entry, width int, showIcons bool, suffix panellist.RowSuffix, styles theme.Theme, disk DiskUsageSource) string {
-	rowTextWidth := columnListTextWidth(width, showIcons)
+func formatBriefRow(entry localfs.Entry, width int, showIcons bool, suffix panellist.RowSuffix, styles theme.Theme, disk DiskUsageSource, scrollbarReserve int) string {
+	rowTextWidth := columnListTextWidth(width, showIcons, scrollbarReserve)
 	nameWidth := rowTextWidth - 1 - listSizeCells
 	if nameWidth < 1 {
 		nameWidth = 1
@@ -94,26 +94,39 @@ func columnListLeadingGutter() int { return 1 }
 
 func columnListIconStrip() int { return 2 }
 
-func columnListTextWidth(colWidth int, showIcons bool) int {
+func columnListTextWidth(colWidth int, showIcons bool, scrollbarReserve int) int {
 	leftGutter, iconStrip := 0, 0
 	if showIcons {
 		leftGutter = columnListLeadingGutter()
 		iconStrip = columnListIconStrip()
 	}
-	rowTextWidth := colWidth - leftGutter - iconStrip
+	rowTextWidth := colWidth - leftGutter - iconStrip - scrollbarReserve
 	if rowTextWidth < 1 {
 		return 1
 	}
 	return rowTextWidth
 }
 
-func columnListContentOrigin(colX, colWidth int, showIcons bool) (listX, listW int) {
+func columnListContentOrigin(colX, colWidth int, showIcons bool, scrollbarReserve int) (listX, listW int) {
 	if !showIcons {
-		return colX, columnListTextWidth(colWidth, false)
+		return colX, columnListTextWidth(colWidth, false, scrollbarReserve)
 	}
 	leftGutter := columnListLeadingGutter()
 	iconStrip := columnListIconStrip()
-	return colX + leftGutter + iconStrip, columnListTextWidth(colWidth, true)
+	return colX + leftGutter + iconStrip, columnListTextWidth(colWidth, true, scrollbarReserve)
+}
+
+// columnHasScrollbarLane reports whether a carousel column owns a vertical scrollbar track.
+func columnHasScrollbarLane(c Column, inactive, showChild bool) bool {
+	return c.Populated && (!c.Active || inactive || showChild)
+}
+
+// columnScrollbarReserve returns list cells withheld for the column scrollbar (0 or 1).
+func columnScrollbarReserve(hasLane bool, scrollbarEnabled bool) int {
+	if hasLane && scrollbarEnabled {
+		return 1
+	}
+	return 0
 }
 
 func briefHeader(nameTitle, sizeTitle string, rowTextWidth int) string {
@@ -124,8 +137,8 @@ func briefHeader(nameTitle, sizeTitle string, rowTextWidth int) string {
 	return fmt.Sprintf("%-*s %*s", nameWidth, nameTitle, listSizeCells, sizeTitle)
 }
 
-func nameWidthForColumn(colWidth int, showIcons bool) int {
-	rowTextWidth := columnListTextWidth(colWidth, showIcons)
+func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int) int {
+	rowTextWidth := columnListTextWidth(colWidth, showIcons, scrollbarReserve)
 	nw := rowTextWidth - 1 - listSizeCells
 	if nw < 1 {
 		return 1
@@ -139,5 +152,6 @@ func CenterNameWidth(frame geom.Rect, showIcons bool, showChild bool) int {
 	if len(cols) < 2 {
 		return 1
 	}
-	return nameWidthForColumn(cols[1].Width, showIcons)
+	reserve := columnScrollbarReserve(showChild, true)
+	return nameWidthForColumn(cols[1].Width, showIcons, reserve)
 }

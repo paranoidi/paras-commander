@@ -50,3 +50,17 @@ func TestMinActiveWidthPercent(t *testing.T) {
 		t.Fatalf("MinActiveWidthPercent(200) = %d, want at least 50", got)
 	}
 }
+
+func TestFilePreviewEligible(t *testing.T) {
+	minCarousel := geom.Rect{X: 0, Y: 0, Width: config.MinCarouselPanelInnerWidth + 2, Height: 20}
+	if FilePreviewEligible(minCarousel, false) {
+		t.Fatal("bare-minimum carousel width should not enable file preview")
+	}
+	if !FilePreviewEligible(minCarousel, true) {
+		t.Fatal("hide inactive should enable file preview at minimum carousel width")
+	}
+	wide := geom.Rect{X: 0, Y: 0, Width: config.MinCarouselFilePreviewColumnWidth*3 + 2, Height: 20}
+	if !FilePreviewEligible(wide, false) {
+		t.Fatal("wide child column should enable file preview")
+	}
+}

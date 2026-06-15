@@ -58,6 +58,7 @@ func (a *App) render() {
 	a.model.DiskUsageGoduIgnore = a.diskUsageIgnore
 	a.commandsMu.RLock()
 	a.model.FilePreviewDraw = a.model.FilePreview
+	a.model.CarouselFilePreviewDraw = a.model.CarouselFilePreview
 	previewOpen := a.model.FilePreviewDraw.Open || a.model.QuickViewDisplayActive()
 	a.model.FullscreenFilePreviewDraw = a.model.FullscreenFilePreview
 	a.commandsMu.RUnlock()

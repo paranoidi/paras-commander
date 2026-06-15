@@ -21,13 +21,13 @@ func TestShowChildPreviewColumnOffWhenQuickView(t *testing.T) {
 	if !state.CarouselCenterHasSubdirectories() {
 		t.Fatal("fixture should have subdirectories")
 	}
-	if !ShowChildPreviewColumn(state, false) {
+	if !ShowChildPreviewColumn(state, false, false) {
 		t.Fatal("want child column when quick view off and subdirs present")
 	}
-	if ShowChildPreviewColumn(state, true) {
+	if ShowChildPreviewColumn(state, true, false) {
 		t.Fatal("want no child column when quick view on")
 	}
-	_, _, col := BuildColumns(state, 10, true)
+	_, _, col, _ := BuildColumns(state, 10, true, false)
 	if col.Populated {
 		t.Fatal("BuildColumns should not populate child when quick view on")
 	}

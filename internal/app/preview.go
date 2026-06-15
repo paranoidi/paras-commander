@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -18,6 +19,36 @@ import (
 
 type quickViewFlushPayload struct {
 	gen uint64
+}
+
+type previewTarget int
+
+const (
+	previewTargetInactive previewTarget = iota
+	previewTargetFullscreen
+	previewTargetCarousel
+)
+
+func (a *App) patchPreviewState(target previewTarget, fn func(*ui.FilePreviewState)) {
+	a.commandsMu.Lock()
+	defer a.commandsMu.Unlock()
+	switch target {
+	case previewTargetFullscreen:
+		fn(&a.model.FullscreenFilePreview)
+	case previewTargetCarousel:
+		fn(&a.model.CarouselFilePreview)
+	default:
+		fn(&a.model.FilePreview)
+	}
+}
+
+func (a *App) previewRunGenFor(target previewTarget) *atomic.Uint64 {
+	switch target {
+	case previewTargetCarousel:
+		return &a.carouselFilePreviewRunGen
+	default:
+		return &a.filePreviewRunGen
+	}
 }
 
 func (a *App) closeFilePreview() {
@@ -211,16 +242,6 @@ func (a *App) patchFilePreview(fn func(*ui.FilePreviewState)) {
 	fn(&a.model.FilePreview)
 }
 
-func (a *App) patchFilePreviewTarget(fullscreen bool, fn func(*ui.FilePreviewState)) {
-	a.commandsMu.Lock()
-	defer a.commandsMu.Unlock()
-	if fullscreen {
-		fn(&a.model.FullscreenFilePreview)
-	} else {
-		fn(&a.model.FilePreview)
-	}
-}
-
 // handleQuickViewToggle toggles inactive-column quick view (Shift+F3 / Left or Right menu).
 func (a *App) handleQuickViewToggle() {
 	if a.model.ViewMode != ui.ViewBrowser {
@@ -253,6 +274,7 @@ func (a *App) handleQuickViewToggle() {
 		a.setTransientMessage("Quick view on", ui.MessageUrgencyInfo)
 	}
 	a.clearCarouselPreviewNavCoalesce()
+	a.closeCarouselFilePreview()
 	a.applyQuickViewPreviewImmediately()
 }
 
@@ -270,6 +292,7 @@ func (a *App) pauseQuickViewDisplay() {
 // resumeQuickViewDisplay restores inactive-column preview after returning to the quick-view driver panel.
 func (a *App) resumeQuickViewDisplay() {
 	a.clearCarouselPreviewNavCoalesce()
+	a.closeCarouselFilePreview()
 	a.applyQuickViewPreviewImmediately()
 }
 
@@ -504,7 +527,7 @@ func (a *App) applyQuickViewPreviewNow() {
 		})
 		a.postCommandWake()
 		gen := a.filePreviewRunGen.Add(1)
-		go a.runFilePreview(a.commandsCtx, path, argv, workDir, false, gen)
+		go a.runFilePreview(a.commandsCtx, path, argv, workDir, previewTargetInactive, gen)
 	}
 }
 
@@ -616,29 +639,30 @@ func (a *App) reconcileQuickViewPreview() {
 	a.armQuickViewPreviewDebounce()
 }
 
-func (a *App) runFilePreview(ctx context.Context, path string, argv []string, workDir string, fullscreen bool, runGen uint64) {
-	if runGen != a.filePreviewRunGen.Load() {
+func (a *App) runFilePreview(ctx context.Context, path string, argv []string, workDir string, target previewTarget, runGen uint64) {
+	gen := a.previewRunGenFor(target)
+	if runGen != gen.Load() {
 		return
 	}
 	runningApplied := false
-	a.patchFilePreviewTarget(fullscreen, func(st *ui.FilePreviewState) {
+	a.patchPreviewState(target, func(st *ui.FilePreviewState) {
 		if !st.Open || st.Path != path {
 			return
 		}
 		st.Phase = ui.FilePreviewPhaseRunning
 		runningApplied = true
 	})
-	if runningApplied && runGen == a.filePreviewRunGen.Load() {
+	if runningApplied && runGen == gen.Load() {
 		a.postCommandWake()
 	}
 
 	select {
 	case <-ctx.Done():
-		if runGen != a.filePreviewRunGen.Load() {
+		if runGen != gen.Load() {
 			return
 		}
 		canceledApplied := false
-		a.patchFilePreviewTarget(fullscreen, func(st *ui.FilePreviewState) {
+		a.patchPreviewState(target, func(st *ui.FilePreviewState) {
 			if st.Path != path {
 				return
 			}
@@ -646,13 +670,9 @@ func (a *App) runFilePreview(ctx context.Context, path string, argv []string, wo
 			st.ErrorMsg = "Canceled"
 			canceledApplied = true
 		})
-		if canceledApplied && runGen == a.filePreviewRunGen.Load() {
+		if canceledApplied && runGen == gen.Load() {
 			a.postCommandWake()
-			if fullscreen {
-				a.clampFullscreenFilePreviewScroll()
-			} else {
-				a.clampFilePreviewScroll()
-			}
+			a.clampPreviewScroll(target)
 		}
 		return
 	default:
@@ -660,11 +680,11 @@ func (a *App) runFilePreview(ctx context.Context, path string, argv []string, wo
 
 	res := cmdrun.Run(ctx, argv, workDir, cmdrun.MaxStreamBytes)
 
-	if runGen != a.filePreviewRunGen.Load() {
+	if runGen != gen.Load() {
 		return
 	}
 	doneApplied := false
-	a.patchFilePreviewTarget(fullscreen, func(st *ui.FilePreviewState) {
+	a.patchPreviewState(target, func(st *ui.FilePreviewState) {
 		if !st.Open || st.Path != path {
 			return
 		}
@@ -691,12 +711,19 @@ func (a *App) runFilePreview(ctx context.Context, path string, argv []string, wo
 		}
 		doneApplied = true
 	})
-	if doneApplied && runGen == a.filePreviewRunGen.Load() {
+	if doneApplied && runGen == gen.Load() {
 		a.postCommandWake()
-		if fullscreen {
-			a.clampFullscreenFilePreviewScroll()
-		} else {
-			a.clampFilePreviewScroll()
-		}
+		a.clampPreviewScroll(target)
+	}
+}
+
+func (a *App) clampPreviewScroll(target previewTarget) {
+	switch target {
+	case previewTargetFullscreen:
+		a.clampFullscreenFilePreviewScroll()
+	case previewTargetCarousel:
+		// v1: carousel preview is not keyboard-scrollable.
+	default:
+		a.clampFilePreviewScroll()
 	}
 }
