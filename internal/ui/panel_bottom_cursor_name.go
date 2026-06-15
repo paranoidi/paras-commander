@@ -221,7 +221,6 @@ func drawPanelCursorNameHintForState(
 		JobGlyph:         jobMarkGlyph,
 		NewFileTier:      state.NewFileMarkTier(entry),
 		SubtreeSelection: subtreeMark,
-		OpenInOtherPanel: entryOpenInOtherPanel(entry, ctx.OtherPanelPath),
 	}
 	drawPanelBottomCursorNameHint(screen, rect, panelID, state, ctx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, suffix, ctx.Styles)
 }

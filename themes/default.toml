@@ -60,7 +60,8 @@ row.symlink = { fg = "bright_cyan" }
 row.indicator.selection_subtree = { fg = "yellow" }
 row.indicator.new = { fg = "bright_green" }
 row.indicator.new.previous = { fg = "bright_yellow" }
-row.indicator.open = { fg = "bright_cyan" }
+row.folder.open = { fg = "bright_cyan" }
+row.folder.mount = { fg = "bright_blue" }
 indicator.sync = { fg = "green", bold = true }
 indicator.quick_view = { fg = "green", bold = true }
 indicator.selections = { fg = "white" }
@@ -209,7 +210,12 @@ completed = "\uf05d"
 [symbols.filelist]
 selection_subtree = "○"
 new = "\uea7f"
+
+[symbols.folders]
+folder = "\U000F024B"
 open = "\U000F0770"
+scanning = "\U000F0D0B"
+mount = "\U000F0256"
 
 [symbols.scrollbar]
 thumb = "┃"

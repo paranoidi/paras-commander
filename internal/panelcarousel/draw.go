@@ -165,7 +165,6 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 				JobGlyph:         jobGlyph,
 				NewFileTier:      newFileTier,
 				SubtreeSelection: subtree,
-				OpenInOtherPanel: panellist.EntryOpenInOtherPanel(entry, p.OtherPanelPath),
 			}
 			var diskSrc DiskUsageSource
 			if p.DiskUsage.Active {

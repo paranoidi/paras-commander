@@ -26,6 +26,11 @@ func ComposeListingVolumeIgnore(base ShouldIgnoreFolder, gate ListingVolumeGate)
 	}
 }
 
+// OnOtherMount reports whether absPath is on a different device than listingDev (typical mount boundary).
+func OnOtherMount(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool) bool {
+	return ScanExcluded(absPath, descendIntoMountPoints, listingDev, listingDevValid, nil)
+}
+
 // ScanExcluded reports whether a directory would not be descended into by disk-usage rules used for the listing row (godu + optional mount gate).
 func ScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore ShouldIgnoreFolder) bool {
 	clean := filepath.Clean(absPath)

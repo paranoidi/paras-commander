@@ -63,8 +63,10 @@ type Theme struct {
 	PanelRowIndicatorNew tcell.Style
 	// PanelRowIndicatorNewPrevious styles the file-list suffix for earlier new-file marks in the same directory.
 	PanelRowIndicatorNewPrevious tcell.Style
-	// PanelRowIndicatorOpen styles the file-list suffix when the other panel is in that directory.
-	PanelRowIndicatorOpen tcell.Style
+	// PanelRowFolderOpen styles the open-folder icon strip when the other panel is in that directory.
+	PanelRowFolderOpen tcell.Style
+	// PanelRowFolderMount styles the other-mount directory icon strip.
+	PanelRowFolderMount tcell.Style
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
 	PanelText                   tcell.Style
 	PanelCursorActive           tcell.Style
@@ -385,7 +387,10 @@ const (
 	SymbolKeyHiddenDotfiles           = "hidden_dotfiles"
 	SymbolKeyFilelistSelectionSubtree = "filelist.selection_subtree"
 	SymbolKeyFilelistNew              = "filelist.new"
-	SymbolKeyFilelistOpen             = "filelist.open"
+	SymbolKeyFoldersFolder            = "folders.folder"
+	SymbolKeyFoldersOpen              = "folders.open"
+	SymbolKeyFoldersScanning          = "folders.scanning"
+	SymbolKeyFoldersMount             = "folders.mount"
 	SymbolKeyScrollbarThumb           = "scrollbar.thumb"
 	SymbolKeyMetaRunning              = "meta.running"
 )
@@ -464,9 +469,24 @@ func (t Theme) SymbolFilelistNew() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistNew, '\uea7f')
 }
 
-// SymbolFilelistOpen returns the other-panel-open-directory suffix glyph.
-func (t Theme) SymbolFilelistOpen() rune {
-	return t.filelistSymbolRune(SymbolKeyFilelistOpen, '\U000F0770')
+// SymbolFoldersFolder returns the default closed-directory icon-strip glyph.
+func (t Theme) SymbolFoldersFolder() string {
+	return t.foldersSymbol(SymbolKeyFoldersFolder, "\U000F024B")
+}
+
+// SymbolFoldersOpen returns the other-panel-open directory icon-strip glyph.
+func (t Theme) SymbolFoldersOpen() string {
+	return t.foldersSymbol(SymbolKeyFoldersOpen, "\U000F0770")
+}
+
+// SymbolFoldersScanning returns the disk-scan-pending directory icon-strip glyph.
+func (t Theme) SymbolFoldersScanning() string {
+	return t.foldersSymbol(SymbolKeyFoldersScanning, "\U000F0D0B")
+}
+
+// SymbolFoldersMount returns the other-mount directory icon-strip glyph.
+func (t Theme) SymbolFoldersMount() string {
+	return t.foldersSymbol(SymbolKeyFoldersMount, "\U000F0256")
 }
 
 // SymbolScrollbarThumb returns the panel scrollbar thumb-style position glyph.
@@ -480,6 +500,15 @@ func (t Theme) filelistSymbolRune(key string, fallback rune) rune {
 			for _, r := range s {
 				return r
 			}
+		}
+	}
+	return fallback
+}
+
+func (t Theme) foldersSymbol(key, fallback string) string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[key]); s != "" {
+			return s
 		}
 	}
 	return fallback
@@ -628,7 +657,8 @@ var requiredStyleKeys = []string{
 	"panel.row.indicator.selection_subtree",
 	"panel.row.indicator.new",
 	"panel.row.indicator.new.previous",
-	"panel.row.indicator.open",
+	"panel.row.folder.open",
+	"panel.row.folder.mount",
 	"panel.text",
 	"panel.indicator.sync",
 	"panel.indicator.quick_view",
@@ -1075,7 +1105,8 @@ func parse(data []byte) (Theme, error) {
 		PanelRowIndicatorSelectionSubtree:   styles["panel.row.indicator.selection_subtree"],
 		PanelRowIndicatorNew:                styles["panel.row.indicator.new"],
 		PanelRowIndicatorNewPrevious:        styles["panel.row.indicator.new.previous"],
-		PanelRowIndicatorOpen:               styles["panel.row.indicator.open"],
+		PanelRowFolderOpen:                  styles["panel.row.folder.open"],
+		PanelRowFolderMount:                 styles["panel.row.folder.mount"],
 		PanelText:                           styles["panel.text"],
 		PanelCursorActive:                   styles["panel.active.row.cursor"],
 		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],

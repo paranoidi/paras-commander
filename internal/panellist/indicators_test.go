@@ -61,33 +61,6 @@ func TestSuffixSpanStyleFilelistFallsBackOffCursorRow(t *testing.T) {
 	}
 }
 
-func TestSuffixDecorationLenOpenInOtherPanel(t *testing.T) {
-	th := theme.Default()
-	dir := localfs.Entry{Name: "alpha", Type: localfs.EntryDirectory}
-	file := localfs.Entry{Name: "beta.txt", Type: localfs.EntryFile}
-	suffix := RowSuffix{OpenInOtherPanel: true}
-	if got := SuffixDecorationLen(20, suffix, dir, th); got != 2 {
-		t.Fatalf("dir decoration len = %d, want 2", got)
-	}
-	if got := SuffixDecorationLen(20, suffix, file, th); got != 0 {
-		t.Fatalf("file decoration len = %d, want 0", got)
-	}
-}
-
-func TestSuffixSpanStyleOpenUsesIndicatorColor(t *testing.T) {
-	th := theme.Default()
-	suffix := RowSuffix{OpenInOtherPanel: true}
-	st, ok := SuffixSpanStyle(th.SymbolFilelistOpen(), suffix, "", "", th, false)
-	if !ok {
-		t.Fatal("expected open suffix style")
-	}
-	fg, _, _ := st.Decompose()
-	wantFG, _, _ := th.PanelRowIndicatorOpen.Decompose()
-	if fg != wantFG {
-		t.Fatalf("fg = %v, want panel.row.indicator.open %v", fg, wantFG)
-	}
-}
-
 func TestListingSuffixSpansCursorIconOnCursorRow(t *testing.T) {
 	th := theme.Default()
 	th.PanelFileIconFG = map[string]tcell.Color{

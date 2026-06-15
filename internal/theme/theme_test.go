@@ -17,8 +17,17 @@ func TestDefaultFilelistSymbols(t *testing.T) {
 	if g := th.SymbolFilelistNew(); g != '\uea7f' {
 		t.Fatalf("SymbolFilelistNew = %U, want U+EA7F", g)
 	}
-	if g := th.SymbolFilelistOpen(); g != '\U000F0770' {
-		t.Fatalf("SymbolFilelistOpen = %U, want U+F0770", g)
+	if g := th.SymbolFoldersFolder(); g != "\U000F024B" {
+		t.Fatalf("SymbolFoldersFolder = %q, want U+F024B", g)
+	}
+	if g := th.SymbolFoldersOpen(); g != "\U000F0770" {
+		t.Fatalf("SymbolFoldersOpen = %q, want U+F0770", g)
+	}
+	if g := th.SymbolFoldersScanning(); g != "\U000F0D0B" {
+		t.Fatalf("SymbolFoldersScanning = %q, want U+F0D0B", g)
+	}
+	if g := th.SymbolFoldersMount(); g != "\U000F0256" {
+		t.Fatalf("SymbolFoldersMount = %q, want U+F0256", g)
 	}
 	if g := th.SymbolScrollbarThumb(); g != '\u2503' {
 		t.Fatalf("SymbolScrollbarThumb = %q, want ┃", string(g))
@@ -31,13 +40,17 @@ func TestDefaultFilelistSymbols(t *testing.T) {
 	if prevFG != tcell.PaletteColor(11) {
 		t.Fatalf("panel.row.indicator.new.previous fg = %v, want bright_yellow (index 11)", prevFG)
 	}
-	openFG, _, _ := th.PanelRowIndicatorOpen.Decompose()
+	openFG, _, _ := th.PanelRowFolderOpen.Decompose()
 	if openFG != tcell.PaletteColor(14) {
-		t.Fatalf("panel.row.indicator.open fg = %v, want bright_cyan (index 14)", openFG)
+		t.Fatalf("panel.row.folder.open fg = %v, want bright_cyan (index 14)", openFG)
 	}
 	subFG, _, _ := th.PanelRowIndicatorSelectionSubtree.Decompose()
 	if subFG != tcell.PaletteColor(3) {
 		t.Fatalf("panel.row.indicator.selection_subtree fg = %v, want yellow (index 3)", subFG)
+	}
+	mountFG, _, _ := th.PanelRowFolderMount.Decompose()
+	if mountFG != tcell.PaletteColor(12) {
+		t.Fatalf("panel.row.folder.mount fg = %v, want bright_blue (index 12)", mountFG)
 	}
 }
 
