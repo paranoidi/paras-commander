@@ -190,6 +190,16 @@ type App struct {
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
 	lastScreenContentHash uint64
+	// chooserFile is non-empty in Helix/editor file-picker mode (--chooser-file).
+	chooserFile string
+}
+
+// LaunchConfig controls process-level startup (CLI flags).
+type LaunchConfig struct {
+	DevMode           bool
+	ChooserFile       string
+	ChooserSelect     string
+	ChooserNoCarousel bool
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -203,20 +213,25 @@ type Options struct {
 	KeymapBundle *keymap.Bundle // optional full bundle override for tests
 	// DevMode appends the Dev pulldown menu with test helpers (pc -dev).
 	DevMode bool
+	// ChooserFile enables file-picker mode; Enter on a file writes the path here and quits.
+	ChooserFile string
+	// ChooserSelect is an optional file or directory to open and highlight at chooser startup.
+	ChooserSelect string
+	// ChooserNoCarousel disables the default carousel view on the left panel at startup.
+	ChooserNoCarousel bool
 }
 
 // Run initializes and starts the terminal application.
-// When devMode is true, the Dev pulldown menu is available (see pc -dev).
-func Run(devMode bool) error {
+func Run(cfg LaunchConfig) error {
 	paths, err := config.DefaultPaths()
 	if err != nil {
 		return err
 	}
-	cfg, err := config.LoadFromPaths(paths)
+	conf, err := config.LoadFromPaths(paths)
 	if err != nil {
 		return err
 	}
-	styles, themeErr := theme.Resolve(cfg.Theme, paths.ThemesDir)
+	styles, themeErr := theme.Resolve(conf.Theme, paths.ThemesDir)
 	themeChoices, choicesErr := theme.ThemeChoices(paths.ThemesDir)
 	if choicesErr != nil && themeErr == nil {
 		themeErr = choicesErr
@@ -230,12 +245,15 @@ func Run(devMode bool) error {
 	}
 	defer screen.Fini()
 	app, err := NewWithOptions(screen, Options{
-		CWD:          os.Getwd,
-		Config:       cfg,
-		Theme:        styles,
-		ThemeChoices: themeChoices,
-		Paths:        paths,
-		DevMode:      devMode,
+		CWD:               os.Getwd,
+		Config:            conf,
+		Theme:             styles,
+		ThemeChoices:      themeChoices,
+		Paths:             paths,
+		DevMode:           cfg.DevMode,
+		ChooserFile:       cfg.ChooserFile,
+		ChooserSelect:     cfg.ChooserSelect,
+		ChooserNoCarousel: cfg.ChooserNoCarousel,
 	})
 	if err != nil {
 		return err
@@ -540,6 +558,24 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
 			app.jobStopCh,
 		)
+	}
+	if opts.ChooserFile != "" {
+		app.chooserFile = opts.ChooserFile
+	}
+	if opts.ChooserSelect != "" {
+		if err := app.applyChooserSelect(opts.ChooserSelect); err != nil {
+			app.stopWorker()
+			return nil, fmt.Errorf("select: %w", err)
+		}
+	}
+	if opts.ChooserFile != "" {
+		if !opts.ChooserNoCarousel {
+			app.model.Left.CarouselMode = true
+			app.model.ActivePanel = ui.LeftPanel
+		}
+		app.model.QuickViewEnabled = true
+		app.model.QuickViewPanel = app.model.ActivePanel
+		app.applyQuickViewPreviewImmediately()
 	}
 	return app, nil
 }

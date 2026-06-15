@@ -478,7 +478,9 @@ func (a *App) finishResolvedKeyboardAction(nextAction string) (quit bool, render
 	case keymap.ActionAppQuitImmediate:
 		return a.handleQuitImmediate(), false
 	default:
-		a.dispatch(nextAction)
+		if quit := a.dispatch(nextAction); quit {
+			return true, false
+		}
 		return false, true
 	}
 }
@@ -547,26 +549,25 @@ func (a *App) dispatchActionLikeKeyboardShortcut(actionID string) bool {
 	case keymap.ActionAppQuitImmediate:
 		return a.handleQuitImmediate()
 	default:
-		a.dispatch(actionID)
-		return false
+		return a.dispatch(actionID)
 	}
 }
 
-func (a *App) dispatch(actionID string) {
+func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchFilePreviewFocus(actionID) {
-		return
+		return false
 	}
 	if a.tryDispatchSelectionsStrip(actionID) {
-		return
+		return false
 	}
 	if a.tryDispatchJobs(actionID) {
-		return
+		return false
 	}
 	if a.tryDispatchMessages(actionID) {
-		return
+		return false
 	}
 	if a.tryDispatchCommands(actionID) {
-		return
+		return false
 	}
 	viewportRows := a.activeViewportRows()
 	activePanel := a.activePanel()
@@ -709,7 +710,7 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionPanelToggleHidden:
 		if err := a.panelByID(a.model.ActivePanel).ToggleHidden(viewportRows); err != nil {
 			a.setErrorMessage("Toggle hidden failed", err)
-			return
+			return false
 		}
 		label := panelLabel(a.model.ActivePanel)
 		a.setTransientMessage(a.panelHiddenVisibilityMessage(label, a.activePanel().ShowHidden), ui.MessageUrgencyInfo)
@@ -723,31 +724,31 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionRemoteSFTPLink:
 		a.openSFTPConnectDialog()
 	case keymap.ActionNavOpen:
-		a.handleNavOpen(activePanel, viewportRows)
+		return a.handleNavOpen(activePanel, viewportRows)
 	case keymap.ActionPanelToggleSync:
 		a.toggleSyncFollow()
 	case keymap.ActionPanelOpenDirInOther:
 		if a.model.ViewMode != ui.ViewBrowser {
-			return
+			return false
 		}
 		entry, ok := activePanel.CurrentEntry()
 		if !ok || entry.Type != localfs.EntryDirectory {
-			return
+			return false
 		}
 		if err := a.navigatePanelToDirectory(a.inactivePanelID(), entry.Path, ""); err != nil {
 			a.setErrorMessage("Open in other panel failed", err)
-			return
+			return false
 		}
 		if a.disableSyncFollowIfEnabled() {
 			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
 		}
 	case keymap.ActionPanelOpenActivePathInOther:
 		if a.model.ViewMode != ui.ViewBrowser {
-			return
+			return false
 		}
 		if err := a.navigatePanelToDirectory(a.inactivePanelID(), activePanel.PathString(), ""); err != nil {
 			a.setErrorMessage("Open current path in other panel failed", err)
-			return
+			return false
 		}
 		if a.disableSyncFollowIfEnabled() {
 			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
@@ -755,11 +756,11 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionNavParent:
 		if err := activePanel.Parent(viewportRows); err != nil {
 			a.setErrorMessage("Parent failed", err)
-			return
+			return false
 		}
 	case keymap.ActionNavHome:
 		if a.model.UserHomeDir == "" {
-			return
+			return false
 		}
 		if err := a.navigatePanelToDirectory(a.model.ActivePanel, a.model.UserHomeDir, ""); err != nil {
 			a.setErrorMessage("Navigate to home failed", err)
@@ -767,12 +768,12 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionNavForward:
 		if _, err := activePanel.HistoryForward(viewportRows); err != nil {
 			a.setErrorMessage("Forward history failed", err)
-			return
+			return false
 		}
 	case keymap.ActionNavBackward:
 		if _, err := activePanel.HistoryBackward(viewportRows); err != nil {
 			a.setErrorMessage("Backward history failed", err)
-			return
+			return false
 		}
 	case keymap.ActionPanelHistoryDialog:
 		// Keyboard/menu shortcut targets whichever panel is active (left vs right).
@@ -808,7 +809,7 @@ func (a *App) dispatch(actionID string) {
 		a.activateMoveAction()
 	case keymap.ActionFileRunForEach:
 		if a.model.ViewMode != ui.ViewBrowser {
-			return
+			return false
 		}
 		a.openRunForEachDialog()
 	case keymap.ActionAppUserMenu:
@@ -844,6 +845,7 @@ func (a *App) dispatch(actionID string) {
 	case keymap.ActionDevShowError:
 		a.setTransientMessage("Example error message", ui.MessageUrgencyError)
 	}
+	return false
 }
 
 func (a *App) handleFilterKey(event *tcell.EventKey) {

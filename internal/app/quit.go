@@ -8,6 +8,9 @@ import (
 )
 
 func (a *App) handleQuit() bool {
+	if a.chooserMode() {
+		return a.handleQuitImmediate()
+	}
 	if a.hasActiveJobs() || a.hasRunningCommands() {
 		a.openQuitConfirm()
 		return false
