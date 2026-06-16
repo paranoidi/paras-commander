@@ -44,6 +44,8 @@ type Options struct {
 	DiskSpaceCheckMinFileBytes int64
 	// CowFileCloning enables Linux FICLONE (CoW) when supported, like Midnight Commander's "file cloning".
 	CowFileCloning bool
+	// CopyFileRange tries Linux copy_file_range(2) after FICLONE before userspace read/write.
+	CopyFileRange bool
 }
 
 // DefaultOptions returns operation defaults aligned with config.Default().Operations.
@@ -56,6 +58,15 @@ func DefaultOptions() Options {
 		SyncAfterEachFile:          o.SyncAfterEachFile,
 		DiskSpaceCheckMinFileBytes: o.DiskSpaceCheckMinFileBytes,
 		CowFileCloning:             o.CowFileCloning,
+		CopyFileRange:              o.CopyFileRange,
+	}
+}
+
+// LocalCopyFileOpts builds localfs.CopyFileOpts for a single file copy.
+func (o Options) LocalCopyFileOpts(buf []byte) localfs.CopyFileOpts {
+	return localfs.CopyFileOpts{
+		Buf:           buf,
+		CopyFileRange: o.CopyFileRange,
 	}
 }
 
@@ -172,7 +183,7 @@ func CopyRegular(src, dest string, opts Options, progress ProgressCallback) erro
 		return fmt.Errorf("stat source %q: %w", src, err)
 	}
 
-	if err := localfs.CopyFile(context.Background(), src, dest, bufSize, opts.PreservePermissions, opts.PreserveTimestamps, false, opts.SyncAfterEachFile, opts.CowFileCloning, nil); err != nil {
+	if err := localfs.CopyFile(context.Background(), src, dest, bufSize, opts.PreservePermissions, opts.PreserveTimestamps, false, opts.SyncAfterEachFile, opts.CowFileCloning, opts.LocalCopyFileOpts(nil), nil); err != nil {
 		return err
 	}
 

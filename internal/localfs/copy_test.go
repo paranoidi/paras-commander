@@ -17,7 +17,7 @@ func TestCopyFileContextCanceled(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	err := CopyFile(ctx, src, dst, 4096, false, false, false, false, false, nil)
+	err := CopyFile(ctx, src, dst, 4096, false, false, false, false, false, CopyFileOpts{}, nil)
 	if err == nil || !errors.Is(err, context.Canceled) {
 		t.Fatalf("CopyFile err = %v, want context.Canceled", err)
 	}

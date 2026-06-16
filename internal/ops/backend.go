@@ -227,7 +227,7 @@ func statConflictFacts(ctx context.Context, src, dst pathloc.Path) (FileConflict
 	}, nil
 }
 
-func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, resolver ConflictResolver, onWritten func(int64)) (copied bool, err error) {
+func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copied bool, err error) {
 	if err := ensureParentDirs(ctx, dst); err != nil {
 		return false, fmt.Errorf("create parent for %q: %w", dst, err)
 	}
@@ -276,7 +276,12 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 		return false, err
 	}
 
-	buf := make([]byte, BufferSize(opts.CopyBufferKiB))
+	bufSize := BufferSize(opts.CopyBufferKiB)
+	if len(buf) < bufSize {
+		buf = make([]byte, bufSize)
+	} else {
+		buf = buf[:bufSize]
+	}
 	cw := &countingWriter{w: wc, fn: onWritten}
 	_, err = io.CopyBuffer(cw, &ctxReader{ctx: ctx, r: rc}, buf)
 	if closeErr := wc.Close(); err == nil {

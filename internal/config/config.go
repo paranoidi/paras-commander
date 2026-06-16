@@ -296,6 +296,8 @@ type OperationsConfig struct {
 	DiskSpaceCheckMinFileBytes int64 `toml:"disk_space_check_min_file_bytes"`
 	// CowFileCloning enables Linux FICLONE (CoW) when supported (similar to Midnight Commander file cloning).
 	CowFileCloning bool `toml:"cow_file_cloning"`
+	// CopyFileRange tries Linux copy_file_range(2) after FICLONE before userspace read/write.
+	CopyFileRange bool `toml:"copy_file_range"`
 	// FlattenDefaultLocation is the default destination prefill panel: "active" or "inactive".
 	FlattenDefaultLocation string `toml:"flatten_default_location"`
 	// FlattenRecursive is the default for the flatten dialog recursive checkbox.
@@ -396,6 +398,7 @@ func Default() Config {
 			SyncAfterEachFile:          DefaultSyncAfterEachFile,
 			DiskSpaceCheckMinFileBytes: DefaultDiskSpaceCheckMinFileBytes,
 			CowFileCloning:             DefaultCowFileCloning,
+			CopyFileRange:              DefaultCopyFileRange,
 			FlattenDefaultLocation:     DefaultFlattenDefaultLocation,
 			FlattenRecursive:           DefaultFlattenRecursive,
 			FlattenRemoveEmptyDirs:     DefaultFlattenRemoveEmptyDirs,

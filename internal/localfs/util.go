@@ -86,7 +86,7 @@ func IsCrossDeviceRenameError(err error) bool {
 // If tryKernelFastCopy is true (Linux), ioctl(FICLONE) is attempted before read/write (CoW when supported).
 // onWritten is called with the byte length of each successful destination write (optional).
 // ctx cancellation is checked before each read from src.
-func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, preserveTimes, dir, syncAfterWrite, tryKernelFastCopy bool, onWritten func(int64)) error {
+func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, preserveTimes, dir, syncAfterWrite, tryKernelFastCopy bool, extra CopyFileOpts, onWritten func(int64)) error {
 	srcInfo, err := os.Lstat(src)
 	if err != nil {
 		return fmt.Errorf("stat source %q: %w", src, err)
@@ -116,12 +116,27 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 		ok, ferr := tryKernelReflinkCopy(ctx, srcFile, dstFile, srcInfo.Size(), onWritten)
 		if ferr != nil {
 			_ = dstFile.Close()
+			_ = os.Remove(target)
+			return fmt.Errorf("copy content %q -> %q: %w", src, target, ferr)
+		}
+		fastDone = ok
+	}
+	if !fastDone && extra.CopyFileRange {
+		ok, ferr := tryKernelFileRangeCopy(ctx, srcFile, dstFile, srcInfo.Size(), onWritten)
+		if ferr != nil {
+			_ = dstFile.Close()
+			_ = os.Remove(target)
 			return fmt.Errorf("copy content %q -> %q: %w", src, target, ferr)
 		}
 		fastDone = ok
 	}
 	if !fastDone {
-		buf := make([]byte, bufSize)
+		buf := extra.Buf
+		if len(buf) < bufSize {
+			buf = make([]byte, bufSize)
+		} else {
+			buf = buf[:bufSize]
+		}
 		srcWrapped := io.Reader(srcFile)
 		if ctx != nil {
 			srcWrapped = &ctxReader{ctx: ctx, r: srcFile}
@@ -133,16 +148,19 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 		_, err = io.CopyBuffer(dstWrapped, srcWrapped, buf)
 		if err != nil {
 			_ = dstFile.Close()
+			_ = os.Remove(target)
 			return fmt.Errorf("copy content %q -> %q: %w", src, target, err)
 		}
 	}
 	if syncAfterWrite {
 		if err := dstFile.Sync(); err != nil {
 			_ = dstFile.Close()
+			_ = os.Remove(target)
 			return fmt.Errorf("sync destination %q: %w", target, err)
 		}
 	}
 	if err := dstFile.Close(); err != nil {
+		_ = os.Remove(target)
 		return fmt.Errorf("close destination %q: %w", target, err)
 	}
 
@@ -202,7 +220,7 @@ func CopyDir(src, dst string, bufSize int, preservePerms, preserveTimes, syncAft
 				return err
 			}
 		} else if childInfo.Mode().IsRegular() {
-			if err := CopyFile(context.Background(), childSrc, destDir, bufSize, preservePerms, preserveTimes, true, syncAfterWrite, false, nil); err != nil {
+			if err := CopyFile(context.Background(), childSrc, destDir, bufSize, preservePerms, preserveTimes, true, syncAfterWrite, false, CopyFileOpts{}, nil); err != nil {
 				return err
 			}
 		} else {

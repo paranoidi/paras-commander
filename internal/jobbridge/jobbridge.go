@@ -186,13 +186,16 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 			SyncAfterEachFile:          opsCfg.SyncAfterEachFile,
 			DiskSpaceCheckMinFileBytes: opsCfg.DiskSpaceCheckMinFileBytes,
 			CowFileCloning:             opsCfg.CowFileCloning,
+			CopyFileRange:              opsCfg.CopyFileRange,
 		}
 		if job.Destination.IsRemote() {
 			opts.CowFileCloning = false
+			opts.CopyFileRange = false
 		}
 		for _, src := range job.Sources {
 			if src.IsRemote() {
 				opts.CowFileCloning = false
+				opts.CopyFileRange = false
 				break
 			}
 		}

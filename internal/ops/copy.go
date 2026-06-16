@@ -187,6 +187,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 	}
 
 	var deferredDirMeta []PlanItem
+	copyBuf := make([]byte, BufferSize(opts.CopyBufferKiB))
 
 	for _, item := range plan {
 		if err := ctx.Err(); err != nil {
@@ -235,13 +236,13 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 		var copied bool
 		var err error
 		if useLocalFastPath(item.Src, item.Dst) {
-			copied, err = copyFileWithConflict(ctx, srcStr, dstStr, opts, resolver, func(delta int64) {
+			copied, err = copyFileWithConflict(ctx, srcStr, dstStr, opts, resolver, copyBuf, func(delta int64) {
 				doneBytes += delta
 				bytesSinceEmit += delta
 				emitProgress(srcStr, dstStr, doneFiles, doneBytes, false)
 			})
 		} else {
-			copied, err = copyFileTransfer(ctx, item.Src, item.Dst, opts, resolver, func(delta int64) {
+			copied, err = copyFileTransfer(ctx, item.Src, item.Dst, opts, resolver, copyBuf, func(delta int64) {
 				doneBytes += delta
 				bytesSinceEmit += delta
 				emitProgress(srcStr, dstStr, doneFiles, doneBytes, false)
@@ -267,7 +268,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 	return doneFiles, doneBytes, nil
 }
 
-func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, resolver ConflictResolver, onWritten func(int64)) (copied bool, err error) {
+func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copied bool, err error) {
 	parent := filepath.Dir(dst)
 	if err := os.MkdirAll(parent, 0o755); err != nil {
 		return false, fmt.Errorf("create parent directory %q: %w", parent, err)
@@ -292,7 +293,7 @@ func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, re
 		return false, fmt.Errorf("stat destination %q: %w", dst, err)
 	}
 
-	err = localfs.CopyFile(ctx, src, dst, BufferSize(opts.CopyBufferKiB), opts.PreservePermissions, opts.PreserveTimestamps, false, opts.SyncAfterEachFile, opts.CowFileCloning, onWritten)
+	err = localfs.CopyFile(ctx, src, dst, BufferSize(opts.CopyBufferKiB), opts.PreservePermissions, opts.PreserveTimestamps, false, opts.SyncAfterEachFile, opts.CowFileCloning, opts.LocalCopyFileOpts(buf), onWritten)
 	if err != nil {
 		return false, err
 	}
