@@ -46,6 +46,16 @@ type Options struct {
 	CowFileCloning bool
 	// CopyFileRange tries Linux copy_file_range(2) after FICLONE before userspace read/write.
 	CopyFileRange bool
+	// SparseFileCopy preserves sparse regions on Linux (SEEK_DATA/SEEK_HOLE).
+	SparseFileCopy bool
+	// PreallocateDestination reserves destination space before copy when source size is known.
+	PreallocateDestination bool
+	// PreallocateMinFileBytes applies preallocation only when source size is at least this value (0 = always).
+	PreallocateMinFileBytes int64
+	// SyncAtJobEnd fsyncs copied local files once after the job when SyncAfterEachFile is false.
+	SyncAtJobEnd bool
+	// SyncMinFileKiB skips fsync for files smaller than this threshold (0 = no minimum).
+	SyncMinFileKiB int
 }
 
 // DefaultOptions returns operation defaults aligned with config.Default().Operations.
@@ -59,14 +69,47 @@ func DefaultOptions() Options {
 		DiskSpaceCheckMinFileBytes: o.DiskSpaceCheckMinFileBytes,
 		CowFileCloning:             o.CowFileCloning,
 		CopyFileRange:              o.CopyFileRange,
+		SparseFileCopy:             o.SparseFileCopy,
+		PreallocateDestination:     o.PreallocateDestination,
+		PreallocateMinFileBytes:    o.PreallocateMinFileBytes,
+		SyncAtJobEnd:               o.SyncAtJobEnd,
+		SyncMinFileKiB:             o.SyncMinFileKiB,
 	}
+}
+
+// SyncFileNow reports whether a copied file should be fsync'd immediately after write.
+func (o Options) SyncFileNow(size int64) bool {
+	if !o.SyncAfterEachFile {
+		return false
+	}
+	return o.syncFileMeetsMinSize(size)
+}
+
+// SyncFileDeferred reports whether a copied local file should be fsync'd at job end.
+func (o Options) SyncFileDeferred(size int64) bool {
+	if o.SyncAfterEachFile || !o.SyncAtJobEnd {
+		return false
+	}
+	return o.syncFileMeetsMinSize(size)
+}
+
+func (o Options) syncFileMeetsMinSize(size int64) bool {
+	if o.SyncMinFileKiB <= 0 {
+		return true
+	}
+	return size >= int64(o.SyncMinFileKiB)*1024
 }
 
 // LocalCopyFileOpts builds localfs.CopyFileOpts for a single file copy.
 func (o Options) LocalCopyFileOpts(buf []byte) localfs.CopyFileOpts {
 	return localfs.CopyFileOpts{
-		Buf:           buf,
-		CopyFileRange: o.CopyFileRange,
+		Buf:                buf,
+		CopyFileRange:      o.CopyFileRange,
+		SparseCopy:         o.SparseFileCopy,
+		Preallocate:        o.PreallocateDestination,
+		PreallocateMin:     o.PreallocateMinFileBytes,
+		SyncPerFile:        o.SyncAfterEachFile,
+		SyncMinFileKiB:     o.SyncMinFileKiB,
 	}
 }
 
@@ -183,7 +226,7 @@ func CopyRegular(src, dest string, opts Options, progress ProgressCallback) erro
 		return fmt.Errorf("stat source %q: %w", src, err)
 	}
 
-	if err := localfs.CopyFile(context.Background(), src, dest, bufSize, opts.PreservePermissions, opts.PreserveTimestamps, false, opts.SyncAfterEachFile, opts.CowFileCloning, opts.LocalCopyFileOpts(nil), nil); err != nil {
+	if err := localfs.CopyFile(context.Background(), src, dest, bufSize, opts.PreservePermissions, opts.PreserveTimestamps, false, opts.CowFileCloning, opts.LocalCopyFileOpts(nil), nil); err != nil {
 		return err
 	}
 

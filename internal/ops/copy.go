@@ -187,6 +187,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 	}
 
 	var deferredDirMeta []PlanItem
+	var deferredSync []string
 	copyBuf := make([]byte, BufferSize(opts.CopyBufferKiB))
 
 	for _, item := range plan {
@@ -220,6 +221,8 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 				if err := copySymlinkWithConflict(srcStr, dstStr, resolver); err != nil {
 					return doneFiles, doneBytes, err
 				}
+			} else if err := copySymlinkTransfer(ctx, item.Src, item.Dst, resolver); err != nil {
+				return doneFiles, doneBytes, err
 			}
 			doneFiles++
 			emitMetaProgress(srcStr, dstStr, doneFiles, doneBytes)
@@ -255,6 +258,12 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 			continue
 		}
 
+		if opts.SyncFileDeferred(item.FileSize) && item.Dst.Scheme() == pathloc.SchemeFile {
+			if host, err := item.Dst.FilePath(); err == nil {
+				deferredSync = append(deferredSync, host)
+			}
+		}
+
 		doneFiles++
 		emitProgress(srcStr, dstStr, doneFiles, doneBytes, true)
 	}
@@ -262,6 +271,12 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 	for _, item := range deferredDirMeta {
 		if err := applyItemMetadata(ctx, item, opts); err != nil {
 			return doneFiles, doneBytes, err
+		}
+	}
+
+	for _, path := range deferredSync {
+		if err := syncLocalPath(path); err != nil {
+			return doneFiles, doneBytes, fmt.Errorf("sync destination %q: %w", path, err)
 		}
 	}
 
@@ -293,7 +308,7 @@ func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, re
 		return false, fmt.Errorf("stat destination %q: %w", dst, err)
 	}
 
-	err = localfs.CopyFile(ctx, src, dst, BufferSize(opts.CopyBufferKiB), opts.PreservePermissions, opts.PreserveTimestamps, false, opts.SyncAfterEachFile, opts.CowFileCloning, opts.LocalCopyFileOpts(buf), onWritten)
+	err = localfs.CopyFile(ctx, src, dst, BufferSize(opts.CopyBufferKiB), opts.PreservePermissions, opts.PreserveTimestamps, false, opts.CowFileCloning, opts.LocalCopyFileOpts(buf), onWritten)
 	if err != nil {
 		return false, err
 	}

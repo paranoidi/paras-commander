@@ -48,6 +48,8 @@ type Backend interface {
 	Mkdir(ctx context.Context, dir pathloc.Path, perm fs.FileMode) error
 	Remove(ctx context.Context, loc pathloc.Path) error
 	Rename(ctx context.Context, oldLoc, newLoc pathloc.Path) error
+	ReadSymlink(ctx context.Context, loc pathloc.Path) (string, error)
+	Symlink(ctx context.Context, loc pathloc.Path, target string) error
 }
 
 // Registry maps schemes to backends.

@@ -107,8 +107,6 @@ func (b *Backend) OpenRead(ctx context.Context, loc pathloc.Path) (io.ReadCloser
 // OpenWrite implements fsbackend.Backend.
 func (b *Backend) OpenWrite(ctx context.Context, loc pathloc.Path, size int64, opts fsbackend.CreateOpts) (io.WriteCloser, error) {
 	_ = ctx
-	_ = size
-	_ = opts
 	host, err := loc.FilePath()
 	if err != nil {
 		return nil, err
@@ -120,7 +118,14 @@ func (b *Backend) OpenWrite(ctx context.Context, loc pathloc.Path, size int64, o
 	if opts.Append {
 		flags |= os.O_APPEND
 	}
-	return os.OpenFile(host, flags, 0o644)
+	f, err := os.OpenFile(host, flags, 0o644)
+	if err != nil {
+		return nil, err
+	}
+	if opts.Truncate && size > 0 {
+		_ = f.Truncate(size)
+	}
+	return f, nil
 }
 
 // Mkdir implements fsbackend.Backend.
@@ -155,6 +160,26 @@ func (b *Backend) Rename(ctx context.Context, oldLoc, newLoc pathloc.Path) error
 		return err
 	}
 	return localfs.Rename(oldHost, newHost)
+}
+
+// ReadSymlink implements fsbackend.Backend.
+func (b *Backend) ReadSymlink(ctx context.Context, loc pathloc.Path) (string, error) {
+	_ = ctx
+	host, err := loc.FilePath()
+	if err != nil {
+		return "", err
+	}
+	return localfs.ReadSymlink(host)
+}
+
+// Symlink implements fsbackend.Backend.
+func (b *Backend) Symlink(ctx context.Context, loc pathloc.Path, target string) error {
+	_ = ctx
+	host, err := loc.FilePath()
+	if err != nil {
+		return err
+	}
+	return localfs.MakeSymlink(target, host)
 }
 
 func localEntryToBackend(loc pathloc.Path, e localfs.Entry) fsbackend.Entry {

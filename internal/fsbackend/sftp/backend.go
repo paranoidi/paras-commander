@@ -182,6 +182,24 @@ func (b *Backend) Rename(ctx context.Context, oldLoc, newLoc pathloc.Path) error
 	return client.Rename(oldRemote, newRemote)
 }
 
+// ReadSymlink implements fsbackend.Backend.
+func (b *Backend) ReadSymlink(ctx context.Context, loc pathloc.Path) (string, error) {
+	client, remote, err := b.withResolvedRemote(ctx, loc)
+	if err != nil {
+		return "", err
+	}
+	return client.ReadLink(remote)
+}
+
+// Symlink implements fsbackend.Backend.
+func (b *Backend) Symlink(ctx context.Context, loc pathloc.Path, target string) error {
+	client, remote, err := b.withResolvedRemote(ctx, loc)
+	if err != nil {
+		return err
+	}
+	return client.Symlink(target, remote)
+}
+
 func entryFromInfo(loc pathloc.Path, info os.FileInfo) fsbackend.Entry {
 	mode := info.Mode()
 	t := fsbackend.EntryFile

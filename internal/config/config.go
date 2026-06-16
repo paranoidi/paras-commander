@@ -298,6 +298,16 @@ type OperationsConfig struct {
 	CowFileCloning bool `toml:"cow_file_cloning"`
 	// CopyFileRange tries Linux copy_file_range(2) after FICLONE before userspace read/write.
 	CopyFileRange bool `toml:"copy_file_range"`
+	// SparseFileCopy preserves holes on Linux via SEEK_DATA/SEEK_HOLE before userspace read/write.
+	SparseFileCopy bool `toml:"sparse_file_copy"`
+	// PreallocateDestination reserves destination space (fallocate or truncate) before copy when source size is known.
+	PreallocateDestination bool `toml:"preallocate_destination"`
+	// PreallocateMinFileBytes applies preallocation only when the source file is at least this large (0 = always).
+	PreallocateMinFileBytes int64 `toml:"preallocate_min_file_bytes"`
+	// SyncAtJobEnd fsyncs copied local files once after the job when sync_after_each_file is false.
+	SyncAtJobEnd bool `toml:"sync_at_job_end"`
+	// SyncMinFileKiB skips fsync for copied files smaller than this threshold (0 = no minimum).
+	SyncMinFileKiB int `toml:"sync_min_file_kib"`
 	// FlattenDefaultLocation is the default destination prefill panel: "active" or "inactive".
 	FlattenDefaultLocation string `toml:"flatten_default_location"`
 	// FlattenRecursive is the default for the flatten dialog recursive checkbox.
@@ -399,6 +409,11 @@ func Default() Config {
 			DiskSpaceCheckMinFileBytes: DefaultDiskSpaceCheckMinFileBytes,
 			CowFileCloning:             DefaultCowFileCloning,
 			CopyFileRange:              DefaultCopyFileRange,
+			SparseFileCopy:             DefaultSparseFileCopy,
+			PreallocateDestination:     DefaultPreallocateDestination,
+			PreallocateMinFileBytes:    DefaultPreallocateMinFileBytes,
+			SyncAtJobEnd:               DefaultSyncAtJobEnd,
+			SyncMinFileKiB:             DefaultSyncMinFileKiB,
 			FlattenDefaultLocation:     DefaultFlattenDefaultLocation,
 			FlattenRecursive:           DefaultFlattenRecursive,
 			FlattenRemoveEmptyDirs:     DefaultFlattenRemoveEmptyDirs,

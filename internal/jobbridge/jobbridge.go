@@ -187,15 +187,24 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 			DiskSpaceCheckMinFileBytes: opsCfg.DiskSpaceCheckMinFileBytes,
 			CowFileCloning:             opsCfg.CowFileCloning,
 			CopyFileRange:              opsCfg.CopyFileRange,
+			SparseFileCopy:             opsCfg.SparseFileCopy,
+			PreallocateDestination:     opsCfg.PreallocateDestination,
+			PreallocateMinFileBytes:    opsCfg.PreallocateMinFileBytes,
+			SyncAtJobEnd:               opsCfg.SyncAtJobEnd,
+			SyncMinFileKiB:             opsCfg.SyncMinFileKiB,
 		}
 		if job.Destination.IsRemote() {
 			opts.CowFileCloning = false
 			opts.CopyFileRange = false
+			opts.SparseFileCopy = false
+			opts.PreallocateDestination = false
 		}
 		for _, src := range job.Sources {
 			if src.IsRemote() {
 				opts.CowFileCloning = false
 				opts.CopyFileRange = false
+				opts.SparseFileCopy = false
+				opts.PreallocateDestination = false
 				break
 			}
 		}

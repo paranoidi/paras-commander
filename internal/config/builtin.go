@@ -106,6 +106,11 @@ const (
 	DefaultDiskSpaceCheckMinFileBytes = 50 * 1024 * 1024
 	DefaultCowFileCloning             = true
 	DefaultCopyFileRange              = true
+	DefaultSparseFileCopy             = false
+	DefaultPreallocateDestination     = false
+	DefaultPreallocateMinFileBytes    = 1024 * 1024
+	DefaultSyncAtJobEnd               = false
+	DefaultSyncMinFileKiB             = 0
 
 	// FlattenDefaultLocationActive is the active panel path for flatten dialog default destination.
 	FlattenDefaultLocationActive = "active"
