@@ -47,8 +47,15 @@ func (a *App) enqueueExtractJob(sources []string, dest string) {
 	a.jobsCtrl.EnqueueExtractJob(sources, dest)
 }
 
-func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool) {
-	a.jobsCtrl.AddTransferJob(jobType, sources, dest, startPaused)
+func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) {
+	a.jobsCtrl.AddTransferJob(jobType, sources, dest, startPaused, preserve)
+}
+
+func (a *App) transferPreserveFromConfig() jobs.TransferPreserve {
+	return jobs.TransferPreserveFromConfig(
+		a.config.Operations.PreservePermissions,
+		a.config.Operations.PreserveTimestamps,
+	)
 }
 
 func (a *App) addFlattenJob(sources []string, dest string, removeEmpty bool, flattenRoots []string) {

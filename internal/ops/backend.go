@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -292,7 +293,8 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 	}
 	if opts.PreserveTimestamps && dst.Scheme() == pathloc.SchemeFile {
 		if host, err := dst.FilePath(); err == nil {
-			_ = os.Chtimes(host, srcEnt.ModifiedAt, srcEnt.ModifiedAt)
+			atime, mtime := transferSourceTimes(src, srcEnt)
+			_ = os.Chtimes(host, atime, mtime)
 		}
 	}
 	if opts.SyncAfterEachFile && dst.Scheme() == pathloc.SchemeFile {
@@ -304,6 +306,23 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 		}
 	}
 	return true, nil
+}
+
+func transferSourceTimes(src pathloc.Path, srcEnt fsbackend.Entry) (atime, mtime time.Time) {
+	mtime = srcEnt.ModifiedAt
+	atime = mtime
+	if src.Scheme() != pathloc.SchemeFile {
+		return atime, mtime
+	}
+	host, err := src.FilePath()
+	if err != nil {
+		return atime, mtime
+	}
+	info, err := os.Lstat(host)
+	if err != nil {
+		return atime, mtime
+	}
+	return localfs.FileTimes(info)
 }
 
 type countingWriter struct {
@@ -367,13 +386,25 @@ func backendEntryToLocal(ent fsbackend.Entry) localfs.Entry {
 }
 
 func planItemFromEntry(srcLoc, dstLoc pathloc.Path, ent fsbackend.Entry) (PlanItem, error) {
+	mod := ent.ModifiedAt
+	meta := PlanItem{
+		Src:        srcLoc,
+		Dst:        dstLoc,
+		Mode:       ent.Mode.Perm(),
+		AccessTime: mod,
+		ModTime:    mod,
+	}
 	switch ent.Type {
 	case fsbackend.EntryDirectory:
-		return PlanItem{Src: srcLoc, Dst: dstLoc, IsDir: true, IsSymlink: ent.Mode&fs.ModeSymlink != 0}, nil
+		meta.IsDir = true
+		meta.IsSymlink = ent.Mode&fs.ModeSymlink != 0
+		return meta, nil
 	case fsbackend.EntrySymlink:
-		return PlanItem{Src: srcLoc, Dst: dstLoc, IsSymlink: true}, nil
+		meta.IsSymlink = true
+		return meta, nil
 	case fsbackend.EntryFile:
-		return PlanItem{Src: srcLoc, Dst: dstLoc, FileSize: ent.Size}, nil
+		meta.FileSize = ent.Size
+		return meta, nil
 	default:
 		return PlanItem{}, fmt.Errorf("unsupported file type for %q", srcLoc)
 	}
@@ -433,14 +464,30 @@ func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, items *
 				return err
 			}
 		case fsbackend.EntrySymlink:
-			*items = append(*items, PlanItem{Src: e.Loc, Dst: childDst, IsSymlink: true})
+			mod := e.ModifiedAt
+			*items = append(*items, PlanItem{
+				Src:        e.Loc,
+				Dst:        childDst,
+				IsSymlink:  true,
+				Mode:       e.Mode.Perm(),
+				AccessTime: mod,
+				ModTime:    mod,
+			})
 			if afterVisit != nil {
 				if err := afterVisit(e.Loc.String()); err != nil {
 					return err
 				}
 			}
 		case fsbackend.EntryFile:
-			*items = append(*items, PlanItem{Src: e.Loc, Dst: childDst, FileSize: e.Size})
+			mod := e.ModifiedAt
+			*items = append(*items, PlanItem{
+				Src:        e.Loc,
+				Dst:        childDst,
+				FileSize:   e.Size,
+				Mode:       e.Mode.Perm(),
+				AccessTime: mod,
+				ModTime:    mod,
+			})
 			if afterVisit != nil {
 				if err := afterVisit(e.Loc.String()); err != nil {
 					return err

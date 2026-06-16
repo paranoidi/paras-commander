@@ -79,11 +79,14 @@ func PlanItemsFromOps(items []ops.PlanItem) []jobs.PlanItem {
 	out := make([]jobs.PlanItem, len(items))
 	for i, p := range items {
 		out[i] = jobs.PlanItem{
-			Src:       p.Src,
-			Dst:       p.Dst,
-			IsDir:     p.IsDir,
-			IsSymlink: p.IsSymlink,
-			FileSize:  p.FileSize,
+			Src:        p.Src,
+			Dst:        p.Dst,
+			IsDir:      p.IsDir,
+			IsSymlink:  p.IsSymlink,
+			FileSize:   p.FileSize,
+			Mode:       p.Mode,
+			AccessTime: p.AccessTime,
+			ModTime:    p.ModTime,
 		}
 	}
 	return out
@@ -97,11 +100,14 @@ func PlanItemsToOps(items []jobs.PlanItem) []ops.PlanItem {
 	out := make([]ops.PlanItem, len(items))
 	for i, p := range items {
 		out[i] = ops.PlanItem{
-			Src:       p.Src,
-			Dst:       p.Dst,
-			IsDir:     p.IsDir,
-			IsSymlink: p.IsSymlink,
-			FileSize:  p.FileSize,
+			Src:        p.Src,
+			Dst:        p.Dst,
+			IsDir:      p.IsDir,
+			IsSymlink:  p.IsSymlink,
+			FileSize:   p.FileSize,
+			Mode:       p.Mode,
+			AccessTime: p.AccessTime,
+			ModTime:    p.ModTime,
 		}
 	}
 	return out
@@ -174,8 +180,8 @@ func ActivityFailureLabel(ev jobs.Event) string {
 func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 		opts := ops.Options{
-			PreservePermissions:        opsCfg.PreservePermissions,
-			PreserveTimestamps:         opsCfg.PreserveTimestamps,
+			PreservePermissions:        job.PreservePermissions,
+			PreserveTimestamps:         job.PreserveTimestamps,
 			CopyBufferKiB:              opsCfg.CopyBufferKiB,
 			SyncAfterEachFile:          opsCfg.SyncAfterEachFile,
 			DiskSpaceCheckMinFileBytes: opsCfg.DiskSpaceCheckMinFileBytes,

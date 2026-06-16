@@ -358,11 +358,11 @@ func (a *App) executeMkdir() {
 		a.setTransientMessage(fmt.Sprintf("Created directory %s", plan.Name), ui.MessageUrgencyInfo)
 	case ui.MkdirActionCreateCopySelect:
 		a.activePanel().ClearSelection()
-		a.addTransferJob(jobs.TypeCopy, sources, plan.Path, false)
+		a.addTransferJob(jobs.TypeCopy, sources, plan.Path, false, a.transferPreserveFromConfig())
 		a.setTransientMessage(fmt.Sprintf("Created %s; copy queued (%d %s)", plan.Name, len(sources), plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 	case ui.MkdirActionCreateMoveSelect:
 		a.activePanel().ClearSelection()
-		a.addTransferJob(jobs.TypeMove, sources, plan.Path, false)
+		a.addTransferJob(jobs.TypeMove, sources, plan.Path, false, a.transferPreserveFromConfig())
 		a.setTransientMessage(fmt.Sprintf("Created %s; move queued (%d %s)", plan.Name, len(sources), plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 	}
 }

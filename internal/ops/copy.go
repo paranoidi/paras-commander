@@ -186,6 +186,8 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 		progress(srcPath, dstPath, doneF, doneB)
 	}
 
+	var deferredDirMeta []PlanItem
+
 	for _, item := range plan {
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
@@ -198,11 +200,14 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 				if err != nil {
 					return doneFiles, doneBytes, err
 				}
-				if err := be.Mkdir(ctx, item.Dst, 0o755); err != nil {
+				if err := be.Mkdir(ctx, item.Dst, mkdirModeForItem(item, opts)); err != nil {
 					return doneFiles, doneBytes, fmt.Errorf("create directory %q: %w", dstStr, err)
 				}
 			} else if err != nil {
 				return doneFiles, doneBytes, fmt.Errorf("stat directory %q: %w", dstStr, PathErrorReason(err))
+			}
+			if opts.PreservePermissions || opts.PreserveTimestamps {
+				deferredDirMeta = append(deferredDirMeta, item)
 			}
 			doneFiles++
 			emitMetaProgress(srcStr, dstStr, doneFiles, doneBytes)
@@ -251,6 +256,12 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 
 		doneFiles++
 		emitProgress(srcStr, dstStr, doneFiles, doneBytes, true)
+	}
+
+	for _, item := range deferredDirMeta {
+		if err := applyItemMetadata(ctx, item, opts); err != nil {
+			return doneFiles, doneBytes, err
+		}
 	}
 
 	return doneFiles, doneBytes, nil

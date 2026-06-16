@@ -360,7 +360,11 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 	}
 	sourcesCopy := append([]string(nil), sources...)
 	a.activePanel().ClearSelection()
-	a.addTransferJob(jobType, sourcesCopy, dest, startPaused)
+	preserve := jobs.TransferPreserve{
+		PreservePermissions: d.PreservePermissions,
+		PreserveTimestamps:  d.PreserveTimestamps,
+	}
+	a.addTransferJob(jobType, sourcesCopy, dest, startPaused, preserve)
 	a.closeTransferDialog()
 	a.setTransferQueuedMessage(jobType, startPaused)
 }
@@ -404,7 +408,11 @@ func (a *App) confirmTransferSelfCopyRename(sources []string, startPaused bool) 
 	finalDest := finalLoc.String()
 	sourcesCopy := append([]string(nil), sources...)
 	a.activePanel().ClearSelection()
-	a.addTransferJob(jobType, sourcesCopy, finalDest, startPaused)
+	preserve := jobs.TransferPreserve{
+		PreservePermissions: d.PreservePermissions,
+		PreserveTimestamps:  d.PreserveTimestamps,
+	}
+	a.addTransferJob(jobType, sourcesCopy, finalDest, startPaused, preserve)
 	a.closeTransferDialog()
 	a.setTransferQueuedMessage(jobType, startPaused)
 }

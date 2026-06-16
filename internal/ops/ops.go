@@ -5,6 +5,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -67,6 +68,14 @@ func PathsEquivalent(a, b pathloc.Path) bool {
 // the item at the same path as src (copy/move onto itself).
 func ResolvedSameAsSource(src, destDir pathloc.Path) bool {
 	return PathsEquivalent(src, ResolveDestination(src, destDir))
+}
+
+// DestinationUnderSource reports whether resolvedDest lies inside src (strict descendant).
+func DestinationUnderSource(src, resolvedDest pathloc.Path) bool {
+	if src.IsZero() || resolvedDest.IsZero() || src.Equal(resolvedDest) {
+		return false
+	}
+	return pathloc.EqualOrUnder(src, resolvedDest)
 }
 
 // ResolveDestination resolves the full destination path for a source path
@@ -190,11 +199,14 @@ func CopySymlink(src, dest string, progress ProgressCallback) error {
 
 // PlanItem describes a single file to copy/move.
 type PlanItem struct {
-	Src       pathloc.Path
-	Dst       pathloc.Path
-	IsDir     bool
-	IsSymlink bool
-	FileSize  int64
+	Src        pathloc.Path
+	Dst        pathloc.Path
+	IsDir      bool
+	IsSymlink  bool
+	FileSize   int64
+	Mode       fs.FileMode // source permission bits when known; zero uses mkdir default
+	AccessTime time.Time   // zero when unknown (remote backends may omit atime)
+	ModTime    time.Time   // zero when unknown
 }
 
 // BuildPlan walks sources and creates a flat list of files to copy/move.
@@ -231,6 +243,9 @@ func BuildPlanCtx(ctx context.Context, sources []pathloc.Path, destination pathl
 		dstLoc, err := ResolveDestinationCtx(ctx, srcLoc, destination)
 		if err != nil {
 			return nil, err
+		}
+		if DestinationUnderSource(srcLoc, dstLoc) {
+			return nil, fmt.Errorf("cannot copy %s into a subdirectory of itself", srcLoc)
 		}
 		if srcLoc.IsRemote() || destination.IsRemote() || !useLocalFastPath(srcLoc, dstLoc) {
 			srcEnt, err := statEntry(ctx, srcLoc)
@@ -290,28 +305,11 @@ func BuildPlanCtx(ctx context.Context, sources []pathloc.Path, destination pathl
 					return err
 				}
 				if info.IsDir() {
-					items = append(items, PlanItem{
-						Src:       srcItem,
-						Dst:       dstItem,
-						IsDir:     true,
-						IsSymlink: localfs.IsSymlink(info),
-					})
+					items = append(items, planItemFromLocalInfo(srcItem, dstItem, info, true, localfs.IsSymlink(info)))
 				} else if localfs.IsSymlink(info) {
-					items = append(items, PlanItem{
-						Src:       srcItem,
-						Dst:       dstItem,
-						IsDir:     false,
-						IsSymlink: true,
-						FileSize:  0,
-					})
+					items = append(items, planItemFromLocalInfo(srcItem, dstItem, info, false, true))
 				} else if info.Mode().IsRegular() {
-					items = append(items, PlanItem{
-						Src:       srcItem,
-						Dst:       dstItem,
-						IsDir:     false,
-						IsSymlink: false,
-						FileSize:  localfs.GetFileSize(info),
-					})
+					items = append(items, planItemFromLocalInfo(srcItem, dstItem, info, false, false))
 				} else {
 					return fmt.Errorf("unsupported file type for %q (mode %v)", path, info.Mode())
 				}
@@ -326,25 +324,27 @@ func BuildPlanCtx(ctx context.Context, sources []pathloc.Path, destination pathl
 			}
 			switch {
 			case localfs.IsSymlink(srcInfo):
-				items = append(items, PlanItem{
-					Src:       srcLoc,
-					Dst:       dstLoc,
-					IsDir:     false,
-					IsSymlink: true,
-					FileSize:  0,
-				})
+				items = append(items, planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, true))
 			case srcInfo.Mode().IsRegular():
-				items = append(items, PlanItem{
-					Src:       srcLoc,
-					Dst:       dstLoc,
-					IsDir:     false,
-					IsSymlink: false,
-					FileSize:  localfs.GetFileSize(srcInfo),
-				})
+				items = append(items, planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, false))
 			default:
 				return nil, fmt.Errorf("unsupported file type for %q (mode %v)", src, srcInfo.Mode())
 			}
 		}
 	}
 	return items, nil
+}
+
+func planItemFromLocalInfo(src, dst pathloc.Path, info os.FileInfo, isDir, isSymlink bool) PlanItem {
+	atime, mtime := localfs.FileTimes(info)
+	return PlanItem{
+		Src:        src,
+		Dst:        dst,
+		IsDir:      isDir,
+		IsSymlink:  isSymlink,
+		FileSize:   localfs.GetFileSize(info),
+		Mode:       info.Mode().Perm(),
+		AccessTime: atime,
+		ModTime:    mtime,
+	}
 }

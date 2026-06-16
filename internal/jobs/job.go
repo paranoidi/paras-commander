@@ -92,6 +92,10 @@ type Job struct {
 	FlattenRemoveEmpty bool
 	// FlattenRoots are the selected directory roots for flatten cleanup (TypeFlatten only).
 	FlattenRoots []pathloc.Path
+
+	// Per-job copy/move metadata options (from transfer dialog or config at enqueue).
+	PreservePermissions bool
+	PreserveTimestamps  bool
 }
 
 // jobIDCounter provides unique job IDs within a runtime session.

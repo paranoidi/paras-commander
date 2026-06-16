@@ -8,7 +8,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 // pathErrorReason returns pathErr.Err when err is *os.PathError so wrappers that
@@ -153,8 +152,7 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 		}
 	}
 	if preserveTimes {
-		atime := srcInfo.ModTime()
-		mtime := srcInfo.ModTime()
+		atime, mtime := FileTimes(srcInfo)
 		if err := os.Chtimes(target, atime, mtime); err != nil {
 			return fmt.Errorf("preserve timestamps on %q: %w", target, err)
 		}
@@ -213,7 +211,8 @@ func CopyDir(src, dst string, bufSize int, preservePerms, preserveTimes, syncAft
 	}
 
 	if preserveTimes {
-		if err := os.Chtimes(destDir, srcInfo.ModTime(), srcInfo.ModTime()); err != nil {
+		atime, mtime := FileTimes(srcInfo)
+		if err := os.Chtimes(destDir, atime, mtime); err != nil {
 			return fmt.Errorf("preserve timestamps on %q: %w", destDir, err)
 		}
 	}
@@ -284,7 +283,8 @@ func CopyMetadata(srcInfo fs.FileInfo, dest string, preservePerms, preserveTimes
 		}
 	}
 	if preserveTimes {
-		if err := os.Chtimes(dest, time.Now(), srcInfo.ModTime()); err != nil {
+		atime, mtime := FileTimes(srcInfo)
+		if err := os.Chtimes(dest, atime, mtime); err != nil {
 			return fmt.Errorf("preserve timestamps on %q: %w", dest, err)
 		}
 	}

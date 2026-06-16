@@ -70,7 +70,7 @@ func (a *App) executeCopyHere() {
 	listDir := p.PathString()
 	panelID := a.model.ActivePanel
 	a.closeFileDialog()
-	a.addTransferJob(jobs.TypeCopy, []string{plan.SourcePath}, plan.DestPath, false)
+	a.addTransferJob(jobs.TypeCopy, []string{plan.SourcePath}, plan.DestPath, false, a.transferPreserveFromConfig())
 	if focusAfter {
 		a.scheduleCopyHereFocus(panelID, listDir, plan.NewName)
 	}

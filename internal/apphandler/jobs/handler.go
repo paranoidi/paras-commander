@@ -875,7 +875,10 @@ func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 		return
 	}
 	h.host.ActivePanel().ClearSelection()
-	h.AddTransferJob(opts.jobType, sources, dest, false)
+	h.AddTransferJob(opts.jobType, sources, dest, false, jobs.TransferPreserveFromConfig(
+		h.config.Operations.PreservePermissions,
+		h.config.Operations.PreserveTimestamps,
+	))
 	h.host.SetTransientMessage(fmt.Sprintf("%s queued (%d %s)", opts.toastVerb, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 }
 
@@ -897,7 +900,7 @@ func (h *Handler) EnqueueMoveJob() {
 }
 
 // AddTransferJob enqueues a copy or move job after scanning.
-func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool) {
+func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) {
 	srcLocs, err := pathloc.ParseAll(sources)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
@@ -909,13 +912,15 @@ func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest strin
 		return
 	}
 	job := &jobs.Job{
-		ID:              jobs.NewJobID(),
-		Type:            jobType,
-		Status:          jobs.StatusScanning,
-		Sources:         srcLocs,
-		Destination:     destLoc,
-		DestIsDir:       ops.DestinationIsDirAtEnqueue(destLoc),
-		PausedAfterScan: startPaused,
+		ID:                  jobs.NewJobID(),
+		Type:                jobType,
+		Status:              jobs.StatusScanning,
+		Sources:             srcLocs,
+		Destination:         destLoc,
+		DestIsDir:           ops.DestinationIsDirAtEnqueue(destLoc),
+		PausedAfterScan:     startPaused,
+		PreservePermissions: preserve.PreservePermissions,
+		PreserveTimestamps:  preserve.PreserveTimestamps,
 	}
 	h.commitJob(job)
 }
