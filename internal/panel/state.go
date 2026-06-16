@@ -49,6 +49,12 @@ type State struct {
 	// HistoryCursorByPath maps canonical directory paths to the last highlighted entry when leaving.
 	HistoryCursorByPath map[string]historyCursorSnapshot
 	SelectedPaths       map[string]bool
+	// SelectedDirPaths tracks selected directory paths for O(1) selectionHasDirs and fast conflict checks.
+	SelectedDirPaths map[string]bool
+	// listingByPath maps entry.Path to listing index; rebuilt when Entries change.
+	listingByPath map[string]localfs.Entry
+	// selectionListedBytes sums file sizes for selected paths present in the current listing.
+	selectionListedBytes int64
 	// selectionDerivedGen bumps on selection mutations; selDerivedCache is rebuilt lazily per cwd.
 	selectionDerivedGen uint64
 	selDerivedCache     selectionDerivedCache
@@ -344,17 +350,12 @@ func (s *State) AddSelection(path string) bool {
 	if s.SelectedPaths != nil && s.SelectedPaths[path] {
 		return false
 	}
-	conflicts := s.resolveSelectionConflicts(path, s.selectedPathIsDirectory(path))
+	isDir := s.selectedPathIsDirectory(path)
+	conflicts := s.resolveSelectionConflicts(path, isDir)
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool)
 	}
-	s.SelectedPaths[path] = true
-	if s.selectedPathIsDirectory(path) {
-		s.selectionHasDirs = true
-	} else if conflicts && s.selectionHasDirs {
-		s.refreshSelectionHasDirs(nil)
-	}
-	s.invalidateSelectionDerived()
+	s.applySelectionAdd(path, isDir)
 	return conflicts
 }
 
@@ -370,15 +371,8 @@ func (s *State) ToggleSelection() (selected bool, conflictsRemoved bool) {
 	}
 	if s.SelectedPaths[entry.Path] {
 		wasDir := entry.IsDir()
-		delete(s.SelectedPaths, entry.Path)
+		s.applySelectionRemove(entry.Path, wasDir)
 		s.removePathFromSelectionsStripOrder(entry.Path)
-		if len(s.SelectedPaths) == 0 {
-			s.SelectedPaths = nil
-			s.selectionHasDirs = false
-		} else if wasDir && s.selectionHasDirs {
-			s.refreshSelectionHasDirs(nil)
-		}
-		s.invalidateSelectionDerived()
 		s.normalizeSelectionsStripCursor()
 		return false, false
 	}
@@ -386,11 +380,7 @@ func (s *State) ToggleSelection() (selected bool, conflictsRemoved bool) {
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool)
 	}
-	s.SelectedPaths[entry.Path] = true
-	if entry.IsDir() {
-		s.selectionHasDirs = true
-	}
-	s.invalidateSelectionDerived()
+	s.applySelectionAdd(entry.Path, entry.IsDir())
 	return true, conflictsRemoved
 }
 
@@ -482,40 +472,33 @@ func (s State) SelectedDirectoryPaths() []string {
 }
 
 // PruneNestedPaths drops paths that are strict descendants of another path in the slice.
+// O(n log n) via sorted single-pass; out maintains no nested pairs.
 func PruneNestedPaths(paths []string) []string {
-	if len(paths) <= 1 {
-		if len(paths) == 1 {
-			return []string{cleanPathString(paths[0])}
+	if len(paths) == 0 {
+		return nil
+	}
+	if len(paths) == 1 {
+		if p := cleanPathString(paths[0]); p != "" {
+			return []string{p}
 		}
 		return nil
 	}
-	sorted := make([]string, len(paths))
-	for i, p := range paths {
-		sorted[i] = cleanPathString(p)
+	sorted := make([]string, 0, len(paths))
+	for _, p := range paths {
+		if p = cleanPathString(p); p != "" {
+			sorted = append(sorted, p)
+		}
+	}
+	if len(sorted) == 0 {
+		return nil
 	}
 	sort.Strings(sorted)
 	out := make([]string, 0, len(sorted))
 	for _, p := range sorted {
-		if p == "" {
+		if len(out) > 0 && isStrictPathDescendant(out[len(out)-1], p) {
 			continue
 		}
-		nested := false
-		for _, kept := range out {
-			if isStrictPathDescendant(kept, p) {
-				nested = true
-				break
-			}
-		}
-		if nested {
-			continue
-		}
-		trimmed := out[:0]
-		for _, kept := range out {
-			if !isStrictPathDescendant(p, kept) {
-				trimmed = append(trimmed, kept)
-			}
-		}
-		out = append(trimmed, p)
+		out = append(out, p)
 	}
 	if len(out) == 0 {
 		return nil
@@ -1226,6 +1209,8 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	}
 	s.prepareGitColumn(listingLoc, localEntries)
 	s.Entries = localEntries
+	s.rebuildListingByPath()
+	s.recomputeSelectionListedBytes()
 	s.Cursor = 0
 	s.ScrollOffset = 0
 	if !previousPath.Equal(listingLoc) {
@@ -1519,14 +1504,9 @@ func (s *State) ToggleOrRemoveStripSelection() bool {
 	if !ok {
 		return false
 	}
-	if s.SelectedPaths != nil {
-		delete(s.SelectedPaths, p)
-		if len(s.SelectedPaths) == 0 {
-			s.SelectedPaths = nil
-		}
-	}
+	wasDir := s.selectedPathIsDirectory(p)
+	s.applySelectionRemove(p, wasDir)
 	s.removePathFromSelectionsStripOrder(p)
-	s.invalidateSelectionDerived()
 	s.normalizeSelectionsStripCursor()
 	return true
 }
@@ -1669,34 +1649,78 @@ func (s *State) InvertSelection() {
 	if len(s.Entries) == 0 {
 		return
 	}
-	if s.SelectedPaths == nil {
-		s.SelectedPaths = make(map[string]bool)
-	}
+	listingSet := make(map[string]bool, len(s.Entries))
+	newSel := make(map[string]bool, len(s.Entries))
+	hasDirs := false
 	for _, entry := range s.Entries {
-		if s.SelectedPaths[entry.Path] {
-			delete(s.SelectedPaths, entry.Path)
-			s.removePathFromSelectionsStripOrder(entry.Path)
-		} else {
-			s.SelectedPaths[entry.Path] = true
+		listingSet[entry.Path] = true
+		wasSelected := s.SelectedPaths != nil && s.SelectedPaths[entry.Path]
+		if wasSelected {
+			continue
+		}
+		newSel[entry.Path] = true
+		if entry.IsDir() {
+			hasDirs = true
 		}
 	}
-	if len(s.SelectedPaths) == 0 {
-		s.SelectedPaths = nil
-		s.selectionHasDirs = false
-	} else {
-		s.refreshSelectionHasDirs(nil)
+	// Keep off-listing selections that were not inverted.
+	if s.SelectedPaths != nil {
+		for p, on := range s.SelectedPaths {
+			if !on || listingSet[p] {
+				continue
+			}
+			newSel[p] = true
+			if s.SelectedDirPaths != nil && s.SelectedDirPaths[p] {
+				hasDirs = true
+			} else if s.selectedPathIsDirectory(p) {
+				hasDirs = true
+			}
+		}
 	}
-	s.invalidateSelectionDerived()
+	if len(newSel) == 0 {
+		s.clearSelectionState()
+		s.SelectionsStripOrder = rebuildSelectionsStripOrderAfterBulk(s.SelectionsStripOrder, nil)
+		s.invalidateSelectionDerivedFull()
+	} else {
+		s.SelectedPaths = newSel
+		s.selectionHasDirs = hasDirs
+		if hasDirs {
+			s.rebuildSelectedDirPaths()
+		} else {
+			s.SelectedDirPaths = nil
+		}
+		s.recomputeSelectionListedBytes()
+		s.SelectionsStripOrder = rebuildSelectionsStripOrderAfterBulk(s.SelectionsStripOrder, newSel)
+		s.invalidateSelectionDerivedFull()
+	}
 	s.normalizeSelectionsStripCursor()
+}
+
+func rebuildSelectionsStripOrderAfterBulk(stripOrder []string, selected map[string]bool) []string {
+	if len(stripOrder) == 0 {
+		return nil
+	}
+	if selected == nil {
+		return nil
+	}
+	out := make([]string, 0, len(stripOrder))
+	for _, p := range stripOrder {
+		if selected[p] {
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // ClearSelection removes all tagged paths on this panel (any directory) and clears the
 // selections strip order.
 func (s *State) ClearSelection() {
-	s.SelectedPaths = nil
+	s.clearSelectionState()
 	s.SelectionsStripOrder = nil
-	s.selectionHasDirs = false
-	s.invalidateSelectionDerived()
+	s.invalidateSelectionDerivedFull()
 	s.normalizeSelectionsStripCursor()
 }
 
@@ -1705,45 +1729,50 @@ func (s *State) ClearSelection() {
 // caseSensitive: when true, matching is case-sensitive.
 // useShellPatterns: when true, uses filepath.Match; otherwise substring match.
 func (s *State) SelectGroup(pattern string, filesOnly, caseSensitive, useShellPatterns bool) {
-	if s.SelectedPaths == nil {
-		s.SelectedPaths = make(map[string]bool)
-	}
+	paths := make([]string, 0)
+	isDir := make(map[string]bool)
 	for _, entry := range s.Entries {
 		if filesOnly && entry.IsDir() {
 			continue
 		}
 		if GroupMatch(entry.Name, pattern, caseSensitive, useShellPatterns) {
-			s.resolveSelectionConflicts(entry.Path, entry.IsDir())
-			s.SelectedPaths[entry.Path] = true
+			paths = append(paths, entry.Path)
+			isDir[entry.Path] = entry.IsDir()
 		}
 	}
-	if len(s.SelectedPaths) == 0 {
-		s.SelectedPaths = nil
-		s.selectionHasDirs = false
-	} else {
-		s.refreshSelectionHasDirs(nil)
+	if len(paths) == 0 {
+		return
 	}
-	s.invalidateSelectionDerived()
+	if s.SelectedPaths == nil {
+		s.SelectedPaths = make(map[string]bool, len(paths))
+	}
+	lookup := func(path string) bool {
+		return isDir[path]
+	}
+	_ = BulkApplySelectionAdds(s.SelectedPaths, paths, lookup)
+	s.rebuildSelectedDirPaths()
+	s.recomputeSelectionListedBytes()
+	s.invalidateSelectionDerivedFull()
 }
 
 // UnselectGroup unselects entries whose basename matches the pattern.
 func (s *State) UnselectGroup(pattern string, filesOnly, caseSensitive, useShellPatterns bool) {
+	if s.SelectedPaths == nil {
+		return
+	}
 	for _, entry := range s.Entries {
 		if filesOnly && entry.IsDir() {
 			continue
 		}
-		if GroupMatch(entry.Name, pattern, caseSensitive, useShellPatterns) {
-			delete(s.SelectedPaths, entry.Path)
-			s.removePathFromSelectionsStripOrder(entry.Path)
+		if !GroupMatch(entry.Name, pattern, caseSensitive, useShellPatterns) {
+			continue
 		}
+		if !s.SelectedPaths[entry.Path] {
+			continue
+		}
+		s.applySelectionRemove(entry.Path, entry.IsDir())
+		s.removePathFromSelectionsStripOrder(entry.Path)
 	}
-	if len(s.SelectedPaths) == 0 {
-		s.SelectedPaths = nil
-		s.selectionHasDirs = false
-	} else if s.selectionHasDirs {
-		s.refreshSelectionHasDirs(nil)
-	}
-	s.invalidateSelectionDerived()
 	s.normalizeSelectionsStripCursor()
 }
 

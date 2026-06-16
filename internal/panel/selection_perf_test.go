@@ -1,0 +1,96 @@
+package panel
+
+import (
+	"fmt"
+	"path/filepath"
+	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
+)
+
+func makeFlatFileListing(b testing.TB, n int) (*State, []localfs.Entry) {
+	b.Helper()
+	root := b.TempDir()
+	entries := make([]localfs.Entry, n)
+	for i := 0; i < n; i++ {
+		p := filepath.Join(root, fmt.Sprintf("file_%05d.txt", i))
+		entries[i] = localfs.Entry{
+			Name: filepath.Base(p),
+			Path: p,
+			Type: localfs.EntryFile,
+			Size: 64,
+		}
+	}
+	s := &State{
+		Path:    pathloc.MustParse(root),
+		Entries: entries,
+	}
+	s.rebuildListingByPath()
+	return s, entries
+}
+
+func BenchmarkToggleSelectionGrowingFiles(b *testing.B) {
+	const n = 5000
+	s, entries := makeFlatFileListing(b, n)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		idx := i % n
+		s.Cursor = idx
+		s.ToggleSelection()
+	}
+	_ = entries
+}
+
+func BenchmarkToggleSelectionAt5000Selected(b *testing.B) {
+	s, entries := makeFlatFileListing(b, 5000)
+	for i := range entries {
+		s.Cursor = i
+		s.ToggleSelection()
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		s.Cursor = 0
+		s.ToggleSelection()
+		s.ToggleSelection()
+	}
+}
+
+func BenchmarkInvertSelection9000(b *testing.B) {
+	s, _ := makeFlatFileListing(b, 9000)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		s.InvertSelection()
+	}
+}
+
+func BenchmarkPruneNestedPathsDirs1000(b *testing.B) {
+	root := b.TempDir()
+	paths := make([]string, 1000)
+	for i := 0; i < 1000; i++ {
+		paths[i] = filepath.Join(root, fmt.Sprintf("dir_%03d", i))
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = PruneNestedPaths(paths)
+	}
+}
+
+func BenchmarkPrunedSelectionRootsRebuildPerToggle(b *testing.B) {
+	s, entries := makeFlatFileListing(b, 1500)
+	for i := range entries {
+		s.Cursor = i
+		s.ToggleSelection()
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		s.Cursor = i % len(entries)
+		s.ToggleSelection()
+		_ = s.PrunedSelectionRoots()
+	}
+}

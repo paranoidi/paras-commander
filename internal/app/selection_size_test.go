@@ -31,7 +31,11 @@ func TestReconcileSelectionSizeScansIdempotentFingerprint(t *testing.T) {
 		SelectedPaths: map[string]bool{
 			sub: true,
 		},
+		SelectedDirPaths: map[string]bool{
+			sub: true,
+		},
 	}
+	// selectionHasDirs is unexported; SelectedDirPaths drives SelectionHasDirs().
 
 	app.reconcileSelectionSizeScans(ui.LeftPanel)
 	if app.selectionSizeScanFP[ui.LeftPanel] == "" {

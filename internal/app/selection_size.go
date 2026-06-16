@@ -32,6 +32,10 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 	}
 	a.selectionSizeScanGen[panelID] = gen
 	a.selectionSizeScanPath[panelID] = path
+	if !p.SelectionHasDirs() {
+		a.selectionSizeScanFP[panelID] = ""
+		return
+	}
 
 	byPath := entriesByPath(p)
 	need := directoriesNeedingScan(

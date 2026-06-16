@@ -252,6 +252,9 @@ func (s *State) selectedPathIsDirectory(path string) bool {
 	if path == "" {
 		return false
 	}
+	if e, ok := s.listingEntry(path); ok {
+		return e.Type == localfs.EntryDirectory
+	}
 	for _, e := range s.Entries {
 		if e.Path == path {
 			return e.Type == localfs.EntryDirectory
@@ -268,21 +271,43 @@ func (s *State) resolveSelectionConflicts(path string, addedIsDir bool) bool {
 	if len(s.SelectedPaths) == 0 {
 		return false
 	}
-	before := make([]string, 0, len(s.SelectedPaths))
-	for p := range s.SelectedPaths {
-		before = append(before, p)
-	}
-	if !ClearSelectionConflicts(s.SelectedPaths, path, addedIsDir, s.selectedPathIsDirectory) {
+	if !addedIsDir && !s.selectionHasDirs {
 		return false
 	}
-	for _, p := range before {
-		if s.SelectedPaths[p] {
-			continue
+	added := cleanPathString(path)
+	if added == "" {
+		return false
+	}
+	var removed []string
+	if addedIsDir {
+		removed = append(removed, s.clearSelectionStrictDescendantsIndexed(added)...)
+	}
+	if s.selectionHasDirs {
+		dirBefore := make([]string, 0, len(s.SelectedDirPaths))
+		for p := range s.SelectedDirPaths {
+			dirBefore = append(dirBefore, p)
 		}
+		isSelDir := func(p string) bool {
+			return s.SelectedDirPaths != nil && s.SelectedDirPaths[p]
+		}
+		if clearSelectionDirAncestors(s.SelectedPaths, added, isSelDir) {
+			for _, p := range dirBefore {
+				if s.SelectedPaths == nil || !s.SelectedPaths[p] {
+					removed = append(removed, p)
+					s.unmarkSelectedDir(p)
+					s.adjustSelectionListedBytes(p, false)
+				}
+			}
+		}
+	}
+	if len(removed) == 0 {
+		return false
+	}
+	for _, p := range removed {
 		s.removePathFromSelectionsStripOrder(p)
 	}
 	if len(s.SelectedPaths) == 0 {
-		s.SelectedPaths = nil
+		s.clearSelectionState()
 	}
 	return true
 }

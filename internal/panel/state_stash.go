@@ -51,12 +51,11 @@ func (s *State) StashClear() {
 // ApplySelectionSnapshot replaces the live selection with paths and strip order.
 // Paths that no longer exist on disk are omitted (stash restore).
 func (s *State) ApplySelectionSnapshot(paths, stripOrder []string) {
-	s.SelectedPaths = nil
+	s.clearSelectionState()
 	s.SelectionsStripOrder = nil
 	paths = filterExistingSelectionPaths(paths)
 	if len(paths) == 0 {
-		s.selectionHasDirs = false
-		s.invalidateSelectionDerived()
+		s.invalidateSelectionDerivedFull()
 		s.normalizeSelectionsStripCursor()
 		return
 	}
@@ -64,14 +63,15 @@ func (s *State) ApplySelectionSnapshot(paths, stripOrder []string) {
 	for _, p := range paths {
 		s.SelectedPaths[p] = true
 	}
-	s.refreshSelectionHasDirs(nil)
+	s.rebuildSelectedDirPaths()
+	s.recomputeSelectionListedBytes()
 	filteredStrip := filterSelectionsStripOrder(stripOrder, s.SelectedPaths)
 	if len(filteredStrip) != len(stripOrder) {
 		s.SelectionsStripOrder = nil
 	} else {
 		s.SelectionsStripOrder = filteredStrip
 	}
-	s.invalidateSelectionDerived()
+	s.invalidateSelectionDerivedFull()
 	s.normalizeSelectionsStripCursor()
 }
 
@@ -109,8 +109,9 @@ func (s *State) MergeSelectionSnapshot(paths, stripOrder []string) {
 	} else {
 		s.SelectionsStripOrder = merged
 	}
-	s.refreshSelectionHasDirs(nil)
-	s.invalidateSelectionDerived()
+	s.rebuildSelectedDirPaths()
+	s.recomputeSelectionListedBytes()
+	s.invalidateSelectionDerivedFull()
 	s.normalizeSelectionsStripCursor()
 }
 

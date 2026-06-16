@@ -23,6 +23,11 @@ func (s State) SelectionDerivedGen() uint64 {
 
 func (s *State) invalidateSelectionDerived() {
 	s.selectionDerivedGen++
+	s.selDerivedCache.built = false
+}
+
+func (s *State) invalidateSelectionDerivedFull() {
+	s.invalidateSelectionDerived()
 }
 
 func (s *State) selDerivedValid() bool {
@@ -51,6 +56,222 @@ func (s *State) rebuildSelectionDerived() {
 	cache.subtreeAncestors = buildSubtreeSelAncestors(s.SelectedPaths)
 
 	s.selDerivedCache = cache
+}
+
+func (s *State) patchSelectionDerivedAfterAdd(path string, isDir bool) {
+	cur := cleanPathString(s.Path.String())
+	if !s.selDerivedCache.built || s.selDerivedCache.path != cur {
+		s.rebuildSelectionDerived()
+		return
+	}
+	path = cleanPathString(path)
+	if path == "" {
+		s.invalidateSelectionDerived()
+		return
+	}
+	s.addSubtreeAncestorsForPath(path)
+	if cleanPathString(filepath.Dir(path)) != cur {
+		s.appendStripPathIfNeeded(path)
+	}
+	s.patchPrunedRootsAfterAdd(path, isDir)
+	s.selDerivedCache.gen = s.selectionDerivedGen
+}
+
+func (s *State) patchSelectionDerivedAfterRemove(path string, wasDir bool) {
+	cur := cleanPathString(s.Path.String())
+	if !s.selDerivedCache.built || s.selDerivedCache.path != cur {
+		s.rebuildSelectionDerived()
+		return
+	}
+	path = cleanPathString(path)
+	if path == "" {
+		s.invalidateSelectionDerived()
+		return
+	}
+	s.removeSubtreeAncestorsForPath(path)
+	if cleanPathString(filepath.Dir(path)) != cur {
+		s.removeStripPath(path)
+	}
+	s.patchPrunedRootsAfterRemove(path, wasDir)
+	s.selDerivedCache.gen = s.selectionDerivedGen
+}
+
+func (s *State) addSubtreeAncestorsForPath(path string) {
+	if s.selDerivedCache.subtreeAncestors == nil {
+		s.selDerivedCache.subtreeAncestors = make(map[string]bool)
+	}
+	loc, err := pathloc.Parse(path)
+	if err != nil {
+		return
+	}
+	for {
+		parent := loc.Parent()
+		if parent.Equal(loc) || parent.IsZero() {
+			break
+		}
+		s.selDerivedCache.subtreeAncestors[cleanPathString(parent.String())] = true
+		loc = parent
+	}
+}
+
+func (s *State) removeSubtreeAncestorsForPath(path string) {
+	if s.SelectedPaths == nil || s.selDerivedCache.subtreeAncestors == nil {
+		return
+	}
+	loc, err := pathloc.Parse(path)
+	if err != nil {
+		return
+	}
+	for {
+		parent := loc.Parent()
+		if parent.Equal(loc) || parent.IsZero() {
+			break
+		}
+		ps := cleanPathString(parent.String())
+		if s.stillHasSelectionUnderAncestor(ps, path) {
+			loc = parent
+			continue
+		}
+		delete(s.selDerivedCache.subtreeAncestors, ps)
+		loc = parent
+	}
+	if len(s.selDerivedCache.subtreeAncestors) == 0 {
+		s.selDerivedCache.subtreeAncestors = nil
+	}
+}
+
+func (s *State) stillHasSelectionUnderAncestor(ancestor, exceptPath string) bool {
+	for p, on := range s.SelectedPaths {
+		if !on || p == exceptPath {
+			continue
+		}
+		if isStrictPathDescendant(ancestor, p) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *State) appendStripPathIfNeeded(path string) {
+	for _, p := range s.selDerivedCache.stripPaths {
+		if p == path {
+			return
+		}
+	}
+	s.selDerivedCache.stripPaths = append(s.selDerivedCache.stripPaths, path)
+	sort.Strings(s.selDerivedCache.stripPaths)
+}
+
+func (s *State) removeStripPath(path string) {
+	if len(s.selDerivedCache.stripPaths) == 0 {
+		return
+	}
+	out := s.selDerivedCache.stripPaths[:0]
+	for _, p := range s.selDerivedCache.stripPaths {
+		if p != path {
+			out = append(out, p)
+		}
+	}
+	s.selDerivedCache.stripPaths = out
+}
+
+func (s *State) patchPrunedRootsAfterAdd(path string, isDir bool) {
+	if !s.selectionHasDirs || isDir {
+		s.selDerivedCache.prunedRoots = insertPrunedRoot(s.selDerivedCache.prunedRoots, path, isDir)
+		return
+	}
+	s.selDerivedCache.prunedRoots = insertSortedUnique(s.selDerivedCache.prunedRoots, path)
+}
+
+func (s *State) patchPrunedRootsAfterRemove(path string, wasDir bool) {
+	if !s.selectionHasDirs && !wasDir {
+		s.selDerivedCache.prunedRoots = removeSortedPath(s.selDerivedCache.prunedRoots, path)
+		return
+	}
+	if len(s.SelectedPaths) == 0 {
+		s.selDerivedCache.prunedRoots = nil
+		return
+	}
+	s.selDerivedCache.prunedRoots = s.buildPrunedSelectionRoots()
+}
+
+func insertSortedUnique(sorted []string, path string) []string {
+	path = cleanPathString(path)
+	if path == "" {
+		return sorted
+	}
+	i := sort.SearchStrings(sorted, path)
+	if i < len(sorted) && sorted[i] == path {
+		return sorted
+	}
+	out := make([]string, 0, len(sorted)+1)
+	out = append(out, sorted[:i]...)
+	out = append(out, path)
+	out = append(out, sorted[i:]...)
+	return out
+}
+
+func removeSortedPath(sorted []string, path string) []string {
+	path = cleanPathString(path)
+	if path == "" || len(sorted) == 0 {
+		return sorted
+	}
+	i := sort.SearchStrings(sorted, path)
+	if i >= len(sorted) || sorted[i] != path {
+		return sorted
+	}
+	out := make([]string, 0, len(sorted)-1)
+	out = append(out, sorted[:i]...)
+	out = append(out, sorted[i+1:]...)
+	return out
+}
+
+func insertPrunedRoot(roots []string, path string, isDir bool) []string {
+	path = cleanPathString(path)
+	if path == "" {
+		return roots
+	}
+	if !isDir {
+		return insertSortedUnique(roots, path)
+	}
+	combined := PruneNestedPaths(append(append([]string(nil), roots...), path))
+	return combined
+}
+
+func (s *State) applySelectionAdd(path string, isDir bool) {
+	path = cleanPathString(path)
+	if path == "" {
+		return
+	}
+	if s.SelectedPaths == nil {
+		s.SelectedPaths = make(map[string]bool)
+	}
+	s.SelectedPaths[path] = true
+	if isDir {
+		s.markSelectedDir(path)
+	}
+	s.adjustSelectionListedBytes(path, true)
+	s.selectionDerivedGen++
+	s.patchSelectionDerivedAfterAdd(path, isDir)
+}
+
+func (s *State) applySelectionRemove(path string, wasDir bool) {
+	path = cleanPathString(path)
+	if path == "" || s.SelectedPaths == nil {
+		return
+	}
+	delete(s.SelectedPaths, path)
+	s.adjustSelectionListedBytes(path, false)
+	if wasDir {
+		s.unmarkSelectedDir(path)
+	}
+	if len(s.SelectedPaths) == 0 {
+		s.clearSelectionState()
+		s.invalidateSelectionDerived()
+		return
+	}
+	s.selectionDerivedGen++
+	s.patchSelectionDerivedAfterRemove(path, wasDir)
 }
 
 func (s *State) buildSelectionsStripPaths(cur string) []string {
@@ -100,22 +321,6 @@ func (s *State) buildPrunedSelectionRoots() []string {
 	}
 	filesOnly := !s.selectionHasDirs
 	return PruneNestedPathsForSelection(paths, filesOnly, s.selectedPathIsDirectory)
-}
-
-func (s *State) refreshSelectionHasDirs(isDir func(string) bool) {
-	if isDir == nil {
-		isDir = s.selectedPathIsDirectory
-	}
-	s.selectionHasDirs = false
-	if len(s.SelectedPaths) == 0 {
-		return
-	}
-	for p, on := range s.SelectedPaths {
-		if on && isDir(p) {
-			s.selectionHasDirs = true
-			return
-		}
-	}
 }
 
 func buildSubtreeSelAncestors(selected map[string]bool) map[string]bool {
@@ -214,7 +419,8 @@ func (s *State) BulkAddSelections(paths []string, isDir func(string) bool) bool 
 	}
 
 	removed := BulkApplySelectionAdds(s.SelectedPaths, paths, isDir)
-	s.refreshSelectionHasDirs(isDir)
-	s.invalidateSelectionDerived()
+	s.rebuildSelectedDirPaths()
+	s.recomputeSelectionListedBytes()
+	s.invalidateSelectionDerivedFull()
 	return removed
 }
