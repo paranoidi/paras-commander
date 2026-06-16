@@ -348,7 +348,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionPanelToggleCarousel,
 			Title:       "Toggle carousel view",
 			Section:     "Sort & display",
-			DefaultKeys: []string{"M-c"},
+			DefaultKeys: []string{"C-c"},
 			Keywords:    []string{"carousel", "columns", "preview", "parent", "child", "godu"},
 		},
 		{
@@ -401,7 +401,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionBookmarkAdd,
 			Title:       "Add bookmark",
 			Section:     "Bookmarks",
-			DefaultKeys: []string{"M-m"},
+			DefaultKeys: []string{"C-b"},
 			Keywords:    []string{"mark", "save"},
 		},
 		{
@@ -541,6 +541,22 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"preview", "inactive", "bat"},
 		},
 		{
+			ID:           ActionFileQuickViewPreviewPageUp,
+			Title:        "Quick view preview page up",
+			Section:      "File operations",
+			DefaultKeys:  []string{"C-k"},
+			PreferredKey: "C-k",
+			Keywords:     []string{"preview", "inactive", "scroll", "page"},
+		},
+		{
+			ID:           ActionFileQuickViewPreviewPageDown,
+			Title:        "Quick view preview page down",
+			Section:      "File operations",
+			DefaultKeys:  []string{"C-j"},
+			PreferredKey: "C-j",
+			Keywords:     []string{"preview", "inactive", "scroll", "page"},
+		},
+		{
 			ID:          ActionMenuFileViewPath,
 			Title:       "View file path",
 			Section:     "File operations",
@@ -618,8 +634,8 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionCommandsOpen,
 			Title:        "Open Commands view",
 			Section:      "Commands",
-			DefaultKeys:  []string{"C-k"},
-			PreferredKey: "C-k",
+			DefaultKeys:  []string{"M-c"},
+			PreferredKey: "M-c",
 			Keywords:     []string{"shell", "stdout", "stderr"},
 		},
 		{
@@ -642,8 +658,8 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionMessagesOpen,
 			Title:        "Open Messages view",
 			Section:      "Messages",
-			DefaultKeys:  []string{"C-M-l"},
-			PreferredKey: "C-M-l",
+			DefaultKeys:  []string{"M-m"},
+			PreferredKey: "M-m",
 			Keywords:     []string{"log", "toast", "status", "banner"},
 		},
 		{
@@ -668,8 +684,8 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionJobsOpen,
 			Title:        "Open jobs view",
 			Section:      "Jobs",
-			DefaultKeys:  []string{"C-j"},
-			PreferredKey: "C-j",
+			DefaultKeys:  []string{"M-j"},
+			PreferredKey: "M-j",
 			Keywords:     []string{"queue", "background"},
 		},
 		{

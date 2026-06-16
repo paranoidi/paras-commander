@@ -185,9 +185,9 @@ const (
 	// DefaultMessageLogMaxEntries caps status/toast lines retained for the Messages view (oldest dropped).
 	DefaultMessageLogMaxEntries = 500
 
-	// DefaultFilePreviewCommand runs bat with paging disabled, colors forced on (non-TTY stdout),
+	// DefaultFilePreviewCommand runs bat with line numbers, paging disabled, colors forced on (non-TTY stdout),
 	// and wrap/width driven by {terminal_width} so output matches the inactive preview column.
-	DefaultFilePreviewCommand = "bat --paging=never --color=always --wrap=auto --terminal-width=%w %f"
+	DefaultFilePreviewCommand = "bat -n --paging=never --color=always --wrap=auto --terminal-width=%w %f"
 
 	// DefaultSFTPIdleTimeoutSecs is how long an unused SFTP connection stays open in the pool.
 	DefaultSFTPIdleTimeoutSecs = 60

@@ -236,6 +236,57 @@ func (a *App) tryDispatchFilePreviewFocus(actionID string) bool {
 	}
 }
 
+// quickViewFilePreviewScrollable reports whether quick view is painting scrollable file preview text.
+func (a *App) quickViewFilePreviewScrollable() bool {
+	if !a.model.QuickViewDisplayActive() || a.model.QuickViewDirOverlayActive {
+		return false
+	}
+	a.commandsMu.RLock()
+	defer a.commandsMu.RUnlock()
+	st := a.model.FilePreview
+	if !st.Open || st.Phase != ui.FilePreviewPhaseDone {
+		return false
+	}
+	if strings.TrimSpace(st.ErrorMsg) != "" {
+		return false
+	}
+	return strings.TrimSpace(st.CombinedText) != ""
+}
+
+// tryDispatchQuickViewPreviewScroll handles Ctrl+J/Ctrl+K while quick view is latched.
+// Scrolls inactive file preview when available; otherwise pages the active file list.
+func (a *App) tryDispatchQuickViewPreviewScroll(actionID string) bool {
+	var pageDir int
+	switch actionID {
+	case keymap.ActionFileQuickViewPreviewPageUp:
+		pageDir = -1
+	case keymap.ActionFileQuickViewPreviewPageDown:
+		pageDir = 1
+	default:
+		return false
+	}
+	if a.model.ViewMode != ui.ViewBrowser || !a.model.QuickViewEnabled {
+		return false
+	}
+	if a.quickViewFilePreviewScrollable() {
+		_, ch, _ := a.filePreviewScrollMetrics()
+		step := ch
+		if step < 1 {
+			step = 1
+		}
+		a.previewScrollBy(pageDir * step)
+		return true
+	}
+	viewportRows := a.activeViewportRows()
+	a.ensureCarouselChildCacheBeforeListNav()
+	a.beginCarouselPreviewNavCoalesce()
+	a.activePanel().Page(pageDir, viewportRows)
+	a.armPanelSyncFollowNavCoalesceAfterListNav()
+	a.armQuickViewNavCoalesceAfterListNav()
+	a.armCarouselPreviewNavCoalesceAfterListNav()
+	return true
+}
+
 func (a *App) patchFilePreview(fn func(*ui.FilePreviewState)) {
 	a.commandsMu.Lock()
 	defer a.commandsMu.Unlock()

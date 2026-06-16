@@ -70,20 +70,22 @@ const (
 	ActionFileRename = "file.rename"
 	// ActionFileRenameOpenSanitize / ActionFileRenameOpenSlugify are bound via
 	// [dialog.rename], not [main].
-	ActionFileRenameOpenSanitize = "file.rename.open-sanitize"
-	ActionFileRenameOpenSlugify  = "file.rename.open-slugify"
-	ActionFileDelete             = "file.delete"
-	ActionFileMkdir              = "file.mkdir"
-	ActionFileMkdirOpenInOther   = "file.mkdir-open-in-other"
-	ActionFileChmod              = "file.chmod"
-	ActionFileChown              = "file.chown"
-	ActionFileSymlink            = "file.symlink"
-	ActionFileHardlink           = "file.hardlink"
-	ActionFileExtract            = "file.extract"
-	ActionFileView               = "file.view"
-	ActionFileQuickView          = "file.quick-view"
-	ActionFileEdit               = "file.edit"
-	ActionFileFlatten            = "file.flatten"
+	ActionFileRenameOpenSanitize       = "file.rename.open-sanitize"
+	ActionFileRenameOpenSlugify        = "file.rename.open-slugify"
+	ActionFileDelete                   = "file.delete"
+	ActionFileMkdir                    = "file.mkdir"
+	ActionFileMkdirOpenInOther         = "file.mkdir-open-in-other"
+	ActionFileChmod                    = "file.chmod"
+	ActionFileChown                    = "file.chown"
+	ActionFileSymlink                  = "file.symlink"
+	ActionFileHardlink                 = "file.hardlink"
+	ActionFileExtract                  = "file.extract"
+	ActionFileView                     = "file.view"
+	ActionFileQuickView                = "file.quick-view"
+	ActionFileQuickViewPreviewPageUp   = "file.quick-view.preview-page-up"
+	ActionFileQuickViewPreviewPageDown = "file.quick-view.preview-page-down"
+	ActionFileEdit                     = "file.edit"
+	ActionFileFlatten                  = "file.flatten"
 	// ActionFlattenDestinationActive / ActionFlattenDestinationInactive are bound via
 	// [dialog.flatten], not [main].
 	ActionFlattenDestinationActive   = "flatten.destination-active"
@@ -226,23 +228,25 @@ var KnownActions = map[string]struct{}{
 	ActionDialogNext:    {},
 	ActionDialogPrev:    {},
 
-	ActionFileRename:                 {},
-	ActionFileRenameOpenSanitize:     {},
-	ActionFileRenameOpenSlugify:      {},
-	ActionFileDelete:                 {},
-	ActionFileMkdir:                  {},
-	ActionFileMkdirOpenInOther:       {},
-	ActionFileChmod:                  {},
-	ActionFileChown:                  {},
-	ActionFileSymlink:                {},
-	ActionFileHardlink:               {},
-	ActionFileExtract:                {},
-	ActionFileView:                   {},
-	ActionFileQuickView:              {},
-	ActionFileEdit:                   {},
-	ActionFileFlatten:                {},
-	ActionFlattenDestinationActive:   {},
-	ActionFlattenDestinationInactive: {},
+	ActionFileRename:                   {},
+	ActionFileRenameOpenSanitize:       {},
+	ActionFileRenameOpenSlugify:        {},
+	ActionFileDelete:                   {},
+	ActionFileMkdir:                    {},
+	ActionFileMkdirOpenInOther:         {},
+	ActionFileChmod:                    {},
+	ActionFileChown:                    {},
+	ActionFileSymlink:                  {},
+	ActionFileHardlink:                 {},
+	ActionFileExtract:                  {},
+	ActionFileView:                     {},
+	ActionFileQuickView:                {},
+	ActionFileQuickViewPreviewPageUp:   {},
+	ActionFileQuickViewPreviewPageDown: {},
+	ActionFileEdit:                     {},
+	ActionFileFlatten:                  {},
+	ActionFlattenDestinationActive:     {},
+	ActionFlattenDestinationInactive:   {},
 
 	ActionCopy:         {},
 	ActionFileCopyHere: {},

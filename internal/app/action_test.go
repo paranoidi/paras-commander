@@ -63,11 +63,8 @@ func TestActionFromKeyMapsQuitImmediate(t *testing.T) {
 }
 
 // TestActionFromKeyMapsCtrlCToJobsCancel verifies that Ctrl+C triggers
-// jobs.cancel only while the jobs view is focused. After the unification
-// of jobs.* shortcuts under [jobs], Ctrl+C is no longer in
-// the global map: it must resolve via the overlay when viewJobs=true,
-// and stay unbound in browser mode (so a stray Ctrl+C never silently
-// triggers a job cancel from outside the jobs screen).
+// jobs.cancel only while the jobs view is focused. In the file browser,
+// Ctrl+C toggles carousel view (panel.toggle-carousel).
 func TestActionFromKeyMapsCtrlCToJobsCancel(t *testing.T) {
 	bundle, err := keymap.DefaultBundle()
 	if err != nil {
@@ -77,8 +74,8 @@ func TestActionFromKeyMapsCtrlCToJobsCancel(t *testing.T) {
 	if got := lookupActionForView(event, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, ui.ViewJobs); got != keymap.ActionJobsCancel {
 		t.Fatalf("jobs view Ctrl+C = %v, want ActionJobsCancel", got)
 	}
-	if got := lookupActionForView(event, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, ui.ViewBrowser); got != "" {
-		t.Fatalf("browser Ctrl+C = %q, want unbound", got)
+	if got := lookupActionForView(event, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, ui.ViewBrowser); got != keymap.ActionPanelToggleCarousel {
+		t.Fatalf("browser Ctrl+C = %q, want %s", got, keymap.ActionPanelToggleCarousel)
 	}
 }
 

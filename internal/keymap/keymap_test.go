@@ -628,9 +628,17 @@ func TestDefaultBundleJobsOpenGlobalRestJobsOverlay(t *testing.T) {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
 
-	id, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModNone))
+	id, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModAlt))
 	if !ok || id != ActionJobsOpen {
-		t.Fatalf("global Ctrl+J = %q %v, want jobs.open", id, ok)
+		t.Fatalf("global Alt+J = %q %v, want jobs.open", id, ok)
+	}
+	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModNone))
+	if !ok || id != ActionFileQuickViewPreviewPageDown {
+		t.Fatalf("global Ctrl+J = %q %v, want file.quick-view.preview-page-down", id, ok)
+	}
+	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModNone))
+	if !ok || id != ActionFileQuickViewPreviewPageUp {
+		t.Fatalf("global Ctrl+K = %q %v, want file.quick-view.preview-page-up", id, ok)
 	}
 	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlQ, 0, tcell.ModNone))
 	if !ok || id != ActionJobsAnswerBlocker {
@@ -640,8 +648,8 @@ func TestDefaultBundleJobsOpenGlobalRestJobsOverlay(t *testing.T) {
 	if !ok || id != ActionJobsAnswerBlocker {
 		t.Fatalf("global Alt+Q = %q %v, want jobs.answer-blocker", id, ok)
 	}
-	if _, ok := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModNone)); ok {
-		t.Fatal("Ctrl+J must not bind in jobs overlay (jobs.open is global-only)")
+	if _, ok := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModAlt)); ok {
+		t.Fatal("Alt+J must not bind in jobs overlay (jobs.open is global-only)")
 	}
 
 	cases := []struct {
@@ -689,8 +697,8 @@ func TestExplicitJobsOpenInMainOverridesDefaultChord(t *testing.T) {
 	if !ok || id != ActionJobsOpen {
 		t.Fatalf("F11 = %q %v, want jobs.open from explicit [main]", id, ok)
 	}
-	if _, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModNone)); ok {
-		t.Fatal("Ctrl+J should not bind: [main] replaced default jobs.open chords")
+	if _, ok := bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModAlt)); ok {
+		t.Fatal("Alt+J should not bind: [main] replaced default jobs.open chords")
 	}
 }
 

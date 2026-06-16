@@ -215,13 +215,13 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	}
 	assertMenuItemKeyLabels(t, cmd, map[string]string{
 		"Bookmarks":    "C-g",
-		"Add bookmark": "M-m",
+		"Add bookmark": "C-b",
 		"Refresh":      "M-C-r",
 	})
 	assertMenuItemKeyLabels(t, display, map[string]string{
-		"Commands": "C-k",
-		"Messages": "C-M-l",
-		"Jobs":     "C-j",
+		"Commands": "M-c",
+		"Messages": "M-m",
+		"Jobs":     "M-j",
 	})
 }
 
@@ -262,9 +262,9 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		t.Fatal("jobs view menus missing Display")
 	}
 	assertMenuItemKeyLabels(t, display, map[string]string{
-		"Commands": "C-k",
-		"Messages": "C-M-l",
-		"Jobs":     "C-j",
+		"Commands": "M-c",
+		"Messages": "M-m",
+		"Jobs":     "M-j",
 	})
 	if file == nil {
 		t.Fatal("jobs view menus missing File")
@@ -320,9 +320,9 @@ func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 				t.Fatalf("Display shortcut = %q, want d", display.Shortcut)
 			}
 			assertMenuItemKeyLabels(t, display, map[string]string{
-				"Commands": "C-k",
-				"Messages": "C-M-l",
-				"Jobs":     "C-j",
+				"Commands": "M-c",
+				"Messages": "M-m",
+				"Jobs":     "M-j",
 			})
 		})
 	}

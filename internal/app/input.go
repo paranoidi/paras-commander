@@ -557,6 +557,9 @@ func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchFilePreviewFocus(actionID) {
 		return false
 	}
+	if a.tryDispatchQuickViewPreviewScroll(actionID) {
+		return false
+	}
 	if a.tryDispatchSelectionsStrip(actionID) {
 		return false
 	}

@@ -5855,6 +5855,40 @@ func TestQuickViewTabPreservesLatchedDirectoryPreview(t *testing.T) {
 	}
 }
 
+func TestQuickViewPreviewPageScrollWithCtrlJK(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "notes.txt"))
+	screen := newScreen(t, 100, 30)
+	app := newApp(t, screen, root)
+	app.config.UI.QuickViewPreviewDebounceMS = 0
+
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
+	app.dispatch(keymap.ActionFileQuickView)
+	if !app.model.QuickViewEnabled {
+		t.Fatal("quick view should be enabled")
+	}
+
+	app.filePreviewRunGen.Add(1)
+	app.patchFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = strings.Repeat("line\n", 200)
+		st.Scroll = 0
+	})
+
+	app.dispatch(keymap.ActionFileQuickViewPreviewPageDown) // default Ctrl+J (vi j = down)
+	if app.model.FilePreview.Scroll < 1 {
+		t.Fatalf("FilePreview.Scroll = %d, want > 0 after preview page down", app.model.FilePreview.Scroll)
+	}
+	scrollAfterDown := app.model.FilePreview.Scroll
+
+	app.dispatch(keymap.ActionFileQuickViewPreviewPageUp) // default Ctrl+K (vi k = up)
+	if app.model.FilePreview.Scroll >= scrollAfterDown {
+		t.Fatalf("FilePreview.Scroll = %d, want < %d after preview page up", app.model.FilePreview.Scroll, scrollAfterDown)
+	}
+}
+
 func TestQuickViewPersistsAcrossPanelSwitch(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "notes.txt"))

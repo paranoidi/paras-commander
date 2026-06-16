@@ -29,9 +29,9 @@ func TestAuxiliaryScreensOpenFromCommandsViewViaKey(t *testing.T) {
 	app := newApp(t, screen, dir)
 
 	app.openCommandsView()
-	ev := tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModCtrl)
+	ev := tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModAlt)
 	if app.actionFromKeyEvent(ev) != keymap.ActionJobsOpen {
-		t.Fatalf("Ctrl+J in commands view = %q, want jobs.open", app.actionFromKeyEvent(ev))
+		t.Fatalf("Alt+J in commands view = %q, want jobs.open", app.actionFromKeyEvent(ev))
 	}
 	_, rendered := app.handleKey(ev)
 	if !rendered {
