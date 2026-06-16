@@ -59,6 +59,10 @@ const (
 	// Bounding results limits the size of the ranked/matchRanges data regardless of index size.
 	DefaultFindMaxResults = 200
 
+	// DefaultDeleteDialogMaxListRows caps visible delete-confirmation name rows per frame
+	// (matches dialog.DeleteDialogMaxListRows; full list still scrolls with PgUp/PgDn).
+	DefaultDeleteDialogMaxListRows = 18
+
 	// DefaultFindListNavIdleMS is how long the result list must be idle (no Up/Down/PgUp/PgDn)
 	// before a background rank update is applied. This keeps the view stable while the user is
 	// navigating, matching the behaviour of disk-usage idle sort in the file listing.

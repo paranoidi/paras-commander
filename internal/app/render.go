@@ -26,12 +26,40 @@ func (a *App) paintFindDialogOverlay() bool {
 	return true
 }
 
+// paintDeleteDialogOverlay repaints only the delete confirmation dialog without redrawing panels or the footer.
+func (a *App) paintDeleteDialogOverlay() bool {
+	if !a.deleteDialogOpen() {
+		return false
+	}
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if layout.TooSmall {
+		return false
+	}
+	ui.PaintDeleteDialog(a.screen, layout, a.model.FileDialog, a.styles, a.model.ShowFileIcons)
+	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
+	a.emitScreenAfterPartialPaint()
+	return true
+}
+
 // renderFindDialogUpdate repaints the find overlay when it is open; otherwise falls back to a full render.
 func (a *App) renderFindDialogUpdate() {
 	if a.model.FindDialog.Open && a.paintFindDialogOverlay() {
 		return
 	}
 	a.render()
+}
+
+// renderDeleteDialogUpdate repaints the delete overlay when it is open; otherwise falls back to a full render.
+func (a *App) renderDeleteDialogUpdate() {
+	if a.deleteDialogOpen() && a.paintDeleteDialogOverlay() {
+		return
+	}
+	a.render()
+}
+
+func (a *App) deleteDialogOpen() bool {
+	return a.model.FileDialog.Open && a.model.FileDialog.DialogType == ui.FileDialogDelete
 }
 
 func (a *App) render() {

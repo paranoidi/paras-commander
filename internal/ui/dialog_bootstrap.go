@@ -207,6 +207,11 @@ func DeleteEnsureListScroll(st *FileDialogState, viewportRows, totalRows int) {
 	dialog.DeleteEnsureListScroll(st, viewportRows, totalRows)
 }
 
+// ComputeDeleteDialogLayoutMinWidth returns minimum outer width for a delete dialog state.
+func ComputeDeleteDialogLayoutMinWidth(state FileDialogState, deleteListIconLead int) int {
+	return dialog.ComputeDeleteDialogLayoutMinWidth(state, deleteListIconLead)
+}
+
 // DeleteListEntryName returns the delete confirmation list label for one entry.
 func DeleteListEntryName(panelPath, homeDir, entryPath, entryName string) string {
 	return dialog.DeleteListEntryName(panelPath, homeDir, entryPath, entryName)

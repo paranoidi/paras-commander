@@ -14,8 +14,34 @@ import (
 // disk-usage metering keeps the listing-volume gate enabled by default.
 const deleteDialogDescendIntoMountPoints = true
 
+func (a *App) clearDeleteDialogReconcileCache() {
+	a.deleteDialogScanFP = ""
+	a.deleteDialogSelGen = 0
+	a.deleteDialogPanelPath = ""
+	a.deleteDialogPrunedPaths = nil
+}
+
+func (a *App) snapshotDeleteDialogSource(p *panel.State) ([]string, bool) {
+	if a.deleteDialogSelGen == p.SelectionDerivedGen() && a.deleteDialogPanelPath == p.PathString() && a.deleteDialogPrunedPaths != nil {
+		return a.deleteDialogPrunedPaths, true
+	}
+	source, err := ops.ResolveSource(p)
+	if err != nil {
+		return nil, false
+	}
+	pruned := panel.PruneNestedPaths(ops.SourcePaths(source))
+	a.deleteDialogSelGen = p.SelectionDerivedGen()
+	a.deleteDialogPanelPath = p.PathString()
+	a.deleteDialogPrunedPaths = pruned
+	return pruned, true
+}
+
 func (a *App) deleteDialogSummary(p *panel.State, source ops.Source) string {
 	pruned := panel.PruneNestedPaths(ops.SourcePaths(source))
+	return a.deleteDialogSummaryFromPruned(p, pruned)
+}
+
+func (a *App) deleteDialogSummaryFromPruned(p *panel.State, pruned []string) string {
 	byPath := entriesByPath(p)
 	remote := p.Path.IsRemote()
 	files, bytes, pending := ui.PathsDeleteImpact(
@@ -61,23 +87,23 @@ func entriesByPath(p *panel.State) map[string]localfs.Entry {
 }
 
 func (a *App) refreshDeleteDialogSummary() {
-	if !a.model.FileDialog.Open || a.model.FileDialog.DialogType != ui.FileDialogDelete {
+	if !a.deleteDialogOpen() {
 		return
 	}
 	p := a.activePanel()
-	source, err := ops.ResolveSource(p)
-	if err != nil {
+	pruned, ok := a.snapshotDeleteDialogSource(p)
+	if !ok {
 		return
 	}
-	a.model.FileDialog.DeleteSummary = a.deleteDialogSummary(p, source)
+	a.model.FileDialog.DeleteSummary = a.deleteDialogSummaryFromPruned(p, pruned)
 }
 
 func (a *App) reconcileDeleteDialogScans() {
 	if a.diskUsage == nil || a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	if !a.model.FileDialog.Open || a.model.FileDialog.DialogType != ui.FileDialogDelete {
-		a.deleteDialogScanFP = ""
+	if !a.deleteDialogOpen() {
+		a.clearDeleteDialogReconcileCache()
 		return
 	}
 	p := a.activePanel()
@@ -85,12 +111,11 @@ func (a *App) reconcileDeleteDialogScans() {
 		a.deleteDialogScanFP = ""
 		return
 	}
-	source, err := ops.ResolveSource(p)
-	if err != nil {
+	pruned, ok := a.snapshotDeleteDialogSource(p)
+	if !ok {
 		a.deleteDialogScanFP = ""
 		return
 	}
-	pruned := panel.PruneNestedPaths(ops.SourcePaths(source))
 	byPath := entriesByPath(p)
 	need := directoriesNeedingScan(
 		pruned,

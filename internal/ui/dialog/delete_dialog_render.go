@@ -10,6 +10,9 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
+// DeleteDialogMaxListRows caps visible name rows per paint (full list still scrolls).
+const DeleteDialogMaxListRows = 18
+
 func deleteDialogWarningLines(state FileDialogState) int {
 	if strings.TrimSpace(state.DeleteWarning) != "" {
 		return 1
@@ -37,21 +40,25 @@ func deleteDialogMaxHeight(layoutHeight int) int {
 	return maxH
 }
 
+func deleteDialogCappedEntryCount(natural int) int {
+	if natural <= DeleteDialogMaxListRows {
+		return natural
+	}
+	return DeleteDialogMaxListRows
+}
+
 // DeleteDialogListViewportRows returns how many delete-list name rows fit for the terminal height.
 func DeleteDialogListViewportRows(layoutHeight int, state FileDialogState) int {
 	natural := len(state.DeleteEntries)
+	capped := deleteDialogCappedEntryCount(natural)
 	chrome := deleteDialogChromeRows(state)
-	naturalHeight := chrome + natural
 	maxH := deleteDialogMaxHeight(layoutHeight)
-	if naturalHeight <= maxH {
-		return natural
-	}
 	available := maxH - chrome
 	if available < 1 {
 		return 1
 	}
-	if available > natural {
-		return natural
+	if capped <= available {
+		return capped
 	}
 	return available
 }
@@ -75,15 +82,45 @@ func DeleteEnsureListScroll(state *FileDialogState, viewportRows, totalRows int)
 }
 
 func deleteDialogListViewportFromHeight(outerHeight int, state FileDialogState) int {
-	natural := len(state.DeleteEntries)
+	capped := deleteDialogCappedEntryCount(len(state.DeleteEntries))
 	available := outerHeight - deleteDialogChromeRows(state)
-	if available >= natural {
-		return natural
+	if available >= capped {
+		return capped
 	}
 	if available < 1 {
 		return 1
 	}
 	return available
+}
+
+// ComputeDeleteDialogLayoutMinWidth returns the minimum outer dialog width from summary, warning,
+// and entry display names. Call once when opening the dialog and store in DeleteLayoutMinWidth.
+func ComputeDeleteDialogLayoutMinWidth(state FileDialogState, deleteListIconLead int) int {
+	minWidth := 30
+	iconLead := deleteListIconLead
+	if iconLead < 0 {
+		iconLead = 0
+	}
+	lineWidth := 30
+	for _, line := range []string{state.DeleteSummary, state.DeleteWarning} {
+		if line == "" {
+			continue
+		}
+		lw := utf8.RuneCountInString(line) + 4
+		if lw > lineWidth {
+			lineWidth = lw
+		}
+	}
+	for _, entry := range state.DeleteEntries {
+		lw := utf8.RuneCountInString(entry.Name) + 4 + iconLead
+		if lw > lineWidth {
+			lineWidth = lw
+		}
+	}
+	if lineWidth > minWidth {
+		minWidth = lineWidth
+	}
+	return minWidth
 }
 
 func fileDeleteDialogHeight(layoutHeight int, state FileDialogState) int {

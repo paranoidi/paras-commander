@@ -180,30 +180,10 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 	if len(state.Fields) > 0 {
 		minWidth = max(minWidth, PreferredFormDialogWidth)
 	}
-	// For delete dialog, use summary, warning, and listed names (plus devicon strip when shown).
+	// For delete dialog, use cached layout width from open (see ComputeDeleteDialogLayoutMinWidth).
 	if state.DialogType == FileDialogDelete {
-		iconLead := deleteListIconLead
-		if iconLead < 0 {
-			iconLead = 0
-		}
-		lineWidth := 30
-		for _, line := range []string{state.DeleteSummary, state.DeleteWarning} {
-			if line == "" {
-				continue
-			}
-			lw := utf8.RuneCountInString(line) + 4
-			if lw > lineWidth {
-				lineWidth = lw
-			}
-		}
-		for _, entry := range state.DeleteEntries {
-			lw := utf8.RuneCountInString(entry.Name) + 4 + iconLead
-			if lw > lineWidth {
-				lineWidth = lw
-			}
-		}
-		if lineWidth > minWidth {
-			minWidth = lineWidth
+		if state.DeleteLayoutMinWidth > minWidth {
+			minWidth = state.DeleteLayoutMinWidth
 		}
 	}
 	if state.DialogType == FileDialogRunForEach && strings.TrimSpace(state.Message) != "" {

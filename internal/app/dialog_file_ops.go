@@ -12,6 +12,7 @@ import (
 )
 
 func (a *App) closeFileDialog() {
+	a.clearDeleteDialogReconcileCache()
 	a.model.FileDialog = ui.FileDialogState{}
 }
 
@@ -93,15 +94,21 @@ func (a *App) openDeleteDialog(p *panel.State) {
 			Type: e.Type,
 		}
 	}
-	a.deleteDialogScanFP = ""
+	pruned := panel.PruneNestedPaths(ops.SourcePaths(source))
+	a.clearDeleteDialogReconcileCache()
 	a.invalidateDeleteDialogDiskCache(p, source)
-	a.model.FileDialog = ui.FileDialogState{
+	a.deleteDialogSelGen = p.SelectionDerivedGen()
+	a.deleteDialogPanelPath = panelPath
+	a.deleteDialogPrunedPaths = pruned
+	fd := ui.FileDialogState{
 		Open:          true,
 		DialogType:    ui.FileDialogDelete,
 		DeleteSummary: a.deleteDialogSummary(p, source),
 		DeleteEntries: entries,
 		FocusedField:  1, // No (safe default); Yes stays index 0.
 	}
+	fd.DeleteLayoutMinWidth = ui.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
+	a.model.FileDialog = fd
 	a.reconcileDeleteDialogScans()
 }
 

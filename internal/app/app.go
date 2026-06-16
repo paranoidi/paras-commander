@@ -107,6 +107,10 @@ type App struct {
 	selectionSizeScanPath [2]string
 	// deleteDialogScanFP is the last enqueued directory set fingerprint for the delete confirmation dialog.
 	deleteDialogScanFP string
+	// deleteDialogSelGen / deleteDialogPanelPath / deleteDialogPrunedPaths skip ResolveSource while the delete dialog is open.
+	deleteDialogSelGen      uint64
+	deleteDialogPanelPath   string
+	deleteDialogPrunedPaths []string
 	// findDialogSelectionScanFP is the last enqueued directory set fingerprint for find-dialog selection-size scans.
 	findDialogSelectionScanFP string
 	// findDialogSelectionScanGen skips reconcile work when marked-selection derived input is unchanged.
@@ -660,6 +664,8 @@ func (a *App) Run() error {
 				if a.model.FindDialog.Open {
 					a.model.FindDialog.InvalidateMarkedSelectionSizeLabel()
 					a.renderFindDialogUpdate()
+				} else if a.deleteDialogOpen() {
+					a.renderDeleteDialogUpdate()
 				} else {
 					a.render()
 				}

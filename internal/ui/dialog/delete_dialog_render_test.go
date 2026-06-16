@@ -7,7 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
-func TestDeleteDialogListViewportRowsNoCap(t *testing.T) {
+func TestDeleteDialogListViewportRowsSmallListUncapped(t *testing.T) {
 	state := FileDialogState{
 		DeleteSummary: "2 files (300 B)",
 		DeleteEntries: []DeleteListEntry{
@@ -18,6 +18,22 @@ func TestDeleteDialogListViewportRowsNoCap(t *testing.T) {
 	got := DeleteDialogListViewportRows(24, state)
 	if got != 2 {
 		t.Fatalf("viewport = %d, want 2", got)
+	}
+}
+
+func TestDeleteDialogListViewportRowsCapsAtMaxListRows(t *testing.T) {
+	entries := make([]DeleteListEntry, 100)
+	for i := range entries {
+		entries[i] = DeleteListEntry{Name: "file.txt", Type: localfs.EntryFile}
+	}
+	state := FileDialogState{
+		DeleteSummary: "100 files (1 KiB)",
+		DeleteEntries: entries,
+	}
+	const layoutH = 100
+	got := DeleteDialogListViewportRows(layoutH, state)
+	if got != DeleteDialogMaxListRows {
+		t.Fatalf("viewport = %d, want max list cap %d", got, DeleteDialogMaxListRows)
 	}
 }
 

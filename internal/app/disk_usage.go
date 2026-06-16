@@ -65,6 +65,10 @@ drained:
 			a.renderFindDialogUpdate()
 			return
 		}
+		if a.deleteDialogOpen() {
+			a.renderDeleteDialogUpdate()
+			return
+		}
 		a.render()
 		return
 	}

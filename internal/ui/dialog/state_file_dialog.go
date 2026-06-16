@@ -141,10 +141,11 @@ type FileDialogState struct {
 	MassRenameReplacementSyntaxHint string
 
 	// Delete confirmation (DialogType == FileDialogDelete).
-	DeleteSummary    string
-	DeleteWarning    string
-	DeleteEntries    []DeleteListEntry
-	DeleteListScroll int
+	DeleteSummary        string
+	DeleteWarning        string
+	DeleteEntries        []DeleteListEntry
+	DeleteListScroll     int
+	DeleteLayoutMinWidth int // cached at open; avoids scanning all entries each frame
 }
 
 // DeleteListEntry is one row in the delete confirmation name list.

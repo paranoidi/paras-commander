@@ -352,8 +352,15 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return false, true
 	case InputModeFileDialog:
+		wasDelete := a.deleteDialogOpen()
 		quit := a.handleFileDialogKey(event)
-		a.render()
+		if wasDelete && a.deleteDialogOpen() {
+			if !a.paintDeleteDialogOverlay() {
+				a.render()
+			}
+		} else {
+			a.render()
+		}
 		return quit, true
 	case InputModeJobsView:
 		quit := a.handleJobsViewKey(event)

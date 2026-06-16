@@ -105,6 +105,7 @@ func TestFileDialogDeleteWidthReservesIconStrip(t *testing.T) {
 		DeleteSummary: "Delete file",
 		DeleteEntries: []DeleteListEntry{{Name: name}},
 	}
+	state.DeleteLayoutMinWidth = ComputeDeleteDialogLayoutMinWidth(state, iconLead)
 	const screenW = 120
 	got := fileDialogWidth(screenW, state, iconLead)
 	want := len([]rune(name)) + 4 + iconLead
@@ -120,9 +121,23 @@ func TestFileDialogDeleteWidthNoIconStripWhenLeadZero(t *testing.T) {
 		DeleteSummary: "Delete file",
 		DeleteEntries: []DeleteListEntry{{Name: name}},
 	}
+	state.DeleteLayoutMinWidth = ComputeDeleteDialogLayoutMinWidth(state, 0)
 	got := fileDialogWidth(80, state, 0)
 	want := len([]rune(name)) + 4
 	if got < want {
 		t.Fatalf("width = %d, want at least %d", got, want)
+	}
+}
+
+func TestFileDialogDeleteWidthUsesCachedLayoutMinWidth(t *testing.T) {
+	state := FileDialogState{
+		DialogType:           FileDialogDelete,
+		DeleteSummary:        "summary",
+		DeleteLayoutMinWidth: 64,
+		DeleteEntries:        make([]DeleteListEntry, 500),
+	}
+	got := fileDialogWidth(120, state, 0)
+	if got != 64 {
+		t.Fatalf("width = %d, want cached 64 without scanning entries", got)
 	}
 }
