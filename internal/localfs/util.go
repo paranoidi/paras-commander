@@ -113,8 +113,7 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 
 	if extra.shouldPreallocate(srcInfo.Size()) {
 		if err := preallocateDestination(dstFile, srcInfo.Size()); err != nil {
-			_ = dstFile.Close()
-			_ = os.Remove(target)
+			abortPartialLocalCopy(dstFile, target)
 			return fmt.Errorf("preallocate destination %q: %w", target, err)
 		}
 	}
@@ -123,8 +122,7 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 	if tryKernelFastCopy {
 		ok, ferr := tryKernelReflinkCopy(ctx, srcFile, dstFile, srcInfo.Size(), onWritten)
 		if ferr != nil {
-			_ = dstFile.Close()
-			_ = os.Remove(target)
+			abortPartialLocalCopy(dstFile, target)
 			return fmt.Errorf("copy content %q -> %q: %w", src, target, ferr)
 		}
 		fastDone = ok
@@ -132,8 +130,7 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 	if !fastDone && extra.CopyFileRange {
 		ok, ferr := tryKernelFileRangeCopy(ctx, srcFile, dstFile, srcInfo.Size(), onWritten)
 		if ferr != nil {
-			_ = dstFile.Close()
-			_ = os.Remove(target)
+			abortPartialLocalCopy(dstFile, target)
 			return fmt.Errorf("copy content %q -> %q: %w", src, target, ferr)
 		}
 		fastDone = ok
@@ -159,15 +156,13 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 			_, err = io.CopyBuffer(dstWrapped, srcWrapped, buf)
 		}
 		if err != nil {
-			_ = dstFile.Close()
-			_ = os.Remove(target)
+			abortPartialLocalCopy(dstFile, target)
 			return fmt.Errorf("copy content %q -> %q: %w", src, target, err)
 		}
 	}
 	if extra.syncNow(srcInfo.Size()) {
 		if err := dstFile.Sync(); err != nil {
-			_ = dstFile.Close()
-			_ = os.Remove(target)
+			abortPartialLocalCopy(dstFile, target)
 			return fmt.Errorf("sync destination %q: %w", target, err)
 		}
 	}

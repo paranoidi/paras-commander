@@ -21,4 +21,7 @@ func TestCopyFileContextCanceled(t *testing.T) {
 	if err == nil || !errors.Is(err, context.Canceled) {
 		t.Fatalf("CopyFile err = %v, want context.Canceled", err)
 	}
+	if _, statErr := os.Stat(dst); !os.IsNotExist(statErr) {
+		t.Fatalf("partial destination %q should be removed after failure, stat err=%v", dst, statErr)
+	}
 }

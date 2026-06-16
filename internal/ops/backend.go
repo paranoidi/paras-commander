@@ -154,6 +154,14 @@ func removePathRecursive(ctx context.Context, loc pathloc.Path) error {
 	return be.Remove(ctx, loc)
 }
 
+func removePartialTransferDest(ctx context.Context, dst pathloc.Path) {
+	be, err := backendFor(dst)
+	if err != nil {
+		return
+	}
+	_ = be.Remove(ctx, dst)
+}
+
 func countTransferNodes(ctx context.Context, loc pathloc.Path) (int, error) {
 	ent, err := statEntry(ctx, loc)
 	if err != nil {
@@ -288,7 +296,7 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 		err = closeErr
 	}
 	if err != nil {
-		_ = dstBE.Remove(ctx, dst)
+		removePartialTransferDest(ctx, dst)
 		return false, err
 	}
 
@@ -307,6 +315,7 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 		if host, err := dst.FilePath(); err == nil {
 			if opts.SyncFileNow(srcEnt.Size) {
 				if err := syncLocalPath(host); err != nil {
+					removePartialTransferDest(ctx, dst)
 					return false, err
 				}
 			}
