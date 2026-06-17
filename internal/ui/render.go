@@ -102,20 +102,21 @@ type Model struct {
 	// MenuBarActivitySpinner requests the busy spinner glyph at the menu-bar trailing edge (set by App.render).
 	MenuBarActivitySpinner bool
 	// SpinPhase advances while the menu-bar activity spinner animates (braille glyph sequence).
-	SpinPhase           uint8
-	Menu                menu.State
-	MenuDefinitions     []menu.Definition
-	ThemeDialog         ThemeDialogState
-	ConfigDialog        ConfigDialogState
-	SortDialog          SortDialogState
-	ListingFormatDialog ListingFormatDialogState
-	GroupSelect         GroupSelectState
-	PathPicker          PathPickerState
-	HistoryDialog       HistoryDialogState
-	SFTPConnectDialog   SFTPConnectDialogState
-	FindDialog          FindDialogState
-	MetaDialog          MetaDialogState
-	UserMenu            UserMenuDialogState
+	SpinPhase               uint8
+	Menu                    menu.State
+	MenuDefinitions         []menu.Definition
+	ThemeDialog             ThemeDialogState
+	ConfigDialog            ConfigDialogState
+	DebounceCalibrateDialog DebounceCalibrateDialogState
+	SortDialog              SortDialogState
+	ListingFormatDialog     ListingFormatDialogState
+	GroupSelect             GroupSelectState
+	PathPicker              PathPickerState
+	HistoryDialog           HistoryDialogState
+	SFTPConnectDialog       SFTPConnectDialogState
+	FindDialog              FindDialogState
+	MetaDialog              MetaDialogState
+	UserMenu                UserMenuDialogState
 	// MetaResults holds per-panel active meta columns (nil/empty = meta not active).
 	MetaResults [2][]MetaColumnState
 	// FilePreview is the live inactive-panel preview state (mutate only under App.commandsMu).
@@ -276,7 +277,7 @@ func (m Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.StashRestoreDialog.Open || m.UserMenu.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.StashRestoreDialog.Open || m.UserMenu.Open {
 		return true
 	}
 	return false
@@ -291,7 +292,7 @@ func (m Model) QuickFilterStartBlocked() bool {
 	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open ||
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
-		m.ConfigDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
+		m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.UserMenu.Open
 }
 
@@ -438,6 +439,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	if model.ConfigDialog.Open {
 		dialog.DrawConfigDialog(screen, layout, model.ConfigDialog, styles)
+	}
+	if model.DebounceCalibrateDialog.Open {
+		dialog.DrawDebounceCalibrateDialog(screen, layout, model.DebounceCalibrateDialog, styles)
 	}
 	if model.SortDialog.Open {
 		dialog.DrawSortDialog(screen, layout, model.SortDialog, styles)

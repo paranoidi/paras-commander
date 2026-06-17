@@ -440,14 +440,14 @@ func (a *App) clearPanelSyncFollowNavCoalesce() {
 }
 
 func (a *App) armPanelSyncFollowNavCoalesceAfterListNav() {
-	if a.config.UI.PanelSyncFollowNavDebounceMS <= 0 {
+	if a.config.UI.KeyRepeatDebounceMS <= 0 {
 		return
 	}
 	if !a.panelSyncFollowNavCoalesceContext() {
 		return
 	}
 	gen := a.syncFollowNavGen.Add(1)
-	delay := time.Duration(a.config.UI.PanelSyncFollowNavDebounceMS) * time.Millisecond
+	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
 	a.syncFollowNavMu.Lock()
 	defer a.syncFollowNavMu.Unlock()
 	if a.syncFollowNavTimer != nil {

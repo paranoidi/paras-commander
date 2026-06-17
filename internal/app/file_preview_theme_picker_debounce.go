@@ -27,7 +27,7 @@ func (a *App) clearPreviewStylePickerDebounce() {
 }
 
 func (a *App) schedulePreviewStylePickerDebounceTimer(gen uint64) {
-	delay := time.Duration(a.config.Preview.StylePickerDebounceMS) * time.Millisecond
+	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
 	a.previewStylePickerDebounceMu.Lock()
 	defer a.previewStylePickerDebounceMu.Unlock()
 	if a.previewStylePickerDebounceTimer != nil {
@@ -54,7 +54,7 @@ func (a *App) armPreviewStylePickerPreview(immediate bool) {
 	if !a.syncPreviewStylePickerSelection() {
 		return
 	}
-	if immediate || a.config.Preview.StylePickerDebounceMS <= 0 {
+	if immediate || a.config.UI.KeyRepeatDebounceMS <= 0 {
 		a.flushPreviewStylePickerPreviewNow()
 		return
 	}

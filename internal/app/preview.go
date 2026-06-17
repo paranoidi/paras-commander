@@ -617,7 +617,7 @@ func (a *App) clearQuickViewNavCoalesce() {
 }
 
 func (a *App) scheduleQuickViewDebounceTimer(gen uint64) {
-	delay := time.Duration(a.config.UI.QuickViewPreviewDebounceMS) * time.Millisecond
+	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
 	a.quickViewDebounceMu.Lock()
 	defer a.quickViewDebounceMu.Unlock()
 	if a.quickViewDebounceTimer != nil {
@@ -638,7 +638,7 @@ func (a *App) scheduleQuickViewDebounceTimer(gen uint64) {
 }
 
 func (a *App) armQuickViewNavCoalesceAfterListNav() {
-	if a.config.UI.QuickViewPreviewDebounceMS <= 0 {
+	if a.config.UI.KeyRepeatDebounceMS <= 0 {
 		return
 	}
 	if !a.quickViewNavCoalesceContext() {
@@ -650,7 +650,7 @@ func (a *App) armQuickViewNavCoalesceAfterListNav() {
 }
 
 func (a *App) armQuickViewPreviewDebounce() {
-	if a.config.UI.QuickViewPreviewDebounceMS <= 0 {
+	if a.config.UI.KeyRepeatDebounceMS <= 0 {
 		a.applyQuickViewPreviewNow()
 		a.quickViewLastFingerprint = a.quickViewFingerprint()
 		return

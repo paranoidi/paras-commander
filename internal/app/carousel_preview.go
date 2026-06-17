@@ -53,7 +53,7 @@ func (a *App) carouselPreviewNavCoalesceContext() bool {
 }
 
 func (a *App) scheduleCarouselPreviewDebounceTimer(gen uint64) {
-	delay := time.Duration(a.config.UI.CarouselPreviewDebounceMS) * time.Millisecond
+	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
 	a.carouselPreviewDebounceMu.Lock()
 	defer a.carouselPreviewDebounceMu.Unlock()
 	if a.carouselPreviewDebounceTimer != nil {
@@ -77,7 +77,7 @@ func (a *App) scheduleCarouselPreviewDebounceTimer(gen uint64) {
 // Call before moving the file-list cursor so the first coalesced frame after a non-coalesced period
 // (e.g. Enter into a directory) does not paint an empty child column.
 func (a *App) beginCarouselPreviewNavCoalesce() bool {
-	if a.config.UI.CarouselPreviewDebounceMS <= 0 {
+	if a.config.UI.KeyRepeatDebounceMS <= 0 {
 		return false
 	}
 	if !a.carouselPreviewNavCoalesceContext() {
@@ -144,7 +144,7 @@ func (a *App) loadCarouselChildPreviewFromDisk() {
 
 // carouselPreviewHeldListNav reports file-list nav keys while carousel child preview coalesce may apply.
 func (a *App) carouselPreviewHeldListNav(resolvedAction string, event *tcell.EventKey) bool {
-	if a.config.UI.CarouselPreviewDebounceMS <= 0 || !a.activePanel().CarouselMode {
+	if a.config.UI.KeyRepeatDebounceMS <= 0 || !a.activePanel().CarouselMode {
 		return false
 	}
 	return a.panelSyncFollowHeldListNav(resolvedAction, event)

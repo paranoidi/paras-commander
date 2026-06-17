@@ -16,7 +16,7 @@ func TestReconcileCarouselFilePreviewStartsPreview(t *testing.T) {
 	}
 	screen := newScreen(t, 200, 30)
 	app := newApp(t, screen, root)
-	app.config.UI.CarouselPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.HideInactivePanel = true
 	app.model.Left.CarouselMode = true
 	if !app.model.Left.SelectVisibleEntry("scroll.txt") {
@@ -45,7 +45,7 @@ func TestReconcileCarouselFilePreviewClosesOnDirectoryCursor(t *testing.T) {
 	}
 	screen := newScreen(t, 200, 30)
 	app := newApp(t, screen, root)
-	app.config.UI.CarouselPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.HideInactivePanel = true
 	app.model.Left.CarouselMode = true
 	app.patchCarouselFilePreview(func(st *ui.FilePreviewState) {

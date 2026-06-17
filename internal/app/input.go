@@ -22,6 +22,7 @@ const (
 	InputModeSortDialog
 	InputModeListingFormatDialog
 	InputModeConfigDialog
+	InputModeDebounceCalibrateDialog
 	InputModeGroupSelect
 	InputModeMenu
 	InputModeFilter
@@ -69,6 +70,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeListingFormatDialog
 	case a.model.ConfigDialog.Open:
 		return InputModeConfigDialog
+	case a.model.DebounceCalibrateDialog.Open:
+		return InputModeDebounceCalibrateDialog
 	case a.model.HostKeyDialog.Open:
 		return InputModeHostKeyDialog
 	case a.model.FileDialog.Open:
@@ -344,6 +347,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return false, true
 	case InputModeConfigDialog:
 		a.handleConfigDialogKey(event)
+		a.render()
+		return false, true
+	case InputModeDebounceCalibrateDialog:
+		a.handleDebounceCalibrateDialogKey(event)
 		a.render()
 		return false, true
 	case InputModeGroupSelect:
@@ -837,6 +844,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openThemeDialog()
 	case keymap.ActionUIOpenConfig:
 		a.openConfigDialog()
+	case keymap.ActionUICalibrateDebounce:
+		a.openDebounceCalibrateDialog()
 	case keymap.ActionFileView:
 		a.openFilePreviewFullscreen()
 	case keymap.ActionFileViewThemePicker:

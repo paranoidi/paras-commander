@@ -128,7 +128,7 @@ func TestFirstListNavAfterChdirPaintsCachedChildDuringCoalesce(t *testing.T) {
 	}
 	screen := newScreen(t, 160, 30)
 	app := newApp(t, screen, root)
-	app.config.UI.CarouselPreviewDebounceMS = 500
+	app.config.UI.KeyRepeatDebounceMS = 500
 	app.model.Left.CarouselMode = true
 
 	left := app.panelByID(ui.LeftPanel)
@@ -177,7 +177,7 @@ func TestCarouselPreviewNavDebounceDefersSideSnapshotUntilFlush(t *testing.T) {
 	}
 	screen := newScreen(t, 160, 30)
 	app := newApp(t, screen, root)
-	app.config.UI.CarouselPreviewDebounceMS = 500
+	app.config.UI.KeyRepeatDebounceMS = 500
 	app.model.Left.CarouselMode = true
 
 	left := app.panelByID(ui.LeftPanel)

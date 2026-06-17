@@ -4562,7 +4562,7 @@ func TestRenameDialogConfigFocusAfterDefaultOn(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	t.Cleanup(app.stopWorker)
-	app.config.UI.PanelSyncFollowNavDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	app.dispatch(keymap.ActionFileRename)
 	if !app.model.FileDialog.RenameFocusAfter {
@@ -5815,7 +5815,7 @@ func TestQuickViewDirRecallsFromInactivePanelHistory(t *testing.T) {
 	writeFile(t, filepath.Join(alpha, "b.txt"))
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	right := app.panelByID(ui.RightPanel)
 	selectPanelEntryByName(t, right, "alpha")
@@ -5851,7 +5851,7 @@ func TestQuickViewDirMirrorsInactivePanelWhenAlreadyInDirectory(t *testing.T) {
 	writeFile(t, filepath.Join(alpha, "b.txt"))
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	right := app.panelByID(ui.RightPanel)
 	selectPanelEntryByName(t, right, "alpha")
@@ -5887,7 +5887,7 @@ func TestQuickViewDirRecallsLastSelectedEntry(t *testing.T) {
 	writeFile(t, filepath.Join(alpha, "b.txt"))
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	app.model.ActivePanel = ui.LeftPanel
 	left := app.panelByID(ui.LeftPanel)
@@ -5924,7 +5924,7 @@ func TestQuickViewTabPreservesLatchedDirectoryPreview(t *testing.T) {
 	writeFile(t, filepath.Join(alpha, "inside.txt"))
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	if err := app.panelByID(ui.RightPanel).Load(child); err != nil {
 		t.Fatal(err)
@@ -5987,7 +5987,7 @@ func TestQuickViewPreviewPageScrollWithCtrlJK(t *testing.T) {
 	writeFile(t, filepath.Join(root, "notes.txt"))
 	screen := newScreen(t, 100, 30)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
@@ -6021,7 +6021,7 @@ func TestQuickViewPersistsAcrossPanelSwitch(t *testing.T) {
 	writeFile(t, filepath.Join(root, "notes.txt"))
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
@@ -6317,7 +6317,7 @@ func TestPanelSyncFollowNavDebounceDefersFollowerUntilCleared(t *testing.T) {
 	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
 		t.Fatalf("right after sync enable = %q, want %q", got, want)
 	}
-	app.config.UI.PanelSyncFollowNavDebounceMS = 500
+	app.config.UI.KeyRepeatDebounceMS = 500
 	app.dispatch(keymap.ActionNavDown)
 	app.reconcileAfterEvent()
 	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
@@ -6571,7 +6571,7 @@ func TestQuickViewFollowsDirectoryHighlight(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
@@ -6604,7 +6604,7 @@ func TestQuickViewFollowsCursorBetweenSubdirectories(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
@@ -6633,7 +6633,7 @@ func TestQuickViewShowsPreviewOnFileHighlight(t *testing.T) {
 	writeFile(t, filepath.Join(root, "notes.txt"))
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
@@ -6653,7 +6653,7 @@ func TestQuickViewPreviewNavDebounceDefersPreviewUntilFlush(t *testing.T) {
 	writeFile(t, readme)
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 500
+	app.config.UI.KeyRepeatDebounceMS = 500
 
 	app.model.ActivePanel = ui.LeftPanel
 	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
@@ -6758,7 +6758,7 @@ func TestQuickViewOffRestoresInactivePanelState(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	if err := app.panelByID(ui.RightPanel).Load(child); err != nil {
 		t.Fatal(err)
@@ -6805,7 +6805,7 @@ func TestQuickViewDirDoesNotMoveOpenInOtherPanelIndicator(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	if err := app.panelByID(ui.RightPanel).Load(child); err != nil {
 		t.Fatal(err)

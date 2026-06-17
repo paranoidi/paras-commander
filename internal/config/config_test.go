@@ -636,20 +636,20 @@ func TestValidatePreviewModeAndStyle(t *testing.T) {
 	}
 }
 
-func TestValidatePreviewStylePickerDebounceMS(t *testing.T) {
+func TestValidateKeyRepeatDebounceMS(t *testing.T) {
 	cfg := Default()
-	cfg.Preview.StylePickerDebounceMS = -1
+	cfg.UI.KeyRepeatDebounceMS = -1
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.Preview.StylePickerDebounceMS != DefaultPreviewStylePickerDebounceMS {
-		t.Fatalf("StylePickerDebounceMS = %d, want default %d", cfg.Preview.StylePickerDebounceMS, DefaultPreviewStylePickerDebounceMS)
+	if cfg.UI.KeyRepeatDebounceMS != DefaultKeyRepeatDebounceMS {
+		t.Fatalf("KeyRepeatDebounceMS = %d, want default %d", cfg.UI.KeyRepeatDebounceMS, DefaultKeyRepeatDebounceMS)
 	}
-	cfg.Preview.StylePickerDebounceMS = 20_000
+	cfg.UI.KeyRepeatDebounceMS = 20_000
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.Preview.StylePickerDebounceMS != 10_000 {
-		t.Fatalf("StylePickerDebounceMS = %d, want clamp 10000", cfg.Preview.StylePickerDebounceMS)
+	if cfg.UI.KeyRepeatDebounceMS != KeyRepeatDebounceMaxMS {
+		t.Fatalf("KeyRepeatDebounceMS = %d, want clamp %d", cfg.UI.KeyRepeatDebounceMS, KeyRepeatDebounceMaxMS)
 	}
 }

@@ -7,20 +7,24 @@ const (
 	// DefaultPathPickerValidateDelayMS is the debounce before filesystem checks on the path-picker filter.
 	DefaultPathPickerValidateDelayMS = 200
 
-	// DefaultPanelSyncFollowNavDebounceMS delays mirroring the driver's file-list highlight into the
-	// follower while latched panel sync is on. Terminals do not report key-up; after this many
-	// milliseconds without another list cursor step, one sync runs (reduces disk I/O during key repeat).
-	// Zero disables coalescing (sync every event, previous behavior).
-	DefaultPanelSyncFollowNavDebounceMS = 100
+	// DefaultKeyRepeatDebounceMS coalesces rapid file-list cursor steps, quick view preview reloads,
+	// carousel child preview reloads, and F3 style-picker re-highlighting. Terminals do not report
+	// key-up; after this many milliseconds without another qualifying step, deferred work runs once.
+	// Zero disables coalescing (immediate per-event behavior).
+	DefaultKeyRepeatDebounceMS = 80
 
-	// DefaultQuickViewPreviewDebounceMS waits after the last listing highlight change before
-	// re-running the preview command while Quick view is on. Zero runs immediately every reconcile.
-	// Default matches DefaultPanelSyncFollowNavDebounceMS for consistent file-list scroll coalescing.
-	DefaultQuickViewPreviewDebounceMS = 100
+	// DebounceCalibrationMarginMS is added to the measured key-repeat interval when calibrating.
+	DebounceCalibrationMarginMS = 10
+	// DebounceCalibrationMinRepeatSamples is how many repeat intervals one hold must yield.
+	DebounceCalibrationMinRepeatSamples = 8
+	// DebounceCalibrationReleaseIdleMS infers key release after hold sampling (no key-up events).
+	DebounceCalibrationReleaseIdleMS = 200
+	// DebounceCalibrationMinRepeatMS / DebounceCalibrationMaxRepeatMS reject outlier repeat intervals.
+	DebounceCalibrationMinRepeatMS = 10
+	DebounceCalibrationMaxRepeatMS = 500
 
-	// DefaultCarouselPreviewDebounceMS waits after the last file-list cursor step before reloading
-	// the carousel child (next) column preview. Zero loads on every render (previous behavior).
-	DefaultCarouselPreviewDebounceMS = 100
+	// KeyRepeatDebounceMaxMS upper clamp for key_repeat_debounce_ms in Config.Validate.
+	KeyRepeatDebounceMaxMS = 10_000
 
 	DefaultDiskUsageWalkConcurrency = 4
 
@@ -205,10 +209,6 @@ const (
 	DefaultPreviewTabWidth    = 4
 	// DefaultMaxPreviewBytes caps internal preview reads (matches cmdrun.MaxStreamBytes).
 	DefaultMaxPreviewBytes = 512 * 1024
-
-	// DefaultPreviewStylePickerDebounceMS waits after the last F3 style-picker selection
-	// before re-running internal Chroma highlighting. Zero applies on every selection change.
-	DefaultPreviewStylePickerDebounceMS = 100
 
 	// DefaultFilePreviewCommand runs bat with line numbers, paging disabled, colors forced on (non-TTY stdout),
 	// and wrap/width driven by {terminal_width} so output matches the inactive preview column.

@@ -108,6 +108,7 @@ func ApplyJobsMenuKeyLabels(defs []Definition, global, jobs *keymap.Map) {
 func Definitions() []Definition {
 	optionsItems := []Item{
 		{Action: keymap.ActionUIOpenConfig, Label: "Configuration", Shortcut: 'c'},
+		{Action: keymap.ActionUICalibrateDebounce, Label: "Calibrate Debounce", Shortcut: 'd'},
 		{Action: keymap.ActionUIOpenTheme, Label: "Theme", Shortcut: 't'},
 	}
 

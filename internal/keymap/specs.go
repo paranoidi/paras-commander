@@ -762,6 +762,13 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"appearance", "colors"},
 		},
 		{
+			ID:          ActionUICalibrateDebounce,
+			Title:       "Calibrate debounce",
+			Section:     "UI",
+			DefaultKeys: nil,
+			Keywords:    []string{"keyboard", "repeat", "debounce"},
+		},
+		{
 			ID:          ActionUIOpenConfig,
 			Title:       "Configuration editor",
 			Section:     "UI",

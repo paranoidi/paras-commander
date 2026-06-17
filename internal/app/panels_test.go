@@ -49,7 +49,7 @@ func TestQuickViewUpdatesAfterDeletedDirectoryRefresh(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.UI.QuickViewPreviewDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 
 	app.model.ActivePanel = ui.LeftPanel
 	left := app.panelByID(ui.LeftPanel)

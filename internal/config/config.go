@@ -182,9 +182,6 @@ type PreviewConfig struct {
 	// Command is a single-line argv template parsed like shellwords (see cmdrun.ParseCommandArgv).
 	// Use %f once to insert the absolute file path as one token; use %w for terminal width; if %f is omitted, the path is appended.
 	Command string `toml:"command"`
-	// StylePickerDebounceMS waits after the last F3 Chroma style-picker selection before
-	// re-highlighting the preview. Zero disables debouncing. Default DefaultPreviewStylePickerDebounceMS.
-	StylePickerDebounceMS int `toml:"style_picker_debounce_ms"`
 }
 
 type UIConfig struct {
@@ -203,16 +200,10 @@ type UIConfig struct {
 	// PathPickerValidateDelayMS waits after the filter changes before checking whether the typed path exists.
 	// Default DefaultPathPickerValidateDelayMS. Use 0 to validate on the next scheduler tick (still not per-key synchronous).
 	PathPickerValidateDelayMS int `toml:"path_picker_validate_delay_ms"`
-	// PanelSyncFollowNavDebounceMS, when latched panel sync is on, waits this long after the last file-list
-	// cursor step (Up/Down/PgUp/PgDn/Home/End) before loading the follower's directory. Zero syncs every tick.
-	// Default DefaultPanelSyncFollowNavDebounceMS.
-	PanelSyncFollowNavDebounceMS int `toml:"panel_sync_follow_nav_debounce_ms"`
-	// QuickViewPreviewDebounceMS waits after the last highlight change before re-running the preview
-	// subprocess while Quick view is enabled. Zero disables debouncing. Default DefaultQuickViewPreviewDebounceMS.
-	QuickViewPreviewDebounceMS int `toml:"quick_view_preview_debounce_ms"`
-	// CarouselPreviewDebounceMS waits after the last file-list cursor step before reloading carousel
-	// parent/child directory previews. Zero disables debouncing. Default DefaultCarouselPreviewDebounceMS.
-	CarouselPreviewDebounceMS int `toml:"carousel_preview_debounce_ms"`
+	// KeyRepeatDebounceMS coalesces rapid file-list cursor steps, quick view preview reloads,
+	// carousel child preview reloads, and F3 style-picker re-highlighting. Zero disables debouncing.
+	// Default DefaultKeyRepeatDebounceMS.
+	KeyRepeatDebounceMS int `toml:"key_repeat_debounce_ms"`
 	// FindQueryDebounceMS waits after the last keystroke in the find dialog query field before
 	// re-ranking the result list. Reducing this to 0 ranks on every keystroke (no debounce).
 	// Default DefaultFindQueryDebounceMS.
@@ -368,9 +359,7 @@ func Default() Config {
 			Clock:                             false,
 			StatusMessageTTLSeconds:           4.5,
 			PathPickerValidateDelayMS:         DefaultPathPickerValidateDelayMS,
-			PanelSyncFollowNavDebounceMS:      DefaultPanelSyncFollowNavDebounceMS,
-			QuickViewPreviewDebounceMS:        DefaultQuickViewPreviewDebounceMS,
-			CarouselPreviewDebounceMS:         DefaultCarouselPreviewDebounceMS,
+			KeyRepeatDebounceMS:               DefaultKeyRepeatDebounceMS,
 			FindQueryDebounceMS:               DefaultFindQueryDebounceMS,
 			FindMaxResults:                    DefaultFindMaxResults,
 			FindListNavIdleMS:                 DefaultFindListNavIdleMS,
@@ -442,11 +431,10 @@ func Default() Config {
 			LocalNames: []string{DefaultUserMenuFileName},
 		},
 		Preview: PreviewConfig{
-			Mode:                  DefaultPreviewMode,
-			Style:                 DefaultPreviewStyle,
-			LineNumbers:           DefaultPreviewLineNumbers,
-			Command:               DefaultFilePreviewCommand,
-			StylePickerDebounceMS: DefaultPreviewStylePickerDebounceMS,
+			Mode:        DefaultPreviewMode,
+			Style:       DefaultPreviewStyle,
+			LineNumbers: DefaultPreviewLineNumbers,
+			Command:     DefaultFilePreviewCommand,
 		},
 		SFTP: SFTPConfig{
 			IdleTimeoutSecs: DefaultSFTPIdleTimeoutSecs,
@@ -745,30 +733,17 @@ func (c *Config) Validate() error {
 	if c.UI.PathPickerValidateDelayMS > pathPickerValidateMaxMS {
 		c.UI.PathPickerValidateDelayMS = pathPickerValidateMaxMS
 	}
-	if c.UI.PanelSyncFollowNavDebounceMS < 0 {
-		c.UI.PanelSyncFollowNavDebounceMS = builtin.UI.PanelSyncFollowNavDebounceMS
+	if c.UI.KeyRepeatDebounceMS < 0 {
+		c.UI.KeyRepeatDebounceMS = builtin.UI.KeyRepeatDebounceMS
 	}
-	const panelSyncFollowNavDebounceMaxMS = 10_000
-	if c.UI.PanelSyncFollowNavDebounceMS > panelSyncFollowNavDebounceMaxMS {
-		c.UI.PanelSyncFollowNavDebounceMS = panelSyncFollowNavDebounceMaxMS
-	}
-	if c.UI.QuickViewPreviewDebounceMS < 0 {
-		c.UI.QuickViewPreviewDebounceMS = builtin.UI.QuickViewPreviewDebounceMS
-	}
-	if c.UI.QuickViewPreviewDebounceMS > panelSyncFollowNavDebounceMaxMS {
-		c.UI.QuickViewPreviewDebounceMS = panelSyncFollowNavDebounceMaxMS
-	}
-	if c.UI.CarouselPreviewDebounceMS < 0 {
-		c.UI.CarouselPreviewDebounceMS = builtin.UI.CarouselPreviewDebounceMS
-	}
-	if c.UI.CarouselPreviewDebounceMS > panelSyncFollowNavDebounceMaxMS {
-		c.UI.CarouselPreviewDebounceMS = panelSyncFollowNavDebounceMaxMS
+	if c.UI.KeyRepeatDebounceMS > KeyRepeatDebounceMaxMS {
+		c.UI.KeyRepeatDebounceMS = KeyRepeatDebounceMaxMS
 	}
 	if c.UI.FindQueryDebounceMS < 0 {
 		c.UI.FindQueryDebounceMS = builtin.UI.FindQueryDebounceMS
 	}
-	if c.UI.FindQueryDebounceMS > panelSyncFollowNavDebounceMaxMS {
-		c.UI.FindQueryDebounceMS = panelSyncFollowNavDebounceMaxMS
+	if c.UI.FindQueryDebounceMS > KeyRepeatDebounceMaxMS {
+		c.UI.FindQueryDebounceMS = KeyRepeatDebounceMaxMS
 	}
 	if c.UI.FindMaxResults <= 0 {
 		c.UI.FindMaxResults = builtin.UI.FindMaxResults
@@ -949,12 +924,6 @@ func (c *Config) Validate() error {
 		c.Preview.Mode = builtin.Preview.Mode
 	}
 	c.Preview.Style = previewValidateStyle(c.Preview.Style)
-	if c.Preview.StylePickerDebounceMS < 0 {
-		c.Preview.StylePickerDebounceMS = DefaultPreviewStylePickerDebounceMS
-	}
-	if c.Preview.StylePickerDebounceMS > panelSyncFollowNavDebounceMaxMS {
-		c.Preview.StylePickerDebounceMS = panelSyncFollowNavDebounceMaxMS
-	}
 	if c.Preview.Mode == PreviewModeExternal {
 		if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/pc-preview-validate", 80); err != nil {
 			c.Preview.Command = builtin.Preview.Command

@@ -133,8 +133,9 @@ const (
 	ActionUIRight     = "ui.right"
 	ActionUIActivate  = "ui.activate"
 
-	ActionUIOpenTheme  = "ui.open-theme"
-	ActionUIOpenConfig = "ui.open-config"
+	ActionUIOpenTheme         = "ui.open-theme"
+	ActionUIOpenConfig        = "ui.open-config"
+	ActionUICalibrateDebounce = "ui.calibrate-debounce"
 
 	// ActionFindSelectAll marks all ranked find-dialog results and is bound via
 	// [dialog.find], not [main].
@@ -282,8 +283,9 @@ var KnownActions = map[string]struct{}{
 	ActionMessagesClose: {},
 	ActionMessagesClear: {},
 
-	ActionUIOpenTheme:  {},
-	ActionUIOpenConfig: {},
+	ActionUIOpenTheme:         {},
+	ActionUIOpenConfig:        {},
+	ActionUICalibrateDebounce: {},
 
 	ActionDialogInputRestoreDefault: {},
 

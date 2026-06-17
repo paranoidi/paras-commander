@@ -87,7 +87,7 @@ func TestFilePreviewThemePickerFooterWhileOpen(t *testing.T) {
 
 func TestPreviewStylePickerDebounceDefersRefreshUntilFlush(t *testing.T) {
 	app, _ := newFilePreviewThemePickerTestApp(t)
-	app.config.Preview.StylePickerDebounceMS = 500
+	app.config.UI.KeyRepeatDebounceMS = 500
 	app.openFilePreviewThemePicker()
 
 	genAfterOpen := app.filePreviewRunGen.Load()

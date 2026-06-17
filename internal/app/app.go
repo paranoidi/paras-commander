@@ -161,6 +161,9 @@ type App struct {
 	carouselPreviewDebounceGen   atomic.Uint64
 	carouselPreviewDebounceMu    sync.Mutex
 	carouselPreviewDebounceTimer *time.Timer
+	// debounceCalibrateReleaseTimer infers key release between calibration trials.
+	debounceCalibrateReleaseMu    sync.Mutex
+	debounceCalibrateReleaseTimer *time.Timer
 	// carouselPreviewNavSkipSnapshot, when true, reuses cached carousel parent/child snapshots during render.
 	carouselPreviewNavSkipSnapshot atomic.Bool
 	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postCommandWake).
@@ -736,6 +739,11 @@ func (a *App) Run() error {
 				}
 			case previewStylePickerFlushPayload:
 				if a.applyPreviewStylePickerFlush(d) {
+					a.render()
+					didRender = true
+				}
+			case debounceCalibrateReleasePayload:
+				if a.applyDebounceCalibrateReleasePayload() {
 					a.render()
 					didRender = true
 				}

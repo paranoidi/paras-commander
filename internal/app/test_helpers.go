@@ -92,7 +92,7 @@ func newApp(t *testing.T, screen tcell.SimulationScreen, dir string) *App {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	app.config.UI.PanelSyncFollowNavDebounceMS = 0
+	app.config.UI.KeyRepeatDebounceMS = 0
 	t.Cleanup(func() {
 		if !app.jobStopOnce {
 			flushBackgroundJobs(t, app)

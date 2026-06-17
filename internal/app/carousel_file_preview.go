@@ -216,7 +216,7 @@ func (a *App) reconcileCarouselFilePreview() {
 	if sig == a.carouselFilePreviewLastFingerprint {
 		return
 	}
-	if a.config.UI.CarouselPreviewDebounceMS <= 0 {
+	if a.config.UI.KeyRepeatDebounceMS <= 0 {
 		a.applyCarouselFilePreviewAfterFlush()
 		return
 	}
