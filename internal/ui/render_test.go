@@ -1429,6 +1429,40 @@ func TestRenderQuickViewPreviewTitleShowsPathAndFilename(t *testing.T) {
 	}
 }
 
+func TestRenderQuickViewUsesPreviewChromeWhenDrawClosed(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	projects := "/home/user/projects"
+	model := Model{
+		Left:             panel.State{Path: pathloc.MustParse("/tmp")},
+		Right:            panel.State{Path: pathloc.MustParse(projects)},
+		ActivePanel:      LeftPanel,
+		QuickViewEnabled: true,
+		QuickViewPanel:   LeftPanel,
+		FilePreviewDraw: FilePreviewState{
+			Open:      false,
+			TitleBase: "readme.md",
+		},
+		UserHomeDir: "/home/user",
+	}
+	Render(screen, model, theme.Default())
+
+	leftWidth := width / 2
+	topRow := tcelltest.TextAt(screen, leftWidth, 1, width-leftWidth)
+	if strings.Contains(topRow, " / ") && strings.Contains(topRow, "%") {
+		t.Fatalf("inactive title row = %q, want preview chrome not volume stats", topRow)
+	}
+	if !strings.Contains(topRow, "readme.md") {
+		t.Fatalf("inactive title row = %q, want filename from preview draw state", topRow)
+	}
+}
+
 func TestRenderHideInactivePanelFullWidthAndOtherPathIndicator(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

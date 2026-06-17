@@ -243,6 +243,29 @@ func (m Model) QuickViewDriverPanelID() int {
 	return m.quickViewDriverPanel()
 }
 
+// InactiveColumnShowsFilePreview reports whether the inactive twin column should paint
+// file-preview chrome instead of a file listing. During quick-view file preview the
+// inactive column stays on preview even when preview state is briefly closed (e.g. between
+// pause/resume), avoiding a one-frame file-panel title with volume stats that flickers
+// before the filename label.
+func (m Model) InactiveColumnShowsFilePreview(inactivePanelID int) bool {
+	if m.HideInactivePanel {
+		return false
+	}
+	if m.QuickViewDisplayActive() && !m.QuickViewDirOverlayActive {
+		return true
+	}
+	return m.FilePreviewDraw.Open
+}
+
+// inactivePanelID returns LeftPanel or RightPanel for the inactive column.
+func (m Model) inactivePanelID() int {
+	if m.ActivePanel == RightPanel {
+		return LeftPanel
+	}
+	return RightPanel
+}
+
 // PanelForFileListRender returns the panel state to paint in the file list. During quick-view
 // directory preview the inactive column uses QuickViewDirOverlay; real Left/Right paths stay
 // unchanged for cross-panel open indicators and for restore when quick view is turned off.
@@ -387,12 +410,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		leftSelectionSizeOnStripBottom := model.Left.SelectedPathCount() > 0 && leftStripVisible
 		rightSelectionSizeOnStripBottom := model.Right.SelectedPathCount() > 0 && rightStripVisible
 
-		inactiveID := RightPanel
-		if model.ActivePanel == RightPanel {
-			inactiveID = LeftPanel
-		}
-		showLeftPreview := !model.HideInactivePanel && model.FilePreviewDraw.Open && inactiveID == LeftPanel
-		showRightPreview := !model.HideInactivePanel && model.FilePreviewDraw.Open && inactiveID == RightPanel
+		inactiveID := model.inactivePanelID()
+		showLeftPreview := layout.Left.Width > 0 && inactiveID == LeftPanel && model.InactiveColumnShowsFilePreview(LeftPanel)
+		showRightPreview := layout.Right.Width > 0 && inactiveID == RightPanel && model.InactiveColumnShowsFilePreview(RightPanel)
 
 		leftOtherPanelPath := model.Right.PathString()
 		rightOtherPanelPath := model.Left.PathString()

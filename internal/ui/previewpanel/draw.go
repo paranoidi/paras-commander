@@ -88,14 +88,10 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	if p.QuickViewChrome {
 		endLabel := ""
 		if tb := strings.TrimSpace(st.TitleBase); tb != "" {
-			if st.BodyHeld {
-				endLabel = " " + tb + "… "
-			} else {
-				endLabel = " " + tb + " "
-			}
+			endLabel = " " + tb + " "
 		}
 		paintQuickViewTitleRow(screen, titleX, innerRight, contentCols, rect.Y,
-			p.PanelPath, p.UserHomeDir, titleStyle, endLabel, titleStyle)
+			p.PanelPath, p.UserHomeDir, titleStyle, endLabel, titleStyle, borderStyle)
 	} else {
 		title := " Preview "
 		if tb := strings.TrimSpace(st.TitleBase); tb != "" {
@@ -167,7 +163,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 }
 
 func paintQuickViewTitleRow(screen tcell.Screen, titleX, innerRight, contentCols, y int,
-	panelPath, userHomeDir string, pathStyle tcell.Style, endLabel string, endStyle tcell.Style) {
+	panelPath, userHomeDir string, pathStyle tcell.Style, endLabel string, endStyle, borderStyle tcell.Style) {
 	endRunes := utf8.RuneCountInString(endLabel)
 	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+3
 	endStartX := 0
@@ -184,12 +180,28 @@ func paintQuickViewTitleRow(screen tcell.Screen, titleX, innerRight, contentCols
 	if pathMax < 0 {
 		pathMax = 0
 	}
-	left := " " + titlePath(panelPath, userHomeDir, pathMax) + " "
-	primitive.TextOverlay(screen, titleX, y, pathSlotCols, left, pathStyle)
-	if !showEnd {
-		return
+	left := primitive.TruncateRight(" "+titlePath(panelPath, userHomeDir, pathMax)+" ", pathSlotCols)
+	leftRunes := []rune(left)
+	endLabelRunes := []rune(endLabel)
+	endStartCol := endStartX - titleX
+
+	for col := 0; col < contentCols; col++ {
+		x := titleX + col
+		var ch rune
+		var st tcell.Style
+		switch {
+		case col < pathSlotCols && col < len(leftRunes):
+			ch = leftRunes[col]
+			st = pathStyle
+		case showEnd && col >= endStartCol && col < endStartCol+endRunes:
+			ch = endLabelRunes[col-endStartCol]
+			st = endStyle
+		default:
+			ch = '─'
+			st = borderStyle
+		}
+		screen.SetContent(x, y, ch, nil, st)
 	}
-	primitive.TextOverlay(screen, endStartX, y, endRunes, endLabel, endStyle)
 }
 
 func titlePath(absPath, homeDir string, maxRunes int) string {

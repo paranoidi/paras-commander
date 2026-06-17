@@ -1,6 +1,8 @@
 package app
 
 import (
+	"path/filepath"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -59,6 +61,7 @@ func (a *App) snapshotPreviewDrawStates() {
 	a.commandsMu.RUnlock()
 
 	inactive = ui.MergeFilePreviewDrawWithHold(inactive, a.filePreviewHold)
+	a.overlayQuickViewInactiveDrawTitle(&inactive)
 	fullscreen = ui.MergeFilePreviewDrawWithHold(fullscreen, a.fullscreenFilePreviewHold)
 	carousel = ui.MergeFilePreviewDrawWithHold(carousel, a.carouselFilePreviewHold)
 
@@ -174,4 +177,21 @@ func (a *App) fullscreenFilePreviewLineCount(textW int) int {
 		}
 	}
 	return warmed.WrappedLineCount(textW, base)
+}
+
+// overlayQuickViewInactiveDrawTitle aligns the inactive-column draw snapshot title with the
+// driver's current file selection so the top-row filename updates during nav coalesce
+// without waiting for the debounced preview reload.
+func (a *App) overlayQuickViewInactiveDrawTitle(st *ui.FilePreviewState) {
+	if !a.model.QuickViewDisplayActive() || a.model.QuickViewDirOverlayActive {
+		return
+	}
+	path, _, mode := a.quickViewWantFile()
+	if mode != quickViewWantFile {
+		return
+	}
+	st.Open = true
+	if tb := filepath.Base(path); tb != "" && tb != "." {
+		st.TitleBase = tb
+	}
 }
