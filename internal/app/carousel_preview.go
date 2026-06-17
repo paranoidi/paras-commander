@@ -14,17 +14,7 @@ type carouselPreviewFlushPayload struct {
 }
 
 func (a *App) clearCarouselPreviewDebounce() {
-	a.carouselPreviewDebounceMu.Lock()
-	if a.carouselPreviewDebounceTimer != nil {
-		if !a.carouselPreviewDebounceTimer.Stop() {
-			select {
-			case <-a.carouselPreviewDebounceTimer.C:
-			default:
-			}
-		}
-		a.carouselPreviewDebounceTimer = nil
-	}
-	a.carouselPreviewDebounceMu.Unlock()
+	a.carouselPreviewDebounce.Clear()
 	a.carouselPreviewDebounceGen.Add(1)
 	a.carouselPreviewNavSkipSnapshot.Store(false)
 }
@@ -54,21 +44,7 @@ func (a *App) carouselPreviewNavCoalesceContext() bool {
 
 func (a *App) scheduleCarouselPreviewDebounceTimer(gen uint64) {
 	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
-	a.carouselPreviewDebounceMu.Lock()
-	defer a.carouselPreviewDebounceMu.Unlock()
-	if a.carouselPreviewDebounceTimer != nil {
-		if !a.carouselPreviewDebounceTimer.Stop() {
-			select {
-			case <-a.carouselPreviewDebounceTimer.C:
-			default:
-			}
-		}
-		a.carouselPreviewDebounceTimer = nil
-	}
-	a.carouselPreviewDebounceTimer = time.AfterFunc(delay, func() {
-		a.carouselPreviewDebounceMu.Lock()
-		a.carouselPreviewDebounceTimer = nil
-		a.carouselPreviewDebounceMu.Unlock()
+	a.carouselPreviewDebounce.Reset(delay, func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(carouselPreviewFlushPayload{gen: gen}))
 	})
 }

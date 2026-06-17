@@ -586,17 +586,7 @@ func (a *App) applyQuickViewPreviewNow() {
 }
 
 func (a *App) clearQuickViewDebounce() {
-	a.quickViewDebounceMu.Lock()
-	if a.quickViewDebounceTimer != nil {
-		if !a.quickViewDebounceTimer.Stop() {
-			select {
-			case <-a.quickViewDebounceTimer.C:
-			default:
-			}
-		}
-		a.quickViewDebounceTimer = nil
-	}
-	a.quickViewDebounceMu.Unlock()
+	a.quickViewDebounce.Clear()
 	a.quickViewDebounceGen.Add(1)
 	a.quickViewNavSkipReconcile.Store(false)
 }
@@ -618,21 +608,7 @@ func (a *App) clearQuickViewNavCoalesce() {
 
 func (a *App) scheduleQuickViewDebounceTimer(gen uint64) {
 	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
-	a.quickViewDebounceMu.Lock()
-	defer a.quickViewDebounceMu.Unlock()
-	if a.quickViewDebounceTimer != nil {
-		if !a.quickViewDebounceTimer.Stop() {
-			select {
-			case <-a.quickViewDebounceTimer.C:
-			default:
-			}
-		}
-		a.quickViewDebounceTimer = nil
-	}
-	a.quickViewDebounceTimer = time.AfterFunc(delay, func() {
-		a.quickViewDebounceMu.Lock()
-		a.quickViewDebounceTimer = nil
-		a.quickViewDebounceMu.Unlock()
+	a.quickViewDebounce.Reset(delay, func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(quickViewFlushPayload{gen: gen}))
 	})
 }

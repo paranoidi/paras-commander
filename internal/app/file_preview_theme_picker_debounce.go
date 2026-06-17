@@ -12,37 +12,13 @@ type previewStylePickerFlushPayload struct {
 }
 
 func (a *App) clearPreviewStylePickerDebounce() {
-	a.previewStylePickerDebounceMu.Lock()
-	if a.previewStylePickerDebounceTimer != nil {
-		if !a.previewStylePickerDebounceTimer.Stop() {
-			select {
-			case <-a.previewStylePickerDebounceTimer.C:
-			default:
-			}
-		}
-		a.previewStylePickerDebounceTimer = nil
-	}
-	a.previewStylePickerDebounceMu.Unlock()
+	a.previewStylePickerDebounce.Clear()
 	a.previewStylePickerDebounceGen.Add(1)
 }
 
 func (a *App) schedulePreviewStylePickerDebounceTimer(gen uint64) {
 	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
-	a.previewStylePickerDebounceMu.Lock()
-	defer a.previewStylePickerDebounceMu.Unlock()
-	if a.previewStylePickerDebounceTimer != nil {
-		if !a.previewStylePickerDebounceTimer.Stop() {
-			select {
-			case <-a.previewStylePickerDebounceTimer.C:
-			default:
-			}
-		}
-		a.previewStylePickerDebounceTimer = nil
-	}
-	a.previewStylePickerDebounceTimer = time.AfterFunc(delay, func() {
-		a.previewStylePickerDebounceMu.Lock()
-		a.previewStylePickerDebounceTimer = nil
-		a.previewStylePickerDebounceMu.Unlock()
+	a.previewStylePickerDebounce.Reset(delay, func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(previewStylePickerFlushPayload{gen: gen}))
 	})
 }

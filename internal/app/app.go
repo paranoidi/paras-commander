@@ -91,9 +91,8 @@ type App struct {
 	// previewStyleAtPickerOpen is preview.style when the F3 Chroma style picker opens.
 	previewStyleAtPickerOpen string
 	// previewStylePickerDebounceGen invalidates in-flight F3 style-picker preview debounce callbacks.
-	previewStylePickerDebounceGen   atomic.Uint64
-	previewStylePickerDebounceMu    sync.Mutex
-	previewStylePickerDebounceTimer *time.Timer
+	previewStylePickerDebounceGen atomic.Uint64
+	previewStylePickerDebounce    managedTimer
 	// jobState manages background job queue and worker lifecycle.
 	jobState        *jobs.State
 	jobsCtrl        *jobsctrl.Handler
@@ -147,23 +146,19 @@ type App struct {
 	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent
 	// until the debounce flush runs or coalesce is cleared.
 	syncFollowNavSkipReconcile atomic.Bool
-	syncFollowNavMu            sync.Mutex
-	syncFollowNavTimer         *time.Timer
+	syncFollowNav              managedTimer
 	// quickViewDebounceGen invalidates in-flight quick view preview debounce callbacks.
 	quickViewDebounceGen     atomic.Uint64
-	quickViewDebounceMu      sync.Mutex
-	quickViewDebounceTimer   *time.Timer
+	quickViewDebounce        managedTimer
 	quickViewLastFingerprint string
 	// quickViewNavSkipReconcile suppresses reconcileQuickViewPreview while file-list nav coalesce
 	// is holding a pending preview flush (mirrors syncFollowNavSkipReconcile).
 	quickViewNavSkipReconcile atomic.Bool
 	// carouselPreviewDebounceGen invalidates in-flight carousel side-preview debounce callbacks.
-	carouselPreviewDebounceGen   atomic.Uint64
-	carouselPreviewDebounceMu    sync.Mutex
-	carouselPreviewDebounceTimer *time.Timer
-	// debounceCalibrateReleaseTimer infers key release between calibration trials.
-	debounceCalibrateReleaseMu    sync.Mutex
-	debounceCalibrateReleaseTimer *time.Timer
+	carouselPreviewDebounceGen atomic.Uint64
+	carouselPreviewDebounce    managedTimer
+	// debounceCalibrateRelease infers key release between calibration trials.
+	debounceCalibrateRelease managedTimer
 	// carouselPreviewNavSkipSnapshot, when true, reuses cached carousel parent/child snapshots during render.
 	carouselPreviewNavSkipSnapshot atomic.Bool
 	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postCommandWake).
@@ -207,9 +202,8 @@ type App struct {
 	gitStatusLoadGen   [2]atomic.Uint64
 
 	// jobBlockerNextGen invalidates in-flight quick-blocker chain timers.
-	jobBlockerNextGen   atomic.Uint64
-	jobBlockerNextMu    sync.Mutex
-	jobBlockerNextTimer *time.Timer
+	jobBlockerNextGen atomic.Uint64
+	jobBlockerNext    managedTimer
 
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).

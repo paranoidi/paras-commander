@@ -101,30 +101,17 @@ func (a *App) handleConflictDialogKey(event *tcell.EventKey) {
 }
 
 func (a *App) scheduleJobBlockerDialogChain() {
-	a.stopJobBlockerNextTimer()
+	a.jobBlockerNextGen.Add(1)
 	delay := time.Duration(a.config.Jobs.BlockerDialogNextDebounceMS) * time.Millisecond
 	gen := a.jobBlockerNextGen.Add(1)
-	a.jobBlockerNextMu.Lock()
-	a.jobBlockerNextTimer = time.AfterFunc(delay, func() {
+	a.jobBlockerNext.Reset(delay, func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(jobBlockerNextPayload{gen: gen}))
 	})
-	a.jobBlockerNextMu.Unlock()
 }
 
 func (a *App) stopJobBlockerNextTimer() {
 	a.jobBlockerNextGen.Add(1)
-	a.jobBlockerNextMu.Lock()
-	defer a.jobBlockerNextMu.Unlock()
-	if a.jobBlockerNextTimer == nil {
-		return
-	}
-	if !a.jobBlockerNextTimer.Stop() {
-		select {
-		case <-a.jobBlockerNextTimer.C:
-		default:
-		}
-	}
-	a.jobBlockerNextTimer = nil
+	a.jobBlockerNext.Clear()
 }
 
 func (a *App) applyJobBlockerNextPayload(p jobBlockerNextPayload) bool {

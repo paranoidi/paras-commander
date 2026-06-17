@@ -570,6 +570,15 @@ func (a *App) dispatchActionLikeKeyboardShortcut(actionID string) bool {
 	}
 }
 
+func (a *App) doListNav(move func()) {
+	a.ensureCarouselChildCacheBeforeListNav()
+	a.beginCarouselPreviewNavCoalesce()
+	move()
+	a.armPanelSyncFollowNavCoalesceAfterListNav()
+	a.armQuickViewNavCoalesceAfterListNav()
+	a.armCarouselPreviewNavCoalesceAfterListNav()
+}
+
 func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchFilePreviewFocus(actionID) {
 		return false
@@ -615,47 +624,17 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelToggleHideInactive:
 		a.toggleHideInactivePanel()
 	case keymap.ActionNavUp:
-		a.ensureCarouselChildCacheBeforeListNav()
-		a.beginCarouselPreviewNavCoalesce()
-		activePanel.Move(-1, viewportRows)
-		a.armPanelSyncFollowNavCoalesceAfterListNav()
-		a.armQuickViewNavCoalesceAfterListNav()
-		a.armCarouselPreviewNavCoalesceAfterListNav()
+		a.doListNav(func() { activePanel.Move(-1, viewportRows) })
 	case keymap.ActionNavDown:
-		a.ensureCarouselChildCacheBeforeListNav()
-		a.beginCarouselPreviewNavCoalesce()
-		activePanel.Move(1, viewportRows)
-		a.armPanelSyncFollowNavCoalesceAfterListNav()
-		a.armQuickViewNavCoalesceAfterListNav()
-		a.armCarouselPreviewNavCoalesceAfterListNav()
+		a.doListNav(func() { activePanel.Move(1, viewportRows) })
 	case keymap.ActionNavPageUp:
-		a.ensureCarouselChildCacheBeforeListNav()
-		a.beginCarouselPreviewNavCoalesce()
-		activePanel.Page(-1, viewportRows)
-		a.armPanelSyncFollowNavCoalesceAfterListNav()
-		a.armQuickViewNavCoalesceAfterListNav()
-		a.armCarouselPreviewNavCoalesceAfterListNav()
+		a.doListNav(func() { activePanel.Page(-1, viewportRows) })
 	case keymap.ActionNavPageDown:
-		a.ensureCarouselChildCacheBeforeListNav()
-		a.beginCarouselPreviewNavCoalesce()
-		activePanel.Page(1, viewportRows)
-		a.armPanelSyncFollowNavCoalesceAfterListNav()
-		a.armQuickViewNavCoalesceAfterListNav()
-		a.armCarouselPreviewNavCoalesceAfterListNav()
+		a.doListNav(func() { activePanel.Page(1, viewportRows) })
 	case keymap.ActionNavTop:
-		a.ensureCarouselChildCacheBeforeListNav()
-		a.beginCarouselPreviewNavCoalesce()
-		activePanel.Top(viewportRows)
-		a.armPanelSyncFollowNavCoalesceAfterListNav()
-		a.armQuickViewNavCoalesceAfterListNav()
-		a.armCarouselPreviewNavCoalesceAfterListNav()
+		a.doListNav(func() { activePanel.Top(viewportRows) })
 	case keymap.ActionNavBottom:
-		a.ensureCarouselChildCacheBeforeListNav()
-		a.beginCarouselPreviewNavCoalesce()
-		activePanel.Bottom(viewportRows)
-		a.armPanelSyncFollowNavCoalesceAfterListNav()
-		a.armQuickViewNavCoalesceAfterListNav()
-		a.armCarouselPreviewNavCoalesceAfterListNav()
+		a.doListNav(func() { activePanel.Bottom(viewportRows) })
 	case keymap.ActionPanelSelectToggle:
 		_, conflicts := activePanel.ToggleSelectionAndAdvance(viewportRows)
 		if conflicts {

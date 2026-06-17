@@ -103,37 +103,13 @@ func (a *App) failDebounceCalibrateMeasuringTooSoon() {
 }
 
 func (a *App) clearDebounceCalibrateReleaseTimer() {
-	a.debounceCalibrateReleaseMu.Lock()
-	if a.debounceCalibrateReleaseTimer != nil {
-		if !a.debounceCalibrateReleaseTimer.Stop() {
-			select {
-			case <-a.debounceCalibrateReleaseTimer.C:
-			default:
-			}
-		}
-		a.debounceCalibrateReleaseTimer = nil
-	}
-	a.debounceCalibrateReleaseMu.Unlock()
+	a.debounceCalibrateRelease.Clear()
 }
 
 func (a *App) armDebounceCalibrateReleaseTimer() {
-	delay := ui.MeasureReleaseIdle()
-	a.debounceCalibrateReleaseMu.Lock()
-	if a.debounceCalibrateReleaseTimer != nil {
-		if !a.debounceCalibrateReleaseTimer.Stop() {
-			select {
-			case <-a.debounceCalibrateReleaseTimer.C:
-			default:
-			}
-		}
-	}
-	a.debounceCalibrateReleaseTimer = time.AfterFunc(delay, func() {
-		a.debounceCalibrateReleaseMu.Lock()
-		a.debounceCalibrateReleaseTimer = nil
-		a.debounceCalibrateReleaseMu.Unlock()
+	a.debounceCalibrateRelease.Reset(ui.MeasureReleaseIdle(), func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(debounceCalibrateReleasePayload{}))
 	})
-	a.debounceCalibrateReleaseMu.Unlock()
 }
 
 type debounceCalibrateReleasePayload struct{}
