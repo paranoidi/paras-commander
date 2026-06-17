@@ -1348,7 +1348,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		switch st.Focus {
 		case st.FindDialogCancelFocus():
 			h.CloseDialog()
-		case 1:
+		case st.FindDialogStayOnVolumeFocus():
 			h.ToggleStayOnVolume()
 		case st.FindDialogOnlyDirsFocus():
 			h.ToggleOnlyDirectories()
@@ -1414,7 +1414,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		}
 		switch event.Rune() {
 		case 'v', 'V':
-			if st.Focus == 1 {
+			if st.Focus == st.FindDialogStayOnVolumeFocus() {
 				h.ToggleStayOnVolume()
 			}
 		case 'd', 'D':
@@ -1435,7 +1435,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			h.CloseDialog()
 		case ' ':
 			switch st.Focus {
-			case 1:
+			case st.FindDialogStayOnVolumeFocus():
 				h.ToggleStayOnVolume()
 			case st.FindDialogOnlyDirsFocus():
 				h.ToggleOnlyDirectories()

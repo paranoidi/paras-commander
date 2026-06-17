@@ -43,8 +43,8 @@ func ListOKCancelNavFocusKey(focus int, key tcell.Key) (newFocus int, handled bo
 }
 
 // FindDialogNavFocusKey applies Tab/arrow navigation for find dialog focus.
-// When hasSelectionsCheckbox is false: 0=list+filter, 1=volume, 2=only-directories, 3=only-files, 4=OK, 5=Cancel.
-// When true: 0=list+filter, 1=volume, 2=only-directories, 3=only-files, 4=selections, 5=OK, 6=Cancel.
+// When hasSelectionsCheckbox is false: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=OK, 5=Cancel.
+// When true: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=selections, 5=OK, 6=Cancel.
 func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key) (newFocus int, handled bool) {
 	maxFocus := 5
 	if hasSelectionsCheckbox {
@@ -106,7 +106,7 @@ func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key)
 			return okFocus - 1, true
 		}
 		if focus == 4 && hasSelectionsCheckbox {
-			return 1, true
+			return 3, true
 		}
 		if focus == 1 || focus == 2 || focus == 3 {
 			return 0, true

@@ -90,8 +90,8 @@ func (e FindEntry) AbsPath(rootPath string) string {
 }
 
 // FindDialogState is a fuzzy picker over recursively indexed paths under a panel root.
-// Focus without selections checkbox: 0=list+filter, 1=stay-on-volume, 2=only-directories, 3=only-files, 4=OK, 5=Cancel.
-// With selections checkbox: 0=list+filter, 1=stay-on-volume, 2=only-directories, 3=only-files, 4=search-selections, 5=OK, 6=Cancel.
+// Focus without selections checkbox: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=OK, 5=Cancel.
+// With selections checkbox: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=search-selections, 5=OK, 6=Cancel.
 type FindDialogState struct {
 	Open                bool
 	PanelID             int
@@ -147,13 +147,18 @@ func (s FindDialogState) FindDialogHasSelectionsCheckbox() bool {
 	return s.ShowSearchSelectionsOption
 }
 
-// FindDialogOnlyDirsFocus returns the focus index for the only-directories checkbox.
+// FindDialogOnlyDirsFocus returns the focus index for the only-directories radio.
 func (s FindDialogState) FindDialogOnlyDirsFocus() int {
+	return 1
+}
+
+// FindDialogOnlyFilesFocus returns the focus index for the only-files radio.
+func (s FindDialogState) FindDialogOnlyFilesFocus() int {
 	return 2
 }
 
-// FindDialogOnlyFilesFocus returns the focus index for the only-files checkbox.
-func (s FindDialogState) FindDialogOnlyFilesFocus() int {
+// FindDialogStayOnVolumeFocus returns the focus index for the stay-on-volume checkbox.
+func (s FindDialogState) FindDialogStayOnVolumeFocus() int {
 	return 3
 }
 

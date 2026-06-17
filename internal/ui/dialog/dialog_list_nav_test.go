@@ -68,7 +68,7 @@ func TestFindDialogNavFocusKey(t *testing.T) {
 		{2, true, tcell.KeyDown, 4, true},
 		{3, true, tcell.KeyDown, 4, true},
 		{4, true, tcell.KeyDown, 5, true},
-		{4, true, tcell.KeyUp, 1, true},
+		{4, true, tcell.KeyUp, 3, true},
 		{5, true, tcell.KeyUp, 4, true},
 		{6, true, tcell.KeyUp, 4, true},
 	} {
