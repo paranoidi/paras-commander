@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 )
 
@@ -170,11 +171,20 @@ type ShellConfig struct {
 	SyncCwdOnReturn bool `toml:"sync_cwd_on_return"`
 }
 
-// PreviewConfig controls inactive-panel file preview (external highlighter command).
+// PreviewConfig controls file preview (internal Chroma or external command).
 type PreviewConfig struct {
+	// Mode is "internal" (Chroma in-process) or "external" (subprocess command).
+	Mode string `toml:"mode"`
+	// Style is the Chroma style name for internal mode (default monokai).
+	Style string `toml:"style"`
+	// LineNumbers prefixes each line with a gutter in internal mode.
+	LineNumbers bool `toml:"line_numbers"`
 	// Command is a single-line argv template parsed like shellwords (see cmdrun.ParseCommandArgv).
 	// Use %f once to insert the absolute file path as one token; use %w for terminal width; if %f is omitted, the path is appended.
 	Command string `toml:"command"`
+	// StylePickerDebounceMS waits after the last F3 Chroma style-picker selection before
+	// re-highlighting the preview. Zero disables debouncing. Default DefaultPreviewStylePickerDebounceMS.
+	StylePickerDebounceMS int `toml:"style_picker_debounce_ms"`
 }
 
 type UIConfig struct {
@@ -432,7 +442,11 @@ func Default() Config {
 			LocalNames: []string{DefaultUserMenuFileName},
 		},
 		Preview: PreviewConfig{
-			Command: DefaultFilePreviewCommand,
+			Mode:                  DefaultPreviewMode,
+			Style:                 DefaultPreviewStyle,
+			LineNumbers:           DefaultPreviewLineNumbers,
+			Command:               DefaultFilePreviewCommand,
+			StylePickerDebounceMS: DefaultPreviewStylePickerDebounceMS,
 		},
 		SFTP: SFTPConfig{
 			IdleTimeoutSecs: DefaultSFTPIdleTimeoutSecs,
@@ -925,8 +939,26 @@ func (c *Config) Validate() error {
 	if strings.TrimSpace(c.Preview.Command) == "" {
 		c.Preview.Command = builtin.Preview.Command
 	}
-	if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/pc-preview-validate", 80); err != nil {
-		c.Preview.Command = builtin.Preview.Command
+	mode := strings.ToLower(strings.TrimSpace(c.Preview.Mode))
+	switch mode {
+	case PreviewModeExternal:
+		c.Preview.Mode = PreviewModeExternal
+	case "", PreviewModeInternal:
+		c.Preview.Mode = PreviewModeInternal
+	default:
+		c.Preview.Mode = builtin.Preview.Mode
+	}
+	c.Preview.Style = previewValidateStyle(c.Preview.Style)
+	if c.Preview.StylePickerDebounceMS < 0 {
+		c.Preview.StylePickerDebounceMS = DefaultPreviewStylePickerDebounceMS
+	}
+	if c.Preview.StylePickerDebounceMS > panelSyncFollowNavDebounceMaxMS {
+		c.Preview.StylePickerDebounceMS = panelSyncFollowNavDebounceMaxMS
+	}
+	if c.Preview.Mode == PreviewModeExternal {
+		if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/pc-preview-validate", 80); err != nil {
+			c.Preview.Command = builtin.Preview.Command
+		}
 	}
 	if c.SFTP.IdleTimeoutSecs < 15 {
 		c.SFTP.IdleTimeoutSecs = builtin.SFTP.IdleTimeoutSecs
@@ -1002,4 +1034,20 @@ func validLoggingLevel(level string) bool {
 	default:
 		return false
 	}
+}
+
+func previewValidateStyle(name string) string {
+	n := strings.TrimSpace(name)
+	if n == "" {
+		return DefaultPreviewStyle
+	}
+	if _, ok := styles.Registry[n]; !ok {
+		return DefaultPreviewStyle
+	}
+	return n
+}
+
+// NormalizePreviewStyle returns a valid Chroma style registry name.
+func NormalizePreviewStyle(name string) string {
+	return previewValidateStyle(name)
 }

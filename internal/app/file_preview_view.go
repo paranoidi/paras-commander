@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -18,6 +17,7 @@ func (a *App) closeFilePreviewFullscreen() {
 	a.commandsMu.Lock()
 	a.model.FullscreenFilePreview = ui.FilePreviewState{}
 	a.commandsMu.Unlock()
+	a.closeFilePreviewThemePicker(false)
 	a.clearFilePreviewHold(previewTargetFullscreen)
 	a.model.ViewMode = ui.ViewBrowser
 	a.model.MenuDefinitions = a.browserMenuDefinitions()
@@ -112,7 +112,6 @@ func fullscreenFilePreviewKeyboardDispatchAllowed(id string) bool {
 		keymap.ActionAppUserMenu,
 		keymap.ActionAppUserMenuEdit,
 		keymap.ActionFileEdit,
-		keymap.ActionUIOpenTheme,
 		keymap.ActionUIOpenConfig,
 		keymap.ActionPanelDiskUsageAbortAll,
 		keymap.ActionPanelDiskUsageClear,
@@ -127,6 +126,27 @@ func fullscreenFilePreviewKeyboardDispatchAllowed(id string) bool {
 
 // handleFilePreviewViewKey handles keys while ViewFilePreview is active (not blocked by transfer menu).
 func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
+	nextAction := a.actionFromKeyEvent(event)
+	if nextAction == keymap.ActionAppQuit {
+		return a.handleQuit()
+	}
+	if nextAction == keymap.ActionAppQuitImmediate {
+		return a.handleQuitImmediate()
+	}
+	if nextAction == keymap.ActionFileViewThemePicker {
+		a.toggleFilePreviewThemePicker()
+		return false
+	}
+	if nextAction == keymap.ActionFileEdit {
+		a.editFullscreenPreviewFile()
+		return false
+	}
+	if a.model.FilePreviewThemePicker.Open {
+		if a.handleFilePreviewThemePickerKey(event) {
+			return false
+		}
+	}
+
 	switch event.Key() {
 	case tcell.KeyEsc:
 		a.closeFilePreviewFullscreen()
@@ -168,7 +188,7 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 		}
 	}
 
-	nextAction := a.actionFromKeyEvent(event)
+	nextAction = a.actionFromKeyEvent(event)
 	if nextAction == keymap.ActionAppQuit {
 		return a.handleQuit()
 	}
@@ -232,13 +252,9 @@ func (a *App) openFilePreviewFullscreen() {
 	if tw < 1 {
 		tw = 1
 	}
-	argv, err := cmdrun.BuildFilePreviewArgv(a.config.Preview.Command, path, tw)
-	if err != nil {
-		a.setErrorMessage("Preview command", err)
-		return
-	}
 	titleBase := filepath.Base(path)
 	a.captureFilePreviewHold(previewTargetFullscreen)
+	a.model.FilePreviewThemePicker = ui.FilePreviewThemePickerState{}
 	a.model.ViewMode = ui.ViewFilePreview
 	a.model.Menu.Open = false
 	a.model.Menu.PulldownOpen = false
@@ -250,11 +266,13 @@ func (a *App) openFilePreviewFullscreen() {
 		st.Path = path
 		st.TitleBase = titleBase
 		st.CombinedText = ""
+		st.SetHighlightedCells(nil)
+		st.Source = ui.PreviewSourceExternalANSI
 		st.Scroll = 0
 		st.ExitCode = 0
 		st.ErrorMsg = ""
 	})
 	gen := a.filePreviewRunGen.Add(1)
 	a.postCommandWake()
-	go a.runFilePreview(a.commandsCtx, path, argv, active.PathString(), previewTargetFullscreen, gen)
+	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, active.PathString(), a.model.PanelsChromeBlocked()), previewTargetFullscreen, gen)
 }

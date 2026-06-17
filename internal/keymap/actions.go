@@ -81,6 +81,7 @@ const (
 	ActionFileHardlink                 = "file.hardlink"
 	ActionFileExtract                  = "file.extract"
 	ActionFileView                     = "file.view"
+	ActionFileViewThemePicker          = "file.view.theme-picker"
 	ActionFileQuickView                = "file.quick-view"
 	ActionFileQuickViewPreviewPageUp   = "file.quick-view.preview-page-up"
 	ActionFileQuickViewPreviewPageDown = "file.quick-view.preview-page-down"
@@ -240,6 +241,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileHardlink:                 {},
 	ActionFileExtract:                  {},
 	ActionFileView:                     {},
+	ActionFileViewThemePicker:          {},
 	ActionFileQuickView:                {},
 	ActionFileQuickViewPreviewPageUp:   {},
 	ActionFileQuickViewPreviewPageDown: {},

@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
 func TestEditActiveFileRejectsDirectory(t *testing.T) {
@@ -61,6 +63,41 @@ func TestEditActiveFileOpensEditorForFile(t *testing.T) {
 	app.editActiveFile()
 	if edited != filePath {
 		t.Fatalf("edited = %q, want %q", edited, filePath)
+	}
+}
+
+func TestEditFullscreenPreviewFileReturnsToBrowser(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "note.txt")
+	writeFile(t, filePath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Path = filePath
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = "preview\n"
+	})
+
+	var edited string
+	prev := externalEditorRunner
+	externalEditorRunner = func(_ context.Context, path string) error {
+		edited = path
+		return nil
+	}
+	t.Cleanup(func() { externalEditorRunner = prev })
+
+	app.editFullscreenPreviewFile()
+	if edited != filePath {
+		t.Fatalf("edited = %q, want %q", edited, filePath)
+	}
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser after edit", app.model.ViewMode)
+	}
+	if app.model.FullscreenFilePreview.Open {
+		t.Fatal("fullscreen preview still open after edit")
 	}
 }
 

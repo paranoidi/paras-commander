@@ -55,7 +55,7 @@ func TestMergeFilePreviewDrawWithHoldKeepsBodyWhileLoading(t *testing.T) {
 	}
 }
 
-func TestMergeFilePreviewDrawWithHoldNoHoldShowsLoading(t *testing.T) {
+func TestMergeFilePreviewDrawWithHoldNoHoldLeavesBodyEmpty(t *testing.T) {
 	t.Parallel()
 	live := FilePreviewState{
 		Open:      true,

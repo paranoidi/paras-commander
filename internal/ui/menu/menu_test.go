@@ -367,16 +367,46 @@ func TestOptionsMenuKeepsThemeChoicesOutOfPulldown(t *testing.T) {
 	}
 }
 
-func TestFunctionKeysFilePreviewViewExcludesMenuF9(t *testing.T) {
+func TestFunctionKeysFilePreviewStylePickerShowsEnterSave(t *testing.T) {
+	t.Parallel()
+	keys := FunctionKeysFilePreviewStylePicker()
+	if len(keys) != 3 {
+		t.Fatalf("FunctionKeysFilePreviewStylePicker len = %d, want Esc + Enter Save + F10", len(keys))
+	}
+	if keys[0] != FooterEscClose {
+		t.Fatalf("footer[0] = %+v, want Esc Close", keys[0])
+	}
+	if keys[1].Key != tcell.KeyEnter || keys[1].KeyLabel != "Enter" || keys[1].Hint != "Save" {
+		t.Fatalf("footer[1] = %+v, want Enter Save", keys[1])
+	}
+	if keys[2].Key != tcell.KeyF10 || keys[2].Hint != "Quit" {
+		t.Fatalf("footer[2] = %+v, want F10 Quit", keys[2])
+	}
+}
+
+func TestFunctionKeysFilePreviewViewShowsStyleF9(t *testing.T) {
 	t.Parallel()
 	keys := FunctionKeysFilePreviewView()
-	for _, fk := range keys {
-		if fk.Key == tcell.KeyF9 {
-			t.Fatalf("fullscreen file preview footer must not advertise F9 Menu, got %+v", keys)
+	if len(keys) != 4 {
+		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F4 Edit + F9 Style + F10", len(keys))
+	}
+	var f4, f9 *FunctionKey
+	for i := range keys {
+		switch keys[i].Key {
+		case tcell.KeyF4:
+			f4 = &keys[i]
+		case tcell.KeyF9:
+			f9 = &keys[i]
 		}
 	}
-	if len(keys) != 2 {
-		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F10 only", len(keys))
+	if f4 == nil || f4.Hint != "Edit" {
+		t.Fatalf("fullscreen file preview footer must advertise F4 Edit, got %+v", keys)
+	}
+	if f9 == nil {
+		t.Fatalf("fullscreen file preview footer must advertise F9 Style, got %+v", keys)
+	}
+	if f9.Hint != "Style" {
+		t.Fatalf("F9 hint = %q, want Style", f9.Hint)
 	}
 }
 

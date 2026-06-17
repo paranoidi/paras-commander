@@ -1,0 +1,88 @@
+package previewpanel
+
+// Phase is the async preview lifecycle.
+type Phase int
+
+const (
+	PhaseIdle Phase = iota
+	PhasePending
+	PhaseRunning
+	PhaseDone
+)
+
+// Source identifies how preview body cells were produced.
+type Source int
+
+const (
+	// SourceExternalANSI uses CombinedText parsed through AnsiStyledCells.
+	SourceExternalANSI Source = iota
+	// SourceInternalHighlighted uses HighlightedCells from Chroma.
+	SourceInternalHighlighted
+)
+
+// State holds scrollable file preview content and wrap cache.
+type State struct {
+	Open bool
+	// Phase is used while Open; draw uses a snapshot each frame.
+	Phase Phase
+	// Path is the absolute file path being previewed.
+	Path string
+	// TitleBase is shown in the panel title (usually filepath.Base(Path)).
+	TitleBase string
+	Source    Source
+	// CombinedText is stdout plus optional stderr (external mode); may contain ANSI escapes.
+	CombinedText string
+	// HighlightedCells is the flat pre-wrap body for internal Chroma highlighting.
+	HighlightedCells []AnsiCell
+	// GutterWidth is the visual width of the line-number gutter (internal mode, line_numbers on).
+	GutterWidth int
+	Scroll      int
+	// ExitCode is set when Phase == PhaseDone and ErrorMsg == "" (external subprocess).
+	ExitCode int
+	// ErrorMsg is set for launch/read failures or non-zero external exit.
+	ErrorMsg string
+	// BodyHeld keeps the previous body visible while a new file loads.
+	BodyHeld bool
+
+	wrappedLines     [][]AnsiCell
+	wrapWidth        int
+	wrapStyleKey     uint64
+	wrapSource       Source
+	wrapCombinedText string
+	wrapCellsLen     int
+	wrapGutterWidth  int
+	wrapHighlightKey uint64
+
+	// highlightCacheKey fingerprints HighlightedCells styles; bump when cells are replaced.
+	highlightCacheKey uint64
+}
+
+// SetHighlightedCells replaces internal Chroma cells and invalidates the wrap cache.
+func (st *State) SetHighlightedCells(cells []AnsiCell) {
+	st.HighlightedCells = cells
+	st.highlightCacheKey = highlightCacheKey(cells)
+	st.clearWrapCache()
+}
+
+func (st *State) clearWrapCache() {
+	st.wrappedLines = nil
+	st.wrapWidth = 0
+	st.wrapStyleKey = 0
+	st.wrapSource = 0
+	st.wrapCombinedText = ""
+	st.wrapCellsLen = 0
+	st.wrapGutterWidth = 0
+	st.wrapHighlightKey = 0
+}
+
+func (st State) highlightedCacheKey() uint64 {
+	if st.highlightCacheKey != 0 {
+		return st.highlightCacheKey
+	}
+	return highlightCacheKey(st.HighlightedCells)
+}
+
+// HighlightedCacheKey fingerprints internal Chroma highlight styles for cache invalidation.
+func (st State) HighlightedCacheKey() uint64 {
+	return st.highlightedCacheKey()
+}

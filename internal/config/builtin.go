@@ -195,6 +195,21 @@ const (
 	// DefaultMessageLogMaxEntries caps status/toast lines retained for the Messages view (oldest dropped).
 	DefaultMessageLogMaxEntries = 500
 
+	// PreviewModeInternal highlights files in-process with Chroma (default).
+	PreviewModeInternal = "internal"
+	// PreviewModeExternal runs [preview].command as a subprocess.
+	PreviewModeExternal       = "external"
+	DefaultPreviewMode        = PreviewModeInternal
+	DefaultPreviewStyle       = "monokai"
+	DefaultPreviewLineNumbers = true
+	DefaultPreviewTabWidth    = 4
+	// DefaultMaxPreviewBytes caps internal preview reads (matches cmdrun.MaxStreamBytes).
+	DefaultMaxPreviewBytes = 512 * 1024
+
+	// DefaultPreviewStylePickerDebounceMS waits after the last F3 style-picker selection
+	// before re-running internal Chroma highlighting. Zero applies on every selection change.
+	DefaultPreviewStylePickerDebounceMS = 100
+
 	// DefaultFilePreviewCommand runs bat with line numbers, paging disabled, colors forced on (non-TTY stdout),
 	// and wrap/width driven by {terminal_width} so output matches the inactive preview column.
 	DefaultFilePreviewCommand = "bat -n --paging=never --color=always --wrap=auto --terminal-width=%w %f"

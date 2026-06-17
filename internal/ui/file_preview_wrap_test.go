@@ -20,8 +20,8 @@ func TestFilePreviewWrapCacheReusesLines(t *testing.T) {
 	if &first[0][0] != &second[0][0] {
 		t.Fatal("expected cached wrapped lines slice to be reused")
 	}
-	if st.wrapCombinedText != text {
-		t.Fatalf("wrapCombinedText = %q, want cached source text", st.wrapCombinedText)
+	if count, ok := st.CachedWrappedLineCount(20); !ok || count != len(first) {
+		t.Fatalf("cache miss after second wrap: ok=%v count=%d want %d", ok, count, len(first))
 	}
 }
 
@@ -38,8 +38,8 @@ func TestFilePreviewWrapCacheInvalidatesOnTextChange(t *testing.T) {
 	if len(lines) == 0 {
 		t.Fatal("expected wrapped lines after text change")
 	}
-	if st.wrapCombinedText != "gamma delta" {
-		t.Fatalf("wrapCombinedText = %q, want updated text", st.wrapCombinedText)
+	if count, ok := st.CachedWrappedLineCount(10); !ok || count != len(lines) {
+		t.Fatalf("cache after text change: ok=%v count=%d want %d", ok, count, len(lines))
 	}
 }
 

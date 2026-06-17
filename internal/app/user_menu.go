@@ -159,7 +159,7 @@ func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
 	}
 
 	switch event.Key() {
-	case tcell.KeyF4:
+	case tcell.KeyF9:
 		a.editUserMenuConfigFromDialog()
 		return
 	case tcell.KeyEsc:

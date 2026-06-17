@@ -534,6 +534,13 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"viewer", "view", "fullscreen", "bat"},
 		},
 		{
+			ID:          ActionFileViewThemePicker,
+			Title:       "Theme picker in file view",
+			Section:     "File operations",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"theme", "preview", "view", "f9"},
+		},
+		{
 			ID:          ActionFileQuickView,
 			Title:       "Quick view",
 			Section:     "File operations",

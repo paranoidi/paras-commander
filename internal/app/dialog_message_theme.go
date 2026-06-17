@@ -195,7 +195,13 @@ func (a *App) previewThemeAtSelection() {
 	if sel < 0 || sel >= len(choices) {
 		return
 	}
-	name := choices[sel].Name
+	a.previewThemeByName(choices[sel].Name)
+}
+
+func (a *App) previewThemeByName(name string) {
+	if name == "" {
+		return
+	}
 	next, err := theme.Resolve(name, a.paths.ThemesDir)
 	if err != nil {
 		a.setTransientMessage(firstMessageLine(err.Error()), ui.MessageUrgencyCritical)

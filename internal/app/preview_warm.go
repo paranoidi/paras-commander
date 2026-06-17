@@ -22,17 +22,16 @@ func (a *App) activePanelChromeBlocked() bool {
 }
 
 func (a *App) fullscreenFilePreviewLayoutMetrics() (textW, contentH int, ok bool) {
-	w, h := a.screen.Size()
-	lay := a.layoutForTerminalSize(w, h)
-	if lay.TooSmall {
+	tw, ok := a.fullscreenPreviewTextWidth()
+	if !ok {
 		return 1, 0, false
 	}
-	union := ui.MergeTwinPanelRects(lay.Left, lay.Right)
-	tw := union.Width - 4
-	if tw < 1 {
-		tw = 1
+	union, ok := a.fullscreenPreviewUnionRect()
+	if !ok {
+		return tw, 0, false
 	}
-	return tw, ui.JobsPanelContentRows(union), true
+	preview, _ := ui.SplitFullscreenPreviewRects(union, a.model.FilePreviewThemePicker.Open, a.model.FilePreviewThemePicker.Choices)
+	return tw, ui.JobsPanelContentRows(preview), true
 }
 
 func filePreviewWarmCandidate(st ui.FilePreviewState) bool {
@@ -129,13 +128,28 @@ func (a *App) filePreviewLineCount(textW int) int {
 
 	a.commandsMu.Lock()
 	defer a.commandsMu.Unlock()
-	if a.model.FilePreview.CombinedText == warmed.CombinedText {
+	if previewBodyCacheMatches(a.model.FilePreview, warmed) {
 		a.model.FilePreview.WrapCacheSnapshot(warmed)
 		if count, ok := a.model.FilePreview.CachedWrappedLineCount(textW); ok {
 			return count
 		}
 	}
 	return warmed.WrappedLineCount(textW, base)
+}
+
+func previewBodyCacheMatches(live, warmed ui.FilePreviewState) bool {
+	if live.Source != warmed.Source {
+		return false
+	}
+	switch live.Source {
+	case ui.PreviewSourceInternalHighlighted:
+		if len(live.HighlightedCells) != len(warmed.HighlightedCells) {
+			return false
+		}
+		return live.HighlightedCacheKey() == warmed.HighlightedCacheKey()
+	default:
+		return live.CombinedText == warmed.CombinedText
+	}
 }
 
 func (a *App) fullscreenFilePreviewLineCount(textW int) int {
@@ -153,7 +167,7 @@ func (a *App) fullscreenFilePreviewLineCount(textW int) int {
 
 	a.commandsMu.Lock()
 	defer a.commandsMu.Unlock()
-	if a.model.FullscreenFilePreview.CombinedText == warmed.CombinedText {
+	if previewBodyCacheMatches(a.model.FullscreenFilePreview, warmed) {
 		a.model.FullscreenFilePreview.WrapCacheSnapshot(warmed)
 		if count, ok := a.model.FullscreenFilePreview.CachedWrappedLineCount(textW); ok {
 			return count

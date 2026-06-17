@@ -479,7 +479,7 @@ func (a *App) handleMetaDialogKey(event *tcell.EventKey) {
 	}
 
 	switch event.Key() {
-	case tcell.KeyF4:
+	case tcell.KeyF9:
 		a.editMetaConfigFromDialog()
 		return
 	case tcell.KeyEsc:

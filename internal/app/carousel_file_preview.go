@@ -4,7 +4,6 @@ import (
 	"errors"
 	"path/filepath"
 
-	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -172,11 +171,6 @@ func (a *App) applyCarouselFilePreviewNow() {
 	if !layOK {
 		tw = 1
 	}
-	argv, err := cmdrun.BuildFilePreviewArgv(a.config.Preview.Command, path, tw)
-	if err != nil {
-		a.patchCarouselFilePreviewMessage(filepath.Base(path), "Preview command: "+err.Error())
-		return
-	}
 	titleBase := filepath.Base(path)
 	a.captureFilePreviewHold(previewTargetCarousel)
 	a.patchCarouselFilePreview(func(st *ui.FilePreviewState) {
@@ -185,13 +179,15 @@ func (a *App) applyCarouselFilePreviewNow() {
 		st.Path = path
 		st.TitleBase = titleBase
 		st.CombinedText = ""
+		st.SetHighlightedCells(nil)
+		st.Source = ui.PreviewSourceExternalANSI
 		st.Scroll = 0
 		st.ExitCode = 0
 		st.ErrorMsg = ""
 	})
 	a.postCommandWake()
 	gen := a.carouselFilePreviewRunGen.Add(1)
-	go a.runFilePreview(a.commandsCtx, path, argv, workDir, previewTargetCarousel, gen)
+	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.activePanelChromeBlocked()), previewTargetCarousel, gen)
 }
 
 func (a *App) reconcileCarouselFilePreview() {

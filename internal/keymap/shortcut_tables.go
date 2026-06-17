@@ -6,6 +6,7 @@ const (
 	JobsShortcutsTable           = "jobs"
 	CommandsShortcutsTable       = "commands"
 	MessagesShortcutsTable       = "messages"
+	FilePreviewShortcutsTable    = "file_preview"
 	DialogShortcutsGroup         = "dialog"
 	DialogInputShortcutsTable    = "dialog.input"
 	DialogRenameShortcutsTable   = "dialog.rename"
@@ -31,6 +32,7 @@ func AllShortcutTablePaths() []string {
 		JobsShortcutsTable,
 		CommandsShortcutsTable,
 		MessagesShortcutsTable,
+		FilePreviewShortcutsTable,
 		DialogInputShortcutsTable,
 		DialogRenameShortcutsTable,
 		DialogBookmarkShortcutsTable,

@@ -2918,6 +2918,112 @@ func TestThemeDialogEscRevertsPreview(t *testing.T) {
 	}
 }
 
+func newFilePreviewThemePickerTestApp(t *testing.T) (*App, config.Paths) {
+	t.Helper()
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "alpha.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+
+	cfg := config.Default()
+	cfg.Preview.Style = config.DefaultPreviewStyle
+	appPaths := config.Paths{
+		ConfigDir: filepath.Join(t.TempDir(), "persist-f3-style"),
+	}.WithResolvedLocations()
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Theme:  theme.Default(),
+		Paths:  appPaths,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+	app.model.ViewMode = ui.ViewFilePreview
+	previewPath := filepath.Join(dir, "alpha.txt")
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Path = previewPath
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = "preview\n"
+	})
+	return app, appPaths
+}
+
+func TestFilePreviewThemePickerOpensOnF9(t *testing.T) {
+	app, _ := newFilePreviewThemePickerTestApp(t)
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	if !app.model.FilePreviewThemePicker.Open {
+		t.Fatal("style picker open = false, want true after F9")
+	}
+}
+
+func TestFilePreviewThemePickerNavigatePreviewsWithoutPersist(t *testing.T) {
+	app, appPaths := newFilePreviewThemePickerTestApp(t)
+	initial := app.config.Preview.Style
+	uiTheme := app.config.Theme
+	app.openFilePreviewThemePicker()
+	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.config.Preview.Style == initial {
+		t.Fatalf("preview style unchanged %q after Down", initial)
+	}
+	if app.config.Theme != uiTheme {
+		t.Fatalf("UI theme changed to %q, want unchanged", app.config.Theme)
+	}
+	reloaded, err := config.LoadFromPaths(appPaths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths: %v", err)
+	}
+	if reloaded.Preview.Style != initial {
+		t.Fatalf("persisted preview.style = %q, want unchanged %q", reloaded.Preview.Style, initial)
+	}
+}
+
+func TestFilePreviewThemePickerEnterClosePersists(t *testing.T) {
+	app, appPaths := newFilePreviewThemePickerTestApp(t)
+	app.openFilePreviewThemePicker()
+	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	selected := app.config.Preview.Style
+	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.FilePreviewThemePicker.Open {
+		t.Fatal("style picker still open after Enter save")
+	}
+	if app.config.Preview.Style != selected {
+		t.Fatalf("config preview.style = %q, want %q", app.config.Preview.Style, selected)
+	}
+	reloaded, err := config.LoadFromPaths(appPaths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths: %v", err)
+	}
+	if reloaded.Preview.Style != selected {
+		t.Fatalf("persisted preview.style = %q, want %q", reloaded.Preview.Style, selected)
+	}
+}
+
+func TestFilePreviewThemePickerEscReverts(t *testing.T) {
+	app, _ := newFilePreviewThemePickerTestApp(t)
+	initial := app.config.Preview.Style
+	app.openFilePreviewThemePicker()
+	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.config.Preview.Style == initial {
+		t.Fatalf("preview style still %q after Down", initial)
+	}
+	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.FilePreviewThemePicker.Open {
+		t.Fatal("style picker still open after Esc")
+	}
+	if app.config.Preview.Style != initial {
+		t.Fatalf("preview.style after Esc = %q, want reverted %q", app.config.Preview.Style, initial)
+	}
+}
+
 func TestActiveFooterKeysThemeDialogShowsF5Reload(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
@@ -3363,7 +3469,7 @@ func TestFullscreenFilePreviewRightDoesNotMoveListCursor(t *testing.T) {
 	}
 }
 
-func TestFullscreenFilePreviewDoesNotOpenMenuFromDispatchOrF9(t *testing.T) {
+func TestFullscreenFilePreviewDoesNotOpenMenuFromDispatch(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -3397,10 +3503,31 @@ func TestFullscreenFilePreviewDoesNotOpenMenuFromDispatchOrF9(t *testing.T) {
 	if app.model.Menu.Open {
 		t.Fatal("F9 must not open menu during fullscreen file preview")
 	}
+	if !app.model.FilePreviewThemePicker.Open {
+		t.Fatal("F9 must open inline theme picker during fullscreen file preview")
+	}
+	var f9Hint string
+	var hasEscClose bool
+	var hasEnterSave bool
 	for _, fk := range app.activeFooterKeys() {
 		if fk.Key == tcell.KeyF9 {
-			t.Fatalf("footer must not list F9, got %+v", app.activeFooterKeys())
+			f9Hint = fk.Hint
 		}
+		if fk.Hint == "Close" && fk.Key == tcell.KeyEsc {
+			hasEscClose = true
+		}
+		if fk.Key == tcell.KeyEnter && fk.KeyLabel == "Enter" && fk.Hint == "Save" {
+			hasEnterSave = true
+		}
+	}
+	if f9Hint != "" {
+		t.Fatalf("footer must not show F9 while theme picker is open, got hint %q", f9Hint)
+	}
+	if !hasEscClose {
+		t.Fatal("footer must show Esc Close while theme picker is open")
+	}
+	if !hasEnterSave {
+		t.Fatal("footer must show Enter Save while theme picker is open")
 	}
 }
 
@@ -6579,13 +6706,44 @@ func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
 	staleGen := app.filePreviewRunGen.Add(1)
 	app.filePreviewRunGen.Add(1)
 
-	app.runFilePreview(context.Background(), path, []string{"/bin/true"}, root, previewTargetInactive, staleGen)
+	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false), previewTargetInactive, staleGen)
 
 	app.commandsMu.RLock()
 	ph := app.model.FilePreview.Phase
 	app.commandsMu.RUnlock()
 	if ph != ui.FilePreviewPhasePending {
 		t.Fatalf("Phase = %v, want Pending when run gen is stale at start", ph)
+	}
+}
+
+func TestRunPreviewInternalSetsHighlightedCells(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "sample.go")
+	writeFile(t, path)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.Preview.Mode = config.PreviewModeInternal
+	app.config.Preview.LineNumbers = true
+
+	app.patchFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhasePending
+		st.Path = path
+	})
+	gen := app.filePreviewRunGen.Add(1)
+	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false), previewTargetInactive, gen)
+
+	app.commandsMu.RLock()
+	st := app.model.FilePreview
+	app.commandsMu.RUnlock()
+	if st.Phase != ui.FilePreviewPhaseDone {
+		t.Fatalf("Phase = %v, want Done", st.Phase)
+	}
+	if st.Source != ui.PreviewSourceInternalHighlighted {
+		t.Fatalf("Source = %v, want internal highlighted", st.Source)
+	}
+	if len(st.HighlightedCells) == 0 {
+		t.Fatal("HighlightedCells empty, want Chroma output")
 	}
 }
 

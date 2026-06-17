@@ -140,18 +140,20 @@ type Model struct {
 	FullscreenFilePreview FilePreviewState
 	// FullscreenFilePreviewDraw is a snapshot for ViewFilePreview rendering.
 	FullscreenFilePreviewDraw FilePreviewState
-	HelpView                  HelpViewState
-	FileDialog                FileDialogState
-	TransferDialog            TransferDialogState
-	FlattenDialog             FlattenDialogState
-	ConflictDialog            ConflictDialogState
-	HostKeyDialog             HostKeyDialogState
-	QuitConfirm               QuitConfirmState
-	StashRestoreDialog        StashRestoreDialogState
-	MessageDialog             MessageDialogState
-	Message                   string
-	MessageUrgency            MessageUrgency
-	FooterKeys                []menu.FunctionKey
+	// FilePreviewThemePicker is the inline theme list on the right side of F3 file view.
+	FilePreviewThemePicker FilePreviewThemePickerState
+	HelpView               HelpViewState
+	FileDialog             FileDialogState
+	TransferDialog         TransferDialogState
+	FlattenDialog          FlattenDialogState
+	ConflictDialog         ConflictDialogState
+	HostKeyDialog          HostKeyDialogState
+	QuitConfirm            QuitConfirmState
+	StashRestoreDialog     StashRestoreDialogState
+	MessageDialog          MessageDialogState
+	Message                string
+	MessageUrgency         MessageUrgency
+	FooterKeys             []menu.FunctionKey
 	// MenuBarPermission is Unix mode text for the active panel cursor row (e.g. "drwxr-xr-x"); empty when none.
 	MenuBarPermission string
 	// MenuBarJobsAttention is the core jobs/conflict label (e.g. "! 1"); the menu bar pads it with
@@ -343,7 +345,11 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	switch model.ViewMode {
 	case ViewFilePreview:
 		union := MergeTwinPanelRects(layout.Left, layout.Right)
-		drawFilePreviewPanel(screen, union, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, "", "")
+		previewRect, pickerRect := SplitFullscreenPreviewRects(union, model.FilePreviewThemePicker.Open, model.FilePreviewThemePicker.Choices)
+		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, "", "")
+		if model.FilePreviewThemePicker.Open && pickerRect.Width > 0 {
+			dialog.DrawFilePreviewThemePicker(screen, pickerRect, model.FilePreviewThemePicker, styles)
+		}
 	case ViewJobs:
 		now := time.Now()
 		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobActivity, styles, now, chromeBlocked, model.UserHomeDir, model.JobsThroughputChartEnabled)

@@ -176,6 +176,9 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		})
 	}
 	if a.model.ViewMode == ui.ViewFilePreview && !a.inQuickFilterUI() {
+		if a.model.FilePreviewThemePicker.Open {
+			return menu.FunctionKeysFilePreviewStylePicker()
+		}
 		return menu.FunctionKeysFilePreviewView()
 	}
 	if a.model.ViewMode == ui.ViewCommands && !a.inQuickFilterUI() {
@@ -836,6 +839,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openConfigDialog()
 	case keymap.ActionFileView:
 		a.openFilePreviewFullscreen()
+	case keymap.ActionFileViewThemePicker:
+		a.toggleFilePreviewThemePicker()
 	case keymap.ActionFileQuickView:
 		a.handleQuickViewToggle()
 	case keymap.ActionMenuFileViewPath:

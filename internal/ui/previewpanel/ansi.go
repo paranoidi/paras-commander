@@ -1,4 +1,4 @@
-package ui
+package previewpanel
 
 import (
 	"strconv"
@@ -176,7 +176,6 @@ func applySGRParams(nums []int, b *sgrBuilder) {
 	}
 }
 
-// parseCSI consumes a CSI sequence starting immediately after ESC '['. Returns index past the sequence.
 func parseCSI(s string, afterBracket int) (next int, final byte, param string) {
 	j := afterBracket
 	for j < len(s) {
@@ -189,8 +188,7 @@ func parseCSI(s string, afterBracket int) (next int, final byte, param string) {
 	return len(s), 0, s[afterBracket:]
 }
 
-// AnsiStyledCells expands s into styled cells using ECMA-48 SGR (CSI … m) and common escapes; non-UTF-8
-// bytes become replacement characters. OSC sequences (ESC ]) are skipped.
+// AnsiStyledCells expands s into styled cells using ECMA-48 SGR.
 func AnsiStyledCells(s string, base tcell.Style) []AnsiCell {
 	var out []AnsiCell
 	var st sgrBuilder
@@ -206,7 +204,6 @@ func AnsiStyledCells(s string, base tcell.Style) []AnsiCell {
 				i = next
 				continue
 			case ']':
-				// OSC: BEL or ST
 				j := i + 2
 				for j < len(s) {
 					if s[j] == '\a' {
@@ -250,8 +247,7 @@ func AnsiStyledCells(s string, base tcell.Style) []AnsiCell {
 	return out
 }
 
-// WrapAnsiCells breaks cells into visual lines of at most width terminal cells (width >= 1).
-// A newline rune ends the current line (which may be empty) and starts the next.
+// WrapAnsiCells breaks cells into visual lines of at most width terminal cells.
 func WrapAnsiCells(cells []AnsiCell, width int) [][]AnsiCell {
 	if width < 1 {
 		width = 1
@@ -287,5 +283,70 @@ func WrapAnsiCells(cells []AnsiCell, width int) [][]AnsiCell {
 		lineWidth += rw
 	}
 	lines = append(lines, line)
+	return lines
+}
+
+// WrapAnsiCellsWithGutter wraps at width. Soft-wrapped continuation rows within one logical
+// line are indented with gutterWidth spaces so text aligns under code, not the gutter.
+// Indent spaces use the style of the first content cell on the continuation row.
+func WrapAnsiCellsWithGutter(cells []AnsiCell, width, gutterWidth int) [][]AnsiCell {
+	if width < 1 {
+		width = 1
+	}
+	if len(cells) == 0 {
+		return [][]AnsiCell{{}}
+	}
+	if gutterWidth < 1 {
+		return WrapAnsiCells(cells, width)
+	}
+	var out [][]AnsiCell
+	var logical []AnsiCell
+	flushLogical := func() {
+		out = append(out, wrapLogicalLineWithGutter(logical, width, gutterWidth)...)
+		logical = nil
+	}
+	for _, c := range cells {
+		if c.R == '\n' {
+			flushLogical()
+			continue
+		}
+		logical = append(logical, c)
+	}
+	if len(logical) > 0 {
+		flushLogical()
+	}
+	if len(out) == 0 {
+		return [][]AnsiCell{{}}
+	}
+	return out
+}
+
+func wrapLogicalLineWithGutter(cells []AnsiCell, width, gutterWidth int) [][]AnsiCell {
+	if len(cells) == 0 {
+		return [][]AnsiCell{{}}
+	}
+	var lines [][]AnsiCell
+	var line []AnsiCell
+	lineWidth := 0
+	for _, c := range cells {
+		rw := runewidth.RuneWidth(c.R)
+		if rw < 1 {
+			rw = 1
+		}
+		for lineWidth+rw > width && len(line) > 0 {
+			lines = append(lines, line)
+			indent := c.St
+			line = make([]AnsiCell, gutterWidth)
+			for i := range line {
+				line[i] = AnsiCell{R: ' ', St: indent}
+			}
+			lineWidth = gutterWidth
+		}
+		line = append(line, c)
+		lineWidth += rw
+	}
+	if len(line) > 0 {
+		lines = append(lines, line)
+	}
 	return lines
 }

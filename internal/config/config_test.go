@@ -613,3 +613,43 @@ func writeConfig(t *testing.T, content string) string {
 	}
 	return path
 }
+
+func TestValidatePreviewModeAndStyle(t *testing.T) {
+	cfg := Default()
+	cfg.Preview.Mode = "bogus"
+	cfg.Preview.Style = "not-a-real-style"
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.Preview.Mode != PreviewModeInternal {
+		t.Fatalf("Mode = %q, want %q", cfg.Preview.Mode, PreviewModeInternal)
+	}
+	if cfg.Preview.Style != DefaultPreviewStyle {
+		t.Fatalf("Style = %q, want %q", cfg.Preview.Style, DefaultPreviewStyle)
+	}
+	cfg.Preview.Mode = PreviewModeExternal
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate external: %v", err)
+	}
+	if cfg.Preview.Mode != PreviewModeExternal {
+		t.Fatalf("Mode = %q, want external", cfg.Preview.Mode)
+	}
+}
+
+func TestValidatePreviewStylePickerDebounceMS(t *testing.T) {
+	cfg := Default()
+	cfg.Preview.StylePickerDebounceMS = -1
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.Preview.StylePickerDebounceMS != DefaultPreviewStylePickerDebounceMS {
+		t.Fatalf("StylePickerDebounceMS = %d, want default %d", cfg.Preview.StylePickerDebounceMS, DefaultPreviewStylePickerDebounceMS)
+	}
+	cfg.Preview.StylePickerDebounceMS = 20_000
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.Preview.StylePickerDebounceMS != 10_000 {
+		t.Fatalf("StylePickerDebounceMS = %d, want clamp 10000", cfg.Preview.StylePickerDebounceMS)
+	}
+}

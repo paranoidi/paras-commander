@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -250,6 +250,9 @@ func (a *App) quickViewFilePreviewScrollable() bool {
 	if strings.TrimSpace(st.ErrorMsg) != "" {
 		return false
 	}
+	if st.Source == ui.PreviewSourceInternalHighlighted {
+		return len(st.HighlightedCells) > 0
+	}
 	return strings.TrimSpace(st.CombinedText) != ""
 }
 
@@ -354,6 +357,8 @@ func (a *App) patchColumnPreviewMessage(titleBase, msg string) {
 		st.Path = ""
 		st.TitleBase = titleBase
 		st.CombinedText = ""
+		st.SetHighlightedCells(nil)
+		st.Source = ui.PreviewSourceExternalANSI
 		st.Scroll = 0
 		st.ExitCode = 0
 		st.ErrorMsg = msg
@@ -560,11 +565,6 @@ func (a *App) applyQuickViewPreviewNow() {
 		if !layOK {
 			tw = 1
 		}
-		argv, err := cmdrun.BuildFilePreviewArgv(a.config.Preview.Command, path, tw)
-		if err != nil {
-			a.patchColumnPreviewMessage(filepath.Base(path), "Preview command: "+err.Error())
-			return
-		}
 		titleBase := filepath.Base(path)
 		a.captureFilePreviewHold(previewTargetInactive)
 		a.patchFilePreview(func(st *ui.FilePreviewState) {
@@ -573,13 +573,15 @@ func (a *App) applyQuickViewPreviewNow() {
 			st.Path = path
 			st.TitleBase = titleBase
 			st.CombinedText = ""
+			st.SetHighlightedCells(nil)
+			st.Source = ui.PreviewSourceExternalANSI
 			st.Scroll = 0
 			st.ExitCode = 0
 			st.ErrorMsg = ""
 		})
 		a.postCommandWake()
 		gen := a.filePreviewRunGen.Add(1)
-		go a.runFilePreview(a.commandsCtx, path, argv, workDir, previewTargetInactive, gen)
+		go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.inactivePreviewChromeBlocked()), previewTargetInactive, gen)
 	}
 }
 
@@ -691,8 +693,19 @@ func (a *App) reconcileQuickViewPreview() {
 	a.armQuickViewPreviewDebounce()
 }
 
-func (a *App) runFilePreview(ctx context.Context, path string, argv []string, workDir string, target previewTarget, runGen uint64) {
+func (a *App) previewRequest(path string, textW int, workDir string, chromeBlocked bool) preview.Request {
+	return preview.Request{
+		Path:      path,
+		TextWidth: textW,
+		WorkDir:   workDir,
+		Preview:   a.config.Preview,
+		BaseStyle: ui.FilePreviewBodyStyle(a.styles, chromeBlocked),
+	}
+}
+
+func (a *App) runPreview(ctx context.Context, req preview.Request, target previewTarget, runGen uint64) {
 	gen := a.previewRunGenFor(target)
+	path := req.Path
 	if runGen != gen.Load() {
 		return
 	}
@@ -730,7 +743,7 @@ func (a *App) runFilePreview(ctx context.Context, path string, argv []string, wo
 	default:
 	}
 
-	res := cmdrun.Run(ctx, argv, workDir, cmdrun.MaxStreamBytes)
+	res := preview.Run(ctx, req)
 
 	if runGen != gen.Load() {
 		return
@@ -741,26 +754,20 @@ func (a *App) runFilePreview(ctx context.Context, path string, argv []string, wo
 			return
 		}
 		st.Phase = ui.FilePreviewPhaseDone
-		if res.LaunchErr != nil {
-			st.ErrorMsg = res.LaunchErr.Error()
-			st.ExitCode = -1
+		if res.ErrorMsg != "" {
+			st.ErrorMsg = res.ErrorMsg
+			st.ExitCode = res.ExitCode
+			st.CombinedText = ""
+			st.SetHighlightedCells(nil)
 			doneApplied = true
 			return
 		}
+		st.Source = res.Source
+		st.CombinedText = res.CombinedText
+		st.SetHighlightedCells(res.HighlightedCells)
+		st.GutterWidth = res.GutterWidth
 		st.ExitCode = res.ExitCode
-		var b strings.Builder
-		b.WriteString(string(res.Stdout))
-		if len(res.Stderr) > 0 {
-			if b.Len() > 0 {
-				b.WriteByte('\n')
-			}
-			b.WriteString("--- stderr ---\n")
-			b.WriteString(string(res.Stderr))
-		}
-		st.CombinedText = b.String()
-		if res.StdoutTrim || res.StderrTrim {
-			st.CombinedText += "\n\n[output truncated]\n"
-		}
+		st.ErrorMsg = ""
 		doneApplied = true
 	})
 	if doneApplied && runGen == gen.Load() {

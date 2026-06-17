@@ -83,6 +83,10 @@ func (a *App) editFullscreenPreviewFile() {
 		a.setErrorMessage("Edit", err)
 		return
 	}
+	a.closeFilePreviewFullscreen()
+	if err := a.activePanel().Refresh(a.activeViewportRows()); err != nil {
+		a.setErrorMessage("Edit", err)
+	}
 }
 
 func (a *App) resolveLocalEditFilePath() (string, error) {

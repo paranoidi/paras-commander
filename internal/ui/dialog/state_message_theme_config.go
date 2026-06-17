@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -9,6 +10,20 @@ import (
 type ThemeChoice struct {
 	Name  string
 	Label string
+}
+
+// FilePreviewThemePickerState is the inline theme list on the right side of F3 file view.
+type FilePreviewThemePickerState struct {
+	Open         bool
+	Choices      []ThemeChoice
+	DisplayLines []string
+	Query        string
+	QueryCursor  int
+	QueryScroll  int
+	Ranked       []int
+	MatchRanges  [][]search.Range
+	Selected     int
+	ListScroll   int
 }
 
 // MessageDialogState is a generic modal with a title, body text, and OK or OK/Cancel buttons.

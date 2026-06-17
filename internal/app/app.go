@@ -77,6 +77,7 @@ type App struct {
 	keysJobs           *keymap.Map // chords active only in jobs view (overlay)
 	keysCommands       *keymap.Map // chords active only in Commands view (overlay)
 	keysMessages       *keymap.Map // chords active only in Messages view (overlay)
+	keysFilePreview    *keymap.Map // chords active only in F3 full-screen file view (overlay)
 	keysDialogInput    *keymap.Map // chords active only while a dialog input field is focused
 	keysRenameDialog   *keymap.Map // sanitize/slugify while main rename dialog is focused
 	keysBookmarkDialog *keymap.Map // delete fzf-marks entry while bookmarks picker is open
@@ -87,6 +88,12 @@ type App struct {
 	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
+	// previewStyleAtPickerOpen is preview.style when the F3 Chroma style picker opens.
+	previewStyleAtPickerOpen string
+	// previewStylePickerDebounceGen invalidates in-flight F3 style-picker preview debounce callbacks.
+	previewStylePickerDebounceGen   atomic.Uint64
+	previewStylePickerDebounceMu    sync.Mutex
+	previewStylePickerDebounceTimer *time.Timer
 	// jobState manages background job queue and worker lifecycle.
 	jobState        *jobs.State
 	jobsCtrl        *jobsctrl.Handler
@@ -313,6 +320,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	kmJobs := bundle.Jobs
 	kmCommands := bundle.Commands
 	kmMessages := bundle.Messages
+	kmFilePreview := bundle.FilePreview
 	kmDialogInput := bundle.DialogInput
 	if kmDialogInput == nil {
 		m, err := keymap.Build(map[string][]string{})
@@ -354,6 +362,13 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		kmHistoryDialog = m
 	}
 	kmFlattenDialog := bundle.FlattenDialog
+	if kmFilePreview == nil {
+		m, err := keymap.Build(keymap.DefaultFilePreviewOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build file preview overlay map: %w", err)
+		}
+		kmFilePreview = m
+	}
 	if kmFlattenDialog == nil {
 		m, err := keymap.Build(keymap.DefaultFlattenDialogOverlayKeys())
 		if err != nil {
@@ -469,6 +484,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysJobs:           kmJobs,
 		keysCommands:       kmCommands,
 		keysMessages:       kmMessages,
+		keysFilePreview:    kmFilePreview,
 		keysDialogInput:    kmDialogInput,
 		keysRenameDialog:   kmRenameDialog,
 		keysBookmarkDialog: kmBookmarkDialog,
@@ -715,6 +731,11 @@ func (a *App) Run() error {
 				}
 			case carouselPreviewFlushPayload:
 				if a.applyCarouselPreviewFlush(d) {
+					a.render()
+					didRender = true
+				}
+			case previewStylePickerFlushPayload:
+				if a.applyPreviewStylePickerFlush(d) {
 					a.render()
 					didRender = true
 				}

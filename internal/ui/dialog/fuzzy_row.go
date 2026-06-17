@@ -89,3 +89,8 @@ func alignOrigToDisp(orig, disp []rune) []int {
 	}
 	return m
 }
+
+// FuzzyRowContent renders one list row with optional fuzzy highlights.
+func FuzzyRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style, pathFit bool) (string, []primitive.Span) {
+	return fuzzyRowContent(line, ranges, width, matchStyle, pathFit)
+}

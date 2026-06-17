@@ -16,7 +16,7 @@ import (
 // LoadFromPaths resolves the full Bundle (global + view + dialog overlays) using a layered merge per table:
 //
 //  1. built-in defaults (DefaultActionKeys / DefaultJobsOverlayKeys / DefaultCommandsOverlayKeys /
-//     DefaultMessagesOverlayKeys / DefaultDialogInputOverlayKeys / DefaultRenameDialogOverlayKeys /
+//     DefaultMessagesOverlayKeys / DefaultFilePreviewOverlayKeys / DefaultDialogInputOverlayKeys / DefaultRenameDialogOverlayKeys /
 //     DefaultBookmarkDialogOverlayKeys / DefaultFindDialogOverlayKeys / DefaultHistoryDialogOverlayKeys /
 //     DefaultFlattenDialogOverlayKeys)
 //  2. keybindings.toml's matching tables (when present)
@@ -82,12 +82,13 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		Jobs:           overlayMaps[0],
 		Commands:       overlayMaps[1],
 		Messages:       overlayMaps[2],
-		DialogInput:    overlayMaps[3],
-		RenameDialog:   overlayMaps[4],
-		BookmarkDialog: overlayMaps[5],
-		FindDialog:     overlayMaps[6],
-		HistoryDialog:  overlayMaps[7],
-		FlattenDialog:  overlayMaps[8],
+		FilePreview:    overlayMaps[3],
+		DialogInput:    overlayMaps[4],
+		RenameDialog:   overlayMaps[5],
+		BookmarkDialog: overlayMaps[6],
+		FindDialog:     overlayMaps[7],
+		HistoryDialog:  overlayMaps[8],
+		FlattenDialog:  overlayMaps[9],
 	}, nil
 }
 
@@ -144,7 +145,7 @@ func parseKeybindingsFile(raw []byte, label string) (mainKeys map[string][]strin
 func validateKeybindingsTopLevel(top map[string]interface{}, label string) error {
 	for k, v := range top {
 		switch k {
-		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable:
+		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable:
 			if _, ok := v.(map[string]interface{}); !ok {
 				return fmt.Errorf("parse keybindings %q: [%s] must be a table", label, k)
 			}
@@ -162,7 +163,7 @@ func validateKeybindingsTopLevel(top map[string]interface{}, label string) error
 				}
 			}
 		default:
-			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, jobs, commands, messages, dialog)", label, k)
+			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, jobs, commands, messages, file_preview, dialog)", label, k)
 		}
 	}
 	return nil
@@ -244,7 +245,7 @@ func EncodeDefaultStub(w io.Writer) error {
 	header := "# Global shortcuts under [main]. Each value is a list of\n" +
 		"# chord strings (single-stroke). See docs/keybindings.md for syntax.\n" +
 		"#\n" +
-		"# View overlays ([jobs], [commands], [messages]) take precedence over\n" +
+		"# View overlays ([jobs], [commands], [messages], [file_preview]) take precedence over\n" +
 		"# [main] while that view is focused.\n" +
 		"#\n" +
 		"# Dialog overlays ([dialog.input], [dialog.rename], …) apply only while\n" +
@@ -263,16 +264,18 @@ func EncodeDefaultStub(w io.Writer) error {
 		return fmt.Errorf("encode keybindings stub header: %w", err)
 	}
 	payload := struct {
-		Main     map[string][]string `toml:"main"`
-		Jobs     map[string][]string `toml:"jobs"`
-		Commands map[string][]string `toml:"commands"`
-		Messages map[string][]string `toml:"messages"`
-		Dialog   dialogShortcuts     `toml:"dialog"`
+		Main        map[string][]string `toml:"main"`
+		Jobs        map[string][]string `toml:"jobs"`
+		Commands    map[string][]string `toml:"commands"`
+		Messages    map[string][]string `toml:"messages"`
+		FilePreview map[string][]string `toml:"file_preview"`
+		Dialog      dialogShortcuts     `toml:"dialog"`
 	}{
-		Main:     DefaultActionKeys(),
-		Jobs:     DefaultJobsOverlayKeys(),
-		Commands: DefaultCommandsOverlayKeys(),
-		Messages: DefaultMessagesOverlayKeys(),
+		Main:        DefaultActionKeys(),
+		Jobs:        DefaultJobsOverlayKeys(),
+		Commands:    DefaultCommandsOverlayKeys(),
+		Messages:    DefaultMessagesOverlayKeys(),
+		FilePreview: DefaultFilePreviewOverlayKeys(),
 		Dialog: dialogShortcuts{
 			Input:    DefaultDialogInputOverlayKeys(),
 			Rename:   DefaultRenameDialogOverlayKeys(),

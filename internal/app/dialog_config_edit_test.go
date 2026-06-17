@@ -35,7 +35,7 @@ func testMetaDialogApp(t *testing.T, dir, cfgDir string) *App {
 	return app
 }
 
-func TestActiveFooterKeysMetaDialogShowsF4EditConfig(t *testing.T) {
+func TestActiveFooterKeysMetaDialogShowsF9EditConfig(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -59,14 +59,14 @@ file = "wc -l"
 
 	keys := app.activeFooterKeys()
 	if len(keys) != 3 {
-		t.Fatalf("meta dialog footer len = %d, want Esc + F4 + F10", len(keys))
+		t.Fatalf("meta dialog footer len = %d, want Esc + F9 + F10", len(keys))
 	}
-	if keys[1].Key != tcell.KeyF4 || keys[1].Hint != menu.FunctionKeyEditConfig.Hint {
-		t.Fatalf("second footer key = %+v, want F4 Edit config", keys[1])
+	if keys[1].Key != tcell.KeyF9 || keys[1].Hint != menu.FunctionKeyEditConfig.Hint {
+		t.Fatalf("second footer key = %+v, want F9 Edit config", keys[1])
 	}
 }
 
-func TestMetaDialogF4RefreshesDocumentationBeforeEditor(t *testing.T) {
+func TestMetaDialogF9RefreshesDocumentationBeforeEditor(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -107,14 +107,14 @@ file = "wc -l"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleMetaDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	app.handleMetaDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
 	if !strings.Contains(app.model.Message, "updated documentation") {
 		t.Fatalf("Message = %q, want updated documentation notice", app.model.Message)
 	}
 }
 
-func TestMetaDialogF4ReloadsEntriesAfterEdit(t *testing.T) {
+func TestMetaDialogF9ReloadsEntriesAfterEdit(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -151,7 +151,7 @@ file = "wc -c"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleMetaDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	app.handleMetaDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open after F4 edit")
@@ -164,7 +164,7 @@ file = "wc -c"
 	}
 }
 
-func TestUserMenuDialogF4RefreshesDocumentationBeforeEditor(t *testing.T) {
+func TestUserMenuDialogF9RefreshesDocumentationBeforeEditor(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
@@ -205,14 +205,14 @@ command = "true"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
 	if !strings.Contains(app.model.Message, "updated documentation") {
 		t.Fatalf("Message = %q, want updated documentation notice", app.model.Message)
 	}
 }
 
-func TestUserMenuDialogF4ReloadsEntriesAfterEdit(t *testing.T) {
+func TestUserMenuDialogF9ReloadsEntriesAfterEdit(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
@@ -251,7 +251,7 @@ command = "true"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
 	if !app.model.UserMenu.Open {
 		t.Fatal("user menu dialog should stay open after F4 edit")
@@ -264,7 +264,7 @@ command = "true"
 	}
 }
 
-func TestUserMenuDialogF4ClosesOnInvalidFile(t *testing.T) {
+func TestUserMenuDialogF9ClosesOnInvalidFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
@@ -289,7 +289,7 @@ command = "true"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
 	if app.model.UserMenu.Open {
 		t.Fatal("user menu dialog should close after invalid menu.toml")
@@ -299,7 +299,7 @@ command = "true"
 	}
 }
 
-func TestMetaDialogF4KeepsCheckedWhenFileInvalid(t *testing.T) {
+func TestMetaDialogF9KeepsCheckedWhenFileInvalid(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -325,7 +325,7 @@ file = "wc -l"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleMetaDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	app.handleMetaDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open")

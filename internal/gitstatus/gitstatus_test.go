@@ -92,6 +92,7 @@ func initGitRepo(t *testing.T) string {
 	runGit(t, root, "init")
 	runGit(t, root, "config", "user.email", "t@example.com")
 	runGit(t, root, "config", "user.name", "test")
+	runGit(t, root, "config", "status.showUntrackedFiles", "all")
 	return root
 }
 

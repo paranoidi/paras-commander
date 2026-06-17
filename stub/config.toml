@@ -103,6 +103,9 @@ delete_mode = "permanent"
   local_names = ["menu.toml"]
 
 [preview]
+  mode = "internal"
+  style = "monokai"
+  line_numbers = true
   command = "bat -n --paging=never --color=always --wrap=auto --terminal-width=%w %f"
 
 [sftp]

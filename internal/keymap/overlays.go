@@ -39,6 +39,14 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
+		TableName: FilePreviewShortcutsTable,
+		Defaults:  DefaultFilePreviewOverlayKeys,
+		Allowed:   AllowedInFilePreviewOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [file_preview] action %q is not allowed (file.view.* only)", source, action)
+		},
+	},
+	{
 		TableName: DialogInputShortcutsTable,
 		Defaults:  DefaultDialogInputOverlayKeys,
 		Allowed:   AllowedInDialogInputOverlay,
@@ -120,6 +128,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "commands.* only"
 	case MessagesShortcutsTable:
 		return "messages.* only"
+	case FilePreviewShortcutsTable:
+		return "file.view.* only"
 	case DialogInputShortcutsTable:
 		return "ui.input.* only"
 	case DialogRenameShortcutsTable:

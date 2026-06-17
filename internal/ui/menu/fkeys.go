@@ -23,7 +23,7 @@ func (fk FunctionKey) FullHint() string {
 var FooterEscClose = FunctionKey{Key: tcell.KeyEsc, KeyLabel: "Esc", Hint: "Close"}
 
 // FunctionKeyEditConfig opens meta.toml or menu.toml from meta/user-menu dialogs.
-var FunctionKeyEditConfig = FunctionKey{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit config"}
+var FunctionKeyEditConfig = FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Edit config"}
 
 // FunctionKeys is the single source of truth for all F-keys shown in the footer
 // and used to route quick-filter function-key presses to menu items.
@@ -87,10 +87,21 @@ var FunctionKeysMessages = []FunctionKey{
 // FunctionKeysMessagesView returns hints for the Messages screen footer.
 func FunctionKeysMessagesView() []FunctionKey { return FunctionKeysMessages }
 
+// FunctionKeysFilePreviewStylePicker is the footer legend while the F3 style picker is open.
+func FunctionKeysFilePreviewStylePicker() []FunctionKey {
+	return []FunctionKey{
+		FooterEscClose,
+		{Key: tcell.KeyEnter, KeyLabel: "Enter", Hint: "Save"},
+		{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+	}
+}
+
 // FunctionKeysFilePreviewView is the footer legend while the full-screen file view is active.
 func FunctionKeysFilePreviewView() []FunctionKey {
 	return []FunctionKey{
 		FooterEscClose,
+		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
+		{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Style"},
 		{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 	}
 }
