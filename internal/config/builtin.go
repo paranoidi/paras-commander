@@ -204,7 +204,7 @@ const (
 	// PreviewModeExternal runs [preview].command as a subprocess.
 	PreviewModeExternal       = "external"
 	DefaultPreviewMode        = PreviewModeInternal
-	DefaultPreviewStyle       = "monokai"
+	DefaultPreviewStyle       = "catppuccin-frappe"
 	DefaultPreviewLineNumbers = true
 	DefaultPreviewTabWidth    = 4
 	// DefaultMaxPreviewBytes caps internal preview reads (matches cmdrun.MaxStreamBytes).

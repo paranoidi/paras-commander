@@ -90,7 +90,7 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 	return strings.TrimSpace(nameTitle)
 }
 
-func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaColumns []MetaColumnState, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool, scrollbarStyle uiscrollbar.Style, scrollbarShowInactive bool, carouselFilePreview FilePreviewState) {
+func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaColumns []MetaColumnState, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool, scrollbarStyle uiscrollbar.Style, scrollbarShowInactive bool, carouselFilePreview FilePreviewState, previewChromaStyle string) {
 	if rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
@@ -214,7 +214,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		})
 		if childKind == panelcarousel.ChildPreviewFile && carouselFilePreview.Open {
 			if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, showChildCol); ok {
-				drawFilePreviewPanel(screen, Rect(previewRect), carouselFilePreview, styles, chromeBlocked, false, true, true, state.PathString(), userHomeDir)
+				drawFilePreviewPanel(screen, Rect(previewRect), carouselFilePreview, styles, chromeBlocked, false, true, true, state.PathString(), userHomeDir, previewChromaStyle)
 			}
 		}
 		if !showChildCol {

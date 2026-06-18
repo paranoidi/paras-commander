@@ -102,7 +102,7 @@ delete_mode = "permanent"
 
 [preview]
   mode = "internal"
-  style = "monokai"
+  style = "catppuccin-frappe"
   line_numbers = true
   command = "bat -n --paging=never --color=always --wrap=auto --terminal-width=%w %f"
 

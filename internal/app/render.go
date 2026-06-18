@@ -2,7 +2,9 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -85,6 +87,11 @@ func (a *App) render() {
 	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsageDescendIntoMountPoints
 	a.model.DiskUsageGoduIgnore = a.diskUsageIgnore
 	a.snapshotPreviewDrawStates()
+	if strings.EqualFold(a.config.Preview.Mode, config.PreviewModeInternal) {
+		a.model.PreviewChromaStyle = a.config.Preview.Style
+	} else {
+		a.model.PreviewChromaStyle = ""
+	}
 	previewOpen := a.model.FilePreviewDraw.Open || a.model.QuickViewDisplayActive()
 	if a.model.ViewMode == ui.ViewFilePreview {
 		a.clampFullscreenFilePreviewScroll()

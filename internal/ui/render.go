@@ -143,18 +143,20 @@ type Model struct {
 	FullscreenFilePreviewDraw FilePreviewState
 	// FilePreviewThemePicker is the inline theme list on the right side of F3 file view.
 	FilePreviewThemePicker FilePreviewThemePickerState
-	HelpView               HelpViewState
-	FileDialog             FileDialogState
-	TransferDialog         TransferDialogState
-	FlattenDialog          FlattenDialogState
-	ConflictDialog         ConflictDialogState
-	HostKeyDialog          HostKeyDialogState
-	QuitConfirm            QuitConfirmState
-	StashRestoreDialog     StashRestoreDialogState
-	MessageDialog          MessageDialogState
-	Message                string
-	MessageUrgency         MessageUrgency
-	FooterKeys             []menu.FunctionKey
+	// PreviewChromaStyle is the active Chroma style name for internal preview border tinting (empty = external mode).
+	PreviewChromaStyle string
+	HelpView           HelpViewState
+	FileDialog         FileDialogState
+	TransferDialog     TransferDialogState
+	FlattenDialog      FlattenDialogState
+	ConflictDialog     ConflictDialogState
+	HostKeyDialog      HostKeyDialogState
+	QuitConfirm        QuitConfirmState
+	StashRestoreDialog StashRestoreDialogState
+	MessageDialog      MessageDialogState
+	Message            string
+	MessageUrgency     MessageUrgency
+	FooterKeys         []menu.FunctionKey
 	// MenuBarPermission is Unix mode text for the active panel cursor row (e.g. "drwxr-xr-x"); empty when none.
 	MenuBarPermission string
 	// MenuBarJobsAttention is the core jobs/conflict label (e.g. "! 1"); the menu bar pads it with
@@ -370,7 +372,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	case ViewFilePreview:
 		union := MergeTwinPanelRects(layout.Left, layout.Right)
 		previewRect, pickerRect := SplitFullscreenPreviewRects(union, model.FilePreviewThemePicker.Open, model.FilePreviewThemePicker.Choices)
-		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, "", "")
+		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, "", "", model.PreviewChromaStyle)
 		if model.FilePreviewThemePicker.Open && pickerRect.Width > 0 {
 			dialog.DrawFilePreviewThemePicker(screen, pickerRect, model.FilePreviewThemePicker, styles)
 		}
@@ -422,9 +424,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if layout.Left.Width > 0 && showLeftPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused,
-				model.QuickViewDisplayActive(), false, model.Left.PathString(), model.UserHomeDir)
+				model.QuickViewDisplayActive(), false, model.Left.PathString(), model.UserHomeDir, model.PreviewChromaStyle)
 		} else if layout.Left.Width > 0 {
-			drawPanel(screen, leftFile, model.PanelForFileListRender(LeftPanel), leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, leftOtherPanelPath, leftSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselFilePreviewDraw)
+			drawPanel(screen, leftFile, model.PanelForFileListRender(LeftPanel), leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, leftOtherPanelPath, leftSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselFilePreviewDraw, model.PreviewChromaStyle)
 		}
 		if layout.Left.Width > 0 && leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
@@ -433,9 +435,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if layout.Right.Width > 0 && showRightPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
-				model.QuickViewDisplayActive(), false, model.Right.PathString(), model.UserHomeDir)
+				model.QuickViewDisplayActive(), false, model.Right.PathString(), model.UserHomeDir, model.PreviewChromaStyle)
 		} else if layout.Right.Width > 0 {
-			drawPanel(screen, rightFile, model.PanelForFileListRender(RightPanel), rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, rightOtherPanelPath, rightSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselFilePreviewDraw)
+			drawPanel(screen, rightFile, model.PanelForFileListRender(RightPanel), rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, rightOtherPanelPath, rightSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselFilePreviewDraw, model.PreviewChromaStyle)
 		}
 		if layout.Right.Width > 0 && rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip

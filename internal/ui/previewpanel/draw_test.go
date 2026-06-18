@@ -20,6 +20,89 @@ func quickViewTitleRowGeom(panelWidth int) (titleX, innerRight, contentCols, y i
 	return titleX, innerRight, contentCols, y
 }
 
+func TestDrawPreviewChromaFrameFillsEmptyContentRows(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	githubBG := tcell.NewRGBColor(0xf7, 0xf7, 0xf7)
+	chromaFrame := styles.PanelInactiveFrame.Background(githubBG)
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	Draw(screen, rect, State{
+		Open:             true,
+		TitleBase:        "sample.go",
+		Source:           SourceInternalHighlighted,
+		HighlightedCells: []AnsiCell{{R: 'x', St: body}},
+	}, DrawParams{
+		Theme:      styles,
+		BodyStyle:  body,
+		FrameStyle: chromaFrame,
+	})
+
+	contentTop := rect.Y + 1
+	contentH := panelHeight - 1
+	emptyRowY := contentTop + 1
+	if emptyRowY >= contentTop+contentH {
+		t.Fatal("panel too short for empty-row check")
+	}
+	_, style, _ := screen.Get(rect.X+2, emptyRowY)
+	_, bg, _ := style.Decompose()
+	r, g, b := rgb(bg)
+	if r != 0xf7 || g != 0xf7 || b != 0xf7 {
+		t.Fatalf("empty content row bg = #%02x%02x%02x, want #f7f7f7", r, g, b)
+	}
+}
+
+func TestDrawPreviewChromaFrameUsesBackground(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	githubBG := tcell.NewRGBColor(0xf7, 0xf7, 0xf7)
+	chromaFrame := styles.PanelInactiveFrame.Background(githubBG)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	Draw(screen, rect, State{Open: true, TitleBase: "sample.go"}, DrawParams{
+		Theme:      styles,
+		BodyStyle:  BodyStyle(styles, false),
+		FrameStyle: chromaFrame,
+	})
+
+	_, style, _ := screen.Get(rect.X, rect.Y)
+	_, bg, _ := style.Decompose()
+	r, g, b := rgb(bg)
+	if r != 0xf7 || g != 0xf7 || b != 0xf7 {
+		t.Fatalf("corner border bg = #%02x%02x%02x, want #f7f7f7", r, g, b)
+	}
+	_, marginStyle, _ := screen.Get(rect.X+1, rect.Y+1)
+	_, marginBG, _ := marginStyle.Decompose()
+	mr, mg, mb := rgb(marginBG)
+	if mr != 0xf7 || mg != 0xf7 || mb != 0xf7 {
+		t.Fatalf("left margin bg = #%02x%02x%02x, want #f7f7f7", mr, mg, mb)
+	}
+	_, rightMarginStyle, _ := screen.Get(rect.X+panelWidth-2, rect.Y+1)
+	_, rightMarginBG, _ := rightMarginStyle.Decompose()
+	rr, rg, rb := rgb(rightMarginBG)
+	if rr != 0xf7 || rg != 0xf7 || rb != 0xf7 {
+		t.Fatalf("right margin bg = #%02x%02x%02x, want #f7f7f7", rr, rg, rb)
+	}
+}
+
+func rgb(c tcell.Color) (r, g, b int) {
+	cr, cg, cb := c.RGB()
+	return int(cr), int(cg), int(cb)
+}
+
 func TestPaintQuickViewTitleRowClearsStaleFilenameOnShorterRedraw(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

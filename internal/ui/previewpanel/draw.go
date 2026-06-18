@@ -20,7 +20,6 @@ type Rect struct {
 // DrawParams configures preview panel chrome and body styling.
 type DrawParams struct {
 	Theme           theme.Theme
-	Active          bool
 	ChromeBlocked   bool
 	PreviewFocused  bool
 	QuickViewChrome bool
@@ -28,6 +27,8 @@ type DrawParams struct {
 	PanelPath       string
 	UserHomeDir     string
 	BodyStyle       tcell.Style
+	// FrameStyle is the border/box-drawing style; when zero, theme panel frame is used.
+	FrameStyle tcell.Style
 }
 
 const gapBeforePanelTitleEnd = 2
@@ -61,7 +62,10 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	if p.ChromeBlocked {
 		_, bg, _ = p.Theme.PanelBlockedSurface.Decompose()
 	}
-	borderStyle := embeddedChrome.Frame
+	borderStyle := p.FrameStyle
+	if borderStyle == (tcell.Style{}) {
+		borderStyle = embeddedChrome.Frame
+	}
 	titleStyle := chrome.Title
 	if p.Embedded {
 		titleStyle = embeddedChrome.HeaderCarousel
@@ -115,6 +119,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		contentH = geom.JobsPanelContentRows(geom.Rect(rect))
 	}
 	if contentH <= 0 {
+		paintFrameMarginColumns(screen, rect, borderStyle, chrome.Surface, p.Embedded)
 		return
 	}
 	textX := rect.X + 2
@@ -134,12 +139,14 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 			errSt = p.Theme.PanelBlockedText.Foreground(efg)
 		}
 		primitive.Text(screen, textX, contentTop, textW, msg, errSt)
+		paintFrameMarginColumns(screen, rect, borderStyle, chrome.Surface, p.Embedded)
 		return
 	}
 
 	if st.ExitCode != 0 && !hasDrawableBody(st) {
 		line := filepath.Base(st.Path) + ": exit " + itoa(st.ExitCode)
 		primitive.Text(screen, textX, contentTop, textW, line, body)
+		paintFrameMarginColumns(screen, rect, borderStyle, chrome.Surface, p.Embedded)
 		return
 	}
 
@@ -152,13 +159,47 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	if scroll > maxStart {
 		scroll = maxStart
 	}
+	padStyle := contentPadStyle(borderStyle, chrome.Surface, body)
 	for row := 0; row < contentH; row++ {
 		y := contentTop + row
 		idx := scroll + row
 		if idx >= len(lines) {
-			break
+			fillContentRow(screen, textX, y, textW, padStyle)
+			continue
 		}
-		drawLine(screen, textX, y, textW, lines[idx], body)
+		drawLine(screen, textX, y, textW, lines[idx], padStyle)
+	}
+	paintFrameMarginColumns(screen, rect, borderStyle, chrome.Surface, p.Embedded)
+}
+
+func contentPadStyle(borderStyle, surfaceStyle, bodyStyle tcell.Style) tcell.Style {
+	_, borderBG, _ := borderStyle.Decompose()
+	_, surfaceBG, _ := surfaceStyle.Decompose()
+	if borderBG == surfaceBG {
+		return bodyStyle
+	}
+	fg, _, _ := bodyStyle.Decompose()
+	return bodyStyle.Foreground(fg).Background(borderBG)
+}
+
+func fillContentRow(screen tcell.Screen, x, y, width int, style tcell.Style) {
+	for col := 0; col < width; col++ {
+		screen.SetContent(x+col, y, ' ', nil, style)
+	}
+}
+
+func paintFrameMarginColumns(screen tcell.Screen, rect Rect, borderStyle, surfaceStyle tcell.Style, embedded bool) {
+	if embedded || rect.Width < 4 || rect.Height < 3 {
+		return
+	}
+	_, borderBG, _ := borderStyle.Decompose()
+	_, surfaceBG, _ := surfaceStyle.Decompose()
+	if borderBG == surfaceBG {
+		return
+	}
+	for y := rect.Y + 1; y < rect.Y+rect.Height-1; y++ {
+		screen.SetContent(rect.X+1, y, ' ', nil, borderStyle)
+		screen.SetContent(rect.X+rect.Width-2, y, ' ', nil, borderStyle)
 	}
 }
 

@@ -69,7 +69,7 @@ func TestGitNotModifiedUsesUsageForegroundUnderDiskMeter(t *testing.T) {
 	}
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	drawPanel(screen, rect, state, true, false, styles, false, "",
-		painter, false, nil, true, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, uiscrollbar.StyleNone, true, FilePreviewState{})
+		painter, false, nil, true, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, uiscrollbar.StyleNone, true, FilePreviewState{}, "")
 
 	rowY := rect.Y + 2 // first data row (large directory)
 	gitCol := rect.X + 1

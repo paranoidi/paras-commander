@@ -175,7 +175,7 @@ type ShellConfig struct {
 type PreviewConfig struct {
 	// Mode is "internal" (Chroma in-process) or "external" (subprocess command).
 	Mode string `toml:"mode"`
-	// Style is the Chroma style name for internal mode (default monokai).
+	// Style is the Chroma style name for internal mode (default catppuccin-frappe).
 	Style string `toml:"style"`
 	// LineNumbers prefixes each line with a gutter in internal mode.
 	LineNumbers bool `toml:"line_numbers"`
