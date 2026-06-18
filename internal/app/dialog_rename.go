@@ -32,6 +32,16 @@ func (a *App) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
 		d.RenameSlugifySep = ui.RenameSlugifyDot
 		d.FocusedField = ui.FileDialogOKFocusIndex(*d)
 		return true
+	case keymap.ActionFileRenameOpenEncoding:
+		if len(d.RenameEncodingCandidates) == 0 {
+			return false
+		}
+		d.RenamePhase = ui.RenamePhaseEncoding
+		if d.RenameEncodingSelected < 0 || d.RenameEncodingSelected >= len(d.RenameEncodingCandidates) {
+			d.RenameEncodingSelected = 0
+		}
+		d.FocusedField = ui.FileDialogOKFocusIndex(*d)
+		return true
 	default:
 		return false
 	}
@@ -46,7 +56,15 @@ func (a *App) renameDialogFooterEligible() bool {
 		return false
 	}
 	return a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize) != "" ||
-		a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify) != ""
+		a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify) != "" ||
+		(len(d.RenameEncodingCandidates) > 0 && a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != "")
+}
+
+func (a *App) renameEncodingFooterEligible() bool {
+	d := &a.model.FileDialog
+	return d.Open && ui.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase == ui.RenamePhaseMain &&
+		len(d.RenameEncodingCandidates) > 0 && a.keysRenameDialog != nil &&
+		a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != ""
 }
 
 func (a *App) closeRenameToolPhase() {
@@ -67,9 +85,24 @@ func (a *App) applyRenameToolAndReturnMain() {
 		f.Value = ui.ApplyRenameSanitize(f.Value, d.RenameSanitizeDots, d.RenameSanitizeUnderscores)
 	case ui.RenamePhaseSlugify:
 		f.Value = ui.ApplyRenameSlugify(f.Value, d.RenameSlugifySep)
+	case ui.RenamePhaseEncoding:
+		idx := d.RenameEncodingSelected
+		if idx < 0 || idx >= len(d.RenameEncodingCandidates) {
+			a.closeRenameToolPhase()
+			return
+		}
+		f.Value = d.RenameEncodingCandidates[idx].UTF8
 	}
 	f.Cursor = len([]rune(f.Value))
 	f.PrefillPending = false
 	d.RenamePhase = ui.RenamePhaseMain
 	d.FocusedField = 0
+}
+
+func (a *App) selectRenameEncodingAtFocus() {
+	d := &a.model.FileDialog
+	if d.FocusedField < 0 || d.FocusedField >= len(d.RenameEncodingCandidates) {
+		return
+	}
+	d.RenameEncodingSelected = d.FocusedField
 }

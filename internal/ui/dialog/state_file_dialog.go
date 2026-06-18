@@ -81,7 +81,14 @@ const (
 	RenamePhaseMain RenamePhase = iota
 	RenamePhaseSanitize
 	RenamePhaseSlugify
+	RenamePhaseEncoding
 )
+
+// RenameEncodingCandidate is one legacy-encoding decode offered in the rename encoding tool.
+type RenameEncodingCandidate struct {
+	Label string
+	UTF8  string
+}
 
 // FileDialogState holds state for any file operation dialog.
 type FileDialogState struct {
@@ -120,6 +127,9 @@ type FileDialogState struct {
 	RenameSlugifySep          RenameSlugifySep
 	// RenameFocusAfter selects and centers the renamed entry after OK (single-file rename main dialog only).
 	RenameFocusAfter bool
+	// RenameEncodingCandidates / RenameEncodingSelected apply when opening rename with detectable legacy encodings.
+	RenameEncodingCandidates []RenameEncodingCandidate
+	RenameEncodingSelected   int
 
 	// Mass rename (DialogType == FileDialogMassRename).
 	MassRenameMode          MassRenameModeUI

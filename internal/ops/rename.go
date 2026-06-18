@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -27,6 +28,9 @@ func PlanRename(source localfs.Entry, newName string, panelPath string) (RenameP
 	}
 	if strings.Contains(newName, "/") || strings.Contains(newName, string(filepath.Separator)) {
 		return RenamePlan{}, &Error{Op: "rename", Text: "name must be a single filename without path separators"}
+	}
+	if !utf8.ValidString(newName) {
+		return RenamePlan{}, &Error{Op: "rename", Text: "name is not valid UTF-8"}
 	}
 
 	srcLoc, err := pathloc.Parse(source.Path)

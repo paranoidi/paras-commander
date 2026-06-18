@@ -42,6 +42,7 @@ type (
 	MkdirActionRadioSpec         = dialog.MkdirActionRadioSpec
 	RenamePhase                  = dialog.RenamePhase
 	RenameSlugifySep             = dialog.RenameSlugifySep
+	RenameEncodingCandidate      = dialog.RenameEncodingCandidate
 	FileDialogState              = dialog.FileDialogState
 	MassRenameModeUI             = dialog.MassRenameModeUI
 	MassRenameSource             = dialog.MassRenameSource
@@ -95,6 +96,7 @@ const (
 	RenamePhaseMain     = dialog.RenamePhaseMain
 	RenamePhaseSanitize = dialog.RenamePhaseSanitize
 	RenamePhaseSlugify  = dialog.RenamePhaseSlugify
+	RenamePhaseEncoding = dialog.RenamePhaseEncoding
 
 	RenameSlugifyDot        = dialog.RenameSlugifyDot
 	RenameSlugifyUnderscore = dialog.RenameSlugifyUnderscore
@@ -251,6 +253,11 @@ func ApplyRenameSanitize(s string, dotsToSpace, underscoresToSpace bool) string 
 // ApplyRenameSlugify replaces ASCII spaces with the chosen separator (delegates to dialog).
 func ApplyRenameSlugify(s string, sep RenameSlugifySep) string {
 	return dialog.ApplyRenameSlugify(s, dialog.RenameSlugifySep(sep))
+}
+
+// RenameEncodingCandidateShortcut returns the Alt+letter shortcut for an encoding label.
+func RenameEncodingCandidateShortcut(label string) rune {
+	return dialog.RenameEncodingCandidateShortcut(label)
 }
 
 // FileDialogHasRenamePhase reports dialog types that use RenamePhase (rename, copy-here).

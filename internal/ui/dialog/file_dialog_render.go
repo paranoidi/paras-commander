@@ -123,6 +123,8 @@ func fileDialogOuterTitle(state FileDialogState) string {
 			return "Sanitize"
 		case RenamePhaseSlugify:
 			return "Slugify"
+		case RenamePhaseEncoding:
+			return "Encoding"
 		default:
 			if state.DialogType == FileDialogCopyHere {
 				return "Copy here"
@@ -530,7 +532,7 @@ func fileDialogOKFocusIndex(state FileDialogState) int {
 		return massRenameContentEnd(state)
 	}
 	if renameToolActive(state) {
-		return renameToolOptionCount()
+		return renameToolOptionCount(state)
 	}
 	return len(state.Fields) + mkdirExtraFocusRows(state) + renameExtraFocusRows(state) + runForEachExtraFocusRows(state)
 }
@@ -544,12 +546,21 @@ func fileDialogCancelFocusIndex(state FileDialogState) int {
 		return massRenameContentEnd(state) + 1
 	}
 	if renameToolActive(state) {
-		return renameToolOptionCount() + 1
+		return renameToolOptionCount(state) + 1
 	}
 	return len(state.Fields) + mkdirExtraFocusRows(state) + renameExtraFocusRows(state) + runForEachExtraFocusRows(state) + 1
 }
 
-func renameToolOptionCount() int { return 2 }
+func renameToolOptionCount(state FileDialogState) int {
+	switch state.RenamePhase {
+	case RenamePhaseEncoding:
+		return RenameEncodingOptionCount(state)
+	case RenamePhaseSanitize, RenamePhaseSlugify:
+		return 2
+	default:
+		return 2
+	}
+}
 
 func renameToolOptionLabels(state FileDialogState) []string {
 	if state.RenamePhase == RenamePhaseSanitize {
@@ -570,6 +581,8 @@ func renameToolPreviewText(state FileDialogState) string {
 		return ApplyRenameSanitize(v, state.RenameSanitizeDots, state.RenameSanitizeUnderscores)
 	case RenamePhaseSlugify:
 		return ApplyRenameSlugify(v, state.RenameSlugifySep)
+	case RenamePhaseEncoding:
+		return RenameEncodingPreviewText(state)
 	default:
 		return v
 	}
@@ -610,13 +623,24 @@ func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState
 		if y < innerBottom {
 			draw.DrawDialogCheckbox(screen, leftCol, y, `Replace "_" with space`, '_', state.RenameSanitizeUnderscores, state.FocusedField == 1, styles)
 		}
-	} else {
+	} else if state.RenamePhase == RenamePhaseSlugify {
 		dotSel := state.RenameSlugifySep == RenameSlugifyDot
 		usSel := state.RenameSlugifySep == RenameSlugifyUnderscore
 		draw.DrawDialogRadio(screen, leftCol, y, `Replace space with "."`, '.', dotSel, state.FocusedField == 0, styles)
 		y++
 		if y < innerBottom {
 			draw.DrawDialogRadio(screen, leftCol, y, `Replace space with "_"`, '_', usSel, state.FocusedField == 1, styles)
+		}
+	} else if state.RenamePhase == RenamePhaseEncoding {
+		for i := 0; i < len(state.RenameEncodingCandidates); i++ {
+			if y >= innerBottom {
+				break
+			}
+			label := RenameEncodingOptionLabel(state, i)
+			shortcut := RenameEncodingOptionShortcut(state, i)
+			sel := state.RenameEncodingSelected == i
+			draw.DrawDialogRadio(screen, leftCol, y, label, shortcut, sel, state.FocusedField == i, styles)
+			y++
 		}
 	}
 }

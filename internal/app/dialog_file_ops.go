@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/paranoidi/paras-commander/internal/filenameenc"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -41,16 +42,23 @@ func (a *App) openRenameDialog(p *panel.State) {
 	}
 	name := entry.Name
 	nameRunes := len([]rune(name))
+	encCands := filenameenc.DetectCandidates(name)
+	renameEnc := make([]ui.RenameEncodingCandidate, 0, len(encCands))
+	for _, c := range encCands {
+		renameEnc = append(renameEnc, ui.RenameEncodingCandidate{Label: c.Label, UTF8: c.UTF8})
+	}
 	fields := []ui.FileDialogField{
 		{Label: "Name", Value: name, Prefill: name, Cursor: nameRunes, PrefillPending: true},
 	}
 	a.model.FileDialog = ui.FileDialogState{
-		Open:             true,
-		DialogType:       ui.FileDialogRename,
-		Fields:           fields,
-		RenamePhase:      ui.RenamePhaseMain,
-		RenameSlugifySep: ui.RenameSlugifyDot,
-		RenameFocusAfter: a.config.Operations.RenameFocusAfter,
+		Open:                     true,
+		DialogType:               ui.FileDialogRename,
+		Fields:                   fields,
+		RenamePhase:              ui.RenamePhaseMain,
+		RenameSlugifySep:         ui.RenameSlugifyDot,
+		RenameFocusAfter:         a.config.Operations.RenameFocusAfter,
+		RenameEncodingCandidates: renameEnc,
+		RenameEncodingSelected:   0,
 	}
 }
 

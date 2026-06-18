@@ -25,6 +25,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
+	"golang.org/x/text/encoding/japanese"
 )
 
 func TestSetErrorMessageOpsErrorNoDuplicatePrefix(t *testing.T) {
@@ -5243,6 +5244,56 @@ func TestRenameDialogSlugifyF3ApplyTransformsName(t *testing.T) {
 	}
 	if got := app.model.FileDialog.Fields[0].Value; got != "my.file" {
 		t.Fatalf("name = %q, want %q", got, "my.file")
+	}
+}
+
+func TestRenameDialogEncodingF4ApplyConvertsLegacyName(t *testing.T) {
+	dir := t.TempDir()
+	want := "日本語"
+	sjis, err := japanese.ShiftJIS.NewEncoder().String(want)
+	if err != nil {
+		t.Fatalf("encode: %v", err)
+	}
+	if utf8.ValidString(sjis) {
+		t.Fatal("want invalid UTF-8 test name")
+	}
+	if err := os.Mkdir(filepath.Join(dir, sjis), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	_ = app.activePanel().Refresh(app.activeViewportRows())
+	if !app.activePanel().SelectVisibleEntry(sjis) {
+		t.Fatal("SelectVisibleEntry(sjis) failed")
+	}
+
+	app.dispatch(keymap.ActionFileRename)
+	if len(app.model.FileDialog.RenameEncodingCandidates) == 0 {
+		t.Fatal("want encoding candidates")
+	}
+	keys := app.activeFooterKeys()
+	foundEncoding := false
+	for _, k := range keys {
+		if k.Hint == "Encoding" && k.Key == tcell.KeyF4 {
+			foundEncoding = true
+			break
+		}
+	}
+	if !foundEncoding {
+		t.Fatalf("footer missing F4 Encoding: %+v", keys)
+	}
+
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	if app.model.FileDialog.RenamePhase != ui.RenamePhaseEncoding {
+		t.Fatalf("phase = %v, want Encoding", app.model.FileDialog.RenamePhase)
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+		t.Fatalf("want back on main rename, got phase %v", app.model.FileDialog.RenamePhase)
+	}
+	if got := app.model.FileDialog.Fields[0].Value; got != want {
+		t.Fatalf("name = %q, want %q", got, want)
 	}
 }
 

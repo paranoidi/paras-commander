@@ -212,6 +212,23 @@ func TestPlanRenameEmptyName(t *testing.T) {
 	}
 }
 
+func TestPlanRenameInvalidUTF8(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "old")
+	if err := os.WriteFile(src, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	entry, err := localfs.EntryFromPath(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	invalid := string([]byte{0xff, 0xfe})
+	_, err = PlanRename(entry, invalid, dir)
+	if err == nil {
+		t.Fatal("PlanRename() error = nil, want invalid UTF-8")
+	}
+}
+
 func TestPlanRenameWithPathSeparator(t *testing.T) {
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "a.txt")

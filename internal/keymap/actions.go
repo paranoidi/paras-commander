@@ -72,6 +72,7 @@ const (
 	// [dialog.rename], not [main].
 	ActionFileRenameOpenSanitize       = "file.rename.open-sanitize"
 	ActionFileRenameOpenSlugify        = "file.rename.open-slugify"
+	ActionFileRenameOpenEncoding       = "file.rename.open-encoding"
 	ActionFileDelete                   = "file.delete"
 	ActionFileMkdir                    = "file.mkdir"
 	ActionFileMkdirOpenInOther         = "file.mkdir-open-in-other"
@@ -233,6 +234,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileRename:                   {},
 	ActionFileRenameOpenSanitize:       {},
 	ActionFileRenameOpenSlugify:        {},
+	ActionFileRenameOpenEncoding:       {},
 	ActionFileDelete:                   {},
 	ActionFileMkdir:                    {},
 	ActionFileMkdirOpenInOther:         {},

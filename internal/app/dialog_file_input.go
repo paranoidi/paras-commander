@@ -522,7 +522,7 @@ func (a *App) fileDialogOnButton() bool {
 		return true // delete only has buttons
 	}
 	if ui.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != ui.RenamePhaseMain {
-		return d.FocusedField >= 2
+		return d.FocusedField >= ui.FileDialogOKFocusIndex(*d)
 	}
 	return d.FocusedField >= ui.FileDialogOKFocusIndex(*d)
 }
@@ -533,7 +533,8 @@ func (a *App) handleRenameToolKey(event *tcell.EventKey) bool {
 		if a.tryStandardDialogActions(event, a.applyRenameToolAndReturnMain, a.closeRenameToolPhase, nil) {
 			return false
 		}
-		if d.RenamePhase == ui.RenamePhaseSanitize {
+		switch d.RenamePhase {
+		case ui.RenamePhaseSanitize:
 			switch event.Rune() {
 			case '.':
 				d.RenameSanitizeDots = !d.RenameSanitizeDots
@@ -544,7 +545,7 @@ func (a *App) handleRenameToolKey(event *tcell.EventKey) bool {
 				d.FocusedField = 1
 				return false
 			}
-		} else {
+		case ui.RenamePhaseSlugify:
 			switch event.Rune() {
 			case '.':
 				d.RenameSlugifySep = ui.RenameSlugifyDot
@@ -554,6 +555,14 @@ func (a *App) handleRenameToolKey(event *tcell.EventKey) bool {
 				d.RenameSlugifySep = ui.RenameSlugifyUnderscore
 				d.FocusedField = 1
 				return false
+			}
+		case ui.RenamePhaseEncoding:
+			for i := 0; i < len(d.RenameEncodingCandidates); i++ {
+				if event.Rune() == ui.RenameEncodingCandidateShortcut(d.RenameEncodingCandidates[i].Label) {
+					d.RenameEncodingSelected = i
+					d.FocusedField = i
+					return false
+				}
 			}
 		}
 	}
@@ -571,10 +580,13 @@ func (a *App) handleRenameToolKey(event *tcell.EventKey) bool {
 		case cancelIdx:
 			a.closeRenameToolPhase()
 		default:
-			if d.RenamePhase == ui.RenamePhaseSanitize {
+			switch d.RenamePhase {
+			case ui.RenamePhaseSanitize:
 				a.toggleRenameSanitizeAtFocus()
-			} else {
+			case ui.RenamePhaseSlugify:
 				a.selectRenameSlugifyAtFocus()
+			case ui.RenamePhaseEncoding:
+				a.selectRenameEncodingAtFocus()
 			}
 		}
 		return false
@@ -591,10 +603,13 @@ func (a *App) handleRenameToolKey(event *tcell.EventKey) bool {
 		return false
 	case tcell.KeyRune:
 		if isPlainPrintableRune(event) && event.Rune() == ' ' {
-			if d.RenamePhase == ui.RenamePhaseSanitize {
+			switch d.RenamePhase {
+			case ui.RenamePhaseSanitize:
 				a.toggleRenameSanitizeAtFocus()
-			} else {
+			case ui.RenamePhaseSlugify:
 				a.selectRenameSlugifyAtFocus()
+			case ui.RenamePhaseEncoding:
+				a.selectRenameEncodingAtFocus()
 			}
 		}
 		return false

@@ -6,6 +6,7 @@ func DefaultRenameDialogOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionFileRenameOpenSanitize: {"F2"},
 		ActionFileRenameOpenSlugify:  {"F3"},
+		ActionFileRenameOpenEncoding: {"F4"},
 	}
 }
 
@@ -13,7 +14,7 @@ func DefaultRenameDialogOverlayKeys() map[string][]string {
 // [dialog.rename].
 func AllowedInRenameDialogOverlay(actionID string) bool {
 	switch actionID {
-	case ActionFileRenameOpenSanitize, ActionFileRenameOpenSlugify:
+	case ActionFileRenameOpenSanitize, ActionFileRenameOpenSlugify, ActionFileRenameOpenEncoding:
 		return true
 	default:
 		return false

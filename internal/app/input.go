@@ -162,6 +162,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			}
 		}
 		if a.renameDialogFooterEligible() {
+			if a.renameEncodingFooterEligible() {
+				if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding); lbl != "" {
+					rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: lbl, Hint: "Encoding"}}, rest...)
+				}
+			}
 			if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify); lbl != "" {
 				rest = append([]menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: lbl, Hint: "Slugify"}}, rest...)
 			}
