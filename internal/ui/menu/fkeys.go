@@ -32,7 +32,7 @@ var FunctionKeys = []FunctionKey{
 	{Key: tcell.KeyF2, KeyLabel: "F2", HintShiftPrefix: "Edit", Hint: "UserCmd"},
 	{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", Hint: "View"},
 	{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
-	{Key: tcell.KeyF5, KeyLabel: "F5", HintShiftPrefix: "Here", Hint: "Copy"},
+	{Key: tcell.KeyF5, KeyLabel: "F5", HintShiftPrefix: "Duplicate", Hint: "Copy"},
 	{Key: tcell.KeyF6, KeyLabel: "F6", HintShiftPrefix: "Ren", Hint: "Mov"},
 	{Key: tcell.KeyF7, KeyLabel: "F7", HintShiftPrefix: "Open", Hint: "Mkdir"},
 	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete"},
