@@ -271,6 +271,12 @@ func (a *App) reconcileCarouselFilePreview() {
 		return
 	}
 	p := a.activePanel()
+	if !p.CarouselMode {
+		// Active panel is not in carousel mode — do not touch the
+		// global carousel file preview; the inactive panel (still with
+		// CarouselMode=true) may be using it for its child column.
+		return
+	}
 	eligible := a.carouselFilePreviewEligible()
 	kind := panelcarousel.ChildPreviewKindFor(*p, a.model.QuickViewDisplayActive(), eligible)
 	if kind != panelcarousel.ChildPreviewFile {
