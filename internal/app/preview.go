@@ -56,9 +56,15 @@ func (a *App) closeFilePreview() {
 	a.model.FilePreview = ui.FilePreviewState{}
 	a.commandsMu.Unlock()
 	a.clearFilePreviewHold(previewTargetInactive)
+	a.clearQuickViewDirOverlayVisualHold()
 	if a.model.ActiveSubFocus == ui.SubFocusInactivePreview {
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 	}
+}
+
+func (a *App) clearQuickViewDirOverlayVisualHold() {
+	a.model.QuickViewDirOverlayVisualHold = false
+	a.model.QuickViewDirOverlayVisualHoldPanel = panel.State{}
 }
 
 func (a *App) filePreviewOpen() bool {
@@ -555,13 +561,20 @@ func (a *App) applyQuickViewPreviewNow() {
 	switch mode {
 	case quickViewWantNone:
 		a.clearQuickViewDirOverlay()
+		a.clearQuickViewDirOverlayVisualHold()
 		a.patchColumnPreviewMessage("", "Quick view: no file")
 	case quickViewWantDir:
 		a.quickViewFollowDirectory()
 	case quickViewWantStatErr:
 		a.clearQuickViewDirOverlay()
+		a.clearQuickViewDirOverlayVisualHold()
 		a.patchColumnPreviewMessage("", "Quick view: cannot read selection")
 	case quickViewWantFile:
+		// When coming from a dir overlay, keep showing it until file content arrives.
+		if a.model.QuickViewDirOverlayActive {
+			a.model.QuickViewDirOverlayVisualHoldPanel = a.model.QuickViewDirOverlay
+			a.model.QuickViewDirOverlayVisualHold = true
+		}
 		a.clearQuickViewDirOverlay()
 		if err := localfs.CheckFilePreviewable(path); err != nil {
 			switch {

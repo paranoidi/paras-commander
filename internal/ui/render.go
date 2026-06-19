@@ -140,6 +140,11 @@ type Model struct {
 	QuickViewDirOverlayActive bool
 	// QuickViewDirOverlayPanelID is LeftPanel or RightPanel for the inactive column, or -1 when inactive.
 	QuickViewDirOverlayPanelID int
+	// QuickViewDirOverlayVisualHold retains the last dir-overlay snapshot during a folder→file debounce
+	// transition. While true the inactive column continues to paint the held dir listing instead of the
+	// loading file-preview chrome, preventing a blank/spinner flash before file content arrives.
+	QuickViewDirOverlayVisualHold      bool
+	QuickViewDirOverlayVisualHoldPanel panel.State
 	// FullscreenFilePreview is the full-screen file view state (mutate only under App.commandsMu).
 	FullscreenFilePreview FilePreviewState
 	// FullscreenFilePreviewDraw is a snapshot for ViewFilePreview rendering.
@@ -258,6 +263,11 @@ func (m Model) InactiveColumnShowsFilePreview(inactivePanelID int) bool {
 		return false
 	}
 	if m.QuickViewDisplayActive() && !m.QuickViewDirOverlayActive {
+		// During a folder→file debounce transition the dir overlay snapshot is kept visible
+		// until the file preview has content; show the dir panel (not file-preview chrome).
+		if m.QuickViewDirOverlayVisualHold {
+			return false
+		}
 		return true
 	}
 	return m.FilePreviewDraw.Open
@@ -277,6 +287,9 @@ func (m Model) inactivePanelID() int {
 func (m Model) PanelForFileListRender(panelID int) panel.State {
 	if m.QuickViewDisplayActive() && m.QuickViewDirOverlayActive && panelID == m.QuickViewDirOverlayPanelID {
 		return m.QuickViewDirOverlay
+	}
+	if m.QuickViewDisplayActive() && m.QuickViewDirOverlayVisualHold && panelID == m.inactivePanelID() {
+		return m.QuickViewDirOverlayVisualHoldPanel
 	}
 	switch panelID {
 	case LeftPanel:

@@ -6742,6 +6742,77 @@ func TestQuickViewPreviewNavDebounceDefersPreviewUntilFlush(t *testing.T) {
 	}
 }
 
+// TestQuickViewDirToFileDebounceKeepsDirOverlayVisible verifies that navigating from a
+// directory entry to a text file during debounce keeps the dir-overlay visible
+// (QuickViewDirOverlayVisualHold) instead of immediately switching to the loading chrome.
+func TestQuickViewDirToFileDebounceKeepsDirOverlayVisible(t *testing.T) {
+	root := t.TempDir()
+	subdir := filepath.Join(root, "bravo")
+	if err := os.Mkdir(subdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	article := filepath.Join(root, "article.txt")
+	writeFile(t, article)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.UI.KeyRepeatDebounceMS = 500
+
+	// Start with cursor on the directory and quick view open.
+	app.model.ActivePanel = ui.LeftPanel
+	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "bravo")
+	app.model.QuickViewEnabled = true
+	app.applyQuickViewPreviewImmediately()
+
+	if !app.model.QuickViewDirOverlayActive {
+		t.Fatal("dir overlay should be active when cursor is on a directory")
+	}
+
+	// Navigate down to the text file; debounce coalesces the preview update.
+	app.dispatch(keymap.ActionNavDown)
+	app.reconcileAfterEvent()
+
+	// While debounce is active the dir overlay stays (reconcile is skipped).
+	if !app.model.QuickViewDirOverlayActive {
+		t.Fatal("dir overlay should still be active while debounce is coalescing")
+	}
+
+	// Flush the debounce — this is where the bug occurred: applyQuickViewPreviewNow
+	// should set the visual hold before clearing the dir overlay.
+	flushed := app.applyQuickViewPreviewFlush(quickViewFlushPayload{gen: app.quickViewDebounceGen.Load()})
+	if !flushed {
+		t.Fatal("applyQuickViewPreviewFlush should have applied")
+	}
+
+	// After flush: dir overlay must be cleared but the visual hold must be active.
+	if app.model.QuickViewDirOverlayActive {
+		t.Fatal("dir overlay should be cleared after debounce flush")
+	}
+
+	// The visual hold must be active: the inactive column should show the dir overlay
+	// (not file-preview chrome) while the file preview is still loading.
+	if !app.model.QuickViewDirOverlayVisualHold {
+		t.Fatal("visual hold should be active during dir→file transition while file is loading")
+	}
+	if app.model.InactiveColumnShowsFilePreview(app.inactivePanelID()) {
+		t.Fatal("inactive column should not show file-preview chrome while visual hold is active")
+	}
+
+	// Simulate the file preview completing (Phase=Done).
+	app.commandsMu.Lock()
+	app.model.FilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FilePreview.CombinedText = "content"
+	app.commandsMu.Unlock()
+
+	// After snapshotPreviewDrawStates, the visual hold should be cleared.
+	app.snapshotPreviewDrawStates()
+	if app.model.QuickViewDirOverlayVisualHold {
+		t.Fatal("visual hold should be cleared once file preview has content")
+	}
+	if !app.model.InactiveColumnShowsFilePreview(app.inactivePanelID()) {
+		t.Fatal("inactive column should show file-preview chrome once content is ready")
+	}
+}
+
 func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "notes.txt")
