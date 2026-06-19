@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/preview/chromaformat"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -9,6 +11,10 @@ import (
 
 // drawFilePreviewPanel paints a file preview panel (quick view, fullscreen, or carousel child).
 func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome, embedded bool, panelPath, userHomeDir, chromaStyleName string) {
+	// Don't apply chroma frame colors when showing a message (e.g. "not a text file").
+	if strings.TrimSpace(st.ErrorMsg) != "" {
+		chromaStyleName = ""
+	}
 	previewpanel.Draw(screen, previewpanel.Rect(rect), st, previewpanel.DrawParams{
 		Theme:           styles,
 		ChromeBlocked:   chromeBlocked,
