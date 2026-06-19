@@ -93,7 +93,7 @@ usage.selected = { fg = "yellow", bg = "bright_black" }
 disk_usage_overview = { fg = "blue"}
 frame = { fg = "blue" }
 header = { fg = "bright_white", bg = "blue", bold = true }
-header.carousel = { fg = "black", bg = "bright_black" }
+header.carousel = { fg = "white", bg = "bright_black" }
 row.cursor = { fg = "black", bg = "cyan", icon = "black" }
 row.cursor.selected = { fg = "yellow", bg = "cyan", bold = true, icon = "black" }
 surface = { fg = "white" }
