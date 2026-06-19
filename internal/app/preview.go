@@ -256,8 +256,9 @@ func (a *App) quickViewFilePreviewScrollable() bool {
 	return strings.TrimSpace(st.CombinedText) != ""
 }
 
-// tryDispatchQuickViewPreviewScroll handles Ctrl+J/Ctrl+K while quick view is latched.
-// Scrolls inactive file preview when available; otherwise pages the active file list.
+// tryDispatchQuickViewPreviewScroll handles Ctrl+J/Ctrl+K preview page keys.
+// Scrolls carousel child preview or inactive quick-view preview when available;
+// otherwise pages the active file list while quick view is latched.
 func (a *App) tryDispatchQuickViewPreviewScroll(actionID string) bool {
 	var pageDir int
 	switch actionID {
@@ -268,7 +269,19 @@ func (a *App) tryDispatchQuickViewPreviewScroll(actionID string) bool {
 	default:
 		return false
 	}
-	if a.model.ViewMode != ui.ViewBrowser || !a.model.QuickViewEnabled {
+	if a.model.ViewMode != ui.ViewBrowser {
+		return false
+	}
+	if a.carouselFilePreviewScrollable() {
+		_, ch, _ := a.carouselFilePreviewScrollMetrics()
+		step := ch
+		if step < 1 {
+			step = 1
+		}
+		a.carouselPreviewScrollBy(pageDir * step)
+		return true
+	}
+	if !a.model.QuickViewEnabled {
 		return false
 	}
 	if a.quickViewFilePreviewScrollable() {
@@ -535,7 +548,7 @@ func (a *App) applyQuickViewPreviewNow() {
 	if !a.model.QuickViewDisplayActive() || a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	if a.model.Menu.Open || a.model.ModalDialogOpen() || a.inQuickFilterUI() {
+	if a.model.Menu.Open || a.model.ModalDialogOpen() {
 		return
 	}
 	path, workDir, mode := a.quickViewWantFile()
@@ -643,7 +656,7 @@ func (a *App) applyQuickViewPreviewFlush(p quickViewFlushPayload) bool {
 	if !a.model.QuickViewDisplayActive() || a.model.ViewMode != ui.ViewBrowser {
 		return false
 	}
-	if a.model.Menu.Open || a.model.ModalDialogOpen() || a.inQuickFilterUI() {
+	if a.model.Menu.Open || a.model.ModalDialogOpen() {
 		return false
 	}
 	a.applyQuickViewPreviewNow()
@@ -659,7 +672,7 @@ func (a *App) reconcileQuickViewPreview() {
 	if a.quickViewNavSkipReconcile.Load() {
 		return
 	}
-	if a.model.Menu.Open || a.model.ModalDialogOpen() || a.inQuickFilterUI() {
+	if a.model.Menu.Open || a.model.ModalDialogOpen() {
 		return
 	}
 	sig := a.quickViewFingerprint()
@@ -757,7 +770,7 @@ func (a *App) clampPreviewScroll(target previewTarget) {
 	case previewTargetFullscreen:
 		a.clampFullscreenFilePreviewScroll()
 	case previewTargetCarousel:
-		// v1: carousel preview is not keyboard-scrollable.
+		a.clampCarouselFilePreviewScroll()
 	default:
 		a.clampFilePreviewScroll()
 	}

@@ -178,6 +178,154 @@ func TestPaintQuickViewTitleRowClearsVolumeLabelPrefill(t *testing.T) {
 	}
 }
 
+func TestDrawEmbeddedPreviewChromaFramePaintsMarginColumns(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	githubBG := tcell.NewRGBColor(0xf7, 0xf7, 0xf7)
+	chromaFrame := styles.PanelActiveFrame.Background(githubBG)
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	Draw(screen, rect, State{
+		Open:             true,
+		TitleBase:        "sample.go",
+		Source:           SourceInternalHighlighted,
+		HighlightedCells: []AnsiCell{{R: 'x', St: body}},
+	}, DrawParams{
+		Theme:      styles,
+		Embedded:   true,
+		BodyStyle:  body,
+		FrameStyle: chromaFrame,
+	})
+
+	for _, col := range []int{rect.X, rect.X + panelWidth - 1} {
+		_, marginStyle, _ := screen.Get(col, rect.Y+1)
+		_, marginBG, _ := marginStyle.Decompose()
+		r, g, b := rgb(marginBG)
+		if r != 0xf7 || g != 0xf7 || b != 0xf7 {
+			t.Fatalf("embedded margin col %d bg = #%02x%02x%02x, want #f7f7f7", col, r, g, b)
+		}
+	}
+}
+
+func TestDrawEmbeddedPreviewTitleRowEdgesUseTitleBackground(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	githubBG := tcell.NewRGBColor(0xf7, 0xf7, 0xf7)
+	chromaFrame := styles.PanelActiveFrame.Background(githubBG)
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	Draw(screen, rect, State{
+		Open:             true,
+		TitleBase:        "sample.go",
+		Source:           SourceInternalHighlighted,
+		HighlightedCells: []AnsiCell{{R: 'x', St: body}},
+	}, DrawParams{
+		Theme:      styles,
+		Embedded:   true,
+		BodyStyle:  body,
+		FrameStyle: chromaFrame,
+	})
+
+	// The title row (rect.Y) edge columns must keep the title background, not the
+	// chroma frame color used for content-row margins.
+	_, wantBG, _ := styles.PanelChrome(true, false).HeaderCarousel.Decompose()
+	wr, wg, wb := rgb(wantBG)
+	for _, col := range []int{rect.X, rect.X + panelWidth - 1} {
+		_, style, _ := screen.Get(col, rect.Y)
+		_, bg, _ := style.Decompose()
+		r, g, b := rgb(bg)
+		if r != wr || g != wg || b != wb {
+			t.Fatalf("title row edge col %d bg = #%02x%02x%02x, want title bg #%02x%02x%02x", col, r, g, b, wr, wg, wb)
+		}
+	}
+}
+
+func TestDrawEmbeddedPreviewMessageUsesThemeMarginsNotChroma(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	githubBG := tcell.NewRGBColor(0xf7, 0xf7, 0xf7)
+	chromaFrame := styles.PanelActiveFrame.Background(githubBG)
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	Draw(screen, rect, State{
+		Open:      true,
+		TitleBase: "binary.bin",
+		ErrorMsg:  "Not a text file",
+	}, DrawParams{
+		Theme:      styles,
+		Embedded:   true,
+		BodyStyle:  body,
+		FrameStyle: chromaFrame,
+	})
+
+	// A message state has no chroma body, so the content margins must use the panel
+	// surface, never the chroma frame color.
+	_, wantBG, _ := body.Decompose()
+	wr, wg, wb := rgb(wantBG)
+	contentRow := rect.Y + 1
+	for _, col := range []int{rect.X, rect.X + panelWidth - 1} {
+		_, style, _ := screen.Get(col, contentRow)
+		_, bg, _ := style.Decompose()
+		r, g, b := rgb(bg)
+		if r == 0xf7 && g == 0xf7 && b == 0xf7 {
+			t.Fatalf("message margin col %d uses chroma frame bg #f7f7f7, want theme surface", col)
+		}
+		if r != wr || g != wg || b != wb {
+			t.Fatalf("message margin col %d bg = #%02x%02x%02x, want surface #%02x%02x%02x", col, r, g, b, wr, wg, wb)
+		}
+	}
+}
+
+func TestDrawEmbeddedPreviewTitleShowsFilenameOnly(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	Draw(screen, rect, State{
+		Open:      true,
+		TitleBase: "go.mod",
+	}, DrawParams{
+		Theme:     styles,
+		Embedded:  true,
+		BodyStyle: BodyStyle(styles, false),
+	})
+
+	titleRow := tcelltest.TextAt(screen, rect.X+1, rect.Y, rect.Width-2)
+	if strings.Contains(titleRow, "─") {
+		t.Fatalf("title row = %q, want no border dashes in embedded preview title", titleRow)
+	}
+	if !strings.Contains(titleRow, "go.mod") {
+		t.Fatalf("title row = %q, want filename only", titleRow)
+	}
+}
+
 func TestPaintQuickViewTitleRowGapIsBorderDash(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

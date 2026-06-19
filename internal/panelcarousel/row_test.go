@@ -14,8 +14,8 @@ func TestCarouselHeaderAlignsWithRowText(t *testing.T) {
 	const colWidth = 28
 	showIcons := true
 	listW := columnListTextWidth(colWidth, showIcons, 0)
-	hdr := briefHeader(listNameHeaderTitle(showIcons), "Size", listW)
-	row := formatBriefRow(localfs.Entry{Name: "another", Type: localfs.EntryDirectory}, colWidth, showIcons, panellist.RowSuffix{}, theme.Default(), nil, 0)
+	hdr := briefHeader(listNameHeaderTitle(showIcons), "Size", listW, true)
+	row := formatBriefRow(localfs.Entry{Name: "another", Type: localfs.EntryDirectory}, colWidth, showIcons, true, panellist.RowSuffix{}, theme.Default(), nil, 0)
 	if len([]rune(hdr)) != listW {
 		t.Fatalf("header rune width %d, want list text width %d", len([]rune(hdr)), listW)
 	}
@@ -33,9 +33,20 @@ func TestCarouselHeaderAlignsWithRowText(t *testing.T) {
 
 func TestBriefHeaderKeepsDiskUsageSortArrow(t *testing.T) {
 	const listW = 24
-	hdr := briefHeader(" Name", "↓Size", listW)
+	hdr := briefHeader(" Name", "↓Size", listW, true)
 	if !strings.Contains(hdr, "↓Size") {
 		t.Fatalf("header %q should contain full ↓Size title", hdr)
+	}
+}
+
+func TestBriefHeaderNameOnlyWhenSizeHidden(t *testing.T) {
+	const listW = 24
+	hdr := briefHeader("Name", "", listW, false)
+	if strings.Contains(hdr, "Size") {
+		t.Fatalf("header %q should not contain size column", hdr)
+	}
+	if len([]rune(hdr)) != listW {
+		t.Fatalf("header width %d, want %d", len([]rune(hdr)), listW)
 	}
 }
 

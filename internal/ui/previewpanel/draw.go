@@ -138,15 +138,13 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 			_, efg, _ := p.Theme.MessageError.Decompose()
 			errSt = p.Theme.PanelBlockedText.Foreground(efg)
 		}
-		primitive.Text(screen, textX, contentTop, textW, msg, errSt)
-		paintFrameMarginColumns(screen, rect, borderStyle, chrome.Surface, p.Embedded)
+		drawMessageContent(screen, rect, p.Embedded, contentTop, contentH, textX, textW, msg, errSt, body)
 		return
 	}
 
 	if st.ExitCode != 0 && !hasDrawableBody(st) {
 		line := filepath.Base(st.Path) + ": exit " + itoa(st.ExitCode)
-		primitive.Text(screen, textX, contentTop, textW, line, body)
-		paintFrameMarginColumns(screen, rect, borderStyle, chrome.Surface, p.Embedded)
+		drawMessageContent(screen, rect, p.Embedded, contentTop, contentH, textX, textW, line, body, body)
 		return
 	}
 
@@ -188,8 +186,43 @@ func fillContentRow(screen tcell.Screen, x, y, width int, style tcell.Style) {
 	}
 }
 
+// drawMessageContent paints a single status line (e.g. "Not a text file") across an
+// otherwise empty preview body. Message states have no chroma-highlighted body, so the
+// whole content area — including the side margins — is filled with the panel surface and
+// no chroma frame margins are drawn, keeping the message panel fully theme-colored.
+func drawMessageContent(screen tcell.Screen, rect Rect, embedded bool, contentTop, contentH, textX, textW int, msg string, msgStyle, surfaceStyle tcell.Style) {
+	fillX, fillW := rect.X, rect.Width
+	if !embedded {
+		fillX, fillW = rect.X+1, rect.Width-2 // stay inside the box border
+	}
+	if fillW < 0 {
+		fillW = 0
+	}
+	for row := 0; row < contentH; row++ {
+		fillContentRow(screen, fillX, contentTop+row, fillW, surfaceStyle)
+	}
+	primitive.Text(screen, textX, contentTop, textW, msg, msgStyle)
+}
+
 func paintFrameMarginColumns(screen tcell.Screen, rect Rect, borderStyle, surfaceStyle tcell.Style, embedded bool) {
-	if embedded || rect.Width < 4 || rect.Height < 3 {
+	if embedded {
+		if rect.Width < 2 || rect.Height < 2 {
+			return
+		}
+		_, borderBG, _ := borderStyle.Decompose()
+		_, surfaceBG, _ := surfaceStyle.Decompose()
+		if borderBG == surfaceBG {
+			return
+		}
+		// Skip the title row (rect.Y): it is filled with the title background and
+		// painting frame margins over its edges would bleed the chroma frame color.
+		for y := rect.Y + 1; y < rect.Y+rect.Height; y++ {
+			screen.SetContent(rect.X, y, ' ', nil, borderStyle)
+			screen.SetContent(rect.X+rect.Width-1, y, ' ', nil, borderStyle)
+		}
+		return
+	}
+	if rect.Width < 4 || rect.Height < 3 {
 		return
 	}
 	_, borderBG, _ := borderStyle.Decompose()

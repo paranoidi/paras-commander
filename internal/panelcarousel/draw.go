@@ -43,6 +43,7 @@ type BodyParams struct {
 	ScrollbarStyle        uiscrollbar.Style
 	ScrollbarShowInactive bool
 	InactiveFrameStyle    tcell.Style
+	Layout                Layout
 }
 
 // DrawBody paints the column header row and three listing columns.
@@ -51,7 +52,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 	if visibleRows == 0 {
 		return
 	}
-	cols := SplitColumns(p.Frame, p.ShowChildColumn)
+	cols := SplitColumns(p.Frame, p.ShowChildColumn, p.Layout)
 	headerY := p.Frame.Y + 1
 
 	centerName, centerSize, _ := p.Center.ListColumnTitles(p.ShowIcons)
@@ -76,15 +77,28 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 		total, offset := columnListingMetrics(c, p.Center)
 		reserve := columnScrollbarReserve(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset)
 		listTextWidth := columnListTextWidth(col.Width, p.ShowIcons, reserve)
+		var showSize bool
+		switch i {
+		case 0:
+			showSize = p.Layout.ShowSize[0]
+		case 1:
+			showSize = p.Layout.ShowSize[1]
+		case 2:
+			showSize = p.Layout.ShowSize[2]
+		}
 		var hdr string
 		switch i {
 		case 1:
-			hdr = briefHeader(centerName, centerSize, listTextWidth)
+			sizeTitle := centerSize
+			if !showSize {
+				sizeTitle = ""
+			}
+			hdr = briefHeader(centerName, sizeTitle, listTextWidth, showSize)
 		case 0:
 			if !p.Parent.Populated {
 				continue
 			}
-			hdr = briefHeader(sideNameTitle, "Size", listTextWidth)
+			hdr = briefHeader(sideNameTitle, "Size", listTextWidth, showSize)
 		case 2:
 			if !p.ShowChildColumn {
 				continue
@@ -95,7 +109,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			if !p.Child.Populated {
 				continue
 			}
-			hdr = briefHeader(sideNameTitle, "Size", listTextWidth)
+			hdr = briefHeader(sideNameTitle, "Size", listTextWidth, showSize)
 		}
 		hdrStyle := p.HeaderCarouselStyle
 		if i == 1 {
@@ -111,7 +125,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 		}
 	}
 
-	drawColumn := func(col geom.Rect, c Column, inactive bool) {
+	drawColumn := func(col geom.Rect, c Column, inactive bool, colIdx int) {
 		if col.Width <= 0 {
 			return
 		}
@@ -200,13 +214,14 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			if p.DiskUsage.Active {
 				diskSrc = p.DiskUsage.Source
 			}
-			text := formatBriefRow(entry, col.Width, p.ShowIcons, rowSuffix, p.Styles, diskSrc, reserve)
+			showSize := p.Layout.ShowSize[colIdx]
+			text := formatBriefRow(entry, col.Width, p.ShowIcons, showSize, rowSuffix, p.Styles, diskSrc, reserve)
 			listStart, listW := columnListContentOrigin(col.X, col.Width, p.ShowIcons, reserve)
 			nameColOffset := listStart - col.X
-			nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve)
+			nameWidth := nameWidthForColumn(col.Width, p.ShowIcons, reserve, showSize)
 			var spans []primitive.Span
 			if c.Active && (p.Center.Filter.Active || p.Center.Filter.Editing) {
-				spans = fuzzySpans(entry, col.Width, p.Center.MatchRanges(entryIndex), isCursor && p.FileListActive, p.Styles, p.ShowIcons, rowSuffix, reserve, func(di int) tcell.Style {
+				spans = fuzzySpans(entry, col.Width, p.Center.MatchRanges(entryIndex), isCursor && p.FileListActive, p.Styles, p.ShowIcons, showSize, rowSuffix, reserve, func(di int) tcell.Style {
 					return blendCell(nameColOffset + di)
 				})
 			}
@@ -267,10 +282,10 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 		}
 	}
 
-	drawColumn(cols[0], p.Parent, true)
-	drawColumn(cols[1], Column{Kind: ColumnCenter, Populated: true, Active: true}, false)
+	drawColumn(cols[0], p.Parent, true, 0)
+	drawColumn(cols[1], Column{Kind: ColumnCenter, Populated: true, Active: true}, false, 1)
 	if p.ShowChildColumn && p.ChildPreviewKind == ChildPreviewDirectoryListing {
-		drawColumn(cols[2], p.Child, true)
+		drawColumn(cols[2], p.Child, true, 2)
 	}
 }
 

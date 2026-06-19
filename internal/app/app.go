@@ -23,6 +23,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/pools"
 	"github.com/paranoidi/paras-commander/internal/sched"
@@ -499,6 +500,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			SelectionsPanelMaxRows:     cfg.UI.SelectionsPanelMaxRows,
 			HideMenuBar:                !cfg.UI.ShowMenuBar,
 			ShowFileIcons:              cfg.UI.ShowFileIcons,
+			CarouselLayout:             carouselLayoutFromConfig(cfg.UI),
 			ShrunkenShowsNameOnly:      cfg.UI.ShrunkenShowsNameOnly,
 			JobsThroughputChartEnabled: cfg.Jobs.ThroughputChartEnabled,
 			UserHomeDir:                homeDir,
@@ -854,4 +856,12 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 	return false
+}
+
+func carouselLayoutFromConfig(ui config.UIConfig) panelcarousel.Layout {
+	layout, err := panelcarousel.ParseLayout(ui.CarouselSplit, ui.CarouselShowSize)
+	if err != nil {
+		return panelcarousel.DefaultLayout()
+	}
+	return layout
 }

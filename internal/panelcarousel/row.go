@@ -16,14 +16,23 @@ import (
 const listSizeCells = 5
 
 // formatBriefRow formats icon+name+size for carousel columns.
-func formatBriefRow(entry localfs.Entry, width int, showIcons bool, suffix panellist.RowSuffix, styles theme.Theme, disk DiskUsageSource, scrollbarReserve int) string {
+func formatBriefRow(entry localfs.Entry, width int, showIcons bool, showSize bool, suffix panellist.RowSuffix, styles theme.Theme, disk DiskUsageSource, scrollbarReserve int) string {
 	rowTextWidth := columnListTextWidth(width, showIcons, scrollbarReserve)
-	nameWidth := rowTextWidth - 1 - listSizeCells
+	nameWidth := rowTextWidth
+	if showSize {
+		nameWidth = rowTextWidth - 1 - listSizeCells
+		if nameWidth < 1 {
+			nameWidth = 1
+		}
+	}
 	if nameWidth < 1 {
 		nameWidth = 1
 	}
 	display := panellist.EntryDisplayRunes(entry, nameWidth, showIcons, suffix, styles)
 	name := string(panellist.RunesFromDisplay(display))
+	if !showSize {
+		return fmt.Sprintf("%-*s", nameWidth, name)
+	}
 	return fmt.Sprintf("%-*s %*s", nameWidth, name, listSizeCells, formatListedSize(entry, disk))
 }
 
@@ -148,16 +157,29 @@ func columnScrollbarReserve(hasLane, showSB bool, style uiscrollbar.Style, total
 	return 0
 }
 
-func briefHeader(nameTitle, sizeTitle string, rowTextWidth int) string {
-	nameWidth := rowTextWidth - 1 - listSizeCells
+func briefHeader(nameTitle, sizeTitle string, rowTextWidth int, showSize bool) string {
+	nameWidth := rowTextWidth
+	if showSize {
+		nameWidth = rowTextWidth - 1 - listSizeCells
+		if nameWidth < 1 {
+			nameWidth = 1
+		}
+		return fmt.Sprintf("%-*s %*s", nameWidth, nameTitle, listSizeCells, sizeTitle)
+	}
 	if nameWidth < 1 {
 		nameWidth = 1
 	}
-	return fmt.Sprintf("%-*s %*s", nameWidth, nameTitle, listSizeCells, sizeTitle)
+	return fmt.Sprintf("%-*s", nameWidth, nameTitle)
 }
 
-func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int) int {
+func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int, showSize bool) int {
 	rowTextWidth := columnListTextWidth(colWidth, showIcons, scrollbarReserve)
+	if !showSize {
+		if rowTextWidth < 1 {
+			return 1
+		}
+		return rowTextWidth
+	}
 	nw := rowTextWidth - 1 - listSizeCells
 	if nw < 1 {
 		return 1
@@ -166,8 +188,8 @@ func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int) int 
 }
 
 // CenterNameWidth returns the name-column width for the carousel center column.
-func CenterNameWidth(frame geom.Rect, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int) int {
-	cols := SplitColumns(frame, showChild)
+func CenterNameWidth(frame geom.Rect, layout Layout, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int) int {
+	cols := SplitColumns(frame, showChild, layout)
 	if len(cols) < 2 {
 		return 1
 	}
@@ -175,5 +197,5 @@ func CenterNameWidth(frame geom.Rect, center panel.State, showIcons, showChild b
 	hasLane := columnHasScrollbarLane(c, false, showChild)
 	total, offset := columnListingMetrics(c, center)
 	reserve := columnScrollbarReserve(hasLane, true, style, total, visibleRows, offset)
-	return nameWidthForColumn(cols[1].Width, showIcons, reserve)
+	return nameWidthForColumn(cols[1].Width, showIcons, reserve, layout.ShowSize[1])
 }

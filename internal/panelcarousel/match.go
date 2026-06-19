@@ -9,11 +9,11 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-func fuzzySpans(entry localfs.Entry, colWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, showIcons bool, suffix panellist.RowSuffix, scrollbarReserve int, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
+func fuzzySpans(entry localfs.Entry, colWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, showIcons bool, showSize bool, suffix panellist.RowSuffix, scrollbarReserve int, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
 	if len(ranges) == 0 {
 		return nil
 	}
-	nameWidth := nameWidthForColumn(colWidth, showIcons, scrollbarReserve)
+	nameWidth := nameWidthForColumn(colWidth, showIcons, scrollbarReserve, showSize)
 	display := panellist.EntryDisplayRunes(entry, nameWidth, showIcons, suffix, styles)
 	matchStyle := styles.FuzzyHighlight
 	if highlightCursor {

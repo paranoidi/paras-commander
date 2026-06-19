@@ -243,6 +243,11 @@ type UIConfig struct {
 	// ScreenRenderHashCache, when true, hashes the logical cell buffer after each full render and skips
 	// screen.Show when unchanged from the last flush. Default DefaultScreenRenderHashCache.
 	ScreenRenderHashCache bool `toml:"screen_render_hash_cache"`
+	// CarouselSplit sets parent | center | child column widths: fixed cells ("16"), percent of
+	// remaining width after fixed columns ("20%"), or flex remainder ("*"). Exactly 3 entries.
+	CarouselSplit []string `toml:"carousel_split"`
+	// CarouselShowSize toggles the size column per carousel pane (exactly 3 booleans).
+	CarouselShowSize []bool `toml:"carousel_show_size"`
 }
 
 type FilterConfig struct {
@@ -374,6 +379,8 @@ func Default() Config {
 			PanelScrollbarInactive:            DefaultPanelScrollbarInactive,
 			MessageLogMaxEntries:              DefaultMessageLogMaxEntries,
 			ScreenRenderHashCache:             DefaultScreenRenderHashCache,
+			CarouselSplit:                     DefaultCarouselSplit(),
+			CarouselShowSize:                  DefaultCarouselShowSize(),
 		},
 		Filter: FilterConfig{
 			Mode:              FilterModeFuzzy,
@@ -778,6 +785,7 @@ func (c *Config) Validate() error {
 	if c.UI.MessageLogMaxEntries > messageLogMaxCap {
 		c.UI.MessageLogMaxEntries = messageLogMaxCap
 	}
+	normalizeCarouselUI(&c.UI)
 	if c.Filter.Mode != FilterModeFuzzy {
 		c.Filter.Mode = builtin.Filter.Mode
 	}

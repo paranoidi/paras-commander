@@ -29,8 +29,7 @@ func (a *App) carouselPreviewNavCoalesceContext() bool {
 		!a.activePanel().CarouselMode ||
 		a.model.ActiveSubFocus != ui.SubFocusFileList ||
 		a.model.Menu.Open ||
-		a.model.ModalDialogOpen() ||
-		a.inQuickFilterUI() {
+		a.model.ModalDialogOpen() {
 		return false
 	}
 	p := a.activePanel()

@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
@@ -63,7 +64,7 @@ func TestSubtreeSelectionMarkUsesDiskUsageBarBackground(t *testing.T) {
 	}
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	drawPanel(screen, rect, state, true, false, styles, false, "",
-		painter, false, nil, true, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, uiscrollbar.StyleNone, true, FilePreviewState{}, "")
+		painter, false, nil, true, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
 
 	rowY := rect.Y + 2
 	markCol := -1

@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
@@ -37,7 +38,7 @@ func TestDrawPanelPaintsThumbScrollbarOnBorder(t *testing.T) {
 	wantThumb := styles.SymbolScrollbarThumb()
 	drawPanel(screen, rect, state, true, false, styles, false, "", nil, false, nil, false,
 		LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false,
-		uiscrollbar.StyleThumb, true, FilePreviewState{}, "")
+		uiscrollbar.StyleThumb, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
 
 	borderX := rect.X + rect.Width - 1
 	foundThumb := false
@@ -80,7 +81,7 @@ func TestDrawPanelCarouselTwoColumnScrollbarOnBorder(t *testing.T) {
 	wantThumb := styles.SymbolScrollbarThumb()
 	drawPanel(screen, rect, state, true, false, styles, false, "", nil, false, nil, false,
 		LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false,
-		uiscrollbar.StyleThumb, true, FilePreviewState{}, "")
+		uiscrollbar.StyleThumb, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
 
 	borderX := rect.X + rect.Width - 1
 	foundThumb := false

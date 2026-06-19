@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
@@ -17,7 +18,7 @@ func thumbPaintedRowRange(t *testing.T, screen tcell.Screen, rect Rect, state pa
 	t.Helper()
 	styles := theme.Default()
 	drawPanel(screen, rect, state, true, false, styles, false, "", nil, false, nil, false,
-		LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, style, true, FilePreviewState{}, "")
+		LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, style, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
 	borderX := rect.X + rect.Width - 1
 	visible := PanelListRows(rect)
 	minRow = visible

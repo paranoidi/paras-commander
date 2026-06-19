@@ -174,6 +174,11 @@ const (
 	// (unless HideInactivePanel gives the active panel full terminal width).
 	MinCarouselFilePreviewColumnWidth = 32
 
+	// DefaultCarouselSplit is the default carousel column width spec (parent | center | child).
+	DefaultCarouselSplit0 = "*"
+	DefaultCarouselSplit1 = "*"
+	DefaultCarouselSplit2 = "*"
+
 	// DefaultUserMenuFileName is the basename of the user menu definition under the config directory
 	// when [user_menu].file is empty.
 	DefaultUserMenuFileName = "menu.toml"

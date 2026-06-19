@@ -5,28 +5,19 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
-// LayoutFits reports whether rect has enough interior width for three carousel columns.
-func LayoutFits(rect geom.Rect, minPanelInner, minCol int) bool {
-	if minPanelInner <= 0 {
-		minPanelInner = config.MinCarouselPanelInnerWidth
-	}
-	if minCol <= 0 {
-		minCol = config.MinCarouselColumnWidth
-	}
+// LayoutFits reports whether rect has enough interior width for carousel layout.
+func LayoutFits(rect geom.Rect, layout Layout, showChild bool) bool {
 	inner := rect.Width - 2
-	if inner < minPanelInner {
-		return false
-	}
-	return inner >= 3*minCol
+	return inner >= layout.MinInnerWidth(showChild)
 }
 
 // MinActiveWidthPercent returns the minimum active-column width share (1–100) so the
 // active panel interior fits three carousel columns at the given total terminal width.
-func MinActiveWidthPercent(totalWidth int) int {
+func MinActiveWidthPercent(totalWidth int, layout Layout) int {
 	if totalWidth <= 0 {
 		return config.DefaultPanelZoomActivePercent
 	}
-	need := config.MinCarouselPanelInnerWidth + 2 // panel column width including frame sides
+	need := layout.MinInnerWidth(true) + 2 // panel column width including frame sides
 	pct := (need*100 + totalWidth - 1) / totalWidth
 	if pct < 50 {
 		pct = 50
@@ -38,9 +29,7 @@ func MinActiveWidthPercent(totalWidth int) int {
 }
 
 // SplitColumns divides the panel interior (below title + header rows) into carousel panes.
-// Parent always receives one third of the inner width. When showChild is false the center
-// column receives the remaining two thirds; otherwise parent, center, and child split evenly.
-func SplitColumns(rect geom.Rect, showChild bool) [3]geom.Rect {
+func SplitColumns(rect geom.Rect, showChild bool, layout Layout) [3]geom.Rect {
 	var cols [3]geom.Rect
 	innerX := rect.X + 1
 	innerW := rect.Width - 2
@@ -49,45 +38,42 @@ func SplitColumns(rect geom.Rect, showChild bool) [3]geom.Rect {
 	}
 	listY := rect.Y + 2
 	listH := geom.PanelListRows(rect)
-	w0 := innerW / 3
-	if showChild && innerW >= 3 {
-		w1 := innerW / 3
-		w2 := innerW - w0 - w1
-		cols[0] = geom.Rect{X: innerX, Y: listY, Width: w0, Height: listH}
-		cols[1] = geom.Rect{X: innerX + w0, Y: listY, Width: w1, Height: listH}
-		cols[2] = geom.Rect{X: innerX + w0 + w1, Y: listY, Width: w2, Height: listH}
-		return cols
+	widths := layout.Resolve(innerW, showChild)
+	x := innerX
+	for i := 0; i < 3; i++ {
+		if widths[i] <= 0 {
+			continue
+		}
+		cols[i] = geom.Rect{X: x, Y: listY, Width: widths[i], Height: listH}
+		x += widths[i]
 	}
-	w1 := innerW - w0
-	cols[0] = geom.Rect{X: innerX, Y: listY, Width: w0, Height: listH}
-	cols[1] = geom.Rect{X: innerX + w0, Y: listY, Width: w1, Height: listH}
 	return cols
 }
 
-// ChildColumnWidth returns the inner width of one carousel third column (matches SplitColumns).
-func ChildColumnWidth(rect geom.Rect) int {
+// ChildColumnWidth returns the inner width of the carousel child column.
+func ChildColumnWidth(rect geom.Rect, layout Layout) int {
 	innerW := rect.Width - 2
-	if innerW < 3 {
+	if innerW < 1 {
 		return 0
 	}
-	return innerW / 3
+	return layout.Resolve(innerW, true)[2]
 }
 
 // FilePreviewEligible reports whether the carousel child column is wide enough for file preview,
 // or the inactive twin panel is hidden so the active panel has full width.
-func FilePreviewEligible(rect geom.Rect, hideInactive bool) bool {
+func FilePreviewEligible(rect geom.Rect, hideInactive bool, layout Layout) bool {
 	if hideInactive {
 		return true
 	}
-	return ChildColumnWidth(rect) >= config.MinCarouselFilePreviewColumnWidth
+	return ChildColumnWidth(rect, layout) >= config.MinCarouselFilePreviewColumnWidth
 }
 
 // ChildPreviewPaintRect returns the rect for embedded file preview in the child column (header + list rows).
-func ChildPreviewPaintRect(frame geom.Rect, showChild bool) (geom.Rect, bool) {
+func ChildPreviewPaintRect(frame geom.Rect, showChild bool, layout Layout) (geom.Rect, bool) {
 	if !showChild {
 		return geom.Rect{}, false
 	}
-	cols := SplitColumns(frame, true)
+	cols := SplitColumns(frame, true, layout)
 	if cols[2].Width <= 0 {
 		return geom.Rect{}, false
 	}

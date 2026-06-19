@@ -90,7 +90,7 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 	return strings.TrimSpace(nameTitle)
 }
 
-func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaColumns []MetaColumnState, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool, scrollbarStyle uiscrollbar.Style, scrollbarShowInactive bool, carouselFilePreview FilePreviewState, previewChromaStyle string) {
+func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaColumns []MetaColumnState, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool, scrollbarStyle uiscrollbar.Style, scrollbarShowInactive bool, carouselLayout panelcarousel.Layout, carouselFilePreview FilePreviewState, previewChromaStyle string) {
 	if rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
@@ -149,85 +149,91 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		return
 	}
 
-	if state.CarouselMode && panelcarousel.LayoutFits(rect, 0, 0) {
+	if state.CarouselMode {
 		quickViewOn := quickViewDriverPanelID >= 0
-		filePreviewEligible := panelcarousel.FilePreviewEligible(rect, hideInactivePanel)
+		filePreviewEligible := panelcarousel.FilePreviewEligible(rect, hideInactivePanel, carouselLayout)
 		showChildCol := panelcarousel.ShowChildPreviewColumn(state, quickViewOn, filePreviewEligible)
-		parent, _, child, childKind := panelcarousel.BuildColumns(state, visibleRows, quickViewOn, filePreviewEligible)
-		carouselDisk := panelcarousel.DiskUsage{
-			Active:                 showDiskUsage,
-			PanelID:                panelID,
-			ListingDevice:          state.ListingDevice,
-			ListingDeviceValid:     state.ListingDeviceValid,
-			DescendIntoMountPoints: diskUsageDescendIntoMountPoints,
-			GoduIgnore:             diskUsageGoduIgnore,
-			Source:                 painter,
-		}
-		panelcarousel.DrawBody(screen, panelcarousel.BodyParams{
-			Frame:                 rect,
-			Center:                state,
-			Parent:                parent,
-			Child:                 child,
-			Styles:                styles,
-			ChromeBlocked:         chromeBlocked,
-			FileListActive:        fileListActive,
-			ShowIcons:             showIcons,
-			HeaderStyle:           headerStyle,
-			HeaderCarouselStyle:   headerCarouselStyle,
-			SurfaceStyle:          chrome.Surface,
-			ShowChildColumn:       showChildCol,
-			ChildPreviewKind:      childKind,
-			DiskUsage:             carouselDisk,
-			OtherPanelPath:        otherPanelPath,
-			ScrollbarStyle:        scrollbarStyle,
-			ScrollbarShowInactive: scrollbarShowInactive,
-			InactiveFrameStyle:    styles.PanelInactiveFrame,
-			JobMark: func(path string) (rune, string, bool) {
-				marked, st := EntryPathJobMarkStatus(path, jobMarks)
-				if !marked {
-					return 0, "", false
-				}
-				glyphStr := styles.SymbolJobsList(st)
-				if glyphStr == "" {
-					return 0, "", false
-				}
-				r, _ := utf8.DecodeRuneInString(glyphStr)
-				return r, st, true
-			},
-			PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
-				paintPanelIconStrip(sc, x, y, entry, rowStyle, styles, PanelIconStripContext{
-					CursorStyleKey: cursorKey,
-					Folder: panellist.FolderIconContext{
-						OtherPanelPath:         otherPanelPath,
-						DescendIntoMountPoints: diskUsageDescendIntoMountPoints,
-						ListingDev:             state.ListingDevice,
-						ListingDevValid:        state.ListingDeviceValid,
-						DiskPending:            diskPending,
-						DiskExcluded:           diskExcluded,
-						DiskUsageChrome:        showDiskUsage,
-					},
-				})
-			},
-			NewFileMark: func(entry localfs.Entry) panellist.NewFileMarkTier {
-				return state.NewFileMarkTier(entry)
-			},
-		})
-		if childKind == panelcarousel.ChildPreviewFile && carouselFilePreview.Open {
-			if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, showChildCol); ok {
-				drawFilePreviewPanel(screen, Rect(previewRect), carouselFilePreview, styles, chromeBlocked, false, true, true, state.PathString(), userHomeDir, previewChromaStyle)
+		if panelcarousel.LayoutFits(rect, carouselLayout, showChildCol) {
+			parent, _, child, childKind := panelcarousel.BuildColumns(state, visibleRows, quickViewOn, filePreviewEligible)
+			carouselDisk := panelcarousel.DiskUsage{
+				Active:                 showDiskUsage,
+				PanelID:                panelID,
+				ListingDevice:          state.ListingDevice,
+				ListingDeviceValid:     state.ListingDeviceValid,
+				DescendIntoMountPoints: diskUsageDescendIntoMountPoints,
+				GoduIgnore:             diskUsageGoduIgnore,
+				Source:                 painter,
 			}
+			panelcarousel.DrawBody(screen, panelcarousel.BodyParams{
+				Frame:                 rect,
+				Center:                state,
+				Parent:                parent,
+				Child:                 child,
+				Styles:                styles,
+				ChromeBlocked:         chromeBlocked,
+				FileListActive:        fileListActive,
+				ShowIcons:             showIcons,
+				HeaderStyle:           headerStyle,
+				HeaderCarouselStyle:   headerCarouselStyle,
+				SurfaceStyle:          chrome.Surface,
+				ShowChildColumn:       showChildCol,
+				ChildPreviewKind:      childKind,
+				DiskUsage:             carouselDisk,
+				OtherPanelPath:        otherPanelPath,
+				ScrollbarStyle:        scrollbarStyle,
+				ScrollbarShowInactive: scrollbarShowInactive,
+				InactiveFrameStyle:    styles.PanelInactiveFrame,
+				Layout:                carouselLayout,
+				JobMark: func(path string) (rune, string, bool) {
+					marked, st := EntryPathJobMarkStatus(path, jobMarks)
+					if !marked {
+						return 0, "", false
+					}
+					glyphStr := styles.SymbolJobsList(st)
+					if glyphStr == "" {
+						return 0, "", false
+					}
+					r, _ := utf8.DecodeRuneInString(glyphStr)
+					return r, st, true
+				},
+				PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
+					paintPanelIconStrip(sc, x, y, entry, rowStyle, styles, PanelIconStripContext{
+						CursorStyleKey: cursorKey,
+						Folder: panellist.FolderIconContext{
+							OtherPanelPath:         otherPanelPath,
+							DescendIntoMountPoints: diskUsageDescendIntoMountPoints,
+							ListingDev:             state.ListingDevice,
+							ListingDevValid:        state.ListingDeviceValid,
+							DiskPending:            diskPending,
+							DiskExcluded:           diskExcluded,
+							DiskUsageChrome:        showDiskUsage,
+						},
+					})
+				},
+				NewFileMark: func(entry localfs.Entry) panellist.NewFileMarkTier {
+					return state.NewFileMarkTier(entry)
+				},
+			})
+			paintCarouselFilePreview := carouselFilePreview.Open && showChildCol &&
+				(childKind == panelcarousel.ChildPreviewFile ||
+					fileListActive && (state.Filter.Active || state.Filter.Editing))
+			if paintCarouselFilePreview {
+				if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, showChildCol, carouselLayout); ok {
+					drawFilePreviewPanel(screen, Rect(previewRect), carouselFilePreview, styles, chromeBlocked, false, false, true, state.PathString(), userHomeDir, previewChromaStyle)
+				}
+			}
+			if !showChildCol {
+				drawPanelListScrollbar(screen, rect, rect.Y+2, visibleRows, state.VisibleEntryCount(), state.ScrollOffset,
+					scrollbarStyle, panelScrollbarShow(fileListActive, scrollbarShowInactive),
+					fileListActive, chromeBlocked, borderStyle, styles)
+			}
+			if selectionSizeLabel != "" {
+				drawPanelBottomSelectionSize(screen, rect, panelID, bottomCtx)
+			} else {
+				drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, panelcarousel.CenterNameWidth(rect, carouselLayout, state, showIcons, showChildCol, scrollbarStyle, visibleRows), jobMarks)
+			}
+			return
 		}
-		if !showChildCol {
-			drawPanelListScrollbar(screen, rect, rect.Y+2, visibleRows, state.VisibleEntryCount(), state.ScrollOffset,
-				scrollbarStyle, panelScrollbarShow(fileListActive, scrollbarShowInactive),
-				fileListActive, chromeBlocked, borderStyle, styles)
-		}
-		if selectionSizeLabel != "" {
-			drawPanelBottomSelectionSize(screen, rect, panelID, bottomCtx)
-		} else {
-			drawPanelCursorNameHintForState(screen, rect, panelID, state, bottomCtx, fileListActive, chromeBlocked, titleStyle, showIcons, panelcarousel.CenterNameWidth(rect, state, showIcons, showChildCol, scrollbarStyle, visibleRows), jobMarks)
-		}
-		return
 	}
 
 	interior := rect.Width - 2

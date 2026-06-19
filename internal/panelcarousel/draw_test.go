@@ -52,9 +52,10 @@ func TestSubtreeSelectionMarkUsesSelectedForeground(t *testing.T) {
 		HeaderStyle:         styles.PanelActiveHeader,
 		HeaderCarouselStyle: styles.PanelActiveHeaderCarousel,
 		SurfaceStyle:        styles.PanelActiveSurface,
+		Layout:              DefaultLayout(),
 	})
 
-	cols := SplitColumns(frame, true)
+	cols := SplitColumns(frame, true, DefaultLayout())
 	centerCol := cols[1]
 	rowY := centerCol.Y
 	markCol := -1
@@ -118,9 +119,10 @@ func TestCenterScrollbarUsesInactiveFrameBetweenColumns(t *testing.T) {
 			ScrollbarStyle:        uiscrollbar.StyleThumb,
 			ScrollbarShowInactive: true,
 			InactiveFrameStyle:    styles.PanelInactiveFrame,
+			Layout:                DefaultLayout(),
 		})
 
-		cols := SplitColumns(frame, showChild)
+		cols := SplitColumns(frame, showChild, DefaultLayout())
 		sbX := cols[1].X + cols[1].Width - 1
 		listY := cols[1].Y
 		for row := 0; row < geom.PanelListRows(frame); row++ {
@@ -144,7 +146,7 @@ func TestCenterScrollbarUsesInactiveFrameBetweenColumns(t *testing.T) {
 	if ShowChildPreviewColumn(filesOnly, false, false) {
 		t.Fatal("files-only fixture should hide child column")
 	}
-	cols := SplitColumns(frame, false)
+	cols := SplitColumns(frame, false, DefaultLayout())
 	sbX := cols[1].X + cols[1].Width - 1
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -165,6 +167,7 @@ func TestCenterScrollbarUsesInactiveFrameBetweenColumns(t *testing.T) {
 		ScrollbarStyle:        uiscrollbar.StyleThumb,
 		ScrollbarShowInactive: true,
 		InactiveFrameStyle:    styles.PanelInactiveFrame,
+		Layout:                DefaultLayout(),
 	})
 	for row := 0; row < geom.PanelListRows(frame); row++ {
 		ch, _, _ := screen.Get(sbX, cols[1].Y+row)
@@ -226,9 +229,10 @@ func TestCarouselNoScrollbarLaneWhenListFits(t *testing.T) {
 		ScrollbarStyle:        uiscrollbar.StyleThumb,
 		ScrollbarShowInactive: true,
 		InactiveFrameStyle:    styles.PanelInactiveFrame,
+		Layout:                DefaultLayout(),
 	})
 
-	cols := SplitColumns(frame, true)
+	cols := SplitColumns(frame, true, DefaultLayout())
 	col := cols[1]
 	reserve := columnScrollbarReserve(
 		columnHasScrollbarLane(Column{Kind: ColumnCenter, Populated: true, Active: true}, false, true),

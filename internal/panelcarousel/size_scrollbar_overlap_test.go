@@ -57,9 +57,10 @@ func TestCarouselSizeNotOverlappedByScrollbar(t *testing.T) {
 		ScrollbarStyle:        uiscrollbar.StyleThumb,
 		ScrollbarShowInactive: true,
 		InactiveFrameStyle:    styles.PanelInactiveFrame,
+		Layout:                DefaultLayout(),
 	})
 
-	cols := SplitColumns(frame, true)
+	cols := SplitColumns(frame, true, DefaultLayout())
 	for i, col := range cols {
 		sbX := col.X + col.Width - 1
 		rowY := col.Y + 5

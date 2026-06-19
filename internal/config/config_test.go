@@ -101,6 +101,46 @@ func TestValidateResetsInvalidPanelZoomPercents(t *testing.T) {
 	}
 }
 
+func TestDefaultCarouselSplit(t *testing.T) {
+	got := Default().UI.CarouselSplit
+	want := DefaultCarouselSplit()
+	if len(got) != len(want) {
+		t.Fatalf("CarouselSplit len = %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("CarouselSplit[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+	show := Default().UI.CarouselShowSize
+	if len(show) != 3 || !show[0] || !show[1] || !show[2] {
+		t.Fatalf("CarouselShowSize = %v, want [true true true]", show)
+	}
+}
+
+func TestValidateResetsInvalidCarouselSplit(t *testing.T) {
+	cfg := Default()
+	cfg.UI.CarouselSplit = []string{"20%", "bad", "*"}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	want := DefaultCarouselSplit()
+	for i := range want {
+		if cfg.UI.CarouselSplit[i] != want[i] {
+			t.Fatalf("CarouselSplit[%d] = %q, want %q after invalid token", i, cfg.UI.CarouselSplit[i], want[i])
+		}
+	}
+
+	cfg.UI.CarouselSplit = []string{"20%", "30%", "*"}
+	cfg.UI.CarouselShowSize = []bool{true}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if len(cfg.UI.CarouselShowSize) != 3 {
+		t.Fatalf("CarouselShowSize len = %d, want 3", len(cfg.UI.CarouselShowSize))
+	}
+}
+
 func TestValidateResetsInvalidPanelScrollbar(t *testing.T) {
 	cfg := Default()
 	cfg.UI.PanelScrollbar = "invalid"

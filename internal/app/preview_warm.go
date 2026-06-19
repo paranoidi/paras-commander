@@ -155,6 +155,30 @@ func previewBodyCacheMatches(live, warmed ui.FilePreviewState) bool {
 	}
 }
 
+func (a *App) carouselFilePreviewLineCount(textW int) int {
+	base := ui.FilePreviewBodyStyle(a.styles, a.activePanelChromeBlocked())
+
+	a.commandsMu.RLock()
+	st := a.model.CarouselFilePreview
+	a.commandsMu.RUnlock()
+
+	if count, ok := st.CachedWrappedLineCount(textW); ok {
+		return count
+	}
+
+	warmed := warmFilePreviewCopy(st, textW, base)
+
+	a.commandsMu.Lock()
+	defer a.commandsMu.Unlock()
+	if previewBodyCacheMatches(a.model.CarouselFilePreview, warmed) {
+		a.model.CarouselFilePreview.WrapCacheSnapshot(warmed)
+		if count, ok := a.model.CarouselFilePreview.CachedWrappedLineCount(textW); ok {
+			return count
+		}
+	}
+	return warmed.WrappedLineCount(textW, base)
+}
+
 func (a *App) fullscreenFilePreviewLineCount(textW int) int {
 	base := ui.FilePreviewBodyStyle(a.styles, a.model.PanelsChromeBlocked())
 

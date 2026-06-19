@@ -193,7 +193,7 @@ func (a *App) applyCarouselPanelZoomPercents(totalWidth int) {
 	if !a.activePanel().CarouselMode || !a.model.PanelZoomEnabled {
 		return
 	}
-	minPct := panelcarousel.MinActiveWidthPercent(totalWidth)
+	minPct := panelcarousel.MinActiveWidthPercent(totalWidth, a.model.CarouselLayout)
 	if a.model.PanelZoomActivePercent < minPct {
 		a.model.PanelZoomActivePercent = minPct
 		a.model.PanelZoomInactivePercent = 100 - minPct
@@ -209,7 +209,7 @@ func (a *App) panelWidthSplit(width int, filePreviewOpen bool) ui.PanelWidthSpli
 		inactivePct = a.config.UI.PanelZoomInactivePercent
 	}
 	if zoom && a.activePanel().CarouselMode {
-		minPct := panelcarousel.MinActiveWidthPercent(width)
+		minPct := panelcarousel.MinActiveWidthPercent(width, a.model.CarouselLayout)
 		if activePct < minPct {
 			activePct = minPct
 			inactivePct = 100 - activePct
