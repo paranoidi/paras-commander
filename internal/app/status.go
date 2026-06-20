@@ -93,6 +93,27 @@ func (a *App) setTransientMessageBanner(logMsg, bannerMsg string, urgency ui.Mes
 	}(gen, ttl)
 }
 
+// appendTransientMessageLines sets the status banner and prepends lines (as a single timestamped batch)
+// to the message log. Handles TTL the same way as setTransientMessage.
+func (a *App) appendTransientMessageLines(banner string, lines []string, urgency ui.MessageUrgency) {
+	if len(lines) == 0 {
+		a.clearTransientMessage()
+		return
+	}
+	gen := a.messageExpiryGen.Add(1)
+	a.model.Message = banner
+	a.model.MessageUrgency = urgency
+	a.appendMessageLogLines(lines, urgency)
+	ttl := a.statusMessageTTL()
+	if ttl <= 0 {
+		return
+	}
+	go func(g uint64, d time.Duration) {
+		time.Sleep(d)
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(statusMessageExpiryPayload{gen: g}))
+	}(gen, ttl)
+}
+
 func (a *App) applyStatusMessageExpiry(p statusMessageExpiryPayload) {
 	if p.gen != a.messageExpiryGen.Load() {
 		return

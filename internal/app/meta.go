@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -31,9 +32,25 @@ type metaWakePayload struct {
 
 // metaExecFailedPayload notifies the main goroutine once per meta run when a shell command fails.
 type metaExecFailedPayload struct {
-	panelID int
-	gen     uint64
+	panelID     int
+	gen         uint64
+	exitCode    int
+	stderr      string
+	confCmd     string // original template from meta.toml
+	expandedCmd string // substituted command actually run
 }
+
+// metaRunFailure wraps a command execution failure with details for the messages log.
+type metaRunFailure struct {
+	ExitCode    int
+	Stderr      string
+	ConfCmd     string // original template from meta.toml (e.g. "git log %f")
+	ExpandedCmd string // substituted command actually run (e.g. "git log /path/to/file")
+	err         error
+}
+
+func (e *metaRunFailure) Error() string { return e.err.Error() }
+func (e *metaRunFailure) Unwrap() error { return e.err }
 
 func (a *App) postMetaResult(panelID int, entryName, path, value string, gen uint64) {
 	_ = a.screen.PostEvent(tcell.NewEventInterrupt(metaWakePayload{
@@ -45,10 +62,14 @@ func (a *App) postMetaResult(panelID int, entryName, path, value string, gen uin
 	}))
 }
 
-func (a *App) postMetaExecFailed(panelID int, gen uint64) {
+func (a *App) postMetaExecFailed(panelID int, gen uint64, exitCode int, stderr, confCmd, expandedCmd string) {
 	_ = a.screen.PostEvent(tcell.NewEventInterrupt(metaExecFailedPayload{
-		panelID: panelID,
-		gen:     gen,
+		panelID:     panelID,
+		gen:         gen,
+		exitCode:    exitCode,
+		stderr:      stderr,
+		confCmd:     confCmd,
+		expandedCmd: expandedCmd,
 	}))
 }
 
@@ -381,7 +402,14 @@ func (a *App) runMetaForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 						if ctx.Err() != nil {
 							return
 						}
-						notifyExecFailed.Do(func() { a.postMetaExecFailed(panelID, gen) })
+						var failure *metaRunFailure
+						if errors.As(err, &failure) {
+							notifyExecFailed.Do(func() {
+								a.postMetaExecFailed(panelID, gen, failure.ExitCode, failure.Stderr, failure.ConfCmd, failure.ExpandedCmd)
+							})
+						} else {
+							notifyExecFailed.Do(func() { a.postMetaExecFailed(panelID, gen, -1, "", "", "") })
+						}
 						a.postMetaResult(panelID, cmdDef.Name, item.entry.Path, "", gen)
 						return
 					}
@@ -437,7 +465,7 @@ func (a *App) metaEntryCmd(cmdDef metacmds.MetaEntry, e localfs.Entry, dir strin
 }
 
 // runMetaCommand runs a shell command template with %f expanded to path.
-// Returns trimmed stdout on success. On failure returns a non-nil error (including context cancellation).
+// Returns trimmed stdout on success. On failure returns *metaRunFailure (or a plain error for context cancellation).
 func runMetaCommand(ctx context.Context, cmd, path, dir string) (string, error) {
 	built, err := cmdrun.BuildInvocation(cmdrun.InvocationSpec{
 		Template: cmd,
@@ -445,15 +473,70 @@ func runMetaCommand(ctx context.Context, cmd, path, dir string) (string, error) 
 		Ctx:      cmdmacro.Context{RowPath: path},
 	})
 	if err != nil {
-		return "", err
+		return "", &metaRunFailure{ExitCode: -1, Stderr: err.Error(), err: err}
 	}
 	c := exec.CommandContext(ctx, built.Argv[0], built.Argv[1:]...)
 	c.Dir = dir
 	out, err := c.Output()
 	if err != nil {
-		return "", err
+		var exitErr *exec.ExitError
+		exitCode := -1
+		var stderr string
+		if errors.As(err, &exitErr) {
+			exitCode = exitErr.ExitCode()
+			stderr = strings.TrimSpace(string(exitErr.Stderr))
+		}
+		return "", &metaRunFailure{ExitCode: exitCode, Stderr: stderr, ConfCmd: cmd, ExpandedCmd: built.Expanded, err: err}
 	}
 	return strings.TrimRight(string(out), "\r\n"), nil
+}
+
+func (a *App) applyMetaExecFailed(d metaExecFailedPayload) {
+	const urgency = ui.MessageUrgencyCritical
+	banner := "meta: command failed to execute"
+
+	wrapCols := a.messageLogWrapCols()
+
+	lines := []string{banner}
+
+	if d.expandedCmd != "" {
+		lines = append(lines, fmt.Sprintf("  exit: %d", d.exitCode))
+	}
+
+	if d.stderr != "" {
+		wrapped := ui.WrapTextLines(d.stderr, wrapCols-10)
+		for i, l := range wrapped {
+			if i == 0 {
+				lines = append(lines, "  stderr: "+l)
+			} else {
+				lines = append(lines, "          "+l)
+			}
+		}
+	}
+
+	if d.confCmd != "" {
+		wrapped := ui.WrapTextLines(d.confCmd, wrapCols-8)
+		for i, l := range wrapped {
+			if i == 0 {
+				lines = append(lines, "  conf: "+l)
+			} else {
+				lines = append(lines, "        "+l)
+			}
+		}
+	}
+
+	if d.expandedCmd != "" {
+		wrapped := ui.WrapTextLines(d.expandedCmd, wrapCols-7)
+		for i, l := range wrapped {
+			if i == 0 {
+				lines = append(lines, "  cmd: "+l)
+			} else {
+				lines = append(lines, "       "+l)
+			}
+		}
+	}
+
+	a.appendTransientMessageLines(banner, lines, urgency)
 }
 
 func (a *App) handleMetaDialogKey(event *tcell.EventKey) {

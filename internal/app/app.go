@@ -703,7 +703,7 @@ func (a *App) Run() error {
 				didRender = true
 			case metaExecFailedPayload:
 				if d.gen == a.metaRunGen[d.panelID] {
-					a.setTransientMessage("meta: command failed to execute", ui.MessageUrgencyCritical)
+					a.applyMetaExecFailed(d)
 				}
 				a.render()
 				didRender = true
