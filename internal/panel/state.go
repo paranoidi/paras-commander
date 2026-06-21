@@ -1768,13 +1768,17 @@ func (s *State) ClearSelection() {
 
 // SelectGroup selects entries whose basename matches the pattern.
 // filesOnly: when true, only regular files are matched (directories skipped).
+// dirsOnly: when true, only directories are matched (regular files skipped).
 // caseSensitive: when true, matching is case-sensitive.
 // useShellPatterns: when true, uses filepath.Match; otherwise substring match.
-func (s *State) SelectGroup(pattern string, filesOnly, caseSensitive, useShellPatterns bool) {
+func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive, useShellPatterns bool) {
 	paths := make([]string, 0)
 	isDir := make(map[string]bool)
 	for _, entry := range s.Entries {
 		if filesOnly && entry.IsDir() {
+			continue
+		}
+		if dirsOnly && !entry.IsDir() {
 			continue
 		}
 		if GroupMatch(entry.Name, pattern, caseSensitive, useShellPatterns) {
@@ -1798,12 +1802,15 @@ func (s *State) SelectGroup(pattern string, filesOnly, caseSensitive, useShellPa
 }
 
 // UnselectGroup unselects entries whose basename matches the pattern.
-func (s *State) UnselectGroup(pattern string, filesOnly, caseSensitive, useShellPatterns bool) {
+func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive, useShellPatterns bool) {
 	if s.SelectedPaths == nil {
 		return
 	}
 	for _, entry := range s.Entries {
 		if filesOnly && entry.IsDir() {
+			continue
+		}
+		if dirsOnly && !entry.IsDir() {
 			continue
 		}
 		if !GroupMatch(entry.Name, pattern, caseSensitive, useShellPatterns) {

@@ -342,6 +342,7 @@ func (a *App) openGroupSelect(mode string, context string) {
 		Mode:             mode,
 		Context:          context,
 		FilesOnly:        false,
+		DirsOnly:         false,
 		CaseSensitive:    false,
 		UseShellPatterns: true,
 		Focus:            0,
@@ -364,14 +365,14 @@ func (a *App) executeGroupSelect() {
 	}
 	switch context {
 	case "find":
-		a.findCtrl.ApplyGroupSelect(gs.Mode, gs.Text, gs.FilesOnly, gs.CaseSensitive, gs.UseShellPatterns)
+		a.findCtrl.ApplyGroupSelect(gs.Mode, gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.UseShellPatterns)
 	default:
 		p := a.activePanel()
 		if gs.Mode == "select" {
-			p.SelectGroup(gs.Text, gs.FilesOnly, gs.CaseSensitive, gs.UseShellPatterns)
+			p.SelectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.UseShellPatterns)
 			a.setTransientMessage(fmt.Sprintf("Selected matching %q", gs.Text), ui.MessageUrgencyInfo)
 		} else {
-			p.UnselectGroup(gs.Text, gs.FilesOnly, gs.CaseSensitive, gs.UseShellPatterns)
+			p.UnselectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.UseShellPatterns)
 			a.setTransientMessage(fmt.Sprintf("Unselected matching %q", gs.Text), ui.MessageUrgencyInfo)
 		}
 	}
@@ -393,7 +394,7 @@ func (a *App) confirmGroupSelectFromInput() {
 
 func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	gs := &a.model.GroupSelect
-	form := ui.NewDialogLinearForm(4)
+	form := ui.NewDialogLinearForm(5)
 
 	if ui.AltDialogOK(event) {
 		a.confirmGroupSelectFromInput()
@@ -431,13 +432,22 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			switch event.Rune() {
 			case 'f', 'F':
 				gs.FilesOnly = !gs.FilesOnly
+				if gs.FilesOnly {
+					gs.DirsOnly = false
+				}
 				gs.Focus = 1
+			case 'd', 'D':
+				gs.DirsOnly = !gs.DirsOnly
+				if gs.DirsOnly {
+					gs.FilesOnly = false
+				}
+				gs.Focus = 2
 			case 's', 'S':
 				gs.CaseSensitive = !gs.CaseSensitive
-				gs.Focus = 2
+				gs.Focus = 3
 			case 'u', 'U':
 				gs.UseShellPatterns = !gs.UseShellPatterns
-				gs.Focus = 3
+				gs.Focus = 4
 			}
 			break
 		}
@@ -449,9 +459,17 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			switch gs.Focus {
 			case 1:
 				gs.FilesOnly = !gs.FilesOnly
+				if gs.FilesOnly {
+					gs.DirsOnly = false
+				}
 			case 2:
-				gs.CaseSensitive = !gs.CaseSensitive
+				gs.DirsOnly = !gs.DirsOnly
+				if gs.DirsOnly {
+					gs.FilesOnly = false
+				}
 			case 3:
+				gs.CaseSensitive = !gs.CaseSensitive
+			case 4:
 				gs.UseShellPatterns = !gs.UseShellPatterns
 			case form.OKIndex():
 				a.confirmGroupSelectFromInput()
@@ -468,7 +486,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 
 func groupSelectAltIsDialogMnemonic(r rune) bool {
 	switch r {
-	case 'f', 'F', 's', 'S', 'u', 'U':
+	case 'f', 'F', 'd', 'D', 's', 'S', 'u', 'U':
 		return true
 	default:
 		return false

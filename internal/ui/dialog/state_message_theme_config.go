@@ -85,7 +85,8 @@ type GroupSelectState struct {
 	Mode             string // "select" or "unselect"
 	Context          string // "" or "panel" (default), "find"
 	FilesOnly        bool
+	DirsOnly         bool
 	CaseSensitive    bool
 	UseShellPatterns bool
-	Focus            int // 0=pattern input, 1=Files only, 2=Case sensitive, 3=Using shell patterns, 4=OK, 5=Cancel
+	Focus            int // 0=pattern input, 1=Files only, 2=Dirs only, 3=Case sensitive, 4=Using shell patterns, 5=OK, 6=Cancel
 }

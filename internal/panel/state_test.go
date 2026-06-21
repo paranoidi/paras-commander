@@ -1694,7 +1694,7 @@ func TestSelectGroupByGlob(t *testing.T) {
 		},
 	}
 
-	state.SelectGroup("*.go", false, false, true)
+	state.SelectGroup("*.go", false, false, false, true)
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("main.go should be selected")
@@ -1719,7 +1719,7 @@ func TestSelectGroupByGlobCaseInsensitive(t *testing.T) {
 		},
 	}
 
-	state.SelectGroup("*.GO", false, false, true)
+	state.SelectGroup("*.GO", false, false, false, true)
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("file.go should be selected (case-insensitive glob)")
@@ -1740,7 +1740,7 @@ func TestSelectGroupByGlobCaseSensitive(t *testing.T) {
 		},
 	}
 
-	state.SelectGroup("*.go", false, true, true)
+	state.SelectGroup("*.go", false, false, true, true)
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("file.go should be selected")
@@ -1764,7 +1764,7 @@ func TestUnselectGroupByGlob(t *testing.T) {
 		},
 	}
 
-	state.UnselectGroup("*.go", false, false, true)
+	state.UnselectGroup("*.go", false, false, false, true)
 
 	if state.IsSelected(state.Entries[0]) {
 		t.Fatal("main.go should be unselected")
@@ -1786,7 +1786,7 @@ func TestSelectGroupFilesOnly(t *testing.T) {
 		},
 	}
 
-	state.SelectGroup("*", true, false, true)
+	state.SelectGroup("*", true, false, false, true)
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("main.go should be selected")
@@ -1809,7 +1809,7 @@ func TestSelectGroupSubstringCaseSensitive(t *testing.T) {
 	}
 
 	// Substring match, case-sensitive
-	state.SelectGroup("main", false, true, false)
+	state.SelectGroup("main", false, false, true, false)
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("main.go should be selected (case-sensitive substring match)")
@@ -1832,7 +1832,7 @@ func TestSelectGroupSubstringCaseInsensitive(t *testing.T) {
 	}
 
 	// Substring match, case-insensitive
-	state.SelectGroup("main", false, false, false)
+	state.SelectGroup("main", false, false, false, false)
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("main.go should be selected (case-insensitive substring)")

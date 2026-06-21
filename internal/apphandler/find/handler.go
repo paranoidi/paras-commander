@@ -1453,7 +1453,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 }
 
 // ApplyGroupSelect marks or unmarks full-corpus find results whose basename matches pattern.
-func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitive, useShellPatterns bool) {
+func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, dirsOnly, caseSensitive, useShellPatterns bool) {
 	st := &h.model.FindDialog
 	if pattern == "" {
 		return
@@ -1471,6 +1471,9 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 			}
 			ent := st.Entries[entIdx]
 			if filesOnly && ent.IsDir {
+				continue
+			}
+			if dirsOnly && !ent.IsDir {
 				continue
 			}
 			path := findEntryAbsPath(st, ent)
@@ -1509,6 +1512,9 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, caseSensitiv
 		}
 		ent := st.Entries[entIdx]
 		if filesOnly && ent.IsDir {
+			continue
+		}
+		if dirsOnly && !ent.IsDir {
 			continue
 		}
 		path := findEntryAbsPath(st, ent)
