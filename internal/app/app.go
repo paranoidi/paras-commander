@@ -57,6 +57,10 @@ type diskIdleSortPayload struct {
 // diskUsageRedrawPayload flushes debounced disk-usage cache/paint updates while a scan is busy.
 type diskUsageRedrawPayload struct{}
 
+// metaRenderFlushPayload is posted by the debounced meta render timer to coalesce frequent
+// metaWakePayload renders into a single repaint (avoids one render per entry with large dirs).
+type metaRenderFlushPayload struct{}
+
 type diskIdleSortPanel struct {
 	timer *time.Timer
 	epoch uint64
@@ -131,6 +135,12 @@ type App struct {
 	// metaRunGen is a monotonically increasing generation counter per panel for meta runs.
 	// Workers carry the generation; stale (cancelled) results are discarded by the event handler.
 	metaRunGen [2]uint64
+	// metaLoadGen is a monotonically increasing generation counter per panel for async meta file loads.
+	// Stale loads (navigated away before load finished) are discarded by the event handler.
+	metaLoadGen [2]uint64
+	// metaRenderTimer debounces meta result renders; posted events call scheduleMetaRenderDebounced
+	// instead of a.render() directly so burst results (large dirs) coalesce into few repaints.
+	metaRenderTimer *time.Timer
 	// metaCache stores computed meta results by [cmdName][absPath] for entries with cache = true.
 	// Nil until first caching write. Protected by metaCacheMu.
 	metaCache   map[string]map[string]string
@@ -699,6 +709,12 @@ func (a *App) Run() error {
 				if d.gen == a.metaRunGen[d.panelID] {
 					a.applyMetaWakeResult(d)
 				}
+				a.scheduleMetaRenderDebounced()
+			case metaRenderFlushPayload:
+				a.render()
+				didRender = true
+			case metaLoadPayload:
+				a.applyMetaLoad(d)
 				a.render()
 				didRender = true
 			case metaExecFailedPayload:

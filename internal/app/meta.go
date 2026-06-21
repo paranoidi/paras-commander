@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdmacro"
@@ -47,6 +48,16 @@ type metaRunFailure struct {
 	ConfCmd     string // original template from meta.toml (e.g. "git log %f")
 	ExpandedCmd string // substituted command actually run (e.g. "git log /path/to/file")
 	err         error
+}
+
+// metaLoadPayload carries the result of an async meta.toml resolve+load back to the UI goroutine.
+type metaLoadPayload struct {
+	panelID     int
+	loadGen     uint64
+	mf          *metacmds.MetaFile
+	activeNames []string
+	warns       []string
+	loadErr     string // non-empty if LoadFile failed
 }
 
 func (e *metaRunFailure) Error() string { return e.err.Error() }
@@ -284,6 +295,7 @@ func (a *App) activateMetaSelection() {
 }
 
 // handleMetaPanelDirChanged re-runs active meta commands when the panel navigates to a new directory.
+// The meta file is resolved and loaded off the UI goroutine to avoid blocking on disk I/O.
 func (a *App) handleMetaPanelDirChanged(panelID int) {
 	if len(a.model.MetaResults[panelID]) == 0 {
 		return
@@ -297,11 +309,49 @@ func (a *App) handleMetaPanelDirChanged(panelID int) {
 	}
 	a.metaNavPath[panelID] = cur
 
-	mf := a.loadMetaFile(panelID)
-	if mf == nil {
+	a.metaLoadGen[panelID]++
+	loadGen := a.metaLoadGen[panelID]
+	activeNames := append([]string(nil), a.metaActiveEntries[panelID]...)
+	cfg := a.config
+	homeDir := a.model.UserHomeDir
+	configDir := a.metaConfigDir()
+
+	go func() {
+		path, warns := metacmds.ResolveMetaTOML(cfg, homeDir, configDir, cur)
+		p := metaLoadPayload{
+			panelID:     panelID,
+			loadGen:     loadGen,
+			activeNames: activeNames,
+			warns:       warns,
+		}
+		if path != "" {
+			mf, err := metacmds.LoadFile(path)
+			if err != nil {
+				p.loadErr = "meta: " + err.Error()
+			} else {
+				p.mf = mf
+			}
+		}
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(p))
+	}()
+}
+
+// applyMetaLoad is called on the UI goroutine when an async meta file load completes.
+func (a *App) applyMetaLoad(d metaLoadPayload) {
+	if d.loadGen != a.metaLoadGen[d.panelID] {
 		return
 	}
-	sorted := metacmds.SortEntriesForDisplay(a.metaActiveEntries[panelID], mf)
+	for _, w := range d.warns {
+		a.setTransientMessage(w, ui.MessageUrgencyWarn)
+	}
+	if d.loadErr != "" {
+		a.setTransientMessage(d.loadErr, ui.MessageUrgencyCritical)
+		return
+	}
+	if d.mf == nil {
+		return
+	}
+	sorted := metacmds.SortEntriesForDisplay(d.activeNames, d.mf)
 	if len(sorted) == 0 {
 		return
 	}
@@ -314,7 +364,20 @@ func (a *App) handleMetaPanelDirChanged(panelID int) {
 			Results:     nil,
 		}
 	}
-	a.runMetaForPanel(panelID, sorted, cols)
+	a.runMetaForPanel(d.panelID, sorted, cols)
+}
+
+// scheduleMetaRenderDebounced arms a short timer to coalesce rapid metaWakePayload events
+// (one per entry in large directories) into a single screen repaint at ~60 fps.
+func (a *App) scheduleMetaRenderDebounced() {
+	if a.metaRenderTimer != nil {
+		return
+	}
+	const debounce = 16 * time.Millisecond
+	a.metaRenderTimer = time.AfterFunc(debounce, func() {
+		a.metaRenderTimer = nil
+		_ = a.screen.PostEvent(tcell.NewEventInterrupt(metaRenderFlushPayload{}))
+	})
 }
 
 // metaDispatchItem holds a single entry selected for meta command execution.
