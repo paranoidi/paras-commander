@@ -306,6 +306,7 @@ func (a *App) tryDispatchQuickViewPreviewScroll(actionID string) bool {
 	a.armPanelSyncFollowNavCoalesceAfterListNav()
 	a.armQuickViewNavCoalesceAfterListNav()
 	a.armCarouselPreviewNavCoalesceAfterListNav()
+	a.armCursorNameHintNavCoalesceAfterListNav()
 	return true
 }
 

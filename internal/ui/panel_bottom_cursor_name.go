@@ -205,6 +205,9 @@ func drawPanelCursorNameHintForState(
 	nameWidth int,
 	jobMarks []JobPathMark,
 ) {
+	if state.CursorNameHintCoalesce {
+		return
+	}
 	entry, _, ok := state.VisibleEntry(state.Cursor)
 	if !ok {
 		return

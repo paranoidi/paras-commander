@@ -172,6 +172,9 @@ type App struct {
 	debounceCalibrateRelease managedTimer
 	// carouselPreviewNavSkipSnapshot, when true, reuses cached carousel parent/child snapshots during render.
 	carouselPreviewNavSkipSnapshot atomic.Bool
+	// cursorNameHintNavSkip, when true, suppresses the bottom-border full-name overlay during file-list nav debounce.
+	cursorNameHintNavSkip atomic.Bool
+	cursorNameHintNav     managedTimer
 	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postCommandWake).
 	filePreviewRunGen atomic.Uint64
 	// filePreviewHold keeps the last completed inactive-column preview for stale-while-revalidate draws.
@@ -639,6 +642,7 @@ func (a *App) Run() error {
 			a.clearPanelSyncFollowNavCoalesce()
 			a.clearQuickViewNavCoalesce()
 			a.clearCarouselPreviewNavCoalesce()
+			a.clearCursorNameHintNavCoalesce()
 			a.screen.Sync()
 			a.ensurePanelsVisible()
 			a.render()
@@ -749,6 +753,9 @@ func (a *App) Run() error {
 					a.render()
 					didRender = true
 				}
+			case cursorNameHintFlushPayload:
+				a.render()
+				didRender = true
 			case previewStylePickerFlushPayload:
 				if a.applyPreviewStylePickerFlush(d) {
 					a.render()

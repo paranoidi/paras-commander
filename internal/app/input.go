@@ -222,6 +222,7 @@ func (a *App) prepareGlobalQuitShortcutCleanup() {
 	a.clearPanelSyncFollowNavCoalesce()
 	a.clearQuickViewNavCoalesce()
 	a.clearCarouselPreviewNavCoalesce()
+	a.clearCursorNameHintNavCoalesce()
 	if a.inQuickFilterUI() {
 		a.activePanel().CancelFilter(a.activeViewportRows())
 	}
@@ -257,6 +258,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	if !a.panelSyncFollowHeldListNav(resolvedAction, event) {
 		a.clearPanelSyncFollowNavCoalesce()
 		a.clearQuickViewNavCoalesce()
+		a.clearCursorNameHintNavCoalesce()
 	}
 	if !a.carouselPreviewHeldListNav(resolvedAction, event) {
 		a.clearCarouselPreviewNavCoalesce()
@@ -582,6 +584,7 @@ func (a *App) doListNav(move func()) {
 	a.armPanelSyncFollowNavCoalesceAfterListNav()
 	a.armQuickViewNavCoalesceAfterListNav()
 	a.armCarouselPreviewNavCoalesceAfterListNav()
+	a.armCursorNameHintNavCoalesceAfterListNav()
 }
 
 func (a *App) dispatch(actionID string) bool {
