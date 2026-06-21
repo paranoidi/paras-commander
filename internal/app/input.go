@@ -456,6 +456,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 		return false, false
 	}
+	if isNavParentBackspaceEvent(event, nextAction) && a.navParentBackspaceGuarded.Load() {
+		a.armNavParentBackspaceGuard() // keep guard alive while key is still held
+		return false, false
+	}
 	quit, rendered = a.finishResolvedKeyboardAction(nextAction)
 	if rendered {
 		a.render()
@@ -894,6 +898,11 @@ func (a *App) handleFilterKey(event *tcell.EventKey) {
 			activePanel.ClearFilter(viewportRows)
 		} else {
 			activePanel.BackspaceFilter(viewportRows)
+			// If backspace just deactivated the filter (Editing→false, Query empty),
+			// arm the guard so the next key-repeat backspace does not trigger nav.parent.
+			if !activePanel.Filter.Editing && activePanel.Filter.Query == "" {
+				a.armNavParentBackspaceGuard()
+			}
 		}
 	case tcell.KeyCtrlL:
 		activePanel.ClearFilter(viewportRows)

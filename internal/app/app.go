@@ -170,6 +170,11 @@ type App struct {
 	carouselPreviewDebounce    managedTimer
 	// debounceCalibrateRelease infers key release between calibration trials.
 	debounceCalibrateRelease managedTimer
+	// navParentBackspaceGuarded, when true, suppresses nav.parent triggered by backspace.
+	// Armed when backspace erases the last filter character; cleared when the key is released
+	// (debounce timer fires). Prevents accidental directory navigation after erasing filter text.
+	navParentBackspaceGuarded  atomic.Bool
+	navParentBackspaceDebounce managedTimer
 	// carouselPreviewNavSkipSnapshot, when true, reuses cached carousel parent/child snapshots during render.
 	carouselPreviewNavSkipSnapshot atomic.Bool
 	// cursorNameHintNavSkip, when true, suppresses the bottom-border full-name overlay during file-list nav debounce.
