@@ -161,6 +161,9 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Default"}}, rest...)
 			}
 		}
+		if a.massRenameEditorFooterEligible() {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Editor"}}, rest...)
+		}
 		if a.renameDialogFooterEligible() {
 			if a.renameEncodingFooterEligible() {
 				if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding); lbl != "" {

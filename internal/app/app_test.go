@@ -4683,7 +4683,7 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 	for _, r := range "foo_" {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	d.FocusedField = 3
+	d.FocusedField = 4 // Replace field (0-2 = radios, 3 = Find, 4 = Replace)
 	for _, r := range "bar_" {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
@@ -4819,6 +4819,8 @@ func TestMassRenameRadioFocusAppliesRegexMode(t *testing.T) {
 	if d.MassRenameMode != ui.MassRenameModeUISimple {
 		t.Fatalf("initial mode = %v, want simple", d.MassRenameMode)
 	}
+	// Up from Find (3) → ExternalEditor (2), Up again → Regex (1)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 	if d.FocusedField != 1 {
 		t.Fatalf("FocusedField = %d, want 1 (Regex radio)", d.FocusedField)
@@ -4849,7 +4851,7 @@ func TestMassRenameRegexCaptureGroupPreviewWithShiftDollar(t *testing.T) {
 	for _, r := range `(\d)$` {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	d.FocusedField = 3
+	d.FocusedField = 4 // Replace field (0-2 = radios, 3 = Pattern, 4 = Replacement)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '0', tcell.ModNone))
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '$', tcell.ModShift))
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '1', tcell.ModNone))
@@ -4899,7 +4901,7 @@ func TestMassRenameRegexpCompileHintForBackslashPattern(t *testing.T) {
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
-	d.FocusedField = 2
+	d.FocusedField = 3 // Pattern field (0-2 = radios, 3 = Pattern)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '\\', tcell.ModNone))
 
 	if !d.Fields[0].InputInvalid {
@@ -4932,7 +4934,7 @@ func TestMassRenameEnterCancelClosesWithInvalidRegex(t *testing.T) {
 	// Regex mode + invalid pattern
 	d.FocusedField = 1
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	d.FocusedField = 2
+	d.FocusedField = 3 // Pattern field (0-2 = radios, 3 = Pattern)
 	for _, r := range "a++" {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
@@ -4974,7 +4976,7 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 	for _, r := range "1" {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	d.FocusedField = 3
+	d.FocusedField = 4 // Replace field (0-2 = radios, 3 = Find, 4 = Replace)
 	for _, r := range "2" {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
@@ -5003,7 +5005,7 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 		t.Fatal("OK action should be blocked when preview has conflicts")
 	}
 	okIdx := ui.FileDialogOKFocusIndex(*d)
-	d.FocusedField = 4
+	d.FocusedField = 5 // case-insensitive checkbox (0-2 = radios, 3 = Find, 4 = Replace, 5 = checkbox)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if d.FocusedField != okIdx {
 		t.Fatalf("Down from checkbox: focus = %d, want OK %d", d.FocusedField, okIdx)

@@ -32,6 +32,7 @@ type MassRenameModeUI int
 const (
 	MassRenameModeUISimple MassRenameModeUI = iota
 	MassRenameModeUIRegex
+	MassRenameModeUIExternalEditor
 )
 
 // MassRenameSource is one selected file (absolute path resolved when the dialog opens).
@@ -149,6 +150,9 @@ type FileDialogState struct {
 	MassRenamePatternCompileHint string
 	// MassRenameReplacementSyntaxHint is shown under the Replacement field when the pattern has capture groups.
 	MassRenameReplacementSyntaxHint string
+	// MassRenameExternalNames holds the per-file basenames returned by the external editor (ExternalEditor mode).
+	// Nil means the editor has not been run yet.
+	MassRenameExternalNames []string
 
 	// Delete confirmation (DialogType == FileDialogDelete).
 	DeleteSummary        string

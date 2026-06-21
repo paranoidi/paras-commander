@@ -86,8 +86,9 @@ const (
 	FileDialogSFTPConnect  = dialog.FileDialogSFTPConnect
 	FileDialogSFTPPassword = dialog.FileDialogSFTPPassword
 
-	MassRenameModeUISimple = dialog.MassRenameModeUISimple
-	MassRenameModeUIRegex  = dialog.MassRenameModeUIRegex
+	MassRenameModeUISimple         = dialog.MassRenameModeUISimple
+	MassRenameModeUIRegex          = dialog.MassRenameModeUIRegex
+	MassRenameModeUIExternalEditor = dialog.MassRenameModeUIExternalEditor
 
 	MkdirActionCreate           = dialog.MkdirActionCreate
 	MkdirActionCreateCopySelect = dialog.MkdirActionCreateCopySelect
@@ -205,9 +206,9 @@ func FileDialogFocusForm(st FileDialogState) dialog.DialogTrailingButtonsForm {
 	return dialog.FileDialogFocusForm(st)
 }
 
-// MassRenamePreviewViewportRows returns how many preview lines fit for a terminal height.
-func MassRenamePreviewViewportRows(layoutHeight int) int {
-	return dialog.MassRenamePreviewViewportRows(layoutHeight)
+// MassRenamePreviewViewportRows returns how many preview lines fit for a terminal height and rename mode.
+func MassRenamePreviewViewportRows(layoutHeight int, mode MassRenameModeUI) int {
+	return dialog.MassRenamePreviewViewportRows(layoutHeight, dialog.MassRenameModeUI(mode))
 }
 
 // MassRenameEnsurePreviewScroll clamps MassRenamePreviewScroll to keep the viewport valid.

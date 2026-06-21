@@ -1,7 +1,9 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -13,8 +15,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// massRenameFindFieldFocus is FocusedField for the Find / Pattern input (0–1 are mode radios).
-const massRenameFindFieldFocus = 2
+// massRenameFindFieldFocus is FocusedField for the Find / Pattern input (0–2 are mode radios).
+const massRenameFindFieldFocus = 3
 
 func (a *App) openMassRenameDialog(p *panel.State) {
 	src, err := ops.ResolveSource(p)
@@ -60,6 +62,9 @@ func (a *App) massRenameSyncFieldLabels() {
 	if d.DialogType != ui.FileDialogMassRename || len(d.Fields) < 2 {
 		return
 	}
+	if d.MassRenameMode == ui.MassRenameModeUIExternalEditor {
+		return // no fields visible in external editor mode
+	}
 	if d.MassRenameMode == ui.MassRenameModeUISimple {
 		d.Fields[0].Label = "Find"
 		d.Fields[1].Label = "Replace"
@@ -88,6 +93,12 @@ func (a *App) recomputeMassRenamePreview() {
 		d.MassRenamePreviewAfterAdded = nil
 		return
 	}
+
+	if d.MassRenameMode == ui.MassRenameModeUIExternalEditor {
+		a.recomputeMassRenameExternalEditorPreview()
+		return
+	}
+
 	entries := make([]localfs.Entry, len(d.MassRenameSources))
 	for i, s := range d.MassRenameSources {
 		entries[i] = localfs.Entry{Name: s.Name, Path: s.Path, Type: localfs.EntryFile}
@@ -163,8 +174,54 @@ func (a *App) recomputeMassRenamePreview() {
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
 	_, h := a.screen.Size()
-	vp := ui.MassRenamePreviewViewportRows(h)
+	vp := ui.MassRenamePreviewViewportRows(h, d.MassRenameMode)
 	ui.MassRenameEnsurePreviewScroll(&a.model.FileDialog, vp, len(before))
+}
+
+func (a *App) recomputeMassRenameExternalEditorPreview() {
+	d := &a.model.FileDialog
+	before := make([]string, 0, len(d.MassRenameSources))
+	after := make([]string, 0, len(d.MassRenameSources))
+	beforeRemoved := make([][]search.Range, 0, len(d.MassRenameSources))
+	beforeReplaced := make([][]search.Range, 0, len(d.MassRenameSources))
+	afterAdded := make([][]search.Range, 0, len(d.MassRenameSources))
+	afterError := make([]bool, len(d.MassRenameSources))
+	namesReady := len(d.MassRenameExternalNames) == len(d.MassRenameSources)
+	for i, src := range d.MassRenameSources {
+		newBase := src.Name
+		if namesReady {
+			newBase = d.MassRenameExternalNames[i]
+		}
+		before = append(before, src.Name)
+		after = append(after, newBase)
+		beforeRemoved = append(beforeRemoved, nil)
+		beforeReplaced = append(beforeReplaced, nil)
+		if namesReady {
+			_, added := ui.MassRenameDiff(src.Name, newBase)
+			afterAdded = append(afterAdded, added)
+		} else {
+			afterAdded = append(afterAdded, nil)
+		}
+	}
+	if namesReady {
+		rows := make([]ops.MassRenameRow, len(d.MassRenameSources))
+		for i, src := range d.MassRenameSources {
+			rows[i] = ops.MassRenameRow{SourcePath: src.Path, OldBase: src.Name, NewBase: d.MassRenameExternalNames[i]}
+		}
+		rowErrs := ops.MassRenameRowErrors(rows)
+		for i, err := range rowErrs {
+			afterError[i] = err != nil
+		}
+	}
+	d.MassRenamePreviewBefore = before
+	d.MassRenamePreviewAfter = after
+	d.MassRenamePreviewBeforeRemoved = beforeRemoved
+	d.MassRenamePreviewBeforeReplaced = beforeReplaced
+	d.MassRenamePreviewAfterAdded = afterAdded
+	d.MassRenamePreviewAfterError = afterError
+	_, h := a.screen.Size()
+	vp := ui.MassRenamePreviewViewportRows(h, d.MassRenameMode)
+	ui.MassRenameEnsurePreviewScroll(d, vp, len(before))
 }
 
 func (a *App) applyMassRenameModeFromFocus() {
@@ -174,9 +231,11 @@ func (a *App) applyMassRenameModeFromFocus() {
 		d.MassRenameMode = ui.MassRenameModeUISimple
 	case 1:
 		d.MassRenameMode = ui.MassRenameModeUIRegex
+	case 2:
+		d.MassRenameMode = ui.MassRenameModeUIExternalEditor
 	}
-	if d.MassRenameMode == ui.MassRenameModeUIRegex && d.FocusedField == 4 {
-		d.FocusedField = 3
+	if d.MassRenameMode == ui.MassRenameModeUIRegex && d.FocusedField == 5 {
+		d.FocusedField = 4 // checkbox focus doesn't exist in regex mode; move to Replace field
 	}
 	a.massRenameSyncFieldLabels()
 	a.recomputeMassRenamePreview()
@@ -195,7 +254,11 @@ func (a *App) tryRejectMassRenameOK(d *ui.FileDialogState) bool {
 }
 
 func (a *App) massRenameOKBlockedMessage(d *ui.FileDialogState) string {
-	if len(d.Fields) > 0 && d.Fields[0].InputInvalid {
+	if d.MassRenameMode == ui.MassRenameModeUIExternalEditor {
+		if len(d.MassRenameExternalNames) == 0 {
+			return "Launch the editor first (Enter on External $EDITOR option)"
+		}
+	} else if len(d.Fields) > 0 && d.Fields[0].InputInvalid {
 		find := d.Fields[0].Value
 		if d.MassRenameMode == ui.MassRenameModeUIRegex {
 			if _, err := ops.MassRenameCompileRegex(find); err != nil {
@@ -224,6 +287,20 @@ func (a *App) massRenameOKBlockedMessage(d *ui.FileDialogState) string {
 func (a *App) massRenameComputeRows(d *ui.FileDialogState) ([]ops.MassRenameRow, error) {
 	if len(d.MassRenameSources) == 0 {
 		return nil, fmt.Errorf("no files to rename")
+	}
+	if d.MassRenameMode == ui.MassRenameModeUIExternalEditor {
+		if len(d.MassRenameExternalNames) == 0 {
+			return nil, fmt.Errorf("launch the editor first (Enter on External $EDITOR)")
+		}
+		rows := make([]ops.MassRenameRow, len(d.MassRenameSources))
+		for i, src := range d.MassRenameSources {
+			newBase := src.Name
+			if i < len(d.MassRenameExternalNames) {
+				newBase = d.MassRenameExternalNames[i]
+			}
+			rows[i] = ops.MassRenameRow{SourcePath: src.Path, OldBase: src.Name, NewBase: newBase}
+		}
+		return rows, nil
 	}
 	entries := make([]localfs.Entry, len(d.MassRenameSources))
 	for i, s := range d.MassRenameSources {
@@ -291,4 +368,78 @@ func (a *App) executeMassRename() {
 	a.refreshBothPanels()
 	a.activePanel().ClearSelection()
 	a.setTransientMessage(fmt.Sprintf("Renamed %d file(s)", n), ui.MessageUrgencyInfo)
+}
+
+func (a *App) massRenameEditorFooterEligible() bool {
+	d := &a.model.FileDialog
+	return d.Open && d.DialogType == ui.FileDialogMassRename
+}
+
+func (a *App) launchMassRenameExternalEditor() {
+	d := &a.model.FileDialog
+	if d.DialogType != ui.FileDialogMassRename {
+		return
+	}
+	d.MassRenameMode = ui.MassRenameModeUIExternalEditor
+	a.massRenameSyncFieldLabels()
+
+	// Write source names to a temp file, one per line.
+	tmp, err := os.CreateTemp("", "paras-rename-*.txt")
+	if err != nil {
+		a.setTransientMessage(fmt.Sprintf("Cannot create temp file: %v", err), ui.MessageUrgencyCritical)
+		return
+	}
+	tmpPath := tmp.Name()
+	for i, src := range d.MassRenameSources {
+		line := src.Name
+		if i < len(d.MassRenameSources)-1 {
+			line += "\n"
+		}
+		if _, werr := tmp.WriteString(line); werr != nil {
+			_ = tmp.Close()
+			_ = os.Remove(tmpPath)
+			a.setTransientMessage(fmt.Sprintf("Cannot write temp file: %v", werr), ui.MessageUrgencyCritical)
+			return
+		}
+	}
+	// Ensure last name also has a newline so editors don't complain.
+	if len(d.MassRenameSources) > 0 {
+		_, _ = tmp.WriteString("\n")
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+		a.setTransientMessage(fmt.Sprintf("Cannot write temp file: %v", err), ui.MessageUrgencyCritical)
+		return
+	}
+	defer func() { _ = os.Remove(tmpPath) }()
+
+	launchErr := a.withTerminalReleased(func() error {
+		return externalEditorRunner(context.Background(), tmpPath)
+	})
+	if launchErr != nil {
+		a.setTransientMessage(fmt.Sprintf("Editor error: %v", launchErr), ui.MessageUrgencyCritical)
+		return
+	}
+
+	raw, readErr := os.ReadFile(tmpPath)
+	if readErr != nil {
+		a.setTransientMessage(fmt.Sprintf("Cannot read temp file: %v", readErr), ui.MessageUrgencyCritical)
+		return
+	}
+	lines := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
+	// Remove trailing empty element that Split produces when the file ends with a newline.
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	if len(lines) != len(d.MassRenameSources) {
+		d.MassRenameExternalNames = nil
+		a.setTransientMessage(
+			fmt.Sprintf("Line count mismatch: got %d, expected %d", len(lines), len(d.MassRenameSources)),
+			ui.MessageUrgencyCritical,
+		)
+		a.recomputeMassRenamePreview()
+		return
+	}
+	d.MassRenameExternalNames = lines
+	a.recomputeMassRenamePreview()
 }

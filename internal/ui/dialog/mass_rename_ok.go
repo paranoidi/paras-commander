@@ -6,13 +6,20 @@ func FileDialogMassRenameOKEnabled(state FileDialogState) bool {
 	if state.DialogType != FileDialogMassRename {
 		return true
 	}
+	if state.MassRenameMode == MassRenameModeUIExternalEditor {
+		return len(state.MassRenameExternalNames) > 0 && !massRenameHasErrors(state)
+	}
 	if len(state.Fields) > 0 && state.Fields[0].InputInvalid {
 		return false
 	}
+	return !massRenameHasErrors(state)
+}
+
+func massRenameHasErrors(state FileDialogState) bool {
 	for _, bad := range state.MassRenamePreviewAfterError {
 		if bad {
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }

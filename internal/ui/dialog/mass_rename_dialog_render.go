@@ -12,7 +12,10 @@ import (
 
 // massRenameContentEnd returns the FocusedField index of the OK button for a mass rename dialog.
 func massRenameContentEnd(state FileDialogState) int {
-	n := 2 + 2 // mode radios + find + replace
+	if state.MassRenameMode == MassRenameModeUIExternalEditor {
+		return 3 // 3 radios, no fields or checkboxes
+	}
+	n := 3 + 2 // mode radios + find + replace
 	if state.MassRenameMode == MassRenameModeUISimple {
 		n++ // case-insensitive checkbox
 	}
@@ -38,8 +41,11 @@ func MassRenameEnsurePreviewScroll(state *FileDialogState, viewportRows, totalRo
 }
 
 // massRenameDialogHeight returns the dialog outer height for mass rename.
+// The dialog is sized identically for all three modes (Simple / Regex / ExternalEditor) so
+// switching modes does not resize it. ExternalEditor skips the fields section at render time,
+// which gives the preview area the freed rows automatically.
 func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
-	maxVP := MassRenamePreviewViewportRows(layoutHeight)
+	maxVP := MassRenamePreviewViewportRows(layoutHeight, MassRenameModeUISimple)
 	previewCount := len(state.MassRenamePreviewBefore)
 	if previewCount < 1 {
 		previewCount = 1
@@ -48,18 +54,16 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	if previewCount < vp {
 		vp = previewCount
 	}
-	// Radios(2) + sep + two fields (label+input each) + [regex pattern compile hint] + [checkbox+sep in simple] + sep + vp + buttons (global sep above buttons only).
-	fixed := 2 + 1 + 4 + 1
+	// 3 radios + sep + two fields (label+input each) + checkbox-area row + sep before preview.
+	// The checkbox-area row is always reserved; it renders blank in Regex / ExternalEditor mode.
+	fixed := 3 + 1 + 4 + 1 + 1
 	if massRenameShowsPatternHint(state) {
 		fixed++
 	}
 	if massRenameShowsReplacementHint(state) {
 		fixed++
 	}
-	if state.MassRenameMode == MassRenameModeUISimple {
-		fixed += 1 + 1 // checkbox + sep
-	}
-	height := 1 + fixed + vp + 2 // inner top pad + body + buttons row + bottom
+	height := 1 + fixed + vp + 2 // top pad + body + buttons row + bottom border
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2
 	}
@@ -69,9 +73,17 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	return height
 }
 
-// MassRenamePreviewViewportRows returns the number of preview lines shown for a terminal height.
-func MassRenamePreviewViewportRows(layoutHeight int) int {
-	maxBody := layoutHeight - 13
+// MassRenamePreviewViewportRows returns the preview page size for PgUp/PgDn scrolling.
+// ExternalEditor skips the fields section, so its effective viewport is larger.
+func MassRenamePreviewViewportRows(layoutHeight int, mode MassRenameModeUI) int {
+	// Base overhead matches the Simple/Regex fixed layout (see massRenameDialogHeight).
+	overhead := 13
+	if mode == MassRenameModeUIExternalEditor {
+		// ExternalEditor omits fields (4) + checkbox-area (1) + sep (1) = 6 rows → overhead shrinks by 5.
+		// (The sep-before-preview is shared but one sep is also absent from the ExternalEditor content.)
+		overhead = 8
+	}
+	maxBody := layoutHeight - overhead
 	if maxBody < 3 {
 		maxBody = 3
 	}
@@ -106,48 +118,8 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
+	draw.DrawDialogRadio(screen, leftCol, y, "External $EDITOR", 'E', state.MassRenameMode == MassRenameModeUIExternalEditor, state.FocusedField == 2, styles)
 	y++
-	if y >= innerBottom {
-		return
-	}
-
-	for fi := 0; fi < 2 && fi < len(state.Fields); fi++ {
-		field := state.Fields[fi]
-		focusIdx := 2 + fi
-		if y >= innerBottom {
-			return
-		}
-		primitive.Text(screen, leftCol, y, innerW, field.Label+":", labelStyle)
-		y++
-		if y >= innerBottom {
-			return
-		}
-		drawInputField(screen, leftCol, y, innerW, field, state.FocusedField == focusIdx, styles)
-		y++
-		if fi == 0 && state.MassRenameMode == MassRenameModeUIRegex {
-			if hint := massRenamePatternHintText(state); hint != "" && y < innerBottom {
-				primitive.Text(screen, leftCol, y, innerW, hint, massRenamePatternHintStyle(styles, dbg))
-				y++
-			}
-		}
-		if fi == 1 && state.MassRenameMode == MassRenameModeUIRegex {
-			if hint := massRenameReplacementHintText(state); hint != "" && y < innerBottom {
-				primitive.Text(screen, leftCol, y, innerW, hint, massRenameReplacementHintStyle(styles, dbg))
-				y++
-			}
-		}
-	}
-
-	if state.MassRenameMode == MassRenameModeUISimple {
-		if y >= innerBottom {
-			return
-		}
-		// One cell left of radios/fields so "[ ]" aligns with "( )" marker column.
-		draw.DrawDialogCheckbox(screen, leftCol-1, y, "Case insensitive find", 'i', state.MassRenameCaseFold, state.FocusedField == 4, styles)
-		y++
-	}
-
 	if y >= innerBottom {
 		return
 	}
@@ -155,6 +127,55 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	y++
 	if y >= innerBottom {
 		return
+	}
+
+	if state.MassRenameMode != MassRenameModeUIExternalEditor {
+		for fi := 0; fi < 2 && fi < len(state.Fields); fi++ {
+			field := state.Fields[fi]
+			focusIdx := 3 + fi
+			if y >= innerBottom {
+				return
+			}
+			primitive.Text(screen, leftCol, y, innerW, field.Label+":", labelStyle)
+			y++
+			if y >= innerBottom {
+				return
+			}
+			drawInputField(screen, leftCol, y, innerW, field, state.FocusedField == focusIdx, styles)
+			y++
+			if fi == 0 && state.MassRenameMode == MassRenameModeUIRegex {
+				if hint := massRenamePatternHintText(state); hint != "" && y < innerBottom {
+					primitive.Text(screen, leftCol, y, innerW, hint, massRenamePatternHintStyle(styles, dbg))
+					y++
+				}
+			}
+			if fi == 1 && state.MassRenameMode == MassRenameModeUIRegex {
+				if hint := massRenameReplacementHintText(state); hint != "" && y < innerBottom {
+					primitive.Text(screen, leftCol, y, innerW, hint, massRenameReplacementHintStyle(styles, dbg))
+					y++
+				}
+			}
+		}
+
+		// Checkbox row is always consumed to keep dialog height identical across modes.
+		// Regex mode leaves it blank; the dialog surface background fills the row.
+		if y >= innerBottom {
+			return
+		}
+		if state.MassRenameMode == MassRenameModeUISimple {
+			// One cell left of radios/fields so "[ ]" aligns with "( )" marker column.
+			draw.DrawDialogCheckbox(screen, leftCol-1, y, "Case insensitive find", 'i', state.MassRenameCaseFold, state.FocusedField == 5, styles)
+		}
+		y++
+
+		if y >= innerBottom {
+			return
+		}
+		draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
+		y++
+		if y >= innerBottom {
+			return
+		}
 	}
 
 	vp := innerBottom - y - 1 // row innerBottom-1 is the global separator above buttons

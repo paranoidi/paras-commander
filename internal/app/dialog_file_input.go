@@ -18,7 +18,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		switch event.Rune() {
 		case 's', 'S':
 			d.MassRenameMode = ui.MassRenameModeUISimple
-			if d.FocusedField == 1 {
+			if d.FocusedField == 1 || d.FocusedField == 2 {
 				d.FocusedField = 0
 			}
 			a.massRenameSyncFieldLabels()
@@ -27,10 +27,18 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		case 'r', 'R':
 			d.MassRenameMode = ui.MassRenameModeUIRegex
 			switch d.FocusedField {
-			case 0:
+			case 0, 2:
 				d.FocusedField = 1
-			case 4:
-				d.FocusedField = 3
+			case 5:
+				d.FocusedField = 4 // checkbox focus doesn't exist in regex mode; move to Replace
+			}
+			a.massRenameSyncFieldLabels()
+			a.recomputeMassRenamePreview()
+			return false
+		case 'e', 'E':
+			d.MassRenameMode = ui.MassRenameModeUIExternalEditor
+			if d.FocusedField < 2 {
+				d.FocusedField = 2
 			}
 			a.massRenameSyncFieldLabels()
 			a.recomputeMassRenamePreview()
@@ -45,9 +53,12 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	}
 	if d.Open && d.DialogType == ui.FileDialogMassRename {
 		switch event.Key() {
+		case tcell.KeyF4:
+			a.launchMassRenameExternalEditor()
+			return false
 		case tcell.KeyPgUp:
 			_, h := a.screen.Size()
-			vp := ui.MassRenamePreviewViewportRows(h)
+			vp := ui.MassRenamePreviewViewportRows(h, d.MassRenameMode)
 			d.MassRenamePreviewScroll -= vp
 			if d.MassRenamePreviewScroll < 0 {
 				d.MassRenamePreviewScroll = 0
@@ -55,7 +66,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			return false
 		case tcell.KeyPgDn:
 			_, h := a.screen.Size()
-			vp := ui.MassRenamePreviewViewportRows(h)
+			vp := ui.MassRenamePreviewViewportRows(h, d.MassRenameMode)
 			ui.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
 			d.MassRenamePreviewScroll += vp
 			ui.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
@@ -150,7 +161,12 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			return false
 		}
 		if onMassRenameRadio {
-			a.applyMassRenameModeFromFocus()
+			if d.FocusedField == 2 {
+				a.launchMassRenameExternalEditor()
+			} else {
+				a.applyMassRenameModeFromFocus()
+				d.FocusedField = massRenameFindFieldFocus
+			}
 			return false
 		}
 		if onRunForEachRadio {
@@ -371,9 +387,9 @@ func (a *App) focusedField() *ui.FileDialogField {
 	}
 	if d.DialogType == ui.FileDialogMassRename {
 		switch d.FocusedField {
-		case 2:
-			return &d.Fields[0]
 		case 3:
+			return &d.Fields[0]
+		case 4:
 			return &d.Fields[1]
 		default:
 			return nil
@@ -397,7 +413,7 @@ func (a *App) fileDialogMoveFocusKey(event *tcell.EventKey) bool {
 	if nf, ok := form.MoveFocus(d.FocusedField, event.Key()); ok {
 		a.clearFileDialogPickerSubfocus()
 		d.FocusedField = nf
-		if d.DialogType == ui.FileDialogMassRename && (nf == 0 || nf == 1) {
+		if d.DialogType == ui.FileDialogMassRename && (nf == 0 || nf == 1 || nf == 2) {
 			a.applyMassRenameModeFromFocus()
 		}
 		return true
@@ -454,13 +470,13 @@ func (a *App) fileDialogOnRunForEachPoolRadio() bool {
 	return d.DialogType == ui.FileDialogRunForEach && d.FocusedField >= base && d.FocusedField < base+extra
 }
 
-// fileDialogOnMassRenameRadio returns true when focus is on Simple / Regex mode radios.
+// fileDialogOnMassRenameRadio returns true when focus is on one of the three mode radios.
 func (a *App) fileDialogOnMassRenameRadio() bool {
 	d := &a.model.FileDialog
 	if d.DialogType != ui.FileDialogMassRename {
 		return false
 	}
-	return d.FocusedField >= 0 && d.FocusedField < 2
+	return d.FocusedField >= 0 && d.FocusedField < 3
 }
 
 // fileDialogOnMassRenameCaseCheckbox returns true when focus is on the case-insensitive checkbox.
@@ -468,7 +484,7 @@ func (a *App) fileDialogOnMassRenameCaseCheckbox() bool {
 	d := &a.model.FileDialog
 	return d.DialogType == ui.FileDialogMassRename &&
 		d.MassRenameMode == ui.MassRenameModeUISimple &&
-		d.FocusedField == 4
+		d.FocusedField == 5
 }
 
 // fileDialogOnRenameFocusCheckbox returns true when focus is on the focus-after-rename checkbox.
