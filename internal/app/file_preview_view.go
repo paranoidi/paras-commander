@@ -138,6 +138,14 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 		a.toggleFilePreviewThemePicker()
 		return false
 	}
+	if nextAction == keymap.ActionFileViewDiffNextHunk {
+		a.hunkNavigate(previewTargetFullscreen, 1)
+		return false
+	}
+	if nextAction == keymap.ActionFileViewDiffPrevHunk {
+		a.hunkNavigate(previewTargetFullscreen, -1)
+		return false
+	}
 	if nextAction == keymap.ActionFileEdit {
 		a.editFullscreenPreviewFile()
 		return false
@@ -272,8 +280,10 @@ func (a *App) openFilePreviewFullscreen() {
 		st.Scroll = 0
 		st.ExitCode = 0
 		st.ErrorMsg = ""
+		st.IsDiff = false
+		st.DiffHunkLines = nil
 	})
 	gen := a.filePreviewRunGen.Add(1)
 	a.postCommandWake()
-	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, active.PathString(), a.model.PanelsChromeBlocked()), previewTargetFullscreen, gen)
+	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, active.PathString(), a.model.PanelsChromeBlocked(), a.gitStatusForPath(path)), previewTargetFullscreen, gen)
 }

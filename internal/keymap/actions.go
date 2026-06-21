@@ -83,6 +83,8 @@ const (
 	ActionFileExtract                  = "file.extract"
 	ActionFileView                     = "file.view"
 	ActionFileViewThemePicker          = "file.view.theme-picker"
+	ActionFileViewDiffNextHunk         = "file.view.diff-next-hunk"
+	ActionFileViewDiffPrevHunk         = "file.view.diff-prev-hunk"
 	ActionFileQuickView                = "file.quick-view"
 	ActionFileQuickViewPreviewPageUp   = "file.quick-view.preview-page-up"
 	ActionFileQuickViewPreviewPageDown = "file.quick-view.preview-page-down"
@@ -245,6 +247,8 @@ var KnownActions = map[string]struct{}{
 	ActionFileExtract:                  {},
 	ActionFileView:                     {},
 	ActionFileViewThemePicker:          {},
+	ActionFileViewDiffNextHunk:         {},
+	ActionFileViewDiffPrevHunk:         {},
 	ActionFileQuickView:                {},
 	ActionFileQuickViewPreviewPageUp:   {},
 	ActionFileQuickViewPreviewPageDown: {},

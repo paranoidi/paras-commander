@@ -260,10 +260,12 @@ func (a *App) applyCarouselFilePreviewNow() {
 		st.Scroll = 0
 		st.ExitCode = 0
 		st.ErrorMsg = ""
+		st.IsDiff = false
+		st.DiffHunkLines = nil
 	})
 	a.postCommandWake()
 	gen := a.carouselFilePreviewRunGen.Add(1)
-	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.activePanelChromeBlocked()), previewTargetCarousel, gen)
+	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.activePanelChromeBlocked(), a.gitStatusForPath(path)), previewTargetCarousel, gen)
 }
 
 func (a *App) reconcileCarouselFilePreview() {

@@ -6828,7 +6828,7 @@ func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
 	staleGen := app.filePreviewRunGen.Add(1)
 	app.filePreviewRunGen.Add(1)
 
-	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false), previewTargetInactive, staleGen)
+	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false, nil), previewTargetInactive, staleGen)
 
 	app.commandsMu.RLock()
 	ph := app.model.FilePreview.Phase
@@ -6853,7 +6853,7 @@ func TestRunPreviewInternalSetsHighlightedCells(t *testing.T) {
 		st.Path = path
 	})
 	gen := app.filePreviewRunGen.Add(1)
-	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false), previewTargetInactive, gen)
+	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false, nil), previewTargetInactive, gen)
 
 	app.commandsMu.RLock()
 	st := app.model.FilePreview

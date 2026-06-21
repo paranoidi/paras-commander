@@ -837,6 +837,10 @@ func (a *App) dispatch(actionID string) bool {
 		a.openFilePreviewFullscreen()
 	case keymap.ActionFileViewThemePicker:
 		a.toggleFilePreviewThemePicker()
+	case keymap.ActionFileViewDiffNextHunk:
+		a.hunkNavigate(previewTargetInactive, 1)
+	case keymap.ActionFileViewDiffPrevHunk:
+		a.hunkNavigate(previewTargetInactive, -1)
 	case keymap.ActionFileQuickView:
 		a.handleQuickViewToggle()
 	case keymap.ActionMenuFileViewPath:

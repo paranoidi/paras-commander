@@ -140,7 +140,7 @@ func (a *App) refreshFullscreenFilePreview() {
 	}
 	gen := a.filePreviewRunGen.Add(1)
 	a.postCommandWake()
-	go a.runPreview(a.commandsCtx, a.previewRequest(st.Path, tw, a.activePanel().PathString(), a.model.PanelsChromeBlocked()), previewTargetFullscreen, gen)
+	go a.runPreview(a.commandsCtx, a.previewRequest(st.Path, tw, a.activePanel().PathString(), a.model.PanelsChromeBlocked(), a.gitStatusForPath(st.Path)), previewTargetFullscreen, gen)
 }
 
 func (a *App) syncFilePreviewThemePickerRanks() {

@@ -1,5 +1,7 @@
 package previewpanel
 
+import "github.com/gdamore/tcell/v2"
+
 // Phase is the async preview lifecycle.
 type Phase int
 
@@ -43,6 +45,10 @@ type State struct {
 	ErrorMsg string
 	// BodyHeld keeps the previous body visible while a new file loads.
 	BodyHeld bool
+	// IsDiff is true when the preview is showing a git diff instead of file content.
+	IsDiff bool
+	// DiffHunkLines holds the 0-based source line numbers of @@ hunk markers in the diff.
+	DiffHunkLines []int
 
 	wrappedLines     [][]AnsiCell
 	wrapWidth        int
@@ -85,4 +91,52 @@ func (st State) highlightedCacheKey() uint64 {
 // HighlightedCacheKey fingerprints internal Chroma highlight styles for cache invalidation.
 func (st State) HighlightedCacheKey() uint64 {
 	return st.highlightedCacheKey()
+}
+
+// SourceLineToScrollOffset returns the wrapped-line index where source line lineN begins.
+// Used to jump to a diff hunk position. base is only used for ANSI text; rune widths
+// determine wrapping regardless of color.
+func (st State) SourceLineToScrollOffset(lineN, textWidth int, base tcell.Style) int {
+	if lineN <= 0 {
+		return 0
+	}
+	var cells []AnsiCell
+	switch st.Source {
+	case SourceInternalHighlighted:
+		cells = st.HighlightedCells
+	default:
+		cells = AnsiStyledCells(st.CombinedText, base)
+	}
+	// Walk cells counting \n; stop after lineN newlines to find start of that source line.
+	srcNewlines := 0
+	endIdx := -1
+	for i, c := range cells {
+		if c.R == '\n' {
+			srcNewlines++
+			if srcNewlines == lineN {
+				endIdx = i + 1
+				break
+			}
+		}
+	}
+	gw := 0
+	if st.Source == SourceInternalHighlighted {
+		gw = st.GutterWidth
+	}
+	wrapFn := func(prefix []AnsiCell) [][]AnsiCell {
+		if gw > 0 {
+			return WrapAnsiCellsWithGutter(prefix, textWidth, gw)
+		}
+		return WrapAnsiCells(prefix, textWidth)
+	}
+	if endIdx < 0 {
+		// lineN is beyond content; return index of last wrapped line.
+		wrapped := wrapFn(cells)
+		return max(0, len(wrapped)-1)
+	}
+	wrapped := wrapFn(cells[:endIdx])
+	if len(wrapped) == 0 {
+		return 0
+	}
+	return len(wrapped) - 1
 }

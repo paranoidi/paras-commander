@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -605,10 +606,12 @@ func (a *App) applyQuickViewPreviewNow() {
 			st.Scroll = 0
 			st.ExitCode = 0
 			st.ErrorMsg = ""
+			st.IsDiff = false
+			st.DiffHunkLines = nil
 		})
 		a.postCommandWake()
 		gen := a.filePreviewRunGen.Add(1)
-		go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.inactivePreviewChromeBlocked()), previewTargetInactive, gen)
+		go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.inactivePreviewChromeBlocked(), a.gitStatusForPath(path)), previewTargetInactive, gen)
 	}
 }
 
@@ -696,14 +699,33 @@ func (a *App) reconcileQuickViewPreview() {
 	a.armQuickViewPreviewDebounce()
 }
 
-func (a *App) previewRequest(path string, textW int, workDir string, chromeBlocked bool) preview.Request {
-	return preview.Request{
+func (a *App) previewRequest(path string, textW int, workDir string, chromeBlocked bool, gitStatus *gitstatus.Cell) preview.Request {
+	req := preview.Request{
 		Path:      path,
 		TextWidth: textW,
 		WorkDir:   workDir,
 		Preview:   a.config.Preview,
 		BaseStyle: ui.FilePreviewBodyStyle(a.styles, chromeBlocked),
 	}
+	if gitStatus != nil && (gitStatus.Staged != gitstatus.NotModified || gitStatus.Unstaged != gitstatus.NotModified) {
+		req.GitDiff = true
+		req.GitStatus = gitStatus
+	}
+	return req
+}
+
+// gitStatusForPath returns the git status for path from the active panel, or nil if unavailable.
+func (a *App) gitStatusForPath(path string) *gitstatus.Cell {
+	p := a.activePanel()
+	if p == nil || p.GitByPath == nil {
+		return nil
+	}
+	cell, ok := p.GitByPath[path]
+	if !ok {
+		return nil
+	}
+	cellCopy := cell
+	return &cellCopy
 }
 
 func (a *App) runPreview(ctx context.Context, req preview.Request, target previewTarget, runGen uint64) {
@@ -762,6 +784,8 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 			st.ExitCode = res.ExitCode
 			st.CombinedText = ""
 			st.SetHighlightedCells(nil)
+			st.IsDiff = res.IsDiff
+			st.DiffHunkLines = nil
 			doneApplied = true
 			return
 		}
@@ -771,6 +795,8 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 		st.GutterWidth = res.GutterWidth
 		st.ExitCode = res.ExitCode
 		st.ErrorMsg = ""
+		st.IsDiff = res.IsDiff
+		st.DiffHunkLines = res.DiffHunkLines
 		doneApplied = true
 	})
 	if doneApplied && runGen == gen.Load() {
@@ -788,4 +814,72 @@ func (a *App) clampPreviewScroll(target previewTarget) {
 	default:
 		a.clampFilePreviewScroll()
 	}
+}
+
+func (a *App) previewTextWidth(target previewTarget) (int, bool) {
+	switch target {
+	case previewTargetFullscreen:
+		return a.fullscreenPreviewTextWidth()
+	default:
+		tw, _, ok := a.inactivePanelPreviewLayoutMetrics(a.filePreviewOpen())
+		return tw, ok
+	}
+}
+
+func (a *App) hunkScrollTo(target previewTarget, scroll int) {
+	switch target {
+	case previewTargetFullscreen:
+		a.fullscreenPreviewScrollTo(scroll)
+	default:
+		a.previewScrollTo(scroll)
+	}
+}
+
+// hunkNavigate scrolls the preview for target to the next (dir>0) or previous (dir<0) diff hunk.
+func (a *App) hunkNavigate(target previewTarget, dir int) {
+	a.commandsMu.RLock()
+	var st ui.FilePreviewState
+	switch target {
+	case previewTargetFullscreen:
+		st = a.model.FullscreenFilePreview
+	default:
+		st = a.model.FilePreview
+	}
+	a.commandsMu.RUnlock()
+
+	if !st.IsDiff || len(st.DiffHunkLines) == 0 || st.Phase != ui.FilePreviewPhaseDone {
+		return
+	}
+	tw, ok := a.previewTextWidth(target)
+	if !ok || tw < 1 {
+		return
+	}
+
+	currentScroll := st.Scroll
+	var targetOffset int
+	found := false
+
+	if dir > 0 {
+		for _, hunkLine := range st.DiffHunkLines {
+			offset := st.SourceLineToScrollOffset(hunkLine, tw, tcell.StyleDefault)
+			if offset > currentScroll {
+				targetOffset = offset
+				found = true
+				break
+			}
+		}
+	} else {
+		for _, hunkLine := range st.DiffHunkLines {
+			offset := st.SourceLineToScrollOffset(hunkLine, tw, tcell.StyleDefault)
+			if offset < currentScroll {
+				targetOffset = offset
+				found = true
+			}
+		}
+	}
+
+	if !found {
+		return
+	}
+	a.hunkScrollTo(target, targetOffset)
 }
