@@ -175,6 +175,9 @@ func (a *App) menuBarPermissionText() string {
 	if ui.IsAuxiliaryView(a.model.ViewMode) {
 		return ""
 	}
+	if a.cursorNameHintNavSkip.Load() {
+		return ""
+	}
 	entry, ok := a.activePanel().CurrentEntry()
 	if !ok {
 		return ""
