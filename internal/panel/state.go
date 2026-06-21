@@ -1301,6 +1301,41 @@ func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entr
 	}
 }
 
+// RescheduleGitStatusIfNeeded schedules an async git status fetch when the panel is inside a
+// git work tree but no data has been loaded yet. Call this after wiring ScheduleGitStatus
+// if the initial load ran before the scheduler was available.
+func (s *State) RescheduleGitStatusIfNeeded() {
+	if !s.GitColumnActive || s.GitPending || s.GitByPath != nil || s.ScheduleGitStatus == nil {
+		return
+	}
+	if s.Path.IsRemote() {
+		return
+	}
+	host, err := s.Path.FilePath()
+	if err != nil {
+		return
+	}
+	workRoot := gitignore.ValidWorkTreeRoot(host)
+	if workRoot == "" {
+		return
+	}
+	s.GitPending = true
+	paths := make([]gitstatus.ListingPaths, len(s.Entries))
+	for i, e := range s.Entries {
+		paths[i] = gitstatus.ListingPaths{
+			AbsPath: filepath.Clean(e.Path),
+			IsDir:   e.Type == localfs.EntryDirectory,
+		}
+	}
+	if !s.ScheduleGitStatus(GitStatusRequest{
+		WorkRoot: workRoot,
+		ListDir:  host,
+		Paths:    paths,
+	}) {
+		s.GitPending = false
+	}
+}
+
 func cleanPathString(p string) string {
 	if p == "" {
 		return ""

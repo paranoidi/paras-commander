@@ -588,6 +588,8 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	app.wireRemotePanelLoaders()
 	app.wireGitStatusLoaders()
+	app.model.Left.RescheduleGitStatusIfNeeded()
+	app.model.Right.RescheduleGitStatusIfNeeded()
 	app.syncJobPathMarks()
 	if secs := cfg.Jobs.FreeSpacePollIntervalSecs; secs > 0 {
 		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
