@@ -316,9 +316,10 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			}
 			if entryIndex == state.Cursor {
 				style = styles.PanelListingCursorStyle(theme.PanelListingCursorOpts{
-					ChromeBlocked:  chromeBlocked,
-					FileListActive: fileListActive,
-					Selected:       selected,
+					ChromeBlocked:     chromeBlocked,
+					FileListActive:    fileListActive,
+					Selected:          selected,
+					FilterUniqueMatch: fileListActive && state.FilterUniqueMatch(),
 				})
 			}
 			subtreeMark = entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
@@ -358,7 +359,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 
 		cursorIconKey := ""
 		if hasEntry {
-			cursorIconKey = panelCursorIconThemeKey(fileListActive, chromeBlocked, entryIndex, state.Cursor, selected)
+			cursorIconKey = panelCursorIconThemeKey(fileListActive, chromeBlocked, entryIndex, state.Cursor, selected, fileListActive && state.FilterUniqueMatch())
 		}
 		if hasEntry {
 			spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, styles, showIcons, rowSuffix, showMetaEffective, metaTotalW, listFmt, nameOnlyDisplay, showGit, func(di int) tcell.Style {
@@ -501,7 +502,7 @@ const (
 )
 
 // panelCursorIconThemeKey is the semantic style key for Theme.PanelFileIconFG on the cursor row; empty otherwise.
-func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cursor int, selected bool) string {
+func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cursor int, selected, filterUniqueMatch bool) string {
 	if entryIndex != cursor {
 		return ""
 	}
@@ -512,6 +513,9 @@ func panelCursorIconThemeKey(fileListActive, chromeBlocked bool, entryIndex, cur
 		return "panel.blocked.row.cursor"
 	}
 	if fileListActive {
+		if filterUniqueMatch {
+			return "panel.active.row.cursor.unique"
+		}
 		if selected {
 			return "panel.active.row.cursor.selected"
 		}

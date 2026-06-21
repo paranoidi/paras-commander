@@ -174,10 +174,11 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			isCursor := entryIndex == cursor
 			if isCursor {
 				style = p.Styles.PanelListingCursorStyle(theme.PanelListingCursorOpts{
-					ChromeBlocked:    p.ChromeBlocked,
-					FileListActive:   p.FileListActive && !inactive,
-					CarouselInactive: inactive,
-					Selected:         selected,
+					ChromeBlocked:     p.ChromeBlocked,
+					FileListActive:    p.FileListActive && !inactive,
+					CarouselInactive:  inactive,
+					Selected:          selected,
+					FilterUniqueMatch: p.FileListActive && !inactive && p.Center.FilterUniqueMatch(),
 				})
 			} else if selected {
 				style = p.Styles.PanelListingSelectedStyle(p.ChromeBlocked)
@@ -228,10 +229,11 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			cursorKey := ""
 			if isCursor {
 				cursorKey = p.Styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{
-					ChromeBlocked:    p.ChromeBlocked,
-					FileListActive:   p.FileListActive && !inactive,
-					CarouselInactive: inactive,
-					Selected:         selected,
+					ChromeBlocked:     p.ChromeBlocked,
+					FileListActive:    p.FileListActive && !inactive,
+					CarouselInactive:  inactive,
+					Selected:          selected,
+					FilterUniqueMatch: p.FileListActive && !inactive && p.Center.FilterUniqueMatch(),
 				})
 			}
 			if suffixSpans := panellist.ListingSuffixSpans(entry, nameWidth, p.ShowIcons, rowSuffix, jobStatus, p.Styles, p.ChromeBlocked, cursorKey, func(di int) tcell.Style {

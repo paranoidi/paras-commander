@@ -329,6 +329,11 @@ func (s State) FilterHasMatches() bool {
 	return len(s.Filter.results) > 0
 }
 
+// FilterUniqueMatch reports whether the active quick filter has exactly one file-name match.
+func (s State) FilterUniqueMatch() bool {
+	return s.Filter.Active && len(s.Filter.results) == 1
+}
+
 // MatchRanges returns highlighted rune ranges for the visible entry.
 func (s State) MatchRanges(index int) []search.Range {
 	if !s.Filter.Active || index < 0 || index >= len(s.Entries) {

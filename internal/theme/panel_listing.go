@@ -11,6 +11,9 @@ type PanelListingCursorOpts struct {
 	FileListActive   bool
 	CarouselInactive bool
 	Selected         bool
+	// FilterUniqueMatch is true when the active quick filter has exactly one matching entry.
+	// Activates panel.active.row.cursor.unique styling on the active panel cursor.
+	FilterUniqueMatch bool
 }
 
 // PanelListingEntryStyle returns the base row style for a listing entry by type and chrome state.
@@ -58,6 +61,9 @@ func (t Theme) PanelListingCursorStyle(opts PanelListingCursorOpts) tcell.Style 
 		return t.PanelCarouselInactiveCursor
 	}
 	if opts.FileListActive {
+		if opts.FilterUniqueMatch {
+			return t.PanelCursorActiveUnique
+		}
 		if opts.Selected {
 			return t.PanelActiveCursorSelected
 		}
@@ -84,6 +90,9 @@ func (t Theme) PanelListingCursorIconKey(opts PanelListingCursorOpts) string {
 		return "panel.carousel.inactive.row.cursor"
 	}
 	if opts.FileListActive {
+		if opts.FilterUniqueMatch {
+			return "panel.active.row.cursor.unique"
+		}
 		if opts.Selected {
 			return "panel.active.row.cursor.selected"
 		}

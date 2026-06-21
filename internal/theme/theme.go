@@ -72,6 +72,7 @@ type Theme struct {
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
 	PanelText                   tcell.Style
 	PanelCursorActive           tcell.Style
+	PanelCursorActiveUnique     tcell.Style
 	PanelCursorInactive         tcell.Style
 	PanelActiveCursorSelected   tcell.Style
 	PanelInactiveCursorSelected tcell.Style
@@ -626,6 +627,7 @@ var requiredStyleKeys = []string{
 	"panel.inactive.header.carousel",
 	"panel.active.row.cursor",
 	"panel.active.row.cursor.selected",
+	"panel.active.row.cursor.unique",
 	"panel.active.usage.cursor",
 	"panel.active.usage.cursor.selected",
 	"panel.inactive.row.cursor",
@@ -1041,6 +1043,7 @@ func parse(data []byte) (Theme, error) {
 	allowedPanelIconStyles := map[string]struct{}{
 		"panel.active.row.cursor":                     {},
 		"panel.active.row.cursor.selected":            {},
+		"panel.active.row.cursor.unique":              {},
 		"panel.inactive.row.cursor":                   {},
 		"panel.inactive.row.cursor.selected":          {},
 		"panel.carousel.inactive.row.cursor":          {},
@@ -1103,6 +1106,7 @@ func parse(data []byte) (Theme, error) {
 		PanelIconFolderDefault:              panelIconFolderDefault,
 		PanelText:                           styles["panel.text"],
 		PanelCursorActive:                   styles["panel.active.row.cursor"],
+		PanelCursorActiveUnique:             styles["panel.active.row.cursor.unique"],
 		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],
 		PanelActiveCursorSelected:           styles["panel.active.row.cursor.selected"],
 		PanelInactiveCursorSelected:         styles["panel.inactive.row.cursor.selected"],

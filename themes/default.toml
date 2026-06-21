@@ -96,6 +96,7 @@ header = { fg = "bright_white", bg = "blue", bold = true }
 header.carousel = { fg = "white", bg = "bright_black" }
 row.cursor = { fg = "black", bg = "cyan", icon = "black" }
 row.cursor.selected = { fg = "yellow", bg = "cyan", bold = true, icon = "black" }
+row.cursor.unique = { fg = "black", bg = "green", icon = "black" }
 surface = { fg = "white" }
 title = { fg = "white", bold = true }
 usage.cursor = { fg = "black", bg = "bright_cyan" }
