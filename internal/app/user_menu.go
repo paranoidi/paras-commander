@@ -226,9 +226,9 @@ func (a *App) executeUserMenuEntry(idx int) {
 	workDir := active.PathString()
 	switch {
 	case entry.Interactive:
-		a.runUserMenuInteractive(argv, workDir)
+		a.runUserMenuInteractive(argv, workDir, entry.Toast)
 	case entry.Detach:
-		a.runUserMenuDetached(argv, workDir)
+		a.runUserMenuDetached(argv, workDir, entry.Toast)
 	default:
 		cmdLine := entry.Command
 		rowIdx := a.appendUserMenuCommandRow(cmdLine, expanded)
@@ -240,7 +240,7 @@ func (a *App) executeUserMenuEntry(idx int) {
 		}
 
 		a.commandsBatchesInflight.Add(1)
-		go a.runUserMenuCommand(a.commandsCtx, rowIdx, argv, workDir, entry.Background, entry.Title, entry.Pool)
+		go a.runUserMenuCommand(a.commandsCtx, rowIdx, argv, workDir, entry.Background, entry.Title, entry.Pool, entry.Toast)
 	}
 }
 
@@ -286,7 +286,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 	})
 }
 
-func (a *App) runUserMenuInteractive(argv []string, workDir string) {
+func (a *App) runUserMenuInteractive(argv []string, workDir, toast string) {
 	if err := a.withTerminalReleased(func() error {
 		return userMenuInteractiveRunner(context.Background(), argv, workDir)
 	}); err != nil {
@@ -294,14 +294,21 @@ func (a *App) runUserMenuInteractive(argv []string, workDir string) {
 		return
 	}
 	a.refreshAfterUserMenuCommand()
+	if toast != "" {
+		a.setTransientMessage(toast, ui.MessageUrgencyInfo)
+	}
 }
 
-func (a *App) runUserMenuDetached(argv []string, workDir string) {
+func (a *App) runUserMenuDetached(argv []string, workDir, toast string) {
 	if err := userMenuDetachRunner(argv, workDir); err != nil {
 		a.setErrorMessage("User menu", err)
 		return
 	}
-	a.setTransientMessage("Started "+cmdrun.FormatArgvDisplay(argv), ui.MessageUrgencyInfo)
+	if toast != "" {
+		a.setTransientMessage(toast, ui.MessageUrgencyInfo)
+	} else {
+		a.setTransientMessage("Started "+cmdrun.FormatArgvDisplay(argv), ui.MessageUrgencyInfo)
+	}
 }
 
 func (a *App) refreshAfterUserMenuCommand() {
@@ -327,19 +334,19 @@ func (a *App) appendUserMenuCommandRow(cmdLine, expanded string) int {
 	return idx
 }
 
-func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, workDir string, background bool, title, poolName string) {
+func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, workDir string, background bool, title, poolName, toast string) {
 	defer a.commandsBatchesInflight.Add(-1)
 
 	postBackgroundFinal := func(res cmdrun.RunResult) {
-		if !background {
-			a.postCommandWake()
-			return
-		}
-		p := commandWakePayload{refreshBrowserPanel: true}
+		p := commandWakePayload{refreshBrowserPanel: background}
 		if log, banner, urg, ok := userMenuBackgroundNotify(title, res); ok {
 			p.notifyLog = log
 			p.notifyBanner = banner
 			p.notifyUrg = urg
+		} else if toast != "" && res.LaunchErr == nil && res.ExitCode == 0 {
+			p.notifyLog = toast
+			p.notifyBanner = toast
+			p.notifyUrg = ui.MessageUrgencyInfo
 		}
 		a.postCommandWakePayload(p)
 	}

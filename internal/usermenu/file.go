@@ -42,6 +42,7 @@ type MenuEntry struct {
 	Key           string   `toml:"key"`
 	Title         string   `toml:"title"`
 	Command       string   `toml:"command"`
+	Toast         string   `toml:"toast"`
 	When          []string `toml:"when"`
 	RunForEach    []string `toml:"run_for_each"`
 	Default       bool     `toml:"default"`
@@ -90,6 +91,7 @@ type menuEntry struct {
 	Key           string     `toml:"key"`
 	Title         string     `toml:"title"`
 	Command       string     `toml:"command"`
+	Toast         string     `toml:"toast"`
 	When          *whenField `toml:"when"`
 	RunForEach    []string   `toml:"run_for_each"`
 	Default       bool       `toml:"default"`
@@ -194,6 +196,7 @@ func Decode(data []byte) (*MenuFile, error) {
 			Key:           strings.TrimSpace(e.Key),
 			Title:         strings.TrimSpace(e.Title),
 			Command:       strings.TrimSpace(e.Command),
+			Toast:         strings.TrimSpace(e.Toast),
 			When:          whenList,
 			RunForEach:    runForEach,
 			Default:       e.Default,

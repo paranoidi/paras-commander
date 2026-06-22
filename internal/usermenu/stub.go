@@ -38,6 +38,10 @@ const MenuStubTOML = `# F2 user menu
 # title           string   required
 # command         string   required
 #
+# toast           string   optional
+#   Message shown in the status bar after the command succeeds.
+#   Suppressed on error. For detach entries it replaces "Started …".
+#
 # key             string   optional   (single letter)
 #   Pin Alt+letter shortcut; otherwise derived from title.
 #
