@@ -182,6 +182,11 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 	case tcell.KeyPgDn:
 		a.fullscreenPreviewScrollBy(step)
 		return false
+	case tcell.KeyRune:
+		if event.Rune() == ' ' {
+			a.fullscreenPreviewScrollBy(step)
+			return false
+		}
 	case tcell.KeyHome:
 		a.fullscreenPreviewScrollTo(0)
 		return false
