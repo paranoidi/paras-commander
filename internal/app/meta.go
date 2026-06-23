@@ -137,29 +137,58 @@ func (a *App) clearMetaCache() {
 	a.metaCacheMu.Unlock()
 }
 
+func (a *App) rerunSinglePanelMeta(panelID int) {
+	if len(a.metaActiveEntries[panelID]) == 0 {
+		return
+	}
+	mf := a.loadMetaFile(panelID)
+	if mf == nil {
+		return
+	}
+	sorted := metacmds.SortEntriesForDisplay(a.metaActiveEntries[panelID], mf)
+	if len(sorted) == 0 {
+		return
+	}
+	cols := make([]ui.MetaColumnState, len(sorted))
+	for i, e := range sorted {
+		cols[i] = ui.MetaColumnState{
+			EntryName:   e.Name,
+			ColumnTitle: e.Column,
+			Order:       e.Order,
+			Results:     nil,
+		}
+	}
+	a.runMetaForPanel(panelID, sorted, cols)
+}
+
 func (a *App) rerunActiveMetaPanels() {
 	for panelID := range a.metaActiveEntries {
-		if len(a.metaActiveEntries[panelID]) == 0 {
-			continue
+		a.rerunSinglePanelMeta(panelID)
+	}
+}
+
+// reconcileMetaForContentChanges detects entries that appeared in the panel listing
+// after a same-directory refresh (e.g. flatten, periodic scan) and re-runs meta for the
+// panel so the new entries get their meta column values populated.
+// Called from reconcileAfterEvent; must be cheap when nothing is missing.
+func (a *App) reconcileMetaForContentChanges(panelID int) {
+	cols := a.model.MetaResults[panelID]
+	if len(cols) == 0 {
+		return
+	}
+	// Results being nil means a run is being set up — nothing to reconcile yet.
+	if cols[0].Results == nil {
+		return
+	}
+	p := a.panelByID(panelID)
+	if p == nil {
+		return
+	}
+	for _, e := range p.Entries {
+		if _, ok := cols[0].Results[e.Path]; !ok {
+			a.rerunSinglePanelMeta(panelID)
+			return
 		}
-		mf := a.loadMetaFile(panelID)
-		if mf == nil {
-			continue
-		}
-		sorted := metacmds.SortEntriesForDisplay(a.metaActiveEntries[panelID], mf)
-		if len(sorted) == 0 {
-			continue
-		}
-		cols := make([]ui.MetaColumnState, len(sorted))
-		for i, e := range sorted {
-			cols[i] = ui.MetaColumnState{
-				EntryName:   e.Name,
-				ColumnTitle: e.Column,
-				Order:       e.Order,
-				Results:     nil,
-			}
-		}
-		a.runMetaForPanel(panelID, sorted, cols)
 	}
 }
 

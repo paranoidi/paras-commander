@@ -292,6 +292,8 @@ func (a *App) reconcileAfterEvent() {
 	a.handlePanelDirChanged(ui.RightPanel)
 	a.handleMetaPanelDirChanged(ui.LeftPanel)
 	a.handleMetaPanelDirChanged(ui.RightPanel)
+	a.reconcileMetaForContentChanges(ui.LeftPanel)
+	a.reconcileMetaForContentChanges(ui.RightPanel)
 	// Panel sync reads the driver's highlight after idle-sort / meta hooks may adjust cursors.
 	if !a.syncFollowNavSkipReconcile.Load() {
 		a.syncFollowFromActive()
