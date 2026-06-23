@@ -1,13 +1,54 @@
 package chromaformat_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/preview/chromaformat"
+	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
+
+func TestHighlightCustomLoadedStyle(t *testing.T) {
+	t.Cleanup(chromastyles.ResetForTest)
+	dir := t.TempDir()
+	xml := `<style name="cedar-glow-preview"><entry type="Keyword" style="#112233"/></style>`
+	if err := os.WriteFile(filepath.Join(dir, "cedar-glow-preview.xml"), []byte(xml), 0o644); err != nil {
+		t.Fatalf("write style: %v", err)
+	}
+	if err := chromastyles.LoadFromDir(dir); err != nil {
+		t.Fatalf("LoadFromDir: %v", err)
+	}
+
+	base := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)
+	res := chromaformat.Highlight("package main\n", chromaformat.Options{
+		Path:        "handler.go",
+		StyleName:   "cedar-glow-preview",
+		BaseStyle:   base,
+		LineNumbers: false,
+		TabWidth:    4,
+	})
+	if len(res.Cells) == 0 {
+		t.Fatal("expected highlighted cells")
+	}
+	baseFG, _, _ := base.Decompose()
+	foundKeyword := false
+	for _, c := range res.Cells {
+		if c.R == 'p' {
+			fg, _, _ := c.St.Decompose()
+			if fg != baseFG {
+				foundKeyword = true
+				break
+			}
+		}
+	}
+	if !foundKeyword {
+		t.Fatal("expected custom preview style to color Go keyword token")
+	}
+}
 
 func TestHighlightGoKeywordColored(t *testing.T) {
 	base := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorBlack)

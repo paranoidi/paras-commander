@@ -1,0 +1,110 @@
+<!--
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+  Theme converted from Helix Editor
+-->
+<style name="jetbrains-dark">
+  <!-- Background and text: ui.background fg=#bcbec4 bg=#1e1f22 -->
+  <entry type="Background" style="bg:#1e1f22 #bcbec4"/>
+  <entry type="Text" style="#bcbec4"/>
+  <entry type="Error" style="#d64d5b"/>
+
+  <!-- Keywords: keyword=#cf8e6d -->
+  <entry type="Keyword" style="#cf8e6d"/>
+  <entry type="KeywordConstant" style="#cf8e6d"/>
+  <entry type="KeywordDeclaration" style="#cf8e6d"/>
+  <entry type="KeywordNamespace" style="#cf8e6d"/>
+  <entry type="KeywordPseudo" style="#cf8e6d"/>
+  <entry type="KeywordReserved" style="#cf8e6d"/>
+  <!-- type.builtin -->
+  <entry type="KeywordType" style="#cf8e6d"/>
+
+  <!-- Names -->
+  <entry type="Name" style="#bcbec4"/>
+  <!-- variable.other.member / struct fields -->
+  <entry type="NameAttribute" style="#c77dbb"/>
+  <!-- type.builtin / variable.builtin -->
+  <entry type="NameBuiltin" style="#cf8e6d"/>
+  <entry type="NameBuiltinPseudo" style="#cf8e6d"/>
+  <!-- type.enum / classes -->
+  <entry type="NameClass" style="#c77dbb"/>
+  <!-- constant.builtin -->
+  <entry type="NameConstant" style="#cf8e6d"/>
+  <!-- function.macro / decorators -->
+  <entry type="NameDecorator" style="#b3ae60"/>
+  <entry type="NameEntity" style="#bcbec4"/>
+  <entry type="NameException" style="#bcbec4"/>
+  <!-- function -->
+  <entry type="NameFunction" style="#56a8f5"/>
+  <!-- label -->
+  <entry type="NameLabel" style="#c77dbb"/>
+  <entry type="NameNamespace" style="#bcbec4"/>
+  <entry type="NameOther" style="#bcbec4"/>
+  <!-- tag -->
+  <entry type="NameTag" style="#d5b778"/>
+  <entry type="NameVariable" style="#bcbec4"/>
+  <!-- variable.other.member -->
+  <entry type="NameVariableClass" style="#c77dbb"/>
+  <entry type="NameVariableGlobal" style="#cf8e6d"/>
+  <entry type="NameVariableInstance" style="#c77dbb"/>
+
+  <!-- Literals -->
+  <!-- string -->
+  <entry type="LiteralString" style="#6aab73"/>
+  <entry type="LiteralStringBacktick" style="#6aab73"/>
+  <entry type="LiteralStringChar" style="#6aab73"/>
+  <!-- comment.block.documentation / comment.line.documentation -->
+  <entry type="LiteralStringDoc" style="#5f826b"/>
+  <entry type="LiteralStringDouble" style="#6aab73"/>
+  <entry type="LiteralStringEscape" style="#cf8e6d"/>
+  <entry type="LiteralStringHeredoc" style="#6aab73"/>
+  <entry type="LiteralStringInterpol" style="#6aab73"/>
+  <entry type="LiteralStringOther" style="#6aab73"/>
+  <entry type="LiteralStringRegex" style="#6aab73"/>
+  <entry type="LiteralStringSingle" style="#6aab73"/>
+  <entry type="LiteralStringSymbol" style="#c77dbb"/>
+  <!-- constant.numeric -->
+  <entry type="LiteralNumber" style="#2aacb8"/>
+  <entry type="LiteralNumberBin" style="#2aacb8"/>
+  <entry type="LiteralNumberFloat" style="#2aacb8"/>
+  <entry type="LiteralNumberHex" style="#2aacb8"/>
+  <entry type="LiteralNumberInteger" style="#2aacb8"/>
+  <entry type="LiteralNumberIntegerLong" style="#2aacb8"/>
+  <entry type="LiteralNumberOct" style="#2aacb8"/>
+
+  <!-- Operators and punctuation: no explicit color in theme -->
+  <entry type="Operator" style="#bcbec4"/>
+  <entry type="OperatorWord" style="#cf8e6d"/>
+  <entry type="Punctuation" style="#bcbec4"/>
+
+  <!-- Comments: comment=#7a7e85, doc comments=#5f826b -->
+  <entry type="Comment" style="#7a7e85"/>
+  <entry type="CommentHashbang" style="#7a7e85"/>
+  <entry type="CommentMultiline" style="#7a7e85"/>
+  <entry type="CommentSingle" style="#7a7e85"/>
+  <entry type="CommentSpecial" style="#7a7e85"/>
+  <!-- preprocessor directives styled like keywords -->
+  <entry type="CommentPreproc" style="#cf8e6d"/>
+  <entry type="CommentPreprocFile" style="#6aab73"/>
+
+  <!-- Generic (diff, markup) -->
+  <!-- diff.minus=#868a91 -->
+  <entry type="GenericDeleted" style="#868a91"/>
+  <!-- markup.italic -->
+  <entry type="GenericEmph" style="italic #bcbec4"/>
+  <entry type="GenericError" style="#d64d5b"/>
+  <!-- markup.heading = italic #c77dbb -->
+  <entry type="GenericHeading" style="bold italic #c77dbb"/>
+  <!-- diff.plus=#549159 -->
+  <entry type="GenericInserted" style="#549159"/>
+  <entry type="GenericOutput" style="#4b5059"/>
+  <entry type="GenericPrompt" style="#57aaf7"/>
+  <!-- markup.bold -->
+  <entry type="GenericStrong" style="bold #bcbec4"/>
+  <entry type="GenericSubheading" style="italic #c77dbb"/>
+  <entry type="GenericTraceback" style="#d64d5b"/>
+  <!-- markup.link = underline -->
+  <entry type="GenericUnderline" style="underline #57aaf7"/>
+</style>

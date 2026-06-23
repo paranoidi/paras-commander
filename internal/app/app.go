@@ -3,6 +3,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -26,6 +27,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/pools"
+	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -271,6 +273,7 @@ func Run(cfg LaunchConfig) error {
 	if err != nil {
 		return err
 	}
+	paths = paths.WithResolvedLocations()
 	conf, err := config.LoadFromPaths(paths)
 	if err != nil {
 		return err
@@ -304,6 +307,9 @@ func Run(cfg LaunchConfig) error {
 	}
 	if themeErr != nil {
 		app.setTransientMessage(themeErr.Error(), ui.MessageUrgencyError)
+	}
+	if warns := chromastyles.LoadWarnings(); len(warns) > 0 {
+		app.setTransientMessage(fmt.Sprintf("Preview styles: %v", errors.Join(warns...)), ui.MessageUrgencyWarn)
 	}
 	return app.Run()
 }

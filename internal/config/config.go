@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 )
 
 const (
@@ -49,10 +49,11 @@ const (
 
 // Paths identifies configuration files discovered from XDG paths.
 type Paths struct {
-	ConfigDir       string
-	ConfigFile      string
-	ThemesDir       string
-	KeybindingsFile string
+	ConfigDir        string
+	ConfigFile       string
+	ThemesDir        string
+	PreviewStylesDir string
+	KeybindingsFile  string
 }
 
 // WithResolvedLocations copies paths and derives ConfigDir or ConfigFile when only one side is set.
@@ -73,11 +74,12 @@ func (paths Paths) WithResolvedLocations() Paths {
 
 func (paths Paths) withDerivedThemesDir() Paths {
 	out := paths
-	if strings.TrimSpace(out.ThemesDir) != "" {
-		return out
-	}
-	if cd := strings.TrimSpace(out.ConfigDir); cd != "" {
+	cd := strings.TrimSpace(out.ConfigDir)
+	if strings.TrimSpace(out.ThemesDir) == "" && cd != "" {
 		out.ThemesDir = filepath.Join(cd, "themes")
+	}
+	if strings.TrimSpace(out.PreviewStylesDir) == "" && cd != "" {
+		out.PreviewStylesDir = filepath.Join(cd, "themes", "preview")
 	}
 	return out
 }
@@ -483,10 +485,11 @@ func DefaultPaths() (Paths, error) {
 
 	configDir := filepath.Join(configHome, appDirName)
 	return Paths{
-		ConfigDir:       configDir,
-		ConfigFile:      filepath.Join(configDir, fileName),
-		ThemesDir:       filepath.Join(configDir, "themes"),
-		KeybindingsFile: filepath.Join(configDir, keybindingsFileBaseName),
+		ConfigDir:        configDir,
+		ConfigFile:       filepath.Join(configDir, fileName),
+		ThemesDir:        filepath.Join(configDir, "themes"),
+		PreviewStylesDir: filepath.Join(configDir, "themes", "preview"),
+		KeybindingsFile:  filepath.Join(configDir, keybindingsFileBaseName),
 	}, nil
 }
 
@@ -507,6 +510,9 @@ func Load() (Config, error) {
 
 // LoadFromPaths loads config.toml from paths, merging it over built-in defaults.
 func LoadFromPaths(paths Paths) (Config, error) {
+	paths = paths.WithResolvedLocations()
+	_ = chromastyles.LoadFromDir(paths.PreviewStylesDir)
+
 	cfg := Default()
 	configFile := paths.ConfigFile
 	if configFile == "" && paths.ConfigDir != "" {
@@ -1041,10 +1047,10 @@ func previewValidateStyle(name string) string {
 	if n == "" {
 		return DefaultPreviewStyle
 	}
-	if _, ok := styles.Registry[n]; !ok {
-		return DefaultPreviewStyle
+	if canonical := chromastyles.CanonicalName(n); canonical != "" {
+		return canonical
 	}
-	return n
+	return DefaultPreviewStyle
 }
 
 // NormalizePreviewStyle returns a valid Chroma style registry name.

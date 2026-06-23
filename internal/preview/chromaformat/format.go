@@ -8,9 +8,9 @@ import (
 
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/lexers"
-	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
@@ -37,10 +37,7 @@ func Highlight(source string, opts Options) Result {
 	if tabWidth < 1 {
 		tabWidth = config.DefaultPreviewTabWidth
 	}
-	style := styles.Get(opts.StyleName)
-	if style == nil {
-		style = styles.Fallback
-	}
+	style := chromastyles.Get(opts.StyleName)
 	lineCount := countLines(source)
 	gutterWidth := 0
 	var gutterFmt string

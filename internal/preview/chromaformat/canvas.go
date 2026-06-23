@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/alecthomas/chroma/v2"
-	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 )
 
 // BackgroundColors returns the Chroma Background token's foreground and background as tcell colors.
@@ -15,9 +15,9 @@ func BackgroundColors(styleName string) (bg, fg tcell.Color, ok bool) {
 	if name == "" {
 		return tcell.ColorDefault, tcell.ColorDefault, false
 	}
-	style := styles.Get(name)
+	style := chromastyles.Get(name)
 	if style == nil {
-		style = styles.Fallback
+		return tcell.ColorDefault, tcell.ColorDefault, false
 	}
 	entry := style.Get(chroma.Background)
 	hasFG := entry.Colour.IsSet()

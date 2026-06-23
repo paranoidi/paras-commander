@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 )
 
 func TestValidateClampsDiskUsageWalkConcurrency(t *testing.T) {
@@ -642,6 +644,14 @@ func TestPathsWithResolvedLocations(t *testing.T) {
 	if got.ThemesDir != filepath.Join(dir, "themes") {
 		t.Fatalf("ThemesDir = %q, want %q", got.ThemesDir, filepath.Join(dir, "themes"))
 	}
+	if got.PreviewStylesDir != filepath.Join(dir, "themes", "preview") {
+		t.Fatalf("PreviewStylesDir = %q, want %q", got.PreviewStylesDir, filepath.Join(dir, "themes", "preview"))
+	}
+	customPreview := filepath.Join(base, "my-preview-styles")
+	gotPreview := Paths{ConfigDir: base, PreviewStylesDir: customPreview}.WithResolvedLocations()
+	if gotPreview.PreviewStylesDir != customPreview {
+		t.Fatalf("PreviewStylesDir must preserve explicit value = %q, want %q", gotPreview.PreviewStylesDir, customPreview)
+	}
 }
 
 func writeConfig(t *testing.T, content string) string {
@@ -673,6 +683,34 @@ func TestValidatePreviewModeAndStyle(t *testing.T) {
 	}
 	if cfg.Preview.Mode != PreviewModeExternal {
 		t.Fatalf("Mode = %q, want external", cfg.Preview.Mode)
+	}
+}
+
+func TestLoadFromPathsValidatesCustomPreviewStyle(t *testing.T) {
+	t.Cleanup(chromastyles.ResetForTest)
+	dir := t.TempDir()
+	previewDir := filepath.Join(dir, "themes", "preview")
+	if err := os.MkdirAll(previewDir, 0o755); err != nil {
+		t.Fatalf("mkdir preview styles: %v", err)
+	}
+	xml := `<style name="cedar-glow-preview"><entry type="Keyword" style="#aabbcc"/></style>`
+	if err := os.WriteFile(filepath.Join(previewDir, "cedar-glow-preview.xml"), []byte(xml), 0o644); err != nil {
+		t.Fatalf("write preview style: %v", err)
+	}
+	configPath := filepath.Join(dir, "config.toml")
+	if err := os.WriteFile(configPath, []byte("[preview]\nstyle = \"cedar-glow-preview\"\n"), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	cfg, err := LoadFromPaths(Paths{
+		ConfigFile:       configPath,
+		ConfigDir:        dir,
+		PreviewStylesDir: previewDir,
+	})
+	if err != nil {
+		t.Fatalf("LoadFromPaths: %v", err)
+	}
+	if cfg.Preview.Style != "cedar-glow-preview" {
+		t.Fatalf("Preview.Style = %q, want cedar-glow-preview", cfg.Preview.Style)
 	}
 }
 
