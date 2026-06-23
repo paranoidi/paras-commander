@@ -10,7 +10,7 @@ func TestExpandCommandLineSpecialCharsInName(t *testing.T) {
 		Active: &PanelSnapshot{
 			Dir:         "/tmp",
 			HasCurrent:  true,
-			CurrentName: `say "hi".gz`,
+			CurrentName: `/tmp/say "hi".gz`,
 		},
 	})
 	if err != nil {

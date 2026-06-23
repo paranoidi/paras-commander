@@ -56,7 +56,7 @@ func panelSnapshot(ps *panel.State) *cmdmacro.PanelSnapshot {
 	}
 	if ent, ok := ps.CurrentEntry(); ok {
 		snap.HasCurrent = true
-		snap.CurrentName = ent.Name
+		snap.CurrentName = ent.Path
 	}
 	if len(ps.SelectedPaths) > 0 {
 		base := snap.Dir
