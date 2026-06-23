@@ -572,32 +572,11 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"preview", "inactive", "scroll", "page"},
 		},
 		{
-			ID:          ActionMenuFileViewPath,
-			Title:       "View file path",
-			Section:     "File operations",
-			DefaultKeys: nil,
-			Keywords:    []string{"menu"},
-		},
-		{
 			ID:          ActionFileEdit,
 			Title:       "Edit file",
 			Section:     "File operations",
 			DefaultKeys: []string{"F4"},
 			Keywords:    []string{"editor", "edit"},
-		},
-		{
-			ID:          ActionMenuFileRelativeSymlink,
-			Title:       "Relative symlink",
-			Section:     "File operations",
-			DefaultKeys: nil,
-			Keywords:    []string{"menu"},
-		},
-		{
-			ID:          ActionMenuFileEditSymlink,
-			Title:       "Edit symlink",
-			Section:     "File operations",
-			DefaultKeys: nil,
-			Keywords:    []string{"menu"},
 		},
 		{
 			ID:          ActionMenuFileChattr,

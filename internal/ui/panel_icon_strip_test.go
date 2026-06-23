@@ -108,3 +108,53 @@ func TestPaintPanelIconStripFileStillUsesDevicon(t *testing.T) {
 		t.Fatal("file row should not use folder theme glyph")
 	}
 }
+
+func TestPaintPanelIconStripBlockedFileUsesRowForeground(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(10, 3)
+
+	th := theme.Default()
+	entry := localfs.Entry{Name: "main.go", Path: "/tmp/main.go", Type: localfs.EntryFile}
+	rowStyle := th.PanelListingEntryStyle(localfs.EntryFile, true)
+	paintPanelIconStrip(screen, 0, 1, entry, rowStyle, th, PanelIconStripContext{ChromeBlocked: true})
+
+	_, style, _ := screen.Get(0, 1)
+	gotFG, _, _ := style.Decompose()
+	wantFG, _, _ := th.PanelBlockedRowFile.Decompose()
+	if gotFG != wantFG {
+		t.Fatalf("blocked file icon fg = %v, want panel.blocked.row.file %v", gotFG, wantFG)
+	}
+}
+
+func TestPaintPanelIconStripBlockedOpenDirectoryUsesRowForeground(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	defer screen.Fini()
+	screen.SetSize(10, 3)
+
+	th := theme.Default()
+	entry := localfs.Entry{Name: "child", Path: "/tmp/child", Type: localfs.EntryDirectory}
+	rowStyle := th.PanelListingEntryStyle(localfs.EntryDirectory, true)
+	paintPanelIconStrip(screen, 0, 1, entry, rowStyle, th, PanelIconStripContext{
+		ChromeBlocked: true,
+		Folder:        panellist.FolderIconContext{OtherPanelPath: "/tmp/child"},
+	})
+
+	openRune := []rune(th.FolderIconGlyph(theme.FolderIconOpen))[0]
+	main, style, _ := screen.Get(0, 1)
+	gotRune, _ := utf8.DecodeRuneInString(main)
+	if gotRune != openRune {
+		t.Fatalf("icon rune = %U, want open folder %U", gotRune, openRune)
+	}
+	gotFG, _, _ := style.Decompose()
+	wantFG, _, _ := th.PanelBlockedRowDirectory.Decompose()
+	if gotFG != wantFG {
+		t.Fatalf("blocked open folder icon fg = %v, want panel.blocked.row.directory %v", gotFG, wantFG)
+	}
+}

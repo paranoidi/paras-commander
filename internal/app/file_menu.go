@@ -17,10 +17,7 @@ func (a *App) dispatchFileMenuItem(item menu.Item) {
 		keymap.ActionFileHardlink,
 		keymap.ActionFileView,
 		keymap.ActionFileQuickView,
-		keymap.ActionMenuFileViewPath,
 		keymap.ActionFileEdit,
-		keymap.ActionMenuFileRelativeSymlink,
-		keymap.ActionMenuFileEditSymlink,
 		keymap.ActionMenuFileChattr:
 		a.dispatch(item.Action)
 	default:

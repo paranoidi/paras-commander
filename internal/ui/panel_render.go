@@ -200,6 +200,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
 					paintPanelIconStrip(sc, x, y, entry, rowStyle, styles, PanelIconStripContext{
 						CursorStyleKey: cursorKey,
+						ChromeBlocked:  chromeBlocked,
 						Folder: panellist.FolderIconContext{
 							OtherPanelPath:         otherPanelPath,
 							DescendIntoMountPoints: diskUsageDescendIntoMountPoints,
@@ -415,6 +416,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				iconStripStyle := blendCell(leftGutter + gitStrip)
 				paintPanelIconStrip(screen, iconStart, y, cur, iconStripStyle, styles, PanelIconStripContext{
 					CursorStyleKey: iconKey,
+					ChromeBlocked:  chromeBlocked,
 					Folder: panellist.FolderIconContext{
 						OtherPanelPath:         otherPanelPath,
 						DescendIntoMountPoints: diskUsageDescendIntoMountPoints,

@@ -73,10 +73,7 @@ func TestFileMenuShortcutExceptions(t *testing.T) {
 	tests := map[string]rune{
 		"Extract":          'x',
 		"View":             'V',
-		"View file...":     'w',
 		"Chmod":            'h',
-		"Relative symlink": 'k',
-		"Edit symlink":     'y',
 		"Chown":            'o',
 		"Chattr":           't',
 		"Select group":     'g',

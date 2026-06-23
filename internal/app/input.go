@@ -861,18 +861,12 @@ func (a *App) dispatch(actionID string) bool {
 		a.hunkNavigate(previewTargetInactive, -1)
 	case keymap.ActionFileQuickView:
 		a.handleQuickViewToggle()
-	case keymap.ActionMenuFileViewPath:
-		a.setUnsupportedMessage("View file...")
 	case keymap.ActionFileEdit:
 		if a.model.ViewMode == ui.ViewFilePreview && a.model.FullscreenFilePreview.Open {
 			a.editFullscreenPreviewFile()
 		} else {
 			a.editActiveFile()
 		}
-	case keymap.ActionMenuFileRelativeSymlink:
-		a.setUnsupportedMessage("Relative symlink")
-	case keymap.ActionMenuFileEditSymlink:
-		a.setUnsupportedMessage("Edit symlink")
 	case keymap.ActionMenuFileChattr:
 		a.setUnsupportedMessage("Chattr")
 	case keymap.ActionDevShowInfo:

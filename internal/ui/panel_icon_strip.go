@@ -18,18 +18,20 @@ const panelIconListLeadingGutter = 1
 // PanelIconStripContext carries panel state for painting one icon-strip cell.
 type PanelIconStripContext struct {
 	CursorStyleKey string
+	ChromeBlocked  bool
 	Folder         panellist.FolderIconContext
 }
 
 // fileDeviconForeground picks the file-icon color: cursor override, else devicon hex, else row FG.
-func fileDeviconForeground(rowStyle tcell.Style, deviconHex string, th theme.Theme, cursorStyleKey string) tcell.Color {
+// When chromeBlocked is true, devicon hex is skipped so icons match panel.blocked.row.* foreground.
+func fileDeviconForeground(rowStyle tcell.Style, deviconHex string, th theme.Theme, cursorStyleKey string, chromeBlocked bool) tcell.Color {
 	rowFG, _, _ := rowStyle.Decompose()
 	if cursorStyleKey != "" && th.PanelFileIconFG != nil {
 		if c, ok := th.PanelFileIconFG[cursorStyleKey]; ok {
 			return c
 		}
 	}
-	if deviconHex != "" {
+	if !chromeBlocked && deviconHex != "" {
 		if c, ok := deviconHexForeground(deviconHex); ok {
 			return c
 		}
@@ -54,7 +56,11 @@ func paintPanelIconStrip(
 			fg, _, _ = rowStyle.Decompose()
 		} else {
 			icon = th.FolderIconGlyph(kind)
-			fg = th.FolderIconForeground(kind, ctx.CursorStyleKey, rowStyle)
+			if ctx.ChromeBlocked {
+				fg = fileDeviconForeground(rowStyle, "", th, ctx.CursorStyleKey, true)
+			} else {
+				fg = th.FolderIconForeground(kind, ctx.CursorStyleKey, rowStyle)
+			}
 		}
 	} else {
 		st := devicons.IconForInfo(fileInfoFromEntry(entry))
@@ -62,7 +68,7 @@ func paintPanelIconStrip(
 		if icon == "" {
 			icon = " "
 		}
-		fg = fileDeviconForeground(rowStyle, st.Color, th, ctx.CursorStyleKey)
+		fg = fileDeviconForeground(rowStyle, st.Color, th, ctx.CursorStyleKey, ctx.ChromeBlocked)
 	}
 	iconStyle := rowStyle.Foreground(fg)
 

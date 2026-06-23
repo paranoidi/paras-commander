@@ -158,10 +158,7 @@ const (
 
 // Menu routing identifiers for File pulldown entries (bindable in keybindings.toml).
 const (
-	ActionMenuFileViewPath        = "menu.file.view-path"
-	ActionMenuFileRelativeSymlink = "menu.file.relative-symlink"
-	ActionMenuFileEditSymlink     = "menu.file.edit-symlink"
-	ActionMenuFileChattr          = "menu.file.chattr"
+	ActionMenuFileChattr = "menu.file.chattr"
 )
 
 // Dev menu actions (menu routing only; enabled with pc -dev).
@@ -267,10 +264,7 @@ var KnownActions = map[string]struct{}{
 
 	ActionRemoteSFTPLink: {},
 
-	ActionMenuFileViewPath:        {},
-	ActionMenuFileRelativeSymlink: {},
-	ActionMenuFileEditSymlink:     {},
-	ActionMenuFileChattr:          {},
+	ActionMenuFileChattr: {},
 
 	ActionJobsOpen:          {},
 	ActionJobsClose:         {},
