@@ -17,10 +17,10 @@ func flattenDialogOverlayFooterKeys(a *App, keys *keymap.Map) []menu.FunctionKey
 	}
 	var out []menu.FunctionKey
 	if lbl := keys.MenuBindingLabel(keymap.ActionFlattenDestinationActive); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Active"})
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Active path"})
 	}
 	if lbl := keys.MenuBindingLabel(keymap.ActionFlattenDestinationInactive); lbl != "" {
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Inactive"})
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Inactive path"})
 	}
 	return out
 }
