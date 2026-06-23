@@ -134,7 +134,9 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		}
 		h.clearFinishedJobs()
 		return true
-	case keymap.ActionJobsQueueUp, keymap.ActionJobsQueueDown, keymap.ActionJobsCancel, keymap.ActionJobsPause, keymap.ActionJobsResume:
+	case keymap.ActionJobsQueueUp, keymap.ActionJobsQueueDown,
+		keymap.ActionJobsCancel, keymap.ActionJobsTerminate, keymap.ActionJobsKill,
+		keymap.ActionJobsPause, keymap.ActionJobsResume:
 		if h.model.ViewMode != ui.ViewJobs {
 			return true
 		}
@@ -145,6 +147,10 @@ func (h *Handler) TryDispatch(actionID string) bool {
 			h.moveJobInQueue(1)
 		case keymap.ActionJobsCancel:
 			h.cancelSelectedJob()
+		case keymap.ActionJobsTerminate:
+			h.terminateSelectedJob()
+		case keymap.ActionJobsKill:
+			h.killSelectedJob()
 		case keymap.ActionJobsPause:
 			h.pauseSelectedQueuedJob()
 		case keymap.ActionJobsResume:
@@ -521,6 +527,44 @@ func (h *Handler) cancelSelectedJob() {
 	id := h.model.JobsList[sel].ID
 	if !h.state.CancelJob(id) {
 		h.host.SetTransientMessage("Could not cancel job", ui.MessageUrgencyWarn)
+		return
+	}
+	h.SyncJobsList()
+	h.SyncJobPathMarks()
+	h.ensureJobsViewSelectionVisible()
+}
+
+func (h *Handler) terminateSelectedJob() {
+	n := len(h.model.JobsList)
+	if n == 0 {
+		return
+	}
+	sel := h.model.JobsView.Selected
+	if sel < 0 || sel >= n {
+		return
+	}
+	id := h.model.JobsList[sel].ID
+	if !h.state.TerminateJob(id) {
+		h.host.SetTransientMessage("Could not terminate job", ui.MessageUrgencyWarn)
+		return
+	}
+	h.SyncJobsList()
+	h.SyncJobPathMarks()
+	h.ensureJobsViewSelectionVisible()
+}
+
+func (h *Handler) killSelectedJob() {
+	n := len(h.model.JobsList)
+	if n == 0 {
+		return
+	}
+	sel := h.model.JobsView.Selected
+	if sel < 0 || sel >= n {
+		return
+	}
+	id := h.model.JobsList[sel].ID
+	if !h.state.KillJob(id) {
+		h.host.SetTransientMessage("Could not kill job", ui.MessageUrgencyWarn)
 		return
 	}
 	h.SyncJobsList()

@@ -3,7 +3,9 @@ package jobs
 import (
 	"context"
 	"errors"
+	"os"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -13,7 +15,8 @@ import (
 type State struct {
 	mu     sync.Mutex
 	queue  *Queue
-	active *Job // Job currently holding the transfer lease (running copy/move), or nil.
+	active    *Job // Job currently holding the transfer lease (running copy/move), or nil.
+	activeProc *os.Process // subprocess registered by the active job, if any.
 	// waitingBlocker holds jobs that yielded the lease while awaiting user blocker input (FIFO).
 	waitingBlocker []*Job
 	finished       []*Job
@@ -518,6 +521,56 @@ func (s *State) CancelJob(id string) bool {
 	return false
 }
 
+// RegisterActiveProcess stores the OS process for the currently running job so that
+// TerminateJob and KillJob can send signals to it.
+func (s *State) RegisterActiveProcess(p *os.Process) {
+	s.mu.Lock()
+	s.activeProc = p
+	s.mu.Unlock()
+}
+
+// TerminateJob sends SIGTERM to any registered subprocess and cancels the job context.
+// For non-running jobs it delegates to CancelJob.
+func (s *State) TerminateJob(id string) bool {
+	s.mu.Lock()
+	if s.active != nil && s.active.ID == id {
+		proc, cancel := s.activeProc, s.cancelRun
+		s.mu.Unlock()
+		if proc != nil {
+			_ = proc.Signal(syscall.SIGTERM)
+		}
+		if cancel != nil {
+			cancel()
+		}
+		return true
+	}
+	s.mu.Unlock()
+	return s.CancelJob(id)
+}
+
+// KillJob sends SIGKILL to any registered subprocess, immediately forces the job to
+// StatusCanceled in state, and cancels the job context. For non-running jobs it
+// delegates to CancelJob.
+func (s *State) KillJob(id string) bool {
+	s.mu.Lock()
+	if s.active != nil && s.active.ID == id {
+		proc, cancel := s.activeProc, s.cancelRun
+		s.active.Status = StatusCanceled
+		s.active.FinishedAt = time.Now()
+		s.mu.Unlock()
+		if proc != nil {
+			_ = proc.Signal(syscall.SIGKILL)
+		}
+		if cancel != nil {
+			cancel()
+		}
+		s.emit(Event{Type: EventCanceled, JobID: id, Status: StatusCanceled})
+		return true
+	}
+	s.mu.Unlock()
+	return s.CancelJob(id)
+}
+
 // StartWorker launches the background worker goroutine. It returns immediately.
 // The worker dequeues jobs and runs each on its own goroutine; only one transfer holds the lease at a time.
 func (s *State) StartWorker(stop <-chan struct{}) {
@@ -645,6 +698,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 
 	s.mu.Lock()
 	s.cancelRun = nil
+	s.activeProc = nil
 	if s.active != nil && s.active.ID == job.ID {
 		s.finished = append(s.finished, job)
 	}

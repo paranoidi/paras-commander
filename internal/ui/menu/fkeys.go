@@ -55,10 +55,9 @@ var FunctionKeysJobs = []FunctionKey{
 	FooterEscClose,
 	{Key: tcell.KeyCtrlP, KeyLabel: "^P", Hint: "Pause"},
 	{Key: tcell.KeyCtrlR, KeyLabel: "^R", Hint: "Resume"},
-	{Key: tcell.KeyCtrlC, KeyLabel: "^C", Hint: "Cancel"},
 	{Key: tcell.KeyF4, KeyLabel: "^↑", Hint: "Move up"},
 	{Key: tcell.KeyF5, KeyLabel: "^↓", Hint: "Move down"},
-	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear"},
+	{Key: tcell.KeyF8, KeyLabel: "F8", HintShiftPrefix: "Kill", Hint: "Term"},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 }

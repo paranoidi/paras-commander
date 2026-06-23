@@ -111,6 +111,8 @@ const (
 	ActionJobsDetails       = "jobs.details"
 	ActionJobsClearFinished = "jobs.clear-finished"
 	ActionJobsCancel        = "jobs.cancel"
+	ActionJobsTerminate     = "jobs.terminate"
+	ActionJobsKill          = "jobs.kill"
 	ActionJobsPause         = "jobs.pause"
 	ActionJobsResume        = "jobs.resume"
 	ActionJobsQueueUp       = "jobs.queue-up"
@@ -275,6 +277,8 @@ var KnownActions = map[string]struct{}{
 	ActionJobsDetails:       {},
 	ActionJobsClearFinished: {},
 	ActionJobsCancel:        {},
+	ActionJobsTerminate:     {},
+	ActionJobsKill:          {},
 	ActionJobsPause:         {},
 	ActionJobsResume:        {},
 	ActionJobsQueueUp:       {},
