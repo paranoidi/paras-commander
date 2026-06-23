@@ -89,15 +89,6 @@ func (a *App) resortPanelsDiskUsageSorted() {
 	}
 }
 
-func (a *App) wireDiskUsageScanScopeChecks() {
-	a.model.Left.InDiskUsageScanScope = func() bool {
-		return a.listingInDiskUsageScanScope(a.model.Left.PathString())
-	}
-	a.model.Right.InDiskUsageScanScope = func() bool {
-		return a.listingInDiskUsageScanScope(a.model.Right.PathString())
-	}
-}
-
 func (a *App) setDiskUsageScanScope(origin string, childRoots []string) {
 	if origin == "" {
 		a.model.DiskUsageScanOrigin = ""
@@ -123,9 +114,10 @@ func (a *App) diskIdleSortPanelEligible(p *panel.State) bool {
 	// DiskUsageIdleSizeSort is the user-visible toggle (config + sort dialog).
 	// Do not require DiskUsageIdleSortActivated here: it was only set after a successful apply,
 	// which prevented startup/dialog-enable paths from ever scheduling idle disk ordering.
+	// Scope check is intentionally omitted: ListingFullyDiskCached (checked by all callers)
+	// is the correct gate — cached data is valid regardless of which scan populated it.
 	return a.model.ViewMode == ui.ViewBrowser &&
 		p.Sort.DiskUsageIdleSizeSort &&
-		a.listingInDiskUsageScanScope(p.PathString()) &&
 		!p.IdleDiskTotalsSort
 }
 
@@ -371,9 +363,6 @@ func (a *App) handlePanelDirChanged(panelID int) {
 		return
 	}
 	if p.IdleDiskTotalsSort {
-		return
-	}
-	if !a.listingInDiskUsageScanScope(p.PathString()) {
 		return
 	}
 	if p.ListingFullyDiskCached() {

@@ -86,9 +86,7 @@ type State struct {
 	Filter    FilterState
 	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
 	DiskSorter func(absPath string) (int64, bool)
-	// InDiskUsageScanScope, when set by the app, reports whether this panel cwd is within the active disk scan.
-	InDiskUsageScanScope func() bool
-	Sort                 SortState
+	Sort       SortState
 	// ListFormat controls trailing columns after size (Modified / Permissions / none). Per-panel; see config default_listing_format.
 	ListFormat ListFormat
 	// ScrollMode mirrors [ui].scroll_mode: minimal, center, or edge scroll policy.
@@ -1226,7 +1224,7 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	}
 	// Activate disk-total primary sort before ApplySort so the first paint matches MC-style
 	// disk ordering when cache already covers this listing (no idle timer / reconcile delay).
-	if s.Sort.DiskUsageIdleSizeSort && len(s.Entries) > 0 && s.ListingFullyDiskCached() && s.inDiskUsageScanScope() {
+	if s.Sort.DiskUsageIdleSizeSort && len(s.Entries) > 0 && s.ListingFullyDiskCached() {
 		s.DiskUsageIdleSortActivated = true
 		s.IdleDiskTotalsSort = true
 	}

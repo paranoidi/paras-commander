@@ -31,9 +31,3 @@ func pathEqualOrUnder(child, root string) bool {
 	return strings.HasPrefix(c, r+string(filepath.Separator))
 }
 
-func (s *State) inDiskUsageScanScope() bool {
-	if s.InDiskUsageScanScope == nil {
-		return false
-	}
-	return s.InDiskUsageScanScope()
-}
