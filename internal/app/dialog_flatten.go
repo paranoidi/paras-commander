@@ -28,6 +28,19 @@ func (a *App) openFlattenDialog() {
 	if a.config.Operations.FlattenDefaultLocation == config.FlattenDefaultLocationActive {
 		destPanel = a.activePanel()
 	}
+	inactiveIsSource := false
+	if destPanel == a.inactivePanel() {
+		inactiveLoc, parseErr := pathloc.Parse(a.inactivePanel().PathString())
+		if parseErr == nil {
+			for _, root := range roots {
+				if root.Equal(inactiveLoc) {
+					inactiveIsSource = true
+					destPanel = a.activePanel()
+					break
+				}
+			}
+		}
+	}
 	a.model.FlattenDialog = ui.FlattenDialogState{
 		Open:         true,
 		Destination:  transferPrefilledDestination(destPanel.PathString()),
@@ -38,6 +51,9 @@ func (a *App) openFlattenDialog() {
 		DirRoots:     rootStrs,
 	}
 	a.clearTransientMessage()
+	if inactiveIsSource {
+		a.setTransientMessage("Destination set to active panel (inactive panel is the flatten source)", ui.MessageUrgencyWarn)
+	}
 	a.armFlattenDestinationValidateTimer()
 }
 
