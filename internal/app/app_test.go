@@ -2213,6 +2213,50 @@ func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
 	}
 }
 
+func TestConfigDialogApplyPersistsPaneSplitOrientation(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+
+	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-split")}.WithResolvedLocations()
+	cfg := config.Default()
+	cfg.UI.PaneSplitOrientation = config.PaneSplitSideBySide
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: cfg,
+		Paths:  appPaths,
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.openConfigDialog()
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if quit {
+		t.Fatal("handleKey() quit = true, want false")
+	}
+	if app.config.UI.PaneSplitOrientation != config.PaneSplitStacked {
+		t.Fatalf("PaneSplitOrientation = %q, want %q", app.config.UI.PaneSplitOrientation, config.PaneSplitStacked)
+	}
+	reloaded, err := config.LoadFromPaths(appPaths)
+	if err != nil {
+		t.Fatalf("LoadFromPaths after persist: %v", err)
+	}
+	if reloaded.UI.PaneSplitOrientation != config.PaneSplitStacked {
+		t.Fatalf("persisted pane_split_orientation = %q, want %q", reloaded.UI.PaneSplitOrientation, config.PaneSplitStacked)
+	}
+}
+
 func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))

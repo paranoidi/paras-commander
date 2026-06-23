@@ -24,6 +24,8 @@ func configDialogScrollbarColumns(rect draw.Rect) (labelCol, optionCol int) {
 	return labelCol, optionCol
 }
 
+const configDialogHorizontalSplitLabel = "Start in horizontal split mode"
+
 func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogState, styles theme.Theme) {
 	const (
 		width     = 54
@@ -48,6 +50,8 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Zoom active panel", 'z', state.ZoomActivePanel, state.Focus == 1, styles)
 	y++
 	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Shrunken shows only name", 's', state.ShrunkenShowsNameOnly, state.Focus == 2, styles)
+	y++
+	draw.DrawDialogCheckbox(screen, leftOptionCol, y, configDialogHorizontalSplitLabel, 'h', state.PaneSplitStacked, state.Focus == 3, styles)
 	y++
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
@@ -97,8 +101,8 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
-	okFocused := state.Focus == 12
-	cancelFocused := state.Focus == 13
+	okFocused := state.Focus == configDialogFocusOK
+	cancelFocused := state.Focus == configDialogFocusCancel
 	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: okFocused},
 		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},

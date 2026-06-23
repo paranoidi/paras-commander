@@ -140,6 +140,15 @@ const (
 	// DefaultZoomActivePanelDisabledAboveWidth: when > 0 and terminal width (cells) is >= this value,
 	// panel zoom is suppressed (even split). Use 0 to never disable zoom based on width.
 	DefaultZoomActivePanelDisabledAboveWidth = 140
+	// DefaultZoomActivePanelDisabledAboveHeight: when > 0 and terminal height (cells) is >= this value,
+	// panel zoom is suppressed in stacked layout. Use 0 to never disable zoom based on height.
+	DefaultZoomActivePanelDisabledAboveHeight = 45
+
+	// Pane split orientation TOML values for [ui].pane_split_orientation.
+	PaneSplitSideBySide = "side_by_side"
+	PaneSplitStacked    = "stacked"
+	// DefaultPaneSplitOrientation is the default twin-pane layout (primary left, secondary right).
+	DefaultPaneSplitOrientation = PaneSplitSideBySide
 
 	// DefaultShrunkenShowsNameOnly: when true, file panels whose list row text width is below
 	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).

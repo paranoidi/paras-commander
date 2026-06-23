@@ -97,8 +97,9 @@ func (a *App) render() {
 	if a.model.ViewMode == ui.ViewFilePreview {
 		a.clampFullscreenFilePreviewScroll()
 	}
-	w, _ := a.screen.Size()
-	a.model.PanelZoomEnabled = a.effectiveZoomActivePanelLayout(w, previewOpen)
+	w, h := a.screen.Size()
+	a.model.SplitOrientation = a.effectivePaneSplitOrientation()
+	a.model.PanelZoomEnabled = a.effectiveZoomActivePanelLayout(w, h, previewOpen)
 	a.applyCarouselPanelZoomPercents(w)
 	if a.model.ViewMode == ui.ViewCommands {
 		a.commandsMu.RLock()
@@ -186,7 +187,7 @@ func (a *App) menuBarPermissionText() string {
 // twin-column split treats panel zoom as off (same rule as when preview is actually open) so
 // callers can size subprocess output (e.g. bat --terminal-width) before preview state is toggled.
 func (a *App) layoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout {
-	return ui.CalculateLayout(width, height, a.model.MenuBarLayoutReserved(), a.panelWidthSplit(width, filePreviewOpen))
+	return ui.CalculateLayoutWithOrientation(width, height, a.model.MenuBarLayoutReserved(), a.panelPaneSplit(width, filePreviewOpen), a.effectivePaneSplitOrientation())
 }
 
 // applyCarouselPanelZoomPercents widens the active column when carousel view is on so three panes fit.
@@ -201,8 +202,12 @@ func (a *App) applyCarouselPanelZoomPercents(totalWidth int) {
 	}
 }
 
-func (a *App) panelWidthSplit(width int, filePreviewOpen bool) ui.PanelWidthSplit {
-	zoom := a.effectiveZoomActivePanelLayout(width, filePreviewOpen)
+func (a *App) panelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit {
+	w, h := a.screen.Size()
+	if width <= 0 {
+		width = w
+	}
+	zoom := a.effectiveZoomActivePanelLayout(width, h, filePreviewOpen)
 	activePct := a.model.PanelZoomActivePercent
 	inactivePct := a.model.PanelZoomInactivePercent
 	if activePct <= 0 || inactivePct <= 0 {
@@ -216,7 +221,7 @@ func (a *App) panelWidthSplit(width int, filePreviewOpen bool) ui.PanelWidthSpli
 			inactivePct = 100 - activePct
 		}
 	}
-	return ui.PanelWidthSplit{
+	return ui.PanelPaneSplit{
 		Zoom:              ui.PanelZoomSplitsColumns(a.model.ViewMode, zoom),
 		ActivePanel:       a.model.ActivePanel,
 		ActivePercent:     activePct,
@@ -243,22 +248,29 @@ func (a *App) zoomActivePanelSuppressedByTerminalWidth(width int) bool {
 	return n > 0 && width >= n
 }
 
+func (a *App) zoomActivePanelSuppressedByTerminalHeight(height int) bool {
+	n := a.config.UI.ZoomActivePanelDisabledAboveHeight
+	return n > 0 && height >= n
+}
+
 // effectiveZoomActivePanelLayout is the zoom flag used for layout and Model.PanelZoomEnabled:
 // preference from effectiveZoomActivePanel, disabled while preview/quick view owns the split,
-// and disabled on wide terminals when [ui].zoom_active_panel_disabled_above_width is > 0.
-// Carousel view on the active panel always enables zoom (ignores saved preference, runtime override, and width gate).
-func (a *App) effectiveZoomActivePanelLayout(width int, filePreviewOpen bool) bool {
+// and disabled on wide/tall terminals when the corresponding [ui] gate is > 0.
+// Carousel view on the active panel always enables zoom (ignores saved preference, runtime override, and size gates).
+func (a *App) effectiveZoomActivePanelLayout(width, height int, filePreviewOpen bool) bool {
 	if filePreviewOpen || ui.LayoutHideInactivePanel(a.model.ViewMode, a.model.HideInactivePanel) {
 		return false
 	}
 	if a.activePanel().CarouselMode {
 		return true
 	}
-	if a.zoomActivePanelSuppressedByTerminalWidth(width) {
+	orientation := a.effectivePaneSplitOrientation()
+	if orientation == ui.SplitVertical {
+		if a.zoomActivePanelSuppressedByTerminalHeight(height) {
+			return false
+		}
+	} else if a.zoomActivePanelSuppressedByTerminalWidth(width) {
 		return false
-	}
-	if a.activePanel().CarouselMode {
-		return true
 	}
 	return a.effectiveZoomActivePanel()
 }

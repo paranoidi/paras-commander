@@ -43,7 +43,7 @@ func TestPanelBottomCenterOverlaySpanSkipsIndicators(t *testing.T) {
 		t.Fatal("expected span")
 	}
 	selUsed := panelBottomStartEdgeUsedWidth(rect, PrimaryPanel, ctx)
-	syncW := len([]rune(panelSyncIndicatorLabel(PrimaryPanel)))
+	syncW := len([]rune(panelSyncIndicatorLabel(PrimaryPanel, SplitHorizontal)))
 	if start < rect.X+1+selUsed {
 		t.Fatalf("start %d too close to selections corner (want >= %d)", start, rect.X+1+selUsed)
 	}
@@ -69,7 +69,7 @@ func TestDrawPanelBottomCursorNameHintOnActiveSecondaryPanel(t *testing.T) {
 		Cursor:  0,
 	}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, SecondaryPanel, nil, -1, -1, nil, false, false, false, SecondaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
+	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, SecondaryPanel, nil, -1, -1, nil, false, false, false, SecondaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "", SplitHorizontal)
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)
@@ -109,7 +109,7 @@ func TestDrawPanelBottomCursorNameHintOnActivePanel(t *testing.T) {
 		Cursor:  0,
 	}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
+	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "", SplitHorizontal)
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)
@@ -134,7 +134,7 @@ func TestDrawPanelBottomCursorNameHintOmittedWhenWiderThanOverlaySpan(t *testing
 		Cursor:  0,
 	}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, PrimaryPanel, nil, PrimaryPanel, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
+	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, PrimaryPanel, nil, PrimaryPanel, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "", SplitHorizontal)
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)
@@ -163,7 +163,7 @@ func TestDrawPanelCarouselCursorNameHint(t *testing.T) {
 		CarouselMode: true,
 	}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
+	drawPanel(screen, rect, state, true, false, styles, true, "", nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "", SplitHorizontal)
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)
@@ -188,7 +188,7 @@ func TestDrawPanelBottomCursorNameHintHiddenOnInactivePanel(t *testing.T) {
 		Cursor:  0,
 	}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, false, false, styles, true, "", nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, SecondaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
+	drawPanel(screen, rect, state, false, false, styles, true, "", nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, SecondaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "", SplitHorizontal)
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)

@@ -64,7 +64,7 @@ func TestPanelBottomEndEdgeReservedStartReservesSyncOnLeftDriver(t *testing.T) {
 	}
 	endX := panelBottomEndEdgeReservedStart(rect, ctx)
 	lastIn := rect.X + rect.Width - 2
-	syncW := len([]rune(panelSyncIndicatorLabel(PrimaryPanel)))
+	syncW := len([]rune(panelSyncIndicatorLabel(PrimaryPanel, SplitHorizontal)))
 	want := lastIn - syncW
 	if endX != want {
 		t.Fatalf("endX = %d, want %d", endX, want)

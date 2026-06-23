@@ -359,6 +359,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"zoom", "layout", "wide", "column", "split"},
 		},
 		{
+			ID:           ActionPanelToggleSplitOrientation,
+			Title:        "Toggle split orientation (runtime)",
+			Section:      "Sort & display",
+			DefaultKeys:  []string{"C-space"},
+			PreferredKey: "C-space",
+			Keywords:     []string{"layout", "stacked", "horizontal", "vertical", "split", "orientation"},
+		},
+		{
 			ID:          ActionPanelReverseSort,
 			Title:       "Reverse sort",
 			Section:     "Sort & display",

@@ -33,7 +33,7 @@ func (a *App) messageLogWrapCols() int {
 	if w <= 0 || h <= 0 {
 		return ui.MessageLogWrapRunes
 	}
-	return ui.MessageLogWrapColsForLayout(a.layoutForTerminalSize(w, h))
+	return ui.MessageLogWrapColsForLayout(a.layoutForTerminalSize(w, h), a.effectivePaneSplitOrientation())
 }
 
 // statusMessageWrapCols is the max runes for one status-banner line (full terminal width).

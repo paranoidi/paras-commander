@@ -198,7 +198,7 @@ func FormatChord(ch Chord) string {
 
 	// Ctrl may be encoded in the key type (KeyCtrlA..KeyCtrlZ) after
 	// CanonicalChord clears the ModCtrl bit. Detect it here.
-	isCtrlKey := ch.Key >= tcell.KeyCtrlA && ch.Key <= tcell.KeyCtrlZ
+	isCtrlKey := ch.Key == tcell.KeyCtrlSpace || (ch.Key >= tcell.KeyCtrlA && ch.Key <= tcell.KeyCtrlZ)
 
 	// Build in canonical order: modifiers first, then key name.
 	if mod := ch.Mod; mod != 0 {
@@ -246,6 +246,9 @@ func chordKeyName(ch Chord, isCtrlKey bool) string {
 			r = unicode.ToUpper(r)
 		}
 		return string(r)
+	}
+	if ch.Key == tcell.KeyCtrlSpace {
+		return "Space"
 	}
 	if isCtrlKey {
 		return string('A' + rune(ch.Key-tcell.KeyCtrlA))

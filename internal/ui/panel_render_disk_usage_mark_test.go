@@ -64,7 +64,7 @@ func TestSubtreeSelectionMarkUsesDiskUsageBarBackground(t *testing.T) {
 	}
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
 	drawPanel(screen, rect, state, true, false, styles, false, "",
-		painter, false, nil, true, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
+		painter, false, nil, true, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "", SplitHorizontal)
 
 	rowY := rect.Y + 2
 	markCol := -1

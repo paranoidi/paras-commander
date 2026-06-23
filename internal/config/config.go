@@ -223,6 +223,12 @@ type UIConfig struct {
 	// (50/50 split). Zero disables this gate (zoom follows zoom_active_panel and runtime toggle only).
 	// Default DefaultZoomActivePanelDisabledAboveWidth.
 	ZoomActivePanelDisabledAboveWidth int `toml:"zoom_active_panel_disabled_above_width"`
+	// ZoomActivePanelDisabledAboveHeight: when > 0 and terminal height (cells) is >= this value, zoom is not
+	// applied in stacked (top/bottom) layout. Zero disables this gate.
+	// Default DefaultZoomActivePanelDisabledAboveHeight.
+	ZoomActivePanelDisabledAboveHeight int `toml:"zoom_active_panel_disabled_above_height"`
+	// PaneSplitOrientation selects twin-pane layout: "side_by_side" (default) or "stacked".
+	PaneSplitOrientation string `toml:"pane_split_orientation"`
 	// PanelZoomActivePercent and PanelZoomInactivePercent are the width shares (must sum to 100) when ZoomActivePanel is true.
 	PanelZoomActivePercent   int `toml:"panel_zoom_active_percent"`
 	PanelZoomInactivePercent int `toml:"panel_zoom_inactive_percent"`
@@ -355,32 +361,34 @@ func Default() Config {
 		RunExecutablesOnEnter:           true,
 		DeleteMode:                      DeletePermanent,
 		UI: UIConfig{
-			ShowMenuBar:                       true,
-			ShowFooter:                        true,
-			ShowStatusLine:                    true,
-			ShowJobsLine:                      true,
-			ShowFileIcons:                     true,
-			BorderStyle:                       BorderStyleSingle,
-			Clock:                             false,
-			StatusMessageTTLSeconds:           4.5,
-			PathPickerValidateDelayMS:         DefaultPathPickerValidateDelayMS,
-			KeyRepeatDebounceMS:               DefaultKeyRepeatDebounceMS,
-			FindQueryDebounceMS:               DefaultFindQueryDebounceMS,
-			FindMaxResults:                    DefaultFindMaxResults,
-			FindListNavIdleMS:                 DefaultFindListNavIdleMS,
-			ZoomActivePanel:                   DefaultZoomActivePanel,
-			ZoomActivePanelDisabledAboveWidth: DefaultZoomActivePanelDisabledAboveWidth,
-			PanelZoomActivePercent:            DefaultPanelZoomActivePercent,
-			PanelZoomInactivePercent:          DefaultPanelZoomInactivePercent,
-			ShrunkenShowsNameOnly:             DefaultShrunkenShowsNameOnly,
-			ScrollMode:                        DefaultScrollMode,
-			ScrollEdgeMargin:                  DefaultScrollEdgeMargin,
-			PanelScrollbar:                    DefaultPanelScrollbar,
-			PanelScrollbarInactive:            DefaultPanelScrollbarInactive,
-			MessageLogMaxEntries:              DefaultMessageLogMaxEntries,
-			ScreenRenderHashCache:             DefaultScreenRenderHashCache,
-			CarouselSplit:                     DefaultCarouselSplit(),
-			CarouselShowSize:                  DefaultCarouselShowSize(),
+			ShowMenuBar:                        true,
+			ShowFooter:                         true,
+			ShowStatusLine:                     true,
+			ShowJobsLine:                       true,
+			ShowFileIcons:                      true,
+			BorderStyle:                        BorderStyleSingle,
+			Clock:                              false,
+			StatusMessageTTLSeconds:            4.5,
+			PathPickerValidateDelayMS:          DefaultPathPickerValidateDelayMS,
+			KeyRepeatDebounceMS:                DefaultKeyRepeatDebounceMS,
+			FindQueryDebounceMS:                DefaultFindQueryDebounceMS,
+			FindMaxResults:                     DefaultFindMaxResults,
+			FindListNavIdleMS:                  DefaultFindListNavIdleMS,
+			ZoomActivePanel:                    DefaultZoomActivePanel,
+			ZoomActivePanelDisabledAboveWidth:  DefaultZoomActivePanelDisabledAboveWidth,
+			ZoomActivePanelDisabledAboveHeight: DefaultZoomActivePanelDisabledAboveHeight,
+			PaneSplitOrientation:               DefaultPaneSplitOrientation,
+			PanelZoomActivePercent:             DefaultPanelZoomActivePercent,
+			PanelZoomInactivePercent:           DefaultPanelZoomInactivePercent,
+			ShrunkenShowsNameOnly:              DefaultShrunkenShowsNameOnly,
+			ScrollMode:                         DefaultScrollMode,
+			ScrollEdgeMargin:                   DefaultScrollEdgeMargin,
+			PanelScrollbar:                     DefaultPanelScrollbar,
+			PanelScrollbarInactive:             DefaultPanelScrollbarInactive,
+			MessageLogMaxEntries:               DefaultMessageLogMaxEntries,
+			ScreenRenderHashCache:              DefaultScreenRenderHashCache,
+			CarouselSplit:                      DefaultCarouselSplit(),
+			CarouselShowSize:                   DefaultCarouselShowSize(),
 		},
 		Filter: FilterConfig{
 			Mode:              FilterModeFuzzy,
@@ -766,6 +774,12 @@ func (c *Config) Validate() error {
 	if c.UI.ZoomActivePanelDisabledAboveWidth < 0 {
 		c.UI.ZoomActivePanelDisabledAboveWidth = builtin.UI.ZoomActivePanelDisabledAboveWidth
 	}
+	if c.UI.ZoomActivePanelDisabledAboveHeight < 0 {
+		c.UI.ZoomActivePanelDisabledAboveHeight = builtin.UI.ZoomActivePanelDisabledAboveHeight
+	}
+	if !c.paneSplitOrientationValid(c.UI.PaneSplitOrientation) {
+		c.UI.PaneSplitOrientation = DefaultPaneSplitOrientation
+	}
 	if !c.scrollModeValid(c.UI.ScrollMode) {
 		c.UI.ScrollMode = DefaultScrollMode
 	}
@@ -989,6 +1003,15 @@ func (c Config) scrollModeValid(value string) bool {
 func (c Config) panelScrollbarValid(value string) bool {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case PanelScrollbarNone, PanelScrollbarThumb, PanelScrollbarBar:
+		return true
+	default:
+		return false
+	}
+}
+
+func (c Config) paneSplitOrientationValid(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case PaneSplitSideBySide, PaneSplitStacked:
 		return true
 	default:
 		return false

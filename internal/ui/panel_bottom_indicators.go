@@ -61,6 +61,7 @@ type PanelBottomIndicatorContext struct {
 	// SelectionSizeCenterStart/End are inclusive screen columns for the centered label.
 	SelectionSizeCenterStart int
 	SelectionSizeCenterEnd   int
+	SplitOrientation         SplitOrientation
 }
 
 type panelBottomIndicatorSpec struct {
@@ -121,18 +122,6 @@ func panelBottomIndicatorVisible(id PanelBottomIndicatorID, ctx PanelBottomIndic
 	}
 }
 
-func panelOtherPanelIndicatorLabel(panelID int, ctx PanelBottomIndicatorContext) string {
-	max := ctx.EndEdgePathMaxRunes
-	if max <= 0 {
-		max = 12
-	}
-	path := PanelTitlePath(ctx.OtherPanelPath, ctx.UserHomeDir, max)
-	if panelID == SecondaryPanel {
-		return " ← " + path + " "
-	}
-	return " → " + path + " "
-}
-
 func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicatorContext) string {
 	switch id {
 	case PanelBottomIndicatorSelections:
@@ -153,9 +142,9 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 		}
 		return fmt.Sprintf(" %s %d %s stashed ", sym, n, word)
 	case PanelBottomIndicatorSync:
-		return panelSyncIndicatorLabel(ctx.PanelID)
+		return panelSyncIndicatorLabel(ctx.PanelID, ctx.SplitOrientation)
 	case PanelBottomIndicatorQuickView:
-		return panelQuickViewIndicatorLabel(ctx.PanelID)
+		return panelQuickViewIndicatorLabel(ctx.PanelID, ctx.SplitOrientation)
 	case PanelBottomIndicatorOtherPanel:
 		return panelOtherPanelIndicatorLabel(ctx.PanelID, ctx)
 	default:
@@ -224,9 +213,12 @@ func panelBottomEdgeAvailableWidth(rect Rect, ctx PanelBottomIndicatorContext) i
 }
 
 // panelBottomEndEdgeReservedStart returns the first column (inclusive) still available on the
-// bottom interior row before End-edge indicator overlays.
+// bottom interior row before End-edge indicator overlays on that row.
 func panelBottomEndEdgeReservedStart(rect Rect, ctx PanelBottomIndicatorContext) int {
 	lastIn := rect.X + rect.Width - 2
+	if !panelEndEdgeOnBottomRow(ctx.PanelID, ctx.SplitOrientation) {
+		return lastIn
+	}
 	labelW := panelBottomEndEdgeTotalWidth(ctx)
 	if labelW == 0 || labelW > rect.Width-2 {
 		return lastIn
@@ -263,6 +255,7 @@ func panelBottomIndicatorContextForRect(
 	borderStyle tcell.Style,
 	styles theme.Theme,
 	selectionSizeLabel string,
+	splitOrientation SplitOrientation,
 ) PanelBottomIndicatorContext {
 	ctx := PanelBottomIndicatorContext{
 		PanelID:                panelID,
@@ -279,6 +272,7 @@ func panelBottomIndicatorContextForRect(
 		BorderStyle:            borderStyle,
 		Styles:                 styles,
 		SelectionSizeLabel:     selectionSizeLabel,
+		SplitOrientation:       splitOrientation,
 	}
 	if selectionSizeLabel != "" {
 		padded, startX, endX, ok := panelSelectionSizeCenterLayout(rect, selectionSizeLabel)
@@ -368,8 +362,8 @@ func dropPanelBottomIndicatorsForWidth(segs []panelBottomIndicatorSegment, maxCo
 	return nil
 }
 
-// drawPanelBottomEndEdgeIndicators paints End-edge registry segments (sync, quick view, hidden other path).
-func drawPanelBottomEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID int, ctx PanelBottomIndicatorContext) {
+// drawPanelEndEdgeIndicators paints End-edge registry segments on a frame row (top or bottom).
+func drawPanelEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID int, ctx PanelBottomIndicatorContext, y int) {
 	if ctx.ChromeBlocked {
 		return
 	}
@@ -385,7 +379,6 @@ func drawPanelBottomEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID in
 	if len(segs) == 0 {
 		return
 	}
-	y := rect.Y + rect.Height - 1
 	if panelID == SecondaryPanel {
 		// End edge on the inner-left; higher Order extends toward physical right.
 		x := rect.X + 1
@@ -399,7 +392,7 @@ func drawPanelBottomEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID in
 		}
 		return
 	}
-	// Left panel: anchor at physical right; higher Order is rightmost (at the corner).
+	// Primary panel: anchor at physical right; higher Order is rightmost (at the corner).
 	x := rect.X + rect.Width - 1
 	for i := len(segs) - 1; i >= 0; i-- {
 		seg := segs[i]
@@ -410,6 +403,22 @@ func drawPanelBottomEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID in
 		}
 		primitive.TextOverlay(screen, x, y, w, seg.Label, seg.Style)
 	}
+}
+
+// drawPanelBottomEndEdgeIndicators paints End-edge registry segments on the bottom frame row.
+func drawPanelBottomEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID int, ctx PanelBottomIndicatorContext) {
+	if !panelEndEdgeOnBottomRow(panelID, ctx.SplitOrientation) {
+		return
+	}
+	drawPanelEndEdgeIndicators(screen, rect, panelID, ctx, rect.Y+rect.Height-1)
+}
+
+// drawPanelTopEndEdgeIndicators paints End-edge registry segments on the top frame row (stacked secondary).
+func drawPanelTopEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID int, ctx PanelBottomIndicatorContext) {
+	if !panelEndEdgeOnTopRow(panelID, ctx.SplitOrientation) {
+		return
+	}
+	drawPanelEndEdgeIndicators(screen, rect, panelID, ctx, rect.Y)
 }
 
 // drawPanelBottomIndicators paints Start-edge, PhysicalLeft-edge, and End-edge registry segments.
@@ -474,6 +483,7 @@ func drawPanelBottomIndicators(screen tcell.Screen, rect Rect, ctx PanelBottomIn
 	}
 
 	drawPanelBottomEndEdgeIndicators(screen, rect, ctx.PanelID, ctx)
+	drawPanelTopEndEdgeIndicators(screen, rect, ctx.PanelID, ctx)
 }
 
 // drawPanelBottomStartEdgeIndicators paints corner-anchored segments (Selections).

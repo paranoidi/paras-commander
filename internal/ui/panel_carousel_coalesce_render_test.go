@@ -53,7 +53,7 @@ func TestCarouselCoalesceRepaintsCachedChildAfterFullScreenClear(t *testing.T) {
 	rect := Rect{X: 0, Y: 1, Width: width, Height: height - 3}
 	styles := theme.Default()
 	drawPanel(screen, rect, state, true, false, styles, false, "",
-		nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
+		nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "", SplitHorizontal)
 
 	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout())
 	childCol := cols[2]
@@ -127,7 +127,7 @@ func TestDrawCarouselFilePreviewDuringQuickFilter(t *testing.T) {
 	}
 	drawPanel(screen, rect, state, true, false, styles, false, "",
 		nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, true, false, PrimaryPanel, "", false,
-		uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), preview, "")
+		uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), preview, "", SplitHorizontal)
 
 	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout())
 	childCol := cols[2]

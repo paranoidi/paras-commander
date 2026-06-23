@@ -263,14 +263,7 @@ func (a *App) toggleSyncFollow() {
 	a.clearPanelSyncFollowNavCoalesce()
 	a.model.SyncFollowEnabled = true
 	a.model.SyncFollowPanel = active
-	arrow := "→"
-	driver := "Left"
-	follower := "Right"
-	if active == ui.SecondaryPanel {
-		arrow = "←"
-		driver = "Right"
-		follower = "Left"
-	}
+	arrow, driver, follower := ui.SyncFollowToastParts(active, a.effectivePaneSplitOrientation())
 	if displacedQuickView {
 		a.setTransientMessage(fmt.Sprintf("Sync: %s %s %s — quick view disabled", driver, arrow, follower), ui.MessageUrgencyWarn)
 	} else {

@@ -60,6 +60,9 @@ func ParseKey(s string) (Chord, error) {
 	}
 
 	if restLower == "space" {
+		if mod&tcell.ModCtrl != 0 {
+			return Chord{Key: tcell.KeyCtrlSpace, Mod: mod &^ tcell.ModCtrl}, nil
+		}
 		return Chord{Key: tcell.KeyRune, Rune: ' ', Mod: mod}, nil
 	}
 

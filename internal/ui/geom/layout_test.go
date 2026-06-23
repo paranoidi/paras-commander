@@ -247,3 +247,89 @@ func TestSplitJobsSecondaryPanelsNoConflictMatchesLegacySplit(t *testing.T) {
 		t.Fatalf("detail=%+v activity=%+v want detail=%+v activity=%+v", detail, activity, wantD, wantA)
 	}
 }
+
+func TestCalculateLayoutStackedSplitsHeight(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 100, Height: 30, ShowMenuBar: true, Split: PanelPaneSplit{},
+		Orientation: SplitVertical,
+	})
+	if layout.TooSmall {
+		t.Fatal("TooSmall = true, want false")
+	}
+	if layout.Primary != (Rect{X: 0, Y: 1, Width: 100, Height: 14}) {
+		t.Fatalf("Primary = %+v", layout.Primary)
+	}
+	if layout.Secondary != (Rect{X: 0, Y: 15, Width: 100, Height: 14}) {
+		t.Fatalf("Secondary = %+v", layout.Secondary)
+	}
+}
+
+func TestCalculateLayoutStackedHandlesOddHeight(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 80, Height: 17, ShowMenuBar: true, Split: PanelPaneSplit{},
+		Orientation: SplitVertical,
+	})
+	if layout.Primary.Height != 7 || layout.Secondary.Height != 8 {
+		t.Fatalf("Primary.Height=%d Secondary.Height=%d want 7/8", layout.Primary.Height, layout.Secondary.Height)
+	}
+	if layout.Secondary.Y != layout.Primary.Y+layout.Primary.Height {
+		t.Fatalf("Secondary.Y = %d want %d", layout.Secondary.Y, layout.Primary.Y+layout.Primary.Height)
+	}
+}
+
+func TestCalculateLayoutStackedZoomWidensActivePrimary(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 80, Height: 40, ShowMenuBar: true,
+		Split:       PanelPaneSplit{Zoom: true, ActivePanel: 0, ActivePercent: 70, InactivePercent: 30},
+		Orientation: SplitVertical,
+	})
+	panelH := 38
+	wantPrimaryH := (panelH * 70) / 100
+	if layout.Primary.Height != wantPrimaryH {
+		t.Fatalf("Primary.Height = %d want %d", layout.Primary.Height, wantPrimaryH)
+	}
+	if layout.Secondary.Height != panelH-layout.Primary.Height {
+		t.Fatalf("Secondary.Height = %d want %d", layout.Secondary.Height, panelH-layout.Primary.Height)
+	}
+}
+
+func TestCalculateLayoutStackedHideInactiveGivesActiveFullHeight(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 80, Height: 30, ShowMenuBar: true,
+		Split:       PanelPaneSplit{HideInactivePanel: true, ActivePanel: 0},
+		Orientation: SplitVertical,
+	})
+	if layout.Primary.Height != 28 || layout.Secondary.Height != 0 {
+		t.Fatalf("Primary=%+v Secondary=%+v want heights 28/0", layout.Primary, layout.Secondary)
+	}
+}
+
+func TestCalculateLayoutStackedMarksShortTerminal(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 80, Height: 15, ShowMenuBar: true, Split: PanelPaneSplit{},
+		Orientation: SplitVertical,
+	})
+	if !layout.TooSmall {
+		t.Fatal("TooSmall = false, want true for height < minStackedHeight")
+	}
+}
+
+func TestMergePaneRectsSideBySide(t *testing.T) {
+	primary := Rect{X: 0, Y: 1, Width: 50, Height: 28}
+	secondary := Rect{X: 50, Y: 1, Width: 50, Height: 28}
+	got := MergePaneRects(primary, secondary, SplitHorizontal)
+	want := Rect{X: 0, Y: 1, Width: 100, Height: 28}
+	if got != want {
+		t.Fatalf("MergePaneRects = %+v want %+v", got, want)
+	}
+}
+
+func TestMergePaneRectsStacked(t *testing.T) {
+	primary := Rect{X: 0, Y: 1, Width: 100, Height: 14}
+	secondary := Rect{X: 0, Y: 15, Width: 100, Height: 14}
+	got := MergePaneRects(primary, secondary, SplitVertical)
+	want := Rect{X: 0, Y: 1, Width: 100, Height: 28}
+	if got != want {
+		t.Fatalf("MergePaneRects = %+v want %+v", got, want)
+	}
+}

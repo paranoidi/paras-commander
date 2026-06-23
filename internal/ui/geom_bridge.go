@@ -4,17 +4,37 @@ import "github.com/paranoidi/paras-commander/internal/ui/geom"
 
 // Rect and Layout are aliases to shared geometry types used by dialogs and the main UI.
 type (
-	Rect   = geom.Rect
-	Layout = geom.Layout
+	Rect             = geom.Rect
+	Layout           = geom.Layout
+	SplitOrientation = geom.SplitOrientation
 )
 
-// CalculateLayout returns deterministic regions for the current terminal size.
-func CalculateLayout(width, height int, showMenuBar bool, split geom.PanelWidthSplit) Layout {
+const (
+	SplitHorizontal = geom.SplitHorizontal
+	SplitVertical   = geom.SplitVertical
+)
+
+// CalculateLayout returns deterministic regions for the current terminal size (side-by-side).
+func CalculateLayout(width, height int, showMenuBar bool, split geom.PanelPaneSplit) Layout {
 	return geom.CalculateLayout(width, height, showMenuBar, split)
 }
 
-// PanelWidthSplit controls horizontal browser column widths (see geom.PanelWidthSplit).
-type PanelWidthSplit = geom.PanelWidthSplit
+// CalculateLayoutWithOrientation is the orientation-aware layout entry point.
+func CalculateLayoutWithOrientation(width, height int, showMenuBar bool, split geom.PanelPaneSplit, orientation geom.SplitOrientation) Layout {
+	return geom.CalculateLayoutWithOrientation(geom.LayoutInput{
+		Width:       width,
+		Height:      height,
+		ShowMenuBar: showMenuBar,
+		Split:       split,
+		Orientation: orientation,
+	})
+}
+
+// PanelPaneSplit controls twin-pane split along the layout axis (see geom.PanelPaneSplit).
+type PanelPaneSplit = geom.PanelPaneSplit
+
+// PanelWidthSplit is a legacy alias for PanelPaneSplit.
+type PanelWidthSplit = geom.PanelPaneSplit
 
 // PanelListRows returns the number of entry rows inside a file panel frame.
 func PanelListRows(rect Rect) int {
@@ -51,14 +71,9 @@ func SplitJobsSecondaryColumnFlexTop(column Rect, bottomLineCount int) (top Rect
 	return geom.SplitJobsSecondaryColumnFlexTop(column, bottomLineCount)
 }
 
-// MergeTwinPanelRects returns one rectangle spanning the browser's primary and secondary columns (same height).
-func MergeTwinPanelRects(primary, secondary Rect) Rect {
-	return Rect{
-		X:      primary.X,
-		Y:      primary.Y,
-		Width:  primary.Width + secondary.Width,
-		Height: primary.Height,
-	}
+// MergeTwinPanelRects returns one rectangle spanning the browser's primary and secondary panes.
+func MergeTwinPanelRects(primary, secondary Rect, orientation SplitOrientation) Rect {
+	return geom.MergePaneRects(primary, secondary, orientation)
 }
 
 // JobsPanelContentRows returns scrollable text lines inside a jobs detail/activity frame (inner height).

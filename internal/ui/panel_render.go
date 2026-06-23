@@ -90,7 +90,7 @@ func panelListHeaderTitleWithSortArrow(nameTitle, sizeTitle, thirdTitle string) 
 	return strings.TrimSpace(nameTitle)
 }
 
-func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaColumns []MetaColumnState, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool, scrollbarStyle uiscrollbar.Style, scrollbarShowInactive bool, carouselLayout panelcarousel.Layout, carouselFilePreview FilePreviewState, previewChromaStyle string) {
+func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive bool, chromeBlocked bool, styles theme.Theme, showIcons bool, userHomeDir string, painter DiskUsagePainter, diskUsageDescendIntoMountPoints bool, diskUsageGoduIgnore func(string) bool, showDiskUsage bool, panelID int, jobMarks []JobPathMark, syncDriverPanelID, quickViewDriverPanelID int, metaColumns []MetaColumnState, shrunkenShowsNameOnly bool, selectionsBottomHint bool, hideInactivePanel bool, activePanel int, otherPanelPath string, showSelectionSizeOnBottom bool, scrollbarStyle uiscrollbar.Style, scrollbarShowInactive bool, carouselLayout panelcarousel.Layout, carouselFilePreview FilePreviewState, previewChromaStyle string, splitOrientation SplitOrientation) {
 	if rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
@@ -119,6 +119,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 		fileListActive, chromeBlocked,
 		borderStyle, styles,
 		selectionSizeLabel,
+		splitOrientation,
 	)
 	drawPanelBottomIndicators(screen, rect, bottomCtx)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
@@ -483,23 +484,6 @@ func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols,
 		return
 	}
 	primitive.TextOverlay(screen, endStartX, y, endRunes, endLabel, endStyle)
-}
-
-// panelSyncIndicatorLabel returns the label rendered on the bottom border of the sync driver.
-// Left driver points right (toward the right panel); right driver points left.
-func panelSyncIndicatorLabel(panelID int) string {
-	if panelID == SecondaryPanel {
-		return " ← Sync "
-	}
-	return " Sync → "
-}
-
-// panelQuickViewIndicatorLabel returns the bottom-border label on the active panel while quick view is on.
-func panelQuickViewIndicatorLabel(panelID int) string {
-	if panelID == SecondaryPanel {
-		return " ← Quick view "
-	}
-	return " Quick view → "
 }
 
 const (

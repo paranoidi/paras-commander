@@ -709,8 +709,17 @@ func (a *App) dispatch(actionID string) bool {
 			a.setTransientMessage("Panel zoom is always on in carousel view", ui.MessageUrgencyInfo)
 			break
 		}
-		tw, _ := a.screen.Size()
-		if a.zoomActivePanelSuppressedByTerminalWidth(tw) {
+		tw, th := a.screen.Size()
+		orientation := a.effectivePaneSplitOrientation()
+		if orientation == ui.SplitVertical {
+			if a.zoomActivePanelSuppressedByTerminalHeight(th) {
+				a.setTransientMessage(fmt.Sprintf(
+					"Panel zoom unavailable (terminal height ≥ %d)",
+					a.config.UI.ZoomActivePanelDisabledAboveHeight,
+				), ui.MessageUrgencyInfo)
+				break
+			}
+		} else if a.zoomActivePanelSuppressedByTerminalWidth(tw) {
 			a.setTransientMessage(fmt.Sprintf(
 				"Panel zoom unavailable (terminal width ≥ %d)",
 				a.config.UI.ZoomActivePanelDisabledAboveWidth,
@@ -718,6 +727,8 @@ func (a *App) dispatch(actionID string) bool {
 			break
 		}
 		a.toggleRuntimeZoomActivePanel()
+	case keymap.ActionPanelToggleSplitOrientation:
+		a.togglePaneSplitOrientation()
 	case keymap.ActionPanelReverseSort:
 		activePanel.ToggleSortReverse(viewportRows)
 		direction := "ascending"

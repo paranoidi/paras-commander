@@ -81,11 +81,10 @@ type Theme struct {
 	// PanelCarouselInactiveCursor* styles preview-pane cursors in carousel mode.
 	PanelCarouselInactiveCursor         tcell.Style
 	PanelCarouselInactiveCursorSelected tcell.Style
-	// PanelSyncIndicator styles the "Sync →" / "← Sync" overlay drawn on the
-	// bottom border of the panel that drives latched panel sync.
+	// PanelSyncIndicator styles sync overlays on the border toward the inactive pane
+	// ("Sync →" / "← Sync" side-by-side; "Sync ↓" / "↑ Sync" stacked).
 	PanelSyncIndicator tcell.Style
-	// PanelQuickViewIndicator styles the "Quick view →" / "← Quick view" overlay on the
-	// active panel bottom border while quick view is enabled.
+	// PanelQuickViewIndicator styles quick-view overlays on the driver pane border toward the inactive pane.
 	PanelQuickViewIndicator tcell.Style
 	// PanelBottomIndicator* style Start/PhysicalLeft bottom-border segments (see ui panel_bottom_indicators).
 	PanelBottomIndicatorSelections     tcell.Style

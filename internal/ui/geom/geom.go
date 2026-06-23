@@ -14,7 +14,7 @@ type SplitOrientation int
 const (
 	// SplitHorizontal is the default: primary left, secondary right.
 	SplitHorizontal SplitOrientation = iota
-	// SplitVertical is reserved for a future top/bottom layout (not implemented).
+	// SplitVertical stacks primary above secondary (horizontal divider between panes).
 	SplitVertical
 )
 
@@ -40,17 +40,18 @@ const (
 )
 
 const (
-	minWidth  = 40
-	minHeight = 8
+	minWidth         = 40
+	minHeight        = 8
+	minStackedHeight = 16 // menu + footer + two usable pane frames when stacked
 )
 
-// PanelWidthSplit controls the horizontal split between the two browser columns.
+// PanelPaneSplit controls the twin-pane split along the layout axis (width when side-by-side, height when stacked).
 // ActivePanel uses the same values as ui.PrimaryPanel (0) and ui.SecondaryPanel (1).
 // When Zoom is false, ActivePercent and InactivePercent are ignored (even 50/50 split).
-// When Zoom is true, the active column receives ActivePercent of the total width and
-// the inactive column receives InactivePercent; both must be positive and sum to 100
+// When Zoom is true, the active pane receives ActivePercent of the axis total and
+// the inactive pane receives InactivePercent; both must be positive and sum to 100
 // or the layout falls back to an even split.
-type PanelWidthSplit struct {
+type PanelPaneSplit struct {
 	Zoom              bool
 	ActivePanel       int
 	ActivePercent     int
@@ -58,48 +59,77 @@ type PanelWidthSplit struct {
 	HideInactivePanel bool
 }
 
+// PanelWidthSplit is a legacy alias for PanelPaneSplit (split applies to width in side-by-side layout).
+type PanelWidthSplit = PanelPaneSplit
+
 // LayoutInput groups terminal size, chrome flags, and split options for CalculateLayout.
 type LayoutInput struct {
 	Width       int
 	Height      int
 	ShowMenuBar bool
-	Split       PanelWidthSplit
+	Split       PanelPaneSplit
 	Orientation SplitOrientation
 }
 
-func mainPanelColumnWidths(total int, split PanelWidthSplit) (primaryW, secondaryW int) {
+func mainPanelAxisSplit(total int, split PanelPaneSplit) (primaryShare, secondaryShare int) {
 	if split.HideInactivePanel {
 		if split.ActivePanel == 0 {
 			return total, 0
 		}
 		return 0, total
 	}
-	primaryW = total / 2
-	secondaryW = total - primaryW
+	primaryShare = total / 2
+	secondaryShare = total - primaryShare
 	if !split.Zoom {
-		return primaryW, secondaryW
+		return primaryShare, secondaryShare
 	}
 	ap, ip := split.ActivePercent, split.InactivePercent
 	if ap <= 0 || ip <= 0 || ap+ip != 100 {
-		return primaryW, secondaryW
+		return primaryShare, secondaryShare
 	}
 	primaryPct := ap
 	if split.ActivePanel != 0 {
 		primaryPct = ip
 	}
-	primaryW = (total * primaryPct) / 100
-	secondaryW = total - primaryW
-	const minSplitColumnWidth = 10 // cells; if zoomed split is too narrow, fall back to 50/50
-	if primaryW < minSplitColumnWidth || secondaryW < minSplitColumnWidth {
+	primaryShare = (total * primaryPct) / 100
+	secondaryShare = total - primaryShare
+	const minSplitAxisCells = 10 // cells; if zoomed split is too small, fall back to 50/50
+	if primaryShare < minSplitAxisCells || secondaryShare < minSplitAxisCells {
 		return total / 2, total - total/2
 	}
-	return primaryW, secondaryW
+	return primaryShare, secondaryShare
 }
 
-// CalculateLayout returns deterministic regions for the current terminal size.
-// When showMenuBar is false, the menu row is omitted and panels extend to the top row.
-// SplitVertical is not implemented yet: the input is accepted but horizontal math is used today.
-func CalculateLayout(width, height int, showMenuBar bool, split PanelWidthSplit) Layout {
+// mainPanelColumnWidths splits total width between primary and secondary columns.
+func mainPanelColumnWidths(total int, split PanelPaneSplit) (primaryW, secondaryW int) {
+	return mainPanelAxisSplit(total, split)
+}
+
+// mainPanelRowHeights splits total height between primary and secondary rows.
+func mainPanelRowHeights(total int, split PanelPaneSplit) (primaryH, secondaryH int) {
+	return mainPanelAxisSplit(total, split)
+}
+
+// MergePaneRects returns one rectangle spanning both browser panes.
+func MergePaneRects(primary, secondary Rect, orientation SplitOrientation) Rect {
+	if orientation == SplitVertical {
+		return Rect{
+			X:      primary.X,
+			Y:      primary.Y,
+			Width:  primary.Width,
+			Height: primary.Height + secondary.Height,
+		}
+	}
+	return Rect{
+		X:      primary.X,
+		Y:      primary.Y,
+		Width:  primary.Width + secondary.Width,
+		Height: primary.Height,
+	}
+}
+
+// CalculateLayout returns deterministic regions for the current terminal size (side-by-side).
+func CalculateLayout(width, height int, showMenuBar bool, split PanelPaneSplit) Layout {
 	return CalculateLayoutWithOrientation(LayoutInput{
 		Width:       width,
 		Height:      height,
@@ -110,33 +140,39 @@ func CalculateLayout(width, height int, showMenuBar bool, split PanelWidthSplit)
 }
 
 // CalculateLayoutWithOrientation is the orientation-aware layout entry point.
-// SplitVertical currently mirrors the horizontal path (future work may swap width/height roles).
 func CalculateLayoutWithOrientation(in LayoutInput) Layout {
-	width, height, showMenuBar, split := in.Width, in.Height, in.ShowMenuBar, in.Split
-	// SplitVertical layout is deferred; horizontal column math is used for all orientations today.
-	_ = in.Orientation
+	width, height, showMenuBar, split, orientation := in.Width, in.Height, in.ShowMenuBar, in.Split, in.Orientation
 	layout := Layout{Width: width, Height: height}
-	if width < minWidth || height < minHeight {
+	minH := minHeight
+	if orientation == SplitVertical {
+		minH = minStackedHeight
+	}
+	if width < minWidth || height < minH {
 		layout.TooSmall = true
 		return layout
 	}
 
-	primaryWidth, secondaryWidth := mainPanelColumnWidths(width, split)
-
-	if !showMenuBar {
-		panelHeight := height - 1
+	menuY := 0
+	panelAreaH := height - 1
+	if showMenuBar {
+		menuY = 1
+		panelAreaH = height - 2
+		layout.Menu = Rect{X: 0, Y: 0, Width: width, Height: 1}
+	} else {
 		layout.Menu = Rect{}
-		layout.Primary = Rect{X: 0, Y: 0, Width: primaryWidth, Height: panelHeight}
-		layout.Secondary = Rect{X: primaryWidth, Y: 0, Width: secondaryWidth, Height: panelHeight}
-		layout.Footer = Rect{X: 0, Y: height - 1, Width: width, Height: 1}
+	}
+	layout.Footer = Rect{X: 0, Y: height - 1, Width: width, Height: 1}
+
+	if orientation == SplitVertical {
+		primaryH, secondaryH := mainPanelRowHeights(panelAreaH, split)
+		layout.Primary = Rect{X: 0, Y: menuY, Width: width, Height: primaryH}
+		layout.Secondary = Rect{X: 0, Y: menuY + primaryH, Width: width, Height: secondaryH}
 		return layout
 	}
 
-	panelHeight := height - 2
-	layout.Menu = Rect{X: 0, Y: 0, Width: width, Height: 1}
-	layout.Primary = Rect{X: 0, Y: 1, Width: primaryWidth, Height: panelHeight}
-	layout.Secondary = Rect{X: primaryWidth, Y: 1, Width: secondaryWidth, Height: panelHeight}
-	layout.Footer = Rect{X: 0, Y: height - 1, Width: width, Height: 1}
+	primaryW, secondaryW := mainPanelColumnWidths(width, split)
+	layout.Primary = Rect{X: 0, Y: menuY, Width: primaryW, Height: panelAreaH}
+	layout.Secondary = Rect{X: primaryW, Y: menuY, Width: secondaryW, Height: panelAreaH}
 	return layout
 }
 

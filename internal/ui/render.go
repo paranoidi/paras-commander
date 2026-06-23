@@ -42,6 +42,8 @@ type Model struct {
 	Secondary      panel.State
 	ActivePanel    int
 	ActiveSubFocus int // SubFocus*; applies to ActivePanel when ViewBrowser.
+	// SplitOrientation selects side-by-side (SplitHorizontal) or stacked (SplitVertical) twin panes.
+	SplitOrientation SplitOrientation
 	// HideInactivePanel gives the active column full width and hides the inactive twin panel.
 	HideInactivePanel bool
 	// SyncFollowEnabled gates latched panel sync. When true, SyncFollowPanel
@@ -359,13 +361,13 @@ func (m Model) MenuBarInteractive() bool {
 // screen.Show() (or screen.Sync()) to flush to the terminal.
 func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	width, height := screen.Size()
-	layout := CalculateLayout(width, height, model.MenuBarLayoutReserved(), PanelWidthSplit{
+	layout := CalculateLayoutWithOrientation(width, height, model.MenuBarLayoutReserved(), PanelPaneSplit{
 		Zoom:              PanelZoomSplitsColumns(model.ViewMode, model.PanelZoomEnabled),
 		ActivePanel:       model.ActivePanel,
 		ActivePercent:     model.PanelZoomActivePercent,
 		InactivePercent:   model.PanelZoomInactivePercent,
 		HideInactivePanel: LayoutHideInactivePanel(model.ViewMode, model.HideInactivePanel),
-	})
+	}, model.SplitOrientation)
 	primitive.Fill(screen, primitive.Rect{Width: width, Height: height}, ' ', tcell.StyleDefault)
 
 	if layout.TooSmall {
@@ -386,7 +388,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	chromeBlocked := model.PanelsChromeBlocked()
 	switch model.ViewMode {
 	case ViewFilePreview:
-		union := MergeTwinPanelRects(layout.Primary, layout.Secondary)
+		union := MergeTwinPanelRects(layout.Primary, layout.Secondary, model.SplitOrientation)
 		previewRect, pickerRect := SplitFullscreenPreviewRects(union, model.FilePreviewThemePicker.Open, model.FilePreviewThemePicker.Choices)
 		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, "", "", model.PreviewChromaStyle)
 		if model.FilePreviewThemePicker.Open && pickerRect.Width > 0 {
@@ -402,7 +404,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		}
 		drawCommandsView(screen, layout, model.CommandsView, cmdEntries, styles, chromeBlocked, model.UserHomeDir)
 	case ViewMessages:
-		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked)
+		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation)
 	default:
 		// Theme picker: show the real left panel (normal chrome, always active) so preview matches in-browser use.
 		previewTheme := model.ThemeDialog.Open
@@ -442,7 +444,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawFilePreviewPanel(screen, primaryFile, model.FilePreviewDraw, styles, primaryChromeBlocked, pvFocused,
 				model.QuickViewDisplayActive(), false, model.Primary.PathString(), model.UserHomeDir, model.PreviewChromaStyle)
 		} else if layout.Primary.Width > 0 {
-			drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel), primaryFileListFocus, primaryChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(PrimaryPanel), PrimaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[PrimaryPanel], model.ShrunkenShowsNameOnly, primarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, primaryOtherPanelPath, primarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.PreviewChromaStyle)
+			drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel), primaryFileListFocus, primaryChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(PrimaryPanel), PrimaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[PrimaryPanel], model.ShrunkenShowsNameOnly, primarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, primaryOtherPanelPath, primarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.PreviewChromaStyle, model.SplitOrientation)
 		}
 		if layout.Primary.Width > 0 && leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
@@ -453,7 +455,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawFilePreviewPanel(screen, secondaryFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
 				model.QuickViewDisplayActive(), false, model.Secondary.PathString(), model.UserHomeDir, model.PreviewChromaStyle)
 		} else if layout.Secondary.Width > 0 {
-			drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel), secondaryFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(SecondaryPanel), SecondaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[SecondaryPanel], model.ShrunkenShowsNameOnly, secondarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, secondaryOtherPanelPath, secondarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.PreviewChromaStyle)
+			drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel), secondaryFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(SecondaryPanel), SecondaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[SecondaryPanel], model.ShrunkenShowsNameOnly, secondarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, secondaryOtherPanelPath, secondarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.PreviewChromaStyle, model.SplitOrientation)
 		}
 		if layout.Secondary.Width > 0 && rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip

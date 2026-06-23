@@ -52,9 +52,18 @@ func CanonicalChord(ch Chord) Chord {
 	key := ch.Key
 	mod := ch.Mod
 
+	if key == tcell.KeyCtrlSpace {
+		mod &^= tcell.ModCtrl
+		return Chord{Key: tcell.KeyCtrlSpace, Rune: 0, Mod: mod}
+	}
 	if key >= tcell.KeyCtrlA && key <= tcell.KeyCtrlZ {
 		mod &^= tcell.ModCtrl
 		return Chord{Key: key, Rune: ch.Rune, Mod: mod}
+	}
+	// Terminals often deliver Ctrl+Space as NUL (fish_key_reader: bind -k nul).
+	if key == tcell.KeyNUL || (key == tcell.KeyRune && ch.Rune == 0) {
+		mod &^= tcell.ModCtrl
+		return Chord{Key: tcell.KeyCtrlSpace, Rune: 0, Mod: mod}
 	}
 	// Terminals often deliver ^Letter as legacy ASCII control codes (KeySOH..KeySUB) with no ModCtrl
 	// (fish_key_reader \cQ → KeyDC1). ParseKey("C-letter") stores KeyCtrl* instead. Do not remap
@@ -76,6 +85,13 @@ func CanonicalChord(ch Chord) Chord {
 	if r >= ctrlLow && r <= ctrlHigh {
 		return Chord{
 			Key:  tcell.KeyCtrlA + tcell.Key(r-ctrlLow),
+			Rune: 0,
+			Mod:  mod &^ tcell.ModCtrl,
+		}
+	}
+	if r == ' ' {
+		return Chord{
+			Key:  tcell.KeyCtrlSpace,
 			Rune: 0,
 			Mod:  mod &^ tcell.ModCtrl,
 		}

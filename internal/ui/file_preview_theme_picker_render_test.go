@@ -44,7 +44,7 @@ func TestRenderFilePreviewThemePickerShowsAllLabels(t *testing.T) {
 	Render(screen, model, styles)
 
 	layout := CalculateLayout(80, 24, true, PanelWidthSplit{})
-	union := MergeTwinPanelRects(layout.Primary, layout.Secondary)
+	union := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
 	_, picker := SplitFullscreenPreviewRects(union, true, choices)
 	listTop := picker.Y + 3
 	for i, want := range []string{"monokai", "github", "dracula"} {
@@ -87,7 +87,7 @@ func TestRenderFilePreviewThemePickerShowsLabelsFromChoices(t *testing.T) {
 	Render(screen, model, styles)
 
 	layout := CalculateLayout(80, 24, true, PanelWidthSplit{})
-	union := MergeTwinPanelRects(layout.Primary, layout.Secondary)
+	union := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
 	_, picker := SplitFullscreenPreviewRects(union, true, choices)
 	listTop := picker.Y + 3
 	got := strings.TrimSpace(tcelltest.TextAt(screen, picker.X+2, listTop+1, picker.Width-4))
@@ -129,7 +129,7 @@ func TestRenderFilePreviewThemePickerFilteredOmitsEmptyRows(t *testing.T) {
 	Render(screen, model, theme.Default())
 
 	layout := CalculateLayout(80, 24, true, PanelWidthSplit{})
-	union := MergeTwinPanelRects(layout.Primary, layout.Secondary)
+	union := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
 	_, picker := SplitFullscreenPreviewRects(union, true, choices)
 	listTop := picker.Y + 3
 	for row := 2; row < FilePreviewThemePickerListRows(picker); row++ {

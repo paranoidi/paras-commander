@@ -27,7 +27,7 @@ func TestDrawMessagesViewAlignsMessageHeaderWithContent(t *testing.T) {
 		Text: "Connecting to sftp://user@host/",
 		Urg:  MessageUrgencyInfo,
 	}}
-	drawMessagesView(screen, layout, MessagesViewState{}, entries, styles, false)
+	drawMessagesView(screen, layout, MessagesViewState{}, entries, styles, false, SplitHorizontal)
 
 	contentX := layout.Primary.X + 2
 	msgCol := contentX + messagesListColTime
@@ -56,7 +56,7 @@ func TestDrawMessagesViewInfoUsesReadableForeground(t *testing.T) {
 		Text: "Connecting to sftp://user@host/",
 		Urg:  MessageUrgencyInfo,
 	}}
-	drawMessagesView(screen, layout, MessagesViewState{}, entries, styles, false)
+	drawMessagesView(screen, layout, MessagesViewState{}, entries, styles, false, SplitHorizontal)
 
 	contentX := layout.Primary.X + 2
 	msgCol := contentX + messagesListColTime + 1 // first content rune after 'C'
