@@ -84,6 +84,9 @@ func statusFingerprint(workRoot, listDir string) (string, error) {
 		appendFileMtime(&b, filepath.Join(dir, ".gitignore"))
 	}
 	appendFileMtime(&b, filepath.Join(workRoot, ".git", "info", "exclude"))
+	// Include the listing directory's own mtime so that creating or deleting
+	// untracked files (which don't touch .git/index) invalidates the cache.
+	appendFileMtime(&b, listDir)
 	return b.String(), nil
 }
 
