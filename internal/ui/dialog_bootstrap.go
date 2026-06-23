@@ -216,6 +216,11 @@ func MassRenameEnsurePreviewScroll(st *FileDialogState, viewportRows, totalRows 
 	dialog.MassRenameEnsurePreviewScroll(st, viewportRows, totalRows)
 }
 
+// MassRenameShowModifiedFocusIdx returns the FocusedField index of the "Show only modified" checkbox.
+func MassRenameShowModifiedFocusIdx(st FileDialogState) int {
+	return dialog.MassRenameShowModifiedFocusIdx(st)
+}
+
 // FileDialogMassRenameOKEnabled reports whether mass rename OK may run (no preview conflicts / invalid find).
 func FileDialogMassRenameOKEnabled(st FileDialogState) bool {
 	return dialog.FileDialogMassRenameOKEnabled(st)

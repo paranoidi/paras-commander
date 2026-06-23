@@ -29,8 +29,8 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			switch d.FocusedField {
 			case 0, 2:
 				d.FocusedField = 1
-			case 5:
-				d.FocusedField = 4 // checkbox focus doesn't exist in regex mode; move to Replace
+			case 6:
+				d.FocusedField = 5 // Simple's show-modified (6) → Regex's show-modified (5)
 			}
 			a.massRenameSyncFieldLabels()
 			a.recomputeMassRenamePreview()
@@ -48,6 +48,10 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 				d.MassRenameCaseFold = !d.MassRenameCaseFold
 				a.recomputeMassRenamePreview()
 			}
+			return false
+		case 'm', 'M':
+			d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
+			a.recomputeMassRenamePreview()
 			return false
 		}
 	}
@@ -129,7 +133,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	onMkdirRadio := a.fileDialogOnMkdirRadio()
 	onRunForEachRadio := a.fileDialogOnRunForEachPoolRadio()
 	onMassRenameRadio := a.fileDialogOnMassRenameRadio()
-	onCheckbox := a.fileDialogOnMassRenameCaseCheckbox() || a.fileDialogOnRenameFocusCheckbox()
+	onCheckbox := a.fileDialogOnMassRenameCaseCheckbox() || a.fileDialogOnRenameFocusCheckbox() || a.fileDialogOnMassRenameShowModifiedCheckbox()
 
 	f := a.focusedField()
 	skipEarlyFieldKey := f != nil && f.PathPicker && !f.PickerFocused && event.Key() == tcell.KeyRight
@@ -171,6 +175,11 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		}
 		if onRunForEachRadio {
 			a.selectFocusedRunForEachPoolRadio()
+			return false
+		}
+		if a.fileDialogOnMassRenameShowModifiedCheckbox() {
+			d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
+			a.recomputeMassRenamePreview()
 			return false
 		}
 		if a.fileDialogOnMassRenameCaseCheckbox() {
@@ -298,6 +307,13 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		if onRunForEachRadio {
 			if isPlainPrintableRune(event) && event.Rune() == ' ' {
 				a.selectFocusedRunForEachPoolRadio()
+			}
+			return false
+		}
+		if a.fileDialogOnMassRenameShowModifiedCheckbox() {
+			if isPlainPrintableRune(event) && event.Rune() == ' ' {
+				d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
+				a.recomputeMassRenamePreview()
 			}
 			return false
 		}
@@ -485,6 +501,15 @@ func (a *App) fileDialogOnMassRenameCaseCheckbox() bool {
 	return d.DialogType == ui.FileDialogMassRename &&
 		d.MassRenameMode == ui.MassRenameModeUISimple &&
 		d.FocusedField == 5
+}
+
+// fileDialogOnMassRenameShowModifiedCheckbox returns true when focus is on the "Show only modified" checkbox.
+func (a *App) fileDialogOnMassRenameShowModifiedCheckbox() bool {
+	d := &a.model.FileDialog
+	if d.DialogType != ui.FileDialogMassRename {
+		return false
+	}
+	return d.FocusedField == ui.MassRenameShowModifiedFocusIdx(*d)
 }
 
 // fileDialogOnRenameFocusCheckbox returns true when focus is on the focus-after-rename checkbox.
