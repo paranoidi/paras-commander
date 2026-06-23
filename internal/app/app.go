@@ -108,7 +108,11 @@ type App struct {
 	diskUsageIgnore diskusage.ShouldIgnoreFolder
 	gitignoreCache  *gitignore.Cache
 	gitStatusCache  *gitstatus.Cache
-	diskIdleSort    [2]diskIdleSortPanel // indexed by ui.LeftPanel / ui.RightPanel (0/1)
+	// diskUsageScanToastArmed is set when a user-initiated disk usage scan starts and cleared
+	// after the "scan finished" toast fires. Selection-size background scans do not set it, so
+	// their EventJobFinished completions never trigger the toast even when DiskUsageShown is true.
+	diskUsageScanToastArmed bool
+	diskIdleSort            [2]diskIdleSortPanel // indexed by ui.LeftPanel / ui.RightPanel (0/1)
 	// diskIdleNavPath records last reconciled panel cwd so idle-sort debounce survives benign reconcile but resets on chdir.
 	diskIdleNavPath [2]string
 	// selectionSizeScanFP is the last enqueued directory set fingerprint per panel for selection-size scans.

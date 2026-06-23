@@ -45,9 +45,11 @@ func (a *App) pollDiskUsageUpdates() {
 		}
 	}
 drained:
-	// Selection-size background walks use the same engine but do not set DiskUsageShown;
-	// skip the toast so it does not cover the bottom-border size indicator.
-	if jobFinishedToast && a.model.DiskUsageShown {
+	// Only user-initiated scans (startDiskUsageScanForPanel) arm the toast flag.
+	// Selection-size background scans do not set it, so their EventJobFinished completions
+	// never show the toast even when DiskUsageShown is true.
+	if jobFinishedToast && a.diskUsageScanToastArmed {
+		a.diskUsageScanToastArmed = false
 		a.setTransientMessage("Disk usage scan finished", ui.MessageUrgencyInfo)
 	}
 	if !needRender {
@@ -280,6 +282,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 
 	a.diskUsage.StartScanFromListing(childPaths, a.diskUsageIgnore, panelID, listingVolumeGateForScan(p, a.config.DiskUsageDescendIntoMountPoints))
 	a.model.DiskUsageShown = true
+	a.diskUsageScanToastArmed = true
 	a.model.DiskUsagePanelID = panelID
 	a.model.DiskUsage = a.diskUsage
 	a.setTransientMessage("Disk usage scan started ("+filepath.Clean(p.PathString())+")", ui.MessageUrgencyInfo)
