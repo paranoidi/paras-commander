@@ -1928,12 +1928,6 @@ func TestLoadAppliesDiskTotalsSortImmediatelyWhenListingFullyCached(t *testing.T
 			return 0, false
 		}
 	}
-	origin := filepath.Clean(dir)
-	roots := []string{filepath.Clean(smallDir), filepath.Clean(largeDir)}
-	state.InDiskUsageScanScope = func() bool {
-		return ListingPathInDiskUsageScanScope(state.PathString(), origin, roots)
-	}
-
 	if err := state.load(pathloc.MustParse(dir), "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
 		t.Fatalf("load: %v", err)
 	}

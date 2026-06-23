@@ -7416,6 +7416,72 @@ func TestApplyIdleDiskSortIgnoresStaleEpoch(t *testing.T) {
 	}
 }
 
+// Regression: disk-usage sort must re-activate when navigating back to a previously-scanned
+// directory after a second scan from a child replaced the global scope.
+func TestDiskSortRestoredAfterNewScanReplacesScope(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpine")
+	beta := filepath.Join(root, "birch")
+	for _, d := range []string{alpha, beta} {
+		if err := os.Mkdir(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeFile(t, filepath.Join(alpha, "leaf.dat"))
+	writeFile(t, filepath.Join(beta, "bark.dat"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.LeftPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+
+	// First scan from root. Wait for it to finish and sort to activate.
+	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	app.handlePanelDirChanged(ui.LeftPanel)
+	if !left.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort should be true at root after first scan")
+	}
+
+	// Navigate into a child directory and start a second scan there, replacing the scope.
+	vr := app.panelViewportRows(ui.LeftPanel)
+	if err := left.NavigateTo(alpha, "", vr); err != nil {
+		t.Fatalf("NavigateTo alpha: %v", err)
+	}
+	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	deadline = time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	// Scope now points at alpha, not root.
+	if app.listingInDiskUsageScanScope(root) {
+		t.Fatal("root should be outside the new scan scope (scope was replaced)")
+	}
+
+	// Navigate back to root. Sort must re-activate because root's entries are still
+	// fully cached from the first scan, even though the scope changed.
+	if err := left.Parent(vr); err != nil {
+		t.Fatalf("Parent: %v", err)
+	}
+	app.handlePanelDirChanged(ui.LeftPanel)
+
+	if !left.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort should be true again at root: cached data is valid regardless of current scan scope")
+	}
+}
+
 func TestClearAllDiskUsageData(t *testing.T) {
 	root := t.TempDir()
 	scanned := filepath.Join(root, "scanned")

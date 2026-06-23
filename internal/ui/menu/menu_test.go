@@ -235,12 +235,14 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		t.Fatalf("first menu = %s, want TopJobs", defs[0].ID)
 	}
 	want := map[string]string{
+		"Terminate job":      "F8",
+		"Kill job":           "S-F8",
 		"Cancel job":         "C-c",
 		"Pause queued job":   "C-p",
 		"Resume paused job":  "C-r",
 		"Move up in queue":   "C-up",
 		"Move down in queue": "C-down",
-		"Clear finished":     "F8",
+		"Clear finished":     "",
 		"Back to file view":  "left",
 	}
 	for _, item := range defs[0].Items {
