@@ -5005,10 +5005,10 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 		t.Fatal("OK action should be blocked when preview has conflicts")
 	}
 	okIdx := ui.FileDialogOKFocusIndex(*d)
-	d.FocusedField = 5 // case-insensitive checkbox (0-2 = radios, 3 = Find, 4 = Replace, 5 = checkbox)
+	d.FocusedField = 6 // show-only-modified checkbox (0-2 = radios, 3 = Find, 4 = Replace, 5 = case-fold, 6 = show-modified)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if d.FocusedField != okIdx {
-		t.Fatalf("Down from checkbox: focus = %d, want OK %d", d.FocusedField, okIdx)
+		t.Fatalf("Down from show-modified checkbox: focus = %d, want OK %d", d.FocusedField, okIdx)
 	}
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if !app.model.FileDialog.Open {

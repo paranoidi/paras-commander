@@ -42,16 +42,17 @@ func (a *App) openMassRenameDialog(p *panel.State) {
 		{Label: "Replace", Value: "", Cursor: 0},
 	}
 	a.model.FileDialog = ui.FileDialogState{
-		Open:                    true,
-		DialogType:              ui.FileDialogMassRename,
-		Fields:                  fields,
-		FocusedField:            massRenameFindFieldFocus,
-		MassRenameMode:          ui.MassRenameModeUISimple,
-		MassRenameCaseFold:      false,
-		MassRenamePreviewScroll: 0,
-		MassRenameSources:       sources,
-		MassRenamePreviewBefore: nil,
-		MassRenamePreviewAfter:  nil,
+		Open:                       true,
+		DialogType:                 ui.FileDialogMassRename,
+		Fields:                     fields,
+		FocusedField:               massRenameFindFieldFocus,
+		MassRenameMode:             ui.MassRenameModeUISimple,
+		MassRenameCaseFold:         false,
+		MassRenameShowOnlyModified: false,
+		MassRenamePreviewScroll:    0,
+		MassRenameSources:          sources,
+		MassRenamePreviewBefore:    nil,
+		MassRenamePreviewAfter:     nil,
 	}
 	a.massRenameSyncFieldLabels()
 	a.recomputeMassRenamePreview()
@@ -148,16 +149,16 @@ func (a *App) recomputeMassRenamePreview() {
 		d.Fields[0].InputInvalid = true
 	}
 	rowErrs := ops.MassRenameRowErrors(rows)
-	afterError := make([]bool, len(rows))
-	for i, err := range rowErrs {
-		afterError[i] = err != nil
-	}
 	before := make([]string, 0, len(rows))
 	after := make([]string, 0, len(rows))
 	beforeRemoved := make([][]search.Range, 0, len(rows))
 	beforeReplaced := make([][]search.Range, 0, len(rows))
 	afterAdded := make([][]search.Range, 0, len(rows))
-	for _, r := range rows {
+	afterError := make([]bool, 0, len(rows))
+	for i, r := range rows {
+		if d.MassRenameShowOnlyModified && r.OldBase == r.NewBase {
+			continue
+		}
 		lcsRemoved, _ := ui.MassRenameDiff(r.OldBase, r.NewBase)
 		matchRanges := ops.MassRenameMatchRanges(r.OldBase, mode, find, caseFold, rx)
 		removed, replaced := ops.MassRenameBeforePreviewHighlightRanges(lcsRemoved, matchRanges, replace)
@@ -166,6 +167,7 @@ func (a *App) recomputeMassRenamePreview() {
 		beforeRemoved = append(beforeRemoved, removed)
 		beforeReplaced = append(beforeReplaced, replaced)
 		afterAdded = append(afterAdded, ops.MassRenameReplacementRanges(r.OldBase, mode, find, replace, caseFold, rx))
+		afterError = append(afterError, i < len(rowErrs) && rowErrs[i] != nil)
 	}
 	d.MassRenamePreviewBefore = before
 	d.MassRenamePreviewAfter = after
@@ -180,17 +182,28 @@ func (a *App) recomputeMassRenamePreview() {
 
 func (a *App) recomputeMassRenameExternalEditorPreview() {
 	d := &a.model.FileDialog
+	namesReady := len(d.MassRenameExternalNames) == len(d.MassRenameSources)
+	var rowErrs []error
+	if namesReady {
+		rows := make([]ops.MassRenameRow, len(d.MassRenameSources))
+		for i, src := range d.MassRenameSources {
+			rows[i] = ops.MassRenameRow{SourcePath: src.Path, OldBase: src.Name, NewBase: d.MassRenameExternalNames[i]}
+		}
+		rowErrs = ops.MassRenameRowErrors(rows)
+	}
 	before := make([]string, 0, len(d.MassRenameSources))
 	after := make([]string, 0, len(d.MassRenameSources))
 	beforeRemoved := make([][]search.Range, 0, len(d.MassRenameSources))
 	beforeReplaced := make([][]search.Range, 0, len(d.MassRenameSources))
 	afterAdded := make([][]search.Range, 0, len(d.MassRenameSources))
-	afterError := make([]bool, len(d.MassRenameSources))
-	namesReady := len(d.MassRenameExternalNames) == len(d.MassRenameSources)
+	afterError := make([]bool, 0, len(d.MassRenameSources))
 	for i, src := range d.MassRenameSources {
 		newBase := src.Name
 		if namesReady {
 			newBase = d.MassRenameExternalNames[i]
+		}
+		if d.MassRenameShowOnlyModified && src.Name == newBase {
+			continue
 		}
 		before = append(before, src.Name)
 		after = append(after, newBase)
@@ -202,16 +215,7 @@ func (a *App) recomputeMassRenameExternalEditorPreview() {
 		} else {
 			afterAdded = append(afterAdded, nil)
 		}
-	}
-	if namesReady {
-		rows := make([]ops.MassRenameRow, len(d.MassRenameSources))
-		for i, src := range d.MassRenameSources {
-			rows[i] = ops.MassRenameRow{SourcePath: src.Path, OldBase: src.Name, NewBase: d.MassRenameExternalNames[i]}
-		}
-		rowErrs := ops.MassRenameRowErrors(rows)
-		for i, err := range rowErrs {
-			afterError[i] = err != nil
-		}
+		afterError = append(afterError, i < len(rowErrs) && rowErrs[i] != nil)
 	}
 	d.MassRenamePreviewBefore = before
 	d.MassRenamePreviewAfter = after
@@ -234,8 +238,8 @@ func (a *App) applyMassRenameModeFromFocus() {
 	case 2:
 		d.MassRenameMode = ui.MassRenameModeUIExternalEditor
 	}
-	if d.MassRenameMode == ui.MassRenameModeUIRegex && d.FocusedField == 5 {
-		d.FocusedField = 4 // checkbox focus doesn't exist in regex mode; move to Replace field
+	if d.MassRenameMode == ui.MassRenameModeUIRegex && d.FocusedField == 6 {
+		d.FocusedField = 5 // Simple's show-modified (6) → Regex's show-modified (5)
 	}
 	a.massRenameSyncFieldLabels()
 	a.recomputeMassRenamePreview()

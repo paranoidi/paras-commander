@@ -133,9 +133,10 @@ type FileDialogState struct {
 	RenameEncodingSelected   int
 
 	// Mass rename (DialogType == FileDialogMassRename).
-	MassRenameMode          MassRenameModeUI
-	MassRenameCaseFold      bool
-	MassRenamePreviewScroll int
+	MassRenameMode             MassRenameModeUI
+	MassRenameCaseFold         bool
+	MassRenameShowOnlyModified bool
+	MassRenamePreviewScroll    int
 	MassRenameSources       []MassRenameSource
 	// MassRenamePreviewBefore / After are paired basename preview columns (recomputed in app).
 	// Rows with Before starting with "!" are full-width compute-error lines (After empty).
