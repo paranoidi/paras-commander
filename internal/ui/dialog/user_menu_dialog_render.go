@@ -37,7 +37,7 @@ func DrawUserMenuDialog(screen tcell.Screen, layout Layout, state UserMenuDialog
 		title = "User menu"
 	}
 	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	y := rect.Y + 1
 
 	shortcuts := UserMenuEntryShortcuts(state.Entries)
@@ -47,7 +47,7 @@ func DrawUserMenuDialog(screen tcell.Screen, layout Layout, state UserMenuDialog
 			break
 		}
 		e := state.Entries[idx]
-		draw.DrawDialogRadio(screen, leftCol, y, e.Title, shortcuts[idx], state.Selected == idx, state.Focus == idx, styles)
+		draw.DrawDialogRadio(screen, primaryCol, y, e.Title, shortcuts[idx], state.Selected == idx, state.Focus == idx, styles)
 		y++
 	}
 

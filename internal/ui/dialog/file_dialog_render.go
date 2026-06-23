@@ -589,7 +589,7 @@ func renameToolPreviewText(state FileDialogState) string {
 }
 
 func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	innerWidth := rect.Width - 4
 	innerBottom := rect.Y + rect.Height - 2
 	y := rect.Y + 1
@@ -598,7 +598,7 @@ func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState
 	}
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	labelStyle := styles.DialogText.Background(dbg)
-	primitive.Text(screen, leftCol, y, innerWidth, "Preview:", labelStyle)
+	primitive.Text(screen, primaryCol, y, innerWidth, "Preview:", labelStyle)
 	y += 2 // blank line between label and preview value (AGENTS.md dialog input layout)
 	if y >= innerBottom {
 		return
@@ -607,7 +607,7 @@ func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState
 	if utf8.RuneCountInString(preview) > innerWidth {
 		preview = primitive.TruncateRight(preview, innerWidth)
 	}
-	primitive.Text(screen, leftCol, y, innerWidth, preview, labelStyle)
+	primitive.Text(screen, primaryCol, y, innerWidth, preview, labelStyle)
 	y++
 	if y >= innerBottom {
 		return
@@ -618,18 +618,18 @@ func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState
 		return
 	}
 	if state.RenamePhase == RenamePhaseSanitize {
-		draw.DrawDialogCheckbox(screen, leftCol, y, `Replace "." with space`, '.', state.RenameSanitizeDots, state.FocusedField == 0, styles)
+		draw.DrawDialogCheckbox(screen, primaryCol, y, `Replace "." with space`, '.', state.RenameSanitizeDots, state.FocusedField == 0, styles)
 		y++
 		if y < innerBottom {
-			draw.DrawDialogCheckbox(screen, leftCol, y, `Replace "_" with space`, '_', state.RenameSanitizeUnderscores, state.FocusedField == 1, styles)
+			draw.DrawDialogCheckbox(screen, primaryCol, y, `Replace "_" with space`, '_', state.RenameSanitizeUnderscores, state.FocusedField == 1, styles)
 		}
 	} else if state.RenamePhase == RenamePhaseSlugify {
 		dotSel := state.RenameSlugifySep == RenameSlugifyDot
 		usSel := state.RenameSlugifySep == RenameSlugifyUnderscore
-		draw.DrawDialogRadio(screen, leftCol, y, `Replace space with "."`, '.', dotSel, state.FocusedField == 0, styles)
+		draw.DrawDialogRadio(screen, primaryCol, y, `Replace space with "."`, '.', dotSel, state.FocusedField == 0, styles)
 		y++
 		if y < innerBottom {
-			draw.DrawDialogRadio(screen, leftCol, y, `Replace space with "_"`, '_', usSel, state.FocusedField == 1, styles)
+			draw.DrawDialogRadio(screen, primaryCol, y, `Replace space with "_"`, '_', usSel, state.FocusedField == 1, styles)
 		}
 	} else if state.RenamePhase == RenamePhaseEncoding {
 		for i := 0; i < len(state.RenameEncodingCandidates); i++ {
@@ -639,7 +639,7 @@ func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState
 			label := RenameEncodingOptionLabel(state, i)
 			shortcut := RenameEncodingOptionShortcut(state, i)
 			sel := state.RenameEncodingSelected == i
-			draw.DrawDialogRadio(screen, leftCol, y, label, shortcut, sel, state.FocusedField == i, styles)
+			draw.DrawDialogRadio(screen, primaryCol, y, label, shortcut, sel, state.FocusedField == i, styles)
 			y++
 		}
 	}
@@ -780,22 +780,22 @@ func drawAddBookmarkDialogContent(screen tcell.Screen, rect Rect, state FileDial
 	}
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	textStyle := styles.DialogText.Background(dbg)
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	innerWidth := rect.Width - 4
 
-	primitive.Text(screen, leftCol, rect.Y+1, innerWidth, "Path:", textStyle)
+	primitive.Text(screen, primaryCol, rect.Y+1, innerWidth, "Path:", textStyle)
 	pathValue := state.Message
 	if utf8.RuneCountInString(pathValue) > innerWidth {
 		pathValue = primitive.TruncateRight(pathValue, innerWidth)
 	}
-	primitive.Text(screen, leftCol, rect.Y+2, innerWidth, pathValue, textStyle)
+	primitive.Text(screen, primaryCol, rect.Y+2, innerWidth, pathValue, textStyle)
 
 	draw.DrawDialogHSeparator(screen, rect, rect.Y+3, borderStyle)
 
-	primitive.Text(screen, leftCol, rect.Y+4, innerWidth, "Name:", textStyle)
+	primitive.Text(screen, primaryCol, rect.Y+4, innerWidth, "Name:", textStyle)
 
 	if len(state.Fields) > 0 {
 		focused := state.FocusedField == 0
-		drawInputField(screen, leftCol, rect.Y+6, innerWidth, state.Fields[0], focused, styles)
+		drawInputField(screen, primaryCol, rect.Y+6, innerWidth, state.Fields[0], focused, styles)
 	}
 }

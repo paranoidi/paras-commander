@@ -194,7 +194,7 @@ func (s FindDialogState) FindDialogMaxFocus() int {
 // HistoryDialogState is a fuzzy picker over one panel’s navigation history paths.
 type HistoryDialogState struct {
 	Open              bool
-	PanelID           int      // LeftPanel or RightPanel
+	PanelID           int      // PrimaryPanel or SecondaryPanel
 	Paths             []string // current list (single panel or merged)
 	CurrentIndex      int      // snapshot HistoryIndex when dialog opened
 	BothPanels        bool     // true when showing merged list

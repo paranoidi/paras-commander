@@ -88,14 +88,14 @@ func drawJobsView(
 	userHomeDir string,
 	throughputChartEnabled bool,
 ) {
-	drawJobsListPanel(screen, layout.Left, state, jobs, styles, now, chromeBlocked)
+	drawJobsListPanel(screen, layout.Primary, state, jobs, styles, now, chromeBlocked)
 	var sel JobEntry
 	if state.Selected >= 0 && state.Selected < len(jobs) {
 		sel = jobs[state.Selected]
 	}
 	detailLines := JobDetailLineCount(sel, now, throughputChartEnabled)
 	showConflict := JobEntryShowsConflictPanel(sel)
-	conflictRect, detailRect, activityRect := SplitJobsRightPanels(layout.Right, showConflict, detailLines)
+	conflictRect, detailRect, activityRect := SplitJobsSecondaryPanels(layout.Secondary, showConflict, detailLines)
 	detailFocused := jobsDetailPaneFocused(state, showConflict)
 	activityFocused := jobsActivityPaneFocused(state, showConflict)
 	conflictFocused := jobsConflictPaneFocused(state, showConflict)

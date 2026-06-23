@@ -15,7 +15,7 @@ func TestDropToShellBlocksRemotePanel(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	app.model.Left.Path = pathloc.MustParse("sftp://user@example.com/")
+	app.model.Primary.Path = pathloc.MustParse("sftp://user@example.com/")
 
 	var calls int
 	prev := dropToShellRunner
@@ -39,7 +39,7 @@ func TestDropToShellStartsInPanelDirectory(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	if err := app.model.Left.Load(panelDir); err != nil {
+	if err := app.model.Primary.Load(panelDir); err != nil {
 		t.Fatal(err)
 	}
 
@@ -72,7 +72,7 @@ func TestDropToShellSyncsPanelCwdOnReturn(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	if err := app.model.Left.Load(panelDir); err != nil {
+	if err := app.model.Primary.Load(panelDir); err != nil {
 		t.Fatal(err)
 	}
 
@@ -83,7 +83,7 @@ func TestDropToShellSyncsPanelCwdOnReturn(t *testing.T) {
 	t.Cleanup(func() { dropToShellRunner = prev })
 
 	app.dropToShell()
-	if got := filepath.Clean(app.model.Left.PathString()); got != otherDir {
+	if got := filepath.Clean(app.model.Primary.PathString()); got != otherDir {
 		t.Fatalf("panel path = %q, want %q", got, otherDir)
 	}
 }
@@ -100,7 +100,7 @@ func TestDropToShellSkipsSyncWhenDisabled(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 	app.config.Shell.SyncCwdOnReturn = false
-	if err := app.model.Left.Load(panelDir); err != nil {
+	if err := app.model.Primary.Load(panelDir); err != nil {
 		t.Fatal(err)
 	}
 
@@ -111,7 +111,7 @@ func TestDropToShellSkipsSyncWhenDisabled(t *testing.T) {
 	t.Cleanup(func() { dropToShellRunner = prev })
 
 	app.dropToShell()
-	if got := filepath.Clean(app.model.Left.PathString()); got != panelDir {
+	if got := filepath.Clean(app.model.Primary.PathString()); got != panelDir {
 		t.Fatalf("panel path = %q, want unchanged %q", got, panelDir)
 	}
 }
@@ -120,7 +120,7 @@ func TestDropToShellUsesConfigCommandOverride(t *testing.T) {
 	root := t.TempDir()
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	if err := app.model.Left.Load(root); err != nil {
+	if err := app.model.Primary.Load(root); err != nil {
 		t.Fatal(err)
 	}
 	app.config.Shell.Command = "/bin/echo drop-shell-marker"
@@ -155,7 +155,7 @@ func TestDispatchDropToShellAction(t *testing.T) {
 	root := t.TempDir()
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	if err := app.model.Left.Load(root); err != nil {
+	if err := app.model.Primary.Load(root); err != nil {
 		t.Fatal(err)
 	}
 

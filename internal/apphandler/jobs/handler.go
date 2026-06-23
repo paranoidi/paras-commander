@@ -96,8 +96,8 @@ func (h *Handler) applyNewFileMarksForCompletedJob(jobID string) {
 		if job == nil || job.ID != jobID {
 			continue
 		}
-		ui.ApplyNewFileMarksFromJob(h.host.LeftPanel(), job)
-		ui.ApplyNewFileMarksFromJob(h.host.RightPanel(), job)
+		ui.ApplyNewFileMarksFromJob(h.host.PrimaryPanel(), job)
+		ui.ApplyNewFileMarksFromJob(h.host.SecondaryPanel(), job)
 		return
 	}
 }
@@ -110,7 +110,7 @@ func (h *Handler) ensureJobsViewSelectionVisible() {
 		h.model.JobsView.EnsureSelectionVisible(n, 0)
 		return
 	}
-	visible := ui.PanelListRows(layout.Left)
+	visible := ui.PanelListRows(layout.Primary)
 	h.model.JobsView.EnsureSelectionVisible(n, visible)
 }
 
@@ -414,7 +414,7 @@ func (h *Handler) jobsViewFocusPaneCount() int {
 	}
 	sel := h.selectedJobEntry()
 	showConflict := ui.JobEntryShowsConflictPanel(sel)
-	_, _, activityRect := ui.SplitJobsRightPanels(layout.Right, showConflict, h.jobsDetailLineCountForSelection())
+	_, _, activityRect := ui.SplitJobsSecondaryPanels(layout.Secondary, showConflict, h.jobsDetailLineCountForSelection())
 	if activityRect.Height == 0 {
 		if showConflict {
 			return 3 // list, conflict, detail (stacked)
@@ -435,7 +435,7 @@ func (h *Handler) jobsDetailContentHeight() int {
 	}
 	sel := h.selectedJobEntry()
 	show := ui.JobEntryShowsConflictPanel(sel)
-	_, detailRect, activityRect := ui.SplitJobsRightPanels(layout.Right, show, h.jobsDetailLineCountForSelection())
+	_, detailRect, activityRect := ui.SplitJobsSecondaryPanels(layout.Secondary, show, h.jobsDetailLineCountForSelection())
 	if activityRect.Height > 0 {
 		return ui.JobsPanelContentRows(detailRect)
 	}
@@ -450,7 +450,7 @@ func (h *Handler) jobsActivityContentHeight() int {
 	}
 	sel := h.selectedJobEntry()
 	show := ui.JobEntryShowsConflictPanel(sel)
-	_, _, activityRect := ui.SplitJobsRightPanels(layout.Right, show, h.jobsDetailLineCountForSelection())
+	_, _, activityRect := ui.SplitJobsSecondaryPanels(layout.Secondary, show, h.jobsDetailLineCountForSelection())
 	return ui.JobsPanelContentRows(activityRect)
 }
 
@@ -785,8 +785,8 @@ func (h *Handler) applyJobEventBatch(batch []jobs.Event) {
 		h.listStale = true
 	}
 	h.affectVisible = viewJobs || sawTerminal || sawBlocker ||
-		(sawMarkUpdate && (ui.PanelTouchedByJobs(h.model.Left.PathString(), h.model.JobPathMarks) ||
-			ui.PanelTouchedByJobs(h.model.Right.PathString(), h.model.JobPathMarks) ||
+		(sawMarkUpdate && (ui.PanelTouchedByJobs(h.model.Primary.PathString(), h.model.JobPathMarks) ||
+			ui.PanelTouchedByJobs(h.model.Secondary.PathString(), h.model.JobPathMarks) ||
 			h.state.JobsWaitingDecision() > 0)) ||
 		(sawProgress && h.model.MenuBarLayoutReserved() && h.state.HasNonFinishedJob())
 	h.lastBatchMenuBarStripOnly = !viewJobs && sawProgress && !sawTerminal && !sawBlocker && !sawMarkUpdate &&

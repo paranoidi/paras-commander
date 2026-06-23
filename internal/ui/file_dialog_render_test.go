@@ -26,9 +26,9 @@ func TestRenderAddBookmarkDialogShowsTitlePathAndName(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 		FileDialog: FileDialogState{
 			Open:       true,
 			DialogType: FileDialogAddBookmark,
@@ -83,9 +83,9 @@ func TestRenderMkdirDialogWithoutSelectionHidesActionRadios(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 		FileDialog: FileDialogState{
 			Open:       true,
 			DialogType: FileDialogMkdir,
@@ -119,9 +119,9 @@ func TestRenderMkdirDialogWithSelectionShowsActionRadios(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 		FileDialog: FileDialogState{
 			Open:             true,
 			DialogType:       FileDialogMkdir,

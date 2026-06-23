@@ -19,8 +19,8 @@ func TestDrawMessagesViewAlignsMessageHeaderWithContent(t *testing.T) {
 
 	styles := theme.Default()
 	layout := Layout{
-		Left:  Rect{X: 0, Y: 1, Width: 40, Height: 10},
-		Right: Rect{X: 40, Y: 1, Width: 40, Height: 10},
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 10},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 10},
 	}
 	entries := []MessageLogEntry{{
 		Time: "12:34:56",
@@ -29,9 +29,9 @@ func TestDrawMessagesViewAlignsMessageHeaderWithContent(t *testing.T) {
 	}}
 	drawMessagesView(screen, layout, MessagesViewState{}, entries, styles, false)
 
-	contentX := layout.Left.X + 2
+	contentX := layout.Primary.X + 2
 	msgCol := contentX + messagesListColTime
-	str, _, _ := screen.Get(msgCol, layout.Left.Y+1)
+	str, _, _ := screen.Get(msgCol, layout.Primary.Y+1)
 	r, _ := utf8.DecodeRuneInString(str)
 	if r != 'M' {
 		t.Fatalf("header Message at col %d = %q, want 'M'", msgCol, r)
@@ -48,8 +48,8 @@ func TestDrawMessagesViewInfoUsesReadableForeground(t *testing.T) {
 
 	styles := theme.Default()
 	layout := Layout{
-		Left:  Rect{X: 0, Y: 1, Width: 40, Height: 10},
-		Right: Rect{X: 40, Y: 1, Width: 40, Height: 10},
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 10},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 10},
 	}
 	entries := []MessageLogEntry{{
 		Time: "12:34:56",
@@ -58,9 +58,9 @@ func TestDrawMessagesViewInfoUsesReadableForeground(t *testing.T) {
 	}}
 	drawMessagesView(screen, layout, MessagesViewState{}, entries, styles, false)
 
-	contentX := layout.Left.X + 2
+	contentX := layout.Primary.X + 2
 	msgCol := contentX + messagesListColTime + 1 // first content rune after 'C'
-	_, st, _ := screen.Get(msgCol, layout.Left.Y+2)
+	_, st, _ := screen.Get(msgCol, layout.Primary.Y+2)
 	fg, _, _ := st.Decompose()
 	bannerFG, _, _ := styles.MessageInfo.Decompose()
 	if fg == bannerFG {

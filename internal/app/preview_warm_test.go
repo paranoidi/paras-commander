@@ -25,12 +25,12 @@ func TestOverlayQuickViewInactiveDrawTitleTracksCursor(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app.model.Left = panel.State{Path: pathloc.MustParse(root)}
-	if err := app.model.Left.Load(root); err != nil {
+	app.model.Primary = panel.State{Path: pathloc.MustParse(root)}
+	if err := app.model.Primary.Load(root); err != nil {
 		t.Fatal(err)
 	}
 	notesIdx := -1
-	for i, e := range app.model.Left.Entries {
+	for i, e := range app.model.Primary.Entries {
 		if e.Name == "notes.txt" {
 			notesIdx = i
 			break
@@ -39,10 +39,10 @@ func TestOverlayQuickViewInactiveDrawTitleTracksCursor(t *testing.T) {
 	if notesIdx < 0 {
 		t.Fatal("notes.txt not in listing")
 	}
-	app.model.Left.Cursor = notesIdx
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.Primary.Cursor = notesIdx
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.model.QuickViewEnabled = true
-	app.model.QuickViewPanel = ui.LeftPanel
+	app.model.QuickViewPanel = ui.PrimaryPanel
 
 	app.commandsMu.Lock()
 	app.model.FilePreview = ui.FilePreviewState{
@@ -69,11 +69,11 @@ func TestOverlayQuickViewInactiveDrawTitleSkipsDirectoryOverlay(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())
 
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.model.QuickViewEnabled = true
-	app.model.QuickViewPanel = ui.LeftPanel
+	app.model.QuickViewPanel = ui.PrimaryPanel
 	app.model.QuickViewDirOverlayActive = true
-	app.model.QuickViewDirOverlayPanelID = ui.RightPanel
+	app.model.QuickViewDirOverlayPanelID = ui.SecondaryPanel
 
 	app.commandsMu.Lock()
 	app.model.FilePreview = ui.FilePreviewState{
@@ -104,19 +104,19 @@ func TestOverlayQuickViewInactiveDrawTitleFromFileEntry(t *testing.T) {
 	readme := filepath.Join(root, "readme.md")
 	writeFileForPreviewWarm(t, readme)
 
-	app.model.Left = panel.State{Path: pathloc.MustParse(root)}
-	if err := app.model.Left.Load(root); err != nil {
+	app.model.Primary = panel.State{Path: pathloc.MustParse(root)}
+	if err := app.model.Primary.Load(root); err != nil {
 		t.Fatal(err)
 	}
-	entry, ok := app.model.Left.CurrentEntry()
+	entry, ok := app.model.Primary.CurrentEntry()
 	if !ok || entry.Type != localfs.EntryFile {
 		t.Fatalf("current entry = %+v, want file", entry)
 	}
 	_ = entry
 
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.model.QuickViewEnabled = true
-	app.model.QuickViewPanel = ui.LeftPanel
+	app.model.QuickViewPanel = ui.PrimaryPanel
 
 	app.commandsMu.Lock()
 	app.model.FilePreview = ui.FilePreviewState{Open: false}

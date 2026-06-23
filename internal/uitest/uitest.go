@@ -31,21 +31,27 @@ func Theme(t *testing.T) theme.Theme {
 // ModelOption adjusts MinimalBrowserModel.
 type ModelOption func(*ui.Model)
 
-// WithLeftPath sets the left panel path (must be an existing directory).
-func WithLeftPath(path string) ModelOption {
+// WithPrimaryPath sets the primary panel path (must be an existing directory).
+func WithPrimaryPath(path string) ModelOption {
 	return func(m *ui.Model) {
-		m.Left.Path = pathloc.MustParse(path)
+		m.Primary.Path = pathloc.MustParse(path)
 	}
 }
 
-// WithRightPath sets the right panel path (must be an existing directory).
-func WithRightPath(path string) ModelOption {
+// WithSecondaryPath sets the secondary panel path (must be an existing directory).
+func WithSecondaryPath(path string) ModelOption {
 	return func(m *ui.Model) {
-		m.Right.Path = pathloc.MustParse(path)
+		m.Secondary.Path = pathloc.MustParse(path)
 	}
 }
 
-// WithActivePanel sets ActivePanel (ui.LeftPanel or ui.RightPanel).
+// WithLeftPath is an alias for WithPrimaryPath.
+func WithLeftPath(path string) ModelOption { return WithPrimaryPath(path) }
+
+// WithRightPath is an alias for WithSecondaryPath.
+func WithRightPath(path string) ModelOption { return WithSecondaryPath(path) }
+
+// WithActivePanel sets ActivePanel (ui.PrimaryPanel or ui.SecondaryPanel).
 func WithActivePanel(id int) ModelOption {
 	return func(m *ui.Model) {
 		m.ActivePanel = id
@@ -56,18 +62,18 @@ func WithActivePanel(id int) ModelOption {
 func MinimalBrowserModel(t *testing.T, opts ...ModelOption) ui.Model {
 	t.Helper()
 	root := t.TempDir()
-	left, err := panel.New(root)
+	primary, err := panel.New(root)
 	if err != nil {
 		t.Fatalf("panel.New(%q): %v", root, err)
 	}
-	right, err := panel.New(root)
+	secondary, err := panel.New(root)
 	if err != nil {
 		t.Fatalf("panel.New(%q): %v", root, err)
 	}
 	m := ui.Model{
-		Left:        left,
-		Right:       right,
-		ActivePanel: ui.LeftPanel,
+		Primary:     primary,
+		Secondary:   secondary,
+		ActivePanel: ui.PrimaryPanel,
 		ViewMode:    ui.ViewBrowser,
 		UserHomeDir: root,
 	}

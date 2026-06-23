@@ -17,40 +17,40 @@ import (
 
 func TestToggleCarouselFlipsActivePanel(t *testing.T) {
 	app := testAppMinimal(t)
-	if app.model.Left.CarouselMode {
+	if app.model.Primary.CarouselMode {
 		t.Fatal("carousel should start off")
 	}
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleCarousel)
-	if !app.model.Left.CarouselMode {
+	if !app.model.Primary.CarouselMode {
 		t.Fatal("carousel should be on after toggle")
 	}
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleCarousel)
-	if app.model.Left.CarouselMode {
+	if app.model.Primary.CarouselMode {
 		t.Fatal("carousel should be off after second toggle")
 	}
 }
 
 func TestCycleListingFormatBlockedInCarousel(t *testing.T) {
 	app := testAppMinimal(t)
-	app.model.Left.CarouselMode = true
-	before := app.model.Left.ListFormat
+	app.model.Primary.CarouselMode = true
+	before := app.model.Primary.ListFormat
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelCycleListingFormat)
-	if app.model.Left.ListFormat != before {
+	if app.model.Primary.ListFormat != before {
 		t.Fatal("listing format should not change in carousel mode")
 	}
 }
 
 func TestCarouselTogglePerPanelFromMenuScope(t *testing.T) {
 	app := testAppMinimal(t)
-	app.model.ActivePanel = ui.RightPanel
-	app.activateScopedPanelMenu(ui.RightPanel, menu.Item{
+	app.model.ActivePanel = ui.SecondaryPanel
+	app.activateScopedPanelMenu(ui.SecondaryPanel, menu.Item{
 		Action: keymap.ActionPanelToggleCarousel,
 		Label:  "Carousel view",
 	})
-	if !app.model.Right.CarouselMode {
+	if !app.model.Secondary.CarouselMode {
 		t.Fatal("right panel carousel should be on")
 	}
-	if app.model.Left.CarouselMode {
+	if app.model.Primary.CarouselMode {
 		t.Fatal("left panel carousel should stay off")
 	}
 }
@@ -84,30 +84,30 @@ func TestCarouselForcesPanelZoomRegardlessOfConfigAndWidth(t *testing.T) {
 		t.Fatalf("NewWithOptions() error = %v", err)
 	}
 
-	app.model.Left.CarouselMode = true
+	app.model.Primary.CarouselMode = true
 	lay := app.layoutForTerminalSize(160, 30)
-	if lay.Left.Width != 112 || lay.Right.Width != 48 {
-		t.Fatalf("carousel on active panel Left=%d Right=%d want 70/30 zoom at width 160", lay.Left.Width, lay.Right.Width)
+	if lay.Primary.Width != 112 || lay.Secondary.Width != 48 {
+		t.Fatalf("carousel on active panel Left=%d Right=%d want 70/30 zoom at width 160", lay.Primary.Width, lay.Secondary.Width)
 	}
 
-	app.model.ActivePanel = ui.RightPanel
-	app.model.Right.CarouselMode = true
+	app.model.ActivePanel = ui.SecondaryPanel
+	app.model.Secondary.CarouselMode = true
 	layRight := app.layoutForTerminalSize(160, 30)
-	if layRight.Left.Width != 48 || layRight.Right.Width != 112 {
-		t.Fatalf("carousel on right panel Left=%d Right=%d want 30/70 zoom", layRight.Left.Width, layRight.Right.Width)
+	if layRight.Primary.Width != 48 || layRight.Secondary.Width != 112 {
+		t.Fatalf("carousel on right panel Left=%d Right=%d want 30/70 zoom", layRight.Primary.Width, layRight.Secondary.Width)
 	}
 
-	app.model.Right.CarouselMode = false
-	app.model.Left.CarouselMode = true
+	app.model.Secondary.CarouselMode = false
+	app.model.Primary.CarouselMode = true
 	layInactive := app.layoutForTerminalSize(160, 30)
-	if layInactive.Left.Width != 80 || layInactive.Right.Width != 80 {
-		t.Fatalf("carousel only on inactive panel Left=%d Right=%d want even split", layInactive.Left.Width, layInactive.Right.Width)
+	if layInactive.Primary.Width != 80 || layInactive.Secondary.Width != 80 {
+		t.Fatalf("carousel only on inactive panel Left=%d Right=%d want even split", layInactive.Primary.Width, layInactive.Secondary.Width)
 	}
 }
 
 func TestToggleZoomIgnoredInCarouselView(t *testing.T) {
 	app := testAppMinimal(t)
-	app.model.Left.CarouselMode = true
+	app.model.Primary.CarouselMode = true
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelToggleZoomActivePanel)
 	if !strings.Contains(app.model.Message, "carousel") {
 		t.Fatalf("message = %q, want carousel zoom hint", app.model.Message)
@@ -129,9 +129,9 @@ func TestFirstListNavAfterChdirPaintsCachedChildDuringCoalesce(t *testing.T) {
 	screen := newScreen(t, 160, 30)
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 500
-	app.model.Left.CarouselMode = true
+	app.model.Primary.CarouselMode = true
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	if _, ok := left.SnapshotChild(20); !ok {
 		t.Fatal("SnapshotChild on Season 01 = false, want true")
 	}
@@ -140,13 +140,13 @@ func TestFirstListNavAfterChdirPaintsCachedChildDuringCoalesce(t *testing.T) {
 	}
 	app.carouselPreviewNavSkipSnapshot.Store(false)
 	app.syncCarouselChildPreviewCoalesceFlags()
-	if app.model.Left.CarouselChildPreviewCoalesce {
+	if app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("coalesce should be off before first debounced nav")
 	}
 
 	app.ensureCarouselChildCacheBeforeListNav()
 	app.beginCarouselPreviewNavCoalesce()
-	if !app.model.Left.CarouselChildPreviewCoalesce {
+	if !app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("coalesce should be on before Move on first debounced nav")
 	}
 	if !left.SelectVisibleEntry("Season 02") {
@@ -154,10 +154,10 @@ func TestFirstListNavAfterChdirPaintsCachedChildDuringCoalesce(t *testing.T) {
 	}
 	app.armCarouselPreviewNavCoalesceAfterListNav()
 
-	if !app.model.Left.CarouselChildPreviewCoalesce {
+	if !app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("coalesce should stay on after first nav arm")
 	}
-	_, _, child, _ := panelcarousel.BuildColumns(app.model.Left, 20, false, false)
+	_, _, child, _ := panelcarousel.BuildColumns(app.model.Primary, 20, false, false)
 	if !child.Populated {
 		t.Fatal("first coalesced frame should repaint cached child column, not leave it blank")
 	}
@@ -178,38 +178,38 @@ func TestCarouselPreviewNavDebounceDefersSideSnapshotUntilFlush(t *testing.T) {
 	screen := newScreen(t, 160, 30)
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 500
-	app.model.Left.CarouselMode = true
+	app.model.Primary.CarouselMode = true
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	selectPanelEntryByName(t, left, "maple")
 	if _, ok := left.SnapshotChild(20); !ok {
 		t.Fatal("SnapshotChild on maple = false, want true")
 	}
-	first := app.model.Left.CarouselSideCache.Child
-	if !app.model.Left.CarouselSideCache.ChildOK || first.Path.String() != maple {
-		t.Fatalf("initial child cache = %+v ok=%v, want maple dir cached", first, app.model.Left.CarouselSideCache.ChildOK)
+	first := app.model.Primary.CarouselSideCache.Child
+	if !app.model.Primary.CarouselSideCache.ChildOK || first.Path.String() != maple {
+		t.Fatalf("initial child cache = %+v ok=%v, want maple dir cached", first, app.model.Primary.CarouselSideCache.ChildOK)
 	}
 
 	app.dispatch(keymap.ActionNavDown)
 	app.syncCarouselChildPreviewCoalesceFlags()
 
-	if !app.model.Left.CarouselChildPreviewCoalesce {
+	if !app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("CarouselChildPreviewCoalesce = false, want true during debounce")
 	}
-	still := app.model.Left.CarouselSideCache.Child
-	if !app.model.Left.CarouselSideCache.ChildOK || still.Path.String() != maple {
-		t.Fatalf("child cache after debounced nav = %+v ok=%v, want still maple", still, app.model.Left.CarouselSideCache.ChildOK)
+	still := app.model.Primary.CarouselSideCache.Child
+	if !app.model.Primary.CarouselSideCache.ChildOK || still.Path.String() != maple {
+		t.Fatalf("child cache after debounced nav = %+v ok=%v, want still maple", still, app.model.Primary.CarouselSideCache.ChildOK)
 	}
 
 	if !app.applyCarouselPreviewFlush(carouselPreviewFlushPayload{gen: app.carouselPreviewDebounceGen.Load()}) {
 		t.Fatal("applyCarouselPreviewFlush should accept flush and load child preview")
 	}
 	app.syncCarouselChildPreviewCoalesceFlags()
-	if app.model.Left.CarouselChildPreviewCoalesce {
+	if app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("coalesce should be off after flush")
 	}
-	after := app.model.Left.CarouselSideCache.Child
-	if !app.model.Left.CarouselSideCache.ChildOK || after.Path.String() != oak {
-		t.Fatalf("child cache after flush = %+v ok=%v, want oak", after, app.model.Left.CarouselSideCache.ChildOK)
+	after := app.model.Primary.CarouselSideCache.Child
+	if !app.model.Primary.CarouselSideCache.ChildOK || after.Path.String() != oak {
+		t.Fatalf("child cache after flush = %+v ok=%v, want oak", after, app.model.Primary.CarouselSideCache.ChildOK)
 	}
 }

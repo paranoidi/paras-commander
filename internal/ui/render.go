@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	LeftPanel = iota
-	RightPanel
+	PrimaryPanel = iota
+	SecondaryPanel
 )
 
 // SubFocus areas within the active browser column (file list vs selections strip),
@@ -38,14 +38,14 @@ type MetaColumnState struct {
 
 // Model is the renderable subset of application state.
 type Model struct {
-	Left           panel.State
-	Right          panel.State
+	Primary        panel.State
+	Secondary      panel.State
 	ActivePanel    int
 	ActiveSubFocus int // SubFocus*; applies to ActivePanel when ViewBrowser.
 	// HideInactivePanel gives the active column full width and hides the inactive twin panel.
 	HideInactivePanel bool
 	// SyncFollowEnabled gates latched panel sync. When true, SyncFollowPanel
-	// (LeftPanel or RightPanel) names the driver whose caret moves auto-load
+	// (PrimaryPanel or SecondaryPanel) names the driver whose caret moves auto-load
 	// the highlighted directory into the inactive panel.
 	SyncFollowEnabled bool
 	SyncFollowPanel   int
@@ -90,7 +90,7 @@ type Model struct {
 	UserHomeDir string
 	// DiskUsageShown enables proportional disk-usage bars after the user starts a scan.
 	DiskUsageShown bool
-	// DiskUsagePanelID stores the panel (LeftPanel/RightPanel) that initiated the current disk usage scan (pending tint only).
+	// DiskUsagePanelID stores the panel (PrimaryPanel/SecondaryPanel) that initiated the current disk usage scan (pending tint only).
 	DiskUsagePanelID int
 	// DiskUsageScanOrigin / DiskUsageScanRoots define the active scan scope (origin listing + queued child roots).
 	// Bars and idle disk-total sort apply on either panel while its cwd is in this scope.
@@ -132,13 +132,13 @@ type Model struct {
 	CarouselFilePreviewDraw FilePreviewState
 	// QuickViewEnabled is true while Shift+F3 / menu "Quick view" is latched for QuickViewPanel.
 	QuickViewEnabled bool
-	// QuickViewPanel is the driver panel (LeftPanel or RightPanel) when QuickViewEnabled, else -1.
+	// QuickViewPanel is the driver panel (PrimaryPanel or SecondaryPanel) when QuickViewEnabled, else -1.
 	QuickViewPanel int
 	// QuickViewDirOverlay holds a transient directory listing for quick-view directory preview (paint only).
 	QuickViewDirOverlay panel.State
 	// QuickViewDirOverlayActive is true when QuickViewDirOverlay should replace the inactive file list.
 	QuickViewDirOverlayActive bool
-	// QuickViewDirOverlayPanelID is LeftPanel or RightPanel for the inactive column, or -1 when inactive.
+	// QuickViewDirOverlayPanelID is PrimaryPanel or SecondaryPanel for the inactive column, or -1 when inactive.
 	QuickViewDirOverlayPanelID int
 	// QuickViewDirOverlayVisualHold retains the last dir-overlay snapshot during a folder→file debounce
 	// transition. While true the inactive column continues to paint the held dir listing instead of the
@@ -194,14 +194,14 @@ func (m Model) PrimaryModal() PrimaryModal {
 	}
 }
 
-// SyncDriverPanelID returns the LeftPanel/RightPanel id that drives latched panel sync,
+// SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,
 // or -1 when sync is disabled. The result is intended for renderers that need a sentinel
 // they can compare against the panel they are about to draw.
 func (m Model) SyncDriverPanelID() int {
 	if !m.SyncFollowEnabled {
 		return -1
 	}
-	if m.SyncFollowPanel != LeftPanel && m.SyncFollowPanel != RightPanel {
+	if m.SyncFollowPanel != PrimaryPanel && m.SyncFollowPanel != SecondaryPanel {
 		return -1
 	}
 	return m.SyncFollowPanel
@@ -214,10 +214,10 @@ func (m Model) showPanelDiskUsage(panelID int) bool {
 	}
 	listingPath := ""
 	switch panelID {
-	case LeftPanel:
-		listingPath = m.Left.PathString()
-	case RightPanel:
-		listingPath = m.Right.PathString()
+	case PrimaryPanel:
+		listingPath = m.Primary.PathString()
+	case SecondaryPanel:
+		listingPath = m.Secondary.PathString()
 	default:
 		return false
 	}
@@ -229,10 +229,10 @@ func (m Model) quickViewDriverPanel() int {
 	if !m.QuickViewEnabled {
 		return -1
 	}
-	if m.QuickViewPanel == LeftPanel || m.QuickViewPanel == RightPanel {
+	if m.QuickViewPanel == PrimaryPanel || m.QuickViewPanel == SecondaryPanel {
 		return m.QuickViewPanel
 	}
-	if m.ActivePanel == LeftPanel || m.ActivePanel == RightPanel {
+	if m.ActivePanel == PrimaryPanel || m.ActivePanel == SecondaryPanel {
 		return m.ActivePanel
 	}
 	return -1
@@ -247,7 +247,7 @@ func (m Model) QuickViewDisplayActive() bool {
 	return driver >= 0 && m.ActivePanel == driver
 }
 
-// QuickViewDriverPanelID returns the LeftPanel/RightPanel id that shows the quick-view
+// QuickViewDriverPanelID returns the PrimaryPanel/SecondaryPanel id that shows the quick-view
 // bottom indicator while quick view is latched, or -1 when disabled.
 func (m Model) QuickViewDriverPanelID() int {
 	return m.quickViewDriverPanel()
@@ -273,12 +273,12 @@ func (m Model) InactiveColumnShowsFilePreview(inactivePanelID int) bool {
 	return m.FilePreviewDraw.Open
 }
 
-// inactivePanelID returns LeftPanel or RightPanel for the inactive column.
+// inactivePanelID returns PrimaryPanel or SecondaryPanel for the inactive column.
 func (m Model) inactivePanelID() int {
-	if m.ActivePanel == RightPanel {
-		return LeftPanel
+	if m.ActivePanel == SecondaryPanel {
+		return PrimaryPanel
 	}
-	return RightPanel
+	return SecondaryPanel
 }
 
 // PanelForFileListRender returns the panel state to paint in the file list. During quick-view
@@ -292,10 +292,10 @@ func (m Model) PanelForFileListRender(panelID int) panel.State {
 		return m.QuickViewDirOverlayVisualHoldPanel
 	}
 	switch panelID {
-	case LeftPanel:
-		return m.Left
-	case RightPanel:
-		return m.Right
+	case PrimaryPanel:
+		return m.Primary
+	case SecondaryPanel:
+		return m.Secondary
 	default:
 		return panel.State{}
 	}
@@ -386,7 +386,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	chromeBlocked := model.PanelsChromeBlocked()
 	switch model.ViewMode {
 	case ViewFilePreview:
-		union := MergeTwinPanelRects(layout.Left, layout.Right)
+		union := MergeTwinPanelRects(layout.Primary, layout.Secondary)
 		previewRect, pickerRect := SplitFullscreenPreviewRects(union, model.FilePreviewThemePicker.Open, model.FilePreviewThemePicker.Choices)
 		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, "", "", model.PreviewChromaStyle)
 		if model.FilePreviewThemePicker.Open && pickerRect.Width > 0 {
@@ -406,58 +406,58 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	default:
 		// Theme picker: show the real left panel (normal chrome, always active) so preview matches in-browser use.
 		previewTheme := model.ThemeDialog.Open
-		leftChromeBlocked := chromeBlocked && !previewTheme
-		leftFileListFocus := previewTheme || (model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusFileList)
-		rightFileListFocus := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusFileList
+		primaryChromeBlocked := chromeBlocked && !previewTheme
+		primaryFileListFocus := previewTheme || (model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusFileList)
+		secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusFileList
 
-		leftStripCount := model.Left.SelectionsStripCount()
-		rightStripCount := model.Right.SelectionsStripCount()
-		leftStripN := SelectionsStripLayoutItemCountFromCount(leftStripCount, LeftPanel, model.ActivePanel, previewTheme)
-		rightStripN := SelectionsStripLayoutItemCountFromCount(rightStripCount, RightPanel, model.ActivePanel, previewTheme)
-		leftFile := FileListFrameWithStripCount(layout.Left, leftStripN, model.SelectionsPanelMaxRows)
-		rightFile := FileListFrameWithStripCount(layout.Right, rightStripN, model.SelectionsPanelMaxRows)
-		_, leftStrip := SplitPanelColumn(layout.Left, leftStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
-		_, rightStrip := SplitPanelColumn(layout.Right, rightStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
+		leftStripCount := model.Primary.SelectionsStripCount()
+		rightStripCount := model.Secondary.SelectionsStripCount()
+		leftStripN := SelectionsStripLayoutItemCountFromCount(leftStripCount, PrimaryPanel, model.ActivePanel, previewTheme)
+		rightStripN := SelectionsStripLayoutItemCountFromCount(rightStripCount, SecondaryPanel, model.ActivePanel, previewTheme)
+		primaryFile := FileListFrameWithStripCount(layout.Primary, leftStripN, model.SelectionsPanelMaxRows)
+		secondaryFile := FileListFrameWithStripCount(layout.Secondary, rightStripN, model.SelectionsPanelMaxRows)
+		_, leftStrip := SplitPanelColumn(layout.Primary, leftStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
+		_, rightStrip := SplitPanelColumn(layout.Secondary, rightStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
 
-		leftSelectionsBottomHint := leftStripCount > 0 && leftStripN == 0
-		rightSelectionsBottomHint := rightStripCount > 0 && rightStripN == 0
+		primarySelectionsBottomHint := leftStripCount > 0 && leftStripN == 0
+		secondarySelectionsBottomHint := rightStripCount > 0 && rightStripN == 0
 		leftStripVisible := leftStrip.Height > 0
 		rightStripVisible := rightStrip.Height > 0
-		leftSelectionSizeOnFileBottom := model.Left.SelectedPathCount() > 0 && !leftStripVisible
-		rightSelectionSizeOnFileBottom := model.Right.SelectedPathCount() > 0 && !rightStripVisible
-		leftSelectionSizeOnStripBottom := model.Left.SelectedPathCount() > 0 && leftStripVisible
-		rightSelectionSizeOnStripBottom := model.Right.SelectedPathCount() > 0 && rightStripVisible
+		primarySelectionSizeOnFileBottom := model.Primary.SelectedPathCount() > 0 && !leftStripVisible
+		secondarySelectionSizeOnFileBottom := model.Secondary.SelectedPathCount() > 0 && !rightStripVisible
+		leftSelectionSizeOnStripBottom := model.Primary.SelectedPathCount() > 0 && leftStripVisible
+		rightSelectionSizeOnStripBottom := model.Secondary.SelectedPathCount() > 0 && rightStripVisible
 
 		inactiveID := model.inactivePanelID()
-		showLeftPreview := layout.Left.Width > 0 && inactiveID == LeftPanel && model.InactiveColumnShowsFilePreview(LeftPanel)
-		showRightPreview := layout.Right.Width > 0 && inactiveID == RightPanel && model.InactiveColumnShowsFilePreview(RightPanel)
+		showLeftPreview := layout.Primary.Width > 0 && inactiveID == PrimaryPanel && model.InactiveColumnShowsFilePreview(PrimaryPanel)
+		showRightPreview := layout.Secondary.Width > 0 && inactiveID == SecondaryPanel && model.InactiveColumnShowsFilePreview(SecondaryPanel)
 
-		leftOtherPanelPath := model.Right.PathString()
-		rightOtherPanelPath := model.Left.PathString()
+		primaryOtherPanelPath := model.Secondary.PathString()
+		secondaryOtherPanelPath := model.Primary.PathString()
 
 		syncDriver := model.SyncDriverPanelID()
 		quickViewDriver := model.QuickViewDriverPanelID()
-		if layout.Left.Width > 0 && showLeftPreview {
+		if layout.Primary.Width > 0 && showLeftPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
-			drawFilePreviewPanel(screen, leftFile, model.FilePreviewDraw, styles, leftChromeBlocked, pvFocused,
-				model.QuickViewDisplayActive(), false, model.Left.PathString(), model.UserHomeDir, model.PreviewChromaStyle)
-		} else if layout.Left.Width > 0 {
-			drawPanel(screen, leftFile, model.PanelForFileListRender(LeftPanel), leftFileListFocus, leftChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(LeftPanel), LeftPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[LeftPanel], model.ShrunkenShowsNameOnly, leftSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, leftOtherPanelPath, leftSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.PreviewChromaStyle)
+			drawFilePreviewPanel(screen, primaryFile, model.FilePreviewDraw, styles, primaryChromeBlocked, pvFocused,
+				model.QuickViewDisplayActive(), false, model.Primary.PathString(), model.UserHomeDir, model.PreviewChromaStyle)
+		} else if layout.Primary.Width > 0 {
+			drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel), primaryFileListFocus, primaryChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(PrimaryPanel), PrimaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[PrimaryPanel], model.ShrunkenShowsNameOnly, primarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, primaryOtherPanelPath, primarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.PreviewChromaStyle)
 		}
-		if layout.Left.Width > 0 && leftStrip.Height > 0 {
-			leftStripFocused := model.ActivePanel == LeftPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
-			drawSelectionsStrip(screen, leftStrip, model.Left, leftStripFocused, leftChromeBlocked, styles, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, leftSelectionSizeOnStripBottom, model.PanelScrollbar, model.PanelScrollbarInactive, leftFileListFocus)
+		if layout.Primary.Width > 0 && leftStrip.Height > 0 {
+			leftStripFocused := model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
+			drawSelectionsStrip(screen, leftStrip, model.Primary, leftStripFocused, primaryChromeBlocked, styles, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, leftSelectionSizeOnStripBottom, model.PanelScrollbar, model.PanelScrollbarInactive, primaryFileListFocus)
 		}
-		if layout.Right.Width > 0 && showRightPreview {
+		if layout.Secondary.Width > 0 && showRightPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
-			drawFilePreviewPanel(screen, rightFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
-				model.QuickViewDisplayActive(), false, model.Right.PathString(), model.UserHomeDir, model.PreviewChromaStyle)
-		} else if layout.Right.Width > 0 {
-			drawPanel(screen, rightFile, model.PanelForFileListRender(RightPanel), rightFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(RightPanel), RightPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[RightPanel], model.ShrunkenShowsNameOnly, rightSelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, rightOtherPanelPath, rightSelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.PreviewChromaStyle)
+			drawFilePreviewPanel(screen, secondaryFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
+				model.QuickViewDisplayActive(), false, model.Secondary.PathString(), model.UserHomeDir, model.PreviewChromaStyle)
+		} else if layout.Secondary.Width > 0 {
+			drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel), secondaryFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(SecondaryPanel), SecondaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[SecondaryPanel], model.ShrunkenShowsNameOnly, secondarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, secondaryOtherPanelPath, secondarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.PreviewChromaStyle)
 		}
-		if layout.Right.Width > 0 && rightStrip.Height > 0 {
-			rightStripFocused := model.ActivePanel == RightPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
-			drawSelectionsStrip(screen, rightStrip, model.Right, rightStripFocused, chromeBlocked, styles, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, rightSelectionSizeOnStripBottom, model.PanelScrollbar, model.PanelScrollbarInactive, rightFileListFocus)
+		if layout.Secondary.Width > 0 && rightStrip.Height > 0 {
+			rightStripFocused := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
+			drawSelectionsStrip(screen, rightStrip, model.Secondary, rightStripFocused, chromeBlocked, styles, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, rightSelectionSizeOnStripBottom, model.PanelScrollbar, model.PanelScrollbarInactive, secondaryFileListFocus)
 		}
 	}
 	if model.Menu.Open && model.MenuBarInteractive() {

@@ -1062,23 +1062,23 @@ func TestDispatchMovesOnlyActivePanel(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionNavDown)
-	if app.model.Left.Cursor != 1 {
-		t.Fatalf("left cursor = %d, want 1", app.model.Left.Cursor)
+	if app.model.Primary.Cursor != 1 {
+		t.Fatalf("left cursor = %d, want 1", app.model.Primary.Cursor)
 	}
-	if app.model.Right.Cursor != 0 {
-		t.Fatalf("right cursor = %d, want 0", app.model.Right.Cursor)
+	if app.model.Secondary.Cursor != 0 {
+		t.Fatalf("right cursor = %d, want 0", app.model.Secondary.Cursor)
 	}
 
 	app.dispatch(keymap.ActionPanelSwitch)
 	app.dispatch(keymap.ActionNavDown)
-	if app.model.ActivePanel != ui.RightPanel {
+	if app.model.ActivePanel != ui.SecondaryPanel {
 		t.Fatalf("active panel = %d, want right panel", app.model.ActivePanel)
 	}
-	if app.model.Left.Cursor != 1 {
-		t.Fatalf("left cursor = %d, want unchanged 1", app.model.Left.Cursor)
+	if app.model.Primary.Cursor != 1 {
+		t.Fatalf("left cursor = %d, want unchanged 1", app.model.Primary.Cursor)
 	}
-	if app.model.Right.Cursor != 1 {
-		t.Fatalf("right cursor = %d, want 1", app.model.Right.Cursor)
+	if app.model.Secondary.Cursor != 1 {
+		t.Fatalf("right cursor = %d, want 1", app.model.Secondary.Cursor)
 	}
 }
 
@@ -1099,7 +1099,7 @@ func TestHideInactivePanelToggleAndTabShow(t *testing.T) {
 	}
 
 	app.model.SyncFollowEnabled = true
-	app.model.SyncFollowPanel = ui.LeftPanel
+	app.model.SyncFollowPanel = ui.PrimaryPanel
 	app.model.QuickViewEnabled = true
 
 	app.dispatch(keymap.ActionPanelToggleHideInactive)
@@ -1117,7 +1117,7 @@ func TestHideInactivePanelToggleAndTabShow(t *testing.T) {
 	if app.model.HideInactivePanel {
 		t.Fatal("HideInactivePanel = true after Tab, want shown")
 	}
-	if app.model.ActivePanel != ui.RightPanel {
+	if app.model.ActivePanel != ui.SecondaryPanel {
 		t.Fatalf("ActivePanel = %d, want right", app.model.ActivePanel)
 	}
 }
@@ -1141,29 +1141,29 @@ func TestDispatchTogglesSelectionOnlyInActivePanel(t *testing.T) {
 		t.Fatalf("New() error = %v", err)
 	}
 
-	leftEntry, ok := app.model.Left.CurrentEntry()
+	leftEntry, ok := app.model.Primary.CurrentEntry()
 	if !ok {
 		t.Fatal("left CurrentEntry() ok = false, want true")
 	}
-	rightEntry, ok := app.model.Right.CurrentEntry()
+	rightEntry, ok := app.model.Secondary.CurrentEntry()
 	if !ok {
 		t.Fatal("right CurrentEntry() ok = false, want true")
 	}
 
 	app.dispatch(keymap.ActionPanelSelectToggle)
-	if !app.model.Left.IsSelected(leftEntry) {
+	if !app.model.Primary.IsSelected(leftEntry) {
 		t.Fatal("left active entry is not selected")
 	}
-	if app.model.Left.Cursor != 1 {
-		t.Fatalf("left cursor = %d, want 1 after selection advances", app.model.Left.Cursor)
+	if app.model.Primary.Cursor != 1 {
+		t.Fatalf("left cursor = %d, want 1 after selection advances", app.model.Primary.Cursor)
 	}
-	if app.model.Right.IsSelected(rightEntry) {
+	if app.model.Secondary.IsSelected(rightEntry) {
 		t.Fatal("right entry is selected, want inactive panel unchanged")
 	}
 
 	app.dispatch(keymap.ActionPanelSwitch)
 	app.dispatch(keymap.ActionPanelSelectToggle)
-	if !app.model.Right.IsSelected(rightEntry) {
+	if !app.model.Secondary.IsSelected(rightEntry) {
 		t.Fatal("right active entry is not selected after switching panels")
 	}
 }
@@ -1197,8 +1197,8 @@ func TestMenuInputUsesMenuStateInsteadOfPanelNavigation(t *testing.T) {
 
 	// F9 now opens menu bar only (no pulldown). Press Down to open pulldown.
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if app.model.Left.Cursor != 0 {
-		t.Fatalf("left cursor = %d, want unchanged 0 while menu is open", app.model.Left.Cursor)
+	if app.model.Primary.Cursor != 0 {
+		t.Fatalf("left cursor = %d, want unchanged 0 while menu is open", app.model.Primary.Cursor)
 	}
 	if !app.model.Menu.PulldownOpen {
 		t.Fatalf("pulldown open = false after Down")
@@ -1240,7 +1240,7 @@ func TestMenuInputUsesMenuStateInsteadOfPanelNavigation(t *testing.T) {
 	}
 }
 
-func TestLeftMenuToggleHiddenTargetsLeftPanel(t *testing.T) {
+func TestLeftMenuToggleHiddenTargetsPrimaryPanel(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, ".hidden"))
 	writeFile(t, filepath.Join(dir, "visible.txt"))
@@ -1258,7 +1258,7 @@ func TestLeftMenuToggleHiddenTargetsLeftPanel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	app.model.ActivePanel = ui.RightPanel
+	app.model.ActivePanel = ui.SecondaryPanel
 
 	app.dispatch(keymap.ActionAppOpenMenu)
 	app.moveMenu(-1)
@@ -1273,17 +1273,17 @@ func TestLeftMenuToggleHiddenTargetsLeftPanel(t *testing.T) {
 	if app.model.Menu.Open {
 		t.Fatal("menu open = true, want closed")
 	}
-	if !app.model.Left.ShowHidden {
+	if !app.model.Primary.ShowHidden {
 		t.Fatal("left ShowHidden = false, want true")
 	}
-	if app.model.Right.ShowHidden {
+	if app.model.Secondary.ShowHidden {
 		t.Fatal("right ShowHidden = true, want false")
 	}
-	if len(app.model.Left.Entries) != 2 {
-		t.Fatalf("left len(Entries) = %d, want hidden and visible entries", len(app.model.Left.Entries))
+	if len(app.model.Primary.Entries) != 2 {
+		t.Fatalf("left len(Entries) = %d, want hidden and visible entries", len(app.model.Primary.Entries))
 	}
-	if app.model.Message != "Left panel hidden and ignored files shown" {
-		t.Fatalf("Message = %q, want left panel hidden visibility message", app.model.Message)
+	if app.model.Message != "Primary panel hidden and ignored files shown" {
+		t.Fatalf("Message = %q, want primary panel hidden visibility message", app.model.Message)
 	}
 }
 
@@ -1454,15 +1454,15 @@ func TestHistoryDialogAltHUsesActivePanel(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	app.model.ActivePanel = ui.RightPanel
+	app.model.ActivePanel = ui.SecondaryPanel
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt)); quit {
 		t.Fatal("unexpected quit")
 	}
 	if !app.model.HistoryDialog.Open {
 		t.Fatal("expected history dialog open")
 	}
-	if app.model.HistoryDialog.PanelID != ui.RightPanel {
-		t.Fatalf("History panel = %d want right (%d)", app.model.HistoryDialog.PanelID, ui.RightPanel)
+	if app.model.HistoryDialog.PanelID != ui.SecondaryPanel {
+		t.Fatalf("History panel = %d want right (%d)", app.model.HistoryDialog.PanelID, ui.SecondaryPanel)
 	}
 }
 
@@ -1476,7 +1476,7 @@ func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	for i := 0; i < left.VisibleEntryCount(); i++ {
 		entry, _, ok := left.VisibleEntry(i)
 		if ok && entry.Name == "alpha" {
@@ -1484,19 +1484,19 @@ func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
 			break
 		}
 	}
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.dispatch(keymap.ActionPanelOpenDirInOther)
 
 	wantRoot := filepath.Clean(root)
 	wantAlpha := filepath.Clean(alpha)
-	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()); got != wantRoot {
+	if got := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()); got != wantRoot {
 		t.Fatalf("left panel path = %q want %q", got, wantRoot)
 	}
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != wantAlpha {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != wantAlpha {
 		t.Fatalf("right panel path = %q want %q", got, wantAlpha)
 	}
 
-	right := app.panelByID(ui.RightPanel)
+	right := app.panelByID(ui.SecondaryPanel)
 	for i := 0; i < right.VisibleEntryCount(); i++ {
 		entry, _, ok := right.VisibleEntry(i)
 		if ok && entry.Name == "gamma" {
@@ -1504,14 +1504,14 @@ func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
 			break
 		}
 	}
-	app.model.ActivePanel = ui.RightPanel
+	app.model.ActivePanel = ui.SecondaryPanel
 	app.dispatch(keymap.ActionPanelOpenDirInOther)
 
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != wantAlpha {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != wantAlpha {
 		t.Fatalf("right panel path = %q want %q after second open", got, wantAlpha)
 	}
 	wantGamma := filepath.Clean(gamma)
-	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()); got != wantGamma {
+	if got := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()); got != wantGamma {
 		t.Fatalf("left panel path = %q want %q", got, wantGamma)
 	}
 }
@@ -1526,7 +1526,7 @@ func TestOpenActivePathInInactivePanel(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	for i := 0; i < left.VisibleEntryCount(); i++ {
 		entry, _, ok := left.VisibleEntry(i)
 		if ok && entry.Name == "alpha" {
@@ -1534,7 +1534,7 @@ func TestOpenActivePathInInactivePanel(t *testing.T) {
 			break
 		}
 	}
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.dispatch(keymap.ActionNavOpen)
 
 	for i := 0; i < left.VisibleEntryCount(); i++ {
@@ -1551,7 +1551,7 @@ func TestOpenActivePathInInactivePanel(t *testing.T) {
 
 	app.dispatch(keymap.ActionPanelOpenActivePathInOther)
 
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != wantAlpha {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != wantAlpha {
 		t.Fatalf("right panel path = %q want active cwd %q", got, wantAlpha)
 	}
 }
@@ -1566,11 +1566,11 @@ func TestOpenInOtherPanelDisablesSync(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	selectPanelEntryByName(t, left, "alpha")
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.model.SyncFollowEnabled = true
-	app.model.SyncFollowPanel = ui.LeftPanel
+	app.model.SyncFollowPanel = ui.PrimaryPanel
 
 	app.dispatch(keymap.ActionPanelOpenDirInOther)
 
@@ -1585,7 +1585,7 @@ func TestOpenInOtherPanelDisablesSync(t *testing.T) {
 	}
 
 	app.model.SyncFollowEnabled = true
-	app.model.SyncFollowPanel = ui.LeftPanel
+	app.model.SyncFollowPanel = ui.PrimaryPanel
 	if _, err := left.Enter(app.activeViewportRows()); err != nil {
 		t.Fatal(err)
 	}
@@ -1619,7 +1619,7 @@ func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	p := app.panelByID(ui.LeftPanel)
+	p := app.panelByID(ui.PrimaryPanel)
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
 		if ok && entry.Name == "alpha" {
@@ -1637,7 +1637,7 @@ func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 	}
 	app.dispatch(keymap.ActionNavOpen)
 
-	app.openHistoryDialog(ui.LeftPanel)
+	app.openHistoryDialog(ui.PrimaryPanel)
 	if !app.model.HistoryDialog.Open {
 		t.Fatal("expected history dialog open")
 	}
@@ -1682,11 +1682,11 @@ func TestHistoryDialogF5TogglesBothPanels(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	navigatePanelIntoDir(t, app, ui.LeftPanel, "alpha")
-	app.model.ActivePanel = ui.RightPanel
-	navigatePanelIntoDir(t, app, ui.RightPanel, "beta")
+	navigatePanelIntoDir(t, app, ui.PrimaryPanel, "alpha")
+	app.model.ActivePanel = ui.SecondaryPanel
+	navigatePanelIntoDir(t, app, ui.SecondaryPanel, "beta")
 
-	app.openHistoryDialog(ui.LeftPanel)
+	app.openHistoryDialog(ui.PrimaryPanel)
 	if !app.model.HistoryDialog.Open {
 		t.Fatal("expected history dialog open")
 	}
@@ -1732,11 +1732,11 @@ func TestHistoryDialogBothPanelsOKNavigatesPanelID(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	navigatePanelIntoDir(t, app, ui.LeftPanel, "alpha")
-	app.model.ActivePanel = ui.RightPanel
-	navigatePanelIntoDir(t, app, ui.RightPanel, "beta")
+	navigatePanelIntoDir(t, app, ui.PrimaryPanel, "alpha")
+	app.model.ActivePanel = ui.SecondaryPanel
+	navigatePanelIntoDir(t, app, ui.SecondaryPanel, "beta")
 
-	app.openHistoryDialog(ui.LeftPanel)
+	app.openHistoryDialog(ui.PrimaryPanel)
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
@@ -1759,7 +1759,7 @@ func TestHistoryDialogBothPanelsOKNavigatesPanelID(t *testing.T) {
 		}
 	}
 	app.activateHistorySelection()
-	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()); got != wantBeta {
+	if got := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()); got != wantBeta {
 		t.Fatalf("left panel path = %q want %q", got, wantBeta)
 	}
 }
@@ -1769,8 +1769,8 @@ func TestHistoryDialogBothEmptyInfoNoDialog(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.panelByID(ui.LeftPanel).History = nil
-	app.panelByID(ui.RightPanel).History = nil
+	app.panelByID(ui.PrimaryPanel).History = nil
+	app.panelByID(ui.SecondaryPanel).History = nil
 
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt)); quit {
 		t.Fatal("unexpected quit")
@@ -1794,9 +1794,9 @@ func TestHistoryDialogFooterF5Hints(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	navigatePanelIntoDir(t, app, ui.LeftPanel, "alpha")
+	navigatePanelIntoDir(t, app, ui.PrimaryPanel, "alpha")
 
-	app.openHistoryDialog(ui.LeftPanel)
+	app.openHistoryDialog(ui.PrimaryPanel)
 	keys := app.activeFooterKeys()
 	var foundBoth bool
 	for _, fk := range keys {
@@ -1940,11 +1940,11 @@ func TestNewWithOptionsAppliesConfiguredHiddenFilesToBothPanels(t *testing.T) {
 		t.Fatalf("NewWithOptions() error = %v", err)
 	}
 
-	if !app.model.Left.ShowHidden || !app.model.Right.ShowHidden {
-		t.Fatalf("ShowHidden left=%v right=%v, want both true", app.model.Left.ShowHidden, app.model.Right.ShowHidden)
+	if !app.model.Primary.ShowHidden || !app.model.Secondary.ShowHidden {
+		t.Fatalf("ShowHidden left=%v right=%v, want both true", app.model.Primary.ShowHidden, app.model.Secondary.ShowHidden)
 	}
-	if len(app.model.Left.Entries) != 2 || len(app.model.Right.Entries) != 2 {
-		t.Fatalf("entry counts left=%d right=%d, want hidden and visible entries", len(app.model.Left.Entries), len(app.model.Right.Entries))
+	if len(app.model.Primary.Entries) != 2 || len(app.model.Secondary.Entries) != 2 {
+		t.Fatalf("entry counts left=%d right=%d, want hidden and visible entries", len(app.model.Primary.Entries), len(app.model.Secondary.Entries))
 	}
 }
 
@@ -2031,8 +2031,8 @@ func TestNewWithOptionsAppliesDefaultListingFormatFromConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)
 	}
-	if app.model.Left.ListFormat != panel.ListFormatBrief || app.model.Right.ListFormat != panel.ListFormatBrief {
-		t.Fatalf("panels ListFormat = %v/%v, want brief", app.model.Left.ListFormat, app.model.Right.ListFormat)
+	if app.model.Primary.ListFormat != panel.ListFormatBrief || app.model.Secondary.ListFormat != panel.ListFormatBrief {
+		t.Fatalf("panels ListFormat = %v/%v, want brief", app.model.Primary.ListFormat, app.model.Secondary.ListFormat)
 	}
 }
 
@@ -2062,11 +2062,11 @@ func TestNewWithOptionsAppliesFilterCycleMatchesToPanels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)
 	}
-	if app.model.Left.Filter.CycleMatches != config.FilterCycleMatchesRanked {
-		t.Fatalf("Left.Filter.CycleMatches = %q, want ranked", app.model.Left.Filter.CycleMatches)
+	if app.model.Primary.Filter.CycleMatches != config.FilterCycleMatchesRanked {
+		t.Fatalf("Left.Filter.CycleMatches = %q, want ranked", app.model.Primary.Filter.CycleMatches)
 	}
-	if app.model.Right.Filter.CycleMatches != config.FilterCycleMatchesRanked {
-		t.Fatalf("Right.Filter.CycleMatches = %q, want ranked", app.model.Right.Filter.CycleMatches)
+	if app.model.Secondary.Filter.CycleMatches != config.FilterCycleMatchesRanked {
+		t.Fatalf("Right.Filter.CycleMatches = %q, want ranked", app.model.Secondary.Filter.CycleMatches)
 	}
 }
 
@@ -2238,8 +2238,8 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)
 	}
-	if app.model.Left.ScrollMode != panel.ScrollModeEdge {
-		t.Fatalf("Left.ScrollMode = %q, want edge from config default", app.model.Left.ScrollMode)
+	if app.model.Primary.ScrollMode != panel.ScrollModeEdge {
+		t.Fatalf("Left.ScrollMode = %q, want edge from config default", app.model.Primary.ScrollMode)
 	}
 
 	app.openConfigDialog()
@@ -2252,7 +2252,7 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 	if app.config.UI.ScrollMode != config.ScrollModeCenter {
 		t.Fatalf("ScrollMode = %q, want center after selection", app.config.UI.ScrollMode)
 	}
-	if app.model.Left.ScrollMode != panel.ScrollModeCenter || app.model.Right.ScrollMode != panel.ScrollModeCenter {
+	if app.model.Primary.ScrollMode != panel.ScrollModeCenter || app.model.Secondary.ScrollMode != panel.ScrollModeCenter {
 		t.Fatal("panel ScrollMode not synced after apply")
 	}
 	reloaded, err := config.LoadFromPaths(appPaths)
@@ -2306,8 +2306,8 @@ panel_zoom_inactive_percent = 30
 	}
 
 	layBefore := app.layoutForTerminalSize(100, 30)
-	if layBefore.Left.Width != 50 || layBefore.Right.Width != 50 {
-		t.Fatalf("before toggle Left=%d Right=%d want 50/50", layBefore.Left.Width, layBefore.Right.Width)
+	if layBefore.Primary.Width != 50 || layBefore.Secondary.Width != 50 {
+		t.Fatalf("before toggle Left=%d Right=%d want 50/50", layBefore.Primary.Width, layBefore.Secondary.Width)
 	}
 
 	app.dispatch(keymap.ActionPanelToggleZoomActivePanel)
@@ -2319,8 +2319,8 @@ panel_zoom_inactive_percent = 30
 	}
 
 	layAfter := app.layoutForTerminalSize(100, 30)
-	if layAfter.Left.Width != 70 || layAfter.Right.Width != 30 {
-		t.Fatalf("after toggle Left=%d Right=%d want 70/30", layAfter.Left.Width, layAfter.Right.Width)
+	if layAfter.Primary.Width != 70 || layAfter.Secondary.Width != 30 {
+		t.Fatalf("after toggle Left=%d Right=%d want 70/30", layAfter.Primary.Width, layAfter.Secondary.Width)
 	}
 
 	app.openConfigDialog()
@@ -2369,15 +2369,15 @@ func TestLayoutForTerminalSizeIgnoresZoomInAuxiliaryViews(t *testing.T) {
 	}
 
 	layBrowser := app.layoutForTerminalSize(100, 30)
-	if layBrowser.Left.Width != 70 || layBrowser.Right.Width != 30 {
-		t.Fatalf("browser Left=%d Right=%d want 70/30", layBrowser.Left.Width, layBrowser.Right.Width)
+	if layBrowser.Primary.Width != 70 || layBrowser.Secondary.Width != 30 {
+		t.Fatalf("browser Left=%d Right=%d want 70/30", layBrowser.Primary.Width, layBrowser.Secondary.Width)
 	}
 
 	for _, vm := range []ui.ViewMode{ui.ViewJobs, ui.ViewCommands, ui.ViewMessages, ui.ViewFilePreview} {
 		app.model.ViewMode = vm
 		lay := app.layoutForTerminalSize(100, 30)
-		if lay.Left.Width != 50 || lay.Right.Width != 50 {
-			t.Fatalf("view %v with zoom on: Left=%d Right=%d want 50/50", vm, lay.Left.Width, lay.Right.Width)
+		if lay.Primary.Width != 50 || lay.Secondary.Width != 50 {
+			t.Fatalf("view %v with zoom on: Left=%d Right=%d want 50/50", vm, lay.Primary.Width, lay.Secondary.Width)
 		}
 	}
 }
@@ -2398,18 +2398,18 @@ func TestLayoutForTerminalSizeIgnoresHideInactivePanelInAuxiliaryViews(t *testin
 	}
 
 	app.model.HideInactivePanel = true
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 
 	layBrowser := app.layoutForTerminalSize(100, 30)
-	if layBrowser.Left.Width != 100 || layBrowser.Right.Width != 0 {
-		t.Fatalf("browser with hide: Left=%d Right=%d want 100/0", layBrowser.Left.Width, layBrowser.Right.Width)
+	if layBrowser.Primary.Width != 100 || layBrowser.Secondary.Width != 0 {
+		t.Fatalf("browser with hide: Left=%d Right=%d want 100/0", layBrowser.Primary.Width, layBrowser.Secondary.Width)
 	}
 
 	for _, vm := range []ui.ViewMode{ui.ViewJobs, ui.ViewCommands, ui.ViewMessages} {
 		app.model.ViewMode = vm
 		lay := app.layoutForTerminalSize(100, 30)
-		if lay.Left.Width != 50 || lay.Right.Width != 50 {
-			t.Fatalf("view %v with hide inactive: Left=%d Right=%d want 50/50", vm, lay.Left.Width, lay.Right.Width)
+		if lay.Primary.Width != 50 || lay.Secondary.Width != 50 {
+			t.Fatalf("view %v with hide inactive: Left=%d Right=%d want 50/50", vm, lay.Primary.Width, lay.Secondary.Width)
 		}
 	}
 	if !app.model.HideInactivePanel {
@@ -2446,8 +2446,8 @@ func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 	}
 
 	layZoomed := app.layoutForTerminalSize(100, 30)
-	if layZoomed.Left.Width != 70 || layZoomed.Right.Width != 30 {
-		t.Fatalf("without preview Left=%d Right=%d want 70/30", layZoomed.Left.Width, layZoomed.Right.Width)
+	if layZoomed.Primary.Width != 70 || layZoomed.Secondary.Width != 30 {
+		t.Fatalf("without preview Left=%d Right=%d want 70/30", layZoomed.Primary.Width, layZoomed.Secondary.Width)
 	}
 
 	app.commandsMu.Lock()
@@ -2457,8 +2457,8 @@ func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 	app.commandsMu.Unlock()
 
 	layEven := app.layoutForTerminalSize(100, 30)
-	if layEven.Left.Width != 50 || layEven.Right.Width != 50 {
-		t.Fatalf("with preview Left=%d Right=%d want 50/50", layEven.Left.Width, layEven.Right.Width)
+	if layEven.Primary.Width != 50 || layEven.Secondary.Width != 50 {
+		t.Fatalf("with preview Left=%d Right=%d want 50/50", layEven.Primary.Width, layEven.Secondary.Width)
 	}
 
 	app.commandsMu.Lock()
@@ -2466,8 +2466,8 @@ func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 	app.commandsMu.Unlock()
 	app.model.QuickViewEnabled = true
 	layQV := app.layoutForTerminalSize(100, 30)
-	if layQV.Left.Width != 50 || layQV.Right.Width != 50 {
-		t.Fatalf("with quick view armed Left=%d Right=%d want 50/50", layQV.Left.Width, layQV.Right.Width)
+	if layQV.Primary.Width != 50 || layQV.Secondary.Width != 50 {
+		t.Fatalf("with quick view armed Left=%d Right=%d want 50/50", layQV.Primary.Width, layQV.Secondary.Width)
 	}
 }
 
@@ -2501,18 +2501,18 @@ func TestLayoutForTerminalSizeDisablesZoomAtOrAboveDisabledAboveWidth(t *testing
 	}
 
 	lay := app.layoutForTerminalSize(160, 30)
-	if lay.Left.Width != 80 || lay.Right.Width != 80 {
-		t.Fatalf("wide terminal Left=%d Right=%d want 50/50", lay.Left.Width, lay.Right.Width)
+	if lay.Primary.Width != 80 || lay.Secondary.Width != 80 {
+		t.Fatalf("wide terminal Left=%d Right=%d want 50/50", lay.Primary.Width, lay.Secondary.Width)
 	}
 
 	layNarrow := app.layoutForTerminalSize(154, 30)
-	if layNarrow.Left.Width != 107 || layNarrow.Right.Width != 47 {
-		t.Fatalf("below gate Left=%d Right=%d want 70%%/30%% of width", layNarrow.Left.Width, layNarrow.Right.Width)
+	if layNarrow.Primary.Width != 107 || layNarrow.Secondary.Width != 47 {
+		t.Fatalf("below gate Left=%d Right=%d want 70%%/30%% of width", layNarrow.Primary.Width, layNarrow.Secondary.Width)
 	}
 
 	layBoundary := app.layoutForTerminalSize(155, 30)
-	if layBoundary.Left.Width != 77 || layBoundary.Right.Width != 78 {
-		t.Fatalf("width == gate Left=%d Right=%d want ~50/50", layBoundary.Left.Width, layBoundary.Right.Width)
+	if layBoundary.Primary.Width != 77 || layBoundary.Secondary.Width != 78 {
+		t.Fatalf("width == gate Left=%d Right=%d want ~50/50", layBoundary.Primary.Width, layBoundary.Secondary.Width)
 	}
 }
 
@@ -2546,8 +2546,8 @@ func TestLayoutForTerminalSizeZoomNotSuppressedWhenDisabledAboveWidthIsZero(t *t
 	}
 
 	lay := app.layoutForTerminalSize(300, 30)
-	if lay.Left.Width != 210 || lay.Right.Width != 90 {
-		t.Fatalf("Left=%d Right=%d want 70/30 split", lay.Left.Width, lay.Right.Width)
+	if lay.Primary.Width != 210 || lay.Secondary.Width != 90 {
+		t.Fatalf("Left=%d Right=%d want 70/30 split", lay.Primary.Width, lay.Secondary.Width)
 	}
 }
 
@@ -2704,8 +2704,8 @@ func TestConfigDialogApplyPersistsDefaultListingFormat(t *testing.T) {
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
-	if app.model.Left.ListFormat != panel.ListFormatPerm || app.model.Right.ListFormat != panel.ListFormatPerm {
-		t.Fatalf("panels ListFormat = %v/%v, want perm", app.model.Left.ListFormat, app.model.Right.ListFormat)
+	if app.model.Primary.ListFormat != panel.ListFormatPerm || app.model.Secondary.ListFormat != panel.ListFormatPerm {
+		t.Fatalf("panels ListFormat = %v/%v, want perm", app.model.Primary.ListFormat, app.model.Secondary.ListFormat)
 	}
 	reloaded, err := config.LoadFromPaths(appPaths)
 	if err != nil {
@@ -3630,9 +3630,9 @@ func TestQuickFilterFunctionKeyClosesFuzzyAndRunsFullscreenFileView(t *testing.T
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
-	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" {
+	if app.model.Primary.Filter.Editing || app.model.Primary.Filter.Active || app.model.Primary.Filter.Query != "" {
 		t.Fatalf("filter should be cleared, got editing=%v active=%v query=%q",
-			app.model.Left.Filter.Editing, app.model.Left.Filter.Active, app.model.Left.Filter.Query)
+			app.model.Primary.Filter.Editing, app.model.Primary.Filter.Active, app.model.Primary.Filter.Query)
 	}
 	if app.model.ViewMode != ui.ViewFilePreview {
 		t.Fatalf("ViewMode = %v, want ViewFilePreview after F3 from quick filter", app.model.ViewMode)
@@ -3668,7 +3668,7 @@ func TestQuickFilterF9ClosesFuzzyAndOpensMenu(t *testing.T) {
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
-	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active {
+	if app.model.Primary.Filter.Editing || app.model.Primary.Filter.Active {
 		t.Fatal("filter should be cleared after F9")
 	}
 	if !app.model.Menu.Open {
@@ -3699,7 +3699,7 @@ func TestQuickFilterF10Quits(t *testing.T) {
 	if !quit {
 		t.Fatal("handleKey() quit = false, want true for F10 from quick filter")
 	}
-	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active {
+	if app.model.Primary.Filter.Editing || app.model.Primary.Filter.Active {
 		t.Fatal("filter should be cleared before quit")
 	}
 }
@@ -3782,7 +3782,7 @@ func TestQuickFilterEmptyOverlayThenTypingEnterOnFileClearsFuzzy(t *testing.T) {
 	}
 
 	app.activePanel().OpenFilter(app.activeViewportRows())
-	if !app.model.Left.Filter.Editing {
+	if !app.model.Primary.Filter.Editing {
 		t.Fatal("filter editing = false, want true after OpenFilter")
 	}
 	for _, r := range "beta" {
@@ -3790,14 +3790,14 @@ func TestQuickFilterEmptyOverlayThenTypingEnterOnFileClearsFuzzy(t *testing.T) {
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
-	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" {
+	if app.model.Primary.Filter.Editing || app.model.Primary.Filter.Active || app.model.Primary.Filter.Query != "" {
 		t.Fatalf("filter editing=%v active=%v query=%q, want fuzzy cleared after Enter on a file",
-			app.model.Left.Filter.Editing, app.model.Left.Filter.Active, app.model.Left.Filter.Query)
+			app.model.Primary.Filter.Editing, app.model.Primary.Filter.Active, app.model.Primary.Filter.Query)
 	}
-	if app.model.Left.VisibleEntryCount() != 2 {
-		t.Fatalf("visible=%d, want both files visible", app.model.Left.VisibleEntryCount())
+	if app.model.Primary.VisibleEntryCount() != 2 {
+		t.Fatalf("visible=%d, want both files visible", app.model.Primary.VisibleEntryCount())
 	}
-	entry, ok := app.model.Left.CurrentEntry()
+	entry, ok := app.model.Primary.CurrentEntry()
 	if !ok || entry.Name != "beta.txt" {
 		t.Fatalf("CurrentEntry() = %q ok=%v, want beta.txt", entry.Name, ok)
 	}
@@ -3824,10 +3824,10 @@ func TestPlainTypingStartsQuickFilterAndMovesToFirstVisibleMatch(t *testing.T) {
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModNone))
 
-	if !app.model.Left.Filter.Editing || app.model.Left.Filter.Query != "s" {
-		t.Fatalf("filter editing=%v query=%q, want typing to start query s", app.model.Left.Filter.Editing, app.model.Left.Filter.Query)
+	if !app.model.Primary.Filter.Editing || app.model.Primary.Filter.Query != "s" {
+		t.Fatalf("filter editing=%v query=%q, want typing to start query s", app.model.Primary.Filter.Editing, app.model.Primary.Filter.Query)
 	}
-	entry, ok := app.model.Left.CurrentEntry()
+	entry, ok := app.model.Primary.CurrentEntry()
 	if !ok || entry.Name != "notes.txt" {
 		t.Fatalf("CurrentEntry() = %q ok=%v, want first visible match notes.txt", entry.Name, ok)
 	}
@@ -3855,7 +3855,7 @@ func TestPlainTypingMultiLetterSelectsBestRankedMatch(t *testing.T) {
 	for _, r := range "abc" {
 		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	entry, ok := app.model.Left.CurrentEntry()
+	entry, ok := app.model.Primary.CurrentEntry()
 	if !ok || entry.Name != "abc.txt" {
 		t.Fatalf("CurrentEntry() = %q ok=%v, want best ranked abc.txt", entry.Name, ok)
 	}
@@ -3890,12 +3890,12 @@ func TestQuickFilterEnterOpensDirectoryAndClearsQuery(t *testing.T) {
 	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	wantPath := filepath.Clean(sub)
-	if got := filepath.Clean(app.model.Left.Path.String()); got != wantPath {
+	if got := filepath.Clean(app.model.Primary.Path.String()); got != wantPath {
 		t.Fatalf("left path=%q after Enter want %q", got, wantPath)
 	}
-	if app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" || app.model.Left.Filter.Editing {
+	if app.model.Primary.Filter.Active || app.model.Primary.Filter.Query != "" || app.model.Primary.Filter.Editing {
 		t.Fatalf("filter cleared: active=%v query=%q editing=%v want all off",
-			app.model.Left.Filter.Active, app.model.Left.Filter.Query, app.model.Left.Filter.Editing)
+			app.model.Primary.Filter.Active, app.model.Primary.Filter.Query, app.model.Primary.Filter.Editing)
 	}
 }
 
@@ -3919,24 +3919,24 @@ func TestQuickFilterInsertSelectsAndAdvancesCursor(t *testing.T) {
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
-	if app.model.Left.Filter.Query != "a" {
-		t.Fatalf("query=%q want a after typing", app.model.Left.Filter.Query)
+	if app.model.Primary.Filter.Query != "a" {
+		t.Fatalf("query=%q want a after typing", app.model.Primary.Filter.Query)
 	}
 
 	entryPath := filepath.Join(dir, "alpha.txt")
-	if app.model.Left.SelectedPaths[entryPath] {
+	if app.model.Primary.SelectedPaths[entryPath] {
 		t.Fatal("alpha.txt selected before Insert, want not selected")
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
-	if !app.model.Left.Filter.Active {
+	if !app.model.Primary.Filter.Active {
 		t.Fatal("filter closed after Insert, want open for multi-select")
 	}
-	if !app.model.Left.SelectedPaths[entryPath] {
+	if !app.model.Primary.SelectedPaths[entryPath] {
 		t.Fatal("alpha.txt not selected after Insert, want selected")
 	}
-	if app.model.Left.Cursor != 1 {
-		t.Fatalf("cursor=%d after Insert, want 1 (moved down past filtered entry)", app.model.Left.Cursor)
+	if app.model.Primary.Cursor != 1 {
+		t.Fatalf("cursor=%d after Insert, want 1 (moved down past filtered entry)", app.model.Primary.Cursor)
 	}
 }
 
@@ -3959,15 +3959,15 @@ func TestQuickFilterEmptyQueryEnterExitsEditing(t *testing.T) {
 	}
 
 	app.activePanel().OpenFilter(app.activeViewportRows())
-	if !app.model.Left.Filter.Editing {
+	if !app.model.Primary.Filter.Editing {
 		t.Fatal("want editing after OpenFilter")
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if app.model.Left.Filter.Editing {
+	if app.model.Primary.Filter.Editing {
 		t.Fatal("want editing=false after Enter with empty query")
 	}
-	if app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" {
-		t.Fatalf("want no active query, got active=%v query=%q", app.model.Left.Filter.Active, app.model.Left.Filter.Query)
+	if app.model.Primary.Filter.Active || app.model.Primary.Filter.Query != "" {
+		t.Fatalf("want no active query, got active=%v query=%q", app.model.Primary.Filter.Active, app.model.Primary.Filter.Query)
 	}
 }
 
@@ -3994,8 +3994,8 @@ func TestFilterModeEscCancelsInsteadOfQuitting(t *testing.T) {
 	if quit {
 		t.Fatal("handleKey(Esc) quit = true, want filter cancel")
 	}
-	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active {
-		t.Fatalf("filter editing=%v active=%v, want canceled", app.model.Left.Filter.Editing, app.model.Left.Filter.Active)
+	if app.model.Primary.Filter.Editing || app.model.Primary.Filter.Active {
+		t.Fatalf("filter editing=%v active=%v, want canceled", app.model.Primary.Filter.Editing, app.model.Primary.Filter.Active)
 	}
 }
 
@@ -4019,10 +4019,10 @@ func TestQuickFilterKeymapActionClosesFilterAndOpensDirInOtherPanel(t *testing.T
 	for _, r := range "sub" {
 		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	if app.model.Left.Filter.Query != "sub" {
-		t.Fatalf("query=%q want sub", app.model.Left.Filter.Query)
+	if app.model.Primary.Filter.Query != "sub" {
+		t.Fatalf("query=%q want sub", app.model.Primary.Filter.Query)
 	}
-	entry, okEntry := app.model.Left.CurrentEntry()
+	entry, okEntry := app.model.Primary.CurrentEntry()
 	if !okEntry || entry.Name != "subdir" {
 		t.Fatalf("CurrentEntry() = %q ok=%v, want subdir under cursor before shortcut", entry.Name, okEntry)
 	}
@@ -4031,12 +4031,12 @@ func TestQuickFilterKeymapActionClosesFilterAndOpensDirInOtherPanel(t *testing.T
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
-	if app.model.Left.Filter.Editing || app.model.Left.Filter.Active || app.model.Left.Filter.Query != "" {
+	if app.model.Primary.Filter.Editing || app.model.Primary.Filter.Active || app.model.Primary.Filter.Query != "" {
 		t.Fatalf("filter should be cleared, got editing=%v active=%v query=%q",
-			app.model.Left.Filter.Editing, app.model.Left.Filter.Active, app.model.Left.Filter.Query)
+			app.model.Primary.Filter.Editing, app.model.Primary.Filter.Active, app.model.Primary.Filter.Query)
 	}
 	want := filepath.Clean(sub)
-	if got := filepath.Clean(app.model.Right.Path.String()); got != want {
+	if got := filepath.Clean(app.model.Secondary.Path.String()); got != want {
 		t.Fatalf("right panel path=%q want %q", got, want)
 	}
 }
@@ -4063,15 +4063,15 @@ func TestQuickFilterUpDownCyclesMatches(t *testing.T) {
 
 	app.activePanel().OpenFilter(app.activeViewportRows())
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModNone))
-	if app.model.Left.Filter.Query != "s" {
-		t.Fatalf("query=%q want s", app.model.Left.Filter.Query)
+	if app.model.Primary.Filter.Query != "s" {
+		t.Fatalf("query=%q want s", app.model.Primary.Filter.Query)
 	}
-	if !app.model.Left.Filter.Editing || !app.model.Left.Filter.Active {
+	if !app.model.Primary.Filter.Editing || !app.model.Primary.Filter.Active {
 		t.Fatalf("want filter editing and active, got editing=%v active=%v",
-			app.model.Left.Filter.Editing, app.model.Left.Filter.Active)
+			app.model.Primary.Filter.Editing, app.model.Primary.Filter.Active)
 	}
 
-	first, ok := app.model.Left.CurrentEntry()
+	first, ok := app.model.Primary.CurrentEntry()
 	if !ok {
 		t.Fatal("CurrentEntry() = false")
 	}
@@ -4079,19 +4079,19 @@ func TestQuickFilterUpDownCyclesMatches(t *testing.T) {
 		t.Fatalf("CurrentEntry() = %q, want first visible match assets", first.Name)
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	second, ok := app.model.Left.CurrentEntry()
+	second, ok := app.model.Primary.CurrentEntry()
 	if !ok {
 		t.Fatal("CurrentEntry() = false after Down")
 	}
 	if second.Name != "notes.txt" {
 		t.Fatalf("after Down want next visible match notes.txt, got %q", second.Name)
 	}
-	if app.model.Left.Filter.Query != "s" {
-		t.Fatalf("query should stay set, got %q", app.model.Left.Filter.Query)
+	if app.model.Primary.Filter.Query != "s" {
+		t.Fatalf("query should stay set, got %q", app.model.Primary.Filter.Query)
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	third, ok := app.model.Left.CurrentEntry()
+	third, ok := app.model.Primary.CurrentEntry()
 	if !ok {
 		t.Fatal("CurrentEntry() = false after second Down")
 	}
@@ -4100,7 +4100,7 @@ func TestQuickFilterUpDownCyclesMatches(t *testing.T) {
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	wrapped, ok := app.model.Left.CurrentEntry()
+	wrapped, ok := app.model.Primary.CurrentEntry()
 	if !ok {
 		t.Fatal("CurrentEntry() = false after third Down")
 	}
@@ -4109,7 +4109,7 @@ func TestQuickFilterUpDownCyclesMatches(t *testing.T) {
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
-	backToLast, ok := app.model.Left.CurrentEntry()
+	backToLast, ok := app.model.Primary.CurrentEntry()
 	if !ok {
 		t.Fatal("CurrentEntry() = false after Up from first")
 	}
@@ -4131,23 +4131,23 @@ func TestQuickFilterCtrlBackspaceClearsQuery(t *testing.T) {
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModNone))
 
-	if app.model.Left.Filter.Query != "al" {
-		t.Fatalf("query=%q want al", app.model.Left.Filter.Query)
+	if app.model.Primary.Filter.Query != "al" {
+		t.Fatalf("query=%q want al", app.model.Primary.Filter.Query)
 	}
-	if !app.model.Left.Filter.Editing {
+	if !app.model.Primary.Filter.Editing {
 		t.Fatal("want filter editing")
 	}
 
 	// Ctrl+Backspace should clear query but keep editing
 	app.handleKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModCtrl))
 
-	if app.model.Left.Filter.Query != "" {
-		t.Fatalf("query=%q want empty after Ctrl+Backspace", app.model.Left.Filter.Query)
+	if app.model.Primary.Filter.Query != "" {
+		t.Fatalf("query=%q want empty after Ctrl+Backspace", app.model.Primary.Filter.Query)
 	}
-	if !app.model.Left.Filter.Editing {
+	if !app.model.Primary.Filter.Editing {
 		t.Fatal("Ctrl+Backspace should keep filter in editing mode")
 	}
-	if app.model.Left.Filter.Active {
+	if app.model.Primary.Filter.Active {
 		t.Fatal("Ctrl+Backspace should deactivate filter")
 	}
 }
@@ -4251,8 +4251,8 @@ func TestExtractDialogEnqueuesJob(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, srcDir)
-	app.model.Right.Path = pathloc.MustParse(destDir)
-	_ = app.model.Right.Refresh(20)
+	app.model.Secondary.Path = pathloc.MustParse(destDir)
+	_ = app.model.Secondary.Refresh(20)
 	if !app.activePanel().SelectVisibleEntry("pack.tar.gz") {
 		t.Fatal("pack.tar.gz not visible in panel")
 	}
@@ -5811,9 +5811,9 @@ func TestQuickViewDisablesSyncWithWarn(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.model.SyncFollowEnabled = true
-	app.model.SyncFollowPanel = ui.LeftPanel
+	app.model.SyncFollowPanel = ui.PrimaryPanel
 
 	app.dispatch(keymap.ActionFileQuickView)
 
@@ -5836,7 +5836,7 @@ func TestSyncDisablesQuickViewWithWarn(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.model.QuickViewEnabled = true
 
 	app.dispatch(keymap.ActionPanelToggleSync)
@@ -5870,18 +5870,18 @@ func TestQuickViewDirRecallsFromInactivePanelHistory(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	right := app.panelByID(ui.RightPanel)
+	right := app.panelByID(ui.SecondaryPanel)
 	selectPanelEntryByName(t, right, "alpha")
-	if err := right.NavigateTo(alpha, "", app.panelViewportRows(ui.RightPanel)); err != nil {
+	if err := right.NavigateTo(alpha, "", app.panelViewportRows(ui.SecondaryPanel)); err != nil {
 		t.Fatal(err)
 	}
 	selectPanelEntryByName(t, right, "b.txt")
-	if err := right.Parent(app.panelViewportRows(ui.RightPanel)); err != nil {
+	if err := right.Parent(app.panelViewportRows(ui.SecondaryPanel)); err != nil {
 		t.Fatal(err)
 	}
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
 
@@ -5906,15 +5906,15 @@ func TestQuickViewDirMirrorsInactivePanelWhenAlreadyInDirectory(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	right := app.panelByID(ui.RightPanel)
+	right := app.panelByID(ui.SecondaryPanel)
 	selectPanelEntryByName(t, right, "alpha")
-	if err := right.NavigateTo(alpha, "", app.panelViewportRows(ui.RightPanel)); err != nil {
+	if err := right.NavigateTo(alpha, "", app.panelViewportRows(ui.SecondaryPanel)); err != nil {
 		t.Fatal(err)
 	}
 	selectPanelEntryByName(t, right, "b.txt")
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
 
@@ -5925,7 +5925,7 @@ func TestQuickViewDirMirrorsInactivePanelWhenAlreadyInDirectory(t *testing.T) {
 	if entry.Name != "b.txt" {
 		t.Fatalf("overlay cursor entry = %q, want b.txt from live inactive listing", entry.Name)
 	}
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != filepath.Clean(alpha) {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != filepath.Clean(alpha) {
 		t.Fatalf("inactive panel path = %q, want unchanged %q", got, alpha)
 	}
 }
@@ -5942,14 +5942,14 @@ func TestQuickViewDirRecallsLastSelectedEntry(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	app.model.ActivePanel = ui.LeftPanel
-	left := app.panelByID(ui.LeftPanel)
+	app.model.ActivePanel = ui.PrimaryPanel
+	left := app.panelByID(ui.PrimaryPanel)
 	selectPanelEntryByName(t, left, "alpha")
-	if err := left.NavigateTo(alpha, "", app.panelViewportRows(ui.LeftPanel)); err != nil {
+	if err := left.NavigateTo(alpha, "", app.panelViewportRows(ui.PrimaryPanel)); err != nil {
 		t.Fatal(err)
 	}
 	selectPanelEntryByName(t, left, "b.txt")
-	if err := left.Parent(app.panelViewportRows(ui.LeftPanel)); err != nil {
+	if err := left.Parent(app.panelViewportRows(ui.PrimaryPanel)); err != nil {
 		t.Fatal(err)
 	}
 	selectPanelEntryByName(t, left, "alpha")
@@ -5979,19 +5979,19 @@ func TestQuickViewTabPreservesLatchedDirectoryPreview(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	if err := app.panelByID(ui.RightPanel).Load(child); err != nil {
+	if err := app.panelByID(ui.SecondaryPanel).Load(child); err != nil {
 		t.Fatal(err)
 	}
-	inactiveBefore := filepath.Clean(app.panelByID(ui.RightPanel).Path.String())
+	inactiveBefore := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String())
 
-	app.model.ActivePanel = ui.LeftPanel
-	left := app.panelByID(ui.LeftPanel)
+	app.model.ActivePanel = ui.PrimaryPanel
+	left := app.panelByID(ui.PrimaryPanel)
 	selectPanelEntryByName(t, left, "alpha")
-	if err := left.NavigateTo(alpha, "", app.panelViewportRows(ui.LeftPanel)); err != nil {
+	if err := left.NavigateTo(alpha, "", app.panelViewportRows(ui.PrimaryPanel)); err != nil {
 		t.Fatal(err)
 	}
 	selectPanelEntryByName(t, left, "inside.txt")
-	if err := left.Parent(app.panelViewportRows(ui.LeftPanel)); err != nil {
+	if err := left.Parent(app.panelViewportRows(ui.PrimaryPanel)); err != nil {
 		t.Fatal(err)
 	}
 	selectPanelEntryByName(t, left, "alpha")
@@ -6000,19 +6000,19 @@ func TestQuickViewTabPreservesLatchedDirectoryPreview(t *testing.T) {
 	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("overlay path = %q, want %q", got, want)
 	}
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != inactiveBefore {
 		t.Fatalf("inactive path before Tab = %q, want unchanged %q", got, inactiveBefore)
 	}
 
 	app.dispatch(keymap.ActionPanelSwitch)
 
-	if !app.model.QuickViewEnabled || app.model.QuickViewPanel != ui.LeftPanel {
+	if !app.model.QuickViewEnabled || app.model.QuickViewPanel != ui.PrimaryPanel {
 		t.Fatalf("quick view should stay latched on left driver (enabled=%v panel=%d)", app.model.QuickViewEnabled, app.model.QuickViewPanel)
 	}
-	if app.model.ActivePanel != ui.RightPanel {
+	if app.model.ActivePanel != ui.SecondaryPanel {
 		t.Fatalf("ActivePanel = %d, want right panel", app.model.ActivePanel)
 	}
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != inactiveBefore {
 		t.Fatalf("inactive path after Tab = %q, want unchanged %q", got, inactiveBefore)
 	}
 	if app.model.QuickViewDirOverlayActive {
@@ -6024,13 +6024,13 @@ func TestQuickViewTabPreservesLatchedDirectoryPreview(t *testing.T) {
 
 	app.dispatch(keymap.ActionPanelSwitch)
 
-	if app.model.ActivePanel != ui.LeftPanel {
+	if app.model.ActivePanel != ui.PrimaryPanel {
 		t.Fatalf("ActivePanel = %d, want left panel after second Tab", app.model.ActivePanel)
 	}
 	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("overlay path after return = %q, want %q", got, want)
 	}
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != inactiveBefore {
 		t.Fatalf("inactive path after return = %q, want unchanged %q", got, inactiveBefore)
 	}
 }
@@ -6042,8 +6042,8 @@ func TestQuickViewPreviewPageScrollWithCtrlJK(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "notes.txt")
 	app.dispatch(keymap.ActionFileQuickView)
 	if !app.model.QuickViewEnabled {
 		t.Fatal("quick view should be enabled")
@@ -6076,8 +6076,8 @@ func TestQuickViewPersistsAcrossPanelSwitch(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "notes.txt")
 	app.dispatch(keymap.ActionFileQuickView)
 	if !app.model.QuickViewEnabled {
 		t.Fatal("quick view should be enabled")
@@ -6088,10 +6088,10 @@ func TestQuickViewPersistsAcrossPanelSwitch(t *testing.T) {
 
 	app.dispatch(keymap.ActionPanelSwitch)
 
-	if !app.model.QuickViewEnabled || app.model.QuickViewPanel != ui.LeftPanel {
+	if !app.model.QuickViewEnabled || app.model.QuickViewPanel != ui.PrimaryPanel {
 		t.Fatalf("quick view should stay latched on left (enabled=%v panel=%d)", app.model.QuickViewEnabled, app.model.QuickViewPanel)
 	}
-	if app.model.ActivePanel != ui.RightPanel {
+	if app.model.ActivePanel != ui.SecondaryPanel {
 		t.Fatalf("ActivePanel = %d, want right panel", app.model.ActivePanel)
 	}
 	if app.filePreviewOpen() {
@@ -6100,7 +6100,7 @@ func TestQuickViewPersistsAcrossPanelSwitch(t *testing.T) {
 
 	app.dispatch(keymap.ActionPanelSwitch)
 
-	if app.model.ActivePanel != ui.LeftPanel {
+	if app.model.ActivePanel != ui.PrimaryPanel {
 		t.Fatalf("ActivePanel = %d, want left panel after return", app.model.ActivePanel)
 	}
 	if !app.filePreviewOpen() {
@@ -6117,15 +6117,15 @@ func TestToggleSyncEnablesAndImmediatelyMirrorsHighlightedFolder(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 
 	app.dispatch(keymap.ActionPanelToggleSync)
 
-	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.LeftPanel {
-		t.Fatalf("Sync state after enable = (enabled=%v panel=%d), want (true, LeftPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
+	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.PrimaryPanel {
+		t.Fatalf("Sync state after enable = (enabled=%v panel=%d), want (true, PrimaryPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
 	}
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel path after enable = %q, want %q", got, want)
 	}
 	if !strings.Contains(app.model.Message, "Sync") {
@@ -6150,8 +6150,8 @@ func TestParentNavigationCentersInAppViewport(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, bar)
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "asdf")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "asdf")
 	if _, err := app.activePanel().Enter(app.activeViewportRows()); err != nil {
 		t.Fatal(err)
 	}
@@ -6198,7 +6198,7 @@ func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	if left.SelectedPaths == nil {
 		left.SelectedPaths = make(map[string]bool)
 	}
@@ -6209,21 +6209,21 @@ func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
 	}
 	left.SelectedPaths[other] = true
 
-	if ui.SelectionsStripLayoutItemCount(left, ui.LeftPanel, ui.LeftPanel, false) != 0 {
+	if ui.SelectionsStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) != 0 {
 		t.Fatal("strip should be hidden while cross-dir selections are in the current directory")
 	}
 	selectPanelEntryByName(t, left, "sub")
 	if _, err := left.Enter(app.activeViewportRows()); err != nil {
 		t.Fatal(err)
 	}
-	if ui.SelectionsStripLayoutItemCount(left, ui.LeftPanel, ui.LeftPanel, false) == 0 {
+	if ui.SelectionsStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) == 0 {
 		t.Fatal("strip should be visible after entering sub with cross-dir selection")
 	}
 
 	if left.FileListViewportRows == nil {
 		t.Fatal("FileListViewportRows callback not wired")
 	}
-	staleVR := app.panelViewportRows(ui.LeftPanel) // still in sub: includes selections strip
+	staleVR := app.panelViewportRows(ui.PrimaryPanel) // still in sub: includes selections strip
 	origViewport := left.FileListViewportRows
 	var scrollPath string
 	var scrollVR int
@@ -6239,19 +6239,19 @@ func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
 	if staleVR >= vr {
 		t.Fatalf("staleVR = %d, want smaller than post-parent %d (strip must shrink file list)", staleVR, vr)
 	}
-	if ui.SelectionsStripLayoutItemCount(left, ui.LeftPanel, ui.LeftPanel, false) != 0 {
+	if ui.SelectionsStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) != 0 {
 		t.Fatal("strip should be hidden in parent after chdir")
 	}
 	if vr != ui.FileListViewportRows(
-		app.layoutForTerminalSize(80, 24).Left,
+		app.layoutForTerminalSize(80, 24).Primary,
 		left,
-		ui.LeftPanel,
-		ui.LeftPanel,
+		ui.PrimaryPanel,
+		ui.PrimaryPanel,
 		false,
 		app.model.SelectionsPanelMaxRows,
 	) {
 		t.Fatalf("viewportRows = %d, want post-parent file list rows %d", vr,
-			ui.FileListViewportRows(app.layoutForTerminalSize(80, 24).Left, left, ui.LeftPanel, ui.LeftPanel, false, app.model.SelectionsPanelMaxRows))
+			ui.FileListViewportRows(app.layoutForTerminalSize(80, 24).Primary, left, ui.PrimaryPanel, ui.PrimaryPanel, false, app.model.SelectionsPanelMaxRows))
 	}
 	entry, ok := left.CurrentEntry()
 	if !ok || entry.Name != "sub" {
@@ -6290,11 +6290,11 @@ func TestParentStaysCenteredAfterDiskUsageResort(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, bar)
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	left.DiskSorter = app.diskUsage.Size
 	app.setDiskUsageScanScope(bar, []string{bar})
-	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
@@ -6307,7 +6307,7 @@ func TestParentStaysCenteredAfterDiskUsageResort(t *testing.T) {
 		t.Fatal("listing not fully disk-cached")
 	}
 
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, left, "asdf")
 	if _, err := left.Enter(app.activeViewportRows()); err != nil {
 		t.Fatal(err)
@@ -6338,19 +6338,19 @@ func TestSyncFollowAppliesBeforeRenderAfterNav(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
 
 	app.dispatch(keymap.ActionNavDown)
 	app.render()
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
 		t.Fatalf("after down+render follower path = %q, want %q", got, want)
 	}
 
 	app.dispatch(keymap.ActionNavDown)
 	app.render()
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "gamma")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "gamma")); got != want {
 		t.Fatalf("after second down+render follower path = %q, want %q", got, want)
 	}
 }
@@ -6364,21 +6364,21 @@ func TestPanelSyncFollowNavDebounceDefersFollowerUntilCleared(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
 		t.Fatalf("right after sync enable = %q, want %q", got, want)
 	}
 	app.config.UI.KeyRepeatDebounceMS = 500
 	app.dispatch(keymap.ActionNavDown)
 	app.reconcileAfterEvent()
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
 		t.Fatalf("follower path after debounced nav+reconcile = %q, want %q (still coalescing)", got, want)
 	}
 	app.clearPanelSyncFollowNavCoalesce()
 	app.reconcileAfterEvent()
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
 		t.Fatalf("follower path after clear+reconcile = %q, want %q", got, want)
 	}
 }
@@ -6398,9 +6398,9 @@ func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.model.ActiveSubFocus = ui.SubFocusFileList
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	selectPanelEntryByName(t, left, "beta")
 	if selected, _ := left.ToggleSelection(); !selected {
 		t.Fatal("toggle selection on beta")
@@ -6418,7 +6418,7 @@ func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {
 	app.dispatch(keymap.ActionPanelToggleSync)
 
 	want := filepath.Clean(beta)
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != want {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != want {
 		t.Fatalf("follower path = %q want %q (strip row should drive sync, not file-list cursor)", got, want)
 	}
 }
@@ -6436,9 +6436,9 @@ func setupSelectionsStripFocusTest(t *testing.T) (*App, *panel.State) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.model.ActiveSubFocus = ui.SubFocusFileList
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	selectPanelEntryByName(t, left, "beta")
 	if selected, _ := left.ToggleSelection(); !selected {
 		t.Fatal("toggle selection on beta")
@@ -6512,12 +6512,12 @@ func TestToggleSyncDisablesWhenAlreadyDriving(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.LeftPanel {
-		t.Fatalf("Sync state after enable = (enabled=%v panel=%d), want (true, LeftPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
+	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.PrimaryPanel {
+		t.Fatalf("Sync state after enable = (enabled=%v panel=%d), want (true, PrimaryPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
 	}
 
 	app.dispatch(keymap.ActionPanelToggleSync)
@@ -6539,26 +6539,26 @@ func TestToggleSyncFromOtherPanelClearsPreviousDriverFirst(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.LeftPanel {
-		t.Fatalf("Sync state after left enable = (enabled=%v panel=%d), want (true, LeftPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
+	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.PrimaryPanel {
+		t.Fatalf("Sync state after left enable = (enabled=%v panel=%d), want (true, PrimaryPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
 	}
 	// Right panel should now be inside /alpha (synced from left).
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after left enable = %q, want %q", got, want)
 	}
 
 	// Switch focus to right and toggle sync there: should clear left's sync, then enable right.
-	app.model.ActivePanel = ui.RightPanel
-	selectPanelEntryByName(t, app.panelByID(ui.RightPanel), "gamma")
+	app.model.ActivePanel = ui.SecondaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.SecondaryPanel), "gamma")
 	app.dispatch(keymap.ActionPanelToggleSync)
 
-	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.RightPanel {
-		t.Fatalf("Sync state after right toggle = (enabled=%v panel=%d), want (true, RightPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
+	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.SecondaryPanel {
+		t.Fatalf("Sync state after right toggle = (enabled=%v panel=%d), want (true, SecondaryPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
 	}
-	if got, want := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()), filepath.Clean(gamma); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()), filepath.Clean(gamma); got != want {
 		t.Fatalf("left panel path after right takes over = %q, want %q", got, want)
 	}
 }
@@ -6575,18 +6575,18 @@ func TestSyncFollowsCursorMovementOverDirectory(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
 
 	// Move cursor onto beta and verify the right panel mirrors it.
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "beta")
 	app.reconcileAfterEvent()
 
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(beta); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(beta); got != want {
 		t.Fatalf("right panel after move = %q, want %q", got, want)
 	}
 }
@@ -6601,17 +6601,17 @@ func TestSyncSkipsCursorMovementOverFile(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
 
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "notes.txt")
 	app.reconcileAfterEvent()
 
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after non-dir hover = %q, want unchanged %q", got, want)
 	}
 }
@@ -6626,9 +6626,9 @@ func TestQuickViewFollowsDirectoryHighlight(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
-	inactiveBefore := filepath.Clean(app.panelByID(ui.RightPanel).Path.String())
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
+	inactiveBefore := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String())
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
 
@@ -6638,7 +6638,7 @@ func TestQuickViewFollowsDirectoryHighlight(t *testing.T) {
 	if !app.model.QuickViewDirOverlayActive {
 		t.Fatal("quick view dir overlay should be active")
 	}
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != inactiveBefore {
 		t.Fatalf("inactive panel path = %q, want unchanged %q", got, inactiveBefore)
 	}
 	if app.filePreviewOpen() {
@@ -6659,24 +6659,24 @@ func TestQuickViewFollowsCursorBetweenSubdirectories(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
-	inactiveBefore := filepath.Clean(app.panelByID(ui.RightPanel).Path.String())
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
+	inactiveBefore := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String())
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
 	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("overlay after alpha = %q, want %q", got, want)
 	}
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != inactiveBefore {
 		t.Fatalf("inactive after alpha = %q, want unchanged %q", got, inactiveBefore)
 	}
 
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "beta")
 	app.reconcileAfterEvent()
 	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(beta); got != want {
 		t.Fatalf("overlay after beta = %q, want %q", got, want)
 	}
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != inactiveBefore {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != inactiveBefore {
 		t.Fatalf("inactive after beta = %q, want unchanged %q", got, inactiveBefore)
 	}
 }
@@ -6688,8 +6688,8 @@ func TestQuickViewShowsPreviewOnFileHighlight(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "notes.txt")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
 
@@ -6708,8 +6708,8 @@ func TestQuickViewPreviewNavDebounceDefersPreviewUntilFlush(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 500
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "notes.txt")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "notes.txt")
 	app.model.QuickViewEnabled = true
 	app.applyQuickViewPreviewImmediately()
 
@@ -6760,8 +6760,8 @@ func TestQuickViewDirToFileDebounceKeepsDirOverlayVisible(t *testing.T) {
 	app.config.UI.KeyRepeatDebounceMS = 500
 
 	// Start with cursor on the directory and quick view open.
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "bravo")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "bravo")
 	app.model.QuickViewEnabled = true
 	app.applyQuickViewPreviewImmediately()
 
@@ -6884,15 +6884,15 @@ func TestQuickViewOffRestoresInactivePanelState(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	if err := app.panelByID(ui.RightPanel).Load(child); err != nil {
+	if err := app.panelByID(ui.SecondaryPanel).Load(child); err != nil {
 		t.Fatal(err)
 	}
-	rightBefore := app.panelByID(ui.RightPanel)
+	rightBefore := app.panelByID(ui.SecondaryPanel)
 	inactivePathBefore := filepath.Clean(rightBefore.Path.String())
 	inactiveCursorBefore := rightBefore.Cursor
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
 	if got, want := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()), filepath.Clean(alpha); got != want {
@@ -6909,7 +6909,7 @@ func TestQuickViewOffRestoresInactivePanelState(t *testing.T) {
 	if app.model.QuickViewDirOverlayActive {
 		t.Fatal("dir overlay should be cleared after quick view off")
 	}
-	rightAfter := app.panelByID(ui.RightPanel)
+	rightAfter := app.panelByID(ui.SecondaryPanel)
 	if got, want := filepath.Clean(rightAfter.Path.String()), inactivePathBefore; got != want {
 		t.Fatalf("inactive path after quick view off = %q, want pre-quick-view %q", got, want)
 	}
@@ -6931,11 +6931,11 @@ func TestQuickViewDirDoesNotMoveOpenInOtherPanelIndicator(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
-	if err := app.panelByID(ui.RightPanel).Load(child); err != nil {
+	if err := app.panelByID(ui.SecondaryPanel).Load(child); err != nil {
 		t.Fatal(err)
 	}
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
 	app.render()
@@ -6973,23 +6973,23 @@ func TestSyncDoesNotFollowFromNonDriverActivePanel(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	rightAfterEnable := filepath.Clean(app.panelByID(ui.RightPanel).Path.String())
+	rightAfterEnable := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String())
 
 	// Switch focus to the non-driver (right) panel and move its cursor.
 	app.dispatch(keymap.ActionPanelSwitch)
-	if app.model.ActivePanel != ui.RightPanel {
-		t.Fatalf("ActivePanel after switch = %d, want RightPanel", app.model.ActivePanel)
+	if app.model.ActivePanel != ui.SecondaryPanel {
+		t.Fatalf("ActivePanel after switch = %d, want SecondaryPanel", app.model.ActivePanel)
 	}
-	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.LeftPanel {
-		t.Fatalf("Tab should not change Sync state; got (enabled=%v panel=%d), want (true, LeftPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
+	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.PrimaryPanel {
+		t.Fatalf("Tab should not change Sync state; got (enabled=%v panel=%d), want (true, PrimaryPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
 	}
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "beta")
 	app.reconcileAfterEvent()
 
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != rightAfterEnable {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != rightAfterEnable {
 		t.Fatalf("right panel changed while non-driver was active: got %q, want unchanged %q", got, rightAfterEnable)
 	}
 }
@@ -7012,22 +7012,22 @@ func TestSyncFollowsBookmarkLikeNavigationFromActivePanel(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(alpha); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
 
 	// Simulate a bookmark/history jump: navigate the active panel to /beta.
-	if err := app.navigatePanelToDirectory(ui.LeftPanel, beta, ""); err != nil {
+	if err := app.navigatePanelToDirectory(ui.PrimaryPanel, beta, ""); err != nil {
 		t.Fatalf("navigatePanelToDirectory: %v", err)
 	}
 	// In the Run loop this is what fires after the bookmark dialog closes.
 	app.reconcileAfterEvent()
 
 	// Cursor in /beta lands on "child" (only entry); sync should mirror it.
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(betaChild); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(betaChild); got != want {
 		t.Fatalf("right panel after bookmark-like jump = %q, want %q (sync should re-mirror)", got, want)
 	}
 }
@@ -7047,19 +7047,19 @@ func TestSyncDoesNotFollowWhenInactivePanelChangesDirectory(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	leftBefore := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String())
+	leftBefore := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String())
 
 	// Mutate the follower (right) panel directly. The driver (left) is still active and
 	// has not moved its cursor, so the left panel should stay put even after reconcile.
-	if err := app.panelByID(ui.RightPanel).Load(beta); err != nil {
+	if err := app.panelByID(ui.SecondaryPanel).Load(beta); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
 	app.reconcileAfterEvent()
 
-	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()); got != leftBefore {
+	if got := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()); got != leftBefore {
 		t.Fatalf("left panel changed because follower moved: got %q, want %q", got, leftBefore)
 	}
 }
@@ -7078,10 +7078,10 @@ func TestSyncFollowsAfterSelectToggleAdvance(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
 
@@ -7089,7 +7089,7 @@ func TestSyncFollowsAfterSelectToggleAdvance(t *testing.T) {
 	app.dispatch(keymap.ActionPanelSelectToggle)
 	app.reconcileAfterEvent()
 
-	if got, want := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
+	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
 		t.Fatalf("right panel after Insert advance = %q, want %q (reconciler should mirror new highlight)", got, want)
 	}
 }
@@ -7106,22 +7106,22 @@ func TestDiskUsageIdleArmingSurvivesPanelSwitchViaReconciler(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	right := app.panelByID(ui.RightPanel)
+	right := app.panelByID(ui.SecondaryPanel)
 	right.Sort.DiskUsageIdleSizeSort = true
 	right.DiskUsageIdleSortActivated = true
 	right.IdleDiskTotalsSort = false
 
-	if app.diskIdleSort[ui.RightPanel].timer != nil {
+	if app.diskIdleSort[ui.SecondaryPanel].timer != nil {
 		t.Fatal("right idle timer should be nil before reconcile")
 	}
 
 	app.dispatch(keymap.ActionPanelSwitch)
-	if app.model.ActivePanel != ui.RightPanel {
-		t.Fatalf("ActivePanel after switch = %d, want RightPanel", app.model.ActivePanel)
+	if app.model.ActivePanel != ui.SecondaryPanel {
+		t.Fatalf("ActivePanel after switch = %d, want SecondaryPanel", app.model.ActivePanel)
 	}
 	app.reconcileAfterEvent()
 
-	if app.diskIdleSort[ui.RightPanel].timer != nil {
+	if app.diskIdleSort[ui.SecondaryPanel].timer != nil {
 		t.Fatal("uncached listing must not arm idle-sort timer from reconcile alone")
 	}
 	if right.IdleDiskTotalsSort {
@@ -7139,7 +7139,7 @@ func TestApplyIdleDiskSortRequiresFullListingCache(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	alphaPath := filepath.Join(root, "alpha")
 
 	left.Sort.DiskUsageIdleSizeSort = true
@@ -7152,7 +7152,7 @@ func TestApplyIdleDiskSortRequiresFullListingCache(t *testing.T) {
 		return 0, false
 	}
 
-	app.applyIdleDiskSort(ui.LeftPanel, app.diskIdleSort[ui.LeftPanel].epoch)
+	app.applyIdleDiskSort(ui.PrimaryPanel, app.diskIdleSort[ui.PrimaryPanel].epoch)
 
 	if left.IdleDiskTotalsSort {
 		t.Fatal("IdleDiskTotalsSort should stay false when listing is not fully disk-cached")
@@ -7170,35 +7170,35 @@ func TestHandlePanelDirChangedRightDoesNotInvalidateLeftIdleTimer(t *testing.T) 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	leftRoot := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String())
-	left := app.panelByID(ui.LeftPanel)
+	leftRoot := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String())
+	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	left.DiskUsageIdleSortActivated = true
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
 	app.setDiskUsageScanScope(leftRoot, []string{filepath.Clean(alpha)})
 
-	app.diskIdleNavPath[ui.LeftPanel] = leftRoot
-	app.armIdleDiskSortTimer(ui.LeftPanel)
-	if app.diskIdleSort[ui.LeftPanel].timer == nil {
+	app.diskIdleNavPath[ui.PrimaryPanel] = leftRoot
+	app.armIdleDiskSortTimer(ui.PrimaryPanel)
+	if app.diskIdleSort[ui.PrimaryPanel].timer == nil {
 		t.Fatal("expected idle timer armed")
 	}
 
-	right := app.panelByID(ui.RightPanel)
+	right := app.panelByID(ui.SecondaryPanel)
 	right.Sort.DiskUsageIdleSizeSort = true
 	right.DiskUsageIdleSortActivated = true
 	right.IdleDiskTotalsSort = false
-	vr := app.panelViewportRows(ui.RightPanel)
+	vr := app.panelViewportRows(ui.SecondaryPanel)
 	if err := right.NavigateTo(filepath.Clean(alpha), "", vr); err != nil {
 		t.Fatalf("NavigateTo: %v", err)
 	}
 
-	app.handlePanelDirChanged(ui.RightPanel)
+	app.handlePanelDirChanged(ui.SecondaryPanel)
 
-	if app.diskIdleSort[ui.LeftPanel].timer == nil {
+	if app.diskIdleSort[ui.PrimaryPanel].timer == nil {
 		t.Fatal("only the navigated panel should reset idle-sort debounce")
 	}
-	app.invalidateIdleDiskSortPanel(ui.LeftPanel)
+	app.invalidateIdleDiskSortPanel(ui.PrimaryPanel)
 }
 
 func TestHandlePanelDirChangedLeftClearsIdleTimerOnChdir(t *testing.T) {
@@ -7212,25 +7212,25 @@ func TestHandlePanelDirChangedLeftClearsIdleTimerOnChdir(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	leftRoot := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String())
+	leftRoot := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String())
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	left.DiskUsageIdleSortActivated = true
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
 	app.setDiskUsageScanScope(leftRoot, []string{filepath.Clean(alpha)})
 
-	app.diskIdleNavPath[ui.LeftPanel] = leftRoot
-	app.armIdleDiskSortTimer(ui.LeftPanel)
+	app.diskIdleNavPath[ui.PrimaryPanel] = leftRoot
+	app.armIdleDiskSortTimer(ui.PrimaryPanel)
 
-	vr := app.panelViewportRows(ui.LeftPanel)
+	vr := app.panelViewportRows(ui.PrimaryPanel)
 	if err := left.NavigateTo(filepath.Clean(alpha), "", vr); err != nil {
 		t.Fatalf("NavigateTo: %v", err)
 	}
-	app.handlePanelDirChanged(ui.LeftPanel)
+	app.handlePanelDirChanged(ui.PrimaryPanel)
 
-	if app.diskIdleSort[ui.LeftPanel].timer != nil {
+	if app.diskIdleSort[ui.PrimaryPanel].timer != nil {
 		t.Fatal("idle timer should clear when panel cwd changes")
 	}
 }
@@ -7246,12 +7246,12 @@ func TestDiskIdleSortActivatesAfterScanWhenListingCached(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	left.DiskUsageIdleSortActivated = true
 	left.IdleDiskTotalsSort = false
 
-	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
@@ -7264,8 +7264,8 @@ func TestDiskIdleSortActivatesAfterScanWhenListingCached(t *testing.T) {
 		t.Fatalf("listing not fully cached after scan busy=%v", app.diskUsageScanBusy())
 	}
 
-	ep := app.diskIdleSort[ui.LeftPanel].epoch
-	app.applyIdleDiskSort(ui.LeftPanel, ep)
+	ep := app.diskIdleSort[ui.PrimaryPanel].epoch
+	app.applyIdleDiskSort(ui.PrimaryPanel, ep)
 
 	if !left.IdleDiskTotalsSort {
 		t.Fatalf("IdleDiskTotalsSort still false epoch=%d busy=%v", ep, app.diskUsageScanBusy())
@@ -7280,14 +7280,14 @@ func TestHandlePanelDirChangedAppliesDiskSortWhenUsageSortEnabledWithoutActivate
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	left.DiskUsageIdleSortActivated = false // must not deadlock idle disk ordering
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
 	app.setDiskUsageScanScope(left.PathString(), []string{filepath.Join(left.PathString(), "x")})
 
-	app.handlePanelDirChanged(ui.LeftPanel)
+	app.handlePanelDirChanged(ui.PrimaryPanel)
 
 	if !left.IdleDiskTotalsSort {
 		t.Fatal("expected IdleDiskTotalsSort when DiskUsageIdleSizeSort is on and listing is fully cached")
@@ -7309,21 +7309,21 @@ func TestNavigateOutsideDiskUsageScanScopeClearsIdleSort(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	app.setDiskUsageScanScope(root, []string{scanned})
 	app.model.DiskUsageShown = true
-	app.model.DiskUsagePanelID = ui.LeftPanel
+	app.model.DiskUsagePanelID = ui.PrimaryPanel
 
 	left.DiskSorter = app.diskUsage.Size
 	left.IdleDiskTotalsSort = true
 	left.ApplySort()
 
-	vr := app.panelViewportRows(ui.LeftPanel)
+	vr := app.panelViewportRows(ui.PrimaryPanel)
 	if err := left.NavigateTo(other, "", vr); err != nil {
 		t.Fatalf("NavigateTo other: %v", err)
 	}
-	app.handlePanelDirChanged(ui.LeftPanel)
+	app.handlePanelDirChanged(ui.PrimaryPanel)
 
 	if left.IdleDiskTotalsSort {
 		t.Fatal("IdleDiskTotalsSort should be false outside scan scope")
@@ -7335,7 +7335,7 @@ func TestNavigateOutsideDiskUsageScanScopeClearsIdleSort(t *testing.T) {
 	if err := left.NavigateTo(scanned, "", vr); err != nil {
 		t.Fatalf("NavigateTo scanned: %v", err)
 	}
-	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
@@ -7344,7 +7344,7 @@ func TestNavigateOutsideDiskUsageScanScopeClearsIdleSort(t *testing.T) {
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
-	app.handlePanelDirChanged(ui.LeftPanel)
+	app.handlePanelDirChanged(ui.PrimaryPanel)
 	if !left.IdleDiskTotalsSort {
 		t.Fatal("IdleDiskTotalsSort should apply inside scan scope when fully cached")
 	}
@@ -7365,9 +7365,9 @@ func TestDiskUsageScanScopeAppliesOnEitherPanel(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
-	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
@@ -7377,13 +7377,13 @@ func TestDiskUsageScanScopeAppliesOnEitherPanel(t *testing.T) {
 		time.Sleep(2 * time.Millisecond)
 	}
 
-	right := app.panelByID(ui.RightPanel)
+	right := app.panelByID(ui.SecondaryPanel)
 	right.Sort.DiskUsageIdleSizeSort = true
-	vrRight := app.panelViewportRows(ui.RightPanel)
+	vrRight := app.panelViewportRows(ui.SecondaryPanel)
 	if err := right.NavigateTo(scanned, "", vrRight); err != nil {
 		t.Fatalf("NavigateTo scanned on right: %v", err)
 	}
-	app.handlePanelDirChanged(ui.RightPanel)
+	app.handlePanelDirChanged(ui.SecondaryPanel)
 
 	if !app.listingInDiskUsageScanScope(scanned) {
 		t.Fatal("scanned path should be in global scan scope")
@@ -7401,15 +7401,15 @@ func TestApplyIdleDiskSortIgnoresStaleEpoch(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	left.DiskUsageIdleSortActivated = true
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
 
-	stale := app.diskIdleSort[ui.LeftPanel].epoch
-	app.invalidateIdleDiskSortPanel(ui.LeftPanel)
-	app.applyIdleDiskSort(ui.LeftPanel, stale)
+	stale := app.diskIdleSort[ui.PrimaryPanel].epoch
+	app.invalidateIdleDiskSortPanel(ui.PrimaryPanel)
+	app.applyIdleDiskSort(ui.PrimaryPanel, stale)
 
 	if left.IdleDiskTotalsSort {
 		t.Fatal("stale epoch must not apply idle disk sort")
@@ -7433,11 +7433,11 @@ func TestDiskSortRestoredAfterNewScanReplacesScope(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 
 	// First scan from root. Wait for it to finish and sort to activate.
-	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
@@ -7446,17 +7446,17 @@ func TestDiskSortRestoredAfterNewScanReplacesScope(t *testing.T) {
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
-	app.handlePanelDirChanged(ui.LeftPanel)
+	app.handlePanelDirChanged(ui.PrimaryPanel)
 	if !left.IdleDiskTotalsSort {
 		t.Fatal("IdleDiskTotalsSort should be true at root after first scan")
 	}
 
 	// Navigate into a child directory and start a second scan there, replacing the scope.
-	vr := app.panelViewportRows(ui.LeftPanel)
+	vr := app.panelViewportRows(ui.PrimaryPanel)
 	if err := left.NavigateTo(alpha, "", vr); err != nil {
 		t.Fatalf("NavigateTo alpha: %v", err)
 	}
-	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline = time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
@@ -7475,7 +7475,7 @@ func TestDiskSortRestoredAfterNewScanReplacesScope(t *testing.T) {
 	if err := left.Parent(vr); err != nil {
 		t.Fatalf("Parent: %v", err)
 	}
-	app.handlePanelDirChanged(ui.LeftPanel)
+	app.handlePanelDirChanged(ui.PrimaryPanel)
 
 	if !left.IdleDiskTotalsSort {
 		t.Fatal("IdleDiskTotalsSort should be true again at root: cached data is valid regardless of current scan scope")
@@ -7494,9 +7494,9 @@ func TestClearAllDiskUsageData(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
-	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
@@ -7543,8 +7543,8 @@ func TestSortDialogHandleKeyAltDTogglesDirectoriesFirstWithoutClearingDiskUsage(
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	left := app.panelByID(ui.LeftPanel)
-	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
+	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
@@ -7595,15 +7595,15 @@ func TestSyncFollowSkipsHistoryRecordingOnFollower(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	app.model.ActivePanel = ui.LeftPanel
-	rightHistoryAtStart := append([]string(nil), app.panelByID(ui.RightPanel).History...)
+	app.model.ActivePanel = ui.PrimaryPanel
+	rightHistoryAtStart := append([]string(nil), app.panelByID(ui.SecondaryPanel).History...)
 
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "alpha")
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
-	selectPanelEntryByName(t, app.panelByID(ui.LeftPanel), "beta")
+	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "beta")
 	app.reconcileAfterEvent()
 
-	right := app.panelByID(ui.RightPanel)
+	right := app.panelByID(ui.SecondaryPanel)
 	if got, want := filepath.Clean(right.PathString()), filepath.Clean(beta); got != want {
 		t.Fatalf("right panel path = %q, want %q", got, want)
 	}
@@ -7770,7 +7770,7 @@ func TestMkdirOpenInInactiveOpensOtherPanelAfterCreate(t *testing.T) {
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
 
-	left := app.panelByID(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
 	for i := 0; i < left.VisibleEntryCount(); i++ {
 		entry, _, ok := left.VisibleEntry(i)
 		if ok && entry.Name == "keep-cursor.txt" {
@@ -7779,7 +7779,7 @@ func TestMkdirOpenInInactiveOpensOtherPanelAfterCreate(t *testing.T) {
 		}
 	}
 
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.dispatch(keymap.ActionFileMkdirOpenInOther)
 	if !app.model.FileDialog.Open {
 		t.Fatal("expected mkdir dialog open")
@@ -7793,10 +7793,10 @@ func TestMkdirOpenInInactiveOpensOtherPanelAfterCreate(t *testing.T) {
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	wantOther := filepath.Join(dir, "otherdir")
-	if got := filepath.Clean(app.panelByID(ui.RightPanel).Path.String()); got != filepath.Clean(wantOther) {
+	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != filepath.Clean(wantOther) {
 		t.Fatalf("inactive panel path = %q want %q", got, wantOther)
 	}
-	if got := filepath.Clean(app.panelByID(ui.LeftPanel).Path.String()); got != filepath.Clean(dir) {
+	if got := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()); got != filepath.Clean(dir) {
 		t.Fatalf("active panel path = %q want %q", got, dir)
 	}
 	entry, ok := left.CurrentEntry()

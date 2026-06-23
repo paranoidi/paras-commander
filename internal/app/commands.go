@@ -168,7 +168,7 @@ func (a *App) ensureCommandsViewSelectionVisible() {
 		a.model.CommandsView.EnsureSelectionVisible(n, 0)
 		return
 	}
-	visible := ui.PanelListRows(layout.Left)
+	visible := ui.PanelListRows(layout.Primary)
 	a.model.CommandsView.EnsureSelectionVisible(n, visible)
 }
 
@@ -338,7 +338,7 @@ func (a *App) commandsViewFocusPaneCount() int {
 	if layout.TooSmall {
 		return 2
 	}
-	_, stderrRect := ui.SplitJobsRightColumnFlexTop(layout.Right, 8)
+	_, stderrRect := ui.SplitJobsSecondaryColumnFlexTop(layout.Secondary, 8)
 	if stderrRect.Height == 0 {
 		return 2
 	}
@@ -361,7 +361,7 @@ func (a *App) maxCommandsStdoutScroll() int {
 	if layout.TooSmall {
 		return 0
 	}
-	stdoutRect, _, stdoutLines, _ := ui.CommandsStreamPanels(layout.Right, sel)
+	stdoutRect, _, stdoutLines, _ := ui.CommandsStreamPanels(layout.Secondary, sel)
 	contentH := ui.JobsPanelContentRows(stdoutRect)
 	return max(0, len(stdoutLines)-contentH)
 }
@@ -373,7 +373,7 @@ func (a *App) maxCommandsStderrScroll() int {
 	if layout.TooSmall {
 		return 0
 	}
-	_, stderrRect, _, stderrLines := ui.CommandsStreamPanels(layout.Right, sel)
+	_, stderrRect, _, stderrLines := ui.CommandsStreamPanels(layout.Secondary, sel)
 	contentH := ui.JobsPanelContentRows(stderrRect)
 	return max(0, len(stderrLines)-contentH)
 }

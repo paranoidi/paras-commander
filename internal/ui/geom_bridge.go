@@ -36,28 +36,28 @@ func SplitPanelColumn(column Rect, stripItemCount int, maxStripContentRows int, 
 	return geom.SplitPanelColumn(column, stripItemCount, maxStripContentRows, minFileContentRows)
 }
 
-// SplitJobsRightPanels splits the right column into optional conflict (top), detail, then activity.
-func SplitJobsRightPanels(column Rect, showConflict bool, detailLineCount int) (conflict, detail, activity Rect) {
-	return geom.SplitJobsRightPanels(column, showConflict, detailLineCount)
+// SplitJobsSecondaryPanels splits the secondary column into optional conflict (top), detail, then activity.
+func SplitJobsSecondaryPanels(column Rect, showConflict bool, detailLineCount int) (conflict, detail, activity Rect) {
+	return geom.SplitJobsSecondaryPanels(column, showConflict, detailLineCount)
 }
 
-// SplitJobsRightColumn divides the jobs screen right column into a top Details panel and bottom Activity panel.
-func SplitJobsRightColumn(column Rect, detailLineCount int) (detail Rect, activity Rect) {
-	return geom.SplitJobsRightColumn(column, detailLineCount)
+// SplitJobsSecondaryColumn divides the jobs screen secondary column into a top Details panel and bottom Activity panel.
+func SplitJobsSecondaryColumn(column Rect, detailLineCount int) (detail Rect, activity Rect) {
+	return geom.SplitJobsSecondaryColumn(column, detailLineCount)
 }
 
-// SplitJobsRightColumnFlexTop divides a column into a flexible top panel and a compact bottom panel.
-func SplitJobsRightColumnFlexTop(column Rect, bottomLineCount int) (top Rect, bottom Rect) {
-	return geom.SplitJobsRightColumnFlexTop(column, bottomLineCount)
+// SplitJobsSecondaryColumnFlexTop divides a column into a flexible top panel and a compact bottom panel.
+func SplitJobsSecondaryColumnFlexTop(column Rect, bottomLineCount int) (top Rect, bottom Rect) {
+	return geom.SplitJobsSecondaryColumnFlexTop(column, bottomLineCount)
 }
 
-// MergeTwinPanelRects returns one rectangle spanning the browser's left and right columns (same height).
-func MergeTwinPanelRects(left, right Rect) Rect {
+// MergeTwinPanelRects returns one rectangle spanning the browser's primary and secondary columns (same height).
+func MergeTwinPanelRects(primary, secondary Rect) Rect {
 	return Rect{
-		X:      left.X,
-		Y:      left.Y,
-		Width:  left.Width + right.Width,
-		Height: left.Height,
+		X:      primary.X,
+		Y:      primary.Y,
+		Width:  primary.Width + secondary.Width,
+		Height: primary.Height,
 	}
 }
 

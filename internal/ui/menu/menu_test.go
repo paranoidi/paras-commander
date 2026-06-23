@@ -105,13 +105,13 @@ func TestFileMenuShortcutExceptions(t *testing.T) {
 func TestNonPanelMenusUseScopeNoneSentinel(t *testing.T) {
 	for _, def := range Definitions() {
 		if def.ID == TopPanelLeft || def.ID == TopPanelRight {
-			if def.PanelScope != PanelScopeLeft && def.PanelScope != PanelScopeRight {
-				t.Fatalf("%s: want PanelScopeLeft or PanelScopeRight, got %d", def.ID, def.PanelScope)
+			if def.PanelScope != PanelScopePrimary && def.PanelScope != PanelScopeSecondary {
+				t.Fatalf("%s: want PanelScopePrimary or PanelScopeSecondary, got %d", def.ID, def.PanelScope)
 			}
 			continue
 		}
 		if def.PanelScope != PanelScopeNone {
-			t.Fatalf("%s must use PanelScopeNone (%d), got %d (omit/zero clashes with PanelScopeLeft)", def.ID, PanelScopeNone, def.PanelScope)
+			t.Fatalf("%s must use PanelScopeNone (%d), got %d (omit/zero clashes with PanelScopePrimary)", def.ID, PanelScopeNone, def.PanelScope)
 		}
 	}
 	for _, def := range DefinitionsJobs() {
@@ -330,7 +330,7 @@ func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 	}
 }
 
-func TestLeftAndRightPanelMenusShareItemActions(t *testing.T) {
+func TestLeftAndSecondaryPanelMenusShareItemActions(t *testing.T) {
 	defs := Definitions()
 	left, right := defs[0], defs[len(defs)-1]
 	if left.ID != TopPanelLeft || right.ID != TopPanelRight {

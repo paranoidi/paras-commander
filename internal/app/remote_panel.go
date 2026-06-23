@@ -20,8 +20,8 @@ type remotePanelLoadPayload struct {
 }
 
 func (a *App) wireRemotePanelLoaders() {
-	a.model.Left.ScheduleRemoteLoad = a.remoteLoadScheduler(ui.LeftPanel)
-	a.model.Right.ScheduleRemoteLoad = a.remoteLoadScheduler(ui.RightPanel)
+	a.model.Primary.ScheduleRemoteLoad = a.remoteLoadScheduler(ui.PrimaryPanel)
+	a.model.Secondary.ScheduleRemoteLoad = a.remoteLoadScheduler(ui.SecondaryPanel)
 }
 
 func (a *App) remoteLoadScheduler(panelID int) panel.RemoteLoadScheduler {

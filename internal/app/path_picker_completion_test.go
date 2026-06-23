@@ -99,8 +99,8 @@ func TestPathPickerItemsSkipMissingHistoryPaths(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.model.Left.History = []string{gone, exists}
-	app.model.Right.History = nil
+	app.model.Primary.History = []string{gone, exists}
+	app.model.Secondary.History = nil
 	items, err := app.pathPickerItemsHistoryAndBookmarks()
 	if err != nil {
 		t.Fatal(err)

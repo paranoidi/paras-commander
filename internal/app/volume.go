@@ -95,7 +95,7 @@ func (a *App) requestVolumeSpaceRefreshAsync(panelID int) {
 	if path == "" || path == "." {
 		return
 	}
-	if panelID < 0 || panelID > ui.RightPanel {
+	if panelID < 0 || panelID > ui.SecondaryPanel {
 		return
 	}
 	if !a.volumeRefreshInFlight[panelID].CompareAndSwap(false, true) {
@@ -115,8 +115,8 @@ func (a *App) requestVolumeSpaceRefreshAsync(panelID int) {
 }
 
 func (a *App) requestBothPanelsVolumeSpaceRefreshAsync() {
-	a.requestVolumeSpaceRefreshAsync(ui.LeftPanel)
-	a.requestVolumeSpaceRefreshAsync(ui.RightPanel)
+	a.requestVolumeSpaceRefreshAsync(ui.PrimaryPanel)
+	a.requestVolumeSpaceRefreshAsync(ui.SecondaryPanel)
 }
 
 // applyVolumeSpaceRefresh merges async statfs into panel state. It returns true when

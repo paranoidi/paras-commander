@@ -18,12 +18,12 @@ func TestEditActiveFileRejectsDirectory(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "file.txt"))
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.model.Left.Load(dir); err != nil {
+	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
-	for i, e := range app.model.Left.Entries {
+	for i, e := range app.model.Primary.Entries {
 		if e.Name == "sub" {
-			app.model.Left.Cursor = i
+			app.model.Primary.Cursor = i
 			break
 		}
 	}
@@ -42,12 +42,12 @@ func TestEditActiveFileOpensEditorForFile(t *testing.T) {
 	writeFile(t, filePath)
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
-	if err := app.model.Left.Load(dir); err != nil {
+	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
-	for i, e := range app.model.Left.Entries {
+	for i, e := range app.model.Primary.Entries {
 		if e.Name == "note.txt" {
-			app.model.Left.Cursor = i
+			app.model.Primary.Cursor = i
 			break
 		}
 	}

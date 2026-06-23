@@ -112,7 +112,7 @@ type App struct {
 	// after the "scan finished" toast fires. Selection-size background scans do not set it, so
 	// their EventJobFinished completions never trigger the toast even when DiskUsageShown is true.
 	diskUsageScanToastArmed bool
-	diskIdleSort            [2]diskIdleSortPanel // indexed by ui.LeftPanel / ui.RightPanel (0/1)
+	diskIdleSort            [2]diskIdleSortPanel // indexed by ui.PrimaryPanel / ui.SecondaryPanel (0/1)
 	// diskIdleNavPath records last reconciled panel cwd so idle-sort debounce survives benign reconcile but resets on chdir.
 	diskIdleNavPath [2]string
 	// selectionSizeScanFP is the last enqueued directory set fingerprint per panel for selection-size scans.
@@ -516,9 +516,9 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		commandsCancel:     cmdCancel,
 		workPools:          workpool.NewRegistry(poolDefs),
 		model: ui.Model{
-			Left:                       left,
-			Right:                      right,
-			ActivePanel:                ui.LeftPanel,
+			Primary:                    left,
+			Secondary:                  right,
+			ActivePanel:                ui.PrimaryPanel,
 			SelectionsPanelMaxRows:     cfg.UI.SelectionsPanelMaxRows,
 			HideMenuBar:                !cfg.UI.ShowMenuBar,
 			ShowFileIcons:              cfg.UI.ShowFileIcons,
@@ -570,8 +570,8 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		return app.pathVolumeContendsWithActiveJob(host)
 	}
-	app.model.Left.SuppressHeavyPathProbes = suppressHeavyPathProbes
-	app.model.Right.SuppressHeavyPathProbes = suppressHeavyPathProbes
+	app.model.Primary.SuppressHeavyPathProbes = suppressHeavyPathProbes
+	app.model.Secondary.SuppressHeavyPathProbes = suppressHeavyPathProbes
 	app.wireFileListViewportRows()
 	app.jobsCtrl = jobsctrl.New(jobsctrl.Deps{
 		Host:     jobsHost{appShellHost: appShellHost{app: app}},
@@ -596,8 +596,8 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	app.wireRemotePanelLoaders()
 	app.wireGitStatusLoaders()
-	app.model.Left.RescheduleGitStatusIfNeeded()
-	app.model.Right.RescheduleGitStatusIfNeeded()
+	app.model.Primary.RescheduleGitStatusIfNeeded()
+	app.model.Secondary.RescheduleGitStatusIfNeeded()
 	app.syncJobPathMarks()
 	if secs := cfg.Jobs.FreeSpacePollIntervalSecs; secs > 0 {
 		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
@@ -622,8 +622,8 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	if opts.ChooserFile != "" {
 		if !opts.ChooserNoCarousel {
-			app.model.Left.CarouselMode = true
-			app.model.ActivePanel = ui.LeftPanel
+			app.model.Primary.CarouselMode = true
+			app.model.ActivePanel = ui.PrimaryPanel
 		}
 		app.model.QuickViewEnabled = true
 		app.model.QuickViewPanel = app.model.ActivePanel

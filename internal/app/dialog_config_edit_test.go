@@ -29,7 +29,7 @@ func testMetaDialogApp(t *testing.T, dir, cfgDir string) *App {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := app.model.Left.Load(dir); err != nil {
+	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
 	return app
@@ -52,7 +52,7 @@ file = "wc -l"
 	}
 
 	app := testMetaDialogApp(t, dir, cfgDir)
-	app.openMetaDialog(ui.LeftPanel)
+	app.openMetaDialog(ui.PrimaryPanel)
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should be open")
 	}
@@ -83,7 +83,7 @@ file = "wc -l"
 	}
 
 	app := testMetaDialogApp(t, dir, cfgDir)
-	app.openMetaDialog(ui.LeftPanel)
+	app.openMetaDialog(ui.PrimaryPanel)
 
 	prev := externalEditorRunner
 	externalEditorRunner = func(_ context.Context, path string) error {
@@ -131,7 +131,7 @@ file = "wc -l"
 	}
 
 	app := testMetaDialogApp(t, dir, cfgDir)
-	app.openMetaDialog(ui.LeftPanel)
+	app.openMetaDialog(ui.PrimaryPanel)
 	if len(app.model.MetaDialog.Entries) != 1 {
 		t.Fatalf("entries len = %d, want lines", len(app.model.MetaDialog.Entries))
 	}
@@ -315,7 +315,7 @@ file = "wc -l"
 	}
 
 	app := testMetaDialogApp(t, dir, cfgDir)
-	app.openMetaDialog(ui.LeftPanel)
+	app.openMetaDialog(ui.PrimaryPanel)
 	app.model.MetaDialog.Checked[0] = true
 	app.model.MetaDialog.Focus = 0
 

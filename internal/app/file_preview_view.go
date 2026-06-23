@@ -261,7 +261,7 @@ func (a *App) openFilePreviewFullscreen() {
 		a.setTransientMessage("View: terminal too small", ui.MessageUrgencyWarn)
 		return
 	}
-	union := ui.MergeTwinPanelRects(lay.Left, lay.Right)
+	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary)
 	tw := union.Width - 4
 	if tw < 1 {
 		tw = 1

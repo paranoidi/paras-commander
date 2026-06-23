@@ -31,7 +31,7 @@ func TestSFTPConnectDialogFilterSelectsHost(t *testing.T) {
 	}
 	app.config.SFTP.SSHConfigFile = sshConfig
 
-	app.openSFTPConnectDialogForPanel(ui.LeftPanel)
+	app.openSFTPConnectDialogForPanel(ui.PrimaryPanel)
 	if !app.model.SFTPConnectDialog.Open {
 		t.Fatal("expected SFTP connect dialog open")
 	}

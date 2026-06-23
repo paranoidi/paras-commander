@@ -19,8 +19,8 @@ type gitStatusPayload struct {
 }
 
 func (a *App) wireGitStatusLoaders() {
-	a.model.Left.ScheduleGitStatus = a.gitStatusScheduler(ui.LeftPanel)
-	a.model.Right.ScheduleGitStatus = a.gitStatusScheduler(ui.RightPanel)
+	a.model.Primary.ScheduleGitStatus = a.gitStatusScheduler(ui.PrimaryPanel)
+	a.model.Secondary.ScheduleGitStatus = a.gitStatusScheduler(ui.SecondaryPanel)
 }
 
 func (a *App) gitStatusScheduler(panelID int) panel.GitStatusScheduler {

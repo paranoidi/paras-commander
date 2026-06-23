@@ -11,7 +11,7 @@ import (
 func TestCollectPanelBottomIndicatorsOrder(t *testing.T) {
 	t.Parallel()
 	ctx := PanelBottomIndicatorContext{
-		PanelID:                LeftPanel,
+		PanelID:                PrimaryPanel,
 		SelectionsBottomHint:   true,
 		QuickViewDriverPanelID: -1,
 		State: panel.State{
@@ -58,13 +58,13 @@ func TestPanelBottomEndEdgeReservedStartReservesSyncOnLeftDriver(t *testing.T) {
 	t.Parallel()
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 10}
 	ctx := PanelBottomIndicatorContext{
-		PanelID:                LeftPanel,
-		SyncDriverPanelID:      LeftPanel,
+		PanelID:                PrimaryPanel,
+		SyncDriverPanelID:      PrimaryPanel,
 		QuickViewDriverPanelID: -1,
 	}
 	endX := panelBottomEndEdgeReservedStart(rect, ctx)
 	lastIn := rect.X + rect.Width - 2
-	syncW := len([]rune(panelSyncIndicatorLabel(LeftPanel)))
+	syncW := len([]rune(panelSyncIndicatorLabel(PrimaryPanel)))
 	want := lastIn - syncW
 	if endX != want {
 		t.Fatalf("endX = %d, want %d", endX, want)
@@ -74,12 +74,12 @@ func TestPanelBottomEndEdgeReservedStartReservesSyncOnLeftDriver(t *testing.T) {
 func TestPanelBottomEndEdgeSegmentsOrdersOtherPanelLast(t *testing.T) {
 	t.Parallel()
 	ctx := PanelBottomIndicatorContext{
-		PanelID:                LeftPanel,
-		ActivePanel:            LeftPanel,
+		PanelID:                PrimaryPanel,
+		ActivePanel:            PrimaryPanel,
 		HideInactivePanel:      true,
 		OtherPanelPath:         "/var/log",
 		UserHomeDir:            "",
-		SyncDriverPanelID:      LeftPanel,
+		SyncDriverPanelID:      PrimaryPanel,
 		QuickViewDriverPanelID: -1,
 		EndEdgePathMaxRunes:    20,
 		Styles:                 theme.Default(),
@@ -126,7 +126,7 @@ func TestCollectPanelBottomIndicatorsDotfilesHiddenVisible(t *testing.T) {
 	t.Parallel()
 	styles := theme.Default()
 	ctx := PanelBottomIndicatorContext{
-		PanelID:                LeftPanel,
+		PanelID:                PrimaryPanel,
 		QuickViewDriverPanelID: -1,
 		State: panel.State{
 			Path:                 pathloc.MustParse("/tmp"),
@@ -153,7 +153,7 @@ func TestCollectPanelBottomIndicatorsDotfilesHiddenVisible(t *testing.T) {
 func TestCollectPanelBottomIndicatorsStashAfterGitignore(t *testing.T) {
 	t.Parallel()
 	ctx := PanelBottomIndicatorContext{
-		PanelID:                LeftPanel,
+		PanelID:                PrimaryPanel,
 		QuickViewDriverPanelID: -1,
 		State: panel.State{
 			Path:                 pathloc.MustParse("/tmp"),

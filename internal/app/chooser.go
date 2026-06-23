@@ -47,23 +47,23 @@ func (a *App) applyChooserSelect(raw string) error {
 	if err != nil {
 		return err
 	}
-	vr := a.panelViewportRows(ui.LeftPanel)
+	vr := a.panelViewportRows(ui.PrimaryPanel)
 	info, statErr := os.Stat(path)
 	if statErr == nil {
 		if info.IsDir() {
-			return a.model.Left.NavigateTo(path, "", vr)
+			return a.model.Primary.NavigateTo(path, "", vr)
 		}
-		return a.model.Left.NavigateTo(filepath.Dir(path), filepath.Base(path), vr)
+		return a.model.Primary.NavigateTo(filepath.Dir(path), filepath.Base(path), vr)
 	}
 	if !os.IsNotExist(statErr) {
 		return statErr
 	}
 	dir := filepath.Dir(path)
-	if err := a.model.Left.NavigateTo(dir, "", vr); err != nil {
+	if err := a.model.Primary.NavigateTo(dir, "", vr); err != nil {
 		return err
 	}
 	if base := filepath.Base(path); base != "" && base != "." {
-		a.model.Left.SelectVisibleEntry(base)
+		a.model.Primary.SelectVisibleEntry(base)
 	}
 	return nil
 }

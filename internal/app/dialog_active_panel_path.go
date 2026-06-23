@@ -38,7 +38,7 @@ func (a *App) tryFlattenDialogDestinationShortcut(ev *tcell.EventKey) bool {
 	}
 	switch id {
 	case keymap.ActionFlattenDestinationActive:
-		a.applyFlattenDestinationFromActivePanel()
+		a.applyFlattenDestinationFromActivePanelState()
 		return true
 	case keymap.ActionFlattenDestinationInactive:
 		a.applyFlattenDestinationFromInactivePanel()
@@ -48,7 +48,7 @@ func (a *App) tryFlattenDialogDestinationShortcut(ev *tcell.EventKey) bool {
 	}
 }
 
-func (a *App) applyFlattenDestinationFromActivePanel() {
+func (a *App) applyFlattenDestinationFromActivePanelState() {
 	d := &a.model.FlattenDialog
 	d.Destination = transferPrefilledDestination(a.activePanel().PathString())
 	d.DestSubFocus = ui.FlattenDestSubFocusText

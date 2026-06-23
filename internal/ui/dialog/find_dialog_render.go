@@ -85,16 +85,16 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, s
 	borderStyle := draw.DrawDialogFrame(screen, rect, findDialogTitle(state), styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	inputWidth := rect.Width - 4
 	cbCol := rect.X + 1
-	fileListCol := leftCol
+	fileListCol := primaryCol
 	fileListWidth := inputWidth
 
-	primitive.Text(screen, leftCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
+	primitive.Text(screen, primaryCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
 
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, "", filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+3, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, "", filterFocused, false, styles)
 
 	sepAfterFilter := rect.Y + 4
 	draw.DrawDialogHSeparator(screen, rect, sepAfterFilter, borderStyle)

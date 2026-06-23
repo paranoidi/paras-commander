@@ -30,13 +30,13 @@ func DrawMetaDialog(screen tcell.Screen, layout Layout, state MetaDialogState, s
 	rect := draw.CenteredDialogRect(layout, width, height)
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Meta", styles)
 
-	leftCol := draw.DialogOptionX(rect)
+	primaryCol := draw.DialogOptionX(rect)
 	y := rect.Y + 1
 
 	shortcuts := MetaEntryShortcuts(state.Entries)
 	for i, entry := range state.Entries {
 		checked := i < len(state.Checked) && state.Checked[i]
-		draw.DrawDialogCheckbox(screen, leftCol, y, metaEntryDisplayLabel(entry), shortcuts[i], checked, state.Focus == i, styles)
+		draw.DrawDialogCheckbox(screen, primaryCol, y, metaEntryDisplayLabel(entry), shortcuts[i], checked, state.Focus == i, styles)
 		y++
 	}
 

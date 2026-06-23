@@ -22,8 +22,8 @@ type PanelHost interface {
 	ActivePanel() *panel.State
 	ActivePanelSources() []string
 	InactivePanel() *panel.State
-	LeftPanel() *panel.State
-	RightPanel() *panel.State
+	PrimaryPanel() *panel.State
+	SecondaryPanel() *panel.State
 }
 
 // ShellHost supplies quit, menu, and global action dispatch from auxiliary views.

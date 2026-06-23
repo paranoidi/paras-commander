@@ -22,15 +22,15 @@ func TestPanelStashToggleIndependentPanels(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	left := app.panelByID(ui.LeftPanel)
-	right := app.panelByID(ui.RightPanel)
+	left := app.panelByID(ui.PrimaryPanel)
+	right := app.panelByID(ui.SecondaryPanel)
 	left.AddSelection(aPath)
 	app.togglePanelSelectionStash()
 	if left.StashPathCount() != 1 || left.SelectedPathCount() != 0 {
 		t.Fatalf("left after stash: stash=%d live=%d", left.StashPathCount(), left.SelectedPathCount())
 	}
 
-	app.model.ActivePanel = ui.RightPanel
+	app.model.ActivePanel = ui.SecondaryPanel
 	right.AddSelection(bPath)
 	app.togglePanelSelectionStash()
 	if right.StashPathCount() != 1 {

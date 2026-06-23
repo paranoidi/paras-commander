@@ -731,7 +731,7 @@ func (a *App) dispatch(actionID string) bool {
 			return false
 		}
 		label := panelLabel(a.model.ActivePanel)
-		a.setTransientMessage(a.panelHiddenVisibilityMessage(label, a.activePanel().ShowHidden), ui.MessageUrgencyInfo)
+		a.setTransientMessage(a.paneHiddenVisibilityMessage(label, a.activePanel().ShowHidden), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelFilterOpen:
 		activePanel.OpenFilter(viewportRows)
 		a.clearTransientMessage()

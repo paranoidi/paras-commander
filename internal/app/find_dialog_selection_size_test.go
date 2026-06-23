@@ -15,7 +15,7 @@ func TestReconcileFindDialogSelectionSizeScansEarlyExitOnUnchangedGen(t *testing
 			ViewMode: ui.ViewBrowser,
 			FindDialog: ui.FindDialogState{
 				Open:    true,
-				PanelID: ui.LeftPanel,
+				PanelID: ui.PrimaryPanel,
 				MarkedPaths: map[string]bool{
 					filepath.Clean("/tmp/a"): true,
 				},

@@ -25,10 +25,10 @@ func scrollModeFromConfig(scrollMode string) panel.ScrollMode {
 func (a *App) syncScrollFromConfig() {
 	mode := scrollModeFromConfig(a.config.UI.ScrollMode)
 	margin := a.config.UI.ScrollEdgeMargin
-	a.model.Left.ScrollMode = mode
-	a.model.Right.ScrollMode = mode
-	a.model.Left.ScrollEdgeMargin = margin
-	a.model.Right.ScrollEdgeMargin = margin
+	a.model.Primary.ScrollMode = mode
+	a.model.Secondary.ScrollMode = mode
+	a.model.Primary.ScrollEdgeMargin = margin
+	a.model.Secondary.ScrollEdgeMargin = margin
 }
 
 func (a *App) switchPanel() {
@@ -45,18 +45,18 @@ func (a *App) switchPanel() {
 func (a *App) switchPanelSwap() {
 	if a.model.HideInactivePanel {
 		a.model.HideInactivePanel = false
-		if a.model.ActivePanel == ui.LeftPanel {
-			a.model.ActivePanel = ui.RightPanel
+		if a.model.ActivePanel == ui.PrimaryPanel {
+			a.model.ActivePanel = ui.SecondaryPanel
 		} else {
-			a.model.ActivePanel = ui.LeftPanel
+			a.model.ActivePanel = ui.PrimaryPanel
 		}
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 		return
 	}
-	if a.model.ActivePanel == ui.LeftPanel {
-		a.model.ActivePanel = ui.RightPanel
+	if a.model.ActivePanel == ui.PrimaryPanel {
+		a.model.ActivePanel = ui.SecondaryPanel
 	} else {
-		a.model.ActivePanel = ui.LeftPanel
+		a.model.ActivePanel = ui.PrimaryPanel
 	}
 	a.model.ActiveSubFocus = ui.SubFocusFileList
 }
@@ -99,37 +99,37 @@ func (a *App) toggleHideInactivePanel() {
 }
 
 func (a *App) reloadActive(successMessage string) {
-	if a.model.ActivePanel == ui.LeftPanel {
-		if err := a.model.Left.Refresh(a.activeViewportRows()); err != nil {
+	if a.model.ActivePanel == ui.PrimaryPanel {
+		if err := a.model.Primary.Refresh(a.activeViewportRows()); err != nil {
 			a.setErrorMessage("Refresh failed", err)
 			return
 		}
-		a.requestVolumeSpaceRefreshAsync(ui.RightPanel)
+		a.requestVolumeSpaceRefreshAsync(ui.SecondaryPanel)
 		a.syncOpenPathInputsAfterFSChange()
 		a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 		return
 	}
-	if err := a.model.Right.Refresh(a.activeViewportRows()); err != nil {
+	if err := a.model.Secondary.Refresh(a.activeViewportRows()); err != nil {
 		a.setErrorMessage("Refresh failed", err)
 		return
 	}
-	a.requestVolumeSpaceRefreshAsync(ui.LeftPanel)
+	a.requestVolumeSpaceRefreshAsync(ui.PrimaryPanel)
 	a.syncOpenPathInputsAfterFSChange()
 	a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 }
 
 func (a *App) activePanel() *panel.State {
-	if a.model.ActivePanel == ui.LeftPanel {
-		return &a.model.Left
+	if a.model.ActivePanel == ui.PrimaryPanel {
+		return &a.model.Primary
 	}
-	return &a.model.Right
+	return &a.model.Secondary
 }
 
 func (a *App) panelByID(panelID int) *panel.State {
-	if panelID == ui.LeftPanel {
-		return &a.model.Left
+	if panelID == ui.PrimaryPanel {
+		return &a.model.Primary
 	}
-	return &a.model.Right
+	return &a.model.Secondary
 }
 
 func (a *App) activeViewportRows() int {
@@ -142,18 +142,18 @@ func (a *App) panelViewportRows(panelID int) int {
 	if layout.TooSmall {
 		return 0
 	}
-	col := layout.Left
-	p := &a.model.Left
-	if panelID == ui.RightPanel {
-		col = layout.Right
-		p = &a.model.Right
+	col := layout.Primary
+	p := &a.model.Primary
+	if panelID == ui.SecondaryPanel {
+		col = layout.Secondary
+		p = &a.model.Secondary
 	}
 	return ui.FileListViewportRows(col, p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open, a.model.SelectionsPanelMaxRows)
 }
 
 func (a *App) wireFileListViewportRows() {
-	a.model.Left.FileListViewportRows = func() int { return a.panelViewportRows(ui.LeftPanel) }
-	a.model.Right.FileListViewportRows = func() int { return a.panelViewportRows(ui.RightPanel) }
+	a.model.Primary.FileListViewportRows = func() int { return a.panelViewportRows(ui.PrimaryPanel) }
+	a.model.Secondary.FileListViewportRows = func() int { return a.panelViewportRows(ui.SecondaryPanel) }
 }
 
 func (a *App) selectionsStripViewportRows(panelID int) int {
@@ -162,11 +162,11 @@ func (a *App) selectionsStripViewportRows(panelID int) int {
 	if layout.TooSmall {
 		return 0
 	}
-	col := layout.Left
-	p := &a.model.Left
-	if panelID == ui.RightPanel {
-		col = layout.Right
-		p = &a.model.Right
+	col := layout.Primary
+	p := &a.model.Primary
+	if panelID == ui.SecondaryPanel {
+		col = layout.Secondary
+		p = &a.model.Secondary
 	}
 	stripN := ui.SelectionsStripLayoutItemCount(p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open)
 	_, stripCol := ui.SplitPanelColumn(col, stripN, a.model.SelectionsPanelMaxRows, 3)
@@ -266,7 +266,7 @@ func (a *App) toggleSyncFollow() {
 	arrow := "→"
 	driver := "Left"
 	follower := "Right"
-	if active == ui.RightPanel {
+	if active == ui.SecondaryPanel {
 		arrow = "←"
 		driver = "Right"
 		follower = "Left"
@@ -284,16 +284,16 @@ func (a *App) toggleSyncFollow() {
 // consistent). New invariants belong here, not sprinkled at call sites: any code path
 // that mutates panel state automatically triggers them via the Run-loop chokepoint.
 func (a *App) reconcileAfterEvent() {
-	a.reconcileSelectionSizeScans(ui.LeftPanel)
-	a.reconcileSelectionSizeScans(ui.RightPanel)
+	a.reconcileSelectionSizeScans(ui.PrimaryPanel)
+	a.reconcileSelectionSizeScans(ui.SecondaryPanel)
 	a.reconcileDeleteDialogScans()
 	a.reconcileFindDialogSelectionSizeScans()
-	a.handlePanelDirChanged(ui.LeftPanel)
-	a.handlePanelDirChanged(ui.RightPanel)
-	a.handleMetaPanelDirChanged(ui.LeftPanel)
-	a.handleMetaPanelDirChanged(ui.RightPanel)
-	a.reconcileMetaForContentChanges(ui.LeftPanel)
-	a.reconcileMetaForContentChanges(ui.RightPanel)
+	a.handlePanelDirChanged(ui.PrimaryPanel)
+	a.handlePanelDirChanged(ui.SecondaryPanel)
+	a.handleMetaPanelDirChanged(ui.PrimaryPanel)
+	a.handleMetaPanelDirChanged(ui.SecondaryPanel)
+	a.reconcileMetaForContentChanges(ui.PrimaryPanel)
+	a.reconcileMetaForContentChanges(ui.SecondaryPanel)
 	// Panel sync reads the driver's highlight after idle-sort / meta hooks may adjust cursors.
 	if !a.syncFollowNavSkipReconcile.Load() {
 		a.syncFollowFromActive()
@@ -524,31 +524,31 @@ func (a *App) ensurePanelsVisible() {
 	width, height := a.screen.Size()
 	layout := a.layoutForTerminalSize(width, height)
 	if layout.TooSmall {
-		a.model.Left.EnsureCursorInViewport(0)
-		a.model.Right.EnsureCursorInViewport(0)
+		a.model.Primary.EnsureCursorInViewport(0)
+		a.model.Secondary.EnsureCursorInViewport(0)
 		return
 	}
-	a.model.Left.EnsureCursorInViewport(a.panelViewportRows(ui.LeftPanel))
-	a.model.Right.EnsureCursorInViewport(a.panelViewportRows(ui.RightPanel))
+	a.model.Primary.EnsureCursorInViewport(a.panelViewportRows(ui.PrimaryPanel))
+	a.model.Secondary.EnsureCursorInViewport(a.panelViewportRows(ui.SecondaryPanel))
 }
 
 func panelLabel(panelID int) string {
-	if panelID == ui.LeftPanel {
-		return "Left panel"
+	if panelID == ui.PrimaryPanel {
+		return "Primary panel"
 	}
-	return "Right panel"
+	return "Secondary panel"
 }
 
 func (a *App) inactivePanel() *panel.State {
-	if a.model.ActivePanel == ui.LeftPanel {
-		return &a.model.Right
+	if a.model.ActivePanel == ui.PrimaryPanel {
+		return &a.model.Secondary
 	}
-	return &a.model.Left
+	return &a.model.Primary
 }
 
 func (a *App) inactivePanelID() int {
-	if a.model.ActivePanel == ui.LeftPanel {
-		return ui.RightPanel
+	if a.model.ActivePanel == ui.PrimaryPanel {
+		return ui.SecondaryPanel
 	}
-	return ui.LeftPanel
+	return ui.PrimaryPanel
 }

@@ -27,7 +27,7 @@ type Item struct {
 // Definition describes one top-level pulldown menu.
 type Definition struct {
 	ID         TopID
-	PanelScope int // PanelScopeNone, or PanelScopeLeft / PanelScopeRight
+	PanelScope int // PanelScopeNone, or PanelScopePrimary / PanelScopeSecondary
 	Label      string
 	Shortcut   rune
 	Items      []Item
@@ -115,7 +115,7 @@ func Definitions() []Definition {
 	return []Definition{
 		{
 			ID:         TopPanelLeft,
-			PanelScope: PanelScopeLeft,
+			PanelScope: PanelScopePrimary,
 			Label:      "Left",
 			Shortcut:   'l',
 			Items: []Item{
@@ -188,7 +188,7 @@ func Definitions() []Definition {
 		},
 		{
 			ID:         TopPanelRight,
-			PanelScope: PanelScopeRight,
+			PanelScope: PanelScopeSecondary,
 			Label:      "Right",
 			Shortcut:   'r',
 			Items: []Item{

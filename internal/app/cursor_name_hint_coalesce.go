@@ -33,6 +33,6 @@ func (a *App) armCursorNameHintNavCoalesceAfterListNav() {
 // syncCursorNameHintNavCoalesceFlags propagates the atomic skip flag into panel state before painting.
 func (a *App) syncCursorNameHintNavCoalesceFlags() {
 	skip := a.cursorNameHintNavSkip.Load()
-	a.model.Left.CursorNameHintCoalesce = skip && a.model.ActivePanel == ui.LeftPanel
-	a.model.Right.CursorNameHintCoalesce = skip && a.model.ActivePanel == ui.RightPanel
+	a.model.Primary.CursorNameHintCoalesce = skip && a.model.ActivePanel == ui.PrimaryPanel
+	a.model.Secondary.CursorNameHintCoalesce = skip && a.model.ActivePanel == ui.SecondaryPanel
 }

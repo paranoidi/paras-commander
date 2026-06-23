@@ -18,15 +18,15 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Help", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	inputWidth := metrics.InputWidth
 	listH := metrics.ListH
 
 	// Filter label.
-	primitive.Text(screen, leftCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
+	primitive.Text(screen, primaryCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
 
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, "", filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+3, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, "", filterFocused, false, styles)
 
 	// Separator before list.
 	sepBeforeList := rect.Y + 4
@@ -39,7 +39,7 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	if n := len([]rune(headerLine)); n > inputWidth {
 		headerLine = string([]rune(headerLine)[:inputWidth])
 	}
-	primitive.Text(screen, leftCol, listTop, inputWidth, headerLine, headerStyle)
+	primitive.Text(screen, primaryCol, listTop, inputWidth, headerLine, headerStyle)
 
 	// List rows.
 	rowWidth := inputWidth
@@ -73,7 +73,7 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 		matchStyle = matchStyle.Background(rowBg)
 
 		rendered, spans := helpRowContent(line, ranges, rowWidth, matchStyle)
-		primitive.StyledText(screen, leftCol, y, rowWidth, rendered, baseStyle, spans)
+		primitive.StyledText(screen, primaryCol, y, rowWidth, rendered, baseStyle, spans)
 	}
 
 	// Separator after list.

@@ -47,7 +47,7 @@ func (a *App) ensureMessagesViewSelectionVisible() {
 		a.model.MessagesView.EnsureSelectionVisible(n, 0)
 		return
 	}
-	rect := ui.MergeTwinPanelRects(layout.Left, layout.Right)
+	rect := ui.MergeTwinPanelRects(layout.Primary, layout.Secondary)
 	visible := ui.PanelListRows(rect)
 	a.model.MessagesView.EnsureSelectionVisible(n, visible)
 }

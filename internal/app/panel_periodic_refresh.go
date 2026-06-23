@@ -41,8 +41,8 @@ func (a *App) handlePanelRefreshTick() {
 	if a.model.ViewMode != ui.ViewBrowser || a.model.ModalDialogOpen() {
 		return
 	}
-	a.schedulePanelListingRefresh(ui.LeftPanel)
-	a.schedulePanelListingRefresh(ui.RightPanel)
+	a.schedulePanelListingRefresh(ui.PrimaryPanel)
+	a.schedulePanelListingRefresh(ui.SecondaryPanel)
 }
 
 func (a *App) schedulePanelListingRefresh(panelID int) {
@@ -50,7 +50,7 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 	if p == nil || p.Path.IsZero() || p.ListingPending {
 		return
 	}
-	if panelID < 0 || panelID > ui.RightPanel {
+	if panelID < 0 || panelID > ui.SecondaryPanel {
 		return
 	}
 	if !a.panelRefreshInFlight[panelID].CompareAndSwap(false, true) {

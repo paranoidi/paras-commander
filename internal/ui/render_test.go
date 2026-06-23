@@ -117,15 +117,15 @@ func TestRenderDrawsOpenInOtherPanelIcon(t *testing.T) {
 
 	openGlyph := theme.Default().FolderIconGlyph(theme.FolderIconOpen)
 	model := Model{
-		Left: panel.State{
+		Primary: panel.State{
 			Path: pathloc.MustParse("/tmp"),
 			Entries: []localfs.Entry{{
 				Name: "child", Path: "/tmp/child", Type: localfs.EntryDirectory,
 			}},
 			Cursor: 0,
 		},
-		Right:         panel.State{Path: pathloc.MustParse("/tmp/child")},
-		ActivePanel:   LeftPanel,
+		Secondary:     panel.State{Path: pathloc.MustParse("/tmp/child")},
+		ActivePanel:   PrimaryPanel,
 		ShowFileIcons: true,
 	}
 	Render(screen, model, theme.Default())
@@ -240,14 +240,14 @@ func TestRenderUsesYellowForegroundForSelectedEntry(t *testing.T) {
 	styles := theme.Default()
 	selected := localfs.Entry{Name: "a.txt", Path: "/tmp/a.txt"}
 	model := Model{
-		Left: panel.State{
+		Primary: panel.State{
 			Path:          pathloc.MustParse("/tmp"),
 			Entries:       []localfs.Entry{selected, localfs.Entry{Name: "b.txt", Path: "/tmp/b.txt"}},
 			Cursor:        1,
 			SelectedPaths: map[string]bool{selected.Path: true},
 		},
-		Right:       panel.State{Path: pathloc.MustParse("/tmp")},
-		ActivePanel: LeftPanel,
+		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
+		ActivePanel: PrimaryPanel,
 	}
 
 	Render(screen, model, styles)
@@ -267,9 +267,9 @@ func TestRenderPanelTitleLeavesBorderAfterSingleTrailingSpace(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 	}
 
 	styles := theme.Default()
@@ -281,7 +281,7 @@ func TestRenderPanelTitleLeavesBorderAfterSingleTrailingSpace(t *testing.T) {
 	}
 }
 
-func TestRenderDrawsLeftPanelPulldownWithKeymapLabels(t *testing.T) {
+func TestRenderDrawsPrimaryPanelPulldownWithKeymapLabels(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -294,9 +294,9 @@ func TestRenderDrawsLeftPanelPulldownWithKeymapLabels(t *testing.T) {
 		t.Fatalf("keymap.Default: %v", err)
 	}
 	model := Model{
-		Left:            panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:           panel.State{Path: pathloc.MustParse("/tmp")},
-		ActivePanel:     LeftPanel,
+		Primary:         panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:       panel.State{Path: pathloc.MustParse("/tmp")},
+		ActivePanel:     PrimaryPanel,
 		MenuDefinitions: menu.BrowserDefinitions(km, false),
 		Menu: menu.State{
 			Open:         true,
@@ -330,9 +330,9 @@ func TestRenderDrawsFilePulldownMenu(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	model := Model{
-		Left:            panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:           panel.State{Path: pathloc.MustParse("/tmp")},
-		ActivePanel:     LeftPanel,
+		Primary:         panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:       panel.State{Path: pathloc.MustParse("/tmp")},
+		ActivePanel:     PrimaryPanel,
 		MenuDefinitions: testBrowserMenuDefinitions(t),
 		Menu: menu.State{
 			Open:         true,
@@ -381,9 +381,9 @@ func TestRenderUsesBlockedPanelFrameWhenMenuOpen(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/tmp")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
+		ActivePanel: PrimaryPanel,
 		Menu: menu.State{
 			Open: true,
 		},
@@ -407,12 +407,12 @@ func TestRenderUsesBlockedPanelFrameWhenSortDialogOpen(t *testing.T) {
 	screen.SetSize(80, 24)
 
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/tmp")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
+		ActivePanel: PrimaryPanel,
 		SortDialog: SortDialogState{
 			Open:    true,
-			PanelID: LeftPanel,
+			PanelID: PrimaryPanel,
 		},
 	}
 
@@ -434,12 +434,12 @@ func TestRenderUsesBlockedPanelFrameWhenListingFormatDialogOpen(t *testing.T) {
 	screen.SetSize(80, 24)
 
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/tmp")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
+		ActivePanel: PrimaryPanel,
 		ListingFormatDialog: ListingFormatDialogState{
 			Open:    true,
-			PanelID: LeftPanel,
+			PanelID: PrimaryPanel,
 		},
 	}
 
@@ -452,7 +452,7 @@ func TestRenderUsesBlockedPanelFrameWhenListingFormatDialogOpen(t *testing.T) {
 	}
 }
 
-func TestRenderThemeDialogPreviewShowsActiveUnblockedLeftPanel(t *testing.T) {
+func TestRenderThemeDialogPreviewShowsActiveUnblockedPrimaryPanel(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -463,13 +463,13 @@ func TestRenderThemeDialogPreviewShowsActiveUnblockedLeftPanel(t *testing.T) {
 	styles := theme.Default()
 	leftEntry := localfs.Entry{Name: "a.txt", Path: "/tmp/a.txt"}
 	model := Model{
-		Left: panel.State{
+		Primary: panel.State{
 			Path:    pathloc.MustParse("/tmp"),
 			Entries: []localfs.Entry{leftEntry},
 			Cursor:  0,
 		},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: RightPanel,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: SecondaryPanel,
 		ThemeDialog: ThemeDialogState{
 			Open:        true,
 			CurrentName: "default",
@@ -499,9 +499,9 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 	width, _ := screen.Size()
 
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 		ThemeDialog: ThemeDialogState{
 			Open:        true,
 			Selected:    1,
@@ -543,9 +543,9 @@ func TestRenderDrawsMessageDialog(t *testing.T) {
 	width, _ := screen.Size()
 
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 		MessageDialog: MessageDialogState{
 			Open:    true,
 			Title:   "Error",
@@ -599,9 +599,9 @@ func TestRenderBlankMenuBarRowWhenFullscreenFilePreview(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:                      panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:                     panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:               LeftPanel,
+		Primary:                   panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:                 panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:               PrimaryPanel,
 		ViewMode:                  ViewFilePreview,
 		FullscreenFilePreviewDraw: FilePreviewState{Open: true, Phase: FilePreviewPhaseDone, CombinedText: "hi\n"},
 	}
@@ -625,9 +625,9 @@ func TestRenderBlankMenuBarRowWhenModalDialogOpen(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 		FileDialog: FileDialogState{
 			Open:       true,
 			DialogType: FileDialogMkdir,
@@ -698,13 +698,13 @@ func TestRenderMenuBarShowsActiveFilePermissionString(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left: panel.State{
+		Primary: panel.State{
 			Path:    pathloc.MustParse("/tmp"),
 			Entries: []localfs.Entry{{Name: "d", Path: "/tmp/d", Type: localfs.EntryDirectory, Mode: mode}},
 			Cursor:  0,
 		},
-		Right:             panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:       LeftPanel,
+		Secondary:         panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:       PrimaryPanel,
 		MenuDefinitions:   testBrowserMenuDefinitions(t),
 		Menu:              menu.State{ActiveMenu: menu.DefaultIndex()},
 		MenuBarPermission: want,
@@ -740,13 +740,13 @@ func TestRenderMenuBarShowsActivitySpinnerAfterPermission(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left: panel.State{
+		Primary: panel.State{
 			Path:    pathloc.MustParse("/tmp"),
 			Entries: []localfs.Entry{{Name: "d", Path: "/tmp/d", Type: localfs.EntryDirectory, Mode: mode}},
 			Cursor:  0,
 		},
-		Right:                  panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:            LeftPanel,
+		Secondary:              panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:            PrimaryPanel,
 		MenuDefinitions:        testBrowserMenuDefinitions(t),
 		Menu:                   menu.State{ActiveMenu: menu.DefaultIndex()},
 		MenuBarPermission:      perm,
@@ -800,9 +800,9 @@ func TestRenderTransientStatusAboveFooterAfterThemeDialog(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 		ThemeDialog: ThemeDialogState{
 			Open:     true,
 			Selected: 0,
@@ -978,9 +978,9 @@ func TestRenderDrawsStatusMessage(t *testing.T) {
 	const width = 80
 
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 		Message:     "Refreshed",
 	}
 
@@ -1024,13 +1024,13 @@ func TestRenderStatusMessageDoesNotOverlayMenuBarPermission(t *testing.T) {
 	perm := localfs.UnixModeString(mode)
 
 	model := Model{
-		Left: panel.State{
+		Primary: panel.State{
 			Path:    pathloc.MustParse("/tmp"),
 			Entries: []localfs.Entry{{Name: "d", Path: "/tmp/d", Type: localfs.EntryDirectory, Mode: mode}},
 			Cursor:  0,
 		},
-		Right:             panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:       LeftPanel,
+		Secondary:         panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:       PrimaryPanel,
 		MenuDefinitions:   testBrowserMenuDefinitions(t),
 		Menu:              menu.State{ActiveMenu: menu.DefaultIndex()},
 		MenuBarPermission: perm,
@@ -1061,9 +1061,9 @@ func TestRenderStatusMessageUsesUrgencyStyle(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	model := Model{
-		Left:           panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:          panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:    LeftPanel,
+		Primary:        panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:      panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:    PrimaryPanel,
 		Message:        "o_O",
 		MessageUrgency: MessageUrgencyWarn,
 	}
@@ -1087,9 +1087,9 @@ func TestRenderStatusMessageLeavesMenuLabelsVisible(t *testing.T) {
 	screen.SetSize(80, 12)
 
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 		Message:     "Hi",
 	}
 	styles := theme.Default()
@@ -1132,9 +1132,9 @@ func TestRenderDrawsPanelLocalFuzzyInputOverlay(t *testing.T) {
 		left.AppendFilterRune(r, 5)
 	}
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 	}
 
 	Render(screen, model, theme.Default())
@@ -1168,9 +1168,9 @@ func TestRenderFuzzyInputUsesNomatchStyleWhenNoMatches(t *testing.T) {
 	}
 	styles := theme.Default()
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 	}
 
 	Render(screen, model, styles)
@@ -1201,9 +1201,9 @@ func TestRenderHighlightsFilterMatches(t *testing.T) {
 	}
 	styles := theme.Default()
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 	}
 
 	Render(screen, model, styles)
@@ -1226,21 +1226,21 @@ func TestRenderDrawsSyncIndicatorOnLeftDriverBottomBorder(t *testing.T) {
 	screen.SetSize(width, height)
 
 	model := Model{
-		Left:              panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:             panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:       LeftPanel,
+		Primary:           panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:         panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:       PrimaryPanel,
 		SyncFollowEnabled: true,
-		SyncFollowPanel:   LeftPanel,
+		SyncFollowPanel:   PrimaryPanel,
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if !strings.Contains(leftBottom, "Sync →") {
 		t.Fatalf("left bottom border = %q, want it to contain %q", leftBottom, "Sync →")
 	}
-	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	rightBottom := tcelltest.TextAt(screen, primaryWidth, bottomY, width-primaryWidth)
 	if strings.Contains(rightBottom, "Sync") {
 		t.Fatalf("right bottom border = %q, want no Sync indicator on the follower", rightBottom)
 	}
@@ -1256,21 +1256,21 @@ func TestRenderDrawsSyncIndicatorOnRightDriverBottomBorder(t *testing.T) {
 	screen.SetSize(width, height)
 
 	model := Model{
-		Left:              panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:             panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:       RightPanel,
+		Primary:           panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:         panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:       SecondaryPanel,
 		SyncFollowEnabled: true,
-		SyncFollowPanel:   RightPanel,
+		SyncFollowPanel:   SecondaryPanel,
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	rightBottom := tcelltest.TextAt(screen, primaryWidth, bottomY, width-primaryWidth)
 	if !strings.Contains(rightBottom, "← Sync") {
 		t.Fatalf("right bottom border = %q, want it to contain %q", rightBottom, "← Sync")
 	}
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, "Sync") {
 		t.Fatalf("left bottom border = %q, want no Sync indicator on the follower", leftBottom)
 	}
@@ -1286,21 +1286,21 @@ func TestRenderDrawsQuickViewIndicatorOnLeftActivePanel(t *testing.T) {
 	screen.SetSize(width, height)
 
 	model := Model{
-		Left:             panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:            panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:      LeftPanel,
+		Primary:          panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:        panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:      PrimaryPanel,
 		QuickViewEnabled: true,
-		QuickViewPanel:   LeftPanel,
+		QuickViewPanel:   PrimaryPanel,
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if !strings.Contains(leftBottom, "Quick view →") {
 		t.Fatalf("left bottom border = %q, want it to contain %q", leftBottom, "Quick view →")
 	}
-	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	rightBottom := tcelltest.TextAt(screen, primaryWidth, bottomY, width-primaryWidth)
 	if strings.Contains(rightBottom, "Quick view") {
 		t.Fatalf("right bottom border = %q, want no Quick view indicator on inactive panel", rightBottom)
 	}
@@ -1316,21 +1316,21 @@ func TestRenderDrawsQuickViewIndicatorOnDriverWhenOtherPanelActive(t *testing.T)
 	screen.SetSize(width, height)
 
 	model := Model{
-		Left:             panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:            panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:      RightPanel,
+		Primary:          panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:        panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:      SecondaryPanel,
 		QuickViewEnabled: true,
-		QuickViewPanel:   LeftPanel,
+		QuickViewPanel:   PrimaryPanel,
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if !strings.Contains(leftBottom, "Quick view →") {
 		t.Fatalf("left bottom border = %q, want quick view indicator on latched driver panel", leftBottom)
 	}
-	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	rightBottom := tcelltest.TextAt(screen, primaryWidth, bottomY, width-primaryWidth)
 	if strings.Contains(rightBottom, "Quick view") {
 		t.Fatalf("right bottom border = %q, want no quick view indicator on active non-driver panel", rightBottom)
 	}
@@ -1346,21 +1346,21 @@ func TestRenderDrawsQuickViewIndicatorOnRightActivePanel(t *testing.T) {
 	screen.SetSize(width, height)
 
 	model := Model{
-		Left:             panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:            panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:      RightPanel,
+		Primary:          panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:        panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:      SecondaryPanel,
 		QuickViewEnabled: true,
-		QuickViewPanel:   RightPanel,
+		QuickViewPanel:   SecondaryPanel,
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	rightBottom := tcelltest.TextAt(screen, primaryWidth, bottomY, width-primaryWidth)
 	if !strings.Contains(rightBottom, "← Quick view") {
 		t.Fatalf("right bottom border = %q, want it to contain %q", rightBottom, "← Quick view")
 	}
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, "Quick view") {
 		t.Fatalf("left bottom border = %q, want no Quick view indicator on inactive panel", leftBottom)
 	}
@@ -1376,15 +1376,15 @@ func TestRenderOmitsQuickViewIndicatorWhenDisabled(t *testing.T) {
 	screen.SetSize(width, height)
 
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, "Quick view") {
 		t.Fatalf("left bottom border = %q, want no Quick view indicator when off", leftBottom)
 	}
@@ -1401,11 +1401,11 @@ func TestRenderQuickViewPreviewTitleShowsPathAndFilename(t *testing.T) {
 
 	projects := "/home/user/projects"
 	model := Model{
-		Left:             panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:            panel.State{Path: pathloc.MustParse(projects)},
-		ActivePanel:      LeftPanel,
+		Primary:          panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:        panel.State{Path: pathloc.MustParse(projects)},
+		ActivePanel:      PrimaryPanel,
 		QuickViewEnabled: true,
-		QuickViewPanel:   LeftPanel,
+		QuickViewPanel:   PrimaryPanel,
 		FilePreviewDraw: FilePreviewState{
 			Open:      true,
 			Phase:     FilePreviewPhaseDone,
@@ -1416,8 +1416,8 @@ func TestRenderQuickViewPreviewTitleShowsPathAndFilename(t *testing.T) {
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
-	topRow := tcelltest.TextAt(screen, leftWidth, 1, width-leftWidth)
+	primaryWidth := width / 2
+	topRow := tcelltest.TextAt(screen, primaryWidth, 1, width-primaryWidth)
 	if !strings.Contains(topRow, "projects") {
 		t.Fatalf("inactive title row = %q, want directory path segment", topRow)
 	}
@@ -1440,11 +1440,11 @@ func TestRenderQuickViewUsesPreviewChromeWhenDrawClosed(t *testing.T) {
 
 	projects := "/home/user/projects"
 	model := Model{
-		Left:             panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:            panel.State{Path: pathloc.MustParse(projects)},
-		ActivePanel:      LeftPanel,
+		Primary:          panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:        panel.State{Path: pathloc.MustParse(projects)},
+		ActivePanel:      PrimaryPanel,
 		QuickViewEnabled: true,
-		QuickViewPanel:   LeftPanel,
+		QuickViewPanel:   PrimaryPanel,
 		FilePreviewDraw: FilePreviewState{
 			Open:      false,
 			TitleBase: "readme.md",
@@ -1453,8 +1453,8 @@ func TestRenderQuickViewUsesPreviewChromeWhenDrawClosed(t *testing.T) {
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
-	topRow := tcelltest.TextAt(screen, leftWidth, 1, width-leftWidth)
+	primaryWidth := width / 2
+	topRow := tcelltest.TextAt(screen, primaryWidth, 1, width-primaryWidth)
 	if strings.Contains(topRow, " / ") && strings.Contains(topRow, "%") {
 		t.Fatalf("inactive title row = %q, want preview chrome not volume stats", topRow)
 	}
@@ -1473,9 +1473,9 @@ func TestRenderHideInactivePanelFullWidthAndOtherPathIndicator(t *testing.T) {
 	screen.SetSize(width, height)
 
 	model := Model{
-		Left:              panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:             panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:       LeftPanel,
+		Primary:           panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:         panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:       PrimaryPanel,
 		HideInactivePanel: true,
 	}
 	Render(screen, model, theme.Default())
@@ -1500,17 +1500,17 @@ func TestRenderOmitsSyncIndicatorWhenDisabled(t *testing.T) {
 	screen.SetSize(width, height)
 
 	// Note: zero value of SyncFollowEnabled is false; SyncFollowPanel zero value
-	// (== LeftPanel) must NOT trigger the indicator on its own.
+	// (== PrimaryPanel) must NOT trigger the indicator on its own.
 	model := Model{
-		Left:        panel.State{Path: pathloc.MustParse("/tmp")},
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, "Sync") {
 		t.Fatalf("left bottom border = %q, want no Sync indicator when sync is off", leftBottom)
 	}
@@ -1540,20 +1540,20 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
 	}
 
 	model := Model{
-		Left:        left,
-		Right:       right,
-		ActivePanel: RightPanel,
+		Primary:     left,
+		Secondary:   right,
+		ActivePanel: SecondaryPanel,
 	}
 	styles := theme.Default()
 	Render(screen, model, styles)
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if !strings.Contains(leftBottom, " Selections ") {
 		t.Fatalf("inactive left bottom = %q, want substring %q", leftBottom, " Selections ")
 	}
-	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	rightBottom := tcelltest.TextAt(screen, primaryWidth, bottomY, width-primaryWidth)
 	if strings.Contains(rightBottom, " Selections ") {
 		t.Fatalf("active right bottom = %q, want no selections hint on active column", rightBottom)
 	}
@@ -1596,16 +1596,16 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
 	}
 
 	model := Model{
-		Left:        left,
-		Right:       right,
-		ActivePanel: LeftPanel,
+		Primary:     left,
+		Secondary:   right,
+		ActivePanel: PrimaryPanel,
 	}
 	styles := theme.Default()
 	Render(screen, model, styles)
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	rightBottom := tcelltest.TextAt(screen, leftWidth, bottomY, width-leftWidth)
+	rightBottom := tcelltest.TextAt(screen, primaryWidth, bottomY, width-primaryWidth)
 	if !strings.Contains(rightBottom, " Selections ") {
 		t.Fatalf("inactive right bottom = %q, want substring %q", rightBottom, " Selections ")
 	}
@@ -1645,15 +1645,15 @@ func TestRenderOmitsSelectionsBottomHintWhenStripVisible(t *testing.T) {
 	}
 
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, " Selections ") {
 		t.Fatalf("left column bottom = %q, want no file-panel selections hint when strip is visible", leftBottom)
 	}
@@ -1679,27 +1679,27 @@ func TestRenderSelectionSizeOnSelectionsStripBottom(t *testing.T) {
 	}
 
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: LeftPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
 	}
 	styles := theme.Default()
 	Render(screen, model, styles)
 
 	layout := CalculateLayout(width, height, true, PanelWidthSplit{})
-	stripN := SelectionsStripLayoutItemCount(&model.Left, LeftPanel, model.ActivePanel, false)
+	stripN := SelectionsStripLayoutItemCount(&model.Primary, PrimaryPanel, model.ActivePanel, false)
 	if stripN == 0 {
 		t.Fatal("stripN = 0, want selections strip visible")
 	}
-	leftFile, leftStrip := SplitPanelColumn(layout.Left, stripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
+	primaryFile, leftStrip := SplitPanelColumn(layout.Primary, stripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
 	if leftStrip.Height == 0 {
 		t.Fatal("leftStrip.Height = 0, want visible strip")
 	}
 
-	fileBottomY := leftFile.Y + leftFile.Height - 1
+	fileBottomY := primaryFile.Y + primaryFile.Height - 1
 	stripBottomY := leftStrip.Y + leftStrip.Height - 1
 	stripTopY := leftStrip.Y
-	fileBottom := tcelltest.TextAt(screen, leftFile.X, fileBottomY, leftFile.Width)
+	fileBottom := tcelltest.TextAt(screen, primaryFile.X, fileBottomY, primaryFile.Width)
 	stripTop := tcelltest.TextAt(screen, leftStrip.X, stripTopY, leftStrip.Width)
 	stripBottom := tcelltest.TextAt(screen, leftStrip.X, stripBottomY, leftStrip.Width)
 	if strings.Contains(fileBottom, " items (") {
@@ -1751,16 +1751,16 @@ func TestRenderDrawsGitignoreBottomHint(t *testing.T) {
 		GitignoreActive: true,
 	}
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: RightPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: SecondaryPanel,
 	}
 	styles := theme.Default()
 	Render(screen, model, styles)
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if !strings.Contains(leftBottom, " Gitignore ") {
 		t.Fatalf("left bottom = %q, want substring %q", leftBottom, " Gitignore ")
 	}
@@ -1794,15 +1794,15 @@ func TestRenderOmitsGitignoreBottomHintOutsideWorkTree(t *testing.T) {
 		GitignoreActive: false,
 	}
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: RightPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: SecondaryPanel,
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, " Gitignore ") {
 		t.Fatalf("left bottom = %q, want no gitignore hint outside a Git work tree", leftBottom)
 	}
@@ -1825,15 +1825,15 @@ func TestRenderDrawsDotfilesHiddenBottomHint(t *testing.T) {
 		DotfilesHiddenActive: true,
 	}
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: RightPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: SecondaryPanel,
 	}
 	Render(screen, model, styles)
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if !strings.Contains(leftBottom, sym) {
 		t.Fatalf("left bottom = %q, want dotfiles-hidden glyph %q", leftBottom, sym)
 	}
@@ -1857,15 +1857,15 @@ func TestRenderOmitsDotfilesHiddenBottomHintWhenShowHidden(t *testing.T) {
 		DotfilesHiddenActive: true,
 	}
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: RightPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: SecondaryPanel,
 	}
 	Render(screen, model, styles)
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, sym) {
 		t.Fatalf("left bottom = %q, want no dotfiles-hidden glyph when show hidden is on", leftBottom)
 	}
@@ -1887,15 +1887,15 @@ func TestRenderOmitsDotfilesHiddenBottomHintWhenInactive(t *testing.T) {
 		Entries: []localfs.Entry{{Name: "a.txt", Path: "/tmp/a.txt"}},
 	}
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: RightPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: SecondaryPanel,
 	}
 	Render(screen, model, styles)
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, sym) {
 		t.Fatalf("left bottom = %q, want no dotfiles-hidden glyph when inactive", leftBottom)
 	}
@@ -1918,15 +1918,15 @@ func TestRenderOmitsGitignoreBottomHintWhenShowHidden(t *testing.T) {
 		GitignoreActive: false,
 	}
 	model := Model{
-		Left:        left,
-		Right:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel: RightPanel,
+		Primary:     left,
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: SecondaryPanel,
 	}
 	Render(screen, model, theme.Default())
 
-	leftWidth := width / 2
+	primaryWidth := width / 2
 	bottomY := height - 2
-	leftBottom := tcelltest.TextAt(screen, 0, bottomY, leftWidth)
+	leftBottom := tcelltest.TextAt(screen, 0, bottomY, primaryWidth)
 	if strings.Contains(leftBottom, " Gitignore ") {
 		t.Fatalf("left bottom = %q, want no gitignore hint when show hidden is on", leftBottom)
 	}

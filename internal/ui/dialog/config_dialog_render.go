@@ -37,10 +37,10 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Configuration", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 
-	leftCol := draw.DialogTextX(rect)
+	primaryCol := draw.DialogTextX(rect)
 	leftOptionCol := draw.DialogOptionX(rect)
 	y := rect.Y + 1
-	primitive.Text(screen, leftCol, y, rect.Width-4, "View options:", styles.DialogText.Background(dbg))
+	primitive.Text(screen, primaryCol, y, rect.Width-4, "View options:", styles.DialogText.Background(dbg))
 	y++
 	y++
 	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Show file icons", 'f', state.ShowFileIcons, state.Focus == 0, styles)
@@ -57,7 +57,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	sbLabelW := utf8.RuneCountInString(sbLabel)
 	rightLabelCol, rightOptionCol := configDialogScrollbarColumns(rect)
 
-	primitive.Text(screen, leftCol, y, utf8.RuneCountInString(scrollModeLabel), scrollModeLabel, styles.DialogText.Background(dbg))
+	primitive.Text(screen, primaryCol, y, utf8.RuneCountInString(scrollModeLabel), scrollModeLabel, styles.DialogText.Background(dbg))
 	primitive.Text(screen, rightLabelCol, y, sbLabelW, sbLabel, styles.DialogText.Background(dbg))
 	y++
 	y++
@@ -84,7 +84,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
 
-	primitive.Text(screen, leftCol, y, rect.Width-4, "Default listing format:", styles.DialogText.Background(dbg))
+	primitive.Text(screen, primaryCol, y, rect.Width-4, "Default listing format:", styles.DialogText.Background(dbg))
 	y++
 	y++
 

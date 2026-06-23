@@ -22,7 +22,7 @@ type DiskUsagePainter interface {
 	// FileCount returns cached recursive file count for a directory or 1 for a cached file path.
 	FileCount(absPath string) (n int64, ok bool)
 	// PendingForPanel is true when absPath should use the disk-scan folder tint for this panel
-	// (LeftPanel/RightPanel): queued, walking, or under such a root for that panel only.
+	// (PrimaryPanel/SecondaryPanel): queued, walking, or under such a root for that panel only.
 	PendingForPanel(absPath string, panelID int) bool
 	// DiskScanBusy is true while a disk usage scan is queued or walking the filesystem.
 	DiskScanBusy() bool

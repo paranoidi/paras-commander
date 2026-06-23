@@ -79,24 +79,24 @@ file = "echo meta"
 	app := testMetaDialogApp(t, dir, cfgDir)
 	app.model.MetaDialog = ui.MetaDialogState{
 		Open:    true,
-		PanelID: ui.LeftPanel,
+		PanelID: ui.PrimaryPanel,
 		Entries: []ui.MetaEntry{{Name: "mkvinfo", Description: "MKV info"}},
 		Checked: []bool{true},
 		Focus:   0,
 	}
 	app.activateMetaSelection()
 
-	if len(app.metaActiveEntries[ui.LeftPanel]) != 1 || app.metaActiveEntries[ui.LeftPanel][0] != "mkvinfo" {
-		t.Fatalf("metaActiveEntries = %v, want [mkvinfo]", app.metaActiveEntries[ui.LeftPanel])
+	if len(app.metaActiveEntries[ui.PrimaryPanel]) != 1 || app.metaActiveEntries[ui.PrimaryPanel][0] != "mkvinfo" {
+		t.Fatalf("metaActiveEntries = %v, want [mkvinfo]", app.metaActiveEntries[ui.PrimaryPanel])
 	}
-	if len(app.model.MetaResults[ui.LeftPanel]) != 1 {
-		t.Fatalf("MetaResults len = %d, want 1", len(app.model.MetaResults[ui.LeftPanel]))
+	if len(app.model.MetaResults[ui.PrimaryPanel]) != 1 {
+		t.Fatalf("MetaResults len = %d, want 1", len(app.model.MetaResults[ui.PrimaryPanel]))
 	}
-	if app.model.MetaResults[ui.LeftPanel][0].EntryName != "mkvinfo" {
-		t.Fatalf("column = %+v, want mkvinfo", app.model.MetaResults[ui.LeftPanel][0])
+	if app.model.MetaResults[ui.PrimaryPanel][0].EntryName != "mkvinfo" {
+		t.Fatalf("column = %+v, want mkvinfo", app.model.MetaResults[ui.PrimaryPanel][0])
 	}
 
-	app.openMetaDialog(ui.LeftPanel)
+	app.openMetaDialog(ui.PrimaryPanel)
 	if len(app.model.MetaDialog.Checked) != 1 || !app.model.MetaDialog.Checked[0] {
 		t.Fatalf("reopen Checked = %v, want [true]", app.model.MetaDialog.Checked)
 	}

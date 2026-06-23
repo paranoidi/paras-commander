@@ -27,8 +27,8 @@ func (jobsHostStub) RequestBothPanelsVolumeSpaceRefreshAsync()     {}
 func (jobsHostStub) ActivePanel() *panel.State                     { return nil }
 func (jobsHostStub) ActivePanelSources() []string                  { return nil }
 func (jobsHostStub) InactivePanel() *panel.State                   { return nil }
-func (jobsHostStub) LeftPanel() *panel.State                       { return &panel.State{} }
-func (jobsHostStub) RightPanel() *panel.State                      { return &panel.State{} }
+func (jobsHostStub) PrimaryPanel() *panel.State                    { return &panel.State{} }
+func (jobsHostStub) SecondaryPanel() *panel.State                  { return &panel.State{} }
 func (jobsHostStub) OpenTransferDialogSelfCopyRename(ui.TransferKind, string, string) {
 }
 func (jobsHostStub) HandleQuit() bool                           { return false }

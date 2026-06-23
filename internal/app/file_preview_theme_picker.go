@@ -162,7 +162,7 @@ func (a *App) filePreviewThemePickerRect() ui.Rect {
 	if lay.TooSmall {
 		return ui.Rect{}
 	}
-	union := ui.MergeTwinPanelRects(lay.Left, lay.Right)
+	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary)
 	_, picker := ui.SplitFullscreenPreviewRects(union, true, a.model.FilePreviewThemePicker.Choices)
 	return picker
 }
@@ -253,7 +253,7 @@ func (a *App) fullscreenPreviewUnionRect() (ui.Rect, bool) {
 	if lay.TooSmall {
 		return ui.Rect{}, false
 	}
-	return ui.MergeTwinPanelRects(lay.Left, lay.Right), true
+	return ui.MergeTwinPanelRects(lay.Primary, lay.Secondary), true
 }
 
 func (a *App) fullscreenPreviewTextWidth() (int, bool) {

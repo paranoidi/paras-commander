@@ -84,11 +84,11 @@ func (a *App) inactivePanelPreviewLayoutMetrics(filePreviewOpenForLayout bool) (
 		return 1, 0, false
 	}
 	inactiveID := a.inactivePanelID()
-	col := lay.Left
-	p := &a.model.Left
-	if inactiveID == ui.RightPanel {
-		col = lay.Right
-		p = &a.model.Right
+	col := lay.Primary
+	p := &a.model.Primary
+	if inactiveID == ui.SecondaryPanel {
+		col = lay.Secondary
+		p = &a.model.Secondary
 	}
 	stripN := ui.SelectionsStripLayoutItemCount(p, inactiveID, a.model.ActivePanel, a.model.ThemeDialog.Open)
 	fileCol, _ := ui.SplitPanelColumn(col, stripN, a.model.SelectionsPanelMaxRows, ui.MinFileListContentRows)

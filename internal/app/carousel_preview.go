@@ -128,6 +128,6 @@ func (a *App) carouselPreviewHeldListNav(resolvedAction string, event *tcell.Eve
 // syncCarouselChildPreviewCoalesceFlags sets child-preview coalesce before painting carousel columns.
 func (a *App) syncCarouselChildPreviewCoalesceFlags() {
 	coalesce := a.carouselPreviewNavSkipSnapshot.Load() && a.carouselPreviewNavCoalesceContext()
-	a.model.Left.CarouselChildPreviewCoalesce = coalesce && a.model.Left.CarouselMode && a.model.ActivePanel == ui.LeftPanel
-	a.model.Right.CarouselChildPreviewCoalesce = coalesce && a.model.Right.CarouselMode && a.model.ActivePanel == ui.RightPanel
+	a.model.Primary.CarouselChildPreviewCoalesce = coalesce && a.model.Primary.CarouselMode && a.model.ActivePanel == ui.PrimaryPanel
+	a.model.Secondary.CarouselChildPreviewCoalesce = coalesce && a.model.Secondary.CarouselMode && a.model.ActivePanel == ui.SecondaryPanel
 }

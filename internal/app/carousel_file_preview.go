@@ -119,9 +119,9 @@ func (a *App) activePanelFileColumnRect() (geom.Rect, bool) {
 	if lay.TooSmall {
 		return geom.Rect{}, false
 	}
-	col := lay.Left
-	if a.model.ActivePanel == ui.RightPanel {
-		col = lay.Right
+	col := lay.Primary
+	if a.model.ActivePanel == ui.SecondaryPanel {
+		col = lay.Secondary
 	}
 	stripN := ui.SelectionsStripLayoutItemCount(
 		a.activePanel(),
@@ -212,7 +212,7 @@ func (a *App) carouselFilePreviewContext() bool {
 	if a.model.ActiveSubFocus != ui.SubFocusFileList {
 		return false
 	}
-	if a.model.ActivePanel != ui.LeftPanel && a.model.ActivePanel != ui.RightPanel {
+	if a.model.ActivePanel != ui.PrimaryPanel && a.model.ActivePanel != ui.SecondaryPanel {
 		return false
 	}
 	if _, ok := a.carouselFilePreviewWantPath(); !ok {

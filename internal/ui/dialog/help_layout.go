@@ -41,17 +41,17 @@ func ComputeHelpDialogListMetrics(layout Layout) (m HelpDialogListMetrics, ok bo
 		}
 	}
 	rect := draw.CenteredDialogRect(layout, maxW, height)
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	inputWidth := rect.Width - 4
 	if inputWidth < 10 {
 		return m, false
 	}
-	colKey := leftCol
-	colSection := leftCol + 28
+	colKey := primaryCol
+	colSection := primaryCol + 28
 	if colSection > rect.X+rect.Width-3 {
 		colSection = rect.X + rect.Width - 3
 	}
-	colTitle := leftCol + 50
+	colTitle := primaryCol + 50
 	if colTitle > rect.X+rect.Width-3 {
 		colTitle = rect.X + rect.Width - 3
 	}

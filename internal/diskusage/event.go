@@ -16,6 +16,6 @@ type Event struct {
 	Generation uint64 // planner session id when emitted; stale workers discard before emit
 	// RootAbs is set for EventSubtreeIndexed (filepath.Clean walk root).
 	RootAbs string
-	// SourcePanel is the initiating panel id (same convention as ui.LeftPanel / ui.RightPanel).
+	// SourcePanel is the initiating panel id (same convention as ui.PrimaryPanel / ui.SecondaryPanel).
 	SourcePanel int
 }

@@ -6,7 +6,7 @@ func MessageLogWrapColsForLayout(layout Layout) int {
 	if layout.TooSmall {
 		return MessageLogWrapRunes
 	}
-	rect := MergeTwinPanelRects(layout.Left, layout.Right)
+	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary)
 	contentW := rect.Width - 4
 	if contentW < 1 {
 		contentW = 1

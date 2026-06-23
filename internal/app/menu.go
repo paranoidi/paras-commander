@@ -269,16 +269,16 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 			a.setErrorMessage(label+" toggle hidden failed", err)
 			return
 		}
-		a.setTransientMessage(a.panelHiddenVisibilityMessage(label, target.ShowHidden), ui.MessageUrgencyInfo)
+		a.setTransientMessage(a.paneHiddenVisibilityMessage(label, target.ShowHidden), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelRefresh:
 		if err := target.Refresh(a.panelViewportRows(panelScope)); err != nil {
 			a.setErrorMessage(label+" refresh failed", err)
 			return
 		}
-		if panelScope == ui.LeftPanel {
-			a.requestVolumeSpaceRefreshAsync(ui.RightPanel)
+		if panelScope == ui.PrimaryPanel {
+			a.requestVolumeSpaceRefreshAsync(ui.SecondaryPanel)
 		} else {
-			a.requestVolumeSpaceRefreshAsync(ui.LeftPanel)
+			a.requestVolumeSpaceRefreshAsync(ui.PrimaryPanel)
 		}
 		a.syncOpenPathInputsAfterFSChange()
 		a.setTransientMessage(label+" refreshed", ui.MessageUrgencyInfo)

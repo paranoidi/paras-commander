@@ -16,10 +16,10 @@ const (
 	TopDev        TopID = "top.dev"
 )
 
-// PanelScope selects left/right panel for scoped pulldowns; PanelScopeNone means not panel-bound.
-// Numeric values match ui.LeftPanel / ui.RightPanel (0 and 1).
+// PanelScope selects primary/secondary panel for scoped pulldowns; PanelScopeNone means not panel-bound.
+// Numeric values match ui.PrimaryPanel / ui.SecondaryPanel (0 and 1).
 const (
-	PanelScopeNone  = -1
-	PanelScopeLeft  = 0
-	PanelScopeRight = 1
+	PanelScopeNone      = -1
+	PanelScopePrimary   = 0
+	PanelScopeSecondary = 1
 )

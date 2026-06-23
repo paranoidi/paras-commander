@@ -53,7 +53,7 @@ func TestCarouselCoalesceRepaintsCachedChildAfterFullScreenClear(t *testing.T) {
 	rect := Rect{X: 0, Y: 1, Width: width, Height: height - 3}
 	styles := theme.Default()
 	drawPanel(screen, rect, state, true, false, styles, false, "",
-		nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
+		nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
 
 	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout())
 	childCol := cols[2]
@@ -126,7 +126,7 @@ func TestDrawCarouselFilePreviewDuringQuickFilter(t *testing.T) {
 		CombinedText: "river delta\n",
 	}
 	drawPanel(screen, rect, state, true, false, styles, false, "",
-		nil, false, nil, false, LeftPanel, nil, -1, -1, nil, false, true, false, LeftPanel, "", false,
+		nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, true, false, PrimaryPanel, "", false,
 		uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), preview, "")
 
 	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout())

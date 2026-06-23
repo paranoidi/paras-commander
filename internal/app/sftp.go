@@ -60,7 +60,7 @@ func (a *App) executeSFTPConnectURI(panelID int, raw string) {
 		a.setErrorMessage("SFTP", fmt.Errorf("expected sftp:// URI, got %s", loc.Scheme()))
 		return
 	}
-	if panelID != ui.LeftPanel && panelID != ui.RightPanel {
+	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		panelID = a.model.ActivePanel
 	}
 	a.startSFTPConnect(panelID, loc)

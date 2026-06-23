@@ -8,15 +8,25 @@ type Rect struct {
 	Height int
 }
 
+// SplitOrientation selects how the twin browser panes are arranged.
+type SplitOrientation int
+
+const (
+	// SplitHorizontal is the default: primary left, secondary right.
+	SplitHorizontal SplitOrientation = iota
+	// SplitVertical is reserved for a future top/bottom layout (not implemented).
+	SplitVertical
+)
+
 // Layout is the full Phase 1 screen geometry.
 type Layout struct {
-	Width    int
-	Height   int
-	Menu     Rect
-	Left     Rect
-	Right    Rect
-	Footer   Rect
-	TooSmall bool
+	Width     int
+	Height    int
+	Menu      Rect
+	Primary   Rect
+	Secondary Rect
+	Footer    Rect
+	TooSmall  bool
 }
 
 const (
@@ -35,7 +45,7 @@ const (
 )
 
 // PanelWidthSplit controls the horizontal split between the two browser columns.
-// ActivePanel uses the same values as ui.LeftPanel (0) and ui.RightPanel (1).
+// ActivePanel uses the same values as ui.PrimaryPanel (0) and ui.SecondaryPanel (1).
 // When Zoom is false, ActivePercent and InactivePercent are ignored (even 50/50 split).
 // When Zoom is true, the active column receives ActivePercent of the total width and
 // the inactive column receives InactivePercent; both must be positive and sum to 100
@@ -48,59 +58,84 @@ type PanelWidthSplit struct {
 	HideInactivePanel bool
 }
 
-func mainPanelColumnWidths(total int, split PanelWidthSplit) (leftW, rightW int) {
+// LayoutInput groups terminal size, chrome flags, and split options for CalculateLayout.
+type LayoutInput struct {
+	Width       int
+	Height      int
+	ShowMenuBar bool
+	Split       PanelWidthSplit
+	Orientation SplitOrientation
+}
+
+func mainPanelColumnWidths(total int, split PanelWidthSplit) (primaryW, secondaryW int) {
 	if split.HideInactivePanel {
 		if split.ActivePanel == 0 {
 			return total, 0
 		}
 		return 0, total
 	}
-	leftW = total / 2
-	rightW = total - leftW
+	primaryW = total / 2
+	secondaryW = total - primaryW
 	if !split.Zoom {
-		return leftW, rightW
+		return primaryW, secondaryW
 	}
 	ap, ip := split.ActivePercent, split.InactivePercent
 	if ap <= 0 || ip <= 0 || ap+ip != 100 {
-		return leftW, rightW
+		return primaryW, secondaryW
 	}
-	leftPct := ap
+	primaryPct := ap
 	if split.ActivePanel != 0 {
-		leftPct = ip
+		primaryPct = ip
 	}
-	leftW = (total * leftPct) / 100
-	rightW = total - leftW
+	primaryW = (total * primaryPct) / 100
+	secondaryW = total - primaryW
 	const minSplitColumnWidth = 10 // cells; if zoomed split is too narrow, fall back to 50/50
-	if leftW < minSplitColumnWidth || rightW < minSplitColumnWidth {
+	if primaryW < minSplitColumnWidth || secondaryW < minSplitColumnWidth {
 		return total / 2, total - total/2
 	}
-	return leftW, rightW
+	return primaryW, secondaryW
 }
 
 // CalculateLayout returns deterministic regions for the current terminal size.
 // When showMenuBar is false, the menu row is omitted and panels extend to the top row.
+// SplitVertical is not implemented yet: the input is accepted but horizontal math is used today.
 func CalculateLayout(width, height int, showMenuBar bool, split PanelWidthSplit) Layout {
+	return CalculateLayoutWithOrientation(LayoutInput{
+		Width:       width,
+		Height:      height,
+		ShowMenuBar: showMenuBar,
+		Split:       split,
+		Orientation: SplitHorizontal,
+	})
+}
+
+// CalculateLayoutWithOrientation is the orientation-aware layout entry point.
+// SplitVertical currently mirrors the horizontal path (future work may swap width/height roles).
+func CalculateLayoutWithOrientation(in LayoutInput) Layout {
+	width, height, showMenuBar, split := in.Width, in.Height, in.ShowMenuBar, in.Split
+	// SplitVertical layout is deferred; horizontal column math is used for all orientations today.
+	_ = in.Orientation
 	layout := Layout{Width: width, Height: height}
 	if width < minWidth || height < minHeight {
 		layout.TooSmall = true
 		return layout
 	}
 
-	leftWidth, rightWidth := mainPanelColumnWidths(width, split)
+	primaryWidth, secondaryWidth := mainPanelColumnWidths(width, split)
 
 	if !showMenuBar {
 		panelHeight := height - 1
 		layout.Menu = Rect{}
-		layout.Left = Rect{X: 0, Y: 0, Width: leftWidth, Height: panelHeight}
-		layout.Right = Rect{X: leftWidth, Y: 0, Width: rightWidth, Height: panelHeight}
+		layout.Primary = Rect{X: 0, Y: 0, Width: primaryWidth, Height: panelHeight}
+		layout.Secondary = Rect{X: primaryWidth, Y: 0, Width: secondaryWidth, Height: panelHeight}
 		layout.Footer = Rect{X: 0, Y: height - 1, Width: width, Height: 1}
 		return layout
 	}
 
 	panelHeight := height - 2
 	layout.Menu = Rect{X: 0, Y: 0, Width: width, Height: 1}
-	layout.Left = Rect{X: 0, Y: 1, Width: leftWidth, Height: panelHeight}
-	layout.Right = Rect{X: leftWidth, Y: 1, Width: rightWidth, Height: panelHeight}
+	layout.Primary = Rect{X: 0, Y: 1, Width: primaryWidth, Height: panelHeight}
+	layout.Secondary = Rect{X: primaryWidth, Y: 1, Width: secondaryWidth, Height: panelHeight}
 	layout.Footer = Rect{X: 0, Y: height - 1, Width: width, Height: 1}
 	return layout
 }
@@ -173,11 +208,11 @@ const jobsDetailChromeRows = 2
 // jobsConflictPanelMinFrameH is the minimum frame height for the file-exists conflict panel above Details.
 const jobsConflictPanelMinFrameH = 17
 
-// SplitJobsRightPanels splits the right column into optional conflict (top), detail, then activity.
+// SplitJobsSecondaryPanels splits the right column into optional conflict (top), detail, then activity.
 // When showConflict is false, conflict has zero height and detail+activity use the full column.
-func SplitJobsRightPanels(column Rect, showConflict bool, detailLineCount int) (conflict, detail, activity Rect) {
+func SplitJobsSecondaryPanels(column Rect, showConflict bool, detailLineCount int) (conflict, detail, activity Rect) {
 	if !showConflict {
-		d, a := SplitJobsRightColumn(column, detailLineCount)
+		d, a := SplitJobsSecondaryColumn(column, detailLineCount)
 		return Rect{X: column.X, Y: column.Y, Width: column.Width, Height: 0}, d, a
 	}
 	cH := jobsConflictPanelMinFrameH
@@ -190,16 +225,16 @@ func SplitJobsRightPanels(column Rect, showConflict bool, detailLineCount int) (
 		Width:  column.Width,
 		Height: column.Height - cH,
 	}
-	d, a := SplitJobsRightColumn(sub, detailLineCount)
+	d, a := SplitJobsSecondaryColumn(sub, detailLineCount)
 	conflict = Rect{X: column.X, Y: column.Y, Width: column.Width, Height: cH}
 	return conflict, d, a
 }
 
-// SplitJobsRightColumn divides the jobs screen right column into a top Details panel and bottom Activity panel.
+// SplitJobsSecondaryColumn divides the jobs screen right column into a top Details panel and bottom Activity panel.
 // The Details frame height is the minimum needed for detailLineCount text rows (plus panel chrome), so Activity
 // receives all remaining vertical space. When the column is too short for two usable panels, activity height is
 // zero and the caller should draw only the detail panel in the full column.
-func SplitJobsRightColumn(column Rect, detailLineCount int) (detail Rect, activity Rect) {
+func SplitJobsSecondaryColumn(column Rect, detailLineCount int) (detail Rect, activity Rect) {
 	activityMin := jobsSubpanelMinFrameH
 	minDetailFrame := max(detailLineCount+jobsDetailChromeRows, 3)
 	if column.Height < activityMin+3 {
@@ -221,10 +256,10 @@ func SplitJobsRightColumn(column Rect, detailLineCount int) (detail Rect, activi
 	return detail, activity
 }
 
-// SplitJobsRightColumnFlexTop divides a column into a top panel that receives all remaining
+// SplitJobsSecondaryColumnFlexTop divides a column into a top panel that receives all remaining
 // vertical space and a bottom panel sized to bottomLineCount text rows (plus panel chrome).
 // When the column is too short for two usable panels, the bottom panel is omitted.
-func SplitJobsRightColumnFlexTop(column Rect, bottomLineCount int) (top Rect, bottom Rect) {
+func SplitJobsSecondaryColumnFlexTop(column Rect, bottomLineCount int) (top Rect, bottom Rect) {
 	compactMin := jobsSubpanelMinFrameH
 	minBottomFrame := max(bottomLineCount+jobsDetailChromeRows, 3)
 	if column.Height < compactMin+3 {

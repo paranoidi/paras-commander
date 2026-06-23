@@ -18,7 +18,7 @@ func SelectionsStripLayoutItemCountFromCount(stripCount, panelID, activePanel in
 	if stripCount <= 0 {
 		return 0
 	}
-	if themePickerOpen && panelID == LeftPanel {
+	if themePickerOpen && panelID == PrimaryPanel {
 		return stripCount
 	}
 	if panelID != activePanel {

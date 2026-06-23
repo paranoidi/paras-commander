@@ -46,12 +46,12 @@ func TestChooserModeEnablesCarouselByDefault(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	t.Cleanup(app.stopWorker)
-	if !app.model.Left.CarouselMode {
+	if !app.model.Primary.CarouselMode {
 		t.Fatal("Left.CarouselMode = false, want true by default in chooser mode")
 	}
 }
 
-func TestChooserNoCarouselDisablesLeftPanelCarousel(t *testing.T) {
+func TestChooserNoCarouselDisablesPrimaryPanelCarousel(t *testing.T) {
 	root := t.TempDir()
 	screen := uitest.Screen(t, 80, 24)
 	app, err := NewWithOptions(screen, Options{
@@ -64,7 +64,7 @@ func TestChooserNoCarouselDisablesLeftPanelCarousel(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	t.Cleanup(app.stopWorker)
-	if app.model.Left.CarouselMode {
+	if app.model.Primary.CarouselMode {
 		t.Fatal("Left.CarouselMode = true, want false with ChooserNoCarousel")
 	}
 }
@@ -86,15 +86,15 @@ func TestChooserSelectHighlightsFile(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	t.Cleanup(app.stopWorker)
-	entry, ok := app.model.Left.CurrentEntry()
+	entry, ok := app.model.Primary.CurrentEntry()
 	if !ok {
 		t.Fatal("no current entry")
 	}
 	if entry.Name != "buffer.go" {
 		t.Fatalf("current entry = %q, want buffer.go", entry.Name)
 	}
-	if app.model.Left.PathString() != root {
-		t.Fatalf("panel path = %q, want %q", app.model.Left.PathString(), root)
+	if app.model.Primary.PathString() != root {
+		t.Fatalf("panel path = %q, want %q", app.model.Primary.PathString(), root)
 	}
 }
 
@@ -112,8 +112,8 @@ func TestChooserSelectMissingFileOpensParent(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	t.Cleanup(app.stopWorker)
-	if app.model.Left.PathString() != root {
-		t.Fatalf("panel path = %q, want %q", app.model.Left.PathString(), root)
+	if app.model.Primary.PathString() != root {
+		t.Fatalf("panel path = %q, want %q", app.model.Primary.PathString(), root)
 	}
 }
 
@@ -134,10 +134,10 @@ func TestChooserEnterWritesAndQuits(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	t.Cleanup(app.stopWorker)
-	if !app.model.Left.SelectVisibleEntry("picked.txt") {
+	if !app.model.Primary.SelectVisibleEntry("picked.txt") {
 		t.Fatal("SelectVisibleEntry(picked.txt) = false")
 	}
-	if quit := app.handleNavOpen(&app.model.Left, 10); !quit {
+	if quit := app.handleNavOpen(&app.model.Primary, 10); !quit {
 		t.Fatal("handleNavOpen = false, want quit")
 	}
 	data, err := os.ReadFile(chooserOut)
@@ -170,14 +170,14 @@ func TestChooserEnterDirectoryDoesNotWrite(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	t.Cleanup(app.stopWorker)
-	if !app.model.Left.SelectVisibleEntry("nested") {
+	if !app.model.Primary.SelectVisibleEntry("nested") {
 		t.Fatal("SelectVisibleEntry(nested) = false")
 	}
-	if quit := app.handleNavOpen(&app.model.Left, 10); quit {
+	if quit := app.handleNavOpen(&app.model.Primary, 10); quit {
 		t.Fatal("handleNavOpen quit on directory")
 	}
-	if app.model.Left.PathString() != sub {
-		t.Fatalf("panel path = %q, want %q", app.model.Left.PathString(), sub)
+	if app.model.Primary.PathString() != sub {
+		t.Fatalf("panel path = %q, want %q", app.model.Primary.PathString(), sub)
 	}
 	if _, err := os.Stat(chooserOut); err == nil {
 		t.Fatal("chooser file created on directory enter")
@@ -201,7 +201,7 @@ func TestChooserDispatchEnterQuits(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	t.Cleanup(app.stopWorker)
-	if !app.model.Left.SelectVisibleEntry("open.me") {
+	if !app.model.Primary.SelectVisibleEntry("open.me") {
 		t.Fatal("SelectVisibleEntry(open.me) = false")
 	}
 	quit, _ := app.finishResolvedKeyboardAction(keymap.ActionNavOpen)

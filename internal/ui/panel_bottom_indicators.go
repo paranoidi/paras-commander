@@ -28,8 +28,8 @@ const (
 type PanelBottomEdge int
 
 const (
-	// PanelBottomEdgeStart is the panel-relative start corner (physical left on LeftPanel,
-	// physical right on RightPanel). Used for cross-directory Selections.
+	// PanelBottomEdgeStart is the panel-relative start corner (physical left on PrimaryPanel,
+	// physical right on SecondaryPanel). Used for cross-directory Selections.
 	PanelBottomEdgeStart PanelBottomEdge = iota
 	// PanelBottomEdgePhysicalLeft chains segments from the physical left interior column
 	// (dotfiles-hidden glyph, Gitignore, stash, and trailing frame dashes on both panels).
@@ -127,7 +127,7 @@ func panelOtherPanelIndicatorLabel(panelID int, ctx PanelBottomIndicatorContext)
 		max = 12
 	}
 	path := PanelTitlePath(ctx.OtherPanelPath, ctx.UserHomeDir, max)
-	if panelID == RightPanel {
+	if panelID == SecondaryPanel {
 		return " ← " + path + " "
 	}
 	return " → " + path + " "
@@ -232,13 +232,13 @@ func panelBottomEndEdgeReservedStart(rect Rect, ctx PanelBottomIndicatorContext)
 		return lastIn
 	}
 	var endReserved int
-	if ctx.PanelID == RightPanel {
+	if ctx.PanelID == SecondaryPanel {
 		endReserved = rect.X + labelW
 	} else {
 		endReserved = lastIn - labelW
 	}
 	if ctx.SelectionSizeCenterStart > 0 {
-		if ctx.PanelID == RightPanel {
+		if ctx.PanelID == SecondaryPanel {
 			if endReserved > ctx.SelectionSizeCenterStart-1 {
 				endReserved = ctx.SelectionSizeCenterStart - 1
 			}
@@ -386,7 +386,7 @@ func drawPanelBottomEndEdgeIndicators(screen tcell.Screen, rect Rect, panelID in
 		return
 	}
 	y := rect.Y + rect.Height - 1
-	if panelID == RightPanel {
+	if panelID == SecondaryPanel {
 		// End edge on the inner-left; higher Order extends toward physical right.
 		x := rect.X + 1
 		for _, seg := range segs {
@@ -489,7 +489,7 @@ func drawPanelBottomStartEdgeIndicators(screen tcell.Screen, rect Rect, ctx Pane
 		if need > available {
 			continue
 		}
-		if ctx.PanelID == RightPanel {
+		if ctx.PanelID == SecondaryPanel {
 			xTitle := lastIn - padW
 			primitive.TextOverlay(screen, xTitle, y, padW, seg.Label, seg.Style)
 			screen.SetContent(lastIn, y, '─', nil, ctx.BorderStyle)

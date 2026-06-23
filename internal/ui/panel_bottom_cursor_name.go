@@ -56,7 +56,7 @@ func panelBottomCenterOverlaySpan(rect Rect, panelID int, ctx PanelBottomIndicat
 	}
 	endReserved := panelBottomEndEdgeReservedStart(rect, ctx)
 
-	if panelID == RightPanel {
+	if panelID == SecondaryPanel {
 		leftBound := firstIn
 		if panelBottomEndEdgeTotalWidth(ctx) > 0 && endReserved < lastIn {
 			leftBound = endReserved + 1
@@ -87,7 +87,7 @@ func panelBottomStartEdgeEndX(rect Rect, panelID int, ctx PanelBottomIndicatorCo
 	if used == 0 {
 		return firstIn - 1
 	}
-	if panelID == RightPanel {
+	if panelID == SecondaryPanel {
 		return rect.X + rect.Width - 2
 	}
 	return firstIn + used - 1

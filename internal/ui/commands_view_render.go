@@ -22,12 +22,12 @@ func drawCommandsView(
 	chromeBlocked bool,
 	userHomeDir string,
 ) {
-	drawCommandsListPanel(screen, layout.Left, state, entries, styles, chromeBlocked, userHomeDir)
+	drawCommandsListPanel(screen, layout.Primary, state, entries, styles, chromeBlocked, userHomeDir)
 	var sel CommandRunEntry
 	if state.Selected >= 0 && state.Selected < len(entries) {
 		sel = entries[state.Selected]
 	}
-	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(layout.Right, sel)
+	stdoutRect, stderrRect, stdoutLines, stderrLines := CommandsStreamPanels(layout.Secondary, sel)
 	stdoutFocused := state.FocusPane == 1
 	stderrFocused := state.FocusPane == 2
 	drawCommandsStreamPanel(screen, stdoutRect, " Stdout ", state.StdoutScroll, stdoutLines, styles, chromeBlocked, stdoutFocused)
@@ -43,7 +43,7 @@ func CommandsStreamPanels(column Rect, entry CommandRunEntry) (stdoutRect, stder
 	stdoutLines = CommandPanelLines(entry.Stdout, textW)
 	stderrLines = CommandPanelLines(CommandStderrDisplay(entry), textW)
 	stderrLineBudget := max(8, min(len(stderrLines)+2, 24))
-	stdoutRect, stderrRect = SplitJobsRightColumnFlexTop(column, stderrLineBudget)
+	stdoutRect, stderrRect = SplitJobsSecondaryColumnFlexTop(column, stderrLineBudget)
 	return stdoutRect, stderrRect, stdoutLines, stderrLines
 }
 

@@ -11,11 +11,11 @@ func TestCalculateLayoutSplitsScreenIntoExpectedRegions(t *testing.T) {
 	if layout.Menu != (Rect{X: 0, Y: 0, Width: 100, Height: 1}) {
 		t.Fatalf("Menu = %+v", layout.Menu)
 	}
-	if layout.Left != (Rect{X: 0, Y: 1, Width: 50, Height: 28}) {
-		t.Fatalf("Left = %+v", layout.Left)
+	if layout.Primary != (Rect{X: 0, Y: 1, Width: 50, Height: 28}) {
+		t.Fatalf("Left = %+v", layout.Primary)
 	}
-	if layout.Right != (Rect{X: 50, Y: 1, Width: 50, Height: 28}) {
-		t.Fatalf("Right = %+v", layout.Right)
+	if layout.Secondary != (Rect{X: 50, Y: 1, Width: 50, Height: 28}) {
+		t.Fatalf("Right = %+v", layout.Secondary)
 	}
 	if layout.Footer.Y != 29 {
 		t.Fatalf("footer = %+v, want y=29", layout.Footer)
@@ -25,11 +25,11 @@ func TestCalculateLayoutSplitsScreenIntoExpectedRegions(t *testing.T) {
 func TestCalculateLayoutHandlesOddWidth(t *testing.T) {
 	layout := CalculateLayout(101, 20, true, PanelWidthSplit{})
 
-	if layout.Left.Width != 50 {
-		t.Fatalf("Left.Width = %d, want 50", layout.Left.Width)
+	if layout.Primary.Width != 50 {
+		t.Fatalf("Left.Width = %d, want 50", layout.Primary.Width)
 	}
-	if layout.Right.X != 50 || layout.Right.Width != 51 {
-		t.Fatalf("Right = %+v, want x=50 width=51", layout.Right)
+	if layout.Secondary.X != 50 || layout.Secondary.Width != 51 {
+		t.Fatalf("Right = %+v, want x=50 width=51", layout.Secondary)
 	}
 }
 
@@ -54,11 +54,11 @@ func TestCalculateLayoutOmitsMenuRowWhenShowMenuBarFalse(t *testing.T) {
 	if layout.Menu != (Rect{}) {
 		t.Fatalf("Menu = %+v, want empty", layout.Menu)
 	}
-	if layout.Left != (Rect{X: 0, Y: 0, Width: 50, Height: 29}) {
-		t.Fatalf("Left = %+v", layout.Left)
+	if layout.Primary != (Rect{X: 0, Y: 0, Width: 50, Height: 29}) {
+		t.Fatalf("Left = %+v", layout.Primary)
 	}
-	if layout.Right != (Rect{X: 50, Y: 0, Width: 50, Height: 29}) {
-		t.Fatalf("Right = %+v", layout.Right)
+	if layout.Secondary != (Rect{X: 50, Y: 0, Width: 50, Height: 29}) {
+		t.Fatalf("Right = %+v", layout.Secondary)
 	}
 	if layout.Footer.Y != 29 {
 		t.Fatalf("footer = %+v, want y=29", layout.Footer)
@@ -69,11 +69,11 @@ func TestCalculateLayoutZoomWidensActiveLeftColumn(t *testing.T) {
 	layout := CalculateLayout(100, 30, true, PanelWidthSplit{
 		Zoom: true, ActivePanel: 0, ActivePercent: 70, InactivePercent: 30,
 	})
-	if layout.Left.Width != 70 || layout.Right.Width != 30 {
-		t.Fatalf("Left=%+v Right=%+v want widths 70/30", layout.Left, layout.Right)
+	if layout.Primary.Width != 70 || layout.Secondary.Width != 30 {
+		t.Fatalf("Left=%+v Right=%+v want widths 70/30", layout.Primary, layout.Secondary)
 	}
-	if layout.Right.X != 70 {
-		t.Fatalf("Right.X = %d, want 70", layout.Right.X)
+	if layout.Secondary.X != 70 {
+		t.Fatalf("Right.X = %d, want 70", layout.Secondary.X)
 	}
 }
 
@@ -82,15 +82,15 @@ func TestCalculateLayoutHideInactivePanelGivesActiveFullWidth(t *testing.T) {
 		HideInactivePanel: true,
 		ActivePanel:       0,
 	})
-	if layout.Left.Width != 100 || layout.Right.Width != 0 {
-		t.Fatalf("Left=%+v Right=%+v want widths 100/0", layout.Left, layout.Right)
+	if layout.Primary.Width != 100 || layout.Secondary.Width != 0 {
+		t.Fatalf("Left=%+v Right=%+v want widths 100/0", layout.Primary, layout.Secondary)
 	}
 	layout = CalculateLayout(100, 30, true, PanelWidthSplit{
 		HideInactivePanel: true,
 		ActivePanel:       1,
 	})
-	if layout.Left.Width != 0 || layout.Right.Width != 100 {
-		t.Fatalf("Left=%+v Right=%+v want widths 0/100", layout.Left, layout.Right)
+	if layout.Primary.Width != 0 || layout.Secondary.Width != 100 {
+		t.Fatalf("Left=%+v Right=%+v want widths 0/100", layout.Primary, layout.Secondary)
 	}
 }
 
@@ -98,11 +98,11 @@ func TestCalculateLayoutZoomWidensActiveRightColumn(t *testing.T) {
 	layout := CalculateLayout(100, 30, true, PanelWidthSplit{
 		Zoom: true, ActivePanel: 1, ActivePercent: 70, InactivePercent: 30,
 	})
-	if layout.Left.Width != 30 || layout.Right.Width != 70 {
-		t.Fatalf("Left=%+v Right=%+v want widths 30/70", layout.Left, layout.Right)
+	if layout.Primary.Width != 30 || layout.Secondary.Width != 70 {
+		t.Fatalf("Left=%+v Right=%+v want widths 30/70", layout.Primary, layout.Secondary)
 	}
-	if layout.Right.X != 30 {
-		t.Fatalf("Right.X = %d, want 30", layout.Right.X)
+	if layout.Secondary.X != 30 {
+		t.Fatalf("Right.X = %d, want 30", layout.Secondary.X)
 	}
 }
 
@@ -156,9 +156,9 @@ func TestSplitPanelColumnHidesStripWhenNoItems(t *testing.T) {
 	}
 }
 
-func TestSplitJobsRightColumnSizesDetailToLineCount(t *testing.T) {
+func TestSplitJobsSecondaryColumnSizesDetailToLineCount(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 28}
-	detail, activity := SplitJobsRightColumn(col, 10)
+	detail, activity := SplitJobsSecondaryColumn(col, 10)
 	wantDetailH := 10 + jobsDetailChromeRows
 	if detail.Height != wantDetailH {
 		t.Fatalf("detail.Height = %d, want %d (lines + chrome)", detail.Height, wantDetailH)
@@ -171,9 +171,9 @@ func TestSplitJobsRightColumnSizesDetailToLineCount(t *testing.T) {
 	}
 }
 
-func TestSplitJobsRightColumnReservesActivityMinimumWhenCramped(t *testing.T) {
+func TestSplitJobsSecondaryColumnReservesActivityMinimumWhenCramped(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 12}
-	detail, activity := SplitJobsRightColumn(col, 100)
+	detail, activity := SplitJobsSecondaryColumn(col, 100)
 	if activity.Height != jobsSubpanelMinFrameH {
 		t.Fatalf("activity.Height = %d, want activity minimum %d", activity.Height, jobsSubpanelMinFrameH)
 	}
@@ -182,9 +182,9 @@ func TestSplitJobsRightColumnReservesActivityMinimumWhenCramped(t *testing.T) {
 	}
 }
 
-func TestSplitJobsRightColumnOmitsActivityWhenTooShort(t *testing.T) {
+func TestSplitJobsSecondaryColumnOmitsActivityWhenTooShort(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 6}
-	detail, activity := SplitJobsRightColumn(col, 3)
+	detail, activity := SplitJobsSecondaryColumn(col, 3)
 	if activity.Height != 0 {
 		t.Fatalf("activity = %+v want omitted", activity)
 	}
@@ -193,9 +193,9 @@ func TestSplitJobsRightColumnOmitsActivityWhenTooShort(t *testing.T) {
 	}
 }
 
-func TestSplitJobsRightColumnFlexTopSizesBottomToLineCount(t *testing.T) {
+func TestSplitJobsSecondaryColumnFlexTopSizesBottomToLineCount(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 28}
-	top, bottom := SplitJobsRightColumnFlexTop(col, 10)
+	top, bottom := SplitJobsSecondaryColumnFlexTop(col, 10)
 	wantBottomH := 10 + jobsDetailChromeRows
 	if bottom.Height != wantBottomH {
 		t.Fatalf("bottom.Height = %d, want %d (lines + chrome)", bottom.Height, wantBottomH)
@@ -208,9 +208,9 @@ func TestSplitJobsRightColumnFlexTopSizesBottomToLineCount(t *testing.T) {
 	}
 }
 
-func TestSplitJobsRightColumnFlexTopReservesBottomMinimumWhenCramped(t *testing.T) {
+func TestSplitJobsSecondaryColumnFlexTopReservesBottomMinimumWhenCramped(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 12}
-	top, bottom := SplitJobsRightColumnFlexTop(col, 100)
+	top, bottom := SplitJobsSecondaryColumnFlexTop(col, 100)
 	if bottom.Height != jobsSubpanelMinFrameH {
 		t.Fatalf("bottom.Height = %d, want minimum %d", bottom.Height, jobsSubpanelMinFrameH)
 	}
@@ -219,9 +219,9 @@ func TestSplitJobsRightColumnFlexTopReservesBottomMinimumWhenCramped(t *testing.
 	}
 }
 
-func TestSplitJobsRightPanelsReservesConflictAboveDetail(t *testing.T) {
+func TestSplitJobsSecondaryPanelsReservesConflictAboveDetail(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 30}
-	conflict, detail, activity := SplitJobsRightPanels(col, true, 8)
+	conflict, detail, activity := SplitJobsSecondaryPanels(col, true, 8)
 	if conflict.Height != jobsConflictPanelMinFrameH {
 		t.Fatalf("conflict.Height = %d, want %d", conflict.Height, jobsConflictPanelMinFrameH)
 	}
@@ -236,10 +236,10 @@ func TestSplitJobsRightPanelsReservesConflictAboveDetail(t *testing.T) {
 	}
 }
 
-func TestSplitJobsRightPanelsNoConflictMatchesLegacySplit(t *testing.T) {
+func TestSplitJobsSecondaryPanelsNoConflictMatchesLegacySplit(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 28}
-	wantD, wantA := SplitJobsRightColumn(col, 10)
-	conflict, detail, activity := SplitJobsRightPanels(col, false, 10)
+	wantD, wantA := SplitJobsSecondaryColumn(col, 10)
+	conflict, detail, activity := SplitJobsSecondaryPanels(col, false, 10)
 	if conflict.Height != 0 {
 		t.Fatalf("conflict = %+v want height 0", conflict)
 	}

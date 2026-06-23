@@ -18,7 +18,7 @@ func thumbPaintedRowRange(t *testing.T, screen tcell.Screen, rect Rect, state pa
 	t.Helper()
 	styles := theme.Default()
 	drawPanel(screen, rect, state, true, false, styles, false, "", nil, false, nil, false,
-		LeftPanel, nil, -1, -1, nil, false, false, false, LeftPanel, "", false, style, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
+		PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, style, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "")
 	borderX := rect.X + rect.Width - 1
 	visible := PanelListRows(rect)
 	minRow = visible

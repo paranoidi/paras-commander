@@ -112,7 +112,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	afterBase := styles.DialogMassRenameAfter.Background(dbg)
 	afterAdded := styles.DialogMassRenameAfterAdded
 	afterError := styles.DialogMassRenameAfterError
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	innerW := rect.Width - 4
 	if innerW <= 0 {
 		return
@@ -121,7 +121,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	innerBottom := rect.Y + rect.Height - 2
 	warnStyle := styles.MessageWarn.Background(dbg)
 
-	optX := leftCol - 1
+	optX := primaryCol - 1
 	draw.DrawDialogRadio(screen, optX, y, "Simple (replace text)", 'S', state.MassRenameMode == MassRenameModeUISimple, state.FocusedField == 0, styles)
 	y++
 	if y >= innerBottom {
@@ -159,22 +159,22 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			if y >= innerBottom {
 				return
 			}
-			primitive.Text(screen, leftCol, y, innerW, field.Label+":", labelStyle)
+			primitive.Text(screen, primaryCol, y, innerW, field.Label+":", labelStyle)
 			y++
 			if y >= innerBottom {
 				return
 			}
-			drawInputField(screen, leftCol, y, innerW, field, state.FocusedField == focusIdx, styles)
+			drawInputField(screen, primaryCol, y, innerW, field, state.FocusedField == focusIdx, styles)
 			y++
 			if fi == 0 && state.MassRenameMode == MassRenameModeUIRegex {
 				if hint := massRenamePatternHintText(state); hint != "" && y < innerBottom {
-					primitive.Text(screen, leftCol, y, innerW, hint, massRenamePatternHintStyle(styles, dbg))
+					primitive.Text(screen, primaryCol, y, innerW, hint, massRenamePatternHintStyle(styles, dbg))
 					y++
 				}
 			}
 			if fi == 1 && state.MassRenameMode == MassRenameModeUIRegex {
 				if hint := massRenameReplacementHintText(state); hint != "" && y < innerBottom {
-					primitive.Text(screen, leftCol, y, innerW, hint, massRenameReplacementHintStyle(styles, dbg))
+					primitive.Text(screen, primaryCol, y, innerW, hint, massRenameReplacementHintStyle(styles, dbg))
 					y++
 				}
 			}
@@ -225,19 +225,19 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		scroll = 0
 	}
 	sepW := 0
-	leftW := innerW / 2
-	rightW := innerW - leftW
+	primaryW := innerW / 2
+	secondaryW := innerW - primaryW
 	if innerW >= 3 {
 		sepW = 1
 		avail := innerW - sepW
-		leftW = avail / 2
-		rightW = avail - leftW
+		primaryW = avail / 2
+		secondaryW = avail - primaryW
 	}
-	if leftW < 1 {
-		leftW = 1
-		rightW = innerW - sepW - leftW
-		if rightW < 0 {
-			rightW = 0
+	if primaryW < 1 {
+		primaryW = 1
+		secondaryW = innerW - sepW - primaryW
+		if secondaryW < 0 {
+			secondaryW = 0
 		}
 	}
 	for row := 0; row < vp && y < innerBottom; row++ {
@@ -251,7 +251,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			rb = after[i]
 		}
 		if strings.HasPrefix(lb, "!") {
-			primitive.Text(screen, leftCol, y, innerW, lb, warnStyle)
+			primitive.Text(screen, primaryCol, y, innerW, lb, warnStyle)
 			y++
 			continue
 		}
@@ -265,14 +265,14 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		if i < len(afterAddedRanges) {
 			added = afterAddedRanges[i]
 		}
-		lbText, lbSpans := massRenameBeforePreviewRow(lb, removed, replaced, leftW, beforeBase, beforeRemoved, beforeReplaced)
+		lbText, lbSpans := massRenameBeforePreviewRow(lb, removed, replaced, primaryW, beforeBase, beforeRemoved, beforeReplaced)
 		rowError := i < len(afterErrorRows) && afterErrorRows[i]
-		rbText, rbSpans := massRenameAfterPreviewRow(rb, added, rightW, afterBase, afterAdded, afterError.Background(dbg), rowError)
-		primitive.StyledText(screen, leftCol, y, leftW, lbText, beforeBase, lbSpans)
+		rbText, rbSpans := massRenameAfterPreviewRow(rb, added, secondaryW, afterBase, afterAdded, afterError.Background(dbg), rowError)
+		primitive.StyledText(screen, primaryCol, y, primaryW, lbText, beforeBase, lbSpans)
 		if sepW == 1 {
-			screen.SetContent(leftCol+leftW, y, ' ', nil, beforeBase)
+			screen.SetContent(primaryCol+primaryW, y, ' ', nil, beforeBase)
 		}
-		primitive.StyledText(screen, leftCol+leftW+sepW, y, rightW, rbText, afterBase, rbSpans)
+		primitive.StyledText(screen, primaryCol+primaryW+sepW, y, secondaryW, rbText, afterBase, rbSpans)
 		y++
 	}
 }

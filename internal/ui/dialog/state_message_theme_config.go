@@ -65,7 +65,7 @@ type SortDialogState struct {
 	DirectoriesFirst      bool
 	DiskUsageIdleSizeSort bool
 	Focus                 int // 0-3=radios, 4=disk idle sort, 5=reverse, 6=dirs first, 7=OK, 8=Cancel
-	PanelID               int // LeftPanel or RightPanel
+	PanelID               int // PrimaryPanel or SecondaryPanel
 }
 
 // ListingFormatDialogState is the renderable state for the panel listing format modal.
@@ -73,7 +73,7 @@ type ListingFormatDialogState struct {
 	Open       bool
 	ListFormat panel.ListFormat
 	Focus      int // 0-2=radios, 3=OK, 4=Cancel
-	PanelID    int // LeftPanel or RightPanel
+	PanelID    int // PrimaryPanel or SecondaryPanel
 }
 
 // GroupSelectState is the renderable state for the group selection input modal.

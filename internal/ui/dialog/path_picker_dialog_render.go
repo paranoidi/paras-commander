@@ -63,14 +63,14 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	inputWidth := rect.Width - 4
 
-	primitive.Text(screen, leftCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
+	primitive.Text(screen, primaryCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
 
 	filterFocused := state.Focus == 0
 	inputInvalid := state.QueryPathInvalid && !state.QueryPathCheckPending
-	draw.DrawScrollingDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, state.QueryCompletionSuffix, filterFocused, inputInvalid, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+3, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, state.QueryCompletionSuffix, filterFocused, inputInvalid, styles)
 
 	sepBeforeList := rect.Y + 4
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
@@ -106,7 +106,7 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)
 		text, spans := pathPickerRowContent(item, ranges, sourceW, nameW, pathW, matchStyle)
-		primitive.StyledText(screen, leftCol, y, rowWidth, text, baseStyle, spans)
+		primitive.StyledText(screen, primaryCol, y, rowWidth, text, baseStyle, spans)
 	}
 
 	sepAfterList := listTop + listH

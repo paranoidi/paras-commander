@@ -19,7 +19,7 @@ func drawMessagesView(
 	styles theme.Theme,
 	chromeBlocked bool,
 ) {
-	rect := MergeTwinPanelRects(layout.Left, layout.Right)
+	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary)
 	layoutChrome := drawAuxPanelChrome(screen, rect, " Messages ", "", true, chromeBlocked, styles)
 	bg := layoutChrome.ContentBG
 

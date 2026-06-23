@@ -2,7 +2,7 @@ package app
 
 import "fmt"
 
-func (a *App) panelHiddenVisibilityMessage(label string, shown bool) string {
+func (a *App) paneHiddenVisibilityMessage(label string, shown bool) string {
 	respect := a.config.RespectGitignore && a.gitignoreCache != nil
 	if shown {
 		if respect {

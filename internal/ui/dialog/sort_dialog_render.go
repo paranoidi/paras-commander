@@ -19,7 +19,7 @@ func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, s
 	}
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Sort order", styles)
 
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	y := rect.Y + 1 // first content row
 
 	// Radio list for sort mode (no blank row after title)
@@ -34,7 +34,7 @@ func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, s
 		{panel.SortMtime, "Modify time", 'm'},
 	}
 	for i, m := range modes {
-		draw.DrawDialogRadio(screen, leftCol, y, m.Label, m.Shortcut, state.SortMode == m.Mode, state.Focus == i, styles)
+		draw.DrawDialogRadio(screen, primaryCol, y, m.Label, m.Shortcut, state.SortMode == m.Mode, state.Focus == i, styles)
 		y++
 	}
 
@@ -49,7 +49,7 @@ func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, s
 		{"Reverse", 'r', state.SortReverse, state.Focus == 5},
 		{"Directories first", 'd', state.DirectoriesFirst, state.Focus == 6},
 	} {
-		draw.DrawDialogCheckbox(screen, leftCol, y, cb.label, cb.shortcut, cb.checked, cb.isFocus, styles)
+		draw.DrawDialogCheckbox(screen, primaryCol, y, cb.label, cb.shortcut, cb.checked, cb.isFocus, styles)
 		y++
 	}
 

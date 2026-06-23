@@ -81,13 +81,13 @@ func (a *App) resortPanelsDiskUsageSorted() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	vrLeft := a.panelViewportRows(ui.LeftPanel)
-	vrRight := a.panelViewportRows(ui.RightPanel)
-	if a.model.Left.Sort.DiskUsageIdleSizeSort && a.model.Left.IdleDiskTotalsSort {
-		a.model.Left.RefreshDiskUsageOrdering(vrLeft, false)
+	vrLeft := a.panelViewportRows(ui.PrimaryPanel)
+	vrRight := a.panelViewportRows(ui.SecondaryPanel)
+	if a.model.Primary.Sort.DiskUsageIdleSizeSort && a.model.Primary.IdleDiskTotalsSort {
+		a.model.Primary.RefreshDiskUsageOrdering(vrLeft, false)
 	}
-	if a.model.Right.Sort.DiskUsageIdleSizeSort && a.model.Right.IdleDiskTotalsSort {
-		a.model.Right.RefreshDiskUsageOrdering(vrRight, false)
+	if a.model.Secondary.Sort.DiskUsageIdleSizeSort && a.model.Secondary.IdleDiskTotalsSort {
+		a.model.Secondary.RefreshDiskUsageOrdering(vrRight, false)
 	}
 }
 
@@ -124,8 +124,8 @@ func (a *App) diskIdleSortPanelEligible(p *panel.State) bool {
 }
 
 func (a *App) maybeScheduleIdleDiskSortBothPanels() {
-	a.maybeScheduleIdleDiskSort(ui.LeftPanel)
-	a.maybeScheduleIdleDiskSort(ui.RightPanel)
+	a.maybeScheduleIdleDiskSort(ui.PrimaryPanel)
+	a.maybeScheduleIdleDiskSort(ui.SecondaryPanel)
 }
 
 func (a *App) maybeScheduleIdleDiskSort(panelID int) {
@@ -140,7 +140,7 @@ func (a *App) maybeScheduleIdleDiskSort(panelID int) {
 }
 
 func (a *App) applyIdleDiskSort(panelID int, epoch uint64) {
-	if panelID != ui.LeftPanel && panelID != ui.RightPanel {
+	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
 	ps := &a.diskIdleSort[panelID]
@@ -163,7 +163,7 @@ func (a *App) applyIdleDiskSort(panelID int, epoch uint64) {
 }
 
 func (a *App) armIdleDiskSortTimer(panelID int) {
-	if panelID != ui.LeftPanel && panelID != ui.RightPanel {
+	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
 	ps := &a.diskIdleSort[panelID]
@@ -192,7 +192,7 @@ func (a *App) armIdleDiskSortTimer(panelID int) {
 }
 
 func (a *App) invalidateIdleDiskSortPanel(panelID int) {
-	if panelID != ui.LeftPanel && panelID != ui.RightPanel {
+	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
 	ps := &a.diskIdleSort[panelID]
@@ -204,8 +204,8 @@ func (a *App) invalidateIdleDiskSortPanel(panelID int) {
 }
 
 func (a *App) invalidateIdleDiskSortBothPanels() {
-	a.invalidateIdleDiskSortPanel(ui.LeftPanel)
-	a.invalidateIdleDiskSortPanel(ui.RightPanel)
+	a.invalidateIdleDiskSortPanel(ui.PrimaryPanel)
+	a.invalidateIdleDiskSortPanel(ui.SecondaryPanel)
 }
 
 func (a *App) deferDiskIdleSortOnUserActivity() {
@@ -215,8 +215,8 @@ func (a *App) deferDiskIdleSortOnUserActivity() {
 	if a.diskUsageScanBusy() {
 		return
 	}
-	a.maybeScheduleIdleDiskSort(ui.LeftPanel)
-	a.maybeScheduleIdleDiskSort(ui.RightPanel)
+	a.maybeScheduleIdleDiskSort(ui.PrimaryPanel)
+	a.maybeScheduleIdleDiskSort(ui.SecondaryPanel)
 }
 
 func (a *App) startDiskUsageScan() {
@@ -244,17 +244,17 @@ func (a *App) clearAllDiskUsageData() {
 	a.stopDiskUsageRedrawDebounce()
 	a.diskUsage.ClearCache()
 	a.model.DiskUsageShown = false
-	a.model.DiskUsagePanelID = ui.LeftPanel
+	a.model.DiskUsagePanelID = ui.PrimaryPanel
 	a.setDiskUsageScanScope("", nil)
-	for _, panelID := range []int{ui.LeftPanel, ui.RightPanel} {
+	for _, panelID := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
 		p := a.panelByID(panelID)
 		p.IdleDiskTotalsSort = false
 	}
 	a.invalidateIdleDiskSortBothPanels()
-	vrLeft := a.panelViewportRows(ui.LeftPanel)
-	vrRight := a.panelViewportRows(ui.RightPanel)
-	_ = a.model.Left.Refresh(vrLeft)
-	_ = a.model.Right.Refresh(vrRight)
+	vrLeft := a.panelViewportRows(ui.PrimaryPanel)
+	vrRight := a.panelViewportRows(ui.SecondaryPanel)
+	_ = a.model.Primary.Refresh(vrLeft)
+	_ = a.model.Secondary.Refresh(vrRight)
 	a.setTransientMessage("Disk usage data cleared", ui.MessageUrgencyInfo)
 }
 

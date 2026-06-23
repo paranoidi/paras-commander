@@ -25,7 +25,7 @@ func TestReconcileSelectionSizeScansIdempotentFingerprint(t *testing.T) {
 	app := testAppMinimal(t)
 	app.model.ViewMode = ui.ViewBrowser
 	app.diskUsage = diskusage.New()
-	app.model.Left = panel.State{
+	app.model.Primary = panel.State{
 		Path:    pathloc.MustParse(dir),
 		Entries: []localfs.Entry{{Name: "subdir", Path: sub, Type: localfs.EntryDirectory}},
 		SelectedPaths: map[string]bool{
@@ -37,13 +37,13 @@ func TestReconcileSelectionSizeScansIdempotentFingerprint(t *testing.T) {
 	}
 	// selectionHasDirs is unexported; SelectedDirPaths drives SelectionHasDirs().
 
-	app.reconcileSelectionSizeScans(ui.LeftPanel)
-	if app.selectionSizeScanFP[ui.LeftPanel] == "" {
+	app.reconcileSelectionSizeScans(ui.PrimaryPanel)
+	if app.selectionSizeScanFP[ui.PrimaryPanel] == "" {
 		t.Fatal("fingerprint empty after first reconcile with pending directory")
 	}
-	firstFP := app.selectionSizeScanFP[ui.LeftPanel]
-	app.reconcileSelectionSizeScans(ui.LeftPanel)
-	if app.selectionSizeScanFP[ui.LeftPanel] != firstFP {
+	firstFP := app.selectionSizeScanFP[ui.PrimaryPanel]
+	app.reconcileSelectionSizeScans(ui.PrimaryPanel)
+	if app.selectionSizeScanFP[ui.PrimaryPanel] != firstFP {
 		t.Fatal("fingerprint changed without selection change")
 	}
 }

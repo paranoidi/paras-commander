@@ -488,7 +488,7 @@ func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols,
 // panelSyncIndicatorLabel returns the label rendered on the bottom border of the sync driver.
 // Left driver points right (toward the right panel); right driver points left.
 func panelSyncIndicatorLabel(panelID int) string {
-	if panelID == RightPanel {
+	if panelID == SecondaryPanel {
 		return " ← Sync "
 	}
 	return " Sync → "
@@ -496,7 +496,7 @@ func panelSyncIndicatorLabel(panelID int) string {
 
 // panelQuickViewIndicatorLabel returns the bottom-border label on the active panel while quick view is on.
 func panelQuickViewIndicatorLabel(panelID int) string {
-	if panelID == RightPanel {
+	if panelID == SecondaryPanel {
 		return " ← Quick view "
 	}
 	return " Quick view → "

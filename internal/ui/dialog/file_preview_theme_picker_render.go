@@ -32,10 +32,10 @@ func DrawFilePreviewThemePicker(screen tcell.Screen, rect geom.Rect, state FileP
 	primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, " Style ", titleStyle)
 
 	_, surfaceBG, _ := chrome.Surface.Decompose()
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	inputWidth := filePreviewThemePickerQueryWidth(rect)
 
-	draw.DrawScrollingDialogInput(screen, leftCol, rect.Y+1, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, "", true, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, "", true, false, styles)
 
 	sepY := rect.Y + 2
 	for x := rect.X + 1; x < rect.X+rect.Width-1; x++ {
@@ -80,9 +80,9 @@ func DrawFilePreviewThemePicker(screen tcell.Screen, rect geom.Rect, state FileP
 		if labelWidth < 1 {
 			labelWidth = 1
 		}
-		primitive.Text(screen, leftCol, y, markerWidth, marker, baseStyle)
+		primitive.Text(screen, primaryCol, y, markerWidth, marker, baseStyle)
 		text, spans := fuzzyRowContent(line, ranges, labelWidth, matchStyle, false)
-		primitive.StyledText(screen, leftCol+markerWidth, y, labelWidth, text, baseStyle, spans)
+		primitive.StyledText(screen, primaryCol+markerWidth, y, labelWidth, text, baseStyle, spans)
 	}
 }
 

@@ -235,8 +235,8 @@ func (a *App) applyConfigDialog() {
 	a.model.ShowFileIcons = val
 	a.model.ShrunkenShowsNameOnly = shrunken
 	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(a.model.ConfigDialog.PanelScrollbar)
-	a.model.Left.ListFormat = lf
-	a.model.Right.ListFormat = lf
+	a.model.Primary.ListFormat = lf
+	a.model.Secondary.ListFormat = lf
 	a.syncScrollFromConfig()
 	a.closeConfigDialog()
 	msg := "Configuration saved"

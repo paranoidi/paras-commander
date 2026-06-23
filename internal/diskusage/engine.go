@@ -13,7 +13,7 @@ import (
 type scanJob struct {
 	childAbs       []string
 	ignore         ShouldIgnoreFolder
-	sourcePanel    int // 0=left, 1=right; matches ui.LeftPanel / ui.RightPanel.
+	sourcePanel    int // 0=left, 1=right; matches ui.PrimaryPanel / ui.SecondaryPanel.
 	listingVolGate ListingVolumeGate
 }
 
@@ -181,7 +181,7 @@ func pathIsOrUnder(child, root string) bool {
 }
 
 // PendingForPanel reports whether childAbs should show the disk-scan folder tint for the given
-// panel (ui.LeftPanel=0, ui.RightPanel=1): queued for that panel, walking for that panel, or
+// panel (ui.PrimaryPanel=0, ui.SecondaryPanel=1): queued for that panel, walking for that panel, or
 // under such a root. Scans started from another panel do not affect this panel's tint.
 func (e *Engine) PendingForPanel(childAbs string, panelID int) bool {
 	if e == nil {
@@ -327,7 +327,7 @@ func (e *Engine) Abort() {
 // StartScanFromListing walks each path in childAbs sequentially in two passes (unknown subtree keys first, then refreshes known keys).
 //
 // Caller supplies absolute filepath.Clean child paths consistent with filesystem listing Paths.
-// sourcePanel is the panel that initiated the scan (same values as ui.LeftPanel / ui.RightPanel).
+// sourcePanel is the panel that initiated the scan (same values as ui.PrimaryPanel / ui.SecondaryPanel).
 func (e *Engine) StartScanFromListing(childAbs []string, shouldIgnore ShouldIgnoreFolder, sourcePanel int, volGate ListingVolumeGate) {
 	if e == nil {
 		return

@@ -9,7 +9,7 @@ import (
 
 func (a *App) inactivePreviewChromeBlocked() bool {
 	chromeBlocked := a.model.PanelsChromeBlocked()
-	if a.inactivePanelID() == ui.LeftPanel && a.model.ThemeDialog.Open {
+	if a.inactivePanelID() == ui.PrimaryPanel && a.model.ThemeDialog.Open {
 		return false
 	}
 	return chromeBlocked
@@ -17,7 +17,7 @@ func (a *App) inactivePreviewChromeBlocked() bool {
 
 func (a *App) activePanelChromeBlocked() bool {
 	chromeBlocked := a.model.PanelsChromeBlocked()
-	if a.model.ActivePanel == ui.LeftPanel && a.model.ThemeDialog.Open {
+	if a.model.ActivePanel == ui.PrimaryPanel && a.model.ThemeDialog.Open {
 		return false
 	}
 	return chromeBlocked

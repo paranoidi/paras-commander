@@ -81,7 +81,7 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
 	if !st.StayOnCurrentVolume {
@@ -151,8 +151,8 @@ func TestFindDialogHandleKeyAltDDoesNotClearDiskUsage(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	left := app.panelByID(ui.LeftPanel)
-	app.startDiskUsageScanForPanel(ui.LeftPanel)
+	left := app.panelByID(ui.PrimaryPanel)
+	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
@@ -168,7 +168,7 @@ func TestFindDialogHandleKeyAltDDoesNotClearDiskUsage(t *testing.T) {
 		t.Fatal("expected cached size for scanned directory")
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
 	for _, r := range "find" {
@@ -210,7 +210,7 @@ func TestFindDialogQueryAltBAltFCtrlL(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	for _, r := range "foo bar" {
@@ -257,7 +257,7 @@ func TestFindDialogQueryHomeEndAndCtrlHomeEndList(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
 	if len(st.Ranked) < 2 {
@@ -319,7 +319,7 @@ func TestFindDialogSelectsFile(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	if !app.model.FindDialog.Open {
 		t.Fatal("expected find dialog open")
 	}
@@ -368,7 +368,7 @@ func TestFindDialogInsertMarksAndOKAddsToPanelSelection(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	km := defaultKeymap(t)
@@ -392,7 +392,7 @@ func TestFindDialogInsertMarksAndOKAddsToPanelSelection(t *testing.T) {
 	if app.model.FindDialog.Open {
 		t.Fatal("expected dialog closed")
 	}
-	p := app.panelByID(ui.LeftPanel)
+	p := app.panelByID(ui.PrimaryPanel)
 	if !p.SelectedPaths[filepath.Clean(aPath)] || !p.SelectedPaths[filepath.Clean(bPath)] {
 		t.Fatalf("panel selections = %v", p.SelectedPaths)
 	}
@@ -414,7 +414,7 @@ func newFindDialogTestApp(t *testing.T) *App {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	return app
 }
@@ -487,7 +487,7 @@ func TestFindDialogGroupSelectGlobMarksFullCorpusResults(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
@@ -529,7 +529,7 @@ func TestFindDialogUnselectAllClearsMarks(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
@@ -568,7 +568,7 @@ func TestFindDialogSelectAllMarksFullCorpusResults(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)); !ok || id != keymap.ActionFindSelectAll {
@@ -610,7 +610,7 @@ func TestFindDialogBulkSelectAllManyFiles(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	waitFindRankDone(t, app)
 
@@ -658,7 +658,7 @@ func TestFindDialogBulkSelectAllMixedTree(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	waitFindRankDone(t, app)
 
@@ -698,7 +698,7 @@ func TestFindDialogBulkOKApplyManyFiles(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	waitFindRankDone(t, app)
 
@@ -716,7 +716,7 @@ func TestFindDialogBulkOKApplyManyFiles(t *testing.T) {
 	if app.model.FindDialog.Open {
 		t.Fatal("expected dialog closed")
 	}
-	p := app.panelByID(ui.LeftPanel)
+	p := app.panelByID(ui.PrimaryPanel)
 	if len(p.SelectedPaths) != n {
 		t.Fatalf("panel selected = %d, want %d", len(p.SelectedPaths), n)
 	}
@@ -745,7 +745,7 @@ func TestFindDialogBulkGroupSelectManyFiles(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	waitFindRankDone(t, app)
 
@@ -814,7 +814,7 @@ func TestFindDialogOnlyDirectoriesFiltersResults(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
 	if findRankedNonDirCount(st) == 0 {
@@ -869,7 +869,7 @@ func TestFindDialogOnlyFilesFiltersResults(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
 	if findRankedDirCount(st) == 0 {
@@ -917,7 +917,7 @@ func TestFindDialogStayOnVolumeRestartClearsEntries(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	if len(app.model.FindDialog.Entries) == 0 {
 		t.Fatal("expected at least one indexed entry")
@@ -954,7 +954,7 @@ func TestFindDialogMarkDirRemovesDescendantMarks(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	ev := tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)
@@ -999,7 +999,7 @@ func TestFindDialogMarkFileRemovesAncestorDirMarks(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	ev := tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)
@@ -1043,7 +1043,7 @@ func TestFindDialogMarkParentThenChildDirRemovesParentMark(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.LeftPanel)
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	ev := tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)
@@ -1104,8 +1104,8 @@ func TestFindDialogSearchOnlySelectionsDefaultScoped(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.panelByID(ui.LeftPanel).AddSelection(filepath.Clean(dirA))
-	app.openFindDialog(ui.LeftPanel)
+	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(dirA))
+	app.openFindDialog(ui.PrimaryPanel)
 	if !app.model.FindDialog.ShowSearchSelectionsOption {
 		t.Fatal("expected search-selections checkbox")
 	}
@@ -1148,8 +1148,8 @@ func TestFindDialogSearchOnlySelectionsWidenAndNarrow(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.panelByID(ui.LeftPanel).AddSelection(filepath.Clean(dirA))
-	app.openFindDialog(ui.LeftPanel)
+	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(dirA))
+	app.openFindDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	countScoped := len(app.model.FindDialog.Entries)
 
@@ -1195,8 +1195,8 @@ func TestFindDialogNoSearchSelectionsCheckboxForFilesOnly(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.panelByID(ui.LeftPanel).AddSelection(filepath.Clean(f))
-	app.openFindDialog(ui.LeftPanel)
+	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(f))
+	app.openFindDialog(ui.PrimaryPanel)
 	if app.model.FindDialog.ShowSearchSelectionsOption {
 		t.Fatal("checkbox should be hidden when only files are selected")
 	}
@@ -1218,9 +1218,9 @@ func TestFindDialogScopedMenuUsesPanel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	app.model.ActivePanel = ui.RightPanel
-	app.openFindDialog(ui.LeftPanel)
-	if app.model.FindDialog.PanelID != ui.LeftPanel {
+	app.model.ActivePanel = ui.SecondaryPanel
+	app.openFindDialog(ui.PrimaryPanel)
+	if app.model.FindDialog.PanelID != ui.PrimaryPanel {
 		t.Fatalf("panel id = %d want left", app.model.FindDialog.PanelID)
 	}
 	app.closeFindDialog()

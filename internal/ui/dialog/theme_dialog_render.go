@@ -72,8 +72,8 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Theme", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	// Layout columns.
-	leftCol := rect.X + 2 // 1 space margin at left
-	listRightEdge := leftCol + listWidth
+	primaryCol := rect.X + 2 // 1 space margin at left
+	listRightEdge := primaryCol + listWidth
 	sepCol := listRightEdge + 2 // space before vertical separator
 	previewLeft := sepCol + 1   // after vertical line
 	previewWidth := rect.X + rect.Width - 2 - previewLeft
@@ -102,8 +102,8 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 			marker = "(*)"
 		}
 		part := " " + marker + " "
-		primitive.Text(screen, leftCol, y, utf8.RuneCountInString(part), part, style)
-		labelX := leftCol + utf8.RuneCountInString(part)
+		primitive.Text(screen, primaryCol, y, utf8.RuneCountInString(part), part, style)
+		labelX := primaryCol + utf8.RuneCountInString(part)
 		labelMax := listRightEdge - labelX
 		if labelMax > 0 {
 			text := fmt.Sprintf("%-*s", labelMax, choice.Label)

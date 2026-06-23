@@ -58,13 +58,13 @@ func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnect
 	borderStyle := draw.DrawDialogFrame(screen, rect, "SFTP", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
-	leftCol := rect.X + 2
+	primaryCol := rect.X + 2
 	inputWidth := rect.Width - 4
 
-	primitive.Text(screen, leftCol, rect.Y+1, inputWidth, "SSH config hosts:", styles.DialogText.Background(itemBg))
+	primitive.Text(screen, primaryCol, rect.Y+1, inputWidth, "SSH config hosts:", styles.DialogText.Background(itemBg))
 
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, leftCol, rect.Y+3, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, "", filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+3, inputWidth, state.Query, state.QueryCursor, state.QueryScroll, "", filterFocused, false, styles)
 
 	sepBeforeList := rect.Y + 4
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
@@ -96,16 +96,16 @@ func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnect
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)
 		text, spans := fuzzyRowContent(line, ranges, rowWidth, matchStyle, false)
-		primitive.StyledText(screen, leftCol, y, rowWidth, text, baseStyle, spans)
+		primitive.StyledText(screen, primaryCol, y, rowWidth, text, baseStyle, spans)
 	}
 
 	sep1 := listTop + listH
 	draw.DrawDialogHSeparator(screen, rect, sep1, borderStyle)
 
 	locLabelY := sep1 + 1
-	primitive.Text(screen, leftCol, locLabelY, inputWidth, "Location:", styles.DialogText.Background(itemBg))
+	primitive.Text(screen, primaryCol, locLabelY, inputWidth, "Location:", styles.DialogText.Background(itemBg))
 	inputY := locLabelY + 2
-	drawInputField(screen, leftCol, inputY, inputWidth, state.Location, state.Focus == 1, styles)
+	drawInputField(screen, primaryCol, inputY, inputWidth, state.Location, state.Focus == 1, styles)
 	draw.DrawDialogHSeparator(screen, rect, inputY+1, borderStyle)
 
 	btnY := rect.Y + rect.Height - 2

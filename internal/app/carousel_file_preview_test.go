@@ -20,8 +20,8 @@ func TestReconcileCarouselFilePreviewStartsPreview(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.HideInactivePanel = true
-	app.model.Left.CarouselMode = true
-	if !app.model.Left.SelectVisibleEntry("scroll.txt") {
+	app.model.Primary.CarouselMode = true
+	if !app.model.Primary.SelectVisibleEntry("scroll.txt") {
 		t.Fatal("scroll.txt not found")
 	}
 
@@ -49,14 +49,14 @@ func TestReconcileCarouselFilePreviewClosesOnDirectoryCursor(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.HideInactivePanel = true
-	app.model.Left.CarouselMode = true
+	app.model.Primary.CarouselMode = true
 	app.patchCarouselFilePreview(func(st *ui.FilePreviewState) {
 		st.Open = true
 		st.Path = filepath.Join(root, "stale.txt")
 	})
 	app.carouselFilePreviewLastFingerprint = "f:" + filepath.Join(root, "stale.txt")
 
-	if !app.model.Left.SelectVisibleEntry("nested") {
+	if !app.model.Primary.SelectVisibleEntry("nested") {
 		t.Fatal("nested not found")
 	}
 	app.reconcileCarouselFilePreview()
@@ -83,8 +83,8 @@ func TestReconcileCarouselFilePreviewPreservesOpenDuringQuickFilter(t *testing.T
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.HideInactivePanel = true
-	app.model.Left.CarouselMode = true
-	if !app.model.Left.SelectVisibleEntry("scroll.txt") {
+	app.model.Primary.CarouselMode = true
+	if !app.model.Primary.SelectVisibleEntry("scroll.txt") {
 		t.Fatal("scroll.txt not found")
 	}
 	app.reconcileCarouselFilePreview()
@@ -95,8 +95,8 @@ func TestReconcileCarouselFilePreviewPreservesOpenDuringQuickFilter(t *testing.T
 		st.CombinedText = "river delta\n"
 	})
 
-	app.model.Left.OpenFilter(app.activeViewportRows())
-	app.model.Left.AppendFilterRune('n', app.activeViewportRows()) // jumps to nested dir match
+	app.model.Primary.OpenFilter(app.activeViewportRows())
+	app.model.Primary.AppendFilterRune('n', app.activeViewportRows()) // jumps to nested dir match
 	app.reconcileCarouselFilePreview()
 
 	app.commandsMu.RLock()
@@ -121,16 +121,16 @@ func TestReconcileCarouselFilePreviewUpdatesToMatchDuringQuickFilter(t *testing.
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.HideInactivePanel = true
-	app.model.Left.CarouselMode = true
-	if !app.model.Left.SelectVisibleEntry("alpha.txt") {
+	app.model.Primary.CarouselMode = true
+	if !app.model.Primary.SelectVisibleEntry("alpha.txt") {
 		t.Fatal("alpha.txt not found")
 	}
 	app.reconcileCarouselFilePreview()
 
 	// Fuzzy-filter to beta.txt; the inline preview should follow the matched file.
-	app.model.Left.OpenFilter(app.activeViewportRows())
+	app.model.Primary.OpenFilter(app.activeViewportRows())
 	for _, r := range "beta" {
-		app.model.Left.AppendFilterRune(r, app.activeViewportRows())
+		app.model.Primary.AppendFilterRune(r, app.activeViewportRows())
 	}
 	app.reconcileCarouselFilePreview()
 
@@ -156,18 +156,18 @@ func TestReconcileQuickViewPreviewUpdatesToMatchDuringQuickFilter(t *testing.T) 
 	screen := newScreen(t, 200, 30)
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
-	app.model.ActivePanel = ui.LeftPanel
+	app.model.ActivePanel = ui.PrimaryPanel
 	app.model.QuickViewEnabled = true
-	app.model.QuickViewPanel = ui.LeftPanel
-	if !app.model.Left.SelectVisibleEntry("alpha.txt") {
+	app.model.QuickViewPanel = ui.PrimaryPanel
+	if !app.model.Primary.SelectVisibleEntry("alpha.txt") {
 		t.Fatal("alpha.txt not found")
 	}
 	app.reconcileQuickViewPreview()
 
 	// Fuzzy-filter to beta.txt; the quick-view preview should follow the matched file.
-	app.model.Left.OpenFilter(app.activeViewportRows())
+	app.model.Primary.OpenFilter(app.activeViewportRows())
 	for _, r := range "beta" {
-		app.model.Left.AppendFilterRune(r, app.activeViewportRows())
+		app.model.Primary.AppendFilterRune(r, app.activeViewportRows())
 	}
 	app.reconcileQuickViewPreview()
 
@@ -197,10 +197,10 @@ func TestReconcileCarouselFilePreviewOpensImmediatelyFromDirectory(t *testing.T)
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 80 // debounce enabled (production default)
 	app.model.HideInactivePanel = true
-	app.model.Left.CarouselMode = true
+	app.model.Primary.CarouselMode = true
 
 	// Cursor on the directory: no file preview.
-	if !app.model.Left.SelectVisibleEntry("nested") {
+	if !app.model.Primary.SelectVisibleEntry("nested") {
 		t.Fatal("nested not found")
 	}
 	app.reconcileCarouselFilePreview()
@@ -212,7 +212,7 @@ func TestReconcileCarouselFilePreviewOpensImmediatelyFromDirectory(t *testing.T)
 	}
 
 	// Move onto a file the way list navigation does (debounce coalesce armed).
-	if !app.model.Left.SelectVisibleEntry("scroll.txt") {
+	if !app.model.Primary.SelectVisibleEntry("scroll.txt") {
 		t.Fatal("scroll.txt not found")
 	}
 	app.carouselPreviewNavSkipSnapshot.Store(true)
@@ -242,8 +242,8 @@ func TestCarouselPreviewPageScrollWithCtrlJK(t *testing.T) {
 	app := newApp(t, screen, root)
 	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.HideInactivePanel = true
-	app.model.Left.CarouselMode = true
-	if !app.model.Left.SelectVisibleEntry("scroll.txt") {
+	app.model.Primary.CarouselMode = true
+	if !app.model.Primary.SelectVisibleEntry("scroll.txt") {
 		t.Fatal("scroll.txt not found")
 	}
 

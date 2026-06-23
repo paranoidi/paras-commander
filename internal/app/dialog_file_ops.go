@@ -19,12 +19,12 @@ func (a *App) closeFileDialog() {
 
 func (a *App) refreshBothPanels() {
 	viewportRows := a.activeViewportRows()
-	if a.model.ActivePanel == ui.LeftPanel {
-		_ = a.model.Left.Refresh(viewportRows)
-		_ = a.model.Right.RefreshOrNavigateToExistingAncestor(viewportRows)
+	if a.model.ActivePanel == ui.PrimaryPanel {
+		_ = a.model.Primary.Refresh(viewportRows)
+		_ = a.model.Secondary.RefreshOrNavigateToExistingAncestor(viewportRows)
 	} else {
-		_ = a.model.Right.Refresh(viewportRows)
-		_ = a.model.Left.RefreshOrNavigateToExistingAncestor(viewportRows)
+		_ = a.model.Secondary.Refresh(viewportRows)
+		_ = a.model.Primary.RefreshOrNavigateToExistingAncestor(viewportRows)
 	}
 	a.applyCopyHereFocusPending()
 	a.applyQuickViewPreviewImmediately()

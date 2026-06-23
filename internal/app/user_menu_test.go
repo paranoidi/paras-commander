@@ -36,7 +36,7 @@ func testUserMenuAppConfig(t *testing.T, dir, cfgDir string, cfg config.Config) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := app.model.Left.Load(dir); err != nil {
+	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
 	return app
