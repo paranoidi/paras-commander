@@ -60,6 +60,7 @@ row.symlink = { fg = "bright_cyan" }
 row.indicator.selection_subtree = { fg = "yellow" }
 row.indicator.new = { fg = "bright_green" }
 row.indicator.new.previous = { fg = "bright_yellow" }
+row.indicator.renamed = { fg = "cyan" }
 icon.folder.open = { fg = "bright_cyan" }
 icon.folder.mount = { fg = "bright_blue" }
 indicator.sync = { fg = "green", bold = true }
@@ -211,6 +212,7 @@ completed = "\uf05d"
 [symbols.filelist]
 selection_subtree = "○"
 new = "\uea7f"
+renamed = "\U000f11e8"
 
 [symbols.folders]
 folder = "\U000F024B"

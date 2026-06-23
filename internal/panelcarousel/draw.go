@@ -17,6 +17,9 @@ type JobMarkFunc func(absPath string) (glyph rune, status string, ok bool)
 // NewFileMarkFunc reports the new-file suffix tier for an entry.
 type NewFileMarkFunc func(entry localfs.Entry) panellist.NewFileMarkTier
 
+// RenameMarkFunc reports whether an entry was recently renamed.
+type RenameMarkFunc func(entry localfs.Entry) bool
+
 // IconPaintFunc paints the devicon strip for one listing row.
 type IconPaintFunc func(screen tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorThemeKey string, diskPending, diskExcluded bool)
 
@@ -35,6 +38,7 @@ type BodyParams struct {
 	SurfaceStyle          tcell.Style
 	JobMark               JobMarkFunc
 	NewFileMark           NewFileMarkFunc
+	RenameMark            RenameMarkFunc
 	PaintIcon             IconPaintFunc
 	DiskUsage             DiskUsage
 	ShowChildColumn       bool
@@ -206,9 +210,14 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			if c.Active && p.NewFileMark != nil {
 				newFileTier = p.NewFileMark(entry)
 			}
+			renameMark := false
+			if c.Active && p.RenameMark != nil {
+				renameMark = p.RenameMark(entry)
+			}
 			rowSuffix := panellist.RowSuffix{
 				JobGlyph:         jobGlyph,
 				NewFileTier:      newFileTier,
+				RenameMark:       renameMark,
 				SubtreeSelection: subtree,
 			}
 			var diskSrc DiskUsageSource

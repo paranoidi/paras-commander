@@ -63,6 +63,8 @@ type Theme struct {
 	PanelRowIndicatorNew tcell.Style
 	// PanelRowIndicatorNewPrevious styles the file-list suffix for earlier new-file marks in the same directory.
 	PanelRowIndicatorNewPrevious tcell.Style
+	// PanelRowIndicatorRenamed styles the file-list suffix for recently renamed entries.
+	PanelRowIndicatorRenamed tcell.Style
 	// PanelIconFolderOpen styles the open-folder icon strip when the other panel is in that directory.
 	PanelIconFolderOpen tcell.Style
 	// PanelIconFolderMount styles the other-mount directory icon strip.
@@ -391,6 +393,7 @@ const (
 	SymbolKeyHiddenDotfiles           = "hidden_dotfiles"
 	SymbolKeyFilelistSelectionSubtree = "filelist.selection_subtree"
 	SymbolKeyFilelistNew              = "filelist.new"
+	SymbolKeyFilelistRenamed          = "filelist.renamed"
 	SymbolKeyFoldersFolder            = "folders.folder"
 	SymbolKeyFoldersOpen              = "folders.open"
 	SymbolKeyFoldersScanning          = "folders.scanning"
@@ -472,6 +475,11 @@ func (t Theme) SymbolFilelistSelectionSubtree() rune {
 // SymbolFilelistNew returns the recently-transferred file suffix glyph.
 func (t Theme) SymbolFilelistNew() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistNew, '\uea7f')
+}
+
+// SymbolFilelistRenamed returns the recently-renamed file suffix glyph.
+func (t Theme) SymbolFilelistRenamed() rune {
+	return t.filelistSymbolRune(SymbolKeyFilelistRenamed, '\U000f11e8')
 }
 
 // SymbolScrollbarThumb returns the panel scrollbar thumb-style position glyph.
@@ -643,6 +651,7 @@ var requiredStyleKeys = []string{
 	"panel.row.indicator.selection_subtree",
 	"panel.row.indicator.new",
 	"panel.row.indicator.new.previous",
+	"panel.row.indicator.renamed",
 	"panel.icon.folder.open",
 	"panel.icon.folder.mount",
 	"panel.text",
@@ -1101,6 +1110,7 @@ func parse(data []byte) (Theme, error) {
 		PanelRowIndicatorSelectionSubtree:   styles["panel.row.indicator.selection_subtree"],
 		PanelRowIndicatorNew:                styles["panel.row.indicator.new"],
 		PanelRowIndicatorNewPrevious:        styles["panel.row.indicator.new.previous"],
+		PanelRowIndicatorRenamed:            styles["panel.row.indicator.renamed"],
 		PanelIconFolderOpen:                 styles["panel.icon.folder.open"],
 		PanelIconFolderMount:                styles["panel.icon.folder.mount"],
 		PanelIconFolderDefault:              panelIconFolderDefault,

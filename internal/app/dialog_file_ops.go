@@ -269,8 +269,10 @@ func (a *App) executeRename() {
 		return
 	}
 	focusAfter := a.model.FileDialog.RenameFocusAfter
+	panelDir := p.Path
 	a.closeFileDialog()
 	a.refreshBothPanels()
+	a.activePanel().AddRenameMarks(panelDir, []string{plan.NewName})
 	if focusAfter {
 		a.activePanel().SelectVisibleEntryCentered(plan.NewName, a.activeViewportRows())
 	}

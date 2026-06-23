@@ -27,6 +27,7 @@ const (
 type RowSuffix struct {
 	JobGlyph         rune
 	NewFileTier      NewFileMarkTier
+	RenameMark       bool
 	SubtreeSelection bool
 }
 
@@ -37,6 +38,9 @@ func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th th
 		n += 2
 	}
 	if suffix.NewFileTier != NewFileMarkNone && width > n+2 {
+		n += 2
+	}
+	if suffix.RenameMark && width > n+2 {
 		n += 2
 	}
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
@@ -103,6 +107,10 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistNew(), NameIdx: -1})
 		used += 2
 	}
+	if suffix.RenameMark && width > used+2 {
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistRenamed(), NameIdx: -1})
+		used += 2
+	}
 	if subtree && width > used+2 {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistSelectionSubtree(), NameIdx: -1})
 	}
@@ -129,6 +137,9 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, jobStatus, cursorStyleKey string,
 			base = th.PanelRowIndicatorNewPrevious
 		}
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
+	case r == th.SymbolFilelistRenamed() && suffix.RenameMark:
+		base := th.PanelRowIndicatorRenamed
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == th.SymbolFilelistSelectionSubtree() && suffix.SubtreeSelection:
 		base := th.PanelRowIndicatorSelectionSubtree
 		if chromeBlocked {
@@ -153,7 +164,7 @@ func ListingSuffixSpans(
 	nameBGAt func(displayIndex int) tcell.Style,
 ) []primitive.Span {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
-	if suffix.JobGlyph == 0 && suffix.NewFileTier == NewFileMarkNone && !subtree {
+	if suffix.JobGlyph == 0 && suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree {
 		return nil
 	}
 	display := EntryDisplayRunes(entry, nameWidth, showIcons, suffix, th)

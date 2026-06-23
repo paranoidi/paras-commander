@@ -213,6 +213,9 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 				NewFileMark: func(entry localfs.Entry) panellist.NewFileMarkTier {
 					return state.NewFileMarkTier(entry)
 				},
+				RenameMark: func(entry localfs.Entry) bool {
+					return state.IsRenameMarked(entry)
+				},
 			})
 			paintCarouselFilePreview := carouselFilePreview.Open && showChildCol &&
 				(childKind == panelcarousel.ChildPreviewFile ||
@@ -301,6 +304,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 
 		var subtreeMark bool
 		var newFileTier panellist.NewFileMarkTier
+		var renameMark bool
 		var jobMark bool
 		var jobStatus string
 		var jobMarkGlyph rune
@@ -324,6 +328,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			}
 			subtreeMark = entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
 			newFileTier = state.NewFileMarkTier(entry)
+			renameMark = state.IsRenameMarked(entry)
 			jobMark, jobStatus = EntryPathJobMarkStatus(entry.Path, jobMarks)
 			if jobMark {
 				glyphStr := styles.SymbolJobsList(jobStatus)
@@ -342,6 +347,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, fileListActive
 			rowSuffix = panellist.RowSuffix{
 				JobGlyph:         jobMarkGlyph,
 				NewFileTier:      newFileTier,
+				RenameMark:       renameMark,
 				SubtreeSelection: subtreeMark,
 			}
 			text = formatEntry(entry, listTextWidth, showIcons, rowSuffix, styles, painter, showMetaEffective, metaTotalW, metaText, listFmt, nameOnlyDisplay)

@@ -13,9 +13,9 @@ import (
 
 // State provides a thread-safe view of all tracked jobs for the UI layer.
 type State struct {
-	mu     sync.Mutex
-	queue  *Queue
-	active    *Job // Job currently holding the transfer lease (running copy/move), or nil.
+	mu         sync.Mutex
+	queue      *Queue
+	active     *Job        // Job currently holding the transfer lease (running copy/move), or nil.
 	activeProc *os.Process // subprocess registered by the active job, if any.
 	// waitingBlocker holds jobs that yielded the lease while awaiting user blocker input (FIFO).
 	waitingBlocker []*Job

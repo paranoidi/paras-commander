@@ -119,6 +119,10 @@ type State struct {
 	// after completed copy/move/flatten into that directory. Marks are dropped when leaving the directory.
 	NewFileMarksByDir map[string]*dirNewFileMarks
 
+	// RenameMarksByDir maps listing directory paths to sets of base names that were renamed
+	// in that directory. Marks are dropped when leaving the directory.
+	RenameMarksByDir map[string]map[string]struct{}
+
 	// OnDirectoryChange is called after every successful directory load (Enter, Parent,
 	// HistoryBackward/Forward, Refresh, ToggleHidden, etc.). The app uses this to check whether disk-usage idle sorting
 	// can be applied immediately or needs to be deferred.
@@ -1137,6 +1141,7 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 	if !loc.Equal(s.Path) {
 		s.rememberCursorForPath(s.Path.String())
 		s.dropNewFileMarks(s.Path.String())
+		s.dropRenameMarks(s.Path.String())
 	}
 	selectedName, indexFallback, centerRecalled := s.resolveLoadCursor(loc, selectedName, indexFallback)
 	if loc.IsRemote() && s.ScheduleRemoteLoad != nil {

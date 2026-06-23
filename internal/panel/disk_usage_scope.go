@@ -30,4 +30,3 @@ func pathEqualOrUnder(child, root string) bool {
 	}
 	return strings.HasPrefix(c, r+string(filepath.Separator))
 }
-

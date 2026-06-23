@@ -363,13 +363,17 @@ func (a *App) executeMassRename() {
 		return
 	}
 	n := 0
+	var renamedNames []string
 	for _, r := range rows {
 		if r.NewBase != r.OldBase {
 			n++
+			renamedNames = append(renamedNames, r.NewBase)
 		}
 	}
+	panelDir := a.activePanel().Path
 	a.closeFileDialog()
 	a.refreshBothPanels()
+	a.activePanel().AddRenameMarks(panelDir, renamedNames)
 	a.activePanel().ClearSelection()
 	a.setTransientMessage(fmt.Sprintf("Renamed %d file(s)", n), ui.MessageUrgencyInfo)
 }

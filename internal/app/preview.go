@@ -502,7 +502,7 @@ func (a *App) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, follo
 		ScrollMode:                 driver.ScrollMode,
 		ScrollEdgeMargin:           driver.ScrollEdgeMargin,
 		Gitignore:                  follower.Gitignore,
-		DiskSorter:              follower.DiskSorter,
+		DiskSorter:                 follower.DiskSorter,
 		SuppressHeavyPathProbes:    follower.SuppressHeavyPathProbes,
 		ScheduleRemoteLoad:         follower.ScheduleRemoteLoad,
 		IdleDiskTotalsSort:         follower.IdleDiskTotalsSort,
