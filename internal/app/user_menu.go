@@ -293,6 +293,7 @@ func (a *App) runUserMenuInteractive(argv []string, workDir, toast string) {
 		a.setErrorMessage("User menu", err)
 		return
 	}
+	a.activePanel().ClearSelection()
 	a.refreshAfterUserMenuCommand()
 	if toast != "" {
 		a.setTransientMessage(toast, ui.MessageUrgencyInfo)
@@ -338,7 +339,11 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 	defer a.commandsBatchesInflight.Add(-1)
 
 	postBackgroundFinal := func(res cmdrun.RunResult) {
-		p := commandWakePayload{refreshBrowserPanel: background}
+		if !background {
+			a.postCommandWakePayload(commandWakePayload{clearActiveSelection: true})
+			return
+		}
+		p := commandWakePayload{refreshBrowserPanel: true, clearActiveSelection: true}
 		if log, banner, urg, ok := userMenuBackgroundNotify(title, res); ok {
 			p.notifyLog = log
 			p.notifyBanner = banner

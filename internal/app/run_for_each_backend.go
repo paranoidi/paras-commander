@@ -88,7 +88,7 @@ func (a *App) runForEachUnifiedBatch(ctx context.Context, start int, spec runFor
 		}
 		a.commandsMu.RUnlock()
 
-		p := commandWakePayload{}
+		p := commandWakePayload{clearActiveSelection: true}
 		if spec.Background {
 			p.refreshBrowserPanel = true
 		}
@@ -101,7 +101,7 @@ func (a *App) runForEachUnifiedBatch(ctx context.Context, start int, spec runFor
 			a.postCommandWakePayload(p)
 			return
 		}
-		a.postCommandWake()
+		a.postCommandWakePayload(p)
 	}()
 
 	allowFilter := spec.AllowFiles || spec.AllowDirs
