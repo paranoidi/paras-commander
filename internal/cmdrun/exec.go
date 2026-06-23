@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 const truncationMarker = "\n\n[output truncated]\n"
@@ -36,6 +37,10 @@ func Run(ctx context.Context, argv []string, dir string, maxStreamBytes int) Run
 
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
+	// Allow orphaned child processes (e.g. clipboard tools spawned by shell wrappers)
+	// up to 5 seconds to flush output after the primary process exits, then forcibly
+	// close the pipes so cmd.Wait() doesn't block indefinitely.
+	cmd.WaitDelay = 5 * time.Second
 
 	var stdoutBuf, stderrBuf cappedWriter
 	stdoutBuf.max = maxStreamBytes
