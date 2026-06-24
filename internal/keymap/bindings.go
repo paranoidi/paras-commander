@@ -76,6 +76,11 @@ func (m *Map) ActionBindings() []Binding {
 			rememberCanonical(ks)
 		}
 	}
+	for _, chords := range DefaultMkdirDialogOverlayKeys() {
+		for _, ks := range chords {
+			rememberCanonical(ks)
+		}
+	}
 	for _, chords := range DefaultBookmarkDialogOverlayKeys() {
 		for _, ks := range chords {
 			rememberCanonical(ks)

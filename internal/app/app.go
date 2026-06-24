@@ -87,6 +87,7 @@ type App struct {
 	keysFilePreview    *keymap.Map // chords active only in F3 full-screen file view (overlay)
 	keysDialogInput    *keymap.Map // chords active only while a dialog input field is focused
 	keysRenameDialog   *keymap.Map // sanitize/slugify while main rename dialog is focused
+	keysMkdirDialog    *keymap.Map // extract common name while mkdir dialog is focused
 	keysBookmarkDialog *keymap.Map // delete fzf-marks entry while bookmarks picker is open
 	keysFindDialog     *keymap.Map // select all while find dialog is open
 	keysHistoryDialog  *keymap.Map // both-panels toggle while history dialog is open
@@ -368,6 +369,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		kmRenameDialog = m
 	}
+	kmMkdirDialog := bundle.MkdirDialog
+	if kmMkdirDialog == nil {
+		m, err := keymap.Build(keymap.DefaultMkdirDialogOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build mkdir dialog overlay map: %w", err)
+		}
+		kmMkdirDialog = m
+	}
 	kmBookmarkDialog := bundle.BookmarkDialog
 	if kmBookmarkDialog == nil {
 		m, err := keymap.Build(keymap.DefaultBookmarkDialogOverlayKeys())
@@ -518,6 +527,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysFilePreview:    kmFilePreview,
 		keysDialogInput:    kmDialogInput,
 		keysRenameDialog:   kmRenameDialog,
+		keysMkdirDialog:    kmMkdirDialog,
 		keysBookmarkDialog: kmBookmarkDialog,
 		keysFindDialog:     kmFindDialog,
 		keysHistoryDialog:  kmHistoryDialog,

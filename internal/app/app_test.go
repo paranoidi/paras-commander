@@ -7658,6 +7658,90 @@ func TestSyncFollowSkipsHistoryRecordingOnFollower(t *testing.T) {
 	}
 }
 
+func TestMkdirDialogExtractFooterHiddenWithSingleSelection(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "a.txt")
+	writeFile(t, src)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{src: true}
+
+	app.dispatch(keymap.ActionFileMkdir)
+	for _, k := range app.activeFooterKeys() {
+		if k.Hint == "Extract common name" {
+			t.Fatalf("footer should not list Extract common name with one selection: %+v", k)
+		}
+	}
+}
+
+func TestMkdirDialogExtractFooterShownWithMultipleSelections(t *testing.T) {
+	dir := t.TempDir()
+	a := filepath.Join(dir, "a.txt")
+	b := filepath.Join(dir, "b.txt")
+	writeFile(t, a)
+	writeFile(t, b)
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{a: true, b: true}
+
+	app.dispatch(keymap.ActionFileMkdir)
+	var found bool
+	var defaultIdx, extractIdx = -1, -1
+	for i, k := range app.activeFooterKeys() {
+		switch k.Hint {
+		case "Extract common name":
+			found = true
+			extractIdx = i
+			if k.Key != tcell.KeyF7 || k.KeyLabel != "F7" {
+				t.Fatalf("extract footer = %+v, want F7 Extract common name", k)
+			}
+		case "Default":
+			defaultIdx = i
+		}
+	}
+	if !found {
+		t.Fatal("footer should list F7 Extract common name with two or more selections")
+	}
+	if defaultIdx < 0 {
+		t.Fatal("footer should list Default when mkdir dialog has a prefill")
+	}
+	if defaultIdx >= extractIdx {
+		t.Fatalf("footer order = Default@%d before Extract@%d, want Default left of F7", defaultIdx, extractIdx)
+	}
+}
+
+func TestMkdirDialogExtractCommonNameF7(t *testing.T) {
+	dir := t.TempDir()
+	names := []string{
+		"[aaa] some common name - 01 - asdf asdf",
+		"[bbb] some common name - 02 - asdf asdf",
+		"[acc] some common name - 03 - asdf asdf",
+	}
+	selected := make(map[string]bool, len(names))
+	for _, name := range names {
+		path := filepath.Join(dir, name)
+		writeFile(t, path)
+		selected[path] = true
+	}
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+	app.activePanel().SelectedPaths = selected
+
+	app.dispatch(keymap.ActionFileMkdir)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
+	if got := app.model.FileDialog.Fields[0].Value; got != "some common name" {
+		t.Fatalf("directory name = %q, want %q", got, "some common name")
+	}
+	if !app.model.FileDialog.Fields[0].PrefillPending {
+		t.Fatal("expected PrefillPending after extract")
+	}
+}
+
 func TestMkdirDialogWithoutSelectionHidesActionRadios(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "test.txt"))

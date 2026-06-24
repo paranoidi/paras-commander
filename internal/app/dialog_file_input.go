@@ -14,6 +14,9 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	if a.tryRenameDialogShortcut(event) {
 		return false
 	}
+	if a.tryMkdirDialogShortcut(event) {
+		return false
+	}
 	if d.Open && d.DialogType == ui.FileDialogMassRename && event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 's', 'S':

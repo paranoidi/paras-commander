@@ -350,6 +350,20 @@ func TestRenameDialogOverlayRejectsNonRenameActions(t *testing.T) {
 	}
 }
 
+func TestMkdirDialogOverlayRejectsNonMkdirActions(t *testing.T) {
+	dir := t.TempDir()
+	keybindings := filepath.Join(dir, "keybindings.toml")
+	body := "[dialog.mkdir]\n" +
+		"jobs.cancel = [\"C-r\"]\n"
+	if err := os.WriteFile(keybindings, []byte(body), 0o600); err != nil {
+		t.Fatalf("write keybindings: %v", err)
+	}
+	_, err := LoadFromPaths(config.Paths{ConfigDir: dir, KeybindingsFile: keybindings})
+	if err == nil {
+		t.Fatal("LoadFromPaths: want error for invalid action in [dialog.mkdir]")
+	}
+}
+
 func TestParseKeybindingsRejectsLegacyActionKeys(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "keybindings.toml")
@@ -376,6 +390,17 @@ func TestDefaultBundleRenameDialogOverlayF2F3(t *testing.T) {
 	id, ok = bundle.RenameDialog.Lookup(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
 	if !ok || id != ActionFileRenameOpenSlugify {
 		t.Fatalf("RenameDialog F3 = %q %v, want %q", id, ok, ActionFileRenameOpenSlugify)
+	}
+}
+
+func TestDefaultBundleMkdirDialogOverlayF7(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	id, ok := bundle.MkdirDialog.Lookup(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
+	if !ok || id != ActionFileMkdirExtractCommonName {
+		t.Fatalf("MkdirDialog F7 = %q %v, want %q", id, ok, ActionFileMkdirExtractCommonName)
 	}
 }
 

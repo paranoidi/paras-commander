@@ -156,6 +156,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Bookmarks"}}, rest...)
 			}
 		}
+		if a.mkdirDialogExtractFooterEligible() {
+			if lbl := a.keysMkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName); lbl != "" {
+				rest = append([]menu.FunctionKey{{Key: tcell.KeyF7, KeyLabel: lbl, Hint: "Extract common name"}}, rest...)
+			}
+		}
 		if a.dialogInputRestoreFooterEligible() {
 			if lbl := a.keysDialogInput.MenuBindingLabel(keymap.ActionDialogInputRestoreDefault); lbl != "" {
 				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Default"}}, rest...)

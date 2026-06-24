@@ -251,6 +251,12 @@ func MassRenameDiff(old, new string) ([]search.Range, []search.Range) {
 	return dialog.MassRenameDiff(old, new)
 }
 
+// ExtractLongestCommonName returns the longest continuous substring shared by all
+// basenames, trimmed for use as a directory name (delegates to dialog).
+func ExtractLongestCommonName(names []string) string {
+	return dialog.ExtractLongestCommonName(names)
+}
+
 // ApplyRenameSanitize applies dot/underscore-to-space cleanups (delegates to dialog).
 func ApplyRenameSanitize(s string, dotsToSpace, underscoresToSpace bool) string {
 	return dialog.ApplyRenameSanitize(s, dotsToSpace, underscoresToSpace)

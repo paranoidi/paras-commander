@@ -10,6 +10,7 @@ type Bundle struct {
 	FilePreview    *Map // F3 full-screen file view overlay; may be nil
 	DialogInput    *Map // dialog input field actions (e.g. restore default placeholder)
 	RenameDialog   *Map // main rename dialog (sanitize/slugify shortcuts)
+	MkdirDialog    *Map // mkdir dialog (extract common name from selection)
 	BookmarkDialog *Map // bookmarks path picker (delete fzf-marks entry)
 	FindDialog     *Map // find dialog (select all ranked results)
 	HistoryDialog  *Map // history dialog (toggle both panels)

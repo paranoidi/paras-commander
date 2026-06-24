@@ -63,6 +63,14 @@ var overlayRegistry = []OverlaySpec{
 		},
 	},
 	{
+		TableName: DialogMkdirShortcutsTable,
+		Defaults:  DefaultMkdirDialogOverlayKeys,
+		Allowed:   AllowedInMkdirDialogOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [dialog.mkdir] action %q is not allowed (file.mkdir.extract-common-name only)", source, action)
+		},
+	},
+	{
 		TableName: DialogBookmarkShortcutsTable,
 		Defaults:  DefaultBookmarkDialogOverlayKeys,
 		Allowed:   AllowedInBookmarkDialogOverlay,
@@ -134,6 +142,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "ui.input.* only"
 	case DialogRenameShortcutsTable:
 		return "file.rename.open-* only"
+	case DialogMkdirShortcutsTable:
+		return "file.mkdir.extract-common-name only"
 	case DialogBookmarkShortcutsTable:
 		return "bookmark.delete only"
 	case DialogFindShortcutsTable:

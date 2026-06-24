@@ -71,12 +71,14 @@ const (
 	ActionFileRename = "file.rename"
 	// ActionFileRenameOpenSanitize / ActionFileRenameOpenSlugify are bound via
 	// [dialog.rename], not [main].
-	ActionFileRenameOpenSanitize       = "file.rename.open-sanitize"
-	ActionFileRenameOpenSlugify        = "file.rename.open-slugify"
-	ActionFileRenameOpenEncoding       = "file.rename.open-encoding"
-	ActionFileDelete                   = "file.delete"
-	ActionFileMkdir                    = "file.mkdir"
-	ActionFileMkdirOpenInOther         = "file.mkdir-open-in-other"
+	ActionFileRenameOpenSanitize = "file.rename.open-sanitize"
+	ActionFileRenameOpenSlugify  = "file.rename.open-slugify"
+	ActionFileRenameOpenEncoding = "file.rename.open-encoding"
+	ActionFileDelete             = "file.delete"
+	ActionFileMkdir              = "file.mkdir"
+	ActionFileMkdirOpenInOther   = "file.mkdir-open-in-other"
+	// ActionFileMkdirExtractCommonName is bound via [dialog.mkdir], not [main].
+	ActionFileMkdirExtractCommonName   = "file.mkdir.extract-common-name"
 	ActionFileChmod                    = "file.chmod"
 	ActionFileChown                    = "file.chown"
 	ActionFileSymlink                  = "file.symlink"
@@ -241,6 +243,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileDelete:                   {},
 	ActionFileMkdir:                    {},
 	ActionFileMkdirOpenInOther:         {},
+	ActionFileMkdirExtractCommonName:   {},
 	ActionFileChmod:                    {},
 	ActionFileChown:                    {},
 	ActionFileSymlink:                  {},

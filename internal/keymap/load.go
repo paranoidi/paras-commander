@@ -17,7 +17,7 @@ import (
 //
 //  1. built-in defaults (DefaultActionKeys / DefaultJobsOverlayKeys / DefaultCommandsOverlayKeys /
 //     DefaultMessagesOverlayKeys / DefaultFilePreviewOverlayKeys / DefaultDialogInputOverlayKeys / DefaultRenameDialogOverlayKeys /
-//     DefaultBookmarkDialogOverlayKeys / DefaultFindDialogOverlayKeys / DefaultHistoryDialogOverlayKeys /
+//     DefaultMkdirDialogOverlayKeys / DefaultBookmarkDialogOverlayKeys / DefaultFindDialogOverlayKeys / DefaultHistoryDialogOverlayKeys /
 //     DefaultFlattenDialogOverlayKeys)
 //  2. keybindings.toml's matching tables (when present)
 //
@@ -85,10 +85,11 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		FilePreview:    overlayMaps[3],
 		DialogInput:    overlayMaps[4],
 		RenameDialog:   overlayMaps[5],
-		BookmarkDialog: overlayMaps[6],
-		FindDialog:     overlayMaps[7],
-		HistoryDialog:  overlayMaps[8],
-		FlattenDialog:  overlayMaps[9],
+		MkdirDialog:    overlayMaps[6],
+		BookmarkDialog: overlayMaps[7],
+		FindDialog:     overlayMaps[8],
+		HistoryDialog:  overlayMaps[9],
+		FlattenDialog:  overlayMaps[10],
 	}, nil
 }
 
@@ -227,6 +228,7 @@ func WriteDefaultStub(filename string) error {
 type dialogShortcuts struct {
 	Input    map[string][]string `toml:"input"`
 	Rename   map[string][]string `toml:"rename"`
+	Mkdir    map[string][]string `toml:"mkdir"`
 	Bookmark map[string][]string `toml:"bookmark"`
 	Find     map[string][]string `toml:"find"`
 	History  map[string][]string `toml:"history"`
@@ -256,6 +258,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		"#\n" +
 		"# [dialog.input] — ui.input.* only (e.g. restore default placeholder).\n" +
 		"# [dialog.rename] — file.rename.open-sanitize and file.rename.open-slugify.\n" +
+		"# [dialog.mkdir] — file.mkdir.extract-common-name.\n" +
 		"# [dialog.bookmark] — bookmark.delete (fzf-marks only).\n" +
 		"# [dialog.find] — find.select-all, find.unselect-all, find.select-group, find.unselect-group.\n" +
 		"# [dialog.history] — panel.history-both-panels.\n" +
@@ -279,6 +282,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		Dialog: dialogShortcuts{
 			Input:    DefaultDialogInputOverlayKeys(),
 			Rename:   DefaultRenameDialogOverlayKeys(),
+			Mkdir:    DefaultMkdirDialogOverlayKeys(),
 			Bookmark: DefaultBookmarkDialogOverlayKeys(),
 			Find:     DefaultFindDialogOverlayKeys(),
 			History:  DefaultHistoryDialogOverlayKeys(),
