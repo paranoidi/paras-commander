@@ -465,7 +465,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	}
 	quit, rendered = a.finishResolvedKeyboardAction(nextAction)
 	if rendered {
-		a.render()
+		if panelSyncFollowListNavAction(nextAction) && a.browserListNavPartialRenderEligible() {
+			a.renderBrowserListNavUpdate()
+		} else {
+			a.render()
+		}
 	}
 	return quit, rendered
 }

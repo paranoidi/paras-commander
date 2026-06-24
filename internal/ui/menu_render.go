@@ -165,6 +165,27 @@ func DrawMenuBarJobsGapOnly(screen tcell.Screen, layout Layout, model Model, men
 	return true
 }
 
+// DrawMenuBarPermissionTailOnly repaints the jobs-attention, permission, and spinner tail on the
+// menu row (used after file-list navigation updates the active row mode string).
+func DrawMenuBarPermissionTailOnly(screen tcell.Screen, layout Layout, model Model, styles theme.Theme) bool {
+	if !model.MenuBarLayoutReserved() || layout.Menu.Width <= 0 {
+		return false
+	}
+	showSpinner := model.MenuBarActivitySpinner
+	rect := layout.Menu
+	tailW := menuBarRightTailRuneCount(model.MenuBarJobsAttention, model.MenuBarPermission, showSpinner)
+	if tailW <= 0 {
+		return false
+	}
+	tailStart := rect.X + rect.Width - menuBarPermRightMargin - tailW
+	if tailStart < rect.X {
+		tailStart = rect.X
+	}
+	primitive.Text(screen, tailStart, rect.Y, rect.X+rect.Width-tailStart, "", styles.MenuBar)
+	drawMenuBarRightTail(screen, rect, model.MenuBarJobsAttention, model.MenuBarPermission, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showSpinner, model.SpinPhase)
+	return true
+}
+
 // DrawMenuBarSpinnerOnly updates the single activity-spinner cell on the menu row without a full repaint.
 func DrawMenuBarSpinnerOnly(screen tcell.Screen, layout Layout, model Model, styles theme.Theme) bool {
 	if !model.MenuBarLayoutReserved() || layout.Menu.Width <= 0 {

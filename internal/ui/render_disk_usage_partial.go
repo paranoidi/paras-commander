@@ -90,3 +90,15 @@ func paintBrowserPanelsInScope(
 	}
 	return painted
 }
+
+// PaintBrowserListNavPanelOnly repaints one browser file-list column (and its selections strip
+// when visible) without touching the other twin panel or the rest of the frame.
+func PaintBrowserListNavPanelOnly(screen tcell.Screen, layout Layout, model Model, styles theme.Theme, panelID int) bool {
+	if model.ViewMode != ViewBrowser || layout.TooSmall {
+		return false
+	}
+	if panelID != PrimaryPanel && panelID != SecondaryPanel {
+		return false
+	}
+	return paintBrowserPanelsInScope(screen, layout, model, styles, func(id int) bool { return id == panelID })
+}

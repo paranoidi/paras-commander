@@ -71,9 +71,11 @@ drained:
 			a.renderDeleteDialogUpdate()
 			return
 		}
-		if a.paintDiskUsageBrowserUpdate() {
-			a.armSpinnerRedrawTimer()
-			return
+		if a.diskUsageScanBusy() {
+			if a.paintDiskUsageBrowserUpdate() {
+				a.armSpinnerRedrawTimer()
+				return
+			}
 		}
 		a.render()
 		return

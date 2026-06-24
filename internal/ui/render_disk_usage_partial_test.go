@@ -97,6 +97,53 @@ func TestPaintDiskUsageBrowserPanelsOnlyScopedPanel(t *testing.T) {
 	}
 }
 
+func TestPaintBrowserListNavPanelOnlySkipsOtherColumn(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	const w, h = 80, 24
+	screen.SetSize(w, h)
+
+	model := Model{
+		ViewMode:       ViewBrowser,
+		ActivePanel:    SecondaryPanel,
+		ActiveSubFocus: SubFocusFileList,
+		Primary: panel.State{
+			Path: pathloc.MustParse("/nas/share"),
+			Entries: []localfs.Entry{
+				{Name: "slowdir", Path: "/nas/share/slowdir", Type: localfs.EntryDirectory},
+			},
+		},
+		Secondary: panel.State{
+			Path: pathloc.MustParse("/local/home"),
+			Entries: []localfs.Entry{
+				{Name: "alpha", Path: "/local/home/alpha", Type: localfs.EntryDirectory},
+				{Name: "beta", Path: "/local/home/beta", Type: localfs.EntryDirectory},
+			},
+			Cursor: 1,
+		},
+	}
+	styles := theme.Default()
+	layout := CalculateLayoutWithOrientation(w, h, true, PanelPaneSplit{
+		ActivePanel:     SecondaryPanel,
+		ActivePercent:   50,
+		InactivePercent: 50,
+	}, SplitHorizontal)
+
+	Render(screen, model, styles)
+	primaryBefore := hashScreenRegion(screen, layout.Primary)
+	model.Secondary.Cursor = 0
+	if !PaintBrowserListNavPanelOnly(screen, layout, model, styles, SecondaryPanel) {
+		t.Fatal("expected list-nav partial paint to succeed")
+	}
+	if got := hashScreenRegion(screen, layout.Primary); got != primaryBefore {
+		t.Fatal("inactive NAS column should be unchanged during active-panel list nav paint")
+	}
+}
+
 func TestPaintDiskUsageBrowserPanelsOnlyRejectsNonBrowser(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")

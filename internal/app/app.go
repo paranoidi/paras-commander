@@ -156,6 +156,8 @@ type App struct {
 	messageExpiryGen     atomic.Uint64
 	spinnerRedrawTimer   *time.Timer
 	diskUsageRedrawTimer *time.Timer
+	// deferDiskUsagePoll skips one pollDiskUsageUpdates drain after partial file-list nav while a scan is busy.
+	deferDiskUsagePoll atomic.Bool
 	pathPickerValidate   sched.Debouncer
 	transferDestValidate sched.Debouncer
 	// syncFollowNavGen invalidates in-flight debounce callbacks for latched panel sync (file-list cursor).
@@ -878,7 +880,9 @@ func (a *App) Run() error {
 		// spinnerTickPayload arriving after scan completion leaves EventJobFinished
 		// unread in the engine channel, so maybeScheduleIdleDiskSortBothPanels()
 		// is never called and the idle-sort timer is never armed.
-		a.pollDiskUsageUpdates()
+		if !a.deferDiskUsagePoll.Swap(false) {
+			a.pollDiskUsageUpdates()
+		}
 	}
 }
 

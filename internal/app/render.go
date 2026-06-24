@@ -60,6 +60,41 @@ func (a *App) renderDeleteDialogUpdate() {
 	a.render()
 }
 
+// browserListNavPartialRenderEligible reports whether file-list navigation can repaint only the
+// active column (inactive panel unchanged this frame).
+func (a *App) browserListNavPartialRenderEligible() bool {
+	if a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusFileList {
+		return false
+	}
+	if a.model.SyncFollowEnabled && !a.syncFollowNavSkipReconcile.Load() {
+		return false
+	}
+	if a.model.QuickViewEnabled && a.model.QuickViewDisplayActive() && !a.quickViewNavSkipReconcile.Load() {
+		return false
+	}
+	return true
+}
+
+// renderBrowserListNavUpdate repaints the active file-list column and menu-bar permission tail
+// without redrawing the inactive panel (avoids disk-usage row work on the other column during scans).
+func (a *App) renderBrowserListNavUpdate() {
+	a.syncCarouselChildPreviewCoalesceFlags()
+	a.syncCursorNameHintNavCoalesceFlags()
+	a.model.MenuBarPermission = a.menuBarPermissionText()
+	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if layout.TooSmall || !ui.PaintBrowserListNavPanelOnly(a.screen, layout, a.model, a.styles, a.model.ActivePanel) {
+		a.render()
+		return
+	}
+	ui.DrawMenuBarPermissionTailOnly(a.screen, layout, a.model, a.styles)
+	a.emitScreenAfterPartialPaint()
+	if a.diskUsageScanBusy() {
+		a.deferDiskUsagePoll.Store(true)
+	}
+}
+
 // paintDiskUsageBrowserUpdate repaints disk-usage scan-scope panels and the menu-bar spinner
 // without a full twin-panel render. Returns false when ui.Render is required instead.
 func (a *App) paintDiskUsageBrowserUpdate() bool {
