@@ -14,7 +14,7 @@ type MkdirActionRadioSpec struct {
 func MkdirActionRadioSpecs() []MkdirActionRadioSpec {
 	return []MkdirActionRadioSpec{
 		{MkdirActionCreate, "Create", 'r'},
-		{MkdirActionCreateCopySelect, "and copy selected", 'c'},
+		{MkdirActionCreateCopySelect, "and copy selected", 'y'},
 		{MkdirActionCreateMoveSelect, "and move selected", 'm'},
 	}
 }

@@ -157,7 +157,7 @@ type App struct {
 	spinnerRedrawTimer   *time.Timer
 	diskUsageRedrawTimer *time.Timer
 	// deferDiskUsagePoll skips one pollDiskUsageUpdates drain after partial file-list nav while a scan is busy.
-	deferDiskUsagePoll atomic.Bool
+	deferDiskUsagePoll   atomic.Bool
 	pathPickerValidate   sched.Debouncer
 	transferDestValidate sched.Debouncer
 	// syncFollowNavGen invalidates in-flight debounce callbacks for latched panel sync (file-list cursor).

@@ -12,8 +12,8 @@ func TestMkdirActionForAltShortcut(t *testing.T) {
 	}{
 		{'r', MkdirActionCreate, 0, true},
 		{'R', MkdirActionCreate, 0, true},
-		{'c', MkdirActionCreateCopySelect, 1, true},
-		{'C', MkdirActionCreateCopySelect, 1, true},
+		{'y', MkdirActionCreateCopySelect, 1, true},
+		{'Y', MkdirActionCreateCopySelect, 1, true},
 		{'m', MkdirActionCreateMoveSelect, 2, true},
 		{'M', MkdirActionCreateMoveSelect, 2, true},
 		{'x', 0, 0, false},

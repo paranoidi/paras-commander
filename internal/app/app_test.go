@@ -7746,12 +7746,12 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 	}
 
 	alt := tcell.ModAlt
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'c', alt))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'y', alt))
 	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreateCopySelect {
-		t.Fatalf("Alt+c: MkdirAction = %v, want copy", app.model.FileDialog.MkdirAction)
+		t.Fatalf("Alt+y: MkdirAction = %v, want copy", app.model.FileDialog.MkdirAction)
 	}
 	if app.model.FileDialog.FocusedField != 2 {
-		t.Fatalf("Alt+c: focus = %d, want 2 (copy radio)", app.model.FileDialog.FocusedField)
+		t.Fatalf("Alt+y: focus = %d, want 2 (copy radio)", app.model.FileDialog.FocusedField)
 	}
 
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'm', alt))
@@ -7770,9 +7770,10 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 		t.Fatalf("Alt+r: focus = %d, want 1 (create radio)", app.model.FileDialog.FocusedField)
 	}
 
-	// Alt+C must not close the dialog in mkdir-with-actions mode.
-	if !app.model.FileDialog.Open {
-		t.Fatal("dialog closed after Alt+c; want copy selection")
+	// Alt+C cancels the dialog; it must not select the copy radio.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'c', alt))
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog still open after Alt+c; want cancel")
 	}
 }
 

@@ -22,7 +22,7 @@ func (p partialDiskUsagePainter) ByteSize(path string) (int64, bool) {
 	return n, ok
 }
 
-func (partialDiskUsagePainter) FileCount(string) (int64, bool) { return 0, false }
+func (partialDiskUsagePainter) FileCount(string) (int64, bool)   { return 0, false }
 func (partialDiskUsagePainter) PendingForPanel(string, int) bool { return false }
 func (partialDiskUsagePainter) DiskScanBusy() bool               { return true }
 func (partialDiskUsagePainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {
