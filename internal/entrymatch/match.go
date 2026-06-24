@@ -10,6 +10,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
 // Context carries state for when-expression evaluation.
@@ -284,7 +285,10 @@ func matchPattern(value, pattern string, shell bool) (bool, error) {
 		return false, nil
 	}
 	if shell {
-		ok, _ := filepath.Match(pattern, value)
+		ok, err := filepath.Match(pattern, value)
+		if err != nil {
+			return false, err
+		}
 		return ok, nil
 	}
 	re, err := regexp.Compile(pattern)
@@ -362,6 +366,55 @@ func modeLetterMatch(m fs.FileMode, r rune) bool {
 		return m&fs.ModeSocket != 0
 	default:
 		return false
+	}
+}
+
+// ValidateWhenExprs checks syntax and pattern compilability for when expressions.
+func ValidateWhenExprs(exprs []string, shellPatterns bool) error {
+	ctx := validationEvalContext(shellPatterns)
+	for _, expr := range exprs {
+		expr = strings.TrimSpace(expr)
+		if expr == "" {
+			continue
+		}
+		if _, err := EvalWhen(expr, ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validationEvalContext(shellPatterns bool) *Context {
+	activeDir := "/menu-validate/active"
+	otherDir := "/menu-validate/other"
+	sampleFile := localfs.Entry{
+		Name: "sample.txt",
+		Path: filepath.Join(activeDir, "sample.txt"),
+		Type: localfs.EntryFile,
+		Mode: 0o644,
+	}
+	otherFile := localfs.Entry{
+		Name: "other.txt",
+		Path: filepath.Join(otherDir, "other.txt"),
+		Type: localfs.EntryFile,
+		Mode: 0o644,
+	}
+	active := &panel.State{
+		Path:          pathloc.MustParse(activeDir),
+		Entries:       []localfs.Entry{sampleFile},
+		Cursor:        0,
+		SelectedPaths: map[string]bool{sampleFile.Path: true},
+	}
+	other := &panel.State{
+		Path:          pathloc.MustParse(otherDir),
+		Entries:       []localfs.Entry{otherFile},
+		Cursor:        0,
+		SelectedPaths: map[string]bool{otherFile.Path: true},
+	}
+	return &Context{
+		Active:        active,
+		Other:         other,
+		ShellPatterns: shellPatterns,
 	}
 }
 

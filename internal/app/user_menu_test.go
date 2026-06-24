@@ -327,7 +327,7 @@ func TestUserMenuDetachDoesNotOpenCommandsView(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeUserMenuFile(t, menuPath, `[[entry]]
-key = "o"
+key = "p"
 title = "Open"
 command = "xdg-open ."
 detach = true
@@ -528,17 +528,15 @@ pool = "missing"
 
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModAlt))
-	waitCommandsDone(t, app)
 
-	app.commandsMu.RLock()
-	defer app.commandsMu.RUnlock()
-	if len(app.model.CommandsList) != 1 {
-		t.Fatalf("CommandsList len = %d, want 1", len(app.model.CommandsList))
+	if app.model.UserMenu.Open {
+		t.Fatal("user menu dialog should not open for unknown pool")
 	}
-	e := app.model.CommandsList[0]
-	if !strings.Contains(e.ErrorMsg, "unknown work pool") {
-		t.Fatalf("ErrorMsg = %q, want unknown work pool", e.ErrorMsg)
+	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
+		t.Fatalf("MessageUrgency = %v, want critical", app.model.MessageUrgency)
+	}
+	if !strings.Contains(app.model.Message, "unknown pool") {
+		t.Fatalf("Message = %q, want unknown pool", app.model.Message)
 	}
 }
 

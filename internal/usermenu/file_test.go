@@ -1,6 +1,9 @@
 package usermenu
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestDecodeShellPatternsIntegerMCStyle(t *testing.T) {
 	mf, err := Decode([]byte(`shell_patterns = 0
@@ -95,7 +98,7 @@ command = "lazygit"
 interactive = 1
 
 [[entry]]
-key = "o"
+key = "p"
 title = "Open"
 command = "xdg-open %d"
 detach = true
@@ -298,5 +301,175 @@ pool = "build"
 	}
 	if len(mf.Entries) != 1 || len(mf.Entries[0].RunForEach) != 2 || !mf.Entries[0].Background || mf.Entries[0].Pool != "build" {
 		t.Fatalf("decoded: %+v", mf.Entries)
+	}
+}
+
+func TestDecodeUnknownTopLevelField(t *testing.T) {
+	_, err := Decode([]byte(`tools = "x"
+
+[[entry]]
+title = "A"
+command = "true"
+`))
+	if err == nil || !strings.Contains(err.Error(), `unknown top-level field "tools"`) {
+		t.Fatalf("err = %v, want unknown top-level field", err)
+	}
+}
+
+func TestDecodeUnknownEntryField(t *testing.T) {
+	_, err := Decode([]byte(`[[entry]]
+title = "Build project"
+command = "true"
+commnd = "oops"
+`))
+	if err == nil || !strings.Contains(err.Error(), `unknown field "commnd"`) {
+		t.Fatalf("err = %v, want unknown entry field", err)
+	}
+}
+
+func TestDecodeWrongEntryTableName(t *testing.T) {
+	_, err := Decode([]byte(`[[toolname]]
+title = "A"
+command = "true"
+`))
+	if err == nil || !strings.Contains(err.Error(), `unknown top-level field "toolname"`) {
+		t.Fatalf("err = %v, want unknown top-level field for wrong table", err)
+	}
+}
+
+func TestDecodeEntryKeyValidation(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "multi-char key",
+			body: `[[entry]]
+key = "ab"
+title = "A"
+command = "true"
+`,
+			want: "single letter",
+		},
+		{
+			name: "non-letter key",
+			body: `[[entry]]
+key = "1"
+title = "A"
+command = "true"
+`,
+			want: "single letter",
+		},
+		{
+			name: "reserved cancel",
+			body: `[[entry]]
+key = "c"
+title = "A"
+command = "true"
+`,
+			want: "reserved",
+		},
+		{
+			name: "duplicate keys",
+			body: `[[entry]]
+key = "a"
+title = "One"
+command = "true"
+
+[[entry]]
+key = "a"
+title = "Two"
+command = "true"
+`,
+			want: "duplicate key",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Decode([]byte(tc.body))
+			if err == nil {
+				t.Fatal("expected key validation error")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("err = %v, want substring %q", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestDecodeWhenValidation(t *testing.T) {
+	_, err := Decode([]byte(`[[entry]]
+title = "Bad when"
+command = "true"
+when = "("
+`))
+	if err == nil || !strings.Contains(err.Error(), "when:") {
+		t.Fatalf("err = %v, want when syntax error", err)
+	}
+
+	_, err = Decode([]byte(`[[entry]]
+title = "Bad glob"
+command = "true"
+when = "f ["
+`))
+	if err == nil || !strings.Contains(err.Error(), "when:") {
+		t.Fatalf("err = %v, want when glob error", err)
+	}
+
+	mf, err := Decode([]byte(`shell_patterns = false
+
+[[entry]]
+title = "Good regex"
+command = "true"
+when = "f \\.go$"
+`))
+	if err != nil {
+		t.Fatalf("valid regex when: %v", err)
+	}
+	if len(mf.Entries) != 1 || len(mf.Entries[0].When) != 1 {
+		t.Fatalf("entries = %+v", mf.Entries)
+	}
+}
+
+func TestDecodeRunForEachRequiresF(t *testing.T) {
+	_, err := Decode([]byte(`[[entry]]
+title = "Bad"
+command = "true"
+run_for_each = ["files"]
+`))
+	if err == nil || !strings.Contains(err.Error(), "requires %f") {
+		t.Fatalf("err = %v, want run_for_each requires %%f", err)
+	}
+}
+
+func TestDecodeMultipleDefaultEntries(t *testing.T) {
+	_, err := Decode([]byte(`[[entry]]
+title = "One"
+command = "true"
+default = true
+
+[[entry]]
+title = "Two"
+command = "true"
+default = true
+`))
+	if err == nil || !strings.Contains(err.Error(), "only one entry may set default") {
+		t.Fatalf("err = %v, want duplicate default error", err)
+	}
+}
+
+func TestValidatePoolRefs(t *testing.T) {
+	mf := &MenuFile{
+		Entries: []MenuEntry{{
+			Title: "Pooled",
+			Pool:  "build",
+		}},
+	}
+	if err := mf.ValidatePoolRefs(PoolNameSet([]string{"build"})); err != nil {
+		t.Fatalf("known pool: %v", err)
+	}
+	if err := mf.ValidatePoolRefs(PoolNameSet(nil)); err == nil || !strings.Contains(err.Error(), `unknown pool "build"`) {
+		t.Fatalf("err = %v, want unknown pool", err)
 	}
 }

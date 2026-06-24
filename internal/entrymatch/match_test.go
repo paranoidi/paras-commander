@@ -39,3 +39,18 @@ func TestEvalWhenRowBareGlob(t *testing.T) {
 		t.Fatalf("row *.py = %v %v", ok, err)
 	}
 }
+
+func TestValidateWhenExprs(t *testing.T) {
+	if err := ValidateWhenExprs([]string{`*.go`}, true); err != nil {
+		t.Fatalf("valid glob: %v", err)
+	}
+	if err := ValidateWhenExprs([]string{`f [`}, true); err == nil {
+		t.Fatal("expected invalid glob error")
+	}
+	if err := ValidateWhenExprs([]string{`f (`}, false); err == nil {
+		t.Fatal("expected syntax error")
+	}
+	if err := ValidateWhenExprs([]string{`f [`}, false); err == nil {
+		t.Fatal("expected invalid regex error")
+	}
+}

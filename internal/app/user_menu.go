@@ -104,6 +104,10 @@ func (a *App) openUserMenu() {
 		a.setUserMenuCritical(err)
 		return
 	}
+	if err := mf.ValidatePoolRefs(usermenu.PoolNameSet(a.workPools.Names())); err != nil {
+		a.setUserMenuCritical(err)
+		return
+	}
 	if len(mf.Entries) == 0 {
 		a.setTransientMessage("User menu: no entries (edit with Shift+F2)", ui.MessageUrgencyWarn)
 		return
