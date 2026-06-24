@@ -68,3 +68,36 @@ func TestExtractLongestCommonName_RejectsSingleRune(t *testing.T) {
 		t.Fatalf("ExtractLongestCommonName() = %q, want %q", got, "alpha")
 	}
 }
+
+func TestExtractLongestCommonName_PreservesLeadingDigit(t *testing.T) {
+	names := []string{
+		"3D scene 01",
+		"3D scene 02",
+	}
+	got := ExtractLongestCommonName(names)
+	if got != "3D scene" {
+		t.Fatalf("ExtractLongestCommonName() = %q, want %q", got, "3D scene")
+	}
+}
+
+func TestExtractLongestCommonName_PreservesLeadingDot(t *testing.T) {
+	names := []string{
+		".hidden-one",
+		".hidden-two",
+	}
+	got := ExtractLongestCommonName(names)
+	if got != ".hidden" {
+		t.Fatalf("ExtractLongestCommonName() = %q, want %q", got, ".hidden")
+	}
+}
+
+func TestExtractLongestCommonName_PrefixFromNameStart(t *testing.T) {
+	names := []string{
+		"aproject 01",
+		"aproject 02",
+	}
+	got := ExtractLongestCommonName(names)
+	if got != "aproject" {
+		t.Fatalf("ExtractLongestCommonName() = %q, want %q", got, "aproject")
+	}
+}

@@ -42,18 +42,30 @@ func ExtractLongestCommonName(names []string) string {
 func bestNormalizedCommonName(names, candidates []string) string {
 	best := ""
 	bestLen := 0
+	bestStartsAtNameStart := false
 	for _, raw := range candidates {
-		normalized := normalizeExtractedCommonName(raw)
+		startsAtStart := substringStartsAtNameStart(names, raw)
+		normalized := normalizeExtractedCommonName(raw, startsAtStart)
 		if normalized == "" || isWeakCommonNameMatch(names, raw, normalized) {
 			continue
 		}
 		n := len([]rune(normalized))
-		if n > bestLen {
+		if n > bestLen || (n == bestLen && startsAtStart && !bestStartsAtNameStart) {
 			bestLen = n
 			best = normalized
+			bestStartsAtNameStart = startsAtStart
 		}
 	}
 	return best
+}
+
+func substringStartsAtNameStart(names []string, raw string) bool {
+	for _, name := range names {
+		if strings.Index(name, raw) != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func allNamesContain(names []string, sub string) bool {
@@ -83,12 +95,16 @@ func isWeakCommonNameMatch(names []string, raw, normalized string) bool {
 	return strings.Contains(normalized, ".") || len([]rune(normalized)) <= 4
 }
 
-func normalizeExtractedCommonName(s string) string {
+func normalizeExtractedCommonName(s string, startsAtNameStart bool) string {
 	s = strings.TrimSpace(s)
+	if !startsAtNameStart {
+		s = strings.TrimLeftFunc(s, isCommonNameLeadingPadding)
+		s = strings.TrimLeftFunc(s, isCommonNameSeparator)
+	}
 	for {
 		prev := s
-		s = strings.TrimFunc(s, isCommonNameSeparator)
-		s = strings.TrimFunc(s, unicode.IsDigit)
+		s = strings.TrimRightFunc(s, isCommonNameSeparator)
+		s = strings.TrimRightFunc(s, unicode.IsDigit)
 		if s == prev {
 			break
 		}
@@ -97,6 +113,15 @@ func normalizeExtractedCommonName(s string) string {
 		return ""
 	}
 	return s
+}
+
+func isCommonNameLeadingPadding(r rune) bool {
+	switch r {
+	case ' ', '\t', '[', ']', '(', ')':
+		return true
+	default:
+		return unicode.IsSpace(r)
+	}
 }
 
 func isCommonNameSeparator(r rune) bool {
