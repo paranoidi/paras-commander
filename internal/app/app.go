@@ -707,6 +707,7 @@ func (a *App) Run() error {
 				a.render()
 				didRender = true
 			case diskUsageRedrawPayload:
+				pollDiskUsageAfter = false
 				a.resortPanelsDiskUsageSorted()
 				a.refreshDeleteDialogSummary()
 				if a.model.FindDialog.Open {
