@@ -714,6 +714,8 @@ func (a *App) Run() error {
 					a.renderFindDialogUpdate()
 				} else if a.deleteDialogOpen() {
 					a.renderDeleteDialogUpdate()
+				} else if a.paintDiskUsageBrowserUpdate() {
+					a.armSpinnerRedrawTimer()
 				} else {
 					a.render()
 				}

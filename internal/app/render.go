@@ -60,6 +60,25 @@ func (a *App) renderDeleteDialogUpdate() {
 	a.render()
 }
 
+// paintDiskUsageBrowserUpdate repaints disk-usage scan-scope panels and the menu-bar spinner
+// without a full twin-panel render. Returns false when ui.Render is required instead.
+func (a *App) paintDiskUsageBrowserUpdate() bool {
+	if a.model.ViewMode != ui.ViewBrowser {
+		return false
+	}
+	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	if layout.TooSmall {
+		return false
+	}
+	if !ui.PaintDiskUsageBrowserPanelsOnly(a.screen, layout, a.model, a.styles) {
+		return false
+	}
+	a.emitScreenAfterPartialPaint()
+	return true
+}
+
 func (a *App) deleteDialogOpen() bool {
 	return a.model.FileDialog.Open && a.model.FileDialog.DialogType == ui.FileDialogDelete
 }
