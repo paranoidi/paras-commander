@@ -79,15 +79,16 @@ type ListingFormatDialogState struct {
 
 // GroupSelectState is the renderable state for the group selection input modal.
 type GroupSelectState struct {
-	Open             bool
-	Text             string
-	TextCursor       int    // rune offset of caret within Text (0..len(runes))
-	TextScroll       int    // first visible rune offset for horizontal scrolling
-	Mode             string // "select" or "unselect"
-	Context          string // "" or "panel" (default), "find"
-	FilesOnly        bool
-	DirsOnly         bool
-	CaseSensitive    bool
-	UseShellPatterns bool
-	Focus            int // 0=pattern input, 1=Files only, 2=Dirs only, 3=Case sensitive, 4=Using shell patterns, 5=OK, 6=Cancel
+	Open               bool
+	Text               string
+	TextCursor         int    // rune offset of caret within Text (0..len(runes))
+	TextScroll         int    // first visible rune offset for horizontal scrolling
+	Mode               string // "select" or "unselect"
+	Context            string // "" or "panel" (default), "find"
+	PatternMode        panel.GroupPatternMode
+	PatternCompileHint string
+	FilesOnly          bool
+	DirsOnly           bool
+	CaseSensitive      bool
+	Focus              int // 0-2=mode radios, 3=pattern, 4=files only, 5=dirs only, 6=case sensitive, 7=OK, 8=Cancel
 }

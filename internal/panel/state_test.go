@@ -1684,6 +1684,34 @@ func TestClearSelectionClearsAllDirectories(t *testing.T) {
 	}
 }
 
+func TestSelectGroupByRegex(t *testing.T) {
+	state := State{
+		Entries: []localfs.Entry{
+			{Name: "main.go", Path: "/tmp/main.go"},
+			{Name: "main_test.go", Path: "/tmp/main_test.go"},
+			{Name: "utils.go", Path: "/tmp/utils.go"},
+			{Name: "README.md", Path: "/tmp/README.md"},
+		},
+	}
+
+	if err := state.SelectGroup(`^main.*\.go$`, false, false, false, GroupPatternRegex); err != nil {
+		t.Fatal(err)
+	}
+
+	if !state.IsSelected(state.Entries[0]) {
+		t.Fatal("main.go should be selected")
+	}
+	if !state.IsSelected(state.Entries[1]) {
+		t.Fatal("main_test.go should be selected")
+	}
+	if state.IsSelected(state.Entries[2]) {
+		t.Fatal("utils.go should not be selected")
+	}
+	if state.IsSelected(state.Entries[3]) {
+		t.Fatal("README.md should not be selected")
+	}
+}
+
 func TestSelectGroupByGlob(t *testing.T) {
 	state := State{
 		Entries: []localfs.Entry{
@@ -1694,7 +1722,9 @@ func TestSelectGroupByGlob(t *testing.T) {
 		},
 	}
 
-	state.SelectGroup("*.go", false, false, false, true)
+	if err := state.SelectGroup("*.go", false, false, false, GroupPatternShell); err != nil {
+		t.Fatal(err)
+	}
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("main.go should be selected")
@@ -1719,7 +1749,9 @@ func TestSelectGroupByGlobCaseInsensitive(t *testing.T) {
 		},
 	}
 
-	state.SelectGroup("*.GO", false, false, false, true)
+	if err := state.SelectGroup("*.GO", false, false, false, GroupPatternShell); err != nil {
+		t.Fatal(err)
+	}
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("file.go should be selected (case-insensitive glob)")
@@ -1740,7 +1772,9 @@ func TestSelectGroupByGlobCaseSensitive(t *testing.T) {
 		},
 	}
 
-	state.SelectGroup("*.go", false, false, true, true)
+	if err := state.SelectGroup("*.go", false, false, true, GroupPatternShell); err != nil {
+		t.Fatal(err)
+	}
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("file.go should be selected")
@@ -1764,7 +1798,9 @@ func TestUnselectGroupByGlob(t *testing.T) {
 		},
 	}
 
-	state.UnselectGroup("*.go", false, false, false, true)
+	if err := state.UnselectGroup("*.go", false, false, false, GroupPatternShell); err != nil {
+		t.Fatal(err)
+	}
 
 	if state.IsSelected(state.Entries[0]) {
 		t.Fatal("main.go should be unselected")
@@ -1786,7 +1822,9 @@ func TestSelectGroupFilesOnly(t *testing.T) {
 		},
 	}
 
-	state.SelectGroup("*", true, false, false, true)
+	if err := state.SelectGroup("*", true, false, false, GroupPatternShell); err != nil {
+		t.Fatal(err)
+	}
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("main.go should be selected")
@@ -1809,7 +1847,9 @@ func TestSelectGroupSubstringCaseSensitive(t *testing.T) {
 	}
 
 	// Substring match, case-sensitive
-	state.SelectGroup("main", false, false, true, false)
+	if err := state.SelectGroup("main", false, false, true, GroupPatternSimple); err != nil {
+		t.Fatal(err)
+	}
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("main.go should be selected (case-sensitive substring match)")
@@ -1832,7 +1872,9 @@ func TestSelectGroupSubstringCaseInsensitive(t *testing.T) {
 	}
 
 	// Substring match, case-insensitive
-	state.SelectGroup("main", false, false, false, false)
+	if err := state.SelectGroup("main", false, false, false, GroupPatternSimple); err != nil {
+		t.Fatal(err)
+	}
 
 	if !state.IsSelected(state.Entries[0]) {
 		t.Fatal("main.go should be selected (case-insensitive substring)")

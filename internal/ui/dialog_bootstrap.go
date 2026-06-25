@@ -90,6 +90,14 @@ const (
 	MassRenameModeUIRegex          = dialog.MassRenameModeUIRegex
 	MassRenameModeUIExternalEditor = dialog.MassRenameModeUIExternalEditor
 
+	GroupSelectFocusShellRadio  = dialog.GroupSelectFocusShellRadio
+	GroupSelectFocusRegexRadio  = dialog.GroupSelectFocusRegexRadio
+	GroupSelectFocusSimpleRadio = dialog.GroupSelectFocusSimpleRadio
+	GroupSelectFocusPattern     = dialog.GroupSelectFocusPattern
+	GroupSelectFocusFilesOnly   = dialog.GroupSelectFocusFilesOnly
+	GroupSelectFocusDirsOnly    = dialog.GroupSelectFocusDirsOnly
+	GroupSelectFocusCase        = dialog.GroupSelectFocusCase
+
 	MkdirActionCreate           = dialog.MkdirActionCreate
 	MkdirActionCreateCopySelect = dialog.MkdirActionCreateCopySelect
 	MkdirActionCreateMoveSelect = dialog.MkdirActionCreateMoveSelect
@@ -155,6 +163,8 @@ var (
 	ConfigDialogScrollbarIndex             = dialog.ConfigDialogScrollbarIndex
 	ConfigDialogMoveScrollFocus            = dialog.ConfigDialogMoveScrollFocus
 	NewDialogLinearForm                    = dialog.NewDialogLinearForm
+	GroupSelectMoveFocus                   = dialog.GroupSelectMoveFocus
+	GroupSelectShowsCaseSensitive          = dialog.GroupSelectShowsCaseSensitive
 	NewDialogTrailingButtonsForm           = dialog.NewDialogTrailingButtonsForm
 	FormatDebounceMS                       = dialog.FormatDebounceMS
 	ParseDebounceMSInput                   = dialog.ParseDebounceMSInput

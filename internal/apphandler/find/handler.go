@@ -1453,9 +1453,14 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 }
 
 // ApplyGroupSelect marks or unmarks full-corpus find results whose basename matches pattern.
-func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, dirsOnly, caseSensitive, useShellPatterns bool) {
+func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, dirsOnly, caseSensitive bool, patternMode panel.GroupPatternMode) {
 	st := &h.model.FindDialog
 	if pattern == "" {
+		return
+	}
+	matcher, err := panel.NewGroupMatcher(pattern, patternMode, caseSensitive)
+	if err != nil {
+		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
 		return
 	}
 	indices := h.findDialogResultIndices(st)
@@ -1481,7 +1486,7 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, dirsOnly, ca
 				continue
 			}
 			name := filepath.Base(path)
-			if !panel.GroupMatch(name, pattern, caseSensitive, useShellPatterns) {
+			if !matcher.Match(name) {
 				continue
 			}
 			paths = append(paths, path)
@@ -1522,7 +1527,7 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, dirsOnly, ca
 			continue
 		}
 		name := filepath.Base(path)
-		if !panel.GroupMatch(name, pattern, caseSensitive, useShellPatterns) {
+		if !matcher.Match(name) {
 			continue
 		}
 		delete(st.MarkedPaths, path)

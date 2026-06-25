@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
@@ -23,15 +24,7 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 		return
 	}
 
-	// top(1) + blank(1) + label(1) + blank(1) + input(1) + blank(1) + cb-row1(1) + cb-row2(1) + cb-row3(1) + sep(1) + buttons(1) + bot(1) = 12
-	height := 12
-	if height > layout.Height-2 {
-		height = layout.Height - 2
-	}
-	if height < 12 {
-		return
-	}
-
+	height := groupSelectDialogHeight(state, layout.Height)
 	rect := draw.CenteredDialogRect(layout, width, height)
 	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
@@ -39,37 +32,79 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	itemBg := dbg
 	textX := draw.DialogTextX(rect)
 	optionX := draw.DialogOptionX(rect)
-	inputWidth := rect.Width - 4
+	inputWidth := draw.DialogContentWidth(rect)
 
-	// Label row (rect.Y+2)
-	primitive.Text(screen, textX, rect.Y+2, inputWidth, "Pattern:", styles.DialogText.Background(itemBg))
+	y := rect.Y + 1
+	innerBottom := rect.Y + rect.Height - 2
 
-	// Input row (rect.Y+4, blank row Y+3)
-	draw.DrawScrollingDialogInput(screen, textX, rect.Y+4, inputWidth, state.Text, state.TextCursor, state.TextScroll, "", state.Focus == 0, false, styles)
+	draw.DrawDialogRadio(screen, optionX, y, "Shell patterns", 'S', state.PatternMode == panel.GroupPatternShell, state.Focus == GroupSelectFocusShellRadio, styles)
+	y++
+	if y >= innerBottom {
+		return
+	}
+	draw.DrawDialogRadio(screen, optionX, y, "Regular expression", 'R', state.PatternMode == panel.GroupPatternRegex, state.Focus == GroupSelectFocusRegexRadio, styles)
+	y++
+	if y >= innerBottom {
+		return
+	}
+	draw.DrawDialogRadio(screen, optionX, y, "Simple", 'I', state.PatternMode == panel.GroupPatternSimple, state.Focus == GroupSelectFocusSimpleRadio, styles)
+	y++
+	if y >= innerBottom {
+		return
+	}
 
-	// Checkbox row 1: Files only (focus 1) | Directories only (focus 2)
-	cbRow1Y := rect.Y + 6
-	draw.DrawDialogCheckbox(screen, optionX, cbRow1Y, "Files only", 'F', state.FilesOnly, state.Focus == 1, styles)
+	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
+	y++
+	if y >= innerBottom {
+		return
+	}
+
+	primitive.Text(screen, textX, y, inputWidth, "Pattern:", styles.DialogText.Background(itemBg))
+	y++
+	if y >= innerBottom {
+		return
+	}
+	y++ // blank row between label and input
+	if y >= innerBottom {
+		return
+	}
+	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, state.Text, state.TextCursor, state.TextScroll, "", state.Focus == GroupSelectFocusPattern, false, styles)
+	y++
+	if y >= innerBottom {
+		return
+	}
+
+	if hint := groupSelectPatternHintText(state); hint != "" && y < innerBottom {
+		primitive.Text(screen, textX, y, inputWidth, hint, groupSelectPatternHintStyle(styles, dbg))
+		y++
+		if y >= innerBottom {
+			return
+		}
+	}
+
+	draw.DrawDialogCheckbox(screen, optionX, y, "Files only", 'F', state.FilesOnly, state.Focus == GroupSelectFocusFilesOnly, styles)
 	cb1W := utf8.RuneCountInString(draw.CheckboxText("Files only", state.FilesOnly)) + 1
 	gap := 2
-	draw.DrawDialogCheckbox(screen, optionX+cb1W+gap, cbRow1Y, "Directories only", 'D', state.DirsOnly, state.Focus == 2, styles)
+	draw.DrawDialogCheckbox(screen, optionX+cb1W+gap, y, "Directories only", 'D', state.DirsOnly, state.Focus == GroupSelectFocusDirsOnly, styles)
+	y++
+	if y >= innerBottom {
+		return
+	}
 
-	// Checkbox row 2: Case sensitive (focus 3)
-	cbRow2Y := rect.Y + 7
-	draw.DrawDialogCheckbox(screen, optionX, cbRow2Y, "Case sensitive", 'S', state.CaseSensitive, state.Focus == 3, styles)
+	if GroupSelectShowsCaseSensitive(state) {
+		draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == GroupSelectFocusCase, styles)
+	}
+	y++
+	if y >= innerBottom {
+		return
+	}
 
-	// Checkbox row 3: Using shell patterns (focus 4)
-	cbRow3Y := rect.Y + 8
-	draw.DrawDialogCheckbox(screen, optionX, cbRow3Y, "Using shell patterns", 'U', state.UseShellPatterns, state.Focus == 4, styles)
+	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 
-	// Separator
-	sepY := rect.Y + 9
-	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
-
-	// Button row
+	form := NewDialogLinearForm(7)
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: state.Focus == 5},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == 6},
+		{Label: "OK", Shortcut: 'O', Focused: state.Focus == form.OKIndex()},
+		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == form.CancelIndex()},
 	}, styles)
 }

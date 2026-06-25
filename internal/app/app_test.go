@@ -364,8 +364,8 @@ func TestGroupSelectEnterOnPatternInputConfirms(t *testing.T) {
 	for _, r := range "*.txt" {
 		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	if app.model.GroupSelect.Focus != 0 {
-		t.Fatalf("focus = %d, want 0 (pattern input)", app.model.GroupSelect.Focus)
+	if app.model.GroupSelect.Focus != ui.GroupSelectFocusPattern {
+		t.Fatalf("focus = %d, want %d (pattern input)", app.model.GroupSelect.Focus, ui.GroupSelectFocusPattern)
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.GroupSelect.Open {
@@ -389,8 +389,8 @@ func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
 	if got := app.model.GroupSelect.Text; got != "focus" {
 		t.Fatalf("pattern = %q, want focus", got)
 	}
-	if app.model.GroupSelect.FilesOnly || app.model.GroupSelect.CaseSensitive || !app.model.GroupSelect.UseShellPatterns {
-		t.Fatalf("checkbox state changed unexpectedly: %+v", app.model.GroupSelect)
+	if app.model.GroupSelect.FilesOnly || app.model.GroupSelect.CaseSensitive || app.model.GroupSelect.PatternMode != panel.GroupPatternShell {
+		t.Fatalf("checkbox/mode state changed unexpectedly: %+v", app.model.GroupSelect)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'F', tcell.ModShift))
@@ -399,9 +399,81 @@ func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
-	if !app.model.GroupSelect.FilesOnly || app.model.GroupSelect.Focus != 1 {
+	if !app.model.GroupSelect.FilesOnly || app.model.GroupSelect.Focus != ui.GroupSelectFocusFilesOnly {
 		t.Fatalf("Alt+F should toggle Files only and focus row; got FilesOnly=%v focus=%d",
 			app.model.GroupSelect.FilesOnly, app.model.GroupSelect.Focus)
+	}
+}
+
+func TestGroupSelectModeShortcutKeepsPatternFocus(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openGroupSelect("select", "panel")
+
+	for _, r := range "foo" {
+		app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	gs := &app.model.GroupSelect
+	if gs.Focus != ui.GroupSelectFocusPattern {
+		t.Fatalf("focus = %d, want pattern", gs.Focus)
+	}
+
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	if gs.PatternMode != panel.GroupPatternRegex {
+		t.Fatalf("mode = %v, want regex", gs.PatternMode)
+	}
+	if gs.Text != "foo" || gs.Focus != ui.GroupSelectFocusPattern {
+		t.Fatalf("after Alt+R: text=%q focus=%d", gs.Text, gs.Focus)
+	}
+
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt))
+	if gs.PatternMode != panel.GroupPatternSimple {
+		t.Fatalf("mode = %v, want simple", gs.PatternMode)
+	}
+}
+
+func TestGroupSelectInvalidRegexBlocksOK(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openGroupSelect("select", "panel")
+
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	for _, r := range "[" {
+		app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if !app.model.GroupSelect.Open {
+		t.Fatal("invalid regex should keep dialog open")
+	}
+}
+
+func TestGroupSelectCheckboxFocusNavigation(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openGroupSelect("select", "panel")
+
+	gs := &app.model.GroupSelect
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) // pattern -> files
+	if gs.Focus != ui.GroupSelectFocusFilesOnly {
+		t.Fatalf("after Down from pattern: focus = %d, want files only", gs.Focus)
+	}
+
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) // files -> case
+	if gs.Focus != ui.GroupSelectFocusCase {
+		t.Fatalf("after Down from files: focus = %d, want case sensitive", gs.Focus)
+	}
+
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)) // case -> files
+	if gs.Focus != ui.GroupSelectFocusFilesOnly {
+		t.Fatalf("after Up from case: focus = %d, want files only", gs.Focus)
+	}
+
+	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone)) // files -> dirs
+	if gs.Focus != ui.GroupSelectFocusDirsOnly {
+		t.Fatalf("after Right from files: focus = %d, want directories only", gs.Focus)
 	}
 }
 

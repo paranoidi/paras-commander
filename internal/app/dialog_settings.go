@@ -346,31 +346,75 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 
 // Group selection dialog handlers
 
+const groupSelectNumContent = 7
+
 func (a *App) openGroupSelect(mode string, context string) {
 	if context == "" {
 		context = "panel"
 	}
 	a.model.GroupSelect = ui.GroupSelectState{
-		Open:             true,
-		Text:             "",
-		Mode:             mode,
-		Context:          context,
-		FilesOnly:        false,
-		DirsOnly:         false,
-		CaseSensitive:    false,
-		UseShellPatterns: true,
-		Focus:            0,
+		Open:          true,
+		Text:          "",
+		Mode:          mode,
+		Context:       context,
+		PatternMode:   panel.GroupPatternShell,
+		FilesOnly:     false,
+		DirsOnly:      false,
+		CaseSensitive: false,
+		Focus:         ui.GroupSelectFocusPattern,
 	}
 }
 
 func (a *App) closeGroupSelect() {
 	a.model.GroupSelect.Open = false
 	a.model.GroupSelect.Text = ""
+	a.model.GroupSelect.PatternCompileHint = ""
+}
+
+func (a *App) groupSelectForm() ui.DialogLinearForm {
+	return ui.NewDialogLinearForm(groupSelectNumContent)
+}
+
+func (a *App) applyGroupSelectModeFromFocus() {
+	gs := &a.model.GroupSelect
+	switch gs.Focus {
+	case ui.GroupSelectFocusShellRadio:
+		gs.PatternMode = panel.GroupPatternShell
+	case ui.GroupSelectFocusRegexRadio:
+		gs.PatternMode = panel.GroupPatternRegex
+	case ui.GroupSelectFocusSimpleRadio:
+		gs.PatternMode = panel.GroupPatternSimple
+	}
+	a.groupSelectClampCaseFocus()
+}
+
+func (a *App) groupSelectClampCaseFocus() {
+	gs := &a.model.GroupSelect
+	if gs.PatternMode == panel.GroupPatternRegex && gs.Focus == ui.GroupSelectFocusCase {
+		gs.Focus = ui.GroupSelectFocusDirsOnly
+	}
+}
+
+func (a *App) tryRejectGroupSelectOK() bool {
+	gs := &a.model.GroupSelect
+	if gs.Text == "" {
+		return false
+	}
+	_, err := panel.NewGroupMatcher(gs.Text, gs.PatternMode, gs.CaseSensitive)
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	a.setTransientMessage(msg, ui.MessageUrgencyCritical)
+	return true
 }
 
 func (a *App) executeGroupSelect() {
 	gs := &a.model.GroupSelect
 	if gs.Text == "" {
+		return
+	}
+	if a.tryRejectGroupSelectOK() {
 		return
 	}
 	context := gs.Context
@@ -379,15 +423,24 @@ func (a *App) executeGroupSelect() {
 	}
 	switch context {
 	case "find":
-		a.findCtrl.ApplyGroupSelect(gs.Mode, gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.UseShellPatterns)
+		a.findCtrl.ApplyGroupSelect(gs.Mode, gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode)
 	default:
 		p := a.activePanel()
+		var err error
 		if gs.Mode == "select" {
-			p.SelectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.UseShellPatterns)
-			a.setTransientMessage(fmt.Sprintf("Selected matching %q", gs.Text), ui.MessageUrgencyInfo)
+			err = p.SelectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode)
+			if err == nil {
+				a.setTransientMessage(fmt.Sprintf("Selected matching %q", gs.Text), ui.MessageUrgencyInfo)
+			}
 		} else {
-			p.UnselectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.UseShellPatterns)
-			a.setTransientMessage(fmt.Sprintf("Unselected matching %q", gs.Text), ui.MessageUrgencyInfo)
+			err = p.UnselectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode)
+			if err == nil {
+				a.setTransientMessage(fmt.Sprintf("Unselected matching %q", gs.Text), ui.MessageUrgencyInfo)
+			}
+		}
+		if err != nil {
+			a.setTransientMessage(err.Error(), ui.MessageUrgencyCritical)
+			return
 		}
 	}
 	a.closeGroupSelect()
@@ -399,16 +452,22 @@ func (a *App) executeGroupSelect() {
 // confirmGroupSelectFromInput applies the pattern row then runs OK (Enter / Alt+O).
 func (a *App) confirmGroupSelectFromInput() {
 	gs := &a.model.GroupSelect
-	if gs.Focus == 0 {
+	if gs.Focus == ui.GroupSelectFocusPattern {
 		e := groupSelectScrollingQuery(gs, a.groupSelectQueryWidth())
 		e.apply()
+	}
+	if gs.Focus >= ui.GroupSelectFocusShellRadio && gs.Focus <= ui.GroupSelectFocusSimpleRadio {
+		a.applyGroupSelectModeFromFocus()
+	}
+	if a.tryRejectGroupSelectOK() {
+		return
 	}
 	a.executeGroupSelect()
 }
 
 func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	gs := &a.model.GroupSelect
-	form := ui.NewDialogLinearForm(5)
+	form := a.groupSelectForm()
 
 	if ui.AltDialogOK(event) {
 		a.confirmGroupSelectFromInput()
@@ -426,13 +485,33 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	case tcell.KeyEnter:
 		if gs.Focus == form.CancelIndex() {
 			a.closeGroupSelect()
-		} else {
-			a.confirmGroupSelectFromInput()
+			return
 		}
+		if gs.Focus >= ui.GroupSelectFocusShellRadio && gs.Focus <= ui.GroupSelectFocusSimpleRadio {
+			a.applyGroupSelectModeFromFocus()
+			return
+		}
+		a.confirmGroupSelectFromInput()
 		return
 	}
 
-	if gs.Focus == 0 {
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		switch event.Rune() {
+		case 's', 'S':
+			gs.PatternMode = panel.GroupPatternShell
+			a.groupSelectClampCaseFocus()
+			return
+		case 'r', 'R':
+			gs.PatternMode = panel.GroupPatternRegex
+			a.groupSelectClampCaseFocus()
+			return
+		case 'i', 'I':
+			gs.PatternMode = panel.GroupPatternSimple
+			return
+		}
+	}
+
+	if gs.Focus == ui.GroupSelectFocusPattern {
 		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && groupSelectAltIsDialogMnemonic(event.Rune())
 		if !skipScrolling && a.handleScrollingQueryKey(event, true, groupSelectScrollingQuery(gs, a.groupSelectQueryWidth())) {
 			return
@@ -441,7 +520,6 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 
 	switch event.Key() {
 	case tcell.KeyRune:
-		// Mnemonics follow dialog standards: Alt+letter only (plain typing goes into the pattern).
 		if keymap.AltLetterModifiers(event.Modifiers()) {
 			switch event.Rune() {
 			case 'f', 'F':
@@ -449,19 +527,18 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 				if gs.FilesOnly {
 					gs.DirsOnly = false
 				}
-				gs.Focus = 1
+				gs.Focus = ui.GroupSelectFocusFilesOnly
 			case 'd', 'D':
 				gs.DirsOnly = !gs.DirsOnly
 				if gs.DirsOnly {
 					gs.FilesOnly = false
 				}
-				gs.Focus = 2
-			case 's', 'S':
-				gs.CaseSensitive = !gs.CaseSensitive
-				gs.Focus = 3
-			case 'u', 'U':
-				gs.UseShellPatterns = !gs.UseShellPatterns
-				gs.Focus = 4
+				gs.Focus = ui.GroupSelectFocusDirsOnly
+			case 'e', 'E':
+				if ui.GroupSelectShowsCaseSensitive(*gs) {
+					gs.CaseSensitive = !gs.CaseSensitive
+					gs.Focus = ui.GroupSelectFocusCase
+				}
 			}
 			break
 		}
@@ -471,20 +548,28 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 		}
 		if event.Rune() == ' ' {
 			switch gs.Focus {
-			case 1:
+			case ui.GroupSelectFocusShellRadio:
+				gs.PatternMode = panel.GroupPatternShell
+				a.groupSelectClampCaseFocus()
+			case ui.GroupSelectFocusRegexRadio:
+				gs.PatternMode = panel.GroupPatternRegex
+				a.groupSelectClampCaseFocus()
+			case ui.GroupSelectFocusSimpleRadio:
+				gs.PatternMode = panel.GroupPatternSimple
+			case ui.GroupSelectFocusFilesOnly:
 				gs.FilesOnly = !gs.FilesOnly
 				if gs.FilesOnly {
 					gs.DirsOnly = false
 				}
-			case 2:
+			case ui.GroupSelectFocusDirsOnly:
 				gs.DirsOnly = !gs.DirsOnly
 				if gs.DirsOnly {
 					gs.FilesOnly = false
 				}
-			case 3:
-				gs.CaseSensitive = !gs.CaseSensitive
-			case 4:
-				gs.UseShellPatterns = !gs.UseShellPatterns
+			case ui.GroupSelectFocusCase:
+				if ui.GroupSelectShowsCaseSensitive(*gs) {
+					gs.CaseSensitive = !gs.CaseSensitive
+				}
 			case form.OKIndex():
 				a.confirmGroupSelectFromInput()
 			case form.CancelIndex():
@@ -493,14 +578,14 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			break
 		}
 	}
-	if focus, ok := form.MoveFocus(gs.Focus, event.Key()); ok {
+	if focus, ok := ui.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.PatternMode); ok {
 		gs.Focus = focus
 	}
 }
 
 func groupSelectAltIsDialogMnemonic(r rune) bool {
 	switch r {
-	case 'f', 'F', 'd', 'D', 's', 'S', 'u', 'U':
+	case 'f', 'F', 'd', 'D', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I':
 		return true
 	default:
 		return false
