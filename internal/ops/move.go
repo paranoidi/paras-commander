@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -113,6 +114,9 @@ func renameSourceForMove(ctx context.Context, src, dst pathloc.Path, resolver Co
 	}
 	if !overwrite {
 		return false, true, false, nil
+	}
+	if err := removePathRecursive(ctx, dst); err != nil {
+		return false, false, false, fmt.Errorf("remove existing %q for overwrite: %w", dst, err)
 	}
 	return renameFastPathOrFallback(src, dst)
 }
@@ -222,17 +226,32 @@ func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources 
 		return 0, 0, err
 	}
 
-	doneFiles, doneBytes, err := ExecuteCopyUsingPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
+	doneFiles, doneBytes, transferred, err := executeCopyWithPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
 	if err != nil {
 		return doneFiles, doneBytes, fmt.Errorf("move copy phase: %w", err)
 	}
 
-	for _, src := range sources {
+	for _, src := range transferred {
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
 		}
 		if err := removePathRecursive(ctx, src); err != nil {
 			return doneFiles, doneBytes, fmt.Errorf("move remove source %q: %w", src, err)
+		}
+	}
+	var dirRoots []pathloc.Path
+	for _, src := range sources {
+		ent, err := statEntry(ctx, src)
+		if err != nil {
+			continue
+		}
+		if ent.Type == fsbackend.EntryDirectory {
+			dirRoots = append(dirRoots, src)
+		}
+	}
+	if len(dirRoots) > 0 {
+		if err := RemoveEmptyDirsUnder(ctx, dirRoots); err != nil {
+			return doneFiles, doneBytes, fmt.Errorf("move remove empty source dirs: %w", err)
 		}
 	}
 

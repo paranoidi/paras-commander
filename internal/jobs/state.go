@@ -686,7 +686,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	cancel()
 
 	switch {
-	case errors.Is(transferErr, context.Canceled):
+	case errors.Is(transferErr, context.Canceled) || errors.Is(transferErr, ErrUserCanceled):
 		job.Status = StatusCanceled
 	case transferErr != nil:
 		job.Status = StatusFailed
@@ -707,7 +707,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	s.mu.Unlock()
 
 	switch {
-	case errors.Is(transferErr, context.Canceled):
+	case errors.Is(transferErr, context.Canceled) || errors.Is(transferErr, ErrUserCanceled):
 		s.emit(Event{
 			Type:   EventCanceled,
 			JobID:  job.ID,

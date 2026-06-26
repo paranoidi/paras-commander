@@ -259,13 +259,16 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 			}
 		}
 		switch event.Key() {
-		case tcell.KeyLeft:
-			if h.model.JobsView.ConflictButtonFocus > 0 {
-				h.model.JobsView.ConflictButtonFocus--
+		case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown, tcell.KeyTab, tcell.KeyBacktab:
+			if sel.PendingBlocker == nil {
+				return false
 			}
-		case tcell.KeyRight:
-			if h.model.JobsView.ConflictButtonFocus < maxB {
-				h.model.JobsView.ConflictButtonFocus++
+			newFocus, handled := ui.JobBlockerDialogMoveFocus(*sel.PendingBlocker, h.model.JobsView.ConflictButtonFocus, event.Key())
+			if handled {
+				if newFocus > maxB {
+					newFocus = maxB
+				}
+				h.model.JobsView.ConflictButtonFocus = newFocus
 			}
 		case tcell.KeyEnter:
 			d := ui.JobBlockerDecisionFromFocus(sel, h.model.JobsView.ConflictButtonFocus)

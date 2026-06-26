@@ -124,7 +124,8 @@ func SummarizePlanForSource(plan []PlanItem, root pathloc.Path) (items int, byte
 // Returns (doneFiles, doneBytes, error).
 // diskWait is optional; when set, regular file copies wait until there is enough free space on the destination volume.
 func ExecuteCopy(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
-	return executeCopyWithPlan(ctx, nil, sources, destination, opts, throttle, progress, resolver, diskWait)
+	doneFiles, doneBytes, _, err := executeCopyWithPlan(ctx, nil, sources, destination, opts, throttle, progress, resolver, diskWait)
+	return doneFiles, doneBytes, err
 }
 
 // ExecuteCopyUsingPlan runs the copy loop using a plan from BuildCopyPlanWithTotals for the same sources and destination
@@ -133,10 +134,11 @@ func ExecuteCopyUsingPlan(ctx context.Context, plan []PlanItem, sources []pathlo
 	if plan == nil {
 		return 0, 0, fmt.Errorf("ExecuteCopyUsingPlan: plan is nil")
 	}
-	return executeCopyWithPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
+	doneFiles, doneBytes, _, err := executeCopyWithPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
+	return doneFiles, doneBytes, err
 }
 
-func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, []pathloc.Path, error) {
 	var plan []PlanItem
 	var err error
 	if planOptional != nil {
@@ -144,10 +146,10 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 	} else {
 		plan, err = BuildPlan(sources, destination, true)
 		if err != nil {
-			return 0, 0, fmt.Errorf("build copy plan: %w", err)
+			return 0, 0, nil, fmt.Errorf("build copy plan: %w", err)
 		}
 		if err := prepareCopyDestinationCtx(ctx, sources, destination); err != nil {
-			return 0, 0, err
+			return 0, 0, nil, err
 		}
 	}
 
@@ -158,6 +160,10 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 	var bytesSinceEmit int64
 	var lastEmit time.Time
 	var lastMetaEmit time.Time // mkdir/symlink progress (no byte deltas): throttle by MinInterval only
+	var transferredOut []pathloc.Path
+	recordTransferred := func(src pathloc.Path) {
+		transferredOut = append(transferredOut, src)
+	}
 
 	emitProgress := func(srcPath, dstPath string, doneF int, doneB int64, force bool) {
 		if progress == nil {
@@ -192,7 +198,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 
 	for _, item := range plan {
 		if err := ctx.Err(); err != nil {
-			return doneFiles, doneBytes, err
+			return doneFiles, doneBytes, transferredOut, err
 		}
 		srcStr := item.Src.String()
 		dstStr := item.Dst.String()
@@ -200,13 +206,13 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 			if _, err := statEntry(ctx, item.Dst); isNotExist(err) {
 				be, err := backendFor(item.Dst)
 				if err != nil {
-					return doneFiles, doneBytes, err
+					return doneFiles, doneBytes, transferredOut, err
 				}
 				if err := be.Mkdir(ctx, item.Dst, mkdirModeForItem(item, opts)); err != nil {
-					return doneFiles, doneBytes, fmt.Errorf("create directory %q: %w", dstStr, err)
+					return doneFiles, doneBytes, transferredOut, fmt.Errorf("create directory %q: %w", dstStr, err)
 				}
 			} else if err != nil {
-				return doneFiles, doneBytes, fmt.Errorf("stat directory %q: %w", dstStr, PathErrorReason(err))
+				return doneFiles, doneBytes, transferredOut, fmt.Errorf("stat directory %q: %w", dstStr, PathErrorReason(err))
 			}
 			if opts.PreservePermissions || opts.PreserveTimestamps {
 				deferredDirMeta = append(deferredDirMeta, item)
@@ -217,13 +223,24 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 		}
 
 		if item.IsSymlink {
+			var copied bool
 			if useLocalFastPath(item.Src, item.Dst) {
-				if err := copySymlinkWithConflict(srcStr, dstStr, resolver); err != nil {
-					return doneFiles, doneBytes, err
+				var copyErr error
+				copied, copyErr = copySymlinkWithConflict(srcStr, dstStr, resolver)
+				if copyErr != nil {
+					return doneFiles, doneBytes, transferredOut, copyErr
 				}
-			} else if err := copySymlinkTransfer(ctx, item.Src, item.Dst, resolver); err != nil {
-				return doneFiles, doneBytes, err
+			} else {
+				var copyErr error
+				copied, copyErr = copySymlinkTransfer(ctx, item.Src, item.Dst, resolver)
+				if copyErr != nil {
+					return doneFiles, doneBytes, transferredOut, copyErr
+				}
 			}
+			if !copied {
+				continue
+			}
+			recordTransferred(item.Src)
 			doneFiles++
 			emitMetaProgress(srcStr, dstStr, doneFiles, doneBytes)
 			continue
@@ -232,7 +249,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 		if diskWait != nil && destination.Scheme() == pathloc.SchemeFile &&
 			(opts.DiskSpaceCheckMinFileBytes <= 0 || item.FileSize >= opts.DiskSpaceCheckMinFileBytes) {
 			if err := EnsureDiskSpace(diskWait, destination, item.FileSize, item.Src); err != nil {
-				return doneFiles, doneBytes, err
+				return doneFiles, doneBytes, transferredOut, err
 			}
 		}
 
@@ -252,11 +269,12 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 			})
 		}
 		if err != nil {
-			return doneFiles, doneBytes, err
+			return doneFiles, doneBytes, transferredOut, err
 		}
 		if !copied {
 			continue
 		}
+		recordTransferred(item.Src)
 
 		if opts.SyncFileDeferred(item.FileSize) && item.Dst.Scheme() == pathloc.SchemeFile {
 			if host, err := item.Dst.FilePath(); err == nil {
@@ -270,17 +288,17 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 
 	for _, item := range deferredDirMeta {
 		if err := applyItemMetadata(ctx, item, opts); err != nil {
-			return doneFiles, doneBytes, err
+			return doneFiles, doneBytes, transferredOut, err
 		}
 	}
 
 	for _, path := range deferredSync {
 		if err := syncLocalPath(path); err != nil {
-			return doneFiles, doneBytes, fmt.Errorf("sync destination %q: %w", path, err)
+			return doneFiles, doneBytes, transferredOut, fmt.Errorf("sync destination %q: %w", path, err)
 		}
 	}
 
-	return doneFiles, doneBytes, nil
+	return doneFiles, doneBytes, transferredOut, nil
 }
 
 func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copied bool, err error) {
@@ -315,33 +333,36 @@ func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, re
 	return true, nil
 }
 
-func copySymlinkWithConflict(src, dst string, resolver ConflictResolver) error {
+func copySymlinkWithConflict(src, dst string, resolver ConflictResolver) (copied bool, err error) {
 	parent := filepath.Dir(dst)
 	if err := os.MkdirAll(parent, 0o755); err != nil {
-		return fmt.Errorf("create parent directory %q: %w", parent, err)
+		return false, fmt.Errorf("create parent directory %q: %w", parent, err)
 	}
 
-	if _, err := os.Stat(dst); err == nil {
+	if _, err := os.Lstat(dst); err == nil {
 		if resolver == nil {
-			return fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
+			return false, fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
 		}
 		facts, err := StatFileConflictFacts(src, dst)
 		if err != nil {
-			return fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
+			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
 		}
 		overwrite, err := resolver(src, dst, facts)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if !overwrite {
-			return nil
+			return false, nil
 		}
 		if err := os.Remove(dst); err != nil {
-			return fmt.Errorf("remove existing %q: %w", dst, err)
+			return false, fmt.Errorf("remove existing %q: %w", dst, err)
 		}
 	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("stat destination %q: %w", dst, err)
+		return false, fmt.Errorf("stat destination %q: %w", dst, err)
 	}
 
-	return CopySymlink(src, dst, nil)
+	if err := CopySymlink(src, dst, nil); err != nil {
+		return false, err
+	}
+	return true, nil
 }

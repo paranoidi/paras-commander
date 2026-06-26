@@ -237,7 +237,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 			case jobs.DecisionSkip, jobs.DecisionSkipAll:
 				return false, nil
 			case jobs.DecisionCancel:
-				return false, fmt.Errorf("canceled by user")
+				return false, jobs.ErrUserCanceled
 			case jobs.DecisionRetry:
 				return false, fmt.Errorf("unexpected retry decision for file conflict")
 			default:

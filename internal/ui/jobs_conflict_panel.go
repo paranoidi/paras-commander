@@ -213,9 +213,15 @@ func JobBlockerDialogMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) 
 		if col > 0 {
 			return focus - 1, true
 		}
+		if row > 0 {
+			return focus - 1, true
+		}
 		return focus, true
 	case tcell.KeyRight:
 		if col < 2 {
+			return focus + 1, true
+		}
+		if row == 0 {
 			return focus + 1, true
 		}
 		return focus, true

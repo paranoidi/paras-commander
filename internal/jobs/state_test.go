@@ -335,6 +335,43 @@ func TestStateCancelQueuedJobKeepsInQueue(t *testing.T) {
 	}
 }
 
+func TestWorkerUserCancelFromConflict(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		return ErrUserCanceled
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	job := &Job{ID: "user-cancel", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
+	s.AddJob(job)
+
+	deadline := time.After(3 * time.Second)
+	var gotCanceled Event
+	for gotCanceled.Type != EventCanceled {
+		select {
+		case <-deadline:
+			t.Fatal("timeout waiting EventCanceled")
+		case ev := <-s.Events():
+			if ev.JobID == job.ID && ev.Type == EventCanceled {
+				gotCanceled = ev
+			}
+		}
+	}
+
+	all := s.AllJobs()
+	if len(all) != 1 {
+		t.Fatalf("AllJobs len = %d, want 1", len(all))
+	}
+	if all[0].Status != StatusCanceled {
+		t.Fatalf("status = %q, want %q", all[0].Status, StatusCanceled)
+	}
+	if gotCanceled.Status != StatusCanceled {
+		t.Fatalf("event status = %q, want %q", gotCanceled.Status, StatusCanceled)
+	}
+}
+
 func TestStateCanceled(t *testing.T) {
 	s := NewState()
 	job := &Job{ID: "test-3", Type: TypeCopy, Status: StatusQueued}

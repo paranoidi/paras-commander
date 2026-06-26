@@ -23,7 +23,7 @@ func StatFileConflictFacts(src, dst string) (FileConflictFacts, error) {
 	if err != nil {
 		return FileConflictFacts{}, err
 	}
-	di, err := os.Stat(dst)
+	di, err := os.Lstat(dst)
 	if err != nil {
 		return FileConflictFacts{}, err
 	}

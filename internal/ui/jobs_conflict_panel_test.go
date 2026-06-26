@@ -3,6 +3,7 @@ package ui
 import (
 	"testing"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 )
 
@@ -44,5 +45,23 @@ func TestJobBlockerDialogDecision(t *testing.T) {
 	}
 	if d, ok := JobBlockerDialogDecision(disk, 2); ok {
 		t.Fatalf("disk postpone should not map, got %q", d)
+	}
+}
+
+func TestJobBlockerDialogMoveFocusFileConflictRows(t *testing.T) {
+	t.Parallel()
+	conflict := jobs.BlockerDetails{Kind: jobs.BlockerKindConflict, Conflict: &jobs.ConflictEvent{}}
+
+	// Overwrite All (2) -> Right -> Skip All (3)
+	focus := 2
+	got, ok := JobBlockerDialogMoveFocus(conflict, focus, tcell.KeyRight)
+	if !ok || got != 3 {
+		t.Fatalf("Right from Overwrite All = %d %v, want 3", got, ok)
+	}
+
+	// Skip All (3) -> Left -> Overwrite All (2)
+	got, ok = JobBlockerDialogMoveFocus(conflict, 3, tcell.KeyLeft)
+	if !ok || got != 2 {
+		t.Fatalf("Left from Skip All = %d %v, want 2", got, ok)
 	}
 }

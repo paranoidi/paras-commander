@@ -1,8 +1,6 @@
 package ops
 
 import (
-	"fmt"
-
 	"github.com/paranoidi/paras-commander/internal/fsvol"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -42,7 +40,7 @@ func EnsureDiskSpace(wait DiskWaitFunc, destRoot pathloc.Path, required int64, n
 			},
 		}) {
 		case jobs.DecisionCancel:
-			return fmt.Errorf("canceled by user")
+			return jobs.ErrUserCanceled
 		case jobs.DecisionRetry:
 			continue
 		default:

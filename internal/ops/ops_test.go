@@ -1093,6 +1093,52 @@ func TestMoveOverwriteExistingDestViaRename(t *testing.T) {
 	}
 }
 
+func TestMoveOverwriteExistingDirViaRename(t *testing.T) {
+	srcDir := t.TempDir()
+	dstParent := t.TempDir()
+
+	srcTree := filepath.Join(srcDir, "02-relocated")
+	dstTree := filepath.Join(dstParent, "02-relocated")
+	if err := os.Mkdir(srcTree, 0o755); err != nil {
+		t.Fatalf("mkdir src: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(srcTree, "from-here.txt"), []byte("from source"), 0o644); err != nil {
+		t.Fatalf("write src file: %v", err)
+	}
+	if err := os.Mkdir(dstTree, 0o755); err != nil {
+		t.Fatalf("mkdir dst: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dstTree, "to-there.txt"), []byte("old dest"), 0o644); err != nil {
+		t.Fatalf("write dst file: %v", err)
+	}
+
+	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+		_ = src
+		_ = dst
+		_ = facts
+		return true, nil
+	}
+
+	opts := Options{CopyBufferKiB: 4}
+	_, _, err := ExecuteMove(context.Background(), MustPaths(srcTree), MustPath(dstParent), opts, ProgressEmitThrottle{}, nil, resolver, nil)
+	if err != nil {
+		t.Fatalf("ExecuteMove error = %v", err)
+	}
+	if _, err := os.Stat(srcTree); !os.IsNotExist(err) {
+		t.Fatalf("source tree should be gone: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dstTree, "from-here.txt"))
+	if err != nil {
+		t.Fatalf("read moved file: %v", err)
+	}
+	if string(data) != "from source" {
+		t.Fatalf("content = %q, want from source", string(data))
+	}
+	if _, err := os.Stat(filepath.Join(dstTree, "to-there.txt")); !os.IsNotExist(err) {
+		t.Fatal("old dest file should be replaced with source tree")
+	}
+}
+
 func TestMoveExistingDestNoResolver(t *testing.T) {
 	srcDir := t.TempDir()
 	dstDir := t.TempDir()
@@ -1289,6 +1335,47 @@ func TestConflictResolverOverwrite(t *testing.T) {
 	data, _ := os.ReadFile(dstFile)
 	if string(data) != "new" {
 		t.Fatalf("content = %q, want %q", string(data), "new")
+	}
+}
+
+func TestCopySymlinkSkipDoesNotIncrementDoneFiles(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+
+	target := filepath.Join(srcDir, "a-symlink-target.txt")
+	if err := os.WriteFile(target, []byte("target"), 0o644); err != nil {
+		t.Fatalf("write target: %v", err)
+	}
+	linkPath := filepath.Join(srcDir, "conflict-symlink.link")
+	if err := os.Symlink("a-symlink-target.txt", linkPath); err != nil {
+		t.Fatalf("create source symlink: %v", err)
+	}
+	dstLink := filepath.Join(dstDir, "conflict-symlink.link")
+	if err := os.Symlink("other-target.txt", dstLink); err != nil {
+		t.Fatalf("create dest symlink: %v", err)
+	}
+
+	resolver := func(src, dst string, facts FileConflictFacts) (bool, error) {
+		_ = src
+		_ = dst
+		_ = facts
+		return false, nil
+	}
+
+	opts := Options{CopyBufferKiB: 4}
+	done, _, err := ExecuteCopy(context.Background(), MustPaths(linkPath), MustPath(dstDir), opts, ProgressEmitThrottle{}, nil, resolver, nil)
+	if err != nil {
+		t.Fatalf("ExecuteCopy error = %v", err)
+	}
+	if done != 0 {
+		t.Fatalf("done files = %d, want 0 when skipping conflicting symlink", done)
+	}
+	dstTarget, err := os.Readlink(dstLink)
+	if err != nil {
+		t.Fatalf("read dest symlink: %v", err)
+	}
+	if dstTarget != "other-target.txt" {
+		t.Fatalf("dest symlink target = %q, want unchanged", dstTarget)
 	}
 }
 

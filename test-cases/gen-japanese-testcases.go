@@ -14,7 +14,8 @@ import (
 )
 
 func main() {
-	root := filepath.Join(".", "japanese")
+	root := filepath.Join(testcasesRoot(), "japanese")
+	// Idempotent: drop output from any previous run.
 	if err := os.RemoveAll(root); err != nil {
 		fatal(err)
 	}
@@ -103,6 +104,17 @@ func main() {
 
 	fmt.Printf("Created %s with %d testcase directories.\n", root, len(cases))
 	fmt.Printf("See %s for details.\n", readmePath)
+}
+
+func testcasesRoot() string {
+	if dir := os.Getenv("TESTCASES_ROOT"); dir != "" {
+		return dir
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		fatal(err)
+	}
+	return wd
 }
 
 func encodeShiftJIS(utf8 string) (string, error) {

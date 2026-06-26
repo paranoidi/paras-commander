@@ -324,48 +324,48 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 	return true, nil
 }
 
-func copySymlinkTransfer(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) error {
+func copySymlinkTransfer(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (copied bool, err error) {
 	if err := ensureParentDirs(ctx, dst); err != nil {
-		return fmt.Errorf("create parent for %q: %w", dst, err)
+		return false, fmt.Errorf("create parent for %q: %w", dst, err)
 	}
 	if _, err := statEntry(ctx, dst); err == nil {
 		if resolver == nil {
-			return fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
+			return false, fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
 		}
 		facts, err := statConflictFacts(ctx, src, dst)
 		if err != nil {
-			return fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
+			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
 		}
 		overwrite, err := resolver(src.String(), dst.String(), facts)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if !overwrite {
-			return nil
+			return false, nil
 		}
 		if err := removePathRecursive(ctx, dst); err != nil {
-			return fmt.Errorf("remove existing %q: %w", dst, err)
+			return false, fmt.Errorf("remove existing %q: %w", dst, err)
 		}
 	} else if !isNotExist(err) {
-		return fmt.Errorf("stat destination %q: %w", dst, err)
+		return false, fmt.Errorf("stat destination %q: %w", dst, err)
 	}
 
 	srcBE, err := backendFor(src)
 	if err != nil {
-		return err
+		return false, err
 	}
 	target, err := srcBE.ReadSymlink(ctx, src)
 	if err != nil {
-		return fmt.Errorf("read symlink %q: %w", src, err)
+		return false, fmt.Errorf("read symlink %q: %w", src, err)
 	}
 	dstBE, err := backendFor(dst)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if err := dstBE.Symlink(ctx, dst, target); err != nil {
-		return fmt.Errorf("create symlink %q -> %q: %w", dst, target, err)
+		return false, fmt.Errorf("create symlink %q -> %q: %w", dst, target, err)
 	}
-	return nil
+	return true, nil
 }
 
 func syncLocalPath(path string) error {
