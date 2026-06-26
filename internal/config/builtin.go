@@ -72,6 +72,13 @@ const (
 	// navigating, matching the behaviour of disk-usage idle sort in the file listing.
 	DefaultFindListNavIdleMS = 400
 
+	// DefaultCompareHashConcurrency limits parallel file hashing during panel compare.
+	DefaultCompareHashConcurrency = 4
+	// DefaultCompareReadBufferKiB is the per-worker read buffer for compare hashing.
+	DefaultCompareReadBufferKiB = 256
+	// DefaultCompareStayOnVolumeDefault is the initial stay-on-volume option when opening compare.
+	DefaultCompareStayOnVolumeDefault = true
+
 	// DefaultProgressUIWakeDebounceMS is minimum spacing between main-loop wakes after worker EventProgress.
 	DefaultProgressUIWakeDebounceMS = 150
 

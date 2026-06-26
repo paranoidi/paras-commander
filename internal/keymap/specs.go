@@ -246,6 +246,49 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "C-M-o",
 			Keywords:     []string{"sync", "follow", "mirror", "latch", "other panel"},
 		},
+		{
+			ID:           ActionPanelComparePanels,
+			Title:        "Compare panels",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"C-M-c"},
+			PreferredKey: "C-M-c",
+			Keywords:     []string{"diff", "hash", "sync", "mirror", "relocated", "missing"},
+		},
+		{
+			ID:          ActionCompareClose,
+			Title:       "Close compare view",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"back", "browser"},
+		},
+		{
+			ID:          ActionCompareCycleFilter,
+			Title:       "Compare category filter",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"equal", "relocated", "missing", "diff"},
+		},
+		{
+			ID:          ActionCompareResetFilter,
+			Title:       "Reset compare filter to All",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"clear", "all", "show all"},
+		},
+		{
+			ID:          ActionCompareRefresh,
+			Title:       "Refresh compare",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"rescan", "rehash"},
+		},
+		{
+			ID:          ActionCompareMerge,
+			Title:       "Compare merge",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"sync", "reconcile", "copy", "duplicate"},
+		},
 
 		// ── Disk usage ──
 		{

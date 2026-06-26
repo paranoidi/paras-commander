@@ -368,6 +368,27 @@ func (s *State) AddSelection(path string) bool {
 	return conflicts
 }
 
+// TogglePathSelection toggles selection for an absolute path not required to be listed.
+func (s *State) TogglePathSelection(path string) (selected bool, conflictsRemoved bool) {
+	path = cleanPathString(path)
+	if path == "" {
+		return false, false
+	}
+	isDir := s.selectedPathIsDirectory(path)
+	if s.SelectedPaths != nil && s.SelectedPaths[path] {
+		s.applySelectionRemove(path, isDir)
+		s.removePathFromSelectionsStripOrder(path)
+		s.normalizeSelectionsStripCursor()
+		return false, false
+	}
+	conflictsRemoved = s.resolveSelectionConflicts(path, isDir)
+	if s.SelectedPaths == nil {
+		s.SelectedPaths = make(map[string]bool)
+	}
+	s.applySelectionAdd(path, isDir)
+	return true, conflictsRemoved
+}
+
 // ToggleSelection toggles the current entry in the panel-local selection set.
 // The first bool is true when the entry is selected after the call; the second reports conflict removals.
 func (s *State) ToggleSelection() (selected bool, conflictsRemoved bool) {
@@ -408,7 +429,13 @@ func (s *State) ToggleSelectionAndAdvance(viewportRows int) (bool, bool) {
 
 // IsSelected reports whether entry is selected in this panel.
 func (s State) IsSelected(entry localfs.Entry) bool {
-	return s.SelectedPaths != nil && s.SelectedPaths[entry.Path]
+	return s.IsSelectedPath(entry.Path)
+}
+
+// IsSelectedPath reports whether an absolute path is selected.
+func (s State) IsSelectedPath(path string) bool {
+	path = cleanPathString(path)
+	return path != "" && s.SelectedPaths != nil && s.SelectedPaths[path]
 }
 
 // HasSelectionInSubtree reports whether some selected path is a strict descendant of dirPath.

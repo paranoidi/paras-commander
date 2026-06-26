@@ -15,6 +15,7 @@ const (
 	DialogFindShortcutsTable     = "dialog.find"
 	DialogHistoryShortcutsTable  = "dialog.history"
 	DialogFlattenShortcutsTable  = "dialog.flatten"
+	CompareShortcutsTable        = "compare"
 )
 
 var dialogShortcutSubtables = map[string]struct{}{
@@ -42,6 +43,7 @@ func AllShortcutTablePaths() []string {
 		DialogFindShortcutsTable,
 		DialogHistoryShortcutsTable,
 		DialogFlattenShortcutsTable,
+		CompareShortcutsTable,
 	}
 }
 

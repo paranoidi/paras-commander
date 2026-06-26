@@ -31,6 +31,7 @@ const (
 	InputModeJobsView
 	InputModeCommandsView
 	InputModeMessagesView
+	InputModeCompareView
 	InputModeFilePreviewView
 	InputModePathPicker
 	InputModeHistoryDialog
@@ -76,6 +77,10 @@ func (a *App) inputMode() InputMode {
 		return InputModeHostKeyDialog
 	case a.model.FileDialog.Open:
 		return InputModeFileDialog
+	case a.model.ViewMode == ui.ViewCompare &&
+		!a.model.AuxiliaryViewDialogKeysBlocked() &&
+		!a.inQuickFilterUI():
+		return InputModeCompareView
 	case a.model.ViewMode == ui.ViewFilePreview &&
 		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
@@ -146,7 +151,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		return footerWithEscClose(rest)
 	}
 	if a.model.PrimaryModal() != ui.PrimaryModalNone ||
-		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.SFTPConnectDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open {
+		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.SFTPConnectDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open || a.model.CompareMergeDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		if hints := flattenDialogOverlayFooterKeys(a, a.keysFlattenDialog); len(hints) > 0 {
 			rest = append(hints, rest...)
@@ -196,6 +201,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			return menu.FunctionKeysFilePreviewStylePicker()
 		}
 		return menu.FunctionKeysFilePreviewView()
+	}
+	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
+		rest := compareViewFooterKeys(a.keysCompare, a.model.CompareView.Filter)
+		rest = append(rest, menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
+		return footerWithEscClose(rest)
 	}
 	if a.model.ViewMode == ui.ViewCommands && !a.inQuickFilterUI() {
 		return menu.FunctionKeysCommandsView()
@@ -393,6 +403,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return quit, true
 	case InputModeCommandsView:
 		quit := a.handleCommandsViewKey(event)
+		a.render()
+		return quit, true
+	case InputModeCompareView:
+		quit := a.handleCompareViewKey(event)
 		a.render()
 		return quit, true
 	case InputModeMessagesView:
@@ -622,6 +636,9 @@ func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchCommands(actionID) {
 		return false
 	}
+	if a.tryDispatchCompare(actionID) {
+		return false
+	}
 	viewportRows := a.activeViewportRows()
 	activePanel := a.activePanel()
 	switch actionID {
@@ -780,6 +797,7 @@ func (a *App) dispatch(actionID string) bool {
 		if a.disableSyncFollowIfEnabled() {
 			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
 		}
+		activePanel.CycleFilterMatch(1, viewportRows)
 	case keymap.ActionPanelOpenActivePathInOther:
 		if a.model.ViewMode != ui.ViewBrowser {
 			return false

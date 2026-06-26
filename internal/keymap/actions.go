@@ -60,6 +60,14 @@ const (
 	ActionPanelToggleSync             = "panel.toggle-sync"
 	ActionPanelMeta                   = "panel.meta"
 	ActionPanelMetaEdit               = "panel.meta-edit"
+	ActionPanelComparePanels          = "panel.compare-panels"
+
+	// Compare view
+	ActionCompareClose       = "compare.close"
+	ActionCompareCycleFilter = "compare.cycle-filter"
+	ActionCompareResetFilter = "compare.reset-filter"
+	ActionCompareRefresh     = "compare.refresh"
+	ActionCompareMerge       = "compare.merge"
 
 	// Dialog actions
 	ActionDialogConfirm = "ui.confirm"
@@ -230,6 +238,13 @@ var KnownActions = map[string]struct{}{
 	ActionPanelToggleSync:             {},
 	ActionPanelMeta:                   {},
 	ActionPanelMetaEdit:               {},
+	ActionPanelComparePanels:          {},
+
+	ActionCompareClose:       {},
+	ActionCompareCycleFilter: {},
+	ActionCompareResetFilter: {},
+	ActionCompareRefresh:     {},
+	ActionCompareMerge:       {},
 
 	ActionDialogConfirm: {},
 	ActionDialogCancel:  {},

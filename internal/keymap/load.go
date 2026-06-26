@@ -90,6 +90,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		FindDialog:     overlayMaps[8],
 		HistoryDialog:  overlayMaps[9],
 		FlattenDialog:  overlayMaps[10],
+		Compare:        overlayMaps[11],
 	}, nil
 }
 
@@ -146,7 +147,7 @@ func parseKeybindingsFile(raw []byte, label string) (mainKeys map[string][]strin
 func validateKeybindingsTopLevel(top map[string]interface{}, label string) error {
 	for k, v := range top {
 		switch k {
-		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable:
+		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, CompareShortcutsTable:
 			if _, ok := v.(map[string]interface{}); !ok {
 				return fmt.Errorf("parse keybindings %q: [%s] must be a table", label, k)
 			}
@@ -164,7 +165,7 @@ func validateKeybindingsTopLevel(top map[string]interface{}, label string) error
 				}
 			}
 		default:
-			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, jobs, commands, messages, file_preview, dialog)", label, k)
+			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, jobs, commands, messages, file_preview, compare, dialog)", label, k)
 		}
 	}
 	return nil
@@ -272,6 +273,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		Commands    map[string][]string `toml:"commands"`
 		Messages    map[string][]string `toml:"messages"`
 		FilePreview map[string][]string `toml:"file_preview"`
+		Compare     map[string][]string `toml:"compare"`
 		Dialog      dialogShortcuts     `toml:"dialog"`
 	}{
 		Main:        DefaultActionKeys(),
@@ -279,6 +281,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		Commands:    DefaultCommandsOverlayKeys(),
 		Messages:    DefaultMessagesOverlayKeys(),
 		FilePreview: DefaultFilePreviewOverlayKeys(),
+		Compare:     DefaultCompareOverlayKeys(),
 		Dialog: dialogShortcuts{
 			Input:    DefaultDialogInputOverlayKeys(),
 			Rename:   DefaultRenameDialogOverlayKeys(),

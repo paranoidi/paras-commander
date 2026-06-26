@@ -53,6 +53,9 @@ type (
 	TransferDialogState          = dialog.TransferDialogState
 	FlattenDialogState           = dialog.FlattenDialogState
 	FlattenDialogLinearForm      = dialog.FlattenDialogLinearForm
+	CompareMergeDialogState      = dialog.CompareMergeDialogState
+	CompareMergeDialogLinearForm = dialog.CompareMergeDialogLinearForm
+	CompareFilterDialogState     = dialog.CompareFilterDialogState
 	ConflictDialogState          = dialog.ConflictDialogState
 	HostKeyDialogState           = dialog.HostKeyDialogState
 	SFTPConnectDialogState       = dialog.SFTPConnectDialogState
@@ -184,6 +187,13 @@ var (
 	TransferDialogMoveFocus                = dialog.TransferDialogMoveFocus
 	FlattenDialogMoveFocus                 = dialog.FlattenDialogMoveFocus
 	NewFlattenDialogLinearForm             = dialog.NewFlattenDialogLinearForm
+	CompareMergeDialogMoveFocus            = dialog.CompareMergeDialogMoveFocus
+	NewCompareMergeDialogLinearForm        = dialog.NewCompareMergeDialogLinearForm
+	CompareFilterDialogMoveFocus           = dialog.CompareFilterDialogMoveFocus
+	CompareFilterDialogOKIndex             = dialog.CompareFilterDialogOKIndex
+	CompareFilterDialogCancelIndex         = dialog.CompareFilterDialogCancelIndex
+	CompareFilterForFocus                  = dialog.CompareFilterForFocus
+	FocusForCompareFilter                  = dialog.FocusForCompareFilter
 	DialogPairLeftRight                    = dialog.DialogPairLeftRight
 	IsWordRune                             = lineedit.IsWordRune
 	BackwardWordIndex                      = lineedit.BackwardWordIndex

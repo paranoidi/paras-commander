@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -62,9 +63,13 @@ type Model struct {
 	CommandsView CommandsViewState
 	CommandsList []CommandRunEntry
 	// CommandsDisplay is a mutex-backed snapshot refreshed in App.render for ViewCommands (avoids races with worker updates).
-	CommandsDisplay []CommandRunEntry
-	MessagesView    MessagesViewState
-	MessageLog      []MessageLogEntry
+	CommandsDisplay     []CommandRunEntry
+	MessagesView        MessagesViewState
+	MessageLog          []MessageLogEntry
+	CompareView         CompareViewState
+	CompareSnapshot     comparepkg.Snapshot
+	CompareMergeDialog  CompareMergeDialogState
+	CompareFilterDialog CompareFilterDialogState
 	// HideMenuBar mirrors !ui.show_menu_bar: when true, the top menu row is omitted and panels extend upward.
 	HideMenuBar bool
 	// ShowFileIcons mirrors ui.show_file_icons (Nerd Font glyphs before file names).
@@ -403,6 +408,15 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			cmdEntries = model.CommandsDisplay
 		}
 		drawCommandsView(screen, layout, model.CommandsView, cmdEntries, styles, chromeBlocked, model.UserHomeDir)
+	case ViewCompare:
+		filtered := comparepkg.FilteredRows(model.CompareSnapshot, model.CompareView.Filter)
+		drawCompareView(screen, layout, model.CompareView, model.CompareSnapshot, filtered, model.Primary, model.Secondary, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
+		if model.CompareMergeDialog.Open {
+			dialog.DrawCompareMergeDialog(screen, layout, model.CompareMergeDialog, styles)
+		}
+		if model.CompareFilterDialog.Open {
+			dialog.DrawCompareFilterDialog(screen, layout, model.CompareFilterDialog, styles)
+		}
 	case ViewMessages:
 		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation)
 	default:

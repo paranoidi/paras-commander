@@ -102,6 +102,14 @@ var overlayRegistry = []OverlaySpec{
 			return fmt.Errorf("parse config %q: [dialog.flatten] action %q is not allowed (flatten.destination-active, flatten.destination-inactive only)", source, action)
 		},
 	},
+	{
+		TableName: CompareShortcutsTable,
+		Defaults:  DefaultCompareOverlayKeys,
+		Allowed:   AllowedInCompareOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [compare] action %q is not allowed (compare.* only)", source, action)
+		},
+	},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.
@@ -152,6 +160,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "panel.history-both-panels only"
 	case DialogFlattenShortcutsTable:
 		return "flatten.destination-active, flatten.destination-inactive only"
+	case CompareShortcutsTable:
+		return "compare.* only"
 	default:
 		return "not allowed"
 	}

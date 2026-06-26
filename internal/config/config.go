@@ -125,6 +125,16 @@ type Config struct {
 	Meta MetaConfig `toml:"meta"`
 	// Pools configures discovery of the separate pools.toml work-pool definitions file.
 	Pools PoolsConfig `toml:"pools"`
+	// Compare configures twin-panel directory compare (content hash diff).
+	Compare CompareConfig `toml:"compare"`
+}
+
+// CompareConfig controls panel compare hashing and walk options.
+type CompareConfig struct {
+	HashConcurrency     int   `toml:"hash_concurrency"`
+	ReadBufferKiB       int   `toml:"read_buffer_kib"`
+	MaxHashBytes        int64 `toml:"max_hash_bytes"`
+	StayOnVolumeDefault bool  `toml:"stay_on_volume_default"`
 }
 
 // PoolsConfig controls discovery of the separate pools.toml file.
@@ -469,6 +479,12 @@ func Default() Config {
 		Pools: PoolsConfig{
 			File: "",
 		},
+		Compare: CompareConfig{
+			HashConcurrency:     DefaultCompareHashConcurrency,
+			ReadBufferKiB:       DefaultCompareReadBufferKiB,
+			MaxHashBytes:        0,
+			StayOnVolumeDefault: DefaultCompareStayOnVolumeDefault,
+		},
 	}
 }
 
@@ -727,6 +743,12 @@ func (c *Config) Validate() error {
 	}
 	if c.DiskUsageWalkConcurrency < 1 {
 		c.DiskUsageWalkConcurrency = builtin.DiskUsageWalkConcurrency
+	}
+	if c.Compare.HashConcurrency < 1 {
+		c.Compare.HashConcurrency = builtin.Compare.HashConcurrency
+	}
+	if c.Compare.ReadBufferKiB < 1 {
+		c.Compare.ReadBufferKiB = builtin.Compare.ReadBufferKiB
 	}
 	if !c.sortModeValid(c.DefaultSort) {
 		c.DefaultSort = builtin.DefaultSort

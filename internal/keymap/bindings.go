@@ -2,10 +2,26 @@ package keymap
 
 import (
 	"fmt"
+	"slices"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
+)
+
+var (
+	cachedCompareOverlayKeys     = sync.OnceValue(DefaultCompareOverlayKeys)
+	cachedJobsOverlayKeys        = sync.OnceValue(DefaultJobsOverlayKeys)
+	cachedCommandsOverlayKeys    = sync.OnceValue(DefaultCommandsOverlayKeys)
+	cachedMessagesOverlayKeys    = sync.OnceValue(DefaultMessagesOverlayKeys)
+	cachedDialogInputOverlayKeys = sync.OnceValue(DefaultDialogInputOverlayKeys)
+	cachedRenameDialogKeys       = sync.OnceValue(DefaultRenameDialogOverlayKeys)
+	cachedMkdirDialogKeys        = sync.OnceValue(DefaultMkdirDialogOverlayKeys)
+	cachedBookmarkDialogKeys     = sync.OnceValue(DefaultBookmarkDialogOverlayKeys)
+	cachedFindDialogKeys         = sync.OnceValue(DefaultFindDialogOverlayKeys)
+	cachedHistoryDialogKeys      = sync.OnceValue(DefaultHistoryDialogOverlayKeys)
+	cachedFlattenDialogKeys      = sync.OnceValue(DefaultFlattenDialogOverlayKeys)
 )
 
 // Binding pairs a parsed chord with its action ID and original string form.
@@ -107,7 +123,7 @@ func (m *Map) ActionBindings() []Binding {
 	return out
 }
 
-// BindingsForAction returns all chord strings bound to actionID, or nil.
+// BindingsForAction returns all chord strings bound to actionID in stable display order.
 func (m *Map) BindingsForAction(actionID string) []string {
 	if m == nil {
 		return nil
@@ -118,10 +134,11 @@ func (m *Map) BindingsForAction(actionID string) []string {
 			out = append(out, b.KeyStr)
 		}
 	}
-	return out
+	return sortMenuBindingKeys(actionID, out)
 }
 
-func menuBindingLabelPick(spec ActionSpec, hasSpec bool, keys []string) string {
+func menuBindingLabelPick(actionID string, spec ActionSpec, hasSpec bool, keys []string) string {
+	keys = sortMenuBindingKeys(actionID, keys)
 	if len(keys) == 0 {
 		return ""
 	}
@@ -133,6 +150,84 @@ func menuBindingLabelPick(spec ActionSpec, hasSpec bool, keys []string) string {
 		}
 	}
 	return keys[0]
+}
+
+// sortMenuBindingKeys orders chord labels deterministically for menus and footers.
+func sortMenuBindingKeys(actionID string, keys []string) []string {
+	if len(keys) <= 1 {
+		return keys
+	}
+	spec, hasSpec := SpecForAction(actionID)
+	order := make(map[string]int, len(keys))
+	if hasSpec {
+		for i, k := range spec.DefaultKeys {
+			if _, ok := order[k]; !ok {
+				order[k] = i
+			}
+		}
+	}
+	for _, reg := range []map[string][]string{
+		cachedCompareOverlayKeys(),
+		cachedJobsOverlayKeys(),
+		cachedCommandsOverlayKeys(),
+		cachedMessagesOverlayKeys(),
+		cachedDialogInputOverlayKeys(),
+		cachedRenameDialogKeys(),
+		cachedMkdirDialogKeys(),
+		cachedBookmarkDialogKeys(),
+		cachedFindDialogKeys(),
+		cachedHistoryDialogKeys(),
+		cachedFlattenDialogKeys(),
+	} {
+		chords, ok := reg[actionID]
+		if !ok {
+			continue
+		}
+		for i, k := range chords {
+			if _, seen := order[k]; !seen {
+				order[k] = i
+			}
+		}
+	}
+	out := append([]string(nil), keys...)
+	slices.SortStableFunc(out, func(a, b string) int {
+		pa, oka := order[a]
+		pb, okb := order[b]
+		switch {
+		case oka && okb && pa != pb:
+			return pa - pb
+		case oka != okb:
+			if oka {
+				return -1
+			}
+			return 1
+		}
+		return menuBindingKeyPriority(a) - menuBindingKeyPriority(b)
+	})
+	return out
+}
+
+func menuBindingKeyPriority(key string) int {
+	ch, err := ParseKey(key)
+	if err != nil {
+		return 100
+	}
+	switch ch.Key {
+	case tcell.KeyEsc:
+		return 0
+	case tcell.KeyF1, tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF5, tcell.KeyF6,
+		tcell.KeyF7, tcell.KeyF8, tcell.KeyF9, tcell.KeyF10, tcell.KeyF11, tcell.KeyF12:
+		return 10 + int(ch.Key-tcell.KeyF1)
+	case tcell.KeyEnter, tcell.KeyInsert, tcell.KeyDelete, tcell.KeyBackspace, tcell.KeyBackspace2:
+		return 30
+	case tcell.KeyUp, tcell.KeyDown, tcell.KeyLeft, tcell.KeyRight,
+		tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd:
+		return 90
+	}
+	if ch.Key == tcell.KeyRune {
+		return 50
+	}
+	return 60
 }
 
 // MenuBindingLabel returns one key string for pulldown menus: the PreferredKey from the action
@@ -147,7 +242,7 @@ func (m *Map) MenuBindingLabel(actionID string) string {
 	if len(keys) == 0 && hasSpec {
 		keys = append(keys, spec.DefaultKeys...)
 	}
-	return menuBindingLabelPick(spec, hasSpec, keys)
+	return menuBindingLabelPick(actionID, spec, hasSpec, keys)
 }
 
 // MenuBindingLabelPreferCommands resolves a menu hint using the Commands overlay when present,
@@ -156,7 +251,7 @@ func MenuBindingLabelPreferCommands(global, commands *Map, actionID string) stri
 	spec, hasSpec := SpecForAction(actionID)
 	if commands != nil {
 		if ks := commands.BindingsForAction(actionID); len(ks) > 0 {
-			return menuBindingLabelPick(spec, hasSpec, ks)
+			return menuBindingLabelPick(actionID, spec, hasSpec, ks)
 		}
 	}
 	if global != nil {
@@ -171,7 +266,7 @@ func MenuBindingLabelPreferMessages(global, messages *Map, actionID string) stri
 	spec, hasSpec := SpecForAction(actionID)
 	if messages != nil {
 		if ks := messages.BindingsForAction(actionID); len(ks) > 0 {
-			return menuBindingLabelPick(spec, hasSpec, ks)
+			return menuBindingLabelPick(actionID, spec, hasSpec, ks)
 		}
 	}
 	if global != nil {
@@ -186,7 +281,7 @@ func MenuBindingLabelPreferJobs(global, jobs *Map, actionID string) string {
 	spec, hasSpec := SpecForAction(actionID)
 	if jobs != nil {
 		if ks := jobs.BindingsForAction(actionID); len(ks) > 0 {
-			return menuBindingLabelPick(spec, hasSpec, ks)
+			return menuBindingLabelPick(actionID, spec, hasSpec, ks)
 		}
 	}
 	if global != nil {

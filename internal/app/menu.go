@@ -288,6 +288,8 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		a.openHistoryDialog(panelScope)
 	case keymap.ActionPanelFindDialog:
 		a.openFindDialog(panelScope)
+	case keymap.ActionPanelComparePanels:
+		a.openComparePanels()
 	case keymap.ActionPanelExternalBrowser:
 		a.openPanelPathInExternalBrowser(panelScope)
 	case keymap.ActionPanelListingFormatDialog:

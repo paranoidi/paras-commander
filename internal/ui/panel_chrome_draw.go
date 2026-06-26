@@ -71,7 +71,7 @@ func paintAuxPanelTopRowSplit(screen tcell.Screen, titleX, innerRight, contentCo
 	endStartX := 0
 	pathSlotCols := contentCols
 	if showEnd {
-		endStartX = innerRight - endRunes + 1
+		endStartX = innerRight - endRunes
 		pathSlotCols = endStartX - titleX - gapBeforePanelTitleEnd
 		if pathSlotCols < 3 {
 			showEnd = false
@@ -83,6 +83,27 @@ func paintAuxPanelTopRowSplit(screen tcell.Screen, titleX, innerRight, contentCo
 		return
 	}
 	primitive.TextOverlay(screen, endStartX, y, endRunes, endLabel, endStyle)
+}
+
+// drawAuxPanelBottomCenterLabel paints centered text on the bottom border interior row.
+func drawAuxPanelBottomCenterLabel(screen tcell.Screen, rect Rect, label string, style tcell.Style) {
+	if label == "" {
+		return
+	}
+	innerLeft := rect.X + 1
+	innerRight := rect.X + rect.Width - 2
+	innerW := innerRight - innerLeft + 1
+	runes := len([]rune(label))
+	if runes > innerW {
+		label = primitive.TruncateRight(label, innerW)
+		runes = len([]rune(label))
+	}
+	if runes <= 0 || innerW <= 0 {
+		return
+	}
+	x := innerLeft + (innerW-runes)/2
+	y := rect.Y + rect.Height - 1
+	primitive.TextOverlay(screen, x, y, runes, label, style)
 }
 
 func auxPanelListHeaderStyle(chrome theme.PanelChrome, blocked bool, contentBG tcell.Color) tcell.Style {

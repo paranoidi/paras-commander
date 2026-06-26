@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -92,6 +93,7 @@ type App struct {
 	keysFindDialog     *keymap.Map // select all while find dialog is open
 	keysHistoryDialog  *keymap.Map // both-panels toggle while history dialog is open
 	keysFlattenDialog  *keymap.Map // destination panel shortcuts while flatten dialog is open
+	keysCompare        *keymap.Map // chords active only in Compare view (overlay)
 	devMode            bool
 	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
@@ -105,6 +107,7 @@ type App struct {
 	jobState        *jobs.State
 	jobsCtrl        *jobsctrl.Handler
 	findCtrl        *findctrl.Handler
+	compareCtrl     *comparectrl.Handler
 	jobStopCh       chan struct{}
 	jobStopOnce     bool
 	diskUsage       *diskusage.Engine
@@ -416,6 +419,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		kmFlattenDialog = m
 	}
+	kmCompare := bundle.Compare
+	if kmCompare == nil {
+		m, err := keymap.Build(keymap.DefaultCompareOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build compare overlay map: %w", err)
+		}
+		kmCompare = m
+	}
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -532,6 +543,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysFindDialog:     kmFindDialog,
 		keysHistoryDialog:  kmHistoryDialog,
 		keysFlattenDialog:  kmFlattenDialog,
+		keysCompare:        kmCompare,
 		devMode:            opts.DevMode,
 		commandsCtx:        cmdCtx,
 		commandsCancel:     cmdCancel,
@@ -610,6 +622,16 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Config:         cfg,
 		Keys:           km,
 		KeysFindDialog: kmFindDialog,
+	})
+	app.compareCtrl = comparectrl.New(comparectrl.Deps{
+		Host:        compareHost{appShellHost: appShellHost{app: app}},
+		Screen:      screen,
+		Model:       &app.model,
+		Config:      cfg,
+		Keys:        km,
+		KeysCompare: kmCompare,
+		Gitignore:   giCache,
+		DiskIgnore:  duIgnorer,
 	})
 	if err := app.configureSFTP(); err != nil {
 		app.stopWorker()
@@ -823,6 +845,11 @@ func (a *App) Run() error {
 			case findctrl.FindNavIdlePayload:
 				if a.handleFindNavIdle(d.Epoch) {
 					a.renderFindDialogUpdate()
+					didRender = true
+				}
+			case comparectrl.WakePayload:
+				if a.pollCompareUpdates(d) {
+					a.render()
 					didRender = true
 				}
 			case throughputChartTickPayload:

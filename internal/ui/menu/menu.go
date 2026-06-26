@@ -170,6 +170,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionFileRunForEach, Label: "Run for each...", Shortcut: 'f'},
 				{Action: keymap.ActionAppDropToShell, Label: "Shell", Shortcut: 's'},
 				{Action: keymap.ActionPanelToggleSplitOrientation, Label: "Toggle split orientation", Shortcut: 'O'},
+				{Action: keymap.ActionPanelComparePanels, Label: "Compare panels", Shortcut: 'p'},
 				{Action: keymap.ActionBookmarkOpen, Label: "Bookmarks", Shortcut: 'b'},
 				{Action: keymap.ActionBookmarkAdd, Label: "Add bookmark", Shortcut: 'a'},
 				{Action: keymap.ActionPanelRefresh, Label: "Refresh", Shortcut: 'r'},

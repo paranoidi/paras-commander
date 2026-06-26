@@ -949,6 +949,22 @@ func equalStringSlice(a, b []string) bool {
 	return true
 }
 
+func TestMenuBindingLabelStableAcrossCalls(t *testing.T) {
+	m, err := Build(DefaultCompareOverlayKeys())
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	first := m.MenuBindingLabel(ActionCompareClose)
+	if first != "Esc" {
+		t.Fatalf("first label = %q, want Esc", first)
+	}
+	for i := 0; i < 100; i++ {
+		if got := m.MenuBindingLabel(ActionCompareClose); got != first {
+			t.Fatalf("iteration %d: label = %q, want %q", i, got, first)
+		}
+	}
+}
+
 func writeFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0o644)
 }
