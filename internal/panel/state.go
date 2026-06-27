@@ -1796,11 +1796,12 @@ func (s *State) ClearSelection() {
 	s.normalizeSelectionsStripCursor()
 }
 
-// SelectGroup selects entries whose basename matches the pattern.
+// SelectGroup selects entries whose basename (or any meta column value) matches the pattern.
 // filesOnly: when true, only regular files are matched (directories skipped).
 // dirsOnly: when true, only directories are matched (regular files skipped).
 // caseSensitive: when true, matching is case-sensitive (shell and simple modes only).
-func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode) error {
+// meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename.
+func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) error {
 	matcher, err := NewGroupMatcher(pattern, mode, caseSensitive)
 	if err != nil {
 		return err
@@ -1814,7 +1815,16 @@ func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive b
 		if dirsOnly && !entry.IsDir() {
 			continue
 		}
-		if matcher.Match(entry.Name) {
+		matched := !meta.OnlyMeta && matcher.Match(entry.Name)
+		if !matched {
+			for _, col := range meta.Cols {
+				if v, ok := col[entry.Path]; ok && v != "" && matcher.Match(v) {
+					matched = true
+					break
+				}
+			}
+		}
+		if matched {
 			paths = append(paths, entry.Path)
 			isDir[entry.Path] = entry.IsDir()
 		}
@@ -1835,8 +1845,9 @@ func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive b
 	return nil
 }
 
-// UnselectGroup unselects entries whose basename matches the pattern.
-func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode) error {
+// UnselectGroup unselects entries whose basename (or any meta column value) matches the pattern.
+// meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename.
+func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) error {
 	if s.SelectedPaths == nil {
 		return nil
 	}
@@ -1851,7 +1862,16 @@ func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive
 		if dirsOnly && !entry.IsDir() {
 			continue
 		}
-		if !matcher.Match(entry.Name) {
+		matched := !meta.OnlyMeta && matcher.Match(entry.Name)
+		if !matched {
+			for _, col := range meta.Cols {
+				if v, ok := col[entry.Path]; ok && v != "" && matcher.Match(v) {
+					matched = true
+					break
+				}
+			}
+		}
+		if !matched {
 			continue
 		}
 		if !s.SelectedPaths[entry.Path] {

@@ -68,8 +68,8 @@ type Model struct {
 	MessageLog          []MessageLogEntry
 	CompareView         CompareViewState
 	CompareSnapshot     comparepkg.Snapshot
-	CompareMergeDialog  CompareMergeDialogState
-	CompareFilterDialog CompareFilterDialogState
+	CompareMergeDialog  dialog.CompareMergeDialogState
+	CompareFilterDialog dialog.CompareFilterDialogState
 	// HideMenuBar mirrors !ui.show_menu_bar: when true, the top menu row is omitted and panels extend upward.
 	HideMenuBar bool
 	// ShowFileIcons mirrors ui.show_file_icons (Nerd Font glyphs before file names).

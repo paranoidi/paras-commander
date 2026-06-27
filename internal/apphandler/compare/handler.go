@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -161,7 +162,7 @@ func (h *Handler) Close() {
 	}
 	h.model.CompareView = ui.CompareViewState{}
 	h.model.CompareSnapshot = comparepkg.Snapshot{}
-	h.model.CompareMergeDialog = ui.CompareMergeDialogState{}
+	h.model.CompareMergeDialog = dialog.CompareMergeDialogState{}
 }
 
 // PollUpdates applies the latest session snapshot. Returns true when UI should repaint.

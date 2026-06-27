@@ -9,13 +9,14 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) openCompareMergeDialog() {
 	if a.model.ViewMode != ui.ViewCompare {
 		return
 	}
-	d := ui.CompareMergeDialogState{
+	d := dialog.CompareMergeDialogState{
 		Open:          true,
 		Direction:     comparepkg.MergeTowardSecondary,
 		CopyMissing:   true,
@@ -30,10 +31,10 @@ func (a *App) openCompareMergeDialog() {
 }
 
 func (a *App) closeCompareMergeDialog() {
-	a.model.CompareMergeDialog = ui.CompareMergeDialogState{}
+	a.model.CompareMergeDialog = dialog.CompareMergeDialogState{}
 }
 
-func (a *App) refreshCompareMergePreview(d *ui.CompareMergeDialogState) {
+func (a *App) refreshCompareMergePreview(d *dialog.CompareMergeDialogState) {
 	rows := a.compareCtrl.FilteredRows()
 	in := comparepkg.MergeInput{
 		PrimarySelected:   a.model.Primary.SelectedPaths,
@@ -63,7 +64,7 @@ func (a *App) handleCompareMergeDialogKey(event *tcell.EventKey) bool {
 	if !d.Open {
 		return false
 	}
-	form := ui.NewCompareMergeDialogLinearForm()
+	form := dialog.NewCompareMergeDialogLinearForm()
 	if a.tryStandardDialogActions(event, a.confirmCompareMerge, a.closeCompareMergeDialog, nil) {
 		return true
 	}
@@ -124,7 +125,7 @@ func (a *App) handleCompareMergeDialogKey(event *tcell.EventKey) bool {
 		}
 		return true
 	}
-	if nf, ok := ui.CompareMergeDialogMoveFocus(d.Focus, event.Key()); ok {
+	if nf, ok := dialog.CompareMergeDialogMoveFocus(d.Focus, event.Key()); ok {
 		d.Focus = nf
 		return true
 	}
