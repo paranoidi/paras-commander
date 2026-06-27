@@ -6,6 +6,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestReconcileFindDialogSelectionSizeScansEarlyExitOnUnchangedGen(t *testing.T) {
@@ -13,7 +14,7 @@ func TestReconcileFindDialogSelectionSizeScansEarlyExitOnUnchangedGen(t *testing
 	app := &App{
 		model: ui.Model{
 			ViewMode: ui.ViewBrowser,
-			FindDialog: ui.FindDialogState{
+			FindDialog: dialog.FindDialogState{
 				Open:    true,
 				PanelID: ui.PrimaryPanel,
 				MarkedPaths: map[string]bool{

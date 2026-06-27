@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
@@ -115,7 +116,7 @@ func (a *App) paintDiskUsageBrowserUpdate() bool {
 }
 
 func (a *App) deleteDialogOpen() bool {
-	return a.model.FileDialog.Open && a.model.FileDialog.DialogType == ui.FileDialogDelete
+	return a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogDelete
 }
 
 func (a *App) render() {
@@ -162,7 +163,7 @@ func (a *App) render() {
 	} else {
 		a.model.CommandsDisplay = nil
 	}
-	if a.model.FileDialog.Open && a.model.FileDialog.DialogType == ui.FileDialogMassRename {
+	if a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogMassRename {
 		a.recomputeMassRenamePreview()
 	}
 	ui.Render(a.screen, a.model, a.styles)

@@ -11,17 +11,18 @@ import (
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) closePathPicker() {
 	purpose := a.model.PathPicker.Purpose
 	a.pathPickerValidate.Invalidate()
-	a.model.PathPicker = ui.PathPickerState{}
-	if a.model.TransferDialog.Open && a.model.TransferDialog.Phase == ui.TransferPhaseDestination &&
-		purpose == ui.PathPickerPurposeApplyTransferDestination {
+	a.model.PathPicker = dialog.PathPickerState{}
+	if a.model.TransferDialog.Open && a.model.TransferDialog.Phase == dialog.TransferPhaseDestination &&
+		purpose == dialog.PathPickerPurposeApplyTransferDestination {
 		a.armTransferDestinationValidateTimer()
 	}
-	if a.model.FlattenDialog.Open && purpose == ui.PathPickerPurposeApplyFlattenDestination {
+	if a.model.FlattenDialog.Open && purpose == dialog.PathPickerPurposeApplyFlattenDestination {
 		a.armFlattenDestinationValidateTimer()
 	}
 }
@@ -37,7 +38,7 @@ func (a *App) syncPathPickerRanks() {
 	}
 	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.Items), a.config.CaseInsensitiveFilter)
 	clampFilteredListSelection(&st.Selected, len(st.Ranked))
-	ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+	dialog.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 }
 
 func (a *App) syncPathPickerCompletion() {
@@ -66,7 +67,7 @@ func (a *App) syncPathPickerScroll() {
 	width := a.pathPickerQueryWidth()
 	valueLen := len([]rune(st.Query))
 	suffixLen := len([]rune(st.QueryCompletionSuffix))
-	st.QueryCursor, st.QueryScroll = ui.EnsurePathInputScroll(valueLen, st.QueryCursor, st.QueryScroll, width, suffixLen)
+	st.QueryCursor, st.QueryScroll = dialog.EnsurePathInputScroll(valueLen, st.QueryCursor, st.QueryScroll, width, suffixLen)
 }
 
 func (a *App) pathPickerScrollToCaret() {
@@ -77,7 +78,7 @@ func (a *App) pathPickerScrollToCaret() {
 	width := a.pathPickerQueryWidth()
 	valueLen := len([]rune(st.Query))
 	suffixLen := len([]rune(st.QueryCompletionSuffix))
-	st.QueryCursor, st.QueryScroll = ui.EnsurePathInputScroll(valueLen, st.QueryCursor, st.QueryScroll, width, suffixLen)
+	st.QueryCursor, st.QueryScroll = dialog.EnsurePathInputScroll(valueLen, st.QueryCursor, st.QueryScroll, width, suffixLen)
 }
 
 func (a *App) acceptPathPickerCompletion() {
@@ -111,7 +112,7 @@ func (a *App) acceptPathPickerCompletion() {
 	a.syncPathPickerCompletion()
 	a.armPathPickerValidateTimer()
 	st.Selected = 0
-	ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+	dialog.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 }
 
 func (a *App) pathPickerListRows() int {
@@ -146,7 +147,7 @@ func (a *App) activatePathPickerSelection() {
 	path := filepath.Clean(st.Items[entIdx].Path)
 
 	switch st.Purpose {
-	case ui.PathPickerPurposeNavigate:
+	case dialog.PathPickerPurposeNavigate:
 		p := a.activePanel()
 		if err := a.navigatePanelToDirectory(a.model.ActivePanel, path, ""); err != nil {
 			a.setErrorMessage("Bookmark", err)
@@ -155,25 +156,25 @@ func (a *App) activatePathPickerSelection() {
 		p.EnsureCursorVisible(a.activeViewportRows())
 		a.closePathPicker()
 		a.setTransientMessage(path, ui.MessageUrgencyInfo)
-	case ui.PathPickerPurposeApplyTransferDestination:
+	case dialog.PathPickerPurposeApplyTransferDestination:
 		d := &a.model.TransferDialog
 		rn := []rune(path)
 		d.Destination.Value = path
 		d.Destination.Cursor = len(rn)
 		d.Destination.Prefill = ""
 		d.Destination.PrefillPending = false
-		d.DestSubFocus = ui.TransferDestSubFocusText
+		d.DestSubFocus = dialog.TransferDestSubFocusText
 		a.closePathPicker()
-	case ui.PathPickerPurposeApplyFlattenDestination:
+	case dialog.PathPickerPurposeApplyFlattenDestination:
 		d := &a.model.FlattenDialog
 		rn := []rune(path)
 		d.Destination.Value = path
 		d.Destination.Cursor = len(rn)
 		d.Destination.Prefill = ""
 		d.Destination.PrefillPending = false
-		d.DestSubFocus = ui.FlattenDestSubFocusText
+		d.DestSubFocus = dialog.FlattenDestSubFocusText
 		a.closePathPicker()
-	case ui.PathPickerPurposeApplyFileDialogField:
+	case dialog.PathPickerPurposeApplyFileDialogField:
 		idx := st.FileFieldIndex
 		if idx < 0 || idx >= len(a.model.FileDialog.Fields) {
 			a.closePathPicker()
@@ -219,29 +220,29 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 			a.acceptPathPickerCompletion()
 			return
 		}
-		if nf, ok := ui.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+		if nf, ok := dialog.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
 			st.Focus = nf
 		}
 	case tcell.KeyBacktab:
-		if nf, ok := ui.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+		if nf, ok := dialog.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
 			st.Focus = nf
 		}
 	case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		if nf, ok := ui.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+		if nf, ok := dialog.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
 			st.Focus = nf
 			if st.Focus == 0 && event.Key() == tcell.KeyUp {
-				ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+				dialog.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 			}
 			break
 		}
 		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.pathPickerListRows, func() {
-			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+			dialog.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 		}) {
 			break
 		}
 	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
 		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.pathPickerListRows, func() {
-			ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+			dialog.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 		}) {
 			break
 		}
@@ -285,13 +286,13 @@ func (a *App) pathPickerQueryWidth() int {
 
 // pathPickerItemsHistoryAndBookmarks returns merged passive-first panel histories plus
 // bookmarks (deduped by cleaned path), each with a display line for fuzzy matching.
-func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) {
+func (a *App) pathPickerItemsHistoryAndBookmarks() ([]dialog.PathPickerItem, error) {
 	passive := a.inactivePanel()
 	active := a.activePanel()
 	panelPath := active.PathString()
 	home := a.model.UserHomeDir
 	seen := make(map[string]struct{})
-	var items []ui.PathPickerItem
+	var items []dialog.PathPickerItem
 
 	for _, cp := range panel.MergeNavigationHistories(passive.History, active.History) {
 		if pathpick.QueryLooksPathlike(cp) && pathEntryMissing(panelPath, home, cp) {
@@ -301,7 +302,7 @@ func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) 
 			continue
 		}
 		seen[cp] = struct{}{}
-		items = append(items, ui.PathPickerItem{
+		items = append(items, dialog.PathPickerItem{
 			Source:      "history",
 			Path:        cp,
 			PathMissing: pathEntryMissing(panelPath, home, cp),
@@ -318,7 +319,7 @@ func (a *App) pathPickerItemsHistoryAndBookmarks() ([]ui.PathPickerItem, error) 
 			continue
 		}
 		seen[cp] = struct{}{}
-		items = append(items, ui.PathPickerItem{
+		items = append(items, dialog.PathPickerItem{
 			Source:      marks[i].Origin.PathPickerSource(),
 			Name:        marks[i].Name,
 			Path:        cp,
@@ -347,10 +348,10 @@ func (a *App) openPathPickerForFlatten() {
 		a.setTransientMessage("No paths in history or bookmarks", ui.MessageUrgencyInfo)
 		return
 	}
-	a.model.PathPicker = ui.PathPickerState{
+	a.model.PathPicker = dialog.PathPickerState{
 		Open:       true,
 		Title:      "Choose path",
-		Purpose:    ui.PathPickerPurposeApplyFlattenDestination,
+		Purpose:    dialog.PathPickerPurposeApplyFlattenDestination,
 		Query:      "",
 		Items:      items,
 		Focus:      0,
@@ -371,10 +372,10 @@ func (a *App) openPathPickerForTransfer() {
 		a.setTransientMessage("No paths in history or bookmarks", ui.MessageUrgencyInfo)
 		return
 	}
-	a.model.PathPicker = ui.PathPickerState{
+	a.model.PathPicker = dialog.PathPickerState{
 		Open:       true,
 		Title:      "Choose path",
-		Purpose:    ui.PathPickerPurposeApplyTransferDestination,
+		Purpose:    dialog.PathPickerPurposeApplyTransferDestination,
 		Query:      "",
 		Items:      items,
 		Focus:      0,
@@ -394,10 +395,10 @@ func (a *App) openPathPickerForFileField(fieldIndex int) {
 		a.setTransientMessage("No paths in history or bookmarks", ui.MessageUrgencyInfo)
 		return
 	}
-	a.model.PathPicker = ui.PathPickerState{
+	a.model.PathPicker = dialog.PathPickerState{
 		Open:           true,
 		Title:          "Choose path",
-		Purpose:        ui.PathPickerPurposeApplyFileDialogField,
+		Purpose:        dialog.PathPickerPurposeApplyFileDialogField,
 		FileFieldIndex: fieldIndex,
 		Query:          "",
 		Items:          items,
@@ -436,14 +437,14 @@ func (a *App) applyPathPickerPathValidation() {
 }
 
 func (a *App) armTransferDestinationValidateTimer() {
-	if !a.model.TransferDialog.Open || a.model.TransferDialog.Phase != ui.TransferPhaseDestination {
+	if !a.model.TransferDialog.Open || a.model.TransferDialog.Phase != dialog.TransferPhaseDestination {
 		return
 	}
 	d := &a.model.TransferDialog
 	d.DestPathCheckPending = true
 	delay := time.Duration(a.config.UI.PathPickerValidateDelayMS) * time.Millisecond
 	a.transferDestValidate.Arm(delay, func() {
-		if !a.model.TransferDialog.Open || a.model.TransferDialog.Phase != ui.TransferPhaseDestination {
+		if !a.model.TransferDialog.Open || a.model.TransferDialog.Phase != dialog.TransferPhaseDestination {
 			return
 		}
 		a.applyTransferDestinationPathValidation()
@@ -453,7 +454,7 @@ func (a *App) armTransferDestinationValidateTimer() {
 
 func (a *App) applyTransferDestinationPathValidation() {
 	d := &a.model.TransferDialog
-	if !d.Open || d.Phase != ui.TransferPhaseDestination {
+	if !d.Open || d.Phase != dialog.TransferPhaseDestination {
 		return
 	}
 	d.DestPathCheckPending = false

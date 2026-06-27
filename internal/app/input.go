@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -150,7 +151,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		}
 		return footerWithEscClose(rest)
 	}
-	if a.model.PrimaryModal() != ui.PrimaryModalNone ||
+	if a.model.PrimaryModal() != dialog.PrimaryModalNone ||
 		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.SFTPConnectDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open || a.model.CompareMergeDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
 		if hints := flattenDialogOverlayFooterKeys(a, a.keysFlattenDialog); len(hints) > 0 {
@@ -259,7 +260,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		} else {
 			a.prepareGlobalQuitShortcutCleanup()
 			if a.model.QuitConfirm.Open {
-				a.model.QuitConfirm = ui.QuitConfirmState{}
+				a.model.QuitConfirm = dialog.QuitConfirmState{}
 				a.stopWorker()
 				return true, false
 			}

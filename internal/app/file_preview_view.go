@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -268,7 +269,7 @@ func (a *App) openFilePreviewFullscreen() {
 	}
 	titleBase := filepath.Base(path)
 	a.captureFilePreviewHold(previewTargetFullscreen)
-	a.model.FilePreviewThemePicker = ui.FilePreviewThemePickerState{}
+	a.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
 	a.model.ViewMode = ui.ViewFilePreview
 	a.model.Menu.Open = false
 	a.model.Menu.PulldownOpen = false

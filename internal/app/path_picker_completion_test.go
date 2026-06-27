@@ -7,7 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestPathPickerAcceptLongCompletionScrollsToEnd(t *testing.T) {
@@ -53,7 +53,7 @@ func TestPathPickerAcceptLongCompletionScrollsToEnd(t *testing.T) {
 		t.Fatalf("cursor = %d want %d", st.QueryCursor, wantCursor)
 	}
 	width := app.pathPickerQueryWidth()
-	_, wantScroll := ui.EnsureScrollInputVisible(wantCursor, wantCursor, 0, width)
+	_, wantScroll := dialog.EnsureScrollInputVisible(wantCursor, wantCursor, 0, width)
 	if st.QueryScroll <= 0 {
 		t.Fatalf("QueryScroll = %d want > 0 for long accepted path", st.QueryScroll)
 	}
@@ -65,7 +65,7 @@ func TestPathPickerAcceptLongCompletionScrollsToEnd(t *testing.T) {
 	if st.QueryCursor != wantCursor {
 		t.Fatalf("after End cursor = %d want %d", st.QueryCursor, wantCursor)
 	}
-	_, wantScroll = ui.EnsureScrollInputVisible(wantCursor, wantCursor, st.QueryScroll, width)
+	_, wantScroll = dialog.EnsureScrollInputVisible(wantCursor, wantCursor, st.QueryScroll, width)
 	if st.QueryScroll != wantScroll {
 		t.Fatalf("after End scroll = %d want %d", st.QueryScroll, wantScroll)
 	}

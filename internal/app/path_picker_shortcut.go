@@ -3,7 +3,7 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) pathPickerHostFooterEligible() bool {
@@ -15,7 +15,7 @@ func (a *App) pathPickerHostFooterEligible() bool {
 		return f != nil && f.PathPicker
 	}
 	if a.model.TransferDialog.Open &&
-		a.model.TransferDialog.Phase == ui.TransferPhaseDestination &&
+		a.model.TransferDialog.Phase == dialog.TransferPhaseDestination &&
 		a.model.TransferDialog.FocusField == 0 {
 		return true
 	}
@@ -47,7 +47,7 @@ func (a *App) tryPathPickerHostShortcut(ev *tcell.EventKey) bool {
 		return true
 	}
 	d := &a.model.TransferDialog
-	if d.Open && d.Phase == ui.TransferPhaseDestination && d.FocusField == 0 {
+	if d.Open && d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0 {
 		a.openPathPickerForTransfer()
 		return true
 	}

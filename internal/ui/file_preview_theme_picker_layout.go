@@ -1,9 +1,10 @@
 package ui
 
 import (
+	"unicode/utf8"
+
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
-	"unicode/utf8"
 )
 
 const (
@@ -13,7 +14,7 @@ const (
 
 // SplitFullscreenPreviewRects divides the twin-panel union into a left preview region and
 // an optional right theme picker. When the picker is closed, previewRect is the full union.
-func SplitFullscreenPreviewRects(union Rect, pickerOpen bool, choices []ThemeChoice) (previewRect, pickerRect Rect) {
+func SplitFullscreenPreviewRects(union Rect, pickerOpen bool, choices []dialog.ThemeChoice) (previewRect, pickerRect Rect) {
 	if !pickerOpen || len(choices) == 0 {
 		return union, Rect{}
 	}
@@ -39,7 +40,7 @@ func SplitFullscreenPreviewRects(union Rect, pickerOpen bool, choices []ThemeCho
 	return previewRect, pickerRect
 }
 
-func filePreviewThemePickerOuterWidth(union Rect, choices []ThemeChoice) int {
+func filePreviewThemePickerOuterWidth(union Rect, choices []dialog.ThemeChoice) int {
 	listInner := 0
 	for _, choice := range choices {
 		w := utf8.RuneCountInString(choice.Label) + 6

@@ -5,7 +5,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 type findHost struct {
@@ -26,7 +26,7 @@ func (h findHost) HandleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool,
 	return h.app.handleScrollingQueryKey(ev, inputFocused, edit.(scrollingQueryEdit))
 }
 
-func (h findHost) FindDialogScrollingQuery(st *ui.FindDialogState, width int, onChange func()) any {
+func (h findHost) FindDialogScrollingQuery(st *dialog.FindDialogState, width int, onChange func()) any {
 	return findDialogScrollingQuery(st, width, onChange)
 }
 

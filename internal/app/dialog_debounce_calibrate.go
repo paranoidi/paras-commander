@@ -10,28 +10,29 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) openDebounceCalibrateDialog() {
 	a.clearTransientMessage()
 	ms := a.config.UI.KeyRepeatDebounceMS
-	a.model.DebounceCalibrateDialog = ui.DebounceCalibrateDialogState{
+	a.model.DebounceCalibrateDialog = dialog.DebounceCalibrateDialogState{
 		Open:   true,
-		Phase:  ui.DebounceCalibrateEdit,
+		Phase:  dialog.DebounceCalibrateEdit,
 		Focus:  0,
-		Value:  ui.FormatDebounceMS(ms),
-		Cursor: utf8.RuneCountInString(ui.FormatDebounceMS(ms)),
+		Value:  dialog.FormatDebounceMS(ms),
+		Cursor: utf8.RuneCountInString(dialog.FormatDebounceMS(ms)),
 	}
 }
 
 func (a *App) closeDebounceCalibrateDialog() {
 	a.clearDebounceCalibrateReleaseTimer()
-	a.model.DebounceCalibrateDialog = ui.DebounceCalibrateDialogState{}
+	a.model.DebounceCalibrateDialog = dialog.DebounceCalibrateDialogState{}
 }
 
 func (a *App) applyDebounceCalibrateDialog() {
 	st := &a.model.DebounceCalibrateDialog
-	ms, err := ui.ParseDebounceMSInput(st.Value)
+	ms, err := dialog.ParseDebounceMSInput(st.Value)
 	if err != nil {
 		st.Status = fmt.Sprintf("Enter 0–%d", config.KeyRepeatDebounceMaxMS)
 		return
@@ -53,8 +54,8 @@ func (a *App) applyDebounceCalibrateDialog() {
 func (a *App) beginDebounceCalibrateMeasuring() {
 	st := &a.model.DebounceCalibrateDialog
 	st.InputSnapshot = st.Value
-	st.Phase = ui.DebounceCalibrateMeasuring
-	st.MeasureStep = ui.MeasureAwaitPress
+	st.Phase = dialog.DebounceCalibrateMeasuring
+	st.MeasureStep = dialog.MeasureAwaitPress
 	st.Samples = nil
 	st.PressKey = ""
 	st.EventCount = 0
@@ -65,12 +66,12 @@ func (a *App) beginDebounceCalibrateMeasuring() {
 func (a *App) abortDebounceCalibrateMeasuring() {
 	st := &a.model.DebounceCalibrateDialog
 	a.clearDebounceCalibrateReleaseTimer()
-	st.Phase = ui.DebounceCalibrateEdit
+	st.Phase = dialog.DebounceCalibrateEdit
 	st.Value = st.InputSnapshot
 	st.Cursor = utf8.RuneCountInString(st.Value)
-	st.Focus = ui.NewDialogTrailingButtonsForm(1, 3).MiddleButtonIndex()
+	st.Focus = dialog.NewDialogTrailingButtonsForm(1, 3).MiddleButtonIndex()
 	st.Status = ""
-	st.MeasureStep = ui.MeasureAwaitPress
+	st.MeasureStep = dialog.MeasureAwaitPress
 	st.Samples = nil
 	st.PressKey = ""
 	st.EventCount = 0
@@ -79,14 +80,14 @@ func (a *App) abortDebounceCalibrateMeasuring() {
 func (a *App) finishDebounceCalibrateMeasuring() {
 	st := &a.model.DebounceCalibrateDialog
 	a.clearDebounceCalibrateReleaseTimer()
-	avg := ui.AverageRepeatIntervalMS(st.Samples)
-	ms := ui.RecommendedDebounceMS(avg, ui.CalibrationMarginMS())
-	st.Phase = ui.DebounceCalibrateEdit
-	st.Value = ui.FormatDebounceMS(ms)
+	avg := dialog.AverageRepeatIntervalMS(st.Samples)
+	ms := dialog.RecommendedDebounceMS(avg, dialog.CalibrationMarginMS())
+	st.Phase = dialog.DebounceCalibrateEdit
+	st.Value = dialog.FormatDebounceMS(ms)
 	st.Cursor = utf8.RuneCountInString(st.Value)
 	st.Focus = 0
-	st.Status = fmt.Sprintf("Repeat interval %d ms; margin %d ms.", avg, ui.CalibrationMarginMS())
-	st.MeasureStep = ui.MeasureAwaitPress
+	st.Status = fmt.Sprintf("Repeat interval %d ms; margin %d ms.", avg, dialog.CalibrationMarginMS())
+	st.MeasureStep = dialog.MeasureAwaitPress
 	st.Samples = nil
 	st.PressKey = ""
 	st.EventCount = 0
@@ -95,11 +96,11 @@ func (a *App) finishDebounceCalibrateMeasuring() {
 func (a *App) failDebounceCalibrateMeasuringTooSoon() {
 	st := &a.model.DebounceCalibrateDialog
 	a.clearDebounceCalibrateReleaseTimer()
-	st.MeasureStep = ui.MeasureAwaitPress
+	st.MeasureStep = dialog.MeasureAwaitPress
 	st.Samples = nil
 	st.PressKey = ""
 	st.EventCount = 0
-	st.Status = fmt.Sprintf("Released too soon; hold until %d/%d on the bar.", 0, ui.MeasureMinRepeatSamples())
+	st.Status = fmt.Sprintf("Released too soon; hold until %d/%d on the bar.", 0, dialog.MeasureMinRepeatSamples())
 }
 
 func (a *App) clearDebounceCalibrateReleaseTimer() {
@@ -107,7 +108,7 @@ func (a *App) clearDebounceCalibrateReleaseTimer() {
 }
 
 func (a *App) armDebounceCalibrateReleaseTimer() {
-	a.debounceCalibrateRelease.Reset(ui.MeasureReleaseIdle(), func() {
+	a.debounceCalibrateRelease.Reset(dialog.MeasureReleaseIdle(), func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(debounceCalibrateReleasePayload{}))
 	})
 }
@@ -116,10 +117,10 @@ type debounceCalibrateReleasePayload struct{}
 
 func (a *App) applyDebounceCalibrateReleasePayload() bool {
 	st := &a.model.DebounceCalibrateDialog
-	if !st.Open || st.Phase != ui.DebounceCalibrateMeasuring || st.MeasureStep != ui.MeasureCollecting {
+	if !st.Open || st.Phase != dialog.DebounceCalibrateMeasuring || st.MeasureStep != dialog.MeasureCollecting {
 		return false
 	}
-	if ui.RepeatCalibrationReleaseReady(st.Samples) {
+	if dialog.RepeatCalibrationReleaseReady(st.Samples) {
 		a.finishDebounceCalibrateMeasuring()
 		return true
 	}
@@ -129,13 +130,13 @@ func (a *App) applyDebounceCalibrateReleasePayload() bool {
 
 func (a *App) handleDebounceCalibrateDialogKey(event *tcell.EventKey) {
 	st := &a.model.DebounceCalibrateDialog
-	if st.Phase == ui.DebounceCalibrateMeasuring {
+	if st.Phase == dialog.DebounceCalibrateMeasuring {
 		a.handleDebounceCalibrateMeasuringKey(event)
 		return
 	}
 
-	form := ui.NewDialogTrailingButtonsForm(1, 3)
-	if ui.AltDialogOK(event) {
+	form := dialog.NewDialogTrailingButtonsForm(1, 3)
+	if dialog.AltDialogOK(event) {
 		a.applyDebounceCalibrateDialog()
 		return
 	}
@@ -143,7 +144,7 @@ func (a *App) handleDebounceCalibrateDialogKey(event *tcell.EventKey) {
 		a.beginDebounceCalibrateMeasuring()
 		return
 	}
-	if ui.AltDialogCancel(event) {
+	if dialog.AltDialogCancel(event) {
 		a.closeDebounceCalibrateDialog()
 		return
 	}
@@ -236,25 +237,25 @@ func (a *App) handleDebounceCalibrateMeasuringKey(event *tcell.EventKey) {
 		a.abortDebounceCalibrateMeasuring()
 		return
 	}
-	fp, ok := ui.KeyFingerprint(event)
+	fp, ok := dialog.KeyFingerprint(event)
 	if !ok {
 		return
 	}
 	now := time.Now()
 	switch st.MeasureStep {
-	case ui.MeasureAwaitPress:
+	case dialog.MeasureAwaitPress:
 		st.PressKey = fp
 		st.LastEventAt = now
 		st.EventCount = 1
 		st.Samples = nil
-		st.MeasureStep = ui.MeasureCollecting
+		st.MeasureStep = dialog.MeasureCollecting
 		st.Status = ""
 		a.armDebounceCalibrateReleaseTimer()
-	case ui.MeasureCollecting:
+	case dialog.MeasureCollecting:
 		if fp != st.PressKey {
 			return
 		}
-		hold := ui.RecordRepeatCalibrationEvent(ui.RepeatCalibrationHold{
+		hold := dialog.RecordRepeatCalibrationEvent(dialog.RepeatCalibrationHold{
 			PressKey:    st.PressKey,
 			LastEventAt: st.LastEventAt,
 			EventCount:  st.EventCount,

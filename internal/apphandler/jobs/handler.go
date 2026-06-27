@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -881,7 +882,7 @@ func (h *Handler) commitJob(job *jobs.Job) {
 }
 
 type transferEnqueueOpts struct {
-	kind                   ui.TransferKind
+	kind                   dialog.TransferKind
 	jobType                jobs.Type
 	unsupportedSameDirMove bool
 	toastVerb              string
@@ -931,7 +932,7 @@ func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 
 func (h *Handler) EnqueueCopyJob() {
 	h.enqueueTransferJob(transferEnqueueOpts{
-		kind:      ui.TransferKindCopy,
+		kind:      dialog.TransferKindCopy,
 		jobType:   jobs.TypeCopy,
 		toastVerb: "Copy",
 	})
@@ -939,7 +940,7 @@ func (h *Handler) EnqueueCopyJob() {
 
 func (h *Handler) EnqueueMoveJob() {
 	h.enqueueTransferJob(transferEnqueueOpts{
-		kind:                   ui.TransferKindMove,
+		kind:                   dialog.TransferKindMove,
 		jobType:                jobs.TypeMove,
 		unsupportedSameDirMove: true,
 		toastVerb:              "Move",

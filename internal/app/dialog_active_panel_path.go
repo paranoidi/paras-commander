@@ -3,7 +3,7 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -51,7 +51,7 @@ func (a *App) tryFlattenDialogDestinationShortcut(ev *tcell.EventKey) bool {
 func (a *App) applyFlattenDestinationFromActivePanelState() {
 	d := &a.model.FlattenDialog
 	d.Destination = transferPrefilledDestination(a.activePanel().PathString())
-	d.DestSubFocus = ui.FlattenDestSubFocusText
+	d.DestSubFocus = dialog.FlattenDestSubFocusText
 	a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
 	a.armFlattenDestinationValidateTimer()
 }
@@ -59,7 +59,7 @@ func (a *App) applyFlattenDestinationFromActivePanelState() {
 func (a *App) applyFlattenDestinationFromInactivePanel() {
 	d := &a.model.FlattenDialog
 	d.Destination = transferPrefilledDestination(a.inactivePanel().PathString())
-	d.DestSubFocus = ui.FlattenDestSubFocusText
+	d.DestSubFocus = dialog.FlattenDestSubFocusText
 	a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
 	a.armFlattenDestinationValidateTimer()
 }

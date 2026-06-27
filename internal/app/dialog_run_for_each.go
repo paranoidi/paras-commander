@@ -5,12 +5,12 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) recomputeRunForEachCommandValidation() {
 	d := &a.model.FileDialog
-	if !d.Open || d.DialogType != ui.FileDialogRunForEach || len(d.Fields) == 0 {
+	if !d.Open || d.DialogType != dialog.FileDialogRunForEach || len(d.Fields) == 0 {
 		return
 	}
 	msg := validateRunForEachCommand(

@@ -8,6 +8,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -287,7 +288,7 @@ func drawMenuBarLabel(screen tcell.Screen, x, y, width int, label string, shortc
 		}
 		nextStyle := style
 		if !highlighted && menuOpen && shortcut != 0 && unicode.ToLower(r) == unicode.ToLower(shortcut) {
-			nextStyle = AccentGlyphStyle(style, accent)
+			nextStyle = dialog.AccentGlyphStyle(style, accent)
 			highlighted = true
 		}
 		screen.SetContent(x+column, y, r, nil, nextStyle)
@@ -367,7 +368,7 @@ func drawMenuLabel(screen tcell.Screen, x, y, width int, item menu.Item, style, 
 		}
 		nextStyle := style
 		if !highlighted && item.Shortcut != 0 && unicode.ToLower(r) == unicode.ToLower(item.Shortcut) {
-			nextStyle = AccentGlyphStyle(style, accent)
+			nextStyle = dialog.AccentGlyphStyle(style, accent)
 			highlighted = true
 		}
 		screen.SetContent(x+column, y, r, nil, nextStyle)

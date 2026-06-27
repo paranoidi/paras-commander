@@ -10,7 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestDeleteDialogDescendIntoMountPoints(t *testing.T) {
@@ -38,9 +38,9 @@ func TestDeleteDialogSummaryRefreshesAfterDiskScanFlush(t *testing.T) {
 			Name: "payload", Path: sub, Type: localfs.EntryDirectory,
 		}},
 	}
-	app.model.FileDialog = ui.FileDialogState{
+	app.model.FileDialog = dialog.FileDialogState{
 		Open:          true,
-		DialogType:    ui.FileDialogDelete,
+		DialogType:    dialog.FileDialogDelete,
 		DeleteSummary: app.deleteDialogSummary(p, source),
 		FocusedField:  1,
 	}
@@ -93,9 +93,9 @@ func TestDeleteDialogSummaryRefreshesWhenScanNoLongerNeeded(t *testing.T) {
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{sub: true}
-	app.model.FileDialog = ui.FileDialogState{
+	app.model.FileDialog = dialog.FileDialogState{
 		Open:          true,
-		DialogType:    ui.FileDialogDelete,
+		DialogType:    dialog.FileDialogDelete,
 		DeleteSummary: "0 files (0 B) stale",
 		FocusedField:  1,
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // massRenameFindFieldFocus is FocusedField for the Find / Pattern input (0–2 are mode radios).
@@ -28,25 +29,25 @@ func (a *App) openMassRenameDialog(p *panel.State) {
 		a.setErrorMessage("Mass rename", fmt.Errorf("no files selected"))
 		return
 	}
-	sources := make([]ui.MassRenameSource, 0, len(src.Entries))
+	sources := make([]dialog.MassRenameSource, 0, len(src.Entries))
 	for _, e := range src.Entries {
 		ap := e.Path
 		if !filepath.IsAbs(ap) {
 			ap = filepath.Join(p.PathString(), ap)
 		}
 		ap = filepath.Clean(ap)
-		sources = append(sources, ui.MassRenameSource{Path: ap, Name: filepath.Base(ap)})
+		sources = append(sources, dialog.MassRenameSource{Path: ap, Name: filepath.Base(ap)})
 	}
-	fields := []ui.FileDialogField{
+	fields := []dialog.FileDialogField{
 		{Label: "Find", Value: "", Cursor: 0},
 		{Label: "Replace", Value: "", Cursor: 0},
 	}
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:                       true,
-		DialogType:                 ui.FileDialogMassRename,
+		DialogType:                 dialog.FileDialogMassRename,
 		Fields:                     fields,
 		FocusedField:               massRenameFindFieldFocus,
-		MassRenameMode:             ui.MassRenameModeUISimple,
+		MassRenameMode:             dialog.MassRenameModeUISimple,
 		MassRenameCaseFold:         false,
 		MassRenameShowOnlyModified: false,
 		MassRenamePreviewScroll:    0,
@@ -60,13 +61,13 @@ func (a *App) openMassRenameDialog(p *panel.State) {
 
 func (a *App) massRenameSyncFieldLabels() {
 	d := &a.model.FileDialog
-	if d.DialogType != ui.FileDialogMassRename || len(d.Fields) < 2 {
+	if d.DialogType != dialog.FileDialogMassRename || len(d.Fields) < 2 {
 		return
 	}
-	if d.MassRenameMode == ui.MassRenameModeUIExternalEditor {
+	if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor {
 		return // no fields visible in external editor mode
 	}
-	if d.MassRenameMode == ui.MassRenameModeUISimple {
+	if d.MassRenameMode == dialog.MassRenameModeUISimple {
 		d.Fields[0].Label = "Find"
 		d.Fields[1].Label = "Replace"
 	} else {
@@ -77,7 +78,7 @@ func (a *App) massRenameSyncFieldLabels() {
 
 func (a *App) recomputeMassRenamePreview() {
 	d := &a.model.FileDialog
-	if d.DialogType != ui.FileDialogMassRename {
+	if d.DialogType != dialog.FileDialogMassRename {
 		return
 	}
 	d.Message = ""
@@ -95,7 +96,7 @@ func (a *App) recomputeMassRenamePreview() {
 		return
 	}
 
-	if d.MassRenameMode == ui.MassRenameModeUIExternalEditor {
+	if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor {
 		a.recomputeMassRenameExternalEditorPreview()
 		return
 	}
@@ -114,7 +115,7 @@ func (a *App) recomputeMassRenamePreview() {
 	}
 	mode := ops.MassRenameModeSimple
 	var rx *regexp.Regexp
-	if d.MassRenameMode == ui.MassRenameModeUIRegex {
+	if d.MassRenameMode == dialog.MassRenameModeUIRegex {
 		mode = ops.MassRenameModeRegex
 		if strings.TrimSpace(find) == "" {
 			rx = nil
@@ -134,7 +135,7 @@ func (a *App) recomputeMassRenamePreview() {
 		}
 	}
 	d.MassRenameReplacementSyntaxHint = ops.MassRenameReplacementSyntaxHint(rx)
-	caseFold := d.MassRenameCaseFold && d.MassRenameMode == ui.MassRenameModeUISimple
+	caseFold := d.MassRenameCaseFold && d.MassRenameMode == dialog.MassRenameModeUISimple
 	rows, err := ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, rx)
 	if err != nil {
 		d.Message = err.Error()
@@ -159,7 +160,7 @@ func (a *App) recomputeMassRenamePreview() {
 		if d.MassRenameShowOnlyModified && r.OldBase == r.NewBase {
 			continue
 		}
-		lcsRemoved, _ := ui.MassRenameDiff(r.OldBase, r.NewBase)
+		lcsRemoved, _ := dialog.MassRenameDiff(r.OldBase, r.NewBase)
 		matchRanges := ops.MassRenameMatchRanges(r.OldBase, mode, find, caseFold, rx)
 		removed, replaced := ops.MassRenameBeforePreviewHighlightRanges(lcsRemoved, matchRanges, replace)
 		before = append(before, r.OldBase)
@@ -176,8 +177,8 @@ func (a *App) recomputeMassRenamePreview() {
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
 	_, h := a.screen.Size()
-	vp := ui.MassRenamePreviewViewportRows(h, d.MassRenameMode)
-	ui.MassRenameEnsurePreviewScroll(&a.model.FileDialog, vp, len(before))
+	vp := dialog.MassRenamePreviewViewportRows(h, d.MassRenameMode)
+	dialog.MassRenameEnsurePreviewScroll(&a.model.FileDialog, vp, len(before))
 }
 
 func (a *App) recomputeMassRenameExternalEditorPreview() {
@@ -210,7 +211,7 @@ func (a *App) recomputeMassRenameExternalEditorPreview() {
 		beforeRemoved = append(beforeRemoved, nil)
 		beforeReplaced = append(beforeReplaced, nil)
 		if namesReady {
-			_, added := ui.MassRenameDiff(src.Name, newBase)
+			_, added := dialog.MassRenameDiff(src.Name, newBase)
 			afterAdded = append(afterAdded, added)
 		} else {
 			afterAdded = append(afterAdded, nil)
@@ -224,29 +225,29 @@ func (a *App) recomputeMassRenameExternalEditorPreview() {
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
 	_, h := a.screen.Size()
-	vp := ui.MassRenamePreviewViewportRows(h, d.MassRenameMode)
-	ui.MassRenameEnsurePreviewScroll(d, vp, len(before))
+	vp := dialog.MassRenamePreviewViewportRows(h, d.MassRenameMode)
+	dialog.MassRenameEnsurePreviewScroll(d, vp, len(before))
 }
 
 func (a *App) applyMassRenameModeFromFocus() {
 	d := &a.model.FileDialog
 	switch d.FocusedField {
 	case 0:
-		d.MassRenameMode = ui.MassRenameModeUISimple
+		d.MassRenameMode = dialog.MassRenameModeUISimple
 	case 1:
-		d.MassRenameMode = ui.MassRenameModeUIRegex
+		d.MassRenameMode = dialog.MassRenameModeUIRegex
 	case 2:
-		d.MassRenameMode = ui.MassRenameModeUIExternalEditor
+		d.MassRenameMode = dialog.MassRenameModeUIExternalEditor
 	}
-	if d.MassRenameMode == ui.MassRenameModeUIRegex && d.FocusedField == 6 {
+	if d.MassRenameMode == dialog.MassRenameModeUIRegex && d.FocusedField == 6 {
 		d.FocusedField = 5 // Simple's show-modified (6) → Regex's show-modified (5)
 	}
 	a.massRenameSyncFieldLabels()
 	a.recomputeMassRenamePreview()
 }
 
-func (a *App) tryRejectMassRenameOK(d *ui.FileDialogState) bool {
-	if d.DialogType != ui.FileDialogMassRename || ui.FileDialogMassRenameOKEnabled(*d) {
+func (a *App) tryRejectMassRenameOK(d *dialog.FileDialogState) bool {
+	if d.DialogType != dialog.FileDialogMassRename || dialog.FileDialogMassRenameOKEnabled(*d) {
 		return false
 	}
 	msg := a.massRenameOKBlockedMessage(d)
@@ -257,14 +258,14 @@ func (a *App) tryRejectMassRenameOK(d *ui.FileDialogState) bool {
 	return true
 }
 
-func (a *App) massRenameOKBlockedMessage(d *ui.FileDialogState) string {
-	if d.MassRenameMode == ui.MassRenameModeUIExternalEditor {
+func (a *App) massRenameOKBlockedMessage(d *dialog.FileDialogState) string {
+	if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor {
 		if len(d.MassRenameExternalNames) == 0 {
 			return "Launch the editor first (Enter on External $EDITOR option)"
 		}
 	} else if len(d.Fields) > 0 && d.Fields[0].InputInvalid {
 		find := d.Fields[0].Value
-		if d.MassRenameMode == ui.MassRenameModeUIRegex {
+		if d.MassRenameMode == dialog.MassRenameModeUIRegex {
 			if _, err := ops.MassRenameCompileRegex(find); err != nil {
 				msg := ops.MassRenameRegexCompileUserMessage(err)
 				if msg != "" {
@@ -288,11 +289,11 @@ func (a *App) massRenameOKBlockedMessage(d *ui.FileDialogState) string {
 	return ""
 }
 
-func (a *App) massRenameComputeRows(d *ui.FileDialogState) ([]ops.MassRenameRow, error) {
+func (a *App) massRenameComputeRows(d *dialog.FileDialogState) ([]ops.MassRenameRow, error) {
 	if len(d.MassRenameSources) == 0 {
 		return nil, fmt.Errorf("no files to rename")
 	}
-	if d.MassRenameMode == ui.MassRenameModeUIExternalEditor {
+	if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor {
 		if len(d.MassRenameExternalNames) == 0 {
 			return nil, fmt.Errorf("launch the editor first (Enter on External $EDITOR)")
 		}
@@ -320,7 +321,7 @@ func (a *App) massRenameComputeRows(d *ui.FileDialogState) ([]ops.MassRenameRow,
 	}
 	mode := ops.MassRenameModeSimple
 	var rx *regexp.Regexp
-	if d.MassRenameMode == ui.MassRenameModeUIRegex {
+	if d.MassRenameMode == dialog.MassRenameModeUIRegex {
 		mode = ops.MassRenameModeRegex
 		if strings.TrimSpace(find) != "" {
 			var err error
@@ -330,7 +331,7 @@ func (a *App) massRenameComputeRows(d *ui.FileDialogState) ([]ops.MassRenameRow,
 			}
 		}
 	}
-	caseFold := d.MassRenameCaseFold && d.MassRenameMode == ui.MassRenameModeUISimple
+	caseFold := d.MassRenameCaseFold && d.MassRenameMode == dialog.MassRenameModeUISimple
 	return ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, rx)
 }
 
@@ -380,15 +381,15 @@ func (a *App) executeMassRename() {
 
 func (a *App) massRenameEditorFooterEligible() bool {
 	d := &a.model.FileDialog
-	return d.Open && d.DialogType == ui.FileDialogMassRename
+	return d.Open && d.DialogType == dialog.FileDialogMassRename
 }
 
 func (a *App) launchMassRenameExternalEditor() {
 	d := &a.model.FileDialog
-	if d.DialogType != ui.FileDialogMassRename {
+	if d.DialogType != dialog.FileDialogMassRename {
 		return
 	}
-	d.MassRenameMode = ui.MassRenameModeUIExternalEditor
+	d.MassRenameMode = dialog.MassRenameModeUIExternalEditor
 	a.massRenameSyncFieldLabels()
 
 	// Write source names to a temp file, one per line.

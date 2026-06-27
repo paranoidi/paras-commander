@@ -2,11 +2,11 @@ package app
 
 import (
 	"github.com/paranoidi/paras-commander/internal/app/pathpick"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // syncPathFieldCompletion updates filesystem completion ghost text on a path input field.
-func (a *App) syncPathFieldCompletion(f *ui.FileDialogField, textWidth int) {
+func (a *App) syncPathFieldCompletion(f *dialog.FileDialogField, textWidth int) {
 	if f == nil {
 		return
 	}
@@ -27,13 +27,13 @@ func (a *App) syncPathFieldCompletion(f *ui.FileDialogField, textWidth int) {
 	a.syncPathFieldScroll(f, textWidth)
 }
 
-func (a *App) syncPathFieldScroll(f *ui.FileDialogField, textWidth int) {
+func (a *App) syncPathFieldScroll(f *dialog.FileDialogField, textWidth int) {
 	if f == nil || textWidth <= 0 {
 		return
 	}
 	valueLen := len([]rune(f.Value))
 	suffixLen := len([]rune(f.CompletionSuffix))
-	f.Cursor, f.Scroll = ui.EnsurePathInputScroll(valueLen, f.Cursor, f.Scroll, textWidth, suffixLen)
+	f.Cursor, f.Scroll = dialog.EnsurePathInputScroll(valueLen, f.Cursor, f.Scroll, textWidth, suffixLen)
 }
 
 // syncOpenPathInputsAfterFSChange refreshes filesystem completion on open path fields
@@ -43,7 +43,7 @@ func (a *App) syncOpenPathInputsAfterFSChange() {
 		a.syncPathPickerCompletion()
 	}
 	d := &a.model.TransferDialog
-	if d.Open && d.Phase == ui.TransferPhaseDestination {
+	if d.Open && d.Phase == dialog.TransferPhaseDestination {
 		a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
 	}
 	fd := &a.model.FlattenDialog
@@ -62,7 +62,7 @@ func (a *App) syncOpenPathInputsAfterFSChange() {
 
 func (a *App) transferDestinationTextWidth() int {
 	termW, _ := a.screen.Size()
-	frameW := ui.PreferredFormDialogWidth
+	frameW := dialog.PreferredFormDialogWidth
 	if frameW > termW-4 {
 		frameW = termW - 4
 	}

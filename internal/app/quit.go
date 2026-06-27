@@ -4,7 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) handleQuit() bool {
@@ -21,7 +21,7 @@ func (a *App) handleQuit() bool {
 // handleQuitImmediate exits without prompting, stopping background jobs and command batches.
 func (a *App) handleQuitImmediate() bool {
 	if a.model.QuitConfirm.Open {
-		a.model.QuitConfirm = ui.QuitConfirmState{}
+		a.model.QuitConfirm = dialog.QuitConfirmState{}
 	}
 	a.stopWorker()
 	return true
@@ -62,7 +62,7 @@ func (a *App) hasActiveJobs() bool {
 }
 
 func (a *App) openQuitConfirm() {
-	st := ui.QuitConfirmState{Open: true, Focus: 0}
+	st := dialog.QuitConfirmState{Open: true, Focus: 0}
 	hasJobs := a.hasActiveJobs()
 	cmds := a.hasRunningCommands()
 	switch {
@@ -81,26 +81,26 @@ func (a *App) handleQuitConfirmKey(event *tcell.EventKey) bool {
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 's', 'S':
-			a.model.QuitConfirm = ui.QuitConfirmState{}
+			a.model.QuitConfirm = dialog.QuitConfirmState{}
 			return false
 		case 'q', 'Q':
-			a.model.QuitConfirm = ui.QuitConfirmState{}
+			a.model.QuitConfirm = dialog.QuitConfirmState{}
 			return true
 		}
 	}
 	switch event.Key() {
 	case tcell.KeyEsc:
-		a.model.QuitConfirm = ui.QuitConfirmState{}
+		a.model.QuitConfirm = dialog.QuitConfirmState{}
 		return false
 	case tcell.KeyLeft:
-		a.model.QuitConfirm.Focus = ui.DialogPairLeftRight(a.model.QuitConfirm.Focus, false)
+		a.model.QuitConfirm.Focus = dialog.DialogPairLeftRight(a.model.QuitConfirm.Focus, false)
 		return false
 	case tcell.KeyRight:
-		a.model.QuitConfirm.Focus = ui.DialogPairLeftRight(a.model.QuitConfirm.Focus, true)
+		a.model.QuitConfirm.Focus = dialog.DialogPairLeftRight(a.model.QuitConfirm.Focus, true)
 		return false
 	case tcell.KeyEnter:
 		quitAnyway := a.model.QuitConfirm.Focus == 1
-		a.model.QuitConfirm = ui.QuitConfirmState{}
+		a.model.QuitConfirm = dialog.QuitConfirmState{}
 		return quitAnyway
 	}
 	return false

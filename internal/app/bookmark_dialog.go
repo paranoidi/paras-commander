@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // tryBookmarkDialogShortcut handles [dialog.bookmark] while the bookmarks
@@ -27,17 +28,17 @@ func (a *App) tryBookmarkDialogShortcut(ev *tcell.EventKey) bool {
 
 func (a *App) bookmarkDialogOpen() bool {
 	st := &a.model.PathPicker
-	return st.Open && st.Purpose == ui.PathPickerPurposeNavigate
+	return st.Open && st.Purpose == dialog.PathPickerPurposeNavigate
 }
 
-func (a *App) pathPickerSelectedItem() (ui.PathPickerItem, bool) {
+func (a *App) pathPickerSelectedItem() (dialog.PathPickerItem, bool) {
 	st := &a.model.PathPicker
 	if !st.Open || len(st.Ranked) == 0 || st.Selected < 0 || st.Selected >= len(st.Ranked) {
-		return ui.PathPickerItem{}, false
+		return dialog.PathPickerItem{}, false
 	}
 	entIdx := st.Ranked[st.Selected]
 	if entIdx < 0 || entIdx >= len(st.Items) {
-		return ui.PathPickerItem{}, false
+		return dialog.PathPickerItem{}, false
 	}
 	return st.Items[entIdx], true
 }

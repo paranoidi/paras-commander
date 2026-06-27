@@ -5,6 +5,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // jobsHost implements apphandler/jobs.Host for *App.
@@ -30,7 +31,7 @@ func (h jobsHost) PrimaryPanel() *panel.State { return &h.app.model.Primary }
 
 func (h jobsHost) SecondaryPanel() *panel.State { return &h.app.model.Secondary }
 
-func (h jobsHost) OpenTransferDialogSelfCopyRename(kind ui.TransferKind, absDest, source string) {
+func (h jobsHost) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, absDest, source string) {
 	h.app.openTransferDialogSelfCopyRename(kind, absDest, source)
 }
 

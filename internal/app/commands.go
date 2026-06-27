@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -52,10 +53,10 @@ func (a *App) openRunForEachDialog() {
 	entries := append([]localfs.Entry(nil), src.Entries...)
 	dir := a.activePanel().PathString()
 	msg := "Runs once per selected item. Command must include %f (iterated item path).\nOther macros: %d active dir, %F/%D other panel, %t/%T tagged paths.\nDo not wrap % macros in quotes.\n>> | && etc. run via sh -c; otherwise argv is parsed without a shell."
-	fields := []ui.FileDialogField{{Label: "Command", Value: "", Cursor: 0}}
-	a.model.FileDialog = ui.FileDialogState{
+	fields := []dialog.FileDialogField{{Label: "Command", Value: "", Cursor: 0}}
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:              true,
-		DialogType:        ui.FileDialogRunForEach,
+		DialogType:        dialog.FileDialogRunForEach,
 		Fields:            fields,
 		FocusedField:      0,
 		Message:           msg,

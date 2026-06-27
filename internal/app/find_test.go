@@ -13,9 +13,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func findRankedIndexForPath(st *ui.FindDialogState, absPath string) int {
+func findRankedIndexForPath(st *dialog.FindDialogState, absPath string) int {
 	want := filepath.Clean(absPath)
 	for i, entIdx := range st.Ranked {
 		if entIdx >= 0 && entIdx < len(st.Entries) && filepath.Clean(st.Entries[entIdx].AbsPath(st.RootPath)) == want {
@@ -770,7 +771,7 @@ func TestFindDialogBulkGroupSelectManyFiles(t *testing.T) {
 	}
 }
 
-func findRankedNonDirCount(st *ui.FindDialogState) int {
+func findRankedNonDirCount(st *dialog.FindDialogState) int {
 	n := 0
 	for _, idx := range st.Ranked {
 		if idx >= 0 && idx < len(st.Entries) && !st.Entries[idx].IsDir {
@@ -780,7 +781,7 @@ func findRankedNonDirCount(st *ui.FindDialogState) int {
 	return n
 }
 
-func findRankedDirCount(st *ui.FindDialogState) int {
+func findRankedDirCount(st *dialog.FindDialogState) int {
 	n := 0
 	for _, idx := range st.Ranked {
 		if idx >= 0 && idx < len(st.Entries) && st.Entries[idx].IsDir {
@@ -1066,7 +1067,7 @@ func TestFindDialogMarkParentThenChildDirRemovesParentMark(t *testing.T) {
 	}
 }
 
-func findIndexedUnder(st *ui.FindDialogState, dir string) bool {
+func findIndexedUnder(st *dialog.FindDialogState, dir string) bool {
 	dir = filepath.Clean(dir)
 	for _, e := range st.Entries {
 		p := filepath.Clean(e.AbsPath(st.RootPath))

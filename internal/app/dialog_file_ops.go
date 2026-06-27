@@ -10,11 +10,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) closeFileDialog() {
 	a.clearDeleteDialogReconcileCache()
-	a.model.FileDialog = ui.FileDialogState{}
+	a.model.FileDialog = dialog.FileDialogState{}
 }
 
 func (a *App) refreshBothPanels() {
@@ -43,19 +44,19 @@ func (a *App) openRenameDialog(p *panel.State) {
 	name := entry.Name
 	nameRunes := len([]rune(name))
 	encCands := filenameenc.DetectCandidates(name)
-	renameEnc := make([]ui.RenameEncodingCandidate, 0, len(encCands))
+	renameEnc := make([]dialog.RenameEncodingCandidate, 0, len(encCands))
 	for _, c := range encCands {
-		renameEnc = append(renameEnc, ui.RenameEncodingCandidate{Label: c.Label, UTF8: c.UTF8})
+		renameEnc = append(renameEnc, dialog.RenameEncodingCandidate{Label: c.Label, UTF8: c.UTF8})
 	}
-	fields := []ui.FileDialogField{
+	fields := []dialog.FileDialogField{
 		{Label: "Name", Value: name, Prefill: name, Cursor: nameRunes, PrefillPending: true},
 	}
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:                     true,
-		DialogType:               ui.FileDialogRename,
+		DialogType:               dialog.FileDialogRename,
 		Fields:                   fields,
-		RenamePhase:              ui.RenamePhaseMain,
-		RenameSlugifySep:         ui.RenameSlugifyDot,
+		RenamePhase:              dialog.RenamePhaseMain,
+		RenameSlugifySep:         dialog.RenameSlugifyDot,
 		RenameFocusAfter:         a.config.Operations.RenameFocusAfter,
 		RenameEncodingCandidates: renameEnc,
 		RenameEncodingSelected:   0,
@@ -73,15 +74,15 @@ func (a *App) openMkdirDialog(openInInactive bool) {
 		cursor = len([]rune(name))
 	}
 	pending := name != ""
-	fields := []ui.FileDialogField{
+	fields := []dialog.FileDialogField{
 		{Label: "Directory name", Value: name, Prefill: name, Cursor: cursor, PrefillPending: pending},
 	}
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:                true,
-		DialogType:          ui.FileDialogMkdir,
+		DialogType:          dialog.FileDialogMkdir,
 		Fields:              fields,
 		MkdirShowActions:    len(p.SelectedPaths) > 0,
-		MkdirAction:         ui.MkdirActionCreate,
+		MkdirAction:         dialog.MkdirActionCreate,
 		MkdirOpenInInactive: openInInactive,
 	}
 }
@@ -94,10 +95,10 @@ func (a *App) openDeleteDialog(p *panel.State) {
 	}
 	panelPath := p.PathString()
 	homeDir := a.model.UserHomeDir
-	entries := make([]ui.DeleteListEntry, len(source.Entries))
+	entries := make([]dialog.DeleteListEntry, len(source.Entries))
 	for i, e := range source.Entries {
-		entries[i] = ui.DeleteListEntry{
-			Name: ui.DeleteListEntryName(panelPath, homeDir, e.Path, e.Name),
+		entries[i] = dialog.DeleteListEntry{
+			Name: dialog.DeleteListEntryName(panelPath, homeDir, e.Path, e.Name),
 			Path: e.Path,
 			Type: e.Type,
 		}
@@ -108,14 +109,14 @@ func (a *App) openDeleteDialog(p *panel.State) {
 	a.deleteDialogSelGen = p.SelectionDerivedGen()
 	a.deleteDialogPanelPath = panelPath
 	a.deleteDialogPrunedPaths = pruned
-	fd := ui.FileDialogState{
+	fd := dialog.FileDialogState{
 		Open:          true,
-		DialogType:    ui.FileDialogDelete,
+		DialogType:    dialog.FileDialogDelete,
 		DeleteSummary: a.deleteDialogSummary(p, source),
 		DeleteEntries: entries,
 		FocusedField:  1, // No (safe default); Yes stays index 0.
 	}
-	fd.DeleteLayoutMinWidth = ui.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
+	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
 	a.model.FileDialog = fd
 	a.reconcileDeleteDialogScans()
 }
@@ -130,12 +131,12 @@ func (a *App) openChmodDialog(p *panel.State) {
 		a.setErrorMessage("Chmod", err)
 		return
 	}
-	fields := []ui.FileDialogField{
+	fields := []dialog.FileDialogField{
 		{Label: "Mode", Value: ""},
 	}
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:       true,
-		DialogType: ui.FileDialogChmod,
+		DialogType: dialog.FileDialogChmod,
 		Fields:     fields,
 	}
 	a.model.FileDialog.Fields[0].Cursor = 0
@@ -151,13 +152,13 @@ func (a *App) openChownDialog(p *panel.State) {
 		a.setErrorMessage("Chown", err)
 		return
 	}
-	fields := []ui.FileDialogField{
+	fields := []dialog.FileDialogField{
 		{Label: "User", Value: ""},
 		{Label: "Group", Value: ""},
 	}
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:       true,
-		DialogType: ui.FileDialogChown,
+		DialogType: dialog.FileDialogChown,
 		Fields:     fields,
 	}
 }
@@ -174,13 +175,13 @@ func (a *App) openSymlinkDialog(p *panel.State) {
 	}
 	targetPath := entry.Path
 	defaultLink := filepath.Join(a.inactivePanel().PathString(), entry.Name)
-	fields := []ui.FileDialogField{
+	fields := []dialog.FileDialogField{
 		{Label: "Target", Value: targetPath, Cursor: len([]rune(targetPath)), PathPicker: true},
 		{Label: "Link path", Value: defaultLink, Cursor: len([]rune(defaultLink)), PathPicker: true},
 	}
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:       true,
-		DialogType: ui.FileDialogSymlink,
+		DialogType: dialog.FileDialogSymlink,
 		Fields:     fields,
 	}
 	a.syncFocusedFileDialogPathFieldCompletion()
@@ -198,13 +199,13 @@ func (a *App) openHardlinkDialog(p *panel.State) {
 	}
 	sourcePath := entry.Path
 	defaultDest := filepath.Join(a.inactivePanel().PathString(), entry.Name)
-	fields := []ui.FileDialogField{
+	fields := []dialog.FileDialogField{
 		{Label: "Source", Value: sourcePath, Cursor: len([]rune(sourcePath)), PathPicker: true},
 		{Label: "New path", Value: defaultDest, Cursor: len([]rune(defaultDest)), PathPicker: true},
 	}
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:       true,
-		DialogType: ui.FileDialogHardlink,
+		DialogType: dialog.FileDialogHardlink,
 		Fields:     fields,
 	}
 	a.syncFocusedFileDialogPathFieldCompletion()
@@ -212,31 +213,31 @@ func (a *App) openHardlinkDialog(p *panel.State) {
 
 func (a *App) executeFileDialog() {
 	switch a.model.FileDialog.DialogType {
-	case ui.FileDialogRunForEach:
+	case dialog.FileDialogRunForEach:
 		a.executeRunForEach()
-	case ui.FileDialogMassRename:
+	case dialog.FileDialogMassRename:
 		a.executeMassRename()
-	case ui.FileDialogRename:
+	case dialog.FileDialogRename:
 		a.executeRename()
-	case ui.FileDialogCopyHere:
+	case dialog.FileDialogCopyHere:
 		a.executeCopyHere()
-	case ui.FileDialogMkdir:
+	case dialog.FileDialogMkdir:
 		a.executeMkdir()
-	case ui.FileDialogDelete:
+	case dialog.FileDialogDelete:
 		a.executeDelete()
-	case ui.FileDialogChmod:
+	case dialog.FileDialogChmod:
 		a.executeChmod()
-	case ui.FileDialogChown:
+	case dialog.FileDialogChown:
 		a.executeChown()
-	case ui.FileDialogSymlink:
+	case dialog.FileDialogSymlink:
 		a.executeSymlink()
-	case ui.FileDialogHardlink:
+	case dialog.FileDialogHardlink:
 		a.executeHardlink()
-	case ui.FileDialogExtract:
+	case dialog.FileDialogExtract:
 		a.executeExtract()
-	case ui.FileDialogAddBookmark:
+	case dialog.FileDialogAddBookmark:
 		a.executeAddBookmark()
-	case ui.FileDialogSFTPPassword:
+	case dialog.FileDialogSFTPPassword:
 		a.executeSFTPPassword()
 	default:
 		a.closeFileDialog()
@@ -287,7 +288,7 @@ func (a *App) executeMkdir() {
 		return
 	}
 	input := d.Fields[0].Value
-	action := ui.MkdirActionCreate
+	action := dialog.MkdirActionCreate
 	if d.MkdirShowActions {
 		action = d.MkdirAction
 	}
@@ -307,7 +308,7 @@ func (a *App) executeMkdir() {
 	// For copy/move post-actions, resolve sources up-front so a missing/empty
 	// selection fails fast without leaving an empty directory behind.
 	var sources []string
-	if action == ui.MkdirActionCreateCopySelect || action == ui.MkdirActionCreateMoveSelect {
+	if action == dialog.MkdirActionCreateCopySelect || action == dialog.MkdirActionCreateMoveSelect {
 		src, srcErr := ops.ResolveSource(p)
 		if srcErr != nil {
 			a.setErrorMessage("Mkdir source", srcErr)
@@ -364,13 +365,13 @@ func (a *App) executeMkdir() {
 	}
 
 	switch action {
-	case ui.MkdirActionCreate:
+	case dialog.MkdirActionCreate:
 		a.setTransientMessage(fmt.Sprintf("Created directory %s", plan.Name), ui.MessageUrgencyInfo)
-	case ui.MkdirActionCreateCopySelect:
+	case dialog.MkdirActionCreateCopySelect:
 		a.activePanel().ClearSelection()
 		a.addTransferJob(jobs.TypeCopy, sources, plan.Path, false, a.transferPreserveFromConfig())
 		a.setTransientMessage(fmt.Sprintf("Created %s; copy queued (%d %s)", plan.Name, len(sources), plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
-	case ui.MkdirActionCreateMoveSelect:
+	case dialog.MkdirActionCreateMoveSelect:
 		a.activePanel().ClearSelection()
 		a.addTransferJob(jobs.TypeMove, sources, plan.Path, false, a.transferPreserveFromConfig())
 		a.setTransientMessage(fmt.Sprintf("Created %s; move queued (%d %s)", plan.Name, len(sources), plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)

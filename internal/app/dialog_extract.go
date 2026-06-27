@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) openExtractDialog(p *panel.State) {
@@ -24,14 +25,14 @@ func (a *App) openExtractDialog(p *panel.State) {
 	dest := transferPrefilledDestination(a.inactivePanel().PathString())
 	dest.Label = "Destination"
 	dest.PathPicker = true
-	fields := []ui.FileDialogField{dest}
+	fields := []dialog.FileDialogField{dest}
 	msg := ""
 	if skipped > 0 {
 		msg = fmt.Sprintf("%d non-archive item(s) will be skipped.", skipped)
 	}
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:           true,
-		DialogType:     ui.FileDialogExtract,
+		DialogType:     dialog.FileDialogExtract,
 		Fields:         fields,
 		FocusedField:   0,
 		Message:        msg,

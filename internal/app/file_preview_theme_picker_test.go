@@ -5,14 +5,14 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestSyncFilePreviewThemePickerRanksFiltersLabels(t *testing.T) {
 	app, _ := newFilePreviewThemePickerTestApp(t)
-	app.model.FilePreviewThemePicker = ui.FilePreviewThemePickerState{
+	app.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{
 		Open: true,
-		Choices: []ui.ThemeChoice{
+		Choices: []dialog.ThemeChoice{
 			{Name: "monokai", Label: "monokai"},
 			{Name: "github", Label: "github"},
 		},

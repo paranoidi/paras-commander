@@ -8,7 +8,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestSymlinkDialogRightAtEndFocusesPathPickerGlyph(t *testing.T) {
@@ -157,7 +157,7 @@ func TestSymlinkDialogOpensPathPickerFromGlyph(t *testing.T) {
 	}
 
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != ui.PathPickerPurposeApplyFileDialogField {
+	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != dialog.PathPickerPurposeApplyFileDialogField {
 		t.Fatalf("path picker = open %v purpose %v, want ApplyFileDialogField",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
 	}

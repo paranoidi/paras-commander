@@ -1,8 +1,9 @@
 package dialog
 
 import (
-	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 	"unicode/utf8"
+
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"

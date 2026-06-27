@@ -10,7 +10,7 @@ import (
 func PaintDeleteDialog(
 	screen tcell.Screen,
 	layout Layout,
-	state FileDialogState,
+	state dialog.FileDialogState,
 	styles theme.Theme,
 	showIcons bool,
 ) {

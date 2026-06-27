@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -14,7 +15,7 @@ func (a *App) mergedPanelHistories() []string {
 	return panel.MergeNavigationHistories(a.inactivePanel().History, a.activePanel().History)
 }
 
-func historyMarkPath(st *ui.HistoryDialogState) string {
+func historyMarkPath(st *dialog.HistoryDialogState) string {
 	idx := st.PanelCurrentIndex
 	if idx < 0 || idx >= len(st.PanelPaths) {
 		return ""
@@ -51,11 +52,11 @@ func (a *App) openHistoryDialog(panelID int) {
 	if curIdx < 0 || curIdx >= len(panelPaths) {
 		curIdx = 0
 	}
-	display := historyDisplayLinesFor(panelPaths, historyMarkPath(&ui.HistoryDialogState{
+	display := historyDisplayLinesFor(panelPaths, historyMarkPath(&dialog.HistoryDialogState{
 		PanelPaths:        panelPaths,
 		PanelCurrentIndex: curIdx,
 	}))
-	a.model.HistoryDialog = ui.HistoryDialogState{
+	a.model.HistoryDialog = dialog.HistoryDialogState{
 		Open:              true,
 		PanelID:           panelID,
 		Paths:             panelPaths,
@@ -78,11 +79,11 @@ func (a *App) openHistoryDialog(panelID int) {
 		}
 	}
 	a.model.HistoryDialog.Selected = selected
-	ui.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
+	dialog.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
 }
 
 func (a *App) closeHistoryDialog() {
-	a.model.HistoryDialog = ui.HistoryDialogState{}
+	a.model.HistoryDialog = dialog.HistoryDialogState{}
 }
 
 func (a *App) toggleHistoryDialogBothPanels() {
@@ -123,7 +124,7 @@ func (a *App) reloadHistoryDialogList() {
 			}
 		}
 	}
-	ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
+	dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
 }
 
 func historyDialogOverlayFooterKeys(keys *keymap.Map, bothPanels bool) []menu.FunctionKey {
@@ -149,7 +150,7 @@ func (a *App) syncHistoryDialogRanks() {
 	copy(lines, st.DisplayLines)
 	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.Paths), a.config.CaseInsensitiveFilter)
 	clampFilteredListSelection(&st.Selected, len(st.Ranked))
-	ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
+	dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
 }
 
 func (a *App) historyDialogListRows() int {
@@ -211,7 +212,7 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 		onChange := func() {
 			a.syncHistoryDialogRanks()
 			st.Selected = 0
-			ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
+			dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
 		}
 		if a.handleScrollingQueryKey(event, true, historyDialogScrollingQuery(st, a.historyDialogQueryWidth(), onChange)) {
 			return
@@ -229,21 +230,21 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			a.activateHistorySelection()
 		}
 	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		if nf, ok := ui.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+		if nf, ok := dialog.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
 			st.Focus = nf
 			if st.Focus == 0 && event.Key() == tcell.KeyUp {
-				ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
+				dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
 			}
 			break
 		}
 		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.historyDialogListRows, func() {
-			ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
+			dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
 		}) {
 			break
 		}
 	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
 		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.historyDialogListRows, func() {
-			ui.EnsureHistoryListScroll(st, a.historyDialogListRows())
+			dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
 		}) {
 			break
 		}

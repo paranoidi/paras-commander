@@ -18,6 +18,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -410,7 +411,7 @@ func TestRenderUsesBlockedPanelFrameWhenSortDialogOpen(t *testing.T) {
 		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
 		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel: PrimaryPanel,
-		SortDialog: SortDialogState{
+		SortDialog: dialog.SortDialogState{
 			Open:    true,
 			PanelID: PrimaryPanel,
 		},
@@ -437,7 +438,7 @@ func TestRenderUsesBlockedPanelFrameWhenListingFormatDialogOpen(t *testing.T) {
 		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
 		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel: PrimaryPanel,
-		ListingFormatDialog: ListingFormatDialogState{
+		ListingFormatDialog: dialog.ListingFormatDialogState{
 			Open:    true,
 			PanelID: PrimaryPanel,
 		},
@@ -470,10 +471,10 @@ func TestRenderThemeDialogPreviewShowsActiveUnblockedPrimaryPanel(t *testing.T) 
 		},
 		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: SecondaryPanel,
-		ThemeDialog: ThemeDialogState{
+		ThemeDialog: dialog.ThemeDialogState{
 			Open:        true,
 			CurrentName: "default",
-			Choices:     []ThemeChoice{{Name: "default", Label: "Default"}},
+			Choices:     []dialog.ThemeChoice{{Name: "default", Label: "Default"}},
 		},
 	}
 
@@ -502,11 +503,11 @@ func TestRenderDrawsThemeDialog(t *testing.T) {
 		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
 		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: PrimaryPanel,
-		ThemeDialog: ThemeDialogState{
+		ThemeDialog: dialog.ThemeDialogState{
 			Open:        true,
 			Selected:    1,
 			CurrentName: "default",
-			Choices: []ThemeChoice{
+			Choices: []dialog.ThemeChoice{
 				{Name: "default", Label: "Default"},
 				{Name: "test-theme", Label: "Test Theme"},
 			},
@@ -546,7 +547,7 @@ func TestRenderDrawsMessageDialog(t *testing.T) {
 		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
 		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: PrimaryPanel,
-		MessageDialog: MessageDialogState{
+		MessageDialog: dialog.MessageDialogState{
 			Open:    true,
 			Title:   "Error",
 			Message: "theme reload failed: disk full",
@@ -628,10 +629,10 @@ func TestRenderBlankMenuBarRowWhenModalDialogOpen(t *testing.T) {
 		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
 		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: PrimaryPanel,
-		FileDialog: FileDialogState{
+		FileDialog: dialog.FileDialogState{
 			Open:       true,
-			DialogType: FileDialogMkdir,
-			Fields:     []FileDialogField{{Label: "Name", Value: "x"}},
+			DialogType: dialog.FileDialogMkdir,
+			Fields:     []dialog.FileDialogField{{Label: "Name", Value: "x"}},
 		},
 	}
 
@@ -661,11 +662,11 @@ func TestQuickFilterStartBlocked(t *testing.T) {
 	if !m.QuickFilterStartBlocked() {
 		t.Fatal("open menu should block")
 	}
-	m = Model{MessageDialog: MessageDialogState{Open: true}}
+	m = Model{MessageDialog: dialog.MessageDialogState{Open: true}}
 	if !m.QuickFilterStartBlocked() {
 		t.Fatal("message dialog should block")
 	}
-	m = Model{HelpView: HelpViewState{Open: true}}
+	m = Model{HelpView: dialog.HelpViewState{Open: true}}
 	if m.QuickFilterStartBlocked() {
 		t.Fatal("help view alone should not block (legacy parity with shouldStartFilter)")
 	}
@@ -803,11 +804,11 @@ func TestRenderTransientStatusAboveFooterAfterThemeDialog(t *testing.T) {
 		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
 		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: PrimaryPanel,
-		ThemeDialog: ThemeDialogState{
+		ThemeDialog: dialog.ThemeDialogState{
 			Open:     true,
 			Selected: 0,
 			Focus:    0,
-			Choices:  []ThemeChoice{{Name: "default", Label: "default"}},
+			Choices:  []dialog.ThemeChoice{{Name: "default", Label: "default"}},
 		},
 		Message:        "theme-reload-err",
 		MessageUrgency: MessageUrgencyCritical,

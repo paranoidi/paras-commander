@@ -33,6 +33,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/workpool"
 )
@@ -564,7 +565,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			ViewMode:                   ui.ViewBrowser,
 			JobActivity:                make(map[string][]string),
 			MenuDefinitions:            menu.BrowserDefinitions(km, opts.DevMode),
-			ThemeDialog: ui.ThemeDialogState{
+			ThemeDialog: dialog.ThemeDialogState{
 				CurrentName: styles.Name,
 				Choices:     uiThemeChoices(themeChoices),
 			},

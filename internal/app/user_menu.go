@@ -125,7 +125,7 @@ func (a *App) openUserMenu() {
 		a.setTransientMessage("User menu: no visible entries", ui.MessageUrgencyWarn)
 		return
 	}
-	a.model.UserMenu = ui.UserMenuDialogState{
+	a.model.UserMenu = dialog.UserMenuDialogState{
 		Open:         true,
 		Title:        "User menu",
 		Entries:      visible,
@@ -142,7 +142,7 @@ func (a *App) openUserMenu() {
 }
 
 func (a *App) closeUserMenu() {
-	a.model.UserMenu = ui.UserMenuDialogState{}
+	a.model.UserMenu = dialog.UserMenuDialogState{}
 }
 
 func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
@@ -157,7 +157,7 @@ func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
 	layout := a.layoutForTerminalSize(w, h)
 	vr := dialog.UserMenuListViewportRows(layout, n)
 
-	if ui.AltDialogCancel(event) {
+	if dialog.AltDialogCancel(event) {
 		a.closeUserMenu()
 		return
 	}
@@ -179,7 +179,7 @@ func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
 		}
 	case tcell.KeyRune:
 		if keymap.AltLetterModifiers(event.Modifiers()) {
-			if i, ok := ui.UserMenuEntryIndexForAltShortcut(st.Entries, event.Rune()); ok {
+			if i, ok := dialog.UserMenuEntryIndexForAltShortcut(st.Entries, event.Rune()); ok {
 				a.executeUserMenuEntry(i)
 				return
 			}

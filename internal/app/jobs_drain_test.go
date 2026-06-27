@@ -1,8 +1,9 @@
 package app
 
 import (
-	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/jobs"

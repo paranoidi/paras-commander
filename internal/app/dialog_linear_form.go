@@ -3,7 +3,7 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // linearFormHandlers configures handleLinearFormDialogKey.
@@ -17,7 +17,7 @@ type linearFormHandlers struct {
 	allowPlainOKCancel bool
 }
 
-func (a *App) handleLinearFormDialogKey(ev *tcell.EventKey, form ui.DialogLinearForm, h linearFormHandlers) bool {
+func (a *App) handleLinearFormDialogKey(ev *tcell.EventKey, form dialog.DialogLinearForm, h linearFormHandlers) bool {
 	if a.tryStandardDialogActions(ev, h.onApply, h.onCancel, nil) {
 		return true
 	}

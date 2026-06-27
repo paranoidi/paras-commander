@@ -6,9 +6,10 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func findEntryLocalfs(e FindEntry) localfs.Entry {
+func findEntryLocalfs(e dialog.FindEntry) localfs.Entry {
 	t := e.Type
 	if t == 0 {
 		if e.IsDir {
@@ -24,7 +25,7 @@ func findEntryLocalfs(e FindEntry) localfs.Entry {
 	}
 }
 
-func deleteListEntryLocalfs(e DeleteListEntry) localfs.Entry {
+func deleteListEntryLocalfs(e dialog.DeleteListEntry) localfs.Entry {
 	t := e.Type
 	if t == 0 {
 		t = localfs.EntryFile
@@ -56,11 +57,11 @@ func PaintDialogRowIcon(screen tcell.Screen, x, y int, entry localfs.Entry, styl
 }
 
 // PaintFindDialogRowIcon draws file-list devicons for one find dialog row.
-func PaintFindDialogRowIcon(screen tcell.Screen, x, y int, entry FindEntry, styles theme.Theme) {
+func PaintFindDialogRowIcon(screen tcell.Screen, x, y int, entry dialog.FindEntry, styles theme.Theme) {
 	PaintDialogRowIcon(screen, x, y, findEntryLocalfs(entry), styles)
 }
 
 // PaintDeleteDialogRowIcon draws file-list devicons for one delete dialog row.
-func PaintDeleteDialogRowIcon(screen tcell.Screen, x, y int, entry DeleteListEntry, styles theme.Theme) {
+func PaintDeleteDialogRowIcon(screen tcell.Screen, x, y int, entry dialog.DeleteListEntry, styles theme.Theme) {
 	PaintDialogRowIcon(screen, x, y, deleteListEntryLocalfs(entry), styles)
 }

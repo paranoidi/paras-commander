@@ -115,18 +115,18 @@ type Model struct {
 	SpinPhase               uint8
 	Menu                    menu.State
 	MenuDefinitions         []menu.Definition
-	ThemeDialog             ThemeDialogState
-	ConfigDialog            ConfigDialogState
-	DebounceCalibrateDialog DebounceCalibrateDialogState
-	SortDialog              SortDialogState
-	ListingFormatDialog     ListingFormatDialogState
-	GroupSelect             GroupSelectState
-	PathPicker              PathPickerState
-	HistoryDialog           HistoryDialogState
-	SFTPConnectDialog       SFTPConnectDialogState
-	FindDialog              FindDialogState
-	MetaDialog              MetaDialogState
-	UserMenu                UserMenuDialogState
+	ThemeDialog             dialog.ThemeDialogState
+	ConfigDialog            dialog.ConfigDialogState
+	DebounceCalibrateDialog dialog.DebounceCalibrateDialogState
+	SortDialog              dialog.SortDialogState
+	ListingFormatDialog     dialog.ListingFormatDialogState
+	GroupSelect             dialog.GroupSelectState
+	PathPicker              dialog.PathPickerState
+	HistoryDialog           dialog.HistoryDialogState
+	SFTPConnectDialog       dialog.SFTPConnectDialogState
+	FindDialog              dialog.FindDialogState
+	MetaDialog              dialog.MetaDialogState
+	UserMenu                dialog.UserMenuDialogState
 	// MetaResults holds per-panel active meta columns (nil/empty = meta not active).
 	MetaResults [2][]MetaColumnState
 	// FilePreview is the live inactive-panel preview state (mutate only under App.commandsMu).
@@ -157,18 +157,18 @@ type Model struct {
 	// FullscreenFilePreviewDraw is a snapshot for ViewFilePreview rendering.
 	FullscreenFilePreviewDraw FilePreviewState
 	// FilePreviewThemePicker is the inline theme list on the right side of F3 file view.
-	FilePreviewThemePicker FilePreviewThemePickerState
+	FilePreviewThemePicker dialog.FilePreviewThemePickerState
 	// PreviewChromaStyle is the active Chroma style name for internal preview border tinting (empty = external mode).
 	PreviewChromaStyle string
-	HelpView           HelpViewState
-	FileDialog         FileDialogState
-	TransferDialog     TransferDialogState
-	FlattenDialog      FlattenDialogState
-	ConflictDialog     ConflictDialogState
-	HostKeyDialog      HostKeyDialogState
-	QuitConfirm        QuitConfirmState
-	StashRestoreDialog StashRestoreDialogState
-	MessageDialog      MessageDialogState
+	HelpView           dialog.HelpViewState
+	FileDialog         dialog.FileDialogState
+	TransferDialog     dialog.TransferDialogState
+	FlattenDialog      dialog.FlattenDialogState
+	ConflictDialog     dialog.ConflictDialogState
+	HostKeyDialog      dialog.HostKeyDialogState
+	QuitConfirm        dialog.QuitConfirmState
+	StashRestoreDialog dialog.StashRestoreDialogState
+	MessageDialog      dialog.MessageDialogState
 	Message            string
 	MessageUrgency     MessageUrgency
 	FooterKeys         []menu.FunctionKey
@@ -184,20 +184,20 @@ type Model struct {
 // PrimaryModal identifies which exclusive modal occupies the primary dialog layer (see package dialog).
 
 // PrimaryModal returns the active primary modal, in the same priority order as Render.
-func (m Model) PrimaryModal() PrimaryModal {
+func (m Model) PrimaryModal() dialog.PrimaryModal {
 	switch {
 	case m.ThemeDialog.Open:
-		return PrimaryModalTheme
+		return dialog.PrimaryModalTheme
 	case m.ConflictDialog.Open:
-		return PrimaryModalConflict
+		return dialog.PrimaryModalConflict
 	case m.TransferDialog.Open:
-		return PrimaryModalTransfer
+		return dialog.PrimaryModalTransfer
 	case m.FlattenDialog.Open:
-		return PrimaryModalFlatten
+		return dialog.PrimaryModalFlatten
 	case m.QuitConfirm.Open:
-		return PrimaryModalQuit
+		return dialog.PrimaryModalQuit
 	default:
-		return PrimaryModalNone
+		return dialog.PrimaryModalNone
 	}
 }
 
@@ -322,7 +322,7 @@ func (m Model) PanelsChromeBlocked() bool {
 
 // ModalDialogOpen reports modals that block normal navigation and hide the menu bar row.
 func (m Model) ModalDialogOpen() bool {
-	if m.PrimaryModal() != PrimaryModalNone {
+	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
 	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.StashRestoreDialog.Open || m.UserMenu.Open {
@@ -480,15 +480,15 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		drawPulldownMenu(screen, layout, model.Menu, menus, styles)
 	}
 	switch model.PrimaryModal() {
-	case PrimaryModalTheme:
+	case dialog.PrimaryModalTheme:
 		dialog.DrawThemeDialog(screen, layout, model.ThemeDialog, styles)
-	case PrimaryModalTransfer:
+	case dialog.PrimaryModalTransfer:
 		dialog.DrawTransferDialog(screen, layout, model.TransferDialog, styles)
-	case PrimaryModalFlatten:
+	case dialog.PrimaryModalFlatten:
 		dialog.DrawFlattenDialog(screen, layout, model.FlattenDialog, styles)
-	case PrimaryModalConflict:
+	case dialog.PrimaryModalConflict:
 		dialog.DrawConflictDialog(screen, layout, model.ConflictDialog, styles, model.UserHomeDir)
-	case PrimaryModalQuit:
+	case dialog.PrimaryModalQuit:
 		dialog.DrawQuitConfirmDialog(screen, layout, model.QuitConfirm, styles)
 	}
 	if model.ConfigDialog.Open {

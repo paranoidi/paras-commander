@@ -7,7 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestTransferDialogPrefillDestinationTrailingSlash(t *testing.T) {
@@ -59,7 +59,7 @@ func TestTransferDialogCopyPreserveAltAndFocusedShortcuts(t *testing.T) {
 
 	app.openCopyDialog()
 	d := &app.model.TransferDialog
-	if !d.Open || d.Kind != ui.TransferKindCopy {
+	if !d.Open || d.Kind != dialog.TransferKindCopy {
 		t.Fatal("copy dialog should be open")
 	}
 	if !d.PreservePermissions || !d.PreserveTimestamps {
@@ -122,11 +122,11 @@ func TestTransferDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 			t.Fatal("transfer dialog should be open")
 		}
 		prefix := filepath.Join(root, "f")
-		d.Destination = ui.FileDialogField{
+		d.Destination = dialog.FileDialogField{
 			Value:  prefix,
 			Cursor: len([]rune(prefix)),
 		}
-		d.DestSubFocus = ui.TransferDestSubFocusText
+		d.DestSubFocus = dialog.TransferDestSubFocusText
 		d.FocusField = 0
 		app.syncPathFieldCompletion(&d.Destination, app.transferDestinationTextWidth())
 		if d.Destination.CompletionSuffix != "oo" {

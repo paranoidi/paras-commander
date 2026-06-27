@@ -10,14 +10,15 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) openCopyDialog() {
-	a.openTransferDialog(ui.TransferKindCopy)
+	a.openTransferDialog(dialog.TransferKindCopy)
 }
 
 func (a *App) openMoveDialog() {
-	a.openTransferDialog(ui.TransferKindMove)
+	a.openTransferDialog(dialog.TransferKindMove)
 }
 
 // activateCopyAction is the single user-facing entry point for copy (keyboard, menu, F-keys).
@@ -49,7 +50,7 @@ func absPathClean(p string) string {
 	return filepath.Clean(abs)
 }
 
-func transferPrefilledDestination(path string) ui.FileDialogField {
+func transferPrefilledDestination(path string) dialog.FileDialogField {
 	path = strings.TrimSpace(path)
 	if path != "" {
 		sep := string(filepath.Separator)
@@ -58,7 +59,7 @@ func transferPrefilledDestination(path string) ui.FileDialogField {
 		}
 	}
 	rn := len([]rune(path))
-	return ui.FileDialogField{
+	return dialog.FileDialogField{
 		Value:          path,
 		Prefill:        path,
 		Cursor:         rn,
@@ -66,16 +67,16 @@ func transferPrefilledDestination(path string) ui.FileDialogField {
 	}
 }
 
-func (a *App) openTransferDialog(kind ui.TransferKind) {
+func (a *App) openTransferDialog(kind dialog.TransferKind) {
 	passive := a.inactivePanel()
-	st := ui.TransferDialogState{
+	st := dialog.TransferDialogState{
 		Open:         true,
 		Kind:         kind,
 		Destination:  transferPrefilledDestination(passive.PathString()),
-		DestSubFocus: ui.TransferDestSubFocusText,
+		DestSubFocus: dialog.TransferDestSubFocusText,
 		FocusField:   0, // destination path row
 	}
-	if kind == ui.TransferKindCopy {
+	if kind == dialog.TransferKindCopy {
 		st.PreservePermissions = a.config.Operations.PreservePermissions
 		st.PreserveTimestamps = a.config.Operations.PreserveTimestamps
 	}
@@ -84,9 +85,9 @@ func (a *App) openTransferDialog(kind ui.TransferKind) {
 	a.armTransferDestinationValidateTimer()
 }
 
-func transferSelfCopyNewNamePrefilled(base string) ui.FileDialogField {
+func transferSelfCopyNewNamePrefilled(base string) dialog.FileDialogField {
 	rn := len([]rune(base))
-	return ui.FileDialogField{
+	return dialog.FileDialogField{
 		Value:          base,
 		Prefill:        base,
 		Cursor:         rn,
@@ -95,20 +96,20 @@ func transferSelfCopyNewNamePrefilled(base string) ui.FileDialogField {
 }
 
 // openTransferDialogSelfCopyRename opens the transfer modal directly on the "new name" step (e.g. F5/F6 onto self).
-func (a *App) openTransferDialogSelfCopyRename(kind ui.TransferKind, absDestDir, sourcePath string) {
+func (a *App) openTransferDialogSelfCopyRename(kind dialog.TransferKind, absDestDir, sourcePath string) {
 	base := filepath.Base(sourcePath)
-	st := ui.TransferDialogState{
+	st := dialog.TransferDialogState{
 		Open:                 true,
 		Kind:                 kind,
-		Phase:                ui.TransferPhaseSelfCopyRename,
-		Destination:          ui.FileDialogField{},
-		DestSubFocus:         ui.TransferDestSubFocusText,
+		Phase:                dialog.TransferPhaseSelfCopyRename,
+		Destination:          dialog.FileDialogField{},
+		DestSubFocus:         dialog.TransferDestSubFocusText,
 		SelfCopyDestDir:      absDestDir,
 		SelfCopyOrigBasename: base,
 		SelfCopyNewName:      transferSelfCopyNewNamePrefilled(base),
 		FocusField:           0,
 	}
-	if kind == ui.TransferKindCopy {
+	if kind == dialog.TransferKindCopy {
 		st.PreservePermissions = a.config.Operations.PreservePermissions
 		st.PreserveTimestamps = a.config.Operations.PreserveTimestamps
 	}
@@ -118,12 +119,12 @@ func (a *App) openTransferDialogSelfCopyRename(kind ui.TransferKind, absDestDir,
 
 func (a *App) closeTransferDialog() {
 	a.transferDestValidate.Invalidate()
-	a.model.TransferDialog = ui.TransferDialogState{}
+	a.model.TransferDialog = dialog.TransferDialogState{}
 }
 
 func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	d := &a.model.TransferDialog
-	if d.Phase == ui.TransferPhaseDestination && d.Kind == ui.TransferKindCopy {
+	if d.Phase == dialog.TransferPhaseDestination && d.Kind == dialog.TransferKindCopy {
 		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 			switch event.Rune() {
 			case 'r', 'R':
@@ -148,8 +149,8 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	if a.tryPathPickerHostShortcut(event) {
 		return
 	}
-	if d.FocusField == 0 && d.Phase == ui.TransferPhaseDestination &&
-		d.DestSubFocus == ui.TransferDestSubFocusText &&
+	if d.FocusField == 0 && d.Phase == dialog.TransferPhaseDestination &&
+		d.DestSubFocus == dialog.TransferDestSubFocusText &&
 		event.Key() == tcell.KeyTab && d.Destination.CompletionSuffix != "" {
 		if d.Destination.AcceptCompletion() {
 			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
@@ -158,16 +159,16 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 		}
 		return
 	}
-	if d.FocusField == 0 && d.Phase == ui.TransferPhaseSelfCopyRename {
+	if d.FocusField == 0 && d.Phase == dialog.TransferPhaseSelfCopyRename {
 		if a.editTransferFieldKey(event, &d.SelfCopyNewName) {
 			return
 		}
 	}
-	if d.FocusField == 0 && d.Phase == ui.TransferPhaseDestination {
-		if d.DestSubFocus == ui.TransferDestSubFocusPicker {
+	if d.FocusField == 0 && d.Phase == dialog.TransferPhaseDestination {
+		if d.DestSubFocus == dialog.TransferDestSubFocusPicker {
 			switch event.Key() {
 			case tcell.KeyLeft:
-				d.DestSubFocus = ui.TransferDestSubFocusText
+				d.DestSubFocus = dialog.TransferDestSubFocusText
 				runes := []rune(d.Destination.Value)
 				d.Destination.Cursor = len(runes)
 				return
@@ -175,7 +176,7 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 				a.openPathPickerForTransfer()
 				return
 			case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
-				d.DestSubFocus = ui.TransferDestSubFocusText
+				d.DestSubFocus = dialog.TransferDestSubFocusText
 			default:
 				return
 			}
@@ -197,7 +198,7 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 					return
 				}
 				if c >= len(runes) {
-					d.DestSubFocus = ui.TransferDestSubFocusPicker
+					d.DestSubFocus = dialog.TransferDestSubFocusPicker
 					return
 				}
 				dest.MoveCursor(1)
@@ -210,21 +211,21 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 			}
 		}
 	}
-	if focus, ok := ui.TransferDialogMoveFocus(*d, d.FocusField, event.Key()); ok {
+	if focus, ok := dialog.TransferDialogMoveFocus(*d, d.FocusField, event.Key()); ok {
 		prev := d.FocusField
 		d.FocusField = focus
 		if prev == 0 && focus != 0 {
-			d.DestSubFocus = ui.TransferDestSubFocusText
+			d.DestSubFocus = dialog.TransferDestSubFocusText
 		}
 		return
 	}
 	if event.Key() == tcell.KeyEnter {
-		tf := ui.NewTransferDialogLinearForm(ui.TransferDialogEffectiveNumContent(*d))
-		if d.Phase == ui.TransferPhaseDestination && d.FocusField == 0 && d.DestSubFocus == ui.TransferDestSubFocusText {
+		tf := dialog.NewTransferDialogLinearForm(dialog.TransferDialogEffectiveNumContent(*d))
+		if d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0 && d.DestSubFocus == dialog.TransferDestSubFocusText {
 			a.confirmTransfer()
 			return
 		}
-		if d.Phase == ui.TransferPhaseSelfCopyRename && d.FocusField == 0 {
+		if d.Phase == dialog.TransferPhaseSelfCopyRename && d.FocusField == 0 {
 			a.confirmTransfer()
 			return
 		}
@@ -240,14 +241,14 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if d.FocusField == 0 && d.Phase != ui.TransferPhaseSelfCopyRename {
+	if d.FocusField == 0 && d.Phase != dialog.TransferPhaseSelfCopyRename {
 		if a.editTransferFieldKey(event, &d.Destination) {
 			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
 			a.armTransferDestinationValidateTimer()
 			return
 		}
 	}
-	if d.Phase == ui.TransferPhaseDestination && d.Kind == ui.TransferKindCopy && event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
+	if d.Phase == dialog.TransferPhaseDestination && d.Kind == dialog.TransferKindCopy && event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
 		switch event.Rune() {
 		case 'r', 'R':
 			if d.FocusField == 1 {
@@ -268,7 +269,7 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	}
 }
 
-func (a *App) editTransferFieldKey(event *tcell.EventKey, f *ui.FileDialogField) bool {
+func (a *App) editTransferFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {
 	return a.handleFileDialogFieldKey(event, f, func() {
 		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
 	})
@@ -300,7 +301,7 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 	d := &a.model.TransferDialog
 	sources := a.activePanelSources()
 	if len(sources) == 0 {
-		if d.Kind == ui.TransferKindCopy {
+		if d.Kind == dialog.TransferKindCopy {
 			a.setTransientMessage("No files to copy", ui.MessageUrgencyWarn)
 		} else {
 			a.setTransientMessage("No files to move", ui.MessageUrgencyWarn)
@@ -308,7 +309,7 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 		return
 	}
 
-	if d.Phase == ui.TransferPhaseSelfCopyRename {
+	if d.Phase == dialog.TransferPhaseSelfCopyRename {
 		a.confirmTransferSelfCopyRename(sources, startPaused)
 		return
 	}
@@ -336,7 +337,7 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 			a.setTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
 			return
 		}
-		d.Phase = ui.TransferPhaseSelfCopyRename
+		d.Phase = dialog.TransferPhaseSelfCopyRename
 		d.SelfCopyDestDir = absDest
 		base := filepath.Base(sources[0])
 		d.SelfCopyOrigBasename = base
@@ -350,9 +351,9 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 
 	var jobType jobs.Type
 	switch d.Kind {
-	case ui.TransferKindCopy:
+	case dialog.TransferKindCopy:
 		jobType = jobs.TypeCopy
-	case ui.TransferKindMove:
+	case dialog.TransferKindMove:
 		jobType = jobs.TypeMove
 	default:
 		a.closeTransferDialog()
@@ -387,9 +388,9 @@ func (a *App) confirmTransferSelfCopyRename(sources []string, startPaused bool) 
 
 	var jobType jobs.Type
 	switch d.Kind {
-	case ui.TransferKindCopy:
+	case dialog.TransferKindCopy:
 		jobType = jobs.TypeCopy
-	case ui.TransferKindMove:
+	case dialog.TransferKindMove:
 		jobType = jobs.TypeMove
 	default:
 		a.closeTransferDialog()

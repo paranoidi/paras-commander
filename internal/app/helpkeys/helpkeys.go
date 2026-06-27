@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // JoinDisplay joins every binding into one readable string (comma-separated).
@@ -70,7 +70,7 @@ func ConcatKeywords(kw []string) string {
 }
 
 // CanonicalRankText is the terminal-agnostic corpus for help filtering and rank scores.
-func CanonicalRankText(ent ui.HelpEntry) string {
+func CanonicalRankText(ent dialog.HelpEntry) string {
 	s := strings.Join([]string{ent.Keys, ent.Section, ent.Title}, " ")
 	if ent.FuzzyExtra != "" {
 		s += " " + ent.FuzzyExtra

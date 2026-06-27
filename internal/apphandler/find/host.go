@@ -6,7 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // Host supplies cross-cutting app services the find handler cannot import from internal/app.
@@ -20,7 +20,7 @@ type Host interface {
 	InQuickFilterUI() bool
 	NavigatePanelToDirectory(panelID int, path, message string) error
 	HandleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, edit any) bool
-	FindDialogScrollingQuery(st *ui.FindDialogState, width int, onChange func()) any
+	FindDialogScrollingQuery(st *dialog.FindDialogState, width int, onChange func()) any
 	FindDialogQueryWidth() int
 	DiskUsageIgnore() diskusage.ShouldIgnoreFolder
 	GitignoreCache() *gitignore.Cache

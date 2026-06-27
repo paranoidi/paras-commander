@@ -7,6 +7,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) openBookmarkDialog() {
@@ -23,20 +24,20 @@ func (a *App) openBookmarkDialog() {
 	}
 	panelPath := a.activePanel().PathString()
 	home := a.model.UserHomeDir
-	items := make([]ui.PathPickerItem, len(marks))
+	items := make([]dialog.PathPickerItem, len(marks))
 	for i := range marks {
 		cp := filepath.Clean(marks[i].Path)
-		items[i] = ui.PathPickerItem{
+		items[i] = dialog.PathPickerItem{
 			Source:      marks[i].Origin.PathPickerSource(),
 			Name:        marks[i].Name,
 			Path:        marks[i].Path,
 			PathMissing: pathEntryMissing(panelPath, home, cp),
 		}
 	}
-	a.model.PathPicker = ui.PathPickerState{
+	a.model.PathPicker = dialog.PathPickerState{
 		Open:       true,
 		Title:      "Bookmarks",
-		Purpose:    ui.PathPickerPurposeNavigate,
+		Purpose:    dialog.PathPickerPurposeNavigate,
 		Query:      "",
 		Items:      items,
 		Focus:      0,
@@ -64,10 +65,10 @@ func (a *App) openAddBookmarkDialog() {
 	defaultName := defaultBookmarkName(path)
 	cursor := len([]rune(defaultName))
 	pending := defaultName != ""
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:       true,
-		DialogType: ui.FileDialogAddBookmark,
-		Fields: []ui.FileDialogField{
+		DialogType: dialog.FileDialogAddBookmark,
+		Fields: []dialog.FileDialogField{
 			{
 				Label:          "Name",
 				Value:          defaultName,
@@ -93,9 +94,9 @@ func defaultBookmarkName(path string) string {
 
 // addBookmarkDialogInputField returns the name field for Add bookmark, including when
 // keyboard focus is on OK/Cancel (focusedField returns nil in that case).
-func (a *App) addBookmarkDialogInputField() *ui.FileDialogField {
+func (a *App) addBookmarkDialogInputField() *dialog.FileDialogField {
 	d := &a.model.FileDialog
-	if !d.Open || d.DialogType != ui.FileDialogAddBookmark || len(d.Fields) != 1 {
+	if !d.Open || d.DialogType != dialog.FileDialogAddBookmark || len(d.Fields) != 1 {
 		return nil
 	}
 	if d.FocusedField >= 0 && d.FocusedField < len(d.Fields) {

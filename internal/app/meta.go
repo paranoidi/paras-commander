@@ -18,6 +18,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/metacmds"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // metaWakePayload wakes PollEvent after a meta background worker completes one entry.
@@ -243,7 +244,7 @@ func (a *App) openMetaDialog(panelID int) {
 		_, checked[i] = activeSet[e.Name]
 	}
 
-	a.model.MetaDialog = ui.MetaDialogState{
+	a.model.MetaDialog = dialog.MetaDialogState{
 		Open:    true,
 		PanelID: panelID,
 		Entries: entries,
@@ -254,18 +255,18 @@ func (a *App) openMetaDialog(panelID int) {
 }
 
 func (a *App) closeMetaDialog() {
-	a.model.MetaDialog = ui.MetaDialogState{}
+	a.model.MetaDialog = dialog.MetaDialogState{}
 }
 
 // metaEntries returns MetaEntry slice sorted by order+name from a MetaFile (nil-safe).
-func metaEntries(mf *metacmds.MetaFile) []ui.MetaEntry {
+func metaEntries(mf *metacmds.MetaFile) []dialog.MetaEntry {
 	if mf == nil || len(mf.Entries) == 0 {
 		return nil
 	}
 	sorted := metacmds.SortedEntries(mf)
-	out := make([]ui.MetaEntry, len(sorted))
+	out := make([]dialog.MetaEntry, len(sorted))
 	for i, e := range sorted {
-		out[i] = ui.MetaEntry{Name: e.Name, Description: e.Description}
+		out[i] = dialog.MetaEntry{Name: e.Name, Description: e.Description}
 	}
 	return out
 }
@@ -274,7 +275,7 @@ func (a *App) activateMetaSelection() {
 	st := a.model.MetaDialog
 	panelID := st.PanelID
 	checked := append([]bool(nil), st.Checked...)
-	entries := append([]ui.MetaEntry(nil), st.Entries...)
+	entries := append([]dialog.MetaEntry(nil), st.Entries...)
 	a.closeMetaDialog()
 
 	var activeNames []string
@@ -634,19 +635,19 @@ func (a *App) applyMetaExecFailed(d metaExecFailedPayload) {
 func (a *App) handleMetaDialogKey(event *tcell.EventKey) {
 	st := &a.model.MetaDialog
 	n := len(st.Entries)
-	form := ui.NewDialogLinearForm(n)
+	form := dialog.NewDialogLinearForm(n)
 
-	if ui.AltDialogOK(event) {
+	if dialog.AltDialogOK(event) {
 		a.activateMetaSelection()
 		return
 	}
-	if ui.AltDialogCancel(event) {
+	if dialog.AltDialogCancel(event) {
 		a.closeMetaDialog()
 		return
 	}
 
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if i, ok := ui.MetaEntryIndexForAltShortcut(st.Entries, event.Rune()); ok {
+		if i, ok := dialog.MetaEntryIndexForAltShortcut(st.Entries, event.Rune()); ok {
 			st.Checked[i] = !st.Checked[i]
 			st.Focus = i
 			return

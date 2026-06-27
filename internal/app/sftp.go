@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 type sftpHostKeyWait struct {
@@ -124,7 +125,7 @@ type sftpPasswordOpenPayload struct {
 }
 
 func (a *App) openHostKeyDialog(p sftpb.HostKeyPrompt) {
-	a.model.HostKeyDialog = ui.HostKeyDialogState{
+	a.model.HostKeyDialog = dialog.HostKeyDialogState{
 		Open:        true,
 		Host:        p.Host,
 		KeyType:     p.KeyType,
@@ -134,7 +135,7 @@ func (a *App) openHostKeyDialog(p sftpb.HostKeyPrompt) {
 }
 
 func (a *App) closeHostKeyDialog() {
-	a.model.HostKeyDialog = ui.HostKeyDialogState{}
+	a.model.HostKeyDialog = dialog.HostKeyDialogState{}
 }
 
 func (a *App) finishHostKeyDialog(decision sftpb.HostKeyDecision) {
@@ -150,10 +151,10 @@ func (a *App) finishHostKeyDialog(decision sftpb.HostKeyDecision) {
 
 func (a *App) openSFTPPasswordDialog(p sftpb.PasswordPrompt) {
 	label := "Password for " + p.User + "@" + p.Host
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:       true,
-		DialogType: ui.FileDialogSFTPPassword,
-		Fields: []ui.FileDialogField{{
+		DialogType: dialog.FileDialogSFTPPassword,
+		Fields: []dialog.FileDialogField{{
 			Label:  label,
 			Value:  "",
 			Cursor: 0,

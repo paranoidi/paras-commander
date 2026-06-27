@@ -4,7 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // tryMkdirDialogShortcut handles [dialog.mkdir] while the mkdir dialog is open.
@@ -14,7 +14,7 @@ func (a *App) tryMkdirDialogShortcut(ev *tcell.EventKey) bool {
 		return false
 	}
 	d := &a.model.FileDialog
-	if !d.Open || d.DialogType != ui.FileDialogMkdir {
+	if !d.Open || d.DialogType != dialog.FileDialogMkdir {
 		return false
 	}
 	id, ok := a.keysMkdirDialog.Lookup(ev)
@@ -34,7 +34,7 @@ func (a *App) mkdirDialogExtractFooterEligible() bool {
 		return false
 	}
 	d := &a.model.FileDialog
-	if !d.Open || d.DialogType != ui.FileDialogMkdir {
+	if !d.Open || d.DialogType != dialog.FileDialogMkdir {
 		return false
 	}
 	if len(a.activePanel().SelectedPaths) < 2 {
@@ -54,7 +54,7 @@ func (a *App) applyMkdirExtractCommonName() bool {
 	for i, e := range source.Entries {
 		names[i] = e.Name
 	}
-	extracted := ui.ExtractLongestCommonName(names)
+	extracted := dialog.ExtractLongestCommonName(names)
 	if extracted == "" {
 		a.setErrorMessage("Mkdir", ops.SourceError("no common name found in selection"))
 		return true

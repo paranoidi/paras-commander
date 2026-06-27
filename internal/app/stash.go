@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) togglePanelSelectionStash() {
@@ -25,7 +26,7 @@ func (a *App) togglePanelSelectionStash() {
 		a.restorePanelStash(p)
 		return
 	}
-	a.model.StashRestoreDialog = ui.StashRestoreDialogState{Open: true, Focus: 0}
+	a.model.StashRestoreDialog = dialog.StashRestoreDialogState{Open: true, Focus: 0}
 	a.render()
 }
 
@@ -40,7 +41,7 @@ func (a *App) restorePanelStash(p *panel.State) {
 }
 
 func (a *App) closeStashRestoreDialog() {
-	a.model.StashRestoreDialog = ui.StashRestoreDialogState{}
+	a.model.StashRestoreDialog = dialog.StashRestoreDialogState{}
 }
 
 func (a *App) handleStashRestoreDialogKey(event *tcell.EventKey) {

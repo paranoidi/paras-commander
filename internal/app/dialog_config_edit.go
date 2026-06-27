@@ -8,7 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
-func metaDialogEntries(mf *metacmds.MetaFile) []ui.MetaEntry {
+func metaDialogEntries(mf *metacmds.MetaFile) []dialog.MetaEntry {
 	return metaEntries(mf)
 }
 
@@ -60,7 +60,7 @@ func (a *App) refreshMetaDialogAfterConfigEdit() {
 	}
 
 	n := len(entries)
-	form := ui.NewDialogLinearForm(n)
+	form := dialog.NewDialogLinearForm(n)
 	focus := metaDialogFocusFromTarget(entries, form, prevFocusName, prevFocusButton, 0)
 
 	st.Entries = entries
@@ -68,7 +68,7 @@ func (a *App) refreshMetaDialogAfterConfigEdit() {
 	st.Focus = focus
 }
 
-func metaEntryIndexByName(entries []ui.MetaEntry, name string) int {
+func metaEntryIndexByName(entries []dialog.MetaEntry, name string) int {
 	if name == "" {
 		return -1
 	}
@@ -80,9 +80,9 @@ func metaEntryIndexByName(entries []ui.MetaEntry, name string) int {
 	return -1
 }
 
-func metaDialogFocusTarget(entries []ui.MetaEntry, focus int) (entryName string, button tcell.Key) {
+func metaDialogFocusTarget(entries []dialog.MetaEntry, focus int) (entryName string, button tcell.Key) {
 	n := len(entries)
-	form := ui.NewDialogLinearForm(n)
+	form := dialog.NewDialogLinearForm(n)
 	switch {
 	case focus < n:
 		return entries[focus].Name, 0
@@ -95,7 +95,7 @@ func metaDialogFocusTarget(entries []ui.MetaEntry, focus int) (entryName string,
 	}
 }
 
-func metaDialogFocusFromTarget(entries []ui.MetaEntry, form ui.DialogLinearForm, entryName string, button tcell.Key, _ int) int {
+func metaDialogFocusFromTarget(entries []dialog.MetaEntry, form dialog.DialogLinearForm, entryName string, button tcell.Key, _ int) int {
 	switch button {
 	case tcell.KeyEnter:
 		return form.OKIndex()

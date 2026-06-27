@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
@@ -29,7 +30,7 @@ func (jobsHostStub) ActivePanelSources() []string                  { return nil 
 func (jobsHostStub) InactivePanel() *panel.State                   { return nil }
 func (jobsHostStub) PrimaryPanel() *panel.State                    { return &panel.State{} }
 func (jobsHostStub) SecondaryPanel() *panel.State                  { return &panel.State{} }
-func (jobsHostStub) OpenTransferDialogSelfCopyRename(ui.TransferKind, string, string) {
+func (jobsHostStub) OpenTransferDialogSelfCopyRename(dialog.TransferKind, string, string) {
 }
 func (jobsHostStub) HandleQuit() bool                           { return false }
 func (jobsHostStub) HandleQuitImmediate() bool                  { return false }

@@ -2,13 +2,13 @@ package app
 
 import (
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // handleFileDialogFieldKey applies standard text-editing keys to a FileDialogField.
 // afterEdit runs after any mutation (e.g. mass-rename preview recompute, path completion sync).
 // Returns true when the event was consumed.
-func (a *App) handleFileDialogFieldKey(ev *tcell.EventKey, f *ui.FileDialogField, afterEdit func()) bool {
+func (a *App) handleFileDialogFieldKey(ev *tcell.EventKey, f *dialog.FileDialogField, afterEdit func()) bool {
 	if f == nil {
 		return false
 	}
@@ -59,9 +59,9 @@ func (a *App) handleFileDialogFieldKey(ev *tcell.EventKey, f *ui.FileDialogField
 func (a *App) fileDialogFieldAfterEdit() func() {
 	var extra func()
 	switch a.model.FileDialog.DialogType {
-	case ui.FileDialogMassRename:
+	case dialog.FileDialogMassRename:
 		extra = a.recomputeMassRenamePreview
-	case ui.FileDialogRunForEach:
+	case dialog.FileDialogRunForEach:
 		extra = a.recomputeRunForEachCommandValidation
 	}
 	f := a.focusedField()

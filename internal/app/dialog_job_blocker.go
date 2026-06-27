@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // jobBlockerNextPayload opens the next quick blocker dialog after debounce elapses.
@@ -25,7 +26,7 @@ func (a *App) tryOpenJobBlockerDialog() {
 		return
 	}
 	blocker := *job.PendingBlocker
-	a.model.ConflictDialog = ui.ConflictDialogState{
+	a.model.ConflictDialog = dialog.ConflictDialogState{
 		Open:    true,
 		JobID:   job.ID,
 		Blocker: blocker,
@@ -34,7 +35,7 @@ func (a *App) tryOpenJobBlockerDialog() {
 }
 
 func (a *App) closeJobBlockerDialog() {
-	a.model.ConflictDialog = ui.ConflictDialogState{}
+	a.model.ConflictDialog = dialog.ConflictDialogState{}
 	a.stopJobBlockerNextTimer()
 }
 

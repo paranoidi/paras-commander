@@ -7,7 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -70,7 +70,7 @@ func TestFileMenuCopyOpensTransferDialogWithoutEnqueue(t *testing.T) {
 	}
 	app.activateMenuSelection(def, item)
 
-	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != ui.TransferKindCopy {
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindCopy {
 		t.Fatal("File menu Copy should open transfer dialog")
 	}
 	if len(app.jobState.AllJobs()) != 0 {
@@ -112,7 +112,7 @@ func TestQuickFilterF5OpensCopyDialogWithoutEnqueue(t *testing.T) {
 	if app.inQuickFilterUI() {
 		t.Fatal("F5 should dismiss quick filter")
 	}
-	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != ui.TransferKindCopy {
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindCopy {
 		t.Fatal("F5 from quick filter should open copy dialog")
 	}
 	if len(app.jobState.AllJobs()) != 0 {

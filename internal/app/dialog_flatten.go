@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) openFlattenDialog() {
@@ -41,10 +42,10 @@ func (a *App) openFlattenDialog() {
 			}
 		}
 	}
-	a.model.FlattenDialog = ui.FlattenDialogState{
+	a.model.FlattenDialog = dialog.FlattenDialogState{
 		Open:         true,
 		Destination:  transferPrefilledDestination(destPanel.PathString()),
-		DestSubFocus: ui.FlattenDestSubFocusText,
+		DestSubFocus: dialog.FlattenDestSubFocusText,
 		Recursive:    a.config.Operations.FlattenRecursive,
 		RemoveEmpty:  a.config.Operations.FlattenRemoveEmptyDirs,
 		FocusField:   0,
@@ -72,7 +73,7 @@ func (a *App) flattenSourceErrorToast(err error) {
 
 func (a *App) closeFlattenDialog() {
 	a.transferDestValidate.Invalidate()
-	a.model.FlattenDialog = ui.FlattenDialogState{}
+	a.model.FlattenDialog = dialog.FlattenDialogState{}
 }
 
 func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
@@ -123,7 +124,7 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 	if a.tryFlattenDialogDestinationShortcut(event) {
 		return
 	}
-	if d.FocusField == 0 && d.DestSubFocus == ui.FlattenDestSubFocusText &&
+	if d.FocusField == 0 && d.DestSubFocus == dialog.FlattenDestSubFocusText &&
 		event.Key() == tcell.KeyTab && d.Destination.CompletionSuffix != "" {
 		if d.Destination.AcceptCompletion() {
 			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
@@ -133,10 +134,10 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if d.FocusField == 0 {
-		if d.DestSubFocus == ui.FlattenDestSubFocusPicker {
+		if d.DestSubFocus == dialog.FlattenDestSubFocusPicker {
 			switch event.Key() {
 			case tcell.KeyLeft:
-				d.DestSubFocus = ui.FlattenDestSubFocusText
+				d.DestSubFocus = dialog.FlattenDestSubFocusText
 				runes := []rune(d.Destination.Value)
 				d.Destination.Cursor = len(runes)
 				return
@@ -144,7 +145,7 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 				a.openPathPickerForFlatten()
 				return
 			case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
-				d.DestSubFocus = ui.FlattenDestSubFocusText
+				d.DestSubFocus = dialog.FlattenDestSubFocusText
 			default:
 				return
 			}
@@ -165,7 +166,7 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 					return
 				}
 				if c >= len(runes) {
-					d.DestSubFocus = ui.FlattenDestSubFocusPicker
+					d.DestSubFocus = dialog.FlattenDestSubFocusPicker
 					return
 				}
 				dest.MoveCursor(1)
@@ -178,17 +179,17 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 			}
 		}
 	}
-	if focus, ok := ui.FlattenDialogMoveFocus(d.FocusField, event.Key()); ok {
+	if focus, ok := dialog.FlattenDialogMoveFocus(d.FocusField, event.Key()); ok {
 		prev := d.FocusField
 		d.FocusField = focus
 		if prev == 0 && focus != 0 {
-			d.DestSubFocus = ui.FlattenDestSubFocusText
+			d.DestSubFocus = dialog.FlattenDestSubFocusText
 		}
 		return
 	}
 	if event.Key() == tcell.KeyEnter {
-		tform := ui.NewFlattenDialogLinearForm()
-		if d.FocusField == 0 && d.DestSubFocus == ui.FlattenDestSubFocusText {
+		tform := dialog.NewFlattenDialogLinearForm()
+		if d.FocusField == 0 && d.DestSubFocus == dialog.FlattenDestSubFocusText {
 			a.confirmFlatten()
 			return
 		}
@@ -216,7 +217,7 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 	}
 }
 
-func (a *App) editFlattenFieldKey(event *tcell.EventKey, f *ui.FileDialogField) bool {
+func (a *App) editFlattenFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {
 	return a.handleFileDialogFieldKey(event, f, func() {
 		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
 	})

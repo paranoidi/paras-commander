@@ -1,9 +1,10 @@
 package app
 
 import (
-	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"testing"
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
 )

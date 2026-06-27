@@ -3,7 +3,7 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/search"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // syncFilteredListRanks ranks display lines against query and builds ranked indices plus
@@ -44,21 +44,21 @@ func handleFilteredListSelectionKey(ev *tcell.EventKey, focus int, selected *int
 	rows := listRows()
 	switch ev.Key() {
 	case tcell.KeyUp:
-		*selected = ui.ListClampedSelectionDelta(*selected, rankedLen, -1)
+		*selected = dialog.ListClampedSelectionDelta(*selected, rankedLen, -1)
 		ensureScroll()
 		return true
 	case tcell.KeyDown:
-		*selected = ui.ListClampedSelectionDelta(*selected, rankedLen, 1)
+		*selected = dialog.ListClampedSelectionDelta(*selected, rankedLen, 1)
 		ensureScroll()
 		return true
 	case tcell.KeyPgUp:
 		step := max(1, rows-1)
-		*selected = ui.ListClampedSelectionDelta(*selected, rankedLen, -step)
+		*selected = dialog.ListClampedSelectionDelta(*selected, rankedLen, -step)
 		ensureScroll()
 		return true
 	case tcell.KeyPgDn:
 		step := max(1, rows-1)
-		*selected = ui.ListClampedSelectionDelta(*selected, rankedLen, step)
+		*selected = dialog.ListClampedSelectionDelta(*selected, rankedLen, step)
 		ensureScroll()
 		return true
 	case tcell.KeyHome:

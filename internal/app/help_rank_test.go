@@ -5,11 +5,11 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
 	"github.com/paranoidi/paras-commander/internal/search"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestHelpCanonicalRankOrdersKeysSectionTitle(t *testing.T) {
-	ent := ui.HelpEntry{Keys: "Alt+O", Section: "Navigation", Title: "Open", FuzzyExtra: "panel.open-dir-in-other search"}
+	ent := dialog.HelpEntry{Keys: "Alt+O", Section: "Navigation", Title: "Open", FuzzyExtra: "panel.open-dir-in-other search"}
 	got := helpkeys.CanonicalRankText(ent)
 	want := "Alt+O Navigation Open panel.open-dir-in-other search"
 	if got != want {
@@ -18,7 +18,7 @@ func TestHelpCanonicalRankOrdersKeysSectionTitle(t *testing.T) {
 }
 
 func TestHelpRankOrderSameForDifferentLayouts(t *testing.T) {
-	entries := []ui.HelpEntry{
+	entries := []dialog.HelpEntry{
 		{Keys: "A", Section: "S1", Title: "Zebra", FuzzyExtra: "id1"},
 		{Keys: "B", Section: "S2", Title: "Alpha", FuzzyExtra: "id2"},
 	}

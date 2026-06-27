@@ -9,6 +9,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestRunMetaCommand_expandsF(t *testing.T) {
@@ -77,10 +78,10 @@ file = "echo meta"
 	}
 
 	app := testMetaDialogApp(t, dir, cfgDir)
-	app.model.MetaDialog = ui.MetaDialogState{
+	app.model.MetaDialog = dialog.MetaDialogState{
 		Open:    true,
 		PanelID: ui.PrimaryPanel,
-		Entries: []ui.MetaEntry{{Name: "mkvinfo", Description: "MKV info"}},
+		Entries: []dialog.MetaEntry{{Name: "mkvinfo", Description: "MKV info"}},
 		Checked: []bool{true},
 		Focus:   0,
 	}

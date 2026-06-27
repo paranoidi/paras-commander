@@ -9,11 +9,12 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // TestRenderAddBookmarkDialogShowsTitlePathAndName verifies the new
 // Add bookmark file dialog draws its centered title, the read-only
-// "Path:" info row populated from FileDialogState.Message, the editable
+// "Path:" info row populated from dialog.FileDialogState.Message, the editable
 // "Name:" label, and the prefilled value in the input row.
 func TestRenderAddBookmarkDialogShowsTitlePathAndName(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
@@ -29,10 +30,10 @@ func TestRenderAddBookmarkDialogShowsTitlePathAndName(t *testing.T) {
 		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
 		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: PrimaryPanel,
-		FileDialog: FileDialogState{
+		FileDialog: dialog.FileDialogState{
 			Open:       true,
-			DialogType: FileDialogAddBookmark,
-			Fields: []FileDialogField{
+			DialogType: dialog.FileDialogAddBookmark,
+			Fields: []dialog.FileDialogField{
 				{Label: "Name", Value: "projects", Prefill: "projects", Cursor: 8, PrefillPending: true},
 			},
 			Message: "/home/user/projects",
@@ -86,10 +87,10 @@ func TestRenderMkdirDialogWithoutSelectionHidesActionRadios(t *testing.T) {
 		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
 		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: PrimaryPanel,
-		FileDialog: FileDialogState{
+		FileDialog: dialog.FileDialogState{
 			Open:       true,
-			DialogType: FileDialogMkdir,
-			Fields:     []FileDialogField{{Label: "Directory name", Value: "x"}},
+			DialogType: dialog.FileDialogMkdir,
+			Fields:     []dialog.FileDialogField{{Label: "Directory name", Value: "x"}},
 		},
 	}
 
@@ -122,12 +123,12 @@ func TestRenderMkdirDialogWithSelectionShowsActionRadios(t *testing.T) {
 		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
 		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: PrimaryPanel,
-		FileDialog: FileDialogState{
-			Open:             true,
-			DialogType:       FileDialogMkdir,
-			Fields:           []FileDialogField{{Label: "Directory name", Value: "x"}},
-			MkdirShowActions: true,
-			MkdirAction:      MkdirActionCreate,
+		FileDialog: dialog.FileDialogState{
+			Open:               true,
+			DialogType:         dialog.FileDialogMkdir,
+			Fields:             []dialog.FileDialogField{{Label: "Directory name", Value: "x"}},
+			MkdirShowActions:   true,
+			MkdirAction: dialog.MkdirActionCreate,
 		},
 	}
 

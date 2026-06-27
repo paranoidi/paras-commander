@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) openMessageDialog(title, message string) {
@@ -29,11 +30,11 @@ func (a *App) closeMessageDialog() {
 func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
 	d := &a.model.MessageDialog
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if ui.AltDialogOK(event) {
+		if dialog.AltDialogOK(event) {
 			a.closeMessageDialog()
 			return
 		}
-		if ui.AltDialogCancel(event) && d.TwoButtons {
+		if dialog.AltDialogCancel(event) && d.TwoButtons {
 			a.closeMessageDialog()
 			return
 		}
@@ -69,11 +70,11 @@ func (a *App) handleMessageDialogKey(event *tcell.EventKey) {
 
 func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
 	// Alt+O = OK, Alt+C = Cancel
-	if ui.AltDialogOK(event) {
+	if dialog.AltDialogOK(event) {
 		a.activateThemeDialogSelection()
 		return
 	}
-	if ui.AltDialogCancel(event) {
+	if dialog.AltDialogCancel(event) {
 		a.styles = a.themeAtDialogOpen
 		a.closeThemeDialog()
 		return
@@ -95,7 +96,7 @@ func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
 		}
 	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
 		td := &a.model.ThemeDialog
-		if nf, ok := ui.ListOKCancelNavFocusKey(td.Focus, event.Key()); ok {
+		if nf, ok := dialog.ListOKCancelNavFocusKey(td.Focus, event.Key()); ok {
 			td.Focus = nf
 			break
 		}
@@ -183,7 +184,7 @@ func (a *App) themeDialogListViewportRows() int {
 	if layout.TooSmall {
 		return 1
 	}
-	return ui.ThemeDialogListViewportRows(layout, len(a.model.ThemeDialog.Choices))
+	return dialog.ThemeDialogListViewportRows(layout, len(a.model.ThemeDialog.Choices))
 }
 
 func (a *App) previewThemeAtSelection() {
@@ -269,10 +270,10 @@ func (a *App) persistPartial(patch map[string]interface{}) error {
 	return config.WriteMergedPartial(a.paths, patch)
 }
 
-func uiThemeChoices(choices []theme.NamedTheme) []ui.ThemeChoice {
-	result := make([]ui.ThemeChoice, 0, len(choices))
+func uiThemeChoices(choices []theme.NamedTheme) []dialog.ThemeChoice {
+	result := make([]dialog.ThemeChoice, 0, len(choices))
 	for _, choice := range choices {
-		result = append(result, ui.ThemeChoice{Name: choice.Name, Label: choice.Label})
+		result = append(result, dialog.ThemeChoice{Name: choice.Name, Label: choice.Label})
 	}
 	return result
 }

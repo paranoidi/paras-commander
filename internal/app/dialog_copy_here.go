@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // activateCopyHereAction copies the highlighted directory beside itself under a new name.
@@ -22,16 +23,16 @@ func (a *App) openCopyHereDialog() {
 	}
 	name := entry.Name
 	nameRunes := len([]rune(name))
-	fields := []ui.FileDialogField{
+	fields := []dialog.FileDialogField{
 		{Label: "Name", Value: name, Prefill: name, Cursor: nameRunes, PrefillPending: true},
 	}
-	a.model.FileDialog = ui.FileDialogState{
+	a.model.FileDialog = dialog.FileDialogState{
 		Open:             true,
-		DialogType:       ui.FileDialogCopyHere,
+		DialogType:       dialog.FileDialogCopyHere,
 		Fields:           fields,
 		CopyHereSource:   entry.Path,
-		RenamePhase:      ui.RenamePhaseMain,
-		RenameSlugifySep: ui.RenameSlugifyDot,
+		RenamePhase:      dialog.RenamePhaseMain,
+		RenameSlugifySep: dialog.RenameSlugifyDot,
 		RenameFocusAfter: a.config.Operations.RenameFocusAfter,
 	}
 }

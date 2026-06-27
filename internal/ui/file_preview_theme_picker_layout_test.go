@@ -1,11 +1,15 @@
 package ui
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+)
 
 func TestSplitFullscreenPreviewRectsClosedUsesFullUnion(t *testing.T) {
 	t.Parallel()
 	union := Rect{X: 0, Y: 1, Width: 80, Height: 20}
-	choices := []ThemeChoice{{Name: "default", Label: "Default"}}
+	choices := []dialog.ThemeChoice{{Name: "default", Label: "Default"}}
 	preview, picker := SplitFullscreenPreviewRects(union, false, choices)
 	if preview != union {
 		t.Fatalf("preview = %+v, want full union %+v", preview, union)
@@ -18,7 +22,7 @@ func TestSplitFullscreenPreviewRectsClosedUsesFullUnion(t *testing.T) {
 func TestSplitFullscreenPreviewRectsOpenReservesRightColumn(t *testing.T) {
 	t.Parallel()
 	union := Rect{X: 0, Y: 1, Width: 80, Height: 20}
-	choices := []ThemeChoice{
+	choices := []dialog.ThemeChoice{
 		{Name: "default", Label: "Default"},
 		{Name: "test-theme", Label: "Test Theme"},
 	}

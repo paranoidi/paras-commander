@@ -6,7 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func (a *App) loadSSHConfig() sshconfig.Config {
@@ -29,12 +29,12 @@ func (a *App) openSFTPConnectDialogForPanel(panelID int) {
 	display := sshconfig.FormatHostListLines(a.sftpConnectHosts)
 
 	prefill := "sftp://"
-	a.model.SFTPConnectDialog = ui.SFTPConnectDialogState{
+	a.model.SFTPConnectDialog = dialog.SFTPConnectDialogState{
 		Open:         true,
 		PanelID:      panelID,
 		DisplayLines: display,
 		Selected:     0,
-		Location: ui.FileDialogField{
+		Location: dialog.FileDialogField{
 			Label:          "Location",
 			Value:          prefill,
 			Prefill:        prefill,
@@ -47,13 +47,13 @@ func (a *App) openSFTPConnectDialogForPanel(panelID int) {
 	if len(a.model.SFTPConnectDialog.Ranked) == 0 {
 		a.model.SFTPConnectDialog.Focus = 1
 	}
-	ui.EnsureSFTPConnectListScroll(&a.model.SFTPConnectDialog, a.sftpConnectListRows())
-	a.model.FileDialog = ui.FileDialogState{}
+	dialog.EnsureSFTPConnectListScroll(&a.model.SFTPConnectDialog, a.sftpConnectListRows())
+	a.model.FileDialog = dialog.FileDialogState{}
 	a.clearTransientMessage()
 }
 
 func (a *App) closeSFTPConnectDialog() {
-	a.model.SFTPConnectDialog = ui.SFTPConnectDialogState{}
+	a.model.SFTPConnectDialog = dialog.SFTPConnectDialogState{}
 	a.sftpConnectHosts = nil
 }
 
@@ -66,7 +66,7 @@ func (a *App) syncSFTPConnectDialogRanks() {
 	copy(lines, st.DisplayLines)
 	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.DisplayLines), a.config.CaseInsensitiveFilter)
 	clampFilteredListSelection(&st.Selected, len(st.Ranked))
-	ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
+	dialog.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
 }
 
 func (a *App) sftpConnectListRows() int {
@@ -126,7 +126,7 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 		onChange := func() {
 			a.syncSFTPConnectDialogRanks()
 			st.Selected = 0
-			ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
+			dialog.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
 		}
 		if a.handleScrollingQueryKey(event, true, sftpConnectDialogScrollingQuery(st, a.sftpConnectDialogQueryWidth(), onChange)) {
 			return
@@ -136,7 +136,7 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 		return
 	}
 
-	form := ui.NewDialogLinearForm(2)
+	form := dialog.NewDialogLinearForm(2)
 	switch event.Key() {
 	case tcell.KeyEsc:
 		a.closeSFTPConnectDialog()
@@ -174,7 +174,7 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 				break
 			}
 			if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.sftpConnectListRows, func() {
-				ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
+				dialog.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
 			}) {
 				break
 			}
@@ -194,7 +194,7 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 		}
 	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
 		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.sftpConnectListRows, func() {
-			ui.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
+			dialog.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
 		}) {
 			break
 		}

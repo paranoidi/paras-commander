@@ -5,7 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // dialogExtraMnemonic pairs an Alt+letter shortcut with an action.
@@ -20,13 +20,13 @@ func (a *App) tryStandardDialogActions(ev *tcell.EventKey, apply, cancel func(),
 	if ev.Key() != tcell.KeyRune || !keymap.AltLetterModifiers(ev.Modifiers()) {
 		return false
 	}
-	if ui.AltDialogOK(ev) {
+	if dialog.AltDialogOK(ev) {
 		if apply != nil {
 			apply()
 		}
 		return true
 	}
-	if ui.AltDialogCancel(ev) {
+	if dialog.AltDialogCancel(ev) {
 		if cancel != nil {
 			cancel()
 		}

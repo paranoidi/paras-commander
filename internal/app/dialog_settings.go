@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -21,7 +22,7 @@ func (a *App) openSortDialog() {
 func (a *App) openSortDialogForPanel(panelID int) {
 	a.closeListingFormatDialog()
 	target := a.panelByID(panelID)
-	a.model.SortDialog = ui.SortDialogState{
+	a.model.SortDialog = dialog.SortDialogState{
 		Open:                  true,
 		SortMode:              target.Sort.Mode,
 		SortReverse:           target.Sort.Reverse,
@@ -49,7 +50,7 @@ func (a *App) applySortDialog() {
 }
 
 func (a *App) handleSortDialogKey(event *tcell.EventKey) {
-	form := ui.NewDialogLinearForm(7)
+	form := dialog.NewDialogLinearForm(7)
 	st := &a.model.SortDialog
 	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
 		focus:              &st.Focus,
@@ -120,7 +121,7 @@ func listingFormatFromShortcut(ch rune, focus *int) (panel.ListFormat, bool) {
 func scrollModeFromShortcut(ch rune, focus *int) (panel.ScrollMode, bool) {
 	for i, row := range panel.ScrollModeDialogRadios() {
 		if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
-			*focus = ui.ConfigDialogScrollModeFocus(i)
+			*focus = dialog.ConfigDialogScrollModeFocus(i)
 			return row.Mode, true
 		}
 	}
@@ -130,7 +131,7 @@ func scrollModeFromShortcut(ch rune, focus *int) (panel.ScrollMode, bool) {
 func panelScrollbarFromShortcut(ch rune, focus *int) (uiscrollbar.Style, bool) {
 	for i, row := range uiscrollbar.DialogRadios() {
 		if unicode.ToLower(ch) == unicode.ToLower(row.Shortcut) {
-			*focus = ui.ConfigDialogScrollbarFocus(i)
+			*focus = dialog.ConfigDialogScrollbarFocus(i)
 			return row.Style, true
 		}
 	}
@@ -138,7 +139,7 @@ func panelScrollbarFromShortcut(ch rune, focus *int) (uiscrollbar.Style, bool) {
 }
 
 func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
-	form := ui.NewDialogLinearForm(3)
+	form := dialog.NewDialogLinearForm(3)
 	st := &a.model.ListingFormatDialog
 	radios := panel.ListFormatDialogRadios()
 	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
@@ -177,7 +178,7 @@ func (a *App) openListingFormatDialogForPanel(panelID int) {
 	a.closeSortDialog()
 	a.clearTransientMessage()
 	target := a.panelByID(panelID)
-	a.model.ListingFormatDialog = ui.ListingFormatDialogState{
+	a.model.ListingFormatDialog = dialog.ListingFormatDialogState{
 		Open:       true,
 		ListFormat: panel.EffectiveListFormat(target.ListFormat),
 		Focus:      0,
@@ -202,7 +203,7 @@ func (a *App) openConfigDialog() {
 	lf, _ := panel.ParseListFormat(a.config.DefaultListingFormat)
 	sm, _ := panel.ParseScrollMode(a.config.UI.ScrollMode)
 	sb, _ := uiscrollbar.ParseStyle(a.config.UI.PanelScrollbar)
-	a.model.ConfigDialog = ui.ConfigDialogState{
+	a.model.ConfigDialog = dialog.ConfigDialogState{
 		Open:                   true,
 		ShowFileIcons:          a.config.UI.ShowFileIcons,
 		ZoomActivePanel:        a.config.UI.ZoomActivePanel,
@@ -267,7 +268,7 @@ func (a *App) applyConfigDialog() {
 }
 
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
-	form := ui.NewDialogLinearForm(13)
+	form := dialog.NewDialogLinearForm(13)
 	st := &a.model.ConfigDialog
 	listRadios := panel.ListFormatDialogRadios()
 	scrollRadios := panel.ScrollModeDialogRadios()
@@ -277,7 +278,7 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 		onApply:            a.applyConfigDialog,
 		onCancel:           a.closeConfigDialog,
 		allowPlainOKCancel: true,
-		onMoveFocus:        ui.ConfigDialogMoveScrollFocus,
+		onMoveFocus:        dialog.ConfigDialogMoveScrollFocus,
 		onMnemonic: func(r rune) bool {
 			if mode, ok := scrollModeFromShortcut(r, &st.Focus); ok {
 				st.ScrollMode = mode
@@ -329,11 +330,11 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 			case form.CancelIndex():
 				a.closeConfigDialog()
 			default:
-				if idx, ok := ui.ConfigDialogScrollModeIndex(focus); ok {
+				if idx, ok := dialog.ConfigDialogScrollModeIndex(focus); ok {
 					st.ScrollMode = scrollRadios[idx].Mode
 					return true
 				}
-				if idx, ok := ui.ConfigDialogScrollbarIndex(focus); ok {
+				if idx, ok := dialog.ConfigDialogScrollbarIndex(focus); ok {
 					st.PanelScrollbar = sbRadios[idx].Style
 					return true
 				}
@@ -352,7 +353,7 @@ func (a *App) openGroupSelect(mode string, context string) {
 	if context == "" {
 		context = "panel"
 	}
-	a.model.GroupSelect = ui.GroupSelectState{
+	a.model.GroupSelect = dialog.GroupSelectState{
 		Open:          true,
 		Text:          "",
 		Mode:          mode,
@@ -361,7 +362,7 @@ func (a *App) openGroupSelect(mode string, context string) {
 		FilesOnly:     false,
 		DirsOnly:      false,
 		CaseSensitive: false,
-		Focus:         ui.GroupSelectFocusPattern,
+		Focus:         dialog.GroupSelectFocusPattern,
 	}
 }
 
@@ -371,18 +372,18 @@ func (a *App) closeGroupSelect() {
 	a.model.GroupSelect.PatternCompileHint = ""
 }
 
-func (a *App) groupSelectForm() ui.DialogLinearForm {
-	return ui.NewDialogLinearForm(groupSelectNumContent)
+func (a *App) groupSelectForm() dialog.DialogLinearForm {
+	return dialog.NewDialogLinearForm(groupSelectNumContent)
 }
 
 func (a *App) applyGroupSelectModeFromFocus() {
 	gs := &a.model.GroupSelect
 	switch gs.Focus {
-	case ui.GroupSelectFocusShellRadio:
+	case dialog.GroupSelectFocusShellRadio:
 		gs.PatternMode = panel.GroupPatternShell
-	case ui.GroupSelectFocusRegexRadio:
+	case dialog.GroupSelectFocusRegexRadio:
 		gs.PatternMode = panel.GroupPatternRegex
-	case ui.GroupSelectFocusSimpleRadio:
+	case dialog.GroupSelectFocusSimpleRadio:
 		gs.PatternMode = panel.GroupPatternSimple
 	}
 	a.groupSelectClampCaseFocus()
@@ -390,8 +391,8 @@ func (a *App) applyGroupSelectModeFromFocus() {
 
 func (a *App) groupSelectClampCaseFocus() {
 	gs := &a.model.GroupSelect
-	if gs.PatternMode == panel.GroupPatternRegex && gs.Focus == ui.GroupSelectFocusCase {
-		gs.Focus = ui.GroupSelectFocusDirsOnly
+	if gs.PatternMode == panel.GroupPatternRegex && gs.Focus == dialog.GroupSelectFocusCase {
+		gs.Focus = dialog.GroupSelectFocusDirsOnly
 	}
 }
 
@@ -452,11 +453,11 @@ func (a *App) executeGroupSelect() {
 // confirmGroupSelectFromInput applies the pattern row then runs OK (Enter / Alt+O).
 func (a *App) confirmGroupSelectFromInput() {
 	gs := &a.model.GroupSelect
-	if gs.Focus == ui.GroupSelectFocusPattern {
+	if gs.Focus == dialog.GroupSelectFocusPattern {
 		e := groupSelectScrollingQuery(gs, a.groupSelectQueryWidth())
 		e.apply()
 	}
-	if gs.Focus >= ui.GroupSelectFocusShellRadio && gs.Focus <= ui.GroupSelectFocusSimpleRadio {
+	if gs.Focus >= dialog.GroupSelectFocusShellRadio && gs.Focus <= dialog.GroupSelectFocusSimpleRadio {
 		a.applyGroupSelectModeFromFocus()
 	}
 	if a.tryRejectGroupSelectOK() {
@@ -469,11 +470,11 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	gs := &a.model.GroupSelect
 	form := a.groupSelectForm()
 
-	if ui.AltDialogOK(event) {
+	if dialog.AltDialogOK(event) {
 		a.confirmGroupSelectFromInput()
 		return
 	}
-	if ui.AltDialogCancel(event) {
+	if dialog.AltDialogCancel(event) {
 		a.closeGroupSelect()
 		return
 	}
@@ -487,7 +488,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			a.closeGroupSelect()
 			return
 		}
-		if gs.Focus >= ui.GroupSelectFocusShellRadio && gs.Focus <= ui.GroupSelectFocusSimpleRadio {
+		if gs.Focus >= dialog.GroupSelectFocusShellRadio && gs.Focus <= dialog.GroupSelectFocusSimpleRadio {
 			a.applyGroupSelectModeFromFocus()
 			return
 		}
@@ -511,7 +512,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 		}
 	}
 
-	if gs.Focus == ui.GroupSelectFocusPattern {
+	if gs.Focus == dialog.GroupSelectFocusPattern {
 		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && groupSelectAltIsDialogMnemonic(event.Rune())
 		if !skipScrolling && a.handleScrollingQueryKey(event, true, groupSelectScrollingQuery(gs, a.groupSelectQueryWidth())) {
 			return
@@ -527,17 +528,17 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 				if gs.FilesOnly {
 					gs.DirsOnly = false
 				}
-				gs.Focus = ui.GroupSelectFocusFilesOnly
+				gs.Focus = dialog.GroupSelectFocusFilesOnly
 			case 'd', 'D':
 				gs.DirsOnly = !gs.DirsOnly
 				if gs.DirsOnly {
 					gs.FilesOnly = false
 				}
-				gs.Focus = ui.GroupSelectFocusDirsOnly
+				gs.Focus = dialog.GroupSelectFocusDirsOnly
 			case 'e', 'E':
-				if ui.GroupSelectShowsCaseSensitive(*gs) {
+				if dialog.GroupSelectShowsCaseSensitive(*gs) {
 					gs.CaseSensitive = !gs.CaseSensitive
-					gs.Focus = ui.GroupSelectFocusCase
+					gs.Focus = dialog.GroupSelectFocusCase
 				}
 			}
 			break
@@ -548,26 +549,26 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 		}
 		if event.Rune() == ' ' {
 			switch gs.Focus {
-			case ui.GroupSelectFocusShellRadio:
+			case dialog.GroupSelectFocusShellRadio:
 				gs.PatternMode = panel.GroupPatternShell
 				a.groupSelectClampCaseFocus()
-			case ui.GroupSelectFocusRegexRadio:
+			case dialog.GroupSelectFocusRegexRadio:
 				gs.PatternMode = panel.GroupPatternRegex
 				a.groupSelectClampCaseFocus()
-			case ui.GroupSelectFocusSimpleRadio:
+			case dialog.GroupSelectFocusSimpleRadio:
 				gs.PatternMode = panel.GroupPatternSimple
-			case ui.GroupSelectFocusFilesOnly:
+			case dialog.GroupSelectFocusFilesOnly:
 				gs.FilesOnly = !gs.FilesOnly
 				if gs.FilesOnly {
 					gs.DirsOnly = false
 				}
-			case ui.GroupSelectFocusDirsOnly:
+			case dialog.GroupSelectFocusDirsOnly:
 				gs.DirsOnly = !gs.DirsOnly
 				if gs.DirsOnly {
 					gs.FilesOnly = false
 				}
-			case ui.GroupSelectFocusCase:
-				if ui.GroupSelectShowsCaseSensitive(*gs) {
+			case dialog.GroupSelectFocusCase:
+				if dialog.GroupSelectShowsCaseSensitive(*gs) {
 					gs.CaseSensitive = !gs.CaseSensitive
 				}
 			case form.OKIndex():
@@ -578,7 +579,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			break
 		}
 	}
-	if focus, ok := ui.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.PatternMode); ok {
+	if focus, ok := dialog.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.PatternMode); ok {
 		gs.Focus = focus
 	}
 }

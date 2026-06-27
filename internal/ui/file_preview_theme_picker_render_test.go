@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestRenderFilePreviewThemePickerShowsAllLabels(t *testing.T) {
@@ -20,7 +21,7 @@ func TestRenderFilePreviewThemePickerShowsAllLabels(t *testing.T) {
 	screen.SetSize(80, 24)
 
 	styles := theme.Default()
-	choices := []ThemeChoice{
+	choices := []dialog.ThemeChoice{
 		{Name: "monokai", Label: "monokai"},
 		{Name: "github", Label: "github"},
 		{Name: "dracula", Label: "dracula"},
@@ -33,7 +34,7 @@ func TestRenderFilePreviewThemePickerShowsAllLabels(t *testing.T) {
 		FullscreenFilePreviewDraw: FilePreviewState{
 			Open: true, Phase: FilePreviewPhaseDone, CombinedText: "hi\n",
 		},
-		FilePreviewThemePicker: FilePreviewThemePickerState{
+		FilePreviewThemePicker: dialog.FilePreviewThemePickerState{
 			Open:         true,
 			Choices:      choices,
 			DisplayLines: []string{"monokai", "github", "dracula"},
@@ -65,7 +66,7 @@ func TestRenderFilePreviewThemePickerShowsLabelsFromChoices(t *testing.T) {
 	screen.SetSize(80, 24)
 
 	styles := theme.Default()
-	choices := []ThemeChoice{
+	choices := []dialog.ThemeChoice{
 		{Name: "monokai", Label: "monokai"},
 		{Name: "github", Label: "github"},
 	}
@@ -77,7 +78,7 @@ func TestRenderFilePreviewThemePickerShowsLabelsFromChoices(t *testing.T) {
 		FullscreenFilePreviewDraw: FilePreviewState{
 			Open: true, Phase: FilePreviewPhaseDone, CombinedText: "hi\n",
 		},
-		FilePreviewThemePicker: FilePreviewThemePickerState{
+		FilePreviewThemePicker: dialog.FilePreviewThemePickerState{
 			Open:     true,
 			Choices:  choices,
 			Ranked:   []int{0, 1},
@@ -104,7 +105,7 @@ func TestRenderFilePreviewThemePickerFilteredOmitsEmptyRows(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 24)
 
-	choices := []ThemeChoice{
+	choices := []dialog.ThemeChoice{
 		{Name: "monokai", Label: "monokai"},
 		{Name: "monokailight", Label: "monokailight"},
 		{Name: "github", Label: "github"},
@@ -117,7 +118,7 @@ func TestRenderFilePreviewThemePickerFilteredOmitsEmptyRows(t *testing.T) {
 		FullscreenFilePreviewDraw: FilePreviewState{
 			Open: true, Phase: FilePreviewPhaseDone, CombinedText: "hi\n",
 		},
-		FilePreviewThemePicker: FilePreviewThemePickerState{
+		FilePreviewThemePicker: dialog.FilePreviewThemePickerState{
 			Open:         true,
 			Choices:      choices,
 			DisplayLines: []string{"monokai", "monokailight", "github"},

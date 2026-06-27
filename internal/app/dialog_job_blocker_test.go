@@ -9,7 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func installJobBlockerTransferFunc(app *App) {
@@ -179,7 +179,7 @@ func TestHandleKeyCtrlQOpensJobBlockerDialog(t *testing.T) {
 		{"legacy key 17", tcell.NewEventKey(tcell.Key(17), 0, tcell.ModNone)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			app.model.ConflictDialog = ui.ConflictDialogState{}
+			app.model.ConflictDialog = dialog.ConflictDialogState{}
 			if id, ok := app.keys.Lookup(tc.ev); !ok || id != keymap.ActionJobsAnswerBlocker {
 				t.Fatalf("Ctrl+Q lookup = %q %v, want jobs.answer-blocker", id, ok)
 			}

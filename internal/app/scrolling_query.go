@@ -3,12 +3,12 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // scrollingQueryEdit binds a ScrollingQuery view to mutable string/cursor/scroll fields.
 type scrollingQueryEdit struct {
-	q             *ui.ScrollingQuery
+	q             *dialog.ScrollingQuery
 	width         int
 	onChange      func()
 	ensureVisible func() // when nil, uses q.EnsureVisible(width)
@@ -20,7 +20,7 @@ type scrollingQueryEdit struct {
 
 func (a *App) pathPickerScrollingQuery() scrollingQueryEdit {
 	st := &a.model.PathPicker
-	q := &ui.ScrollingQuery{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll}
+	q := &dialog.ScrollingQuery{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll}
 	width := a.pathPickerQueryWidth()
 	edit := scrollingQueryEdit{
 		q:     q,
@@ -28,18 +28,18 @@ func (a *App) pathPickerScrollingQuery() scrollingQueryEdit {
 		ensureVisible: func() {
 			valueLen := len([]rune(q.Value))
 			suffixLen := len([]rune(st.QueryCompletionSuffix))
-			q.Cursor, q.Scroll = ui.EnsurePathInputScroll(valueLen, q.Cursor, q.Scroll, width, suffixLen)
+			q.Cursor, q.Scroll = dialog.EnsurePathInputScroll(valueLen, q.Cursor, q.Scroll, width, suffixLen)
 		},
 	}
 	edit.applyVisibleAfterErase = func() {
 		valueLen := len([]rune(q.Value))
 		suffixLen := len([]rune(st.QueryCompletionSuffix))
-		if ui.ScrollContentLen(valueLen, q.Cursor) <= width {
+		if dialog.ScrollContentLen(valueLen, q.Cursor) <= width {
 			q.Scroll = 0
 		} else if q.Scroll > 0 {
-			q.Cursor, q.Scroll = ui.AdjustScrollRevealOnErase(q.Value, q.Cursor, q.Scroll, width, suffixLen)
+			q.Cursor, q.Scroll = dialog.AdjustScrollRevealOnErase(q.Value, q.Cursor, q.Scroll, width, suffixLen)
 		}
-		q.Cursor, q.Scroll = ui.EnsurePathInputScroll(valueLen, q.Cursor, q.Scroll, width, suffixLen)
+		q.Cursor, q.Scroll = dialog.EnsurePathInputScroll(valueLen, q.Cursor, q.Scroll, width, suffixLen)
 		max := q.Scroll
 		edit.maxScrollAfterErase = &max
 	}
@@ -56,13 +56,13 @@ func (a *App) pathPickerScrollingQuery() scrollingQueryEdit {
 		edit.maxScrollAfterErase = nil
 		a.armPathPickerValidateTimer()
 		st.Selected = 0
-		ui.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+		dialog.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 	}
 	return edit
 }
 
 func newScrollingQueryEdit(value *string, cursor, scroll *int, width int, onChange func()) scrollingQueryEdit {
-	q := &ui.ScrollingQuery{Value: *value, Cursor: *cursor, Scroll: *scroll}
+	q := &dialog.ScrollingQuery{Value: *value, Cursor: *cursor, Scroll: *scroll}
 	edit := scrollingQueryEdit{
 		q:     q,
 		width: width,
@@ -78,23 +78,23 @@ func newScrollingQueryEdit(value *string, cursor, scroll *int, width int, onChan
 	return edit
 }
 
-func findDialogScrollingQuery(st *ui.FindDialogState, width int, onChange func()) scrollingQueryEdit {
+func findDialogScrollingQuery(st *dialog.FindDialogState, width int, onChange func()) scrollingQueryEdit {
 	return newScrollingQueryEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
 }
 
-func helpViewScrollingQuery(st *ui.HelpViewState, width int, onChange func()) scrollingQueryEdit {
+func helpViewScrollingQuery(st *dialog.HelpViewState, width int, onChange func()) scrollingQueryEdit {
 	return newScrollingQueryEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
 }
 
-func historyDialogScrollingQuery(st *ui.HistoryDialogState, width int, onChange func()) scrollingQueryEdit {
+func historyDialogScrollingQuery(st *dialog.HistoryDialogState, width int, onChange func()) scrollingQueryEdit {
 	return newScrollingQueryEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
 }
 
-func sftpConnectDialogScrollingQuery(st *ui.SFTPConnectDialogState, width int, onChange func()) scrollingQueryEdit {
+func sftpConnectDialogScrollingQuery(st *dialog.SFTPConnectDialogState, width int, onChange func()) scrollingQueryEdit {
 	return newScrollingQueryEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
 }
 
-func groupSelectScrollingQuery(gs *ui.GroupSelectState, width int) scrollingQueryEdit {
+func groupSelectScrollingQuery(gs *dialog.GroupSelectState, width int) scrollingQueryEdit {
 	return newScrollingQueryEdit(&gs.Text, &gs.TextCursor, &gs.TextScroll, width, nil)
 }
 
@@ -261,7 +261,7 @@ func (a *App) findDialogQueryWidth() int {
 func (a *App) helpDialogQueryWidth() int {
 	termW, termH := a.screen.Size()
 	layout := a.layoutForTerminalSize(termW, termH)
-	metrics, ok := ui.ComputeHelpDialogListMetrics(layout)
+	metrics, ok := dialog.ComputeHelpDialogListMetrics(layout)
 	if !ok {
 		return dialogInputWidthFromFrame(78)
 	}

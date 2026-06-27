@@ -320,7 +320,7 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 		f = maxF
 	}
 
-	row := []DialogButtonSpec{
+	row := []dialog.DialogButtonSpec{
 		{Label: "Retry", Shortcut: 'R', Focused: focused && f == 0},
 		{Label: "Abort", Shortcut: 'B', Focused: focused && f == 1},
 	}
@@ -363,12 +363,12 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 		f = 4
 	}
 
-	row1 := []DialogButtonSpec{
+	row1 := []dialog.DialogButtonSpec{
 		{Label: "Overwrite", Shortcut: 'O', Focused: focused && f == 0, Destructive: true},
 		{Label: "Skip", Shortcut: 'S', Focused: focused && f == 1},
 		{Label: "Overwrite All", Shortcut: 'A', Focused: focused && f == 2, Destructive: true},
 	}
-	row2 := []DialogButtonSpec{
+	row2 := []dialog.DialogButtonSpec{
 		{Label: "Skip All", Shortcut: 'L', Focused: focused && f == 3},
 		{Label: "Cancel", Shortcut: 'C', Focused: focused && f == 4},
 	}

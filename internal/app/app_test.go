@@ -24,6 +24,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"golang.org/x/text/encoding/japanese"
 )
@@ -364,8 +365,8 @@ func TestGroupSelectEnterOnPatternInputConfirms(t *testing.T) {
 	for _, r := range "*.txt" {
 		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	if app.model.GroupSelect.Focus != ui.GroupSelectFocusPattern {
-		t.Fatalf("focus = %d, want %d (pattern input)", app.model.GroupSelect.Focus, ui.GroupSelectFocusPattern)
+	if app.model.GroupSelect.Focus != dialog.GroupSelectFocusPattern {
+		t.Fatalf("focus = %d, want %d (pattern input)", app.model.GroupSelect.Focus, dialog.GroupSelectFocusPattern)
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.GroupSelect.Open {
@@ -399,7 +400,7 @@ func TestGroupSelectPlainTypingDoesNotTriggerShortcuts(t *testing.T) {
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
-	if !app.model.GroupSelect.FilesOnly || app.model.GroupSelect.Focus != ui.GroupSelectFocusFilesOnly {
+	if !app.model.GroupSelect.FilesOnly || app.model.GroupSelect.Focus != dialog.GroupSelectFocusFilesOnly {
 		t.Fatalf("Alt+F should toggle Files only and focus row; got FilesOnly=%v focus=%d",
 			app.model.GroupSelect.FilesOnly, app.model.GroupSelect.Focus)
 	}
@@ -415,7 +416,7 @@ func TestGroupSelectModeShortcutKeepsPatternFocus(t *testing.T) {
 		app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	gs := &app.model.GroupSelect
-	if gs.Focus != ui.GroupSelectFocusPattern {
+	if gs.Focus != dialog.GroupSelectFocusPattern {
 		t.Fatalf("focus = %d, want pattern", gs.Focus)
 	}
 
@@ -423,7 +424,7 @@ func TestGroupSelectModeShortcutKeepsPatternFocus(t *testing.T) {
 	if gs.PatternMode != panel.GroupPatternRegex {
 		t.Fatalf("mode = %v, want regex", gs.PatternMode)
 	}
-	if gs.Text != "foo" || gs.Focus != ui.GroupSelectFocusPattern {
+	if gs.Text != "foo" || gs.Focus != dialog.GroupSelectFocusPattern {
 		t.Fatalf("after Alt+R: text=%q focus=%d", gs.Text, gs.Focus)
 	}
 
@@ -457,22 +458,22 @@ func TestGroupSelectCheckboxFocusNavigation(t *testing.T) {
 
 	gs := &app.model.GroupSelect
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) // pattern -> files
-	if gs.Focus != ui.GroupSelectFocusFilesOnly {
+	if gs.Focus != dialog.GroupSelectFocusFilesOnly {
 		t.Fatalf("after Down from pattern: focus = %d, want files only", gs.Focus)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) // files -> case
-	if gs.Focus != ui.GroupSelectFocusCase {
+	if gs.Focus != dialog.GroupSelectFocusCase {
 		t.Fatalf("after Down from files: focus = %d, want case sensitive", gs.Focus)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)) // case -> files
-	if gs.Focus != ui.GroupSelectFocusFilesOnly {
+	if gs.Focus != dialog.GroupSelectFocusFilesOnly {
 		t.Fatalf("after Up from case: focus = %d, want files only", gs.Focus)
 	}
 
 	app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone)) // files -> dirs
-	if gs.Focus != ui.GroupSelectFocusDirsOnly {
+	if gs.Focus != dialog.GroupSelectFocusDirsOnly {
 		t.Fatalf("after Right from files: focus = %d, want directories only", gs.Focus)
 	}
 }
@@ -533,7 +534,7 @@ func TestHelpViewEnterRunsCopyLikeKeyboardShortcut(t *testing.T) {
 	if app.model.HelpView.Open {
 		t.Fatal("HelpView should close after activating action")
 	}
-	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != ui.TransferKindCopy {
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindCopy {
 		t.Fatal("Copy dialog should open (keyboard parity)")
 	}
 }
@@ -560,7 +561,7 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	}
 
 	app.openCopyDialog()
-	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != ui.TransferKindCopy {
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindCopy {
 		t.Fatal("copy dialog should open")
 	}
 	if len(p.SelectedPaths) == 0 {
@@ -584,7 +585,7 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	}
 
 	app.openMoveDialog()
-	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != ui.TransferKindMove {
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindMove {
 		t.Fatal("move dialog should open")
 	}
 	if len(p.SelectedPaths) == 0 {
@@ -686,7 +687,7 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 
 	app.openCopyDialog()
 	d := &app.model.TransferDialog
-	if d.FocusField != 0 || d.Phase != ui.TransferPhaseDestination {
+	if d.FocusField != 0 || d.Phase != dialog.TransferPhaseDestination {
 		t.Fatalf("unexpected initial dialog state: focus=%d phase=%v", d.FocusField, d.Phase)
 	}
 	startCursor := d.Destination.Cursor
@@ -698,7 +699,7 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 	if d.Destination.Cursor != startCursor-1 {
 		t.Fatalf("Left: cursor = %d, want %d", d.Destination.Cursor, startCursor-1)
 	}
-	if d.DestSubFocus != ui.TransferDestSubFocusText {
+	if d.DestSubFocus != dialog.TransferDestSubFocusText {
 		t.Fatalf("Left changed sub-focus to %v, want text", d.DestSubFocus)
 	}
 
@@ -741,7 +742,7 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		if !app.model.TransferDialog.Open {
 			t.Fatal("dialog should stay open")
 		}
-		if app.model.TransferDialog.Phase != ui.TransferPhaseSelfCopyRename {
+		if app.model.TransferDialog.Phase != dialog.TransferPhaseSelfCopyRename {
 			t.Fatalf("phase = %v, want SelfCopyRename", app.model.TransferDialog.Phase)
 		}
 		if len(app.jobState.AllJobs()) != 0 {
@@ -764,7 +765,7 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		p := app.activePanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
 		app.enqueueCopyJob()
-		if !app.model.TransferDialog.Open || app.model.TransferDialog.Phase != ui.TransferPhaseSelfCopyRename {
+		if !app.model.TransferDialog.Open || app.model.TransferDialog.Phase != dialog.TransferPhaseSelfCopyRename {
 			t.Fatalf("want self-copy rename dialog, got %+v", app.model.TransferDialog)
 		}
 		if len(p.SelectedPaths) == 0 {
@@ -785,7 +786,7 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		p.SelectedPaths = map[string]bool{aaa: true}
 		app.openCopyDialog()
 		app.confirmCopy()
-		app.model.TransferDialog.SelfCopyNewName = ui.FileDialogField{
+		app.model.TransferDialog.SelfCopyNewName = dialog.FileDialogField{
 			Value:          "aaa",
 			Prefill:        "aaa",
 			Cursor:         len([]rune("aaa")),
@@ -813,7 +814,7 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		p.SelectedPaths = map[string]bool{aaa: true}
 		app.openCopyDialog()
 		app.confirmCopy()
-		app.model.TransferDialog.SelfCopyNewName = ui.FileDialogField{
+		app.model.TransferDialog.SelfCopyNewName = dialog.FileDialogField{
 			Value:          "aaa2",
 			Prefill:        "aaa2",
 			Cursor:         len([]rune("aaa2")),
@@ -851,7 +852,7 @@ func TestTransferSelfCopyMultipleSourcesRejected(t *testing.T) {
 	p.SelectedPaths = map[string]bool{aaa: true, bbb: true}
 	app.openCopyDialog()
 	app.confirmCopy()
-	if app.model.TransferDialog.Phase != ui.TransferPhaseDestination {
+	if app.model.TransferDialog.Phase != dialog.TransferPhaseDestination {
 		t.Fatalf("phase = %v, want Destination", app.model.TransferDialog.Phase)
 	}
 	if !strings.Contains(app.model.Message, "multiple items") {
@@ -3197,7 +3198,7 @@ func TestHandleKeyOpeningFileDialogRendersDialogFooterImmediately(t *testing.T) 
 	if quit {
 		t.Fatal("handleKey(F7) quit = true, want false")
 	}
-	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogMkdir {
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogMkdir {
 		t.Fatalf("file dialog = %+v, want open mkdir dialog", app.model.FileDialog)
 	}
 
@@ -3684,7 +3685,7 @@ func TestMenuShortcutCopyOpensTransferDialog(t *testing.T) {
 	if app.model.Menu.Open {
 		t.Fatal("menu open = true, want closed")
 	}
-	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != ui.TransferKindCopy {
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindCopy {
 		t.Fatal("File menu Copy shortcut should open transfer dialog")
 	}
 	if len(app.jobState.AllJobs()) != 0 {
@@ -4280,7 +4281,7 @@ func TestFileMenuRenameOpensRenameDialog(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("File dialog not open")
 	}
-	if app.model.FileDialog.DialogType != ui.FileDialogRename {
+	if app.model.FileDialog.DialogType != dialog.FileDialogRename {
 		t.Fatalf("dialog type = %d, want FileDialogRename", app.model.FileDialog.DialogType)
 	}
 	if len(app.model.FileDialog.Fields) != 1 || app.model.FileDialog.Fields[0].Value != "test.txt" {
@@ -4300,7 +4301,7 @@ func TestFileMenuMkdirOpensMkdirDialog(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("File dialog not open")
 	}
-	if app.model.FileDialog.DialogType != ui.FileDialogMkdir {
+	if app.model.FileDialog.DialogType != dialog.FileDialogMkdir {
 		t.Fatalf("dialog type = %d, want FileDialogMkdir", app.model.FileDialog.DialogType)
 	}
 }
@@ -4317,7 +4318,7 @@ func TestFileMenuDeleteOpensDeleteConfirmation(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("File dialog not open")
 	}
-	if app.model.FileDialog.DialogType != ui.FileDialogDelete {
+	if app.model.FileDialog.DialogType != dialog.FileDialogDelete {
 		t.Fatalf("dialog type = %d, want FileDialogDelete", app.model.FileDialog.DialogType)
 	}
 	if got := app.model.FileDialog.DeleteSummary; !strings.HasPrefix(got, "1 file (") {
@@ -4343,7 +4344,7 @@ func TestFileMenuExtractOpensExtractDialog(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("File dialog not open")
 	}
-	if app.model.FileDialog.DialogType != ui.FileDialogExtract {
+	if app.model.FileDialog.DialogType != dialog.FileDialogExtract {
 		t.Fatalf("dialog type = %d, want FileDialogExtract", app.model.FileDialog.DialogType)
 	}
 	if len(app.model.FileDialog.ExtractSources) != 1 {
@@ -4411,7 +4412,7 @@ func TestFileMenuChmodOpensChmodDialog(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("File dialog not open")
 	}
-	if app.model.FileDialog.DialogType != ui.FileDialogChmod {
+	if app.model.FileDialog.DialogType != dialog.FileDialogChmod {
 		t.Fatalf("dialog type = %d, want FileDialogChmod", app.model.FileDialog.DialogType)
 	}
 }
@@ -4428,7 +4429,7 @@ func TestFileMenuChownOpensChownDialog(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("File dialog not open")
 	}
-	if app.model.FileDialog.DialogType != ui.FileDialogChown {
+	if app.model.FileDialog.DialogType != dialog.FileDialogChown {
 		t.Fatalf("dialog type = %d, want FileDialogChown", app.model.FileDialog.DialogType)
 	}
 	if len(app.model.FileDialog.Fields) != 2 {
@@ -4448,7 +4449,7 @@ func TestFileMenuSymlinkOpensSymlinkDialog(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("File dialog not open")
 	}
-	if app.model.FileDialog.DialogType != ui.FileDialogSymlink {
+	if app.model.FileDialog.DialogType != dialog.FileDialogSymlink {
 		t.Fatalf("dialog type = %d, want FileDialogSymlink", app.model.FileDialog.DialogType)
 	}
 }
@@ -4504,7 +4505,7 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 
 	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	app.dispatch(keymap.ActionFileSymlink)
-	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogSymlink {
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogSymlink {
 		t.Fatal("symlink dialog should be open")
 	}
 	keys = app.activeFooterKeys()
@@ -4552,7 +4553,7 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 		t.Fatalf("FocusField = %d, want 0", app.model.TransferDialog.FocusField)
 	}
 	app.handleKey(tcell.NewEventKey(tcell.KeyCtrlG, 0, tcell.ModNone))
-	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != ui.PathPickerPurposeApplyTransferDestination {
+	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != dialog.PathPickerPurposeApplyTransferDestination {
 		t.Fatalf("path picker = open %v purpose %v, want ApplyTransferDestination",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
 	}
@@ -4563,11 +4564,11 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 
 	app.dispatch(keymap.ActionFileSymlink)
-	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogSymlink {
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogSymlink {
 		t.Fatal("symlink dialog should be open")
 	}
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlG, 0, tcell.ModNone))
-	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != ui.PathPickerPurposeApplyFileDialogField {
+	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != dialog.PathPickerPurposeApplyFileDialogField {
 		t.Fatalf("path picker = open %v purpose %v, want ApplyFileDialogField",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
 	}
@@ -4585,7 +4586,7 @@ func TestFileMenuHardlinkOpensHardlinkDialog(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("File dialog not open")
 	}
-	if app.model.FileDialog.DialogType != ui.FileDialogHardlink {
+	if app.model.FileDialog.DialogType != dialog.FileDialogHardlink {
 		t.Fatalf("dialog type = %d, want FileDialogHardlink", app.model.FileDialog.DialogType)
 	}
 }
@@ -4659,7 +4660,7 @@ func TestRenameDialogFocusCheckboxDefaultOff(t *testing.T) {
 	if app.model.FileDialog.RenameFocusAfter {
 		t.Fatal("RenameFocusAfter = true, want false (default)")
 	}
-	if got, want := ui.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 4; got != want {
+	if got, want := dialog.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 4; got != want {
 		t.Fatalf("focus count = %d, want %d (field + checkbox + OK + Cancel)", got, want)
 	}
 }
@@ -4789,7 +4790,7 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 	p.SelectedPaths = map[string]bool{aPath: true, bPath: true}
 
 	app.dispatch(keymap.ActionFileRename)
-	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogMassRename {
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogMassRename {
 		t.Fatalf("expected mass rename dialog, open=%v type=%v", app.model.FileDialog.Open, app.model.FileDialog.DialogType)
 	}
 	d := &app.model.FileDialog
@@ -4803,7 +4804,7 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 	for _, r := range "bar_" {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	d.FocusedField = ui.FileDialogOKFocusIndex(*d)
+	d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
@@ -4852,7 +4853,7 @@ func TestMassRenameModeShortcutKeepsFindFocus(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
-	if !d.Open || d.DialogType != ui.FileDialogMassRename {
+	if !d.Open || d.DialogType != dialog.FileDialogMassRename {
 		t.Fatalf("expected mass rename dialog")
 	}
 	if d.FocusedField != massRenameFindFieldFocus {
@@ -4860,7 +4861,7 @@ func TestMassRenameModeShortcutKeepsFindFocus(t *testing.T) {
 	}
 
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
-	if d.MassRenameMode != ui.MassRenameModeUIRegex {
+	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
 		t.Fatalf("mode = %v, want regex", d.MassRenameMode)
 	}
 	if d.FocusedField != massRenameFindFieldFocus {
@@ -4871,7 +4872,7 @@ func TestMassRenameModeShortcutKeepsFindFocus(t *testing.T) {
 	}
 
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
-	if d.MassRenameMode != ui.MassRenameModeUISimple {
+	if d.MassRenameMode != dialog.MassRenameModeUISimple {
 		t.Fatalf("mode = %v, want simple", d.MassRenameMode)
 	}
 	if d.FocusedField != massRenameFindFieldFocus {
@@ -4904,7 +4905,7 @@ func TestMassRenameModeShortcutKeepsReplaceFocus(t *testing.T) {
 	}
 
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
-	if d.MassRenameMode != ui.MassRenameModeUIRegex {
+	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
 		t.Fatalf("mode = %v, want regex", d.MassRenameMode)
 	}
 	if d.FocusedField != replaceFocus {
@@ -4912,7 +4913,7 @@ func TestMassRenameModeShortcutKeepsReplaceFocus(t *testing.T) {
 	}
 
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
-	if d.MassRenameMode != ui.MassRenameModeUISimple {
+	if d.MassRenameMode != dialog.MassRenameModeUISimple {
 		t.Fatalf("mode = %v, want simple", d.MassRenameMode)
 	}
 	if d.FocusedField != replaceFocus {
@@ -4932,7 +4933,7 @@ func TestMassRenameRadioFocusAppliesRegexMode(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
-	if d.MassRenameMode != ui.MassRenameModeUISimple {
+	if d.MassRenameMode != dialog.MassRenameModeUISimple {
 		t.Fatalf("initial mode = %v, want simple", d.MassRenameMode)
 	}
 	// Up from Find (3) → ExternalEditor (2), Up again → Regex (1)
@@ -4941,7 +4942,7 @@ func TestMassRenameRadioFocusAppliesRegexMode(t *testing.T) {
 	if d.FocusedField != 1 {
 		t.Fatalf("FocusedField = %d, want 1 (Regex radio)", d.FocusedField)
 	}
-	if d.MassRenameMode != ui.MassRenameModeUIRegex {
+	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
 		t.Fatalf("mode = %v, want regex after focusing radio", d.MassRenameMode)
 	}
 	if d.Fields[0].Label != "Pattern" {
@@ -5044,7 +5045,7 @@ func TestMassRenameEnterCancelClosesWithInvalidRegex(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
-	if !d.Open || d.DialogType != ui.FileDialogMassRename {
+	if !d.Open || d.DialogType != dialog.FileDialogMassRename {
 		t.Fatalf("expected mass rename dialog")
 	}
 	// Regex mode + invalid pattern
@@ -5057,7 +5058,7 @@ func TestMassRenameEnterCancelClosesWithInvalidRegex(t *testing.T) {
 	if !d.Fields[0].InputInvalid {
 		t.Fatal("expected invalid pattern")
 	}
-	d.FocusedField = ui.FileDialogCancelFocusIndex(*d)
+	d.FocusedField = dialog.FileDialogCancelFocusIndex(*d)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.Open {
 		t.Fatal("Enter on Cancel should close dialog even when regexp is invalid")
@@ -5086,7 +5087,7 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
-	if !d.Open || d.DialogType != ui.FileDialogMassRename {
+	if !d.Open || d.DialogType != dialog.FileDialogMassRename {
 		t.Fatalf("expected mass rename dialog")
 	}
 	for _, r := range "1" {
@@ -5117,10 +5118,10 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 	if len(d.MassRenamePreviewAfterError) != len(paths) || !d.MassRenamePreviewAfterError[conflictIdx] {
 		t.Fatalf("after error flags = %v, want index %d set", d.MassRenamePreviewAfterError, conflictIdx)
 	}
-	if ui.FileDialogMassRenameOKEnabled(*d) {
+	if dialog.FileDialogMassRenameOKEnabled(*d) {
 		t.Fatal("OK action should be blocked when preview has conflicts")
 	}
-	okIdx := ui.FileDialogOKFocusIndex(*d)
+	okIdx := dialog.FileDialogOKFocusIndex(*d)
 	d.FocusedField = 6 // show-only-modified checkbox (0-2 = radios, 3 = Find, 4 = Replace, 5 = case-fold, 6 = show-modified)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if d.FocusedField != okIdx {
@@ -5326,14 +5327,14 @@ func TestRenameDialogSanitizeF2ApplyTransformsName(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
-	if app.model.FileDialog.RenamePhase != ui.RenamePhaseSanitize {
+	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseSanitize {
 		t.Fatalf("phase = %v, want Sanitize", app.model.FileDialog.RenamePhase)
 	}
-	if got, want := app.model.FileDialog.FocusedField, ui.FileDialogOKFocusIndex(app.model.FileDialog); got != want {
+	if got, want := app.model.FileDialog.FocusedField, dialog.FileDialogOKFocusIndex(app.model.FileDialog); got != want {
 		t.Fatalf("sanitize open focus = %d, want OK (%d)", got, want)
 	}
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if app.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 		t.Fatalf("want back on main rename, got phase %v", app.model.FileDialog.RenamePhase)
 	}
 	if got := app.model.FileDialog.Fields[0].Value; got != "x y z" {
@@ -5350,14 +5351,14 @@ func TestRenameDialogSlugifyF3ApplyTransformsName(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
-	if app.model.FileDialog.RenamePhase != ui.RenamePhaseSlugify {
+	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseSlugify {
 		t.Fatalf("phase = %v, want Slugify", app.model.FileDialog.RenamePhase)
 	}
-	if got, want := app.model.FileDialog.FocusedField, ui.FileDialogOKFocusIndex(app.model.FileDialog); got != want {
+	if got, want := app.model.FileDialog.FocusedField, dialog.FileDialogOKFocusIndex(app.model.FileDialog); got != want {
 		t.Fatalf("slugify open focus = %d, want OK (%d)", got, want)
 	}
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if app.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 		t.Fatalf("want back on main rename, got phase %v", app.model.FileDialog.RenamePhase)
 	}
 	if got := app.model.FileDialog.Fields[0].Value; got != "my.file" {
@@ -5403,11 +5404,11 @@ func TestRenameDialogEncodingF4ApplyConvertsLegacyName(t *testing.T) {
 	}
 
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
-	if app.model.FileDialog.RenamePhase != ui.RenamePhaseEncoding {
+	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseEncoding {
 		t.Fatalf("phase = %v, want Encoding", app.model.FileDialog.RenamePhase)
 	}
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if app.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 		t.Fatalf("want back on main rename, got phase %v", app.model.FileDialog.RenamePhase)
 	}
 	if got := app.model.FileDialog.Fields[0].Value; got != want {
@@ -5425,7 +5426,7 @@ func TestRenameDialogSanitizeEscReturnsWithoutApply(t *testing.T) {
 	app.dispatch(keymap.ActionFileRename)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
-	if app.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 		t.Fatalf("phase = %v, want Main", app.model.FileDialog.RenamePhase)
 	}
 	if got := app.model.FileDialog.Fields[0].Value; got != "a.b" {
@@ -5614,14 +5615,14 @@ func TestKeybindingDispatcherOpensFileDialogs(t *testing.T) {
 
 	// Test F7 for mkdir.
 	app.handleKey(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
-	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogMkdir {
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogMkdir {
 		t.Fatal("F7 should open mkdir dialog")
 	}
 	app.closeFileDialog()
 
 	// Test F8 for delete (default global binding).
 	app.handleKey(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
-	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogDelete {
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogDelete {
 		t.Fatal("F8 should open delete dialog")
 	}
 	app.closeFileDialog()
@@ -5783,7 +5784,7 @@ func TestAddBookmarkDialogOpenPrefillsBasename(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("FileDialog should be open after ActionBookmarkAdd")
 	}
-	if app.model.FileDialog.DialogType != ui.FileDialogAddBookmark {
+	if app.model.FileDialog.DialogType != dialog.FileDialogAddBookmark {
 		t.Fatalf("dialog type = %d, want FileDialogAddBookmark", app.model.FileDialog.DialogType)
 	}
 	if got, want := len(app.model.FileDialog.Fields), 1; got != want {
@@ -7822,13 +7823,13 @@ func TestMkdirDialogWithoutSelectionHidesActionRadios(t *testing.T) {
 	app := newApp(t, screen, dir)
 
 	app.dispatch(keymap.ActionFileMkdir)
-	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != ui.FileDialogMkdir {
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogMkdir {
 		t.Fatal("F7 should open mkdir dialog")
 	}
 	if app.model.FileDialog.MkdirShowActions {
 		t.Fatal("MkdirShowActions should be false without selections")
 	}
-	if got, want := ui.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 3; got != want {
+	if got, want := dialog.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 3; got != want {
 		t.Fatalf("focus count = %d, want %d (field + OK + Cancel)", got, want)
 	}
 }
@@ -7850,10 +7851,10 @@ func TestMkdirDialogWithSelectionShowsActionRadiosAndNav(t *testing.T) {
 	if !app.model.FileDialog.MkdirShowActions {
 		t.Fatal("MkdirShowActions should be true with selections")
 	}
-	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreate {
+	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreate {
 		t.Fatalf("MkdirAction = %v, want MkdirActionCreate (default)", app.model.FileDialog.MkdirAction)
 	}
-	if got, want := ui.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 6; got != want {
+	if got, want := dialog.FileDialogFocusForm(app.model.FileDialog).TotalFocus(), 6; got != want {
 		t.Fatalf("focus count = %d, want %d (field + 3 radios + OK + Cancel)", got, want)
 	}
 
@@ -7864,13 +7865,13 @@ func TestMkdirDialogWithSelectionShowsActionRadiosAndNav(t *testing.T) {
 	}
 	// Space on first radio selects MkdirActionCreate (already default).
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
-	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreate {
+	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreate {
 		t.Fatalf("MkdirAction = %v, want MkdirActionCreate after Space on first radio", app.model.FileDialog.MkdirAction)
 	}
 	// Move to second radio and select copy.
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
-	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreateCopySelect {
+	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreateCopySelect {
 		t.Fatalf("MkdirAction = %v, want MkdirActionCreateCopySelect after Space on second radio", app.model.FileDialog.MkdirAction)
 	}
 	// Down past last radio reaches OK button.
@@ -7903,7 +7904,7 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 
 	alt := tcell.ModAlt
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'y', alt))
-	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreateCopySelect {
+	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreateCopySelect {
 		t.Fatalf("Alt+y: MkdirAction = %v, want copy", app.model.FileDialog.MkdirAction)
 	}
 	if app.model.FileDialog.FocusedField != 2 {
@@ -7911,7 +7912,7 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 	}
 
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'm', alt))
-	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreateMoveSelect {
+	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreateMoveSelect {
 		t.Fatalf("Alt+m: MkdirAction = %v, want move", app.model.FileDialog.MkdirAction)
 	}
 	if app.model.FileDialog.FocusedField != 3 {
@@ -7919,7 +7920,7 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 	}
 
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', alt))
-	if app.model.FileDialog.MkdirAction != ui.MkdirActionCreate {
+	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreate {
 		t.Fatalf("Alt+r: MkdirAction = %v, want create", app.model.FileDialog.MkdirAction)
 	}
 	if app.model.FileDialog.FocusedField != 1 {
@@ -8055,7 +8056,7 @@ func TestMkdirActionCreateAndCopyQueuesCopyJob(t *testing.T) {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	// Set MkdirActionCreateCopySelect via the model (focus-independent path).
-	app.model.FileDialog.MkdirAction = ui.MkdirActionCreateCopySelect
+	app.model.FileDialog.MkdirAction = dialog.MkdirActionCreateCopySelect
 	app.executeFileDialog()
 
 	if app.model.FileDialog.Open {
@@ -8100,7 +8101,7 @@ func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
 	for _, r := range "newdir" {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.model.FileDialog.MkdirAction = ui.MkdirActionCreateMoveSelect
+	app.model.FileDialog.MkdirAction = dialog.MkdirActionCreateMoveSelect
 	app.executeFileDialog()
 
 	if app.model.FileDialog.Open {
@@ -8143,7 +8144,7 @@ func TestCopyHereOpensRenameLikeDialogForSingleDirectory(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("expected copy-here dialog open")
 	}
-	if app.model.FileDialog.DialogType != ui.FileDialogCopyHere {
+	if app.model.FileDialog.DialogType != dialog.FileDialogCopyHere {
 		t.Fatalf("dialog type = %v, want FileDialogCopyHere", app.model.FileDialog.DialogType)
 	}
 	if app.model.FileDialog.CopyHereSource != src {
@@ -8218,7 +8219,7 @@ func TestCopyHereDialogFocusCheckboxToggle(t *testing.T) {
 	if !app.model.FileDialog.RenameFocusAfter {
 		t.Fatal("Alt+A should toggle focus-after checkbox on")
 	}
-	okIdx := ui.FileDialogOKFocusIndex(app.model.FileDialog)
+	okIdx := dialog.FileDialogOKFocusIndex(app.model.FileDialog)
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if app.model.FileDialog.FocusedField != 1 {
 		t.Fatalf("Down from field: focus = %d, want 1 (checkbox)", app.model.FileDialog.FocusedField)

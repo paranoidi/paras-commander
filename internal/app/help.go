@@ -17,9 +17,9 @@ func (a *App) openHelpDialog() {
 	}
 	entries := a.buildHelpEntries()
 	if entries == nil {
-		entries = []ui.HelpEntry{}
+		entries = []dialog.HelpEntry{}
 	}
-	a.model.HelpView = ui.HelpViewState{
+	a.model.HelpView = dialog.HelpViewState{
 		Open:       true,
 		Query:      "",
 		Entries:    entries,
@@ -31,7 +31,7 @@ func (a *App) openHelpDialog() {
 }
 
 func (a *App) closeHelpDialog() {
-	a.model.HelpView = ui.HelpViewState{}
+	a.model.HelpView = dialog.HelpViewState{}
 }
 
 func (a *App) syncHelpRanks() {
@@ -78,7 +78,7 @@ func (a *App) syncHelpRanks() {
 	ensureHelpListScroll(st, a.helpListRows())
 }
 
-func ensureHelpListScroll(st *ui.HelpViewState, listRows int) {
+func ensureHelpListScroll(st *dialog.HelpViewState, listRows int) {
 	n := len(st.Ranked)
 	if n == 0 || listRows <= 0 {
 		st.ListScroll = 0
@@ -117,8 +117,8 @@ func (a *App) helpListRows() int {
 }
 
 // buildHelpEntries constructs help entries from keymap action bindings only.
-func (a *App) buildHelpEntries() []ui.HelpEntry {
-	var entries []ui.HelpEntry
+func (a *App) buildHelpEntries() []dialog.HelpEntry {
+	var entries []dialog.HelpEntry
 
 	specs := keymap.DefaultActionSpecs()
 	for _, spec := range specs {
@@ -130,7 +130,7 @@ func (a *App) buildHelpEntries() []ui.HelpEntry {
 			continue // unbound
 		}
 		displayKeys := helpkeys.JoinDisplay(keys, spec.PreferredKey)
-		entries = append(entries, ui.HelpEntry{
+		entries = append(entries, dialog.HelpEntry{
 			ActionID:   spec.ID,
 			Title:      spec.Title,
 			Keys:       displayKeys,
@@ -258,7 +258,7 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 	case tcell.KeyUp:
 		if st.Focus == 0 {
 			if len(st.Ranked) > 0 {
-				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
+				st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
 				ensureHelpListScroll(st, a.helpListRows())
 			}
 		} else {
@@ -271,7 +271,7 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 	case tcell.KeyDown:
 		if st.Focus == 0 {
 			if len(st.Ranked) > 0 {
-				next := ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
+				next := dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
 				if next != st.Selected {
 					st.Selected = next
 					ensureHelpListScroll(st, a.helpListRows())
@@ -283,13 +283,13 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 	case tcell.KeyPgUp:
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			step := max(1, a.helpListRows()-1)
-			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
+			st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
 			ensureHelpListScroll(st, a.helpListRows())
 		}
 	case tcell.KeyPgDn:
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			step := max(1, a.helpListRows()-1)
-			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
+			st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
 			ensureHelpListScroll(st, a.helpListRows())
 		}
 	case tcell.KeyHome:

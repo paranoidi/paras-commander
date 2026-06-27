@@ -3,7 +3,7 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // tryRenameDialogShortcut handles [dialog.rename] while the main
@@ -13,7 +13,7 @@ func (a *App) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
 		return false
 	}
 	d := &a.model.FileDialog
-	if !d.Open || !ui.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != ui.RenamePhaseMain {
+	if !d.Open || !dialog.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != dialog.RenamePhaseMain {
 		return false
 	}
 	id, ok := a.keysRenameDialog.Lookup(ev)
@@ -22,25 +22,25 @@ func (a *App) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
 	}
 	switch id {
 	case keymap.ActionFileRenameOpenSanitize:
-		d.RenamePhase = ui.RenamePhaseSanitize
+		d.RenamePhase = dialog.RenamePhaseSanitize
 		d.RenameSanitizeDots = true
 		d.RenameSanitizeUnderscores = true
-		d.FocusedField = ui.FileDialogOKFocusIndex(*d)
+		d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
 		return true
 	case keymap.ActionFileRenameOpenSlugify:
-		d.RenamePhase = ui.RenamePhaseSlugify
-		d.RenameSlugifySep = ui.RenameSlugifyDot
-		d.FocusedField = ui.FileDialogOKFocusIndex(*d)
+		d.RenamePhase = dialog.RenamePhaseSlugify
+		d.RenameSlugifySep = dialog.RenameSlugifyDot
+		d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
 		return true
 	case keymap.ActionFileRenameOpenEncoding:
 		if len(d.RenameEncodingCandidates) == 0 {
 			return false
 		}
-		d.RenamePhase = ui.RenamePhaseEncoding
+		d.RenamePhase = dialog.RenamePhaseEncoding
 		if d.RenameEncodingSelected < 0 || d.RenameEncodingSelected >= len(d.RenameEncodingCandidates) {
 			d.RenameEncodingSelected = 0
 		}
-		d.FocusedField = ui.FileDialogOKFocusIndex(*d)
+		d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
 		return true
 	default:
 		return false
@@ -52,7 +52,7 @@ func (a *App) renameDialogFooterEligible() bool {
 		return false
 	}
 	d := &a.model.FileDialog
-	if !d.Open || !ui.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != ui.RenamePhaseMain {
+	if !d.Open || !dialog.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != dialog.RenamePhaseMain {
 		return false
 	}
 	return a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize) != "" ||
@@ -62,14 +62,14 @@ func (a *App) renameDialogFooterEligible() bool {
 
 func (a *App) renameEncodingFooterEligible() bool {
 	d := &a.model.FileDialog
-	return d.Open && ui.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase == ui.RenamePhaseMain &&
+	return d.Open && dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase == dialog.RenamePhaseMain &&
 		len(d.RenameEncodingCandidates) > 0 && a.keysRenameDialog != nil &&
 		a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != ""
 }
 
 func (a *App) closeRenameToolPhase() {
 	d := &a.model.FileDialog
-	d.RenamePhase = ui.RenamePhaseMain
+	d.RenamePhase = dialog.RenamePhaseMain
 	d.FocusedField = 0
 }
 
@@ -81,11 +81,11 @@ func (a *App) applyRenameToolAndReturnMain() {
 	}
 	f := &d.Fields[0]
 	switch d.RenamePhase {
-	case ui.RenamePhaseSanitize:
-		f.Value = ui.ApplyRenameSanitize(f.Value, d.RenameSanitizeDots, d.RenameSanitizeUnderscores)
-	case ui.RenamePhaseSlugify:
-		f.Value = ui.ApplyRenameSlugify(f.Value, d.RenameSlugifySep)
-	case ui.RenamePhaseEncoding:
+	case dialog.RenamePhaseSanitize:
+		f.Value = dialog.ApplyRenameSanitize(f.Value, d.RenameSanitizeDots, d.RenameSanitizeUnderscores)
+	case dialog.RenamePhaseSlugify:
+		f.Value = dialog.ApplyRenameSlugify(f.Value, d.RenameSlugifySep)
+	case dialog.RenamePhaseEncoding:
 		idx := d.RenameEncodingSelected
 		if idx < 0 || idx >= len(d.RenameEncodingCandidates) {
 			a.closeRenameToolPhase()
@@ -95,7 +95,7 @@ func (a *App) applyRenameToolAndReturnMain() {
 	}
 	f.Cursor = len([]rune(f.Value))
 	f.PrefillPending = false
-	d.RenamePhase = ui.RenamePhaseMain
+	d.RenamePhase = dialog.RenamePhaseMain
 	d.FocusedField = 0
 }
 

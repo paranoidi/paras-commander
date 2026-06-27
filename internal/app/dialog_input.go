@@ -3,7 +3,7 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // tryDialogInputRestore handles [dialog.input] chords while a
@@ -15,7 +15,7 @@ import (
 // Returns true when the chord matched and the field state changed. A
 // non-matching chord, a nil field, or a field with no Prefill all return false
 // so the caller can fall through to its normal handling.
-func (a *App) tryDialogInputRestore(ev *tcell.EventKey, f *ui.FileDialogField) bool {
+func (a *App) tryDialogInputRestore(ev *tcell.EventKey, f *dialog.FileDialogField) bool {
 	if a.keysDialogInput == nil || f == nil {
 		return false
 	}
@@ -37,7 +37,7 @@ func (a *App) dialogInputRestoreFooterEligible() bool {
 		return false
 	}
 	if a.model.FileDialog.Open {
-		if ui.FileDialogHasRenamePhase(a.model.FileDialog.DialogType) && a.model.FileDialog.RenamePhase != ui.RenamePhaseMain {
+		if dialog.FileDialogHasRenamePhase(a.model.FileDialog.DialogType) && a.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 			return false
 		}
 		if a.fileDialogOnButton() || a.fileDialogOnRadio() {
@@ -52,10 +52,10 @@ func (a *App) dialogInputRestoreFooterEligible() bool {
 			return false
 		}
 		switch d.Phase {
-		case ui.TransferPhaseSelfCopyRename:
+		case dialog.TransferPhaseSelfCopyRename:
 			return d.SelfCopyNewName.Prefill != ""
-		case ui.TransferPhaseDestination:
-			if d.DestSubFocus != ui.TransferDestSubFocusText {
+		case dialog.TransferPhaseDestination:
+			if d.DestSubFocus != dialog.TransferDestSubFocusText {
 				return false
 			}
 			return d.Destination.Prefill != ""
@@ -77,7 +77,7 @@ func (a *App) dialogInputRestoreFooterEligible() bool {
 // dialog text fields (restore default, word motion, backward kill word).
 // Returns true when the chord matched a dialog-input action (even when the
 // edit was a no-op), so the caller should not fall through to generic key handling.
-func (a *App) tryDialogInputFieldActions(ev *tcell.EventKey, f *ui.FileDialogField) bool {
+func (a *App) tryDialogInputFieldActions(ev *tcell.EventKey, f *dialog.FileDialogField) bool {
 	if a.keysDialogInput == nil || f == nil {
 		return false
 	}

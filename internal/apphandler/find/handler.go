@@ -51,7 +51,7 @@ func (h *Handler) OpenDialog(panelID int) {
 	p := h.host.PanelByID(panelID)
 	root := filepath.Clean(p.PathString())
 	selRoots := panel.PruneNestedPaths(p.SelectedDirectoryPaths())
-	h.model.FindDialog = ui.FindDialogState{
+	h.model.FindDialog = dialog.FindDialogState{
 		Open:                       true,
 		PanelID:                    panelID,
 		RootPath:                   root,
@@ -71,10 +71,10 @@ func (h *Handler) OpenDialog(panelID int) {
 func (h *Handler) CloseDialog() {
 	h.stopFindIndexer()
 	h.cancelPendingRank()
-	h.model.FindDialog = ui.FindDialogState{}
+	h.model.FindDialog = dialog.FindDialogState{}
 }
 
-func (h *Handler) findVolumeGate(st *ui.FindDialogState) diskusage.ListingVolumeGate {
+func (h *Handler) findVolumeGate(st *dialog.FindDialogState) diskusage.ListingVolumeGate {
 	return diskusage.ListingVolumeGate{
 		Enabled: st.StayOnCurrentVolume && st.ListingDeviceValid,
 		RefDev:  st.ListingDevice,
@@ -82,7 +82,7 @@ func (h *Handler) findVolumeGate(st *ui.FindDialogState) diskusage.ListingVolume
 	}
 }
 
-func (h *Handler) findScopeRoots(st *ui.FindDialogState) []string {
+func (h *Handler) findScopeRoots(st *dialog.FindDialogState) []string {
 	if st.ShowSearchSelectionsOption && st.SearchOnlySelections && len(st.SelectionDirRoots) > 0 {
 		out := make([]string, len(st.SelectionDirRoots))
 		for i, r := range st.SelectionDirRoots {
@@ -167,7 +167,7 @@ func (h *Handler) findWalkCompleted(root string) bool {
 	return ok
 }
 
-func (h *Handler) findSelectionSkipRoots(st *ui.FindDialogState) []string {
+func (h *Handler) findSelectionSkipRoots(st *dialog.FindDialogState) []string {
 	if !st.ShowSearchSelectionsOption {
 		return nil
 	}
@@ -336,7 +336,7 @@ func findRelLine(displayRoot, absPath string) string {
 	return filepath.ToSlash(rel)
 }
 
-func (h *Handler) appendFindBatch(st *ui.FindDialogState, batch []findpkg.Entry) {
+func (h *Handler) appendFindBatch(st *dialog.FindDialogState, batch []findpkg.Entry) {
 	if len(batch) == 0 {
 		return
 	}
@@ -357,7 +357,7 @@ func (h *Handler) appendFindBatch(st *ui.FindDialogState, batch []findpkg.Entry)
 		}
 		h.indexedPaths[p] = struct{}{}
 		h.sessionMu.Unlock()
-		st.Entries = append(st.Entries, ui.FindEntry{
+		st.Entries = append(st.Entries, dialog.FindEntry{
 			RelLine: findRelLine(st.RootPath, p),
 			IsDir:   e.IsDir,
 			Type:    e.Type,
@@ -377,7 +377,7 @@ func (h *Handler) appendFindBatch(st *ui.FindDialogState, batch []findpkg.Entry)
 	st.IndexedCount = len(st.Entries)
 }
 
-func rebuildFindPathIndex(st *ui.FindDialogState) {
+func rebuildFindPathIndex(st *dialog.FindDialogState) {
 	if len(st.Entries) == 0 {
 		st.PathIsDir = nil
 		st.PathSize = nil
@@ -404,11 +404,11 @@ func rebuildFindPathIndex(st *ui.FindDialogState) {
 	}
 }
 
-func findEntryAbsPath(st *ui.FindDialogState, ent ui.FindEntry) string {
+func findEntryAbsPath(st *dialog.FindDialogState, ent dialog.FindEntry) string {
 	return filepath.Clean(ent.AbsPath(st.RootPath))
 }
 
-func (h *Handler) findPathIsDir(st *ui.FindDialogState) func(string) bool {
+func (h *Handler) findPathIsDir(st *dialog.FindDialogState) func(string) bool {
 	return func(path string) bool {
 		if st.PathIsDir == nil {
 			return false
@@ -602,7 +602,7 @@ func (h *Handler) syncFindDialogRanks() {
 	if st.Selected < 0 {
 		st.Selected = 0
 	}
-	ui.EnsureFindListScroll(st, h.findDialogListRows())
+	dialog.EnsureFindListScroll(st, h.findDialogListRows())
 }
 
 // cancelPendingRank increments the generation counter so any in-flight or scheduled rank is discarded.
@@ -639,7 +639,7 @@ func (h *Handler) sendRankWork(input rankInput) {
 
 // buildRankInput takes a compact snapshot from the main-thread dialog state.
 // lines/isDirs share string data with st.Entries; no extra string allocations.
-func (h *Handler) buildRankInput(gen int, st *ui.FindDialogState) rankInput {
+func (h *Handler) buildRankInput(gen int, st *dialog.FindDialogState) rankInput {
 	n := len(st.Entries)
 	lines := make([]string, n)
 	isDirs := make([]bool, n)
@@ -1033,7 +1033,7 @@ func (h *Handler) ApplyPendingRank() bool {
 		st.Selected = 0
 	}
 	// Center the selected item so updates don't jump the view.
-	ui.CenterFindListScroll(st, h.findDialogListRows())
+	dialog.CenterFindListScroll(st, h.findDialogListRows())
 	st.RankPending = false
 	return true
 }
@@ -1137,7 +1137,7 @@ func (h *Handler) NavigateFindCursor() {
 	h.CloseDialog()
 }
 
-func (h *Handler) findDialogResultIndices(st *ui.FindDialogState) []int {
+func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
 	q := search.Parse(st.Query)
 	if q.Empty() {
 		indices := make([]int, 0, len(st.Entries))
@@ -1243,7 +1243,7 @@ func (h *Handler) findDialogToggleSelectionAndAdvance() {
 	}
 	if st.Selected < len(st.Ranked)-1 {
 		st.Selected++
-		ui.EnsureFindListScroll(st, h.findDialogListRows())
+		dialog.EnsureFindListScroll(st, h.findDialogListRows())
 	}
 	st.InvalidateMarkedSelectionDerived()
 }
@@ -1301,11 +1301,11 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		h.findDialogToggleSelectionAndAdvance()
 		return
 	}
-	if ui.AltDialogOK(event) {
+	if dialog.AltDialogOK(event) {
 		h.ActivateDialogOK()
 		return
 	}
-	if ui.AltDialogCancel(event) {
+	if dialog.AltDialogCancel(event) {
 		h.CloseDialog()
 		return
 	}
@@ -1360,49 +1360,49 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			h.ActivateDialogOK()
 		}
 	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		if nf, ok := ui.FindDialogNavFocusKey(st.Focus, st.FindDialogHasSelectionsCheckbox(), event.Key()); ok {
+		if nf, ok := dialog.FindDialogNavFocusKey(st.Focus, st.FindDialogHasSelectionsCheckbox(), event.Key()); ok {
 			st.Focus = nf
 			if st.Focus == 0 && event.Key() == tcell.KeyUp {
-				ui.EnsureFindListScroll(st, h.findDialogListRows())
+				dialog.EnsureFindListScroll(st, h.findDialogListRows())
 			}
 			break
 		}
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			switch event.Key() {
 			case tcell.KeyUp:
-				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
-				ui.EnsureFindListScroll(st, h.findDialogListRows())
+				st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
+				dialog.EnsureFindListScroll(st, h.findDialogListRows())
 				h.armFindNavIdleTimer()
 			case tcell.KeyDown:
-				st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
-				ui.EnsureFindListScroll(st, h.findDialogListRows())
+				st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
+				dialog.EnsureFindListScroll(st, h.findDialogListRows())
 				h.armFindNavIdleTimer()
 			}
 		}
 	case tcell.KeyHome:
 		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
 			st.Selected = 0
-			ui.EnsureFindListScroll(st, h.findDialogListRows())
+			dialog.EnsureFindListScroll(st, h.findDialogListRows())
 			h.armFindNavIdleTimer()
 		}
 	case tcell.KeyEnd:
 		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
 			st.Selected = len(st.Ranked) - 1
-			ui.EnsureFindListScroll(st, h.findDialogListRows())
+			dialog.EnsureFindListScroll(st, h.findDialogListRows())
 			h.armFindNavIdleTimer()
 		}
 	case tcell.KeyPgUp:
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			step := max(1, h.findDialogListRows()-1)
-			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
-			ui.EnsureFindListScroll(st, h.findDialogListRows())
+			st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
+			dialog.EnsureFindListScroll(st, h.findDialogListRows())
 			h.armFindNavIdleTimer()
 		}
 	case tcell.KeyPgDn:
 		if st.Focus == 0 && len(st.Ranked) > 0 {
 			step := max(1, h.findDialogListRows()-1)
-			st.Selected = ui.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
-			ui.EnsureFindListScroll(st, h.findDialogListRows())
+			st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
+			dialog.EnsureFindListScroll(st, h.findDialogListRows())
 			h.armFindNavIdleTimer()
 		}
 	case tcell.KeyRune:

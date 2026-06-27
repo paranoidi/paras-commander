@@ -7,13 +7,14 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func chromaStyleUIChoices() []ui.ThemeChoice {
+func chromaStyleUIChoices() []dialog.ThemeChoice {
 	src := chromastyles.Choices()
-	out := make([]ui.ThemeChoice, len(src))
+	out := make([]dialog.ThemeChoice, len(src))
 	for i, c := range src {
-		out[i] = ui.ThemeChoice{Name: c.Name, Label: c.Label}
+		out[i] = dialog.ThemeChoice{Name: c.Name, Label: c.Label}
 	}
 	return out
 }
@@ -40,7 +41,7 @@ func (a *App) openFilePreviewThemePicker() {
 	for i, c := range choices {
 		display[i] = c.Label
 	}
-	a.model.FilePreviewThemePicker = ui.FilePreviewThemePickerState{
+	a.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{
 		Open:         true,
 		Choices:      choices,
 		DisplayLines: display,
@@ -57,7 +58,7 @@ func (a *App) openFilePreviewThemePicker() {
 	a.model.FilePreviewThemePicker.Selected = selected
 	a.armPreviewStylePickerPreview(true)
 	rect := a.filePreviewThemePickerRect()
-	ui.EnsureFilePreviewThemePickerListScroll(&a.model.FilePreviewThemePicker, ui.FilePreviewThemePickerListRows(rect))
+	dialog.EnsureFilePreviewThemePickerListScroll(&a.model.FilePreviewThemePicker, ui.FilePreviewThemePickerListRows(rect))
 }
 
 func (a *App) closeFilePreviewThemePicker(revert bool) {
@@ -66,7 +67,7 @@ func (a *App) closeFilePreviewThemePicker(revert bool) {
 		a.config.Preview.Style = a.previewStyleAtPickerOpen
 		a.refreshFullscreenFilePreview()
 	}
-	a.model.FilePreviewThemePicker = ui.FilePreviewThemePickerState{}
+	a.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
 }
 
 func (a *App) applyFilePreviewThemePickerSelection() {
@@ -153,7 +154,7 @@ func (a *App) syncFilePreviewThemePickerRanks() {
 	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(lines), a.config.CaseInsensitiveFilter)
 	clampFilteredListSelection(&st.Selected, len(st.Ranked))
 	rect := a.filePreviewThemePickerRect()
-	ui.EnsureFilePreviewThemePickerListScroll(st, ui.FilePreviewThemePickerListRows(rect))
+	dialog.EnsureFilePreviewThemePickerListScroll(st, ui.FilePreviewThemePickerListRows(rect))
 }
 
 func (a *App) filePreviewThemePickerRect() ui.Rect {
@@ -175,7 +176,7 @@ func (a *App) filePreviewThemePickerQueryWidth() int {
 	return ui.FilePreviewThemePickerQueryWidth(a.filePreviewThemePickerRect())
 }
 
-func filePreviewThemePickerDisplayLines(st *ui.FilePreviewThemePickerState) []string {
+func filePreviewThemePickerDisplayLines(st *dialog.FilePreviewThemePickerState) []string {
 	lines := make([]string, len(st.Choices))
 	for i, choice := range st.Choices {
 		switch {
@@ -190,7 +191,7 @@ func filePreviewThemePickerDisplayLines(st *ui.FilePreviewThemePickerState) []st
 	return lines
 }
 
-func filePreviewThemePickerScrollingQuery(st *ui.FilePreviewThemePickerState, width int, onChange func()) scrollingQueryEdit {
+func filePreviewThemePickerScrollingQuery(st *dialog.FilePreviewThemePickerState, width int, onChange func()) scrollingQueryEdit {
 	return newScrollingQueryEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
 }
 
@@ -213,14 +214,14 @@ func (a *App) handleFilePreviewThemePickerKey(event *tcell.EventKey) bool {
 		a.syncFilePreviewThemePickerRanks()
 		st.Selected = 0
 		a.previewFilePreviewThemePickerSelection()
-		ui.EnsureFilePreviewThemePickerListScroll(st, a.filePreviewThemePickerListRows())
+		dialog.EnsureFilePreviewThemePickerListScroll(st, a.filePreviewThemePickerListRows())
 	}
 	if a.handleScrollingQueryKey(event, true, filePreviewThemePickerScrollingQuery(st, a.filePreviewThemePickerQueryWidth(), onChange)) {
 		return true
 	}
 
 	ensureScroll := func() {
-		ui.EnsureFilePreviewThemePickerListScroll(st, a.filePreviewThemePickerListRows())
+		dialog.EnsureFilePreviewThemePickerListScroll(st, a.filePreviewThemePickerListRows())
 	}
 	if handleFilteredListSelectionKey(event, 0, &st.Selected, len(st.Ranked), a.filePreviewThemePickerListRows, ensureScroll) {
 		a.previewFilePreviewThemePickerSelection()
