@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -41,6 +42,10 @@ func Run(ctx context.Context, argv []string, dir string, maxStreamBytes int) Run
 	// up to 5 seconds to flush output after the primary process exits, then forcibly
 	// close the pipes so cmd.Wait() doesn't block indefinitely.
 	cmd.WaitDelay = 5 * time.Second
+	// New session so the child has no controlling terminal. Without this, interactive
+	// shells (e.g. bash -i) call tcsetpgrp() to grab the terminal and receive SIGTTOU,
+	// which suspends the child and sends the app to the background.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 
 	var stdoutBuf, stderrBuf cappedWriter
 	stdoutBuf.max = maxStreamBytes
