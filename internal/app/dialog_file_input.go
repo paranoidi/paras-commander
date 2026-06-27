@@ -429,38 +429,56 @@ func (a *App) clearFileDialogPickerSubfocus() {
 func (a *App) fileDialogMoveFocusKey(event *tcell.EventKey) bool {
 	d := &a.model.FileDialog
 
-	// Mass rename: Tab/Shift+Tab follows visual layout (radios+show-modified → Find → Replace → …).
-	// Focus indices don't match visual order (show-modified is last content, but visually first).
-	// Up/Down keep their linear order for existing keyboard flows.
+	// Mass rename: Tab/Backtab jumps between visual segments (focus indices don't match visual order).
+	// Seg 0: mode radios(0-2) + show-modified. Seg 1: find+replace+case-fold (non-external). Seg 2: buttons.
+	// Down/Up mirror the visual order via the non-linear transitions below.
 	if d.DialogType == dialog.FileDialogMassRename {
 		key := event.Key()
-		onRadio := d.FocusedField >= 0 && d.FocusedField < 3
+		externalMode := d.MassRenameMode == dialog.MassRenameModeUIExternalEditor
 		showModifiedIdx := dialog.MassRenameShowModifiedFocusIdx(*d)
+		okIdx := dialog.FileDialogOKFocusIndex(*d)
+		onRadio := d.FocusedField >= 0 && d.FocusedField < 3
 		onShowModified := d.FocusedField == showModifiedIdx
-		if key == tcell.KeyTab && (onRadio || onShowModified) {
+		onFindOrReplace := !externalMode && (d.FocusedField == massRenameFindFieldFocus || d.FocusedField == massRenameFindFieldFocus+1)
+		onCaseFold := d.MassRenameMode == dialog.MassRenameModeUISimple && d.FocusedField == 5
+		onSegment1 := onFindOrReplace || onCaseFold
+		onButton := d.FocusedField >= okIdx
+		if key == tcell.KeyTab || key == tcell.KeyBacktab {
 			a.clearFileDialogPickerSubfocus()
-			if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor {
-				d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
-			} else {
-				d.FocusedField = massRenameFindFieldFocus
+			if key == tcell.KeyTab {
+				switch {
+				case onRadio || onShowModified:
+					if externalMode {
+						d.FocusedField = okIdx
+					} else {
+						d.FocusedField = massRenameFindFieldFocus
+					}
+				case onSegment1:
+					d.FocusedField = okIdx
+				case onButton:
+					d.FocusedField = 0
+					a.applyMassRenameModeFromFocus()
+				}
+			} else { // Backtab
+				switch {
+				case onRadio || onShowModified:
+					d.FocusedField = okIdx
+				case onSegment1:
+					d.FocusedField = 0
+					a.applyMassRenameModeFromFocus()
+				case onButton:
+					if externalMode {
+						d.FocusedField = 0
+						a.applyMassRenameModeFromFocus()
+					} else {
+						d.FocusedField = massRenameFindFieldFocus
+					}
+				}
 			}
 			return true
 		}
-		if key == tcell.KeyBacktab && d.FocusedField == massRenameFindFieldFocus {
-			a.clearFileDialogPickerSubfocus()
-			d.FocusedField = showModifiedIdx
-			return true
-		}
-		if key == tcell.KeyBacktab && onShowModified {
-			a.clearFileDialogPickerSubfocus()
-			d.FocusedField = 2
-			a.applyMassRenameModeFromFocus()
-			return true
-		}
-		// Down/Up mirror the visual order: radios → showModified → fields → buttons.
-		// The focus indices don't match visual order (showModified is above fields but has a higher index),
-		// so we intercept the non-linear transitions for non-ExternalEditor modes.
-		notExternal := d.MassRenameMode != dialog.MassRenameModeUIExternalEditor
+		// Down/Up use visual order (show-modified is above the fields but has a higher focus index).
+		notExternal := !externalMode
 		if key == tcell.KeyDown && d.FocusedField == 2 && notExternal {
 			a.clearFileDialogPickerSubfocus()
 			d.FocusedField = showModifiedIdx

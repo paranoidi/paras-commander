@@ -49,9 +49,10 @@ type FlattenDialogLinearForm struct {
 }
 
 // NewFlattenDialogLinearForm returns the flatten dialog focus layout.
+// Segments: destination(0) | recursive+removeEmpty(1,2) | buttons(3).
 func NewFlattenDialogLinearForm() FlattenDialogLinearForm {
 	return FlattenDialogLinearForm{
-		form: NewDialogTrailingButtonsForm(flattenDialogNumContent, 2),
+		form: NewDialogTrailingButtonsForm(flattenDialogNumContent, 2).WithSegments(0, 1, flattenDialogNumContent),
 	}
 }
 

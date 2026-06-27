@@ -50,7 +50,8 @@ func (a *App) applySortDialog() {
 }
 
 func (a *App) handleSortDialogKey(event *tcell.EventKey) {
-	form := dialog.NewDialogLinearForm(7)
+	// Segments: sort mode radios(0-3) | options checkboxes(4-6) | buttons(7).
+	form := dialog.NewDialogLinearForm(7).WithSegments(0, 4, 7)
 	st := &a.model.SortDialog
 	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
 		focus:              &st.Focus,
@@ -139,7 +140,8 @@ func panelScrollbarFromShortcut(ch rune, focus *int) (uiscrollbar.Style, bool) {
 }
 
 func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
-	form := dialog.NewDialogLinearForm(3)
+	// Segments: format radios(0-2) | buttons(3).
+	form := dialog.NewDialogLinearForm(3).WithSegments(0, 3)
 	st := &a.model.ListingFormatDialog
 	radios := panel.ListFormatDialogRadios()
 	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
@@ -268,7 +270,8 @@ func (a *App) applyConfigDialog() {
 }
 
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
-	form := dialog.NewDialogLinearForm(13)
+	// Segments: view checkboxes(0-3) | scroll section(4-9) | listing radios(10-12) | buttons(13).
+	form := dialog.NewDialogLinearForm(13).WithSegments(0, 4, 10, 13)
 	st := &a.model.ConfigDialog
 	listRadios := panel.ListFormatDialogRadios()
 	scrollRadios := panel.ScrollModeDialogRadios()

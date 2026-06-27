@@ -18,8 +18,9 @@ type CompareFilterDialogState struct {
 const compareFilterDialogNumContent = 6
 
 // CompareFilterDialogMoveFocus applies standard dialog navigation.
+// Segments: all 6 filter radios(0-5) | buttons(6).
 func CompareFilterDialogMoveFocus(focus int, key tcell.Key) (int, bool) {
-	form := NewDialogTrailingButtonsForm(compareFilterDialogNumContent, 2)
+	form := NewDialogTrailingButtonsForm(compareFilterDialogNumContent, 2).WithSegments(0, compareFilterDialogNumContent)
 	return form.MoveFocus(focus, key)
 }
 

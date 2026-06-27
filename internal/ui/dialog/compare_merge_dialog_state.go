@@ -27,9 +27,10 @@ type CompareMergeDialogLinearForm struct {
 }
 
 // NewCompareMergeDialogLinearForm returns merge dialog focus layout.
+// Segments: direction radios(0,1) | transfer checkboxes(2,3) | operation radios(4,5) | buttons(6).
 func NewCompareMergeDialogLinearForm() CompareMergeDialogLinearForm {
 	return CompareMergeDialogLinearForm{
-		form: NewDialogTrailingButtonsForm(compareMergeDialogNumContent, 2),
+		form: NewDialogTrailingButtonsForm(compareMergeDialogNumContent, 2).WithSegments(0, 2, 4, compareMergeDialogNumContent),
 	}
 }
 

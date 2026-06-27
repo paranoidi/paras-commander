@@ -30,7 +30,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	const (
 		width     = 54
 		minWidth  = 38
-		minHeight = 21
+		minHeight = 23
 	)
 	rect, ok := draw.ClampCenteredDialogRect(layout, width, minHeight, minWidth, minHeight)
 	if !ok {
@@ -70,10 +70,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	sbRadios := uiscrollbar.DialogRadios()
 	scrollMode := panel.EffectiveScrollMode(state.ScrollMode)
 	sb := uiscrollbar.EffectiveStyle(state.PanelScrollbar)
-	scrollRows := len(scrollRadios)
-	if len(sbRadios) > scrollRows {
-		scrollRows = len(sbRadios)
-	}
+	scrollRows := max(len(scrollRadios), len(sbRadios))
 	for i := 0; i < scrollRows; i++ {
 		if i < len(scrollRadios) {
 			r := scrollRadios[i]

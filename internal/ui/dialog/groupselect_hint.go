@@ -108,6 +108,7 @@ func GroupSelectMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode,
 	showCase := GroupSelectShowsCaseSensitive(GroupSelectState{PatternMode: mode})
 	showMeta := metaColumnCount > 0
 
+	okIdx := form.OKIndex()
 	switch key {
 	case tcell.KeyRight:
 		if focus == GroupSelectFocusFilesOnly {
@@ -116,7 +117,7 @@ func GroupSelectMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode,
 		if focus == GroupSelectFocusIncludeMeta && showMeta {
 			return GroupSelectFocusOnlyMeta, true
 		}
-		if focus == form.OKIndex() {
+		if focus == okIdx {
 			return form.CancelIndex(), true
 		}
 		return focus, false
@@ -128,10 +129,34 @@ func GroupSelectMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode,
 			return GroupSelectFocusIncludeMeta, true
 		}
 		if focus == form.CancelIndex() {
-			return form.OKIndex(), true
+			return okIdx, true
 		}
 		return focus, false
-	case tcell.KeyDown, tcell.KeyTab:
+	case tcell.KeyTab:
+		// Segment jumps: mode radios(0-2) → pattern(3) → filters(4+) → buttons → mode radios
+		switch {
+		case focus < GroupSelectFocusPattern:
+			return GroupSelectFocusPattern, true
+		case focus == GroupSelectFocusPattern:
+			return GroupSelectFocusFilesOnly, true
+		case focus < okIdx:
+			return okIdx, true
+		default:
+			return GroupSelectFocusShellRadio, true
+		}
+	case tcell.KeyBacktab:
+		// Reverse segment jumps
+		switch {
+		case focus < GroupSelectFocusPattern:
+			return okIdx, true
+		case focus == GroupSelectFocusPattern:
+			return GroupSelectFocusShellRadio, true
+		case focus < okIdx:
+			return GroupSelectFocusPattern, true
+		default:
+			return GroupSelectFocusFilesOnly, true
+		}
+	case tcell.KeyDown:
 		switch focus {
 		case GroupSelectFocusFilesOnly:
 			if showCase {
@@ -140,27 +165,27 @@ func GroupSelectMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode,
 			if showMeta {
 				return GroupSelectFocusIncludeMeta, true
 			}
-			return form.OKIndex(), true
+			return okIdx, true
 		case GroupSelectFocusDirsOnly:
 			if showMeta {
 				return GroupSelectFocusIncludeMeta, true
 			}
-			return form.OKIndex(), true
+			return okIdx, true
 		case GroupSelectFocusCase:
 			if showMeta {
 				return GroupSelectFocusIncludeMeta, true
 			}
-			return form.OKIndex(), true
+			return okIdx, true
 		case GroupSelectFocusIncludeMeta, GroupSelectFocusOnlyMeta:
-			return form.OKIndex(), true
+			return okIdx, true
 		default:
-			next, ok := form.MoveFocus(focus, key)
+			next, ok := form.MoveFocus(focus, tcell.KeyDown)
 			if !ok {
 				return focus, false
 			}
 			return groupSelectSkipHiddenCase(next, mode), true
 		}
-	case tcell.KeyUp, tcell.KeyBacktab:
+	case tcell.KeyUp:
 		switch focus {
 		case GroupSelectFocusFilesOnly, GroupSelectFocusDirsOnly:
 			return GroupSelectFocusPattern, true
@@ -171,10 +196,10 @@ func GroupSelectMoveFocus(focus int, key tcell.Key, mode panel.GroupPatternMode,
 				return GroupSelectFocusCase, true
 			}
 			return GroupSelectFocusFilesOnly, true
-		case form.OKIndex(), form.CancelIndex():
+		case okIdx, form.CancelIndex():
 			return GroupSelectLastContentFocus(mode, metaColumnCount), true
 		default:
-			next, ok := form.MoveFocus(focus, key)
+			next, ok := form.MoveFocus(focus, tcell.KeyUp)
 			if !ok {
 				return focus, false
 			}
