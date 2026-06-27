@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+// GroupSelectMeta carries optional meta-column data for group select/unselect matching.
+type GroupSelectMeta struct {
+	Cols     []map[string]string // per-column abs-path → value maps (nil = no meta matching)
+	OnlyMeta bool                // when true, skip filename matching; match only via Cols
+}
+
 // GroupPatternMode selects shell glob, regexp, or simple substring matching for group select.
 type GroupPatternMode int
 

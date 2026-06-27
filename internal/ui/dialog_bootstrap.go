@@ -97,6 +97,8 @@ const (
 	GroupSelectFocusFilesOnly   = dialog.GroupSelectFocusFilesOnly
 	GroupSelectFocusDirsOnly    = dialog.GroupSelectFocusDirsOnly
 	GroupSelectFocusCase        = dialog.GroupSelectFocusCase
+	GroupSelectFocusIncludeMeta = dialog.GroupSelectFocusIncludeMeta
+	GroupSelectFocusOnlyMeta    = dialog.GroupSelectFocusOnlyMeta
 
 	MkdirActionCreate           = dialog.MkdirActionCreate
 	MkdirActionCreateCopySelect = dialog.MkdirActionCreateCopySelect
@@ -163,7 +165,8 @@ var (
 	ConfigDialogScrollbarIndex             = dialog.ConfigDialogScrollbarIndex
 	ConfigDialogMoveScrollFocus            = dialog.ConfigDialogMoveScrollFocus
 	NewDialogLinearForm                    = dialog.NewDialogLinearForm
-	GroupSelectMoveFocus                   = dialog.GroupSelectMoveFocus
+	GroupSelectMoveFocus      = dialog.GroupSelectMoveFocus
+	GroupSelectLastFocus      = dialog.GroupSelectLastContentFocus
 	GroupSelectShowsCaseSensitive          = dialog.GroupSelectShowsCaseSensitive
 	NewDialogTrailingButtonsForm           = dialog.NewDialogTrailingButtonsForm
 	FormatDebounceMS                       = dialog.FormatDebounceMS

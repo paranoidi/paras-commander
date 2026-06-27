@@ -346,22 +346,26 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 
 // Group selection dialog handlers
 
-const groupSelectNumContent = 7
-
 func (a *App) openGroupSelect(mode string, context string) {
 	if context == "" {
 		context = "panel"
 	}
+	metaCount := 0
+	if context == "panel" {
+		metaCount = len(a.model.MetaResults[a.model.ActivePanel])
+	}
 	a.model.GroupSelect = ui.GroupSelectState{
-		Open:          true,
-		Text:          "",
-		Mode:          mode,
-		Context:       context,
-		PatternMode:   panel.GroupPatternShell,
-		FilesOnly:     false,
-		DirsOnly:      false,
-		CaseSensitive: false,
-		Focus:         ui.GroupSelectFocusPattern,
+		Open:               true,
+		Text:               "",
+		Mode:               mode,
+		Context:            context,
+		PatternMode:        panel.GroupPatternShell,
+		FilesOnly:          false,
+		DirsOnly:           false,
+		CaseSensitive:      false,
+		MetaColumnCount:    metaCount,
+		IncludeMetaColumns: metaCount > 0,
+		Focus:              ui.GroupSelectFocusPattern,
 	}
 }
 
@@ -372,7 +376,11 @@ func (a *App) closeGroupSelect() {
 }
 
 func (a *App) groupSelectForm() ui.DialogLinearForm {
-	return ui.NewDialogLinearForm(groupSelectNumContent)
+	n := 7
+	if a.model.GroupSelect.MetaColumnCount > 0 {
+		n += 2 // IncludeMeta + OnlyMeta
+	}
+	return ui.NewDialogLinearForm(n)
 }
 
 func (a *App) applyGroupSelectModeFromFocus() {
@@ -426,14 +434,23 @@ func (a *App) executeGroupSelect() {
 		a.findCtrl.ApplyGroupSelect(gs.Mode, gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode)
 	default:
 		p := a.activePanel()
+		var meta panel.GroupSelectMeta
+		if gs.IncludeMetaColumns && gs.MetaColumnCount > 0 {
+			for _, col := range a.model.MetaResults[a.model.ActivePanel] {
+				if col.Results != nil {
+					meta.Cols = append(meta.Cols, col.Results)
+				}
+			}
+			meta.OnlyMeta = gs.OnlyMetaColumns
+		}
 		var err error
 		if gs.Mode == "select" {
-			err = p.SelectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode)
+			err = p.SelectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, meta)
 			if err == nil {
 				a.setTransientMessage(fmt.Sprintf("Selected matching %q", gs.Text), ui.MessageUrgencyInfo)
 			}
 		} else {
-			err = p.UnselectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode)
+			err = p.UnselectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, meta)
 			if err == nil {
 				a.setTransientMessage(fmt.Sprintf("Unselected matching %q", gs.Text), ui.MessageUrgencyInfo)
 			}
@@ -539,6 +556,22 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 					gs.CaseSensitive = !gs.CaseSensitive
 					gs.Focus = ui.GroupSelectFocusCase
 				}
+			case 'm', 'M':
+				if gs.MetaColumnCount > 0 {
+					gs.IncludeMetaColumns = !gs.IncludeMetaColumns
+					if !gs.IncludeMetaColumns {
+						gs.OnlyMetaColumns = false
+					}
+					gs.Focus = ui.GroupSelectFocusIncludeMeta
+				}
+			case 'n', 'N':
+				if gs.MetaColumnCount > 0 {
+					gs.OnlyMetaColumns = !gs.OnlyMetaColumns
+					if gs.OnlyMetaColumns {
+						gs.IncludeMetaColumns = true
+					}
+					gs.Focus = ui.GroupSelectFocusOnlyMeta
+				}
 			}
 			break
 		}
@@ -570,6 +603,20 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 				if ui.GroupSelectShowsCaseSensitive(*gs) {
 					gs.CaseSensitive = !gs.CaseSensitive
 				}
+			case ui.GroupSelectFocusIncludeMeta:
+				if gs.MetaColumnCount > 0 {
+					gs.IncludeMetaColumns = !gs.IncludeMetaColumns
+					if !gs.IncludeMetaColumns {
+						gs.OnlyMetaColumns = false
+					}
+				}
+			case ui.GroupSelectFocusOnlyMeta:
+				if gs.MetaColumnCount > 0 {
+					gs.OnlyMetaColumns = !gs.OnlyMetaColumns
+					if gs.OnlyMetaColumns {
+						gs.IncludeMetaColumns = true
+					}
+				}
 			case form.OKIndex():
 				a.confirmGroupSelectFromInput()
 			case form.CancelIndex():
@@ -578,14 +625,14 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 			break
 		}
 	}
-	if focus, ok := ui.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.PatternMode); ok {
+	if focus, ok := ui.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.PatternMode, gs.MetaColumnCount); ok {
 		gs.Focus = focus
 	}
 }
 
 func groupSelectAltIsDialogMnemonic(r rune) bool {
 	switch r {
-	case 'f', 'F', 'd', 'D', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I':
+	case 'f', 'F', 'd', 'D', 'e', 'E', 'r', 'R', 's', 'S', 'i', 'I', 'm', 'M', 'n', 'N':
 		return true
 	default:
 		return false
