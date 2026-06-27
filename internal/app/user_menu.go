@@ -229,6 +229,9 @@ func (a *App) executeUserMenuEntry(idx int) {
 
 	workDir := active.PathString()
 	switch {
+	case entry.Dialog:
+		a.commandsBatchesInflight.Add(1)
+		go a.runUserMenuCommandDialog(a.commandsCtx, argv, workDir, entry.Title, entry.DialogWidth, entry.DialogHeight)
 	case entry.Interactive:
 		a.runUserMenuInteractive(argv, workDir, entry.Toast)
 	case entry.Detach:

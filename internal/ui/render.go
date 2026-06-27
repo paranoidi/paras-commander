@@ -159,19 +159,20 @@ type Model struct {
 	// FilePreviewThemePicker is the inline theme list on the right side of F3 file view.
 	FilePreviewThemePicker dialog.FilePreviewThemePickerState
 	// PreviewChromaStyle is the active Chroma style name for internal preview border tinting (empty = external mode).
-	PreviewChromaStyle string
-	HelpView           dialog.HelpViewState
-	FileDialog         dialog.FileDialogState
-	TransferDialog     dialog.TransferDialogState
-	FlattenDialog      dialog.FlattenDialogState
-	ConflictDialog     dialog.ConflictDialogState
-	HostKeyDialog      dialog.HostKeyDialogState
-	QuitConfirm        dialog.QuitConfirmState
-	StashRestoreDialog dialog.StashRestoreDialogState
-	MessageDialog      dialog.MessageDialogState
-	Message            string
-	MessageUrgency     MessageUrgency
-	FooterKeys         []menu.FunctionKey
+	PreviewChromaStyle  string
+	HelpView            dialog.HelpViewState
+	FileDialog          dialog.FileDialogState
+	TransferDialog      dialog.TransferDialogState
+	FlattenDialog       dialog.FlattenDialogState
+	ConflictDialog      dialog.ConflictDialogState
+	HostKeyDialog       dialog.HostKeyDialogState
+	QuitConfirm         dialog.QuitConfirmState
+	StashRestoreDialog  dialog.StashRestoreDialogState
+	MessageDialog       dialog.MessageDialogState
+	CommandOutputDialog dialog.CommandOutputDialogState
+	Message             string
+	MessageUrgency      MessageUrgency
+	FooterKeys          []menu.FunctionKey
 	// MenuBarPermission is Unix mode text for the active panel cursor row (e.g. "drwxr-xr-x"); empty when none.
 	MenuBarPermission string
 	// MenuBarJobsAttention is the core jobs/conflict label (e.g. "! 1"); the menu bar pads it with
@@ -325,7 +326,7 @@ func (m Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.StashRestoreDialog.Open || m.UserMenu.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.StashRestoreDialog.Open || m.UserMenu.Open || m.CommandOutputDialog.Open {
 		return true
 	}
 	return false
@@ -341,7 +342,8 @@ func (m Model) QuickFilterStartBlocked() bool {
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
-		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.UserMenu.Open
+		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.UserMenu.Open ||
+		m.CommandOutputDialog.Open
 }
 
 // AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
@@ -552,6 +554,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	if model.MessageDialog.Open {
 		dialog.DrawMessageDialog(screen, layout, model.MessageDialog, styles)
+	}
+	if model.CommandOutputDialog.Open {
+		dialog.DrawCommandOutputDialog(screen, layout, model.CommandOutputDialog, styles)
 	}
 	// Caller must invoke screen.Show() or screen.Sync() so the terminal updates.
 }

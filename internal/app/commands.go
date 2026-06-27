@@ -19,6 +19,7 @@ type commandWakePayload struct {
 	notifyUrg            ui.MessageUrgency
 	refreshBrowserPanel  bool
 	clearActiveSelection bool
+	openOutputDialog     *dialog.CommandOutputDialogState
 }
 
 func (a *App) postCommandWake() {
@@ -38,6 +39,9 @@ func (a *App) applyCommandWake(p commandWakePayload) {
 	}
 	if strings.TrimSpace(p.notifyLog) != "" {
 		a.setTransientMessageBanner(p.notifyLog, p.notifyBanner, p.notifyUrg)
+	}
+	if p.openOutputDialog != nil {
+		a.model.CommandOutputDialog = *p.openOutputDialog
 	}
 }
 

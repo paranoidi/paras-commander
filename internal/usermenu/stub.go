@@ -73,6 +73,17 @@ const MenuStubTOML = `# F2 user menu
 #   Capture output without Commands view; notify on failure/stderr;
 #   refresh panel when done.
 #
+# dialog          bool     optional   default: false
+#   Show command stdout in a modal dialog when the command finishes.
+#   Mutually exclusive with interactive, detach, background, and run_for_each.
+#
+# dialog_width    string | int   optional   default: 80% of terminal width
+#   Dialog width: "80%" for 80 % of terminal width, or "100" for 100 columns.
+#   Bare integer also accepted: 100 is equivalent to "100".
+#
+# dialog_height   string | int   optional   default: 60% of terminal height
+#   Dialog height: "50%" for 50 % of terminal height, or "20" for 20 rows.
+#
 # pool            string   optional
 #   Work pool name from pools.toml [[pools]]; default/background mode only.
 #   Omit for unlimited parallelism; not combinable with interactive or detach.

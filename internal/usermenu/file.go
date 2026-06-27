@@ -3,6 +3,7 @@ package usermenu
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -30,6 +31,9 @@ var menuEntryKeys = map[string]struct{}{
 	"pool":           {},
 	"shell":          {},
 	"shell_patterns": {},
+	"dialog":         {},
+	"dialog_width":   {},
+	"dialog_height":  {},
 }
 
 // boolField decodes MC-style 0/1 or a TOML boolean.
@@ -76,6 +80,9 @@ type MenuEntry struct {
 	Pool          string   `toml:"pool"`
 	Shell         bool     `toml:"shell"`
 	ShellPatterns bool     `toml:"shell_patterns"`
+	Dialog        bool     `toml:"dialog"`
+	DialogWidth   string   `toml:"dialog_width"`
+	DialogHeight  string   `toml:"dialog_height"`
 }
 
 type menuFileRaw struct {
@@ -111,6 +118,28 @@ func (w *whenField) UnmarshalTOML(data interface{}) error {
 	return nil
 }
 
+// dimField decodes dialog_width / dialog_height as either a quoted string ("80%", "100")
+// or a bare TOML integer (80, 100) for user convenience.
+type dimField struct {
+	Set   bool
+	Value string
+}
+
+func (d *dimField) UnmarshalTOML(data any) error {
+	d.Set = true
+	switch v := data.(type) {
+	case string:
+		d.Value = strings.TrimSpace(v)
+	case int64:
+		d.Value = fmt.Sprintf("%d", v)
+	case uint64:
+		d.Value = fmt.Sprintf("%d", v)
+	default:
+		return fmt.Errorf("expected integer or string, got %T", data)
+	}
+	return nil
+}
+
 type menuEntry struct {
 	Key           string     `toml:"key"`
 	Title         string     `toml:"title"`
@@ -125,6 +154,9 @@ type menuEntry struct {
 	Pool          string     `toml:"pool"`
 	Shell         *boolField `toml:"shell"`
 	ShellPatterns *boolField `toml:"shell_patterns"`
+	Dialog        *boolField `toml:"dialog"`
+	DialogWidth   *dimField  `toml:"dialog_width"`
+	DialogHeight  *dimField  `toml:"dialog_height"`
 }
 
 // LoadFile reads and validates menu.toml from path.
@@ -221,6 +253,10 @@ func Decode(data []byte) (*MenuFile, error) {
 		if e.Shell != nil && e.Shell.Set {
 			shell = e.Shell.Value
 		}
+		dialog := false
+		if e.Dialog != nil && e.Dialog.Set {
+			dialog = e.Dialog.Value
+		}
 		modeCount := 0
 		if interactive {
 			modeCount++
@@ -231,12 +267,30 @@ func Decode(data []byte) (*MenuFile, error) {
 		if background {
 			modeCount++
 		}
+		if dialog {
+			modeCount++
+		}
 		if modeCount > 1 {
-			return nil, entryError(i, title, "interactive, detach, and background are mutually exclusive")
+			return nil, entryError(i, title, "interactive, detach, background, and dialog are mutually exclusive")
 		}
 		pool := strings.TrimSpace(e.Pool)
 		if pool != "" && (interactive || detach) {
 			return nil, entryError(i, title, "pool cannot be combined with interactive or detach")
+		}
+
+		dialogWidth := ""
+		if e.DialogWidth != nil && e.DialogWidth.Set {
+			dialogWidth = e.DialogWidth.Value
+			if err := validateDimSpec(dialogWidth); err != nil {
+				return nil, entryError(i, title, fmt.Sprintf("dialog_width: %v", err))
+			}
+		}
+		dialogHeight := ""
+		if e.DialogHeight != nil && e.DialogHeight.Set {
+			dialogHeight = e.DialogHeight.Value
+			if err := validateDimSpec(dialogHeight); err != nil {
+				return nil, entryError(i, title, fmt.Sprintf("dialog_height: %v", err))
+			}
 		}
 
 		runForEach := make([]string, 0, len(e.RunForEach))
@@ -256,6 +310,9 @@ func Decode(data []byte) (*MenuFile, error) {
 		}
 		if len(runForEach) > 0 && (interactive || detach) {
 			return nil, entryError(i, title, "run_for_each cannot be combined with interactive or detach")
+		}
+		if len(runForEach) > 0 && dialog {
+			return nil, entryError(i, title, "run_for_each cannot be combined with dialog")
 		}
 		cmd := strings.TrimSpace(e.Command)
 		if len(runForEach) > 0 && !cmdmacro.CommandRequiresMacro(cmd, 'f') {
@@ -291,6 +348,9 @@ func Decode(data []byte) (*MenuFile, error) {
 			Pool:          pool,
 			Shell:         shell,
 			ShellPatterns: entryShellPatterns,
+			Dialog:        dialog,
+			DialogWidth:   dialogWidth,
+			DialogHeight:  dialogHeight,
 		})
 	}
 	return out, nil
@@ -379,6 +439,27 @@ func validateEntryKey(i int, title, key string, pinned map[rune]int) error {
 		return entryError(i, title, fmt.Sprintf("duplicate key %q (also used by entry %d)", key, prev))
 	}
 	pinned[lr] = i
+	return nil
+}
+
+// validateDimSpec checks that a dialog_width or dialog_height value is a positive integer
+// or a percentage string like "80%" (1–100).
+func validateDimSpec(spec string) error {
+	spec = strings.TrimSpace(spec)
+	if spec == "" {
+		return nil
+	}
+	if pct, ok := strings.CutSuffix(spec, "%"); ok {
+		f, err := strconv.ParseFloat(pct, 64)
+		if err != nil || f <= 0 || f > 100 {
+			return fmt.Errorf("invalid percentage %q (want 1–100%%)", spec)
+		}
+		return nil
+	}
+	n, err := strconv.Atoi(spec)
+	if err != nil || n <= 0 {
+		return fmt.Errorf("invalid dimension %q (want positive integer or e.g. \"80%%\")", spec)
+	}
 	return nil
 }
 

@@ -42,10 +42,13 @@ const (
 	InputModeHelpView
 	InputModeHostKeyDialog
 	InputModeSFTPConnectDialog
+	InputModeCommandOutputDialog
 )
 
 func (a *App) inputMode() InputMode {
 	switch {
+	case a.model.CommandOutputDialog.Open:
+		return InputModeCommandOutputDialog
 	case a.model.MessageDialog.Open:
 		return InputModeMessageDialog
 	case a.model.PathPicker.Open:
@@ -150,6 +153,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			}
 		}
 		return footerWithEscClose(rest)
+	}
+	if a.model.CommandOutputDialog.Open {
+		return footerWithEscClose([]menu.FunctionKey{
+			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+		})
 	}
 	if a.model.PrimaryModal() != dialog.PrimaryModalNone ||
 		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.SFTPConnectDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open || a.model.CompareMergeDialog.Open {
@@ -321,6 +329,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	}
 
 	switch a.inputMode() {
+	case InputModeCommandOutputDialog:
+		a.handleCommandOutputDialogKey(event)
+		a.render()
+		return false, true
 	case InputModeMessageDialog:
 		a.handleMessageDialogKey(event)
 		a.render()
