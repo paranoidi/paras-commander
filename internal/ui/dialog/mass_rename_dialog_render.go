@@ -65,7 +65,7 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	if massRenameShowsReplacementHint(state) {
 		fixed++
 	}
-	height := 1 + fixed + vp + 2 // top pad + body + buttons row + bottom border
+	height := 1 + fixed + vp + 3 // top pad + body + sep-above-buttons + buttons row + bottom border
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2
 	}
@@ -79,10 +79,11 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 // ExternalEditor skips the fields section, so its effective viewport is larger.
 func MassRenamePreviewViewportRows(layoutHeight int, mode MassRenameModeUI) int {
 	// Base overhead matches the Simple/Regex fixed layout (see massRenameDialogHeight).
-	overhead := 14
+	// +1 accounts for the separator row above buttons drawn outside drawMassRenameDialog.
+	overhead := 15
 	if mode == MassRenameModeUIExternalEditor {
 		// ExternalEditor omits fields (4) + case-fold checkbox (1) + sep-before-preview (1) = 6 rows.
-		overhead = 8
+		overhead = 9
 	}
 	maxBody := layoutHeight - overhead
 	if maxBody < 3 {

@@ -428,6 +428,62 @@ func (a *App) clearFileDialogPickerSubfocus() {
 
 func (a *App) fileDialogMoveFocusKey(event *tcell.EventKey) bool {
 	d := &a.model.FileDialog
+
+	// Mass rename: Tab/Shift+Tab follows visual layout (radios+show-modified → Find → Replace → …).
+	// Focus indices don't match visual order (show-modified is last content, but visually first).
+	// Up/Down keep their linear order for existing keyboard flows.
+	if d.DialogType == dialog.FileDialogMassRename {
+		key := event.Key()
+		onRadio := d.FocusedField >= 0 && d.FocusedField < 3
+		showModifiedIdx := dialog.MassRenameShowModifiedFocusIdx(*d)
+		onShowModified := d.FocusedField == showModifiedIdx
+		if key == tcell.KeyTab && (onRadio || onShowModified) {
+			a.clearFileDialogPickerSubfocus()
+			if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor {
+				d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
+			} else {
+				d.FocusedField = massRenameFindFieldFocus
+			}
+			return true
+		}
+		if key == tcell.KeyBacktab && d.FocusedField == massRenameFindFieldFocus {
+			a.clearFileDialogPickerSubfocus()
+			d.FocusedField = showModifiedIdx
+			return true
+		}
+		if key == tcell.KeyBacktab && onShowModified {
+			a.clearFileDialogPickerSubfocus()
+			d.FocusedField = 2
+			a.applyMassRenameModeFromFocus()
+			return true
+		}
+		// Down/Up mirror the visual order: radios → showModified → fields → buttons.
+		// The focus indices don't match visual order (showModified is above fields but has a higher index),
+		// so we intercept the non-linear transitions for non-ExternalEditor modes.
+		notExternal := d.MassRenameMode != dialog.MassRenameModeUIExternalEditor
+		if key == tcell.KeyDown && d.FocusedField == 2 && notExternal {
+			a.clearFileDialogPickerSubfocus()
+			d.FocusedField = showModifiedIdx
+			return true
+		}
+		if key == tcell.KeyDown && onShowModified && notExternal {
+			a.clearFileDialogPickerSubfocus()
+			d.FocusedField = massRenameFindFieldFocus
+			return true
+		}
+		if key == tcell.KeyUp && d.FocusedField == massRenameFindFieldFocus && notExternal {
+			a.clearFileDialogPickerSubfocus()
+			d.FocusedField = showModifiedIdx
+			return true
+		}
+		if key == tcell.KeyUp && onShowModified && notExternal {
+			a.clearFileDialogPickerSubfocus()
+			d.FocusedField = 2
+			a.applyMassRenameModeFromFocus()
+			return true
+		}
+	}
+
 	form := dialog.FileDialogFocusForm(*d)
 	if nf, ok := form.MoveFocus(d.FocusedField, event.Key()); ok {
 		a.clearFileDialogPickerSubfocus()

@@ -124,11 +124,11 @@ func TestRenderMkdirDialogWithSelectionShowsActionRadios(t *testing.T) {
 		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: PrimaryPanel,
 		FileDialog: dialog.FileDialogState{
-			Open:               true,
-			DialogType:         dialog.FileDialogMkdir,
-			Fields:             []dialog.FileDialogField{{Label: "Directory name", Value: "x"}},
-			MkdirShowActions:   true,
-			MkdirAction: dialog.MkdirActionCreate,
+			Open:             true,
+			DialogType:       dialog.FileDialogMkdir,
+			Fields:           []dialog.FileDialogField{{Label: "Directory name", Value: "x"}},
+			MkdirShowActions: true,
+			MkdirAction:      dialog.MkdirActionCreate,
 		},
 	}
 

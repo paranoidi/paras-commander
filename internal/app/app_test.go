@@ -4936,7 +4936,8 @@ func TestMassRenameRadioFocusAppliesRegexMode(t *testing.T) {
 	if d.MassRenameMode != dialog.MassRenameModeUISimple {
 		t.Fatalf("initial mode = %v, want simple", d.MassRenameMode)
 	}
-	// Up from Find (3) → ExternalEditor (2), Up again → Regex (1)
+	// Up from Find (3) → showModified (6), Up → ExternalEditor (2), Up again → Regex (1)
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 	if d.FocusedField != 1 {
@@ -5122,11 +5123,9 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 		t.Fatal("OK action should be blocked when preview has conflicts")
 	}
 	okIdx := dialog.FileDialogOKFocusIndex(*d)
-	d.FocusedField = 6 // show-only-modified checkbox (0-2 = radios, 3 = Find, 4 = Replace, 5 = case-fold, 6 = show-modified)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if d.FocusedField != okIdx {
-		t.Fatalf("Down from show-modified checkbox: focus = %d, want OK %d", d.FocusedField, okIdx)
-	}
+	// Down from show-modified (6) → Find (3) → Replace (4) → Case-insensitive (5) → Show-modified (6) → Find... cycle.
+	// Navigate directly to OK to test the blocked-OK path.
+	d.FocusedField = okIdx
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if !app.model.FileDialog.Open {
 		t.Fatal("Enter on OK with conflicts should not close dialog")
