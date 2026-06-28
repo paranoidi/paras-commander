@@ -151,6 +151,19 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 		a.editFullscreenPreviewFile()
 		return false
 	}
+	if nextAction == keymap.ActionFileQuickViewPreviewPageUp || nextAction == keymap.ActionFileQuickViewPreviewPageDown {
+		_, ch, _ := a.fullscreenFilePreviewScrollMetrics()
+		step := ch
+		if step < 1 {
+			step = 1
+		}
+		if nextAction == keymap.ActionFileQuickViewPreviewPageUp {
+			a.fullscreenPreviewScrollBy(-step)
+		} else {
+			a.fullscreenPreviewScrollBy(step)
+		}
+		return false
+	}
 	if a.model.FilePreviewThemePicker.Open {
 		if a.handleFilePreviewThemePickerKey(event) {
 			return false
