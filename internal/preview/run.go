@@ -134,11 +134,12 @@ func runExternal(ctx context.Context, req Request) Result {
 }
 
 func runGitDiff(ctx context.Context, req Request) Result {
-	// Untracked new file: no diff available.
+	// Untracked new file: no diff available, fall back to content preview.
 	if req.GitStatus != nil &&
 		req.GitStatus.Staged == gitstatus.NotModified &&
 		req.GitStatus.Unstaged == gitstatus.New {
-		return Result{IsDiff: true, ErrorMsg: "No diff: file not tracked"}
+		req.GitDiff = false
+		return Run(ctx, req)
 	}
 
 	// Choose diff args: staged-only changes use --cached; otherwise compare to HEAD.
