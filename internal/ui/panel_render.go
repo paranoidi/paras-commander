@@ -276,7 +276,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 				}
 			}
 			if !showChildCol {
-				drawPanelListScrollbar(screen, rect, rect.Y+2, visibleRows, state.VisibleEntryCount(), state.ScrollOffset,
+				drawPanelListScrollbar(screen, rect,
+					panelScrollPos{ListTopY: rect.Y + 2, Visible: visibleRows, Total: state.VisibleEntryCount(), Offset: state.ScrollOffset},
 					panelStyle.ScrollbarStyle, panelScrollbarShow(ctx.FileListActive, display.ScrollbarShowInactive),
 					ctx.FileListActive, ctx.ChromeBlocked, borderStyle, panelStyle.Styles)
 			}
@@ -493,7 +494,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		}, spans)
 	}
 
-	drawPanelListScrollbar(screen, rect, rect.Y+2, visibleRows, state.VisibleEntryCount(), state.ScrollOffset,
+	drawPanelListScrollbar(screen, rect,
+		panelScrollPos{ListTopY: rect.Y + 2, Visible: visibleRows, Total: state.VisibleEntryCount(), Offset: state.ScrollOffset},
 		panelStyle.ScrollbarStyle, panelScrollbarShow(ctx.FileListActive, display.ScrollbarShowInactive),
 		ctx.FileListActive, ctx.ChromeBlocked, borderStyle, panelStyle.Styles)
 

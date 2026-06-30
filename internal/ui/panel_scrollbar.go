@@ -6,19 +6,24 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-func drawPanelListScrollbar(screen tcell.Screen, rect Rect, listTopY, visibleRows, total, offset int, style uiscrollbar.Style, show bool, fileListActive, chromeBlocked bool, frameStyle tcell.Style, styles theme.Theme) {
+// panelScrollPos groups the four scroll-position integers passed to drawPanelListScrollbar.
+type panelScrollPos struct {
+	ListTopY, Visible, Total, Offset int
+}
+
+func drawPanelListScrollbar(screen tcell.Screen, rect Rect, pos panelScrollPos, style uiscrollbar.Style, show, fileListActive, chromeBlocked bool, frameStyle tcell.Style, styles theme.Theme) {
 	if !show || style == uiscrollbar.StyleNone {
 		return
 	}
-	metrics, ok := uiscrollbar.ComputeMetrics(total, visibleRows, offset)
+	metrics, ok := uiscrollbar.ComputeMetrics(pos.Total, pos.Visible, pos.Offset)
 	if !ok {
 		return
 	}
 	uiscrollbar.Draw(uiscrollbar.DrawParams{
 		Screen:     screen,
 		X:          rect.X + rect.Width - 1,
-		ListTopY:   listTopY,
-		Visible:    visibleRows,
+		ListTopY:   pos.ListTopY,
+		Visible:    pos.Visible,
 		Metrics:    metrics,
 		Style:      style,
 		Active:     fileListActive,
