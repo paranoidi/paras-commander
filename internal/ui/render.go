@@ -458,7 +458,23 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawFilePreviewPanel(screen, primaryFile, model.FilePreviewDraw, styles, primaryChromeBlocked, pvFocused,
 				model.QuickViewDisplayActive(), false, model.Primary.PathString(), model.UserHomeDir)
 		} else if layout.Primary.Width > 0 {
-			drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel), primaryFileListFocus, primaryChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(PrimaryPanel), PrimaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[PrimaryPanel], model.ShrunkenShowsNameOnly, primarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, primaryOtherPanelPath, primarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.SplitOrientation)
+			drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel),
+				PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
+				PanelContext{
+					PanelID: PrimaryPanel, FileListActive: primaryFileListFocus, ChromeBlocked: primaryChromeBlocked,
+					ActivePanel: model.ActivePanel, OtherPanelPath: primaryOtherPanelPath,
+					HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
+					SplitOrientation: model.SplitOrientation, SelectionsBottomHint: primarySelectionsBottomHint,
+					ShowSelectionSizeOnBottom: primarySelectionSizeOnFileBottom,
+				},
+				PanelDisplayConfig{
+					ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
+					Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
+					DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(PrimaryPanel),
+					JobMarks: model.JobPathMarks, MetaColumns: model.MetaResults[PrimaryPanel],
+					ShrunkenShowsNameOnly: model.ShrunkenShowsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
+					CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
+				})
 		}
 		if layout.Primary.Width > 0 && leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
@@ -469,7 +485,23 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawFilePreviewPanel(screen, secondaryFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
 				model.QuickViewDisplayActive(), false, model.Secondary.PathString(), model.UserHomeDir)
 		} else if layout.Secondary.Width > 0 {
-			drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel), secondaryFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(SecondaryPanel), SecondaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[SecondaryPanel], model.ShrunkenShowsNameOnly, secondarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, secondaryOtherPanelPath, secondarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.SplitOrientation)
+			drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel),
+				PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
+				PanelContext{
+					PanelID: SecondaryPanel, FileListActive: secondaryFileListFocus, ChromeBlocked: chromeBlocked,
+					ActivePanel: model.ActivePanel, OtherPanelPath: secondaryOtherPanelPath,
+					HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
+					SplitOrientation: model.SplitOrientation, SelectionsBottomHint: secondarySelectionsBottomHint,
+					ShowSelectionSizeOnBottom: secondarySelectionSizeOnFileBottom,
+				},
+				PanelDisplayConfig{
+					ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
+					Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
+					DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(SecondaryPanel),
+					JobMarks: model.JobPathMarks, MetaColumns: model.MetaResults[SecondaryPanel],
+					ShrunkenShowsNameOnly: model.ShrunkenShowsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
+					CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
+				})
 		}
 		if layout.Secondary.Width > 0 && rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip

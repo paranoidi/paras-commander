@@ -9,7 +9,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 type panicDiskScanPainter struct{}
@@ -40,6 +39,8 @@ func TestDrawPanelSkipsDiskScanExcludedWhenMeteringOff(t *testing.T) {
 		Cursor: 0,
 	}
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 12}
-	drawPanel(screen, rect, state, true, false, theme.Default(), true, "",
-		panicDiskScanPainter{}, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, SplitHorizontal)
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: theme.Default()},
+		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
+		PanelDisplayConfig{ShowIcons: true, Painter: panicDiskScanPainter{}, ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 func TestPanelListGitColumnActiveVisibleWhilePending(t *testing.T) {
@@ -69,8 +68,10 @@ func TestGitNotModifiedUsesUsageForegroundUnderDiskMeter(t *testing.T) {
 		Cursor: 1, // large row is non-cursor so usage.normal applies on the meter
 	}
 	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
-	drawPanel(screen, rect, state, true, false, styles, false, "",
-		painter, false, nil, true, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, SplitHorizontal)
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: styles},
+		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
+		PanelDisplayConfig{Painter: painter, ShowDiskUsage: true, ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
 
 	rowY := rect.Y + 2 // first data row (large directory)
 	gitCol := rect.X + 1

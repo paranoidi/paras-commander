@@ -17,8 +17,10 @@ import (
 func thumbPaintedRowRange(t *testing.T, screen tcell.Screen, rect Rect, state panel.State, style uiscrollbar.Style) (minRow, maxRow int, ok bool) {
 	t.Helper()
 	styles := theme.Default()
-	drawPanel(screen, rect, state, true, false, styles, false, "", nil, false, nil, false,
-		PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, style, true, panelcarousel.DefaultLayout(), FilePreviewState{}, SplitHorizontal)
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: styles, ScrollbarStyle: style},
+		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
+		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
 	borderX := rect.X + rect.Width - 1
 	visible := PanelListRows(rect)
 	minRow = visible

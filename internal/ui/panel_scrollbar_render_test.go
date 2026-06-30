@@ -36,9 +36,10 @@ func TestDrawPanelPaintsThumbScrollbarOnBorder(t *testing.T) {
 	rect := Rect{X: 0, Y: 0, Width: 40, Height: 12}
 	styles := theme.Default()
 	wantThumb := styles.SymbolScrollbarThumb()
-	drawPanel(screen, rect, state, true, false, styles, false, "", nil, false, nil, false,
-		PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false,
-		uiscrollbar.StyleThumb, true, panelcarousel.DefaultLayout(), FilePreviewState{}, SplitHorizontal)
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: styles, ScrollbarStyle: uiscrollbar.StyleThumb},
+		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
+		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
 
 	borderX := rect.X + rect.Width - 1
 	foundThumb := false
@@ -79,9 +80,10 @@ func TestDrawPanelCarouselTwoColumnScrollbarOnBorder(t *testing.T) {
 	screen.SetSize(rect.Width, rect.Height)
 	styles := theme.Default()
 	wantThumb := styles.SymbolScrollbarThumb()
-	drawPanel(screen, rect, state, true, false, styles, false, "", nil, false, nil, false,
-		PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false,
-		uiscrollbar.StyleThumb, true, panelcarousel.DefaultLayout(), FilePreviewState{}, SplitHorizontal)
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: styles, ScrollbarStyle: uiscrollbar.StyleThumb},
+		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
+		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
 
 	borderX := rect.X + rect.Width - 1
 	foundThumb := false

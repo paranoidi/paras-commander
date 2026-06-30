@@ -11,7 +11,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // Regression: ui.Render clears the full screen each frame, so carousel child preview must be
@@ -52,8 +51,10 @@ func TestCarouselCoalesceRepaintsCachedChildAfterFullScreenClear(t *testing.T) {
 
 	rect := Rect{X: 0, Y: 1, Width: width, Height: height - 3}
 	styles := theme.Default()
-	drawPanel(screen, rect, state, true, false, styles, false, "",
-		nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false, uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), FilePreviewState{}, SplitHorizontal)
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: styles},
+		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
+		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
 
 	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout())
 	childCol := cols[2]
@@ -125,9 +126,10 @@ func TestDrawCarouselFilePreviewDuringQuickFilter(t *testing.T) {
 		Path:         scroll,
 		CombinedText: "river delta\n",
 	}
-	drawPanel(screen, rect, state, true, false, styles, false, "",
-		nil, false, nil, false, PrimaryPanel, nil, -1, -1, nil, false, true, false, PrimaryPanel, "", false,
-		uiscrollbar.StyleNone, true, panelcarousel.DefaultLayout(), preview, SplitHorizontal)
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: styles},
+		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SelectionsBottomHint: true},
+		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout(), CarouselFilePreview: preview})
 
 	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout())
 	childCol := cols[2]
