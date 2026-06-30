@@ -188,8 +188,9 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	} else {
 		volumeLabel := panelVolumeFreeSpaceTitle(state.VolumeSpaceOK, state.VolumeAvailBytes, state.VolumeTotalBytes)
 		paintPanelTopTitleRow(screen, titleX, innerRight, contentCols, rect.Y,
-			state.PathString(), display.UserHomeDir, titleStyle,
-			volumeLabel, chrome.DiskUsageOverview, borderStyle, true)
+			state.PathString(), display.UserHomeDir,
+			panelTitleStyles{Path: titleStyle, End: chrome.DiskUsageOverview, Border: borderStyle},
+			volumeLabel, true)
 	}
 
 	visibleRows := PanelListRows(rect)
@@ -505,10 +506,15 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 
 const gapBeforePanelTitleEnd = 2
 
+// panelTitleStyles groups the three tcell.Style values needed by paintPanelTopTitleRow.
+type panelTitleStyles struct {
+	Path, End, Border tcell.Style
+}
+
 // paintPanelTopTitleRow paints the panel top border path on the start and an optional end label
 // (volume overview with decorative dashes, or a plain title-styled suffix such as a filename).
 func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols, y int,
-	panelPath, userHomeDir string, pathStyle tcell.Style, endLabel string, endStyle, borderStyle tcell.Style, volumeDecorated bool) {
+	panelPath, userHomeDir string, ts panelTitleStyles, endLabel string, volumeDecorated bool) {
 	pathSlotCols := contentCols
 	endRunes := utf8.RuneCountInString(endLabel)
 	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+3
@@ -526,22 +532,22 @@ func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols,
 		pathMax = 0
 	}
 	left := " " + PanelTitlePath(panelPath, userHomeDir, pathMax) + " "
-	primitive.TextOverlay(screen, titleX, y, pathSlotCols, left, pathStyle)
+	primitive.TextOverlay(screen, titleX, y, pathSlotCols, left, ts.Path)
 	if !showEnd {
 		return
 	}
 	if volumeDecorated {
 		leaderRunes := utf8.RuneCountInString(panelVolumeTitleLeader)
 		trailerRunes := utf8.RuneCountInString(panelVolumeTitleTrailer)
-		primitive.TextOverlay(screen, endStartX, y, leaderRunes, panelVolumeTitleLeader, borderStyle)
+		primitive.TextOverlay(screen, endStartX, y, leaderRunes, panelVolumeTitleLeader, ts.Border)
 		contentX := endStartX + leaderRunes
 		contentLen := endRunes - leaderRunes - trailerRunes
 		contentText := string([]rune(endLabel)[leaderRunes : leaderRunes+contentLen])
-		primitive.TextOverlay(screen, contentX, y, contentLen, contentText, endStyle)
-		primitive.TextOverlay(screen, endStartX+endRunes-trailerRunes, y, trailerRunes, panelVolumeTitleTrailer, borderStyle)
+		primitive.TextOverlay(screen, contentX, y, contentLen, contentText, ts.End)
+		primitive.TextOverlay(screen, endStartX+endRunes-trailerRunes, y, trailerRunes, panelVolumeTitleTrailer, ts.Border)
 		return
 	}
-	primitive.TextOverlay(screen, endStartX, y, endRunes, endLabel, endStyle)
+	primitive.TextOverlay(screen, endStartX, y, endRunes, endLabel, ts.End)
 }
 
 const (
