@@ -6,7 +6,6 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
-	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
@@ -52,7 +51,7 @@ func TestDrawCompareViewPrimaryFocusHighlightsLeftColumn(t *testing.T) {
 	}
 	rows := []comparepkg.Row{snap.Rows[0]}
 
-	drawCompareView(screen, layout, view, snap, rows, panel.State{}, panel.State{}, styles, false, "", SplitHorizontal)
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: rows}, styles, false, "", SplitHorizontal)
 
 	leftStyle := cellStyleAt(screen, leftX, lineY)
 	gapStyle := cellStyleAt(screen, leftX+pathW-comparePathGapCol, lineY)
@@ -114,7 +113,7 @@ func TestDrawCompareViewSecondaryFocusHighlightsRightColumn(t *testing.T) {
 	}
 	rows := []comparepkg.Row{snap.Rows[0]}
 
-	drawCompareView(screen, layout, view, snap, rows, panel.State{}, panel.State{}, styles, false, "", SplitHorizontal)
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: rows}, styles, false, "", SplitHorizontal)
 
 	leftStyle := cellStyleAt(screen, leftX, lineY)
 	rightStyle := cellStyleAt(screen, rightX, lineY)
@@ -162,7 +161,7 @@ func TestDrawCompareViewPrimaryFocusOnEmptyLeftCell(t *testing.T) {
 		FocusColumn: CompareColumnPrimary,
 	}
 
-	drawCompareView(screen, layout, view, snap, snap.Rows, panel.State{}, panel.State{}, styles, false, "", SplitHorizontal)
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: snap.Rows}, styles, false, "", SplitHorizontal)
 
 	_, leftStyle, _ := screen.Get(leftX, lineY)
 	_, leftBG, _ := leftStyle.Decompose()
@@ -202,7 +201,7 @@ func TestDrawCompareViewUnfocusedColumnNotRowSelectedOnSelectedRow(t *testing.T)
 	}
 	view := CompareViewState{Selected: 0, Filter: comparepkg.FilterAll, FocusColumn: CompareColumnPrimary}
 
-	drawCompareView(screen, layout, view, snap, snap.Rows, panel.State{}, panel.State{}, styles, false, "", SplitHorizontal)
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: snap.Rows}, styles, false, "", SplitHorizontal)
 
 	selectedFG, _, _ := styles.PanelRowSelected.Decompose()
 	rightFG, _, _ := cellStyleAt(screen, rightX, lineY).Decompose()
@@ -249,7 +248,7 @@ func TestDrawCompareViewFocusedColumnCursorOnlyOnSelectedRow(t *testing.T) {
 		FocusColumn: CompareColumnPrimary,
 	}
 
-	drawCompareView(screen, layout, view, snap, snap.Rows, panel.State{}, panel.State{}, styles, false, "", SplitHorizontal)
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: snap.Rows}, styles, false, "", SplitHorizontal)
 
 	_, activeBG, _ := styles.PanelCursorActive.Decompose()
 	_, jobsBG, _ := styles.JobsRow.Decompose()
@@ -321,7 +320,7 @@ func TestDrawCompareViewStripsCommonPathPrefix(t *testing.T) {
 	view := CompareViewState{Selected: 0, Filter: comparepkg.FilterAll, FocusColumn: CompareColumnPrimary}
 	rows := []comparepkg.Row{snap.Rows[0]}
 
-	drawCompareView(screen, layout, view, snap, rows, panel.State{}, panel.State{}, styles, false, home, SplitHorizontal)
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: rows}, styles, false, home, SplitHorizontal)
 
 	leftText := rowTextAt(screen, leftX, lineY, pathW-comparePathGapCol)
 	rightText := rowTextAt(screen, rightX, lineY, pathW)
@@ -394,7 +393,7 @@ func TestDrawCompareViewStripsCommonPathPrefixSingleSided(t *testing.T) {
 	}
 	view := CompareViewState{Selected: 0, Filter: comparepkg.FilterAll, FocusColumn: CompareColumnPrimary}
 
-	drawCompareView(screen, layout, view, snap, snap.Rows, panel.State{}, panel.State{}, styles, false, home, SplitHorizontal)
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: snap.Rows}, styles, false, home, SplitHorizontal)
 
 	leftText := rowTextAt(screen, leftX, lineY, pathW-comparePathGapCol)
 	rightText := rowTextAt(screen, rightX, lineY, pathW)

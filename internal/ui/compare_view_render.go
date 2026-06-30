@@ -17,18 +17,28 @@ const (
 	comparePathGapCol = 1 // blank column between each path column and the status glyph
 )
 
+// compareViewData groups the data inputs to drawCompareView.
+type compareViewData struct {
+	Snap      comparepkg.Snapshot
+	Rows      []comparepkg.Row
+	Primary   panel.State
+	Secondary panel.State
+}
+
 func drawCompareView(
 	screen tcell.Screen,
 	layout Layout,
 	view CompareViewState,
-	snap comparepkg.Snapshot,
-	rows []comparepkg.Row,
-	primary, secondary panel.State,
+	data compareViewData,
 	styles theme.Theme,
 	chromeBlocked bool,
 	userHomeDir string,
 	orientation SplitOrientation,
 ) {
+	snap := data.Snap
+	rows := data.Rows
+	primary := data.Primary
+	secondary := data.Secondary
 	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, orientation)
 	endLabel := panelSelectionSizePadded(comparepkg.FilterLabel(view.Filter))
 	title := compareViewTitle(snap)
