@@ -339,6 +339,14 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if showMetaEffective {
 		nameWidth = panelListNameWidthWithMeta(listTextWidth, metaTotalW, listFmt, nameOnlyDisplay, false)
 	}
+	rowOpts := panelRowOpts{
+		ShowIcons: display.ShowIcons,
+		ShowMeta:  showMetaEffective,
+		MetaColW:  metaTotalW,
+		ListFmt:   listFmt,
+		NameOnly:  nameOnlyDisplay,
+		ShowGit:   showGit,
+	}
 	for row := 0; row < visibleRows; row++ {
 		y := rect.Y + 2 + row
 		style := panelStyle.Styles.PanelRowFile
@@ -399,7 +407,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 				RenameMark:       renameMark,
 				SubtreeSelection: subtreeMark,
 			}
-			text = formatEntry(entry, listTextWidth, display.ShowIcons, rowSuffix, panelStyle.Styles, display.Painter, showMetaEffective, metaTotalW, metaText, listFmt, nameOnlyDisplay)
+			rowOpts.Suffix = rowSuffix
+			text = formatEntry(entry, listTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
 			if display.ShowDiskUsage && display.Painter != nil && diskDenom > 0 {
 				fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, display.Painter), diskDenom, fullRowCells)
 			}
@@ -417,7 +426,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			cursorIconKey = panelCursorIconThemeKey(ctx.FileListActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.FileListActive && state.FilterUniqueMatch())
 		}
 		if hasEntry {
-			spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, panelStyle.Styles, display.ShowIcons, rowSuffix, showMetaEffective, metaTotalW, listFmt, nameOnlyDisplay, showGit, func(di int) tcell.Style {
+			spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, panelStyle.Styles, rowOpts, func(di int) tcell.Style {
 				return blendCell(di + leftGutter + gitStrip + iconStrip)
 			})
 			if suffixSpans := panellist.ListingSuffixSpans(cur, nameWidth, display.ShowIcons, rowSuffix, jobStatus, panelStyle.Styles, ctx.ChromeBlocked, cursorIconKey, func(di int) tcell.Style {
@@ -604,21 +613,32 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, nameTitle, panelListSizeCells, sizeTitle, tw, thirdTitle)
 }
 
-func formatEntry(entry localfs.Entry, width int, showFileIcons bool, suffix panellist.RowSuffix, styles theme.Theme, painter DiskUsagePainter, showMeta bool, metaColW int, metaText string, listFmt panel.ListFormat, nameOnly bool) string {
-	listFmt = panel.EffectiveListFormat(listFmt)
-	tw := panelListThirdColumnWidth(listFmt, nameOnly)
-	nameWidth := panelListNameWidth(width, listFmt, nameOnly, false)
-	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(width, metaColW, listFmt, nameOnly, false)
+// panelRowOpts holds display options shared by formatEntry and matchSpans.
+type panelRowOpts struct {
+	ShowIcons bool
+	Suffix    panellist.RowSuffix
+	ShowMeta  bool
+	MetaColW  int
+	ListFmt   panel.ListFormat
+	NameOnly  bool
+	ShowGit   bool
+}
+
+func formatEntry(entry localfs.Entry, width int, opts panelRowOpts, styles theme.Theme, painter DiskUsagePainter, metaText string) string {
+	listFmt := panel.EffectiveListFormat(opts.ListFmt)
+	tw := panelListThirdColumnWidth(listFmt, opts.NameOnly)
+	nameWidth := panelListNameWidth(width, listFmt, opts.NameOnly, false)
+	if opts.ShowMeta {
+		nameWidth = panelListNameWidthWithMeta(width, opts.MetaColW, listFmt, opts.NameOnly, false)
 	}
-	display := panellist.EntryDisplayRunes(entry, nameWidth, showFileIcons, suffix, styles)
+	display := panellist.EntryDisplayRunes(entry, nameWidth, opts.ShowIcons, opts.Suffix, styles)
 	name := string(panellist.RunesFromDisplay(display))
-	if nameOnly {
+	if opts.NameOnly {
 		return fmt.Sprintf("%-*s", width, name)
 	}
 	if tw == 0 {
-		if showMeta {
-			metaPadded := padMetaLineToWidth(metaText, metaColW)
+		if opts.ShowMeta {
+			metaPadded := padMetaLineToWidth(metaText, opts.MetaColW)
 			return fmt.Sprintf("%-*s  %s %*s", nameWidth, name, metaPadded, panelListSizeCells, formatListedSize(entry, painter))
 		}
 		return fmt.Sprintf("%-*s %*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter))
@@ -630,24 +650,24 @@ func formatEntry(entry localfs.Entry, width int, showFileIcons bool, suffix pane
 	default:
 		third = formatTime(entry.ModifiedAt)
 	}
-	if showMeta {
-		metaPadded := padMetaLineToWidth(metaText, metaColW)
+	if opts.ShowMeta {
+		metaPadded := padMetaLineToWidth(metaText, opts.MetaColW)
 		return fmt.Sprintf("%-*s  %s %*s  %-*s", nameWidth, name, metaPadded, panelListSizeCells, formatListedSize(entry, painter), tw, third)
 	}
 	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter), tw, third)
 }
 
-func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, showFileIcons bool, suffix panellist.RowSuffix, showMeta bool, metaColW int, listFmt panel.ListFormat, nameOnly, showGit bool, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
+func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, opts panelRowOpts, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
 	if len(ranges) == 0 {
 		return nil
 	}
-	listFmt = panel.EffectiveListFormat(listFmt)
+	listFmt := panel.EffectiveListFormat(opts.ListFmt)
 	// rowWidth already has the git strip excluded; pass false to avoid double-subtracting.
-	nameWidth := panelListNameWidth(rowWidth, listFmt, nameOnly, false)
-	if showMeta {
-		nameWidth = panelListNameWidthWithMeta(rowWidth, metaColW, listFmt, nameOnly, false)
+	nameWidth := panelListNameWidth(rowWidth, listFmt, opts.NameOnly, false)
+	if opts.ShowMeta {
+		nameWidth = panelListNameWidthWithMeta(rowWidth, opts.MetaColW, listFmt, opts.NameOnly, false)
 	}
-	display := panellist.EntryDisplayRunes(entry, nameWidth, showFileIcons, suffix, styles)
+	display := panellist.EntryDisplayRunes(entry, nameWidth, opts.ShowIcons, opts.Suffix, styles)
 	matchStyle := styles.FuzzyHighlight
 	if highlightCursor {
 		matchStyle = styles.FuzzyHighlightCursor
