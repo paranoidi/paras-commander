@@ -74,10 +74,6 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		}
 	} else {
 		primitive.Box(screen, primitive.Rect(rect), borderStyle)
-		inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
-		if inner.Width > 0 && inner.Height > 0 {
-			primitive.Fill(screen, inner, ' ', chrome.Surface)
-		}
 	}
 	titleX := rect.X + 2
 	innerRight := rect.X + rect.Width - 2
@@ -119,7 +115,6 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		contentH = geom.JobsPanelContentRows(geom.Rect(rect))
 	}
 	if contentH <= 0 {
-		paintFrameMarginColumns(screen, rect, borderStyle, chrome.Surface, p.Embedded)
 		return
 	}
 	textX := rect.X + 2
@@ -130,6 +125,25 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	}
 	if textW < 1 {
 		textW = 1
+	}
+
+	// Compute margin column positions and style once.
+	// Non-embedded: margins at X+1 and X+Width-2 (inside the box border).
+	// Embedded: margins at X and X+Width-1 (outer edges; title row is skipped since contentTop=Y+1).
+	_, borderBG, _ := borderStyle.Decompose()
+	_, surfaceBG, _ := chrome.Surface.Decompose()
+	marginStyle := chrome.Surface
+	if borderBG != surfaceBG {
+		marginStyle = borderStyle
+	}
+	var leftMarginX, rightMarginX int
+	paintMargins := false
+	if p.Embedded {
+		leftMarginX, rightMarginX = rect.X, rect.X+rect.Width-1
+		paintMargins = rect.Width >= 2
+	} else {
+		leftMarginX, rightMarginX = rect.X+1, rect.X+rect.Width-2
+		paintMargins = rect.Width >= 4
 	}
 
 	if msg := strings.TrimSpace(st.ErrorMsg); msg != "" {
@@ -160,14 +174,19 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	padStyle := contentPadStyle(borderStyle, chrome.Surface, body)
 	for row := 0; row < contentH; row++ {
 		y := contentTop + row
+		if paintMargins {
+			screen.SetContent(leftMarginX, y, ' ', nil, marginStyle)
+		}
 		idx := scroll + row
 		if idx >= len(lines) {
 			fillContentRow(screen, textX, y, textW, padStyle)
-			continue
+		} else {
+			drawLine(screen, textX, y, textW, lines[idx], padStyle)
 		}
-		drawLine(screen, textX, y, textW, lines[idx], padStyle)
+		if paintMargins {
+			screen.SetContent(rightMarginX, y, ' ', nil, marginStyle)
+		}
 	}
-	paintFrameMarginColumns(screen, rect, borderStyle, chrome.Surface, p.Embedded)
 }
 
 func contentPadStyle(borderStyle, surfaceStyle, bodyStyle tcell.Style) tcell.Style {
@@ -204,37 +223,6 @@ func drawMessageContent(screen tcell.Screen, rect Rect, embedded bool, contentTo
 	primitive.Text(screen, textX, contentTop, textW, msg, msgStyle)
 }
 
-func paintFrameMarginColumns(screen tcell.Screen, rect Rect, borderStyle, surfaceStyle tcell.Style, embedded bool) {
-	if embedded {
-		if rect.Width < 2 || rect.Height < 2 {
-			return
-		}
-		_, borderBG, _ := borderStyle.Decompose()
-		_, surfaceBG, _ := surfaceStyle.Decompose()
-		if borderBG == surfaceBG {
-			return
-		}
-		// Skip the title row (rect.Y): it is filled with the title background and
-		// painting frame margins over its edges would bleed the chroma frame color.
-		for y := rect.Y + 1; y < rect.Y+rect.Height; y++ {
-			screen.SetContent(rect.X, y, ' ', nil, borderStyle)
-			screen.SetContent(rect.X+rect.Width-1, y, ' ', nil, borderStyle)
-		}
-		return
-	}
-	if rect.Width < 4 || rect.Height < 3 {
-		return
-	}
-	_, borderBG, _ := borderStyle.Decompose()
-	_, surfaceBG, _ := surfaceStyle.Decompose()
-	if borderBG == surfaceBG {
-		return
-	}
-	for y := rect.Y + 1; y < rect.Y+rect.Height-1; y++ {
-		screen.SetContent(rect.X+1, y, ' ', nil, borderStyle)
-		screen.SetContent(rect.X+rect.Width-2, y, ' ', nil, borderStyle)
-	}
-}
 
 func paintQuickViewTitleRow(screen tcell.Screen, titleX, innerRight, contentCols, y int,
 	panelPath, userHomeDir string, pathStyle tcell.Style, endLabel string, endStyle, borderStyle tcell.Style) {
