@@ -27,7 +27,7 @@ func (a *App) armPreviewStylePickerPreview(immediate bool) {
 	if !a.model.FilePreviewThemePicker.Open {
 		return
 	}
-	if !a.syncPreviewStylePickerSelection() {
+	if a.filePreviewThemePickerSelectedName() == "" {
 		return
 	}
 	if immediate || a.config.UI.KeyRepeatDebounceMS <= 0 {

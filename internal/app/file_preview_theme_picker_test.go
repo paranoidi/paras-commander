@@ -97,13 +97,17 @@ func TestPreviewStylePickerDebounceDefersRefreshUntilFlush(t *testing.T) {
 	if app.filePreviewRunGen.Load() != genAfterOpen {
 		t.Fatal("debounced style change should not start preview immediately")
 	}
-	if app.config.Preview.Style == styleAfterOpen {
-		t.Fatalf("preview.style still %q after Down, want new selection", styleAfterOpen)
+	// Border and content are both gated by the debounce: style unchanged until flush.
+	if app.config.Preview.Style != styleAfterOpen {
+		t.Fatalf("preview.style changed to %q before flush, want unchanged %q", app.config.Preview.Style, styleAfterOpen)
 	}
 	if !app.applyPreviewStylePickerFlush(previewStylePickerFlushPayload{gen: app.previewStylePickerDebounceGen.Load()}) {
 		t.Fatal("applyPreviewStylePickerFlush should run deferred preview")
 	}
 	if app.filePreviewRunGen.Load() == genAfterOpen {
 		t.Fatal("flush should start preview refresh")
+	}
+	if app.config.Preview.Style == styleAfterOpen {
+		t.Fatalf("preview.style still %q after flush, want new selection", styleAfterOpen)
 	}
 }
