@@ -88,6 +88,7 @@ func (a *App) renderBrowserListNavUpdate() {
 		return
 	}
 	ui.DrawMenuBarPermissionTailOnly(a.screen, layout, a.model, a.styles)
+	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
 	a.emitScreenAfterPartialPaint()
 	if a.diskUsageScanBusy() {
 		a.deferDiskUsagePoll.Store(true)
