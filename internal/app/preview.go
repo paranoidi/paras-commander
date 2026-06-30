@@ -791,6 +791,11 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 		st.Source = res.Source
 		st.CombinedText = res.CombinedText
 		st.SetHighlightedCells(res.HighlightedCells)
+		if res.Source == ui.PreviewSourceInternalHighlighted {
+			st.ChromaStyle = req.Preview.Style
+		} else {
+			st.ChromaStyle = ""
+		}
 		st.GutterWidth = res.GutterWidth
 		st.ExitCode = res.ExitCode
 		st.ErrorMsg = ""

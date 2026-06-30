@@ -73,7 +73,7 @@ func paintBrowserPanelsInScope(
 
 	painted := false
 	if inScope(PrimaryPanel) && layout.Primary.Width > 0 && !showLeftPreview {
-		drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel), primaryFileListFocus, primaryChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(PrimaryPanel), PrimaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[PrimaryPanel], model.ShrunkenShowsNameOnly, primarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, primaryOtherPanelPath, primarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.PreviewChromaStyle, model.SplitOrientation)
+		drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel), primaryFileListFocus, primaryChromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(PrimaryPanel), PrimaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[PrimaryPanel], model.ShrunkenShowsNameOnly, primarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, primaryOtherPanelPath, primarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.SplitOrientation)
 		painted = true
 		if leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
@@ -81,7 +81,7 @@ func paintBrowserPanelsInScope(
 		}
 	}
 	if inScope(SecondaryPanel) && layout.Secondary.Width > 0 && !showRightPreview {
-		drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel), secondaryFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(SecondaryPanel), SecondaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[SecondaryPanel], model.ShrunkenShowsNameOnly, secondarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, secondaryOtherPanelPath, secondarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.PreviewChromaStyle, model.SplitOrientation)
+		drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel), secondaryFileListFocus, chromeBlocked, styles, model.ShowFileIcons, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, model.showPanelDiskUsage(SecondaryPanel), SecondaryPanel, model.JobPathMarks, syncDriver, quickViewDriver, model.MetaResults[SecondaryPanel], model.ShrunkenShowsNameOnly, secondarySelectionsBottomHint, model.HideInactivePanel, model.ActivePanel, secondaryOtherPanelPath, secondarySelectionSizeOnFileBottom, model.PanelScrollbar, model.PanelScrollbarInactive, model.CarouselLayout, model.CarouselFilePreviewDraw, model.SplitOrientation)
 		painted = true
 		if rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip

@@ -10,8 +10,10 @@ import (
 )
 
 // drawFilePreviewPanel paints a file preview panel (quick view, fullscreen, or carousel child).
-func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome, embedded bool, panelPath, userHomeDir, chromaStyleName string) {
-	// Don't apply chroma frame colors when showing a message (e.g. "not a text file").
+func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome, embedded bool, panelPath, userHomeDir string) {
+	// Use the style stored with the content so border and body always match.
+	// ErrorMsg states have no syntax-highlighted body, so suppress chroma border tint.
+	chromaStyleName := st.ChromaStyle
 	if strings.TrimSpace(st.ErrorMsg) != "" {
 		chromaStyleName = ""
 	}

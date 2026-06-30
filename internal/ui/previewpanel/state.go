@@ -43,6 +43,9 @@ type State struct {
 	ExitCode int
 	// ErrorMsg is set for launch/read failures or non-zero external exit.
 	ErrorMsg string
+	// ChromaStyle is the Chroma style name used to generate HighlightedCells (internal mode only).
+	// Empty when content was produced by an external renderer. Used to tint the panel border.
+	ChromaStyle string
 	// BodyHeld keeps the previous body visible while a new file loads.
 	BodyHeld bool
 	// IsDiff is true when the preview is showing a git diff instead of file content.

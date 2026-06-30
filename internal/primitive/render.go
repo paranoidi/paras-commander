@@ -22,24 +22,28 @@ type Span struct {
 	Style tcell.Style
 }
 
-// Box draws a single-line box border inside rect.
+// Box draws a single-line box border inside rect. Each cell is written once.
 func Box(screen tcell.Screen, rect Rect, style tcell.Style) {
 	if rect.Width <= 1 || rect.Height <= 1 {
 		Fill(screen, rect, ' ', style)
 		return
 	}
-
-	for x := rect.X; x < rect.X+rect.Width; x++ {
+	// Top row
+	screen.SetContent(rect.X, rect.Y, '┌', nil, style)
+	for x := rect.X + 1; x < rect.X+rect.Width-1; x++ {
 		screen.SetContent(x, rect.Y, '─', nil, style)
-		screen.SetContent(x, rect.Y+rect.Height-1, '─', nil, style)
 	}
-	for y := rect.Y; y < rect.Y+rect.Height; y++ {
+	screen.SetContent(rect.X+rect.Width-1, rect.Y, '┐', nil, style)
+	// Side columns
+	for y := rect.Y + 1; y < rect.Y+rect.Height-1; y++ {
 		screen.SetContent(rect.X, y, '│', nil, style)
 		screen.SetContent(rect.X+rect.Width-1, y, '│', nil, style)
 	}
-	screen.SetContent(rect.X, rect.Y, '┌', nil, style)
-	screen.SetContent(rect.X+rect.Width-1, rect.Y, '┐', nil, style)
+	// Bottom row
 	screen.SetContent(rect.X, rect.Y+rect.Height-1, '└', nil, style)
+	for x := rect.X + 1; x < rect.X+rect.Width-1; x++ {
+		screen.SetContent(x, rect.Y+rect.Height-1, '─', nil, style)
+	}
 	screen.SetContent(rect.X+rect.Width-1, rect.Y+rect.Height-1, '┘', nil, style)
 }
 

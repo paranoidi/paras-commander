@@ -38,7 +38,7 @@ func TestDrawPanelPaintsThumbScrollbarOnBorder(t *testing.T) {
 	wantThumb := styles.SymbolScrollbarThumb()
 	drawPanel(screen, rect, state, true, false, styles, false, "", nil, false, nil, false,
 		PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false,
-		uiscrollbar.StyleThumb, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "", SplitHorizontal)
+		uiscrollbar.StyleThumb, true, panelcarousel.DefaultLayout(), FilePreviewState{}, SplitHorizontal)
 
 	borderX := rect.X + rect.Width - 1
 	foundThumb := false
@@ -81,7 +81,7 @@ func TestDrawPanelCarouselTwoColumnScrollbarOnBorder(t *testing.T) {
 	wantThumb := styles.SymbolScrollbarThumb()
 	drawPanel(screen, rect, state, true, false, styles, false, "", nil, false, nil, false,
 		PrimaryPanel, nil, -1, -1, nil, false, false, false, PrimaryPanel, "", false,
-		uiscrollbar.StyleThumb, true, panelcarousel.DefaultLayout(), FilePreviewState{}, "", SplitHorizontal)
+		uiscrollbar.StyleThumb, true, panelcarousel.DefaultLayout(), FilePreviewState{}, SplitHorizontal)
 
 	borderX := rect.X + rect.Width - 1
 	foundThumb := false
