@@ -17,6 +17,19 @@ const (
 	panelSelectionsChromePadded = " " + panelSelectionsChromeName + " "
 )
 
+// SelectionsStripOpts carries display configuration for drawSelectionsStrip.
+type SelectionsStripOpts struct {
+	Styles                          theme.Theme
+	UserHomeDir                     string
+	Painter                         DiskUsagePainter
+	DiskUsageDescendIntoMountPoints bool
+	DiskUsageGoduIgnore             func(string) bool
+	ShowSelectionSizeOnBottom       bool
+	ScrollbarStyle                  uiscrollbar.Style
+	ScrollbarShowInactive           bool
+	PanelFileListActive             bool
+}
+
 // drawSelectionsStrip renders the per-panel list of selected paths outside the current directory.
 // The title is always "Selections"; stripFocused only affects title active vs inactive color.
 func drawSelectionsStrip(
@@ -24,16 +37,17 @@ func drawSelectionsStrip(
 	rect Rect,
 	state panel.State,
 	stripFocused, chromeBlocked bool,
-	styles theme.Theme,
-	userHomeDir string,
-	painter DiskUsagePainter,
-	diskUsageDescendIntoMountPoints bool,
-	diskUsageGoduIgnore func(string) bool,
-	showSelectionSizeOnBottom bool,
-	scrollbarStyle uiscrollbar.Style,
-	scrollbarShowInactive bool,
-	panelFileListActive bool,
+	opts SelectionsStripOpts,
 ) {
+	styles := opts.Styles
+	userHomeDir := opts.UserHomeDir
+	painter := opts.Painter
+	diskUsageDescendIntoMountPoints := opts.DiskUsageDescendIntoMountPoints
+	diskUsageGoduIgnore := opts.DiskUsageGoduIgnore
+	showSelectionSizeOnBottom := opts.ShowSelectionSizeOnBottom
+	scrollbarStyle := opts.ScrollbarStyle
+	scrollbarShowInactive := opts.ScrollbarShowInactive
+	panelFileListActive := opts.PanelFileListActive
 	if rect.Height <= 0 || rect.Width < 8 {
 		return
 	}

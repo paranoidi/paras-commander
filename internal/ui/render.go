@@ -478,7 +478,12 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		}
 		if layout.Primary.Width > 0 && leftStrip.Height > 0 {
 			leftStripFocused := model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
-			drawSelectionsStrip(screen, leftStrip, model.Primary, leftStripFocused, primaryChromeBlocked, styles, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, leftSelectionSizeOnStripBottom, model.PanelScrollbar, model.PanelScrollbarInactive, primaryFileListFocus)
+			drawSelectionsStrip(screen, leftStrip, model.Primary, leftStripFocused, primaryChromeBlocked, SelectionsStripOpts{
+				Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
+				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
+				ShowSelectionSizeOnBottom: leftSelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,
+				ScrollbarShowInactive: model.PanelScrollbarInactive, PanelFileListActive: primaryFileListFocus,
+			})
 		}
 		if layout.Secondary.Width > 0 && showRightPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
@@ -505,7 +510,12 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		}
 		if layout.Secondary.Width > 0 && rightStrip.Height > 0 {
 			rightStripFocused := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
-			drawSelectionsStrip(screen, rightStrip, model.Secondary, rightStripFocused, chromeBlocked, styles, model.UserHomeDir, model.DiskUsage, model.DiskUsageDescendIntoMountPoints, model.DiskUsageGoduIgnore, rightSelectionSizeOnStripBottom, model.PanelScrollbar, model.PanelScrollbarInactive, secondaryFileListFocus)
+			drawSelectionsStrip(screen, rightStrip, model.Secondary, rightStripFocused, chromeBlocked, SelectionsStripOpts{
+				Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
+				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
+				ShowSelectionSizeOnBottom: rightSelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,
+				ScrollbarShowInactive: model.PanelScrollbarInactive, PanelFileListActive: secondaryFileListFocus,
+			})
 		}
 	}
 	if model.Menu.Open && model.MenuBarInteractive() {

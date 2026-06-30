@@ -43,7 +43,10 @@ func TestSelectionsStripMarkOnFileRow(t *testing.T) {
 		SelectedPaths:        map[string]bool{filePath: true},
 	}
 
-	drawSelectionsStrip(screen, rect, state, true, false, styles, "", nil, false, nil, true, uiscrollbar.StyleNone, true, true)
+	drawSelectionsStrip(screen, rect, state, true, false, SelectionsStripOpts{
+		Styles: styles, ShowSelectionSizeOnBottom: true, ScrollbarStyle: uiscrollbar.StyleNone,
+		ScrollbarShowInactive: true, PanelFileListActive: true,
+	})
 
 	rowY := rect.Y + 1
 	markCol := -1
