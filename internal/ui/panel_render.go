@@ -150,15 +150,24 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			panelStyle.Styles.SymbolWorking(),
 		)
 	}
-	bottomCtx := panelBottomIndicatorContextForRect(
-		rect, ctx.PanelID, state, ctx.SelectionsBottomHint,
-		ctx.SyncDriverPanelID, ctx.QuickViewDriverPanelID,
-		ctx.HideInactivePanel, ctx.ActivePanel, ctx.OtherPanelPath, display.UserHomeDir,
-		ctx.FileListActive, ctx.ChromeBlocked,
-		borderStyle, panelStyle.Styles,
-		selectionSizeLabel,
-		ctx.SplitOrientation,
-	)
+	bottomCtx := PanelBottomIndicatorContext{
+		PanelID:                ctx.PanelID,
+		State:                  state,
+		SelectionsBottomHint:   ctx.SelectionsBottomHint,
+		SyncDriverPanelID:      ctx.SyncDriverPanelID,
+		QuickViewDriverPanelID: ctx.QuickViewDriverPanelID,
+		HideInactivePanel:      ctx.HideInactivePanel,
+		ActivePanel:            ctx.ActivePanel,
+		OtherPanelPath:         ctx.OtherPanelPath,
+		UserHomeDir:            display.UserHomeDir,
+		FileListActive:         ctx.FileListActive,
+		ChromeBlocked:          ctx.ChromeBlocked,
+		BorderStyle:            borderStyle,
+		Styles:                 panelStyle.Styles,
+		SelectionSizeLabel:     selectionSizeLabel,
+		SplitOrientation:       ctx.SplitOrientation,
+	}
+	finalizeBottomCtx(rect, &bottomCtx)
 	drawPanelBottomIndicators(screen, rect, bottomCtx)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
 	if inner.Width > 0 && inner.Height > 0 {

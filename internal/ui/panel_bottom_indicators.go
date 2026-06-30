@@ -241,41 +241,11 @@ func panelBottomEndEdgeReservedStart(rect Rect, ctx PanelBottomIndicatorContext)
 	return endReserved
 }
 
-// panelBottomIndicatorContextForRect builds indicator context with path budget for the other-panel label.
-func panelBottomIndicatorContextForRect(
-	rect Rect,
-	panelID int,
-	state panel.State,
-	selectionsBottomHint bool,
-	syncDriverPanelID, quickViewDriverPanelID int,
-	hideInactivePanel bool,
-	activePanel int,
-	otherPanelPath, userHomeDir string,
-	fileListActive, chromeBlocked bool,
-	borderStyle tcell.Style,
-	styles theme.Theme,
-	selectionSizeLabel string,
-	splitOrientation SplitOrientation,
-) PanelBottomIndicatorContext {
-	ctx := PanelBottomIndicatorContext{
-		PanelID:                panelID,
-		State:                  state,
-		SelectionsBottomHint:   selectionsBottomHint,
-		SyncDriverPanelID:      syncDriverPanelID,
-		QuickViewDriverPanelID: quickViewDriverPanelID,
-		HideInactivePanel:      hideInactivePanel,
-		ActivePanel:            activePanel,
-		OtherPanelPath:         otherPanelPath,
-		UserHomeDir:            userHomeDir,
-		FileListActive:         fileListActive,
-		ChromeBlocked:          chromeBlocked,
-		BorderStyle:            borderStyle,
-		Styles:                 styles,
-		SelectionSizeLabel:     selectionSizeLabel,
-		SplitOrientation:       splitOrientation,
-	}
-	if selectionSizeLabel != "" {
-		padded, startX, endX, ok := panelSelectionSizeCenterLayout(rect, selectionSizeLabel)
+// finalizeBottomCtx computes the derived fields of ctx that depend on rect:
+// SelectionSizeLabel centering and EndEdgePathMaxRunes path budget.
+func finalizeBottomCtx(rect Rect, ctx *PanelBottomIndicatorContext) {
+	if ctx.SelectionSizeLabel != "" {
+		padded, startX, endX, ok := panelSelectionSizeCenterLayout(rect, ctx.SelectionSizeLabel)
 		if ok {
 			ctx.SelectionSizeLabel = padded
 			ctx.SelectionSizeWidth = utf8.RuneCountInString(padded)
@@ -283,23 +253,22 @@ func panelBottomIndicatorContextForRect(
 			ctx.SelectionSizeCenterEnd = endX
 		}
 	}
-	avail := panelBottomEdgeAvailableWidth(rect, ctx)
+	avail := panelBottomEdgeAvailableWidth(rect, *ctx)
 	fixed := 0
 	for _, spec := range panelBottomIndicatorRegistry {
 		if spec.Edge != PanelBottomEdgeEnd || spec.ID == PanelBottomIndicatorOtherPanel {
 			continue
 		}
-		if !panelBottomIndicatorVisible(spec.ID, ctx) {
+		if !panelBottomIndicatorVisible(spec.ID, *ctx) {
 			continue
 		}
-		fixed += utf8.RuneCountInString(panelBottomIndicatorLabel(spec.ID, ctx))
+		fixed += utf8.RuneCountInString(panelBottomIndicatorLabel(spec.ID, *ctx))
 	}
-	if hideInactivePanel && panelID == activePanel && otherPanelPath != "" {
+	if ctx.HideInactivePanel && ctx.PanelID == ctx.ActivePanel && ctx.OtherPanelPath != "" {
 		ctx.EndEdgePathMaxRunes = max(0, avail-fixed-4)
 	} else {
 		ctx.EndEdgePathMaxRunes = max(0, avail-fixed)
 	}
-	return ctx
 }
 
 // collectPanelBottomIndicators returns visible segments sorted by edge then order.
