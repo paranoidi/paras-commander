@@ -421,12 +421,19 @@ func PaintScrollingInputContent(
 	return cursor, scroll
 }
 
+// ScrollingInputState holds the content state for DrawScrollingDialogInput.
+type ScrollingInputState struct {
+	Value            string
+	Cursor, Scroll   int
+	CompletionSuffix string
+}
+
 // DrawScrollingDialogInput paints a dialog input row with horizontal scrolling.
-func DrawScrollingDialogInput(screen tcell.Screen, x, y, width int, value string, cursor, scroll int, completionSuffix string, focused, invalid bool, styles theme.Theme) {
+func DrawScrollingDialogInput(screen tcell.Screen, x, y, width int, input ScrollingInputState, focused, invalid bool, styles theme.Theme) {
 	if width <= 0 {
 		return
 	}
-	PaintScrollingInputContent(screen, x, y, width, value, completionSuffix, cursor, scroll, focused, invalid, focused, styles)
+	PaintScrollingInputContent(screen, x, y, width, input.Value, input.CompletionSuffix, input.Cursor, input.Scroll, focused, invalid, focused, styles)
 }
 
 // DialogButtonSpec describes one rendered dialog button (label, Alt shortcut, focus).

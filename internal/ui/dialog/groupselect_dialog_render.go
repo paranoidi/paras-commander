@@ -69,7 +69,7 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, state.Text, state.TextCursor, state.TextScroll, "", state.Focus == GroupSelectFocusPattern, false, styles)
+	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, draw.ScrollingInputState{Value: state.Text, Cursor: state.TextCursor, Scroll: state.TextScroll}, state.Focus == GroupSelectFocusPattern, false, styles)
 	y++
 	if y >= innerBottom {
 		return

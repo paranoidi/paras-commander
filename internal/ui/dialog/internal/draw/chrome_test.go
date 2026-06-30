@@ -206,7 +206,7 @@ func TestDrawScrollingDialogInputGhostSuffixUsesPlaceholderStyle(t *testing.T) {
 	value := "/a"
 	suffix := "bc"
 	cursor := len([]rune(value))
-	DrawScrollingDialogInput(screen, 2, 2, 10, value, cursor, 0, suffix, true, false, th)
+	DrawScrollingDialogInput(screen, 2, 2, 10, ScrollingInputState{Value: value, Cursor: cursor, CompletionSuffix: suffix}, true, false, th)
 
 	// Last ghost rune (caret cell uses reversed committed style, not placeholder).
 	ghostCol := 2 + cursor + len([]rune(suffix)) - 1
@@ -230,7 +230,7 @@ func TestOverflowMarkersNeverUseErrorStyle(t *testing.T) {
 
 	th := theme.Default()
 	value := "0123456789ABCDEFGHIJ"
-	DrawScrollingDialogInput(screen, 2, 2, 10, value, 5, 0, "", true, true, th)
+	DrawScrollingDialogInput(screen, 2, 2, 10, ScrollingInputState{Value: value, Cursor: 5}, true, true, th)
 
 	_, st, _ := screen.Get(2+9, 2)
 	errFG, _, _ := th.DialogInputActiveError.Decompose()
@@ -252,7 +252,7 @@ func TestOverflowMarkerRightVisibleWithCursorInLastTextCell(t *testing.T) {
 	width := 10
 	scroll := 8
 	cursor := 15
-	DrawScrollingDialogInput(screen, 2, 2, width, value, cursor, scroll, "", true, false, theme.Default())
+	DrawScrollingDialogInput(screen, 2, 2, width, ScrollingInputState{Value: value, Cursor: cursor, Scroll: scroll}, true, false, theme.Default())
 
 	got, _, _ := screen.Get(2+width-1, 2)
 	if got != "▶" {
@@ -302,7 +302,7 @@ func TestDrawScrollingDialogInputShowsRightMarkerWhenTailStillHidden(t *testing.
 	if lay.RightPad == 0 {
 		t.Fatalf("expected hidden tail at scroll %d", scroll)
 	}
-	DrawScrollingDialogInput(screen, 2, 2, width, value, cursor, scroll, "", true, false, theme.Default())
+	DrawScrollingDialogInput(screen, 2, 2, width, ScrollingInputState{Value: value, Cursor: cursor, Scroll: scroll}, true, false, theme.Default())
 
 	got, _, _ := screen.Get(2+width-1, 2)
 	if got != "▶" {
@@ -323,7 +323,7 @@ func TestDrawScrollingDialogInputTailVisibleWhenCaretAfterLastRune(t *testing.T)
 	runes := []rune(value)
 	cursor := len(runes)
 	_, scroll := EnsureScrollInputVisible(cursor, cursor, 0, width)
-	DrawScrollingDialogInput(screen, 2, 2, width, value, cursor, scroll, "", true, false, theme.Default())
+	DrawScrollingDialogInput(screen, 2, 2, width, ScrollingInputState{Value: value, Cursor: cursor, Scroll: scroll}, true, false, theme.Default())
 
 	gotRow := tcelltest.TextAt(screen, 2, 2, width)
 	if !strings.Contains(gotRow, string(runes[len(runes)-1])) {
@@ -342,7 +342,7 @@ func TestDrawScrollingDialogInputShowsTailWhenCursorAtEnd(t *testing.T) {
 	value := "0123456789ABCDEFGHIJ" // 20 chars
 	width := 10
 	cursor := utf8.RuneCountInString(value)
-	DrawScrollingDialogInput(screen, 2, 2, width, value, cursor, 0, "", true, false, theme.Default())
+	DrawScrollingDialogInput(screen, 2, 2, width, ScrollingInputState{Value: value, Cursor: cursor}, true, false, theme.Default())
 
 	got := tcelltest.TextAt(screen, 2, 2, width)
 	want := "◀CDEFGHIJ " // scroll=11 hides 0..A; overflow marker on first cell, cursor blank tail
