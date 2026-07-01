@@ -29,6 +29,13 @@ type RunResult struct {
 // Run executes argv as a subprocess with working directory dir. argv must be non-empty.
 // Each stream is capped at maxStreamBytes; when exceeded, tail bytes are kept and StdoutTrim/StderrTrim are set.
 func Run(ctx context.Context, argv []string, dir string, maxStreamBytes int) RunResult {
+	return RunTracked(ctx, argv, dir, maxStreamBytes, nil)
+}
+
+// RunTracked behaves like Run but, once the subprocess starts, calls onStart with its
+// *os.Process so a caller can send it signals (e.g. terminate/kill) independently of ctx
+// cancellation. onStart may be nil.
+func RunTracked(ctx context.Context, argv []string, dir string, maxStreamBytes int, onStart func(*os.Process)) RunResult {
 	if len(argv) == 0 {
 		return RunResult{LaunchErr: errors.New("empty argv"), ExitCode: -1}
 	}
@@ -53,7 +60,13 @@ func Run(ctx context.Context, argv []string, dir string, maxStreamBytes int) Run
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
 
-	err := cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return RunResult{LaunchErr: err, ExitCode: -1}
+	}
+	if onStart != nil {
+		onStart(cmd.Process)
+	}
+	err := cmd.Wait()
 	out := RunResult{
 		Stdout:     stdoutBuf.Bytes(),
 		Stderr:     stderrBuf.Bytes(),

@@ -2,6 +2,7 @@ package app
 
 import (
 	"strings"
+	"syscall"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -187,8 +188,45 @@ func (a *App) tryDispatchCommands(actionID string) bool {
 			a.closeCommandsView()
 		}
 		return true
+	case keymap.ActionCommandsTerminate:
+		if a.model.ViewMode == ui.ViewCommands {
+			a.terminateSelectedCommand()
+		}
+		return true
+	case keymap.ActionCommandsKill:
+		if a.model.ViewMode == ui.ViewCommands {
+			a.killSelectedCommand()
+		}
+		return true
 	default:
 		return false
+	}
+}
+
+func (a *App) selectedRunningCommandRow() (int, bool) {
+	idx := a.model.CommandsView.Selected
+	a.commandsMu.RLock()
+	defer a.commandsMu.RUnlock()
+	if idx < 0 || idx >= len(a.model.CommandsList) {
+		return 0, false
+	}
+	if a.model.CommandsList[idx].Phase != ui.CommandRunRunning {
+		return 0, false
+	}
+	return idx, true
+}
+
+func (a *App) terminateSelectedCommand() {
+	idx, ok := a.selectedRunningCommandRow()
+	if !ok || !a.signalCommandRow(idx, syscall.SIGTERM) {
+		a.setTransientMessage("Could not terminate command", ui.MessageUrgencyWarn)
+	}
+}
+
+func (a *App) killSelectedCommand() {
+	idx, ok := a.selectedRunningCommandRow()
+	if !ok || !a.signalCommandRow(idx, syscall.SIGKILL) {
+		a.setTransientMessage("Could not kill command", ui.MessageUrgencyWarn)
 	}
 }
 

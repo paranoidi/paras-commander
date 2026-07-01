@@ -220,6 +220,11 @@ type App struct {
 	commandsCtx             context.Context
 	commandsCancel          context.CancelFunc
 
+	// commandProcsMu guards commandProcs, which maps a Commands-view row index to the
+	// handle needed to terminate/kill its running subprocess (commands.terminate/commands.kill).
+	commandProcsMu sync.Mutex
+	commandProcs   map[int]*commandProcHandle
+
 	workPools *workpool.Registry
 
 	volumeRefreshInFlight [2]atomic.Bool

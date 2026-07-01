@@ -11,6 +11,8 @@ func DefinitionsCommands() []Definition {
 			Label:      "Actions",
 			Shortcut:   'a',
 			Items: []Item{
+				{Action: keymap.ActionCommandsTerminate, Label: "Terminate command", Shortcut: 't'},
+				{Action: keymap.ActionCommandsKill, Label: "Kill command", Shortcut: 'k'},
 				{Action: keymap.ActionCommandsClose, Label: "Back to file view", Shortcut: 'b'},
 			},
 		},

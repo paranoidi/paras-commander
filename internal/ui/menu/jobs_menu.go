@@ -10,8 +10,6 @@ func DefinitionsJobs() []Definition {
 			PanelScope: PanelScopeNone,
 			Label:      "Jobs",
 			Items: []Item{
-				{Action: keymap.ActionJobsTerminate, Label: "Terminate job", Shortcut: 't'},
-				{Action: keymap.ActionJobsKill, Label: "Kill job", Shortcut: 'k'},
 				{Action: keymap.ActionJobsCancel, Label: "Cancel job", Shortcut: 'c'},
 				{Action: keymap.ActionJobsPause, Label: "Pause queued job", Shortcut: 'p'},
 				{Action: keymap.ActionJobsResume, Label: "Resume paused job", Shortcut: 'r'},

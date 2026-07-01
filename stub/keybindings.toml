@@ -88,9 +88,7 @@
   "remote.sftp-link" = ["C-r"]
 
 [jobs]
-  "jobs.cancel" = ["C-c"]
-  "jobs.terminate" = ["F8"]
-  "jobs.kill" = ["S-F8"]
+  "jobs.cancel" = ["C-c", "F8"]
   "jobs.close" = ["left"]
   "jobs.pause" = ["C-p"]
   "jobs.queue-down" = ["C-down"]
@@ -99,6 +97,8 @@
 
 [commands]
   "commands.close" = ["left"]
+  "commands.terminate" = ["F8"]
+  "commands.kill" = ["S-F8"]
 
 [compare]
   "compare.close" = ["esc"]

@@ -158,19 +158,19 @@ type Model struct {
 	FullscreenFilePreviewDraw FilePreviewState
 	// FilePreviewThemePicker is the inline theme list on the right side of F3 file view.
 	FilePreviewThemePicker dialog.FilePreviewThemePickerState
-	HelpView            dialog.HelpViewState
-	FileDialog          dialog.FileDialogState
-	TransferDialog      dialog.TransferDialogState
-	FlattenDialog       dialog.FlattenDialogState
-	ConflictDialog      dialog.ConflictDialogState
-	HostKeyDialog       dialog.HostKeyDialogState
-	QuitConfirm         dialog.QuitConfirmState
-	StashRestoreDialog  dialog.StashRestoreDialogState
-	MessageDialog       dialog.MessageDialogState
-	CommandOutputDialog dialog.CommandOutputDialogState
-	Message             string
-	MessageUrgency      MessageUrgency
-	FooterKeys          []menu.FunctionKey
+	HelpView               dialog.HelpViewState
+	FileDialog             dialog.FileDialogState
+	TransferDialog         dialog.TransferDialogState
+	FlattenDialog          dialog.FlattenDialogState
+	ConflictDialog         dialog.ConflictDialogState
+	HostKeyDialog          dialog.HostKeyDialogState
+	QuitConfirm            dialog.QuitConfirmState
+	StashRestoreDialog     dialog.StashRestoreDialogState
+	MessageDialog          dialog.MessageDialogState
+	CommandOutputDialog    dialog.CommandOutputDialogState
+	Message                string
+	MessageUrgency         MessageUrgency
+	FooterKeys             []menu.FunctionKey
 	// MenuBarPermission is Unix mode text for the active panel cursor row (e.g. "drwxr-xr-x"); empty when none.
 	MenuBarPermission string
 	// MenuBarJobsAttention is the core jobs/conflict label (e.g. "! 1"); the menu bar pads it with

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
@@ -199,7 +200,10 @@ func (a *App) runForEachUnifiedBatch(ctx context.Context, start int, spec runFor
 			}
 		}
 
-		res := cmdrun.Run(ctx, argv, spec.WorkDir, cmdrun.MaxStreamBytes)
+		res := cmdrun.RunTracked(ctx, argv, spec.WorkDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+			a.setCommandProcess(idx, p)
+		})
+		a.unregisterCommandProc(idx)
 		if release != nil {
 			release()
 		}

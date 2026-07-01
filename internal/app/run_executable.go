@@ -149,7 +149,10 @@ func (a *App) runFileExecuteCommand(ctx context.Context, idx int, argv []string,
 	})
 	a.postCommandWake()
 
-	res := cmdrun.Run(ctx, argv, workDir, cmdrun.MaxStreamBytes)
+	res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+		a.setCommandProcess(idx, p)
+	})
+	a.unregisterCommandProc(idx)
 	a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
 		e.Phase = ui.CommandRunDone
 		e.Stdout = string(res.Stdout)

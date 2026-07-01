@@ -265,8 +265,8 @@ func TestLookupF8BrowserVsJobsOverlay(t *testing.T) {
 	if got := lookupActionForView(f8, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, bundle.FilePreview, bundle.Compare, ui.ViewBrowser); got != keymap.ActionFileDelete {
 		t.Fatalf("browser F8 = %q, want file.delete", got)
 	}
-	if got := lookupActionForView(f8, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, bundle.FilePreview, bundle.Compare, ui.ViewJobs); got != keymap.ActionJobsTerminate {
-		t.Fatalf("jobs view F8 = %q, want jobs.terminate", got)
+	if got := lookupActionForView(f8, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, bundle.FilePreview, bundle.Compare, ui.ViewJobs); got != keymap.ActionJobsCancel {
+		t.Fatalf("jobs view F8 = %q, want jobs.cancel", got)
 	}
 }
 

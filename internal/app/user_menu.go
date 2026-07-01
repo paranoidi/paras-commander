@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -411,7 +412,10 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 	})
 	a.postCommandWake()
 
-	res := cmdrun.Run(ctx, argv, workDir, cmdrun.MaxStreamBytes)
+	res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+		a.setCommandProcess(idx, p)
+	})
+	a.unregisterCommandProc(idx)
 	a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
 		e.Phase = ui.CommandRunDone
 		e.Stdout = string(res.Stdout)

@@ -12,9 +12,7 @@ import "strings"
 func DefaultJobsOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionJobsClose:     {"left"},
-		ActionJobsCancel:    {"C-c"},
-		ActionJobsTerminate: {"F8"},
-		ActionJobsKill:      {"S-F8"},
+		ActionJobsCancel:    {"C-c", "F8"},
 		ActionJobsPause:     {"C-p"},
 		ActionJobsResume:    {"C-r"},
 		ActionJobsQueueUp:   {"C-up"},

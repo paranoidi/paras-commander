@@ -223,7 +223,6 @@ func drawMessageContent(screen tcell.Screen, rect Rect, embedded bool, contentTo
 	primitive.Text(screen, textX, contentTop, textW, msg, msgStyle)
 }
 
-
 func paintQuickViewTitleRow(screen tcell.Screen, titleX, innerRight, contentCols, y int,
 	panelPath, userHomeDir string, pathStyle tcell.Style, endLabel string, endStyle, borderStyle tcell.Style) {
 	endRunes := utf8.RuneCountInString(endLabel)

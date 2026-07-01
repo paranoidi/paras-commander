@@ -122,8 +122,6 @@ const (
 	ActionJobsDetails       = "jobs.details"
 	ActionJobsClearFinished = "jobs.clear-finished"
 	ActionJobsCancel        = "jobs.cancel"
-	ActionJobsTerminate     = "jobs.terminate"
-	ActionJobsKill          = "jobs.kill"
 	ActionJobsPause         = "jobs.pause"
 	ActionJobsResume        = "jobs.resume"
 	ActionJobsQueueUp       = "jobs.queue-up"
@@ -131,9 +129,11 @@ const (
 	ActionJobsAnswerBlocker = "jobs.answer-blocker"
 
 	// Commands screen + external command execution
-	ActionCommandsOpen   = "commands.open"
-	ActionCommandsClose  = "commands.close"
-	ActionFileRunForEach = "file.run-for-each"
+	ActionCommandsOpen      = "commands.open"
+	ActionCommandsClose     = "commands.close"
+	ActionCommandsTerminate = "commands.terminate"
+	ActionCommandsKill      = "commands.kill"
+	ActionFileRunForEach    = "file.run-for-each"
 
 	// Messages view (status / toast log)
 	ActionMessagesOpen  = "messages.open"
@@ -291,17 +291,17 @@ var KnownActions = map[string]struct{}{
 	ActionJobsDetails:       {},
 	ActionJobsClearFinished: {},
 	ActionJobsCancel:        {},
-	ActionJobsTerminate:     {},
-	ActionJobsKill:          {},
 	ActionJobsPause:         {},
 	ActionJobsResume:        {},
 	ActionJobsQueueUp:       {},
 	ActionJobsQueueDown:     {},
 	ActionJobsAnswerBlocker: {},
 
-	ActionCommandsOpen:   {},
-	ActionCommandsClose:  {},
-	ActionFileRunForEach: {},
+	ActionCommandsOpen:      {},
+	ActionCommandsClose:     {},
+	ActionCommandsTerminate: {},
+	ActionCommandsKill:      {},
+	ActionFileRunForEach:    {},
 
 	ActionMessagesOpen:  {},
 	ActionMessagesClose: {},
