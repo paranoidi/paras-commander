@@ -13,6 +13,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
+	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -95,6 +96,7 @@ type App struct {
 	keysHistoryDialog  *keymap.Map // both-panels toggle while history dialog is open
 	keysFlattenDialog  *keymap.Map // destination panel shortcuts while flatten dialog is open
 	keysCompare        *keymap.Map // chords active only in Compare view (overlay)
+	keysDedup          *keymap.Map // chords active only in find-duplicates view (overlay)
 	devMode            bool
 	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
@@ -109,6 +111,7 @@ type App struct {
 	jobsCtrl        *jobsctrl.Handler
 	findCtrl        *findctrl.Handler
 	compareCtrl     *comparectrl.Handler
+	dedupCtrl       *dedupctrl.Handler
 	jobStopCh       chan struct{}
 	jobStopOnce     bool
 	diskUsage       *diskusage.Engine
@@ -427,6 +430,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		kmCompare = m
 	}
+	kmDedup := bundle.Dedup
+	if kmDedup == nil {
+		m, err := keymap.Build(keymap.DefaultDedupOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build dedup overlay map: %w", err)
+		}
+		kmDedup = m
+	}
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -544,6 +555,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysHistoryDialog:  kmHistoryDialog,
 		keysFlattenDialog:  kmFlattenDialog,
 		keysCompare:        kmCompare,
+		keysDedup:          kmDedup,
 		devMode:            opts.DevMode,
 		commandsCtx:        cmdCtx,
 		commandsCancel:     cmdCancel,
@@ -632,6 +644,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		KeysCompare: kmCompare,
 		Gitignore:   giCache,
 		DiskIgnore:  duIgnorer,
+	})
+	app.dedupCtrl = dedupctrl.New(dedupctrl.Deps{
+		Host:       dedupHost{appShellHost: appShellHost{app: app}},
+		Screen:     screen,
+		Model:      &app.model,
+		Config:     cfg,
+		Gitignore:  giCache,
+		DiskIgnore: duIgnorer,
 	})
 	if err := app.configureSFTP(); err != nil {
 		app.stopWorker()
@@ -849,6 +869,11 @@ func (a *App) Run() error {
 				}
 			case comparectrl.WakePayload:
 				if a.pollCompareUpdates(d) {
+					a.render()
+					didRender = true
+				}
+			case dedupctrl.WakePayload:
+				if a.pollDedupUpdates(d) {
 					a.render()
 					didRender = true
 				}

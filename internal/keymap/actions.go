@@ -61,6 +61,7 @@ const (
 	ActionPanelMeta                   = "panel.meta"
 	ActionPanelMetaEdit               = "panel.meta-edit"
 	ActionPanelComparePanels          = "panel.compare-panels"
+	ActionPanelFindDuplicates         = "panel.find-duplicates"
 
 	// Compare view
 	ActionCompareClose       = "compare.close"
@@ -68,6 +69,10 @@ const (
 	ActionCompareResetFilter = "compare.reset-filter"
 	ActionCompareRefresh     = "compare.refresh"
 	ActionCompareMerge       = "compare.merge"
+
+	// Dedup (find-duplicates) view
+	ActionDedupClose   = "dedup.close"
+	ActionDedupRefresh = "dedup.refresh"
 
 	// Dialog actions
 	ActionDialogConfirm = "ui.confirm"
@@ -239,12 +244,16 @@ var KnownActions = map[string]struct{}{
 	ActionPanelMeta:                   {},
 	ActionPanelMetaEdit:               {},
 	ActionPanelComparePanels:          {},
+	ActionPanelFindDuplicates:         {},
 
 	ActionCompareClose:       {},
 	ActionCompareCycleFilter: {},
 	ActionCompareResetFilter: {},
 	ActionCompareRefresh:     {},
 	ActionCompareMerge:       {},
+
+	ActionDedupClose:   {},
+	ActionDedupRefresh: {},
 
 	ActionDialogConfirm: {},
 	ActionDialogCancel:  {},

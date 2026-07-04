@@ -90,6 +90,10 @@ icon.folder.excluded = { fg = "black" }
 usage.normal = { fg = "white", bg = "bright_black" }
 usage.selected = { fg = "yellow", bg = "bright_black" }
 
+[panel.dedup]
+row.all_marked = { fg = "red", bold = true }
+row.cursor.all_marked = { fg = "red", bg = "cyan", bold = true }
+
 [panel.active]
 disk_usage_overview = { fg = "blue"}
 frame = { fg = "blue" }

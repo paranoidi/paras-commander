@@ -33,6 +33,7 @@ const (
 	InputModeCommandsView
 	InputModeMessagesView
 	InputModeCompareView
+	InputModeDedupView
 	InputModeFilePreviewView
 	InputModePathPicker
 	InputModeHistoryDialog
@@ -85,6 +86,10 @@ func (a *App) inputMode() InputMode {
 		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
 		return InputModeCompareView
+	case a.model.ViewMode == ui.ViewDedup &&
+		!a.model.AuxiliaryViewDialogKeysBlocked() &&
+		!a.inQuickFilterUI():
+		return InputModeDedupView
 	case a.model.ViewMode == ui.ViewFilePreview &&
 		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
@@ -214,6 +219,19 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
 		rest := compareViewFooterKeys(a.keysCompare, a.model.CompareView.Filter)
 		rest = append(rest, menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
+		return footerWithEscClose(rest)
+	}
+	if a.model.DedupAwaitHashConfirm() {
+		return footerWithEscClose([]menu.FunctionKey{
+			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+		})
+	}
+	if a.model.ViewMode == ui.ViewDedup && !a.inQuickFilterUI() {
+		rest := dedupViewFooterKeys(a.keys, a.keysDedup)
+		rest = append(rest,
+			menu.FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
+			menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+		)
 		return footerWithEscClose(rest)
 	}
 	if a.model.ViewMode == ui.ViewCommands && !a.inQuickFilterUI() {
@@ -420,6 +438,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return quit, true
 	case InputModeCompareView:
 		quit := a.handleCompareViewKey(event)
+		a.render()
+		return quit, true
+	case InputModeDedupView:
+		quit := a.handleDedupViewKey(event)
 		a.render()
 		return quit, true
 	case InputModeMessagesView:
@@ -652,11 +674,16 @@ func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchCompare(actionID) {
 		return false
 	}
+	if a.tryDispatchDedup(actionID) {
+		return false
+	}
 	viewportRows := a.activeViewportRows()
 	activePanel := a.activePanel()
 	switch actionID {
 	case keymap.ActionAppOpenMenu:
 		a.openMenu()
+	case keymap.ActionPanelFindDuplicates:
+		a.openFindDuplicates()
 	case keymap.ActionAppDropToShell:
 		a.dropToShell()
 	case keymap.ActionPanelRefresh:

@@ -16,4 +16,5 @@ type Bundle struct {
 	HistoryDialog  *Map // history dialog (toggle both panels)
 	FlattenDialog  *Map // flatten dialog (destination active/inactive panel)
 	Compare        *Map // Compare-view overlay; may be nil
+	Dedup          *Map // find-duplicates view overlay; may be nil
 }

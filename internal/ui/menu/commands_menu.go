@@ -30,7 +30,7 @@ func DefinitionsCommands() []Definition {
 // CommandsDefinitions returns DefinitionsCommands() with KeyLabels resolved from global km plus optional Commands overlay.
 func CommandsDefinitions(global, commands *keymap.Map) []Definition {
 	defs := DefinitionsCommands()
-	ApplyCommandsMenuKeyLabels(defs, global, commands)
+	ApplyOverlayMenuKeyLabels(defs, global, commands)
 	return defs
 }
 

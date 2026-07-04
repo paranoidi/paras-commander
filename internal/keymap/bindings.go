@@ -245,42 +245,13 @@ func (m *Map) MenuBindingLabel(actionID string) string {
 	return menuBindingLabelPick(actionID, spec, hasSpec, keys)
 }
 
-// MenuBindingLabelPreferCommands resolves a menu hint using the Commands overlay when present,
-// otherwise falls back to the global map.
-func MenuBindingLabelPreferCommands(global, commands *Map, actionID string) string {
+// MenuBindingLabelPreferOverlay resolves a menu hint using the overlay's chords when it
+// binds the action, otherwise falls back to the global map. A nil overlay means "global
+// only" (avoids duplicating global defaults via the overlay map).
+func MenuBindingLabelPreferOverlay(global, overlay *Map, actionID string) string {
 	spec, hasSpec := SpecForAction(actionID)
-	if commands != nil {
-		if ks := commands.BindingsForAction(actionID); len(ks) > 0 {
-			return menuBindingLabelPick(actionID, spec, hasSpec, ks)
-		}
-	}
-	if global != nil {
-		return global.MenuBindingLabel(actionID)
-	}
-	return ""
-}
-
-// MenuBindingLabelPreferMessages resolves a menu hint using the Messages overlay when present,
-// otherwise falls back to the global map.
-func MenuBindingLabelPreferMessages(global, messages *Map, actionID string) string {
-	spec, hasSpec := SpecForAction(actionID)
-	if messages != nil {
-		if ks := messages.BindingsForAction(actionID); len(ks) > 0 {
-			return menuBindingLabelPick(actionID, spec, hasSpec, ks)
-		}
-	}
-	if global != nil {
-		return global.MenuBindingLabel(actionID)
-	}
-	return ""
-}
-
-// MenuBindingLabelPreferJobs resolves a menu hint using overlay bindings only when present,
-// otherwise falls back to the global map (avoids duplicating global defaults via the overlay map).
-func MenuBindingLabelPreferJobs(global, jobs *Map, actionID string) string {
-	spec, hasSpec := SpecForAction(actionID)
-	if jobs != nil {
-		if ks := jobs.BindingsForAction(actionID); len(ks) > 0 {
+	if overlay != nil {
+		if ks := overlay.BindingsForAction(actionID); len(ks) > 0 {
 			return menuBindingLabelPick(actionID, spec, hasSpec, ks)
 		}
 	}

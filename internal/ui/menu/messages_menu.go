@@ -31,7 +31,7 @@ func DefinitionsMessages() []Definition {
 // MessagesDefinitions returns DefinitionsMessages() with KeyLabels resolved from global km plus optional Messages overlay.
 func MessagesDefinitions(global, messages *keymap.Map) []Definition {
 	defs := DefinitionsMessages()
-	ApplyMessagesMenuKeyLabels(defs, global, messages)
+	ApplyOverlayMenuKeyLabels(defs, global, messages)
 	return defs
 }
 

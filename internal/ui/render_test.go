@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -649,6 +650,33 @@ func TestRenderBlankMenuBarRowWhenModalDialogOpen(t *testing.T) {
 	titlePrefix := tcelltest.TextAt(screen, 0, 1, 9)
 	if titlePrefix != "┌─ /tmp ─" {
 		t.Fatalf("panel title prefix = %q, want border on row below menu", titlePrefix)
+	}
+}
+
+func TestRenderBlankMenuBarRowWhenDedupAwaitHashConfirm(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 12)
+	const width = 80
+
+	styles := theme.Default()
+	model := Model{
+		Primary:         panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:       panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:     PrimaryPanel,
+		ViewMode:        ViewDedup,
+		DedupSnapshot:   comparepkg.DedupSnapshot{Phase: comparepkg.DedupAwaitConfirm, HashTotal: 168857},
+		MenuDefinitions: menu.DedupDefinitions(nil, nil),
+	}
+
+	Render(screen, model, styles)
+
+	top := tcelltest.TextAt(screen, 0, 0, width)
+	if strings.Contains(top, "Actions") || strings.Contains(top, "Display") || strings.Contains(top, "File") {
+		t.Fatalf("menu row = %q, want blank (no pulldown menu labels)", top)
 	}
 }
 

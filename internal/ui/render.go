@@ -70,6 +70,9 @@ type Model struct {
 	CompareSnapshot     comparepkg.Snapshot
 	CompareMergeDialog  dialog.CompareMergeDialogState
 	CompareFilterDialog dialog.CompareFilterDialogState
+	DedupView           DedupViewState
+	DedupSnapshot       comparepkg.DedupSnapshot
+	DedupList           []DedupEntry
 	// HideMenuBar mirrors !ui.show_menu_bar: when true, the top menu row is omitted and panels extend upward.
 	HideMenuBar bool
 	// ShowFileIcons mirrors ui.show_file_icons (Nerd Font glyphs before file names).
@@ -309,13 +312,18 @@ func (m Model) PanelForFileListRender(panelID int) panel.State {
 	}
 }
 
+// DedupAwaitHashConfirm reports the pre-hash confirmation gate ("N files to hash — Enter to continue").
+func (m Model) DedupAwaitHashConfirm() bool {
+	return m.ViewMode == ViewDedup && m.DedupSnapshot.Phase == comparepkg.DedupAwaitConfirm
+}
+
 // PanelsChromeBlocked reports when file/jobs panel chrome should use panel.blocked.*
 // styles because a menu or modal has taken focus.
 func (m Model) PanelsChromeBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
-	if m.ModalDialogOpen() {
+	if m.ModalDialogOpen() || m.DedupAwaitHashConfirm() {
 		return true
 	}
 	return false
@@ -358,10 +366,10 @@ func (m Model) MenuBarLayoutReserved() bool {
 	return !m.HideMenuBar
 }
 
-// MenuBarInteractive is true when menu labels and pulldown may be shown (blocked by modal dialogs
-// and by the fullscreen file preview, which has no pulldown menus).
+// MenuBarInteractive is true when menu labels and pulldown may be shown (blocked by modal dialogs,
+// the dedup hash-confirm gate, and the fullscreen file preview, which has no pulldown menus).
 func (m Model) MenuBarInteractive() bool {
-	return !m.HideMenuBar && !m.ModalDialogOpen() && m.ViewMode != ViewFilePreview
+	return !m.HideMenuBar && !m.ModalDialogOpen() && m.ViewMode != ViewFilePreview && !m.DedupAwaitHashConfirm()
 }
 
 // Render paints model into the screen's logical cell buffer. The caller must invoke
@@ -385,7 +393,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	menus := menu.ActiveDefinitions(model.MenuDefinitions)
 	showMenuBarSpinner := model.MenuBarActivitySpinner
 	if model.MenuBarLayoutReserved() {
-		if model.ModalDialogOpen() || model.ViewMode == ViewFilePreview {
+		if model.ModalDialogOpen() || model.ViewMode == ViewFilePreview || model.DedupAwaitHashConfirm() {
 			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
 		} else {
 			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
@@ -419,6 +427,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if model.CompareFilterDialog.Open {
 			dialog.DrawCompareFilterDialog(screen, layout, model.CompareFilterDialog, styles)
 		}
+	case ViewDedup:
+		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
 	case ViewMessages:
 		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation)
 	default:
