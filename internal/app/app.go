@@ -281,15 +281,12 @@ func Run(cfg LaunchConfig) error {
 		return err
 	}
 	paths = paths.WithResolvedLocations()
-	conf, err := config.LoadFromPaths(paths)
+
+	startup, useBuiltIn, err := resolveStartupConfig(paths)
 	if err != nil {
 		return err
 	}
-	styles, themeErr := theme.Resolve(conf.Theme, paths.ThemesDir)
-	themeChoices, choicesErr := theme.ThemeChoices(paths.ThemesDir)
-	if choicesErr != nil && themeErr == nil {
-		themeErr = choicesErr
-	}
+
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		return fmt.Errorf("create screen: %w", err)
@@ -298,11 +295,13 @@ func Run(cfg LaunchConfig) error {
 		return fmt.Errorf("initialize screen: %w", err)
 	}
 	defer screen.Fini()
+
 	app, err := NewWithOptions(screen, Options{
 		CWD:               os.Getwd,
-		Config:            conf,
-		Theme:             styles,
-		ThemeChoices:      themeChoices,
+		Config:            startup.Config,
+		Theme:             startup.Theme,
+		ThemeChoices:      startup.ThemeChoices,
+		KeymapBundle:      startup.Keymap,
 		Paths:             paths,
 		DevMode:           cfg.DevMode,
 		ChooserFile:       cfg.ChooserFile,
@@ -312,8 +311,8 @@ func Run(cfg LaunchConfig) error {
 	if err != nil {
 		return err
 	}
-	if themeErr != nil {
-		app.setTransientMessage(themeErr.Error(), ui.MessageUrgencyError)
+	if useBuiltIn {
+		app.setTransientMessage("Started with built-in defaults (configuration failed to load).", ui.MessageUrgencyWarn)
 	}
 	if warns := chromastyles.LoadWarnings(); len(warns) > 0 {
 		app.setTransientMessage(fmt.Sprintf("Preview styles: %v", errors.Join(warns...)), ui.MessageUrgencyWarn)
