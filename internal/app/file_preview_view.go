@@ -174,6 +174,12 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 	case tcell.KeyEsc:
 		a.closeFilePreviewFullscreen()
 		return false
+	case tcell.KeyLeft:
+		// Left also exits the view (Esc is the primary key); modified Left falls through to chord bindings.
+		if event.Modifiers() == tcell.ModNone {
+			a.closeFilePreviewFullscreen()
+			return false
+		}
 	}
 
 	// Scroll using raw keys before action resolution. Up/Down (etc.) are normally bound to
@@ -208,9 +214,9 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 		_, ch2, lc := a.fullscreenFilePreviewScrollMetrics()
 		a.fullscreenPreviewScrollTo(max(0, lc-ch2))
 		return false
-	case tcell.KeyLeft, tcell.KeyRight:
-		// Default bindings map these to nav.parent / nav.open; consume unmodified arrows so
-		// chord bindings (e.g. history forward) still resolve below when modifiers are set.
+	case tcell.KeyRight:
+		// Default binding maps Right to nav.open; consume the unmodified arrow so chord
+		// bindings (e.g. history forward) still resolve below when modifiers are set.
 		if event.Modifiers() == tcell.ModNone {
 			return false
 		}

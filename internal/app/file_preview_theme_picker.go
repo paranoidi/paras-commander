@@ -250,7 +250,9 @@ func (a *App) handleFilePreviewThemePickerKey(event *tcell.EventKey) bool {
 
 func (a *App) fullscreenPreviewUnionRect() (ui.Rect, bool) {
 	w, h := a.screen.Size()
-	lay := a.layoutForTerminalSize(w, h)
+	// Fullscreen preview reclaims the menu row (borderless, filename on row 0), so compute
+	// the layout with the menu bar unreserved to match ui.Render.
+	lay := ui.CalculateLayoutWithOrientation(w, h, false, a.panelPaneSplit(w, true), a.effectivePaneSplitOrientation())
 	if lay.TooSmall {
 		return ui.Rect{}, false
 	}
@@ -263,7 +265,7 @@ func (a *App) fullscreenPreviewTextWidth() (int, bool) {
 		return 1, false
 	}
 	preview, _ := ui.SplitFullscreenPreviewRects(union, a.model.FilePreviewThemePicker.Open, a.model.FilePreviewThemePicker.Choices)
-	tw := preview.Width - 4
+	tw := preview.Width // borderless: full width, no side border columns
 	if tw < 1 {
 		tw = 1
 	}
