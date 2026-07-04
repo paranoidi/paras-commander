@@ -27,22 +27,21 @@ func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title, endLabel string, 
 		primitive.Fill(screen, primitive.Rect(inner), ' ', chrome.Surface)
 	}
 	titleX := rect.X + 2
-	titleWidth := rect.Width - 4
-	if titleWidth < 1 {
-		titleWidth = 1
-	}
 	innerRight := rect.X + rect.Width - 2
 	contentCols := innerRight - titleX + 1
+	if contentCols < 1 {
+		contentCols = 1
+	}
 	if endLabel != "" {
 		endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, active, blocked)
-		paintAuxPanelTopRowSplit(screen, titleX, innerRight, contentCols, rect.Y, title, endLabel, chrome.Title, endStyle)
+		paintAuxPanelTopRow(screen, titleX, innerRight, contentCols, rect.Y, title, endLabel, chrome.Title, endStyle, chrome.Frame)
 	} else {
-		primitive.TextOverlay(screen, titleX, rect.Y, titleWidth, title, chrome.Title)
+		paintAuxPanelTopRow(screen, titleX, innerRight, contentCols, rect.Y, title, "", chrome.Title, chrome.Title, chrome.Frame)
 	}
 	return AuxPanelChromeLayout{
 		Inner:      inner,
 		TitleX:     titleX,
-		TitleWidth: titleWidth,
+		TitleWidth: contentCols,
 		ContentBG:  auxPanelContentBG(styles, blocked),
 		Chrome:     chrome,
 	}
@@ -64,25 +63,42 @@ func auxPanelBodyText(styles theme.Theme, blocked bool, contentBG tcell.Color) t
 	return styles.PanelText.Background(contentBG)
 }
 
-// paintAuxPanelTopRowSplit paints a top border row with a start title and optional end label (frame dashes between).
-func paintAuxPanelTopRowSplit(screen tcell.Screen, titleX, innerRight, contentCols, y int, leftTitle, endLabel string, titleStyle, endStyle tcell.Style) {
+// paintAuxPanelTopRow paints the top border row with a title, optional end label, and frame dashes elsewhere.
+func paintAuxPanelTopRow(screen tcell.Screen, titleX, innerRight, contentCols, y int, leftTitle, endLabel string, titleStyle, endStyle, borderStyle tcell.Style) {
 	endRunes := utf8.RuneCountInString(endLabel)
 	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+3
 	endStartX := 0
 	pathSlotCols := contentCols
 	if showEnd {
-		endStartX = innerRight - endRunes
+		endStartX = innerRight - endRunes + 1
 		pathSlotCols = endStartX - titleX - gapBeforePanelTitleEnd
 		if pathSlotCols < 3 {
 			showEnd = false
 			pathSlotCols = contentCols
 		}
 	}
-	primitive.TextOverlay(screen, titleX, y, pathSlotCols, leftTitle, titleStyle)
-	if !showEnd {
-		return
+	left := primitive.TruncateRight(leftTitle, pathSlotCols)
+	leftRunes := []rune(left)
+	endLabelRunes := []rune(endLabel)
+	endStartCol := endStartX - titleX
+
+	for col := 0; col < contentCols; col++ {
+		x := titleX + col
+		var ch rune
+		var st tcell.Style
+		switch {
+		case col < pathSlotCols && col < len(leftRunes):
+			ch = leftRunes[col]
+			st = titleStyle
+		case showEnd && col >= endStartCol && col < endStartCol+endRunes:
+			ch = endLabelRunes[col-endStartCol]
+			st = endStyle
+		default:
+			ch = '─'
+			st = borderStyle
+		}
+		screen.SetContent(x, y, ch, nil, st)
 	}
-	primitive.TextOverlay(screen, endStartX, y, endRunes, endLabel, endStyle)
 }
 
 // drawAuxPanelBottomCenterLabel paints centered text on the bottom border interior row.

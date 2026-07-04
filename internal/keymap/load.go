@@ -91,6 +91,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		HistoryDialog:  overlayMaps[9],
 		FlattenDialog:  overlayMaps[10],
 		Compare:        overlayMaps[11],
+		Dedup:          overlayMaps[12],
 	}, nil
 }
 
@@ -147,7 +148,7 @@ func parseKeybindingsFile(raw []byte, label string) (mainKeys map[string][]strin
 func validateKeybindingsTopLevel(top map[string]interface{}, label string) error {
 	for k, v := range top {
 		switch k {
-		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, CompareShortcutsTable:
+		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, CompareShortcutsTable, DedupShortcutsTable:
 			if _, ok := v.(map[string]interface{}); !ok {
 				return fmt.Errorf("parse keybindings %q: [%s] must be a table", label, k)
 			}
@@ -165,7 +166,7 @@ func validateKeybindingsTopLevel(top map[string]interface{}, label string) error
 				}
 			}
 		default:
-			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, jobs, commands, messages, file_preview, compare, dialog)", label, k)
+			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, jobs, commands, messages, file_preview, compare, dedup, dialog)", label, k)
 		}
 	}
 	return nil
@@ -274,6 +275,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		Messages    map[string][]string `toml:"messages"`
 		FilePreview map[string][]string `toml:"file_preview"`
 		Compare     map[string][]string `toml:"compare"`
+		Dedup       map[string][]string `toml:"dedup"`
 		Dialog      dialogShortcuts     `toml:"dialog"`
 	}{
 		Main:        DefaultActionKeys(),
@@ -282,6 +284,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		Messages:    DefaultMessagesOverlayKeys(),
 		FilePreview: DefaultFilePreviewOverlayKeys(),
 		Compare:     DefaultCompareOverlayKeys(),
+		Dedup:       DefaultDedupOverlayKeys(),
 		Dialog: dialogShortcuts{
 			Input:    DefaultDialogInputOverlayKeys(),
 			Rename:   DefaultRenameDialogOverlayKeys(),

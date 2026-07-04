@@ -250,7 +250,7 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 		default:
 			a.setUnsupportedMessage(item.Label)
 		}
-	case menu.TopJobs, menu.TopCommands, menu.TopMessages:
+	case menu.TopJobs, menu.TopCommands, menu.TopMessages, menu.TopDedup:
 		a.dispatch(item.Action)
 	default:
 		a.setUnsupportedMessage(item.Label)
@@ -290,6 +290,8 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		a.openFindDialog(panelScope)
 	case keymap.ActionPanelComparePanels:
 		a.openComparePanels()
+	case keymap.ActionPanelFindDuplicates:
+		a.openFindDuplicates()
 	case keymap.ActionPanelExternalBrowser:
 		a.openPanelPathInExternalBrowser(panelScope)
 	case keymap.ActionPanelListingFormatDialog:

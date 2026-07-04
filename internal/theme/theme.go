@@ -57,6 +57,10 @@ type Theme struct {
 	PanelRowDirectory           tcell.Style
 	PanelRowSymlink             tcell.Style
 	PanelRowSelected            tcell.Style
+	// PanelDedupRowAllMarked styles dedup view rows when every file in the duplicate group is marked.
+	PanelDedupRowAllMarked tcell.Style
+	// PanelDedupRowCursorAllMarked styles the cursor row in a fully-marked duplicate group.
+	PanelDedupRowCursorAllMarked tcell.Style
 	// PanelRowIndicatorSelectionSubtree styles the file-list suffix on directories with nested selections.
 	PanelRowIndicatorSelectionSubtree tcell.Style
 	// PanelRowIndicatorNew styles the file-list suffix for the latest transferred batch.
@@ -647,6 +651,8 @@ var requiredStyleKeys = []string{
 	"panel.row.directory",
 	"panel.row.symlink",
 	"panel.row.selected",
+	"panel.dedup.row.all_marked",
+	"panel.dedup.row.cursor.all_marked",
 	"panel.row.indicator.selection_subtree",
 	"panel.row.indicator.new",
 	"panel.row.indicator.new.previous",
@@ -1106,6 +1112,8 @@ func parse(data []byte) (Theme, error) {
 		PanelRowDirectory:                   styles["panel.row.directory"],
 		PanelRowSymlink:                     styles["panel.row.symlink"],
 		PanelRowSelected:                    styles["panel.row.selected"],
+		PanelDedupRowAllMarked:              styles["panel.dedup.row.all_marked"],
+		PanelDedupRowCursorAllMarked:        styles["panel.dedup.row.cursor.all_marked"],
 		PanelRowIndicatorSelectionSubtree:   styles["panel.row.indicator.selection_subtree"],
 		PanelRowIndicatorNew:                styles["panel.row.indicator.new"],
 		PanelRowIndicatorNewPrevious:        styles["panel.row.indicator.new.previous"],

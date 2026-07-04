@@ -13,6 +13,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
+	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -95,6 +96,7 @@ type App struct {
 	keysHistoryDialog  *keymap.Map // both-panels toggle while history dialog is open
 	keysFlattenDialog  *keymap.Map // destination panel shortcuts while flatten dialog is open
 	keysCompare        *keymap.Map // chords active only in Compare view (overlay)
+	keysDedup          *keymap.Map // chords active only in find-duplicates view (overlay)
 	devMode            bool
 	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
@@ -109,6 +111,7 @@ type App struct {
 	jobsCtrl        *jobsctrl.Handler
 	findCtrl        *findctrl.Handler
 	compareCtrl     *comparectrl.Handler
+	dedupCtrl       *dedupctrl.Handler
 	jobStopCh       chan struct{}
 	jobStopOnce     bool
 	diskUsage       *diskusage.Engine
@@ -286,15 +289,12 @@ func Run(cfg LaunchConfig) error {
 		return err
 	}
 	paths = paths.WithResolvedLocations()
-	conf, err := config.LoadFromPaths(paths)
+
+	startup, useBuiltIn, err := resolveStartupConfig(paths)
 	if err != nil {
 		return err
 	}
-	styles, themeErr := theme.Resolve(conf.Theme, paths.ThemesDir)
-	themeChoices, choicesErr := theme.ThemeChoices(paths.ThemesDir)
-	if choicesErr != nil && themeErr == nil {
-		themeErr = choicesErr
-	}
+
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		return fmt.Errorf("create screen: %w", err)
@@ -303,11 +303,13 @@ func Run(cfg LaunchConfig) error {
 		return fmt.Errorf("initialize screen: %w", err)
 	}
 	defer screen.Fini()
+
 	app, err := NewWithOptions(screen, Options{
 		CWD:               os.Getwd,
-		Config:            conf,
-		Theme:             styles,
-		ThemeChoices:      themeChoices,
+		Config:            startup.Config,
+		Theme:             startup.Theme,
+		ThemeChoices:      startup.ThemeChoices,
+		KeymapBundle:      startup.Keymap,
 		Paths:             paths,
 		DevMode:           cfg.DevMode,
 		ChooserFile:       cfg.ChooserFile,
@@ -317,8 +319,8 @@ func Run(cfg LaunchConfig) error {
 	if err != nil {
 		return err
 	}
-	if themeErr != nil {
-		app.setTransientMessage(themeErr.Error(), ui.MessageUrgencyError)
+	if useBuiltIn {
+		app.setTransientMessage("Started with built-in defaults (configuration failed to load).", ui.MessageUrgencyWarn)
 	}
 	if warns := chromastyles.LoadWarnings(); len(warns) > 0 {
 		app.setTransientMessage(fmt.Sprintf("Preview styles: %v", errors.Join(warns...)), ui.MessageUrgencyWarn)
@@ -432,6 +434,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			return nil, fmt.Errorf("build compare overlay map: %w", err)
 		}
 		kmCompare = m
+	}
+	kmDedup := bundle.Dedup
+	if kmDedup == nil {
+		m, err := keymap.Build(keymap.DefaultDedupOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build dedup overlay map: %w", err)
+		}
+		kmDedup = m
 	}
 	styles := opts.Theme
 	if styles.Name == "" {
@@ -550,6 +560,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysHistoryDialog:  kmHistoryDialog,
 		keysFlattenDialog:  kmFlattenDialog,
 		keysCompare:        kmCompare,
+		keysDedup:          kmDedup,
 		devMode:            opts.DevMode,
 		commandsCtx:        cmdCtx,
 		commandsCancel:     cmdCancel,
@@ -638,6 +649,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		KeysCompare: kmCompare,
 		Gitignore:   giCache,
 		DiskIgnore:  duIgnorer,
+	})
+	app.dedupCtrl = dedupctrl.New(dedupctrl.Deps{
+		Host:       dedupHost{appShellHost: appShellHost{app: app}},
+		Screen:     screen,
+		Model:      &app.model,
+		Config:     cfg,
+		Gitignore:  giCache,
+		DiskIgnore: duIgnorer,
 	})
 	if err := app.configureSFTP(); err != nil {
 		app.stopWorker()
@@ -855,6 +874,11 @@ func (a *App) Run() error {
 				}
 			case comparectrl.WakePayload:
 				if a.pollCompareUpdates(d) {
+					a.render()
+					didRender = true
+				}
+			case dedupctrl.WakePayload:
+				if a.pollDedupUpdates(d) {
 					a.render()
 					didRender = true
 				}

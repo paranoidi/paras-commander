@@ -35,7 +35,7 @@ func DefinitionsJobs() []Definition {
 // JobsDefinitions returns DefinitionsJobs() with KeyLabels resolved from global km plus optional jobs overlay.
 func JobsDefinitions(global, jobs *keymap.Map) []Definition {
 	defs := DefinitionsJobs()
-	ApplyJobsMenuKeyLabels(defs, global, jobs)
+	ApplyOverlayMenuKeyLabels(defs, global, jobs)
 	return defs
 }
 

@@ -255,6 +255,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"diff", "hash", "sync", "mirror", "relocated", "missing"},
 		},
 		{
+			ID:           ActionPanelFindDuplicates,
+			Title:        "Find duplicates",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"C-M-u"},
+			PreferredKey: "C-M-u",
+			Keywords:     []string{"duplicate", "dedup", "dupes", "hash", "identical", "remove"},
+		},
+		{
 			ID:          ActionCompareClose,
 			Title:       "Close compare view",
 			Section:     "Navigation",
@@ -288,6 +296,20 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"sync", "reconcile", "copy", "duplicate"},
+		},
+		{
+			ID:          ActionDedupClose,
+			Title:       "Close find-duplicates view",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"back", "browser"},
+		},
+		{
+			ID:          ActionDedupRefresh,
+			Title:       "Refresh find-duplicates",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"rescan", "rehash"},
 		},
 
 		// ── Disk usage ──

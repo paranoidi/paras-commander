@@ -110,6 +110,14 @@ var overlayRegistry = []OverlaySpec{
 			return fmt.Errorf("parse config %q: [compare] action %q is not allowed (compare.* only)", source, action)
 		},
 	},
+	{
+		TableName: DedupShortcutsTable,
+		Defaults:  DefaultDedupOverlayKeys,
+		Allowed:   AllowedInDedupOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [dedup] action %q is not allowed (dedup.* only)", source, action)
+		},
+	},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.
@@ -162,6 +170,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "flatten.destination-active, flatten.destination-inactive only"
 	case CompareShortcutsTable:
 		return "compare.* only"
+	case DedupShortcutsTable:
+		return "dedup.* only"
 	default:
 		return "not allowed"
 	}

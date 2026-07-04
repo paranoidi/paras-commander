@@ -37,11 +37,12 @@ const (
 	ViewCompare
 	ViewMessages
 	ViewFilePreview
+	ViewDedup
 )
 
 // IsAuxiliaryView reports vm is a full-screen meta view rather than the file browser.
 func IsAuxiliaryView(vm ViewMode) bool {
-	return vm == ViewJobs || vm == ViewCommands || vm == ViewCompare || vm == ViewMessages || vm == ViewFilePreview
+	return vm == ViewJobs || vm == ViewCommands || vm == ViewCompare || vm == ViewMessages || vm == ViewFilePreview || vm == ViewDedup
 }
 
 // PanelZoomSplitsColumns reports whether the browser uses an asymmetric column split

@@ -294,6 +294,22 @@ func TestMessagesDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	}
 }
 
+func TestDedupDefinitionsFillsMenuKeyLabels(t *testing.T) {
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	defs := DedupDefinitions(bundle.Global, bundle.Dedup)
+	if defs[0].ID != TopDedup {
+		t.Fatalf("first menu = %s, want TopDedup", defs[0].ID)
+	}
+	assertMenuItemKeyLabels(t, &defs[0], map[string]string{
+		"Back to file view": "Esc",
+		"Refresh":           "Alt+R",
+		"Delete marked":     "F8",
+	})
+}
+
 func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 	bundle, err := keymap.DefaultBundle()
 	if err != nil {
@@ -303,6 +319,7 @@ func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 		"jobs":     JobsDefinitions(bundle.Global, bundle.Jobs),
 		"commands": CommandsDefinitions(bundle.Global, bundle.Commands),
 		"messages": MessagesDefinitions(bundle.Global, bundle.Messages),
+		"dedup":    DedupDefinitions(bundle.Global, bundle.Dedup),
 	} {
 		t.Run(name, func(t *testing.T) {
 			var display *Definition

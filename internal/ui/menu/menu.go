@@ -41,15 +41,16 @@ func ActiveDefinitions(defs []Definition) []Definition {
 	return Definitions()
 }
 
-// ApplyMenuKeyLabels sets Item.KeyLabel from km.MenuBindingLabel for every non-separator item.
-func ApplyMenuKeyLabels(defs []Definition, km *keymap.Map) {
+// ApplyOverlayMenuKeyLabels sets Item.KeyLabel for every non-separator item, preferring the
+// overlay's chords before global. Pass a nil overlay for global-only menus (e.g. the browser).
+func ApplyOverlayMenuKeyLabels(defs []Definition, global, overlay *keymap.Map) {
 	for i := range defs {
 		for j := range defs[i].Items {
 			item := &defs[i].Items[j]
 			if item.Separator || item.Action == "" {
 				continue
 			}
-			item.KeyLabel = km.MenuBindingLabel(item.Action)
+			item.KeyLabel = keymap.MenuBindingLabelPreferOverlay(global, overlay, item.Action)
 		}
 	}
 }
@@ -61,47 +62,8 @@ func BrowserDefinitions(km *keymap.Map, dev bool) []Definition {
 	if dev {
 		defs = append(defs, DevDefinition())
 	}
-	ApplyMenuKeyLabels(defs, km)
+	ApplyOverlayMenuKeyLabels(defs, km, nil)
 	return defs
-}
-
-// ApplyCommandsMenuKeyLabels sets Item.KeyLabel using the Commands overlay chords before global.
-func ApplyCommandsMenuKeyLabels(defs []Definition, global, commands *keymap.Map) {
-	for i := range defs {
-		for j := range defs[i].Items {
-			item := &defs[i].Items[j]
-			if item.Separator || item.Action == "" {
-				continue
-			}
-			item.KeyLabel = keymap.MenuBindingLabelPreferCommands(global, commands, item.Action)
-		}
-	}
-}
-
-// ApplyMessagesMenuKeyLabels sets Item.KeyLabel using the Messages overlay chords before global.
-func ApplyMessagesMenuKeyLabels(defs []Definition, global, messages *keymap.Map) {
-	for i := range defs {
-		for j := range defs[i].Items {
-			item := &defs[i].Items[j]
-			if item.Separator || item.Action == "" {
-				continue
-			}
-			item.KeyLabel = keymap.MenuBindingLabelPreferMessages(global, messages, item.Action)
-		}
-	}
-}
-
-// ApplyJobsMenuKeyLabels sets Item.KeyLabel using jobs overlay chords before global (jobs pulldown).
-func ApplyJobsMenuKeyLabels(defs []Definition, global, jobs *keymap.Map) {
-	for i := range defs {
-		for j := range defs[i].Items {
-			item := &defs[i].Items[j]
-			if item.Separator || item.Action == "" {
-				continue
-			}
-			item.KeyLabel = keymap.MenuBindingLabelPreferJobs(global, jobs, item.Action)
-		}
-	}
 }
 
 // Definitions returns the built-in v1 menu tree.
@@ -171,6 +133,7 @@ func Definitions() []Definition {
 				{Action: keymap.ActionAppDropToShell, Label: "Shell", Shortcut: 's'},
 				{Action: keymap.ActionPanelToggleSplitOrientation, Label: "Toggle split orientation", Shortcut: 'O'},
 				{Action: keymap.ActionPanelComparePanels, Label: "Compare panels", Shortcut: 'p'},
+				{Action: keymap.ActionPanelFindDuplicates, Label: "Find duplicates", Shortcut: 'd'},
 				{Action: keymap.ActionBookmarkOpen, Label: "Bookmarks", Shortcut: 'b'},
 				{Action: keymap.ActionBookmarkAdd, Label: "Add bookmark", Shortcut: 'a'},
 				{Action: keymap.ActionPanelRefresh, Label: "Refresh", Shortcut: 'r'},
