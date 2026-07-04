@@ -29,6 +29,8 @@ const (
 	ActionFindUnselectAll             = "find.unselect-all"
 	ActionFindSelectGroup             = "find.select-group"
 	ActionFindUnselectGroup           = "find.unselect-group"
+	ActionFindOpenInPrimary           = "find.open-primary"
+	ActionFindOpenInSecondary         = "find.open-secondary"
 	ActionPanelRefresh                = "panel.refresh"
 	ActionPanelSelectToggle           = "panel.select-toggle"
 	ActionPanelSelectGroup            = "panel.select-group"
@@ -212,6 +214,8 @@ var KnownActions = map[string]struct{}{
 	ActionFindUnselectAll:             {},
 	ActionFindSelectGroup:             {},
 	ActionFindUnselectGroup:           {},
+	ActionFindOpenInPrimary:           {},
+	ActionFindOpenInSecondary:         {},
 	ActionPanelRefresh:                {},
 	ActionPanelSelectToggle:           {},
 	ActionPanelSelectGroup:            {},

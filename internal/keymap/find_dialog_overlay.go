@@ -3,10 +3,12 @@ package keymap
 // DefaultFindDialogOverlayKeys holds chords that apply only while the find dialog is open.
 func DefaultFindDialogOverlayKeys() map[string][]string {
 	return map[string][]string{
-		ActionFindUnselectAll:   {"F4"},
-		ActionFindSelectAll:     {"F5", "C-a"},
-		ActionFindSelectGroup:   {"F6"},
-		ActionFindUnselectGroup: {"F7"},
+		ActionFindUnselectAll:     {"F4"},
+		ActionFindSelectAll:       {"F5", "C-a"},
+		ActionFindSelectGroup:     {"F6"},
+		ActionFindUnselectGroup:   {"F7"},
+		ActionFindOpenInPrimary:   {"S-left"},
+		ActionFindOpenInSecondary: {"S-right"},
 	}
 }
 
@@ -14,7 +16,8 @@ func DefaultFindDialogOverlayKeys() map[string][]string {
 // [dialog.find].
 func AllowedInFindDialogOverlay(actionID string) bool {
 	switch actionID {
-	case ActionFindSelectAll, ActionFindUnselectAll, ActionFindSelectGroup, ActionFindUnselectGroup:
+	case ActionFindSelectAll, ActionFindUnselectAll, ActionFindSelectGroup, ActionFindUnselectGroup,
+		ActionFindOpenInPrimary, ActionFindOpenInSecondary:
 		return true
 	default:
 		return false

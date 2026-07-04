@@ -24,6 +24,12 @@ func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	if lbl := keys.MenuBindingLabel(keymap.ActionFindUnselectGroup); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect group"})
 	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindOpenInPrimary); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindOpenInSecondary); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ►"})
+	}
 	return out
 }
 

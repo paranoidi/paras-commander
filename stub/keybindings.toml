@@ -135,6 +135,8 @@
     "find.select-group" = ["F6"]
     "find.unselect-all" = ["F4"]
     "find.unselect-group" = ["F7"]
+    "find.open-primary" = ["S-left"]
+    "find.open-secondary" = ["S-right"]
   [dialog.history]
     "panel.history-both-panels" = ["F5"]
   [dialog.flatten]

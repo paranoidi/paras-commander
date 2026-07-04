@@ -1104,37 +1104,61 @@ func (h *Handler) applyFindDialogMarkedSelections() {
 	h.host.SetTransientMessage(fmt.Sprintf("Added %d to selection", added), ui.MessageUrgencyInfo)
 }
 
-// NavigateFindCursor moves the active panel to the find dialog selection.
-func (h *Handler) NavigateFindCursor() {
+// navigateFindEntryToPanel points panelID at the currently selected result
+// (cd into a directory; cd into a file's parent and highlight it). It does not
+// change the active panel or close the dialog. Returns the entry basename and
+// true on success; false if there is no valid selection or navigation fails.
+func (h *Handler) navigateFindEntryToPanel(panelID int) (string, bool) {
 	st := &h.model.FindDialog
 	if len(st.Ranked) == 0 || st.Selected < 0 || st.Selected >= len(st.Ranked) {
-		return
+		return "", false
 	}
 	entIdx := st.Ranked[st.Selected]
 	if entIdx < 0 || entIdx >= len(st.Entries) {
-		return
+		return "", false
 	}
 	ent := st.Entries[entIdx]
 	path := ent.AbsPath(st.RootPath)
-	panelID := st.PanelID
 
-	if ent.IsDir {
-		if err := h.host.NavigatePanelToDirectory(panelID, path, ""); err != nil {
-			h.host.SetErrorMessage("Find", err)
-			return
-		}
-	} else {
-		dir := filepath.Clean(filepath.Dir(path))
-		name := filepath.Base(path)
-		if err := h.host.NavigatePanelToDirectory(panelID, dir, name); err != nil {
-			h.host.SetErrorMessage("Find", err)
-			return
-		}
+	dir, name := path, ""
+	if !ent.IsDir {
+		dir = filepath.Clean(filepath.Dir(path))
+		name = filepath.Base(path)
+	}
+	if err := h.host.NavigatePanelToDirectory(panelID, dir, name); err != nil {
+		h.host.SetErrorMessage("Find", err)
+		return "", false
+	}
+	h.host.PanelByID(panelID).EnsureCursorVisible(h.host.PanelViewportRows(panelID))
+	return filepath.Base(path), true
+}
+
+// NavigateFindCursor moves the active panel to the find dialog selection and
+// closes the dialog.
+func (h *Handler) NavigateFindCursor() {
+	panelID := h.model.FindDialog.PanelID
+	if _, ok := h.navigateFindEntryToPanel(panelID); !ok {
+		return
 	}
 	h.model.ActivePanel = panelID
 	h.model.ActiveSubFocus = ui.SubFocusFileList
-	h.host.PanelByID(panelID).EnsureCursorVisible(h.host.PanelViewportRows(panelID))
 	h.CloseDialog()
+}
+
+// OpenSelectedInPrimary points the primary (left) panel at the selected result,
+// leaving the find dialog open.
+func (h *Handler) OpenSelectedInPrimary() {
+	if name, ok := h.navigateFindEntryToPanel(ui.PrimaryPanel); ok {
+		h.host.SetTransientMessage(fmt.Sprintf("Opened %s in primary panel", name), ui.MessageUrgencyInfo)
+	}
+}
+
+// OpenSelectedInSecondary points the secondary (right) panel at the selected
+// result, leaving the find dialog open.
+func (h *Handler) OpenSelectedInSecondary() {
+	if name, ok := h.navigateFindEntryToPanel(ui.SecondaryPanel); ok {
+		h.host.SetTransientMessage(fmt.Sprintf("Opened %s in secondary panel", name), ui.MessageUrgencyInfo)
+	}
 }
 
 func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
@@ -1293,6 +1317,12 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 				return
 			case keymap.ActionFindUnselectGroup:
 				h.host.OpenGroupSelectDialog("unselect", true)
+				return
+			case keymap.ActionFindOpenInPrimary:
+				h.OpenSelectedInPrimary()
+				return
+			case keymap.ActionFindOpenInSecondary:
+				h.OpenSelectedInSecondary()
 				return
 			}
 		}

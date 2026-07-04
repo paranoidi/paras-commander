@@ -517,6 +517,22 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"find dialog", "pattern", "glob", "deselect"},
 		},
 		{
+			ID:           ActionFindOpenInPrimary,
+			Title:        "Open in primary panel",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "S-left",
+			Keywords:     []string{"find dialog", "left panel", "reveal", "cd"},
+		},
+		{
+			ID:           ActionFindOpenInSecondary,
+			Title:        "Open in secondary panel",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "S-right",
+			Keywords:     []string{"find dialog", "right panel", "reveal", "cd"},
+		},
+		{
 			ID:           ActionFlattenDestinationActive,
 			Title:        "Flatten destination: active panel",
 			Section:      "File operations",
