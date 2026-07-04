@@ -44,7 +44,7 @@ func TestRenderFilePreviewThemePickerShowsAllLabels(t *testing.T) {
 	}
 	Render(screen, model, styles)
 
-	layout := CalculateLayout(80, 24, true, PanelWidthSplit{})
+	layout := CalculateLayout(80, 24, false, PanelWidthSplit{}) // fullscreen preview frees the menu row
 	union := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
 	_, picker := SplitFullscreenPreviewRects(union, true, choices)
 	listTop := picker.Y + 3
@@ -87,7 +87,7 @@ func TestRenderFilePreviewThemePickerShowsLabelsFromChoices(t *testing.T) {
 	}
 	Render(screen, model, styles)
 
-	layout := CalculateLayout(80, 24, true, PanelWidthSplit{})
+	layout := CalculateLayout(80, 24, false, PanelWidthSplit{}) // fullscreen preview frees the menu row
 	union := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
 	_, picker := SplitFullscreenPreviewRects(union, true, choices)
 	listTop := picker.Y + 3
@@ -129,7 +129,7 @@ func TestRenderFilePreviewThemePickerFilteredOmitsEmptyRows(t *testing.T) {
 	}
 	Render(screen, model, theme.Default())
 
-	layout := CalculateLayout(80, 24, true, PanelWidthSplit{})
+	layout := CalculateLayout(80, 24, false, PanelWidthSplit{}) // fullscreen preview frees the menu row
 	union := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
 	_, picker := SplitFullscreenPreviewRects(union, true, choices)
 	listTop := picker.Y + 3

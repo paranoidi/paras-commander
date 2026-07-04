@@ -33,7 +33,12 @@ func (a *App) fullscreenFilePreviewLayoutMetrics() (textW, contentH int, ok bool
 		return tw, 0, false
 	}
 	preview, _ := ui.SplitFullscreenPreviewRects(union, a.model.FilePreviewThemePicker.Open, a.model.FilePreviewThemePicker.Choices)
-	return tw, ui.JobsPanelContentRows(preview), true
+	// Borderless: only the filename row is reserved (no top+bottom border), so subtract 1, not 2.
+	contentH = preview.Height - 1
+	if contentH < 0 {
+		contentH = 0
+	}
+	return tw, contentH, true
 }
 
 func filePreviewWarmCandidate(st ui.FilePreviewState) bool {

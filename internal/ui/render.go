@@ -374,7 +374,9 @@ func (m Model) MenuBarInteractive() bool {
 // screen.Show() (or screen.Sync()) to flush to the terminal.
 func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	width, height := screen.Size()
-	layout := CalculateLayoutWithOrientation(width, height, model.MenuBarLayoutReserved(), PanelPaneSplit{
+	// Fullscreen file preview hides the menu entirely and reclaims its row (filename sits there, borderless).
+	reserveMenu := model.MenuBarLayoutReserved() && model.ViewMode != ViewFilePreview
+	layout := CalculateLayoutWithOrientation(width, height, reserveMenu, PanelPaneSplit{
 		Zoom:              PanelZoomSplitsColumns(model.ViewMode, model.PanelZoomEnabled),
 		ActivePanel:       model.ActivePanel,
 		ActivePercent:     model.PanelZoomActivePercent,
@@ -390,8 +392,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 
 	menus := menu.ActiveDefinitions(model.MenuDefinitions)
 	showMenuBarSpinner := model.MenuBarActivitySpinner
-	if model.MenuBarLayoutReserved() {
-		if model.ModalDialogOpen() || model.ViewMode == ViewFilePreview || model.DedupAwaitHashConfirm() {
+	if reserveMenu {
+		if model.ModalDialogOpen() || model.DedupAwaitHashConfirm() {
 			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
 		} else {
 			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
@@ -403,7 +405,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	case ViewFilePreview:
 		union := MergeTwinPanelRects(layout.Primary, layout.Secondary, model.SplitOrientation)
 		previewRect, pickerRect := SplitFullscreenPreviewRects(union, model.FilePreviewThemePicker.Open, model.FilePreviewThemePicker.Choices)
-		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, "", "")
+		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, true, "", "")
 		if model.FilePreviewThemePicker.Open && pickerRect.Width > 0 {
 			dialog.DrawFilePreviewThemePicker(screen, pickerRect, model.FilePreviewThemePicker, styles)
 		}
@@ -468,7 +470,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if layout.Primary.Width > 0 && showLeftPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, primaryFile, model.FilePreviewDraw, styles, primaryChromeBlocked, pvFocused,
-				model.QuickViewDisplayActive(), false, model.Primary.PathString(), model.UserHomeDir)
+				model.QuickViewDisplayActive(), false, false, model.Primary.PathString(), model.UserHomeDir)
 		} else if layout.Primary.Width > 0 {
 			drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel),
 				PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
@@ -500,7 +502,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if layout.Secondary.Width > 0 && showRightPreview {
 			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, secondaryFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
-				model.QuickViewDisplayActive(), false, model.Secondary.PathString(), model.UserHomeDir)
+				model.QuickViewDisplayActive(), false, false, model.Secondary.PathString(), model.UserHomeDir)
 		} else if layout.Secondary.Width > 0 {
 			drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel),
 				PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},

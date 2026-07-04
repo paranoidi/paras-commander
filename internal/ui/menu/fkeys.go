@@ -97,6 +97,7 @@ func FunctionKeysFilePreviewStylePicker() []FunctionKey {
 }
 
 // FunctionKeysFilePreviewView is the footer legend while the full-screen file view is active.
+// Esc is the primary exit key (shown); Left also closes the view.
 func FunctionKeysFilePreviewView() []FunctionKey {
 	return []FunctionKey{
 		FooterEscClose,

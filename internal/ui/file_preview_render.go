@@ -10,7 +10,7 @@ import (
 )
 
 // drawFilePreviewPanel paints a file preview panel (quick view, fullscreen, or carousel child).
-func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome, embedded bool, panelPath, userHomeDir string) {
+func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome, embedded, borderless bool, panelPath, userHomeDir string) {
 	// Use the style stored with the content so border and body always match.
 	// ErrorMsg states have no syntax-highlighted body, so suppress chroma border tint.
 	chromaStyleName := st.ChromaStyle
@@ -23,6 +23,7 @@ func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, s
 		PreviewFocused:  previewFocused,
 		QuickViewChrome: quickViewChrome,
 		Embedded:        embedded,
+		Borderless:      borderless,
 		PanelPath:       panelPath,
 		UserHomeDir:     userHomeDir,
 		BodyStyle:       FilePreviewBodyStyle(styles, chromeBlocked),

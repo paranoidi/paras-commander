@@ -272,7 +272,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 					ctx.FileListActive && (state.Filter.Active || state.Filter.Editing))
 			if paintCarouselFilePreview {
 				if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, showChildCol, display.CarouselLayout); ok {
-					drawFilePreviewPanel(screen, Rect(previewRect), display.CarouselFilePreview, panelStyle.Styles, ctx.ChromeBlocked, false, false, true, state.PathString(), display.UserHomeDir)
+					drawFilePreviewPanel(screen, Rect(previewRect), display.CarouselFilePreview, panelStyle.Styles, ctx.ChromeBlocked, false, false, true, false, state.PathString(), display.UserHomeDir)
 				}
 			}
 			if !showChildCol {

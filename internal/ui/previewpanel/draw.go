@@ -24,7 +24,10 @@ type DrawParams struct {
 	PreviewFocused  bool
 	QuickViewChrome bool
 	Embedded        bool
-	PanelPath       string
+	// Borderless draws no box and no styled title bar: the filename sits as plain
+	// text on the first row (fullscreen F3 viewer). Mutually exclusive with Embedded/QuickViewChrome.
+	Borderless bool
+	PanelPath  string
 	UserHomeDir     string
 	BodyStyle       tcell.Style
 	// FrameStyle is the border/box-drawing style; when zero, theme panel frame is used.
@@ -67,12 +70,15 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		borderStyle = embeddedChrome.Frame
 	}
 	titleStyle := chrome.Title
-	if p.Embedded {
+	switch {
+	case p.Embedded:
 		titleStyle = embeddedChrome.HeaderCarousel
 		for x := rect.X; x < rect.X+rect.Width; x++ {
 			screen.SetContent(x, rect.Y, ' ', nil, titleStyle)
 		}
-	} else {
+	case p.Borderless:
+		// No box; the filename is drawn plain on the first row (see below).
+	default:
 		primitive.Box(screen, primitive.Rect(rect), borderStyle)
 	}
 	titleX := rect.X + 2
@@ -92,6 +98,22 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		}
 		paintQuickViewTitleRow(screen, titleX, innerRight, contentCols, rect.Y,
 			p.PanelPath, p.UserHomeDir, titleStyle, endLabel, titleStyle, borderStyle)
+	} else if p.Borderless {
+		name := strings.TrimSpace(st.TitleBase)
+		if name == "" {
+			name = filepath.Base(st.Path)
+		}
+		if st.BodyHeld {
+			name += "…"
+		}
+		// Fill the row with the preview theme (syntax) background, filename centered.
+		headerStyle := contentPadStyle(borderStyle, chrome.Surface, p.BodyStyle)
+		primitive.Text(screen, rect.X, rect.Y, rect.Width, "", headerStyle)
+		start := rect.X + (rect.Width-runewidth.StringWidth(name))/2
+		if start < rect.X {
+			start = rect.X
+		}
+		primitive.TextOverlay(screen, start, rect.Y, rect.X+rect.Width-start, name, headerStyle)
 	} else {
 		title := " Preview "
 		if tb := strings.TrimSpace(st.TitleBase); tb != "" {
@@ -111,7 +133,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	body := p.BodyStyle
 	contentTop := rect.Y + 1
 	contentH := rect.Height - 1
-	if !p.Embedded {
+	if !p.Embedded && !p.Borderless {
 		contentH = geom.JobsPanelContentRows(geom.Rect(rect))
 	}
 	if contentH <= 0 {
@@ -119,9 +141,13 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	}
 	textX := rect.X + 2
 	textW := rect.Width - 4
-	if p.Embedded {
+	switch {
+	case p.Embedded:
 		textX = rect.X + 1
 		textW = rect.Width - 2
+	case p.Borderless:
+		textX = rect.X
+		textW = rect.Width
 	}
 	if textW < 1 {
 		textW = 1
@@ -141,7 +167,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	if p.Embedded {
 		leftMarginX, rightMarginX = rect.X, rect.X+rect.Width-1
 		paintMargins = rect.Width >= 2
-	} else {
+	} else if !p.Borderless {
 		leftMarginX, rightMarginX = rect.X+1, rect.X+rect.Width-2
 		paintMargins = rect.Width >= 4
 	}
@@ -152,13 +178,13 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 			_, efg, _ := p.Theme.MessageError.Decompose()
 			errSt = p.Theme.PanelBlockedText.Foreground(efg)
 		}
-		drawMessageContent(screen, rect, p.Embedded, contentTop, contentH, textX, textW, msg, errSt, body)
+		drawMessageContent(screen, rect, p.Embedded || p.Borderless, contentTop, contentH, textX, textW, msg, errSt, body)
 		return
 	}
 
 	if st.ExitCode != 0 && !hasDrawableBody(st) {
 		line := filepath.Base(st.Path) + ": exit " + itoa(st.ExitCode)
-		drawMessageContent(screen, rect, p.Embedded, contentTop, contentH, textX, textW, line, body, body)
+		drawMessageContent(screen, rect, p.Embedded || p.Borderless, contentTop, contentH, textX, textW, line, body, body)
 		return
 	}
 
