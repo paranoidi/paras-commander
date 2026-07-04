@@ -192,6 +192,21 @@ func (a *App) activatePathPickerSelection() {
 	}
 }
 
+// pathPickerNavFocus wraps ListOKCancelNavFocusKey, skipping the hidden OK
+// button (focus index 1) for the navigate/bookmark picker, which shows only
+// Cancel (focus index 2).
+func pathPickerNavFocus(purpose dialog.PathPickerPurpose, focus int, key tcell.Key) (int, bool) {
+	nf, ok := dialog.ListOKCancelNavFocusKey(focus, key)
+	if ok && purpose == dialog.PathPickerPurposeNavigate && nf == 1 {
+		if key == tcell.KeyTab {
+			nf = 2
+		} else {
+			nf = 0
+		}
+	}
+	return nf, ok
+}
+
 func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 	st := &a.model.PathPicker
 	if a.tryBookmarkDialogShortcut(event) {
@@ -220,15 +235,15 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 			a.acceptPathPickerCompletion()
 			return
 		}
-		if nf, ok := dialog.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+		if nf, ok := pathPickerNavFocus(st.Purpose, st.Focus, event.Key()); ok {
 			st.Focus = nf
 		}
 	case tcell.KeyBacktab:
-		if nf, ok := dialog.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+		if nf, ok := pathPickerNavFocus(st.Purpose, st.Focus, event.Key()); ok {
 			st.Focus = nf
 		}
 	case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
-		if nf, ok := dialog.ListOKCancelNavFocusKey(st.Focus, event.Key()); ok {
+		if nf, ok := pathPickerNavFocus(st.Purpose, st.Focus, event.Key()); ok {
 			st.Focus = nf
 			if st.Focus == 0 && event.Key() == tcell.KeyUp {
 				dialog.EnsurePathPickerListScroll(st, a.pathPickerListRows())

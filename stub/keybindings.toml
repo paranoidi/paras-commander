@@ -12,7 +12,7 @@
 #
 # [dialog.input] — ui.input.* only (e.g. restore default placeholder).
 # [dialog.rename] — file.rename.open-sanitize, file.rename.open-slugify, and file.rename.open-encoding.
-# [dialog.bookmark] — bookmark.delete (fzf-marks only).
+# [dialog.bookmark] — bookmark.delete (fzf-marks only) and bookmark.open-other (open in inactive panel).
 # [dialog.find] — find.select-all, find.unselect-all, find.select-group, find.unselect-group.
 # [dialog.history] — panel.history-both-panels.
 # [dialog.flatten] — flatten.destination-active and flatten.destination-inactive.
@@ -130,6 +130,7 @@
     "file.mkdir.extract-common-name" = ["F7"]
   [dialog.bookmark]
     "bookmark.delete" = ["F8"]
+    "bookmark.open-other" = ["M-Enter", "S-Enter"]
   [dialog.find]
     "find.select-all" = ["F5", "C-a"]
     "find.select-group" = ["F6"]

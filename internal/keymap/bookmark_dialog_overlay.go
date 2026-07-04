@@ -4,7 +4,8 @@ package keymap
 // bookmarks path picker (navigate purpose) is open.
 func DefaultBookmarkDialogOverlayKeys() map[string][]string {
 	return map[string][]string{
-		ActionBookmarkDelete: {"F8"},
+		ActionBookmarkDelete:    {"F8"},
+		ActionBookmarkOpenOther: {"M-Enter", "S-Enter"},
 	}
 }
 
@@ -12,7 +13,7 @@ func DefaultBookmarkDialogOverlayKeys() map[string][]string {
 // [dialog.bookmark].
 func AllowedInBookmarkDialogOverlay(actionID string) bool {
 	switch actionID {
-	case ActionBookmarkDelete:
+	case ActionBookmarkDelete, ActionBookmarkOpenOther:
 		return true
 	default:
 		return false

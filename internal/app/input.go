@@ -154,7 +154,14 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		}
 		if a.bookmarkDialogDeleteFooterEligible() {
 			if lbl := a.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete); lbl != "" {
-				rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete"}}, rest...)
+				rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete bookmark"}}, rest...)
+			}
+		}
+		if a.keysBookmarkDialog != nil && a.bookmarkDialogOpen() {
+			if _, ok := a.pathPickerSelectedItem(); ok {
+				if lbl := a.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkOpenOther); lbl != "" {
+					rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Open other"}}, rest...)
+				}
 			}
 		}
 		return footerWithEscClose(rest)

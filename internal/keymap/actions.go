@@ -51,6 +51,7 @@ const (
 	ActionBookmarkOpen                = "bookmark.open"
 	ActionBookmarkAdd                 = "bookmark.add"
 	ActionBookmarkDelete              = "bookmark.delete"
+	ActionBookmarkOpenOther           = "bookmark.open-other"
 	ActionPanelDiskUsageScan          = "panel.disk-usage-scan"
 	ActionPanelDiskUsageAbortAll      = "panel.disk-usage-abort-all"
 	ActionPanelDiskUsageClear         = "panel.disk-usage-clear"
@@ -236,6 +237,7 @@ var KnownActions = map[string]struct{}{
 	ActionBookmarkOpen:                {},
 	ActionBookmarkAdd:                 {},
 	ActionBookmarkDelete:              {},
+	ActionBookmarkOpenOther:           {},
 	ActionPanelDiskUsageScan:          {},
 	ActionPanelDiskUsageAbortAll:      {},
 	ActionPanelDiskUsageClear:         {},

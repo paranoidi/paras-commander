@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
@@ -20,10 +21,36 @@ func (a *App) tryBookmarkDialogShortcut(ev *tcell.EventKey) bool {
 		return false
 	}
 	id, ok := a.keysBookmarkDialog.Lookup(ev)
-	if !ok || id != keymap.ActionBookmarkDelete {
+	if !ok {
 		return false
 	}
-	return a.deleteSelectedBookmark()
+	switch id {
+	case keymap.ActionBookmarkDelete:
+		return a.deleteSelectedBookmark()
+	case keymap.ActionBookmarkOpenOther:
+		return a.openSelectedBookmarkInInactivePanel()
+	default:
+		return false
+	}
+}
+
+// openSelectedBookmarkInInactivePanel navigates the inactive panel to the
+// selected bookmark path and closes the picker (like Enter). Returns true when handled.
+func (a *App) openSelectedBookmarkInInactivePanel() bool {
+	item, ok := a.pathPickerSelectedItem()
+	if !ok {
+		return false
+	}
+	path := filepath.Clean(item.Path)
+	id := a.inactivePanelID()
+	if err := a.navigatePanelToDirectory(id, path, ""); err != nil {
+		a.setErrorMessage("Bookmark", err)
+		return true
+	}
+	a.panelByID(id).EnsureCursorVisible(a.panelViewportRows(id))
+	a.closePathPicker()
+	a.setTransientMessage(fmt.Sprintf("Opened in other panel: %s", path), ui.MessageUrgencyInfo)
+	return true
 }
 
 func (a *App) bookmarkDialogOpen() bool {

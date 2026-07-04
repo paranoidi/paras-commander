@@ -113,8 +113,16 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 	draw.DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)
 
 	buttonY := rect.Y + rect.Height - 2
-	okFocused := state.Focus == 1
 	cancelFocused := state.Focus == 2
+	// Bookmark navigate picker confirms with Enter (or Alt+Enter for the other
+	// panel), so the OK button is redundant — show Cancel only.
+	if state.Purpose == PathPickerPurposeNavigate {
+		draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
+			{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
+		}, styles)
+		return
+	}
+	okFocused := state.Focus == 1
 	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 		{Label: "OK", Shortcut: 'O', Focused: okFocused},
 		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},

@@ -485,6 +485,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"fzf-marks", "mark", "remove", "delete"},
 		},
 		{
+			ID:           ActionBookmarkOpenOther,
+			Title:        "Open in other panel",
+			Section:      "Bookmarks",
+			DefaultKeys:  nil, // overlay: DefaultBookmarkDialogOverlayKeys
+			PreferredKey: "M-Enter",
+			Keywords:     []string{"bookmark", "inactive panel", "other panel", "open"},
+		},
+		{
 			ID:           ActionFindUnselectAll,
 			Title:        "Unselect all",
 			Section:      "Find",
