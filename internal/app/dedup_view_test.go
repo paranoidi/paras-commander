@@ -113,15 +113,18 @@ func TestDedupViewMarkAndDelete(t *testing.T) {
 	if app.model.DedupView.MarkedReclaimBytes != int64(len("dup")) {
 		t.Fatalf("MarkedReclaimBytes = %d, want %d", app.model.DedupView.MarkedReclaimBytes, len("dup"))
 	}
-	// F8 arms the confirmation prompt.
+	// F8 opens the standard delete confirmation dialog listing the marked files.
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
-	if !app.model.DedupView.PendingDelete {
-		t.Fatal("delete key did not arm the confirmation prompt")
+	if !app.deleteDialogOpen() {
+		t.Fatal("delete key did not open the delete dialog")
 	}
-	// Enter confirms: enqueues the delete and optimistically prunes the group.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	if app.model.DedupView.PendingDelete {
-		t.Fatal("pending delete not cleared after confirm")
+	if got := len(app.model.FileDialog.DeleteEntries); got != 1 {
+		t.Fatalf("delete entries = %d, want 1", got)
+	}
+	// Confirming (Yes) enqueues the delete and optimistically prunes the group.
+	app.executeDelete()
+	if app.deleteDialogOpen() {
+		t.Fatal("delete dialog not closed after confirm")
 	}
 	if len(app.model.DedupSnapshot.Groups) != 0 {
 		t.Fatalf("groups after delete = %d, want 0 (group drops below 2)", len(app.model.DedupSnapshot.Groups))

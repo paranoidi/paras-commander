@@ -123,12 +123,6 @@ func drawDedupView(
 			primitive.Text(screen, sizeX, lineY, sizeW, "", lineStyle)
 		}
 	}
-
-	if view.PendingDelete {
-		drawDedupCenter(screen, rect, y, visibleRows,
-			fmt.Sprintf("Delete %d marked files? Enter · Esc", view.MarkedCount),
-			styles.PanelRowSelected)
-	}
 }
 
 // drawDedupHashProgress paints a disk-usage-style fill meter across the row, with the

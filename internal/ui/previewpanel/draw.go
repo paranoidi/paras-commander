@@ -26,10 +26,10 @@ type DrawParams struct {
 	Embedded        bool
 	// Borderless draws no box and no styled title bar: the filename sits as plain
 	// text on the first row (fullscreen F3 viewer). Mutually exclusive with Embedded/QuickViewChrome.
-	Borderless bool
-	PanelPath  string
-	UserHomeDir     string
-	BodyStyle       tcell.Style
+	Borderless  bool
+	PanelPath   string
+	UserHomeDir string
+	BodyStyle   tcell.Style
 	// FrameStyle is the border/box-drawing style; when zero, theme panel frame is used.
 	FrameStyle tcell.Style
 }
