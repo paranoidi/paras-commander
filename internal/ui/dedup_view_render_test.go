@@ -84,7 +84,7 @@ func TestDrawDedupHashProgressBarAndLabel(t *testing.T) {
 		Current:   "nested",
 	}
 	view := DedupViewState{}
-	layoutChrome := drawAuxPanelChrome(screen, rect, dedupViewTitle(snap), "", true, false, styles)
+	layoutChrome := drawAuxPanelChrome(screen, rect, dedupViewTitle(snap, 0), "", true, false, styles)
 	drawDedupView(screen, layout, view, snap, nil, styles, false, "", SplitHorizontal)
 
 	_, wantUsageBG, _ := styles.PanelUsageNormal.Decompose()
@@ -153,7 +153,7 @@ func TestDrawDedupViewSelectedRowUsesActiveCursorStyle(t *testing.T) {
 			},
 		}},
 	}
-	list := DedupEntriesFromSnapshot(snap)
+	list, _ := DedupEntriesFromSnapshot(snap, false, true)
 	view := DedupViewState{Selected: 1}
 
 	drawDedupView(screen, layout, view, snap, list, styles, false, "", SplitHorizontal)
@@ -287,7 +287,7 @@ func TestDrawDedupViewFullyMarkedGroupUsesRedRowStyle(t *testing.T) {
 			},
 		}},
 	}
-	list := DedupEntriesFromSnapshot(snap)
+	list, _ := DedupEntriesFromSnapshot(snap, false, true)
 	view := DedupViewState{
 		Selected: 0,
 		Marked: map[string]bool{
@@ -354,7 +354,7 @@ func TestDrawDedupViewTitleBarKeepsFrameDashesAfterTitle(t *testing.T) {
 	view := DedupViewState{}
 	drawDedupView(screen, layout, view, snap, nil, styles, false, "", SplitHorizontal)
 
-	title := dedupViewTitle(snap)
+	title := dedupViewTitle(snap, 0)
 	titleRunes := len([]rune(title))
 	_, frameBG, _ := styles.PanelActiveFrame.Decompose()
 	_, titleBG, _ := styles.PanelActiveTitle.Decompose()

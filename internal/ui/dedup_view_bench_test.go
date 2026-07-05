@@ -33,7 +33,7 @@ func syntheticDedupSnapshot(groups int) comparepkg.DedupSnapshot {
 func BenchmarkDrawDedupViewLargeList(b *testing.B) {
 	const groups = 45464
 	snap := syntheticDedupSnapshot(groups)
-	list := DedupEntriesFromSnapshot(snap)
+	list, _ := DedupEntriesFromSnapshot(snap, false, true)
 	if len(list) != groups*2 {
 		b.Fatalf("list len = %d, want %d", len(list), groups*2)
 	}

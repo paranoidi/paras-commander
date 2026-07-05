@@ -102,7 +102,7 @@ func (h *Handler) Open() {
 	h.model.ViewMode = ui.ViewDedup
 	h.model.MenuDefinitions = h.host.DedupMenuDefinitions()
 	h.model.Menu.ActiveMenu = menu.DefaultIndexDedup()
-	h.model.DedupView = ui.DedupViewState{Marked: map[string]bool{}}
+	h.model.DedupView = ui.DedupViewState{Marked: map[string]bool{}, IgnoreEmpty: true}
 
 	volGate := diskusage.ListingVolumeGate{}
 	if h.config.Compare.StayOnVolumeDefault {
@@ -193,7 +193,32 @@ func (h *Handler) EnsureSelectionVisible(visibleRows int) {
 }
 
 func (h *Handler) syncDedupList() {
-	h.model.DedupList = ui.DedupEntriesFromSnapshot(h.model.DedupSnapshot)
+	st := &h.model.DedupView
+	h.model.DedupList, st.IgnoredEmptyCount = ui.DedupEntriesFromSnapshot(
+		h.model.DedupSnapshot, st.SortByWasted, st.IgnoreEmpty)
+}
+
+// ToggleSortOrder flips between order-by-path and most-space-wasted.
+func (h *Handler) ToggleSortOrder() {
+	if h.model.ViewMode != ui.ViewDedup {
+		return
+	}
+	h.model.DedupView.SortByWasted = !h.model.DedupView.SortByWasted
+	h.syncDedupList()
+	h.ensureSelectionVisible(0)
+}
+
+// ToggleIgnoreEmpty flips whether zero-byte duplicate groups are hidden.
+func (h *Handler) ToggleIgnoreEmpty() {
+	if h.model.ViewMode != ui.ViewDedup {
+		return
+	}
+	st := &h.model.DedupView
+	st.IgnoreEmpty = !st.IgnoreEmpty
+	st.Selected = 0
+	st.ListScroll = 0
+	h.syncDedupList()
+	h.ensureSelectionVisible(0)
 }
 
 func (h *Handler) ensureSelectionVisible(visibleRows int) {
@@ -220,6 +245,33 @@ func (h *Handler) ToggleMark() {
 		st.Marked[entry.AbsKey] = true
 		st.MarkedCount++
 		st.MarkedReclaimBytes += entry.Size
+	}
+}
+
+// MarkRedundantUnderSelected marks (for deletion) every duplicate copy under the
+// selected row's directory, leaving one surviving copy of each content group so
+// only unique files remain there. It only marks — deletion stays with DeleteMarked.
+func (h *Handler) MarkRedundantUnderSelected() {
+	list := h.model.DedupList
+	st := &h.model.DedupView
+	keys := ui.DedupRedundantUnder(list, st.Selected)
+	if len(keys) == 0 {
+		h.host.SetTransientMessage("No redundant copies under this folder", ui.MessageUrgencyInfo)
+		return
+	}
+	if st.Marked == nil {
+		st.Marked = map[string]bool{}
+	}
+	set := make(map[string]bool, len(keys))
+	for _, k := range keys {
+		set[k] = true
+	}
+	for _, e := range list {
+		if set[e.AbsKey] && !st.Marked[e.AbsKey] {
+			st.Marked[e.AbsKey] = true
+			st.MarkedCount++
+			st.MarkedReclaimBytes += e.Size
+		}
 	}
 }
 

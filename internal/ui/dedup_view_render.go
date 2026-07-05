@@ -23,8 +23,12 @@ func drawDedupView(
 	orientation SplitOrientation,
 ) {
 	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, orientation)
-	title := dedupViewTitle(snap)
-	endLabel := panelSelectionSizePadded(view.MarkedSummary())
+	title := dedupViewTitle(snap, view.IgnoredEmptyCount)
+	// Sort order / marked indicator only applies to the finished results list.
+	endLabel := ""
+	if snap.Phase == comparepkg.DedupDone {
+		endLabel = panelSelectionSizePadded(dedupEndLabel(view))
+	}
 	layoutChrome := drawAuxPanelChrome(screen, rect, title, endLabel, true, chromeBlocked, styles)
 	bg := layoutChrome.ContentBG
 
@@ -174,7 +178,21 @@ func drawDedupCenter(screen tcell.Screen, rect Rect, bodyY, bodyRows int, text s
 	primitive.TextOverlay(screen, x, yy, runes, text, style)
 }
 
-func dedupViewTitle(snap comparepkg.DedupSnapshot) string {
+// dedupEndLabel is the top-right border indicator: current sort order, plus the
+// marked-files summary when any rows are marked. Mirrors the compare view's
+// filter indicator (endLabel via FilterLabel).
+func dedupEndLabel(view DedupViewState) string {
+	sortLabel := "Sort: Path"
+	if view.SortByWasted {
+		sortLabel = "Sort: Wasted"
+	}
+	if ms := view.MarkedSummary(); ms != "" {
+		return sortLabel + " · " + ms
+	}
+	return sortLabel
+}
+
+func dedupViewTitle(snap comparepkg.DedupSnapshot, ignoredEmpty int) string {
 	switch snap.Phase {
 	case comparepkg.DedupWalking:
 		return " Duplicates (walking…) "
@@ -190,10 +208,15 @@ func dedupViewTitle(snap comparepkg.DedupSnapshot) string {
 	case comparepkg.DedupCanceled:
 		return " Duplicates (canceled) "
 	default:
+		groups := "groups"
 		if len(snap.Groups) == 1 {
-			return " Duplicates (1 group) "
+			groups = "group"
 		}
-		return fmt.Sprintf(" Duplicates (%d groups) ", len(snap.Groups))
+		title := fmt.Sprintf(" Duplicates (%d %s", len(snap.Groups), groups)
+		if ignoredEmpty > 0 {
+			title += fmt.Sprintf(" · %d empty hidden", ignoredEmpty)
+		}
+		return title + ") "
 	}
 }
 

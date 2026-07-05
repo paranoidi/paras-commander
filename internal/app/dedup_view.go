@@ -74,6 +74,15 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionDedupRefresh:
 		a.dedupCtrl.Refresh()
 		return true
+	case keymap.ActionDedupToggleSort:
+		a.dedupCtrl.ToggleSortOrder()
+		return true
+	case keymap.ActionDedupToggleEmpty:
+		a.dedupCtrl.ToggleIgnoreEmpty()
+		return true
+	case keymap.ActionDedupMarkRedundant:
+		a.dedupCtrl.MarkRedundantUnderSelected()
+		return true
 	case keymap.ActionFileDelete:
 		if len(a.dedupCtrl.MarkedPaths()) > 0 {
 			a.openDedupDeleteDialog()
@@ -91,6 +100,12 @@ func dedupViewFooterKeys(global, dedup *keymap.Map) []menu.FunctionKey {
 	if dedup != nil {
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupRefresh); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Refresh"})
+		}
+		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupToggleSort); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Sort"})
+		}
+		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkRedundant); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Keep uniques"})
 		}
 	}
 	if global != nil {

@@ -1,7 +1,10 @@
 package ui
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
+	"strings"
 
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 )
@@ -24,16 +27,35 @@ type DedupViewState struct {
 	Marked             map[string]bool // absolute paths marked for deletion
 	MarkedCount        int
 	MarkedReclaimBytes int64
+	SortByWasted       bool // false = order by path (default); true = most space wasted first
+	IgnoreEmpty        bool // hide zero-byte duplicate groups (default true, set on Open)
+	IgnoredEmptyCount  int  // files hidden by IgnoreEmpty, for the title
 }
 
-// DedupEntriesFromSnapshot builds the flat display list from a done-phase snapshot.
-// Returns nil when the results list is not shown (walking, hashing, etc.).
-func DedupEntriesFromSnapshot(snap comparepkg.DedupSnapshot) []DedupEntry {
+// DedupEntriesFromSnapshot builds the flat display list from a done-phase snapshot,
+// applying the view's sort order and ignore-empty filter. Returns nil when the
+// results list is not shown (walking, hashing, etc.). ignoredEmpty is the number
+// of files dropped by the ignore-empty filter.
+func DedupEntriesFromSnapshot(snap comparepkg.DedupSnapshot, sortByWasted, ignoreEmpty bool) (rows []DedupEntry, ignoredEmpty int) {
 	if snap.Phase != comparepkg.DedupDone {
-		return nil
+		return nil, 0
 	}
-	var rows []DedupEntry
+	groups := make([]comparepkg.DedupGroup, 0, len(snap.Groups))
 	for _, g := range snap.Groups {
+		if ignoreEmpty && g.Size == 0 {
+			ignoredEmpty += len(g.Files)
+			continue
+		}
+		groups = append(groups, g)
+	}
+	if sortByWasted {
+		slices.SortFunc(groups, comparepkg.DedupGroupBySize)
+	} else {
+		slices.SortFunc(groups, func(a, b comparepkg.DedupGroup) int {
+			return cmp.Compare(a.Files[0].Rel, b.Files[0].Rel)
+		})
+	}
+	for _, g := range groups {
 		copies := len(g.Files)
 		for i, f := range g.Files {
 			rows = append(rows, DedupEntry{
@@ -45,7 +67,7 @@ func DedupEntriesFromSnapshot(snap comparepkg.DedupSnapshot) []DedupEntry {
 			})
 		}
 	}
-	return rows
+	return rows, ignoredEmpty
 }
 
 // EnsureSelectionVisible clamps the selected row and scroll offset.
@@ -92,6 +114,38 @@ func DedupGroupFullyMarked(list []DedupEntry, marked map[string]bool, idx int) b
 		}
 	}
 	return end > start
+}
+
+// DedupRedundantUnder returns the AbsKeys of duplicate copies under the selected
+// row's directory that can be deleted while leaving exactly one surviving copy of
+// each content group. When a copy already survives outside the directory, every
+// under-directory copy is redundant; otherwise the first under-directory copy is
+// kept. Result is empty when nothing under the directory is safe to drop.
+func DedupRedundantUnder(list []DedupEntry, selected int) []string {
+	if selected < 0 || selected >= len(list) {
+		return nil
+	}
+	dir := list[selected].File.Abs.Parent().String() + "/"
+	var out []string
+	for start := 0; start < len(list); {
+		_, end := dedupGroupBounds(list, start)
+		var under []string
+		outside := 0
+		for i := start; i < end; i++ {
+			// Trailing slash on both sides keeps "/a/b" from matching "/a/bc".
+			if strings.HasPrefix(list[i].AbsKey+"/", dir) {
+				under = append(under, list[i].AbsKey)
+			} else {
+				outside++
+			}
+		}
+		if outside == 0 && len(under) > 0 {
+			under = under[1:] // keep the first copy alive
+		}
+		out = append(out, under...)
+		start = end
+	}
+	return out
 }
 
 func dedupGroupBounds(list []DedupEntry, idx int) (start, end int) {

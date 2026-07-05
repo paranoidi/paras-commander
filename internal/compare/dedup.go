@@ -162,8 +162,8 @@ func (s *DedupSession) run(ctx context.Context) {
 
 	// Size prefilter: a file whose byte size is unique in the tree provably has no
 	// duplicate, so it is never opened. Only files sharing a size are hash candidates.
-	// ponytail: all zero-byte files collide on size 0 and group together; correct but
-	// noisy — add a skip-empties toggle if that becomes annoying.
+	// All zero-byte files collide on size 0 and group together; the dedup view
+	// hides them by default via its ignore-empty toggle (DedupEntriesFromSnapshot).
 	bySize := map[int64][]FileRecord{}
 	for _, f := range files {
 		bySize[f.Size] = append(bySize[f.Size], f)
@@ -292,11 +292,16 @@ func groupByHash(candidates []FileRecord, hashes [][32]byte, hashErr []bool) []D
 		slices.SortFunc(files, func(a, b DedupFile) int { return cmp.Compare(a.Rel, b.Rel) })
 		groups = append(groups, DedupGroup{Hash: h, Size: candidates[idxs[0]].Size, Files: files})
 	}
-	slices.SortFunc(groups, func(a, b DedupGroup) int {
-		if a.Size != b.Size {
-			return cmp.Compare(b.Size, a.Size) // largest first
-		}
-		return bytes.Compare(a.Hash[:], b.Hash[:])
-	})
+	slices.SortFunc(groups, DedupGroupBySize)
 	return groups
+}
+
+// DedupGroupBySize orders duplicate groups "most space wasted" first: largest
+// file size first, hash as a stable tiebreak. Shared by the backend group build
+// and the view's sort toggle so ordering has one definition.
+func DedupGroupBySize(a, b DedupGroup) int {
+	if a.Size != b.Size {
+		return cmp.Compare(b.Size, a.Size) // largest first
+	}
+	return bytes.Compare(a.Hash[:], b.Hash[:])
 }

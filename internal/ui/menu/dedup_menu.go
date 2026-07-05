@@ -13,6 +13,9 @@ func DefinitionsDedup() []Definition {
 			Items: []Item{
 				{Action: keymap.ActionDedupClose, Label: "Back to file view", Shortcut: 'b'},
 				{Action: keymap.ActionDedupRefresh, Label: "Refresh", Shortcut: 'r'},
+				{Action: keymap.ActionDedupToggleSort, Label: "Sort order", Shortcut: 's'},
+				{Action: keymap.ActionDedupToggleEmpty, Label: "Ignore empty files", Shortcut: 'e'},
+				{Action: keymap.ActionDedupMarkRedundant, Label: "Keep uniques in this folder", Shortcut: 'k'},
 				{Action: keymap.ActionFileDelete, Label: "Delete marked", Shortcut: 'm'},
 			},
 		},

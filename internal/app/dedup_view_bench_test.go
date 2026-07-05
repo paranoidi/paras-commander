@@ -48,7 +48,7 @@ func benchDedupApp(b *testing.B, groups int) *App {
 	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.ViewMode = ui.ViewDedup
 	app.model.DedupSnapshot = syntheticDedupSnapshot(groups)
-	app.model.DedupList = ui.DedupEntriesFromSnapshot(app.model.DedupSnapshot)
+	app.model.DedupList, _ = ui.DedupEntriesFromSnapshot(app.model.DedupSnapshot, false, true)
 	app.model.DedupView = ui.DedupViewState{Marked: map[string]bool{}}
 	return app
 }

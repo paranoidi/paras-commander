@@ -311,6 +311,27 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"rescan", "rehash"},
 		},
+		{
+			ID:          ActionDedupToggleSort,
+			Title:       "Toggle duplicates sort order",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"sort", "path", "wasted", "order"},
+		},
+		{
+			ID:          ActionDedupToggleEmpty,
+			Title:       "Toggle ignore empty files",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"empty", "zero", "hide", "ignore"},
+		},
+		{
+			ID:          ActionDedupMarkRedundant,
+			Title:       "Mark redundant duplicates in folder",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"mark", "select", "redundant", "unique", "folder"},
+		},
 
 		// ── Disk usage ──
 		{
