@@ -1,6 +1,7 @@
 package cmdrun
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -69,7 +70,7 @@ func RunTracked(ctx context.Context, argv []string, dir string, maxStreamBytes i
 	err := cmd.Wait()
 	out := RunResult{
 		Stdout:     stdoutBuf.Bytes(),
-		Stderr:     stderrBuf.Bytes(),
+		Stderr:     stripJobControlNoise(stderrBuf.Bytes()),
 		StdoutTrim: stdoutBuf.trimmed,
 		StderrTrim: stderrBuf.trimmed,
 		ExitCode:   -1,
@@ -85,6 +86,48 @@ func RunTracked(ctx context.Context, argv []string, dir string, maxStreamBytes i
 	}
 	out.ExitCode = 0
 	return out
+}
+
+// jobControlNoise are substrings of the harmless startup warnings a job-control
+// shell (e.g. bash -i) emits when Setsid puts it in a new session with no
+// controlling terminal. tcsetpgrp() then fails with pgrp -1. This is an expected
+// artifact of the session we deliberately create in RunTracked, never a real
+// failure, so we drop those lines from captured stderr — otherwise callers that
+// surface any stderr (e.g. the user-menu background notifier) toast them as errors.
+var jobControlNoise = []string{
+	"cannot set terminal process group",
+	"no job control in this shell",
+}
+
+func stripJobControlNoise(b []byte) []byte {
+	needsFilter := false
+	for _, m := range jobControlNoise {
+		if bytes.Contains(b, []byte(m)) {
+			needsFilter = true
+			break
+		}
+	}
+	if !needsFilter {
+		return b
+	}
+	lines := bytes.Split(b, []byte("\n"))
+	kept := lines[:0]
+	for _, ln := range lines {
+		if isJobControlNoise(ln) {
+			continue
+		}
+		kept = append(kept, ln)
+	}
+	return bytes.Join(kept, []byte("\n"))
+}
+
+func isJobControlNoise(line []byte) bool {
+	for _, m := range jobControlNoise {
+		if bytes.Contains(line, []byte(m)) {
+			return true
+		}
+	}
+	return false
 }
 
 type cappedWriter struct {
