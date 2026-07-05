@@ -68,6 +68,10 @@ type Handler struct {
 	findNavEpoch  uint64
 	findNavActive bool
 
+	// lastIndexCountRenderAt throttles the live indexed-count re-render to at most once per
+	// config.DefaultFindIndexingCountThrottleMS while a walk is running. Main-thread only.
+	lastIndexCountRenderAt time.Time
+
 	// rankWorkCh carries the latest pending rank input to the single rank worker goroutine.
 	// Capacity 1: the worker drains it; senders drain-then-replace to discard stale inputs.
 	rankWorkCh chan rankInput

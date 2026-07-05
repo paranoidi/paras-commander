@@ -516,6 +516,7 @@ func (h *Handler) ToggleSearchOnlySelections() {
 func (h *Handler) PollUpdates(payload WakePayload) bool {
 	needRender := false
 	needSync := false
+	gotBatch := false
 	// Clear the dedup flag so the next batch from readFindSession can post a new WakePayload.
 	h.wakePending.Store(false)
 	h.sessionMu.Lock()
@@ -534,13 +535,22 @@ func (h *Handler) PollUpdates(payload WakePayload) bool {
 				}
 				h.appendFindBatch(st, batch)
 				needSync = true
-				needRender = true
+				gotBatch = true
 			default:
 				goto drained
 			}
 		}
 	}
 drained:
+	// Throttle the live indexed-count repaint: batches arrive many times per second on a fast
+	// disk. The final count is guaranteed by the finished/error render paths below.
+	if gotBatch {
+		interval := time.Duration(config.DefaultFindIndexingCountThrottleMS) * time.Millisecond
+		if time.Since(h.lastIndexCountRenderAt) >= interval {
+			h.lastIndexCountRenderAt = time.Now()
+			needRender = true
+		}
+	}
 	if needSync {
 		throttle := 0
 		st := &h.model.FindDialog

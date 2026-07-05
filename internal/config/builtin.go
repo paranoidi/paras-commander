@@ -58,6 +58,13 @@ const (
 	// subsequent batches are coalesced until the interval expires, then one more rank fires.
 	DefaultFindIndexingRankThrottleMS = 200
 
+	// DefaultFindIndexingCountThrottleMS is the minimum interval between find-dialog re-renders
+	// driven purely by a new batch of indexed entries (i.e. the live indexed-count update). On a
+	// fast disk batches arrive many times per second; without this the count field repaints on
+	// every batch. The final count is still shown: the indexing-finished/error paths render
+	// unconditionally.
+	DefaultFindIndexingCountThrottleMS = 500
+
 	// DefaultFindMaxResults caps the number of ranked results the find dialog keeps after each
 	// rank computation. Only the top-N scored entries are kept; the full index is always retained.
 	// Bounding results limits the size of the ranked/matchRanges data regardless of index size.
