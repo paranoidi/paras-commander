@@ -3,8 +3,24 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
+
+// fileDialogRect returns the current on-screen file-dialog rect, used as a geometry
+// signature to decide whether a per-keystroke overlay is valid. Returns the zero Rect
+// when the dialog is not drawable. The Rect is a plain comparable int struct, so callers
+// compare snapshots with ==; a change (e.g. mass-rename preview/hint rows resizing the
+// dialog) forces a full render that correctly clears cells outside a now-smaller rect.
+func (a *App) fileDialogRect() ui.Rect {
+	w, h := a.screen.Size()
+	layout := a.layoutForTerminalSize(w, h)
+	r, ok := dialog.FileDialogRect(layout, a.model.FileDialog, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
+	if !ok {
+		return ui.Rect{}
+	}
+	return r
+}
 
 func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	d := &a.model.FileDialog

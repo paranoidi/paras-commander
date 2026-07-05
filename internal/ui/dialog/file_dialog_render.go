@@ -14,14 +14,19 @@ import (
 // DeleteRowIconPainter draws file-list devicons for one delete dialog row; nil skips icons.
 type DeleteRowIconPainter func(screen tcell.Screen, x, y int, entry DeleteListEntry, styles theme.Theme)
 
-func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, styles theme.Theme, showIcons bool, deleteIconLead int, paintDeleteIcon DeleteRowIconPainter) {
+// FileDialogRect returns the outer rect DrawFileDialog will use for the given
+// state, and ok=false when the dialog is not drawable (closed or width < 20).
+// It is the single source of truth for the dialog's on-screen geometry, so the
+// app can compare it across a keystroke to decide whether a dialog-rect overlay
+// is valid (unchanged geometry) or a full render is required (shrunk geometry).
+func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (Rect, bool) {
 	if !state.Open {
-		return
+		return Rect{}, false
 	}
 
 	width := fileDialogWidth(layout.Width, state, deleteIconLead)
 	if width < 20 {
-		return
+		return Rect{}, false
 	}
 
 	// Calculate height based on dialog type.
@@ -68,12 +73,20 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, s
 		height = 5
 	}
 
+	return draw.CenteredDialogRect(layout, width, height), true
+}
+
+func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, styles theme.Theme, showIcons bool, deleteIconLead int, paintDeleteIcon DeleteRowIconPainter) {
+	rect, ok := FileDialogRect(layout, state, deleteIconLead)
+	if !ok {
+		return
+	}
+
 	dialogTitle := fileDialogOuterTitle(state)
 	if dialogTitle == "" {
 		return
 	}
 
-	rect := draw.CenteredDialogRect(layout, width, height)
 	borderStyle := draw.DrawDialogFrame(screen, rect, dialogTitle, styles)
 
 	switch state.DialogType {

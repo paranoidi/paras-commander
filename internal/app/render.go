@@ -27,9 +27,12 @@ func (a *App) paintFindDialogOverlay() bool {
 	return true
 }
 
-// paintDeleteDialogOverlay repaints only the delete confirmation dialog without redrawing panels or the footer.
-func (a *App) paintDeleteDialogOverlay() bool {
-	if !a.deleteDialogOpen() {
+// paintFileDialogOverlay repaints only the file dialog rect (rename, mkdir, copy/move,
+// mass rename, delete, …) on top of the unchanged panel buffer, without redrawing panels
+// or the footer. Returns false when the dialog is closed or the terminal is too small, so
+// callers fall back to a full render.
+func (a *App) paintFileDialogOverlay() bool {
+	if !a.model.FileDialog.Open {
 		return false
 	}
 	w, h := a.screen.Size()
@@ -37,7 +40,10 @@ func (a *App) paintDeleteDialogOverlay() bool {
 	if layout.TooSmall {
 		return false
 	}
-	ui.PaintDeleteDialog(a.screen, layout, a.model.FileDialog, a.styles, a.model.ShowFileIcons)
+	if a.model.FileDialog.DialogType == dialog.FileDialogMassRename {
+		a.recomputeMassRenamePreview()
+	}
+	ui.PaintFileDialog(a.screen, layout, a.model.FileDialog, a.styles, a.model.ShowFileIcons)
 	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true
@@ -53,7 +59,7 @@ func (a *App) renderFindDialogUpdate() {
 
 // renderDeleteDialogUpdate repaints the delete overlay when it is open; otherwise falls back to a full render.
 func (a *App) renderDeleteDialogUpdate() {
-	if a.deleteDialogOpen() && a.paintDeleteDialogOverlay() {
+	if a.deleteDialogOpen() && a.paintFileDialogOverlay() {
 		return
 	}
 	a.render()
