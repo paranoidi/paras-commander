@@ -379,6 +379,13 @@ func (a *App) executeMkdir() {
 }
 
 func (a *App) executeDelete() {
+	// Dedup delete: the dialog overlays the dedup view; route to the handler
+	// which enqueues the job and prunes the marked rows.
+	if a.model.ViewMode == ui.ViewDedup {
+		a.closeFileDialog()
+		a.dedupCtrl.DeleteMarked()
+		return
+	}
 	p := a.activePanel()
 	source, err := ops.ResolveSource(p)
 	if err != nil {

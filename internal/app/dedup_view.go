@@ -5,7 +5,9 @@ import (
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -26,6 +28,34 @@ func (h dedupHost) BrowserMenuDefinitions() []menu.Definition { return h.app.bro
 
 func (a *App) openFindDuplicates() { a.dedupCtrl.Open() }
 
+// openDedupDeleteDialog opens the standard delete confirmation for the marked
+// duplicate files, reusing the browser dialog (list + impact summary + Yes/No).
+func (a *App) openDedupDeleteDialog() {
+	st := a.model.DedupView
+	var entries []dialog.DeleteListEntry
+	for _, e := range a.model.DedupList {
+		if st.Marked[e.AbsKey] {
+			entries = append(entries, dialog.DeleteListEntry{
+				Name: e.File.Rel,
+				Path: e.AbsKey,
+				Type: localfs.EntryFile,
+			})
+		}
+	}
+	if len(entries) == 0 {
+		return
+	}
+	fd := dialog.FileDialogState{
+		Open:          true,
+		DialogType:    dialog.FileDialogDelete,
+		DeleteSummary: ui.FormatDeleteImpactSummary(int64(st.MarkedCount), st.MarkedReclaimBytes, false, a.styles.SymbolWorking()),
+		DeleteEntries: entries,
+		FocusedField:  1, // No (safe default); Yes stays index 0.
+	}
+	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
+	a.model.FileDialog = fd
+}
+
 func (a *App) closeDedupView() { a.dedupCtrl.Close() }
 
 func (a *App) pollDedupUpdates(payload dedupctrl.WakePayload) bool {
@@ -45,9 +75,8 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		a.dedupCtrl.Refresh()
 		return true
 	case keymap.ActionFileDelete:
-		st := &a.model.DedupView
 		if len(a.dedupCtrl.MarkedPaths()) > 0 {
-			st.PendingDelete = true
+			a.openDedupDeleteDialog()
 		} else {
 			a.setTransientMessage("Mark files with Space first", ui.MessageUrgencyInfo)
 		}
@@ -92,16 +121,6 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 			a.dedupCtrl.Confirm()
 		case tcell.KeyEsc, tcell.KeyLeft:
 			a.closeDedupView()
-		}
-		return false
-	}
-	// Delete confirmation prompt.
-	if st.PendingDelete {
-		switch event.Key() {
-		case tcell.KeyEnter:
-			a.dedupCtrl.DeleteMarked()
-		case tcell.KeyEsc:
-			st.PendingDelete = false
 		}
 		return false
 	}

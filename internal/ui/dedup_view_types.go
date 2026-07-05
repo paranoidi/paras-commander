@@ -24,7 +24,6 @@ type DedupViewState struct {
 	Marked             map[string]bool // absolute paths marked for deletion
 	MarkedCount        int
 	MarkedReclaimBytes int64
-	PendingDelete      bool // showing the "delete N marked?" confirmation
 }
 
 // DedupEntriesFromSnapshot builds the flat display list from a done-phase snapshot.

@@ -240,7 +240,6 @@ func (h *Handler) MarkedPaths() []string {
 // from the view.
 func (h *Handler) DeleteMarked() {
 	st := &h.model.DedupView
-	st.PendingDelete = false
 	paths := h.MarkedPaths()
 	if len(paths) == 0 {
 		return
