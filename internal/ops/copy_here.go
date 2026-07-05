@@ -17,20 +17,17 @@ type CopyHerePlan struct {
 	DestPath   string
 }
 
-// ValidateCopyHereSource requires exactly one directory (selection or cursor).
+// ValidateCopyHereSource requires exactly one entry (file or directory,
+// selection or cursor).
 func ValidateCopyHereSource(p *panel.State) (localfs.Entry, error) {
 	source, err := ResolveSource(p)
 	if err != nil {
 		return localfs.Entry{}, err
 	}
 	if len(source.Entries) > 1 {
-		return localfs.Entry{}, &Error{Op: "copy-here", Text: "select a single directory"}
+		return localfs.Entry{}, &Error{Op: "copy-here", Text: "select a single file or directory"}
 	}
-	entry := source.Entries[0]
-	if entry.Type != localfs.EntryDirectory {
-		return localfs.Entry{}, &Error{Op: "copy-here", Text: "not a directory"}
-	}
-	return entry, nil
+	return source.Entries[0], nil
 }
 
 // PlanCopyHere validates a same-directory copy of a directory under a new basename.

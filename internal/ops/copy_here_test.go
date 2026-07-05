@@ -10,7 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
-func TestValidateCopyHereSourceRequiresSingleDirectory(t *testing.T) {
+func TestValidateCopyHereSourceRequiresSingleEntry(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "sub")
 	if err := os.Mkdir(sub, 0o755); err != nil {
@@ -34,8 +34,12 @@ func TestValidateCopyHereSourceRequiresSingleDirectory(t *testing.T) {
 	}
 
 	p.SelectedPaths = map[string]bool{file: true}
-	if _, err := ValidateCopyHereSource(p); err == nil {
-		t.Fatal("ValidateCopyHereSource() error = nil, want error for file")
+	fileEntry, err := ValidateCopyHereSource(p)
+	if err != nil {
+		t.Fatalf("ValidateCopyHereSource() error = %v, want file accepted", err)
+	}
+	if fileEntry.Path != file {
+		t.Fatalf("entry path = %q, want %q", fileEntry.Path, file)
 	}
 
 	p.SelectedPaths = map[string]bool{sub: true}
@@ -156,6 +160,28 @@ func TestExecuteCopyCopyHereSiblingSemantics(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dest, "root.txt")); err != nil {
 		t.Fatalf("missing copied root file: %v", err)
+	}
+}
+
+func TestExecuteCopyFileSiblingSemantics(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "report.txt")
+	if err := os.WriteFile(src, []byte("payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	dest := filepath.Join(dir, "report-copy.txt")
+	opts := Options{CopyBufferKiB: 4}
+	if _, _, err := ExecuteCopy(context.Background(), MustPaths(src), MustPath(dest), opts, ProgressEmitThrottle{}, nil, nil, nil); err != nil {
+		t.Fatalf("ExecuteCopy() error = %v", err)
+	}
+
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatalf("missing duplicated file at %q: %v", dest, err)
+	}
+	if string(got) != "payload" {
+		t.Fatalf("duplicated content = %q, want %q", got, "payload")
 	}
 }
 

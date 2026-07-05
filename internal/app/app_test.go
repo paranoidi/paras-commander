@@ -8184,12 +8184,12 @@ func TestCopyHereRejectsMultipleSelections(t *testing.T) {
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should stay closed for multiple selections")
 	}
-	if !strings.Contains(app.model.Message, "single directory") {
-		t.Fatalf("message = %q, want single-directory error", app.model.Message)
+	if !strings.Contains(app.model.Message, "single file or directory") {
+		t.Fatalf("message = %q, want single file-or-directory error", app.model.Message)
 	}
 }
 
-func TestCopyHereRejectsFile(t *testing.T) {
+func TestCopyHereOpensDialogForFile(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "note.txt")
 	writeFile(t, file)
@@ -8201,11 +8201,17 @@ func TestCopyHereRejectsFile(t *testing.T) {
 	p.SelectedPaths = map[string]bool{file: true}
 
 	app.dispatch(keymap.ActionFileCopyHere)
-	if app.model.FileDialog.Open {
-		t.Fatal("dialog should stay closed for file selection")
+	if !app.model.FileDialog.Open {
+		t.Fatal("expected copy-here dialog open for file selection")
 	}
-	if !strings.Contains(app.model.Message, "not a directory") {
-		t.Fatalf("message = %q, want not-a-directory error", app.model.Message)
+	if app.model.FileDialog.DialogType != dialog.FileDialogCopyHere {
+		t.Fatalf("dialog type = %v, want FileDialogCopyHere", app.model.FileDialog.DialogType)
+	}
+	if app.model.FileDialog.CopyHereSource != file {
+		t.Fatalf("CopyHereSource = %q, want %q", app.model.FileDialog.CopyHereSource, file)
+	}
+	if got := app.model.FileDialog.Fields[0].Value; got != "note.txt" {
+		t.Fatalf("prefill value = %q, want %q", got, "note.txt")
 	}
 }
 
@@ -8294,6 +8300,43 @@ func TestCopyHereWithFocusAfterSelectsAfterJob(t *testing.T) {
 	}
 	if p.ScrollOffset != wantScroll {
 		t.Fatalf("ScrollOffset = %d, want %d (centered on copied entry)", p.ScrollOffset, wantScroll)
+	}
+}
+
+func TestCopyHereConfirmsFromOKButtonWithFocusAfter(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "note.txt")
+	writeFile(t, file)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	p := app.activePanel()
+	selectPanelEntryByName(t, p, "note.txt")
+	p.SelectedPaths = map[string]bool{file: true}
+
+	app.dispatch(keymap.ActionFileCopyHere)
+	// Replace the prefilled name.
+	for _, r := range "copy.txt" {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	// Enable focus-after, then navigate focus down to the OK button and confirm
+	// from there (the real user flow that used to drop the copy silently).
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	okIdx := dialog.FileDialogOKFocusIndex(app.model.FileDialog)
+	for app.model.FileDialog.FocusedField != okIdx {
+		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	}
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should close after OK")
+	}
+	flushBackgroundJobs(t, app)
+	app.applyJobRefreshes()
+
+	if _, err := os.Stat(filepath.Join(dir, "copy.txt")); err != nil {
+		t.Fatalf("expected duplicated file at copy.txt: %v", err)
 	}
 }
 

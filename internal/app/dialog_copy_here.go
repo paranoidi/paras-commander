@@ -9,7 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// activateCopyHereAction copies the highlighted directory beside itself under a new name.
+// activateCopyHereAction copies the highlighted file or directory beside itself under a new name.
 func (a *App) activateCopyHereAction() {
 	a.openCopyHereDialog()
 }
@@ -40,11 +40,11 @@ func (a *App) openCopyHereDialog() {
 func (a *App) executeCopyHere() {
 	p := a.activePanel()
 	d := &a.model.FileDialog
-	field := a.focusedField()
-	if field == nil {
+	if len(d.Fields) == 0 {
 		a.closeFileDialog()
 		return
 	}
+	newName := d.Fields[0].Value
 	sourcePath := d.CopyHereSource
 	if sourcePath == "" {
 		a.closeFileDialog()
@@ -61,7 +61,7 @@ func (a *App) executeCopyHere() {
 		a.closeFileDialog()
 		return
 	}
-	plan, err := ops.PlanCopyHere(entry, field.Value, p.PathString())
+	plan, err := ops.PlanCopyHere(entry, newName, p.PathString())
 	if err != nil {
 		a.setErrorMessage("Copy here", err)
 		a.closeFileDialog()

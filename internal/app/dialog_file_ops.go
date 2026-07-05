@@ -246,12 +246,12 @@ func (a *App) executeFileDialog() {
 
 func (a *App) executeRename() {
 	p := a.activePanel()
-	field := a.focusedField()
-	if field == nil {
+	d := &a.model.FileDialog
+	if len(d.Fields) == 0 {
 		a.closeFileDialog()
 		return
 	}
-	newName := field.Value
+	newName := d.Fields[0].Value
 	entry, err := ops.ResolveSourceSingle(p)
 	if err != nil {
 		a.setErrorMessage("Rename source", err)
