@@ -305,7 +305,7 @@ func TestDedupDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	}
 	assertMenuItemKeyLabels(t, &defs[0], map[string]string{
 		"Back to file view": "Esc",
-		"Refresh":           "Alt+R",
+		"Refresh":           "M-C-r",
 		"Delete marked":     "F8",
 	})
 }

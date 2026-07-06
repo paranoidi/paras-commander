@@ -71,7 +71,7 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionDedupClose:
 		a.closeDedupView()
 		return true
-	case keymap.ActionDedupRefresh:
+	case keymap.ActionPanelRefresh:
 		a.dedupCtrl.Refresh()
 		return true
 	case keymap.ActionDedupToggleSort:
@@ -82,6 +82,15 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		return true
 	case keymap.ActionDedupMarkRedundant:
 		a.dedupCtrl.MarkRedundantUnderSelected()
+		return true
+	case keymap.ActionDedupMarkDuplicates:
+		a.dedupCtrl.MarkDuplicatesUnderSelected()
+		return true
+	case keymap.ActionDedupMarkGroup:
+		a.dedupCtrl.ToggleGroupMark()
+		return true
+	case keymap.ActionPanelClearSelection:
+		a.dedupCtrl.ClearMarks()
 		return true
 	case keymap.ActionFileDelete:
 		if len(a.dedupCtrl.MarkedPaths()) > 0 {
@@ -97,18 +106,29 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 
 func dedupViewFooterKeys(global, dedup *keymap.Map) []menu.FunctionKey {
 	var out []menu.FunctionKey
-	if dedup != nil {
-		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupRefresh); lbl != "" {
+	if global != nil {
+		if lbl := global.MenuBindingLabel(keymap.ActionPanelRefresh); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Refresh"})
 		}
+	}
+	if dedup != nil {
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupToggleSort); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Sort"})
 		}
+		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkGroup); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Mark group"})
+		}
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkRedundant); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Keep uniques"})
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Mark uniques"})
+		}
+		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkDuplicates); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Mark dups"})
 		}
 	}
 	if global != nil {
+		if lbl := global.MenuBindingLabel(keymap.ActionPanelClearSelection); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unmark all"})
+		}
 		if lbl := global.MenuBindingLabel(keymap.ActionFileDelete); lbl != "" {
 			out = append(out, menu.FunctionKey{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete"})
 		}

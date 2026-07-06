@@ -80,6 +80,7 @@ func drawDedupView(
 
 	base := styles.JobsRow.Background(bg)
 	dim := styles.PanelBlockedText.Background(bg)
+	activeStart, activeEnd := dedupGroupBounds(list, view.Selected)
 	for row := range visibleRows {
 		idx := scroll + row
 		if idx >= n {
@@ -91,7 +92,11 @@ func drawDedupView(
 		rowSelected := idx == view.Selected
 		groupAllMarked := DedupGroupFullyMarked(list, view.Marked, idx)
 
-		lineStyle := base
+		rowBase := base
+		if idx < activeStart || idx >= activeEnd {
+			rowBase = dim
+		}
+		lineStyle := rowBase
 		switch {
 		case groupAllMarked && rowSelected:
 			lineStyle = styles.PanelDedupRowCursorAllMarked

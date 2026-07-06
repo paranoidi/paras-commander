@@ -74,11 +74,12 @@ const (
 	ActionCompareMerge       = "compare.merge"
 
 	// Dedup (find-duplicates) view
-	ActionDedupClose         = "dedup.close"
-	ActionDedupRefresh       = "dedup.refresh"
-	ActionDedupToggleSort    = "dedup.toggle-sort"
-	ActionDedupToggleEmpty   = "dedup.toggle-empty"
-	ActionDedupMarkRedundant = "dedup.mark-redundant"
+	ActionDedupClose          = "dedup.close"
+	ActionDedupToggleSort     = "dedup.toggle-sort"
+	ActionDedupToggleEmpty    = "dedup.toggle-empty"
+	ActionDedupMarkRedundant  = "dedup.mark-redundant"
+	ActionDedupMarkDuplicates = "dedup.mark-duplicates"
+	ActionDedupMarkGroup      = "dedup.mark-group"
 
 	// Dialog actions
 	ActionDialogConfirm = "ui.confirm"
@@ -261,11 +262,12 @@ var KnownActions = map[string]struct{}{
 	ActionCompareRefresh:     {},
 	ActionCompareMerge:       {},
 
-	ActionDedupClose:         {},
-	ActionDedupRefresh:       {},
-	ActionDedupToggleSort:    {},
-	ActionDedupToggleEmpty:   {},
-	ActionDedupMarkRedundant: {},
+	ActionDedupClose:          {},
+	ActionDedupToggleSort:     {},
+	ActionDedupToggleEmpty:    {},
+	ActionDedupMarkRedundant:  {},
+	ActionDedupMarkDuplicates: {},
+	ActionDedupMarkGroup:      {},
 
 	ActionDialogConfirm: {},
 	ActionDialogCancel:  {},

@@ -136,6 +136,28 @@ func TestDedupRedundantUnder(t *testing.T) {
 	}
 }
 
+func TestDedupDuplicatesUnder(t *testing.T) {
+	mk := func(rel string) DedupEntry {
+		e := DedupEntry{File: comparepkg.DedupFile{Rel: rel, Abs: pathloc.MustParse("/root/" + rel)}, Size: 10}
+		e.AbsKey = e.File.Abs.String()
+		return e
+	}
+	// g1: one copy under backup/, one outside → the backup copy is stored elsewhere.
+	// g2: both copies under backup/ → no external survivor, leave untouched.
+	list := []DedupEntry{
+		func() DedupEntry { e := mk("backup/copper"); e.GroupFirst = true; return e }(),
+		mk("keep/copper"),
+		func() DedupEntry { e := mk("backup/inner/willow"); e.GroupFirst = true; return e }(),
+		mk("backup/other/willow"),
+	}
+
+	// Unlike DedupRedundantUnder, the fully-inside group (g2) must yield NOTHING.
+	got := DedupDuplicatesUnder(list, 0) // selected /root/backup/copper → dir /root/backup
+	if len(got) != 1 || got[0] != "/root/backup/copper" {
+		t.Fatalf("marked %v, want only /root/backup/copper", got)
+	}
+}
+
 func TestDedupGroupFullyMarked(t *testing.T) {
 	list := []DedupEntry{
 		{AbsKey: "/g1/a", GroupFirst: true, Copies: 2},

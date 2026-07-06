@@ -248,15 +248,58 @@ func (h *Handler) ToggleMark() {
 	}
 }
 
-// MarkRedundantUnderSelected marks (for deletion) every duplicate copy under the
-// selected row's directory, leaving one surviving copy of each content group so
-// only unique files remain there. It only marks — deletion stays with DeleteMarked.
-func (h *Handler) MarkRedundantUnderSelected() {
+// ToggleGroupMark marks every copy in the selected row's duplicate group, or unmarks
+// them all when the whole group is already marked.
+func (h *Handler) ToggleGroupMark() {
 	list := h.model.DedupList
 	st := &h.model.DedupView
-	keys := ui.DedupRedundantUnder(list, st.Selected)
+	if st.Selected < 0 || st.Selected >= len(list) {
+		return
+	}
+	if st.Marked == nil {
+		st.Marked = map[string]bool{}
+	}
+	start, end := ui.DedupGroupBounds(list, st.Selected)
+	unmark := ui.DedupGroupFullyMarked(list, st.Marked, st.Selected)
+	for i := start; i < end; i++ {
+		e := list[i]
+		switch {
+		case unmark && st.Marked[e.AbsKey]:
+			delete(st.Marked, e.AbsKey)
+			st.MarkedCount--
+			st.MarkedReclaimBytes -= e.Size
+		case !unmark && !st.Marked[e.AbsKey]:
+			st.Marked[e.AbsKey] = true
+			st.MarkedCount++
+			st.MarkedReclaimBytes += e.Size
+		}
+	}
+}
+
+// MarkRedundantUnderSelected marks (for deletion) redundant duplicate copies under
+// the selected row's directory, leaving one surviving copy of each content group so
+// only unique files remain there ("keep uniques"). Mark-only — deletion stays with
+// DeleteMarked.
+func (h *Handler) MarkRedundantUnderSelected() {
+	h.markUnderSelected(ui.DedupRedundantUnder, "No redundant copies under this folder")
+}
+
+// MarkDuplicatesUnderSelected marks (for deletion) copies under the selected row's
+// directory that are also stored outside it, leaving groups that live only here
+// untouched ("delete duplicates from here"). Mark-only — deletion stays with
+// DeleteMarked.
+func (h *Handler) MarkDuplicatesUnderSelected() {
+	h.markUnderSelected(ui.DedupDuplicatesUnder, "No duplicates stored elsewhere under this folder")
+}
+
+// markUnderSelected applies a mark-selection rule to the current list and merges the
+// result into the delete-mark set, keeping the marked count and reclaim bytes in sync.
+func (h *Handler) markUnderSelected(pick func([]ui.DedupEntry, int) []string, emptyMsg string) {
+	list := h.model.DedupList
+	st := &h.model.DedupView
+	keys := pick(list, st.Selected)
 	if len(keys) == 0 {
-		h.host.SetTransientMessage("No redundant copies under this folder", ui.MessageUrgencyInfo)
+		h.host.SetTransientMessage(emptyMsg, ui.MessageUrgencyInfo)
 		return
 	}
 	if st.Marked == nil {
@@ -273,6 +316,17 @@ func (h *Handler) MarkRedundantUnderSelected() {
 			st.MarkedReclaimBytes += e.Size
 		}
 	}
+}
+
+// ClearMarks unmarks every file, reusing the file-list clear-selection binding.
+func (h *Handler) ClearMarks() {
+	st := &h.model.DedupView
+	if st.MarkedCount == 0 {
+		return
+	}
+	st.Marked = map[string]bool{}
+	st.MarkedCount = 0
+	st.MarkedReclaimBytes = 0
 }
 
 // MarkedPaths returns marked file paths that still exist in the current snapshot,

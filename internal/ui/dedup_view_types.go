@@ -118,10 +118,25 @@ func DedupGroupFullyMarked(list []DedupEntry, marked map[string]bool, idx int) b
 
 // DedupRedundantUnder returns the AbsKeys of duplicate copies under the selected
 // row's directory that can be deleted while leaving exactly one surviving copy of
-// each content group. When a copy already survives outside the directory, every
-// under-directory copy is redundant; otherwise the first under-directory copy is
-// kept. Result is empty when nothing under the directory is safe to drop.
+// each content group ("keep uniques in this folder"). When a copy already survives
+// outside the directory, every under-directory copy is redundant; otherwise the
+// first under-directory copy is kept.
 func DedupRedundantUnder(list []DedupEntry, selected int) []string {
+	return dedupMarkUnder(list, selected, true)
+}
+
+// DedupDuplicatesUnder returns the AbsKeys of copies under the selected row's
+// directory that are also stored outside it ("delete duplicates from this folder").
+// A group living entirely under the directory is left untouched — nothing here is
+// dropped unless a copy survives elsewhere.
+func DedupDuplicatesUnder(list []DedupEntry, selected int) []string {
+	return dedupMarkUnder(list, selected, false)
+}
+
+// dedupMarkUnder collects under-directory copies to mark for deletion. When
+// keepOneWhenIsolated is true a group living entirely under the directory keeps its
+// first copy; when false such a group is skipped entirely.
+func dedupMarkUnder(list []DedupEntry, selected int, keepOneWhenIsolated bool) []string {
 	if selected < 0 || selected >= len(list) {
 		return nil
 	}
@@ -139,13 +154,23 @@ func DedupRedundantUnder(list []DedupEntry, selected int) []string {
 				outside++
 			}
 		}
-		if outside == 0 && len(under) > 0 {
-			under = under[1:] // keep the first copy alive
+		if outside == 0 {
+			if keepOneWhenIsolated && len(under) > 0 {
+				under = under[1:] // keep the first copy alive
+			} else {
+				under = nil // no external survivor: leave the group untouched
+			}
 		}
 		out = append(out, under...)
 		start = end
 	}
 	return out
+}
+
+// DedupGroupBounds returns the [start,end) row range of the duplicate group that
+// contains idx, using the GroupFirst sentinel in the flat list.
+func DedupGroupBounds(list []DedupEntry, idx int) (start, end int) {
+	return dedupGroupBounds(list, idx)
 }
 
 func dedupGroupBounds(list []DedupEntry, idx int) (start, end int) {

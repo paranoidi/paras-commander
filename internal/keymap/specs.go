@@ -305,13 +305,6 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"back", "browser"},
 		},
 		{
-			ID:          ActionDedupRefresh,
-			Title:       "Refresh find-duplicates",
-			Section:     "Navigation",
-			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
-			Keywords:    []string{"rescan", "rehash"},
-		},
-		{
 			ID:          ActionDedupToggleSort,
 			Title:       "Toggle duplicates sort order",
 			Section:     "Navigation",
@@ -331,6 +324,20 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"mark", "select", "redundant", "unique", "folder"},
+		},
+		{
+			ID:          ActionDedupMarkGroup,
+			Title:       "Mark whole duplicate group",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"mark", "select", "group", "all", "toggle"},
+		},
+		{
+			ID:          ActionDedupMarkDuplicates,
+			Title:       "Mark duplicates stored elsewhere",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"mark", "select", "delete", "duplicate", "purge", "folder"},
 		},
 
 		// ── Disk usage ──
