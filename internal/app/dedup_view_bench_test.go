@@ -1,34 +1,12 @@
 package app
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
-	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
-	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/testutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
-
-func syntheticDedupSnapshot(groups int) comparepkg.DedupSnapshot {
-	root := pathloc.MustParse("/scan/root")
-	snap := comparepkg.DedupSnapshot{
-		Root:  root,
-		Phase: comparepkg.DedupDone,
-	}
-	for g := range groups {
-		relA := fmt.Sprintf("group-%d/a.bin", g)
-		relB := fmt.Sprintf("group-%d/b.bin", g)
-		snap.Groups = append(snap.Groups, comparepkg.DedupGroup{
-			Size: 4096,
-			Files: []comparepkg.DedupFile{
-				{Rel: relA, Abs: pathloc.MustParse("/scan/root/" + relA)},
-				{Rel: relB, Abs: pathloc.MustParse("/scan/root/" + relB)},
-			},
-		})
-	}
-	return snap
-}
 
 func benchDedupApp(b *testing.B, groups int) *App {
 	b.Helper()
@@ -47,7 +25,7 @@ func benchDedupApp(b *testing.B, groups int) *App {
 	b.Cleanup(app.stopWorker)
 	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.ViewMode = ui.ViewDedup
-	app.model.DedupSnapshot = syntheticDedupSnapshot(groups)
+	app.model.DedupSnapshot = testutil.SyntheticDedupSnapshot(groups)
 	app.model.DedupView = ui.DedupViewState{Marked: map[string]bool{}, IgnoreEmpty: true, TreeDirs: true}
 	app.model.DedupList, _ = ui.DedupRowsFromSnapshot(app.model.DedupSnapshot, app.model.DedupView)
 	return app
@@ -56,8 +34,9 @@ func benchDedupApp(b *testing.B, groups int) *App {
 func BenchmarkDedupViewNavDown(b *testing.B) {
 	const groups = 45464
 	app := benchDedupApp(b, groups)
-	if len(app.model.DedupList) != groups*2 {
-		b.Fatalf("DedupList = %d, want %d", len(app.model.DedupList), groups*2)
+	// TreeDirs: one dir row per group plus its two files.
+	if len(app.model.DedupList) != groups*3 {
+		b.Fatalf("DedupList = %d, want %d", len(app.model.DedupList), groups*3)
 	}
 
 	b.ResetTimer()

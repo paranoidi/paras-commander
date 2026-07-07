@@ -1,38 +1,16 @@
 package ui
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
-	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
-	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/testutil"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-func syntheticDedupSnapshot(groups int) comparepkg.DedupSnapshot {
-	root := pathloc.MustParse("/scan/root")
-	snap := comparepkg.DedupSnapshot{
-		Root:  root,
-		Phase: comparepkg.DedupDone,
-	}
-	for g := range groups {
-		relA := fmt.Sprintf("group-%d/a.bin", g)
-		relB := fmt.Sprintf("group-%d/b.bin", g)
-		snap.Groups = append(snap.Groups, comparepkg.DedupGroup{
-			Size: 4096,
-			Files: []comparepkg.DedupFile{
-				{Rel: relA, Abs: pathloc.MustParse("/scan/root/" + relA)},
-				{Rel: relB, Abs: pathloc.MustParse("/scan/root/" + relB)},
-			},
-		})
-	}
-	return snap
-}
-
 func BenchmarkDrawDedupViewLargeList(b *testing.B) {
 	const groups = 45464
-	snap := syntheticDedupSnapshot(groups)
+	snap := testutil.SyntheticDedupSnapshot(groups)
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
 	if len(list) != groups*2 {
 		b.Fatalf("list len = %d, want %d", len(list), groups*2)
