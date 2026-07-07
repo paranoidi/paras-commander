@@ -7,5 +7,5 @@ func (a *App) browserMenuDefinitions() []menu.Definition {
 }
 
 func (a *App) dedupMenuDefinitions() []menu.Definition {
-	return menu.DedupDefinitions(a.keys, a.keysDedup)
+	return menu.DedupDefinitions(a.keys, a.keysDedup, a.model.DedupView.IgnoreEmpty)
 }

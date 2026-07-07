@@ -3,7 +3,6 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
-	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -33,14 +32,14 @@ func (a *App) openFindDuplicates() { a.dedupCtrl.Open() }
 func (a *App) openDedupDeleteDialog() {
 	st := a.model.DedupView
 	var entries []dialog.DeleteListEntry
-	for _, e := range a.model.DedupList {
-		if st.Marked[e.AbsKey] {
-			entries = append(entries, dialog.DeleteListEntry{
-				Name: e.File.Rel,
-				Path: e.AbsKey,
-				Type: localfs.EntryFile,
-			})
-		}
+	// Marked files come from the handler (group-based), not the visible rows, so
+	// copies hidden inside collapsed tree nodes are listed too.
+	for _, f := range a.dedupCtrl.MarkedFiles() {
+		entries = append(entries, dialog.DeleteListEntry{
+			Name: f.Rel,
+			Path: f.Abs.String(),
+			Type: localfs.EntryFile,
+		})
 	}
 	if len(entries) == 0 {
 		return
@@ -89,6 +88,26 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionDedupMarkGroup:
 		a.dedupCtrl.ToggleGroupMark()
 		return true
+	case keymap.ActionDedupToggleNode:
+		a.dedupCtrl.ToggleNode()
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
+	case keymap.ActionDedupCollapse:
+		a.dedupCtrl.CollapseOrParent()
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
+	case keymap.ActionDedupToggleTree:
+		a.dedupCtrl.ToggleTreeMode()
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
+	case keymap.ActionDedupCollapseAll:
+		a.dedupCtrl.CollapseAll()
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
+	case keymap.ActionDedupExpandAll:
+		a.dedupCtrl.ExpandAll()
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
 	case keymap.ActionPanelClearSelection:
 		a.dedupCtrl.ClearMarks()
 		return true
@@ -112,6 +131,9 @@ func dedupViewFooterKeys(global, dedup *keymap.Map) []menu.FunctionKey {
 		}
 	}
 	if dedup != nil {
+		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupToggleTree); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Dirs/Groups"})
+		}
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupToggleSort); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Sort"})
 		}
@@ -136,30 +158,17 @@ func dedupViewFooterKeys(global, dedup *keymap.Map) []menu.FunctionKey {
 	return out
 }
 
-// dedupVisibleRows is the number of file rows the results list can show (title border,
-// root header, and bottom border consume three rows of chrome — same as jobs/commands).
+// dedupVisibleRows is the number of file rows one tree pane can show (title
+// border, header line, and bottom border consume three rows of chrome — same as
+// jobs/commands). Both panes share the twin-panel split, so the primary rect's
+// row count serves for clamping either pane.
 func (a *App) dedupVisibleRows() int {
 	width, height := a.screen.Size()
 	layout := a.layoutForTerminalSize(width, height)
-	rect := ui.MergeTwinPanelRects(layout.Primary, layout.Secondary, a.model.SplitOrientation)
-	return ui.PanelListRows(rect)
+	return ui.PanelListRows(layout.Primary)
 }
 
 func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
-	snap := a.model.DedupSnapshot
-	st := &a.model.DedupView
-
-	// Confirmation gate before the (expensive) hashing phase.
-	if snap.Phase == comparepkg.DedupAwaitConfirm {
-		switch event.Key() {
-		case tcell.KeyEnter:
-			a.dedupCtrl.Confirm()
-		case tcell.KeyEsc, tcell.KeyLeft:
-			a.closeDedupView()
-		}
-		return false
-	}
-
 	nextAction := a.actionFromKeyEvent(event)
 	if nextAction == keymap.ActionAppQuit {
 		return a.handleQuit()
@@ -176,7 +185,6 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 	}
 
 	visible := a.dedupVisibleRows()
-	n := a.dedupCtrl.ListLen()
 
 	if nextAction != "" && a.tryDispatchDedup(nextAction) {
 		return false
@@ -188,10 +196,11 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 	switch nextAction {
 	case keymap.ActionPanelSelectToggle:
 		a.dedupCtrl.ToggleMark()
-		if st.Selected < n-1 {
-			st.Selected++
-		}
+		a.dedupCtrl.MoveSelection(1)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
+		return false
+	case keymap.ActionPanelSwitch:
+		a.dedupCtrl.SwitchPane()
 		return false
 	}
 
@@ -199,30 +208,22 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 	case tcell.KeyEsc:
 		a.closeDedupView()
 	case tcell.KeyUp:
-		if st.Selected > 0 {
-			st.Selected--
-		}
+		a.dedupCtrl.MoveSelection(-1)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
 	case tcell.KeyDown:
-		if st.Selected < n-1 {
-			st.Selected++
-		}
+		a.dedupCtrl.MoveSelection(1)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
 	case tcell.KeyPgUp:
-		st.Selected = max(0, st.Selected-visible)
+		a.dedupCtrl.MoveSelection(-visible)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
 	case tcell.KeyPgDn:
-		if n > 0 {
-			st.Selected = min(n-1, st.Selected+visible)
-		}
+		a.dedupCtrl.MoveSelection(visible)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
 	case tcell.KeyHome:
-		st.Selected = 0
+		a.dedupCtrl.SelectEdge(false)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
 	case tcell.KeyEnd:
-		if n > 0 {
-			st.Selected = n - 1
-		}
+		a.dedupCtrl.SelectEdge(true)
 		a.dedupCtrl.EnsureSelectionVisible(visible)
 	case tcell.KeyEnter:
 		a.dedupCtrl.NavigateFromSelection()

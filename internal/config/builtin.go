@@ -79,6 +79,10 @@ const (
 	// navigating, matching the behaviour of disk-usage idle sort in the file listing.
 	DefaultFindListNavIdleMS = 400
 
+	// DefaultDedupHashConfirmBytes pauses find-duplicates before hashing when the total
+	// byte size of hash candidates exceeds this value (0 disables the gate).
+	DefaultDedupHashConfirmBytes = 32 * 1024 * 1024 * 1024
+
 	// DefaultCompareHashConcurrency limits parallel file hashing during panel compare.
 	DefaultCompareHashConcurrency = 4
 	// DefaultCompareReadBufferKiB is the per-worker read buffer for compare hashing.

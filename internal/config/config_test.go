@@ -11,6 +11,23 @@ import (
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 )
 
+func TestDefaultDedupHashConfirmBytes(t *testing.T) {
+	if got := Default().Dedup.HashConfirmBytes; got != DefaultDedupHashConfirmBytes {
+		t.Fatalf("Dedup.HashConfirmBytes = %d, want %d", got, DefaultDedupHashConfirmBytes)
+	}
+}
+
+func TestValidateClampsNegativeDedupHashConfirmBytes(t *testing.T) {
+	cfg := Default()
+	cfg.Dedup.HashConfirmBytes = -1
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.Dedup.HashConfirmBytes != 0 {
+		t.Fatalf("Dedup.HashConfirmBytes = %d, want 0", cfg.Dedup.HashConfirmBytes)
+	}
+}
+
 func TestValidateClampsDiskUsageWalkConcurrency(t *testing.T) {
 	cfg := Default()
 	cfg.DiskUsageWalkConcurrency = 0

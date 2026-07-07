@@ -80,6 +80,11 @@ const (
 	ActionDedupMarkRedundant  = "dedup.mark-redundant"
 	ActionDedupMarkDuplicates = "dedup.mark-duplicates"
 	ActionDedupMarkGroup      = "dedup.mark-group"
+	ActionDedupToggleNode     = "dedup.toggle-node"
+	ActionDedupCollapse       = "dedup.collapse"
+	ActionDedupToggleTree     = "dedup.toggle-tree"
+	ActionDedupCollapseAll    = "dedup.collapse-all"
+	ActionDedupExpandAll      = "dedup.expand-all"
 
 	// Dialog actions
 	ActionDialogConfirm = "ui.confirm"
@@ -268,6 +273,11 @@ var KnownActions = map[string]struct{}{
 	ActionDedupMarkRedundant:  {},
 	ActionDedupMarkDuplicates: {},
 	ActionDedupMarkGroup:      {},
+	ActionDedupToggleNode:     {},
+	ActionDedupCollapse:       {},
+	ActionDedupToggleTree:     {},
+	ActionDedupCollapseAll:    {},
+	ActionDedupExpandAll:      {},
 
 	ActionDialogConfirm: {},
 	ActionDialogCancel:  {},

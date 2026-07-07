@@ -10,6 +10,7 @@ import (
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -46,11 +47,17 @@ func TestDedupViewFindsDuplicates(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 	app.openFindDuplicates()
-	if app.model.ViewMode != ui.ViewDedup {
-		t.Fatalf("ViewMode = %v, want ViewDedup", app.model.ViewMode)
+	if !app.model.DedupProgressDialog.Open {
+		t.Fatal("DedupProgressDialog should be open after starting scan")
+	}
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser during scan", app.model.ViewMode)
 	}
 
 	snap := waitDedupDone(t, app)
+	if app.model.ViewMode != ui.ViewDedup {
+		t.Fatalf("ViewMode = %v, want ViewDedup after scan", app.model.ViewMode)
+	}
 	if snap.Phase != comparepkg.DedupDone {
 		t.Fatalf("phase = %v (%s)", snap.Phase, snap.Err)
 	}
@@ -58,7 +65,7 @@ func TestDedupViewFindsDuplicates(t *testing.T) {
 		t.Fatalf("groups = %d, want 1", len(snap.Groups))
 	}
 	if len(app.model.DedupList) != 2 {
-		t.Fatalf("DedupList = %d, want 2", len(app.model.DedupList))
+		t.Fatalf("DedupList = %d, want 2 (sub dir collapsed + a.txt)", len(app.model.DedupList))
 	}
 
 	app.render() // exercise drawDedupView; must not panic
@@ -70,21 +77,194 @@ func TestDedupViewFindsDuplicates(t *testing.T) {
 	}
 }
 
-func TestDedupViewLeftClosesViewDoesNotQuit(t *testing.T) {
+func TestDedupViewLeftCollapsesInsteadOfClosing(t *testing.T) {
 	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b.txt"), []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 	app.openFindDuplicates()
+	waitDedupDone(t, app)
 	if app.model.ViewMode != ui.ViewDedup {
 		t.Fatalf("ViewMode = %v, want ViewDedup", app.model.ViewMode)
 	}
 
+	// Left is tree collapse now, not close: the view must stay open.
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if quit {
 		t.Fatal("KeyLeft in dedup view must not quit the application")
 	}
-	if app.model.ViewMode != ui.ViewBrowser {
-		t.Fatalf("ViewMode = %v, want ViewBrowser after KeyLeft", app.model.ViewMode)
+	if app.model.ViewMode != ui.ViewDedup {
+		t.Fatalf("ViewMode = %v, want ViewDedup after KeyLeft", app.model.ViewMode)
+	}
+}
+
+func TestDedupViewCopiesPaneTabFocusAndMark(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt"), filepath.Join("meadow", "beacon.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	// Dirs mode starts collapsed; Down from the first directory row selects the root file.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+
+	// Cursor on a duplicate file: copies pane lists the two OTHER copies.
+	if got := len(app.model.DedupCopiesList); got == 0 {
+		t.Fatal("copies pane empty for selected file")
+	}
+	var copyFiles []string
+	selAbs := app.model.DedupList[app.model.DedupView.Main.Selected].Value.AbsKey
+	for _, r := range app.model.DedupCopiesList {
+		if r.Value.Kind == ui.DedupRowFile {
+			copyFiles = append(copyFiles, r.Value.AbsKey)
+			if r.Value.AbsKey == selAbs {
+				t.Fatal("copies pane contains the selected file itself")
+			}
+		}
+	}
+	if len(copyFiles) != 2 {
+		t.Fatalf("copies pane files = %v, want 2 other copies", copyFiles)
+	}
+
+	// Tab focuses the copies pane; Down moves its cursor, not the main one.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if !app.model.DedupView.FocusCopies {
+		t.Fatal("Tab did not focus the copies pane")
+	}
+	mainSel := app.model.DedupView.Main.Selected
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if app.model.DedupView.Main.Selected != mainSel {
+		t.Fatal("Down in copies pane moved the main cursor")
+	}
+
+	// Space marks the focused copy.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if app.model.DedupView.MarkedCount != 1 {
+		t.Fatalf("MarkedCount = %d, want 1 after marking in copies pane", app.model.DedupView.MarkedCount)
+	}
+
+	// Tab returns to the main pane; moving the main cursor rebuilds the copies pane.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if app.model.DedupView.FocusCopies {
+		t.Fatal("second Tab did not return focus to the main pane")
+	}
+
+	app.render() // twin panes must render without panicking
+}
+
+func TestDedupViewExpandAutoDescendsSingleDirChain(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "orchard", "deep", "deeper"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("orchard", "deep", "deeper", "lantern.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	app.dedupCtrl.CollapseAll()
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
+	rows := app.model.DedupList
+	if len(rows) != 2 || rows[0].ID != "d:orchard" {
+		t.Fatalf("collapsed rows = %+v, want [d:orchard, root lantern]", rows)
+	}
+
+	// Right on orchard: the single-subdir chain orchard→deep→deeper opens in one
+	// step and the cursor lands on the deepest chain directory.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	rows = app.model.DedupList
+	sel := app.model.DedupView.Main.Selected
+	if sel < 0 || sel >= len(rows) || rows[sel].ID != "d:orchard/deep/deeper" {
+		t.Fatalf("cursor on %q, want d:orchard/deep/deeper", rows[sel].ID)
+	}
+	if !rows[sel].Expanded {
+		t.Fatal("deepest chain dir should be expanded (its file visible)")
+	}
+	if got := len(rows); got != 5 { // orchard, deep, deeper, deeper/lantern.txt, root lantern.txt
+		t.Fatalf("rows after auto-descend = %d, want 5", got)
+	}
+}
+
+func TestDedupViewTreeCollapseAndModes(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	if got := len(app.model.DedupList); got != 2 {
+		t.Fatalf("dirs-mode rows = %d, want 2 (meadow dir collapsed + root lantern.txt)", got)
+	}
+
+	// Ctrl+T switches to the groups tree: one collapsed group header.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlT, 0, tcell.ModCtrl))
+	if app.model.DedupView.TreeDirs {
+		t.Fatal("Ctrl+T did not switch to groups tree mode")
+	}
+	if got := len(app.model.DedupList); got != 1 {
+		t.Fatalf("groups-mode rows = %d, want 1 (collapsed header)", got)
+	}
+
+	// Right expands the group header; the copy row appears.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if got := len(app.model.DedupList); got != 2 {
+		t.Fatalf("after expand rows = %d, want 2", got)
+	}
+	// Left collapses again.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if got := len(app.model.DedupList); got != 1 {
+		t.Fatalf("after collapse rows = %d, want 1", got)
+	}
+	// Marking the collapsed group still marks the hidden copy.
+	app.dedupCtrl.ToggleGroupMark()
+	if got := len(app.dedupCtrl.MarkedPaths()); got != 2 {
+		t.Fatalf("marked after group-mark on collapsed header = %d, want 2", got)
+	}
+	// Right again re-expands.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if got := len(app.model.DedupList); got != 2 {
+		t.Fatalf("after re-expand rows = %d, want 2", got)
+	}
+
+	// Ctrl+T switches back to the directory tree.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlT, 0, tcell.ModCtrl))
+	if !app.model.DedupView.TreeDirs {
+		t.Fatal("Ctrl+T did not switch back to directory tree mode")
+	}
+	if got := len(app.model.DedupList); got != 2 {
+		t.Fatalf("dirs-mode rows = %d, want 2 (collapse state preserved)", got)
+	}
+	if got := len(app.dedupCtrl.MarkedPaths()); got != 2 {
+		t.Fatalf("marks lost on mode switch: %d, want 2", got)
 	}
 }
 
@@ -135,6 +315,7 @@ func TestDedupViewMenuOmitsBrowserItems(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())
 	app.openFindDuplicates()
+	waitDedupDone(t, app)
 
 	for _, def := range menu.ActiveDefinitions(app.model.MenuDefinitions) {
 		switch def.ID {
@@ -154,6 +335,7 @@ func TestDedupViewFooterEscFirst(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())
 	app.openFindDuplicates()
+	waitDedupDone(t, app)
 	keys := app.activeFooterKeys()
 	if len(keys) == 0 {
 		t.Fatal("footer keys empty")
@@ -181,12 +363,11 @@ func TestDedupViewFooterEscFirst(t *testing.T) {
 	}
 }
 
-func TestDedupAwaitHashConfirmFooterShowsOnlyEscAndF10(t *testing.T) {
+func TestDedupProgressDialogFooterShowsEscAndF10(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, t.TempDir())
-	app.model.ViewMode = ui.ViewDedup
-	app.model.DedupSnapshot.Phase = comparepkg.DedupAwaitConfirm
-	app.model.DedupSnapshot.HashTotal = 168857
+	app.model.DedupProgressDialog.Open = true
+	app.model.DedupSnapshot.Phase = comparepkg.DedupHashing
 
 	keys := app.activeFooterKeys()
 	if len(keys) != 2 {
@@ -200,12 +381,33 @@ func TestDedupAwaitHashConfirmFooterShowsOnlyEscAndF10(t *testing.T) {
 	}
 }
 
-func TestDedupAwaitHashConfirmMenuBarNotInteractive(t *testing.T) {
+func TestDedupProgressDialogMenuBarNotInteractive(t *testing.T) {
 	m := ui.Model{
-		ViewMode:      ui.ViewDedup,
-		DedupSnapshot: comparepkg.DedupSnapshot{Phase: comparepkg.DedupAwaitConfirm},
+		DedupProgressDialog: dialog.DedupProgressDialogState{Open: true},
+		DedupSnapshot:       comparepkg.DedupSnapshot{Phase: comparepkg.DedupHashing},
 	}
 	if m.MenuBarInteractive() {
-		t.Fatal("dedup hash-confirm gate must hide interactive menu bar")
+		t.Fatal("dedup progress dialog must hide interactive menu bar")
+	}
+	if !m.ModalDialogOpen() {
+		t.Fatal("dedup progress dialog must count as modal")
+	}
+}
+
+func TestDedupProgressDialogCancelClosesScan(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	if !app.model.DedupProgressDialog.Open {
+		t.Fatal("expected progress dialog open")
+	}
+
+	app.handleDedupProgressDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.DedupProgressDialog.Open {
+		t.Fatal("progress dialog should close after cancel")
+	}
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser after cancel", app.model.ViewMode)
 	}
 }

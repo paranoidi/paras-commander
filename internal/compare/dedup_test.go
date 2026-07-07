@@ -26,7 +26,7 @@ func writeFile(t *testing.T, dir, rel, content string) {
 
 // startDedup starts a session and returns a channel of its terminal/await snapshots
 // (Done, Error, AwaitConfirm) in order. At most a couple are ever sent per run.
-func startDedup(t *testing.T, dir string, threshold int) (*DedupSession, <-chan DedupSnapshot) {
+func startDedup(t *testing.T, dir string, confirmHashBytes int64) (*DedupSession, <-chan DedupSnapshot) {
 	t.Helper()
 	root, err := pathloc.File(dir)
 	if err != nil {
@@ -35,7 +35,7 @@ func startDedup(t *testing.T, dir string, threshold int) (*DedupSession, <-chan 
 	phases := make(chan DedupSnapshot, 8)
 	sess := StartDedup(context.Background(), root, DedupOptions{
 		HashWorkers:      2,
-		ConfirmThreshold: threshold,
+		ConfirmHashBytes: confirmHashBytes,
 		OnUpdate: func(s DedupSnapshot) {
 			switch s.Phase {
 			case DedupDone, DedupError, DedupAwaitConfirm:
@@ -76,6 +76,80 @@ func TestDedupGroupsAndSizePrefilter(t *testing.T) {
 	}
 	if g.Files[0].Rel != "a/dup1.txt" || g.Files[1].Rel != "b/dup2.txt" {
 		t.Fatalf("group files = %v, want sorted [a/dup1.txt b/dup2.txt]", g.Files)
+	}
+}
+
+func TestDedupWalkingPublishesFileCount(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "alpha.txt", "a")
+	writeFile(t, dir, "beta.txt", "b")
+
+	root, err := pathloc.File(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var walking []DedupSnapshot
+	sess := StartDedup(context.Background(), root, DedupOptions{
+		OnUpdate: func(s DedupSnapshot) {
+			if s.Phase == DedupWalking && s.Walked > 0 {
+				walking = append(walking, s)
+			}
+		},
+	})
+	defer sess.Close()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if p := sess.Snapshot().Phase; p == DedupDone || p == DedupError {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if len(walking) == 0 {
+		t.Fatal("expected walking snapshots with file count")
+	}
+	if walking[0].Walked < 1 {
+		t.Fatalf("first walking update = %d, want >= 1", walking[0].Walked)
+	}
+	if got := sess.Snapshot().Walked; got != 2 {
+		t.Fatalf("walked = %d, want 2", got)
+	}
+}
+
+func TestDedupWalkingProgressRateLimited(t *testing.T) {
+	dir := t.TempDir()
+	const n = 40
+	for i := range n {
+		writeFile(t, dir, fmt.Sprintf("dir%d/file.txt", i), "x")
+	}
+
+	root, err := pathloc.File(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var updates int
+	sess := StartDedup(context.Background(), root, DedupOptions{
+		OnUpdate: func(s DedupSnapshot) {
+			if s.Phase == DedupWalking && s.Walked > 0 {
+				updates++
+			}
+		},
+	})
+	defer sess.Close()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if p := sess.Snapshot().Phase; p != DedupWalking {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if updates >= n {
+		t.Fatalf("walking updates = %d, want < %d (rate-limited)", updates, n)
 	}
 }
 
@@ -163,7 +237,7 @@ func TestDedupHashingProgressRateLimited(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 
-	// n tiny files hash in well under one hashProgressInterval; the throttle should coalesce
+	// n tiny files hash in well under one dedupProgressInterval; the throttle should coalesce
 	// them into far fewer visible path changes than one-per-file.
 	if pathChanges >= n {
 		t.Fatalf("path changes = %d, want < %d (rate-limited)", pathChanges, n)
@@ -172,7 +246,7 @@ func TestDedupHashingProgressRateLimited(t *testing.T) {
 
 func TestDedupConfirmGate(t *testing.T) {
 	dir := t.TempDir()
-	// Three size-10 candidates; threshold 1 forces the confirmation gate.
+	// Three size-10 candidates (30 bytes total); threshold 1 byte forces the confirmation gate.
 	writeFile(t, dir, "a/dup1.txt", "duplicate!")
 	writeFile(t, dir, "b/dup2.txt", "duplicate!")
 	writeFile(t, dir, "collide.txt", "0123456789")
@@ -187,6 +261,9 @@ func TestDedupConfirmGate(t *testing.T) {
 	if snap.HashTotal != 3 {
 		t.Fatalf("hashTotal = %d, want 3", snap.HashTotal)
 	}
+	if snap.HashBytesTotal != 30 {
+		t.Fatalf("hashBytesTotal = %d, want 30", snap.HashBytesTotal)
+	}
 
 	sess.Confirm()
 	got := <-phases
@@ -195,5 +272,19 @@ func TestDedupConfirmGate(t *testing.T) {
 	}
 	if len(got.Groups) != 1 {
 		t.Fatalf("groups after confirm = %d, want 1", len(got.Groups))
+	}
+}
+
+func TestDedupConfirmGateSkippedUnderByteThreshold(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "a/dup1.txt", "duplicate!")
+	writeFile(t, dir, "b/dup2.txt", "duplicate!")
+
+	sess, phases := startDedup(t, dir, 30)
+	defer sess.Close()
+
+	snap := <-phases
+	if snap.Phase != DedupDone {
+		t.Fatalf("phase = %v, want DedupDone (20 bytes <= 30 byte threshold)", snap.Phase)
 	}
 }

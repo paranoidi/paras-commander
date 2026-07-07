@@ -33,7 +33,7 @@ func syntheticDedupSnapshot(groups int) comparepkg.DedupSnapshot {
 func BenchmarkDrawDedupViewLargeList(b *testing.B) {
 	const groups = 45464
 	snap := syntheticDedupSnapshot(groups)
-	list, _ := DedupEntriesFromSnapshot(snap, false, true)
+	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
 	if len(list) != groups*2 {
 		b.Fatalf("list len = %d, want %d", len(list), groups*2)
 	}
@@ -49,11 +49,12 @@ func BenchmarkDrawDedupViewLargeList(b *testing.B) {
 		Primary:   Rect{X: 0, Y: 1, Width: 60, Height: 36},
 		Secondary: Rect{X: 60, Y: 1, Width: 60, Height: 36},
 	}
-	view := DedupViewState{Selected: 1, ListScroll: 0, Marked: map[string]bool{}}
+	view := DedupViewState{Main: DedupPane{Selected: 1}, Marked: map[string]bool{}}
+	copies := DedupCopyRows(snap, list[1], nil)
 	styles := theme.Default()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		drawDedupView(screen, layout, view, snap, list, styles, false, "", SplitHorizontal)
+		drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal)
 	}
 }

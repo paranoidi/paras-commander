@@ -197,8 +197,45 @@ func TestParseRejectsBGOnDialogOption(t *testing.T) {
 		"dialog.option.active": `{ fg = "yellow", bg = "bright_black", bold = true }`,
 	})
 	_, err := parse(data)
-	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background comes from dialog.surface)`) {
+	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background is merged at render time)`) {
 		t.Fatalf("parse() error = %v, want reject bg on dialog.option", err)
+	}
+}
+
+func TestParseRejectsBGOnDialogProgressLabel(t *testing.T) {
+	data := testTheme(t, "badprogresslabelbg", nil, map[string]string{
+		"dialog.progress.label.on_track": `{ fg = "white", bg = "black", bold = true }`,
+	})
+	_, err := parse(data)
+	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background is merged at render time)`) {
+		t.Fatalf("parse() error = %v, want reject bg on dialog.progress.label.on_track", err)
+	}
+}
+
+func TestDialogProgressLabelOnBarUsesTrackBackground(t *testing.T) {
+	data := testTheme(t, "dedupprogress", nil, map[string]string{
+		"dialog.progress.track":          `{ fg = "black", bg = "yellow" }`,
+		"dialog.progress.fill":           `{ fg = "black", bg = "white" }`,
+		"dialog.progress.label.on_track": `{ fg = "white", bold = true }`,
+		"dialog.progress.label.on_fill":  `{ fg = "black", bold = true }`,
+	})
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	_, wantTrackBG, _ := th.DialogProgressTrack.Decompose()
+	_, wantFillBG, _ := th.DialogProgressFill.Decompose()
+
+	trackLabel := th.DialogProgressLabelOnBar(false)
+	_, trackBG, _ := trackLabel.Decompose()
+	if trackBG != wantTrackBG {
+		t.Fatalf("DialogProgressLabelOnBar(track) bg = %v, want track bg %v", trackBG, wantTrackBG)
+	}
+
+	fillLabel := th.DialogProgressLabelOnBar(true)
+	_, fillBG, _ := fillLabel.Decompose()
+	if fillBG != wantFillBG {
+		t.Fatalf("DialogProgressLabelOnBar(fill) bg = %v, want fill bg %v", fillBG, wantFillBG)
 	}
 }
 
@@ -207,7 +244,7 @@ func TestParseRejectsBGOnDialogIndicatorSelectionSize(t *testing.T) {
 		"dialog.indicator.selection_size": `{ fg = "yellow", bg = "bright_black" }`,
 	})
 	_, err := parse(data)
-	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background comes from dialog.surface)`) {
+	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background is merged at render time)`) {
 		t.Fatalf("parse() error = %v, want reject bg on dialog.indicator.selection_size", err)
 	}
 }

@@ -653,7 +653,7 @@ func TestRenderBlankMenuBarRowWhenModalDialogOpen(t *testing.T) {
 	}
 }
 
-func TestRenderBlankMenuBarRowWhenDedupAwaitHashConfirm(t *testing.T) {
+func TestRenderBlankMenuBarRowWhenDedupProgressDialogOpen(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -664,12 +664,13 @@ func TestRenderBlankMenuBarRowWhenDedupAwaitHashConfirm(t *testing.T) {
 
 	styles := theme.Default()
 	model := Model{
-		Primary:         panel.State{Path: pathloc.MustParse("/tmp")},
-		Secondary:       panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:     PrimaryPanel,
-		ViewMode:        ViewDedup,
-		DedupSnapshot:   comparepkg.DedupSnapshot{Phase: comparepkg.DedupAwaitConfirm, HashTotal: 168857},
-		MenuDefinitions: menu.DedupDefinitions(nil, nil),
+		Primary:             panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:           panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:         PrimaryPanel,
+		ViewMode:            ViewBrowser,
+		DedupProgressDialog: dialog.DedupProgressDialogState{Open: true},
+		DedupSnapshot:       comparepkg.DedupSnapshot{Phase: comparepkg.DedupHashing, HashTotal: 168857},
+		MenuDefinitions:     menu.BrowserDefinitions(nil, false),
 	}
 
 	Render(screen, model, styles)

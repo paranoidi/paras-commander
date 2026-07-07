@@ -17,6 +17,8 @@ type WalkOptions struct {
 	ShowHidden    bool
 	Gitignore     *gitignore.Cache
 	ShouldSkipDir diskusage.ShouldIgnoreFolder
+	// OnFile, when set, is called after each regular file is indexed (1-based count).
+	OnFile func(walked int)
 }
 
 // WalkRoot indexes regular files under root (local paths only in phase 1).
@@ -93,6 +95,9 @@ func WalkRoot(ctx context.Context, root pathloc.Path, opts WalkOptions) ([]FileR
 			return nil
 		}
 		out = append(out, FileRecord{Abs: loc, Rel: rel, Size: size})
+		if opts.OnFile != nil {
+			opts.OnFile(len(out))
+		}
 		return nil
 	})
 	if walkErr != nil {

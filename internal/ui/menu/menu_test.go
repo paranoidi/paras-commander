@@ -299,7 +299,7 @@ func TestDedupDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
-	defs := DedupDefinitions(bundle.Global, bundle.Dedup)
+	defs := DedupDefinitions(bundle.Global, bundle.Dedup, true)
 	if defs[0].ID != TopDedup {
 		t.Fatalf("first menu = %s, want TopDedup", defs[0].ID)
 	}
@@ -308,6 +308,23 @@ func TestDedupDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Refresh":           "M-C-r",
 		"Delete marked":     "F8",
 	})
+}
+
+func TestDedupToggleEmptyMenuLabel(t *testing.T) {
+	if got := DedupToggleEmptyMenuLabel(true); got != "Show empty files" {
+		t.Fatalf("ignoreEmpty=true label = %q, want Show empty files", got)
+	}
+	if got := DedupToggleEmptyMenuLabel(false); got != "Ignore empty files" {
+		t.Fatalf("ignoreEmpty=false label = %q, want Ignore empty files", got)
+	}
+	defs := DefinitionsDedup(true)
+	if got := defs[0].Items[3].Label; got != "Show empty files" {
+		t.Fatalf("DefinitionsDedup(true) empty label = %q", got)
+	}
+	defs = DefinitionsDedup(false)
+	if got := defs[0].Items[3].Label; got != "Ignore empty files" {
+		t.Fatalf("DefinitionsDedup(false) empty label = %q", got)
+	}
 }
 
 func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
@@ -319,7 +336,7 @@ func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 		"jobs":     JobsDefinitions(bundle.Global, bundle.Jobs),
 		"commands": CommandsDefinitions(bundle.Global, bundle.Commands),
 		"messages": MessagesDefinitions(bundle.Global, bundle.Messages),
-		"dedup":    DedupDefinitions(bundle.Global, bundle.Dedup),
+		"dedup":    DedupDefinitions(bundle.Global, bundle.Dedup, true),
 	} {
 		t.Run(name, func(t *testing.T) {
 			var display *Definition

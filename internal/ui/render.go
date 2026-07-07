@@ -72,7 +72,8 @@ type Model struct {
 	CompareFilterDialog dialog.CompareFilterDialogState
 	DedupView           DedupViewState
 	DedupSnapshot       comparepkg.DedupSnapshot
-	DedupList           []DedupEntry
+	DedupList           []DedupRow
+	DedupCopiesList     []DedupRow
 	// HideMenuBar mirrors !ui.show_menu_bar: when true, the top menu row is omitted and panels extend upward.
 	HideMenuBar bool
 	// ShowFileIcons mirrors ui.show_file_icons (Nerd Font glyphs before file names).
@@ -170,6 +171,7 @@ type Model struct {
 	QuitConfirm            dialog.QuitConfirmState
 	StashRestoreDialog     dialog.StashRestoreDialogState
 	MessageDialog          dialog.MessageDialogState
+	DedupProgressDialog    dialog.DedupProgressDialogState
 	CommandOutputDialog    dialog.CommandOutputDialogState
 	Message                string
 	MessageUrgency         MessageUrgency
@@ -310,21 +312,13 @@ func (m Model) PanelForFileListRender(panelID int) panel.State {
 	}
 }
 
-// DedupAwaitHashConfirm reports the pre-hash confirmation gate ("N files to hash — Enter to continue").
-func (m Model) DedupAwaitHashConfirm() bool {
-	return m.ViewMode == ViewDedup && m.DedupSnapshot.Phase == comparepkg.DedupAwaitConfirm
-}
-
 // PanelsChromeBlocked reports when file/jobs panel chrome should use panel.blocked.*
 // styles because a menu or modal has taken focus.
 func (m Model) PanelsChromeBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
-	if m.ModalDialogOpen() || m.DedupAwaitHashConfirm() {
-		return true
-	}
-	return false
+	return m.ModalDialogOpen()
 }
 
 // ModalDialogOpen reports modals that block normal navigation and hide the menu bar row.
@@ -332,7 +326,7 @@ func (m Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.StashRestoreDialog.Open || m.UserMenu.Open || m.CommandOutputDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.UserMenu.Open || m.CommandOutputDialog.Open {
 		return true
 	}
 	return false
@@ -349,7 +343,7 @@ func (m Model) QuickFilterStartBlocked() bool {
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.UserMenu.Open ||
-		m.CommandOutputDialog.Open
+		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open
 }
 
 // AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
@@ -364,10 +358,10 @@ func (m Model) MenuBarLayoutReserved() bool {
 	return !m.HideMenuBar
 }
 
-// MenuBarInteractive is true when menu labels and pulldown may be shown (blocked by modal dialogs,
-// the dedup hash-confirm gate, and the fullscreen file preview, which has no pulldown menus).
+// MenuBarInteractive is true when menu labels and pulldown may be shown (blocked by modal dialogs
+// and the fullscreen file preview, which has no pulldown menus).
 func (m Model) MenuBarInteractive() bool {
-	return !m.HideMenuBar && !m.ModalDialogOpen() && m.ViewMode != ViewFilePreview && !m.DedupAwaitHashConfirm()
+	return !m.HideMenuBar && !m.ModalDialogOpen() && m.ViewMode != ViewFilePreview
 }
 
 // Render paints model into the screen's logical cell buffer. The caller must invoke
@@ -393,7 +387,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	menus := menu.ActiveDefinitions(model.MenuDefinitions)
 	showMenuBarSpinner := model.MenuBarActivitySpinner
 	if reserveMenu {
-		if model.ModalDialogOpen() || model.DedupAwaitHashConfirm() {
+		if model.ModalDialogOpen() {
 			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
 		} else {
 			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
@@ -430,7 +424,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			dialog.DrawCompareFilterDialog(screen, layout, model.CompareFilterDialog, styles)
 		}
 	case ViewDedup:
-		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
+		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
 	case ViewMessages:
 		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation)
 	default:
@@ -608,6 +602,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	}
 	if model.MessageDialog.Open {
 		dialog.DrawMessageDialog(screen, layout, model.MessageDialog, styles)
+	}
+	if model.DedupProgressDialog.Open {
+		dialog.DrawDedupProgressDialog(screen, layout, model.DedupProgressDialog, model.DedupSnapshot, styles, model.UserHomeDir)
 	}
 	if model.CommandOutputDialog.Open {
 		dialog.DrawCommandOutputDialog(screen, layout, model.CommandOutputDialog, styles)

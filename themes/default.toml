@@ -166,6 +166,10 @@ option.inactive = { fg = "white" }
 option.selected = { fg = "yellow" }
 option.invalid = { fg = "red" }
 indicator.selection_size = { fg = "yellow" }
+progress.fill = { fg = "black", bg = "bright_green" }
+progress.label.on_fill = { fg = "black", bold = true }
+progress.label.on_track = { fg = "bright_white", bold = true }
+progress.track = { fg = "bright_black", bg = "bright_black" }
 
 [dialog.massrename]
 before = { fg = "white" }
@@ -227,6 +231,11 @@ excluded = "\uf114"
 
 [symbols.scrollbar]
 thumb = "┃"
+
+[symbols.tree]
+expand = "▶"
+collapse = "▼"
+leaf = "·"
 
 [symbols.meta]
 running = "\uf141"

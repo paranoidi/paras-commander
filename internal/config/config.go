@@ -127,6 +127,15 @@ type Config struct {
 	Pools PoolsConfig `toml:"pools"`
 	// Compare configures twin-panel directory compare (content hash diff).
 	Compare CompareConfig `toml:"compare"`
+	// Dedup configures find-duplicates within a single directory.
+	Dedup DedupConfig `toml:"dedup"`
+}
+
+// DedupConfig controls find-duplicates scanning.
+type DedupConfig struct {
+	// HashConfirmBytes pauses before hashing when the total byte size of hash
+	// candidates exceeds this value. Zero disables the confirmation gate.
+	HashConfirmBytes int64 `toml:"hash_confirm_bytes"`
 }
 
 // CompareConfig controls panel compare hashing and walk options.
@@ -485,6 +494,9 @@ func Default() Config {
 			MaxHashBytes:        0,
 			StayOnVolumeDefault: DefaultCompareStayOnVolumeDefault,
 		},
+		Dedup: DedupConfig{
+			HashConfirmBytes: DefaultDedupHashConfirmBytes,
+		},
 	}
 }
 
@@ -749,6 +761,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Compare.ReadBufferKiB < 1 {
 		c.Compare.ReadBufferKiB = builtin.Compare.ReadBufferKiB
+	}
+	if c.Dedup.HashConfirmBytes < 0 {
+		c.Dedup.HashConfirmBytes = 0
 	}
 	if !c.sortModeValid(c.DefaultSort) {
 		c.DefaultSort = builtin.DefaultSort

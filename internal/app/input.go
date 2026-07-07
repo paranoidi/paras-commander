@@ -33,6 +33,7 @@ const (
 	InputModeCommandsView
 	InputModeMessagesView
 	InputModeCompareView
+	InputModeDedupProgressDialog
 	InputModeDedupView
 	InputModeFilePreviewView
 	InputModePathPicker
@@ -82,6 +83,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeHostKeyDialog
 	case a.model.FileDialog.Open:
 		return InputModeFileDialog
+	case a.model.DedupProgressDialog.Open:
+		return InputModeDedupProgressDialog
 	case a.model.ViewMode == ui.ViewCompare &&
 		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
@@ -121,6 +124,11 @@ func (a *App) inputMode() InputMode {
 // Dialogs show Esc (close) first, then other keys (e.g. F10 quit). Normal mode shows all.
 func (a *App) activeFooterKeys() []menu.FunctionKey {
 	if a.model.MessageDialog.Open {
+		return footerWithEscClose([]menu.FunctionKey{
+			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+		})
+	}
+	if a.model.DedupProgressDialog.Open {
 		return footerWithEscClose([]menu.FunctionKey{
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
@@ -227,11 +235,6 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		rest := compareViewFooterKeys(a.keysCompare, a.model.CompareView.Filter)
 		rest = append(rest, menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
 		return footerWithEscClose(rest)
-	}
-	if a.model.DedupAwaitHashConfirm() {
-		return footerWithEscClose([]menu.FunctionKey{
-			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
-		})
 	}
 	if a.model.ViewMode == ui.ViewDedup && !a.inQuickFilterUI() {
 		rest := dedupViewFooterKeys(a.keys, a.keysDedup)
@@ -450,6 +453,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		quit := a.handleCompareViewKey(event)
 		a.render()
 		return quit, true
+	case InputModeDedupProgressDialog:
+		a.handleDedupProgressDialogKey(event)
+		a.render()
+		return false, true
 	case InputModeDedupView:
 		quit := a.handleDedupViewKey(event)
 		a.render()

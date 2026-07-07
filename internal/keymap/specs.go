@@ -339,6 +339,41 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"mark", "select", "delete", "duplicate", "purge", "folder"},
 		},
+		{
+			ID:          ActionDedupToggleNode,
+			Title:       "Expand/collapse duplicates tree node",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"tree", "expand", "collapse", "fold", "node"},
+		},
+		{
+			ID:          ActionDedupCollapse,
+			Title:       "Collapse duplicates tree node / go to parent",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"tree", "collapse", "fold", "parent"},
+		},
+		{
+			ID:          ActionDedupToggleTree,
+			Title:       "Toggle duplicates tree mode (groups/directories)",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"tree", "view", "mode", "directory", "group"},
+		},
+		{
+			ID:          ActionDedupCollapseAll,
+			Title:       "Collapse all duplicates tree nodes",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"tree", "collapse", "fold", "all"},
+		},
+		{
+			ID:          ActionDedupExpandAll,
+			Title:       "Expand all duplicates tree nodes",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"tree", "expand", "unfold", "all"},
+		},
 
 		// ── Disk usage ──
 		{

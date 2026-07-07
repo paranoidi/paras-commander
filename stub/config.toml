@@ -120,3 +120,7 @@ delete_mode = "permanent"
 
 [pools]
   file = ""
+
+[dedup]
+  # Pause before hashing when total candidate bytes exceed this (0 disables).
+  hash_confirm_bytes = 34359738368

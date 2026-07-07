@@ -12,9 +12,9 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// hashProgressInterval rate-limits dedup hashing progress publishes (path label + bar).
+// dedupProgressInterval rate-limits dedup walk and hashing progress publishes.
 // ponytail: fixed 500ms; promote to config if someone wants to tune it.
-const hashProgressInterval = 500 * time.Millisecond
+const dedupProgressInterval = 500 * time.Millisecond
 
 // DedupPhase is the dedup session lifecycle stage.
 type DedupPhase int
@@ -43,14 +43,15 @@ type DedupGroup struct {
 
 // DedupSnapshot is an immutable dedup result generation.
 type DedupSnapshot struct {
-	Root      pathloc.Path
-	Phase     DedupPhase
-	Groups    []DedupGroup
-	Walked    int
-	Hashed    int
-	HashTotal int
-	Current   string // rel directory of the file most recently picked up for hashing (progress label)
-	Err       string
+	Root           pathloc.Path
+	Phase          DedupPhase
+	Groups         []DedupGroup
+	Walked         int
+	Hashed         int
+	HashTotal      int
+	HashBytesTotal int64  // total bytes among hash candidates (confirm gate + progress context)
+	Current        string // rel directory of the file most recently picked up for hashing (progress label)
+	Err            string
 }
 
 // WithoutPaths returns a copy of the snapshot with the given absolute paths removed;
@@ -74,15 +75,36 @@ func (s DedupSnapshot) WithoutPaths(removed map[string]bool) DedupSnapshot {
 	return out
 }
 
+func (s *DedupSession) walkRoot(ctx context.Context) ([]FileRecord, error) {
+	walkOpts := s.opts.Walk
+	var pubMu sync.Mutex
+	var lastPub time.Time
+	walkOpts.OnFile = func(walked int) {
+		pubMu.Lock()
+		if !lastPub.IsZero() && time.Since(lastPub) < dedupProgressInterval {
+			pubMu.Unlock()
+			return
+		}
+		lastPub = time.Now()
+		pubMu.Unlock()
+		s.publish(DedupSnapshot{
+			Root:   s.root,
+			Phase:  DedupWalking,
+			Walked: walked,
+		})
+	}
+	return WalkRoot(ctx, s.root, walkOpts)
+}
+
 // DedupOptions configures a dedup session.
 type DedupOptions struct {
 	Walk         WalkOptions
 	HashWorkers  int
 	ReadBuffer   []byte
 	MaxHashBytes int64
-	// ConfirmThreshold, when >0, pauses before hashing (phase DedupAwaitConfirm)
-	// once the number of hash candidates exceeds it, until Confirm() is called.
-	ConfirmThreshold int
+	// ConfirmHashBytes, when >0, pauses before hashing (phase DedupAwaitConfirm)
+	// once the total byte size of hash candidates exceeds it, until Confirm() is called.
+	ConfirmHashBytes int64
 	OnUpdate         func(DedupSnapshot)
 }
 
@@ -150,7 +172,7 @@ func (s *DedupSession) run(ctx context.Context) {
 		return
 	}
 
-	files, err := WalkRoot(ctx, s.root, s.opts.Walk)
+	files, err := s.walkRoot(ctx)
 	if err != nil {
 		if ctx.Err() != nil {
 			s.publish(DedupSnapshot{Root: s.root, Phase: DedupCanceled})
@@ -180,9 +202,20 @@ func (s *DedupSession) run(ctx context.Context) {
 		return
 	}
 
+	var candidateBytes int64
+	for _, f := range candidates {
+		candidateBytes += f.Size
+	}
+
 	// Gate the expensive hashing phase behind confirmation for large candidate sets.
-	if s.opts.ConfirmThreshold > 0 && len(candidates) > s.opts.ConfirmThreshold {
-		s.publish(DedupSnapshot{Root: s.root, Phase: DedupAwaitConfirm, Walked: len(files), HashTotal: len(candidates)})
+	if s.opts.ConfirmHashBytes > 0 && candidateBytes > s.opts.ConfirmHashBytes {
+		s.publish(DedupSnapshot{
+			Root:           s.root,
+			Phase:          DedupAwaitConfirm,
+			Walked:         len(files),
+			HashTotal:      len(candidates),
+			HashBytesTotal: candidateBytes,
+		})
 		select {
 		case <-ctx.Done():
 			s.publish(DedupSnapshot{Root: s.root, Phase: DedupCanceled})
@@ -197,7 +230,13 @@ func (s *DedupSession) run(ctx context.Context) {
 		bufSize = 256 * 1024
 	}
 
-	s.publish(DedupSnapshot{Root: s.root, Phase: DedupHashing, Walked: len(files), HashTotal: len(candidates)})
+	s.publish(DedupSnapshot{
+		Root:           s.root,
+		Phase:          DedupHashing,
+		Walked:         len(files),
+		HashTotal:      len(candidates),
+		HashBytesTotal: candidateBytes,
+	})
 
 	// Each worker writes only to its own unique index, so no mutex is needed.
 	hashes := make([][32]byte, len(candidates))
@@ -205,24 +244,25 @@ func (s *DedupSession) run(ctx context.Context) {
 	var hashed atomic.Int32
 
 	// Workers finish files far faster than the UI can meaningfully repaint, so rate-limit
-	// hashing progress publishes (path label + progress bar) to one every hashProgressInterval.
+	// hashing progress publishes (path label + progress bar) to one every dedupProgressInterval.
 	var pubMu sync.Mutex
 	var lastPub time.Time
 	publishHashing := func(cur string, done int) {
 		pubMu.Lock()
-		if !lastPub.IsZero() && time.Since(lastPub) < hashProgressInterval {
+		if !lastPub.IsZero() && time.Since(lastPub) < dedupProgressInterval {
 			pubMu.Unlock()
 			return
 		}
 		lastPub = time.Now()
 		pubMu.Unlock()
 		s.publish(DedupSnapshot{
-			Root:      s.root,
-			Phase:     DedupHashing,
-			Walked:    len(files),
-			Hashed:    done,
-			HashTotal: len(candidates),
-			Current:   cur,
+			Root:           s.root,
+			Phase:          DedupHashing,
+			Walked:         len(files),
+			Hashed:         done,
+			HashTotal:      len(candidates),
+			HashBytesTotal: candidateBytes,
+			Current:        cur,
 		})
 	}
 
@@ -263,12 +303,13 @@ func (s *DedupSession) run(ctx context.Context) {
 	}
 
 	s.publish(DedupSnapshot{
-		Root:      s.root,
-		Phase:     DedupDone,
-		Groups:    groupByHash(candidates, hashes, hashErr),
-		Walked:    len(files),
-		Hashed:    len(candidates),
-		HashTotal: len(candidates),
+		Root:           s.root,
+		Phase:          DedupDone,
+		Groups:         groupByHash(candidates, hashes, hashErr),
+		Walked:         len(files),
+		Hashed:         len(candidates),
+		HashTotal:      len(candidates),
+		HashBytesTotal: candidateBytes,
 	})
 }
 

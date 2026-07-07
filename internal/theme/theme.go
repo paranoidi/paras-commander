@@ -178,6 +178,10 @@ type Theme struct {
 	DialogOptionSelected           tcell.Style
 	DialogOptionInvalid            tcell.Style
 	DialogIndicatorSelectionSize   tcell.Style
+	DialogProgressTrack            tcell.Style
+	DialogProgressFill             tcell.Style
+	DialogProgressLabelOnFill      tcell.Style
+	DialogProgressLabelOnTrack     tcell.Style
 	DialogMassRenameBefore         tcell.Style
 	DialogMassRenameBeforeRemoved  tcell.Style
 	DialogMassRenameBeforeReplaced tcell.Style
@@ -283,6 +287,30 @@ func (t Theme) DialogIndicatorSelectionSizeStyle() tcell.Style {
 		src = t.PanelBottomIndicatorSelectionSize
 	}
 	return mergeForegroundOnSurface(src, t.DialogSurface)
+}
+
+// DialogProgressLabelOnBar returns label foreground/attributes merged onto the fill or track bar cell.
+// Background always comes from dialog.progress.fill or dialog.progress.track (label TOML must not set bg).
+func (t Theme) DialogProgressLabelOnBar(onFill bool) tcell.Style {
+	if onFill {
+		return mergeForegroundOnBar(t.DialogProgressLabelOnFill, t.DialogProgressFill)
+	}
+	return mergeForegroundOnBar(t.DialogProgressLabelOnTrack, t.DialogProgressTrack)
+}
+
+func mergeForegroundOnBar(labelSrc, bar tcell.Style) tcell.Style {
+	fg, _, attrs := labelSrc.Decompose()
+	out := bar.Foreground(fg)
+	if attrs&tcell.AttrBold != 0 {
+		out = out.Bold(true)
+	}
+	if attrs&tcell.AttrUnderline != 0 {
+		out = out.Underline(true)
+	}
+	if attrs&tcell.AttrReverse != 0 {
+		out = out.Reverse(true)
+	}
+	return out
 }
 
 func mergeForegroundOnSurface(src, surface tcell.Style) tcell.Style {
@@ -404,6 +432,9 @@ const (
 	SymbolKeyFoldersExcluded          = "folders.excluded"
 	SymbolKeyScrollbarThumb           = "scrollbar.thumb"
 	SymbolKeyMetaRunning              = "meta.running"
+	SymbolKeyTreeExpand               = "tree.expand"
+	SymbolKeyTreeCollapse             = "tree.collapse"
+	SymbolKeyTreeLeaf                 = "tree.leaf"
 )
 
 // Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
@@ -483,6 +514,22 @@ func (t Theme) SymbolFilelistNew() rune {
 // SymbolFilelistRenamed returns the recently-renamed file suffix glyph.
 func (t Theme) SymbolFilelistRenamed() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistRenamed, '\U000f11e8')
+}
+
+// SymbolTreeExpand returns the collapsed-node expander glyph for tree-style lists
+// (duplicates view; the file-list tree layout later).
+func (t Theme) SymbolTreeExpand() rune {
+	return t.filelistSymbolRune(SymbolKeyTreeExpand, '▶') // ▶
+}
+
+// SymbolTreeCollapse returns the expanded-node expander glyph for tree-style lists.
+func (t Theme) SymbolTreeCollapse() rune {
+	return t.filelistSymbolRune(SymbolKeyTreeCollapse, '▼') // ▼
+}
+
+// SymbolTreeLeaf returns the leaf-row gutter glyph for tree-style lists.
+func (t Theme) SymbolTreeLeaf() rune {
+	return t.filelistSymbolRune(SymbolKeyTreeLeaf, '·') // ·
 }
 
 // SymbolScrollbarThumb returns the panel scrollbar thumb-style position glyph.
@@ -720,6 +767,10 @@ var requiredStyleKeys = []string{
 	"dialog.option.selected",
 	"dialog.option.invalid",
 	"dialog.indicator.selection_size",
+	"dialog.progress.track",
+	"dialog.progress.fill",
+	"dialog.progress.label.on_fill",
+	"dialog.progress.label.on_track",
 	"dialog.massrename.before",
 	"dialog.massrename.before.removed",
 	"dialog.massrename.before.replaced",
@@ -1017,11 +1068,13 @@ func parse(data []byte) (Theme, error) {
 		"dialog.option.selected":          {},
 		"dialog.option.invalid":           {},
 		"dialog.indicator.selection_size": {},
+		"dialog.progress.label.on_fill":   {},
+		"dialog.progress.label.on_track":  {},
 	}
 	for key, spec := range specs {
 		if spec.BG != "" {
 			if _, ok := dialogSurfaceForegroundKeys[key]; ok {
-				return Theme{}, fmt.Errorf(`style %q: field "bg" is not allowed (background comes from dialog.surface)`, key)
+				return Theme{}, fmt.Errorf(`style %q: field "bg" is not allowed (background is merged at render time)`, key)
 			}
 		}
 	}
@@ -1209,6 +1262,10 @@ func parse(data []byte) (Theme, error) {
 		DialogOptionSelected:           styles["dialog.option.selected"],
 		DialogOptionInvalid:            styles["dialog.option.invalid"],
 		DialogIndicatorSelectionSize:   styles["dialog.indicator.selection_size"],
+		DialogProgressTrack:            styles["dialog.progress.track"],
+		DialogProgressFill:             styles["dialog.progress.fill"],
+		DialogProgressLabelOnFill:      styles["dialog.progress.label.on_fill"],
+		DialogProgressLabelOnTrack:     styles["dialog.progress.label.on_track"],
 		DialogMassRenameBefore:         styles["dialog.massrename.before"],
 		DialogMassRenameBeforeRemoved:  styles["dialog.massrename.before.removed"],
 		DialogMassRenameBeforeReplaced: styles["dialog.massrename.before.replaced"],

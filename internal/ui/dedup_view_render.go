@@ -2,98 +2,219 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-const dedupSizeCol = 12 // " 1.2M ×3"
+const (
+	dedupListSizeTitle  = "Size"
+	dedupListCountTitle = "Count"
+)
+
+// dedupListColumns holds horizontal layout for the dedup tree list header and rows.
+type dedupListColumns struct {
+	pathW, pathX, gapBeforeCountX, countColX, countColW, sizeColX, sizeColW, sizeColRight, innerRight, listW int
+}
+
+func dedupRowDetailTexts(d DedupRowData) (size, count string) {
+	switch {
+	case d.ShowSize:
+		return formatByteSizeListed(d.Size), strconv.Itoa(d.Copies)
+	case d.Kind == DedupRowDir:
+		return formatByteSizeListed(d.WastedBytes), strconv.Itoa(d.DupCount)
+	default:
+		return "", ""
+	}
+}
+
+func dedupListColumnWidths(rows []DedupRow) (sizeW, countW int) {
+	sizeW = len([]rune(dedupListSizeTitle))
+	countW = len([]rune(dedupListCountTitle))
+	for _, row := range rows {
+		s, c := dedupRowDetailTexts(row.Value)
+		sizeW = max(sizeW, len([]rune(s)))
+		countW = max(countW, len([]rune(c)))
+	}
+	return max(sizeW, 1), max(countW, 1)
+}
+
+// dedupListColumnLayout places Count and Size in compact trailing columns, right-aligned
+// with one space between them and one inner margin cell at innerRight.
+func dedupListColumnLayout(contentX, innerRight, sizeW, countW int) dedupListColumns {
+	sizeColRight := innerRight - 1
+	sizeColX := sizeColRight - sizeW + 1
+	countColRight := sizeColX - 2
+	countColX := countColRight - countW + 1
+	gapBeforeCountX := countColX - 1
+	pathX := contentX
+	pathW := max(gapBeforeCountX-pathX, 1)
+	listW := sizeColRight - contentX + 1
+	return dedupListColumns{
+		pathW:           pathW,
+		pathX:           pathX,
+		gapBeforeCountX: gapBeforeCountX,
+		countColX:       countColX,
+		countColW:       countW,
+		sizeColX:        sizeColX,
+		sizeColW:        sizeW,
+		sizeColRight:    sizeColRight,
+		innerRight:      innerRight,
+		listW:           listW,
+	}
+}
+
+// dedupListHeader formats the list header row: path label, Count, and Size columns.
+func dedupListHeader(pathW, sizeW, countW int, pathLabel string) string {
+	pathTitle := truncateHeaderRunes(pathW, pathLabel)
+	sizeTitle := truncateHeaderRunes(sizeW, dedupListSizeTitle)
+	countTitle := truncateHeaderRunes(countW, dedupListCountTitle)
+	return fmt.Sprintf("%-*s %*s %*s", pathW, pathTitle, countW, countTitle, sizeW, sizeTitle)
+}
 
 func drawDedupView(
 	screen tcell.Screen,
 	layout Layout,
 	view DedupViewState,
 	snap comparepkg.DedupSnapshot,
-	list []DedupEntry,
+	list []DedupRow,
+	copies []DedupRow,
 	styles theme.Theme,
 	chromeBlocked bool,
 	userHomeDir string,
 	orientation SplitOrientation,
 ) {
-	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, orientation)
-	title := dedupViewTitle(snap, view.IgnoredEmptyCount)
-	// Sort order / marked indicator only applies to the finished results list.
-	endLabel := ""
-	if snap.Phase == comparepkg.DedupDone {
-		endLabel = panelSelectionSizePadded(dedupEndLabel(view))
+	if snap.Phase != comparepkg.DedupDone {
+		return
 	}
-	layoutChrome := drawAuxPanelChrome(screen, rect, title, endLabel, true, chromeBlocked, styles)
+
+	rootHeader := primitive.PathWithHomeTilde(snap.Root.String(), userHomeDir)
+	drawDedupTreePane(screen, layout.Primary, dedupPaneParams{
+		Title:      dedupViewTitle(snap, view.IgnoredEmptyCount),
+		EndLabel:   panelSelectionSizePadded(dedupEndLabel(view)),
+		Header:     rootHeader,
+		Rows:       list,
+		Pane:       view.Main,
+		Focused:    !view.FocusCopies,
+		EmptyText:  dedupEmptyMessage(snap),
+		DimByGroup: !view.TreeDirs,
+		ActiveGroup: func() int {
+			if view.Main.Selected >= 0 && view.Main.Selected < len(list) {
+				return list[view.Main.Selected].Value.GroupIdx
+			}
+			return -1
+		}(),
+	}, snap, view, styles, chromeBlocked)
+
+	copiesHeader := ""
+	copiesEmpty := " Select a file to see its copies "
+	if sel, ok := dedupRowAt(list, view.Main.Selected); ok && sel.Value.Kind == DedupRowFile {
+		copiesHeader = sel.Value.File.Rel
+		copiesEmpty = " No other copies "
+	}
+	drawDedupTreePane(screen, layout.Secondary, dedupPaneParams{
+		Title:       " Copies ",
+		Header:      copiesHeader,
+		Rows:        copies,
+		Pane:        view.Copies,
+		Focused:     view.FocusCopies,
+		EmptyText:   copiesEmpty,
+		ActiveGroup: -1,
+	}, snap, view, styles, chromeBlocked)
+}
+
+func dedupRowAt(rows []DedupRow, idx int) (DedupRow, bool) {
+	if idx < 0 || idx >= len(rows) {
+		return DedupRow{}, false
+	}
+	return rows[idx], true
+}
+
+// dedupPaneParams bundles per-pane rendering inputs for drawDedupTreePane.
+type dedupPaneParams struct {
+	Title       string
+	EndLabel    string
+	Header      string
+	Rows        []DedupRow
+	Pane        DedupPane
+	Focused     bool
+	EmptyText   string
+	DimByGroup  bool // groups mode: dim rows outside ActiveGroup
+	ActiveGroup int
+}
+
+// drawDedupTreePane paints one tree pane: chrome, header line, and tree rows
+// with expander gutter and the size/details column.
+func drawDedupTreePane(
+	screen tcell.Screen,
+	rect Rect,
+	p dedupPaneParams,
+	snap comparepkg.DedupSnapshot,
+	view DedupViewState,
+	styles theme.Theme,
+	chromeBlocked bool,
+) {
+	layoutChrome := drawAuxPanelChrome(screen, rect, p.Title, p.EndLabel, p.Focused, chromeBlocked, styles)
 	bg := layoutChrome.ContentBG
 
 	contentX := rect.X + 2
-	contentW := max(rect.Width-4, 1)
+	innerRight := rect.X + rect.Width - 2
 
 	headerY := rect.Y + 1
 	y := headerY + 1
 	headerStyle := layoutChrome.Chrome.Header
-	rootHeader := primitive.FitPathForWidth(primitive.PathWithHomeTilde(snap.Root.String(), userHomeDir), contentW)
+	sizeW, countW := dedupListColumnWidths(p.Rows)
+	cols := dedupListColumnLayout(contentX, innerRight, sizeW, countW)
+	pathHeader := primitive.FitPathForWidth(p.Header, cols.pathW)
 	primitive.Text(screen, rect.X+1, headerY, rect.Width-2, "", headerStyle)
-	primitive.Text(screen, contentX, headerY, contentW, rootHeader, headerStyle)
+	primitive.Text(screen, contentX, headerY, cols.listW, dedupListHeader(cols.pathW, cols.sizeColW, cols.countColW, pathHeader), headerStyle)
+	primitive.Text(screen, innerRight, headerY, 1, "", headerStyle)
 
 	visibleRows := PanelListRows(rect)
 	if visibleRows <= 0 {
 		return
 	}
 
-	// Full-screen prompts take over the body.
-	if snap.Phase == comparepkg.DedupAwaitConfirm {
-		drawDedupCenter(screen, rect, y, visibleRows,
-			fmt.Sprintf("%d files to hash — Enter to continue · Esc to cancel", snap.HashTotal),
-			styles.JobsRow.Background(bg))
+	if len(p.Rows) == 0 {
+		primitive.Text(screen, contentX, y, cols.listW, p.EmptyText, styles.JobsRow.Background(bg))
+		primitive.Text(screen, innerRight, y, 1, "", styles.JobsRow.Background(bg))
 		return
 	}
 
-	if snap.Phase == comparepkg.DedupHashing {
-		drawDedupHashProgress(screen, rect.X+1, y, max(rect.Width-2, 1), snap, styles, bg)
-		return
-	}
-
-	if len(list) == 0 {
-		primitive.Text(screen, contentX, y, contentW, dedupEmptyMessage(snap), styles.JobsRow.Background(bg))
-		return
-	}
-
-	n := len(list)
-	scroll := max(view.ListScroll, 0)
+	n := len(p.Rows)
+	scroll := max(p.Pane.ListScroll, 0)
 	if scroll+visibleRows > n {
 		scroll = max(0, n-visibleRows)
 	}
 
-	pathW := max(contentW-1-dedupSizeCol, 4)
-	pathX := contentX
-	gapBeforeSizeX := pathX + pathW
-	sizeX := gapBeforeSizeX + 1
-	innerRight := rect.X + rect.Width - 2
-	sizeW := innerRight - sizeX + 1
+	pathW := cols.pathW
+	pathX := cols.pathX
+	gapBeforeCountX := cols.gapBeforeCountX
+	countColX := cols.countColX
+	sizeColX := cols.sizeColX
 
 	base := styles.JobsRow.Background(bg)
 	dim := styles.PanelBlockedText.Background(bg)
-	activeStart, activeEnd := dedupGroupBounds(list, view.Selected)
 	for row := range visibleRows {
 		idx := scroll + row
 		if idx >= n {
 			break
 		}
-		entry := list[idx]
+		entry := p.Rows[idx]
+		d := entry.Value
 		lineY := y + row
-		marked := view.Marked[entry.AbsKey]
-		rowSelected := idx == view.Selected
-		groupAllMarked := DedupGroupFullyMarked(list, view.Marked, idx)
+		marked := d.Kind == DedupRowFile && view.Marked[d.AbsKey]
+		rowSelected := idx == p.Pane.Selected
+		groupAllMarked := d.Kind == DedupRowFile && d.GroupIdx >= 0 && d.GroupIdx < len(snap.Groups) &&
+			DedupGroupFullyMarked(snap.Groups[d.GroupIdx], view.Marked)
 
 		rowBase := base
-		if idx < activeStart || idx >= activeEnd {
+		if p.DimByGroup && d.GroupIdx != p.ActiveGroup {
 			rowBase = dim
 		}
 		lineStyle := rowBase
@@ -105,7 +226,7 @@ func drawDedupView(
 		case rowSelected:
 			lineStyle = styles.PanelListingCursorStyle(theme.PanelListingCursorOpts{
 				ChromeBlocked:  chromeBlocked,
-				FileListActive: true,
+				FileListActive: p.Focused,
 				Selected:       marked,
 			})
 		case marked:
@@ -114,127 +235,98 @@ func drawDedupView(
 
 		primitive.Text(screen, rect.X+1, lineY, 1, "", lineStyle)
 
-		pathText := primitive.FitPathForWidth(entry.File.Rel, pathW)
-		if !entry.GroupFirst {
-			pathText = primitive.FitPathForWidth("↳ "+entry.File.Rel, pathW)
+		indent := strings.Repeat("  ", entry.Depth)
+		cursorStyleKey := ""
+		if rowSelected {
+			cursorStyleKey = styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{
+				ChromeBlocked:  chromeBlocked,
+				FileListActive: p.Focused,
+				Selected:       marked,
+			})
 		}
-		primitive.Text(screen, pathX, lineY, pathW, pathText, lineStyle)
-		primitive.Text(screen, gapBeforeSizeX, lineY, 1, "", lineStyle)
+		gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, chromeBlocked, cursorStyleKey)
+		prefix := indent + gutter + " "
+		pathText := primitive.FitPathForWidth(d.Display, max(pathW-len([]rune(prefix)), 4))
+		x := pathX
+		primitive.Text(screen, x, lineY, pathW, indent, lineStyle)
+		x += len([]rune(indent))
+		primitive.Text(screen, x, lineY, pathW-(x-pathX), gutter, gutterStyle)
+		x += len([]rune(gutter))
+		primitive.Text(screen, x, lineY, pathW-(x-pathX), " "+pathText, lineStyle)
+		primitive.Text(screen, gapBeforeCountX, lineY, 1, "", lineStyle)
 
-		if entry.GroupFirst {
-			sizeText := fmt.Sprintf("%s ×%d", formatJobBytes(entry.Size), entry.Copies)
-			sizeStyle := dim
-			if rowSelected || groupAllMarked {
-				sizeStyle = lineStyle
-			}
-			primitive.Text(screen, sizeX, lineY, sizeW, sizeText, sizeStyle)
-		} else {
-			primitive.Text(screen, sizeX, lineY, sizeW, "", lineStyle)
+		sizeText, countText := dedupRowDetailTexts(d)
+		detailStyle := dim
+		if rowSelected || groupAllMarked {
+			detailStyle = lineStyle
 		}
+		primitive.Text(screen, countColX, lineY, cols.countColW, fmt.Sprintf("%*s", cols.countColW, countText), detailStyle)
+		primitive.Text(screen, countColX+cols.countColW, lineY, 1, "", lineStyle)
+		primitive.Text(screen, sizeColX, lineY, cols.sizeColW, fmt.Sprintf("%*s", cols.sizeColW, sizeText), detailStyle)
+		primitive.Text(screen, innerRight, lineY, 1, "", lineStyle)
 	}
 }
 
-// drawDedupHashProgress paints a disk-usage-style fill meter across the row, with the
-// currently-hashing path as the overlaid label.
-func drawDedupHashProgress(screen tcell.Screen, x, y, width int, snap comparepkg.DedupSnapshot, styles theme.Theme, bg tcell.Color) {
-	if width <= 0 {
-		return
-	}
-	pct := 0.0
-	if snap.HashTotal > 0 {
-		pct = float64(snap.Hashed) / float64(snap.HashTotal)
-	}
-	pct = min(1, max(0, pct))
-	fill := int(pct * float64(width))
-
-	label := "Hashing files…"
-	if snap.Current != "" {
-		label = "Hashing " + snap.Current + "…"
-	}
-	labelRunes := []rune(truncateMiddle(label, width))
-
-	base := styles.JobsRow.Background(bg)
-	accent := mergeDiskUsageBackground(base, styles.DiskUsageBarStyle(true, false, false))
-	for i := range width {
-		r := " "
-		if i < len(labelRunes) {
-			r = string(labelRunes[i])
-		}
-		st := base
-		if i < fill {
-			st = accent
-		}
-		primitive.Text(screen, x+i, y, 1, r, st)
-	}
-}
-
-// drawDedupCenter paints a single centered line in the list body.
-func drawDedupCenter(screen tcell.Screen, rect Rect, bodyY, bodyRows int, text string, style tcell.Style) {
-	innerLeft := rect.X + 1
-	innerRight := rect.X + rect.Width - 2
-	innerW := innerRight - innerLeft + 1
-	if innerW <= 0 || bodyRows <= 0 {
-		return
-	}
-	text = primitive.FitPathForWidth(text, innerW)
-	runes := len([]rune(text))
-	x := innerLeft + (innerW-runes)/2
-	yy := bodyY + bodyRows/2
-	primitive.TextOverlay(screen, x, yy, runes, text, style)
-}
-
-// dedupEndLabel is the top-right border indicator: current sort order, plus the
-// marked-files summary when any rows are marked. Mirrors the compare view's
-// filter indicator (endLabel via FilterLabel).
+// dedupEndLabel is the top-right border indicator: current tree mode / sort
+// order, plus the marked-files summary when any rows are marked. Mirrors the
+// compare view's filter indicator (endLabel via FilterLabel). The sort toggle
+// only applies to the groups tree, so dirs mode shows the view mode instead.
 func dedupEndLabel(view DedupViewState) string {
-	sortLabel := "Sort: Path"
+	modeLabel := "Sort: Path"
 	if view.SortByWasted {
-		sortLabel = "Sort: Wasted"
+		modeLabel = "Sort: Wasted"
+	}
+	if view.TreeDirs {
+		modeLabel = "View: Dirs"
 	}
 	if ms := view.MarkedSummary(); ms != "" {
-		return sortLabel + " · " + ms
+		return modeLabel + " · " + ms
 	}
-	return sortLabel
+	return modeLabel
 }
 
 func dedupViewTitle(snap comparepkg.DedupSnapshot, ignoredEmpty int) string {
-	switch snap.Phase {
-	case comparepkg.DedupWalking:
-		return " Duplicates (walking…) "
-	case comparepkg.DedupAwaitConfirm:
-		return " Duplicates (confirm) "
-	case comparepkg.DedupHashing:
-		if snap.HashTotal > 0 {
-			return fmt.Sprintf(" Duplicates (hash %d/%d) ", snap.Hashed, snap.HashTotal)
-		}
-		return " Duplicates (hashing…) "
-	case comparepkg.DedupError:
-		return " Duplicates (error) "
-	case comparepkg.DedupCanceled:
-		return " Duplicates (canceled) "
-	default:
-		groups := "groups"
-		if len(snap.Groups) == 1 {
-			groups = "group"
-		}
-		title := fmt.Sprintf(" Duplicates (%d %s", len(snap.Groups), groups)
-		if ignoredEmpty > 0 {
-			title += fmt.Sprintf(" · %d empty hidden", ignoredEmpty)
-		}
-		return title + ") "
+	groups := "groups"
+	if len(snap.Groups) == 1 {
+		groups = "group"
 	}
+	title := fmt.Sprintf(" Duplicates (%d %s", len(snap.Groups), groups)
+	if ignoredEmpty > 0 {
+		title += fmt.Sprintf(" · %d empty hidden", ignoredEmpty)
+	}
+	return title + ") "
+}
+
+func dedupTreeGutter(styles theme.Theme, entry DedupRow, lineStyle tcell.Style, chromeBlocked bool, cursorStyleKey string) (string, tcell.Style) {
+	if entry.HasChildren {
+		if entry.Value.Kind == DedupRowDir {
+			kind := theme.FolderIconDefault
+			if entry.Expanded {
+				kind = theme.FolderIconOpen
+			}
+			gutter := styles.FolderIconGlyph(kind)
+			gutterStyle := lineStyle
+			if !chromeBlocked {
+				iconRowStyle := styles.PanelListingEntryStyle(localfs.EntryDirectory, chromeBlocked)
+				gutterStyle = lineStyle.Foreground(styles.FolderIconForeground(kind, cursorStyleKey, iconRowStyle))
+			}
+			return gutter, gutterStyle
+		}
+		gutter := string(styles.SymbolTreeExpand())
+		if entry.Expanded {
+			gutter = string(styles.SymbolTreeCollapse())
+		}
+		return gutter, lineStyle
+	}
+	return string(styles.SymbolTreeLeaf()), lineStyle
+}
+
+func dedupTreePrefix(styles theme.Theme, row DedupRow) string {
+	indent := strings.Repeat("  ", row.Depth)
+	gutter, _ := dedupTreeGutter(styles, row, tcell.StyleDefault, true, "")
+	return indent + gutter + " "
 }
 
 func dedupEmptyMessage(snap comparepkg.DedupSnapshot) string {
-	switch snap.Phase {
-	case comparepkg.DedupWalking:
-		return " Walking directory… "
-	case comparepkg.DedupError:
-		if snap.Err != "" {
-			return " " + snap.Err + " "
-		}
-		return " Find duplicates failed "
-	default:
-		return " No duplicate files found "
-	}
+	return " No duplicate files found "
 }

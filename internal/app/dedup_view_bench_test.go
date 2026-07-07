@@ -48,8 +48,8 @@ func benchDedupApp(b *testing.B, groups int) *App {
 	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.ViewMode = ui.ViewDedup
 	app.model.DedupSnapshot = syntheticDedupSnapshot(groups)
-	app.model.DedupList, _ = ui.DedupEntriesFromSnapshot(app.model.DedupSnapshot, false, true)
-	app.model.DedupView = ui.DedupViewState{Marked: map[string]bool{}}
+	app.model.DedupView = ui.DedupViewState{Marked: map[string]bool{}, IgnoreEmpty: true, TreeDirs: true}
+	app.model.DedupList, _ = ui.DedupRowsFromSnapshot(app.model.DedupSnapshot, app.model.DedupView)
 	return app
 }
 
@@ -62,7 +62,7 @@ func BenchmarkDedupViewNavDown(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		app.model.DedupView.Selected = 0
+		app.model.DedupView.Main.Selected = 0
 		app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	}
 }
