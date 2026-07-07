@@ -1,0 +1,329 @@
+package app
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui"
+)
+
+func TestFilePreviewFocusScrollAndTabReturnsToActivePanelFileList(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(100, 30)
+
+	app, err := NewWithOptions(screen, Options{
+		CWD: func() (string, error) {
+			return dir, nil
+		},
+		Config: config.Default(),
+		Paths:  config.Paths{}.WithResolvedLocations(),
+		Theme:  theme.Default(),
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions() error = %v", err)
+	}
+
+	app.patchFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = strings.Repeat("line\n", 40)
+		st.Scroll = 0
+	})
+	app.model.ActiveSubFocus = ui.SubFocusInactivePreview
+
+	app.dispatch(keymap.ActionNavDown)
+	if app.model.FilePreview.Scroll != 1 {
+		t.Fatalf("FilePreview.Scroll = %d, want 1", app.model.FilePreview.Scroll)
+	}
+
+	prevActive := app.model.ActivePanel
+	app.dispatch(keymap.ActionPanelSwitch)
+	if app.model.ActivePanel != prevActive {
+		t.Fatalf("ActivePanel = %d, want unchanged %d after Tab from preview", app.model.ActivePanel, prevActive)
+	}
+	if app.model.ActiveSubFocus != ui.SubFocusFileList {
+		t.Fatalf("ActiveSubFocus = %v, want SubFocusFileList", app.model.ActiveSubFocus)
+	}
+}
+
+func TestMenuShortcutActivatesFullscreenFileView(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.dispatch(keymap.ActionFileView)
+	if app.model.ViewMode != ui.ViewFilePreview {
+		t.Fatalf("ViewMode = %v, want ViewFilePreview after file.view", app.model.ViewMode)
+	}
+	app.commandsMu.RLock()
+	open := app.model.FullscreenFilePreview.Open
+	app.commandsMu.RUnlock()
+	if !open {
+		t.Fatal("FullscreenFilePreview.Open = false, want true after file.view")
+	}
+}
+
+func TestFullscreenFilePreviewArrowDownScrollsWithoutNavigatingList(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
+		writeFile(t, filepath.Join(dir, name))
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = strings.Repeat("x\n", 200)
+		st.Scroll = 0
+	})
+
+	cursorBefore := app.activePanel().Cursor
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if got := app.activePanel().Cursor; got != cursorBefore {
+		t.Fatalf("list cursor moved %d -> %d; Down must scroll preview, not nav.down", cursorBefore, got)
+	}
+	app.commandsMu.RLock()
+	scroll := app.model.FullscreenFilePreview.Scroll
+	app.commandsMu.RUnlock()
+	if scroll != 1 {
+		t.Fatalf("FullscreenFilePreview.Scroll = %d, want 1 after first Down", scroll)
+	}
+}
+
+func TestFullscreenFilePreviewLeftBackspaceDoNotChangePanelPath(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("mkdir sub: %v", err)
+	}
+	writeFile(t, filepath.Join(sub, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if err := app.activePanel().Load(sub); err != nil {
+		t.Fatalf("Load(sub): %v", err)
+	}
+	pathBefore := app.activePanel().Path
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = "x\n"
+		st.Scroll = 0
+	})
+
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	if got := app.activePanel().Path; !got.Equal(pathBefore) {
+		t.Fatalf("KeyLeft changed path %q -> %q", pathBefore, got)
+	}
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
+	if got := app.activePanel().Path; !got.Equal(pathBefore) {
+		t.Fatalf("Backspace changed path %q -> %q", pathBefore, got)
+	}
+}
+
+func TestFullscreenFilePreviewRightDoesNotMoveListCursor(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
+		writeFile(t, filepath.Join(dir, name))
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = strings.Repeat("x\n", 200)
+		st.Scroll = 0
+	})
+
+	cursorBefore := app.activePanel().Cursor
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if got := app.activePanel().Cursor; got != cursorBefore {
+		t.Fatalf("list cursor moved %d -> %d; Right must not nav.open", cursorBefore, got)
+	}
+}
+
+func TestFullscreenFilePreviewDoesNotOpenMenuFromDispatch(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = "x\n"
+		st.Scroll = 0
+	})
+
+	app.dispatch(keymap.ActionAppOpenMenu)
+	if app.model.Menu.Open {
+		t.Fatal("ActionAppOpenMenu must not open menu during fullscreen file preview")
+	}
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	if app.model.Menu.Open {
+		t.Fatal("F9 must not open menu during fullscreen file preview")
+	}
+	if !app.model.FilePreviewThemePicker.Open {
+		t.Fatal("F9 must open inline theme picker during fullscreen file preview")
+	}
+	var f9Hint string
+	var hasEscClose bool
+	var hasEnterSave bool
+	for _, fk := range app.activeFooterKeys() {
+		if fk.Key == tcell.KeyF9 {
+			f9Hint = fk.Hint
+		}
+		if fk.Hint == "Close" && fk.Key == tcell.KeyEsc {
+			hasEscClose = true
+		}
+		if fk.Key == tcell.KeyEnter && fk.KeyLabel == "Enter" && fk.Hint == "Save" {
+			hasEnterSave = true
+		}
+	}
+	if f9Hint != "" {
+		t.Fatalf("footer must not show F9 while theme picker is open, got hint %q", f9Hint)
+	}
+	if !hasEscClose {
+		t.Fatal("footer must show Esc Close while theme picker is open")
+	}
+	if !hasEnterSave {
+		t.Fatal("footer must show Enter Save while theme picker is open")
+	}
+}
+
+func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "notes.txt")
+	writeFile(t, path)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.patchFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhasePending
+		st.Path = path
+	})
+	staleGen := app.filePreviewRunGen.Add(1)
+	app.filePreviewRunGen.Add(1)
+
+	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false, nil), previewTargetInactive, staleGen)
+
+	app.commandsMu.RLock()
+	ph := app.model.FilePreview.Phase
+	app.commandsMu.RUnlock()
+	if ph != ui.FilePreviewPhasePending {
+		t.Fatalf("Phase = %v, want Pending when run gen is stale at start", ph)
+	}
+}
+
+func TestRunPreviewInternalSetsHighlightedCells(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "sample.go")
+	writeFile(t, path)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.Preview.Mode = config.PreviewModeInternal
+	app.config.Preview.LineNumbers = true
+
+	app.patchFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhasePending
+		st.Path = path
+	})
+	gen := app.filePreviewRunGen.Add(1)
+	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false, nil), previewTargetInactive, gen)
+
+	app.commandsMu.RLock()
+	st := app.model.FilePreview
+	app.commandsMu.RUnlock()
+	if st.Phase != ui.FilePreviewPhaseDone {
+		t.Fatalf("Phase = %v, want Done", st.Phase)
+	}
+	if st.Source != ui.PreviewSourceInternalHighlighted {
+		t.Fatalf("Source = %v, want internal highlighted", st.Source)
+	}
+	if len(st.HighlightedCells) == 0 {
+		t.Fatal("HighlightedCells empty, want Chroma output")
+	}
+}
