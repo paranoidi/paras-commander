@@ -6,7 +6,7 @@ Currently the project is in implementation phase and not all features are implem
 
 Read all documantion in llm-docs/ before starting implementing new feature.
 
-Once new feature is implemented update llm-docs/features-done.md for agents to later refer to.
+Once new feature is implemented update llm-docs/index.md for agents to later refer to.
 
 Leave compiled binary after running tests.
 

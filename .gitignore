@@ -1,5 +1,13 @@
+.aliases
+.cursor/
+.llm-docs/
+.vscode/
 .worktrees/
 /pc
-paras-commander
-.aliases
-.llm-docs/
+bin/
+drafts/
+llm-docs/
+scripts/
+stub/
+test-data/
+themes/imports/
