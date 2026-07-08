@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
@@ -2542,6 +2543,44 @@ func TestHasSelectionInSubtree(t *testing.T) {
 	}
 }
 
+func TestSelectionsStripDropsConflictRemovedDir(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	cloverPath := filepath.Join(meadow, "clover.txt")
+	testutil.WriteFile(t, cloverPath)
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	// Select meadow/, then enter it.
+	if !state.SelectVisibleEntry("meadow") {
+		t.Fatal("meadow not found")
+	}
+	if selected, _ := state.ToggleSelection(); !selected {
+		t.Fatal("meadow should be selected")
+	}
+	entered, err := state.Enter(5)
+	if err != nil || !entered {
+		t.Fatalf("Enter meadow: err=%v entered=%v", err, entered)
+	}
+	// Selecting clover.txt conflicts with the selected ancestor dir; last selection wins.
+	if !state.SelectVisibleEntry("clover.txt") {
+		t.Fatal("clover.txt not found")
+	}
+	selected, conflictsRemoved := state.ToggleSelection()
+	if !selected || !conflictsRemoved {
+		t.Fatalf("ToggleSelection = (%v, %v), want selected with conflicts removed", selected, conflictsRemoved)
+	}
+	// Strip must not keep the removed dir; all selections are in the current dir, so it hides.
+	if paths := state.SelectionsStripPaths(); len(paths) != 0 {
+		t.Fatalf("SelectionsStripPaths = %v, want empty after conflict removal", paths)
+	}
+}
+
 func TestCrossDirectorySelectionsAndStripOrder(t *testing.T) {
 	root := t.TempDir()
 	sub := filepath.Join(root, "sub")
@@ -2600,13 +2639,13 @@ func TestCrossDirectorySelectionsAndStripOrder(t *testing.T) {
 	if err := state.Parent(5); err != nil {
 		t.Fatalf("Parent: %v", err)
 	}
-	// Left sub: sub.txt should appear in strip paths
+	// Left sub: the visible strip lists ALL selections, including root.txt in the current dir.
 	paths := state.SelectionsStripPaths()
-	if len(paths) != 1 || paths[0] != subTxtPath {
-		t.Fatalf("SelectionsStripPaths = %v, want single sub.txt path", paths)
+	if len(paths) != 2 || !slices.Contains(paths, subTxtPath) || !slices.Contains(paths, rootEntryPath) {
+		t.Fatalf("SelectionsStripPaths = %v, want sub.txt and root.txt", paths)
 	}
 
-	// Re-enter sub: strip should drop sub.txt from order display (still selected in list)
+	// Re-enter sub: strip still lists both selections.
 	for i := 0; i < state.VisibleEntryCount(); i++ {
 		e, _, ok := state.VisibleEntry(i)
 		if ok && e.Name == "sub" && e.Type == localfs.EntryDirectory {
@@ -2618,8 +2657,9 @@ func TestCrossDirectorySelectionsAndStripOrder(t *testing.T) {
 	if err != nil || !entered {
 		t.Fatalf("Enter sub again: err=%v entered=%v", err, entered)
 	}
-	if len(state.SelectionsStripPaths()) != 1 || state.SelectionsStripPaths()[0] != rootEntryPath {
-		t.Fatalf("strip should list root.txt while in sub, got %v", state.SelectionsStripPaths())
+	paths = state.SelectionsStripPaths()
+	if len(paths) != 2 || !slices.Contains(paths, subTxtPath) || !slices.Contains(paths, rootEntryPath) {
+		t.Fatalf("strip should list both selections while in sub, got %v", paths)
 	}
 	var subEntry localfs.Entry
 	for _, e := range state.Entries {

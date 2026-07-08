@@ -67,3 +67,18 @@ func TestSelectionsStripMarkOnFileRow(t *testing.T) {
 		t.Fatalf("○ foreground = %v, want panel.row.selected %v", gotFG, wantFG)
 	}
 }
+
+func TestSelectionStripDisplayPathRelative(t *testing.T) {
+	t.Parallel()
+	const cur = "/home/rover/notebook"
+	cases := []struct{ abs, want string }{
+		{"/home/rover/notebook/current.txt", "current.txt"},
+		{"/home/rover/notebook/child/inside.txt", "child/inside.txt"},
+		{"/home/rover/sibling.txt", "../sibling.txt"},
+	}
+	for _, c := range cases {
+		if got := selectionStripDisplayPath(c.abs, cur, "/home/rover", 60); got != c.want {
+			t.Fatalf("selectionStripDisplayPath(%q) = %q, want %q", c.abs, got, c.want)
+		}
+	}
+}

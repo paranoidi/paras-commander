@@ -1475,7 +1475,8 @@ func (s *State) removePathFromSelectionsStripOrder(path string) {
 	s.SelectionsStripOrder = out
 }
 
-// SelectionsStripPaths returns selected paths shown in the selections sub-pane (not in the current directory).
+// SelectionsStripPaths returns all selected paths shown in the selections sub-pane.
+// Empty when every selection lives in the current directory (strip hidden).
 func (s *State) SelectionsStripPaths() []string {
 	s.ensureSelectionDerived()
 	return s.selDerivedCache.stripPaths

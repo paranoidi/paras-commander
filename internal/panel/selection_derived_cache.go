@@ -70,8 +70,12 @@ func (s *State) patchSelectionDerivedAfterAdd(path string, isDir bool) {
 		return
 	}
 	s.addSubtreeAncestorsForPath(path)
-	if cleanPathString(filepath.Dir(path)) != cur {
+	if len(s.selDerivedCache.stripPaths) > 0 {
 		s.appendStripPathIfNeeded(path)
+	} else if cleanPathString(filepath.Dir(path)) != cur {
+		// Strip just became visible: it lists every selection, so rebuild.
+		s.rebuildSelectionDerived()
+		return
 	}
 	s.patchPrunedRootsAfterAdd(path, isDir)
 	s.selDerivedCache.gen = s.selectionDerivedGen
@@ -89,8 +93,10 @@ func (s *State) patchSelectionDerivedAfterRemove(path string, wasDir bool) {
 		return
 	}
 	s.removeSubtreeAncestorsForPath(path)
-	if cleanPathString(filepath.Dir(path)) != cur {
-		s.removeStripPath(path)
+	s.removeStripPath(path)
+	if !selectionsOutsideDir(s.SelectedPaths, cur) {
+		// Last out-of-directory selection gone: strip hides.
+		s.selDerivedCache.stripPaths = nil
 	}
 	s.patchPrunedRootsAfterRemove(path, wasDir)
 	s.selDerivedCache.gen = s.selectionDerivedGen
@@ -274,39 +280,39 @@ func (s *State) applySelectionRemove(path string, wasDir bool) {
 	s.patchSelectionDerivedAfterRemove(path, wasDir)
 }
 
+// buildSelectionsStripPaths lists ALL selected paths (order-first, extras sorted) when at
+// least one selection lives outside cur; an all-in-current-directory selection hides the strip.
 func (s *State) buildSelectionsStripPaths(cur string) []string {
-	seen := make(map[string]bool)
-	out := make([]string, 0, len(s.SelectionsStripOrder))
+	if !selectionsOutsideDir(s.SelectedPaths, cur) {
+		return nil
+	}
+	seen := make(map[string]bool, len(s.SelectedPaths))
+	out := make([]string, 0, len(s.SelectedPaths))
 	for _, p := range s.SelectionsStripOrder {
-		if s.SelectedPaths == nil || !s.SelectedPaths[p] {
-			continue
-		}
-		if cleanPathString(filepath.Dir(p)) == cur {
-			continue
-		}
-		if seen[p] {
+		if !s.SelectedPaths[p] || seen[p] {
 			continue
 		}
 		seen[p] = true
 		out = append(out, p)
 	}
-	if s.SelectedPaths != nil {
-		extra := make([]string, 0)
-		for p := range s.SelectedPaths {
-			if cleanPathString(filepath.Dir(p)) == cur {
-				continue
-			}
-			if seen[p] {
-				continue
-			}
-			extra = append(extra, p)
+	extra := make([]string, 0)
+	for p := range s.SelectedPaths {
+		if seen[p] {
+			continue
 		}
-		if len(extra) > 0 {
-			sort.Strings(extra)
-			out = append(out, extra...)
+		extra = append(extra, p)
+	}
+	sort.Strings(extra)
+	return append(out, extra...)
+}
+
+func selectionsOutsideDir(selected map[string]bool, dir string) bool {
+	for p, on := range selected {
+		if on && cleanPathString(filepath.Dir(p)) != dir {
+			return true
 		}
 	}
-	return out
+	return false
 }
 
 func (s *State) buildPrunedSelectionRoots() []string {

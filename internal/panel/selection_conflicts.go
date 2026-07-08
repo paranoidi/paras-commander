@@ -309,5 +309,8 @@ func (s *State) resolveSelectionConflicts(path string, addedIsDir bool) bool {
 	if len(s.SelectedPaths) == 0 {
 		s.clearSelectionState()
 	}
+	// Removals bypassed applySelectionRemove; drop the derived cache so the
+	// follow-up add rebuilds strip paths without the conflicting entries.
+	s.invalidateSelectionDerived()
 	return true
 }

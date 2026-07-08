@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"path/filepath"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -120,7 +121,7 @@ func drawSelectionsStrip(
 		text := ""
 		if idx < len(paths) {
 			p := paths[idx]
-			text = prefix + selectionStripDisplayPath(p, userHomeDir, textCols)
+			text = prefix + selectionStripDisplayPath(p, state.Path.String(), userHomeDir, textCols)
 		}
 
 		var spans []primitive.Span
@@ -171,10 +172,15 @@ func paintSelectionsStripBottomSize(screen tcell.Screen, rect Rect, rawLabel str
 	screen.SetContent(innerRight, y, '─', nil, borderStyle)
 }
 
-func selectionStripDisplayPath(absPath, userHomeDir string, width int) string {
+// selectionStripDisplayPath shows the path relative to the current directory
+// (name.txt, child/name.txt, ../sibling.txt); tilde-absolute when Rel fails (e.g. remote vs local).
+func selectionStripDisplayPath(absPath, curDir, userHomeDir string, width int) string {
 	if width <= 0 {
 		return ""
 	}
-	label := primitive.PathWithHomeTilde(absPath, userHomeDir)
+	label, err := filepath.Rel(curDir, absPath)
+	if err != nil {
+		label = primitive.PathWithHomeTilde(absPath, userHomeDir)
+	}
 	return primitive.FitPathForWidth(label, width)
 }
