@@ -719,6 +719,8 @@ func (a *App) dispatch(actionID string) bool {
 		}
 	case keymap.ActionPanelFocusSelections:
 		a.toggleSelectionsStripFocus()
+	case keymap.ActionPanelOpenSelectionsRoot:
+		a.navigateToSelectionsRoot()
 	case keymap.ActionPanelToggleHideInactive:
 		a.toggleHideInactivePanel()
 	case keymap.ActionNavUp:

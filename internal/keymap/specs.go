@@ -91,9 +91,17 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionPanelFocusSelections,
 			Title:        "Focus selections panel",
 			Section:      "Navigation",
+			DefaultKeys:  []string{"M-s"},
+			PreferredKey: "M-s",
+			Keywords:     []string{"selections", "strip"},
+		},
+		{
+			ID:           ActionPanelOpenSelectionsRoot,
+			Title:        "Go to selections common root",
+			Section:      "Navigation",
 			DefaultKeys:  []string{"C-M-s"},
 			PreferredKey: "C-M-s",
-			Keywords:     []string{"selections", "strip"},
+			Keywords:     []string{"selections", "root", "common", "navigate"},
 		},
 		{
 			ID:          ActionPanelToggleHideInactive,

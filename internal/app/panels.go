@@ -184,6 +184,24 @@ func (a *App) toggleSelectionsStripFocus() {
 	}
 }
 
+// navigateToSelectionsRoot moves the active panel to the deepest common ancestor of its
+// selected paths — the directory copy/move is permitted from when selections span
+// multiple parent directories.
+func (a *App) navigateToSelectionsRoot() {
+	root, _, ok := a.selectionsCommonRoot()
+	if !ok {
+		a.setTransientMessage("No selections", ui.MessageUrgencyInfo)
+		return
+	}
+	if a.activePanel().Path.Equal(root) {
+		a.setTransientMessage("Already at selections root", ui.MessageUrgencyInfo)
+		return
+	}
+	if err := a.navigatePanelToDirectory(a.model.ActivePanel, root.String(), ""); err != nil {
+		a.setErrorMessage("Navigate failed", err)
+	}
+}
+
 // navigateFromSelectionsStrip opens the directory for the highlighted strip path in the active panel
 // (the directory itself if the path is a directory, otherwise its parent) and focuses the file list.
 func (a *App) navigateFromSelectionsStrip() {

@@ -98,6 +98,57 @@ func TestTransferAmbiguousDialogCancelKeepsLocation(t *testing.T) {
 	}
 }
 
+func TestOpenSelectionsRootNavigatesToCommonRoot(t *testing.T) {
+	app, root, alpha, bravo := setupAmbiguousSelection(t)
+	p := app.activePanel()
+	p.AddSelection(filepath.Join(alpha, "river.txt"))
+	p.AddSelection(filepath.Join(bravo, "stone.txt"))
+
+	ev := tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModAlt)
+	if quit, _ := app.handleKey(ev); quit {
+		t.Fatal("unexpected quit")
+	}
+	if got := app.activePanel().PathString(); got != root {
+		t.Fatalf("panel path = %q, want common root %q", got, root)
+	}
+
+	// Already at the root: stays put.
+	if quit, _ := app.handleKey(ev); quit {
+		t.Fatal("unexpected quit")
+	}
+	if got := app.activePanel().PathString(); got != root {
+		t.Fatalf("panel path = %q, want unchanged %q", got, root)
+	}
+}
+
+func TestOpenSelectionsRootSingleDirNavigatesToParent(t *testing.T) {
+	app, _, alpha, bravo := setupAmbiguousSelection(t)
+	p := app.activePanel()
+	p.AddSelection(filepath.Join(alpha, "river.txt"))
+	p.AddSelection(filepath.Join(alpha, "pond.txt"))
+	if err := p.Load(bravo); err != nil {
+		t.Fatalf("load bravo: %v", err)
+	}
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModAlt)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if got := app.activePanel().PathString(); got != alpha {
+		t.Fatalf("panel path = %q, want single selection dir %q", got, alpha)
+	}
+}
+
+func TestOpenSelectionsRootWithoutSelectionsKeepsLocation(t *testing.T) {
+	app, _, alpha, _ := setupAmbiguousSelection(t)
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModAlt)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if got := app.activePanel().PathString(); got != alpha {
+		t.Fatalf("panel path = %q, want unchanged %q", got, alpha)
+	}
+}
+
 func TestTransferSingleDirSelectionElsewhereSkipsAmbiguousDialog(t *testing.T) {
 	app, _, alpha, bravo := setupAmbiguousSelection(t)
 	p := app.activePanel()

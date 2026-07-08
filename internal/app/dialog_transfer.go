@@ -90,21 +90,15 @@ func (a *App) openTransferDialog(kind dialog.TransferKind) {
 	a.armTransferDestinationValidateTimer()
 }
 
-// multiDirSelectionCommonRoot returns the deepest common ancestor of the active panel's
-// selected paths when they span multiple parent directories and the panel is not already
-// at that ancestor. Copy/move issued elsewhere is ambiguous; the caller shows a confirm
-// offering to navigate there instead of opening the transfer dialog.
-func (a *App) multiDirSelectionCommonRoot() (string, bool) {
+// selectionsCommonRoot folds the parents of the active panel's selected paths into their
+// deepest common ancestor. multiDir reports whether selections span more than one parent
+// directory. ok is false when there are no selections or they mix schemes/hosts.
+func (a *App) selectionsCommonRoot() (root pathloc.Path, multiDir bool, ok bool) {
 	p := a.activePanel()
-	if len(p.SelectedPaths) < 2 {
-		return "", false
-	}
-	var root pathloc.Path
-	multiDir := false
 	for sel := range p.SelectedPaths {
 		loc, err := pathloc.Parse(sel)
 		if err != nil {
-			return "", false
+			return pathloc.Path{}, false, false
 		}
 		parent := loc.Parent()
 		switch {
@@ -115,12 +109,21 @@ func (a *App) multiDirSelectionCommonRoot() (string, bool) {
 			anc, ok := pathloc.CommonAncestor(root, parent)
 			if !ok {
 				// ponytail: mixed schemes/hosts have no common root; proceed as before
-				return "", false
+				return pathloc.Path{}, false, false
 			}
 			root = anc
 		}
 	}
-	if !multiDir || p.Path.Equal(root) {
+	return root, multiDir, !root.IsZero()
+}
+
+// multiDirSelectionCommonRoot returns the deepest common ancestor of the active panel's
+// selected paths when they span multiple parent directories and the panel is not already
+// at that ancestor. Copy/move issued elsewhere is ambiguous; the caller shows a confirm
+// offering to navigate there instead of opening the transfer dialog.
+func (a *App) multiDirSelectionCommonRoot() (string, bool) {
+	root, multiDir, ok := a.selectionsCommonRoot()
+	if !ok || !multiDir || a.activePanel().Path.Equal(root) {
 		return "", false
 	}
 	return root.String(), true
