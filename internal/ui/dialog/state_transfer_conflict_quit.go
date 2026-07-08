@@ -13,6 +13,7 @@ const (
 	PrimaryModalFlatten
 	PrimaryModalConflict
 	PrimaryModalQuit
+	PrimaryModalAmbiguousTransfer
 )
 
 // TransferKind selects copy vs move in the shared destination dialog.
@@ -73,6 +74,14 @@ type QuitConfirmState struct {
 	// WarnLine1 / WarnLine2 override copy when non-empty (e.g. active commands vs jobs only).
 	WarnLine1 string
 	WarnLine2 string
+}
+
+// AmbiguousTransferState holds the confirm shown when copy/move is issued away from
+// the common root of a selection spanning multiple directories.
+type AmbiguousTransferState struct {
+	Open       bool
+	Focus      int    // 0=OK, 1=Cancel
+	CommonRoot string // canonical path OK navigates the active panel to
 }
 
 // TransferDialogNumContent returns the number of focusable content rows before OK/Cancel.

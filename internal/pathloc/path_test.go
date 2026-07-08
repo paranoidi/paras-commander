@@ -126,6 +126,32 @@ func TestHasPrefixFile(t *testing.T) {
 	}
 }
 
+func TestCommonAncestor(t *testing.T) {
+	cases := []struct {
+		a, b string
+		want string
+		ok   bool
+	}{
+		{"/tmp/a/x", "/tmp/a/y", "/tmp/a", true},
+		{"/tmp/a", "/tmp/a/y/z", "/tmp/a", true},
+		{"/tmp/a", "/tmp/a", "/tmp/a", true},
+		{"/tmp/a/x", "/var/b", "/", true},
+		{"sftp://host/a/x", "sftp://host/a/y", "sftp://host/a", true},
+	}
+	for _, c := range cases {
+		got, ok := CommonAncestor(MustParse(c.a), MustParse(c.b))
+		if ok != c.ok || got.String() != c.want {
+			t.Fatalf("CommonAncestor(%q, %q) = %q, %v; want %q, %v", c.a, c.b, got.String(), ok, c.want, c.ok)
+		}
+	}
+	if _, ok := CommonAncestor(MustParse("/tmp/a"), MustParse("sftp://host/a")); ok {
+		t.Fatal("mixed schemes must have no common ancestor")
+	}
+	if _, ok := CommonAncestor(MustParse("sftp://host1/a"), MustParse("sftp://host2/a")); ok {
+		t.Fatal("different hosts must have no common ancestor")
+	}
+}
+
 func TestParentFile(t *testing.T) {
 	p := FileMust("/tmp/a/b")
 	parent := p.Parent()

@@ -68,6 +68,11 @@ func transferPrefilledDestination(path string) dialog.FileDialogField {
 }
 
 func (a *App) openTransferDialog(kind dialog.TransferKind) {
+	if root, ok := a.multiDirSelectionCommonRoot(); ok {
+		a.model.AmbiguousTransfer = dialog.AmbiguousTransferState{Open: true, CommonRoot: root}
+		a.clearTransientMessage()
+		return
+	}
 	passive := a.inactivePanel()
 	st := dialog.TransferDialogState{
 		Open:         true,
@@ -83,6 +88,81 @@ func (a *App) openTransferDialog(kind dialog.TransferKind) {
 	a.model.TransferDialog = st
 	a.clearTransientMessage()
 	a.armTransferDestinationValidateTimer()
+}
+
+// multiDirSelectionCommonRoot returns the deepest common ancestor of the active panel's
+// selected paths when they span multiple parent directories and the panel is not already
+// at that ancestor. Copy/move issued elsewhere is ambiguous; the caller shows a confirm
+// offering to navigate there instead of opening the transfer dialog.
+func (a *App) multiDirSelectionCommonRoot() (string, bool) {
+	p := a.activePanel()
+	if len(p.SelectedPaths) < 2 {
+		return "", false
+	}
+	var root pathloc.Path
+	multiDir := false
+	for sel := range p.SelectedPaths {
+		loc, err := pathloc.Parse(sel)
+		if err != nil {
+			return "", false
+		}
+		parent := loc.Parent()
+		switch {
+		case root.IsZero():
+			root = parent
+		case !parent.Equal(root):
+			multiDir = true
+			anc, ok := pathloc.CommonAncestor(root, parent)
+			if !ok {
+				// ponytail: mixed schemes/hosts have no common root; proceed as before
+				return "", false
+			}
+			root = anc
+		}
+	}
+	if !multiDir || p.Path.Equal(root) {
+		return "", false
+	}
+	return root.String(), true
+}
+
+// handleAmbiguousTransferKey drives the "Ambiguous command" confirm; OK navigates the
+// active panel to the selections' common root (the user re-issues copy/move from there).
+func (a *App) handleAmbiguousTransferKey(event *tcell.EventKey) {
+	confirm := func() {
+		root := a.model.AmbiguousTransfer.CommonRoot
+		a.model.AmbiguousTransfer = dialog.AmbiguousTransferState{}
+		if err := a.navigatePanelToDirectory(a.model.ActivePanel, root, ""); err != nil {
+			a.setErrorMessage("Navigate failed", err)
+		}
+	}
+	cancel := func() {
+		a.model.AmbiguousTransfer = dialog.AmbiguousTransferState{}
+	}
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		switch event.Rune() {
+		case 'o', 'O':
+			confirm()
+			return
+		case 'c', 'C':
+			cancel()
+			return
+		}
+	}
+	switch event.Key() {
+	case tcell.KeyEsc:
+		cancel()
+	case tcell.KeyLeft:
+		a.model.AmbiguousTransfer.Focus = dialog.DialogPairLeftRight(a.model.AmbiguousTransfer.Focus, false)
+	case tcell.KeyRight:
+		a.model.AmbiguousTransfer.Focus = dialog.DialogPairLeftRight(a.model.AmbiguousTransfer.Focus, true)
+	case tcell.KeyEnter:
+		if a.model.AmbiguousTransfer.Focus == 0 {
+			confirm()
+		} else {
+			cancel()
+		}
+	}
 }
 
 func transferSelfCopyNewNamePrefilled(base string) dialog.FileDialogField {

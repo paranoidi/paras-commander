@@ -132,6 +132,22 @@ func (p Path) Parent() Path {
 	}
 }
 
+// CommonAncestor returns the deepest location that is an ancestor of (or equal to)
+// both a and b, walking a upward via Parent. False when none exists (mixed schemes/hosts).
+func CommonAncestor(a, b Path) (Path, bool) {
+	for anc := a; !anc.IsZero(); {
+		if b.HasPrefix(anc) {
+			return anc, true
+		}
+		parent := anc.Parent()
+		if parent.Equal(anc) {
+			break
+		}
+		anc = parent
+	}
+	return Path{}, false
+}
+
 // Join appends a single path element (name) under p.
 func (p Path) Join(name string) (Path, error) {
 	name = strings.Trim(name, "/")
@@ -279,16 +295,14 @@ func hasFilePrefix(p, prefix string) bool {
 }
 
 func hasSFTPPrefix(p, prefix string) bool {
-	_, pRemote, err := splitSFTP(p)
+	pHost, pRemote, err := splitSFTP(p)
 	if err != nil {
 		return false
 	}
-	_, prefixRemote, err := splitSFTP(prefix)
+	prefixHost, prefixRemote, err := splitSFTP(prefix)
 	if err != nil {
 		return false
 	}
-	_, pHost, _ := splitSFTP(p)
-	_, prefixHost, _ := splitSFTP(prefix)
 	if pHost != prefixHost {
 		return false
 	}

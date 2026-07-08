@@ -78,7 +78,7 @@ func deleteListPathFromCommonAncestor(panelPath, entryPath string) (rel string, 
 	if err1 != nil || err2 != nil || panel.Scheme() != entryLoc.Scheme() {
 		return "", "", false
 	}
-	anc, ok := deepestSharedAncestor(panel, entryLoc)
+	anc, ok := pathloc.CommonAncestor(panel, entryLoc)
 	if !ok {
 		return "", "", false
 	}
@@ -103,15 +103,6 @@ func ancestorBasePath(anc pathloc.Path) (string, bool) {
 	default:
 		return "", false
 	}
-}
-
-func deepestSharedAncestor(panelDir, entryLoc pathloc.Path) (pathloc.Path, bool) {
-	for anc := panelDir; !anc.IsZero(); anc = anc.Parent() {
-		if entryLoc.HasPrefix(anc) && panelDir.HasPrefix(anc) {
-			return anc, true
-		}
-	}
-	return pathloc.Path{}, false
 }
 
 func pathRelativeUnderAncestor(anc pathloc.Path, entryPath string) (string, bool) {
