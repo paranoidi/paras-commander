@@ -322,6 +322,11 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 				})
 			}
 			doneFiles, doneBytes, err = ops.ExecuteDeletePaths(ctx, pathloc.Strings(job.Sources), deleteProgress)
+			if err == nil && job.DeleteRemoveEmptyDirs {
+				if cleanErr := ops.RemoveEmptyDirsUnder(ctx, uniqueParents(job.Sources)); cleanErr != nil {
+					err = cleanErr
+				}
+			}
 		case jobs.TypeExtract:
 			emit(jobs.Event{
 				Type:       jobs.EventPlanTotals,
@@ -365,4 +370,20 @@ func Plural(n int, singular, plural string) string {
 		return singular
 	}
 	return plural
+}
+
+// uniqueParents returns the distinct parent directories of paths, in first-seen order.
+func uniqueParents(paths []pathloc.Path) []pathloc.Path {
+	seen := make(map[string]bool, len(paths))
+	out := make([]pathloc.Path, 0, len(paths))
+	for _, p := range paths {
+		parent := p.Parent()
+		key := parent.String()
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, parent)
+	}
+	return out
 }

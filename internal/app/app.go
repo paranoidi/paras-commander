@@ -970,6 +970,8 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 	case a.model.AmbiguousTransfer.Open:
 		a.handleAmbiguousTransferKey(event)
 		return false
+	case a.model.DedupEmptyDirsConfirm.Open:
+		return a.handleDedupEmptyDirsConfirmKey(event)
 	case a.model.StashRestoreDialog.Open:
 		a.handleStashRestoreDialogKey(event)
 		return false

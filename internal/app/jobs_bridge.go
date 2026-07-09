@@ -41,7 +41,9 @@ func (a *App) enqueueCopyJob() { a.jobsCtrl.EnqueueCopyJob() }
 
 func (a *App) enqueueMoveJob() { a.jobsCtrl.EnqueueMoveJob() }
 
-func (a *App) enqueueDeleteJob(sources []string) { a.jobsCtrl.EnqueueDeleteJob(sources) }
+func (a *App) enqueueDeleteJob(sources []string, removeEmptyDirs bool) {
+	a.jobsCtrl.EnqueueDeleteJob(sources, removeEmptyDirs)
+}
 
 func (a *App) enqueueExtractJob(sources []string, dest string) {
 	a.jobsCtrl.EnqueueExtractJob(sources, dest)

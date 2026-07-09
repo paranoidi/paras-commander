@@ -19,7 +19,9 @@ func (h dedupHost) NavigatePanelToPath(panelID int, path string, selectName stri
 	return h.app.navigatePanelToDirectory(panelID, path, selectName)
 }
 
-func (h dedupHost) EnqueueDeleteJob(paths []string) { h.app.enqueueDeleteJob(paths) }
+func (h dedupHost) EnqueueDeleteJob(paths []string, removeEmptyDirs bool) {
+	h.app.enqueueDeleteJob(paths, removeEmptyDirs)
+}
 
 func (h dedupHost) DedupMenuDefinitions() []menu.Definition { return h.app.dedupMenuDefinitions() }
 
@@ -53,6 +55,43 @@ func (a *App) openDedupDeleteDialog() {
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
 	a.model.FileDialog = fd
+}
+
+// openDedupEmptyDirsConfirm opens the "remove directories left empty by this
+// delete?" confirmation, shown after the delete-marked-files dialog is
+// confirmed. Defaults to Yes (index 0) — removing already-empty directories
+// is low-risk, unlike the file deletion itself.
+func (a *App) openDedupEmptyDirsConfirm() {
+	a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{Open: true, Focus: 0}
+}
+
+func (a *App) handleDedupEmptyDirsConfirmKey(event *tcell.EventKey) bool {
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		switch event.Rune() {
+		case 'y', 'Y':
+			a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
+			a.dedupCtrl.DeleteMarked(true)
+			return false
+		case 'n', 'N':
+			a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
+			a.dedupCtrl.DeleteMarked(false)
+			return false
+		}
+	}
+	switch event.Key() {
+	case tcell.KeyEsc:
+		a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
+		a.dedupCtrl.DeleteMarked(false)
+	case tcell.KeyLeft:
+		a.model.DedupEmptyDirsConfirm.Focus = dialog.DialogPairLeftRight(a.model.DedupEmptyDirsConfirm.Focus, false)
+	case tcell.KeyRight:
+		a.model.DedupEmptyDirsConfirm.Focus = dialog.DialogPairLeftRight(a.model.DedupEmptyDirsConfirm.Focus, true)
+	case tcell.KeyEnter:
+		removeEmpty := a.model.DedupEmptyDirsConfirm.Focus == 0
+		a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{}
+		a.dedupCtrl.DeleteMarked(removeEmpty)
+	}
+	return false
 }
 
 func (a *App) closeDedupView() { a.dedupCtrl.Close() }

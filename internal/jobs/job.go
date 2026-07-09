@@ -93,6 +93,10 @@ type Job struct {
 	// FlattenRoots are the selected directory roots for flatten cleanup (TypeFlatten only).
 	FlattenRoots []pathloc.Path
 
+	// DeleteRemoveEmptyDirs enables post-delete removal of directories left empty
+	// under the parent directories of Sources (TypeDelete only).
+	DeleteRemoveEmptyDirs bool
+
 	// Per-job copy/move metadata options (from transfer dialog or config at enqueue).
 	PreservePermissions bool
 	PreserveTimestamps  bool

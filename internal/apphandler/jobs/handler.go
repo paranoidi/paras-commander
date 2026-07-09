@@ -931,18 +931,19 @@ func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest strin
 	h.commitJob(job)
 }
 
-func (h *Handler) EnqueueDeleteJob(sources []string) {
+func (h *Handler) EnqueueDeleteJob(sources []string, removeEmptyDirs bool) {
 	srcLocs, err := pathloc.ParseAll(sources)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue delete: %v", err), ui.MessageUrgencyError)
 		return
 	}
 	job := &jobs.Job{
-		ID:         jobs.NewJobID(),
-		Type:       jobs.TypeDelete,
-		Status:     jobs.StatusQueued,
-		Sources:    srcLocs,
-		TotalFiles: len(sources),
+		ID:                    jobs.NewJobID(),
+		Type:                  jobs.TypeDelete,
+		Status:                jobs.StatusQueued,
+		Sources:               srcLocs,
+		TotalFiles:            len(sources),
+		DeleteRemoveEmptyDirs: removeEmptyDirs,
 	}
 	h.commitJob(job)
 }

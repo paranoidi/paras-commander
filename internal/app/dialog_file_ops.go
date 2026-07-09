@@ -383,7 +383,7 @@ func (a *App) executeDelete() {
 	// which enqueues the job and prunes the marked rows.
 	if a.model.ViewMode == ui.ViewDedup {
 		a.closeFileDialog()
-		a.dedupCtrl.DeleteMarked()
+		a.openDedupEmptyDirsConfirm()
 		return
 	}
 	p := a.activePanel()
@@ -405,7 +405,7 @@ func (a *App) executeDelete() {
 	for i, e := range source.Entries {
 		sources[i] = e.Path
 	}
-	a.enqueueDeleteJob(sources)
+	a.enqueueDeleteJob(sources, false)
 	n := len(sources)
 	delNoun := "items"
 	if n == 1 {

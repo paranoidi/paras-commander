@@ -31,7 +31,7 @@ type Deps struct {
 // Host is the app shell surface dedup needs.
 type Host interface {
 	NavigatePanelToPath(panelID int, path string, selectName string) error
-	EnqueueDeleteJob(paths []string)
+	EnqueueDeleteJob(paths []string, removeEmptyDirs bool)
 	SetTransientMessage(text string, urgency ui.MessageUrgency)
 	DedupMenuDefinitions() []menu.Definition
 	BrowserMenuDefinitions() []menu.Definition
@@ -674,13 +674,13 @@ func (h *Handler) MarkedPaths() []string {
 
 // DeleteMarked enqueues a delete job for marked files and optimistically prunes them
 // from the view.
-func (h *Handler) DeleteMarked() {
+func (h *Handler) DeleteMarked(removeEmptyDirs bool) {
 	st := &h.model.DedupView
 	paths := h.MarkedPaths()
 	if len(paths) == 0 {
 		return
 	}
-	h.host.EnqueueDeleteJob(paths)
+	h.host.EnqueueDeleteJob(paths, removeEmptyDirs)
 	noun := "files"
 	if len(paths) == 1 {
 		noun = "file"

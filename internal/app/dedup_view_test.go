@@ -301,13 +301,88 @@ func TestDedupViewMarkAndDelete(t *testing.T) {
 	if got := len(app.model.FileDialog.DeleteEntries); got != 1 {
 		t.Fatalf("delete entries = %d, want 1", got)
 	}
-	// Confirming (Yes) enqueues the delete and optimistically prunes the group.
+	// Confirming (Yes) opens the empty-dirs cleanup confirmation.
 	app.executeDelete()
 	if app.deleteDialogOpen() {
 		t.Fatal("delete dialog not closed after confirm")
 	}
+	if !app.model.DedupEmptyDirsConfirm.Open {
+		t.Fatal("empty-dirs confirm dialog did not open after delete confirm")
+	}
+	if app.model.DedupEmptyDirsConfirm.Focus != 0 {
+		t.Fatalf("empty-dirs confirm default focus = %d, want 0 (Yes)", app.model.DedupEmptyDirsConfirm.Focus)
+	}
+	// Enter accepts the Yes default, enqueuing the delete and optimistically pruning the group.
+	app.handleDedupEmptyDirsConfirmKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.DedupEmptyDirsConfirm.Open {
+		t.Fatal("empty-dirs confirm dialog not closed after Enter")
+	}
 	if len(app.model.DedupSnapshot.Groups) != 0 {
 		t.Fatalf("groups after delete = %d, want 0 (group drops below 2)", len(app.model.DedupSnapshot.Groups))
+	}
+}
+
+// TestDedupViewEmptyDirsConfirmDefaultsYesAndRemoves verifies that answering
+// the empty-dirs confirmation with the Yes default removes the now-empty
+// directory left behind by the delete, while answering No leaves it.
+func TestDedupViewEmptyDirsConfirmDefaultsYesAndRemoves(t *testing.T) {
+	for _, removeEmpty := range []bool{true, false} {
+		t.Run(map[bool]string{true: "yes", false: "no"}[removeEmpty], func(t *testing.T) {
+			// sub is the scan root itself, containing only the duplicate pair, so
+			// deleting both leaves it empty.
+			parent := t.TempDir()
+			sub := filepath.Join(parent, "sub")
+			if err := os.Mkdir(sub, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(sub, "a.txt"), []byte("dup"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(sub, "b.txt"), []byte("dup"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			screen := newScreen(t, 80, 24)
+			app := newApp(t, screen, sub)
+			app.openFindDuplicates()
+			waitDedupDone(t, app)
+
+			// Mark both duplicate rows (Insert marks + advances cursor, per panel.select-toggle).
+			app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+			app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+			if got := len(app.dedupCtrl.MarkedPaths()); got != 2 {
+				t.Fatalf("marked paths = %d, want 2", got)
+			}
+
+			app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+			if !app.deleteDialogOpen() {
+				t.Fatal("delete key did not open the delete dialog")
+			}
+			app.executeDelete()
+			if !app.model.DedupEmptyDirsConfirm.Open {
+				t.Fatal("empty-dirs confirm dialog did not open")
+			}
+			if app.model.DedupEmptyDirsConfirm.Focus != 0 {
+				t.Fatalf("empty-dirs confirm default focus = %d, want 0 (Yes)", app.model.DedupEmptyDirsConfirm.Focus)
+			}
+			if removeEmpty {
+				app.handleDedupEmptyDirsConfirmKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+			} else {
+				app.handleDedupEmptyDirsConfirmKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
+			}
+
+			flushBackgroundJobs(t, app)
+			waitUntilAppJobsFinished(t, app, 5*time.Second)
+
+			_, err := os.Stat(sub)
+			if removeEmpty {
+				if !os.IsNotExist(err) {
+					t.Fatalf("sub dir stat err = %v, want IsNotExist (dir should be removed)", err)
+				}
+			} else if err != nil {
+				t.Fatalf("sub dir stat err = %v, want nil (dir should remain)", err)
+			}
+		})
 	}
 }
 
