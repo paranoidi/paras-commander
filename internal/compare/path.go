@@ -16,6 +16,11 @@ func RelDir(rel string) string {
 	return dir
 }
 
+// RelBase returns the filename component of a slash-separated relative path.
+func RelBase(rel string) string {
+	return filepath.ToSlash(filepath.Base(filepath.FromSlash(rel)))
+}
+
 // JoinRel joins root with a slash-relative path.
 func JoinRel(root pathloc.Path, rel string) (pathloc.Path, error) {
 	if root.IsRemote() {

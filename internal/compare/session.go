@@ -207,7 +207,7 @@ func (s *Session) run(ctx context.Context) {
 				if ctx.Err() != nil {
 					return
 				}
-				sum, err := HashFile(ctx, job.loc, buf, s.opts.MaxHashBytes)
+				sum, err := HashFile(ctx, job.loc, buf, s.opts.MaxHashBytes, nil)
 				mu.Lock()
 				if err != nil {
 					if job.side == 0 {

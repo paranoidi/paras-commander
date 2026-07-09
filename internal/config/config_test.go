@@ -28,6 +28,23 @@ func TestValidateClampsNegativeDedupHashConfirmBytes(t *testing.T) {
 	}
 }
 
+func TestDefaultDedupFileProgressBytes(t *testing.T) {
+	if got := Default().Dedup.FileProgressBytes; got != DefaultDedupFileProgressBytes {
+		t.Fatalf("Dedup.FileProgressBytes = %d, want %d", got, DefaultDedupFileProgressBytes)
+	}
+}
+
+func TestValidateClampsNegativeDedupFileProgressBytes(t *testing.T) {
+	cfg := Default()
+	cfg.Dedup.FileProgressBytes = -1
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.Dedup.FileProgressBytes != 0 {
+		t.Fatalf("Dedup.FileProgressBytes = %d, want 0", cfg.Dedup.FileProgressBytes)
+	}
+}
+
 func TestValidateClampsDiskUsageWalkConcurrency(t *testing.T) {
 	cfg := Default()
 	cfg.DiskUsageWalkConcurrency = 0

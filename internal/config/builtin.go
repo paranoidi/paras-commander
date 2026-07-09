@@ -83,6 +83,10 @@ const (
 	// byte size of hash candidates exceeds this value (0 disables the gate).
 	DefaultDedupHashConfirmBytes = 32 * 1024 * 1024 * 1024
 
+	// DefaultDedupFileProgressBytes shows a per-file progress bar in the
+	// find-duplicates dialog for files at or above this size (0 disables it).
+	DefaultDedupFileProgressBytes = 200 * 1024 * 1024
+
 	// DefaultCompareHashConcurrency limits parallel file hashing during panel compare.
 	DefaultCompareHashConcurrency = 4
 	// DefaultCompareReadBufferKiB is the per-worker read buffer for compare hashing.

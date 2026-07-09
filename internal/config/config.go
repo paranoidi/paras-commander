@@ -136,6 +136,9 @@ type DedupConfig struct {
 	// HashConfirmBytes pauses before hashing when the total byte size of hash
 	// candidates exceeds this value. Zero disables the confirmation gate.
 	HashConfirmBytes int64 `toml:"hash_confirm_bytes"`
+	// FileProgressBytes shows a per-file progress bar in the scan dialog for
+	// files at or above this size. Zero disables the per-file bar.
+	FileProgressBytes int64 `toml:"file_progress_bytes"`
 }
 
 // CompareConfig controls panel compare hashing and walk options.
@@ -495,7 +498,8 @@ func Default() Config {
 			StayOnVolumeDefault: DefaultCompareStayOnVolumeDefault,
 		},
 		Dedup: DedupConfig{
-			HashConfirmBytes: DefaultDedupHashConfirmBytes,
+			HashConfirmBytes:  DefaultDedupHashConfirmBytes,
+			FileProgressBytes: DefaultDedupFileProgressBytes,
 		},
 	}
 }
@@ -764,6 +768,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Dedup.HashConfirmBytes < 0 {
 		c.Dedup.HashConfirmBytes = 0
+	}
+	if c.Dedup.FileProgressBytes < 0 {
+		c.Dedup.FileProgressBytes = 0
 	}
 	if !c.sortModeValid(c.DefaultSort) {
 		c.DefaultSort = builtin.DefaultSort

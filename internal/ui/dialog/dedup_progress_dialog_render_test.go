@@ -24,11 +24,13 @@ func TestDrawDedupProgressDialogHashBarAndLabel(t *testing.T) {
 	styles := theme.Default()
 	layout := Layout{Width: 80, Height: 24}
 	snap := comparepkg.DedupSnapshot{
-		Root:      pathloc.MustParse("/scan/root"),
-		Phase:     comparepkg.DedupHashing,
-		Hashed:    1,
-		HashTotal: 4,
-		Current:   "nested",
+		Root:           pathloc.MustParse("/scan/root"),
+		Phase:          comparepkg.DedupHashing,
+		Hashed:         1,
+		HashTotal:      4,
+		HashBytesTotal: 400,
+		HashedBytes:    100,
+		Current:        "nested",
 	}
 	DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, styles, "")
 
@@ -41,8 +43,8 @@ func TestDrawDedupProgressDialogHashBarAndLabel(t *testing.T) {
 	textX := draw.DialogTextX(rect)
 	textW := draw.DialogContentWidth(rect)
 	line := strings.TrimSpace(cellTextAt(screen, textX, barY, textW))
-	if !strings.Contains(line, "Hashing nested") {
-		t.Fatalf("bar line = %q, want hashing status", line)
+	if !strings.Contains(line, "nested") {
+		t.Fatalf("bar line = %q, want current directory label", line)
 	}
 	if strings.Contains(line, "1/4") {
 		t.Fatalf("bar line = %q, count must not be overlaid on bar", line)
@@ -74,8 +76,14 @@ func TestDrawDedupProgressDialogHashBarAndLabel(t *testing.T) {
 	if !ok {
 		t.Fatal("hash count row not found")
 	}
-	if countY != barY+1 {
-		t.Fatalf("count row y=%d, want barY+1=%d", countY, barY+1)
+	if countY != barY+2 {
+		t.Fatalf("count row y=%d, want barY+2=%d", countY, barY+2)
+	}
+	// No CurrentFile: the per-file bar row between bar and count stays dialog surface.
+	_, wantSurface, _ := styles.DialogSurface.Decompose()
+	_, fileRowBG, _ := cellStyleAt(screen, textX+textW/2, barY+1).Decompose()
+	if fileRowBG != wantSurface {
+		t.Fatalf("per-file row bg %v, want dialog surface %v", fileRowBG, wantSurface)
 	}
 	countLine := strings.TrimSpace(cellTextAt(screen, textX, countY, textW))
 	if countLine != "1/4" {
@@ -159,11 +167,13 @@ func TestDrawDedupHashProgressBarFullWidth(t *testing.T) {
 
 		layout := Layout{Width: 80, Height: 24}
 		snap := comparepkg.DedupSnapshot{
-			Root:      pathloc.MustParse("/scan/root"),
-			Phase:     comparepkg.DedupHashing,
-			Hashed:    14,
-			HashTotal: 56,
-			Current:   current,
+			Root:           pathloc.MustParse("/scan/root"),
+			Phase:          comparepkg.DedupHashing,
+			Hashed:         14,
+			HashTotal:      56,
+			HashBytesTotal: 56,
+			HashedBytes:    14,
+			Current:        current,
 		}
 		DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, styles, "")
 
@@ -195,7 +205,7 @@ func TestDrawDedupHashProgressBarFullWidth(t *testing.T) {
 	_, _, _, shortFill, shortTrack, shortLast := measure(t, "a")
 	longScreen, longRect, longBarY, longFill, longTrack, _ := measure(t, strings.Repeat("segment/", 12)+"verylongfilename.txt")
 
-	wantFilled := dedupHashProgressFilledCols(draw.DialogContentWidth(draw.CenteredDialogRect(Layout{Width: 80, Height: 24}, PreferredFormDialogWidth, dedupProgressDialogHeight(comparepkg.DedupHashing))), 14, 56)
+	wantFilled := dedupBarFilledCols(draw.DialogContentWidth(draw.CenteredDialogRect(Layout{Width: 80, Height: 24}, PreferredFormDialogWidth, dedupProgressDialogHeight(comparepkg.DedupHashing))), dedupFrac(14, 56))
 	wantTrack := draw.DialogContentWidth(draw.CenteredDialogRect(Layout{Width: 80, Height: 24}, PreferredFormDialogWidth, dedupProgressDialogHeight(comparepkg.DedupHashing))) - wantFilled
 
 	if shortFill != wantFilled || longFill != wantFilled {
@@ -239,11 +249,13 @@ func TestDedupProgressTrackLabelBackgroundMatch(t *testing.T) {
 
 	layout := Layout{Width: 80, Height: 24}
 	snap := comparepkg.DedupSnapshot{
-		Root:      pathloc.MustParse("/scan/root"),
-		Phase:     comparepkg.DedupHashing,
-		Hashed:    1,
-		HashTotal: 4,
-		Current:   strings.Repeat("seg/", 8) + "file.txt",
+		Root:           pathloc.MustParse("/scan/root"),
+		Phase:          comparepkg.DedupHashing,
+		Hashed:         1,
+		HashTotal:      4,
+		HashBytesTotal: 4,
+		HashedBytes:    1,
+		Current:        strings.Repeat("seg/", 8) + "file.txt",
 	}
 	DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, styles, "")
 
@@ -256,7 +268,7 @@ func TestDedupProgressTrackLabelBackgroundMatch(t *testing.T) {
 	}
 
 	_, wantTrackBG, _ := styles.DialogProgressTrack.Decompose()
-	filled := dedupHashProgressFilledCols(textW, snap.Hashed, snap.HashTotal)
+	filled := dedupBarFilledCols(textW, dedupFrac(snap.HashedBytes, snap.HashBytesTotal))
 	var trackBarBG, trackTextBG tcell.Color
 	for col := textX + filled; col < textX+textW; col++ {
 		ch, st, _ := screen.Get(col, barY)
@@ -280,16 +292,76 @@ func TestDedupProgressTrackLabelBackgroundMatch(t *testing.T) {
 	}
 }
 
-func TestDedupHashProgressFilledCols(t *testing.T) {
+func TestDedupBarFilledCols(t *testing.T) {
 	t.Parallel()
-	if got := dedupHashProgressFilledCols(56, 14, 56); got != 14 {
-		t.Fatalf("filled = %d, want 14", got)
+	cases := []struct {
+		width int
+		frac  float64
+		want  int
+	}{
+		{56, dedupFrac(14, 56), 14},
+		{56, dedupFrac(1, 10000), 1},  // started: never fully empty
+		{56, dedupFrac(0, 56), 0},     // untouched
+		{56, dedupFrac(56, 56), 56},   // complete
+		{56, dedupFrac(100, 56), 56},  // clamp overshoot
+		{56, dedupFrac(28, 56), 28},   // exact half
+		{10, dedupFrac(55, 100), 6},   // rounds, not truncates (5.5 -> 6)
+		{56, dedupFrac(1, 0), 0},      // unknown total
 	}
-	if got := dedupHashProgressFilledCols(56, 1, 100); got != 1 {
-		t.Fatalf("non-zero hashed min fill = %d, want 1", got)
+	for _, c := range cases {
+		if got := dedupBarFilledCols(c.width, c.frac); got != c.want {
+			t.Fatalf("dedupBarFilledCols(%d, %v) = %d, want %d", c.width, c.frac, got, c.want)
+		}
 	}
-	if got := dedupHashProgressFilledCols(56, 0, 56); got != 0 {
-		t.Fatalf("zero hashed fill = %d, want 0", got)
+}
+
+func TestDrawDedupProgressDialogPerFileBar(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+
+	styles := theme.Default()
+	layout := Layout{Width: 80, Height: 24}
+	snap := comparepkg.DedupSnapshot{
+		Root:            pathloc.MustParse("/scan/root"),
+		Phase:           comparepkg.DedupHashing,
+		Hashed:          1,
+		HashTotal:       4,
+		HashBytesTotal:  1 << 30,
+		HashedBytes:     1 << 29,
+		Current:         "media/archive",
+		CurrentFile:     "voyage.iso",
+		CurrentFileSize: 1 << 29,
+		CurrentFileDone: 1 << 28,
+	}
+	DrawDedupProgressDialog(screen, layout, DedupProgressDialogState{Open: true}, snap, styles, "")
+
+	rect := draw.CenteredDialogRect(layout, PreferredFormDialogWidth, dedupProgressDialogHeight(snap.Phase))
+	barY := dedupHashProgressBarRow(screen, rect, snap.Hashed, snap.HashTotal)
+	if barY < 0 {
+		t.Fatal("hash progress bar row not found")
+	}
+	textX := draw.DialogTextX(rect)
+	textW := draw.DialogContentWidth(rect)
+
+	fileLine := strings.TrimSpace(cellTextAt(screen, textX, barY+1, textW))
+	if !strings.Contains(fileLine, "voyage.iso") {
+		t.Fatalf("per-file line = %q, want filename label", fileLine)
+	}
+	if strings.Contains(fileLine, "media/archive") {
+		t.Fatalf("per-file line = %q, must not contain the directory path", fileLine)
+	}
+	_, wantFillBG, _ := styles.DialogProgressFill.Decompose()
+	_, gotBG, _ := cellStyleAt(screen, textX, barY+1).Decompose()
+	if gotBG != wantFillBG {
+		t.Fatalf("per-file first col bg %v, want fill %v", gotBG, wantFillBG)
+	}
+	lastCh, _, _ := screen.Get(textX+textW-1, barY+1)
+	if lastCh != "█" && lastCh != "░" {
+		t.Fatalf("per-file last bar col = %q, want █ or ░", lastCh)
 	}
 }
 
@@ -298,7 +370,7 @@ func dedupHashProgressBarRow(screen tcell.Screen, rect draw.Rect, hashed, total 
 	if !ok {
 		return -1
 	}
-	return countY - 1
+	return countY - 2 // per-file bar row sits between the main bar and the count
 }
 
 func cellTextAt(screen tcell.Screen, x, y, w int) string {

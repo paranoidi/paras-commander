@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -187,8 +188,8 @@ func TestDedupHashingPublishesCurrentPath(t *testing.T) {
 		t.Fatal("expected hashing snapshots with a current path")
 	}
 	last := hashing[len(hashing)-1]
-	if last.Hashed == 0 || last.HashTotal < 2 {
-		t.Fatalf("hashing progress = %d/%d, want partial progress", last.Hashed, last.HashTotal)
+	if last.HashedBytes == 0 || last.HashTotal < 2 {
+		t.Fatalf("hashing progress = %d bytes of %d files, want partial progress", last.HashedBytes, last.HashTotal)
 	}
 	if last.Current == "" {
 		t.Fatal("hashing snapshot missing current path")
@@ -241,6 +242,159 @@ func TestDedupHashingProgressRateLimited(t *testing.T) {
 	// them into far fewer visible path changes than one-per-file.
 	if pathChanges >= n {
 		t.Fatalf("path changes = %d, want < %d (rate-limited)", pathChanges, n)
+	}
+}
+
+func TestHashFileReportsProgress(t *testing.T) {
+	dir := t.TempDir()
+	content := strings.Repeat("orchard meadow lantern ", 8) // 184 bytes
+	writeFile(t, dir, "voyage.txt", content)
+	loc, err := pathloc.File(filepath.Join(dir, "voyage.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var reads []int64
+	buf := make([]byte, 32) // force multiple reads
+	if _, err := HashFile(context.Background(), loc, buf, 0, func(read int64) {
+		reads = append(reads, read)
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(reads) < 2 {
+		t.Fatalf("progress callbacks = %d, want several with a 32-byte buffer", len(reads))
+	}
+	for i := 1; i < len(reads); i++ {
+		if reads[i] <= reads[i-1] {
+			t.Fatalf("progress not strictly increasing: %v", reads)
+		}
+	}
+	if got, want := reads[len(reads)-1], int64(len(content)); got != want {
+		t.Fatalf("final progress = %d, want file size %d", got, want)
+	}
+}
+
+func TestDedupHashedBytesMonotonic(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "a/dup1.txt", "duplicate!")
+	writeFile(t, dir, "b/dup2.txt", "duplicate!")
+	writeFile(t, dir, "c/dup3.txt", "duplicate!")
+
+	root, err := pathloc.File(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var mu sync.Mutex
+	var seen []DedupSnapshot
+	sess := StartDedup(context.Background(), root, DedupOptions{
+		HashWorkers: 2,
+		ReadBuffer:  make([]byte, 4),
+		OnUpdate: func(s DedupSnapshot) {
+			if s.Phase == DedupHashing || s.Phase == DedupDone {
+				mu.Lock()
+				seen = append(seen, s)
+				mu.Unlock()
+			}
+		},
+	})
+	defer sess.Close()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if p := sess.Snapshot().Phase; p == DedupDone || p == DedupError {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen) == 0 {
+		t.Fatal("expected hashing/done snapshots")
+	}
+	for i := 1; i < len(seen); i++ {
+		if seen[i].HashedBytes < seen[i-1].HashedBytes {
+			t.Fatalf("HashedBytes regressed at %d: %d -> %d", i, seen[i-1].HashedBytes, seen[i].HashedBytes)
+		}
+	}
+	last := seen[len(seen)-1]
+	if last.Phase != DedupDone {
+		t.Fatalf("last phase = %v, want DedupDone", last.Phase)
+	}
+	if last.HashedBytes != last.HashBytesTotal {
+		t.Fatalf("done HashedBytes = %d, want HashBytesTotal %d", last.HashedBytes, last.HashBytesTotal)
+	}
+}
+
+func TestDedupCurrentFileAboveThreshold(t *testing.T) {
+	dir := t.TempDir()
+	content := strings.Repeat("harbor lantern meadow ", 6) // 132 bytes
+	writeFile(t, dir, "alpha/voyage.dat", content)
+	writeFile(t, dir, "beta/voyage.dat", content)
+
+	run := func(t *testing.T, fileProgressBytes int64) []DedupSnapshot {
+		t.Helper()
+		root, err := pathloc.File(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var mu sync.Mutex
+		var hashing []DedupSnapshot
+		sess := StartDedup(context.Background(), root, DedupOptions{
+			HashWorkers:       1,
+			ReadBuffer:        make([]byte, 8), // several callbacks per file before completion
+			FileProgressBytes: fileProgressBytes,
+			OnUpdate: func(s DedupSnapshot) {
+				if s.Phase == DedupHashing {
+					mu.Lock()
+					hashing = append(hashing, s)
+					mu.Unlock()
+				}
+			},
+		})
+		defer sess.Close()
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) {
+			if p := sess.Snapshot().Phase; p == DedupDone || p == DedupError {
+				break
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		return append([]DedupSnapshot(nil), hashing...)
+	}
+
+	withFile := run(t, 1)
+	found := false
+	for _, s := range withFile {
+		if s.CurrentFile == "" {
+			continue
+		}
+		found = true
+		if strings.Contains(s.CurrentFile, "/") {
+			t.Fatalf("CurrentFile = %q, want filename without path", s.CurrentFile)
+		}
+		if s.CurrentFile != "voyage.dat" {
+			t.Fatalf("CurrentFile = %q, want voyage.dat", s.CurrentFile)
+		}
+		if s.CurrentFileSize != int64(len(content)) {
+			t.Fatalf("CurrentFileSize = %d, want %d", s.CurrentFileSize, len(content))
+		}
+		if s.CurrentFileDone <= 0 || s.CurrentFileDone > s.CurrentFileSize {
+			t.Fatalf("CurrentFileDone = %d, want within (0, %d]", s.CurrentFileDone, s.CurrentFileSize)
+		}
+	}
+	if !found {
+		t.Fatal("expected a hashing snapshot with CurrentFile above threshold")
+	}
+
+	for _, s := range run(t, 0) {
+		if s.CurrentFile != "" {
+			t.Fatalf("CurrentFile = %q with threshold disabled, want empty", s.CurrentFile)
+		}
 	}
 }
 

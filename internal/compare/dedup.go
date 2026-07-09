@@ -50,8 +50,14 @@ type DedupSnapshot struct {
 	Hashed         int
 	HashTotal      int
 	HashBytesTotal int64  // total bytes among hash candidates (confirm gate + progress context)
-	Current        string // rel directory of the file most recently picked up for hashing (progress label)
-	Err            string
+	HashedBytes    int64  // bytes hashed so far: completed candidates + in-progress partial reads
+	Current        string // rel directory of the tracked in-progress file (progress label)
+	// CurrentFile is the filename (no path) of the tracked in-progress file,
+	// set only when its size is at least DedupOptions.FileProgressBytes.
+	CurrentFile     string
+	CurrentFileSize int64
+	CurrentFileDone int64
+	Err             string
 }
 
 // WithoutPaths returns a copy of the snapshot with the given absolute paths removed;
@@ -105,7 +111,11 @@ type DedupOptions struct {
 	// ConfirmHashBytes, when >0, pauses before hashing (phase DedupAwaitConfirm)
 	// once the total byte size of hash candidates exceeds it, until Confirm() is called.
 	ConfirmHashBytes int64
-	OnUpdate         func(DedupSnapshot)
+	// FileProgressBytes, when >0, exposes per-file hashing progress
+	// (CurrentFile/CurrentFileSize/CurrentFileDone) for tracked files at or
+	// above this size. Zero disables per-file progress.
+	FileProgressBytes int64
+	OnUpdate          func(DedupSnapshot)
 }
 
 // DedupSession walks one root, size-prefilters, hashes candidates, and groups duplicates.
@@ -241,29 +251,56 @@ func (s *DedupSession) run(ctx context.Context) {
 	// Each worker writes only to its own unique index, so no mutex is needed.
 	hashes := make([][32]byte, len(candidates))
 	hashErr := make([]bool, len(candidates))
-	var hashed atomic.Int32
 
-	// Workers finish files far faster than the UI can meaningfully repaint, so rate-limit
-	// hashing progress publishes (path label + progress bar) to one every dedupProgressInterval.
+	// Progress is byte-based so large files advance the bar smoothly instead of
+	// jumping one file at a time. One mutex guards the tracker; contention is one
+	// lock per read-buffer chunk per worker, which is negligible.
 	var pubMu sync.Mutex
 	var lastPub time.Time
-	publishHashing := func(cur string, done int) {
+	doneFiles := 0
+	var doneBytes int64
+	inProgress := map[int]int64{} // candidate idx -> bytes hashed so far
+	publishProgress := func() {
 		pubMu.Lock()
 		if !lastPub.IsZero() && time.Since(lastPub) < dedupProgressInterval {
 			pubMu.Unlock()
 			return
 		}
 		lastPub = time.Now()
-		pubMu.Unlock()
-		s.publish(DedupSnapshot{
+		// Track the largest in-progress candidate (lowest index tiebreak): it is
+		// stable for as long as it hashes, so the label does not jitter between
+		// whichever worker last reported.
+		tracked := -1
+		hashedBytes := doneBytes
+		for idx, read := range inProgress {
+			hashedBytes += read
+			if tracked < 0 || candidates[idx].Size > candidates[tracked].Size ||
+				(candidates[idx].Size == candidates[tracked].Size && idx < tracked) {
+				tracked = idx
+			}
+		}
+		snap := DedupSnapshot{
 			Root:           s.root,
 			Phase:          DedupHashing,
 			Walked:         len(files),
-			Hashed:         done,
+			Hashed:         doneFiles,
 			HashTotal:      len(candidates),
 			HashBytesTotal: candidateBytes,
-			Current:        cur,
-		})
+			HashedBytes:    hashedBytes,
+		}
+		if tracked >= 0 {
+			snap.Current = RelDir(candidates[tracked].Rel)
+			if s.opts.FileProgressBytes > 0 && candidates[tracked].Size >= s.opts.FileProgressBytes {
+				snap.CurrentFile = RelBase(candidates[tracked].Rel)
+				snap.CurrentFileSize = candidates[tracked].Size
+				snap.CurrentFileDone = inProgress[tracked]
+			}
+		}
+		// Publish while still holding the lock so snapshots cannot be stored out
+		// of order (HashedBytes must never regress); publish is an atomic store
+		// plus a coalesced wake, so this is cheap.
+		s.publish(snap)
+		pubMu.Unlock()
 	}
 
 	jobCh := make(chan int)
@@ -277,14 +314,28 @@ func (s *DedupSession) run(ctx context.Context) {
 				if ctx.Err() != nil {
 					return
 				}
-				rel := candidates[idx].Rel
-				sum, err := HashFile(ctx, candidates[idx].Abs, buf, s.opts.MaxHashBytes)
+				pubMu.Lock()
+				inProgress[idx] = 0
+				pubMu.Unlock()
+				sum, err := HashFile(ctx, candidates[idx].Abs, buf, s.opts.MaxHashBytes, func(read int64) {
+					pubMu.Lock()
+					inProgress[idx] = read
+					pubMu.Unlock()
+					publishProgress()
+				})
 				if err != nil {
 					hashErr[idx] = true
 				} else {
 					hashes[idx] = sum
 				}
-				publishHashing(RelDir(rel), int(hashed.Add(1)))
+				// Charge the full size even on error so HashedBytes stays
+				// monotonic and reaches HashBytesTotal.
+				pubMu.Lock()
+				delete(inProgress, idx)
+				doneFiles++
+				doneBytes += candidates[idx].Size
+				pubMu.Unlock()
+				publishProgress()
 			}
 		}()
 	}
@@ -310,6 +361,7 @@ func (s *DedupSession) run(ctx context.Context) {
 		Hashed:         len(candidates),
 		HashTotal:      len(candidates),
 		HashBytesTotal: candidateBytes,
+		HashedBytes:    candidateBytes,
 	})
 }
 

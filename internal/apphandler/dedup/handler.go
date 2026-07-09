@@ -130,11 +130,12 @@ func (h *Handler) Open() {
 			Gitignore:     h.gitignore,
 			ShouldSkipDir: shouldSkip,
 		},
-		HashWorkers:      workers,
-		ReadBuffer:       make([]byte, bufKiB*1024),
-		MaxHashBytes:     h.config.Compare.MaxHashBytes,
-		ConfirmHashBytes: h.config.Dedup.HashConfirmBytes,
-		OnUpdate:         func(_ comparepkg.DedupSnapshot) { h.postWake() },
+		HashWorkers:       workers,
+		ReadBuffer:        make([]byte, bufKiB*1024),
+		MaxHashBytes:      h.config.Compare.MaxHashBytes,
+		ConfirmHashBytes:  h.config.Dedup.HashConfirmBytes,
+		FileProgressBytes: h.config.Dedup.FileProgressBytes,
+		OnUpdate:          func(_ comparepkg.DedupSnapshot) { h.postWake() },
 	})
 	h.model.DedupSnapshot = h.session.Snapshot()
 }

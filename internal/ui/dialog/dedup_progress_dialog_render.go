@@ -12,7 +12,8 @@ import (
 )
 
 func dedupProgressDialogHeight(phase comparepkg.DedupPhase) int {
-	// Directory label + blank + path + separator + status row (+ hash count row when hashing) + blank + buttons + borders.
+	// Directory label + blank + path + separator + status row (+ per-file bar row
+	// + hash count row when hashing) + blank + buttons + borders.
 	if phase == comparepkg.DedupHashing {
 		return 12
 	}
@@ -59,7 +60,17 @@ func DrawDedupProgressDialog(
 	case comparepkg.DedupAwaitConfirm:
 		primitive.Text(screen, textX, y, textW, formatDedupByteSize(snap.HashBytesTotal)+" to hash. Continue?", textStyle)
 	case comparepkg.DedupHashing:
-		drawDedupHashProgressBar(screen, textX, y, textW, snap.Hashed, snap.HashTotal, snap.Current, styles)
+		label := snap.Current
+		if label == "" {
+			label = "Hashing files…"
+		}
+		drawDedupBar(screen, textX, y, textW, dedupFrac(snap.HashedBytes, snap.HashBytesTotal), label, styles)
+		y++
+		// Per-file bar for large files; the row stays blank dialog surface otherwise
+		// so the dialog never resizes mid-scan.
+		if snap.CurrentFile != "" {
+			drawDedupBar(screen, textX, y, textW, dedupFrac(snap.CurrentFileDone, snap.CurrentFileSize), snap.CurrentFile, styles)
+		}
 		y++
 		drawDedupHashCountRow(screen, rect, y, snap.Hashed, snap.HashTotal, textStyle)
 	default:
@@ -88,18 +99,28 @@ func dedupWalkFilesSuffix(walked int) string {
 	return fmt.Sprintf(" %d %s", walked, noun)
 }
 
-// drawDedupHashProgressBar paints a full-width ████░░░░ meter with status/path overlaid (no count).
-func drawDedupHashProgressBar(screen tcell.Screen, x, y, width, hashed, total int, currentPath string, styles theme.Theme) {
+// dedupFrac returns done/total clamped to [0,1]; zero when total is unknown.
+func dedupFrac(done, total int64) float64 {
+	if total <= 0 {
+		return 0
+	}
+	if done >= total {
+		return 1
+	}
+	if done < 0 {
+		return 0
+	}
+	return float64(done) / float64(total)
+}
+
+// drawDedupBar paints a full-width ████░░░░ meter with the label overlaid.
+// The label is fitted as a path (middle-ellipsized segments) to the bar width.
+func drawDedupBar(screen tcell.Screen, x, y, width int, frac float64, label string, styles theme.Theme) {
 	if width <= 0 {
 		return
 	}
-	filled := dedupHashProgressFilledCols(width, hashed, total)
-
-	status := "Hashing files…"
-	if currentPath != "" {
-		status = "Hashing " + currentPath + "…"
-	}
-	labelRunes := []rune(primitive.FitPathForWidth(status, width))
+	filled := dedupBarFilledCols(width, frac)
+	labelRunes := []rune(primitive.FitPathForWidth(label, width))
 
 	fillStyle := styles.DialogProgressFill
 	trackStyle := styles.DialogProgressTrack
@@ -122,13 +143,13 @@ func drawDedupHashProgressBar(screen tcell.Screen, x, y, width, hashed, total in
 	}
 }
 
-func dedupHashProgressFilledCols(width, hashed, total int) int {
-	if width <= 0 || total <= 0 {
+func dedupBarFilledCols(width int, frac float64) int {
+	if width <= 0 || frac <= 0 {
 		return 0
 	}
-	filled := (hashed * width) / total
-	if hashed > 0 && filled == 0 {
-		filled = 1
+	filled := int(frac*float64(width) + 0.5)
+	if filled == 0 {
+		filled = 1 // started: never show a completely empty bar
 	}
 	if filled > width {
 		return width
