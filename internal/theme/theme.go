@@ -61,6 +61,12 @@ type Theme struct {
 	PanelDedupRowAllMarked tcell.Style
 	// PanelDedupRowCursorAllMarked styles the cursor row in a fully-marked duplicate group.
 	PanelDedupRowCursorAllMarked tcell.Style
+	// PanelDedupRowKeep styles dedup view file rows designated as survivors.
+	PanelDedupRowKeep tcell.Style
+	// PanelDedupRowCursorKeep styles the cursor row on a kept duplicate file.
+	PanelDedupRowCursorKeep tcell.Style
+	// PanelDedupRowIndicatorKeepSubtree styles the dir-row suffix when a subtree contains kept files.
+	PanelDedupRowIndicatorKeepSubtree tcell.Style
 	// PanelRowIndicatorSelectionSubtree styles the file-list suffix on directories with nested selections.
 	PanelRowIndicatorSelectionSubtree tcell.Style
 	// PanelRowIndicatorNew styles the file-list suffix for the latest transferred batch.
@@ -69,6 +75,8 @@ type Theme struct {
 	PanelRowIndicatorNewPrevious tcell.Style
 	// PanelRowIndicatorRenamed styles the file-list suffix for recently renamed entries.
 	PanelRowIndicatorRenamed tcell.Style
+	// PanelRowTreeConnector styles tree branch/continuation glyphs in tree-style lists.
+	PanelRowTreeConnector tcell.Style
 	// PanelIconFolderOpen styles the open-folder icon strip when the other panel is in that directory.
 	PanelIconFolderOpen tcell.Style
 	// PanelIconFolderMount styles the other-mount directory icon strip.
@@ -434,6 +442,9 @@ const (
 	SymbolKeyMetaRunning              = "meta.running"
 	SymbolKeyTreeExpand               = "tree.expand"
 	SymbolKeyTreeCollapse             = "tree.collapse"
+	SymbolKeyTreeContinue             = "tree.continue"
+	SymbolKeyTreeBranch               = "tree.branch"
+	SymbolKeyTreeEnd                  = "tree.end"
 	SymbolKeyTreeLeaf                 = "tree.leaf"
 )
 
@@ -532,6 +543,21 @@ func (t Theme) SymbolTreeLeaf() rune {
 	return t.filelistSymbolRune(SymbolKeyTreeLeaf, '·') // ·
 }
 
+// SymbolTreeContinue returns the ancestor continuation glyph for tree-style lists.
+func (t Theme) SymbolTreeContinue() string {
+	return t.treeSymbol(SymbolKeyTreeContinue, "│")
+}
+
+// SymbolTreeBranch returns the non-last-sibling branch glyph for tree-style lists.
+func (t Theme) SymbolTreeBranch() string {
+	return t.treeSymbol(SymbolKeyTreeBranch, "├─")
+}
+
+// SymbolTreeEnd returns the last-sibling branch glyph for tree-style lists.
+func (t Theme) SymbolTreeEnd() string {
+	return t.treeSymbol(SymbolKeyTreeEnd, "└─")
+}
+
 // SymbolScrollbarThumb returns the panel scrollbar thumb-style position glyph.
 func (t Theme) SymbolScrollbarThumb() rune {
 	return t.filelistSymbolRune(SymbolKeyScrollbarThumb, '\u25cf') // ●
@@ -549,6 +575,15 @@ func (t Theme) filelistSymbolRune(key string, fallback rune) rune {
 }
 
 func (t Theme) foldersSymbol(key, fallback string) string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[key]); s != "" {
+			return s
+		}
+	}
+	return fallback
+}
+
+func (t Theme) treeSymbol(key, fallback string) string {
 	if t.Symbols != nil {
 		if s := strings.TrimSpace(t.Symbols[key]); s != "" {
 			return s
@@ -700,10 +735,14 @@ var requiredStyleKeys = []string{
 	"panel.row.selected",
 	"panel.dedup.row.all_marked",
 	"panel.dedup.row.cursor.all_marked",
+	"panel.dedup.row.keep",
+	"panel.dedup.row.cursor.keep",
+	"panel.dedup.row.indicator.keep_subtree",
 	"panel.row.indicator.selection_subtree",
 	"panel.row.indicator.new",
 	"panel.row.indicator.new.previous",
 	"panel.row.indicator.renamed",
+	"panel.row.tree.connector",
 	"panel.icon.folder.open",
 	"panel.icon.folder.mount",
 	"panel.text",
@@ -1167,10 +1206,14 @@ func parse(data []byte) (Theme, error) {
 		PanelRowSelected:                    styles["panel.row.selected"],
 		PanelDedupRowAllMarked:              styles["panel.dedup.row.all_marked"],
 		PanelDedupRowCursorAllMarked:        styles["panel.dedup.row.cursor.all_marked"],
+		PanelDedupRowKeep:                   styles["panel.dedup.row.keep"],
+		PanelDedupRowCursorKeep:             styles["panel.dedup.row.cursor.keep"],
+		PanelDedupRowIndicatorKeepSubtree:   styles["panel.dedup.row.indicator.keep_subtree"],
 		PanelRowIndicatorSelectionSubtree:   styles["panel.row.indicator.selection_subtree"],
 		PanelRowIndicatorNew:                styles["panel.row.indicator.new"],
 		PanelRowIndicatorNewPrevious:        styles["panel.row.indicator.new.previous"],
 		PanelRowIndicatorRenamed:            styles["panel.row.indicator.renamed"],
+		PanelRowTreeConnector:               styles["panel.row.tree.connector"],
 		PanelIconFolderOpen:                 styles["panel.icon.folder.open"],
 		PanelIconFolderMount:                styles["panel.icon.folder.mount"],
 		PanelIconFolderDefault:              panelIconFolderDefault,

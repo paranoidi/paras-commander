@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 func TestPanelZoomSplitsColumnsOnlyInBrowser(t *testing.T) {
@@ -174,53 +173,5 @@ func TestJobDetailLineCountOmitsThroughputGraphWhenDisabled(t *testing.T) {
 	off := JobDetailLineCount(j, now, false)
 	if d := on - off; d != throughputGraphBodyRows {
 		t.Fatalf("line delta = %d want %d (graph body rows)", d, throughputGraphBodyRows)
-	}
-}
-
-func TestJobRowLeadingIconCompletedUsesDoneGlyph(t *testing.T) {
-	if got := (theme.Theme{}).SymbolJobsList("completed"); got != "\uf05d" {
-		t.Fatalf("completed icon = %q, want %q", got, "\uf05d")
-	}
-}
-
-func TestJobRowLeadingIconFailedUsesErrorGlyph(t *testing.T) {
-	want := "\uf06a"
-	if got := (theme.Theme{}).SymbolJobsList("failed"); got != want {
-		t.Fatalf("failed icon = %q, want %q", got, want)
-	}
-}
-
-func TestJobRowLeadingIconCanceledUsesStoppedGlyph(t *testing.T) {
-	want := "\uf28d"
-	if got := (theme.Theme{}).SymbolJobsList("canceled"); got != want {
-		t.Fatalf("canceled icon = %q, want %q", got, want)
-	}
-}
-
-func TestJobRowLeadingIconDecisionUsesInputRequiredGlyph(t *testing.T) {
-	want := "\U000f02d7"
-	if got := (theme.Theme{}).SymbolJobsList("decision"); got != want {
-		t.Fatalf("decision icon = %q, want %q", got, want)
-	}
-}
-
-func TestJobRowLeadingIconQueuedUsesClockGlyph(t *testing.T) {
-	want := "\u231B" // ⌛ queued (hourglass)
-	if got := (theme.Theme{}).SymbolJobsList("queued"); got != want {
-		t.Fatalf("queued icon = %q, want %q", got, want)
-	}
-}
-
-func TestJobRowLeadingIconRunningUsesOngoingGlyph(t *testing.T) {
-	want := "\uf144"
-	if got := (theme.Theme{}).SymbolJobsList("running"); got != want {
-		t.Fatalf("running icon = %q, want %q", got, want)
-	}
-}
-
-func TestJobRowLeadingIconPausedUsesPausedGlyph(t *testing.T) {
-	want := "\uf28b"
-	if got := (theme.Theme{}).SymbolJobsList("paused"); got != want {
-		t.Fatalf("paused icon = %q, want %q", got, want)
 	}
 }

@@ -255,12 +255,13 @@ func TestOverflowMarkerRightVisibleWithCursorInLastTextCell(t *testing.T) {
 	DrawScrollingDialogInput(screen, 2, 2, width, ScrollingInputState{Value: value, Cursor: cursor, Scroll: scroll}, true, false, theme.Default())
 
 	got, _, _ := screen.Get(2+width-1, 2)
-	if got != "▶" {
-		t.Fatalf("right cell = %q want ▶", got)
+	right := string(ScrollOverflowRight)
+	if got != right {
+		t.Fatalf("right cell = %q want %s", got, right)
 	}
 	gotRow := tcelltest.TextAt(screen, 2, 2, width)
-	if !strings.HasSuffix(gotRow, "▶") {
-		t.Fatalf("row = %q; ▶ missing at end", gotRow)
+	if !strings.HasSuffix(gotRow, right) {
+		t.Fatalf("row = %q; %s missing at end", gotRow, right)
 	}
 }
 
@@ -305,8 +306,9 @@ func TestDrawScrollingDialogInputShowsRightMarkerWhenTailStillHidden(t *testing.
 	DrawScrollingDialogInput(screen, 2, 2, width, ScrollingInputState{Value: value, Cursor: cursor, Scroll: scroll}, true, false, theme.Default())
 
 	got, _, _ := screen.Get(2+width-1, 2)
-	if got != "▶" {
-		t.Fatalf("right cell = %q want ▶ at scroll %d", got, scroll)
+	right := string(ScrollOverflowRight)
+	if got != right {
+		t.Fatalf("right cell = %q want %s at scroll %d", got, right, scroll)
 	}
 }
 
@@ -345,7 +347,7 @@ func TestDrawScrollingDialogInputShowsTailWhenCursorAtEnd(t *testing.T) {
 	DrawScrollingDialogInput(screen, 2, 2, width, ScrollingInputState{Value: value, Cursor: cursor}, true, false, theme.Default())
 
 	got := tcelltest.TextAt(screen, 2, 2, width)
-	want := "◀CDEFGHIJ " // scroll=11 hides 0..A; overflow marker on first cell, cursor blank tail
+	want := string(ScrollOverflowLeft) + "CDEFGHIJ " // scroll=11 hides 0..A; overflow marker on first cell, cursor blank tail
 	if got != want {
 		t.Fatalf("visible row = %q want %q", got, want)
 	}

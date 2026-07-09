@@ -43,7 +43,8 @@ type DedupGroup struct {
 
 // DedupSnapshot is an immutable dedup result generation.
 type DedupSnapshot struct {
-	Root           pathloc.Path
+	Root           pathloc.Path // scan path (unchanged after trim)
+	DisplayRoot    pathloc.Path // results view root; zero means same as Root
 	Phase          DedupPhase
 	Groups         []DedupGroup
 	Walked         int
@@ -83,6 +84,7 @@ func (s DedupSnapshot) WithoutPaths(removed map[string]bool) DedupSnapshot {
 
 func (s *DedupSession) walkRoot(ctx context.Context) ([]FileRecord, error) {
 	walkOpts := s.opts.Walk
+	walkOpts.SkipSymlinks = true
 	var pubMu sync.Mutex
 	var lastPub time.Time
 	walkOpts.OnFile = func(walked int) {

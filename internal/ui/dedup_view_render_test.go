@@ -324,7 +324,7 @@ func TestDrawDedupViewTitleBarKeepsFrameDashesAfterTitle(t *testing.T) {
 	}
 }
 
-func TestDrawDedupViewDirectoryFolderIconUsesListingColor(t *testing.T) {
+func TestDrawDedupViewDirectoryFolderIconUsesDirectoryBlue(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -366,8 +366,129 @@ func TestDrawDedupViewDirectoryFolderIconUsesListingColor(t *testing.T) {
 	gutterX := contentX
 	fg, _, _ := cellStyleAt(screen, gutterX, lineY).Decompose()
 	wantFG, _, _ := styles.PanelRowDirectory.Decompose()
+	_, jobsFG, _ := styles.JobsRow.Decompose()
+	if wantFG == jobsFG {
+		t.Fatal("test requires distinct panel.row.directory and jobs.row foregrounds")
+	}
 	if fg != wantFG {
-		t.Fatalf("closed folder icon fg %v, want panel.row.directory %v", fg, wantFG)
+		t.Fatalf("closed folder icon fg %v, want directory fg %v (not jobs.row %v)", fg, wantFG, jobsFG)
+	}
+
+	openFG, _, _ := styles.PanelIconFolderOpen.Decompose()
+	if openFG == wantFG {
+		t.Fatal("test requires distinct panel.icon.folder.open and panel.row.directory foregrounds")
+	}
+}
+
+func TestDrawDedupViewOpenFolderIconUsesDirectoryBlue(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	contentX := rect.X + 2
+	lineY := rect.Y + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{{
+			Size: 4,
+			Files: []comparepkg.DedupFile{
+				{Rel: "meadow/lantern.txt", Abs: pathloc.MustParse("/scan/root/meadow/lantern.txt")},
+				{Rel: "lantern.txt", Abs: pathloc.MustParse("/scan/root/lantern.txt")},
+			},
+		}},
+	}
+	view := DedupViewState{
+		IgnoreEmpty: true,
+		TreeDirs:    true,
+		Main:        DedupPane{Selected: 1},
+	}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+
+	gutterX := contentX
+	fg, _, _ := cellStyleAt(screen, gutterX, lineY).Decompose()
+	wantFG, _, _ := styles.PanelRowDirectory.Decompose()
+	openFG, _, _ := styles.PanelIconFolderOpen.Decompose()
+	if openFG == wantFG {
+		t.Fatal("test requires distinct panel.icon.folder.open and panel.row.directory foregrounds")
+	}
+	if fg == openFG {
+		t.Fatalf("open folder icon fg %v, want directory fg %v (not panel.icon.folder.open)", fg, wantFG)
+	}
+	if fg != wantFG {
+		t.Fatalf("open folder icon fg %v, want directory fg %v", fg, wantFG)
+	}
+}
+
+func TestDrawDedupViewCursorSelectedDirFolderIconUsesDirectoryBlue(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	contentX := rect.X + 2
+	lineY := rect.Y + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{{
+			Size: 4,
+			Files: []comparepkg.DedupFile{
+				{Rel: "meadow/lantern.txt", Abs: pathloc.MustParse("/scan/root/meadow/lantern.txt")},
+				{Rel: "lantern.txt", Abs: pathloc.MustParse("/scan/root/lantern.txt")},
+			},
+		}},
+	}
+	view := DedupViewState{
+		IgnoreEmpty: true,
+		TreeDirs:    true,
+		Main:        DedupPane{Selected: 0}, // cursor on meadow dir row
+	}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	if list[0].Value.Kind != DedupRowDir {
+		t.Fatalf("first row kind = %v, want DedupRowDir", list[0].Value.Kind)
+	}
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+
+	wantDirFG, _, _ := styles.PanelRowDirectory.Decompose()
+	_, cursorFG, _ := styles.PanelCursorActive.Decompose()
+	if wantDirFG == cursorFG {
+		t.Fatal("test requires distinct panel.row.directory and panel.active.row.cursor foregrounds")
+	}
+
+	gutterX := contentX
+	iconFG, _, _ := cellStyleAt(screen, gutterX, lineY).Decompose()
+	if iconFG != wantDirFG {
+		t.Fatalf("cursor-selected dir folder icon fg %v, want directory fg %v", iconFG, wantDirFG)
+	}
+	if iconFG == cursorFG {
+		t.Fatalf("cursor-selected dir folder icon fg %v, should not use cursor fg", iconFG)
+	}
+
+	nameX := contentX + len([]rune(dedupTreePrefix(styles, list[0]))) + 1
+	nameFG, _, _ := cellStyleAt(screen, nameX, lineY).Decompose()
+	if nameFG == wantDirFG {
+		t.Fatal("test requires dir name to use cursor styling, not plain directory fg")
 	}
 }
 
@@ -513,5 +634,554 @@ func TestDedupListColumnWidthsUsesCompactMinimums(t *testing.T) {
 	}
 	if countW != len([]rune(dedupListCountTitle)) {
 		t.Fatalf("countW = %d, want header title width %d", countW, len([]rune(dedupListCountTitle)))
+	}
+}
+
+func TestDrawDedupViewDirRowShowsSubtreeMarkIndicator(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	contentX := rect.X + 2
+	dirRowY := rect.Y + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{{
+			Size: 4,
+			Files: []comparepkg.DedupFile{
+				{Rel: "meadow/lantern.txt", Abs: pathloc.MustParse("/scan/root/meadow/lantern.txt")},
+				{Rel: "lantern.txt", Abs: pathloc.MustParse("/scan/root/lantern.txt")},
+			},
+		}},
+	}
+	view := DedupViewState{
+		IgnoreEmpty: true,
+		TreeDirs:    true,
+		Marked:      map[string]bool{"/scan/root/meadow/lantern.txt": true},
+		MarkedCount: 1,
+		Main:        DedupPane{Selected: 2}, // keep cursor off the dir row
+	}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+
+	var meadowRow DedupRow
+	for _, row := range list {
+		if row.Value.Kind == DedupRowDir && row.Value.DirRel == "meadow" {
+			meadowRow = row
+			break
+		}
+	}
+	markX := contentX + len([]rune(dedupTreePrefix(styles, meadowRow))) + 1 + len("meadow")
+	r, style, _ := screen.Get(markX, dirRowY)
+	if r != string(styles.SymbolFilelistSelectionSubtree()) {
+		t.Fatalf("rune at (%d,%d) = %q, want subtree indicator", markX, dirRowY, r)
+	}
+	fg, _, _ := style.Decompose()
+	wantFG, _, _ := styles.PanelRowIndicatorSelectionSubtree.Decompose()
+	if fg != wantFG {
+		t.Fatalf("indicator fg %v, want panel.row.indicator.selection_subtree %v", fg, wantFG)
+	}
+}
+
+func TestDrawDedupViewDirRowShowsRedSubtreeMarkWhenGroupFullyMarked(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	contentX := rect.X + 2
+	dirRowY := rect.Y + 2
+
+	absMeadow := pathloc.MustParse("/scan/root/meadow/lantern.txt")
+	absRoot := pathloc.MustParse("/scan/root/lantern.txt")
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{{
+			Size: 4,
+			Files: []comparepkg.DedupFile{
+				{Rel: "meadow/lantern.txt", Abs: absMeadow},
+				{Rel: "lantern.txt", Abs: absRoot},
+			},
+		}},
+	}
+	view := DedupViewState{
+		IgnoreEmpty: true,
+		TreeDirs:    true,
+		Marked: map[string]bool{
+			absMeadow.String(): true,
+			absRoot.String():   true,
+		},
+		MarkedCount: 2,
+		Main:        DedupPane{Selected: 3}, // keep cursor off the dir row
+	}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+
+	var meadowRow DedupRow
+	for _, row := range list {
+		if row.Value.Kind == DedupRowDir && row.Value.DirRel == "meadow" {
+			meadowRow = row
+			break
+		}
+	}
+	markX := contentX + len([]rune(dedupTreePrefix(styles, meadowRow))) + 1 + len("meadow")
+	r, style, _ := screen.Get(markX, dirRowY)
+	if r != string(styles.SymbolFilelistSelectionSubtree()) {
+		t.Fatalf("rune at (%d,%d) = %q, want subtree indicator", markX, dirRowY, r)
+	}
+	fg, _, _ := style.Decompose()
+	wantFG, _, _ := styles.PanelDedupRowAllMarked.Decompose()
+	if fg != wantFG {
+		t.Fatalf("indicator fg %v, want panel.dedup.row.all_marked %v", fg, wantFG)
+	}
+	yellowFG, _, _ := styles.PanelRowIndicatorSelectionSubtree.Decompose()
+	if fg == yellowFG {
+		t.Fatalf("indicator fg should be red (all-marked), not yellow subtree color")
+	}
+}
+
+func TestDrawDedupViewNestedRowShowsTreeConnectors(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	contentX := rect.X + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{{
+			Size: 4,
+			Files: []comparepkg.DedupFile{
+				{Rel: "meadow/lantern.txt", Abs: pathloc.MustParse("/scan/root/meadow/lantern.txt")},
+				{Rel: "meadow/copy.txt", Abs: pathloc.MustParse("/scan/root/meadow/copy.txt")},
+				{Rel: "lantern.txt", Abs: pathloc.MustParse("/scan/root/lantern.txt")},
+			},
+		}},
+	}
+	view := DedupViewState{
+		IgnoreEmpty: true,
+		TreeDirs:    true,
+		Main:        DedupPane{},
+	}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+
+	wantConnectorFG, _, _ := styles.PanelRowTreeConnector.Decompose()
+	branch := styles.SymbolTreeBranch()
+	endGlyph := styles.SymbolTreeEnd()
+
+	var nestedRow DedupRow
+	var nestedY int
+	for i, row := range list {
+		if row.Depth == 1 {
+			nestedRow = row
+			nestedY = rect.Y + 2 + i
+			break
+		}
+	}
+	if nestedRow.ID == "" {
+		t.Fatal("expected a depth-1 nested row")
+	}
+
+	connectorX := contentX
+	got, style, _ := screen.Get(connectorX, nestedY)
+	wantFirst := []rune(dedupTreeConnectorPrefix(styles, nestedRow))[0]
+	if got != string(wantFirst) {
+		t.Fatalf("connector at (%d,%d) = %q, want %q", connectorX, nestedY, got, string(wantFirst))
+	}
+	fg, _, _ := style.Decompose()
+	if fg != wantConnectorFG {
+		t.Fatalf("connector fg %v, want panel.row.tree.connector %v", fg, wantConnectorFG)
+	}
+
+	prefix := dedupTreeConnectorPrefix(styles, nestedRow)
+	if !strings.Contains(prefix, branch) && !strings.Contains(prefix, endGlyph) {
+		t.Fatalf("connector prefix %q, want branch %q or end %q", prefix, branch, endGlyph)
+	}
+}
+
+func TestDedupTreeConnectorLastChildUsesEnd(t *testing.T) {
+	styles := theme.Default()
+	row := DedupRow{
+		Depth:       1,
+		HasChildren: true,
+		Expanded:    true,
+		LastChild:   true,
+	}
+	prefix := dedupTreeConnectorPrefix(styles, row)
+	endGlyph := styles.SymbolTreeEnd()
+	if !strings.HasPrefix(prefix, endGlyph) {
+		t.Fatalf("prefix %q, want end %q when last child even if expanded", prefix, endGlyph)
+	}
+
+	child := DedupRow{
+		Depth:           2,
+		LastChild:       true,
+		AncestorHasNext: []bool{false},
+	}
+	childPrefix := dedupTreeConnectorPrefix(styles, child)
+	want := "   " + styles.SymbolTreeEnd() + " "
+	if childPrefix != want {
+		t.Fatalf("child prefix %q, want %q", childPrefix, want)
+	}
+}
+
+func TestDedupTreeConnectorNonLastChildUsesBranch(t *testing.T) {
+	styles := theme.Default()
+	row := DedupRow{
+		Depth:       1,
+		HasChildren: true,
+		Expanded:    true,
+		LastChild:   false,
+	}
+	prefix := dedupTreeConnectorPrefix(styles, row)
+	branch := styles.SymbolTreeBranch()
+	if !strings.HasPrefix(prefix, branch) {
+		t.Fatalf("prefix %q, want branch %q when not last child", prefix, branch)
+	}
+
+	child := DedupRow{
+		Depth:           2,
+		LastChild:       true,
+		AncestorHasNext: []bool{true},
+	}
+	childPrefix := dedupTreeConnectorPrefix(styles, child)
+	want := styles.SymbolTreeContinue() + "  " + styles.SymbolTreeEnd() + " "
+	if childPrefix != want {
+		t.Fatalf("child prefix %q, want %q", childPrefix, want)
+	}
+}
+
+func TestDedupTreeConnectorTwoRootsOnlyChildDir(t *testing.T) {
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{{
+			Size: 4,
+			Files: []comparepkg.DedupFile{
+				{Rel: "test-relocate-new/basic/IMG_4005.jpg", Abs: pathloc.MustParse("/scan/root/test-relocate-new/basic/IMG_4005.jpg")},
+				{Rel: "test-relocate-orig/IMG_4005.jpg", Abs: pathloc.MustParse("/scan/root/test-relocate-orig/IMG_4005.jpg")},
+			},
+		}},
+	}
+	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true, TreeDirs: true})
+	styles := theme.Default()
+
+	var basicRow, imgRow DedupRow
+	for _, row := range list {
+		switch {
+		case row.Value.Kind == DedupRowDir && row.Value.DirRel == "test-relocate-new/basic":
+			basicRow = row
+		case row.Value.Kind == DedupRowFile && row.Value.Display == "IMG_4005.jpg" && row.Depth == 2:
+			imgRow = row
+		}
+	}
+	if basicRow.ID == "" || imgRow.ID == "" {
+		t.Fatalf("rows = %+v, want basic dir and nested file", list)
+	}
+	if !basicRow.LastChild {
+		t.Fatalf("basic LastChild = false, want true (only child under test-relocate-new)")
+	}
+	basicPrefix := dedupTreeConnectorPrefix(styles, basicRow)
+	if !strings.HasPrefix(basicPrefix, styles.SymbolTreeEnd()) {
+		t.Fatalf("basic prefix %q, want end connector", basicPrefix)
+	}
+	imgPrefix := dedupTreeConnectorPrefix(styles, imgRow)
+	wantImg := "   " + styles.SymbolTreeEnd() + " "
+	if imgPrefix != wantImg {
+		t.Fatalf("img prefix %q, want %q", imgPrefix, wantImg)
+	}
+	gutter, _ := dedupTreeGutter(styles, imgRow, tcell.StyleDefault, true)
+	if gutter != "" {
+		t.Fatalf("file row gutter = %q, want empty", gutter)
+	}
+}
+
+func TestDrawDedupViewCopiesPaneEmptyHeaderOmitsPathDot(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Secondary
+	contentX := rect.X + 2
+	headerY := rect.Y + 1
+
+	root := pathloc.MustParse("/scan/root")
+	snap := comparepkg.DedupSnapshot{Root: root, Phase: comparepkg.DedupDone}
+	snap.Groups = append(snap.Groups, dedupTestGroup(1, 1024, "alpha.bin"))
+	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
+	drawDedupView(screen, layout, DedupViewState{Main: DedupPane{Selected: -1}}, snap, list, nil, styles, false, "", SplitHorizontal)
+
+	ch, _, _ := screen.Get(contentX, headerY)
+	if ch == "." {
+		t.Fatalf("empty copies header at x=%d is %q, want no path dot", contentX, ch)
+	}
+}
+
+func TestDrawDedupViewCopiesPaneEmptyTextStartsAtContentColumn(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Secondary
+	contentX := rect.X + 2
+	emptyY := rect.Y + 2
+	want := "Select a file to see its copies"
+
+	root := pathloc.MustParse("/scan/root")
+	snap := comparepkg.DedupSnapshot{Root: root, Phase: comparepkg.DedupDone}
+	snap.Groups = append(snap.Groups, dedupTestGroup(1, 1024, "alpha.bin"))
+	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
+	drawDedupView(screen, layout, DedupViewState{Main: DedupPane{Selected: -1}}, snap, list, nil, styles, false, "", SplitHorizontal)
+
+	ch, _, _ := screen.Get(contentX, emptyY)
+	if ch != "S" {
+		t.Fatalf("first empty-text glyph at x=%d is %q, want %q", contentX, ch, "S")
+	}
+	for i, wantR := range []rune(want) {
+		ch, _, _ := screen.Get(contentX+i, emptyY)
+		if ch != string(wantR) {
+			t.Fatalf("empty text at x=%d is %q, want %q", contentX+i, ch, string(wantR))
+		}
+	}
+}
+
+func TestDrawDedupViewCopiesPaneDirUsesSelectionStyleWhenFullyMarked(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	copiesRect := layout.Secondary
+	contentX := copiesRect.X + 2
+	dirRowY := copiesRect.Y + 2
+
+	absMain := pathloc.MustParse("/scan/root/lantern.txt")
+	absMeadow := pathloc.MustParse("/scan/root/meadow/lantern.txt")
+	absBeacon := pathloc.MustParse("/scan/root/meadow/beacon.txt")
+	absOrchard := pathloc.MustParse("/scan/root/orchard/lantern.txt")
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{{
+			Size: 4,
+			Files: []comparepkg.DedupFile{
+				{Rel: "lantern.txt", Abs: absMain},
+				{Rel: "meadow/lantern.txt", Abs: absMeadow},
+				{Rel: "meadow/beacon.txt", Abs: absBeacon},
+				{Rel: "orchard/lantern.txt", Abs: absOrchard},
+			},
+		}},
+	}
+	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true, TreeDirs: true})
+	var mainSel DedupRow
+	for _, r := range list {
+		if r.Value.AbsKey == absMain.String() {
+			mainSel = r
+			break
+		}
+	}
+	copies := DedupCopyRows(snap, mainSel, nil)
+	view := DedupViewState{
+		IgnoreEmpty: true,
+		TreeDirs:    true,
+		Marked: map[string]bool{
+			absMeadow.String():  true,
+			absBeacon.String():  true,
+			absOrchard.String(): false,
+		},
+		Main: DedupPane{Selected: DedupRowIndexByID(list, mainSel.ID)},
+	}
+	drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal)
+
+	wantSelectedFG, _, _ := styles.PanelRowSelected.Decompose()
+	_, normalFG, _ := styles.PanelRowDirectory.Decompose()
+	if wantSelectedFG == normalFG {
+		t.Fatal("test requires distinct panel.row.selected and panel.row.directory foregrounds")
+	}
+
+	// Copies pane: meadow dir has all copy files marked; orchard has one unmarked.
+	var meadowRow DedupRow
+	for _, row := range copies {
+		if row.Value.Kind == DedupRowDir && row.Value.DirRel == "meadow" {
+			meadowRow = row
+			break
+		}
+	}
+	meadowNameX := contentX + len([]rune(dedupTreePrefix(styles, meadowRow))) + 1
+	fg, _, _ := cellStyleAt(screen, meadowNameX, dirRowY).Decompose()
+	if fg != wantSelectedFG {
+		t.Fatalf("fully marked meadow dir fg %v, want selection fg %v", fg, wantSelectedFG)
+	}
+
+	meadowGutterX := contentX + len([]rune(dedupTreeConnectorPrefix(styles, meadowRow)))
+	iconFG, _, _ := cellStyleAt(screen, meadowGutterX, dirRowY).Decompose()
+	wantIconFG, _, _ := styles.PanelRowDirectory.Decompose()
+	if iconFG != wantIconFG {
+		t.Fatalf("fully marked meadow folder icon fg %v, want directory fg %v", iconFG, wantIconFG)
+	}
+	if iconFG == wantSelectedFG {
+		t.Fatalf("fully marked meadow folder icon fg %v, should not use selection fg", iconFG)
+	}
+
+	orchardRowY := dirRowY + 3 // meadow dir + 2 files + orchard dir
+	var orchardRow DedupRow
+	for _, row := range copies {
+		if row.Value.Kind == DedupRowDir && row.Value.DirRel == "orchard" {
+			orchardRow = row
+			break
+		}
+	}
+	orchardNameX := contentX + len([]rune(dedupTreePrefix(styles, orchardRow))) + 1
+	fg, _, _ = cellStyleAt(screen, orchardNameX, orchardRowY).Decompose()
+	if fg == wantSelectedFG {
+		t.Fatalf("partially marked orchard dir fg %v, should not use selection fg", fg)
+	}
+}
+
+func TestDrawDedupViewFileTreePaneDirUsesSelectionStyleWhenFullyMarked(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	treeRect := layout.Primary
+	contentX := treeRect.X + 2
+	dirRowY := treeRect.Y + 2
+
+	absMain := pathloc.MustParse("/scan/root/lantern.txt")
+	absMeadow := pathloc.MustParse("/scan/root/meadow/lantern.txt")
+	absBeacon := pathloc.MustParse("/scan/root/meadow/beacon.txt")
+	absOrchard := pathloc.MustParse("/scan/root/orchard/lantern.txt")
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			{
+				Size: 4,
+				Files: []comparepkg.DedupFile{
+					{Rel: "lantern.txt", Abs: absMain},
+					{Rel: "meadow/lantern.txt", Abs: absMeadow},
+					{Rel: "orchard/lantern.txt", Abs: absOrchard},
+				},
+			},
+			{
+				Size: 5,
+				Files: []comparepkg.DedupFile{
+					{Rel: "meadow/beacon.txt", Abs: absBeacon},
+				},
+			},
+		},
+	}
+	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true, TreeDirs: true})
+	view := DedupViewState{
+		IgnoreEmpty: true,
+		TreeDirs:    true,
+		Marked: map[string]bool{
+			absMeadow.String(): true,
+			absBeacon.String(): true,
+		},
+		Main: DedupPane{Selected: 0},
+	}
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+
+	wantSelectedFG, _, _ := styles.PanelRowSelected.Decompose()
+	_, normalFG, _ := styles.PanelRowDirectory.Decompose()
+	if wantSelectedFG == normalFG {
+		t.Fatal("test requires distinct panel.row.selected and panel.row.directory foregrounds")
+	}
+
+	var meadowRow DedupRow
+	for _, row := range list {
+		if row.Value.Kind == DedupRowDir && row.Value.DirRel == "meadow" {
+			meadowRow = row
+			break
+		}
+	}
+	meadowNameX := contentX + len([]rune(dedupTreePrefix(styles, meadowRow))) + 1
+	fg, _, _ := cellStyleAt(screen, meadowNameX, dirRowY).Decompose()
+	if fg != wantSelectedFG {
+		t.Fatalf("fully marked meadow dir fg %v, want selection fg %v", fg, wantSelectedFG)
+	}
+
+	meadowGutterX := contentX + len([]rune(dedupTreeConnectorPrefix(styles, meadowRow)))
+	iconFG, _, _ := cellStyleAt(screen, meadowGutterX, dirRowY).Decompose()
+	wantIconFG, _, _ := styles.PanelRowDirectory.Decompose()
+	if iconFG != wantIconFG {
+		t.Fatalf("fully marked meadow folder icon fg %v, want directory fg %v", iconFG, wantIconFG)
+	}
+
+	var orchardRow DedupRow
+	for _, row := range list {
+		if row.Value.Kind == DedupRowDir && row.Value.DirRel == "orchard" {
+			orchardRow = row
+			break
+		}
+	}
+	orchardRowY := dirRowY + 1
+	orchardNameX := contentX + len([]rune(dedupTreePrefix(styles, orchardRow))) + 1
+	fg, _, _ = cellStyleAt(screen, orchardNameX, orchardRowY).Decompose()
+	if fg == wantSelectedFG {
+		t.Fatalf("partially marked orchard dir fg %v, should not use selection fg", fg)
 	}
 }

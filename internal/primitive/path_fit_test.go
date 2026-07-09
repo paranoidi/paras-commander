@@ -73,6 +73,14 @@ func TestFitPathForWidthEllipsisInTruncation(t *testing.T) {
 	}
 }
 
+func TestFitPathForWidthEmptyPath(t *testing.T) {
+	for _, w := range []int{1, 4, 20} {
+		if got := FitPathForWidth("", w); got != "" {
+			t.Fatalf("FitPathForWidth('', %d) = %q, want empty", w, got)
+		}
+	}
+}
+
 func TestFitPathForWidthMaxZero(t *testing.T) {
 	if got := FitPathForWidth("any/path", 0); got != "" {
 		t.Fatalf("got %q", got)

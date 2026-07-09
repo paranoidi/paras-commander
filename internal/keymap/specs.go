@@ -307,80 +307,80 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupClose,
-			Title:       "Close find-duplicates view",
-			Section:     "Navigation",
+			Title:       "Close view",
+			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"back", "browser"},
 		},
 		{
 			ID:          ActionDedupToggleSort,
-			Title:       "Toggle duplicates sort order",
-			Section:     "Navigation",
+			Title:       "Toggle sort order",
+			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"sort", "path", "wasted", "order"},
 		},
 		{
 			ID:          ActionDedupToggleEmpty,
-			Title:       "Toggle ignore empty files",
-			Section:     "Navigation",
+			Title:       "Toggle empty files",
+			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"empty", "zero", "hide", "ignore"},
 		},
 		{
-			ID:          ActionDedupMarkRedundant,
-			Title:       "Mark redundant duplicates in folder",
-			Section:     "Navigation",
-			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
-			Keywords:    []string{"mark", "select", "redundant", "unique", "folder"},
-		},
-		{
-			ID:          ActionDedupMarkGroup,
-			Title:       "Mark whole duplicate group",
-			Section:     "Navigation",
-			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
-			Keywords:    []string{"mark", "select", "group", "all", "toggle"},
-		},
-		{
-			ID:          ActionDedupMarkDuplicates,
-			Title:       "Mark duplicates stored elsewhere",
-			Section:     "Navigation",
-			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
-			Keywords:    []string{"mark", "select", "delete", "duplicate", "purge", "folder"},
-		},
-		{
 			ID:          ActionDedupToggleNode,
-			Title:       "Expand/collapse duplicates tree node",
-			Section:     "Navigation",
+			Title:       "Expand/collapse directory",
+			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "expand", "collapse", "fold", "node"},
 		},
 		{
 			ID:          ActionDedupCollapse,
-			Title:       "Collapse duplicates tree node / go to parent",
-			Section:     "Navigation",
+			Title:       "Collapse dir / go up",
+			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "collapse", "fold", "parent"},
 		},
 		{
 			ID:          ActionDedupToggleTree,
-			Title:       "Toggle duplicates tree mode (groups/directories)",
-			Section:     "Navigation",
+			Title:       "Groups / directory view",
+			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "view", "mode", "directory", "group"},
 		},
 		{
 			ID:          ActionDedupCollapseAll,
-			Title:       "Collapse all duplicates tree nodes",
-			Section:     "Navigation",
+			Title:       "Collapse all",
+			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "collapse", "fold", "all"},
 		},
 		{
 			ID:          ActionDedupExpandAll,
-			Title:       "Expand all duplicates tree nodes",
-			Section:     "Navigation",
+			Title:       "Expand all",
+			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "expand", "unfold", "all"},
+		},
+		{
+			ID:          ActionDedupPrevDir,
+			Title:       "Previous directory",
+			Section:     "Find duplicates",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"directory", "folder", "up", "previous", "jump"},
+		},
+		{
+			ID:          ActionDedupNextDir,
+			Title:       "Next directory",
+			Section:     "Find duplicates",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"directory", "folder", "down", "next", "jump"},
+		},
+		{
+			ID:          ActionDedupMarkKeep,
+			Title:       "Mark to keep",
+			Section:     "Find duplicates",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"keep", "survivor", "duplicate", "dedup"},
 		},
 
 		// ── Disk usage ──

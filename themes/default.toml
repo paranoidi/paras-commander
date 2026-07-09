@@ -61,6 +61,7 @@ row.indicator.selection_subtree = { fg = "yellow" }
 row.indicator.new = { fg = "bright_green" }
 row.indicator.new.previous = { fg = "bright_yellow" }
 row.indicator.renamed = { fg = "cyan" }
+row.tree.connector = { fg = "bright_black" }
 icon.folder.open = { fg = "bright_cyan" }
 icon.folder.mount = { fg = "bright_blue" }
 indicator.sync = { fg = "green", bold = true }
@@ -93,6 +94,9 @@ usage.selected = { fg = "yellow", bg = "bright_black" }
 [panel.dedup]
 row.all_marked = { fg = "red", bold = true }
 row.cursor.all_marked = { fg = "red", bg = "cyan", bold = true }
+row.keep = { fg = "bright_green", bold = true }
+row.cursor.keep = { fg = "bright_green", bg = "cyan", bold = true }
+row.indicator.keep_subtree = { fg = "bright_green" }
 
 [panel.active]
 disk_usage_overview = { fg = "blue"}
@@ -218,7 +222,7 @@ decision = "\uf059"
 completed = "\uf05d"
 
 [symbols.filelist]
-selection_subtree = "○"
+selection_subtree = ""
 new = "\uea7f"
 renamed = "\U000f11e8"
 
@@ -233,8 +237,9 @@ excluded = "\uf114"
 thumb = "┃"
 
 [symbols.tree]
-expand = "▶"
-collapse = "▼"
+continue = "│"
+branch = "├─"
+end = "└─"
 leaf = "·"
 
 [symbols.meta]

@@ -90,8 +90,11 @@ func drawSelectionsStrip(
 	}
 	markFG, _, _ := markSource.Decompose()
 
-	const selectionsStripMarkPrefix = " ○ "
+	mark := styles.SymbolFilelistSelectionSubtree()
+	selectionsStripMarkPrefix := " " + string(mark) + " "
 	markCols := utf8.RuneCountInString(selectionsStripMarkPrefix)
+	markStart := 1
+	markEnd := markStart + utf8.RuneCountInString(string(mark))
 
 	for row := 0; row < visibleRows; row++ {
 		y := rect.Y + 1 + row
@@ -127,8 +130,8 @@ func drawSelectionsStrip(
 		var spans []primitive.Span
 		if prefix != "" {
 			spans = []primitive.Span{{
-				Start: 1,
-				End:   2,
+				Start: markStart,
+				End:   markEnd,
 				Style: baseStyle.Foreground(markFG),
 			}}
 		}

@@ -75,17 +75,17 @@ const (
 	ActionCompareMerge       = "compare.merge"
 
 	// Dedup (find-duplicates) view
-	ActionDedupClose          = "dedup.close"
-	ActionDedupToggleSort     = "dedup.toggle-sort"
-	ActionDedupToggleEmpty    = "dedup.toggle-empty"
-	ActionDedupMarkRedundant  = "dedup.mark-redundant"
-	ActionDedupMarkDuplicates = "dedup.mark-duplicates"
-	ActionDedupMarkGroup      = "dedup.mark-group"
-	ActionDedupToggleNode     = "dedup.toggle-node"
-	ActionDedupCollapse       = "dedup.collapse"
-	ActionDedupToggleTree     = "dedup.toggle-tree"
-	ActionDedupCollapseAll    = "dedup.collapse-all"
-	ActionDedupExpandAll      = "dedup.expand-all"
+	ActionDedupClose       = "dedup.close"
+	ActionDedupToggleSort  = "dedup.toggle-sort"
+	ActionDedupToggleEmpty = "dedup.toggle-empty"
+	ActionDedupToggleNode  = "dedup.toggle-node"
+	ActionDedupCollapse    = "dedup.collapse"
+	ActionDedupToggleTree  = "dedup.toggle-tree"
+	ActionDedupCollapseAll = "dedup.collapse-all"
+	ActionDedupExpandAll   = "dedup.expand-all"
+	ActionDedupPrevDir     = "dedup.prev-dir"
+	ActionDedupNextDir     = "dedup.next-dir"
+	ActionDedupMarkKeep    = "dedup.mark-keep"
 
 	// Dialog actions
 	ActionDialogConfirm = "ui.confirm"
@@ -269,17 +269,17 @@ var KnownActions = map[string]struct{}{
 	ActionCompareRefresh:     {},
 	ActionCompareMerge:       {},
 
-	ActionDedupClose:          {},
-	ActionDedupToggleSort:     {},
-	ActionDedupToggleEmpty:    {},
-	ActionDedupMarkRedundant:  {},
-	ActionDedupMarkDuplicates: {},
-	ActionDedupMarkGroup:      {},
-	ActionDedupToggleNode:     {},
-	ActionDedupCollapse:       {},
-	ActionDedupToggleTree:     {},
-	ActionDedupCollapseAll:    {},
-	ActionDedupExpandAll:      {},
+	ActionDedupClose:       {},
+	ActionDedupToggleSort:  {},
+	ActionDedupToggleEmpty: {},
+	ActionDedupToggleNode:  {},
+	ActionDedupCollapse:    {},
+	ActionDedupToggleTree:  {},
+	ActionDedupCollapseAll: {},
+	ActionDedupExpandAll:   {},
+	ActionDedupPrevDir:     {},
+	ActionDedupNextDir:     {},
+	ActionDedupMarkKeep:    {},
 
 	ActionDialogConfirm: {},
 	ActionDialogCancel:  {},

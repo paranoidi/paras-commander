@@ -98,6 +98,7 @@ func (h *Handler) Open() {
 
 	h.model.DedupView = ui.DedupViewState{
 		Marked:                map[string]bool{},
+		Kept:                  map[string]bool{},
 		IgnoreEmpty:           true,
 		TreeDirs:              true,
 		DirsCollapsePending:   true,
@@ -188,6 +189,11 @@ func (h *Handler) PollUpdates(_ WakePayload) bool {
 
 func (h *Handler) enterResultsView() {
 	h.session = nil
+	snap := h.model.DedupSnapshot.WithTrimmedDisplayRoot()
+	h.model.DedupSnapshot = snap
+	if snap.DisplayRootTrimmed() {
+		h.host.SetTransientMessage("Duplicates view re-rooted", ui.MessageUrgencyInfo)
+	}
 	h.model.DedupProgressDialog = dialog.DedupProgressDialogState{}
 	h.model.ViewMode = ui.ViewDedup
 	h.model.MenuDefinitions = h.host.DedupMenuDefinitions()
@@ -296,6 +302,28 @@ func (h *Handler) selectedRow() (ui.DedupRow, bool) {
 	return h.paneRow(pane, rows)
 }
 
+// MoveToAdjacentDir moves the focused pane's cursor to the previous (delta -1)
+// or next (delta +1) visible directory row. File rows are skipped. When no such
+// directory exists the cursor stays put (no wrap).
+func (h *Handler) MoveToAdjacentDir(delta int) {
+	if delta != -1 && delta != 1 {
+		return
+	}
+	pane, rows := h.focusedPane()
+	if len(rows) == 0 {
+		return
+	}
+	for i := pane.Selected + delta; i >= 0 && i < len(rows); i += delta {
+		if rows[i].Value.Kind == ui.DedupRowDir {
+			pane.Selected = i
+			if !h.model.DedupView.FocusCopies {
+				h.syncCopies()
+			}
+			return
+		}
+	}
+}
+
 // MoveSelection moves the focused pane's cursor by delta rows (clamped). Main
 // pane moves refresh the copies pane.
 func (h *Handler) MoveSelection(delta int) {
@@ -395,10 +423,24 @@ func (h *Handler) resyncFocused() {
 	h.resyncPreservingCursor()
 }
 
-// ToggleNode expands/collapses the focused pane's node under the cursor. On
-// expand, a chain of single-subdirectory nodes is opened in one go (see
-// autoDescendSingleDir).
-func (h *Handler) ToggleNode() {
+// DescendFromSelection handles Right on tree rows. Collapsed directory rows
+// expand in place and keep the cursor on the folder; expanded directory rows
+// descend into the subtree and land on the first file row in depth-first order,
+// expanding collapsed folders along the way without collapsing expanded ones.
+// Group headers (file rows with child copies) still toggle expand/collapse.
+func (h *Handler) DescendFromSelection() {
+	row, ok := h.selectedRow()
+	if !ok || !row.HasChildren {
+		return
+	}
+	if row.Value.Kind == ui.DedupRowDir {
+		h.descendIntoDir()
+		return
+	}
+	h.toggleExpandableNode()
+}
+
+func (h *Handler) toggleExpandableNode() {
 	row, ok := h.selectedRow()
 	if !ok || !row.HasChildren {
 		return
@@ -407,47 +449,60 @@ func (h *Handler) ToggleNode() {
 	expanding := pane.Collapsed[row.ID]
 	pane.SetCollapsed(row.ID, !expanding)
 	h.resyncFocused()
-	if expanding {
-		h.autoDescendSingleDir()
-	}
 }
 
-// autoDescendSingleDir walks down from the just-expanded node: while its only
-// direct child is a directory, expand that child too and move the cursor onto
-// it. All steps happen inside one key event, so only the end result is painted.
-func (h *Handler) autoDescendSingleDir() {
+// descendIntoDir expands a collapsed selected directory in place, or when the
+// directory is already expanded moves the cursor to the first file descendant
+// in flattened tree order. Collapsed intermediate directories on the path are
+// expanded; already-expanded directories are left open. When no file exists
+// under the directory, the cursor moves to the first direct child row.
+func (h *Handler) descendIntoDir() {
+	pane, rows := h.focusedPane()
+	row, ok := h.paneRow(pane, rows)
+	if !ok || row.Value.Kind != ui.DedupRowDir || !row.HasChildren {
+		return
+	}
+	if pane.Collapsed[row.ID] {
+		pane.SetCollapsed(row.ID, false)
+		h.resyncFocused()
+		return
+	}
 	for {
-		pane, rows := h.focusedPane()
-		row, ok := h.paneRow(pane, rows)
-		if !ok || !row.HasChildren || !row.Expanded {
+		dirIdx := pane.Selected
+		row, ok = h.paneRow(pane, rows)
+		if !ok || row.Value.Kind != ui.DedupRowDir {
 			break
 		}
-		childIdx := -1
-		children := 0
-		for i := pane.Selected + 1; i < len(rows) && rows[i].Depth > row.Depth; i++ {
-			if rows[i].Depth == row.Depth+1 {
-				children++
-				childIdx = i
+		depth := row.Depth
+		end := ui.DedupSubtreeEndIndex(rows, dirIdx)
+		expandedChild := false
+		for i := dirIdx + 1; i < end; i++ {
+			child := rows[i]
+			if child.Value.Kind == ui.DedupRowFile {
+				pane.Selected = i
+				if !h.model.DedupView.FocusCopies {
+					h.syncCopies()
+				}
+				return
 			}
-		}
-		if children != 1 || rows[childIdx].Value.Kind != ui.DedupRowDir {
-			break
-		}
-		child := rows[childIdx]
-		pane.Selected = childIdx
-		if pane.Collapsed[child.ID] {
-			pane.SetCollapsed(child.ID, false)
-			h.resyncFocused()
-			pane, rows = h.focusedPane()
-			i := ui.DedupRowIndexByID(rows, child.ID)
-			if i < 0 {
+			if child.Value.Kind == ui.DedupRowDir && child.HasChildren && pane.Collapsed[child.ID] {
+				pane.SetCollapsed(child.ID, false)
+				h.resyncFocused()
+				pane, rows = h.focusedPane()
+				expandedChild = true
 				break
 			}
-			pane.Selected = i
 		}
-	}
-	if !h.model.DedupView.FocusCopies {
-		h.syncCopies()
+		if expandedChild {
+			continue
+		}
+		if dirIdx+1 < end && rows[dirIdx+1].Depth == depth+1 {
+			pane.Selected = dirIdx + 1
+			if !h.model.DedupView.FocusCopies {
+				h.syncCopies()
+			}
+		}
+		return
 	}
 }
 
@@ -554,8 +609,8 @@ func (h *Handler) setMark(absKey string, size int64, on bool) {
 	}
 }
 
-// ToggleMark flips the delete mark on the selected file. Directory rows are not
-// markable (the mark-under actions cover whole directories).
+// ToggleMark flips the delete mark on the selected file. Directory rows use
+// SelectToggleAndAdvance (Insert) for folder bulk mark in both panes.
 func (h *Handler) ToggleMark() {
 	row, ok := h.selectedRow()
 	if !ok || row.Value.Kind != ui.DedupRowFile {
@@ -565,86 +620,295 @@ func (h *Handler) ToggleMark() {
 	h.setMark(row.Value.AbsKey, row.Value.Size, !st.Marked[row.Value.AbsKey])
 }
 
-// ToggleGroupMark marks every copy in the selected row's duplicate group, or unmarks
-// them all when the whole group is already marked.
-func (h *Handler) ToggleGroupMark() {
+// SelectToggleAndAdvance toggles delete marks on the focused row and moves the
+// cursor. In the file-tree pane, directory rows recursively mark or clear all
+// duplicate files under the folder, then skip to the next directory row. The
+// copies pane uses the same folder behavior for copy files under the folder.
+func (h *Handler) SelectToggleAndAdvance() {
 	row, ok := h.selectedRow()
-	if !ok || row.Value.Kind != ui.DedupRowFile {
+	if !ok {
 		return
 	}
-	snap := h.model.DedupSnapshot
-	gi := row.Value.GroupIdx
-	if gi < 0 || gi >= len(snap.Groups) {
+	st := &h.model.DedupView
+	if st.FocusCopies && row.Value.Kind == ui.DedupRowDir {
+		h.toggleCopiesFolderMarks(row)
+		_, rows := h.focusedPane()
+		next := ui.DedupNextDirRowIndex(rows, st.Copies.Selected)
+		if next >= len(rows) {
+			next = len(rows) - 1
+		}
+		st.Copies.Selected = next
 		return
 	}
-	g := snap.Groups[gi]
-	unmark := ui.DedupGroupFullyMarked(g, h.model.DedupView.Marked)
+	if !st.FocusCopies && row.Value.Kind == ui.DedupRowDir {
+		h.toggleMainFolderMarks(row)
+		_, rows := h.focusedPane()
+		next := ui.DedupNextDirRowIndex(rows, st.Main.Selected)
+		if next >= len(rows) {
+			next = len(rows) - 1
+		}
+		st.Main.Selected = next
+		return
+	}
+	if row.Value.Kind != ui.DedupRowFile {
+		return
+	}
+	if st.Kept[row.Value.AbsKey] {
+		return
+	}
+	h.setMark(row.Value.AbsKey, row.Value.Size, !st.Marked[row.Value.AbsKey])
+	h.MoveSelection(1)
+}
+
+// ToggleCopiesPaneSelectAll marks every copy-pane file for the current main
+// selection, or clears those marks when they are all already marked. No-op when
+// the copies pane is not focused or has no rows.
+func (h *Handler) ToggleCopiesPaneSelectAll() {
+	st := &h.model.DedupView
+	if !st.FocusCopies || len(h.model.DedupCopiesList) == 0 {
+		return
+	}
+	mainSel, ok := h.paneRow(&st.Main, h.model.DedupList)
+	if !ok {
+		return
+	}
+	files := ui.DedupCopyPaneFiles(h.model.DedupSnapshot, mainSel)
+	if len(files) == 0 {
+		return
+	}
+	unmark := true
+	for _, f := range files {
+		if !st.Marked[f.Abs.String()] {
+			unmark = false
+			break
+		}
+	}
+	gi := mainSel.Value.GroupIdx
+	size := int64(0)
+	if gi >= 0 && gi < len(h.model.DedupSnapshot.Groups) {
+		size = h.model.DedupSnapshot.Groups[gi].Size
+	}
+	for _, f := range files {
+		abs := f.Abs.String()
+		if !unmark && st.Kept[abs] {
+			continue
+		}
+		h.setMark(abs, size, !unmark)
+	}
+}
+
+func (h *Handler) toggleMainFolderMarks(dirRow ui.DedupRow) {
+	byGroup := ui.DedupSnapshotFilesUnderDir(h.model.DedupSnapshot, dirRow.Value.DirRel)
+	if len(byGroup) == 0 {
+		return
+	}
+	st := h.model.DedupView
+	clear := false
+	for _, files := range byGroup {
+		for _, f := range files {
+			if st.Marked[f.Abs.String()] {
+				clear = true
+				break
+			}
+		}
+		if clear {
+			break
+		}
+	}
+	for gi, files := range byGroup {
+		size := h.model.DedupSnapshot.Groups[gi].Size
+		for _, f := range files {
+			abs := f.Abs.String()
+			if !clear && st.Kept[abs] {
+				continue
+			}
+			h.setMark(abs, size, !clear)
+		}
+	}
+}
+
+func (h *Handler) toggleCopiesFolderMarks(dirRow ui.DedupRow) {
+	mainSel, ok := h.paneRow(&h.model.DedupView.Main, h.model.DedupList)
+	if !ok {
+		return
+	}
+	files := ui.DedupCopyFilesUnderDir(h.model.DedupSnapshot, mainSel, dirRow.Value.DirRel)
+	if len(files) == 0 {
+		return
+	}
+	st := h.model.DedupView
+	clear := false
+	for _, f := range files {
+		if st.Marked[f.Abs.String()] {
+			clear = true
+			break
+		}
+	}
+	gi := mainSel.Value.GroupIdx
+	size := int64(0)
+	if gi >= 0 && gi < len(h.model.DedupSnapshot.Groups) {
+		size = h.model.DedupSnapshot.Groups[gi].Size
+	}
+	for _, f := range files {
+		abs := f.Abs.String()
+		if !clear && st.Kept[abs] {
+			continue
+		}
+		h.setMark(abs, size, !clear)
+	}
+}
+
+func keepAbsSetFromFiles(files []comparepkg.DedupFile) map[string]bool {
+	out := make(map[string]bool, len(files))
+	for _, f := range files {
+		out[f.Abs.String()] = true
+	}
+	return out
+}
+
+func dedupKeepSetsEqual(a, b map[string]bool) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k := range a {
+		if !b[k] {
+			return false
+		}
+	}
+	return true
+}
+
+// applyGroupKeep designates keepAbs files as survivors in group gi and marks
+// every other group member for deletion. When the group's current keep set
+// already equals keepAbs, clears keep and deletion marks for the whole group.
+// The second return value is true when an existing keep designation was replaced
+// by a different keep set (not toggle-off).
+func (h *Handler) applyGroupKeep(gi int, keepAbs map[string]bool) (applied bool, replacedKeep bool) {
+	if gi < 0 || gi >= len(h.model.DedupSnapshot.Groups) || len(keepAbs) == 0 {
+		return false, false
+	}
+	g := h.model.DedupSnapshot.Groups[gi]
+	st := &h.model.DedupView
+	if st.Kept == nil {
+		st.Kept = map[string]bool{}
+	}
+	currentKeep := map[string]bool{}
 	for _, f := range g.Files {
-		h.setMark(f.Abs.String(), g.Size, !unmark)
+		if st.Kept[f.Abs.String()] {
+			currentKeep[f.Abs.String()] = true
+		}
+	}
+	if dedupKeepSetsEqual(currentKeep, keepAbs) {
+		for _, f := range g.Files {
+			abs := f.Abs.String()
+			delete(st.Kept, abs)
+			h.setMark(abs, g.Size, false)
+		}
+		return true, false
+	}
+	replacedKeep = len(currentKeep) > 0
+	for _, f := range g.Files {
+		abs := f.Abs.String()
+		if keepAbs[abs] {
+			st.Kept[abs] = true
+			h.setMark(abs, g.Size, false)
+		} else {
+			delete(st.Kept, abs)
+			h.setMark(abs, g.Size, true)
+		}
+	}
+	return true, replacedKeep
+}
+
+func (h *Handler) notifyDuplicateKeep(replaced bool) {
+	if replaced {
+		h.host.SetTransientMessage("Duplicate keep", ui.MessageUrgencyInfo)
 	}
 }
 
-// MarkRedundantUnderSelected marks (for deletion) redundant duplicate copies under
-// the selected row's directory, leaving one surviving copy of each content group so
-// only unique files remain there ("keep uniques"). Mark-only — deletion stays with
-// DeleteMarked.
-func (h *Handler) MarkRedundantUnderSelected() {
-	h.markUnderSelected(ui.DedupRedundantUnder, "No redundant copies under this folder")
+func (h *Handler) keepCopyFilesUnderDir(dirRow ui.DedupRow) bool {
+	mainSel, ok := h.paneRow(&h.model.DedupView.Main, h.model.DedupList)
+	if !ok {
+		return false
+	}
+	files := ui.DedupCopyFilesUnderDir(h.model.DedupSnapshot, mainSel, dirRow.Value.DirRel)
+	if len(files) == 0 {
+		return false
+	}
+	_, replaced := h.applyGroupKeep(mainSel.Value.GroupIdx, keepAbsSetFromFiles(files))
+	return replaced
 }
 
-// MarkDuplicatesUnderSelected marks (for deletion) copies under the selected row's
-// directory that are also stored outside it, leaving groups that live only here
-// untouched ("delete duplicates from here"). Mark-only — deletion stays with
-// DeleteMarked.
-func (h *Handler) MarkDuplicatesUnderSelected() {
-	h.markUnderSelected(ui.DedupDuplicatesUnder, "No duplicates stored elsewhere under this folder")
+// KeepSelection marks the focused file or folder contents as survivors (green)
+// and marks every other copy in the affected duplicate group(s) for deletion.
+func (h *Handler) KeepSelection() {
+	row, ok := h.selectedRow()
+	if !ok {
+		return
+	}
+	st := &h.model.DedupView
+	if st.FocusCopies && row.Value.Kind == ui.DedupRowDir {
+		h.notifyDuplicateKeep(h.keepCopyFilesUnderDir(row))
+		_, rows := h.focusedPane()
+		next := ui.DedupNextDirRowIndex(rows, st.Copies.Selected)
+		if next >= len(rows) {
+			next = len(rows) - 1
+		}
+		st.Copies.Selected = next
+		return
+	}
+	if row.Value.Kind == ui.DedupRowDir && !st.FocusCopies {
+		replaced := false
+		byGroup := ui.DedupSnapshotFilesUnderDir(h.model.DedupSnapshot, row.Value.DirRel)
+		for gi, files := range byGroup {
+			if _, groupReplaced := h.applyGroupKeep(gi, keepAbsSetFromFiles(files)); groupReplaced {
+				replaced = true
+			}
+		}
+		h.notifyDuplicateKeep(replaced)
+		return
+	}
+	if row.Value.Kind != ui.DedupRowFile {
+		return
+	}
+	gi := row.Value.GroupIdx
+	if st.FocusCopies {
+		mainSel, ok := h.paneRow(&st.Main, h.model.DedupList)
+		if !ok {
+			return
+		}
+		gi = mainSel.Value.GroupIdx
+	}
+	_, replaced := h.applyGroupKeep(gi, map[string]bool{row.Value.AbsKey: true})
+	h.notifyDuplicateKeep(replaced)
+	h.MoveSelection(1)
 }
 
-// selectedDirAbs returns the absolute directory the mark-under actions operate
-// on: the directory itself when the cursor is on a dirs-mode directory row,
-// otherwise the selected file's parent directory.
+// selectedDirAbs returns the absolute directory for navigation from a directory
+// row or the parent of a selected file.
 func (h *Handler) selectedDirAbs() string {
 	row, ok := h.selectedRow()
 	if !ok {
 		return ""
 	}
 	if row.Value.Kind == ui.DedupRowDir {
-		root := strings.TrimSuffix(h.model.DedupSnapshot.Root.String(), "/")
+		root := strings.TrimSuffix(h.model.DedupSnapshot.EffectiveDisplayRoot().String(), "/")
 		return root + "/" + row.Value.DirRel
 	}
 	return row.Value.File.Abs.Parent().String()
 }
 
-// markUnderSelected applies a mark-selection rule over the active groups and
-// merges the result into the delete-mark set. Operating on groups (not visible
-// rows) keeps collapsed copies included.
-func (h *Handler) markUnderSelected(pick func([]comparepkg.DedupGroup, string) []string, emptyMsg string) {
-	groups := h.activeGroups()
-	keys := pick(groups, h.selectedDirAbs())
-	if len(keys) == 0 {
-		h.host.SetTransientMessage(emptyMsg, ui.MessageUrgencyInfo)
-		return
-	}
-	sizeByKey := make(map[string]int64, len(keys))
-	for _, g := range groups {
-		for _, f := range g.Files {
-			sizeByKey[f.Abs.String()] = g.Size
-		}
-	}
-	for _, k := range keys {
-		h.setMark(k, sizeByKey[k], true)
-	}
-}
-
-// ClearMarks unmarks every file, reusing the file-list clear-selection binding.
+// ClearMarks unmarks every file and clears keep designations, reusing the
+// file-list clear-selection binding.
 func (h *Handler) ClearMarks() {
 	st := &h.model.DedupView
-	if st.MarkedCount == 0 {
+	if st.MarkedCount == 0 && len(st.Kept) == 0 {
 		return
 	}
 	st.Marked = map[string]bool{}
 	st.MarkedCount = 0
 	st.MarkedReclaimBytes = 0
+	st.Kept = map[string]bool{}
 }
 
 // MarkedFiles returns marked files that still exist in the current snapshot, in
@@ -693,6 +957,7 @@ func (h *Handler) DeleteMarked(removeEmptyDirs bool) {
 	st.Marked = map[string]bool{}
 	st.MarkedCount = 0
 	st.MarkedReclaimBytes = 0
+	st.Kept = map[string]bool{}
 	st.Main = ui.DedupPane{Collapsed: st.Main.Collapsed}
 	st.FocusCopies = false
 	h.syncDedupList()

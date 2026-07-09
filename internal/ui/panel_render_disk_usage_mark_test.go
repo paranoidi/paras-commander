@@ -68,24 +68,25 @@ func TestSubtreeSelectionMarkUsesDiskUsageBarBackground(t *testing.T) {
 		PanelDisplayConfig{Painter: painter, ShowDiskUsage: true, ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
 
 	rowY := rect.Y + 2
+	wantMark := styles.SymbolFilelistSelectionSubtree()
 	markCol := -1
 	for col := rect.X + 1; col < rect.X+rect.Width-1; col++ {
 		ch, _, _ := screen.Get(col, rowY)
 		r, _ := utf8.DecodeRuneInString(ch)
-		if r == '○' {
+		if r == wantMark {
 			markCol = col
 			break
 		}
 	}
 	if markCol < 0 {
-		t.Fatal("subtree selection mark ○ not found on directory row")
+		t.Fatal("subtree selection mark not found on directory row")
 	}
 	_, markStyle, _ := screen.Get(markCol, rowY)
 	_, gotBG, _ := markStyle.Decompose()
 	if gotBG != wantUsageBG {
-		t.Fatalf("○ background = %v, want panel.usage.normal %v (row.directory bg is %v)", gotBG, wantUsageBG, rowDirBG)
+		t.Fatalf("subtree mark background = %v, want panel.usage.normal %v (row.directory bg is %v)", gotBG, wantUsageBG, rowDirBG)
 	}
 	if gotBG == rowDirBG && wantUsageBG != rowDirBG {
-		t.Fatalf("○ still using row.directory background %v", rowDirBG)
+		t.Fatalf("subtree mark still using row.directory background %v", rowDirBG)
 	}
 }

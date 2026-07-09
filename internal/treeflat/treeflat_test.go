@@ -51,11 +51,26 @@ func TestFlattenRowFields(t *testing.T) {
 	for _, r := range rows {
 		byID[r.ID] = r
 	}
-	if r := byID["a"]; r.Depth != 0 || !r.HasChildren || !r.Expanded {
-		t.Fatalf("row a = %+v, want depth 0, expandable, expanded", r)
+	if r := byID["a"]; r.Depth != 0 || !r.HasChildren || !r.Expanded || r.LastChild {
+		t.Fatalf("row a = %+v, want depth 0, expandable, expanded, not last root", r)
 	}
-	if r := byID["a/y/z"]; r.Depth != 2 || r.HasChildren || r.Expanded {
-		t.Fatalf("row a/y/z = %+v, want depth 2 leaf", r)
+	if r := byID["a/x"]; r.Depth != 1 || r.HasChildren || r.Expanded || r.LastChild {
+		t.Fatalf("row a/x = %+v, want depth 1 first child, leaf, not last", r)
+	}
+	if got := byID["a/x"].AncestorHasNext; len(got) != 0 {
+		t.Fatalf("row a/x AncestorHasNext = %v, want []", got)
+	}
+	if r := byID["a/y"]; r.Depth != 1 || !r.HasChildren || !r.Expanded || !r.LastChild || len(r.AncestorHasNext) != 0 {
+		t.Fatalf("row a/y = %+v, want depth 1 last child, expandable, expanded, no ancestor continues", r)
+	}
+	if r := byID["a/y/z"]; r.Depth != 2 || r.HasChildren || r.Expanded || !r.LastChild {
+		t.Fatalf("row a/y/z = %+v, want depth 2 leaf, last child", r)
+	}
+	if got := byID["a/y/z"].AncestorHasNext; len(got) != 1 || got[0] {
+		t.Fatalf("row a/y/z AncestorHasNext = %v, want [false] (parent y is last sibling)", got)
+	}
+	if r := byID["b"]; r.Depth != 0 || r.HasChildren || r.Expanded || !r.LastChild {
+		t.Fatalf("row b = %+v, want depth 0 leaf, last root", r)
 	}
 
 	rows = Flatten(testTree(), func(id string) bool { return id != "a/y" })

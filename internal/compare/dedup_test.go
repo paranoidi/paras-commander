@@ -442,3 +442,139 @@ func TestDedupConfirmGateSkippedUnderByteThreshold(t *testing.T) {
 		t.Fatalf("phase = %v, want DedupDone (20 bytes <= 30 byte threshold)", snap.Phase)
 	}
 }
+
+func TestDedupSkipsSymlinks(t *testing.T) {
+	rootDir := t.TempDir()
+	scan := filepath.Join(rootDir, "scan")
+	hidden := filepath.Join(rootDir, "hidden", "other")
+	if err := os.MkdirAll(scan, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(hidden, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, scan, "real1.txt", "duplicate!")
+	writeFile(t, scan, "real2.txt", "duplicate!")
+	writeFile(t, hidden, "hidden-dup.txt", "duplicate!")
+	if err := os.Symlink("real1.txt", filepath.Join(scan, "link1")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("real2.txt", filepath.Join(scan, "link2")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join("..", "hidden", "other"), filepath.Join(scan, "other-link")); err != nil {
+		t.Fatal(err)
+	}
+
+	sess, phases := startDedup(t, scan, 0)
+	defer sess.Close()
+	snap := <-phases
+
+	if snap.Phase != DedupDone {
+		t.Fatalf("phase = %v, want DedupDone", snap.Phase)
+	}
+	if snap.Walked != 2 {
+		t.Fatalf("walked = %d, want 2 regular files (symlinks ignored)", snap.Walked)
+	}
+	if len(snap.Groups) != 1 {
+		t.Fatalf("groups = %d, want 1", len(snap.Groups))
+	}
+	g := snap.Groups[0]
+	if len(g.Files) != 2 {
+		t.Fatalf("group files = %d, want 2", len(g.Files))
+	}
+	for _, f := range g.Files {
+		if f.Rel != "real1.txt" && f.Rel != "real2.txt" {
+			t.Fatalf("unexpected duplicate member %q", f.Rel)
+		}
+	}
+}
+
+func TestDedupTrimDisplayRootRel(t *testing.T) {
+	group := func(rels ...string) []DedupGroup {
+		g := DedupGroup{Size: 10}
+		for _, rel := range rels {
+			g.Files = append(g.Files, DedupFile{Rel: rel})
+		}
+		return []DedupGroup{g}
+	}
+
+	tests := []struct {
+		name string
+		grps []DedupGroup
+		want string
+	}{
+		{
+			name: "single chain to leaf dir",
+			grps: group("alpha/bravo/charlie/copper.txt", "alpha/bravo/charlie/willow.txt"),
+			want: "alpha/bravo/charlie",
+		},
+		{
+			name: "nested only under chain",
+			grps: group("alpha/bravo/charlie/delta/copper.txt", "alpha/bravo/charlie/delta/willow.txt"),
+			want: "alpha/bravo/charlie/delta",
+		},
+		{
+			name: "file at intermediate stops trim there",
+			grps: group("alpha/copper.txt", "alpha/bravo/charlie/willow.txt"),
+			want: "alpha",
+		},
+		{
+			name: "file at scan root blocks trim",
+			grps: group("copper.txt", "alpha/bravo/charlie/willow.txt"),
+			want: "",
+		},
+		{
+			name: "single child then sibling branches trims to parent",
+			grps: group("alpha/bravo/copper.txt", "alpha/delta/willow.txt"),
+			want: "alpha",
+		},
+		{
+			name: "scan root single child then branches",
+			grps: group("test-cases/diff-a/copper.txt", "test-cases/diff-b/willow.txt"),
+			want: "test-cases",
+		},
+		{
+			name: "flat scan root duplicates",
+			grps: group("copper.txt", "willow.txt"),
+			want: "",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := dedupTrimDisplayRootRel(tc.grps); got != tc.want {
+				t.Fatalf("dedupTrimDisplayRootRel() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestDedupWithTrimmedDisplayRoot(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, dir, "alpha/bravo/charlie/copper.txt", "duplicate!")
+	writeFile(t, dir, "alpha/bravo/charlie/willow.txt", "duplicate!")
+
+	sess, phases := startDedup(t, dir, 0)
+	defer sess.Close()
+	snap := <-phases
+	if snap.Phase != DedupDone {
+		t.Fatalf("phase = %v, want DedupDone", snap.Phase)
+	}
+
+	trimmed := snap.WithTrimmedDisplayRoot()
+	if !trimmed.DisplayRootTrimmed() {
+		t.Fatal("DisplayRootTrimmed = false, want true")
+	}
+	wantRoot := filepath.Join(dir, "alpha", "bravo", "charlie")
+	if got := trimmed.EffectiveDisplayRoot().String(); got != wantRoot {
+		t.Fatalf("EffectiveDisplayRoot = %q, want %q", got, wantRoot)
+	}
+	if trimmed.Root.String() != snap.Root.String() {
+		t.Fatalf("scan Root changed: %q -> %q", snap.Root, trimmed.Root)
+	}
+	for _, f := range trimmed.Groups[0].Files {
+		if strings.Contains(f.Rel, "alpha/") {
+			t.Fatalf("trimmed rel still contains chain prefix: %q", f.Rel)
+		}
+	}
+}

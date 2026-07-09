@@ -1,4 +1,4 @@
-package ui
+package previewpanel
 
 import (
 	"testing"
@@ -13,20 +13,21 @@ func TestAnsiStyledCellsBoldRed(t *testing.T) {
 		t.Fatalf("cells = %#v", cells)
 	}
 	fg, _, _ := cells[0].St.Decompose()
-	if fg != tcell.PaletteColor(1) {
-		t.Fatalf("fg = %v want red palette 1", fg)
+	if fg != ansi16(1, false) {
+		t.Fatalf("fg = %v want ansi16 red", fg)
 	}
 }
 
 func TestAnsi256Color(t *testing.T) {
+	const colorIndex = 196
 	base := tcell.StyleDefault
 	cells := AnsiStyledCells("\x1b[38;5;196mZ\x1b[0m", base)
 	if len(cells) != 1 || cells[0].R != 'Z' {
 		t.Fatalf("cells = %#v", cells)
 	}
 	fg, _, _ := cells[0].St.Decompose()
-	if fg != tcell.PaletteColor(196) {
-		t.Fatalf("fg = %v want palette 196", fg)
+	if fg != tcell.PaletteColor(colorIndex) {
+		t.Fatalf("fg = %v want palette %d", fg, colorIndex)
 	}
 }
 

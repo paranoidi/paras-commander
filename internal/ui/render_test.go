@@ -72,24 +72,27 @@ func TestFormatEntryFileIconsOmitsDirectorySlash(t *testing.T) {
 }
 
 func TestFormatEntrySubtreeSelectionMark(t *testing.T) {
+	th := theme.Default()
+	mark := string(th.SymbolFilelistSelectionSubtree())
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
-	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, theme.Default(), nil, "")
+	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, th, nil, "")
 	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
-	if nameColumn != "/sub ○" {
+	if nameColumn != "/sub "+mark {
 		t.Fatalf("name column = %q, want trailing mark after dir slash prefix", nameColumn)
 	}
-	gotIcons := formatEntry(entry, 50, panelRowOpts{ShowIcons: true, Suffix: panellist.RowSuffix{SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, theme.Default(), nil, "")
+	gotIcons := formatEntry(entry, 50, panelRowOpts{ShowIcons: true, Suffix: panellist.RowSuffix{SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, th, nil, "")
 	nameColumn = strings.TrimRight(gotIcons[:nameWidth], " ")
-	if nameColumn != " sub ○" {
+	if nameColumn != " sub "+mark {
 		t.Fatalf("icons mode name column = %q, want dirname then trailing mark", nameColumn)
 	}
 }
 
 func TestFormatEntryJobQueueMark(t *testing.T) {
+	th := theme.Default()
 	entry := localfs.Entry{Name: "file.txt", Path: "/tmp/file.txt", Type: localfs.EntryFile}
-	glyph := rune('\uf144')
-	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobGlyph: glyph}, ListFmt: panel.ListFormatMtime}, theme.Default(), nil, "")
+	glyph, _ := utf8.DecodeRuneInString(th.SymbolJobsList("running"))
+	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobGlyph: glyph}, ListFmt: panel.ListFormatMtime}, th, nil, "")
 	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
 	want := " file.txt " + string(glyph)
@@ -140,12 +143,14 @@ func TestRenderDrawsOpenInOtherPanelIcon(t *testing.T) {
 }
 
 func TestFormatEntryJobQueueMarkBeforeSubtreeSelectionMark(t *testing.T) {
+	th := theme.Default()
+	mark := string(th.SymbolFilelistSelectionSubtree())
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
-	glyph := rune('\uf144')
-	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobGlyph: glyph, SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, theme.Default(), nil, "")
+	glyph, _ := utf8.DecodeRuneInString(th.SymbolJobsList("running"))
+	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobGlyph: glyph, SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, th, nil, "")
 	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
-	want := "/sub " + string(glyph) + " ○"
+	want := "/sub " + string(glyph) + " " + mark
 	if nameColumn != want {
 		t.Fatalf("name column = %q, want %q", nameColumn, want)
 	}

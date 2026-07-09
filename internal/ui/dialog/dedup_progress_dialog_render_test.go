@@ -300,13 +300,13 @@ func TestDedupBarFilledCols(t *testing.T) {
 		want  int
 	}{
 		{56, dedupFrac(14, 56), 14},
-		{56, dedupFrac(1, 10000), 1},  // started: never fully empty
-		{56, dedupFrac(0, 56), 0},     // untouched
-		{56, dedupFrac(56, 56), 56},   // complete
-		{56, dedupFrac(100, 56), 56},  // clamp overshoot
-		{56, dedupFrac(28, 56), 28},   // exact half
-		{10, dedupFrac(55, 100), 6},   // rounds, not truncates (5.5 -> 6)
-		{56, dedupFrac(1, 0), 0},      // unknown total
+		{56, dedupFrac(1, 10000), 1}, // started: never fully empty
+		{56, dedupFrac(0, 56), 0},    // untouched
+		{56, dedupFrac(56, 56), 56},  // complete
+		{56, dedupFrac(100, 56), 56}, // clamp overshoot
+		{56, dedupFrac(28, 56), 28},  // exact half
+		{10, dedupFrac(55, 100), 6},  // rounds, not truncates (5.5 -> 6)
+		{56, dedupFrac(1, 0), 0},     // unknown total
 	}
 	for _, c := range cases {
 		if got := dedupBarFilledCols(c.width, c.frac); got != c.want {

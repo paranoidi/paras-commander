@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 func TestDrawInputFieldScrollsHorizontallyForLongValue(t *testing.T) {
@@ -32,8 +33,9 @@ func TestDrawInputFieldScrollsHorizontallyForLongValue(t *testing.T) {
 	if !strings.Contains(got, string(tail)) {
 		t.Fatalf("expected tail %q in visible row %q", string(tail), got)
 	}
-	if !strings.Contains(got, "◀") {
-		t.Fatalf("expected ◀ overflow marker in %q", got)
+	left := string(draw.ScrollOverflowLeft)
+	if !strings.Contains(got, left) {
+		t.Fatalf("expected %s overflow marker in %q", left, got)
 	}
 }
 
@@ -121,7 +123,8 @@ func TestDrawPathInputRowScrollsHorizontallyForLongValue(t *testing.T) {
 	if strings.Contains(got, "~") {
 		t.Fatalf("did not expect ~ truncation marker, got %q", got)
 	}
-	if !strings.Contains(got, "◀") {
-		t.Fatalf("expected ◀ overflow marker in %q", got)
+	left := string(draw.ScrollOverflowLeft)
+	if !strings.Contains(got, left) {
+		t.Fatalf("expected %s overflow marker in %q", left, got)
 	}
 }

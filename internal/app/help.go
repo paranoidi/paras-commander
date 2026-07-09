@@ -12,10 +12,16 @@ import (
 )
 
 func (a *App) openHelpDialog() {
-	if ui.IsAuxiliaryView(a.model.ViewMode) {
+	vm := a.model.ViewMode
+	if ui.IsAuxiliaryView(vm) && vm != ui.ViewDedup {
 		return
 	}
-	entries := a.buildHelpEntries()
+	var entries []dialog.HelpEntry
+	if vm == ui.ViewDedup {
+		entries = a.buildDedupHelpEntries()
+	} else {
+		entries = a.buildHelpEntries()
+	}
 	if entries == nil {
 		entries = []dialog.HelpEntry{}
 	}
@@ -118,6 +124,15 @@ func (a *App) helpListRows() int {
 
 // buildHelpEntries constructs help entries from keymap action bindings only.
 func (a *App) buildHelpEntries() []dialog.HelpEntry {
+	return a.buildHelpEntriesForView(ui.ViewBrowser, nil)
+}
+
+// buildDedupHelpEntries constructs contextual help for the find-duplicates view.
+func (a *App) buildDedupHelpEntries() []dialog.HelpEntry {
+	return a.buildHelpEntriesForView(ui.ViewDedup, helpkeys.IsDedupHelpAction)
+}
+
+func (a *App) buildHelpEntriesForView(vm ui.ViewMode, allow func(string) bool) []dialog.HelpEntry {
 	var entries []dialog.HelpEntry
 
 	specs := keymap.DefaultActionSpecs()
@@ -125,7 +140,10 @@ func (a *App) buildHelpEntries() []dialog.HelpEntry {
 		if spec.ID == keymap.ActionAppShowHelp {
 			continue // self-referential, omit
 		}
-		keys := a.effectiveKeyStrings(spec.ID, spec.DefaultKeys)
+		if allow != nil && !allow(spec.ID) {
+			continue
+		}
+		keys := a.effectiveKeyStringsForView(spec.ID, spec.DefaultKeys, vm)
 		if len(keys) == 0 {
 			continue // unbound
 		}
@@ -141,9 +159,8 @@ func (a *App) buildHelpEntries() []dialog.HelpEntry {
 	return entries
 }
 
-// effectiveKeyStrings returns the actual bound key strings for an action,
-// merging global and jobs-overlay bindings, then falling back to defaults and overlay defaults.
-func (a *App) effectiveKeyStrings(actionID string, defaults []string) []string {
+// effectiveKeyStringsForView returns bound key strings for an action in the given view context.
+func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm ui.ViewMode) []string {
 	seen := make(map[string]struct{})
 	var out []string
 	add := func(xs []string) {
@@ -179,6 +196,9 @@ func (a *App) effectiveKeyStrings(actionID string, defaults []string) []string {
 	if a.keysFlattenDialog != nil {
 		add(a.keysFlattenDialog.BindingsForAction(actionID))
 	}
+	if vm == ui.ViewDedup && a.keysDedup != nil {
+		add(a.keysDedup.BindingsForAction(actionID))
+	}
 	if len(out) > 0 {
 		return out
 	}
@@ -201,7 +221,77 @@ func (a *App) effectiveKeyStrings(actionID string, defaults []string) []string {
 	if od := keymap.DefaultFlattenDialogOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
 	}
+	if vm == ui.ViewDedup {
+		if od := keymap.DefaultDedupOverlayKeys()[actionID]; len(od) > 0 {
+			add(od)
+		}
+	}
 	return out
+}
+
+// activateHelpAction runs the action chosen from the help dialog.
+func (a *App) activateHelpAction(actionID string) bool {
+	if a.model.ViewMode == ui.ViewDedup {
+		return a.activateDedupHelpAction(actionID)
+	}
+	return a.dispatchActionLikeKeyboardShortcut(actionID)
+}
+
+func (a *App) activateDedupHelpAction(actionID string) bool {
+	switch actionID {
+	case keymap.ActionAppQuit:
+		return a.handleQuit()
+	case keymap.ActionAppQuitImmediate:
+		return a.handleQuitImmediate()
+	case keymap.ActionAppOpenMenu:
+		a.openMenu()
+		return false
+	}
+
+	visible := a.dedupVisibleRows()
+
+	if a.tryDispatchDedup(actionID) {
+		return false
+	}
+	if a.tryDispatchAuxiliaryScreens(actionID) {
+		return false
+	}
+
+	switch actionID {
+	case keymap.ActionPanelSelectToggle:
+		a.dedupCtrl.SelectToggleAndAdvance()
+		a.dedupCtrl.EnsureSelectionVisible(visible)
+	case keymap.ActionPanelInvertSelection:
+		if a.model.DedupView.FocusCopies {
+			a.dedupCtrl.ToggleCopiesPaneSelectAll()
+		}
+	case keymap.ActionPanelSwitch:
+		a.dedupCtrl.SwitchPane()
+	case keymap.ActionNavUp:
+		a.dedupCtrl.MoveSelection(-1)
+		a.dedupCtrl.EnsureSelectionVisible(visible)
+	case keymap.ActionNavDown:
+		a.dedupCtrl.MoveSelection(1)
+		a.dedupCtrl.EnsureSelectionVisible(visible)
+	case keymap.ActionNavPageUp:
+		a.dedupCtrl.MoveSelection(-visible)
+		a.dedupCtrl.EnsureSelectionVisible(visible)
+	case keymap.ActionNavPageDown:
+		a.dedupCtrl.MoveSelection(visible)
+		a.dedupCtrl.EnsureSelectionVisible(visible)
+	case keymap.ActionNavTop:
+		a.dedupCtrl.SelectEdge(false)
+		a.dedupCtrl.EnsureSelectionVisible(visible)
+	case keymap.ActionNavBottom:
+		a.dedupCtrl.SelectEdge(true)
+		a.dedupCtrl.EnsureSelectionVisible(visible)
+	case keymap.ActionNavOpen:
+		a.dedupCtrl.NavigateFromSelection()
+		a.closeDedupView()
+	default:
+		return false
+	}
+	return false
 }
 
 func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
@@ -246,11 +336,11 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 			return false
 		}
 		actionID := st.Entries[entIdx].ActionID
-		if !helpkeys.ActionRunnableInBrowser(actionID) {
+		if !helpkeys.ActionRunnableInView(a.model.ViewMode, actionID) {
 			return false
 		}
 		a.closeHelpDialog()
-		return a.dispatchActionLikeKeyboardShortcut(actionID)
+		return a.activateHelpAction(actionID)
 	case tcell.KeyTab:
 		st.Focus = (st.Focus + 1) % 2
 	case tcell.KeyBacktab:

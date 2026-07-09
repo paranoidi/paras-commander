@@ -5,8 +5,53 @@ import (
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
+
+// DedupHelpActionIDs lists actions shown in find-duplicates contextual help.
+var DedupHelpActionIDs = map[string]struct{}{
+	keymap.ActionDedupClose:       {},
+	keymap.ActionDedupToggleSort:  {},
+	keymap.ActionDedupToggleEmpty: {},
+	keymap.ActionDedupToggleNode:  {},
+	keymap.ActionDedupCollapse:    {},
+	keymap.ActionDedupToggleTree:  {},
+	keymap.ActionDedupCollapseAll: {},
+	keymap.ActionDedupExpandAll:   {},
+	keymap.ActionDedupPrevDir:     {},
+	keymap.ActionDedupNextDir:     {},
+	keymap.ActionDedupMarkKeep:    {},
+
+	keymap.ActionPanelSelectToggle:    {},
+	keymap.ActionPanelInvertSelection: {},
+	keymap.ActionPanelSwitch:          {},
+	keymap.ActionPanelClearSelection:  {},
+
+	keymap.ActionPanelRefresh: {},
+	keymap.ActionFileDelete:   {},
+
+	keymap.ActionNavUp:       {},
+	keymap.ActionNavDown:     {},
+	keymap.ActionNavPageUp:   {},
+	keymap.ActionNavPageDown: {},
+	keymap.ActionNavTop:      {},
+	keymap.ActionNavBottom:   {},
+	keymap.ActionNavOpen:     {},
+
+	keymap.ActionAppOpenMenu:      {},
+	keymap.ActionAppQuit:          {},
+	keymap.ActionAppQuitImmediate: {},
+	keymap.ActionCommandsOpen:     {},
+	keymap.ActionMessagesOpen:     {},
+	keymap.ActionJobsOpen:         {},
+}
+
+// IsDedupHelpAction reports whether actionID belongs in find-duplicates help.
+func IsDedupHelpAction(actionID string) bool {
+	_, ok := DedupHelpActionIDs[actionID]
+	return ok
+}
 
 // JoinDisplay joins every binding into one readable string (comma-separated).
 // When preferredKey is non-empty and appears in keys, it is listed first.
@@ -87,5 +132,15 @@ func ActionRunnableInBrowser(actionID string) bool {
 		return false
 	default:
 		return true
+	}
+}
+
+// ActionRunnableInView reports whether activating actionID from the help dialog should run.
+func ActionRunnableInView(vm ui.ViewMode, actionID string) bool {
+	switch vm {
+	case ui.ViewDedup:
+		return IsDedupHelpAction(actionID)
+	default:
+		return ActionRunnableInBrowser(actionID)
 	}
 }

@@ -93,7 +93,18 @@ func drawDedupView(
 		return
 	}
 
-	rootHeader := primitive.PathWithHomeTilde(snap.Root.String(), userHomeDir)
+	rootHeader := primitive.PathWithHomeTilde(snap.EffectiveDisplayRoot().String(), userHomeDir)
+	markedDirs := dedupMarkedDirSet(snap, view.Marked)
+	dangerMarkedDirs := dedupDangerMarkedDirSet(snap, view.Marked)
+	keptDirs := dedupKeptDirSet(snap, view.Kept)
+	var treeFullyMarkedDirs map[string]bool
+	if view.TreeDirs {
+		treeFullyMarkedDirs = dedupSnapshotFullyMarkedDirSet(snap, view.Marked)
+	}
+	var copyFullyMarkedDirs map[string]bool
+	if sel, ok := dedupRowAt(list, view.Main.Selected); ok && sel.Value.Kind == DedupRowFile {
+		copyFullyMarkedDirs = dedupCopyPaneFullyMarkedDirSet(snap, sel, view.Marked)
+	}
 	drawDedupTreePane(screen, layout.Primary, dedupPaneParams{
 		Title:      dedupViewTitle(snap, view.IgnoredEmptyCount),
 		EndLabel:   panelSelectionSizePadded(dedupEndLabel(view)),
@@ -109,22 +120,31 @@ func drawDedupView(
 			}
 			return -1
 		}(),
+		FullyMarkedDirs:  treeFullyMarkedDirs,
+		MarkedDirs:       markedDirs,
+		DangerMarkedDirs: dangerMarkedDirs,
+		KeptDirs:         keptDirs,
 	}, snap, view, styles, chromeBlocked)
 
 	copiesHeader := ""
-	copiesEmpty := " Select a file to see its copies "
+	copiesEmpty := "Select a file to see its copies"
 	if sel, ok := dedupRowAt(list, view.Main.Selected); ok && sel.Value.Kind == DedupRowFile {
 		copiesHeader = sel.Value.File.Rel
-		copiesEmpty = " No other copies "
+		copiesEmpty = "No other copies"
 	}
 	drawDedupTreePane(screen, layout.Secondary, dedupPaneParams{
-		Title:       " Copies ",
-		Header:      copiesHeader,
-		Rows:        copies,
-		Pane:        view.Copies,
-		Focused:     view.FocusCopies,
-		EmptyText:   copiesEmpty,
-		ActiveGroup: -1,
+		Title:            " Copies ",
+		Header:           copiesHeader,
+		Rows:             copies,
+		Pane:             view.Copies,
+		Focused:          view.FocusCopies,
+		EmptyText:        copiesEmpty,
+		ActiveGroup:      -1,
+		CopiesPane:       true,
+		FullyMarkedDirs:  copyFullyMarkedDirs,
+		MarkedDirs:       markedDirs,
+		DangerMarkedDirs: dangerMarkedDirs,
+		KeptDirs:         keptDirs,
 	}, snap, view, styles, chromeBlocked)
 }
 
@@ -137,15 +157,20 @@ func dedupRowAt(rows []DedupRow, idx int) (DedupRow, bool) {
 
 // dedupPaneParams bundles per-pane rendering inputs for drawDedupTreePane.
 type dedupPaneParams struct {
-	Title       string
-	EndLabel    string
-	Header      string
-	Rows        []DedupRow
-	Pane        DedupPane
-	Focused     bool
-	EmptyText   string
-	DimByGroup  bool // groups mode: dim rows outside ActiveGroup
-	ActiveGroup int
+	Title            string
+	EndLabel         string
+	Header           string
+	Rows             []DedupRow
+	Pane             DedupPane
+	Focused          bool
+	EmptyText        string
+	DimByGroup       bool // groups mode: dim rows outside ActiveGroup
+	ActiveGroup      int
+	CopiesPane       bool            // copies pane: dir rows can show fully-marked copy styling
+	FullyMarkedDirs  map[string]bool // DirRel keys whose entire descendant duplicate subtree is marked
+	MarkedDirs       map[string]bool // DirRel keys of dirs whose subtree has a marked file
+	DangerMarkedDirs map[string]bool // DirRel keys of dirs whose subtree has a fully-marked group
+	KeptDirs         map[string]bool // DirRel keys of dirs whose subtree has a kept file
 }
 
 // drawDedupTreePane paints one tree pane: chrome, header line, and tree rows
@@ -208,10 +233,12 @@ func drawDedupTreePane(
 		entry := p.Rows[idx]
 		d := entry.Value
 		lineY := y + row
-		marked := d.Kind == DedupRowFile && view.Marked[d.AbsKey]
+		kept := d.Kind == DedupRowFile && view.Kept[d.AbsKey]
+		marked := d.Kind == DedupRowFile && view.Marked[d.AbsKey] && !kept
 		rowSelected := idx == p.Pane.Selected
 		groupAllMarked := d.Kind == DedupRowFile && d.GroupIdx >= 0 && d.GroupIdx < len(snap.Groups) &&
 			DedupGroupFullyMarked(snap.Groups[d.GroupIdx], view.Marked)
+		dirFullyMarked := d.Kind == DedupRowDir && p.FullyMarkedDirs[d.DirRel]
 
 		rowBase := base
 		if p.DimByGroup && d.GroupIdx != p.ActiveGroup {
@@ -219,6 +246,10 @@ func drawDedupTreePane(
 		}
 		lineStyle := rowBase
 		switch {
+		case kept && rowSelected:
+			lineStyle = styles.PanelDedupRowCursorKeep
+		case kept:
+			lineStyle = styles.PanelDedupRowKeep.Background(bg)
 		case groupAllMarked && rowSelected:
 			lineStyle = styles.PanelDedupRowCursorAllMarked
 		case groupAllMarked:
@@ -227,37 +258,68 @@ func drawDedupTreePane(
 			lineStyle = styles.PanelListingCursorStyle(theme.PanelListingCursorOpts{
 				ChromeBlocked:  chromeBlocked,
 				FileListActive: p.Focused,
-				Selected:       marked,
+				Selected:       marked || dirFullyMarked,
 			})
-		case marked:
+		case marked, dirFullyMarked:
 			lineStyle = styles.PanelListingSelectedStyle(chromeBlocked).Background(bg)
 		}
 
 		primitive.Text(screen, rect.X+1, lineY, 1, "", lineStyle)
 
-		indent := strings.Repeat("  ", entry.Depth)
 		cursorStyleKey := ""
 		if rowSelected {
 			cursorStyleKey = styles.PanelListingCursorIconKey(theme.PanelListingCursorOpts{
 				ChromeBlocked:  chromeBlocked,
 				FileListActive: p.Focused,
-				Selected:       marked,
+				Selected:       marked || dirFullyMarked,
 			})
 		}
-		gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, chromeBlocked, cursorStyleKey)
-		prefix := indent + gutter + " "
-		pathText := primitive.FitPathForWidth(d.Display, max(pathW-len([]rune(prefix)), 4))
+		connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
+		gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, chromeBlocked)
+		prefix := connectorPrefix
+		if gutter != "" {
+			prefix += gutter + " "
+		}
+		keptSubtree := d.Kind == DedupRowDir && p.KeptDirs[d.DirRel]
+		subtreeMark := keptSubtree || (d.Kind == DedupRowDir && p.MarkedDirs[d.DirRel])
+		fitW := pathW - len([]rune(prefix))
+		if subtreeMark {
+			fitW -= 2 // room for subtree mark suffix, like panellist.SuffixDecorationLen
+		}
+		pathText := primitive.FitPathForWidth(d.Display, max(fitW, 4))
+		_, rowBG, _ := lineStyle.Decompose()
+		connectorStyle := styles.PanelRowTreeConnector.Background(rowBG)
 		x := pathX
-		primitive.Text(screen, x, lineY, pathW, indent, lineStyle)
-		x += len([]rune(indent))
-		primitive.Text(screen, x, lineY, pathW-(x-pathX), gutter, gutterStyle)
-		x += len([]rune(gutter))
-		primitive.Text(screen, x, lineY, pathW-(x-pathX), " "+pathText, lineStyle)
+		primitive.Text(screen, x, lineY, pathW, connectorPrefix, connectorStyle)
+		x += len([]rune(connectorPrefix))
+		if gutter != "" {
+			primitive.Text(screen, x, lineY, pathW-(x-pathX), gutter, gutterStyle)
+			x += len([]rune(gutter))
+			primitive.Text(screen, x, lineY, pathW-(x-pathX), " "+pathText, lineStyle)
+			x++ // leading space before pathText
+		} else {
+			primitive.Text(screen, x, lineY, pathW-(x-pathX), pathText, lineStyle)
+		}
+		if markX := x + len([]rune(pathText)) + 1; subtreeMark && markX < pathX+pathW {
+			var base tcell.Style
+			switch {
+			case keptSubtree:
+				base = styles.PanelDedupRowIndicatorKeepSubtree
+			case p.DangerMarkedDirs[d.DirRel]:
+				base = styles.PanelDedupRowAllMarked
+			case chromeBlocked:
+				base = styles.PanelBlockedRowSelected
+			default:
+				base = styles.PanelRowIndicatorSelectionSubtree
+			}
+			markStyle := lineStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
+			primitive.Text(screen, markX, lineY, 1, string(styles.SymbolFilelistSelectionSubtree()), markStyle)
+		}
 		primitive.Text(screen, gapBeforeCountX, lineY, 1, "", lineStyle)
 
 		sizeText, countText := dedupRowDetailTexts(d)
 		detailStyle := dim
-		if rowSelected || groupAllMarked {
+		if rowSelected || kept || groupAllMarked || dirFullyMarked {
 			detailStyle = lineStyle
 		}
 		primitive.Text(screen, countColX, lineY, cols.countColW, fmt.Sprintf("%*s", cols.countColW, countText), detailStyle)
@@ -297,7 +359,12 @@ func dedupViewTitle(snap comparepkg.DedupSnapshot, ignoredEmpty int) string {
 	return title + ") "
 }
 
-func dedupTreeGutter(styles theme.Theme, entry DedupRow, lineStyle tcell.Style, chromeBlocked bool, cursorStyleKey string) (string, tcell.Style) {
+func dedupTreeGutter(
+	styles theme.Theme,
+	entry DedupRow,
+	lineStyle tcell.Style,
+	chromeBlocked bool,
+) (string, tcell.Style) {
 	if entry.HasChildren {
 		if entry.Value.Kind == DedupRowDir {
 			kind := theme.FolderIconDefault
@@ -305,12 +372,11 @@ func dedupTreeGutter(styles theme.Theme, entry DedupRow, lineStyle tcell.Style, 
 				kind = theme.FolderIconOpen
 			}
 			gutter := styles.FolderIconGlyph(kind)
-			gutterStyle := lineStyle
-			if !chromeBlocked {
-				iconRowStyle := styles.PanelListingEntryStyle(localfs.EntryDirectory, chromeBlocked)
-				gutterStyle = lineStyle.Foreground(styles.FolderIconForeground(kind, cursorStyleKey, iconRowStyle))
-			}
-			return gutter, gutterStyle
+			iconRowStyle := styles.PanelListingEntryStyle(localfs.EntryDirectory, chromeBlocked)
+			// Dedup tree rows use jobs.row as line text; folder glyphs always use directory
+			// blue (panel.row.directory), never jobs.row grey, open-folder cyan, or cursor/selection FG.
+			iconFG := styles.FolderIconForeground(theme.FolderIconDefault, "", iconRowStyle)
+			return gutter, lineStyle.Foreground(iconFG)
 		}
 		gutter := string(styles.SymbolTreeExpand())
 		if entry.Expanded {
@@ -318,15 +384,43 @@ func dedupTreeGutter(styles theme.Theme, entry DedupRow, lineStyle tcell.Style, 
 		}
 		return gutter, lineStyle
 	}
-	return string(styles.SymbolTreeLeaf()), lineStyle
+	return "", lineStyle
+}
+
+func dedupTreeConnectorPrefix(styles theme.Theme, entry DedupRow) string {
+	if entry.Depth == 0 {
+		return ""
+	}
+	var b strings.Builder
+	continueGlyph := styles.SymbolTreeContinue()
+	branchGlyph := styles.SymbolTreeBranch()
+	endGlyph := styles.SymbolTreeEnd()
+	for i := range entry.Depth - 1 {
+		if entry.AncestorHasNext[i] {
+			b.WriteString(continueGlyph)
+			b.WriteString("  ")
+		} else {
+			b.WriteString("   ")
+		}
+	}
+	if entry.LastChild {
+		b.WriteString(endGlyph)
+	} else {
+		b.WriteString(branchGlyph)
+	}
+	b.WriteString(" ")
+	return b.String()
 }
 
 func dedupTreePrefix(styles theme.Theme, row DedupRow) string {
-	indent := strings.Repeat("  ", row.Depth)
-	gutter, _ := dedupTreeGutter(styles, row, tcell.StyleDefault, true, "")
-	return indent + gutter + " "
+	gutter, _ := dedupTreeGutter(styles, row, tcell.StyleDefault, true)
+	connector := dedupTreeConnectorPrefix(styles, row)
+	if gutter == "" {
+		return connector
+	}
+	return connector + gutter + " "
 }
 
 func dedupEmptyMessage(snap comparepkg.DedupSnapshot) string {
-	return " No duplicate files found "
+	return "No duplicate files found"
 }

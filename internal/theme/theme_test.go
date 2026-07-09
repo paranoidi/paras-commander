@@ -7,71 +7,70 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/themes"
 )
 
-func TestDefaultFilelistSymbols(t *testing.T) {
-	th := Default()
-	if g := th.SymbolFilelistSelectionSubtree(); g != '\u25cb' {
-		t.Fatalf("SymbolFilelistSelectionSubtree = %q, want ○", string(g))
+func TestDefaultMatchesEmbeddedTheme(t *testing.T) {
+	data, err := themes.Files.ReadFile("default.toml")
+	if err != nil {
+		t.Fatalf("ReadFile(default.toml): %v", err)
 	}
-	if g := th.SymbolFilelistNew(); g != '\uea7f' {
-		t.Fatalf("SymbolFilelistNew = %U, want U+EA7F", g)
+	embedded, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse(embedded): %v", err)
 	}
-	if g := th.FolderIconGlyph(FolderIconDefault); g != "\U000F024B" {
-		t.Fatalf("FolderIconGlyph(Default) = %q, want U+F024B", g)
+	got := Default()
+
+	if got.Name != embedded.Name {
+		t.Fatalf("Name = %q, want %q", got.Name, embedded.Name)
 	}
-	if g := th.FolderIconGlyph(FolderIconOpen); g != "\U000F0770" {
-		t.Fatalf("FolderIconGlyph(Open) = %q, want U+F0770", g)
+
+	assertSymbolRuneEqual(t, "SymbolFilelistSelectionSubtree", got.SymbolFilelistSelectionSubtree(), embedded.SymbolFilelistSelectionSubtree())
+	assertSymbolRuneEqual(t, "SymbolFilelistNew", got.SymbolFilelistNew(), embedded.SymbolFilelistNew())
+	assertSymbolStrEqual(t, "FolderIconDefault", got.FolderIconGlyph(FolderIconDefault), embedded.FolderIconGlyph(FolderIconDefault))
+	assertSymbolStrEqual(t, "FolderIconOpen", got.FolderIconGlyph(FolderIconOpen), embedded.FolderIconGlyph(FolderIconOpen))
+	assertSymbolStrEqual(t, "FolderIconScanning", got.FolderIconGlyph(FolderIconScanning), embedded.FolderIconGlyph(FolderIconScanning))
+	assertSymbolStrEqual(t, "FolderIconMount", got.FolderIconGlyph(FolderIconMount), embedded.FolderIconGlyph(FolderIconMount))
+	assertSymbolStrEqual(t, "FolderIconExcluded", got.FolderIconGlyph(FolderIconExcluded), embedded.FolderIconGlyph(FolderIconExcluded))
+	assertSymbolRuneEqual(t, "SymbolScrollbarThumb", got.SymbolScrollbarThumb(), embedded.SymbolScrollbarThumb())
+
+	for _, status := range []string{
+		"scanning", "queued", "running", "paused", "canceled", "failed", "decision", "completed",
+	} {
+		label := "SymbolJobsList(" + status + ")"
+		assertSymbolStrEqual(t, label, got.SymbolJobsList(status), embedded.SymbolJobsList(status))
 	}
-	if g := th.FolderIconGlyph(FolderIconScanning); g != "\U000F0D0B" {
-		t.Fatalf("FolderIconGlyph(Scanning) = %q, want U+F0D0B", g)
-	}
-	if g := th.FolderIconGlyph(FolderIconMount); g != "\U000F0256" {
-		t.Fatalf("FolderIconGlyph(Mount) = %q, want U+F0256", g)
-	}
-	if g := th.FolderIconGlyph(FolderIconExcluded); g != "\uf114" {
-		t.Fatalf("FolderIconGlyph(Excluded) = %q, want U+F114", g)
-	}
-	if g := th.SymbolScrollbarThumb(); g != '\u2503' {
-		t.Fatalf("SymbolScrollbarThumb = %q, want ┃", string(g))
-	}
-	newFG, _, _ := th.PanelRowIndicatorNew.Decompose()
-	if newFG != tcell.PaletteColor(10) {
-		t.Fatalf("panel.row.indicator.new fg = %v, want bright_green (index 10)", newFG)
-	}
-	prevFG, _, _ := th.PanelRowIndicatorNewPrevious.Decompose()
-	if prevFG != tcell.PaletteColor(11) {
-		t.Fatalf("panel.row.indicator.new.previous fg = %v, want bright_yellow (index 11)", prevFG)
-	}
-	openFG, _, _ := th.PanelIconFolderOpen.Decompose()
-	if openFG != tcell.PaletteColor(14) {
-		t.Fatalf("panel.icon.folder.open fg = %v, want bright_cyan (index 14)", openFG)
-	}
-	subFG, _, _ := th.PanelRowIndicatorSelectionSubtree.Decompose()
-	if subFG != tcell.PaletteColor(3) {
-		t.Fatalf("panel.row.indicator.selection_subtree fg = %v, want yellow (index 3)", subFG)
-	}
-	mountFG, _, _ := th.PanelIconFolderMount.Decompose()
-	if mountFG != tcell.PaletteColor(12) {
-		t.Fatalf("panel.icon.folder.mount fg = %v, want bright_blue (index 12)", mountFG)
+	assertSymbolStrEqual(t, "SymbolWorking", got.SymbolWorking(), embedded.SymbolWorking())
+
+	assertStyleEqual(t, "PanelRowIndicatorNew", got.PanelRowIndicatorNew, embedded.PanelRowIndicatorNew)
+	assertStyleEqual(t, "PanelRowIndicatorNewPrevious", got.PanelRowIndicatorNewPrevious, embedded.PanelRowIndicatorNewPrevious)
+	assertStyleEqual(t, "PanelIconFolderOpen", got.PanelIconFolderOpen, embedded.PanelIconFolderOpen)
+	assertStyleEqual(t, "PanelRowIndicatorSelectionSubtree", got.PanelRowIndicatorSelectionSubtree, embedded.PanelRowIndicatorSelectionSubtree)
+	assertStyleEqual(t, "PanelIconFolderMount", got.PanelIconFolderMount, embedded.PanelIconFolderMount)
+	assertStyleEqual(t, "PanelRowSelected", got.PanelRowSelected, embedded.PanelRowSelected)
+}
+
+func assertSymbolRuneEqual(t *testing.T, label string, got, want rune) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("%s = %q, want %q", label, string(got), string(want))
 	}
 }
 
-func TestDefaultLoadsEmbeddedTheme(t *testing.T) {
-	styles := Default()
-	if styles.Name != "default" {
-		t.Fatalf("Default().Name = %q, want default", styles.Name)
+func assertSymbolStrEqual(t *testing.T, label, got, want string) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("%s = %q, want %q", label, got, want)
 	}
+}
 
-	foreground, background, attrs := styles.PanelRowSelected.Decompose()
-	if foreground != tcell.PaletteColor(3) {
-		t.Fatalf("selected foreground = %v, want ANSI yellow (index 3)", foreground)
-	}
-	if background != tcell.ColorDefault {
-		t.Fatalf("selected background = %v, want terminal default background (theme uses default)", background)
-	}
-	if attrs&tcell.AttrBold == 0 {
-		t.Fatal("selected attrs do not include bold")
+func assertStyleEqual(t *testing.T, label string, got, want tcell.Style) {
+	t.Helper()
+	gotFG, gotBG, gotAttrs := got.Decompose()
+	wantFG, wantBG, wantAttrs := want.Decompose()
+	if gotFG != wantFG || gotBG != wantBG || gotAttrs != wantAttrs {
+		t.Fatalf("%s = fg %v bg %v attrs %v, want fg %v bg %v attrs %v",
+			label, gotFG, gotBG, gotAttrs, wantFG, wantBG, wantAttrs)
 	}
 }
 

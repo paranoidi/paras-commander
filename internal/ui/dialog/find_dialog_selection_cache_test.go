@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 type stubMarkedSelectionPainter struct {
@@ -77,17 +79,18 @@ func TestFindMarkedSelectionSizeLabelPendingDirs(t *testing.T) {
 		MarkedPaths: map[string]bool{dir: true},
 		PathIsDir:   map[string]bool{dir: true},
 	}
-	got, ok := st.MarkedSelectionSizeLabel(false, stubMarkedSelectionPainter{}, false, nil, "\uf017")
+	working := theme.Default().SymbolWorking()
+	got, ok := st.MarkedSelectionSizeLabel(false, stubMarkedSelectionPainter{}, false, nil, working)
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}
-	if got != "1 item (0 B) \uf017" {
+	if got != "1 item (0 B) "+working {
 		t.Fatalf("label = %q, want pending glyph", got)
 	}
 	st.InvalidateMarkedSelectionSizeLabel()
 	st.PathIsDir[dir] = true
 	painter := stubMarkedSelectionPainter{sizes: map[string]int64{dir: 1024}}
-	got2, ok2 := st.MarkedSelectionSizeLabel(false, painter, false, nil, "\uf017")
+	got2, ok2 := st.MarkedSelectionSizeLabel(false, painter, false, nil, working)
 	if !ok2 {
 		t.Fatal("ok2 = false after disk refresh")
 	}

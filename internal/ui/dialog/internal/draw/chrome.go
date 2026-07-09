@@ -123,6 +123,12 @@ func DrawSimpleDialogInput(screen tcell.Screen, x, y, width int, value string, f
 	}
 }
 
+// Scroll overflow markers for horizontally scrolling dialog inputs.
+const (
+	ScrollOverflowLeft  = '◀'
+	ScrollOverflowRight = '▶'
+)
+
 // ScrollingInputLayout reserves screen columns for ◀/▶ overflow markers.
 type ScrollingInputLayout struct {
 	TextCols int // rune columns painted between markers
@@ -413,10 +419,10 @@ func PaintScrollingInputContent(
 	}
 
 	if lay.LeftPad > 0 {
-		screen.SetContent(x, y, '◀', nil, markerStyle)
+		screen.SetContent(x, y, ScrollOverflowLeft, nil, markerStyle)
 	}
 	if lay.RightPad > 0 {
-		screen.SetContent(x+width-1, y, '▶', nil, markerStyle)
+		screen.SetContent(x+width-1, y, ScrollOverflowRight, nil, markerStyle)
 	}
 	return cursor, scroll
 }

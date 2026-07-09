@@ -58,22 +58,23 @@ func TestSubtreeSelectionMarkUsesSelectedForeground(t *testing.T) {
 	cols := SplitColumns(frame, true, DefaultLayout())
 	centerCol := cols[1]
 	rowY := centerCol.Y
+	wantMark := styles.SymbolFilelistSelectionSubtree()
 	markCol := -1
 	for col := centerCol.X; col < centerCol.X+centerCol.Width; col++ {
 		ch, _, _ := screen.Get(col, rowY)
 		r, _ := utf8.DecodeRuneInString(ch)
-		if r == '\u25cb' {
+		if r == wantMark {
 			markCol = col
 			break
 		}
 	}
 	if markCol < 0 {
-		t.Fatal("subtree selection mark ○ not found on directory row")
+		t.Fatal("subtree selection mark not found on directory row")
 	}
 	_, markStyle, _ := screen.Get(markCol, rowY)
 	gotFG, _, _ := markStyle.Decompose()
 	if gotFG != wantFG {
-		t.Fatalf("○ foreground = %v, want cursor-row icon %v", gotFG, wantFG)
+		t.Fatalf("subtree mark foreground = %v, want cursor-row icon %v", gotFG, wantFG)
 	}
 }
 

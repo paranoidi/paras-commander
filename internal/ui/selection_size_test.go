@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
 func TestFormatSelectionByteSize(t *testing.T) {
@@ -152,11 +153,12 @@ func TestSelectionSizeLabelPendingWorkingGlyph(t *testing.T) {
 		SelectedPaths: map[string]bool{dir: true},
 	}
 	painter := stubSelectionSizePainter{sizes: map[string]int64{}}
-	got, ok := SelectionSizeLabel(&state, false, painter, false, nil, "\uf017")
+	working := theme.Default().SymbolWorking()
+	got, ok := SelectionSizeLabel(&state, false, painter, false, nil, working)
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}
-	if !strings.HasSuffix(got, " \uf017") {
+	if !strings.HasSuffix(got, " "+working) {
 		t.Fatalf("label = %q, want working glyph suffix", got)
 	}
 	if !strings.Contains(got, "1 item") {

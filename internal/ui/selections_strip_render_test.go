@@ -49,22 +49,23 @@ func TestSelectionsStripMarkOnFileRow(t *testing.T) {
 	})
 
 	rowY := rect.Y + 1
+	wantMark := styles.SymbolFilelistSelectionSubtree()
 	markCol := -1
 	for col := rect.X + 1; col < rect.X+rect.Width-1; col++ {
 		ch, _, _ := screen.Get(col, rowY)
 		r, _ := utf8.DecodeRuneInString(ch)
-		if r == '\u25cb' {
+		if r == wantMark {
 			markCol = col
 			break
 		}
 	}
 	if markCol < 0 {
-		t.Fatal("selection mark ○ not found on file strip row")
+		t.Fatal("selection mark not found on file strip row")
 	}
 	_, markStyle, _ := screen.Get(markCol, rowY)
 	gotFG, _, _ := markStyle.Decompose()
 	if gotFG != wantFG {
-		t.Fatalf("○ foreground = %v, want panel.row.selected %v", gotFG, wantFG)
+		t.Fatalf("selection mark foreground = %v, want panel.row.selected %v", gotFG, wantFG)
 	}
 }
 

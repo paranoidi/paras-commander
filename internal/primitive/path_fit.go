@@ -17,6 +17,9 @@ func FitPathForWidth(path string, maxRunes int) string {
 	if maxRunes <= 0 {
 		return ""
 	}
+	if path == "" {
+		return ""
+	}
 	path = filepath.ToSlash(filepath.Clean(path))
 	// Clean strips a trailing slash from "~/", which must stay "~/" for display.
 	if path == "~" {

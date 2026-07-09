@@ -53,11 +53,12 @@ func FunctionKeyLabelByKey(k tcell.Key) (string, bool) {
 // FunctionKeysJobs is the footer legend while the jobs view is active.
 var FunctionKeysJobs = []FunctionKey{
 	FooterEscClose,
-	{Key: tcell.KeyCtrlP, KeyLabel: "^P", Hint: "Pause"},
-	{Key: tcell.KeyCtrlR, KeyLabel: "^R", Hint: "Resume"},
-	{Key: tcell.KeyF4, KeyLabel: "^↑", Hint: "Move up"},
-	{Key: tcell.KeyF5, KeyLabel: "^↓", Hint: "Move down"},
-	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Cancel"},
+	{Key: tcell.KeyCtrlC, KeyLabel: "C-c", Hint: "Cancel"},
+	{Key: tcell.KeyCtrlP, KeyLabel: "C-p", Hint: "Pause"},
+	{Key: tcell.KeyCtrlR, KeyLabel: "C-r", Hint: "Resume"},
+	{Key: tcell.KeyUp, KeyLabel: "C-up", Hint: "Move up"},
+	{Key: tcell.KeyDown, KeyLabel: "C-down", Hint: "Move down"},
+	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear"},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 }

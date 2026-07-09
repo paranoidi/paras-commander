@@ -449,9 +449,10 @@ func TestThemeDialogF5ReloadsMenuDropdownAccentFromDisk(t *testing.T) {
 	}
 
 	app.openThemeDialog()
+	wantFG1, _, _ := styles.MenuDropdownAccent.Decompose()
 	fg1, _, _ := app.styles.MenuDropdownAccent.Decompose()
-	if fg1 != tcell.PaletteColor(9) {
-		t.Fatalf("initial preview menu.dropdown.accent fg = %v, want bright_red (ANSI 9)", fg1)
+	if fg1 != wantFG1 {
+		t.Fatalf("initial preview menu.dropdown.accent fg = %v, want %v", fg1, wantFG1)
 	}
 
 	writeAccentFG("bright_green")
@@ -459,9 +460,14 @@ func TestThemeDialogF5ReloadsMenuDropdownAccentFromDisk(t *testing.T) {
 	if quit {
 		t.Fatal("handleKey(F5) quit = true, want false")
 	}
+	reloaded, err := theme.Resolve("default", paths.ThemesDir)
+	if err != nil {
+		t.Fatalf("Resolve after F5: %v", err)
+	}
+	wantFG2, _, _ := reloaded.MenuDropdownAccent.Decompose()
 	fg2, _, _ := app.styles.MenuDropdownAccent.Decompose()
-	if fg2 != tcell.PaletteColor(10) {
-		t.Fatalf("after F5 menu.dropdown.accent fg = %v, want bright_green (ANSI 10)", fg2)
+	if fg2 != wantFG2 {
+		t.Fatalf("after F5 menu.dropdown.accent fg = %v, want %v", fg2, wantFG2)
 	}
 }
 

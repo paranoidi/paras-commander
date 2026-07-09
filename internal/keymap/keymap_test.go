@@ -206,14 +206,14 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 	}
 }
 
-func TestDefaultJobsOverlayMapsF8ToCancel(t *testing.T) {
+func TestDefaultJobsOverlayMapsF8ToClearFinished(t *testing.T) {
 	bundle, err := DefaultBundle()
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
 	id, ok := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
-	if !ok || id != ActionJobsCancel {
-		t.Fatalf("jobs overlay F8 = %q %v, want jobs.cancel", id, ok)
+	if !ok || id != ActionJobsClearFinished {
+		t.Fatalf("jobs overlay F8 = %q %v, want jobs.clear-finished", id, ok)
 	}
 	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
 	if !ok || id != ActionFileDelete {
@@ -651,10 +651,9 @@ keep_finished = 25
 	if !ok || id != ActionJobsClearFinished {
 		t.Fatalf("C-k -> %q %v, want jobs.clear-finished from keybindings.toml", id, ok)
 	}
-	// F8 is now jobs.cancel by default; clearing the clear-finished binding does not free F8.
-	id, ok = bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
-	if !ok || id != ActionJobsCancel {
-		t.Fatalf("F8 jobs overlay -> %q %v, want jobs.cancel (default unaffected by clear-finished rebind)", id, ok)
+	// Rebinding clear-finished replaces the default F8 chord for that action.
+	if _, ok := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)); ok {
+		t.Fatal("F8 jobs overlay should be unbound after clear-finished rebind to C-k")
 	}
 }
 
@@ -716,7 +715,7 @@ func TestDefaultBundleJobsOpenGlobalRestJobsOverlay(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModNone), ActionJobsResume, "Ctrl+R"},
 		{tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModCtrl), ActionJobsQueueUp, "Ctrl+Up"},
 		{tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModCtrl), ActionJobsQueueDown, "Ctrl+Down"},
-		{tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone), ActionJobsCancel, "F8"},
+		{tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone), ActionJobsClearFinished, "F8"},
 	}
 	for _, tc := range cases {
 		id, ok := bundle.Jobs.Lookup(tc.ev)
@@ -810,10 +809,9 @@ jobs.clear-finished = ["C-k"]
 	if !ok || id != ActionJobsClearFinished {
 		t.Fatalf("jobs overlay C-k = %q %v", id, ok)
 	}
-	// F8 is jobs.cancel by default; rebinding clear-finished does not free F8.
-	id, okF8 := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
-	if !okF8 || id != ActionJobsCancel {
-		t.Fatalf("jobs overlay F8 = %q %v, want jobs.cancel", id, okF8)
+	// Rebinding clear-finished replaces the default F8 chord for that action.
+	if _, okF8 := bundle.Jobs.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)); okF8 {
+		t.Fatal("jobs overlay F8 should be unbound after clear-finished rebind to C-k")
 	}
 }
 

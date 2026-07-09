@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -77,6 +78,132 @@ func TestDedupViewFindsDuplicates(t *testing.T) {
 	}
 }
 
+func TestDedupViewTrimsSingleChainDisplayRoot(t *testing.T) {
+	dir := t.TempDir()
+	nested := filepath.Join(dir, "alpha", "bravo", "charlie")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "copper.txt"), []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "willow.txt"), []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	snap := waitDedupDone(t, app)
+
+	wantDisplay := filepath.Join(dir, "alpha", "bravo", "charlie")
+	if got := snap.EffectiveDisplayRoot().String(); got != wantDisplay {
+		t.Fatalf("EffectiveDisplayRoot = %q, want %q", got, wantDisplay)
+	}
+	if snap.Root.String() != dir {
+		t.Fatalf("scan Root = %q, want %q", snap.Root, dir)
+	}
+	if app.model.Message != "Duplicates view re-rooted" {
+		t.Fatalf("message = %q, want display-root trim toast", app.model.Message)
+	}
+	if len(app.model.DedupList) != 2 {
+		t.Fatalf("DedupList = %d, want 2 files at trimmed root", len(app.model.DedupList))
+	}
+	for _, row := range app.model.DedupList {
+		if row.Value.Kind != ui.DedupRowFile {
+			t.Fatalf("row kind = %v, want file (no empty alpha/bravo chain)", row.Value.Kind)
+		}
+		if row.Depth != 0 {
+			t.Fatalf("row depth = %d, want 0 under trimmed display root", row.Depth)
+		}
+	}
+}
+
+func TestDedupViewTrimsToBranchParentDisplayRoot(t *testing.T) {
+	dir := t.TempDir()
+	for _, rel := range []string{
+		filepath.Join("test-cases", "diff-a", "copper.txt"),
+		filepath.Join("test-cases", "diff-b", "willow.txt"),
+	} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, rel)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	snap := waitDedupDone(t, app)
+
+	wantDisplay := filepath.Join(dir, "test-cases")
+	if got := snap.EffectiveDisplayRoot().String(); got != wantDisplay {
+		t.Fatalf("EffectiveDisplayRoot = %q, want %q", got, wantDisplay)
+	}
+	if app.model.Message != "Duplicates view re-rooted" {
+		t.Fatalf("message = %q, want display-root trim toast", app.model.Message)
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyInfo {
+		t.Fatalf("MessageUrgency = %v, want info", app.model.MessageUrgency)
+	}
+	if len(app.model.DedupList) != 2 {
+		t.Fatalf("DedupList = %d, want diff-a + diff-b at trimmed root", len(app.model.DedupList))
+	}
+	names := map[string]bool{}
+	for _, row := range app.model.DedupList {
+		if row.Value.Kind != ui.DedupRowDir || row.Depth != 0 {
+			t.Fatalf("row = %+v, want depth-0 dir", row)
+		}
+		names[row.Value.Display] = true
+	}
+	if !names["diff-a"] || !names["diff-b"] {
+		t.Fatalf("top-level dirs = %v, want diff-a and diff-b", names)
+	}
+}
+
+func TestDedupViewSkipsSymlinks(t *testing.T) {
+	rootDir := t.TempDir()
+	scan := filepath.Join(rootDir, "scan")
+	hidden := filepath.Join(rootDir, "hidden", "other")
+	if err := os.MkdirAll(scan, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(hidden, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(scan, "real1.txt"), []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(scan, "real2.txt"), []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(hidden, "hidden.txt"), []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("real1.txt", filepath.Join(scan, "link1")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join("..", "hidden", "other"), filepath.Join(scan, "other-link")); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, scan)
+	app.openFindDuplicates()
+	snap := waitDedupDone(t, app)
+
+	if len(snap.Groups) != 1 {
+		t.Fatalf("groups = %d, want 1", len(snap.Groups))
+	}
+	for _, f := range snap.Groups[0].Files {
+		if f.Rel != "real1.txt" && f.Rel != "real2.txt" {
+			t.Fatalf("unexpected duplicate member %q", f.Rel)
+		}
+	}
+}
+
 func TestDedupViewLeftCollapsesInsteadOfClosing(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("dup"), 0o644); err != nil {
@@ -101,6 +228,102 @@ func TestDedupViewLeftCollapsesInsteadOfClosing(t *testing.T) {
 	}
 	if app.model.ViewMode != ui.ViewDedup {
 		t.Fatalf("ViewMode = %v, want ViewDedup after KeyLeft", app.model.ViewMode)
+	}
+}
+
+func TestDedupViewAltArrowJumpsBetweenVisibleDirs(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "orchard"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{
+		"lantern.txt",
+		filepath.Join("meadow", "lantern.txt"),
+		filepath.Join("meadow", "beacon.txt"),
+		filepath.Join("orchard", "lantern.txt"),
+	} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	mainSelDir := func(wantRel string) {
+		t.Helper()
+		row := app.model.DedupList[app.model.DedupView.Main.Selected]
+		if row.Value.Kind != ui.DedupRowDir || row.Value.DirRel != wantRel {
+			t.Fatalf("main selected = %+v, want dir %q", row.Value, wantRel)
+		}
+	}
+	copiesSelDir := func(wantRel string) {
+		t.Helper()
+		row := app.model.DedupCopiesList[app.model.DedupView.Copies.Selected]
+		if row.Value.Kind != ui.DedupRowDir || row.Value.DirRel != wantRel {
+			t.Fatalf("copies selected = %+v, want dir %q", row.Value, wantRel)
+		}
+	}
+
+	// Main pane: meadow (dir), orchard (dir), lantern.txt (file).
+	mainSelDir("meadow")
+	before := app.model.DedupView.Main.Selected
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModAlt))
+	if app.model.DedupView.Main.Selected != before {
+		t.Fatalf("Alt+Up on first dir moved cursor from %d to %d", before, app.model.DedupView.Main.Selected)
+	}
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt))
+	mainSelDir("orchard")
+
+	before = app.model.DedupView.Main.Selected
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt))
+	if app.model.DedupView.Main.Selected != before {
+		t.Fatal("Alt+Down on last dir should stay (next row is a file)")
+	}
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) // file row
+	if app.model.DedupList[app.model.DedupView.Main.Selected].Value.Kind != ui.DedupRowFile {
+		t.Fatal("expected file row after Down from orchard")
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModAlt))
+	mainSelDir("orchard")
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	before = app.model.DedupView.Main.Selected
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt))
+	if app.model.DedupView.Main.Selected != before {
+		t.Fatal("Alt+Down on last row should stay when no next dir exists")
+	}
+
+	// Copies pane: cursor is on root file; Tab focuses copies dirs.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if !app.model.DedupView.FocusCopies {
+		t.Fatal("Tab did not focus copies pane")
+	}
+	copiesSelDir("meadow")
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt))
+	copiesSelDir("orchard")
+
+	before = app.model.DedupView.Copies.Selected
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt))
+	if app.model.DedupView.Copies.Selected != before {
+		t.Fatal("Alt+Down on last copies dir should stay")
+	}
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModAlt))
+	copiesSelDir("meadow")
+
+	before = app.model.DedupView.Copies.Selected
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModAlt))
+	if app.model.DedupView.Copies.Selected != before {
+		t.Fatal("Alt+Up on first copies dir should stay")
 	}
 }
 
@@ -167,7 +390,333 @@ func TestDedupViewCopiesPaneTabFocusAndMark(t *testing.T) {
 	app.render() // twin panes must render without panicking
 }
 
-func TestDedupViewExpandAutoDescendsSingleDirChain(t *testing.T) {
+func TestDedupViewCopiesPaneFolderSelectToggle(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "orchard"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{
+		"lantern.txt",
+		filepath.Join("meadow", "lantern.txt"),
+		filepath.Join("meadow", "beacon.txt"),
+		filepath.Join("orchard", "lantern.txt"),
+	} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	// Select root lantern.txt (dirs mode: meadow, orchard, then root file).
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if !app.model.DedupView.FocusCopies {
+		t.Fatal("Tab did not focus copies pane")
+	}
+
+	copies := app.model.DedupCopiesList
+	if len(copies) < 2 {
+		t.Fatalf("copies list = %d rows, want at least meadow + orchard dirs", len(copies))
+	}
+	if copies[0].Value.Kind != ui.DedupRowDir || copies[0].Value.DirRel != "meadow" {
+		t.Fatalf("first copy row = %+v, want meadow dir", copies[0].Value)
+	}
+	if app.model.DedupView.Copies.Selected != 0 {
+		t.Fatalf("copies cursor = %d, want 0 on meadow", app.model.DedupView.Copies.Selected)
+	}
+
+	meadowLantern := filepath.Join(dir, "meadow", "lantern.txt")
+	meadowBeacon := filepath.Join(dir, "meadow", "beacon.txt")
+	orchardLantern := filepath.Join(dir, "orchard", "lantern.txt")
+
+	// Insert on meadow: mark all files under meadow, advance to orchard.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if app.model.DedupView.MarkedCount != 2 {
+		t.Fatalf("MarkedCount = %d, want 2 after meadow folder mark", app.model.DedupView.MarkedCount)
+	}
+	if !app.model.DedupView.Marked[meadowLantern] || !app.model.DedupView.Marked[meadowBeacon] {
+		t.Fatalf("meadow files not marked: %v", app.model.DedupView.Marked)
+	}
+	if app.model.DedupView.Marked[orchardLantern] {
+		t.Fatal("orchard file should not be marked yet")
+	}
+	sel := app.model.DedupView.Copies.Selected
+	if sel < 0 || sel >= len(copies) || copies[sel].Value.DirRel != "orchard" {
+		t.Fatalf("cursor on %q after meadow mark, want orchard dir", copies[sel].Value.DirRel)
+	}
+
+	// Move back to meadow and Insert again: clear meadow marks.
+	for i, r := range app.model.DedupCopiesList {
+		if r.Value.Kind == ui.DedupRowDir && r.Value.DirRel == "meadow" {
+			app.model.DedupView.Copies.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if app.model.DedupView.MarkedCount != 0 {
+		t.Fatalf("MarkedCount = %d, want 0 after meadow folder clear", app.model.DedupView.MarkedCount)
+	}
+
+	// Partial mark under meadow, then folder Insert clears all under meadow.
+	app.dedupCtrl.ExpandAll()
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)) // meadow dir
+	for i, r := range app.model.DedupCopiesList {
+		if r.Value.Kind == ui.DedupRowFile && r.Value.File.Rel == "meadow/beacon.txt" {
+			app.model.DedupView.Copies.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)) // mark beacon only
+	if app.model.DedupView.MarkedCount != 1 || !app.model.DedupView.Marked[meadowBeacon] {
+		t.Fatalf("partial mark failed: count=%d marked=%v", app.model.DedupView.MarkedCount, app.model.DedupView.Marked)
+	}
+	for i, r := range app.model.DedupCopiesList {
+		if r.Value.Kind == ui.DedupRowDir && r.Value.DirRel == "meadow" {
+			app.model.DedupView.Copies.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if app.model.DedupView.MarkedCount != 0 {
+		t.Fatalf("folder clear after partial mark: count=%d, want 0", app.model.DedupView.MarkedCount)
+	}
+	if app.model.DedupView.Marked[meadowBeacon] || app.model.DedupView.Marked[meadowLantern] {
+		t.Fatalf("meadow marks remain: %v", app.model.DedupView.Marked)
+	}
+}
+
+func TestDedupViewMainPaneFolderSelectToggle(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "orchard"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{
+		"lantern.txt",
+		filepath.Join("meadow", "lantern.txt"),
+		filepath.Join("orchard", "lantern.txt"),
+	} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, rel := range []string{
+		filepath.Join("meadow", "beacon.txt"),
+		filepath.Join("orchard", "beacon.txt"),
+	} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup2"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	if app.model.DedupView.FocusCopies {
+		t.Fatal("file-tree panel must be focused on open")
+	}
+	main := app.model.DedupList
+	if len(main) < 2 {
+		t.Fatalf("main list = %d rows, want at least meadow + orchard dirs", len(main))
+	}
+	if main[0].Value.Kind != ui.DedupRowDir || main[0].Value.DirRel != "meadow" {
+		t.Fatalf("first main row = %+v, want meadow dir", main[0].Value)
+	}
+	if app.model.DedupView.Main.Selected != 0 {
+		t.Fatalf("main cursor = %d, want 0 on meadow", app.model.DedupView.Main.Selected)
+	}
+
+	meadowLantern := filepath.Join(dir, "meadow", "lantern.txt")
+	meadowBeacon := filepath.Join(dir, "meadow", "beacon.txt")
+	orchardLantern := filepath.Join(dir, "orchard", "lantern.txt")
+	rootLantern := filepath.Join(dir, "lantern.txt")
+
+	// Insert on meadow in file-tree: mark all files under meadow, advance to orchard.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if app.model.DedupView.MarkedCount != 2 {
+		t.Fatalf("MarkedCount = %d, want 2 after meadow folder mark", app.model.DedupView.MarkedCount)
+	}
+	if !app.model.DedupView.Marked[meadowLantern] || !app.model.DedupView.Marked[meadowBeacon] {
+		t.Fatalf("meadow files not marked: %v", app.model.DedupView.Marked)
+	}
+	if app.model.DedupView.Marked[orchardLantern] || app.model.DedupView.Marked[rootLantern] {
+		t.Fatalf("non-meadow files marked: %v", app.model.DedupView.Marked)
+	}
+	sel := app.model.DedupView.Main.Selected
+	if sel < 0 || sel >= len(main) || main[sel].Value.DirRel != "orchard" {
+		t.Fatalf("cursor on %q after meadow mark, want orchard dir", main[sel].Value.DirRel)
+	}
+
+	// Move back to meadow and Insert again: clear meadow marks.
+	for i, r := range app.model.DedupList {
+		if r.Value.Kind == ui.DedupRowDir && r.Value.DirRel == "meadow" {
+			app.model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if app.model.DedupView.MarkedCount != 0 {
+		t.Fatalf("MarkedCount = %d, want 0 after meadow folder clear", app.model.DedupView.MarkedCount)
+	}
+
+	// Partial mark under meadow, then folder Insert clears all under meadow.
+	app.dedupCtrl.ExpandAll()
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)) // orchard dir
+	for i, r := range app.model.DedupList {
+		if r.Value.Kind == ui.DedupRowDir && r.Value.DirRel == "meadow" {
+			app.model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	for i, r := range app.model.DedupList {
+		if r.Value.Kind == ui.DedupRowFile && r.Value.File.Rel == "meadow/beacon.txt" {
+			app.model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)) // mark beacon only
+	if app.model.DedupView.MarkedCount != 1 || !app.model.DedupView.Marked[meadowBeacon] {
+		t.Fatalf("partial mark failed: count=%d marked=%v", app.model.DedupView.MarkedCount, app.model.DedupView.Marked)
+	}
+	for i, r := range app.model.DedupList {
+		if r.Value.Kind == ui.DedupRowDir && r.Value.DirRel == "meadow" {
+			app.model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if app.model.DedupView.MarkedCount != 0 {
+		t.Fatalf("folder clear after partial mark: count=%d, want 0", app.model.DedupView.MarkedCount)
+	}
+	if app.model.DedupView.Marked[meadowBeacon] || app.model.DedupView.Marked[meadowLantern] {
+		t.Fatalf("meadow marks remain: %v", app.model.DedupView.Marked)
+	}
+
+	// C-k keep on meadow/lantern, then folder Insert must not mark kept files.
+	for i, r := range app.model.DedupList {
+		if r.Value.Kind == ui.DedupRowFile && r.Value.File.Rel == "meadow/lantern.txt" {
+			app.model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(dedupCtrlK())
+	if !app.model.DedupView.Kept[meadowLantern] {
+		t.Fatalf("meadow lantern not kept: %v", app.model.DedupView.Kept)
+	}
+	for i, r := range app.model.DedupList {
+		if r.Value.Kind == ui.DedupRowDir && r.Value.DirRel == "meadow" {
+			app.model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if app.model.DedupView.Marked[meadowLantern] {
+		t.Fatal("kept meadow lantern must not be marked for deletion")
+	}
+	if !app.model.DedupView.Marked[meadowBeacon] {
+		t.Fatal("non-kept meadow beacon should be marked after folder Insert")
+	}
+}
+
+func TestDedupViewCopiesPaneSelectAll(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "orchard"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{
+		"lantern.txt",
+		filepath.Join("meadow", "lantern.txt"),
+		filepath.Join("meadow", "beacon.txt"),
+		filepath.Join("orchard", "lantern.txt"),
+	} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	// Select root lantern.txt and focus the copies pane.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if !app.model.DedupView.FocusCopies {
+		t.Fatal("Tab did not focus copies pane")
+	}
+
+	meadowLantern := filepath.Join(dir, "meadow", "lantern.txt")
+	meadowBeacon := filepath.Join(dir, "meadow", "beacon.txt")
+	orchardLantern := filepath.Join(dir, "orchard", "lantern.txt")
+
+	star := tcell.NewEventKey(tcell.KeyRune, '*', tcell.ModNone)
+	if id, ok := app.keys.Lookup(star); !ok || id != keymap.ActionPanelInvertSelection {
+		t.Fatalf("* key = %q %v, want panel.invert-selection", id, ok)
+	}
+
+	// * in main pane is a no-op.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if app.model.DedupView.FocusCopies {
+		t.Fatal("Tab did not return focus to main pane")
+	}
+	app.handleDedupViewKey(star)
+	if app.model.DedupView.MarkedCount != 0 {
+		t.Fatalf("main pane * marked %d files, want no-op", app.model.DedupView.MarkedCount)
+	}
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+
+	// * marks all copy-pane files (three other copies).
+	app.handleDedupViewKey(star)
+	if app.model.DedupView.MarkedCount != 3 {
+		t.Fatalf("MarkedCount = %d, want 3 after select all", app.model.DedupView.MarkedCount)
+	}
+	for _, p := range []string{meadowLantern, meadowBeacon, orchardLantern} {
+		if !app.model.DedupView.Marked[p] {
+			t.Fatalf("%q not marked after select all", p)
+		}
+	}
+
+	// * again clears all copy-pane marks.
+	app.handleDedupViewKey(star)
+	if app.model.DedupView.MarkedCount != 0 {
+		t.Fatalf("MarkedCount = %d, want 0 after second *", app.model.DedupView.MarkedCount)
+	}
+
+	// Partial mark, then * selects the rest.
+	app.model.DedupView.Marked[meadowBeacon] = true
+	app.model.DedupView.MarkedCount = 1
+	app.model.DedupView.MarkedReclaimBytes = int64(len("dup"))
+	app.handleDedupViewKey(star)
+	if app.model.DedupView.MarkedCount != 3 {
+		t.Fatalf("MarkedCount = %d, want 3 after select all from partial", app.model.DedupView.MarkedCount)
+	}
+
+	// Collapsed copies pane still includes hidden files.
+	app.dedupCtrl.CollapseAll()
+	app.handleDedupViewKey(star) // clear all
+	app.handleDedupViewKey(star) // select all
+	if app.model.DedupView.MarkedCount != 3 {
+		t.Fatalf("collapsed select all: MarkedCount = %d, want 3", app.model.DedupView.MarkedCount)
+	}
+}
+
+func TestDedupViewRightExpandsCollapsedDirInPlace(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "orchard", "deep", "deeper"), 0o755); err != nil {
 		t.Fatal(err)
@@ -190,19 +739,144 @@ func TestDedupViewExpandAutoDescendsSingleDirChain(t *testing.T) {
 		t.Fatalf("collapsed rows = %+v, want [d:orchard, root lantern]", rows)
 	}
 
-	// Right on orchard: the single-subdir chain orchard→deep→deeper opens in one
-	// step and the cursor lands on the deepest chain directory.
+	// First Right on orchard: expand only, cursor stays on the folder row.
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	rows = app.model.DedupList
 	sel := app.model.DedupView.Main.Selected
-	if sel < 0 || sel >= len(rows) || rows[sel].ID != "d:orchard/deep/deeper" {
-		t.Fatalf("cursor on %q, want d:orchard/deep/deeper", rows[sel].ID)
+	if sel != 0 || rows[sel].ID != "d:orchard" {
+		t.Fatalf("cursor on %q at %d, want orchard dir at 0", rows[sel].ID, sel)
 	}
-	if !rows[sel].Expanded {
-		t.Fatal("deepest chain dir should be expanded (its file visible)")
+	if got := len(rows); got != 3 { // orchard, deep (collapsed), root lantern.txt
+		t.Fatalf("rows after first Right = %d, want 3", got)
+	}
+	if !rows[0].Expanded {
+		t.Fatal("orchard should be expanded after first Right")
+	}
+}
+
+func TestDedupViewRightDescendsToFirstFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "orchard", "deep", "deeper"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("orchard", "deep", "deeper", "lantern.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	app.dedupCtrl.CollapseAll()
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
+
+	// Expand orchard in place, then descend on the second Right.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	rows := app.model.DedupList
+	sel := app.model.DedupView.Main.Selected
+	if sel < 0 || sel >= len(rows) || rows[sel].Value.Kind != ui.DedupRowFile {
+		t.Fatalf("cursor on %q (kind=%v), want first file under orchard", rows[sel].ID, rows[sel].Value.Kind)
+	}
+	if got := rows[sel].Value.File.Rel; got != "orchard/deep/deeper/lantern.txt" {
+		t.Fatalf("selected file rel = %q, want orchard/deep/deeper/lantern.txt", got)
 	}
 	if got := len(rows); got != 5 { // orchard, deep, deeper, deeper/lantern.txt, root lantern.txt
-		t.Fatalf("rows after auto-descend = %d, want 5", got)
+		t.Fatalf("rows after descend = %d, want 5", got)
+	}
+	if !rows[0].Expanded {
+		t.Fatal("orchard should stay expanded after descend")
+	}
+}
+
+func TestDedupViewRightOnExpandedDirDoesNotCollapse(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	// Expand meadow in place, then descend on the second Right without collapsing.
+	app.dedupCtrl.CollapseAll()
+	for i, r := range app.model.DedupList {
+		if r.ID == "d:meadow" {
+			app.model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	beforeRows := len(app.model.DedupList)
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if got := len(app.model.DedupList); got != beforeRows {
+		t.Fatalf("rows after Right on expanded dir = %d, want %d (no collapse)", got, beforeRows)
+	}
+	sel := app.model.DedupView.Main.Selected
+	row := app.model.DedupList[sel]
+	if row.Value.Kind != ui.DedupRowFile || row.Value.File.Rel != "meadow/lantern.txt" {
+		t.Fatalf("cursor on %+v, want meadow/lantern.txt file", row)
+	}
+}
+
+func TestDedupViewCopiesPaneRightDescendsToFirstFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{
+		"lantern.txt",
+		filepath.Join("meadow", "lantern.txt"),
+		filepath.Join("meadow", "beacon.txt"),
+	} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone)) // root lantern.txt
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if !app.model.DedupView.FocusCopies {
+		t.Fatal("Tab did not focus copies pane")
+	}
+	app.dedupCtrl.CollapseAll()
+	for i, r := range app.model.DedupCopiesList {
+		if r.ID == "d:meadow" {
+			app.model.DedupView.Copies.Selected = i
+			break
+		}
+	}
+
+	// First Right expands meadow in place; second Right descends to the first file.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	rows := app.model.DedupCopiesList
+	sel := app.model.DedupView.Copies.Selected
+	if sel < 0 || sel >= len(rows) || rows[sel].ID != "d:meadow" {
+		t.Fatalf("copies cursor on %q at %d, want meadow dir after first Right", rows[sel].ID, sel)
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	rows = app.model.DedupCopiesList
+	sel = app.model.DedupView.Copies.Selected
+	if sel < 0 || sel >= len(rows) || rows[sel].Value.Kind != ui.DedupRowFile {
+		t.Fatalf("copies cursor on %q (kind=%v), want first file under meadow", rows[sel].ID, rows[sel].Value.Kind)
+	}
+	if got := rows[sel].Value.File.Rel; got != "meadow/beacon.txt" {
+		t.Fatalf("copies selected file rel = %q, want meadow/beacon.txt", got)
 	}
 }
 
@@ -244,11 +918,6 @@ func TestDedupViewTreeCollapseAndModes(t *testing.T) {
 	if got := len(app.model.DedupList); got != 1 {
 		t.Fatalf("after collapse rows = %d, want 1", got)
 	}
-	// Marking the collapsed group still marks the hidden copy.
-	app.dedupCtrl.ToggleGroupMark()
-	if got := len(app.dedupCtrl.MarkedPaths()); got != 2 {
-		t.Fatalf("marked after group-mark on collapsed header = %d, want 2", got)
-	}
 	// Right again re-expands.
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if got := len(app.model.DedupList); got != 2 {
@@ -262,9 +931,6 @@ func TestDedupViewTreeCollapseAndModes(t *testing.T) {
 	}
 	if got := len(app.model.DedupList); got != 2 {
 		t.Fatalf("dirs-mode rows = %d, want 2 (collapse state preserved)", got)
-	}
-	if got := len(app.dedupCtrl.MarkedPaths()); got != 2 {
-		t.Fatalf("marks lost on mode switch: %d, want 2", got)
 	}
 }
 
@@ -418,6 +1084,9 @@ func TestDedupViewFooterEscFirst(t *testing.T) {
 	if keys[0] != menu.FooterEscClose {
 		t.Fatalf("footer[0] = %+v, want Esc Close", keys[0])
 	}
+	if len(keys) < 2 || keys[1].Key != tcell.KeyF1 || keys[1].Hint != "Help" {
+		t.Fatalf("footer[1] = %+v, want F1 Help", keys[1])
+	}
 	var foundDelete, foundRefresh bool
 	for _, fk := range keys {
 		if fk.Hint == "Delete" {
@@ -436,6 +1105,44 @@ func TestDedupViewFooterEscFirst(t *testing.T) {
 	if !foundRefresh {
 		t.Fatalf("footer missing Refresh: %+v", keys)
 	}
+	assertDedupFooterGroupOnlyHints(t, keys, false)
+}
+
+func TestDedupViewFooterSortHintInGroupsMode(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+	if !app.model.DedupView.TreeDirs {
+		t.Fatal("dedup view should start in directory-tree mode")
+	}
+	assertDedupFooterGroupOnlyHints(t, app.activeFooterKeys(), false)
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlT, 0, tcell.ModCtrl))
+	if app.model.DedupView.TreeDirs {
+		t.Fatal("Ctrl+T did not switch to groups tree mode")
+	}
+	assertDedupFooterGroupOnlyHints(t, app.activeFooterKeys(), true)
+}
+
+func assertDedupFooterGroupOnlyHints(t *testing.T, keys []menu.FunctionKey, wantGroupOnlyHints bool) {
+	t.Helper()
+	groupOnlyHints := []string{"Sort"}
+	for _, hint := range groupOnlyHints {
+		found := false
+		for _, fk := range keys {
+			if fk.Hint == hint {
+				found = true
+				break
+			}
+		}
+		if wantGroupOnlyHints && !found {
+			t.Fatalf("footer missing %q in groups mode: %+v", hint, keys)
+		}
+		if !wantGroupOnlyHints && found {
+			t.Fatalf("footer lists %q in directory-tree mode: %+v", hint, keys)
+		}
+	}
 }
 
 func TestDedupProgressDialogFooterShowsEscAndF10(t *testing.T) {
@@ -453,6 +1160,175 @@ func TestDedupProgressDialogFooterShowsEscAndF10(t *testing.T) {
 	}
 	if keys[1].Key != tcell.KeyF10 || keys[1].Hint != "Quit" {
 		t.Fatalf("footer[1] = %+v, want F10 Quit", keys[1])
+	}
+}
+
+func dedupCtrlK() *tcell.EventKey {
+	return tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModCtrl)
+}
+
+func TestDedupViewKeepMarking(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "a.txt")
+	bPath := filepath.Join(dir, "b.txt")
+	if err := os.WriteFile(aPath, []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bPath, []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	app.handleDedupViewKey(dedupCtrlK())
+	if !app.model.DedupView.Kept[aPath] {
+		t.Fatalf("Kept missing %q: %v", aPath, app.model.DedupView.Kept)
+	}
+	if app.model.DedupView.MarkedCount != 1 {
+		t.Fatalf("MarkedCount = %d, want 1", app.model.DedupView.MarkedCount)
+	}
+	if !app.model.DedupView.Marked[bPath] {
+		t.Fatalf("sibling not marked for deletion: %v", app.model.DedupView.Marked)
+	}
+	if app.model.Message == "Duplicate keep" {
+		t.Fatal("first keep should not show Duplicate keep toast")
+	}
+
+	for i, r := range app.model.DedupList {
+		if r.Value.AbsKey == aPath {
+			app.model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	markedBefore := app.model.DedupView.MarkedCount
+	selBefore := app.model.DedupView.Main.Selected
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone))
+	if app.model.DedupView.Main.Selected != selBefore {
+		t.Fatalf("Insert on kept file moved cursor from %d to %d", selBefore, app.model.DedupView.Main.Selected)
+	}
+	if app.model.DedupView.MarkedCount != markedBefore {
+		t.Fatalf("Insert on kept file changed MarkedCount from %d to %d", markedBefore, app.model.DedupView.MarkedCount)
+	}
+
+	for i, r := range app.model.DedupList {
+		if r.Value.AbsKey == bPath {
+			app.model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(dedupCtrlK())
+	if app.model.Message != "Duplicate keep" {
+		t.Fatalf("message = %q, want Duplicate keep toast when switching keeper", app.model.Message)
+	}
+	if !app.model.DedupView.Kept[bPath] || app.model.DedupView.Kept[aPath] {
+		t.Fatalf("keeper switch failed: Kept = %v", app.model.DedupView.Kept)
+	}
+	if !app.model.DedupView.Marked[aPath] || app.model.DedupView.Marked[bPath] {
+		t.Fatalf("keeper switch marks wrong: %v", app.model.DedupView.Marked)
+	}
+
+	for i, r := range app.model.DedupList {
+		if r.Value.AbsKey == bPath {
+			app.model.DedupView.Main.Selected = i
+			break
+		}
+	}
+	app.handleDedupViewKey(dedupCtrlK())
+	if len(app.model.DedupView.Kept) != 0 {
+		t.Fatalf("toggle-off keep left Kept = %v", app.model.DedupView.Kept)
+	}
+	if app.model.DedupView.MarkedCount != 0 {
+		t.Fatalf("toggle-off keep left MarkedCount = %d, want 0", app.model.DedupView.MarkedCount)
+	}
+}
+
+func TestDedupViewCopiesPaneKeep(t *testing.T) {
+	dir := t.TempDir()
+	rootLantern := filepath.Join(dir, "lantern.txt")
+	meadowLantern := filepath.Join(dir, "meadow", "lantern.txt")
+	orchardLantern := filepath.Join(dir, "orchard", "lantern.txt")
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "orchard"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{rootLantern, meadowLantern, orchardLantern} {
+		if err := os.WriteFile(p, []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	for i, r := range app.model.DedupCopiesList {
+		if r.Value.Kind == ui.DedupRowFile && r.Value.AbsKey == meadowLantern {
+			app.model.DedupView.Copies.Selected = i
+			break
+		}
+	}
+
+	app.handleDedupViewKey(dedupCtrlK())
+	if !app.model.DedupView.Kept[meadowLantern] {
+		t.Fatalf("copy not kept: %v", app.model.DedupView.Kept)
+	}
+	if !app.model.DedupView.Marked[rootLantern] || !app.model.DedupView.Marked[orchardLantern] {
+		t.Fatalf("other copies not marked: %v", app.model.DedupView.Marked)
+	}
+	if app.model.DedupView.Marked[meadowLantern] {
+		t.Fatal("kept copy must not be marked for deletion")
+	}
+}
+
+func TestDedupViewCopiesPaneFolderKeep(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "orchard"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{
+		"lantern.txt",
+		filepath.Join("meadow", "lantern.txt"),
+		filepath.Join("meadow", "beacon.txt"),
+		filepath.Join("orchard", "lantern.txt"),
+	} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+
+	meadowLantern := filepath.Join(dir, "meadow", "lantern.txt")
+	meadowBeacon := filepath.Join(dir, "meadow", "beacon.txt")
+	orchardLantern := filepath.Join(dir, "orchard", "lantern.txt")
+	rootLantern := filepath.Join(dir, "lantern.txt")
+
+	app.handleDedupViewKey(dedupCtrlK())
+	if !app.model.DedupView.Kept[meadowLantern] || !app.model.DedupView.Kept[meadowBeacon] {
+		t.Fatalf("meadow files not kept: %v", app.model.DedupView.Kept)
+	}
+	if !app.model.DedupView.Marked[rootLantern] || !app.model.DedupView.Marked[orchardLantern] {
+		t.Fatalf("non-meadow copies not marked: %v", app.model.DedupView.Marked)
+	}
+	if app.model.DedupView.Marked[meadowLantern] || app.model.DedupView.Marked[meadowBeacon] {
+		t.Fatalf("meadow files must not be marked: %v", app.model.DedupView.Marked)
 	}
 }
 

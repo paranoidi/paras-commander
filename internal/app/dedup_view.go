@@ -118,17 +118,8 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	case keymap.ActionDedupToggleEmpty:
 		a.dedupCtrl.ToggleIgnoreEmpty()
 		return true
-	case keymap.ActionDedupMarkRedundant:
-		a.dedupCtrl.MarkRedundantUnderSelected()
-		return true
-	case keymap.ActionDedupMarkDuplicates:
-		a.dedupCtrl.MarkDuplicatesUnderSelected()
-		return true
-	case keymap.ActionDedupMarkGroup:
-		a.dedupCtrl.ToggleGroupMark()
-		return true
 	case keymap.ActionDedupToggleNode:
-		a.dedupCtrl.ToggleNode()
+		a.dedupCtrl.DescendFromSelection()
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 		return true
 	case keymap.ActionDedupCollapse:
@@ -147,6 +138,18 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		a.dedupCtrl.ExpandAll()
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 		return true
+	case keymap.ActionDedupPrevDir:
+		a.dedupCtrl.MoveToAdjacentDir(-1)
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
+	case keymap.ActionDedupNextDir:
+		a.dedupCtrl.MoveToAdjacentDir(1)
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
+	case keymap.ActionDedupMarkKeep:
+		a.dedupCtrl.KeepSelection()
+		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
+		return true
 	case keymap.ActionPanelClearSelection:
 		a.dedupCtrl.ClearMarks()
 		return true
@@ -162,7 +165,7 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 	}
 }
 
-func dedupViewFooterKeys(global, dedup *keymap.Map) []menu.FunctionKey {
+func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.FunctionKey {
 	var out []menu.FunctionKey
 	if global != nil {
 		if lbl := global.MenuBindingLabel(keymap.ActionPanelRefresh); lbl != "" {
@@ -173,23 +176,23 @@ func dedupViewFooterKeys(global, dedup *keymap.Map) []menu.FunctionKey {
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupToggleTree); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Dirs/Groups"})
 		}
-		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupToggleSort); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Sort"})
-		}
-		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkGroup); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Mark group"})
-		}
-		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkRedundant); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Mark uniques"})
-		}
-		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkDuplicates); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Mark dups"})
+		if !treeDirs {
+			if lbl := dedup.MenuBindingLabel(keymap.ActionDedupToggleSort); lbl != "" {
+				out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Sort"})
+			}
 		}
 	}
 	if global != nil {
 		if lbl := global.MenuBindingLabel(keymap.ActionPanelClearSelection); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unmark all"})
 		}
+	}
+	if dedup != nil {
+		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkKeep); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Keep"})
+		}
+	}
+	if global != nil {
 		if lbl := global.MenuBindingLabel(keymap.ActionFileDelete); lbl != "" {
 			out = append(out, menu.FunctionKey{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete"})
 		}
@@ -234,9 +237,13 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 
 	switch nextAction {
 	case keymap.ActionPanelSelectToggle:
-		a.dedupCtrl.ToggleMark()
-		a.dedupCtrl.MoveSelection(1)
+		a.dedupCtrl.SelectToggleAndAdvance()
 		a.dedupCtrl.EnsureSelectionVisible(visible)
+		return false
+	case keymap.ActionPanelInvertSelection:
+		if a.model.DedupView.FocusCopies {
+			a.dedupCtrl.ToggleCopiesPaneSelectAll()
+		}
 		return false
 	case keymap.ActionPanelSwitch:
 		a.dedupCtrl.SwitchPane()

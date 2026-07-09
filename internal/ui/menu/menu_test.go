@@ -239,7 +239,7 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Resume paused job":  "C-r",
 		"Move up in queue":   "C-up",
 		"Move down in queue": "C-down",
-		"Clear finished":     "",
+		"Clear finished":     "F8",
 		"Back to file view":  "left",
 	}
 	for _, item := range defs[0].Items {
@@ -299,7 +299,7 @@ func TestDedupDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
-	defs := DedupDefinitions(bundle.Global, bundle.Dedup, true)
+	defs := DedupDefinitions(bundle.Global, bundle.Dedup, true, true)
 	if defs[0].ID != TopDedup {
 		t.Fatalf("first menu = %s, want TopDedup", defs[0].ID)
 	}
@@ -310,6 +310,15 @@ func TestDedupDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	})
 }
 
+func dedupMenuItemLabel(defs []Definition, action string) string {
+	for _, item := range defs[0].Items {
+		if item.Action == action {
+			return item.Label
+		}
+	}
+	return ""
+}
+
 func TestDedupToggleEmptyMenuLabel(t *testing.T) {
 	if got := DedupToggleEmptyMenuLabel(true); got != "Show empty files" {
 		t.Fatalf("ignoreEmpty=true label = %q, want Show empty files", got)
@@ -317,13 +326,44 @@ func TestDedupToggleEmptyMenuLabel(t *testing.T) {
 	if got := DedupToggleEmptyMenuLabel(false); got != "Ignore empty files" {
 		t.Fatalf("ignoreEmpty=false label = %q, want Ignore empty files", got)
 	}
-	defs := DefinitionsDedup(true)
-	if got := defs[0].Items[3].Label; got != "Show empty files" {
-		t.Fatalf("DefinitionsDedup(true) empty label = %q", got)
+	defs := DefinitionsDedup(true, true)
+	if got := dedupMenuItemLabel(defs, keymap.ActionDedupToggleEmpty); got != "Show empty files" {
+		t.Fatalf("DefinitionsDedup(true, true) empty label = %q", got)
 	}
-	defs = DefinitionsDedup(false)
-	if got := defs[0].Items[3].Label; got != "Ignore empty files" {
-		t.Fatalf("DefinitionsDedup(false) empty label = %q", got)
+	defs = DefinitionsDedup(false, true)
+	if got := dedupMenuItemLabel(defs, keymap.ActionDedupToggleEmpty); got != "Ignore empty files" {
+		t.Fatalf("DefinitionsDedup(false, true) empty label = %q", got)
+	}
+}
+
+func TestDefinitionsDedupSortActionByTreeMode(t *testing.T) {
+	groupOnlyActions := map[string]bool{
+		keymap.ActionDedupToggleSort: true,
+	}
+	for _, treeDirs := range []bool{true, false} {
+		name := map[bool]string{true: "dirs", false: "groups"}[treeDirs]
+		t.Run(name, func(t *testing.T) {
+			defs := DefinitionsDedup(false, treeDirs)
+			for _, item := range defs[0].Items {
+				if groupOnlyActions[item.Action] && treeDirs {
+					t.Fatalf("dirs mode includes group-only action %q", item.Action)
+				}
+			}
+			if treeDirs {
+				return
+			}
+			found := map[string]bool{}
+			for _, item := range defs[0].Items {
+				if groupOnlyActions[item.Action] {
+					found[item.Action] = true
+				}
+			}
+			for action := range groupOnlyActions {
+				if !found[action] {
+					t.Fatalf("groups mode missing group-only action %q", action)
+				}
+			}
+		})
 	}
 }
 
@@ -336,7 +376,7 @@ func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 		"jobs":     JobsDefinitions(bundle.Global, bundle.Jobs),
 		"commands": CommandsDefinitions(bundle.Global, bundle.Commands),
 		"messages": MessagesDefinitions(bundle.Global, bundle.Messages),
-		"dedup":    DedupDefinitions(bundle.Global, bundle.Dedup, true),
+		"dedup":    DedupDefinitions(bundle.Global, bundle.Dedup, true, true),
 	} {
 		t.Run(name, func(t *testing.T) {
 			var display *Definition

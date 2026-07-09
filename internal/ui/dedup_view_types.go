@@ -94,12 +94,13 @@ type DedupViewState struct {
 	Marked                map[string]bool // absolute paths marked for deletion
 	MarkedCount           int
 	MarkedReclaimBytes    int64
-	SortByWasted          bool // groups mode: false = order by path; true = most space wasted first
-	IgnoreEmpty           bool // hide zero-byte duplicate groups (default true, set on Open)
-	IgnoredEmptyCount     int  // files hidden by IgnoreEmpty, for the title
-	TreeDirs              bool // true = directory hierarchy tree (default); false = duplicate groups tree
-	DirsCollapsePending   bool // dirs mode: collapse all folders on first DedupDone list build
-	GroupsCollapsePending bool // groups mode: collapse all group headers on first DedupDone list build
+	Kept                  map[string]bool // absolute paths designated as survivors
+	SortByWasted          bool            // groups mode: false = order by path; true = most space wasted first
+	IgnoreEmpty           bool            // hide zero-byte duplicate groups (default true, set on Open)
+	IgnoredEmptyCount     int             // files hidden by IgnoreEmpty, for the title
+	TreeDirs              bool            // true = directory hierarchy tree (default); false = duplicate groups tree
+	DirsCollapsePending   bool            // dirs mode: collapse all folders on first DedupDone list build
+	GroupsCollapsePending bool            // groups mode: collapse all group headers on first DedupDone list build
 }
 
 func dedupGroupID(g comparepkg.DedupGroup) string { return fmt.Sprintf("g:%x", g.Hash) }
@@ -360,6 +361,72 @@ func DedupRowIndexByID(rows []DedupRow, id string) int {
 	return -1
 }
 
+// dedupFileRelUnderDirRel reports whether fileRel is a strict descendant of
+// dirRel (file directly in dir or in a nested subdirectory).
+func dedupFileRelUnderDirRel(fileRel, dirRel string) bool {
+	if dirRel == "" {
+		return true
+	}
+	prefix := dirRel + "/"
+	return strings.HasPrefix(fileRel+"/", prefix)
+}
+
+// DedupCopyPaneFiles returns every copy-pane file for mainSel's duplicate group,
+// excluding the main-selected file itself. Snapshot-backed so collapsed subtree
+// files are included.
+func DedupCopyPaneFiles(snap comparepkg.DedupSnapshot, mainSel DedupRow) []comparepkg.DedupFile {
+	return DedupCopyFilesUnderDir(snap, mainSel, "")
+}
+
+// DedupCopyFilesUnderDir returns copy-pane files under dirRel for the duplicate
+// group of mainSel, excluding the main-selected file itself. Uses snapshot data
+// so collapsed subtree files are included.
+func DedupCopyFilesUnderDir(snap comparepkg.DedupSnapshot, mainSel DedupRow, dirRel string) []comparepkg.DedupFile {
+	d := mainSel.Value
+	if d.Kind != DedupRowFile || d.GroupIdx < 0 || d.GroupIdx >= len(snap.Groups) {
+		return nil
+	}
+	excludeAbs := d.AbsKey
+	g := snap.Groups[d.GroupIdx]
+	out := make([]comparepkg.DedupFile, 0, len(g.Files))
+	for _, f := range g.Files {
+		if f.Abs.String() == excludeAbs {
+			continue
+		}
+		if dedupFileRelUnderDirRel(f.Rel, dirRel) {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// DedupSubtreeEndIndex returns the first row index after the subtree rooted at
+// from, or len(rows) when from is the last row.
+func DedupSubtreeEndIndex(rows []DedupRow, from int) int {
+	if from < 0 || from >= len(rows) {
+		return len(rows)
+	}
+	depth := rows[from].Depth
+	for i := from + 1; i < len(rows); i++ {
+		if rows[i].Depth <= depth {
+			return i
+		}
+	}
+	return len(rows)
+}
+
+// DedupNextDirRowIndex skips the subtree at from and returns the next directory
+// row index, or the subtree end when no directory row remains.
+func DedupNextDirRowIndex(rows []DedupRow, from int) int {
+	end := DedupSubtreeEndIndex(rows, from)
+	for i := end; i < len(rows); i++ {
+		if rows[i].Value.Kind == DedupRowDir {
+			return i
+		}
+	}
+	return end
+}
+
 // EnsureSelectionVisible clamps the pane's selected row and scroll offset.
 func (p *DedupPane) EnsureSelectionVisible(total int, visibleRows int) {
 	if total == 0 {
@@ -401,52 +468,218 @@ func DedupGroupFullyMarked(g comparepkg.DedupGroup, marked map[string]bool) bool
 	return len(g.Files) > 0
 }
 
-// DedupRedundantUnder returns the AbsKeys of duplicate copies under dirAbs that
-// can be deleted while leaving exactly one surviving copy of each content group
-// ("keep uniques in this folder"). When a copy already survives outside the
-// directory, every under-directory copy is redundant; otherwise the first
-// under-directory copy is kept.
-func DedupRedundantUnder(groups []comparepkg.DedupGroup, dirAbs string) []string {
-	return dedupMarkUnder(groups, dirAbs, true)
+// DedupCopyDirFullyMarked reports whether every copy-pane file under dirRel for
+// mainSel's duplicate group is marked for deletion.
+func DedupCopyDirFullyMarked(snap comparepkg.DedupSnapshot, mainSel DedupRow, dirRel string, marked map[string]bool) bool {
+	files := DedupCopyFilesUnderDir(snap, mainSel, dirRel)
+	if len(files) == 0 {
+		return false
+	}
+	for _, f := range files {
+		if !marked[f.Abs.String()] {
+			return false
+		}
+	}
+	return true
 }
 
-// DedupDuplicatesUnder returns the AbsKeys of copies under dirAbs that are also
-// stored outside it ("delete duplicates from this folder"). A group living
-// entirely under the directory is left untouched — nothing here is dropped
-// unless a copy survives elsewhere.
-func DedupDuplicatesUnder(groups []comparepkg.DedupGroup, dirAbs string) []string {
-	return dedupMarkUnder(groups, dirAbs, false)
+type dedupDirMarkStat struct {
+	total, marked int
 }
 
-// dedupMarkUnder collects under-directory copies to mark for deletion. When
-// keepOneWhenIsolated is true a group living entirely under the directory keeps
-// its first copy; when false such a group is skipped entirely.
-func dedupMarkUnder(groups []comparepkg.DedupGroup, dirAbs string, keepOneWhenIsolated bool) []string {
-	if dirAbs == "" {
+func dedupAccumulateDirMarkStats(stats map[string]*dedupDirMarkStat, f comparepkg.DedupFile, marked map[string]bool) {
+	isMarked := marked[f.Abs.String()]
+	rel := f.Rel
+	for {
+		i := strings.LastIndexByte(rel, '/')
+		if i < 0 {
+			break
+		}
+		rel = rel[:i]
+		s := stats[rel]
+		if s == nil {
+			s = &dedupDirMarkStat{}
+			stats[rel] = s
+		}
+		s.total++
+		if isMarked {
+			s.marked++
+		}
+	}
+}
+
+func dedupFullyMarkedDirSetFromStats(stats map[string]*dedupDirMarkStat) map[string]bool {
+	out := map[string]bool{}
+	for dirRel, s := range stats {
+		if s.total > 0 && s.marked == s.total {
+			out[dirRel] = true
+		}
+	}
+	if len(out) == 0 {
 		return nil
 	}
-	dir := dirAbs + "/"
-	var out []string
-	for _, g := range groups {
-		var under []string
-		outside := 0
+	return out
+}
+
+func dedupFullyMarkedDirSetForFiles(files []comparepkg.DedupFile, marked map[string]bool) map[string]bool {
+	if len(marked) == 0 || len(files) == 0 {
+		return nil
+	}
+	stats := map[string]*dedupDirMarkStat{}
+	for _, f := range files {
+		dedupAccumulateDirMarkStats(stats, f, marked)
+	}
+	return dedupFullyMarkedDirSetFromStats(stats)
+}
+
+// dedupSnapshotFullyMarkedDirSet returns DirRel keys of file-tree directory rows
+// whose entire descendant duplicate-file subtree is marked for deletion.
+func dedupSnapshotFullyMarkedDirSet(snap comparepkg.DedupSnapshot, marked map[string]bool) map[string]bool {
+	if len(marked) == 0 {
+		return nil
+	}
+	stats := map[string]*dedupDirMarkStat{}
+	for _, g := range snap.Groups {
 		for _, f := range g.Files {
-			abs := f.Abs.String()
-			// Trailing slash on both sides keeps "/a/b" from matching "/a/bc".
-			if strings.HasPrefix(abs+"/", dir) {
-				under = append(under, abs)
-			} else {
-				outside++
+			dedupAccumulateDirMarkStats(stats, f, marked)
+		}
+	}
+	return dedupFullyMarkedDirSetFromStats(stats)
+}
+
+// dedupCopyPaneFullyMarkedDirSet returns DirRel keys of copies-pane directory
+// rows whose entire descendant copy-file subtree is marked for deletion.
+func dedupCopyPaneFullyMarkedDirSet(snap comparepkg.DedupSnapshot, mainSel DedupRow, marked map[string]bool) map[string]bool {
+	if len(marked) == 0 {
+		return nil
+	}
+	d := mainSel.Value
+	if d.Kind != DedupRowFile || d.GroupIdx < 0 || d.GroupIdx >= len(snap.Groups) {
+		return nil
+	}
+	excludeAbs := d.AbsKey
+	g := snap.Groups[d.GroupIdx]
+	files := make([]comparepkg.DedupFile, 0, len(g.Files))
+	for _, f := range g.Files {
+		if f.Abs.String() == excludeAbs {
+			continue
+		}
+		files = append(files, f)
+	}
+	return dedupFullyMarkedDirSetForFiles(files, marked)
+}
+
+// DedupGroupFilesUnderDir returns files in g whose Rel path is under dirRel.
+func DedupGroupFilesUnderDir(g comparepkg.DedupGroup, dirRel string) []comparepkg.DedupFile {
+	out := make([]comparepkg.DedupFile, 0, len(g.Files))
+	for _, f := range g.Files {
+		if dedupFileRelUnderDirRel(f.Rel, dirRel) {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// DedupSnapshotFilesUnderDir returns, for each group index, the files in that
+// group whose Rel path is under dirRel. Used for main-pane folder keep.
+func DedupSnapshotFilesUnderDir(snap comparepkg.DedupSnapshot, dirRel string) map[int][]comparepkg.DedupFile {
+	out := map[int][]comparepkg.DedupFile{}
+	for gi, g := range snap.Groups {
+		files := DedupGroupFilesUnderDir(g, dirRel)
+		if len(files) > 0 {
+			out[gi] = files
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// dedupKeptDirSet returns ancestor dir rel paths (like DedupRowData.DirRel)
+// that contain at least one kept file, for the dir-row keep-subtree indicator.
+func dedupKeptDirSet(snap comparepkg.DedupSnapshot, kept map[string]bool) map[string]bool {
+	if len(kept) == 0 {
+		return nil
+	}
+	out := map[string]bool{}
+	for _, g := range snap.Groups {
+		for _, f := range g.Files {
+			if !kept[f.Abs.String()] {
+				continue
+			}
+			rel := f.Rel
+			for {
+				i := strings.LastIndexByte(rel, '/')
+				if i < 0 {
+					break
+				}
+				rel = rel[:i]
+				if out[rel] {
+					break
+				}
+				out[rel] = true
 			}
 		}
-		if outside == 0 {
-			if keepOneWhenIsolated && len(under) > 0 {
-				under = under[1:] // keep the first copy alive
-			} else {
-				under = nil // no external survivor: leave the group untouched
+	}
+	return out
+}
+
+// dedupMarkedDirSet returns the rel dir paths (ancestors of marked files) that
+// contain at least one marked file, keyed like DedupRowData.DirRel, for the
+// dir-row subtree-selection indicator.
+func dedupMarkedDirSet(snap comparepkg.DedupSnapshot, marked map[string]bool) map[string]bool {
+	if len(marked) == 0 {
+		return nil
+	}
+	out := map[string]bool{}
+	for _, g := range snap.Groups {
+		for _, f := range g.Files {
+			if !marked[f.Abs.String()] {
+				continue
+			}
+			rel := f.Rel
+			for {
+				i := strings.LastIndexByte(rel, '/')
+				if i < 0 {
+					break
+				}
+				rel = rel[:i]
+				if out[rel] {
+					break
+				}
+				out[rel] = true
 			}
 		}
-		out = append(out, under...)
+	}
+	return out
+}
+
+// dedupDangerMarkedDirSet returns ancestor dir rel paths (like DedupRowData.DirRel)
+// whose subtree contains a file from a fully-marked duplicate group.
+func dedupDangerMarkedDirSet(snap comparepkg.DedupSnapshot, marked map[string]bool) map[string]bool {
+	if len(marked) == 0 {
+		return nil
+	}
+	out := map[string]bool{}
+	for _, g := range snap.Groups {
+		if !DedupGroupFullyMarked(g, marked) {
+			continue
+		}
+		for _, f := range g.Files {
+			rel := f.Rel
+			for {
+				i := strings.LastIndexByte(rel, '/')
+				if i < 0 {
+					break
+				}
+				rel = rel[:i]
+				if out[rel] {
+					break
+				}
+				out[rel] = true
+			}
+		}
 	}
 	return out
 }

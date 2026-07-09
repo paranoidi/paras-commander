@@ -17,6 +17,9 @@ type WalkOptions struct {
 	ShowHidden    bool
 	Gitignore     *gitignore.Cache
 	ShouldSkipDir diskusage.ShouldIgnoreFolder
+	// SkipSymlinks, when true, ignores symlink entries entirely: they are not
+	// indexed and symlink targets are not followed during the walk.
+	SkipSymlinks bool
 	// OnFile, when set, is called after each regular file is indexed (1-based count).
 	OnFile func(walked int)
 }
@@ -63,6 +66,9 @@ func WalkRoot(ctx context.Context, root pathloc.Path, opts WalkOptions) ([]FileR
 		name := d.Name()
 		isDir := d.IsDir()
 		if d.Type()&fs.ModeSymlink != 0 {
+			if opts.SkipSymlinks {
+				return nil
+			}
 			if info, statErr := os.Stat(path); statErr == nil {
 				isDir = info.IsDir()
 			}
