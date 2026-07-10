@@ -78,3 +78,52 @@ func TestStripCommonPathPrefix(t *testing.T) {
 		})
 	}
 }
+
+func TestCommonDisplayPathPrefix(t *testing.T) {
+	home := "/home/alice"
+	tests := []struct {
+		name  string
+		left  string
+		right string
+		want  string
+	}{
+		{
+			name:  "compare roots under shared parent",
+			left:  PathWithHomeTilde("/home/alice/projects/paras-commander/test-cases/diff-b", home),
+			right: PathWithHomeTilde("/home/alice/projects/paras-commander/test-cases/diff-a", home),
+			want:  "~/projects/paras-commander/test-cases/",
+		},
+		{
+			name:  "no common segments",
+			left:  "/left-root/alpha",
+			right: "/right-root/beta",
+			want:  "",
+		},
+		{
+			name:  "parent and child",
+			left:  "~/a/b",
+			right: "~/a/b/c/file.txt",
+			want:  "~/a/b/",
+		},
+		{
+			name:  "different prefix roots",
+			left:  "~/a/b",
+			right: "/home/alice/a/b",
+			want:  "",
+		},
+		{
+			name:  "empty side",
+			left:  "~/solo",
+			right: "",
+			want:  "",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := CommonDisplayPathPrefix(tc.left, tc.right)
+			if got != tc.want {
+				t.Fatalf("CommonDisplayPathPrefix(%q, %q) = %q, want %q", tc.left, tc.right, got, tc.want)
+			}
+		})
+	}
+}

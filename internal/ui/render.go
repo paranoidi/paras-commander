@@ -429,7 +429,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary},
 			styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
 		if model.CompareMergeDialog.Open {
-			dialog.DrawCompareMergeDialog(screen, layout, model.CompareMergeDialog, styles)
+			dialog.DrawCompareMergeDialog(screen, layout, model.CompareMergeDialog, styles, model.UserHomeDir)
 		}
 		if model.CompareFilterDialog.Open {
 			dialog.DrawCompareFilterDialog(screen, layout, model.CompareFilterDialog, styles)

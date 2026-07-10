@@ -70,11 +70,11 @@ func (a *App) handleCompareMergeDialogKey(event *tcell.EventKey) bool {
 	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
-		case 'a', 'A':
+		case 'l', 'L':
 			d.Direction = comparepkg.MergeTowardPrimary
 			a.refreshCompareMergePreview(d)
 			return true
-		case 'i', 'I':
+		case 'r', 'R':
 			d.Direction = comparepkg.MergeTowardSecondary
 			a.refreshCompareMergePreview(d)
 			return true

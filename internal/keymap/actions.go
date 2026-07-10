@@ -86,6 +86,7 @@ const (
 	ActionDedupPrevDir     = "dedup.prev-dir"
 	ActionDedupNextDir     = "dedup.next-dir"
 	ActionDedupMarkKeep    = "dedup.mark-keep"
+	ActionDedupCompare     = "dedup.compare"
 
 	// Dialog actions
 	ActionDialogConfirm = "ui.confirm"
@@ -280,6 +281,7 @@ var KnownActions = map[string]struct{}{
 	ActionDedupPrevDir:     {},
 	ActionDedupNextDir:     {},
 	ActionDedupMarkKeep:    {},
+	ActionDedupCompare:     {},
 
 	ActionDialogConfirm: {},
 	ActionDialogCancel:  {},

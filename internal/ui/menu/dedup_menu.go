@@ -18,6 +18,7 @@ func DefinitionsDedup(ignoreEmpty, treeDirs bool) []Definition {
 	items := []Item{
 		{Action: keymap.ActionDedupClose, Label: "Back to file view", Shortcut: 'b'},
 		{Action: keymap.ActionPanelRefresh, Label: "Refresh", Shortcut: 'r'},
+		{Action: keymap.ActionDedupCompare, Label: "Compare directories", Shortcut: 'd'},
 	}
 	if !treeDirs {
 		items = append(items, Item{Action: keymap.ActionDedupToggleSort, Label: "Sort order", Shortcut: 's'})

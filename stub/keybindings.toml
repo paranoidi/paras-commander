@@ -110,6 +110,7 @@
 
 [dedup]
   "dedup.close" = ["esc"]
+  "dedup.compare" = ["C-M-c"]
   "dedup.toggle-sort" = ["C-s"]
   "dedup.toggle-empty" = ["M-e"]
   "dedup.mark-redundant" = ["C-k"]

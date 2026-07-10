@@ -53,6 +53,14 @@ type Handler struct {
 	wakePending   atomic.Bool
 	sessionCtx    context.Context
 	sessionCancel context.CancelFunc
+
+	// Open arguments replayed by Refresh; onClose is the return hook fired once
+	// by Close (dedup detour), never by Refresh.
+	openedPrimary    pathloc.Path
+	openedSecondary  pathloc.Path
+	openedShowHidden bool
+	openedGate       diskusage.ListingVolumeGate
+	onClose          func()
 }
 
 // WakePayload wakes PollEvent when compare session updates.
@@ -87,17 +95,42 @@ func (h *Handler) Open() {
 	if ui.IsAuxiliaryView(h.model.ViewMode) && h.model.ViewMode != ui.ViewCompare {
 		return
 	}
-	h.Close()
-	primary := h.model.Primary.Path
-	secondary := h.model.Secondary.Path
+	volGate := diskusage.ListingVolumeGate{}
+	if h.config.Compare.StayOnVolumeDefault {
+		volGate = diskusage.ListingVolumeGate{
+			Enabled: h.model.Primary.ListingDeviceValid,
+			RefDev:  h.model.Primary.ListingDevice,
+			Valid:   h.model.Primary.ListingDeviceValid,
+		}
+	}
+	h.open(h.model.Primary.Path, h.model.Secondary.Path, h.model.Primary.ShowHidden, volGate, nil)
+}
+
+// OpenPaths opens compare on two arbitrary local roots (the dedup entry point).
+// No aux-view guard (the caller owns the context) and no panel-anchored volume
+// gate (the roots may live on any device). onClose fires exactly once when the
+// view is closed — but not on Refresh. Returns false when validation fails,
+// leaving the current view untouched.
+func (h *Handler) OpenPaths(primary, secondary pathloc.Path, showHidden bool, onClose func()) bool {
+	return h.open(primary, secondary, showHidden, diskusage.ListingVolumeGate{}, onClose)
+}
+
+func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate diskusage.ListingVolumeGate, onClose func()) bool {
+	// Validate before any teardown so a failed open is a true no-op for the
+	// caller's view (dedup stays up when the pair overlaps).
 	if primary.IsZero() || secondary.IsZero() {
-		h.host.SetTransientMessage("Compare: both panels need a path", ui.MessageUrgencyError)
-		return
+		h.host.SetTransientMessage("Compare: both sides need a path", ui.MessageUrgencyError)
+		return false
 	}
 	if pathloc.TreesOverlap(primary, secondary) {
-		h.host.SetTransientMessage("Compare: panels must point to separate directory trees", ui.MessageUrgencyError)
-		return
+		h.host.SetTransientMessage("Compare: paths must point to separate directory trees", ui.MessageUrgencyError)
+		return false
 	}
+	h.teardown()
+	h.openedPrimary, h.openedSecondary = primary, secondary
+	h.openedShowHidden = showHidden
+	h.openedGate = volGate
+	h.onClose = onClose
 
 	h.model.ViewMode = ui.ViewCompare
 	h.model.MenuDefinitions = h.host.CompareMenuDefinitions()
@@ -107,15 +140,6 @@ func (h *Handler) Open() {
 		FocusColumn: ui.CompareColumnPrimary,
 	}
 
-	stayOnVolume := h.config.Compare.StayOnVolumeDefault
-	volGate := diskusage.ListingVolumeGate{}
-	if stayOnVolume {
-		volGate = diskusage.ListingVolumeGate{
-			Enabled: h.model.Primary.ListingDeviceValid,
-			RefDev:  h.model.Primary.ListingDevice,
-			Valid:   h.model.Primary.ListingDeviceValid,
-		}
-	}
 	shouldSkip := diskusage.ComposeListingVolumeIgnore(h.diskIgnore, volGate)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -133,7 +157,7 @@ func (h *Handler) Open() {
 
 	h.session = comparepkg.Start(ctx, primary, secondary, comparepkg.Options{
 		Walk: comparepkg.WalkOptions{
-			ShowHidden:    h.model.Primary.ShowHidden,
+			ShowHidden:    showHidden,
 			Gitignore:     h.gitignore,
 			ShouldSkipDir: shouldSkip,
 		},
@@ -143,10 +167,24 @@ func (h *Handler) Open() {
 		OnUpdate:     func(_ comparepkg.Snapshot) { h.postWake() },
 	})
 	h.model.CompareSnapshot = h.session.Snapshot()
+	return true
 }
 
-// Close cancels compare and returns to the browser.
+// Close cancels compare, returns to the browser, and fires the return hook once.
 func (h *Handler) Close() {
+	h.teardown()
+	if cb := h.onClose; cb != nil {
+		h.onClose = nil
+		cb() // runs with ViewMode already reset, so the caller may re-enter its view
+	}
+}
+
+// DiscardReturn drops the return hook so the next Close falls back to the browser.
+func (h *Handler) DiscardReturn() { h.onClose = nil }
+
+// teardown cancels the session and clears compare view state. It never touches
+// onClose, so Refresh (which reopens via open → teardown) keeps the return hook.
+func (h *Handler) teardown() {
 	if h.sessionCancel != nil {
 		h.sessionCancel()
 	}
@@ -175,12 +213,12 @@ func (h *Handler) PollUpdates(_ WakePayload) bool {
 	return false
 }
 
-// Refresh re-runs compare with current panel paths.
+// Refresh re-runs compare with the roots it was opened on, keeping the return hook.
 func (h *Handler) Refresh() {
 	if h.model.ViewMode != ui.ViewCompare {
 		return
 	}
-	h.Open()
+	h.open(h.openedPrimary, h.openedSecondary, h.openedShowHidden, h.openedGate, h.onClose)
 }
 
 // CycleFilter advances the category filter.

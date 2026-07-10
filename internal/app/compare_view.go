@@ -174,6 +174,7 @@ func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 	case tcell.KeyEnd:
 		a.selectCompareEdge(true)
 	case tcell.KeyEnter:
+		a.compareCtrl.DiscardReturn()
 		a.compareCtrl.NavigateFromSelection(visible)
 		a.closeCompareView()
 	}

@@ -156,6 +156,12 @@ func (a *App) tryDispatchDedup(actionID string) bool {
 		a.dedupCtrl.KeepSelection()
 		a.dedupCtrl.EnsureSelectionVisible(a.dedupVisibleRows())
 		return true
+	case keymap.ActionDedupCompare:
+		if p, s, ok := a.dedupCtrl.CompareDirsFromSelection(); ok {
+			a.compareCtrl.OpenPaths(p, s, a.activePanel().ShowHidden,
+				func() { a.dedupCtrl.ReopenPreservingState() })
+		}
+		return true
 	case keymap.ActionPanelClearSelection:
 		a.dedupCtrl.ClearMarks()
 		return true
@@ -196,6 +202,9 @@ func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.Functi
 	if dedup != nil {
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkKeep); lbl != "" {
 			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Keep"})
+		}
+		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupCompare); lbl != "" {
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Compare"})
 		}
 	}
 	if global != nil {

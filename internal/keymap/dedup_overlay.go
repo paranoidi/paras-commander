@@ -16,6 +16,7 @@ func DefaultDedupOverlayKeys() map[string][]string {
 		ActionDedupPrevDir:     {"M-up"},
 		ActionDedupNextDir:     {"M-down"},
 		ActionDedupMarkKeep:    {"C-k"},
+		ActionDedupCompare:     {"C-M-c"}, // matches global panel.compare-panels; overlay shadows it in-view
 	}
 }
 

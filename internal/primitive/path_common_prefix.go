@@ -24,6 +24,44 @@ func StripCommonPathPrefix(left, right string) (string, string) {
 	return joinDisplayPathSuffix(leftSegs[n:]), joinDisplayPathSuffix(rightSegs[n:])
 }
 
+// CommonDisplayPathPrefix returns the shared leading display path (with trailing
+// slash) when left and right share path segments under the same root prefix
+// (~/ or /). Empty when inputs differ in root, share no segments, or either is
+// empty.
+func CommonDisplayPathPrefix(left, right string) string {
+	if left == "" || right == "" {
+		return ""
+	}
+	leftPrefix, leftSegs := splitDisplayPath(left)
+	rightPrefix, rightSegs := splitDisplayPath(right)
+	if leftPrefix != rightPrefix {
+		return ""
+	}
+	n := 0
+	for n < len(leftSegs) && n < len(rightSegs) && leftSegs[n] == rightSegs[n] {
+		n++
+	}
+	if n == 0 {
+		return ""
+	}
+	return joinDisplayPathPrefix(leftPrefix, leftSegs[:n])
+}
+
+func joinDisplayPathPrefix(prefix string, segs []string) string {
+	if len(segs) == 0 {
+		return prefix
+	}
+	body := strings.Join(segs, "/")
+	switch prefix {
+	case "~/":
+		return "~/" + body + "/"
+	case "/":
+		return "/" + body + "/"
+	default:
+		return body + "/"
+	}
+}
+
 func splitDisplayPath(s string) (prefix string, segs []string) {
 	switch {
 	case strings.HasPrefix(s, "~/"):

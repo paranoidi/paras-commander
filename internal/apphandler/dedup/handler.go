@@ -53,6 +53,19 @@ type Handler struct {
 
 	session     *comparepkg.DedupSession
 	wakePending atomic.Bool
+	pending     *dedupPendingState
+}
+
+// dedupPendingState carries marks/keeps/tree state across a rescan so returning
+// from a compare-directories detour restores the view for paths still present.
+type dedupPendingState struct {
+	marked, kept                        map[string]bool
+	mainCollapsed, copiesCollapsed      map[string]bool
+	treeDirs, sortByWasted, ignoreEmpty bool
+	prevExpandable                      []string
+	mainRowID, mainRowAbsKey            string
+	focusCopies                         bool
+	copiesRowID, copiesRowAbsKey        string
 }
 
 // New constructs a dedup handler.
@@ -82,13 +95,23 @@ func (h *Handler) Open() {
 	if ui.IsAuxiliaryView(h.model.ViewMode) && h.model.ViewMode != ui.ViewDedup {
 		return
 	}
+	p := &h.model.Primary
+	if h.model.ActivePanel == ui.SecondaryPanel {
+		p = &h.model.Secondary
+	}
+	h.openRoot(p.Path)
+}
+
+// openRoot cancels any previous scan and starts a new one on root. Walk options
+// (hidden files, volume gate) still come from the active panel — panels cannot
+// navigate while the dedup or compare view is open.
+func (h *Handler) openRoot(root pathloc.Path) {
 	h.Close()
 
 	p := &h.model.Primary
 	if h.model.ActivePanel == ui.SecondaryPanel {
 		p = &h.model.Secondary
 	}
-	root := p.Path
 	if root.IsZero() {
 		h.host.SetTransientMessage("Find duplicates: panel needs a path", ui.MessageUrgencyError)
 		return
@@ -146,6 +169,7 @@ func (h *Handler) Open() {
 
 // Close cancels the scan and returns to the browser.
 func (h *Handler) Close() {
+	h.pending = nil
 	if h.session != nil {
 		h.session.Close()
 		h.session = nil
@@ -201,8 +225,70 @@ func (h *Handler) enterResultsView() {
 	h.model.ViewMode = ui.ViewDedup
 	h.model.MenuDefinitions = h.host.DedupMenuDefinitions()
 	h.model.Menu.ActiveMenu = menu.DefaultIndexDedup()
+	h.applyPending(snap)
 	h.syncDedupList()
+	h.restorePendingCursor()
 	h.ensureSelectionVisible(0)
+}
+
+// applyPending restores tree toggles, collapse maps, and marks/keeps captured by
+// ReopenPreservingState, pruning entries no longer present in the new snapshot.
+// No-op when no rescan-with-state is pending.
+func (h *Handler) applyPending(snap comparepkg.DedupSnapshot) {
+	p := h.pending
+	if p == nil {
+		return
+	}
+	st := &h.model.DedupView
+	st.TreeDirs = p.treeDirs
+	st.SortByWasted = p.sortByWasted
+	st.IgnoreEmpty = p.ignoreEmpty
+	st.Main.Collapsed = p.mainCollapsed
+	st.Copies.Collapsed = p.copiesCollapsed
+	// Only the restored mode keeps its collapse state; the other mode still gets
+	// its collapse-all first build. Nodes new in the rescan come up collapsed.
+	if p.treeDirs {
+		st.DirsCollapsePending = false
+	} else {
+		st.GroupsCollapsePending = false
+	}
+	ui.DedupCollapseNewIDs(&st.Main, p.prevExpandable, ui.DedupExpandableIDs(snap, *st))
+	for _, g := range snap.Groups {
+		for _, f := range g.Files {
+			abs := f.Abs.String()
+			if p.marked[abs] {
+				h.setMark(abs, g.Size, true)
+			}
+			if p.kept[abs] {
+				st.Kept[abs] = true
+			}
+		}
+	}
+}
+
+// restorePendingCursor re-locates the main cursor by its pre-rescan row ID (mark
+// key fallback) and drops the pending state. Runs after syncDedupList.
+func (h *Handler) restorePendingCursor() {
+	p := h.pending
+	if p == nil {
+		return
+	}
+	h.pending = nil
+	st := &h.model.DedupView
+	if i := ui.DedupRowIndexByID(h.model.DedupList, p.mainRowID); i >= 0 {
+		st.Main.Selected = i
+	} else if i := ui.DedupRowIndexByID(h.model.DedupList, p.mainRowAbsKey); i >= 0 {
+		st.Main.Selected = i
+	}
+	h.syncCopies()
+	if i := ui.DedupRowIndexByID(h.model.DedupCopiesList, p.copiesRowID); i >= 0 {
+		st.Copies.Selected = i
+	} else if i := ui.DedupRowIndexByID(h.model.DedupCopiesList, p.copiesRowAbsKey); i >= 0 {
+		st.Copies.Selected = i
+	}
+	if p.focusCopies && len(h.model.DedupCopiesList) > 0 {
+		st.FocusCopies = true
+	}
 }
 
 func (h *Handler) finishScan(message string, urgency ui.MessageUrgency) {
@@ -225,6 +311,73 @@ func (h *Handler) Refresh() {
 		return
 	}
 	h.Open()
+}
+
+// ReopenPreservingState re-scans the previous snapshot root and, once the new
+// scan completes, restores marks, keeps, collapse state, and the cursor for
+// entries still present in the new results. Used as the return hook when
+// compare-directories was opened from this view.
+func (h *Handler) ReopenPreservingState() {
+	root := h.model.DedupSnapshot.Root
+	if root.IsZero() {
+		h.Open()
+		return
+	}
+	st := h.model.DedupView
+	p := dedupPendingState{
+		marked:          st.Marked,
+		kept:            st.Kept,
+		mainCollapsed:   st.Main.Collapsed,
+		copiesCollapsed: st.Copies.Collapsed,
+		treeDirs:        st.TreeDirs,
+		sortByWasted:    st.SortByWasted,
+		ignoreEmpty:     st.IgnoreEmpty,
+		prevExpandable:  ui.DedupExpandableIDs(h.model.DedupSnapshot, st),
+	}
+	if row, ok := h.paneRow(&h.model.DedupView.Main, h.model.DedupList); ok {
+		p.mainRowID, p.mainRowAbsKey = row.ID, row.Value.AbsKey
+	}
+	p.focusCopies = st.FocusCopies
+	if row, ok := h.paneRow(&st.Copies, h.model.DedupCopiesList); ok {
+		p.copiesRowID, p.copiesRowAbsKey = row.ID, row.Value.AbsKey
+	}
+	// Capture above happens before openRoot (its Close prelude wipes the model);
+	// pending is set after (the same prelude clears h.pending).
+	h.openRoot(root)
+	if h.session == nil {
+		return // openRoot refused; message already shown
+	}
+	h.pending = &p
+}
+
+// CompareDirsFromSelection resolves the directory pair for compare-directories:
+// primary = the main-pane selected file's directory, secondary = the directory
+// under the copies-pane cursor (dir row → scan root + rel, file row → parent).
+// Emits a transient message and returns ok=false when no pair can be formed.
+func (h *Handler) CompareDirsFromSelection() (primary, secondary pathloc.Path, ok bool) {
+	st := &h.model.DedupView
+	mainRow, okMain := h.paneRow(&st.Main, h.model.DedupList)
+	if !okMain || mainRow.Value.Kind != ui.DedupRowFile {
+		h.host.SetTransientMessage("Compare: select a duplicate file first", ui.MessageUrgencyInfo)
+		return pathloc.Path{}, pathloc.Path{}, false
+	}
+	copyRow, okCopy := h.paneRow(&st.Copies, h.model.DedupCopiesList)
+	if !okCopy {
+		h.host.SetTransientMessage("Compare: no copies to compare against", ui.MessageUrgencyInfo)
+		return pathloc.Path{}, pathloc.Path{}, false
+	}
+	primary = mainRow.Value.File.Abs.Parent()
+	if copyRow.Value.Kind == ui.DedupRowDir {
+		dir, err := comparepkg.JoinRel(h.model.DedupSnapshot.EffectiveDisplayRoot(), copyRow.Value.DirRel)
+		if err != nil {
+			h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyError)
+			return pathloc.Path{}, pathloc.Path{}, false
+		}
+		secondary = dir
+	} else {
+		secondary = copyRow.Value.File.Abs.Parent()
+	}
+	return primary, secondary, true
 }
 
 // EnsureSelectionVisible keeps both panes' cursor rows visible for visibleRows height.

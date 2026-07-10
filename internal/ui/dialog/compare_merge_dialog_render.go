@@ -8,41 +8,27 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
-func compareMergeDialogHeight() int {
-	// Destination: label + blank + radio1 + path1 + radio2 + path2 + sep = 7
+func compareMergeDialogHeight(showSharedPrefix bool) int {
+	// Destination: label + blank + [optional shared] + radio1 + path1 + radio2 + path2 + sep
+	dest := 7
+	if showSharedPrefix {
+		dest++
+	}
 	// Transfer:  label + blank + 2 checkboxes + sep = 5
 	// Operation: label + blank + 2 radios + sep = 5
 	// preview + blank + button = 3
-	y := 1       // first inner row below top border
-	y += 7       // direction section
-	y += 5       // transfer section
-	y += 5       // operation section
-	y += 3       // preview + blank above buttons + button row
+	y := 1 + dest + 5 + 5 + 3
 	return y + 1 // inner bottom margin + bottom border
 }
 
-func truncateMergeDialogPath(path string, maxWidth int) string {
-	if maxWidth <= 0 {
-		return ""
-	}
-	runes := []rune(path)
-	n := len(runes)
-	if n <= maxWidth {
-		return path
-	}
-	if maxWidth <= 1 {
-		return "…"
-	}
-	return "…" + string(runes[n-(maxWidth-1):])
-}
-
 // DrawCompareMergeDialog paints the compare merge modal.
-func DrawCompareMergeDialog(screen tcell.Screen, layout Layout, state CompareMergeDialogState, styles theme.Theme) {
+func DrawCompareMergeDialog(screen tcell.Screen, layout Layout, state CompareMergeDialogState, styles theme.Theme, userHomeDir string) {
 	width := PreferredFormDialogWidth
 	if width < 52 {
 		width = 52
 	}
-	rect := draw.CenteredDialogRect(layout, width, compareMergeDialogHeight())
+	sharedPrefix, leftPath, rightPath := FormatCompareMergePaths(state.PrimaryPath, state.SecondaryPath, userHomeDir)
+	rect := draw.CenteredDialogRect(layout, width, compareMergeDialogHeight(sharedPrefix != ""))
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Merge", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 
@@ -58,13 +44,18 @@ func DrawCompareMergeDialog(screen tcell.Screen, layout Layout, state CompareMer
 	// Destination section
 	primitive.Text(screen, draw.DialogTextX(rect), y, draw.DialogContentWidth(rect), "Destination:", pathStyle)
 	y += 2
-	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Active location", 'A', state.Direction == comparepkg.MergeTowardPrimary, state.Focus == 0, styles)
+	if sharedPrefix != "" {
+		primitive.Text(screen, draw.DialogTextX(rect), y, draw.DialogContentWidth(rect),
+			"Shared: "+primitive.FitPathForWidth(sharedPrefix, draw.DialogContentWidth(rect)-len("Shared: ")), pathStyle)
+		y++
+	}
+	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Left side", 'L', state.Direction == comparepkg.MergeTowardPrimary, state.Focus == 0, styles)
 	y++
-	primitive.Text(screen, draw.DialogTextX(rect)+pathIndent, y, pathAvailW, truncateMergeDialogPath(state.PrimaryPath, pathAvailW), pathStyle)
+	primitive.Text(screen, draw.DialogTextX(rect)+pathIndent, y, pathAvailW, primitive.FitPathForWidth(leftPath, pathAvailW), pathStyle)
 	y++
-	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Inactive location", 'I', state.Direction == comparepkg.MergeTowardSecondary, state.Focus == 1, styles)
+	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Right side", 'R', state.Direction == comparepkg.MergeTowardSecondary, state.Focus == 1, styles)
 	y++
-	primitive.Text(screen, draw.DialogTextX(rect)+pathIndent, y, pathAvailW, truncateMergeDialogPath(state.SecondaryPath, pathAvailW), pathStyle)
+	primitive.Text(screen, draw.DialogTextX(rect)+pathIndent, y, pathAvailW, primitive.FitPathForWidth(rightPath, pathAvailW), pathStyle)
 	y++
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++

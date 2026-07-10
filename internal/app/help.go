@@ -429,6 +429,7 @@ func (a *App) activateCompareHelpAction(actionID string) bool {
 	case keymap.ActionNavBottom:
 		a.selectCompareEdge(true)
 	case keymap.ActionNavOpen:
+		a.compareCtrl.DiscardReturn()
 		a.compareCtrl.NavigateFromSelection(visible)
 		a.closeCompareView()
 	}

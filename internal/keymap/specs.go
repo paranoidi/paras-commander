@@ -451,6 +451,14 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"keep", "survivor", "duplicate", "dedup"},
 		},
+		{
+			ID:          ActionDedupCompare,
+			Views:       HelpDedup,
+			Title:       "Compare directories",
+			Section:     "Find duplicates",
+			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
+			Keywords:    []string{"compare", "diff", "directory", "merge"},
+		},
 
 		// ── Disk usage ──
 		{
