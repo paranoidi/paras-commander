@@ -1589,6 +1589,75 @@ func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
 	}
 }
 
+// TestOpenDirInOtherCarriesShowHiddenToInactivePanel guards against the inactive panel
+// silently re-applying gitignore filtering when the source panel had it disabled: opening
+// a gitignored directory into the other panel must carry ShowHidden over, otherwise every
+// entry under it (also matched by the same ignore rule) is filtered out and the panel
+// renders empty with no explanation.
+func TestOpenDirInOtherCarriesShowHiddenToInactivePanel(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".gitignore"), []byte("excluded/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	excludedSub := filepath.Join(root, "excluded", "nested")
+	if err := os.MkdirAll(excludedSub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(excludedSub, "leaf.txt"))
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	app.model.ActivePanel = ui.PrimaryPanel
+	app.dispatch(keymap.ActionPanelToggleHidden)
+	left := app.panelByID(ui.PrimaryPanel)
+	if !left.ShowHidden {
+		t.Fatal("left ShowHidden = false, want true after toggle")
+	}
+
+	for i := 0; i < left.VisibleEntryCount(); i++ {
+		entry, _, ok := left.VisibleEntry(i)
+		if ok && entry.Name == "excluded" {
+			left.Cursor = i
+			break
+		}
+	}
+	app.dispatch(keymap.ActionNavOpen)
+	if got, want := filepath.Clean(left.PathString()), filepath.Clean(filepath.Join(root, "excluded")); got != want {
+		t.Fatalf("left cwd = %q want %q", got, want)
+	}
+
+	for i := 0; i < left.VisibleEntryCount(); i++ {
+		entry, _, ok := left.VisibleEntry(i)
+		if ok && entry.Name == "nested" {
+			left.Cursor = i
+			break
+		}
+	}
+	app.dispatch(keymap.ActionPanelOpenDirInOther)
+
+	right := app.panelByID(ui.SecondaryPanel)
+	if got, want := filepath.Clean(right.PathString()), filepath.Clean(excludedSub); got != want {
+		t.Fatalf("right cwd = %q want %q", got, want)
+	}
+	if !right.ShowHidden {
+		t.Fatal("right ShowHidden = false, want true carried over from left panel")
+	}
+	if right.GitignoreActive {
+		t.Fatal("right GitignoreActive = true, want false once filtering is disabled")
+	}
+	if right.VisibleEntryCount() != 1 {
+		t.Fatalf("right entries = %d, want 1 (leaf.txt visible, not filtered by inherited gitignore rule)", right.VisibleEntryCount())
+	}
+	entry, _, ok := right.VisibleEntry(0)
+	if !ok || entry.Name != "leaf.txt" {
+		t.Fatalf("right entry = %v, want leaf.txt", entry)
+	}
+}
+
 func TestOpenActivePathInInactivePanel(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")

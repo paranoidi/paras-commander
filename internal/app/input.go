@@ -840,6 +840,7 @@ func (a *App) dispatch(actionID string) bool {
 		if !ok || entry.Type != localfs.EntryDirectory {
 			return false
 		}
+		a.panelByID(a.inactivePanelID()).ShowHidden = activePanel.ShowHidden
 		if err := a.navigatePanelToDirectory(a.inactivePanelID(), entry.Path, ""); err != nil {
 			a.setErrorMessage("Open in other panel failed", err)
 			return false
@@ -852,6 +853,7 @@ func (a *App) dispatch(actionID string) bool {
 		if a.model.ViewMode != ui.ViewBrowser {
 			return false
 		}
+		a.panelByID(a.inactivePanelID()).ShowHidden = activePanel.ShowHidden
 		if err := a.navigatePanelToDirectory(a.inactivePanelID(), activePanel.PathString(), ""); err != nil {
 			a.setErrorMessage("Open current path in other panel failed", err)
 			return false
