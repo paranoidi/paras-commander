@@ -472,8 +472,8 @@ func TestToggleHiddenReloadsPanelEntries(t *testing.T) {
 		t.Fatalf("len(Entries) = %d, want only visible entry", len(state.Entries))
 	}
 
-	if err := state.ToggleHidden(5); err != nil {
-		t.Fatalf("ToggleHidden() error = %v", err)
+	if err := state.SetShowHidden(true, 5); err != nil {
+		t.Fatalf("SetShowHidden() error = %v", err)
 	}
 
 	if !state.ShowHidden {
@@ -499,8 +499,8 @@ func TestToggleHiddenPreservesCurrentEntryWhenStillVisible(t *testing.T) {
 	}
 	state.Cursor = 1
 
-	if err := state.ToggleHidden(5); err != nil {
-		t.Fatalf("ToggleHidden() error = %v", err)
+	if err := state.SetShowHidden(true, 5); err != nil {
+		t.Fatalf("SetShowHidden() error = %v", err)
 	}
 
 	entry, ok := state.CurrentEntry()

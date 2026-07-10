@@ -813,12 +813,10 @@ func (a *App) dispatch(actionID string) bool {
 		}
 		a.setTransientMessage(fmt.Sprintf("Sort %s (%s)", direction, activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelToggleHidden:
-		if err := a.panelByID(a.model.ActivePanel).ToggleHidden(viewportRows); err != nil {
+		if err := a.toggleHiddenGlobal(); err != nil {
 			a.setErrorMessage("Toggle hidden failed", err)
 			return false
 		}
-		label := panelLabel(a.model.ActivePanel)
-		a.setTransientMessage(a.paneHiddenVisibilityMessage(label, a.activePanel().ShowHidden), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelFilterOpen:
 		activePanel.OpenFilter(viewportRows)
 		a.clearTransientMessage()

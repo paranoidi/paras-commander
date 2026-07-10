@@ -265,11 +265,10 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 	case keymap.ActionPanelSortDialog:
 		a.openSortDialogForPanel(panelScope)
 	case keymap.ActionPanelToggleHidden:
-		if err := target.ToggleHidden(a.panelViewportRows(panelScope)); err != nil {
+		if err := a.toggleHiddenGlobal(); err != nil {
 			a.setErrorMessage(label+" toggle hidden failed", err)
 			return
 		}
-		a.setTransientMessage(a.paneHiddenVisibilityMessage(label, target.ShowHidden), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelRefresh:
 		if err := target.Refresh(a.panelViewportRows(panelScope)); err != nil {
 			a.setErrorMessage(label+" refresh failed", err)

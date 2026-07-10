@@ -1313,7 +1313,7 @@ func TestMenuInputUsesMenuStateInsteadOfPanelNavigation(t *testing.T) {
 	}
 }
 
-func TestLeftMenuToggleHiddenTargetsPrimaryPanel(t *testing.T) {
+func TestLeftMenuToggleHiddenIsGlobal(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, ".hidden"))
 	writeFile(t, filepath.Join(dir, "visible.txt"))
@@ -1349,14 +1349,51 @@ func TestLeftMenuToggleHiddenTargetsPrimaryPanel(t *testing.T) {
 	if !app.model.Primary.ShowHidden {
 		t.Fatal("left ShowHidden = false, want true")
 	}
-	if app.model.Secondary.ShowHidden {
-		t.Fatal("right ShowHidden = true, want false")
+	if !app.model.Secondary.ShowHidden {
+		t.Fatal("right ShowHidden = false, want true (toggle is global, not panel-scoped)")
 	}
 	if len(app.model.Primary.Entries) != 2 {
 		t.Fatalf("left len(Entries) = %d, want hidden and visible entries", len(app.model.Primary.Entries))
 	}
-	if app.model.Message != "Primary panel hidden and ignored files shown" {
-		t.Fatalf("Message = %q, want primary panel hidden visibility message", app.model.Message)
+	if app.model.Message != "Hidden and ignored files shown" {
+		t.Fatalf("Message = %q, want global hidden visibility message", app.model.Message)
+	}
+}
+
+// TestToggleHiddenConvergesDivergedPanels guards the set-to-value semantics: even when
+// the panels somehow diverge, one toggle brings both to the same state (flip-each
+// semantics would keep them diverged forever).
+func TestToggleHiddenConvergesDivergedPanels(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "visible.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.Secondary.ShowHidden = true
+	app.model.ActivePanel = ui.PrimaryPanel
+
+	app.dispatch(keymap.ActionPanelToggleHidden)
+	if !app.model.Primary.ShowHidden || !app.model.Secondary.ShowHidden {
+		t.Fatalf("ShowHidden = (%v, %v), want both true after toggle from diverged state",
+			app.model.Primary.ShowHidden, app.model.Secondary.ShowHidden)
+	}
+
+	app.dispatch(keymap.ActionPanelToggleHidden)
+	if app.model.Primary.ShowHidden || app.model.Secondary.ShowHidden {
+		t.Fatalf("ShowHidden = (%v, %v), want both false after second toggle",
+			app.model.Primary.ShowHidden, app.model.Secondary.ShowHidden)
 	}
 }
 

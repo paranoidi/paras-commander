@@ -124,7 +124,7 @@ type State struct {
 	RenameMarksByDir map[string]map[string]struct{}
 
 	// OnDirectoryChange is called after every successful directory load (Enter, Parent,
-	// HistoryBackward/Forward, Refresh, ToggleHidden, etc.). The app uses this to check whether disk-usage idle sorting
+	// HistoryBackward/Forward, Refresh, SetShowHidden, etc.). The app uses this to check whether disk-usage idle sorting
 	// can be applied immediately or needs to be deferred.
 	OnDirectoryChange func()
 	// FileListViewportRows, when set by the app, returns the live file-list viewport row count
@@ -258,15 +258,20 @@ func (s *State) ApplyPeriodicRefresh(listingLoc pathloc.Path, backendEntries []f
 	return true, nil
 }
 
-// ToggleHidden flips hidden-file visibility and reloads the current directory using the same cursor rules as Refresh.
-func (s *State) ToggleHidden(viewportRows int) error {
+// SetShowHidden applies hidden-file visibility and reloads the current directory using the
+// same cursor rules as Refresh. No-op when the value is unchanged. Visibility is a global
+// app setting; the app assigns the same value to every panel so they can never diverge.
+func (s *State) SetShowHidden(shown bool, viewportRows int) error {
+	if s.ShowHidden == shown {
+		return nil
+	}
 	priorCursor := s.Cursor
 	entry, ok := s.CurrentEntry()
 	selectedName := ""
 	if ok {
 		selectedName = entry.Name
 	}
-	s.ShowHidden = !s.ShowHidden
+	s.ShowHidden = shown
 	return s.load(s.Path, selectedName, viewportRows, priorCursor, remoteLoadOpts{})
 }
 
@@ -832,7 +837,7 @@ func removePathFromSlice(slice []string, target string) []string {
 
 // shouldCenterCursorOnListing reports whether ApplyListing should center the cursor after
 // restoring a highlight. Recall and explicit selections (e.g. Parent) center on chdir;
-// same-directory reloads (Refresh, ToggleHidden) keep minimal scroll.
+// same-directory reloads (Refresh, SetShowHidden) keep minimal scroll.
 func shouldCenterCursorOnListing(previousPath, listingLoc pathloc.Path, centerRecalled bool, selectedName string, indexFallback int) bool {
 	if previousPath.Equal(listingLoc) {
 		return false
