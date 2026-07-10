@@ -39,8 +39,11 @@ type Theme struct {
 	MenuDropdownAccent   tcell.Style
 	MenuDetail           tcell.Style
 
-	PanelActiveFrame     tcell.Style
-	PanelInactiveFrame   tcell.Style
+	PanelActiveFrame   tcell.Style
+	PanelInactiveFrame tcell.Style
+	// PanelTargetFrame overrides the border for a panel whose current directory is the
+	// resolved Copy/Move/Flatten destination (see App.updateDestinationTargetPanels).
+	PanelTargetFrame     tcell.Style
 	PanelActiveSurface   tcell.Style
 	PanelInactiveSurface tcell.Style
 	PanelActiveTitle     tcell.Style
@@ -708,6 +711,7 @@ var requiredStyleKeys = []string{
 	"menu.detail",
 	"panel.active.frame",
 	"panel.inactive.frame",
+	"panel.target.frame",
 	"panel.active.surface",
 	"panel.inactive.surface",
 	"panel.active.title",
@@ -1190,6 +1194,7 @@ func parse(data []byte) (Theme, error) {
 
 		PanelActiveFrame:                    styles["panel.active.frame"],
 		PanelInactiveFrame:                  styles["panel.inactive.frame"],
+		PanelTargetFrame:                    styles["panel.target.frame"],
 		PanelActiveSurface:                  styles["panel.active.surface"],
 		PanelInactiveSurface:                styles["panel.inactive.surface"],
 		PanelActiveTitle:                    styles["panel.active.title"],

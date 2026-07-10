@@ -11,6 +11,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -136,6 +137,80 @@ func TestTransferDialogEnterFromDestinationConfirms(t *testing.T) {
 	}
 	if len(app.jobState.AllJobs()) != 1 {
 		t.Fatalf("expected one job after Enter, got %d", len(app.jobState.AllJobs()))
+	}
+}
+
+func TestTransferDialogDestinationTargetPanel(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	dstDir := filepath.Join(dir, "dest")
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
+		t.Fatalf("mkdir dest: %v", err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	if err := app.inactivePanel().Load(dstDir); err != nil {
+		t.Fatalf("inactive Load: %v", err)
+	}
+
+	// Prefilled destination is the inactive (Secondary) panel's path.
+	app.openCopyDialog()
+	app.applyTransferDestinationPathValidation()
+	if !app.model.DestinationTargetSecondary {
+		t.Fatal("expected Secondary panel marked as destination target")
+	}
+	if app.model.DestinationTargetPrimary {
+		t.Fatal("Primary panel should not be marked as destination target")
+	}
+
+	// Retyping the destination to the active (Primary) panel's path flips the target.
+	app.model.TransferDialog.Destination.Value = dir
+	app.applyTransferDestinationPathValidation()
+	if !app.model.DestinationTargetPrimary {
+		t.Fatal("expected Primary panel marked as destination target")
+	}
+	if app.model.DestinationTargetSecondary {
+		t.Fatal("Secondary panel should no longer be marked as destination target")
+	}
+
+	app.closeTransferDialog()
+	if app.model.DestinationTargetPrimary || app.model.DestinationTargetSecondary {
+		t.Fatal("closing the dialog should clear destination target panels")
+	}
+}
+
+func TestTransferDialogDestinationTargetPanelBorderColor(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	dstDir := filepath.Join(dir, "dest")
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
+		t.Fatalf("mkdir dest: %v", err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	if err := app.inactivePanel().Load(dstDir); err != nil {
+		t.Fatalf("inactive Load: %v", err)
+	}
+
+	app.openCopyDialog()
+	app.applyTransferDestinationPathValidation()
+	app.render()
+
+	width, height := app.screen.Size()
+	layout := app.layoutForTerminalSize(width, height)
+	styles := theme.Default()
+	wantFG, _, _ := styles.PanelTargetFrame.Decompose()
+
+	_, secStyle, _ := screen.Get(layout.Secondary.X, layout.Secondary.Y)
+	secFG, _, _ := secStyle.Decompose()
+	if secFG != wantFG {
+		t.Fatalf("Secondary panel border fg = %v, want target frame fg %v", secFG, wantFG)
+	}
+
+	_, priStyle, _ := screen.Get(layout.Primary.X, layout.Primary.Y)
+	priFG, _, _ := priStyle.Decompose()
+	if priFG == wantFG {
+		t.Fatal("Primary panel border should not use the target frame color")
 	}
 }
 

@@ -47,6 +47,34 @@ func footerHasHint(keys []menu.FunctionKey, hint, keyLabel string) bool {
 	return false
 }
 
+func TestFlattenDestinationTargetPanel(t *testing.T) {
+	app, activeDir, _ := flattenDialogTestSetup(t)
+
+	// Default destination is the inactive (Secondary) panel's path.
+	app.applyFlattenDestinationPathValidation()
+	if !app.model.DestinationTargetSecondary {
+		t.Fatal("expected Secondary panel marked as destination target")
+	}
+	if app.model.DestinationTargetPrimary {
+		t.Fatal("Primary panel should not be marked as destination target")
+	}
+
+	// Retyping the destination to the active (Primary) panel's path flips the target.
+	app.model.FlattenDialog.Destination.Value = activeDir
+	app.applyFlattenDestinationPathValidation()
+	if !app.model.DestinationTargetPrimary {
+		t.Fatal("expected Primary panel marked as destination target")
+	}
+	if app.model.DestinationTargetSecondary {
+		t.Fatal("Secondary panel should no longer be marked as destination target")
+	}
+
+	app.closeFlattenDialog()
+	if app.model.DestinationTargetPrimary || app.model.DestinationTargetSecondary {
+		t.Fatal("closing the dialog should clear destination target panels")
+	}
+}
+
 func TestFlattenMixedSelectionShowsError(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

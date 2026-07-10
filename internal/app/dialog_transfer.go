@@ -203,6 +203,8 @@ func (a *App) openTransferDialogSelfCopyRename(kind dialog.TransferKind, absDest
 func (a *App) closeTransferDialog() {
 	a.transferDestValidate.Invalidate()
 	a.model.TransferDialog = dialog.TransferDialogState{}
+	a.model.DestinationTargetPrimary = false
+	a.model.DestinationTargetSecondary = false
 }
 
 func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
@@ -429,6 +431,8 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 		a.transferDestValidate.Invalidate()
 		d.DestPathInvalid = false
 		d.DestPathCheckPending = false
+		a.model.DestinationTargetPrimary = false
+		a.model.DestinationTargetSecondary = false
 		return
 	}
 

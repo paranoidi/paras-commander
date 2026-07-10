@@ -475,6 +475,7 @@ func (a *App) applyTransferDestinationPathValidation() {
 	d.DestPathCheckPending = false
 	panel := a.activePanel()
 	d.DestPathInvalid = pathpick.TypedDoesNotExist(panel.PathString(), a.model.UserHomeDir, d.Destination.Value)
+	a.updateDestinationTargetPanels(panel.PathString(), d.Destination.Value)
 	a.syncOpenPathInputsAfterFSChange()
 }
 
@@ -502,5 +503,21 @@ func (a *App) applyFlattenDestinationPathValidation() {
 	d.DestPathCheckPending = false
 	panel := a.activePanel()
 	d.DestPathInvalid = pathpick.TypedDoesNotExist(panel.PathString(), a.model.UserHomeDir, d.Destination.Value)
+	a.updateDestinationTargetPanels(panel.PathString(), d.Destination.Value)
 	a.syncOpenPathInputsAfterFSChange()
+}
+
+// updateDestinationTargetPanels resolves typed (the Copy/Move/Flatten destination text,
+// relative to panelPath) and marks whichever visible panel(s) it points at so drawPanel
+// can paint that panel's border with theme.PanelTargetFrame.
+func (a *App) updateDestinationTargetPanels(panelPath, typed string) {
+	typed = strings.TrimSpace(typed)
+	if typed == "" {
+		a.model.DestinationTargetPrimary = false
+		a.model.DestinationTargetSecondary = false
+		return
+	}
+	abs := filepath.Clean(pathpick.ResolveQuery(panelPath, a.model.UserHomeDir, typed))
+	a.model.DestinationTargetPrimary = filepath.Clean(a.model.Primary.PathString()) == abs
+	a.model.DestinationTargetSecondary = filepath.Clean(a.model.Secondary.PathString()) == abs
 }

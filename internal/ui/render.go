@@ -52,6 +52,11 @@ type Model struct {
 	// the highlighted directory into the inactive panel.
 	SyncFollowEnabled bool
 	SyncFollowPanel   int
+	// DestinationTargetPrimary / DestinationTargetSecondary mark a panel as the resolved
+	// Copy/Move/Flatten destination (green border), updated on the debounced destination
+	// path validation tick (see App.updateDestinationTargetPanels).
+	DestinationTargetPrimary   bool
+	DestinationTargetSecondary bool
 	// SelectionsPanelMaxRows caps visible rows in the selections strip (0 = use app default).
 	SelectionsPanelMaxRows int
 	ViewMode               ViewMode
@@ -480,6 +485,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 					HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 					SplitOrientation: model.SplitOrientation, SelectionsBottomHint: primarySelectionsBottomHint,
 					ShowSelectionSizeOnBottom: primarySelectionSizeOnFileBottom,
+					IsTransferTarget:          model.DestinationTargetPrimary,
 				},
 				PanelDisplayConfig{
 					ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
@@ -512,6 +518,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 					HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 					SplitOrientation: model.SplitOrientation, SelectionsBottomHint: secondarySelectionsBottomHint,
 					ShowSelectionSizeOnBottom: secondarySelectionSizeOnFileBottom,
+					IsTransferTarget:          model.DestinationTargetSecondary,
 				},
 				PanelDisplayConfig{
 					ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,

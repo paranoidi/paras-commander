@@ -74,6 +74,8 @@ func (a *App) flattenSourceErrorToast(err error) {
 func (a *App) closeFlattenDialog() {
 	a.transferDestValidate.Invalidate()
 	a.model.FlattenDialog = dialog.FlattenDialogState{}
+	a.model.DestinationTargetPrimary = false
+	a.model.DestinationTargetSecondary = false
 }
 
 func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {

@@ -110,6 +110,9 @@ type PanelContext struct {
 	SplitOrientation          SplitOrientation
 	SelectionsBottomHint      bool
 	ShowSelectionSizeOnBottom bool
+	// IsTransferTarget marks this panel as the resolved Copy/Move/Flatten destination
+	// (its border is painted with theme.PanelTargetFrame instead of the normal frame).
+	IsTransferTarget bool
 }
 
 // PanelDisplayConfig carries feature-flag and data inputs to drawPanel.
@@ -134,6 +137,9 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	}
 	chrome := panelStyle.Styles.PanelChrome(ctx.FileListActive, ctx.ChromeBlocked)
 	borderStyle := chrome.Frame
+	if ctx.IsTransferTarget {
+		borderStyle = panelStyle.Styles.PanelTargetFrame
+	}
 	titleStyle := chrome.Title
 	headerStyle := chrome.Header
 	headerCarouselStyle := chrome.HeaderCarousel
