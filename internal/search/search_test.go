@@ -53,6 +53,21 @@ func TestRankOrdersBetterFuzzyMatchesFirst(t *testing.T) {
 	}
 }
 
+func TestRankPrefersContiguousMatchOverEarlierLooseMatch(t *testing.T) {
+	results := Parse("cop").Rank([]string{
+		"gen-compare-diff.sh",
+		"dedupe-copy",
+		"gen-conflict-copy-move.sh",
+	}, Options{CaseInsensitive: true})
+
+	if len(results) != 3 {
+		t.Fatalf("len(results) = %d, want 3", len(results))
+	}
+	if results[0].Index != 1 {
+		t.Fatalf("best result index = %d, want 1 for contiguous match dedupe-copy", results[0].Index)
+	}
+}
+
 func TestEmptyQueryMatchesInOriginalOrder(t *testing.T) {
 	results := Parse("   ").Rank([]string{"b", "a"}, Options{CaseInsensitive: true})
 	if len(results) != 2 {

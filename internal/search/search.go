@@ -283,7 +283,7 @@ func matchFuzzy(needle, value string, opts Options) Result {
 
 	first := hits[0].runeIdx
 	span := hits[len(hits)-1].runeIdx - first + 1
-	score := 1000 - first*10 - span*5 + len(hits)*10
+	score := 1000 - first*5 - span*10 + len(hits)*10
 
 	ranges := make([]Range, 0, len(hits))
 	for i, h := range hits {
