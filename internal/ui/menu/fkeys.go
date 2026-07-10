@@ -53,6 +53,7 @@ func FunctionKeyLabelByKey(k tcell.Key) (string, bool) {
 // FunctionKeysJobs is the footer legend while the jobs view is active.
 var FunctionKeysJobs = []FunctionKey{
 	FooterEscClose,
+	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
 	{Key: tcell.KeyCtrlC, KeyLabel: "C-c", Hint: "Cancel"},
 	{Key: tcell.KeyCtrlP, KeyLabel: "C-p", Hint: "Pause"},
 	{Key: tcell.KeyCtrlR, KeyLabel: "C-r", Hint: "Resume"},
@@ -69,6 +70,7 @@ func FunctionKeysJobsView() []FunctionKey { return FunctionKeysJobs }
 // FunctionKeysCommandsView is the footer legend while the Commands screen is active.
 var FunctionKeysCommands = []FunctionKey{
 	FooterEscClose,
+	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
 	{Key: tcell.KeyF8, KeyLabel: "F8", HintShiftPrefix: "Kill", Hint: "Term"},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
@@ -80,6 +82,7 @@ func FunctionKeysCommandsView() []FunctionKey { return FunctionKeysCommands }
 // FunctionKeysMessagesView is the footer legend while the Messages screen is active.
 var FunctionKeysMessages = []FunctionKey{
 	FooterEscClose,
+	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
 	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear"},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
@@ -102,6 +105,7 @@ func FunctionKeysFilePreviewStylePicker() []FunctionKey {
 func FunctionKeysFilePreviewView() []FunctionKey {
 	return []FunctionKey{
 		FooterEscClose,
+		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
 		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
 		{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Style"},
 		{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},

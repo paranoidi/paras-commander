@@ -9,48 +9,32 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// DedupHelpActionIDs lists actions shown in find-duplicates contextual help.
-var DedupHelpActionIDs = map[string]struct{}{
-	keymap.ActionDedupClose:       {},
-	keymap.ActionDedupToggleSort:  {},
-	keymap.ActionDedupToggleEmpty: {},
-	keymap.ActionDedupToggleNode:  {},
-	keymap.ActionDedupCollapse:    {},
-	keymap.ActionDedupToggleTree:  {},
-	keymap.ActionDedupCollapseAll: {},
-	keymap.ActionDedupExpandAll:   {},
-	keymap.ActionDedupPrevDir:     {},
-	keymap.ActionDedupNextDir:     {},
-	keymap.ActionDedupMarkKeep:    {},
-
-	keymap.ActionPanelSelectToggle:    {},
-	keymap.ActionPanelInvertSelection: {},
-	keymap.ActionPanelSwitch:          {},
-	keymap.ActionPanelClearSelection:  {},
-
-	keymap.ActionPanelRefresh: {},
-	keymap.ActionFileDelete:   {},
-
-	keymap.ActionNavUp:       {},
-	keymap.ActionNavDown:     {},
-	keymap.ActionNavPageUp:   {},
-	keymap.ActionNavPageDown: {},
-	keymap.ActionNavTop:      {},
-	keymap.ActionNavBottom:   {},
-	keymap.ActionNavOpen:     {},
-
-	keymap.ActionAppOpenMenu:      {},
-	keymap.ActionAppQuit:          {},
-	keymap.ActionAppQuitImmediate: {},
-	keymap.ActionCommandsOpen:     {},
-	keymap.ActionMessagesOpen:     {},
-	keymap.ActionJobsOpen:         {},
+// viewMask maps a ViewMode to its ActionSpec.Views bit.
+func viewMask(vm ui.ViewMode) keymap.HelpViews {
+	switch vm {
+	case ui.ViewJobs:
+		return keymap.HelpJobs
+	case ui.ViewCommands:
+		return keymap.HelpCommands
+	case ui.ViewMessages:
+		return keymap.HelpMessages
+	case ui.ViewCompare:
+		return keymap.HelpCompare
+	case ui.ViewDedup:
+		return keymap.HelpDedup
+	case ui.ViewFilePreview:
+		return keymap.HelpFilePreview
+	default:
+		return keymap.HelpBrowser
+	}
 }
 
-// IsDedupHelpAction reports whether actionID belongs in find-duplicates help.
-func IsDedupHelpAction(actionID string) bool {
-	_, ok := DedupHelpActionIDs[actionID]
-	return ok
+// ActionRunnableInView reports whether actionID belongs in vm's F1 help and may
+// be activated from it. Derived from ActionSpec.Views — the single source of
+// truth for help visibility (internal/keymap/specs.go).
+func ActionRunnableInView(vm ui.ViewMode, actionID string) bool {
+	spec, ok := keymap.SpecForAction(actionID)
+	return ok && spec.Views&viewMask(vm) != 0
 }
 
 // JoinDisplay joins every binding into one readable string (comma-separated).
@@ -121,26 +105,4 @@ func CanonicalRankText(ent dialog.HelpEntry) string {
 		s += " " + ent.FuzzyExtra
 	}
 	return s
-}
-
-// ActionRunnableInBrowser is false for jobs-only shortcuts that no-op outside the jobs view.
-func ActionRunnableInBrowser(actionID string) bool {
-	switch actionID {
-	case keymap.ActionJobsCancel, keymap.ActionJobsPause, keymap.ActionJobsResume,
-		keymap.ActionJobsQueueUp, keymap.ActionJobsQueueDown, keymap.ActionJobsClearFinished,
-		keymap.ActionMessagesClear:
-		return false
-	default:
-		return true
-	}
-}
-
-// ActionRunnableInView reports whether activating actionID from the help dialog should run.
-func ActionRunnableInView(vm ui.ViewMode, actionID string) bool {
-	switch vm {
-	case ui.ViewDedup:
-		return IsDedupHelpAction(actionID)
-	default:
-		return ActionRunnableInBrowser(actionID)
-	}
 }

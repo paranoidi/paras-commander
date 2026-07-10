@@ -75,44 +75,6 @@ func TestHelpViewEnterRunsCopyLikeKeyboardShortcut(t *testing.T) {
 	}
 }
 
-func TestHelpViewEnterJobsCancelNoOpWhileBrowser(t *testing.T) {
-	dir := t.TempDir()
-	screen := newScreen(t, 80, 24)
-	app := newApp(t, screen, dir)
-
-	app.openHelpDialog()
-
-	jobsIdx := -1
-	for i, e := range app.model.HelpView.Entries {
-		if e.ActionID == keymap.ActionJobsCancel {
-			jobsIdx = i
-			break
-		}
-	}
-	if jobsIdx < 0 {
-		t.Fatal("help entries should include Cancel job action")
-	}
-	sel := -1
-	for i, idx := range app.model.HelpView.Ranked {
-		if idx == jobsIdx {
-			sel = i
-			break
-		}
-	}
-	if sel < 0 {
-		t.Fatal("ranked list should include Cancel job entry")
-	}
-	app.model.HelpView.Selected = sel
-	app.model.HelpView.Focus = 0
-
-	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
-		t.Fatal("Enter on jobs.cancel should not quit")
-	}
-	if !app.model.HelpView.Open {
-		t.Fatal("HelpView should stay open when action is invalid for browser")
-	}
-}
-
 func TestActiveFooterKeysBrowserShowsF7JobsViewUsesJobsLegend(t *testing.T) {
 	dir := t.TempDir()
 	screen := tcell.NewSimulationScreen("UTF-8")

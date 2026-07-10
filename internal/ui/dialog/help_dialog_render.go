@@ -15,7 +15,11 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 		return
 	}
 	rect := metrics.Rect
-	borderStyle := draw.DrawDialogFrame(screen, rect, "Help", styles)
+	title := state.Title
+	if title == "" {
+		title = "Help"
+	}
+	borderStyle := draw.DrawDialogFrame(screen, rect, title, styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
 	primaryCol := rect.X + 2

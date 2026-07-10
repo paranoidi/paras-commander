@@ -234,7 +234,10 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
 		rest := compareViewFooterKeys(a.keysCompare, a.model.CompareView.Filter)
 		rest = append(rest, menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
-		return footerWithEscClose(rest)
+		out := footerWithEscClose(rest)
+		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"}
+		out = append(out[:1], append([]menu.FunctionKey{f1}, out[1:]...)...)
+		return out
 	}
 	if a.model.ViewMode == ui.ViewDedup && !a.inQuickFilterUI() {
 		rest := dedupViewFooterKeys(a.keys, a.keysDedup, a.model.DedupView.TreeDirs)

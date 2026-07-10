@@ -233,7 +233,6 @@ type HelpEntry struct {
 	Title    string // "Copy"
 	Keys     string // "F5"
 	Section  string // "File operations"
-	Context  string // optional context, e.g. "Browser"
 	// FuzzyExtra is action id and keywords for the rank-only corpus (after Title), space-separated.
 	FuzzyExtra string
 }
@@ -241,6 +240,7 @@ type HelpEntry struct {
 // HelpViewState holds state for the centered help dialog with fuzzy search.
 type HelpViewState struct {
 	Open        bool
+	Title       string // dialog title, e.g. "Help" or "Help — Jobs"
 	Query       string
 	QueryCursor int // rune offset of caret within Query (0..len(runes))
 	QueryScroll int // first visible rune offset for horizontal scrolling

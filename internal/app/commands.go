@@ -234,6 +234,39 @@ func (a *App) hasRunningCommands() bool {
 	return a.commandsBatchesInflight.Load() > 0
 }
 
+// moveCommandsSelection moves the Commands-list cursor by delta rows (clamped), scrolling
+// into view and resetting stream scroll when the row actually changes. Shared by the raw
+// arrow-key handling below and by help-dialog activation.
+func (a *App) moveCommandsSelection(delta int) {
+	n := a.commandsLen()
+	sel := max(0, a.model.CommandsView.Selected+delta)
+	if n > 0 && sel > n-1 {
+		sel = n - 1
+	}
+	a.setCommandsSelection(sel)
+}
+
+// selectCommandsEdge moves the Commands-list cursor to the first (toEnd=false) or last
+// (toEnd=true) row.
+func (a *App) selectCommandsEdge(toEnd bool) {
+	n := a.commandsLen()
+	sel := 0
+	if toEnd && n > 0 {
+		sel = n - 1
+	}
+	a.setCommandsSelection(sel)
+}
+
+func (a *App) setCommandsSelection(sel int) {
+	beforeSel := a.model.CommandsView.Selected
+	a.model.CommandsView.Selected = sel
+	if beforeSel != sel {
+		a.model.CommandsView.StdoutScroll = 0
+		a.model.CommandsView.StderrScroll = 0
+	}
+	a.ensureCommandsViewSelectionVisible()
+}
+
 func (a *App) handleCommandsViewKey(event *tcell.EventKey) bool {
 	a.clampCommandsFocusPane()
 	switch event.Key() {
@@ -276,61 +309,21 @@ func (a *App) handleCommandsViewKey(event *tcell.EventKey) bool {
 	}
 
 	fp := a.model.CommandsView.FocusPane
-	n := a.commandsLen()
 	switch fp {
 	case 0:
-		beforeSel := a.model.CommandsView.Selected
 		switch event.Key() {
 		case tcell.KeyUp:
-			if a.model.CommandsView.Selected > 0 {
-				a.model.CommandsView.Selected--
-			}
-			if beforeSel != a.model.CommandsView.Selected {
-				a.model.CommandsView.StdoutScroll = 0
-				a.model.CommandsView.StderrScroll = 0
-			}
-			a.ensureCommandsViewSelectionVisible()
+			a.moveCommandsSelection(-1)
 		case tcell.KeyDown:
-			if n > 0 && a.model.CommandsView.Selected < n-1 {
-				a.model.CommandsView.Selected++
-			}
-			if beforeSel != a.model.CommandsView.Selected {
-				a.model.CommandsView.StdoutScroll = 0
-				a.model.CommandsView.StderrScroll = 0
-			}
-			a.ensureCommandsViewSelectionVisible()
+			a.moveCommandsSelection(1)
 		case tcell.KeyPgUp:
-			a.model.CommandsView.Selected = max(0, a.model.CommandsView.Selected-5)
-			if beforeSel != a.model.CommandsView.Selected {
-				a.model.CommandsView.StdoutScroll = 0
-				a.model.CommandsView.StderrScroll = 0
-			}
-			a.ensureCommandsViewSelectionVisible()
+			a.moveCommandsSelection(-5)
 		case tcell.KeyPgDn:
-			if n > 0 {
-				a.model.CommandsView.Selected = min(n-1, a.model.CommandsView.Selected+5)
-			}
-			if beforeSel != a.model.CommandsView.Selected {
-				a.model.CommandsView.StdoutScroll = 0
-				a.model.CommandsView.StderrScroll = 0
-			}
-			a.ensureCommandsViewSelectionVisible()
+			a.moveCommandsSelection(5)
 		case tcell.KeyHome:
-			a.model.CommandsView.Selected = 0
-			if beforeSel != a.model.CommandsView.Selected {
-				a.model.CommandsView.StdoutScroll = 0
-				a.model.CommandsView.StderrScroll = 0
-			}
-			a.ensureCommandsViewSelectionVisible()
+			a.selectCommandsEdge(false)
 		case tcell.KeyEnd:
-			if n > 0 {
-				a.model.CommandsView.Selected = n - 1
-			}
-			if beforeSel != a.model.CommandsView.Selected {
-				a.model.CommandsView.StdoutScroll = 0
-				a.model.CommandsView.StderrScroll = 0
-			}
-			a.ensureCommandsViewSelectionVisible()
+			a.selectCommandsEdge(true)
 		}
 	case 1:
 		maxS := a.maxCommandsStdoutScroll()

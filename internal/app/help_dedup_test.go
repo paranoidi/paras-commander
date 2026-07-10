@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -74,12 +73,12 @@ func TestBuildDedupHelpEntriesIncludesAllDedupActions(t *testing.T) {
 	for _, e := range entries {
 		byID[e.ActionID] = struct{}{}
 	}
-	for actionID := range helpkeys.DedupHelpActionIDs {
-		if !strings.HasPrefix(actionID, "dedup.") {
+	for _, spec := range keymap.DefaultActionSpecs() {
+		if spec.Views&keymap.HelpDedup == 0 || !strings.HasPrefix(spec.ID, "dedup.") {
 			continue
 		}
-		if _, ok := byID[actionID]; !ok {
-			t.Fatalf("dedup help missing %q", actionID)
+		if _, ok := byID[spec.ID]; !ok {
+			t.Fatalf("dedup help missing %q", spec.ID)
 		}
 	}
 	for _, forbidden := range []string{keymap.ActionCopy, keymap.ActionMove, keymap.ActionPanelFindDuplicates} {

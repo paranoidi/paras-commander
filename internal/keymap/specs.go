@@ -1,5 +1,26 @@
 package keymap
 
+// HelpViews is a bitmask of views whose F1 help lists the action.
+// The zero value means the action appears in no F1 help — used for
+// dialog-overlay-only shortcuts documented by the dialog itself.
+type HelpViews uint16
+
+const (
+	HelpBrowser HelpViews = 1 << iota
+	HelpJobs
+	HelpCommands
+	HelpMessages
+	HelpCompare
+	HelpDedup
+	HelpFilePreview
+)
+
+// Tagging shorthands for DefaultActionSpecs.
+const (
+	helpAllViews      = HelpBrowser | HelpJobs | HelpCommands | HelpMessages | HelpCompare | HelpDedup | HelpFilePreview
+	helpAllButPreview = helpAllViews &^ HelpFilePreview // menu bar and list nav are absent in file preview
+)
+
 // ActionSpec describes one configurable action: its stable ID, human-friendly
 // display metadata, default chord strings, and search keywords.
 type ActionSpec struct {
@@ -9,6 +30,8 @@ type ActionSpec struct {
 	Title string
 	// Section groups actions in the help screen (e.g. "File operations").
 	Section string
+	// Views selects which views' F1 help lists the action (zero = none).
+	Views HelpViews
 	// DefaultKeys is the built-in chord strings (e.g. []string{"F5"}); empty = unbound by default.
 	DefaultKeys []string
 	// PreferredKey is the visual label shown in menus, footer, and help summary.
@@ -24,6 +47,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── App ──
 		{
 			ID:           ActionAppQuit,
+			Views:        helpAllViews,
 			Title:        "Quit",
 			Section:      "App",
 			DefaultKeys:  []string{"F10"},
@@ -32,6 +56,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionAppQuitImmediate,
+			Views:        helpAllViews,
 			Title:        "Quit without confirmation",
 			Section:      "App",
 			DefaultKeys:  []string{"S-F10"},
@@ -40,6 +65,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionAppOpenMenu,
+			Views:        helpAllButPreview,
 			Title:        "Open menu",
 			Section:      "App",
 			DefaultKeys:  []string{"F9"},
@@ -56,6 +82,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionAppUserMenu,
+			Views:        HelpBrowser | HelpFilePreview,
 			Title:        "User menu",
 			Section:      "App",
 			DefaultKeys:  []string{"F2"},
@@ -64,6 +91,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionAppUserMenuEdit,
+			Views:        HelpBrowser | HelpFilePreview,
 			Title:        "Edit user menu",
 			Section:      "App",
 			DefaultKeys:  []string{"S-F2"},
@@ -72,6 +100,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionAppDropToShell,
+			Views:        HelpBrowser,
 			Title:        "Drop to shell",
 			Section:      "App",
 			DefaultKeys:  []string{"C-o"},
@@ -82,6 +111,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Panel navigation ──
 		{
 			ID:          ActionPanelSwitch,
+			Views:       HelpBrowser | HelpDedup,
 			Title:       "Switch panel",
 			Section:     "Navigation",
 			DefaultKeys: []string{"tab"},
@@ -89,6 +119,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelFocusSelections,
+			Views:        HelpBrowser,
 			Title:        "Focus selections panel",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"M-s"},
@@ -97,6 +128,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelOpenSelectionsRoot,
+			Views:        HelpBrowser,
 			Title:        "Go to selections common root",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"C-M-s"},
@@ -105,6 +137,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelToggleHideInactive,
+			Views:       HelpBrowser,
 			Title:       "Hide inactive panel",
 			Section:     "Navigation",
 			DefaultKeys: []string{"S-tab"},
@@ -112,6 +145,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionNavUp,
+			Views:       helpAllButPreview,
 			Title:       "Cursor up",
 			Section:     "Navigation",
 			DefaultKeys: []string{"up"},
@@ -119,6 +153,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionNavDown,
+			Views:       helpAllButPreview,
 			Title:       "Cursor down",
 			Section:     "Navigation",
 			DefaultKeys: []string{"down"},
@@ -126,6 +161,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionNavPageUp,
+			Views:       helpAllButPreview,
 			Title:       "Page up",
 			Section:     "Navigation",
 			DefaultKeys: []string{"pgup"},
@@ -133,6 +169,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionNavPageDown,
+			Views:       helpAllButPreview,
 			Title:       "Page down",
 			Section:     "Navigation",
 			DefaultKeys: []string{"pgdn"},
@@ -140,6 +177,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionNavTop,
+			Views:       helpAllButPreview,
 			Title:       "First entry",
 			Section:     "Navigation",
 			DefaultKeys: []string{"home"},
@@ -147,6 +185,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionNavBottom,
+			Views:       helpAllButPreview,
 			Title:       "Last entry",
 			Section:     "Navigation",
 			DefaultKeys: []string{"end"},
@@ -154,6 +193,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionNavOpen,
+			Views:        HelpBrowser | HelpCompare | HelpDedup,
 			Title:        "Open directory or file",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"enter", "right"},
@@ -162,6 +202,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionNavParent,
+			Views:        HelpBrowser,
 			Title:        "Parent directory",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"left", "backspace"},
@@ -170,6 +211,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionNavHome,
+			Views:        HelpBrowser,
 			Title:        "Home directory",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"~", "§"},
@@ -178,6 +220,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionNavForward,
+			Views:       HelpBrowser,
 			Title:       "Forward history",
 			Section:     "Navigation",
 			DefaultKeys: []string{"M-C-left"},
@@ -185,6 +228,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionNavBackward,
+			Views:       HelpBrowser,
 			Title:       "Backward history",
 			Section:     "Navigation",
 			DefaultKeys: []string{"M-C-right"},
@@ -192,6 +236,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelHistoryDialog,
+			Views:        HelpBrowser,
 			Title:        "Directory history",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"M-h", "C-h"},
@@ -208,6 +253,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelFindDialog,
+			Views:        HelpBrowser,
 			Title:        "Find files",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"C-f"},
@@ -216,6 +262,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelRefresh,
+			Views:        HelpBrowser | HelpDedup | HelpFilePreview,
 			Title:        "Refresh panel",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"M-C-r"},
@@ -224,6 +271,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelExternalBrowser,
+			Views:        HelpBrowser | HelpJobs | HelpCommands | HelpCompare | HelpFilePreview,
 			Title:        "External browser",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"M-e"},
@@ -232,6 +280,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelOpenDirInOther,
+			Views:        HelpBrowser,
 			Title:        "Open directory in other panel",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"S-right", "M-o"},
@@ -240,6 +289,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelOpenActivePathInOther,
+			Views:        HelpBrowser,
 			Title:        "Open current path in other panel",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"S-left", "M-i"},
@@ -248,6 +298,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelToggleSync,
+			Views:        HelpBrowser,
 			Title:        "Toggle panel sync",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"C-M-o"},
@@ -256,6 +307,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelComparePanels,
+			Views:        HelpBrowser,
 			Title:        "Compare panels",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"C-M-c"},
@@ -264,6 +316,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelFindDuplicates,
+			Views:        HelpBrowser,
 			Title:        "Find duplicates",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"C-M-u"},
@@ -272,6 +325,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionCompareClose,
+			Views:       HelpCompare,
 			Title:       "Close compare view",
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
@@ -279,6 +333,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionCompareCycleFilter,
+			Views:       HelpCompare,
 			Title:       "Compare category filter",
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
@@ -286,6 +341,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionCompareResetFilter,
+			Views:       HelpCompare,
 			Title:       "Reset compare filter to All",
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
@@ -293,6 +349,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionCompareRefresh,
+			Views:       HelpCompare,
 			Title:       "Refresh compare",
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
@@ -300,6 +357,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionCompareMerge,
+			Views:       HelpCompare,
 			Title:       "Compare merge",
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
@@ -307,6 +365,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupClose,
+			Views:       HelpDedup,
 			Title:       "Close view",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -314,6 +373,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupToggleSort,
+			Views:       HelpDedup,
 			Title:       "Toggle sort order",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -321,6 +381,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupToggleEmpty,
+			Views:       HelpDedup,
 			Title:       "Toggle empty files",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -328,6 +389,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupToggleNode,
+			Views:       HelpDedup,
 			Title:       "Expand/collapse directory",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -335,6 +397,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupCollapse,
+			Views:       HelpDedup,
 			Title:       "Collapse dir / go up",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -342,6 +405,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupToggleTree,
+			Views:       HelpDedup,
 			Title:       "Groups / directory view",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -349,6 +413,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupCollapseAll,
+			Views:       HelpDedup,
 			Title:       "Collapse all",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -356,6 +421,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupExpandAll,
+			Views:       HelpDedup,
 			Title:       "Expand all",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -363,6 +429,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupPrevDir,
+			Views:       HelpDedup,
 			Title:       "Previous directory",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -370,6 +437,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupNextDir,
+			Views:       HelpDedup,
 			Title:       "Next directory",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -377,6 +445,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionDedupMarkKeep,
+			Views:       HelpDedup,
 			Title:       "Mark to keep",
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
@@ -386,6 +455,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Disk usage ──
 		{
 			ID:          ActionPanelDiskUsageScan,
+			Views:       HelpBrowser,
 			Title:       "Disk usage scan",
 			Section:     "Disk usage",
 			DefaultKeys: []string{"C-d"},
@@ -393,6 +463,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelDiskUsageAbortAll,
+			Views:       HelpBrowser | HelpFilePreview,
 			Title:       "Abort disk usage scans",
 			Section:     "Disk usage",
 			DefaultKeys: []string{"C-M-d"},
@@ -400,6 +471,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelDiskUsageClear,
+			Views:       HelpBrowser | HelpFilePreview,
 			Title:       "Clear disk usage data",
 			Section:     "Disk usage",
 			DefaultKeys: []string{"M-d"},
@@ -409,6 +481,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Selection ──
 		{
 			ID:          ActionPanelSelectToggle,
+			Views:       HelpBrowser | HelpCompare | HelpDedup,
 			Title:       "Toggle selection",
 			Section:     "Selection",
 			DefaultKeys: []string{"insert"},
@@ -416,6 +489,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelSelectGroup,
+			Views:       HelpBrowser,
 			Title:       "Select group",
 			Section:     "Selection",
 			DefaultKeys: []string{"+"},
@@ -423,6 +497,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelUnselectGroup,
+			Views:       HelpBrowser,
 			Title:       "Unselect group",
 			Section:     "Selection",
 			DefaultKeys: []string{"-"},
@@ -430,6 +505,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelInvertSelection,
+			Views:       HelpBrowser | HelpDedup,
 			Title:       "Invert selection",
 			Section:     "Selection",
 			DefaultKeys: []string{"*"},
@@ -437,6 +513,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelClearSelection,
+			Views:       HelpBrowser | HelpDedup,
 			Title:       "Clear selection",
 			Section:     "Selection",
 			DefaultKeys: []string{"C-u"},
@@ -444,6 +521,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelStashToggle,
+			Views:        HelpBrowser,
 			Title:        "Toggle selection stash",
 			Section:      "Selection",
 			DefaultKeys:  []string{"M-insert"},
@@ -454,6 +532,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Sort & display ──
 		{
 			ID:          ActionPanelSortDialog,
+			Views:       HelpBrowser,
 			Title:       "Sort dialog",
 			Section:     "Sort & display",
 			DefaultKeys: []string{"C-s"},
@@ -461,6 +540,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelListingFormatDialog,
+			Views:       HelpBrowser,
 			Title:       "Listing format dialog",
 			Section:     "Sort & display",
 			DefaultKeys: nil, // opened from Left/Right menu by default
@@ -468,6 +548,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelCycleSort,
+			Views:       HelpBrowser,
 			Title:       "Cycle sort mode",
 			Section:     "Sort & display",
 			DefaultKeys: nil, // unbound by default
@@ -475,6 +556,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelCycleListingFormat,
+			Views:       HelpBrowser,
 			Title:       "Cycle listing format",
 			Section:     "Sort & display",
 			DefaultKeys: []string{"M-t"},
@@ -482,6 +564,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelToggleCarousel,
+			Views:       HelpBrowser,
 			Title:       "Toggle carousel view",
 			Section:     "Sort & display",
 			DefaultKeys: []string{"C-c"},
@@ -489,14 +572,16 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelToggleZoomActivePanel,
-			Title:       "Toggle zoom active panel (runtime)",
+			Views:       HelpBrowser,
+			Title:       "Toggle zoom active panel",
 			Section:     "Sort & display",
 			DefaultKeys: []string{"M-z"},
 			Keywords:    []string{"zoom", "layout", "wide", "column", "split"},
 		},
 		{
 			ID:           ActionPanelToggleSplitOrientation,
-			Title:        "Toggle split orientation (runtime)",
+			Views:        HelpBrowser,
+			Title:        "Toggle split orientation",
 			Section:      "Sort & display",
 			DefaultKeys:  []string{"C-space"},
 			PreferredKey: "C-space",
@@ -504,6 +589,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelReverseSort,
+			Views:       HelpBrowser,
 			Title:       "Reverse sort",
 			Section:     "Sort & display",
 			DefaultKeys: nil, // unbound by default
@@ -511,6 +597,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelToggleHidden,
+			Views:       HelpBrowser,
 			Title:       "Toggle hidden files",
 			Section:     "Sort & display",
 			DefaultKeys: []string{"M-."},
@@ -518,6 +605,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelMeta,
+			Views:       HelpBrowser,
 			Title:       "Meta column",
 			Section:     "Sort & display",
 			DefaultKeys: []string{"M-,"},
@@ -525,6 +613,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelMetaEdit,
+			Views:        HelpBrowser,
 			Title:        "Edit meta commands",
 			Section:      "Sort & display",
 			DefaultKeys:  []string{"S-M-,", "M-;"},
@@ -535,6 +624,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Bookmarks ──
 		{
 			ID:           ActionBookmarkOpen,
+			Views:        HelpBrowser | HelpFilePreview,
 			Title:        "Open bookmarks",
 			Section:      "Bookmarks",
 			DefaultKeys:  []string{"C-g", "C-e"},
@@ -543,6 +633,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionBookmarkAdd,
+			Views:       HelpBrowser | HelpFilePreview,
 			Title:       "Add bookmark",
 			Section:     "Bookmarks",
 			DefaultKeys: []string{"C-b"},
@@ -629,6 +720,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionRemoteSFTPLink,
+			Views:       HelpBrowser,
 			Title:       "SFTP ...",
 			Section:     "Remote",
 			DefaultKeys: []string{"C-r"},
@@ -638,6 +730,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── File operations ──
 		{
 			ID:           ActionFileRename,
+			Views:        HelpBrowser,
 			Title:        "Rename / Move",
 			Section:      "File operations",
 			DefaultKeys:  []string{"S-F6"},
@@ -646,6 +739,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileMkdir,
+			Views:       HelpBrowser,
 			Title:       "Create directory",
 			Section:     "File operations",
 			DefaultKeys: []string{"F7"},
@@ -653,6 +747,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFileMkdirOpenInOther,
+			Views:        HelpBrowser,
 			Title:        "Create directory and open in other",
 			Section:      "File operations",
 			DefaultKeys:  []string{"S-F7"},
@@ -661,6 +756,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileDelete,
+			Views:       HelpBrowser | HelpDedup,
 			Title:       "Delete",
 			Section:     "File operations",
 			DefaultKeys: []string{"F8", "delete"},
@@ -668,6 +764,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileChmod,
+			Views:       HelpBrowser,
 			Title:       "Change mode",
 			Section:     "File operations",
 			DefaultKeys: nil, // unbound by default (menu only)
@@ -675,6 +772,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileChown,
+			Views:       HelpBrowser,
 			Title:       "Change owner",
 			Section:     "File operations",
 			DefaultKeys: nil, // unbound by default (menu only)
@@ -682,6 +780,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileSymlink,
+			Views:       HelpBrowser,
 			Title:       "Symlink",
 			Section:     "File operations",
 			DefaultKeys: nil, // unbound by default (menu only)
@@ -689,6 +788,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileHardlink,
+			Views:       HelpBrowser,
 			Title:       "Hard link",
 			Section:     "File operations",
 			DefaultKeys: nil, // unbound by default (menu only)
@@ -696,6 +796,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileView,
+			Views:       HelpBrowser,
 			Title:       "Full screen file view",
 			Section:     "File operations",
 			DefaultKeys: []string{"F3"},
@@ -703,13 +804,31 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileViewThemePicker,
+			Views:       HelpFilePreview,
 			Title:       "Theme picker in file view",
 			Section:     "File operations",
 			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
 			Keywords:    []string{"theme", "preview", "view", "f9"},
 		},
 		{
+			ID:          ActionFileViewDiffNextHunk,
+			Views:       HelpFilePreview,
+			Title:       "Next diff hunk",
+			Section:     "File operations",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"diff", "hunk", "change", "jump"},
+		},
+		{
+			ID:          ActionFileViewDiffPrevHunk,
+			Views:       HelpFilePreview,
+			Title:       "Previous diff hunk",
+			Section:     "File operations",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"diff", "hunk", "change", "jump"},
+		},
+		{
 			ID:          ActionFileQuickView,
+			Views:       HelpBrowser,
 			Title:       "Quick view",
 			Section:     "File operations",
 			DefaultKeys: []string{"S-F3"},
@@ -717,6 +836,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFileQuickViewPreviewPageUp,
+			Views:        HelpBrowser | HelpFilePreview,
 			Title:        "Quick view preview page up",
 			Section:      "File operations",
 			DefaultKeys:  []string{"C-k"},
@@ -725,6 +845,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFileQuickViewPreviewPageDown,
+			Views:        HelpBrowser | HelpFilePreview,
 			Title:        "Quick view preview page down",
 			Section:      "File operations",
 			DefaultKeys:  []string{"C-j"},
@@ -733,6 +854,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileEdit,
+			Views:       HelpBrowser | HelpFilePreview,
 			Title:       "Edit file",
 			Section:     "File operations",
 			DefaultKeys: []string{"F4"},
@@ -740,6 +862,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionMenuFileChattr,
+			Views:       HelpBrowser,
 			Title:       "Change file attributes",
 			Section:     "File operations",
 			DefaultKeys: nil,
@@ -747,6 +870,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionCopy,
+			Views:       HelpBrowser,
 			Title:       "Copy",
 			Section:     "File operations",
 			DefaultKeys: []string{"F5"},
@@ -754,14 +878,16 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFileCopyHere,
-			Title:        "Copy here",
+			Views:        HelpBrowser,
+			Title:        "Duplicate",
 			Section:      "File operations",
 			DefaultKeys:  []string{"S-F5"},
 			PreferredKey: "S-F5",
-			Keywords:     []string{"duplicate", "directory", "same directory"},
+			Keywords:     []string{"copy here", "directory", "same directory"},
 		},
 		{
 			ID:          ActionFileExtract,
+			Views:       HelpBrowser,
 			Title:       "Extract archives",
 			Section:     "File operations",
 			DefaultKeys: nil,
@@ -769,6 +895,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionMove,
+			Views:       HelpBrowser,
 			Title:       "Move",
 			Section:     "File operations",
 			DefaultKeys: []string{"F6"},
@@ -776,6 +903,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionFileFlatten,
+			Views:        HelpBrowser,
 			Title:        "Flatten directories",
 			Section:      "File operations",
 			DefaultKeys:  []string{"C-M-f"},
@@ -786,6 +914,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Commands ──
 		{
 			ID:           ActionCommandsOpen,
+			Views:        helpAllViews,
 			Title:        "Open Commands view",
 			Section:      "Commands",
 			DefaultKeys:  []string{"M-c"},
@@ -794,13 +923,33 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionCommandsClose,
+			Views:       HelpCommands,
 			Title:       "Close Commands view",
 			Section:     "Commands",
 			DefaultKeys: nil, // overlay: DefaultCommandsOverlayKeys
 			Keywords:    []string{"back", "browser", "esc"},
 		},
 		{
+			ID:           ActionCommandsTerminate,
+			Views:        HelpCommands,
+			Title:        "Terminate command",
+			Section:      "Commands",
+			DefaultKeys:  nil, // overlay: DefaultCommandsOverlayKeys
+			PreferredKey: "F8",
+			Keywords:     []string{"sigterm", "stop", "process"},
+		},
+		{
+			ID:           ActionCommandsKill,
+			Views:        HelpCommands,
+			Title:        "Kill command",
+			Section:      "Commands",
+			DefaultKeys:  nil, // overlay: DefaultCommandsOverlayKeys
+			PreferredKey: "S-F8",
+			Keywords:     []string{"sigkill", "force", "stop", "process"},
+		},
+		{
 			ID:          ActionFileRunForEach,
+			Views:       HelpBrowser,
 			Title:       "Run for each",
 			Section:     "Commands",
 			DefaultKeys: nil,
@@ -810,6 +959,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Messages (status / toast log) ──
 		{
 			ID:           ActionMessagesOpen,
+			Views:        helpAllViews,
 			Title:        "Open Messages view",
 			Section:      "Messages",
 			DefaultKeys:  []string{"M-m"},
@@ -818,6 +968,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionMessagesClose,
+			Views:       HelpMessages,
 			Title:       "Close Messages view",
 			Section:     "Messages",
 			DefaultKeys: nil, // overlay: DefaultMessagesOverlayKeys
@@ -825,6 +976,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionMessagesClear,
+			Views:       HelpMessages,
 			Title:       "Clear messages",
 			Section:     "Messages",
 			DefaultKeys: nil,
@@ -836,6 +988,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// jobs.* defaults live in DefaultJobsOverlayKeys ([jobs]).
 		{
 			ID:           ActionJobsOpen,
+			Views:        helpAllViews,
 			Title:        "Open jobs view",
 			Section:      "Jobs",
 			DefaultKeys:  []string{"M-j"},
@@ -844,6 +997,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionJobsAnswerBlocker,
+			Views:        HelpBrowser | HelpJobs,
 			Title:        "Answer job blocker",
 			Section:      "Jobs",
 			DefaultKeys:  []string{"C-q", "M-q"},
@@ -852,6 +1006,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionJobsCancel,
+			Views:       HelpJobs,
 			Title:       "Cancel job",
 			Section:     "Jobs",
 			DefaultKeys: nil,
@@ -859,6 +1014,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionJobsPause,
+			Views:       HelpJobs,
 			Title:       "Pause queued job",
 			Section:     "Jobs",
 			DefaultKeys: nil,
@@ -866,6 +1022,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionJobsResume,
+			Views:       HelpJobs,
 			Title:       "Resume paused job",
 			Section:     "Jobs",
 			DefaultKeys: nil,
@@ -873,6 +1030,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionJobsQueueUp,
+			Views:       HelpJobs,
 			Title:       "Move job up in queue",
 			Section:     "Jobs",
 			DefaultKeys: nil,
@@ -880,6 +1038,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionJobsQueueDown,
+			Views:       HelpJobs,
 			Title:       "Move job down in queue",
 			Section:     "Jobs",
 			DefaultKeys: nil,
@@ -887,6 +1046,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionJobsClose,
+			Views:       HelpJobs,
 			Title:       "Close jobs view",
 			Section:     "Jobs",
 			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
@@ -894,6 +1054,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionJobsClearFinished,
+			Views:       HelpJobs,
 			Title:       "Clear finished jobs",
 			Section:     "Jobs",
 			DefaultKeys: nil,
@@ -903,6 +1064,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Options dialogs ──
 		{
 			ID:          ActionUIOpenTheme,
+			Views:       HelpBrowser,
 			Title:       "Theme picker",
 			Section:     "UI",
 			DefaultKeys: nil,
@@ -910,6 +1072,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionUICalibrateDebounce,
+			Views:       HelpBrowser | HelpFilePreview,
 			Title:       "Calibrate debounce",
 			Section:     "UI",
 			DefaultKeys: nil,
@@ -917,6 +1080,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionUIOpenConfig,
+			Views:       HelpBrowser | HelpFilePreview,
 			Title:       "Configuration editor",
 			Section:     "UI",
 			DefaultKeys: nil,
@@ -958,6 +1122,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Filter (unbound by default) ──
 		{
 			ID:          ActionPanelFilterOpen,
+			Views:       HelpBrowser,
 			Title:       "Open quick filter",
 			Section:     "Filter",
 			DefaultKeys: nil, // unbound by default

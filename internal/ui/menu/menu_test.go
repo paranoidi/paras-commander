@@ -460,8 +460,8 @@ func TestFunctionKeysFilePreviewStylePickerShowsEnterSave(t *testing.T) {
 func TestFunctionKeysFilePreviewViewShowsStyleF9(t *testing.T) {
 	t.Parallel()
 	keys := FunctionKeysFilePreviewView()
-	if len(keys) != 4 {
-		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F4 Edit + F9 Style + F10", len(keys))
+	if len(keys) != 5 {
+		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F1 Help + F4 Edit + F9 Style + F10", len(keys))
 	}
 	var f4, f9 *FunctionKey
 	for i := range keys {

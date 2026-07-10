@@ -5,7 +5,24 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ui"
 )
+
+func newHelpEntriesApp(t *testing.T) *App {
+	t.Helper()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(80, 24)
+	a, err := New(screen, func() (string, error) { return t.TempDir(), nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	return a
+}
 
 func TestBuildHelpEntriesIncludesCrossPanelOpenActions(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
@@ -39,5 +56,53 @@ func TestBuildHelpEntriesIncludesCrossPanelOpenActions(t *testing.T) {
 	}
 	if !strings.Contains(keysOpenCwd, "Alt") || !strings.Contains(keysOpenCwd, "I") {
 		t.Fatalf("unexpected keys display for open-active-path-in-other: %q", keysOpenCwd)
+	}
+}
+
+func TestBrowserHelpExcludesOtherViewAndDialogActions(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	entries := a.buildHelpEntries()
+	byID := make(map[string]struct{}, len(entries))
+	for _, e := range entries {
+		byID[e.ActionID] = struct{}{}
+	}
+	if _, ok := byID[keymap.ActionCopy]; !ok {
+		t.Fatal("browser help missing file.copy")
+	}
+	for _, forbidden := range []string{
+		keymap.ActionJobsCancel,
+		keymap.ActionCommandsTerminate,
+		keymap.ActionMessagesClear,
+		keymap.ActionFindSelectAll,
+		keymap.ActionBookmarkDelete,
+		keymap.ActionFlattenDestinationActive,
+		keymap.ActionAppShowHelp,
+	} {
+		if _, ok := byID[forbidden]; ok {
+			t.Fatalf("browser help should not include %q", forbidden)
+		}
+	}
+}
+
+func TestCommandsHelpIncludesTerminateWithOverlayKeys(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	entries := a.buildHelpEntriesForView(ui.ViewCommands)
+	idx := helpEntryIndex(entries, keymap.ActionCommandsTerminate)
+	if idx < 0 {
+		t.Fatal("commands help missing commands.terminate")
+	}
+	if !strings.Contains(entries[idx].Keys, "F8") {
+		t.Fatalf("commands.terminate keys = %q, want F8 from overlay", entries[idx].Keys)
+	}
+	if helpEntryIndex(entries, keymap.ActionJobsCancel) >= 0 {
+		t.Fatal("commands help should not include jobs.cancel")
+	}
+}
+
+func TestJobsHelpIncludesAnswerBlocker(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	entries := a.buildHelpEntriesForView(ui.ViewJobs)
+	if helpEntryIndex(entries, keymap.ActionJobsAnswerBlocker) < 0 {
+		t.Fatal("jobs help missing jobs.answer-blocker")
 	}
 }

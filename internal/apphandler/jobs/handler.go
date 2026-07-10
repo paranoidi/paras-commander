@@ -122,8 +122,6 @@ func (h *Handler) TryDispatch(actionID string) bool {
 	case keymap.ActionJobsOpen:
 		h.ToggleJobsView()
 		return true
-	case keymap.ActionJobsAnswerBlocker:
-		return true
 	case keymap.ActionJobsClose:
 		if h.model.ViewMode == ui.ViewJobs {
 			h.closeJobsView()
@@ -217,7 +215,6 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 		detailPane, activityPane = 2, 3
 	}
 
-	n := len(h.model.JobsList)
 	fp := h.model.JobsView.FocusPane
 
 	if conflictVis && fp == 1 {
@@ -276,59 +273,19 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 
 	switch fp {
 	case 0:
-		beforeSel := h.model.JobsView.Selected
 		switch event.Key() {
 		case tcell.KeyUp:
-			if h.model.JobsView.Selected > 0 {
-				h.model.JobsView.Selected--
-			}
-			if beforeSel != h.model.JobsView.Selected {
-				h.model.JobsView.DetailScroll = 0
-				h.model.JobsView.ActivityScroll = 0
-			}
-			h.ensureJobsViewSelectionVisible()
+			h.MoveSelection(-1)
 		case tcell.KeyDown:
-			if h.model.JobsView.Selected < n-1 {
-				h.model.JobsView.Selected++
-			}
-			if beforeSel != h.model.JobsView.Selected {
-				h.model.JobsView.DetailScroll = 0
-				h.model.JobsView.ActivityScroll = 0
-			}
-			h.ensureJobsViewSelectionVisible()
+			h.MoveSelection(1)
 		case tcell.KeyPgUp:
-			h.model.JobsView.Selected = max(0, h.model.JobsView.Selected-5)
-			if beforeSel != h.model.JobsView.Selected {
-				h.model.JobsView.DetailScroll = 0
-				h.model.JobsView.ActivityScroll = 0
-			}
-			h.ensureJobsViewSelectionVisible()
+			h.MoveSelection(-5)
 		case tcell.KeyPgDn:
-			h.model.JobsView.Selected = min(n-1, h.model.JobsView.Selected+5)
-			if beforeSel != h.model.JobsView.Selected {
-				h.model.JobsView.DetailScroll = 0
-				h.model.JobsView.ActivityScroll = 0
-			}
-			h.ensureJobsViewSelectionVisible()
+			h.MoveSelection(5)
 		case tcell.KeyHome:
-			h.model.JobsView.Selected = 0
-			if beforeSel != h.model.JobsView.Selected {
-				h.model.JobsView.DetailScroll = 0
-				h.model.JobsView.ActivityScroll = 0
-			}
-			h.ensureJobsViewSelectionVisible()
+			h.SelectEdge(false)
 		case tcell.KeyEnd:
-			if n > 0 {
-				h.model.JobsView.Selected = n - 1
-			}
-			if beforeSel != h.model.JobsView.Selected {
-				h.model.JobsView.DetailScroll = 0
-				h.model.JobsView.ActivityScroll = 0
-			}
-			h.ensureJobsViewSelectionVisible()
-		}
-		if beforeSel != h.model.JobsView.Selected {
-			h.model.JobsView.ConflictButtonFocus = 0
+			h.SelectEdge(true)
 		}
 	case detailPane:
 		contentH := h.jobsDetailContentHeight()
@@ -368,6 +325,39 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 		// Defensive: unknown pane index.
 	}
 	return false
+}
+
+// MoveSelection moves the jobs-list primary-pane cursor by delta rows (clamped), scrolling
+// into view and resetting detail/activity scroll + conflict focus when the row actually
+// changes. Shared by the raw arrow-key handling below and by help-dialog activation.
+func (h *Handler) MoveSelection(delta int) {
+	n := len(h.model.JobsList)
+	sel := max(0, h.model.JobsView.Selected+delta)
+	if n > 0 && sel > n-1 {
+		sel = n - 1
+	}
+	h.setSelection(sel)
+}
+
+// SelectEdge moves the jobs-list cursor to the first (toEnd=false) or last (toEnd=true) row.
+func (h *Handler) SelectEdge(toEnd bool) {
+	n := len(h.model.JobsList)
+	sel := 0
+	if toEnd && n > 0 {
+		sel = n - 1
+	}
+	h.setSelection(sel)
+}
+
+func (h *Handler) setSelection(sel int) {
+	beforeSel := h.model.JobsView.Selected
+	h.model.JobsView.Selected = sel
+	if beforeSel != sel {
+		h.model.JobsView.DetailScroll = 0
+		h.model.JobsView.ActivityScroll = 0
+		h.model.JobsView.ConflictButtonFocus = 0
+	}
+	h.ensureJobsViewSelectionVisible()
 }
 
 func (h *Handler) jobsViewConflictVisible() bool {

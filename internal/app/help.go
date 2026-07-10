@@ -11,22 +11,44 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
+// helpContext describes what the F1 help dialog shows for a given ui.ViewMode.
+// Entry visibility itself comes from ActionSpec.Views (internal/keymap/specs.go).
+type helpContext struct {
+	title    string                             // dialog title
+	activate func(a *App, actionID string) bool // nil = dispatchActionLikeKeyboardShortcut
+}
+
+// helpContextFor resolves the help content for the current view. This is the single place
+// that knows what "contextual help" means for each ui.ViewMode — new views plug in here
+// instead of growing another branch in openHelpDialog/activateHelpAction.
+func (a *App) helpContextFor(vm ui.ViewMode) helpContext {
+	switch vm {
+	case ui.ViewDedup:
+		return helpContext{title: "Help — Dedup", activate: (*App).activateDedupHelpAction}
+	case ui.ViewJobs:
+		return helpContext{title: "Help — Jobs", activate: (*App).activateJobsHelpAction}
+	case ui.ViewCommands:
+		return helpContext{title: "Help — Commands", activate: (*App).activateCommandsHelpAction}
+	case ui.ViewMessages:
+		return helpContext{title: "Help — Messages", activate: (*App).activateMessagesHelpAction}
+	case ui.ViewCompare:
+		return helpContext{title: "Help — Compare", activate: (*App).activateCompareHelpAction}
+	case ui.ViewFilePreview:
+		return helpContext{title: "Help — Preview"}
+	default:
+		return helpContext{title: "Help"}
+	}
+}
+
 func (a *App) openHelpDialog() {
-	vm := a.model.ViewMode
-	if ui.IsAuxiliaryView(vm) && vm != ui.ViewDedup {
-		return
-	}
-	var entries []dialog.HelpEntry
-	if vm == ui.ViewDedup {
-		entries = a.buildDedupHelpEntries()
-	} else {
-		entries = a.buildHelpEntries()
-	}
+	hc := a.helpContextFor(a.model.ViewMode)
+	entries := a.buildHelpEntriesForView(a.model.ViewMode)
 	if entries == nil {
 		entries = []dialog.HelpEntry{}
 	}
 	a.model.HelpView = dialog.HelpViewState{
 		Open:       true,
+		Title:      hc.title,
 		Query:      "",
 		Entries:    entries,
 		Selected:   0,
@@ -122,25 +144,22 @@ func (a *App) helpListRows() int {
 	return listH
 }
 
-// buildHelpEntries constructs help entries from keymap action bindings only.
+// buildHelpEntries constructs help entries for the browser view.
 func (a *App) buildHelpEntries() []dialog.HelpEntry {
-	return a.buildHelpEntriesForView(ui.ViewBrowser, nil)
+	return a.buildHelpEntriesForView(ui.ViewBrowser)
 }
 
 // buildDedupHelpEntries constructs contextual help for the find-duplicates view.
 func (a *App) buildDedupHelpEntries() []dialog.HelpEntry {
-	return a.buildHelpEntriesForView(ui.ViewDedup, helpkeys.IsDedupHelpAction)
+	return a.buildHelpEntriesForView(ui.ViewDedup)
 }
 
-func (a *App) buildHelpEntriesForView(vm ui.ViewMode, allow func(string) bool) []dialog.HelpEntry {
+func (a *App) buildHelpEntriesForView(vm ui.ViewMode) []dialog.HelpEntry {
 	var entries []dialog.HelpEntry
 
 	specs := keymap.DefaultActionSpecs()
 	for _, spec := range specs {
-		if spec.ID == keymap.ActionAppShowHelp {
-			continue // self-referential, omit
-		}
-		if allow != nil && !allow(spec.ID) {
+		if !helpkeys.ActionRunnableInView(vm, spec.ID) {
 			continue
 		}
 		keys := a.effectiveKeyStringsForView(spec.ID, spec.DefaultKeys, vm)
@@ -199,6 +218,12 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	if vm == ui.ViewDedup && a.keysDedup != nil {
 		add(a.keysDedup.BindingsForAction(actionID))
 	}
+	if vm == ui.ViewCompare && a.keysCompare != nil {
+		add(a.keysCompare.BindingsForAction(actionID))
+	}
+	if vm == ui.ViewFilePreview && a.keysFilePreview != nil {
+		add(a.keysFilePreview.BindingsForAction(actionID))
+	}
 	if len(out) > 0 {
 		return out
 	}
@@ -221,8 +246,24 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 	if od := keymap.DefaultFlattenDialogOverlayKeys()[actionID]; len(od) > 0 {
 		add(od)
 	}
+	if od := keymap.DefaultCommandsOverlayKeys()[actionID]; len(od) > 0 {
+		add(od)
+	}
+	if od := keymap.DefaultMessagesOverlayKeys()[actionID]; len(od) > 0 {
+		add(od)
+	}
 	if vm == ui.ViewDedup {
 		if od := keymap.DefaultDedupOverlayKeys()[actionID]; len(od) > 0 {
+			add(od)
+		}
+	}
+	if vm == ui.ViewCompare {
+		if od := keymap.DefaultCompareOverlayKeys()[actionID]; len(od) > 0 {
+			add(od)
+		}
+	}
+	if vm == ui.ViewFilePreview {
+		if od := keymap.DefaultFilePreviewOverlayKeys()[actionID]; len(od) > 0 {
 			add(od)
 		}
 	}
@@ -231,10 +272,167 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 
 // activateHelpAction runs the action chosen from the help dialog.
 func (a *App) activateHelpAction(actionID string) bool {
-	if a.model.ViewMode == ui.ViewDedup {
-		return a.activateDedupHelpAction(actionID)
+	hc := a.helpContextFor(a.model.ViewMode)
+	if hc.activate != nil {
+		return hc.activate(a, actionID)
 	}
 	return a.dispatchActionLikeKeyboardShortcut(actionID)
+}
+
+// activateJobsHelpAction runs a help-dialog action while the jobs view is active. Nav
+// actions bypass dispatch() (which assumes file-browser panel navigation) and move the
+// jobs-list cursor directly, mirroring what the raw arrow-key handler does.
+func (a *App) activateJobsHelpAction(actionID string) bool {
+	switch actionID {
+	case keymap.ActionAppQuit:
+		return a.handleQuit()
+	case keymap.ActionAppQuitImmediate:
+		return a.handleQuitImmediate()
+	case keymap.ActionAppOpenMenu:
+		a.openMenu()
+		return false
+	}
+	if a.tryDispatchJobs(actionID) {
+		return false
+	}
+	if a.tryDispatchAuxiliaryScreens(actionID) {
+		return false
+	}
+	switch actionID {
+	case keymap.ActionNavUp:
+		a.jobsCtrl.MoveSelection(-1)
+	case keymap.ActionNavDown:
+		a.jobsCtrl.MoveSelection(1)
+	case keymap.ActionNavPageUp:
+		a.jobsCtrl.MoveSelection(-5)
+	case keymap.ActionNavPageDown:
+		a.jobsCtrl.MoveSelection(5)
+	case keymap.ActionNavTop:
+		a.jobsCtrl.SelectEdge(false)
+	case keymap.ActionNavBottom:
+		a.jobsCtrl.SelectEdge(true)
+	}
+	return false
+}
+
+// activateCommandsHelpAction runs a help-dialog action while the Commands view is active.
+func (a *App) activateCommandsHelpAction(actionID string) bool {
+	switch actionID {
+	case keymap.ActionAppQuit:
+		return a.handleQuit()
+	case keymap.ActionAppQuitImmediate:
+		return a.handleQuitImmediate()
+	case keymap.ActionAppOpenMenu:
+		a.openMenu()
+		return false
+	}
+	if a.tryDispatchCommands(actionID) {
+		return false
+	}
+	if a.tryDispatchAuxiliaryScreens(actionID) {
+		return false
+	}
+	if actionID == keymap.ActionPanelExternalBrowser {
+		a.dispatch(actionID)
+		return false
+	}
+	switch actionID {
+	case keymap.ActionNavUp:
+		a.moveCommandsSelection(-1)
+	case keymap.ActionNavDown:
+		a.moveCommandsSelection(1)
+	case keymap.ActionNavPageUp:
+		a.moveCommandsSelection(-5)
+	case keymap.ActionNavPageDown:
+		a.moveCommandsSelection(5)
+	case keymap.ActionNavTop:
+		a.selectCommandsEdge(false)
+	case keymap.ActionNavBottom:
+		a.selectCommandsEdge(true)
+	}
+	return false
+}
+
+// activateMessagesHelpAction runs a help-dialog action while the Messages view is active.
+func (a *App) activateMessagesHelpAction(actionID string) bool {
+	switch actionID {
+	case keymap.ActionAppQuit:
+		return a.handleQuit()
+	case keymap.ActionAppQuitImmediate:
+		return a.handleQuitImmediate()
+	case keymap.ActionAppOpenMenu:
+		a.openMenu()
+		return false
+	}
+	if a.tryDispatchMessages(actionID) {
+		return false
+	}
+	if a.tryDispatchAuxiliaryScreens(actionID) {
+		return false
+	}
+	switch actionID {
+	case keymap.ActionNavUp:
+		a.moveMessagesSelection(-1)
+	case keymap.ActionNavDown:
+		a.moveMessagesSelection(1)
+	case keymap.ActionNavPageUp:
+		a.moveMessagesSelection(-5)
+	case keymap.ActionNavPageDown:
+		a.moveMessagesSelection(5)
+	case keymap.ActionNavTop:
+		a.selectMessagesEdge(false)
+	case keymap.ActionNavBottom:
+		a.selectMessagesEdge(true)
+	}
+	return false
+}
+
+// activateCompareHelpAction runs a help-dialog action while the Compare view is active.
+func (a *App) activateCompareHelpAction(actionID string) bool {
+	switch actionID {
+	case keymap.ActionAppQuit:
+		return a.handleQuit()
+	case keymap.ActionAppQuitImmediate:
+		return a.handleQuitImmediate()
+	case keymap.ActionAppOpenMenu:
+		a.openMenu()
+		return false
+	}
+	if a.tryDispatchCompare(actionID) {
+		return false
+	}
+	if a.tryDispatchAuxiliaryScreens(actionID) {
+		return false
+	}
+	if actionID == keymap.ActionPanelExternalBrowser {
+		a.dispatch(actionID)
+		return false
+	}
+
+	visible := a.compareVisibleRows()
+	switch actionID {
+	case keymap.ActionPanelSelectToggle:
+		if conflicts := a.compareCtrl.ToggleColumnSelection(); conflicts {
+			a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+		}
+		a.moveCompareSelection(1)
+	case keymap.ActionNavUp:
+		a.moveCompareSelection(-1)
+	case keymap.ActionNavDown:
+		a.moveCompareSelection(1)
+	case keymap.ActionNavPageUp:
+		a.moveCompareSelection(-visible)
+	case keymap.ActionNavPageDown:
+		a.moveCompareSelection(visible)
+	case keymap.ActionNavTop:
+		a.selectCompareEdge(false)
+	case keymap.ActionNavBottom:
+		a.selectCompareEdge(true)
+	case keymap.ActionNavOpen:
+		a.compareCtrl.NavigateFromSelection(visible)
+		a.closeCompareView()
+	}
+	return false
 }
 
 func (a *App) activateDedupHelpAction(actionID string) bool {

@@ -16,6 +16,9 @@ func (a *App) openJobsView() { a.jobsCtrl.OpenJobsView() }
 
 func (a *App) tryDispatchJobs(actionID string) bool {
 	if actionID == keymap.ActionJobsAnswerBlocker {
+		// The raw-key path answers blockers pre-dispatch (input.go); this covers
+		// menu/help activation. No-op when nothing is waiting for a decision.
+		a.handleJobsAnswerBlockerKey()
 		return true
 	}
 	return a.jobsCtrl.TryDispatch(actionID)

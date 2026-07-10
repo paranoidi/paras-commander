@@ -70,6 +70,41 @@ func (a *App) tryDispatchMessages(actionID string) bool {
 	}
 }
 
+// moveMessagesSelection moves the Messages-list cursor by steps logical messages (negative
+// moves up), skipping continuation rows via ui.AdjacentMessageLogIndex. Shared by the raw
+// arrow-key handling below and by help-dialog activation.
+func (a *App) moveMessagesSelection(steps int) {
+	log := a.model.MessageLog
+	dir, n := 1, steps
+	if steps < 0 {
+		dir, n = -1, -steps
+	}
+	sel := a.model.MessagesView.Selected
+	for range n {
+		next := ui.AdjacentMessageLogIndex(log, sel, dir)
+		if next == sel {
+			break
+		}
+		sel = next
+	}
+	a.model.MessagesView.Selected = sel
+	a.ensureMessagesViewSelectionVisible()
+}
+
+// selectMessagesEdge moves the Messages-list cursor to the first (toEnd=false) or last
+// (toEnd=true) logical message.
+func (a *App) selectMessagesEdge(toEnd bool) {
+	log := a.model.MessageLog
+	if toEnd {
+		if len(log) > 0 {
+			a.model.MessagesView.Selected = len(log) - 1
+		}
+	} else {
+		a.model.MessagesView.Selected = 0
+	}
+	a.ensureMessagesViewSelectionVisible()
+}
+
 func (a *App) handleMessagesViewKey(event *tcell.EventKey) bool {
 	switch event.Key() {
 	case tcell.KeyEsc:
@@ -97,49 +132,20 @@ func (a *App) handleMessagesViewKey(event *tcell.EventKey) bool {
 	if nextAction != "" && a.tryDispatchAuxiliaryScreens(nextAction) {
 		return false
 	}
-	if nextAction == keymap.ActionPanelExternalBrowser {
-		a.dispatch(nextAction)
-		return false
-	}
 
-	log := a.model.MessageLog
 	switch event.Key() {
 	case tcell.KeyUp:
-		a.model.MessagesView.Selected = ui.AdjacentMessageLogIndex(log, a.model.MessagesView.Selected, -1)
-		a.ensureMessagesViewSelectionVisible()
+		a.moveMessagesSelection(-1)
 	case tcell.KeyDown:
-		a.model.MessagesView.Selected = ui.AdjacentMessageLogIndex(log, a.model.MessagesView.Selected, 1)
-		a.ensureMessagesViewSelectionVisible()
+		a.moveMessagesSelection(1)
 	case tcell.KeyPgUp:
-		sel := a.model.MessagesView.Selected
-		for range 5 {
-			next := ui.AdjacentMessageLogIndex(log, sel, -1)
-			if next == sel {
-				break
-			}
-			sel = next
-		}
-		a.model.MessagesView.Selected = sel
-		a.ensureMessagesViewSelectionVisible()
+		a.moveMessagesSelection(-5)
 	case tcell.KeyPgDn:
-		sel := a.model.MessagesView.Selected
-		for range 5 {
-			next := ui.AdjacentMessageLogIndex(log, sel, 1)
-			if next == sel {
-				break
-			}
-			sel = next
-		}
-		a.model.MessagesView.Selected = sel
-		a.ensureMessagesViewSelectionVisible()
+		a.moveMessagesSelection(5)
 	case tcell.KeyHome:
-		a.model.MessagesView.Selected = 0
-		a.ensureMessagesViewSelectionVisible()
+		a.selectMessagesEdge(false)
 	case tcell.KeyEnd:
-		if len(log) > 0 {
-			a.model.MessagesView.Selected = len(log) - 1
-		}
-		a.ensureMessagesViewSelectionVisible()
+		a.selectMessagesEdge(true)
 	}
 	return false
 }

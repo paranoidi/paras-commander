@@ -60,6 +60,43 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 	}
 }
 
+// compareVisibleRows returns the merged twin-panel row count used for Compare-list paging
+// and scroll-into-view math.
+func (a *App) compareVisibleRows() int {
+	width, height := a.screen.Size()
+	layout := a.layoutForTerminalSize(width, height)
+	rect := ui.MergeTwinPanelRects(layout.Primary, layout.Secondary, a.model.SplitOrientation)
+	return max(0, rect.Height-2)
+}
+
+// moveCompareSelection moves the Compare-list cursor by delta rows (clamped), scrolling into
+// view. Shared by the raw arrow-key handling below and by help-dialog activation.
+func (a *App) moveCompareSelection(delta int) {
+	rows := a.compareCtrl.FilteredRows()
+	st := &a.model.CompareView
+	sel := max(0, st.Selected+delta)
+	if len(rows) > 0 && sel > len(rows)-1 {
+		sel = len(rows) - 1
+	}
+	st.Selected = sel
+	a.compareCtrl.EnsureSelectionVisible(a.compareVisibleRows())
+}
+
+// selectCompareEdge moves the Compare-list cursor to the first (toEnd=false) or last
+// (toEnd=true) row.
+func (a *App) selectCompareEdge(toEnd bool) {
+	rows := a.compareCtrl.FilteredRows()
+	st := &a.model.CompareView
+	if toEnd {
+		if len(rows) > 0 {
+			st.Selected = len(rows) - 1
+		}
+	} else {
+		st.Selected = 0
+	}
+	a.compareCtrl.EnsureSelectionVisible(a.compareVisibleRows())
+}
+
 func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 	if a.model.CompareFilterDialog.Open {
 		a.handleCompareFilterDialogKey(event)
@@ -122,48 +159,20 @@ func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 		return false
 	}
 
-	width, height := a.screen.Size()
-	layout := a.layoutForTerminalSize(width, height)
-	rect := ui.MergeTwinPanelRects(layout.Primary, layout.Secondary, a.model.SplitOrientation)
-	visible := max(0, rect.Height-2)
-
-	rows := a.compareCtrl.FilteredRows()
-	st := &a.model.CompareView
+	visible := a.compareVisibleRows()
 	switch event.Key() {
 	case tcell.KeyUp:
-		if st.Selected > 0 {
-			st.Selected--
-		}
-		a.compareCtrl.EnsureSelectionVisible(visible)
+		a.moveCompareSelection(-1)
 	case tcell.KeyDown:
-		if st.Selected < len(rows)-1 {
-			st.Selected++
-		}
-		a.compareCtrl.EnsureSelectionVisible(visible)
+		a.moveCompareSelection(1)
 	case tcell.KeyPgUp:
-		if visible > 0 {
-			st.Selected -= visible
-			if st.Selected < 0 {
-				st.Selected = 0
-			}
-		}
-		a.compareCtrl.EnsureSelectionVisible(visible)
+		a.moveCompareSelection(-visible)
 	case tcell.KeyPgDn:
-		if visible > 0 && len(rows) > 0 {
-			st.Selected += visible
-			if st.Selected >= len(rows) {
-				st.Selected = len(rows) - 1
-			}
-		}
-		a.compareCtrl.EnsureSelectionVisible(visible)
+		a.moveCompareSelection(visible)
 	case tcell.KeyHome:
-		st.Selected = 0
-		a.compareCtrl.EnsureSelectionVisible(visible)
+		a.selectCompareEdge(false)
 	case tcell.KeyEnd:
-		if len(rows) > 0 {
-			st.Selected = len(rows) - 1
-		}
-		a.compareCtrl.EnsureSelectionVisible(visible)
+		a.selectCompareEdge(true)
 	case tcell.KeyEnter:
 		a.compareCtrl.NavigateFromSelection(visible)
 		a.closeCompareView()
