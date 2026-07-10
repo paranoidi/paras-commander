@@ -40,6 +40,11 @@ type Result struct {
 	IsDiff bool
 	// DiffHunkLines holds 0-based source line numbers of @@ hunk markers.
 	DiffHunkLines []int
+	// StatusText is a short git-status label to show in the preview title (e.g. "no changes", "ignored").
+	// Set when a diff was requested but there was nothing to diff, so plain content is shown instead.
+	StatusText string
+	// StatusThemeKey is the panel.git.* theme key used to color StatusText.
+	StatusThemeKey string
 }
 
 // Run executes internal Chroma highlighting or an external preview command.
@@ -133,13 +138,24 @@ func runExternal(ctx context.Context, req Request) Result {
 	}
 }
 
+// gitDiffFallback shows plain file content with a git-status label when there is
+// nothing meaningful to diff (untracked, ignored, unmodified, or an empty diff).
+func gitDiffFallback(ctx context.Context, req Request, status gitstatus.Status) Result {
+	req.GitDiff = false
+	res := Run(ctx, req)
+	res.StatusText = status.Label()
+	res.StatusThemeKey = status.ThemeKey()
+	return res
+}
+
 func runGitDiff(ctx context.Context, req Request) Result {
-	// Untracked new file: no diff available, fall back to content preview.
-	if req.GitStatus != nil &&
-		req.GitStatus.Staged == gitstatus.NotModified &&
-		req.GitStatus.Unstaged == gitstatus.New {
-		req.GitDiff = false
-		return Run(ctx, req)
+	var eff gitstatus.Status
+	if req.GitStatus != nil {
+		eff = req.GitStatus.Effective()
+	}
+	// Nothing to diff: unmodified, untracked, or ignored — show plain content instead.
+	if eff == gitstatus.NotModified || eff == gitstatus.New || eff == gitstatus.Ignored {
+		return gitDiffFallback(ctx, req, eff)
 	}
 
 	// Choose diff args: staged-only changes use --cached; otherwise compare to HEAD.
@@ -167,7 +183,7 @@ func runGitDiff(ctx context.Context, req Request) Result {
 			combined += "--- stderr ---\n" + string(res.Stderr)
 		}
 		if strings.TrimSpace(combined) == "" {
-			return Result{IsDiff: true, ErrorMsg: "No changes"}
+			return gitDiffFallback(ctx, req, eff)
 		}
 		return Result{
 			IsDiff:       true,
@@ -185,7 +201,7 @@ func runGitDiff(ctx context.Context, req Request) Result {
 	}
 	rawDiff := strings.TrimRight(string(res.Stdout), "\n")
 	if strings.TrimSpace(rawDiff) == "" {
-		return Result{IsDiff: true, ErrorMsg: "No changes"}
+		return gitDiffFallback(ctx, req, eff)
 	}
 
 	hunkLines := parseDiffHunkLines(rawDiff)

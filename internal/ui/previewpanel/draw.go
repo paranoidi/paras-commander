@@ -106,14 +106,25 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		if st.BodyHeld {
 			name += "…"
 		}
+		statusSuffix := ""
+		if st.GitStatusText != "" {
+			statusSuffix = " (" + st.GitStatusText + ")"
+		}
 		// Fill the row with the preview theme (syntax) background, filename centered.
 		headerStyle := contentPadStyle(borderStyle, chrome.Surface, p.BodyStyle)
 		primitive.Text(screen, rect.X, rect.Y, rect.Width, "", headerStyle)
-		start := rect.X + (rect.Width-runewidth.StringWidth(name))/2
+		full := name + statusSuffix
+		start := rect.X + (rect.Width-runewidth.StringWidth(full))/2
 		if start < rect.X {
 			start = rect.X
 		}
 		primitive.TextOverlay(screen, start, rect.Y, rect.X+rect.Width-start, name, headerStyle)
+		if statusSuffix != "" {
+			statusFg, _, _ := p.Theme.PanelGitStyle(st.GitStatusThemeKey).Decompose()
+			suffixStyle := headerStyle.Foreground(statusFg)
+			suffixX := start + runewidth.StringWidth(name)
+			primitive.TextOverlay(screen, suffixX, rect.Y, rect.X+rect.Width-suffixX, statusSuffix, suffixStyle)
+		}
 	} else {
 		title := " Preview "
 		if tb := strings.TrimSpace(st.TitleBase); tb != "" {

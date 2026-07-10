@@ -307,6 +307,8 @@ func (a *App) openFilePreviewFullscreen() {
 		st.ErrorMsg = ""
 		st.IsDiff = false
 		st.DiffHunkLines = nil
+		st.GitStatusText = ""
+		st.GitStatusThemeKey = ""
 	})
 	gen := a.filePreviewRunGen.Add(1)
 	a.postCommandWake()

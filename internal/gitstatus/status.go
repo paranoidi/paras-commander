@@ -20,6 +20,11 @@ type Cell struct {
 	Unstaged Status
 }
 
+// Effective returns the more significant of Staged/Unstaged for single-status display.
+func (c Cell) Effective() Status {
+	return combineStatus(c.Staged, c.Unstaged)
+}
+
 // Rune returns the display glyph for s (eza notation).
 func (s Status) Rune() rune {
 	switch s {
@@ -39,6 +44,28 @@ func (s Status) Rune() rune {
 		return 'U'
 	default:
 		return '-'
+	}
+}
+
+// Label returns a short human-readable word for this status, shown in preview titles.
+func (s Status) Label() string {
+	switch s {
+	case New:
+		return "untracked"
+	case Modified:
+		return "modified"
+	case Deleted:
+		return "deleted"
+	case Renamed:
+		return "renamed"
+	case TypeChange:
+		return "type changed"
+	case Ignored:
+		return "ignored"
+	case Conflicted:
+		return "conflicted"
+	default:
+		return "no changes"
 	}
 }
 

@@ -52,6 +52,10 @@ type State struct {
 	IsDiff bool
 	// DiffHunkLines holds the 0-based source line numbers of @@ hunk markers in the diff.
 	DiffHunkLines []int
+	// GitStatusText is a short git-status label shown next to the title (e.g. "no changes", "ignored").
+	GitStatusText string
+	// GitStatusThemeKey is the panel.git.* theme key used to color GitStatusText.
+	GitStatusThemeKey string
 
 	wrappedLines     [][]AnsiCell
 	wrapWidth        int

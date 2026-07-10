@@ -262,6 +262,8 @@ func (a *App) applyCarouselFilePreviewNow() {
 		st.ErrorMsg = ""
 		st.IsDiff = false
 		st.DiffHunkLines = nil
+		st.GitStatusText = ""
+		st.GitStatusThemeKey = ""
 	})
 	a.postCommandWake()
 	gen := a.carouselFilePreviewRunGen.Add(1)

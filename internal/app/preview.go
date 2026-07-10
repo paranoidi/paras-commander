@@ -607,6 +607,8 @@ func (a *App) applyQuickViewPreviewNow() {
 			st.ErrorMsg = ""
 			st.IsDiff = false
 			st.DiffHunkLines = nil
+			st.GitStatusText = ""
+			st.GitStatusThemeKey = ""
 		})
 		a.postCommandWake()
 		gen := a.filePreviewRunGen.Add(1)
@@ -706,7 +708,7 @@ func (a *App) previewRequest(path string, textW int, workDir string, chromeBlock
 		Preview:   a.config.Preview,
 		BaseStyle: ui.FilePreviewBodyStyle(a.styles, chromeBlocked),
 	}
-	if gitStatus != nil && (gitStatus.Staged != gitstatus.NotModified || gitStatus.Unstaged != gitstatus.NotModified) {
+	if gitStatus != nil {
 		req.GitDiff = true
 		req.GitStatus = gitStatus
 	}
@@ -785,6 +787,8 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 			st.SetHighlightedCells(nil)
 			st.IsDiff = res.IsDiff
 			st.DiffHunkLines = nil
+			st.GitStatusText = ""
+			st.GitStatusThemeKey = ""
 			doneApplied = true
 			return
 		}
@@ -801,6 +805,8 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 		st.ErrorMsg = ""
 		st.IsDiff = res.IsDiff
 		st.DiffHunkLines = res.DiffHunkLines
+		st.GitStatusText = res.StatusText
+		st.GitStatusThemeKey = res.StatusThemeKey
 		doneApplied = true
 	})
 	if doneApplied && runGen == gen.Load() {
