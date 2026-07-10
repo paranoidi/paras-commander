@@ -1360,6 +1360,43 @@ func TestLeftMenuToggleHiddenIsGlobal(t *testing.T) {
 	}
 }
 
+// TestToggleHiddenConvergesDivergedPanels guards the set-to-value semantics: even when
+// the panels somehow diverge, one toggle brings both to the same state (flip-each
+// semantics would keep them diverged forever).
+func TestToggleHiddenConvergesDivergedPanels(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "visible.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.Secondary.ShowHidden = true
+	app.model.ActivePanel = ui.PrimaryPanel
+
+	app.dispatch(keymap.ActionPanelToggleHidden)
+	if !app.model.Primary.ShowHidden || !app.model.Secondary.ShowHidden {
+		t.Fatalf("ShowHidden = (%v, %v), want both true after toggle from diverged state",
+			app.model.Primary.ShowHidden, app.model.Secondary.ShowHidden)
+	}
+
+	app.dispatch(keymap.ActionPanelToggleHidden)
+	if app.model.Primary.ShowHidden || app.model.Secondary.ShowHidden {
+		t.Fatalf("ShowHidden = (%v, %v), want both false after second toggle",
+			app.model.Primary.ShowHidden, app.model.Secondary.ShowHidden)
+	}
+}
+
 func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
 	root := t.TempDir()
 	target := filepath.Join(root, "deep", "target")
