@@ -105,21 +105,25 @@ func drawDedupView(
 	if sel, ok := dedupRowAt(list, view.Main.Selected); ok && sel.Value.Kind == DedupRowFile {
 		copyFullyMarkedDirs = dedupCopyPaneFullyMarkedDirSet(snap, sel, view.Marked)
 	}
+	activeGroup := -1
+	if view.Main.Selected >= 0 && view.Main.Selected < len(list) {
+		activeGroup = list[view.Main.Selected].Value.GroupIdx
+	}
+	var hintDirs map[string]bool
+	if view.TreeDirs && activeGroup >= 0 && activeGroup < len(snap.Groups) {
+		hintDirs = dedupGroupDirSet(snap.Groups[activeGroup])
+	}
 	drawDedupTreePane(screen, layout.Primary, dedupPaneParams{
-		Title:      dedupViewTitle(snap, view.IgnoredEmptyCount),
-		EndLabel:   panelSelectionSizePadded(dedupEndLabel(view)),
-		Header:     rootHeader,
-		Rows:       list,
-		Pane:       view.Main,
-		Focused:    !view.FocusCopies,
-		EmptyText:  dedupEmptyMessage(snap),
-		DimByGroup: !view.TreeDirs,
-		ActiveGroup: func() int {
-			if view.Main.Selected >= 0 && view.Main.Selected < len(list) {
-				return list[view.Main.Selected].Value.GroupIdx
-			}
-			return -1
-		}(),
+		Title:            dedupViewTitle(snap, view.IgnoredEmptyCount),
+		EndLabel:         panelSelectionSizePadded(dedupEndLabel(view)),
+		Header:           rootHeader,
+		Rows:             list,
+		Pane:             view.Main,
+		Focused:          !view.FocusCopies,
+		EmptyText:        dedupEmptyMessage(snap),
+		DimByGroup:       !view.TreeDirs,
+		ActiveGroup:      activeGroup,
+		HintDirs:         hintDirs,
 		FullyMarkedDirs:  treeFullyMarkedDirs,
 		MarkedDirs:       markedDirs,
 		DangerMarkedDirs: dangerMarkedDirs,
@@ -166,6 +170,7 @@ type dedupPaneParams struct {
 	EmptyText        string
 	DimByGroup       bool // groups mode: dim rows outside ActiveGroup
 	ActiveGroup      int
+	HintDirs         map[string]bool // dirs mode: DirRel keys whose subtree contains ActiveGroup (collapsed-folder hint)
 	CopiesPane       bool            // copies pane: dir rows can show fully-marked copy styling
 	FullyMarkedDirs  map[string]bool // DirRel keys whose entire descendant duplicate subtree is marked
 	MarkedDirs       map[string]bool // DirRel keys of dirs whose subtree has a marked file
@@ -241,7 +246,12 @@ func drawDedupTreePane(
 		dirFullyMarked := d.Kind == DedupRowDir && p.FullyMarkedDirs[d.DirRel]
 
 		rowBase := base
-		if p.DimByGroup && d.GroupIdx != p.ActiveGroup {
+		switch {
+		case p.ActiveGroup >= 0 && d.Kind == DedupRowFile && d.GroupIdx == p.ActiveGroup && !rowSelected:
+			rowBase = styles.PanelHint.Background(bg)
+		case p.ActiveGroup >= 0 && d.Kind == DedupRowDir && !entry.Expanded && p.HintDirs[d.DirRel]:
+			rowBase = styles.PanelHint.Background(bg)
+		case p.DimByGroup && d.GroupIdx != p.ActiveGroup:
 			rowBase = dim
 		}
 		lineStyle := rowBase

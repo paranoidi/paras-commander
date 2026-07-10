@@ -59,10 +59,16 @@ func (a *App) openDedupDeleteDialog() {
 
 // openDedupEmptyDirsConfirm opens the "remove directories left empty by this
 // delete?" confirmation, shown after the delete-marked-files dialog is
-// confirmed. Defaults to Yes (index 0) — removing already-empty directories
+// confirmed, but only when the delete would actually leave directories
+// dangling. Defaults to Yes (index 0) — removing already-empty directories
 // is low-risk, unlike the file deletion itself.
 func (a *App) openDedupEmptyDirsConfirm() {
-	a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{Open: true, Focus: 0}
+	dirs := a.dedupCtrl.EmptyDirsAfterDelete()
+	if len(dirs) == 0 {
+		a.dedupCtrl.DeleteMarked(false)
+		return
+	}
+	a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{Open: true, Focus: 0, Dirs: dirs}
 }
 
 func (a *App) handleDedupEmptyDirsConfirmKey(event *tcell.EventKey) bool {

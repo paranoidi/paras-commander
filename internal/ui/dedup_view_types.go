@@ -655,6 +655,27 @@ func dedupMarkedDirSet(snap comparepkg.DedupSnapshot, marked map[string]bool) ma
 	return out
 }
 
+// dedupGroupDirSet returns ancestor dir rel paths (like DedupRowData.DirRel)
+// whose subtree contains a file from g, for the collapsed-folder cursor-hint.
+func dedupGroupDirSet(g comparepkg.DedupGroup) map[string]bool {
+	out := map[string]bool{}
+	for _, f := range g.Files {
+		rel := f.Rel
+		for {
+			i := strings.LastIndexByte(rel, '/')
+			if i < 0 {
+				break
+			}
+			rel = rel[:i]
+			if out[rel] {
+				break
+			}
+			out[rel] = true
+		}
+	}
+	return out
+}
+
 // dedupDangerMarkedDirSet returns ancestor dir rel paths (like DedupRowData.DirRel)
 // whose subtree contains a file from a fully-marked duplicate group.
 func dedupDangerMarkedDirSet(snap comparepkg.DedupSnapshot, marked map[string]bool) map[string]bool {

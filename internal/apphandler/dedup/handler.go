@@ -13,6 +13,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
+	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -136,6 +138,7 @@ func (h *Handler) Open() {
 		MaxHashBytes:      h.config.Compare.MaxHashBytes,
 		ConfirmHashBytes:  h.config.Dedup.HashConfirmBytes,
 		FileProgressBytes: h.config.Dedup.FileProgressBytes,
+		ChunkBytes:        h.config.Dedup.ChunkBytes,
 		OnUpdate:          func(_ comparepkg.DedupSnapshot) { h.postWake() },
 	})
 	h.model.DedupSnapshot = h.session.Snapshot()
@@ -933,6 +936,49 @@ func (h *Handler) MarkedPaths() []string {
 	out := make([]string, 0, len(files))
 	for _, f := range files {
 		out = append(out, f.Abs.String())
+	}
+	return out
+}
+
+// EmptyDirsAfterDelete previews the directories that deleting the currently
+// marked files would leave empty (dry run, no filesystem changes), as paths
+// relative to the dedup root. Returns nil when nothing would be removed, so
+// callers can skip the "remove empty directories?" confirmation entirely.
+func (h *Handler) EmptyDirsAfterDelete() []string {
+	files := h.MarkedFiles()
+	if len(files) == 0 {
+		return nil
+	}
+	removed := make(map[string]bool, len(files))
+	var roots []pathloc.Path
+	seen := map[string]bool{}
+	for _, f := range files {
+		removed[f.Abs.String()] = true
+		parent := f.Abs.Parent()
+		if key := parent.String(); !seen[key] {
+			seen[key] = true
+			roots = append(roots, parent)
+		}
+	}
+	dirs, err := ops.PreviewEmptyDirsUnder(context.Background(), roots, removed)
+	if err != nil || len(dirs) == 0 {
+		return nil
+	}
+	rootFP, err := h.model.DedupSnapshot.EffectiveDisplayRoot().FilePath()
+	if err != nil {
+		return nil
+	}
+	out := make([]string, 0, len(dirs))
+	for _, d := range dirs {
+		dfp, err := d.FilePath()
+		if err != nil {
+			continue
+		}
+		rel, err := filepath.Rel(rootFP, dfp)
+		if err != nil {
+			continue
+		}
+		out = append(out, filepath.ToSlash(rel))
 	}
 	return out
 }

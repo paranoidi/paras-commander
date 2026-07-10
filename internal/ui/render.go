@@ -556,7 +556,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	case dialog.PrimaryModalAmbiguousTransfer:
 		dialog.DrawAmbiguousTransferDialog(screen, layout, model.AmbiguousTransfer, styles)
 	case dialog.PrimaryModalDedupEmptyDirs:
-		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, styles)
+		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, styles, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintDedupEmptyDirsConfirmRowIcon)
 	}
 	if model.ConfigDialog.Open {
 		dialog.DrawConfigDialog(screen, layout, model.ConfigDialog, styles)

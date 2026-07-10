@@ -75,6 +75,7 @@ indicator.other_panel = { fg = "cyan", bold = true }
 scrollbar.track = { fg = "bright_black" }
 scrollbar.thumb = { fg = "white" }
 text = { fg = "white" }
+hint = { fg = "bright_white", bold = true }
 
 git.conflicted = { fg = "red" }
 git.deleted = { fg = "red" }
@@ -173,10 +174,10 @@ option.inactive = { fg = "white" }
 option.selected = { fg = "yellow" }
 option.invalid = { fg = "red" }
 indicator.selection_size = { fg = "yellow" }
-progress.fill = { fg = "black", bg = "bright_green" }
-progress.label.on_fill = { fg = "black", bold = true }
+progress.fill = { fg = "white", bg = "black" }
+progress.label.on_fill = { fg = "bright_white", bold = true }
 progress.label.on_track = { fg = "bright_white", bold = true }
-progress.track = { fg = "bright_black", bg = "bright_black" }
+progress.track = { fg = "white", bg = "bright_black" }
 
 [dialog.massrename]
 before = { fg = "white" }

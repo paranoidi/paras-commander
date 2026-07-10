@@ -139,6 +139,9 @@ type DedupConfig struct {
 	// FileProgressBytes shows a per-file progress bar in the scan dialog for
 	// files at or above this size. Zero disables the per-file bar.
 	FileProgressBytes int64 `toml:"file_progress_bytes"`
+	// ChunkBytes compares same-size files this many bytes at a time, bailing out
+	// of a file as soon as its content diverges. Zero disables chunking.
+	ChunkBytes int64 `toml:"chunk_bytes"`
 }
 
 // CompareConfig controls panel compare hashing and walk options.
@@ -500,6 +503,7 @@ func Default() Config {
 		Dedup: DedupConfig{
 			HashConfirmBytes:  DefaultDedupHashConfirmBytes,
 			FileProgressBytes: DefaultDedupFileProgressBytes,
+			ChunkBytes:        DefaultDedupChunkBytes,
 		},
 	}
 }
@@ -771,6 +775,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Dedup.FileProgressBytes < 0 {
 		c.Dedup.FileProgressBytes = 0
+	}
+	if c.Dedup.ChunkBytes < 0 {
+		c.Dedup.ChunkBytes = 0
 	}
 	if !c.sortModeValid(c.DefaultSort) {
 		c.DefaultSort = builtin.DefaultSort

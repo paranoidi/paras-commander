@@ -10,9 +10,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// HashFile reads loc and returns SHA-256 of its contents. When onProgress is
-// non-nil it is invoked after each read with the cumulative bytes hashed so far.
-func HashFile(ctx context.Context, loc pathloc.Path, buf []byte, maxBytes int64, onProgress func(read int64)) ([32]byte, error) {
+// HashFile reads loc and returns SHA-256 of its contents.
+func HashFile(ctx context.Context, loc pathloc.Path, buf []byte, maxBytes int64) ([32]byte, error) {
 	if maxBytes > 0 {
 		ent, err := fsbackend.Default().Stat(ctx, loc)
 		if err != nil {
@@ -36,7 +35,6 @@ func HashFile(ctx context.Context, loc pathloc.Path, buf []byte, maxBytes int64,
 	if len(buf) == 0 {
 		buf = make([]byte, 32*1024)
 	}
-	var read int64
 	for {
 		if ctx.Err() != nil {
 			return [32]byte{}, ctx.Err()
@@ -45,10 +43,6 @@ func HashFile(ctx context.Context, loc pathloc.Path, buf []byte, maxBytes int64,
 		if n > 0 {
 			if _, werr := h.Write(buf[:n]); werr != nil {
 				return [32]byte{}, werr
-			}
-			read += int64(n)
-			if onProgress != nil {
-				onProgress(read)
 			}
 		}
 		if readErr == io.EOF {

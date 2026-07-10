@@ -207,6 +207,54 @@ func removeEmptyDirsPostOrder(ctx context.Context, dir pathloc.Path) error {
 	return nil
 }
 
+// PreviewEmptyDirsUnder dry-runs RemoveEmptyDirsUnder: it reports which
+// directories under each root would be removed if the paths in removed were
+// deleted first, without touching the filesystem. removed keys are
+// pathloc.Path.String() values of files about to be deleted.
+func PreviewEmptyDirsUnder(ctx context.Context, roots []pathloc.Path, removed map[string]bool) ([]pathloc.Path, error) {
+	var out []pathloc.Path
+	for _, root := range roots {
+		if _, err := previewEmptyDirsPostOrder(ctx, root, removed, &out); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+func previewEmptyDirsPostOrder(ctx context.Context, dir pathloc.Path, removed map[string]bool, out *[]pathloc.Path) (bool, error) {
+	be, err := backendFor(dir)
+	if err != nil {
+		return false, err
+	}
+	entries, err := be.List(ctx, dir)
+	if err != nil {
+		return false, &Error{Op: "flatten", Text: fmt.Sprintf("list %q: %v", dir, err), Err: err}
+	}
+	empty := true
+	for _, e := range entries {
+		if e.Name == "." || e.Name == ".." {
+			continue
+		}
+		if e.Type == fsbackend.EntryDirectory {
+			childEmpty, err := previewEmptyDirsPostOrder(ctx, e.Loc, removed, out)
+			if err != nil {
+				return false, err
+			}
+			if !childEmpty {
+				empty = false
+			}
+			continue
+		}
+		if !removed[e.Loc.String()] {
+			empty = false
+		}
+	}
+	if empty {
+		*out = append(*out, dir)
+	}
+	return empty, nil
+}
+
 func dirHasOnlyDotEntries(entries []fsbackend.Entry) bool {
 	for _, e := range entries {
 		if e.Name == "." || e.Name == ".." {

@@ -87,7 +87,9 @@ type Theme struct {
 	// PanelIconFolderDefault optionally styles the default closed-folder icon strip; unset uses row FG.
 	PanelIconFolderDefault tcell.Style
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
-	PanelText                   tcell.Style
+	PanelText tcell.Style
+	// PanelHint highlights rows related to the cursor row (e.g. duplicate siblings in the dedupe treeview).
+	PanelHint                   tcell.Style
 	PanelCursorActive           tcell.Style
 	PanelCursorActiveUnique     tcell.Style
 	PanelCursorInactive         tcell.Style
@@ -750,6 +752,7 @@ var requiredStyleKeys = []string{
 	"panel.icon.folder.open",
 	"panel.icon.folder.mount",
 	"panel.text",
+	"panel.hint",
 	"panel.indicator.sync",
 	"panel.indicator.quick_view",
 	"panel.indicator.selections",
@@ -1223,6 +1226,7 @@ func parse(data []byte) (Theme, error) {
 		PanelIconFolderMount:                styles["panel.icon.folder.mount"],
 		PanelIconFolderDefault:              panelIconFolderDefault,
 		PanelText:                           styles["panel.text"],
+		PanelHint:                           styles["panel.hint"],
 		PanelCursorActive:                   styles["panel.active.row.cursor"],
 		PanelCursorActiveUnique:             styles["panel.active.row.cursor.unique"],
 		PanelCursorInactive:                 styles["panel.inactive.row.cursor"],

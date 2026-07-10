@@ -4,11 +4,16 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"crypto/sha256"
+	"hash"
+	"io"
+	"math"
 	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -110,6 +115,10 @@ type DedupOptions struct {
 	HashWorkers  int
 	ReadBuffer   []byte
 	MaxHashBytes int64
+	// ChunkBytes compares same-size files this many bytes at a time so a file
+	// can be dropped as soon as its prefix diverges from every other file in
+	// its partition. Zero or negative disables chunking (whole file in one round).
+	ChunkBytes int64
 	// ConfirmHashBytes, when >0, pauses before hashing (phase DedupAwaitConfirm)
 	// once the total byte size of hash candidates exceeds it, until Confirm() is called.
 	ConfirmHashBytes int64
@@ -203,10 +212,20 @@ func (s *DedupSession) run(ctx context.Context) {
 		bySize[f.Size] = append(bySize[f.Size], f)
 	}
 	var candidates []FileRecord
-	for _, group := range bySize {
-		if len(group) > 1 {
-			candidates = append(candidates, group...)
+	var sizeGroups [][]int // candidate indices per size class; each hashes as one unit
+	for size, group := range bySize {
+		if len(group) < 2 {
+			continue
 		}
+		if s.opts.MaxHashBytes > 0 && size > s.opts.MaxHashBytes {
+			continue // oversize files are never opened (same outcome as the old per-file error)
+		}
+		idxs := make([]int, 0, len(group))
+		for _, f := range group {
+			idxs = append(idxs, len(candidates))
+			candidates = append(candidates, f)
+		}
+		sizeGroups = append(sizeGroups, idxs)
 	}
 
 	if len(candidates) == 0 {
@@ -250,9 +269,18 @@ func (s *DedupSession) run(ctx context.Context) {
 		HashBytesTotal: candidateBytes,
 	})
 
-	// Each worker writes only to its own unique index, so no mutex is needed.
+	// Each size group is resolved by exactly one worker and groups have disjoint
+	// candidate indices, so these slices need no mutex. hashOK is set only for
+	// files read to EOF: partial prefix digests of early-bailed files must never
+	// reach groupByHash (files from different size groups can share a prefix).
 	hashes := make([][32]byte, len(candidates))
-	hashErr := make([]bool, len(candidates))
+	hashOK := make([]bool, len(candidates))
+	hashers := make([]hash.Hash, len(candidates))
+
+	chunk := s.opts.ChunkBytes
+	if chunk <= 0 {
+		chunk = math.MaxInt64
+	}
 
 	// Progress is byte-based so large files advance the bar smoothly instead of
 	// jumping one file at a time. One mutex guards the tracker; contention is one
@@ -305,47 +333,101 @@ func (s *DedupSession) run(ctx context.Context) {
 		pubMu.Unlock()
 	}
 
-	jobCh := make(chan int)
+	// resolve retires a candidate (EOF, early bail, or read error). Charging the
+	// full size even for bailed/errored files keeps HashedBytes monotonic and
+	// reaching HashBytesTotal; skipped bytes just jump the bar forward.
+	resolve := func(idx int) {
+		pubMu.Lock()
+		delete(inProgress, idx)
+		doneFiles++
+		doneBytes += candidates[idx].Size
+		pubMu.Unlock()
+		publishProgress()
+	}
+
+	// processGroup compares one size class chunk by chunk: each round hashes the
+	// next chunk of every member, then splits the partition by prefix digest.
+	// Singleton partitions are provably unique and stop reading immediately;
+	// partitions that reach EOF are duplicate sets and their hashers now hold the
+	// true full-file SHA-256.
+	// ponytail: one worker walks a whole size group serially; parallelize files
+	// inside a giant group if that ever shows up in practice.
+	type partition struct {
+		idxs   []int
+		offset int64
+	}
+	processGroup := func(group []int, buf []byte) {
+		size := candidates[group[0]].Size
+		pubMu.Lock()
+		for _, idx := range group {
+			hashers[idx] = sha256.New()
+			inProgress[idx] = 0
+		}
+		pubMu.Unlock()
+		stack := []partition{{idxs: group}}
+		for len(stack) > 0 {
+			if ctx.Err() != nil {
+				return
+			}
+			p := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			if p.offset >= size {
+				for _, idx := range p.idxs {
+					copy(hashes[idx][:], hashers[idx].Sum(nil))
+					hashOK[idx] = true
+					resolve(idx)
+				}
+				continue
+			}
+			end := p.offset + chunk
+			if end > size || end < 0 { // end < 0: offset+MaxInt64 overflow
+				end = size
+			}
+			byKey := map[string][]int{}
+			for _, idx := range p.idxs {
+				err := hashChunk(ctx, candidates[idx].Abs, hashers[idx], buf, p.offset, end-p.offset, func(read int64) {
+					pubMu.Lock()
+					inProgress[idx] = p.offset + read
+					pubMu.Unlock()
+					publishProgress()
+				})
+				if err != nil {
+					resolve(idx) // unreadable: drop it, keep comparing the rest
+					continue
+				}
+				key := string(hashers[idx].Sum(nil))
+				byKey[key] = append(byKey[key], idx)
+			}
+			for _, sub := range byKey {
+				if len(sub) == 1 {
+					resolve(sub[0]) // unique prefix: no duplicate possible, skip the rest
+					continue
+				}
+				stack = append(stack, partition{idxs: sub, offset: end})
+			}
+		}
+	}
+
+	jobCh := make(chan []int)
 	var wg sync.WaitGroup
 	for range workers {
 		wg.Add(1)
 		buf := make([]byte, bufSize)
 		go func() {
 			defer wg.Done()
-			for idx := range jobCh {
+			for group := range jobCh {
 				if ctx.Err() != nil {
 					return
 				}
-				pubMu.Lock()
-				inProgress[idx] = 0
-				pubMu.Unlock()
-				sum, err := HashFile(ctx, candidates[idx].Abs, buf, s.opts.MaxHashBytes, func(read int64) {
-					pubMu.Lock()
-					inProgress[idx] = read
-					pubMu.Unlock()
-					publishProgress()
-				})
-				if err != nil {
-					hashErr[idx] = true
-				} else {
-					hashes[idx] = sum
-				}
-				// Charge the full size even on error so HashedBytes stays
-				// monotonic and reaches HashBytesTotal.
-				pubMu.Lock()
-				delete(inProgress, idx)
-				doneFiles++
-				doneBytes += candidates[idx].Size
-				pubMu.Unlock()
-				publishProgress()
+				processGroup(group, buf)
 			}
 		}()
 	}
-	for idx := range candidates {
+	for _, group := range sizeGroups {
 		if ctx.Err() != nil {
 			break
 		}
-		jobCh <- idx
+		jobCh <- group
 	}
 	close(jobCh)
 	wg.Wait()
@@ -358,7 +440,7 @@ func (s *DedupSession) run(ctx context.Context) {
 	s.publish(DedupSnapshot{
 		Root:           s.root,
 		Phase:          DedupDone,
-		Groups:         groupByHash(candidates, hashes, hashErr),
+		Groups:         groupByHash(candidates, hashes, hashOK),
 		Walked:         len(files),
 		Hashed:         len(candidates),
 		HashTotal:      len(candidates),
@@ -367,10 +449,58 @@ func (s *DedupSession) run(ctx context.Context) {
 	})
 }
 
-func groupByHash(candidates []FileRecord, hashes [][32]byte, hashErr []bool) []DedupGroup {
+// hashChunk feeds bytes [offset, offset+n) of loc into h, reporting cumulative
+// bytes read within the chunk via onRead after every buffer read.
+func hashChunk(ctx context.Context, loc pathloc.Path, h hash.Hash, buf []byte, offset, n int64, onRead func(read int64)) error {
+	be, err := fsbackend.Default().Backend(loc)
+	if err != nil {
+		return err
+	}
+	rc, err := be.OpenRead(ctx, loc)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = rc.Close() }()
+	if offset > 0 {
+		if sk, ok := rc.(io.Seeker); ok {
+			if _, err := sk.Seek(offset, io.SeekStart); err != nil {
+				return err
+			}
+		} else if _, err := io.CopyN(io.Discard, rc, offset); err != nil {
+			return err
+		}
+	}
+	var read int64
+	for read < n {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		want := min(n-read, int64(len(buf)))
+		nr, readErr := rc.Read(buf[:want])
+		if nr > 0 {
+			if _, werr := h.Write(buf[:nr]); werr != nil {
+				return werr
+			}
+			read += int64(nr)
+			onRead(read)
+		}
+		if readErr == io.EOF {
+			if read < n {
+				return io.ErrUnexpectedEOF // file shrank since the walk
+			}
+			break
+		}
+		if readErr != nil {
+			return readErr
+		}
+	}
+	return nil
+}
+
+func groupByHash(candidates []FileRecord, hashes [][32]byte, hashOK []bool) []DedupGroup {
 	byHash := map[[32]byte][]int{}
 	for idx := range candidates {
-		if hashErr[idx] {
+		if !hashOK[idx] {
 			continue
 		}
 		byHash[hashes[idx]] = append(byHash[hashes[idx]], idx)

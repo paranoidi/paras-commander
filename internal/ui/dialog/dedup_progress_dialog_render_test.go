@@ -50,26 +50,24 @@ func TestDrawDedupProgressDialogHashBarAndLabel(t *testing.T) {
 		t.Fatalf("bar line = %q, count must not be overlaid on bar", line)
 	}
 
-	hasBlock := false
+	// The bar is carried by cell backgrounds (no block glyphs): fill on the
+	// left, track to the right edge, and no glyph texture anywhere.
 	for col := textX; col < textX+textW; col++ {
 		ch, _, _ := screen.Get(col, barY)
 		if ch == "█" || ch == "░" {
-			hasBlock = true
-			break
+			t.Fatalf("col %d = %q, bar must not use block glyphs", col, ch)
 		}
 	}
-	if !hasBlock {
-		t.Fatal("progress row should include █ or ░ bar glyphs")
-	}
-	lastCh, _, _ := screen.Get(textX+textW-1, barY)
-	if lastCh != "█" && lastCh != "░" {
-		t.Fatalf("last bar col = %q, want █ or ░", lastCh)
-	}
-
 	_, wantFillBG, _ := styles.DialogProgressFill.Decompose()
 	_, gotBG, _ := cellStyleAt(screen, textX, barY).Decompose()
 	if gotBG != wantFillBG {
 		t.Fatalf("first col bg %v, want fill %v", gotBG, wantFillBG)
+	}
+	_, wantTrackBG, _ := styles.DialogProgressTrack.Decompose()
+	lastCh, lastStyle, _ := screen.Get(textX+textW-1, barY)
+	_, lastBG, _ := lastStyle.Decompose()
+	if lastCh != " " || lastBG != wantTrackBG {
+		t.Fatalf("last bar col = %q bg %v, want blank track cell bg %v", lastCh, lastBG, wantTrackBG)
 	}
 
 	countY, ok := dialogRowContaining(screen, rect, "1/4")
@@ -217,9 +215,9 @@ func TestDrawDedupHashProgressBarFullWidth(t *testing.T) {
 	if shortFill != longFill || shortTrack != longTrack {
 		t.Fatalf("meter width must not depend on label length")
 	}
-	// Short label leaves bar glyphs on the track; long label overlays text across full width.
-	if shortLast != '░' && shortLast != '█' {
-		t.Fatalf("short label last char = %q, want bar glyph", shortLast)
+	// Short label leaves blank bar cells on the track; long label overlays text across full width.
+	if shortLast != ' ' {
+		t.Fatalf("short label last char = %q, want blank bar cell", shortLast)
 	}
 
 	textX := draw.DialogTextX(longRect)
@@ -228,12 +226,12 @@ func TestDrawDedupHashProgressBarFullWidth(t *testing.T) {
 	for col := textX + wantFilled; col < textX+textW; col++ {
 		ch, _, _ := longScreen.Get(col, longBarY)
 		r, _ := utf8.DecodeRuneInString(ch)
-		if r != '█' && r != '░' && r != ' ' {
+		if r != ' ' {
 			trackTextCols++
 		}
 	}
 	if trackTextCols == 0 {
-		t.Fatal("long label should render text on track region, not only bar glyphs")
+		t.Fatal("long label should render text on track region, not only blank bar cells")
 	}
 }
 
@@ -274,15 +272,15 @@ func TestDedupProgressTrackLabelBackgroundMatch(t *testing.T) {
 		ch, st, _ := screen.Get(col, barY)
 		r, _ := utf8.DecodeRuneInString(ch)
 		_, bg, _ := st.Decompose()
-		if r == '░' && trackBarBG == tcell.ColorDefault {
+		if r == ' ' && trackBarBG == tcell.ColorDefault {
 			trackBarBG = bg
 		}
-		if r != '░' && r != '█' && r != ' ' && trackTextBG == tcell.ColorDefault {
+		if r != ' ' && trackTextBG == tcell.ColorDefault {
 			trackTextBG = bg
 		}
 	}
 	if trackBarBG == tcell.ColorDefault {
-		t.Fatal("no track bar glyph found")
+		t.Fatal("no blank track bar cell found")
 	}
 	if trackTextBG == tcell.ColorDefault {
 		t.Fatal("no track label text found")
@@ -359,9 +357,11 @@ func TestDrawDedupProgressDialogPerFileBar(t *testing.T) {
 	if gotBG != wantFillBG {
 		t.Fatalf("per-file first col bg %v, want fill %v", gotBG, wantFillBG)
 	}
-	lastCh, _, _ := screen.Get(textX+textW-1, barY+1)
-	if lastCh != "█" && lastCh != "░" {
-		t.Fatalf("per-file last bar col = %q, want █ or ░", lastCh)
+	_, wantTrackBG, _ := styles.DialogProgressTrack.Decompose()
+	lastCh, lastStyle, _ := screen.Get(textX+textW-1, barY+1)
+	_, lastBG, _ := lastStyle.Decompose()
+	if lastCh != " " || lastBG != wantTrackBG {
+		t.Fatalf("per-file last bar col = %q bg %v, want blank track cell bg %v", lastCh, lastBG, wantTrackBG)
 	}
 }
 

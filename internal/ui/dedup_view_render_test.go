@@ -262,6 +262,137 @@ func TestDrawDedupViewFullyMarkedGroupUsesRedRowStyle(t *testing.T) {
 	}
 }
 
+func TestDrawDedupViewHighlightsDuplicateSiblingsOfCursor(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	contentX := rect.X + 2
+	firstLineY := rect.Y + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 1024, "dirX/dup.bin", "dirY/dup.bin"),
+			dedupTestGroup(2, 512, "dirZ/lonely.bin"),
+		},
+	}
+	view := DedupViewState{TreeDirs: true, IgnoreEmpty: true}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+
+	cursorIdx := DedupRowIndexByID(list, "/root/dirX/dup.bin")
+	siblingIdx := DedupRowIndexByID(list, "/root/dirY/dup.bin")
+	unrelatedIdx := DedupRowIndexByID(list, "/root/dirZ/lonely.bin")
+	if cursorIdx < 0 || siblingIdx < 0 || unrelatedIdx < 0 {
+		t.Fatalf("rows = %+v, missing expected file rows", list)
+	}
+	view.Main.Selected = cursorIdx
+
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+
+	wantHintFG, _, _ := styles.PanelHint.Decompose()
+	wantBaseFG, _, _ := styles.JobsRow.Decompose()
+	if wantHintFG == wantBaseFG {
+		t.Fatal("test requires distinct panel.hint and jobs.row foregrounds")
+	}
+
+	for _, tc := range []struct {
+		name     string
+		idx      int
+		wantHint bool
+	}{
+		{"sibling copy in another directory", siblingIdx, true},
+		{"unrelated file in a different group", unrelatedIdx, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			row := list[tc.idx]
+			y := firstLineY + tc.idx
+			pathTextX := contentX + len([]rune(dedupTreePrefix(styles, row)))
+			fg, _, _ := cellStyleAt(screen, pathTextX, y).Decompose()
+			wantFG := wantBaseFG
+			if tc.wantHint {
+				wantFG = wantHintFG
+			}
+			if fg != wantFG {
+				t.Fatalf("fg %v, want %v (hint=%v)", fg, wantFG, tc.wantHint)
+			}
+		})
+	}
+}
+
+func TestDrawDedupViewHighlightsCollapsedFolderContainingCursorSibling(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	contentX := rect.X + 2
+	firstLineY := rect.Y + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 1024, "cursor.bin", "dirY/dup.bin"),
+			dedupTestGroup(2, 512, "dirZ/lonely.bin"),
+		},
+	}
+	view := DedupViewState{TreeDirs: true, IgnoreEmpty: true}
+	// Collapse dirY (holding the cursor's sibling copy) and dirZ (unrelated group).
+	view.Main.Collapsed = DedupCollapsedSet([]string{"d:dirY", "d:dirZ"})
+	list, _ := DedupRowsFromSnapshot(snap, view)
+
+	cursorIdx := DedupRowIndexByID(list, "/root/cursor.bin")
+	hintDirIdx := DedupRowIndexByID(list, "d:dirY")
+	unrelatedDirIdx := DedupRowIndexByID(list, "d:dirZ")
+	if cursorIdx < 0 || hintDirIdx < 0 || unrelatedDirIdx < 0 {
+		t.Fatalf("rows = %+v, missing expected rows", list)
+	}
+	view.Main.Selected = cursorIdx
+
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+
+	wantHintFG, _, _ := styles.PanelHint.Decompose()
+
+	for _, tc := range []struct {
+		name     string
+		idx      int
+		wantHint bool
+	}{
+		{"collapsed folder holding cursor's sibling copy", hintDirIdx, true},
+		{"collapsed folder unrelated to cursor's group", unrelatedDirIdx, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			row := list[tc.idx]
+			y := firstLineY + tc.idx
+			pathTextX := contentX + len([]rune(dedupTreePrefix(styles, row)))
+			fg, _, _ := cellStyleAt(screen, pathTextX, y).Decompose()
+			gotHint := fg == wantHintFG
+			if gotHint != tc.wantHint {
+				t.Fatalf("fg %v hint=%v, want hint=%v", fg, gotHint, tc.wantHint)
+			}
+		})
+	}
+}
+
 func TestDrawDedupViewTitleBarKeepsFrameDashesAfterTitle(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

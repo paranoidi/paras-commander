@@ -967,21 +967,15 @@ func TestDedupViewMarkAndDelete(t *testing.T) {
 	if got := len(app.model.FileDialog.DeleteEntries); got != 1 {
 		t.Fatalf("delete entries = %d, want 1", got)
 	}
-	// Confirming (Yes) opens the empty-dirs cleanup confirmation.
+	// Confirming (Yes) deletes directly: the other duplicate (b.txt) still lives
+	// in dir, so the delete leaves no directory empty and the cleanup
+	// confirmation must not appear.
 	app.executeDelete()
 	if app.deleteDialogOpen() {
 		t.Fatal("delete dialog not closed after confirm")
 	}
-	if !app.model.DedupEmptyDirsConfirm.Open {
-		t.Fatal("empty-dirs confirm dialog did not open after delete confirm")
-	}
-	if app.model.DedupEmptyDirsConfirm.Focus != 0 {
-		t.Fatalf("empty-dirs confirm default focus = %d, want 0 (Yes)", app.model.DedupEmptyDirsConfirm.Focus)
-	}
-	// Enter accepts the Yes default, enqueuing the delete and optimistically pruning the group.
-	app.handleDedupEmptyDirsConfirmKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.DedupEmptyDirsConfirm.Open {
-		t.Fatal("empty-dirs confirm dialog not closed after Enter")
+		t.Fatal("empty-dirs confirm dialog opened even though no directory is left empty")
 	}
 	if len(app.model.DedupSnapshot.Groups) != 0 {
 		t.Fatalf("groups after delete = %d, want 0 (group drops below 2)", len(app.model.DedupSnapshot.Groups))
@@ -1030,6 +1024,9 @@ func TestDedupViewEmptyDirsConfirmDefaultsYesAndRemoves(t *testing.T) {
 			}
 			if app.model.DedupEmptyDirsConfirm.Focus != 0 {
 				t.Fatalf("empty-dirs confirm default focus = %d, want 0 (Yes)", app.model.DedupEmptyDirsConfirm.Focus)
+			}
+			if got := app.model.DedupEmptyDirsConfirm.Dirs; len(got) != 1 || got[0] != "." {
+				t.Fatalf("empty-dirs confirm dirs = %v, want [\".\"] (sub is the scan root)", got)
 			}
 			if removeEmpty {
 				app.handleDedupEmptyDirsConfirmKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))

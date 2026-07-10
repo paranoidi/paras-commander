@@ -113,8 +113,10 @@ func dedupFrac(done, total int64) float64 {
 	return float64(done) / float64(total)
 }
 
-// drawDedupBar paints a full-width ████░░░░ meter with the label overlaid.
-// The label is fitted as a path (middle-ellipsized segments) to the bar width.
+// drawDedupBar paints a full-width meter whose fill/track are carried by the
+// cell background (no block glyphs — a glyph shows its foreground and made the
+// bar look patchy), with the label overlaid on top. The label is fitted as a
+// path (middle-ellipsized segments) to the bar width.
 func drawDedupBar(screen tcell.Screen, x, y, width int, frac float64, label string, styles theme.Theme) {
 	if width <= 0 {
 		return
@@ -122,20 +124,16 @@ func drawDedupBar(screen tcell.Screen, x, y, width int, frac float64, label stri
 	filled := dedupBarFilledCols(width, frac)
 	labelRunes := []rune(primitive.FitPathForWidth(label, width))
 
-	fillStyle := styles.DialogProgressFill
-	trackStyle := styles.DialogProgressTrack
 	for col := 0; col < width; col++ {
 		onFill := col < filled
-		bg := trackStyle
-		ch := '░'
+		st := styles.DialogProgressTrack
 		if onFill {
-			bg = fillStyle
-			ch = '█'
+			st = styles.DialogProgressFill
 		}
-		st := bg
+		ch := ' '
 		if col < len(labelRunes) {
 			ch = labelRunes[col]
-			if labelRunes[col] != ' ' {
+			if ch != ' ' {
 				st = styles.DialogProgressLabelOnBar(onFill)
 			}
 		}

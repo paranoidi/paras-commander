@@ -2,6 +2,7 @@ package compare
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -245,36 +246,6 @@ func TestDedupHashingProgressRateLimited(t *testing.T) {
 	}
 }
 
-func TestHashFileReportsProgress(t *testing.T) {
-	dir := t.TempDir()
-	content := strings.Repeat("orchard meadow lantern ", 8) // 184 bytes
-	writeFile(t, dir, "voyage.txt", content)
-	loc, err := pathloc.File(filepath.Join(dir, "voyage.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var reads []int64
-	buf := make([]byte, 32) // force multiple reads
-	if _, err := HashFile(context.Background(), loc, buf, 0, func(read int64) {
-		reads = append(reads, read)
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	if len(reads) < 2 {
-		t.Fatalf("progress callbacks = %d, want several with a 32-byte buffer", len(reads))
-	}
-	for i := 1; i < len(reads); i++ {
-		if reads[i] <= reads[i-1] {
-			t.Fatalf("progress not strictly increasing: %v", reads)
-		}
-	}
-	if got, want := reads[len(reads)-1], int64(len(content)); got != want {
-		t.Fatalf("final progress = %d, want file size %d", got, want)
-	}
-}
-
 func TestDedupHashedBytesMonotonic(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, dir, "a/dup1.txt", "duplicate!")
@@ -395,6 +366,58 @@ func TestDedupCurrentFileAboveThreshold(t *testing.T) {
 		if s.CurrentFile != "" {
 			t.Fatalf("CurrentFile = %q with threshold disabled, want empty", s.CurrentFile)
 		}
+	}
+}
+
+func TestDedupChunkedEarlyBail(t *testing.T) {
+	dir := t.TempDir()
+	// Chunk size 8. Size class A (24 bytes): two identical duplicates, one file
+	// diverging in the first chunk, one diverging only in the last chunk.
+	writeFile(t, dir, "a/copper.dat", "prefix00middle00suffix00")
+	writeFile(t, dir, "b/copper.dat", "prefix00middle00suffix00")
+	writeFile(t, dir, "c/early.dat", "DIFFER00middle00suffix00")
+	writeFile(t, dir, "d/late.dat", "prefix00middle00DIFFER00")
+	// Size class B (16 bytes): both share size-class-A's first chunk as prefix
+	// but differ from each other there is no pair, so both bail in round one.
+	// Their partial prefix digests equal each other and must not form a group.
+	writeFile(t, dir, "e/willow.dat", "prefix00aaaaaaaa")
+	writeFile(t, dir, "f/willow.dat", "prefix00bbbbbbbb")
+
+	root, err := pathloc.File(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan DedupSnapshot, 1)
+	sess := StartDedup(context.Background(), root, DedupOptions{
+		HashWorkers: 1,
+		ChunkBytes:  8,
+		OnUpdate: func(s DedupSnapshot) {
+			if s.Phase == DedupDone || s.Phase == DedupError {
+				done <- s
+			}
+		},
+	})
+	defer sess.Close()
+	snap := <-done
+
+	if snap.Phase != DedupDone {
+		t.Fatalf("phase = %v (err %q), want DedupDone", snap.Phase, snap.Err)
+	}
+	if snap.HashedBytes != snap.HashBytesTotal {
+		t.Fatalf("done HashedBytes = %d, want HashBytesTotal %d", snap.HashedBytes, snap.HashBytesTotal)
+	}
+	if snap.Hashed != snap.HashTotal {
+		t.Fatalf("done Hashed = %d, want HashTotal %d", snap.Hashed, snap.HashTotal)
+	}
+	if len(snap.Groups) != 1 {
+		t.Fatalf("groups = %d (%v), want exactly the copper.dat pair", len(snap.Groups), snap.Groups)
+	}
+	g := snap.Groups[0]
+	if len(g.Files) != 2 || g.Files[0].Rel != "a/copper.dat" || g.Files[1].Rel != "b/copper.dat" {
+		t.Fatalf("group files = %v, want [a/copper.dat b/copper.dat]", g.Files)
+	}
+	if want := sha256.Sum256([]byte("prefix00middle00suffix00")); g.Hash != want {
+		t.Fatalf("group hash = %x, want full-file sha256 %x", g.Hash, want)
 	}
 }
 

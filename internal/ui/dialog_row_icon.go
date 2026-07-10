@@ -65,3 +65,9 @@ func PaintFindDialogRowIcon(screen tcell.Screen, x, y int, entry dialog.FindEntr
 func PaintDeleteDialogRowIcon(screen tcell.Screen, x, y int, entry dialog.DeleteListEntry, styles theme.Theme) {
 	PaintDialogRowIcon(screen, x, y, deleteListEntryLocalfs(entry), styles)
 }
+
+// PaintDedupEmptyDirsConfirmRowIcon draws the closed-folder devicon for one row
+// of the "remove empty directories" confirmation list; every row is a directory.
+func PaintDedupEmptyDirsConfirmRowIcon(screen tcell.Screen, x, y int, dir string, styles theme.Theme) {
+	PaintDialogRowIcon(screen, x, y, localfs.Entry{Name: filepath.Base(dir), Path: dir, Type: localfs.EntryDirectory}, styles)
+}
