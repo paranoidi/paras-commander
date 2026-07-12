@@ -276,7 +276,7 @@ func watchWinchResize(ptyMaster, sizeFrom *os.File) (stop func()) {
 	signal.Notify(ch, syscall.SIGWINCH)
 	go func() {
 		for range ch {
-			_ = syncPTYSize(ptyMaster, sizeFrom)
+			_, _ = syncPTYSize(ptyMaster, sizeFrom)
 		}
 	}()
 	return func() { signal.Stop(ch) }

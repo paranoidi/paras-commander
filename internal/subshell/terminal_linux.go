@@ -72,13 +72,21 @@ func openControllingTTY() (*os.File, error) {
 	return os.OpenFile("/dev/tty", os.O_RDWR, 0)
 }
 
-// syncPTYSize sets the PTY window to match termSizeFrom (usually stdout).
-func syncPTYSize(ptyMaster, termSizeFrom *os.File) error {
+// syncPTYSize sets the PTY window to match termSizeFrom (usually stdout). cellsChanged
+// reports whether rows/cols actually changed — that Setsize already delivers a real WINCH
+// with a new size, so callers can skip forceFullRedraw. Pixel-only changes don't count:
+// size-comparing apps ignore them.
+func syncPTYSize(ptyMaster, termSizeFrom *os.File) (cellsChanged bool, err error) {
 	ws, err := pty.GetsizeFull(termSizeFrom)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return pty.Setsize(ptyMaster, ws)
+	cur, curErr := pty.GetsizeFull(ptyMaster)
+	if curErr == nil && *cur == *ws {
+		return false, nil
+	}
+	cellsChanged = curErr != nil || cur.Rows != ws.Rows || cur.Cols != ws.Cols
+	return cellsChanged, pty.Setsize(ptyMaster, ws)
 }
 
 // forceFullRedraw jiggles the PTY winsize (rows-1, then the real size back) so a full-screen

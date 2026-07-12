@@ -78,7 +78,7 @@ func Start(opts StartOptions) (*Subshell, error) {
 		return nil, fmt.Errorf("subshell: start pty: %w", err)
 	}
 	if term.IsTerminal(int(os.Stdout.Fd())) {
-		_ = syncPTYSize(ptmx, os.Stdout)
+		_, _ = syncPTYSize(ptmx, os.Stdout)
 	}
 
 	s := &Subshell{
@@ -180,8 +180,8 @@ func (s *Subshell) RunVisible(screen tcell.Screen) (toggledBack bool, err error)
 	}
 	registerVisibleRestore(restoreHost)
 
-	_ = syncPTYSize(s.pty, hostTTY)
-	if s.Busy() {
+	resized, _ := syncPTYSize(s.pty, hostTTY)
+	if s.Busy() && !resized {
 		forceFullRedraw(s.pty)
 	}
 	stopResize := watchWinchResize(s.pty, hostTTY)
