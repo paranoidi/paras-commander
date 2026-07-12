@@ -6,8 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -180,6 +182,48 @@ func TestDropToShellDefaultConfigSyncEnabled(t *testing.T) {
 	}
 	if !cfg.Shell.Persistent {
 		t.Fatal("Default().Shell.Persistent = false, want true")
+	}
+}
+
+func TestShellInsertPathListSortsSelections(t *testing.T) {
+	p := &panel.State{SelectedPaths: map[string]bool{
+		"/tmp/orchard/walnut": true,
+		"/tmp/meadow/aspen":   true,
+		"/tmp/meadow/birch":   true,
+	}}
+	got := shellInsertPathList(p)
+	want := []string{"/tmp/meadow/aspen", "/tmp/meadow/birch", "/tmp/orchard/walnut"}
+	if len(got) != len(want) {
+		t.Fatalf("paths = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("paths = %v, want %v", got, want)
+		}
+	}
+}
+
+func TestAltEnterResolvesToShellInsertPaths(t *testing.T) {
+	app := testAppMinimal(t)
+	for _, mod := range []tcell.ModMask{tcell.ModAlt, tcell.ModShift} {
+		id, ok := app.keys.Lookup(tcell.NewEventKey(tcell.KeyEnter, '\r', mod))
+		if !ok || id != keymap.ActionAppShellInsertPaths {
+			t.Fatalf("Enter+%v resolves to %q (ok=%v), want %q", mod, id, ok, keymap.ActionAppShellInsertPaths)
+		}
+	}
+}
+
+func TestDispatchShellInsertPathsWithoutPersistentWarns(t *testing.T) {
+	root := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root) // helper disables Shell.Persistent
+	if err := app.model.Primary.Load(root); err != nil {
+		t.Fatal(err)
+	}
+
+	app.dispatch(keymap.ActionAppShellInsertPaths)
+	if app.subshell != nil {
+		t.Fatal("no subshell session should be started without persistent shell")
 	}
 }
 

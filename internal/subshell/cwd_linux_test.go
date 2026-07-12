@@ -109,5 +109,27 @@ func TestBusyRefusesChdir(t *testing.T) {
 	if err := sub.Chdir("/tmp"); !errors.Is(err, ErrBusy) {
 		t.Fatalf("Chdir while busy = %v, want ErrBusy", err)
 	}
+	if err := sub.InsertText("'/tmp/file'"); !errors.Is(err, ErrBusy) {
+		t.Fatalf("InsertText while busy = %v, want ErrBusy", err)
+	}
 	pollUntil(t, 5*time.Second, "idle after sleep", func() bool { return !sub.Busy() })
+}
+
+// InsertText leaves the text in the input buffer: the stub only sees the line (and echoes
+// line:<text>) once a newline is written afterwards.
+func TestInsertTextStaysInInputBuffer(t *testing.T) {
+	sub, err := Start(StartOptions{Shell: "/bin/sh", Command: stubShell})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = sub.Close() })
+	readUntil(t, sub.pty, "READY", 3*time.Second)
+
+	if err := sub.InsertText("'/tmp/alpha beta'"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sub.WritePTY([]byte("\n")); err != nil {
+		t.Fatal(err)
+	}
+	readUntil(t, sub.pty, "line:'/tmp/alpha beta'", 3*time.Second)
 }

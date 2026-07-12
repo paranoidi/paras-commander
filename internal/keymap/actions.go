@@ -9,6 +9,9 @@ const (
 	ActionAppUserMenu      = "app.user-menu"
 	ActionAppUserMenuEdit  = "app.user-menu-edit"
 	ActionAppDropToShell   = "app.drop-to-shell"
+	// ActionAppShellInsertPaths puts the selected/focused paths on the persistent
+	// subshell's command line and enters the shell.
+	ActionAppShellInsertPaths = "app.shell-insert-paths"
 
 	ActionPanelSwitch                 = "panel.switch"
 	ActionNavUp                       = "nav.up"
@@ -199,13 +202,14 @@ const (
 
 // KnownActions lists action IDs accepted in keybindings.toml for the current app.
 var KnownActions = map[string]struct{}{
-	ActionAppQuit:          {},
-	ActionAppQuitImmediate: {},
-	ActionAppOpenMenu:      {},
-	ActionAppShowHelp:      {},
-	ActionAppUserMenu:      {},
-	ActionAppUserMenuEdit:  {},
-	ActionAppDropToShell:   {},
+	ActionAppQuit:             {},
+	ActionAppQuitImmediate:    {},
+	ActionAppOpenMenu:         {},
+	ActionAppShowHelp:         {},
+	ActionAppUserMenu:         {},
+	ActionAppUserMenuEdit:     {},
+	ActionAppDropToShell:      {},
+	ActionAppShellInsertPaths: {},
 
 	ActionPanelSwitch:                 {},
 	ActionNavUp:                       {},

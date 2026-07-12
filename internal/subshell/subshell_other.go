@@ -54,6 +54,11 @@ func (s *Subshell) Chdir(string) error {
 	return ErrUnsupportedPlatform
 }
 
+// InsertText is not available on this platform.
+func (s *Subshell) InsertText(string) error {
+	return ErrUnsupportedPlatform
+}
+
 // SaveLaunchTerminal is a no-op on unsupported platforms.
 func SaveLaunchTerminal() {}
 

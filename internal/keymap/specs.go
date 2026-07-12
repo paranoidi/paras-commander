@@ -107,6 +107,15 @@ func DefaultActionSpecs() []ActionSpec {
 			PreferredKey: "C-o",
 			Keywords:     []string{"shell", "subshell", "ctrl-o", "terminal"},
 		},
+		{
+			ID:           ActionAppShellInsertPaths,
+			Views:        HelpBrowser,
+			Title:        "Send paths to shell",
+			Section:      "App",
+			DefaultKeys:  []string{"M-Enter", "S-Enter"},
+			PreferredKey: "M-Enter",
+			Keywords:     []string{"shell", "insert", "filename", "command line", "alt-enter", "shift-enter", "inject"},
+		},
 
 		// ── Panel navigation ──
 		{

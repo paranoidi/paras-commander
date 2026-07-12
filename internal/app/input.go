@@ -709,6 +709,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openFindDuplicates()
 	case keymap.ActionAppDropToShell:
 		a.dropToShell()
+	case keymap.ActionAppShellInsertPaths:
+		a.shellInsertPaths()
 	case keymap.ActionPanelRefresh:
 		a.reloadActive("Panel refreshed")
 	case keymap.ActionPanelExternalBrowser:

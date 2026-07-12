@@ -43,3 +43,16 @@ func (s *Subshell) Chdir(dir string) error {
 	_, err := s.WritePTY(chdirCommand(dir))
 	return err
 }
+
+// InsertText writes text into the idle shell's input buffer without a newline — it stays on
+// the command line for the user to complete. Returns [ErrBusy] while a foreground command runs.
+func (s *Subshell) InsertText(text string) error {
+	if !s.Alive() {
+		return ErrNotAlive
+	}
+	if s.Busy() {
+		return ErrBusy
+	}
+	_, err := s.WritePTY([]byte(text))
+	return err
+}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
@@ -121,23 +122,41 @@ func (a *App) persistentShellToggle() bool {
 		return false
 	}
 	panelDir := a.localActivePanelDir()
+	fresh, ok := a.ensureSubshell(panelDir)
+	if !ok {
+		return false
+	}
 	chdirBusy := false
+	if !fresh && panelDir != "" {
+		chdirBusy = errors.Is(a.subshellChdirIfNeeded(panelDir), subshell.ErrBusy)
+	}
+	a.runShellVisible(chdirBusy)
+	return true
+}
+
+// ensureSubshell lazily (re)starts the persistent session; a fresh child starts in panelDir.
+// ok is false when the persistent path is unavailable (a warning is shown unless the platform
+// simply does not support it).
+func (a *App) ensureSubshell(panelDir string) (fresh, ok bool) {
 	if a.subshell != nil && !a.subshell.Alive() {
 		a.closeSubshell()
 	}
-	if a.subshell == nil {
-		sub, err := subshell.Start(subshell.StartOptions{Dir: panelDir})
-		if err != nil {
-			if !errors.Is(err, subshell.ErrUnsupportedPlatform) {
-				a.setTransientMessage(fmt.Sprintf("Shell: persistent session unavailable (%v)", err), ui.MessageUrgencyWarn)
-			}
-			return false
-		}
-		a.subshell = sub
-	} else if panelDir != "" {
-		chdirBusy = errors.Is(a.subshellChdirIfNeeded(panelDir), subshell.ErrBusy)
+	if a.subshell != nil {
+		return false, true
 	}
+	sub, err := subshell.Start(subshell.StartOptions{Dir: panelDir})
+	if err != nil {
+		if !errors.Is(err, subshell.ErrUnsupportedPlatform) {
+			a.setTransientMessage(fmt.Sprintf("Shell: persistent session unavailable (%v)", err), ui.MessageUrgencyWarn)
+		}
+		return false, false
+	}
+	a.subshell = sub
+	return true, true
+}
 
+// runShellVisible shows the persistent shell session and reconciles the TUI afterwards.
+func (a *App) runShellVisible(chdirBusy bool) {
 	_, err := a.subshell.RunVisible(a.screen)
 	// Same post-Resume housekeeping as withTerminalReleased: force a full repaint.
 	a.lastScreenContentHash = 0
@@ -158,7 +177,71 @@ func (a *App) persistentShellToggle() bool {
 	}
 	a.refreshAfterDropToShell()
 	a.render()
-	return true
+}
+
+// shellInsertPaths (app.shell-insert-paths, Alt+Enter) puts the selected — or focused — paths
+// on the persistent shell's command line as quoted absolute paths and enters the shell.
+func (a *App) shellInsertPaths() {
+	if a.model.ModalDialogOpen() || a.model.ViewMode != ui.ViewBrowser {
+		return
+	}
+	if !a.config.Shell.Persistent || strings.TrimSpace(a.config.Shell.Command) != "" {
+		a.setTransientMessage("Send paths to shell requires the persistent shell", ui.MessageUrgencyWarn)
+		return
+	}
+	p := a.activePanel()
+	if p.Path.IsRemote() {
+		a.setTransientMessage("Send paths to shell is not available on remote panels", ui.MessageUrgencyWarn)
+		return
+	}
+	paths := shellInsertPathList(p)
+	if len(paths) == 0 {
+		a.setTransientMessage("Send paths to shell: no file selected", ui.MessageUrgencyWarn)
+		return
+	}
+	panelDir := a.localActivePanelDir()
+	fresh, ok := a.ensureSubshell(panelDir)
+	if !ok {
+		// ensureSubshell already warned about real failures; non-Linux is out of scope.
+		return
+	}
+	if !fresh && panelDir != "" {
+		if errors.Is(a.subshellChdirIfNeeded(panelDir), subshell.ErrBusy) {
+			a.setTransientMessage("Shell is busy — paths not sent", ui.MessageUrgencyWarn)
+			return
+		}
+	}
+	quoted := make([]string, len(paths))
+	for i, pth := range paths {
+		quoted[i] = subshell.QuoteArg(pth)
+	}
+	if err := a.subshell.InsertText(strings.Join(quoted, " ") + " "); err != nil {
+		if errors.Is(err, subshell.ErrBusy) {
+			a.setTransientMessage("Shell is busy — paths not sent", ui.MessageUrgencyWarn)
+		} else {
+			a.setErrorMessage("Shell", err)
+		}
+		return
+	}
+	a.runShellVisible(false)
+}
+
+// shellInsertPathList returns the sorted selected paths, or the focused entry, as absolute
+// cleaned paths. The parent (..) row yields nothing.
+func shellInsertPathList(p *panel.State) []string {
+	if len(p.SelectedPaths) > 0 {
+		paths := make([]string, 0, len(p.SelectedPaths))
+		for sel := range p.SelectedPaths {
+			paths = append(paths, absPathClean(sel))
+		}
+		sort.Strings(paths)
+		return paths
+	}
+	entry, ok := p.CurrentEntry()
+	if !ok || entry.Name == ".." {
+		return nil
+	}
+	return []string{absPathClean(entry.Path)}
 }
 
 // localActivePanelDir returns the active panel directory, or "" when it is remote or
