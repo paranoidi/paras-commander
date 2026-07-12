@@ -9,11 +9,18 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// Cwd returns the shell child's current working directory.
-// ponytail: /proc readlink; MC pipe+precmd if we ever need non-Linux or symlink-exact cwd.
+// Cwd returns the shell child's current working directory: the logical $PWD reported by the
+// precmd pipe hook when available (symlinked paths preserved), else the /proc readlink
+// fallback (shells without a precmd hook, or before the first prompt fired).
 func (s *Subshell) Cwd() (string, error) {
 	if !s.Alive() {
 		return "", ErrNotAlive
+	}
+	s.mu.Lock()
+	cwd := s.cwdPipe
+	s.mu.Unlock()
+	if cwd != "" {
+		return cwd, nil
 	}
 	return os.Readlink(fmt.Sprintf("/proc/%d/cwd", s.cmd.Process.Pid))
 }

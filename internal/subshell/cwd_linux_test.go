@@ -58,9 +58,10 @@ func testChdirCwdRoundtrip(t *testing.T, shell string) {
 	if err := sub.Chdir(target); err != nil {
 		t.Fatal(err)
 	}
+	// The precmd pipe reports logical pwd (target as given); /proc fallback reports resolved.
 	pollUntil(t, 5*time.Second, "cwd to follow Chdir", func() bool {
 		cwd, err := sub.Cwd()
-		return err == nil && cwd == resolved
+		return err == nil && (cwd == resolved || cwd == target)
 	})
 
 	// Shell → commander direction: cd typed "in the shell" is visible via Cwd.
@@ -75,6 +76,52 @@ func testChdirCwdRoundtrip(t *testing.T, shell string) {
 
 func TestChdirCwdRoundtripBash(t *testing.T) { testChdirCwdRoundtrip(t, "bash") }
 func TestChdirCwdRoundtripFish(t *testing.T) { testChdirCwdRoundtrip(t, "fish") }
+
+// The precmd pipe reports the logical $PWD: cd through a symlink must surface the symlinked
+// path, which the /proc readlink fallback can never produce.
+func testCwdKeepsSymlinkPath(t *testing.T, shell string) {
+	base := t.TempDir()
+	if err := os.Mkdir(filepath.Join(base, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(base, "aspen link")
+	if err := os.Symlink(filepath.Join(base, "meadow"), link); err != nil {
+		t.Fatal(err)
+	}
+
+	sub := startInteractive(t, shell, base)
+	pollUntil(t, 5*time.Second, "shell idle at start", func() bool { return !sub.Busy() })
+
+	if err := sub.Chdir(link); err != nil {
+		t.Fatal(err)
+	}
+	pollUntil(t, 5*time.Second, "cwd to keep the symlink path", func() bool {
+		cwd, err := sub.Cwd()
+		return err == nil && cwd == link
+	})
+}
+
+func TestCwdKeepsSymlinkPathBash(t *testing.T) { testCwdKeepsSymlinkPath(t, "bash") }
+func TestCwdKeepsSymlinkPathFish(t *testing.T) { testCwdKeepsSymlinkPath(t, "fish") }
+
+// Shells without a precmd hook keep working through the /proc fallback (resolved paths).
+func TestCwdFallbackWithoutPrecmd(t *testing.T) {
+	base := t.TempDir()
+	resolved, err := filepath.EvalSymlinks(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub := startInteractive(t, "sh", "/")
+	pollUntil(t, 5*time.Second, "shell idle at start", func() bool { return !sub.Busy() })
+
+	if _, err := sub.WritePTY([]byte(" cd " + QuoteArg(base) + "\n")); err != nil {
+		t.Fatal(err)
+	}
+	pollUntil(t, 5*time.Second, "cwd via /proc fallback", func() bool {
+		cwd, err := sub.Cwd()
+		return err == nil && cwd == resolved
+	})
+}
 
 // Regression: File.Fd() flips the pollable PTY back to blocking mode, so drainPTYToWriter on
 // an idle shell (no pending output — the interactive Ctrl+O case) blocked forever and froze

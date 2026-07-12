@@ -3,10 +3,12 @@
 package subshell
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -18,12 +20,13 @@ import (
 
 // Subshell is a persistent PTY-backed shell: one long-lived shell child and Suspend/Resume visible sessions.
 type Subshell struct {
-	cmd   *exec.Cmd
-	pty   *os.File
-	dead  chan struct{}
-	mu    sync.Mutex
-	alive bool
-	wait  sync.WaitGroup
+	cmd     *exec.Cmd
+	pty     *os.File
+	dead    chan struct{}
+	mu      sync.Mutex
+	alive   bool
+	cwdPipe string // last $PWD reported by the shell's prompt hook (empty until first prompt)
+	wait    sync.WaitGroup
 }
 
 // StartOptions configures [Start].
@@ -57,10 +60,21 @@ func Start(opts StartOptions) (*Subshell, error) {
 	if opts.Dir != "" {
 		cmd.Dir = opts.Dir
 	}
-	cmd.Env = os.Environ()
+	// ignoreboth keeps the injected leading-space cd/precmd lines out of bash history (MC does
+	// the same). ponytail: zsh needs setopt HIST_IGNORE_SPACE from the user; fish skips natively.
+	cmd.Env = append(os.Environ(), "HISTCONTROL=ignoreboth")
+
+	// The shell's prompt hook reports $PWD on child fd 3 (MC's subshell_pipe mechanism).
+	pipeR, pipeW, err := os.Pipe()
+	if err != nil {
+		return nil, fmt.Errorf("subshell: cwd pipe: %w", err)
+	}
+	cmd.ExtraFiles = []*os.File{pipeW}
 
 	ptmx, err := pty.Start(cmd)
+	_ = pipeW.Close() // child holds its dup; parent must not keep the write end open
 	if err != nil {
+		_ = pipeR.Close()
 		return nil, fmt.Errorf("subshell: start pty: %w", err)
 	}
 	if term.IsTerminal(int(os.Stdout.Fd())) {
@@ -80,6 +94,27 @@ func Start(opts StartOptions) (*Subshell, error) {
 		s.alive = false
 		s.mu.Unlock()
 	})
+	s.wait.Go(func() {
+		// Ends on EOF when the child (sole write-end holder) exits.
+		defer func() { _ = pipeR.Close() }()
+		scanner := bufio.NewScanner(pipeR)
+		for scanner.Scan() {
+			if line := strings.TrimSpace(scanner.Text()); line != "" {
+				s.mu.Lock()
+				s.cwdPipe = line
+				s.mu.Unlock()
+			}
+		}
+	})
+
+	if init := precmdInit(shell); init != "" && opts.Command == "" {
+		if _, err := ptmx.WriteString(init); err == nil {
+			// Absorb the init line's echo so the first toggle shows a clean prompt, then
+			// request a fresh one. ponytail: quiet-window heuristic; MC feeds until prompt.
+			absorbPTYUntilQuiet(ptmx, 100*time.Millisecond, time.Second)
+			_, _ = ptmx.WriteString("\n")
+		}
+	}
 	return s, nil
 }
 
