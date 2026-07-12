@@ -1,8 +1,10 @@
-// Command subshell-spike is a manual Phase 0 smoke test for internal/subshell.
+// Command subshell-spike is a manual smoke test for internal/subshell.
 //
 // Run from a real terminal: go run ./cmd/subshell-spike/
 //
 // Ctrl+O toggles between the subshell and a minimal tcell screen (both directions).
+// The banner shows the shell's live cwd; 1/2 inject cd to two temp dirs (commander→shell),
+// and cd typed inside the shell shows up in the banner (shell→commander).
 // q quits only from the commander banner, not while the shell is visible. The shell child
 // stays alive across toggles until you type exit in the shell.
 package main
@@ -12,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/subshell"
@@ -31,12 +34,12 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	spike, err := subshell.StartSpike(subshell.StartOptions{Dir: wd})
+	sub, err := subshell.Start(subshell.StartOptions{Dir: wd})
 	if err != nil {
 		return err
 	}
 	defer func() {
-		_ = spike.Close()
+		_ = sub.Close()
 	}()
 
 	screen, err := tcell.NewScreen()
@@ -57,30 +60,61 @@ func run() error {
 		os.Exit(130)
 	}()
 
-	drawBanner(screen, "paras-commander subshell spike — Ctrl+O enters shell")
+	cdTargets := [2]string{}
+	for i := range cdTargets {
+		dir, err := os.MkdirTemp("", fmt.Sprintf("subshell spike cd%d ", i+1))
+		if err != nil {
+			return err
+		}
+		defer func() { _ = os.Remove(dir) }()
+		cdTargets[i] = dir
+	}
+
 	for {
-		if !spike.Alive() {
+		if !sub.Alive() {
 			drawBanner(screen, "shell exited — press q to quit spike")
 			if waitQuit(screen) {
 				return nil
 			}
 			continue
 		}
-		drawBanner(screen, "commander view — Ctrl+O enter shell, q quit spike")
-		switch waitCommanderKey(screen) {
+		drawBanner(screen, commanderBanner(sub))
+		switch waitCommanderKey(screen, sub) {
 		case "shell":
-			toggled, err := spike.RunVisible(screen)
-			if err != nil {
+			if _, err := sub.RunVisible(screen); err != nil {
 				return err
 			}
-			if toggled && spike.Alive() {
-				drawBanner(screen, "commander view — Ctrl+O enter shell, q quit spike")
-			} else {
-				drawBanner(screen, "shell exited")
-			}
+		case "cd1":
+			doChdir(screen, sub, cdTargets[0])
+		case "cd2":
+			doChdir(screen, sub, cdTargets[1])
 		case "quit":
 			return nil
 		}
+	}
+}
+
+func commanderBanner(sub *subshell.Subshell) string {
+	cwd, err := sub.Cwd()
+	if err != nil {
+		cwd = "?"
+	}
+	return fmt.Sprintf("commander — Ctrl+O shell, 1/2 cd tmp, q quit | shell cwd: %s", cwd)
+}
+
+// doChdir injects a cd and waits briefly so the banner redraw shows the new cwd.
+func doChdir(screen tcell.Screen, sub *subshell.Subshell, target string) {
+	if err := sub.Chdir(target); err != nil {
+		drawBanner(screen, fmt.Sprintf("chdir refused: %v — any key", err))
+		screen.PollEvent()
+		return
+	}
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if cwd, err := sub.Cwd(); err == nil && cwd == target {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 
@@ -96,17 +130,22 @@ func drawBanner(screen tcell.Screen, msg string) {
 	screen.Show()
 }
 
-func waitCommanderKey(screen tcell.Screen) string {
+func waitCommanderKey(screen tcell.Screen, sub *subshell.Subshell) string {
 	for {
 		switch ev := screen.PollEvent().(type) {
 		case *tcell.EventResize:
-			drawBanner(screen, "commander view — Ctrl+O enter shell, q quit spike")
+			drawBanner(screen, commanderBanner(sub))
 		case *tcell.EventKey:
 			if ev.Key() == tcell.KeyCtrlO {
 				return "shell"
 			}
-			if ev.Rune() == 'q' || ev.Rune() == 'Q' {
+			switch ev.Rune() {
+			case 'q', 'Q':
 				return "quit"
+			case '1':
+				return "cd1"
+			case '2':
+				return "cd2"
 			}
 		}
 	}
