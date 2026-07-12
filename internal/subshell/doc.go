@@ -1,6 +1,6 @@
 // Package subshell implements a persistent PTY-backed shell for MC-style Ctrl+O toggle.
 //
-// Phase 0 (Spike) provides [Spike]: creack/pty child, tcell Suspend/Resume handoff, and a
+// [Subshell] provides: creack/pty child, tcell Suspend/Resume handoff, and a
 // stdin↔PTY feed loop that returns on Ctrl+O (0x0f and kitty-style sequences). Later phases
 // add cwd sync and app integration.
 //
@@ -14,5 +14,5 @@
 // protocol (Ctrl+O → 0x0f), restore host raw mode before tcell Resume. Call [SaveLaunchTerminal] before Init
 // and [ShutdownTerminal] on exit so kill does not leave the parent shell in raw mode.
 // Press Ctrl+O to enter the shell and again to return.
-// q quits the spike only from the commander banner, not from inside the shell.
+// q quits the spike harness only from the commander banner, not from inside the shell.
 package subshell

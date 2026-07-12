@@ -192,10 +192,14 @@ type UserMenuConfig struct {
 // ShellConfig controls drop-to-shell (suspend TUI, run interactive shell, resume).
 type ShellConfig struct {
 	// Command is an optional argv template parsed like shellwords (see cmdrun.ParseCommandArgv).
-	// Empty uses $SHELL then bash fallback.
+	// Empty uses $SHELL then bash fallback. Setting it forces the one-shot shell even when
+	// Persistent is true (a custom argv is incompatible with the persistent PTY session).
 	Command string `toml:"command"`
-	// SyncCwdOnReturn navigates the active panel to the process cwd after the shell exits.
+	// SyncCwdOnReturn navigates the active panel to the shell cwd after returning from the shell.
 	SyncCwdOnReturn bool `toml:"sync_cwd_on_return"`
+	// Persistent keeps one MC-style shell session alive across Ctrl+O toggles (Linux only;
+	// falls back to the one-shot shell elsewhere or when the PTY cannot start).
+	Persistent bool `toml:"persistent"`
 }
 
 // PreviewConfig controls file preview (internal Chroma or external command).
@@ -485,6 +489,7 @@ func Default() Config {
 		},
 		Shell: ShellConfig{
 			SyncCwdOnReturn: DefaultShellSyncCwdOnReturn,
+			Persistent:      DefaultShellPersistent,
 		},
 		Meta: MetaConfig{
 			File:                "",

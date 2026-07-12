@@ -66,6 +66,10 @@ func runVisiblePoll(ptyMaster *os.File, in *os.File, out io.Writer, dead <-chan 
 		if err != nil && !errors.Is(err, unix.EINTR) {
 			return false, err
 		}
+		// Any File.Fd() call (e.g. pty.Setsize on SIGWINCH) flips these fds back to blocking;
+		// the read-until-EAGAIN bursts below must never block, so re-arm every wakeup.
+		_ = unix.SetNonblock(inFD, true)
+		_ = unix.SetNonblock(ptyFD, true)
 
 		if pfds[1].Revents&(unix.POLLIN|unix.POLLHUP) != 0 {
 			for {
@@ -145,6 +149,9 @@ func drainPTYToWriter(ptyMaster *os.File, out io.Writer, maxWait time.Duration) 
 	deadline := time.Now().Add(maxWait)
 	buf := make([]byte, 4096)
 	ptyFD := int(ptyMaster.Fd())
+	// File.Fd() flips a pollable fd back to blocking mode — without this SetNonblock the
+	// first read on an idle shell blocks forever (the Ctrl+O toggle-out freeze).
+	_ = unix.SetNonblock(ptyFD, true)
 	for time.Now().Before(deadline) {
 		n, err := unix.Read(ptyFD, buf)
 		if n > 0 {

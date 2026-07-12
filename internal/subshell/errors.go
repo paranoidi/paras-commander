@@ -9,4 +9,6 @@ var (
 	ErrFeedStopped = errors.New("subshell: visible feed stopped")
 	// ErrUnsupportedPlatform is returned on non-Linux builds.
 	ErrUnsupportedPlatform = errors.New("subshell: unsupported platform")
+	// ErrBusy is returned by Chdir when the shell is running a foreground command.
+	ErrBusy = errors.New("subshell: shell is running a command")
 )

@@ -32,6 +32,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
+	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -98,6 +99,7 @@ type App struct {
 	keysCompare        *keymap.Map // chords active only in Compare view (overlay)
 	keysDedup          *keymap.Map // chords active only in find-duplicates view (overlay)
 	devMode            bool
+	subshell           *subshell.Subshell // persistent MC-style shell; nil until first Ctrl+O (lazy start)
 	model              ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
@@ -325,6 +327,8 @@ func Run(cfg LaunchConfig) error {
 	if warns := chromastyles.LoadWarnings(); len(warns) > 0 {
 		app.setTransientMessage(fmt.Sprintf("Preview styles: %v", errors.Join(warns...)), ui.MessageUrgencyWarn)
 	}
+	// Registered after screen.Fini's defer so the shell child dies before tcell releases the TTY.
+	defer app.closeSubshell()
 	return app.Run()
 }
 

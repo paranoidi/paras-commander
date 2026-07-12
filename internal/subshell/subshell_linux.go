@@ -8,14 +8,16 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/creack/pty"
 	"github.com/gdamore/tcell/v2"
 	"golang.org/x/term"
 )
 
-// Spike is a Phase 0 PTY prototype: one long-lived shell child and Suspend/Resume visible sessions.
-type Spike struct {
+// Subshell is a persistent PTY-backed shell: one long-lived shell child and Suspend/Resume visible sessions.
+type Subshell struct {
 	cmd   *exec.Cmd
 	pty   *os.File
 	dead  chan struct{}
@@ -24,7 +26,7 @@ type Spike struct {
 	wait  sync.WaitGroup
 }
 
-// StartOptions configures [StartSpike].
+// StartOptions configures [Start].
 type StartOptions struct {
 	// Shell is the executable path; empty uses $SHELL, then /bin/sh.
 	Shell string
@@ -35,8 +37,8 @@ type StartOptions struct {
 	Command string
 }
 
-// StartSpike forks a shell on a PTY master returned internally via [Spike.PTYFd].
-func StartSpike(opts StartOptions) (*Spike, error) {
+// Start forks a shell on a PTY master returned internally via [Subshell.PTYFd].
+func Start(opts StartOptions) (*Subshell, error) {
 	shell := opts.Shell
 	if shell == "" {
 		shell = os.Getenv("SHELL")
@@ -65,38 +67,36 @@ func StartSpike(opts StartOptions) (*Spike, error) {
 		_ = syncPTYSize(ptmx, os.Stdout)
 	}
 
-	s := &Spike{
+	s := &Subshell{
 		cmd:   cmd,
 		pty:   ptmx,
 		dead:  make(chan struct{}),
 		alive: true,
 	}
-	s.wait.Add(1)
-	go func() {
-		defer s.wait.Done()
+	s.wait.Go(func() {
 		defer close(s.dead)
 		_ = cmd.Wait()
 		s.mu.Lock()
 		s.alive = false
 		s.mu.Unlock()
-	}()
+	})
 	return s, nil
 }
 
 // Alive reports whether the shell child is still running.
-func (s *Spike) Alive() bool {
+func (s *Subshell) Alive() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.alive
 }
 
 // PTYFd returns the master PTY fd for tests and later phases.
-func (s *Spike) PTYFd() int {
+func (s *Subshell) PTYFd() int {
 	return int(s.pty.Fd())
 }
 
 // WritePTY writes bytes to the shell (visible or not).
-func (s *Spike) WritePTY(b []byte) (int, error) {
+func (s *Subshell) WritePTY(b []byte) (int, error) {
 	if !s.Alive() {
 		return 0, ErrNotAlive
 	}
@@ -104,7 +104,7 @@ func (s *Spike) WritePTY(b []byte) (int, error) {
 }
 
 // RunVisible releases the TUI via Suspend, runs the PTY feed until Ctrl+O, then Resumes tcell.
-func (s *Spike) RunVisible(screen tcell.Screen) (toggledBack bool, err error) {
+func (s *Subshell) RunVisible(screen tcell.Screen) (toggledBack bool, err error) {
 	if !s.Alive() {
 		return false, ErrNotAlive
 	}
@@ -176,19 +176,27 @@ func (s *Spike) RunVisible(screen tcell.Screen) (toggledBack bool, err error) {
 	return toggledBack, nil
 }
 
-// RunVisibleFeed is like [Spike.RunVisible] but uses explicit streams (tests).
-func (s *Spike) RunVisibleFeed(in io.Reader, out io.Writer) (bool, error) {
+// RunVisibleFeed is like [Subshell.RunVisible] but uses explicit streams (tests).
+func (s *Subshell) RunVisibleFeed(in io.Reader, out io.Writer) (bool, error) {
 	if !s.Alive() {
 		return false, ErrNotAlive
 	}
 	return runVisibleFeed(s.pty, in, out, s.dead)
 }
 
-// Close shuts the PTY and waits for the child exit waiter started in [StartSpike].
-func (s *Spike) Close() error {
-	if err := s.pty.Close(); err != nil {
-		return err
+// Close terminates the shell child and releases the PTY. Closing only the master is not
+// enough: an interactive shell may never see SIGHUP while a reader still holds the fd, and
+// cmd.Wait would block forever. SIGHUP first (lets the shell save history), SIGKILL after a
+// short grace. ponytail: fixed 500ms grace; make it configurable if a shell needs longer.
+func (s *Subshell) Close() error {
+	if s.Alive() {
+		_ = s.cmd.Process.Signal(syscall.SIGHUP)
+		select {
+		case <-s.dead:
+		case <-time.After(500 * time.Millisecond):
+			_ = s.cmd.Process.Kill()
+		}
 	}
 	s.wait.Wait()
-	return nil
+	return s.pty.Close()
 }

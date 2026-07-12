@@ -263,4 +263,6 @@ const (
 
 	// DefaultShellSyncCwdOnReturn navigates the active panel to the process cwd after drop-to-shell exits.
 	DefaultShellSyncCwdOnReturn = true
+	// DefaultShellPersistent keeps one MC-style shell session alive across Ctrl+O toggles (Linux only).
+	DefaultShellPersistent = true
 )

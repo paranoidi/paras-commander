@@ -49,16 +49,16 @@ func readUntil(t *testing.T, r io.Reader, substr string, timeout time.Duration) 
 }
 
 func TestSpikeStubShellSurvivesTwoToggles(t *testing.T) {
-	spike, err := StartSpike(StartOptions{Shell: "/bin/sh", Command: stubShell})
+	sub, err := Start(StartOptions{Shell: "/bin/sh", Command: stubShell})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = spike.Close() })
+	t.Cleanup(func() { _ = sub.Close() })
 
-	readUntil(t, spike.pty, "READY", 3*time.Second)
+	readUntil(t, sub.pty, "READY", 3*time.Second)
 
 	// First visible session: send a line, toggle back with Ctrl+O.
-	toggled, err := spike.RunVisibleFeed(
+	toggled, err := sub.RunVisibleFeed(
 		bytes.NewReader(append([]byte("alpha\n"), ToggleKeyCtrlO)),
 		io.Discard,
 	)
@@ -68,46 +68,46 @@ func TestSpikeStubShellSurvivesTwoToggles(t *testing.T) {
 	if !toggled {
 		t.Fatal("expected toggle back")
 	}
-	if !spike.Alive() {
+	if !sub.Alive() {
 		t.Fatal("shell should survive first toggle")
 	}
 
 	// Talk to shell while commander would be visible.
-	if _, err := spike.WritePTY([]byte("PING\n")); err != nil {
+	if _, err := sub.WritePTY([]byte("PING\n")); err != nil {
 		t.Fatal(err)
 	}
-	readUntil(t, spike.pty, "PONG", 2*time.Second)
+	readUntil(t, sub.pty, "PONG", 2*time.Second)
 
 	// Second visible session: toggle immediately.
-	toggled, err = spike.RunVisibleFeed(bytes.NewReader([]byte{ToggleKeyCtrlO}), io.Discard)
+	toggled, err = sub.RunVisibleFeed(bytes.NewReader([]byte{ToggleKeyCtrlO}), io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !toggled {
 		t.Fatal("expected second toggle back")
 	}
-	if !spike.Alive() {
+	if !sub.Alive() {
 		t.Fatal("shell should survive second toggle")
 	}
 
 	// Exit in shell ends the child.
-	if _, err := spike.WritePTY([]byte("exit\n")); err != nil {
+	if _, err := sub.WritePTY([]byte("exit\n")); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.Now().Add(3 * time.Second)
-	for spike.Alive() && time.Now().Before(deadline) {
+	for sub.Alive() && time.Now().Before(deadline) {
 		time.Sleep(20 * time.Millisecond)
 	}
-	if spike.Alive() {
+	if sub.Alive() {
 		t.Fatal("shell should exit after exit command")
 	}
 }
 
 func TestSpikeStartRequiresShell(t *testing.T) {
-	spike, err := StartSpike(StartOptions{Shell: "/bin/sh", Command: "echo spike-ok"})
+	sub, err := Start(StartOptions{Shell: "/bin/sh", Command: "echo sub-ok"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = spike.Close() })
-	readUntil(t, spike.pty, "spike-ok", 2*time.Second)
+	t.Cleanup(func() { _ = sub.Close() })
+	readUntil(t, sub.pty, "sub-ok", 2*time.Second)
 }

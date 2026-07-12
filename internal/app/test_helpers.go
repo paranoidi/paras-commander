@@ -76,6 +76,8 @@ func testAppMinimal(t *testing.T) *App {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
+	// The persistent subshell would grab a real PTY and /dev/tty under a simulation screen.
+	app.config.Shell.Persistent = false
 	t.Cleanup(app.stopWorker)
 	return app
 }
@@ -93,6 +95,8 @@ func newApp(t *testing.T, screen tcell.SimulationScreen, dir string) *App {
 		t.Fatalf("New() error = %v", err)
 	}
 	app.config.UI.KeyRepeatDebounceMS = 0
+	// The persistent subshell would grab a real PTY and /dev/tty under a simulation screen.
+	app.config.Shell.Persistent = false
 	t.Cleanup(func() {
 		if !app.jobStopOnce {
 			flushBackgroundJobs(t, app)

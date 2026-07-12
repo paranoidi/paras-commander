@@ -2,13 +2,16 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/shell"
+	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -18,6 +21,9 @@ var dropToShellRunner = func(ctx context.Context, argv []string) error {
 
 func (a *App) dropToShell() {
 	if a.model.ModalDialogOpen() {
+		return
+	}
+	if a.config.Shell.Persistent && a.persistentShellToggle() {
 		return
 	}
 	p := a.activePanel()
@@ -83,8 +89,20 @@ func (a *App) syncPanelCwdAfterShell() {
 	if err != nil {
 		return
 	}
+	a.syncActivePanelToDir(shellWd)
+}
+
+// syncActivePanelToDir navigates the active panel to shellWd unless it already shows it.
+// The panel path is also compared symlink-resolved: /proc/<pid>/cwd is fully resolved while
+// the panel may display a path through a symlink.
+func (a *App) syncActivePanelToDir(shellWd string) {
 	active := a.activePanel()
-	if panel.CleanPathString(active.PathString()) == panel.CleanPathString(shellWd) {
+	panelPath := panel.CleanPathString(active.PathString())
+	if panelPath == panel.CleanPathString(shellWd) {
+		return
+	}
+	if resolved, err := filepath.EvalSymlinks(panelPath); err == nil &&
+		panel.CleanPathString(resolved) == panel.CleanPathString(shellWd) {
 		return
 	}
 	if fi, statErr := os.Stat(shellWd); statErr != nil || !fi.IsDir() {
@@ -93,6 +111,94 @@ func (a *App) syncPanelCwdAfterShell() {
 	if navErr := a.navigatePanelToDirectory(a.model.ActivePanel, shellWd, ""); navErr != nil {
 		a.setErrorMessage("Shell", navErr)
 	}
+}
+
+// persistentShellToggle shows the MC-style persistent subshell session. It reports false when
+// the persistent path is unavailable (custom shell.command, non-Linux, PTY start failure) so
+// dropToShell falls back to the one-shot shell.
+func (a *App) persistentShellToggle() bool {
+	if strings.TrimSpace(a.config.Shell.Command) != "" {
+		return false
+	}
+	panelDir := a.localActivePanelDir()
+	if a.subshell != nil && !a.subshell.Alive() {
+		a.closeSubshell()
+	}
+	if a.subshell == nil {
+		sub, err := subshell.Start(subshell.StartOptions{Dir: panelDir})
+		if err != nil {
+			if !errors.Is(err, subshell.ErrUnsupportedPlatform) {
+				a.setTransientMessage(fmt.Sprintf("Shell: persistent session unavailable (%v)", err), ui.MessageUrgencyWarn)
+			}
+			return false
+		}
+		a.subshell = sub
+	} else if panelDir != "" {
+		a.subshellChdirIfNeeded(panelDir)
+	}
+
+	_, err := a.subshell.RunVisible(a.screen)
+	// Same post-Resume housekeeping as withTerminalReleased: force a full repaint.
+	a.lastScreenContentHash = 0
+	a.screen.HideCursor()
+	if err != nil {
+		a.setErrorMessage("Shell", err)
+	}
+	if !a.subshell.Alive() {
+		a.closeSubshell()
+	} else if a.config.Shell.SyncCwdOnReturn && !a.activePanel().Path.IsRemote() {
+		if cwd, cwdErr := a.subshell.Cwd(); cwdErr == nil {
+			a.syncActivePanelToDir(cwd)
+		}
+	}
+	a.refreshAfterDropToShell()
+	a.render()
+	return true
+}
+
+// localActivePanelDir returns the active panel directory, or "" when it is remote or
+// unavailable (the persistent shell then keeps its current cwd).
+func (a *App) localActivePanelDir() string {
+	p := a.activePanel()
+	if p.Path.IsRemote() {
+		return ""
+	}
+	dir, err := p.Path.FilePath()
+	if err != nil {
+		return ""
+	}
+	dir = strings.TrimSpace(dir)
+	if dir == "" || dir == "." {
+		return ""
+	}
+	if fi, statErr := os.Stat(dir); statErr != nil || !fi.IsDir() {
+		return ""
+	}
+	return dir
+}
+
+// subshellChdirIfNeeded injects cd into the idle subshell when its cwd differs from dir.
+// A busy shell keeps its cwd (same as MC: no injection while a foreground command runs).
+func (a *App) subshellChdirIfNeeded(dir string) {
+	if cwd, err := a.subshell.Cwd(); err == nil {
+		if panel.CleanPathString(cwd) == panel.CleanPathString(dir) {
+			return
+		}
+		if resolved, rerr := filepath.EvalSymlinks(dir); rerr == nil &&
+			panel.CleanPathString(cwd) == panel.CleanPathString(resolved) {
+			return
+		}
+	}
+	_ = a.subshell.Chdir(dir)
+}
+
+// closeSubshell terminates the persistent shell session; the next toggle starts a fresh one.
+func (a *App) closeSubshell() {
+	if a.subshell == nil {
+		return
+	}
+	_ = a.subshell.Close()
+	a.subshell = nil
 }
 
 func (a *App) refreshAfterDropToShell() {

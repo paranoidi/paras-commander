@@ -178,4 +178,24 @@ func TestDropToShellDefaultConfigSyncEnabled(t *testing.T) {
 	if !cfg.Shell.SyncCwdOnReturn {
 		t.Fatal("Default().Shell.SyncCwdOnReturn = false, want true")
 	}
+	if !cfg.Shell.Persistent {
+		t.Fatal("Default().Shell.Persistent = false, want true")
+	}
+}
+
+func TestPersistentShellSkippedWithCommandOverride(t *testing.T) {
+	root := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	if err := app.model.Primary.Load(root); err != nil {
+		t.Fatal(err)
+	}
+	app.config.Shell.Command = "/bin/echo drop-shell-marker"
+
+	if app.persistentShellToggle() {
+		t.Fatal("persistentShellToggle should refuse a custom shell.command")
+	}
+	if app.subshell != nil {
+		t.Fatal("no subshell session should be started")
+	}
 }

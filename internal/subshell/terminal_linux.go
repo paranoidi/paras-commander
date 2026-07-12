@@ -20,23 +20,30 @@ const (
 )
 
 var (
-	launchTTYMu sync.Mutex
-	launchTTYFD = -1
-	launchTTY   *term.State
+	launchTTYMu   sync.Mutex
+	launchTTYFile *os.File
+	launchTTY     *term.State
 )
 
-// SaveLaunchTerminal records termios before tcell Init (call from main).
+// SaveLaunchTerminal records termios before tcell Init (call from main). The tty handle stays
+// open until [RestoreLaunchTerminal] — a closed fd could be reused and restored by mistake.
 func SaveLaunchTerminal() {
-	fd, err := controllingTTYFD()
-	if err != nil || !term.IsTerminal(fd) {
+	f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+	if err != nil {
+		return
+	}
+	fd := int(f.Fd())
+	if !term.IsTerminal(fd) {
+		_ = f.Close()
 		return
 	}
 	state, err := term.GetState(fd)
 	if err != nil {
+		_ = f.Close()
 		return
 	}
 	launchTTYMu.Lock()
-	launchTTYFD = fd
+	launchTTYFile = f
 	launchTTY = state
 	launchTTYMu.Unlock()
 }
@@ -44,29 +51,19 @@ func SaveLaunchTerminal() {
 // RestoreLaunchTerminal restores the terminal to the state from [SaveLaunchTerminal].
 func RestoreLaunchTerminal() {
 	launchTTYMu.Lock()
-	fd := launchTTYFD
+	f := launchTTYFile
 	state := launchTTY
-	launchTTYFD = -1
+	launchTTYFile = nil
 	launchTTY = nil
 	launchTTYMu.Unlock()
-	if fd < 0 || state == nil {
+	if f == nil || state == nil {
 		return
 	}
+	fd := int(f.Fd())
 	discardPendingStdin(fd)
 	_ = term.Restore(fd, state)
 	enableKittyKeyboardProtocol()
-}
-
-func controllingTTYFD() (int, error) {
-	f, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
-	if err != nil {
-		if term.IsTerminal(int(os.Stdin.Fd())) {
-			return int(os.Stdin.Fd()), nil
-		}
-		return -1, err
-	}
-	defer func() { _ = f.Close() }()
-	return int(f.Fd()), nil
+	_ = f.Close()
 }
 
 // openControllingTTY returns a read/write handle to the interactive terminal.
@@ -84,36 +81,22 @@ func syncPTYSize(ptyMaster, termSizeFrom *os.File) error {
 	return pty.Setsize(ptyMaster, ws)
 }
 
-func disableKittyKeyboardProtocol() {
-	if fd, err := controllingTTYFD(); err == nil {
-		setKittyKeyboardProtocolOnFD(fd, false)
-	}
-	if term.IsTerminal(int(os.Stdout.Fd())) {
-		setKittyKeyboardProtocolOnFD(int(os.Stdout.Fd()), false)
-	}
-}
+func disableKittyKeyboardProtocol() { setKittyKeyboardProtocol(false) }
 
-func enableKittyKeyboardProtocol() {
-	if fd, err := controllingTTYFD(); err == nil {
-		setKittyKeyboardProtocolOnFD(fd, true)
-	}
-	if term.IsTerminal(int(os.Stdout.Fd())) {
-		setKittyKeyboardProtocolOnFD(int(os.Stdout.Fd()), true)
-	}
-}
+func enableKittyKeyboardProtocol() { setKittyKeyboardProtocol(true) }
 
-func setKittyKeyboardProtocolOnFD(fd int, enable bool) {
-	if !term.IsTerminal(fd) {
-		return
-	}
-	f := os.NewFile(uintptr(fd), "/dev/tty")
-	if f == nil {
-		return
-	}
+func setKittyKeyboardProtocol(enable bool) {
+	seq := kittyKeyboardDisable
 	if enable {
-		_, _ = f.WriteString(kittyKeyboardEnable)
-	} else {
-		_, _ = f.WriteString(kittyKeyboardDisable)
+		seq = kittyKeyboardEnable
+	}
+	if f, err := os.OpenFile("/dev/tty", os.O_WRONLY, 0); err == nil {
+		_, _ = f.WriteString(seq)
+		_ = f.Close()
+		return
+	}
+	if term.IsTerminal(int(os.Stdout.Fd())) {
+		_, _ = os.Stdout.WriteString(seq)
 	}
 }
 

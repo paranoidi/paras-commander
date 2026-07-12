@@ -40,7 +40,7 @@ func EmergencyRestoreScreen(screen tcell.Screen) {
 	enableKittyKeyboardProtocol()
 }
 
-// ShutdownTerminal fully releases the spike: visible session, tcell, then launch termios.
+// ShutdownTerminal fully releases the sub: visible session, tcell, then launch termios.
 func ShutdownTerminal(screen tcell.Screen) {
 	EmergencyRestoreScreen(screen)
 	screen.Fini()
