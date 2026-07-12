@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/creack/pty"
 )
 
 // stubShell echoes READY then answers PING with PONG until exit.
@@ -101,6 +103,26 @@ func TestSpikeStubShellSurvivesTwoToggles(t *testing.T) {
 	if sub.Alive() {
 		t.Fatal("shell should exit after exit command")
 	}
+}
+
+func TestForceFullRedrawDeliversWinch(t *testing.T) {
+	sub, err := Start(StartOptions{
+		Shell:   "/bin/sh",
+		Command: "trap 'echo WINCHED' WINCH; echo READY; while :; do sleep 0.1; done",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = sub.Close() })
+
+	// Headless runs leave the PTY at 0x0; forceFullRedraw needs a real size to jiggle.
+	if err := pty.Setsize(sub.pty, &pty.Winsize{Rows: 24, Cols: 80}); err != nil {
+		t.Fatal(err)
+	}
+	readUntil(t, sub.pty, "READY", 3*time.Second)
+
+	forceFullRedraw(sub.pty)
+	readUntil(t, sub.pty, "WINCHED", 3*time.Second)
 }
 
 func TestSpikeStartRequiresShell(t *testing.T) {

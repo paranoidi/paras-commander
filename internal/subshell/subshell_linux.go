@@ -181,6 +181,9 @@ func (s *Subshell) RunVisible(screen tcell.Screen) (toggledBack bool, err error)
 	registerVisibleRestore(restoreHost)
 
 	_ = syncPTYSize(s.pty, hostTTY)
+	if s.Busy() {
+		forceFullRedraw(s.pty)
+	}
 	stopResize := watchWinchResize(s.pty, hostTTY)
 	defer stopResize()
 
