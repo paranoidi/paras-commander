@@ -121,6 +121,7 @@ func (a *App) persistentShellToggle() bool {
 		return false
 	}
 	panelDir := a.localActivePanelDir()
+	chdirBusy := false
 	if a.subshell != nil && !a.subshell.Alive() {
 		a.closeSubshell()
 	}
@@ -134,7 +135,7 @@ func (a *App) persistentShellToggle() bool {
 		}
 		a.subshell = sub
 	} else if panelDir != "" {
-		a.subshellChdirIfNeeded(panelDir)
+		chdirBusy = errors.Is(a.subshellChdirIfNeeded(panelDir), subshell.ErrBusy)
 	}
 
 	_, err := a.subshell.RunVisible(a.screen)
@@ -143,6 +144,10 @@ func (a *App) persistentShellToggle() bool {
 	a.screen.HideCursor()
 	if err != nil {
 		a.setErrorMessage("Shell", err)
+	}
+	if chdirBusy {
+		// Only visible now: transient messages render in the TUI, not in the shell.
+		a.setTransientMessage("Shell is busy — panel directory was not sent to the shell", ui.MessageUrgencyWarn)
 	}
 	if !a.subshell.Alive() {
 		a.closeSubshell()
@@ -178,18 +183,19 @@ func (a *App) localActivePanelDir() string {
 }
 
 // subshellChdirIfNeeded injects cd into the idle subshell when its cwd differs from dir.
-// A busy shell keeps its cwd (same as MC: no injection while a foreground command runs).
-func (a *App) subshellChdirIfNeeded(dir string) {
+// A busy shell keeps its cwd (same as MC: no injection while a foreground command runs);
+// that surfaces as [subshell.ErrBusy].
+func (a *App) subshellChdirIfNeeded(dir string) error {
 	if cwd, err := a.subshell.Cwd(); err == nil {
 		if panel.CleanPathString(cwd) == panel.CleanPathString(dir) {
-			return
+			return nil
 		}
 		if resolved, rerr := filepath.EvalSymlinks(dir); rerr == nil &&
 			panel.CleanPathString(cwd) == panel.CleanPathString(resolved) {
-			return
+			return nil
 		}
 	}
-	_ = a.subshell.Chdir(dir)
+	return a.subshell.Chdir(dir)
 }
 
 // closeSubshell terminates the persistent shell session; the next toggle starts a fresh one.
