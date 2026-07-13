@@ -79,8 +79,25 @@ func (a *App) toggleTerminalPanelFocus() {
 		a.syncPanelFromSubshellCwd()
 	default:
 		tp.Focused = true
+		a.syncTerminalShellToPanelDir()
 	}
 	a.render()
+}
+
+// syncTerminalShellToPanelDir injects a cd into the already-running persistent shell when the
+// active panel dir has changed since the last sync (e.g. the panel navigated elsewhere while
+// the terminal panel was visible but unfocused).
+func (a *App) syncTerminalShellToPanelDir() {
+	if a.subshell == nil {
+		return
+	}
+	panelDir := a.localActivePanelDir()
+	if panelDir == "" {
+		return
+	}
+	if errors.Is(a.subshellChdirIfNeeded(panelDir), subshell.ErrBusy) {
+		a.setTransientMessage("Shell is busy — panel directory was not sent to the shell", ui.MessageUrgencyWarn)
+	}
 }
 
 func (a *App) openTerminalPanel(focus bool) {
@@ -111,10 +128,8 @@ func (a *App) openTerminalPanel(focus bool) {
 		return
 	}
 
-	if !fresh && panelDir != "" {
-		if errors.Is(a.subshellChdirIfNeeded(panelDir), subshell.ErrBusy) {
-			a.setTransientMessage("Shell is busy — panel directory was not sent to the shell", ui.MessageUrgencyWarn)
-		}
+	if !fresh {
+		a.syncTerminalShellToPanelDir()
 	}
 	if a.terminalFeed != nil {
 		// Feed already alive from a previous hide — reuse it so the emulator

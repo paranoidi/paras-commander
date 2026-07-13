@@ -38,7 +38,7 @@ func TestForDisplay_preferredAbsent(t *testing.T) {
 func TestJoinDisplay_listsAllBindings(t *testing.T) {
 	t.Parallel()
 	got := JoinDisplay([]string{"C-e", "C-g"}, "C-g")
-	want := "Ctrl+G, Ctrl+E"
+	want := "Ctrl-G, Ctrl-E"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}

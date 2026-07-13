@@ -95,8 +95,8 @@ func TestDedupHelpUsesOverlayKeys(t *testing.T) {
 	if idx < 0 {
 		t.Fatal("dedup help missing dedup.mark-keep")
 	}
-	if !strings.Contains(entries[idx].Keys, "Ctrl+K") {
-		t.Fatalf("dedup.mark-keep keys = %q, want Ctrl+K from overlay", entries[idx].Keys)
+	if !strings.Contains(entries[idx].Keys, "Ctrl-K") {
+		t.Fatalf("dedup.mark-keep keys = %q, want Ctrl-K from overlay", entries[idx].Keys)
 	}
 }
 

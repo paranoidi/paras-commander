@@ -49,8 +49,8 @@ func TestFormatChordCtrlSpace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseKey: %v", err)
 	}
-	if got := FormatChord(ch); got != "Ctrl+Space" {
-		t.Fatalf("FormatChord(C-space) = %q, want Ctrl+Space", got)
+	if got := FormatChord(ch); got != "Ctrl-Space" {
+		t.Fatalf("FormatChord(C-space) = %q, want Ctrl-Space", got)
 	}
 }
 
@@ -59,15 +59,15 @@ func TestFormatChordAltLetterUppercase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseKey: %v", err)
 	}
-	if got := FormatChord(ch); got != "Alt+M" {
-		t.Fatalf("FormatChord(M-m) = %q, want Alt+M", got)
+	if got := FormatChord(ch); got != "Alt-M" {
+		t.Fatalf("FormatChord(M-m) = %q, want Alt-M", got)
 	}
 	ch2, err := ParseKey("M-M")
 	if err != nil {
 		t.Fatalf("ParseKey: %v", err)
 	}
-	if got := FormatChord(ch2); got != "Alt+M" {
-		t.Fatalf("FormatChord(M-M) = %q, want Alt+M", got)
+	if got := FormatChord(ch2); got != "Alt-M" {
+		t.Fatalf("FormatChord(M-M) = %q, want Alt-M", got)
 	}
 }
 

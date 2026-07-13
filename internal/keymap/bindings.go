@@ -52,7 +52,7 @@ func (m *Map) ActionBindings() []Binding {
 	// Pre-populate with TOML original forms from every default registry
 	// (specs + jobs overlay) so we keep canonical representations for
 	// display even when the chord would otherwise round-trip through
-	// FormatChord (e.g. "C-j" instead of "Ctrl+J").
+	// FormatChord (e.g. "C-j" instead of "Ctrl-J").
 	rememberCanonical := func(ks string) {
 		ch, err := ParseKey(ks)
 		if err != nil {
@@ -263,7 +263,7 @@ func MenuBindingLabelPreferOverlay(global, overlay *Map, actionID string) string
 
 // FormatChord returns a human-readable string for a parsed chord,
 // suitable for display in help screens.
-// Examples: "Ctrl+D", "Alt+←", "Shift+Tab", "F5", "Enter", "Ctrl+Alt+D".
+// Examples: "Ctrl-D", "Alt-←", "Shift-Tab", "F5", "Enter", "Ctrl-Alt-D".
 func FormatChord(ch Chord) string {
 	var parts []string
 
@@ -295,7 +295,7 @@ func FormatChord(ch Chord) string {
 	if len(parts) == 0 {
 		return "?"
 	}
-	return strings.Join(parts, "+")
+	return strings.Join(parts, "-")
 }
 
 func contains(ss []string, s string) bool {
@@ -309,7 +309,7 @@ func contains(ss []string, s string) bool {
 
 // chordKeyName returns the display name for a chord's key part.
 // isCtrlKey is true when the chord is a KeyCtrl* type — the function
-// returns the bare letter in that case (the "Ctrl+" prefix is added by FormatChord).
+// returns the bare letter in that case (the "Ctrl-" prefix is added by FormatChord).
 func chordKeyName(ch Chord, isCtrlKey bool) string {
 	if ch.Key == tcell.KeyRune {
 		r := ch.Rune
@@ -344,7 +344,7 @@ func chordKeyName(ch Chord, isCtrlKey bool) string {
 	case tcell.KeyTab:
 		return "Tab"
 	case tcell.KeyBacktab:
-		return "Shift+Tab"
+		return "Shift-Tab"
 	case tcell.KeyEnter:
 		return "Enter"
 	case tcell.KeyEsc:
