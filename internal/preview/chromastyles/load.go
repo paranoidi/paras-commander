@@ -7,10 +7,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/alecthomas/chroma/v2"
 	"github.com/alecthomas/chroma/v2/styles"
 )
+
+// mu guards custom/loadWarnings: multiple App instances (e.g. in tests) can load
+// config and render previews concurrently, both touching this process-wide registry.
+var mu sync.RWMutex
 
 var (
 	custom       = map[string]*chroma.Style{}
@@ -19,11 +24,15 @@ var (
 
 // LoadWarnings returns non-fatal issues from the most recent LoadFromDir call.
 func LoadWarnings() []error {
+	mu.RLock()
+	defer mu.RUnlock()
 	return loadWarnings
 }
 
 // ResetForTest clears custom styles and load warnings between tests.
 func ResetForTest() {
+	mu.Lock()
+	defer mu.Unlock()
 	custom = map[string]*chroma.Style{}
 	loadWarnings = nil
 }
@@ -32,6 +41,8 @@ func ResetForTest() {
 // The custom map is replaced on each call. Invalid sibling .xml files are skipped
 // and recorded in LoadWarnings; a missing directory is not an error.
 func LoadFromDir(dir string) error {
+	mu.Lock()
+	defer mu.Unlock()
 	custom = map[string]*chroma.Style{}
 	loadWarnings = nil
 
@@ -92,7 +103,10 @@ func Get(name string) *chroma.Style {
 	if key == "" {
 		return styles.Fallback
 	}
-	if style, ok := custom[key]; ok {
+	mu.RLock()
+	style, ok := custom[key]
+	mu.RUnlock()
+	if ok {
 		return style
 	}
 	return styles.Get(name)
@@ -104,10 +118,13 @@ func IsValid(name string) bool {
 	if key == "" {
 		return false
 	}
-	if _, ok := custom[key]; ok {
+	mu.RLock()
+	_, ok := custom[key]
+	mu.RUnlock()
+	if ok {
 		return true
 	}
-	_, ok := styles.Registry[key]
+	_, ok = styles.Registry[key]
 	return ok
 }
 
@@ -117,7 +134,10 @@ func CanonicalName(name string) string {
 	if key == "" {
 		return ""
 	}
-	if _, ok := custom[key]; ok {
+	mu.RLock()
+	_, ok := custom[key]
+	mu.RUnlock()
+	if ok {
 		return key
 	}
 	if _, ok := styles.Registry[key]; ok {

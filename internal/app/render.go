@@ -166,7 +166,13 @@ func (a *App) render() {
 	if a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogMassRename {
 		a.recomputeMassRenamePreview()
 	}
-	ui.Render(a.screen, a.model, a.styles)
+	// Copy a.model under commandsMu: passing it by value into ui.Render otherwise reads
+	// every field (including CarouselFilePreview/FilePreview/FullscreenFilePreview, which
+	// background preview goroutines mutate under this same lock) without synchronization.
+	a.commandsMu.RLock()
+	modelSnapshot := a.model
+	a.commandsMu.RUnlock()
+	ui.Render(a.screen, modelSnapshot, a.styles)
 	a.syncTerminalPanelCursor()
 	a.emitScreenAfterFullRender()
 	a.armSpinnerRedrawTimer()

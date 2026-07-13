@@ -256,10 +256,18 @@ func (s *State) PauseQueuedJob(id string) bool {
 
 // AllJobs returns active job (if any), jobs waiting for blocker input, queued jobs, then recently finished jobs.
 // Each job ID appears at most once even if internal buckets overlap during worker transitions.
+// Returned jobs are copies (same convention as ActiveJob/FirstWaitingBlockerJob) so callers can
+// read them after releasing s.mu without racing the worker goroutine's in-place mutations.
 func (s *State) AllJobs() []*Job {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return dedupeJobsByID(s.collectAllJobsUnlocked())
+	deduped := dedupeJobsByID(s.collectAllJobsUnlocked())
+	out := make([]*Job, len(deduped))
+	for i, j := range deduped {
+		cp := *j
+		out[i] = &cp
+	}
+	return out
 }
 
 // MenuBarStripStatuses returns job statuses for the menu-bar strip: finished retention
@@ -323,14 +331,11 @@ func (s *State) ApplyEvent(ev Event) {
 			job.CurrentPath = ev.CurrentPath
 		}
 	case EventScanTotals:
-		job := s.findJobUnlocked(ev.JobID)
-		if job != nil {
-			job.TotalFiles = ev.TotalFiles
-			job.TotalDirs = ev.TotalDirs
-			job.TotalBytes = ev.TotalBytes
-			job.Status = ev.Status
-			job.CurrentPath = ""
-		}
+		// No job mutation here: runJobScan already writes TotalFiles/TotalDirs/TotalBytes/
+		// Status/CurrentPath directly under s.mu (scan.go) before emitting this event, so
+		// there's one source of truth for these fields. Re-applying ev's copy of them here
+		// would be a second, differently-timed write to the same fields the worker reads
+		// unsynchronized in jobbridge — i.e. exactly the kind of race this pattern avoids.
 	case EventPlanTotals:
 		job := s.findJobUnlocked(ev.JobID)
 		if job != nil {

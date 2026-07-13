@@ -246,22 +246,27 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 		}
 		opsPlan := PlanItemsToOps(job.Plan)
 		var planErr error
+		// totalBytes starts from job.TotalBytes (set during the pre-scan phase, which
+		// happens-before this call via the queue/dequeue lock). If we build a fresh plan
+		// below we use that value directly instead of reading job.TotalBytes back after
+		// emit: the emit is only enqueued, not yet applied by ApplyEvent on the app's
+		// event-loop goroutine, so re-reading the field here would race that write.
+		totalBytes := job.TotalBytes
 		if (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) && len(opsPlan) == 0 {
 			var tf int
-			var tb int64
-			opsPlan, tf, _, tb, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{})
+			opsPlan, tf, _, totalBytes, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{})
 			if planErr == nil {
 				emit(jobs.Event{
 					Type:       jobs.EventPlanTotals,
 					JobID:      job.ID,
 					Status:     jobs.StatusRunning,
 					TotalFiles: tf,
-					TotalBytes: tb,
+					TotalBytes: totalBytes,
 				})
 			}
 		}
 		if planErr == nil && (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) {
-			tb := job.TotalBytes
+			tb := totalBytes
 			if tb <= 0 && len(opsPlan) > 0 {
 				_, _, tb = ops.SummarizePlan(opsPlan)
 			}
@@ -357,8 +362,18 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 			return fmt.Errorf("unknown job type: %s", job.Type)
 		}
 		if err == nil {
-			job.DoneFiles = doneFiles
-			job.DoneBytes = doneBytes
+			// Final tally goes through emit (like every other progress update in this
+			// function) rather than writing job fields directly: job.Status transitions
+			// and ApplyEvent-driven field writes are the app event loop's job, not the
+			// worker's — direct writes here would race the event loop reading the same
+			// job via AllJobs()/Snapshot().
+			emit(jobs.Event{
+				Type:      jobs.EventProgress,
+				JobID:     job.ID,
+				Status:    jobs.StatusRunning,
+				DoneFiles: doneFiles,
+				DoneBytes: doneBytes,
+			})
 		}
 		return err
 	}

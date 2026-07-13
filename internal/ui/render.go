@@ -198,7 +198,7 @@ type Model struct {
 // PrimaryModal identifies which exclusive modal occupies the primary dialog layer (see package dialog).
 
 // PrimaryModal returns the active primary modal, in the same priority order as Render.
-func (m Model) PrimaryModal() dialog.PrimaryModal {
+func (m *Model) PrimaryModal() dialog.PrimaryModal {
 	switch {
 	case m.ThemeDialog.Open:
 		return dialog.PrimaryModalTheme
@@ -222,7 +222,7 @@ func (m Model) PrimaryModal() dialog.PrimaryModal {
 // SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,
 // or -1 when sync is disabled. The result is intended for renderers that need a sentinel
 // they can compare against the panel they are about to draw.
-func (m Model) SyncDriverPanelID() int {
+func (m *Model) SyncDriverPanelID() int {
 	if !m.SyncFollowEnabled {
 		return -1
 	}
@@ -233,7 +233,7 @@ func (m Model) SyncDriverPanelID() int {
 }
 
 // showPanelDiskUsage is true when proportional disk-usage bars apply to panelID's listing.
-func (m Model) showPanelDiskUsage(panelID int) bool {
+func (m *Model) showPanelDiskUsage(panelID int) bool {
 	if !m.DiskUsageShown || m.DiskUsage == nil {
 		return false
 	}
@@ -250,7 +250,7 @@ func (m Model) showPanelDiskUsage(panelID int) bool {
 }
 
 // quickViewDriverPanel resolves the latched quick-view driver panel.
-func (m Model) quickViewDriverPanel() int {
+func (m *Model) quickViewDriverPanel() int {
 	if !m.QuickViewEnabled {
 		return -1
 	}
@@ -265,7 +265,7 @@ func (m Model) quickViewDriverPanel() int {
 
 // renderSubFocus returns ActiveSubFocus for focus styling, or -1 while the
 // embedded terminal panel owns keyboard focus (panels then render inactive).
-func (m Model) renderSubFocus() int {
+func (m *Model) renderSubFocus() int {
 	if m.TerminalPanel.Visible && m.TerminalPanel.Focused {
 		return -1
 	}
@@ -273,7 +273,7 @@ func (m Model) renderSubFocus() int {
 }
 
 // QuickViewDisplayActive is true when the inactive column should show quick-view preview.
-func (m Model) QuickViewDisplayActive() bool {
+func (m *Model) QuickViewDisplayActive() bool {
 	if !m.QuickViewEnabled {
 		return false
 	}
@@ -283,7 +283,7 @@ func (m Model) QuickViewDisplayActive() bool {
 
 // QuickViewDriverPanelID returns the PrimaryPanel/SecondaryPanel id that shows the quick-view
 // bottom indicator while quick view is latched, or -1 when disabled.
-func (m Model) QuickViewDriverPanelID() int {
+func (m *Model) QuickViewDriverPanelID() int {
 	return m.quickViewDriverPanel()
 }
 
@@ -292,7 +292,7 @@ func (m Model) QuickViewDriverPanelID() int {
 // inactive column stays on preview even when preview state is briefly closed (e.g. between
 // pause/resume), avoiding a one-frame file-panel title with volume stats that flickers
 // before the filename label.
-func (m Model) InactiveColumnShowsFilePreview(inactivePanelID int) bool {
+func (m *Model) InactiveColumnShowsFilePreview(inactivePanelID int) bool {
 	if m.HideInactivePanel {
 		return false
 	}
@@ -308,7 +308,7 @@ func (m Model) InactiveColumnShowsFilePreview(inactivePanelID int) bool {
 }
 
 // inactivePanelID returns PrimaryPanel or SecondaryPanel for the inactive column.
-func (m Model) inactivePanelID() int {
+func (m *Model) inactivePanelID() int {
 	if m.ActivePanel == SecondaryPanel {
 		return PrimaryPanel
 	}
@@ -318,7 +318,7 @@ func (m Model) inactivePanelID() int {
 // PanelForFileListRender returns the panel state to paint in the file list. During quick-view
 // directory preview the inactive column uses QuickViewDirOverlay; real Left/Right paths stay
 // unchanged for cross-panel open indicators and for restore when quick view is turned off.
-func (m Model) PanelForFileListRender(panelID int) panel.State {
+func (m *Model) PanelForFileListRender(panelID int) panel.State {
 	if m.QuickViewDisplayActive() && m.QuickViewDirOverlayActive && panelID == m.QuickViewDirOverlayPanelID {
 		return m.QuickViewDirOverlay
 	}
@@ -337,7 +337,7 @@ func (m Model) PanelForFileListRender(panelID int) panel.State {
 
 // PanelsChromeBlocked reports when file/jobs panel chrome should use panel.blocked.*
 // styles because a menu or modal has taken focus.
-func (m Model) PanelsChromeBlocked() bool {
+func (m *Model) PanelsChromeBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
@@ -345,7 +345,7 @@ func (m Model) PanelsChromeBlocked() bool {
 }
 
 // ModalDialogOpen reports modals that block normal navigation and hide the menu bar row.
-func (m Model) ModalDialogOpen() bool {
+func (m *Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
@@ -357,7 +357,7 @@ func (m Model) ModalDialogOpen() bool {
 
 // QuickFilterStartBlocked reports UI states where the quick filter must not open from a plain printable key
 // in normal input mode (same modal/menu set as the legacy shouldStartFilter guard).
-func (m Model) QuickFilterStartBlocked() bool {
+func (m *Model) QuickFilterStartBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
@@ -372,18 +372,18 @@ func (m Model) QuickFilterStartBlocked() bool {
 // AuxiliaryViewDialogKeysBlocked reports transfer/conflict/quit dialogs plus the pulldown menu that block
 // dedicated Jobs/Commands view keyboard handling. inputMode checks this only after earlier cases have ruled
 // out other modals.
-func (m Model) AuxiliaryViewDialogKeysBlocked() bool {
+func (m *Model) AuxiliaryViewDialogKeysBlocked() bool {
 	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.AmbiguousTransfer.Open || m.StashRestoreDialog.Open || m.DedupEmptyDirsConfirm.Open || m.Menu.Open
 }
 
 // MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config show_menu_bar).
-func (m Model) MenuBarLayoutReserved() bool {
+func (m *Model) MenuBarLayoutReserved() bool {
 	return !m.HideMenuBar
 }
 
 // MenuBarInteractive is true when menu labels and pulldown may be shown (blocked by modal dialogs
 // and the fullscreen file preview, which has no pulldown menus).
-func (m Model) MenuBarInteractive() bool {
+func (m *Model) MenuBarInteractive() bool {
 	return !m.HideMenuBar && !m.ModalDialogOpen() && m.ViewMode != ViewFilePreview
 }
 
