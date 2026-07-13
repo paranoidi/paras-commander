@@ -89,12 +89,11 @@ func syncPTYSize(ptyMaster, termSizeFrom *os.File) (cellsChanged bool, err error
 	return cellsChanged, pty.Setsize(ptyMaster, ws)
 }
 
+func disableKittyKeyboardProtocol() { setKittyKeyboardProtocol(false) }
+
 // forceFullRedraw jiggles the PTY winsize (rows-1, then the real size back) so a full-screen
-// app that kept running while the TUI owned the terminal repaints from scratch — its frame is
-// gone and it would otherwise only send diffs against it. A plain SIGWINCH is not enough:
-// tcell/gocui apps skip repainting when the size is unchanged. The pause lets the app observe
-// the shrunken size before the restore. ponytail: fixed 30ms settle; bump if some app
-// coalesces both resizes into none.
+// app that kept running while the TUI owned the terminal repaints from scratch. Fallback only:
+// the emulator path (WriteScreenTo) is preferred. ponytail: fixed 30ms settle.
 func forceFullRedraw(ptyMaster *os.File) {
 	ws, err := pty.GetsizeFull(ptyMaster)
 	if err != nil || ws.Rows < 2 {
@@ -108,8 +107,6 @@ func forceFullRedraw(ptyMaster *os.File) {
 	time.Sleep(30 * time.Millisecond)
 	_ = pty.Setsize(ptyMaster, ws)
 }
-
-func disableKittyKeyboardProtocol() { setKittyKeyboardProtocol(false) }
 
 func enableKittyKeyboardProtocol() { setKittyKeyboardProtocol(true) }
 

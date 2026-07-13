@@ -13,6 +13,17 @@ const (
 	// subshell's command line and enters the shell.
 	ActionAppShellInsertPaths = "app.shell-insert-paths"
 
+	// ActionTerminalTogglePanel shows/hides the embedded terminal panel strip
+	// (does not change focus).
+	ActionTerminalTogglePanel = "terminal.toggle-panel"
+	// ActionTerminalFocus toggles keyboard focus into/out of the terminal panel,
+	// opening it first if it is hidden.
+	ActionTerminalFocus = "terminal.focus"
+	// ActionTerminalGrow / ActionTerminalShrink resize the terminal panel while it has focus
+	// ([terminal] context only).
+	ActionTerminalGrow   = "terminal.grow"
+	ActionTerminalShrink = "terminal.shrink"
+
 	ActionPanelSwitch                 = "panel.switch"
 	ActionNavUp                       = "nav.up"
 	ActionNavDown                     = "nav.down"
@@ -210,6 +221,11 @@ var KnownActions = map[string]struct{}{
 	ActionAppUserMenuEdit:     {},
 	ActionAppDropToShell:      {},
 	ActionAppShellInsertPaths: {},
+
+	ActionTerminalTogglePanel: {},
+	ActionTerminalFocus:       {},
+	ActionTerminalGrow:        {},
+	ActionTerminalShrink:      {},
 
 	ActionPanelSwitch:                 {},
 	ActionNavUp:                       {},

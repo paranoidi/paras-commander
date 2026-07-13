@@ -1,7 +1,7 @@
 # Global shortcuts under [main]. Each value is a list of
 # chord strings (single-stroke). See docs/keybindings.md for syntax.
 #
-# View overlays ([jobs], [commands], [messages], [file_preview], [compare]) take precedence over
+# View overlays ([jobs], [commands], [messages], [file_preview], [compare], [terminal]) take precedence over
 # [main] while that view is focused.
 #
 # Dialog overlays ([dialog.input], [dialog.rename], …) apply only while
@@ -9,6 +9,9 @@
 #
 # Fuzzy path picker on copy/move destination or symlink/hardlink path rows
 # uses the same chords as bookmark.open under [main].
+#
+# [terminal] — terminal.toggle-panel, terminal.focus, terminal.grow, terminal.shrink, app.drop-to-shell
+# (applies while the embedded terminal panel has focus).
 #
 # [dialog.input] — ui.input.* only (e.g. restore default placeholder).
 # [dialog.rename] — file.rename.open-sanitize, file.rename.open-slugify, and file.rename.open-encoding.
@@ -82,11 +85,13 @@
   "panel.toggle-carousel" = ["C-c"]
   "panel.toggle-hidden" = ["M-."]
   "panel.toggle-hide-inactive" = ["S-tab"]
-  "panel.toggle-sync" = ["C-M-o"]
+  "panel.toggle-sync" = ["C-M-y"]
   "panel.toggle-zoom-active-panel" = ["M-z"]
   "panel.toggle-split-orientation" = ["C-space"]
   "panel.unselect-group" = ["-"]
   "remote.sftp-link" = ["C-r"]
+  "terminal.focus" = ["M-p"]
+  "terminal.toggle-panel" = ["C-M-p"]
 
 [jobs]
   "jobs.cancel" = ["C-c", "F8"]
@@ -130,6 +135,13 @@
   "file.view.theme-picker" = ["F9"]
   "file.view.diff-next-hunk" = ["C-M-j"]
   "file.view.diff-prev-hunk" = ["C-M-k"]
+
+[terminal]
+  "terminal.toggle-panel" = ["C-M-p"]
+  "terminal.focus" = ["M-p"]
+  "terminal.grow" = ["C-k"]
+  "terminal.shrink" = ["C-j"]
+  "app.drop-to-shell" = ["C-o"]
 
 [dialog]
   [dialog.input]

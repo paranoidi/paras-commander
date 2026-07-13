@@ -26,6 +26,7 @@ type Subshell struct {
 	mu      sync.Mutex
 	alive   bool
 	cwdPipe string // last $PWD reported by the shell's prompt hook (empty until first prompt)
+	feed    *PanelFeed
 	wait    sync.WaitGroup
 }
 
@@ -144,6 +145,17 @@ func (s *Subshell) RunVisible(screen tcell.Screen) (toggledBack bool, err error)
 		return false, ErrNotAlive
 	}
 
+	// Sole-reader invariant: park the panel feed's PTY reader for the whole visible
+	// session; tee the feed loop's output into its emulator so panel state stays
+	// current. The reader restarts on every exit path (defer runs last); the app
+	// restores panel dims afterwards via PanelFeed.Resize.
+	out := io.Writer(os.Stdout)
+	if feed := s.panelFeed(); feed != nil {
+		feed.Pause()
+		defer feed.startReader()
+		out = io.MultiWriter(os.Stdout, feed.teeWriter())
+	}
+
 	hostTTY, err := openControllingTTY()
 	if err != nil {
 		return false, fmt.Errorf("subshell: open /dev/tty: %w", err)
@@ -181,13 +193,22 @@ func (s *Subshell) RunVisible(screen tcell.Screen) (toggledBack bool, err error)
 	registerVisibleRestore(restoreHost)
 
 	resized, _ := syncPTYSize(s.pty, hostTTY)
-	if s.Busy() && !resized {
+	if feed := s.panelFeed(); feed != nil {
+		feed.syncVTToPTY()
+		// The emulator is the source of truth for the shell's screen (the real
+		// terminal still shows whatever the previous visible session left).
+		// Replay it in every case except busy+resized, where the size-change
+		// WINCH already makes the full-screen app repaint itself.
+		if !s.Busy() || !resized {
+			_ = feed.WriteScreenTo(hostTTY)
+		}
+	} else if s.Busy() && !resized {
 		forceFullRedraw(s.pty)
 	}
 	stopResize := watchWinchResize(s.pty, hostTTY)
 	defer stopResize()
 
-	toggledBack, err = runVisibleFeed(s.pty, hostTTY, os.Stdout, s.dead)
+	toggledBack, err = runVisibleFeed(s.pty, hostTTY, out, s.dead)
 	if err != nil {
 		return toggledBack, err
 	}
@@ -227,6 +248,10 @@ func (s *Subshell) RunVisibleFeed(in io.Reader, out io.Writer) (bool, error) {
 // cmd.Wait would block forever. SIGHUP first (lets the shell save history), SIGKILL after a
 // short grace. ponytail: fixed 500ms grace; make it configurable if a shell needs longer.
 func (s *Subshell) Close() error {
+	// Park the panel reader first — a reader racing the PTY close is a use-after-close.
+	if feed := s.panelFeed(); feed != nil {
+		feed.Close()
+	}
 	if s.Alive() {
 		_ = s.cmd.Process.Signal(syscall.SIGHUP)
 		select {

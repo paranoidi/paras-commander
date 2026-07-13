@@ -265,4 +265,9 @@ const (
 	DefaultShellSyncCwdOnReturn = true
 	// DefaultShellPersistent keeps one MC-style shell session alive across Ctrl+O toggles (Linux only).
 	DefaultShellPersistent = true
+	// DefaultShellTerminalPanelHeight is the embedded terminal panel's content row count
+	// (excludes the separator row); clamped to a minimum of 3 in Config.Validate.
+	DefaultShellTerminalPanelHeight = 10
+	// MinShellTerminalPanelHeight is the lower clamp for [shell].terminal_panel_height in Config.Validate.
+	MinShellTerminalPanelHeight = 3
 )

@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/geom"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
@@ -190,6 +191,8 @@ type Model struct {
 	MenuBarJobsAttention string
 	// MenuBarJobs is the jobs queue + progress snapshot for the menu-bar gap (App.render).
 	MenuBarJobs MenuBarJobsStrip
+	// TerminalPanel is the embedded terminal panel strip state (above the footer, browser view only).
+	TerminalPanel TerminalPanelState
 }
 
 // PrimaryModal identifies which exclusive modal occupies the primary dialog layer (see package dialog).
@@ -258,6 +261,15 @@ func (m Model) quickViewDriverPanel() int {
 		return m.ActivePanel
 	}
 	return -1
+}
+
+// renderSubFocus returns ActiveSubFocus for focus styling, or -1 while the
+// embedded terminal panel owns keyboard focus (panels then render inactive).
+func (m Model) renderSubFocus() int {
+	if m.TerminalPanel.Visible && m.TerminalPanel.Focused {
+		return -1
+	}
+	return m.ActiveSubFocus
 }
 
 // QuickViewDisplayActive is true when the inactive column should show quick-view preview.
@@ -381,13 +393,25 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	width, height := screen.Size()
 	// Fullscreen file preview hides the menu entirely and reclaims its row (filename sits there, borderless).
 	reserveMenu := model.MenuBarLayoutReserved() && model.ViewMode != ViewFilePreview
-	layout := CalculateLayoutWithOrientation(width, height, reserveMenu, PanelPaneSplit{
-		Zoom:              PanelZoomSplitsColumns(model.ViewMode, model.PanelZoomEnabled),
-		ActivePanel:       model.ActivePanel,
-		ActivePercent:     model.PanelZoomActivePercent,
-		InactivePercent:   model.PanelZoomInactivePercent,
-		HideInactivePanel: LayoutHideInactivePanel(model.ViewMode, model.HideInactivePanel),
-	}, model.SplitOrientation)
+	// Full-screen views reclaim the terminal strip (must match App.terminalLayoutRows).
+	terminalRows := 0
+	if model.TerminalPanel.Visible && model.ViewMode == ViewBrowser {
+		terminalRows = model.TerminalPanel.Rows
+	}
+	layout := geom.CalculateLayoutWithOrientation(geom.LayoutInput{
+		Width:       width,
+		Height:      height,
+		ShowMenuBar: reserveMenu,
+		Split: PanelPaneSplit{
+			Zoom:              PanelZoomSplitsColumns(model.ViewMode, model.PanelZoomEnabled),
+			ActivePanel:       model.ActivePanel,
+			ActivePercent:     model.PanelZoomActivePercent,
+			InactivePercent:   model.PanelZoomInactivePercent,
+			HideInactivePanel: LayoutHideInactivePanel(model.ViewMode, model.HideInactivePanel),
+		},
+		Orientation:  model.SplitOrientation,
+		TerminalRows: terminalRows,
+	})
 	primitive.Fill(screen, primitive.Rect{Width: width, Height: height}, ' ', tcell.StyleDefault)
 
 	if layout.TooSmall {
@@ -442,8 +466,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		// Theme picker: show the real left panel (normal chrome, always active) so preview matches in-browser use.
 		previewTheme := model.ThemeDialog.Open
 		primaryChromeBlocked := chromeBlocked && !previewTheme
-		primaryFileListFocus := previewTheme || (model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusFileList)
-		secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusFileList
+		primaryFileListFocus := previewTheme || (model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusFileList)
+		secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.renderSubFocus() == SubFocusFileList
 
 		leftStripCount := model.Primary.SelectionsStripCount()
 		rightStripCount := model.Secondary.SelectionsStripCount()
@@ -473,7 +497,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		syncDriver := model.SyncDriverPanelID()
 		quickViewDriver := model.QuickViewDriverPanelID()
 		if layout.Primary.Width > 0 && showLeftPreview {
-			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
+			pvFocused := model.renderSubFocus() == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, primaryFile, model.FilePreviewDraw, styles, primaryChromeBlocked, pvFocused,
 				model.QuickViewDisplayActive(), false, false, model.Primary.PathString(), model.UserHomeDir)
 		} else if layout.Primary.Width > 0 {
@@ -497,7 +521,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 				})
 		}
 		if layout.Primary.Width > 0 && leftStrip.Height > 0 {
-			leftStripFocused := model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
+			leftStripFocused := model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusSelectionsStrip
 			drawSelectionsStrip(screen, leftStrip, model.Primary, leftStripFocused, primaryChromeBlocked, SelectionsStripOpts{
 				Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
 				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
@@ -506,7 +530,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			})
 		}
 		if layout.Secondary.Width > 0 && showRightPreview {
-			pvFocused := model.ActiveSubFocus == SubFocusInactivePreview
+			pvFocused := model.renderSubFocus() == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, secondaryFile, model.FilePreviewDraw, styles, chromeBlocked, pvFocused,
 				model.QuickViewDisplayActive(), false, false, model.Secondary.PathString(), model.UserHomeDir)
 		} else if layout.Secondary.Width > 0 {
@@ -530,13 +554,16 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 				})
 		}
 		if layout.Secondary.Width > 0 && rightStrip.Height > 0 {
-			rightStripFocused := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusSelectionsStrip
+			rightStripFocused := model.ActivePanel == SecondaryPanel && model.renderSubFocus() == SubFocusSelectionsStrip
 			drawSelectionsStrip(screen, rightStrip, model.Secondary, rightStripFocused, chromeBlocked, SelectionsStripOpts{
 				Styles: styles, UserHomeDir: model.UserHomeDir, Painter: model.DiskUsage,
 				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 				ShowSelectionSizeOnBottom: rightSelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,
 				ScrollbarShowInactive: model.PanelScrollbarInactive, PanelFileListActive: secondaryFileListFocus,
 			})
+		}
+		if model.TerminalPanel.Visible && layout.Terminal.Height > 0 {
+			drawTerminalPanel(screen, layout.Terminal, model.TerminalPanel, styles)
 		}
 	}
 	if model.Menu.Open && model.MenuBarInteractive() {
@@ -611,7 +638,13 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	// Transient status must be drawn after modal chrome so it is not overwritten (e.g. theme picker).
 	// Draw before the generic message dialog so that modal stays the topmost curated surface when both apply.
 	if msg != "" && layout.Footer.Height > 0 {
-		row := Rect{X: 0, Y: layout.Footer.Y - 1, Width: layout.Width, Height: 1}
+		msgY := layout.Footer.Y - 1
+		if model.TerminalPanel.Visible && layout.Terminal.Height > 0 {
+			// The terminal panel occupies the row directly above the footer; paint the
+			// transient message over the panel's top row instead (message wins).
+			msgY = layout.Terminal.Y
+		}
+		row := Rect{X: 0, Y: msgY, Width: layout.Width, Height: 1}
 		drawStatusMessageOverlay(screen, row, msg, model.MessageUrgency, styles)
 	}
 	if model.StashRestoreDialog.Open {

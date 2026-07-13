@@ -17,4 +17,5 @@ type Bundle struct {
 	FlattenDialog  *Map // flatten dialog (destination active/inactive panel)
 	Compare        *Map // Compare-view overlay; may be nil
 	Dedup          *Map // find-duplicates view overlay; may be nil
+	Terminal       *Map // embedded terminal panel overlay; may be nil
 }

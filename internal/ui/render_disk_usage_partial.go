@@ -41,8 +41,8 @@ func paintBrowserPanelsInScope(
 	previewTheme := model.ThemeDialog.Open
 	primaryChromeBlocked := model.PanelsChromeBlocked() && !previewTheme
 	chromeBlocked := model.PanelsChromeBlocked()
-	primaryFileListFocus := previewTheme || (model.ActivePanel == PrimaryPanel && model.ActiveSubFocus == SubFocusFileList)
-	secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.ActiveSubFocus == SubFocusFileList
+	primaryFileListFocus := previewTheme || (model.ActivePanel == PrimaryPanel && model.renderSubFocus() == SubFocusFileList)
+	secondaryFileListFocus := model.ActivePanel == SecondaryPanel && model.renderSubFocus() == SubFocusFileList
 
 	leftStripCount := model.Primary.SelectionsStripCount()
 	rightStripCount := model.Secondary.SelectionsStripCount()

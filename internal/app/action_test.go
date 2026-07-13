@@ -151,12 +151,30 @@ func TestActionFromKeyMapsMetaIToOpenActivePathInOtherPanel(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsCtrlAltOToToggleSync(t *testing.T) {
+func TestActionFromKeyMapsCtrlAltYToToggleSync(t *testing.T) {
 	km := defaultKeymap(t)
-	event := tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt|tcell.ModCtrl)
+	event := tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt|tcell.ModCtrl)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionPanelToggleSync {
 		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelToggleSync", got)
+	}
+}
+
+func TestActionFromKeyMapsCtrlAltPToTerminalTogglePanel(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyCtrlP, 0, tcell.ModAlt|tcell.ModCtrl)
+	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionTerminalTogglePanel {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionTerminalTogglePanel", got)
+	}
+}
+
+func TestActionFromKeyMapsAltPToTerminalFocus(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModAlt)
+	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionTerminalFocus {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionTerminalFocus", got)
 	}
 }
 

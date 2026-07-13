@@ -200,6 +200,9 @@ type ShellConfig struct {
 	// Persistent keeps one MC-style shell session alive across Ctrl+O toggles (Linux only;
 	// falls back to the one-shot shell elsewhere or when the PTY cannot start).
 	Persistent bool `toml:"persistent"`
+	// TerminalPanelHeight is the embedded terminal panel's content row count (excludes the
+	// separator row). Minimum 3 after Validate. Default DefaultShellTerminalPanelHeight.
+	TerminalPanelHeight int `toml:"terminal_panel_height"`
 }
 
 // PreviewConfig controls file preview (internal Chroma or external command).
@@ -488,8 +491,9 @@ func Default() Config {
 			ListTimeoutSecs: DefaultSFTPListTimeoutSecs,
 		},
 		Shell: ShellConfig{
-			SyncCwdOnReturn: DefaultShellSyncCwdOnReturn,
-			Persistent:      DefaultShellPersistent,
+			SyncCwdOnReturn:     DefaultShellSyncCwdOnReturn,
+			Persistent:          DefaultShellPersistent,
+			TerminalPanelHeight: DefaultShellTerminalPanelHeight,
 		},
 		Meta: MetaConfig{
 			File:                "",
@@ -783,6 +787,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Dedup.ChunkBytes < 0 {
 		c.Dedup.ChunkBytes = 0
+	}
+	if c.Shell.TerminalPanelHeight < MinShellTerminalPanelHeight {
+		c.Shell.TerminalPanelHeight = builtin.Shell.TerminalPanelHeight
 	}
 	if !c.sortModeValid(c.DefaultSort) {
 		c.DefaultSort = builtin.DefaultSort

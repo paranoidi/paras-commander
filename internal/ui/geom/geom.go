@@ -26,7 +26,11 @@ type Layout struct {
 	Primary   Rect
 	Secondary Rect
 	Footer    Rect
-	TooSmall  bool
+	// Terminal is the embedded terminal panel strip, directly above Footer. Height is the
+	// content row count. Zero Rect means the panel is omitted (not requested, or the
+	// terminal was too small to fit alongside the minimum panel area).
+	Terminal Rect
+	TooSmall bool
 }
 
 const (
@@ -43,6 +47,10 @@ const (
 	minWidth         = 40
 	minHeight        = 8
 	minStackedHeight = 16 // menu + footer + two usable pane frames when stacked
+	// minTerminalPanelRows is the smallest usable terminal panel content-row count.
+	// Requests below this are clamped up; if there isn't room even for this minimum
+	// alongside the panel area's own minimum, the terminal panel is omitted.
+	minTerminalPanelRows = 3
 )
 
 // PanelPaneSplit controls the twin-pane split along the layout axis (width when side-by-side, height when stacked).
@@ -69,6 +77,10 @@ type LayoutInput struct {
 	ShowMenuBar bool
 	Split       PanelPaneSplit
 	Orientation SplitOrientation
+	// TerminalRows requests an embedded terminal panel with this many content rows
+	// (excluding the separator row). Zero omits the panel entirely. See CalculateLayoutWithOrientation
+	// for clamping/shrink-to-fit/omission behavior when the terminal panel would starve the panel area.
+	TerminalRows int
 }
 
 func mainPanelAxisSplit(total int, split PanelPaneSplit) (primaryShare, secondaryShare int) {
@@ -162,6 +174,31 @@ func CalculateLayoutWithOrientation(in LayoutInput) Layout {
 		layout.Menu = Rect{}
 	}
 	layout.Footer = Rect{X: 0, Y: height - 1, Width: width, Height: 1}
+
+	if in.TerminalRows > 0 {
+		// chromeRows mirrors how panelAreaH was derived above (footer, plus menu when shown),
+		// so panelAreaMin is the panel area guaranteed by the TooSmall floor (minH) for this
+		// same showMenuBar setting.
+		chromeRows := 1
+		if showMenuBar {
+			chromeRows = 2
+		}
+		panelAreaMin := minH - chromeRows
+		terminalRows := in.TerminalRows
+		if terminalRows < minTerminalPanelRows {
+			terminalRows = minTerminalPanelRows
+		}
+		if panelAreaH-terminalRows < panelAreaMin {
+			terminalRows = panelAreaH - panelAreaMin
+			if terminalRows < minTerminalPanelRows {
+				terminalRows = 0
+			}
+		}
+		if terminalRows > 0 {
+			layout.Terminal = Rect{X: 0, Y: height - 1 - terminalRows, Width: width, Height: terminalRows}
+			panelAreaH -= terminalRows
+		}
+	}
 
 	if orientation == SplitVertical {
 		primaryH, secondaryH := mainPanelRowHeights(panelAreaH, split)

@@ -59,6 +59,45 @@ func (s *Subshell) InsertText(string) error {
 	return ErrUnsupportedPlatform
 }
 
+// WritePTY is not available on this platform.
+func (s *Subshell) WritePTY([]byte) (int, error) {
+	return 0, ErrUnsupportedPlatform
+}
+
+// PanelFeed is not available on unsupported platforms.
+type PanelFeed struct{}
+
+// StartPanelFeed is not available on this platform.
+func (s *Subshell) StartPanelFeed(int, int, func()) (*PanelFeed, error) {
+	return nil, ErrUnsupportedPlatform
+}
+
+// Resize is a no-op on unsupported platforms.
+func (f *PanelFeed) Resize(int, int) {}
+
+// Pause is a no-op on unsupported platforms.
+func (f *PanelFeed) Pause() {}
+
+// Resume is a no-op on unsupported platforms.
+func (f *PanelFeed) Resume(int, int) {}
+
+// Close is a no-op on unsupported platforms.
+func (f *PanelFeed) Close() {}
+
+// Exited always reports false on unsupported platforms.
+func (f *PanelFeed) Exited() bool { return false }
+
+// AppCursor always reports false on unsupported platforms.
+func (f *PanelFeed) AppCursor() bool { return false }
+
+// Cursor reports no cursor on unsupported platforms.
+func (f *PanelFeed) Cursor() (int, int, bool) { return 0, 0, false }
+
+// Draw is a no-op on unsupported platforms.
+func (f *PanelFeed) Draw(tcell.Style, func(x, y int, r rune, style tcell.Style)) (int, int, bool) {
+	return 0, 0, false
+}
+
 // SaveLaunchTerminal is a no-op on unsupported platforms.
 func SaveLaunchTerminal() {}
 

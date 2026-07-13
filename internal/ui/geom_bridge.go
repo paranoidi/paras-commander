@@ -20,13 +20,17 @@ func CalculateLayout(width, height int, showMenuBar bool, split geom.PanelPaneSp
 }
 
 // CalculateLayoutWithOrientation is the orientation-aware layout entry point.
-func CalculateLayoutWithOrientation(width, height int, showMenuBar bool, split geom.PanelPaneSplit, orientation geom.SplitOrientation) Layout {
+// terminalRows reserves the embedded terminal panel strip (0 = no strip); callers must
+// pass the same value ui.Render derives from the model so app-side layout math matches
+// what is painted.
+func CalculateLayoutWithOrientation(width, height int, showMenuBar bool, split geom.PanelPaneSplit, orientation geom.SplitOrientation, terminalRows int) Layout {
 	return geom.CalculateLayoutWithOrientation(geom.LayoutInput{
-		Width:       width,
-		Height:      height,
-		ShowMenuBar: showMenuBar,
-		Split:       split,
-		Orientation: orientation,
+		Width:        width,
+		Height:       height,
+		ShowMenuBar:  showMenuBar,
+		Split:        split,
+		Orientation:  orientation,
+		TerminalRows: terminalRows,
 	})
 }
 

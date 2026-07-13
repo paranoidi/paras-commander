@@ -117,6 +117,44 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"shell", "insert", "filename", "command line", "alt-enter", "shift-enter", "inject"},
 		},
 
+		// ── Terminal panel ──
+		{
+			ID:           ActionTerminalTogglePanel,
+			Views:        HelpBrowser,
+			Title:        "Show/hide terminal panel",
+			Section:      "Terminal",
+			DefaultKeys:  []string{"C-M-p"},
+			PreferredKey: "C-M-p",
+			Keywords:     []string{"terminal", "shell", "panel", "strip", "embedded"},
+		},
+		{
+			ID:           ActionTerminalFocus,
+			Views:        HelpBrowser,
+			Title:        "Focus terminal",
+			Section:      "Terminal",
+			DefaultKeys:  []string{"M-p"},
+			PreferredKey: "M-p",
+			Keywords:     []string{"terminal", "shell", "focus", "switch", "panel"},
+		},
+		{
+			ID:           ActionTerminalGrow,
+			Views:        HelpBrowser,
+			Title:        "Grow terminal panel",
+			Section:      "Terminal",
+			DefaultKeys:  nil, // overlay: DefaultTerminalOverlayKeys
+			PreferredKey: "C-k",
+			Keywords:     []string{"terminal", "resize", "taller", "grow"},
+		},
+		{
+			ID:           ActionTerminalShrink,
+			Views:        HelpBrowser,
+			Title:        "Shrink terminal panel",
+			Section:      "Terminal",
+			DefaultKeys:  nil, // overlay: DefaultTerminalOverlayKeys
+			PreferredKey: "C-j",
+			Keywords:     []string{"terminal", "resize", "shorter", "shrink"},
+		},
+
 		// ── Panel navigation ──
 		{
 			ID:          ActionPanelSwitch,
@@ -310,8 +348,8 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Toggle panel sync",
 			Section:      "Navigation",
-			DefaultKeys:  []string{"C-M-o"},
-			PreferredKey: "C-M-o",
+			DefaultKeys:  []string{"C-M-y"},
+			PreferredKey: "C-M-y",
 			Keywords:     []string{"sync", "follow", "mirror", "latch", "other panel"},
 		},
 		{

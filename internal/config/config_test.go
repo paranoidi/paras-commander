@@ -80,6 +80,27 @@ func TestValidateClampsDiskUsageWalkConcurrency(t *testing.T) {
 	}
 }
 
+func TestValidateClampsShellTerminalPanelHeight(t *testing.T) {
+	cfg := Default()
+	if cfg.Shell.TerminalPanelHeight != DefaultShellTerminalPanelHeight {
+		t.Fatalf("Default() Shell.TerminalPanelHeight = %d, want %d", cfg.Shell.TerminalPanelHeight, DefaultShellTerminalPanelHeight)
+	}
+	cfg.Shell.TerminalPanelHeight = 1
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.Shell.TerminalPanelHeight != DefaultShellTerminalPanelHeight {
+		t.Fatalf("Shell.TerminalPanelHeight = %d, want reset to default %d", cfg.Shell.TerminalPanelHeight, DefaultShellTerminalPanelHeight)
+	}
+	cfg.Shell.TerminalPanelHeight = 5
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.Shell.TerminalPanelHeight != 5 {
+		t.Fatalf("Shell.TerminalPanelHeight = %d, want 5 (unchanged, above minimum)", cfg.Shell.TerminalPanelHeight)
+	}
+}
+
 func TestValidateClampsNegativeDiskSpaceCheckMinFileBytes(t *testing.T) {
 	cfg := Default()
 	cfg.Operations.DiskSpaceCheckMinFileBytes = -1

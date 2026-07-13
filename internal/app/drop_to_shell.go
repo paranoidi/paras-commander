@@ -152,6 +152,14 @@ func (a *App) ensureSubshell(panelDir string) (fresh, ok bool) {
 		return false, false
 	}
 	a.subshell = sub
+	// Start the emulator feed with the shell (not with the panel) so no output
+	// is ever lost: a full-screen session's content is captured even when the
+	// embedded panel has never been opened.
+	if cols, rows := a.screen.Size(); cols > 0 && rows > 0 {
+		if feed, feedErr := sub.StartPanelFeed(cols, rows, a.postTerminalWake); feedErr == nil {
+			a.terminalFeed = feed
+		}
+	}
 	return true, true
 }
 
@@ -170,9 +178,14 @@ func (a *App) runShellVisible(chdirBusy bool) {
 	}
 	if !a.subshell.Alive() {
 		a.closeSubshell()
-	} else if a.config.Shell.SyncCwdOnReturn && !a.activePanel().Path.IsRemote() {
-		if cwd, cwdErr := a.subshell.Cwd(); cwdErr == nil {
-			a.syncActivePanelToDir(cwd)
+	} else {
+		a.syncPanelFromSubshellCwd()
+		// Restore the embedded panel's grid after the full-screen session (RunVisible
+		// restarted the feed reader at full-screen dims; the resize WINCH repaints).
+		if a.terminalFeed != nil {
+			if cols, rows, ok := a.terminalPanelContentDims(); ok {
+				a.terminalFeed.Resize(cols, rows)
+			}
 		}
 	}
 	a.refreshAfterDropToShell()
@@ -221,6 +234,11 @@ func (a *App) shellInsertPaths() {
 		} else {
 			a.setErrorMessage("Shell", err)
 		}
+		return
+	}
+	if a.model.TerminalPanel.Visible && a.terminalFeed != nil {
+		a.model.TerminalPanel.Focused = true
+		a.render()
 		return
 	}
 	a.runShellVisible(false)
@@ -282,7 +300,10 @@ func (a *App) subshellChdirIfNeeded(dir string) error {
 }
 
 // closeSubshell terminates the persistent shell session; the next toggle starts a fresh one.
+// The embedded terminal panel is a view of that session, so it closes with it.
 func (a *App) closeSubshell() {
+	a.closeTerminalPanel()
+	a.terminalFeed = nil // subshell.Close() kills the feed internally
 	if a.subshell == nil {
 		return
 	}

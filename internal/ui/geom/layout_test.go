@@ -314,6 +314,101 @@ func TestCalculateLayoutStackedMarksShortTerminal(t *testing.T) {
 	}
 }
 
+func TestCalculateLayoutReservesTerminalPanelSideBySide(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 100, Height: 30, ShowMenuBar: true, Split: PanelPaneSplit{},
+		Orientation: SplitHorizontal, TerminalRows: 5,
+	})
+	if layout.TooSmall {
+		t.Fatal("TooSmall = true, want false")
+	}
+	wantTerminal := Rect{X: 0, Y: 24, Width: 100, Height: 5}
+	if layout.Terminal != wantTerminal {
+		t.Fatalf("Terminal = %+v, want %+v", layout.Terminal, wantTerminal)
+	}
+	if layout.Primary.Height != 23 || layout.Secondary.Height != 23 {
+		t.Fatalf("Primary=%+v Secondary=%+v want height 23 (panel area reduced by terminal)", layout.Primary, layout.Secondary)
+	}
+	if layout.Terminal.Y != layout.Footer.Y-layout.Terminal.Height {
+		t.Fatalf("Terminal.Y = %d, want directly above footer (footerY=%d, height=%d)", layout.Terminal.Y, layout.Footer.Y, layout.Terminal.Height)
+	}
+}
+
+func TestCalculateLayoutReservesTerminalPanelStacked(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 80, Height: 40, ShowMenuBar: true, Split: PanelPaneSplit{},
+		Orientation: SplitVertical, TerminalRows: 5,
+	})
+	if layout.TooSmall {
+		t.Fatal("TooSmall = true, want false")
+	}
+	wantTerminal := Rect{X: 0, Y: 34, Width: 80, Height: 5}
+	if layout.Terminal != wantTerminal {
+		t.Fatalf("Terminal = %+v, want %+v", layout.Terminal, wantTerminal)
+	}
+	if layout.Primary.Height+layout.Secondary.Height != 33 {
+		t.Fatalf("Primary=%+v Secondary=%+v want combined height 33 (panel area reduced by terminal)", layout.Primary, layout.Secondary)
+	}
+	if layout.Secondary.Y+layout.Secondary.Height != layout.Terminal.Y {
+		t.Fatalf("Secondary bottom (%d) should meet Terminal.Y (%d)", layout.Secondary.Y+layout.Secondary.Height, layout.Terminal.Y)
+	}
+}
+
+func TestCalculateLayoutClampsTerminalRowsToMinimumThree(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 100, Height: 30, ShowMenuBar: true, Split: PanelPaneSplit{},
+		Orientation: SplitHorizontal, TerminalRows: 1,
+	})
+	if layout.Terminal.Height != 3 {
+		t.Fatalf("Terminal.Height = %d, want 3 (minimum content rows)", layout.Terminal.Height)
+	}
+}
+
+func TestCalculateLayoutShrinksTerminalWhenPanelAreaWouldStarve(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 100, Height: 13, ShowMenuBar: true, Split: PanelPaneSplit{},
+		Orientation: SplitHorizontal, TerminalRows: 10,
+	})
+	if layout.TooSmall {
+		t.Fatal("TooSmall = true, want false")
+	}
+	if layout.Terminal.Height != 5 {
+		t.Fatalf("Terminal.Height = %d, want 5 (shrunk to keep panel area at its minimum)", layout.Terminal.Height)
+	}
+	if layout.Primary.Height != 6 {
+		t.Fatalf("Primary.Height = %d, want 6 (panelAreaMin preserved)", layout.Primary.Height)
+	}
+}
+
+func TestCalculateLayoutOmitsTerminalWhenPanelAreaAlreadyAtMinimum(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 100, Height: 8, ShowMenuBar: true, Split: PanelPaneSplit{},
+		Orientation: SplitHorizontal, TerminalRows: 5,
+	})
+	if layout.TooSmall {
+		t.Fatal("TooSmall = true, want false")
+	}
+	if layout.Terminal != (Rect{}) {
+		t.Fatalf("Terminal = %+v, want omitted (zero rect)", layout.Terminal)
+	}
+	if layout.Primary.Height != 6 || layout.Secondary.Height != 6 {
+		t.Fatalf("Primary=%+v Secondary=%+v want height 6 (unaffected by omitted terminal)", layout.Primary, layout.Secondary)
+	}
+}
+
+func TestCalculateLayoutTerminalRowsIgnoredWhenTooSmall(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 39, Height: 8, ShowMenuBar: true, Split: PanelPaneSplit{},
+		Orientation: SplitHorizontal, TerminalRows: 5,
+	})
+	if !layout.TooSmall {
+		t.Fatal("TooSmall = false, want true")
+	}
+	if layout.Terminal != (Rect{}) {
+		t.Fatalf("Terminal = %+v, want zero rect when TooSmall", layout.Terminal)
+	}
+}
+
 func TestMergePaneRectsSideBySide(t *testing.T) {
 	primary := Rect{X: 0, Y: 1, Width: 50, Height: 28}
 	secondary := Rect{X: 50, Y: 1, Width: 50, Height: 28}

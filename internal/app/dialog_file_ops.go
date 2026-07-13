@@ -6,6 +6,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/filenameenc"
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -119,6 +120,34 @@ func (a *App) openDeleteDialog(p *panel.State) {
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
 	a.model.FileDialog = fd
 	a.reconcileDeleteDialogScans()
+}
+
+// openDeleteDialogForPreviewedFile shows the delete confirm dialog for the file currently open
+// in the fullscreen viewer (F8), never the active panel's selection.
+func (a *App) openDeleteDialogForPreviewedFile() {
+	path := a.model.FullscreenFilePreview.Path
+	if path == "" {
+		return
+	}
+	entry, err := localfs.EntryFromPath(path)
+	if err != nil {
+		a.setErrorMessage("Delete", err)
+		return
+	}
+	entries := []dialog.DeleteListEntry{{
+		Name: a.model.FullscreenFilePreview.TitleBase,
+		Path: entry.Path,
+		Type: entry.Type,
+	}}
+	fd := dialog.FileDialogState{
+		Open:          true,
+		DialogType:    dialog.FileDialogDelete,
+		DeleteSummary: ui.FormatDeleteImpactSummary(1, entry.Size, false, ""),
+		DeleteEntries: entries,
+		FocusedField:  1, // No (safe default); Yes stays index 0.
+	}
+	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
+	a.model.FileDialog = fd
 }
 
 func (a *App) openChmodDialog(p *panel.State) {
@@ -384,6 +413,14 @@ func (a *App) executeDelete() {
 	if a.model.ViewMode == ui.ViewDedup {
 		a.closeFileDialog()
 		a.openDedupEmptyDirsConfirm()
+		return
+	}
+	if a.model.ViewMode == ui.ViewFilePreview {
+		path := a.model.FullscreenFilePreview.Path
+		a.closeFileDialog()
+		a.enqueueDeleteJob([]string{path}, false)
+		a.closeFilePreviewFullscreen()
+		a.setTransientMessage("Delete queued (1 item)", ui.MessageUrgencyInfo)
 		return
 	}
 	p := a.activePanel()

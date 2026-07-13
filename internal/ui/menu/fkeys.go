@@ -107,6 +107,7 @@ func FunctionKeysFilePreviewView() []FunctionKey {
 		FooterEscClose,
 		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
 		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
+		{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete this"},
 		{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Style"},
 		{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 	}

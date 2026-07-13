@@ -252,7 +252,7 @@ func (a *App) fullscreenPreviewUnionRect() (ui.Rect, bool) {
 	w, h := a.screen.Size()
 	// Fullscreen preview reclaims the menu row (borderless, filename on row 0), so compute
 	// the layout with the menu bar unreserved to match ui.Render.
-	lay := ui.CalculateLayoutWithOrientation(w, h, false, a.panelPaneSplit(w, true), a.effectivePaneSplitOrientation())
+	lay := ui.CalculateLayoutWithOrientation(w, h, false, a.panelPaneSplit(w, true), a.effectivePaneSplitOrientation(), a.terminalLayoutRows())
 	if lay.TooSmall {
 		return ui.Rect{}, false
 	}

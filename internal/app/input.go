@@ -123,6 +123,11 @@ func (a *App) inputMode() InputMode {
 // activeFooterKeys returns F-key hints filtered by current app state.
 // Dialogs show Esc (close) first, then other keys (e.g. F10 quit). Normal mode shows all.
 func (a *App) activeFooterKeys() []menu.FunctionKey {
+	// Focused terminal panel receives every key (F5 is the shell's, not Copy) — a
+	// populated footer would lie about who handles the F-keys.
+	if a.terminalPanelHasKeyFocus() {
+		return nil
+	}
 	if a.model.MessageDialog.Open {
 		return footerWithEscClose([]menu.FunctionKey{
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
@@ -291,6 +296,11 @@ func (a *App) prepareGlobalQuitShortcutCleanup() {
 
 func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	a.deferDiskIdleSortOnUserActivity()
+	// Focused terminal panel owns every key before the global intercepts below —
+	// F10 must reach htop, F1 must reach the shell, only [terminal] chords are ours.
+	if a.terminalPanelHasKeyFocus() {
+		return false, a.handleTerminalPanelKey(event)
+	}
 	// Global F10 quit - works from any mode, any dialog, any menu.
 	// Shift+F10 defaults to app.quit-immediate and must not fall through to plain F10.
 	if event.Key() == tcell.KeyF10 {
@@ -711,6 +721,10 @@ func (a *App) dispatch(actionID string) bool {
 		a.dropToShell()
 	case keymap.ActionAppShellInsertPaths:
 		a.shellInsertPaths()
+	case keymap.ActionTerminalTogglePanel:
+		a.toggleTerminalPanelVisible()
+	case keymap.ActionTerminalFocus:
+		a.toggleTerminalPanelFocus()
 	case keymap.ActionPanelRefresh:
 		a.reloadActive("Panel refreshed")
 	case keymap.ActionPanelExternalBrowser:

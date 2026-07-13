@@ -233,6 +233,20 @@ type Theme struct {
 	FooterKey        tcell.Style
 	FooterLabel      tcell.Style
 	FooterLabelShift tcell.Style
+
+	// TerminalText styles the embedded terminal panel strip ([terminal] in TOML). Optional
+	// (zero value falls back — see TerminalTextStyle) so imported/user themes without a
+	// [terminal] table keep rendering correctly.
+	TerminalText tcell.Style
+}
+
+// TerminalTextStyle returns the terminal panel body text style, falling back to the panel
+// default text style when the theme omits terminal.text.
+func (t Theme) TerminalTextStyle() tcell.Style {
+	if t.TerminalText != (tcell.Style{}) {
+		return t.TerminalText
+	}
+	return t.PanelText
 }
 
 // PanelRowIconForeground returns the foreground for cursor-row adornment icons: file-list
@@ -855,12 +869,13 @@ var requiredStyleKeys = []string{
 	"footer.key",
 	"footer.label",
 	"footer.label.shift",
+	"terminal.text",
 }
 
 var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
 
 // styleSectionRoots are top-level TOML tables for semantic styles (keys inside omit this prefix).
-var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy"}
+var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal"}
 
 var styleSectionRootSet = makeStyleKeySet(styleSectionRoots)
 
@@ -1353,6 +1368,8 @@ func parse(data []byte) (Theme, error) {
 		FooterKey:        styles["footer.key"],
 		FooterLabel:      styles["footer.label"],
 		FooterLabelShift: styles["footer.label.shift"],
+
+		TerminalText: styles["terminal.text"],
 	}, nil
 }
 
@@ -1479,7 +1496,7 @@ func collectStyleSpecs(raw map[string]any) (map[string]styleSpec, error) {
 		found = true
 	}
 	if !found {
-		return nil, fmt.Errorf("theme must define at least one style section ([menu], [panel], [dialog], [jobs], [message], [footer], or [fuzzy])")
+		return nil, fmt.Errorf("theme must define at least one style section ([menu], [panel], [dialog], [jobs], [message], [footer], [fuzzy], or [terminal])")
 	}
 	for key := range specs {
 		if !requiredStyleKeySet[key] {

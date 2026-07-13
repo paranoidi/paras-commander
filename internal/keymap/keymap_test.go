@@ -179,8 +179,11 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModNone), ActionAppDropToShell, true},
 		{tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModCtrl), ActionAppDropToShell, true},
 		{tcell.NewEventKey(tcell.KeyRune, 0x0f, tcell.ModCtrl), ActionAppDropToShell, true},
-		{tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt), ActionPanelToggleSync, true},
-		{tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelToggleSync, true},
+		{tcell.NewEventKey(tcell.KeyCtrlP, 0, tcell.ModAlt), ActionTerminalTogglePanel, true},
+		{tcell.NewEventKey(tcell.KeyCtrlP, 0, tcell.ModAlt|tcell.ModCtrl), ActionTerminalTogglePanel, true},
+		{tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModAlt), ActionTerminalFocus, true},
+		{tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt), ActionPanelToggleSync, true},
+		{tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelToggleSync, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModMeta), ActionPanelOpenDirInOther, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModMeta), ActionPanelOpenActivePathInOther, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModMeta|tcell.ModAlt), ActionPanelOpenDirInOther, true},
@@ -789,6 +792,22 @@ func TestEncodeDefaultStubRoundTrip(t *testing.T) {
 	if okJ1 != okJ2 || j1 != j2 {
 		t.Fatalf("stub jobs overlay F8 -> %q %v vs default bundle %q %v", j1, okJ1, j2, okJ2)
 	}
+	for _, ev := range []*tcell.EventKey{
+		tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt|tcell.ModCtrl),
+		tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModCtrl),
+		tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModCtrl),
+		tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModCtrl),
+	} {
+		t1, okT1 := bundle.Terminal.Lookup(ev)
+		t2, okT2 := defBundle.Terminal.Lookup(ev)
+		if okT1 != okT2 || t1 != t2 {
+			t.Fatalf("stub terminal overlay ev %v -> %q %v vs default bundle %q %v", ev, t1, okT1, t2, okT2)
+		}
+	}
+	cmy := tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt|tcell.ModCtrl)
+	if id, ok := bundle.Global.Lookup(cmy); !ok || id != ActionPanelToggleSync {
+		t.Fatalf("stub C-M-y = %q %v, want panel.toggle-sync", id, ok)
+	}
 }
 
 func TestLoadFromPathsMergesJobsShortcuts(t *testing.T) {
@@ -828,6 +847,86 @@ file.delete = ["F8"]
 	_, err := LoadFromPaths(config.Paths{KeybindingsFile: path})
 	if err == nil {
 		t.Fatal("expected error for non-jobs action under [jobs]")
+	}
+}
+
+func TestDefaultTerminalOverlayMapsChordsToTerminalActions(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	tests := []struct {
+		ev     *tcell.EventKey
+		wantID string
+	}{
+		{tcell.NewEventKey(tcell.KeyCtrlP, 0, tcell.ModAlt|tcell.ModCtrl), ActionTerminalTogglePanel},
+		{tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModAlt), ActionTerminalFocus},
+		{tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModCtrl), ActionTerminalGrow},
+		{tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModCtrl), ActionTerminalShrink},
+		{tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModCtrl), ActionAppDropToShell},
+	}
+	for _, tt := range tests {
+		id, ok := bundle.Terminal.Lookup(tt.ev)
+		if !ok || id != tt.wantID {
+			t.Fatalf("terminal overlay lookup = %q %v, want %q", id, ok, tt.wantID)
+		}
+	}
+}
+
+func TestLoadFromPathsMergesTerminalShortcuts(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "keybindings.toml")
+	content := `
+[terminal]
+terminal.grow = ["C-up"]
+`
+	if err := writeFile(path, content); err != nil {
+		t.Fatalf("writeFile: %v", err)
+	}
+	bundle, err := LoadFromPaths(config.Paths{KeybindingsFile: path})
+	if err != nil {
+		t.Fatalf("LoadFromPaths: %v", err)
+	}
+	id, ok := bundle.Terminal.Lookup(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModCtrl))
+	if !ok || id != ActionTerminalGrow {
+		t.Fatalf("terminal overlay C-up = %q %v, want terminal.grow", id, ok)
+	}
+	// Rebinding grow replaces the default C-k chord for that action.
+	if _, okCK := bundle.Terminal.Lookup(tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModNone)); okCK {
+		t.Fatal("terminal overlay C-k should be unbound after grow rebind to C-up")
+	}
+}
+
+func TestLoadFromPathsRejectsNonTerminalActionInTerminalOverlay(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "keybindings.toml")
+	content := `
+[terminal]
+file.delete = ["F8"]
+`
+	if err := writeFile(path, content); err != nil {
+		t.Fatalf("writeFile: %v", err)
+	}
+	_, err := LoadFromPaths(config.Paths{KeybindingsFile: path})
+	if err == nil {
+		t.Fatal("expected error for non-terminal action under [terminal]")
+	}
+}
+
+func TestPanelToggleSyncDefaultsToCtrlAltY(t *testing.T) {
+	m, err := Default()
+	if err != nil {
+		t.Fatalf("Default: %v", err)
+	}
+	id, ok := m.Lookup(tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt|tcell.ModCtrl))
+	if !ok || id != ActionPanelToggleSync {
+		t.Fatalf("C-M-y = %q %v, want panel.toggle-sync", id, ok)
+	}
+	if id, ok := m.Lookup(tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt|tcell.ModCtrl)); ok && id == ActionPanelToggleSync {
+		t.Fatal("C-M-o should no longer map to panel.toggle-sync")
+	}
+	if _, ok := m.Lookup(tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt|tcell.ModCtrl)); ok {
+		t.Fatal("C-M-o should no longer be bound to anything (rebound to terminal.toggle-panel = C-M-p)")
 	}
 }
 

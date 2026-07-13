@@ -460,20 +460,25 @@ func TestFunctionKeysFilePreviewStylePickerShowsEnterSave(t *testing.T) {
 func TestFunctionKeysFilePreviewViewShowsStyleF9(t *testing.T) {
 	t.Parallel()
 	keys := FunctionKeysFilePreviewView()
-	if len(keys) != 5 {
-		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F1 Help + F4 Edit + F9 Style + F10", len(keys))
+	if len(keys) != 6 {
+		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F1 Help + F4 Edit + F8 Delete this + F9 Style + F10", len(keys))
 	}
-	var f4, f9 *FunctionKey
+	var f4, f8, f9 *FunctionKey
 	for i := range keys {
 		switch keys[i].Key {
 		case tcell.KeyF4:
 			f4 = &keys[i]
+		case tcell.KeyF8:
+			f8 = &keys[i]
 		case tcell.KeyF9:
 			f9 = &keys[i]
 		}
 	}
 	if f4 == nil || f4.Hint != "Edit" {
 		t.Fatalf("fullscreen file preview footer must advertise F4 Edit, got %+v", keys)
+	}
+	if f8 == nil || f8.Hint != "Delete this" {
+		t.Fatalf("fullscreen file preview footer must advertise F8 Delete this, got %+v", keys)
 	}
 	if f9 == nil {
 		t.Fatalf("fullscreen file preview footer must advertise F9 Style, got %+v", keys)

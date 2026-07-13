@@ -92,6 +92,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		FlattenDialog:  overlayMaps[10],
 		Compare:        overlayMaps[11],
 		Dedup:          overlayMaps[12],
+		Terminal:       overlayMaps[13],
 	}, nil
 }
 
@@ -148,7 +149,7 @@ func parseKeybindingsFile(raw []byte, label string) (mainKeys map[string][]strin
 func validateKeybindingsTopLevel(top map[string]interface{}, label string) error {
 	for k, v := range top {
 		switch k {
-		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, CompareShortcutsTable, DedupShortcutsTable:
+		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, CompareShortcutsTable, DedupShortcutsTable, TerminalShortcutsTable:
 			if _, ok := v.(map[string]interface{}); !ok {
 				return fmt.Errorf("parse keybindings %q: [%s] must be a table", label, k)
 			}
@@ -166,7 +167,7 @@ func validateKeybindingsTopLevel(top map[string]interface{}, label string) error
 				}
 			}
 		default:
-			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, jobs, commands, messages, file_preview, compare, dedup, dialog)", label, k)
+			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, jobs, commands, messages, file_preview, compare, dedup, terminal, dialog)", label, k)
 		}
 	}
 	return nil
@@ -249,8 +250,11 @@ func EncodeDefaultStub(w io.Writer) error {
 	header := "# Global shortcuts under [main]. Each value is a list of\n" +
 		"# chord strings (single-stroke). See docs/keybindings.md for syntax.\n" +
 		"#\n" +
-		"# View overlays ([jobs], [commands], [messages], [file_preview]) take precedence over\n" +
+		"# View overlays ([jobs], [commands], [messages], [file_preview], [terminal]) take precedence over\n" +
 		"# [main] while that view is focused.\n" +
+		"#\n" +
+		"# [terminal] — terminal.toggle-panel, terminal.focus, terminal.grow, terminal.shrink, app.drop-to-shell\n" +
+		"# (applies while the embedded terminal panel has focus).\n" +
 		"#\n" +
 		"# Dialog overlays ([dialog.input], [dialog.rename], …) apply only while\n" +
 		"# the matching dialog context is focused.\n" +
@@ -276,6 +280,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		FilePreview map[string][]string `toml:"file_preview"`
 		Compare     map[string][]string `toml:"compare"`
 		Dedup       map[string][]string `toml:"dedup"`
+		Terminal    map[string][]string `toml:"terminal"`
 		Dialog      dialogShortcuts     `toml:"dialog"`
 	}{
 		Main:        DefaultActionKeys(),
@@ -285,6 +290,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		FilePreview: DefaultFilePreviewOverlayKeys(),
 		Compare:     DefaultCompareOverlayKeys(),
 		Dedup:       DefaultDedupOverlayKeys(),
+		Terminal:    DefaultTerminalOverlayKeys(),
 		Dialog: dialogShortcuts{
 			Input:    DefaultDialogInputOverlayKeys(),
 			Rename:   DefaultRenameDialogOverlayKeys(),

@@ -118,6 +118,14 @@ var overlayRegistry = []OverlaySpec{
 			return fmt.Errorf("parse config %q: [dedup] action %q is not allowed (dedup.* only)", source, action)
 		},
 	},
+	{
+		TableName: TerminalShortcutsTable,
+		Defaults:  DefaultTerminalOverlayKeys,
+		Allowed:   AllowedInTerminalOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [terminal] action %q is not allowed (terminal.toggle-panel, terminal.focus, terminal.grow, terminal.shrink, app.drop-to-shell only)", source, action)
+		},
+	},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.
@@ -172,6 +180,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "compare.* only"
 	case DedupShortcutsTable:
 		return "dedup.* only"
+	case TerminalShortcutsTable:
+		return "terminal.toggle-panel, terminal.focus, terminal.grow, terminal.shrink, app.drop-to-shell only"
 	default:
 		return "not allowed"
 	}

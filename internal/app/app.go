@@ -79,28 +79,31 @@ type syncFollowNavFlushPayload struct {
 
 // App owns lifecycle, state, and input dispatch.
 type App struct {
-	screen             tcell.Screen
-	config             config.Config
-	styles             theme.Theme
-	themes             map[string]theme.Theme
-	paths              config.Paths
-	keys               *keymap.Map
-	keysJobs           *keymap.Map // chords active only in jobs view (overlay)
-	keysCommands       *keymap.Map // chords active only in Commands view (overlay)
-	keysMessages       *keymap.Map // chords active only in Messages view (overlay)
-	keysFilePreview    *keymap.Map // chords active only in F3 full-screen file view (overlay)
-	keysDialogInput    *keymap.Map // chords active only while a dialog input field is focused
-	keysRenameDialog   *keymap.Map // sanitize/slugify while main rename dialog is focused
-	keysMkdirDialog    *keymap.Map // extract common name while mkdir dialog is focused
-	keysBookmarkDialog *keymap.Map // delete fzf-marks entry while bookmarks picker is open
-	keysFindDialog     *keymap.Map // select all while find dialog is open
-	keysHistoryDialog  *keymap.Map // both-panels toggle while history dialog is open
-	keysFlattenDialog  *keymap.Map // destination panel shortcuts while flatten dialog is open
-	keysCompare        *keymap.Map // chords active only in Compare view (overlay)
-	keysDedup          *keymap.Map // chords active only in find-duplicates view (overlay)
-	devMode            bool
-	subshell           *subshell.Subshell // persistent MC-style shell; nil until first Ctrl+O (lazy start)
-	model              ui.Model
+	screen              tcell.Screen
+	config              config.Config
+	styles              theme.Theme
+	themes              map[string]theme.Theme
+	paths               config.Paths
+	keys                *keymap.Map
+	keysJobs            *keymap.Map // chords active only in jobs view (overlay)
+	keysCommands        *keymap.Map // chords active only in Commands view (overlay)
+	keysMessages        *keymap.Map // chords active only in Messages view (overlay)
+	keysFilePreview     *keymap.Map // chords active only in F3 full-screen file view (overlay)
+	keysDialogInput     *keymap.Map // chords active only while a dialog input field is focused
+	keysRenameDialog    *keymap.Map // sanitize/slugify while main rename dialog is focused
+	keysMkdirDialog     *keymap.Map // extract common name while mkdir dialog is focused
+	keysBookmarkDialog  *keymap.Map // delete fzf-marks entry while bookmarks picker is open
+	keysFindDialog      *keymap.Map // select all while find dialog is open
+	keysHistoryDialog   *keymap.Map // both-panels toggle while history dialog is open
+	keysFlattenDialog   *keymap.Map // destination panel shortcuts while flatten dialog is open
+	keysCompare         *keymap.Map // chords active only in Compare view (overlay)
+	keysDedup           *keymap.Map // chords active only in find-duplicates view (overlay)
+	keysTerminal        *keymap.Map // chords active only while the embedded terminal panel is focused (overlay)
+	devMode             bool
+	subshell            *subshell.Subshell  // persistent MC-style shell; nil until first Ctrl+O (lazy start)
+	terminalFeed        *subshell.PanelFeed // emulator feed shadowing the subshell for its whole life (started by ensureSubshell)
+	terminalWakePending atomic.Bool         // coalesces terminalWakePayload posts from the PTY reader
+	model               ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
 	// previewStyleAtPickerOpen is preview.style when the F3 Chroma style picker opens.
@@ -253,6 +256,12 @@ type App struct {
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
 	lastScreenContentHash uint64
+	// pendingCursor is the hardware-cursor state set by syncTerminalPanelCursor for the
+	// current frame; lastFlushedCursor is what the last Show flushed. Cursor-only moves
+	// (arrow keys in the terminal panel) change no cells, so the hash cache must also
+	// compare these to know a flush is needed.
+	pendingCursor     hwCursorState
+	lastFlushedCursor hwCursorState
 	// chooserFile is non-empty in Helix/editor file-picker mode (--chooser-file).
 	chooserFile string
 }
@@ -447,6 +456,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		kmDedup = m
 	}
+	kmTerminal := bundle.Terminal
+	if kmTerminal == nil {
+		m, err := keymap.Build(keymap.DefaultTerminalOverlayKeys())
+		if err != nil {
+			return nil, fmt.Errorf("build terminal overlay map: %w", err)
+		}
+		kmTerminal = m
+	}
 	styles := opts.Theme
 	if styles.Name == "" {
 		styles = theme.Default()
@@ -565,6 +582,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysFlattenDialog:  kmFlattenDialog,
 		keysCompare:        kmCompare,
 		keysDedup:          kmDedup,
+		keysTerminal:       kmTerminal,
 		devMode:            opts.DevMode,
 		commandsCtx:        cmdCtx,
 		commandsCancel:     cmdCancel,
@@ -593,6 +611,10 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 				ActiveMenu: menu.DefaultIndex(),
 			},
 			FooterKeys: menu.FunctionKeys,
+			// TerminalPanel starts hidden; input.go (later phase) owns toggle/resize/focus.
+			TerminalPanel: ui.TerminalPanelState{
+				Rows: cfg.Shell.TerminalPanelHeight,
+			},
 		},
 		jobState:  jobState,
 		jobStopCh: make(chan struct{}),
@@ -727,6 +749,7 @@ func (a *App) Run() error {
 			a.clearCursorNameHintNavCoalesce()
 			a.screen.Sync()
 			a.ensurePanelsVisible()
+			a.resizeTerminalFeedToLayout()
 			a.render()
 			didRender = true
 		case *tcell.EventKey:
@@ -751,6 +774,10 @@ func (a *App) Run() error {
 				// Progress wakes are frequent; reconciling both panels here caused
 				// extra sync/stat work and starved spinner ticks on slow mounts.
 				pollDiskUsageAfter = false
+			case terminalWakePayload:
+				pollDiskUsageAfter = false
+				a.handleTerminalWake()
+				didRender = true
 			case statusMessageExpiryPayload:
 				a.applyStatusMessageExpiry(d)
 				a.render()

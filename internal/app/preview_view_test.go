@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestFilePreviewFocusScrollAndTabReturnsToActivePanelFileList(t *testing.T) {
@@ -325,5 +326,50 @@ func TestRunPreviewInternalSetsHighlightedCells(t *testing.T) {
 	}
 	if len(st.HighlightedCells) == 0 {
 		t.Fatal("HighlightedCells empty, want Chroma output")
+	}
+}
+
+func TestF8DeletesOnlyPreviewedFileKeepingPanelSelection(t *testing.T) {
+	dir := t.TempDir()
+	previewedPath := filepath.Join(dir, "walrus.txt")
+	otherPath := filepath.Join(dir, "lighthouse.txt")
+	writeFile(t, previewedPath)
+	writeFile(t, otherPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{previewedPath: true, otherPath: true}
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.model.FullscreenFilePreview.Path = previewedPath
+	app.model.FullscreenFilePreview.TitleBase = filepath.Base(previewedPath)
+
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogDelete {
+		t.Fatal("F8 should open the delete dialog for the previewed file")
+	}
+
+	// Default focus is No; move to Yes then Enter confirms delete.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after confirm")
+	}
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser after delete", app.model.ViewMode)
+	}
+	if !p.SelectedPaths[previewedPath] || !p.SelectedPaths[otherPath] {
+		t.Fatal("panel selection must stay untouched by the previewed-file delete")
+	}
+
+	flushBackgroundJobs(t, app)
+	if _, err := os.Stat(previewedPath); !os.IsNotExist(err) {
+		t.Fatal("previewed file should be deleted")
+	}
+	if _, err := os.Stat(otherPath); err != nil {
+		t.Fatal("other selected file must not be deleted")
 	}
 }

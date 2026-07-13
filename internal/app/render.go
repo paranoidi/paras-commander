@@ -167,6 +167,7 @@ func (a *App) render() {
 		a.recomputeMassRenamePreview()
 	}
 	ui.Render(a.screen, a.model, a.styles)
+	a.syncTerminalPanelCursor()
 	a.emitScreenAfterFullRender()
 	a.armSpinnerRedrawTimer()
 }
@@ -179,10 +180,11 @@ func (a *App) emitScreenAfterFullRender() {
 		return
 	}
 	h := ui.HashScreenLogical(a.screen)
-	if h == a.lastScreenContentHash {
+	if h == a.lastScreenContentHash && a.pendingCursor == a.lastFlushedCursor {
 		return
 	}
 	a.lastScreenContentHash = h
+	a.lastFlushedCursor = a.pendingCursor
 	a.screen.Show()
 }
 
@@ -192,6 +194,7 @@ func (a *App) emitScreenAfterPartialPaint() {
 	a.screen.Show()
 	if a.config.UI.ScreenRenderHashCache {
 		a.lastScreenContentHash = ui.HashScreenLogical(a.screen)
+		a.lastFlushedCursor = a.pendingCursor
 	}
 }
 
@@ -242,7 +245,7 @@ func (a *App) menuBarPermissionText() string {
 // twin-column split treats panel zoom as off (same rule as when preview is actually open) so
 // callers can size subprocess output (e.g. bat --terminal-width) before preview state is toggled.
 func (a *App) layoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout {
-	return ui.CalculateLayoutWithOrientation(width, height, a.model.MenuBarLayoutReserved(), a.panelPaneSplit(width, filePreviewOpen), a.effectivePaneSplitOrientation())
+	return ui.CalculateLayoutWithOrientation(width, height, a.model.MenuBarLayoutReserved(), a.panelPaneSplit(width, filePreviewOpen), a.effectivePaneSplitOrientation(), a.terminalLayoutRows())
 }
 
 // applyCarouselPanelZoomPercents widens the active column when carousel view is on so three panes fit.

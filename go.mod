@@ -10,6 +10,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.13.9
 	github.com/mattn/go-runewidth v0.0.23
 	github.com/mattn/go-shellwords v1.0.12
+	github.com/micro-editor/terminal v0.0.0-20250324214352-e587e959c6b5
 	github.com/pkg/sftp v1.13.10
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	golang.org/x/crypto v0.51.0
