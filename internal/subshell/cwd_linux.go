@@ -72,15 +72,30 @@ func (s *Subshell) Chdir(dir string) error {
 	feed := s.panelFeed()
 	if feed != nil {
 		feed.Mute()
-		defer feed.Unmute()
 	}
 	s.mu.Lock()
 	beforeGen := s.cwdGen
 	s.mu.Unlock()
 	if _, err := s.WritePTY(chdirCommand(dir)); err != nil {
+		if feed != nil {
+			feed.Unmute()
+		}
 		return err
 	}
 	s.waitForPromptCycle(beforeGen)
+	if feed != nil {
+		feed.Unmute()
+	}
+	// Force a fresh, guaranteed-visible prompt redraw: the quiet round trip above is
+	// timing-based, not byte-exact, and can end up discarding the shell's own post-cd
+	// prompt output along with the injected line's echo — leaving a stale-looking
+	// prompt (still showing the old directory) until something else repaints it. A
+	// bare Enter on an empty input line is a no-op for every shell we support (no
+	// history entry, nothing executes) but guarantees one clean render of the
+	// current, correct prompt. Safe here specifically because Busy() above already
+	// confirmed the shell is sitting at its own prompt, not running a foreground
+	// command — the same precondition that already gates the cd injection itself.
+	_, _ = s.WritePTY([]byte("\n"))
 	return nil
 }
 

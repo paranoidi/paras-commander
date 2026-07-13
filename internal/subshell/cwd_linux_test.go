@@ -194,6 +194,14 @@ func testChdirMutesInjectedCommand(t *testing.T, shell string) {
 		cwd, err := sub.Cwd()
 		return err == nil && cwd == target
 	})
+	// Chdir's own synthetic Enter must force a fresh prompt render showing the new
+	// directory — the mute/settle window can otherwise swallow the shell's real
+	// post-cd prompt redraw too, leaving a stale-looking prompt. Matched against the
+	// screen with row breaks stripped: t.TempDir()'s long paths can push the prompt
+	// past 80 columns, wrapping the directory name itself across two emulator rows.
+	pollUntil(t, 3*time.Second, "prompt to redraw with the new directory", func() bool {
+		return strings.Contains(strings.ReplaceAll(feedScreenText(feed), "\n", ""), filepath.Base(target))
+	})
 
 	if _, err := sub.WritePTY([]byte("echo INJECTION-OK\n")); err != nil {
 		t.Fatal(err)

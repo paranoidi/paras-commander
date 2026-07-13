@@ -94,7 +94,7 @@ func TestPanelFeedResizeReflectsInDraw(t *testing.T) {
 	if maxX != 19 || maxY != 3 {
 		t.Fatalf("draw grid = %dx%d, want 20x4", maxX+1, maxY+1)
 	}
-	if ws, err := ptySizeCells(sub.pty); err != nil || ws.cols != 20 || ws.rows != 4 {
+	if ws, err := ptySizeCells(sub.ptyFD); err != nil || ws.cols != 20 || ws.rows != 4 {
 		t.Fatalf("pty size = %+v (err %v), want 20x4", ws, err)
 	}
 }

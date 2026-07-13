@@ -7,11 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"sync"
 	"sync/atomic"
 
-	"github.com/creack/pty"
 	"github.com/gdamore/tcell/v2"
 	terminal "github.com/micro-editor/terminal"
 	"golang.org/x/sys/unix"
@@ -61,7 +59,7 @@ func (s *Subshell) StartPanelFeed(cols, rows int, wake func()) (*PanelFeed, erro
 	}
 	f.vt = vt
 	vt.Resize(cols, rows)
-	_ = setPTYSizeCells(s.pty, cols, rows)
+	_ = setPTYSizeCells(s.ptyFD, cols, rows)
 
 	s.mu.Lock()
 	s.feed = f
@@ -87,7 +85,7 @@ func (f *PanelFeed) Resize(cols, rows int) {
 	}
 	f.vt.Resize(cols, rows)
 	f.cols, f.rows = cols, rows
-	_ = setPTYSizeCells(f.sub.pty, cols, rows)
+	_ = setPTYSizeCells(f.sub.ptyFD, cols, rows)
 }
 
 // Pause parks the PTY reader (blocks until it acks). RunVisible calls this so its
@@ -240,7 +238,7 @@ func (w vtTee) Write(p []byte) (int, error) {
 // syncVTToPTY resizes the emulator to the PTY's current winsize (RunVisible calls
 // this after syncPTYSize so the tee parses against full-screen dims).
 func (f *PanelFeed) syncVTToPTY() {
-	ws, err := ptySizeCells(f.sub.pty)
+	ws, err := ptySizeCells(f.sub.ptyFD)
 	if err != nil {
 		return
 	}
@@ -364,14 +362,19 @@ func (f *PanelFeed) run(stop, parked chan struct{}) {
 
 type cellSize struct{ cols, rows int }
 
-func setPTYSizeCells(ptyMaster *os.File, cols, rows int) error {
-	return pty.Setsize(ptyMaster, &pty.Winsize{Cols: uint16(cols), Rows: uint16(rows)})
+// setPTYSizeCells and ptySizeCells take the cached raw fd, not *os.File: creack/pty's own
+// Setsize/GetsizeFull call .Fd() internally, which flips the fd back to blocking mode (their
+// own tests acknowledge the resulting race — "Potential in (*os.File).Fd()") and can race
+// PanelFeed.run's reader goroutine mid-read, hanging it exactly like the Busy()/.Fd() bug
+// fixed earlier in Subshell.ptyFD.
+func setPTYSizeCells(ptyFD int, cols, rows int) error {
+	return unix.IoctlSetWinsize(ptyFD, unix.TIOCSWINSZ, &unix.Winsize{Col: uint16(cols), Row: uint16(rows)})
 }
 
-func ptySizeCells(ptyMaster *os.File) (cellSize, error) {
-	ws, err := pty.GetsizeFull(ptyMaster)
+func ptySizeCells(ptyFD int) (cellSize, error) {
+	ws, err := unix.IoctlGetWinsize(ptyFD, unix.TIOCGWINSZ)
 	if err != nil {
 		return cellSize{}, err
 	}
-	return cellSize{cols: int(ws.Cols), rows: int(ws.Rows)}, nil
+	return cellSize{cols: int(ws.Col), rows: int(ws.Row)}, nil
 }
