@@ -97,14 +97,12 @@ func TestWorkerYieldsTransferLeaseWhileWaitingConflictDecision(t *testing.T) {
 func TestWorkerEmitsJobResumedAfterBlockerDecision(t *testing.T) {
 	s := NewState()
 	stop := make(chan struct{})
-	blockerEntered := make(chan struct{})
 	var wg sync.WaitGroup
 
 	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
 		if job.ID != "job-a" {
 			return nil
 		}
-		close(blockerEntered)
 		_ = waitBlocker(BlockerRequest{
 			Kind:     BlockerKindConflict,
 			Conflict: &ConflictRequest{JobID: job.ID, Source: "/a", Destination: "/b", ExistingDetails: "file exists"},
@@ -120,11 +118,22 @@ func TestWorkerEmitsJobResumedAfterBlockerDecision(t *testing.T) {
 		s.AddJob(&Job{ID: "job-a", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
 	}()
 
+	// SubmitConflictDecision only takes effect once the worker has registered
+	// job-a's blocker channel, which happens before EventJobBlockerRequest is
+	// emitted. Waiting on that event (rather than a signal fired from inside
+	// the transferFunc closure, before registration) avoids racing ahead of
+	// the registration and having the decision silently dropped.
 	deadline := time.After(5 * time.Second)
-	select {
-	case <-deadline:
-		t.Fatal("timeout waiting for blocker")
-	case <-blockerEntered:
+	var gotBlockerRequest bool
+	for !gotBlockerRequest {
+		select {
+		case <-deadline:
+			t.Fatal("timeout waiting for blocker request")
+		case ev := <-s.Events():
+			if ev.Type == EventJobBlockerRequest && ev.JobID == "job-a" {
+				gotBlockerRequest = true
+			}
+		}
 	}
 	s.SubmitConflictDecision("job-a", DecisionOverwriteAll)
 

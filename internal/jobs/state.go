@@ -159,14 +159,15 @@ func (s *State) removePendingDequeuedByID(id string) {
 func (s *State) AddJob(job *Job) {
 	s.mu.Lock()
 	s.queue.Enqueue(job)
+	status := job.Status
 	s.mu.Unlock()
 
 	s.emit(Event{
 		Type:   EventEnqueued,
 		JobID:  job.ID,
-		Status: job.Status,
+		Status: status,
 	})
-	if job.NeedsPreScan() && job.Status == StatusScanning {
+	if job.NeedsPreScan() && status == StatusScanning {
 		s.startJobScan(job)
 		return
 	}
@@ -632,6 +633,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 
 	cancel()
 
+	s.mu.Lock()
 	switch {
 	case errors.Is(transferErr, context.Canceled) || errors.Is(transferErr, ErrUserCanceled):
 		job.Status = StatusCanceled
@@ -643,7 +645,6 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	}
 	job.FinishedAt = time.Now()
 
-	s.mu.Lock()
 	s.cancelRun = nil
 	if s.active != nil && s.active.ID == job.ID {
 		s.finished = append(s.finished, job)
