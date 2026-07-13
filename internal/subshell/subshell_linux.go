@@ -20,14 +20,22 @@ import (
 
 // Subshell is a persistent PTY-backed shell: one long-lived shell child and Suspend/Resume visible sessions.
 type Subshell struct {
-	cmd     *exec.Cmd
-	pty     *os.File
+	cmd   *exec.Cmd
+	pty   *os.File
+	ptyFD int // cached int(pty.Fd()) — File.Fd() flips the fd back to blocking mode on every
+	// call (see PanelFeed.run's re-arm comment), so Busy()/PTYFd() must not call it fresh
+	// while a PanelFeed reader may be concurrently relying on the fd staying nonblocking.
 	dead    chan struct{}
 	mu      sync.Mutex
 	alive   bool
 	cwdPipe string // last $PWD reported by the shell's prompt hook (empty until first prompt)
-	feed    *PanelFeed
-	wait    sync.WaitGroup
+	// cwdGen bumps on every line the prompt hook reports (even an unchanged $PWD, e.g. a
+	// failed cd) — Chdir waits on cwdCond for a fresh generation instead of polling.
+	cwdGen        int
+	cwdCond       *sync.Cond
+	hasPrecmdHook bool // true once Start actually wrote a prompt hook (see precmdInit)
+	feed          *PanelFeed
+	wait          sync.WaitGroup
 }
 
 // StartOptions configures [Start].
@@ -85,9 +93,11 @@ func Start(opts StartOptions) (*Subshell, error) {
 	s := &Subshell{
 		cmd:   cmd,
 		pty:   ptmx,
+		ptyFD: int(ptmx.Fd()),
 		dead:  make(chan struct{}),
 		alive: true,
 	}
+	s.cwdCond = sync.NewCond(&s.mu)
 	s.wait.Go(func() {
 		defer close(s.dead)
 		_ = cmd.Wait()
@@ -103,6 +113,8 @@ func Start(opts StartOptions) (*Subshell, error) {
 			if line := strings.TrimSpace(scanner.Text()); line != "" {
 				s.mu.Lock()
 				s.cwdPipe = line
+				s.cwdGen++
+				s.cwdCond.Broadcast()
 				s.mu.Unlock()
 			}
 		}
@@ -114,6 +126,7 @@ func Start(opts StartOptions) (*Subshell, error) {
 			// request a fresh one. ponytail: quiet-window heuristic; MC feeds until prompt.
 			absorbPTYUntilQuiet(ptmx, 100*time.Millisecond, time.Second)
 			_, _ = ptmx.WriteString("\n")
+			s.hasPrecmdHook = true
 		}
 	}
 	return s, nil
@@ -128,7 +141,7 @@ func (s *Subshell) Alive() bool {
 
 // PTYFd returns the master PTY fd for tests and later phases.
 func (s *Subshell) PTYFd() int {
-	return int(s.pty.Fd())
+	return s.ptyFD
 }
 
 // WritePTY writes bytes to the shell (visible or not).

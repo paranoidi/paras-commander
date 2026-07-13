@@ -38,6 +38,7 @@ type PanelFeed struct {
 	carry   []byte // partial UTF-8 rune left over by vt.Write
 
 	exited atomic.Bool
+	muted  atomic.Bool // see Mute/Unmute
 }
 
 // StartPanelFeed sizes the PTY to the panel, attaches an emulator, and starts the
@@ -252,9 +253,30 @@ func (f *PanelFeed) syncVTToPTY() {
 	f.cols, f.rows = ws.cols, ws.rows
 }
 
+// Mute discards future PTY bytes instead of feeding them to the emulator — used by
+// [Subshell.Chdir] so an injected cd's echo never reaches the screen (MC's QUIETLY
+// feed mode). Drops any pending partial-UTF8 rune synchronously: those bytes belong
+// to the pre-mute stream and will never be completed now, and clearing them here
+// (rather than in Unmute) avoids a race with the reader goroutine calling feedBytes
+// the instant Unmute flips the flag back.
+func (f *PanelFeed) Mute() {
+	f.carryMu.Lock()
+	f.carry = nil
+	f.carryMu.Unlock()
+	f.muted.Store(true)
+}
+
+// Unmute resumes feeding PTY bytes to the emulator.
+func (f *PanelFeed) Unmute() {
+	f.muted.Store(false)
+}
+
 // feedBytes parses a PTY chunk into the emulator, carrying partial UTF-8 runes
 // (vt.Write reports a short count when the chunk ends mid-rune).
 func (f *PanelFeed) feedBytes(p []byte) {
+	if f.muted.Load() {
+		return
+	}
 	f.carryMu.Lock()
 	defer f.carryMu.Unlock()
 	buf := p
@@ -284,7 +306,7 @@ func (f *PanelFeed) startReader() {
 // (any File.Fd() call flips the fd back to blocking; re-arm every wakeup).
 func (f *PanelFeed) run(stop, parked chan struct{}) {
 	defer close(parked)
-	ptyFD := int(f.sub.pty.Fd())
+	ptyFD := f.sub.ptyFD
 	buf := make([]byte, 4096)
 	pfd := []unix.PollFd{{Fd: int32(ptyFD), Events: unix.POLLIN}}
 	for {

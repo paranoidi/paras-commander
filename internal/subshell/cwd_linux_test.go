@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -160,6 +161,111 @@ func TestBusyRefusesChdir(t *testing.T) {
 		t.Fatalf("InsertText while busy = %v, want ErrBusy", err)
 	}
 	pollUntil(t, 5*time.Second, "idle after sleep", func() bool { return !sub.Busy() })
+}
+
+// Chdir must mute the injected cd from the terminal panel emulator (MC's QUIETLY feed mode):
+// the literal "cd '...'" line and its echo must never render, and normal output must resume
+// once the shell settles back at a prompt (proving Unmute actually fires).
+func testChdirMutesInjectedCommand(t *testing.T, shell string) {
+	if _, err := exec.LookPath(shell); err != nil {
+		t.Skipf("%s not installed", shell)
+	}
+	base := t.TempDir()
+	target := filepath.Join(base, "willow grove")
+	if err := os.Mkdir(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	sub, err := Start(StartOptions{Shell: shell, Dir: base})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = sub.Close() })
+	feed, err := sub.StartPanelFeed(80, 24, func() {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pollUntil(t, 5*time.Second, "shell idle at start", func() bool { return !sub.Busy() })
+
+	if err := sub.Chdir(target); err != nil {
+		t.Fatal(err)
+	}
+	pollUntil(t, 5*time.Second, "cwd to follow Chdir", func() bool {
+		cwd, err := sub.Cwd()
+		return err == nil && cwd == target
+	})
+
+	if _, err := sub.WritePTY([]byte("echo INJECTION-OK\n")); err != nil {
+		t.Fatal(err)
+	}
+	waitFeedText(t, feed, "INJECTION-OK")
+	if strings.Contains(feedScreenText(feed), "cd '") {
+		t.Fatalf("injected cd leaked into the emulator:\n%s", feedScreenText(feed))
+	}
+}
+
+func TestChdirMutesInjectedCommandBash(t *testing.T) { testChdirMutesInjectedCommand(t, "bash") }
+func TestChdirMutesInjectedCommandFish(t *testing.T) { testChdirMutesInjectedCommand(t, "fish") }
+
+// Hookless shells (no precmd signal) fall back to a fixed settle window but must still mute.
+func TestChdirMutesInjectedCommandHookless(t *testing.T) {
+	base := t.TempDir()
+	target := filepath.Join(base, "cedar")
+	if err := os.Mkdir(target, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	resolved, err := filepath.EvalSymlinks(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sub, err := Start(StartOptions{Shell: "sh", Dir: base})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = sub.Close() })
+	feed, err := sub.StartPanelFeed(80, 24, func() {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pollUntil(t, 5*time.Second, "shell idle at start", func() bool { return !sub.Busy() })
+
+	if err := sub.Chdir(target); err != nil {
+		t.Fatal(err)
+	}
+	pollUntil(t, 5*time.Second, "cwd via /proc fallback", func() bool {
+		cwd, err := sub.Cwd()
+		return err == nil && cwd == resolved
+	})
+
+	if _, err := sub.WritePTY([]byte("echo INJECTION-OK\n")); err != nil {
+		t.Fatal(err)
+	}
+	waitFeedText(t, feed, "INJECTION-OK")
+	if strings.Contains(feedScreenText(feed), "cd '") {
+		t.Fatalf("injected cd leaked into the emulator:\n%s", feedScreenText(feed))
+	}
+}
+
+// Regression: hasPrecmdHook must mirror Start's exact hook-install gate (init != "" &&
+// opts.Command == ""), not just precmdInit(shell) != "". A shell named "bash" run in
+// Command (stub) mode never gets the hook written, so Chdir must not block for the full
+// sync timeout waiting on a cwdGen bump that will never come.
+func TestChdirHookGateSkipsCommandMode(t *testing.T) {
+	sub, err := Start(StartOptions{Shell: "bash", Command: stubShell})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = sub.Close() })
+	readUntil(t, sub.pty, "READY", 3*time.Second)
+
+	start := time.Now()
+	if err := sub.Chdir("/tmp"); err != nil {
+		t.Fatalf("Chdir: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("Chdir took %v with no real precmd hook installed, want well under the 2s sync timeout", elapsed)
+	}
 }
 
 // InsertText leaves the text in the input buffer: the stub only sees the line (and echoes

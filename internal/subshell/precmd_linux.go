@@ -16,6 +16,9 @@ import (
 // init_subshell_precmd in mc/src/subshell/common.c; we drop MC's `kill -STOP $$` because
 // busy detection uses TIOCGPGRP instead). The reported pwd is logical, so panel sync keeps
 // symlinked paths as typed. Empty for shells without a known hook — /proc fallback applies.
+// Doubles as the "prompt cycle completed" signal for [Subshell.Chdir]: each line bumps
+// Subshell.cwdGen and broadcasts cwdCond, which Chdir waits on to know when it's safe to
+// stop muting the injected cd's echo from the terminal panel emulator.
 func precmdInit(shell string) string {
 	switch filepath.Base(shell) {
 	case "bash":
