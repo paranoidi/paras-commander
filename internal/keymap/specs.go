@@ -102,7 +102,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionAppDropToShell,
 			Views:        HelpBrowser,
 			Title:        "Drop to shell",
-			Section:      "App",
+			Section:      "Shell",
 			DefaultKeys:  []string{"C-o"},
 			PreferredKey: "C-o",
 			Keywords:     []string{"shell", "subshell", "ctrl-o", "terminal"},
@@ -111,18 +111,18 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionAppShellInsertPaths,
 			Views:        HelpBrowser,
 			Title:        "Send paths to shell",
-			Section:      "App",
+			Section:      "Shell",
 			DefaultKeys:  []string{"M-Enter", "S-Enter"},
 			PreferredKey: "M-Enter",
 			Keywords:     []string{"shell", "insert", "filename", "command line", "alt-enter", "shift-enter", "inject"},
 		},
 
-		// ── Terminal panel ──
+		// ── Shell panel ──
 		{
 			ID:           ActionTerminalTogglePanel,
 			Views:        HelpBrowser,
-			Title:        "Show/hide terminal panel",
-			Section:      "Terminal",
+			Title:        "Show/hide shell panel",
+			Section:      "Shell",
 			DefaultKeys:  []string{"C-M-p"},
 			PreferredKey: "C-M-p",
 			Keywords:     []string{"terminal", "shell", "panel", "strip", "embedded"},
@@ -130,8 +130,8 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionTerminalFocus,
 			Views:        HelpBrowser,
-			Title:        "Focus terminal",
-			Section:      "Terminal",
+			Title:        "Focus shell",
+			Section:      "Shell",
 			DefaultKeys:  []string{"M-p"},
 			PreferredKey: "M-p",
 			Keywords:     []string{"terminal", "shell", "focus", "switch", "panel"},
@@ -139,8 +139,8 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionTerminalGrow,
 			Views:        HelpBrowser,
-			Title:        "Grow terminal panel",
-			Section:      "Terminal",
+			Title:        "Grow shell panel",
+			Section:      "Shell",
 			DefaultKeys:  nil, // overlay: DefaultTerminalOverlayKeys
 			PreferredKey: "C-k",
 			Keywords:     []string{"terminal", "resize", "taller", "grow"},
@@ -148,8 +148,8 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionTerminalShrink,
 			Views:        HelpBrowser,
-			Title:        "Shrink terminal panel",
-			Section:      "Terminal",
+			Title:        "Shrink shell panel",
+			Section:      "Shell",
 			DefaultKeys:  nil, // overlay: DefaultTerminalOverlayKeys
 			PreferredKey: "C-j",
 			Keywords:     []string{"terminal", "resize", "shorter", "shrink"},
