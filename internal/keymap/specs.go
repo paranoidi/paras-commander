@@ -348,8 +348,8 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Toggle panel sync",
 			Section:      "Navigation",
-			DefaultKeys:  []string{"C-M-y"},
-			PreferredKey: "C-M-y",
+			DefaultKeys:  []string{"M-y"},
+			PreferredKey: "M-y",
 			Keywords:     []string{"sync", "follow", "mirror", "latch", "other panel"},
 		},
 		{

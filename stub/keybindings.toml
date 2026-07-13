@@ -85,7 +85,7 @@
   "panel.toggle-carousel" = ["C-c"]
   "panel.toggle-hidden" = ["M-."]
   "panel.toggle-hide-inactive" = ["S-tab"]
-  "panel.toggle-sync" = ["C-M-y"]
+  "panel.toggle-sync" = ["M-y"]
   "panel.toggle-zoom-active-panel" = ["M-z"]
   "panel.toggle-split-orientation" = ["C-space"]
   "panel.unselect-group" = ["-"]

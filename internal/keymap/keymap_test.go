@@ -182,8 +182,7 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyCtrlP, 0, tcell.ModAlt), ActionTerminalTogglePanel, true},
 		{tcell.NewEventKey(tcell.KeyCtrlP, 0, tcell.ModAlt|tcell.ModCtrl), ActionTerminalTogglePanel, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModAlt), ActionTerminalFocus, true},
-		{tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt), ActionPanelToggleSync, true},
-		{tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelToggleSync, true},
+		{tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt), ActionPanelToggleSync, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModMeta), ActionPanelOpenDirInOther, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModMeta), ActionPanelOpenActivePathInOther, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModMeta|tcell.ModAlt), ActionPanelOpenDirInOther, true},
@@ -804,9 +803,9 @@ func TestEncodeDefaultStubRoundTrip(t *testing.T) {
 			t.Fatalf("stub terminal overlay ev %v -> %q %v vs default bundle %q %v", ev, t1, okT1, t2, okT2)
 		}
 	}
-	cmy := tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt|tcell.ModCtrl)
+	cmy := tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt)
 	if id, ok := bundle.Global.Lookup(cmy); !ok || id != ActionPanelToggleSync {
-		t.Fatalf("stub C-M-y = %q %v, want panel.toggle-sync", id, ok)
+		t.Fatalf("stub M-y = %q %v, want panel.toggle-sync", id, ok)
 	}
 }
 
@@ -913,14 +912,14 @@ file.delete = ["F8"]
 	}
 }
 
-func TestPanelToggleSyncDefaultsToCtrlAltY(t *testing.T) {
+func TestPanelToggleSyncDefaultsToAltY(t *testing.T) {
 	m, err := Default()
 	if err != nil {
 		t.Fatalf("Default: %v", err)
 	}
-	id, ok := m.Lookup(tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt|tcell.ModCtrl))
+	id, ok := m.Lookup(tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt))
 	if !ok || id != ActionPanelToggleSync {
-		t.Fatalf("C-M-y = %q %v, want panel.toggle-sync", id, ok)
+		t.Fatalf("M-y = %q %v, want panel.toggle-sync", id, ok)
 	}
 	if id, ok := m.Lookup(tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModAlt|tcell.ModCtrl)); ok && id == ActionPanelToggleSync {
 		t.Fatal("C-M-o should no longer map to panel.toggle-sync")

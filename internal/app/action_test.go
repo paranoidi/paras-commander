@@ -151,9 +151,9 @@ func TestActionFromKeyMapsMetaIToOpenActivePathInOtherPanel(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsCtrlAltYToToggleSync(t *testing.T) {
+func TestActionFromKeyMapsAltYToToggleSync(t *testing.T) {
 	km := defaultKeymap(t)
-	event := tcell.NewEventKey(tcell.KeyCtrlY, 0, tcell.ModAlt|tcell.ModCtrl)
+	event := tcell.NewEventKey(tcell.KeyRune, 'y', tcell.ModAlt)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionPanelToggleSync {
 		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelToggleSync", got)
