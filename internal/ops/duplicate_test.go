@@ -10,7 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
-func TestValidateCopyHereSourceRequiresSingleEntry(t *testing.T) {
+func TestValidateDuplicateSourceRequiresSingleEntry(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "sub")
 	if err := os.Mkdir(sub, 0o755); err != nil {
@@ -29,51 +29,51 @@ func TestValidateCopyHereSourceRequiresSingleEntry(t *testing.T) {
 	}
 	p.SelectedPaths = map[string]bool{sub: true, file: true}
 
-	if _, err := ValidateCopyHereSource(p); err == nil {
-		t.Fatal("ValidateCopyHereSource() error = nil, want error for multiple selections")
+	if _, err := ValidateDuplicateSource(p); err == nil {
+		t.Fatal("ValidateDuplicateSource() error = nil, want error for multiple selections")
 	}
 
 	p.SelectedPaths = map[string]bool{file: true}
-	fileEntry, err := ValidateCopyHereSource(p)
+	fileEntry, err := ValidateDuplicateSource(p)
 	if err != nil {
-		t.Fatalf("ValidateCopyHereSource() error = %v, want file accepted", err)
+		t.Fatalf("ValidateDuplicateSource() error = %v, want file accepted", err)
 	}
 	if fileEntry.Path != file {
 		t.Fatalf("entry path = %q, want %q", fileEntry.Path, file)
 	}
 
 	p.SelectedPaths = map[string]bool{sub: true}
-	entry, err := ValidateCopyHereSource(p)
+	entry, err := ValidateDuplicateSource(p)
 	if err != nil {
-		t.Fatalf("ValidateCopyHereSource() error = %v", err)
+		t.Fatalf("ValidateDuplicateSource() error = %v", err)
 	}
 	if entry.Path != sub {
 		t.Fatalf("entry path = %q, want %q", entry.Path, sub)
 	}
 }
 
-func TestPlanCopyHereRejectsSameName(t *testing.T) {
+func TestPlanDuplicateRejectsSameName(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "sub")
 	if err := os.Mkdir(sub, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	entry := localfs.Entry{Name: "sub", Path: sub, Type: localfs.EntryDirectory}
-	if _, err := PlanCopyHere(entry, "sub", dir); err == nil {
-		t.Fatal("PlanCopyHere() error = nil, want error for unchanged name")
+	if _, err := PlanDuplicate(entry, "sub", dir); err == nil {
+		t.Fatal("PlanDuplicate() error = nil, want error for unchanged name")
 	}
 }
 
-func TestPlanCopyHereSiblingDestination(t *testing.T) {
+func TestPlanDuplicateSiblingDestination(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "project")
 	if err := os.Mkdir(src, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	entry := localfs.Entry{Name: "project", Path: src, Type: localfs.EntryDirectory}
-	plan, err := PlanCopyHere(entry, "project-copy", dir)
+	plan, err := PlanDuplicate(entry, "project-copy", dir)
 	if err != nil {
-		t.Fatalf("PlanCopyHere() error = %v", err)
+		t.Fatalf("PlanDuplicate() error = %v", err)
 	}
 	wantDest := filepath.Join(dir, "project-copy")
 	if plan.DestPath != wantDest {
@@ -84,7 +84,7 @@ func TestPlanCopyHereSiblingDestination(t *testing.T) {
 	}
 }
 
-func TestBuildCopyPlanCopyHereNoExtraNesting(t *testing.T) {
+func TestBuildCopyPlanDuplicateNoExtraNesting(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "project")
 	if err := os.MkdirAll(filepath.Join(src, "nested"), 0o755); err != nil {
@@ -131,7 +131,7 @@ func TestBuildCopyPlanCopyHereNoExtraNesting(t *testing.T) {
 	}
 }
 
-func TestExecuteCopyCopyHereSiblingSemantics(t *testing.T) {
+func TestExecuteCopyDuplicateSiblingSemantics(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "project")
 	if err := os.MkdirAll(filepath.Join(src, "nested"), 0o755); err != nil {

@@ -932,7 +932,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"duplicate"},
 		},
 		{
-			ID:           ActionFileCopyHere,
+			ID:           ActionFileDuplicate,
 			Views:        HelpBrowser,
 			Title:        "Duplicate",
 			Section:      "File operations",

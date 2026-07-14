@@ -28,7 +28,7 @@ func (a *App) refreshBothPanels() {
 		_ = a.model.Secondary.Refresh(viewportRows)
 		_ = a.model.Primary.RefreshOrNavigateToExistingAncestor(viewportRows)
 	}
-	a.applyCopyHereFocusPending()
+	a.applyDuplicateFocusPending()
 	a.applyQuickViewPreviewImmediately()
 }
 
@@ -248,8 +248,8 @@ func (a *App) executeFileDialog() {
 		a.executeMassRename()
 	case dialog.FileDialogRename:
 		a.executeRename()
-	case dialog.FileDialogCopyHere:
-		a.executeCopyHere()
+	case dialog.FileDialogDuplicate:
+		a.executeDuplicate()
 	case dialog.FileDialogMkdir:
 		a.executeMkdir()
 	case dialog.FileDialogDelete:

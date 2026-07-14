@@ -8,7 +8,7 @@ Read all documantion in llm-docs/ before starting implementing new feature.
 
 Once new feature is implemented update llm-docs/index.md for agents to later refer to.
 
-Leave compiled binary after running tests.
+Leave compiled binary after running tests. Build with `go build -o pc ./cmd/pc` — the binary must be named `pc`, not `paras-commander` (the module/repo directory name).
 
 When user request shortcut to be added it needs to be configurable in `keybindings.toml`. Check if requested shortcut works in terminal. Many shortcut combinations do not. If user requests a shortcut that is already taken in that context, choose a reasonable next best option and notify the user.
 

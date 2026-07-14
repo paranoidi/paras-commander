@@ -9,16 +9,16 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// activateCopyHereAction copies the highlighted file or directory beside itself under a new name.
-func (a *App) activateCopyHereAction() {
-	a.openCopyHereDialog()
+// activateDuplicateAction copies the highlighted file or directory beside itself under a new name.
+func (a *App) activateDuplicateAction() {
+	a.openDuplicateDialog()
 }
 
-func (a *App) openCopyHereDialog() {
+func (a *App) openDuplicateDialog() {
 	p := a.activePanel()
-	entry, err := ops.ValidateCopyHereSource(p)
+	entry, err := ops.ValidateDuplicateSource(p)
 	if err != nil {
-		a.setErrorMessage("Copy here", err)
+		a.setErrorMessage("Duplicate", err)
 		return
 	}
 	name := entry.Name
@@ -28,16 +28,16 @@ func (a *App) openCopyHereDialog() {
 	}
 	a.model.FileDialog = dialog.FileDialogState{
 		Open:             true,
-		DialogType:       dialog.FileDialogCopyHere,
+		DialogType:       dialog.FileDialogDuplicate,
 		Fields:           fields,
-		CopyHereSource:   entry.Path,
+		DuplicateSource:  entry.Path,
 		RenamePhase:      dialog.RenamePhaseMain,
 		RenameSlugifySep: dialog.RenameSlugifyDot,
 		RenameFocusAfter: a.config.Operations.RenameFocusAfter,
 	}
 }
 
-func (a *App) executeCopyHere() {
+func (a *App) executeDuplicate() {
 	p := a.activePanel()
 	d := &a.model.FileDialog
 	if len(d.Fields) == 0 {
@@ -45,25 +45,25 @@ func (a *App) executeCopyHere() {
 		return
 	}
 	newName := d.Fields[0].Value
-	sourcePath := d.CopyHereSource
+	sourcePath := d.DuplicateSource
 	if sourcePath == "" {
 		a.closeFileDialog()
 		return
 	}
-	entry, err := ops.ValidateCopyHereSource(p)
+	entry, err := ops.ValidateDuplicateSource(p)
 	if err != nil {
-		a.setErrorMessage("Copy here source", err)
+		a.setErrorMessage("Duplicate source", err)
 		a.closeFileDialog()
 		return
 	}
 	if entry.Path != sourcePath {
-		a.setErrorMessage("Copy here", ops.SourceError("source changed while dialog was open"))
+		a.setErrorMessage("Duplicate", ops.SourceError("source changed while dialog was open"))
 		a.closeFileDialog()
 		return
 	}
-	plan, err := ops.PlanCopyHere(entry, newName, p.PathString())
+	plan, err := ops.PlanDuplicate(entry, newName, p.PathString())
 	if err != nil {
-		a.setErrorMessage("Copy here", err)
+		a.setErrorMessage("Duplicate", err)
 		a.closeFileDialog()
 		return
 	}
@@ -73,7 +73,7 @@ func (a *App) executeCopyHere() {
 	a.closeFileDialog()
 	a.addTransferJob(jobs.TypeCopy, []string{plan.SourcePath}, plan.DestPath, false, a.transferPreserveFromConfig())
 	if focusAfter {
-		a.scheduleCopyHereFocus(panelID, listDir, plan.NewName)
+		a.scheduleDuplicateFocus(panelID, listDir, plan.NewName)
 	}
 	a.refreshBothPanels()
 	a.setTransientMessage(fmt.Sprintf("Copy queued as %s", plan.NewName), ui.MessageUrgencyInfo)

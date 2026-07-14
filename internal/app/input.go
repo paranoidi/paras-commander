@@ -938,8 +938,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openFlattenDialog()
 	case keymap.ActionCopy:
 		a.activateCopyAction()
-	case keymap.ActionFileCopyHere:
-		a.activateCopyHereAction()
+	case keymap.ActionFileDuplicate:
+		a.activateDuplicateAction()
 	case keymap.ActionMove:
 		a.activateMoveAction()
 	case keymap.ActionFileRunForEach:

@@ -140,9 +140,9 @@ const (
 	ActionFlattenDestinationInactive = "flatten.destination-inactive"
 
 	// Copy/Move
-	ActionCopy         = "file.copy"
-	ActionFileCopyHere = "file.copy-here"
-	ActionMove         = "file.move"
+	ActionCopy          = "file.copy"
+	ActionFileDuplicate = "file.duplicate"
+	ActionMove          = "file.move"
 
 	// Remote
 	ActionRemoteSFTPLink = "remote.sftp-link"
@@ -333,9 +333,9 @@ var KnownActions = map[string]struct{}{
 	ActionFlattenDestinationActive:     {},
 	ActionFlattenDestinationInactive:   {},
 
-	ActionCopy:         {},
-	ActionFileCopyHere: {},
-	ActionMove:         {},
+	ActionCopy:          {},
+	ActionFileDuplicate: {},
+	ActionMove:          {},
 
 	ActionRemoteSFTPLink: {},
 

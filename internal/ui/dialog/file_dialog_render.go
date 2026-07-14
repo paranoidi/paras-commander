@@ -140,8 +140,8 @@ func fileDialogOuterTitle(state FileDialogState) string {
 		case RenamePhaseEncoding:
 			return "Encoding"
 		default:
-			if state.DialogType == FileDialogCopyHere {
-				return "Copy here"
+			if state.DialogType == FileDialogDuplicate {
+				return "Duplicate"
 			}
 			return "Rename"
 		}
@@ -153,8 +153,8 @@ func fileDialogTitle(dialogType FileDialogType) string {
 	switch dialogType {
 	case FileDialogRename:
 		return "Rename"
-	case FileDialogCopyHere:
-		return "Copy here"
+	case FileDialogDuplicate:
+		return "Duplicate"
 	case FileDialogMkdir:
 		return "Create directory"
 	case FileDialogDelete:
@@ -709,8 +709,8 @@ func runForEachExtraFocusRows(state FileDialogState) int {
 
 // renameFocusCheckboxLabel returns the focus-after checkbox caption for rename-like dialogs.
 func renameFocusCheckboxLabel(state FileDialogState) string {
-	if state.DialogType == FileDialogCopyHere {
-		return "Focus after copy"
+	if state.DialogType == FileDialogDuplicate {
+		return "Focus after duplicate"
 	}
 	return "Focus after rename"
 }

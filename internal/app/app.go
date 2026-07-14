@@ -237,8 +237,8 @@ type App struct {
 
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool
-	// copyHereFocus defers SelectVisibleEntryCentered until a queued copy-here job creates the entry.
-	copyHereFocus copyHereFocusPending
+	// duplicateFocus defers SelectVisibleEntryCentered until a queued duplicate job creates the entry.
+	duplicateFocus duplicateFocusPending
 
 	sftpMu                 sync.Mutex
 	sftpHostKeyWait        *sftpHostKeyWait

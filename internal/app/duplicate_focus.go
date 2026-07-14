@@ -4,35 +4,35 @@ import (
 	"path/filepath"
 )
 
-type copyHereFocusPending struct {
+type duplicateFocusPending struct {
 	panelID int
 	listDir string
 	name    string
 }
 
-func (a *App) scheduleCopyHereFocus(panelID int, listDir, name string) {
-	a.copyHereFocus = copyHereFocusPending{
+func (a *App) scheduleDuplicateFocus(panelID int, listDir, name string) {
+	a.duplicateFocus = duplicateFocusPending{
 		panelID: panelID,
 		listDir: listDir,
 		name:    name,
 	}
 }
 
-func (a *App) applyCopyHereFocusPending() {
-	f := a.copyHereFocus
+func (a *App) applyDuplicateFocusPending() {
+	f := a.duplicateFocus
 	if f.name == "" {
 		return
 	}
 	p := a.panelByID(f.panelID)
 	if p == nil {
-		a.copyHereFocus = copyHereFocusPending{}
+		a.duplicateFocus = duplicateFocusPending{}
 		return
 	}
 	if filepath.Clean(p.PathString()) != filepath.Clean(f.listDir) {
-		a.copyHereFocus = copyHereFocusPending{}
+		a.duplicateFocus = duplicateFocusPending{}
 		return
 	}
 	if p.SelectVisibleEntryCentered(f.name, a.panelViewportRows(f.panelID)) {
-		a.copyHereFocus = copyHereFocusPending{}
+		a.duplicateFocus = duplicateFocusPending{}
 	}
 }

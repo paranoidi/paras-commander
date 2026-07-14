@@ -1,14 +1,16 @@
 .aliases
 .cursor/
 .llm-docs/
+.ua/
 .vscode/
 .worktrees/
 /pc
+/paras-commander
 bin/
 drafts/
 llm-docs/
 scripts/
 stub/
+test-cases/
 test-data/
 themes/imports/
-test-cases/

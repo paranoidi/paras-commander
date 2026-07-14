@@ -11,7 +11,7 @@ type FileDialogType int
 const (
 	FileDialogNone FileDialogType = iota
 	FileDialogRename
-	FileDialogCopyHere
+	FileDialogDuplicate
 	FileDialogMkdir
 	FileDialogDelete
 	FileDialogChmod
@@ -117,11 +117,11 @@ type FileDialogState struct {
 	// MkdirOpenInInactive opens the new directory in the inactive panel after a successful create.
 	MkdirOpenInInactive bool
 
-	// CopyHereSource is the directory path copied by FileDialogCopyHere.
-	CopyHereSource string
+	// DuplicateSource is the directory path copied by FileDialogDuplicate.
+	DuplicateSource string
 
 	// RenamePhase and the following fields apply when DialogType uses rename-like phases
-	// (FileDialogRename, FileDialogCopyHere).
+	// (FileDialogRename, FileDialogDuplicate).
 	RenamePhase               RenamePhase
 	RenameSanitizeDots        bool
 	RenameSanitizeUnderscores bool

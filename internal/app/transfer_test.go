@@ -638,7 +638,7 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 	}
 }
 
-func TestCopyHereOpensRenameLikeDialogForSingleDirectory(t *testing.T) {
+func TestDuplicateOpensRenameLikeDialogForSingleDirectory(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "project")
 	if err := os.Mkdir(src, 0o755); err != nil {
@@ -650,22 +650,22 @@ func TestCopyHereOpensRenameLikeDialogForSingleDirectory(t *testing.T) {
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
-	app.dispatch(keymap.ActionFileCopyHere)
+	app.dispatch(keymap.ActionFileDuplicate)
 	if !app.model.FileDialog.Open {
-		t.Fatal("expected copy-here dialog open")
+		t.Fatal("expected duplicate dialog open")
 	}
-	if app.model.FileDialog.DialogType != dialog.FileDialogCopyHere {
-		t.Fatalf("dialog type = %v, want FileDialogCopyHere", app.model.FileDialog.DialogType)
+	if app.model.FileDialog.DialogType != dialog.FileDialogDuplicate {
+		t.Fatalf("dialog type = %v, want FileDialogDuplicate", app.model.FileDialog.DialogType)
 	}
-	if app.model.FileDialog.CopyHereSource != src {
-		t.Fatalf("CopyHereSource = %q, want %q", app.model.FileDialog.CopyHereSource, src)
+	if app.model.FileDialog.DuplicateSource != src {
+		t.Fatalf("DuplicateSource = %q, want %q", app.model.FileDialog.DuplicateSource, src)
 	}
 	if len(app.model.FileDialog.Fields) != 1 || app.model.FileDialog.Fields[0].Value != "project" {
 		t.Fatalf("name field = %+v, want prefilled project", app.model.FileDialog.Fields)
 	}
 }
 
-func TestCopyHereRejectsMultipleSelections(t *testing.T) {
+func TestDuplicateRejectsMultipleSelections(t *testing.T) {
 	dir := t.TempDir()
 	a := filepath.Join(dir, "a")
 	b := filepath.Join(dir, "b")
@@ -680,7 +680,7 @@ func TestCopyHereRejectsMultipleSelections(t *testing.T) {
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{a: true, b: true}
 
-	app.dispatch(keymap.ActionFileCopyHere)
+	app.dispatch(keymap.ActionFileDuplicate)
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should stay closed for multiple selections")
 	}
@@ -689,7 +689,7 @@ func TestCopyHereRejectsMultipleSelections(t *testing.T) {
 	}
 }
 
-func TestCopyHereOpensDialogForFile(t *testing.T) {
+func TestDuplicateOpensDialogForFile(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "note.txt")
 	writeFile(t, file)
@@ -700,22 +700,22 @@ func TestCopyHereOpensDialogForFile(t *testing.T) {
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{file: true}
 
-	app.dispatch(keymap.ActionFileCopyHere)
+	app.dispatch(keymap.ActionFileDuplicate)
 	if !app.model.FileDialog.Open {
-		t.Fatal("expected copy-here dialog open for file selection")
+		t.Fatal("expected duplicate dialog open for file selection")
 	}
-	if app.model.FileDialog.DialogType != dialog.FileDialogCopyHere {
-		t.Fatalf("dialog type = %v, want FileDialogCopyHere", app.model.FileDialog.DialogType)
+	if app.model.FileDialog.DialogType != dialog.FileDialogDuplicate {
+		t.Fatalf("dialog type = %v, want FileDialogDuplicate", app.model.FileDialog.DialogType)
 	}
-	if app.model.FileDialog.CopyHereSource != file {
-		t.Fatalf("CopyHereSource = %q, want %q", app.model.FileDialog.CopyHereSource, file)
+	if app.model.FileDialog.DuplicateSource != file {
+		t.Fatalf("DuplicateSource = %q, want %q", app.model.FileDialog.DuplicateSource, file)
 	}
 	if got := app.model.FileDialog.Fields[0].Value; got != "note.txt" {
 		t.Fatalf("prefill value = %q, want %q", got, "note.txt")
 	}
 }
 
-func TestCopyHereDialogFocusCheckboxToggle(t *testing.T) {
+func TestDuplicateDialogFocusCheckboxToggle(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "project")
 	if err := os.Mkdir(src, 0o755); err != nil {
@@ -727,7 +727,7 @@ func TestCopyHereDialogFocusCheckboxToggle(t *testing.T) {
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
-	app.dispatch(keymap.ActionFileCopyHere)
+	app.dispatch(keymap.ActionFileDuplicate)
 	if app.model.FileDialog.RenameFocusAfter {
 		t.Fatal("RenameFocusAfter = true, want false (default)")
 	}
@@ -750,7 +750,7 @@ func TestCopyHereDialogFocusCheckboxToggle(t *testing.T) {
 	}
 }
 
-func TestCopyHereWithFocusAfterSelectsAfterJob(t *testing.T) {
+func TestDuplicateWithFocusAfterSelectsAfterJob(t *testing.T) {
 	dir := t.TempDir()
 	for i := 0; i < 20; i++ {
 		name := fmt.Sprintf("%02d", i)
@@ -768,7 +768,7 @@ func TestCopyHereWithFocusAfterSelectsAfterJob(t *testing.T) {
 	p.SelectedPaths = map[string]bool{src: true}
 
 	newName := "99"
-	app.dispatch(keymap.ActionFileCopyHere)
+	app.dispatch(keymap.ActionFileDuplicate)
 	for _, r := range newName {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
@@ -781,7 +781,7 @@ func TestCopyHereWithFocusAfterSelectsAfterJob(t *testing.T) {
 	p = app.activePanel()
 	entry, ok := p.CurrentEntry()
 	if !ok {
-		t.Fatal("CurrentEntry() ok = false after copy-here job")
+		t.Fatal("CurrentEntry() ok = false after duplicate job")
 	}
 	if entry.Name != newName {
 		t.Fatalf("cursor entry = %q, want %s", entry.Name, newName)
@@ -803,7 +803,7 @@ func TestCopyHereWithFocusAfterSelectsAfterJob(t *testing.T) {
 	}
 }
 
-func TestCopyHereConfirmsFromOKButtonWithFocusAfter(t *testing.T) {
+func TestDuplicateConfirmsFromOKButtonWithFocusAfter(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "note.txt")
 	writeFile(t, file)
@@ -815,7 +815,7 @@ func TestCopyHereConfirmsFromOKButtonWithFocusAfter(t *testing.T) {
 	selectPanelEntryByName(t, p, "note.txt")
 	p.SelectedPaths = map[string]bool{file: true}
 
-	app.dispatch(keymap.ActionFileCopyHere)
+	app.dispatch(keymap.ActionFileDuplicate)
 	// Replace the prefilled name.
 	for _, r := range "copy.txt" {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
@@ -840,7 +840,7 @@ func TestCopyHereConfirmsFromOKButtonWithFocusAfter(t *testing.T) {
 	}
 }
 
-func TestCopyHereQueuesJobWithNewName(t *testing.T) {
+func TestDuplicateQueuesJobWithNewName(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "alpha")
 	if err := os.Mkdir(src, 0o755); err != nil {
@@ -852,7 +852,7 @@ func TestCopyHereQueuesJobWithNewName(t *testing.T) {
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{src: true}
 
-	app.dispatch(keymap.ActionFileCopyHere)
+	app.dispatch(keymap.ActionFileDuplicate)
 	for _, r := range "beta" {
 		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}

@@ -55,9 +55,9 @@ func TestFileDialogFocusFormRenameWithFocusCheckbox(t *testing.T) {
 	}
 }
 
-func TestFileDialogFocusFormCopyHereWithFocusCheckbox(t *testing.T) {
+func TestFileDialogFocusFormDuplicateWithFocusCheckbox(t *testing.T) {
 	st := FileDialogState{
-		DialogType:  FileDialogCopyHere,
+		DialogType:  FileDialogDuplicate,
 		RenamePhase: RenamePhaseMain,
 		Fields:      []FileDialogField{{}},
 	}

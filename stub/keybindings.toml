@@ -32,7 +32,7 @@
   "bookmark.open" = ["C-g", "C-e"]
   "commands.open" = ["M-c"]
   "file.copy" = ["F5"]
-  "file.copy-here" = ["S-F5"]
+  "file.duplicate" = ["S-F5"]
   "file.delete" = ["F8", "delete"]
   "file.edit" = ["F4"]
   "file.flatten" = ["C-M-f"]
