@@ -18,7 +18,7 @@ func (st *State) wrapCacheValid(textWidth int, base tcell.Style) bool {
 	if st.wrappedLines == nil || st.wrapWidth != textWidth || st.wrapStyleKey != styleCacheKey(base) || st.wrapSource != st.Source {
 		return false
 	}
-	if st.wrapGutterWidth != st.GutterWidth {
+	if st.wrapGutterWidth != st.GutterWidth || st.wrapSearchKey != st.Search.cacheKey() {
 		return false
 	}
 	switch st.Source {
@@ -30,7 +30,10 @@ func (st *State) wrapCacheValid(textWidth int, base tcell.Style) bool {
 	}
 }
 
-func (st *State) bodyCells(base tcell.Style) []AnsiCell {
+// bodyCellsRaw returns the flat pre-wrap body cell stream for st.Source, with no search
+// highlighting applied. For SourceInternalHighlighted this returns HighlightedCells BY
+// REFERENCE (same backing array reused across frames) — callers must not mutate it.
+func (st *State) bodyCellsRaw(base tcell.Style) []AnsiCell {
 	switch st.Source {
 	case SourceInternalHighlighted:
 		return st.HighlightedCells
@@ -39,8 +42,39 @@ func (st *State) bodyCells(base tcell.Style) []AnsiCell {
 	}
 }
 
+// bodyCells returns the flat pre-wrap body cell stream with search-match highlighting
+// baked into each matched cell's style, so wrapping (which may insert gutter/indent
+// cells) can never misalign a rune-offset-based overlay applied after the fact.
+func (st *State) bodyCells(base tcell.Style) []AnsiCell {
+	return st.applySearchOverlay(st.bodyCellsRaw(base))
+}
+
+// applySearchOverlay returns cells with matched ranges restyled, always as a copy —
+// bodyCellsRaw can return HighlightedCells by reference, and mutating it in place would
+// permanently corrupt the stored Chroma highlighting even after search ends.
+func (st *State) applySearchOverlay(cells []AnsiCell) []AnsiCell {
+	if !st.Search.Active || len(st.Search.Matches) == 0 {
+		return cells
+	}
+	out := make([]AnsiCell, len(cells))
+	copy(out, cells)
+	for mi, m := range st.Search.Matches {
+		style := st.Search.MatchStyle
+		if mi == st.Search.Current {
+			style = st.Search.CurrentStyle
+		}
+		for i := m.Start; i < m.End && i < len(out); i++ {
+			out[i].St = style
+		}
+	}
+	return out
+}
+
 // WrapCacheSnapshot copies the wrapped-line cache from src when it matches this state's body.
 func (st *State) WrapCacheSnapshot(src State) {
+	if src.wrapSearchKey != st.Search.cacheKey() {
+		return
+	}
 	switch st.Source {
 	case SourceInternalHighlighted:
 		if src.wrapCellsLen != len(st.HighlightedCells) || src.wrapSource != st.Source || src.wrapHighlightKey != st.highlightedCacheKey() {
@@ -59,6 +93,7 @@ func (st *State) WrapCacheSnapshot(src State) {
 	st.wrapCellsLen = src.wrapCellsLen
 	st.wrapGutterWidth = src.wrapGutterWidth
 	st.wrapHighlightKey = src.wrapHighlightKey
+	st.wrapSearchKey = src.wrapSearchKey
 }
 
 // CachedWrappedLineCount returns len(wrappedLines) when the layout cache matches textWidth.
@@ -98,6 +133,7 @@ func (st *State) EnsureWrappedLines(textWidth int, base tcell.Style) [][]AnsiCel
 	st.wrapCombinedText = st.CombinedText
 	st.wrapCellsLen = len(st.HighlightedCells)
 	st.wrapGutterWidth = st.GutterWidth
+	st.wrapSearchKey = st.Search.cacheKey()
 	if st.Source == SourceInternalHighlighted {
 		st.highlightCacheKey = highlightCacheKey(st.HighlightedCells)
 		st.wrapHighlightKey = st.highlightCacheKey

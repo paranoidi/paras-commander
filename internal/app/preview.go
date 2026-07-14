@@ -862,6 +862,9 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 			st.DiffHunkLines = nil
 			st.GitStatusText = ""
 			st.GitStatusThemeKey = ""
+			if st.Search.Active {
+				st.RecomputeSearch()
+			}
 			doneApplied = true
 			return
 		}
@@ -881,6 +884,9 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 		st.DiffHunkLines = res.DiffHunkLines
 		st.GitStatusText = res.StatusText
 		st.GitStatusThemeKey = res.StatusThemeKey
+		if st.Search.Active {
+			st.RecomputeSearch()
+		}
 		doneApplied = true
 	})
 	if doneApplied && runGen == gen.Load() {

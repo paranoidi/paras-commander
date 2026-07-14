@@ -273,6 +273,58 @@ func TestFullscreenFilePreviewDoesNotOpenMenuFromDispatch(t *testing.T) {
 	}
 }
 
+func TestFullscreenFilePreviewIgnoresBrowserOnlyShortcuts(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = "x\n"
+		st.Scroll = 0
+	})
+	pathBefore := app.activePanel().PathString()
+
+	for _, tc := range []struct {
+		name string
+		key  *tcell.EventKey
+	}{
+		{"user menu", tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone)},
+		{"edit user menu", tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModShift)},
+		{"refresh panel", tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt|tcell.ModCtrl)},
+		{"add bookmark", tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModCtrl)},
+		{"open bookmarks", tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModCtrl)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app.handleFilePreviewViewKey(tc.key)
+			if app.model.UserMenu.Open {
+				t.Fatal("user menu must stay closed")
+			}
+			if app.model.PathPicker.Open {
+				t.Fatal("bookmark picker must stay closed")
+			}
+			if got := app.activePanel().PathString(); got != pathBefore {
+				t.Fatalf("panel path changed %q -> %q", pathBefore, got)
+			}
+		})
+	}
+}
+
 func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "notes.txt")
@@ -521,5 +573,91 @@ func TestRefreshPreviewTargetAfterResizeReRunsOnlyOnWidthChange(t *testing.T) {
 	}
 	if app.previewLastWidth[previewTargetInactive] != tw {
 		t.Fatalf("previewLastWidth[inactive] = %d, want %d recorded from the new request", app.previewLastWidth[previewTargetInactive], tw)
+	}
+}
+
+// TestFullscreenFilePreviewSearchStartTypeEnterNavigateEsc drives the "/" incremental
+// search flow end to end: start search, type a query, accept with Enter, step to the next
+// match with "n", then cancel the search with Esc (leaving the fullscreen preview open).
+func TestFullscreenFilePreviewSearchStartTypeEnterNavigateEsc(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "notes.txt")
+	writeFile(t, path)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	// Matches are spaced far apart (well beyond one screen height of filler lines) so
+	// navigating from the first to the second match must actually scroll the viewport.
+	var content strings.Builder
+	for i := 0; i < 3; i++ {
+		content.WriteString("foo bar\n")
+		content.WriteString(strings.Repeat("baz qux\n", 30))
+	}
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Path = path
+		st.Phase = ui.FilePreviewPhaseDone
+		st.CombinedText = content.String()
+		st.Scroll = 0
+	})
+
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, '/', tcell.ModNone))
+	app.commandsMu.RLock()
+	search := app.model.FullscreenFilePreview.Search
+	app.commandsMu.RUnlock()
+	if !search.Active || !search.Editing {
+		t.Fatalf("after '/', Search = %+v, want Active=true Editing=true", search)
+	}
+
+	for _, r := range "foo" {
+		app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	app.commandsMu.RLock()
+	search = app.model.FullscreenFilePreview.Search
+	app.commandsMu.RUnlock()
+	if search.Query != "foo" || len(search.Matches) != 3 || search.Current != 0 {
+		t.Fatalf("after typing \"foo\", Search = %+v, want Query=foo len(Matches)=3 Current=0", search)
+	}
+
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.commandsMu.RLock()
+	search = app.model.FullscreenFilePreview.Search
+	app.commandsMu.RUnlock()
+	if search.Editing || !search.Active {
+		t.Fatalf("after Enter, Search = %+v, want Editing=false Active=true", search)
+	}
+
+	// "n" must now navigate (not be captured as query text, since Editing is false).
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
+	app.commandsMu.RLock()
+	current := app.model.FullscreenFilePreview.Search.Current
+	scroll := app.model.FullscreenFilePreview.Scroll
+	app.commandsMu.RUnlock()
+	if current != 1 {
+		t.Fatalf("after 'n', Search.Current = %d, want 1", current)
+	}
+	if scroll == 0 {
+		t.Fatal("after 'n', Scroll = 0, want the view to have scrolled to reveal match 1")
+	}
+
+	// First Esc clears the search but leaves the fullscreen preview open.
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.commandsMu.RLock()
+	search = app.model.FullscreenFilePreview.Search
+	open := app.model.FullscreenFilePreview.Open
+	app.commandsMu.RUnlock()
+	if search.Active {
+		t.Fatalf("after first Esc, Search.Active = true, want false")
+	}
+	if !open {
+		t.Fatal("after first Esc, fullscreen preview should still be open")
+	}
+
+	// Second Esc closes the preview (no active search left to clear).
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser after second Esc", app.model.ViewMode)
 	}
 }

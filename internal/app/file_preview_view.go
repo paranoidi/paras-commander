@@ -30,11 +30,17 @@ func (a *App) toggleFilePreviewRawMarkdown() {
 		fp.Scroll = 0
 	})
 	a.refreshFullscreenFilePreview()
+	a.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) {
+		if fp.Search.Active {
+			fp.RecomputeSearch()
+		}
+	})
 }
 
 func (a *App) closeFilePreviewFullscreen() {
 	a.commandsMu.Lock()
 	a.model.FullscreenFilePreview = ui.FilePreviewState{}
+	a.model.FullscreenFilePreviewSearchField = dialog.FileDialogField{}
 	a.commandsMu.Unlock()
 	a.closeFilePreviewThemePicker(false)
 	a.clearFilePreviewHold(previewTargetFullscreen)
@@ -128,22 +134,11 @@ func (a *App) patchFullscreenFilePreview(fn func(*ui.FilePreviewState)) {
 }
 
 // fullscreenFilePreviewKeyboardDispatchAllowed lists actions that may reach dispatch() while
-// the fullscreen file view is active. Other bindings (nav.*, file ops, panel focus, etc.) are
-// ignored so they cannot mutate the hidden file panes—see tryDispatchFilePreviewFocus for the
-// analogous inactive-column preview policy.
+// the fullscreen file view is active. Preview-local bindings (scroll, search, edit, etc.) are
+// handled in handleFilePreviewViewKey; only auxiliary full-screen views may fall through here.
 func fullscreenFilePreviewKeyboardDispatchAllowed(id string) bool {
 	switch id {
-	case keymap.ActionPanelRefresh,
-		keymap.ActionBookmarkOpen,
-		keymap.ActionBookmarkAdd,
-		keymap.ActionPanelExternalBrowser,
-		keymap.ActionAppUserMenu,
-		keymap.ActionAppUserMenuEdit,
-		keymap.ActionFileEdit,
-		keymap.ActionUIOpenConfig,
-		keymap.ActionUICalibrateDebounce,
-		keymap.ActionPanelDiskUsageAbortAll,
-		keymap.ActionPanelDiskUsageClear,
+	case keymap.ActionPanelExternalBrowser,
 		keymap.ActionJobsOpen,
 		keymap.ActionCommandsOpen,
 		keymap.ActionMessagesOpen:
@@ -155,6 +150,9 @@ func fullscreenFilePreviewKeyboardDispatchAllowed(id string) bool {
 
 // handleFilePreviewViewKey handles keys while ViewFilePreview is active (not blocked by transfer menu).
 func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
+	if a.model.FullscreenFilePreview.Search.Editing {
+		return a.handleFilePreviewSearchTypingKey(event)
+	}
 	nextAction := a.actionFromKeyEvent(event)
 	if nextAction == keymap.ActionAppQuit {
 		return a.handleQuit()
@@ -176,6 +174,18 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 	}
 	if nextAction == keymap.ActionFileViewDiffPrevHunk {
 		a.hunkNavigate(previewTargetFullscreen, -1)
+		return false
+	}
+	if nextAction == keymap.ActionFileViewSearchStart {
+		a.startFilePreviewSearch()
+		return false
+	}
+	if nextAction == keymap.ActionFileViewSearchNext {
+		a.filePreviewSearchNav(1)
+		return false
+	}
+	if nextAction == keymap.ActionFileViewSearchPrev {
+		a.filePreviewSearchNav(-1)
 		return false
 	}
 	if nextAction == keymap.ActionFileEdit {
@@ -209,6 +219,11 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 
 	switch event.Key() {
 	case tcell.KeyEsc:
+		if a.model.FullscreenFilePreview.Search.Active {
+			a.clearFilePreviewSearchField()
+			a.patchFullscreenFilePreview(func(st *ui.FilePreviewState) { st.CancelSearch() })
+			return false
+		}
 		a.closeFilePreviewFullscreen()
 		return false
 	case tcell.KeyLeft:
@@ -328,6 +343,7 @@ func (a *App) openFilePreviewFullscreen() {
 	a.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
 	a.model.FullscreenFilePreviewRawMarkdown = false
 	a.model.ViewMode = ui.ViewFilePreview
+	a.clearFilePreviewSearchField()
 	a.model.Menu.Open = false
 	a.model.Menu.PulldownOpen = false
 	a.model.MenuDefinitions = a.browserMenuDefinitions()
@@ -347,6 +363,7 @@ func (a *App) openFilePreviewFullscreen() {
 		st.DiffHunkLines = nil
 		st.GitStatusText = ""
 		st.GitStatusThemeKey = ""
+		st.CancelSearch()
 	})
 	gen := a.filePreviewRunGen.Add(1)
 	a.postCommandWake()

@@ -10,6 +10,9 @@ func DefaultFilePreviewOverlayKeys() map[string][]string {
 		ActionFileViewToggleRaw:    {"F5"},
 		ActionFileViewDiffNextHunk: {"C-M-j"},
 		ActionFileViewDiffPrevHunk: {"C-M-k"},
+		ActionFileViewSearchStart:  {"/"},
+		ActionFileViewSearchNext:   {"n"},
+		ActionFileViewSearchPrev:   {"p"},
 	}
 }
 

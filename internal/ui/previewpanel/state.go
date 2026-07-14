@@ -60,6 +60,8 @@ type State struct {
 	GitStatusText string
 	// GitStatusThemeKey is the panel.git.* theme key used to color GitStatusText.
 	GitStatusThemeKey string
+	// Search tracks incremental "/" search state and matches within this preview.
+	Search SearchState
 
 	wrappedLines     [][]AnsiCell
 	wrapWidth        int
@@ -69,6 +71,7 @@ type State struct {
 	wrapCellsLen     int
 	wrapGutterWidth  int
 	wrapHighlightKey uint64
+	wrapSearchKey    uint64
 
 	// highlightCacheKey fingerprints HighlightedCells styles; bump when cells are replaced.
 	highlightCacheKey uint64
@@ -90,6 +93,7 @@ func (st *State) clearWrapCache() {
 	st.wrapCellsLen = 0
 	st.wrapGutterWidth = 0
 	st.wrapHighlightKey = 0
+	st.wrapSearchKey = 0
 }
 
 func (st State) highlightedCacheKey() uint64 {

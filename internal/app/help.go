@@ -171,11 +171,29 @@ func (a *App) buildHelpEntriesForView(vm ui.ViewMode) []dialog.HelpEntry {
 			ActionID:   spec.ID,
 			Title:      spec.Title,
 			Keys:       displayKeys,
-			Section:    spec.Section,
+			Section:    helpSectionForView(vm, spec),
 			FuzzyExtra: strings.TrimSpace(spec.ID + helpkeys.ConcatKeywords(spec.Keywords)),
 		})
 	}
 	return entries
+}
+
+// helpSectionForView returns the help grouping for an action in vm. Preview-only and
+// preview-shared bindings use the Preview section while the fullscreen file view is active.
+func helpSectionForView(vm ui.ViewMode, spec keymap.ActionSpec) string {
+	if vm != ui.ViewFilePreview {
+		return spec.Section
+	}
+	switch spec.ID {
+	case keymap.ActionFileEdit,
+		keymap.ActionFileQuickViewPreviewPageUp,
+		keymap.ActionFileQuickViewPreviewPageDown:
+		return "Preview"
+	}
+	if spec.Views == keymap.HelpFilePreview {
+		return "Preview"
+	}
+	return spec.Section
 }
 
 // effectiveKeyStringsForView returns bound key strings for an action in the given view context.

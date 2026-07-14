@@ -166,6 +166,8 @@ type Model struct {
 	FullscreenFilePreview FilePreviewState
 	// FullscreenFilePreviewDraw is a snapshot for ViewFilePreview rendering.
 	FullscreenFilePreviewDraw FilePreviewState
+	// FullscreenFilePreviewSearchField is the "/" query editor while Search.Editing is true.
+	FullscreenFilePreviewSearchField dialog.FileDialogField
 	// FullscreenFilePreviewRawMarkdown is true while file.view.toggle-raw has switched the
 	// fullscreen preview of a markdown file to raw Chroma-highlighted source instead of
 	// rendered markdown. Reset to false whenever a new fullscreen preview opens. Only affects
@@ -439,7 +441,16 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	case ViewFilePreview:
 		union := MergeTwinPanelRects(layout.Primary, layout.Secondary, model.SplitOrientation)
 		previewRect, pickerRect := SplitFullscreenPreviewRects(union, model.FilePreviewThemePicker.Open, model.FilePreviewThemePicker.Choices)
+		if model.FullscreenFilePreviewDraw.Search.Editing {
+			if previewRect.Height > 0 {
+				previewRect.Height--
+			}
+		}
 		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, true, "", "")
+		if model.FullscreenFilePreviewDraw.Search.Editing && layout.Footer.Height > 0 {
+			drawFilePreviewSearchBar(screen, Rect{X: 0, Y: layout.Footer.Y - 1, Width: layout.Width, Height: 1},
+				model.FullscreenFilePreviewSearchField, styles)
+		}
 		if model.FilePreviewThemePicker.Open && pickerRect.Width > 0 {
 			dialog.DrawFilePreviewThemePicker(screen, pickerRect, model.FilePreviewThemePicker, styles)
 		}

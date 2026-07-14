@@ -112,6 +112,7 @@ func FunctionKeysFilePreviewView(rawMarkdown bool) []FunctionKey {
 	return []FunctionKey{
 		FooterEscClose,
 		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
+		{Key: tcell.KeyRune, KeyLabel: "/", Hint: "Search"},
 		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
 		{Key: tcell.KeyF5, KeyLabel: "F5", Hint: toggleHint},
 		{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete this"},

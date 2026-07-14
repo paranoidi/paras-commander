@@ -462,6 +462,11 @@ func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 	)
 }
 
+// DrawInputField paints a single dialog text input row (shared by file dialogs and inline query bars).
+func DrawInputField(screen tcell.Screen, x, y, width int, field FileDialogField, focused bool, styles theme.Theme) {
+	drawInputField(screen, x, y, width, field, focused, styles)
+}
+
 // drawPathInputRow draws text in the first width-2 cells, the path-picker glyph in the
 // next cell, and leaves the rightmost cell blank (row background).
 // When pathInvalid is true, uses dialog.input.*.error for the row (see Theme.DialogInputBaseStyle).

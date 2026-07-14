@@ -77,6 +77,58 @@ func TestWrapGutterContinuationIndent(t *testing.T) {
 	}
 }
 
+func TestWrapAppliesSearchHighlightAndInvalidatesOnCurrentChange(t *testing.T) {
+	base := tcell.StyleDefault
+	matchStyle := base.Foreground(tcell.ColorYellow)
+	currentStyle := base.Foreground(tcell.ColorRed)
+	var cells []previewpanel.AnsiCell
+	for _, r := range "foo bar foo" {
+		cells = append(cells, previewpanel.AnsiCell{R: r, St: base})
+	}
+	st := previewpanel.State{
+		Open:             true,
+		Phase:            previewpanel.PhaseDone,
+		Source:           previewpanel.SourceInternalHighlighted,
+		HighlightedCells: cells,
+	}
+	st.Search = previewpanel.SearchState{
+		Active: true,
+		Matches: []previewpanel.SearchMatch{
+			{Start: 0, End: 3, Line: 0},
+			{Start: 8, End: 11, Line: 0},
+		},
+		Current:      0,
+		MatchStyle:   matchStyle,
+		CurrentStyle: currentStyle,
+	}
+
+	lines := st.EnsureWrappedLines(40, base)
+	flat := lines[0]
+	if flat[0].St != currentStyle {
+		t.Fatalf("match 0 (current) style = %+v, want current style", flat[0].St)
+	}
+	if flat[8].St != matchStyle {
+		t.Fatalf("match 1 style = %+v, want match style", flat[8].St)
+	}
+	if flat[4].St != base {
+		t.Fatalf("non-match cell style = %+v, want unchanged base", flat[4].St)
+	}
+	if st.HighlightedCells[0].St != base {
+		t.Fatal("HighlightedCells must not be mutated by the search overlay")
+	}
+
+	// Changing Current alone (no Matches/Query change) must bust the wrap cache.
+	st.Search.Current = 1
+	lines2 := st.EnsureWrappedLines(40, base)
+	flat2 := lines2[0]
+	if flat2[0].St != matchStyle {
+		t.Fatalf("after Current change, match 0 style = %+v, want match style", flat2[0].St)
+	}
+	if flat2[8].St != currentStyle {
+		t.Fatalf("after Current change, match 1 style = %+v, want current style", flat2[8].St)
+	}
+}
+
 func lineString(cells []previewpanel.AnsiCell) string {
 	var b strings.Builder
 	for _, c := range cells {

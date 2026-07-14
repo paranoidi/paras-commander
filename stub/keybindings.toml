@@ -136,6 +136,9 @@
   "file.view.toggle-raw" = ["F5"]
   "file.view.diff-next-hunk" = ["C-M-j"]
   "file.view.diff-prev-hunk" = ["C-M-k"]
+  "file.view.search-start" = ["/"]
+  "file.view.search-next" = ["n"]
+  "file.view.search-prev" = ["p"]
 
 [terminal]
   "terminal.toggle-panel" = ["C-M-p"]

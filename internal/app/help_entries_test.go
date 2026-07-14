@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func newHelpEntriesApp(t *testing.T) *App {
@@ -104,5 +105,50 @@ func TestJobsHelpIncludesAnswerBlocker(t *testing.T) {
 	entries := a.buildHelpEntriesForView(ui.ViewJobs)
 	if helpEntryIndex(entries, keymap.ActionJobsAnswerBlocker) < 0 {
 		t.Fatal("jobs help missing jobs.answer-blocker")
+	}
+}
+
+func TestPreviewHelpUsesPreviewSectionAndExcludesBrowserActions(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	entries := a.buildHelpEntriesForView(ui.ViewFilePreview)
+	byID := make(map[string]dialog.HelpEntry, len(entries))
+	for _, e := range entries {
+		byID[e.ActionID] = e
+	}
+	for _, id := range []string{
+		keymap.ActionFileViewThemePicker,
+		keymap.ActionFileViewToggleRaw,
+		keymap.ActionFileViewSearchStart,
+		keymap.ActionFileEdit,
+		keymap.ActionFileQuickViewPreviewPageUp,
+	} {
+		ent, ok := byID[id]
+		if !ok {
+			t.Fatalf("preview help missing %q", id)
+		}
+		if ent.Section != "Preview" {
+			t.Fatalf("%q section = %q, want Preview", id, ent.Section)
+		}
+	}
+	if ent, ok := byID[keymap.ActionPanelExternalBrowser]; !ok {
+		t.Fatal("preview help missing panel.external-browser")
+	} else if ent.Section != "Navigation" {
+		t.Fatalf("panel.external-browser section = %q, want Navigation", ent.Section)
+	}
+	for _, forbidden := range []string{
+		keymap.ActionAppUserMenu,
+		keymap.ActionAppUserMenuEdit,
+		keymap.ActionPanelRefresh,
+		keymap.ActionPanelDiskUsageAbortAll,
+		keymap.ActionPanelDiskUsageClear,
+		keymap.ActionBookmarkOpen,
+		keymap.ActionBookmarkAdd,
+		keymap.ActionAppOpenMenu,
+		keymap.ActionNavUp,
+		keymap.ActionCopy,
+	} {
+		if _, ok := byID[forbidden]; ok {
+			t.Fatalf("preview help should not include %q", forbidden)
+		}
 	}
 }

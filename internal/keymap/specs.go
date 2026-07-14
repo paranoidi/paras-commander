@@ -82,7 +82,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionAppUserMenu,
-			Views:        HelpBrowser | HelpFilePreview,
+			Views:        helpAllButPreview,
 			Title:        "User menu",
 			Section:      "App",
 			DefaultKeys:  []string{"F2"},
@@ -91,7 +91,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionAppUserMenuEdit,
-			Views:        HelpBrowser | HelpFilePreview,
+			Views:        helpAllButPreview,
 			Title:        "Edit user menu",
 			Section:      "App",
 			DefaultKeys:  []string{"S-F2"},
@@ -309,7 +309,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:           ActionPanelRefresh,
-			Views:        HelpBrowser | HelpDedup | HelpFilePreview,
+			Views:        HelpBrowser | HelpDedup,
 			Title:        "Refresh panel",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"M-C-r"},
@@ -518,7 +518,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelDiskUsageAbortAll,
-			Views:       HelpBrowser | HelpFilePreview,
+			Views:       HelpBrowser,
 			Title:       "Abort disk usage scans",
 			Section:     "Disk usage",
 			DefaultKeys: []string{"C-M-d"},
@@ -526,7 +526,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionPanelDiskUsageClear,
-			Views:       HelpBrowser | HelpFilePreview,
+			Views:       HelpBrowser,
 			Title:       "Clear disk usage data",
 			Section:     "Disk usage",
 			DefaultKeys: []string{"M-d"},
@@ -679,7 +679,7 @@ func DefaultActionSpecs() []ActionSpec {
 		// ── Bookmarks ──
 		{
 			ID:           ActionBookmarkOpen,
-			Views:        HelpBrowser | HelpFilePreview,
+			Views:        HelpBrowser,
 			Title:        "Open bookmarks",
 			Section:      "Bookmarks",
 			DefaultKeys:  []string{"C-g", "C-e"},
@@ -688,7 +688,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionBookmarkAdd,
-			Views:       HelpBrowser | HelpFilePreview,
+			Views:       HelpBrowser,
 			Title:       "Add bookmark",
 			Section:     "Bookmarks",
 			DefaultKeys: []string{"C-b"},
@@ -861,7 +861,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionFileViewThemePicker,
 			Views:       HelpFilePreview,
 			Title:       "Theme picker in file view",
-			Section:     "File operations",
+			Section:     "Preview",
 			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
 			Keywords:    []string{"theme", "preview", "view", "f9"},
 		},
@@ -869,7 +869,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionFileViewToggleRaw,
 			Views:       HelpFilePreview,
 			Title:       "Toggle raw/rendered markdown in file view",
-			Section:     "File operations",
+			Section:     "Preview",
 			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
 			Keywords:    []string{"markdown", "raw", "render", "source", "f5"},
 		},
@@ -877,7 +877,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionFileViewDiffNextHunk,
 			Views:       HelpFilePreview,
 			Title:       "Next diff hunk",
-			Section:     "File operations",
+			Section:     "Preview",
 			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
 			Keywords:    []string{"diff", "hunk", "change", "jump"},
 		},
@@ -885,9 +885,33 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:          ActionFileViewDiffPrevHunk,
 			Views:       HelpFilePreview,
 			Title:       "Previous diff hunk",
-			Section:     "File operations",
+			Section:     "Preview",
 			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
 			Keywords:    []string{"diff", "hunk", "change", "jump"},
+		},
+		{
+			ID:          ActionFileViewSearchStart,
+			Views:       HelpFilePreview,
+			Title:       "Search in file view",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"search", "find", "incremental"},
+		},
+		{
+			ID:          ActionFileViewSearchNext,
+			Views:       HelpFilePreview,
+			Title:       "Next search match",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"search", "find", "next", "match"},
+		},
+		{
+			ID:          ActionFileViewSearchPrev,
+			Views:       HelpFilePreview,
+			Title:       "Previous search match",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"search", "find", "previous", "match"},
 		},
 		{
 			ID:          ActionFileQuickView,
@@ -1135,7 +1159,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionUICalibrateDebounce,
-			Views:       HelpBrowser | HelpFilePreview,
+			Views:       HelpBrowser,
 			Title:       "Calibrate debounce",
 			Section:     "UI",
 			DefaultKeys: nil,
@@ -1143,7 +1167,7 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionUIOpenConfig,
-			Views:       HelpBrowser | HelpFilePreview,
+			Views:       HelpBrowser,
 			Title:       "Configuration editor",
 			Section:     "UI",
 			DefaultKeys: nil,
