@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -139,9 +140,11 @@ func (a *App) refreshFullscreenFilePreview() {
 	if !ok {
 		return
 	}
+	req := a.previewRequest(st.Path, tw, a.activePanel().PathString(), a.model.PanelsChromeBlocked(), a.gitStatusForPath(st.Path), previewTargetFullscreen)
+	req.RawMarkdown = a.model.FullscreenFilePreviewRawMarkdown
 	gen := a.filePreviewRunGen.Add(1)
 	a.postCommandWake()
-	go a.runPreview(a.commandsCtx, a.previewRequest(st.Path, tw, a.activePanel().PathString(), a.model.PanelsChromeBlocked(), a.gitStatusForPath(st.Path)), previewTargetFullscreen, gen)
+	go a.runPreview(a.commandsCtx, req, previewTargetFullscreen, gen)
 }
 
 func (a *App) syncFilePreviewThemePickerRanks() {
@@ -264,10 +267,39 @@ func (a *App) fullscreenPreviewTextWidth() (int, bool) {
 	if !ok {
 		return 1, false
 	}
-	preview, _ := ui.SplitFullscreenPreviewRects(union, a.model.FilePreviewThemePicker.Open, a.model.FilePreviewThemePicker.Choices)
-	tw := preview.Width // borderless: full width, no side border columns
+	previewRect, _ := ui.SplitFullscreenPreviewRects(union, a.model.FilePreviewThemePicker.Open, a.model.FilePreviewThemePicker.Choices)
+	tw := previewRect.Width // borderless: full width, no side border columns
 	if tw < 1 {
 		tw = 1
 	}
+	if a.fullscreenPreviewRendersMarkdown() {
+		tw -= 2 // 1-space left/right margin for rendered markdown
+		if tw < 1 {
+			tw = 1
+		}
+	}
 	return tw, true
+}
+
+// fullscreenPreviewRendersMarkdown reports whether the fullscreen preview's next content will be
+// produced by the rendered-markdown formatter, mirroring preview.Run's dispatch (including the
+// git-diff-to-plain-content fallback) so layout can reserve the markdown margin ahead of the
+// async run completing.
+func (a *App) fullscreenPreviewRendersMarkdown() bool {
+	a.commandsMu.RLock()
+	path := a.model.FullscreenFilePreview.Path
+	a.commandsMu.RUnlock()
+	if path == "" {
+		return false
+	}
+	req := preview.Request{
+		Path:        path,
+		Preview:     a.config.Preview,
+		RawMarkdown: a.model.FullscreenFilePreviewRawMarkdown,
+	}
+	if gitStatus := a.gitStatusForPath(path); gitStatus != nil {
+		req.GitDiff = true
+		req.GitStatus = gitStatus
+	}
+	return preview.WillRenderMarkdown(req)
 }

@@ -234,7 +234,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		if a.model.FilePreviewThemePicker.Open {
 			return menu.FunctionKeysFilePreviewStylePicker()
 		}
-		return menu.FunctionKeysFilePreviewView()
+		return menu.FunctionKeysFilePreviewView(a.model.FullscreenFilePreviewRawMarkdown)
 	}
 	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
 		rest := compareViewFooterKeys(a.keysCompare, a.model.CompareView.Filter)
@@ -961,6 +961,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openFilePreviewFullscreen()
 	case keymap.ActionFileViewThemePicker:
 		a.toggleFilePreviewThemePicker()
+	case keymap.ActionFileViewToggleRaw:
+		a.toggleFilePreviewRawMarkdown()
 	case keymap.ActionFileViewDiffNextHunk:
 		a.hunkNavigate(previewTargetInactive, 1)
 	case keymap.ActionFileViewDiffPrevHunk:

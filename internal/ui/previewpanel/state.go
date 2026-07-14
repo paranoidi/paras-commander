@@ -50,6 +50,10 @@ type State struct {
 	BodyHeld bool
 	// IsDiff is true when the preview is showing a git diff instead of file content.
 	IsDiff bool
+	// IsMarkdown is true when body content was produced by the rendered-markdown formatter
+	// (mdformat) rather than raw/diff/chroma text. Borderless (fullscreen) draw adds a
+	// 1-space left/right margin when this is set.
+	IsMarkdown bool
 	// DiffHunkLines holds the 0-based source line numbers of @@ hunk markers in the diff.
 	DiffHunkLines []int
 	// GitStatusText is a short git-status label shown next to the title (e.g. "no changes", "ignored").

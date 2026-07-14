@@ -267,7 +267,28 @@ func (a *App) applyCarouselFilePreviewNow() {
 	})
 	a.postCommandWake()
 	gen := a.carouselFilePreviewRunGen.Add(1)
-	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.activePanelChromeBlocked(), a.gitStatusForPath(path)), previewTargetCarousel, gen)
+	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.activePanelChromeBlocked(), a.gitStatusForPath(path), previewTargetCarousel), previewTargetCarousel, gen)
+}
+
+// refreshCarouselFilePreview re-runs the current carousel child preview at its current path,
+// e.g. after a terminal resize changes the child column's text width. Scroll is left untouched
+// (unlike applyCarouselFilePreviewNow, which is for opening/switching files).
+func (a *App) refreshCarouselFilePreview() {
+	a.commandsMu.RLock()
+	st := a.model.CarouselFilePreview
+	a.commandsMu.RUnlock()
+	if !st.Open || st.Path == "" {
+		return
+	}
+	tw, _, ok := a.carouselChildPreviewLayoutMetrics()
+	if !ok {
+		return
+	}
+	workDir := a.activePanel().PathString()
+	req := a.previewRequest(st.Path, tw, workDir, a.activePanelChromeBlocked(), a.gitStatusForPath(st.Path), previewTargetCarousel)
+	gen := a.carouselFilePreviewRunGen.Add(1)
+	a.postCommandWake()
+	go a.runPreview(a.commandsCtx, req, previewTargetCarousel, gen)
 }
 
 func (a *App) reconcileCarouselFilePreview() {

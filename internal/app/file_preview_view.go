@@ -9,10 +9,28 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
+
+// toggleFilePreviewRawMarkdown flips the fullscreen preview of a markdown file between
+// rendered markdown and raw Chroma-highlighted source. No-op for non-markdown files and
+// while showing a git diff (IsDiff), per file.view.toggle-raw.
+func (a *App) toggleFilePreviewRawMarkdown() {
+	a.commandsMu.RLock()
+	st := a.model.FullscreenFilePreview
+	a.commandsMu.RUnlock()
+	if !st.Open || st.Path == "" || st.IsDiff || !preview.IsMarkdownPath(st.Path) {
+		return
+	}
+	a.model.FullscreenFilePreviewRawMarkdown = !a.model.FullscreenFilePreviewRawMarkdown
+	a.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) {
+		fp.Scroll = 0
+	})
+	a.refreshFullscreenFilePreview()
+}
 
 func (a *App) closeFilePreviewFullscreen() {
 	a.commandsMu.Lock()
@@ -137,6 +155,10 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 	}
 	if nextAction == keymap.ActionFileViewThemePicker {
 		a.toggleFilePreviewThemePicker()
+		return false
+	}
+	if nextAction == keymap.ActionFileViewToggleRaw {
+		a.toggleFilePreviewRawMarkdown()
 		return false
 	}
 	if nextAction == keymap.ActionFileViewDiffNextHunk {
@@ -295,6 +317,7 @@ func (a *App) openFilePreviewFullscreen() {
 	titleBase := filepath.Base(path)
 	a.captureFilePreviewHold(previewTargetFullscreen)
 	a.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
+	a.model.FullscreenFilePreviewRawMarkdown = false
 	a.model.ViewMode = ui.ViewFilePreview
 	a.model.Menu.Open = false
 	a.model.Menu.PulldownOpen = false
@@ -318,5 +341,5 @@ func (a *App) openFilePreviewFullscreen() {
 	})
 	gen := a.filePreviewRunGen.Add(1)
 	a.postCommandWake()
-	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, active.PathString(), a.model.PanelsChromeBlocked(), a.gitStatusForPath(path)), previewTargetFullscreen, gen)
+	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, active.PathString(), a.model.PanelsChromeBlocked(), a.gitStatusForPath(path), previewTargetFullscreen), previewTargetFullscreen, gen)
 }

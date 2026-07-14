@@ -133,6 +133,7 @@
 
 [file_preview]
   "file.view.theme-picker" = ["F9"]
+  "file.view.toggle-raw" = ["F5"]
   "file.view.diff-next-hunk" = ["C-M-j"]
   "file.view.diff-prev-hunk" = ["C-M-k"]
 

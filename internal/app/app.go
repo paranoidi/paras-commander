@@ -213,6 +213,10 @@ type App struct {
 	carouselFilePreviewRunGen atomic.Uint64
 	// carouselFilePreviewLastFingerprint tracks the last carousel file preview highlight for debouncing.
 	carouselFilePreviewLastFingerprint string
+	// previewLastWidth records the TextWidth each preview target's content was last requested at
+	// (indexed by previewTarget), so a terminal resize can detect a width change and re-run the
+	// preview (markdown word-wrap/table layout is baked into emitted cells at request time).
+	previewLastWidth [3]int
 
 	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
 	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on
@@ -750,6 +754,7 @@ func (a *App) Run() error {
 			a.screen.Sync()
 			a.ensurePanelsVisible()
 			a.resizeTerminalFeedToLayout()
+			a.refreshPreviewsAfterResize()
 			a.render()
 			didRender = true
 		case *tcell.EventKey:

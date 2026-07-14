@@ -288,7 +288,7 @@ func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
 	staleGen := app.filePreviewRunGen.Add(1)
 	app.filePreviewRunGen.Add(1)
 
-	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false, nil), previewTargetInactive, staleGen)
+	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false, nil, previewTargetInactive), previewTargetInactive, staleGen)
 
 	app.commandsMu.RLock()
 	ph := app.model.FilePreview.Phase
@@ -313,7 +313,7 @@ func TestRunPreviewInternalSetsHighlightedCells(t *testing.T) {
 		st.Path = path
 	})
 	gen := app.filePreviewRunGen.Add(1)
-	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false, nil), previewTargetInactive, gen)
+	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false, nil, previewTargetInactive), previewTargetInactive, gen)
 
 	app.commandsMu.RLock()
 	st := app.model.FilePreview
@@ -326,6 +326,117 @@ func TestRunPreviewInternalSetsHighlightedCells(t *testing.T) {
 	}
 	if len(st.HighlightedCells) == 0 {
 		t.Fatal("HighlightedCells empty, want Chroma output")
+	}
+}
+
+func TestFilePreviewOverlayMapsF5ToToggleRaw(t *testing.T) {
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	id, ok := bundle.FilePreview.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if !ok || id != keymap.ActionFileViewToggleRaw {
+		t.Fatalf("FilePreview.Lookup(F5) = %q %v, want %s", id, ok, keymap.ActionFileViewToggleRaw)
+	}
+}
+
+func TestToggleFilePreviewRawMarkdownFlipsAndResetsScrollForMarkdown(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "notes.md")
+	writeFile(t, path)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Path = path
+		st.Phase = ui.FilePreviewPhaseDone
+		st.Scroll = 5
+	})
+
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+
+	if !app.model.FullscreenFilePreviewRawMarkdown {
+		t.Fatal("FullscreenFilePreviewRawMarkdown = false, want true after F5 on a markdown file")
+	}
+	app.commandsMu.RLock()
+	scroll := app.model.FullscreenFilePreview.Scroll
+	app.commandsMu.RUnlock()
+	if scroll != 0 {
+		t.Fatalf("Scroll = %d, want 0 after toggling raw/rendered", scroll)
+	}
+}
+
+func TestToggleFilePreviewRawMarkdownNoOpForNonMarkdown(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "notes.txt")
+	writeFile(t, path)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Path = path
+		st.Phase = ui.FilePreviewPhaseDone
+		st.Scroll = 5
+	})
+
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+
+	if app.model.FullscreenFilePreviewRawMarkdown {
+		t.Fatal("FullscreenFilePreviewRawMarkdown = true, want false for a non-markdown file")
+	}
+	app.commandsMu.RLock()
+	scroll := app.model.FullscreenFilePreview.Scroll
+	app.commandsMu.RUnlock()
+	if scroll != 5 {
+		t.Fatalf("Scroll = %d, want unchanged 5 (no-op)", scroll)
+	}
+}
+
+func TestToggleFilePreviewRawMarkdownNoOpForDiff(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "notes.md")
+	writeFile(t, path)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	app.model.ViewMode = ui.ViewFilePreview
+	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Path = path
+		st.Phase = ui.FilePreviewPhaseDone
+		st.IsDiff = true
+		st.Scroll = 5
+	})
+
+	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+
+	if app.model.FullscreenFilePreviewRawMarkdown {
+		t.Fatal("FullscreenFilePreviewRawMarkdown = true, want false while showing a diff")
+	}
+	app.commandsMu.RLock()
+	scroll := app.model.FullscreenFilePreview.Scroll
+	app.commandsMu.RUnlock()
+	if scroll != 5 {
+		t.Fatalf("Scroll = %d, want unchanged 5 (no-op)", scroll)
+	}
+}
+
+func TestOpenFilePreviewFullscreenResetsRawMarkdownFlag(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "notes.md")
+	writeFile(t, path)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.model.FullscreenFilePreviewRawMarkdown = true
+
+	app.openFilePreviewFullscreen()
+
+	if app.model.FullscreenFilePreviewRawMarkdown {
+		t.Fatal("FullscreenFilePreviewRawMarkdown = true, want reset to false on a fresh fullscreen preview")
 	}
 }
 
@@ -371,5 +482,44 @@ func TestF8DeletesOnlyPreviewedFileKeepingPanelSelection(t *testing.T) {
 	}
 	if _, err := os.Stat(otherPath); err != nil {
 		t.Fatal("other selected file must not be deleted")
+	}
+}
+
+// TestRefreshPreviewTargetAfterResizeReRunsOnlyOnWidthChange covers the decision logic used by
+// the *tcell.EventResize handler: an open preview target is re-run when its currently computed
+// text width differs from the width its content was last requested at, and left alone otherwise.
+func TestRefreshPreviewTargetAfterResizeReRunsOnlyOnWidthChange(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "notes.md")
+	writeFile(t, path)
+	screen := newScreen(t, 100, 30)
+	app := newApp(t, screen, dir)
+
+	app.patchFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhaseDone
+		st.Path = path
+	})
+	tw, _, ok := app.inactivePanelPreviewLayoutMetrics(true)
+	if !ok {
+		t.Fatal("inactivePanelPreviewLayoutMetrics() ok = false, want true")
+	}
+
+	// Same width as last request: no re-run.
+	app.previewLastWidth[previewTargetInactive] = tw
+	genBefore := app.filePreviewRunGen.Load()
+	app.refreshPreviewTargetAfterResize(previewTargetInactive)
+	if got := app.filePreviewRunGen.Load(); got != genBefore {
+		t.Fatalf("filePreviewRunGen = %d, want unchanged %d when width did not change", got, genBefore)
+	}
+
+	// Different width from last request: re-run triggered.
+	app.previewLastWidth[previewTargetInactive] = tw + 1
+	app.refreshPreviewTargetAfterResize(previewTargetInactive)
+	if got := app.filePreviewRunGen.Load(); got != genBefore+1 {
+		t.Fatalf("filePreviewRunGen = %d, want %d after width change triggers a re-run", got, genBefore+1)
+	}
+	if app.previewLastWidth[previewTargetInactive] != tw {
+		t.Fatalf("previewLastWidth[inactive] = %d, want %d recorded from the new request", app.previewLastWidth[previewTargetInactive], tw)
 	}
 }

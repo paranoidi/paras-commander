@@ -612,7 +612,78 @@ func (a *App) applyQuickViewPreviewNow() {
 		})
 		a.postCommandWake()
 		gen := a.filePreviewRunGen.Add(1)
-		go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.inactivePreviewChromeBlocked(), a.gitStatusForPath(path)), previewTargetInactive, gen)
+		go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.inactivePreviewChromeBlocked(), a.gitStatusForPath(path), previewTargetInactive), previewTargetInactive, gen)
+	}
+}
+
+// refreshInactiveFilePreview re-runs the current inactive-column (quick view) preview at its
+// current path, e.g. after a terminal resize changes the inactive column's text width. Scroll is
+// left untouched (unlike applyQuickViewPreviewNow, which is for opening/switching files).
+func (a *App) refreshInactiveFilePreview() {
+	a.commandsMu.RLock()
+	st := a.model.FilePreview
+	a.commandsMu.RUnlock()
+	if !st.Open || st.Path == "" {
+		return
+	}
+	tw, _, ok := a.inactivePanelPreviewLayoutMetrics(true)
+	if !ok {
+		return
+	}
+	workDir := a.activePanel().PathString()
+	req := a.previewRequest(st.Path, tw, workDir, a.inactivePreviewChromeBlocked(), a.gitStatusForPath(st.Path), previewTargetInactive)
+	gen := a.filePreviewRunGen.Add(1)
+	a.postCommandWake()
+	go a.runPreview(a.commandsCtx, req, previewTargetInactive, gen)
+}
+
+// refreshPreviewsAfterResize re-runs any open preview target whose current computed text width
+// differs from the width its content was last requested at. Markdown word-wrap and table layout
+// (internal/preview/mdformat) are baked into the emitted cells at request time, so a plain re-wrap
+// at the new width (the downstream character-wrap cache) is not enough after a terminal resize.
+func (a *App) refreshPreviewsAfterResize() {
+	a.refreshPreviewTargetAfterResize(previewTargetInactive)
+	a.refreshPreviewTargetAfterResize(previewTargetFullscreen)
+	a.refreshPreviewTargetAfterResize(previewTargetCarousel)
+}
+
+func (a *App) refreshPreviewTargetAfterResize(target previewTarget) {
+	a.commandsMu.RLock()
+	var open bool
+	switch target {
+	case previewTargetFullscreen:
+		open = a.model.FullscreenFilePreview.Open
+	case previewTargetCarousel:
+		open = a.model.CarouselFilePreview.Open
+	default:
+		open = a.model.FilePreview.Open
+	}
+	a.commandsMu.RUnlock()
+	if !open {
+		return
+	}
+
+	var tw int
+	var ok bool
+	switch target {
+	case previewTargetFullscreen:
+		tw, ok = a.fullscreenPreviewTextWidth()
+	case previewTargetCarousel:
+		tw, _, ok = a.carouselChildPreviewLayoutMetrics()
+	default:
+		tw, _, ok = a.inactivePanelPreviewLayoutMetrics(true)
+	}
+	if !ok || tw == a.previewLastWidth[target] {
+		return
+	}
+
+	switch target {
+	case previewTargetFullscreen:
+		a.refreshFullscreenFilePreview()
+	case previewTargetCarousel:
+		a.refreshCarouselFilePreview()
+	default:
+		a.refreshInactiveFilePreview()
 	}
 }
 
@@ -700,7 +771,8 @@ func (a *App) reconcileQuickViewPreview() {
 	a.armQuickViewPreviewDebounce()
 }
 
-func (a *App) previewRequest(path string, textW int, workDir string, chromeBlocked bool, gitStatus *gitstatus.Cell) preview.Request {
+func (a *App) previewRequest(path string, textW int, workDir string, chromeBlocked bool, gitStatus *gitstatus.Cell, target previewTarget) preview.Request {
+	a.previewLastWidth[target] = textW
 	req := preview.Request{
 		Path:      path,
 		TextWidth: textW,
@@ -786,6 +858,7 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 			st.CombinedText = ""
 			st.SetHighlightedCells(nil)
 			st.IsDiff = res.IsDiff
+			st.IsMarkdown = res.IsMarkdown
 			st.DiffHunkLines = nil
 			st.GitStatusText = ""
 			st.GitStatusThemeKey = ""
@@ -804,6 +877,7 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 		st.ExitCode = res.ExitCode
 		st.ErrorMsg = ""
 		st.IsDiff = res.IsDiff
+		st.IsMarkdown = res.IsMarkdown
 		st.DiffHunkLines = res.DiffHunkLines
 		st.GitStatusText = res.StatusText
 		st.GitStatusThemeKey = res.StatusThemeKey

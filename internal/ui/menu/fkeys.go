@@ -101,12 +101,19 @@ func FunctionKeysFilePreviewStylePicker() []FunctionKey {
 }
 
 // FunctionKeysFilePreviewView is the footer legend while the full-screen file view is active.
-// Esc is the primary exit key (shown); Left also closes the view.
-func FunctionKeysFilePreviewView() []FunctionKey {
+// Esc is the primary exit key (shown); Left also closes the view. rawMarkdown reflects
+// file.view.toggle-raw's current state: the F5 hint reads "Raw" when showing rendered
+// markdown (F5 would switch to raw source) and "Render" when already showing raw source.
+func FunctionKeysFilePreviewView(rawMarkdown bool) []FunctionKey {
+	toggleHint := "Raw"
+	if rawMarkdown {
+		toggleHint = "Render"
+	}
 	return []FunctionKey{
 		FooterEscClose,
 		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
 		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
+		{Key: tcell.KeyF5, KeyLabel: "F5", Hint: toggleHint},
 		{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete this"},
 		{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Style"},
 		{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},

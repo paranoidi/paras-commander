@@ -166,6 +166,11 @@ type Model struct {
 	FullscreenFilePreview FilePreviewState
 	// FullscreenFilePreviewDraw is a snapshot for ViewFilePreview rendering.
 	FullscreenFilePreviewDraw FilePreviewState
+	// FullscreenFilePreviewRawMarkdown is true while file.view.toggle-raw has switched the
+	// fullscreen preview of a markdown file to raw Chroma-highlighted source instead of
+	// rendered markdown. Reset to false whenever a new fullscreen preview opens. Only affects
+	// the fullscreen target — quick view and carousel previews always render.
+	FullscreenFilePreviewRawMarkdown bool
 	// FilePreviewThemePicker is the inline theme list on the right side of F3 file view.
 	FilePreviewThemePicker dialog.FilePreviewThemePickerState
 	HelpView               dialog.HelpViewState

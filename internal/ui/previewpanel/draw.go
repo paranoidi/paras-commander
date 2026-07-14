@@ -150,10 +150,16 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	if contentH <= 0 {
 		return
 	}
+	// Borderless rendered-markdown content gets a 1-space left/right screen margin
+	// (matches the width preview.WillRenderMarkdown-driven callers already reserved).
+	borderlessMarkdown := p.Borderless && st.IsMarkdown
 	textX := rect.X + 2
 	textW := rect.Width - 4
 	switch {
 	case p.Embedded:
+		textX = rect.X + 1
+		textW = rect.Width - 2
+	case borderlessMarkdown:
 		textX = rect.X + 1
 		textW = rect.Width - 2
 	case p.Borderless:
@@ -169,6 +175,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	// Embedded: margins at X and X+Width-1 (outer edges; title row is skipped since contentTop=Y+1).
 	_, borderBG, _ := borderStyle.Decompose()
 	_, surfaceBG, _ := chrome.Surface.Decompose()
+	padStyle := contentPadStyle(borderStyle, chrome.Surface, body)
 	marginStyle := chrome.Surface
 	if borderBG != surfaceBG {
 		marginStyle = borderStyle
@@ -178,6 +185,13 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	if p.Embedded {
 		leftMarginX, rightMarginX = rect.X, rect.X+rect.Width-1
 		paintMargins = rect.Width >= 2
+	} else if borderlessMarkdown {
+		// Margin must match the text row background exactly (contentPadStyle), not the
+		// chrome/frame color: borderless has no visible frame, so a mismatched fill here
+		// reads as a stray border where none is drawn.
+		leftMarginX, rightMarginX = rect.X, rect.X+rect.Width-1
+		paintMargins = rect.Width >= 2
+		marginStyle = padStyle
 	} else if !p.Borderless {
 		leftMarginX, rightMarginX = rect.X+1, rect.X+rect.Width-2
 		paintMargins = rect.Width >= 4
@@ -208,7 +222,6 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	if scroll > maxStart {
 		scroll = maxStart
 	}
-	padStyle := contentPadStyle(borderStyle, chrome.Surface, body)
 	for row := 0; row < contentH; row++ {
 		y := contentTop + row
 		if paintMargins {

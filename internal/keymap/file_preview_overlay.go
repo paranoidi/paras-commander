@@ -7,6 +7,7 @@ import "strings"
 func DefaultFilePreviewOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionFileViewThemePicker:  {"F9"},
+		ActionFileViewToggleRaw:    {"F5"},
 		ActionFileViewDiffNextHunk: {"C-M-j"},
 		ActionFileViewDiffPrevHunk: {"C-M-k"},
 	}

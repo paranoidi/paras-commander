@@ -16,7 +16,10 @@ import (
 
 // Options configures Chroma highlighting for a single file body.
 type Options struct {
-	Path         string
+	Path string
+	// Language, when set, selects the lexer by name/alias (e.g. a fenced code block's
+	// info string) instead of matching Path. Path is still used as a fallback.
+	Language     string
 	StyleName    string
 	BaseStyle    tcell.Style
 	LineNumbers  bool
@@ -47,17 +50,14 @@ func Highlight(source string, opts Options) Result {
 		gutterFmt = fmt.Sprintf("%%%dd", digits)
 		gutterWidth = cellStringWidth(fmt.Sprintf(gutterFmt+" ", lineCount))
 		gutterEntry := style.Get(chroma.LineNumbers)
-		gutterStyle = styleEntryToTcell(opts.BaseStyle, gutterEntry)
+		gutterStyle = StyleEntryToTcell(opts.BaseStyle, gutterEntry)
 	}
 	contentWidth := opts.ContentWidth
 	if contentWidth < 1 {
 		contentWidth = 1
 	}
 
-	lexer := lexers.Match(filepath.Base(opts.Path))
-	if lexer == nil {
-		lexer = lexers.Fallback
-	}
+	lexer := lexerFor(opts)
 	lexer = chroma.Coalesce(lexer)
 	it, err := lexer.Tokenise(nil, source)
 	if err != nil {
@@ -81,7 +81,7 @@ func Highlight(source string, opts Options) Result {
 	}
 	for token := it(); token != chroma.EOF; token = it() {
 		entry := style.Get(token.Type)
-		tokenStyle := styleEntryToTcell(opts.BaseStyle, entry)
+		tokenStyle := StyleEntryToTcell(opts.BaseStyle, entry)
 		for _, r := range token.Value {
 			if atLineStart {
 				emitGutter()
@@ -113,6 +113,20 @@ func Highlight(source string, opts Options) Result {
 		emitGutter()
 	}
 	return Result{Cells: out, GutterWidth: gutterWidth, ContentWidth: contentWidth}
+}
+
+// lexerFor resolves a lexer by Language (fenced code block info string) first,
+// falling back to matching Path, then the plain-text fallback lexer.
+func lexerFor(opts Options) chroma.Lexer {
+	if opts.Language != "" {
+		if l := lexers.Get(opts.Language); l != nil {
+			return l
+		}
+	}
+	if l := lexers.Match(filepath.Base(opts.Path)); l != nil {
+		return l
+	}
+	return lexers.Fallback
 }
 
 func countLines(s string) int {
@@ -170,7 +184,10 @@ func fallbackPlain(source string, base tcell.Style, tabWidth int, gutterFmt stri
 	return Result{Cells: out, GutterWidth: gutterWidth, ContentWidth: contentWidth}
 }
 
-func styleEntryToTcell(base tcell.Style, entry chroma.StyleEntry) tcell.Style {
+// StyleEntryToTcell converts a Chroma style entry to a tcell.Style, filling in
+// unset foreground/background from base. Shared with mdformat so both packages
+// derive terminal styles from Chroma style entries the same way.
+func StyleEntryToTcell(base tcell.Style, entry chroma.StyleEntry) tcell.Style {
 	baseFG, baseBG, _ := base.Decompose()
 	fg := baseFG
 	if entry.Colour.IsSet() {

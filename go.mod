@@ -13,6 +13,7 @@ require (
 	github.com/micro-editor/terminal v0.0.0-20250324214352-e587e959c6b5
 	github.com/pkg/sftp v1.13.10
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
+	github.com/yuin/goldmark v1.8.4
 	golang.org/x/crypto v0.51.0
 	golang.org/x/sys v0.44.0
 	golang.org/x/term v0.43.0

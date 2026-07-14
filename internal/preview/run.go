@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -12,8 +13,51 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/preview/chromaformat"
+	"github.com/paranoidi/paras-commander/internal/preview/mdformat"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
+
+// markdownExtensions are the file extensions eligible for rendered (not raw
+// Chroma-highlighted) markdown in internal preview mode. Single source of
+// truth for the extension list.
+var markdownExtensions = []string{".md", ".markdown"}
+
+// IsMarkdownPath reports whether path is eligible for rendered markdown (vs. raw
+// Chroma-highlighted source) in internal preview mode. Exported so callers outside
+// this package (e.g. the app layer's raw/rendered toggle) share the same extension
+// check instead of re-deriving it.
+func IsMarkdownPath(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	for _, e := range markdownExtensions {
+		if ext == e {
+			return true
+		}
+	}
+	return false
+}
+
+// WillRenderMarkdown reports whether Run(req) would produce content via the rendered-markdown
+// formatter (mdformat) rather than raw/diff/chroma output. Mirrors Run's dispatch, including the
+// git-diff fallback to plain content for untracked/ignored/unmodified files (see runGitDiff), so
+// callers can size layout (e.g. the fullscreen preview's margin) before the async run completes.
+func WillRenderMarkdown(req Request) bool {
+	if strings.ToLower(strings.TrimSpace(req.Preview.Mode)) == config.PreviewModeExternal {
+		return false
+	}
+	if !IsMarkdownPath(req.Path) || req.RawMarkdown {
+		return false
+	}
+	if req.GitDiff {
+		var eff gitstatus.Status
+		if req.GitStatus != nil {
+			eff = req.GitStatus.Effective()
+		}
+		if eff != gitstatus.NotModified && eff != gitstatus.New && eff != gitstatus.Ignored {
+			return false
+		}
+	}
+	return true
+}
 
 // Request is input for a single preview run.
 type Request struct {
@@ -25,6 +69,9 @@ type Request struct {
 	// GitDiff, when true, shows git diff output instead of file content.
 	GitDiff   bool
 	GitStatus *gitstatus.Cell // nil when not in a git repo or file is unmodified
+	// RawMarkdown, when true, skips rendered markdown and shows raw Chroma-highlighted
+	// source for a markdown path instead. Ignored for non-markdown paths.
+	RawMarkdown bool
 }
 
 // Result is the unified preview output for internal and external backends.
@@ -38,6 +85,10 @@ type Result struct {
 	Truncated        bool
 	// IsDiff is true when this result came from a git diff run.
 	IsDiff bool
+	// IsMarkdown is true when content was produced by the rendered-markdown formatter
+	// (mdformat) rather than raw/diff/chroma text. Drives the fullscreen preview's
+	// left/right margin (see previewpanel.State.IsMarkdown).
+	IsMarkdown bool
 	// DiffHunkLines holds 0-based source line numbers of @@ hunk markers.
 	DiffHunkLines []int
 	// StatusText is a short git-status label to show in the preview title (e.g. "no changes", "ignored").
@@ -57,6 +108,9 @@ func Run(ctx context.Context, req Request) Result {
 	case config.PreviewModeExternal:
 		return runExternal(ctx, req)
 	default:
+		if IsMarkdownPath(req.Path) && !req.RawMarkdown {
+			return runMarkdown(req)
+		}
 		return runInternal(req)
 	}
 }
@@ -104,6 +158,36 @@ func runInternal(req Request) Result {
 		HighlightedCells: cells,
 		GutterWidth:      hl.GutterWidth,
 		Truncated:        truncated,
+	}
+}
+
+// runMarkdown renders block-level markdown (headings, emphasis, lists, fenced
+// code, ...) instead of raw Chroma token coloring. Never reached for a git-dirty
+// file: Run only falls through to this default branch once req.GitDiff is false.
+func runMarkdown(req Request) Result {
+	data, truncated, err := readFileLimited(req.Path, config.DefaultMaxPreviewBytes)
+	if err != nil {
+		return Result{ErrorMsg: err.Error()}
+	}
+	contentW := max(1, req.TextWidth)
+	md := mdformat.Render(string(data), mdformat.Options{
+		Path:         req.Path,
+		StyleName:    req.Preview.Style,
+		BaseStyle:    req.BaseStyle,
+		ContentWidth: contentW,
+	})
+	cells := md.Cells
+	if truncated {
+		cells = append(cells, previewpanel.AnsiCell{R: '\n', St: req.BaseStyle})
+		for _, r := range "\n[output truncated]\n" {
+			cells = append(cells, previewpanel.AnsiCell{R: r, St: req.BaseStyle})
+		}
+	}
+	return Result{
+		Source:           previewpanel.SourceInternalHighlighted,
+		HighlightedCells: cells,
+		Truncated:        truncated,
+		IsMarkdown:       true,
 	}
 }
 

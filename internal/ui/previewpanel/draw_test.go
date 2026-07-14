@@ -214,6 +214,45 @@ func TestDrawEmbeddedPreviewChromaFramePaintsMarginColumns(t *testing.T) {
 	}
 }
 
+func TestDrawBorderlessMarkdownPreviewPaintsOneSpaceMargin(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	Draw(screen, rect, State{
+		Open:             true,
+		TitleBase:        "README.md",
+		Source:           SourceInternalHighlighted,
+		IsMarkdown:       true,
+		HighlightedCells: []AnsiCell{{R: 'x', St: body}},
+	}, DrawParams{
+		Theme:      styles,
+		Borderless: true,
+		BodyStyle:  body,
+	})
+
+	contentY := rect.Y + 1
+	leftCh, _, _ := screen.Get(rect.X, contentY)
+	if leftCh != " " {
+		t.Fatalf("left margin col = %q, want blank", leftCh)
+	}
+	rightCh, _, _ := screen.Get(rect.X+panelWidth-1, contentY)
+	if rightCh != " " {
+		t.Fatalf("right margin col = %q, want blank", rightCh)
+	}
+	textCh, _, _ := screen.Get(rect.X+1, contentY)
+	if textCh != "x" {
+		t.Fatalf("first text col = %q, want 'x' one column in from the margin", textCh)
+	}
+}
+
 func TestDrawEmbeddedPreviewTitleRowEdgesUseTitleBackground(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
