@@ -512,6 +512,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 
 		syncDriver := model.SyncDriverPanelID()
 		quickViewDriver := model.QuickViewDriverPanelID()
+		var cursorNameHintFallback CursorNameHintFallback
 		if layout.Primary.Width > 0 && showLeftPreview {
 			pvFocused := model.renderSubFocus() == SubFocusInactivePreview
 			drawFilePreviewPanel(screen, primaryFile, model.FilePreviewDraw, styles, primaryChromeBlocked, pvFocused,
@@ -526,6 +527,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 					SplitOrientation: model.SplitOrientation, SelectionsBottomHint: primarySelectionsBottomHint,
 					ShowSelectionSizeOnBottom: primarySelectionSizeOnFileBottom,
 					IsTransferTarget:          model.DestinationTargetPrimary,
+					CursorNameHintFallbackOut: cursorNameHintFallbackOut(primaryFileListFocus, &cursorNameHintFallback),
 				},
 				PanelDisplayConfig{
 					ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
@@ -559,6 +561,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 					SplitOrientation: model.SplitOrientation, SelectionsBottomHint: secondarySelectionsBottomHint,
 					ShowSelectionSizeOnBottom: secondarySelectionSizeOnFileBottom,
 					IsTransferTarget:          model.DestinationTargetSecondary,
+					CursorNameHintFallbackOut: cursorNameHintFallbackOut(secondaryFileListFocus, &cursorNameHintFallback),
 				},
 				PanelDisplayConfig{
 					ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
@@ -581,6 +584,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		if model.TerminalPanel.Visible && layout.Terminal.Height > 0 {
 			drawTerminalPanel(screen, layout.Terminal, model.TerminalPanel, styles)
 		}
+		drawCursorNameHintScreenFallback(screen, layout, &cursorNameHintFallback, model.TerminalPanel.Visible)
 	}
 	if model.Menu.Open && model.MenuBarInteractive() {
 		drawPulldownMenu(screen, layout, model.Menu, menus, styles)

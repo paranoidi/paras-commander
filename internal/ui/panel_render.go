@@ -113,6 +113,9 @@ type PanelContext struct {
 	// IsTransferTarget marks this panel as the resolved Copy/Move/Flatten destination
 	// (its border is painted with theme.PanelTargetFrame instead of the normal frame).
 	IsTransferTarget bool
+	// CursorNameHintFallbackOut receives the full cursor name when it does not fit on the
+	// panel bottom border and should be painted above the footer instead.
+	CursorNameHintFallbackOut *CursorNameHintFallback
 }
 
 // PanelDisplayConfig carries feature-flag and data inputs to drawPanel.
@@ -290,7 +293,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			if selectionSizeLabel != "" {
 				drawPanelBottomSelectionSize(screen, rect, ctx.PanelID, bottomCtx)
 			} else {
-				drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, panelcarousel.CenterNameWidth(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows), display.JobMarks)
+				drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, panelcarousel.CenterNameWidth(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows), display.JobMarks, ctx.CursorNameHintFallbackOut)
 			}
 			return
 		}
@@ -508,7 +511,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if selectionSizeLabel != "" {
 		drawPanelBottomSelectionSize(screen, rect, ctx.PanelID, bottomCtx)
 	} else {
-		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, nameWidth, display.JobMarks)
+		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, nameWidth, display.JobMarks, ctx.CursorNameHintFallbackOut)
 	}
 }
 

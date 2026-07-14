@@ -149,6 +149,20 @@ func panelBottomPhysicalLeftChainEndX(rect Rect, ctx PanelBottomIndicatorContext
 	return x
 }
 
+// CursorNameHintFallback holds the active panel cursor name when it must be shown above
+// the footer because it does not fit on the panel bottom border.
+type CursorNameHintFallback struct {
+	FullName string
+	Style    tcell.Style
+}
+
+func cursorNameHintFallbackOut(fileListActive bool, out *CursorNameHintFallback) *CursorNameHintFallback {
+	if fileListActive {
+		return out
+	}
+	return nil
+}
+
 func drawPanelBottomCursorNameHint(
 	screen tcell.Screen,
 	rect Rect,
@@ -162,6 +176,7 @@ func drawPanelBottomCursorNameHint(
 	nameWidth int,
 	suffix panellist.RowSuffix,
 	styles theme.Theme,
+	fallbackOut *CursorNameHintFallback,
 ) {
 	if !fileListActive || chromeBlocked {
 		return
@@ -173,23 +188,57 @@ func drawPanelBottomCursorNameHint(
 	if !entryDisplayNameTruncated(entry, nameWidth, showIcons, suffix, styles) {
 		return
 	}
+	fullName := entryListingFullName(entry, showIcons)
+	fullRunes := []rune(fullName)
+	if len(fullRunes) == 0 {
+		return
+	}
 	startX, endX, spanOK := panelBottomCenterOverlaySpan(rect, panelID, ctx)
-	if !spanOK {
+	if spanOK {
+		spanW := endX - startX + 1
+		if spanW > 0 && len(fullRunes) <= spanW {
+			pad := spanW - len(fullRunes)
+			leftPad := pad / 2
+			x := startX + leftPad
+			y := rect.Y + rect.Height - 1
+			primitive.TextOverlay(screen, x, y, len(fullRunes), fullName, titleStyle)
+			return
+		}
+	}
+	if fallbackOut != nil {
+		fallbackOut.FullName = fullName
+		fallbackOut.Style = titleStyle
+	}
+}
+
+// drawCursorNameHintScreenFallback paints a cursor-name hint centered on the row above the footer
+// when the full name does not fit on the panel bottom border.
+func drawCursorNameHintScreenFallback(screen tcell.Screen, layout Layout, fallback *CursorNameHintFallback, terminalVisible bool) {
+	if fallback == nil || fallback.FullName == "" || layout.Footer.Height <= 0 {
 		return
 	}
-	spanW := endX - startX + 1
-	if spanW <= 0 {
+	rowY := layout.Footer.Y - 1
+	if terminalVisible && layout.Terminal.Height > 0 {
+		rowY = layout.Terminal.Y
+	}
+	drawScreenCenteredCursorNameHint(screen, Rect{X: 0, Y: rowY, Width: layout.Width, Height: 1}, fallback.FullName, fallback.Style)
+}
+
+func drawScreenCenteredCursorNameHint(screen tcell.Screen, rect Rect, fullName string, style tcell.Style) {
+	if fullName == "" || rect.Width <= 0 || rect.Height <= 0 {
 		return
 	}
-	fullRunes := []rune(entryListingFullName(entry, showIcons))
-	if len(fullRunes) == 0 || len(fullRunes) > spanW {
+	runes := []rune(fullName)
+	if len(runes) > rect.Width {
+		fullName = primitive.TruncateRight(fullName, rect.Width)
+		runes = []rune(fullName)
+	}
+	if len(runes) == 0 {
 		return
 	}
-	pad := spanW - len(fullRunes)
-	leftPad := pad / 2
-	x := startX + leftPad
-	y := rect.Y + rect.Height - 1
-	primitive.TextOverlay(screen, x, y, len(fullRunes), string(fullRunes), titleStyle)
+	x := rect.X + (rect.Width-len(runes))/2
+	y := rect.Y
+	primitive.TextOverlay(screen, x, y, len(runes), fullName, style)
 }
 
 func drawPanelCursorNameHintForState(
@@ -204,6 +253,7 @@ func drawPanelCursorNameHintForState(
 	showIcons bool,
 	nameWidth int,
 	jobMarks []JobPathMark,
+	fallbackOut *CursorNameHintFallback,
 ) {
 	if state.CursorNameHintCoalesce {
 		return
@@ -225,5 +275,5 @@ func drawPanelCursorNameHintForState(
 		NewFileTier:      state.NewFileMarkTier(entry),
 		SubtreeSelection: subtreeMark,
 	}
-	drawPanelBottomCursorNameHint(screen, rect, panelID, state, ctx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, suffix, ctx.Styles)
+	drawPanelBottomCursorNameHint(screen, rect, panelID, state, ctx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, suffix, ctx.Styles, fallbackOut)
 }

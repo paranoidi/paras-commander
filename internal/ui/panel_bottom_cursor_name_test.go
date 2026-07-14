@@ -123,7 +123,7 @@ func TestDrawPanelBottomCursorNameHintOnActivePanel(t *testing.T) {
 	}
 }
 
-func TestDrawPanelBottomCursorNameHintOmittedWhenWiderThanOverlaySpan(t *testing.T) {
+func TestDrawPanelBottomCursorNameHintFallsBackWhenWiderThanOverlaySpan(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -139,15 +139,58 @@ func TestDrawPanelBottomCursorNameHintOmittedWhenWiderThanOverlaySpan(t *testing
 		Cursor:  0,
 	}
 	styles := theme.Default()
+	var fallback CursorNameHintFallback
 	drawPanel(screen, rect, state,
 		PanelStyleConfig{Styles: styles},
-		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: PrimaryPanel, QuickViewDriverPanelID: -1},
+		PanelContext{
+			PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel,
+			SyncDriverPanelID: PrimaryPanel, QuickViewDriverPanelID: -1,
+			CursorNameHintFallbackOut: &fallback,
+		},
 		PanelDisplayConfig{ShowIcons: true, ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
 
 	bottomY := rect.Y + rect.Height - 1
 	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)
 	if strings.Contains(bottom, longName) {
-		t.Fatalf("bottom = %q, want no hint when full name cannot fit between indicators", bottom)
+		t.Fatalf("bottom = %q, want no hint on border when full name cannot fit between indicators", bottom)
+	}
+	if fallback.FullName == "" || !strings.Contains(fallback.FullName, longName) {
+		t.Fatalf("fallback = %q, want full cursor name for screen row", fallback.FullName)
+	}
+}
+
+func TestRenderDrawsCursorNameHintAboveFooterWhenTooWideForBorder(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	longName := strings.Repeat("m", 70) + ".txt"
+	model := Model{
+		Primary: panel.State{
+			Path:    pathloc.MustParse("/tmp"),
+			Entries: []localfs.Entry{{Name: longName, Path: "/tmp/" + longName}},
+			Cursor:  0,
+		},
+		Secondary:     panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:   PrimaryPanel,
+		ShowFileIcons: true,
+	}
+	Render(screen, model, theme.Default())
+
+	statusRow := layoutStatusMessageRowY(height)
+	row := tcelltest.TextAt(screen, 0, statusRow, width)
+	if !strings.Contains(row, longName) {
+		t.Fatalf("row above footer = %q, want full cursor name centered on screen", row)
+	}
+	bottomY := height - 1
+	bottom := tcelltest.TextAt(screen, 0, bottomY, width)
+	if strings.Contains(bottom, longName) {
+		t.Fatalf("footer row = %q, want cursor name above footer not on footer", bottom)
 	}
 }
 
