@@ -104,7 +104,11 @@ func (a *App) syncPreviewStylePickerSelection() bool {
 	if name == "" {
 		return false
 	}
-	a.config.Preview.Style = config.NormalizePreviewStyle(name)
+	style := config.NormalizePreviewStyle(name)
+	if style == a.config.Preview.Style {
+		return false
+	}
+	a.config.Preview.Style = style
 	return true
 }
 

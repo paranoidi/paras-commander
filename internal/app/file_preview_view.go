@@ -72,6 +72,15 @@ func (a *App) fullscreenFilePreviewScrollMetrics() (textW, contentH, lineCount i
 }
 
 func (a *App) clampFullscreenFilePreviewScroll() {
+	a.commandsMu.RLock()
+	ph := a.model.FullscreenFilePreview.Phase
+	a.commandsMu.RUnlock()
+	if ph == ui.FilePreviewPhasePending || ph == ui.FilePreviewPhaseRunning {
+		// Content is being (re)rendered (e.g. theme switch in progress) and its
+		// line count is a placeholder — clamping now would zero a valid scroll
+		// position before the real content lands.
+		return
+	}
 	_, ch, lc := a.fullscreenFilePreviewScrollMetrics()
 	maxStart := max(0, lc-ch)
 	a.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
