@@ -30,6 +30,11 @@ var tableMarkdown = sync.OnceValue(func() goldmark.Markdown {
 	return goldmark.New(goldmark.WithExtensions(extension.Table))
 })
 
+// codeBlockTint is how far codeBase shifts away from the style's page Background
+// (see Render), chosen to read clearly as a distinct block without overpowering
+// the syntax colours drawn on top of it.
+const codeBlockTint = 0.18
+
 // Options configures markdown rendering for a single file body.
 type Options struct {
 	Path         string
@@ -67,6 +72,17 @@ func Render(source string, opts Options) Result {
 	// (styled via styleFor) pick up the syntax style's background, causing
 	// a two-tone patchwork.
 	r.textBase = r.styleFor(chroma.Text)
+	// codeBase brightens (or darkens, for light styles) the style's own page
+	// Background so fenced/indented code reads as a distinct block instead of
+	// blending into prose, which already carries that same page Background (see
+	// textBase comment above). Chroma's own LineHighlight token is unsuitable here:
+	// it's designed as a subtle ~10% single-line cursor marker, too faint to read as
+	// a block over many lines; codeBlockTint picks a bolder, still style-derived shift.
+	r.codeBase = r.textBase
+	if bg := r.style.Get(chroma.Background); bg.Background.IsSet() {
+		boosted := bg.Background.BrightenOrDarken(codeBlockTint)
+		r.codeBase = r.textBase.Background(tcell.NewRGBColor(int32(boosted.Red()), int32(boosted.Green()), int32(boosted.Blue())))
+	}
 	r.renderSiblings(doc, nil, nil)
 	return Result{Cells: r.out}
 }
@@ -76,6 +92,7 @@ type renderer struct {
 	style     *chroma.Style
 	base      tcell.Style
 	textBase  tcell.Style
+	codeBase  tcell.Style
 	styleName string
 	width     int
 	out       []previewpanel.AnsiCell
@@ -406,7 +423,7 @@ func (r *renderer) renderCode(code, lang string, firstPrefix, contPrefix []previ
 	opts := chromaformat.Options{
 		Language:     lang,
 		StyleName:    r.styleName,
-		BaseStyle:    r.textBase,
+		BaseStyle:    r.codeBase,
 		TabWidth:     config.DefaultPreviewTabWidth,
 		ContentWidth: width,
 	}
@@ -414,7 +431,16 @@ func (r *renderer) renderCode(code, lang string, firstPrefix, contPrefix []previ
 		opts.Path = "code.txt"
 	}
 	hl := chromaformat.Highlight(code, opts)
-	indentCells := r.runes(indent, r.textBase)
+	// Chroma's Style.Get merges the page's Background entry into every token
+	// (style.go: Get() always inherits s.get(Background)), so each highlighted
+	// cell's background comes back as the page background no matter what
+	// opts.BaseStyle carries. Force the code-block background on afterward,
+	// keeping the per-token foreground/bold/italic from Highlight.
+	_, codeBG, _ := r.codeBase.Decompose()
+	for i := range hl.Cells {
+		hl.Cells[i].St = hl.Cells[i].St.Background(codeBG)
+	}
+	indentCells := r.runes(indent, r.codeBase)
 	first := true
 	for _, line := range splitCellLines(hl.Cells) {
 		prefix := contPrefix
