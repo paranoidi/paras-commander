@@ -23,6 +23,8 @@ type ScanWalkHooks struct {
 	OnPath      func(path string) error
 	YieldEveryN int
 	Yield       func()
+	// FlatDestNames requests dest/<basename> plan naming (flatten jobs); see ops.PlanBuildOptions.
+	FlatDestNames bool
 }
 
 // ScanFunc builds a transfer plan and totals; wired by the app using internal/ops.
@@ -105,6 +107,7 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 	}
 
 	hooks := ScanWalkHooks{
+		FlatDestNames: job.Type == TypeFlatten,
 		OnPath: func(path string) error {
 			now := time.Now()
 			if lastProgress.IsZero() || now.Sub(lastProgress) >= progressMin {

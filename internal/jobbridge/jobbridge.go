@@ -52,8 +52,9 @@ func EventUpdatesMarks(t jobs.EventType) bool {
 func ScanFunc() jobs.ScanFunc {
 	return func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks jobs.ScanWalkHooks) (jobs.ScanResult, error) {
 		opts := ops.PlanBuildOptions{
-			YieldEveryN: hooks.YieldEveryN,
-			Yield:       hooks.Yield,
+			YieldEveryN:   hooks.YieldEveryN,
+			Yield:         hooks.Yield,
+			FlatDestNames: hooks.FlatDestNames,
 		}
 		if hooks.OnPath != nil {
 			opts.OnPath = hooks.OnPath
@@ -192,6 +193,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 			PreallocateMinFileBytes:    opsCfg.PreallocateMinFileBytes,
 			SyncAtJobEnd:               opsCfg.SyncAtJobEnd,
 			SyncMinFileKiB:             opsCfg.SyncMinFileKiB,
+			FlatDestNames:              job.Type == jobs.TypeFlatten,
 		}
 		if job.Destination.IsRemote() {
 			opts.CowFileCloning = false
@@ -254,7 +256,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 		totalBytes := job.TotalBytes
 		if (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) && len(opsPlan) == 0 {
 			var tf int
-			opsPlan, tf, _, totalBytes, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{})
+			opsPlan, tf, _, totalBytes, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{FlatDestNames: job.Type == jobs.TypeFlatten})
 			if planErr == nil {
 				emit(jobs.Event{
 					Type:       jobs.EventPlanTotals,

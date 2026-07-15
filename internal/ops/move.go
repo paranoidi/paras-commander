@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
@@ -135,18 +136,29 @@ func renameFastPathOrFallback(src, dst pathloc.Path) (renamed, skipped, fallback
 // executeMoveRenamePhase tries rename for each source with conflict checks.
 // When fallbackCopy is true, prior renames in this batch were rolled back.
 // When plan is non-nil, per-source progress uses pre-scan counts and post-rename walks are skipped.
-func executeMoveRenamePhase(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, plan []PlanItem, throttle ProgressEmitThrottle, resolver ConflictResolver, progress ProgressCallback) (doneFiles int, doneBytes int64, fallbackCopy bool, err error) {
+func executeMoveRenamePhase(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, plan []PlanItem, flatNames bool, throttle ProgressEmitThrottle, resolver ConflictResolver, progress ProgressCallback) (doneFiles int, doneBytes int64, fallbackCopy bool, err error) {
 	usePlan := len(plan) > 0
 	var renamed []renamePair
 	var cumulativeFiles int
 	var cumulativeBytes int64
 
+	var nameRoot pathloc.Path
+	if !flatNames {
+		nameRoot = TransferNameRoot(sources)
+	}
 	for _, src := range sources {
 		if err := ctx.Err(); err != nil {
 			renamePairsRollback(renamed)
 			return 0, 0, false, err
 		}
-		dst := ResolveDestination(src, destination)
+		name := TransferDestName(src, nameRoot)
+		dst := ResolveDestinationNamed(destination, name)
+		if strings.ContainsAny(name, `/\`) {
+			if err := ensureParentDirs(ctx, dst); err != nil {
+				renamePairsRollback(renamed)
+				return 0, 0, false, fmt.Errorf("create parent for %q: %w", dst, err)
+			}
+		}
 		didRename, skipped, needCopy, renameErr := renameSourceForMove(ctx, src, dst, resolver)
 		if renameErr != nil {
 			renamePairsRollback(renamed)
@@ -198,7 +210,7 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 		return 0, 0, err
 	}
 
-	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, nil, throttle, resolver, progress)
+	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, nil, opts.FlatDestNames, throttle, resolver, progress)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -217,7 +229,7 @@ func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources 
 		plan = planOptional
 		_, _, tb = SummarizePlan(plan)
 	} else {
-		plan, _, _, tb, planErr = BuildCopyPlanWithTotalsCtx(ctx, sources, destination, PlanBuildOptions{})
+		plan, _, _, tb, planErr = BuildCopyPlanWithTotalsCtx(ctx, sources, destination, PlanBuildOptions{FlatDestNames: opts.FlatDestNames})
 		if planErr != nil {
 			return 0, 0, fmt.Errorf("move copy phase plan: %w", planErr)
 		}
@@ -267,7 +279,7 @@ func ExecuteMoveWithPlan(ctx context.Context, plan []PlanItem, sources []pathloc
 		return 0, 0, err
 	}
 
-	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, plan, throttle, resolver, progress)
+	doneFiles, doneBytes, fallbackToCopy, err := executeMoveRenamePhase(ctx, sources, destination, plan, opts.FlatDestNames, throttle, resolver, progress)
 	if err != nil {
 		return 0, 0, err
 	}

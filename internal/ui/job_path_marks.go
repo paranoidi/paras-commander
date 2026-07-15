@@ -8,6 +8,8 @@ import (
 
 // resolvedJobDestinationPath matches ops.ResolveDestination for a fixed dest-is-dir flag
 // without calling Stat (see jobs.Job.DestIsDir at enqueue time).
+// ponytail: basename-only approximation for in-flight glyphs; batch-relative names
+// (ops.TransferDestName) would cost a common-root walk per row paint.
 func resolvedJobDestinationPath(src, dest string, destIsDir bool) string {
 	srcLoc, err1 := pathloc.Parse(src)
 	destLoc, err2 := pathloc.Parse(dest)

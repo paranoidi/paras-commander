@@ -411,12 +411,11 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 	}
 	absDest := destLoc.String()
 
-	nSelf := 0
-	for _, src := range sources {
-		if ops.ResolvedSameAsSource(pathloc.MustParse(src), destLoc) {
-			nSelf++
-		}
+	srcLocs := make([]pathloc.Path, len(sources))
+	for i, src := range sources {
+		srcLocs[i] = pathloc.MustParse(src)
 	}
+	nSelf := ops.SelfTargetCount(srcLocs, destLoc)
 	if nSelf > 0 {
 		if len(sources) > 1 {
 			a.setTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)

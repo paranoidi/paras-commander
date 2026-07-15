@@ -151,7 +151,7 @@ func TestFlattenSameNameNestedDirMove(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	opts := Options{CopyBufferKiB: 4}
+	opts := Options{CopyBufferKiB: 4, FlatDestNames: true}
 	done, _, err := ExecuteMove(context.Background(), MustPaths(sources...), destLoc, opts, ProgressEmitThrottle{}, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ExecuteMove: %v", err)

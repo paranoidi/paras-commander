@@ -855,13 +855,11 @@ func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 		return
 	}
 	absDest := destLoc.String()
-	nSelf := 0
-	for _, src := range sources {
-		srcLoc := pathloc.MustParse(src)
-		if ops.ResolvedSameAsSource(srcLoc, destLoc) {
-			nSelf++
-		}
+	srcLocs := make([]pathloc.Path, len(sources))
+	for i, src := range sources {
+		srcLocs[i] = pathloc.MustParse(src)
 	}
+	nSelf := ops.SelfTargetCount(srcLocs, destLoc)
 	if nSelf > 0 {
 		if len(sources) > 1 {
 			h.host.SetTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)

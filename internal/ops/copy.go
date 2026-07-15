@@ -19,6 +19,8 @@ type PlanBuildOptions struct {
 	// YieldEveryN invokes Yield after every N walk callbacks when Yield is non-nil.
 	YieldEveryN int
 	Yield       func()
+	// FlatDestNames mirrors Options.FlatDestNames for plan building.
+	FlatDestNames bool
 }
 
 // ConflictResolver is called when a destination path already exists.
@@ -144,7 +146,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 	if planOptional != nil {
 		plan = planOptional
 	} else {
-		plan, err = BuildPlan(sources, destination, true)
+		plan, err = BuildPlanCtx(ctx, sources, destination, true, PlanBuildOptions{FlatDestNames: opts.FlatDestNames})
 		if err != nil {
 			return 0, 0, nil, fmt.Errorf("build copy plan: %w", err)
 		}

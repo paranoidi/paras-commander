@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -25,13 +27,20 @@ func TopLevelDestNamesFromJob(j *jobs.Job) (destDir pathloc.Path, names []string
 	if destDir.IsZero() {
 		return pathloc.Path{}, nil, false
 	}
+	var nameRoot pathloc.Path
+	if j.Type != jobs.TypeFlatten {
+		nameRoot = ops.TransferNameRoot(j.Sources)
+	}
 	seen := make(map[string]struct{})
 	for _, src := range j.Sources {
-		dst := ops.ResolveDestination(src, j.Destination)
-		if !dst.Parent().Equal(destDir) {
-			continue
+		base := j.Destination.Base()
+		if j.DestIsDir {
+			// Nested batch names create a directory at the destination; mark its first segment.
+			base = ops.TransferDestName(src, nameRoot)
+			if i := strings.IndexAny(base, `/\`); i >= 0 {
+				base = base[:i]
+			}
 		}
-		base := dst.Base()
 		if base == "" || base == "." {
 			continue
 		}

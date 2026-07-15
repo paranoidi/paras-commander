@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -56,6 +57,9 @@ type Options struct {
 	SyncAtJobEnd bool
 	// SyncMinFileKiB skips fsync for files smaller than this threshold (0 = no minimum).
 	SyncMinFileKiB int
+	// FlatDestNames resolves every source to dest/<basename> (flatten jobs) instead of
+	// batch-relative names below the sources' common parent (see TransferNameRoot).
+	FlatDestNames bool
 }
 
 // DefaultOptions returns operation defaults aligned with config.Default().Operations.
@@ -124,6 +128,57 @@ func ResolvedSameAsSource(src, destDir pathloc.Path) bool {
 	return PathsEquivalent(src, ResolveDestination(src, destDir))
 }
 
+// SelfTargetCount reports how many of sources would resolve onto themselves when
+// transferred into destDir, using the same batch-relative naming as BuildPlan.
+func SelfTargetCount(sources []pathloc.Path, destDir pathloc.Path) int {
+	root := TransferNameRoot(sources)
+	n := 0
+	for _, src := range sources {
+		if PathsEquivalent(src, ResolveDestinationNamed(destDir, TransferDestName(src, root))) {
+			n++
+		}
+	}
+	return n
+}
+
+// TransferNameRoot returns the deepest common ancestor of the sources' parent
+// directories. Destination names for a batch transfer are taken relative to this
+// root so a selection spanning multiple directories keeps its structure under
+// the destination. Zero when sources are empty or mix schemes/hosts (callers
+// fall back to basename naming).
+func TransferNameRoot(sources []pathloc.Path) pathloc.Path {
+	var root pathloc.Path
+	for _, src := range sources {
+		parent := src.Parent()
+		switch {
+		case root.IsZero():
+			root = parent
+		case !parent.Equal(root):
+			anc, ok := pathloc.CommonAncestor(root, parent)
+			if !ok {
+				return pathloc.Path{}
+			}
+			root = anc
+		}
+	}
+	return root
+}
+
+// TransferDestName returns the destination child name for src in a batch rooted
+// at root (from TransferNameRoot): src's path below root, or its basename when
+// root is zero or src is not under it. The result may span multiple path
+// segments; pathloc.Path.Join accepts it.
+func TransferDestName(src, root pathloc.Path) string {
+	if !root.IsZero() && !src.Equal(root) && src.HasPrefix(root) {
+		rel := strings.TrimPrefix(src.String(), root.String())
+		rel = strings.TrimLeft(rel, `/\`)
+		if rel != "" {
+			return rel
+		}
+	}
+	return src.Base()
+}
+
 // DestinationUnderSource reports whether resolvedDest lies inside src (strict descendant).
 func DestinationUnderSource(src, resolvedDest pathloc.Path) bool {
 	if src.IsZero() || resolvedDest.IsZero() || src.Equal(resolvedDest) {
@@ -144,12 +199,26 @@ func ResolveDestination(src, dest pathloc.Path) pathloc.Path {
 
 // ResolveDestinationCtx is ResolveDestination with backend Stat for remote paths.
 func ResolveDestinationCtx(ctx context.Context, src, dest pathloc.Path) (pathloc.Path, error) {
+	return resolveDestinationNamedCtx(ctx, dest, src.Base())
+}
+
+// ResolveDestinationNamed is ResolveDestination with an explicit child name
+// (see TransferDestName) instead of src's basename.
+func ResolveDestinationNamed(dest pathloc.Path, name string) pathloc.Path {
+	resolved, err := resolveDestinationNamedCtx(context.Background(), dest, name)
+	if err != nil {
+		return dest
+	}
+	return resolved
+}
+
+func resolveDestinationNamedCtx(ctx context.Context, dest pathloc.Path, name string) (pathloc.Path, error) {
 	isDir, err := destinationIsDir(ctx, dest)
 	if err != nil {
 		return dest, err
 	}
 	if isDir {
-		child, err := dest.Join(src.Base())
+		child, err := dest.Join(name)
 		if err != nil {
 			return dest, err
 		}
@@ -290,11 +359,15 @@ func BuildPlanCtx(ctx context.Context, sources []pathloc.Path, destination pathl
 		}
 		return nil
 	}
+	var nameRoot pathloc.Path
+	if !opts.FlatDestNames {
+		nameRoot = TransferNameRoot(sources)
+	}
 	for _, srcLoc := range sources {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		dstLoc, err := ResolveDestinationCtx(ctx, srcLoc, destination)
+		dstLoc, err := resolveDestinationNamedCtx(ctx, destination, TransferDestName(srcLoc, nameRoot))
 		if err != nil {
 			return nil, err
 		}
