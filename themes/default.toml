@@ -119,7 +119,7 @@ usage.cursor.selected = { fg = "yellow", bg = "bright_blue", bold = true }
 frame = { fg = "green" }
 
 [panel.carousel.inactive]
-row.cursor = { fg = "white", bg = "black" }
+row.cursor = { bg = "black" }
 row.cursor.selected = { fg = "yellow", bg = "black", bold = true }
 
 [panel.inactive]
@@ -127,7 +127,7 @@ disk_usage_overview = { fg = "bright_black"}
 frame = { fg = "bright_black" }
 header = { fg = "bright_white", bg = "blue", bold = true }
 header.carousel = { fg = "black", bg = "bright_black" }
-row.cursor = { fg = "white", bg = "black" }
+row.cursor = { bg = "black" }
 row.cursor.selected = { fg = "yellow", bg = "cyan", bold = true }
 surface = { fg = "white" }
 title = { fg = "white" }

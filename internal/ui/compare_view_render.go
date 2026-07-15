@@ -182,7 +182,7 @@ func entrySecondaryAbs(snap comparepkg.Snapshot, row comparepkg.Row) string {
 
 func comparePathCellStyle(pathBase tcell.Style, colFocused, rowCursor, pathSelected bool, styles theme.Theme, chromeBlocked bool, bg tcell.Color) tcell.Style {
 	if colFocused && rowCursor {
-		return styles.PanelListingCursorStyle(theme.PanelListingCursorOpts{
+		return styles.PanelListingCursorStyle(pathBase, theme.PanelListingCursorOpts{
 			ChromeBlocked:  chromeBlocked,
 			FileListActive: true,
 			Selected:       pathSelected,

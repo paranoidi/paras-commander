@@ -177,7 +177,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 			selected := selState.IsSelected(entry)
 			isCursor := entryIndex == cursor
 			if isCursor {
-				style = p.Styles.PanelListingCursorStyle(theme.PanelListingCursorOpts{
+				style = p.Styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
 					ChromeBlocked:     p.ChromeBlocked,
 					FileListActive:    p.FileListActive && !inactive,
 					CarouselInactive:  inactive,

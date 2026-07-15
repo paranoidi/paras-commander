@@ -47,7 +47,19 @@ func (t Theme) PanelListingSelectedStyle(chromeBlocked bool) tcell.Style {
 }
 
 // PanelListingCursorStyle returns cursor-row styling for file panels and carousel columns.
-func (t Theme) PanelListingCursorStyle(opts PanelListingCursorOpts) tcell.Style {
+// base is the row's non-cursor style; when the theme's cursor style leaves fg unset
+// (e.g. panel.inactive.row.cursor = { bg = "black" }), the base foreground and attributes
+// are kept so entry-type colors (directory blue bold, symlink cyan) survive under the cursor.
+func (t Theme) PanelListingCursorStyle(base tcell.Style, opts PanelListingCursorOpts) tcell.Style {
+	cursor := t.panelListingCursorThemeStyle(opts)
+	if fg, _, _ := cursor.Decompose(); fg == tcell.ColorDefault {
+		_, bg, _ := cursor.Decompose()
+		return base.Background(bg)
+	}
+	return cursor
+}
+
+func (t Theme) panelListingCursorThemeStyle(opts PanelListingCursorOpts) tcell.Style {
 	if opts.ChromeBlocked {
 		if opts.Selected {
 			return t.PanelBlockedCursorSelected

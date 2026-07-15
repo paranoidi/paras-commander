@@ -265,7 +265,7 @@ func drawDedupTreePane(
 		case groupAllMarked:
 			lineStyle = styles.PanelDedupRowAllMarked.Background(bg)
 		case rowSelected:
-			lineStyle = styles.PanelListingCursorStyle(theme.PanelListingCursorOpts{
+			lineStyle = styles.PanelListingCursorStyle(rowBase, theme.PanelListingCursorOpts{
 				ChromeBlocked:  chromeBlocked,
 				FileListActive: p.Focused,
 				Selected:       marked || dirFullyMarked,

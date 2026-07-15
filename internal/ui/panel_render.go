@@ -387,7 +387,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 				style = panelStyle.Styles.PanelListingSelectedStyle(ctx.ChromeBlocked)
 			}
 			if entryIndex == state.Cursor {
-				style = panelStyle.Styles.PanelListingCursorStyle(theme.PanelListingCursorOpts{
+				style = panelStyle.Styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
 					ChromeBlocked:     ctx.ChromeBlocked,
 					FileListActive:    ctx.FileListActive,
 					Selected:          selected,
