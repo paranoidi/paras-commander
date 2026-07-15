@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -27,25 +29,15 @@ func TestRunVersionFlags(t *testing.T) {
 	}
 }
 
-func TestRunRejectsUnexpectedPositional(t *testing.T) {
+func TestRunRejectsPathArgumentsWithChooserFile(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	err := run([]string{"/tmp/example.go"}, &stderr, &stdout)
+	// Flags must precede positionals: the Go flag package stops at the first non-flag.
+	err := run([]string{"--chooser-file=/tmp/out", "/tmp/example.go"}, &stderr, &stdout)
 	if err == nil {
 		t.Fatal("run: nil error, want rejection")
 	}
-	if !strings.Contains(err.Error(), "unexpected argument") {
-		t.Fatalf("error = %v, want unexpected argument", err)
-	}
-}
-
-func TestRunRejectsPositionalWithChooserFile(t *testing.T) {
-	var stdout, stderr bytes.Buffer
-	err := run([]string{"/tmp/example.go", "--chooser-file=/tmp/out"}, &stderr, &stdout)
-	if err == nil {
-		t.Fatal("run: nil error, want rejection")
-	}
-	if !strings.Contains(err.Error(), "unexpected argument") {
-		t.Fatalf("error = %v, want unexpected argument", err)
+	if !strings.Contains(err.Error(), "path arguments cannot be used with --chooser-file") {
+		t.Fatalf("error = %v, want path arguments / chooser-file conflict", err)
 	}
 }
 
@@ -61,8 +53,17 @@ func TestRunRejectsSelectWithoutChooserFile(t *testing.T) {
 }
 
 func TestRunRejectsTooManyPositionals(t *testing.T) {
+	root := t.TempDir()
+	a := filepath.Join(root, "alpha")
+	b := filepath.Join(root, "bravo")
+	c := filepath.Join(root, "charlie")
+	for _, d := range []string{a, b, c} {
+		if err := os.Mkdir(d, 0o755); err != nil {
+			t.Fatalf("Mkdir %s: %v", d, err)
+		}
+	}
 	var stdout, stderr bytes.Buffer
-	err := run([]string{"/tmp/a", "/tmp/b", "--chooser-file=/tmp/out"}, &stderr, &stdout)
+	err := run([]string{a, b, c}, &stderr, &stdout)
 	if err == nil {
 		t.Fatal("run: nil error, want rejection")
 	}

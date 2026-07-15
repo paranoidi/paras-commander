@@ -925,7 +925,8 @@ func (a *App) hunkScrollTo(target previewTarget, scroll int) {
 	}
 }
 
-// hunkNavigate scrolls the preview for target to the next (dir>0) or previous (dir<0) diff hunk.
+// hunkNavigate scrolls the preview for target to the next (dir>0) or previous (dir<0)
+// contiguous +/- change chunk (DiffHunkLines).
 func (a *App) hunkNavigate(target previewTarget, dir int) {
 	a.commandsMu.RLock()
 	var st ui.FilePreviewState
@@ -937,7 +938,7 @@ func (a *App) hunkNavigate(target previewTarget, dir int) {
 	}
 	a.commandsMu.RUnlock()
 
-	if !st.IsDiff || len(st.DiffHunkLines) == 0 || st.Phase != ui.FilePreviewPhaseDone {
+	if !st.IsDiff || st.Phase != ui.FilePreviewPhaseDone {
 		return
 	}
 	tw, ok := a.previewTextWidth(target)
@@ -969,6 +970,11 @@ func (a *App) hunkNavigate(target previewTarget, dir int) {
 	}
 
 	if !found {
+		if dir > 0 {
+			a.setTransientMessage("No more changes", ui.MessageUrgencyInfo)
+		} else {
+			a.setTransientMessage("No previous changes", ui.MessageUrgencyInfo)
+		}
 		return
 	}
 	a.hunkScrollTo(target, targetOffset)

@@ -69,9 +69,10 @@ func run(args []string, stderr, stdout io.Writer) error {
 		return writeConfigDirStubs(dir, stderr)
 	}
 
-	if flags.NArg() > 0 {
-		return fmt.Errorf("unexpected argument %q", flags.Arg(0))
+	if flags.NArg() > 2 {
+		return fmt.Errorf("unexpected argument %q", flags.Arg(2))
 	}
+	startPaths := append([]string(nil), flags.Args()...)
 	chooser := strings.TrimSpace(*chooserFile)
 	selectArg := strings.TrimSpace(*selectPath)
 	if selectArg != "" && chooser == "" {
@@ -80,11 +81,15 @@ func run(args []string, stderr, stdout io.Writer) error {
 	if *noCarousel && chooser == "" {
 		return fmt.Errorf("--no-carousel requires --chooser-file")
 	}
+	if len(startPaths) > 0 && chooser != "" {
+		return fmt.Errorf("path arguments cannot be used with --chooser-file")
+	}
 
 	return app.Run(app.LaunchConfig{
 		DevMode:           *devMode,
 		ChooserFile:       chooser,
 		ChooserSelect:     selectArg,
 		ChooserNoCarousel: *noCarousel,
+		StartPaths:        startPaths,
 	})
 }

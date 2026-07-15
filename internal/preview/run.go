@@ -89,7 +89,10 @@ type Result struct {
 	// (mdformat) rather than raw/diff/chroma text. Drives the fullscreen preview's
 	// left/right margin (see previewpanel.State.IsMarkdown).
 	IsMarkdown bool
-	// DiffHunkLines holds 0-based source line numbers of @@ hunk markers.
+	// DiffHunkLines holds 0-based source line numbers where each contiguous
+	// +/- change run begins (first added/removed line of the chunk). Used by
+	// Ctrl+Alt+J/K. Not @@ headers — with large -U context there is usually
+	// only one @@ for the whole file.
 	DiffHunkLines []int
 	// StatusText is a short git-status label to show in the preview title (e.g. "no changes", "ignored").
 	// Set when a diff was requested but there was nothing to diff, so plain content is shown instead.
@@ -243,13 +246,15 @@ func runGitDiff(ctx context.Context, req Request) Result {
 	}
 
 	// Choose diff args: staged-only changes use --cached; otherwise compare to HEAD.
-	var diffArgs []string
+	// Large -U keeps unchanged lines so the preview is the whole file with +/- markers
+	// (git's default ~3-line context would show only local hunks).
+	diffArgs := []string{fmt.Sprintf("-U%d", config.DefaultPreviewGitDiffContextLines)}
 	if req.GitStatus != nil &&
 		req.GitStatus.Staged != gitstatus.NotModified &&
 		req.GitStatus.Unstaged == gitstatus.NotModified {
-		diffArgs = []string{"--cached"}
+		diffArgs = append(diffArgs, "--cached")
 	} else {
-		diffArgs = []string{"HEAD"}
+		diffArgs = append(diffArgs, "HEAD")
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(req.Preview.Mode))
@@ -270,10 +275,11 @@ func runGitDiff(ctx context.Context, req Request) Result {
 			return gitDiffFallback(ctx, req, eff)
 		}
 		return Result{
-			IsDiff:       true,
-			Source:       previewpanel.SourceExternalANSI,
-			CombinedText: combined,
-			ExitCode:     res.ExitCode,
+			IsDiff:        true,
+			Source:        previewpanel.SourceExternalANSI,
+			CombinedText:  combined,
+			ExitCode:      res.ExitCode,
+			DiffHunkLines: parseDiffChangeChunkLines(stripANSI(string(res.Stdout))),
 		}
 	}
 
@@ -288,7 +294,7 @@ func runGitDiff(ctx context.Context, req Request) Result {
 		return gitDiffFallback(ctx, req, eff)
 	}
 
-	hunkLines := parseDiffHunkLines(rawDiff)
+	hunkLines := parseDiffChangeChunkLines(rawDiff)
 
 	textW := max(1, req.TextWidth)
 	lineCount := strings.Count(rawDiff, "\n") + 1
@@ -318,14 +324,63 @@ func runGitDiff(ctx context.Context, req Request) Result {
 	}
 }
 
-func parseDiffHunkLines(diff string) []int {
+// parseDiffChangeChunkLines returns 0-based source line numbers where each
+// contiguous run of unified-diff change lines (+/-) begins. File headers
+// (---/+++) and @@ markers are ignored. Groups of consecutive +/- lines
+// (e.g. a deletion followed immediately by an addition) count as one chunk.
+func parseDiffChangeChunkLines(diff string) []int {
 	var lines []int
+	inChunk := false
 	for i, line := range strings.Split(diff, "\n") {
-		if strings.HasPrefix(line, "@@") {
-			lines = append(lines, i)
+		if isUnifiedDiffChangeLine(line) {
+			if !inChunk {
+				lines = append(lines, i)
+				inChunk = true
+			}
+			continue
 		}
+		inChunk = false
 	}
 	return lines
+}
+
+// isUnifiedDiffChangeLine reports a body line that adds or removes content.
+// Excludes ---/+++ file headers (git writes a space after the marker) so a
+// deleted/added line whose content starts with -- / ++ is still counted.
+func isUnifiedDiffChangeLine(line string) bool {
+	if line == "" {
+		return false
+	}
+	switch line[0] {
+	case '+':
+		return !strings.HasPrefix(line, "+++ ")
+	case '-':
+		return !strings.HasPrefix(line, "--- ")
+	default:
+		return false
+	}
+}
+
+// stripANSI removes CSI SGR sequences (ESC [ … m) so external colored diff
+// text can be scanned for +/- line prefixes.
+func stripANSI(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for i := 0; i < len(s); {
+		if s[i] == '\x1b' && i+1 < len(s) && s[i+1] == '[' {
+			j := i + 2
+			for j < len(s) && ((s[j] >= '0' && s[j] <= '9') || s[j] == ';') {
+				j++
+			}
+			if j < len(s) && s[j] == 'm' {
+				i = j + 1
+				continue
+			}
+		}
+		b.WriteByte(s[i])
+		i++
+	}
+	return b.String()
 }
 
 func readFileLimited(path string, maxBytes int) ([]byte, bool, error) {

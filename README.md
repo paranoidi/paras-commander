@@ -64,6 +64,30 @@ After a local `go build` (binary in the current directory):
 ./pc
 ```
 
+Open a directory in the primary (left) panel:
+
+```bash
+./pc /path/to/dir
+```
+
+Open a file in fullscreen preview (Esc returns to its parent directory with the file selected):
+
+```bash
+./pc README.md
+```
+
+Open two directories (primary, then secondary). If exactly one argument is a file,
+that panel opens the file's parent with the file selected and Quick View is enabled
+on that panel; both arguments being files is an error.
+
+```bash
+./pc ~/projects ~/Downloads
+./pc README.md ~/Downloads
+```
+
+Missing paths exit with an error. Path arguments cannot be combined with
+`--chooser-file` (use `--select` there instead).
+
 With test helpers (Dev pulldown menu for status toasts):
 
 ```bash

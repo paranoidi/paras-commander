@@ -54,7 +54,8 @@ type State struct {
 	// (mdformat) rather than raw/diff/chroma text. Borderless (fullscreen) draw adds a
 	// 1-space left/right margin when this is set.
 	IsMarkdown bool
-	// DiffHunkLines holds the 0-based source line numbers of @@ hunk markers in the diff.
+	// DiffHunkLines holds 0-based source line numbers where each contiguous +/- change
+	// run begins (first added/removed line of the chunk). Used by Ctrl+Alt+J/K.
 	DiffHunkLines []int
 	// GitStatusText is a short git-status label shown next to the title (e.g. "no changes", "ignored").
 	GitStatusText string

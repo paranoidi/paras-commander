@@ -875,19 +875,19 @@ func DefaultActionSpecs() []ActionSpec {
 		},
 		{
 			ID:          ActionFileViewDiffNextHunk,
-			Views:       HelpFilePreview,
-			Title:       "Next diff hunk",
+			Views:       HelpBrowser | HelpFilePreview,
+			Title:       "Next diff change",
 			Section:     "Preview",
-			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
-			Keywords:    []string{"diff", "hunk", "change", "jump"},
+			DefaultKeys: []string{"C-M-j"},
+			Keywords:    []string{"diff", "hunk", "change", "chunk", "jump"},
 		},
 		{
 			ID:          ActionFileViewDiffPrevHunk,
-			Views:       HelpFilePreview,
-			Title:       "Previous diff hunk",
+			Views:       HelpBrowser | HelpFilePreview,
+			Title:       "Previous diff change",
 			Section:     "Preview",
-			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
-			Keywords:    []string{"diff", "hunk", "change", "jump"},
+			DefaultKeys: []string{"C-M-k"},
+			Keywords:    []string{"diff", "hunk", "change", "chunk", "jump"},
 		},
 		{
 			ID:          ActionFileViewSearchStart,

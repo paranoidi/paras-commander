@@ -276,6 +276,8 @@ type LaunchConfig struct {
 	ChooserFile       string
 	ChooserSelect     string
 	ChooserNoCarousel bool
+	// StartPaths are optional existing local paths (at most two). See applyStartPaths.
+	StartPaths []string
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -295,6 +297,8 @@ type Options struct {
 	ChooserSelect string
 	// ChooserNoCarousel disables the default carousel view on the left panel at startup.
 	ChooserNoCarousel bool
+	// StartPaths are optional existing local paths (at most two). See applyStartPaths.
+	StartPaths []string
 }
 
 // Run initializes and starts the terminal application.
@@ -330,6 +334,7 @@ func Run(cfg LaunchConfig) error {
 		ChooserFile:       cfg.ChooserFile,
 		ChooserSelect:     cfg.ChooserSelect,
 		ChooserNoCarousel: cfg.ChooserNoCarousel,
+		StartPaths:        cfg.StartPaths,
 	})
 	if err != nil {
 		return err
@@ -716,6 +721,12 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		if err := app.applyChooserSelect(opts.ChooserSelect); err != nil {
 			app.stopWorker()
 			return nil, fmt.Errorf("select: %w", err)
+		}
+	}
+	if len(opts.StartPaths) > 0 {
+		if err := app.applyStartPaths(opts.StartPaths); err != nil {
+			app.stopWorker()
+			return nil, err
 		}
 	}
 	if opts.ChooserFile != "" {

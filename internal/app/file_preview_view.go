@@ -327,16 +327,28 @@ func (a *App) openFilePreviewFullscreen() {
 		}
 		return
 	}
+	if err := a.openFullscreenFilePreviewAt(path); err != nil {
+		a.setTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
+	}
+}
+
+// openFullscreenFilePreviewAt opens the full-screen file view for path.
+// Caller must ensure path is a previewable regular file.
+func (a *App) openFullscreenFilePreviewAt(path string) error {
+	path = filepath.Clean(path)
 	w, h := a.screen.Size()
 	lay := a.layoutForTerminalSize(w, h)
 	if lay.TooSmall {
-		a.setTransientMessage("View: terminal too small", ui.MessageUrgencyWarn)
-		return
+		return fmt.Errorf("terminal too small")
 	}
 	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary, a.effectivePaneSplitOrientation())
 	tw := union.Width - 4
 	if tw < 1 {
 		tw = 1
+	}
+	panelPath := filepath.Dir(path)
+	if active := a.activePanel(); active != nil && active.PathString() != "" {
+		panelPath = active.PathString()
 	}
 	titleBase := filepath.Base(path)
 	a.captureFilePreviewHold(previewTargetFullscreen)
@@ -367,5 +379,11 @@ func (a *App) openFilePreviewFullscreen() {
 	})
 	gen := a.filePreviewRunGen.Add(1)
 	a.postCommandWake()
-	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, active.PathString(), a.model.PanelsChromeBlocked(), a.gitStatusForPath(path), previewTargetFullscreen), previewTargetFullscreen, gen)
+	go a.runPreview(
+		a.commandsCtx,
+		a.previewRequest(path, tw, panelPath, a.model.PanelsChromeBlocked(), a.gitStatusForPath(path), previewTargetFullscreen),
+		previewTargetFullscreen,
+		gen,
+	)
+	return nil
 }

@@ -250,6 +250,12 @@ const (
 	// DefaultMaxPreviewBytes caps internal preview reads (matches cmdrun.MaxStreamBytes).
 	DefaultMaxPreviewBytes = 512 * 1024
 
+	// DefaultPreviewGitDiffContextLines is the unified-diff context (-U) for git-dirty
+	// file previews (F3 / quick view / carousel). Git's default (~3) shows only local
+	// hunks; a large value keeps unchanged lines so the preview is the whole file with
+	// +/- markers. Stream size is still capped by cmdrun.MaxStreamBytes.
+	DefaultPreviewGitDiffContextLines = 1_000_000
+
 	// DefaultFilePreviewCommand runs bat with line numbers, paging disabled, colors forced on (non-TTY stdout),
 	// and wrap/width driven by {terminal_width} so output matches the inactive preview column.
 	DefaultFilePreviewCommand = "bat -n --paging=never --color=always --wrap=auto --terminal-width=%w %f"
