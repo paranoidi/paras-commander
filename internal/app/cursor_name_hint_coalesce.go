@@ -10,14 +10,14 @@ import (
 // cursorNameHintFlushPayload triggers a repaint after cursor-name-hint nav debounce clears.
 type cursorNameHintFlushPayload struct{}
 
-// clearCursorNameHintNavCoalesce stops the pending coalesce and re-enables the bottom name overlay.
+// clearCursorNameHintNavCoalesce stops the pending coalesce so the next paint uses the current cursor name.
 func (a *App) clearCursorNameHintNavCoalesce() {
 	a.cursorNameHintNav.Clear()
 	a.cursorNameHintNavSkip.Store(false)
 }
 
-// armCursorNameHintNavCoalesceAfterListNav suppresses the bottom full-name overlay while the user
-// is holding a navigation key; the overlay reappears once the debounce timer fires.
+// armCursorNameHintNavCoalesceAfterListNav keeps the previous bottom full-name overlay visible while the
+// user is holding a navigation key; the overlay updates to the current cursor once the debounce timer fires.
 func (a *App) armCursorNameHintNavCoalesceAfterListNav() {
 	if a.config.UI.KeyRepeatDebounceMS <= 0 {
 		return

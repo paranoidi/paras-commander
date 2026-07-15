@@ -105,6 +105,10 @@ type Model struct {
 	JobsThroughputChartEnabled bool
 	// UserHomeDir is filepath.Clean(os.UserHomeDir()); empty skips ~ substitution in panel titles.
 	UserHomeDir string
+	// CursorNameHintPinOutPrimary / CursorNameHintPinOutSecondary are set by App for one paint
+	// and point at live panel.State.CursorNameHintPinned fields (not the Model snapshot copy).
+	CursorNameHintPinOutPrimary   *string
+	CursorNameHintPinOutSecondary *string
 	// DiskUsageShown enables proportional disk-usage bars after the user starts a scan.
 	DiskUsageShown bool
 	// DiskUsagePanelID stores the panel (PrimaryPanel/SecondaryPanel) that initiated the current disk usage scan (pending tint only).
@@ -528,6 +532,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 					ShowSelectionSizeOnBottom: primarySelectionSizeOnFileBottom,
 					IsTransferTarget:          model.DestinationTargetPrimary,
 					CursorNameHintFallbackOut: cursorNameHintFallbackOut(primaryFileListFocus, &cursorNameHintFallback),
+					CursorNameHintPinnedOut:   model.CursorNameHintPinOutPrimary,
 				},
 				PanelDisplayConfig{
 					ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
@@ -562,6 +567,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 					ShowSelectionSizeOnBottom: secondarySelectionSizeOnFileBottom,
 					IsTransferTarget:          model.DestinationTargetSecondary,
 					CursorNameHintFallbackOut: cursorNameHintFallbackOut(secondaryFileListFocus, &cursorNameHintFallback),
+					CursorNameHintPinnedOut:   model.CursorNameHintPinOutSecondary,
 				},
 				PanelDisplayConfig{
 					ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,

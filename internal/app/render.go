@@ -89,7 +89,10 @@ func (a *App) renderBrowserListNavUpdate() {
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
-	if layout.TooSmall || !ui.PaintBrowserListNavPanelOnly(a.screen, layout, a.model, a.styles, a.model.ActivePanel) {
+	model := a.model
+	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
+	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
+	if layout.TooSmall || !ui.PaintBrowserListNavPanelOnly(a.screen, layout, model, a.styles, a.model.ActivePanel) {
 		a.render()
 		return
 	}
@@ -113,7 +116,10 @@ func (a *App) paintDiskUsageBrowserUpdate() bool {
 	if layout.TooSmall {
 		return false
 	}
-	if !ui.PaintDiskUsageBrowserPanelsOnly(a.screen, layout, a.model, a.styles) {
+	model := a.model
+	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
+	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
+	if !ui.PaintDiskUsageBrowserPanelsOnly(a.screen, layout, model, a.styles) {
 		return false
 	}
 	a.emitScreenAfterPartialPaint()
@@ -172,6 +178,8 @@ func (a *App) render() {
 	a.commandsMu.RLock()
 	modelSnapshot := a.model
 	a.commandsMu.RUnlock()
+	modelSnapshot.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
+	modelSnapshot.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
 	ui.Render(a.screen, modelSnapshot, a.styles)
 	a.syncTerminalPanelCursor()
 	a.emitScreenAfterFullRender()

@@ -163,6 +163,41 @@ func cursorNameHintFallbackOut(fileListActive bool, out *CursorNameHintFallback)
 	return nil
 }
 
+// paintPanelBottomCursorNameOverlay paints fullName centered in [startX, endX] on bottom row y:
+// name glyphs first, then border dashes for any remaining span cells (clears a longer prior overlay).
+func paintPanelBottomCursorNameOverlay(
+	screen tcell.Screen,
+	startX, endX, y int,
+	fullName string,
+	titleStyle, borderStyle tcell.Style,
+) bool {
+	spanW := endX - startX + 1
+	if spanW <= 0 {
+		return false
+	}
+	runes := []rune(fullName)
+	if len(runes) == 0 || len(runes) > spanW {
+		return false
+	}
+	leftPad := (spanW - len(runes)) / 2
+	for i, r := range runes {
+		screen.SetContent(startX+leftPad+i, y, r, nil, titleStyle)
+	}
+	for col := 0; col < leftPad; col++ {
+		screen.SetContent(startX+col, y, '─', nil, borderStyle)
+	}
+	for col := leftPad + len(runes); col < spanW; col++ {
+		screen.SetContent(startX+col, y, '─', nil, borderStyle)
+	}
+	return true
+}
+
+func setCursorNameHintPinned(out *string, value string) {
+	if out != nil {
+		*out = value
+	}
+}
+
 func drawPanelBottomCursorNameHint(
 	screen tcell.Screen,
 	rect Rect,
@@ -177,31 +212,50 @@ func drawPanelBottomCursorNameHint(
 	suffix panellist.RowSuffix,
 	styles theme.Theme,
 	fallbackOut *CursorNameHintFallback,
+	pinnedOut *string,
 ) {
 	if !fileListActive || chromeBlocked {
+		setCursorNameHintPinned(pinnedOut, "")
+		return
+	}
+	if state.CursorNameHintCoalesce {
+		if state.CursorNameHintPinned == "" {
+			return
+		}
+		paintOrFallbackCursorNameHint(screen, rect, panelID, ctx, state.CursorNameHintPinned, titleStyle, fallbackOut)
 		return
 	}
 	entry, _, ok := state.VisibleEntry(state.Cursor)
 	if !ok {
+		setCursorNameHintPinned(pinnedOut, "")
 		return
 	}
 	if !entryDisplayNameTruncated(entry, nameWidth, showIcons, suffix, styles) {
+		setCursorNameHintPinned(pinnedOut, "")
 		return
 	}
 	fullName := entryListingFullName(entry, showIcons)
-	fullRunes := []rune(fullName)
-	if len(fullRunes) == 0 {
+	if fullName == "" {
+		setCursorNameHintPinned(pinnedOut, "")
 		return
 	}
+	paintOrFallbackCursorNameHint(screen, rect, panelID, ctx, fullName, titleStyle, fallbackOut)
+	setCursorNameHintPinned(pinnedOut, fullName)
+}
+
+func paintOrFallbackCursorNameHint(
+	screen tcell.Screen,
+	rect Rect,
+	panelID int,
+	ctx PanelBottomIndicatorContext,
+	fullName string,
+	titleStyle tcell.Style,
+	fallbackOut *CursorNameHintFallback,
+) {
 	startX, endX, spanOK := panelBottomCenterOverlaySpan(rect, panelID, ctx)
 	if spanOK {
-		spanW := endX - startX + 1
-		if spanW > 0 && len(fullRunes) <= spanW {
-			pad := spanW - len(fullRunes)
-			leftPad := pad / 2
-			x := startX + leftPad
-			y := rect.Y + rect.Height - 1
-			primitive.TextOverlay(screen, x, y, len(fullRunes), fullName, titleStyle)
+		y := rect.Y + rect.Height - 1
+		if paintPanelBottomCursorNameOverlay(screen, startX, endX, y, fullName, titleStyle, ctx.BorderStyle) {
 			return
 		}
 	}
@@ -254,12 +308,15 @@ func drawPanelCursorNameHintForState(
 	nameWidth int,
 	jobMarks []JobPathMark,
 	fallbackOut *CursorNameHintFallback,
+	pinnedOut *string,
 ) {
 	if state.CursorNameHintCoalesce {
+		drawPanelBottomCursorNameHint(screen, rect, panelID, state, ctx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, panellist.RowSuffix{}, ctx.Styles, fallbackOut, pinnedOut)
 		return
 	}
 	entry, _, ok := state.VisibleEntry(state.Cursor)
 	if !ok {
+		setCursorNameHintPinned(pinnedOut, "")
 		return
 	}
 	subtreeMark := entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
@@ -275,5 +332,5 @@ func drawPanelCursorNameHintForState(
 		NewFileTier:      state.NewFileMarkTier(entry),
 		SubtreeSelection: subtreeMark,
 	}
-	drawPanelBottomCursorNameHint(screen, rect, panelID, state, ctx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, suffix, ctx.Styles, fallbackOut)
+	drawPanelBottomCursorNameHint(screen, rect, panelID, state, ctx, fileListActive, chromeBlocked, titleStyle, showIcons, nameWidth, suffix, ctx.Styles, fallbackOut, pinnedOut)
 }

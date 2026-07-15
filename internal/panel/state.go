@@ -97,8 +97,12 @@ type State struct {
 	CarouselMode bool
 	// CarouselChildPreviewCoalesce skips child-directory reads during scroll and reuses CarouselSideCache.Child.
 	CarouselChildPreviewCoalesce bool
-	// CursorNameHintCoalesce suppresses the bottom-border full-name overlay during file-list nav debounce.
+	// CursorNameHintCoalesce holds the previous bottom-border full-name overlay during file-list
+	// nav debounce (paint uses CursorNameHintPinned until the debounce timer fires).
 	CursorNameHintCoalesce bool
+	// CursorNameHintPinned is the last full-name overlay text painted when not coalescing.
+	// During CursorNameHintCoalesce it keeps the prior name visible until debounce settles.
+	CursorNameHintPinned string
 	// CarouselSideCache holds the last-built parent/child listing snapshots for carousel side columns.
 	CarouselSideCache struct {
 		Parent   ListingSnapshot

@@ -116,6 +116,10 @@ type PanelContext struct {
 	// CursorNameHintFallbackOut receives the full cursor name when it does not fit on the
 	// panel bottom border and should be painted above the footer instead.
 	CursorNameHintFallbackOut *CursorNameHintFallback
+	// CursorNameHintPinnedOut, when non-nil, receives latch updates for the bottom-border
+	// overlay text (points at the live panel.State.CursorNameHintPinned in App.model, not a
+	// paint-time Model snapshot copy).
+	CursorNameHintPinnedOut *string
 }
 
 // PanelDisplayConfig carries feature-flag and data inputs to drawPanel.
@@ -293,7 +297,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			if selectionSizeLabel != "" {
 				drawPanelBottomSelectionSize(screen, rect, ctx.PanelID, bottomCtx)
 			} else {
-				drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, panelcarousel.CenterNameWidth(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows), display.JobMarks, ctx.CursorNameHintFallbackOut)
+				drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, panelcarousel.CenterNameWidth(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows), display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
 			}
 			return
 		}
@@ -511,7 +515,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if selectionSizeLabel != "" {
 		drawPanelBottomSelectionSize(screen, rect, ctx.PanelID, bottomCtx)
 	} else {
-		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, nameWidth, display.JobMarks, ctx.CursorNameHintFallbackOut)
+		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, nameWidth, display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
 	}
 }
 

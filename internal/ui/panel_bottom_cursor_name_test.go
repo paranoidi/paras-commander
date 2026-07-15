@@ -226,6 +226,119 @@ func TestDrawPanelCarouselCursorNameHint(t *testing.T) {
 	}
 }
 
+func TestPaintPanelBottomCursorNameOverlayClearsStaleLongerName(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+
+	styles := theme.Default()
+	chrome := styles.PanelChrome(true, false)
+	const y = 0
+	startX, endX := 1, 38
+	longName := " " + strings.Repeat("w", 30) + ".txt"
+	shortName := " " + strings.Repeat("a", 8) + ".txt"
+
+	if !paintPanelBottomCursorNameOverlay(screen, startX, endX, y, longName, chrome.Title, chrome.Frame) {
+		t.Fatal("expected long name to fit in overlay span")
+	}
+	if !paintPanelBottomCursorNameOverlay(screen, startX, endX, y, shortName, chrome.Title, chrome.Frame) {
+		t.Fatal("expected short name to fit in overlay span")
+	}
+
+	got := tcelltest.TextAt(screen, startX, y, endX-startX+1)
+	if strings.Contains(got, strings.Repeat("w", 8)) {
+		t.Fatalf("overlay = %q, want no stale long-name glyphs", got)
+	}
+	if !strings.Contains(got, strings.TrimSpace(shortName)) {
+		t.Fatalf("overlay = %q, want short name", got)
+	}
+	shortIdx := strings.Index(got, strings.TrimSpace(shortName))
+	if shortIdx < 0 {
+		t.Fatal("short name not found")
+	}
+	after := got[shortIdx+len(strings.TrimSpace(shortName)):]
+	if strings.Trim(after, "─ ") != "" {
+		t.Fatalf("after short name = %q, want border dashes only", after)
+	}
+}
+
+func TestDrawPanelBottomCursorNameHintKeepsPinnedDuringCoalesce(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+
+	oldName := strings.Repeat("o", 30) + ".txt"
+	newName := strings.Repeat("n", 30) + ".txt"
+	rect := Rect{X: 0, Y: 0, Width: 40, Height: 8}
+	pinned := " " + oldName
+	state := panel.State{
+		Path: pathloc.MustParse("/tmp"),
+		Entries: []localfs.Entry{
+			{Name: oldName, Path: "/tmp/" + oldName},
+			{Name: newName, Path: "/tmp/" + newName},
+		},
+		Cursor:                 1,
+		CursorNameHintCoalesce: true,
+		CursorNameHintPinned:   pinned,
+	}
+	styles := theme.Default()
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: styles},
+		PanelContext{
+			PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel,
+			SyncDriverPanelID: -1, QuickViewDriverPanelID: -1,
+			CursorNameHintPinnedOut: &pinned,
+		},
+		PanelDisplayConfig{ShowIcons: true, ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
+
+	bottomY := rect.Y + rect.Height - 1
+	bottom := tcelltest.TextAt(screen, rect.X, bottomY, rect.Width)
+	if !strings.Contains(bottom, oldName) {
+		t.Fatalf("bottom = %q, want pinned old name during coalesce", bottom)
+	}
+	if strings.Contains(bottom, newName) {
+		t.Fatalf("bottom = %q, want pinned old name not current cursor name during coalesce", bottom)
+	}
+}
+
+func TestDrawPanelBottomCursorNameHintLatchesPinnedWhenSettled(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+
+	longName := strings.Repeat("p", 30) + ".txt"
+	rect := Rect{X: 0, Y: 0, Width: 40, Height: 8}
+	var pinned string
+	state := panel.State{
+		Path:    pathloc.MustParse("/tmp"),
+		Entries: []localfs.Entry{{Name: longName, Path: "/tmp/" + longName}},
+		Cursor:  0,
+	}
+	styles := theme.Default()
+	drawPanel(screen, rect, state,
+		PanelStyleConfig{Styles: styles},
+		PanelContext{
+			PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel,
+			SyncDriverPanelID: -1, QuickViewDriverPanelID: -1,
+			CursorNameHintPinnedOut: &pinned,
+		},
+		PanelDisplayConfig{ShowIcons: true, ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
+
+	want := " " + longName
+	if pinned != want {
+		t.Fatalf("pinned = %q, want %q", pinned, want)
+	}
+}
+
 func TestDrawPanelBottomCursorNameHintHiddenOnInactivePanel(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")

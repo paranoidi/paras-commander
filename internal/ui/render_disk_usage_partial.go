@@ -72,6 +72,7 @@ func paintBrowserPanelsInScope(
 	quickViewDriver := model.QuickViewDriverPanelID()
 
 	painted := false
+	var cursorNameHintFallback CursorNameHintFallback
 	if inScope(PrimaryPanel) && layout.Primary.Width > 0 && !showLeftPreview {
 		drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
@@ -81,6 +82,8 @@ func paintBrowserPanelsInScope(
 				HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 				SplitOrientation: model.SplitOrientation, SelectionsBottomHint: primarySelectionsBottomHint,
 				ShowSelectionSizeOnBottom: primarySelectionSizeOnFileBottom,
+				CursorNameHintFallbackOut: cursorNameHintFallbackOut(primaryFileListFocus, &cursorNameHintFallback),
+				CursorNameHintPinnedOut:   model.CursorNameHintPinOutPrimary,
 			},
 			PanelDisplayConfig{
 				ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
@@ -110,6 +113,8 @@ func paintBrowserPanelsInScope(
 				HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 				SplitOrientation: model.SplitOrientation, SelectionsBottomHint: secondarySelectionsBottomHint,
 				ShowSelectionSizeOnBottom: secondarySelectionSizeOnFileBottom,
+				CursorNameHintFallbackOut: cursorNameHintFallbackOut(secondaryFileListFocus, &cursorNameHintFallback),
+				CursorNameHintPinnedOut:   model.CursorNameHintPinOutSecondary,
 			},
 			PanelDisplayConfig{
 				ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
@@ -129,6 +134,9 @@ func paintBrowserPanelsInScope(
 				ScrollbarShowInactive: model.PanelScrollbarInactive, PanelFileListActive: secondaryFileListFocus,
 			})
 		}
+	}
+	if painted {
+		drawCursorNameHintScreenFallback(screen, layout, &cursorNameHintFallback, model.TerminalPanel.Visible)
 	}
 	return painted
 }

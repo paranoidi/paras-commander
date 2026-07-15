@@ -198,7 +198,7 @@ type App struct {
 	navParentBackspaceDebounce managedTimer
 	// carouselPreviewNavSkipSnapshot, when true, reuses cached carousel parent/child snapshots during render.
 	carouselPreviewNavSkipSnapshot atomic.Bool
-	// cursorNameHintNavSkip, when true, suppresses the bottom-border full-name overlay during file-list nav debounce.
+	// cursorNameHintNavSkip, when true, holds the previous bottom-border full-name overlay during file-list nav debounce.
 	cursorNameHintNavSkip atomic.Bool
 	cursorNameHintNav     managedTimer
 	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postCommandWake).
