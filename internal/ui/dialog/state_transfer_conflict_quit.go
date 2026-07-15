@@ -78,11 +78,16 @@ type QuitConfirmState struct {
 }
 
 // AmbiguousTransferState holds the confirm shown when copy/move is issued away from
-// the common root of a selection spanning multiple directories.
+// the common root of a selection spanning multiple directories. OK proceeds straight
+// to the normal transfer dialog (no navigation); the list previews the selections
+// relative to CommonRoot.
 type AmbiguousTransferState struct {
 	Open       bool
-	Focus      int    // 0=OK, 1=Cancel
-	CommonRoot string // canonical path OK navigates the active panel to
+	Focus      int          // 0=OK, 1=Cancel
+	Kind       TransferKind // Copy or Move — for title/verb and the OK action
+	CommonRoot string       // canonical common-root path, shown in full
+	Entries    []DeleteListEntry
+	Scroll     int
 }
 
 // TransferDialogNumContent returns the number of focusable content rows before OK/Cancel.

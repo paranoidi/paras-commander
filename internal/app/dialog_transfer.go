@@ -69,10 +69,44 @@ func transferPrefilledDestination(path string) dialog.FileDialogField {
 
 func (a *App) openTransferDialog(kind dialog.TransferKind) {
 	if root, ok := a.multiDirSelectionCommonRoot(); ok {
-		a.model.AmbiguousTransfer = dialog.AmbiguousTransferState{Open: true, CommonRoot: root}
+		a.model.AmbiguousTransfer = dialog.AmbiguousTransferState{
+			Open:       true,
+			Kind:       kind,
+			CommonRoot: root,
+			Entries:    a.ambiguousTransferEntries(root),
+		}
+		// Same implied destination as the transfer dialog prefills (inactive panel).
+		a.updateDestinationTargetPanels(a.activePanel().PathString(), a.inactivePanel().PathString())
 		a.clearTransientMessage()
 		return
 	}
+	a.openTransferDialogDirect(kind)
+}
+
+// ambiguousTransferEntries builds the preview list for the ambiguous-transfer confirm:
+// the active panel's selection resolved and labeled relative to the common root (not
+// the panel's current path), so the preview reflects where the transfer will read from.
+func (a *App) ambiguousTransferEntries(root string) []dialog.DeleteListEntry {
+	source, err := ops.ResolveSource(a.activePanel())
+	if err != nil {
+		return nil
+	}
+	homeDir := a.model.UserHomeDir
+	entries := make([]dialog.DeleteListEntry, len(source.Entries))
+	for i, e := range source.Entries {
+		entries[i] = dialog.DeleteListEntry{
+			Name: dialog.DeleteListEntryName(root, homeDir, e.Path, e.Name),
+			Path: e.Path,
+			Type: e.Type,
+		}
+	}
+	return entries
+}
+
+// openTransferDialogDirect opens the normal copy/move destination dialog, bypassing the
+// ambiguous-selection confirm (used both for unambiguous selections and after the user
+// confirms the ambiguous-transfer preview).
+func (a *App) openTransferDialogDirect(kind dialog.TransferKind) {
 	passive := a.inactivePanel()
 	st := dialog.TransferDialogState{
 		Open:         true,
@@ -120,7 +154,7 @@ func (a *App) selectionsCommonRoot() (root pathloc.Path, multiDir bool, ok bool)
 // multiDirSelectionCommonRoot returns the deepest common ancestor of the active panel's
 // selected paths when they span multiple parent directories and the panel is not already
 // at that ancestor. Copy/move issued elsewhere is ambiguous; the caller shows a confirm
-// offering to navigate there instead of opening the transfer dialog.
+// with a root-relative preview before opening the transfer dialog.
 func (a *App) multiDirSelectionCommonRoot() (string, bool) {
 	root, multiDir, ok := a.selectionsCommonRoot()
 	if !ok || !multiDir || a.activePanel().Path.Equal(root) {
@@ -129,18 +163,18 @@ func (a *App) multiDirSelectionCommonRoot() (string, bool) {
 	return root.String(), true
 }
 
-// handleAmbiguousTransferKey drives the "Ambiguous command" confirm; OK navigates the
-// active panel to the selections' common root (the user re-issues copy/move from there).
+// handleAmbiguousTransferKey drives the copy/move ambiguous-selection confirm; OK opens
+// the normal transfer dialog directly (no panel navigation).
 func (a *App) handleAmbiguousTransferKey(event *tcell.EventKey) {
 	confirm := func() {
-		root := a.model.AmbiguousTransfer.CommonRoot
+		kind := a.model.AmbiguousTransfer.Kind
 		a.model.AmbiguousTransfer = dialog.AmbiguousTransferState{}
-		if err := a.navigatePanelToDirectory(a.model.ActivePanel, root, ""); err != nil {
-			a.setErrorMessage("Navigate failed", err)
-		}
+		a.openTransferDialogDirect(kind)
 	}
 	cancel := func() {
 		a.model.AmbiguousTransfer = dialog.AmbiguousTransferState{}
+		a.model.DestinationTargetPrimary = false
+		a.model.DestinationTargetSecondary = false
 	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
@@ -159,12 +193,41 @@ func (a *App) handleAmbiguousTransferKey(event *tcell.EventKey) {
 		a.model.AmbiguousTransfer.Focus = dialog.DialogPairLeftRight(a.model.AmbiguousTransfer.Focus, false)
 	case tcell.KeyRight:
 		a.model.AmbiguousTransfer.Focus = dialog.DialogPairLeftRight(a.model.AmbiguousTransfer.Focus, true)
+	case tcell.KeyUp:
+		a.scrollAmbiguousTransferList(-1)
+	case tcell.KeyDown:
+		a.scrollAmbiguousTransferList(1)
+	case tcell.KeyPgUp:
+		a.scrollAmbiguousTransferList(-a.ambiguousTransferListViewportRows())
+	case tcell.KeyPgDn:
+		a.scrollAmbiguousTransferList(a.ambiguousTransferListViewportRows())
 	case tcell.KeyEnter:
 		if a.model.AmbiguousTransfer.Focus == 0 {
 			confirm()
 		} else {
 			cancel()
 		}
+	}
+}
+
+func (a *App) ambiguousTransferListViewportRows() int {
+	_, h := a.screen.Size()
+	return dialog.AmbiguousListViewportRows(dialog.Layout{Height: h}, len(a.model.AmbiguousTransfer.Entries))
+}
+
+func (a *App) scrollAmbiguousTransferList(delta int) {
+	st := &a.model.AmbiguousTransfer
+	vp := a.ambiguousTransferListViewportRows()
+	maxScroll := len(st.Entries) - vp
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	st.Scroll += delta
+	if st.Scroll < 0 {
+		st.Scroll = 0
+	}
+	if st.Scroll > maxScroll {
+		st.Scroll = maxScroll
 	}
 }
 

@@ -601,7 +601,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	case dialog.PrimaryModalQuit:
 		dialog.DrawQuitConfirmDialog(screen, layout, model.QuitConfirm, styles)
 	case dialog.PrimaryModalAmbiguousTransfer:
-		dialog.DrawAmbiguousTransferDialog(screen, layout, model.AmbiguousTransfer, styles)
+		dialog.DrawAmbiguousTransferDialog(screen, layout, model.AmbiguousTransfer, styles, model.UserHomeDir, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintDeleteDialogRowIcon)
 	case dialog.PrimaryModalDedupEmptyDirs:
 		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, styles, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintDedupEmptyDirsConfirmRowIcon)
 	}
