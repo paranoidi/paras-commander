@@ -42,3 +42,13 @@ func DrawDialogHSeparator(screen tcell.Screen, rect geom.Rect, y int, borderStyl
 func DrawDialogButtonRowCentered(screen tcell.Screen, rect geom.Rect, y int, buttons []DialogButtonSpec, styles theme.Theme) {
 	draw.DrawDialogButtonRowCentered(screen, rect, y, buttons, styles)
 }
+
+// DrawOKCancelButtonRow draws a centered OK/Cancel button row (re-export).
+func DrawOKCancelButtonRow(screen tcell.Screen, rect geom.Rect, y int, okFocused, cancelFocused bool, styles theme.Theme) {
+	draw.DrawOKCancelButtonRow(screen, rect, y, okFocused, cancelFocused, styles)
+}
+
+// OKCancelButtonSpecs returns standard OK/Cancel button specs (re-export).
+func OKCancelButtonSpecs(okFocused, cancelFocused bool) []DialogButtonSpec {
+	return draw.OKCancelButtonSpecs(okFocused, cancelFocused)
+}

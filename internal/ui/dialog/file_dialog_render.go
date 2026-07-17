@@ -76,7 +76,10 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 	return draw.CenteredDialogRect(layout, width, height), true
 }
 
-func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, styles theme.Theme, showIcons bool, deleteIconLead int, paintDeleteIcon DeleteRowIconPainter) {
+func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, ctx DialogRenderContext, paintDeleteIcon DeleteRowIconPainter) {
+	styles := ctx.Styles
+	showIcons := ctx.ShowIcons
+	deleteIconLead := ctx.IconLead
 	rect, ok := FileDialogRect(layout, state, deleteIconLead)
 	if !ok {
 		return
@@ -716,10 +719,9 @@ func drawOkCancelButtons(screen tcell.Screen, rect Rect, y int, state FileDialog
 	cancelFocusIdx := fileDialogCancelFocusIndex(state)
 	okDisabled := state.DialogType == FileDialogMassRename && !FileDialogMassRenameOKEnabled(state)
 
-	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: state.FocusedField == okFocusIdx, Disabled: okDisabled},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.FocusedField == cancelFocusIdx},
-	}, styles)
+	specs := draw.OKCancelButtonSpecs(state.FocusedField == okFocusIdx, state.FocusedField == cancelFocusIdx)
+	specs[0].Disabled = okDisabled
+	draw.DrawDialogButtonRowCentered(screen, rect, y, specs, styles)
 }
 
 // FileDialogOKFocusIndex returns the FocusedField index of the OK button.

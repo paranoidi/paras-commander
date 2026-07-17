@@ -537,6 +537,19 @@ func DrawDialogFrame(screen tcell.Screen, rect Rect, title string, styles theme.
 	return borderStyle
 }
 
+// OKCancelButtonSpecs returns the standard OK/Cancel button row specs.
+func OKCancelButtonSpecs(okFocused, cancelFocused bool) []DialogButtonSpec {
+	return []DialogButtonSpec{
+		{Label: "OK", Shortcut: 'O', Focused: okFocused},
+		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
+	}
+}
+
+// DrawOKCancelButtonRow draws a centered OK/Cancel button row.
+func DrawOKCancelButtonRow(screen tcell.Screen, rect Rect, y int, okFocused, cancelFocused bool, styles theme.Theme) {
+	DrawDialogButtonRowCentered(screen, rect, y, OKCancelButtonSpecs(okFocused, cancelFocused), styles)
+}
+
 // DrawDialogButtonRowCentered draws a row of buttons with fixed gap, centered in rect at row y.
 func DrawDialogButtonRowCentered(screen tcell.Screen, rect Rect, y int, buttons []DialogButtonSpec, styles theme.Theme) {
 	if len(buttons) == 0 {

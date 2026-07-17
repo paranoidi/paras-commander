@@ -37,32 +37,19 @@ func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogSt
 
 	tform := NewFlattenDialogLinearForm()
 	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: state.FocusField == tform.OKIndex()},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.FocusField == tform.CancelIndex()},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, buttonY, state.FocusField == tform.OKIndex(), state.FocusField == tform.CancelIndex(), styles)
 }
 
-// FlattenDialogLinearForm is focus navigation for the flatten dialog (destination + 2 checkboxes + OK/Cancel).
-type FlattenDialogLinearForm struct {
-	form DialogTrailingButtonsForm
-}
+// FlattenDialogLinearForm is the flatten dialog focus layout (destination + 2 checkboxes + OK/Cancel).
+type FlattenDialogLinearForm = DialogTrailingButtonsForm
 
 // NewFlattenDialogLinearForm returns the flatten dialog focus layout.
 // Segments: destination(0) | recursive+removeEmpty(1,2) | buttons(3).
-func NewFlattenDialogLinearForm() FlattenDialogLinearForm {
-	return FlattenDialogLinearForm{
-		form: NewDialogTrailingButtonsForm(flattenDialogNumContent, 2).WithSegments(0, 1, flattenDialogNumContent),
-	}
+func NewFlattenDialogLinearForm() DialogTrailingButtonsForm {
+	return NewDialogTrailingButtonsForm(flattenDialogNumContent, 2).WithSegments(0, 1, flattenDialogNumContent)
 }
 
 // FlattenDialogMoveFocus applies standard dialog navigation for the flatten dialog.
 func FlattenDialogMoveFocus(focus int, key tcell.Key) (int, bool) {
-	return NewFlattenDialogLinearForm().form.MoveFocus(focus, key)
+	return NewFlattenDialogLinearForm().MoveFocus(focus, key)
 }
-
-// FlattenDialogOKIndex returns the OK button focus index.
-func (d FlattenDialogLinearForm) OKIndex() int { return d.form.OKIndex() }
-
-// FlattenDialogCancelIndex returns the Cancel button focus index.
-func (d FlattenDialogLinearForm) CancelIndex() int { return d.form.CancelIndex() }

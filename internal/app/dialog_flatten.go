@@ -125,54 +125,8 @@ func (a *App) tryFlattenToggle(event *tcell.EventKey) bool {
 // handling below.
 func (a *App) handleFlattenDestNavKey(event *tcell.EventKey) bool {
 	d := &a.model.FlattenDialog
-	if d.FocusField != 0 {
-		return false
-	}
-	if d.DestSubFocus == dialog.FlattenDestSubFocusPicker {
-		switch event.Key() {
-		case tcell.KeyLeft:
-			d.DestSubFocus = dialog.FlattenDestSubFocusText
-			runes := []rune(d.Destination.Value)
-			d.Destination.Cursor = len(runes)
-			return true
-		case tcell.KeyEnter:
-			a.openPathPickerForFlatten()
-			return true
-		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
-			d.DestSubFocus = dialog.FlattenDestSubFocusText
-			return false
-		default:
-			return true
-		}
-	}
-	switch event.Key() {
-	case tcell.KeyRight:
-		dest := &d.Destination
-		runes := []rune(dest.Value)
-		c := dest.Cursor
-		if c < 0 {
-			c = 0
-		}
-		if c > len(runes) {
-			c = len(runes)
-		}
-		if dest.Prefill != "" && dest.PrefillPending && dest.Value == dest.Prefill && c >= len(runes) {
-			dest.CommitPrefill()
-			return true
-		}
-		if c >= len(runes) {
-			d.DestSubFocus = dialog.FlattenDestSubFocusPicker
-			return true
-		}
-		dest.MoveCursor(1)
-		a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-		return true
-	case tcell.KeyLeft:
-		d.Destination.MoveCursor(-1)
-		a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-		return true
-	}
-	return false
+	return a.destFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
+		dialog.FlattenDestSubFocusText, dialog.FlattenDestSubFocusPicker, a.openPathPickerForFlatten)
 }
 
 func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
@@ -193,13 +147,8 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 	if a.tryFlattenDialogDestinationShortcut(event) {
 		return
 	}
-	if d.FocusField == 0 && d.DestSubFocus == dialog.FlattenDestSubFocusText &&
-		event.Key() == tcell.KeyTab && d.Destination.CompletionSuffix != "" {
-		if d.Destination.AcceptCompletion() {
-			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-			a.armFlattenDestinationValidateTimer()
-			return
-		}
+	if event.Key() == tcell.KeyTab &&
+		a.destFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.FlattenDestSubFocusText, a.armFlattenDestinationValidateTimer) {
 		return
 	}
 	if a.handleFlattenDestNavKey(event) {

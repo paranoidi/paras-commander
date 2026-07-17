@@ -109,8 +109,5 @@ func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnect
 	draw.DrawDialogHSeparator(screen, rect, inputY+1, borderStyle)
 
 	btnY := rect.Y + rect.Height - 2
-	draw.DrawDialogButtonRowCentered(screen, rect, btnY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: state.Focus == 2},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == 3},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, btnY, state.Focus == 2, state.Focus == 3, styles)
 }

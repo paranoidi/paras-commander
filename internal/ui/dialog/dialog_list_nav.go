@@ -2,12 +2,48 @@ package dialog
 
 import "github.com/gdamore/tcell/v2"
 
+// ListDialogForm describes focus for list + OK + Cancel dialogs
+// (0=list, 1=OK, 2=Cancel). When HideOK is true, focus never lands on OK
+// (navigate/bookmark path picker shows Cancel only).
+type ListDialogForm struct {
+	HideOK bool
+}
+
+// ListIndex is the focus index of the filtered list / query field.
+func (ListDialogForm) ListIndex() int { return 0 }
+
+// OKIndex is the focus index of the OK button.
+func (ListDialogForm) OKIndex() int { return 1 }
+
+// CancelIndex is the focus index of the Cancel button.
+func (ListDialogForm) CancelIndex() int { return 2 }
+
+// MoveFocus applies Tab, Backtab, and arrow keys for list+OK+Cancel dialogs
+// (Midnight Commander rules: Up from buttons returns to list; Down from OK
+// moves to Cancel; Down on list is caller-specific). When handled is false,
+// focus is unchanged and the caller should handle list motion.
+func (f ListDialogForm) MoveFocus(focus int, key tcell.Key) (newFocus int, handled bool) {
+	nf, ok := listOKCancelNavFocusKey(focus, key)
+	if !ok {
+		return focus, false
+	}
+	if f.HideOK && nf == f.OKIndex() {
+		if key == tcell.KeyTab {
+			nf = f.CancelIndex()
+		} else {
+			nf = f.ListIndex()
+		}
+	}
+	return nf, true
+}
+
 // ListOKCancelNavFocusKey applies Tab, Backtab, arrow keys for a modal with
-// focus indices 0=list, 1=OK, 2=Cancel (Midnight Commander rules: Up from buttons
-// returns to list; Down from OK moves to Cancel; Down on list is caller-specific).
-// When handled is false, focus is unchanged and the caller should handle list
-// motion (e.g. wrap vs clamp) or leave the key unhandled.
+// focus indices 0=list, 1=OK, 2=Cancel.
 func ListOKCancelNavFocusKey(focus int, key tcell.Key) (newFocus int, handled bool) {
+	return ListDialogForm{}.MoveFocus(focus, key)
+}
+
+func listOKCancelNavFocusKey(focus int, key tcell.Key) (newFocus int, handled bool) {
 	switch key {
 	case tcell.KeyTab:
 		return (focus + 1) % 3, true

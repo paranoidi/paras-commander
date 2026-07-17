@@ -86,8 +86,5 @@ func DrawCompareMergeDialog(screen tcell.Screen, layout Layout, state CompareMer
 	y++ // blank above buttons
 
 	tform := NewCompareMergeDialogLinearForm()
-	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: state.Focus == tform.OKIndex()},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == tform.CancelIndex()},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, y, state.Focus == tform.OKIndex(), state.Focus == tform.CancelIndex(), styles)
 }

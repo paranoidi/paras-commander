@@ -113,8 +113,5 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 
 	form := NewDialogLinearForm(7)
 	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: state.Focus == form.OKIndex()},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == form.CancelIndex()},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, buttonY, state.Focus == form.OKIndex(), state.Focus == form.CancelIndex(), styles)
 }

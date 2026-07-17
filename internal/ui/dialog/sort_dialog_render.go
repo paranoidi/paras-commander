@@ -23,17 +23,7 @@ func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, s
 	y := rect.Y + 1 // first content row
 
 	// Radio list for sort mode (no blank row after title)
-	modes := []struct {
-		Mode     panel.SortMode
-		Label    string
-		Shortcut rune
-	}{
-		{panel.SortName, "Name", 'n'},
-		{panel.SortExtension, "Extension", 'e'},
-		{panel.SortSize, "Size", 's'},
-		{panel.SortMtime, "Modify time", 'm'},
-	}
-	for i, m := range modes {
+	for i, m := range panel.SortDialogRadios() {
 		draw.DrawDialogRadio(screen, primaryCol, y, m.Label, m.Shortcut, state.SortMode == m.Mode, state.Focus == i, styles)
 		y++
 	}
@@ -61,8 +51,5 @@ func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, s
 	okFocused := state.Focus == 7
 	cancelFocused := state.Focus == 8
 
-	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: okFocused},
-		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, y, okFocused, cancelFocused, styles)
 }

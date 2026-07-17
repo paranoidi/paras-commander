@@ -228,55 +228,11 @@ func (a *App) handleTransferAltShortcut(event *tcell.EventKey) bool {
 // handling below.
 func (a *App) handleTransferDestinationNav(event *tcell.EventKey) bool {
 	d := &a.model.TransferDialog
-	if d.FocusField != 0 || d.Phase != dialog.TransferPhaseDestination {
+	if d.Phase != dialog.TransferPhaseDestination {
 		return false
 	}
-	if d.DestSubFocus == dialog.TransferDestSubFocusPicker {
-		switch event.Key() {
-		case tcell.KeyLeft:
-			d.DestSubFocus = dialog.TransferDestSubFocusText
-			runes := []rune(d.Destination.Value)
-			d.Destination.Cursor = len(runes)
-			return true
-		case tcell.KeyEnter:
-			a.openPathPickerForTransfer()
-			return true
-		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
-			d.DestSubFocus = dialog.TransferDestSubFocusText
-			return false
-		default:
-			return true
-		}
-	}
-	switch event.Key() {
-	case tcell.KeyRight:
-		dest := &d.Destination
-		runes := []rune(dest.Value)
-		c := dest.Cursor
-		if c < 0 {
-			c = 0
-		}
-		if c > len(runes) {
-			c = len(runes)
-		}
-		// First Right on a pending placeholder commits it; second Right at EOT moves to the glyph.
-		if dest.Prefill != "" && dest.PrefillPending && dest.Value == dest.Prefill && c >= len(runes) {
-			dest.CommitPrefill()
-			return true
-		}
-		if c >= len(runes) {
-			d.DestSubFocus = dialog.TransferDestSubFocusPicker
-			return true
-		}
-		dest.MoveCursor(1)
-		a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-		return true
-	case tcell.KeyLeft:
-		d.Destination.MoveCursor(-1)
-		a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-		return true
-	}
-	return false
+	return a.destFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
+		dialog.TransferDestSubFocusText, dialog.TransferDestSubFocusPicker, a.openPathPickerForTransfer)
 }
 
 // handleTransferEnter handles Enter on the transfer dialog: confirm from the destination
@@ -377,14 +333,8 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	if a.tryPathPickerHostShortcut(event) {
 		return
 	}
-	if d.FocusField == 0 && d.Phase == dialog.TransferPhaseDestination &&
-		d.DestSubFocus == dialog.TransferDestSubFocusText &&
-		event.Key() == tcell.KeyTab && d.Destination.CompletionSuffix != "" {
-		if d.Destination.AcceptCompletion() {
-			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-			a.armTransferDestinationValidateTimer()
-			return
-		}
+	if d.Phase == dialog.TransferPhaseDestination && event.Key() == tcell.KeyTab &&
+		a.destFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.TransferDestSubFocusText, a.armTransferDestinationValidateTimer) {
 		return
 	}
 	if d.FocusField == 0 && d.Phase == dialog.TransferPhaseSelfCopyRename {

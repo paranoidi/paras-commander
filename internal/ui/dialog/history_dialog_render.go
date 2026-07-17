@@ -109,8 +109,5 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 	buttonY := rect.Y + rect.Height - 2
 	okFocused := state.Focus == 1
 	cancelFocused := state.Focus == 2
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: okFocused},
-		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, buttonY, okFocused, cancelFocused, styles)
 }

@@ -111,6 +111,44 @@ func FilterLabel(f Filter) string {
 	}
 }
 
+// FilterDialogRadio describes one category radio in the compare filter dialog.
+type FilterDialogRadio struct {
+	Filter   Filter
+	Label    string
+	Shortcut rune
+}
+
+// FilterDialogRadios is the canonical radio list for the compare filter dialog and its key handler.
+func FilterDialogRadios() []FilterDialogRadio {
+	return []FilterDialogRadio{
+		{FilterAll, "All", 'A'},
+		{FilterEqual, "Equal", 'E'},
+		{FilterRelocated, "Relocated", 'R'},
+		{FilterPrimaryOnly, "Primary only", 'P'},
+		{FilterSecondaryOnly, "Secondary only", 'S'},
+		{FilterContentDiff, "Content diff", 'D'},
+	}
+}
+
+// FocusForFilter returns the radio focus index for f (0 when unknown).
+func FocusForFilter(f Filter) int {
+	for i, r := range FilterDialogRadios() {
+		if r.Filter == f {
+			return i
+		}
+	}
+	return 0
+}
+
+// FilterForFocus maps focus index to a Filter value.
+func FilterForFocus(focus int) (Filter, bool) {
+	radios := FilterDialogRadios()
+	if focus < 0 || focus >= len(radios) {
+		return FilterAll, false
+	}
+	return radios[focus].Filter, true
+}
+
 // FilteredRows returns rows from snap that match filter.
 func FilteredRows(snap Snapshot, filter Filter) []Row {
 	out := make([]Row, 0, len(snap.Rows))

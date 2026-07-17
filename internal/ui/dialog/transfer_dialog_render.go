@@ -15,6 +15,15 @@ import (
 // layout (full list still scrolls).
 const TransferListMaxRows = 10
 
+func drawTransferButtons(screen tcell.Screen, rect draw.Rect, y int, state TransferDialogState, styles theme.Theme) {
+	tform := NewTransferDialogLinearForm(TransferDialogEffectiveNumContent(state))
+	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
+		{Label: "OK", Shortcut: 'O', Focused: state.FocusField == tform.OKIndex()},
+		{Label: "Add paused", Shortcut: 'p', Focused: state.FocusField == tform.AddPausedIndex()},
+		{Label: "Cancel", Shortcut: 'C', Focused: state.FocusField == tform.CancelIndex()},
+	}, styles)
+}
+
 func transferDialogMaxHeight(layoutHeight int) int {
 	maxH := layoutHeight * 80 / 100
 	if maxH > layoutHeight-2 {
@@ -100,9 +109,10 @@ func transferMultiDialogWidth(layout Layout, state TransferDialogState, userHome
 	return width
 }
 
-func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialogState, styles theme.Theme, userHomeDir string, showIcons bool, iconLead int, paintIcon DeleteRowIconPainter) {
+func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialogState, ctx DialogRenderContext, paintIcon DeleteRowIconPainter) {
+	styles := ctx.Styles
 	if state.MultiLocation() {
-		drawMultiLocationTransferDialog(screen, layout, state, styles, userHomeDir, showIcons, iconLead, paintIcon)
+		drawMultiLocationTransferDialog(screen, layout, state, ctx, paintIcon)
 		return
 	}
 
@@ -143,13 +153,8 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 		sepY := rect.Y + 6
 		draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
 
-		tform := NewTransferDialogLinearForm(TransferDialogEffectiveNumContent(state))
 		buttonY := rect.Y + rect.Height - 2
-		draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-			{Label: "OK", Shortcut: 'O', Focused: state.FocusField == tform.OKIndex()},
-			{Label: "Add paused", Shortcut: 'p', Focused: state.FocusField == tform.AddPausedIndex()},
-			{Label: "Cancel", Shortcut: 'C', Focused: state.FocusField == tform.CancelIndex()},
-		}, styles)
+		drawTransferButtons(screen, rect, buttonY, state, styles)
 		return
 	}
 
@@ -174,33 +179,27 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 		sep2Y := sep1Y + 3
 		draw.DrawDialogHSeparator(screen, rect, sep2Y, borderStyle)
 
-		tform := NewTransferDialogLinearForm(TransferDialogEffectiveNumContent(state))
 		buttonY := rect.Y + rect.Height - 2
-		draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-			{Label: "OK", Shortcut: 'O', Focused: state.FocusField == tform.OKIndex()},
-			{Label: "Add paused", Shortcut: 'p', Focused: state.FocusField == tform.AddPausedIndex()},
-			{Label: "Cancel", Shortcut: 'C', Focused: state.FocusField == tform.CancelIndex()},
-		}, styles)
+		drawTransferButtons(screen, rect, buttonY, state, styles)
 		return
 	}
 
 	sepY := rect.Y + 4
 	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
 
-	tform := NewTransferDialogLinearForm(TransferDialogEffectiveNumContent(state))
 	buttonY := rect.Y + rect.Height - 2
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: state.FocusField == tform.OKIndex()},
-		{Label: "Add paused", Shortcut: 'p', Focused: state.FocusField == tform.AddPausedIndex()},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.FocusField == tform.CancelIndex()},
-	}, styles)
+	drawTransferButtons(screen, rect, buttonY, state, styles)
 }
 
 // drawMultiLocationTransferDialog renders the Copy/Move dialog when the selection spans
 // multiple directories away from their common root (TransferDialogState.MultiLocation()):
 // a Source: header with the common root, the usual Destination block, preserve/flatten
 // checkboxes, and a scrollable "Result" preview of the selections.
-func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state TransferDialogState, styles theme.Theme, userHomeDir string, showIcons bool, iconLead int, paintIcon DeleteRowIconPainter) {
+func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state TransferDialogState, ctx DialogRenderContext, paintIcon DeleteRowIconPainter) {
+	styles := ctx.Styles
+	userHomeDir := ctx.UserHomeDir
+	showIcons := ctx.ShowIcons
+	iconLead := ctx.IconLead
 	title := "Copy"
 	if state.Kind == TransferKindMove {
 		title = "Move"
@@ -295,10 +294,5 @@ func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state T
 	y++
 	y++ // blank row above buttons
 
-	tform := NewTransferDialogLinearForm(TransferDialogEffectiveNumContent(state))
-	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: state.FocusField == tform.OKIndex()},
-		{Label: "Add paused", Shortcut: 'p', Focused: state.FocusField == tform.AddPausedIndex()},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.FocusField == tform.CancelIndex()},
-	}, styles)
+	drawTransferButtons(screen, rect, y, state, styles)
 }

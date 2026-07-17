@@ -180,10 +180,7 @@ func DrawMessageDialog(screen tcell.Screen, layout Layout, state MessageDialogSt
 	if state.TwoButtons {
 		f0 := state.ButtonFocus == 0
 		f1 := state.ButtonFocus == 1
-		draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-			{Label: "OK", Shortcut: 'O', Focused: f0},
-			{Label: "Cancel", Shortcut: 'C', Focused: f1},
-		}, styles)
+		draw.DrawOKCancelButtonRow(screen, rect, buttonY, f0, f1, styles)
 		return
 	}
 	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{

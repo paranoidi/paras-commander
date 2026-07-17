@@ -21,5 +21,10 @@ func PaintFileDialog(
 	if !state.Open {
 		return
 	}
-	dialog.DrawFileDialog(screen, layout, state, styles, showIcons, DialogListIconLeadingWidth(showIcons), PaintDeleteDialogRowIcon)
+	ctx := dialog.DialogRenderContext{
+		Styles:    styles,
+		ShowIcons: showIcons,
+		IconLead:  DialogListIconLeadingWidth(showIcons),
+	}
+	dialog.DrawFileDialog(screen, layout, state, ctx, PaintDeleteDialogRowIcon)
 }

@@ -100,8 +100,5 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
 	okFocused := state.Focus == configDialogFocusOK
 	cancelFocused := state.Focus == configDialogFocusCancel
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: okFocused},
-		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, buttonY, okFocused, cancelFocused, styles)
 }

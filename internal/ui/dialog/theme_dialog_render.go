@@ -207,10 +207,7 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	btnY := outerSepY + 1
 	okFocused := state.Focus == 1
 	cancelFocused := state.Focus == 2
-	draw.DrawDialogButtonRowCentered(screen, rect, btnY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: okFocused},
-		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, btnY, okFocused, cancelFocused, styles)
 
 	// Override box-drawing connector characters at the vertical separator column
 	// where it intersects horizontal lines. Must be after all draw calls.

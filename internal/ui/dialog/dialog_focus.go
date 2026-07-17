@@ -58,6 +58,11 @@ func (d DialogTrailingButtonsForm) MiddleButtonIndex() int {
 	return d.NumContent + 1
 }
 
+// AddPausedIndex is the middle button index for the three-button transfer dialog.
+func (d DialogTrailingButtonsForm) AddPausedIndex() int {
+	return d.MiddleButtonIndex()
+}
+
 // CancelIndex is the focus index of the Cancel button.
 func (d DialogTrailingButtonsForm) CancelIndex() int {
 	return d.NumContent + d.NumTrailingButtons - 1
@@ -177,82 +182,12 @@ func (d DialogTrailingButtonsForm) MoveFocus(focus int, key tcell.Key) (int, boo
 	}
 }
 
-// DialogLinearForm describes focus indices for a dialog with N content rows
-// (indices 0..numContent-1) followed by OK and Cancel.
-type DialogLinearForm struct {
-	NumContent    int
-	SegmentStarts []int
-}
+// DialogLinearForm is the standard OK+Cancel trailing-button layout.
+type DialogLinearForm = DialogTrailingButtonsForm
 
 // NewDialogLinearForm returns layout for NumContent fields and two trailing buttons.
-func NewDialogLinearForm(numContent int) DialogLinearForm {
-	return DialogLinearForm{NumContent: numContent}
-}
-
-// WithSegments returns a copy with segment-jump Tab/Backtab enabled (see DialogTrailingButtonsForm).
-func (d DialogLinearForm) WithSegments(starts ...int) DialogLinearForm {
-	d.SegmentStarts = starts
-	return d
-}
-
-func (d DialogLinearForm) trailing() DialogTrailingButtonsForm {
-	t := NewDialogTrailingButtonsForm(d.NumContent, 2)
-	if len(d.SegmentStarts) >= 2 {
-		t.SegmentStarts = d.SegmentStarts
-	}
-	return t
-}
-
-// TotalFocus is the number of focus positions (content + OK + Cancel).
-func (d DialogLinearForm) TotalFocus() int {
-	return d.trailing().TotalFocus()
-}
-
-// OKIndex is the focus index of the OK button.
-func (d DialogLinearForm) OKIndex() int {
-	return d.trailing().OKIndex()
-}
-
-// CancelIndex is the focus index of the Cancel button.
-func (d DialogLinearForm) CancelIndex() int {
-	return d.trailing().CancelIndex()
-}
-
-// Tab advances focus with wrap (Tab / Shift+Tab convenience), 0..TotalFocus-1.
-func (d DialogLinearForm) Tab(focus int) int {
-	return d.trailing().Tab(focus)
-}
-
-// Backtab moves focus backward with wrap.
-func (d DialogLinearForm) Backtab(focus int) int {
-	return d.trailing().Backtab(focus)
-}
-
-// Down moves focus down per AGENTS.md: within content only until last content, then to OK;
-// on OK/Cancel, Down does nothing.
-func (d DialogLinearForm) Down(focus int) int {
-	return d.trailing().Down(focus)
-}
-
-// Up moves focus up per AGENTS.md: from OK/Cancel to last content; within content without wrap from 0.
-func (d DialogLinearForm) Up(focus int) int {
-	return d.trailing().Up(focus)
-}
-
-// Left moves focus between OK and Cancel only.
-func (d DialogLinearForm) Left(focus int) int {
-	return d.trailing().Left(focus)
-}
-
-// Right moves focus from OK to Cancel only.
-func (d DialogLinearForm) Right(focus int) int {
-	return d.trailing().Right(focus)
-}
-
-// MoveFocus applies the standard dialog focus-navigation key and reports
-// whether the key was handled.
-func (d DialogLinearForm) MoveFocus(focus int, key tcell.Key) (int, bool) {
-	return d.trailing().MoveFocus(focus, key)
+func NewDialogLinearForm(numContent int) DialogTrailingButtonsForm {
+	return NewDialogTrailingButtonsForm(numContent, 2)
 }
 
 // UserMenuDialogForm is focus for N menu rows plus a single Cancel button (no OK).
@@ -336,76 +271,12 @@ func (d UserMenuDialogForm) MoveFocus(focus int, key tcell.Key) (int, bool) {
 	}
 }
 
-// TransferDialogLinearForm is focus navigation for the copy/move destination dialog:
-// NumContent fields, then OK, Add paused, Cancel.
-type TransferDialogLinearForm struct {
-	NumContent    int
-	SegmentStarts []int
-}
+// TransferDialogLinearForm is the three-button transfer dialog layout (OK, Add paused, Cancel).
+type TransferDialogLinearForm = DialogTrailingButtonsForm
 
 // NewTransferDialogLinearForm returns layout for NumContent fields plus three trailing buttons.
-func NewTransferDialogLinearForm(numContent int) TransferDialogLinearForm {
-	return TransferDialogLinearForm{NumContent: numContent}
-}
-
-// WithSegments returns a copy with segment-jump Tab/Backtab enabled (see DialogTrailingButtonsForm).
-func (d TransferDialogLinearForm) WithSegments(starts ...int) TransferDialogLinearForm {
-	d.SegmentStarts = starts
-	return d
-}
-
-func (d TransferDialogLinearForm) trailing() DialogTrailingButtonsForm {
-	t := NewDialogTrailingButtonsForm(d.NumContent, 3)
-	if len(d.SegmentStarts) >= 2 {
-		t.SegmentStarts = d.SegmentStarts
-	}
-	return t
-}
-
-func (d TransferDialogLinearForm) TotalFocus() int {
-	return d.trailing().TotalFocus()
-}
-
-func (d TransferDialogLinearForm) OKIndex() int {
-	return d.trailing().OKIndex()
-}
-
-func (d TransferDialogLinearForm) AddPausedIndex() int {
-	return d.trailing().MiddleButtonIndex()
-}
-
-func (d TransferDialogLinearForm) CancelIndex() int {
-	return d.trailing().CancelIndex()
-}
-
-func (d TransferDialogLinearForm) Tab(focus int) int {
-	return d.trailing().Tab(focus)
-}
-
-func (d TransferDialogLinearForm) Backtab(focus int) int {
-	return d.trailing().Backtab(focus)
-}
-
-func (d TransferDialogLinearForm) Down(focus int) int {
-	return d.trailing().Down(focus)
-}
-
-func (d TransferDialogLinearForm) Up(focus int) int {
-	return d.trailing().Up(focus)
-}
-
-func (d TransferDialogLinearForm) Left(focus int) int {
-	return d.trailing().Left(focus)
-}
-
-func (d TransferDialogLinearForm) Right(focus int) int {
-	return d.trailing().Right(focus)
-}
-
-// MoveFocus applies the standard dialog focus-navigation key and reports
-// whether the key was handled.
-func (d TransferDialogLinearForm) MoveFocus(focus int, key tcell.Key) (int, bool) {
-	return d.trailing().MoveFocus(focus, key)
+func NewTransferDialogLinearForm(numContent int) DialogTrailingButtonsForm {
+	return NewDialogTrailingButtonsForm(numContent, 3)
 }
 
 // TransferDialogMoveFocus applies Tab/arrow navigation for the copy/move dialog (destination or self-copy phase).

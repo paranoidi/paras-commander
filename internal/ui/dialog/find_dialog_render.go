@@ -75,7 +75,10 @@ const findDialogPreferredWidth = 117 // 50% wider than the history/path picker d
 // FindRowIconPainter draws file-list devicons for one find dialog row; nil skips icons.
 type FindRowIconPainter func(screen tcell.Screen, x, y int, entry FindEntry, styles theme.Theme)
 
-func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, styles theme.Theme, showIcons bool, iconLead int, paintIcon FindRowIconPainter, selectionSizeLabel string) {
+func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, ctx DialogRenderContext, paintIcon FindRowIconPainter, selectionSizeLabel string) {
+	styles := ctx.Styles
+	showIcons := ctx.ShowIcons
+	iconLead := ctx.IconLead
 	width, height, listH, ok := FindDialogMetrics(layout, state.ShowSearchSelectionsOption)
 	if !ok {
 		return
@@ -192,8 +195,5 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, s
 
 	okFocused := state.Focus == state.FindDialogOKFocus()
 	cancelFocused := state.Focus == state.FindDialogCancelFocus()
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: okFocused},
-		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, buttonY, okFocused, cancelFocused, styles)
 }

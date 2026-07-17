@@ -43,7 +43,10 @@ func dedupEmptyDirsConfirmWidth(state DedupEmptyDirsConfirmState, msg string, ic
 	return width
 }
 
-func DrawDedupEmptyDirsConfirmDialog(screen tcell.Screen, layout Layout, state DedupEmptyDirsConfirmState, styles theme.Theme, showIcons bool, iconLead int, paintIcon DedupEmptyDirsRowIconPainter) {
+func DrawDedupEmptyDirsConfirmDialog(screen tcell.Screen, layout Layout, state DedupEmptyDirsConfirmState, ctx DialogRenderContext, paintIcon DedupEmptyDirsRowIconPainter) {
+	styles := ctx.Styles
+	showIcons := ctx.ShowIcons
+	iconLead := ctx.IconLead
 	noun := "directories"
 	if len(state.Dirs) == 1 {
 		noun = "directory"

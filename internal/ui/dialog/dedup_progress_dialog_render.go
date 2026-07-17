@@ -80,10 +80,7 @@ func DrawDedupProgressDialog(
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawDialogHSeparator(screen, rect, buttonY-1, borderStyle)
 	if snap.Phase == comparepkg.DedupAwaitConfirm {
-		draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-			{Label: "OK", Shortcut: 'O', Focused: state.ButtonFocus == 0},
-			{Label: "Cancel", Shortcut: 'C', Focused: state.ButtonFocus == 1},
-		}, styles)
+		draw.DrawOKCancelButtonRow(screen, rect, buttonY, state.ButtonFocus == 0, state.ButtonFocus == 1, styles)
 		return
 	}
 	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{

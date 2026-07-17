@@ -192,19 +192,9 @@ func (a *App) activatePathPickerSelection() {
 	}
 }
 
-// pathPickerNavFocus wraps ListOKCancelNavFocusKey, skipping the hidden OK
-// button (focus index 1) for the navigate/bookmark picker, which shows only
-// Cancel (focus index 2).
+// pathPickerNavFocus applies list+OK+Cancel navigation, hiding OK for navigate/bookmark.
 func pathPickerNavFocus(purpose dialog.PathPickerPurpose, focus int, key tcell.Key) (int, bool) {
-	nf, ok := dialog.ListOKCancelNavFocusKey(focus, key)
-	if ok && purpose == dialog.PathPickerPurposeNavigate && nf == 1 {
-		if key == tcell.KeyTab {
-			nf = 2
-		} else {
-			nf = 0
-		}
-	}
-	return nf, ok
+	return dialog.ListDialogForm{HideOK: purpose == dialog.PathPickerPurposeNavigate}.MoveFocus(focus, key)
 }
 
 func (a *App) handlePathPickerKey(event *tcell.EventKey) {

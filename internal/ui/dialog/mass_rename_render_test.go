@@ -36,7 +36,7 @@ func TestDrawMassRenameDialogLastItemVisible(t *testing.T) {
 	}
 	layout := Layout{Width: 80, Height: 40}
 	styles := theme.Default()
-	DrawFileDialog(screen, layout, state, styles, false, 0, nil)
+	DrawFileDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil)
 
 	var dump strings.Builder
 	for y := 0; y < 40; y++ {
@@ -80,7 +80,7 @@ func TestDrawMassRenameDialogShowsRegexpCompileHint(t *testing.T) {
 	}
 	layout := Layout{Width: 80, Height: 24}
 	styles := theme.Default()
-	DrawFileDialog(screen, layout, state, styles, false, 0, nil)
+	DrawFileDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil)
 
 	var found string
 	for y := 0; y < 24; y++ {

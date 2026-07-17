@@ -34,8 +34,5 @@ func DrawListingFormatDialog(screen tcell.Screen, layout Layout, state ListingFo
 
 	okFocused := state.Focus == 3
 	cancelFocused := state.Focus == 4
-	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: okFocused},
-		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, y, okFocused, cancelFocused, styles)
 }

@@ -21,6 +21,15 @@ const (
 	SecondaryPanel
 )
 
+func dialogRenderContext(model Model, styles theme.Theme) dialog.DialogRenderContext {
+	return dialog.DialogRenderContext{
+		Styles:      styles,
+		UserHomeDir: model.UserHomeDir,
+		ShowIcons:   model.ShowFileIcons,
+		IconLead:    DialogListIconLeadingWidth(model.ShowFileIcons),
+	}
+}
+
 // SubFocus areas within the active browser column (file list vs selections strip),
 // or keyboard focus on the inactive-column file preview when it is open.
 const (
@@ -614,7 +623,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	case dialog.PrimaryModalTheme:
 		dialog.DrawThemeDialog(screen, layout, model.ThemeDialog, styles)
 	case dialog.PrimaryModalTransfer:
-		dialog.DrawTransferDialog(screen, layout, model.TransferDialog, styles, model.UserHomeDir, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintDeleteDialogRowIcon)
+		dialog.DrawTransferDialog(screen, layout, model.TransferDialog, dialogRenderContext(model, styles), PaintDeleteDialogRowIcon)
 	case dialog.PrimaryModalFlatten:
 		dialog.DrawFlattenDialog(screen, layout, model.FlattenDialog, styles)
 	case dialog.PrimaryModalConflict:
@@ -622,7 +631,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	case dialog.PrimaryModalQuit:
 		dialog.DrawQuitConfirmDialog(screen, layout, model.QuitConfirm, styles)
 	case dialog.PrimaryModalDedupEmptyDirs:
-		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, styles, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintDedupEmptyDirsConfirmRowIcon)
+		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, dialogRenderContext(model, styles), PaintDedupEmptyDirsConfirmRowIcon)
 	}
 	if model.ConfigDialog.Open {
 		dialog.DrawConfigDialog(screen, layout, model.ConfigDialog, styles)
@@ -656,7 +665,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 			model.DiskUsageGoduIgnore,
 			styles.SymbolWorking(),
 		)
-		dialog.DrawFindDialog(screen, layout, model.FindDialog, styles, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintFindDialogRowIcon, selectionLabel)
+		dialog.DrawFindDialog(screen, layout, model.FindDialog, dialogRenderContext(model, styles), PaintFindDialogRowIcon, selectionLabel)
 	}
 	if model.GroupSelect.Open {
 		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)
@@ -665,7 +674,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawMetaDialog(screen, layout, model.MetaDialog, styles)
 	}
 	if model.FileDialog.Open {
-		dialog.DrawFileDialog(screen, layout, model.FileDialog, styles, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintDeleteDialogRowIcon)
+		dialog.DrawFileDialog(screen, layout, model.FileDialog, dialogRenderContext(model, styles), PaintDeleteDialogRowIcon)
 	}
 	if model.HostKeyDialog.Open {
 		dialog.DrawHostKeyDialog(screen, layout, model.HostKeyDialog, styles)

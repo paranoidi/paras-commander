@@ -64,6 +64,23 @@ func IterateSortModes() []SortMode {
 	return []SortMode{SortName, SortExtension, SortSize, SortMtime}
 }
 
+// SortDialogRadio describes one sort-mode radio in the sort dialog.
+type SortDialogRadio struct {
+	Mode     SortMode
+	Label    string
+	Shortcut rune
+}
+
+// SortDialogRadios is the canonical radio list for the sort dialog and its key handler.
+func SortDialogRadios() []SortDialogRadio {
+	return []SortDialogRadio{
+		{SortName, "Name", 'n'},
+		{SortExtension, "Extension", 'e'},
+		{SortSize, "Size", 's'},
+		{SortMtime, "Modify time", 'm'},
+	}
+}
+
 // ApplySort sorts s.Entries in-place using the current sort state.
 func (s *State) ApplySort() {
 	if len(s.Entries) == 0 {

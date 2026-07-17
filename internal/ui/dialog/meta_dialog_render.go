@@ -45,8 +45,5 @@ func DrawMetaDialog(screen tcell.Screen, layout Layout, state MetaDialogState, s
 
 	okFocused := state.Focus == form.OKIndex()
 	cancelFocused := state.Focus == form.CancelIndex()
-	draw.DrawDialogButtonRowCentered(screen, rect, y, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: okFocused},
-		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, y, okFocused, cancelFocused, styles)
 }

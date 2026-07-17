@@ -54,5 +54,10 @@ func PaintFindDialog(
 		return
 	}
 	selectionLabel := FindDialogSelectionSizePadded(state, painter, descendIntoMountPoints, goduIgnore, styles.SymbolWorking())
-	dialog.DrawFindDialog(screen, layout, *state, styles, showIcons, DialogListIconLeadingWidth(showIcons), PaintFindDialogRowIcon, selectionLabel)
+	ctx := dialog.DialogRenderContext{
+		Styles:    styles,
+		ShowIcons: showIcons,
+		IconLead:  DialogListIconLeadingWidth(showIcons),
+	}
+	dialog.DrawFindDialog(screen, layout, *state, ctx, PaintFindDialogRowIcon, selectionLabel)
 }

@@ -66,29 +66,13 @@ func (a *App) handleCompareFilterDialogKey(event *tcell.EventKey) {
 	}
 	// Alt+letter shortcuts navigate to a filter option and apply live.
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		var target comparepkg.Filter
-		found := true
-		switch {
-		case runeMatchesCaseFold(event.Rune(), 'a'):
-			target = comparepkg.FilterAll
-		case runeMatchesCaseFold(event.Rune(), 'e'):
-			target = comparepkg.FilterEqual
-		case runeMatchesCaseFold(event.Rune(), 'r'):
-			target = comparepkg.FilterRelocated
-		case runeMatchesCaseFold(event.Rune(), 'p'):
-			target = comparepkg.FilterPrimaryOnly
-		case runeMatchesCaseFold(event.Rune(), 's'):
-			target = comparepkg.FilterSecondaryOnly
-		case runeMatchesCaseFold(event.Rune(), 'd'):
-			target = comparepkg.FilterContentDiff
-		default:
-			found = false
-		}
-		if found {
-			newFocus := dialog.FocusForCompareFilter(target)
-			d.Focus = newFocus
-			a.applyCompareFilterFocus(newFocus)
-			return
+		for _, row := range comparepkg.FilterDialogRadios() {
+			if runeMatchesCaseFold(event.Rune(), row.Shortcut) {
+				newFocus := dialog.FocusForCompareFilter(row.Filter)
+				d.Focus = newFocus
+				a.applyCompareFilterFocus(newFocus)
+				return
+			}
 		}
 	}
 	if nf, ok := dialog.CompareFilterDialogMoveFocus(d.Focus, event.Key()); ok {

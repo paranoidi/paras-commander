@@ -123,8 +123,5 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 		return
 	}
 	okFocused := state.Focus == 1
-	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
-		{Label: "OK", Shortcut: 'O', Focused: okFocused},
-		{Label: "Cancel", Shortcut: 'C', Focused: cancelFocused},
-	}, styles)
+	draw.DrawOKCancelButtonRow(screen, rect, buttonY, okFocused, cancelFocused, styles)
 }
