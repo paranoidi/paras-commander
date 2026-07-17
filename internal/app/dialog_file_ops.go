@@ -6,6 +6,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/filenameenc"
 	"github.com/paranoidi/paras-commander/internal/jobs"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -17,6 +18,46 @@ import (
 func (a *App) closeFileDialog() {
 	a.clearDeleteDialogReconcileCache()
 	a.model.FileDialog = dialog.FileDialogState{}
+}
+
+// tryDispatchFileOps handles file-operation dialog openers and copy/move/duplicate actions.
+func (a *App) tryDispatchFileOps(actionID string) bool {
+	activePanel := a.activePanel()
+	switch actionID {
+	case keymap.ActionFileRename:
+		a.openRenameDialog(activePanel)
+	case keymap.ActionFileDelete:
+		a.openDeleteDialog(activePanel)
+	case keymap.ActionFileMkdir:
+		a.openMkdirDialog(false)
+	case keymap.ActionFileMkdirOpenInOther:
+		a.openMkdirDialog(true)
+	case keymap.ActionFileChmod:
+		a.openChmodDialog(activePanel)
+	case keymap.ActionFileChown:
+		a.openChownDialog(activePanel)
+	case keymap.ActionFileSymlink:
+		a.openSymlinkDialog(activePanel)
+	case keymap.ActionFileHardlink:
+		a.openHardlinkDialog(activePanel)
+	case keymap.ActionFileExtract:
+		a.openExtractDialog(activePanel)
+	case keymap.ActionFileFlatten:
+		a.openFlattenDialog()
+	case keymap.ActionCopy:
+		a.activateCopyAction()
+	case keymap.ActionFileDuplicate:
+		a.activateDuplicateAction()
+	case keymap.ActionMove:
+		a.activateMoveAction()
+	case keymap.ActionFileRunForEach:
+		if a.model.ViewMode == ui.ViewBrowser {
+			a.openRunForEachDialog()
+		}
+	default:
+		return false
+	}
+	return true
 }
 
 func (a *App) refreshBothPanels() {

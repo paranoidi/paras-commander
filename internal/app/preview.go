@@ -311,6 +311,33 @@ func (a *App) tryDispatchQuickViewPreviewScroll(actionID string) bool {
 	return true
 }
 
+// tryDispatchFileView handles file-preview/quick-view/diff-hunk-navigation actions.
+func (a *App) tryDispatchFileView(actionID string) bool {
+	switch actionID {
+	case keymap.ActionFileView:
+		a.openFilePreviewFullscreen()
+	case keymap.ActionFileViewThemePicker:
+		a.toggleFilePreviewThemePicker()
+	case keymap.ActionFileViewToggleRaw:
+		a.toggleFilePreviewRawMarkdown()
+	case keymap.ActionFileViewDiffNextHunk:
+		a.hunkNavigate(previewTargetInactive, 1)
+	case keymap.ActionFileViewDiffPrevHunk:
+		a.hunkNavigate(previewTargetInactive, -1)
+	case keymap.ActionFileQuickView:
+		a.handleQuickViewToggle()
+	case keymap.ActionFileEdit:
+		if a.model.ViewMode == ui.ViewFilePreview && a.model.FullscreenFilePreview.Open {
+			a.editFullscreenPreviewFile()
+		} else {
+			a.editActiveFile()
+		}
+	default:
+		return false
+	}
+	return true
+}
+
 func (a *App) patchFilePreview(fn func(*ui.FilePreviewState)) {
 	a.commandsMu.Lock()
 	defer a.commandsMu.Unlock()

@@ -1,13 +1,11 @@
 package app
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -47,6 +45,12 @@ const (
 	InputModeCommandOutputDialog
 )
 
+// viewActiveForInput reports whether vm is the active view and eligible to receive
+// view-specific key handling (no blocking dialog keys, no quick-filter UI in front).
+func (a *App) viewActiveForInput(vm ui.ViewMode) bool {
+	return a.model.ViewMode == vm && !a.model.AuxiliaryViewDialogKeysBlocked() && !a.inQuickFilterUI()
+}
+
 func (a *App) inputMode() InputMode {
 	switch {
 	case a.model.CommandOutputDialog.Open:
@@ -85,29 +89,17 @@ func (a *App) inputMode() InputMode {
 		return InputModeFileDialog
 	case a.model.DedupProgressDialog.Open:
 		return InputModeDedupProgressDialog
-	case a.model.ViewMode == ui.ViewCompare &&
-		!a.model.AuxiliaryViewDialogKeysBlocked() &&
-		!a.inQuickFilterUI():
+	case a.viewActiveForInput(ui.ViewCompare):
 		return InputModeCompareView
-	case a.model.ViewMode == ui.ViewDedup &&
-		!a.model.AuxiliaryViewDialogKeysBlocked() &&
-		!a.inQuickFilterUI():
+	case a.viewActiveForInput(ui.ViewDedup):
 		return InputModeDedupView
-	case a.model.ViewMode == ui.ViewFilePreview &&
-		!a.model.AuxiliaryViewDialogKeysBlocked() &&
-		!a.inQuickFilterUI():
+	case a.viewActiveForInput(ui.ViewFilePreview):
 		return InputModeFilePreviewView
-	case a.model.ViewMode == ui.ViewCommands &&
-		!a.model.AuxiliaryViewDialogKeysBlocked() &&
-		!a.inQuickFilterUI():
+	case a.viewActiveForInput(ui.ViewCommands):
 		return InputModeCommandsView
-	case a.model.ViewMode == ui.ViewMessages &&
-		!a.model.AuxiliaryViewDialogKeysBlocked() &&
-		!a.inQuickFilterUI():
+	case a.viewActiveForInput(ui.ViewMessages):
 		return InputModeMessagesView
-	case a.model.ViewMode == ui.ViewJobs &&
-		!a.model.AuxiliaryViewDialogKeysBlocked() &&
-		!a.inQuickFilterUI():
+	case a.viewActiveForInput(ui.ViewJobs):
 		return InputModeJobsView
 	case a.model.TransferDialog.Open, a.model.FlattenDialog.Open, a.model.ConflictDialog.Open, a.model.QuitConfirm.Open, a.model.DedupEmptyDirsConfirm.Open, a.model.StashRestoreDialog.Open:
 		return InputModeDialog
@@ -161,23 +153,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		return footerWithEscClose(rest)
 	}
 	if a.model.PathPicker.Open || a.model.MetaDialog.Open {
-		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		if a.model.MetaDialog.Open {
-			rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
-		}
-		if a.bookmarkDialogDeleteFooterEligible() {
-			if lbl := a.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete); lbl != "" {
-				rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete bookmark"}}, rest...)
-			}
-		}
-		if a.keysBookmarkDialog != nil && a.bookmarkDialogOpen() {
-			if _, ok := a.pathPickerSelectedItem(); ok {
-				if lbl := a.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkOpenOther); lbl != "" {
-					rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Open other"}}, rest...)
-				}
-			}
-		}
-		return footerWithEscClose(rest)
+		return a.pathPickerMetaFooterKeys()
 	}
 	if a.model.CommandOutputDialog.Open {
 		return footerWithEscClose([]menu.FunctionKey{
@@ -186,42 +162,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	}
 	if a.model.PrimaryModal() != dialog.PrimaryModalNone ||
 		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.SFTPConnectDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open || a.model.CompareMergeDialog.Open {
-		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		if hints := flattenDialogOverlayFooterKeys(a, a.keysFlattenDialog); len(hints) > 0 {
-			rest = append(hints, rest...)
-		}
-		if a.pathPickerHostFooterEligible() {
-			if lbl := a.keys.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
-				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Bookmarks"}}, rest...)
-			}
-		}
-		if a.mkdirDialogExtractFooterEligible() {
-			if lbl := a.keysMkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName); lbl != "" {
-				rest = append([]menu.FunctionKey{{Key: tcell.KeyF7, KeyLabel: lbl, Hint: "Extract common name"}}, rest...)
-			}
-		}
-		if a.dialogInputRestoreFooterEligible() {
-			if lbl := a.keysDialogInput.MenuBindingLabel(keymap.ActionDialogInputRestoreDefault); lbl != "" {
-				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Default"}}, rest...)
-			}
-		}
-		if a.massRenameEditorFooterEligible() {
-			rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Editor"}}, rest...)
-		}
-		if a.renameDialogFooterEligible() {
-			if a.renameEncodingFooterEligible() {
-				if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding); lbl != "" {
-					rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: lbl, Hint: "Encoding"}}, rest...)
-				}
-			}
-			if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify); lbl != "" {
-				rest = append([]menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: lbl, Hint: "Slugify"}}, rest...)
-			}
-			if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize); lbl != "" {
-				rest = append([]menu.FunctionKey{{Key: tcell.KeyF2, KeyLabel: lbl, Hint: "Sanitize"}}, rest...)
-			}
-		}
-		return footerWithEscClose(rest)
+		return a.primaryModalFooterKeys()
 	}
 	if a.model.Menu.Open {
 		// Menu open: Esc closes menu / pulldown; F9 and F10 as before.
@@ -230,39 +171,8 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
-	if a.model.ViewMode == ui.ViewFilePreview && !a.inQuickFilterUI() {
-		if a.model.FilePreviewThemePicker.Open {
-			return menu.FunctionKeysFilePreviewStylePicker()
-		}
-		return menu.FunctionKeysFilePreviewView(a.model.FullscreenFilePreviewRawMarkdown)
-	}
-	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
-		rest := compareViewFooterKeys(a.keysCompare, a.model.CompareView.Filter)
-		rest = append(rest, menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
-		out := footerWithEscClose(rest)
-		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"}
-		out = append(out[:1], append([]menu.FunctionKey{f1}, out[1:]...)...)
-		return out
-	}
-	if a.model.ViewMode == ui.ViewDedup && !a.inQuickFilterUI() {
-		rest := dedupViewFooterKeys(a.keys, a.keysDedup, a.model.DedupView.TreeDirs)
-		rest = append(rest,
-			menu.FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
-			menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
-		)
-		out := footerWithEscClose(rest)
-		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"}
-		out = append(out[:1], append([]menu.FunctionKey{f1}, out[1:]...)...)
-		return out
-	}
-	if a.model.ViewMode == ui.ViewCommands && !a.inQuickFilterUI() {
-		return menu.FunctionKeysCommandsView()
-	}
-	if a.model.ViewMode == ui.ViewMessages && !a.inQuickFilterUI() {
-		return menu.FunctionKeysMessagesView()
-	}
-	if a.model.ViewMode == ui.ViewJobs && !a.inQuickFilterUI() {
-		return menu.FunctionKeysJobsView()
+	if keys, ok := a.auxiliaryViewFooterKeys(); ok {
+		return keys
 	}
 	if a.model.HelpView.Open {
 		return footerWithEscClose([]menu.FunctionKey{
@@ -275,6 +185,108 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		return menu.FunctionKeysSelectionsStripView(a.keys.MenuBindingLabel(keymap.ActionPanelClearSelection))
 	}
 	return menu.FunctionKeys
+}
+
+// pathPickerMetaFooterKeys builds footer hints for the PathPicker / MetaDialog overlay branch.
+func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
+	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+	if a.model.MetaDialog.Open {
+		rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
+	}
+	if a.bookmarkDialogDeleteFooterEligible() {
+		if lbl := a.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete); lbl != "" {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete bookmark"}}, rest...)
+		}
+	}
+	if a.keysBookmarkDialog != nil && a.bookmarkDialogOpen() {
+		if _, ok := a.pathPickerSelectedItem(); ok {
+			if lbl := a.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkOpenOther); lbl != "" {
+				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Open other"}}, rest...)
+			}
+		}
+	}
+	return footerWithEscClose(rest)
+}
+
+// primaryModalFooterKeys builds footer hints for the primary-modal branch (sort/listing-format/config/
+// group-select/file-dialog/SFTP-connect/path-picker/history/find/meta/user-menu/compare-merge dialogs).
+func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
+	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+	if hints := flattenDialogOverlayFooterKeys(a, a.keysFlattenDialog); len(hints) > 0 {
+		rest = append(hints, rest...)
+	}
+	if a.pathPickerHostFooterEligible() {
+		if lbl := a.keys.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
+			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Bookmarks"}}, rest...)
+		}
+	}
+	if a.mkdirDialogExtractFooterEligible() {
+		if lbl := a.keysMkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName); lbl != "" {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF7, KeyLabel: lbl, Hint: "Extract common name"}}, rest...)
+		}
+	}
+	if a.dialogInputRestoreFooterEligible() {
+		if lbl := a.keysDialogInput.MenuBindingLabel(keymap.ActionDialogInputRestoreDefault); lbl != "" {
+			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Default"}}, rest...)
+		}
+	}
+	if a.massRenameEditorFooterEligible() {
+		rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Editor"}}, rest...)
+	}
+	if a.renameDialogFooterEligible() {
+		if a.renameEncodingFooterEligible() {
+			if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding); lbl != "" {
+				rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: lbl, Hint: "Encoding"}}, rest...)
+			}
+		}
+		if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify); lbl != "" {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: lbl, Hint: "Slugify"}}, rest...)
+		}
+		if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize); lbl != "" {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF2, KeyLabel: lbl, Hint: "Sanitize"}}, rest...)
+		}
+	}
+	return footerWithEscClose(rest)
+}
+
+// auxiliaryViewFooterKeys builds footer hints for FilePreview/Compare/Dedup/Commands/Messages/Jobs
+// views. Returns ok=false when none of those views is active so the caller falls through.
+func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
+	if a.model.ViewMode == ui.ViewFilePreview && !a.inQuickFilterUI() {
+		if a.model.FilePreviewThemePicker.Open {
+			return menu.FunctionKeysFilePreviewStylePicker(), true
+		}
+		return menu.FunctionKeysFilePreviewView(a.model.FullscreenFilePreviewRawMarkdown), true
+	}
+	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
+		rest := compareViewFooterKeys(a.keysCompare, a.model.CompareView.Filter)
+		rest = append(rest, menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
+		out := footerWithEscClose(rest)
+		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"}
+		out = append(out[:1], append([]menu.FunctionKey{f1}, out[1:]...)...)
+		return out, true
+	}
+	if a.model.ViewMode == ui.ViewDedup && !a.inQuickFilterUI() {
+		rest := dedupViewFooterKeys(a.keys, a.keysDedup, a.model.DedupView.TreeDirs)
+		rest = append(rest,
+			menu.FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
+			menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+		)
+		out := footerWithEscClose(rest)
+		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"}
+		out = append(out[:1], append([]menu.FunctionKey{f1}, out[1:]...)...)
+		return out, true
+	}
+	if a.model.ViewMode == ui.ViewCommands && !a.inQuickFilterUI() {
+		return menu.FunctionKeysCommandsView(), true
+	}
+	if a.model.ViewMode == ui.ViewMessages && !a.inQuickFilterUI() {
+		return menu.FunctionKeysMessagesView(), true
+	}
+	if a.model.ViewMode == ui.ViewJobs && !a.inQuickFilterUI() {
+		return menu.FunctionKeysJobsView(), true
+	}
+	return nil, false
 }
 
 func footerWithEscClose(rest []menu.FunctionKey) []menu.FunctionKey {
@@ -294,12 +306,15 @@ func (a *App) prepareGlobalQuitShortcutCleanup() {
 	}
 }
 
-func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
-	a.deferDiskIdleSortOnUserActivity()
+// handleGlobalKeyIntercepts handles the pre-dispatch global key intercepts that apply
+// regardless of input mode: terminal-panel focus, F10/Shift-F10 quit, quit-immediate,
+// nav-coalesce clearing, disk-usage abort/clear, jobs-answer-blocker, and global show-help.
+// handled reports whether handleKey should return (quit, rendered) immediately.
+func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction string) (handled, quit, rendered bool) {
 	// Focused terminal panel owns every key before the global intercepts below —
 	// F10 must reach htop, F1 must reach the shell, only [terminal] chords are ours.
 	if a.terminalPanelHasKeyFocus() {
-		return false, a.handleTerminalPanelKey(event)
+		return true, false, a.handleTerminalPanelKey(event)
 	}
 	// Global F10 quit - works from any mode, any dialog, any menu.
 	// Shift+F10 defaults to app.quit-immediate and must not fall through to plain F10.
@@ -307,25 +322,24 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		if event.Modifiers()&tcell.ModShift != 0 {
 			if id, ok := a.keys.Lookup(event); ok && id == keymap.ActionAppQuitImmediate {
 				a.prepareGlobalQuitShortcutCleanup()
-				return a.handleQuitImmediate(), false
+				return true, a.handleQuitImmediate(), false
 			}
 		} else {
 			a.prepareGlobalQuitShortcutCleanup()
 			if a.model.QuitConfirm.Open {
 				a.model.QuitConfirm = dialog.QuitConfirmState{}
 				a.stopWorker()
-				return true, false
+				return true, true, false
 			}
-			return a.handleQuit(), false
+			return true, a.handleQuit(), false
 		}
 	}
 
 	if id, ok := a.keys.Lookup(event); ok && id == keymap.ActionAppQuitImmediate {
 		a.prepareGlobalQuitShortcutCleanup()
-		return a.handleQuitImmediate(), false
+		return true, a.handleQuitImmediate(), false
 	}
 
-	resolvedAction := a.actionFromKeyEvent(event)
 	if !a.panelSyncFollowHeldListNav(resolvedAction, event) {
 		a.clearPanelSyncFollowNavCoalesce()
 		a.clearQuickViewNavCoalesce()
@@ -338,28 +352,28 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		if resolvedAction == keymap.ActionPanelDiskUsageAbortAll {
 			a.abortAllDiskUsageScans()
 			a.render()
-			return false, true
+			return true, false, true
 		}
 		if resolvedAction == keymap.ActionPanelDiskUsageClear {
 			a.clearAllDiskUsageData()
 			a.render()
-			return false, true
+			return true, false, true
 		}
 	}
 
 	if resolvedAction == keymap.ActionJobsAnswerBlocker {
 		if rendered := a.handleJobsAnswerBlockerKey(); rendered {
 			a.render()
-			return false, true
+			return true, false, true
 		}
-		return false, false
+		return true, false, false
 	}
 
 	// Global show-help (F1 by default). Closes menu or quick filter first.
 	if resolvedAction == keymap.ActionAppShowHelp && !a.model.HelpView.Open {
 		// Do not open help from modal dialogs.
 		if a.model.ModalDialogOpen() {
-			return false, false
+			return true, false, false
 		}
 		if a.model.Menu.Open {
 			a.closeMenu()
@@ -369,7 +383,17 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 		a.openHelpDialog()
 		a.render()
-		return false, true
+		return true, false, true
+	}
+
+	return false, false, false
+}
+
+func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
+	a.deferDiskIdleSortOnUserActivity()
+	resolvedAction := a.actionFromKeyEvent(event)
+	if handled, iquit, irendered := a.handleGlobalKeyIntercepts(event, resolvedAction); handled {
+		return iquit, irendered
 	}
 
 	switch a.inputMode() {
@@ -494,27 +518,8 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return quit, true
 	case InputModeFilter:
-		// Function keys in filter mode dismiss the filter and run the menu action.
-		if _, ok := menu.FunctionKeyLabelByKey(event.Key()); ok {
-			quit := a.handleQuickFilterFunctionKey(event)
-			a.render()
-			return quit, true
-		}
-		// Bound actions (same keymap as normal browser mode) dismiss the filter unless
-		// the key is filter-local (typing, match cycling, Insert, etc.).
-		if resolvedAction != "" && !a.quickFilterRetainsKey(event, resolvedAction) {
-			a.activePanel().CancelFilter(a.activeViewportRows())
-			fqQuit, fqRendered := a.finishResolvedKeyboardAction(resolvedAction)
-			if fqRendered {
-				a.render()
-			}
-			return fqQuit, fqRendered
-		}
-		// Filter keys (printable, navigation, etc.) update the filter.
-		if a.shouldHandleFilterKey(event) {
-			a.handleFilterKey(event)
-			a.render()
-			return false, true
+		if fQuit, fRendered, handled := a.handleFilterModeKey(event, resolvedAction); handled {
+			return fQuit, fRendered
 		}
 		// If neither function key nor filter key, fall through to action dispatch.
 	default: // InputModeNormal
@@ -559,6 +564,35 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 	}
 	return quit, rendered
+}
+
+// handleFilterModeKey handles the InputModeFilter case in handleKey. handled=false means
+// neither a function key nor a filter key matched, so the caller falls through to normal
+// action dispatch.
+func (a *App) handleFilterModeKey(event *tcell.EventKey, resolvedAction string) (quit, rendered, handled bool) {
+	// Function keys in filter mode dismiss the filter and run the menu action.
+	if _, ok := menu.FunctionKeyLabelByKey(event.Key()); ok {
+		quit := a.handleQuickFilterFunctionKey(event)
+		a.render()
+		return quit, true, true
+	}
+	// Bound actions (same keymap as normal browser mode) dismiss the filter unless
+	// the key is filter-local (typing, match cycling, Insert, etc.).
+	if resolvedAction != "" && !a.quickFilterRetainsKey(event, resolvedAction) {
+		a.activePanel().CancelFilter(a.activeViewportRows())
+		fqQuit, fqRendered := a.finishResolvedKeyboardAction(resolvedAction)
+		if fqRendered {
+			a.render()
+		}
+		return fqQuit, fqRendered, true
+	}
+	// Filter keys (printable, navigation, etc.) update the filter.
+	if a.shouldHandleFilterKey(event) {
+		a.handleFilterKey(event)
+		a.render()
+		return false, true, true
+	}
+	return false, false, false
 }
 
 // quickFilterRetainsKey reports keys that stay on the quick-filter input path even when
@@ -710,6 +744,21 @@ func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchDedup(actionID) {
 		return false
 	}
+	if handled, quit := a.tryDispatchNavigation(actionID); handled {
+		return quit
+	}
+	if a.tryDispatchSelectionActions(actionID) {
+		return false
+	}
+	if a.tryDispatchPanelLayout(actionID) {
+		return false
+	}
+	if a.tryDispatchFileOps(actionID) {
+		return false
+	}
+	if a.tryDispatchFileView(actionID) {
+		return false
+	}
 	viewportRows := a.activeViewportRows()
 	activePanel := a.activePanel()
 	switch actionID {
@@ -743,111 +792,10 @@ func (a *App) dispatch(actionID string) bool {
 		a.toggleSelectionsStripFocus()
 	case keymap.ActionPanelOpenSelectionsRoot:
 		a.navigateToSelectionsRoot()
-	case keymap.ActionPanelToggleHideInactive:
-		a.toggleHideInactivePanel()
-	case keymap.ActionNavUp:
-		a.doListNav(func() { activePanel.Move(-1, viewportRows) })
-	case keymap.ActionNavDown:
-		a.doListNav(func() { activePanel.Move(1, viewportRows) })
-	case keymap.ActionNavPageUp:
-		a.doListNav(func() { activePanel.Page(-1, viewportRows) })
-	case keymap.ActionNavPageDown:
-		a.doListNav(func() { activePanel.Page(1, viewportRows) })
-	case keymap.ActionNavTop:
-		a.doListNav(func() { activePanel.Top(viewportRows) })
-	case keymap.ActionNavBottom:
-		a.doListNav(func() { activePanel.Bottom(viewportRows) })
-	case keymap.ActionPanelSelectToggle:
-		_, conflicts := activePanel.ToggleSelectionAndAdvance(viewportRows)
-		if conflicts {
-			a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
-		}
-	case keymap.ActionPanelSelectGroup:
-		a.openGroupSelect("select", "panel")
-	case keymap.ActionPanelUnselectGroup:
-		a.openGroupSelect("unselect", "panel")
-	case keymap.ActionPanelInvertSelection:
-		activePanel.InvertSelection()
-		a.setTransientMessage("Selection inverted", ui.MessageUrgencyInfo)
-	case keymap.ActionPanelClearSelection:
-		activePanel.ClearSelection()
-		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
-	case keymap.ActionPanelStashToggle:
-		a.togglePanelSelectionStash()
-	case keymap.ActionPanelSortDialog:
-		a.openSortDialog()
-	case keymap.ActionPanelListingFormatDialog:
-		if activePanel.CarouselMode {
-			a.setTransientMessage("Listing format is not available in carousel view", ui.MessageUrgencyInfo)
-			break
-		}
-		a.openListingFormatDialog()
 	case keymap.ActionPanelMeta:
 		a.openMetaDialog(a.model.ActivePanel)
 	case keymap.ActionPanelMetaEdit:
 		a.editMetaFile()
-	case keymap.ActionPanelCycleSort:
-		activePanel.CycleSort(viewportRows)
-		a.setTransientMessage(fmt.Sprintf("Sort: %s", activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
-	case keymap.ActionPanelCycleListingFormat:
-		if activePanel.CarouselMode {
-			a.setTransientMessage("Listing format is not available in carousel view", ui.MessageUrgencyInfo)
-			break
-		}
-		activePanel.CycleListingFormat()
-		a.setTransientMessage(fmt.Sprintf("Listing: %s", activePanel.ListFormat.String()), ui.MessageUrgencyInfo)
-	case keymap.ActionPanelToggleCarousel:
-		activePanel.CarouselMode = !activePanel.CarouselMode
-		if !activePanel.CarouselMode {
-			a.clearCarouselPreviewNavCoalesce()
-			a.closeCarouselFilePreview()
-		}
-		onOff := "off"
-		if activePanel.CarouselMode {
-			onOff = "on"
-		}
-		a.setTransientMessage(fmt.Sprintf("Carousel view: %s", onOff), ui.MessageUrgencyInfo)
-	case keymap.ActionPanelToggleZoomActivePanel:
-		if a.filePreviewOpen() || a.model.QuickViewDisplayActive() {
-			a.setTransientMessage("Zoom disabled while quick view or file view is active", ui.MessageUrgencyInfo)
-			break
-		}
-		if activePanel.CarouselMode {
-			a.setTransientMessage("Panel zoom is always on in carousel view", ui.MessageUrgencyInfo)
-			break
-		}
-		tw, th := a.screen.Size()
-		orientation := a.effectivePaneSplitOrientation()
-		if orientation == ui.SplitVertical {
-			if a.zoomActivePanelSuppressedByTerminalHeight(th) {
-				a.setTransientMessage(fmt.Sprintf(
-					"Panel zoom unavailable (terminal height ≥ %d)",
-					a.config.UI.ZoomActivePanelDisabledAboveHeight,
-				), ui.MessageUrgencyInfo)
-				break
-			}
-		} else if a.zoomActivePanelSuppressedByTerminalWidth(tw) {
-			a.setTransientMessage(fmt.Sprintf(
-				"Panel zoom unavailable (terminal width ≥ %d)",
-				a.config.UI.ZoomActivePanelDisabledAboveWidth,
-			), ui.MessageUrgencyInfo)
-			break
-		}
-		a.toggleRuntimeZoomActivePanel()
-	case keymap.ActionPanelToggleSplitOrientation:
-		a.togglePaneSplitOrientation()
-	case keymap.ActionPanelReverseSort:
-		activePanel.ToggleSortReverse(viewportRows)
-		direction := "ascending"
-		if activePanel.Sort.Reverse {
-			direction = "descending"
-		}
-		a.setTransientMessage(fmt.Sprintf("Sort %s (%s)", direction, activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
-	case keymap.ActionPanelToggleHidden:
-		if err := a.toggleHiddenGlobal(); err != nil {
-			a.setErrorMessage("Toggle hidden failed", err)
-			return false
-		}
 	case keymap.ActionPanelFilterOpen:
 		activePanel.OpenFilter(viewportRows)
 		a.clearTransientMessage()
@@ -857,96 +805,13 @@ func (a *App) dispatch(actionID string) bool {
 		a.openAddBookmarkDialog()
 	case keymap.ActionRemoteSFTPLink:
 		a.openSFTPConnectDialog()
-	case keymap.ActionNavOpen:
-		return a.handleNavOpen(activePanel, viewportRows)
 	case keymap.ActionPanelToggleSync:
 		a.toggleSyncFollow()
-	case keymap.ActionPanelOpenDirInOther:
-		if a.model.ViewMode != ui.ViewBrowser {
-			return false
-		}
-		entry, ok := activePanel.CurrentEntry()
-		if !ok || entry.Type != localfs.EntryDirectory {
-			return false
-		}
-		if err := a.navigatePanelToDirectory(a.inactivePanelID(), entry.Path, ""); err != nil {
-			a.setErrorMessage("Open in other panel failed", err)
-			return false
-		}
-		if a.disableSyncFollowIfEnabled() {
-			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
-		}
-		activePanel.CycleFilterMatch(1, viewportRows)
-	case keymap.ActionPanelOpenActivePathInOther:
-		if a.model.ViewMode != ui.ViewBrowser {
-			return false
-		}
-		if err := a.navigatePanelToDirectory(a.inactivePanelID(), activePanel.PathString(), ""); err != nil {
-			a.setErrorMessage("Open current path in other panel failed", err)
-			return false
-		}
-		if a.disableSyncFollowIfEnabled() {
-			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
-		}
-	case keymap.ActionNavParent:
-		if err := activePanel.Parent(viewportRows); err != nil {
-			a.setErrorMessage("Parent failed", err)
-			return false
-		}
-	case keymap.ActionNavHome:
-		if a.model.UserHomeDir == "" {
-			return false
-		}
-		if err := a.navigatePanelToDirectory(a.model.ActivePanel, a.model.UserHomeDir, ""); err != nil {
-			a.setErrorMessage("Navigate to home failed", err)
-		}
-	case keymap.ActionNavForward:
-		if _, err := activePanel.HistoryForward(viewportRows); err != nil {
-			a.setErrorMessage("Forward history failed", err)
-			return false
-		}
-	case keymap.ActionNavBackward:
-		if _, err := activePanel.HistoryBackward(viewportRows); err != nil {
-			a.setErrorMessage("Backward history failed", err)
-			return false
-		}
 	case keymap.ActionPanelHistoryDialog:
 		// Keyboard/menu shortcut targets whichever panel is active (left vs right).
 		a.openHistoryDialog(a.model.ActivePanel)
 	case keymap.ActionPanelFindDialog:
 		a.openFindDialog(a.model.ActivePanel)
-		// File operation actions
-	case keymap.ActionFileRename:
-		a.openRenameDialog(activePanel)
-	case keymap.ActionFileDelete:
-		a.openDeleteDialog(activePanel)
-	case keymap.ActionFileMkdir:
-		a.openMkdirDialog(false)
-	case keymap.ActionFileMkdirOpenInOther:
-		a.openMkdirDialog(true)
-	case keymap.ActionFileChmod:
-		a.openChmodDialog(activePanel)
-	case keymap.ActionFileChown:
-		a.openChownDialog(activePanel)
-	case keymap.ActionFileSymlink:
-		a.openSymlinkDialog(activePanel)
-	case keymap.ActionFileHardlink:
-		a.openHardlinkDialog(activePanel)
-	case keymap.ActionFileExtract:
-		a.openExtractDialog(activePanel)
-	case keymap.ActionFileFlatten:
-		a.openFlattenDialog()
-	case keymap.ActionCopy:
-		a.activateCopyAction()
-	case keymap.ActionFileDuplicate:
-		a.activateDuplicateAction()
-	case keymap.ActionMove:
-		a.activateMoveAction()
-	case keymap.ActionFileRunForEach:
-		if a.model.ViewMode != ui.ViewBrowser {
-			return false
-		}
-		a.openRunForEachDialog()
 	case keymap.ActionAppUserMenu:
 		a.openUserMenu()
 	case keymap.ActionAppUserMenuEdit:
@@ -957,24 +822,6 @@ func (a *App) dispatch(actionID string) bool {
 		a.openConfigDialog()
 	case keymap.ActionUICalibrateDebounce:
 		a.openDebounceCalibrateDialog()
-	case keymap.ActionFileView:
-		a.openFilePreviewFullscreen()
-	case keymap.ActionFileViewThemePicker:
-		a.toggleFilePreviewThemePicker()
-	case keymap.ActionFileViewToggleRaw:
-		a.toggleFilePreviewRawMarkdown()
-	case keymap.ActionFileViewDiffNextHunk:
-		a.hunkNavigate(previewTargetInactive, 1)
-	case keymap.ActionFileViewDiffPrevHunk:
-		a.hunkNavigate(previewTargetInactive, -1)
-	case keymap.ActionFileQuickView:
-		a.handleQuickViewToggle()
-	case keymap.ActionFileEdit:
-		if a.model.ViewMode == ui.ViewFilePreview && a.model.FullscreenFilePreview.Open {
-			a.editFullscreenPreviewFile()
-		} else {
-			a.editActiveFile()
-		}
 	case keymap.ActionMenuFileChattr:
 		a.setUnsupportedMessage("Chattr")
 	case keymap.ActionDevShowInfo:

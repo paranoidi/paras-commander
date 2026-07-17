@@ -563,3 +563,193 @@ func (a *App) inactivePanelID() int {
 	}
 	return ui.PrimaryPanel
 }
+
+// tryDispatchNavigation handles list-navigation and directory-navigation actions.
+// handled reports whether actionID was consumed; quit reports whether the app should exit
+// (only ActionNavOpen can request this, via handleNavOpen/handleChooserOpen).
+func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
+	viewportRows := a.activeViewportRows()
+	activePanel := a.activePanel()
+	switch actionID {
+	case keymap.ActionNavUp:
+		a.doListNav(func() { activePanel.Move(-1, viewportRows) })
+	case keymap.ActionNavDown:
+		a.doListNav(func() { activePanel.Move(1, viewportRows) })
+	case keymap.ActionNavPageUp:
+		a.doListNav(func() { activePanel.Page(-1, viewportRows) })
+	case keymap.ActionNavPageDown:
+		a.doListNav(func() { activePanel.Page(1, viewportRows) })
+	case keymap.ActionNavTop:
+		a.doListNav(func() { activePanel.Top(viewportRows) })
+	case keymap.ActionNavBottom:
+		a.doListNav(func() { activePanel.Bottom(viewportRows) })
+	case keymap.ActionNavOpen:
+		return true, a.handleNavOpen(activePanel, viewportRows)
+	case keymap.ActionPanelOpenDirInOther:
+		if a.model.ViewMode != ui.ViewBrowser {
+			break
+		}
+		entry, ok := activePanel.CurrentEntry()
+		if !ok || entry.Type != localfs.EntryDirectory {
+			break
+		}
+		if err := a.navigatePanelToDirectory(a.inactivePanelID(), entry.Path, ""); err != nil {
+			a.setErrorMessage("Open in other panel failed", err)
+			break
+		}
+		if a.disableSyncFollowIfEnabled() {
+			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
+		}
+		activePanel.CycleFilterMatch(1, viewportRows)
+	case keymap.ActionPanelOpenActivePathInOther:
+		if a.model.ViewMode != ui.ViewBrowser {
+			break
+		}
+		if err := a.navigatePanelToDirectory(a.inactivePanelID(), activePanel.PathString(), ""); err != nil {
+			a.setErrorMessage("Open current path in other panel failed", err)
+			break
+		}
+		if a.disableSyncFollowIfEnabled() {
+			a.setTransientMessage("Open in other panel — sync disabled", ui.MessageUrgencyWarn)
+		}
+	case keymap.ActionNavParent:
+		if err := activePanel.Parent(viewportRows); err != nil {
+			a.setErrorMessage("Parent failed", err)
+		}
+	case keymap.ActionNavHome:
+		if a.model.UserHomeDir == "" {
+			break
+		}
+		if err := a.navigatePanelToDirectory(a.model.ActivePanel, a.model.UserHomeDir, ""); err != nil {
+			a.setErrorMessage("Navigate to home failed", err)
+		}
+	case keymap.ActionNavForward:
+		if _, err := activePanel.HistoryForward(viewportRows); err != nil {
+			a.setErrorMessage("Forward history failed", err)
+		}
+	case keymap.ActionNavBackward:
+		if _, err := activePanel.HistoryBackward(viewportRows); err != nil {
+			a.setErrorMessage("Backward history failed", err)
+		}
+	default:
+		return false, false
+	}
+	return true, false
+}
+
+// tryDispatchSelectionActions handles panel selection actions (toggle/group/invert/clear/stash).
+func (a *App) tryDispatchSelectionActions(actionID string) bool {
+	viewportRows := a.activeViewportRows()
+	activePanel := a.activePanel()
+	switch actionID {
+	case keymap.ActionPanelSelectToggle:
+		_, conflicts := activePanel.ToggleSelectionAndAdvance(viewportRows)
+		if conflicts {
+			a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+		}
+	case keymap.ActionPanelSelectGroup:
+		a.openGroupSelect("select", "panel")
+	case keymap.ActionPanelUnselectGroup:
+		a.openGroupSelect("unselect", "panel")
+	case keymap.ActionPanelInvertSelection:
+		activePanel.InvertSelection()
+		a.setTransientMessage("Selection inverted", ui.MessageUrgencyInfo)
+	case keymap.ActionPanelClearSelection:
+		activePanel.ClearSelection()
+		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
+	case keymap.ActionPanelStashToggle:
+		a.togglePanelSelectionStash()
+	default:
+		return false
+	}
+	return true
+}
+
+// tryDispatchPanelLayout handles panel sort/listing-format/carousel/zoom/split/hidden-file actions.
+func (a *App) tryDispatchPanelLayout(actionID string) bool {
+	viewportRows := a.activeViewportRows()
+	activePanel := a.activePanel()
+	switch actionID {
+	case keymap.ActionPanelToggleHideInactive:
+		a.toggleHideInactivePanel()
+	case keymap.ActionPanelSortDialog:
+		a.openSortDialog()
+	case keymap.ActionPanelListingFormatDialog:
+		if activePanel.CarouselMode {
+			a.setTransientMessage("Listing format is not available in carousel view", ui.MessageUrgencyInfo)
+			break
+		}
+		a.openListingFormatDialog()
+	case keymap.ActionPanelCycleSort:
+		activePanel.CycleSort(viewportRows)
+		a.setTransientMessage(fmt.Sprintf("Sort: %s", activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
+	case keymap.ActionPanelCycleListingFormat:
+		if activePanel.CarouselMode {
+			a.setTransientMessage("Listing format is not available in carousel view", ui.MessageUrgencyInfo)
+			break
+		}
+		activePanel.CycleListingFormat()
+		a.setTransientMessage(fmt.Sprintf("Listing: %s", activePanel.ListFormat.String()), ui.MessageUrgencyInfo)
+	case keymap.ActionPanelToggleCarousel:
+		activePanel.CarouselMode = !activePanel.CarouselMode
+		if !activePanel.CarouselMode {
+			a.clearCarouselPreviewNavCoalesce()
+			a.closeCarouselFilePreview()
+		}
+		onOff := "off"
+		if activePanel.CarouselMode {
+			onOff = "on"
+		}
+		a.setTransientMessage(fmt.Sprintf("Carousel view: %s", onOff), ui.MessageUrgencyInfo)
+	case keymap.ActionPanelToggleZoomActivePanel:
+		a.toggleZoomActivePanelGuarded()
+	case keymap.ActionPanelToggleSplitOrientation:
+		a.togglePaneSplitOrientation()
+	case keymap.ActionPanelReverseSort:
+		activePanel.ToggleSortReverse(viewportRows)
+		direction := "ascending"
+		if activePanel.Sort.Reverse {
+			direction = "descending"
+		}
+		a.setTransientMessage(fmt.Sprintf("Sort %s (%s)", direction, activePanel.Sort.Mode.String()), ui.MessageUrgencyInfo)
+	case keymap.ActionPanelToggleHidden:
+		if err := a.toggleHiddenGlobal(); err != nil {
+			a.setErrorMessage("Toggle hidden failed", err)
+		}
+	default:
+		return false
+	}
+	return true
+}
+
+// toggleZoomActivePanelGuarded toggles active-panel zoom unless quick view/file preview is
+// active, carousel mode is on, or the terminal size is below the configured zoom threshold.
+func (a *App) toggleZoomActivePanelGuarded() {
+	if a.filePreviewOpen() || a.model.QuickViewDisplayActive() {
+		a.setTransientMessage("Zoom disabled while quick view or file view is active", ui.MessageUrgencyInfo)
+		return
+	}
+	activePanel := a.activePanel()
+	if activePanel.CarouselMode {
+		a.setTransientMessage("Panel zoom is always on in carousel view", ui.MessageUrgencyInfo)
+		return
+	}
+	tw, th := a.screen.Size()
+	orientation := a.effectivePaneSplitOrientation()
+	if orientation == ui.SplitVertical {
+		if a.zoomActivePanelSuppressedByTerminalHeight(th) {
+			a.setTransientMessage(fmt.Sprintf(
+				"Panel zoom unavailable (terminal height ≥ %d)",
+				a.config.UI.ZoomActivePanelDisabledAboveHeight,
+			), ui.MessageUrgencyInfo)
+			return
+		}
+	} else if a.zoomActivePanelSuppressedByTerminalWidth(tw) {
+		a.setTransientMessage(fmt.Sprintf(
+			"Panel zoom unavailable (terminal width ≥ %d)",
+			a.config.UI.ZoomActivePanelDisabledAboveWidth,
+		), ui.MessageUrgencyInfo)
+		return
+	}
+	a.toggleRuntimeZoomActivePanel()
+}

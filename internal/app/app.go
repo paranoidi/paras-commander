@@ -774,6 +774,202 @@ func newBrowserPanel(path string, opts browserPanelOptions) (panel.State, error)
 	return p, nil
 }
 
+// eventOutcome carries the loop-local render/poll flags produced by handleInterruptPayload
+// back to Run's post-switch tail.
+type eventOutcome struct {
+	didRender              bool
+	pollJobsAfter          bool
+	applyJobRefreshesAfter bool
+	pollDiskUsageAfter     bool
+}
+
+// handleInterruptPayload handles the EventInterrupt payload type-switch for Run.
+func (a *App) handleInterruptPayload(data any) eventOutcome {
+	out := eventOutcome{pollDiskUsageAfter: true}
+	switch d := data.(type) {
+	case jobsWakePayload:
+		out.pollJobsAfter = true
+		out.applyJobRefreshesAfter = true
+		// Progress wakes are frequent; reconciling both panels here caused
+		// extra sync/stat work and starved spinner ticks on slow mounts.
+		out.pollDiskUsageAfter = false
+	case terminalWakePayload:
+		out.pollDiskUsageAfter = false
+		a.handleTerminalWake()
+		out.didRender = true
+	case statusMessageExpiryPayload:
+		a.applyStatusMessageExpiry(d)
+		a.render()
+		out.didRender = true
+	case spinnerTickPayload:
+		out.pollDiskUsageAfter = false
+		if a.menuBarSpinnerBusy() {
+			a.model.SpinPhase++
+			w, h := a.screen.Size()
+			if ui.DrawMenuBarSpinnerOnly(a.screen, a.layoutForTerminalSize(w, h), a.model, a.styles) {
+				a.emitScreenAfterPartialPaint()
+			}
+			out.didRender = true
+		}
+	case diskIdleSortPayload:
+		a.applyIdleDiskSort(d.PanelID, d.Epoch)
+		a.render()
+		out.didRender = true
+	case diskUsageRedrawPayload:
+		out.pollDiskUsageAfter = false
+		a.resortPanelsDiskUsageSorted()
+		a.refreshDeleteDialogSummary()
+		if a.model.FindDialog.Open {
+			a.model.FindDialog.InvalidateMarkedSelectionSizeLabel()
+			a.renderFindDialogUpdate()
+		} else if a.deleteDialogOpen() {
+			a.renderDeleteDialogUpdate()
+		} else if a.paintDiskUsageBrowserUpdate() {
+			a.armSpinnerRedrawTimer()
+		} else {
+			a.render()
+		}
+		out.didRender = true
+	case volumeSpaceRefreshPayload:
+		out.pollDiskUsageAfter = false
+		if a.applyVolumeSpaceRefresh(d) && a.model.ViewMode == ui.ViewJobs {
+			a.render()
+			out.didRender = true
+		}
+	case commandWakePayload:
+		a.applyCommandWake(d)
+		a.render()
+		out.didRender = true
+	case metaWakePayload:
+		if d.gen == a.metaRunGen[d.panelID] {
+			a.applyMetaWakeResult(d)
+		}
+		a.scheduleMetaRenderDebounced()
+	case metaRenderFlushPayload:
+		a.render()
+		out.didRender = true
+	case metaLoadPayload:
+		a.applyMetaLoad(d)
+		a.render()
+		out.didRender = true
+	case metaExecFailedPayload:
+		if d.gen == a.metaRunGen[d.panelID] {
+			a.applyMetaExecFailed(d)
+		}
+		a.render()
+		out.didRender = true
+	case pathPickerValidatePayload:
+		a.render()
+		out.didRender = true
+	case transferDestValidatePayload:
+		a.render()
+		out.didRender = true
+	case jobBlockerNextPayload:
+		if a.applyJobBlockerNextPayload(d) {
+			a.render()
+			out.didRender = true
+		}
+	case syncFollowNavFlushPayload:
+		if a.applyPanelSyncFollowNavFlush(d) {
+			a.render()
+			out.didRender = true
+		}
+	case quickViewFlushPayload:
+		if a.applyQuickViewPreviewFlush(d) {
+			a.render()
+			out.didRender = true
+		}
+	case carouselPreviewFlushPayload:
+		if a.applyCarouselPreviewFlush(d) {
+			a.render()
+			out.didRender = true
+		}
+	case cursorNameHintFlushPayload:
+		a.render()
+		out.didRender = true
+	case previewStylePickerFlushPayload:
+		if a.applyPreviewStylePickerFlush(d) {
+			a.render()
+			out.didRender = true
+		}
+	case debounceCalibrateReleasePayload:
+		if a.applyDebounceCalibrateReleasePayload() {
+			a.render()
+			out.didRender = true
+		}
+	case findctrl.WakePayload:
+		if a.pollFindUpdates(d) {
+			a.renderFindDialogUpdate()
+			out.didRender = true
+		}
+	case findctrl.RankWakePayload:
+		if a.applyFindRank() {
+			a.renderFindDialogUpdate()
+			out.didRender = true
+		}
+	case findctrl.ThrottleRankWakePayload:
+		if a.handleFindThrottleRankWake() {
+			a.renderFindDialogUpdate()
+			out.didRender = true
+		}
+	case findctrl.DebounceRankWakePayload:
+		if a.handleFindDebounceRankWake() {
+			a.renderFindDialogUpdate()
+			out.didRender = true
+		}
+	case findctrl.FindNavIdlePayload:
+		if a.handleFindNavIdle(d.Epoch) {
+			a.renderFindDialogUpdate()
+			out.didRender = true
+		}
+	case comparectrl.WakePayload:
+		if a.pollCompareUpdates(d) {
+			a.render()
+			out.didRender = true
+		}
+	case dedupctrl.WakePayload:
+		if a.pollDedupUpdates(d) {
+			a.render()
+			out.didRender = true
+		}
+	case throughputChartTickPayload:
+		out.pollDiskUsageAfter = false
+		if a.applyThroughputChartTick() {
+			a.render()
+			out.didRender = true
+		}
+	case sftpConnectPayload:
+		a.applySFTPConnect(d)
+		out.didRender = true
+	case sftpHostKeyOpenPayload:
+		a.openHostKeyDialog(d.prompt)
+		a.render()
+		out.didRender = true
+	case sftpPasswordOpenPayload:
+		a.openSFTPPasswordDialog(d.prompt)
+		a.render()
+		out.didRender = true
+	case remotePanelLoadPayload:
+		if a.applyRemotePanelLoad(d) {
+			a.render()
+			out.didRender = true
+		}
+	case gitStatusPayload:
+		if a.applyGitStatusLoad(d) {
+			a.render()
+			out.didRender = true
+		}
+	case panelRefreshTickPayload:
+		a.handlePanelRefreshTick()
+	case panelRefreshApplyPayload:
+		if a.applyPanelListingRefresh(d) {
+			a.render()
+			out.didRender = true
+		}
+	}
+	return out
+}
+
 // Run starts the event loop.
 func (a *App) Run() error {
 	a.screen.HideCursor()
@@ -816,187 +1012,11 @@ func (a *App) Run() error {
 				didRender = true
 			}
 		case *tcell.EventInterrupt:
-			switch d := event.Data().(type) {
-			case jobsWakePayload:
-				pollJobsAfter = true
-				applyJobRefreshesAfter = true
-				// Progress wakes are frequent; reconciling both panels here caused
-				// extra sync/stat work and starved spinner ticks on slow mounts.
-				pollDiskUsageAfter = false
-			case terminalWakePayload:
-				pollDiskUsageAfter = false
-				a.handleTerminalWake()
-				didRender = true
-			case statusMessageExpiryPayload:
-				a.applyStatusMessageExpiry(d)
-				a.render()
-				didRender = true
-			case spinnerTickPayload:
-				pollDiskUsageAfter = false
-				if a.menuBarSpinnerBusy() {
-					a.model.SpinPhase++
-					w, h := a.screen.Size()
-					if ui.DrawMenuBarSpinnerOnly(a.screen, a.layoutForTerminalSize(w, h), a.model, a.styles) {
-						a.emitScreenAfterPartialPaint()
-					}
-					didRender = true
-				}
-			case diskIdleSortPayload:
-				a.applyIdleDiskSort(d.PanelID, d.Epoch)
-				a.render()
-				didRender = true
-			case diskUsageRedrawPayload:
-				pollDiskUsageAfter = false
-				a.resortPanelsDiskUsageSorted()
-				a.refreshDeleteDialogSummary()
-				if a.model.FindDialog.Open {
-					a.model.FindDialog.InvalidateMarkedSelectionSizeLabel()
-					a.renderFindDialogUpdate()
-				} else if a.deleteDialogOpen() {
-					a.renderDeleteDialogUpdate()
-				} else if a.paintDiskUsageBrowserUpdate() {
-					a.armSpinnerRedrawTimer()
-				} else {
-					a.render()
-				}
-				didRender = true
-			case volumeSpaceRefreshPayload:
-				pollDiskUsageAfter = false
-				if a.applyVolumeSpaceRefresh(d) && a.model.ViewMode == ui.ViewJobs {
-					a.render()
-					didRender = true
-				}
-			case commandWakePayload:
-				a.applyCommandWake(d)
-				a.render()
-				didRender = true
-			case metaWakePayload:
-				if d.gen == a.metaRunGen[d.panelID] {
-					a.applyMetaWakeResult(d)
-				}
-				a.scheduleMetaRenderDebounced()
-			case metaRenderFlushPayload:
-				a.render()
-				didRender = true
-			case metaLoadPayload:
-				a.applyMetaLoad(d)
-				a.render()
-				didRender = true
-			case metaExecFailedPayload:
-				if d.gen == a.metaRunGen[d.panelID] {
-					a.applyMetaExecFailed(d)
-				}
-				a.render()
-				didRender = true
-			case pathPickerValidatePayload:
-				a.render()
-				didRender = true
-			case transferDestValidatePayload:
-				a.render()
-				didRender = true
-			case jobBlockerNextPayload:
-				if a.applyJobBlockerNextPayload(d) {
-					a.render()
-					didRender = true
-				}
-			case syncFollowNavFlushPayload:
-				if a.applyPanelSyncFollowNavFlush(d) {
-					a.render()
-					didRender = true
-				}
-			case quickViewFlushPayload:
-				if a.applyQuickViewPreviewFlush(d) {
-					a.render()
-					didRender = true
-				}
-			case carouselPreviewFlushPayload:
-				if a.applyCarouselPreviewFlush(d) {
-					a.render()
-					didRender = true
-				}
-			case cursorNameHintFlushPayload:
-				a.render()
-				didRender = true
-			case previewStylePickerFlushPayload:
-				if a.applyPreviewStylePickerFlush(d) {
-					a.render()
-					didRender = true
-				}
-			case debounceCalibrateReleasePayload:
-				if a.applyDebounceCalibrateReleasePayload() {
-					a.render()
-					didRender = true
-				}
-			case findctrl.WakePayload:
-				if a.pollFindUpdates(d) {
-					a.renderFindDialogUpdate()
-					didRender = true
-				}
-			case findctrl.RankWakePayload:
-				if a.applyFindRank() {
-					a.renderFindDialogUpdate()
-					didRender = true
-				}
-			case findctrl.ThrottleRankWakePayload:
-				if a.handleFindThrottleRankWake() {
-					a.renderFindDialogUpdate()
-					didRender = true
-				}
-			case findctrl.DebounceRankWakePayload:
-				if a.handleFindDebounceRankWake() {
-					a.renderFindDialogUpdate()
-					didRender = true
-				}
-			case findctrl.FindNavIdlePayload:
-				if a.handleFindNavIdle(d.Epoch) {
-					a.renderFindDialogUpdate()
-					didRender = true
-				}
-			case comparectrl.WakePayload:
-				if a.pollCompareUpdates(d) {
-					a.render()
-					didRender = true
-				}
-			case dedupctrl.WakePayload:
-				if a.pollDedupUpdates(d) {
-					a.render()
-					didRender = true
-				}
-			case throughputChartTickPayload:
-				pollDiskUsageAfter = false
-				if a.applyThroughputChartTick() {
-					a.render()
-					didRender = true
-				}
-			case sftpConnectPayload:
-				a.applySFTPConnect(d)
-				didRender = true
-			case sftpHostKeyOpenPayload:
-				a.openHostKeyDialog(d.prompt)
-				a.render()
-				didRender = true
-			case sftpPasswordOpenPayload:
-				a.openSFTPPasswordDialog(d.prompt)
-				a.render()
-				didRender = true
-			case remotePanelLoadPayload:
-				if a.applyRemotePanelLoad(d) {
-					a.render()
-					didRender = true
-				}
-			case gitStatusPayload:
-				if a.applyGitStatusLoad(d) {
-					a.render()
-					didRender = true
-				}
-			case panelRefreshTickPayload:
-				a.handlePanelRefreshTick()
-			case panelRefreshApplyPayload:
-				if a.applyPanelListingRefresh(d) {
-					a.render()
-					didRender = true
-				}
-			}
+			outcome := a.handleInterruptPayload(event.Data())
+			didRender = outcome.didRender
+			pollJobsAfter = outcome.pollJobsAfter
+			applyJobRefreshesAfter = outcome.applyJobRefreshesAfter
+			pollDiskUsageAfter = outcome.pollDiskUsageAfter
 		}
 
 		if pollJobsAfter {
