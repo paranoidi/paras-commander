@@ -235,7 +235,8 @@ func statConflictFacts(ctx context.Context, src, dst pathloc.Path) (FileConflict
 	}, nil
 }
 
-func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copied bool, err error) {
+// resolveDestConflict returns proceed=false when the resolver declined the overwrite.
+func resolveDestConflict(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (proceed bool, err error) {
 	if err := ensureParentDirs(ctx, dst); err != nil {
 		return false, fmt.Errorf("create parent for %q: %w", dst, err)
 	}
@@ -259,6 +260,42 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 		}
 	} else if !isNotExist(err) {
 		return false, fmt.Errorf("stat destination %q: %w", dst, err)
+	}
+	return true, nil
+}
+
+// applyTransferMetadata applies permission/timestamp preservation and the
+// after-each-file sync gate to a freshly copied local destination file.
+func applyTransferMetadata(ctx context.Context, src, dst pathloc.Path, srcEnt fsbackend.Entry, opts Options) error {
+	if opts.PreservePermissions && dst.Scheme() == pathloc.SchemeFile {
+		if host, err := dst.FilePath(); err == nil {
+			_ = os.Chmod(host, srcEnt.Mode.Perm())
+		}
+	}
+	if opts.PreserveTimestamps && dst.Scheme() == pathloc.SchemeFile {
+		if host, err := dst.FilePath(); err == nil {
+			atime, mtime := transferSourceTimes(src, srcEnt)
+			_ = os.Chtimes(host, atime, mtime)
+		}
+	}
+	if opts.SyncAfterEachFile && dst.Scheme() == pathloc.SchemeFile {
+		if host, err := dst.FilePath(); err == nil {
+			if opts.SyncFileNow(srcEnt.Size) {
+				if err := syncLocalPath(host); err != nil {
+					removePartialTransferDest(ctx, dst)
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copied bool, err error) {
+	if proceed, err := resolveDestConflict(ctx, src, dst, resolver); err != nil {
+		return false, err
+	} else if !proceed {
+		return false, nil
 	}
 
 	srcBE, err := backendFor(src)
@@ -300,54 +337,17 @@ func copyFileTransfer(ctx context.Context, src, dst pathloc.Path, opts Options, 
 		return false, err
 	}
 
-	if opts.PreservePermissions && dst.Scheme() == pathloc.SchemeFile {
-		if host, err := dst.FilePath(); err == nil {
-			_ = os.Chmod(host, srcEnt.Mode.Perm())
-		}
-	}
-	if opts.PreserveTimestamps && dst.Scheme() == pathloc.SchemeFile {
-		if host, err := dst.FilePath(); err == nil {
-			atime, mtime := transferSourceTimes(src, srcEnt)
-			_ = os.Chtimes(host, atime, mtime)
-		}
-	}
-	if opts.SyncAfterEachFile && dst.Scheme() == pathloc.SchemeFile {
-		if host, err := dst.FilePath(); err == nil {
-			if opts.SyncFileNow(srcEnt.Size) {
-				if err := syncLocalPath(host); err != nil {
-					removePartialTransferDest(ctx, dst)
-					return false, err
-				}
-			}
-		}
+	if err := applyTransferMetadata(ctx, src, dst, srcEnt, opts); err != nil {
+		return false, err
 	}
 	return true, nil
 }
 
 func copySymlinkTransfer(ctx context.Context, src, dst pathloc.Path, resolver ConflictResolver) (copied bool, err error) {
-	if err := ensureParentDirs(ctx, dst); err != nil {
-		return false, fmt.Errorf("create parent for %q: %w", dst, err)
-	}
-	if _, err := statEntry(ctx, dst); err == nil {
-		if resolver == nil {
-			return false, fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
-		}
-		facts, err := statConflictFacts(ctx, src, dst)
-		if err != nil {
-			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
-		}
-		overwrite, err := resolver(src.String(), dst.String(), facts)
-		if err != nil {
-			return false, err
-		}
-		if !overwrite {
-			return false, nil
-		}
-		if err := removePathRecursive(ctx, dst); err != nil {
-			return false, fmt.Errorf("remove existing %q: %w", dst, err)
-		}
-	} else if !isNotExist(err) {
-		return false, fmt.Errorf("stat destination %q: %w", dst, err)
+	if proceed, err := resolveDestConflict(ctx, src, dst, resolver); err != nil {
+		return false, err
+	} else if !proceed {
+		return false, nil
 	}
 
 	srcBE, err := backendFor(src)

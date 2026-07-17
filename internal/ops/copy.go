@@ -140,6 +140,165 @@ func ExecuteCopyUsingPlan(ctx context.Context, plan []PlanItem, sources []pathlo
 	return doneFiles, doneBytes, err
 }
 
+// copyRunState carries the mutable tallies and throttled-progress state shared
+// across the per-item copy helpers invoked from executeCopyWithPlan's loop.
+type copyRunState struct {
+	doneFiles       int
+	doneBytes       int64
+	bytesSinceEmit  int64
+	lastEmit        time.Time
+	lastMetaEmit    time.Time // mkdir/symlink progress (no byte deltas): throttle by MinInterval only
+	transferredOut  []pathloc.Path
+	deferredDirMeta []PlanItem
+	deferredSync    []string
+
+	th       ProgressEmitThrottle
+	progress ProgressCallback
+}
+
+func (s *copyRunState) recordTransferred(src pathloc.Path) {
+	s.transferredOut = append(s.transferredOut, src)
+}
+
+func (s *copyRunState) emitProgress(srcPath, dstPath string, force bool) {
+	if s.progress == nil {
+		return
+	}
+	now := time.Now()
+	sinceEmit := time.Duration(0)
+	if !s.lastEmit.IsZero() {
+		sinceEmit = now.Sub(s.lastEmit)
+	}
+	if force || s.bytesSinceEmit >= s.th.MinBytes || (s.bytesSinceEmit > 0 && !s.lastEmit.IsZero() && sinceEmit >= s.th.MinInterval) {
+		s.progress(srcPath, dstPath, s.doneFiles, s.doneBytes)
+		s.bytesSinceEmit = 0
+		s.lastEmit = now
+	}
+}
+
+func (s *copyRunState) emitMetaProgress(srcPath, dstPath string) {
+	if s.progress == nil {
+		return
+	}
+	now := time.Now()
+	if !s.lastMetaEmit.IsZero() && now.Sub(s.lastMetaEmit) < s.th.MinInterval {
+		return
+	}
+	s.lastMetaEmit = now
+	s.progress(srcPath, dstPath, s.doneFiles, s.doneBytes)
+}
+
+func copyDirItem(ctx context.Context, item PlanItem, opts Options, state *copyRunState) error {
+	srcStr := item.Src.String()
+	dstStr := item.Dst.String()
+	if _, err := statEntry(ctx, item.Dst); isNotExist(err) {
+		be, err := backendFor(item.Dst)
+		if err != nil {
+			return err
+		}
+		if err := be.Mkdir(ctx, item.Dst, mkdirModeForItem(item, opts)); err != nil {
+			return fmt.Errorf("create directory %q: %w", dstStr, err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("stat directory %q: %w", dstStr, PathErrorReason(err))
+	}
+	if opts.PreservePermissions || opts.PreserveTimestamps {
+		state.deferredDirMeta = append(state.deferredDirMeta, item)
+	}
+	state.doneFiles++
+	state.emitMetaProgress(srcStr, dstStr)
+	return nil
+}
+
+func copySymlinkItem(ctx context.Context, item PlanItem, resolver ConflictResolver, state *copyRunState) error {
+	srcStr := item.Src.String()
+	dstStr := item.Dst.String()
+	var copied bool
+	if useLocalFastPath(item.Src, item.Dst) {
+		var err error
+		copied, err = copySymlinkWithConflict(srcStr, dstStr, resolver)
+		if err != nil {
+			return err
+		}
+	} else {
+		var err error
+		copied, err = copySymlinkTransfer(ctx, item.Src, item.Dst, resolver)
+		if err != nil {
+			return err
+		}
+	}
+	if !copied {
+		return nil
+	}
+	state.recordTransferred(item.Src)
+	state.doneFiles++
+	state.emitMetaProgress(srcStr, dstStr)
+	return nil
+}
+
+func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver ConflictResolver, diskWait DiskWaitFunc, destination pathloc.Path, copyBuf []byte, state *copyRunState) error {
+	srcStr := item.Src.String()
+	dstStr := item.Dst.String()
+
+	if diskWait != nil && destination.Scheme() == pathloc.SchemeFile &&
+		(opts.DiskSpaceCheckMinFileBytes <= 0 || item.FileSize >= opts.DiskSpaceCheckMinFileBytes) {
+		if err := EnsureDiskSpace(diskWait, destination, item.FileSize, item.Src); err != nil {
+			return err
+		}
+	}
+
+	var copied bool
+	var err error
+	if useLocalFastPath(item.Src, item.Dst) {
+		copied, err = copyFileWithConflict(ctx, srcStr, dstStr, opts, resolver, copyBuf, func(delta int64) {
+			state.doneBytes += delta
+			state.bytesSinceEmit += delta
+			state.emitProgress(srcStr, dstStr, false)
+		})
+	} else {
+		copied, err = copyFileTransfer(ctx, item.Src, item.Dst, opts, resolver, copyBuf, func(delta int64) {
+			state.doneBytes += delta
+			state.bytesSinceEmit += delta
+			state.emitProgress(srcStr, dstStr, false)
+		})
+	}
+	if err != nil {
+		return err
+	}
+	if !copied {
+		return nil
+	}
+	state.recordTransferred(item.Src)
+
+	if opts.SyncFileDeferred(item.FileSize) && item.Dst.Scheme() == pathloc.SchemeFile {
+		if host, err := item.Dst.FilePath(); err == nil {
+			state.deferredSync = append(state.deferredSync, host)
+		}
+	}
+
+	state.doneFiles++
+	state.emitProgress(srcStr, dstStr, true)
+	return nil
+}
+
+func applyDeferredDirMeta(ctx context.Context, opts Options, state *copyRunState) error {
+	for _, item := range state.deferredDirMeta {
+		if err := applyItemMetadata(ctx, item, opts); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func runDeferredSyncs(state *copyRunState) error {
+	for _, path := range state.deferredSync {
+		if err := syncLocalPath(path); err != nil {
+			return fmt.Errorf("sync destination %q: %w", path, err)
+		}
+	}
+	return nil
+}
+
 func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, []pathloc.Path, error) {
 	var plan []PlanItem
 	var err error
@@ -155,152 +314,41 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 		}
 	}
 
-	th := effectiveProgressThrottle(throttle)
-
-	var doneFiles int
-	var doneBytes int64
-	var bytesSinceEmit int64
-	var lastEmit time.Time
-	var lastMetaEmit time.Time // mkdir/symlink progress (no byte deltas): throttle by MinInterval only
-	var transferredOut []pathloc.Path
-	recordTransferred := func(src pathloc.Path) {
-		transferredOut = append(transferredOut, src)
-	}
-
-	emitProgress := func(srcPath, dstPath string, doneF int, doneB int64, force bool) {
-		if progress == nil {
-			return
-		}
-		now := time.Now()
-		sinceEmit := time.Duration(0)
-		if !lastEmit.IsZero() {
-			sinceEmit = now.Sub(lastEmit)
-		}
-		if force || bytesSinceEmit >= th.MinBytes || (bytesSinceEmit > 0 && !lastEmit.IsZero() && sinceEmit >= th.MinInterval) {
-			progress(srcPath, dstPath, doneF, doneB)
-			bytesSinceEmit = 0
-			lastEmit = now
-		}
-	}
-	emitMetaProgress := func(srcPath, dstPath string, doneF int, doneB int64) {
-		if progress == nil {
-			return
-		}
-		now := time.Now()
-		if !lastMetaEmit.IsZero() && now.Sub(lastMetaEmit) < th.MinInterval {
-			return
-		}
-		lastMetaEmit = now
-		progress(srcPath, dstPath, doneF, doneB)
-	}
-
-	var deferredDirMeta []PlanItem
-	var deferredSync []string
+	state := &copyRunState{th: effectiveProgressThrottle(throttle), progress: progress}
 	copyBuf := make([]byte, BufferSize(opts.CopyBufferKiB))
 
 	for _, item := range plan {
 		if err := ctx.Err(); err != nil {
-			return doneFiles, doneBytes, transferredOut, err
+			return state.doneFiles, state.doneBytes, state.transferredOut, err
 		}
-		srcStr := item.Src.String()
-		dstStr := item.Dst.String()
 		if item.IsDir && !item.IsSymlink {
-			if _, err := statEntry(ctx, item.Dst); isNotExist(err) {
-				be, err := backendFor(item.Dst)
-				if err != nil {
-					return doneFiles, doneBytes, transferredOut, err
-				}
-				if err := be.Mkdir(ctx, item.Dst, mkdirModeForItem(item, opts)); err != nil {
-					return doneFiles, doneBytes, transferredOut, fmt.Errorf("create directory %q: %w", dstStr, err)
-				}
-			} else if err != nil {
-				return doneFiles, doneBytes, transferredOut, fmt.Errorf("stat directory %q: %w", dstStr, PathErrorReason(err))
+			if err := copyDirItem(ctx, item, opts, state); err != nil {
+				return state.doneFiles, state.doneBytes, state.transferredOut, err
 			}
-			if opts.PreservePermissions || opts.PreserveTimestamps {
-				deferredDirMeta = append(deferredDirMeta, item)
-			}
-			doneFiles++
-			emitMetaProgress(srcStr, dstStr, doneFiles, doneBytes)
 			continue
 		}
 
 		if item.IsSymlink {
-			var copied bool
-			if useLocalFastPath(item.Src, item.Dst) {
-				var copyErr error
-				copied, copyErr = copySymlinkWithConflict(srcStr, dstStr, resolver)
-				if copyErr != nil {
-					return doneFiles, doneBytes, transferredOut, copyErr
-				}
-			} else {
-				var copyErr error
-				copied, copyErr = copySymlinkTransfer(ctx, item.Src, item.Dst, resolver)
-				if copyErr != nil {
-					return doneFiles, doneBytes, transferredOut, copyErr
-				}
+			if err := copySymlinkItem(ctx, item, resolver, state); err != nil {
+				return state.doneFiles, state.doneBytes, state.transferredOut, err
 			}
-			if !copied {
-				continue
-			}
-			recordTransferred(item.Src)
-			doneFiles++
-			emitMetaProgress(srcStr, dstStr, doneFiles, doneBytes)
 			continue
 		}
 
-		if diskWait != nil && destination.Scheme() == pathloc.SchemeFile &&
-			(opts.DiskSpaceCheckMinFileBytes <= 0 || item.FileSize >= opts.DiskSpaceCheckMinFileBytes) {
-			if err := EnsureDiskSpace(diskWait, destination, item.FileSize, item.Src); err != nil {
-				return doneFiles, doneBytes, transferredOut, err
-			}
-		}
-
-		var copied bool
-		var err error
-		if useLocalFastPath(item.Src, item.Dst) {
-			copied, err = copyFileWithConflict(ctx, srcStr, dstStr, opts, resolver, copyBuf, func(delta int64) {
-				doneBytes += delta
-				bytesSinceEmit += delta
-				emitProgress(srcStr, dstStr, doneFiles, doneBytes, false)
-			})
-		} else {
-			copied, err = copyFileTransfer(ctx, item.Src, item.Dst, opts, resolver, copyBuf, func(delta int64) {
-				doneBytes += delta
-				bytesSinceEmit += delta
-				emitProgress(srcStr, dstStr, doneFiles, doneBytes, false)
-			})
-		}
-		if err != nil {
-			return doneFiles, doneBytes, transferredOut, err
-		}
-		if !copied {
-			continue
-		}
-		recordTransferred(item.Src)
-
-		if opts.SyncFileDeferred(item.FileSize) && item.Dst.Scheme() == pathloc.SchemeFile {
-			if host, err := item.Dst.FilePath(); err == nil {
-				deferredSync = append(deferredSync, host)
-			}
-		}
-
-		doneFiles++
-		emitProgress(srcStr, dstStr, doneFiles, doneBytes, true)
-	}
-
-	for _, item := range deferredDirMeta {
-		if err := applyItemMetadata(ctx, item, opts); err != nil {
-			return doneFiles, doneBytes, transferredOut, err
+		if err := copyRegularItem(ctx, item, opts, resolver, diskWait, destination, copyBuf, state); err != nil {
+			return state.doneFiles, state.doneBytes, state.transferredOut, err
 		}
 	}
 
-	for _, path := range deferredSync {
-		if err := syncLocalPath(path); err != nil {
-			return doneFiles, doneBytes, transferredOut, fmt.Errorf("sync destination %q: %w", path, err)
-		}
+	if err := applyDeferredDirMeta(ctx, opts, state); err != nil {
+		return state.doneFiles, state.doneBytes, state.transferredOut, err
 	}
 
-	return doneFiles, doneBytes, transferredOut, nil
+	if err := runDeferredSyncs(state); err != nil {
+		return state.doneFiles, state.doneBytes, state.transferredOut, err
+	}
+
+	return state.doneFiles, state.doneBytes, state.transferredOut, nil
 }
 
 func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, resolver ConflictResolver, buf []byte, onWritten func(int64)) (copied bool, err error) {
