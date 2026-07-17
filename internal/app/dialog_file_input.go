@@ -34,84 +34,17 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 	if d.Open && d.DialogType == dialog.FileDialogMassRename && event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 's', 'S':
-			d.MassRenameMode = dialog.MassRenameModeUISimple
-			if d.FocusedField == 1 || d.FocusedField == 2 {
-				d.FocusedField = 0
-			}
-			a.massRenameSyncFieldLabels()
-			a.recomputeMassRenamePreview()
-			return false
-		case 'r', 'R':
-			d.MassRenameMode = dialog.MassRenameModeUIRegex
-			switch d.FocusedField {
-			case 0, 2:
-				d.FocusedField = 1
-			case 6:
-				d.FocusedField = 5 // Simple's show-modified (6) → Regex's show-modified (5)
-			}
-			a.massRenameSyncFieldLabels()
-			a.recomputeMassRenamePreview()
-			return false
-		case 'e', 'E':
-			d.MassRenameMode = dialog.MassRenameModeUIExternalEditor
-			if d.FocusedField < 2 {
-				d.FocusedField = 2
-			}
-			a.massRenameSyncFieldLabels()
-			a.recomputeMassRenamePreview()
-			return false
-		case 'i', 'I':
-			if d.MassRenameMode == dialog.MassRenameModeUISimple {
-				d.MassRenameCaseFold = !d.MassRenameCaseFold
-				a.recomputeMassRenamePreview()
-			}
-			return false
-		case 'm', 'M':
-			d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
-			a.recomputeMassRenamePreview()
+		if a.handleMassRenameAltShortcut(d, event.Rune()) {
 			return false
 		}
 	}
 	if d.Open && d.DialogType == dialog.FileDialogMassRename {
-		switch event.Key() {
-		case tcell.KeyF4:
-			a.launchMassRenameExternalEditor()
-			return false
-		case tcell.KeyPgUp:
-			_, h := a.screen.Size()
-			vp := dialog.MassRenamePreviewViewportRows(h, d.MassRenameMode)
-			d.MassRenamePreviewScroll -= vp
-			if d.MassRenamePreviewScroll < 0 {
-				d.MassRenamePreviewScroll = 0
-			}
-			return false
-		case tcell.KeyPgDn:
-			_, h := a.screen.Size()
-			vp := dialog.MassRenamePreviewViewportRows(h, d.MassRenameMode)
-			dialog.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
-			d.MassRenamePreviewScroll += vp
-			dialog.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
+		if a.handleMassRenamePreviewScrollKey(d, event.Key()) {
 			return false
 		}
 	}
 	if d.Open && d.DialogType == dialog.FileDialogDelete {
-		switch event.Key() {
-		case tcell.KeyPgUp:
-			_, h := a.screen.Size()
-			vp := dialog.DeleteDialogListViewportRows(h, *d)
-			d.DeleteListScroll -= vp
-			if d.DeleteListScroll < 0 {
-				d.DeleteListScroll = 0
-			}
-			return false
-		case tcell.KeyPgDn:
-			_, h := a.screen.Size()
-			vp := dialog.DeleteDialogListViewportRows(h, *d)
-			dialog.DeleteEnsureListScroll(d, vp, len(d.DeleteEntries))
-			d.DeleteListScroll += vp
-			dialog.DeleteEnsureListScroll(d, vp, len(d.DeleteEntries))
+		if a.handleDeleteListScrollKey(d, event.Key()) {
 			return false
 		}
 	}
@@ -149,9 +82,6 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	}
 
 	onRadio := a.fileDialogOnRadio()
-	onMkdirRadio := a.fileDialogOnMkdirRadio()
-	onRunForEachRadio := a.fileDialogOnRunForEachPoolRadio()
-	onMassRenameRadio := a.fileDialogOnMassRenameRadio()
 	onCheckbox := a.fileDialogOnMassRenameCaseCheckbox() || a.fileDialogOnRenameFocusCheckbox() || a.fileDialogOnMassRenameShowModifiedCheckbox()
 
 	f := a.focusedField()
@@ -171,55 +101,7 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		a.closeFileDialog()
 		return false
 	case tcell.KeyEnter:
-		if a.model.FileDialog.DialogType == dialog.FileDialogDelete {
-			if a.model.FileDialog.FocusedField == 0 {
-				a.executeDelete()
-			} else {
-				a.closeFileDialog()
-			}
-			return false
-		}
-		if f := a.focusedField(); f != nil && f.PathPicker && f.PickerFocused {
-			a.openPathPickerForFileField(a.model.FileDialog.FocusedField)
-			return false
-		}
-		if onMassRenameRadio {
-			if d.FocusedField == 2 {
-				a.launchMassRenameExternalEditor()
-			} else {
-				a.applyMassRenameModeFromFocus()
-				d.FocusedField = massRenameFindFieldFocus
-			}
-			return false
-		}
-		if onRunForEachRadio {
-			a.selectFocusedRunForEachPoolRadio()
-			return false
-		}
-		if a.fileDialogOnMassRenameShowModifiedCheckbox() {
-			d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
-			a.recomputeMassRenamePreview()
-			return false
-		}
-		if a.fileDialogOnMassRenameCaseCheckbox() {
-			d := &a.model.FileDialog
-			d.MassRenameCaseFold = !d.MassRenameCaseFold
-			a.recomputeMassRenamePreview()
-			return false
-		}
-		if a.fileDialogOnRenameFocusCheckbox() {
-			d.RenameFocusAfter = !d.RenameFocusAfter
-			return false
-		}
-		if onMkdirRadio {
-			a.selectFocusedMkdirRadio()
-		}
-		if a.fileDialogOnButton() && d.DialogType != dialog.FileDialogDelete &&
-			d.FocusedField == dialog.FileDialogCancelFocusIndex(*d) {
-			a.closeFileDialog()
-			return false
-		}
-		a.executeFileDialog()
+		a.handleFileDialogEnter()
 		return false
 	case tcell.KeyDown:
 		if a.fileDialogMoveFocusKey(event) {
@@ -317,51 +199,208 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 		}
 		return false
 	case tcell.KeyRune:
-		if onMassRenameRadio {
-			if isPlainPrintableRune(event) && event.Rune() == ' ' {
-				a.applyMassRenameModeFromFocus()
-			}
-			return false
-		}
-		if onRunForEachRadio {
-			if isPlainPrintableRune(event) && event.Rune() == ' ' {
-				a.selectFocusedRunForEachPoolRadio()
-			}
-			return false
-		}
-		if a.fileDialogOnMassRenameShowModifiedCheckbox() {
-			if isPlainPrintableRune(event) && event.Rune() == ' ' {
-				d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
-				a.recomputeMassRenamePreview()
-			}
-			return false
-		}
-		if a.fileDialogOnMassRenameCaseCheckbox() {
-			if isPlainPrintableRune(event) && event.Rune() == ' ' {
-				d := &a.model.FileDialog
-				d.MassRenameCaseFold = !d.MassRenameCaseFold
-				a.recomputeMassRenamePreview()
-			}
-			return false
-		}
-		if a.fileDialogOnRenameFocusCheckbox() {
-			if isPlainPrintableRune(event) && event.Rune() == ' ' {
-				d.RenameFocusAfter = !d.RenameFocusAfter
-			}
-			return false
-		}
-		if onMkdirRadio {
-			if isPlainPrintableRune(event) && event.Rune() == ' ' {
-				a.selectFocusedMkdirRadio()
-			}
-			return false
-		}
-		if isDialogInputRune(event) {
-			if f := a.focusedField(); f != nil {
-				a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
-			}
-		}
+		a.handleFileDialogRune(event)
 		return false
+	}
+	return false
+}
+
+// handleFileDialogEnter handles Enter on the file dialog: delete confirmation, path-picker
+// open, mass-rename/run-for-each radio commit, checkbox toggles, mkdir radio commit, and
+// button/default activation.
+func (a *App) handleFileDialogEnter() {
+	d := &a.model.FileDialog
+	if d.DialogType == dialog.FileDialogDelete {
+		if d.FocusedField == 0 {
+			a.executeDelete()
+		} else {
+			a.closeFileDialog()
+		}
+		return
+	}
+	if f := a.focusedField(); f != nil && f.PathPicker && f.PickerFocused {
+		a.openPathPickerForFileField(d.FocusedField)
+		return
+	}
+	if a.fileDialogOnMassRenameRadio() {
+		if d.FocusedField == 2 {
+			a.launchMassRenameExternalEditor()
+		} else {
+			a.applyMassRenameModeFromFocus()
+			d.FocusedField = massRenameFindFieldFocus
+		}
+		return
+	}
+	if a.fileDialogOnRunForEachPoolRadio() {
+		a.selectFocusedRunForEachPoolRadio()
+		return
+	}
+	if a.fileDialogOnMassRenameShowModifiedCheckbox() {
+		d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
+		a.recomputeMassRenamePreview()
+		return
+	}
+	if a.fileDialogOnMassRenameCaseCheckbox() {
+		d.MassRenameCaseFold = !d.MassRenameCaseFold
+		a.recomputeMassRenamePreview()
+		return
+	}
+	if a.fileDialogOnRenameFocusCheckbox() {
+		d.RenameFocusAfter = !d.RenameFocusAfter
+		return
+	}
+	if a.fileDialogOnMkdirRadio() {
+		a.selectFocusedMkdirRadio()
+	}
+	if a.fileDialogOnButton() && d.DialogType != dialog.FileDialogDelete &&
+		d.FocusedField == dialog.FileDialogCancelFocusIndex(*d) {
+		a.closeFileDialog()
+		return
+	}
+	a.executeFileDialog()
+}
+
+// handleFileDialogRune handles KeyRune on the file dialog: space-toggle for mass-rename and
+// run-for-each radios, checkbox toggles, mkdir radio, and plain-input forwarding to the
+// focused field.
+func (a *App) handleFileDialogRune(event *tcell.EventKey) {
+	d := &a.model.FileDialog
+	if a.fileDialogOnMassRenameRadio() {
+		if isPlainPrintableRune(event) && event.Rune() == ' ' {
+			a.applyMassRenameModeFromFocus()
+		}
+		return
+	}
+	if a.fileDialogOnRunForEachPoolRadio() {
+		if isPlainPrintableRune(event) && event.Rune() == ' ' {
+			a.selectFocusedRunForEachPoolRadio()
+		}
+		return
+	}
+	if a.fileDialogOnMassRenameShowModifiedCheckbox() {
+		if isPlainPrintableRune(event) && event.Rune() == ' ' {
+			d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
+			a.recomputeMassRenamePreview()
+		}
+		return
+	}
+	if a.fileDialogOnMassRenameCaseCheckbox() {
+		if isPlainPrintableRune(event) && event.Rune() == ' ' {
+			d.MassRenameCaseFold = !d.MassRenameCaseFold
+			a.recomputeMassRenamePreview()
+		}
+		return
+	}
+	if a.fileDialogOnRenameFocusCheckbox() {
+		if isPlainPrintableRune(event) && event.Rune() == ' ' {
+			d.RenameFocusAfter = !d.RenameFocusAfter
+		}
+		return
+	}
+	if a.fileDialogOnMkdirRadio() {
+		if isPlainPrintableRune(event) && event.Rune() == ' ' {
+			a.selectFocusedMkdirRadio()
+		}
+		return
+	}
+	if isDialogInputRune(event) {
+		if f := a.focusedField(); f != nil {
+			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
+		}
+	}
+}
+
+// handleMassRenameAltShortcut handles Alt-letter mode/option shortcuts on the mass-rename
+// dialog (Simple/Regex/External mode switches, case-fold, show-only-modified). Returns
+// true when the rune was handled.
+func (a *App) handleMassRenameAltShortcut(d *dialog.FileDialogState, r rune) bool {
+	switch r {
+	case 's', 'S':
+		d.MassRenameMode = dialog.MassRenameModeUISimple
+		if d.FocusedField == 1 || d.FocusedField == 2 {
+			d.FocusedField = 0
+		}
+		a.massRenameSyncFieldLabels()
+		a.recomputeMassRenamePreview()
+		return true
+	case 'r', 'R':
+		d.MassRenameMode = dialog.MassRenameModeUIRegex
+		switch d.FocusedField {
+		case 0, 2:
+			d.FocusedField = 1
+		case 6:
+			d.FocusedField = 5 // Simple's show-modified (6) → Regex's show-modified (5)
+		}
+		a.massRenameSyncFieldLabels()
+		a.recomputeMassRenamePreview()
+		return true
+	case 'e', 'E':
+		d.MassRenameMode = dialog.MassRenameModeUIExternalEditor
+		if d.FocusedField < 2 {
+			d.FocusedField = 2
+		}
+		a.massRenameSyncFieldLabels()
+		a.recomputeMassRenamePreview()
+		return true
+	case 'i', 'I':
+		if d.MassRenameMode == dialog.MassRenameModeUISimple {
+			d.MassRenameCaseFold = !d.MassRenameCaseFold
+			a.recomputeMassRenamePreview()
+		}
+		return true
+	case 'm', 'M':
+		d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
+		a.recomputeMassRenamePreview()
+		return true
+	}
+	return false
+}
+
+// handleMassRenamePreviewScrollKey handles F4 (external editor) and PgUp/PgDn preview
+// scrolling on the mass-rename dialog. Returns true when the key was handled.
+func (a *App) handleMassRenamePreviewScrollKey(d *dialog.FileDialogState, key tcell.Key) bool {
+	switch key {
+	case tcell.KeyF4:
+		a.launchMassRenameExternalEditor()
+		return true
+	case tcell.KeyPgUp:
+		_, h := a.screen.Size()
+		vp := dialog.MassRenamePreviewViewportRows(h, d.MassRenameMode)
+		d.MassRenamePreviewScroll -= vp
+		if d.MassRenamePreviewScroll < 0 {
+			d.MassRenamePreviewScroll = 0
+		}
+		return true
+	case tcell.KeyPgDn:
+		_, h := a.screen.Size()
+		vp := dialog.MassRenamePreviewViewportRows(h, d.MassRenameMode)
+		dialog.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
+		d.MassRenamePreviewScroll += vp
+		dialog.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
+		return true
+	}
+	return false
+}
+
+// handleDeleteListScrollKey handles PgUp/PgDn scrolling of the delete confirmation list.
+// Returns true when the key was handled.
+func (a *App) handleDeleteListScrollKey(d *dialog.FileDialogState, key tcell.Key) bool {
+	switch key {
+	case tcell.KeyPgUp:
+		_, h := a.screen.Size()
+		vp := dialog.DeleteDialogListViewportRows(h, *d)
+		d.DeleteListScroll -= vp
+		if d.DeleteListScroll < 0 {
+			d.DeleteListScroll = 0
+		}
+		return true
+	case tcell.KeyPgDn:
+		_, h := a.screen.Size()
+		vp := dialog.DeleteDialogListViewportRows(h, *d)
+		dialog.DeleteEnsureListScroll(d, vp, len(d.DeleteEntries))
+		d.DeleteListScroll += vp
+		dialog.DeleteEnsureListScroll(d, vp, len(d.DeleteEntries))
+		return true
 	}
 	return false
 }
@@ -442,80 +481,92 @@ func (a *App) clearFileDialogPickerSubfocus() {
 	}
 }
 
+// massRenameMoveFocusKey handles Tab/Backtab segment jumps and Down/Up visual-order
+// transitions specific to the mass-rename dialog's non-linear focus layout (focus indices
+// don't match visual order: Seg 0 = mode radios(0-2) + show-modified, Seg 1 = find+replace+
+// case-fold (non-external), Seg 2 = buttons). Returns true when handled (focus updated);
+// false when the dialog isn't mass-rename or the key isn't one of these special cases, so
+// the caller falls through to the generic dialog.FileDialogFocusForm tail.
+func (a *App) massRenameMoveFocusKey(event *tcell.EventKey) bool {
+	d := &a.model.FileDialog
+	if d.DialogType != dialog.FileDialogMassRename {
+		return false
+	}
+	key := event.Key()
+	externalMode := d.MassRenameMode == dialog.MassRenameModeUIExternalEditor
+	showModifiedIdx := dialog.MassRenameShowModifiedFocusIdx(*d)
+	okIdx := dialog.FileDialogOKFocusIndex(*d)
+	onRadio := d.FocusedField >= 0 && d.FocusedField < 3
+	onShowModified := d.FocusedField == showModifiedIdx
+	onFindOrReplace := !externalMode && (d.FocusedField == massRenameFindFieldFocus || d.FocusedField == massRenameFindFieldFocus+1)
+	onCaseFold := d.MassRenameMode == dialog.MassRenameModeUISimple && d.FocusedField == 5
+	onSegment1 := onFindOrReplace || onCaseFold
+	onButton := d.FocusedField >= okIdx
+	if key == tcell.KeyTab || key == tcell.KeyBacktab {
+		a.clearFileDialogPickerSubfocus()
+		if key == tcell.KeyTab {
+			switch {
+			case onRadio || onShowModified:
+				if externalMode {
+					d.FocusedField = okIdx
+				} else {
+					d.FocusedField = massRenameFindFieldFocus
+				}
+			case onSegment1:
+				d.FocusedField = okIdx
+			case onButton:
+				d.FocusedField = 0
+				a.applyMassRenameModeFromFocus()
+			}
+		} else { // Backtab
+			switch {
+			case onRadio || onShowModified:
+				d.FocusedField = okIdx
+			case onSegment1:
+				d.FocusedField = 0
+				a.applyMassRenameModeFromFocus()
+			case onButton:
+				if externalMode {
+					d.FocusedField = 0
+					a.applyMassRenameModeFromFocus()
+				} else {
+					d.FocusedField = massRenameFindFieldFocus
+				}
+			}
+		}
+		return true
+	}
+	// Down/Up use visual order (show-modified is above the fields but has a higher focus index).
+	notExternal := !externalMode
+	if key == tcell.KeyDown && d.FocusedField == 2 && notExternal {
+		a.clearFileDialogPickerSubfocus()
+		d.FocusedField = showModifiedIdx
+		return true
+	}
+	if key == tcell.KeyDown && onShowModified && notExternal {
+		a.clearFileDialogPickerSubfocus()
+		d.FocusedField = massRenameFindFieldFocus
+		return true
+	}
+	if key == tcell.KeyUp && d.FocusedField == massRenameFindFieldFocus && notExternal {
+		a.clearFileDialogPickerSubfocus()
+		d.FocusedField = showModifiedIdx
+		return true
+	}
+	if key == tcell.KeyUp && onShowModified && notExternal {
+		a.clearFileDialogPickerSubfocus()
+		d.FocusedField = 2
+		a.applyMassRenameModeFromFocus()
+		return true
+	}
+	return false
+}
+
 func (a *App) fileDialogMoveFocusKey(event *tcell.EventKey) bool {
 	d := &a.model.FileDialog
 
-	// Mass rename: Tab/Backtab jumps between visual segments (focus indices don't match visual order).
-	// Seg 0: mode radios(0-2) + show-modified. Seg 1: find+replace+case-fold (non-external). Seg 2: buttons.
-	// Down/Up mirror the visual order via the non-linear transitions below.
-	if d.DialogType == dialog.FileDialogMassRename {
-		key := event.Key()
-		externalMode := d.MassRenameMode == dialog.MassRenameModeUIExternalEditor
-		showModifiedIdx := dialog.MassRenameShowModifiedFocusIdx(*d)
-		okIdx := dialog.FileDialogOKFocusIndex(*d)
-		onRadio := d.FocusedField >= 0 && d.FocusedField < 3
-		onShowModified := d.FocusedField == showModifiedIdx
-		onFindOrReplace := !externalMode && (d.FocusedField == massRenameFindFieldFocus || d.FocusedField == massRenameFindFieldFocus+1)
-		onCaseFold := d.MassRenameMode == dialog.MassRenameModeUISimple && d.FocusedField == 5
-		onSegment1 := onFindOrReplace || onCaseFold
-		onButton := d.FocusedField >= okIdx
-		if key == tcell.KeyTab || key == tcell.KeyBacktab {
-			a.clearFileDialogPickerSubfocus()
-			if key == tcell.KeyTab {
-				switch {
-				case onRadio || onShowModified:
-					if externalMode {
-						d.FocusedField = okIdx
-					} else {
-						d.FocusedField = massRenameFindFieldFocus
-					}
-				case onSegment1:
-					d.FocusedField = okIdx
-				case onButton:
-					d.FocusedField = 0
-					a.applyMassRenameModeFromFocus()
-				}
-			} else { // Backtab
-				switch {
-				case onRadio || onShowModified:
-					d.FocusedField = okIdx
-				case onSegment1:
-					d.FocusedField = 0
-					a.applyMassRenameModeFromFocus()
-				case onButton:
-					if externalMode {
-						d.FocusedField = 0
-						a.applyMassRenameModeFromFocus()
-					} else {
-						d.FocusedField = massRenameFindFieldFocus
-					}
-				}
-			}
-			return true
-		}
-		// Down/Up use visual order (show-modified is above the fields but has a higher focus index).
-		notExternal := !externalMode
-		if key == tcell.KeyDown && d.FocusedField == 2 && notExternal {
-			a.clearFileDialogPickerSubfocus()
-			d.FocusedField = showModifiedIdx
-			return true
-		}
-		if key == tcell.KeyDown && onShowModified && notExternal {
-			a.clearFileDialogPickerSubfocus()
-			d.FocusedField = massRenameFindFieldFocus
-			return true
-		}
-		if key == tcell.KeyUp && d.FocusedField == massRenameFindFieldFocus && notExternal {
-			a.clearFileDialogPickerSubfocus()
-			d.FocusedField = showModifiedIdx
-			return true
-		}
-		if key == tcell.KeyUp && onShowModified && notExternal {
-			a.clearFileDialogPickerSubfocus()
-			d.FocusedField = 2
-			a.applyMassRenameModeFromFocus()
-			return true
-		}
+	if a.massRenameMoveFocusKey(event) {
+		return true
 	}
 
 	form := dialog.FileDialogFocusForm(*d)

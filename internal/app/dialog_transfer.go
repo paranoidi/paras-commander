@@ -190,17 +190,21 @@ func (a *App) closeTransferDialog() {
 	a.model.DestinationTargetSecondary = false
 }
 
-func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
+// handleTransferAltShortcut handles the Alt-letter mnemonics that must run before standard
+// dialog actions and field editing: Alt+R/Alt+T toggle preserve-permissions/timestamps on a
+// copy's destination phase, and Alt+I toggles "Flatten into destination" for a multi-location
+// transfer. Returns true when the rune was handled.
+func (a *App) handleTransferAltShortcut(event *tcell.EventKey) bool {
 	d := &a.model.TransferDialog
 	if d.Phase == dialog.TransferPhaseDestination && d.Kind == dialog.TransferKindCopy {
 		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 			switch event.Rune() {
 			case 'r', 'R':
 				d.PreservePermissions = !d.PreservePermissions
-				return
+				return true
 			case 't', 'T':
 				d.PreserveTimestamps = !d.PreserveTimestamps
-				return
+				return true
 			}
 		}
 	}
@@ -211,9 +215,144 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 			switch event.Rune() {
 			case 'i', 'I':
 				d.FlattenIntoDest = !d.FlattenIntoDest
-				return
+				return true
 			}
 		}
+	}
+	return false
+}
+
+// handleTransferDestinationNav handles Left/Right cursor movement and picker sub-focus
+// navigation on the destination field while it is focused. Returns true when the key was
+// handled (caller should return); false to fall through to the generic focus-move / Enter
+// handling below.
+func (a *App) handleTransferDestinationNav(event *tcell.EventKey) bool {
+	d := &a.model.TransferDialog
+	if d.FocusField != 0 || d.Phase != dialog.TransferPhaseDestination {
+		return false
+	}
+	if d.DestSubFocus == dialog.TransferDestSubFocusPicker {
+		switch event.Key() {
+		case tcell.KeyLeft:
+			d.DestSubFocus = dialog.TransferDestSubFocusText
+			runes := []rune(d.Destination.Value)
+			d.Destination.Cursor = len(runes)
+			return true
+		case tcell.KeyEnter:
+			a.openPathPickerForTransfer()
+			return true
+		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
+			d.DestSubFocus = dialog.TransferDestSubFocusText
+			return false
+		default:
+			return true
+		}
+	}
+	switch event.Key() {
+	case tcell.KeyRight:
+		dest := &d.Destination
+		runes := []rune(dest.Value)
+		c := dest.Cursor
+		if c < 0 {
+			c = 0
+		}
+		if c > len(runes) {
+			c = len(runes)
+		}
+		// First Right on a pending placeholder commits it; second Right at EOT moves to the glyph.
+		if dest.Prefill != "" && dest.PrefillPending && dest.Value == dest.Prefill && c >= len(runes) {
+			dest.CommitPrefill()
+			return true
+		}
+		if c >= len(runes) {
+			d.DestSubFocus = dialog.TransferDestSubFocusPicker
+			return true
+		}
+		dest.MoveCursor(1)
+		a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
+		return true
+	case tcell.KeyLeft:
+		d.Destination.MoveCursor(-1)
+		a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
+		return true
+	}
+	return false
+}
+
+// handleTransferEnter handles Enter on the transfer dialog: confirm from the destination
+// text field or self-copy rename field, or activate the focused Cancel/OK/Add-paused
+// button. Returns true when handled (caller should return); false when the key isn't Enter
+// or Enter didn't land on a recognized target, so the caller falls through to field editing.
+func (a *App) handleTransferEnter(event *tcell.EventKey) bool {
+	d := &a.model.TransferDialog
+	if event.Key() != tcell.KeyEnter {
+		return false
+	}
+	tf := dialog.NewTransferDialogLinearForm(dialog.TransferDialogEffectiveNumContent(*d))
+	if d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0 && d.DestSubFocus == dialog.TransferDestSubFocusText {
+		a.confirmTransfer()
+		return true
+	}
+	if d.Phase == dialog.TransferPhaseSelfCopyRename && d.FocusField == 0 {
+		a.confirmTransfer()
+		return true
+	}
+	switch d.FocusField {
+	case tf.CancelIndex():
+		a.closeTransferDialog()
+		return true
+	case tf.OKIndex():
+		a.confirmTransfer()
+		return true
+	case tf.AddPausedIndex():
+		a.confirmTransferPaused()
+		return true
+	}
+	return false
+}
+
+// handleTransferCheckboxRune applies rune shortcuts (mnemonic letters and Space) for the
+// permissions/timestamps checkboxes and the multi-location flatten checkbox when they are
+// focused.
+func (a *App) handleTransferCheckboxRune(event *tcell.EventKey) {
+	d := &a.model.TransferDialog
+	if d.Phase != dialog.TransferPhaseDestination || event.Key() != tcell.KeyRune || event.Modifiers() != tcell.ModNone {
+		return
+	}
+	if d.Kind == dialog.TransferKindCopy {
+		switch event.Rune() {
+		case 'r', 'R':
+			if d.FocusField == 1 {
+				d.PreservePermissions = !d.PreservePermissions
+			}
+		case 't', 'T':
+			if d.FocusField == 2 {
+				d.PreserveTimestamps = !d.PreserveTimestamps
+			}
+		case ' ':
+			switch d.FocusField {
+			case 1:
+				d.PreservePermissions = !d.PreservePermissions
+			case 2:
+				d.PreserveTimestamps = !d.PreserveTimestamps
+			}
+		}
+	}
+	if d.MultiLocation() {
+		flattenIdx := dialog.TransferDialogEffectiveNumContent(*d) - 1
+		if d.FocusField == flattenIdx {
+			switch event.Rune() {
+			case 'i', 'I', ' ':
+				d.FlattenIntoDest = !d.FlattenIntoDest
+			}
+		}
+	}
+}
+
+func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
+	d := &a.model.TransferDialog
+	if a.handleTransferAltShortcut(event) {
+		return
 	}
 	// Alt+O = OK, Alt+C = Cancel, Alt+P = Add paused (mnemonics; must run before field edit).
 	if a.tryStandardDialogActions(event, a.confirmTransfer, a.closeTransferDialog, []dialogExtraMnemonic{
@@ -253,52 +392,8 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if d.FocusField == 0 && d.Phase == dialog.TransferPhaseDestination {
-		if d.DestSubFocus == dialog.TransferDestSubFocusPicker {
-			switch event.Key() {
-			case tcell.KeyLeft:
-				d.DestSubFocus = dialog.TransferDestSubFocusText
-				runes := []rune(d.Destination.Value)
-				d.Destination.Cursor = len(runes)
-				return
-			case tcell.KeyEnter:
-				a.openPathPickerForTransfer()
-				return
-			case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
-				d.DestSubFocus = dialog.TransferDestSubFocusText
-			default:
-				return
-			}
-		} else {
-			switch event.Key() {
-			case tcell.KeyRight:
-				dest := &d.Destination
-				runes := []rune(dest.Value)
-				c := dest.Cursor
-				if c < 0 {
-					c = 0
-				}
-				if c > len(runes) {
-					c = len(runes)
-				}
-				// First Right on a pending placeholder commits it; second Right at EOT moves to the glyph.
-				if dest.Prefill != "" && dest.PrefillPending && dest.Value == dest.Prefill && c >= len(runes) {
-					dest.CommitPrefill()
-					return
-				}
-				if c >= len(runes) {
-					d.DestSubFocus = dialog.TransferDestSubFocusPicker
-					return
-				}
-				dest.MoveCursor(1)
-				a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-				return
-			case tcell.KeyLeft:
-				d.Destination.MoveCursor(-1)
-				a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-				return
-			}
-		}
+	if a.handleTransferDestinationNav(event) {
+		return
 	}
 	if focus, ok := dialog.TransferDialogMoveFocus(*d, d.FocusField, event.Key()); ok {
 		prev := d.FocusField
@@ -308,27 +403,8 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 		}
 		return
 	}
-	if event.Key() == tcell.KeyEnter {
-		tf := dialog.NewTransferDialogLinearForm(dialog.TransferDialogEffectiveNumContent(*d))
-		if d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0 && d.DestSubFocus == dialog.TransferDestSubFocusText {
-			a.confirmTransfer()
-			return
-		}
-		if d.Phase == dialog.TransferPhaseSelfCopyRename && d.FocusField == 0 {
-			a.confirmTransfer()
-			return
-		}
-		switch d.FocusField {
-		case tf.CancelIndex():
-			a.closeTransferDialog()
-			return
-		case tf.OKIndex():
-			a.confirmTransfer()
-			return
-		case tf.AddPausedIndex():
-			a.confirmTransferPaused()
-			return
-		}
+	if a.handleTransferEnter(event) {
+		return
 	}
 	if d.FocusField == 0 && d.Phase != dialog.TransferPhaseSelfCopyRename {
 		if a.editTransferFieldKey(event, &d.Destination) {
@@ -337,36 +413,7 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if d.Phase == dialog.TransferPhaseDestination && event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
-		if d.Kind == dialog.TransferKindCopy {
-			switch event.Rune() {
-			case 'r', 'R':
-				if d.FocusField == 1 {
-					d.PreservePermissions = !d.PreservePermissions
-				}
-			case 't', 'T':
-				if d.FocusField == 2 {
-					d.PreserveTimestamps = !d.PreserveTimestamps
-				}
-			case ' ':
-				switch d.FocusField {
-				case 1:
-					d.PreservePermissions = !d.PreservePermissions
-				case 2:
-					d.PreserveTimestamps = !d.PreserveTimestamps
-				}
-			}
-		}
-		if d.MultiLocation() {
-			flattenIdx := dialog.TransferDialogEffectiveNumContent(*d) - 1
-			if d.FocusField == flattenIdx {
-				switch event.Rune() {
-				case 'i', 'I', ' ':
-					d.FlattenIntoDest = !d.FlattenIntoDest
-				}
-			}
-		}
-	}
+	a.handleTransferCheckboxRune(event)
 }
 
 func (a *App) editTransferFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {

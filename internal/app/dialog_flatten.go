@@ -78,16 +78,19 @@ func (a *App) closeFlattenDialog() {
 	a.model.DestinationTargetSecondary = false
 }
 
-func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
+// tryFlattenToggle handles the Recursive/RemoveEmpty toggle shortcuts: Alt+R/Alt+E always,
+// and the plain r/e/Space mnemonics when the matching checkbox row is focused. Returns true
+// when handled.
+func (a *App) tryFlattenToggle(event *tcell.EventKey) bool {
 	d := &a.model.FlattenDialog
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 'r', 'R':
 			d.Recursive = !d.Recursive
-			return
+			return true
 		case 'e', 'E':
 			d.RemoveEmpty = !d.RemoveEmpty
-			return
+			return true
 		}
 	}
 	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
@@ -95,23 +98,87 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 		case 'r', 'R':
 			if d.FocusField == 1 {
 				d.Recursive = !d.Recursive
-				return
+				return true
 			}
 		case 'e', 'E':
 			if d.FocusField == 2 {
 				d.RemoveEmpty = !d.RemoveEmpty
-				return
+				return true
 			}
 		case ' ':
 			switch d.FocusField {
 			case 1:
 				d.Recursive = !d.Recursive
-				return
+				return true
 			case 2:
 				d.RemoveEmpty = !d.RemoveEmpty
-				return
+				return true
 			}
 		}
+	}
+	return false
+}
+
+// handleFlattenDestNavKey handles Left/Right cursor movement and picker sub-focus
+// navigation on the destination field while it is focused. Returns true when the key was
+// handled (caller should return); false to fall through to the generic focus-move / Enter
+// handling below.
+func (a *App) handleFlattenDestNavKey(event *tcell.EventKey) bool {
+	d := &a.model.FlattenDialog
+	if d.FocusField != 0 {
+		return false
+	}
+	if d.DestSubFocus == dialog.FlattenDestSubFocusPicker {
+		switch event.Key() {
+		case tcell.KeyLeft:
+			d.DestSubFocus = dialog.FlattenDestSubFocusText
+			runes := []rune(d.Destination.Value)
+			d.Destination.Cursor = len(runes)
+			return true
+		case tcell.KeyEnter:
+			a.openPathPickerForFlatten()
+			return true
+		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
+			d.DestSubFocus = dialog.FlattenDestSubFocusText
+			return false
+		default:
+			return true
+		}
+	}
+	switch event.Key() {
+	case tcell.KeyRight:
+		dest := &d.Destination
+		runes := []rune(dest.Value)
+		c := dest.Cursor
+		if c < 0 {
+			c = 0
+		}
+		if c > len(runes) {
+			c = len(runes)
+		}
+		if dest.Prefill != "" && dest.PrefillPending && dest.Value == dest.Prefill && c >= len(runes) {
+			dest.CommitPrefill()
+			return true
+		}
+		if c >= len(runes) {
+			d.DestSubFocus = dialog.FlattenDestSubFocusPicker
+			return true
+		}
+		dest.MoveCursor(1)
+		a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
+		return true
+	case tcell.KeyLeft:
+		d.Destination.MoveCursor(-1)
+		a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
+		return true
+	}
+	return false
+}
+
+func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
+	d := &a.model.FlattenDialog
+	if a.tryFlattenToggle(event) {
+		return
 	}
 	if a.tryStandardDialogActions(event, a.confirmFlatten, a.closeFlattenDialog, nil) {
 		return
@@ -135,51 +202,8 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 		}
 		return
 	}
-	if d.FocusField == 0 {
-		if d.DestSubFocus == dialog.FlattenDestSubFocusPicker {
-			switch event.Key() {
-			case tcell.KeyLeft:
-				d.DestSubFocus = dialog.FlattenDestSubFocusText
-				runes := []rune(d.Destination.Value)
-				d.Destination.Cursor = len(runes)
-				return
-			case tcell.KeyEnter:
-				a.openPathPickerForFlatten()
-				return
-			case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyDown, tcell.KeyUp:
-				d.DestSubFocus = dialog.FlattenDestSubFocusText
-			default:
-				return
-			}
-		} else {
-			switch event.Key() {
-			case tcell.KeyRight:
-				dest := &d.Destination
-				runes := []rune(dest.Value)
-				c := dest.Cursor
-				if c < 0 {
-					c = 0
-				}
-				if c > len(runes) {
-					c = len(runes)
-				}
-				if dest.Prefill != "" && dest.PrefillPending && dest.Value == dest.Prefill && c >= len(runes) {
-					dest.CommitPrefill()
-					return
-				}
-				if c >= len(runes) {
-					d.DestSubFocus = dialog.FlattenDestSubFocusPicker
-					return
-				}
-				dest.MoveCursor(1)
-				a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-				return
-			case tcell.KeyLeft:
-				d.Destination.MoveCursor(-1)
-				a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-				return
-			}
-		}
+	if a.handleFlattenDestNavKey(event) {
+		return
 	}
 	if focus, ok := dialog.FlattenDialogMoveFocus(d.FocusField, event.Key()); ok {
 		prev := d.FocusField
