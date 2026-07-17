@@ -126,7 +126,10 @@ func SummarizePlanForSource(plan []PlanItem, root pathloc.Path) (items int, byte
 // Returns (doneFiles, doneBytes, error).
 // diskWait is optional; when set, regular file copies wait until there is enough free space on the destination volume.
 func ExecuteCopy(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
-	doneFiles, doneBytes, _, err := executeCopyWithPlan(ctx, nil, sources, destination, opts, throttle, progress, resolver, diskWait)
+	doneFiles, doneBytes, _, err := transferRun{
+		ctx: ctx, sources: sources, destination: destination, opts: opts,
+		throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait,
+	}.executeCopy()
 	return doneFiles, doneBytes, err
 }
 
@@ -136,7 +139,11 @@ func ExecuteCopyUsingPlan(ctx context.Context, plan []PlanItem, sources []pathlo
 	if plan == nil {
 		return 0, 0, fmt.Errorf("ExecuteCopyUsingPlan: plan is nil")
 	}
-	doneFiles, doneBytes, _, err := executeCopyWithPlan(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
+	doneFiles, doneBytes, _, err := transferRun{
+		ctx: ctx, sources: sources, destination: destination, opts: opts,
+		throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait,
+		planOptional: plan,
+	}.executeCopy()
 	return doneFiles, doneBytes, err
 }
 
@@ -358,18 +365,15 @@ func copyFileWithConflict(ctx context.Context, src, dst string, opts Options, re
 	}
 
 	if _, err := os.Stat(dst); err == nil {
-		if resolver == nil {
-			return false, fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
+		facts, ferr := StatFileConflictFacts(src, dst)
+		if ferr != nil {
+			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, ferr)
 		}
-		facts, err := StatFileConflictFacts(src, dst)
-		if err != nil {
-			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
+		proceed, perr := resolveOverwriteDecision(src, dst, resolver, facts)
+		if perr != nil {
+			return false, perr
 		}
-		overwrite, err := resolver(src, dst, facts)
-		if err != nil {
-			return false, err
-		}
-		if !overwrite {
+		if !proceed {
 			return false, nil
 		}
 	} else if !os.IsNotExist(err) {
@@ -390,18 +394,15 @@ func copySymlinkWithConflict(src, dst string, resolver ConflictResolver) (copied
 	}
 
 	if _, err := os.Lstat(dst); err == nil {
-		if resolver == nil {
-			return false, fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
+		facts, ferr := StatFileConflictFacts(src, dst)
+		if ferr != nil {
+			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, ferr)
 		}
-		facts, err := StatFileConflictFacts(src, dst)
-		if err != nil {
-			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
+		proceed, perr := resolveOverwriteDecision(src, dst, resolver, facts)
+		if perr != nil {
+			return false, perr
 		}
-		overwrite, err := resolver(src, dst, facts)
-		if err != nil {
-			return false, err
-		}
-		if !overwrite {
+		if !proceed {
 			return false, nil
 		}
 		if err := os.Remove(dst); err != nil {

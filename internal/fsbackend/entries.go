@@ -4,26 +4,46 @@ import (
 	"fmt"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// ToPanelEntries converts backend rows to localfs entries for panel rendering.
+// ToPanelEntry converts one backend row to a localfs entry for panel rendering.
 // Entry.Path is the canonical pathloc string (host path or sftp:// URI).
+func ToPanelEntry(e Entry) localfs.Entry {
+	return localfs.Entry{
+		Name:       e.Name,
+		Path:       e.Loc.String(),
+		Type:       LocalTypeFromBackend(e.Type),
+		Size:       e.Size,
+		Mode:       e.Mode,
+		ModifiedAt: e.ModifiedAt,
+	}
+}
+
+// ToPanelEntries converts backend rows to localfs entries for panel rendering.
 func ToPanelEntries(entries []Entry) ([]localfs.Entry, error) {
 	out := make([]localfs.Entry, len(entries))
 	for i, e := range entries {
-		out[i] = localfs.Entry{
-			Name:       e.Name,
-			Path:       e.Loc.String(),
-			Type:       localTypeFromBackend(e.Type),
-			Size:       e.Size,
-			Mode:       e.Mode,
-			ModifiedAt: e.ModifiedAt,
-		}
+		out[i] = ToPanelEntry(e)
 	}
 	return out, nil
 }
 
-func localTypeFromBackend(t EntryType) localfs.EntryType {
+// FromPanelEntry converts a panel/localfs entry to a backend Entry (Loc may be zero on parse failure).
+func FromPanelEntry(e localfs.Entry) Entry {
+	loc, _ := pathloc.Parse(e.Path)
+	return Entry{
+		Name:       e.Name,
+		Loc:        loc,
+		Type:       BackendTypeFromLocal(e.Type),
+		Size:       e.Size,
+		Mode:       e.Mode,
+		ModifiedAt: e.ModifiedAt,
+	}
+}
+
+// LocalTypeFromBackend maps backend entry types to localfs types.
+func LocalTypeFromBackend(t EntryType) localfs.EntryType {
 	switch t {
 	case EntryDirectory:
 		return localfs.EntryDirectory
@@ -33,6 +53,20 @@ func localTypeFromBackend(t EntryType) localfs.EntryType {
 		return localfs.EntryOther
 	default:
 		return localfs.EntryFile
+	}
+}
+
+// BackendTypeFromLocal maps localfs entry types to backend types.
+func BackendTypeFromLocal(t localfs.EntryType) EntryType {
+	switch t {
+	case localfs.EntryDirectory:
+		return EntryDirectory
+	case localfs.EntrySymlink:
+		return EntrySymlink
+	case localfs.EntryOther:
+		return EntryOther
+	default:
+		return EntryFile
 	}
 }
 

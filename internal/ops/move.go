@@ -218,7 +218,10 @@ func ExecuteMove(ctx context.Context, sources []pathloc.Path, destination pathlo
 		return doneFiles, doneBytes, nil
 	}
 
-	return executeMoveCopyPhase(ctx, nil, sources, destination, opts, throttle, progress, resolver, diskWait)
+	return transferRun{
+		ctx: ctx, sources: sources, destination: destination, opts: opts,
+		throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait,
+	}.executeMoveCopyPhase()
 }
 
 func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
@@ -287,5 +290,9 @@ func ExecuteMoveWithPlan(ctx context.Context, plan []PlanItem, sources []pathloc
 		return doneFiles, doneBytes, nil
 	}
 
-	return executeMoveCopyPhase(ctx, plan, sources, destination, opts, throttle, progress, resolver, diskWait)
+	return transferRun{
+		ctx: ctx, sources: sources, destination: destination, opts: opts,
+		throttle: throttle, progress: progress, resolver: resolver, diskWait: diskWait,
+		planOptional: plan,
+	}.executeMoveCopyPhase()
 }

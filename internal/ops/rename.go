@@ -2,9 +2,6 @@ package ops
 
 import (
 	"context"
-	"path/filepath"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -23,43 +20,14 @@ type RenamePlan struct {
 // - source must exist.
 // - newName must differ from the current basename.
 func PlanRename(source localfs.Entry, newName string, panelPath string) (RenamePlan, error) {
-	if newName == "" {
-		return RenamePlan{}, &Error{Op: "rename", Text: "name is empty"}
-	}
-	if strings.Contains(newName, "/") || strings.Contains(newName, string(filepath.Separator)) {
-		return RenamePlan{}, &Error{Op: "rename", Text: "name must be a single filename without path separators"}
-	}
-	if !utf8.ValidString(newName) {
-		return RenamePlan{}, &Error{Op: "rename", Text: "name is not valid UTF-8"}
-	}
-
-	srcLoc, err := pathloc.Parse(source.Path)
+	srcLoc, newLoc, err := planSiblingTarget(source.Path, panelPath, newName, siblingTargetRules{
+		op:           "rename",
+		sameNameText: "new name is the same as the current name",
+		requireUTF8:  true,
+	})
 	if err != nil {
-		return RenamePlan{}, &Error{Op: "rename", Text: "invalid source path", Err: err}
+		return RenamePlan{}, err
 	}
-	if srcLoc.Base() == newName {
-		return RenamePlan{}, &Error{Op: "rename", Text: "new name is the same as the current name"}
-	}
-
-	parent := srcLoc.Parent()
-	if parent.IsZero() {
-		panel, err := pathloc.Parse(panelPath)
-		if err != nil {
-			return RenamePlan{}, &Error{Op: "rename", Text: "invalid panel path", Err: err}
-		}
-		parent = panel
-	}
-	newLoc, err := parent.Join(newName)
-	if err != nil {
-		return RenamePlan{}, &Error{Op: "rename", Text: err.Error(), Err: err}
-	}
-
-	if _, err := statEntry(context.Background(), newLoc); err == nil {
-		return RenamePlan{}, &Error{Op: "rename", Text: "target already exists"}
-	} else if !isNotExist(err) {
-		return RenamePlan{}, &Error{Op: "rename", Text: "cannot stat target", Err: err}
-	}
-
 	return RenamePlan{
 		SourcePath: srcLoc.String(),
 		NewName:    newName,

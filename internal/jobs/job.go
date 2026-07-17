@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -62,7 +63,7 @@ type Job struct {
 	FinishedAt    time.Time
 
 	// Plan is the pre-built copy/move plan from pre-scan; nil until scan completes or for delete jobs.
-	Plan []PlanItem
+	Plan []ops.PlanItem
 	// PausedAfterScan when true transitions to StatusPaused instead of StatusQueued when pre-scan completes.
 	PausedAfterScan bool
 

@@ -241,18 +241,15 @@ func resolveDestConflict(ctx context.Context, src, dst pathloc.Path, resolver Co
 		return false, fmt.Errorf("create parent for %q: %w", dst, err)
 	}
 	if _, err := statEntry(ctx, dst); err == nil {
-		if resolver == nil {
-			return false, fmt.Errorf("destination %q already exists and no conflict resolver configured", dst)
+		facts, ferr := statConflictFacts(ctx, src, dst)
+		if ferr != nil {
+			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, ferr)
 		}
-		facts, err := statConflictFacts(ctx, src, dst)
-		if err != nil {
-			return false, fmt.Errorf("conflict stat %q %q: %w", src, dst, err)
+		proceed, perr := resolveOverwriteDecision(src.String(), dst.String(), resolver, facts)
+		if perr != nil {
+			return false, perr
 		}
-		overwrite, err := resolver(src.String(), dst.String(), facts)
-		if err != nil {
-			return false, err
-		}
-		if !overwrite {
+		if !proceed {
 			return false, nil
 		}
 		if err := removePathRecursive(ctx, dst); err != nil {
@@ -429,29 +426,9 @@ func entryFromPathString(path string) (localfs.Entry, error) {
 		if err != nil {
 			return localfs.Entry{}, err
 		}
-		return backendEntryToLocal(ent), nil
+		return fsbackend.ToPanelEntry(ent), nil
 	}
 	return localfs.EntryFromPath(path)
-}
-
-func backendEntryToLocal(ent fsbackend.Entry) localfs.Entry {
-	t := localfs.EntryFile
-	switch ent.Type {
-	case fsbackend.EntryDirectory:
-		t = localfs.EntryDirectory
-	case fsbackend.EntrySymlink:
-		t = localfs.EntrySymlink
-	case fsbackend.EntryOther:
-		t = localfs.EntryOther
-	}
-	return localfs.Entry{
-		Name:       ent.Name,
-		Path:       ent.Loc.String(),
-		Type:       t,
-		Size:       ent.Size,
-		Mode:       ent.Mode,
-		ModifiedAt: ent.ModifiedAt,
-	}
 }
 
 func planItemFromEntry(srcLoc, dstLoc pathloc.Path, ent fsbackend.Entry) (PlanItem, error) {

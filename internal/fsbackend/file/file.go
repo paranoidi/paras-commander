@@ -194,19 +194,11 @@ func localEntryToBackend(loc pathloc.Path, e localfs.Entry) fsbackend.Entry {
 }
 
 func entryTypeFromLocal(t localfs.EntryType) fsbackend.EntryType {
-	switch t {
-	case localfs.EntryDirectory:
-		return fsbackend.EntryDirectory
-	case localfs.EntrySymlink:
-		return fsbackend.EntrySymlink
-	case localfs.EntryOther:
-		return fsbackend.EntryOther
-	default:
-		return fsbackend.EntryFile
-	}
+	return fsbackend.BackendTypeFromLocal(t)
 }
 
-// ToLocalEntries converts backend entries to localfs rows for panel rendering.
+// ToLocalEntries converts backend entries to localfs rows with host file paths
+// (file-scheme only). Prefer fsbackend.ToPanelEntries when the canonical Loc string is enough.
 func ToLocalEntries(entries []fsbackend.Entry) ([]localfs.Entry, error) {
 	out := make([]localfs.Entry, len(entries))
 	for i, e := range entries {
@@ -214,27 +206,9 @@ func ToLocalEntries(entries []fsbackend.Entry) ([]localfs.Entry, error) {
 		if err != nil {
 			return nil, fmt.Errorf("entry %q: %w", e.Name, err)
 		}
-		out[i] = localfs.Entry{
-			Name:       e.Name,
-			Path:       host,
-			Type:       localTypeFromBackend(e.Type),
-			Size:       e.Size,
-			Mode:       e.Mode,
-			ModifiedAt: e.ModifiedAt,
-		}
+		row := fsbackend.ToPanelEntry(e)
+		row.Path = host
+		out[i] = row
 	}
 	return out, nil
-}
-
-func localTypeFromBackend(t fsbackend.EntryType) localfs.EntryType {
-	switch t {
-	case fsbackend.EntryDirectory:
-		return localfs.EntryDirectory
-	case fsbackend.EntrySymlink:
-		return localfs.EntrySymlink
-	case fsbackend.EntryOther:
-		return localfs.EntryOther
-	default:
-		return localfs.EntryFile
-	}
 }

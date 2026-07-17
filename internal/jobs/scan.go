@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/priority"
 )
 
 // ScanResult is returned by ScanFunc after a successful pre-scan walk.
 type ScanResult struct {
-	Plan       []PlanItem
+	Plan       []ops.PlanItem
 	TotalFiles int
 	TotalDirs  int
 	TotalBytes int64

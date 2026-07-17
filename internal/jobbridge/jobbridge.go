@@ -3,6 +3,7 @@ package jobbridge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -64,54 +65,12 @@ func ScanFunc() jobs.ScanFunc {
 			return jobs.ScanResult{}, err
 		}
 		return jobs.ScanResult{
-			Plan:       PlanItemsFromOps(plan),
+			Plan:       plan,
 			TotalFiles: totalItems,
 			TotalDirs:  totalDirs,
 			TotalBytes: totalBytes,
 		}, nil
 	}
-}
-
-// PlanItemsFromOps converts ops plan items to jobs plan items.
-func PlanItemsFromOps(items []ops.PlanItem) []jobs.PlanItem {
-	if len(items) == 0 {
-		return nil
-	}
-	out := make([]jobs.PlanItem, len(items))
-	for i, p := range items {
-		out[i] = jobs.PlanItem{
-			Src:        p.Src,
-			Dst:        p.Dst,
-			IsDir:      p.IsDir,
-			IsSymlink:  p.IsSymlink,
-			FileSize:   p.FileSize,
-			Mode:       p.Mode,
-			AccessTime: p.AccessTime,
-			ModTime:    p.ModTime,
-		}
-	}
-	return out
-}
-
-// PlanItemsToOps converts jobs plan items to ops plan items.
-func PlanItemsToOps(items []jobs.PlanItem) []ops.PlanItem {
-	if len(items) == 0 {
-		return nil
-	}
-	out := make([]ops.PlanItem, len(items))
-	for i, p := range items {
-		out[i] = ops.PlanItem{
-			Src:        p.Src,
-			Dst:        p.Dst,
-			IsDir:      p.IsDir,
-			IsSymlink:  p.IsSymlink,
-			FileSize:   p.FileSize,
-			Mode:       p.Mode,
-			AccessTime: p.AccessTime,
-			ModTime:    p.ModTime,
-		}
-	}
-	return out
 }
 
 // ActivityDetailLabel formats the activity line for a progress event.
@@ -182,7 +141,8 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg)
 		resolver := newConflictResolver(job, waitBlocker)
-		opsPlan := PlanItemsToOps(job.Plan)
+		diskWait := diskWaitFromBlocker(waitBlocker)
+		opsPlan := job.Plan
 		var planErr error
 		// totalBytes starts from job.TotalBytes (set during the pre-scan phase, which
 		// happens-before this call via the queue/dequeue lock). If we build a fresh plan
@@ -209,8 +169,8 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 				_, _, tb = ops.SummarizePlan(opsPlan)
 			}
 			if job.Type == jobs.TypeCopy && tb > 0 {
-				if err := ops.EnsureDiskSpace(waitBlocker, job.Destination, tb, pathloc.Path{}); err != nil {
-					return err
+				if err := ops.EnsureDiskSpace(diskWait, job.Destination, tb, pathloc.Path{}); err != nil {
+					return mapOpsCanceled(err)
 				}
 			}
 		}
@@ -226,16 +186,16 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 			})
 		}
 		doneFiles, doneBytes, err := executeJobByType(transferExecCtx{
-			ctx:         ctx,
-			job:         job,
-			opsPlan:     opsPlan,
-			planErr:     planErr,
-			opts:        opts,
-			throttle:    throttle,
-			progress:    progress,
-			resolver:    resolver,
-			waitBlocker: waitBlocker,
-			emit:        emit,
+			ctx:      ctx,
+			job:      job,
+			opsPlan:  opsPlan,
+			planErr:  planErr,
+			opts:     opts,
+			throttle: throttle,
+			progress: progress,
+			resolver: resolver,
+			diskWait: diskWait,
+			emit:     emit,
 		})
 		if err == nil {
 			// Final tally goes through emit (like every other progress update in this
@@ -251,8 +211,41 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 				DoneBytes: doneBytes,
 			})
 		}
-		return err
+		return mapOpsCanceled(err)
 	}
+}
+
+// diskWaitFromBlocker adapts the jobs blocker callback to ops.DiskWaitFunc.
+func diskWaitFromBlocker(waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) ops.DiskWaitFunc {
+	if waitBlocker == nil {
+		return nil
+	}
+	return func(req ops.DiskSpaceWaitRequest) ops.DiskSpaceWaitDecision {
+		decision := waitBlocker(jobs.BlockerRequest{
+			Kind: jobs.BlockerKindDiskSpace,
+			DiskSpace: &jobs.DiskSpaceBlockerRequest{
+				Destination:    req.Destination,
+				RequiredBytes:  req.RequiredBytes,
+				AvailableBytes: req.AvailableBytes,
+				AvailableKnown: req.AvailableKnown,
+				NextSource:     req.NextSource,
+			},
+		})
+		if decision == jobs.DecisionCancel {
+			return ops.DiskSpaceWaitCancel
+		}
+		return ops.DiskSpaceWaitRetry
+	}
+}
+
+func mapOpsCanceled(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, ops.ErrUserCanceled) {
+		return jobs.ErrUserCanceled
+	}
+	return err
 }
 
 // buildTransferOptions builds the ops.Options and progress-emit throttle for a transfer job.
@@ -337,16 +330,16 @@ func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jo
 // transferExecCtx bundles the parameters executeJobByType needs to run the ops.Execute* call
 // for job.Type; it exists purely to keep that function's signature manageable.
 type transferExecCtx struct {
-	ctx         context.Context
-	job         *jobs.Job
-	opsPlan     []ops.PlanItem
-	planErr     error
-	opts        ops.Options
-	throttle    ops.ProgressEmitThrottle
-	progress    func(sourcePath, destPath string, doneFiles int, doneBytes int64)
-	resolver    func(src, dst string, facts ops.FileConflictFacts) (bool, error)
-	waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision
-	emit        func(jobs.Event)
+	ctx      context.Context
+	job      *jobs.Job
+	opsPlan  []ops.PlanItem
+	planErr  error
+	opts     ops.Options
+	throttle ops.ProgressEmitThrottle
+	progress func(sourcePath, destPath string, doneFiles int, doneBytes int64)
+	resolver func(src, dst string, facts ops.FileConflictFacts) (bool, error)
+	diskWait ops.DiskWaitFunc
+	emit     func(jobs.Event)
 }
 
 // executeJobByType runs the ops.Execute* call matching tc.job.Type (copy/move/flatten use the
@@ -357,15 +350,15 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 	switch job.Type {
 	case jobs.TypeCopy:
 		if tc.planErr != nil {
-			doneFiles, doneBytes, err = ops.ExecuteCopy(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.waitBlocker)
+			doneFiles, doneBytes, err = ops.ExecuteCopy(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 		} else {
-			doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlan(tc.ctx, tc.opsPlan, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.waitBlocker)
+			doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlan(tc.ctx, tc.opsPlan, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 		}
 	case jobs.TypeMove, jobs.TypeFlatten:
 		if len(tc.opsPlan) > 0 {
-			doneFiles, doneBytes, err = ops.ExecuteMoveWithPlan(tc.ctx, tc.opsPlan, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.waitBlocker)
+			doneFiles, doneBytes, err = ops.ExecuteMoveWithPlan(tc.ctx, tc.opsPlan, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 		} else {
-			doneFiles, doneBytes, err = ops.ExecuteMove(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.waitBlocker)
+			doneFiles, doneBytes, err = ops.ExecuteMove(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 		}
 		if err == nil && job.Type == jobs.TypeFlatten && job.FlattenRemoveEmpty {
 			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, job.FlattenRoots); cleanErr != nil {
