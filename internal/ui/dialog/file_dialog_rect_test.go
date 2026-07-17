@@ -27,13 +27,23 @@ func TestFileDialogRectStableAcrossFieldValueLength(t *testing.T) {
 	if !ok {
 		t.Fatal("expected drawable rect for open rename dialog")
 	}
-	base.Fields[0].Value = strings.Repeat("b", 500)
+	base.Fields[0].Value = strings.Repeat("b", 40)
 	long, ok := FileDialogRect(layout, base, 0)
 	if !ok {
 		t.Fatal("expected drawable rect for open rename dialog (long value)")
 	}
 	if short != long {
 		t.Fatalf("rect changed with field value length: short=%+v long=%+v", short, long)
+	}
+	// A name too long for the fixed width switches rename to the 80%-wide mode;
+	// the rect change makes the keystroke fall back to a full render.
+	base.Fields[0].Value = strings.Repeat("c", 500)
+	wide, ok := FileDialogRect(layout, base, 0)
+	if !ok {
+		t.Fatal("expected drawable rect for open rename dialog (overlong value)")
+	}
+	if wide.Width != WideDialogWidth(layout.Width) {
+		t.Fatalf("overlong value width = %d, want %d (80%% of terminal)", wide.Width, WideDialogWidth(layout.Width))
 	}
 }
 

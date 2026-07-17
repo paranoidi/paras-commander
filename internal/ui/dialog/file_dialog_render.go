@@ -185,7 +185,7 @@ func fileDialogTitle(dialogType FileDialogType) string {
 }
 
 func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead int) int {
-	minWidth := 30
+	minWidth := fileDialogBaseMinWidth
 	// Field row width follows labels only; values scroll in drawInputField / drawPathInputRow.
 	for _, field := range state.Fields {
 		fw := utf8.RuneCountInString(field.Label) + 6
@@ -195,6 +195,16 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 	}
 	if len(state.Fields) > 0 {
 		minWidth = max(minWidth, PreferredFormDialogWidth)
+	}
+	// Rename/duplicate: if the name (plus cursor cell) doesn't fit the fixed
+	// width, switch to a wide mode covering 80% of the terminal.
+	if FileDialogHasRenamePhase(state.DialogType) {
+		for _, field := range state.Fields {
+			if utf8.RuneCountInString(field.Value)+1+4 > minWidth {
+				minWidth = max(minWidth, WideDialogWidth(screenWidth))
+				break
+			}
+		}
 	}
 	// For delete dialog, use cached layout width from open (see ComputeDeleteDialogLayoutMinWidth).
 	if state.DialogType == FileDialogDelete {
@@ -289,7 +299,7 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 	if minWidth > screenWidth-4 {
 		minWidth = screenWidth - 4
 	}
-	return max(20, minWidth)
+	return max(fileDialogFloorWidth, minWidth)
 }
 
 func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcell.Style, state FileDialogState, styles theme.Theme) {

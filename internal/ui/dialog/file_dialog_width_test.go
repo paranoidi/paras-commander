@@ -16,13 +16,6 @@ func TestFileDialogWidthIgnoresFieldValueLength(t *testing.T) {
 		base FileDialogState
 	}{
 		{
-			name: "rename",
-			typ:  FileDialogRename,
-			base: FileDialogState{
-				Fields: []FileDialogField{{Label: "Name", Value: ""}},
-			},
-		},
-		{
 			name: "mkdir",
 			typ:  FileDialogMkdir,
 			base: FileDialogState{
@@ -61,6 +54,25 @@ func TestFileDialogWidthIgnoresFieldValueLength(t *testing.T) {
 				t.Fatalf("width = %d, want PreferredFormDialogWidth %d", wShort, PreferredFormDialogWidth)
 			}
 		})
+	}
+}
+
+func TestFileDialogRenameWidthWidensForLongName(t *testing.T) {
+	const screenW = 120
+	s := FileDialogState{
+		DialogType: FileDialogRename,
+		Fields:     []FileDialogField{{Label: "Name", Value: strings.Repeat("a", 10)}},
+	}
+	if got := fileDialogWidth(screenW, s, 0); got != PreferredFormDialogWidth {
+		t.Fatalf("short name width = %d, want %d", got, PreferredFormDialogWidth)
+	}
+	s.Fields[0].Value = strings.Repeat("b", PreferredFormDialogWidth)
+	if got := fileDialogWidth(screenW, s, 0); got != WideDialogWidth(screenW) {
+		t.Fatalf("long name width = %d, want %d (80%% of terminal)", got, WideDialogWidth(screenW))
+	}
+	s.DialogType = FileDialogDuplicate
+	if got := fileDialogWidth(screenW, s, 0); got != WideDialogWidth(screenW) {
+		t.Fatalf("duplicate long name width = %d, want %d", got, WideDialogWidth(screenW))
 	}
 }
 
