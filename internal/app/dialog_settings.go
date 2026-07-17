@@ -544,36 +544,21 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 		if keymap.AltLetterModifiers(event.Modifiers()) {
 			switch event.Rune() {
 			case 'f', 'F':
-				gs.FilesOnly = !gs.FilesOnly
-				if gs.FilesOnly {
-					gs.DirsOnly = false
-				}
+				a.toggleGroupSelectField(gs, dialog.GroupSelectFocusFilesOnly)
 				gs.Focus = dialog.GroupSelectFocusFilesOnly
 			case 'd', 'D':
-				gs.DirsOnly = !gs.DirsOnly
-				if gs.DirsOnly {
-					gs.FilesOnly = false
-				}
+				a.toggleGroupSelectField(gs, dialog.GroupSelectFocusDirsOnly)
 				gs.Focus = dialog.GroupSelectFocusDirsOnly
 			case 'e', 'E':
-				if dialog.GroupSelectShowsCaseSensitive(*gs) {
-					gs.CaseSensitive = !gs.CaseSensitive
+				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusCase) {
 					gs.Focus = dialog.GroupSelectFocusCase
 				}
 			case 'm', 'M':
-				if gs.MetaColumnCount > 0 {
-					gs.IncludeMetaColumns = !gs.IncludeMetaColumns
-					if !gs.IncludeMetaColumns {
-						gs.OnlyMetaColumns = false
-					}
+				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusIncludeMeta) {
 					gs.Focus = dialog.GroupSelectFocusIncludeMeta
 				}
 			case 'n', 'N':
-				if gs.MetaColumnCount > 0 {
-					gs.OnlyMetaColumns = !gs.OnlyMetaColumns
-					if gs.OnlyMetaColumns {
-						gs.IncludeMetaColumns = true
-					}
+				if a.toggleGroupSelectField(gs, dialog.GroupSelectFocusOnlyMeta) {
 					gs.Focus = dialog.GroupSelectFocusOnlyMeta
 				}
 			}
@@ -585,46 +570,12 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 		}
 		if event.Rune() == ' ' {
 			switch gs.Focus {
-			case dialog.GroupSelectFocusShellRadio:
-				gs.PatternMode = panel.GroupPatternShell
-				a.groupSelectClampCaseFocus()
-			case dialog.GroupSelectFocusRegexRadio:
-				gs.PatternMode = panel.GroupPatternRegex
-				a.groupSelectClampCaseFocus()
-			case dialog.GroupSelectFocusSimpleRadio:
-				gs.PatternMode = panel.GroupPatternSimple
-			case dialog.GroupSelectFocusFilesOnly:
-				gs.FilesOnly = !gs.FilesOnly
-				if gs.FilesOnly {
-					gs.DirsOnly = false
-				}
-			case dialog.GroupSelectFocusDirsOnly:
-				gs.DirsOnly = !gs.DirsOnly
-				if gs.DirsOnly {
-					gs.FilesOnly = false
-				}
-			case dialog.GroupSelectFocusCase:
-				if dialog.GroupSelectShowsCaseSensitive(*gs) {
-					gs.CaseSensitive = !gs.CaseSensitive
-				}
-			case dialog.GroupSelectFocusIncludeMeta:
-				if gs.MetaColumnCount > 0 {
-					gs.IncludeMetaColumns = !gs.IncludeMetaColumns
-					if !gs.IncludeMetaColumns {
-						gs.OnlyMetaColumns = false
-					}
-				}
-			case dialog.GroupSelectFocusOnlyMeta:
-				if gs.MetaColumnCount > 0 {
-					gs.OnlyMetaColumns = !gs.OnlyMetaColumns
-					if gs.OnlyMetaColumns {
-						gs.IncludeMetaColumns = true
-					}
-				}
 			case form.OKIndex():
 				a.confirmGroupSelectFromInput()
 			case form.CancelIndex():
 				a.closeGroupSelect()
+			default:
+				a.toggleGroupSelectField(gs, gs.Focus)
 			}
 			break
 		}
@@ -632,6 +583,60 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	if focus, ok := dialog.GroupSelectMoveFocus(gs.Focus, event.Key(), gs.PatternMode, gs.MetaColumnCount); ok {
 		gs.Focus = focus
 	}
+}
+
+// toggleGroupSelectField applies the toggle/radio-set action addressed by focus
+// (one of the dialog.GroupSelectFocus* constants). It is the single source of
+// truth shared by the Alt-letter mnemonic switch (which sets gs.Focus only when
+// the action actually applies) and the Space-toggle switch (which already has
+// gs.Focus at the target field). Returns false when focus doesn't address a
+// toggleable field, or the field is conditionally hidden (case-sensitivity when
+// not shown, meta columns when there are none) so nothing changed.
+func (a *App) toggleGroupSelectField(gs *dialog.GroupSelectState, focus int) bool {
+	switch focus {
+	case dialog.GroupSelectFocusShellRadio:
+		gs.PatternMode = panel.GroupPatternShell
+		a.groupSelectClampCaseFocus()
+	case dialog.GroupSelectFocusRegexRadio:
+		gs.PatternMode = panel.GroupPatternRegex
+		a.groupSelectClampCaseFocus()
+	case dialog.GroupSelectFocusSimpleRadio:
+		gs.PatternMode = panel.GroupPatternSimple
+	case dialog.GroupSelectFocusFilesOnly:
+		gs.FilesOnly = !gs.FilesOnly
+		if gs.FilesOnly {
+			gs.DirsOnly = false
+		}
+	case dialog.GroupSelectFocusDirsOnly:
+		gs.DirsOnly = !gs.DirsOnly
+		if gs.DirsOnly {
+			gs.FilesOnly = false
+		}
+	case dialog.GroupSelectFocusCase:
+		if !dialog.GroupSelectShowsCaseSensitive(*gs) {
+			return false
+		}
+		gs.CaseSensitive = !gs.CaseSensitive
+	case dialog.GroupSelectFocusIncludeMeta:
+		if gs.MetaColumnCount <= 0 {
+			return false
+		}
+		gs.IncludeMetaColumns = !gs.IncludeMetaColumns
+		if !gs.IncludeMetaColumns {
+			gs.OnlyMetaColumns = false
+		}
+	case dialog.GroupSelectFocusOnlyMeta:
+		if gs.MetaColumnCount <= 0 {
+			return false
+		}
+		gs.OnlyMetaColumns = !gs.OnlyMetaColumns
+		if gs.OnlyMetaColumns {
+			gs.IncludeMetaColumns = true
+		}
+	default:
+		return false
+	}
+	return true
 }
 
 func groupSelectAltIsDialogMnemonic(r rune) bool {

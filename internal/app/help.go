@@ -126,6 +126,23 @@ func ensureHelpListScroll(st *dialog.HelpViewState, listRows int) {
 	}
 }
 
+// applyHelpListNav applies PgUp/PgDn/Ctrl+Home/Ctrl+End to the ranked help
+// list when it has focus, updating scroll. Returns false (no-op) when the
+// list isn't focused, is empty, or key isn't a recognized list-navigation key.
+func (a *App) applyHelpListNav(key tcell.Key, mods tcell.ModMask) bool {
+	st := &a.model.HelpView
+	if st.Focus != 0 || len(st.Ranked) == 0 {
+		return false
+	}
+	sel, ok := dialog.ListNavKeySelection(key, mods, st.Selected, len(st.Ranked), max(1, a.helpListRows()-1))
+	if !ok {
+		return false
+	}
+	st.Selected = sel
+	ensureHelpListScroll(st, a.helpListRows())
+	return true
+}
+
 func (a *App) helpListRows() int {
 	_, termH := a.screen.Size()
 	// Centered dialog: 7 rows margin top/bottom → max height = termH - 14.
@@ -587,28 +604,8 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 				}
 			}
 		} // on Close button, Down does nothing
-	case tcell.KeyPgUp:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			step := max(1, a.helpListRows()-1)
-			st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
-			ensureHelpListScroll(st, a.helpListRows())
-		}
-	case tcell.KeyPgDn:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			step := max(1, a.helpListRows()-1)
-			st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
-			ensureHelpListScroll(st, a.helpListRows())
-		}
-	case tcell.KeyHome:
-		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
-			st.Selected = 0
-			ensureHelpListScroll(st, a.helpListRows())
-		}
-	case tcell.KeyEnd:
-		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
-			st.Selected = len(st.Ranked) - 1
-			ensureHelpListScroll(st, a.helpListRows())
-		}
+	case tcell.KeyPgUp, tcell.KeyPgDn, tcell.KeyHome, tcell.KeyEnd:
+		a.applyHelpListNav(event.Key(), event.Modifiers())
 	case tcell.KeyLeft:
 		// Only one button (Close), no-op between buttons.
 	case tcell.KeyRight:

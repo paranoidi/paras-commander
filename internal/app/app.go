@@ -365,137 +365,28 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("validate app config: %w", err)
 	}
-	var bundle *keymap.Bundle
-	switch {
-	case opts.KeymapBundle != nil:
-		bundle = opts.KeymapBundle
-	case opts.Keymap != nil:
-		bundle = &keymap.Bundle{Global: opts.Keymap}
-	default:
-		var err error
-		bundle, err = keymap.LoadFromPaths(opts.Paths)
-		if err != nil {
-			return nil, fmt.Errorf("load keybindings: %w", err)
-		}
+	rk, err := resolveKeymapBundle(opts)
+	if err != nil {
+		return nil, err
 	}
-	if bundle.Global == nil {
-		return nil, fmt.Errorf("load keybindings: global keymap is nil")
-	}
-	km := bundle.Global
-	kmJobs := bundle.Jobs
-	kmCommands := bundle.Commands
-	kmMessages := bundle.Messages
-	kmFilePreview := bundle.FilePreview
-	kmDialogInput := bundle.DialogInput
-	if kmDialogInput == nil {
-		m, err := keymap.Build(map[string][]string{})
-		if err != nil {
-			return nil, fmt.Errorf("build empty dialog input map: %w", err)
-		}
-		kmDialogInput = m
-	}
-	kmRenameDialog := bundle.RenameDialog
-	if kmRenameDialog == nil {
-		m, err := keymap.Build(keymap.DefaultRenameDialogOverlayKeys())
-		if err != nil {
-			return nil, fmt.Errorf("build rename dialog overlay map: %w", err)
-		}
-		kmRenameDialog = m
-	}
-	kmMkdirDialog := bundle.MkdirDialog
-	if kmMkdirDialog == nil {
-		m, err := keymap.Build(keymap.DefaultMkdirDialogOverlayKeys())
-		if err != nil {
-			return nil, fmt.Errorf("build mkdir dialog overlay map: %w", err)
-		}
-		kmMkdirDialog = m
-	}
-	kmBookmarkDialog := bundle.BookmarkDialog
-	if kmBookmarkDialog == nil {
-		m, err := keymap.Build(keymap.DefaultBookmarkDialogOverlayKeys())
-		if err != nil {
-			return nil, fmt.Errorf("build bookmark dialog overlay map: %w", err)
-		}
-		kmBookmarkDialog = m
-	}
-	kmFindDialog := bundle.FindDialog
-	if kmFindDialog == nil {
-		m, err := keymap.Build(keymap.DefaultFindDialogOverlayKeys())
-		if err != nil {
-			return nil, fmt.Errorf("build find dialog overlay map: %w", err)
-		}
-		kmFindDialog = m
-	}
-	kmHistoryDialog := bundle.HistoryDialog
-	if kmHistoryDialog == nil {
-		m, err := keymap.Build(keymap.DefaultHistoryDialogOverlayKeys())
-		if err != nil {
-			return nil, fmt.Errorf("build history dialog overlay map: %w", err)
-		}
-		kmHistoryDialog = m
-	}
-	kmFlattenDialog := bundle.FlattenDialog
-	if kmFilePreview == nil {
-		m, err := keymap.Build(keymap.DefaultFilePreviewOverlayKeys())
-		if err != nil {
-			return nil, fmt.Errorf("build file preview overlay map: %w", err)
-		}
-		kmFilePreview = m
-	}
-	if kmFlattenDialog == nil {
-		m, err := keymap.Build(keymap.DefaultFlattenDialogOverlayKeys())
-		if err != nil {
-			return nil, fmt.Errorf("build flatten dialog overlay map: %w", err)
-		}
-		kmFlattenDialog = m
-	}
-	kmCompare := bundle.Compare
-	if kmCompare == nil {
-		m, err := keymap.Build(keymap.DefaultCompareOverlayKeys())
-		if err != nil {
-			return nil, fmt.Errorf("build compare overlay map: %w", err)
-		}
-		kmCompare = m
-	}
-	kmDedup := bundle.Dedup
-	if kmDedup == nil {
-		m, err := keymap.Build(keymap.DefaultDedupOverlayKeys())
-		if err != nil {
-			return nil, fmt.Errorf("build dedup overlay map: %w", err)
-		}
-		kmDedup = m
-	}
-	kmTerminal := bundle.Terminal
-	if kmTerminal == nil {
-		m, err := keymap.Build(keymap.DefaultTerminalOverlayKeys())
-		if err != nil {
-			return nil, fmt.Errorf("build terminal overlay map: %w", err)
-		}
-		kmTerminal = m
-	}
-	styles := opts.Theme
-	if styles.Name == "" {
-		styles = theme.Default()
-	}
-	themeChoices := opts.ThemeChoices
-	if len(themeChoices) == 0 {
-		var err error
-		themeChoices, err = theme.ThemeChoices(opts.Paths.WithResolvedLocations().ThemesDir)
-		if err != nil {
-			return nil, fmt.Errorf("load theme choices: %w", err)
-		}
-	}
-	availableThemes := map[string]theme.Theme{}
-	for _, choice := range themeChoices {
-		availableThemes[choice.Name] = choice.Theme
-	}
-	if _, ok := availableThemes[styles.Name]; styles.Name != "" && !ok {
-		availableThemes[styles.Name] = styles
-		themeChoices = append(themeChoices, theme.NamedTheme{
-			Name:  styles.Name,
-			Label: styles.Name,
-			Theme: styles,
-		})
+	km := rk.global
+	kmJobs := rk.jobs
+	kmCommands := rk.commands
+	kmMessages := rk.messages
+	kmFilePreview := rk.filePreview
+	kmDialogInput := rk.dialogInput
+	kmRenameDialog := rk.renameDialog
+	kmMkdirDialog := rk.mkdirDialog
+	kmBookmarkDialog := rk.bookmarkDialog
+	kmFindDialog := rk.findDialog
+	kmHistoryDialog := rk.historyDialog
+	kmFlattenDialog := rk.flattenDialog
+	kmCompare := rk.compare
+	kmDedup := rk.dedup
+	kmTerminal := rk.terminal
+	styles, availableThemes, themeChoices, err := resolveThemes(opts)
+	if err != nil {
+		return nil, err
 	}
 	path, err := cwd()
 	if err != nil {
@@ -512,39 +403,23 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	duEngine := diskusage.NewWithWalkConcurrency(cfg.DiskUsageWalkConcurrency)
 
-	left, err := panel.NewWithOptions(path, listOptions, giCache)
+	panelOpts := browserPanelOptions{
+		list:       listOptions,
+		gitignore:  giCache,
+		cfg:        cfg,
+		sortMode:   sortMode,
+		listFormat: listingFormat,
+		scrollMode: scrollModeFromConfig(cfg.UI.ScrollMode),
+		diskEngine: duEngine,
+	}
+	left, err := newBrowserPanel(path, panelOpts)
 	if err != nil {
 		return nil, err
 	}
-	left.Sort.Mode = sortMode
-	left.Sort.Reverse = cfg.SortReverse
-	left.Sort.DirectoriesFirst = cfg.DirectoriesFirst
-	left.Sort.DiskUsageIdleSizeSort = cfg.DiskUsageIdleSizeSort
-	left.DiskUsageIdleSortActivated = cfg.DiskUsageIdleSizeSort
-	left.ListFormat = listingFormat
-	left.DiskSorter = duEngine.Size
-	left.ApplySort()
-	left.Filter.CaseInsensitive = cfg.CaseInsensitiveFilter
-	left.Filter.CycleMatches = cfg.Filter.CycleMatches
-	right, err := panel.NewWithOptions(path, listOptions, giCache)
+	right, err := newBrowserPanel(path, panelOpts)
 	if err != nil {
 		return nil, err
 	}
-	right.Sort.Mode = sortMode
-	right.Sort.Reverse = cfg.SortReverse
-	right.Sort.DirectoriesFirst = cfg.DirectoriesFirst
-	right.Sort.DiskUsageIdleSizeSort = cfg.DiskUsageIdleSizeSort
-	right.DiskUsageIdleSortActivated = cfg.DiskUsageIdleSizeSort
-	right.ListFormat = listingFormat
-	right.DiskSorter = duEngine.Size
-	right.ApplySort()
-	right.Filter.CaseInsensitive = cfg.CaseInsensitiveFilter
-	right.Filter.CycleMatches = cfg.Filter.CycleMatches
-	scrollMode := scrollModeFromConfig(cfg.UI.ScrollMode)
-	left.ScrollMode = scrollMode
-	right.ScrollMode = scrollMode
-	left.ScrollEdgeMargin = cfg.UI.ScrollEdgeMargin
-	right.ScrollEdgeMargin = cfg.UI.ScrollEdgeMargin
 	jobState := jobs.NewState()
 	jobState.SetTransferFunc(jobTransferFunc(cfg.Operations, cfg.Jobs))
 	jobState.SetThroughputChart(
@@ -739,6 +614,164 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		app.applyQuickViewPreviewImmediately()
 	}
 	return app, nil
+}
+
+// resolvedKeymaps holds every keymap.Map used by App, each already defaulted
+// from package defaults when the caller-supplied bundle left it nil.
+type resolvedKeymaps struct {
+	global         *keymap.Map
+	jobs           *keymap.Map
+	commands       *keymap.Map
+	messages       *keymap.Map
+	filePreview    *keymap.Map
+	dialogInput    *keymap.Map
+	renameDialog   *keymap.Map
+	mkdirDialog    *keymap.Map
+	bookmarkDialog *keymap.Map
+	findDialog     *keymap.Map
+	historyDialog  *keymap.Map
+	flattenDialog  *keymap.Map
+	compare        *keymap.Map
+	dedup          *keymap.Map
+	terminal       *keymap.Map
+}
+
+// loadKeymapBundle resolves the raw keymap.Bundle: an explicit bundle or global
+// override for tests takes precedence, otherwise it loads from opts.Paths.
+func loadKeymapBundle(opts Options) (*keymap.Bundle, error) {
+	switch {
+	case opts.KeymapBundle != nil:
+		return opts.KeymapBundle, nil
+	case opts.Keymap != nil:
+		return &keymap.Bundle{Global: opts.Keymap}, nil
+	default:
+		bundle, err := keymap.LoadFromPaths(opts.Paths)
+		if err != nil {
+			return nil, fmt.Errorf("load keybindings: %w", err)
+		}
+		return bundle, nil
+	}
+}
+
+// resolveKeymapBundle resolves the global keymap and every per-view overlay
+// keymap, falling back to package defaults for any overlay the bundle didn't supply.
+func resolveKeymapBundle(opts Options) (resolvedKeymaps, error) {
+	bundle, err := loadKeymapBundle(opts)
+	if err != nil {
+		return resolvedKeymaps{}, err
+	}
+	if bundle.Global == nil {
+		return resolvedKeymaps{}, fmt.Errorf("load keybindings: global keymap is nil")
+	}
+	rk := resolvedKeymaps{
+		global:         bundle.Global,
+		jobs:           bundle.Jobs,
+		commands:       bundle.Commands,
+		messages:       bundle.Messages,
+		filePreview:    bundle.FilePreview,
+		dialogInput:    bundle.DialogInput,
+		renameDialog:   bundle.RenameDialog,
+		mkdirDialog:    bundle.MkdirDialog,
+		bookmarkDialog: bundle.BookmarkDialog,
+		findDialog:     bundle.FindDialog,
+		historyDialog:  bundle.HistoryDialog,
+		flattenDialog:  bundle.FlattenDialog,
+		compare:        bundle.Compare,
+		dedup:          bundle.Dedup,
+		terminal:       bundle.Terminal,
+	}
+	for _, step := range []struct {
+		km    **keymap.Map
+		build func() map[string][]string
+		label string
+	}{
+		{&rk.dialogInput, func() map[string][]string { return map[string][]string{} }, "empty dialog input"},
+		{&rk.renameDialog, keymap.DefaultRenameDialogOverlayKeys, "rename dialog overlay"},
+		{&rk.mkdirDialog, keymap.DefaultMkdirDialogOverlayKeys, "mkdir dialog overlay"},
+		{&rk.bookmarkDialog, keymap.DefaultBookmarkDialogOverlayKeys, "bookmark dialog overlay"},
+		{&rk.findDialog, keymap.DefaultFindDialogOverlayKeys, "find dialog overlay"},
+		{&rk.historyDialog, keymap.DefaultHistoryDialogOverlayKeys, "history dialog overlay"},
+		{&rk.filePreview, keymap.DefaultFilePreviewOverlayKeys, "file preview overlay"},
+		{&rk.flattenDialog, keymap.DefaultFlattenDialogOverlayKeys, "flatten dialog overlay"},
+		{&rk.compare, keymap.DefaultCompareOverlayKeys, "compare overlay"},
+		{&rk.dedup, keymap.DefaultDedupOverlayKeys, "dedup overlay"},
+		{&rk.terminal, keymap.DefaultTerminalOverlayKeys, "terminal overlay"},
+	} {
+		if *step.km != nil {
+			continue
+		}
+		m, err := keymap.Build(step.build())
+		if err != nil {
+			return resolvedKeymaps{}, fmt.Errorf("build %s map: %w", step.label, err)
+		}
+		*step.km = m
+	}
+	return rk, nil
+}
+
+// resolveThemes resolves the active theme (falling back to theme.Default when
+// unset), the full set of selectable theme choices (loaded from disk when the
+// caller didn't supply one), and registers the active theme as a choice if it
+// isn't already one (e.g. a config-only custom theme).
+func resolveThemes(opts Options) (styles theme.Theme, availableThemes map[string]theme.Theme, themeChoices []theme.NamedTheme, err error) {
+	styles = opts.Theme
+	if styles.Name == "" {
+		styles = theme.Default()
+	}
+	themeChoices = opts.ThemeChoices
+	if len(themeChoices) == 0 {
+		themeChoices, err = theme.ThemeChoices(opts.Paths.WithResolvedLocations().ThemesDir)
+		if err != nil {
+			return theme.Theme{}, nil, nil, fmt.Errorf("load theme choices: %w", err)
+		}
+	}
+	availableThemes = map[string]theme.Theme{}
+	for _, choice := range themeChoices {
+		availableThemes[choice.Name] = choice.Theme
+	}
+	if _, ok := availableThemes[styles.Name]; styles.Name != "" && !ok {
+		availableThemes[styles.Name] = styles
+		themeChoices = append(themeChoices, theme.NamedTheme{
+			Name:  styles.Name,
+			Label: styles.Name,
+			Theme: styles,
+		})
+	}
+	return styles, availableThemes, themeChoices, nil
+}
+
+// browserPanelOptions bundles the config-derived settings applied identically
+// to both the left and right panel at startup (see newBrowserPanel).
+type browserPanelOptions struct {
+	list       localfs.ListOptions
+	gitignore  *gitignore.Cache
+	cfg        config.Config
+	sortMode   panel.SortMode
+	listFormat panel.ListFormat
+	scrollMode panel.ScrollMode
+	diskEngine *diskusage.Engine
+}
+
+// newBrowserPanel constructs a panel.State at path with sort/list/scroll/filter
+// options applied consistently; used for both the left and right startup panel.
+func newBrowserPanel(path string, opts browserPanelOptions) (panel.State, error) {
+	p, err := panel.NewWithOptions(path, opts.list, opts.gitignore)
+	if err != nil {
+		return panel.State{}, err
+	}
+	p.Sort.Mode = opts.sortMode
+	p.Sort.Reverse = opts.cfg.SortReverse
+	p.Sort.DirectoriesFirst = opts.cfg.DirectoriesFirst
+	p.Sort.DiskUsageIdleSizeSort = opts.cfg.DiskUsageIdleSizeSort
+	p.DiskUsageIdleSortActivated = opts.cfg.DiskUsageIdleSizeSort
+	p.ListFormat = opts.listFormat
+	p.DiskSorter = opts.diskEngine.Size
+	p.ApplySort()
+	p.Filter.CaseInsensitive = opts.cfg.CaseInsensitiveFilter
+	p.Filter.CycleMatches = opts.cfg.Filter.CycleMatches
+	p.ScrollMode = opts.scrollMode
+	p.ScrollEdgeMargin = opts.cfg.UI.ScrollEdgeMargin
+	return p, nil
 }
 
 // Run starts the event loop.

@@ -1311,6 +1311,88 @@ func (h *Handler) ToggleOnlyFiles() {
 	h.syncFindDialogRanks()
 }
 
+// findToggleField identifies one of the toggleable find-dialog checkbox rows,
+// shared by the Enter switch, the Alt-letter switch, and the plain Rune/space
+// switch in HandleDialogKey so the focus/rune → Toggle* mapping lives once.
+type findToggleField int
+
+const (
+	findToggleNone findToggleField = iota
+	findToggleStayOnVolume
+	findToggleOnlyDirs
+	findToggleOnlyFiles
+	findToggleSelections
+)
+
+// findToggleFieldForRune maps a mnemonic letter (v/d/l/s) to its toggle field.
+func findToggleFieldForRune(r rune) findToggleField {
+	switch r {
+	case 'v', 'V':
+		return findToggleStayOnVolume
+	case 'd', 'D':
+		return findToggleOnlyDirs
+	case 'l', 'L':
+		return findToggleOnlyFiles
+	case 's', 'S':
+		return findToggleSelections
+	default:
+		return findToggleNone
+	}
+}
+
+// findToggleFieldForFocus maps a dialog focus index to its toggle field.
+func (h *Handler) findToggleFieldForFocus(focus int) findToggleField {
+	st := &h.model.FindDialog
+	switch focus {
+	case st.FindDialogStayOnVolumeFocus():
+		return findToggleStayOnVolume
+	case st.FindDialogOnlyDirsFocus():
+		return findToggleOnlyDirs
+	case st.FindDialogOnlyFilesFocus():
+		return findToggleOnlyFiles
+	case st.FindDialogSelectionsFocus():
+		return findToggleSelections
+	default:
+		return findToggleNone
+	}
+}
+
+// applyFindToggle runs the Toggle* method for field. Returns false (no-op) for findToggleNone.
+func (h *Handler) applyFindToggle(field findToggleField) bool {
+	switch field {
+	case findToggleStayOnVolume:
+		h.ToggleStayOnVolume()
+	case findToggleOnlyDirs:
+		h.ToggleOnlyDirectories()
+	case findToggleOnlyFiles:
+		h.ToggleOnlyFiles()
+	case findToggleSelections:
+		h.ToggleSearchOnlySelections()
+	default:
+		return false
+	}
+	return true
+}
+
+// applyFindListNav applies Up/Down/PgUp/PgDn/Ctrl+Home/Ctrl+End to the ranked
+// result list when it has focus, updating scroll and the nav-idle debounce.
+// Returns false (no-op) when the list isn't focused, is empty, or key isn't a
+// recognized list-navigation key.
+func (h *Handler) applyFindListNav(key tcell.Key, mods tcell.ModMask) bool {
+	st := &h.model.FindDialog
+	if st.Focus != 0 || len(st.Ranked) == 0 {
+		return false
+	}
+	sel, ok := dialog.ListNavKeySelection(key, mods, st.Selected, len(st.Ranked), max(1, h.findDialogListRows()-1))
+	if !ok {
+		return false
+	}
+	st.Selected = sel
+	dialog.EnsureFindListScroll(st, h.findDialogListRows())
+	h.armFindNavIdleTimer()
+	return true
+}
+
 func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	st := &h.model.FindDialog
 	if h.keysFindDialog != nil {
@@ -1350,20 +1432,12 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'v', 'V':
-			h.ToggleStayOnVolume()
-			return
-		case 'd', 'D':
-			h.ToggleOnlyDirectories()
-			return
-		case 'l', 'L':
-			h.ToggleOnlyFiles()
-			return
-		case 's', 'S':
-			if st.FindDialogHasSelectionsCheckbox() {
-				h.ToggleSearchOnlySelections()
-				st.Focus = st.FindDialogSelectionsFocus()
+		if field := findToggleFieldForRune(event.Rune()); field != findToggleNone {
+			if field != findToggleSelections || st.FindDialogHasSelectionsCheckbox() {
+				h.applyFindToggle(field)
+				if field == findToggleSelections {
+					st.Focus = st.FindDialogSelectionsFocus()
+				}
 			}
 			return
 		}
@@ -1385,18 +1459,9 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	case tcell.KeyEsc:
 		h.CloseDialog()
 	case tcell.KeyEnter:
-		switch st.Focus {
-		case st.FindDialogCancelFocus():
+		if st.Focus == st.FindDialogCancelFocus() {
 			h.CloseDialog()
-		case st.FindDialogStayOnVolumeFocus():
-			h.ToggleStayOnVolume()
-		case st.FindDialogOnlyDirsFocus():
-			h.ToggleOnlyDirectories()
-		case st.FindDialogOnlyFilesFocus():
-			h.ToggleOnlyFiles()
-		case st.FindDialogSelectionsFocus():
-			h.ToggleSearchOnlySelections()
-		default:
+		} else if !h.applyFindToggle(h.findToggleFieldForFocus(st.Focus)) {
 			h.ActivateDialogOK()
 		}
 	case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
@@ -1407,44 +1472,9 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			}
 			break
 		}
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			switch event.Key() {
-			case tcell.KeyUp:
-				st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
-				dialog.EnsureFindListScroll(st, h.findDialogListRows())
-				h.armFindNavIdleTimer()
-			case tcell.KeyDown:
-				st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
-				dialog.EnsureFindListScroll(st, h.findDialogListRows())
-				h.armFindNavIdleTimer()
-			}
-		}
-	case tcell.KeyHome:
-		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
-			st.Selected = 0
-			dialog.EnsureFindListScroll(st, h.findDialogListRows())
-			h.armFindNavIdleTimer()
-		}
-	case tcell.KeyEnd:
-		if st.Focus == 0 && event.Modifiers()&tcell.ModCtrl != 0 && len(st.Ranked) > 0 {
-			st.Selected = len(st.Ranked) - 1
-			dialog.EnsureFindListScroll(st, h.findDialogListRows())
-			h.armFindNavIdleTimer()
-		}
-	case tcell.KeyPgUp:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			step := max(1, h.findDialogListRows()-1)
-			st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -step)
-			dialog.EnsureFindListScroll(st, h.findDialogListRows())
-			h.armFindNavIdleTimer()
-		}
-	case tcell.KeyPgDn:
-		if st.Focus == 0 && len(st.Ranked) > 0 {
-			step := max(1, h.findDialogListRows()-1)
-			st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), step)
-			dialog.EnsureFindListScroll(st, h.findDialogListRows())
-			h.armFindNavIdleTimer()
-		}
+		h.applyFindListNav(event.Key(), event.Modifiers())
+	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
+		h.applyFindListNav(event.Key(), event.Modifiers())
 	case tcell.KeyRune:
 		if event.Modifiers() != tcell.ModNone {
 			break
@@ -1453,40 +1483,22 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			break
 		}
 		switch event.Rune() {
-		case 'v', 'V':
-			if st.Focus == st.FindDialogStayOnVolumeFocus() {
-				h.ToggleStayOnVolume()
-			}
-		case 'd', 'D':
-			if st.Focus == st.FindDialogOnlyDirsFocus() {
-				h.ToggleOnlyDirectories()
-			}
-		case 'l', 'L':
-			if st.Focus == st.FindDialogOnlyFilesFocus() {
-				h.ToggleOnlyFiles()
-			}
-		case 's', 'S':
-			if st.Focus == st.FindDialogSelectionsFocus() {
-				h.ToggleSearchOnlySelections()
+		case 'v', 'V', 'd', 'D', 'l', 'L', 's', 'S':
+			if field := findToggleFieldForRune(event.Rune()); field == h.findToggleFieldForFocus(st.Focus) {
+				h.applyFindToggle(field)
 			}
 		case 'o', 'O':
 			h.ActivateDialogOK()
 		case 'c', 'C':
 			h.CloseDialog()
 		case ' ':
-			switch st.Focus {
-			case st.FindDialogStayOnVolumeFocus():
-				h.ToggleStayOnVolume()
-			case st.FindDialogOnlyDirsFocus():
-				h.ToggleOnlyDirectories()
-			case st.FindDialogOnlyFilesFocus():
-				h.ToggleOnlyFiles()
-			case st.FindDialogSelectionsFocus():
-				h.ToggleSearchOnlySelections()
-			case st.FindDialogOKFocus():
-				h.ActivateDialogOK()
-			case st.FindDialogCancelFocus():
-				h.CloseDialog()
+			if !h.applyFindToggle(h.findToggleFieldForFocus(st.Focus)) {
+				switch st.Focus {
+				case st.FindDialogOKFocus():
+					h.ActivateDialogOK()
+				case st.FindDialogCancelFocus():
+					h.CloseDialog()
+				}
 			}
 		}
 	}

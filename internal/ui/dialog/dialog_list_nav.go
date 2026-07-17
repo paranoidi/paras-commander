@@ -147,3 +147,34 @@ func ListClampedSelectionDelta(selected, rankedLen, delta int) int {
 	}
 	return v
 }
+
+// ListNavKeySelection computes the new Selected index for the list-navigation
+// keys shared by fuzzy-picker style dialogs (Up/Down by one row, PgUp/PgDn by
+// pageSize rows, Ctrl+Home/Ctrl+End to the first/last row). pageSize is
+// clamped to at least 1. ok is false when rankedLen <= 0 or key isn't one of
+// these keys (or Home/End without Ctrl) — the caller should leave selected
+// unchanged and fall through to its own handling.
+func ListNavKeySelection(key tcell.Key, mods tcell.ModMask, selected, rankedLen, pageSize int) (newSelected int, ok bool) {
+	if rankedLen <= 0 {
+		return selected, false
+	}
+	switch key {
+	case tcell.KeyUp:
+		return ListClampedSelectionDelta(selected, rankedLen, -1), true
+	case tcell.KeyDown:
+		return ListClampedSelectionDelta(selected, rankedLen, 1), true
+	case tcell.KeyPgUp:
+		return ListClampedSelectionDelta(selected, rankedLen, -max(1, pageSize)), true
+	case tcell.KeyPgDn:
+		return ListClampedSelectionDelta(selected, rankedLen, max(1, pageSize)), true
+	case tcell.KeyHome:
+		if mods&tcell.ModCtrl != 0 {
+			return 0, true
+		}
+	case tcell.KeyEnd:
+		if mods&tcell.ModCtrl != 0 {
+			return rankedLen - 1, true
+		}
+	}
+	return selected, false
+}
