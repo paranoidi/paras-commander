@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -85,26 +84,15 @@ func SourceError(text string) *Error {
 //   - Empty panels or no valid cursor entry produce an error.
 func ResolveSource(p *panel.State) (Source, error) {
 	if len(p.SelectedPaths) > 0 {
-		byPath := make(map[string]localfs.Entry, len(p.Entries))
-		for _, entry := range p.Entries {
-			byPath[entry.Path] = entry
-		}
-		paths := make([]string, 0, len(p.SelectedPaths))
-		for path := range p.SelectedPaths {
-			paths = append(paths, path)
-		}
-		sort.Strings(paths)
-		entries := make([]localfs.Entry, 0, len(paths))
-		for _, path := range paths {
-			if e, ok := byPath[path]; ok {
-				entries = append(entries, e)
-				continue
-			}
+		entries, err := p.SelectedEntries(false, func(path string) (localfs.Entry, error) {
 			e, err := entryFromPathString(path)
 			if err != nil {
-				return Source{}, &Error{Op: "source", Text: fmt.Sprintf("selected path %q: %v", path, err), Err: err}
+				return localfs.Entry{}, &Error{Op: "source", Text: fmt.Sprintf("selected path %q: %v", path, err), Err: err}
 			}
-			entries = append(entries, e)
+			return e, nil
+		})
+		if err != nil {
+			return Source{}, err
 		}
 		if len(entries) > 0 {
 			return Source{Kind: SourceSelected, Entries: entries}, nil

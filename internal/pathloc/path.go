@@ -148,6 +148,29 @@ func CommonAncestor(a, b Path) (Path, bool) {
 	return Path{}, false
 }
 
+// CommonParent folds paths into their deepest common ancestor.
+// mixed is true when more than one distinct path contributed to the fold.
+// ok is false when paths is empty or members mix schemes/hosts.
+func CommonParent(paths []Path) (root Path, mixed bool, ok bool) {
+	for _, p := range paths {
+		if p.IsZero() {
+			continue
+		}
+		switch {
+		case root.IsZero():
+			root = p
+		case !p.Equal(root):
+			mixed = true
+			anc, ancOK := CommonAncestor(root, p)
+			if !ancOK {
+				return Path{}, false, false
+			}
+			root = anc
+		}
+	}
+	return root, mixed, !root.IsZero()
+}
+
 // Join appends a single path element (name) under p.
 func (p Path) Join(name string) (Path, error) {
 	name = strings.Trim(name, "/")

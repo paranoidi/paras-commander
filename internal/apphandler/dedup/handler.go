@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/apphandler/hashwalk"
+	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
@@ -32,7 +33,7 @@ type Deps struct {
 
 // Host is the app shell surface dedup needs.
 type Host interface {
-	NavigatePanelToPath(panelID int, path string, selectName string) error
+	host.PanelNavigationHost
 	EnqueueDeleteJob(paths []string, removeEmptyDirs bool)
 	SetTransientMessage(text string, urgency ui.MessageUrgency)
 	DedupMenuDefinitions() []menu.Definition
@@ -51,9 +52,9 @@ type Handler struct {
 	gitignore  *gitignore.Cache
 	diskIgnore diskusage.ShouldIgnoreFolder
 
-	session     *comparepkg.DedupSession
-	wakePending atomic.Bool
-	pending     *dedupPendingState
+	session *comparepkg.DedupSession
+	wake    host.WakeCoalescer
+	pending *dedupPendingState
 }
 
 // dedupPendingState carries marks/keeps/tree state across a rescan so returning
@@ -81,13 +82,7 @@ func New(d Deps) *Handler {
 }
 
 func (h *Handler) postWake() {
-	if h.screen == nil {
-		return
-	}
-	if h.wakePending.Swap(true) {
-		return
-	}
-	_ = h.screen.PostEvent(tcell.NewEventInterrupt(WakePayload{}))
+	h.wake.Post(h.screen, WakePayload{})
 }
 
 // Open starts scanning the active panel's directory for duplicates.
@@ -139,26 +134,17 @@ func (h *Handler) openRoot(root pathloc.Path) {
 			Valid:   p.ListingDeviceValid,
 		}
 	}
-	shouldSkip := diskusage.ComposeListingVolumeIgnore(h.diskIgnore, volGate)
-
-	bufKiB := h.config.Compare.ReadBufferKiB
-	if bufKiB <= 0 {
-		bufKiB = config.DefaultCompareReadBufferKiB
-	}
-	workers := h.config.Compare.HashConcurrency
-	if workers <= 0 {
-		workers = config.DefaultCompareHashConcurrency
-	}
+	hs := hashwalk.FromCompareConfig(h.config.Compare, h.diskIgnore, volGate)
 
 	h.session = comparepkg.StartDedup(context.Background(), root, comparepkg.DedupOptions{
 		Walk: comparepkg.WalkOptions{
 			ShowHidden:    p.ShowHidden,
 			Gitignore:     h.gitignore,
-			ShouldSkipDir: shouldSkip,
+			ShouldSkipDir: hs.ShouldSkip,
 		},
-		HashWorkers:       workers,
-		ReadBuffer:        make([]byte, bufKiB*1024),
-		MaxHashBytes:      h.config.Compare.MaxHashBytes,
+		HashWorkers:       hs.HashWorkers,
+		ReadBuffer:        hs.ReadBuffer,
+		MaxHashBytes:      hs.MaxHashBytes,
 		ConfirmHashBytes:  h.config.Dedup.HashConfirmBytes,
 		FileProgressBytes: h.config.Dedup.FileProgressBytes,
 		ChunkBytes:        h.config.Dedup.ChunkBytes,
@@ -188,7 +174,7 @@ func (h *Handler) Close() {
 
 // PollUpdates applies the latest session snapshot. Returns true when the UI should repaint.
 func (h *Handler) PollUpdates(_ WakePayload) bool {
-	h.wakePending.Store(false)
+	_ = h.wake.Take()
 	if h.session == nil {
 		return false
 	}

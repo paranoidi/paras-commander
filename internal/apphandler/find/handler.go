@@ -1135,7 +1135,7 @@ func (h *Handler) navigateFindEntryToPanel(panelID int) (string, bool) {
 		dir = filepath.Clean(filepath.Dir(path))
 		name = filepath.Base(path)
 	}
-	if err := h.host.NavigatePanelToDirectory(panelID, dir, name); err != nil {
+	if err := h.host.NavigatePanelToPath(panelID, dir, name); err != nil {
 		h.host.SetErrorMessage("Find", err)
 		return "", false
 	}
@@ -1410,9 +1410,9 @@ func (h *Handler) tryFindDialogActionKey(event *tcell.EventKey) bool {
 	case keymap.ActionFindSelectAll:
 		h.findDialogSelectAll()
 	case keymap.ActionFindSelectGroup:
-		h.host.OpenGroupSelectDialog("select", true)
+		h.host.OpenGroupSelectDialog(GroupSelectModeSelect, true)
 	case keymap.ActionFindUnselectGroup:
-		h.host.OpenGroupSelectDialog("unselect", true)
+		h.host.OpenGroupSelectDialog(GroupSelectModeUnselect, true)
 	case keymap.ActionFindOpenInPrimary:
 		h.OpenSelectedInPrimary()
 	case keymap.ActionFindOpenInSecondary:
@@ -1544,23 +1544,24 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 }
 
 // ApplyGroupSelect marks or unmarks full-corpus find results whose basename matches pattern.
-func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, dirsOnly, caseSensitive bool, patternMode panel.GroupPatternMode) {
+func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 	st := &h.model.FindDialog
+	pattern := req.Pattern
 	if pattern == "" {
 		return
 	}
-	matcher, err := panel.NewGroupMatcher(pattern, patternMode, caseSensitive)
+	matcher, err := panel.NewGroupMatcher(pattern, req.PatternMode, req.CaseSensitive)
 	if err != nil {
 		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyCritical)
 		return
 	}
 	indices := h.findDialogResultIndices(st)
-	if mode == "select" {
+	if req.Mode == GroupSelectModeSelect {
 		walkOrder := len(st.MarkedPaths) == 0
 		if st.MarkedPaths == nil {
 			st.MarkedPaths = make(map[string]bool, len(indices))
 		}
-		matched := matchingFindPaths(st, indices, filesOnly, dirsOnly, matcher)
+		matched := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
 		paths := make([]string, 0, len(matched))
 		for _, path := range matched {
 			if !st.MarkedPaths[path] {
@@ -1587,7 +1588,7 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, dirsOnly, ca
 		st.InvalidateMarkedSelectionDerived()
 		return
 	}
-	for _, path := range matchingFindPaths(st, indices, filesOnly, dirsOnly, matcher) {
+	for _, path := range matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher) {
 		delete(st.MarkedPaths, path)
 	}
 	if len(st.MarkedPaths) == 0 {

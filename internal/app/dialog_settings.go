@@ -5,6 +5,7 @@ import (
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
+	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -59,19 +60,14 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 		onCancel:           a.closeSortDialog,
 		allowPlainOKCancel: true,
 		onMnemonic: func(r rune) bool {
+			for i, row := range panel.SortDialogRadios() {
+				if unicode.ToLower(r) == unicode.ToLower(row.Shortcut) {
+					st.SortMode = row.Mode
+					st.Focus = i
+					return true
+				}
+			}
 			switch r {
-			case 'n', 'N':
-				st.SortMode = panel.SortName
-				st.Focus = 0
-			case 'e', 'E':
-				st.SortMode = panel.SortExtension
-				st.Focus = 1
-			case 's', 'S':
-				st.SortMode = panel.SortSize
-				st.Focus = 2
-			case 'm', 'M':
-				st.SortMode = panel.SortMtime
-				st.Focus = 3
 			case 'u', 'U':
 				st.DiskUsageIdleSizeSort = !st.DiskUsageIdleSizeSort
 				st.Focus = 4
@@ -87,10 +83,12 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 			return true
 		},
 		onSpace: func(focus int) bool {
+			radios := panel.SortDialogRadios()
+			if focus >= 0 && focus < len(radios) {
+				st.SortMode = radios[focus].Mode
+				return true
+			}
 			switch focus {
-			case 0, 1, 2, 3:
-				modes := []panel.SortMode{panel.SortName, panel.SortExtension, panel.SortSize, panel.SortMtime}
-				st.SortMode = modes[focus]
 			case 4:
 				st.DiskUsageIdleSizeSort = !st.DiskUsageIdleSizeSort
 			case 5:
@@ -435,7 +433,14 @@ func (a *App) executeGroupSelect() {
 	}
 	switch context {
 	case "find":
-		a.findCtrl.ApplyGroupSelect(gs.Mode, gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode)
+		a.findCtrl.ApplyGroupSelect(findctrl.GroupSelectRequest{
+			Mode:          findctrl.GroupSelectMode(gs.Mode),
+			Pattern:       gs.Text,
+			FilesOnly:     gs.FilesOnly,
+			DirsOnly:      gs.DirsOnly,
+			CaseSensitive: gs.CaseSensitive,
+			PatternMode:   gs.PatternMode,
+		})
 	default:
 		p := a.activePanel()
 		var meta panel.GroupSelectMeta

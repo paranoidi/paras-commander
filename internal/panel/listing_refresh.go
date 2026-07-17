@@ -82,28 +82,7 @@ func FetchListing(ctx context.Context, snap ListingRefreshSnapshot) ([]fsbackend
 func BackendEntriesFromPanel(entries []localfs.Entry) []fsbackend.Entry {
 	out := make([]fsbackend.Entry, len(entries))
 	for i, e := range entries {
-		loc, _ := pathloc.Parse(e.Path)
-		out[i] = fsbackend.Entry{
-			Name:       e.Name,
-			Loc:        loc,
-			Type:       backendTypeFromLocal(e.Type),
-			Size:       e.Size,
-			Mode:       e.Mode,
-			ModifiedAt: e.ModifiedAt,
-		}
+		out[i] = fsbackend.FromPanelEntry(e)
 	}
 	return out
-}
-
-func backendTypeFromLocal(t localfs.EntryType) fsbackend.EntryType {
-	switch t {
-	case localfs.EntryDirectory:
-		return fsbackend.EntryDirectory
-	case localfs.EntrySymlink:
-		return fsbackend.EntrySymlink
-	case localfs.EntryOther:
-		return fsbackend.EntryOther
-	default:
-		return fsbackend.EntryFile
-	}
 }

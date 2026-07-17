@@ -18,12 +18,12 @@ type Host interface {
 	ActivePanel() *panel.State
 	ActiveViewportRows() int
 	InQuickFilterUI() bool
-	NavigatePanelToDirectory(panelID int, path, message string) error
-	HandleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, edit any) bool
-	FindDialogScrollingQuery(st *dialog.FindDialogState, width int, onChange func()) any
+	host.PanelNavigationHost
+	HandleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, edit ScrollingQueryEdit) bool
+	FindDialogScrollingQuery(st *dialog.FindDialogState, width int, onChange func()) ScrollingQueryEdit
 	FindDialogQueryWidth() int
 	DiskUsageIgnore() diskusage.ShouldIgnoreFolder
 	GitignoreCache() *gitignore.Cache
 	PanelViewportRows(panelID int) int
-	OpenGroupSelectDialog(mode string, forFind bool)
+	OpenGroupSelectDialog(mode GroupSelectMode, forFind bool)
 }

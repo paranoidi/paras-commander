@@ -756,7 +756,9 @@ func TestFindDialogBulkGroupSelectManyFiles(t *testing.T) {
 		t.Fatalf("indexed = %d, want %d", st.IndexedCount, wantEntries)
 	}
 	deadline := time.Now().Add(3 * time.Second)
-	app.findCtrl.ApplyGroupSelect("select", "*.txt", false, false, false, panel.GroupPatternShell)
+	app.findCtrl.ApplyGroupSelect(findctrl.GroupSelectRequest{
+		Mode: findctrl.GroupSelectModeSelect, Pattern: "*.txt", PatternMode: panel.GroupPatternShell,
+	})
 	if time.Now().After(deadline) {
 		t.Fatal("group select took too long")
 	}

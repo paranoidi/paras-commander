@@ -26,6 +26,11 @@ type PanelHost interface {
 	SecondaryPanel() *panel.State
 }
 
+// PanelNavigationHost navigates a panel to a directory and optionally selects an entry by name.
+type PanelNavigationHost interface {
+	NavigatePanelToPath(panelID int, path string, selectName string) error
+}
+
 // ShellHost supplies quit, menu, and global action dispatch from auxiliary views.
 type ShellHost interface {
 	HandleQuit() bool

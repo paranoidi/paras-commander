@@ -152,19 +152,13 @@ func SelfTargetCount(sources []pathloc.Path, destDir pathloc.Path, flatDestNames
 // the destination. Zero when sources are empty or mix schemes/hosts (callers
 // fall back to basename naming).
 func TransferNameRoot(sources []pathloc.Path) pathloc.Path {
-	var root pathloc.Path
+	parents := make([]pathloc.Path, 0, len(sources))
 	for _, src := range sources {
-		parent := src.Parent()
-		switch {
-		case root.IsZero():
-			root = parent
-		case !parent.Equal(root):
-			anc, ok := pathloc.CommonAncestor(root, parent)
-			if !ok {
-				return pathloc.Path{}
-			}
-			root = anc
-		}
+		parents = append(parents, src.Parent())
+	}
+	root, _, ok := pathloc.CommonParent(parents)
+	if !ok {
+		return pathloc.Path{}
 	}
 	return root
 }

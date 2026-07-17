@@ -6,24 +6,14 @@ import "github.com/paranoidi/paras-commander/internal/pathloc"
 // common ancestor. multiDir reports whether the selections span more than one parent
 // directory. ok is false when there are no selections or they mix schemes/hosts.
 func (s *State) SelectionsCommonRoot() (root pathloc.Path, multiDir bool, ok bool) {
+	parents := make([]pathloc.Path, 0, len(s.SelectedPaths))
 	for sel := range s.SelectedPaths {
 		loc, err := pathloc.Parse(sel)
 		if err != nil {
 			return pathloc.Path{}, false, false
 		}
-		parent := loc.Parent()
-		switch {
-		case root.IsZero():
-			root = parent
-		case !parent.Equal(root):
-			multiDir = true
-			anc, ok := pathloc.CommonAncestor(root, parent)
-			if !ok {
-				// ponytail: mixed schemes/hosts have no common root; proceed as before
-				return pathloc.Path{}, false, false
-			}
-			root = anc
-		}
+		parents = append(parents, loc.Parent())
 	}
-	return root, multiDir, !root.IsZero()
+	root, multiDir, ok = pathloc.CommonParent(parents)
+	return root, multiDir, ok
 }

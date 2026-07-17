@@ -3,9 +3,10 @@ package compare
 import (
 	"context"
 	"path/filepath"
-	"sync/atomic"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/apphandler/hashwalk"
+	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
@@ -31,7 +32,7 @@ type Deps struct {
 
 // Host is the app shell surface compare needs.
 type Host interface {
-	NavigatePanelToPath(panelID int, path string, selectName string) error
+	host.PanelNavigationHost
 	TogglePanelSelection(panelID int, path string) (conflicts bool)
 	SetTransientMessage(text string, urgency ui.MessageUrgency)
 	CompareMenuDefinitions() []menu.Definition
@@ -50,7 +51,7 @@ type Handler struct {
 	diskIgnore  diskusage.ShouldIgnoreFolder
 
 	session       *comparepkg.Session
-	wakePending   atomic.Bool
+	wake          host.WakeCoalescer
 	sessionCtx    context.Context
 	sessionCancel context.CancelFunc
 
@@ -81,13 +82,7 @@ func New(d Deps) *Handler {
 }
 
 func (h *Handler) postWake() {
-	if h.screen == nil {
-		return
-	}
-	if h.wakePending.Swap(true) {
-		return
-	}
-	_ = h.screen.PostEvent(tcell.NewEventInterrupt(WakePayload{}))
+	h.wake.Post(h.screen, WakePayload{})
 }
 
 // Open starts comparing primary and secondary panel paths.
@@ -140,30 +135,21 @@ func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate
 		FocusColumn: ui.CompareColumnPrimary,
 	}
 
-	shouldSkip := diskusage.ComposeListingVolumeIgnore(h.diskIgnore, volGate)
+	hs := hashwalk.FromCompareConfig(h.config.Compare, h.diskIgnore, volGate)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	h.sessionCtx = ctx
 	h.sessionCancel = cancel
 
-	bufKiB := h.config.Compare.ReadBufferKiB
-	if bufKiB <= 0 {
-		bufKiB = config.DefaultCompareReadBufferKiB
-	}
-	workers := h.config.Compare.HashConcurrency
-	if workers <= 0 {
-		workers = config.DefaultCompareHashConcurrency
-	}
-
 	h.session = comparepkg.Start(ctx, primary, secondary, comparepkg.Options{
 		Walk: comparepkg.WalkOptions{
 			ShowHidden:    showHidden,
 			Gitignore:     h.gitignore,
-			ShouldSkipDir: shouldSkip,
+			ShouldSkipDir: hs.ShouldSkip,
 		},
-		HashWorkers:  workers,
-		ReadBuffer:   make([]byte, bufKiB*1024),
-		MaxHashBytes: h.config.Compare.MaxHashBytes,
+		HashWorkers:  hs.HashWorkers,
+		ReadBuffer:   hs.ReadBuffer,
+		MaxHashBytes: hs.MaxHashBytes,
 		OnUpdate:     func(_ comparepkg.Snapshot) { h.postWake() },
 	})
 	h.model.CompareSnapshot = h.session.Snapshot()
@@ -205,7 +191,7 @@ func (h *Handler) teardown() {
 
 // PollUpdates applies the latest session snapshot. Returns true when UI should repaint.
 func (h *Handler) PollUpdates(_ WakePayload) bool {
-	h.wakePending.Store(false)
+	_ = h.wake.Take()
 	if h.session != nil {
 		h.model.CompareSnapshot = h.session.Snapshot()
 		return true

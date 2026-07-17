@@ -479,40 +479,19 @@ func isStrictPathDescendant(parent, child string) bool {
 
 // SelectedDirectoryPaths returns absolute paths of selected directories in stable sorted order.
 func (s State) SelectedDirectoryPaths() []string {
-	if len(s.SelectedPaths) == 0 {
+	entries, _ := s.SelectedEntries(true, localfs.EntryFromPath)
+	if len(entries) == 0 {
 		return nil
 	}
-	byPath := make(map[string]localfs.Entry, len(s.Entries))
-	for _, entry := range s.Entries {
-		byPath[entry.Path] = entry
-	}
-	out := make([]string, 0)
-	for path, on := range s.SelectedPaths {
-		if !on {
-			continue
-		}
-		path = cleanPathString(path)
-		if path == "" {
-			continue
-		}
-		if e, ok := byPath[path]; ok {
-			if e.Type == localfs.EntryDirectory {
-				out = append(out, path)
-			}
-			continue
-		}
-		e, err := localfs.EntryFromPath(path)
-		if err != nil {
-			continue
-		}
+	out := make([]string, 0, len(entries))
+	for _, e := range entries {
 		if e.Type == localfs.EntryDirectory {
-			out = append(out, path)
+			out = append(out, e.Path)
 		}
 	}
 	if len(out) == 0 {
 		return nil
 	}
-	sort.Strings(out)
 	return out
 }
 

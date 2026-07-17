@@ -53,7 +53,9 @@ func (a *App) enqueueExtractJob(sources []string, dest string) {
 }
 
 func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) {
-	a.jobsCtrl.AddTransferJob(jobType, sources, dest, startPaused, preserve)
+	a.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
+		Type: jobType, Sources: sources, Dest: dest, StartPaused: startPaused, Preserve: preserve,
+	})
 }
 
 func (a *App) transferPreserveFromConfig() jobs.TransferPreserve {
@@ -64,7 +66,9 @@ func (a *App) transferPreserveFromConfig() jobs.TransferPreserve {
 }
 
 func (a *App) addFlattenJob(sources []string, dest string, removeEmpty bool, flattenRoots []string) {
-	a.jobsCtrl.AddFlattenJob(sources, dest, removeEmpty, flattenRoots)
+	a.jobsCtrl.AddFlattenJob(jobsctrl.FlattenJobRequest{
+		Sources: sources, Dest: dest, RemoveEmpty: removeEmpty, FlattenRoots: flattenRoots,
+	})
 }
 
 func plural(n int, singular, pluralForm string) string {

@@ -913,10 +913,12 @@ func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 		return
 	}
 	h.host.ActivePanel().ClearSelection()
-	h.AddTransferJob(opts.jobType, sources, dest, false, jobs.TransferPreserveFromConfig(
-		h.config.Operations.PreservePermissions,
-		h.config.Operations.PreserveTimestamps,
-	))
+	h.AddTransferJob(TransferJobRequest{
+		Type:     opts.jobType,
+		Sources:  sources,
+		Dest:     dest,
+		Preserve: jobs.TransferPreserveFromConfig(h.config.Operations.PreservePermissions, h.config.Operations.PreserveTimestamps),
+	})
 	h.host.SetTransientMessage(fmt.Sprintf("%s queued (%d %s)", opts.toastVerb, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 }
 
@@ -938,28 +940,28 @@ func (h *Handler) EnqueueMoveJob() {
 }
 
 // AddTransferJob enqueues a copy or move job after scanning.
-func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) {
-	srcLocs, err := pathloc.ParseAll(sources)
+func (h *Handler) AddTransferJob(req TransferJobRequest) {
+	srcLocs, err := pathloc.ParseAll(req.Sources)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
-	destLoc, err := pathloc.Parse(dest)
+	destLoc, err := pathloc.Parse(req.Dest)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
 	job := &jobs.Job{
 		ID:                  jobs.NewJobID(),
-		Type:                jobType,
+		Type:                req.Type,
 		Status:              jobs.StatusScanning,
 		Sources:             srcLocs,
 		Destination:         destLoc,
 		DestIsDir:           ops.DestinationIsDirAtEnqueue(destLoc),
-		PausedAfterScan:     startPaused,
-		PreservePermissions: preserve.PreservePermissions,
-		PreserveTimestamps:  preserve.PreserveTimestamps,
-		FlattenIntoDest:     preserve.FlattenIntoDest,
+		PausedAfterScan:     req.StartPaused,
+		PreservePermissions: req.Preserve.PreservePermissions,
+		PreserveTimestamps:  req.Preserve.PreserveTimestamps,
+		FlattenIntoDest:     req.Preserve.FlattenIntoDest,
 	}
 	h.commitJob(job)
 }
@@ -1005,18 +1007,18 @@ func (h *Handler) EnqueueExtractJob(sources []string, dest string) {
 }
 
 // AddFlattenJob enqueues a flatten (move children + optional empty-dir cleanup) job.
-func (h *Handler) AddFlattenJob(sources []string, dest string, removeEmpty bool, flattenRoots []string) {
-	srcLocs, err := pathloc.ParseAll(sources)
+func (h *Handler) AddFlattenJob(req FlattenJobRequest) {
+	srcLocs, err := pathloc.ParseAll(req.Sources)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
-	destLoc, err := pathloc.Parse(dest)
+	destLoc, err := pathloc.Parse(req.Dest)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
 	}
-	rootLocs, err := pathloc.ParseAll(flattenRoots)
+	rootLocs, err := pathloc.ParseAll(req.FlattenRoots)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue job: %v", err), ui.MessageUrgencyError)
 		return
@@ -1028,7 +1030,7 @@ func (h *Handler) AddFlattenJob(sources []string, dest string, removeEmpty bool,
 		Sources:            srcLocs,
 		Destination:        destLoc,
 		DestIsDir:          ops.DestinationIsDirAtEnqueue(destLoc),
-		FlattenRemoveEmpty: removeEmpty,
+		FlattenRemoveEmpty: req.RemoveEmpty,
 		FlattenRoots:       rootLocs,
 	}
 	h.commitJob(job)

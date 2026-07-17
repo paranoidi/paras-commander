@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
+	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -161,7 +162,9 @@ func (a *App) confirmCompareMerge() {
 	}
 	for _, item := range plan.Copies {
 		destDir := filepath.Dir(item.Dst)
-		a.jobsCtrl.AddTransferJob(jobType, []string{item.Src}, destDir, false, preserve)
+		a.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
+			Type: jobType, Sources: []string{item.Src}, Dest: destDir, Preserve: preserve,
+		})
 	}
 	a.closeCompareMergeDialog()
 	a.compareCtrl.Refresh()
