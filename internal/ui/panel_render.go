@@ -348,7 +348,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	rect, state, panelStyle, ctx, display := p.Rect, p.State, p.PanelStyle, p.Ctx, p.Display
 	listTextWidth, listContentStart, nameWidth := p.ListTextWidth, p.ListContentStart, p.NameWidth
 	leftGutter, gitStrip, iconStrip := p.LeftGutter, p.GitStrip, p.IconStrip
-	gitStart, iconStart, showGit := p.GitStart, p.IconStart, p.ShowGit
+	showGit := p.ShowGit
 	fullRowCells, diskDenom := p.FullRowCells, p.DiskDenom
 	metaLayouts, showMetaEffective := p.MetaLayouts, p.ShowMetaEffective
 	rowOpts := p.RowOpts
@@ -374,19 +374,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	if entry, _, ok := state.VisibleEntry(entryIndex); ok {
 		hasEntry = true
 		cur = entry
-		style = panelStyle.Styles.PanelListingEntryStyle(entry.Type, ctx.ChromeBlocked)
-		selected = state.IsSelected(entry)
-		if selected {
-			style = panelStyle.Styles.PanelListingSelectedStyle(ctx.ChromeBlocked)
-		}
-		if entryIndex == state.Cursor {
-			style = panelStyle.Styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
-				ChromeBlocked:     ctx.ChromeBlocked,
-				FileListActive:    ctx.FileListActive,
-				Selected:          selected,
-				FilterUniqueMatch: ctx.FileListActive && state.FilterUniqueMatch(),
-			})
-		}
+		style, selected = panelRowStyle(entry, entryIndex, state, ctx, panelStyle.Styles)
 		subtreeMark = entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
 		newFileTier = state.NewFileMarkTier(entry)
 		renameMark = state.IsRenameMarked(entry)
@@ -405,12 +393,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		if showMetaEffective {
 			metaText = MetaRowText(metaLayouts, entry.Path)
 		}
-		rowSuffix = panellist.RowSuffix{
-			JobGlyph:         jobMarkGlyph,
-			NewFileTier:      newFileTier,
-			RenameMark:       renameMark,
-			SubtreeSelection: subtreeMark,
-		}
+		rowSuffix = panellist.NewRowSuffix(jobMarkGlyph, newFileTier, renameMark, subtreeMark)
 		rowOpts.Suffix = rowSuffix
 		text = formatEntry(entry, listTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
 		if display.ShowDiskUsage && display.Painter != nil && diskDenom > 0 {
@@ -458,42 +441,95 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		}
 	}
 	if showGit {
-		gitStyle := blendCell(leftGutter)
-		gitUnderUsage := !ctx.ChromeBlocked && fillCols > leftGutter
-		var gitUsageAccent tcell.Style
-		if gitUnderUsage {
-			gitUsageAccent = panelStyle.Styles.DiskUsageBarStyle(ctx.FileListActive, entryIndex == state.Cursor, selected)
-		}
-		if hasEntry {
-			paintGitColumn(screen, gitStart, y, panelGitCell(cur, state.GitByPath), gitStyle, panelStyle.Styles, entryIndex == state.Cursor, gitUnderUsage, gitUsageAccent)
-			paintGitRowTrailingGap(screen, gitStart, y, gitStyle)
-		} else {
-			paintGitStripBlank(screen, gitStart, y, gitStyle)
-		}
+		drawPanelRowGitStrip(screen, p, panelRowPaintState{
+			Y: y, HasEntry: hasEntry, Entry: cur, EntryIndex: entryIndex, Selected: selected,
+			FillCols: fillCols, BlendCell: blendCell,
+		})
 	}
 	if display.ShowIcons {
-		if hasEntry {
-			iconStripStyle := blendCell(leftGutter + gitStrip)
-			paintPanelIconStrip(screen, iconStart, y, cur, iconStripStyle, panelStyle.Styles, PanelIconStripContext{
-				CursorStyleKey: iconKey,
-				ChromeBlocked:  ctx.ChromeBlocked,
-				Folder: panellist.FolderIconContext{
-					OtherPanelPath:         ctx.OtherPanelPath,
-					DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
-					ListingDev:             state.ListingDevice,
-					ListingDevValid:        state.ListingDeviceValid,
-					DiskPending:            diskPending,
-					DiskExcluded:           diskExcluded,
-					DiskUsageChrome:        display.ShowDiskUsage,
-				},
-			})
-		} else {
-			paintPanelIconStripBlank(screen, iconStart, y, style)
-		}
+		drawPanelRowIconStrip(screen, p, panelRowPaintState{
+			Y: y, HasEntry: hasEntry, Entry: cur, Style: style, BlendCell: blendCell,
+			IconKey: iconKey, DiskPending: diskPending, DiskExcluded: diskExcluded,
+		})
 	}
 	primitive.StyledTextCellwise(screen, listContentStart, y, listTextWidth, text, func(ci int) tcell.Style {
 		return blendCell(leftGutter + gitStrip + iconStrip + ci)
 	}, spans)
+}
+
+// panelRowStyle resolves the row's file/selected/cursor style, moved out of drawPanelRow's
+// per-entry style-resolution block.
+func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx PanelContext, styles theme.Theme) (style tcell.Style, selected bool) {
+	style = styles.PanelListingEntryStyle(entry.Type, ctx.ChromeBlocked)
+	selected = state.IsSelected(entry)
+	if selected {
+		style = styles.PanelListingSelectedStyle(ctx.ChromeBlocked)
+	}
+	if entryIndex == state.Cursor {
+		style = styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
+			ChromeBlocked:     ctx.ChromeBlocked,
+			FileListActive:    ctx.FileListActive,
+			Selected:          selected,
+			FilterUniqueMatch: ctx.FileListActive && state.FilterUniqueMatch(),
+		})
+	}
+	return style, selected
+}
+
+// panelRowPaintState carries the per-entry values drawPanelRow computes in its body that the
+// git-strip and icon-strip paint helpers need alongside the shared panelRowParams.
+type panelRowPaintState struct {
+	Y            int
+	HasEntry     bool
+	Entry        localfs.Entry
+	EntryIndex   int
+	Selected     bool
+	Style        tcell.Style
+	FillCols     int
+	BlendCell    func(int) tcell.Style
+	IconKey      string
+	DiskPending  bool
+	DiskExcluded bool
+}
+
+// drawPanelRowGitStrip paints the git-status strip cell (or its blank filler when the row has
+// no entry) for one row, moved out of drawPanelRow's git-strip block.
+func drawPanelRowGitStrip(screen tcell.Screen, p panelRowParams, rp panelRowPaintState) {
+	gitStyle := rp.BlendCell(p.LeftGutter)
+	gitUnderUsage := !p.Ctx.ChromeBlocked && rp.FillCols > p.LeftGutter
+	var gitUsageAccent tcell.Style
+	if gitUnderUsage {
+		gitUsageAccent = p.PanelStyle.Styles.DiskUsageBarStyle(p.Ctx.FileListActive, rp.EntryIndex == p.State.Cursor, rp.Selected)
+	}
+	if rp.HasEntry {
+		paintGitColumn(screen, p.GitStart, rp.Y, panelGitCell(rp.Entry, p.State.GitByPath), gitStyle, p.PanelStyle.Styles, rp.EntryIndex == p.State.Cursor, gitUnderUsage, gitUsageAccent)
+		paintGitRowTrailingGap(screen, p.GitStart, rp.Y, gitStyle)
+	} else {
+		paintGitStripBlank(screen, p.GitStart, rp.Y, gitStyle)
+	}
+}
+
+// drawPanelRowIconStrip paints the devicon strip cell (or its blank filler when the row has no
+// entry) for one row, moved out of drawPanelRow's icon-strip block.
+func drawPanelRowIconStrip(screen tcell.Screen, p panelRowParams, rp panelRowPaintState) {
+	if !rp.HasEntry {
+		paintPanelIconStripBlank(screen, p.IconStart, rp.Y, rp.Style)
+		return
+	}
+	iconStripStyle := rp.BlendCell(p.LeftGutter + p.GitStrip)
+	paintPanelIconStrip(screen, p.IconStart, rp.Y, rp.Entry, iconStripStyle, p.PanelStyle.Styles, PanelIconStripContext{
+		CursorStyleKey: rp.IconKey,
+		ChromeBlocked:  p.Ctx.ChromeBlocked,
+		Folder: panellist.FolderIconContext{
+			OtherPanelPath:         p.Ctx.OtherPanelPath,
+			DescendIntoMountPoints: p.Display.DiskUsageDescendIntoMountPoints,
+			ListingDev:             p.State.ListingDevice,
+			ListingDevValid:        p.State.ListingDeviceValid,
+			DiskPending:            rp.DiskPending,
+			DiskExcluded:           rp.DiskExcluded,
+			DiskUsageChrome:        p.Display.ShowDiskUsage,
+		},
+	})
 }
 
 // panelColumnLayout computes the leading-column (gutter/git/icon) widths and offsets for a

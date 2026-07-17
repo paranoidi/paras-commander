@@ -225,8 +225,6 @@ func drawDedupTreePane(
 	pathW := cols.pathW
 	pathX := cols.pathX
 	gapBeforeCountX := cols.gapBeforeCountX
-	countColX := cols.countColX
-	sizeColX := cols.sizeColX
 
 	base := styles.JobsRow.Background(bg)
 	dim := styles.PanelBlockedText.Background(bg)
@@ -245,34 +243,14 @@ func drawDedupTreePane(
 			DedupGroupFullyMarked(snap.Groups[d.GroupIdx], view.Marked)
 		dirFullyMarked := d.Kind == DedupRowDir && p.FullyMarkedDirs[d.DirRel]
 
-		rowBase := base
-		switch {
-		case p.ActiveGroup >= 0 && d.Kind == DedupRowFile && d.GroupIdx == p.ActiveGroup && !rowSelected:
-			rowBase = styles.PanelHint.Background(bg)
-		case p.ActiveGroup >= 0 && d.Kind == DedupRowDir && !entry.Expanded && p.HintDirs[d.DirRel]:
-			rowBase = styles.PanelHint.Background(bg)
-		case p.DimByGroup && d.GroupIdx != p.ActiveGroup:
-			rowBase = dim
+		flags := dedupRowFlags{
+			RowSelected:    rowSelected,
+			Kept:           kept,
+			Marked:         marked,
+			GroupAllMarked: groupAllMarked,
+			DirFullyMarked: dirFullyMarked,
 		}
-		lineStyle := rowBase
-		switch {
-		case kept && rowSelected:
-			lineStyle = styles.PanelDedupRowCursorKeep
-		case kept:
-			lineStyle = styles.PanelDedupRowKeep.Background(bg)
-		case groupAllMarked && rowSelected:
-			lineStyle = styles.PanelDedupRowCursorAllMarked
-		case groupAllMarked:
-			lineStyle = styles.PanelDedupRowAllMarked.Background(bg)
-		case rowSelected:
-			lineStyle = styles.PanelListingCursorStyle(rowBase, theme.PanelListingCursorOpts{
-				ChromeBlocked:  chromeBlocked,
-				FileListActive: p.Focused,
-				Selected:       marked || dirFullyMarked,
-			})
-		case marked, dirFullyMarked:
-			lineStyle = styles.PanelListingSelectedStyle(chromeBlocked).Background(bg)
-		}
+		lineStyle := dedupRowStyle(styles, p, d, entry, flags, chromeBlocked, base, dim, bg)
 
 		primitive.Text(screen, rect.X+1, lineY, 1, "", lineStyle)
 
@@ -284,59 +262,115 @@ func drawDedupTreePane(
 				Selected:       marked || dirFullyMarked,
 			})
 		}
-		connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
-		gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, chromeBlocked)
-		prefix := connectorPrefix
-		if gutter != "" {
-			prefix += gutter + " "
-		}
-		keptSubtree := d.Kind == DedupRowDir && p.KeptDirs[d.DirRel]
-		subtreeMark := keptSubtree || (d.Kind == DedupRowDir && p.MarkedDirs[d.DirRel])
-		fitW := pathW - len([]rune(prefix))
-		if subtreeMark {
-			fitW -= 2 // room for subtree mark suffix, like panellist.SuffixDecorationLen
-		}
-		pathText := primitive.FitPathForWidth(d.Display, max(fitW, 4))
-		_, rowBG, _ := lineStyle.Decompose()
-		connectorStyle := styles.PanelRowTreeConnector.Background(rowBG)
-		x := pathX
-		primitive.Text(screen, x, lineY, pathW, connectorPrefix, connectorStyle)
-		x += len([]rune(connectorPrefix))
-		if gutter != "" {
-			primitive.Text(screen, x, lineY, pathW-(x-pathX), gutter, gutterStyle)
-			x += len([]rune(gutter))
-			primitive.Text(screen, x, lineY, pathW-(x-pathX), " "+pathText, lineStyle)
-			x++ // leading space before pathText
-		} else {
-			primitive.Text(screen, x, lineY, pathW-(x-pathX), pathText, lineStyle)
-		}
-		if markX := x + len([]rune(pathText)) + 1; subtreeMark && markX < pathX+pathW {
-			var base tcell.Style
-			switch {
-			case keptSubtree:
-				base = styles.PanelDedupRowIndicatorKeepSubtree
-			case p.DangerMarkedDirs[d.DirRel]:
-				base = styles.PanelDedupRowAllMarked
-			case chromeBlocked:
-				base = styles.PanelBlockedRowSelected
-			default:
-				base = styles.PanelRowIndicatorSelectionSubtree
-			}
-			markStyle := lineStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
-			primitive.Text(screen, markX, lineY, 1, string(styles.SymbolFilelistSelectionSubtree()), markStyle)
-		}
+		drawDedupPathColumn(screen, styles, p, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked)
 		primitive.Text(screen, gapBeforeCountX, lineY, 1, "", lineStyle)
 
-		sizeText, countText := dedupRowDetailTexts(d)
-		detailStyle := dim
-		if rowSelected || kept || groupAllMarked || dirFullyMarked {
-			detailStyle = lineStyle
-		}
-		primitive.Text(screen, countColX, lineY, cols.countColW, fmt.Sprintf("%*s", cols.countColW, countText), detailStyle)
-		primitive.Text(screen, countColX+cols.countColW, lineY, 1, "", lineStyle)
-		primitive.Text(screen, sizeColX, lineY, cols.sizeColW, fmt.Sprintf("%*s", cols.sizeColW, sizeText), detailStyle)
-		primitive.Text(screen, innerRight, lineY, 1, "", lineStyle)
+		drawDedupDetailColumns(screen, cols, d, lineY, lineStyle, dim, rowSelected || kept || groupAllMarked || dirFullyMarked, innerRight)
 	}
+}
+
+// dedupRowFlags bundles the per-row booleans dedupRowStyle picks a style from.
+type dedupRowFlags struct {
+	RowSelected    bool
+	Kept           bool
+	Marked         bool
+	GroupAllMarked bool
+	DirFullyMarked bool
+}
+
+// dedupRowStyle picks the row's base and line styles from precomputed per-row flags, moved out
+// of drawDedupTreePane's two stacked flag→style switches. Pure function of flags.
+func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry DedupRow, f dedupRowFlags, chromeBlocked bool, base, dim tcell.Style, bg tcell.Color) tcell.Style {
+	rowBase := base
+	switch {
+	case p.ActiveGroup >= 0 && d.Kind == DedupRowFile && d.GroupIdx == p.ActiveGroup && !f.RowSelected:
+		rowBase = styles.PanelHint.Background(bg)
+	case p.ActiveGroup >= 0 && d.Kind == DedupRowDir && !entry.Expanded && p.HintDirs[d.DirRel]:
+		rowBase = styles.PanelHint.Background(bg)
+	case p.DimByGroup && d.GroupIdx != p.ActiveGroup:
+		rowBase = dim
+	}
+	lineStyle := rowBase
+	switch {
+	case f.Kept && f.RowSelected:
+		lineStyle = styles.PanelDedupRowCursorKeep
+	case f.Kept:
+		lineStyle = styles.PanelDedupRowKeep.Background(bg)
+	case f.GroupAllMarked && f.RowSelected:
+		lineStyle = styles.PanelDedupRowCursorAllMarked
+	case f.GroupAllMarked:
+		lineStyle = styles.PanelDedupRowAllMarked.Background(bg)
+	case f.RowSelected:
+		lineStyle = styles.PanelListingCursorStyle(rowBase, theme.PanelListingCursorOpts{
+			ChromeBlocked:  chromeBlocked,
+			FileListActive: p.Focused,
+			Selected:       f.Marked || f.DirFullyMarked,
+		})
+	case f.Marked, f.DirFullyMarked:
+		lineStyle = styles.PanelListingSelectedStyle(chromeBlocked).Background(bg)
+	}
+	return lineStyle
+}
+
+// drawDedupPathColumn paints the tree connector, expand/collapse gutter, fitted path text, and
+// trailing subtree-mark suffix for one row, moved out of drawDedupTreePane's per-row path
+// column block.
+func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked bool) {
+	connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
+	gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, chromeBlocked)
+	prefix := connectorPrefix
+	if gutter != "" {
+		prefix += gutter + " "
+	}
+	keptSubtree := d.Kind == DedupRowDir && p.KeptDirs[d.DirRel]
+	subtreeMark := keptSubtree || (d.Kind == DedupRowDir && p.MarkedDirs[d.DirRel])
+	fitW := pathW - len([]rune(prefix))
+	if subtreeMark {
+		fitW -= 2 // room for subtree mark suffix, like panellist.SuffixDecorationLen
+	}
+	pathText := primitive.FitPathForWidth(d.Display, max(fitW, 4))
+	_, rowBG, _ := lineStyle.Decompose()
+	connectorStyle := styles.PanelRowTreeConnector.Background(rowBG)
+	x := pathX
+	primitive.Text(screen, x, lineY, pathW, connectorPrefix, connectorStyle)
+	x += len([]rune(connectorPrefix))
+	if gutter != "" {
+		primitive.Text(screen, x, lineY, pathW-(x-pathX), gutter, gutterStyle)
+		x += len([]rune(gutter))
+		primitive.Text(screen, x, lineY, pathW-(x-pathX), " "+pathText, lineStyle)
+		x++ // leading space before pathText
+	} else {
+		primitive.Text(screen, x, lineY, pathW-(x-pathX), pathText, lineStyle)
+	}
+	if markX := x + len([]rune(pathText)) + 1; subtreeMark && markX < pathX+pathW {
+		var base tcell.Style
+		switch {
+		case keptSubtree:
+			base = styles.PanelDedupRowIndicatorKeepSubtree
+		case p.DangerMarkedDirs[d.DirRel]:
+			base = styles.PanelDedupRowAllMarked
+		case chromeBlocked:
+			base = styles.PanelBlockedRowSelected
+		default:
+			base = styles.PanelRowIndicatorSelectionSubtree
+		}
+		markStyle := lineStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
+		primitive.Text(screen, markX, lineY, 1, string(styles.SymbolFilelistSelectionSubtree()), markStyle)
+	}
+}
+
+// drawDedupDetailColumns paints the Count and Size trailing columns for one row, moved out of
+// drawDedupTreePane's detail-column paint block.
+func drawDedupDetailColumns(screen tcell.Screen, cols dedupListColumns, d DedupRowData, lineY int, lineStyle, dim tcell.Style, showLineStyle bool, innerRight int) {
+	sizeText, countText := dedupRowDetailTexts(d)
+	detailStyle := dim
+	if showLineStyle {
+		detailStyle = lineStyle
+	}
+	primitive.Text(screen, cols.countColX, lineY, cols.countColW, fmt.Sprintf("%*s", cols.countColW, countText), detailStyle)
+	primitive.Text(screen, cols.countColX+cols.countColW, lineY, 1, "", lineStyle)
+	primitive.Text(screen, cols.sizeColX, lineY, cols.sizeColW, fmt.Sprintf("%*s", cols.sizeColW, sizeText), detailStyle)
+	primitive.Text(screen, innerRight, lineY, 1, "", lineStyle)
 }
 
 // dedupEndLabel is the top-right border indicator: current tree mode / sort

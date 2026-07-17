@@ -259,28 +259,26 @@ func drawMenuBarRightTail(screen tcell.Screen, rect Rect, attention, perm string
 			screen.SetContent(gapX, rect.Y, ' ', nil, detailStyle)
 		}
 		startAtt := startPerm - 1 - len(attRunes)
-		for i, r := range attRunes {
-			x := startAtt + i
-			if x < rect.X {
-				continue
-			}
-			if x >= rect.X+rect.Width {
-				break
-			}
-			screen.SetContent(x, rect.Y, r, nil, alertStyle)
-		}
+		drawRunesClipped(screen, startAtt, rect.Y, attRunes, rect, alertStyle)
 		return
 	}
 	startAtt := last - len(attRunes) + 1
-	for i, r := range attRunes {
-		x := startAtt + i
+	drawRunesClipped(screen, startAtt, rect.Y, attRunes, rect, alertStyle)
+}
+
+// drawRunesClipped paints runes starting at column startX on row y, skipping cells left of
+// rect and stopping at the first cell at or past rect's right edge, moved out of
+// drawMenuBarRightTail's two identical bounds-checked attention-glyph paint loops.
+func drawRunesClipped(screen tcell.Screen, startX, y int, runes []rune, rect Rect, style tcell.Style) {
+	for i, r := range runes {
+		x := startX + i
 		if x < rect.X {
 			continue
 		}
 		if x >= rect.X+rect.Width {
 			break
 		}
-		screen.SetContent(x, rect.Y, r, nil, alertStyle)
+		screen.SetContent(x, y, r, nil, style)
 	}
 }
 

@@ -326,39 +326,31 @@ func (a *App) handleCommandsViewKey(event *tcell.EventKey) bool {
 			a.selectCommandsEdge(true)
 		}
 	case 1:
-		maxS := a.maxCommandsStdoutScroll()
-		switch event.Key() {
-		case tcell.KeyUp:
-			if a.model.CommandsView.StdoutScroll > 0 {
-				a.model.CommandsView.StdoutScroll--
-			}
-		case tcell.KeyDown:
-			if a.model.CommandsView.StdoutScroll < maxS {
-				a.model.CommandsView.StdoutScroll++
-			}
-		case tcell.KeyPgUp:
-			a.model.CommandsView.StdoutScroll = max(0, a.model.CommandsView.StdoutScroll-5)
-		case tcell.KeyPgDn:
-			a.model.CommandsView.StdoutScroll = min(maxS, a.model.CommandsView.StdoutScroll+5)
-		}
+		a.scrollCommandsPane(&a.model.CommandsView.StdoutScroll, a.maxCommandsStdoutScroll(), event.Key())
 	case 2:
-		maxS := a.maxCommandsStderrScroll()
-		switch event.Key() {
-		case tcell.KeyUp:
-			if a.model.CommandsView.StderrScroll > 0 {
-				a.model.CommandsView.StderrScroll--
-			}
-		case tcell.KeyDown:
-			if a.model.CommandsView.StderrScroll < maxS {
-				a.model.CommandsView.StderrScroll++
-			}
-		case tcell.KeyPgUp:
-			a.model.CommandsView.StderrScroll = max(0, a.model.CommandsView.StderrScroll-5)
-		case tcell.KeyPgDn:
-			a.model.CommandsView.StderrScroll = min(maxS, a.model.CommandsView.StderrScroll+5)
-		}
+		a.scrollCommandsPane(&a.model.CommandsView.StderrScroll, a.maxCommandsStderrScroll(), event.Key())
 	}
 	return false
+}
+
+// scrollCommandsPane applies an Up/Down/PgUp/PgDn key to a scroll offset clamped to
+// [0, maxScroll], collapsing the identical stdout/stderr pane scroll switches in
+// handleCommandsViewKey.
+func (a *App) scrollCommandsPane(scroll *int, maxScroll int, key tcell.Key) {
+	switch key {
+	case tcell.KeyUp:
+		if *scroll > 0 {
+			*scroll--
+		}
+	case tcell.KeyDown:
+		if *scroll < maxScroll {
+			*scroll++
+		}
+	case tcell.KeyPgUp:
+		*scroll = max(0, *scroll-5)
+	case tcell.KeyPgDn:
+		*scroll = min(maxScroll, *scroll+5)
+	}
 }
 
 func (a *App) clampCommandsFocusPane() {

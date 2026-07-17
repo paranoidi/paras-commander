@@ -714,47 +714,78 @@ func (h *Handler) applyJobEventBatch(batch []jobs.Event) {
 		return
 	}
 	viewJobs := h.model.ViewMode == ui.ViewJobs
-	var sawTerminal, sawProgress, sawBlocker, sawMarkUpdate bool
+	flags := h.scanBatchFlags(batch)
+	if flags.Terminal {
+		h.refreshTerminal = true
+		h.refreshProgress = false
+	} else if flags.Progress && !h.refreshTerminal {
+		h.refreshProgress = true
+	}
+	if flags.MarkUpdate {
+		h.SyncJobPathMarks()
+	}
+	if viewJobs {
+		h.SyncJobsList()
+		h.ensureJobsViewSelectionVisible()
+	} else if flags.Terminal || flags.Blocker || flags.MarkUpdate || flags.Progress {
+		h.listStale = true
+	}
+	h.affectVisible = viewJobs || h.batchAffectsVisible(flags)
+	h.lastBatchMenuBarStripOnly = !viewJobs && h.batchIsMenuBarStripOnly(flags)
+}
+
+// batchFlags summarizes what categories of event a batch contained, computed by
+// scanBatchFlags and consumed by applyJobEventBatch's post-loop bookkeeping.
+type batchFlags struct {
+	Terminal   bool
+	Progress   bool
+	Blocker    bool
+	MarkUpdate bool
+}
+
+// scanBatchFlags applies each event in the batch to UI model state (jobs.State, activity log,
+// job message) and reports which categories of event it contained, moved out of
+// applyJobEventBatch's accumulation loop.
+func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
+	var f batchFlags
 	for _, ev := range batch {
 		h.state.ApplyEvent(ev)
 		h.appendJobActivity(ev)
 		h.updateJobMessage(ev)
 		switch ev.Type {
 		case jobs.EventCompleted:
-			sawTerminal = true
+			f.Terminal = true
 			h.applyNewFileMarksForCompletedJob(ev.JobID)
 		case jobs.EventFailed, jobs.EventCanceled:
-			sawTerminal = true
+			f.Terminal = true
 		case jobs.EventProgress, jobs.EventScanProgress:
-			sawProgress = true
+			f.Progress = true
 		case jobs.EventJobBlockerRequest:
-			sawBlocker = true
+			f.Blocker = true
 		}
 		if jobbridge.EventUpdatesMarks(ev.Type) {
-			sawMarkUpdate = true
+			f.MarkUpdate = true
 		}
 	}
-	if sawTerminal {
-		h.refreshTerminal = true
-		h.refreshProgress = false
-	} else if sawProgress && !h.refreshTerminal {
-		h.refreshProgress = true
-	}
-	if sawMarkUpdate {
-		h.SyncJobPathMarks()
-	}
-	if viewJobs {
-		h.SyncJobsList()
-		h.ensureJobsViewSelectionVisible()
-	} else if sawTerminal || sawBlocker || sawMarkUpdate || sawProgress {
-		h.listStale = true
-	}
-	h.affectVisible = viewJobs || sawTerminal || sawBlocker ||
-		(sawMarkUpdate && (ui.PanelTouchedByJobs(h.model.Primary.PathString(), h.model.JobPathMarks) ||
+	return f
+}
+
+// batchAffectsVisible reports whether the batch requires an immediate visible-area repaint
+// (independent of whether the Jobs view itself is open — the caller ORs in viewJobs), moved
+// out of applyJobEventBatch's dense affectVisible boolean expression.
+func (h *Handler) batchAffectsVisible(f batchFlags) bool {
+	return f.Terminal || f.Blocker ||
+		(f.MarkUpdate && (ui.PanelTouchedByJobs(h.model.Primary.PathString(), h.model.JobPathMarks) ||
 			ui.PanelTouchedByJobs(h.model.Secondary.PathString(), h.model.JobPathMarks) ||
 			h.state.JobsWaitingDecision() > 0)) ||
-		(sawProgress && h.model.MenuBarLayoutReserved() && h.state.HasNonFinishedJob())
-	h.lastBatchMenuBarStripOnly = !viewJobs && sawProgress && !sawTerminal && !sawBlocker && !sawMarkUpdate &&
+		(f.Progress && h.model.MenuBarLayoutReserved() && h.state.HasNonFinishedJob())
+}
+
+// batchIsMenuBarStripOnly reports whether the batch only needs the menu-bar activity strip
+// repainted (progress with a live non-finished job, and nothing terminal/blocker/mark-related),
+// moved out of applyJobEventBatch's dense lastBatchMenuBarStripOnly boolean expression.
+func (h *Handler) batchIsMenuBarStripOnly(f batchFlags) bool {
+	return f.Progress && !f.Terminal && !f.Blocker && !f.MarkUpdate &&
 		h.model.MenuBarLayoutReserved() && h.state.HasNonFinishedJob()
 }
 

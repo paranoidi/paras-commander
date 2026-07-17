@@ -192,39 +192,11 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		if !c.Populated {
 			continue
 		}
-		var entries []localfs.Entry
-		var cursor, scroll int
-		var selState *panel.State
-		if c.Active {
-			selState = &p.Center
-			entries = p.Center.Entries
-			cursor = p.Center.Cursor
-			scroll = p.Center.ScrollOffset
-		} else {
-			selState = &p.Center
-			entries = c.Snapshot.Entries
-			cursor = c.Snapshot.Cursor
-			scroll = c.Snapshot.Scroll
-		}
-		entryIndex := scroll + row
-		if entryIndex < 0 || entryIndex >= len(entries) {
+		ce, ok := resolveCarouselColumnEntry(cp, row)
+		if !ok {
 			continue
 		}
-		entry := entries[entryIndex]
-		style := p.Styles.PanelListingEntryStyle(entry.Type, p.ChromeBlocked)
-		selected := selState.IsSelected(entry)
-		isCursor := entryIndex == cursor
-		if isCursor {
-			style = p.Styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
-				ChromeBlocked:     p.ChromeBlocked,
-				FileListActive:    p.FileListActive && !inactive,
-				CarouselInactive:  inactive,
-				Selected:          selected,
-				FilterUniqueMatch: p.FileListActive && !inactive && p.Center.FilterUniqueMatch(),
-			})
-		} else if selected {
-			style = p.Styles.PanelListingSelectedStyle(p.ChromeBlocked)
-		}
+		entry, selState, entryIndex, isCursor, selected, style := ce.Entry, ce.SelState, ce.EntryIndex, ce.IsCursor, ce.Selected, ce.Style
 		fillCols := 0
 		if !p.ChromeBlocked && diskDenom > 0 {
 			fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, p.DiskUsage.Source), diskDenom, col.Width)
@@ -252,12 +224,7 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		if c.Active && p.RenameMark != nil {
 			renameMark = p.RenameMark(entry)
 		}
-		rowSuffix := panellist.RowSuffix{
-			JobGlyph:         jobGlyph,
-			NewFileTier:      newFileTier,
-			RenameMark:       renameMark,
-			SubtreeSelection: subtree,
-		}
+		rowSuffix := panellist.NewRowSuffix(jobGlyph, newFileTier, renameMark, subtree)
 		var diskSrc DiskUsageSource
 		if p.DiskUsage.Active {
 			diskSrc = p.DiskUsage.Source
@@ -288,31 +255,10 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		}); len(suffixSpans) > 0 {
 			spans = append(suffixSpans, spans...)
 		}
-		if p.ShowIcons {
-			leftGutter := columnListLeadingGutter()
-			for i := 0; i < leftGutter; i++ {
-				screen.SetContent(col.X+i, y, ' ', nil, blendCell(i))
-			}
-			if p.PaintIcon != nil {
-				key := cursorKey
-				diskPending := false
-				diskExcluded := false
-				if p.DiskUsage.Active && p.DiskUsage.Source != nil && entry.Type == localfs.EntryDirectory {
-					diskPending = p.DiskUsage.Source.PendingForPanel(entry.Path, p.DiskUsage.PanelID)
-					diskExcluded = p.DiskUsage.Source.DiskScanExcluded(
-						entry.Path,
-						p.DiskUsage.DescendIntoMountPoints,
-						p.DiskUsage.ListingDevice,
-						p.DiskUsage.ListingDeviceValid,
-						p.DiskUsage.GoduIgnore,
-					)
-				}
-				p.PaintIcon(screen, col.X+leftGutter, y, entry, blendCell(leftGutter), key, diskPending, diskExcluded)
-			}
-		}
-		primitive.StyledTextCellwise(screen, listStart, y, listW, text, func(ci int) tcell.Style {
-			return blendCell(nameColOffset + ci)
-		}, spans)
+		drawCarouselRowIconAndText(screen, cp, carouselRowPaintState{
+			Y: y, Entry: entry, CursorKey: cursorKey, BlendCell: blendCell,
+			ListStart: listStart, ListW: listW, NameColOffset: nameColOffset, Text: text, Spans: spans,
+		})
 	}
 	if columnScrollbarNeeded(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset) {
 		metrics, _ := uiscrollbar.ComputeMetrics(total, visibleRows, offset)
@@ -329,6 +275,103 @@ func drawCarouselColumn(cp carouselColumnParams) {
 			Theme:      p.Styles,
 		})
 	}
+}
+
+// carouselColumnEntry bundles one row's entry lookup plus its resolved selection/cursor style.
+type carouselColumnEntry struct {
+	Entry      localfs.Entry
+	SelState   *panel.State
+	EntryIndex int
+	IsCursor   bool
+	Selected   bool
+	Style      tcell.Style
+}
+
+// resolveCarouselColumnEntry looks up the entry for one row (Active columns read the live
+// panel.State, inactive columns read the column's Snapshot) and resolves its style, moved out
+// of drawCarouselColumn's per-row entry+style resolution block. ok is false when the row is
+// past the end of the column's entries.
+func resolveCarouselColumnEntry(cp carouselColumnParams, row int) (carouselColumnEntry, bool) {
+	p, c, inactive := cp.Body, cp.C, cp.Inactive
+	var entries []localfs.Entry
+	var cursor, scroll int
+	var selState *panel.State
+	if c.Active {
+		selState = &p.Center
+		entries = p.Center.Entries
+		cursor = p.Center.Cursor
+		scroll = p.Center.ScrollOffset
+	} else {
+		selState = &p.Center
+		entries = c.Snapshot.Entries
+		cursor = c.Snapshot.Cursor
+		scroll = c.Snapshot.Scroll
+	}
+	entryIndex := scroll + row
+	if entryIndex < 0 || entryIndex >= len(entries) {
+		return carouselColumnEntry{}, false
+	}
+	entry := entries[entryIndex]
+	style := p.Styles.PanelListingEntryStyle(entry.Type, p.ChromeBlocked)
+	selected := selState.IsSelected(entry)
+	isCursor := entryIndex == cursor
+	if isCursor {
+		style = p.Styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
+			ChromeBlocked:     p.ChromeBlocked,
+			FileListActive:    p.FileListActive && !inactive,
+			CarouselInactive:  inactive,
+			Selected:          selected,
+			FilterUniqueMatch: p.FileListActive && !inactive && p.Center.FilterUniqueMatch(),
+		})
+	} else if selected {
+		style = p.Styles.PanelListingSelectedStyle(p.ChromeBlocked)
+	}
+	return carouselColumnEntry{Entry: entry, SelState: selState, EntryIndex: entryIndex, IsCursor: isCursor, Selected: selected, Style: style}, true
+}
+
+// carouselRowPaintState carries the per-row values drawCarouselColumn computes that the
+// icon-gutter and cellwise-text paint step need alongside the shared carouselColumnParams.
+type carouselRowPaintState struct {
+	Y             int
+	Entry         localfs.Entry
+	CursorKey     string
+	BlendCell     func(int) tcell.Style
+	ListStart     int
+	ListW         int
+	NameColOffset int
+	Text          string
+	Spans         []primitive.Span
+}
+
+// drawCarouselRowIconAndText paints the icon gutter (if enabled) and the cellwise-styled row
+// text, moved out of drawCarouselColumn's icon-gutter/cellwise paint block.
+func drawCarouselRowIconAndText(screen tcell.Screen, cp carouselColumnParams, rp carouselRowPaintState) {
+	p, col := cp.Body, cp.Col
+	if p.ShowIcons {
+		leftGutter := columnListLeadingGutter()
+		for i := 0; i < leftGutter; i++ {
+			screen.SetContent(col.X+i, rp.Y, ' ', nil, rp.BlendCell(i))
+		}
+		if p.PaintIcon != nil {
+			key := rp.CursorKey
+			diskPending := false
+			diskExcluded := false
+			if p.DiskUsage.Active && p.DiskUsage.Source != nil && rp.Entry.Type == localfs.EntryDirectory {
+				diskPending = p.DiskUsage.Source.PendingForPanel(rp.Entry.Path, p.DiskUsage.PanelID)
+				diskExcluded = p.DiskUsage.Source.DiskScanExcluded(
+					rp.Entry.Path,
+					p.DiskUsage.DescendIntoMountPoints,
+					p.DiskUsage.ListingDevice,
+					p.DiskUsage.ListingDeviceValid,
+					p.DiskUsage.GoduIgnore,
+				)
+			}
+			p.PaintIcon(screen, col.X+leftGutter, rp.Y, rp.Entry, rp.BlendCell(leftGutter), key, diskPending, diskExcluded)
+		}
+	}
+	primitive.StyledTextCellwise(screen, rp.ListStart, rp.Y, rp.ListW, rp.Text, func(ci int) tcell.Style {
+		return rp.BlendCell(rp.NameColOffset + ci)
+	}, rp.Spans)
 }
 
 // CursorIconKeyForTest exposes cursor icon theme keys for tests.

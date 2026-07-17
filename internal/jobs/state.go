@@ -374,51 +374,38 @@ func (s *State) ApplyEvent(ev Event) {
 			j.PendingBlocker = nil
 		}
 	case EventCompleted:
-		if s.active != nil && s.active.ID == ev.JobID {
-			s.active.Status = StatusCompleted
-			s.active.FinishedAt = time.Now()
-			s.active.PendingBlocker = nil
-			s.active = nil
-		}
-		if j := s.findJobUnlocked(ev.JobID); j != nil {
-			j.Status = StatusCompleted
-			j.PendingBlocker = nil
-			if j.FinishedAt.IsZero() {
-				j.FinishedAt = time.Now()
-			}
-		}
+		s.finalizeJob(ev.JobID, StatusCompleted, "")
 	case EventFailed:
-		if s.active != nil && s.active.ID == ev.JobID {
-			s.active.Status = StatusFailed
-			s.active.Error = ev.Error
-			s.active.FinishedAt = time.Now()
-			s.active.PendingBlocker = nil
-			s.active = nil
-		}
-		if j := s.findJobUnlocked(ev.JobID); j != nil {
-			j.Status = StatusFailed
-			j.PendingBlocker = nil
-			if j.Error == "" && ev.Error != "" {
-				j.Error = ev.Error
-			}
-			if j.FinishedAt.IsZero() {
-				j.FinishedAt = time.Now()
-			}
-		}
+		s.finalizeJob(ev.JobID, StatusFailed, ev.Error)
 	case EventCanceled:
-		if s.active != nil && s.active.ID == ev.JobID {
-			s.active.Status = StatusCanceled
-			s.active.FinishedAt = time.Now()
-			s.active.PendingBlocker = nil
-			s.active = nil
-		}
 		s.removeWaitingBlockerUnlocked(ev.JobID)
-		if job := s.findJobUnlocked(ev.JobID); job != nil {
-			job.Status = StatusCanceled
-			job.PendingBlocker = nil
-			if job.FinishedAt.IsZero() {
-				job.FinishedAt = time.Now()
-			}
+		s.finalizeJob(ev.JobID, StatusCanceled, "")
+	}
+}
+
+// finalizeJob updates the active job pointer (if it matches jobID) and the job's own record to
+// a terminal status, collapsing the shared "update active job + update finished copy" shape of
+// EventCompleted/EventFailed/EventCanceled. errMsg is only set for EventFailed (Completed and
+// Canceled pass ""); a non-empty errMsg overwrites the active job's error and fills the job
+// record's error only when still unset (first error wins).
+func (s *State) finalizeJob(jobID string, status Status, errMsg string) {
+	if s.active != nil && s.active.ID == jobID {
+		s.active.Status = status
+		if errMsg != "" {
+			s.active.Error = errMsg
+		}
+		s.active.FinishedAt = time.Now()
+		s.active.PendingBlocker = nil
+		s.active = nil
+	}
+	if j := s.findJobUnlocked(jobID); j != nil {
+		j.Status = status
+		j.PendingBlocker = nil
+		if errMsg != "" && j.Error == "" {
+			j.Error = errMsg
+		}
+		if j.FinishedAt.IsZero() {
+			j.FinishedAt = time.Now()
 		}
 	}
 }

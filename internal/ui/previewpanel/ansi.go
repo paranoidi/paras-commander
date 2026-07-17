@@ -89,6 +89,39 @@ func (b *sgrBuilder) style(base tcell.Style) tcell.Style {
 	return out
 }
 
+// parseExtendedColor parses the mode-selector + operand params of an SGR extended-color
+// sequence (the part after the 38/48 introducer: 5;N for indexed, 2;R;G;B for direct RGB),
+// starting at nums[i+1]. advance is how many extra params (2 or 4) were consumed so the caller
+// can move its loop index past them; it is 0 when the sequence is incomplete (nothing
+// consumed). ok is false when advance > 0 but the operand was out of range (color left unset,
+// but the params are still consumed) — this mirrors the identical fg/bg parsing that used to be
+// duplicated for cases 38 and 48.
+func parseExtendedColor(nums []int, i int) (color tcell.Color, advance int, ok bool) {
+	if i+1 >= len(nums) {
+		return 0, 0, false
+	}
+	switch nums[i+1] {
+	case 5:
+		if i+2 >= len(nums) {
+			return 0, 0, false
+		}
+		c := nums[i+2]
+		if c >= 0 && c <= 255 {
+			return tcell.PaletteColor(c), 2, true
+		}
+		return 0, 2, false
+	case 2:
+		if i+4 >= len(nums) {
+			return 0, 0, false
+		}
+		r := clamp8(nums[i+2])
+		g := clamp8(nums[i+3])
+		bb := clamp8(nums[i+4])
+		return tcell.NewRGBColor(r, g, bb), 4, true
+	}
+	return 0, 0, false
+}
+
 func applySGRParams(nums []int, b *sgrBuilder) {
 	for i := 0; i < len(nums); i++ {
 		n := nums[i]
@@ -127,50 +160,20 @@ func applySGRParams(nums []int, b *sgrBuilder) {
 		case n == 49:
 			b.bgSet = false
 		case n == 38:
-			if i+1 < len(nums) {
-				switch nums[i+1] {
-				case 5:
-					if i+2 < len(nums) {
-						c := nums[i+2]
-						if c >= 0 && c <= 255 {
-							b.fg = tcell.PaletteColor(c)
-							b.fgSet = true
-						}
-						i += 2
-					}
-				case 2:
-					if i+4 < len(nums) {
-						r := clamp8(nums[i+2])
-						g := clamp8(nums[i+3])
-						bb := clamp8(nums[i+4])
-						b.fg = tcell.NewRGBColor(r, g, bb)
-						b.fgSet = true
-						i += 4
-					}
+			if color, advance, ok := parseExtendedColor(nums, i); advance > 0 {
+				if ok {
+					b.fg = color
+					b.fgSet = true
 				}
+				i += advance
 			}
 		case n == 48:
-			if i+1 < len(nums) {
-				switch nums[i+1] {
-				case 5:
-					if i+2 < len(nums) {
-						c := nums[i+2]
-						if c >= 0 && c <= 255 {
-							b.bg = tcell.PaletteColor(c)
-							b.bgSet = true
-						}
-						i += 2
-					}
-				case 2:
-					if i+4 < len(nums) {
-						r := clamp8(nums[i+2])
-						g := clamp8(nums[i+3])
-						bb := clamp8(nums[i+4])
-						b.bg = tcell.NewRGBColor(r, g, bb)
-						b.bgSet = true
-						i += 4
-					}
+			if color, advance, ok := parseExtendedColor(nums, i); advance > 0 {
+				if ok {
+					b.bg = color
+					b.bgSet = true
 				}
+				i += advance
 			}
 		}
 	}
