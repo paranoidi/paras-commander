@@ -76,7 +76,7 @@ func assertStyleEqual(t *testing.T, label string, got, want tcell.Style) {
 
 func TestParsePaletteANSIIndex(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar": `{ fg = "marker", bg = "black" }`,
+		"menu.bar.active": `{ fg = "marker", bg = "black" }`,
 	})
 	dataStr := string(data)
 	dataStr = strings.Replace(dataStr, "yellow = \"#ffff00\"\n", "yellow = \"#ffff00\"\nmarker = 88\n", 1)
@@ -85,7 +85,7 @@ func TestParsePaletteANSIIndex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse() error = %v", err)
 	}
-	fg, _, _ := styles.MenuBar.Decompose()
+	fg, _, _ := styles.MenuBarActive.Decompose()
 	if fg != tcell.PaletteColor(88) {
 		t.Fatalf("palette foreground = %v, want ANSI index 88", fg)
 	}
@@ -93,7 +93,7 @@ func TestParsePaletteANSIIndex(t *testing.T) {
 
 func TestParseResolvesPaletteHexAndAttributes(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar": `{ fg = "white", bg = "#0a0b0c", underline = true, reverse = true }`,
+		"menu.bar.active": `{ fg = "white", bg = "#0a0b0c", underline = true, reverse = true }`,
 	})
 
 	styles, err := parse(data)
@@ -101,7 +101,7 @@ func TestParseResolvesPaletteHexAndAttributes(t *testing.T) {
 		t.Fatalf("parse() error = %v", err)
 	}
 
-	foreground, background, attrs := styles.MenuBar.Decompose()
+	foreground, background, attrs := styles.MenuBarActive.Decompose()
 	if foreground != tcell.NewRGBColor(1, 2, 3) {
 		t.Fatalf("foreground = %v, want palette white", foreground)
 	}
@@ -183,7 +183,7 @@ func TestParseLoadsPanelCursorIconFG(t *testing.T) {
 
 func TestParseRejectsIconOnNonCursorStyle(t *testing.T) {
 	data := testTheme(t, "badicon", nil, map[string]string{
-		"menu.bar": `{ fg = "white", bg = "black", icon = "yellow" }`,
+		"menu.bar.active": `{ fg = "white", bg = "black", icon = "yellow" }`,
 	})
 	_, err := parse(data)
 	if err == nil || !strings.Contains(err.Error(), `field "icon" is only allowed on panel cursor row styles`) {
@@ -365,7 +365,7 @@ func TestParseDialogSectionFlatKeys(t *testing.T) {
 
 func TestParsePaletteDefaultTerminalColor(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar": `{ fg = "termfg", bg = "termbg" }`,
+		"menu.bar.active": `{ fg = "termfg", bg = "termbg" }`,
 	})
 	dataStr := strings.Replace(string(data), "yellow = \"#ffff00\"\n", "yellow = \"#ffff00\"\ntermfg = \"default\"\ntermbg = \"default\"\n", 1)
 
@@ -373,7 +373,7 @@ func TestParsePaletteDefaultTerminalColor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse() error = %v", err)
 	}
-	fg, bg, _ := styles.MenuBar.Decompose()
+	fg, bg, _ := styles.MenuBarActive.Decompose()
 	if fg != tcell.ColorDefault || bg != tcell.ColorDefault {
 		t.Fatalf("menu fg=%v bg=%v, want ColorDefault for both", fg, bg)
 	}
@@ -381,7 +381,7 @@ func TestParsePaletteDefaultTerminalColor(t *testing.T) {
 
 func TestParseResolvesDefaultColorKeyword(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar": `{ fg = "default", bg = "default" }`,
+		"menu.bar.active": `{ fg = "default", bg = "default" }`,
 	})
 
 	styles, err := parse(data)
@@ -389,7 +389,7 @@ func TestParseResolvesDefaultColorKeyword(t *testing.T) {
 		t.Fatalf("parse() error = %v", err)
 	}
 
-	foreground, background, _ := styles.MenuBar.Decompose()
+	foreground, background, _ := styles.MenuBarActive.Decompose()
 	if foreground != tcell.ColorDefault {
 		t.Fatalf("foreground = %v, want ColorDefault", foreground)
 	}
@@ -400,7 +400,7 @@ func TestParseResolvesDefaultColorKeyword(t *testing.T) {
 
 func TestParseResolvesPartialDefaultColorKeyword(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar": `{ fg = "default", bg = "black" }`,
+		"menu.bar.active": `{ fg = "default", bg = "black" }`,
 	})
 
 	styles, err := parse(data)
@@ -408,7 +408,7 @@ func TestParseResolvesPartialDefaultColorKeyword(t *testing.T) {
 		t.Fatalf("parse() error = %v", err)
 	}
 
-	foreground, background, _ := styles.MenuBar.Decompose()
+	foreground, background, _ := styles.MenuBarActive.Decompose()
 	if foreground != tcell.ColorDefault {
 		t.Fatalf("foreground = %v, want ColorDefault", foreground)
 	}
@@ -419,7 +419,7 @@ func TestParseResolvesPartialDefaultColorKeyword(t *testing.T) {
 
 func TestParseRejectsInvalidColor(t *testing.T) {
 	data := testTheme(t, "custom", nil, map[string]string{
-		"menu.bar": `{ fg = "missing", bg = "black" }`,
+		"menu.bar.active": `{ fg = "missing", bg = "black" }`,
 	})
 
 	_, err := parse(data)
@@ -451,7 +451,7 @@ func TestThemeChoicesAppendsDiskOnlyThemes(t *testing.T) {
 func TestThemeChoicesDiskOverridesBuiltInName(t *testing.T) {
 	dir := t.TempDir()
 	data := testTheme(t, "default", nil, map[string]string{
-		"menu.bar": `{ fg = "white", bg = "#111111" }`,
+		"menu.bar.active": `{ fg = "white", bg = "#111111" }`,
 	})
 	if err := os.WriteFile(filepath.Join(dir, "local-default.toml"), data, 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
@@ -465,7 +465,7 @@ func TestThemeChoicesDiskOverridesBuiltInName(t *testing.T) {
 	for _, ch := range choices {
 		if ch.Name == "default" {
 			seen++
-			_, bg, _ = ch.Theme.MenuBar.Decompose()
+			_, bg, _ = ch.Theme.MenuBarActive.Decompose()
 		}
 	}
 	if seen != 1 {
@@ -505,7 +505,7 @@ func TestResolveFallsBackToDefaultForUnavailableTheme(t *testing.T) {
 func TestResolvePrefersDiskThemeOverBuiltInWithSameName(t *testing.T) {
 	dir := t.TempDir()
 	data := testTheme(t, "default", nil, map[string]string{
-		"menu.bar": `{ fg = "white", bg = "#112233" }`,
+		"menu.bar.active": `{ fg = "white", bg = "#112233" }`,
 	})
 	if err := os.WriteFile(filepath.Join(dir, "custom.toml"), data, 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
@@ -514,7 +514,7 @@ func TestResolvePrefersDiskThemeOverBuiltInWithSameName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
-	_, bg, _ := got.MenuBar.Decompose()
+	_, bg, _ := got.MenuBarActive.Decompose()
 	if want := tcell.NewRGBColor(0x11, 0x22, 0x33); bg != want {
 		t.Fatalf("disk theme bg = %v, want %v (#112233 from user themes dir)", bg, want)
 	}
@@ -523,7 +523,7 @@ func TestResolvePrefersDiskThemeOverBuiltInWithSameName(t *testing.T) {
 func TestResolveSkipsBrokenSiblingTomlFiles(t *testing.T) {
 	dir := t.TempDir()
 	good := testTheme(t, "default", nil, map[string]string{
-		"menu.bar": `{ fg = "white", bg = "#111111" }`,
+		"menu.bar.active": `{ fg = "white", bg = "#111111" }`,
 	})
 	if err := os.WriteFile(filepath.Join(dir, "good.toml"), good, 0o644); err != nil {
 		t.Fatalf("WriteFile good.toml: %v", err)
@@ -535,7 +535,7 @@ func TestResolveSkipsBrokenSiblingTomlFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
-	_, bg, _ := got.MenuBar.Decompose()
+	_, bg, _ := got.MenuBarActive.Decompose()
 	if want := tcell.NewRGBColor(0x11, 0x11, 0x11); bg != want {
 		t.Fatalf("bg = %v, want disk override %v", bg, want)
 	}

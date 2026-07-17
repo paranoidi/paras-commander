@@ -344,8 +344,8 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 	}
 	writeDiskDefault := func(hex string) {
 		content := strings.Replace(string(base),
-			`bar = { fg = "default" }`,
-			fmt.Sprintf(`bar = { fg = "white", bg = %q }`, hex), 1)
+			`bar.inactive = { fg = "bright_black" }`,
+			fmt.Sprintf(`bar.inactive = { fg = "white", bg = %q }`, hex), 1)
 		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
 		}
@@ -383,7 +383,7 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 	}
 
 	app.openThemeDialog()
-	_, bg1, _ := app.styles.MenuBar.Decompose()
+	_, bg1, _ := app.styles.MenuBarInactive.Decompose()
 	if want := tcell.NewRGBColor(0x11, 0x11, 0x11); bg1 != want {
 		t.Fatalf("initial preview bg = %v, want %v", bg1, want)
 	}
@@ -393,7 +393,7 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 	if quit {
 		t.Fatal("handleKey(F5) quit = true, want false")
 	}
-	_, bg2, _ := app.styles.MenuBar.Decompose()
+	_, bg2, _ := app.styles.MenuBarInactive.Decompose()
 	if want := tcell.NewRGBColor(0x22, 0x22, 0x22); bg2 != want {
 		t.Fatalf("after F5 bg = %v, want updated disk theme %v", bg2, want)
 	}

@@ -29,7 +29,8 @@ type NamedTheme struct {
 type Theme struct {
 	Name string
 
-	MenuBar              tcell.Style
+	MenuBarActive        tcell.Style
+	MenuBarInactive      tcell.Style
 	MenuBarSelected      tcell.Style
 	MenuDropdown         tcell.Style
 	MenuDropdownSelected tcell.Style
@@ -728,7 +729,8 @@ type styleSpec struct {
 }
 
 var requiredStyleKeys = []string{
-	"menu.bar",
+	"menu.bar.active",
+	"menu.bar.inactive",
 	"menu.bar.selected",
 	"menu.dropdown",
 	"menu.dropdown.selected",
@@ -1212,7 +1214,8 @@ func parse(data []byte) (Theme, error) {
 	return Theme{
 		Name: name,
 
-		MenuBar:              styles["menu.bar"],
+		MenuBarActive:        styles["menu.bar.active"],
+		MenuBarInactive:      styles["menu.bar.inactive"],
 		MenuBarSelected:      styles["menu.bar.selected"],
 		MenuDropdown:         styles["menu.dropdown"],
 		MenuDropdownSelected: styles["menu.dropdown.selected"],

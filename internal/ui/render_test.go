@@ -649,8 +649,8 @@ func TestRenderBlankMenuBarRowWhenModalDialogOpen(t *testing.T) {
 		t.Fatalf("menu row = %q, want blank (no menu labels)", top)
 	}
 	_, menuStyle, _ := screen.Get(0, 0)
-	if menuStyle != styles.MenuBar {
-		t.Fatalf("top-left cell style = %v, want MenuBar %v", menuStyle, styles.MenuBar)
+	if menuStyle != styles.MenuBarInactive {
+		t.Fatalf("top-left cell style = %v, want MenuBarInactive %v", menuStyle, styles.MenuBarInactive)
 	}
 	titlePrefix := tcelltest.TextAt(screen, 0, 1, 9)
 	if titlePrefix != "┌─ /tmp ─" {
@@ -1133,7 +1133,7 @@ func TestRenderStatusMessageLeavesMenuLabelsVisible(t *testing.T) {
 
 	// First menu label is " Left " — column 1 is 'L' in Menu style when menu pulldown is closed.
 	_, st, _ := screen.Get(1, 0)
-	if st != styles.MenuBar {
+	if st != styles.MenuBarInactive {
 		t.Fatalf("col 1 style = %v, want Menu (menu not covered by status fill)", st)
 	}
 	statusRow := layoutStatusMessageRowY(12)

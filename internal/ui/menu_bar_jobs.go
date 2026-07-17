@@ -54,7 +54,7 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 		return
 	}
 	for i := 0; i < totalWidth; i++ {
-		screen.SetContent(startX+i, y, ' ', nil, styles.MenuBar)
+		screen.SetContent(startX+i, y, ' ', nil, styles.MenuBarInactive)
 	}
 	wantProgress := strip.HasProgress && strip.ProgressFrac >= 0 && strip.ProgressFrac <= 1
 	if len(strip.QueueStatuses) == 0 && !wantProgress {
@@ -73,7 +73,7 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 		x++
 	}
 	if queueW > 0 && progW > 0 && x < startX+totalWidth {
-		screen.SetContent(x, y, ' ', nil, styles.MenuBar)
+		screen.SetContent(x, y, ' ', nil, styles.MenuBarInactive)
 		x++
 	}
 	doneSym := styles.SymbolMenuProgressDone()

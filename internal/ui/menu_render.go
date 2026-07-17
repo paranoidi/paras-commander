@@ -65,7 +65,7 @@ func menuBarRightTailRuneCount(attention, perm string, showMenuBarSpinner bool) 
 
 // drawMenuBarBlank fills the menu row with menu background and no labels (modal overlays block the menu).
 func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
-	primitive.Text(screen, rect.X, rect.Y, rect.Width, "", styles.MenuBar)
+	primitive.Text(screen, rect.X, rect.Y, rect.Width, "", styles.MenuBarInactive)
 	tailW := menuBarRightTailRuneCount(attention, perm, showMenuBarSpinner)
 	clipExclusive := menuBarMenusClipExclusive(rect, tailW)
 	gapStart := rect.X
@@ -78,13 +78,17 @@ func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsSt
 
 func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
 	x := rect.X
-	primitive.Text(screen, x, rect.Y, rect.Width, "", styles.MenuBar)
+	barStyle := styles.MenuBarInactive
+	if state.Open {
+		barStyle = styles.MenuBarActive
+	}
+	primitive.Text(screen, x, rect.Y, rect.Width, "", barStyle)
 	tailW := menuBarRightTailRuneCount(attention, perm, showMenuBarSpinner)
 	clipExclusive := menuBarMenusClipExclusive(rect, tailW)
 	for index, menuDefinition := range menus {
 		label := " " + menuDefinition.Label + " "
 		labelW := utf8.RuneCountInString(label)
-		style := styles.MenuBar
+		style := barStyle
 		accent := styles.MenuBarAccent
 		if state.Open && index == state.ActiveMenu {
 			style = styles.MenuBarSelected
@@ -182,7 +186,11 @@ func DrawMenuBarPermissionTailOnly(screen tcell.Screen, layout Layout, model Mod
 	if tailStart < rect.X {
 		tailStart = rect.X
 	}
-	primitive.Text(screen, tailStart, rect.Y, rect.X+rect.Width-tailStart, "", styles.MenuBar)
+	barStyle := styles.MenuBarInactive
+	if model.Menu.Open {
+		barStyle = styles.MenuBarActive
+	}
+	primitive.Text(screen, tailStart, rect.Y, rect.X+rect.Width-tailStart, "", barStyle)
 	drawMenuBarRightTail(screen, rect, model.MenuBarJobsAttention, model.MenuBarPermission, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showSpinner, model.SpinPhase)
 	return true
 }

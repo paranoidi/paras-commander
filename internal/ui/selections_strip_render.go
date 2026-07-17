@@ -146,7 +146,7 @@ func drawSelectionsStrip(
 
 	drawPanelListScrollbar(screen, rect,
 		panelScrollPos{ListTopY: rect.Y + 1, Visible: visibleRows, Total: len(paths), Offset: scroll},
-		scrollbarStyle, panelScrollbarShow(panelFileListActive, scrollbarShowInactive),
+		scrollbarStyle, panelScrollbarShow(panelFileListActive || stripFocused, scrollbarShowInactive),
 		stripFocused, chromeBlocked, chrome.Chrome.Frame, styles)
 }
 

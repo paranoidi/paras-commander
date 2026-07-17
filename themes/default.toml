@@ -21,7 +21,8 @@ bright_cyan = 14
 bright_white = 15
 
 [menu]
-bar = { fg = "default" }
+bar.active = { fg = "default" }
+bar.inactive = { fg = "bright_black" }
 bar.accent = { fg = "magenta", bold = true }
 bar.alert = { fg = "bright_red", bold = true }
 bar.selected = { fg = "black", bg = "cyan", bold = true }
