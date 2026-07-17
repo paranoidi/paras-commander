@@ -210,67 +210,81 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 	}
 
 	conflictVis := h.jobsViewConflictVisible()
+	fp := h.model.JobsView.FocusPane
+
+	if conflictVis && fp == 1 {
+		return h.handleJobsConflictPaneKey(event)
+	}
+
+	h.handleJobsPaneScrollKey(event, fp, conflictVis)
+	return false
+}
+
+// handleJobsConflictPaneKey handles key input while the conflict/blocker pane (FocusPane 1
+// when a conflict panel is visible) has focus: Alt+letter decision shortcuts and
+// Left/Right/Up/Down/Tab/Backtab/Enter navigation between the blocker dialog's buttons.
+func (h *Handler) handleJobsConflictPaneKey(event *tcell.EventKey) bool {
+	sel := h.selectedJobEntry()
+	maxB := ui.JobsBlockerMaxButtonIndex(sel)
+	disk := sel.PendingBlocker != nil && sel.PendingBlocker.Kind == jobs.BlockerKindDiskSpace
+
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		if disk {
+			switch event.Rune() {
+			case 'r', 'R':
+				h.submitJobsConflictDecision(jobs.DecisionRetry)
+				return false
+			case 'b', 'B':
+				h.submitJobsConflictDecision(jobs.DecisionCancel)
+				return false
+			}
+			return false
+		}
+		switch event.Rune() {
+		case 'o', 'O':
+			h.submitJobsConflictDecision(jobs.DecisionOverwrite)
+			return false
+		case 's', 'S':
+			h.submitJobsConflictDecision(jobs.DecisionSkip)
+			return false
+		case 'a', 'A':
+			h.submitJobsConflictDecision(jobs.DecisionOverwriteAll)
+			return false
+		case 'l', 'L':
+			h.submitJobsConflictDecision(jobs.DecisionSkipAll)
+			return false
+		case 'c', 'C':
+			h.submitJobsConflictDecision(jobs.DecisionCancel)
+			return false
+		}
+	}
+	switch event.Key() {
+	case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown, tcell.KeyTab, tcell.KeyBacktab:
+		if sel.PendingBlocker == nil {
+			return false
+		}
+		newFocus, handled := ui.JobBlockerDialogMoveFocus(*sel.PendingBlocker, h.model.JobsView.ConflictButtonFocus, event.Key())
+		if handled {
+			if newFocus > maxB {
+				newFocus = maxB
+			}
+			h.model.JobsView.ConflictButtonFocus = newFocus
+		}
+	case tcell.KeyEnter:
+		d := ui.JobBlockerDecisionFromFocus(sel, h.model.JobsView.ConflictButtonFocus)
+		h.submitJobsConflictDecision(d)
+	}
+	return false
+}
+
+// handleJobsPaneScrollKey handles Up/Down/PgUp/PgDn (and Home/End on the list pane) for
+// whichever pane currently has focus (list, detail, or activity). detailPane/activityPane
+// indices shift by one when the conflict panel is visible (see conflictVis).
+func (h *Handler) handleJobsPaneScrollKey(event *tcell.EventKey, fp int, conflictVis bool) {
 	detailPane, activityPane := 1, 2
 	if conflictVis {
 		detailPane, activityPane = 2, 3
 	}
-
-	fp := h.model.JobsView.FocusPane
-
-	if conflictVis && fp == 1 {
-		sel := h.selectedJobEntry()
-		maxB := ui.JobsBlockerMaxButtonIndex(sel)
-		disk := sel.PendingBlocker != nil && sel.PendingBlocker.Kind == jobs.BlockerKindDiskSpace
-
-		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-			if disk {
-				switch event.Rune() {
-				case 'r', 'R':
-					h.submitJobsConflictDecision(jobs.DecisionRetry)
-					return false
-				case 'b', 'B':
-					h.submitJobsConflictDecision(jobs.DecisionCancel)
-					return false
-				}
-				return false
-			}
-			switch event.Rune() {
-			case 'o', 'O':
-				h.submitJobsConflictDecision(jobs.DecisionOverwrite)
-				return false
-			case 's', 'S':
-				h.submitJobsConflictDecision(jobs.DecisionSkip)
-				return false
-			case 'a', 'A':
-				h.submitJobsConflictDecision(jobs.DecisionOverwriteAll)
-				return false
-			case 'l', 'L':
-				h.submitJobsConflictDecision(jobs.DecisionSkipAll)
-				return false
-			case 'c', 'C':
-				h.submitJobsConflictDecision(jobs.DecisionCancel)
-				return false
-			}
-		}
-		switch event.Key() {
-		case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown, tcell.KeyTab, tcell.KeyBacktab:
-			if sel.PendingBlocker == nil {
-				return false
-			}
-			newFocus, handled := ui.JobBlockerDialogMoveFocus(*sel.PendingBlocker, h.model.JobsView.ConflictButtonFocus, event.Key())
-			if handled {
-				if newFocus > maxB {
-					newFocus = maxB
-				}
-				h.model.JobsView.ConflictButtonFocus = newFocus
-			}
-		case tcell.KeyEnter:
-			d := ui.JobBlockerDecisionFromFocus(sel, h.model.JobsView.ConflictButtonFocus)
-			h.submitJobsConflictDecision(d)
-		}
-		return false
-	}
-
 	switch fp {
 	case 0:
 		switch event.Key() {
@@ -324,7 +338,6 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 	default:
 		// Defensive: unknown pane index.
 	}
-	return false
 }
 
 // MoveSelection moves the jobs-list primary-pane cursor by delta rows (clamped), scrolling

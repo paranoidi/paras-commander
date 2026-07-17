@@ -220,140 +220,177 @@ func Decode(data []byte) (*MenuFile, error) {
 	pinnedKeys := make(map[rune]int)
 	defaultCount := 0
 	for i, e := range raw.Entry {
-		title := strings.TrimSpace(e.Title)
-		if title == "" {
-			return nil, fmt.Errorf("menu.toml: entry %d: title is required", i)
-		}
-		if strings.TrimSpace(e.Command) == "" {
-			return nil, entryError(i, title, "command is required")
-		}
-		if err := validateEntryKey(i, title, e.Key, pinnedKeys); err != nil {
+		entry, err := decodeEntry(i, e, out.ShellPatterns, pinnedKeys, &defaultCount)
+		if err != nil {
 			return nil, err
 		}
-		if e.Default {
-			defaultCount++
-			if defaultCount > 1 {
-				return nil, entryError(i, title, "only one entry may set default = true")
-			}
-		}
-
-		interactive := false
-		if e.Interactive != nil && e.Interactive.Set {
-			interactive = e.Interactive.Value
-		}
-		detach := false
-		if e.Detach != nil && e.Detach.Set {
-			detach = e.Detach.Value
-		}
-		background := false
-		if e.Background != nil && e.Background.Set {
-			background = e.Background.Value
-		}
-		shell := false
-		if e.Shell != nil && e.Shell.Set {
-			shell = e.Shell.Value
-		}
-		dialog := false
-		if e.Dialog != nil && e.Dialog.Set {
-			dialog = e.Dialog.Value
-		}
-		modeCount := 0
-		if interactive {
-			modeCount++
-		}
-		if detach {
-			modeCount++
-		}
-		if background {
-			modeCount++
-		}
-		if dialog {
-			modeCount++
-		}
-		if modeCount > 1 {
-			return nil, entryError(i, title, "interactive, detach, background, and dialog are mutually exclusive")
-		}
-		pool := strings.TrimSpace(e.Pool)
-		if pool != "" && (interactive || detach) {
-			return nil, entryError(i, title, "pool cannot be combined with interactive or detach")
-		}
-
-		dialogWidth := ""
-		if e.DialogWidth != nil && e.DialogWidth.Set {
-			dialogWidth = e.DialogWidth.Value
-			if err := validateDimSpec(dialogWidth); err != nil {
-				return nil, entryError(i, title, fmt.Sprintf("dialog_width: %v", err))
-			}
-		}
-		dialogHeight := ""
-		if e.DialogHeight != nil && e.DialogHeight.Set {
-			dialogHeight = e.DialogHeight.Value
-			if err := validateDimSpec(dialogHeight); err != nil {
-				return nil, entryError(i, title, fmt.Sprintf("dialog_height: %v", err))
-			}
-		}
-
-		runForEach := make([]string, 0, len(e.RunForEach))
-		seen := map[string]bool{}
-		for _, raw := range e.RunForEach {
-			v := strings.ToLower(strings.TrimSpace(raw))
-			if v == "" {
-				continue
-			}
-			if v != "files" && v != "dirs" {
-				return nil, entryError(i, title, fmt.Sprintf("run_for_each: invalid value %q (want files/dirs)", raw))
-			}
-			if !seen[v] {
-				seen[v] = true
-				runForEach = append(runForEach, v)
-			}
-		}
-		if len(runForEach) > 0 && (interactive || detach) {
-			return nil, entryError(i, title, "run_for_each cannot be combined with interactive or detach")
-		}
-		if len(runForEach) > 0 && dialog {
-			return nil, entryError(i, title, "run_for_each cannot be combined with dialog")
-		}
-		cmd := strings.TrimSpace(e.Command)
-		if len(runForEach) > 0 && !cmdmacro.CommandRequiresMacro(cmd, 'f') {
-			return nil, entryError(i, title, "run_for_each requires %f in command")
-		}
-
-		var whenList []string
-		if e.When != nil && e.When.Set {
-			for _, w := range e.When.Value {
-				w = strings.TrimSpace(w)
-				if w == "" {
-					continue
-				}
-				whenList = append(whenList, w)
-			}
-		}
-		entryShellPatterns := resolveShellPatterns(out.ShellPatterns, e.ShellPatterns)
-		if err := entrymatch.ValidateWhenExprs(whenList, entryShellPatterns); err != nil {
-			return nil, entryError(i, title, fmt.Sprintf("when: %v", err))
-		}
-
-		out.Entries = append(out.Entries, MenuEntry{
-			Key:           strings.TrimSpace(e.Key),
-			Title:         title,
-			Command:       cmd,
-			Toast:         strings.TrimSpace(e.Toast),
-			When:          whenList,
-			RunForEach:    runForEach,
-			Default:       e.Default,
-			Interactive:   interactive,
-			Detach:        detach,
-			Background:    background,
-			Pool:          pool,
-			Shell:         shell,
-			ShellPatterns: entryShellPatterns,
-			Dialog:        dialog,
-			DialogWidth:   dialogWidth,
-			DialogHeight:  dialogHeight,
-		})
+		out.Entries = append(out.Entries, entry)
 	}
 	return out, nil
+}
+
+// entryModes holds one entry's resolved interactive/detach/background/dialog/shell booleans,
+// as decoded by validateEntryModes.
+type entryModes struct {
+	interactive bool
+	detach      bool
+	background  bool
+	dialog      bool
+	shell       bool
+}
+
+// validateEntryModes resolves e's mode booleans (MC-style 0/1 or TOML bool, defaulting to
+// false when unset) and enforces that interactive/detach/background/dialog are mutually
+// exclusive and that pool cannot be combined with interactive or detach.
+func validateEntryModes(i int, title string, e menuEntry, pool string) (entryModes, error) {
+	m := entryModes{}
+	if e.Interactive != nil && e.Interactive.Set {
+		m.interactive = e.Interactive.Value
+	}
+	if e.Detach != nil && e.Detach.Set {
+		m.detach = e.Detach.Value
+	}
+	if e.Background != nil && e.Background.Set {
+		m.background = e.Background.Value
+	}
+	if e.Shell != nil && e.Shell.Set {
+		m.shell = e.Shell.Value
+	}
+	if e.Dialog != nil && e.Dialog.Set {
+		m.dialog = e.Dialog.Value
+	}
+	modeCount := 0
+	if m.interactive {
+		modeCount++
+	}
+	if m.detach {
+		modeCount++
+	}
+	if m.background {
+		modeCount++
+	}
+	if m.dialog {
+		modeCount++
+	}
+	if modeCount > 1 {
+		return entryModes{}, entryError(i, title, "interactive, detach, background, and dialog are mutually exclusive")
+	}
+	if pool != "" && (m.interactive || m.detach) {
+		return entryModes{}, entryError(i, title, "pool cannot be combined with interactive or detach")
+	}
+	return m, nil
+}
+
+// decodeRunForEach lowercases/dedupes rawValues into the files/dirs run_for_each list and
+// enforces its combination rules with interactive/detach/dialog and the required %f macro.
+func decodeRunForEach(i int, title string, rawValues []string, interactive, detach, dialog bool, cmd string) ([]string, error) {
+	runForEach := make([]string, 0, len(rawValues))
+	seen := map[string]bool{}
+	for _, raw := range rawValues {
+		v := strings.ToLower(strings.TrimSpace(raw))
+		if v == "" {
+			continue
+		}
+		if v != "files" && v != "dirs" {
+			return nil, entryError(i, title, fmt.Sprintf("run_for_each: invalid value %q (want files/dirs)", raw))
+		}
+		if !seen[v] {
+			seen[v] = true
+			runForEach = append(runForEach, v)
+		}
+	}
+	if len(runForEach) > 0 && (interactive || detach) {
+		return nil, entryError(i, title, "run_for_each cannot be combined with interactive or detach")
+	}
+	if len(runForEach) > 0 && dialog {
+		return nil, entryError(i, title, "run_for_each cannot be combined with dialog")
+	}
+	if len(runForEach) > 0 && !cmdmacro.CommandRequiresMacro(cmd, 'f') {
+		return nil, entryError(i, title, "run_for_each requires %f in command")
+	}
+	return runForEach, nil
+}
+
+// decodeEntry validates and converts one raw [[entry]] table (index i) into a MenuEntry.
+// defaultCount is shared across all entries in the file to enforce "only one default = true".
+func decodeEntry(i int, e menuEntry, shellPatternsDefault bool, pinnedKeys map[rune]int, defaultCount *int) (MenuEntry, error) {
+	title := strings.TrimSpace(e.Title)
+	if title == "" {
+		return MenuEntry{}, fmt.Errorf("menu.toml: entry %d: title is required", i)
+	}
+	if strings.TrimSpace(e.Command) == "" {
+		return MenuEntry{}, entryError(i, title, "command is required")
+	}
+	if err := validateEntryKey(i, title, e.Key, pinnedKeys); err != nil {
+		return MenuEntry{}, err
+	}
+	if e.Default {
+		(*defaultCount)++
+		if *defaultCount > 1 {
+			return MenuEntry{}, entryError(i, title, "only one entry may set default = true")
+		}
+	}
+
+	pool := strings.TrimSpace(e.Pool)
+	modes, err := validateEntryModes(i, title, e, pool)
+	if err != nil {
+		return MenuEntry{}, err
+	}
+
+	dialogWidth := ""
+	if e.DialogWidth != nil && e.DialogWidth.Set {
+		dialogWidth = e.DialogWidth.Value
+		if err := validateDimSpec(dialogWidth); err != nil {
+			return MenuEntry{}, entryError(i, title, fmt.Sprintf("dialog_width: %v", err))
+		}
+	}
+	dialogHeight := ""
+	if e.DialogHeight != nil && e.DialogHeight.Set {
+		dialogHeight = e.DialogHeight.Value
+		if err := validateDimSpec(dialogHeight); err != nil {
+			return MenuEntry{}, entryError(i, title, fmt.Sprintf("dialog_height: %v", err))
+		}
+	}
+
+	cmd := strings.TrimSpace(e.Command)
+	runForEach, err := decodeRunForEach(i, title, e.RunForEach, modes.interactive, modes.detach, modes.dialog, cmd)
+	if err != nil {
+		return MenuEntry{}, err
+	}
+
+	var whenList []string
+	if e.When != nil && e.When.Set {
+		for _, w := range e.When.Value {
+			w = strings.TrimSpace(w)
+			if w == "" {
+				continue
+			}
+			whenList = append(whenList, w)
+		}
+	}
+	entryShellPatterns := resolveShellPatterns(shellPatternsDefault, e.ShellPatterns)
+	if err := entrymatch.ValidateWhenExprs(whenList, entryShellPatterns); err != nil {
+		return MenuEntry{}, entryError(i, title, fmt.Sprintf("when: %v", err))
+	}
+
+	return MenuEntry{
+		Key:           strings.TrimSpace(e.Key),
+		Title:         title,
+		Command:       cmd,
+		Toast:         strings.TrimSpace(e.Toast),
+		When:          whenList,
+		RunForEach:    runForEach,
+		Default:       e.Default,
+		Interactive:   modes.interactive,
+		Detach:        modes.detach,
+		Background:    modes.background,
+		Pool:          pool,
+		Shell:         modes.shell,
+		ShellPatterns: entryShellPatterns,
+		Dialog:        modes.dialog,
+		DialogWidth:   dialogWidth,
+		DialogHeight:  dialogHeight,
+	}, nil
 }
 
 func validateMenuStructure(top map[string]interface{}) error {

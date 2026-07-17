@@ -180,72 +180,8 @@ func ActivityFailureLabel(ev jobs.Event) string {
 // TransferFunc builds the job worker transfer function from config.
 func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
-		opts := ops.Options{
-			PreservePermissions:        job.PreservePermissions,
-			PreserveTimestamps:         job.PreserveTimestamps,
-			CopyBufferKiB:              opsCfg.CopyBufferKiB,
-			SyncAfterEachFile:          opsCfg.SyncAfterEachFile,
-			DiskSpaceCheckMinFileBytes: opsCfg.DiskSpaceCheckMinFileBytes,
-			CowFileCloning:             opsCfg.CowFileCloning,
-			CopyFileRange:              opsCfg.CopyFileRange,
-			SparseFileCopy:             opsCfg.SparseFileCopy,
-			PreallocateDestination:     opsCfg.PreallocateDestination,
-			PreallocateMinFileBytes:    opsCfg.PreallocateMinFileBytes,
-			SyncAtJobEnd:               opsCfg.SyncAtJobEnd,
-			SyncMinFileKiB:             opsCfg.SyncMinFileKiB,
-			FlatDestNames:              job.FlatDestNames(),
-		}
-		if job.Destination.IsRemote() {
-			opts.CowFileCloning = false
-			opts.CopyFileRange = false
-			opts.SparseFileCopy = false
-			opts.PreallocateDestination = false
-		}
-		for _, src := range job.Sources {
-			if src.IsRemote() {
-				opts.CowFileCloning = false
-				opts.CopyFileRange = false
-				opts.SparseFileCopy = false
-				opts.PreallocateDestination = false
-				break
-			}
-		}
-		throttle := ops.ProgressEmitThrottle{
-			MinBytes:    int64(jobsCfg.WorkerProgressMinBytes),
-			MinInterval: time.Duration(jobsCfg.WorkerProgressMinIntervalMS) * time.Millisecond,
-		}
-		resolver := func(src, dst string, facts ops.FileConflictFacts) (bool, error) {
-			kind := facts.Kind
-			if kind == "" {
-				kind = "file"
-			}
-			req := jobs.ConflictRequest{
-				JobID:           job.ID,
-				Source:          src,
-				Destination:     dst,
-				ExistingDetails: kind + " exists",
-				SourceSize:      ops.FormatConflictSize(facts.SourceSize),
-				SourceTime:      ops.FormatConflictTime(facts.SourceMod),
-				DestSize:        ops.FormatConflictSize(facts.DestSize),
-				DestTime:        ops.FormatConflictTime(facts.DestMod),
-			}
-			decision := waitBlocker(jobs.BlockerRequest{
-				Kind:     jobs.BlockerKindConflict,
-				Conflict: &req,
-			})
-			switch decision {
-			case jobs.DecisionOverwrite, jobs.DecisionOverwriteAll:
-				return true, nil
-			case jobs.DecisionSkip, jobs.DecisionSkipAll:
-				return false, nil
-			case jobs.DecisionCancel:
-				return false, jobs.ErrUserCanceled
-			case jobs.DecisionRetry:
-				return false, fmt.Errorf("unexpected retry decision for file conflict")
-			default:
-				return false, nil
-			}
-		}
+		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg)
+		resolver := newConflictResolver(job, waitBlocker)
 		opsPlan := PlanItemsToOps(job.Plan)
 		var planErr error
 		// totalBytes starts from job.TotalBytes (set during the pre-scan phase, which
@@ -289,80 +225,18 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 				CurrentDestPath: destPath,
 			})
 		}
-		var doneFiles int
-		var doneBytes int64
-		var err error
-		switch job.Type {
-		case jobs.TypeCopy:
-			if planErr != nil {
-				doneFiles, doneBytes, err = ops.ExecuteCopy(ctx, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
-			} else {
-				doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlan(ctx, opsPlan, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
-			}
-		case jobs.TypeMove, jobs.TypeFlatten:
-			if len(opsPlan) > 0 {
-				doneFiles, doneBytes, err = ops.ExecuteMoveWithPlan(ctx, opsPlan, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
-			} else {
-				doneFiles, doneBytes, err = ops.ExecuteMove(ctx, job.Sources, job.Destination, opts, throttle, progress, resolver, waitBlocker)
-			}
-			if err == nil && job.Type == jobs.TypeFlatten && job.FlattenRemoveEmpty {
-				if cleanErr := ops.RemoveEmptyDirsUnder(ctx, job.FlattenRoots); cleanErr != nil {
-					err = cleanErr
-				}
-			}
-		case jobs.TypeDelete:
-			emit(jobs.Event{
-				Type:       jobs.EventPlanTotals,
-				JobID:      job.ID,
-				Status:     jobs.StatusRunning,
-				TotalFiles: len(job.Sources),
-				TotalBytes: 0,
-			})
-			deleteProgress := func(path string, df int, db int64) {
-				emit(jobs.Event{
-					Type:        jobs.EventProgress,
-					JobID:       job.ID,
-					Status:      jobs.StatusRunning,
-					DoneFiles:   df,
-					DoneBytes:   db,
-					CurrentPath: path,
-				})
-			}
-			doneFiles, doneBytes, err = ops.ExecuteDeletePaths(ctx, pathloc.Strings(job.Sources), deleteProgress)
-			if err == nil && job.DeleteRemoveEmptyDirs {
-				if cleanErr := ops.RemoveEmptyDirsUnder(ctx, uniqueParents(job.Sources)); cleanErr != nil {
-					err = cleanErr
-				}
-			}
-		case jobs.TypeExtract:
-			emit(jobs.Event{
-				Type:       jobs.EventPlanTotals,
-				JobID:      job.ID,
-				Status:     jobs.StatusRunning,
-				TotalFiles: len(job.Sources),
-				TotalBytes: 0,
-			})
-			tc := archive.ProbeToolchain()
-			plan, _, extractPlanErr := ops.PlanExtract(pathloc.Strings(job.Sources), job.Destination.String(), tc)
-			if extractPlanErr != nil {
-				err = extractPlanErr
-			} else {
-				extractProgress := func(path string, df int) {
-					emit(jobs.Event{
-						Type:        jobs.EventProgress,
-						JobID:       job.ID,
-						Status:      jobs.StatusRunning,
-						DoneFiles:   df,
-						DoneBytes:   0,
-						CurrentPath: path,
-					})
-				}
-				doneFiles, err = ops.ExecuteExtract(ctx, plan, extractProgress)
-				doneBytes = 0
-			}
-		default:
-			return fmt.Errorf("unknown job type: %s", job.Type)
-		}
+		doneFiles, doneBytes, err := executeJobByType(transferExecCtx{
+			ctx:         ctx,
+			job:         job,
+			opsPlan:     opsPlan,
+			planErr:     planErr,
+			opts:        opts,
+			throttle:    throttle,
+			progress:    progress,
+			resolver:    resolver,
+			waitBlocker: waitBlocker,
+			emit:        emit,
+		})
 		if err == nil {
 			// Final tally goes through emit (like every other progress update in this
 			// function) rather than writing job fields directly: job.Status transitions
@@ -379,6 +253,179 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 		}
 		return err
 	}
+}
+
+// buildTransferOptions builds the ops.Options and progress-emit throttle for a transfer job.
+// CoW cloning / copy_file_range / sparse-file copy / preallocation are local-filesystem-only
+// optimizations, so they're stripped when either the destination or any source is remote.
+func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) (ops.Options, ops.ProgressEmitThrottle) {
+	opts := ops.Options{
+		PreservePermissions:        job.PreservePermissions,
+		PreserveTimestamps:         job.PreserveTimestamps,
+		CopyBufferKiB:              opsCfg.CopyBufferKiB,
+		SyncAfterEachFile:          opsCfg.SyncAfterEachFile,
+		DiskSpaceCheckMinFileBytes: opsCfg.DiskSpaceCheckMinFileBytes,
+		CowFileCloning:             opsCfg.CowFileCloning,
+		CopyFileRange:              opsCfg.CopyFileRange,
+		SparseFileCopy:             opsCfg.SparseFileCopy,
+		PreallocateDestination:     opsCfg.PreallocateDestination,
+		PreallocateMinFileBytes:    opsCfg.PreallocateMinFileBytes,
+		SyncAtJobEnd:               opsCfg.SyncAtJobEnd,
+		SyncMinFileKiB:             opsCfg.SyncMinFileKiB,
+		FlatDestNames:              job.FlatDestNames(),
+	}
+	if job.Destination.IsRemote() {
+		opts.CowFileCloning = false
+		opts.CopyFileRange = false
+		opts.SparseFileCopy = false
+		opts.PreallocateDestination = false
+	}
+	for _, src := range job.Sources {
+		if src.IsRemote() {
+			opts.CowFileCloning = false
+			opts.CopyFileRange = false
+			opts.SparseFileCopy = false
+			opts.PreallocateDestination = false
+			break
+		}
+	}
+	throttle := ops.ProgressEmitThrottle{
+		MinBytes:    int64(jobsCfg.WorkerProgressMinBytes),
+		MinInterval: time.Duration(jobsCfg.WorkerProgressMinIntervalMS) * time.Millisecond,
+	}
+	return opts, throttle
+}
+
+// newConflictResolver builds the per-file conflict resolver passed to ops.Execute*: it turns a
+// file conflict into a jobs.BlockerRequest, blocks on waitBlocker for the user's decision, and
+// translates that decision into ops' (overwrite bool, error) resolver contract.
+func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) func(src, dst string, facts ops.FileConflictFacts) (bool, error) {
+	return func(src, dst string, facts ops.FileConflictFacts) (bool, error) {
+		kind := facts.Kind
+		if kind == "" {
+			kind = "file"
+		}
+		req := jobs.ConflictRequest{
+			JobID:           job.ID,
+			Source:          src,
+			Destination:     dst,
+			ExistingDetails: kind + " exists",
+			SourceSize:      ops.FormatConflictSize(facts.SourceSize),
+			SourceTime:      ops.FormatConflictTime(facts.SourceMod),
+			DestSize:        ops.FormatConflictSize(facts.DestSize),
+			DestTime:        ops.FormatConflictTime(facts.DestMod),
+		}
+		decision := waitBlocker(jobs.BlockerRequest{
+			Kind:     jobs.BlockerKindConflict,
+			Conflict: &req,
+		})
+		switch decision {
+		case jobs.DecisionOverwrite, jobs.DecisionOverwriteAll:
+			return true, nil
+		case jobs.DecisionSkip, jobs.DecisionSkipAll:
+			return false, nil
+		case jobs.DecisionCancel:
+			return false, jobs.ErrUserCanceled
+		case jobs.DecisionRetry:
+			return false, fmt.Errorf("unexpected retry decision for file conflict")
+		default:
+			return false, nil
+		}
+	}
+}
+
+// transferExecCtx bundles the parameters executeJobByType needs to run the ops.Execute* call
+// for job.Type; it exists purely to keep that function's signature manageable.
+type transferExecCtx struct {
+	ctx         context.Context
+	job         *jobs.Job
+	opsPlan     []ops.PlanItem
+	planErr     error
+	opts        ops.Options
+	throttle    ops.ProgressEmitThrottle
+	progress    func(sourcePath, destPath string, doneFiles int, doneBytes int64)
+	resolver    func(src, dst string, facts ops.FileConflictFacts) (bool, error)
+	waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision
+	emit        func(jobs.Event)
+}
+
+// executeJobByType runs the ops.Execute* call matching tc.job.Type (copy/move/flatten use the
+// pre-built plan when available; delete/extract build and emit their own PlanTotals since they
+// don't take a shared plan).
+func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err error) {
+	job := tc.job
+	switch job.Type {
+	case jobs.TypeCopy:
+		if tc.planErr != nil {
+			doneFiles, doneBytes, err = ops.ExecuteCopy(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.waitBlocker)
+		} else {
+			doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlan(tc.ctx, tc.opsPlan, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.waitBlocker)
+		}
+	case jobs.TypeMove, jobs.TypeFlatten:
+		if len(tc.opsPlan) > 0 {
+			doneFiles, doneBytes, err = ops.ExecuteMoveWithPlan(tc.ctx, tc.opsPlan, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.waitBlocker)
+		} else {
+			doneFiles, doneBytes, err = ops.ExecuteMove(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.waitBlocker)
+		}
+		if err == nil && job.Type == jobs.TypeFlatten && job.FlattenRemoveEmpty {
+			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, job.FlattenRoots); cleanErr != nil {
+				err = cleanErr
+			}
+		}
+	case jobs.TypeDelete:
+		tc.emit(jobs.Event{
+			Type:       jobs.EventPlanTotals,
+			JobID:      job.ID,
+			Status:     jobs.StatusRunning,
+			TotalFiles: len(job.Sources),
+			TotalBytes: 0,
+		})
+		deleteProgress := func(path string, df int, db int64) {
+			tc.emit(jobs.Event{
+				Type:        jobs.EventProgress,
+				JobID:       job.ID,
+				Status:      jobs.StatusRunning,
+				DoneFiles:   df,
+				DoneBytes:   db,
+				CurrentPath: path,
+			})
+		}
+		doneFiles, doneBytes, err = ops.ExecuteDeletePaths(tc.ctx, pathloc.Strings(job.Sources), deleteProgress)
+		if err == nil && job.DeleteRemoveEmptyDirs {
+			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, uniqueParents(job.Sources)); cleanErr != nil {
+				err = cleanErr
+			}
+		}
+	case jobs.TypeExtract:
+		tc.emit(jobs.Event{
+			Type:       jobs.EventPlanTotals,
+			JobID:      job.ID,
+			Status:     jobs.StatusRunning,
+			TotalFiles: len(job.Sources),
+			TotalBytes: 0,
+		})
+		toolchain := archive.ProbeToolchain()
+		plan, _, extractPlanErr := ops.PlanExtract(pathloc.Strings(job.Sources), job.Destination.String(), toolchain)
+		if extractPlanErr != nil {
+			err = extractPlanErr
+		} else {
+			extractProgress := func(path string, df int) {
+				tc.emit(jobs.Event{
+					Type:        jobs.EventProgress,
+					JobID:       job.ID,
+					Status:      jobs.StatusRunning,
+					DoneFiles:   df,
+					DoneBytes:   0,
+					CurrentPath: path,
+				})
+			}
+			doneFiles, err = ops.ExecuteExtract(tc.ctx, plan, extractProgress)
+			doneBytes = 0
+		}
+	default:
+		return 0, 0, fmt.Errorf("unknown job type: %s", job.Type)
+	}
+	return doneFiles, doneBytes, err
 }
 
 // Plural returns singular or plural noun form for n.

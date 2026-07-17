@@ -380,91 +380,105 @@ func BuildPlanCtx(ctx context.Context, sources []pathloc.Path, destination pathl
 			return nil, fmt.Errorf("cannot copy %s into a subdirectory of itself", srcLoc)
 		}
 		if srcLoc.IsRemote() || destination.IsRemote() || !useLocalFastPath(srcLoc, dstLoc) {
-			srcEnt, err := statEntry(ctx, srcLoc)
-			if err != nil {
-				return nil, fmt.Errorf("stat %q: %w", srcLoc, err)
-			}
-			if srcEnt.Type == fsbackend.EntryDirectory {
-				if !followDirChildren {
-					continue
-				}
-				if err := walkBackendTree(ctx, srcLoc, dstLoc, &items, afterVisit); err != nil {
-					return nil, err
-				}
-				continue
-			}
-			if err := afterVisit(srcLoc.String()); err != nil {
+			if err := planRemoteSource(ctx, srcLoc, dstLoc, followDirChildren, &items, afterVisit); err != nil {
 				return nil, err
 			}
-			item, err := planItemFromEntry(srcLoc, dstLoc, srcEnt)
-			if err != nil {
-				return nil, err
-			}
-			items = append(items, item)
 			continue
 		}
-		src, err := srcLoc.FilePath()
-		if err != nil {
+		if err := planLocalSource(srcLoc, dstLoc, followDirChildren, &items, afterVisit); err != nil {
 			return nil, err
-		}
-		srcInfo, err := os.Lstat(src)
-		if err != nil {
-			return nil, fmt.Errorf("stat %q: %w", src, err)
-		}
-		if srcInfo.IsDir() {
-			if !followDirChildren {
-				continue
-			}
-			dst, err := dstLoc.FilePath()
-			if err != nil {
-				return nil, err
-			}
-			err = localfs.WalkDirRecursive(src, func(path string, info os.FileInfo) error {
-				if err := afterVisit(path); err != nil {
-					return err
-				}
-				rel, err := filepath.Rel(src, path)
-				if err != nil {
-					return fmt.Errorf("compute relative path for %q: %w", path, err)
-				}
-				childDstHost := filepath.Join(dst, rel)
-				srcItem, err := pathloc.File(path)
-				if err != nil {
-					return err
-				}
-				dstItem, err := pathloc.File(childDstHost)
-				if err != nil {
-					return err
-				}
-				if info.IsDir() {
-					items = append(items, planItemFromLocalInfo(srcItem, dstItem, info, true, localfs.IsSymlink(info)))
-				} else if localfs.IsSymlink(info) {
-					items = append(items, planItemFromLocalInfo(srcItem, dstItem, info, false, true))
-				} else if info.Mode().IsRegular() {
-					items = append(items, planItemFromLocalInfo(srcItem, dstItem, info, false, false))
-				} else {
-					return fmt.Errorf("unsupported file type for %q (mode %v)", path, info.Mode())
-				}
-				return nil
-			})
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			if err := afterVisit(src); err != nil {
-				return nil, err
-			}
-			switch {
-			case localfs.IsSymlink(srcInfo):
-				items = append(items, planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, true))
-			case srcInfo.Mode().IsRegular():
-				items = append(items, planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, false))
-			default:
-				return nil, fmt.Errorf("unsupported file type for %q (mode %v)", src, srcInfo.Mode())
-			}
 		}
 	}
 	return items, nil
+}
+
+// planRemoteSource plans one BuildPlanCtx source through the fsbackend stat/walk path: used
+// when either endpoint is remote or the local os fast path isn't available for this src/dst
+// pair. Stats srcLoc, then either walks a directory tree via walkBackendTree or appends a
+// single planItemFromEntry to *items.
+func planRemoteSource(ctx context.Context, srcLoc, dstLoc pathloc.Path, followDirChildren bool, items *[]PlanItem, afterVisit func(string) error) error {
+	srcEnt, err := statEntry(ctx, srcLoc)
+	if err != nil {
+		return fmt.Errorf("stat %q: %w", srcLoc, err)
+	}
+	if srcEnt.Type == fsbackend.EntryDirectory {
+		if !followDirChildren {
+			return nil
+		}
+		return walkBackendTree(ctx, srcLoc, dstLoc, items, afterVisit)
+	}
+	if err := afterVisit(srcLoc.String()); err != nil {
+		return err
+	}
+	item, err := planItemFromEntry(srcLoc, dstLoc, srcEnt)
+	if err != nil {
+		return err
+	}
+	*items = append(*items, item)
+	return nil
+}
+
+// planLocalSource plans one BuildPlanCtx source through the local os.Lstat/WalkDirRecursive
+// fast path (both endpoints local and useLocalFastPath allows it). Appends resulting items
+// to *items.
+func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, items *[]PlanItem, afterVisit func(string) error) error {
+	src, err := srcLoc.FilePath()
+	if err != nil {
+		return err
+	}
+	srcInfo, err := os.Lstat(src)
+	if err != nil {
+		return fmt.Errorf("stat %q: %w", src, err)
+	}
+	if srcInfo.IsDir() {
+		if !followDirChildren {
+			return nil
+		}
+		dst, err := dstLoc.FilePath()
+		if err != nil {
+			return err
+		}
+		return localfs.WalkDirRecursive(src, func(path string, info os.FileInfo) error {
+			if err := afterVisit(path); err != nil {
+				return err
+			}
+			rel, err := filepath.Rel(src, path)
+			if err != nil {
+				return fmt.Errorf("compute relative path for %q: %w", path, err)
+			}
+			childDstHost := filepath.Join(dst, rel)
+			srcItem, err := pathloc.File(path)
+			if err != nil {
+				return err
+			}
+			dstItem, err := pathloc.File(childDstHost)
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				*items = append(*items, planItemFromLocalInfo(srcItem, dstItem, info, true, localfs.IsSymlink(info)))
+			} else if localfs.IsSymlink(info) {
+				*items = append(*items, planItemFromLocalInfo(srcItem, dstItem, info, false, true))
+			} else if info.Mode().IsRegular() {
+				*items = append(*items, planItemFromLocalInfo(srcItem, dstItem, info, false, false))
+			} else {
+				return fmt.Errorf("unsupported file type for %q (mode %v)", path, info.Mode())
+			}
+			return nil
+		})
+	}
+	if err := afterVisit(src); err != nil {
+		return err
+	}
+	switch {
+	case localfs.IsSymlink(srcInfo):
+		*items = append(*items, planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, true))
+	case srcInfo.Mode().IsRegular():
+		*items = append(*items, planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, false))
+	default:
+		return fmt.Errorf("unsupported file type for %q (mode %v)", src, srcInfo.Mode())
+	}
+	return nil
 }
 
 func planItemFromLocalInfo(src, dst pathloc.Path, info os.FileInfo, isDir, isSymlink bool) PlanItem {

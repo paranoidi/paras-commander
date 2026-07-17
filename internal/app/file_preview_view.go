@@ -154,62 +154,8 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 		return a.handleFilePreviewSearchTypingKey(event)
 	}
 	nextAction := a.actionFromKeyEvent(event)
-	if nextAction == keymap.ActionAppQuit {
-		return a.handleQuit()
-	}
-	if nextAction == keymap.ActionAppQuitImmediate {
-		return a.handleQuitImmediate()
-	}
-	if nextAction == keymap.ActionFileViewThemePicker {
-		a.toggleFilePreviewThemePicker()
-		return false
-	}
-	if nextAction == keymap.ActionFileViewToggleRaw {
-		a.toggleFilePreviewRawMarkdown()
-		return false
-	}
-	if nextAction == keymap.ActionFileViewDiffNextHunk {
-		a.hunkNavigate(previewTargetFullscreen, 1)
-		return false
-	}
-	if nextAction == keymap.ActionFileViewDiffPrevHunk {
-		a.hunkNavigate(previewTargetFullscreen, -1)
-		return false
-	}
-	if nextAction == keymap.ActionFileViewSearchStart {
-		a.startFilePreviewSearch()
-		return false
-	}
-	if nextAction == keymap.ActionFileViewSearchNext {
-		a.filePreviewSearchNav(1)
-		return false
-	}
-	if nextAction == keymap.ActionFileViewSearchPrev {
-		a.filePreviewSearchNav(-1)
-		return false
-	}
-	if nextAction == keymap.ActionFileEdit {
-		a.editFullscreenPreviewFile()
-		return false
-	}
-	if nextAction == keymap.ActionFileDelete {
-		if a.model.FullscreenFilePreview.Path != "" {
-			a.openDeleteDialogForPreviewedFile()
-		}
-		return false
-	}
-	if nextAction == keymap.ActionFileQuickViewPreviewPageUp || nextAction == keymap.ActionFileQuickViewPreviewPageDown {
-		_, ch, _ := a.fullscreenFilePreviewScrollMetrics()
-		step := ch
-		if step < 1 {
-			step = 1
-		}
-		if nextAction == keymap.ActionFileQuickViewPreviewPageUp {
-			a.fullscreenPreviewScrollBy(-step)
-		} else {
-			a.fullscreenPreviewScrollBy(step)
-		}
-		return false
+	if quit, handled := a.tryFilePreviewAction(nextAction); handled {
+		return quit
 	}
 	if a.model.FilePreviewThemePicker.Open {
 		if a.handleFilePreviewThemePickerKey(event) {
@@ -236,42 +182,8 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 
 	// Scroll using raw keys before action resolution. Up/Down (etc.) are normally bound to
 	// nav.* and would otherwise dispatch to the file list behind the fullscreen view.
-	_, ch, _ := a.fullscreenFilePreviewScrollMetrics()
-	step := ch
-	if step < 1 {
-		step = 1
-	}
-	switch event.Key() {
-	case tcell.KeyUp:
-		a.fullscreenPreviewScrollBy(-1)
+	if a.handleFilePreviewScrollKey(event) {
 		return false
-	case tcell.KeyDown:
-		a.fullscreenPreviewScrollBy(1)
-		return false
-	case tcell.KeyPgUp:
-		a.fullscreenPreviewScrollBy(-step)
-		return false
-	case tcell.KeyPgDn:
-		a.fullscreenPreviewScrollBy(step)
-		return false
-	case tcell.KeyRune:
-		if event.Rune() == ' ' {
-			a.fullscreenPreviewScrollBy(step)
-			return false
-		}
-	case tcell.KeyHome:
-		a.fullscreenPreviewScrollTo(0)
-		return false
-	case tcell.KeyEnd:
-		_, ch2, lc := a.fullscreenFilePreviewScrollMetrics()
-		a.fullscreenPreviewScrollTo(max(0, lc-ch2))
-		return false
-	case tcell.KeyRight:
-		// Default binding maps Right to nav.open; consume the unmodified arrow so chord
-		// bindings (e.g. history forward) still resolve below when modifiers are set.
-		if event.Modifiers() == tcell.ModNone {
-			return false
-		}
 	}
 
 	nextAction = a.actionFromKeyEvent(event)
@@ -290,6 +202,107 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 		}
 		a.dispatch(nextAction)
 		return false
+	}
+	return false
+}
+
+// tryFilePreviewAction dispatches actions handled directly by the fullscreen file preview
+// (theme picker, raw-markdown toggle, diff hunk nav, search, edit/delete, quick-view paging,
+// and the two quit actions). handled is true when the caller must return immediately from
+// handleFilePreviewViewKey with quit as its return value.
+func (a *App) tryFilePreviewAction(nextAction string) (quit bool, handled bool) {
+	switch nextAction {
+	case keymap.ActionAppQuit:
+		return a.handleQuit(), true
+	case keymap.ActionAppQuitImmediate:
+		return a.handleQuitImmediate(), true
+	case keymap.ActionFileViewThemePicker:
+		a.toggleFilePreviewThemePicker()
+		return false, true
+	case keymap.ActionFileViewToggleRaw:
+		a.toggleFilePreviewRawMarkdown()
+		return false, true
+	case keymap.ActionFileViewDiffNextHunk:
+		a.hunkNavigate(previewTargetFullscreen, 1)
+		return false, true
+	case keymap.ActionFileViewDiffPrevHunk:
+		a.hunkNavigate(previewTargetFullscreen, -1)
+		return false, true
+	case keymap.ActionFileViewSearchStart:
+		a.startFilePreviewSearch()
+		return false, true
+	case keymap.ActionFileViewSearchNext:
+		a.filePreviewSearchNav(1)
+		return false, true
+	case keymap.ActionFileViewSearchPrev:
+		a.filePreviewSearchNav(-1)
+		return false, true
+	case keymap.ActionFileEdit:
+		a.editFullscreenPreviewFile()
+		return false, true
+	case keymap.ActionFileDelete:
+		if a.model.FullscreenFilePreview.Path != "" {
+			a.openDeleteDialogForPreviewedFile()
+		}
+		return false, true
+	case keymap.ActionFileQuickViewPreviewPageUp, keymap.ActionFileQuickViewPreviewPageDown:
+		_, ch, _ := a.fullscreenFilePreviewScrollMetrics()
+		step := ch
+		if step < 1 {
+			step = 1
+		}
+		if nextAction == keymap.ActionFileQuickViewPreviewPageUp {
+			a.fullscreenPreviewScrollBy(-step)
+		} else {
+			a.fullscreenPreviewScrollBy(step)
+		}
+		return false, true
+	default:
+		return false, false
+	}
+}
+
+// handleFilePreviewScrollKey handles raw scroll keys (arrows, PgUp/PgDn, space, Home/End) for
+// the fullscreen file preview. Returns true if the key was consumed, in which case the caller
+// must return false immediately (these keys would otherwise resolve via nav.* actions and
+// dispatch to the file list behind the fullscreen view).
+func (a *App) handleFilePreviewScrollKey(event *tcell.EventKey) bool {
+	_, ch, _ := a.fullscreenFilePreviewScrollMetrics()
+	step := ch
+	if step < 1 {
+		step = 1
+	}
+	switch event.Key() {
+	case tcell.KeyUp:
+		a.fullscreenPreviewScrollBy(-1)
+		return true
+	case tcell.KeyDown:
+		a.fullscreenPreviewScrollBy(1)
+		return true
+	case tcell.KeyPgUp:
+		a.fullscreenPreviewScrollBy(-step)
+		return true
+	case tcell.KeyPgDn:
+		a.fullscreenPreviewScrollBy(step)
+		return true
+	case tcell.KeyRune:
+		if event.Rune() == ' ' {
+			a.fullscreenPreviewScrollBy(step)
+			return true
+		}
+	case tcell.KeyHome:
+		a.fullscreenPreviewScrollTo(0)
+		return true
+	case tcell.KeyEnd:
+		_, ch2, lc := a.fullscreenFilePreviewScrollMetrics()
+		a.fullscreenPreviewScrollTo(max(0, lc-ch2))
+		return true
+	case tcell.KeyRight:
+		// Default binding maps Right to nav.open; consume the unmodified arrow so chord
+		// bindings (e.g. history forward) still resolve below when modifiers are set.
+		if event.Modifiers() == tcell.ModNone {
+			return true
+		}
 	}
 	return false
 }
