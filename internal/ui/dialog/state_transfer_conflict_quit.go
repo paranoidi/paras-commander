@@ -13,7 +13,6 @@ const (
 	PrimaryModalFlatten
 	PrimaryModalConflict
 	PrimaryModalQuit
-	PrimaryModalAmbiguousTransfer
 	PrimaryModalDedupEmptyDirs
 )
 
@@ -50,6 +49,7 @@ type TransferDialogState struct {
 	DestSubFocus         int  // TransferDestSubFocus* when Phase==TransferPhaseDestination and FocusField==0
 	PreservePermissions  bool // copy only
 	PreserveTimestamps   bool // copy only
+	FlattenIntoDest      bool // last content row when MultiLocation(); copies as dest/<basename>
 	FocusField           int  // content indices then OK, Add paused, Cancel; see TransferDialogLinearForm
 	SelfCopyDestDir      string
 	SelfCopyOrigBasename string
@@ -58,6 +58,24 @@ type TransferDialogState struct {
 	DestPathInvalid bool
 	// DestPathCheckPending is true until debounced validation runs after Destination.Value changed.
 	DestPathCheckPending bool
+
+	// CommonRoot is the canonical common-root path of a selection spanning multiple
+	// directories (set when the transfer is issued away from that root); empty otherwise.
+	// Non-empty CommonRoot switches the destination phase into the multi-location layout
+	// (source/root header, preview list, flatten checkbox). See MultiLocation.
+	CommonRoot string
+	// Entries previews the selections relative to CommonRoot (non-recursive, root-relative
+	// or basename labels depending on FlattenIntoDest).
+	Entries       []DeleteListEntry
+	EntriesScroll int
+}
+
+// MultiLocation reports whether the destination phase should show the multi-location
+// layout (common-root header, preview list, Flatten into destination checkbox) —
+// i.e. the transfer was issued on a selection spanning multiple directories away
+// from their common root.
+func (st TransferDialogState) MultiLocation() bool {
+	return st.CommonRoot != "" && st.Phase == TransferPhaseDestination
 }
 
 // ConflictDialogState holds the quick job-blocker answer dialog (Ctrl+Q).
@@ -77,31 +95,20 @@ type QuitConfirmState struct {
 	WarnLine2 string
 }
 
-// AmbiguousTransferState holds the confirm shown when copy/move is issued away from
-// the common root of a selection spanning multiple directories. OK proceeds straight
-// to the normal transfer dialog (no navigation); the list previews the selections
-// relative to CommonRoot.
-type AmbiguousTransferState struct {
-	Open       bool
-	Focus      int          // 0=OK, 1=Cancel
-	Kind       TransferKind // Copy or Move — for title/verb and the OK action
-	CommonRoot string       // canonical common-root path, shown in full
-	Entries    []DeleteListEntry
-	Scroll     int
-}
-
-// TransferDialogNumContent returns the number of focusable content rows before OK/Cancel.
-func TransferDialogNumContent(kind TransferKind) int {
-	if kind == TransferKindCopy {
-		return 3 // destination + two checkboxes
-	}
-	return 1 // destination only
-}
-
-// TransferDialogEffectiveNumContent returns the focusable content count for the current dialog screen.
+// TransferDialogEffectiveNumContent returns the focusable content count for the current
+// dialog screen: self-copy rename = 1; destination phase = destination row plus, for
+// copy, the two preserve checkboxes; plus one more (Flatten into destination, always
+// last) when MultiLocation().
 func TransferDialogEffectiveNumContent(st TransferDialogState) int {
 	if st.Phase == TransferPhaseSelfCopyRename {
 		return 1
 	}
-	return TransferDialogNumContent(st.Kind)
+	n := 1 // destination
+	if st.Kind == TransferKindCopy {
+		n = 3 // destination + two preserve checkboxes
+	}
+	if st.MultiLocation() {
+		n++
+	}
+	return n
 }

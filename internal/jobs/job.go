@@ -100,6 +100,16 @@ type Job struct {
 	// Per-job copy/move metadata options (from transfer dialog or config at enqueue).
 	PreservePermissions bool
 	PreserveTimestamps  bool
+	// FlattenIntoDest requests dest/<basename> naming for a copy/move job (transfer-dialog
+	// "Flatten into destination" checkbox), independent of TypeFlatten jobs.
+	FlattenIntoDest bool
+}
+
+// FlatDestNames reports whether the job should resolve every source to dest/<basename>
+// instead of preserving relative structure — true for TypeFlatten jobs and for copy/move
+// jobs with FlattenIntoDest set. Single source of truth; do not re-derive job.Type == TypeFlatten.
+func (j *Job) FlatDestNames() bool {
+	return j.Type == TypeFlatten || j.FlattenIntoDest
 }
 
 // jobIDCounter provides unique job IDs within a runtime session.

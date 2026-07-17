@@ -859,7 +859,7 @@ func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 	for i, src := range sources {
 		srcLocs[i] = pathloc.MustParse(src)
 	}
-	nSelf := ops.SelfTargetCount(srcLocs, destLoc)
+	nSelf := ops.SelfTargetCount(srcLocs, destLoc, false)
 	if nSelf > 0 {
 		if len(sources) > 1 {
 			h.host.SetTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
@@ -915,6 +915,7 @@ func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest strin
 		PausedAfterScan:     startPaused,
 		PreservePermissions: preserve.PreservePermissions,
 		PreserveTimestamps:  preserve.PreserveTimestamps,
+		FlattenIntoDest:     preserve.FlattenIntoDest,
 	}
 	h.commitJob(job)
 }

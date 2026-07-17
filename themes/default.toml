@@ -266,6 +266,9 @@ failed = "●"
 decision = "●"
 completed = "●"
 
+[symbols.selections]
+multi_location = "\uef81"
+
 [symbols.compare]
 equal = "="
 relocated = "\u2194"

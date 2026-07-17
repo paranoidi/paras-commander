@@ -4,6 +4,8 @@ package jobs
 type TransferPreserve struct {
 	PreservePermissions bool
 	PreserveTimestamps  bool
+	// FlattenIntoDest requests dest/<basename> naming (transfer-dialog "Flatten into destination").
+	FlattenIntoDest bool
 }
 
 // FromConfig returns transfer preserve flags from operations config defaults.

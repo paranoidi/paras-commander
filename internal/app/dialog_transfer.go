@@ -68,25 +68,31 @@ func transferPrefilledDestination(path string) dialog.FileDialogField {
 }
 
 func (a *App) openTransferDialog(kind dialog.TransferKind) {
-	if root, ok := a.multiDirSelectionCommonRoot(); ok {
-		a.model.AmbiguousTransfer = dialog.AmbiguousTransferState{
-			Open:       true,
-			Kind:       kind,
-			CommonRoot: root,
-			Entries:    a.ambiguousTransferEntries(root),
-		}
-		// Same implied destination as the transfer dialog prefills (inactive panel).
-		a.updateDestinationTargetPanels(a.activePanel().PathString(), a.inactivePanel().PathString())
-		a.clearTransientMessage()
-		return
+	passive := a.inactivePanel()
+	st := dialog.TransferDialogState{
+		Open:         true,
+		Kind:         kind,
+		Destination:  transferPrefilledDestination(passive.PathString()),
+		DestSubFocus: dialog.TransferDestSubFocusText,
+		FocusField:   0, // destination path row
 	}
-	a.openTransferDialogDirect(kind)
+	if kind == dialog.TransferKindCopy {
+		st.PreservePermissions = a.config.Operations.PreservePermissions
+		st.PreserveTimestamps = a.config.Operations.PreserveTimestamps
+	}
+	if root, ok := a.multiDirSelectionCommonRoot(); ok {
+		st.CommonRoot = root
+		st.Entries = a.transferPreviewEntries(root)
+	}
+	a.model.TransferDialog = st
+	a.clearTransientMessage()
+	a.armTransferDestinationValidateTimer()
 }
 
-// ambiguousTransferEntries builds the preview list for the ambiguous-transfer confirm:
-// the active panel's selection resolved and labeled relative to the common root (not
-// the panel's current path), so the preview reflects where the transfer will read from.
-func (a *App) ambiguousTransferEntries(root string) []dialog.DeleteListEntry {
+// transferPreviewEntries builds the multi-location preview list: the active panel's
+// selection resolved and labeled relative to root (not the panel's current path), so
+// the preview reflects where the transfer will read from.
+func (a *App) transferPreviewEntries(root string) []dialog.DeleteListEntry {
 	source, err := ops.ResolveSource(a.activePanel())
 	if err != nil {
 		return nil
@@ -103,131 +109,45 @@ func (a *App) ambiguousTransferEntries(root string) []dialog.DeleteListEntry {
 	return entries
 }
 
-// openTransferDialogDirect opens the normal copy/move destination dialog, bypassing the
-// ambiguous-selection confirm (used both for unambiguous selections and after the user
-// confirms the ambiguous-transfer preview).
-func (a *App) openTransferDialogDirect(kind dialog.TransferKind) {
-	passive := a.inactivePanel()
-	st := dialog.TransferDialogState{
-		Open:         true,
-		Kind:         kind,
-		Destination:  transferPrefilledDestination(passive.PathString()),
-		DestSubFocus: dialog.TransferDestSubFocusText,
-		FocusField:   0, // destination path row
-	}
-	if kind == dialog.TransferKindCopy {
-		st.PreservePermissions = a.config.Operations.PreservePermissions
-		st.PreserveTimestamps = a.config.Operations.PreserveTimestamps
-	}
-	a.model.TransferDialog = st
-	a.clearTransientMessage()
-	a.armTransferDestinationValidateTimer()
-}
-
-// selectionsCommonRoot folds the parents of the active panel's selected paths into their
-// deepest common ancestor. multiDir reports whether selections span more than one parent
-// directory. ok is false when there are no selections or they mix schemes/hosts.
+// selectionsCommonRoot delegates to panel.State.SelectionsCommonRoot for the active panel.
 func (a *App) selectionsCommonRoot() (root pathloc.Path, multiDir bool, ok bool) {
-	p := a.activePanel()
-	for sel := range p.SelectedPaths {
-		loc, err := pathloc.Parse(sel)
-		if err != nil {
-			return pathloc.Path{}, false, false
-		}
-		parent := loc.Parent()
-		switch {
-		case root.IsZero():
-			root = parent
-		case !parent.Equal(root):
-			multiDir = true
-			anc, ok := pathloc.CommonAncestor(root, parent)
-			if !ok {
-				// ponytail: mixed schemes/hosts have no common root; proceed as before
-				return pathloc.Path{}, false, false
-			}
-			root = anc
-		}
-	}
-	return root, multiDir, !root.IsZero()
+	return a.activePanel().SelectionsCommonRoot()
 }
 
 // multiDirSelectionCommonRoot returns the deepest common ancestor of the active panel's
-// selected paths when they span multiple parent directories and the panel is not already
-// at that ancestor. Copy/move issued elsewhere is ambiguous; the caller shows a confirm
-// with a root-relative preview before opening the transfer dialog.
+// selected paths when they span multiple parent directories, regardless of the panel's
+// current path. The transfer dialog always shows the multi-location Source/Result preview
+// in that case.
 func (a *App) multiDirSelectionCommonRoot() (string, bool) {
 	root, multiDir, ok := a.selectionsCommonRoot()
-	if !ok || !multiDir || a.activePanel().Path.Equal(root) {
+	if !ok || !multiDir {
 		return "", false
 	}
 	return root.String(), true
 }
 
-// handleAmbiguousTransferKey drives the copy/move ambiguous-selection confirm; OK opens
-// the normal transfer dialog directly (no panel navigation).
-func (a *App) handleAmbiguousTransferKey(event *tcell.EventKey) {
-	confirm := func() {
-		kind := a.model.AmbiguousTransfer.Kind
-		a.model.AmbiguousTransfer = dialog.AmbiguousTransferState{}
-		a.openTransferDialogDirect(kind)
-	}
-	cancel := func() {
-		a.model.AmbiguousTransfer = dialog.AmbiguousTransferState{}
-		a.model.DestinationTargetPrimary = false
-		a.model.DestinationTargetSecondary = false
-	}
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		switch event.Rune() {
-		case 'o', 'O':
-			confirm()
-			return
-		case 'c', 'C':
-			cancel()
-			return
-		}
-	}
-	switch event.Key() {
-	case tcell.KeyEsc:
-		cancel()
-	case tcell.KeyLeft:
-		a.model.AmbiguousTransfer.Focus = dialog.DialogPairLeftRight(a.model.AmbiguousTransfer.Focus, false)
-	case tcell.KeyRight:
-		a.model.AmbiguousTransfer.Focus = dialog.DialogPairLeftRight(a.model.AmbiguousTransfer.Focus, true)
-	case tcell.KeyUp:
-		a.scrollAmbiguousTransferList(-1)
-	case tcell.KeyDown:
-		a.scrollAmbiguousTransferList(1)
-	case tcell.KeyPgUp:
-		a.scrollAmbiguousTransferList(-a.ambiguousTransferListViewportRows())
-	case tcell.KeyPgDn:
-		a.scrollAmbiguousTransferList(a.ambiguousTransferListViewportRows())
-	case tcell.KeyEnter:
-		if a.model.AmbiguousTransfer.Focus == 0 {
-			confirm()
-		} else {
-			cancel()
-		}
-	}
+// transferPreviewListViewportRows returns how many preview-list rows the multi-location
+// transfer dialog currently shows, for clamping EntriesScroll.
+func (a *App) transferPreviewListViewportRows() int {
+	w, h := a.screen.Size()
+	return dialog.TransferListViewportRows(dialog.Layout{Width: w, Height: h}, a.model.TransferDialog)
 }
 
-func (a *App) ambiguousTransferListViewportRows() int {
-	_, h := a.screen.Size()
-	return dialog.AmbiguousListViewportRows(dialog.Layout{Height: h}, len(a.model.AmbiguousTransfer.Entries))
-}
-
-func (a *App) scrollAmbiguousTransferList(delta int) {
-	st := &a.model.AmbiguousTransfer
-	vp := a.ambiguousTransferListViewportRows()
+// scrollTransferPreviewList moves the multi-location preview list scroll by delta rows,
+// clamped to the current viewport.
+func (a *App) scrollTransferPreviewList(delta int) {
+	st := &a.model.TransferDialog
+	vp := a.transferPreviewListViewportRows()
 	maxScroll := len(st.Entries) - vp
 	if maxScroll < 0 {
 		maxScroll = 0
 	}
-	st.Scroll += delta
-	if st.Scroll < 0 {
-		st.Scroll = 0
+	st.EntriesScroll += delta
+	if st.EntriesScroll < 0 {
+		st.EntriesScroll = 0
 	}
-	if st.Scroll > maxScroll {
-		st.Scroll = maxScroll
+	if st.EntriesScroll > maxScroll {
+		st.EntriesScroll = maxScroll
 	}
 }
 
@@ -284,6 +204,17 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 			}
 		}
 	}
+	// Alt+I toggles "Flatten into destination"; applies to both copy and move when
+	// the transfer is issued on a selection spanning multiple directories (MultiLocation).
+	if d.MultiLocation() {
+		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+			switch event.Rune() {
+			case 'i', 'I':
+				d.FlattenIntoDest = !d.FlattenIntoDest
+				return
+			}
+		}
+	}
 	// Alt+O = OK, Alt+C = Cancel, Alt+P = Add paused (mnemonics; must run before field edit).
 	if a.tryStandardDialogActions(event, a.confirmTransfer, a.closeTransferDialog, []dialogExtraMnemonic{
 		{'p', a.confirmTransferPaused},
@@ -293,6 +224,16 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	if event.Key() == tcell.KeyEsc {
 		a.closeTransferDialog()
 		return
+	}
+	if d.MultiLocation() {
+		switch event.Key() {
+		case tcell.KeyPgUp:
+			a.scrollTransferPreviewList(-a.transferPreviewListViewportRows())
+			return
+		case tcell.KeyPgDn:
+			a.scrollTransferPreviewList(a.transferPreviewListViewportRows())
+			return
+		}
 	}
 	if a.tryPathPickerHostShortcut(event) {
 		return
@@ -396,22 +337,33 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if d.Phase == dialog.TransferPhaseDestination && d.Kind == dialog.TransferKindCopy && event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
-		switch event.Rune() {
-		case 'r', 'R':
-			if d.FocusField == 1 {
-				d.PreservePermissions = !d.PreservePermissions
+	if d.Phase == dialog.TransferPhaseDestination && event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
+		if d.Kind == dialog.TransferKindCopy {
+			switch event.Rune() {
+			case 'r', 'R':
+				if d.FocusField == 1 {
+					d.PreservePermissions = !d.PreservePermissions
+				}
+			case 't', 'T':
+				if d.FocusField == 2 {
+					d.PreserveTimestamps = !d.PreserveTimestamps
+				}
+			case ' ':
+				switch d.FocusField {
+				case 1:
+					d.PreservePermissions = !d.PreservePermissions
+				case 2:
+					d.PreserveTimestamps = !d.PreserveTimestamps
+				}
 			}
-		case 't', 'T':
-			if d.FocusField == 2 {
-				d.PreserveTimestamps = !d.PreserveTimestamps
-			}
-		case ' ':
-			switch d.FocusField {
-			case 1:
-				d.PreservePermissions = !d.PreservePermissions
-			case 2:
-				d.PreserveTimestamps = !d.PreserveTimestamps
+		}
+		if d.MultiLocation() {
+			flattenIdx := dialog.TransferDialogEffectiveNumContent(*d) - 1
+			if d.FocusField == flattenIdx {
+				switch event.Rune() {
+				case 'i', 'I', ' ':
+					d.FlattenIntoDest = !d.FlattenIntoDest
+				}
 			}
 		}
 	}
@@ -478,7 +430,8 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 	for i, src := range sources {
 		srcLocs[i] = pathloc.MustParse(src)
 	}
-	nSelf := ops.SelfTargetCount(srcLocs, destLoc)
+	flat := d.MultiLocation() && d.FlattenIntoDest
+	nSelf := ops.SelfTargetCount(srcLocs, destLoc, flat)
 	if nSelf > 0 {
 		if len(sources) > 1 {
 			a.setTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
@@ -513,6 +466,7 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 	preserve := jobs.TransferPreserve{
 		PreservePermissions: d.PreservePermissions,
 		PreserveTimestamps:  d.PreserveTimestamps,
+		FlattenIntoDest:     flat,
 	}
 	a.addTransferJob(jobType, sourcesCopy, dest, startPaused, preserve)
 	a.closeTransferDialog()

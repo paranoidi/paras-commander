@@ -186,7 +186,6 @@ type Model struct {
 	ConflictDialog         dialog.ConflictDialogState
 	HostKeyDialog          dialog.HostKeyDialogState
 	QuitConfirm            dialog.QuitConfirmState
-	AmbiguousTransfer      dialog.AmbiguousTransferState
 	DedupEmptyDirsConfirm  dialog.DedupEmptyDirsConfirmState
 	StashRestoreDialog     dialog.StashRestoreDialogState
 	MessageDialog          dialog.MessageDialogState
@@ -221,8 +220,6 @@ func (m *Model) PrimaryModal() dialog.PrimaryModal {
 		return dialog.PrimaryModalFlatten
 	case m.QuitConfirm.Open:
 		return dialog.PrimaryModalQuit
-	case m.AmbiguousTransfer.Open:
-		return dialog.PrimaryModalAmbiguousTransfer
 	case m.DedupEmptyDirsConfirm.Open:
 		return dialog.PrimaryModalDedupEmptyDirs
 	default:
@@ -376,7 +373,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
-		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.AmbiguousTransfer.Open || m.StashRestoreDialog.Open || m.UserMenu.Open ||
+		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.UserMenu.Open ||
 		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupEmptyDirsConfirm.Open
 }
 
@@ -384,7 +381,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 // dedicated Jobs/Commands view keyboard handling. inputMode checks this only after earlier cases have ruled
 // out other modals.
 func (m *Model) AuxiliaryViewDialogKeysBlocked() bool {
-	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.AmbiguousTransfer.Open || m.StashRestoreDialog.Open || m.DedupEmptyDirsConfirm.Open || m.Menu.Open
+	return m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.DedupEmptyDirsConfirm.Open || m.Menu.Open
 }
 
 // MenuBarLayoutReserved is true when the top row is reserved for the menu strip (config show_menu_bar).
@@ -599,15 +596,13 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	case dialog.PrimaryModalTheme:
 		dialog.DrawThemeDialog(screen, layout, model.ThemeDialog, styles)
 	case dialog.PrimaryModalTransfer:
-		dialog.DrawTransferDialog(screen, layout, model.TransferDialog, styles)
+		dialog.DrawTransferDialog(screen, layout, model.TransferDialog, styles, model.UserHomeDir, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintDeleteDialogRowIcon)
 	case dialog.PrimaryModalFlatten:
 		dialog.DrawFlattenDialog(screen, layout, model.FlattenDialog, styles)
 	case dialog.PrimaryModalConflict:
 		dialog.DrawConflictDialog(screen, layout, model.ConflictDialog, styles, model.UserHomeDir)
 	case dialog.PrimaryModalQuit:
 		dialog.DrawQuitConfirmDialog(screen, layout, model.QuitConfirm, styles)
-	case dialog.PrimaryModalAmbiguousTransfer:
-		dialog.DrawAmbiguousTransferDialog(screen, layout, model.AmbiguousTransfer, styles, model.UserHomeDir, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintDeleteDialogRowIcon)
 	case dialog.PrimaryModalDedupEmptyDirs:
 		dialog.DrawDedupEmptyDirsConfirmDialog(screen, layout, model.DedupEmptyDirsConfirm, styles, model.ShowFileIcons, DialogListIconLeadingWidth(model.ShowFileIcons), PaintDedupEmptyDirsConfirmRowIcon)
 	}

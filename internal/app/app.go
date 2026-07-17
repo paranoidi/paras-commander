@@ -1014,9 +1014,6 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 		return false
 	case a.model.QuitConfirm.Open:
 		return a.handleQuitConfirmKey(event)
-	case a.model.AmbiguousTransfer.Open:
-		a.handleAmbiguousTransferKey(event)
-		return false
 	case a.model.DedupEmptyDirsConfirm.Open:
 		return a.handleDedupEmptyDirsConfirmKey(event)
 	case a.model.StashRestoreDialog.Open:

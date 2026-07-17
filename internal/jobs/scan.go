@@ -107,7 +107,7 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 	}
 
 	hooks := ScanWalkHooks{
-		FlatDestNames: job.Type == TypeFlatten,
+		FlatDestNames: job.FlatDestNames(),
 		OnPath: func(path string) error {
 			now := time.Now()
 			if lastProgress.IsZero() || now.Sub(lastProgress) >= progressMin {

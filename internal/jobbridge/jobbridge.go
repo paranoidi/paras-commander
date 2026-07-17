@@ -193,7 +193,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 			PreallocateMinFileBytes:    opsCfg.PreallocateMinFileBytes,
 			SyncAtJobEnd:               opsCfg.SyncAtJobEnd,
 			SyncMinFileKiB:             opsCfg.SyncMinFileKiB,
-			FlatDestNames:              job.Type == jobs.TypeFlatten,
+			FlatDestNames:              job.FlatDestNames(),
 		}
 		if job.Destination.IsRemote() {
 			opts.CowFileCloning = false
@@ -256,7 +256,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 		totalBytes := job.TotalBytes
 		if (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) && len(opsPlan) == 0 {
 			var tf int
-			opsPlan, tf, _, totalBytes, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{FlatDestNames: job.Type == jobs.TypeFlatten})
+			opsPlan, tf, _, totalBytes, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{FlatDestNames: job.FlatDestNames()})
 			if planErr == nil {
 				emit(jobs.Event{
 					Type:       jobs.EventPlanTotals,

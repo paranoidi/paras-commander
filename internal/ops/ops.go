@@ -130,8 +130,13 @@ func ResolvedSameAsSource(src, destDir pathloc.Path) bool {
 
 // SelfTargetCount reports how many of sources would resolve onto themselves when
 // transferred into destDir, using the same batch-relative naming as BuildPlan.
-func SelfTargetCount(sources []pathloc.Path, destDir pathloc.Path) int {
-	root := TransferNameRoot(sources)
+// flatDestNames mirrors the "Flatten into destination" transfer option: when true,
+// naming is basename-only (zero root) instead of batch-relative structure.
+func SelfTargetCount(sources []pathloc.Path, destDir pathloc.Path, flatDestNames bool) int {
+	var root pathloc.Path
+	if !flatDestNames {
+		root = TransferNameRoot(sources)
+	}
 	n := 0
 	for _, src := range sources {
 		if PathsEquivalent(src, ResolveDestinationNamed(destDir, TransferDestName(src, root))) {

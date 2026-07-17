@@ -109,7 +109,7 @@ func (a *App) inputMode() InputMode {
 		!a.model.AuxiliaryViewDialogKeysBlocked() &&
 		!a.inQuickFilterUI():
 		return InputModeJobsView
-	case a.model.TransferDialog.Open, a.model.FlattenDialog.Open, a.model.ConflictDialog.Open, a.model.QuitConfirm.Open, a.model.AmbiguousTransfer.Open, a.model.DedupEmptyDirsConfirm.Open, a.model.StashRestoreDialog.Open:
+	case a.model.TransferDialog.Open, a.model.FlattenDialog.Open, a.model.ConflictDialog.Open, a.model.QuitConfirm.Open, a.model.DedupEmptyDirsConfirm.Open, a.model.StashRestoreDialog.Open:
 		return InputModeDialog
 	case a.model.Menu.Open:
 		return InputModeMenu

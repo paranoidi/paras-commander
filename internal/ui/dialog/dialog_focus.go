@@ -413,11 +413,12 @@ func TransferDialogMoveFocus(st TransferDialogState, focus int, key tcell.Key) (
 	n := TransferDialogEffectiveNumContent(st)
 	okIdx := n // buttons start at numContent (3-button form, so OKIndex == NumContent)
 	var segs []int
-	if n == 3 {
-		// Copy: destination(0) | preserve checkboxes(1,2) | buttons(okIdx)
+	if n >= 2 {
+		// Copy destination(0) | preserve checkboxes / flatten(1..) | buttons(okIdx); or
+		// move/self-copy destination(0) | flatten(1) | buttons(okIdx) when MultiLocation().
 		segs = []int{0, 1, okIdx}
 	} else {
-		// Move or self-copy: single content field | buttons
+		// Move or self-copy, no flatten row: single content field | buttons
 		segs = []int{0, okIdx}
 	}
 	return NewTransferDialogLinearForm(n).WithSegments(segs...).MoveFocus(focus, key)

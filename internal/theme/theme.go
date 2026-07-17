@@ -465,6 +465,7 @@ const (
 	SymbolKeyTreeBranch               = "tree.branch"
 	SymbolKeyTreeEnd                  = "tree.end"
 	SymbolKeyTreeLeaf                 = "tree.leaf"
+	SymbolKeySelectionsMultiLocation  = "selections.multi_location"
 )
 
 // Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
@@ -529,6 +530,17 @@ func (t Theme) SymbolGit() string {
 		}
 	}
 	return "\uf1d3" // Font Awesome git (Nerd Fonts)
+}
+
+// SymbolSelectionsMultiLocation returns the glyph prepended to the selections strip title
+// when the panel's selections span multiple parent directories.
+func (t Theme) SymbolSelectionsMultiLocation() string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[SymbolKeySelectionsMultiLocation]); s != "" {
+			return s
+		}
+	}
+	return "\uef81"
 }
 
 // SymbolFilelistSelectionSubtree returns the directory nested-selection suffix glyph.

@@ -78,11 +78,25 @@ func TestExecuteMovePreservesMultiDirStructure(t *testing.T) {
 func TestSelfTargetCountMultiDirIntoCommonRoot(t *testing.T) {
 	root, sources := multiDirSources(t)
 
-	if n := SelfTargetCount(sources, pathloc.FileMust(root)); n != len(sources) {
+	if n := SelfTargetCount(sources, pathloc.FileMust(root), false); n != len(sources) {
 		t.Errorf("SelfTargetCount into common root = %d, want %d", n, len(sources))
 	}
-	if n := SelfTargetCount(sources, pathloc.FileMust(t.TempDir())); n != 0 {
+	if n := SelfTargetCount(sources, pathloc.FileMust(t.TempDir()), false); n != 0 {
 		t.Errorf("SelfTargetCount into fresh dir = %d, want 0", n)
+	}
+}
+
+func TestSelfTargetCountFlatDestNames(t *testing.T) {
+	root, sources := multiDirSources(t)
+
+	// With flatten, naming is basename-only: nested sources (maple/leaf.txt,
+	// maple/bark.txt) no longer self-target, but "birch" (already a direct
+	// child of root) still does.
+	if n := SelfTargetCount(sources, pathloc.FileMust(root), true); n != 1 {
+		t.Errorf("SelfTargetCount flat into common root = %d, want 1", n)
+	}
+	if n := SelfTargetCount(sources, pathloc.FileMust(t.TempDir()), true); n != 0 {
+		t.Errorf("SelfTargetCount flat into fresh dir = %d, want 0", n)
 	}
 }
 
