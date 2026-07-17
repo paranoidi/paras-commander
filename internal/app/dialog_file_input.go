@@ -22,6 +22,36 @@ func (a *App) fileDialogRect() ui.Rect {
 	return r
 }
 
+// tryFileDialogPreKey handles the mass-rename/delete Alt-shortcuts and preview/list
+// scrolling, plus the mkdir/rename Alt-mnemonics, that must run before general field
+// routing in handleFileDialogKey. Returns true when the key was fully handled.
+func (a *App) tryFileDialogPreKey(event *tcell.EventKey, d *dialog.FileDialogState) bool {
+	if d.Open && d.DialogType == dialog.FileDialogMassRename && event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		if a.handleMassRenameAltShortcut(d, event.Rune()) {
+			return true
+		}
+	}
+	if d.Open && d.DialogType == dialog.FileDialogMassRename {
+		if a.handleMassRenamePreviewScrollKey(d, event.Key()) {
+			return true
+		}
+	}
+	if d.Open && d.DialogType == dialog.FileDialogDelete {
+		if a.handleDeleteListScrollKey(d, event.Key()) {
+			return true
+		}
+	}
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		if a.tryMkdirActionAltShortcut(event.Rune()) {
+			return true
+		}
+		if a.tryRenameFocusAltShortcut(event.Rune()) {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	d := &a.model.FileDialog
 	if d.Open && dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != dialog.RenamePhaseMain {
@@ -33,28 +63,8 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	if a.tryMkdirDialogShortcut(event) {
 		return false
 	}
-	if d.Open && d.DialogType == dialog.FileDialogMassRename && event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if a.handleMassRenameAltShortcut(d, event.Rune()) {
-			return false
-		}
-	}
-	if d.Open && d.DialogType == dialog.FileDialogMassRename {
-		if a.handleMassRenamePreviewScrollKey(d, event.Key()) {
-			return false
-		}
-	}
-	if d.Open && d.DialogType == dialog.FileDialogDelete {
-		if a.handleDeleteListScrollKey(d, event.Key()) {
-			return false
-		}
-	}
-	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
-		if a.tryMkdirActionAltShortcut(event.Rune()) {
-			return false
-		}
-		if a.tryRenameFocusAltShortcut(event.Rune()) {
-			return false
-		}
+	if a.tryFileDialogPreKey(event, d) {
+		return false
 	}
 	var altExtras []dialogExtraMnemonic
 	if d.DialogType == dialog.FileDialogDelete {
@@ -152,55 +162,30 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
 		}
 		return false
-	case tcell.KeyHome:
-		if onRadio || onCheckbox {
-			return false
-		}
-		if f := a.focusedField(); f != nil {
-			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
-		}
-		return false
-	case tcell.KeyEnd:
-		if onRadio || onCheckbox {
-			return false
-		}
-		if f := a.focusedField(); f != nil {
-			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
-		}
-		return false
+	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyDelete, tcell.KeyCtrlL:
+		return a.fileDialogPassFieldEditKey(event, onRadio, onCheckbox)
 	case tcell.KeyTab:
 		a.fileDialogMoveFocusKey(event)
 		return false
 	case tcell.KeyBacktab:
 		a.fileDialogMoveFocusKey(event)
 		return false
-	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		if onRadio || onCheckbox {
-			return false
-		}
-		if f := a.focusedField(); f != nil {
-			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
-		}
-		return false
-	case tcell.KeyDelete:
-		if onRadio || onCheckbox {
-			return false
-		}
-		if f := a.focusedField(); f != nil {
-			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
-		}
-		return false
-	case tcell.KeyCtrlL:
-		if onRadio || onCheckbox {
-			return false
-		}
-		if f := a.focusedField(); f != nil {
-			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
-		}
-		return false
 	case tcell.KeyRune:
 		a.handleFileDialogRune(event)
 		return false
+	}
+	return false
+}
+
+// fileDialogPassFieldEditKey routes Home/End/Backspace/Delete/Ctrl+L to the focused
+// field's edit handler, unless focus is on a radio or checkbox row (no-op there).
+// Always returns false: these keys are always fully consumed by the file dialog.
+func (a *App) fileDialogPassFieldEditKey(event *tcell.EventKey, onRadio, onCheckbox bool) bool {
+	if onRadio || onCheckbox {
+		return false
+	}
+	if f := a.focusedField(); f != nil {
+		a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
 	}
 	return false
 }
@@ -712,43 +697,68 @@ func (a *App) fileDialogOnButton() bool {
 	return d.FocusedField >= dialog.FileDialogOKFocusIndex(*d)
 }
 
+// tryRenameToolAltShortcut handles the per-phase Alt-letter mnemonics on the rename-tool
+// dialogs (Sanitize: '.'/'_' toggle dots/underscores; Slugify: '.'/'_' pick separator;
+// Encoding: per-candidate shortcut letter). Returns true when the rune was handled.
+func (a *App) tryRenameToolAltShortcut(event *tcell.EventKey, d *dialog.FileDialogState) bool {
+	switch d.RenamePhase {
+	case dialog.RenamePhaseSanitize:
+		switch event.Rune() {
+		case '.':
+			d.RenameSanitizeDots = !d.RenameSanitizeDots
+			d.FocusedField = 0
+			return true
+		case '_':
+			d.RenameSanitizeUnderscores = !d.RenameSanitizeUnderscores
+			d.FocusedField = 1
+			return true
+		}
+	case dialog.RenamePhaseSlugify:
+		switch event.Rune() {
+		case '.':
+			d.RenameSlugifySep = dialog.RenameSlugifyDot
+			d.FocusedField = 0
+			return true
+		case '_':
+			d.RenameSlugifySep = dialog.RenameSlugifyUnderscore
+			d.FocusedField = 1
+			return true
+		}
+	case dialog.RenamePhaseEncoding:
+		for i := 0; i < len(d.RenameEncodingCandidates); i++ {
+			if event.Rune() == dialog.RenameEncodingCandidateShortcut(d.RenameEncodingCandidates[i].Label) {
+				d.RenameEncodingSelected = i
+				d.FocusedField = i
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// applyRenameToolAtFocus applies the rename-tool action for the current focused row
+// (sanitize toggle / slugify pick / encoding pick), dispatched by d.RenamePhase. Shared
+// by Enter (on non-button focus) and Space.
+func (a *App) applyRenameToolAtFocus() {
+	d := &a.model.FileDialog
+	switch d.RenamePhase {
+	case dialog.RenamePhaseSanitize:
+		a.toggleRenameSanitizeAtFocus()
+	case dialog.RenamePhaseSlugify:
+		a.selectRenameSlugifyAtFocus()
+	case dialog.RenamePhaseEncoding:
+		a.selectRenameEncodingAtFocus()
+	}
+}
+
 func (a *App) handleRenameToolKey(event *tcell.EventKey) bool {
 	d := &a.model.FileDialog
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		if a.tryStandardDialogActions(event, a.applyRenameToolAndReturnMain, a.closeRenameToolPhase, nil) {
 			return false
 		}
-		switch d.RenamePhase {
-		case dialog.RenamePhaseSanitize:
-			switch event.Rune() {
-			case '.':
-				d.RenameSanitizeDots = !d.RenameSanitizeDots
-				d.FocusedField = 0
-				return false
-			case '_':
-				d.RenameSanitizeUnderscores = !d.RenameSanitizeUnderscores
-				d.FocusedField = 1
-				return false
-			}
-		case dialog.RenamePhaseSlugify:
-			switch event.Rune() {
-			case '.':
-				d.RenameSlugifySep = dialog.RenameSlugifyDot
-				d.FocusedField = 0
-				return false
-			case '_':
-				d.RenameSlugifySep = dialog.RenameSlugifyUnderscore
-				d.FocusedField = 1
-				return false
-			}
-		case dialog.RenamePhaseEncoding:
-			for i := 0; i < len(d.RenameEncodingCandidates); i++ {
-				if event.Rune() == dialog.RenameEncodingCandidateShortcut(d.RenameEncodingCandidates[i].Label) {
-					d.RenameEncodingSelected = i
-					d.FocusedField = i
-					return false
-				}
-			}
+		if a.tryRenameToolAltShortcut(event, d) {
+			return false
 		}
 	}
 
@@ -765,14 +775,7 @@ func (a *App) handleRenameToolKey(event *tcell.EventKey) bool {
 		case cancelIdx:
 			a.closeRenameToolPhase()
 		default:
-			switch d.RenamePhase {
-			case dialog.RenamePhaseSanitize:
-				a.toggleRenameSanitizeAtFocus()
-			case dialog.RenamePhaseSlugify:
-				a.selectRenameSlugifyAtFocus()
-			case dialog.RenamePhaseEncoding:
-				a.selectRenameEncodingAtFocus()
-			}
+			a.applyRenameToolAtFocus()
 		}
 		return false
 	case tcell.KeyDown, tcell.KeyTab:
@@ -788,14 +791,7 @@ func (a *App) handleRenameToolKey(event *tcell.EventKey) bool {
 		return false
 	case tcell.KeyRune:
 		if isPlainPrintableRune(event) && event.Rune() == ' ' {
-			switch d.RenamePhase {
-			case dialog.RenamePhaseSanitize:
-				a.toggleRenameSanitizeAtFocus()
-			case dialog.RenamePhaseSlugify:
-				a.selectRenameSlugifyAtFocus()
-			case dialog.RenamePhaseEncoding:
-				a.selectRenameEncodingAtFocus()
-			}
+			a.applyRenameToolAtFocus()
 		}
 		return false
 	}

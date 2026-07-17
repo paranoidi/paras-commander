@@ -1393,31 +1393,40 @@ func (h *Handler) applyFindListNav(key tcell.Key, mods tcell.ModMask) bool {
 	return true
 }
 
+// tryFindDialogActionKey dispatches the keymap.ActionFind* bindings looked up via
+// h.keysFindDialog (select/unselect all, group select/unselect, open in
+// primary/secondary). Returns true when the event matched one of these actions.
+func (h *Handler) tryFindDialogActionKey(event *tcell.EventKey) bool {
+	if h.keysFindDialog == nil {
+		return false
+	}
+	id, ok := h.keysFindDialog.Lookup(event)
+	if !ok {
+		return false
+	}
+	switch id {
+	case keymap.ActionFindUnselectAll:
+		h.findDialogUnselectAll()
+	case keymap.ActionFindSelectAll:
+		h.findDialogSelectAll()
+	case keymap.ActionFindSelectGroup:
+		h.host.OpenGroupSelectDialog("select", true)
+	case keymap.ActionFindUnselectGroup:
+		h.host.OpenGroupSelectDialog("unselect", true)
+	case keymap.ActionFindOpenInPrimary:
+		h.OpenSelectedInPrimary()
+	case keymap.ActionFindOpenInSecondary:
+		h.OpenSelectedInSecondary()
+	default:
+		return false
+	}
+	return true
+}
+
 func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	st := &h.model.FindDialog
-	if h.keysFindDialog != nil {
-		if id, ok := h.keysFindDialog.Lookup(event); ok {
-			switch id {
-			case keymap.ActionFindUnselectAll:
-				h.findDialogUnselectAll()
-				return
-			case keymap.ActionFindSelectAll:
-				h.findDialogSelectAll()
-				return
-			case keymap.ActionFindSelectGroup:
-				h.host.OpenGroupSelectDialog("select", true)
-				return
-			case keymap.ActionFindUnselectGroup:
-				h.host.OpenGroupSelectDialog("unselect", true)
-				return
-			case keymap.ActionFindOpenInPrimary:
-				h.OpenSelectedInPrimary()
-				return
-			case keymap.ActionFindOpenInSecondary:
-				h.OpenSelectedInSecondary()
-				return
-			}
-		}
+	if h.tryFindDialogActionKey(event) {
+		return
 	}
 	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle {
 		h.findDialogToggleSelectionAndAdvance()
@@ -1482,16 +1491,18 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		if st.Focus == 0 {
 			break
 		}
-		switch event.Rune() {
-		case 'v', 'V', 'd', 'D', 'l', 'L', 's', 'S':
-			if field := findToggleFieldForRune(event.Rune()); field == h.findToggleFieldForFocus(st.Focus) {
+		if field := findToggleFieldForRune(event.Rune()); field != findToggleNone {
+			if field == h.findToggleFieldForFocus(st.Focus) {
 				h.applyFindToggle(field)
 			}
-		case 'o', 'O':
+			break
+		}
+		switch dialog.DialogButtonRune(event.Rune()) {
+		case dialog.ButtonRuneOK:
 			h.ActivateDialogOK()
-		case 'c', 'C':
+		case dialog.ButtonRuneCancel:
 			h.CloseDialog()
-		case ' ':
+		case dialog.ButtonRuneToggle:
 			if !h.applyFindToggle(h.findToggleFieldForFocus(st.Focus)) {
 				switch st.Focus {
 				case st.FindDialogOKFocus():
@@ -1502,6 +1513,34 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 			}
 		}
 	}
+}
+
+// matchingFindPaths returns the absolute paths of entries at indices whose basename
+// matches matcher, honoring filesOnly/dirsOnly. Shared filter pipeline for both
+// ApplyGroupSelect branches (select also filters out already-marked paths itself).
+func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dirsOnly bool, matcher panel.GroupMatcher) []string {
+	paths := make([]string, 0, len(indices))
+	for _, entIdx := range indices {
+		if entIdx < 0 || entIdx >= len(st.Entries) {
+			continue
+		}
+		ent := st.Entries[entIdx]
+		if filesOnly && ent.IsDir {
+			continue
+		}
+		if dirsOnly && !ent.IsDir {
+			continue
+		}
+		path := findEntryAbsPath(st, ent)
+		if path == "" {
+			continue
+		}
+		if !matcher.Match(filepath.Base(path)) {
+			continue
+		}
+		paths = append(paths, path)
+	}
+	return paths
 }
 
 // ApplyGroupSelect marks or unmarks full-corpus find results whose basename matches pattern.
@@ -1521,27 +1560,12 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, dirsOnly, ca
 		if st.MarkedPaths == nil {
 			st.MarkedPaths = make(map[string]bool, len(indices))
 		}
-		paths := make([]string, 0, len(indices))
-		for _, entIdx := range indices {
-			if entIdx < 0 || entIdx >= len(st.Entries) {
-				continue
+		matched := matchingFindPaths(st, indices, filesOnly, dirsOnly, matcher)
+		paths := make([]string, 0, len(matched))
+		for _, path := range matched {
+			if !st.MarkedPaths[path] {
+				paths = append(paths, path)
 			}
-			ent := st.Entries[entIdx]
-			if filesOnly && ent.IsDir {
-				continue
-			}
-			if dirsOnly && !ent.IsDir {
-				continue
-			}
-			path := findEntryAbsPath(st, ent)
-			if path == "" || st.MarkedPaths[path] {
-				continue
-			}
-			name := filepath.Base(path)
-			if !matcher.Match(name) {
-				continue
-			}
-			paths = append(paths, path)
 		}
 		conflicts := false
 		if len(paths) > 0 {
@@ -1563,25 +1587,7 @@ func (h *Handler) ApplyGroupSelect(mode, pattern string, filesOnly, dirsOnly, ca
 		st.InvalidateMarkedSelectionDerived()
 		return
 	}
-	for _, entIdx := range indices {
-		if entIdx < 0 || entIdx >= len(st.Entries) {
-			continue
-		}
-		ent := st.Entries[entIdx]
-		if filesOnly && ent.IsDir {
-			continue
-		}
-		if dirsOnly && !ent.IsDir {
-			continue
-		}
-		path := findEntryAbsPath(st, ent)
-		if path == "" {
-			continue
-		}
-		name := filepath.Base(path)
-		if !matcher.Match(name) {
-			continue
-		}
+	for _, path := range matchingFindPaths(st, indices, filesOnly, dirsOnly, matcher) {
 		delete(st.MarkedPaths, path)
 	}
 	if len(st.MarkedPaths) == 0 {

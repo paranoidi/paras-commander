@@ -116,6 +116,24 @@ func (a *App) executeSFTPConnectDialog() {
 	a.executeSFTPConnectURI(panelID, raw)
 }
 
+// sftpConnectNavFocus applies the generic Left/Right/Up/Down focus transition via form,
+// redirecting a landing on the host list (0) back to the location field when the list is
+// empty (or, moving up into it, to Cancel) — mirroring pathPickerNavFocus's hidden-focus
+// skip for the path picker's Navigate purpose.
+func sftpConnectNavFocus(form dialog.DialogLinearForm, focus int, key tcell.Key, emptyList bool) (int, bool) {
+	nf, ok := form.MoveFocus(focus, key)
+	if !ok {
+		return focus, false
+	}
+	if nf == 0 && emptyList {
+		if key == tcell.KeyUp {
+			return form.CancelIndex(), true
+		}
+		return 1, true
+	}
+	return nf, true
+}
+
 func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 	if a.tryStandardDialogActions(event, a.executeSFTPConnectDialog, a.closeSFTPConnectDialog, nil) {
 		return
@@ -162,14 +180,15 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 			}
 		}
 	case tcell.KeyLeft, tcell.KeyRight, tcell.KeyUp, tcell.KeyDown:
+		emptyList := len(st.Ranked) == 0
 		if st.Focus >= form.OKIndex() {
-			if nf, ok := form.MoveFocus(st.Focus, event.Key()); ok {
+			if nf, ok := sftpConnectNavFocus(form, st.Focus, event.Key(), emptyList); ok {
 				st.Focus = nf
 			}
 			break
 		}
 		if st.Focus == 0 {
-			if event.Key() == tcell.KeyDown && len(st.Ranked) == 0 {
+			if event.Key() == tcell.KeyDown && emptyList {
 				st.Focus = 1
 				break
 			}
@@ -182,15 +201,8 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 				break
 			}
 		}
-		if nf, ok := form.MoveFocus(st.Focus, event.Key()); ok {
+		if nf, ok := sftpConnectNavFocus(form, st.Focus, event.Key(), emptyList); ok {
 			st.Focus = nf
-			if st.Focus == 0 && len(st.Ranked) == 0 {
-				if event.Key() == tcell.KeyUp {
-					st.Focus = form.CancelIndex()
-				} else {
-					st.Focus = 1
-				}
-			}
 		}
 	case tcell.KeyHome, tcell.KeyEnd, tcell.KeyPgUp, tcell.KeyPgDn:
 		if handleFilteredListSelectionKey(event, st.Focus, &st.Selected, len(st.Ranked), a.sftpConnectListRows, func() {

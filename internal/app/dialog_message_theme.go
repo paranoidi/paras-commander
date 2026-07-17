@@ -75,22 +75,19 @@ func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if dialog.AltDialogCancel(event) {
-		a.styles = a.themeAtDialogOpen
-		a.closeThemeDialog()
+		a.cancelThemeDialog()
 		return
 	}
 
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyF9:
-		a.styles = a.themeAtDialogOpen
-		a.closeThemeDialog()
+		a.cancelThemeDialog()
 	case tcell.KeyF5:
 		a.previewThemeAtSelection()
 	case tcell.KeyEnter:
 		switch a.model.ThemeDialog.Focus {
 		case 2: // Cancel
-			a.styles = a.themeAtDialogOpen
-			a.closeThemeDialog()
+			a.cancelThemeDialog()
 		default: // list or OK
 			a.activateThemeDialogSelection()
 		}
@@ -130,21 +127,19 @@ func (a *App) handleThemeDialogKey(event *tcell.EventKey) {
 		if event.Modifiers() != tcell.ModNone {
 			break
 		}
-		switch event.Rune() {
-		case 'o', 'O':
+		switch dialog.DialogButtonRune(event.Rune()) {
+		case dialog.ButtonRuneOK:
 			a.activateThemeDialogSelection()
-		case 'c', 'C':
-			a.styles = a.themeAtDialogOpen
-			a.closeThemeDialog()
-		case ' ':
+		case dialog.ButtonRuneCancel:
+			a.cancelThemeDialog()
+		case dialog.ButtonRuneToggle:
 			switch a.model.ThemeDialog.Focus {
 			case 0:
 				a.activateThemeDialogSelection()
 			case 1:
 				a.activateThemeDialogSelection()
 			case 2:
-				a.styles = a.themeAtDialogOpen
-				a.closeThemeDialog()
+				a.cancelThemeDialog()
 			}
 		}
 	}
@@ -166,6 +161,12 @@ func (a *App) openThemeDialog() {
 
 func (a *App) closeThemeDialog() {
 	a.model.ThemeDialog.Open = false
+}
+
+// cancelThemeDialog restores the theme active before the dialog was opened and closes it.
+func (a *App) cancelThemeDialog() {
+	a.styles = a.themeAtDialogOpen
+	a.closeThemeDialog()
 }
 
 func (a *App) moveThemeDialog(delta int) {

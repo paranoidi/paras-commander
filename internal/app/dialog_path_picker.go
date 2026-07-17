@@ -268,12 +268,12 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 		if st.Focus == 0 {
 			break
 		}
-		switch event.Rune() {
-		case 'o', 'O':
+		switch dialog.DialogButtonRune(event.Rune()) {
+		case dialog.ButtonRuneOK:
 			a.activatePathPickerSelection()
-		case 'c', 'C':
+		case dialog.ButtonRuneCancel:
 			a.closePathPicker()
-		case ' ':
+		case dialog.ButtonRuneToggle:
 			switch st.Focus {
 			case 1:
 				a.activatePathPickerSelection()

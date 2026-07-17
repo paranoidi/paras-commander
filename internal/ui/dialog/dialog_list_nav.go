@@ -46,23 +46,18 @@ func ListOKCancelNavFocusKey(focus int, key tcell.Key) (newFocus int, handled bo
 // When hasSelectionsCheckbox is false: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=OK, 5=Cancel.
 // When true: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=selections, 5=OK, 6=Cancel.
 func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key) (newFocus int, handled bool) {
-	maxFocus := 5
+	numContent := 4
 	if hasSelectionsCheckbox {
-		maxFocus = 6
+		numContent = 5
 	}
-	mod := maxFocus + 1
+	form := NewDialogLinearForm(numContent)
+	okFocus := form.OKIndex()
+	cancelFocus := form.CancelIndex()
+
 	switch key {
-	case tcell.KeyTab:
-		return (focus + 1) % mod, true
-	case tcell.KeyBacktab:
-		return (focus + mod - 1) % mod, true
+	case tcell.KeyTab, tcell.KeyBacktab:
+		return form.MoveFocus(focus, key)
 	case tcell.KeyLeft:
-		okFocus := 4
-		cancelFocus := 5
-		if hasSelectionsCheckbox {
-			okFocus = 5
-			cancelFocus = 6
-		}
 		switch focus {
 		case 2:
 			return 1, true
@@ -76,12 +71,6 @@ func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key)
 			return focus, false
 		}
 	case tcell.KeyRight:
-		okFocus := 4
-		cancelFocus := 5
-		if hasSelectionsCheckbox {
-			okFocus = 5
-			cancelFocus = 6
-		}
 		switch focus {
 		case 1:
 			return 2, true
@@ -96,12 +85,6 @@ func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key)
 		if focus == 0 {
 			return focus, false
 		}
-		okFocus := 4
-		cancelFocus := 5
-		if hasSelectionsCheckbox {
-			okFocus = 5
-			cancelFocus = 6
-		}
 		if focus == okFocus || focus == cancelFocus {
 			return okFocus - 1, true
 		}
@@ -113,17 +96,11 @@ func FindDialogNavFocusKey(focus int, hasSelectionsCheckbox bool, key tcell.Key)
 		}
 		return focus - 1, true
 	case tcell.KeyDown:
-		if focus == 0 {
-			return focus, false
-		}
-		if focus == maxFocus {
+		if focus == 0 || focus == cancelFocus {
 			return focus, false
 		}
 		if focus == 1 || focus == 2 || focus == 3 {
-			if hasSelectionsCheckbox {
-				return 4, true
-			}
-			return 4, true // OK
+			return 4, true // OK, or selections row when hasSelectionsCheckbox
 		}
 		return focus + 1, true
 	default:

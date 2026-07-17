@@ -519,15 +519,13 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 's', 'S':
-			gs.PatternMode = panel.GroupPatternShell
-			a.groupSelectClampCaseFocus()
+			a.toggleGroupSelectField(gs, dialog.GroupSelectFocusShellRadio)
 			return
 		case 'r', 'R':
-			gs.PatternMode = panel.GroupPatternRegex
-			a.groupSelectClampCaseFocus()
+			a.toggleGroupSelectField(gs, dialog.GroupSelectFocusRegexRadio)
 			return
 		case 'i', 'I':
-			gs.PatternMode = panel.GroupPatternSimple
+			a.toggleGroupSelectField(gs, dialog.GroupSelectFocusSimpleRadio)
 			return
 		}
 	}
@@ -568,7 +566,7 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 		if mod != tcell.ModNone && mod != tcell.ModShift {
 			break
 		}
-		if event.Rune() == ' ' {
+		if dialog.DialogButtonRune(event.Rune()) == dialog.ButtonRuneToggle {
 			switch gs.Focus {
 			case form.OKIndex():
 				a.confirmGroupSelectFromInput()
