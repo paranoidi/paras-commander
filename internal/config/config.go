@@ -745,6 +745,29 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("theme is required")
 	}
 	builtin := Default()
+	c.validateGeneral(&builtin)
+	c.validateCompareDedupShell(&builtin)
+	c.validateSortAndDelete(&builtin)
+	c.validateUI(&builtin)
+	c.validateUIZoom(&builtin)
+	c.validateFilter(&builtin)
+	c.validateJobs(&builtin)
+	c.validateJobsWorkerTiming(&builtin)
+	c.validateJobsScan(&builtin)
+	c.validateOperations(&builtin)
+	if !validLoggingLevel(c.Logging.Level) {
+		c.Logging.Level = builtin.Logging.Level
+	}
+	if len(c.UserMenu.LocalNames) == 0 {
+		c.UserMenu.LocalNames = append([]string(nil), builtin.UserMenu.LocalNames...)
+	}
+	c.validatePreview(&builtin)
+	c.validateSFTP(&builtin)
+	c.validateMeta(&builtin)
+	return nil
+}
+
+func (c *Config) validateGeneral(builtin *Config) {
 	ds := strings.ToLower(strings.TrimSpace(c.DefaultSort))
 	if ds == SortDiskUsage || ds == "disk-usage" {
 		c.DefaultSort = SortName
@@ -773,6 +796,9 @@ func (c *Config) Validate() error {
 	if c.DiskUsageWalkConcurrency < 1 {
 		c.DiskUsageWalkConcurrency = builtin.DiskUsageWalkConcurrency
 	}
+}
+
+func (c *Config) validateCompareDedupShell(builtin *Config) {
 	if c.Compare.HashConcurrency < 1 {
 		c.Compare.HashConcurrency = builtin.Compare.HashConcurrency
 	}
@@ -791,6 +817,9 @@ func (c *Config) Validate() error {
 	if c.Shell.TerminalPanelHeight < MinShellTerminalPanelHeight {
 		c.Shell.TerminalPanelHeight = builtin.Shell.TerminalPanelHeight
 	}
+}
+
+func (c *Config) validateSortAndDelete(builtin *Config) {
 	if !c.sortModeValid(c.DefaultSort) {
 		c.DefaultSort = builtin.DefaultSort
 	}
@@ -804,6 +833,9 @@ func (c *Config) Validate() error {
 	if c.DeleteMode != DeletePermanent {
 		c.DeleteMode = builtin.DeleteMode
 	}
+}
+
+func (c *Config) validateUI(builtin *Config) {
 	if c.UI.BorderStyle != BorderStyleSingle {
 		c.UI.BorderStyle = builtin.UI.BorderStyle
 	}
@@ -835,6 +867,9 @@ func (c *Config) Validate() error {
 	if c.UI.FindListNavIdleMS < 0 {
 		c.UI.FindListNavIdleMS = builtin.UI.FindListNavIdleMS
 	}
+}
+
+func (c *Config) validateUIZoom(builtin *Config) {
 	if c.UI.PanelZoomActivePercent <= 0 || c.UI.PanelZoomInactivePercent <= 0 ||
 		c.UI.PanelZoomActivePercent+c.UI.PanelZoomInactivePercent != 100 {
 		c.UI.PanelZoomActivePercent = DefaultPanelZoomActivePercent
@@ -869,6 +904,9 @@ func (c *Config) Validate() error {
 		c.UI.MessageLogMaxEntries = messageLogMaxCap
 	}
 	normalizeCarouselUI(&c.UI)
+}
+
+func (c *Config) validateFilter(builtin *Config) {
 	if c.Filter.Mode != FilterModeFuzzy {
 		c.Filter.Mode = builtin.Filter.Mode
 	}
@@ -885,6 +923,9 @@ func (c *Config) Validate() error {
 	default:
 		c.Filter.CycleMatches = builtin.Filter.CycleMatches
 	}
+}
+
+func (c *Config) validateJobs(builtin *Config) {
 	if c.Jobs.KeepFinished <= 0 {
 		c.Jobs.KeepFinished = builtin.Jobs.KeepFinished
 	}
@@ -916,6 +957,11 @@ func (c *Config) Validate() error {
 	if c.Jobs.WorkerProgressMinBytes > workerProgressBytesMax {
 		c.Jobs.WorkerProgressMinBytes = workerProgressBytesMax
 	}
+}
+
+func (c *Config) validateJobsWorkerTiming(builtin *Config) {
+	const jobsProgressTimingMinMS = JobsProgressTimingMinMS
+	const jobsProgressTimingMaxMS = JobsProgressTimingMaxMS
 	if c.Jobs.WorkerProgressMinIntervalMS <= 0 {
 		c.Jobs.WorkerProgressMinIntervalMS = builtin.Jobs.WorkerProgressMinIntervalMS
 	}
@@ -947,6 +993,11 @@ func (c *Config) Validate() error {
 	if c.Jobs.ThroughputChartColumnMS > throughputChartColumnMaxMS {
 		c.Jobs.ThroughputChartColumnMS = throughputChartColumnMaxMS
 	}
+}
+
+func (c *Config) validateJobsScan(builtin *Config) {
+	const jobsProgressTimingMinMS = JobsProgressTimingMinMS
+	const jobsProgressTimingMaxMS = JobsProgressTimingMaxMS
 	if c.Jobs.FreeSpacePollIntervalSecs < 0 {
 		c.Jobs.FreeSpacePollIntervalSecs = builtin.Jobs.FreeSpacePollIntervalSecs
 	}
@@ -984,6 +1035,9 @@ func (c *Config) Validate() error {
 	if c.Jobs.ScanProgressMinIntervalMS > jobsProgressTimingMaxMS {
 		c.Jobs.ScanProgressMinIntervalMS = jobsProgressTimingMaxMS
 	}
+}
+
+func (c *Config) validateOperations(builtin *Config) {
 	if c.Operations.CopyBufferKiB <= 0 {
 		c.Operations.CopyBufferKiB = builtin.Operations.CopyBufferKiB
 	}
@@ -996,12 +1050,9 @@ func (c *Config) Validate() error {
 	} else {
 		c.Operations.FlattenDefaultLocation = loc
 	}
-	if !validLoggingLevel(c.Logging.Level) {
-		c.Logging.Level = builtin.Logging.Level
-	}
-	if len(c.UserMenu.LocalNames) == 0 {
-		c.UserMenu.LocalNames = append([]string(nil), builtin.UserMenu.LocalNames...)
-	}
+}
+
+func (c *Config) validatePreview(builtin *Config) {
 	if strings.TrimSpace(c.Preview.Command) == "" {
 		c.Preview.Command = builtin.Preview.Command
 	}
@@ -1020,6 +1071,9 @@ func (c *Config) Validate() error {
 			c.Preview.Command = builtin.Preview.Command
 		}
 	}
+}
+
+func (c *Config) validateSFTP(builtin *Config) {
 	if c.SFTP.IdleTimeoutSecs < 15 {
 		c.SFTP.IdleTimeoutSecs = builtin.SFTP.IdleTimeoutSecs
 	}
@@ -1038,6 +1092,9 @@ func (c *Config) Validate() error {
 	if c.SFTP.ListTimeoutSecs > 300 {
 		c.SFTP.ListTimeoutSecs = 300
 	}
+}
+
+func (c *Config) validateMeta(builtin *Config) {
 	if len(c.Meta.LocalNames) == 0 {
 		c.Meta.LocalNames = append([]string(nil), builtin.Meta.LocalNames...)
 	}
@@ -1048,7 +1105,6 @@ func (c *Config) Validate() error {
 	if c.Meta.DefaultEntryWorkers > metaWorkersMax {
 		c.Meta.DefaultEntryWorkers = metaWorkersMax
 	}
-	return nil
 }
 
 func (c Config) sortModeValid(value string) bool {
