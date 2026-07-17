@@ -170,6 +170,11 @@ func ScrollingInputLayoutFor(scroll, width, contentLen int) ScrollingInputLayout
 	return ScrollingInputLayout{TextCols: textCols, LeftPad: leftPad, RightPad: rightPad}
 }
 
+// maxScrollFixedPointIters bounds the clamp iteration in ensureScrollInputVisible and
+// AdjustScrollForCompletion: LeftPad can only flip 0→1 once and scroll moves monotonically
+// toward the caret, so it converges in ≤3 passes; this is just a safety bound.
+const maxScrollFixedPointIters = 4
+
 func ensureScrollInputVisible(valueLen, cursor, scroll, width, contentLen int) (int, int) {
 	if width < 1 {
 		width = 1
@@ -183,21 +188,28 @@ func ensureScrollInputVisible(valueLen, cursor, scroll, width, contentLen int) (
 	if scroll < 0 {
 		scroll = 0
 	}
-	lay := ScrollingInputLayoutFor(scroll, width, contentLen)
-	maxScroll := contentLen - lay.TextCols
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if scroll > maxScroll {
-		scroll = maxScroll
-	}
-	if cursor < scroll {
-		scroll = cursor
-	} else if cursor >= scroll+lay.TextCols {
-		scroll = cursor - lay.TextCols + 1
-	}
-	if scroll < 0 {
-		scroll = 0
+	for range maxScrollFixedPointIters {
+		lay := ScrollingInputLayoutFor(scroll, width, contentLen)
+		maxScroll := contentLen - lay.TextCols
+		if maxScroll < 0 {
+			maxScroll = 0
+		}
+		next := scroll
+		if next > maxScroll {
+			next = maxScroll
+		}
+		if cursor < next {
+			next = cursor
+		} else if cursor >= next+lay.TextCols {
+			next = cursor - lay.TextCols + 1
+		}
+		if next < 0 {
+			next = 0
+		}
+		if next == scroll {
+			break
+		}
+		scroll = next
 	}
 	return cursor, scroll
 }
@@ -247,12 +259,20 @@ func AdjustScrollForCompletion(valueLen, cursor, scroll, width, suffixLen int) (
 	if cursor < scroll {
 		scroll = cursor
 	}
-	lay := ScrollingInputLayoutFor(scroll, width, ScrollContentLen(valueLen, cursor))
-	if cursor >= scroll+lay.TextCols {
-		scroll = cursor - lay.TextCols + 1
-		if scroll < 0 {
-			scroll = 0
+	contentLen := ScrollContentLen(valueLen, cursor)
+	for range maxScrollFixedPointIters {
+		lay := ScrollingInputLayoutFor(scroll, width, contentLen)
+		if cursor < scroll+lay.TextCols {
+			break
 		}
+		next := cursor - lay.TextCols + 1
+		if next < 0 {
+			next = 0
+		}
+		if next == scroll {
+			break
+		}
+		scroll = next
 	}
 	return cursor, scroll
 }
@@ -360,11 +380,13 @@ func AdjustScrollRevealOnErase(value string, cursor, scroll, width, suffixLen in
 // ghost completion at the caret (value[:cursor]+suffix+value[cursor:]).
 // Ghost text always uses dialog input placeholder styling, not error styles.
 // textFocused controls caret reverse-video highlighting.
+// valueAsPlaceholder, when true and not invalid, paints the committed value runes in the
+// placeholder/ghost style too (for pending-prefill/suggested-default rendering).
 func PaintScrollingInputContent(
 	screen tcell.Screen, x, y, width int,
 	value, completionSuffix string,
 	cursor, scroll int,
-	textFocused, invalid, focused bool,
+	textFocused, invalid, focused, valueAsPlaceholder bool,
 	styles theme.Theme,
 ) (int, int) {
 	if width <= 0 {
@@ -373,6 +395,9 @@ func PaintScrollingInputContent(
 	committedStyle := styles.DialogInputBaseStyle(focused, invalid)
 	markerStyle := styles.DialogInputBaseStyle(focused, false)
 	_, ghostStyle := styles.DialogInputPair(focused)
+	if valueAsPlaceholder && !invalid {
+		committedStyle = ghostStyle
+	}
 	valueRunes := []rune(value)
 	suffixRunes := []rune(completionSuffix)
 	valueLen := len(valueRunes)
@@ -439,7 +464,7 @@ func DrawScrollingDialogInput(screen tcell.Screen, x, y, width int, input Scroll
 	if width <= 0 {
 		return
 	}
-	PaintScrollingInputContent(screen, x, y, width, input.Value, input.CompletionSuffix, input.Cursor, input.Scroll, focused, invalid, focused, styles)
+	PaintScrollingInputContent(screen, x, y, width, input.Value, input.CompletionSuffix, input.Cursor, input.Scroll, focused, invalid, focused, false, styles)
 }
 
 // DialogButtonSpec describes one rendered dialog button (label, Alt shortcut, focus).

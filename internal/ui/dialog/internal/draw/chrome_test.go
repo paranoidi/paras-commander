@@ -52,7 +52,7 @@ func TestEnsureScrollInputVisible(t *testing.T) {
 	}{
 		{name: "empty/short text", length: 0, cursor: 0, scroll: 0, width: 10, wantCursor: 0, wantScroll: 0},
 		{name: "cursor in window keeps scroll", length: 20, cursor: 5, scroll: 0, width: 10, wantCursor: 5, wantScroll: 0},
-		{name: "cursor past right scrolls right", length: 20, cursor: 12, scroll: 0, width: 10, wantCursor: 12, wantScroll: 4},
+		{name: "cursor past right scrolls right", length: 20, cursor: 12, scroll: 0, width: 10, wantCursor: 12, wantScroll: 5},
 		{name: "cursor before left scrolls left", length: 20, cursor: 2, scroll: 10, width: 10, wantCursor: 2, wantScroll: 2},
 		{name: "cursor at end reserves trailing cell", length: 20, cursor: 20, scroll: 0, width: 10, wantCursor: 20, wantScroll: 12},
 		{name: "cursor clamped to length", length: 5, cursor: 99, scroll: 0, width: 10, wantCursor: 5, wantScroll: 0},
@@ -66,6 +66,16 @@ func TestEnsureScrollInputVisible(t *testing.T) {
 					tc.length, tc.cursor, tc.scroll, tc.width, c, s, tc.wantCursor, tc.wantScroll)
 			}
 		})
+	}
+}
+
+func TestEnsureScrollInputVisibleCaretInsidePaintWindowAfterScrollFlip(t *testing.T) {
+	const length, cursor, scroll, width = 20, 9, 0, 10
+	gotCursor, gotScroll := EnsureScrollInputVisible(length, cursor, scroll, width)
+	lay := ScrollingInputLayoutFor(gotScroll, width, ScrollContentLen(length, gotCursor))
+	if gotCursor < gotScroll || gotCursor >= gotScroll+lay.TextCols {
+		t.Fatalf("caret %d not inside paint window [%d,%d) at scroll %d",
+			gotCursor, gotScroll, gotScroll+lay.TextCols, gotScroll)
 	}
 }
 
@@ -262,6 +272,82 @@ func TestOverflowMarkerRightVisibleWithCursorInLastTextCell(t *testing.T) {
 	gotRow := tcelltest.TextAt(screen, 2, 2, width)
 	if !strings.HasSuffix(gotRow, right) {
 		t.Fatalf("row = %q; %s missing at end", gotRow, right)
+	}
+}
+
+func TestPaintScrollingInputContentCaretVisibleAfterScrollFlip(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(40, 10)
+
+	th := theme.Default()
+	value := "ABCDEFGHIJKLMNOPQRST" // 20 runes
+	const x, y, width = 2, 2, 10
+	cursor := 9
+	PaintScrollingInputContent(screen, x, y, width, value, "", cursor, 0, true, false, true, false, th)
+
+	got, _, _ := screen.Get(x+width-1, y)
+	right := string(ScrollOverflowRight)
+	if got != right {
+		t.Fatalf("right cell = %q want %s", got, right)
+	}
+
+	caretFound := false
+	for i := 0; i < width; i++ {
+		_, st, _ := screen.Get(x+i, y)
+		_, _, attr := st.Decompose()
+		if attr&tcell.AttrReverse != 0 {
+			caretFound = true
+			break
+		}
+	}
+	if !caretFound {
+		t.Fatal("no cell with reverse attribute found in window; caret hidden behind overflow marker")
+	}
+}
+
+func TestPaintScrollingInputContentValueAsPlaceholderStyleAndCaretVisible(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	screen.SetSize(40, 10)
+
+	th := theme.Default()
+	_, wantStyle := th.DialogInputPair(true)
+	wantFG, _, _ := wantStyle.Decompose()
+
+	value := "ABCDEFGHIJKLMNOPQRST" // 20 runes
+	const x, y, width = 2, 2, 10
+	cursor := 9
+	gotCursor, gotScroll := PaintScrollingInputContent(screen, x, y, width, value, "", cursor, 0, true, false, true, true, th)
+
+	lay := ScrollingInputLayoutFor(gotScroll, width, ScrollContentLen(len([]rune(value)), gotCursor))
+	nonCaretUsesPlaceholder := false
+	caretFound := false
+	for i := 0; i < lay.TextCols; i++ {
+		idx := gotScroll + i
+		_, st, _ := screen.Get(x+lay.LeftPad+i, y)
+		fg, _, attr := st.Decompose()
+		if idx == gotCursor {
+			if attr&tcell.AttrReverse != 0 {
+				caretFound = true
+			}
+			continue
+		}
+		if fg == wantFG {
+			nonCaretUsesPlaceholder = true
+		}
+	}
+	if !nonCaretUsesPlaceholder {
+		t.Fatalf("no committed cell used placeholder foreground %v", wantFG)
+	}
+	if !caretFound {
+		t.Fatalf("caret cell missing reverse attribute at cursor=%d scroll=%d", gotCursor, gotScroll)
 	}
 }
 

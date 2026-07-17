@@ -415,49 +415,12 @@ func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 		return
 	}
 	invalid := field.InputInvalid
-	var style, placeholderStyle tcell.Style
-	if invalid {
-		style = styles.DialogInputBaseStyle(focused, true)
-		placeholderStyle = style
-	} else {
-		style, placeholderStyle = styles.DialogInputPair(focused)
-	}
 	prefillPending := field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill
-	if prefillPending {
-		textStyle := placeholderStyle
-		if invalid {
-			textStyle = style
-		}
-		markerStyle := styles.DialogInputBaseStyle(focused, false)
-		runes := []rune(field.Value)
-		length := len(runes)
-		cursor, scroll := draw.EnsureScrollInputVisible(length, field.Cursor, field.Scroll, width)
-		lay := draw.ScrollingInputLayoutFor(scroll, width, length)
-		for i := 0; i < lay.TextCols; i++ {
-			idx := scroll + i
-			ch := ' '
-			if idx < length {
-				ch = runes[idx]
-			}
-			st := textStyle
-			if focused && idx == cursor {
-				st = textStyle.Reverse(true)
-			}
-			screen.SetContent(x+lay.LeftPad+i, y, ch, nil, st)
-		}
-		if lay.LeftPad > 0 {
-			screen.SetContent(x, y, '◀', nil, markerStyle)
-		}
-		if lay.RightPad > 0 {
-			screen.SetContent(x+width-1, y, '▶', nil, markerStyle)
-		}
-		return
-	}
 	draw.PaintScrollingInputContent(
 		screen, x, y, width,
 		field.Value, "",
 		field.Cursor, field.Scroll,
-		focused, invalid, focused,
+		focused, invalid, focused, prefillPending,
 		styles,
 	)
 }
@@ -478,50 +441,23 @@ func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogFiel
 	}
 	textW := width - 2
 	rowStyle := styles.DialogInputBaseStyle(rowFocused, false)
-	committedStyle := styles.DialogInputBaseStyle(rowFocused, pathInvalid)
 	_, placeholderStyle := styles.DialogInputPair(rowFocused)
 	prefillPending := field.Prefill != "" && field.PrefillPending && field.Value == field.Prefill
 	textFocused := rowFocused && !pickerFocused
 
 	primitive.Text(screen, x, y, width, "", rowStyle)
 
+	suffix := field.CompletionSuffix
 	if prefillPending {
-		textStyle := placeholderStyle
-		if pathInvalid {
-			textStyle = committedStyle
-		}
-		markerStyle := styles.DialogInputBaseStyle(rowFocused, false)
-		runes := []rune(field.Value)
-		length := len(runes)
-		cursor, scroll := draw.EnsureScrollInputVisible(length, field.Cursor, field.Scroll, textW)
-		lay := draw.ScrollingInputLayoutFor(scroll, textW, length)
-		for i := 0; i < lay.TextCols; i++ {
-			idx := scroll + i
-			ch := ' '
-			if idx < length {
-				ch = runes[idx]
-			}
-			st := textStyle
-			if textFocused && idx == cursor {
-				st = textStyle.Reverse(true)
-			}
-			screen.SetContent(x+lay.LeftPad+i, y, ch, nil, st)
-		}
-		if lay.LeftPad > 0 {
-			screen.SetContent(x, y, '◀', nil, markerStyle)
-		}
-		if lay.RightPad > 0 {
-			screen.SetContent(x+textW-1, y, '▶', nil, markerStyle)
-		}
-	} else {
-		draw.PaintScrollingInputContent(
-			screen, x, y, textW,
-			field.Value, field.CompletionSuffix,
-			field.Cursor, field.Scroll,
-			textFocused, pathInvalid, rowFocused,
-			styles,
-		)
+		suffix = ""
 	}
+	draw.PaintScrollingInputContent(
+		screen, x, y, textW,
+		field.Value, suffix,
+		field.Cursor, field.Scroll,
+		textFocused, pathInvalid, rowFocused, prefillPending,
+		styles,
+	)
 
 	glyphX := x + textW
 	symStr := styles.SymbolPathPicker()
