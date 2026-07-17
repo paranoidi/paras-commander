@@ -212,121 +212,20 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	}
 
 	if state.CarouselMode {
-		quickViewOn := ctx.QuickViewDriverPanelID >= 0
-		filePreviewEligible := panelcarousel.FilePreviewEligible(rect, ctx.HideInactivePanel, display.CarouselLayout)
-		showChildCol := panelcarousel.ShowChildPreviewColumn(state, quickViewOn, filePreviewEligible)
-		if panelcarousel.LayoutFits(rect, display.CarouselLayout, showChildCol) {
-			parent, _, child, childKind := panelcarousel.BuildColumns(state, visibleRows, quickViewOn, filePreviewEligible)
-			carouselDisk := panelcarousel.DiskUsage{
-				Active:                 display.ShowDiskUsage,
-				PanelID:                ctx.PanelID,
-				ListingDevice:          state.ListingDevice,
-				ListingDeviceValid:     state.ListingDeviceValid,
-				DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
-				GoduIgnore:             display.DiskUsageGoduIgnore,
-				Source:                 display.Painter,
-			}
-			panelcarousel.DrawBody(screen, panelcarousel.BodyParams{
-				Frame:                 rect,
-				Center:                state,
-				Parent:                parent,
-				Child:                 child,
-				Styles:                panelStyle.Styles,
-				ChromeBlocked:         ctx.ChromeBlocked,
-				FileListActive:        ctx.FileListActive,
-				ShowIcons:             display.ShowIcons,
-				HeaderStyle:           headerStyle,
-				HeaderCarouselStyle:   headerCarouselStyle,
-				SurfaceStyle:          chrome.Surface,
-				ShowChildColumn:       showChildCol,
-				ChildPreviewKind:      childKind,
-				DiskUsage:             carouselDisk,
-				OtherPanelPath:        ctx.OtherPanelPath,
-				ScrollbarStyle:        panelStyle.ScrollbarStyle,
-				ScrollbarShowInactive: display.ScrollbarShowInactive,
-				InactiveFrameStyle:    panelStyle.Styles.PanelInactiveFrame,
-				Layout:                display.CarouselLayout,
-				JobMark: func(path string) (rune, string, bool) {
-					marked, st := EntryPathJobMarkStatus(path, display.JobMarks)
-					if !marked {
-						return 0, "", false
-					}
-					glyphStr := panelStyle.Styles.SymbolJobsList(st)
-					if glyphStr == "" {
-						return 0, "", false
-					}
-					r, _ := utf8.DecodeRuneInString(glyphStr)
-					return r, st, true
-				},
-				PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
-					paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles, PanelIconStripContext{
-						CursorStyleKey: cursorKey,
-						ChromeBlocked:  ctx.ChromeBlocked,
-						Folder: panellist.FolderIconContext{
-							OtherPanelPath:         ctx.OtherPanelPath,
-							DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
-							ListingDev:             state.ListingDevice,
-							ListingDevValid:        state.ListingDeviceValid,
-							DiskPending:            diskPending,
-							DiskExcluded:           diskExcluded,
-							DiskUsageChrome:        display.ShowDiskUsage,
-						},
-					})
-				},
-				NewFileMark: func(entry localfs.Entry) panellist.NewFileMarkTier {
-					return state.NewFileMarkTier(entry)
-				},
-				RenameMark: func(entry localfs.Entry) bool {
-					return state.IsRenameMarked(entry)
-				},
-			})
-			paintCarouselFilePreview := display.CarouselFilePreview.Open && showChildCol &&
-				(childKind == panelcarousel.ChildPreviewFile ||
-					ctx.FileListActive && (state.Filter.Active || state.Filter.Editing))
-			if paintCarouselFilePreview {
-				if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, showChildCol, display.CarouselLayout); ok {
-					drawFilePreviewPanel(screen, Rect(previewRect), display.CarouselFilePreview, panelStyle.Styles, ctx.ChromeBlocked, false, false, true, false, state.PathString(), display.UserHomeDir)
-				}
-			}
-			if !showChildCol {
-				drawPanelListScrollbar(screen, rect,
-					panelScrollPos{ListTopY: rect.Y + 2, Visible: visibleRows, Total: state.VisibleEntryCount(), Offset: state.ScrollOffset},
-					panelStyle.ScrollbarStyle, panelScrollbarShow(ctx.FileListActive, display.ScrollbarShowInactive),
-					ctx.FileListActive, ctx.ChromeBlocked, borderStyle, panelStyle.Styles)
-			}
-			if selectionSizeLabel != "" {
-				drawPanelBottomSelectionSize(screen, rect, ctx.PanelID, bottomCtx)
-			} else {
-				drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, panelcarousel.CenterNameWidth(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows), display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
-			}
+		if drawPanelCarousel(screen, panelCarouselParams{
+			Rect: rect, State: state, PanelStyle: panelStyle, Ctx: ctx, Display: display,
+			BottomCtx: bottomCtx, BorderStyle: borderStyle, TitleStyle: titleStyle,
+			HeaderStyle: headerStyle, HeaderCarouselStyle: headerCarouselStyle, SurfaceStyle: chrome.Surface,
+			SelectionSizeLabel: selectionSizeLabel, VisibleRows: visibleRows,
+		}) {
 			return
 		}
 	}
 
-	interior := rect.Width - 2
-	leftGutter := 0
-	if display.ShowIcons {
-		leftGutter = panelIconListLeadingGutter
-	}
-	iconStrip := 0
-	if display.ShowIcons {
-		iconStrip = panelIconStripCells
-	}
-	baseListWidth := interior - leftGutter - iconStrip
-	nameOnlyDisplay := display.ShrunkenShowsNameOnly && baseListWidth < config.ShrunkenListingRowTextWidthThreshold
-	showGit := panelListGitColumnActive(state, nameOnlyDisplay)
-	gitStrip := 0
-	if showGit {
-		gitStrip = panelListGitStripWidth()
-	}
-	rowTextWidth := baseListWidth - gitStrip
-	if rowTextWidth < 1 {
-		rowTextWidth = 1
-	}
-	gitStart := rect.X + 1 + leftGutter
-	iconStart := gitStart + gitStrip
-	fullRowCells := leftGutter + gitStrip + iconStrip + rowTextWidth
-	diskDenom := panelDiskUsageDenom(display.ShowDiskUsage, display.Painter, state.Entries)
+	layoutRes := panelColumnLayout(rect, state, display)
+	leftGutter, iconStrip, nameOnlyDisplay := layoutRes.LeftGutter, layoutRes.IconStrip, layoutRes.NameOnlyDisplay
+	showGit, gitStrip, rowTextWidth := layoutRes.ShowGit, layoutRes.GitStrip, layoutRes.RowTextWidth
+	gitStart, iconStart, fullRowCells, diskDenom := layoutRes.GitStart, layoutRes.IconStart, layoutRes.FullRowCells, layoutRes.DiskDenom
 
 	metaLayouts, metaTotalW := LayoutMetaColumns(display.MetaColumns)
 	showMeta := len(metaLayouts) > 0
@@ -363,148 +262,14 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		ShowGit:   showGit,
 	}
 	for row := 0; row < visibleRows; row++ {
-		y := rect.Y + 2 + row
-		style := panelStyle.Styles.PanelRowFile
-		text := ""
-		entryIndex := state.ScrollOffset + row
-		var spans []primitive.Span
-
-		hasEntry := false
-		var cur localfs.Entry
-		selected := false
-		fillCols := 0
-
-		var subtreeMark bool
-		var newFileTier panellist.NewFileMarkTier
-		var renameMark bool
-		var jobMark bool
-		var jobStatus string
-		var jobMarkGlyph rune
-		var rowSuffix panellist.RowSuffix
-
-		if entry, _, ok := state.VisibleEntry(entryIndex); ok {
-			hasEntry = true
-			cur = entry
-			style = panelStyle.Styles.PanelListingEntryStyle(entry.Type, ctx.ChromeBlocked)
-			selected = state.IsSelected(entry)
-			if selected {
-				style = panelStyle.Styles.PanelListingSelectedStyle(ctx.ChromeBlocked)
-			}
-			if entryIndex == state.Cursor {
-				style = panelStyle.Styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
-					ChromeBlocked:     ctx.ChromeBlocked,
-					FileListActive:    ctx.FileListActive,
-					Selected:          selected,
-					FilterUniqueMatch: ctx.FileListActive && state.FilterUniqueMatch(),
-				})
-			}
-			subtreeMark = entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
-			newFileTier = state.NewFileMarkTier(entry)
-			renameMark = state.IsRenameMarked(entry)
-			jobMark, jobStatus = EntryPathJobMarkStatus(entry.Path, display.JobMarks)
-			if jobMark {
-				glyphStr := panelStyle.Styles.SymbolJobsList(jobStatus)
-				if glyphStr != "" {
-					jobMarkGlyph, _ = utf8.DecodeRuneInString(glyphStr)
-				} else {
-					jobMarkGlyph = 0
-				}
-			} else {
-				jobMarkGlyph = 0
-			}
-			metaText := ""
-			if showMetaEffective {
-				metaText = MetaRowText(metaLayouts, entry.Path)
-			}
-			rowSuffix = panellist.RowSuffix{
-				JobGlyph:         jobMarkGlyph,
-				NewFileTier:      newFileTier,
-				RenameMark:       renameMark,
-				SubtreeSelection: subtreeMark,
-			}
-			rowOpts.Suffix = rowSuffix
-			text = formatEntry(entry, listTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
-			if display.ShowDiskUsage && display.Painter != nil && diskDenom > 0 {
-				fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, display.Painter), diskDenom, fullRowCells)
-			}
-		}
-
-		blendCell := func(absCol int) tcell.Style {
-			if !ctx.ChromeBlocked && fillCols > 0 && absCol >= 0 && absCol < fillCols {
-				return mergeDiskUsageBackground(style, panelStyle.Styles.DiskUsageBarStyle(ctx.FileListActive, entryIndex == state.Cursor, selected))
-			}
-			return style
-		}
-
-		cursorIconKey := ""
-		if hasEntry {
-			cursorIconKey = panelCursorIconThemeKey(ctx.FileListActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.FileListActive && state.FilterUniqueMatch())
-		}
-		if hasEntry {
-			spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, panelStyle.Styles, rowOpts, func(di int) tcell.Style {
-				return blendCell(di + leftGutter + gitStrip + iconStrip)
-			})
-			if suffixSpans := panellist.ListingSuffixSpans(cur, nameWidth, display.ShowIcons, rowSuffix, jobStatus, panelStyle.Styles, ctx.ChromeBlocked, cursorIconKey, func(di int) tcell.Style {
-				return blendCell(di + leftGutter + gitStrip + iconStrip)
-			}); len(suffixSpans) > 0 {
-				spans = append(suffixSpans, spans...)
-			}
-		}
-
-		if display.ShowIcons && leftGutter > 0 {
-			for i := 0; i < leftGutter; i++ {
-				screen.SetContent(rect.X+1+i, y, ' ', nil, blendCell(i))
-			}
-		}
-		iconKey := cursorIconKey
-		var diskPending bool
-		var diskExcluded bool
-		if hasEntry {
-			// Mount-boundary / godu-excluded folder icons and tints are disk-usage UI only.
-			// DiskScanExcluded Stat's each directory row; on a network panel that runs even when the
-			// user navigates the other column and dominates latency during background copy I/O.
-			if display.ShowDiskUsage && display.Painter != nil && cur.Type == localfs.EntryDirectory {
-				diskPending = display.Painter.PendingForPanel(cur.Path, ctx.PanelID)
-				diskExcluded = display.Painter.DiskScanExcluded(cur.Path, display.DiskUsageDescendIntoMountPoints, state.ListingDevice, state.ListingDeviceValid, display.DiskUsageGoduIgnore)
-			}
-		}
-		if showGit {
-			gitStyle := blendCell(leftGutter)
-			gitUnderUsage := !ctx.ChromeBlocked && fillCols > leftGutter
-			var gitUsageAccent tcell.Style
-			if gitUnderUsage {
-				gitUsageAccent = panelStyle.Styles.DiskUsageBarStyle(ctx.FileListActive, entryIndex == state.Cursor, selected)
-			}
-			if hasEntry {
-				paintGitColumn(screen, gitStart, y, panelGitCell(cur, state.GitByPath), gitStyle, panelStyle.Styles, entryIndex == state.Cursor, gitUnderUsage, gitUsageAccent)
-				paintGitRowTrailingGap(screen, gitStart, y, gitStyle)
-			} else {
-				paintGitStripBlank(screen, gitStart, y, gitStyle)
-			}
-		}
-		if display.ShowIcons {
-			if hasEntry {
-				iconStripStyle := blendCell(leftGutter + gitStrip)
-				paintPanelIconStrip(screen, iconStart, y, cur, iconStripStyle, panelStyle.Styles, PanelIconStripContext{
-					CursorStyleKey: iconKey,
-					ChromeBlocked:  ctx.ChromeBlocked,
-					Folder: panellist.FolderIconContext{
-						OtherPanelPath:         ctx.OtherPanelPath,
-						DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
-						ListingDev:             state.ListingDevice,
-						ListingDevValid:        state.ListingDeviceValid,
-						DiskPending:            diskPending,
-						DiskExcluded:           diskExcluded,
-						DiskUsageChrome:        display.ShowDiskUsage,
-					},
-				})
-			} else {
-				paintPanelIconStripBlank(screen, iconStart, y, style)
-			}
-		}
-		primitive.StyledTextCellwise(screen, listContentStart, y, listTextWidth, text, func(ci int) tcell.Style {
-			return blendCell(leftGutter + gitStrip + iconStrip + ci)
-		}, spans)
+		drawPanelRow(screen, row, panelRowParams{
+			Rect: rect, State: state, PanelStyle: panelStyle, Ctx: ctx, Display: display,
+			RowOpts: rowOpts, ListTextWidth: listTextWidth, ListContentStart: listContentStart, NameWidth: nameWidth,
+			LeftGutter: leftGutter, GitStrip: gitStrip, IconStrip: iconStrip,
+			GitStart: gitStart, IconStart: iconStart, ShowGit: showGit,
+			FullRowCells: fullRowCells, DiskDenom: diskDenom,
+			MetaLayouts: metaLayouts, ShowMetaEffective: showMetaEffective,
+		})
 	}
 
 	drawPanelListScrollbar(screen, rect,
@@ -517,6 +282,353 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	} else {
 		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, nameWidth, display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
 	}
+}
+
+// panelCarouselParams carries drawPanel's locals needed to paint the carousel-mode
+// (parent/center/child column) listing. Field names mirror the drawPanel locals they came
+// from so the body below (moved verbatim) can alias them back in one destructuring line.
+type panelCarouselParams struct {
+	Rect                Rect
+	State               panel.State
+	PanelStyle          PanelStyleConfig
+	Ctx                 PanelContext
+	Display             PanelDisplayConfig
+	BottomCtx           PanelBottomIndicatorContext
+	BorderStyle         tcell.Style
+	TitleStyle          tcell.Style
+	HeaderStyle         tcell.Style
+	HeaderCarouselStyle tcell.Style
+	SurfaceStyle        tcell.Style
+	SelectionSizeLabel  string
+	VisibleRows         int
+}
+
+// panelColumnLayoutResult holds the leading-column width/gutter/strip arithmetic shared by
+// the header row and the per-row paint loop in drawPanel.
+type panelColumnLayoutResult struct {
+	LeftGutter      int
+	IconStrip       int
+	NameOnlyDisplay bool
+	ShowGit         bool
+	GitStrip        int
+	RowTextWidth    int
+	GitStart        int
+	IconStart       int
+	FullRowCells    int
+	DiskDenom       int64
+}
+
+// panelRowParams carries drawPanel's locals needed to paint one row of the classic
+// (non-carousel) single-column listing.
+type panelRowParams struct {
+	Rect              Rect
+	State             panel.State
+	PanelStyle        PanelStyleConfig
+	Ctx               PanelContext
+	Display           PanelDisplayConfig
+	RowOpts           panelRowOpts
+	ListTextWidth     int
+	ListContentStart  int
+	NameWidth         int
+	LeftGutter        int
+	GitStrip          int
+	IconStrip         int
+	GitStart          int
+	IconStart         int
+	ShowGit           bool
+	FullRowCells      int
+	DiskDenom         int64
+	MetaLayouts       []MetaColumnLayout
+	ShowMetaEffective bool
+}
+
+// drawPanelRow paints one row (row is the 0-based offset from the first visible row) of the
+// classic single-column panel listing, moved verbatim out of drawPanel's per-row loop body.
+func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
+	rect, state, panelStyle, ctx, display := p.Rect, p.State, p.PanelStyle, p.Ctx, p.Display
+	listTextWidth, listContentStart, nameWidth := p.ListTextWidth, p.ListContentStart, p.NameWidth
+	leftGutter, gitStrip, iconStrip := p.LeftGutter, p.GitStrip, p.IconStrip
+	gitStart, iconStart, showGit := p.GitStart, p.IconStart, p.ShowGit
+	fullRowCells, diskDenom := p.FullRowCells, p.DiskDenom
+	metaLayouts, showMetaEffective := p.MetaLayouts, p.ShowMetaEffective
+	rowOpts := p.RowOpts
+	y := rect.Y + 2 + row
+	style := panelStyle.Styles.PanelRowFile
+	text := ""
+	entryIndex := state.ScrollOffset + row
+	var spans []primitive.Span
+
+	hasEntry := false
+	var cur localfs.Entry
+	selected := false
+	fillCols := 0
+
+	var subtreeMark bool
+	var newFileTier panellist.NewFileMarkTier
+	var renameMark bool
+	var jobMark bool
+	var jobStatus string
+	var jobMarkGlyph rune
+	var rowSuffix panellist.RowSuffix
+
+	if entry, _, ok := state.VisibleEntry(entryIndex); ok {
+		hasEntry = true
+		cur = entry
+		style = panelStyle.Styles.PanelListingEntryStyle(entry.Type, ctx.ChromeBlocked)
+		selected = state.IsSelected(entry)
+		if selected {
+			style = panelStyle.Styles.PanelListingSelectedStyle(ctx.ChromeBlocked)
+		}
+		if entryIndex == state.Cursor {
+			style = panelStyle.Styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
+				ChromeBlocked:     ctx.ChromeBlocked,
+				FileListActive:    ctx.FileListActive,
+				Selected:          selected,
+				FilterUniqueMatch: ctx.FileListActive && state.FilterUniqueMatch(),
+			})
+		}
+		subtreeMark = entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
+		newFileTier = state.NewFileMarkTier(entry)
+		renameMark = state.IsRenameMarked(entry)
+		jobMark, jobStatus = EntryPathJobMarkStatus(entry.Path, display.JobMarks)
+		if jobMark {
+			glyphStr := panelStyle.Styles.SymbolJobsList(jobStatus)
+			if glyphStr != "" {
+				jobMarkGlyph, _ = utf8.DecodeRuneInString(glyphStr)
+			} else {
+				jobMarkGlyph = 0
+			}
+		} else {
+			jobMarkGlyph = 0
+		}
+		metaText := ""
+		if showMetaEffective {
+			metaText = MetaRowText(metaLayouts, entry.Path)
+		}
+		rowSuffix = panellist.RowSuffix{
+			JobGlyph:         jobMarkGlyph,
+			NewFileTier:      newFileTier,
+			RenameMark:       renameMark,
+			SubtreeSelection: subtreeMark,
+		}
+		rowOpts.Suffix = rowSuffix
+		text = formatEntry(entry, listTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
+		if display.ShowDiskUsage && display.Painter != nil && diskDenom > 0 {
+			fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, display.Painter), diskDenom, fullRowCells)
+		}
+	}
+
+	blendCell := func(absCol int) tcell.Style {
+		if !ctx.ChromeBlocked && fillCols > 0 && absCol >= 0 && absCol < fillCols {
+			return mergeDiskUsageBackground(style, panelStyle.Styles.DiskUsageBarStyle(ctx.FileListActive, entryIndex == state.Cursor, selected))
+		}
+		return style
+	}
+
+	cursorIconKey := ""
+	if hasEntry {
+		cursorIconKey = panelCursorIconThemeKey(ctx.FileListActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.FileListActive && state.FilterUniqueMatch())
+	}
+	if hasEntry {
+		spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, panelStyle.Styles, rowOpts, func(di int) tcell.Style {
+			return blendCell(di + leftGutter + gitStrip + iconStrip)
+		})
+		if suffixSpans := panellist.ListingSuffixSpans(cur, nameWidth, display.ShowIcons, rowSuffix, jobStatus, panelStyle.Styles, ctx.ChromeBlocked, cursorIconKey, func(di int) tcell.Style {
+			return blendCell(di + leftGutter + gitStrip + iconStrip)
+		}); len(suffixSpans) > 0 {
+			spans = append(suffixSpans, spans...)
+		}
+	}
+
+	if display.ShowIcons && leftGutter > 0 {
+		for i := 0; i < leftGutter; i++ {
+			screen.SetContent(rect.X+1+i, y, ' ', nil, blendCell(i))
+		}
+	}
+	iconKey := cursorIconKey
+	var diskPending bool
+	var diskExcluded bool
+	if hasEntry {
+		// Mount-boundary / godu-excluded folder icons and tints are disk-usage UI only.
+		// DiskScanExcluded Stat's each directory row; on a network panel that runs even when the
+		// user navigates the other column and dominates latency during background copy I/O.
+		if display.ShowDiskUsage && display.Painter != nil && cur.Type == localfs.EntryDirectory {
+			diskPending = display.Painter.PendingForPanel(cur.Path, ctx.PanelID)
+			diskExcluded = display.Painter.DiskScanExcluded(cur.Path, display.DiskUsageDescendIntoMountPoints, state.ListingDevice, state.ListingDeviceValid, display.DiskUsageGoduIgnore)
+		}
+	}
+	if showGit {
+		gitStyle := blendCell(leftGutter)
+		gitUnderUsage := !ctx.ChromeBlocked && fillCols > leftGutter
+		var gitUsageAccent tcell.Style
+		if gitUnderUsage {
+			gitUsageAccent = panelStyle.Styles.DiskUsageBarStyle(ctx.FileListActive, entryIndex == state.Cursor, selected)
+		}
+		if hasEntry {
+			paintGitColumn(screen, gitStart, y, panelGitCell(cur, state.GitByPath), gitStyle, panelStyle.Styles, entryIndex == state.Cursor, gitUnderUsage, gitUsageAccent)
+			paintGitRowTrailingGap(screen, gitStart, y, gitStyle)
+		} else {
+			paintGitStripBlank(screen, gitStart, y, gitStyle)
+		}
+	}
+	if display.ShowIcons {
+		if hasEntry {
+			iconStripStyle := blendCell(leftGutter + gitStrip)
+			paintPanelIconStrip(screen, iconStart, y, cur, iconStripStyle, panelStyle.Styles, PanelIconStripContext{
+				CursorStyleKey: iconKey,
+				ChromeBlocked:  ctx.ChromeBlocked,
+				Folder: panellist.FolderIconContext{
+					OtherPanelPath:         ctx.OtherPanelPath,
+					DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
+					ListingDev:             state.ListingDevice,
+					ListingDevValid:        state.ListingDeviceValid,
+					DiskPending:            diskPending,
+					DiskExcluded:           diskExcluded,
+					DiskUsageChrome:        display.ShowDiskUsage,
+				},
+			})
+		} else {
+			paintPanelIconStripBlank(screen, iconStart, y, style)
+		}
+	}
+	primitive.StyledTextCellwise(screen, listContentStart, y, listTextWidth, text, func(ci int) tcell.Style {
+		return blendCell(leftGutter + gitStrip + iconStrip + ci)
+	}, spans)
+}
+
+// panelColumnLayout computes the leading-column (gutter/git/icon) widths and offsets for a
+// panel listing, moved verbatim out of drawPanel's body.
+func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig) panelColumnLayoutResult {
+	interior := rect.Width - 2
+	leftGutter := 0
+	if display.ShowIcons {
+		leftGutter = panelIconListLeadingGutter
+	}
+	iconStrip := 0
+	if display.ShowIcons {
+		iconStrip = panelIconStripCells
+	}
+	baseListWidth := interior - leftGutter - iconStrip
+	nameOnlyDisplay := display.ShrunkenShowsNameOnly && baseListWidth < config.ShrunkenListingRowTextWidthThreshold
+	showGit := panelListGitColumnActive(state, nameOnlyDisplay)
+	gitStrip := 0
+	if showGit {
+		gitStrip = panelListGitStripWidth()
+	}
+	rowTextWidth := baseListWidth - gitStrip
+	if rowTextWidth < 1 {
+		rowTextWidth = 1
+	}
+	gitStart := rect.X + 1 + leftGutter
+	iconStart := gitStart + gitStrip
+	fullRowCells := leftGutter + gitStrip + iconStrip + rowTextWidth
+	diskDenom := panelDiskUsageDenom(display.ShowDiskUsage, display.Painter, state.Entries)
+	return panelColumnLayoutResult{
+		LeftGutter: leftGutter, IconStrip: iconStrip, NameOnlyDisplay: nameOnlyDisplay,
+		ShowGit: showGit, GitStrip: gitStrip, RowTextWidth: rowTextWidth,
+		GitStart: gitStart, IconStart: iconStart, FullRowCells: fullRowCells, DiskDenom: diskDenom,
+	}
+}
+
+// drawPanelCarousel paints the carousel-mode (parent/center/child column) listing for a panel
+// when it fits the available width, and reports whether it did so. When it returns false, the
+// caller falls through to the classic single-column listing (unchanged behavior from the
+// original inline `if state.CarouselMode { if panelcarousel.LayoutFits(...) { ...; return } }`).
+func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
+	rect, state, panelStyle, ctx, display := p.Rect, p.State, p.PanelStyle, p.Ctx, p.Display
+	bottomCtx, borderStyle, titleStyle := p.BottomCtx, p.BorderStyle, p.TitleStyle
+	headerStyle, headerCarouselStyle := p.HeaderStyle, p.HeaderCarouselStyle
+	chromeSurface, selectionSizeLabel, visibleRows := p.SurfaceStyle, p.SelectionSizeLabel, p.VisibleRows
+	quickViewOn := ctx.QuickViewDriverPanelID >= 0
+	filePreviewEligible := panelcarousel.FilePreviewEligible(rect, ctx.HideInactivePanel, display.CarouselLayout)
+	showChildCol := panelcarousel.ShowChildPreviewColumn(state, quickViewOn, filePreviewEligible)
+	if !panelcarousel.LayoutFits(rect, display.CarouselLayout, showChildCol) {
+		return false
+	}
+	parent, _, child, childKind := panelcarousel.BuildColumns(state, visibleRows, quickViewOn, filePreviewEligible)
+	carouselDisk := panelcarousel.DiskUsage{
+		Active:                 display.ShowDiskUsage,
+		PanelID:                ctx.PanelID,
+		ListingDevice:          state.ListingDevice,
+		ListingDeviceValid:     state.ListingDeviceValid,
+		DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
+		GoduIgnore:             display.DiskUsageGoduIgnore,
+		Source:                 display.Painter,
+	}
+	panelcarousel.DrawBody(screen, panelcarousel.BodyParams{
+		Frame:                 rect,
+		Center:                state,
+		Parent:                parent,
+		Child:                 child,
+		Styles:                panelStyle.Styles,
+		ChromeBlocked:         ctx.ChromeBlocked,
+		FileListActive:        ctx.FileListActive,
+		ShowIcons:             display.ShowIcons,
+		HeaderStyle:           headerStyle,
+		HeaderCarouselStyle:   headerCarouselStyle,
+		SurfaceStyle:          chromeSurface,
+		ShowChildColumn:       showChildCol,
+		ChildPreviewKind:      childKind,
+		DiskUsage:             carouselDisk,
+		OtherPanelPath:        ctx.OtherPanelPath,
+		ScrollbarStyle:        panelStyle.ScrollbarStyle,
+		ScrollbarShowInactive: display.ScrollbarShowInactive,
+		InactiveFrameStyle:    panelStyle.Styles.PanelInactiveFrame,
+		Layout:                display.CarouselLayout,
+		JobMark: func(path string) (rune, string, bool) {
+			marked, st := EntryPathJobMarkStatus(path, display.JobMarks)
+			if !marked {
+				return 0, "", false
+			}
+			glyphStr := panelStyle.Styles.SymbolJobsList(st)
+			if glyphStr == "" {
+				return 0, "", false
+			}
+			r, _ := utf8.DecodeRuneInString(glyphStr)
+			return r, st, true
+		},
+		PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
+			paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles, PanelIconStripContext{
+				CursorStyleKey: cursorKey,
+				ChromeBlocked:  ctx.ChromeBlocked,
+				Folder: panellist.FolderIconContext{
+					OtherPanelPath:         ctx.OtherPanelPath,
+					DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
+					ListingDev:             state.ListingDevice,
+					ListingDevValid:        state.ListingDeviceValid,
+					DiskPending:            diskPending,
+					DiskExcluded:           diskExcluded,
+					DiskUsageChrome:        display.ShowDiskUsage,
+				},
+			})
+		},
+		NewFileMark: func(entry localfs.Entry) panellist.NewFileMarkTier {
+			return state.NewFileMarkTier(entry)
+		},
+		RenameMark: func(entry localfs.Entry) bool {
+			return state.IsRenameMarked(entry)
+		},
+	})
+	paintCarouselFilePreview := display.CarouselFilePreview.Open && showChildCol &&
+		(childKind == panelcarousel.ChildPreviewFile ||
+			ctx.FileListActive && (state.Filter.Active || state.Filter.Editing))
+	if paintCarouselFilePreview {
+		if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, showChildCol, display.CarouselLayout); ok {
+			drawFilePreviewPanel(screen, Rect(previewRect), display.CarouselFilePreview, panelStyle.Styles, ctx.ChromeBlocked, false, false, true, false, state.PathString(), display.UserHomeDir)
+		}
+	}
+	if !showChildCol {
+		drawPanelListScrollbar(screen, rect,
+			panelScrollPos{ListTopY: rect.Y + 2, Visible: visibleRows, Total: state.VisibleEntryCount(), Offset: state.ScrollOffset},
+			panelStyle.ScrollbarStyle, panelScrollbarShow(ctx.FileListActive, display.ScrollbarShowInactive),
+			ctx.FileListActive, ctx.ChromeBlocked, borderStyle, panelStyle.Styles)
+	}
+	if selectionSizeLabel != "" {
+		drawPanelBottomSelectionSize(screen, rect, ctx.PanelID, bottomCtx)
+	} else {
+		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, panelcarousel.CenterNameWidth(rect, display.CarouselLayout, state, display.ShowIcons, showChildCol, panelStyle.ScrollbarStyle, visibleRows), display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
+	}
+	return true
 }
 
 const gapBeforePanelTitleEnd = 2
