@@ -89,6 +89,12 @@ type Job struct {
 	// PendingBlocker is non-nil while the job waits for user resolution (conflict or disk space).
 	PendingBlocker *BlockerDetails
 
+	// VolumeDevs holds the deduplicated st_dev of each local source and the destination,
+	// computed once at enqueue (AddJob). Volume-contention checks compare against these
+	// cached IDs so the UI thread never re-stats job paths on a mount the job itself is
+	// saturating (stat on a busy CIFS/NFS mount can block for seconds).
+	VolumeDevs []uint64
+
 	// FlattenRemoveEmpty enables post-move removal of empty directories under FlattenRoots.
 	FlattenRemoveEmpty bool
 	// FlattenRoots are the selected directory roots for flatten cleanup (TypeFlatten only).

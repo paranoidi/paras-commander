@@ -7,7 +7,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/fsvol"
-	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -21,7 +20,10 @@ type volumeSpaceRefreshPayload struct {
 }
 
 // pathVolumeContendsWithActiveJob reports whether path sits on the same volume as an
-// unfinished job source or destination (typical NAS during copy).
+// unfinished job source or destination (typical NAS during copy). Job volume devices
+// are cached on the job at enqueue (jobs.Job.VolumeDevs), so this stats only the query
+// path — never the job's own paths on the mount the job is saturating — and only once,
+// when at least one unfinished job has cached devices.
 func (a *App) pathVolumeContendsWithActiveJob(path string) bool {
 	if !a.jobState.HasUnfinishedWork() {
 		return false
@@ -30,65 +32,27 @@ func (a *App) pathVolumeContendsWithActiveJob(path string) bool {
 	if path == "" || path == "." {
 		return false
 	}
+	var dev uint64
+	devOK := false
 	for _, job := range a.jobState.AllJobs() {
-		if job.Status.IsFinished() {
+		if job.Status.IsFinished() || len(job.VolumeDevs) == 0 {
 			continue
 		}
-		if panelSharesVolumeWithJob(path, job) {
+		if !devOK {
+			if dev, devOK = diskusage.PathDevice(path); !devOK {
+				return false
+			}
+		}
+		if job.HasVolumeDev(dev) {
 			return true
 		}
 	}
 	return false
 }
 
-// panelVolumeRefreshSuppressed skips statfs on a panel while a job hammers the same volume
-// (typical NAS source panel during copy). Browsing another mount stays refreshable.
-func (a *App) panelVolumeRefreshSuppressed(panelID int) bool {
-	p := a.panelByID(panelID)
-	if p == nil {
-		return false
-	}
-	return a.pathVolumeContendsWithActiveJob(p.PathString())
-}
-
-func panelSharesVolumeWithJob(panelPath string, job *jobs.Job) bool {
-	if job.Destination.IsRemote() {
-		return false
-	}
-	panelDev, panelOK := diskusage.PathDevice(panelPath)
-	if !panelOK {
-		return false
-	}
-	check := func(p string) bool {
-		p = filepath.Clean(p)
-		if p == "" || p == "." {
-			return false
-		}
-		dev, ok := diskusage.PathDevice(p)
-		return ok && dev == panelDev
-	}
-	for _, src := range job.Sources {
-		host, err := src.FilePath()
-		if err != nil {
-			continue
-		}
-		if check(host) {
-			return true
-		}
-	}
-	destHost, err := job.Destination.FilePath()
-	if err != nil {
-		return false
-	}
-	return check(destHost)
-}
-
 func (a *App) requestVolumeSpaceRefreshAsync(panelID int) {
 	p := a.panelByID(panelID)
 	if p == nil {
-		return
-	}
-	if a.panelVolumeRefreshSuppressed(panelID) {
 		return
 	}
 	path := filepath.Clean(p.PathString())
@@ -102,6 +66,12 @@ func (a *App) requestVolumeSpaceRefreshAsync(panelID int) {
 		return
 	}
 	go func(panelID int, path string) {
+		// Contention suppression stats the panel path; on a mount saturated by a copy
+		// that stat can block for seconds, so it runs here with the statfs, off the UI thread.
+		if a.pathVolumeContendsWithActiveJob(path) {
+			a.volumeRefreshInFlight[panelID].Store(false)
+			return
+		}
 		avail, total, ok := fsvol.VolumeBytes(path)
 		a.volumeRefreshInFlight[panelID].Store(false)
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(volumeSpaceRefreshPayload{

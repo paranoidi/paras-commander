@@ -157,6 +157,7 @@ func (s *State) removePendingDequeuedByID(id string) {
 
 // AddJob adds a job to the queue and emits an enqueued event.
 func (s *State) AddJob(job *Job) {
+	job.ComputeVolumeDevs()
 	s.mu.Lock()
 	s.queue.Enqueue(job)
 	status := job.Status

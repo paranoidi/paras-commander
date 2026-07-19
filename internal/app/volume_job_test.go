@@ -5,12 +5,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 
 	"github.com/paranoidi/paras-commander/internal/jobs"
 )
 
-func TestPanelSharesVolumeWithJobSameDirectory(t *testing.T) {
+func TestJobVolumeDevsSameDirectory(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	panel := filepath.Join(dir, "browse")
@@ -29,20 +30,25 @@ func TestPanelSharesVolumeWithJobSameDirectory(t *testing.T) {
 		Sources:     pathloc.PathsForTest(src),
 		Destination: pathloc.MustParse(dst),
 	}
-	if !panelSharesVolumeWithJob(panel, job) {
+	job.ComputeVolumeDevs()
+	dev, ok := diskusage.PathDevice(panel)
+	if !ok {
+		t.Fatal("PathDevice failed for panel dir")
+	}
+	if !job.HasVolumeDev(dev) {
 		t.Fatal("panel on same volume as job sources should conflict")
 	}
 }
 
-func TestPanelSharesVolumeWithJobDifferentTempDirs(t *testing.T) {
+func TestJobVolumeDevsMissingPathsCacheNothing(t *testing.T) {
 	t.Parallel()
-	panel := t.TempDir()
 	other := t.TempDir()
 	job := &jobs.Job{
-		Sources:     pathloc.PathsForTest(filepath.Join(other, "file.dat")),
+		Sources:     pathloc.PathsForTest(filepath.Join(other, "ghost.dat")),
 		Destination: pathloc.MustParse(filepath.Join(other, "dst")),
 	}
-	if panelSharesVolumeWithJob(panel, job) {
-		t.Fatal("unrelated temp dirs should not share volume conflict on typical setups")
+	job.ComputeVolumeDevs()
+	if len(job.VolumeDevs) != 0 {
+		t.Fatalf("nonexistent job paths must cache no volume devs, got %v", job.VolumeDevs)
 	}
 }
