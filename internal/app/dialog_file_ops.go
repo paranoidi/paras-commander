@@ -61,14 +61,12 @@ func (a *App) tryDispatchFileOps(actionID string) bool {
 }
 
 func (a *App) refreshBothPanels() {
+	// Both panels walk up when their directory vanished (identical to Refresh
+	// otherwise): jobs can remove the active panel's cwd too, e.g. the
+	// dangling-dirs cleanup deleting the directory the user is standing in.
 	viewportRows := a.activeViewportRows()
-	if a.model.ActivePanel == ui.PrimaryPanel {
-		_ = a.model.Primary.Refresh(viewportRows)
-		_ = a.model.Secondary.RefreshOrNavigateToExistingAncestor(viewportRows)
-	} else {
-		_ = a.model.Secondary.Refresh(viewportRows)
-		_ = a.model.Primary.RefreshOrNavigateToExistingAncestor(viewportRows)
-	}
+	_ = a.model.Primary.RefreshOrNavigateToExistingAncestor(viewportRows)
+	_ = a.model.Secondary.RefreshOrNavigateToExistingAncestor(viewportRows)
 	a.applyDuplicateFocusPending()
 	a.applyQuickViewPreviewImmediately()
 }
@@ -186,6 +184,43 @@ func (a *App) openDeleteDialogForPreviewedFile() {
 		DeleteSummary: ui.FormatDeleteImpactSummary(1, entry.Size, false, ""),
 		DeleteEntries: entries,
 		FocusedField:  1, // No (safe default); Yes stays index 0.
+	}
+	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
+	a.model.FileDialog = fd
+}
+
+// promptDanglingDirDelete is the jobsHost.PromptDanglingDirDelete implementation: it
+// opens the delete confirmation for directories a completed move/delete job left
+// empty, unless another modal already owns the screen — in that case the dirs simply
+// stay visible in the panel and we surface a transient message instead of clobbering
+// whatever the user has open.
+func (a *App) promptDanglingDirDelete(dirs []string) {
+	if len(dirs) == 0 {
+		return
+	}
+	if a.model.AnyModalOpen() {
+		a.setTransientMessage(fmt.Sprintf("%d empty %s left behind", len(dirs), plural(len(dirs), "directory", "directories")), ui.MessageUrgencyInfo)
+		return
+	}
+	a.openDanglingDirsDeleteDialog(dirs)
+}
+
+// openDanglingDirsDeleteDialog opens the standard delete confirmation for directories
+// left empty by a completed move/delete job, reusing the browser dialog (list +
+// summary + Yes/No). Modeled on openDedupDeleteDialog; defaults to Yes (index 0) —
+// removing already-empty directories is low-risk, same rationale as dedup.
+func (a *App) openDanglingDirsDeleteDialog(dirs []string) {
+	entries := make([]dialog.DeleteListEntry, len(dirs))
+	for i, d := range dirs {
+		entries[i] = dialog.DeleteListEntry{Name: d, Path: d, Type: localfs.EntryDirectory}
+	}
+	fd := dialog.FileDialogState{
+		Open:               true,
+		DialogType:         dialog.FileDialogDelete,
+		DeleteSummary:      fmt.Sprintf("%d %s left empty", len(dirs), plural(len(dirs), "directory", "directories")),
+		DeleteEntries:      entries,
+		FocusedField:       0, // Yes default
+		DeleteDanglingDirs: true,
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
 	a.model.FileDialog = fd
@@ -449,6 +484,19 @@ func (a *App) executeMkdir() {
 }
 
 func (a *App) executeDelete() {
+	// Dangling-dirs cleanup: the dialog lists directories a completed move/delete
+	// job left empty, not a fresh panel/preview selection. Must run before the
+	// ViewMode branches below, which re-resolve sources from panel state.
+	if a.model.FileDialog.DeleteDanglingDirs {
+		paths := make([]string, len(a.model.FileDialog.DeleteEntries))
+		for i, e := range a.model.FileDialog.DeleteEntries {
+			paths[i] = e.Path
+		}
+		a.closeFileDialog()
+		a.enqueueDeleteJob(paths, false, false)
+		a.setTransientMessage(fmt.Sprintf("Delete queued (%d %s)", len(paths), plural(len(paths), "directory", "directories")), ui.MessageUrgencyInfo)
+		return
+	}
 	// Dedup delete: the dialog overlays the dedup view; route to the handler
 	// which enqueues the job and prunes the marked rows.
 	if a.model.ViewMode == ui.ViewDedup {
@@ -459,7 +507,7 @@ func (a *App) executeDelete() {
 	if a.model.ViewMode == ui.ViewFilePreview {
 		path := a.model.FullscreenFilePreview.Path
 		a.closeFileDialog()
-		a.enqueueDeleteJob([]string{path}, false)
+		a.enqueueDeleteJob([]string{path}, false, true)
 		a.closeFilePreviewFullscreen()
 		a.setTransientMessage("Delete queued (1 item)", ui.MessageUrgencyInfo)
 		return
@@ -483,7 +531,7 @@ func (a *App) executeDelete() {
 	for i, e := range source.Entries {
 		sources[i] = e.Path
 	}
-	a.enqueueDeleteJob(sources, false)
+	a.enqueueDeleteJob(sources, false, true)
 	n := len(sources)
 	delNoun := "items"
 	if n == 1 {

@@ -2,7 +2,9 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"sort"
 
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
@@ -263,6 +265,86 @@ func dirHasOnlyDotEntries(entries []fsbackend.Entry) bool {
 		return false
 	}
 	return true
+}
+
+// DanglingDirsAfter reports directories left empty by removing sources (e.g. after a
+// move or delete job completes): starting from each source's parent, it climbs upward
+// while every remaining entry in the directory is itself a qualifying (already-empty
+// or fully-emptied-below) directory, stopping at the first ancestor with any other
+// content or at the filesystem root. Only the topmost directory of each emptied chain
+// is returned (removing it recursively covers the rest and avoids re-prompting for the
+// children next time). Nonexistent parents (already removed as part of the operation)
+// are skipped rather than treated as an error; unexpected listing failures on parents
+// that do exist are still returned, matching RemoveEmptyDirsUnder's error style.
+func DanglingDirsAfter(ctx context.Context, sources []pathloc.Path) ([]pathloc.Path, error) {
+	candidates := make(map[string]bool)
+	var order []pathloc.Path
+	for _, parent := range uniqueParentDirs(sources) {
+		if err := climbDanglingChain(ctx, parent, candidates, &order); err != nil {
+			return nil, err
+		}
+	}
+	var out []pathloc.Path
+	for _, c := range order {
+		if !candidates[c.Parent().String()] {
+			out = append(out, c)
+		}
+	}
+	return out, nil
+}
+
+// uniqueParentDirs returns each path's parent directory, first-seen order, deduplicated.
+func uniqueParentDirs(paths []pathloc.Path) []pathloc.Path {
+	seen := make(map[string]bool, len(paths))
+	out := make([]pathloc.Path, 0, len(paths))
+	for _, p := range paths {
+		parent := p.Parent()
+		key := parent.String()
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, parent)
+	}
+	return out
+}
+
+// climbDanglingChain walks dir upward, marking it and each qualifying ancestor as a
+// candidate, until an ancestor has non-candidate content, the chain merges into an
+// already-processed candidate, or dir is the filesystem root (Parent() == dir).
+func climbDanglingChain(ctx context.Context, dir pathloc.Path, candidates map[string]bool, order *[]pathloc.Path) error {
+	for {
+		if candidates[dir.String()] {
+			return nil
+		}
+		be, err := backendFor(dir)
+		if err != nil {
+			return nil
+		}
+		entries, err := be.List(ctx, dir)
+		if err != nil {
+			// errors.Is, not os.IsNotExist: localfs.ListDir wraps the cause with %w.
+			if errors.Is(err, fs.ErrNotExist) {
+				return nil
+			}
+			return &Error{Op: "dangling-dirs", Text: fmt.Sprintf("list %q: %v", dir, err), Err: err}
+		}
+		for _, e := range entries {
+			if e.Name == "." || e.Name == ".." {
+				continue
+			}
+			if e.Type != fsbackend.EntryDirectory || !candidates[e.Loc.String()] {
+				return nil
+			}
+		}
+		candidates[dir.String()] = true
+		*order = append(*order, dir)
+		parent := dir.Parent()
+		if parent.Equal(dir) {
+			return nil
+		}
+		dir = parent
+	}
 }
 
 func dedupeSortedStrings(sorted []string) []string {

@@ -104,6 +104,12 @@ type Job struct {
 	// under the parent directories of Sources (TypeDelete only).
 	DeleteRemoveEmptyDirs bool
 
+	// PromptDanglingDirs asks (after this move/delete job completes) whether to remove
+	// directories left empty by the operation, via the normal delete confirmation dialog.
+	// Set at enqueue from [operations].remove_dangling_directories; see
+	// apphandler/jobs.Handler.promptDanglingDirsIfAny.
+	PromptDanglingDirs bool
+
 	// Per-job copy/move metadata options (from transfer dialog or config at enqueue).
 	PreservePermissions bool
 	PreserveTimestamps  bool

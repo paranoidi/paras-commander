@@ -42,3 +42,5 @@ func (h jobsHost) SetJobFailedTransientMessage(err error, fallback string) {
 }
 
 func (h jobsHost) DevMode() bool { return h.app.devMode }
+
+func (h jobsHost) PromptDanglingDirDelete(dirs []string) { h.app.promptDanglingDirDelete(dirs) }

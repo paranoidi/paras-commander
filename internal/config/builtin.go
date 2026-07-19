@@ -153,6 +153,9 @@ const (
 	DefaultFlattenRecursive = false
 	// DefaultFlattenRemoveEmptyDirs is the initial state of the flatten dialog remove-empty checkbox.
 	DefaultFlattenRemoveEmptyDirs = true
+	// DefaultRemoveDanglingDirs enables the post move/delete prompt to remove directories
+	// left empty by the completed job.
+	DefaultRemoveDanglingDirs = true
 	// DefaultRenameFocusAfter is the initial state of the rename dialog focus-after-rename checkbox.
 	DefaultRenameFocusAfter = false
 

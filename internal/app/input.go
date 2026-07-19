@@ -160,8 +160,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
-	if a.model.PrimaryModal() != dialog.PrimaryModalNone ||
-		a.model.SortDialog.Open || a.model.ListingFormatDialog.Open || a.model.ConfigDialog.Open || a.model.GroupSelect.Open || a.model.FileDialog.Open || a.model.SFTPConnectDialog.Open || a.model.PathPicker.Open || a.model.HistoryDialog.Open || a.model.FindDialog.Open || a.model.MetaDialog.Open || a.model.UserMenu.Open || a.model.CompareMergeDialog.Open {
+	if a.model.AnyModalOpen() {
 		return a.primaryModalFooterKeys()
 	}
 	if a.model.Menu.Open {

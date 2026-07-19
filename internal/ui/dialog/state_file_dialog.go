@@ -162,6 +162,11 @@ type FileDialogState struct {
 	DeleteEntries        []DeleteListEntry
 	DeleteListScroll     int
 	DeleteLayoutMinWidth int // cached at open; avoids scanning all entries each frame
+	// DeleteDanglingDirs marks this delete confirmation as the post-move/delete
+	// "remove directories left empty" prompt, routed in executeDelete before the
+	// normal ViewMode branches (entries are already-resolved directory paths, not
+	// a fresh panel selection).
+	DeleteDanglingDirs bool
 }
 
 // DeleteListEntry is one row in the delete confirmation name list.

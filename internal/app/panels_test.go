@@ -36,6 +36,31 @@ func TestRefreshBothPanelsInactiveWalksUpWhenDirectoryDeleted(t *testing.T) {
 	}
 }
 
+func TestRefreshBothPanelsActiveWalksUpWhenDirectoryDeleted(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "hollow")
+	child := filepath.Join(parent, "pruned")
+	if err := os.MkdirAll(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, parent)
+	if err := app.activePanel().Load(child); err != nil {
+		t.Fatalf("active Load: %v", err)
+	}
+	if err := os.RemoveAll(child); err != nil {
+		t.Fatal(err)
+	}
+
+	app.refreshBothPanels()
+
+	want := filepath.Clean(parent)
+	if got := app.activePanel().PathString(); got != want {
+		t.Fatalf("active path = %q, want %q", got, want)
+	}
+}
+
 func TestQuickViewUpdatesAfterDeletedDirectoryRefresh(t *testing.T) {
 	root := t.TempDir()
 	alpha := filepath.Join(root, "alpha")

@@ -236,6 +236,16 @@ func (m *Model) PrimaryModal() dialog.PrimaryModal {
 	}
 }
 
+// AnyModalOpen reports whether any exclusive modal or standalone dialog overlay is
+// open (primary modal layer or an individual dialog). Single source of truth for
+// "a dialog owns the keyboard" checks.
+func (m *Model) AnyModalOpen() bool {
+	return m.PrimaryModal() != dialog.PrimaryModalNone ||
+		m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open ||
+		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
+		m.FindDialog.Open || m.MetaDialog.Open || m.UserMenu.Open || m.CompareMergeDialog.Open
+}
+
 // SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,
 // or -1 when sync is disabled. The result is intended for renderers that need a sentinel
 // they can compare against the panel they are about to draw.

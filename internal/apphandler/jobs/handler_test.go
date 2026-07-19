@@ -41,6 +41,7 @@ func (jobsHostStub) TryDispatchAuxiliaryScreens(string) bool    { return false }
 func (jobsHostStub) ActionFromKeyEvent(*tcell.EventKey) string  { return "" }
 func (jobsHostStub) SetJobFailedTransientMessage(error, string) {}
 func (jobsHostStub) DevMode() bool                              { return false }
+func (jobsHostStub) PromptDanglingDirDelete([]string)           {}
 
 func TestOpenJobsViewFocusesFirstPendingBlocker(t *testing.T) {
 	t.Parallel()

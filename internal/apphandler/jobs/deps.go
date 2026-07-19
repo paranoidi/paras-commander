@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -43,4 +44,10 @@ type Handler struct {
 	listStale                 bool
 	listVersion               uint64
 	pathMarksVersion          uint64
+
+	// pendingDanglingSources accumulates Sources from completed jobs with
+	// PromptDanglingDirs set, stashed in scanBatchFlags and drained (FS-checked,
+	// then possibly prompted) in ApplyRefreshes — never on the event-batch path,
+	// which must stay free of filesystem I/O.
+	pendingDanglingSources []pathloc.Path
 }

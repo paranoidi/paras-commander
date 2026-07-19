@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -101,6 +102,42 @@ func (h *Handler) applyNewFileMarksForCompletedJob(jobID string) {
 		ui.ApplyNewFileMarksFromJob(h.host.SecondaryPanel(), job)
 		return
 	}
+}
+
+// stashDanglingSourcesForCompletedJob queues job.Sources for the dangling-dirs check
+// (see promptDanglingDirsIfAny) when the just-completed job was enqueued with
+// PromptDanglingDirs. No filesystem I/O here — this runs on the event-batch path.
+func (h *Handler) stashDanglingSourcesForCompletedJob(jobID string) {
+	for _, job := range h.state.AllJobs() {
+		if job == nil || job.ID != jobID {
+			continue
+		}
+		if job.PromptDanglingDirs {
+			h.pendingDanglingSources = append(h.pendingDanglingSources, job.Sources...)
+		}
+		return
+	}
+}
+
+// promptDanglingDirsIfAny checks the sources stashed by completed jobs for directories
+// left empty and, if any are found, asks the host to open the delete-confirm prompt.
+// Best-effort: filesystem errors are swallowed (skip the prompt) since this cleanup is
+// a convenience, not part of the job itself. Must only run from ApplyRefreshes.
+func (h *Handler) promptDanglingDirsIfAny() {
+	if len(h.pendingDanglingSources) == 0 {
+		return
+	}
+	sources := h.pendingDanglingSources
+	h.pendingDanglingSources = nil
+	dirs, err := ops.DanglingDirsAfter(context.Background(), sources)
+	if err != nil || len(dirs) == 0 {
+		return
+	}
+	paths := make([]string, len(dirs))
+	for i, d := range dirs {
+		paths[i] = d.String()
+	}
+	h.host.PromptDanglingDirDelete(paths)
 }
 
 func (h *Handler) ensureJobsViewSelectionVisible() {
@@ -756,6 +793,7 @@ func (h *Handler) scanBatchFlags(batch []jobs.Event) batchFlags {
 		case jobs.EventCompleted:
 			f.Terminal = true
 			h.applyNewFileMarksForCompletedJob(ev.JobID)
+			h.stashDanglingSourcesForCompletedJob(ev.JobID)
 		case jobs.EventFailed, jobs.EventCanceled:
 			f.Terminal = true
 		case jobs.EventProgress, jobs.EventScanProgress:
@@ -815,6 +853,7 @@ func (h *Handler) ApplyRefreshes() bool {
 		h.applyJobsRetention()
 		h.SyncJobPathMarks()
 		h.host.RefreshBothPanels()
+		h.promptDanglingDirsIfAny()
 		return true
 	case h.refreshProgress:
 		h.refreshProgress = false
@@ -962,11 +1001,18 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		PreservePermissions: req.Preserve.PreservePermissions,
 		PreserveTimestamps:  req.Preserve.PreserveTimestamps,
 		FlattenIntoDest:     req.Preserve.FlattenIntoDest,
+		PromptDanglingDirs:  req.Type == jobs.TypeMove && h.config.Operations.RemoveDanglingDirs,
 	}
 	h.commitJob(job)
 }
 
-func (h *Handler) EnqueueDeleteJob(sources []string, removeEmptyDirs bool) {
+// EnqueueDeleteJob queues a delete job. promptDangling requests the post-completion
+// "remove directories left empty" prompt for browser-initiated deletes; callers with
+// their own empty-dirs confirm (dedup) or that are themselves the dangling-dirs
+// cleanup pass false to avoid double-prompting. The [operations].remove_dangling_directories
+// gate is applied here, the single place that decides the job field — callers only
+// say whether they want prompting at all.
+func (h *Handler) EnqueueDeleteJob(sources []string, removeEmptyDirs, promptDangling bool) {
 	srcLocs, err := pathloc.ParseAll(sources)
 	if err != nil {
 		h.host.SetTransientMessage(fmt.Sprintf("Queue delete: %v", err), ui.MessageUrgencyError)
@@ -979,6 +1025,7 @@ func (h *Handler) EnqueueDeleteJob(sources []string, removeEmptyDirs bool) {
 		Sources:               srcLocs,
 		TotalFiles:            len(sources),
 		DeleteRemoveEmptyDirs: removeEmptyDirs,
+		PromptDanglingDirs:    promptDangling && h.config.Operations.RemoveDanglingDirs,
 	}
 	h.commitJob(job)
 }
