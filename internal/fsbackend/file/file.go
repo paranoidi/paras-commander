@@ -190,6 +190,8 @@ func localEntryToBackend(loc pathloc.Path, e localfs.Entry) fsbackend.Entry {
 		Size:       e.Size,
 		Mode:       e.Mode,
 		ModifiedAt: e.ModifiedAt,
+		Dev:        e.Dev,
+		DevValid:   e.DevValid,
 	}
 }
 

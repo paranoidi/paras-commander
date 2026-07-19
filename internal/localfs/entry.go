@@ -28,6 +28,12 @@ type Entry struct {
 	Size       int64
 	Mode       fs.FileMode
 	ModifiedAt time.Time
+	// Dev is the entry's st_dev captured from the listing Lstat (DevValid gates it).
+	// Mount-boundary checks (panel mount icon) must compare this cached value —
+	// never re-stat entry paths at paint time (stat on a copy-saturated NAS mount
+	// blocks the UI thread for seconds).
+	Dev      uint64
+	DevValid bool
 }
 
 // ListOptions controls directory listing behavior.
@@ -82,6 +88,7 @@ func ListDir(path string, opts ListOptions) (DirectoryListing, error) {
 			return DirectoryListing{}, fmt.Errorf("read metadata for %q: %w", filepath.Join(cleanPath, name), err)
 		}
 
+		dev, devOK := entryDevice(info)
 		entries = append(entries, Entry{
 			Name:       name,
 			Path:       filepath.Join(cleanPath, name),
@@ -89,6 +96,8 @@ func ListDir(path string, opts ListOptions) (DirectoryListing, error) {
 			Size:       info.Size(),
 			Mode:       info.Mode(),
 			ModifiedAt: info.ModTime(),
+			Dev:        dev,
+			DevValid:   devOK,
 		})
 	}
 

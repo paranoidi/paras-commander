@@ -17,6 +17,8 @@ func ToPanelEntry(e Entry) localfs.Entry {
 		Size:       e.Size,
 		Mode:       e.Mode,
 		ModifiedAt: e.ModifiedAt,
+		Dev:        e.Dev,
+		DevValid:   e.DevValid,
 	}
 }
 
@@ -39,6 +41,8 @@ func FromPanelEntry(e localfs.Entry) Entry {
 		Size:       e.Size,
 		Mode:       e.Mode,
 		ModifiedAt: e.ModifiedAt,
+		Dev:        e.Dev,
+		DevValid:   e.DevValid,
 	}
 }
 

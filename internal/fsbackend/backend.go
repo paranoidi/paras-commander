@@ -30,6 +30,9 @@ type Entry struct {
 	Size       int64
 	Mode       fs.FileMode
 	ModifiedAt time.Time
+	// Dev/DevValid carry st_dev captured at listing time (local backend only; see localfs.Entry).
+	Dev      uint64
+	DevValid bool
 }
 
 // CreateOpts controls OpenWrite behavior (phase 2+).

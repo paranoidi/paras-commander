@@ -17,6 +17,7 @@ func EntryFromPath(path string) (Entry, error) {
 	if err != nil {
 		return Entry{}, fmt.Errorf("stat %q: %w", abs, err)
 	}
+	dev, devOK := entryDevice(info)
 	return Entry{
 		Name:       filepath.Base(abs),
 		Path:       abs,
@@ -24,5 +25,7 @@ func EntryFromPath(path string) (Entry, error) {
 		Size:       info.Size(),
 		Mode:       info.Mode(),
 		ModifiedAt: info.ModTime(),
+		Dev:        dev,
+		DevValid:   devOK,
 	}, nil
 }
