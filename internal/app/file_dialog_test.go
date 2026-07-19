@@ -638,6 +638,47 @@ func TestMassRenameRadioFocusAppliesRegexMode(t *testing.T) {
 	}
 }
 
+func TestMassRenameTabIntoModeRadiosKeepsCurrentMode(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "x.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
+		t.Fatalf("setup mode = %v, want regex", d.MassRenameMode)
+	}
+	if d.FocusedField != massRenameFindFieldFocus {
+		t.Fatalf("setup focus = %d, want Find", d.FocusedField)
+	}
+
+	// Backtab from Find should land on the Regex radio, not force Simple.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModNone))
+	if d.FocusedField != 1 {
+		t.Fatalf("after Backtab: focus = %d, want 1 (Regex radio)", d.FocusedField)
+	}
+	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
+		t.Fatalf("after Backtab: mode = %v, want regex", d.MassRenameMode)
+	}
+
+	// Tab to buttons, then Tab again into mode radios — still Regex.
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // Find
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // OK
+	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // mode radios
+	if d.FocusedField != 1 {
+		t.Fatalf("after Tab cycle: focus = %d, want 1 (Regex radio)", d.FocusedField)
+	}
+	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
+		t.Fatalf("after Tab cycle: mode = %v, want regex", d.MassRenameMode)
+	}
+}
+
 func TestMassRenameRegexCaptureGroupPreviewWithShiftDollar(t *testing.T) {
 	dir := t.TempDir()
 	season1 := filepath.Join(dir, "Season 1")

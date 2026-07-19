@@ -236,6 +236,18 @@ func (a *App) recomputeMassRenameExternalEditorPreview() {
 	dialog.MassRenameEnsurePreviewScroll(d, vp, len(before))
 }
 
+// massRenameModeRadioFocus returns the FocusedField index of the radio for mode.
+func massRenameModeRadioFocus(mode dialog.MassRenameModeUI) int {
+	switch mode {
+	case dialog.MassRenameModeUIRegex:
+		return 1
+	case dialog.MassRenameModeUIExternalEditor:
+		return 2
+	default:
+		return 0
+	}
+}
+
 func (a *App) applyMassRenameModeFromFocus() {
 	d := &a.model.FileDialog
 	prev := d.MassRenameMode

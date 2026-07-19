@@ -548,20 +548,18 @@ func (a *App) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 			case onFindOrReplace:
 				d.FocusedField = okIdx
 			case onButton:
-				d.FocusedField = 0
-				a.applyMassRenameModeFromFocus()
+				// Land on the radio for the current mode (do not force Simple).
+				d.FocusedField = massRenameModeRadioFocus(d.MassRenameMode)
 			}
 		} else { // Backtab
 			switch {
 			case onRadio || onOptionsRow:
 				d.FocusedField = okIdx
 			case onFindOrReplace:
-				d.FocusedField = 0
-				a.applyMassRenameModeFromFocus()
+				d.FocusedField = massRenameModeRadioFocus(d.MassRenameMode)
 			case onButton:
 				if externalMode {
-					d.FocusedField = 0
-					a.applyMassRenameModeFromFocus()
+					d.FocusedField = massRenameModeRadioFocus(d.MassRenameMode)
 				} else {
 					d.FocusedField = massRenameFindFieldFocus
 				}
