@@ -160,9 +160,8 @@ func (a *App) recomputeMassRenamePreview() {
 		if d.MassRenameShowOnlyModified && r.OldBase == r.NewBase {
 			continue
 		}
-		lcsRemoved, _ := dialog.MassRenameDiff(r.OldBase, r.NewBase)
 		matchRanges := ops.MassRenameMatchRanges(r.OldBase, mode, find, caseFold, rx)
-		removed, replaced := ops.MassRenameBeforePreviewHighlightRanges(lcsRemoved, matchRanges, replace)
+		removed, replaced := ops.MassRenameBeforePreviewHighlightRanges(matchRanges, replace)
 		before = append(before, r.OldBase)
 		after = append(after, r.NewBase)
 		beforeRemoved = append(beforeRemoved, removed)

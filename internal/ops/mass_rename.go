@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -340,38 +339,15 @@ func massRenameSimpleFindMatches(oldBase, find string, caseFold bool) bool {
 	return strings.Contains(oldBase, find)
 }
 
-// MassRenameBeforePreviewHighlightRanges splits before-column preview highlights.
-// When replace is empty, find/regex match ranges use before.removed (red); otherwise matches
-// use before.replaced (yellow) and lcsRemoved continues to use before.removed for other deletions.
-func MassRenameBeforePreviewHighlightRanges(lcsRemoved, matchRanges []search.Range, replace string) (removed, replaced []search.Range) {
+// MassRenameBeforePreviewHighlightRanges splits before-column preview highlights from find/regex
+// match ranges. When replace is empty, matches use before.removed (red); otherwise matches use
+// before.replaced (yellow). LCS diffs are not used here: deleted regions that share characters with
+// kept text (digits, spaces) can make LCS mark kept runes as removed.
+func MassRenameBeforePreviewHighlightRanges(matchRanges []search.Range, replace string) (removed, replaced []search.Range) {
 	if replace == "" {
-		return massRenameMergeRanges(append(append([]search.Range(nil), lcsRemoved...), matchRanges...)), nil
+		return matchRanges, nil
 	}
-	return lcsRemoved, matchRanges
-}
-
-func massRenameMergeRanges(ranges []search.Range) []search.Range {
-	if len(ranges) == 0 {
-		return nil
-	}
-	sort.Slice(ranges, func(i, j int) bool {
-		if ranges[i].Start == ranges[j].Start {
-			return ranges[i].End < ranges[j].End
-		}
-		return ranges[i].Start < ranges[j].Start
-	})
-	merged := []search.Range{ranges[0]}
-	for _, current := range ranges[1:] {
-		last := &merged[len(merged)-1]
-		if current.Start <= last.End {
-			if current.End > last.End {
-				last.End = current.End
-			}
-			continue
-		}
-		merged = append(merged, current)
-	}
-	return merged
+	return nil, matchRanges
 }
 
 // MassRenameMatchRanges returns rune-index half-open ranges in oldBase matched by find (simple) or rx (regex).

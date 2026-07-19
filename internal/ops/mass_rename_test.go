@@ -406,7 +406,7 @@ func TestMassRenameMatchRangesEmptyFind(t *testing.T) {
 
 func TestMassRenameBeforePreviewHighlightRanges_emptyReplace(t *testing.T) {
 	match := []search.Range{{Start: 0, End: 3}, {Start: 6, End: 9}}
-	removed, replaced := MassRenameBeforePreviewHighlightRanges(nil, match, "")
+	removed, replaced := MassRenameBeforePreviewHighlightRanges(match, "")
 	wantRemoved := match
 	if !massRenameRangesEqual(removed, wantRemoved) {
 		t.Fatalf("removed: got %v, want %v", removed, wantRemoved)
@@ -416,25 +416,42 @@ func TestMassRenameBeforePreviewHighlightRanges_emptyReplace(t *testing.T) {
 	}
 }
 
-func TestMassRenameBeforePreviewHighlightRanges_emptyReplaceMergesLCS(t *testing.T) {
-	lcs := []search.Range{{Start: 0, End: 2}}
-	match := []search.Range{{Start: 1, End: 4}}
-	removed, replaced := MassRenameBeforePreviewHighlightRanges(lcs, match, "")
-	wantRemoved := []search.Range{{Start: 0, End: 4}}
-	if !massRenameRangesEqual(removed, wantRemoved) {
-		t.Fatalf("removed: got %v, want %v", removed, wantRemoved)
+func TestMassRenameBeforePreviewHighlightRanges_emptyReplaceIgnoresSharedRunesInDeletedRegions(t *testing.T) {
+	// Bracket tags share digits/spaces with kept "S01 "; LCS would falsely mark "01 " removed.
+	old := "Skeleton Knight in Another World - S01 [BD 1080p HEVC 10bit AAC-FLAC] [Dual-Audio]"
+	re, err := MassRenameCompileRegex(`\[.*?\]`)
+	if err != nil {
+		t.Fatal(err)
 	}
+	match := MassRenameMatchRanges(old, MassRenameModeRegex, "", false, re)
+	removed, replaced := MassRenameBeforePreviewHighlightRanges(match, "")
 	if replaced != nil {
 		t.Fatalf("replaced: got %v, want nil", replaced)
+	}
+	if !massRenameRangesEqual(removed, match) {
+		t.Fatalf("removed: got %v, want %v", removed, match)
+	}
+	runes := []rune(old)
+	for _, r := range removed {
+		got := string(runes[r.Start:r.End])
+		if got[0] != '[' || got[len(got)-1] != ']' {
+			t.Fatalf("removed span %q is not a bracket tag", got)
+		}
+	}
+	keep := "01 "
+	for _, r := range removed {
+		span := string(runes[r.Start:r.End])
+		if strings.Contains(span, keep) {
+			t.Fatalf("removed span %q must not include kept %q", span, keep)
+		}
 	}
 }
 
 func TestMassRenameBeforePreviewHighlightRanges_nonemptyReplace(t *testing.T) {
-	lcs := []search.Range{{Start: 4, End: 5}}
 	match := []search.Range{{Start: 0, End: 3}}
-	removed, replaced := MassRenameBeforePreviewHighlightRanges(lcs, match, "bar")
-	if !massRenameRangesEqual(removed, lcs) {
-		t.Fatalf("removed: got %v, want %v", removed, lcs)
+	removed, replaced := MassRenameBeforePreviewHighlightRanges(match, "bar")
+	if removed != nil {
+		t.Fatalf("removed: got %v, want nil", removed)
 	}
 	if !massRenameRangesEqual(replaced, match) {
 		t.Fatalf("replaced: got %v, want %v", replaced, match)
@@ -443,7 +460,7 @@ func TestMassRenameBeforePreviewHighlightRanges_nonemptyReplace(t *testing.T) {
 
 func TestMassRenameBeforePreviewHighlightRanges_whitespaceReplace(t *testing.T) {
 	match := []search.Range{{Start: 0, End: 3}}
-	removed, replaced := MassRenameBeforePreviewHighlightRanges(nil, match, " ")
+	removed, replaced := MassRenameBeforePreviewHighlightRanges(match, " ")
 	if removed != nil {
 		t.Fatalf("removed: got %v, want nil", removed)
 	}
