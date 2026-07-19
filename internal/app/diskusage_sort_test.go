@@ -148,6 +148,7 @@ func TestHandlePanelDirChangedRightDoesNotInvalidateLeftIdleTimer(t *testing.T) 
 	left.DiskUsageIdleSortActivated = true
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
+	app.setDiskUsageShown(true)
 	app.setDiskUsageScanScope(leftRoot, []string{filepath.Clean(alpha)})
 
 	app.diskIdleNavPath[ui.PrimaryPanel] = leftRoot
@@ -191,6 +192,7 @@ func TestHandlePanelDirChangedLeftClearsIdleTimerOnChdir(t *testing.T) {
 	left.DiskUsageIdleSortActivated = true
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
+	app.setDiskUsageShown(true)
 	app.setDiskUsageScanScope(leftRoot, []string{filepath.Clean(alpha)})
 
 	app.diskIdleNavPath[ui.PrimaryPanel] = leftRoot
@@ -257,12 +259,82 @@ func TestHandlePanelDirChangedAppliesDiskSortWhenUsageSortEnabledWithoutActivate
 	left.DiskUsageIdleSortActivated = false // must not deadlock idle disk ordering
 	left.IdleDiskTotalsSort = false
 	left.DiskSorter = func(abs string) (int64, bool) { return 1, true }
+	app.setDiskUsageShown(true)
 	app.setDiskUsageScanScope(left.PathString(), []string{filepath.Join(left.PathString(), "x")})
 
 	app.handlePanelDirChanged(ui.PrimaryPanel)
 
 	if !left.IdleDiskTotalsSort {
 		t.Fatal("expected IdleDiskTotalsSort when DiskUsageIdleSizeSort is on and listing is fully cached")
+	}
+}
+
+// Regression: invert-selection ("*") drives selection-size scans that fill the disk cache.
+// Idle size-sort must stay off until the user runs disk-usage analysis (DiskUsageShown).
+func TestInvertSelectionDoesNotActivateIdleDiskSort(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"maple", "cedar", "birch"} {
+		dir := filepath.Join(root, name)
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		writeFile(t, filepath.Join(dir, "leaf.dat"))
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.PrimaryPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	left.DiskUsageIdleSortActivated = true
+	left.IdleDiskTotalsSort = false
+	left.DiskSorter = app.diskUsage.Size
+
+	if app.model.DiskUsageShown {
+		t.Fatal("DiskUsageShown should be false before any user-initiated scan")
+	}
+
+	namesBefore := make([]string, len(left.Entries))
+	for i, e := range left.Entries {
+		namesBefore[i] = e.Name
+	}
+
+	app.dispatch(keymap.ActionPanelInvertSelection)
+	app.reconcileAfterEvent()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		app.pollDiskUsageUpdates()
+		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	if !left.ListingFullyDiskCached() {
+		t.Fatalf("expected selection-size scan to fully cache listing busy=%v", app.diskUsageScanBusy())
+	}
+
+	// Drain any armed idle-sort timer as if the delay elapsed.
+	ep := app.diskIdleSort[ui.PrimaryPanel].epoch
+	app.applyIdleDiskSort(ui.PrimaryPanel, ep)
+	app.handlePanelDirChanged(ui.PrimaryPanel)
+	app.deferDiskIdleSortOnUserActivity()
+	if timer := app.diskIdleSort[ui.PrimaryPanel].timer; timer != nil {
+		timer.Stop()
+		app.diskIdleSort[ui.PrimaryPanel].timer = nil
+		app.applyIdleDiskSort(ui.PrimaryPanel, app.diskIdleSort[ui.PrimaryPanel].epoch)
+	}
+
+	if left.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort must stay false: selection-size cache is not disk-usage analysis")
+	}
+	if app.model.DiskUsageShown {
+		t.Fatal("DiskUsageShown must stay false after selection-size scans alone")
+	}
+	for i, e := range left.Entries {
+		if e.Name != namesBefore[i] {
+			t.Fatalf("sort order changed after invert-selection: got %q at %d, want %q", e.Name, i, namesBefore[i])
+		}
 	}
 }
 
@@ -284,7 +356,7 @@ func TestNavigateOutsideDiskUsageScanScopeClearsIdleSort(t *testing.T) {
 	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	app.setDiskUsageScanScope(root, []string{scanned})
-	app.model.DiskUsageShown = true
+	app.setDiskUsageShown(true)
 	app.model.DiskUsagePanelID = ui.PrimaryPanel
 
 	left.DiskSorter = app.diskUsage.Size

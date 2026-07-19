@@ -1959,6 +1959,7 @@ func TestLoadAppliesDiskTotalsSortImmediatelyWhenListingFullyCached(t *testing.T
 			DirectoriesFirst:      false,
 			DiskUsageIdleSizeSort: true,
 		},
+		DiskUsageIdleSortEligible: true, // mirrors DiskUsageShown after user-initiated analysis
 	}
 	state.DiskSorter = func(abs string) (int64, bool) {
 		c := filepath.Clean(abs)
@@ -1975,13 +1976,44 @@ func TestLoadAppliesDiskTotalsSortImmediatelyWhenListingFullyCached(t *testing.T
 		t.Fatalf("load: %v", err)
 	}
 	if !state.IdleDiskTotalsSort {
-		t.Fatal("IdleDiskTotalsSort should be true when listing is fully cached on load")
+		t.Fatal("IdleDiskTotalsSort should be true when listing is fully cached on load after analysis")
 	}
 	if len(state.Entries) != 2 {
 		t.Fatalf("len(Entries) = %d, want 2", len(state.Entries))
 	}
 	if state.Entries[0].Name != "zzz" {
 		t.Fatalf("first entry = %q, want zzz (larger disk total sorts first)", state.Entries[0].Name)
+	}
+}
+
+func TestLoadDoesNotApplyDiskTotalsSortWithoutAnalysisEligibility(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"aaa", "zzz"} {
+		if err := os.Mkdir(filepath.Join(dir, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	state := State{
+		ShowHidden: false,
+		Filter:     FilterState{CaseInsensitive: true},
+		Sort: SortState{
+			Mode:                  SortName,
+			Reverse:               false,
+			DirectoriesFirst:      false,
+			DiskUsageIdleSizeSort: true,
+		},
+		// DiskUsageIdleSortEligible left false: selection-size cache must not flip sort.
+	}
+	state.DiskSorter = func(string) (int64, bool) { return 1, true }
+	if err := state.load(pathloc.MustParse(dir), "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if state.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort must stay false without DiskUsageIdleSortEligible")
+	}
+	if state.Entries[0].Name != "aaa" {
+		t.Fatalf("first entry = %q, want aaa (name sort)", state.Entries[0].Name)
 	}
 }
 

@@ -113,8 +113,12 @@ type State struct {
 		// Child was cached; used to reject stale previews during nav coalesce.
 		ChildCursorDir string
 	}
-	// IdleDiskTotalsSort is set after disk scan completes and idle-sort delay elapses (DiskUsageIdleSizeSort).
+	// IdleDiskTotalsSort is set after a user-initiated disk-usage analysis completes and idle-sort delay elapses
+	// (DiskUsageIdleSizeSort). Selection-size background scans must not set this.
 	IdleDiskTotalsSort bool
+	// DiskUsageIdleSortEligible is set by the app when DiskUsageShown is true (user started disk-usage analysis).
+	// Without it, a fully populated size cache (e.g. from selection-size scans) must not activate IdleDiskTotalsSort.
+	DiskUsageIdleSortEligible bool
 	// DiskUsageIdleSortActivated mirrors the disk-usage sort checkbox lifecycle (config/dialog apply).
 	// Idle-sort scheduling keys off Sort.DiskUsageIdleSizeSort; this flag stays in sync for UI/state parity.
 	DiskUsageIdleSortActivated bool
@@ -1243,8 +1247,9 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 		s.notifyChdir(previousPath, listingLoc)
 	}
 	// Activate disk-total primary sort before ApplySort so the first paint matches MC-style
-	// disk ordering when cache already covers this listing (no idle timer / reconcile delay).
-	if s.Sort.DiskUsageIdleSizeSort && len(s.Entries) > 0 && s.ListingFullyDiskCached() {
+	// disk ordering when a user-initiated analysis has run and cache already covers this listing
+	// (no idle timer / reconcile delay). Selection-size cache alone must not enable this.
+	if s.Sort.DiskUsageIdleSizeSort && s.DiskUsageIdleSortEligible && len(s.Entries) > 0 && s.ListingFullyDiskCached() {
 		s.DiskUsageIdleSortActivated = true
 		s.IdleDiskTotalsSort = true
 	}

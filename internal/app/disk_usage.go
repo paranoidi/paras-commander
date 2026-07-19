@@ -118,13 +118,20 @@ func (a *App) listingInDiskUsageScanScope(listingPath string) bool {
 	return panel.ListingPathInDiskUsageScanScope(listingPath, a.model.DiskUsageScanOrigin, a.model.DiskUsageScanRoots)
 }
 
+func (a *App) setDiskUsageShown(shown bool) {
+	a.model.DiskUsageShown = shown
+	a.model.Primary.DiskUsageIdleSortEligible = shown
+	a.model.Secondary.DiskUsageIdleSortEligible = shown
+}
+
 func (a *App) diskIdleSortPanelEligible(p *panel.State) bool {
 	// DiskUsageIdleSizeSort is the user-visible toggle (config + sort dialog).
 	// Do not require DiskUsageIdleSortActivated here: it was only set after a successful apply,
 	// which prevented startup/dialog-enable paths from ever scheduling idle disk ordering.
-	// Scope check is intentionally omitted: ListingFullyDiskCached (checked by all callers)
-	// is the correct gate — cached data is valid regardless of which scan populated it.
+	// DiskUsageShown gates on a user-initiated disk-usage analysis — not merely on
+	// ListingFullyDiskCached, which becomes true after selection-size background scans too.
 	return a.model.ViewMode == ui.ViewBrowser &&
+		a.model.DiskUsageShown &&
 		p.Sort.DiskUsageIdleSizeSort &&
 		!p.IdleDiskTotalsSort
 }
@@ -249,7 +256,7 @@ func (a *App) clearAllDiskUsageData() {
 	}
 	a.stopDiskUsageRedrawDebounce()
 	a.diskUsage.ClearCache()
-	a.model.DiskUsageShown = false
+	a.setDiskUsageShown(false)
 	a.model.DiskUsagePanelID = ui.PrimaryPanel
 	a.setDiskUsageScanScope("", nil)
 	for _, panelID := range []int{ui.PrimaryPanel, ui.SecondaryPanel} {
@@ -287,7 +294,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 	a.setDiskUsageScanScope(p.PathString(), childPaths)
 
 	a.diskUsage.StartScanFromListing(childPaths, a.diskUsageIgnore, panelID, listingVolumeGateForScan(p, a.config.DiskUsageDescendIntoMountPoints))
-	a.model.DiskUsageShown = true
+	a.setDiskUsageShown(true)
 	a.diskUsageScanToastArmed = true
 	a.model.DiskUsagePanelID = panelID
 	a.model.DiskUsage = a.diskUsage
@@ -353,8 +360,9 @@ func (a *App) scheduleDiskUsageRedrawDebounced() {
 // handlePanelDirChanged reconciles disk-usage idle-sort for the given panel. It is
 // invoked from App.reconcileAfterEvent for both panels every iteration of the Run loop.
 // Idempotent: short-circuits when DiskUsageIdleSizeSort is off (the common case) or when
-// appropriate. If the listing is fully disk-cached, disk-total ordering applies immediately;
-// otherwise pending idle-sort debounce for this panel is invalidated on cwd change.
+// appropriate. After a user-initiated disk-usage analysis (DiskUsageShown), a fully
+// disk-cached listing applies disk-total ordering immediately; selection-size cache alone
+// must not. Otherwise pending idle-sort debounce for this panel is invalidated on cwd change.
 func (a *App) handlePanelDirChanged(panelID int) {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
@@ -367,6 +375,9 @@ func (a *App) handlePanelDirChanged(panelID int) {
 	if a.diskIdleNavPath[panelID] != cur {
 		a.invalidateIdleDiskSortPanel(panelID)
 		a.diskIdleNavPath[panelID] = cur
+	}
+	if !a.model.DiskUsageShown {
+		return
 	}
 	if len(p.Entries) == 0 {
 		return

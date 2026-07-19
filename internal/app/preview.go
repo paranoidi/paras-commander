@@ -533,6 +533,7 @@ func (a *App) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, follo
 		SuppressHeavyPathProbes:    follower.SuppressHeavyPathProbes,
 		ScheduleRemoteLoad:         follower.ScheduleRemoteLoad,
 		IdleDiskTotalsSort:         follower.IdleDiskTotalsSort,
+		DiskUsageIdleSortEligible:  follower.DiskUsageIdleSortEligible,
 		DiskUsageIdleSortActivated: follower.DiskUsageIdleSortActivated,
 		HistoryCursorByPath:        panel.MergeHistoryCursorByPath(follower.HistoryCursorByPath, driver.HistoryCursorByPath),
 	}
