@@ -344,8 +344,8 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 	}
 	writeDiskDefault := func(hex string) {
 		content := strings.Replace(string(base),
-			`bar.inactive = { fg = "bright_black" }`,
-			fmt.Sprintf(`bar.inactive = { fg = "white", bg = %q }`, hex), 1)
+			`inactive = { fg = "bright_black" }`,
+			fmt.Sprintf(`inactive = { fg = "white", bg = %q }`, hex), 1)
 		if err := os.WriteFile(filepath.Join(themesDir, "override.toml"), []byte(content), 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
 		}

@@ -8,14 +8,14 @@ import (
 )
 
 var dialogSurfaceForegroundStyleKeys = map[string]struct{}{
-	"dialog.option.inactive":          {},
-	"dialog.option.active":            {},
-	"dialog.option.active.selected":   {},
-	"dialog.option.selected":          {},
-	"dialog.option.invalid":           {},
-	"dialog.indicator.selection_size": {},
-	"dialog.progress.label.on_fill":   {},
-	"dialog.progress.label.on_track":  {},
+	"dialog.option.inactive":         {},
+	"dialog.option.active":           {},
+	"dialog.option.active.selected":  {},
+	"dialog.option.selected":         {},
+	"dialog.option.invalid":          {},
+	"dialog.status.selection_size":   {},
+	"dialog.progress.label.on_fill":  {},
+	"dialog.progress.label.on_track": {},
 }
 
 // TestThemeBytes builds a minimal valid theme TOML from requiredStyleKeys plus optional overrides.

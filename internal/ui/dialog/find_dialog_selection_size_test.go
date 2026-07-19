@@ -38,7 +38,7 @@ func TestDrawFindDialogSelectionSizeOnSeparator(t *testing.T) {
 	}
 	innerLeft := rect.X + 1
 
-	wantStyle := styles.DialogIndicatorSelectionSizeStyle()
+	wantStyle := styles.DialogStatusSelectionSizeStyle()
 	_, wantBG, _ := wantStyle.Decompose()
 	found := false
 	for x := innerLeft; x < rect.X+rect.Width-1; x++ {

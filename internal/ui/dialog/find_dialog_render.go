@@ -187,7 +187,7 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 		sepAfterList = buttonY - 1
 	}
 	if selectionSizeLabel != "" {
-		labelStyle := styles.DialogIndicatorSelectionSizeStyle()
+		labelStyle := styles.DialogStatusSelectionSizeStyle()
 		draw.DrawDialogHSeparatorWithCenteredLabel(screen, rect, sepAfterList, borderStyle, labelStyle, selectionSizeLabel)
 	} else {
 		draw.DrawDialogHSeparator(screen, rect, sepAfterList, borderStyle)

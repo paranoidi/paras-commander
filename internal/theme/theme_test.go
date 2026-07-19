@@ -42,10 +42,10 @@ func TestDefaultMatchesEmbeddedTheme(t *testing.T) {
 	}
 	assertSymbolStrEqual(t, "SymbolWorking", got.SymbolWorking(), embedded.SymbolWorking())
 
-	assertStyleEqual(t, "PanelRowIndicatorNew", got.PanelRowIndicatorNew, embedded.PanelRowIndicatorNew)
-	assertStyleEqual(t, "PanelRowIndicatorNewPrevious", got.PanelRowIndicatorNewPrevious, embedded.PanelRowIndicatorNewPrevious)
+	assertStyleEqual(t, "PanelRowMarkNew", got.PanelRowMarkNew, embedded.PanelRowMarkNew)
+	assertStyleEqual(t, "PanelRowMarkNewPrevious", got.PanelRowMarkNewPrevious, embedded.PanelRowMarkNewPrevious)
 	assertStyleEqual(t, "PanelIconFolderOpen", got.PanelIconFolderOpen, embedded.PanelIconFolderOpen)
-	assertStyleEqual(t, "PanelRowIndicatorSelectionSubtree", got.PanelRowIndicatorSelectionSubtree, embedded.PanelRowIndicatorSelectionSubtree)
+	assertStyleEqual(t, "PanelRowMarkSelectionSubtree", got.PanelRowMarkSelectionSubtree, embedded.PanelRowMarkSelectionSubtree)
 	assertStyleEqual(t, "PanelIconFolderMount", got.PanelIconFolderMount, embedded.PanelIconFolderMount)
 	assertStyleEqual(t, "PanelRowSelected", got.PanelRowSelected, embedded.PanelRowSelected)
 }
@@ -238,37 +238,37 @@ func TestDialogProgressLabelOnBarUsesTrackBackground(t *testing.T) {
 	}
 }
 
-func TestParseRejectsBGOnDialogIndicatorSelectionSize(t *testing.T) {
-	data := testTheme(t, "badindicatorbg", nil, map[string]string{
-		"dialog.indicator.selection_size": `{ fg = "yellow", bg = "bright_black" }`,
+func TestParseRejectsBGOnDialogStatusSelectionSize(t *testing.T) {
+	data := testTheme(t, "badstatusbg", nil, map[string]string{
+		"dialog.status.selection_size": `{ fg = "yellow", bg = "bright_black" }`,
 	})
 	_, err := parse(data)
 	if err == nil || !strings.Contains(err.Error(), `field "bg" is not allowed (background is merged at render time)`) {
-		t.Fatalf("parse() error = %v, want reject bg on dialog.indicator.selection_size", err)
+		t.Fatalf("parse() error = %v, want reject bg on dialog.status.selection_size", err)
 	}
 }
 
-func TestDialogIndicatorSelectionSizeStyleUsesSurfaceBackground(t *testing.T) {
+func TestDialogStatusSelectionSizeStyleUsesSurfaceBackground(t *testing.T) {
 	data := testTheme(t, "findselectionsize", nil, map[string]string{
-		"dialog.surface":                  `{ fg = "white", bg = "yellow" }`,
-		"dialog.indicator.selection_size": `{ fg = "yellow", bold = true }`,
+		"dialog.surface":               `{ fg = "white", bg = "yellow" }`,
+		"dialog.status.selection_size": `{ fg = "yellow", bold = true }`,
 	})
 	th, err := parse(data)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	_, surfaceBG, _ := th.DialogSurface.Decompose()
-	got := th.DialogIndicatorSelectionSizeStyle()
+	got := th.DialogStatusSelectionSizeStyle()
 	fg, bg, attrs := got.Decompose()
 	if bg != surfaceBG {
-		t.Fatalf("DialogIndicatorSelectionSizeStyle bg = %v, want surface bg %v", bg, surfaceBG)
+		t.Fatalf("DialogStatusSelectionSizeStyle bg = %v, want surface bg %v", bg, surfaceBG)
 	}
-	wantFG, _, _ := th.DialogIndicatorSelectionSize.Decompose()
+	wantFG, _, _ := th.DialogStatusSelectionSize.Decompose()
 	if fg != wantFG {
-		t.Fatalf("DialogIndicatorSelectionSizeStyle fg = %v, want %v", fg, wantFG)
+		t.Fatalf("DialogStatusSelectionSizeStyle fg = %v, want %v", fg, wantFG)
 	}
 	if attrs&tcell.AttrBold == 0 {
-		t.Fatal("expected bold from dialog.indicator.selection_size")
+		t.Fatal("expected bold from dialog.status.selection_size")
 	}
 }
 

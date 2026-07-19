@@ -346,13 +346,13 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 		var base tcell.Style
 		switch {
 		case keptSubtree:
-			base = styles.PanelDedupRowIndicatorKeepSubtree
+			base = styles.PanelDedupRowMarkKeepSubtree
 		case p.DangerMarkedDirs[d.DirRel]:
 			base = styles.PanelDedupRowAllMarked
 		case chromeBlocked:
 			base = styles.PanelBlockedRowSelected
 		default:
-			base = styles.PanelRowIndicatorSelectionSubtree
+			base = styles.PanelRowMarkSelectionSubtree
 		}
 		markStyle := lineStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, base))
 		primitive.Text(screen, markX, lineY, 1, string(styles.SymbolFilelistSelectionSubtree()), markStyle)

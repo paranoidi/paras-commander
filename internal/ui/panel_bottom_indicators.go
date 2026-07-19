@@ -95,7 +95,7 @@ type panelBottomIndicatorSegment struct {
 	Style tcell.Style
 }
 
-// panelBottomIndicatorStyle resolves segment paint style via theme panel.indicator.* (with
+// panelBottomIndicatorStyle resolves segment paint style via theme panel.status.* (with
 // documented fallbacks). Dotfiles-hidden and gitignore still default to panel frame when unset.
 func panelBottomIndicatorStyle(ctx PanelBottomIndicatorContext, id PanelBottomIndicatorID) tcell.Style {
 	switch id {

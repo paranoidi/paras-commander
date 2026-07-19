@@ -11,10 +11,10 @@ import (
 
 // siblingTargetRules customize validation messages and checks for in-place rename/duplicate.
 type siblingTargetRules struct {
-	op            string
-	sameNameText  string
-	requireUTF8   bool
-	rejectDotDot  bool
+	op           string
+	sameNameText string
+	requireUTF8  bool
+	rejectDotDot bool
 }
 
 // planSiblingTarget resolves source and destination paths for a same-directory rename/duplicate.

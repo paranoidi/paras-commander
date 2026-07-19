@@ -20,28 +20,35 @@ bright_magenta = 13
 bright_cyan = 14
 bright_white = 15
 
-[menu]
-bar.active = { fg = "default" }
-bar.inactive = { fg = "bright_black" }
-bar.accent = { fg = "magenta", bold = true }
-bar.alert = { fg = "bright_red", bold = true }
-bar.selected = { fg = "black", bg = "cyan", bold = true }
+[menu]                       # misc menu chrome
 detail = { fg = "white" }
+spinner = { fg = "bright_magenta", bold = true }
+# dropdown is both a leaf style and a parent of .accent/.frame/.selected — keep dotted here
 dropdown = { fg = "black", bg = "blue" }
 dropdown.accent = { fg = "white"}
 dropdown.frame = { fg = "bright_blue", bg = "blue" }
 dropdown.selected = { fg = "black", bg = "bright_blue", bold = true }
-job.canceled = { fg = "red" }
-job.completed = { fg = "green" }
-job.decision = { fg = "bright_blue" }
-job.failed = { fg = "bright_red" }
-job.paused = { fg = "yellow" }
-job.queued = { fg = "yellow" }
-job.running = { fg = "green" }
-job.scanning = { fg = "bright_cyan" }
-progress.done = { fg = "green" }
-progress.remaining = { fg = "bright_black" }
-spinner = { fg = "bright_magenta", bold = true }
+
+[menu.bar]                   # top menu bar
+active = { fg = "default" }
+inactive = { fg = "bright_black" }
+accent = { fg = "magenta", bold = true }
+alert = { fg = "bright_red", bold = true }
+selected = { fg = "black", bg = "cyan", bold = true }
+
+[menu.job]                   # menu-bar job queue cells
+canceled = { fg = "red" }
+completed = { fg = "green" }
+decision = { fg = "bright_blue" }
+failed = { fg = "bright_red" }
+paused = { fg = "yellow" }
+queued = { fg = "yellow" }
+running = { fg = "green" }
+scanning = { fg = "bright_cyan" }
+
+[menu.progress]              # menu-bar aggregate progress
+done = { fg = "green" }
+remaining = { fg = "bright_black" }
 
 [message]
 info = { fg = "black", bg = "white" }
@@ -53,48 +60,59 @@ key = { fg = "magenta", bold = true }
 label = { fg = "default" }
 label.shift = { fg = "bright_black" }
 
-[panel]
-row.directory = { fg = "blue", bold = true }
-row.file = { fg = "white" }
-row.selected = { fg = "yellow", bold = true }
-row.symlink = { fg = "bright_cyan" }
-row.indicator.selection_subtree = { fg = "yellow" }
-row.indicator.new = { fg = "bright_green" }
-row.indicator.new.previous = { fg = "bright_yellow" }
-row.indicator.renamed = { fg = "cyan" }
-row.indicator.job = { fg = "green" }
-row.indicator.job.read = { fg = "yellow" }
-row.indicator.job.decision = { fg = "red" }
-row.tree.connector = { fg = "bright_black" }
-icon.folder.open = { fg = "bright_cyan" }
-icon.folder.mount = { fg = "bright_blue" }
-indicator.sync = { fg = "green", bold = true }
-indicator.quick_view = { fg = "green", bold = true }
-indicator.selections = { fg = "white" }
-indicator.selection_size = { fg = "yellow" }
-indicator.dotfiles_hidden = { fg = "bright_black" }
-indicator.gitignore = { fg = "bright_black" }
-indicator.stash = { fg = "yellow", bold = true }
-indicator.other_panel = { fg = "cyan", bold = true }
-scrollbar.track = { fg = "bright_black" }
-scrollbar.thumb = { fg = "white" }
+[panel]                      # panel-wide text
 text = { fg = "white" }
 hint = { fg = "bright_white", bold = true }
 
-git.conflicted = { fg = "red" }
-git.deleted = { fg = "red" }
-git.ignored = { fg = "bright_black" }
-git.modified = { fg = "blue" }
-git.new = { fg = "green" }
-git.not_modified = { fg = "bright_black", bold = true }
-git.renamed = { fg = "yellow" }
-git.typechange = { fg = "magenta" }
+[panel.row]                  # file-list row colors
+directory = { fg = "blue", bold = true }
+file = { fg = "white" }
+selected = { fg = "yellow", bold = true }
+symlink = { fg = "bright_cyan" }
+tree.connector = { fg = "bright_black" }
 
-icon.folder.scanning = { fg = "bright_magenta" }
-icon.folder.excluded = { fg = "black" }
+[panel.row.mark]             # suffix marks on file rows
+selection_subtree = { fg = "yellow" }
+new = { fg = "bright_green" }
+new.previous = { fg = "bright_yellow" }
+renamed = { fg = "cyan" }
+job = { fg = "green" }
+job.read = { fg = "yellow" }
+job.decision = { fg = "red" }
 
-usage.normal = { fg = "white", bg = "bright_black" }
-usage.selected = { fg = "yellow", bg = "bright_black" }
+[panel.icon.folder]          # folder icon colors
+open = { fg = "bright_cyan" }
+mount = { fg = "bright_blue" }
+scanning = { fg = "bright_magenta" }
+excluded = { fg = "black" }
+
+[panel.status]                # bottom-border status segments
+sync = { fg = "green", bold = true }
+quick_view = { fg = "green", bold = true }
+selections = { fg = "white" }
+selection_size = { fg = "yellow" }
+dotfiles_hidden = { fg = "bright_black" }
+gitignore = { fg = "bright_black" }
+stash = { fg = "yellow", bold = true }
+other_panel = { fg = "cyan", bold = true }
+
+[panel.git]                   # git status colors
+conflicted = { fg = "red" }
+deleted = { fg = "red" }
+ignored = { fg = "bright_black" }
+modified = { fg = "blue" }
+new = { fg = "green" }
+not_modified = { fg = "bright_black", bold = true }
+renamed = { fg = "yellow" }
+typechange = { fg = "magenta" }
+
+[panel.scrollbar]             # scrollbar track/thumb colors
+track = { fg = "bright_black" }
+thumb = { fg = "white" }
+
+[panel.usage]                 # disk usage bar colors
+normal = { fg = "white", bg = "bright_black" }
+selected = { fg = "yellow", bg = "bright_black" }
 
 [terminal]
 text = { fg = "white" }
@@ -104,7 +122,7 @@ row.all_marked = { fg = "red", bold = true }
 row.cursor.all_marked = { fg = "red", bg = "cyan", bold = true }
 row.keep = { fg = "bright_green", bold = true }
 row.cursor.keep = { fg = "bright_green", bg = "cyan", bold = true }
-row.indicator.keep_subtree = { fg = "bright_green" }
+row.mark.keep_subtree = { fg = "bright_green" }
 
 [panel.active]
 disk_usage_overview = { fg = "blue"}
@@ -159,32 +177,42 @@ highlight.cursor = { fg = "red", bold = true }
 input = { fg = "bright_yellow", bold = true }
 input.nomatch = { fg = "bright_red", bold = true }
 
-[dialog]
+[dialog]                     # dialog chrome
 frame = { fg = "white" }
 surface = { fg = "white", bg = "bright_black" }
 text = { fg = "white" }
 title = { bold = true }
 # bg matters for the path-picker trailing glyph when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "white", bg = "black", bold = true }
-button.active = { fg = "black", bg = "cyan" }
-button.active_destructive = { fg = "white", bg = "red" }
-button.inactive = { fg = "white", bg = "black" }
-input.active = { fg = "bright_white", bold = true }
-input.active.error = { fg = "red" }
-input.active.placeholder = { fg = "default" }
-input.inactive = { fg = "white", bg = "black" }
-input.inactive.error = { fg = "red", bg = "black" }
-input.inactive.placeholder = { fg = "white", bg = "black" }
-option.active = { fg = "yellow", bold = true }
-option.active.selected = { fg = "bright_white", bold = true }
-option.inactive = { fg = "white" }
-option.selected = { fg = "yellow" }
-option.invalid = { fg = "red" }
-indicator.selection_size = { fg = "yellow" }
-progress.fill = { fg = "white", bg = "black" }
-progress.label.on_fill = { fg = "bright_white", bold = true }
-progress.label.on_track = { fg = "bright_white", bold = true }
-progress.track = { fg = "white", bg = "bright_black" }
+
+[dialog.button]
+active = { fg = "black", bg = "cyan" }
+active_destructive = { fg = "white", bg = "red" }
+inactive = { fg = "white", bg = "black" }
+
+[dialog.input]
+active = { fg = "bright_white", bold = true }
+active.error = { fg = "red" }
+active.placeholder = { fg = "default" }
+inactive = { fg = "white", bg = "black" }
+inactive.error = { fg = "red", bg = "black" }
+inactive.placeholder = { fg = "white", bg = "black" }
+
+[dialog.option]
+active = { fg = "yellow", bold = true }
+active.selected = { fg = "bright_white", bold = true }
+inactive = { fg = "white" }
+selected = { fg = "yellow" }
+invalid = { fg = "red" }
+
+[dialog.status]              # dialog status segments (e.g. find selection size)
+selection_size = { fg = "yellow" }
+
+[dialog.progress]
+fill = { fg = "white", bg = "black" }
+label.on_fill = { fg = "bright_white", bold = true }
+label.on_track = { fg = "bright_white", bold = true }
+track = { fg = "white", bg = "bright_black" }
 
 [dialog.massrename]
 before = { fg = "white" }
@@ -194,25 +222,27 @@ after = { fg = "yellow" }
 after.added = { fg = "green", bold = true }
 after.error = { fg = "bright_red", bold = true }
 
-[jobs]
+[jobs]                       # status-column bucket styles
 done = { fg = "bright_green", bold = true }
 failed = { fg = "bright_red", bold = true }
 row = { fg = "white" }
 running = { fg = "bright_cyan", bold = true }
 
-progress.fill = { fg = "black", bg = "bright_green" }
-progress.label.on_fill = { fg = "black", bold = true }
-progress.label.on_track = { fg = "bright_white", bold = true }
-progress.track = { fg = "bright_black", bg = "black" }
+[jobs.progress]
+fill = { fg = "black", bg = "bright_green" }
+label.on_fill = { fg = "black", bold = true }
+label.on_track = { fg = "bright_white", bold = true }
+track = { fg = "bright_black", bg = "black" }
 
-icons.completed = { fg = "bright_green", bold = true }
-icons.error = { fg = "bright_red", bold = true }
-icons.decision = { fg = "cyan", bold = true }
-icons.ongoing = { fg = "bright_green", bold = true }
-icons.paused = { fg = "yellow", bold = true }
-icons.queued = { fg = "yellow", bold = true }
-icons.scanning = { fg = "bright_cyan", bold = true }
-icons.stopped = { fg = "bright_red", bold = true }
+[jobs.icons]                 # leading icon column (1:1 with job status strings)
+completed = { fg = "bright_green", bold = true }
+failed = { fg = "bright_red", bold = true }
+decision = { fg = "cyan", bold = true }
+running = { fg = "bright_green", bold = true }
+paused = { fg = "yellow", bold = true }
+queued = { fg = "yellow", bold = true }
+scanning = { fg = "bright_cyan", bold = true }
+canceled = { fg = "bright_red", bold = true }
 
 [symbols]
 working = "\uf017"

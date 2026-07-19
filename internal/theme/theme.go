@@ -69,31 +69,29 @@ type Theme struct {
 	PanelDedupRowKeep tcell.Style
 	// PanelDedupRowCursorKeep styles the cursor row on a kept duplicate file.
 	PanelDedupRowCursorKeep tcell.Style
-	// PanelDedupRowIndicatorKeepSubtree styles the dir-row suffix when a subtree contains kept files.
-	PanelDedupRowIndicatorKeepSubtree tcell.Style
-	// PanelRowIndicatorSelectionSubtree styles the file-list suffix on directories with nested selections.
-	PanelRowIndicatorSelectionSubtree tcell.Style
-	// PanelRowIndicatorNew styles the file-list suffix for the latest transferred batch.
-	PanelRowIndicatorNew tcell.Style
-	// PanelRowIndicatorNewPrevious styles the file-list suffix for earlier new-file marks in the same directory.
-	PanelRowIndicatorNewPrevious tcell.Style
-	// PanelRowIndicatorRenamed styles the file-list suffix for recently renamed entries.
-	PanelRowIndicatorRenamed tcell.Style
-	// PanelRowIndicatorJob styles the file-list job mark when the row is under a job's
-	// write (destination) tree; PanelRowIndicatorJobRead styles the read (source) tree;
-	// PanelRowIndicatorJobDecision styles either while the matched job waits on a user
+	// PanelDedupRowMarkKeepSubtree styles the dir-row suffix when a subtree contains kept files.
+	PanelDedupRowMarkKeepSubtree tcell.Style
+	// PanelRowMarkSelectionSubtree styles the file-list suffix on directories with nested selections.
+	PanelRowMarkSelectionSubtree tcell.Style
+	// PanelRowMarkNew styles the file-list suffix for the latest transferred batch.
+	PanelRowMarkNew tcell.Style
+	// PanelRowMarkNewPrevious styles the file-list suffix for earlier new-file marks in the same directory.
+	PanelRowMarkNewPrevious tcell.Style
+	// PanelRowMarkRenamed styles the file-list suffix for recently renamed entries.
+	PanelRowMarkRenamed tcell.Style
+	// PanelRowMarkJob styles the file-list job mark when the row is under a job's
+	// write (destination) tree; PanelRowMarkJobRead styles the read (source) tree;
+	// PanelRowMarkJobDecision styles either while the matched job waits on a user
 	// decision. See Theme.PanelJobMarkStyle.
-	PanelRowIndicatorJob         tcell.Style
-	PanelRowIndicatorJobRead     tcell.Style
-	PanelRowIndicatorJobDecision tcell.Style
+	PanelRowMarkJob         tcell.Style
+	PanelRowMarkJobRead     tcell.Style
+	PanelRowMarkJobDecision tcell.Style
 	// PanelRowTreeConnector styles tree branch/continuation glyphs in tree-style lists.
 	PanelRowTreeConnector tcell.Style
 	// PanelIconFolderOpen styles the open-folder icon strip when the other panel is in that directory.
 	PanelIconFolderOpen tcell.Style
 	// PanelIconFolderMount styles the other-mount directory icon strip.
 	PanelIconFolderMount tcell.Style
-	// PanelIconFolderDefault optionally styles the default closed-folder icon strip; unset uses row FG.
-	PanelIconFolderDefault tcell.Style
 	// PanelText styles non-listing body copy on panel interiors (stdout, jobs detail, preview, etc.).
 	PanelText tcell.Style
 	// PanelHint highlights rows related to the cursor row (e.g. duplicate siblings in the dedupe treeview).
@@ -106,20 +104,20 @@ type Theme struct {
 	// PanelCarouselInactiveCursor* styles preview-pane cursors in carousel mode.
 	PanelCarouselInactiveCursor         tcell.Style
 	PanelCarouselInactiveCursorSelected tcell.Style
-	// PanelSyncIndicator styles sync overlays on the border toward the inactive pane
+	// PanelStatusSync styles sync overlays on the border toward the inactive pane
 	// ("Sync →" / "← Sync" side-by-side; "Sync ↓" / "↑ Sync" stacked).
-	PanelSyncIndicator tcell.Style
-	// PanelQuickViewIndicator styles quick-view overlays on the driver pane border toward the inactive pane.
-	PanelQuickViewIndicator tcell.Style
-	// PanelBottomIndicator* style Start/PhysicalLeft bottom-border segments (see ui panel_bottom_indicators).
-	PanelBottomIndicatorSelections     tcell.Style
-	PanelBottomIndicatorDotfilesHidden tcell.Style
-	PanelBottomIndicatorGitignore      tcell.Style
-	PanelBottomIndicatorStash          tcell.Style
-	PanelBottomIndicatorSelectionSize  tcell.Style
-	PanelBottomIndicatorOtherPanel     tcell.Style
-	PanelScrollbarTrack                tcell.Style
-	PanelScrollbarThumb                tcell.Style
+	PanelStatusSync tcell.Style
+	// PanelStatusQuickView styles quick-view overlays on the driver pane border toward the inactive pane.
+	PanelStatusQuickView tcell.Style
+	// PanelStatus* style Start/PhysicalLeft bottom-border segments (see ui panel_bottom_indicators).
+	PanelStatusSelections     tcell.Style
+	PanelStatusDotfilesHidden tcell.Style
+	PanelStatusGitignore      tcell.Style
+	PanelStatusStash          tcell.Style
+	PanelStatusSelectionSize  tcell.Style
+	PanelStatusOtherPanel     tcell.Style
+	PanelScrollbarTrack       tcell.Style
+	PanelScrollbarThumb       tcell.Style
 	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
 	// when panel file icons are enabled. Absent keys use devicons' suggested hex.
 	PanelFileIconFG map[string]tcell.Color
@@ -198,7 +196,7 @@ type Theme struct {
 	DialogOptionActiveSelected     tcell.Style
 	DialogOptionSelected           tcell.Style
 	DialogOptionInvalid            tcell.Style
-	DialogIndicatorSelectionSize   tcell.Style
+	DialogStatusSelectionSize      tcell.Style
 	DialogProgressTrack            tcell.Style
 	DialogProgressFill             tcell.Style
 	DialogProgressLabelOnFill      tcell.Style
@@ -224,13 +222,13 @@ type Theme struct {
 	JobsProgressLabelOnFill  tcell.Style
 	JobsProgressLabelOnTrack tcell.Style
 
-	// JobsIcon* styles for the leading icon column in the jobs list.
+	// JobsIcon* styles for the leading icon column in the jobs list (keys match job status strings).
 	JobsIconsScanning  tcell.Style
 	JobsIconsQueued    tcell.Style
-	JobsIconsOngoing   tcell.Style
+	JobsIconsRunning   tcell.Style
 	JobsIconsPaused    tcell.Style
-	JobsIconsStopped   tcell.Style
-	JobsIconsError     tcell.Style
+	JobsIconsCanceled  tcell.Style
+	JobsIconsFailed    tcell.Style
 	JobsIconsDecision  tcell.Style
 	JobsIconsCompleted tcell.Style
 
@@ -314,12 +312,12 @@ func (t Theme) DialogOptionInvalidStyle() tcell.Style {
 	return mergeForegroundOnSurface(t.DialogOptionInvalid, t.DialogSurface)
 }
 
-// DialogIndicatorSelectionSizeStyle returns the find-dialog selection count/size label on a horizontal separator.
-// Foreground comes from dialog.indicator.selection_size; background always matches dialog.surface.
-func (t Theme) DialogIndicatorSelectionSizeStyle() tcell.Style {
-	src := t.DialogIndicatorSelectionSize
+// DialogStatusSelectionSizeStyle returns the find-dialog selection count/size label on a horizontal separator.
+// Foreground comes from dialog.status.selection_size; background always matches dialog.surface.
+func (t Theme) DialogStatusSelectionSizeStyle() tcell.Style {
+	src := t.DialogStatusSelectionSize
 	if src == (tcell.Style{}) {
-		src = t.PanelBottomIndicatorSelectionSize
+		src = t.PanelStatusSelectionSize
 	}
 	return mergeForegroundOnSurface(src, t.DialogSurface)
 }
@@ -364,7 +362,7 @@ func mergeForegroundOnSurface(src, surface tcell.Style) tcell.Style {
 	return s
 }
 
-// Panel bottom-indicator style keys ([panel.indicator] in TOML).
+// Panel bottom-indicator style keys ([panel.status] in TOML).
 const (
 	PanelBottomIndicatorKeySelections     = "selections"
 	PanelBottomIndicatorKeyDotfilesHidden = "dotfiles_hidden"
@@ -382,8 +380,8 @@ const (
 func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked bool) tcell.Style {
 	switch id {
 	case PanelBottomIndicatorKeySelections:
-		if t.PanelBottomIndicatorSelections != (tcell.Style{}) {
-			return t.PanelBottomIndicatorSelections
+		if t.PanelStatusSelections != (tcell.Style{}) {
+			return t.PanelStatusSelections
 		}
 		if chromeBlocked {
 			return t.PanelBlockedTitle
@@ -393,13 +391,13 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 		}
 		return t.PanelInactiveTitle
 	case PanelBottomIndicatorKeyDotfilesHidden:
-		if t.PanelBottomIndicatorDotfilesHidden != (tcell.Style{}) {
-			return t.PanelBottomIndicatorDotfilesHidden
+		if t.PanelStatusDotfilesHidden != (tcell.Style{}) {
+			return t.PanelStatusDotfilesHidden
 		}
 		fallthrough
 	case PanelBottomIndicatorKeyGitignore:
-		if t.PanelBottomIndicatorGitignore != (tcell.Style{}) {
-			return t.PanelBottomIndicatorGitignore
+		if t.PanelStatusGitignore != (tcell.Style{}) {
+			return t.PanelStatusGitignore
 		}
 		if chromeBlocked {
 			return t.PanelBlockedFrame
@@ -409,8 +407,8 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 		}
 		return t.PanelInactiveFrame
 	case PanelBottomIndicatorKeyStash:
-		if t.PanelBottomIndicatorStash != (tcell.Style{}) {
-			return t.PanelBottomIndicatorStash
+		if t.PanelStatusStash != (tcell.Style{}) {
+			return t.PanelStatusStash
 		}
 		if chromeBlocked {
 			return t.PanelBlockedTitle
@@ -420,23 +418,23 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 		}
 		return t.PanelInactiveTitle
 	case PanelBottomIndicatorKeySelectionSize:
-		if t.PanelBottomIndicatorSelectionSize != (tcell.Style{}) {
-			return t.PanelBottomIndicatorSelectionSize
+		if t.PanelStatusSelectionSize != (tcell.Style{}) {
+			return t.PanelStatusSelectionSize
 		}
 		fallthrough
 	case PanelBottomIndicatorKeySync:
-		if t.PanelSyncIndicator != (tcell.Style{}) {
-			return t.PanelSyncIndicator
+		if t.PanelStatusSync != (tcell.Style{}) {
+			return t.PanelStatusSync
 		}
 		fallthrough
 	case PanelBottomIndicatorKeyQuickView:
-		if t.PanelQuickViewIndicator != (tcell.Style{}) {
-			return t.PanelQuickViewIndicator
+		if t.PanelStatusQuickView != (tcell.Style{}) {
+			return t.PanelStatusQuickView
 		}
 		fallthrough
 	case PanelBottomIndicatorKeyOtherPanel:
-		if t.PanelBottomIndicatorOtherPanel != (tcell.Style{}) {
-			return t.PanelBottomIndicatorOtherPanel
+		if t.PanelStatusOtherPanel != (tcell.Style{}) {
+			return t.PanelStatusOtherPanel
 		}
 		fallthrough
 	default:
@@ -785,27 +783,27 @@ var requiredStyleKeys = []string{
 	"panel.dedup.row.cursor.all_marked",
 	"panel.dedup.row.keep",
 	"panel.dedup.row.cursor.keep",
-	"panel.dedup.row.indicator.keep_subtree",
-	"panel.row.indicator.selection_subtree",
-	"panel.row.indicator.new",
-	"panel.row.indicator.new.previous",
-	"panel.row.indicator.renamed",
-	"panel.row.indicator.job",
-	"panel.row.indicator.job.read",
-	"panel.row.indicator.job.decision",
+	"panel.dedup.row.mark.keep_subtree",
+	"panel.row.mark.selection_subtree",
+	"panel.row.mark.new",
+	"panel.row.mark.new.previous",
+	"panel.row.mark.renamed",
+	"panel.row.mark.job",
+	"panel.row.mark.job.read",
+	"panel.row.mark.job.decision",
 	"panel.row.tree.connector",
 	"panel.icon.folder.open",
 	"panel.icon.folder.mount",
 	"panel.text",
 	"panel.hint",
-	"panel.indicator.sync",
-	"panel.indicator.quick_view",
-	"panel.indicator.selections",
-	"panel.indicator.dotfiles_hidden",
-	"panel.indicator.gitignore",
-	"panel.indicator.stash",
-	"panel.indicator.selection_size",
-	"panel.indicator.other_panel",
+	"panel.status.sync",
+	"panel.status.quick_view",
+	"panel.status.selections",
+	"panel.status.dotfiles_hidden",
+	"panel.status.gitignore",
+	"panel.status.stash",
+	"panel.status.selection_size",
+	"panel.status.other_panel",
 	"panel.scrollbar.track",
 	"panel.scrollbar.thumb",
 	"panel.blocked.frame",
@@ -857,7 +855,7 @@ var requiredStyleKeys = []string{
 	"dialog.option.active.selected",
 	"dialog.option.selected",
 	"dialog.option.invalid",
-	"dialog.indicator.selection_size",
+	"dialog.status.selection_size",
 	"dialog.progress.track",
 	"dialog.progress.fill",
 	"dialog.progress.label.on_fill",
@@ -881,10 +879,10 @@ var requiredStyleKeys = []string{
 	"jobs.progress.label.on_track",
 	"jobs.icons.scanning",
 	"jobs.icons.queued",
-	"jobs.icons.ongoing",
+	"jobs.icons.running",
 	"jobs.icons.paused",
-	"jobs.icons.stopped",
-	"jobs.icons.error",
+	"jobs.icons.canceled",
+	"jobs.icons.failed",
 	"jobs.icons.decision",
 	"jobs.icons.completed",
 	"menu.progress.done",
@@ -1154,14 +1152,14 @@ func parse(data []byte) (Theme, error) {
 	}
 
 	dialogSurfaceForegroundKeys := map[string]struct{}{
-		"dialog.option.inactive":          {},
-		"dialog.option.active":            {},
-		"dialog.option.active.selected":   {},
-		"dialog.option.selected":          {},
-		"dialog.option.invalid":           {},
-		"dialog.indicator.selection_size": {},
-		"dialog.progress.label.on_fill":   {},
-		"dialog.progress.label.on_track":  {},
+		"dialog.option.inactive":         {},
+		"dialog.option.active":           {},
+		"dialog.option.active.selected":  {},
+		"dialog.option.selected":         {},
+		"dialog.option.invalid":          {},
+		"dialog.status.selection_size":   {},
+		"dialog.progress.label.on_fill":  {},
+		"dialog.progress.label.on_track": {},
 	}
 	for key, spec := range specs {
 		if spec.BG != "" {
@@ -1187,15 +1185,6 @@ func parse(data []byte) (Theme, error) {
 			return Theme{}, fmt.Errorf("style %q: %w", key, err)
 		}
 		styles[key] = style
-	}
-
-	panelIconFolderDefault := tcell.StyleDefault
-	if spec, ok := specs["panel.icon.folder.default"]; ok {
-		style, err := buildStyle(spec, palette)
-		if err != nil {
-			return Theme{}, fmt.Errorf("style %q: %w", "panel.icon.folder.default", err)
-		}
-		panelIconFolderDefault = style
 	}
 
 	panelFileIcons := map[string]tcell.Color{}
@@ -1263,18 +1252,17 @@ func parse(data []byte) (Theme, error) {
 		PanelDedupRowCursorAllMarked:        styles["panel.dedup.row.cursor.all_marked"],
 		PanelDedupRowKeep:                   styles["panel.dedup.row.keep"],
 		PanelDedupRowCursorKeep:             styles["panel.dedup.row.cursor.keep"],
-		PanelDedupRowIndicatorKeepSubtree:   styles["panel.dedup.row.indicator.keep_subtree"],
-		PanelRowIndicatorSelectionSubtree:   styles["panel.row.indicator.selection_subtree"],
-		PanelRowIndicatorNew:                styles["panel.row.indicator.new"],
-		PanelRowIndicatorNewPrevious:        styles["panel.row.indicator.new.previous"],
-		PanelRowIndicatorRenamed:            styles["panel.row.indicator.renamed"],
-		PanelRowIndicatorJob:                styles["panel.row.indicator.job"],
-		PanelRowIndicatorJobRead:            styles["panel.row.indicator.job.read"],
-		PanelRowIndicatorJobDecision:        styles["panel.row.indicator.job.decision"],
+		PanelDedupRowMarkKeepSubtree:        styles["panel.dedup.row.mark.keep_subtree"],
+		PanelRowMarkSelectionSubtree:        styles["panel.row.mark.selection_subtree"],
+		PanelRowMarkNew:                     styles["panel.row.mark.new"],
+		PanelRowMarkNewPrevious:             styles["panel.row.mark.new.previous"],
+		PanelRowMarkRenamed:                 styles["panel.row.mark.renamed"],
+		PanelRowMarkJob:                     styles["panel.row.mark.job"],
+		PanelRowMarkJobRead:                 styles["panel.row.mark.job.read"],
+		PanelRowMarkJobDecision:             styles["panel.row.mark.job.decision"],
 		PanelRowTreeConnector:               styles["panel.row.tree.connector"],
 		PanelIconFolderOpen:                 styles["panel.icon.folder.open"],
 		PanelIconFolderMount:                styles["panel.icon.folder.mount"],
-		PanelIconFolderDefault:              panelIconFolderDefault,
 		PanelText:                           styles["panel.text"],
 		PanelHint:                           styles["panel.hint"],
 		PanelCursorActive:                   styles["panel.active.row.cursor"],
@@ -1284,14 +1272,14 @@ func parse(data []byte) (Theme, error) {
 		PanelInactiveCursorSelected:         styles["panel.inactive.row.cursor.selected"],
 		PanelCarouselInactiveCursor:         styles["panel.carousel.inactive.row.cursor"],
 		PanelCarouselInactiveCursorSelected: styles["panel.carousel.inactive.row.cursor.selected"],
-		PanelSyncIndicator:                  styles["panel.indicator.sync"],
-		PanelQuickViewIndicator:             styles["panel.indicator.quick_view"],
-		PanelBottomIndicatorSelections:      styles["panel.indicator.selections"],
-		PanelBottomIndicatorDotfilesHidden:  styles["panel.indicator.dotfiles_hidden"],
-		PanelBottomIndicatorGitignore:       styles["panel.indicator.gitignore"],
-		PanelBottomIndicatorStash:           styles["panel.indicator.stash"],
-		PanelBottomIndicatorSelectionSize:   styles["panel.indicator.selection_size"],
-		PanelBottomIndicatorOtherPanel:      styles["panel.indicator.other_panel"],
+		PanelStatusSync:                     styles["panel.status.sync"],
+		PanelStatusQuickView:                styles["panel.status.quick_view"],
+		PanelStatusSelections:               styles["panel.status.selections"],
+		PanelStatusDotfilesHidden:           styles["panel.status.dotfiles_hidden"],
+		PanelStatusGitignore:                styles["panel.status.gitignore"],
+		PanelStatusStash:                    styles["panel.status.stash"],
+		PanelStatusSelectionSize:            styles["panel.status.selection_size"],
+		PanelStatusOtherPanel:               styles["panel.status.other_panel"],
 		PanelScrollbarTrack:                 styles["panel.scrollbar.track"],
 		PanelScrollbarThumb:                 styles["panel.scrollbar.thumb"],
 		PanelFileIconFG:                     panelFileIconFG,
@@ -1363,7 +1351,7 @@ func parse(data []byte) (Theme, error) {
 		DialogOptionActiveSelected:     styles["dialog.option.active.selected"],
 		DialogOptionSelected:           styles["dialog.option.selected"],
 		DialogOptionInvalid:            styles["dialog.option.invalid"],
-		DialogIndicatorSelectionSize:   styles["dialog.indicator.selection_size"],
+		DialogStatusSelectionSize:      styles["dialog.status.selection_size"],
 		DialogProgressTrack:            styles["dialog.progress.track"],
 		DialogProgressFill:             styles["dialog.progress.fill"],
 		DialogProgressLabelOnFill:      styles["dialog.progress.label.on_fill"],
@@ -1391,10 +1379,10 @@ func parse(data []byte) (Theme, error) {
 
 		JobsIconsScanning:  styles["jobs.icons.scanning"],
 		JobsIconsQueued:    styles["jobs.icons.queued"],
-		JobsIconsOngoing:   styles["jobs.icons.ongoing"],
+		JobsIconsRunning:   styles["jobs.icons.running"],
 		JobsIconsPaused:    styles["jobs.icons.paused"],
-		JobsIconsStopped:   styles["jobs.icons.stopped"],
-		JobsIconsError:     styles["jobs.icons.error"],
+		JobsIconsCanceled:  styles["jobs.icons.canceled"],
+		JobsIconsFailed:    styles["jobs.icons.failed"],
 		JobsIconsDecision:  styles["jobs.icons.decision"],
 		JobsIconsCompleted: styles["jobs.icons.completed"],
 

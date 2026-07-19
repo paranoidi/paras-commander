@@ -41,9 +41,9 @@ func TestSuffixSpanStyleNewFilePreviousUsesPreviousIndicatorColor(t *testing.T) 
 		t.Fatal("expected style")
 	}
 	fg, _, _ := st.Decompose()
-	wantFG, _, _ := th.PanelRowIndicatorNewPrevious.Decompose()
+	wantFG, _, _ := th.PanelRowMarkNewPrevious.Decompose()
 	if fg != wantFG {
-		t.Fatalf("fg = %v, want panel.row.indicator.new.previous %v", fg, wantFG)
+		t.Fatalf("fg = %v, want panel.row.mark.new.previous %v", fg, wantFG)
 	}
 }
 
@@ -55,9 +55,9 @@ func TestSuffixSpanStyleFilelistFallsBackOffCursorRow(t *testing.T) {
 		t.Fatal("expected style")
 	}
 	fg, _, _ := st.Decompose()
-	wantFG, _, _ := th.PanelRowIndicatorNew.Decompose()
+	wantFG, _, _ := th.PanelRowMarkNew.Decompose()
 	if fg != wantFG {
-		t.Fatalf("fg = %v, want panel.row.indicator.new %v", fg, wantFG)
+		t.Fatalf("fg = %v, want panel.row.mark.new %v", fg, wantFG)
 	}
 }
 

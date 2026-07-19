@@ -54,9 +54,6 @@ func (t Theme) FolderIconForeground(kind FolderIconKind, cursorStyleKey string, 
 			return efg
 		}
 	case FolderIconDefault:
-		if dfg, _, _ := t.PanelIconFolderDefault.Decompose(); dfg != tcell.ColorDefault {
-			return t.PanelRowIconForeground(cursorStyleKey, t.PanelIconFolderDefault)
-		}
 		return rowFG
 	}
 	return rowFG

@@ -1593,7 +1593,7 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveFilePanel(t *testing.T) {
 		t.Fatalf("active right bottom = %q, want no selections hint on active column", rightBottom)
 	}
 
-	// Frame "─" uses panel frame style; Selections segment uses panel.indicator.selections.
+	// Frame "─" uses panel frame style; Selections segment uses panel.status.selections.
 	dashR, dashSt, _ := screen.Get(1, bottomY)
 	if dashR != "─" {
 		t.Fatalf("left bottom frame dash = %q, want '─'", dashR)
@@ -1645,7 +1645,7 @@ func TestRenderDrawsSelectionsBottomHintOnInactiveRightFilePanel(t *testing.T) {
 		t.Fatalf("inactive right bottom = %q, want substring %q", rightBottom, " Selections ")
 	}
 
-	// Trailing frame dash before ┘ uses PanelFrame; Selections uses panel.indicator.selections.
+	// Trailing frame dash before ┘ uses PanelFrame; Selections uses panel.status.selections.
 	lastIn := width - 2
 	dashR, dashSt, _ := screen.Get(lastIn, bottomY)
 	if dashR != "─" {
@@ -1766,7 +1766,7 @@ func TestRenderSelectionSizeOnSelectionsStripBottom(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("strip bottom row has no panel.indicator.selection_size style")
+		t.Fatalf("strip bottom row has no panel.status.selection_size style")
 	}
 }
 

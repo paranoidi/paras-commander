@@ -819,9 +819,9 @@ func TestDrawDedupViewDirRowShowsSubtreeMarkIndicator(t *testing.T) {
 		t.Fatalf("rune at (%d,%d) = %q, want subtree indicator", markX, dirRowY, r)
 	}
 	fg, _, _ := style.Decompose()
-	wantFG, _, _ := styles.PanelRowIndicatorSelectionSubtree.Decompose()
+	wantFG, _, _ := styles.PanelRowMarkSelectionSubtree.Decompose()
 	if fg != wantFG {
-		t.Fatalf("indicator fg %v, want panel.row.indicator.selection_subtree %v", fg, wantFG)
+		t.Fatalf("indicator fg %v, want panel.row.mark.selection_subtree %v", fg, wantFG)
 	}
 }
 
@@ -885,7 +885,7 @@ func TestDrawDedupViewDirRowShowsRedSubtreeMarkWhenGroupFullyMarked(t *testing.T
 	if fg != wantFG {
 		t.Fatalf("indicator fg %v, want panel.dedup.row.all_marked %v", fg, wantFG)
 	}
-	yellowFG, _, _ := styles.PanelRowIndicatorSelectionSubtree.Decompose()
+	yellowFG, _, _ := styles.PanelRowMarkSelectionSubtree.Decompose()
 	if fg == yellowFG {
 		t.Fatalf("indicator fg should be red (all-marked), not yellow subtree color")
 	}

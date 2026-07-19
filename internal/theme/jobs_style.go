@@ -56,13 +56,13 @@ func (t Theme) JobsIconStyle(status string) tcell.Style {
 	case "queued":
 		return t.JobsIconsQueued
 	case "running":
-		return t.JobsIconsOngoing
+		return t.JobsIconsRunning
 	case "paused":
 		return t.JobsIconsPaused
 	case "canceled":
-		return t.JobsIconsStopped
+		return t.JobsIconsCanceled
 	case "failed":
-		return t.JobsIconsError
+		return t.JobsIconsFailed
 	case "decision":
 		return t.JobsIconsDecision
 	case "completed":
@@ -76,12 +76,12 @@ func (t Theme) JobsIconStyle(status string) tcell.Style {
 // read (yellow), red while the matched job waits on a user decision.
 func (t Theme) PanelJobMarkStyle(status string, write bool) tcell.Style {
 	if status == "decision" {
-		return t.PanelRowIndicatorJobDecision
+		return t.PanelRowMarkJobDecision
 	}
 	if write {
-		return t.PanelRowIndicatorJob
+		return t.PanelRowMarkJob
 	}
-	return t.PanelRowIndicatorJobRead
+	return t.PanelRowMarkJobRead
 }
 
 // JobsStatusStyle returns the themed style for the status column in the jobs list.
