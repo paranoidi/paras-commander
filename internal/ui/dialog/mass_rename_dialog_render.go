@@ -2,6 +2,7 @@ package dialog
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
@@ -13,14 +14,9 @@ import (
 // massRenameContentEnd returns the FocusedField index of the OK button for a mass rename dialog.
 func massRenameContentEnd(state FileDialogState) int {
 	if state.MassRenameMode == MassRenameModeUIExternalEditor {
-		return 4 // 3 radios + show-modified checkbox
+		return 5 // 3 radios + show-modified + strip
 	}
-	n := 3 + 2 // mode radios + find + replace
-	if state.MassRenameMode == MassRenameModeUISimple {
-		n++ // case-insensitive checkbox
-	}
-	n++ // show-only-modified checkbox
-	return n
+	return 8 // 3 radios + find + replace + show-modified + strip + case
 }
 
 // MassRenameEnsurePreviewScroll clamps scroll so the viewport fits.
@@ -55,10 +51,8 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	if previewCount < vp {
 		vp = previewCount
 	}
-	// 3 radios + show-modified checkbox + sep + two fields (label+input each) + case-fold checkbox + sep before preview.
-	// The case-fold checkbox row renders blank in Regex mode and is absent in ExternalEditor mode.
-	// ExternalEditor also skips the fields and sep-before-preview.
-	fixed := 3 + 1 + 1 + 4 + 1 + 1
+	// 3 radios + options checkbox row + sep + two fields (label+input each) + sep before preview.
+	fixed := 3 + 1 + 1 + 4 + 1
 	if massRenameShowsPatternHint(state) {
 		fixed++
 	}
@@ -80,9 +74,9 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 func MassRenamePreviewViewportRows(layoutHeight int, mode MassRenameModeUI) int {
 	// Base overhead matches the Simple/Regex fixed layout (see massRenameDialogHeight).
 	// +1 accounts for the separator row above buttons drawn outside drawMassRenameDialog.
-	overhead := 15
+	overhead := 14
 	if mode == MassRenameModeUIExternalEditor {
-		// ExternalEditor omits fields (4) + case-fold checkbox (1) + sep-before-preview (1) = 6 rows.
+		// ExternalEditor omits fields (4) + sep-before-preview (1) = 5 rows.
 		overhead = 9
 	}
 	maxBody := layoutHeight - overhead
@@ -94,14 +88,27 @@ func MassRenamePreviewViewportRows(layoutHeight int, mode MassRenameModeUI) int 
 
 // MassRenameShowModifiedFocusIdx returns the FocusedField index of the "Show only modified" checkbox.
 func MassRenameShowModifiedFocusIdx(state FileDialogState) int {
-	switch state.MassRenameMode {
-	case MassRenameModeUISimple:
-		return 6
-	case MassRenameModeUIRegex:
-		return 5
-	default: // MassRenameModeUIExternalEditor
+	if state.MassRenameMode == MassRenameModeUIExternalEditor {
 		return 3
 	}
+	return 5
+}
+
+// MassRenameStripFocusIdx returns the FocusedField index of the "Strip spaces" checkbox.
+func MassRenameStripFocusIdx(state FileDialogState) int {
+	if state.MassRenameMode == MassRenameModeUIExternalEditor {
+		return 4
+	}
+	return 6
+}
+
+// MassRenameCaseFocusIdx returns the FocusedField index of the "Case insensitive" checkbox,
+// or -1 when the checkbox is not shown (External $EDITOR mode).
+func MassRenameCaseFocusIdx(state FileDialogState) int {
+	if state.MassRenameMode == MassRenameModeUIExternalEditor {
+		return -1
+	}
+	return 7
 }
 
 func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
@@ -139,9 +146,17 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		return
 	}
 
-	// Show-only-modified checkbox (all modes), grouped with mode selection.
+	// Options row: Show only modified | Strip spaces | Case insensitive (Simple/Regex).
 	showModifiedFocusIdx := MassRenameShowModifiedFocusIdx(state)
+	stripFocusIdx := MassRenameStripFocusIdx(state)
+	caseFocusIdx := MassRenameCaseFocusIdx(state)
+	stripX := optX + utf8.RuneCountInString(draw.CheckboxText("Show only modified", false)) + 3
+	caseX := stripX + utf8.RuneCountInString(draw.CheckboxText("Strip spaces", false)) + 3
 	draw.DrawDialogCheckbox(screen, optX, y, "Show only modified", 'm', state.MassRenameShowOnlyModified, state.FocusedField == showModifiedFocusIdx, styles)
+	draw.DrawDialogCheckbox(screen, stripX, y, "Strip spaces", 't', state.MassRenameStripSpaces, state.FocusedField == stripFocusIdx, styles)
+	if caseFocusIdx >= 0 {
+		draw.DrawDialogCheckbox(screen, caseX, y, "Case insensitive", 'i', state.MassRenameCaseFold, state.FocusedField == caseFocusIdx, styles)
+	}
 	y++
 	if y >= innerBottom {
 		return
@@ -180,15 +195,6 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 				}
 			}
 		}
-
-		// Case-fold checkbox (Simple only); Regex mode leaves the row blank.
-		if y >= innerBottom {
-			return
-		}
-		if state.MassRenameMode == MassRenameModeUISimple {
-			draw.DrawDialogCheckbox(screen, optX, y, "Case insensitive find", 'i', state.MassRenameCaseFold, state.FocusedField == 5, styles)
-		}
-		y++
 
 		if y >= innerBottom {
 			return

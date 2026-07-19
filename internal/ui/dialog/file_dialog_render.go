@@ -261,7 +261,10 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 		for _, label := range []string{
 			"Simple (replace text)",
 			"Regular expression",
-			"Case insensitive find",
+			"External $EDITOR",
+			"Show only modified",
+			"Strip spaces",
+			"Case insensitive",
 			"Pattern",
 			"Replacement",
 		} {
@@ -269,6 +272,13 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 			if lw > minWidth {
 				minWidth = lw
 			}
+		}
+		// Options row: three checkboxes on one line (Show only modified | Strip spaces | Case insensitive).
+		optsRow := utf8.RuneCountInString(draw.CheckboxText("Show only modified", false)) +
+			utf8.RuneCountInString(draw.CheckboxText("Strip spaces", false)) +
+			utf8.RuneCountInString(draw.CheckboxText("Case insensitive", false)) + 10 // gaps + margins
+		if optsRow > minWidth {
+			minWidth = optsRow
 		}
 		for i := 0; i < len(state.MassRenamePreviewBefore); i++ {
 			lb := state.MassRenamePreviewBefore[i]

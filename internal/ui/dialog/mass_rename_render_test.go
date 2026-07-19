@@ -49,7 +49,7 @@ func TestDrawMassRenameDialogLastItemVisible(t *testing.T) {
 }
 
 func TestDrawMassRenameDialogShowsRegexpCompileHint(t *testing.T) {
-	_, err := ops.MassRenameCompileRegex(`\`)
+	_, err := ops.MassRenameCompileRegex(`\`, false)
 	if err == nil {
 		t.Fatal("expected compile error")
 	}

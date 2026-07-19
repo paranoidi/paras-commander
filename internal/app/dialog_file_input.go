@@ -92,7 +92,10 @@ func (a *App) handleFileDialogKey(event *tcell.EventKey) bool {
 	}
 
 	onRadio := a.fileDialogOnRadio()
-	onCheckbox := a.fileDialogOnMassRenameCaseCheckbox() || a.fileDialogOnRenameFocusCheckbox() || a.fileDialogOnMassRenameShowModifiedCheckbox()
+	onCheckbox := a.fileDialogOnMassRenameCaseCheckbox() ||
+		a.fileDialogOnMassRenameStripCheckbox() ||
+		a.fileDialogOnRenameFocusCheckbox() ||
+		a.fileDialogOnMassRenameShowModifiedCheckbox()
 
 	f := a.focusedField()
 	skipEarlyFieldKey := f != nil && f.PathPicker && !f.PickerFocused && event.Key() == tcell.KeyRight
@@ -225,6 +228,11 @@ func (a *App) handleFileDialogEnter() {
 		a.recomputeMassRenamePreview()
 		return
 	}
+	if a.fileDialogOnMassRenameStripCheckbox() {
+		d.MassRenameStripSpaces = !d.MassRenameStripSpaces
+		a.recomputeMassRenamePreview()
+		return
+	}
 	if a.fileDialogOnMassRenameCaseCheckbox() {
 		d.MassRenameCaseFold = !d.MassRenameCaseFold
 		a.recomputeMassRenamePreview()
@@ -269,6 +277,13 @@ func (a *App) handleFileDialogRune(event *tcell.EventKey) {
 		}
 		return
 	}
+	if a.fileDialogOnMassRenameStripCheckbox() {
+		if isPlainPrintableRune(event) && event.Rune() == ' ' {
+			d.MassRenameStripSpaces = !d.MassRenameStripSpaces
+			a.recomputeMassRenamePreview()
+		}
+		return
+	}
 	if a.fileDialogOnMassRenameCaseCheckbox() {
 		if isPlainPrintableRune(event) && event.Rune() == ' ' {
 			d.MassRenameCaseFold = !d.MassRenameCaseFold
@@ -296,42 +311,49 @@ func (a *App) handleFileDialogRune(event *tcell.EventKey) {
 }
 
 // handleMassRenameAltShortcut handles Alt-letter mode/option shortcuts on the mass-rename
-// dialog (Simple/Regex/External mode switches, case-fold, show-only-modified). Returns
-// true when the rune was handled.
+// dialog (Simple/Regex/External mode switches, case-fold, strip, show-only-modified).
+// Returns true when the rune was handled.
 func (a *App) handleMassRenameAltShortcut(d *dialog.FileDialogState, r rune) bool {
 	switch r {
 	case 's', 'S':
+		prev := d.MassRenameMode
 		d.MassRenameMode = dialog.MassRenameModeUISimple
 		if d.FocusedField == 1 || d.FocusedField == 2 {
 			d.FocusedField = 0
 		}
+		a.massRenameClampFocusAfterModeChange(prev)
 		a.massRenameSyncFieldLabels()
 		a.recomputeMassRenamePreview()
 		return true
 	case 'r', 'R':
+		prev := d.MassRenameMode
 		d.MassRenameMode = dialog.MassRenameModeUIRegex
-		switch d.FocusedField {
-		case 0, 2:
+		if d.FocusedField == 0 || d.FocusedField == 2 {
 			d.FocusedField = 1
-		case 6:
-			d.FocusedField = 5 // Simple's show-modified (6) → Regex's show-modified (5)
 		}
+		a.massRenameClampFocusAfterModeChange(prev)
 		a.massRenameSyncFieldLabels()
 		a.recomputeMassRenamePreview()
 		return true
 	case 'e', 'E':
+		prev := d.MassRenameMode
 		d.MassRenameMode = dialog.MassRenameModeUIExternalEditor
 		if d.FocusedField < 2 {
 			d.FocusedField = 2
 		}
+		a.massRenameClampFocusAfterModeChange(prev)
 		a.massRenameSyncFieldLabels()
 		a.recomputeMassRenamePreview()
 		return true
 	case 'i', 'I':
-		if d.MassRenameMode == dialog.MassRenameModeUISimple {
+		if d.MassRenameMode != dialog.MassRenameModeUIExternalEditor {
 			d.MassRenameCaseFold = !d.MassRenameCaseFold
 			a.recomputeMassRenamePreview()
 		}
+		return true
+	case 't', 'T':
+		d.MassRenameStripSpaces = !d.MassRenameStripSpaces
+		a.recomputeMassRenamePreview()
 		return true
 	case 'm', 'M':
 		d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
@@ -466,12 +488,10 @@ func (a *App) clearFileDialogPickerSubfocus() {
 	}
 }
 
-// massRenameMoveFocusKey handles Tab/Backtab segment jumps and Down/Up visual-order
-// transitions specific to the mass-rename dialog's non-linear focus layout (focus indices
-// don't match visual order: Seg 0 = mode radios(0-2) + show-modified, Seg 1 = find+replace+
-// case-fold (non-external), Seg 2 = buttons). Returns true when handled (focus updated);
-// false when the dialog isn't mass-rename or the key isn't one of these special cases, so
-// the caller falls through to the generic dialog.FileDialogFocusForm tail.
+// massRenameMoveFocusKey handles Tab/Backtab segment jumps, Left/Right on the options
+// checkbox row, and Down/Up visual-order transitions (focus indices don't match visual
+// order: Seg 0 = mode radios(0-2) + options row, Seg 1 = find+replace, Seg 2 = buttons).
+// Returns true when handled; false so the caller can fall through to FileDialogFocusForm.
 func (a *App) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 	d := &a.model.FileDialog
 	if d.DialogType != dialog.FileDialogMassRename {
@@ -480,24 +500,52 @@ func (a *App) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 	key := event.Key()
 	externalMode := d.MassRenameMode == dialog.MassRenameModeUIExternalEditor
 	showModifiedIdx := dialog.MassRenameShowModifiedFocusIdx(*d)
+	stripIdx := dialog.MassRenameStripFocusIdx(*d)
+	caseIdx := dialog.MassRenameCaseFocusIdx(*d)
 	okIdx := dialog.FileDialogOKFocusIndex(*d)
 	onRadio := d.FocusedField >= 0 && d.FocusedField < 3
-	onShowModified := d.FocusedField == showModifiedIdx
+	onOptionsRow := d.FocusedField == showModifiedIdx || d.FocusedField == stripIdx || d.FocusedField == caseIdx
 	onFindOrReplace := !externalMode && (d.FocusedField == massRenameFindFieldFocus || d.FocusedField == massRenameFindFieldFocus+1)
-	onCaseFold := d.MassRenameMode == dialog.MassRenameModeUISimple && d.FocusedField == 5
-	onSegment1 := onFindOrReplace || onCaseFold
 	onButton := d.FocusedField >= okIdx
+
+	if key == tcell.KeyRight {
+		switch d.FocusedField {
+		case showModifiedIdx:
+			a.clearFileDialogPickerSubfocus()
+			d.FocusedField = stripIdx
+			return true
+		case stripIdx:
+			if caseIdx >= 0 {
+				a.clearFileDialogPickerSubfocus()
+				d.FocusedField = caseIdx
+				return true
+			}
+		}
+	}
+	if key == tcell.KeyLeft {
+		switch d.FocusedField {
+		case stripIdx:
+			a.clearFileDialogPickerSubfocus()
+			d.FocusedField = showModifiedIdx
+			return true
+		case caseIdx:
+			a.clearFileDialogPickerSubfocus()
+			d.FocusedField = stripIdx
+			return true
+		}
+	}
+
 	if key == tcell.KeyTab || key == tcell.KeyBacktab {
 		a.clearFileDialogPickerSubfocus()
 		if key == tcell.KeyTab {
 			switch {
-			case onRadio || onShowModified:
+			case onRadio || onOptionsRow:
 				if externalMode {
 					d.FocusedField = okIdx
 				} else {
 					d.FocusedField = massRenameFindFieldFocus
 				}
-			case onSegment1:
+			case onFindOrReplace:
 				d.FocusedField = okIdx
 			case onButton:
 				d.FocusedField = 0
@@ -505,9 +553,9 @@ func (a *App) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 			}
 		} else { // Backtab
 			switch {
-			case onRadio || onShowModified:
+			case onRadio || onOptionsRow:
 				d.FocusedField = okIdx
-			case onSegment1:
+			case onFindOrReplace:
 				d.FocusedField = 0
 				a.applyMassRenameModeFromFocus()
 			case onButton:
@@ -521,27 +569,45 @@ func (a *App) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 		}
 		return true
 	}
-	// Down/Up use visual order (show-modified is above the fields but has a higher focus index).
-	notExternal := !externalMode
-	if key == tcell.KeyDown && d.FocusedField == 2 && notExternal {
+	// Down/Up use visual order (options row is above the fields but has higher focus indices).
+	if key == tcell.KeyDown && d.FocusedField == 2 {
 		a.clearFileDialogPickerSubfocus()
 		d.FocusedField = showModifiedIdx
 		return true
 	}
-	if key == tcell.KeyDown && onShowModified && notExternal {
+	if key == tcell.KeyDown && onOptionsRow {
 		a.clearFileDialogPickerSubfocus()
-		d.FocusedField = massRenameFindFieldFocus
+		if externalMode {
+			d.FocusedField = okIdx
+		} else {
+			d.FocusedField = massRenameFindFieldFocus
+		}
 		return true
 	}
-	if key == tcell.KeyUp && d.FocusedField == massRenameFindFieldFocus && notExternal {
+	if key == tcell.KeyUp && d.FocusedField == massRenameFindFieldFocus && !externalMode {
 		a.clearFileDialogPickerSubfocus()
 		d.FocusedField = showModifiedIdx
 		return true
 	}
-	if key == tcell.KeyUp && onShowModified && notExternal {
+	if key == tcell.KeyDown && d.FocusedField == massRenameFindFieldFocus+1 && !externalMode {
+		// Replace → OK (skip options-row indices that sit above the fields visually).
+		a.clearFileDialogPickerSubfocus()
+		d.FocusedField = okIdx
+		return true
+	}
+	if key == tcell.KeyUp && onOptionsRow {
 		a.clearFileDialogPickerSubfocus()
 		d.FocusedField = 2
 		a.applyMassRenameModeFromFocus()
+		return true
+	}
+	if key == tcell.KeyUp && onButton {
+		a.clearFileDialogPickerSubfocus()
+		if externalMode {
+			d.FocusedField = showModifiedIdx
+		} else {
+			d.FocusedField = massRenameFindFieldFocus + 1 // Replace
+		}
 		return true
 	}
 	return false
@@ -627,9 +693,20 @@ func (a *App) fileDialogOnMassRenameRadio() bool {
 // fileDialogOnMassRenameCaseCheckbox returns true when focus is on the case-insensitive checkbox.
 func (a *App) fileDialogOnMassRenameCaseCheckbox() bool {
 	d := &a.model.FileDialog
-	return d.DialogType == dialog.FileDialogMassRename &&
-		d.MassRenameMode == dialog.MassRenameModeUISimple &&
-		d.FocusedField == 5
+	if d.DialogType != dialog.FileDialogMassRename {
+		return false
+	}
+	idx := dialog.MassRenameCaseFocusIdx(*d)
+	return idx >= 0 && d.FocusedField == idx
+}
+
+// fileDialogOnMassRenameStripCheckbox returns true when focus is on the "Strip spaces" checkbox.
+func (a *App) fileDialogOnMassRenameStripCheckbox() bool {
+	d := &a.model.FileDialog
+	if d.DialogType != dialog.FileDialogMassRename {
+		return false
+	}
+	return d.FocusedField == dialog.MassRenameStripFocusIdx(*d)
 }
 
 // fileDialogOnMassRenameShowModifiedCheckbox returns true when focus is on the "Show only modified" checkbox.

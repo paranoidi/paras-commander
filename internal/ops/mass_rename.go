@@ -40,11 +40,12 @@ func resolveEntryPath(entry localfs.Entry, panelPath string) string {
 }
 
 // MassRenameCompute applies find/replace to each entry basename and returns one row per entry.
-// In simple mode, an empty find string leaves each basename unchanged.
+// In simple mode, an empty find string leaves each basename unchanged (before optional strip).
 // In regex mode, a nil regexp leaves each basename unchanged (caller omits compile for an empty pattern).
+// When stripSpaces is true, leading/trailing Unicode spaces are trimmed from NewBase.
 // Rows with NewBase == OldBase are no-ops (still listed for preview).
 // panelPath is used to resolve non-absolute entry paths (same as PlanRename).
-func MassRenameCompute(entries []localfs.Entry, panelPath string, mode MassRenameMode, find, replace string, simpleCaseFold bool, rx *regexp.Regexp) ([]MassRenameRow, error) {
+func MassRenameCompute(entries []localfs.Entry, panelPath string, mode MassRenameMode, find, replace string, caseFold, stripSpaces bool, rx *regexp.Regexp) ([]MassRenameRow, error) {
 	if len(entries) == 0 {
 		return nil, &Error{Op: "mass-rename", Text: "no files to rename"}
 	}
@@ -52,22 +53,25 @@ func MassRenameCompute(entries []localfs.Entry, panelPath string, mode MassRenam
 	for _, e := range entries {
 		src := resolveEntryPath(e, panelPath)
 		oldBase := filepath.Base(src)
-		nb, err := massRenameTransformBase(mode, oldBase, find, replace, simpleCaseFold, rx)
+		nb, err := massRenameTransformBase(mode, oldBase, find, replace, caseFold, rx)
 		if err != nil {
 			return nil, err
+		}
+		if stripSpaces {
+			nb = strings.TrimSpace(nb)
 		}
 		out = append(out, MassRenameRow{SourcePath: src, OldBase: oldBase, NewBase: nb})
 	}
 	return out, nil
 }
 
-func massRenameTransformBase(mode MassRenameMode, oldBase, find, replace string, simpleCaseFold bool, rx *regexp.Regexp) (string, error) {
+func massRenameTransformBase(mode MassRenameMode, oldBase, find, replace string, caseFold bool, rx *regexp.Regexp) (string, error) {
 	switch mode {
 	case MassRenameModeSimple:
 		if find == "" {
 			return oldBase, nil
 		}
-		if simpleCaseFold {
+		if caseFold {
 			return replaceAllFold(oldBase, find, replace), nil
 		}
 		return strings.ReplaceAll(oldBase, find, replace), nil
@@ -132,9 +136,13 @@ func replaceAllFold(s, old, repl string) string {
 }
 
 // MassRenameCompileRegex compiles the pattern for MassRenameModeRegex.
-func MassRenameCompileRegex(pattern string) (*regexp.Regexp, error) {
+// When caseFold is true, the pattern is compiled with the (?i) flag.
+func MassRenameCompileRegex(pattern string, caseFold bool) (*regexp.Regexp, error) {
 	if strings.TrimSpace(pattern) == "" {
 		return nil, &Error{Op: "mass-rename", Text: "regexp pattern is empty"}
+	}
+	if caseFold {
+		pattern = "(?i)" + pattern
 	}
 	re, err := regexp.Compile(pattern)
 	if err != nil {
@@ -305,14 +313,14 @@ func MassRenameValidateRows(rows []MassRenameRow) error {
 
 // MassRenameFindMatchesAny reports whether find (simple) or rx (regex) matches at least one row basename.
 // An empty simple find or nil regexp matches all rows (identity preview; no error state).
-func MassRenameFindMatchesAny(rows []MassRenameRow, mode MassRenameMode, find string, simpleCaseFold bool, rx *regexp.Regexp) bool {
+func MassRenameFindMatchesAny(rows []MassRenameRow, mode MassRenameMode, find string, caseFold bool, rx *regexp.Regexp) bool {
 	switch mode {
 	case MassRenameModeSimple:
 		if find == "" {
 			return true
 		}
 		for _, r := range rows {
-			if massRenameSimpleFindMatches(r.OldBase, find, simpleCaseFold) {
+			if massRenameSimpleFindMatches(r.OldBase, find, caseFold) {
 				return true
 			}
 		}
@@ -351,13 +359,13 @@ func MassRenameBeforePreviewHighlightRanges(matchRanges []search.Range, replace 
 }
 
 // MassRenameMatchRanges returns rune-index half-open ranges in oldBase matched by find (simple) or rx (regex).
-func MassRenameMatchRanges(oldBase string, mode MassRenameMode, find string, simpleCaseFold bool, rx *regexp.Regexp) []search.Range {
+func MassRenameMatchRanges(oldBase string, mode MassRenameMode, find string, caseFold bool, rx *regexp.Regexp) []search.Range {
 	switch mode {
 	case MassRenameModeSimple:
 		if find == "" {
 			return nil
 		}
-		return massRenameSimpleFindRanges(oldBase, find, simpleCaseFold)
+		return massRenameSimpleFindRanges(oldBase, find, caseFold)
 	case MassRenameModeRegex:
 		if rx == nil {
 			return nil
@@ -443,13 +451,13 @@ func massRenameAppendRange(ranges []search.Range, start, end int) []search.Range
 
 // MassRenameReplacementRanges returns rune-index half-open ranges in the transformed basename
 // where replacement text was inserted (simple find/replace or expanded regex template).
-func MassRenameReplacementRanges(oldBase string, mode MassRenameMode, find, replace string, simpleCaseFold bool, rx *regexp.Regexp) []search.Range {
+func MassRenameReplacementRanges(oldBase string, mode MassRenameMode, find, replace string, caseFold bool, rx *regexp.Regexp) []search.Range {
 	switch mode {
 	case MassRenameModeSimple:
 		if find == "" {
 			return nil
 		}
-		return massRenameSimpleReplacementRanges(oldBase, find, replace, simpleCaseFold)
+		return massRenameSimpleReplacementRanges(oldBase, find, replace, caseFold)
 	case MassRenameModeRegex:
 		if rx == nil {
 			return nil

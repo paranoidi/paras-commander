@@ -135,6 +135,7 @@ type FileDialogState struct {
 	// Mass rename (DialogType == FileDialogMassRename).
 	MassRenameMode             MassRenameModeUI
 	MassRenameCaseFold         bool
+	MassRenameStripSpaces      bool
 	MassRenameShowOnlyModified bool
 	MassRenamePreviewScroll    int
 	MassRenameSources          []MassRenameSource

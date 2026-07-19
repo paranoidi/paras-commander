@@ -23,7 +23,7 @@ func massRenamePatternHintText(state FileDialogState) string {
 	if pat == "" {
 		return ""
 	}
-	_, err := ops.MassRenameCompileRegex(pat)
+	_, err := ops.MassRenameCompileRegex(pat, state.MassRenameCaseFold)
 	if err == nil {
 		return ""
 	}
