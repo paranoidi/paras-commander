@@ -79,6 +79,13 @@ type Theme struct {
 	PanelRowIndicatorNewPrevious tcell.Style
 	// PanelRowIndicatorRenamed styles the file-list suffix for recently renamed entries.
 	PanelRowIndicatorRenamed tcell.Style
+	// PanelRowIndicatorJob styles the file-list job mark when the row is under a job's
+	// write (destination) tree; PanelRowIndicatorJobRead styles the read (source) tree;
+	// PanelRowIndicatorJobDecision styles either while the matched job waits on a user
+	// decision. See Theme.PanelJobMarkStyle.
+	PanelRowIndicatorJob         tcell.Style
+	PanelRowIndicatorJobRead     tcell.Style
+	PanelRowIndicatorJobDecision tcell.Style
 	// PanelRowTreeConnector styles tree branch/continuation glyphs in tree-style lists.
 	PanelRowTreeConnector tcell.Style
 	// PanelIconFolderOpen styles the open-folder icon strip when the other panel is in that directory.
@@ -218,14 +225,14 @@ type Theme struct {
 	JobsProgressLabelOnTrack tcell.Style
 
 	// JobsIcon* styles for the leading icon column in the jobs list.
-	JobsIconsScanning      tcell.Style
-	JobsIconsQueued        tcell.Style
-	JobsIconsOngoing       tcell.Style
-	JobsIconsPaused        tcell.Style
-	JobsIconsStopped       tcell.Style
-	JobsIconsError         tcell.Style
-	JobsIconsInputRequired tcell.Style
-	JobsIconsCompleted     tcell.Style
+	JobsIconsScanning  tcell.Style
+	JobsIconsQueued    tcell.Style
+	JobsIconsOngoing   tcell.Style
+	JobsIconsPaused    tcell.Style
+	JobsIconsStopped   tcell.Style
+	JobsIconsError     tcell.Style
+	JobsIconsDecision  tcell.Style
+	JobsIconsCompleted tcell.Style
 
 	// Symbols holds global glyphs (e.g. Nerd Font job status icons) referenced by the UI
 	// from the [symbols] section of the theme file.
@@ -453,6 +460,7 @@ const (
 	SymbolKeyFilelistSelectionSubtree = "filelist.selection_subtree"
 	SymbolKeyFilelistNew              = "filelist.new"
 	SymbolKeyFilelistRenamed          = "filelist.renamed"
+	SymbolKeyFilelistJob              = "filelist.job"
 	SymbolKeyFoldersFolder            = "folders.folder"
 	SymbolKeyFoldersOpen              = "folders.open"
 	SymbolKeyFoldersScanning          = "folders.scanning"
@@ -557,6 +565,12 @@ func (t Theme) SymbolFilelistNew() rune {
 // SymbolFilelistRenamed returns the recently-renamed file suffix glyph.
 func (t Theme) SymbolFilelistRenamed() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistRenamed, '\U000f11e8')
+}
+
+// SymbolFilelistJob returns the file-list job mark glyph (role/status colored via
+// Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
+func (t Theme) SymbolFilelistJob() rune {
+	return t.filelistSymbolRune(SymbolKeyFilelistJob, '\U000f02ca')
 }
 
 // SymbolTreeExpand returns the collapsed-node expander glyph for tree-style lists
@@ -776,6 +790,9 @@ var requiredStyleKeys = []string{
 	"panel.row.indicator.new",
 	"panel.row.indicator.new.previous",
 	"panel.row.indicator.renamed",
+	"panel.row.indicator.job",
+	"panel.row.indicator.job.read",
+	"panel.row.indicator.job.decision",
 	"panel.row.tree.connector",
 	"panel.icon.folder.open",
 	"panel.icon.folder.mount",
@@ -868,7 +885,7 @@ var requiredStyleKeys = []string{
 	"jobs.icons.paused",
 	"jobs.icons.stopped",
 	"jobs.icons.error",
-	"jobs.icons.input_required",
+	"jobs.icons.decision",
 	"jobs.icons.completed",
 	"menu.progress.done",
 	"menu.progress.remaining",
@@ -1251,6 +1268,9 @@ func parse(data []byte) (Theme, error) {
 		PanelRowIndicatorNew:                styles["panel.row.indicator.new"],
 		PanelRowIndicatorNewPrevious:        styles["panel.row.indicator.new.previous"],
 		PanelRowIndicatorRenamed:            styles["panel.row.indicator.renamed"],
+		PanelRowIndicatorJob:                styles["panel.row.indicator.job"],
+		PanelRowIndicatorJobRead:            styles["panel.row.indicator.job.read"],
+		PanelRowIndicatorJobDecision:        styles["panel.row.indicator.job.decision"],
 		PanelRowTreeConnector:               styles["panel.row.tree.connector"],
 		PanelIconFolderOpen:                 styles["panel.icon.folder.open"],
 		PanelIconFolderMount:                styles["panel.icon.folder.mount"],
@@ -1369,14 +1389,14 @@ func parse(data []byte) (Theme, error) {
 		JobsProgressLabelOnFill:  styles["jobs.progress.label.on_fill"],
 		JobsProgressLabelOnTrack: styles["jobs.progress.label.on_track"],
 
-		JobsIconsScanning:      styles["jobs.icons.scanning"],
-		JobsIconsQueued:        styles["jobs.icons.queued"],
-		JobsIconsOngoing:       styles["jobs.icons.ongoing"],
-		JobsIconsPaused:        styles["jobs.icons.paused"],
-		JobsIconsStopped:       styles["jobs.icons.stopped"],
-		JobsIconsError:         styles["jobs.icons.error"],
-		JobsIconsInputRequired: styles["jobs.icons.input_required"],
-		JobsIconsCompleted:     styles["jobs.icons.completed"],
+		JobsIconsScanning:  styles["jobs.icons.scanning"],
+		JobsIconsQueued:    styles["jobs.icons.queued"],
+		JobsIconsOngoing:   styles["jobs.icons.ongoing"],
+		JobsIconsPaused:    styles["jobs.icons.paused"],
+		JobsIconsStopped:   styles["jobs.icons.stopped"],
+		JobsIconsError:     styles["jobs.icons.error"],
+		JobsIconsDecision:  styles["jobs.icons.decision"],
+		JobsIconsCompleted: styles["jobs.icons.completed"],
 
 		Symbols: symbols,
 

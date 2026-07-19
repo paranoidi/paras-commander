@@ -131,7 +131,7 @@ func TestEntryPathJobMarkStatus_moveListedBeforeDeleteNestedChildPrefersDelete(t
 	}
 	// Same ordering issue as user report: transfer job appears first in JobsList.
 	list := []JobEntry{move, del}
-	marked, st := EntryPathJobMarkStatusFromEntries(child, list)
+	marked, st, _ := EntryPathJobMarkStatusFromEntries(child, list)
 	if !marked {
 		t.Fatal("expected child path marked")
 	}
@@ -166,7 +166,7 @@ func TestEntryPathJobMarkStatus_finishedDeleteQueuedMoveOverlappingUsesMove(t *t
 		Sources: []string{child},
 	}
 	list := []JobEntry{move, delDone}
-	marked, st := EntryPathJobMarkStatusFromEntries(child, list)
+	marked, st, _ := EntryPathJobMarkStatusFromEntries(child, list)
 	if !marked {
 		t.Fatal("expected child path still marked by queued move (ancestor source)")
 	}
@@ -208,7 +208,7 @@ func TestEntryPathJobMarkStatus_twoMovesSameTypeMoreSpecificSourceWins(t *testin
 	}
 	// Wider job first; row is under the narrower source only.
 	list := []JobEntry{moveWide, moveNarrow}
-	marked, st := EntryPathJobMarkStatusFromEntries(deep, list)
+	marked, st, _ := EntryPathJobMarkStatusFromEntries(deep, list)
 	if !marked {
 		t.Fatal("expected row marked")
 	}
@@ -248,7 +248,7 @@ func TestEntryPathJobMarkStatus_copyListedBeforeMoveSameSubtreePrefersMove(t *te
 	}
 	row := filepath.Join(src, "x")
 	list := []JobEntry{copyJ, moveJ}
-	marked, st := EntryPathJobMarkStatusFromEntries(row, list)
+	marked, st, _ := EntryPathJobMarkStatusFromEntries(row, list)
 	if !marked {
 		t.Fatal("expected row marked")
 	}
@@ -292,7 +292,7 @@ func TestEntryPathJobMarkStatus_jobEntriesFromJobsKeepsBothQueuedJobs(t *testing
 	if len(list) != 2 {
 		t.Fatalf("JobsList len = %d, want 2 (delete not removed when move exists)", len(list))
 	}
-	marked, st := EntryPathJobMarkStatusFromEntries(child, list)
+	marked, st, _ := EntryPathJobMarkStatusFromEntries(child, list)
 	if !marked {
 		t.Fatal("expected child path marked")
 	}
@@ -319,13 +319,164 @@ func TestEntryPathJobMarkStatus_decisionThenRunning(t *testing.T) {
 		Destination: filepath.Join(tmp, "dest"),
 		DestIsDir:   true,
 	}}
-	marked, st := EntryPathJobMarkStatus(dstRoot, marks)
+	marked, st, _ := EntryPathJobMarkStatus(dstRoot, marks)
 	if !marked || st != string(jobs.StatusWaitingDecision) {
 		t.Fatalf("marked=%v status=%q, want decision on destination dir", marked, st)
 	}
 	marks[0].Status = string(jobs.StatusRunning)
-	marked, st = EntryPathJobMarkStatus(dstRoot, marks)
+	marked, st, _ = EntryPathJobMarkStatus(dstRoot, marks)
 	if !marked || st != string(jobs.StatusRunning) {
 		t.Fatalf("marked=%v status=%q, want running after resume", marked, st)
+	}
+}
+
+func TestEntryPathJobMarkStatus_roleSourceIsRead(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	src := filepath.Join(tmp, "walnut")
+	if err := os.MkdirAll(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(tmp, "granite")
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marks := []JobPathMark{{
+		Type:        string(jobs.TypeCopy),
+		Status:      string(jobs.StatusRunning),
+		Sources:     []string{src},
+		Destination: dst,
+		DestIsDir:   true,
+	}}
+	marked, _, write := EntryPathJobMarkStatus(src, marks)
+	if !marked || write {
+		t.Fatalf("marked=%v write=%v, want marked read-only source", marked, write)
+	}
+}
+
+func TestEntryPathJobMarkStatus_roleDestinationIsWrite(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	src := filepath.Join(tmp, "walnut")
+	if err := os.MkdirAll(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(tmp, "granite")
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marks := []JobPathMark{{
+		Type:        string(jobs.TypeCopy),
+		Status:      string(jobs.StatusRunning),
+		Sources:     []string{src},
+		Destination: dst,
+		DestIsDir:   true,
+	}}
+	resolvedDst := filepath.Join(dst, filepath.Base(src))
+	marked, _, write := EntryPathJobMarkStatus(resolvedDst, marks)
+	if !marked || !write {
+		t.Fatalf("marked=%v write=%v, want marked write destination", marked, write)
+	}
+}
+
+func TestEntryPathJobMarkStatus_roleDeleteSourceIsWrite(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	src := filepath.Join(tmp, "walnut")
+	if err := os.MkdirAll(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marks := []JobPathMark{{
+		Type:    string(jobs.TypeDelete),
+		Status:  string(jobs.StatusRunning),
+		Sources: []string{src},
+	}}
+	marked, _, write := EntryPathJobMarkStatus(src, marks)
+	if !marked || !write {
+		t.Fatalf("marked=%v write=%v, want marked write (delete mutates its source)", marked, write)
+	}
+}
+
+func TestPanelInsideJobWriteTree(t *testing.T) {
+	t.Parallel()
+	tmp := t.TempDir()
+	src := filepath.Join(tmp, "walnut")
+	if err := os.MkdirAll(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dst := filepath.Join(tmp, "granite")
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	resolvedRoot := filepath.Join(dst, filepath.Base(src))
+	if err := os.MkdirAll(filepath.Join(resolvedRoot, "lantern"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	sibling := filepath.Join(tmp, "harbor")
+	if err := os.MkdirAll(sibling, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	exactDestJob := JobPathMark{
+		Type:        string(jobs.TypeCopy),
+		Status:      string(jobs.StatusRunning),
+		Sources:     []string{src},
+		Destination: dst,
+		DestIsDir:   true,
+	}
+	decisionJob := exactDestJob
+	decisionJob.Status = string(jobs.StatusWaitingDecision)
+	finishedJob := exactDestJob
+	finishedJob.Status = string(jobs.StatusCompleted)
+
+	tests := []struct {
+		name       string
+		panelPath  string
+		jobMarks   []JobPathMark
+		wantMarked bool
+		wantStatus string
+	}{
+		{
+			name:       "exact destination dir match",
+			panelPath:  dst,
+			jobMarks:   []JobPathMark{exactDestJob},
+			wantMarked: true,
+			wantStatus: string(jobs.StatusRunning),
+		},
+		{
+			name:       "nested under resolved destination root",
+			panelPath:  filepath.Join(resolvedRoot, "lantern"),
+			jobMarks:   []JobPathMark{exactDestJob},
+			wantMarked: true,
+			wantStatus: string(jobs.StatusRunning),
+		},
+		{
+			name:       "sibling directory does not match",
+			panelPath:  sibling,
+			jobMarks:   []JobPathMark{exactDestJob},
+			wantMarked: false,
+		},
+		{
+			name:       "decision status wins over running match",
+			panelPath:  dst,
+			jobMarks:   []JobPathMark{exactDestJob, decisionJob},
+			wantMarked: true,
+			wantStatus: string(jobs.StatusWaitingDecision),
+		},
+		{
+			name:       "finished job ignored",
+			panelPath:  dst,
+			jobMarks:   []JobPathMark{finishedJob},
+			wantMarked: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			marked, status := PanelInsideJobWriteTree(tt.panelPath, tt.jobMarks)
+			if marked != tt.wantMarked || status != tt.wantStatus {
+				t.Fatalf("PanelInsideJobWriteTree(%q) = (%v, %q), want (%v, %q)", tt.panelPath, marked, status, tt.wantMarked, tt.wantStatus)
+			}
+		})
 	}
 }

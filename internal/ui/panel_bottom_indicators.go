@@ -19,6 +19,7 @@ const (
 	PanelBottomIndicatorDotfilesHidden PanelBottomIndicatorID = "dotfiles_hidden"
 	PanelBottomIndicatorGitignore      PanelBottomIndicatorID = "gitignore"
 	PanelBottomIndicatorStash          PanelBottomIndicatorID = "stash"
+	PanelBottomIndicatorJobWrite       PanelBottomIndicatorID = "job_write"
 	PanelBottomIndicatorSync           PanelBottomIndicatorID = "sync"
 	PanelBottomIndicatorQuickView      PanelBottomIndicatorID = "quick_view"
 	PanelBottomIndicatorOtherPanel     PanelBottomIndicatorID = "other_panel"
@@ -62,6 +63,10 @@ type PanelBottomIndicatorContext struct {
 	SelectionSizeCenterStart int
 	SelectionSizeCenterEnd   int
 	SplitOrientation         SplitOrientation
+	// JobWriteMark / JobWriteStatus report whether this panel's current directory is
+	// inside a non-finished job's write (destination) tree; see PanelInsideJobWriteTree.
+	JobWriteMark   bool
+	JobWriteStatus string
 }
 
 type panelBottomIndicatorSpec struct {
@@ -76,6 +81,7 @@ var panelBottomIndicatorRegistry = []panelBottomIndicatorSpec{
 	{ID: PanelBottomIndicatorDotfilesHidden, Edge: PanelBottomEdgePhysicalLeft, Order: 0},
 	{ID: PanelBottomIndicatorGitignore, Edge: PanelBottomEdgePhysicalLeft, Order: 1},
 	{ID: PanelBottomIndicatorStash, Edge: PanelBottomEdgePhysicalLeft, Order: 2},
+	{ID: PanelBottomIndicatorJobWrite, Edge: PanelBottomEdgePhysicalLeft, Order: 3},
 	{ID: PanelBottomIndicatorSync, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorQuickView, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorOtherPanel, Edge: PanelBottomEdgeEnd, Order: 1},
@@ -95,6 +101,8 @@ func panelBottomIndicatorStyle(ctx PanelBottomIndicatorContext, id PanelBottomIn
 	switch id {
 	case PanelBottomIndicatorGitignore, PanelBottomIndicatorDotfilesHidden:
 		return ctx.BorderStyle
+	case PanelBottomIndicatorJobWrite:
+		return ctx.Styles.PanelJobMarkStyle(ctx.JobWriteStatus, true)
 	default:
 		return ctx.Styles.PanelBottomIndicator(string(id), ctx.FileListActive, ctx.ChromeBlocked)
 	}
@@ -111,6 +119,8 @@ func panelBottomIndicatorVisible(id PanelBottomIndicatorID, ctx PanelBottomIndic
 		return ctx.State.GitignoreActive
 	case PanelBottomIndicatorStash:
 		return ctx.State.StashPathCount() > 0
+	case PanelBottomIndicatorJobWrite:
+		return ctx.JobWriteMark
 	case PanelBottomIndicatorSync:
 		return ctx.SyncDriverPanelID == ctx.PanelID
 	case PanelBottomIndicatorQuickView:
@@ -141,6 +151,8 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 			word = "selections"
 		}
 		return fmt.Sprintf(" %s %d %s stashed ", sym, n, word)
+	case PanelBottomIndicatorJobWrite:
+		return " " + string(ctx.Styles.SymbolFilelistJob()) + " "
 	case PanelBottomIndicatorSync:
 		return panelSyncIndicatorLabel(ctx.PanelID, ctx.SplitOrientation)
 	case PanelBottomIndicatorQuickView:

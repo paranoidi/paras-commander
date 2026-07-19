@@ -62,6 +62,9 @@ row.indicator.selection_subtree = { fg = "yellow" }
 row.indicator.new = { fg = "bright_green" }
 row.indicator.new.previous = { fg = "bright_yellow" }
 row.indicator.renamed = { fg = "cyan" }
+row.indicator.job = { fg = "green" }
+row.indicator.job.read = { fg = "yellow" }
+row.indicator.job.decision = { fg = "red" }
 row.tree.connector = { fg = "bright_black" }
 icon.folder.open = { fg = "bright_cyan" }
 icon.folder.mount = { fg = "bright_blue" }
@@ -204,7 +207,7 @@ progress.track = { fg = "bright_black", bg = "black" }
 
 icons.completed = { fg = "bright_green", bold = true }
 icons.error = { fg = "bright_red", bold = true }
-icons.input_required = { fg = "cyan", bold = true }
+icons.decision = { fg = "cyan", bold = true }
 icons.ongoing = { fg = "bright_green", bold = true }
 icons.paused = { fg = "yellow", bold = true }
 icons.queued = { fg = "yellow", bold = true }
@@ -233,6 +236,7 @@ completed = "\uf05d"
 selection_subtree = ""
 new = "\uea7f"
 renamed = "\U000f11e8"
+job = "\U000f02ca"
 
 [symbols.folders]
 folder = "\U000F024B"

@@ -163,6 +163,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			panelStyle.Styles.SymbolWorking(),
 		)
 	}
+	jobWriteMark, jobWriteStatus := PanelInsideJobWriteTree(state.PathString(), display.JobMarks)
 	bottomCtx := PanelBottomIndicatorContext{
 		PanelID:                ctx.PanelID,
 		State:                  state,
@@ -179,6 +180,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		Styles:                 panelStyle.Styles,
 		SelectionSizeLabel:     selectionSizeLabel,
 		SplitOrientation:       ctx.SplitOrientation,
+		JobWriteMark:           jobWriteMark,
+		JobWriteStatus:         jobWriteStatus,
 	}
 	finalizeBottomCtx(rect, &bottomCtx)
 	drawPanelBottomIndicators(screen, rect, bottomCtx)
@@ -368,6 +371,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	var renameMark bool
 	var jobMark bool
 	var jobStatus string
+	var jobWrite bool
 	var jobMarkGlyph rune
 	var rowSuffix panellist.RowSuffix
 
@@ -378,14 +382,9 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		subtreeMark = entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
 		newFileTier = state.NewFileMarkTier(entry)
 		renameMark = state.IsRenameMarked(entry)
-		jobMark, jobStatus = EntryPathJobMarkStatus(entry.Path, display.JobMarks)
+		jobMark, jobStatus, jobWrite = EntryPathJobMarkStatus(entry.Path, display.JobMarks)
 		if jobMark {
-			glyphStr := panelStyle.Styles.SymbolJobsList(jobStatus)
-			if glyphStr != "" {
-				jobMarkGlyph, _ = utf8.DecodeRuneInString(glyphStr)
-			} else {
-				jobMarkGlyph = 0
-			}
+			jobMarkGlyph = panelStyle.Styles.SymbolFilelistJob()
 		} else {
 			jobMarkGlyph = 0
 		}
@@ -393,7 +392,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		if showMetaEffective {
 			metaText = MetaRowText(metaLayouts, entry.Path)
 		}
-		rowSuffix = panellist.NewRowSuffix(jobMarkGlyph, newFileTier, renameMark, subtreeMark)
+		rowSuffix = panellist.NewRowSuffix(jobMarkGlyph, newFileTier, renameMark, subtreeMark, jobWrite)
 		rowOpts.Suffix = rowSuffix
 		text = formatEntry(entry, listTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
 		if display.ShowDiskUsage && display.Painter != nil && diskDenom > 0 {
@@ -611,17 +610,12 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 		ScrollbarShowInactive: display.ScrollbarShowInactive,
 		InactiveFrameStyle:    panelStyle.Styles.PanelInactiveFrame,
 		Layout:                display.CarouselLayout,
-		JobMark: func(path string) (rune, string, bool) {
-			marked, st := EntryPathJobMarkStatus(path, display.JobMarks)
+		JobMark: func(path string) (rune, string, bool, bool) {
+			marked, st, write := EntryPathJobMarkStatus(path, display.JobMarks)
 			if !marked {
-				return 0, "", false
+				return 0, "", false, false
 			}
-			glyphStr := panelStyle.Styles.SymbolJobsList(st)
-			if glyphStr == "" {
-				return 0, "", false
-			}
-			r, _ := utf8.DecodeRuneInString(glyphStr)
-			return r, st, true
+			return panelStyle.Styles.SymbolFilelistJob(), st, write, true
 		},
 		PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
 			paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles, PanelIconStripContext{

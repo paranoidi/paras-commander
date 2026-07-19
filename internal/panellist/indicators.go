@@ -29,6 +29,9 @@ type RowSuffix struct {
 	NewFileTier      NewFileMarkTier
 	RenameMark       bool
 	SubtreeSelection bool
+	// JobWrite is true when JobGlyph marks a job's write (destination) tree rather
+	// than its read (source) tree; see Theme.PanelJobMarkStyle.
+	JobWrite bool
 }
 
 // SuffixDecorationLen returns how many trailing runes are reserved for row suffix indicators.
@@ -130,7 +133,8 @@ func RunesFromDisplay(display []DisplayRune) []rune {
 func SuffixSpanStyle(r rune, suffix RowSuffix, jobStatus, cursorStyleKey string, th theme.Theme, chromeBlocked bool) (tcell.Style, bool) {
 	switch {
 	case r == suffix.JobGlyph && suffix.JobGlyph != 0:
-		return th.JobsIconStyle(jobStatus), true
+		base := th.PanelJobMarkStyle(jobStatus, suffix.JobWrite)
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == th.SymbolFilelistNew() && suffix.NewFileTier != NewFileMarkNone:
 		base := th.PanelRowIndicatorNew
 		if suffix.NewFileTier == NewFileMarkPrevious {

@@ -182,6 +182,33 @@ func TestCollectPanelBottomIndicatorsStashAfterGitignore(t *testing.T) {
 	}
 }
 
+func TestCollectPanelBottomIndicatorsJobWriteVisible(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	ctx := PanelBottomIndicatorContext{
+		PanelID:                PrimaryPanel,
+		QuickViewDriverPanelID: -1,
+		State:                  panel.State{Path: pathloc.MustParse("/tmp")},
+		Styles:                 styles,
+		JobWriteMark:           true,
+		JobWriteStatus:         "running",
+	}
+	got := collectPanelBottomIndicators(ctx)
+	var seg *panelBottomIndicatorSegment
+	for i := range got {
+		if got[i].ID == PanelBottomIndicatorJobWrite {
+			seg = &got[i]
+		}
+	}
+	if seg == nil {
+		t.Fatal("job_write segment not present when JobWriteMark is true")
+	}
+	wantLabel := " " + string(styles.SymbolFilelistJob()) + " "
+	if seg.Label != wantLabel {
+		t.Fatalf("label = %q, want %q", seg.Label, wantLabel)
+	}
+}
+
 func TestPanelBottomIndicatorRegistryIncludesEndEdgeIndicators(t *testing.T) {
 	t.Parallel()
 	var hasSync, hasQuickView, hasOther bool

@@ -91,7 +91,7 @@ func TestFormatEntrySubtreeSelectionMark(t *testing.T) {
 func TestFormatEntryJobQueueMark(t *testing.T) {
 	th := theme.Default()
 	entry := localfs.Entry{Name: "file.txt", Path: "/tmp/file.txt", Type: localfs.EntryFile}
-	glyph, _ := utf8.DecodeRuneInString(th.SymbolJobsList("running"))
+	glyph := th.SymbolFilelistJob()
 	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobGlyph: glyph}, ListFmt: panel.ListFormatMtime}, th, nil, "")
 	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")
@@ -146,7 +146,7 @@ func TestFormatEntryJobQueueMarkBeforeSubtreeSelectionMark(t *testing.T) {
 	th := theme.Default()
 	mark := string(th.SymbolFilelistSelectionSubtree())
 	entry := localfs.Entry{Name: "sub", Path: "/tmp/p/sub", Type: localfs.EntryDirectory}
-	glyph, _ := utf8.DecodeRuneInString(th.SymbolJobsList("running"))
+	glyph := th.SymbolFilelistJob()
 	got := formatEntry(entry, 50, panelRowOpts{Suffix: panellist.RowSuffix{JobGlyph: glyph, SubtreeSelection: true}, ListFmt: panel.ListFormatMtime}, th, nil, "")
 	nameWidth := panelListNameWidth(50, panel.ListFormatMtime, false, false)
 	nameColumn := strings.TrimRight(got[:nameWidth], " ")

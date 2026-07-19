@@ -261,7 +261,7 @@ func TestApplyRefreshesReloadsPanelsAndSyncsJobPathMarks(t *testing.T) {
 	if model.JobPathMarks[0].Status != string(jobs.StatusCompleted) {
 		t.Fatalf("JobPathMarks status = %q, want completed", model.JobPathMarks[0].Status)
 	}
-	marked, _ := ui.EntryPathJobMarkStatus("/src/a", model.JobPathMarks)
+	marked, _, _ := ui.EntryPathJobMarkStatus("/src/a", model.JobPathMarks)
 	if marked {
 		t.Fatal("completed flatten job should not mark source paths")
 	}
