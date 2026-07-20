@@ -459,6 +459,33 @@ func TestRenderUsesBlockedPanelFrameWhenListingFormatDialogOpen(t *testing.T) {
 	}
 }
 
+func TestRenderKeepsActivePanelFrameWhenQuickActionOpen(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+
+	model := Model{
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
+		ActivePanel: PrimaryPanel,
+		QuickAction: dialog.QuickActionState{
+			Open:  true,
+			Items: []dialog.QuickActionItem{{Label: "Example"}},
+		},
+	}
+
+	styles := theme.Default()
+	Render(screen, model, styles)
+
+	_, cornerStyle, _ := screen.Get(0, 1)
+	if cornerStyle != styles.PanelActiveFrame {
+		t.Fatalf("left (active) panel border style = %v, want active frame %v (quick-action list must not blank panel focus)", cornerStyle, styles.PanelActiveFrame)
+	}
+}
+
 func TestRenderThemeDialogPreviewShowsActiveUnblockedPrimaryPanel(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
