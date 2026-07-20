@@ -79,7 +79,7 @@ File panel browsing, sorting, and listing.
 | `show_hidden` | bool | `false` | Show dotfiles and other hidden entries in panel listings on startup. |
 | `respect_gitignore` | bool | `true` | Hide files matched by `.gitignore` in panel listings. |
 | `default_sort` | string | `"name"` | Default panel sort order: `"name"`, `"extension"`, `"size"`, or `"mtime"`. |
-| `default_listing_format` | string | `"mtime"` | Default listing column layout: `"mtime"` (modified time), `"perm"` (permissions), or `"brief"` (minimal columns). |
+| `default_listing_format` | string | `"brief"` | Default listing column layout: `"mtime"` (modified time), `"perm"` (permissions), or `"brief"` (minimal columns). |
 | `sort_reverse` | bool | `false` | Reverse the default sort order. |
 | `directories_first` | bool | `true` | List directories before files regardless of sort order. |
 | `refresh_interval_ms` | int | `2500` | How often panels re-read their directory from disk in the background. `0` disables automatic refresh; non-zero values are clamped to 200–60000. |

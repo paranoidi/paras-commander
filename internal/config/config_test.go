@@ -465,8 +465,8 @@ func TestLoadFromPathsClampsUnsupportedValuesToDefaults(t *testing.T) {
 			name:    "listing format invalid",
 			content: "[panels]\ndefault_listing_format = \"wide\"\n",
 			testFn: func(t *testing.T, cfg Config) {
-				if cfg.Panels.DefaultListingFormat != ListingFormatMtime {
-					t.Fatalf("Panels.DefaultListingFormat = %q, want clamped to %q", cfg.Panels.DefaultListingFormat, ListingFormatMtime)
+				if cfg.Panels.DefaultListingFormat != ListingFormatBrief {
+					t.Fatalf("Panels.DefaultListingFormat = %q, want clamped to %q", cfg.Panels.DefaultListingFormat, ListingFormatBrief)
 				}
 			},
 		},
