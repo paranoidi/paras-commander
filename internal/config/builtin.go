@@ -147,7 +147,7 @@ const (
 	// FlattenDefaultLocationInactive is the inactive panel path for flatten dialog default destination.
 	FlattenDefaultLocationInactive = "inactive"
 	// DefaultFlattenDefaultLocation is the initial flatten destination prefill panel.
-	DefaultFlattenDefaultLocation = FlattenDefaultLocationInactive
+	DefaultFlattenDefaultLocation = FlattenDefaultLocationActive
 
 	// DefaultFlattenRecursive is the initial state of the flatten dialog recursive checkbox.
 	DefaultFlattenRecursive = false

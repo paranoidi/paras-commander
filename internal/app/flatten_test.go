@@ -48,25 +48,25 @@ func footerHasHint(keys []menu.FunctionKey, hint, keyLabel string) bool {
 }
 
 func TestFlattenDestinationTargetPanel(t *testing.T) {
-	app, activeDir, _ := flattenDialogTestSetup(t)
+	app, _, inactiveDir := flattenDialogTestSetup(t)
 
-	// Default destination is the inactive (Secondary) panel's path.
-	app.applyFlattenDestinationPathValidation()
-	if !app.model.DestinationTargetSecondary {
-		t.Fatal("expected Secondary panel marked as destination target")
-	}
-	if app.model.DestinationTargetPrimary {
-		t.Fatal("Primary panel should not be marked as destination target")
-	}
-
-	// Retyping the destination to the active (Primary) panel's path flips the target.
-	app.model.FlattenDialog.Destination.Value = activeDir
+	// Default destination is the active (Primary) panel's path.
 	app.applyFlattenDestinationPathValidation()
 	if !app.model.DestinationTargetPrimary {
 		t.Fatal("expected Primary panel marked as destination target")
 	}
 	if app.model.DestinationTargetSecondary {
-		t.Fatal("Secondary panel should no longer be marked as destination target")
+		t.Fatal("Secondary panel should not be marked as destination target")
+	}
+
+	// Retyping the destination to the inactive (Secondary) panel's path flips the target.
+	app.model.FlattenDialog.Destination.Value = inactiveDir
+	app.applyFlattenDestinationPathValidation()
+	if !app.model.DestinationTargetSecondary {
+		t.Fatal("expected Secondary panel marked as destination target")
+	}
+	if app.model.DestinationTargetPrimary {
+		t.Fatal("Primary panel should no longer be marked as destination target")
 	}
 
 	app.closeFlattenDialog()
@@ -131,8 +131,8 @@ func TestFileMenuFlattenOpensDialog(t *testing.T) {
 	if !app.model.FlattenDialog.Open {
 		t.Fatal("flatten dialog should be open")
 	}
-	if app.model.FlattenDialog.Destination.Value != transferPrefilledDestination(dst).Value {
-		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, transferPrefilledDestination(dst).Value)
+	if app.model.FlattenDialog.Destination.Value != transferPrefilledDestination(dir).Value {
+		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, transferPrefilledDestination(dir).Value)
 	}
 	if app.model.FlattenDialog.Recursive {
 		t.Fatal("recursive should default false")
@@ -208,21 +208,24 @@ func TestFlattenDestinationFooterShowsActiveAndInactive(t *testing.T) {
 func TestFlattenDestinationShortcutF5SetsActivePath(t *testing.T) {
 	t.Parallel()
 	app, activeDir, inactiveDir := flattenDialogTestSetup(t)
-	wantInactive := transferPrefilledDestination(inactiveDir).Value
-	if app.model.FlattenDialog.Destination.Value != wantInactive {
-		t.Fatalf("initial destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
-	}
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	wantActive := transferPrefilledDestination(activeDir).Value
 	if app.model.FlattenDialog.Destination.Value != wantActive {
-		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantActive)
+		t.Fatalf("initial destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantActive)
+	}
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	wantInactive := transferPrefilledDestination(inactiveDir).Value
+	if app.model.FlattenDialog.Destination.Value != wantInactive {
+		t.Fatalf("after F6 destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
+	}
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if app.model.FlattenDialog.Destination.Value != wantActive {
+		t.Fatalf("after F5 destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantActive)
 	}
 }
 
 func TestFlattenDestinationShortcutF6SetsInactivePath(t *testing.T) {
 	t.Parallel()
 	app, _, inactiveDir := flattenDialogTestSetup(t)
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	wantInactive := transferPrefilledDestination(inactiveDir).Value
 	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
 	if app.model.FlattenDialog.Destination.Value != wantInactive {
@@ -252,7 +255,7 @@ func TestFlattenDestinationShortcutsNoOpWhenUnfocused(t *testing.T) {
 	}
 }
 
-func TestFlattenInactivePanelIsSourceFallsBackToActive(t *testing.T) {
+func TestFlattenInactivePanelIsSourceUsesActive(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	activeDir := filepath.Join(dir, "active")
@@ -279,12 +282,6 @@ func TestFlattenInactivePanelIsSourceFallsBackToActive(t *testing.T) {
 	want := transferPrefilledDestination(activeDir).Value
 	if app.model.FlattenDialog.Destination.Value != want {
 		t.Fatalf("destination = %q, want active panel %q", app.model.FlattenDialog.Destination.Value, want)
-	}
-	if app.model.Message == "" {
-		t.Fatal("expected a warning toast message")
-	}
-	if app.model.MessageUrgency != ui.MessageUrgencyWarn {
-		t.Fatalf("message urgency = %v, want warn", app.model.MessageUrgency)
 	}
 }
 
