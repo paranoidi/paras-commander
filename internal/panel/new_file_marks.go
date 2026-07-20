@@ -48,6 +48,24 @@ func (s *State) AddNewFileMarks(dir pathloc.Path, names []string) {
 	dm.latest = newLatest
 }
 
+// newlyAppearedNames returns names present in newEntries but absent from oldEntries.
+// ponytail: name-only diff, so an external rename (old name gone, new name shows up)
+// reads as "new" too — same model AddNewFileMarks already uses for job batches; revisit
+// with inode/mtime tracking only if that false positive turns out to matter in practice.
+func newlyAppearedNames(oldEntries, newEntries []localfs.Entry) []string {
+	oldNames := make(map[string]struct{}, len(oldEntries))
+	for _, e := range oldEntries {
+		oldNames[e.Name] = struct{}{}
+	}
+	var added []string
+	for _, e := range newEntries {
+		if _, ok := oldNames[e.Name]; !ok {
+			added = append(added, e.Name)
+		}
+	}
+	return added
+}
+
 // dropNewFileMarks removes session marks for one listing directory.
 func (s *State) dropNewFileMarks(dir string) {
 	if s.NewFileMarksByDir == nil {

@@ -1217,6 +1217,10 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	if sameDirReload {
 		wasCentered = s.cursorAppearsCentered(s.effectiveFileListViewportRows(viewportRows))
 	}
+	var newlyAppeared []string
+	if sameDirReload {
+		newlyAppeared = newlyAppearedNames(s.Entries, localEntries)
+	}
 	s.Path = listingLoc
 	if listingLoc.IsRemote() {
 		s.GitignoreActive = false
@@ -1238,6 +1242,9 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	}
 	s.prepareGitColumn(listingLoc, localEntries)
 	s.Entries = localEntries
+	if len(newlyAppeared) > 0 {
+		s.AddNewFileMarks(listingLoc, newlyAppeared)
+	}
 	s.rebuildListingByPath()
 	s.recomputeSelectionListedBytes()
 	s.Cursor = 0
