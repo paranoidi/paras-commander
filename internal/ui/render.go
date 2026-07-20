@@ -149,7 +149,7 @@ type Model struct {
 	SFTPConnectDialog       dialog.SFTPConnectDialogState
 	FindDialog              dialog.FindDialogState
 	MetaDialog              dialog.MetaDialogState
-	UserMenu                dialog.UserMenuDialogState
+	QuickAction             dialog.QuickActionState
 	// MetaResults holds per-panel active meta columns (nil/empty = meta not active).
 	MetaResults [2][]MetaColumnState
 	// FilePreview is the live inactive-panel preview state (mutate only under App.commandsMu).
@@ -243,7 +243,7 @@ func (m *Model) AnyModalOpen() bool {
 	return m.PrimaryModal() != dialog.PrimaryModalNone ||
 		m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open ||
 		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
-		m.FindDialog.Open || m.MetaDialog.Open || m.UserMenu.Open || m.CompareMergeDialog.Open
+		m.FindDialog.Open || m.MetaDialog.Open || m.QuickAction.Open || m.CompareMergeDialog.Open
 }
 
 // SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,
@@ -376,7 +376,7 @@ func (m *Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.UserMenu.Open || m.CommandOutputDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.QuickAction.Open || m.CommandOutputDialog.Open {
 		return true
 	}
 	return false
@@ -392,7 +392,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
-		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.UserMenu.Open ||
+		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.QuickAction.Open ||
 		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupEmptyDirsConfirm.Open
 }
 
@@ -652,8 +652,8 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	if model.SortDialog.Open {
 		dialog.DrawSortDialog(screen, layout, model.SortDialog, styles)
 	}
-	if model.UserMenu.Open {
-		dialog.DrawUserMenuDialog(screen, layout, model.UserMenu, styles)
+	if model.QuickAction.Open {
+		dialog.DrawQuickActionDialog(screen, layout, model.QuickAction, styles)
 	}
 	if model.ListingFormatDialog.Open {
 		dialog.DrawListingFormatDialog(screen, layout, model.ListingFormatDialog, styles)

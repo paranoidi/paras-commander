@@ -38,7 +38,7 @@ const (
 	InputModeHistoryDialog
 	InputModeFindDialog
 	InputModeMetaDialog
-	InputModeUserMenu
+	InputModeQuickAction
 	InputModeHelpView
 	InputModeHostKeyDialog
 	InputModeSFTPConnectDialog
@@ -69,8 +69,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeFindDialog
 	case a.model.MetaDialog.Open:
 		return InputModeMetaDialog
-	case a.model.UserMenu.Open:
-		return InputModeUserMenu
+	case a.model.QuickAction.Open:
+		return InputModeQuickAction
 	case a.model.HelpView.Open:
 		return InputModeHelpView
 	case a.model.ThemeDialog.Open:
@@ -136,11 +136,10 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
-	if a.model.UserMenu.Open {
-		return footerWithEscClose([]menu.FunctionKey{
-			menu.FunctionKeyEditConfig,
-			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
-		})
+	if a.model.QuickAction.Open {
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		rest = append(append([]menu.FunctionKey(nil), a.quickActionFooterExtra...), rest...)
+		return footerWithEscClose(rest)
 	}
 	if a.model.FindDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
@@ -430,8 +429,8 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.handleMetaDialogKey(event)
 		a.render()
 		return false, true
-	case InputModeUserMenu:
-		a.handleUserMenuDialogKey(event)
+	case InputModeQuickAction:
+		a.handleQuickActionKey(event)
 		a.render()
 		return false, true
 	case InputModeHelpView:

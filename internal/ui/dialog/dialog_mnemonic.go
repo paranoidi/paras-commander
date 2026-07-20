@@ -88,7 +88,9 @@ func dialogMnemonicCandidates(label string) []rune {
 	return out
 }
 
-func configuredKeyRune(key string) rune {
+// ConfiguredKeyRune returns the lowercase letter pinned by a configured shortcut
+// string (e.g. a menu entry's `key` field), or 0 when key has no letter.
+func ConfiguredKeyRune(key string) rune {
 	k := strings.TrimSpace(key)
 	if k == "" {
 		return 0

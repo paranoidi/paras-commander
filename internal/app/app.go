@@ -37,6 +37,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
+	"github.com/paranoidi/paras-commander/internal/usermenu"
 	"github.com/paranoidi/paras-commander/internal/workpool"
 )
 
@@ -268,6 +269,18 @@ type App struct {
 	lastFlushedCursor hwCursorState
 	// chooserFile is non-empty in Helix/editor file-picker mode (--chooser-file).
 	chooserFile string
+
+	// quickActionOnActivate/quickActionOnKey/quickActionFooterExtra are the callbacks
+	// and footer hints for whichever quick-action list is currently open (model.QuickAction).
+	// Only one quick-action dialog can be open at a time.
+	quickActionOnActivate  func(int)
+	quickActionOnKey       func(*tcell.EventKey) bool
+	quickActionFooterExtra []menu.FunctionKey
+
+	// userMenuVisible/userMenuPath are the F2 user-menu quick-action consumer's state:
+	// the currently visible entries and the resolved menu.toml path they came from.
+	userMenuVisible []usermenu.MenuEntry
+	userMenuPath    string
 }
 
 // LaunchConfig controls process-level startup (CLI flags).

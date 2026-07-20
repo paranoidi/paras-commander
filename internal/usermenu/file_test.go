@@ -362,15 +362,6 @@ command = "true"
 			want: "single letter",
 		},
 		{
-			name: "reserved cancel",
-			body: `[[entry]]
-key = "c"
-title = "A"
-command = "true"
-`,
-			want: "reserved",
-		},
-		{
 			name: "duplicate keys",
 			body: `[[entry]]
 key = "a"

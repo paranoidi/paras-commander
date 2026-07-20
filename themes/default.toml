@@ -184,6 +184,8 @@ text = { fg = "white" }
 title = { bold = true }
 # bg matters for the path-picker trailing glyph when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "white", bg = "black", bold = true }
+# full-row selection bar for the buttonless quick-action list widget (fg+bg, unlike dialog.option.*).
+list.selected = { fg = "black", bg = "cyan" }
 
 [dialog.button]
 active = { fg = "black", bg = "cyan" }

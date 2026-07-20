@@ -8,12 +8,12 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
-	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
@@ -126,84 +126,43 @@ func (a *App) openUserMenu() {
 		a.setTransientMessage("User menu: no visible entries", ui.MessageUrgencyWarn)
 		return
 	}
-	a.model.UserMenu = dialog.UserMenuDialogState{
-		Open:         true,
-		Title:        "User menu",
-		Entries:      visible,
-		Selected:     defIdx,
-		Focus:        defIdx,
-		ScrollOffset: 0,
-		SourcePath:   menuPath,
-	}
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
-	vr := dialog.UserMenuListViewportRows(layout, len(visible))
-	dialog.UserMenuEnsureScroll(&a.model.UserMenu, vr)
+	a.userMenuVisible = visible
+	a.userMenuPath = menuPath
+	a.openQuickAction(
+		dialog.QuickActionState{
+			Title:    "User menu",
+			Items:    userMenuQuickActionItems(visible),
+			Selected: defIdx,
+		},
+		func(i int) {
+			if i < 0 || i >= len(a.userMenuVisible) {
+				return
+			}
+			a.runUserMenuEntry(a.userMenuVisible[i])
+		},
+		func(event *tcell.EventKey) bool {
+			if event.Key() == tcell.KeyF9 {
+				a.editUserMenuConfigFromDialog()
+				return true
+			}
+			return false
+		},
+		[]menu.FunctionKey{menu.FunctionKeyEditConfig},
+	)
 	a.clearTransientMessage()
 }
 
-func (a *App) closeUserMenu() {
-	a.model.UserMenu = dialog.UserMenuDialogState{}
+// userMenuQuickActionItems maps visible F2 menu entries to quick-action rows.
+func userMenuQuickActionItems(entries []usermenu.MenuEntry) []dialog.QuickActionItem {
+	items := make([]dialog.QuickActionItem, len(entries))
+	for i, e := range entries {
+		items[i] = dialog.QuickActionItem{Key: dialog.ConfiguredKeyRune(e.Key), Label: e.Title}
+	}
+	return items
 }
 
-func (a *App) handleUserMenuDialogKey(event *tcell.EventKey) {
-	st := &a.model.UserMenu
-	n := len(st.Entries)
-	if n == 0 {
-		a.closeUserMenu()
-		return
-	}
-	form := dialog.NewUserMenuDialogForm(n)
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
-	vr := dialog.UserMenuListViewportRows(layout, n)
-
-	if dialog.AltDialogCancel(event) {
-		a.closeUserMenu()
-		return
-	}
-
-	switch event.Key() {
-	case tcell.KeyF9:
-		a.editUserMenuConfigFromDialog()
-		return
-	case tcell.KeyEsc:
-		a.closeUserMenu()
-	case tcell.KeyEnter:
-		if st.Focus == form.CancelIndex() {
-			a.closeUserMenu()
-			return
-		}
-		if st.Focus >= 0 && st.Focus < n {
-			a.executeUserMenuEntry(st.Focus)
-			return
-		}
-	case tcell.KeyRune:
-		if keymap.AltLetterModifiers(event.Modifiers()) {
-			if i, ok := dialog.UserMenuEntryIndexForAltShortcut(st.Entries, event.Rune()); ok {
-				a.executeUserMenuEntry(i)
-				return
-			}
-		}
-	}
-	if focus, ok := form.MoveFocus(st.Focus, event.Key()); ok {
-		st.Focus = focus
-		if st.Focus >= 0 && st.Focus < n {
-			st.Selected = st.Focus
-		}
-		dialog.UserMenuEnsureScroll(st, vr)
-	}
-}
-
-func (a *App) executeUserMenuEntry(idx int) {
-	st := a.model.UserMenu
-	if !st.Open || idx < 0 || idx >= len(st.Entries) {
-		a.closeUserMenu()
-		return
-	}
-	entry := st.Entries[idx]
-	a.closeUserMenu()
-
+// runUserMenuEntry executes a resolved F2 user-menu entry (dialog already closed).
+func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	active := a.activePanel()
 	other := a.inactivePanel()
 	if len(entry.RunForEach) > 0 {

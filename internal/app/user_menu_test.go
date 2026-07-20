@@ -64,7 +64,7 @@ func TestOpenUserMenuCreatesStubWhenMissing(t *testing.T) {
 	if len(edited) != 1 || edited[0] != global {
 		t.Fatalf("edited = %v, want [%q]", edited, global)
 	}
-	if app.model.UserMenu.Open {
+	if app.model.QuickAction.Open {
 		t.Fatal("user menu dialog should not open during bootstrap")
 	}
 }
@@ -100,7 +100,7 @@ command = "true"
 	if len(edited) != 1 || edited[0] != menuPath {
 		t.Fatalf("edited = %v, want [%q]", edited, menuPath)
 	}
-	if app.model.UserMenu.Open {
+	if app.model.QuickAction.Open {
 		t.Fatal("edit user menu should not open dialog")
 	}
 }
@@ -131,7 +131,7 @@ func TestOpenUserMenuInvalidFileCritical(t *testing.T) {
 	if called {
 		t.Fatal("editor should not run for invalid menu.toml")
 	}
-	if app.model.UserMenu.Open {
+	if app.model.QuickAction.Open {
 		t.Fatal("user menu dialog should not open")
 	}
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {
@@ -168,7 +168,7 @@ func TestOpenUserMenuExistingStubNoEditor(t *testing.T) {
 	if called {
 		t.Fatal("editor should not run when menu file exists but has no entries")
 	}
-	if app.model.UserMenu.Open {
+	if app.model.QuickAction.Open {
 		t.Fatal("user menu dialog should not open without entries")
 	}
 	if app.model.MessageUrgency != ui.MessageUrgencyWarn {
@@ -209,7 +209,7 @@ command = "true"
 	if called {
 		t.Fatal("editor should not run when menu has entries")
 	}
-	if !app.model.UserMenu.Open {
+	if !app.model.QuickAction.Open {
 		t.Fatal("user menu dialog should open")
 	}
 }
@@ -231,13 +231,13 @@ command = "true"
 
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
-	if !app.model.UserMenu.Open {
+	if !app.model.QuickAction.Open {
 		t.Fatal("user menu should be open")
 	}
 
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
 
-	if app.model.UserMenu.Open {
+	if app.model.QuickAction.Open {
 		t.Fatal("user menu should close after entry key")
 	}
 	if app.model.ViewMode != ui.ViewCommands {
@@ -303,7 +303,7 @@ interactive = true
 	t.Cleanup(func() { userMenuInteractiveRunner = prev })
 
 	app.openUserMenu()
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModAlt))
+	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModNone))
 
 	if app.model.ViewMode == ui.ViewCommands {
 		t.Fatal("interactive user menu should not open commands view")
@@ -347,7 +347,7 @@ detach = true
 	t.Cleanup(func() { userMenuDetachRunner = prev })
 
 	app.openUserMenu()
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModAlt))
+	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
 
 	if app.model.ViewMode == ui.ViewCommands {
 		t.Fatal("detach user menu should not open commands view")
@@ -379,7 +379,7 @@ background = true
 
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
 
 	if app.model.ViewMode == ui.ViewCommands {
 		t.Fatal("background user menu should not open commands view")
@@ -406,7 +406,7 @@ background = true
 
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModNone))
 	waitCommandsDone(t, app)
 
 	app.applyCommandWake(backgroundWakePayloadForEntry(t, app, "Fail"))
@@ -435,7 +435,7 @@ background = true
 
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModAlt))
+	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
 	waitCommandsDone(t, app)
 
 	app.applyCommandWake(commandWakePayload{refreshBrowserPanel: true})
@@ -486,9 +486,9 @@ max_parallel = 1
 	app := testUserMenuApp(t, dir, cfgDir)
 
 	app.openUserMenu()
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
+	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModNone))
 	app.openUserMenu()
-	app.handleUserMenuDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
+	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModNone))
 
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
@@ -529,7 +529,7 @@ pool = "missing"
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
 
-	if app.model.UserMenu.Open {
+	if app.model.QuickAction.Open {
 		t.Fatal("user menu dialog should not open for unknown pool")
 	}
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {

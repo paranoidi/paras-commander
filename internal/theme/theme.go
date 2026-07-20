@@ -196,6 +196,7 @@ type Theme struct {
 	DialogOptionActiveSelected     tcell.Style
 	DialogOptionSelected           tcell.Style
 	DialogOptionInvalid            tcell.Style
+	DialogListSelected             tcell.Style
 	DialogStatusSelectionSize      tcell.Style
 	DialogProgressTrack            tcell.Style
 	DialogProgressFill             tcell.Style
@@ -855,6 +856,7 @@ var requiredStyleKeys = []string{
 	"dialog.option.active.selected",
 	"dialog.option.selected",
 	"dialog.option.invalid",
+	"dialog.list.selected",
 	"dialog.status.selection_size",
 	"dialog.progress.track",
 	"dialog.progress.fill",
@@ -1351,6 +1353,7 @@ func parse(data []byte) (Theme, error) {
 		DialogOptionActiveSelected:     styles["dialog.option.active.selected"],
 		DialogOptionSelected:           styles["dialog.option.selected"],
 		DialogOptionInvalid:            styles["dialog.option.invalid"],
+		DialogListSelected:             styles["dialog.list.selected"],
 		DialogStatusSelectionSize:      styles["dialog.status.selection_size"],
 		DialogProgressTrack:            styles["dialog.progress.track"],
 		DialogProgressFill:             styles["dialog.progress.fill"],

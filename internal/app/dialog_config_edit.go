@@ -122,11 +122,10 @@ func (a *App) resolveUserMenuEditPath() (string, error) {
 }
 
 func (a *App) editUserMenuConfigFromDialog() {
-	st := &a.model.UserMenu
-	if !st.Open {
+	if !a.model.QuickAction.Open {
 		return
 	}
-	path := st.SourcePath
+	path := a.userMenuPath
 	if path == "" {
 		var err error
 		path, err = a.resolveUserMenuEditPath()
@@ -141,26 +140,24 @@ func (a *App) editUserMenuConfigFromDialog() {
 }
 
 func (a *App) reloadUserMenuDialog() {
-	st := &a.model.UserMenu
+	st := &a.model.QuickAction
 	if !st.Open {
 		return
 	}
 	prevTitle := ""
 	prevKey := ""
-	if st.Selected >= 0 && st.Selected < len(st.Entries) {
-		prevTitle = st.Entries[st.Selected].Title
-		prevKey = st.Entries[st.Selected].Key
+	if st.Selected >= 0 && st.Selected < len(a.userMenuVisible) {
+		prevTitle = a.userMenuVisible[st.Selected].Title
+		prevKey = a.userMenuVisible[st.Selected].Key
 	}
-	oldForm := dialog.NewUserMenuDialogForm(len(st.Entries))
-	wasOnCancel := st.Focus == oldForm.CancelIndex()
 
-	menuPath := st.SourcePath
+	menuPath := a.userMenuPath
 	if menuPath == "" {
 		var err error
 		menuPath, err = a.resolveUserMenuEditPath()
 		if err != nil {
 			a.setErrorMessage("User menu", err)
-			a.closeUserMenu()
+			a.closeQuickAction()
 			return
 		}
 	}
@@ -168,17 +165,17 @@ func (a *App) reloadUserMenuDialog() {
 	mf, err := usermenu.LoadFile(menuPath)
 	if err != nil {
 		a.setUserMenuCritical(err)
-		a.closeUserMenu()
+		a.closeQuickAction()
 		return
 	}
 	if err := mf.ValidatePoolRefs(usermenu.PoolNameSet(a.workPools.Names())); err != nil {
 		a.setUserMenuCritical(err)
-		a.closeUserMenu()
+		a.closeQuickAction()
 		return
 	}
 	if len(mf.Entries) == 0 {
 		a.setTransientMessage("User menu: no entries (edit with Shift+F2)", ui.MessageUrgencyWarn)
-		a.closeUserMenu()
+		a.closeQuickAction()
 		return
 	}
 
@@ -188,31 +185,26 @@ func (a *App) reloadUserMenuDialog() {
 	visible, defIdx, err := usermenu.FilterVisible(mf, ctx)
 	if err != nil {
 		a.setUserMenuCritical(err)
-		a.closeUserMenu()
+		a.closeQuickAction()
 		return
 	}
 	if len(visible) == 0 {
 		a.setTransientMessage("User menu: no visible entries", ui.MessageUrgencyWarn)
-		a.closeUserMenu()
+		a.closeQuickAction()
 		return
 	}
 
 	selected := userMenuEntryIndexByKeyOrTitle(visible, prevKey, prevTitle, defIdx)
-	form := dialog.NewUserMenuDialogForm(len(visible))
-	focus := selected
-	if wasOnCancel {
-		focus = form.CancelIndex()
-	}
 
-	st.Entries = visible
+	a.userMenuVisible = visible
+	a.userMenuPath = menuPath
+	st.Items = userMenuQuickActionItems(visible)
 	st.Selected = selected
-	st.Focus = focus
-	st.SourcePath = menuPath
 
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
-	vr := dialog.UserMenuListViewportRows(layout, len(visible))
-	dialog.UserMenuEnsureScroll(st, vr)
+	vr := dialog.QuickActionViewportRows(layout, len(visible))
+	dialog.QuickActionEnsureScroll(st, vr)
 }
 
 func userMenuEntryIndexByKeyOrTitle(entries []usermenu.MenuEntry, key, title string, fallback int) int {

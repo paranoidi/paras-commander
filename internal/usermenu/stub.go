@@ -15,7 +15,8 @@ const MenuStubTOML = `# F2 user menu
 #
 # Each action is a [[entry]] table. Keep the table name "entry" for every
 # action (e.g. [[toolname]] is ignored — only [[entry]] is loaded).
-# Press Alt+the highlighted letter in the F2 menu to run an entry immediately.
+# Press the highlighted letter in the F2 menu to run an entry immediately
+# (no Alt needed), or move with Up/Down and press Enter. Esc closes the menu.
 #
 # [[entry]]
 # title = "Print working directory"
@@ -43,7 +44,8 @@ const MenuStubTOML = `# F2 user menu
 #   Suppressed on error. For detach entries it replaces "Started …".
 #
 # key             string   optional   (single letter)
-#   Pin Alt+letter shortcut; otherwise derived from title.
+#   Pin the F2 menu activation letter; otherwise derived from title.
+#   No letters are reserved.
 #
 # when            string | [string]   optional   default: always visible
 #   Visibility filter; OR semantics across list items.

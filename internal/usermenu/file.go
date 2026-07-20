@@ -469,9 +469,6 @@ func validateEntryKey(i int, title, key string, pinned map[rune]int) error {
 		return entryError(i, title, fmt.Sprintf("key must be a single letter, got %q", key))
 	}
 	lr := unicode.ToLower(runes[0])
-	if lr == 'c' || lr == 'o' {
-		return entryError(i, title, fmt.Sprintf("key %q is reserved (Alt+C/Cancel, Alt+O/OK)", key))
-	}
 	if prev, dup := pinned[lr]; dup {
 		return entryError(i, title, fmt.Sprintf("duplicate key %q (also used by entry %d)", key, prev))
 	}
