@@ -200,18 +200,18 @@ func (a *App) applyListingFormatDialog() {
 
 func (a *App) openConfigDialog() {
 	a.clearTransientMessage()
-	lf, _ := panel.ParseListFormat(a.config.DefaultListingFormat)
-	sm, _ := panel.ParseScrollMode(a.config.UI.ScrollMode)
-	sb, _ := uiscrollbar.ParseStyle(a.config.UI.PanelScrollbar)
+	lf, _ := panel.ParseListFormat(a.config.Panels.DefaultListingFormat)
+	sm, _ := panel.ParseScrollMode(a.config.UI.Scroll.Mode)
+	sb, _ := uiscrollbar.ParseStyle(a.config.UI.Scroll.Scrollbar)
 	a.model.ConfigDialog = dialog.ConfigDialogState{
 		Open:                   true,
 		ShowFileIcons:          a.config.UI.ShowFileIcons,
-		ZoomActivePanel:        a.config.UI.ZoomActivePanel,
+		ZoomActivePanel:        a.config.UI.Zoom.ActivePanel,
 		ShrunkenShowsNameOnly:  a.config.UI.ShrunkenShowsNameOnly,
-		PaneSplitStacked:       a.config.UI.PaneSplitOrientation == config.PaneSplitStacked,
+		PaneSplitStacked:       a.config.UI.Zoom.Orientation == config.PaneSplitStacked,
 		ScrollMode:             panel.EffectiveScrollMode(sm),
 		PanelScrollbar:         uiscrollbar.EffectiveStyle(sb),
-		PanelScrollbarInactive: a.config.UI.PanelScrollbarInactive,
+		PanelScrollbarInactive: a.config.UI.Scroll.ScrollbarInactive,
 		ListFormat:             panel.EffectiveListFormat(lf),
 		Focus:                  0,
 	}
@@ -235,12 +235,12 @@ func (a *App) applyConfigDialog() {
 	sb := uiscrollbar.TOMLValue(a.model.ConfigDialog.PanelScrollbar)
 	lf := panel.EffectiveListFormat(a.model.ConfigDialog.ListFormat)
 	a.config.UI.ShowFileIcons = val
-	a.config.UI.ZoomActivePanel = zoom
+	a.config.UI.Zoom.ActivePanel = zoom
 	a.config.UI.ShrunkenShowsNameOnly = shrunken
-	a.config.UI.PaneSplitOrientation = paneSplit
-	a.config.UI.ScrollMode = scrollMode
-	a.config.UI.PanelScrollbar = sb
-	a.config.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
+	a.config.UI.Zoom.Orientation = paneSplit
+	a.config.UI.Scroll.Mode = scrollMode
+	a.config.UI.Scroll.Scrollbar = sb
+	a.config.Panels.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
 	a.model.ShowFileIcons = val
 	a.model.ShrunkenShowsNameOnly = shrunken
 	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(a.model.ConfigDialog.PanelScrollbar)
@@ -252,13 +252,19 @@ func (a *App) applyConfigDialog() {
 	patch := map[string]interface{}{
 		"ui": map[string]interface{}{
 			"show_file_icons":          val,
-			"zoom_active_panel":        zoom,
 			"shrunken_shows_name_only": shrunken,
-			"pane_split_orientation":   paneSplit,
-			"scroll_mode":              scrollMode,
-			"panel_scrollbar":          sb,
+			"zoom": map[string]interface{}{
+				"active_panel": zoom,
+				"orientation":  paneSplit,
+			},
+			"scroll": map[string]interface{}{
+				"mode":      scrollMode,
+				"scrollbar": sb,
+			},
 		},
-		"default_listing_format": panel.ListingFormatTOMLValue(lf),
+		"panels": map[string]interface{}{
+			"default_listing_format": panel.ListingFormatTOMLValue(lf),
+		},
 	}
 	if err := a.persistPartial(patch); err != nil {
 		msg = fmt.Sprintf("Configuration saved (could not write config: %v)", err)

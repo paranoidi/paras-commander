@@ -14,7 +14,7 @@ const (
 	ScrollModeEdge    ScrollMode = "edge"
 )
 
-// ParseScrollMode parses scroll_mode from config TOML.
+// ParseScrollMode parses [ui.scroll].mode from config TOML.
 func ParseScrollMode(value string) (ScrollMode, error) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "":
@@ -40,7 +40,7 @@ func EffectiveScrollMode(m ScrollMode) ScrollMode {
 	}
 }
 
-// ScrollModeTOMLValue returns the canonical scroll_mode string for TOML persistence.
+// ScrollModeTOMLValue returns the canonical scroll.mode string for TOML persistence.
 func ScrollModeTOMLValue(m ScrollMode) string {
 	switch EffectiveScrollMode(m) {
 	case ScrollModeMinimal:

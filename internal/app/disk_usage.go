@@ -191,7 +191,7 @@ func (a *App) armIdleDiskSortTimer(panelID int) {
 	if !p.ListingFullyDiskCached() {
 		return
 	}
-	delayMS := a.config.DiskUsageIdleSortDelayMS
+	delayMS := a.config.DiskUsage.IdleSortDelayMS
 	if delayMS <= 0 {
 		delayMS = 500
 	}
@@ -293,7 +293,7 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 
 	a.setDiskUsageScanScope(p.PathString(), childPaths)
 
-	a.diskUsage.StartScanFromListing(childPaths, a.diskUsageIgnore, panelID, listingVolumeGateForScan(p, a.config.DiskUsageDescendIntoMountPoints))
+	a.diskUsage.StartScanFromListing(childPaths, a.diskUsageIgnore, panelID, listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints))
 	a.setDiskUsageShown(true)
 	a.diskUsageScanToastArmed = true
 	a.model.DiskUsagePanelID = panelID

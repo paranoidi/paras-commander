@@ -21,7 +21,7 @@ func (a *App) paintFindDialogOverlay() bool {
 	if layout.TooSmall {
 		return false
 	}
-	ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.ShowFileIcons, a.model.DiskUsage, a.config.DiskUsageDescendIntoMountPoints, a.diskUsageIgnore)
+	ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.ShowFileIcons, a.model.DiskUsage, a.config.DiskUsage.DescendIntoMountPoints, a.diskUsageIgnore)
 	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true
@@ -134,12 +134,12 @@ func (a *App) render() {
 	a.stopDiskUsageRedrawDebounce()
 	a.syncCarouselChildPreviewCoalesceFlags()
 	a.syncCursorNameHintNavCoalesceFlags()
-	a.model.PanelZoomActivePercent = a.config.UI.PanelZoomActivePercent
-	a.model.PanelZoomInactivePercent = a.config.UI.PanelZoomInactivePercent
+	a.model.PanelZoomActivePercent = a.config.UI.Zoom.ActivePercent
+	a.model.PanelZoomInactivePercent = a.config.UI.Zoom.InactivePercent
 	a.model.ShrunkenShowsNameOnly = a.config.UI.ShrunkenShowsNameOnly
-	sb, _ := uiscrollbar.ParseStyle(a.config.UI.PanelScrollbar)
+	sb, _ := uiscrollbar.ParseStyle(a.config.UI.Scroll.Scrollbar)
 	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(sb)
-	a.model.PanelScrollbarInactive = a.config.UI.PanelScrollbarInactive
+	a.model.PanelScrollbarInactive = a.config.UI.Scroll.ScrollbarInactive
 	// Reconcile derived model (latched panel sync, disk-usage idle-sort hooks, etc.)
 	// before painting so the frame matches post-mutation state. The Run loop also calls
 	// reconcileAfterEvent() after each event; without this ordering, render() would run
@@ -151,7 +151,7 @@ func (a *App) render() {
 	a.model.MenuBarJobs = a.menuBarJobsStripSnapshot()
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
 	a.model.FooterKeys = a.activeFooterKeys()
-	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsageDescendIntoMountPoints
+	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsage.DescendIntoMountPoints
 	a.model.DiskUsageGoduIgnore = a.diskUsageIgnore
 	a.snapshotPreviewDrawStates()
 	previewOpen := a.model.FilePreviewDraw.Open || a.model.QuickViewDisplayActive()
@@ -283,8 +283,8 @@ func (a *App) panelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit 
 	activePct := a.model.PanelZoomActivePercent
 	inactivePct := a.model.PanelZoomInactivePercent
 	if activePct <= 0 || inactivePct <= 0 {
-		activePct = a.config.UI.PanelZoomActivePercent
-		inactivePct = a.config.UI.PanelZoomInactivePercent
+		activePct = a.config.UI.Zoom.ActivePercent
+		inactivePct = a.config.UI.Zoom.InactivePercent
 	}
 	if zoom && a.activePanel().CarouselMode {
 		minPct := panelcarousel.MinActiveWidthPercent(width, a.model.CarouselLayout)
@@ -312,16 +312,16 @@ func (a *App) effectiveZoomActivePanel() bool {
 	if a.zoomActivePanelOverride != nil {
 		return *a.zoomActivePanelOverride
 	}
-	return a.config.UI.ZoomActivePanel
+	return a.config.UI.Zoom.ActivePanel
 }
 
 func (a *App) zoomActivePanelSuppressedByTerminalWidth(width int) bool {
-	n := a.config.UI.ZoomActivePanelDisabledAboveWidth
+	n := a.config.UI.Zoom.DisabledAboveWidth
 	return n > 0 && width >= n
 }
 
 func (a *App) zoomActivePanelSuppressedByTerminalHeight(height int) bool {
-	n := a.config.UI.ZoomActivePanelDisabledAboveHeight
+	n := a.config.UI.Zoom.DisabledAboveHeight
 	return n > 0 && height >= n
 }
 
@@ -348,12 +348,12 @@ func (a *App) effectiveZoomActivePanelLayout(width, height int, filePreviewOpen 
 }
 
 // toggleRuntimeZoomActivePanel flips the zoom split the user currently sees (saved
-// [ui].zoom_active_panel plus optional runtime-only override). When the flipped state
+// [ui.zoom].active_panel plus optional runtime-only override). When the flipped state
 // matches the saved config value, the override is cleared so nil always means "follow saved".
 func (a *App) toggleRuntimeZoomActivePanel() {
 	effective := a.effectiveZoomActivePanel()
 	next := !effective
-	saved := a.config.UI.ZoomActivePanel
+	saved := a.config.UI.Zoom.ActivePanel
 	if next == saved {
 		a.zoomActivePanelOverride = nil
 	} else {

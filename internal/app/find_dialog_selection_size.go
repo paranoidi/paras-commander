@@ -36,7 +36,7 @@ func (a *App) reconcileFindDialogSelectionSizeScans() {
 		st.ListingDevice,
 		st.ListingDeviceValid,
 		a.diskUsage,
-		a.config.DiskUsageDescendIntoMountPoints,
+		a.config.DiskUsage.DescendIntoMountPoints,
 		a.diskUsageIgnore,
 	)
 	fp := strings.Join(need, "\n")
@@ -53,7 +53,7 @@ func (a *App) reconcileFindDialogSelectionSizeScans() {
 		a.diskUsageIgnore,
 		st.PanelID,
 		diskusage.ListingVolumeGate{
-			Enabled: !a.config.DiskUsageDescendIntoMountPoints && st.ListingDeviceValid,
+			Enabled: !a.config.DiskUsage.DescendIntoMountPoints && st.ListingDeviceValid,
 			RefDev:  st.ListingDevice,
 			Valid:   st.ListingDeviceValid,
 		},

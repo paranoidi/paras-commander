@@ -591,7 +591,7 @@ func (h *Handler) syncFindDialogRanks() {
 		st.Query,
 		st.OnlyDirectories,
 		st.OnlyFiles,
-		h.config.CaseInsensitiveFilter,
+		h.config.Filter.CaseInsensitive,
 	)
 	st.Ranked = ranked
 	st.MatchRanges = matchRanges
@@ -664,7 +664,7 @@ func (h *Handler) buildRankInput(gen int, st *dialog.FindDialogState) rankInput 
 		query:     st.Query,
 		onlyDirs:  st.OnlyDirectories,
 		onlyFiles: st.OnlyFiles,
-		opts:      search.Options{CaseInsensitive: h.config.CaseInsensitiveFilter},
+		opts:      search.Options{CaseInsensitive: h.config.Filter.CaseInsensitive},
 	}
 }
 
@@ -821,7 +821,7 @@ func (h *Handler) armFindNavIdleTimer() {
 		h.findNavTimer.Stop()
 		h.findNavTimer = nil
 	}
-	idleMS := h.config.UI.FindListNavIdleMS
+	idleMS := h.config.UI.Find.ListNavIdleMS
 	if idleMS <= 0 {
 		h.findNavActive = false
 		return
@@ -877,7 +877,7 @@ func (h *Handler) doRank(input rankInput) {
 	h.rankMu.Unlock()
 
 	q := search.Parse(input.query)
-	maxResults := h.config.UI.FindMaxResults
+	maxResults := h.config.UI.Find.MaxResults
 
 	var result rankResult
 	result.gen = input.gen
@@ -1201,7 +1201,7 @@ func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
 		st.Query,
 		st.OnlyDirectories,
 		st.OnlyFiles,
-		h.config.CaseInsensitiveFilter,
+		h.config.Filter.CaseInsensitive,
 	)
 	return ranked
 }
@@ -1455,7 +1455,7 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	if st.Focus == 0 {
 		onChange := func() {
 			st.Selected = 0
-			h.scheduleFindRank(-h.config.UI.FindQueryDebounceMS)
+			h.scheduleFindRank(-h.config.UI.Find.QueryDebounceMS)
 		}
 		if h.host.HandleScrollingQueryKey(event, true, h.host.FindDialogScrollingQuery(st, h.host.FindDialogQueryWidth(), onChange)) {
 			return

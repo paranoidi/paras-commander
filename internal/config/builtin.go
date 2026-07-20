@@ -85,7 +85,7 @@ const (
 
 	// DefaultDedupFileProgressBytes shows a per-file progress bar in the
 	// find-duplicates dialog for files at or above this size (0 disables it).
-	DefaultDedupFileProgressBytes = 200 * 1024 * 1024
+	DefaultDedupFileProgressBytes = 256 * 1024 * 1024
 
 	// DefaultDedupChunkBytes compares same-size files this many bytes at a time,
 	// bailing out of a file as soon as its content diverges (0 disables chunking).
@@ -162,7 +162,7 @@ const (
 	// DefaultListingFormat is the persisted default_listing_format value (Modified time column).
 	DefaultListingFormat = ListingFormatMtime
 
-	// Panel zoom: widen the active browser column when [ui].zoom_active_panel is true.
+	// Panel zoom: widen the active browser column when [ui.zoom].active_panel is true.
 	DefaultZoomActivePanel          = true
 	DefaultPanelZoomActivePercent   = 70
 	DefaultPanelZoomInactivePercent = 30
@@ -173,7 +173,7 @@ const (
 	// panel zoom is suppressed in stacked layout. Use 0 to never disable zoom based on height.
 	DefaultZoomActivePanelDisabledAboveHeight = 45
 
-	// Pane split orientation TOML values for [ui].pane_split_orientation.
+	// Pane split orientation TOML values for [ui.zoom].orientation.
 	PaneSplitSideBySide = "side_by_side"
 	PaneSplitStacked    = "stacked"
 	// DefaultPaneSplitOrientation is the default twin-pane layout (primary left, secondary right).
@@ -192,7 +192,7 @@ const (
 	DefaultScrollMode = "edge"
 	// DefaultScrollEdgeMargin is rows of buffer above/below the cursor before edge mode scrolls.
 	DefaultScrollEdgeMargin = 5
-	// ScrollEdgeMarginMax is the upper bound for [ui].scroll_edge_margin after Validate.
+	// ScrollEdgeMarginMax is the upper bound for [ui.scroll].edge_margin after Validate.
 	ScrollEdgeMarginMax = 50
 
 	// DefaultScreenRenderHashCache skips terminal Show when the logical screen buffer matches the

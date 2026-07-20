@@ -21,7 +21,7 @@ func (a *App) clearTransientMessage() {
 }
 
 func (a *App) statusMessageTTL() time.Duration {
-	sec := a.config.UI.StatusMessageTTLSeconds
+	sec := a.config.UI.Status.MessageTTLSeconds
 	if sec <= 0 {
 		return 0
 	}
@@ -129,7 +129,7 @@ func (a *App) appendMessageLogLines(lines []string, urgency ui.MessageUrgency) {
 	if len(lines) == 0 {
 		return
 	}
-	max := a.config.UI.MessageLogMaxEntries
+	max := a.config.UI.Status.LogMaxEntries
 	if max <= 0 {
 		max = config.DefaultMessageLogMaxEntries
 	}

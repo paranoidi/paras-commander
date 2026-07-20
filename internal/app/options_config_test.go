@@ -24,7 +24,7 @@ func TestNewWithOptionsAppliesConfiguredHiddenFilesToBothPanels(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	cfg := config.Default()
-	cfg.ShowHidden = true
+	cfg.Panels.ShowHidden = true
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
@@ -112,7 +112,7 @@ func TestNewWithOptionsAppliesDefaultListingFormatFromConfig(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	cfg := config.Default()
-	cfg.DefaultListingFormat = config.ListingFormatBrief
+	cfg.Panels.DefaultListingFormat = config.ListingFormatBrief
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestOptionsMenuOpensConfigurationDialog(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	cfg := config.Default()
-	cfg.DefaultListingFormat = config.ListingFormatPerm
+	cfg.Panels.DefaultListingFormat = config.ListingFormatPerm
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
@@ -276,7 +276,7 @@ func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
 
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-zoom")}.WithResolvedLocations()
 	cfg := config.Default()
-	cfg.UI.ZoomActivePanel = false
+	cfg.UI.Zoom.ActivePanel = false
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
@@ -296,14 +296,14 @@ func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
-	if !app.config.UI.ZoomActivePanel {
+	if !app.config.UI.Zoom.ActivePanel {
 		t.Fatal("ZoomActivePanel = false, want true after toggle")
 	}
 	reloaded, err := config.LoadFromPaths(appPaths)
 	if err != nil {
 		t.Fatalf("LoadFromPaths after persist: %v", err)
 	}
-	if !reloaded.UI.ZoomActivePanel {
+	if !reloaded.UI.Zoom.ActivePanel {
 		t.Fatalf("persisted zoom_active_panel = false, want true")
 	}
 }
@@ -321,7 +321,7 @@ func TestConfigDialogApplyPersistsPaneSplitOrientation(t *testing.T) {
 
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-split")}.WithResolvedLocations()
 	cfg := config.Default()
-	cfg.UI.PaneSplitOrientation = config.PaneSplitSideBySide
+	cfg.UI.Zoom.Orientation = config.PaneSplitSideBySide
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
@@ -340,15 +340,15 @@ func TestConfigDialogApplyPersistsPaneSplitOrientation(t *testing.T) {
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
-	if app.config.UI.PaneSplitOrientation != config.PaneSplitStacked {
-		t.Fatalf("PaneSplitOrientation = %q, want %q", app.config.UI.PaneSplitOrientation, config.PaneSplitStacked)
+	if app.config.UI.Zoom.Orientation != config.PaneSplitStacked {
+		t.Fatalf("PaneSplitOrientation = %q, want %q", app.config.UI.Zoom.Orientation, config.PaneSplitStacked)
 	}
 	reloaded, err := config.LoadFromPaths(appPaths)
 	if err != nil {
 		t.Fatalf("LoadFromPaths after persist: %v", err)
 	}
-	if reloaded.UI.PaneSplitOrientation != config.PaneSplitStacked {
-		t.Fatalf("persisted pane_split_orientation = %q, want %q", reloaded.UI.PaneSplitOrientation, config.PaneSplitStacked)
+	if reloaded.UI.Zoom.Orientation != config.PaneSplitStacked {
+		t.Fatalf("persisted pane_split_orientation = %q, want %q", reloaded.UI.Zoom.Orientation, config.PaneSplitStacked)
 	}
 }
 
@@ -365,7 +365,7 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-scroll")}.WithResolvedLocations()
 	cfg := config.Default()
-	cfg.UI.ScrollMode = config.DefaultScrollMode
+	cfg.UI.Scroll.Mode = config.DefaultScrollMode
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
@@ -388,8 +388,8 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
-	if app.config.UI.ScrollMode != config.ScrollModeCenter {
-		t.Fatalf("ScrollMode = %q, want center after selection", app.config.UI.ScrollMode)
+	if app.config.UI.Scroll.Mode != config.ScrollModeCenter {
+		t.Fatalf("ScrollMode = %q, want center after selection", app.config.UI.Scroll.Mode)
 	}
 	if app.model.Primary.ScrollMode != panel.ScrollModeCenter || app.model.Secondary.ScrollMode != panel.ScrollModeCenter {
 		t.Fatal("panel ScrollMode not synced after apply")
@@ -398,8 +398,8 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadFromPaths after persist: %v", err)
 	}
-	if reloaded.UI.ScrollMode != config.ScrollModeCenter {
-		t.Fatalf("persisted scroll_mode = %q, want center", reloaded.UI.ScrollMode)
+	if reloaded.UI.Scroll.Mode != config.ScrollModeCenter {
+		t.Fatalf("persisted scroll_mode = %q, want center", reloaded.UI.Scroll.Mode)
 	}
 }
 
@@ -441,8 +441,8 @@ func TestConfigDialogApplyPersistsDefaultListingFormat(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadFromPaths after persist: %v", err)
 	}
-	if reloaded.DefaultListingFormat != config.ListingFormatPerm {
-		t.Fatalf("persisted default_listing_format = %q, want %q", reloaded.DefaultListingFormat, config.ListingFormatPerm)
+	if reloaded.Panels.DefaultListingFormat != config.ListingFormatPerm {
+		t.Fatalf("persisted default_listing_format = %q, want %q", reloaded.Panels.DefaultListingFormat, config.ListingFormatPerm)
 	}
 }
 

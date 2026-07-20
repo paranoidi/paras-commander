@@ -148,7 +148,7 @@ func (a *App) syncHistoryDialogRanks() {
 	}
 	lines := make([]string, len(st.DisplayLines))
 	copy(lines, st.DisplayLines)
-	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.Paths), a.config.CaseInsensitiveFilter)
+	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.Paths), a.config.Filter.CaseInsensitive)
 	clampFilteredListSelection(&st.Selected, len(st.Ranked))
 	dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
 }

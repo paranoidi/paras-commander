@@ -23,8 +23,8 @@ func scrollModeFromConfig(scrollMode string) panel.ScrollMode {
 }
 
 func (a *App) syncScrollFromConfig() {
-	mode := scrollModeFromConfig(a.config.UI.ScrollMode)
-	margin := a.config.UI.ScrollEdgeMargin
+	mode := scrollModeFromConfig(a.config.UI.Scroll.Mode)
+	margin := a.config.UI.Scroll.EdgeMargin
 	a.model.Primary.ScrollMode = mode
 	a.model.Secondary.ScrollMode = mode
 	a.model.Primary.ScrollEdgeMargin = margin
@@ -740,14 +740,14 @@ func (a *App) toggleZoomActivePanelGuarded() {
 		if a.zoomActivePanelSuppressedByTerminalHeight(th) {
 			a.setTransientMessage(fmt.Sprintf(
 				"Panel zoom unavailable (terminal height ≥ %d)",
-				a.config.UI.ZoomActivePanelDisabledAboveHeight,
+				a.config.UI.Zoom.DisabledAboveHeight,
 			), ui.MessageUrgencyInfo)
 			return
 		}
 	} else if a.zoomActivePanelSuppressedByTerminalWidth(tw) {
 		a.setTransientMessage(fmt.Sprintf(
 			"Panel zoom unavailable (terminal width ≥ %d)",
-			a.config.UI.ZoomActivePanelDisabledAboveWidth,
+			a.config.UI.Zoom.DisabledAboveWidth,
 		), ui.MessageUrgencyInfo)
 		return
 	}

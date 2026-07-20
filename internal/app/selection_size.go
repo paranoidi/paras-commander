@@ -44,7 +44,7 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		p.ListingDevice,
 		p.ListingDeviceValid,
 		a.diskUsage,
-		a.config.DiskUsageDescendIntoMountPoints,
+		a.config.DiskUsage.DescendIntoMountPoints,
 		a.diskUsageIgnore,
 	)
 	fp := strings.Join(need, "\n")
@@ -60,7 +60,7 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		need,
 		a.diskUsageIgnore,
 		panelID,
-		listingVolumeGateForScan(p, a.config.DiskUsageDescendIntoMountPoints),
+		listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints),
 	)
 }
 

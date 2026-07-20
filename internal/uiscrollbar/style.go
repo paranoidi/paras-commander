@@ -14,7 +14,7 @@ const (
 	StyleBar   Style = "bar"
 )
 
-// ParseStyle parses panel_scrollbar from config TOML.
+// ParseStyle parses [ui.scroll].scrollbar from config TOML.
 func ParseStyle(value string) (Style, error) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "":
@@ -40,7 +40,7 @@ func EffectiveStyle(s Style) Style {
 	}
 }
 
-// TOMLValue returns the canonical panel_scrollbar string for persistence.
+// TOMLValue returns the canonical scroll.scrollbar string for persistence.
 func TOMLValue(s Style) string {
 	switch EffectiveStyle(s) {
 	case StyleNone:

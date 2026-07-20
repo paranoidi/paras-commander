@@ -89,9 +89,9 @@ type State struct {
 	Sort       SortState
 	// ListFormat controls trailing columns after size (Modified / Permissions / none). Per-panel; see config default_listing_format.
 	ListFormat ListFormat
-	// ScrollMode mirrors [ui].scroll_mode: minimal, center, or edge scroll policy.
+	// ScrollMode mirrors [ui.scroll].mode: minimal, center, or edge scroll policy.
 	ScrollMode ScrollMode
-	// ScrollEdgeMargin mirrors [ui].scroll_edge_margin for edge mode.
+	// ScrollEdgeMargin mirrors [ui.scroll].edge_margin for edge mode.
 	ScrollEdgeMargin int
 	// CarouselMode shows a three-column parent | current | child preview inside this panel.
 	CarouselMode bool
@@ -996,7 +996,7 @@ func (s *State) EnsureCursorCentered(viewportRows int) {
 	s.ScrollOffset = target
 }
 
-// EnsureCursorEdge updates ScrollOffset only when the cursor is within scroll_edge_margin rows of the viewport edge.
+// EnsureCursorEdge updates ScrollOffset only when the cursor is within [ui.scroll].edge_margin rows of the viewport edge.
 func (s *State) EnsureCursorEdge(viewportRows int) {
 	s.clampCursor()
 	n := s.VisibleEntryCount()

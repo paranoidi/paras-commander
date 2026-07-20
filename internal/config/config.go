@@ -20,12 +20,11 @@ const (
 	fileName                = "config.toml"
 	keybindingsFileBaseName = "keybindings.toml"
 
-	ThemeDefault   = "default"
-	StartupPathCWD = "cwd"
-	SortName       = "name"
-	SortExtension  = "extension"
-	SortSize       = "size"
-	SortMtime      = "mtime"
+	ThemeDefault  = "default"
+	SortName      = "name"
+	SortExtension = "extension"
+	SortSize      = "size"
+	SortMtime     = "mtime"
 	// Listing format root keys (default_listing_format).
 	ListingFormatMtime = "mtime"
 	ListingFormatPerm  = "perm"
@@ -38,7 +37,6 @@ const (
 	FilterCycleMatchesVisual = "visual"
 	// FilterCycleMatchesRanked orders ↑/↓ by fuzzy rank (best match first).
 	FilterCycleMatchesRanked = "ranked"
-	BorderStyleSingle        = "single"
 	ScrollModeMinimal        = "minimal"
 	ScrollModeCenter         = "center"
 	ScrollModeEdge           = "edge"
@@ -86,41 +84,20 @@ func (paths Paths) withDerivedThemesDir() Paths {
 
 // Config is the parsed general application configuration.
 type Config struct {
-	Theme                    string `toml:"theme"`
-	ShowHidden               bool   `toml:"show_hidden"`
-	RespectGitignore         bool   `toml:"respect_gitignore"`
-	ConfirmDelete            bool   `toml:"confirm_delete"`
-	ConfirmOverwrite         bool   `toml:"confirm_overwrite"`
-	CaseInsensitiveFilter    bool   `toml:"case_insensitive_filter"`
-	JobConcurrency           int    `toml:"job_concurrency"`
-	StartupPathMode          string `toml:"startup_path_mode"`
-	DefaultSort              string `toml:"default_sort"`
-	DefaultListingFormat     string `toml:"default_listing_format"`
-	SortReverse              bool   `toml:"sort_reverse"`
-	DirectoriesFirst         bool   `toml:"directories_first"`
-	DiskUsageIdleSizeSort    bool   `toml:"disk_usage_idle_size_sort"`
-	DiskUsageIdleSortDelayMS int    `toml:"disk_usage_idle_sort_delay_ms"`
-	// RefreshIntervalMS re-reads both panel directories on this interval in background goroutines (0 disables).
-	RefreshIntervalMS               int  `toml:"refresh_interval_ms"`
-	DiskUsageDescendIntoMountPoints bool `toml:"disk_usage_descend_into_mount_points"`
-	// DiskUsageWalkConcurrency limits concurrent subdirectory branches during a disk-usage walk (minimum 1 after Validate).
-	// Default is DefaultDiskUsageWalkConcurrency.
-	// Low values spare HDD/NAS; raise for fast local SSDs.
-	DiskUsageWalkConcurrency   int              `toml:"disk_usage_walk_concurrency"`
-	FollowSymlinksOnNavigation bool             `toml:"follow_symlinks_on_navigation"`
-	OpenFilesExternally        bool             `toml:"open_files_externally"`
-	RunExecutablesOnEnter      bool             `toml:"run_executables_on_enter"`
-	DeleteMode                 string           `toml:"delete_mode"`
-	UI                         UIConfig         `toml:"ui"`
-	Filter                     FilterConfig     `toml:"filter"`
-	Jobs                       JobsConfig       `toml:"jobs"`
-	Operations                 OperationsConfig `toml:"operations"`
-	Logging                    LoggingConfig    `toml:"logging"`
-	Bookmarks                  BookmarksConfig  `toml:"bookmarks"`
-	UserMenu                   UserMenuConfig   `toml:"user_menu"`
-	Preview                    PreviewConfig    `toml:"preview"`
-	SFTP                       SFTPConfig       `toml:"sftp"`
-	Shell                      ShellConfig      `toml:"shell"`
+	Theme      string           `toml:"theme"`
+	Panels     PanelsConfig     `toml:"panels"`
+	DiskUsage  DiskUsageConfig  `toml:"disk_usage"`
+	Carousel   CarouselConfig   `toml:"carousel"`
+	UI         UIConfig         `toml:"ui"`
+	Filter     FilterConfig     `toml:"filter"`
+	Jobs       JobsConfig       `toml:"jobs"`
+	Operations OperationsConfig `toml:"operations"`
+	Logging    LoggingConfig    `toml:"logging"`
+	Bookmarks  BookmarksConfig  `toml:"bookmarks"`
+	UserMenu   UserMenuConfig   `toml:"user_menu"`
+	Preview    PreviewConfig    `toml:"preview"`
+	SFTP       SFTPConfig       `toml:"sftp"`
+	Shell      ShellConfig      `toml:"shell"`
 	// Meta configures the separate meta.toml command definitions file and execution settings.
 	Meta MetaConfig `toml:"meta"`
 	// Pools configures discovery of the separate pools.toml work-pool definitions file.
@@ -129,6 +106,40 @@ type Config struct {
 	Compare CompareConfig `toml:"compare"`
 	// Dedup configures find-duplicates within a single directory.
 	Dedup DedupConfig `toml:"dedup"`
+}
+
+// PanelsConfig controls file panel browsing, sorting, and listing.
+type PanelsConfig struct {
+	ShowHidden           bool   `toml:"show_hidden"`
+	RespectGitignore     bool   `toml:"respect_gitignore"`
+	DefaultSort          string `toml:"default_sort"`
+	DefaultListingFormat string `toml:"default_listing_format"`
+	SortReverse          bool   `toml:"sort_reverse"`
+	DirectoriesFirst     bool   `toml:"directories_first"`
+	// RefreshIntervalMS re-reads both panel directories on this interval in background goroutines (0 disables).
+	RefreshIntervalMS     int  `toml:"refresh_interval_ms"`
+	OpenFilesExternally   bool `toml:"open_files_externally"`
+	RunExecutablesOnEnter bool `toml:"run_executables_on_enter"`
+}
+
+// DiskUsageConfig controls the disk-usage (F-key) view and its background walk.
+type DiskUsageConfig struct {
+	IdleSizeSort           bool `toml:"idle_size_sort"`
+	IdleSortDelayMS        int  `toml:"idle_sort_delay_ms"`
+	DescendIntoMountPoints bool `toml:"descend_into_mount_points"`
+	// WalkConcurrency limits concurrent subdirectory branches during a disk-usage walk (minimum 1 after Validate).
+	// Default is DefaultDiskUsageWalkConcurrency.
+	// Low values spare HDD/NAS; raise for fast local SSDs.
+	WalkConcurrency int `toml:"walk_concurrency"`
+}
+
+// CarouselConfig controls the carousel (multi-column) panel layout.
+type CarouselConfig struct {
+	// Split sets parent | center | child column widths: fixed cells ("16"), percent of
+	// remaining width after fixed columns ("20%"), or flex remainder ("*"). Exactly 3 entries.
+	Split []string `toml:"split"`
+	// ShowSize toggles the size column per carousel pane (exactly 3 booleans).
+	ShowSize []bool `toml:"show_size"`
 }
 
 // DedupConfig controls find-duplicates scanning.
@@ -219,75 +230,82 @@ type PreviewConfig struct {
 }
 
 type UIConfig struct {
-	ShowMenuBar    bool   `toml:"show_menu_bar"`
-	ShowFooter     bool   `toml:"show_footer"`
-	ShowStatusLine bool   `toml:"show_status_line"`
-	ShowJobsLine   bool   `toml:"show_jobs_line"`
-	ShowFileIcons  bool   `toml:"show_file_icons"`
-	BorderStyle    string `toml:"border_style"`
-	Clock          bool   `toml:"clock"`
-	// SelectionsPanelMaxRows caps visible rows in the cross-directory selections strip (0 = default 5).
-	SelectionsPanelMaxRows int `toml:"selections_panel_max_rows"`
-	// StatusMessageTTLSeconds is how long transient status banners stay visible before clearing.
-	// Default 4.5. Use 0 to keep messages until replaced or cleared by another action.
-	StatusMessageTTLSeconds float64 `toml:"status_message_ttl_seconds"`
-	// PathPickerValidateDelayMS waits after the filter changes before checking whether the typed path exists.
-	// Default DefaultPathPickerValidateDelayMS. Use 0 to validate on the next scheduler tick (still not per-key synchronous).
-	PathPickerValidateDelayMS int `toml:"path_picker_validate_delay_ms"`
+	ShowMenuBar   bool `toml:"show_menu_bar"`
+	ShowFileIcons bool `toml:"show_file_icons"`
+	// ShrunkenShowsNameOnly: when true, narrow panels hide trailing listing columns and show only names
+	// (sort and default_listing_format are unchanged; see ShrunkenListingRowTextWidthThreshold in builtin.go).
+	ShrunkenShowsNameOnly bool `toml:"shrunken_shows_name_only"`
+	// ScreenRenderHashCache, when true, hashes the logical cell buffer after each full render and skips
+	// screen.Show when unchanged from the last flush. Default DefaultScreenRenderHashCache.
+	ScreenRenderHashCache bool `toml:"screen_render_hash_cache"`
 	// KeyRepeatDebounceMS coalesces rapid file-list cursor steps, quick view preview reloads,
 	// carousel child preview reloads, and F3 style-picker re-highlighting. Zero disables debouncing.
 	// Default DefaultKeyRepeatDebounceMS.
 	KeyRepeatDebounceMS int `toml:"key_repeat_debounce_ms"`
-	// FindQueryDebounceMS waits after the last keystroke in the find dialog query field before
+	// PathPickerValidateDelayMS waits after the filter changes before checking whether the typed path exists.
+	// Default DefaultPathPickerValidateDelayMS. Use 0 to validate on the next scheduler tick (still not per-key synchronous).
+	PathPickerValidateDelayMS int `toml:"path_picker_validate_delay_ms"`
+	// SelectionsPanelMaxRows caps visible rows in the cross-directory selections strip (0 = default 5).
+	SelectionsPanelMaxRows int `toml:"selections_panel_max_rows"`
+
+	Zoom   UIZoomConfig   `toml:"zoom"`
+	Scroll UIScrollConfig `toml:"scroll"`
+	Find   UIFindConfig   `toml:"find"`
+	Status UIStatusConfig `toml:"status"`
+}
+
+type UIZoomConfig struct {
+	// ActivePanel widens the active browser column; inactive column uses the remainder (see ActivePercent/InactivePercent).
+	ActivePanel bool `toml:"active_panel"`
+	// DisabledAboveWidth: when > 0 and terminal width (cells) is >= this value, zoom is not applied
+	// (50/50 split). Zero disables this gate (zoom follows active_panel and runtime toggle only).
+	// Default DefaultZoomActivePanelDisabledAboveWidth.
+	DisabledAboveWidth int `toml:"disabled_above_width"`
+	// DisabledAboveHeight: when > 0 and terminal height (cells) is >= this value, zoom is not
+	// applied in stacked (top/bottom) layout. Zero disables this gate.
+	// Default DefaultZoomActivePanelDisabledAboveHeight.
+	DisabledAboveHeight int `toml:"disabled_above_height"`
+	// Orientation selects twin-pane layout: "side_by_side" (default) or "stacked".
+	Orientation string `toml:"orientation"`
+	// ActivePercent and InactivePercent are the width shares (must sum to 100) when ActivePanel is true.
+	ActivePercent   int `toml:"active_percent"`
+	InactivePercent int `toml:"inactive_percent"`
+}
+
+type UIScrollConfig struct {
+	// Mode selects file-list scroll policy: minimal, center, or edge.
+	Mode string `toml:"mode"`
+	// EdgeMargin is rows of buffer above/below the cursor before edge mode scrolls.
+	EdgeMargin int `toml:"edge_margin"`
+	// Scrollbar selects the vertical scroll indicator style for panel lists (none, thumb, bar).
+	Scrollbar string `toml:"scrollbar"`
+	// ScrollbarInactive shows scroll indicators on the inactive panel when true.
+	ScrollbarInactive bool `toml:"scrollbar_inactive"`
+}
+
+type UIFindConfig struct {
+	// QueryDebounceMS waits after the last keystroke in the find dialog query field before
 	// re-ranking the result list. Reducing this to 0 ranks on every keystroke (no debounce).
 	// Default DefaultFindQueryDebounceMS.
-	FindQueryDebounceMS int `toml:"find_query_debounce_ms"`
-	// FindMaxResults caps the number of ranked results shown in the find dialog. The full index
+	QueryDebounceMS int `toml:"query_debounce_ms"`
+	// MaxResults caps the number of ranked results shown in the find dialog. The full index
 	// is always retained; only the top-N scored entries are kept after each rank.
 	// Default DefaultFindMaxResults.
-	FindMaxResults int `toml:"find_max_results"`
-	// FindListNavIdleMS is the navigation-idle delay before a background rank update is applied
+	MaxResults int `toml:"max_results"`
+	// ListNavIdleMS is the navigation-idle delay before a background rank update is applied
 	// to the find result list. Resets on every Up/Down/PgUp/PgDn movement. Zero applies updates
 	// immediately regardless of navigation.
 	// Default DefaultFindListNavIdleMS.
-	FindListNavIdleMS int `toml:"find_list_nav_idle_ms"`
-	// ZoomActivePanel widens the active browser column; inactive column uses the remainder (see panel_zoom_*_percent).
-	ZoomActivePanel bool `toml:"zoom_active_panel"`
-	// ZoomActivePanelDisabledAboveWidth: when > 0 and terminal width (cells) is >= this value, zoom is not applied
-	// (50/50 split). Zero disables this gate (zoom follows zoom_active_panel and runtime toggle only).
-	// Default DefaultZoomActivePanelDisabledAboveWidth.
-	ZoomActivePanelDisabledAboveWidth int `toml:"zoom_active_panel_disabled_above_width"`
-	// ZoomActivePanelDisabledAboveHeight: when > 0 and terminal height (cells) is >= this value, zoom is not
-	// applied in stacked (top/bottom) layout. Zero disables this gate.
-	// Default DefaultZoomActivePanelDisabledAboveHeight.
-	ZoomActivePanelDisabledAboveHeight int `toml:"zoom_active_panel_disabled_above_height"`
-	// PaneSplitOrientation selects twin-pane layout: "side_by_side" (default) or "stacked".
-	PaneSplitOrientation string `toml:"pane_split_orientation"`
-	// PanelZoomActivePercent and PanelZoomInactivePercent are the width shares (must sum to 100) when ZoomActivePanel is true.
-	PanelZoomActivePercent   int `toml:"panel_zoom_active_percent"`
-	PanelZoomInactivePercent int `toml:"panel_zoom_inactive_percent"`
-	// ShrunkenShowsNameOnly: when true, narrow panels hide trailing listing columns and show only names
-	// (sort and default_listing_format are unchanged; see ShrunkenListingRowTextWidthThreshold in builtin.go).
-	ShrunkenShowsNameOnly bool `toml:"shrunken_shows_name_only"`
-	// ScrollMode selects file-list scroll policy: minimal, center, or edge.
-	ScrollMode string `toml:"scroll_mode"`
-	// ScrollEdgeMargin is rows of buffer above/below the cursor before edge mode scrolls.
-	ScrollEdgeMargin int `toml:"scroll_edge_margin"`
-	// PanelScrollbar selects the vertical scroll indicator style for panel lists (none, thumb, bar).
-	PanelScrollbar string `toml:"panel_scrollbar"`
-	// PanelScrollbarInactive shows scroll indicators on the inactive panel when true.
-	PanelScrollbarInactive bool `toml:"panel_scrollbar_inactive"`
-	// MessageLogMaxEntries caps how many status/toast lines are retained for the Messages view (oldest dropped).
+	ListNavIdleMS int `toml:"list_nav_idle_ms"`
+}
+
+type UIStatusConfig struct {
+	// MessageTTLSeconds is how long transient status banners stay visible before clearing.
+	// Default 4.5. Use 0 to keep messages until replaced or cleared by another action.
+	MessageTTLSeconds float64 `toml:"message_ttl_seconds"`
+	// LogMaxEntries caps how many status/toast lines are retained for the Messages view (oldest dropped).
 	// Zero means use the built-in default (see DefaultMessageLogMaxEntries).
-	MessageLogMaxEntries int `toml:"message_log_max_entries"`
-	// ScreenRenderHashCache, when true, hashes the logical cell buffer after each full render and skips
-	// screen.Show when unchanged from the last flush. Default DefaultScreenRenderHashCache.
-	ScreenRenderHashCache bool `toml:"screen_render_hash_cache"`
-	// CarouselSplit sets parent | center | child column widths: fixed cells ("16"), percent of
-	// remaining width after fixed columns ("20%"), or flex remainder ("*"). Exactly 3 entries.
-	CarouselSplit []string `toml:"carousel_split"`
-	// CarouselShowSize toggles the size column per carousel pane (exactly 3 booleans).
-	CarouselShowSize []bool `toml:"carousel_show_size"`
+	LogMaxEntries int `toml:"log_max_entries"`
 }
 
 type FilterConfig struct {
@@ -296,6 +314,8 @@ type FilterConfig struct {
 	MatchPathSegments bool   `toml:"match_path_segments"`
 	// CycleMatches controls Up/Down among quick-filter matches: "visual" (default) or "ranked".
 	CycleMatches string `toml:"cycle_matches"`
+	// CaseInsensitive controls case sensitivity of the quick filter and find dialog.
+	CaseInsensitive bool `toml:"case_insensitive"`
 }
 
 type JobsConfig struct {
@@ -332,9 +352,13 @@ type JobsConfig struct {
 }
 
 type OperationsConfig struct {
-	PreservePermissions bool `toml:"preserve_permissions"`
-	PreserveTimestamps  bool `toml:"preserve_timestamps"`
-	CopyBufferKiB       int  `toml:"copy_buffer_kib"`
+	// ConfirmDelete shows a confirmation dialog before deleting files.
+	ConfirmDelete bool `toml:"confirm_delete"`
+	// DeleteMode selects how delete jobs remove files (currently only "permanent").
+	DeleteMode          string `toml:"delete_mode"`
+	PreservePermissions bool   `toml:"preserve_permissions"`
+	PreserveTimestamps  bool   `toml:"preserve_timestamps"`
+	CopyBufferKiB       int    `toml:"copy_buffer_kib"`
 	// SyncAfterEachFile fsyncs each copied file before closing (durable; slow for many small files).
 	SyncAfterEachFile bool `toml:"sync_after_each_file"`
 	// DiskSpaceCheckMinFileBytes: per-file mid-copy disk checks run only when the source file size is >= this value.
@@ -376,62 +400,66 @@ type LoggingConfig struct {
 // Default returns built-in values that match the current application behavior.
 func Default() Config {
 	return Config{
-		Theme:                           ThemeDefault,
-		ShowHidden:                      false,
-		RespectGitignore:                true,
-		ConfirmDelete:                   true,
-		ConfirmOverwrite:                true,
-		CaseInsensitiveFilter:           true,
-		JobConcurrency:                  1,
-		StartupPathMode:                 StartupPathCWD,
-		DefaultSort:                     SortName,
-		DefaultListingFormat:            DefaultListingFormat,
-		SortReverse:                     false,
-		DirectoriesFirst:                true,
-		DiskUsageIdleSizeSort:           true,
-		DiskUsageIdleSortDelayMS:        500,
-		RefreshIntervalMS:               DefaultRefreshIntervalMS,
-		DiskUsageDescendIntoMountPoints: false,
-		DiskUsageWalkConcurrency:        DefaultDiskUsageWalkConcurrency,
-		FollowSymlinksOnNavigation:      true,
-		OpenFilesExternally:             true,
-		RunExecutablesOnEnter:           true,
-		DeleteMode:                      DeletePermanent,
+		Theme: ThemeDefault,
+		Panels: PanelsConfig{
+			ShowHidden:            false,
+			RespectGitignore:      true,
+			DefaultSort:           SortName,
+			DefaultListingFormat:  DefaultListingFormat,
+			SortReverse:           false,
+			DirectoriesFirst:      true,
+			RefreshIntervalMS:     DefaultRefreshIntervalMS,
+			OpenFilesExternally:   true,
+			RunExecutablesOnEnter: true,
+		},
+		DiskUsage: DiskUsageConfig{
+			IdleSizeSort:           true,
+			IdleSortDelayMS:        500,
+			DescendIntoMountPoints: false,
+			WalkConcurrency:        DefaultDiskUsageWalkConcurrency,
+		},
+		Carousel: CarouselConfig{
+			Split:    DefaultCarouselSplit(),
+			ShowSize: DefaultCarouselShowSize(),
+		},
 		UI: UIConfig{
-			ShowMenuBar:                        true,
-			ShowFooter:                         true,
-			ShowStatusLine:                     true,
-			ShowJobsLine:                       true,
-			ShowFileIcons:                      true,
-			BorderStyle:                        BorderStyleSingle,
-			Clock:                              false,
-			StatusMessageTTLSeconds:            4.5,
-			PathPickerValidateDelayMS:          DefaultPathPickerValidateDelayMS,
-			KeyRepeatDebounceMS:                DefaultKeyRepeatDebounceMS,
-			FindQueryDebounceMS:                DefaultFindQueryDebounceMS,
-			FindMaxResults:                     DefaultFindMaxResults,
-			FindListNavIdleMS:                  DefaultFindListNavIdleMS,
-			ZoomActivePanel:                    DefaultZoomActivePanel,
-			ZoomActivePanelDisabledAboveWidth:  DefaultZoomActivePanelDisabledAboveWidth,
-			ZoomActivePanelDisabledAboveHeight: DefaultZoomActivePanelDisabledAboveHeight,
-			PaneSplitOrientation:               DefaultPaneSplitOrientation,
-			PanelZoomActivePercent:             DefaultPanelZoomActivePercent,
-			PanelZoomInactivePercent:           DefaultPanelZoomInactivePercent,
-			ShrunkenShowsNameOnly:              DefaultShrunkenShowsNameOnly,
-			ScrollMode:                         DefaultScrollMode,
-			ScrollEdgeMargin:                   DefaultScrollEdgeMargin,
-			PanelScrollbar:                     DefaultPanelScrollbar,
-			PanelScrollbarInactive:             DefaultPanelScrollbarInactive,
-			MessageLogMaxEntries:               DefaultMessageLogMaxEntries,
-			ScreenRenderHashCache:              DefaultScreenRenderHashCache,
-			CarouselSplit:                      DefaultCarouselSplit(),
-			CarouselShowSize:                   DefaultCarouselShowSize(),
+			ShowMenuBar:               true,
+			ShowFileIcons:             true,
+			ShrunkenShowsNameOnly:     DefaultShrunkenShowsNameOnly,
+			ScreenRenderHashCache:     DefaultScreenRenderHashCache,
+			KeyRepeatDebounceMS:       DefaultKeyRepeatDebounceMS,
+			PathPickerValidateDelayMS: DefaultPathPickerValidateDelayMS,
+			SelectionsPanelMaxRows:    0,
+			Zoom: UIZoomConfig{
+				ActivePanel:         DefaultZoomActivePanel,
+				DisabledAboveWidth:  DefaultZoomActivePanelDisabledAboveWidth,
+				DisabledAboveHeight: DefaultZoomActivePanelDisabledAboveHeight,
+				Orientation:         DefaultPaneSplitOrientation,
+				ActivePercent:       DefaultPanelZoomActivePercent,
+				InactivePercent:     DefaultPanelZoomInactivePercent,
+			},
+			Scroll: UIScrollConfig{
+				Mode:              DefaultScrollMode,
+				EdgeMargin:        DefaultScrollEdgeMargin,
+				Scrollbar:         DefaultPanelScrollbar,
+				ScrollbarInactive: DefaultPanelScrollbarInactive,
+			},
+			Find: UIFindConfig{
+				QueryDebounceMS: DefaultFindQueryDebounceMS,
+				MaxResults:      DefaultFindMaxResults,
+				ListNavIdleMS:   DefaultFindListNavIdleMS,
+			},
+			Status: UIStatusConfig{
+				MessageTTLSeconds: 4.5,
+				LogMaxEntries:     DefaultMessageLogMaxEntries,
+			},
 		},
 		Filter: FilterConfig{
 			Mode:              FilterModeFuzzy,
 			Syntax:            FilterSyntaxFZF,
 			MatchPathSegments: false,
 			CycleMatches:      FilterCycleMatchesVisual,
+			CaseInsensitive:   true,
 		},
 		Jobs: JobsConfig{
 			ShowFinished:                true,
@@ -453,6 +481,8 @@ func Default() Config {
 			ScanProgressMinIntervalMS:   DefaultScanProgressMinIntervalMS,
 		},
 		Operations: OperationsConfig{
+			ConfirmDelete:              true,
+			DeleteMode:                 DeletePermanent,
 			PreservePermissions:        DefaultPreservePermissions,
 			PreserveTimestamps:         DefaultPreserveTimestamps,
 			CopyBufferKiB:              DefaultCopyBufferKiB,
@@ -772,33 +802,27 @@ func (c *Config) Validate() error {
 }
 
 func (c *Config) validateGeneral(builtin *Config) {
-	ds := strings.ToLower(strings.TrimSpace(c.DefaultSort))
+	ds := strings.ToLower(strings.TrimSpace(c.Panels.DefaultSort))
 	if ds == SortDiskUsage || ds == "disk-usage" {
-		c.DefaultSort = SortName
-		c.DiskUsageIdleSizeSort = true
+		c.Panels.DefaultSort = SortName
+		c.DiskUsage.IdleSizeSort = true
 	}
-	if c.JobConcurrency != 1 {
-		c.JobConcurrency = builtin.JobConcurrency
+	if c.DiskUsage.IdleSortDelayMS <= 0 {
+		c.DiskUsage.IdleSortDelayMS = 500
 	}
-	if c.StartupPathMode != StartupPathCWD {
-		c.StartupPathMode = builtin.StartupPathMode
+	if c.Panels.RefreshIntervalMS < 0 {
+		c.Panels.RefreshIntervalMS = DefaultRefreshIntervalMS
 	}
-	if c.DiskUsageIdleSortDelayMS <= 0 {
-		c.DiskUsageIdleSortDelayMS = 500
-	}
-	if c.RefreshIntervalMS < 0 {
-		c.RefreshIntervalMS = DefaultRefreshIntervalMS
-	}
-	if c.RefreshIntervalMS > 0 {
-		if c.RefreshIntervalMS < RefreshIntervalMinMS {
-			c.RefreshIntervalMS = RefreshIntervalMinMS
+	if c.Panels.RefreshIntervalMS > 0 {
+		if c.Panels.RefreshIntervalMS < RefreshIntervalMinMS {
+			c.Panels.RefreshIntervalMS = RefreshIntervalMinMS
 		}
-		if c.RefreshIntervalMS > RefreshIntervalMaxMS {
-			c.RefreshIntervalMS = RefreshIntervalMaxMS
+		if c.Panels.RefreshIntervalMS > RefreshIntervalMaxMS {
+			c.Panels.RefreshIntervalMS = RefreshIntervalMaxMS
 		}
 	}
-	if c.DiskUsageWalkConcurrency < 1 {
-		c.DiskUsageWalkConcurrency = builtin.DiskUsageWalkConcurrency
+	if c.DiskUsage.WalkConcurrency < 1 {
+		c.DiskUsage.WalkConcurrency = builtin.DiskUsage.WalkConcurrency
 	}
 }
 
@@ -824,27 +848,21 @@ func (c *Config) validateCompareDedupShell(builtin *Config) {
 }
 
 func (c *Config) validateSortAndDelete(builtin *Config) {
-	if !c.sortModeValid(c.DefaultSort) {
-		c.DefaultSort = builtin.DefaultSort
+	if !c.sortModeValid(c.Panels.DefaultSort) {
+		c.Panels.DefaultSort = builtin.Panels.DefaultSort
 	}
-	if !c.listingFormatValid(c.DefaultListingFormat) {
-		c.DefaultListingFormat = DefaultListingFormat
+	if !c.listingFormatValid(c.Panels.DefaultListingFormat) {
+		c.Panels.DefaultListingFormat = DefaultListingFormat
 	}
 	// SortReverse is now supported, no clamping needed
-	if !c.FollowSymlinksOnNavigation {
-		c.FollowSymlinksOnNavigation = builtin.FollowSymlinksOnNavigation
-	}
-	if c.DeleteMode != DeletePermanent {
-		c.DeleteMode = builtin.DeleteMode
+	if c.Operations.DeleteMode != DeletePermanent {
+		c.Operations.DeleteMode = builtin.Operations.DeleteMode
 	}
 }
 
 func (c *Config) validateUI(builtin *Config) {
-	if c.UI.BorderStyle != BorderStyleSingle {
-		c.UI.BorderStyle = builtin.UI.BorderStyle
-	}
-	if c.UI.StatusMessageTTLSeconds < 0 {
-		c.UI.StatusMessageTTLSeconds = builtin.UI.StatusMessageTTLSeconds
+	if c.UI.Status.MessageTTLSeconds < 0 {
+		c.UI.Status.MessageTTLSeconds = builtin.UI.Status.MessageTTLSeconds
 	}
 	if c.UI.PathPickerValidateDelayMS < 0 {
 		c.UI.PathPickerValidateDelayMS = builtin.UI.PathPickerValidateDelayMS
@@ -859,55 +877,55 @@ func (c *Config) validateUI(builtin *Config) {
 	if c.UI.KeyRepeatDebounceMS > KeyRepeatDebounceMaxMS {
 		c.UI.KeyRepeatDebounceMS = KeyRepeatDebounceMaxMS
 	}
-	if c.UI.FindQueryDebounceMS < 0 {
-		c.UI.FindQueryDebounceMS = builtin.UI.FindQueryDebounceMS
+	if c.UI.Find.QueryDebounceMS < 0 {
+		c.UI.Find.QueryDebounceMS = builtin.UI.Find.QueryDebounceMS
 	}
-	if c.UI.FindQueryDebounceMS > KeyRepeatDebounceMaxMS {
-		c.UI.FindQueryDebounceMS = KeyRepeatDebounceMaxMS
+	if c.UI.Find.QueryDebounceMS > KeyRepeatDebounceMaxMS {
+		c.UI.Find.QueryDebounceMS = KeyRepeatDebounceMaxMS
 	}
-	if c.UI.FindMaxResults <= 0 {
-		c.UI.FindMaxResults = builtin.UI.FindMaxResults
+	if c.UI.Find.MaxResults <= 0 {
+		c.UI.Find.MaxResults = builtin.UI.Find.MaxResults
 	}
-	if c.UI.FindListNavIdleMS < 0 {
-		c.UI.FindListNavIdleMS = builtin.UI.FindListNavIdleMS
+	if c.UI.Find.ListNavIdleMS < 0 {
+		c.UI.Find.ListNavIdleMS = builtin.UI.Find.ListNavIdleMS
 	}
 }
 
 func (c *Config) validateUIZoom(builtin *Config) {
-	if c.UI.PanelZoomActivePercent <= 0 || c.UI.PanelZoomInactivePercent <= 0 ||
-		c.UI.PanelZoomActivePercent+c.UI.PanelZoomInactivePercent != 100 {
-		c.UI.PanelZoomActivePercent = DefaultPanelZoomActivePercent
-		c.UI.PanelZoomInactivePercent = DefaultPanelZoomInactivePercent
+	if c.UI.Zoom.ActivePercent <= 0 || c.UI.Zoom.InactivePercent <= 0 ||
+		c.UI.Zoom.ActivePercent+c.UI.Zoom.InactivePercent != 100 {
+		c.UI.Zoom.ActivePercent = DefaultPanelZoomActivePercent
+		c.UI.Zoom.InactivePercent = DefaultPanelZoomInactivePercent
 	}
-	if c.UI.ZoomActivePanelDisabledAboveWidth < 0 {
-		c.UI.ZoomActivePanelDisabledAboveWidth = builtin.UI.ZoomActivePanelDisabledAboveWidth
+	if c.UI.Zoom.DisabledAboveWidth < 0 {
+		c.UI.Zoom.DisabledAboveWidth = builtin.UI.Zoom.DisabledAboveWidth
 	}
-	if c.UI.ZoomActivePanelDisabledAboveHeight < 0 {
-		c.UI.ZoomActivePanelDisabledAboveHeight = builtin.UI.ZoomActivePanelDisabledAboveHeight
+	if c.UI.Zoom.DisabledAboveHeight < 0 {
+		c.UI.Zoom.DisabledAboveHeight = builtin.UI.Zoom.DisabledAboveHeight
 	}
-	if !c.paneSplitOrientationValid(c.UI.PaneSplitOrientation) {
-		c.UI.PaneSplitOrientation = DefaultPaneSplitOrientation
+	if !c.paneSplitOrientationValid(c.UI.Zoom.Orientation) {
+		c.UI.Zoom.Orientation = DefaultPaneSplitOrientation
 	}
-	if !c.scrollModeValid(c.UI.ScrollMode) {
-		c.UI.ScrollMode = DefaultScrollMode
+	if !c.scrollModeValid(c.UI.Scroll.Mode) {
+		c.UI.Scroll.Mode = DefaultScrollMode
 	}
-	if !c.panelScrollbarValid(c.UI.PanelScrollbar) {
-		c.UI.PanelScrollbar = DefaultPanelScrollbar
+	if !c.panelScrollbarValid(c.UI.Scroll.Scrollbar) {
+		c.UI.Scroll.Scrollbar = DefaultPanelScrollbar
 	}
-	if c.UI.ScrollEdgeMargin < 0 {
-		c.UI.ScrollEdgeMargin = DefaultScrollEdgeMargin
+	if c.UI.Scroll.EdgeMargin < 0 {
+		c.UI.Scroll.EdgeMargin = DefaultScrollEdgeMargin
 	}
-	if c.UI.ScrollEdgeMargin > ScrollEdgeMarginMax {
-		c.UI.ScrollEdgeMargin = ScrollEdgeMarginMax
+	if c.UI.Scroll.EdgeMargin > ScrollEdgeMarginMax {
+		c.UI.Scroll.EdgeMargin = ScrollEdgeMarginMax
 	}
-	if c.UI.MessageLogMaxEntries <= 0 {
-		c.UI.MessageLogMaxEntries = builtin.UI.MessageLogMaxEntries
+	if c.UI.Status.LogMaxEntries <= 0 {
+		c.UI.Status.LogMaxEntries = builtin.UI.Status.LogMaxEntries
 	}
 	const messageLogMaxCap = 50_000
-	if c.UI.MessageLogMaxEntries > messageLogMaxCap {
-		c.UI.MessageLogMaxEntries = messageLogMaxCap
+	if c.UI.Status.LogMaxEntries > messageLogMaxCap {
+		c.UI.Status.LogMaxEntries = messageLogMaxCap
 	}
-	normalizeCarouselUI(&c.UI)
+	normalizeCarousel(&c.Carousel)
 }
 
 func (c *Config) validateFilter(builtin *Config) {

@@ -67,10 +67,10 @@ func TestCarouselForcesPanelZoomRegardlessOfConfigAndWidth(t *testing.T) {
 	screen.SetSize(160, 30)
 
 	cfg := config.Default()
-	cfg.UI.ZoomActivePanel = false
-	cfg.UI.ZoomActivePanelDisabledAboveWidth = 155
-	cfg.UI.PanelZoomActivePercent = 70
-	cfg.UI.PanelZoomInactivePercent = 30
+	cfg.UI.Zoom.ActivePanel = false
+	cfg.UI.Zoom.DisabledAboveWidth = 155
+	cfg.UI.Zoom.ActivePercent = 70
+	cfg.UI.Zoom.InactivePercent = 30
 
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {

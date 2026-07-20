@@ -16,7 +16,7 @@ func (a *App) syncPathFieldCompletion(f *dialog.FileDialogField, textWidth int) 
 		return
 	}
 	panel := a.activePanel()
-	c, ok := pathpick.SuggestAtCursor(panel.PathString(), a.model.UserHomeDir, f.Value, f.Cursor, a.config.ShowHidden)
+	c, ok := pathpick.SuggestAtCursor(panel.PathString(), a.model.UserHomeDir, f.Value, f.Cursor, a.config.Panels.ShowHidden)
 	if !ok {
 		f.ClearCompletion()
 		a.syncPathFieldScroll(f, textWidth)

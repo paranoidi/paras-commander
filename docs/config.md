@@ -40,7 +40,14 @@ These live alongside `config.toml` in the same config directory but are
 ## Contents
 
 - [General (root keys)](#general-root-keys)
+- [\[panels\]](#panels)
+- [\[disk_usage\]](#disk_usage)
+- [\[carousel\]](#carousel)
 - [\[ui\]](#ui)
+- [\[ui.zoom\]](#uizoom)
+- [\[ui.scroll\]](#uiscroll)
+- [\[ui.find\]](#uifind)
+- [\[ui.status\]](#uistatus)
 - [\[filter\]](#filter)
 - [\[jobs\]](#jobs)
 - [\[operations\]](#operations)
@@ -62,26 +69,42 @@ Keys at the top level of the file, outside any `[table]`.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `theme` | string | `"default"` | Name of the active color theme (see `themes/`). |
+
+## `[panels]`
+
+File panel browsing, sorting, and listing.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
 | `show_hidden` | bool | `false` | Show dotfiles and other hidden entries in panel listings on startup. |
 | `respect_gitignore` | bool | `true` | Hide files matched by `.gitignore` in panel listings. |
-| `confirm_delete` | bool | `true` | Ask for confirmation before deleting files or directories. |
-| `confirm_overwrite` | bool | `true` | Ask for confirmation before a copy or move would overwrite an existing file. |
-| `case_insensitive_filter` | bool | `true` | Match panel quick-filter and find queries case-insensitively. |
-| `job_concurrency` | int | `1` | Number of file operations that can run at once. Currently only `1` is supported; other values are reset to the default. |
-| `startup_path_mode` | string | `"cwd"` | How panels choose their starting directory. Currently only `"cwd"` (the process's current working directory) is supported. |
 | `default_sort` | string | `"name"` | Default panel sort order: `"name"`, `"extension"`, `"size"`, or `"mtime"`. |
 | `default_listing_format` | string | `"mtime"` | Default listing column layout: `"mtime"` (modified time), `"perm"` (permissions), or `"brief"` (minimal columns). |
 | `sort_reverse` | bool | `false` | Reverse the default sort order. |
 | `directories_first` | bool | `true` | List directories before files regardless of sort order. |
-| `disk_usage_idle_size_sort` | bool | `true` | While a disk-usage scan is running, re-sort by size once the cursor has been idle for a moment instead of resorting on every update. |
-| `disk_usage_idle_sort_delay_ms` | int | `500` | How long the cursor must be idle before the disk-usage idle re-sort (above) triggers. |
 | `refresh_interval_ms` | int | `2500` | How often panels re-read their directory from disk in the background. `0` disables automatic refresh; non-zero values are clamped to 200–60000. |
-| `disk_usage_descend_into_mount_points` | bool | `false` | Let a disk-usage scan cross into other mounted filesystems instead of stopping at mount boundaries. |
-| `disk_usage_walk_concurrency` | int | `4` | Number of subdirectory branches a disk-usage scan walks concurrently (minimum 1). Lower this on slow HDDs/NAS, raise it on fast local SSDs. |
-| `follow_symlinks_on_navigation` | bool | `true` | Follow symlinks when navigating into them. |
 | `open_files_externally` | bool | `true` | Open non-executable files with the OS-associated external application on Enter. |
 | `run_executables_on_enter` | bool | `true` | Run executable files directly when pressing Enter on them. |
-| `delete_mode` | string | `"permanent"` | How delete removes files. Currently only `"permanent"` is supported. |
+
+## `[disk_usage]`
+
+Disk-usage view and background walk.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `idle_size_sort` | bool | `true` | While a disk-usage scan is running, re-sort by size once the cursor has been idle for a moment instead of resorting on every update. |
+| `idle_sort_delay_ms` | int | `500` | How long the cursor must be idle before the disk-usage idle re-sort (above) triggers. |
+| `descend_into_mount_points` | bool | `false` | Let a disk-usage scan cross into other mounted filesystems instead of stopping at mount boundaries. |
+| `walk_concurrency` | int | `4` | Number of subdirectory branches a disk-usage scan walks concurrently (minimum 1). Lower this on slow HDDs/NAS, raise it on fast local SSDs. |
+
+## `[carousel]`
+
+Carousel (multi-column) panel layout.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `split` | array of strings | `["*", "*", "*"]` | Column widths for carousel view (parent \| center \| child), one token per column: a fixed cell count (`"16"`), a percent of remaining width (`"20%"`), or the flex remainder (`"*"`). Must be exactly 3 entries. |
+| `show_size` | array of bools | `[true, true, true]` | Whether to show the size column in each of the 3 carousel columns. |
 
 ## `[ui]`
 
@@ -90,34 +113,55 @@ General interface layout, timing, and rendering behavior.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `show_menu_bar` | bool | `true` | Show the top menu bar. |
-| `show_footer` | bool | `true` | Show the bottom function-key footer. |
-| `show_status_line` | bool | `true` | Show the status line above the footer. |
-| `show_jobs_line` | bool | `true` | Show the background jobs summary line. |
 | `show_file_icons` | bool | `true` | Show file-type icons/glyphs in panel listings. |
-| `border_style` | string | `"single"` | Panel border drawing style. Currently only `"single"` is supported. |
-| `clock` | bool | `false` | Show a clock in the UI. |
-| `selections_panel_max_rows` | int | `0` (→ 5) | Maximum visible rows in the cross-directory selections strip. `0` means use the built-in default of 5. |
-| `status_message_ttl_seconds` | float | `4.5` | How long transient status banners stay visible before clearing automatically. `0` keeps a message until it's replaced or explicitly cleared. |
-| `path_picker_validate_delay_ms` | int | `200` | Delay after the path-picker filter changes before checking whether the typed path exists on disk. |
-| `key_repeat_debounce_ms` | int | `80` | Coalesces rapid repeated key presses (file-list cursor steps, quick-view/carousel preview reloads, F3 style-picker highlighting) so they don't reload on every single step. `0` disables debouncing; values above 10000 are clamped. |
-| `find_query_debounce_ms` | int | `150` | Delay after the last keystroke in the find dialog before re-ranking results. `0` re-ranks on every keystroke. |
-| `find_max_results` | int | `200` | Maximum number of ranked results shown in the find dialog (the full index is still searched; only the displayed top-N is capped). |
-| `find_list_nav_idle_ms` | int | `400` | How long the find result list must be idle (no arrow-key movement) before a background rank update is applied to the view. |
-| `zoom_active_panel` | bool | `true` | Widen the active panel and shrink the inactive one, sized by `panel_zoom_active_percent` / `panel_zoom_inactive_percent`. |
-| `zoom_active_panel_disabled_above_width` | int | `140` | When greater than 0 and the terminal is at least this many cells wide, panel zoom is suppressed in favor of an even 50/50 split. `0` disables this width-based gate. |
-| `zoom_active_panel_disabled_above_height` | int | `45` | Same as above but for terminal height, applied when panels are stacked top/bottom. `0` disables this gate. |
-| `pane_split_orientation` | string | `"side_by_side"` | Twin-panel layout: `"side_by_side"` or `"stacked"`. |
-| `panel_zoom_active_percent` | int | `70` | Width share given to the active panel when `zoom_active_panel` is enabled. Must sum to 100 with `panel_zoom_inactive_percent`. |
-| `panel_zoom_inactive_percent` | int | `30` | Width share given to the inactive panel when `zoom_active_panel` is enabled. |
 | `shrunken_shows_name_only` | bool | `true` | When a panel becomes too narrow for its listing columns, show only the name column instead of truncating everything. |
-| `scroll_mode` | string | `"edge"` | File-list scroll policy: `"minimal"`, `"center"`, or `"edge"`. |
-| `scroll_edge_margin` | int | `5` | In `"edge"` scroll mode, how many rows of buffer to keep above/below the cursor before scrolling (clamped to 0–50). |
-| `panel_scrollbar` | string | `"thumb"` | Vertical scroll indicator style for panel lists: `"none"`, `"thumb"`, or `"bar"`. |
-| `panel_scrollbar_inactive` | bool | `false` | Also show the scroll indicator on the inactive panel. |
-| `message_log_max_entries` | int | `500` | Maximum number of status/toast lines retained for the Messages view (oldest entries are dropped first). |
 | `screen_render_hash_cache` | bool | `true` | Skip re-drawing the terminal screen when nothing actually changed since the last frame — reduces flicker and I/O over slow connections. |
-| `carousel_split` | array of strings | `["*", "*", "*"]` | Column widths for carousel view (parent \| center \| child), one token per column: a fixed cell count (`"16"`), a percent of remaining width (`"20%"`), or the flex remainder (`"*"`). Must be exactly 3 entries. |
-| `carousel_show_size` | array of bools | `[true, true, true]` | Whether to show the size column in each of the 3 carousel columns. |
+| `key_repeat_debounce_ms` | int | `80` | Coalesces rapid repeated key presses (file-list cursor steps, quick-view/carousel preview reloads, F3 style-picker highlighting) so they don't reload on every single step. `0` disables debouncing; values above 10000 are clamped. |
+| `path_picker_validate_delay_ms` | int | `200` | Delay after the path-picker filter changes before checking whether the typed path exists on disk. |
+| `selections_panel_max_rows` | int | `0` (→ 5) | Maximum visible rows in the cross-directory selections strip. `0` means use the built-in default of 5. |
+
+## `[ui.zoom]`
+
+Active/inactive panel width zoom and twin-panel orientation.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `active_panel` | bool | `true` | Widen the active panel and shrink the inactive one, sized by `active_percent` / `inactive_percent`. |
+| `disabled_above_width` | int | `140` | When greater than 0 and the terminal is at least this many cells wide, panel zoom is suppressed in favor of an even 50/50 split. `0` disables this width-based gate. |
+| `disabled_above_height` | int | `45` | Same as above but for terminal height, applied when panels are stacked top/bottom. `0` disables this gate. |
+| `orientation` | string | `"side_by_side"` | Twin-panel layout: `"side_by_side"` or `"stacked"`. |
+| `active_percent` | int | `70` | Width share given to the active panel when `active_panel` is enabled. Must sum to 100 with `inactive_percent`. |
+| `inactive_percent` | int | `30` | Width share given to the inactive panel when `active_panel` is enabled. |
+
+## `[ui.scroll]`
+
+File-list scroll policy and scrollbar display.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `mode` | string | `"edge"` | File-list scroll policy: `"minimal"`, `"center"`, or `"edge"`. |
+| `edge_margin` | int | `5` | In `"edge"` scroll mode, how many rows of buffer to keep above/below the cursor before scrolling (clamped to 0–50). |
+| `scrollbar` | string | `"thumb"` | Vertical scroll indicator style for panel lists: `"none"`, `"thumb"`, or `"bar"`. |
+| `scrollbar_inactive` | bool | `false` | Also show the scroll indicator on the inactive panel. |
+
+## `[ui.find]`
+
+Find dialog ranking and result timing.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `query_debounce_ms` | int | `150` | Delay after the last keystroke in the find dialog before re-ranking results. `0` re-ranks on every keystroke. |
+| `max_results` | int | `200` | Maximum number of ranked results shown in the find dialog (the full index is still searched; only the displayed top-N is capped). |
+| `list_nav_idle_ms` | int | `400` | How long the find result list must be idle (no arrow-key movement) before a background rank update is applied to the view. |
+
+## `[ui.status]`
+
+Transient status banners and the Messages view log.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `message_ttl_seconds` | float | `4.5` | How long transient status banners stay visible before clearing automatically. `0` keeps a message until it's replaced or explicitly cleared. |
+| `log_max_entries` | int | `500` | Maximum number of status/toast lines retained for the Messages view (oldest entries are dropped first). |
 
 ## `[filter]`
 
@@ -129,6 +173,7 @@ Panel quick-filter behavior.
 | `syntax` | string | `"subset-fzf"` | Quick-filter query syntax. Currently only `"subset-fzf"` is supported. |
 | `match_path_segments` | bool | `false` | Match filter terms against full path segments instead of just the file name. |
 | `cycle_matches` | string | `"visual"` | How Up/Down move among quick-filter matches: `"visual"` (panel row order) or `"ranked"` (best fuzzy match first). |
+| `case_insensitive` | bool | `true` | Match panel quick-filter and find queries case-insensitively. |
 
 ## `[jobs]`
 
@@ -160,6 +205,8 @@ Copy/move file-transfer behavior.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
+| `confirm_delete` | bool | `true` | Ask for confirmation before deleting files or directories. |
+| `delete_mode` | string | `"permanent"` | How delete removes files. Currently only `"permanent"` is supported. |
 | `preserve_permissions` | bool | `true` | Preserve source file permissions on copy. |
 | `preserve_timestamps` | bool | `true` | Preserve source file modification times on copy. |
 | `copy_buffer_kib` | int | `256` | Read/write buffer size, in KiB, used for userspace file copies. |
@@ -275,5 +322,5 @@ Find-duplicates scan (within a single directory).
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `hash_confirm_bytes` | int64 | `34359738368` (32 GiB) | Pause and ask for confirmation before hashing if the total size of hash candidates exceeds this. `0` disables the confirmation gate. |
-| `file_progress_bytes` | int64 | `209715200` (200 MiB) | Show a per-file progress bar in the scan dialog for files at or above this size. `0` disables the per-file bar. |
+| `file_progress_bytes` | int64 | `268435456` (256 MiB) | Show a per-file progress bar in the scan dialog for files at or above this size. `0` disables the per-file bar. |
 | `chunk_bytes` | int64 | `33554432` (32 MiB) | Compare same-size files this many bytes at a time, stopping as soon as content diverges. `0` disables chunked comparison. |

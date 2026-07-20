@@ -64,19 +64,19 @@ func TestValidateClampsNegativeDedupChunkBytes(t *testing.T) {
 
 func TestValidateClampsDiskUsageWalkConcurrency(t *testing.T) {
 	cfg := Default()
-	cfg.DiskUsageWalkConcurrency = 0
+	cfg.DiskUsage.WalkConcurrency = 0
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.DiskUsageWalkConcurrency != DefaultDiskUsageWalkConcurrency {
-		t.Fatalf("DiskUsageWalkConcurrency = %d, want %d", cfg.DiskUsageWalkConcurrency, DefaultDiskUsageWalkConcurrency)
+	if cfg.DiskUsage.WalkConcurrency != DefaultDiskUsageWalkConcurrency {
+		t.Fatalf("DiskUsage.WalkConcurrency = %d, want %d", cfg.DiskUsage.WalkConcurrency, DefaultDiskUsageWalkConcurrency)
 	}
-	cfg.DiskUsageWalkConcurrency = 2
+	cfg.DiskUsage.WalkConcurrency = 2
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.DiskUsageWalkConcurrency != 2 {
-		t.Fatalf("DiskUsageWalkConcurrency = %d, want 2", cfg.DiskUsageWalkConcurrency)
+	if cfg.DiskUsage.WalkConcurrency != 2 {
+		t.Fatalf("DiskUsage.WalkConcurrency = %d, want 2", cfg.DiskUsage.WalkConcurrency)
 	}
 }
 
@@ -143,14 +143,14 @@ func TestDefaultPathPickerValidateDelayMS(t *testing.T) {
 	if got := Default().UI.PathPickerValidateDelayMS; got != DefaultPathPickerValidateDelayMS {
 		t.Fatalf("PathPickerValidateDelayMS = %d, want %d", got, DefaultPathPickerValidateDelayMS)
 	}
-	if got := Default().UI.PanelZoomActivePercent; got != DefaultPanelZoomActivePercent {
-		t.Fatalf("PanelZoomActivePercent = %d, want %d", got, DefaultPanelZoomActivePercent)
+	if got := Default().UI.Zoom.ActivePercent; got != DefaultPanelZoomActivePercent {
+		t.Fatalf("Zoom.ActivePercent = %d, want %d", got, DefaultPanelZoomActivePercent)
 	}
-	if got := Default().UI.PanelZoomInactivePercent; got != DefaultPanelZoomInactivePercent {
-		t.Fatalf("PanelZoomInactivePercent = %d, want %d", got, DefaultPanelZoomInactivePercent)
+	if got := Default().UI.Zoom.InactivePercent; got != DefaultPanelZoomInactivePercent {
+		t.Fatalf("Zoom.InactivePercent = %d, want %d", got, DefaultPanelZoomInactivePercent)
 	}
-	if got := Default().UI.ZoomActivePanelDisabledAboveWidth; got != DefaultZoomActivePanelDisabledAboveWidth {
-		t.Fatalf("ZoomActivePanelDisabledAboveWidth = %d, want %d", got, DefaultZoomActivePanelDisabledAboveWidth)
+	if got := Default().UI.Zoom.DisabledAboveWidth; got != DefaultZoomActivePanelDisabledAboveWidth {
+		t.Fatalf("Zoom.DisabledAboveWidth = %d, want %d", got, DefaultZoomActivePanelDisabledAboveWidth)
 	}
 	if got := Default().UI.ShrunkenShowsNameOnly; got != DefaultShrunkenShowsNameOnly {
 		t.Fatalf("ShrunkenShowsNameOnly = %v, want %v", got, DefaultShrunkenShowsNameOnly)
@@ -162,154 +162,154 @@ func TestDefaultPathPickerValidateDelayMS(t *testing.T) {
 
 func TestValidateResetsInvalidPanelZoomPercents(t *testing.T) {
 	cfg := Default()
-	cfg.UI.PanelZoomActivePercent = 60
-	cfg.UI.PanelZoomInactivePercent = 50
+	cfg.UI.Zoom.ActivePercent = 60
+	cfg.UI.Zoom.InactivePercent = 50
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.PanelZoomActivePercent != DefaultPanelZoomActivePercent ||
-		cfg.UI.PanelZoomInactivePercent != DefaultPanelZoomInactivePercent {
+	if cfg.UI.Zoom.ActivePercent != DefaultPanelZoomActivePercent ||
+		cfg.UI.Zoom.InactivePercent != DefaultPanelZoomInactivePercent {
 		t.Fatalf("got %d/%d, want defaults %d/%d",
-			cfg.UI.PanelZoomActivePercent, cfg.UI.PanelZoomInactivePercent,
+			cfg.UI.Zoom.ActivePercent, cfg.UI.Zoom.InactivePercent,
 			DefaultPanelZoomActivePercent, DefaultPanelZoomInactivePercent)
 	}
 }
 
 func TestDefaultCarouselSplit(t *testing.T) {
-	got := Default().UI.CarouselSplit
+	got := Default().Carousel.Split
 	want := DefaultCarouselSplit()
 	if len(got) != len(want) {
-		t.Fatalf("CarouselSplit len = %d, want %d", len(got), len(want))
+		t.Fatalf("Carousel.Split len = %d, want %d", len(got), len(want))
 	}
 	for i := range want {
 		if got[i] != want[i] {
-			t.Fatalf("CarouselSplit[%d] = %q, want %q", i, got[i], want[i])
+			t.Fatalf("Carousel.Split[%d] = %q, want %q", i, got[i], want[i])
 		}
 	}
-	show := Default().UI.CarouselShowSize
+	show := Default().Carousel.ShowSize
 	if len(show) != 3 || !show[0] || !show[1] || !show[2] {
-		t.Fatalf("CarouselShowSize = %v, want [true true true]", show)
+		t.Fatalf("Carousel.ShowSize = %v, want [true true true]", show)
 	}
 }
 
 func TestValidateResetsInvalidCarouselSplit(t *testing.T) {
 	cfg := Default()
-	cfg.UI.CarouselSplit = []string{"20%", "bad", "*"}
+	cfg.Carousel.Split = []string{"20%", "bad", "*"}
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
 	want := DefaultCarouselSplit()
 	for i := range want {
-		if cfg.UI.CarouselSplit[i] != want[i] {
-			t.Fatalf("CarouselSplit[%d] = %q, want %q after invalid token", i, cfg.UI.CarouselSplit[i], want[i])
+		if cfg.Carousel.Split[i] != want[i] {
+			t.Fatalf("Carousel.Split[%d] = %q, want %q after invalid token", i, cfg.Carousel.Split[i], want[i])
 		}
 	}
 
-	cfg.UI.CarouselSplit = []string{"20%", "30%", "*"}
-	cfg.UI.CarouselShowSize = []bool{true}
+	cfg.Carousel.Split = []string{"20%", "30%", "*"}
+	cfg.Carousel.ShowSize = []bool{true}
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if len(cfg.UI.CarouselShowSize) != 3 {
-		t.Fatalf("CarouselShowSize len = %d, want 3", len(cfg.UI.CarouselShowSize))
+	if len(cfg.Carousel.ShowSize) != 3 {
+		t.Fatalf("Carousel.ShowSize len = %d, want 3", len(cfg.Carousel.ShowSize))
 	}
 }
 
 func TestValidateResetsInvalidPanelScrollbar(t *testing.T) {
 	cfg := Default()
-	cfg.UI.PanelScrollbar = "invalid"
+	cfg.UI.Scroll.Scrollbar = "invalid"
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.PanelScrollbar != DefaultPanelScrollbar {
-		t.Fatalf("PanelScrollbar = %q, want %q", cfg.UI.PanelScrollbar, DefaultPanelScrollbar)
+	if cfg.UI.Scroll.Scrollbar != DefaultPanelScrollbar {
+		t.Fatalf("Scroll.Scrollbar = %q, want %q", cfg.UI.Scroll.Scrollbar, DefaultPanelScrollbar)
 	}
 }
 
 func TestValidateClampsNegativeZoomActivePanelDisabledAboveWidth(t *testing.T) {
 	cfg := Default()
-	cfg.UI.ZoomActivePanelDisabledAboveWidth = -10
+	cfg.UI.Zoom.DisabledAboveWidth = -10
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.ZoomActivePanelDisabledAboveWidth != DefaultZoomActivePanelDisabledAboveWidth {
-		t.Fatalf("ZoomActivePanelDisabledAboveWidth = %d, want %d",
-			cfg.UI.ZoomActivePanelDisabledAboveWidth, DefaultZoomActivePanelDisabledAboveWidth)
+	if cfg.UI.Zoom.DisabledAboveWidth != DefaultZoomActivePanelDisabledAboveWidth {
+		t.Fatalf("Zoom.DisabledAboveWidth = %d, want %d",
+			cfg.UI.Zoom.DisabledAboveWidth, DefaultZoomActivePanelDisabledAboveWidth)
 	}
-	cfg.UI.ZoomActivePanelDisabledAboveWidth = 0
+	cfg.UI.Zoom.DisabledAboveWidth = 0
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.ZoomActivePanelDisabledAboveWidth != 0 {
-		t.Fatalf("ZoomActivePanelDisabledAboveWidth = %d, want 0", cfg.UI.ZoomActivePanelDisabledAboveWidth)
+	if cfg.UI.Zoom.DisabledAboveWidth != 0 {
+		t.Fatalf("Zoom.DisabledAboveWidth = %d, want 0", cfg.UI.Zoom.DisabledAboveWidth)
 	}
 }
 
 func TestValidateClampsRefreshIntervalMS(t *testing.T) {
 	cfg := Default()
-	cfg.RefreshIntervalMS = -1
+	cfg.Panels.RefreshIntervalMS = -1
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.RefreshIntervalMS != DefaultRefreshIntervalMS {
-		t.Fatalf("negative = %d, want default %d", cfg.RefreshIntervalMS, DefaultRefreshIntervalMS)
+	if cfg.Panels.RefreshIntervalMS != DefaultRefreshIntervalMS {
+		t.Fatalf("negative = %d, want default %d", cfg.Panels.RefreshIntervalMS, DefaultRefreshIntervalMS)
 	}
-	cfg.RefreshIntervalMS = 0
+	cfg.Panels.RefreshIntervalMS = 0
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.RefreshIntervalMS != 0 {
-		t.Fatalf("zero = %d, want 0 (disabled)", cfg.RefreshIntervalMS)
+	if cfg.Panels.RefreshIntervalMS != 0 {
+		t.Fatalf("zero = %d, want 0 (disabled)", cfg.Panels.RefreshIntervalMS)
 	}
-	cfg.RefreshIntervalMS = 100
+	cfg.Panels.RefreshIntervalMS = 100
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.RefreshIntervalMS != 200 {
-		t.Fatalf("100 = %d, want clamp 200", cfg.RefreshIntervalMS)
+	if cfg.Panels.RefreshIntervalMS != 200 {
+		t.Fatalf("100 = %d, want clamp 200", cfg.Panels.RefreshIntervalMS)
 	}
-	cfg.RefreshIntervalMS = 120_000
+	cfg.Panels.RefreshIntervalMS = 120_000
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.RefreshIntervalMS != 60_000 {
-		t.Fatalf("120000 = %d, want clamp 60000", cfg.RefreshIntervalMS)
+	if cfg.Panels.RefreshIntervalMS != 60_000 {
+		t.Fatalf("120000 = %d, want clamp 60000", cfg.Panels.RefreshIntervalMS)
 	}
 }
 
 func TestValidateClampsScrollMode(t *testing.T) {
 	cfg := Default()
-	cfg.UI.ScrollMode = "bogus"
+	cfg.UI.Scroll.Mode = "bogus"
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.ScrollMode != ScrollModeEdge {
-		t.Fatalf("ScrollMode = %q, want %q", cfg.UI.ScrollMode, ScrollModeEdge)
+	if cfg.UI.Scroll.Mode != ScrollModeEdge {
+		t.Fatalf("Scroll.Mode = %q, want %q", cfg.UI.Scroll.Mode, ScrollModeEdge)
 	}
-	cfg.UI.ScrollMode = ScrollModeEdge
+	cfg.UI.Scroll.Mode = ScrollModeEdge
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.ScrollMode != ScrollModeEdge {
-		t.Fatalf("ScrollMode = %q, want %q", cfg.UI.ScrollMode, ScrollModeEdge)
+	if cfg.UI.Scroll.Mode != ScrollModeEdge {
+		t.Fatalf("Scroll.Mode = %q, want %q", cfg.UI.Scroll.Mode, ScrollModeEdge)
 	}
 }
 
 func TestValidateClampsScrollEdgeMargin(t *testing.T) {
 	cfg := Default()
-	cfg.UI.ScrollEdgeMargin = -3
+	cfg.UI.Scroll.EdgeMargin = -3
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.ScrollEdgeMargin != DefaultScrollEdgeMargin {
-		t.Fatalf("ScrollEdgeMargin = %d, want %d", cfg.UI.ScrollEdgeMargin, DefaultScrollEdgeMargin)
+	if cfg.UI.Scroll.EdgeMargin != DefaultScrollEdgeMargin {
+		t.Fatalf("Scroll.EdgeMargin = %d, want %d", cfg.UI.Scroll.EdgeMargin, DefaultScrollEdgeMargin)
 	}
-	cfg.UI.ScrollEdgeMargin = 999
+	cfg.UI.Scroll.EdgeMargin = 999
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.ScrollEdgeMargin != ScrollEdgeMarginMax {
-		t.Fatalf("ScrollEdgeMargin = %d, want %d", cfg.UI.ScrollEdgeMargin, ScrollEdgeMarginMax)
+	if cfg.UI.Scroll.EdgeMargin != ScrollEdgeMarginMax {
+		t.Fatalf("Scroll.EdgeMargin = %d, want %d", cfg.UI.Scroll.EdgeMargin, ScrollEdgeMarginMax)
 	}
 }
 
@@ -344,14 +344,15 @@ func TestLoadFromPathsUsesDefaultsWhenConfigIsMissing(t *testing.T) {
 
 func TestLoadFromPathsMergesConfigOverDefaults(t *testing.T) {
 	path := writeConfig(t, `
+[panels]
 show_hidden = true
-confirm_delete = false
 directories_first = false
 
 [jobs]
 keep_finished = 5
 
 [operations]
+confirm_delete = false
 copy_buffer_kib = 512
 
 [logging]
@@ -363,14 +364,14 @@ level = "debug"
 		t.Fatalf("LoadFromPaths() error = %v", err)
 	}
 
-	if !cfg.ShowHidden {
-		t.Fatal("ShowHidden = false, want true")
+	if !cfg.Panels.ShowHidden {
+		t.Fatal("Panels.ShowHidden = false, want true")
 	}
-	if cfg.ConfirmDelete {
-		t.Fatal("ConfirmDelete = true, want false")
+	if cfg.Operations.ConfirmDelete {
+		t.Fatal("Operations.ConfirmDelete = true, want false")
 	}
-	if cfg.DirectoriesFirst {
-		t.Fatal("DirectoriesFirst = true, want false")
+	if cfg.Panels.DirectoriesFirst {
+		t.Fatal("Panels.DirectoriesFirst = true, want false")
 	}
 	if cfg.Jobs.KeepFinished != 5 {
 		t.Fatalf("Jobs.KeepFinished = %d, want 5", cfg.Jobs.KeepFinished)
@@ -381,27 +382,24 @@ level = "debug"
 	if cfg.Logging.Level != "debug" {
 		t.Fatalf("Logging.Level = %q, want debug", cfg.Logging.Level)
 	}
-	if !cfg.ConfirmOverwrite {
-		t.Fatal("ConfirmOverwrite = false, want default true")
-	}
 }
 
 func TestLoadFromPathsMergesStatusMessageTTL(t *testing.T) {
 	path := writeConfig(t, `
-[ui]
-status_message_ttl_seconds = 12.25
+[ui.status]
+message_ttl_seconds = 12.25
 `)
 	cfg, err := LoadFromPaths(Paths{ConfigFile: path})
 	if err != nil {
 		t.Fatalf("LoadFromPaths() error = %v", err)
 	}
-	if cfg.UI.StatusMessageTTLSeconds != 12.25 {
-		t.Fatalf("StatusMessageTTLSeconds = %v, want 12.25", cfg.UI.StatusMessageTTLSeconds)
+	if cfg.UI.Status.MessageTTLSeconds != 12.25 {
+		t.Fatalf("Status.MessageTTLSeconds = %v, want 12.25", cfg.UI.Status.MessageTTLSeconds)
 	}
 }
 
 func TestLoadFromPathsReportsInvalidTOML(t *testing.T) {
-	path := writeConfig(t, `show_hidden =`)
+	path := writeConfig(t, `theme =`)
 
 	_, err := LoadFromPaths(Paths{ConfigFile: path})
 	if err == nil {
@@ -432,61 +430,43 @@ func TestLoadFromPathsClampsUnsupportedValuesToDefaults(t *testing.T) {
 	}{
 		{
 			name:    "sort mode",
-			content: `default_sort = "unknown_mode"`,
+			content: "[panels]\ndefault_sort = \"unknown_mode\"\n",
 			testFn: func(t *testing.T, cfg Config) {
-				if cfg.DefaultSort != SortName {
-					t.Fatalf("DefaultSort = %q, want clamped to %q", cfg.DefaultSort, SortName)
+				if cfg.Panels.DefaultSort != SortName {
+					t.Fatalf("Panels.DefaultSort = %q, want clamped to %q", cfg.Panels.DefaultSort, SortName)
 				}
 			},
 		},
 		{
 			name:    "default_sort disk_usage migrates",
-			content: `default_sort = "disk_usage"`,
+			content: "[panels]\ndefault_sort = \"disk_usage\"\n",
 			testFn: func(t *testing.T, cfg Config) {
-				if cfg.DefaultSort != SortName {
-					t.Fatalf("DefaultSort = %q, want migrated to %q", cfg.DefaultSort, SortName)
+				if cfg.Panels.DefaultSort != SortName {
+					t.Fatalf("Panels.DefaultSort = %q, want migrated to %q", cfg.Panels.DefaultSort, SortName)
 				}
-				if !cfg.DiskUsageIdleSizeSort {
-					t.Fatal("DiskUsageIdleSizeSort = false, want true after disk_usage migration")
+				if !cfg.DiskUsage.IdleSizeSort {
+					t.Fatal("DiskUsage.IdleSizeSort = false, want true after disk_usage migration")
 				}
 			},
 		},
 		{
 			name:    "default_sort disk-usage migrates",
-			content: `default_sort = "disk-usage"`,
+			content: "[panels]\ndefault_sort = \"disk-usage\"\n",
 			testFn: func(t *testing.T, cfg Config) {
-				if cfg.DefaultSort != SortName {
-					t.Fatalf("DefaultSort = %q, want migrated to %q", cfg.DefaultSort, SortName)
+				if cfg.Panels.DefaultSort != SortName {
+					t.Fatalf("Panels.DefaultSort = %q, want migrated to %q", cfg.Panels.DefaultSort, SortName)
 				}
-				if !cfg.DiskUsageIdleSizeSort {
-					t.Fatal("DiskUsageIdleSizeSort = false, want true after disk-usage migration")
+				if !cfg.DiskUsage.IdleSizeSort {
+					t.Fatal("DiskUsage.IdleSizeSort = false, want true after disk-usage migration")
 				}
 			},
 		},
 		{
 			name:    "listing format invalid",
-			content: `default_listing_format = "wide"`,
+			content: "[panels]\ndefault_listing_format = \"wide\"\n",
 			testFn: func(t *testing.T, cfg Config) {
-				if cfg.DefaultListingFormat != ListingFormatMtime {
-					t.Fatalf("DefaultListingFormat = %q, want clamped to %q", cfg.DefaultListingFormat, ListingFormatMtime)
-				}
-			},
-		},
-		{
-			name:    "job concurrency",
-			content: `job_concurrency = 2`,
-			testFn: func(t *testing.T, cfg Config) {
-				if cfg.JobConcurrency != 1 {
-					t.Fatalf("JobConcurrency = %d, want clamped to 1", cfg.JobConcurrency)
-				}
-			},
-		},
-		{
-			name:    "startup mode",
-			content: `startup_path_mode = "last-session"`,
-			testFn: func(t *testing.T, cfg Config) {
-				if cfg.StartupPathMode != StartupPathCWD {
-					t.Fatalf("StartupPathMode = %q, want clamped to %q", cfg.StartupPathMode, StartupPathCWD)
+				if cfg.Panels.DefaultListingFormat != ListingFormatMtime {
+					t.Fatalf("Panels.DefaultListingFormat = %q, want clamped to %q", cfg.Panels.DefaultListingFormat, ListingFormatMtime)
 				}
 			},
 		},
@@ -546,11 +526,11 @@ func TestLoadFromPathsClampsUnsupportedValuesToDefaults(t *testing.T) {
 		},
 		{
 			name:    "status message ttl negative",
-			content: "[ui]\nstatus_message_ttl_seconds = -1\n",
+			content: "[ui.status]\nmessage_ttl_seconds = -1\n",
 			testFn: func(t *testing.T, cfg Config) {
-				want := Default().UI.StatusMessageTTLSeconds
-				if cfg.UI.StatusMessageTTLSeconds != want {
-					t.Fatalf("StatusMessageTTLSeconds = %v, want clamped to default %v", cfg.UI.StatusMessageTTLSeconds, want)
+				want := Default().UI.Status.MessageTTLSeconds
+				if cfg.UI.Status.MessageTTLSeconds != want {
+					t.Fatalf("Status.MessageTTLSeconds = %v, want clamped to default %v", cfg.UI.Status.MessageTTLSeconds, want)
 				}
 			},
 		},
@@ -593,7 +573,7 @@ func TestEncodeDefaultStubWritesLoadableDefaults(t *testing.T) {
 	}
 
 	content := buffer.String()
-	for _, want := range []string{"theme = \"default\"", "show_hidden = false", "[ui]", "status_message_ttl_seconds", "message_log_max_entries", "[filter]", "[jobs]", "[operations]", "[logging]"} {
+	for _, want := range []string{"theme = \"default\"", "[panels]", "show_hidden = false", "[disk_usage]", "[carousel]", "[ui]", "[ui.status]", "message_ttl_seconds", "log_max_entries", "[filter]", "[jobs]", "[operations]", "[logging]"} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("encoded config missing %q:\n%s", want, content)
 		}
@@ -666,7 +646,7 @@ func TestWriteMergedPartialThemeCreatesMinimalTomlWhenMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadFromPaths(): %v", err)
 	}
-	if cfg.Theme != "mytheme" || cfg.ShowHidden != Default().ShowHidden {
+	if cfg.Theme != "mytheme" || cfg.Panels.ShowHidden != Default().Panels.ShowHidden {
 		t.Fatalf("merged config %+v differs from expectation", cfg)
 	}
 }

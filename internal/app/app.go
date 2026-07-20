@@ -405,16 +405,16 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
 	}
-	sortMode, _ := panel.ParseSortMode(cfg.DefaultSort)
-	listingFormat, _ := panel.ParseListFormat(cfg.DefaultListingFormat)
+	sortMode, _ := panel.ParseSortMode(cfg.Panels.DefaultSort)
+	listingFormat, _ := panel.ParseListFormat(cfg.Panels.DefaultListingFormat)
 	listOptions := localfs.ListOptions{
-		ShowHidden: cfg.ShowHidden,
+		ShowHidden: cfg.Panels.ShowHidden,
 	}
 	var giCache *gitignore.Cache
-	if cfg.RespectGitignore {
+	if cfg.Panels.RespectGitignore {
 		giCache = gitignore.NewCache()
 	}
-	duEngine := diskusage.NewWithWalkConcurrency(cfg.DiskUsageWalkConcurrency)
+	duEngine := diskusage.NewWithWalkConcurrency(cfg.DiskUsage.WalkConcurrency)
 
 	panelOpts := browserPanelOptions{
 		list:       listOptions,
@@ -422,7 +422,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		cfg:        cfg,
 		sortMode:   sortMode,
 		listFormat: listingFormat,
-		scrollMode: scrollModeFromConfig(cfg.UI.ScrollMode),
+		scrollMode: scrollModeFromConfig(cfg.UI.Scroll.Mode),
 		diskEngine: duEngine,
 	}
 	left, err := newBrowserPanel(path, panelOpts)
@@ -491,7 +491,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			SelectionsPanelMaxRows:     cfg.UI.SelectionsPanelMaxRows,
 			HideMenuBar:                !cfg.UI.ShowMenuBar,
 			ShowFileIcons:              cfg.UI.ShowFileIcons,
-			CarouselLayout:             carouselLayoutFromConfig(cfg.UI),
+			CarouselLayout:             carouselLayoutFromConfig(cfg.Carousel),
 			ShrunkenShowsNameOnly:      cfg.UI.ShrunkenShowsNameOnly,
 			JobsThroughputChartEnabled: cfg.Jobs.ThroughputChartEnabled,
 			UserHomeDir:                homeDir,
@@ -593,7 +593,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if secs := cfg.Jobs.FreeSpacePollIntervalSecs; secs > 0 {
 		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
 	}
-	if ms := cfg.RefreshIntervalMS; ms > 0 {
+	if ms := cfg.Panels.RefreshIntervalMS; ms > 0 {
 		go app.runPanelRefreshTicker(time.Duration(ms)*time.Millisecond, app.jobStopCh)
 	}
 	if cfg.Jobs.ThroughputChartEnabled {
@@ -773,17 +773,17 @@ func newBrowserPanel(path string, opts browserPanelOptions) (panel.State, error)
 		return panel.State{}, err
 	}
 	p.Sort.Mode = opts.sortMode
-	p.Sort.Reverse = opts.cfg.SortReverse
-	p.Sort.DirectoriesFirst = opts.cfg.DirectoriesFirst
-	p.Sort.DiskUsageIdleSizeSort = opts.cfg.DiskUsageIdleSizeSort
-	p.DiskUsageIdleSortActivated = opts.cfg.DiskUsageIdleSizeSort
+	p.Sort.Reverse = opts.cfg.Panels.SortReverse
+	p.Sort.DirectoriesFirst = opts.cfg.Panels.DirectoriesFirst
+	p.Sort.DiskUsageIdleSizeSort = opts.cfg.DiskUsage.IdleSizeSort
+	p.DiskUsageIdleSortActivated = opts.cfg.DiskUsage.IdleSizeSort
 	p.ListFormat = opts.listFormat
 	p.DiskSorter = opts.diskEngine.Size
 	p.ApplySort()
-	p.Filter.CaseInsensitive = opts.cfg.CaseInsensitiveFilter
+	p.Filter.CaseInsensitive = opts.cfg.Filter.CaseInsensitive
 	p.Filter.CycleMatches = opts.cfg.Filter.CycleMatches
 	p.ScrollMode = opts.scrollMode
-	p.ScrollEdgeMargin = opts.cfg.UI.ScrollEdgeMargin
+	p.ScrollEdgeMargin = opts.cfg.UI.Scroll.EdgeMargin
 	return p, nil
 }
 
@@ -1089,8 +1089,8 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 	return false
 }
 
-func carouselLayoutFromConfig(ui config.UIConfig) panelcarousel.Layout {
-	layout, err := panelcarousel.ParseLayout(ui.CarouselSplit, ui.CarouselShowSize)
+func carouselLayoutFromConfig(c config.CarouselConfig) panelcarousel.Layout {
+	layout, err := panelcarousel.ParseLayout(c.Split, c.ShowSize)
 	if err != nil {
 		return panelcarousel.DefaultLayout()
 	}

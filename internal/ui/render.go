@@ -93,11 +93,11 @@ type Model struct {
 	HideMenuBar bool
 	// ShowFileIcons mirrors ui.show_file_icons (Nerd Font glyphs before file names).
 	ShowFileIcons bool
-	// CarouselLayout mirrors [ui].carousel_split and carousel_show_size.
+	// CarouselLayout mirrors [carousel].split and [carousel].show_size.
 	CarouselLayout panelcarousel.Layout
-	// PanelZoomEnabled mirrors effective zoom for layout (saved [ui].zoom_active_panel plus optional
+	// PanelZoomEnabled mirrors effective zoom for layout (saved [ui.zoom].active_panel plus optional
 	// runtime-only override in App.render), suppressed while quick view / file preview uses the split,
-	// and suppressed on wide terminals when [ui].zoom_active_panel_disabled_above_width > 0.
+	// and suppressed on wide terminals when [ui.zoom].disabled_above_width > 0.
 	// Carousel view on the active panel always enables zoom (ignores preference, override, and width gate).
 	// Layout uses it only in the file browser; see PanelZoomSplitsColumns.
 	PanelZoomEnabled bool
@@ -106,9 +106,9 @@ type Model struct {
 	PanelZoomInactivePercent int
 	// ShrunkenShowsNameOnly mirrors ui.shrunken_shows_name_only (narrow panels may hide trailing listing columns).
 	ShrunkenShowsNameOnly bool
-	// PanelScrollbar mirrors [ui].panel_scrollbar (none, thumb, bar).
+	// PanelScrollbar mirrors [ui.scroll].scrollbar (none, thumb, bar).
 	PanelScrollbar uiscrollbar.Style
-	// PanelScrollbarInactive mirrors [ui].panel_scrollbar_inactive.
+	// PanelScrollbarInactive mirrors [ui.scroll].scrollbar_inactive.
 	PanelScrollbarInactive bool
 	// JobsThroughputChartEnabled mirrors [jobs].throughput_chart_enabled (strip + graph off when false).
 	JobsThroughputChartEnabled bool
@@ -128,7 +128,7 @@ type Model struct {
 	DiskUsageScanRoots  []string
 	// DiskUsage provides cached sizes (nil disables painting even when DiskUsageShown is true).
 	DiskUsage DiskUsagePainter
-	// DiskUsageDescendIntoMountPoints mirrors config disk_usage_descend_into_mount_points (cross-mount subtree scans).
+	// DiskUsageDescendIntoMountPoints mirrors config [disk_usage].descend_into_mount_points (cross-mount subtree scans).
 	DiskUsageDescendIntoMountPoints bool
 	// DiskUsageGoduIgnore is optional basename ignore (~/.goduignore); nil if unavailable.
 	DiskUsageGoduIgnore func(string) bool

@@ -11,7 +11,7 @@ func TestEffectivePaneSplitOrientationUsesOverride(t *testing.T) {
 	a := &App{
 		config: config.Default(),
 	}
-	a.config.UI.PaneSplitOrientation = config.PaneSplitSideBySide
+	a.config.UI.Zoom.Orientation = config.PaneSplitSideBySide
 	stacked := ui.SplitVertical
 	a.paneSplitOrientationOverride = &stacked
 	if got := a.effectivePaneSplitOrientation(); got != ui.SplitVertical {

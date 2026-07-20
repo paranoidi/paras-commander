@@ -96,8 +96,8 @@ func TestNavOpenFalseExecutableBitDoesNotRun(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.OpenFilesExternally = true
-	app.config.RunExecutablesOnEnter = true
+	app.config.Panels.OpenFilesExternally = true
+	app.config.Panels.RunExecutablesOnEnter = true
 	selectEntryByName(t, app, "clip.mkv")
 
 	app.dispatch(keymap.ActionNavOpen)
@@ -116,8 +116,8 @@ func TestNavOpenNonExecutableDoesNotRunWhenExternalOpenDisabled(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.OpenFilesExternally = false
-	app.config.RunExecutablesOnEnter = true
+	app.config.Panels.OpenFilesExternally = false
+	app.config.Panels.RunExecutablesOnEnter = true
 	selectEntryByName(t, app, "plain.txt")
 
 	app.dispatch(keymap.ActionNavOpen)
@@ -136,8 +136,8 @@ func TestNavOpenSkipsExecutableWhenRunOnEnterDisabled(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.config.RunExecutablesOnEnter = false
-	app.config.OpenFilesExternally = false
+	app.config.Panels.RunExecutablesOnEnter = false
+	app.config.Panels.OpenFilesExternally = false
 	selectEntryByName(t, app, "runme.sh")
 
 	app.dispatch(keymap.ActionNavOpen)
@@ -168,7 +168,7 @@ func TestNavOpenExecutableUsesRelativeCommandLine(t *testing.T) {
 
 func TestRunExecutablesOnEnterDefaultConfig(t *testing.T) {
 	cfg := config.Default()
-	if !cfg.RunExecutablesOnEnter {
+	if !cfg.Panels.RunExecutablesOnEnter {
 		t.Fatal("Default().RunExecutablesOnEnter should be true")
 	}
 }

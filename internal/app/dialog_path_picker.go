@@ -36,7 +36,7 @@ func (a *App) syncPathPickerRanks() {
 	for i, e := range st.Items {
 		lines[i] = e.SearchLine()
 	}
-	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.Items), a.config.CaseInsensitiveFilter)
+	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.Items), a.config.Filter.CaseInsensitive)
 	clampFilteredListSelection(&st.Selected, len(st.Ranked))
 	dialog.EnsurePathPickerListScroll(st, a.pathPickerListRows())
 }
@@ -47,7 +47,7 @@ func (a *App) syncPathPickerCompletion() {
 		return
 	}
 	panel := a.activePanel()
-	c, ok := pathpick.SuggestAtCursor(panel.PathString(), a.model.UserHomeDir, st.Query, st.QueryCursor, a.config.ShowHidden)
+	c, ok := pathpick.SuggestAtCursor(panel.PathString(), a.model.UserHomeDir, st.Query, st.QueryCursor, a.config.Panels.ShowHidden)
 	if !ok {
 		st.QueryCompletionSuffix = ""
 		st.QueryCompletionIsDir = false

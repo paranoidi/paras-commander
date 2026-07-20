@@ -64,7 +64,7 @@ func (a *App) syncSFTPConnectDialogRanks() {
 	}
 	lines := make([]string, len(st.DisplayLines))
 	copy(lines, st.DisplayLines)
-	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.DisplayLines), a.config.CaseInsensitiveFilter)
+	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(st.DisplayLines), a.config.Filter.CaseInsensitive)
 	clampFilteredListSelection(&st.Selected, len(st.Ranked))
 	dialog.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
 }

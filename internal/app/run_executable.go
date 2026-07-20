@@ -14,7 +14,7 @@ import (
 
 // resolveExecutableOpenPath returns the absolute path to run when Enter should execute a file.
 func (a *App) resolveExecutableOpenPath(p *panel.State) (string, bool) {
-	if a.model.ViewMode != ui.ViewBrowser || !a.config.RunExecutablesOnEnter {
+	if a.model.ViewMode != ui.ViewBrowser || !a.config.Panels.RunExecutablesOnEnter {
 		return "", false
 	}
 	if p.Path.IsRemote() {

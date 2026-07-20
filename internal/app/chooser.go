@@ -91,7 +91,7 @@ func (a *App) handleNavOpen(activePanel *panel.State, viewportRows int) bool {
 		a.runExecutableFromPanel(path)
 		return false
 	}
-	if !a.config.OpenFilesExternally {
+	if !a.config.Panels.OpenFilesExternally {
 		return false
 	}
 	entry, ok := activePanel.CurrentEntry()

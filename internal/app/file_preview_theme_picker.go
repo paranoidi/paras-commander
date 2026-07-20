@@ -158,7 +158,7 @@ func (a *App) syncFilePreviewThemePickerRanks() {
 	}
 	lines := filePreviewThemePickerDisplayLines(st)
 	st.DisplayLines = lines
-	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(lines), a.config.CaseInsensitiveFilter)
+	st.Ranked, st.MatchRanges = syncFilteredListRanks(lines, st.Query, len(lines), a.config.Filter.CaseInsensitive)
 	clampFilteredListSelection(&st.Selected, len(st.Ranked))
 	rect := a.filePreviewThemePickerRect()
 	dialog.EnsureFilePreviewThemePickerListScroll(st, ui.FilePreviewThemePickerListRows(rect))

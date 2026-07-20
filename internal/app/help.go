@@ -72,7 +72,7 @@ func (a *App) syncHelpRanks() {
 		rankTexts[i] = helpkeys.CanonicalRankText(e)
 	}
 	q := search.Parse(st.Query)
-	opts := search.Options{CaseInsensitive: a.config.CaseInsensitiveFilter}
+	opts := search.Options{CaseInsensitive: a.config.Filter.CaseInsensitive}
 	ranked := q.Rank(rankTexts, opts)
 	st.Ranked = make([]int, len(ranked))
 	st.MatchRanges = make([][]search.Range, len(st.Entries))

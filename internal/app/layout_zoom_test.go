@@ -25,18 +25,18 @@ func TestRuntimeZoomToggleChangesLayoutAndDoesNotPersist(t *testing.T) {
 	screen.SetSize(100, 30)
 
 	cfg := config.Default()
-	cfg.UI.ZoomActivePanel = false
-	cfg.UI.PanelZoomActivePercent = 70
-	cfg.UI.PanelZoomInactivePercent = 30
+	cfg.UI.Zoom.ActivePanel = false
+	cfg.UI.Zoom.ActivePercent = 70
+	cfg.UI.Zoom.InactivePercent = 30
 
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "runtime-zoom-persist")}.WithResolvedLocations()
 	if err := os.MkdirAll(appPaths.ConfigDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
-	initToml := `[ui]
-zoom_active_panel = false
-panel_zoom_active_percent = 70
-panel_zoom_inactive_percent = 30
+	initToml := `[ui.zoom]
+active_panel = false
+active_percent = 70
+inactive_percent = 30
 `
 	if err := os.WriteFile(appPaths.ConfigFile, []byte(initToml), 0o644); err != nil {
 		t.Fatalf("WriteFile config: %v", err)
@@ -63,7 +63,7 @@ panel_zoom_inactive_percent = 30
 	if app.zoomActivePanelOverride == nil || !*app.zoomActivePanelOverride {
 		t.Fatal("expected runtime override zoom on")
 	}
-	if app.config.UI.ZoomActivePanel {
+	if app.config.UI.Zoom.ActivePanel {
 		t.Fatal("saved ZoomActivePanel must stay false")
 	}
 
@@ -84,7 +84,7 @@ panel_zoom_inactive_percent = 30
 	if err != nil {
 		t.Fatalf("LoadFromPaths: %v", err)
 	}
-	if reloaded.UI.ZoomActivePanel {
+	if reloaded.UI.Zoom.ActivePanel {
 		t.Fatalf("persisted zoom_active_panel leaked true, want false")
 	}
 }
@@ -101,9 +101,9 @@ func TestLayoutForTerminalSizeIgnoresZoomInAuxiliaryViews(t *testing.T) {
 	screen.SetSize(100, 30)
 
 	cfg := config.Default()
-	cfg.UI.ZoomActivePanel = true
-	cfg.UI.PanelZoomActivePercent = 70
-	cfg.UI.PanelZoomInactivePercent = 30
+	cfg.UI.Zoom.ActivePanel = true
+	cfg.UI.Zoom.ActivePercent = 70
+	cfg.UI.Zoom.InactivePercent = 30
 
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
@@ -178,9 +178,9 @@ func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 	screen.SetSize(100, 30)
 
 	cfg := config.Default()
-	cfg.UI.ZoomActivePanel = true
-	cfg.UI.PanelZoomActivePercent = 70
-	cfg.UI.PanelZoomInactivePercent = 30
+	cfg.UI.Zoom.ActivePanel = true
+	cfg.UI.Zoom.ActivePercent = 70
+	cfg.UI.Zoom.InactivePercent = 30
 
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
@@ -232,10 +232,10 @@ func TestLayoutForTerminalSizeDisablesZoomAtOrAboveDisabledAboveWidth(t *testing
 	screen.SetSize(160, 30)
 
 	cfg := config.Default()
-	cfg.UI.ZoomActivePanel = true
-	cfg.UI.ZoomActivePanelDisabledAboveWidth = 155
-	cfg.UI.PanelZoomActivePercent = 70
-	cfg.UI.PanelZoomInactivePercent = 30
+	cfg.UI.Zoom.ActivePanel = true
+	cfg.UI.Zoom.DisabledAboveWidth = 155
+	cfg.UI.Zoom.ActivePercent = 70
+	cfg.UI.Zoom.InactivePercent = 30
 
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
@@ -277,10 +277,10 @@ func TestLayoutForTerminalSizeZoomNotSuppressedWhenDisabledAboveWidthIsZero(t *t
 	screen.SetSize(300, 30)
 
 	cfg := config.Default()
-	cfg.UI.ZoomActivePanel = true
-	cfg.UI.ZoomActivePanelDisabledAboveWidth = 0
-	cfg.UI.PanelZoomActivePercent = 70
-	cfg.UI.PanelZoomInactivePercent = 30
+	cfg.UI.Zoom.ActivePanel = true
+	cfg.UI.Zoom.DisabledAboveWidth = 0
+	cfg.UI.Zoom.ActivePercent = 70
+	cfg.UI.Zoom.InactivePercent = 30
 
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
@@ -312,7 +312,7 @@ func TestPanelToggleZoomNoOpOnWideTerminal(t *testing.T) {
 	screen.SetSize(160, 30)
 
 	cfg := config.Default()
-	cfg.UI.ZoomActivePanelDisabledAboveWidth = 155
+	cfg.UI.Zoom.DisabledAboveWidth = 155
 
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
@@ -347,7 +347,7 @@ func TestPanelToggleZoomNoOpWhileFilePreviewOpen(t *testing.T) {
 	screen.SetSize(100, 30)
 
 	cfg := config.Default()
-	cfg.UI.ZoomActivePanel = false
+	cfg.UI.Zoom.ActivePanel = false
 
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {

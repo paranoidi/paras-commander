@@ -7,7 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-// splitOrientationFromConfig maps [ui].pane_split_orientation to geom orientation.
+// splitOrientationFromConfig maps [ui.zoom].orientation to geom orientation.
 func splitOrientationFromConfig(value string) ui.SplitOrientation {
 	if strings.EqualFold(strings.TrimSpace(value), config.PaneSplitStacked) {
 		return ui.SplitVertical
@@ -16,7 +16,7 @@ func splitOrientationFromConfig(value string) ui.SplitOrientation {
 }
 
 func (a *App) savedPaneSplitOrientation() ui.SplitOrientation {
-	return splitOrientationFromConfig(a.config.UI.PaneSplitOrientation)
+	return splitOrientationFromConfig(a.config.UI.Zoom.Orientation)
 }
 
 // effectivePaneSplitOrientation returns saved preference plus optional session-only override.

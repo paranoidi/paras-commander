@@ -7,7 +7,7 @@ import (
 )
 
 func (a *App) paneHiddenVisibilityMessage(shown bool) string {
-	respect := a.config.RespectGitignore && a.gitignoreCache != nil
+	respect := a.config.Panels.RespectGitignore && a.gitignoreCache != nil
 	if shown {
 		if respect {
 			return "Hidden and ignored files shown"

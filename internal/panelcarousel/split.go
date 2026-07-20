@@ -45,13 +45,13 @@ func DefaultLayout() Layout {
 // showSize must be empty (all true) or exactly 3 booleans.
 func ParseLayout(split []string, showSize []bool) (Layout, error) {
 	if len(split) != 3 {
-		return Layout{}, fmt.Errorf("carousel_split: want 3 entries, got %d", len(split))
+		return Layout{}, fmt.Errorf("carousel.split: want 3 entries, got %d", len(split))
 	}
 	out := DefaultLayout()
 	for i, tok := range split {
 		spec, err := parseSplitToken(strings.TrimSpace(tok))
 		if err != nil {
-			return Layout{}, fmt.Errorf("carousel_split[%d]: %w", i, err)
+			return Layout{}, fmt.Errorf("carousel.split[%d]: %w", i, err)
 		}
 		out.Splits[i] = spec
 	}
@@ -61,7 +61,7 @@ func ParseLayout(split []string, showSize []bool) (Layout, error) {
 	case 3:
 		out.ShowSize = [3]bool{showSize[0], showSize[1], showSize[2]}
 	default:
-		return Layout{}, fmt.Errorf("carousel_show_size: want 0 or 3 entries, got %d", len(showSize))
+		return Layout{}, fmt.Errorf("carousel.show_size: want 0 or 3 entries, got %d", len(showSize))
 	}
 	return out, nil
 }

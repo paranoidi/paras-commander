@@ -519,7 +519,7 @@ func (a *App) executeDelete() {
 		a.closeFileDialog()
 		return
 	}
-	_, err = ops.PlanDelete(source, a.config.ConfirmDelete, a.config.DeleteMode)
+	_, err = ops.PlanDelete(source, a.config.Operations.ConfirmDelete, a.config.Operations.DeleteMode)
 	if err != nil {
 		a.setErrorMessage("Delete", err)
 		a.closeFileDialog()

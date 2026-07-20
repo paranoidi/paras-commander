@@ -19,7 +19,7 @@ func DefaultCarouselShowSize() []bool {
 	return []bool{true, true, true}
 }
 
-// carouselSplitTokenValid reports whether tok is a valid carousel_split entry.
+// carouselSplitTokenValid reports whether tok is a valid carousel.split entry.
 func carouselSplitTokenValid(tok string) bool {
 	tok = strings.TrimSpace(tok)
 	if tok == "*" {
@@ -53,14 +53,14 @@ func carouselShowSizeValid(showSize []bool) bool {
 	return len(showSize) == 0 || len(showSize) == 3
 }
 
-func normalizeCarouselUI(ui *UIConfig) {
-	if !carouselSplitValid(ui.CarouselSplit) {
-		ui.CarouselSplit = DefaultCarouselSplit()
+func normalizeCarousel(c *CarouselConfig) {
+	if !carouselSplitValid(c.Split) {
+		c.Split = DefaultCarouselSplit()
 	}
-	if !carouselShowSizeValid(ui.CarouselShowSize) {
-		ui.CarouselShowSize = DefaultCarouselShowSize()
+	if !carouselShowSizeValid(c.ShowSize) {
+		c.ShowSize = DefaultCarouselShowSize()
 	}
-	if len(ui.CarouselShowSize) == 0 {
-		ui.CarouselShowSize = DefaultCarouselShowSize()
+	if len(c.ShowSize) == 0 {
+		c.ShowSize = DefaultCarouselShowSize()
 	}
 }
