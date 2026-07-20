@@ -183,6 +183,7 @@ func (a *App) handleTerminalWake() {
 	if feed.Exited() {
 		a.closeSubshell()
 		a.setTransientMessage("Terminal: shell exited", ui.MessageUrgencyInfo)
+		a.render()
 		return
 	}
 	if !a.model.TerminalPanel.Visible {
