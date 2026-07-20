@@ -47,6 +47,8 @@ Theme file defines icons/glyphs for statuses such as ongoing, paused, failed, ab
 
 Default configuration values should be stored in a single place and imported from there instead of putting magic values around the codebase. Built-in defaults for jobs copy progress emit, file operations (copy buffer, fsync, disk checks, CoW cloning), and disk-usage walk concurrency are exported `const` in `internal/config/builtin.go` and wired through `config.Default()`; `internal/ops` reads them via `config` (it must not define parallel magic numbers). `internal/config` must not import `internal/ops` (import-cycle constraint).
 
+Whenever a field is added, removed, renamed, or its default/behavior changes in the `internal/config` structs, update `docs/config.md` to match in the same change.
+
 # Dialog Standards
 
 All dialogs (modal overlays) must follow these navigation and rendering rules:

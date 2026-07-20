@@ -153,3 +153,5 @@ golangci-lint run ./...
 ## Configuration
 
 Paras Commander reads a TOML config file. On first run a default config is generated. Themes live in the `themes/` directory.
+
+See [`docs/config.md`](docs/config.md) for the full list of config.toml keys, defaults, and descriptions.
