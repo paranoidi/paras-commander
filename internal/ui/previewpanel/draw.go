@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // Rect is a screen rectangle for preview painting.
@@ -32,6 +33,17 @@ type DrawParams struct {
 	BodyStyle   tcell.Style
 	// FrameStyle is the border/box-drawing style; when zero, theme panel frame is used.
 	FrameStyle tcell.Style
+	// ScrollbarStyle selects the scroll indicator painted on the panel's right edge.
+	// Empty or StyleNone paints nothing.
+	ScrollbarStyle uiscrollbar.Style
+	// ScrollGutterX, when HasScrollGutterX is set, overrides the scrollbar's target column
+	// instead of deriving it from rect/mode. Carousel child previews pass the enclosing
+	// panel's real border column here, since their own rect stops one column short of it.
+	HasScrollGutterX bool
+	ScrollGutterX    int
+	// ScrollbarRailStyle, when non-zero, styles the scrollbar's non-thumb rail glyph
+	// (e.g. a Chroma Comment-token tint), overriding the plain border/frame style.
+	ScrollbarRailStyle tcell.Style
 }
 
 const gapBeforePanelTitleEnd = 2
@@ -164,7 +176,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		textW = rect.Width - 2
 	case p.Borderless:
 		textX = rect.X
-		textW = rect.Width
+		textW = rect.Width - 1
 	}
 	if textW < 1 {
 		textW = 1
@@ -181,20 +193,36 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		marginStyle = borderStyle
 	}
 	var leftMarginX, rightMarginX int
-	paintMargins := false
+	paintLeftMargin, paintRightMargin := false, false
 	if p.Embedded {
 		leftMarginX, rightMarginX = rect.X, rect.X+rect.Width-1
-		paintMargins = rect.Width >= 2
+		paintLeftMargin, paintRightMargin = rect.Width >= 2, rect.Width >= 2
 	} else if borderlessMarkdown {
 		// Margin must match the text row background exactly (contentPadStyle), not the
 		// chrome/frame color: borderless has no visible frame, so a mismatched fill here
 		// reads as a stray border where none is drawn.
 		leftMarginX, rightMarginX = rect.X, rect.X+rect.Width-1
-		paintMargins = rect.Width >= 2
+		paintLeftMargin, paintRightMargin = rect.Width >= 2, rect.Width >= 2
 		marginStyle = padStyle
-	} else if !p.Borderless {
+	} else if p.Borderless {
+		// Plain (non-markdown) borderless: reserve a right-only gutter column for the
+		// scrollbar; no left margin since the un-boxed text already starts flush at rect.X.
+		rightMarginX = rect.X + rect.Width - 1
+		paintRightMargin = rect.Width >= 2
+		marginStyle = padStyle
+	} else {
 		leftMarginX, rightMarginX = rect.X+1, rect.X+rect.Width-2
-		paintMargins = rect.Width >= 4
+		paintLeftMargin, paintRightMargin = rect.Width >= 4, rect.Width >= 4
+	}
+	scrollGutterX := rect.X + rect.Width - 1
+	if p.Embedded || borderlessMarkdown || p.Borderless {
+		scrollGutterX = rightMarginX
+	}
+	if p.HasScrollGutterX {
+		// Caller knows better: e.g. the carousel child preview's own rect stops one
+		// column short of the panel's real border (a blank margin column sits between
+		// them), so the scrollbar must target the panel's border column instead.
+		scrollGutterX = p.ScrollGutterX
 	}
 
 	if msg := strings.TrimSpace(st.ErrorMsg); msg != "" {
@@ -224,7 +252,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	}
 	for row := 0; row < contentH; row++ {
 		y := contentTop + row
-		if paintMargins {
+		if paintLeftMargin {
 			screen.SetContent(leftMarginX, y, ' ', nil, marginStyle)
 		}
 		idx := scroll + row
@@ -233,8 +261,23 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		} else {
 			drawLine(screen, textX, y, textW, lines[idx], padStyle)
 		}
-		if paintMargins {
+		if paintRightMargin {
 			screen.SetContent(rightMarginX, y, ' ', nil, marginStyle)
+		}
+	}
+
+	scrollbarActive := p.PreviewFocused || p.Embedded
+	if p.ScrollbarStyle != "" && p.ScrollbarStyle != uiscrollbar.StyleNone {
+		if metrics, show := uiscrollbar.ComputeMetrics(len(lines), contentH, scroll); show {
+			railStyle := borderStyle
+			if p.ScrollbarRailStyle != (tcell.Style{}) {
+				railStyle = p.ScrollbarRailStyle
+			}
+			uiscrollbar.Draw(uiscrollbar.DrawParams{
+				Screen: screen, X: scrollGutterX, ListTopY: contentTop, Visible: contentH,
+				Metrics: metrics, Style: p.ScrollbarStyle, Active: scrollbarActive,
+				Blocked: p.ChromeBlocked, FrameStyle: railStyle, Theme: p.Theme,
+			})
 		}
 	}
 }

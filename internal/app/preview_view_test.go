@@ -91,6 +91,40 @@ func TestMenuShortcutActivatesFullscreenFileView(t *testing.T) {
 	}
 }
 
+func TestFullscreenPreviewTextWidthReservesScrollbarGutterForPlainContent(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	app.dispatch(keymap.ActionFileView)
+
+	union, ok := app.fullscreenPreviewUnionRect()
+	if !ok {
+		t.Fatal("fullscreenPreviewUnionRect() ok = false")
+	}
+	previewRect, _ := ui.SplitFullscreenPreviewRects(union, app.model.FilePreviewThemePicker.Open, app.model.FilePreviewThemePicker.Choices)
+
+	tw, ok := app.fullscreenPreviewTextWidth()
+	if !ok {
+		t.Fatal("fullscreenPreviewTextWidth() ok = false")
+	}
+	if want := previewRect.Width - 1; tw != want {
+		t.Fatalf("fullscreenPreviewTextWidth() = %d, want %d (previewRect.Width-1, 1-col scrollbar gutter)", tw, want)
+	}
+}
+
 func TestFullscreenFilePreviewArrowDownScrollsWithoutNavigatingList(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {

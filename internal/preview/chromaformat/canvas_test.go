@@ -60,6 +60,44 @@ func TestFrameStyleFromChromaAppliesBackground(t *testing.T) {
 	}
 }
 
+func TestCommentColorMonokai(t *testing.T) {
+	fg, ok := chromaformat.CommentColor("monokai")
+	if !ok {
+		t.Fatal("expected monokai Comment color")
+	}
+	r, g, b := rgb(fg)
+	if r != 0x75 || g != 0x71 || b != 0x5e {
+		t.Fatalf("monokai comment fg = #%02x%02x%02x, want #75715e", r, g, b)
+	}
+}
+
+func TestCommentColorEmptyName(t *testing.T) {
+	if _, ok := chromaformat.CommentColor(""); ok {
+		t.Fatal("empty style name should not ok")
+	}
+}
+
+func TestCommentFrameStyleAppliesCommentForegroundKeepsBackground(t *testing.T) {
+	themeFrame := tcell.StyleDefault.Foreground(tcell.ColorBlue).Background(tcell.ColorBlack)
+	out := chromaformat.CommentFrameStyle(themeFrame, "monokai")
+	fg, bg, _ := out.Decompose()
+	r, g, b := rgb(fg)
+	if r != 0x75 || g != 0x71 || b != 0x5e {
+		t.Fatalf("frame fg = #%02x%02x%02x, want monokai comment color", r, g, b)
+	}
+	if bg != tcell.ColorBlack {
+		t.Fatalf("frame bg = %v, want unchanged (ColorBlack)", bg)
+	}
+}
+
+func TestCommentFrameStyleUnknownStyleReturnsFrameUnchanged(t *testing.T) {
+	themeFrame := tcell.StyleDefault.Foreground(tcell.ColorBlue)
+	out := chromaformat.CommentFrameStyle(themeFrame, "")
+	if out != themeFrame {
+		t.Fatal("empty style name should return frame unchanged")
+	}
+}
+
 func rgb(c tcell.Color) (r, g, b int) {
 	cr, cg, cb := c.RGB()
 	return int(cr), int(cg), int(cb)

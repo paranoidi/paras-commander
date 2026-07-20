@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 func quickViewTitleRowGeom(panelWidth int) (titleX, innerRight, contentCols, y int) {
@@ -388,5 +389,233 @@ func TestPaintQuickViewTitleRowGapIsBorderDash(t *testing.T) {
 	gap := tcelltest.TextAt(screen, titleX+gapStart, y, gapBeforePanelTitleEnd)
 	if gap != strings.Repeat("─", gapBeforePanelTitleEnd) {
 		t.Fatalf("gap = %q, want %q", gap, strings.Repeat("─", gapBeforePanelTitleEnd))
+	}
+}
+
+// overflowingLines returns HighlightedCells for n one-character lines, more than enough
+// to overflow any contentH used by these tests.
+func overflowingLines(n int, body tcell.Style) []AnsiCell {
+	cells := make([]AnsiCell, 0, n*2)
+	for range n {
+		cells = append(cells, AnsiCell{R: 'x', St: body}, AnsiCell{R: '\n', St: body})
+	}
+	return cells
+}
+
+func TestDrawBoxedPreviewScrollbarVisibleRegardlessOfFocus(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	gutterX := rect.X + panelWidth - 1
+
+	draw := func(focused bool) {
+		Draw(screen, rect, State{
+			Open:             true,
+			TitleBase:        "sample.go",
+			Source:           SourceInternalHighlighted,
+			HighlightedCells: overflowingLines(20, body),
+		}, DrawParams{
+			Theme:          styles,
+			PreviewFocused: focused,
+			BodyStyle:      body,
+			FrameStyle:     styles.PanelActiveFrame,
+			ScrollbarStyle: uiscrollbar.StyleThumb,
+		})
+	}
+
+	// Quick view's boxed preview usually renders unfocused (the user is browsing the
+	// *other* panel), so the thumb must still show — hiding it here was the reported bug.
+	contentH := panelHeight - 2
+	hasThumbGlyph := func() bool {
+		for row := 0; row < contentH; row++ {
+			c, _, _ := screen.Get(gutterX, rect.Y+1+row)
+			if c != "│" {
+				return true
+			}
+		}
+		return false
+	}
+
+	draw(true)
+	if !hasThumbGlyph() {
+		t.Fatal("no scrollbar thumb glyph found while focused, want one distinct from the plain border")
+	}
+
+	draw(false)
+	if !hasThumbGlyph() {
+		t.Fatal("no scrollbar thumb glyph found while unfocused (quick view), want it to still be visible")
+	}
+}
+
+func TestDrawBoxedPreviewScrollbarHiddenWhenContentFits(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+
+	Draw(screen, rect, State{
+		Open:             true,
+		TitleBase:        "sample.go",
+		Source:           SourceInternalHighlighted,
+		HighlightedCells: []AnsiCell{{R: 'x', St: body}},
+	}, DrawParams{
+		Theme:          styles,
+		PreviewFocused: true,
+		BodyStyle:      body,
+		FrameStyle:     styles.PanelActiveFrame,
+		ScrollbarStyle: uiscrollbar.StyleThumb,
+	})
+
+	ch, _, _ := screen.Get(rect.X+panelWidth-1, rect.Y+1)
+	if ch != "│" {
+		t.Fatalf("gutter col with content that fits = %q, want plain border (nothing to scroll)", ch)
+	}
+}
+
+func TestDrawPlainBorderlessPreviewReservesScrollbarGutter(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	gutterX := rect.X + panelWidth - 1
+
+	Draw(screen, rect, State{
+		Open:             true,
+		TitleBase:        "sample.go",
+		Source:           SourceInternalHighlighted,
+		HighlightedCells: overflowingLines(20, body),
+	}, DrawParams{
+		Theme:          styles,
+		Borderless:     true,
+		PreviewFocused: true,
+		BodyStyle:      body,
+		FrameStyle:     styles.PanelActiveFrame,
+		ScrollbarStyle: uiscrollbar.StyleThumb,
+	})
+
+	lastTextCh, _, _ := screen.Get(gutterX, rect.Y+1)
+	if lastTextCh == "x" {
+		t.Fatalf("last column = %q, want scrollbar gutter reserved (not text)", lastTextCh)
+	}
+}
+
+func TestDrawEmbeddedPreviewScrollGutterXOverridesToPanelBorder(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	body := BodyStyle(styles, false)
+	// The carousel child column's own rect (panelWidth) stops one column short of the
+	// enclosing panel's real border; ScrollGutterX simulates that border column, one past
+	// this rect's own right edge.
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	panelBorderX := rect.X + panelWidth
+
+	Draw(screen, rect, State{
+		Open:             true,
+		TitleBase:        "sample.go",
+		Source:           SourceInternalHighlighted,
+		HighlightedCells: overflowingLines(20, body),
+	}, DrawParams{
+		Theme:            styles,
+		Embedded:         true,
+		BodyStyle:        body,
+		FrameStyle:       styles.PanelActiveFrame,
+		ScrollbarStyle:   uiscrollbar.StyleThumb,
+		HasScrollGutterX: true,
+		ScrollGutterX:    panelBorderX,
+	})
+
+	foundThumb := false
+	for row := 0; row < panelHeight-1; row++ {
+		if c, _, _ := screen.Get(panelBorderX, rect.Y+1+row); c != "│" {
+			foundThumb = true
+			break
+		}
+	}
+	if !foundThumb {
+		t.Fatal("no scrollbar glyph found at overridden ScrollGutterX column")
+	}
+	// The rect's own margin column (one left of the override) must stay a plain blank
+	// margin — the scrollbar must not also paint there.
+	rightMarginX := rect.X + panelWidth - 1
+	for row := 0; row < panelHeight-1; row++ {
+		if c, _, _ := screen.Get(rightMarginX, rect.Y+1+row); c != " " {
+			t.Fatalf("embedded margin col at row %d = %q, want blank (scrollbar should be at the override column only)", row, c)
+		}
+	}
+}
+
+func TestDrawFullscreenPreviewScrollbarRailStyleOverride(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 10
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	gutterX := rect.X + panelWidth - 1
+	railStyle := tcell.StyleDefault.Foreground(tcell.NewRGBColor(0x75, 0x71, 0x5e))
+
+	// Overflowing content so the scrollbar actually paints; the non-thumb rows use the
+	// plain rail glyph ('│'), which should carry the override style.
+	Draw(screen, rect, State{
+		Open:             true,
+		TitleBase:        "sample.go",
+		Source:           SourceInternalHighlighted,
+		HighlightedCells: overflowingLines(20, body),
+	}, DrawParams{
+		Theme:              styles,
+		Borderless:         true,
+		PreviewFocused:     true,
+		BodyStyle:          body,
+		FrameStyle:         styles.PanelActiveFrame,
+		ScrollbarStyle:     uiscrollbar.StyleThumb,
+		ScrollbarRailStyle: railStyle,
+	})
+
+	found := false
+	for row := 0; row < panelHeight-1; row++ {
+		c, st, _ := screen.Get(gutterX, rect.Y+1+row)
+		if c == "│" {
+			found = true
+			if st != railStyle {
+				t.Fatalf("gutter rail style at row %d = %v, want override %v", row, st, railStyle)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("no plain rail glyph found to check style against (content should overflow but not fill every row)")
 	}
 }

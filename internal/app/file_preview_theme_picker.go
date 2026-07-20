@@ -272,15 +272,14 @@ func (a *App) fullscreenPreviewTextWidth() (int, bool) {
 		return 1, false
 	}
 	previewRect, _ := ui.SplitFullscreenPreviewRects(union, a.model.FilePreviewThemePicker.Open, a.model.FilePreviewThemePicker.Choices)
-	tw := previewRect.Width // borderless: full width, no side border columns
+	tw := previewRect.Width // borderless: no side border columns, only a right-side scrollbar gutter
+	if a.fullscreenPreviewRendersMarkdown() {
+		tw -= 2 // 1-space left margin + 1-space right margin/scrollbar gutter for rendered markdown
+	} else {
+		tw-- // 1-space right scrollbar gutter
+	}
 	if tw < 1 {
 		tw = 1
-	}
-	if a.fullscreenPreviewRendersMarkdown() {
-		tw -= 2 // 1-space left/right margin for rendered markdown
-		if tw < 1 {
-			tw = 1
-		}
 	}
 	return tw, true
 }

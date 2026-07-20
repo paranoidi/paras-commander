@@ -644,7 +644,12 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 			ctx.FileListActive && (state.Filter.Active || state.Filter.Editing))
 	if paintCarouselFilePreview {
 		if previewRect, ok := panelcarousel.ChildPreviewPaintRect(rect, showChildCol, display.CarouselLayout); ok {
-			drawFilePreviewPanel(screen, Rect(previewRect), display.CarouselFilePreview, panelStyle.Styles, ctx.ChromeBlocked, false, false, true, false, state.PathString(), display.UserHomeDir)
+			// The child preview's own rect stops one column short of the panel's real
+			// border (a blank margin column sits between them) — point the scrollbar at
+			// the border column itself, matching the plain file list's scrollbar position,
+			// and use the panel's own (non-Chroma-tinted) border color for the rail so it
+			// matches that border column's usual color, same as the file list's scrollbar.
+			drawFilePreviewPanel(screen, Rect(previewRect), display.CarouselFilePreview, panelStyle.Styles, ctx.ChromeBlocked, false, false, true, false, state.PathString(), display.UserHomeDir, panelStyle.ScrollbarStyle, rect.X+rect.Width-1, borderStyle)
 		}
 	}
 	if !showChildCol {

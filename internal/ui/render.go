@@ -465,7 +465,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 				previewRect.Height--
 			}
 		}
-		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, true, "", "")
+		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, true, "", "", model.PanelScrollbar, -1, tcell.Style{})
 		if model.FullscreenFilePreviewDraw.Search.Editing && layout.Footer.Height > 0 {
 			drawFilePreviewSearchBar(screen, Rect{X: 0, Y: layout.Footer.Y - 1, Width: layout.Width, Height: 1},
 				model.FullscreenFilePreviewSearchField, styles)
@@ -534,7 +534,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 	if side.ColumnWidth > 0 && side.ShowPreview {
 		pvFocused := model.renderSubFocus() == SubFocusInactivePreview
 		drawFilePreviewPanel(screen, side.FileRect, model.FilePreviewDraw, styles, side.ChromeBlocked, pvFocused,
-			model.QuickViewDisplayActive(), false, false, ownState.PathString(), model.UserHomeDir)
+			model.QuickViewDisplayActive(), false, false, ownState.PathString(), model.UserHomeDir, model.PanelScrollbar, -1, tcell.Style{})
 	} else if side.ColumnWidth > 0 {
 		drawPanel(screen, side.FileRect, model.PanelForFileListRender(side.PanelID),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},

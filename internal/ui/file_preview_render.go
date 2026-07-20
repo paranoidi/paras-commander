@@ -7,27 +7,48 @@ import (
 	"github.com/paranoidi/paras-commander/internal/preview/chromaformat"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // drawFilePreviewPanel paints a file preview panel (quick view, fullscreen, or carousel child).
-func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome, embedded, borderless bool, panelPath, userHomeDir string) {
+// scrollGutterX overrides the scrollbar's target column when >= 0 (see previewpanel.DrawParams);
+// pass -1 to let previewpanel derive it from rect/mode. scrollbarRailStyle overrides the
+// scrollbar's non-thumb rail color when non-zero (e.g. the carousel child preview passes the
+// enclosing panel's own border color, since its embedded chrome is otherwise Chroma-tinted and
+// would otherwise mismatch the border column the rail is painted on); pass a zero tcell.Style
+// to use the mode's default (frame color, or a dimmed Chroma "Comment" tint in fullscreen).
+func drawFilePreviewPanel(screen tcell.Screen, rect Rect, st FilePreviewState, styles theme.Theme, chromeBlocked, previewFocused, quickViewChrome, embedded, borderless bool, panelPath, userHomeDir string, scrollbarStyle uiscrollbar.Style, scrollGutterX int, scrollbarRailStyle tcell.Style) {
 	// Use the style stored with the content so border and body always match.
 	// ErrorMsg states have no syntax-highlighted body, so suppress chroma border tint.
 	chromaStyleName := st.ChromaStyle
 	if strings.TrimSpace(st.ErrorMsg) != "" {
 		chromaStyleName = ""
 	}
+	frame := filePreviewFrameStyle(styles, previewFocused, chromeBlocked, embedded, chromaStyleName)
+	// Fullscreen's scrollbar rail reads as a dimmed Chroma "Comment" tint rather than the
+	// full frame color, so it doesn't compete visually with the syntax-highlighted body.
+	railStyle := frame
+	if borderless && chromaStyleName != "" && !chromeBlocked {
+		railStyle = chromaformat.CommentFrameStyle(frame, chromaStyleName)
+	}
+	if scrollbarRailStyle != (tcell.Style{}) {
+		railStyle = scrollbarRailStyle
+	}
 	previewpanel.Draw(screen, previewpanel.Rect(rect), st, previewpanel.DrawParams{
-		Theme:           styles,
-		ChromeBlocked:   chromeBlocked,
-		PreviewFocused:  previewFocused,
-		QuickViewChrome: quickViewChrome,
-		Embedded:        embedded,
-		Borderless:      borderless,
-		PanelPath:       panelPath,
-		UserHomeDir:     userHomeDir,
-		BodyStyle:       FilePreviewBodyStyle(styles, chromeBlocked),
-		FrameStyle:      filePreviewFrameStyle(styles, previewFocused, chromeBlocked, embedded, chromaStyleName),
+		Theme:              styles,
+		ChromeBlocked:      chromeBlocked,
+		PreviewFocused:     previewFocused,
+		QuickViewChrome:    quickViewChrome,
+		Embedded:           embedded,
+		Borderless:         borderless,
+		PanelPath:          panelPath,
+		UserHomeDir:        userHomeDir,
+		BodyStyle:          FilePreviewBodyStyle(styles, chromeBlocked),
+		FrameStyle:         frame,
+		ScrollbarStyle:     scrollbarStyle,
+		HasScrollGutterX:   scrollGutterX >= 0,
+		ScrollGutterX:      scrollGutterX,
+		ScrollbarRailStyle: railStyle,
 	})
 }
 
