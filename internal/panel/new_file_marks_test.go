@@ -82,6 +82,26 @@ func TestApplyPeriodicRefreshMarksExternallyCreatedFileAsNew(t *testing.T) {
 	}
 }
 
+func TestSetShowHiddenDoesNotMarkRevealedDotfilesAsNew(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	if err := os.WriteFile(dir+"/.hidden", nil, 0o644); err != nil {
+		t.Fatalf("write file: %v", err)
+	}
+	loc := pathloc.MustParse(dir)
+	s := State{Path: pathloc.MustParse(t.TempDir()), Sort: defaultSortState()}
+	if err := s.load(loc, "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if err := s.SetShowHidden(true, 10); err != nil {
+		t.Fatalf("SetShowHidden: %v", err)
+	}
+	ent := localfs.Entry{Name: ".hidden", Type: localfs.EntryFile}
+	if got := s.NewFileMarkTier(ent); got != panellist.NewFileMarkNone {
+		t.Fatalf("tier = %v, want none for pre-existing dotfile revealed by SetShowHidden", got)
+	}
+}
+
 func TestLoadIntoDirectoryDoesNotMarkExistingEntriesAsNew(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

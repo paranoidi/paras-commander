@@ -77,6 +77,11 @@ type State struct {
 	GitignoreActive bool
 	// DotfilesHiddenActive is true when dotfiles are hidden and the current directory has dot-prefixed names.
 	DotfilesHiddenActive bool
+	// entriesShowHidden is the ShowHidden value in effect when Entries was last populated. Used to
+	// skip the newly-appeared-file diff when a same-dir reload is really a visibility filter toggle
+	// (SetShowHidden) rather than external filesystem changes — otherwise files that were always on
+	// disk but newly revealed by the filter would get marked as new.
+	entriesShowHidden bool
 	// GitColumnActive is true when the listing path is inside a Git work tree with valid metadata (local panels only).
 	GitColumnActive bool
 	// GitPending is true while async git status is in flight for this listing.
@@ -1218,9 +1223,10 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 		wasCentered = s.cursorAppearsCentered(s.effectiveFileListViewportRows(viewportRows))
 	}
 	var newlyAppeared []string
-	if sameDirReload {
+	if sameDirReload && s.entriesShowHidden == s.ShowHidden {
 		newlyAppeared = newlyAppearedNames(s.Entries, localEntries)
 	}
+	s.entriesShowHidden = s.ShowHidden
 	s.Path = listingLoc
 	if listingLoc.IsRemote() {
 		s.GitignoreActive = false
