@@ -44,7 +44,7 @@ func TestSelectionsStripMarkOnFileRow(t *testing.T) {
 		SelectedPaths:        map[string]bool{filePath: true},
 	}
 
-	drawSelectionsStrip(screen, rect, state, true, false, SelectionsStripOpts{
+	drawSelectionsStrip(screen, rect, state, false, false, SelectionsStripOpts{
 		Styles: styles, ShowSelectionSizeOnBottom: true, ScrollbarStyle: uiscrollbar.StyleNone,
 		ScrollbarShowInactive: true, PanelFileListActive: true,
 	})
@@ -67,6 +67,67 @@ func TestSelectionsStripMarkOnFileRow(t *testing.T) {
 	gotFG, _, _ := markStyle.Decompose()
 	if gotFG != wantFG {
 		t.Fatalf("selection mark foreground = %v, want panel.row.selected %v", gotFG, wantFG)
+	}
+}
+
+// TestSelectionsStripMarkOnCursorRow verifies the active row's selection mark follows the
+// cursor row's icon color override instead of staying the static panel.row.selected color.
+func TestSelectionsStripMarkOnCursorRow(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	filePath := filepath.Join(dir, "picked.txt")
+	if err := os.WriteFile(filePath, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	styles := theme.Default()
+	wantFG, ok := styles.PanelFileIconFG["panel.active.row.cursor"]
+	if !ok {
+		t.Fatal("theme missing panel.active.row.cursor icon override")
+	}
+
+	const width, height = 60, 8
+	screen.SetSize(width, height)
+	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
+	state := panel.State{
+		Path:                 pathloc.MustParse(sub),
+		SelectionsStripOrder: []string{filePath},
+		SelectedPaths:        map[string]bool{filePath: true},
+	}
+
+	drawSelectionsStrip(screen, rect, state, true, false, SelectionsStripOpts{
+		Styles: styles, ShowSelectionSizeOnBottom: true, ScrollbarStyle: uiscrollbar.StyleNone,
+		ScrollbarShowInactive: true, PanelFileListActive: true,
+	})
+
+	rowY := rect.Y + 1
+	wantMark := styles.SymbolFilelistSelectionSubtree()
+	markCol := -1
+	for col := rect.X + 1; col < rect.X+rect.Width-1; col++ {
+		ch, _, _ := screen.Get(col, rowY)
+		r, _ := utf8.DecodeRuneInString(ch)
+		if r == wantMark {
+			markCol = col
+			break
+		}
+	}
+	if markCol < 0 {
+		t.Fatal("selection mark not found on cursor row")
+	}
+	_, markStyle, _ := screen.Get(markCol, rowY)
+	gotFG, _, _ := markStyle.Decompose()
+	if gotFG != wantFG {
+		t.Fatalf("cursor row selection mark foreground = %v, want panel.active.row.cursor icon %v", gotFG, wantFG)
 	}
 }
 

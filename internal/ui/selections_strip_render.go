@@ -94,7 +94,6 @@ func drawSelectionsStrip(
 	if chromeBlocked {
 		markSource = styles.PanelBlockedRowSelected
 	}
-	markFG, _, _ := markSource.Decompose()
 
 	mark := styles.SymbolFilelistSelectionSubtree()
 	selectionsStripMarkPrefix := " " + string(mark) + " "
@@ -106,14 +105,17 @@ func drawSelectionsStrip(
 		y := rect.Y + 1 + row
 		idx := scroll + row
 		baseStyle := styles.PanelRowFile
+		cursorStyleKey := ""
 		if chromeBlocked {
 			baseStyle = styles.PanelBlockedRowFile
 		}
 		if stripFocused && idx == state.SelectionsStripCursor {
 			if chromeBlocked {
 				baseStyle = styles.PanelBlockedCursor
+				cursorStyleKey = "panel.blocked.row.cursor"
 			} else {
 				baseStyle = styles.PanelCursorActive
+				cursorStyleKey = "panel.active.row.cursor"
 			}
 		}
 
@@ -138,7 +140,7 @@ func drawSelectionsStrip(
 			spans = []primitive.Span{{
 				Start: markStart,
 				End:   markEnd,
-				Style: baseStyle.Foreground(markFG),
+				Style: baseStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, markSource)),
 			}}
 		}
 		primitive.StyledText(screen, contentStart, y, rowTextWidth, text, baseStyle, spans)
