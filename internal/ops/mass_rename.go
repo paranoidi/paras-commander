@@ -222,26 +222,15 @@ func MassRenameRowErrors(rows []MassRenameRow) []error {
 	if len(rows) == 0 {
 		return out
 	}
-	dir := filepath.Dir(rows[0].SourcePath)
-	mixedDir := &Error{Op: "mass-rename", Text: "all selected files must be in the same directory"}
-	for i, r := range rows {
-		if filepath.Dir(r.SourcePath) != dir {
-			out[i] = mixedDir
-		}
-	}
-	if mixedDirErr := firstMassRenameRowError(out); mixedDirErr != nil {
-		for i := range out {
-			if out[i] == nil {
-				out[i] = mixedDirErr
-			}
-		}
-		return out
-	}
 	sourceSet := make(map[string]struct{}, len(rows))
 	for _, r := range rows {
 		sourceSet[r.SourcePath] = struct{}{}
 	}
-	newToIndices := make(map[string][]int, len(rows))
+	type dirBase struct {
+		dir  string
+		base string
+	}
+	newToIndices := make(map[dirBase][]int, len(rows))
 	for i, r := range rows {
 		if r.NewBase == r.OldBase {
 			continue
@@ -258,14 +247,15 @@ func MassRenameRowErrors(rows []MassRenameRow) []error {
 			out[i] = &Error{Op: "mass-rename", Text: fmt.Sprintf("resulting name is not valid UTF-8: %q", r.NewBase)}
 			continue
 		}
-		newToIndices[r.NewBase] = append(newToIndices[r.NewBase], i)
+		key := dirBase{dir: filepath.Dir(r.SourcePath), base: r.NewBase}
+		newToIndices[key] = append(newToIndices[key], i)
 	}
-	for newBase, indices := range newToIndices {
+	for key, indices := range newToIndices {
 		if len(indices) < 2 {
 			continue
 		}
 		prev := rows[indices[0]].OldBase
-		dup := &Error{Op: "mass-rename", Text: fmt.Sprintf("duplicate target name %q (from %q and %q)", newBase, prev, rows[indices[1]].OldBase)}
+		dup := &Error{Op: "mass-rename", Text: fmt.Sprintf("duplicate target name %q (from %q and %q)", key.base, prev, rows[indices[1]].OldBase)}
 		for _, i := range indices {
 			massRenameSetRowError(out, i, dup)
 		}
@@ -274,7 +264,7 @@ func MassRenameRowErrors(rows []MassRenameRow) []error {
 		if r.NewBase == r.OldBase || out[i] != nil {
 			continue
 		}
-		dst := filepath.Join(dir, r.NewBase)
+		dst := filepath.Join(filepath.Dir(r.SourcePath), r.NewBase)
 		if fi, err := os.Lstat(dst); err == nil {
 			if fi.IsDir() {
 				massRenameSetRowError(out, i, &Error{Op: "mass-rename", Text: fmt.Sprintf("target %q already exists", r.NewBase)})
@@ -534,25 +524,25 @@ func MassRenameHasWork(rows []MassRenameRow) bool {
 func ExecuteMassRename(rows []MassRenameRow) error {
 	type pair struct {
 		src     string
+		dir     string
 		newBase string
 	}
 	var work []pair
 	for _, r := range rows {
 		if r.NewBase != r.OldBase {
-			work = append(work, pair{src: r.SourcePath, newBase: r.NewBase})
+			work = append(work, pair{src: r.SourcePath, dir: filepath.Dir(r.SourcePath), newBase: r.NewBase})
 		}
 	}
 	if len(work) == 0 {
 		return nil
 	}
-	dir := filepath.Dir(work[0].src)
 	used := make(map[string]struct{}, len(rows)*3)
 	for _, r := range rows {
 		used[r.SourcePath] = struct{}{}
 	}
 	temps := make([]string, len(work))
 	for i := range work {
-		t, err := pickMassRenameTemp(dir, used)
+		t, err := pickMassRenameTemp(work[i].dir, used)
 		if err != nil {
 			return err
 		}
@@ -568,11 +558,11 @@ func ExecuteMassRename(rows []MassRenameRow) error {
 		}
 	}
 	for i := range work {
-		dst := filepath.Join(dir, work[i].newBase)
+		dst := filepath.Join(work[i].dir, work[i].newBase)
 		if err := localfs.Rename(temps[i], dst); err != nil {
 			_ = localfs.Rename(temps[i], work[i].src)
 			for j := i - 1; j >= 0; j-- {
-				prevDst := filepath.Join(dir, work[j].newBase)
+				prevDst := filepath.Join(work[j].dir, work[j].newBase)
 				_ = localfs.Rename(prevDst, work[j].src)
 			}
 			return fmt.Errorf("mass rename stage2 %q -> %q: %w", temps[i], dst, err)

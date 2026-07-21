@@ -312,6 +312,84 @@ func TestMassRenameRowErrorsDuplicateTargetsBothRows(t *testing.T) {
 	}
 }
 
+func TestMassRenameRowErrorsAllowsMixedDirectories(t *testing.T) {
+	root := t.TempDir()
+	dirA := filepath.Join(root, "dirA")
+	dirB := filepath.Join(root, "dirB")
+	if err := os.Mkdir(dirA, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(dirB, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rows := []MassRenameRow{
+		{SourcePath: filepath.Join(dirA, "foo.txt"), OldBase: "foo.txt", NewBase: "renamed.txt"},
+		{SourcePath: filepath.Join(dirB, "bar.txt"), OldBase: "bar.txt", NewBase: "other.txt"},
+	}
+	errs := MassRenameRowErrors(rows)
+	for i, err := range errs {
+		if err != nil {
+			t.Fatalf("row %d: unexpected error %v", i, err)
+		}
+	}
+}
+
+func TestMassRenameRowErrorsDuplicateScopedPerDirectory(t *testing.T) {
+	root := t.TempDir()
+	dirA := filepath.Join(root, "dirA")
+	dirB := filepath.Join(root, "dirB")
+	if err := os.Mkdir(dirA, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(dirB, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	rows := []MassRenameRow{
+		{SourcePath: filepath.Join(dirA, "a.txt"), OldBase: "a.txt", NewBase: "same.txt"},
+		{SourcePath: filepath.Join(dirB, "b.txt"), OldBase: "b.txt", NewBase: "same.txt"},
+	}
+	errs := MassRenameRowErrors(rows)
+	if errs[0] != nil || errs[1] != nil {
+		t.Fatalf("same target name in different directories should not conflict, got %#v", errs)
+	}
+}
+
+func TestMassRenameExecuteMultiDirectory(t *testing.T) {
+	root := t.TempDir()
+	dirA := filepath.Join(root, "dirA")
+	dirB := filepath.Join(root, "dirB")
+	if err := os.Mkdir(dirA, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(dirB, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	srcA := filepath.Join(dirA, "foo.txt")
+	srcB := filepath.Join(dirB, "bar.txt")
+	if err := os.WriteFile(srcA, []byte("A"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(srcB, []byte("B"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rows := []MassRenameRow{
+		{SourcePath: srcA, OldBase: "foo.txt", NewBase: "renamed.txt"},
+		{SourcePath: srcB, OldBase: "bar.txt", NewBase: "renamed.txt"},
+	}
+	if err := MassRenameValidateRows(rows); err != nil {
+		t.Fatal(err)
+	}
+	if err := ExecuteMassRename(rows); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := os.ReadFile(filepath.Join(dirA, "renamed.txt")); err != nil || string(b) != "A" {
+		t.Fatalf("dirA/renamed.txt: content %q, err %v", b, err)
+	}
+	if b, err := os.ReadFile(filepath.Join(dirB, "renamed.txt")); err != nil || string(b) != "B" {
+		t.Fatalf("dirB/renamed.txt: content %q, err %v", b, err)
+	}
+}
+
 func TestMassRenameRegexCompileUserMessage(t *testing.T) {
 	_, err := MassRenameCompileRegex("a++", false)
 	if err == nil {
