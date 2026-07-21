@@ -34,6 +34,9 @@ type Entry struct {
 	// blocks the UI thread for seconds).
 	Dev      uint64
 	DevValid bool
+	// AccessDenied is derived from the listing Lstat (no re-stat at paint time), same
+	// rationale as Dev above.
+	AccessDenied bool
 }
 
 // ListOptions controls directory listing behavior.
@@ -83,21 +86,23 @@ func ListDir(path string, opts ListOptions) (DirectoryListing, error) {
 			continue
 		}
 
+		path := filepath.Join(cleanPath, name)
 		info, err := dirEntry.Info()
 		if err != nil {
-			return DirectoryListing{}, fmt.Errorf("read metadata for %q: %w", filepath.Join(cleanPath, name), err)
+			return DirectoryListing{}, fmt.Errorf("read metadata for %q: %w", path, err)
 		}
 
 		dev, devOK := entryDevice(info)
 		entries = append(entries, Entry{
-			Name:       name,
-			Path:       filepath.Join(cleanPath, name),
-			Type:       classify(info.Mode()),
-			Size:       info.Size(),
-			Mode:       info.Mode(),
-			ModifiedAt: info.ModTime(),
-			Dev:        dev,
-			DevValid:   devOK,
+			Name:         name,
+			Path:         path,
+			Type:         classify(info.Mode()),
+			Size:         info.Size(),
+			Mode:         info.Mode(),
+			ModifiedAt:   info.ModTime(),
+			Dev:          dev,
+			DevValid:     devOK,
+			AccessDenied: entryAccessDenied(path, info),
 		})
 	}
 

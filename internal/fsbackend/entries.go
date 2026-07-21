@@ -11,14 +11,15 @@ import (
 // Entry.Path is the canonical pathloc string (host path or sftp:// URI).
 func ToPanelEntry(e Entry) localfs.Entry {
 	return localfs.Entry{
-		Name:       e.Name,
-		Path:       e.Loc.String(),
-		Type:       LocalTypeFromBackend(e.Type),
-		Size:       e.Size,
-		Mode:       e.Mode,
-		ModifiedAt: e.ModifiedAt,
-		Dev:        e.Dev,
-		DevValid:   e.DevValid,
+		Name:         e.Name,
+		Path:         e.Loc.String(),
+		Type:         LocalTypeFromBackend(e.Type),
+		Size:         e.Size,
+		Mode:         e.Mode,
+		ModifiedAt:   e.ModifiedAt,
+		Dev:          e.Dev,
+		DevValid:     e.DevValid,
+		AccessDenied: e.AccessDenied,
 	}
 }
 
@@ -35,14 +36,15 @@ func ToPanelEntries(entries []Entry) ([]localfs.Entry, error) {
 func FromPanelEntry(e localfs.Entry) Entry {
 	loc, _ := pathloc.Parse(e.Path)
 	return Entry{
-		Name:       e.Name,
-		Loc:        loc,
-		Type:       BackendTypeFromLocal(e.Type),
-		Size:       e.Size,
-		Mode:       e.Mode,
-		ModifiedAt: e.ModifiedAt,
-		Dev:        e.Dev,
-		DevValid:   e.DevValid,
+		Name:         e.Name,
+		Loc:          loc,
+		Type:         BackendTypeFromLocal(e.Type),
+		Size:         e.Size,
+		Mode:         e.Mode,
+		ModifiedAt:   e.ModifiedAt,
+		Dev:          e.Dev,
+		DevValid:     e.DevValid,
+		AccessDenied: e.AccessDenied,
 	}
 }
 

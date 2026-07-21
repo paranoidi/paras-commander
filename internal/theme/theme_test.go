@@ -27,6 +27,7 @@ func TestDefaultMatchesEmbeddedTheme(t *testing.T) {
 
 	assertSymbolRuneEqual(t, "SymbolFilelistSelectionSubtree", got.SymbolFilelistSelectionSubtree(), embedded.SymbolFilelistSelectionSubtree())
 	assertSymbolRuneEqual(t, "SymbolFilelistNew", got.SymbolFilelistNew(), embedded.SymbolFilelistNew())
+	assertSymbolRuneEqual(t, "SymbolFilelistNoPermission", got.SymbolFilelistNoPermission(), embedded.SymbolFilelistNoPermission())
 	assertSymbolStrEqual(t, "FolderIconDefault", got.FolderIconGlyph(FolderIconDefault), embedded.FolderIconGlyph(FolderIconDefault))
 	assertSymbolStrEqual(t, "FolderIconOpen", got.FolderIconGlyph(FolderIconOpen), embedded.FolderIconGlyph(FolderIconOpen))
 	assertSymbolStrEqual(t, "FolderIconScanning", got.FolderIconGlyph(FolderIconScanning), embedded.FolderIconGlyph(FolderIconScanning))
@@ -46,6 +47,7 @@ func TestDefaultMatchesEmbeddedTheme(t *testing.T) {
 	assertStyleEqual(t, "PanelRowMarkNewPrevious", got.PanelRowMarkNewPrevious, embedded.PanelRowMarkNewPrevious)
 	assertStyleEqual(t, "PanelIconFolderOpen", got.PanelIconFolderOpen, embedded.PanelIconFolderOpen)
 	assertStyleEqual(t, "PanelRowMarkSelectionSubtree", got.PanelRowMarkSelectionSubtree, embedded.PanelRowMarkSelectionSubtree)
+	assertStyleEqual(t, "PanelRowMarkNoPermission", got.PanelRowMarkNoPermission, embedded.PanelRowMarkNoPermission)
 	assertStyleEqual(t, "PanelIconFolderMount", got.PanelIconFolderMount, embedded.PanelIconFolderMount)
 	assertStyleEqual(t, "PanelRowSelected", got.PanelRowSelected, embedded.PanelRowSelected)
 }

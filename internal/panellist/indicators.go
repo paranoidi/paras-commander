@@ -50,6 +50,9 @@ func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th th
 	if subtree && width > n+2 {
 		n += 2
 	}
+	if entry.AccessDenied && width > n+2 {
+		n += 2
+	}
 	return n
 }
 
@@ -116,6 +119,10 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 	}
 	if subtree && width > used+2 {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistSelectionSubtree(), NameIdx: -1})
+		used += 2
+	}
+	if entry.AccessDenied && width > used+2 {
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistNoPermission(), NameIdx: -1})
 	}
 	return out
 }
@@ -130,7 +137,7 @@ func RunesFromDisplay(display []DisplayRune) []rune {
 }
 
 // SuffixSpanStyle returns foreground style for one suffix glyph rune.
-func SuffixSpanStyle(r rune, suffix RowSuffix, jobStatus, cursorStyleKey string, th theme.Theme, chromeBlocked bool) (tcell.Style, bool) {
+func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, cursorStyleKey string, th theme.Theme, chromeBlocked bool) (tcell.Style, bool) {
 	switch {
 	case r == suffix.JobGlyph && suffix.JobGlyph != 0:
 		base := th.PanelJobMarkStyle(jobStatus, suffix.JobWrite)
@@ -150,6 +157,8 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, jobStatus, cursorStyleKey string,
 			base = th.PanelBlockedRowSelected
 		}
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
+	case r == th.SymbolFilelistNoPermission() && entry.AccessDenied:
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelRowMarkNoPermission)), true
 	default:
 		return tcell.StyleDefault, false
 	}
@@ -168,7 +177,8 @@ func ListingSuffixSpans(
 	nameBGAt func(displayIndex int) tcell.Style,
 ) []primitive.Span {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
-	if suffix.JobGlyph == 0 && suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree {
+	if suffix.JobGlyph == 0 && suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree &&
+		!entry.AccessDenied {
 		return nil
 	}
 	display := EntryDisplayRunes(entry, nameWidth, showIcons, suffix, th)
@@ -180,7 +190,7 @@ func ListingSuffixSpans(
 	var spans []primitive.Span
 	for i := decStart; i < len(display); i++ {
 		r := display[i].Rune
-		spanStyle, ok := SuffixSpanStyle(r, suffix, jobStatus, cursorStyleKey, th, chromeBlocked)
+		spanStyle, ok := SuffixSpanStyle(r, suffix, entry, jobStatus, cursorStyleKey, th, chromeBlocked)
 		if !ok {
 			continue
 		}

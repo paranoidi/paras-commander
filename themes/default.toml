@@ -76,6 +76,7 @@ selection_subtree = { fg = "yellow" }
 new = { fg = "bright_green" }
 new.previous = { fg = "bright_yellow" }
 renamed = { fg = "cyan" }
+no_permission = { fg = "bright_black" }
 job = { fg = "green" }
 job.read = { fg = "yellow" }
 job.decision = { fg = "red" }
@@ -268,6 +269,7 @@ completed = "\uf05d"
 selection_subtree = ""
 new = "\uea7f"
 renamed = "\U000f11e8"
+no_permission = "\uf023"
 job = "\U000f02ca"
 
 [symbols.folders]

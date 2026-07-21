@@ -33,6 +33,9 @@ type Entry struct {
 	// Dev/DevValid carry st_dev captured at listing time (local backend only; see localfs.Entry).
 	Dev      uint64
 	DevValid bool
+	// AccessDenied carries a permission fact captured at listing time (local backend only;
+	// see localfs.Entry).
+	AccessDenied bool
 }
 
 // CreateOpts controls OpenWrite behavior (phase 2+).

@@ -14,7 +14,7 @@ func TestSuffixSpanStyleFilelistUsesCursorIconOnCursorRow(t *testing.T) {
 		"panel.active.row.cursor": tcell.NewRGBColor(1, 2, 3),
 	}
 	suffix := RowSuffix{NewFileTier: NewFileMarkLatest, SubtreeSelection: true}
-	st, ok := SuffixSpanStyle(th.SymbolFilelistNew(), suffix, "", "panel.active.row.cursor", th, false)
+	st, ok := SuffixSpanStyle(th.SymbolFilelistNew(), suffix, localfs.Entry{}, "", "panel.active.row.cursor", th, false)
 	if !ok {
 		t.Fatal("expected new-file suffix style")
 	}
@@ -23,7 +23,7 @@ func TestSuffixSpanStyleFilelistUsesCursorIconOnCursorRow(t *testing.T) {
 	if fg != want {
 		t.Fatalf("new suffix fg = %v, want cursor icon %v", fg, want)
 	}
-	stSub, ok := SuffixSpanStyle(th.SymbolFilelistSelectionSubtree(), suffix, "", "panel.active.row.cursor", th, false)
+	stSub, ok := SuffixSpanStyle(th.SymbolFilelistSelectionSubtree(), suffix, localfs.Entry{}, "", "panel.active.row.cursor", th, false)
 	if !ok {
 		t.Fatal("expected subtree suffix style")
 	}
@@ -36,7 +36,7 @@ func TestSuffixSpanStyleFilelistUsesCursorIconOnCursorRow(t *testing.T) {
 func TestSuffixSpanStyleNewFilePreviousUsesPreviousIndicatorColor(t *testing.T) {
 	th := theme.Default()
 	suffix := RowSuffix{NewFileTier: NewFileMarkPrevious}
-	st, ok := SuffixSpanStyle(th.SymbolFilelistNew(), suffix, "", "", th, false)
+	st, ok := SuffixSpanStyle(th.SymbolFilelistNew(), suffix, localfs.Entry{}, "", "", th, false)
 	if !ok {
 		t.Fatal("expected style")
 	}
@@ -50,7 +50,7 @@ func TestSuffixSpanStyleNewFilePreviousUsesPreviousIndicatorColor(t *testing.T) 
 func TestSuffixSpanStyleFilelistFallsBackOffCursorRow(t *testing.T) {
 	th := theme.Default()
 	suffix := RowSuffix{NewFileTier: NewFileMarkLatest}
-	st, ok := SuffixSpanStyle(th.SymbolFilelistNew(), suffix, "", "", th, false)
+	st, ok := SuffixSpanStyle(th.SymbolFilelistNew(), suffix, localfs.Entry{}, "", "", th, false)
 	if !ok {
 		t.Fatal("expected style")
 	}
@@ -58,6 +58,29 @@ func TestSuffixSpanStyleFilelistFallsBackOffCursorRow(t *testing.T) {
 	wantFG, _, _ := th.PanelRowMarkNew.Decompose()
 	if fg != wantFG {
 		t.Fatalf("fg = %v, want panel.row.mark.new %v", fg, wantFG)
+	}
+}
+
+func TestSuffixSpanStyleNoPermission(t *testing.T) {
+	th := theme.Default()
+	entry := localfs.Entry{Name: "alpha.txt", Type: localfs.EntryFile, AccessDenied: true}
+	stPerm, ok := SuffixSpanStyle(th.SymbolFilelistNoPermission(), RowSuffix{}, entry, "", "", th, false)
+	if !ok {
+		t.Fatal("expected no-permission suffix style")
+	}
+	fgPerm, _, _ := stPerm.Decompose()
+	wantPermFG, _, _ := th.PanelRowMarkNoPermission.Decompose()
+	if fgPerm != wantPermFG {
+		t.Fatalf("fg = %v, want panel.row.mark.no_permission %v", fgPerm, wantPermFG)
+	}
+}
+
+func TestSuffixDecorationLenReservesPermissionMark(t *testing.T) {
+	th := theme.Default()
+	entry := localfs.Entry{Name: "alpha.txt", Type: localfs.EntryFile, AccessDenied: true}
+	got := SuffixDecorationLen(20, RowSuffix{}, entry, th)
+	if got != 2 {
+		t.Fatalf("SuffixDecorationLen = %d, want 2", got)
 	}
 }
 

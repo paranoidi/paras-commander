@@ -79,6 +79,8 @@ type Theme struct {
 	PanelRowMarkNewPrevious tcell.Style
 	// PanelRowMarkRenamed styles the file-list suffix for recently renamed entries.
 	PanelRowMarkRenamed tcell.Style
+	// PanelRowMarkNoPermission styles the file-list suffix for entries the current user cannot access.
+	PanelRowMarkNoPermission tcell.Style
 	// PanelRowMarkJob styles the file-list job mark when the row is under a job's
 	// write (destination) tree; PanelRowMarkJobRead styles the read (source) tree;
 	// PanelRowMarkJobDecision styles either while the matched job waits on a user
@@ -460,6 +462,7 @@ const (
 	SymbolKeyFilelistNew              = "filelist.new"
 	SymbolKeyFilelistRenamed          = "filelist.renamed"
 	SymbolKeyFilelistJob              = "filelist.job"
+	SymbolKeyFilelistNoPermission     = "filelist.no_permission"
 	SymbolKeyFoldersFolder            = "folders.folder"
 	SymbolKeyFoldersOpen              = "folders.open"
 	SymbolKeyFoldersScanning          = "folders.scanning"
@@ -570,6 +573,11 @@ func (t Theme) SymbolFilelistRenamed() rune {
 // Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
 func (t Theme) SymbolFilelistJob() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistJob, '\U000f02ca')
+}
+
+// SymbolFilelistNoPermission returns the suffix glyph for entries the current user cannot access.
+func (t Theme) SymbolFilelistNoPermission() rune {
+	return t.filelistSymbolRune(SymbolKeyFilelistNoPermission, '\uf023')
 }
 
 // SymbolTreeExpand returns the collapsed-node expander glyph for tree-style lists
@@ -789,6 +797,7 @@ var requiredStyleKeys = []string{
 	"panel.row.mark.new",
 	"panel.row.mark.new.previous",
 	"panel.row.mark.renamed",
+	"panel.row.mark.no_permission",
 	"panel.row.mark.job",
 	"panel.row.mark.job.read",
 	"panel.row.mark.job.decision",
@@ -1259,6 +1268,7 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkNew:                     styles["panel.row.mark.new"],
 		PanelRowMarkNewPrevious:             styles["panel.row.mark.new.previous"],
 		PanelRowMarkRenamed:                 styles["panel.row.mark.renamed"],
+		PanelRowMarkNoPermission:            styles["panel.row.mark.no_permission"],
 		PanelRowMarkJob:                     styles["panel.row.mark.job"],
 		PanelRowMarkJobRead:                 styles["panel.row.mark.job.read"],
 		PanelRowMarkJobDecision:             styles["panel.row.mark.job.decision"],

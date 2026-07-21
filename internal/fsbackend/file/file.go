@@ -184,14 +184,15 @@ func (b *Backend) Symlink(ctx context.Context, loc pathloc.Path, target string) 
 
 func localEntryToBackend(loc pathloc.Path, e localfs.Entry) fsbackend.Entry {
 	return fsbackend.Entry{
-		Name:       e.Name,
-		Loc:        loc,
-		Type:       entryTypeFromLocal(e.Type),
-		Size:       e.Size,
-		Mode:       e.Mode,
-		ModifiedAt: e.ModifiedAt,
-		Dev:        e.Dev,
-		DevValid:   e.DevValid,
+		Name:         e.Name,
+		Loc:          loc,
+		Type:         entryTypeFromLocal(e.Type),
+		Size:         e.Size,
+		Mode:         e.Mode,
+		ModifiedAt:   e.ModifiedAt,
+		Dev:          e.Dev,
+		DevValid:     e.DevValid,
+		AccessDenied: e.AccessDenied,
 	}
 }
 
