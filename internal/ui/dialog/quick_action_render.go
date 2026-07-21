@@ -125,8 +125,10 @@ func DrawQuickActionDialog(screen tcell.Screen, layout Layout, state QuickAction
 
 	rect := quickActionRect(layout, state, width, height)
 
-	draw.DrawDialogFrame(screen, rect, state.Title, styles)
-	_, dbg, _ := styles.DialogSurface.Decompose()
+	draw.DrawDialogFrameStyled(screen, rect, state.Title,
+		styles.DialogQuickActionSurface, styles.DialogQuickActionFrame, styles.DialogQuickActionTitle,
+		styles.QuickActionBorderGlyphs())
+	_, dbg, _ := styles.DialogQuickActionSurface.Decompose()
 
 	shortcuts := QuickActionShortcuts(state.Items)
 	labelX := rect.X + 5
@@ -142,14 +144,14 @@ func DrawQuickActionDialog(screen tcell.Screen, layout Layout, state QuickAction
 		item := state.Items[idx]
 		y := rect.Y + 1 + row
 
-		base := styles.DialogText.Background(dbg)
+		base := styles.DialogQuickActionText.Background(dbg)
 		if state.Selected == idx {
-			base = styles.DialogListSelected
+			base = styles.DialogQuickActionListSelected
 		}
 		primitive.Text(screen, rect.X+1, y, rect.Width-2, "", base)
 
 		if sh := shortcuts[idx]; sh != 0 {
-			accent := draw.AccentGlyphStyle(base, styles.DialogAccent)
+			accent := draw.AccentGlyphStyle(base, styles.DialogQuickActionAccent)
 			primitive.Text(screen, rect.X+2, y, 1, string(sh), accent)
 		}
 		primitive.Text(screen, labelX, y, labelWidth, item.Label, base)

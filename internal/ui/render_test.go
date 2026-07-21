@@ -459,6 +459,71 @@ func TestRenderUsesBlockedPanelFrameWhenListingFormatDialogOpen(t *testing.T) {
 	}
 }
 
+func TestRenderKeepsActivePanelFrameWhenQuickActionOpen(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+
+	model := Model{
+		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
+		ActivePanel: PrimaryPanel,
+		QuickAction: dialog.QuickActionState{
+			Open:  true,
+			Items: []dialog.QuickActionItem{{Label: "Example"}},
+		},
+	}
+
+	styles := theme.Default()
+	Render(screen, model, styles)
+
+	_, cornerStyle, _ := screen.Get(0, 1)
+	if cornerStyle != styles.PanelActiveFrame {
+		t.Fatalf("left (active) panel border style = %v, want active frame %v (quick-action list must not blank panel focus)", cornerStyle, styles.PanelActiveFrame)
+	}
+}
+
+func TestRenderQuickActionOpenDimsActivePanelCursorRow(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+
+	styles := theme.Default()
+	entry := localfs.Entry{Name: "alpha.txt", Path: "/tmp/alpha.txt"}
+	model := Model{
+		Primary: panel.State{
+			Path:    pathloc.MustParse("/tmp"),
+			Entries: []localfs.Entry{entry},
+			Cursor:  0,
+		},
+		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel: PrimaryPanel,
+		QuickAction: dialog.QuickActionState{
+			Open:  true,
+			Items: []dialog.QuickActionItem{{Label: "Example"}},
+		},
+	}
+
+	Render(screen, model, styles)
+
+	_, leftBorder, _ := screen.Get(0, 1)
+	if leftBorder != styles.PanelActiveFrame {
+		t.Fatalf("left panel border = %v, want active panel border (quick-action must not blank panel focus)", leftBorder)
+	}
+	_, rowStyle, _ := screen.Get(1, 3)
+	_, rowBG, _ := rowStyle.Decompose()
+	_, wantBG, _ := styles.PanelCursorInactive.Decompose()
+	if rowBG != wantBG {
+		t.Fatalf("left list cursor row background = %v, want %v (active panel's cursor row must look inactive while F2 quick-action list is open)", rowBG, wantBG)
+	}
+}
+
 func TestRenderThemeDialogPreviewShowsActiveUnblockedPrimaryPanel(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

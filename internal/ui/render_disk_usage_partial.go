@@ -77,7 +77,8 @@ func paintBrowserPanelsInScope(
 		drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 			PanelContext{
-				PanelID: PrimaryPanel, FileListActive: primaryFileListFocus, ChromeBlocked: primaryChromeBlocked,
+				PanelID: PrimaryPanel, FileListActive: primaryFileListFocus,
+				CursorRowActive: primaryFileListFocus && !model.QuickAction.Open, ChromeBlocked: primaryChromeBlocked,
 				ActivePanel: model.ActivePanel, OtherPanelPath: primaryOtherPanelPath,
 				HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 				SplitOrientation: model.SplitOrientation, SelectionsBottomHint: primarySelectionsBottomHint,
@@ -108,7 +109,8 @@ func paintBrowserPanelsInScope(
 		drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 			PanelContext{
-				PanelID: SecondaryPanel, FileListActive: secondaryFileListFocus, ChromeBlocked: chromeBlocked,
+				PanelID: SecondaryPanel, FileListActive: secondaryFileListFocus,
+				CursorRowActive: secondaryFileListFocus && !model.QuickAction.Open, ChromeBlocked: chromeBlocked,
 				ActivePanel: model.ActivePanel, OtherPanelPath: secondaryOtherPanelPath,
 				HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 				SplitOrientation: model.SplitOrientation, SelectionsBottomHint: secondarySelectionsBottomHint,

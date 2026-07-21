@@ -522,17 +522,28 @@ func CenteredDialogRect(layout Layout, width, height int) Rect {
 	return Rect{X: x, Y: y, Width: width, Height: height}
 }
 
-// DrawDialogFrame clears the rect with dialog background, draws a border using
-// DialogFrame on that background, and paints the title row per AGENTS.md.
+// DrawDialogFrame clears the rect with dialog background, draws a sharp-cornered border using
+// DialogFrame on that background, and paints the title row per AGENTS.md (title glyph foreground
+// comes from DialogFrame — DialogTitle only contributes attributes like bold).
 // Returns borderStyle (for horizontal rules inside the dialog).
 func DrawDialogFrame(screen tcell.Screen, rect Rect, title string, styles theme.Theme) tcell.Style {
-	primitive.Fill(screen, primitive.Rect{X: rect.X, Y: rect.Y, Width: rect.Width, Height: rect.Height}, ' ', styles.DialogSurface)
-	_, dbg, _ := styles.DialogSurface.Decompose()
-	borderStyle := styles.DialogFrame.Background(dbg)
-	primitive.Box(screen, primitive.Rect{X: rect.X, Y: rect.Y, Width: rect.Width, Height: rect.Height}, borderStyle)
+	frameFg, _, _ := styles.DialogFrame.Decompose()
+	titleStyle := styles.DialogTitle.Foreground(frameFg)
+	return DrawDialogFrameStyled(screen, rect, title, styles.DialogSurface, styles.DialogFrame, titleStyle, primitive.SharpBorder)
+}
 
-	bfg, _, _ := styles.DialogFrame.Decompose()
-	titleStyle := styles.DialogTitle.Foreground(bfg).Background(dbg)
+// DrawDialogFrameStyled is DrawDialogFrame with explicit surface/frame/title styles and border
+// glyphs, for dialogs with their own minimal theme (e.g. the F2 quick-action list) instead of
+// the shared Theme.Dialog* fields. Unlike DrawDialogFrame, titleBase's own foreground is used
+// as-is (only its background is merged with surface) — callers that want the frame-colored-title
+// convention must resolve that themselves, as DrawDialogFrame does.
+func DrawDialogFrameStyled(screen tcell.Screen, rect Rect, title string, surface, frame, titleBase tcell.Style, glyphs primitive.BorderGlyphs) tcell.Style {
+	primitive.Fill(screen, primitive.Rect{X: rect.X, Y: rect.Y, Width: rect.Width, Height: rect.Height}, ' ', surface)
+	_, dbg, _ := surface.Decompose()
+	borderStyle := frame.Background(dbg)
+	primitive.Box(screen, primitive.Rect{X: rect.X, Y: rect.Y, Width: rect.Width, Height: rect.Height}, borderStyle, glyphs)
+
+	titleStyle := titleBase.Background(dbg)
 	DrawCenteredDialogTitle(screen, rect, title, titleStyle, borderStyle)
 	return borderStyle
 }

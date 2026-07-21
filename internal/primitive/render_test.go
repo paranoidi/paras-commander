@@ -45,7 +45,7 @@ func TestBoxDrawsCorners(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(5, 4)
 
-	Box(screen, Rect{X: 1, Y: 1, Width: 3, Height: 2}, tcell.StyleDefault)
+	Box(screen, Rect{X: 1, Y: 1, Width: 3, Height: 2}, tcell.StyleDefault, SharpBorder)
 
 	tests := []struct {
 		name string

@@ -363,12 +363,14 @@ func (m *Model) PanelForFileListRender(panelID int) panel.State {
 }
 
 // PanelsChromeBlocked reports when file/jobs panel chrome should use panel.blocked.*
-// styles because a menu or modal has taken focus.
+// styles because a menu or modal has taken focus. The quick-action list (F2 user menu)
+// is excluded: it floats over the panels without taking over navigation context, so the
+// active/inactive panel distinction must stay visible underneath it.
 func (m *Model) PanelsChromeBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
-	return m.ModalDialogOpen()
+	return m.ModalDialogOpen() && !m.QuickAction.Open
 }
 
 // ModalDialogOpen reports modals that block normal navigation and hide the menu bar row.
@@ -539,7 +541,8 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 		drawPanel(screen, side.FileRect, model.PanelForFileListRender(side.PanelID),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 			PanelContext{
-				PanelID: side.PanelID, FileListActive: side.FileListFocus, ChromeBlocked: side.ChromeBlocked,
+				PanelID: side.PanelID, FileListActive: side.FileListFocus,
+				CursorRowActive: side.FileListFocus && !model.QuickAction.Open, ChromeBlocked: side.ChromeBlocked,
 				ActivePanel: model.ActivePanel, OtherPanelPath: side.OtherPanelPath,
 				HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 				SplitOrientation: model.SplitOrientation, SelectionsBottomHint: side.SelectionsBottomHint,

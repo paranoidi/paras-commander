@@ -91,7 +91,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	case p.Borderless:
 		// No box; the filename is drawn plain on the first row (see below).
 	default:
-		primitive.Box(screen, primitive.Rect(rect), borderStyle)
+		primitive.Box(screen, primitive.Rect(rect), borderStyle, primitive.SharpBorder)
 	}
 	titleX := rect.X + 2
 	innerRight := rect.X + rect.Width - 2

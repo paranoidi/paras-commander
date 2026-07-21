@@ -99,8 +99,14 @@ type PanelStyleConfig struct {
 
 // PanelContext carries panel-identity, focus, and twin-panel coordination inputs to drawPanel.
 type PanelContext struct {
-	PanelID                   int
-	FileListActive            bool
+	PanelID        int
+	FileListActive bool
+	// CursorRowActive selects the cursor row's active/inactive highlight and icon key
+	// independent of FileListActive (which also drives border/header chrome). Floating
+	// overlays like the F2 quick-action list dim only the row indicator on the active
+	// panel while leaving chrome untouched, so this is normally equal to FileListActive
+	// but can be forced false without affecting chrome.
+	CursorRowActive           bool
 	ChromeBlocked             bool
 	ActivePanel               int
 	OtherPanelPath            string
@@ -151,7 +157,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	headerStyle := chrome.Header
 	headerCarouselStyle := chrome.HeaderCarousel
 
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
+	primitive.Box(screen, primitive.Rect(rect), borderStyle, primitive.SharpBorder)
 	var selectionSizeLabel string
 	if ctx.ShowSelectionSizeOnBottom && state.SelectedPathCount() > 0 {
 		selectionSizeLabel, _ = SelectionSizeLabel(
@@ -409,7 +415,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 
 	cursorIconKey := ""
 	if hasEntry {
-		cursorIconKey = panelCursorIconThemeKey(ctx.FileListActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.FileListActive && state.FilterUniqueMatch())
+		cursorIconKey = panelCursorIconThemeKey(ctx.CursorRowActive, ctx.ChromeBlocked, entryIndex, state.Cursor, selected, ctx.CursorRowActive && state.FilterUniqueMatch())
 	}
 	if hasEntry {
 		spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, panelStyle.Styles, rowOpts, func(di int) tcell.Style {
@@ -467,9 +473,9 @@ func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx P
 	if entryIndex == state.Cursor {
 		style = styles.PanelListingCursorStyle(style, theme.PanelListingCursorOpts{
 			ChromeBlocked:     ctx.ChromeBlocked,
-			FileListActive:    ctx.FileListActive,
+			FileListActive:    ctx.CursorRowActive,
 			Selected:          selected,
-			FilterUniqueMatch: ctx.FileListActive && state.FilterUniqueMatch(),
+			FilterUniqueMatch: ctx.CursorRowActive && state.FilterUniqueMatch(),
 		})
 	}
 	return style, selected

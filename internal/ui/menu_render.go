@@ -321,7 +321,7 @@ func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, menu
 		rect.Height = max(2, layout.Footer.Y-rect.Y)
 	}
 
-	primitive.Box(screen, primitive.Rect(rect), styles.MenuDropdownFrame)
+	primitive.Box(screen, primitive.Rect(rect), styles.MenuDropdownFrame, primitive.SharpBorder)
 	itemRows := rect.Height - 2
 	for row := 0; row < itemRows && row < len(menuDefinition.Items); row++ {
 		item := menuDefinition.Items[row]

@@ -22,29 +22,45 @@ type Span struct {
 	Style tcell.Style
 }
 
-// Box draws a single-line box border inside rect. Each cell is written once.
-func Box(screen tcell.Screen, rect Rect, style tcell.Style) {
+// BorderGlyphs is the set of box-drawing runes used to paint a frame's corners and edges.
+type BorderGlyphs struct {
+	TopLeft     rune
+	TopRight    rune
+	BottomLeft  rune
+	BottomRight rune
+	Horizontal  rune
+	Vertical    rune
+}
+
+// SharpBorder is the square-corner box style used by file panels and most dialogs.
+var SharpBorder = BorderGlyphs{TopLeft: '┌', TopRight: '┐', BottomLeft: '└', BottomRight: '┘', Horizontal: '─', Vertical: '│'}
+
+// RoundedBorder is the rounded-corner box style (e.g. the F2 quick-action dialog default).
+var RoundedBorder = BorderGlyphs{TopLeft: '╭', TopRight: '╮', BottomLeft: '╰', BottomRight: '╯', Horizontal: '─', Vertical: '│'}
+
+// Box draws a single-line box border inside rect using glyphs. Each cell is written once.
+func Box(screen tcell.Screen, rect Rect, style tcell.Style, glyphs BorderGlyphs) {
 	if rect.Width <= 1 || rect.Height <= 1 {
 		Fill(screen, rect, ' ', style)
 		return
 	}
 	// Top row
-	screen.SetContent(rect.X, rect.Y, '┌', nil, style)
+	screen.SetContent(rect.X, rect.Y, glyphs.TopLeft, nil, style)
 	for x := rect.X + 1; x < rect.X+rect.Width-1; x++ {
-		screen.SetContent(x, rect.Y, '─', nil, style)
+		screen.SetContent(x, rect.Y, glyphs.Horizontal, nil, style)
 	}
-	screen.SetContent(rect.X+rect.Width-1, rect.Y, '┐', nil, style)
+	screen.SetContent(rect.X+rect.Width-1, rect.Y, glyphs.TopRight, nil, style)
 	// Side columns
 	for y := rect.Y + 1; y < rect.Y+rect.Height-1; y++ {
-		screen.SetContent(rect.X, y, '│', nil, style)
-		screen.SetContent(rect.X+rect.Width-1, y, '│', nil, style)
+		screen.SetContent(rect.X, y, glyphs.Vertical, nil, style)
+		screen.SetContent(rect.X+rect.Width-1, y, glyphs.Vertical, nil, style)
 	}
 	// Bottom row
-	screen.SetContent(rect.X, rect.Y+rect.Height-1, '└', nil, style)
+	screen.SetContent(rect.X, rect.Y+rect.Height-1, glyphs.BottomLeft, nil, style)
 	for x := rect.X + 1; x < rect.X+rect.Width-1; x++ {
-		screen.SetContent(x, rect.Y+rect.Height-1, '─', nil, style)
+		screen.SetContent(x, rect.Y+rect.Height-1, glyphs.Horizontal, nil, style)
 	}
-	screen.SetContent(rect.X+rect.Width-1, rect.Y+rect.Height-1, '┘', nil, style)
+	screen.SetContent(rect.X+rect.Width-1, rect.Y+rect.Height-1, glyphs.BottomRight, nil, style)
 }
 
 // Fill writes ch across the entire rect.

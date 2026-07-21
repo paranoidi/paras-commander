@@ -185,8 +185,6 @@ text = { fg = "white" }
 title = { bold = true }
 # bg matters for the path-picker trailing glyph when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "white", bg = "black", bold = true }
-# full-row selection bar for the buttonless quick-action list widget (fg+bg, unlike dialog.option.*).
-list.selected = { fg = "black", bg = "cyan" }
 
 [dialog.button]
 active = { fg = "black", bg = "cyan" }
@@ -216,6 +214,15 @@ fill = { fg = "white", bg = "black" }
 label.on_fill = { fg = "bright_white", bold = true }
 label.on_track = { fg = "bright_white", bold = true }
 track = { fg = "white", bg = "bright_black" }
+
+[dialog.quickaction]         # F2 quick-action list — minimal chrome subset + border style
+border = "rounded"           # "rounded" (default) or "sharp"
+frame = { fg = "bright_black" }
+surface = { fg = "white" }    # no distinct background — same as the filelist panels
+text = { fg = "white" }
+title = { fg = "white", bold = true }
+accent = { fg = "white", bg = "black", bold = true }
+list.selected = { fg = "black", bg = "cyan" }
 
 [dialog.massrename]
 before = { fg = "white" }

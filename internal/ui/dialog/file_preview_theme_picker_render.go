@@ -17,7 +17,7 @@ func DrawFilePreviewThemePicker(screen tcell.Screen, rect geom.Rect, state FileP
 
 	chrome := styles.PanelChrome(true, false)
 	borderStyle := chrome.Frame
-	primitive.Box(screen, primitive.Rect(rect), borderStyle)
+	primitive.Box(screen, primitive.Rect(rect), borderStyle, primitive.SharpBorder)
 	inner := primitive.Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
 	if inner.Width > 0 && inner.Height > 0 {
 		primitive.Fill(screen, inner, ' ', chrome.Surface)

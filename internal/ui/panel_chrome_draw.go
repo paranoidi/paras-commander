@@ -21,7 +21,7 @@ type AuxPanelChromeLayout struct {
 // When endLabel is non-empty, the top row uses a split layout (title left, endLabel right).
 func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title, endLabel string, active, blocked bool, styles theme.Theme) AuxPanelChromeLayout {
 	chrome := styles.PanelChrome(active, blocked)
-	primitive.Box(screen, primitive.Rect(rect), chrome.Frame)
+	primitive.Box(screen, primitive.Rect(rect), chrome.Frame, primitive.SharpBorder)
 	inner := Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
 	if inner.Width > 0 && inner.Height > 0 {
 		primitive.Fill(screen, primitive.Rect(inner), ' ', chrome.Surface)

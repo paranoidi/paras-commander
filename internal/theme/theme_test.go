@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/themes"
 )
 
@@ -362,6 +363,46 @@ func TestParseDialogSectionFlatKeys(t *testing.T) {
 	}
 	if attrs&tcell.AttrBold == 0 {
 		t.Fatal("DialogInputActive: want bold")
+	}
+}
+
+func TestParseQuickActionBorderDefaultsToRounded(t *testing.T) {
+	data := testTheme(t, "qaborderdefault", nil, nil)
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if th.DialogQuickActionBorderStyle != QuickActionBorderRounded {
+		t.Fatalf("DialogQuickActionBorderStyle = %q, want %q", th.DialogQuickActionBorderStyle, QuickActionBorderRounded)
+	}
+	if th.QuickActionBorderGlyphs() != (primitive.RoundedBorder) {
+		t.Fatalf("QuickActionBorderGlyphs() = %v, want RoundedBorder", th.QuickActionBorderGlyphs())
+	}
+}
+
+func TestParseQuickActionBorderSharp(t *testing.T) {
+	data := testTheme(t, "qabordersharp", nil, map[string]string{
+		"dialog.quickaction.border": `"sharp"`,
+	})
+	th, err := parse(data)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if th.DialogQuickActionBorderStyle != QuickActionBorderSharp {
+		t.Fatalf("DialogQuickActionBorderStyle = %q, want %q", th.DialogQuickActionBorderStyle, QuickActionBorderSharp)
+	}
+	if th.QuickActionBorderGlyphs() != (primitive.SharpBorder) {
+		t.Fatalf("QuickActionBorderGlyphs() = %v, want SharpBorder", th.QuickActionBorderGlyphs())
+	}
+}
+
+func TestParseQuickActionBorderRejectsInvalidValue(t *testing.T) {
+	data := testTheme(t, "qaborderbad", nil, map[string]string{
+		"dialog.quickaction.border": `"curvy"`,
+	})
+	_, err := parse(data)
+	if err == nil || !strings.Contains(err.Error(), `dialog.quickaction.border must be`) {
+		t.Fatalf("parse() error = %v, want invalid border style error", err)
 	}
 }
 

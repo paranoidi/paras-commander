@@ -10,10 +10,17 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/themes"
 )
 
 const defaultName = "default"
+
+// QuickAction border style values for dialog.quickaction.border.
+const (
+	QuickActionBorderRounded = "rounded"
+	QuickActionBorderSharp   = "sharp"
+)
 
 // Registry maps stable theme names to parsed render styles.
 type Registry map[string]Theme
@@ -198,7 +205,6 @@ type Theme struct {
 	DialogOptionActiveSelected     tcell.Style
 	DialogOptionSelected           tcell.Style
 	DialogOptionInvalid            tcell.Style
-	DialogListSelected             tcell.Style
 	DialogStatusSelectionSize      tcell.Style
 	DialogProgressTrack            tcell.Style
 	DialogProgressFill             tcell.Style
@@ -210,6 +216,19 @@ type Theme struct {
 	DialogMassRenameAfter          tcell.Style
 	DialogMassRenameAfterAdded     tcell.Style
 	DialogMassRenameAfterError     tcell.Style
+
+	// DialogQuickAction* is the minimal, separate theme subset for the F2 quick-action
+	// list (buttonless letter-activated menu) — it does not reuse the generic Dialog*
+	// fields above. DialogQuickActionBorderStyle selects the frame glyph set (see
+	// QuickActionBorderGlyphs) and is parsed from dialog.quickaction.border, not a
+	// tcell.Style like the rest of this block.
+	DialogQuickActionFrame        tcell.Style
+	DialogQuickActionSurface      tcell.Style
+	DialogQuickActionText         tcell.Style
+	DialogQuickActionTitle        tcell.Style
+	DialogQuickActionAccent       tcell.Style
+	DialogQuickActionListSelected tcell.Style
+	DialogQuickActionBorderStyle  string
 
 	MessageInfo  tcell.Style
 	MessageWarn  tcell.Style
@@ -256,6 +275,15 @@ func (t Theme) TerminalTextStyle() tcell.Style {
 		return t.TerminalText
 	}
 	return t.PanelText
+}
+
+// QuickActionBorderGlyphs returns the border glyph set for the F2 quick-action dialog,
+// selected by DialogQuickActionBorderStyle ("rounded", the default, or "sharp").
+func (t Theme) QuickActionBorderGlyphs() primitive.BorderGlyphs {
+	if t.DialogQuickActionBorderStyle == QuickActionBorderSharp {
+		return primitive.SharpBorder
+	}
+	return primitive.RoundedBorder
 }
 
 // PanelRowIconForeground returns the foreground for cursor-row adornment icons: file-list
@@ -865,7 +893,6 @@ var requiredStyleKeys = []string{
 	"dialog.option.active.selected",
 	"dialog.option.selected",
 	"dialog.option.invalid",
-	"dialog.list.selected",
 	"dialog.status.selection_size",
 	"dialog.progress.track",
 	"dialog.progress.fill",
@@ -877,6 +904,12 @@ var requiredStyleKeys = []string{
 	"dialog.massrename.after",
 	"dialog.massrename.after.added",
 	"dialog.massrename.after.error",
+	"dialog.quickaction.frame",
+	"dialog.quickaction.surface",
+	"dialog.quickaction.text",
+	"dialog.quickaction.title",
+	"dialog.quickaction.accent",
+	"dialog.quickaction.list.selected",
 	"message.info",
 	"message.warn",
 	"message.error",
@@ -1157,6 +1190,12 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
+
+	quickActionBorderStyle, err := quickActionBorderStyleField(raw)
+	if err != nil {
+		return Theme{}, err
+	}
+
 	specs, err := collectStyleSpecs(raw)
 	if err != nil {
 		return Theme{}, err
@@ -1363,7 +1402,6 @@ func parse(data []byte) (Theme, error) {
 		DialogOptionActiveSelected:     styles["dialog.option.active.selected"],
 		DialogOptionSelected:           styles["dialog.option.selected"],
 		DialogOptionInvalid:            styles["dialog.option.invalid"],
-		DialogListSelected:             styles["dialog.list.selected"],
 		DialogStatusSelectionSize:      styles["dialog.status.selection_size"],
 		DialogProgressTrack:            styles["dialog.progress.track"],
 		DialogProgressFill:             styles["dialog.progress.fill"],
@@ -1375,6 +1413,14 @@ func parse(data []byte) (Theme, error) {
 		DialogMassRenameAfter:          styles["dialog.massrename.after"],
 		DialogMassRenameAfterAdded:     styles["dialog.massrename.after.added"],
 		DialogMassRenameAfterError:     styles["dialog.massrename.after.error"],
+
+		DialogQuickActionFrame:        styles["dialog.quickaction.frame"],
+		DialogQuickActionSurface:      styles["dialog.quickaction.surface"],
+		DialogQuickActionText:         styles["dialog.quickaction.text"],
+		DialogQuickActionTitle:        styles["dialog.quickaction.title"],
+		DialogQuickActionAccent:       styles["dialog.quickaction.accent"],
+		DialogQuickActionListSelected: styles["dialog.quickaction.list.selected"],
+		DialogQuickActionBorderStyle:  quickActionBorderStyle,
 
 		MessageInfo:  styles["message.info"],
 		MessageWarn:  styles["message.warn"],
@@ -1418,6 +1464,36 @@ func stringField(raw map[string]any, key string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("%s must be a string", key)
 	}
+	return text, nil
+}
+
+// quickActionBorderStyleField extracts and validates dialog.quickaction.border ("rounded",
+// the default, or "sharp"), then deletes it from raw so the generic style-table flattener
+// (collectStyleSpecs) doesn't trip over a plain string sitting among dialog.quickaction's
+// fg/bg style tables.
+func quickActionBorderStyleField(raw map[string]any) (string, error) {
+	dialogTable, _ := raw["dialog"].(map[string]any)
+	if dialogTable == nil {
+		return QuickActionBorderRounded, nil
+	}
+	quickActionTable, _ := dialogTable["quickaction"].(map[string]any)
+	if quickActionTable == nil {
+		return QuickActionBorderRounded, nil
+	}
+	value, ok := quickActionTable["border"]
+	if !ok {
+		return QuickActionBorderRounded, nil
+	}
+	text, ok := value.(string)
+	if !ok {
+		return "", fmt.Errorf("dialog.quickaction.border must be a string")
+	}
+	switch text {
+	case QuickActionBorderRounded, QuickActionBorderSharp:
+	default:
+		return "", fmt.Errorf("dialog.quickaction.border must be %q or %q, got %q", QuickActionBorderRounded, QuickActionBorderSharp, text)
+	}
+	delete(quickActionTable, "border")
 	return text, nil
 }
 
