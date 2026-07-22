@@ -14,6 +14,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/search"
+	"github.com/paranoidi/paras-commander/internal/treeflat"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
@@ -88,7 +89,12 @@ type State struct {
 	GitPending bool
 	// GitByPath maps absolute entry paths to eza-style staged/unstaged cells; nil until loaded.
 	GitByPath map[string]gitstatus.Cell
-	Filter    FilterState
+	// gitWorkRoot caches the work-tree root prepareGitColumn resolved for the current cwd
+	// listing (valid only while GitColumnActive), so tree-mode child-directory git-status
+	// fetches (scheduleTreeChildGitStatus) can reuse it instead of recomputing
+	// gitignore.ValidWorkTreeRoot per subdirectory.
+	gitWorkRoot string
+	Filter      FilterState
 	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
 	DiskSorter func(absPath string) (int64, bool)
 	Sort       SortState
@@ -153,6 +159,23 @@ type State struct {
 	ListingPending bool
 	// ScheduleGitStatus runs git status for the current listing off the UI thread (set by app).
 	ScheduleGitStatus GitStatusScheduler
+	// ScheduleTreeChildLoad runs a tree-mode directory's first-expand child listing off the UI
+	// thread (set by app; nil = synchronous fallback, see setTreeNodeExpanded).
+	ScheduleTreeChildLoad TreeChildLoadScheduler
+
+	// ListLayout selects flat rows (default) or an expand/collapse tree for this panel's file list.
+	ListLayout ListLayout
+	// TreeRoots holds the tree built for tree-layout rendering. Depth-0 nodes mirror Entries;
+	// deeper nodes are loaded lazily on first expand (see ToggleTreeExpand).
+	TreeRoots []treeflat.Node[TreeEntry]
+	// TreeExpanded tracks expand state by node ID (absolute path); default collapsed, so a path
+	// absent from the map means collapsed.
+	TreeExpanded map[string]bool
+	// treeRows caches the last treeflat.Flatten(TreeRoots, ...) output.
+	treeRows []treeflat.Row[TreeEntry]
+	// treeCursorID tracks the node ID the cursor should reattach to after a tree rebuild
+	// (expand/collapse, or an async ApplyTreeChildLoad completing).
+	treeCursorID string
 }
 
 // GitStatusRequest describes one async git status fetch for the current listing.
@@ -329,11 +352,23 @@ func (s State) CurrentEntry() (localfs.Entry, bool) {
 
 // VisibleEntryCount returns the number of entries currently visible in the panel.
 func (s State) VisibleEntryCount() int {
+	if s.ListLayout == ListLayoutTree {
+		return len(s.treeRows)
+	}
 	return len(s.Entries)
 }
 
-// VisibleEntry returns the visible entry and its backing Entries index.
+// VisibleEntry returns the visible entry and its backing index (Entries index in flat mode,
+// treeRows index in tree mode — every caller today discards this second value).
 func (s State) VisibleEntry(index int) (localfs.Entry, int, bool) {
+	if s.ListLayout == ListLayoutTree {
+		return s.treeVisibleEntry(index)
+	}
+	return s.flatVisibleEntry(index)
+}
+
+// flatVisibleEntry is VisibleEntry's original body, extracted unchanged.
+func (s State) flatVisibleEntry(index int) (localfs.Entry, int, bool) {
 	if index < 0 || index >= s.VisibleEntryCount() {
 		return localfs.Entry{}, 0, false
 	}
@@ -342,6 +377,32 @@ func (s State) VisibleEntry(index int) (localfs.Entry, int, bool) {
 		return localfs.Entry{}, 0, false
 	}
 	return s.Entries[entryIndex], entryIndex, true
+}
+
+func (s State) treeVisibleEntry(index int) (localfs.Entry, int, bool) {
+	if index < 0 || index >= len(s.treeRows) {
+		return localfs.Entry{}, 0, false
+	}
+	return s.treeRows[index].Value.Entry, index, true
+}
+
+// VisibleEntries returns the currently visible entries as a flat slice (Entries in flat mode,
+// flattened treeRows in tree mode). For callers that need every visible row's Entry but not the
+// per-row tree shape (e.g. the disk-usage bar denominator, which only needs byte sizes).
+func (s State) VisibleEntries() []localfs.Entry {
+	count := s.VisibleEntryCount()
+	if count == 0 {
+		return nil
+	}
+	out := make([]localfs.Entry, 0, count)
+	for i := 0; i < count; i++ {
+		entry, _, ok := s.VisibleEntry(i)
+		if !ok {
+			continue
+		}
+		out = append(out, entry)
+	}
+	return out
 }
 
 // FilterHasMatches reports whether the active quick filter has at least one file-name match.
@@ -356,7 +417,7 @@ func (s State) FilterUniqueMatch() bool {
 
 // MatchRanges returns highlighted rune ranges for the visible entry.
 func (s State) MatchRanges(index int) []search.Range {
-	if !s.Filter.Active || index < 0 || index >= len(s.Entries) {
+	if !s.Filter.Active || index < 0 || index >= s.VisibleEntryCount() {
 		return nil
 	}
 	for _, result := range s.Filter.results {
@@ -1267,6 +1328,16 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 		s.IdleDiskTotalsSort = true
 	}
 	s.ApplySort()
+	if s.ListLayout == ListLayoutTree {
+		// ponytail: full-fidelity refresh (preserving expansions/cached children across a live
+		// directory watch) is async-loading-phase work; for now every ApplyListing re-roots tree
+		// mode fresh, which also resets expansions on a same-directory refresh. Reseeded after
+		// ApplySort (not before) so depth-0 tree rows reflect the panel's sort setting instead of
+		// raw backend order.
+		s.TreeRoots = treeRootsFromEntries(s.Entries)
+		s.TreeExpanded = nil
+		s.rebuildTreeRows()
+	}
 	s.rebuildFilter()
 	found := false
 	if selectedName != "" {
@@ -1311,6 +1382,7 @@ func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entr
 	}
 	workRoot := gitignore.ValidWorkTreeRoot(host)
 	s.GitColumnActive = workRoot != ""
+	s.gitWorkRoot = workRoot
 	s.GitByPath = nil
 	if !s.GitColumnActive {
 		s.GitPending = false
@@ -1707,8 +1779,10 @@ func (s *State) rebuildFilter() {
 		return
 	}
 
-	names := make([]string, len(s.Entries))
-	for i, entry := range s.Entries {
+	count := s.VisibleEntryCount()
+	names := make([]string, count)
+	for i := 0; i < count; i++ {
+		entry, _, _ := s.VisibleEntry(i)
 		names[i] = entry.Name
 	}
 	ranked := query.Rank(names, search.Options{CaseInsensitive: s.Filter.CaseInsensitive})
@@ -1725,13 +1799,18 @@ func (s *State) rebuildFilter() {
 
 // InvertSelection toggles selection for all visible entries.
 func (s *State) InvertSelection() {
-	if len(s.Entries) == 0 {
+	count := s.VisibleEntryCount()
+	if count == 0 {
 		return
 	}
-	listingSet := make(map[string]bool, len(s.Entries))
-	newSel := make(map[string]bool, len(s.Entries))
+	listingSet := make(map[string]bool, count)
+	newSel := make(map[string]bool, count)
 	hasDirs := false
-	for _, entry := range s.Entries {
+	for i := 0; i < count; i++ {
+		entry, _, ok := s.VisibleEntry(i)
+		if !ok {
+			continue
+		}
 		listingSet[entry.Path] = true
 		wasSelected := s.SelectedPaths != nil && s.SelectedPaths[entry.Path]
 		if wasSelected {
@@ -1815,7 +1894,11 @@ func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive b
 	}
 	paths := make([]string, 0)
 	isDir := make(map[string]bool)
-	for _, entry := range s.Entries {
+	for i := 0; i < s.VisibleEntryCount(); i++ {
+		entry, _, ok := s.VisibleEntry(i)
+		if !ok {
+			continue
+		}
 		if filesOnly && entry.IsDir() {
 			continue
 		}
@@ -1862,7 +1945,11 @@ func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive
 	if err != nil {
 		return err
 	}
-	for _, entry := range s.Entries {
+	for i := 0; i < s.VisibleEntryCount(); i++ {
+		entry, _, ok := s.VisibleEntry(i)
+		if !ok {
+			continue
+		}
 		if filesOnly && entry.IsDir() {
 			continue
 		}

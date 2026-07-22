@@ -251,8 +251,9 @@ type App struct {
 	sftpConnectTargetPanel int
 	sftpConnectHosts       []sshconfig.HostEntry
 
-	remotePanelLoadGen [2]atomic.Uint64
-	gitStatusLoadGen   [2]atomic.Uint64
+	remotePanelLoadGen  [2]atomic.Uint64
+	gitStatusLoadGen    [2]atomic.Uint64
+	quickViewGitLoadGen atomic.Uint64
 
 	// jobBlockerNextGen invalidates in-flight quick-blocker chain timers.
 	jobBlockerNextGen atomic.Uint64
@@ -586,6 +587,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, fmt.Errorf("configure sftp: %w", err)
 	}
 	app.wireRemotePanelLoaders()
+	app.wireTreeChildLoaders()
 	app.wireGitStatusLoaders()
 	app.model.Primary.RescheduleGitStatusIfNeeded()
 	app.model.Secondary.RescheduleGitStatusIfNeeded()
@@ -967,8 +969,18 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			a.render()
 			out.didRender = true
 		}
+	case treeChildLoadPayload:
+		if a.applyTreeChildLoad(d) {
+			a.render()
+			out.didRender = true
+		}
 	case gitStatusPayload:
 		if a.applyGitStatusLoad(d) {
+			a.render()
+			out.didRender = true
+		}
+	case quickViewGitStatusPayload:
+		if a.applyQuickViewGitStatusLoad(d) {
 			a.render()
 			out.didRender = true
 		}

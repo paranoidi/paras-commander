@@ -45,6 +45,27 @@ func TestResolveFolderIconKindPriority(t *testing.T) {
 	}
 }
 
+func TestResolveFolderIconKindTreeExpanded(t *testing.T) {
+	th := theme.Default()
+	dir := localfs.Entry{Name: "alpha", Path: "/tmp/alpha", Type: localfs.EntryDirectory}
+
+	ctx := FolderIconContext{TreeExpanded: true}
+	kind, ok := ResolveFolderIconKind(dir, ctx)
+	if !ok || kind != theme.FolderIconTreeExpanded {
+		t.Fatalf("tree-expanded kind = %v ok=%v, want FolderIconTreeExpanded", kind, ok)
+	}
+	if th.FolderIconGlyph(kind) != th.FolderIconGlyph(theme.FolderIconOpen) {
+		t.Fatalf("tree-expanded glyph mismatch with FolderIconOpen")
+	}
+
+	// Open-in-other-panel is the stronger signal and wins when both apply.
+	ctx = FolderIconContext{OtherPanelPath: "/tmp/alpha", TreeExpanded: true}
+	kind, ok = ResolveFolderIconKind(dir, ctx)
+	if !ok || kind != theme.FolderIconOpen {
+		t.Fatalf("open-in-other-panel should win over tree-expanded: kind = %v", kind)
+	}
+}
+
 func TestResolveFolderIconKindNonDirectory(t *testing.T) {
 	file := localfs.Entry{Name: "readme.txt", Path: "/tmp/readme.txt", Type: localfs.EntryFile}
 	_, ok := ResolveFolderIconKind(file, FolderIconContext{})

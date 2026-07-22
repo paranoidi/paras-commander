@@ -3,11 +3,11 @@ package ui
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
@@ -411,14 +411,17 @@ func dedupTreeGutter(
 ) (string, tcell.Style) {
 	if entry.HasChildren {
 		if entry.Value.Kind == DedupRowDir {
+			// Dedup tree rows use jobs.row as line text; folder glyphs always use directory
+			// blue (panel.row.directory), never jobs.row grey, open-folder cyan, or cursor/selection FG.
+			// dedup always wants the *closed*-kind foreground even when expanded, so it can't
+			// reuse panellist.TreeExpanderGlyph's FG (which switches to open-folder color); it
+			// only reuses the glyph text.
 			kind := theme.FolderIconDefault
 			if entry.Expanded {
 				kind = theme.FolderIconOpen
 			}
 			gutter := styles.FolderIconGlyph(kind)
 			iconRowStyle := styles.PanelListingEntryStyle(localfs.EntryDirectory, chromeBlocked)
-			// Dedup tree rows use jobs.row as line text; folder glyphs always use directory
-			// blue (panel.row.directory), never jobs.row grey, open-folder cyan, or cursor/selection FG.
 			iconFG := styles.FolderIconForeground(theme.FolderIconDefault, "", iconRowStyle)
 			return gutter, lineStyle.Foreground(iconFG)
 		}
@@ -432,28 +435,7 @@ func dedupTreeGutter(
 }
 
 func dedupTreeConnectorPrefix(styles theme.Theme, entry DedupRow) string {
-	if entry.Depth == 0 {
-		return ""
-	}
-	var b strings.Builder
-	continueGlyph := styles.SymbolTreeContinue()
-	branchGlyph := styles.SymbolTreeBranch()
-	endGlyph := styles.SymbolTreeEnd()
-	for i := range entry.Depth - 1 {
-		if entry.AncestorHasNext[i] {
-			b.WriteString(continueGlyph)
-			b.WriteString("  ")
-		} else {
-			b.WriteString("   ")
-		}
-	}
-	if entry.LastChild {
-		b.WriteString(endGlyph)
-	} else {
-		b.WriteString(branchGlyph)
-	}
-	b.WriteString(" ")
-	return b.String()
+	return panellist.TreeConnectorPrefix(entry.Depth, entry.LastChild, entry.AncestorHasNext, styles)
 }
 
 func dedupTreePrefix(styles theme.Theme, row DedupRow) string {

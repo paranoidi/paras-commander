@@ -11,6 +11,7 @@ const (
 	FolderIconMount
 	FolderIconScanning
 	FolderIconExcluded
+	FolderIconTreeExpanded
 )
 
 // FolderIconGlyph returns the icon-strip glyph for the given folder icon kind.
@@ -20,7 +21,7 @@ func (t Theme) FolderIconGlyph(kind FolderIconKind) string {
 		return t.foldersSymbol(SymbolKeyFoldersExcluded, "\uf114")
 	case FolderIconScanning:
 		return t.foldersSymbol(SymbolKeyFoldersScanning, "\U000F0D0B")
-	case FolderIconOpen:
+	case FolderIconOpen, FolderIconTreeExpanded:
 		return t.foldersSymbol(SymbolKeyFoldersOpen, "\U000F0770")
 	case FolderIconMount:
 		return t.foldersSymbol(SymbolKeyFoldersMount, "\U000F0256")

@@ -701,6 +701,22 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 			onOff = "on"
 		}
 		a.setTransientMessage(fmt.Sprintf("Carousel view: %s", onOff), ui.MessageUrgencyInfo)
+	case keymap.ActionPanelToggleTree:
+		if a.toggleTreeForPanel(activePanel, viewportRows) {
+			a.setTransientMessage("Tree view is not available in carousel view", ui.MessageUrgencyInfo)
+		}
+	case keymap.ActionPanelTreeExpand:
+		if a.expandTreeForPanel(activePanel, viewportRows) {
+			a.setTransientMessage("Tree view is not available in carousel view", ui.MessageUrgencyInfo)
+		}
+	case keymap.ActionPanelTreeCollapse:
+		a.collapseTreeForPanel(activePanel, viewportRows)
+	case keymap.ActionPanelTreeCollapseAll:
+		a.collapseAllTreeForPanel(activePanel, viewportRows)
+	case keymap.ActionPanelTreeExpandAllShallow:
+		if a.expandAllTreeShallowForPanel(activePanel, viewportRows) {
+			a.setTransientMessage("Tree view is not available in carousel view", ui.MessageUrgencyInfo)
+		}
 	case keymap.ActionPanelToggleZoomActivePanel:
 		a.toggleZoomActivePanelGuarded()
 	case keymap.ActionPanelToggleSplitOrientation:
@@ -720,6 +736,64 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 		return false
 	}
 	return true
+}
+
+// toggleTreeForPanel enables tree layout on target (seeding it from the current flat listing)
+// if not already active, then toggles expand/collapse on the directory under target's cursor —
+// so pressing Space on a not-yet-tree panel both switches to tree view and opens that row in
+// one step. Returns true when blocked by CarouselMode (single entry point for both the direct
+// keybinding dispatch and the scoped Left/Right menu item; see activateScopedPanelMenu).
+func (a *App) toggleTreeForPanel(target *panel.State, viewportRows int) (blocked bool) {
+	if target.ListLayout != panel.ListLayoutTree {
+		if !target.SetListLayout(panel.ListLayoutTree, viewportRows) {
+			return true
+		}
+	}
+	if err := target.ToggleTreeExpand(viewportRows); err != nil {
+		a.setErrorMessage("Toggle tree failed", err)
+	}
+	return false
+}
+
+// expandTreeForPanel enables tree layout on target if not already active, then expands the
+// directory under the cursor. Mirrors toggleTreeForPanel's auto-enable step; see its doc comment.
+func (a *App) expandTreeForPanel(target *panel.State, viewportRows int) (blocked bool) {
+	if target.ListLayout != panel.ListLayoutTree {
+		if !target.SetListLayout(panel.ListLayoutTree, viewportRows) {
+			return true
+		}
+	}
+	if err := target.ExpandTreeCursorRow(viewportRows); err != nil {
+		a.setErrorMessage("Expand failed", err)
+	}
+	return false
+}
+
+// collapseTreeForPanel collapses the directory under the cursor. Unlike expandTreeForPanel, it
+// never auto-enables tree mode: there is nothing to collapse if tree mode was never on.
+func (a *App) collapseTreeForPanel(target *panel.State, viewportRows int) {
+	if err := target.CollapseTreeCursorRow(viewportRows); err != nil {
+		a.setErrorMessage("Collapse failed", err)
+	}
+}
+
+// collapseAllTreeForPanel clears all expand state on target. Never auto-enables tree mode.
+func (a *App) collapseAllTreeForPanel(target *panel.State, viewportRows int) {
+	target.CollapseAllTree(viewportRows)
+}
+
+// expandAllTreeShallowForPanel enables tree layout on target if not already active, then expands
+// every depth-0 directory by exactly one level.
+func (a *App) expandAllTreeShallowForPanel(target *panel.State, viewportRows int) (blocked bool) {
+	if target.ListLayout != panel.ListLayoutTree {
+		if !target.SetListLayout(panel.ListLayoutTree, viewportRows) {
+			return true
+		}
+	}
+	if err := target.ExpandAllTreeShallow(viewportRows); err != nil {
+		a.setErrorMessage("Expand all failed", err)
+	}
+	return false
 }
 
 // toggleZoomActivePanelGuarded toggles active-panel zoom unless quick view/file preview is

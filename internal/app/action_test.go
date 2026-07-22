@@ -88,21 +88,51 @@ func TestActionFromKeyEscDoesNotMapToQuit(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsCtrlAltLeftToForwardHistory(t *testing.T) {
+func TestActionFromKeyMapsCtrlAltLeftToTreeCollapseAll(t *testing.T) {
 	km := defaultKeymap(t)
 	event := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt|tcell.ModCtrl)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
-	if got != keymap.ActionNavForward {
-		t.Fatalf("actionFromKeyEvent() = %v, want ActionNavForward", got)
+	if got != keymap.ActionPanelTreeCollapseAll {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelTreeCollapseAll", got)
 	}
 }
 
-func TestActionFromKeyMapsCtrlAltRightToBackwardHistory(t *testing.T) {
+func TestActionFromKeyMapsCtrlAltRightToTreeExpandAllShallow(t *testing.T) {
 	km := defaultKeymap(t)
 	event := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt|tcell.ModCtrl)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
-	if got != keymap.ActionNavBackward {
-		t.Fatalf("actionFromKeyEvent() = %v, want ActionNavBackward", got)
+	if got != keymap.ActionPanelTreeExpandAllShallow {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelTreeExpandAllShallow", got)
+	}
+}
+
+func TestActionFromKeyMapsAltLeftToTreeCollapse(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt)
+	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionPanelTreeCollapse {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelTreeCollapse", got)
+	}
+}
+
+func TestActionFromKeyMapsAltRightToTreeExpand(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt)
+	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionPanelTreeExpand {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelTreeExpand", got)
+	}
+}
+
+func TestActionFromKeyMapsCtrlArrowsToDirectoryHistory(t *testing.T) {
+	km := defaultKeymap(t)
+	fwd := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModCtrl)
+	if got := lookupActionForView(fwd, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser); got != keymap.ActionNavForward {
+		t.Fatalf("actionFromKeyEvent(C-right) = %v, want ActionNavForward", got)
+	}
+	back := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModCtrl)
+	if got := lookupActionForView(back, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser); got != keymap.ActionNavBackward {
+		t.Fatalf("actionFromKeyEvent(C-left) = %v, want ActionNavBackward", got)
 	}
 }
 

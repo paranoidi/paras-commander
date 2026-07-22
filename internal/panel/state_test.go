@@ -1575,6 +1575,53 @@ func TestApplySortDeterministicTieBreakByName(t *testing.T) {
 	}
 }
 
+// TestSortEntriesDirectMatchesApplySort confirms the extracted SortEntries free function (used
+// directly by tree-mode child loads, since there's no *State to call ApplySort against a
+// standalone []localfs.Entry) sorts identically to what ApplySort does through the receiver.
+func TestSortEntriesDirectMatchesApplySort(t *testing.T) {
+	entries := []localfs.Entry{
+		{Name: "z.txt", Path: "/tmp/z.txt"},
+		{Name: "a.txt", Path: "/tmp/a.txt"},
+		{Name: "m.txt", Path: "/tmp/m.txt"},
+	}
+	SortEntries(entries, SortState{Mode: SortName, Reverse: true}, nil, false)
+
+	names := entryNames(entries)
+	want := []string{"z.txt", "m.txt", "a.txt"}
+	for i := range want {
+		if names[i] != want[i] {
+			t.Fatalf("names[%d] = %q, want %q", i, names[i], want[i])
+		}
+	}
+}
+
+// TestSortEntriesUseDiskPrimaryFalseIgnoresDiskSorter confirms useDiskPrimary=false sorts by
+// SortState.Mode even when a diskSorter is supplied and would rank differently — this is exactly
+// how tree-mode child loads call SortEntries (see ApplyTreeChildLoad), forcing disk-primary sort
+// off regardless of the panel's flat-mode disk-usage-idle-sort settings.
+func TestSortEntriesUseDiskPrimaryFalseIgnoresDiskSorter(t *testing.T) {
+	entries := []localfs.Entry{
+		{Name: "small.txt", Path: "/tmp/small.txt", Size: 1},
+		{Name: "large.txt", Path: "/tmp/large.txt", Size: 100},
+	}
+	diskSorter := func(absPath string) (int64, bool) {
+		// Disk totals disagree with SortSize (small.txt "big" on disk, large.txt "small").
+		if absPath == "/tmp/small.txt" {
+			return 9999, true
+		}
+		return 1, true
+	}
+	SortEntries(entries, SortState{Mode: SortSize}, diskSorter, false)
+
+	names := entryNames(entries)
+	want := []string{"small.txt", "large.txt"} // by Size ascending, diskSorter ignored
+	for i := range want {
+		if names[i] != want[i] {
+			t.Fatalf("names[%d] = %q, want %q (useDiskPrimary=false must ignore diskSorter)", i, names[i], want[i])
+		}
+	}
+}
+
 func TestSetSortModePreservesCursorByPath(t *testing.T) {
 	state := State{
 		Entries: []localfs.Entry{

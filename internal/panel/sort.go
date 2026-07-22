@@ -81,18 +81,28 @@ func SortDialogRadios() []SortDialogRadio {
 	}
 }
 
-// ApplySort sorts s.Entries in-place using the current sort state.
+// ApplySort sorts s.Entries in-place using the current sort state, then (in tree mode) resyncs
+// TreeRoots/treeRows so the visible tree order matches — see resyncTreeOrder for why that's needed.
 func (s *State) ApplySort() {
-	if len(s.Entries) == 0 {
+	SortEntries(s.Entries, s.Sort, s.DiskSorter, s.primarySortUsesDiskTotals())
+	s.resyncTreeOrder()
+}
+
+// SortEntries sorts entries in place per sortState, tie-breaking by name then path.
+// useDiskPrimary switches the primary sort key to diskSorter's cached totals (used for the
+// idle disk-usage sort in flat mode); callers that never want this (e.g. tree-mode child
+// loads) pass false regardless of the panel's own DiskUsageIdleSizeSort setting.
+func SortEntries(entries []localfs.Entry, sortState SortState, diskSorter func(string) (int64, bool), useDiskPrimary bool) {
+	if len(entries) == 0 {
 		return
 	}
 
-	sort.SliceStable(s.Entries, func(i, j int) bool {
-		left := s.Entries[i]
-		right := s.Entries[j]
+	sort.SliceStable(entries, func(i, j int) bool {
+		left := entries[i]
+		right := entries[j]
 
 		// Directories first
-		if s.Sort.DirectoriesFirst && left.Type != right.Type {
+		if sortState.DirectoriesFirst && left.Type != right.Type {
 			if left.Type == localfs.EntryDirectory {
 				return true
 			}
@@ -101,18 +111,18 @@ func (s *State) ApplySort() {
 			}
 		}
 
-		reverse := s.Sort.Reverse
+		reverse := sortState.Reverse
 
 		// Primary sort key
 		var cmp int
-		if s.primarySortUsesDiskTotals() {
-			cmp = compareDiskUsagePrimary(left, right, s.DiskSorter, false)
+		if useDiskPrimary {
+			cmp = compareDiskUsagePrimary(left, right, diskSorter, false)
 			if cmp != 0 {
 				// Largest cached totals first; unknown sizes stay last (handled inside compareDiskUsagePrimary).
 				return cmp < 0
 			}
 		} else {
-			cmp = compareByMode(left, right, s.Sort.Mode)
+			cmp = compareByMode(left, right, sortState.Mode)
 			if cmp != 0 {
 				if reverse {
 					return cmp > 0
@@ -242,7 +252,9 @@ func (s State) ListColumnTitles(showIcons bool) (nameTitle, sizeTitle, thirdTitl
 		case SortSize:
 			return nameBase, fmt.Sprintf("%cSize", arrow), ""
 		case SortMtime:
-			return nameBase, fmt.Sprintf("%cSize", arrow), ""
+			// Brief has no Modified column to attach the arrow to; omit it rather
+			// than misattributing it to Size.
+			return nameBase, "Size", ""
 		default:
 			return listNameColumnTitle(showIcons, arrow), "Size", ""
 		}
@@ -254,7 +266,9 @@ func (s State) ListColumnTitles(showIcons bool) (nameTitle, sizeTitle, thirdTitl
 		case SortSize:
 			return nameBase, fmt.Sprintf("%cSize", arrow), lblPerm
 		case SortMtime:
-			return nameBase, "Size", fmt.Sprintf("%c%s", arrow, lblPerm)
+			// Perm has no Modified column to attach the arrow to; omit it rather
+			// than misattributing it to Permissions.
+			return nameBase, "Size", lblPerm
 		default:
 			return listNameColumnTitle(showIcons, arrow), "Size", lblPerm
 		}

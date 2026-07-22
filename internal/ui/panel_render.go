@@ -250,7 +250,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	if showGit {
 		paintGitHeader(screen, gitStart, headerY, headerStyle, panelStyle.Styles)
 	}
-	if display.ShowIcons {
+	if display.ShowIcons && state.ListLayout != panel.ListLayoutTree {
 		paintPanelIconStripBlank(screen, iconStart, headerY, headerStyle)
 	}
 	listContentStart := iconStart + iconStrip
@@ -381,11 +381,35 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	var jobMarkGlyph rune
 	var rowSuffix panellist.RowSuffix
 
+	// Tree-mode gutter (ancestor guide lines + folder expander) is prepended before the
+	// icon/name columns; every other column (size/date/permissions/git/marks) keeps using the
+	// unmodified listTextWidth/listContentStart/nameWidth below.
+	var treeConnector string
+	var treeExpanded bool
+	var treeLoading bool
+	treeGutterWidth := 0
+
 	if entry, _, ok := state.VisibleEntry(entryIndex); ok {
 		hasEntry = true
 		cur = entry
+		if state.ListLayout == panel.ListLayoutTree {
+			if depth, lastChild, ancestorHasNext, expanded, loading, trOK := state.TreeRowShape(entryIndex); trOK {
+				treeConnector = panellist.TreeConnectorPrefix(depth, lastChild, ancestorHasNext, panelStyle.Styles)
+				treeExpanded = expanded
+				treeLoading = loading
+				pw := len([]rune(treeConnector)) + panelIconStripCells
+				// Narrow-panel fallback: hide the gutter rather than crush the name to nothing.
+				if pw > 0 && pw < listTextWidth {
+					treeGutterWidth = pw
+				} else {
+					treeConnector = ""
+				}
+			}
+		}
+		effTextWidth := listTextWidth - treeGutterWidth
+		effNameWidth := max(1, nameWidth-treeGutterWidth)
 		style, selected = panelRowStyle(entry, entryIndex, state, ctx, panelStyle.Styles)
-		subtreeMark = entry.Type == localfs.EntryDirectory && nameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
+		subtreeMark = entry.Type == localfs.EntryDirectory && effNameWidth > 2 && state.HasSelectionInSubtree(entry.Path)
 		newFileTier = state.NewFileMarkTier(entry)
 		renameMark = state.IsRenameMarked(entry)
 		jobMark, jobStatus, jobWrite = EntryPathJobMarkStatus(entry.Path, display.JobMarks)
@@ -400,7 +424,10 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		}
 		rowSuffix = panellist.NewRowSuffix(jobMarkGlyph, newFileTier, renameMark, subtreeMark, jobWrite)
 		rowOpts.Suffix = rowSuffix
-		text = formatEntry(entry, listTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
+		text = formatEntry(entry, effTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
+		nameWidth = effNameWidth
+		listTextWidth = effTextWidth
+		listContentStart += treeGutterWidth
 		if display.ShowDiskUsage && display.Painter != nil && diskDenom > 0 {
 			fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, display.Painter), diskDenom, fullRowCells)
 		}
@@ -419,10 +446,10 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	}
 	if hasEntry {
 		spans = matchSpans(cur, listTextWidth, state.MatchRanges(entryIndex), entryIndex == state.Cursor, panelStyle.Styles, rowOpts, func(di int) tcell.Style {
-			return blendCell(di + leftGutter + gitStrip + iconStrip)
+			return blendCell(di + leftGutter + gitStrip + iconStrip + treeGutterWidth)
 		})
 		if suffixSpans := panellist.ListingSuffixSpans(cur, nameWidth, display.ShowIcons, rowSuffix, jobStatus, panelStyle.Styles, ctx.ChromeBlocked, cursorIconKey, func(di int) tcell.Style {
-			return blendCell(di + leftGutter + gitStrip + iconStrip)
+			return blendCell(di + leftGutter + gitStrip + iconStrip + treeGutterWidth)
 		}); len(suffixSpans) > 0 {
 			spans = append(suffixSpans, spans...)
 		}
@@ -451,14 +478,40 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			FillCols: fillCols, BlendCell: blendCell,
 		})
 	}
-	if display.ShowIcons {
+	if display.ShowIcons && state.ListLayout != panel.ListLayoutTree {
 		drawPanelRowIconStrip(screen, p, panelRowPaintState{
 			Y: y, HasEntry: hasEntry, Entry: cur, Style: style, BlendCell: blendCell,
 			IconKey: iconKey, DiskPending: diskPending, DiskExcluded: diskExcluded,
 		})
 	}
+	if treeGutterWidth > 0 {
+		gutterX := listContentStart - treeGutterWidth
+		_, rowBG, _ := style.Decompose()
+		connectorStyle := panelStyle.Styles.PanelRowTreeConnector.Background(rowBG)
+		connW := len([]rune(treeConnector))
+		primitive.Text(screen, gutterX, y, connW, treeConnector, connectorStyle)
+		if hasEntry {
+			iconX := gutterX + connW
+			iconStripStyle := blendCell(leftGutter + gitStrip + iconStrip + connW)
+			paintPanelIconStrip(screen, iconX, y, cur, iconStripStyle, panelStyle.Styles, PanelIconStripContext{
+				CursorStyleKey: iconKey,
+				ChromeBlocked:  ctx.ChromeBlocked,
+				Folder: panellist.FolderIconContext{
+					OtherPanelPath:         ctx.OtherPanelPath,
+					DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
+					ListingDev:             state.ListingDevice,
+					ListingDevValid:        state.ListingDeviceValid,
+					DiskPending:            diskPending,
+					DiskExcluded:           diskExcluded,
+					DiskUsageChrome:        display.ShowDiskUsage,
+					TreeExpanded:           treeExpanded,
+					TreeLoading:            treeLoading,
+				},
+			})
+		}
+	}
 	primitive.StyledTextCellwise(screen, listContentStart, y, listTextWidth, text, func(ci int) tcell.Style {
-		return blendCell(leftGutter + gitStrip + iconStrip + ci)
+		return blendCell(leftGutter + gitStrip + iconStrip + treeGutterWidth + ci)
 	}, spans)
 }
 
@@ -546,7 +599,7 @@ func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig)
 		leftGutter = panelIconListLeadingGutter
 	}
 	iconStrip := 0
-	if display.ShowIcons {
+	if display.ShowIcons && state.ListLayout != panel.ListLayoutTree {
 		iconStrip = panelIconStripCells
 	}
 	baseListWidth := interior - leftGutter - iconStrip
@@ -563,7 +616,7 @@ func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig)
 	gitStart := rect.X + 1 + leftGutter
 	iconStart := gitStart + gitStrip
 	fullRowCells := leftGutter + gitStrip + iconStrip + rowTextWidth
-	diskDenom := panelDiskUsageDenom(display.ShowDiskUsage, display.Painter, state.Entries)
+	diskDenom := panelDiskUsageDenom(display.ShowDiskUsage, display.Painter, state.VisibleEntries())
 	return panelColumnLayoutResult{
 		LeftGutter: leftGutter, IconStrip: iconStrip, NameOnlyDisplay: nameOnlyDisplay,
 		ShowGit: showGit, GitStrip: gitStrip, RowTextWidth: rowTextWidth,

@@ -1,0 +1,792 @@
+package panel
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/localfs"
+)
+
+func TestToggleTreeExpandCollapseReusesCachedChildren(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "willow.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount before expand = %d, want 2", got)
+	}
+	// Directories sort first, so the cursor should already be on the "meadow" row.
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Type != localfs.EntryDirectory {
+		t.Fatalf("CurrentEntry = %+v ok=%v, want directory row", entry, ok)
+	}
+
+	if err := state.ToggleTreeExpand(10); err != nil {
+		t.Fatalf("ToggleTreeExpand (expand): %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 4 {
+		t.Fatalf("VisibleEntryCount after expand = %d, want 4 (2 top-level + 2 children)", got)
+	}
+
+	// Collapse must not drop the cached children.
+	state.Cursor = 0
+	if err := state.ToggleTreeExpand(10); err != nil {
+		t.Fatalf("ToggleTreeExpand (collapse): %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount after collapse = %d, want 2", got)
+	}
+
+	// Remove the on-disk children so a re-fetch would be observable, then re-expand: the
+	// cached children must still be shown (no re-read of the now-empty directory).
+	if err := os.Remove(filepath.Join(meadow, "harbor.txt")); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if err := os.Remove(filepath.Join(meadow, "willow.txt")); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	state.Cursor = 0
+	if err := state.ToggleTreeExpand(10); err != nil {
+		t.Fatalf("ToggleTreeExpand (re-expand): %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 4 {
+		t.Fatalf("VisibleEntryCount after re-expand = %d, want 4 (cached children, not re-fetched)", got)
+	}
+}
+
+// TestApplyListingRebuildsTreeRowsOnNavigate is the regression test for the tree-mode navigation
+// bug: after Left/Right (or Enter) navigation while in tree mode, VisibleEntry rows must reflect
+// the new directory's entries, not the tree built from whichever directory tree mode was first
+// toggled on in.
+func TestApplyListingRebuildsTreeRowsOnNavigate(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(other, "willow.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if got := state.VisibleEntryCount(); got != 1 {
+		t.Fatalf("VisibleEntryCount in %s = %d, want 1", root, got)
+	}
+
+	if err := state.NavigateTo(other, "", 10); err != nil {
+		t.Fatalf("NavigateTo(%s): %v", other, err)
+	}
+
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount after navigating to %s = %d, want 2 (stale tree rows from %s)", other, got, root)
+	}
+	entry, _, ok := state.VisibleEntry(0)
+	if !ok {
+		t.Fatal("VisibleEntry(0) ok = false, want true")
+	}
+	if entry.Path != filepath.Join(other, "harbor.txt") {
+		t.Fatalf("VisibleEntry(0).Path = %q, want harbor.txt under %s (got stale entry from %s)", entry.Path, other, root)
+	}
+}
+
+// TestApplyListingSortsTreeRootsOnNavigate is the regression test for the ApplyListing
+// TreeRoots-reseeded-before-ApplySort ordering bug: depth-0 tree rows must reflect the panel's
+// active sort setting after navigating while in tree mode, not raw backend/filesystem order.
+// Reverse-name sort is used so a fix-independent alphabetical backend read order (harbor before
+// willow) would fail before the fix and pass after.
+func TestApplyListingSortsTreeRootsOnNavigate(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(other, "willow.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	state.Sort = SortState{Mode: SortName, Reverse: true}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	if err := state.NavigateTo(other, "", 10); err != nil {
+		t.Fatalf("NavigateTo(%s): %v", other, err)
+	}
+
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount after navigate = %d, want 2", got)
+	}
+	entry0, _, ok := state.VisibleEntry(0)
+	if !ok {
+		t.Fatal("VisibleEntry(0) ok = false, want true")
+	}
+	entry1, _, ok := state.VisibleEntry(1)
+	if !ok {
+		t.Fatal("VisibleEntry(1) ok = false, want true")
+	}
+	if entry0.Name != "willow.txt" || entry1.Name != "harbor.txt" {
+		t.Fatalf("VisibleEntry order = [%s, %s], want [willow.txt, harbor.txt] (reverse-name sort applied to depth-0 tree rows)", entry0.Name, entry1.Name)
+	}
+}
+
+func TestSetListLayoutRoundTripPreservesFlatEntries(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "meadow"), 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	wantPaths := make([]string, len(state.Entries))
+	for i, e := range state.Entries {
+		wantPaths[i] = e.Path
+	}
+
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if !state.SetListLayout(ListLayoutFlat, 10) {
+		t.Fatal("SetListLayout(Flat) = false, want true")
+	}
+	if state.ListLayout != ListLayoutFlat {
+		t.Fatalf("ListLayout = %v, want Flat", state.ListLayout)
+	}
+	if len(state.Entries) != len(wantPaths) {
+		t.Fatalf("len(Entries) = %d, want %d", len(state.Entries), len(wantPaths))
+	}
+	for i, e := range state.Entries {
+		if e.Path != wantPaths[i] {
+			t.Fatalf("Entries[%d].Path = %q, want %q", i, e.Path, wantPaths[i])
+		}
+	}
+}
+
+func TestSetListLayoutBlockedByCarouselMode(t *testing.T) {
+	root := t.TempDir()
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	state.CarouselMode = true
+	if state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = true while CarouselMode active, want false")
+	}
+	if state.ListLayout != ListLayoutFlat {
+		t.Fatalf("ListLayout = %v, want Flat (blocked)", state.ListLayout)
+	}
+}
+
+func TestToggleTreeExpandNoOpOnFileRow(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "lantern.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	before := state.VisibleEntryCount()
+	if err := state.ToggleTreeExpand(10); err != nil {
+		t.Fatalf("ToggleTreeExpand: %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != before {
+		t.Fatalf("VisibleEntryCount changed on file row: got %d, want %d", got, before)
+	}
+	if len(state.TreeExpanded) != 0 {
+		t.Fatalf("TreeExpanded = %v, want empty (no-op on file row)", state.TreeExpanded)
+	}
+}
+
+func TestExpandTreeCursorRow(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	// Directories sort first, so the cursor sits on "meadow".
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow (dir): %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 3 {
+		t.Fatalf("VisibleEntryCount after expand = %d, want 3 (meadow + harbor.txt + beacon.txt)", got)
+	}
+
+	// No-op: already expanded.
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow (already expanded): %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 3 {
+		t.Fatalf("VisibleEntryCount unchanged = %d, want 3", got)
+	}
+
+	// No-op on a file row.
+	state.Cursor = 1 // harbor.txt, meadow's child
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow (file row): %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 3 {
+		t.Fatalf("VisibleEntryCount changed on file row: got %d, want 3", got)
+	}
+}
+
+func TestCollapseTreeCursorRow(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	// Outside tree mode: no-op.
+	if err := state.CollapseTreeCursorRow(10); err != nil {
+		t.Fatalf("CollapseTreeCursorRow (outside tree mode): %v", err)
+	}
+
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	// No-op: row is not expanded yet.
+	if err := state.CollapseTreeCursorRow(10); err != nil {
+		t.Fatalf("CollapseTreeCursorRow (not expanded): %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 1 {
+		t.Fatalf("VisibleEntryCount = %d, want 1 (unchanged)", got)
+	}
+
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow: %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount after expand = %d, want 2", got)
+	}
+
+	state.Cursor = 0
+	if err := state.CollapseTreeCursorRow(10); err != nil {
+		t.Fatalf("CollapseTreeCursorRow: %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 1 {
+		t.Fatalf("VisibleEntryCount after collapse = %d, want 1", got)
+	}
+}
+
+// TestCollapseTreeCursorRowJumpsToAndCollapsesParent covers the collapse-or-jump-to-parent
+// behavior: when the cursor isn't itself sitting on an expanded directory, CollapseTreeCursorRow
+// walks up to the immediate parent and collapses that instead of doing nothing.
+func TestCollapseTreeCursorRowJumpsToAndCollapsesParent(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	nested := filepath.Join(meadow, "nested")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "deep.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	// rowOf finds the visible row index for path (child listing order is not directories-
+	// first, unlike the top-level ApplySort, so tests must look rows up by path, not assume a
+	// fixed index).
+	rowOf := func(path string) int {
+		t.Helper()
+		for i := 0; i < state.VisibleEntryCount(); i++ {
+			if e, _, ok := state.VisibleEntry(i); ok && e.Path == path {
+				return i
+			}
+		}
+		t.Fatalf("row for %s not found among %d visible rows", path, state.VisibleEntryCount())
+		return -1
+	}
+
+	// Cursor starts on "meadow" (top-level directories sort first). Expand it.
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow(meadow): %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 4 {
+		t.Fatalf("VisibleEntryCount after expanding meadow = %d, want 4", got)
+	}
+
+	// Cursor on harbor.txt, a file child of the expanded "meadow": collapsing should jump to
+	// and collapse the parent ("meadow"), not no-op.
+	state.Cursor = rowOf(filepath.Join(meadow, "harbor.txt"))
+	if err := state.CollapseTreeCursorRow(10); err != nil {
+		t.Fatalf("CollapseTreeCursorRow (file child): %v", err)
+	}
+	if state.TreeExpanded[meadow] {
+		t.Fatal("TreeExpanded[meadow] = true, want false after collapsing via file-child cursor")
+	}
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount after collapse = %d, want 2 (meadow, beacon.txt)", got)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Path != meadow {
+		t.Fatalf("CurrentEntry after collapse = %+v ok=%v, want cursor on meadow", entry, ok)
+	}
+
+	// Re-expand meadow, cursor lands back on it.
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow(meadow) re-expand: %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 4 {
+		t.Fatalf("VisibleEntryCount after re-expand = %d, want 4", got)
+	}
+
+	// Cursor on "nested", a collapsed nested directory (not itself expanded): collapsing
+	// should jump to and collapse its parent ("meadow"), not toggle "nested".
+	state.Cursor = rowOf(nested)
+	if err := state.CollapseTreeCursorRow(10); err != nil {
+		t.Fatalf("CollapseTreeCursorRow (nested collapsed dir): %v", err)
+	}
+	if state.TreeExpanded[meadow] {
+		t.Fatal("TreeExpanded[meadow] = true, want false after collapsing via nested-dir cursor")
+	}
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount after collapse = %d, want 2 (meadow, beacon.txt)", got)
+	}
+	entry, ok = state.CurrentEntry()
+	if !ok || entry.Path != meadow {
+		t.Fatalf("CurrentEntry after collapse = %+v ok=%v, want cursor on meadow", entry, ok)
+	}
+
+	// Existing behavior preserved: cursor directly on an expanded directory collapses that
+	// same directory in place, not its grandparent. Re-expand meadow, then expand nested too.
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow(meadow) re-expand 2: %v", err)
+	}
+	state.Cursor = rowOf(nested)
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow(nested): %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 5 {
+		t.Fatalf("VisibleEntryCount after expanding nested = %d, want 5", got)
+	}
+	state.Cursor = rowOf(nested) // back on "nested", which is now expanded
+	if err := state.CollapseTreeCursorRow(10); err != nil {
+		t.Fatalf("CollapseTreeCursorRow (nested expanded): %v", err)
+	}
+	if state.TreeExpanded[nested] {
+		t.Fatal("TreeExpanded[nested] = true, want false")
+	}
+	if !state.TreeExpanded[meadow] {
+		t.Fatal("TreeExpanded[meadow] = false, want true (must not collapse the grandparent)")
+	}
+	entry, ok = state.CurrentEntry()
+	if !ok || entry.Path != nested {
+		t.Fatalf("CurrentEntry after in-place collapse = %+v ok=%v, want cursor on nested", entry, ok)
+	}
+
+	// Depth-0 no-op: cursor on a top-level file with nothing expanded above it.
+	before := state.VisibleEntryCount()
+	state.Cursor = rowOf(filepath.Join(root, "beacon.txt"))
+	beaconIdx := state.Cursor
+	wantExpanded := map[string]bool{}
+	for k, v := range state.TreeExpanded {
+		wantExpanded[k] = v
+	}
+	if err := state.CollapseTreeCursorRow(10); err != nil {
+		t.Fatalf("CollapseTreeCursorRow (depth-0 file): %v", err)
+	}
+	if state.Cursor != beaconIdx {
+		t.Fatalf("Cursor = %d, want unchanged %d (depth-0 no-op)", state.Cursor, beaconIdx)
+	}
+	if got := state.VisibleEntryCount(); got != before {
+		t.Fatalf("VisibleEntryCount = %d, want unchanged %d (depth-0 no-op)", got, before)
+	}
+	for k, v := range wantExpanded {
+		if state.TreeExpanded[k] != v {
+			t.Fatalf("TreeExpanded[%s] changed, want unchanged (depth-0 no-op)", k)
+		}
+	}
+}
+
+func TestCollapseAllTree(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	// Outside tree mode: no-op, must not panic or flip layout.
+	state.CollapseAllTree(10)
+
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow: %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount after expand = %d, want 2", got)
+	}
+
+	state.CollapseAllTree(10)
+	if got := state.VisibleEntryCount(); got != 1 {
+		t.Fatalf("VisibleEntryCount after CollapseAllTree = %d, want 1", got)
+	}
+	if len(state.TreeExpanded) != 0 {
+		t.Fatalf("TreeExpanded = %v, want empty after CollapseAllTree", state.TreeExpanded)
+	}
+}
+
+func TestCollapseAllTreeCursorLandsOnRootAncestorNotOldIndex(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	nested := filepath.Join(meadow, "nested")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "deep.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	rowOf := func(path string) int {
+		t.Helper()
+		for i := 0; i < state.VisibleEntryCount(); i++ {
+			if e, _, ok := state.VisibleEntry(i); ok && e.Path == path {
+				return i
+			}
+		}
+		t.Fatalf("row for %s not found among %d visible rows", path, state.VisibleEntryCount())
+		return -1
+	}
+
+	// Expand meadow, then nested, and put the cursor on the deeply nested file.
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow(meadow): %v", err)
+	}
+	state.Cursor = rowOf(nested)
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow(nested): %v", err)
+	}
+	state.Cursor = rowOf(filepath.Join(nested, "deep.txt"))
+
+	state.CollapseAllTree(10)
+
+	// After collapsing everything, the cursor must follow "meadow" (the depth-0 ancestor of the
+	// row it was on) rather than landing on whatever entry now occupies the old numeric index.
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Path != meadow {
+		t.Fatalf("CurrentEntry after CollapseAllTree = %+v ok=%v, want cursor on meadow", entry, ok)
+	}
+}
+
+func TestExpandAllTreeShallow(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	nested := filepath.Join(meadow, "nested")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "deep.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	orchard := filepath.Join(root, "orchard")
+	if err := os.Mkdir(orchard, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(orchard, "ember.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	// Depth-0: meadow, orchard (2 dirs). Both should expand by one level.
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount before expand-all = %d, want 2", got)
+	}
+
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow: %v", err)
+	}
+	// meadow -> nested (1 child), orchard -> ember.txt (1 child): 2 roots + 2 children = 4.
+	if got := state.VisibleEntryCount(); got != 4 {
+		t.Fatalf("VisibleEntryCount after ExpandAllTreeShallow = %d, want 4 (depth-0 dirs expanded by one level only)", got)
+	}
+	if !state.TreeExpanded[meadow] {
+		t.Fatalf("TreeExpanded[%s] = false, want true", meadow)
+	}
+	if !state.TreeExpanded[orchard] {
+		t.Fatalf("TreeExpanded[%s] = false, want true", orchard)
+	}
+	// "nested" is a depth-1 directory with its own child ("deep.txt"); it must NOT be
+	// auto-expanded by the shallow expand-all.
+	if state.TreeExpanded[nested] {
+		t.Fatalf("TreeExpanded[%s] = true, want false (shallow expand must not recurse)", nested)
+	}
+}
+
+// TestQuickFilterMatchesExpandedTreeChild is the regression test for the quick-filter-does-not-
+// search-expanded-leafs bug: rebuildFilter must build its corpus from VisibleEntry/
+// VisibleEntryCount (which include flattened tree rows), not from the flat, depth-0-only
+// s.Entries slice.
+func TestQuickFilterMatchesExpandedTreeChild(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	// Cursor starts on "meadow" (directories sort first).
+	if err := state.ToggleTreeExpand(10); err != nil {
+		t.Fatalf("ToggleTreeExpand: %v", err)
+	}
+
+	state.OpenFilter(10)
+	for _, r := range "harbor" {
+		state.AppendFilterRune(r, 10)
+	}
+
+	if !state.FilterHasMatches() {
+		t.Fatal("FilterHasMatches() = false, want true for expanded tree child harbor.txt")
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "harbor.txt" {
+		t.Fatalf("CurrentEntry() = %+v ok=%v, want harbor.txt (expanded tree child)", entry, ok)
+	}
+}
+
+// TestSelectGroupMatchesExpandedTreeChild is the regression test for the sibling bug to the
+// quick-filter one above: SelectGroup/UnselectGroup/InvertSelection iterated s.Entries directly
+// (the flat, depth-0-only list), so a group-select pattern could never match a file only visible
+// inside an expanded tree directory. Switching to VisibleEntry/VisibleEntryCount fixes it.
+func TestSelectGroupMatchesExpandedTreeChild(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	// Cursor starts on "meadow" (directories sort first).
+	if err := state.ToggleTreeExpand(10); err != nil {
+		t.Fatalf("ToggleTreeExpand: %v", err)
+	}
+
+	if err := state.SelectGroup("harbor.txt", false, false, true, GroupPatternShell, GroupSelectMeta{}); err != nil {
+		t.Fatalf("SelectGroup: %v", err)
+	}
+	harborPath := filepath.Join(meadow, "harbor.txt")
+	if !state.SelectedPaths[harborPath] {
+		t.Fatalf("SelectedPaths[%q] = false, want true (expanded tree child must be selectable)", harborPath)
+	}
+
+	if err := state.UnselectGroup("harbor.txt", false, false, true, GroupPatternShell, GroupSelectMeta{}); err != nil {
+		t.Fatalf("UnselectGroup: %v", err)
+	}
+	if state.SelectedPaths[harborPath] {
+		t.Fatal("SelectedPaths still true after UnselectGroup on expanded tree child")
+	}
+}
+
+// TestInvertSelectionCoversExpandedTreeChild confirms InvertSelection toggles selection for
+// rows only visible inside an expanded tree directory, not just the depth-0 listing.
+func TestInvertSelectionCoversExpandedTreeChild(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := state.ToggleTreeExpand(10); err != nil {
+		t.Fatalf("ToggleTreeExpand: %v", err)
+	}
+
+	state.InvertSelection()
+
+	harborPath := filepath.Join(meadow, "harbor.txt")
+	if !state.SelectedPaths[harborPath] {
+		t.Fatalf("SelectedPaths[%q] = false after InvertSelection, want true (expanded tree child included)", harborPath)
+	}
+}
+
+// TestFilterResultsStayValidAfterTreeExpandChangesRowLayout proves rebuildTreeRows keeps an
+// active filter's results in sync: expanding "meadow" inserts a new row above "aardvark.txt",
+// shifting its row index. Without a rebuildFilter call in rebuildTreeRows, the filter's stale
+// Index would keep pointing at the old row position (now occupied by "harbor.txt").
+func TestFilterResultsStayValidAfterTreeExpandChangesRowLayout(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "aardvark.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount before expand = %d, want 2 (meadow, aardvark.txt)", got)
+	}
+
+	state.OpenFilter(10)
+	for _, r := range "aardvark" {
+		state.AppendFilterRune(r, 10)
+	}
+	if !state.FilterHasMatches() {
+		t.Fatal("FilterHasMatches() = false before expand, want true")
+	}
+
+	// The filter match moved the cursor onto aardvark.txt (a file); move it back to meadow
+	// (row 0) so ToggleTreeExpand acts on the directory, not the no-op file row.
+	state.Cursor = 0
+
+	// Expanding meadow inserts harbor.txt above aardvark.txt: rows become
+	// meadow(0), harbor.txt(1), aardvark.txt(2).
+	if err := state.ToggleTreeExpand(10); err != nil {
+		t.Fatalf("ToggleTreeExpand: %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 3 {
+		t.Fatalf("VisibleEntryCount after expand = %d, want 3", got)
+	}
+
+	if !state.FilterHasMatches() {
+		t.Fatal("FilterHasMatches() = false after expand, want true (filter must stay in sync)")
+	}
+	if ranges := state.MatchRanges(2); len(ranges) == 0 {
+		t.Fatal("MatchRanges(2) empty, want match on aardvark.txt's new row after tree rebuild")
+	}
+	if ranges := state.MatchRanges(1); len(ranges) != 0 {
+		t.Fatalf("MatchRanges(1) = %v, want no match on harbor.txt's row (stale filter index)", ranges)
+	}
+}

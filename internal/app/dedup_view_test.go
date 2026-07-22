@@ -204,7 +204,7 @@ func TestDedupViewSkipsSymlinks(t *testing.T) {
 	}
 }
 
-func TestDedupViewLeftCollapsesInsteadOfClosing(t *testing.T) {
+func TestDedupViewPlainLeftDoesNotCloseView(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("dup"), 0o644); err != nil {
 		t.Fatal(err)
@@ -221,7 +221,8 @@ func TestDedupViewLeftCollapsesInsteadOfClosing(t *testing.T) {
 		t.Fatalf("ViewMode = %v, want ViewDedup", app.model.ViewMode)
 	}
 
-	// Left is tree collapse now, not close: the view must stay open.
+	// Plain Left has no dedup binding (tree collapse moved to Alt+Left): it must not close
+	// the view or quit the app, just do nothing.
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if quit {
 		t.Fatal("KeyLeft in dedup view must not quit the application")
@@ -740,7 +741,7 @@ func TestDedupViewRightExpandsCollapsedDirInPlace(t *testing.T) {
 	}
 
 	// First Right on orchard: expand only, cursor stays on the folder row.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
 	rows = app.model.DedupList
 	sel := app.model.DedupView.Main.Selected
 	if sel != 0 || rows[sel].ID != "d:orchard" {
@@ -774,8 +775,8 @@ func TestDedupViewRightDescendsToFirstFile(t *testing.T) {
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
 
 	// Expand orchard in place, then descend on the second Right.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
 	rows := app.model.DedupList
 	sel := app.model.DedupView.Main.Selected
 	if sel < 0 || sel >= len(rows) || rows[sel].Value.Kind != ui.DedupRowFile {
@@ -816,9 +817,9 @@ func TestDedupViewRightOnExpandedDirDoesNotCollapse(t *testing.T) {
 			break
 		}
 	}
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
 	beforeRows := len(app.model.DedupList)
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
 	if got := len(app.model.DedupList); got != beforeRows {
 		t.Fatalf("rows after Right on expanded dir = %d, want %d (no collapse)", got, beforeRows)
 	}
@@ -863,13 +864,13 @@ func TestDedupViewCopiesPaneRightDescendsToFirstFile(t *testing.T) {
 	}
 
 	// First Right expands meadow in place; second Right descends to the first file.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
 	rows := app.model.DedupCopiesList
 	sel := app.model.DedupView.Copies.Selected
 	if sel < 0 || sel >= len(rows) || rows[sel].ID != "d:meadow" {
 		t.Fatalf("copies cursor on %q at %d, want meadow dir after first Right", rows[sel].ID, sel)
 	}
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
 	rows = app.model.DedupCopiesList
 	sel = app.model.DedupView.Copies.Selected
 	if sel < 0 || sel >= len(rows) || rows[sel].Value.Kind != ui.DedupRowFile {
@@ -909,17 +910,17 @@ func TestDedupViewTreeCollapseAndModes(t *testing.T) {
 	}
 
 	// Right expands the group header; the copy row appears.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
 	if got := len(app.model.DedupList); got != 2 {
 		t.Fatalf("after expand rows = %d, want 2", got)
 	}
 	// Left collapses again.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt))
 	if got := len(app.model.DedupList); got != 1 {
 		t.Fatalf("after collapse rows = %d, want 1", got)
 	}
 	// Right again re-expands.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
 	if got := len(app.model.DedupList); got != 2 {
 		t.Fatalf("after re-expand rows = %d, want 2", got)
 	}

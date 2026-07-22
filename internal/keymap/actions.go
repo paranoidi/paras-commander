@@ -57,6 +57,11 @@ const (
 	ActionPanelCycleSort              = "panel.cycle-sort"
 	ActionPanelCycleListingFormat     = "panel.cycle-listing-format"
 	ActionPanelToggleCarousel         = "panel.toggle-carousel"
+	ActionPanelToggleTree             = "panel.toggle-tree"
+	ActionPanelTreeExpand             = "panel.tree-expand"
+	ActionPanelTreeCollapse           = "panel.tree-collapse"
+	ActionPanelTreeCollapseAll        = "panel.tree-collapse-all"
+	ActionPanelTreeExpandAllShallow   = "panel.tree-expand-all-shallow"
 	ActionPanelToggleZoomActivePanel  = "panel.toggle-zoom-active-panel"
 	ActionPanelToggleSplitOrientation = "panel.toggle-split-orientation"
 	ActionPanelReverseSort            = "panel.reverse-sort"
@@ -264,6 +269,11 @@ var KnownActions = map[string]struct{}{
 	ActionPanelCycleSort:              {},
 	ActionPanelCycleListingFormat:     {},
 	ActionPanelToggleCarousel:         {},
+	ActionPanelToggleTree:             {},
+	ActionPanelTreeExpand:             {},
+	ActionPanelTreeCollapse:           {},
+	ActionPanelTreeCollapseAll:        {},
+	ActionPanelTreeExpandAllShallow:   {},
 	ActionPanelToggleZoomActivePanel:  {},
 	ActionPanelToggleSplitOrientation: {},
 	ActionPanelReverseSort:            {},

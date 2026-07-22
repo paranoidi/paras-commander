@@ -316,6 +316,11 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		}
 		label := panelLabel(panelScope)
 		a.setTransientMessage(fmt.Sprintf("%s carousel view: %s", label, onOff), ui.MessageUrgencyInfo)
+	case keymap.ActionPanelToggleTree:
+		p := a.panelByID(panelScope)
+		if a.toggleTreeForPanel(p, a.panelViewportRows(panelScope)) {
+			a.setTransientMessage(panelLabel(panelScope)+" tree view is not available in carousel view", ui.MessageUrgencyInfo)
+		}
 	case keymap.ActionPanelMeta:
 		a.openMetaDialog(panelScope)
 	case keymap.ActionFileQuickView:

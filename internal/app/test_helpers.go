@@ -17,6 +17,26 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uitest"
 )
 
+// applyNextInterruptEvent blocks until screen posts an EventInterrupt (e.g. from an async
+// scheduler goroutine such as treeChildLoadScheduler/remoteLoadScheduler) and applies it via
+// handleInterruptPayload, mirroring what Run()'s event loop does. Used by tests that dispatch an
+// action that triggers async work and need the result applied before asserting on panel state.
+func applyNextInterruptEvent(t *testing.T, app *App, screen tcell.SimulationScreen) {
+	t.Helper()
+	done := make(chan tcell.Event, 1)
+	go func() { done <- screen.PollEvent() }()
+	select {
+	case ev := <-done:
+		interruptEv, ok := ev.(*tcell.EventInterrupt)
+		if !ok {
+			t.Fatalf("PollEvent returned %T, want *tcell.EventInterrupt", ev)
+		}
+		app.handleInterruptPayload(interruptEv.Data())
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for async event")
+	}
+}
+
 func waitUntilAppJobsFinished(t *testing.T, app *App, d time.Duration) {
 	t.Helper()
 	deadline := time.Now().Add(d)
