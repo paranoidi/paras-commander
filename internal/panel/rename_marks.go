@@ -28,6 +28,10 @@ func (s *State) AddRenameMarks(dir pathloc.Path, names []string) {
 		}
 		marks[n] = struct{}{}
 	}
+	// A reload triggered by the rename itself sees the new name appear where the old
+	// one was and misreads it as an externally-created file (see newlyAppearedNames).
+	// Rename and new-file status are mutually exclusive for the same entry.
+	s.clearNewFileMarks(key, names)
 }
 
 // dropRenameMarks removes session rename marks for one listing directory.

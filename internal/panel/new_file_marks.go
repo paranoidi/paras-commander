@@ -66,6 +66,19 @@ func newlyAppearedNames(oldEntries, newEntries []localfs.Entry) []string {
 	return added
 }
 
+// clearNewFileMarks drops names from the new-file batches for an already-cleaned dir key
+// (see AddRenameMarks: a rename's own reload can misread the new name as newly appeared).
+func (s *State) clearNewFileMarks(key string, names []string) {
+	dm := s.NewFileMarksByDir[key]
+	if dm == nil {
+		return
+	}
+	for _, n := range names {
+		delete(dm.latest, n)
+		delete(dm.previous, n)
+	}
+}
+
 // dropNewFileMarks removes session marks for one listing directory.
 func (s *State) dropNewFileMarks(dir string) {
 	if s.NewFileMarksByDir == nil {
