@@ -57,7 +57,7 @@ func Highlight(source string, opts Options) Result {
 		contentWidth = 1
 	}
 
-	lexer := lexerFor(opts)
+	lexer := lexerFor(opts, source)
 	lexer = chroma.Coalesce(lexer)
 	it, err := lexer.Tokenise(nil, source)
 	if err != nil {
@@ -116,14 +116,18 @@ func Highlight(source string, opts Options) Result {
 }
 
 // lexerFor resolves a lexer by Language (fenced code block info string) first,
-// falling back to matching Path, then the plain-text fallback lexer.
-func lexerFor(opts Options) chroma.Lexer {
+// falling back to matching Path, then content analysis (e.g. shebang lines
+// for extensionless scripts), then the plain-text fallback lexer.
+func lexerFor(opts Options, source string) chroma.Lexer {
 	if opts.Language != "" {
 		if l := lexers.Get(opts.Language); l != nil {
 			return l
 		}
 	}
 	if l := lexers.Match(filepath.Base(opts.Path)); l != nil {
+		return l
+	}
+	if l := lexers.Analyse(source); l != nil {
 		return l
 	}
 	return lexers.Fallback
