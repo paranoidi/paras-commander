@@ -56,7 +56,7 @@ func TestCarouselCoalesceRepaintsCachedChildAfterFullScreenClear(t *testing.T) {
 		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1},
 		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout()})
 
-	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout())
+	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout(), [3]int{})
 	childCol := cols[2]
 	headerY := rect.Y + 1
 	foundHeader := false
@@ -131,7 +131,7 @@ func TestDrawCarouselFilePreviewDuringQuickFilter(t *testing.T) {
 		PanelContext{PanelID: PrimaryPanel, FileListActive: true, ActivePanel: PrimaryPanel, SyncDriverPanelID: -1, QuickViewDriverPanelID: -1, SelectionsBottomHint: true},
 		PanelDisplayConfig{ScrollbarShowInactive: true, CarouselLayout: panelcarousel.DefaultLayout(), CarouselFilePreview: preview})
 
-	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout())
+	cols := panelcarousel.SplitColumns(rect, true, panelcarousel.DefaultLayout(), [3]int{})
 	childCol := cols[2]
 	found := false
 	for y := childCol.Y; y < childCol.Y+childCol.Height; y++ {

@@ -48,6 +48,7 @@ type BodyParams struct {
 	ScrollbarShowInactive bool
 	InactiveFrameStyle    tcell.Style
 	Layout                Layout
+	MeasuredFitWidth      [3]int
 }
 
 // DrawBody paints the column header row and three listing columns.
@@ -56,7 +57,7 @@ func DrawBody(screen tcell.Screen, p BodyParams) {
 	if visibleRows == 0 {
 		return
 	}
-	cols := SplitColumns(p.Frame, p.ShowChildColumn, p.Layout)
+	cols := SplitColumns(p.Frame, p.ShowChildColumn, p.Layout, p.MeasuredFitWidth)
 	drawCarouselHeader(screen, carouselHeaderParams{Body: p, Cols: cols, VisibleRows: visibleRows})
 
 	drawCarouselColumn(carouselColumnParams{Screen: screen, Body: p, VisibleRows: visibleRows, Col: cols[0], C: p.Parent, Inactive: true, ColIdx: 0})

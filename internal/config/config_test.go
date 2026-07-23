@@ -187,8 +187,8 @@ func TestDefaultCarouselSplit(t *testing.T) {
 		}
 	}
 	show := Default().Carousel.ShowSize
-	if len(show) != 3 || !show[0] || !show[1] || !show[2] {
-		t.Fatalf("Carousel.ShowSize = %v, want [true true true]", show)
+	if len(show) != 3 || show[0] || !show[1] || !show[2] {
+		t.Fatalf("Carousel.ShowSize = %v, want [false true true]", show)
 	}
 }
 
@@ -212,6 +212,50 @@ func TestValidateResetsInvalidCarouselSplit(t *testing.T) {
 	}
 	if len(cfg.Carousel.ShowSize) != 3 {
 		t.Fatalf("Carousel.ShowSize len = %d, want 3", len(cfg.Carousel.ShowSize))
+	}
+}
+
+func TestValidateAcceptsFitSplitTokensAtParentAndCenter(t *testing.T) {
+	cfg := Default()
+	cfg.Carousel.Split = []string{"<16", "<33%", "*"}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	want := []string{"<16", "<33%", "*"}
+	for i := range want {
+		if cfg.Carousel.Split[i] != want[i] {
+			t.Fatalf("Carousel.Split[%d] = %q, want %q (fit tokens should survive validation)", i, cfg.Carousel.Split[i], want[i])
+		}
+	}
+}
+
+func TestValidateResetsFitSplitTokenAtChildColumn(t *testing.T) {
+	cfg := Default()
+	cfg.Carousel.Split = []string{"*", "*", "<16"}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	want := DefaultCarouselSplit()
+	for i := range want {
+		if cfg.Carousel.Split[i] != want[i] {
+			t.Fatalf("Carousel.Split[%d] = %q, want %q after fit-mode token on child column", i, cfg.Carousel.Split[i], want[i])
+		}
+	}
+}
+
+func TestValidateResetsMalformedFitSplitTokens(t *testing.T) {
+	for _, tok := range []string{"<", "<abc", "<0", "<-1", "<150%", "<%"} {
+		cfg := Default()
+		cfg.Carousel.Split = []string{tok, "*", "*"}
+		if err := cfg.Validate(); err != nil {
+			t.Fatalf("Validate(%q): %v", tok, err)
+		}
+		want := DefaultCarouselSplit()
+		for i := range want {
+			if cfg.Carousel.Split[i] != want[i] {
+				t.Fatalf("token %q: Carousel.Split[%d] = %q, want %q", tok, i, cfg.Carousel.Split[i], want[i])
+			}
+		}
 	}
 }
 

@@ -144,19 +144,33 @@ func (a *App) carouselFilePreviewEligible() bool {
 	return panelcarousel.FilePreviewEligible(rect, a.model.HideInactivePanel, a.model.CarouselLayout)
 }
 
+// carouselChildPreviewLayoutMetrics returns the embedded file preview's text width and content
+// height inside the carousel child column.
+//
+// ponytail: measures the parent/center columns' actual fit-to-content widths (mirroring
+// drawPanelCarousel's MeasureFitColumnWidths + ChildPreviewPaintRect call) rather than
+// panelcarousel.ChildColumnWidth's unmeasured worst-case cap — otherwise a fit-mode split
+// (e.g. the default "<33%") that measures narrower than its cap leaves the child preview
+// pre-wrapped to a too-small width while the painted column is actually wider.
 func (a *App) carouselChildPreviewLayoutMetrics() (textW, contentH int, ok bool) {
 	rect, ok := a.activePanelFileColumnRect()
 	if !ok {
 		return 1, 0, false
 	}
-	childW := panelcarousel.ChildColumnWidth(rect, a.model.CarouselLayout)
-	tw := childW - 2
-	if tw < 1 {
-		tw = 1
-	}
 	listH := geom.PanelListRows(rect)
 	if listH < 1 {
-		return tw, 0, false
+		return 1, 0, false
+	}
+	state := *a.activePanel()
+	parent, _, _, _ := panelcarousel.BuildColumns(state, listH, false, true)
+	measuredFitWidth := panelcarousel.MeasureFitColumnWidths(a.model.CarouselLayout, parent, state, a.model.ShowFileIcons, true, a.model.PanelScrollbar, listH)
+	childRect, ok := panelcarousel.ChildPreviewPaintRect(rect, true, a.model.CarouselLayout, measuredFitWidth)
+	if !ok {
+		return 1, listH, false
+	}
+	tw := childRect.Width - 2
+	if tw < 1 {
+		tw = 1
 	}
 	return tw, listH, true
 }

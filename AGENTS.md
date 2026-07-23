@@ -8,6 +8,8 @@ Read all documantion in llm-docs/ before starting implementing new feature.
 
 Once new feature is implemented update llm-docs/index.md for agents to later refer to.
 
+llm-docs must always describe the current state of the code, never the history of how it got there. Don't write "used to be X, now Y", "was later renamed", "previously", "bug fixed:", or changelog-style entries — just document what's true now. When updating an existing llm-docs section for a change, rewrite it to read as if it were written fresh today, not as a diff appended to the old explanation.
+
 Leave compiled binary after running tests. Build with `go build -o pc ./cmd/pc` — the binary must be named `pc`, not `paras-commander` (the module/repo directory name).
 
 When user request shortcut to be added it needs to be configurable in `keybindings.toml`. Check if requested shortcut works in terminal. Many shortcut combinations do not. If user requests a shortcut that is already taken in that context, choose a reasonable next best option and notify the user.

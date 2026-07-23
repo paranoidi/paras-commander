@@ -15,12 +15,14 @@ const (
 	SplitFixed ColumnSplitKind = iota
 	SplitPercent
 	SplitFlex
+	SplitFitChars   // "<N": min(measured content, N chars)
+	SplitFitPercent // "<N%": min(measured content, N% of innerW)
 )
 
 // ColumnSplitSpec is one carousel column width token after parsing.
 type ColumnSplitSpec struct {
 	Kind  ColumnSplitKind
-	Value int // cells for Fixed; percent 0–100 for Percent; unused for Flex
+	Value int // cap in chars for Fixed/FitChars; percent 0–100 for Percent/FitPercent; unused for Flex
 }
 
 // Layout holds resolved carousel column split and per-column size visibility.
@@ -49,7 +51,7 @@ func ParseLayout(split []string, showSize []bool) (Layout, error) {
 	}
 	out := DefaultLayout()
 	for i, tok := range split {
-		spec, err := parseSplitToken(strings.TrimSpace(tok))
+		spec, err := parseSplitToken(strings.TrimSpace(tok), i)
 		if err != nil {
 			return Layout{}, fmt.Errorf("carousel.split[%d]: %w", i, err)
 		}
@@ -66,9 +68,31 @@ func ParseLayout(split []string, showSize []bool) (Layout, error) {
 	return out, nil
 }
 
-func parseSplitToken(tok string) (ColumnSplitSpec, error) {
+func parseSplitToken(tok string, index int) (ColumnSplitSpec, error) {
 	if tok == "*" {
 		return ColumnSplitSpec{Kind: SplitFlex}, nil
+	}
+	if strings.HasPrefix(tok, "<") {
+		if index == 2 {
+			return ColumnSplitSpec{}, fmt.Errorf("fit-mode %q not allowed on child column", tok)
+		}
+		rest := strings.TrimPrefix(tok, "<")
+		if strings.HasSuffix(rest, "%") {
+			pctStr := strings.TrimSpace(strings.TrimSuffix(rest, "%"))
+			if pctStr == "" {
+				return ColumnSplitSpec{}, fmt.Errorf("invalid percent %q", tok)
+			}
+			pct, err := strconv.Atoi(pctStr)
+			if err != nil || pct < 0 || pct > 100 {
+				return ColumnSplitSpec{}, fmt.Errorf("invalid percent %q", tok)
+			}
+			return ColumnSplitSpec{Kind: SplitFitPercent, Value: pct}, nil
+		}
+		n, err := strconv.Atoi(rest)
+		if err != nil || n < 1 {
+			return ColumnSplitSpec{}, fmt.Errorf("invalid width %q", tok)
+		}
+		return ColumnSplitSpec{Kind: SplitFitChars, Value: n}, nil
 	}
 	if strings.HasSuffix(tok, "%") {
 		pctStr := strings.TrimSpace(strings.TrimSuffix(tok, "%"))
@@ -90,11 +114,23 @@ func parseSplitToken(tok string) (ColumnSplitSpec, error) {
 
 // Resolve computes parent, center, and child column widths for inner panel width innerW.
 // When showChild is false, the child width is folded into the center column.
+//
+// This is a thin wrapper over ResolveMeasured with no measured content, so any fit-mode
+// column resolves to its configured worst-case cap. Use ResolveMeasured directly at real
+// render call sites where live listing content is available to measure.
 func (l Layout) Resolve(innerW int, showChild bool) [3]int {
+	return l.ResolveMeasured(innerW, showChild, [3]int{})
+}
+
+// ResolveMeasured computes parent, center, and child column widths for inner panel width
+// innerW, same as Resolve, but lets fit-mode columns (SplitFitChars/SplitFitPercent) size to
+// the real measured content width in measuredFitWidth when it's smaller than the configured
+// cap. measuredFitWidth[i] == 0 means "not measured" — the column falls back to its cap.
+func (l Layout) ResolveMeasured(innerW int, showChild bool, measuredFitWidth [3]int) [3]int {
 	if innerW < 1 {
 		return [3]int{}
 	}
-	widths := resolveWidths(innerW, l.Splits)
+	widths := resolveWidths(innerW, l.Splits, measuredFitWidth)
 	if !showChild {
 		widths[1] += widths[2]
 		widths[2] = 0
@@ -102,13 +138,29 @@ func (l Layout) Resolve(innerW int, showChild bool) [3]int {
 	return widths
 }
 
-func resolveWidths(innerW int, splits [3]ColumnSplitSpec) [3]int {
+func resolveWidths(innerW int, splits [3]ColumnSplitSpec, measuredFitWidth [3]int) [3]int {
 	var out [3]int
 	fixedSum := 0
 	for i, s := range splits {
-		if s.Kind == SplitFixed {
+		switch s.Kind {
+		case SplitFixed:
 			out[i] = s.Value
 			fixedSum += s.Value
+		case SplitFitChars:
+			w := s.Value // cap
+			if measuredFitWidth[i] > 0 && measuredFitWidth[i] < w {
+				w = measuredFitWidth[i]
+			}
+			out[i] = w
+			fixedSum += w
+		case SplitFitPercent:
+			capW := (innerW*s.Value + 50) / 100
+			w := capW
+			if measuredFitWidth[i] > 0 && measuredFitWidth[i] < w {
+				w = measuredFitWidth[i]
+			}
+			out[i] = w
+			fixedSum += w
 		}
 	}
 	remaining := innerW - fixedSum
@@ -146,12 +198,13 @@ func resolveWidths(innerW int, splits [3]ColumnSplitSpec) [3]int {
 		}
 	}
 
-	// Absorb any rounding drift into the last non-fixed column, else last column.
+	// Absorb any rounding drift into the last non-fixed, non-fit column, else last column.
 	sum := out[0] + out[1] + out[2]
 	if sum != innerW {
 		drift := innerW - sum
 		for i := 2; i >= 0; i-- {
-			if splits[i].Kind != SplitFixed {
+			k := splits[i].Kind
+			if k != SplitFixed && k != SplitFitChars && k != SplitFitPercent {
 				out[i] += drift
 				break
 			}
@@ -161,6 +214,10 @@ func resolveWidths(innerW int, splits [3]ColumnSplitSpec) [3]int {
 }
 
 // MinInnerWidth returns the minimum interior width required for carousel layout.
+//
+// ponytail: uses Resolve (unmeasured), so fit-mode columns are sized at their configured
+// worst-case cap here — this is a structural, pre-render check with no live listing to
+// measure. Real render call sites use ResolveMeasured with actual content widths instead.
 func (l Layout) MinInnerWidth(showChild bool) int {
 	minCol := config.MinCarouselColumnWidth
 	lo, hi := 1, minCol

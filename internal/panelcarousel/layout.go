@@ -29,7 +29,7 @@ func MinActiveWidthPercent(totalWidth int, layout Layout) int {
 }
 
 // SplitColumns divides the panel interior (below title + header rows) into carousel panes.
-func SplitColumns(rect geom.Rect, showChild bool, layout Layout) [3]geom.Rect {
+func SplitColumns(rect geom.Rect, showChild bool, layout Layout, measuredFitWidth [3]int) [3]geom.Rect {
 	var cols [3]geom.Rect
 	innerX := rect.X + 1
 	innerW := rect.Width - 2
@@ -38,7 +38,7 @@ func SplitColumns(rect geom.Rect, showChild bool, layout Layout) [3]geom.Rect {
 	}
 	listY := rect.Y + 2
 	listH := geom.PanelListRows(rect)
-	widths := layout.Resolve(innerW, showChild)
+	widths := layout.ResolveMeasured(innerW, showChild, measuredFitWidth)
 	x := innerX
 	for i := 0; i < 3; i++ {
 		if widths[i] <= 0 {
@@ -51,6 +51,10 @@ func SplitColumns(rect geom.Rect, showChild bool, layout Layout) [3]geom.Rect {
 }
 
 // ChildColumnWidth returns the inner width of the carousel child column.
+//
+// ponytail: uses Layout.Resolve (unmeasured) — this is a structural pre-render check (used to
+// decide whether file preview is eligible before the frame is painted) with no live listing
+// entries available to measure fit-mode columns against.
 func ChildColumnWidth(rect geom.Rect, layout Layout) int {
 	innerW := rect.Width - 2
 	if innerW < 1 {
@@ -69,11 +73,11 @@ func FilePreviewEligible(rect geom.Rect, hideInactive bool, layout Layout) bool 
 }
 
 // ChildPreviewPaintRect returns the rect for embedded file preview in the child column (header + list rows).
-func ChildPreviewPaintRect(frame geom.Rect, showChild bool, layout Layout) (geom.Rect, bool) {
+func ChildPreviewPaintRect(frame geom.Rect, showChild bool, layout Layout, measuredFitWidth [3]int) (geom.Rect, bool) {
 	if !showChild {
 		return geom.Rect{}, false
 	}
-	cols := SplitColumns(frame, true, layout)
+	cols := SplitColumns(frame, true, layout, measuredFitWidth)
 	if cols[2].Width <= 0 {
 		return geom.Rect{}, false
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -187,9 +188,78 @@ func nameWidthForColumn(colWidth int, showIcons bool, scrollbarReserve int, show
 	return nw
 }
 
+// fitEntryTextLen returns one entry's rendered name-text rune length (leading prefix rune +
+// name + '@' suffix for symlinks), matching panellist.EntryDisplayRunes' body construction.
+// Per-row transient decorations (job marks, new-file/rename badges) are excluded on purpose:
+// those change independent of directory content and would make column width flicker.
+func fitEntryTextLen(e localfs.Entry) int {
+	n := 1 + utf8.RuneCountInString(e.Name)
+	if e.Type == localfs.EntrySymlink {
+		n++
+	}
+	return n
+}
+
+// MeasureFitColumnWidths computes uncapped whole-column content-fit widths for the parent
+// (index 0) and center (index 1) columns whose layout token is fit-mode; index 2 is always 0
+// (fit-mode is rejected there at parse time). Scans every entry in the column's listing (not
+// just the visible window) so width doesn't jitter while scrolling. Call ONCE per render pass;
+// thread the same result into SplitColumns (via DrawBody / ChildPreviewPaintRect) and
+// CenterNameWidth so all three agree on the same frame's column geometry.
+func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int) [3]int {
+	var out [3]int
+	for i := 0; i < 2; i++ {
+		if k := layout.Splits[i].Kind; k != SplitFitChars && k != SplitFitPercent {
+			continue
+		}
+		var entries []localfs.Entry
+		var c Column
+		var nameTitle string
+		inactive := false
+		if i == 0 {
+			if !parent.Populated {
+				continue
+			}
+			entries = parent.Snapshot.Entries
+			c = parent
+			inactive = true
+			nameTitle = listNameHeaderTitle(showIcons)
+		} else {
+			entries = center.Entries
+			c = Column{Kind: ColumnCenter, Populated: true, Active: true}
+			nameTitle, _, _ = center.ListColumnTitles(showIcons)
+		}
+		if len(entries) == 0 {
+			continue
+		}
+		// Header title ("Name" / " Name" / "↓Name" ...) must always fit uncropped, so the
+		// fit-to-content width can never shrink below it (see briefHeader).
+		longest := utf8.RuneCountInString(nameTitle)
+		for _, e := range entries {
+			if n := fitEntryTextLen(e); n > longest {
+				longest = n
+			}
+		}
+		hasLane := columnHasScrollbarLane(c, inactive, showChild)
+		total, offset := columnListingMetrics(c, center)
+		reserve := columnScrollbarReserve(hasLane, true, style, total, visibleRows, offset)
+		w := longest
+		if showIcons {
+			w += columnListLeadingGutter() + columnListIconStrip()
+		}
+		if layout.ShowSize[i] {
+			w += 1 + listSizeCells
+		}
+		w++ // 1-char right margin so content doesn't touch the next column
+		w += reserve
+		out[i] = w
+	}
+	return out
+}
+
 // CenterNameWidth returns the name-column width for the carousel center column.
-func CenterNameWidth(frame geom.Rect, layout Layout, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int) int {
-	cols := SplitColumns(frame, showChild, layout)
+func CenterNameWidth(frame geom.Rect, layout Layout, center panel.State, showIcons, showChild bool, style uiscrollbar.Style, visibleRows int, measuredFitWidth [3]int) int {
+	cols := SplitColumns(frame, showChild, layout, measuredFitWidth)
 	if len(cols) < 2 {
 		return 1
 	}

@@ -213,8 +213,8 @@ const (
 	MinCarouselFilePreviewColumnWidth = 32
 
 	// DefaultCarouselSplit is the default carousel column width spec (parent | center | child).
-	DefaultCarouselSplit0 = "*"
-	DefaultCarouselSplit1 = "*"
+	DefaultCarouselSplit0 = "<33%"
+	DefaultCarouselSplit1 = "<33%"
 	DefaultCarouselSplit2 = "*"
 
 	// DefaultUserMenuFileName is the basename of the user menu definition under the config directory

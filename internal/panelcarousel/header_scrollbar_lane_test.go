@@ -57,7 +57,7 @@ func TestCarouselHeaderFillsScrollbarLane(t *testing.T) {
 	})
 
 	headerY := frame.Y + 1
-	cols := SplitColumns(frame, true, DefaultLayout())
+	cols := SplitColumns(frame, true, DefaultLayout(), [3]int{})
 	for i, col := range cols {
 		sbX := col.X + col.Width - 1
 		wantStyle := styles.PanelActiveHeaderCarousel

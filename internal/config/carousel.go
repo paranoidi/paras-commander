@@ -16,15 +16,30 @@ func DefaultCarouselSplit() []string {
 
 // DefaultCarouselShowSize returns the built-in per-column size visibility flags.
 func DefaultCarouselShowSize() []bool {
-	return []bool{true, true, true}
+	return []bool{false, true, true}
 }
 
-// carouselSplitTokenValid reports whether tok is a valid carousel.split entry.
-func carouselSplitTokenValid(tok string) bool {
+// carouselSplitTokenValid reports whether tok is a valid carousel.split entry at column idx.
+// This grammar mirrors internal/panelcarousel/split.go's parseSplitToken (config can't import
+// panelcarousel — the duplication already exists today for the base grammar, extended here for
+// fit-mode tokens too).
+func carouselSplitTokenValid(tok string, idx int) bool {
 	tok = strings.TrimSpace(tok)
 	if tok == "*" {
 		return true
 	}
+	if strings.HasPrefix(tok, "<") {
+		if idx == 2 {
+			return false
+		}
+		return carouselSplitCapValid(strings.TrimPrefix(tok, "<"))
+	}
+	return carouselSplitCapValid(tok)
+}
+
+// carouselSplitCapValid validates the shared "N" / "N%" grammar used by fixed/percent tokens
+// and by fit-mode tokens after stripping their "<" prefix.
+func carouselSplitCapValid(tok string) bool {
 	if strings.HasSuffix(tok, "%") {
 		pctStr := strings.TrimSpace(strings.TrimSuffix(tok, "%"))
 		if pctStr == "" {
@@ -41,8 +56,8 @@ func carouselSplitValid(split []string) bool {
 	if len(split) != 3 {
 		return false
 	}
-	for _, tok := range split {
-		if !carouselSplitTokenValid(tok) {
+	for i, tok := range split {
+		if !carouselSplitTokenValid(tok, i) {
 			return false
 		}
 	}

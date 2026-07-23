@@ -103,8 +103,8 @@ Carousel (multi-column) panel layout.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `split` | array of strings | `["*", "*", "*"]` | Column widths for carousel view (parent \| center \| child), one token per column: a fixed cell count (`"16"`), a percent of remaining width (`"20%"`), or the flex remainder (`"*"`). Must be exactly 3 entries. |
-| `show_size` | array of bools | `[true, true, true]` | Whether to show the size column in each of the 3 carousel columns. |
+| `split` | array of strings | `["<33%", "<33%", "*"]` | Column widths for carousel view (parent \| center \| child), one token per column: a fixed cell count (`"16"`), a percent of remaining width (`"20%"`), the flex remainder (`"*"`), or a fit-to-content cap — `"<16"` sizes the column to the longest filename currently listed in it, capped at 16 characters, and `"<33%"` does the same capped at 33% of the panel's interior width. Fit-to-content tokens (`<N` / `<N%`) are only valid for the parent (index 0) and center (index 1) columns — the child column can show an embedded file preview instead of a listing, so it has no "longest filename" to fit to, and a `<` token there is rejected like any other malformed entry. Must be exactly 3 entries. |
+| `show_size` | array of bools | `[false, true, true]` | Whether to show the size column in each of the 3 carousel columns. |
 
 ## `[ui]`
 

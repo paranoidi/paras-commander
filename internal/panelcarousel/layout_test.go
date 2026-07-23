@@ -22,7 +22,7 @@ func TestLayoutFits(t *testing.T) {
 func TestSplitColumnsWidths(t *testing.T) {
 	layout := DefaultLayout()
 	rect := geom.Rect{X: 1, Y: 2, Width: 92, Height: 18}
-	cols := SplitColumns(rect, true, layout)
+	cols := SplitColumns(rect, true, layout, [3]int{})
 	sum := cols[0].Width + cols[1].Width + cols[2].Width
 	if sum != rect.Width-2 {
 		t.Fatalf("column widths sum %d, want inner %d", sum, rect.Width-2)
@@ -36,7 +36,7 @@ func TestSplitColumnsWidensCenterWithoutChild(t *testing.T) {
 	}
 	rect := geom.Rect{X: 0, Y: 0, Width: 92, Height: 18}
 	innerW := rect.Width - 2
-	cols := SplitColumns(rect, false, layout)
+	cols := SplitColumns(rect, false, layout, [3]int{})
 	widths := layout.Resolve(innerW, false)
 	if cols[0].Width != widths[0] {
 		t.Fatalf("parent width = %d, want %d", cols[0].Width, widths[0])
@@ -74,13 +74,38 @@ func TestFilePreviewEligible(t *testing.T) {
 	}
 }
 
+func TestSplitColumnsAndChildPreviewPaintRectAgreeOnMeasuredFitWidth(t *testing.T) {
+	t.Parallel()
+	layout, err := ParseLayout([]string{"<16", "*", "*"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rect := geom.Rect{X: 0, Y: 0, Width: 92, Height: 18}
+	measured := [3]int{9, 0, 0}
+
+	cols := SplitColumns(rect, true, layout, measured)
+	previewRect, ok := ChildPreviewPaintRect(rect, true, layout, measured)
+	if !ok {
+		t.Fatal("ChildPreviewPaintRect should succeed for a wide-enough child column")
+	}
+	if previewRect.X != cols[2].X || previewRect.Width != cols[2].Width {
+		t.Fatalf("ChildPreviewPaintRect = {X:%d Width:%d}, want to match SplitColumns col[2] = {X:%d Width:%d}",
+			previewRect.X, previewRect.Width, cols[2].X, cols[2].Width)
+	}
+	// The parent column shrank to the measured width (under its 16-cell cap), which changes
+	// column 2's X — both call sites must agree given the same measuredFitWidth.
+	if cols[0].Width != 9 {
+		t.Fatalf("parent column width = %d, want 9 (measured under cap)", cols[0].Width)
+	}
+}
+
 func TestSplitColumnsCustomLayout(t *testing.T) {
 	layout, err := ParseLayout([]string{"20%", "30%", "*"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	rect := geom.Rect{X: 0, Y: 0, Width: 92, Height: 18}
-	cols := SplitColumns(rect, true, layout)
+	cols := SplitColumns(rect, true, layout, [3]int{})
 	want := layout.Resolve(rect.Width-2, true)
 	if cols[0].Width != want[0] || cols[1].Width != want[1] || cols[2].Width != want[2] {
 		t.Fatalf("cols = [%d %d %d], want %v", cols[0].Width, cols[1].Width, cols[2].Width, want)

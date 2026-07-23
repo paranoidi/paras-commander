@@ -2,6 +2,7 @@ package panelcarousel
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"unicode/utf8"
 
@@ -55,7 +56,7 @@ func TestSubtreeSelectionMarkUsesSelectedForeground(t *testing.T) {
 		Layout:              DefaultLayout(),
 	})
 
-	cols := SplitColumns(frame, true, DefaultLayout())
+	cols := SplitColumns(frame, true, DefaultLayout(), [3]int{})
 	centerCol := cols[1]
 	rowY := centerCol.Y
 	wantMark := styles.SymbolFilelistSelectionSubtree()
@@ -123,7 +124,7 @@ func TestCenterScrollbarUsesInactiveFrameBetweenColumns(t *testing.T) {
 			Layout:                DefaultLayout(),
 		})
 
-		cols := SplitColumns(frame, showChild, DefaultLayout())
+		cols := SplitColumns(frame, showChild, DefaultLayout(), [3]int{})
 		sbX := cols[1].X + cols[1].Width - 1
 		listY := cols[1].Y
 		for row := 0; row < geom.PanelListRows(frame); row++ {
@@ -147,7 +148,7 @@ func TestCenterScrollbarUsesInactiveFrameBetweenColumns(t *testing.T) {
 	if ShowChildPreviewColumn(filesOnly, false, false) {
 		t.Fatal("files-only fixture should hide child column")
 	}
-	cols := SplitColumns(frame, false, DefaultLayout())
+	cols := SplitColumns(frame, false, DefaultLayout(), [3]int{})
 	sbX := cols[1].X + cols[1].Width - 1
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
@@ -233,7 +234,7 @@ func TestCarouselNoScrollbarLaneWhenListFits(t *testing.T) {
 		Layout:                DefaultLayout(),
 	})
 
-	cols := SplitColumns(frame, true, DefaultLayout())
+	cols := SplitColumns(frame, true, DefaultLayout(), [3]int{})
 	col := cols[1]
 	reserve := columnScrollbarReserve(
 		columnHasScrollbarLane(Column{Kind: ColumnCenter, Populated: true, Active: true}, false, true),
@@ -263,5 +264,129 @@ func TestCarouselNoScrollbarLaneWhenListFits(t *testing.T) {
 	_, innerBG, _ := innerStyle.Decompose()
 	if rightBG == surfaceBG && innerBG != surfaceBG {
 		t.Fatalf("center column right edge looks like an empty scrollbar lane")
+	}
+}
+
+// TestDrawBodyPaintsBoundariesMatchingSplitColumnsWithMeasuredFitWidth verifies DrawBody
+// doesn't compute its own measurement — it must thread BodyParams.MeasuredFitWidth straight
+// into its internal SplitColumns call, so the painted column boundaries match a direct
+// SplitColumns call given the same MeasuredFitWidth. Uses distinct, hand-picked header colors
+// (rather than a named theme) so the parent/center header boundary is unambiguous.
+func TestDrawBodyPaintsBoundariesMatchingSplitColumnsWithMeasuredFitWidth(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+
+	layout, err := ParseLayout([]string{"<16", "*", "*"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	measured := [3]int{9, 0, 0}
+	frame := geom.Rect{X: 0, Y: 0, Width: 92, Height: 18}
+	screen.SetSize(frame.Width, frame.Height)
+	styles := theme.Default()
+	parentHeaderStyle := tcell.StyleDefault.Background(tcell.ColorRed)
+	centerHeaderStyle := tcell.StyleDefault.Background(tcell.ColorBlue)
+	entries := []localfs.Entry{{Name: "cat", Path: "/vol/cat", Type: localfs.EntryFile}}
+	center := panel.State{Path: pathloc.MustParse("/vol"), Entries: entries}
+	parent := Column{Kind: ColumnParent, Populated: true, Snapshot: panel.ListingSnapshot{Entries: entries}}
+
+	DrawBody(screen, BodyParams{
+		Frame:               frame,
+		Center:              center,
+		Parent:              parent,
+		Styles:              styles,
+		FileListActive:      true,
+		ShowIcons:           false,
+		HeaderStyle:         centerHeaderStyle,
+		HeaderCarouselStyle: parentHeaderStyle,
+		SurfaceStyle:        styles.PanelActiveSurface,
+		ShowChildColumn:     false,
+		Layout:              layout,
+		MeasuredFitWidth:    measured,
+	})
+
+	want := SplitColumns(frame, false, layout, measured)
+	if want[0].Width != 9 {
+		t.Fatalf("test setup: want parent width 9 (measured under 16-cell cap), got %d", want[0].Width)
+	}
+	headerY := frame.Y + 1
+	_, wantParentBG, _ := parentHeaderStyle.Decompose()
+	_, wantCenterBG, _ := centerHeaderStyle.Decompose()
+
+	_, lastParentStyle, _ := screen.Get(want[0].X+want[0].Width-1, headerY)
+	_, lastParentBG, _ := lastParentStyle.Decompose()
+	if lastParentBG != wantParentBG {
+		t.Fatalf("parent column last header cell (X=%d) bg = %v, want %v (carousel header style)",
+			want[0].X+want[0].Width-1, lastParentBG, wantParentBG)
+	}
+	_, firstCenterStyle, _ := screen.Get(want[1].X, headerY)
+	_, firstCenterBG, _ := firstCenterStyle.Decompose()
+	if firstCenterBG != wantCenterBG {
+		t.Fatalf("center column first header cell (X=%d) bg = %v, want %v (center header style) — "+
+			"DrawBody's SplitColumns call disagrees with the direct SplitColumns call on the same MeasuredFitWidth",
+			want[1].X, firstCenterBG, wantCenterBG)
+	}
+}
+
+// Regression: a fit-mode column ("<20%") whose listing has only very short names (e.g. "pc")
+// must still measure wide enough to show the full "Name  Size" header — it must never crop to
+// something like "Name  S~".
+func TestFitModeColumnHeaderNeverTruncatesWithShortNames(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+
+	layout, err := ParseLayout([]string{"<20%", "*", "*"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	frame := geom.Rect{X: 0, Y: 0, Width: 92, Height: 18}
+	screen.SetSize(frame.Width, frame.Height)
+	styles := theme.Default()
+	entries := []localfs.Entry{{Name: "pc", Path: "/vol/pc", Type: localfs.EntryFile}}
+	center := panel.State{Path: pathloc.MustParse("/vol"), Entries: entries}
+	parent := Column{Kind: ColumnParent, Populated: true, Snapshot: panel.ListingSnapshot{Entries: entries}}
+	visibleRows := frame.Height - 2
+
+	measured := MeasureFitColumnWidths(layout, parent, center, false, true, uiscrollbar.StyleThumb, visibleRows)
+
+	DrawBody(screen, BodyParams{
+		Frame:                 frame,
+		Center:                center,
+		Parent:                parent,
+		Styles:                styles,
+		FileListActive:        true,
+		HeaderStyle:           styles.PanelActiveHeader,
+		HeaderCarouselStyle:   styles.PanelActiveHeaderCarousel,
+		SurfaceStyle:          styles.PanelActiveSurface,
+		ScrollbarStyle:        uiscrollbar.StyleThumb,
+		ScrollbarShowInactive: true,
+		InactiveFrameStyle:    styles.PanelInactiveFrame,
+		ShowChildColumn:       false,
+		Layout:                layout,
+		MeasuredFitWidth:      measured,
+	})
+
+	cols := SplitColumns(frame, false, layout, measured)
+	headerY := frame.Y + 1
+	var sb []rune
+	for x := cols[0].X; x < cols[0].X+cols[0].Width; x++ {
+		ch, _, _ := screen.Get(x, headerY)
+		r, _ := utf8.DecodeRuneInString(ch)
+		sb = append(sb, r)
+	}
+	hdr := string(sb)
+	if strings.Contains(hdr, "~") {
+		t.Fatalf("parent header %q was truncated with ellipsis, want full %q", hdr, "Name  Size")
+	}
+	if !strings.Contains(hdr, "Size") {
+		t.Fatalf("parent header %q does not contain full %q", hdr, "Size")
 	}
 }

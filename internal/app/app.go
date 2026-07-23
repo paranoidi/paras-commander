@@ -1104,7 +1104,10 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 func carouselLayoutFromConfig(c config.CarouselConfig) panelcarousel.Layout {
 	layout, err := panelcarousel.ParseLayout(c.Split, c.ShowSize)
 	if err != nil {
-		return panelcarousel.DefaultLayout()
+		// ponytail: config.Validate() already normalizes CarouselConfig, so this fallback
+		// should be unreachable; parse the same config-level default rather than duplicating
+		// it as a second hardcoded value.
+		layout, _ = panelcarousel.ParseLayout(config.DefaultCarouselSplit(), config.DefaultCarouselShowSize())
 	}
 	return layout
 }
