@@ -798,20 +798,20 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"find dialog", "right panel", "reveal", "cd"},
 		},
 		{
-			ID:           ActionFlattenDestinationActive,
-			Title:        "Flatten destination: active panel",
+			ID:           ActionDestinationActivePanel,
+			Title:        "Set destination to active panel path",
 			Section:      "File operations",
-			DefaultKeys:  nil, // overlay: DefaultFlattenDialogOverlayKeys
-			PreferredKey: "F5",
-			Keywords:     []string{"flatten dialog", "destination", "active panel"},
+			DefaultKeys:  nil, // overlay: shared by DefaultFlattenDialogOverlayKeys / DefaultTransferDialogOverlayKeys
+			PreferredKey: "S-left",
+			Keywords:     []string{"flatten dialog", "copy dialog", "move dialog", "destination", "active panel"},
 		},
 		{
-			ID:           ActionFlattenDestinationInactive,
-			Title:        "Flatten destination: inactive panel",
+			ID:           ActionDestinationInactivePanel,
+			Title:        "Set destination to inactive panel path",
 			Section:      "File operations",
-			DefaultKeys:  nil, // overlay: DefaultFlattenDialogOverlayKeys
-			PreferredKey: "F6",
-			Keywords:     []string{"flatten dialog", "destination", "inactive panel", "passive"},
+			DefaultKeys:  nil, // overlay: shared by DefaultFlattenDialogOverlayKeys / DefaultTransferDialogOverlayKeys
+			PreferredKey: "S-right",
+			Keywords:     []string{"flatten dialog", "copy dialog", "move dialog", "destination", "inactive panel", "passive"},
 		},
 		{
 			ID:          ActionRemoteSFTPLink,

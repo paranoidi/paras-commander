@@ -438,24 +438,45 @@ func TestDefaultBundleHistoryDialogOverlayF5(t *testing.T) {
 	}
 }
 
-func TestDefaultBundleFlattenDialogOverlayF5F6(t *testing.T) {
+func TestDefaultBundleFlattenDialogOverlayShiftArrows(t *testing.T) {
 	bundle, err := DefaultBundle()
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
-	if got := bundle.FlattenDialog.MenuBindingLabel(ActionFlattenDestinationActive); got != "F5" {
-		t.Fatalf("FlattenDialog Active MenuBindingLabel = %q, want F5", got)
+	if got := bundle.FlattenDialog.MenuBindingLabel(ActionDestinationActivePanel); got != "S-left" {
+		t.Fatalf("FlattenDialog Active MenuBindingLabel = %q, want S-left", got)
 	}
-	id, ok := bundle.FlattenDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
-	if !ok || id != ActionFlattenDestinationActive {
-		t.Fatalf("FlattenDialog F5 = %q %v, want %q", id, ok, ActionFlattenDestinationActive)
+	id, ok := bundle.FlattenDialog.Lookup(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
+	if !ok || id != ActionDestinationActivePanel {
+		t.Fatalf("FlattenDialog Shift+Left = %q %v, want %q", id, ok, ActionDestinationActivePanel)
 	}
-	if got := bundle.FlattenDialog.MenuBindingLabel(ActionFlattenDestinationInactive); got != "F6" {
-		t.Fatalf("FlattenDialog Inactive MenuBindingLabel = %q, want F6", got)
+	if got := bundle.FlattenDialog.MenuBindingLabel(ActionDestinationInactivePanel); got != "S-right" {
+		t.Fatalf("FlattenDialog Inactive MenuBindingLabel = %q, want S-right", got)
 	}
-	id, ok = bundle.FlattenDialog.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
-	if !ok || id != ActionFlattenDestinationInactive {
-		t.Fatalf("FlattenDialog F6 = %q %v, want %q", id, ok, ActionFlattenDestinationInactive)
+	id, ok = bundle.FlattenDialog.Lookup(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
+	if !ok || id != ActionDestinationInactivePanel {
+		t.Fatalf("FlattenDialog Shift+Right = %q %v, want %q", id, ok, ActionDestinationInactivePanel)
+	}
+}
+
+func TestDefaultBundleTransferDialogOverlayShiftArrows(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	if got := bundle.TransferDialog.MenuBindingLabel(ActionDestinationActivePanel); got != "S-left" {
+		t.Fatalf("TransferDialog Active MenuBindingLabel = %q, want S-left", got)
+	}
+	id, ok := bundle.TransferDialog.Lookup(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
+	if !ok || id != ActionDestinationActivePanel {
+		t.Fatalf("TransferDialog Shift+Left = %q %v, want %q", id, ok, ActionDestinationActivePanel)
+	}
+	if got := bundle.TransferDialog.MenuBindingLabel(ActionDestinationInactivePanel); got != "S-right" {
+		t.Fatalf("TransferDialog Inactive MenuBindingLabel = %q, want S-right", got)
+	}
+	id, ok = bundle.TransferDialog.Lookup(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
+	if !ok || id != ActionDestinationInactivePanel {
+		t.Fatalf("TransferDialog Shift+Right = %q %v, want %q", id, ok, ActionDestinationInactivePanel)
 	}
 }
 

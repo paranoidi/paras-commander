@@ -197,37 +197,37 @@ func TestFlattenDestinationFooterShowsActiveAndInactive(t *testing.T) {
 		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.FlattenDialog.FocusField)
 	}
 	keys := app.activeFooterKeys()
-	if !footerHasHint(keys, "Active path", "F5") {
-		t.Fatalf("footer = %+v, want Active F5 hint", keys)
+	if !footerHasHint(keys, "Active path ◄", "S-left") {
+		t.Fatalf("footer = %+v, want Active S-left hint", keys)
 	}
-	if !footerHasHint(keys, "Inactive path", "F6") {
-		t.Fatalf("footer = %+v, want Inactive F6 hint", keys)
+	if !footerHasHint(keys, "Inactive path ►", "S-right") {
+		t.Fatalf("footer = %+v, want Inactive S-right hint", keys)
 	}
 }
 
-func TestFlattenDestinationShortcutF5SetsActivePath(t *testing.T) {
+func TestFlattenDestinationShortcutShiftLeftSetsActivePath(t *testing.T) {
 	t.Parallel()
 	app, activeDir, inactiveDir := flattenDialogTestSetup(t)
 	wantActive := transferPrefilledDestination(activeDir).Value
 	if app.model.FlattenDialog.Destination.Value != wantActive {
 		t.Fatalf("initial destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantActive)
 	}
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	wantInactive := transferPrefilledDestination(inactiveDir).Value
 	if app.model.FlattenDialog.Destination.Value != wantInactive {
-		t.Fatalf("after F6 destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
+		t.Fatalf("after Shift+Right destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
 	}
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
 	if app.model.FlattenDialog.Destination.Value != wantActive {
-		t.Fatalf("after F5 destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantActive)
+		t.Fatalf("after Shift+Left destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantActive)
 	}
 }
 
-func TestFlattenDestinationShortcutF6SetsInactivePath(t *testing.T) {
+func TestFlattenDestinationShortcutShiftRightSetsInactivePath(t *testing.T) {
 	t.Parallel()
 	app, _, inactiveDir := flattenDialogTestSetup(t)
 	wantInactive := transferPrefilledDestination(inactiveDir).Value
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	if app.model.FlattenDialog.Destination.Value != wantInactive {
 		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
 	}
@@ -242,16 +242,16 @@ func TestFlattenDestinationShortcutsNoOpWhenUnfocused(t *testing.T) {
 		t.Fatalf("FocusField = %d, want 1 (recursive)", app.model.FlattenDialog.FocusField)
 	}
 	keys := app.activeFooterKeys()
-	if footerHasHint(keys, "Active path", "F5") || footerHasHint(keys, "Inactive path", "F6") {
+	if footerHasHint(keys, "Active path ◄", "S-left") || footerHasHint(keys, "Inactive path ►", "S-right") {
 		t.Fatalf("footer = %+v, must not show Active/Inactive when destination unfocused", keys)
 	}
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
 	if app.model.FlattenDialog.Destination.Value != want {
-		t.Fatalf("F5 destination = %q, want unchanged %q", app.model.FlattenDialog.Destination.Value, want)
+		t.Fatalf("Shift+Left destination = %q, want unchanged %q", app.model.FlattenDialog.Destination.Value, want)
 	}
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	if app.model.FlattenDialog.Destination.Value != want {
-		t.Fatalf("F6 destination = %q, want unchanged %q", app.model.FlattenDialog.Destination.Value, want)
+		t.Fatalf("Shift+Right destination = %q, want unchanged %q", app.model.FlattenDialog.Destination.Value, want)
 	}
 }
 

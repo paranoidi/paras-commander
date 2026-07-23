@@ -99,7 +99,15 @@ var overlayRegistry = []OverlaySpec{
 		Defaults:  DefaultFlattenDialogOverlayKeys,
 		Allowed:   AllowedInFlattenDialogOverlay,
 		DisallowedActionError: func(source, action string) error {
-			return fmt.Errorf("parse config %q: [dialog.flatten] action %q is not allowed (flatten.destination-active, flatten.destination-inactive only)", source, action)
+			return fmt.Errorf("parse config %q: [dialog.flatten] action %q is not allowed (ui.destination-active, ui.destination-inactive only)", source, action)
+		},
+	},
+	{
+		TableName: DialogTransferShortcutsTable,
+		Defaults:  DefaultTransferDialogOverlayKeys,
+		Allowed:   AllowedInTransferDialogOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [dialog.transfer] action %q is not allowed (ui.destination-active, ui.destination-inactive only)", source, action)
 		},
 	},
 	{
@@ -175,7 +183,9 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 	case DialogHistoryShortcutsTable:
 		return "panel.history-both-panels only"
 	case DialogFlattenShortcutsTable:
-		return "flatten.destination-active, flatten.destination-inactive only"
+		return "ui.destination-active, ui.destination-inactive only"
+	case DialogTransferShortcutsTable:
+		return "ui.destination-active, ui.destination-inactive only"
 	case CompareShortcutsTable:
 		return "compare.* only"
 	case DedupShortcutsTable:

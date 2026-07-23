@@ -15,6 +15,7 @@ type Bundle struct {
 	FindDialog     *Map // find dialog (select all ranked results)
 	HistoryDialog  *Map // history dialog (toggle both panels)
 	FlattenDialog  *Map // flatten dialog (destination active/inactive panel)
+	TransferDialog *Map // copy/move dialog (destination active/inactive panel)
 	Compare        *Map // Compare-view overlay; may be nil
 	Dedup          *Map // find-duplicates view overlay; may be nil
 	Terminal       *Map // embedded terminal panel overlay; may be nil

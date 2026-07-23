@@ -18,7 +18,7 @@ import (
 //  1. built-in defaults (DefaultActionKeys / DefaultJobsOverlayKeys / DefaultCommandsOverlayKeys /
 //     DefaultMessagesOverlayKeys / DefaultFilePreviewOverlayKeys / DefaultDialogInputOverlayKeys / DefaultRenameDialogOverlayKeys /
 //     DefaultMkdirDialogOverlayKeys / DefaultBookmarkDialogOverlayKeys / DefaultFindDialogOverlayKeys / DefaultHistoryDialogOverlayKeys /
-//     DefaultFlattenDialogOverlayKeys)
+//     DefaultFlattenDialogOverlayKeys / DefaultTransferDialogOverlayKeys)
 //  2. keybindings.toml's matching tables (when present)
 //
 // keybindings.toml can be absent without failing startup; built-in defaults
@@ -90,9 +90,10 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		FindDialog:     overlayMaps[8],
 		HistoryDialog:  overlayMaps[9],
 		FlattenDialog:  overlayMaps[10],
-		Compare:        overlayMaps[11],
-		Dedup:          overlayMaps[12],
-		Terminal:       overlayMaps[13],
+		TransferDialog: overlayMaps[11],
+		Compare:        overlayMaps[12],
+		Dedup:          overlayMaps[13],
+		Terminal:       overlayMaps[14],
 	}, nil
 }
 
@@ -236,6 +237,7 @@ type dialogShortcuts struct {
 	Find     map[string][]string `toml:"find"`
 	History  map[string][]string `toml:"history"`
 	Flatten  map[string][]string `toml:"flatten"`
+	Transfer map[string][]string `toml:"transfer"`
 }
 
 // EncodeDefaultStub writes the canonical keybindings TOML: a leading
@@ -268,7 +270,8 @@ func EncodeDefaultStub(w io.Writer) error {
 		"# [dialog.bookmark] — bookmark.delete (fzf-marks only).\n" +
 		"# [dialog.find] — find.select-all, find.unselect-all, find.select-group, find.unselect-group.\n" +
 		"# [dialog.history] — panel.history-both-panels.\n" +
-		"# [dialog.flatten] — flatten.destination-active and flatten.destination-inactive.\n\n"
+		"# [dialog.flatten] — ui.destination-active and ui.destination-inactive.\n" +
+		"# [dialog.transfer] — ui.destination-active and ui.destination-inactive (copy/move dialog).\n\n"
 	if _, err := io.WriteString(w, header); err != nil {
 		return fmt.Errorf("encode keybindings stub header: %w", err)
 	}
@@ -299,6 +302,7 @@ func EncodeDefaultStub(w io.Writer) error {
 			Find:     DefaultFindDialogOverlayKeys(),
 			History:  DefaultHistoryDialogOverlayKeys(),
 			Flatten:  DefaultFlattenDialogOverlayKeys(),
+			Transfer: DefaultTransferDialogOverlayKeys(),
 		},
 	}
 	if err := toml.NewEncoder(w).Encode(payload); err != nil {

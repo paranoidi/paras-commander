@@ -274,6 +274,103 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 	}
 }
 
+func TestTransferDestinationFooterShowsActiveAndInactive(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	dstDir := filepath.Join(dir, "dest")
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
+		t.Fatalf("mkdir dest: %v", err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	if err := app.inactivePanel().Load(dstDir); err != nil {
+		t.Fatalf("inactive Load: %v", err)
+	}
+
+	p := app.activePanel()
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("expected current entry tagged after Insert")
+	}
+
+	app.openCopyDialog()
+	if app.model.TransferDialog.FocusField != 0 {
+		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
+	}
+	keys := app.activeFooterKeys()
+	if !footerHasHint(keys, "Active path ◄", "S-left") {
+		t.Fatalf("footer = %+v, want Active S-left hint", keys)
+	}
+	if !footerHasHint(keys, "Inactive path ►", "S-right") {
+		t.Fatalf("footer = %+v, want Inactive S-right hint", keys)
+	}
+}
+
+func TestTransferDestinationShortcutSetsActiveAndInactivePath(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "a.txt"))
+	dstDir := filepath.Join(dir, "dest")
+	if err := os.Mkdir(dstDir, 0o755); err != nil {
+		t.Fatalf("mkdir dest: %v", err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	if err := app.inactivePanel().Load(dstDir); err != nil {
+		t.Fatalf("inactive Load: %v", err)
+	}
+
+	p := app.activePanel()
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
+		t.Fatal("unexpected quit")
+	}
+	if len(p.SelectedPaths) == 0 {
+		t.Fatal("expected current entry tagged after Insert")
+	}
+
+	app.openCopyDialog()
+	wantActive := transferPrefilledDestination(app.activePanel().PathString()).Value
+	wantInactive := transferPrefilledDestination(app.inactivePanel().PathString()).Value
+
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
+	if app.model.TransferDialog.Destination.Value != wantInactive {
+		t.Fatalf("after Shift+Right destination = %q, want %q", app.model.TransferDialog.Destination.Value, wantInactive)
+	}
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
+	if app.model.TransferDialog.Destination.Value != wantActive {
+		t.Fatalf("after Shift+Left destination = %q, want %q", app.model.TransferDialog.Destination.Value, wantActive)
+	}
+}
+
+func TestTransferDestinationShortcutNoOpDuringSelfCopyRename(t *testing.T) {
+	dir := t.TempDir()
+	aaa := filepath.Join(dir, "aaa")
+	if err := os.Mkdir(aaa, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aaa: true}
+	app.enqueueCopyJob()
+	if app.model.TransferDialog.Phase != dialog.TransferPhaseSelfCopyRename || app.model.TransferDialog.FocusField != 0 {
+		t.Fatalf("want self-copy rename dialog with FocusField 0, got %+v", app.model.TransferDialog)
+	}
+	want := app.model.TransferDialog.SelfCopyNewName.Value
+
+	keys := app.activeFooterKeys()
+	if footerHasHint(keys, "Active path ◄", "S-left") || footerHasHint(keys, "Inactive path ►", "S-right") {
+		t.Fatalf("footer = %+v, must not show Active/Inactive during self-copy rename", keys)
+	}
+
+	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
+	if app.model.TransferDialog.SelfCopyNewName.Value != want {
+		t.Fatalf("Shift+Left mutated SelfCopyNewName = %q, want unchanged %q", app.model.TransferDialog.SelfCopyNewName.Value, want)
+	}
+}
+
 func TestTransferSelfCopyRenameFlow(t *testing.T) {
 	t.Run("dialog OK enters rename phase without queueing", func(t *testing.T) {
 		dir := t.TempDir()
@@ -557,14 +654,20 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
 	}
 	keys := app.activeFooterKeys()
-	if len(keys) != 4 {
-		t.Fatalf("footer len = %d, want Esc + Default + Paths + F10", len(keys))
+	if len(keys) != 6 {
+		t.Fatalf("footer len = %d, want Esc + Default + Bookmarks + Active + Inactive + F10", len(keys))
 	}
 	if keys[1].Hint != "Default" || keys[1].KeyLabel != "C-r" {
 		t.Fatalf("restore footer = %+v, want C-r Default", keys[1])
 	}
 	if keys[2].Hint != "Bookmarks" || keys[2].KeyLabel != "C-g" {
 		t.Fatalf("bookmarks footer = %+v, want C-g Bookmarks", keys[2])
+	}
+	if !footerHasHint(keys, "Active path ◄", "S-left") {
+		t.Fatalf("footer = %+v, want Active S-left hint", keys)
+	}
+	if !footerHasHint(keys, "Inactive path ►", "S-right") {
+		t.Fatalf("footer = %+v, want Inactive S-right hint", keys)
 	}
 
 	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))

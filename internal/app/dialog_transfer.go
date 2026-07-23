@@ -333,6 +333,9 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 	if a.tryPathPickerHostShortcut(event) {
 		return
 	}
+	if a.tryTransferDialogDestinationShortcut(event) {
+		return
+	}
 	if d.Phase == dialog.TransferPhaseDestination && event.Key() == tcell.KeyTab &&
 		a.destFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.TransferDestSubFocusText, a.armTransferDestinationValidateTimer) {
 		return

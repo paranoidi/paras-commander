@@ -4,8 +4,8 @@ package keymap
 // dialog destination row is focused.
 func DefaultFlattenDialogOverlayKeys() map[string][]string {
 	return map[string][]string{
-		ActionFlattenDestinationActive:   {"F5"},
-		ActionFlattenDestinationInactive: {"F6"},
+		ActionDestinationActivePanel:   {"S-left"},
+		ActionDestinationInactivePanel: {"S-right"},
 	}
 }
 
@@ -13,7 +13,7 @@ func DefaultFlattenDialogOverlayKeys() map[string][]string {
 // [dialog.flatten].
 func AllowedInFlattenDialogOverlay(actionID string) bool {
 	switch actionID {
-	case ActionFlattenDestinationActive, ActionFlattenDestinationInactive:
+	case ActionDestinationActivePanel, ActionDestinationInactivePanel:
 		return true
 	default:
 		return false

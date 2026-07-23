@@ -97,6 +97,7 @@ type App struct {
 	keysFindDialog      *keymap.Map // select all while find dialog is open
 	keysHistoryDialog   *keymap.Map // both-panels toggle while history dialog is open
 	keysFlattenDialog   *keymap.Map // destination panel shortcuts while flatten dialog is open
+	keysTransferDialog  *keymap.Map // destination panel shortcuts while transfer (copy/move) dialog is open
 	keysCompare         *keymap.Map // chords active only in Compare view (overlay)
 	keysDedup           *keymap.Map // chords active only in find-duplicates view (overlay)
 	keysTerminal        *keymap.Map // chords active only while the embedded terminal panel is focused (overlay)
@@ -395,6 +396,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	kmFindDialog := rk.findDialog
 	kmHistoryDialog := rk.historyDialog
 	kmFlattenDialog := rk.flattenDialog
+	kmTransferDialog := rk.transferDialog
 	kmCompare := rk.compare
 	kmDedup := rk.dedup
 	kmTerminal := rk.terminal
@@ -478,6 +480,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		keysFindDialog:     kmFindDialog,
 		keysHistoryDialog:  kmHistoryDialog,
 		keysFlattenDialog:  kmFlattenDialog,
+		keysTransferDialog: kmTransferDialog,
 		keysCompare:        kmCompare,
 		keysDedup:          kmDedup,
 		keysTerminal:       kmTerminal,
@@ -646,6 +649,7 @@ type resolvedKeymaps struct {
 	findDialog     *keymap.Map
 	historyDialog  *keymap.Map
 	flattenDialog  *keymap.Map
+	transferDialog *keymap.Map
 	compare        *keymap.Map
 	dedup          *keymap.Map
 	terminal       *keymap.Map
@@ -691,6 +695,7 @@ func resolveKeymapBundle(opts Options) (resolvedKeymaps, error) {
 		findDialog:     bundle.FindDialog,
 		historyDialog:  bundle.HistoryDialog,
 		flattenDialog:  bundle.FlattenDialog,
+		transferDialog: bundle.TransferDialog,
 		compare:        bundle.Compare,
 		dedup:          bundle.Dedup,
 		terminal:       bundle.Terminal,
@@ -708,6 +713,7 @@ func resolveKeymapBundle(opts Options) (resolvedKeymaps, error) {
 		{&rk.historyDialog, keymap.DefaultHistoryDialogOverlayKeys, "history dialog overlay"},
 		{&rk.filePreview, keymap.DefaultFilePreviewOverlayKeys, "file preview overlay"},
 		{&rk.flattenDialog, keymap.DefaultFlattenDialogOverlayKeys, "flatten dialog overlay"},
+		{&rk.transferDialog, keymap.DefaultTransferDialogOverlayKeys, "transfer dialog overlay"},
 		{&rk.compare, keymap.DefaultCompareOverlayKeys, "compare overlay"},
 		{&rk.dedup, keymap.DefaultDedupOverlayKeys, "dedup overlay"},
 		{&rk.terminal, keymap.DefaultTerminalOverlayKeys, "terminal overlay"},

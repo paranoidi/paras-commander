@@ -213,6 +213,9 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	if hints := flattenDialogOverlayFooterKeys(a, a.keysFlattenDialog); len(hints) > 0 {
 		rest = append(hints, rest...)
 	}
+	if hints := transferDialogOverlayFooterKeys(a, a.keysTransferDialog); len(hints) > 0 {
+		rest = append(hints, rest...)
+	}
 	if a.pathPickerHostFooterEligible() {
 		if lbl := a.keys.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
 			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Bookmarks"}}, rest...)

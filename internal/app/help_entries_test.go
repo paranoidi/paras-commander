@@ -76,7 +76,7 @@ func TestBrowserHelpExcludesOtherViewAndDialogActions(t *testing.T) {
 		keymap.ActionMessagesClear,
 		keymap.ActionFindSelectAll,
 		keymap.ActionBookmarkDelete,
-		keymap.ActionFlattenDestinationActive,
+		keymap.ActionDestinationActivePanel,
 		keymap.ActionAppShowHelp,
 	} {
 		if _, ok := byID[forbidden]; ok {

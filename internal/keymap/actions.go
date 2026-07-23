@@ -143,10 +143,6 @@ const (
 	ActionFileQuickViewPreviewPageDown = "file.quick-view.preview-page-down"
 	ActionFileEdit                     = "file.edit"
 	ActionFileFlatten                  = "file.flatten"
-	// ActionFlattenDestinationActive / ActionFlattenDestinationInactive are bound via
-	// [dialog.flatten], not [main].
-	ActionFlattenDestinationActive   = "flatten.destination-active"
-	ActionFlattenDestinationInactive = "flatten.destination-inactive"
 
 	// Copy/Move
 	ActionCopy          = "file.copy"
@@ -206,6 +202,12 @@ const (
 	ActionDialogInputBackwardWord = "ui.input.backward-word"
 	// ActionDialogInputForwardWord moves the cursor past the next word (readline M-f).
 	ActionDialogInputForwardWord = "ui.input.forward-word"
+
+	// ActionDestinationActivePanel / ActionDestinationInactivePanel set a dialog's destination
+	// path field to the active/inactive panel path. Bound via [dialog.flatten] and
+	// [dialog.transfer], not [main].
+	ActionDestinationActivePanel   = "ui.destination-active"
+	ActionDestinationInactivePanel = "ui.destination-inactive"
 )
 
 // Menu routing identifiers for File pulldown entries (bindable in keybindings.toml).
@@ -348,8 +350,6 @@ var KnownActions = map[string]struct{}{
 	ActionFileQuickViewPreviewPageDown: {},
 	ActionFileEdit:                     {},
 	ActionFileFlatten:                  {},
-	ActionFlattenDestinationActive:     {},
-	ActionFlattenDestinationInactive:   {},
 
 	ActionCopy:          {},
 	ActionFileDuplicate: {},
@@ -391,4 +391,7 @@ var KnownActions = map[string]struct{}{
 	ActionDialogInputKillWordBackward: {},
 	ActionDialogInputBackwardWord:     {},
 	ActionDialogInputForwardWord:      {},
+
+	ActionDestinationActivePanel:   {},
+	ActionDestinationInactivePanel: {},
 }
