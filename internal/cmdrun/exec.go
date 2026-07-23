@@ -46,10 +46,14 @@ func RunTracked(ctx context.Context, argv []string, dir string, maxStreamBytes i
 
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
-	// Allow orphaned child processes (e.g. clipboard tools spawned by shell wrappers)
-	// up to 5 seconds to flush output after the primary process exits, then forcibly
-	// close the pipes so cmd.Wait() doesn't block indefinitely.
-	cmd.WaitDelay = 5 * time.Second
+	// Orphaned child processes (e.g. clipboard tools that fork into the background
+	// to keep serving a selection) may inherit our stdout/stderr pipe and never
+	// close it on their own — no amount of waiting makes them flush, since they're
+	// designed to keep running. WaitDelay bounds how long cmd.Wait() blocks after
+	// the primary process exits before forcibly closing the pipes; keep it short
+	// so a normal, already-finished command doesn't sit around waiting on a daemon
+	// that was never going to close the pipe.
+	cmd.WaitDelay = 200 * time.Millisecond
 	// New session so the child has no controlling terminal. Without this, interactive
 	// shells (e.g. bash -i) call tcsetpgrp() to grab the terminal and receive SIGTTOU,
 	// which suspends the child and sends the app to the background.
@@ -79,6 +83,16 @@ func RunTracked(ctx context.Context, argv []string, dir string, maxStreamBytes i
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
 			out.ExitCode = exitErr.ExitCode()
+			return out
+		}
+		if errors.Is(err, exec.ErrWaitDelay) {
+			// The primary process already exited (ProcessState is set before
+			// WaitDelay is even considered); only an orphaned grandchild held
+			// the output pipes open past WaitDelay. Trust the real exit status
+			// instead of surfacing this as a launch failure.
+			if cmd.ProcessState != nil {
+				out.ExitCode = cmd.ProcessState.ExitCode()
+			}
 			return out
 		}
 		out.LaunchErr = err
