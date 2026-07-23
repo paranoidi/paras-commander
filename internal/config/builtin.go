@@ -11,7 +11,7 @@ const (
 	// carousel child preview reloads, and F3 style-picker re-highlighting. Terminals do not report
 	// key-up; after this many milliseconds without another qualifying step, deferred work runs once.
 	// Zero disables coalescing (immediate per-event behavior).
-	DefaultKeyRepeatDebounceMS = 35
+	DefaultKeyRepeatDebounceMS = 45
 
 	// DebounceCalibrationMarginMS is added to the measured key-repeat interval when calibrating.
 	DebounceCalibrationMarginMS = 10

@@ -117,7 +117,7 @@ General interface layout, timing, and rendering behavior.
 | `show_file_icons` | bool | `true` | Show file-type icons/glyphs in panel listings. |
 | `shrunken_shows_name_only` | bool | `true` | When a panel becomes too narrow for its listing columns, show only the name column instead of truncating everything. |
 | `screen_render_hash_cache` | bool | `true` | Skip re-drawing the terminal screen when nothing actually changed since the last frame — reduces flicker and I/O over slow connections. |
-| `key_repeat_debounce_ms` | int | `35` | Coalesces rapid repeated key presses (file-list cursor steps, quick-view/carousel preview reloads, F3 style-picker highlighting) so they don't reload on every single step. `0` disables debouncing; values above 10000 are clamped. |
+| `key_repeat_debounce_ms` | int | `45` | Coalesces rapid repeated key presses (file-list cursor steps, quick-view/carousel preview reloads, F3 style-picker highlighting) so they don't reload on every single step. `0` disables debouncing; values above 10000 are clamped. |
 | `path_picker_validate_delay_ms` | int | `200` | Delay after the path-picker filter changes before checking whether the typed path exists on disk. |
 | `selections_panel_max_rows` | int | `0` (→ 5) | Maximum visible rows in the cross-directory selections strip. `0` means use the built-in default of 5. |
 
