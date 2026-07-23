@@ -141,7 +141,7 @@ func (a *App) carouselFilePreviewEligible() bool {
 	if !ok {
 		return false
 	}
-	return panelcarousel.FilePreviewEligible(rect, a.model.HideInactivePanel, a.model.CarouselLayout)
+	return panelcarousel.FilePreviewEligible(rect, a.model.HideInactivePanel || a.carouselAutohideInactivePanel(), a.model.CarouselLayout)
 }
 
 // carouselChildPreviewLayoutMetrics returns the embedded file preview's text width and content

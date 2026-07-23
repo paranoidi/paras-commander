@@ -140,6 +140,10 @@ type CarouselConfig struct {
 	Split []string `toml:"split"`
 	// ShowSize toggles the size column per carousel pane (exactly 3 booleans).
 	ShowSize []bool `toml:"show_size"`
+	// AutohideInactivePanel hides the inactive twin panel while the active panel is in
+	// carousel mode, giving its columns the full width. The panel reappears when Tab makes
+	// it the active panel, and hides again when Tab leaves it. Has no effect outside carousel mode.
+	AutohideInactivePanel bool `toml:"autohide_inactive_panel"`
 }
 
 // DedupConfig controls find-duplicates scanning.
@@ -419,8 +423,9 @@ func Default() Config {
 			WalkConcurrency:        DefaultDiskUsageWalkConcurrency,
 		},
 		Carousel: CarouselConfig{
-			Split:    DefaultCarouselSplit(),
-			ShowSize: DefaultCarouselShowSize(),
+			Split:                 DefaultCarouselSplit(),
+			ShowSize:              DefaultCarouselShowSize(),
+			AutohideInactivePanel: DefaultCarouselAutohideInactivePanel,
 		},
 		UI: UIConfig{
 			ShowMenuBar:               true,

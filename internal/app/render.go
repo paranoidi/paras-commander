@@ -92,6 +92,7 @@ func (a *App) renderBrowserListNavUpdate() {
 	model := a.model
 	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
+	model.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
 	if layout.TooSmall || !ui.PaintBrowserListNavPanelOnly(a.screen, layout, model, a.styles, a.model.ActivePanel) {
 		a.render()
 		return
@@ -119,6 +120,7 @@ func (a *App) paintDiskUsageBrowserUpdate() bool {
 	model := a.model
 	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
+	model.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
 	if !ui.PaintDiskUsageBrowserPanelsOnly(a.screen, layout, model, a.styles) {
 		return false
 	}
@@ -180,6 +182,7 @@ func (a *App) render() {
 	a.commandsMu.RUnlock()
 	modelSnapshot.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	modelSnapshot.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
+	modelSnapshot.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
 	ui.Render(a.screen, modelSnapshot, a.styles)
 	a.syncTerminalPanelCursor()
 	a.emitScreenAfterFullRender()
@@ -298,8 +301,18 @@ func (a *App) panelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit 
 		ActivePanel:       a.model.ActivePanel,
 		ActivePercent:     activePct,
 		InactivePercent:   inactivePct,
-		HideInactivePanel: ui.LayoutHideInactivePanel(a.model.ViewMode, a.model.HideInactivePanel),
+		HideInactivePanel: ui.LayoutHideInactivePanel(a.model.ViewMode, a.model.HideInactivePanel || a.carouselAutohideInactivePanel()),
 	}
+}
+
+// carouselAutohideInactivePanel reports whether the inactive twin panel should be hidden
+// because the active panel is in carousel mode. It does not engage while sync-follow or
+// quick view is on, since both need both panels visible.
+func (a *App) carouselAutohideInactivePanel() bool {
+	return a.config.Carousel.AutohideInactivePanel &&
+		a.activePanel().CarouselMode &&
+		!a.model.SyncFollowEnabled &&
+		!a.model.QuickViewEnabled
 }
 
 func (a *App) layoutForTerminalSize(width, height int) ui.Layout {

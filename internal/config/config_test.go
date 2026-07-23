@@ -190,6 +190,9 @@ func TestDefaultCarouselSplit(t *testing.T) {
 	if len(show) != 3 || show[0] || !show[1] || !show[2] {
 		t.Fatalf("Carousel.ShowSize = %v, want [false true true]", show)
 	}
+	if !Default().Carousel.AutohideInactivePanel {
+		t.Fatal("Carousel.AutohideInactivePanel = false, want true")
+	}
 }
 
 func TestValidateResetsInvalidCarouselSplit(t *testing.T) {

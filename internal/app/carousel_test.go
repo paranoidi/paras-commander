@@ -67,6 +67,7 @@ func TestCarouselForcesPanelZoomRegardlessOfConfigAndWidth(t *testing.T) {
 	screen.SetSize(160, 30)
 
 	cfg := config.Default()
+	cfg.Carousel.AutohideInactivePanel = false
 	cfg.UI.Zoom.ActivePanel = false
 	cfg.UI.Zoom.DisabledAboveWidth = 155
 	cfg.UI.Zoom.ActivePercent = 70

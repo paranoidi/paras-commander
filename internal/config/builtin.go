@@ -217,6 +217,10 @@ const (
 	DefaultCarouselSplit1 = "<33%"
 	DefaultCarouselSplit2 = "*"
 
+	// DefaultCarouselAutohideInactivePanel hides the inactive twin panel while the active
+	// panel is in carousel mode.
+	DefaultCarouselAutohideInactivePanel = true
+
 	// DefaultUserMenuFileName is the basename of the user menu definition under the config directory
 	// when [user_menu].file is empty.
 	DefaultUserMenuFileName = "menu.toml"
