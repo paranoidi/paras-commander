@@ -33,11 +33,18 @@ const (
 const maxTreeExpandDepth = 32
 
 // SetListLayout switches the panel's file-list rendering between flat rows and an
-// expand/collapse tree. Entering tree mode seeds TreeRoots from the current (already-loaded)
-// flat Entries as depth-0 nodes with no children loaded yet; leaving tree mode is a pure mode
-// switch, flat Entries are never mutated by tree mode. Returns false (no-op) when CarouselMode
-// is active, matching the existing carousel/listing-format mutual-exclusion guard used
-// elsewhere (see ActionPanelListingFormatDialog / ActionPanelCycleListingFormat dispatch).
+// expand/collapse tree. Entering tree mode seeds TreeRoots fresh from the current
+// (already-loaded) flat Entries as depth-0 nodes with no children loaded yet, and starts with
+// every node collapsed (TreeExpanded reset, not just lazily allocated) — there is no
+// cross-session expand-state cache, so a directory expanded in an earlier tree-mode session
+// does not silently resume expanded (with a stale Children==nil node) the next time tree mode is
+// entered. Leaving tree mode is equivalent to collapsing the whole tree down to depth 0: flat
+// Entries are never mutated by tree mode, and the cursor lands on the same depth-0 ancestor
+// CollapseAllTree/CollapseTreeCursorRow would leave it on (treeRootAncestorID), not wherever a
+// nested expanded row's numeric index happened to fall in the flat listing. Returns false (no-op)
+// when CarouselMode is active, matching the existing carousel/listing-format mutual-exclusion
+// guard used elsewhere (see ActionPanelListingFormatDialog / ActionPanelCycleListingFormat
+// dispatch).
 func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 	if layout == ListLayoutTree && s.CarouselMode {
 		return false
@@ -45,16 +52,25 @@ func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 	if s.ListLayout == layout {
 		return true
 	}
+	var cursorAncestorID string
+	if layout == ListLayoutFlat && s.ListLayout == ListLayoutTree {
+		cursorAncestorID = s.treeRootAncestorID()
+	}
 	s.ListLayout = layout
 	if layout == ListLayoutTree {
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
-		if s.TreeExpanded == nil {
-			s.TreeExpanded = make(map[string]bool)
-		}
+		s.TreeExpanded = make(map[string]bool)
 		s.rebuildTreeRows()
-		s.clampCursor()
-		s.EnsureCursorInViewport(viewportRows)
+	} else if cursorAncestorID != "" {
+		for i, e := range s.Entries {
+			if e.Path == cursorAncestorID {
+				s.Cursor = i
+				break
+			}
+		}
 	}
+	s.clampCursor()
+	s.EnsureCursorInViewport(viewportRows)
 	return true
 }
 

@@ -692,7 +692,9 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 		a.setTransientMessage(fmt.Sprintf("Listing: %s", activePanel.ListFormat.String()), ui.MessageUrgencyInfo)
 	case keymap.ActionPanelToggleCarousel:
 		activePanel.CarouselMode = !activePanel.CarouselMode
-		if !activePanel.CarouselMode {
+		if activePanel.CarouselMode {
+			activePanel.SetListLayout(panel.ListLayoutFlat, viewportRows)
+		} else {
 			a.clearCarouselPreviewNavCoalesce()
 			a.closeCarouselFilePreview()
 		}

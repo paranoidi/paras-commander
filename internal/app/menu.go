@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
@@ -303,12 +304,12 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 	case keymap.ActionPanelToggleCarousel:
 		p := a.panelByID(panelScope)
 		p.CarouselMode = !p.CarouselMode
-		if !p.CarouselMode {
+		if p.CarouselMode {
+			p.SetListLayout(panel.ListLayoutFlat, a.panelViewportRows(panelScope))
+			a.model.ActivePanel = panelScope
+		} else {
 			a.clearCarouselPreviewNavCoalesce()
 			a.closeCarouselFilePreview()
-		}
-		if p.CarouselMode {
-			a.model.ActivePanel = panelScope
 		}
 		onOff := "off"
 		if p.CarouselMode {
