@@ -54,12 +54,6 @@ type statusMessageExpiryPayload struct {
 // spinnerTickPayload is posted periodically to animate the menu-bar activity spinner.
 type spinnerTickPayload struct{}
 
-// pathPickerValidatePayload wakes PollEvent after debounced path-picker filter validation.
-type pathPickerValidatePayload struct{}
-
-// transferDestValidatePayload wakes PollEvent after debounced copy/move destination path validation.
-type transferDestValidatePayload struct{}
-
 // diskIdleSortPayload applies deferred disk-total sort for one panel after idle delay.
 type diskIdleSortPayload struct {
 	PanelID int
@@ -132,9 +126,7 @@ type App struct {
 	spinnerRedrawTimer   *time.Timer
 	diskUsageRedrawTimer *time.Timer
 	// deferDiskUsagePoll skips one pollDiskUsageUpdates drain after partial file-list nav while a scan is busy.
-	deferDiskUsagePoll   atomic.Bool
-	pathPickerValidate   sched.Debouncer
-	transferDestValidate sched.Debouncer
+	deferDiskUsagePoll atomic.Bool
 	// syncFollowNavGen invalidates in-flight debounce callbacks for latched panel sync (file-list cursor).
 	syncFollowNavGen atomic.Uint64
 	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent
@@ -508,17 +500,19 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Ctx:             app.commandsCtx,
 	})
 	app.dialogCtrl = dialogctrl.New(dialogctrl.Deps{
-		Host:             dialogHost{appShellHost: appShellHost{app: app}},
-		Screen:           screen,
-		Model:            &app.model,
-		KeysRenameDialog: keys.RenameDialog,
-		KeysMkdirDialog:  keys.MkdirDialog,
-		KeysDialogInput:  keys.DialogInput,
-		Jobs:             app.jobsCtrl,
-		Commands:         app.commandsCtrl,
-		Preview:          app.previewCtrl,
-		DiskUsage:        app.diskUsage,
-		DiskUsageIgnore:  duIgnorer,
+		Host:               dialogHost{appShellHost: appShellHost{app: app}},
+		Screen:             screen,
+		Model:              &app.model,
+		KeysRenameDialog:   keys.RenameDialog,
+		KeysMkdirDialog:    keys.MkdirDialog,
+		KeysDialogInput:    keys.DialogInput,
+		KeysGlobal:         keys.Global,
+		KeysTransferDialog: keys.TransferDialog,
+		Jobs:               app.jobsCtrl,
+		Commands:           app.commandsCtrl,
+		Preview:            app.previewCtrl,
+		DiskUsage:          app.diskUsage,
+		DiskUsageIgnore:    duIgnorer,
 	})
 	if err := app.configureSFTP(); err != nil {
 		app.stopWorker()
@@ -776,10 +770,10 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		a.metaCtrl.HandleExecFailed(d)
 		a.render()
 		out.didRender = true
-	case pathPickerValidatePayload:
+	case dialogctrl.PathPickerValidatePayload:
 		a.render()
 		out.didRender = true
-	case transferDestValidatePayload:
+	case dialogctrl.TransferDestValidatePayload:
 		a.render()
 		out.didRender = true
 	case jobsctrl.JobBlockerNextPayload:
@@ -987,7 +981,7 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 		a.jobsCtrl.HandleBlockerDialogKey(event)
 		return false
 	case a.model.TransferDialog.Open:
-		a.handleTransferDialogKey(event)
+		a.dialogCtrl.HandleTransferDialogKey(event)
 		return false
 	case a.model.FlattenDialog.Open:
 		a.handleFlattenDialogKey(event)

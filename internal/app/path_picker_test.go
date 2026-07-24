@@ -41,21 +41,21 @@ func TestApplyPathPickerPathValidation(t *testing.T) {
 
 	st.Query = "fuzzyonly"
 	st.QueryPathCheckPending = false
-	app.applyPathPickerPathValidation()
+	app.dialogCtrl.ApplyPathPickerPathValidation()
 	if st.QueryPathInvalid {
 		t.Fatal("plain fuzzy filter must not set invalid")
 	}
 
 	st.Query = filepath.Join(root, "nope", "missing")
 	st.QueryPathCheckPending = false
-	app.applyPathPickerPathValidation()
+	app.dialogCtrl.ApplyPathPickerPathValidation()
 	if !st.QueryPathInvalid {
 		t.Fatal("expected invalid for missing path-shaped query")
 	}
 
 	st.Query = real
 	st.QueryPathCheckPending = false
-	app.applyPathPickerPathValidation()
+	app.dialogCtrl.ApplyPathPickerPathValidation()
 	if st.QueryPathInvalid {
 		t.Fatal("existing path must clear invalid")
 	}
@@ -90,12 +90,12 @@ func TestPathPickerCloseStopsValidateTimer(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	app.openBookmarkDialog()
-	app.armPathPickerValidateTimer()
-	if !app.pathPickerValidate.Armed() {
+	app.dialogCtrl.ArmPathPickerValidateTimer()
+	if !app.dialogCtrl.PathPickerValidateArmed() {
 		t.Fatal("expected timer armed")
 	}
-	app.closePathPicker()
-	if app.pathPickerValidate.Armed() {
+	app.dialogCtrl.ClosePathPicker()
+	if app.dialogCtrl.PathPickerValidateArmed() {
 		t.Fatal("closePathPicker should stop validate timer")
 	}
 	if app.model.PathPicker.Open {
@@ -134,7 +134,7 @@ func TestPathPickerQueryInsertAdvancesCursorAndScroll(t *testing.T) {
 
 	const longPath = "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/value"
 	for _, r := range longPath {
-		app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 
 	st := &app.model.PathPicker
@@ -149,13 +149,13 @@ func TestPathPickerQueryInsertAdvancesCursorAndScroll(t *testing.T) {
 		t.Fatalf("expected QueryScroll > 0 for long input, got 0")
 	}
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if st.QueryCursor != wantCursor-1 {
 		t.Fatalf("Left arrow: QueryCursor = %d want %d", st.QueryCursor, wantCursor-1)
 	}
 
 	for i := 0; i < 200; i++ {
-		app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+		app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	}
 	if st.QueryCursor != 0 {
 		t.Fatalf("after many Left: QueryCursor = %d want 0", st.QueryCursor)
@@ -164,12 +164,12 @@ func TestPathPickerQueryInsertAdvancesCursorAndScroll(t *testing.T) {
 		t.Fatalf("after cursor home: QueryScroll = %d want 0", st.QueryScroll)
 	}
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlE, 0, tcell.ModCtrl))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlE, 0, tcell.ModCtrl))
 	if st.QueryCursor != wantCursor {
 		t.Fatalf("Ctrl+E: QueryCursor = %d want %d", st.QueryCursor, wantCursor)
 	}
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
 	if st.QueryCursor != wantCursor-1 {
 		t.Fatalf("Backspace: QueryCursor = %d want %d", st.QueryCursor, wantCursor-1)
 	}
@@ -177,12 +177,12 @@ func TestPathPickerQueryInsertAdvancesCursorAndScroll(t *testing.T) {
 		t.Fatalf("after Backspace Query = %q want %q", got, longPath[:len(longPath)-1])
 	}
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl))
 	if st.QueryCursor != 0 || st.QueryScroll != 0 {
 		t.Fatalf("Ctrl+A: cursor/scroll = (%d,%d) want (0,0)", st.QueryCursor, st.QueryScroll)
 	}
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyDelete, 0, tcell.ModNone))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyDelete, 0, tcell.ModNone))
 	if got := st.Query; got != longPath[1:len(longPath)-1] {
 		t.Fatalf("after Delete Query = %q want %q", got, longPath[1:len(longPath)-1])
 	}
@@ -224,17 +224,17 @@ func TestPathPickerQueryCtrlWAndAltBWordNav(t *testing.T) {
 	st.QueryCursor = len([]rune(st.Query))
 	st.Focus = 0
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModNone))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModNone))
 	if st.Query != "/foo/" || st.QueryCursor != 5 {
 		t.Fatalf("after Ctrl+W: query=%q cursor=%d", st.Query, st.QueryCursor)
 	}
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt))
 	if st.QueryCursor != 1 {
 		t.Fatalf("after Alt+b: cursor=%d want 1", st.QueryCursor)
 	}
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
 	if st.Query != "" || st.QueryCursor != 0 || st.QueryScroll != 0 {
 		t.Fatalf("after Ctrl+L: query=%q cursor=%d scroll=%d", st.Query, st.QueryCursor, st.QueryScroll)
 	}
@@ -272,7 +272,7 @@ func TestPathPickerTabAcceptsFilesystemCompletion(t *testing.T) {
 
 	prefix := filepath.Join(root, "f")
 	for _, r := range prefix {
-		app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	if st.QueryCompletionSuffix != "oo" {
 		t.Fatalf("suffix = %q want oo", st.QueryCompletionSuffix)
@@ -281,7 +281,7 @@ func TestPathPickerTabAcceptsFilesystemCompletion(t *testing.T) {
 		t.Fatal("expected directory completion")
 	}
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 	want := filepath.Join(root, "foo") + "/"
 	if st.Query != want {
 		t.Fatalf("Query = %q want %q", st.Query, want)
@@ -326,10 +326,10 @@ func TestPathPickerBackspaceRevealScrollOnLastVisible(t *testing.T) {
 
 	query := "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/~/projects/paras-commander/"
 	for _, r := range query {
-		app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.syncPathPickerScroll()
-	width := app.pathPickerQueryWidth()
+	app.dialogCtrl.SyncPathPickerScroll()
+	width := app.dialogCtrl.PathPickerQueryWidth()
 	runes := []rune(st.Query)
 	if len(runes) <= width {
 		t.Fatalf("test path must exceed input width %d", width)
@@ -341,7 +341,7 @@ func TestPathPickerBackspaceRevealScrollOnLastVisible(t *testing.T) {
 	if st.QueryCursor != len(runes) {
 		t.Fatalf("cursor = %d want %d", st.QueryCursor, len(runes))
 	}
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
 	if st.QueryScroll >= scrollBefore {
 		t.Fatalf("QueryScroll = %d want < %d after backspace on last visible char", st.QueryScroll, scrollBefore)
 	}
@@ -377,15 +377,15 @@ func TestPathPickerValidateArmIncrementsGeneration(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	app.openBookmarkDialog()
-	before := app.pathPickerValidate.Generation()
-	app.armPathPickerValidateTimer()
-	afterArm := app.pathPickerValidate.Generation()
+	before := app.dialogCtrl.PathPickerValidateGeneration()
+	app.dialogCtrl.ArmPathPickerValidateTimer()
+	afterArm := app.dialogCtrl.PathPickerValidateGeneration()
 	if afterArm != before+1 {
 		t.Fatalf("pathPickerValidate generation after arm = %d want %d", afterArm, before+1)
 	}
-	app.closePathPicker()
-	if app.pathPickerValidate.Generation() <= afterArm {
+	app.dialogCtrl.ClosePathPicker()
+	if app.dialogCtrl.PathPickerValidateGeneration() <= afterArm {
 		t.Fatalf("pathPickerValidate generation after close should exceed post-arm value; got %d want > %d",
-			app.pathPickerValidate.Generation(), afterArm)
+			app.dialogCtrl.PathPickerValidateGeneration(), afterArm)
 	}
 }

@@ -47,12 +47,12 @@ func TestPathPickerAcceptLongCompletionScrollsToEnd(t *testing.T) {
 	st.QueryCompletionIsDir = false
 	st.QueryScroll = 0
 
-	app.acceptPathPickerCompletion()
+	app.dialogCtrl.AcceptPathPickerCompletion()
 	wantCursor := len([]rune(long + "EXTRA"))
 	if st.QueryCursor != wantCursor {
 		t.Fatalf("cursor = %d want %d", st.QueryCursor, wantCursor)
 	}
-	width := app.pathPickerQueryWidth()
+	width := app.dialogCtrl.PathPickerQueryWidth()
 	_, wantScroll := dialog.EnsureScrollInputVisible(wantCursor, wantCursor, 0, width)
 	if st.QueryScroll <= 0 {
 		t.Fatalf("QueryScroll = %d want > 0 for long accepted path", st.QueryScroll)
@@ -61,7 +61,7 @@ func TestPathPickerAcceptLongCompletionScrollsToEnd(t *testing.T) {
 		t.Fatalf("QueryScroll = %d want <= %d for tail visibility", st.QueryScroll, wantScroll)
 	}
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
 	if st.QueryCursor != wantCursor {
 		t.Fatalf("after End cursor = %d want %d", st.QueryCursor, wantCursor)
 	}
@@ -101,7 +101,7 @@ func TestPathPickerItemsSkipMissingHistoryPaths(t *testing.T) {
 	}
 	app.model.Primary.History = []string{gone, exists}
 	app.model.Secondary.History = nil
-	items, err := app.pathPickerItemsHistoryAndBookmarks()
+	items, err := app.dialogCtrl.PathPickerItemsHistoryAndBookmarks()
 	if err != nil {
 		t.Fatal(err)
 	}

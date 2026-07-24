@@ -5,6 +5,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -22,28 +23,37 @@ type Host interface {
 	ActiveViewportRows() int
 	PanelViewportRows(panelID int) int
 
+	// ClearTransientMessage clears the status banner (e.g. when a transfer/extract dialog opens).
+	ClearTransientMessage()
+
 	// Config and Styles return the App's live config/theme (not a snapshot): both are mutable
 	// at runtime from the settings and theme dialogs, so the handler must re-read them on every
 	// use rather than caching a copy from construction time.
 	Config() config.Config
 	Styles() theme.Theme
 
-	// Path picker / path-completion glue: still owned by internal/app (reserved for a later
-	// path-picker extraction), reached through Host until then.
-	OpenPathPickerForFileField(fieldIndex int)
-	SyncPathFieldCompletion(f *dialog.FileDialogField, textWidth int)
-	TransferDestinationTextWidth() int
-	TryPathPickerHostShortcut(ev *tcell.EventKey) bool
-
-	// Extract, flatten, copy/move activation, and bookmark/SFTP dialogs: still owned by
-	// internal/app (reserved for a later extraction step), reached through Host until then.
+	// Extract, flatten, and bookmark/SFTP dialogs: still owned by internal/app (reserved for a
+	// later extraction step), reached through Host until then.
 	OpenExtractDialog(p *panel.State)
 	OpenFlattenDialog()
-	ActivateCopyAction()
-	ActivateMoveAction()
 	ExecuteExtract()
 	ExecuteAddBookmark()
 	ExecuteSFTPPassword()
+
+	// TryBookmarkDialogShortcut handles [dialog.bookmark] chords (delete/open-other) while the
+	// bookmarks path picker (a PathPickerPurposeNavigate-purposed PathPicker) is open; the
+	// bookmarks dialog itself is still owned by internal/app.
+	TryBookmarkDialogShortcut(ev *tcell.EventKey) bool
+	// HandlePathPickerScrollingQueryKey handles a focused edit key on the path picker's query
+	// row through internal/app's shared scrollquery glue (internal/app/scrolling_query.go).
+	HandlePathPickerScrollingQueryKey(ev *tcell.EventKey) bool
+
+	// SyncFilteredListRanks / ClampFilteredListSelection / HandleFilteredListSelectionKey are
+	// internal/app's shared fuzzy-list ranking/selection helpers (internal/app/filtered_list.go),
+	// also used by the find, history, SFTP-connect, and preview-style-picker dialogs.
+	SyncFilteredListRanks(lines []string, query string, matchRangeSlots int, caseInsensitive bool) (ranked []int, matchRanges [][]search.Range)
+	ClampFilteredListSelection(selected *int, rankedLen int)
+	HandleFilteredListSelectionKey(ev *tcell.EventKey, focus int, selected *int, rankedLen int, listRows func() int, ensureScroll func()) bool
 
 	// Mass-rename dialog: opening and the key-handling machinery live in this package, but the
 	// dialog's own preview/execution logic is still owned by internal/app (reserved for a later

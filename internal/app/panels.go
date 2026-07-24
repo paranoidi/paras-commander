@@ -102,7 +102,7 @@ func (a *App) reloadActive(successMessage string) {
 			return
 		}
 		a.requestVolumeSpaceRefreshAsync(ui.SecondaryPanel)
-		a.syncOpenPathInputsAfterFSChange()
+		a.dialogCtrl.SyncOpenPathInputsAfterFSChange()
 		a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 		return
 	}
@@ -111,7 +111,7 @@ func (a *App) reloadActive(successMessage string) {
 		return
 	}
 	a.requestVolumeSpaceRefreshAsync(ui.PrimaryPanel)
-	a.syncOpenPathInputsAfterFSChange()
+	a.dialogCtrl.SyncOpenPathInputsAfterFSChange()
 	a.setTransientMessage(successMessage, ui.MessageUrgencyInfo)
 }
 
@@ -185,7 +185,7 @@ func (a *App) toggleSelectionsStripFocus() {
 // selected paths — the directory copy/move is permitted from when selections span
 // multiple parent directories.
 func (a *App) navigateToSelectionsRoot() {
-	root, _, ok := a.selectionsCommonRoot()
+	root, _, ok := a.activePanel().SelectionsCommonRoot()
 	if !ok {
 		a.setTransientMessage("No selections", ui.MessageUrgencyInfo)
 		return

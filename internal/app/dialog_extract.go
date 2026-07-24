@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -22,7 +23,7 @@ func (a *App) openExtractDialog(p *panel.State) {
 		a.setTransientMessage("No supported archives selected", ui.MessageUrgencyWarn)
 		return
 	}
-	dest := transferPrefilledDestination(a.inactivePanel().PathString())
+	dest := dialogctrl.TransferPrefilledDestination(a.inactivePanel().PathString())
 	dest.Label = "Destination"
 	dest.PathPicker = true
 	fields := []dialog.FileDialogField{dest}

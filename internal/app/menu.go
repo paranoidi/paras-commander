@@ -229,10 +229,10 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 			a.activePanel().InvertSelection()
 			a.setTransientMessage("Selection inverted", ui.MessageUrgencyInfo)
 		case keymap.ActionCopy:
-			a.activateCopyAction()
+			a.dialogCtrl.ActivateCopyAction()
 			return false
 		case keymap.ActionMove:
-			a.activateMoveAction()
+			a.dialogCtrl.ActivateMoveAction()
 			return false
 		case keymap.ActionFileFlatten:
 			a.openFlattenDialog()
@@ -280,7 +280,7 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 		} else {
 			a.requestVolumeSpaceRefreshAsync(ui.PrimaryPanel)
 		}
-		a.syncOpenPathInputsAfterFSChange()
+		a.dialogCtrl.SyncOpenPathInputsAfterFSChange()
 		a.setTransientMessage(label+" refreshed", ui.MessageUrgencyInfo)
 	case keymap.ActionPanelDiskUsageScan:
 		a.startDiskUsageScanForPanel(panelScope)

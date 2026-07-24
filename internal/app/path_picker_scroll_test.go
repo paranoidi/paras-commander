@@ -46,7 +46,7 @@ func TestPathPickerBackspaceRevealWhenValueFitsWithGhostSuffix(t *testing.T) {
 	st.QueryScroll = len(runes) - 2
 	st.QueryCompletionSuffix = "documentary.riverbank.mountain.catalog.release" // long ghost tail
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone)) // drop '2'
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone)) // drop '2'
 	if st.QueryScroll != 0 {
 		t.Fatalf("QueryScroll = %d want 0; committed path fits field width", st.QueryScroll)
 	}
@@ -54,7 +54,7 @@ func TestPathPickerBackspaceRevealWhenValueFitsWithGhostSuffix(t *testing.T) {
 		t.Fatalf("after first backspace Query = %q", st.Query)
 	}
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone)) // drop '1'
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone)) // drop '1'
 	if st.QueryScroll != 0 {
 		t.Fatalf("QueryScroll = %d want 0", st.QueryScroll)
 	}
@@ -95,9 +95,9 @@ func TestPathPickerBackspaceRevealScrollAtLeftOverflowMarker(t *testing.T) {
 
 	query := "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/~/synthetic/workspace/catalog/"
 	for _, r := range query {
-		app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.syncPathPickerScroll()
+	app.dialogCtrl.SyncPathPickerScroll()
 	if st.QueryScroll == 0 {
 		t.Fatal("expected scrolled query")
 	}
@@ -106,7 +106,7 @@ func TestPathPickerBackspaceRevealScrollAtLeftOverflowMarker(t *testing.T) {
 	st.QueryCursor = st.QueryScroll + 1
 	scrollBefore := st.QueryScroll
 
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
 	if st.QueryScroll >= scrollBefore {
 		t.Fatalf("QueryScroll = %d want < %d after erasing first visible rune", st.QueryScroll, scrollBefore)
 	}

@@ -81,7 +81,7 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 
-	if h.host.TryPathPickerHostShortcut(event) {
+	if h.TryPathPickerHostShortcut(event) {
 		return false
 	}
 
@@ -211,7 +211,7 @@ func (h *Handler) handleFileDialogEnter() {
 		return
 	}
 	if f := h.FocusedField(); f != nil && f.PathPicker && f.PickerFocused {
-		h.host.OpenPathPickerForFileField(d.FocusedField)
+		h.OpenPathPickerForFileField(d.FocusedField)
 		return
 	}
 	if h.fileDialogOnMassRenameRadio() {

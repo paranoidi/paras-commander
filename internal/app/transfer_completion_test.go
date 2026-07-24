@@ -30,7 +30,7 @@ func TestTransferDialogPrefillDestinationTrailingSlash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app.openCopyDialog()
+	app.dialogCtrl.OpenCopyDialog()
 	dest := app.model.TransferDialog.Destination.Value
 	if dest == "" || dest[len(dest)-1] != '/' {
 		t.Fatalf("destination prefill = %q, want trailing %q", dest, filepath.Separator)
@@ -57,7 +57,7 @@ func TestTransferDialogCopyPreserveAltAndFocusedShortcuts(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 
-	app.openCopyDialog()
+	app.dialogCtrl.OpenCopyDialog()
 	d := &app.model.TransferDialog
 	if !d.Open || d.Kind != dialog.TransferKindCopy {
 		t.Fatal("copy dialog should be open")
@@ -66,7 +66,7 @@ func TestTransferDialogCopyPreserveAltAndFocusedShortcuts(t *testing.T) {
 		t.Fatal("expected preserve options from config defaults")
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
 	if d.PreservePermissions {
 		t.Fatal("Alt+R should toggle preserve permissions off")
 	}
@@ -74,19 +74,19 @@ func TestTransferDialogCopyPreserveAltAndFocusedShortcuts(t *testing.T) {
 		t.Fatal("Alt+T should not affect timestamps yet")
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModAlt))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModAlt))
 	if d.PreserveTimestamps {
 		t.Fatal("Alt+T should toggle preserve timestamps off")
 	}
 
 	d.FocusField = 1
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModNone))
 	if !d.PreservePermissions {
 		t.Fatal("r on focused permissions row should toggle on")
 	}
 
 	d.FocusField = 2
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
 	if !d.PreserveTimestamps {
 		t.Fatal("t on focused timestamps row should toggle on")
 	}
@@ -115,7 +115,7 @@ func TestTransferDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 
-	for _, open := range []func(){app.openCopyDialog, app.openMoveDialog} {
+	for _, open := range []func(){app.dialogCtrl.OpenCopyDialog, app.dialogCtrl.OpenMoveDialog} {
 		open()
 		d := &app.model.TransferDialog
 		if !d.Open {
@@ -128,12 +128,12 @@ func TestTransferDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 		}
 		d.DestSubFocus = dialog.TransferDestSubFocusText
 		d.FocusField = 0
-		app.syncPathFieldCompletion(&d.Destination, app.transferDestinationTextWidth())
+		app.dialogCtrl.SyncPathFieldCompletion(&d.Destination, app.dialogCtrl.TransferDestinationTextWidth())
 		if d.Destination.CompletionSuffix != "oo" {
 			t.Fatalf("suffix = %q want oo", d.Destination.CompletionSuffix)
 		}
 
-		app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+		app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 		want := filepath.Join(root, "foo") + "/"
 		if d.Destination.Value != want {
 			t.Fatalf("Value = %q want %q", d.Destination.Value, want)
@@ -141,6 +141,6 @@ func TestTransferDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 		if d.Destination.Cursor != len([]rune(want)) {
 			t.Fatalf("Cursor = %d want %d", d.Destination.Cursor, len([]rune(want)))
 		}
-		app.closeTransferDialog()
+		app.dialogCtrl.CloseTransferDialog()
 	}
 }

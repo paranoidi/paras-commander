@@ -9,7 +9,7 @@ import (
 func (a *App) pathPickerScrollingQuery() scrollquery.Edit {
 	st := &a.model.PathPicker
 	q := &dialog.ScrollingQuery{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll}
-	width := a.pathPickerQueryWidth()
+	width := a.dialogCtrl.PathPickerQueryWidth()
 	edit := scrollquery.Edit{
 		Q:     q,
 		Width: width,
@@ -35,16 +35,16 @@ func (a *App) pathPickerScrollingQuery() scrollquery.Edit {
 		st.Query = q.Value
 		st.QueryCursor = q.Cursor
 		st.QueryScroll = q.Scroll
-		a.syncPathPickerRanks()
-		a.syncPathPickerCompletion()
+		a.dialogCtrl.SyncPathPickerRanks()
+		a.dialogCtrl.SyncPathPickerCompletion()
 		if edit.MaxScrollAfterErase != nil && st.QueryScroll > *edit.MaxScrollAfterErase {
 			st.QueryScroll = *edit.MaxScrollAfterErase
 			q.Scroll = *edit.MaxScrollAfterErase
 		}
 		edit.MaxScrollAfterErase = nil
-		a.armPathPickerValidateTimer()
+		a.dialogCtrl.ArmPathPickerValidateTimer()
 		st.Selected = 0
-		dialog.EnsurePathPickerListScroll(st, a.pathPickerListRows())
+		dialog.EnsurePathPickerListScroll(st, a.dialogCtrl.PathPickerListRows())
 	}
 	return edit
 }

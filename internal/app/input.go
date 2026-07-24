@@ -212,10 +212,10 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	if hints := flattenDialogOverlayFooterKeys(a, a.keys.FlattenDialog); len(hints) > 0 {
 		rest = append(hints, rest...)
 	}
-	if hints := transferDialogOverlayFooterKeys(a, a.keys.TransferDialog); len(hints) > 0 {
+	if hints := a.dialogCtrl.TransferDialogOverlayFooterKeys(a.keys.TransferDialog); len(hints) > 0 {
 		rest = append(hints, rest...)
 	}
-	if a.pathPickerHostFooterEligible() {
+	if a.dialogCtrl.PathPickerHostFooterEligible() {
 		if lbl := a.keys.Global.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
 			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Bookmarks"}}, rest...)
 		}
@@ -431,7 +431,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return false, true
 	case InputModePathPicker:
-		a.handlePathPickerKey(event)
+		a.dialogCtrl.HandlePathPickerKey(event)
 		a.render()
 		return false, true
 	case InputModeHistoryDialog:
@@ -649,10 +649,10 @@ func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string
 func (a *App) finishResolvedKeyboardAction(nextAction string) (quit bool, rendered bool) {
 	switch nextAction {
 	case keymap.ActionCopy:
-		a.activateCopyAction()
+		a.dialogCtrl.ActivateCopyAction()
 		return false, true
 	case keymap.ActionMove:
-		a.activateMoveAction()
+		a.dialogCtrl.ActivateMoveAction()
 		return false, true
 	case keymap.ActionAppQuit:
 		return a.handleQuit(), false
@@ -720,10 +720,10 @@ func (a *App) dispatchActionLikeKeyboardShortcut(actionID string) bool {
 		a.clearAllDiskUsageData()
 		return false
 	case keymap.ActionCopy:
-		a.activateCopyAction()
+		a.dialogCtrl.ActivateCopyAction()
 		return false
 	case keymap.ActionMove:
-		a.activateMoveAction()
+		a.dialogCtrl.ActivateMoveAction()
 		return false
 	case keymap.ActionAppQuit:
 		return a.handleQuit()

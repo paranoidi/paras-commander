@@ -27,7 +27,7 @@ func TestQueueRetainsMultiplePausedTransferJobs(t *testing.T) {
 
 	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
 		p := filepath.Join(dir, name)
-		app.addTransferJob(jobs.TypeCopy, []string{p}, dst, true, app.transferPreserveFromConfig())
+		app.dialogCtrl.AddTransferJob(jobs.TypeCopy, []string{p}, dst, true, app.dialogCtrl.TransferPreserveFromConfig())
 	}
 	if got := app.jobState.Queue().Len(); got != 3 {
 		t.Fatalf("Queue().Len() = %d, want 3", got)

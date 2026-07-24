@@ -5,6 +5,7 @@ import (
 	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -28,37 +29,41 @@ func (h dialogHost) ActiveViewportRows() int { return h.app.activeViewportRows()
 
 func (h dialogHost) PanelViewportRows(panelID int) int { return h.app.panelViewportRows(panelID) }
 
+func (h dialogHost) ClearTransientMessage() { h.app.clearTransientMessage() }
+
 func (h dialogHost) Config() config.Config { return h.app.config }
 
 func (h dialogHost) Styles() theme.Theme { return h.app.styles }
 
-func (h dialogHost) OpenPathPickerForFileField(fieldIndex int) {
-	h.app.openPathPickerForFileField(fieldIndex)
-}
-
-func (h dialogHost) SyncPathFieldCompletion(f *dialog.FileDialogField, textWidth int) {
-	h.app.syncPathFieldCompletion(f, textWidth)
-}
-
-func (h dialogHost) TransferDestinationTextWidth() int { return h.app.transferDestinationTextWidth() }
-
-func (h dialogHost) TryPathPickerHostShortcut(ev *tcell.EventKey) bool {
-	return h.app.tryPathPickerHostShortcut(ev)
-}
-
 func (h dialogHost) OpenExtractDialog(p *panel.State) { h.app.openExtractDialog(p) }
 
 func (h dialogHost) OpenFlattenDialog() { h.app.openFlattenDialog() }
-
-func (h dialogHost) ActivateCopyAction() { h.app.activateCopyAction() }
-
-func (h dialogHost) ActivateMoveAction() { h.app.activateMoveAction() }
 
 func (h dialogHost) ExecuteExtract() { h.app.executeExtract() }
 
 func (h dialogHost) ExecuteAddBookmark() { h.app.executeAddBookmark() }
 
 func (h dialogHost) ExecuteSFTPPassword() { h.app.executeSFTPPassword() }
+
+func (h dialogHost) TryBookmarkDialogShortcut(ev *tcell.EventKey) bool {
+	return h.app.tryBookmarkDialogShortcut(ev)
+}
+
+func (h dialogHost) HandlePathPickerScrollingQueryKey(ev *tcell.EventKey) bool {
+	return h.app.handleScrollingQueryKey(ev, true, h.app.pathPickerScrollingQuery())
+}
+
+func (h dialogHost) SyncFilteredListRanks(lines []string, query string, matchRangeSlots int, caseInsensitive bool) (ranked []int, matchRanges [][]search.Range) {
+	return syncFilteredListRanks(lines, query, matchRangeSlots, caseInsensitive)
+}
+
+func (h dialogHost) ClampFilteredListSelection(selected *int, rankedLen int) {
+	clampFilteredListSelection(selected, rankedLen)
+}
+
+func (h dialogHost) HandleFilteredListSelectionKey(ev *tcell.EventKey, focus int, selected *int, rankedLen int, listRows func() int, ensureScroll func()) bool {
+	return handleFilteredListSelectionKey(ev, focus, selected, rankedLen, listRows, ensureScroll)
+}
 
 func (h dialogHost) OpenMassRenameDialog(p *panel.State) { h.app.openMassRenameDialog(p) }
 

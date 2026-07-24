@@ -10,16 +10,16 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// addTransferJob enqueues a copy/move job through Deps.Jobs.
-func (h *Handler) addTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) {
+// AddTransferJob enqueues a copy/move job through Deps.Jobs.
+func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) {
 	h.jobs.AddTransferJob(jobsctrl.TransferJobRequest{
 		Type: jobType, Sources: sources, Dest: dest, StartPaused: startPaused, Preserve: preserve,
 	})
 }
 
-// transferPreserveFromConfig reads the live copy-preserve settings (permissions/timestamps)
+// TransferPreserveFromConfig reads the live copy-preserve settings (permissions/timestamps)
 // from Host.Config(), not a construction-time snapshot: the settings dialog mutates them at runtime.
-func (h *Handler) transferPreserveFromConfig() jobs.TransferPreserve {
+func (h *Handler) TransferPreserveFromConfig() jobs.TransferPreserve {
 	cfg := h.host.Config()
 	return jobs.TransferPreserveFromConfig(cfg.Operations.PreservePermissions, cfg.Operations.PreserveTimestamps)
 }
@@ -86,7 +86,7 @@ func (h *Handler) executeDuplicate() {
 	listDir := p.PathString()
 	panelID := h.model.ActivePanel
 	h.CloseFileDialog()
-	h.addTransferJob(jobs.TypeCopy, []string{plan.SourcePath}, plan.DestPath, false, h.transferPreserveFromConfig())
+	h.AddTransferJob(jobs.TypeCopy, []string{plan.SourcePath}, plan.DestPath, false, h.TransferPreserveFromConfig())
 	if focusAfter {
 		h.scheduleDuplicateFocus(panelID, listDir, plan.NewName)
 	}

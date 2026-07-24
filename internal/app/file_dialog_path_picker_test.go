@@ -99,7 +99,7 @@ func TestSymlinkDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 	prefix := filepath.Join(root, "f")
 	f.Value = prefix
 	f.Cursor = len([]rune(prefix))
-	app.syncPathFieldCompletion(f, app.transferDestinationTextWidth())
+	app.dialogCtrl.SyncPathFieldCompletion(f, app.dialogCtrl.TransferDestinationTextWidth())
 	if f.CompletionSuffix != "oo" {
 		t.Fatalf("suffix = %q want oo", f.CompletionSuffix)
 	}

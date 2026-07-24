@@ -1,15 +1,15 @@
-package app
+package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// destFieldNav handles Left/Right cursor movement and text/picker sub-focus on a
-// destination path field while FocusField is 0. Shared by transfer and flatten dialogs.
+// DestFieldNav handles Left/Right cursor movement and text/picker sub-focus on a
+// destination path field while FocusField is 0. Shared by the transfer and flatten dialogs.
 // openPicker runs when Enter is pressed with picker sub-focus.
 // Returns true when the key was handled (caller should return).
-func (a *App) destFieldNav(
+func (h *Handler) DestFieldNav(
 	event *tcell.EventKey,
 	field *dialog.FileDialogField,
 	subFocus *int,
@@ -59,18 +59,18 @@ func (a *App) destFieldNav(
 			return true
 		}
 		field.MoveCursor(1)
-		a.syncPathFieldCompletion(field, a.transferDestinationTextWidth())
+		h.SyncPathFieldCompletion(field, h.TransferDestinationTextWidth())
 		return true
 	case tcell.KeyLeft:
 		field.MoveCursor(-1)
-		a.syncPathFieldCompletion(field, a.transferDestinationTextWidth())
+		h.SyncPathFieldCompletion(field, h.TransferDestinationTextWidth())
 		return true
 	}
 	return false
 }
 
-// destFieldAcceptCompletion accepts Tab completion on the destination text sub-focus.
-func (a *App) destFieldAcceptCompletion(field *dialog.FileDialogField, subFocus, focusField, textSub int, onAccepted func()) bool {
+// DestFieldAcceptCompletion accepts Tab completion on the destination text sub-focus.
+func (h *Handler) DestFieldAcceptCompletion(field *dialog.FileDialogField, subFocus, focusField, textSub int, onAccepted func()) bool {
 	if focusField != 0 || subFocus != textSub || field == nil {
 		return false
 	}
@@ -78,7 +78,7 @@ func (a *App) destFieldAcceptCompletion(field *dialog.FileDialogField, subFocus,
 		return false
 	}
 	if field.AcceptCompletion() {
-		a.syncPathFieldCompletion(field, a.transferDestinationTextWidth())
+		h.SyncPathFieldCompletion(field, h.TransferDestinationTextWidth())
 		if onAccepted != nil {
 			onAccepted()
 		}

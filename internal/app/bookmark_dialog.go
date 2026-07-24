@@ -48,7 +48,7 @@ func (a *App) openSelectedBookmarkInInactivePanel() bool {
 		return true
 	}
 	a.panelByID(id).EnsureCursorVisible(a.panelViewportRows(id))
-	a.closePathPicker()
+	a.dialogCtrl.ClosePathPicker()
 	a.setTransientMessage(fmt.Sprintf("Opened in other panel: %s", path), ui.MessageUrgencyInfo)
 	return true
 }
@@ -111,7 +111,7 @@ func (a *App) deleteSelectedBookmark() bool {
 	st := &a.model.PathPicker
 	entIdx := st.Ranked[st.Selected]
 	st.Items = append(st.Items[:entIdx], st.Items[entIdx+1:]...)
-	a.syncPathPickerRanks()
+	a.dialogCtrl.SyncPathPickerRanks()
 	label := item.Name
 	if label == "" {
 		label = item.Path

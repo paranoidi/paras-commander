@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -51,7 +52,7 @@ func TestFlattenDestinationTargetPanel(t *testing.T) {
 	app, _, inactiveDir := flattenDialogTestSetup(t)
 
 	// Default destination is the active (Primary) panel's path.
-	app.applyFlattenDestinationPathValidation()
+	app.dialogCtrl.ApplyFlattenDestinationPathValidation()
 	if !app.model.DestinationTargetPrimary {
 		t.Fatal("expected Primary panel marked as destination target")
 	}
@@ -61,7 +62,7 @@ func TestFlattenDestinationTargetPanel(t *testing.T) {
 
 	// Retyping the destination to the inactive (Secondary) panel's path flips the target.
 	app.model.FlattenDialog.Destination.Value = inactiveDir
-	app.applyFlattenDestinationPathValidation()
+	app.dialogCtrl.ApplyFlattenDestinationPathValidation()
 	if !app.model.DestinationTargetSecondary {
 		t.Fatal("expected Secondary panel marked as destination target")
 	}
@@ -131,8 +132,8 @@ func TestFileMenuFlattenOpensDialog(t *testing.T) {
 	if !app.model.FlattenDialog.Open {
 		t.Fatal("flatten dialog should be open")
 	}
-	if app.model.FlattenDialog.Destination.Value != transferPrefilledDestination(dir).Value {
-		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, transferPrefilledDestination(dir).Value)
+	if app.model.FlattenDialog.Destination.Value != dialogctrl.TransferPrefilledDestination(dir).Value {
+		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, dialogctrl.TransferPrefilledDestination(dir).Value)
 	}
 	if app.model.FlattenDialog.Recursive {
 		t.Fatal("recursive should default false")
@@ -208,12 +209,12 @@ func TestFlattenDestinationFooterShowsActiveAndInactive(t *testing.T) {
 func TestFlattenDestinationShortcutShiftLeftSetsActivePath(t *testing.T) {
 	t.Parallel()
 	app, activeDir, inactiveDir := flattenDialogTestSetup(t)
-	wantActive := transferPrefilledDestination(activeDir).Value
+	wantActive := dialogctrl.TransferPrefilledDestination(activeDir).Value
 	if app.model.FlattenDialog.Destination.Value != wantActive {
 		t.Fatalf("initial destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantActive)
 	}
 	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
-	wantInactive := transferPrefilledDestination(inactiveDir).Value
+	wantInactive := dialogctrl.TransferPrefilledDestination(inactiveDir).Value
 	if app.model.FlattenDialog.Destination.Value != wantInactive {
 		t.Fatalf("after Shift+Right destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
 	}
@@ -226,7 +227,7 @@ func TestFlattenDestinationShortcutShiftLeftSetsActivePath(t *testing.T) {
 func TestFlattenDestinationShortcutShiftRightSetsInactivePath(t *testing.T) {
 	t.Parallel()
 	app, _, inactiveDir := flattenDialogTestSetup(t)
-	wantInactive := transferPrefilledDestination(inactiveDir).Value
+	wantInactive := dialogctrl.TransferPrefilledDestination(inactiveDir).Value
 	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	if app.model.FlattenDialog.Destination.Value != wantInactive {
 		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
@@ -279,7 +280,7 @@ func TestFlattenInactivePanelIsSourceUsesActive(t *testing.T) {
 	if !app.model.FlattenDialog.Open {
 		t.Fatal("flatten dialog should be open")
 	}
-	want := transferPrefilledDestination(activeDir).Value
+	want := dialogctrl.TransferPrefilledDestination(activeDir).Value
 	if app.model.FlattenDialog.Destination.Value != want {
 		t.Fatalf("destination = %q, want active panel %q", app.model.FlattenDialog.Destination.Value, want)
 	}
@@ -307,7 +308,7 @@ func TestFlattenDefaultLocationActivePrefill(t *testing.T) {
 	}
 	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
 	app.openFlattenDialog()
-	want := transferPrefilledDestination(activeDir).Value
+	want := dialogctrl.TransferPrefilledDestination(activeDir).Value
 	if app.model.FlattenDialog.Destination.Value != want {
 		t.Fatalf("destination = %q, want active panel %q", app.model.FlattenDialog.Destination.Value, want)
 	}

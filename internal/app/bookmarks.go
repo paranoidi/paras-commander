@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -31,7 +32,7 @@ func (a *App) openBookmarkDialog() {
 			Source:      marks[i].Origin.PathPickerSource(),
 			Name:        marks[i].Name,
 			Path:        marks[i].Path,
-			PathMissing: pathEntryMissing(panelPath, home, cp),
+			PathMissing: dialogctrl.PathEntryMissing(panelPath, home, cp),
 		}
 	}
 	a.model.PathPicker = dialog.PathPickerState{
@@ -44,7 +45,7 @@ func (a *App) openBookmarkDialog() {
 		Selected:   0,
 		ListScroll: 0,
 	}
-	a.syncPathPickerRanks()
+	a.dialogCtrl.SyncPathPickerRanks()
 }
 
 // openAddBookmarkDialog presents the centered dialog to append a new fzf-marks entry

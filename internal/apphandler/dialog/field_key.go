@@ -17,12 +17,12 @@ func (h *Handler) fileDialogFieldAfterEdit() func() {
 	if f == nil || !f.PathPicker {
 		return extra
 	}
-	textWidth := h.host.TransferDestinationTextWidth()
+	textWidth := h.TransferDestinationTextWidth()
 	return func() {
 		if extra != nil {
 			extra()
 		}
-		h.host.SyncPathFieldCompletion(f, textWidth)
+		h.SyncPathFieldCompletion(f, textWidth)
 	}
 }
 
@@ -34,5 +34,5 @@ func (h *Handler) SyncFocusedFileDialogPathFieldCompletion() {
 	if f == nil || !f.PathPicker {
 		return
 	}
-	h.host.SyncPathFieldCompletion(f, h.host.TransferDestinationTextWidth())
+	h.SyncPathFieldCompletion(f, h.TransferDestinationTextWidth())
 }

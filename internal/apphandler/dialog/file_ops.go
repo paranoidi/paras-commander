@@ -47,11 +47,11 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 	case keymap.ActionFileFlatten:
 		h.host.OpenFlattenDialog()
 	case keymap.ActionCopy:
-		h.host.ActivateCopyAction()
+		h.ActivateCopyAction()
 	case keymap.ActionFileDuplicate:
 		h.activateDuplicateAction()
 	case keymap.ActionMove:
-		h.host.ActivateMoveAction()
+		h.ActivateMoveAction()
 	case keymap.ActionFileRunForEach:
 		if h.model.ViewMode == ui.ViewBrowser {
 			h.commands.OpenRunForEachDialog()
@@ -480,11 +480,11 @@ func (h *Handler) executeMkdir() {
 		h.host.SetTransientMessage(fmt.Sprintf("Created directory %s", plan.Name), ui.MessageUrgencyInfo)
 	case dialog.MkdirActionCreateCopySelect:
 		h.host.ActivePanel().ClearSelection()
-		h.addTransferJob(jobs.TypeCopy, sources, plan.Path, false, h.transferPreserveFromConfig())
+		h.AddTransferJob(jobs.TypeCopy, sources, plan.Path, false, h.TransferPreserveFromConfig())
 		h.host.SetTransientMessage(fmt.Sprintf("Created %s; copy queued (%d %s)", plan.Name, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 	case dialog.MkdirActionCreateMoveSelect:
 		h.host.ActivePanel().ClearSelection()
-		h.addTransferJob(jobs.TypeMove, sources, plan.Path, false, h.transferPreserveFromConfig())
+		h.AddTransferJob(jobs.TypeMove, sources, plan.Path, false, h.TransferPreserveFromConfig())
 		h.host.SetTransientMessage(fmt.Sprintf("Created %s; move queued (%d %s)", plan.Name, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 	}
 }

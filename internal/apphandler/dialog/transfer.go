@@ -1,11 +1,10 @@
-package app
+package dialog
 
 import (
 	"path/filepath"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -14,49 +13,41 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) {
-	a.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
-		Type: jobType, Sources: sources, Dest: dest, StartPaused: startPaused, Preserve: preserve,
-	})
+// OpenCopyDialog opens the unified transfer dialog in copy mode.
+func (h *Handler) OpenCopyDialog() {
+	h.openTransferDialog(dialog.TransferKindCopy)
 }
 
-func (a *App) transferPreserveFromConfig() jobs.TransferPreserve {
-	return jobs.TransferPreserveFromConfig(
-		a.config.Operations.PreservePermissions,
-		a.config.Operations.PreserveTimestamps,
-	)
+// OpenMoveDialog opens the unified transfer dialog in move mode.
+func (h *Handler) OpenMoveDialog() {
+	h.openTransferDialog(dialog.TransferKindMove)
 }
 
-func (a *App) openCopyDialog() {
-	a.openTransferDialog(dialog.TransferKindCopy)
+// ActivateCopyAction is the single user-facing entry point for copy (keyboard, menu, F-keys).
+func (h *Handler) ActivateCopyAction() {
+	h.OpenCopyDialog()
 }
 
-func (a *App) openMoveDialog() {
-	a.openTransferDialog(dialog.TransferKindMove)
-}
-
-// activateCopyAction is the single user-facing entry point for copy (keyboard, menu, F-keys).
-func (a *App) activateCopyAction() {
-	a.openCopyDialog()
-}
-
-// activateMoveAction is the single user-facing entry point for move (keyboard, menu, F-keys).
+// ActivateMoveAction is the single user-facing entry point for move (keyboard, menu, F-keys).
 // With no selection, a single cursor item already shown in the passive panel opens Rename instead.
-func (a *App) activateMoveAction() {
-	p := a.activePanel()
+func (h *Handler) ActivateMoveAction() {
+	p := h.host.ActivePanel()
 	if len(p.SelectedPaths) == 0 {
 		if entry, ok := p.CurrentEntry(); ok {
-			dest := a.inactivePanel().PathString()
+			dest := h.host.InactivePanel().PathString()
 			if entry.Path == filepath.Join(dest, entry.Name) {
-				a.dialogCtrl.OpenRenameDialog(p)
+				h.OpenRenameDialog(p)
 				return
 			}
 		}
 	}
-	a.openMoveDialog()
+	h.OpenMoveDialog()
 }
 
-func transferPrefilledDestination(path string) dialog.FileDialogField {
+// TransferPrefilledDestination builds a destination FileDialogField prefilled (as a pending
+// suggestion) with path, trailing-separated when non-empty. Shared by the transfer, flatten,
+// and extract dialogs.
+func TransferPrefilledDestination(path string) dialog.FileDialogField {
 	path = strings.TrimSpace(path)
 	if path != "" {
 		sep := string(filepath.Separator)
@@ -73,37 +64,38 @@ func transferPrefilledDestination(path string) dialog.FileDialogField {
 	}
 }
 
-func (a *App) openTransferDialog(kind dialog.TransferKind) {
-	passive := a.inactivePanel()
+func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
+	passive := h.host.InactivePanel()
 	st := dialog.TransferDialogState{
 		Open:         true,
 		Kind:         kind,
-		Destination:  transferPrefilledDestination(passive.PathString()),
+		Destination:  TransferPrefilledDestination(passive.PathString()),
 		DestSubFocus: dialog.TransferDestSubFocusText,
 		FocusField:   0, // destination path row
 	}
 	if kind == dialog.TransferKindCopy {
-		st.PreservePermissions = a.config.Operations.PreservePermissions
-		st.PreserveTimestamps = a.config.Operations.PreserveTimestamps
+		cfg := h.host.Config()
+		st.PreservePermissions = cfg.Operations.PreservePermissions
+		st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
 	}
-	if root, ok := a.multiDirSelectionCommonRoot(); ok {
+	if root, ok := h.multiDirSelectionCommonRoot(); ok {
 		st.CommonRoot = root
-		st.Entries = a.transferPreviewEntries(root)
+		st.Entries = h.transferPreviewEntries(root)
 	}
-	a.model.TransferDialog = st
-	a.clearTransientMessage()
-	a.armTransferDestinationValidateTimer()
+	h.model.TransferDialog = st
+	h.host.ClearTransientMessage()
+	h.ArmTransferDestinationValidateTimer()
 }
 
 // transferPreviewEntries builds the multi-location preview list: the active panel's
 // selection resolved and labeled relative to root (not the panel's current path), so
 // the preview reflects where the transfer will read from.
-func (a *App) transferPreviewEntries(root string) []dialog.DeleteListEntry {
-	source, err := ops.ResolveSource(a.activePanel())
+func (h *Handler) transferPreviewEntries(root string) []dialog.DeleteListEntry {
+	source, err := ops.ResolveSource(h.host.ActivePanel())
 	if err != nil {
 		return nil
 	}
-	homeDir := a.model.UserHomeDir
+	homeDir := h.model.UserHomeDir
 	entries := make([]dialog.DeleteListEntry, len(source.Entries))
 	for i, e := range source.Entries {
 		entries[i] = dialog.DeleteListEntry{
@@ -115,35 +107,30 @@ func (a *App) transferPreviewEntries(root string) []dialog.DeleteListEntry {
 	return entries
 }
 
-// selectionsCommonRoot delegates to panel.State.SelectionsCommonRoot for the active panel.
-func (a *App) selectionsCommonRoot() (root pathloc.Path, multiDir bool, ok bool) {
-	return a.activePanel().SelectionsCommonRoot()
-}
-
 // multiDirSelectionCommonRoot returns the deepest common ancestor of the active panel's
 // selected paths when they span multiple parent directories, regardless of the panel's
 // current path. The transfer dialog always shows the multi-location Source/Result preview
 // in that case.
-func (a *App) multiDirSelectionCommonRoot() (string, bool) {
-	root, multiDir, ok := a.selectionsCommonRoot()
+func (h *Handler) multiDirSelectionCommonRoot() (string, bool) {
+	root, multiDir, ok := h.host.ActivePanel().SelectionsCommonRoot()
 	if !ok || !multiDir {
 		return "", false
 	}
 	return root.String(), true
 }
 
-// transferPreviewListViewportRows returns how many preview-list rows the multi-location
+// TransferPreviewListViewportRows returns how many preview-list rows the multi-location
 // transfer dialog currently shows, for clamping EntriesScroll.
-func (a *App) transferPreviewListViewportRows() int {
-	w, h := a.screen.Size()
-	return dialog.TransferListViewportRows(dialog.Layout{Width: w, Height: h}, a.model.TransferDialog)
+func (h *Handler) TransferPreviewListViewportRows() int {
+	w, ht := h.screen.Size()
+	return dialog.TransferListViewportRows(dialog.Layout{Width: w, Height: ht}, h.model.TransferDialog)
 }
 
 // scrollTransferPreviewList moves the multi-location preview list scroll by delta rows,
 // clamped to the current viewport.
-func (a *App) scrollTransferPreviewList(delta int) {
-	st := &a.model.TransferDialog
-	vp := a.transferPreviewListViewportRows()
+func (h *Handler) scrollTransferPreviewList(delta int) {
+	st := &h.model.TransferDialog
+	vp := h.TransferPreviewListViewportRows()
 	maxScroll := len(st.Entries) - vp
 	if maxScroll < 0 {
 		maxScroll = 0
@@ -167,8 +154,9 @@ func transferSelfCopyNewNamePrefilled(base string) dialog.FileDialogField {
 	}
 }
 
-// openTransferDialogSelfCopyRename opens the transfer modal directly on the "new name" step (e.g. F5/F6 onto self).
-func (a *App) openTransferDialogSelfCopyRename(kind dialog.TransferKind, absDestDir, sourcePath string) {
+// OpenTransferDialogSelfCopyRename opens the transfer modal directly on the "new name" step
+// (e.g. F5/F6 onto self).
+func (h *Handler) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, absDestDir, sourcePath string) {
 	base := filepath.Base(sourcePath)
 	st := dialog.TransferDialogState{
 		Open:                 true,
@@ -182,26 +170,29 @@ func (a *App) openTransferDialogSelfCopyRename(kind dialog.TransferKind, absDest
 		FocusField:           0,
 	}
 	if kind == dialog.TransferKindCopy {
-		st.PreservePermissions = a.config.Operations.PreservePermissions
-		st.PreserveTimestamps = a.config.Operations.PreserveTimestamps
+		cfg := h.host.Config()
+		st.PreservePermissions = cfg.Operations.PreservePermissions
+		st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
 	}
-	a.model.TransferDialog = st
-	a.clearTransientMessage()
+	h.model.TransferDialog = st
+	h.host.ClearTransientMessage()
 }
 
-func (a *App) closeTransferDialog() {
-	a.transferDestValidate.Invalidate()
-	a.model.TransferDialog = dialog.TransferDialogState{}
-	a.model.DestinationTargetPrimary = false
-	a.model.DestinationTargetSecondary = false
+// CloseTransferDialog closes the unified transfer (copy/move) dialog and invalidates its
+// debounced destination-path validation.
+func (h *Handler) CloseTransferDialog() {
+	h.transferDestValidate.Invalidate()
+	h.model.TransferDialog = dialog.TransferDialogState{}
+	h.model.DestinationTargetPrimary = false
+	h.model.DestinationTargetSecondary = false
 }
 
 // handleTransferAltShortcut handles the Alt-letter mnemonics that must run before standard
 // dialog actions and field editing: Alt+R/Alt+T toggle preserve-permissions/timestamps on a
 // copy's destination phase, and Alt+I toggles "Flatten into destination" for a multi-location
 // transfer. Returns true when the rune was handled.
-func (a *App) handleTransferAltShortcut(event *tcell.EventKey) bool {
-	d := &a.model.TransferDialog
+func (h *Handler) handleTransferAltShortcut(event *tcell.EventKey) bool {
+	d := &h.model.TransferDialog
 	if d.Phase == dialog.TransferPhaseDestination && d.Kind == dialog.TransferKindCopy {
 		if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 			switch event.Rune() {
@@ -232,42 +223,42 @@ func (a *App) handleTransferAltShortcut(event *tcell.EventKey) bool {
 // navigation on the destination field while it is focused. Returns true when the key was
 // handled (caller should return); false to fall through to the generic focus-move / Enter
 // handling below.
-func (a *App) handleTransferDestinationNav(event *tcell.EventKey) bool {
-	d := &a.model.TransferDialog
+func (h *Handler) handleTransferDestinationNav(event *tcell.EventKey) bool {
+	d := &h.model.TransferDialog
 	if d.Phase != dialog.TransferPhaseDestination {
 		return false
 	}
-	return a.destFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
-		dialog.TransferDestSubFocusText, dialog.TransferDestSubFocusPicker, a.openPathPickerForTransfer)
+	return h.DestFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
+		dialog.TransferDestSubFocusText, dialog.TransferDestSubFocusPicker, h.OpenPathPickerForTransfer)
 }
 
 // handleTransferEnter handles Enter on the transfer dialog: confirm from the destination
 // text field or self-copy rename field, or activate the focused Cancel/OK/Add-paused
 // button. Returns true when handled (caller should return); false when the key isn't Enter
 // or Enter didn't land on a recognized target, so the caller falls through to field editing.
-func (a *App) handleTransferEnter(event *tcell.EventKey) bool {
-	d := &a.model.TransferDialog
+func (h *Handler) handleTransferEnter(event *tcell.EventKey) bool {
+	d := &h.model.TransferDialog
 	if event.Key() != tcell.KeyEnter {
 		return false
 	}
 	tf := dialog.NewTransferDialogLinearForm(dialog.TransferDialogEffectiveNumContent(*d))
 	if d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0 && d.DestSubFocus == dialog.TransferDestSubFocusText {
-		a.confirmTransfer()
+		h.confirmTransfer()
 		return true
 	}
 	if d.Phase == dialog.TransferPhaseSelfCopyRename && d.FocusField == 0 {
-		a.confirmTransfer()
+		h.confirmTransfer()
 		return true
 	}
 	switch d.FocusField {
 	case tf.CancelIndex():
-		a.closeTransferDialog()
+		h.CloseTransferDialog()
 		return true
 	case tf.OKIndex():
-		a.confirmTransfer()
+		h.confirmTransfer()
 		return true
 	case tf.AddPausedIndex():
-		a.confirmTransferPaused()
+		h.confirmTransferPaused()
 		return true
 	}
 	return false
@@ -276,8 +267,8 @@ func (a *App) handleTransferEnter(event *tcell.EventKey) bool {
 // handleTransferCheckboxRune applies rune shortcuts (mnemonic letters and Space) for the
 // permissions/timestamps checkboxes and the multi-location flatten checkbox when they are
 // focused.
-func (a *App) handleTransferCheckboxRune(event *tcell.EventKey) {
-	d := &a.model.TransferDialog
+func (h *Handler) handleTransferCheckboxRune(event *tcell.EventKey) {
+	d := &h.model.TransferDialog
 	if d.Phase != dialog.TransferPhaseDestination || event.Key() != tcell.KeyRune || event.Modifiers() != tcell.ModNone {
 		return
 	}
@@ -311,47 +302,48 @@ func (a *App) handleTransferCheckboxRune(event *tcell.EventKey) {
 	}
 }
 
-func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
-	d := &a.model.TransferDialog
-	if a.handleTransferAltShortcut(event) {
+// HandleTransferDialogKey routes a key event for the open unified transfer (copy/move) dialog.
+func (h *Handler) HandleTransferDialogKey(event *tcell.EventKey) {
+	d := &h.model.TransferDialog
+	if h.handleTransferAltShortcut(event) {
 		return
 	}
 	// Alt+O = OK, Alt+C = Cancel, Alt+P = Add paused (mnemonics; must run before field edit).
-	if dialog.TryStandardDialogActions(event, a.confirmTransfer, a.closeTransferDialog, []dialog.ExtraMnemonic{
-		{Rune: 'p', Fn: a.confirmTransferPaused},
+	if dialog.TryStandardDialogActions(event, h.confirmTransfer, h.CloseTransferDialog, []dialog.ExtraMnemonic{
+		{Rune: 'p', Fn: h.confirmTransferPaused},
 	}) {
 		return
 	}
 	if event.Key() == tcell.KeyEsc {
-		a.closeTransferDialog()
+		h.CloseTransferDialog()
 		return
 	}
 	if d.MultiLocation() {
 		switch event.Key() {
 		case tcell.KeyPgUp:
-			a.scrollTransferPreviewList(-a.transferPreviewListViewportRows())
+			h.scrollTransferPreviewList(-h.TransferPreviewListViewportRows())
 			return
 		case tcell.KeyPgDn:
-			a.scrollTransferPreviewList(a.transferPreviewListViewportRows())
+			h.scrollTransferPreviewList(h.TransferPreviewListViewportRows())
 			return
 		}
 	}
-	if a.tryPathPickerHostShortcut(event) {
+	if h.TryPathPickerHostShortcut(event) {
 		return
 	}
-	if a.tryTransferDialogDestinationShortcut(event) {
+	if h.TryTransferDialogDestinationShortcut(event) {
 		return
 	}
 	if d.Phase == dialog.TransferPhaseDestination && event.Key() == tcell.KeyTab &&
-		a.destFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.TransferDestSubFocusText, a.armTransferDestinationValidateTimer) {
+		h.DestFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.TransferDestSubFocusText, h.ArmTransferDestinationValidateTimer) {
 		return
 	}
 	if d.FocusField == 0 && d.Phase == dialog.TransferPhaseSelfCopyRename {
-		if a.editTransferFieldKey(event, &d.SelfCopyNewName) {
+		if h.editTransferFieldKey(event, &d.SelfCopyNewName) {
 			return
 		}
 	}
-	if a.handleTransferDestinationNav(event) {
+	if h.handleTransferDestinationNav(event) {
 		return
 	}
 	if focus, ok := dialog.TransferDialogMoveFocus(*d, d.FocusField, event.Key()); ok {
@@ -362,22 +354,22 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 		}
 		return
 	}
-	if a.handleTransferEnter(event) {
+	if h.handleTransferEnter(event) {
 		return
 	}
 	if d.FocusField == 0 && d.Phase != dialog.TransferPhaseSelfCopyRename {
-		if a.editTransferFieldKey(event, &d.Destination) {
-			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-			a.armTransferDestinationValidateTimer()
+		if h.editTransferFieldKey(event, &d.Destination) {
+			h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
+			h.ArmTransferDestinationValidateTimer()
 			return
 		}
 	}
-	a.handleTransferCheckboxRune(event)
+	h.handleTransferCheckboxRune(event)
 }
 
-func (a *App) editTransferFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {
-	return dialog.HandleFileDialogFieldKey(event, f, a.keys.DialogInput, func() {
-		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
+func (h *Handler) editTransferFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {
+	return dialog.HandleFileDialogFieldKey(event, f, h.keysDialogInput, func() {
+		h.SyncPathFieldCompletion(f, h.TransferDestinationTextWidth())
 	})
 }
 
@@ -395,39 +387,39 @@ func transferBasenameIssue(name string) string {
 	return ""
 }
 
-func (a *App) confirmTransfer() {
-	a.confirmTransferEnqueue(false)
+func (h *Handler) confirmTransfer() {
+	h.confirmTransferEnqueue(false)
 }
 
-func (a *App) confirmTransferPaused() {
-	a.confirmTransferEnqueue(true)
+func (h *Handler) confirmTransferPaused() {
+	h.confirmTransferEnqueue(true)
 }
 
-func (a *App) confirmTransferEnqueue(startPaused bool) {
-	d := &a.model.TransferDialog
-	sources := a.activePanelSources()
+func (h *Handler) confirmTransferEnqueue(startPaused bool) {
+	d := &h.model.TransferDialog
+	sources := h.ActivePanelSources()
 	if len(sources) == 0 {
 		if d.Kind == dialog.TransferKindCopy {
-			a.setTransientMessage("No files to copy", ui.MessageUrgencyWarn)
+			h.host.SetTransientMessage("No files to copy", ui.MessageUrgencyWarn)
 		} else {
-			a.setTransientMessage("No files to move", ui.MessageUrgencyWarn)
+			h.host.SetTransientMessage("No files to move", ui.MessageUrgencyWarn)
 		}
 		return
 	}
 
 	if d.Phase == dialog.TransferPhaseSelfCopyRename {
-		a.confirmTransferSelfCopyRename(sources, startPaused)
+		h.confirmTransferSelfCopyRename(sources, startPaused)
 		return
 	}
 
 	dest := strings.TrimSpace(d.Destination.Value)
 	if dest == "" {
-		a.setTransientMessage("Destination required", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Destination required", ui.MessageUrgencyWarn)
 		return
 	}
 	destLoc, err := pathloc.Parse(dest)
 	if err != nil {
-		a.setTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
 		return
 	}
 	absDest := destLoc.String()
@@ -440,7 +432,7 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 	nSelf := ops.SelfTargetCount(srcLocs, destLoc, flat)
 	if nSelf > 0 {
 		if len(sources) > 1 {
-			a.setTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
+			h.host.SetTransientMessage("Cannot transfer multiple items when some would overwrite themselves", ui.MessageUrgencyWarn)
 			return
 		}
 		d.Phase = dialog.TransferPhaseSelfCopyRename
@@ -449,11 +441,11 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 		d.SelfCopyOrigBasename = base
 		d.SelfCopyNewName = transferSelfCopyNewNamePrefilled(base)
 		d.FocusField = 0
-		a.transferDestValidate.Invalidate()
+		h.transferDestValidate.Invalidate()
 		d.DestPathInvalid = false
 		d.DestPathCheckPending = false
-		a.model.DestinationTargetPrimary = false
-		a.model.DestinationTargetSecondary = false
+		h.model.DestinationTargetPrimary = false
+		h.model.DestinationTargetSecondary = false
 		return
 	}
 
@@ -464,34 +456,34 @@ func (a *App) confirmTransferEnqueue(startPaused bool) {
 	case dialog.TransferKindMove:
 		jobType = jobs.TypeMove
 	default:
-		a.closeTransferDialog()
+		h.CloseTransferDialog()
 		return
 	}
 	sourcesCopy := append([]string(nil), sources...)
-	a.activePanel().ClearSelection()
+	h.host.ActivePanel().ClearSelection()
 	preserve := jobs.TransferPreserve{
 		PreservePermissions: d.PreservePermissions,
 		PreserveTimestamps:  d.PreserveTimestamps,
 		FlattenIntoDest:     flat,
 	}
-	a.addTransferJob(jobType, sourcesCopy, dest, startPaused, preserve)
-	a.closeTransferDialog()
-	a.setTransferQueuedMessage(jobType, startPaused)
+	h.AddTransferJob(jobType, sourcesCopy, dest, startPaused, preserve)
+	h.CloseTransferDialog()
+	h.setTransferQueuedMessage(jobType, startPaused)
 }
 
-func (a *App) confirmTransferSelfCopyRename(sources []string, startPaused bool) {
-	d := &a.model.TransferDialog
+func (h *Handler) confirmTransferSelfCopyRename(sources []string, startPaused bool) {
+	d := &h.model.TransferDialog
 	if len(sources) != 1 {
-		a.closeTransferDialog()
+		h.CloseTransferDialog()
 		return
 	}
 	trimmed := strings.TrimSpace(d.SelfCopyNewName.Value)
 	if msg := transferBasenameIssue(trimmed); msg != "" {
-		a.setTransientMessage(msg, ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage(msg, ui.MessageUrgencyWarn)
 		return
 	}
 	if trimmed == d.SelfCopyOrigBasename {
-		a.setTransientMessage("New name must differ from the original", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("New name must differ from the original", ui.MessageUrgencyWarn)
 		return
 	}
 
@@ -502,32 +494,32 @@ func (a *App) confirmTransferSelfCopyRename(sources []string, startPaused bool) 
 	case dialog.TransferKindMove:
 		jobType = jobs.TypeMove
 	default:
-		a.closeTransferDialog()
+		h.CloseTransferDialog()
 		return
 	}
 	destDir, err := pathloc.Parse(d.SelfCopyDestDir)
 	if err != nil {
-		a.setTransientMessage("Invalid destination directory", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Invalid destination directory", ui.MessageUrgencyWarn)
 		return
 	}
 	finalLoc, err := destDir.Join(trimmed)
 	if err != nil {
-		a.setTransientMessage(err.Error(), ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyWarn)
 		return
 	}
 	finalDest := finalLoc.String()
 	sourcesCopy := append([]string(nil), sources...)
-	a.activePanel().ClearSelection()
+	h.host.ActivePanel().ClearSelection()
 	preserve := jobs.TransferPreserve{
 		PreservePermissions: d.PreservePermissions,
 		PreserveTimestamps:  d.PreserveTimestamps,
 	}
-	a.addTransferJob(jobType, sourcesCopy, finalDest, startPaused, preserve)
-	a.closeTransferDialog()
-	a.setTransferQueuedMessage(jobType, startPaused)
+	h.AddTransferJob(jobType, sourcesCopy, finalDest, startPaused, preserve)
+	h.CloseTransferDialog()
+	h.setTransferQueuedMessage(jobType, startPaused)
 }
 
-func (a *App) setTransferQueuedMessage(jobType jobs.Type, paused bool) {
+func (h *Handler) setTransferQueuedMessage(jobType jobs.Type, paused bool) {
 	var msg string
 	if jobType == jobs.TypeCopy {
 		if paused {
@@ -540,18 +532,18 @@ func (a *App) setTransferQueuedMessage(jobType jobs.Type, paused bool) {
 	} else {
 		msg = "Move queued"
 	}
-	a.setTransientMessage(msg, ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(msg, ui.MessageUrgencyInfo)
 }
 
-// confirmCopy confirms the unified transfer dialog when opened as copy (tests).
-func (a *App) confirmCopy() {
-	a.confirmTransfer()
+// ConfirmCopy confirms the unified transfer dialog when opened as copy (tests).
+func (h *Handler) ConfirmCopy() {
+	h.confirmTransfer()
 }
 
-// activePanelSources returns file paths from the active panel: selected entries
+// ActivePanelSources returns file paths from the active panel: selected entries
 // if any, otherwise the cursor entry. Returns nil if no valid sources exist.
-func (a *App) activePanelSources() []string {
-	source, err := ops.ResolveSource(a.activePanel())
+func (h *Handler) ActivePanelSources() []string {
+	source, err := ops.ResolveSource(h.host.ActivePanel())
 	if err != nil {
 		return nil
 	}

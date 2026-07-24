@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -45,7 +46,7 @@ func (a *App) openFlattenDialog() {
 	}
 	a.model.FlattenDialog = dialog.FlattenDialogState{
 		Open:         true,
-		Destination:  transferPrefilledDestination(destPanel.PathString()),
+		Destination:  dialogctrl.TransferPrefilledDestination(destPanel.PathString()),
 		DestSubFocus: dialog.FlattenDestSubFocusText,
 		Recursive:    a.config.Operations.FlattenRecursive,
 		RemoveEmpty:  a.config.Operations.FlattenRemoveEmptyDirs,
@@ -56,7 +57,7 @@ func (a *App) openFlattenDialog() {
 	if inactiveIsSource {
 		a.setTransientMessage("Destination set to active panel (inactive panel is the flatten source)", ui.MessageUrgencyWarn)
 	}
-	a.armFlattenDestinationValidateTimer()
+	a.dialogCtrl.ArmFlattenDestinationValidateTimer()
 }
 
 func (a *App) flattenSourceErrorToast(err error) {
@@ -73,7 +74,7 @@ func (a *App) flattenSourceErrorToast(err error) {
 }
 
 func (a *App) closeFlattenDialog() {
-	a.transferDestValidate.Invalidate()
+	a.dialogCtrl.InvalidateTransferDestValidate()
 	a.model.FlattenDialog = dialog.FlattenDialogState{}
 	a.model.DestinationTargetPrimary = false
 	a.model.DestinationTargetSecondary = false
@@ -126,8 +127,8 @@ func (a *App) tryFlattenToggle(event *tcell.EventKey) bool {
 // handling below.
 func (a *App) handleFlattenDestNavKey(event *tcell.EventKey) bool {
 	d := &a.model.FlattenDialog
-	return a.destFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
-		dialog.FlattenDestSubFocusText, dialog.FlattenDestSubFocusPicker, a.openPathPickerForFlatten)
+	return a.dialogCtrl.DestFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
+		dialog.FlattenDestSubFocusText, dialog.FlattenDestSubFocusPicker, a.dialogCtrl.OpenPathPickerForFlatten)
 }
 
 func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
@@ -142,14 +143,14 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 		a.closeFlattenDialog()
 		return
 	}
-	if a.tryPathPickerHostShortcut(event) {
+	if a.dialogCtrl.TryPathPickerHostShortcut(event) {
 		return
 	}
 	if a.tryFlattenDialogDestinationShortcut(event) {
 		return
 	}
 	if event.Key() == tcell.KeyTab &&
-		a.destFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.FlattenDestSubFocusText, a.armFlattenDestinationValidateTimer) {
+		a.dialogCtrl.DestFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.FlattenDestSubFocusText, a.dialogCtrl.ArmFlattenDestinationValidateTimer) {
 		return
 	}
 	if a.handleFlattenDestNavKey(event) {
@@ -186,8 +187,8 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 	}
 	if d.FocusField == 0 {
 		if a.editFlattenFieldKey(event, &d.Destination) {
-			a.syncPathFieldCompletion(&d.Destination, a.transferDestinationTextWidth())
-			a.armFlattenDestinationValidateTimer()
+			a.dialogCtrl.SyncPathFieldCompletion(&d.Destination, a.dialogCtrl.TransferDestinationTextWidth())
+			a.dialogCtrl.ArmFlattenDestinationValidateTimer()
 			return
 		}
 	}
@@ -195,7 +196,7 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 
 func (a *App) editFlattenFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {
 	return dialog.HandleFileDialogFieldKey(event, f, a.keys.DialogInput, func() {
-		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
+		a.dialogCtrl.SyncPathFieldCompletion(f, a.dialogCtrl.TransferDestinationTextWidth())
 	})
 }
 

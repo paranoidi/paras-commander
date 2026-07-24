@@ -79,7 +79,7 @@ func TestTransferMultiDirSelectionOpensAtCommonRoot(t *testing.T) {
 		t.Fatalf("load root: %v", err)
 	}
 
-	app.activateCopyAction()
+	app.dialogCtrl.ActivateCopyAction()
 	if !app.model.TransferDialog.Open {
 		t.Fatal("transfer dialog should open")
 	}
@@ -98,7 +98,7 @@ func TestTransferMultiDirSelectionMoveKind(t *testing.T) {
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 
-	app.activateMoveAction()
+	app.dialogCtrl.ActivateMoveAction()
 	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindMove {
 		t.Fatal("transfer dialog should open with Move kind")
 	}
@@ -116,7 +116,7 @@ func TestTransferSingleDirSelectionSkipsMultiLocation(t *testing.T) {
 		t.Fatalf("load bravo: %v", err)
 	}
 
-	app.activateCopyAction()
+	app.dialogCtrl.ActivateCopyAction()
 	if !app.model.TransferDialog.Open {
 		t.Fatal("transfer dialog should open for single-directory selection")
 	}
@@ -133,16 +133,16 @@ func TestTransferFlattenToggleAltI(t *testing.T) {
 	p := app.activePanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
-	app.activateCopyAction()
+	app.dialogCtrl.ActivateCopyAction()
 	if !app.model.TransferDialog.MultiLocation() {
 		t.Fatal("expected multi-location copy dialog")
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt))
 	if !app.model.TransferDialog.FlattenIntoDest {
 		t.Fatal("Alt+I should toggle FlattenIntoDest on")
 	}
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'I', tcell.ModAlt))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'I', tcell.ModAlt))
 	if app.model.TransferDialog.FlattenIntoDest {
 		t.Fatal("Alt+I should toggle FlattenIntoDest off")
 	}
@@ -153,12 +153,12 @@ func TestTransferFlattenToggleAltIWorksForMove(t *testing.T) {
 	p := app.activePanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
-	app.activateMoveAction()
+	app.dialogCtrl.ActivateMoveAction()
 	if !app.model.TransferDialog.MultiLocation() {
 		t.Fatal("expected multi-location move dialog")
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt))
 	if !app.model.TransferDialog.FlattenIntoDest {
 		t.Fatal("Alt+I should toggle FlattenIntoDest on for move too")
 	}
@@ -169,26 +169,26 @@ func TestTransferFlattenToggleFocusedSpace(t *testing.T) {
 	p := app.activePanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
-	app.activateCopyAction()
+	app.dialogCtrl.ActivateCopyAction()
 
 	flattenIdx := dialog.TransferDialogEffectiveNumContent(app.model.TransferDialog) - 1
 	if flattenIdx != 3 {
 		t.Fatalf("copy multi-location flatten focus index = %d, want 3", flattenIdx)
 	}
 	app.model.TransferDialog.FocusField = flattenIdx
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if !app.model.TransferDialog.FlattenIntoDest {
 		t.Fatal("space on the focused flatten row should toggle FlattenIntoDest")
 	}
 
-	app.closeTransferDialog()
-	app.activateMoveAction()
+	app.dialogCtrl.CloseTransferDialog()
+	app.dialogCtrl.ActivateMoveAction()
 	flattenIdx = dialog.TransferDialogEffectiveNumContent(app.model.TransferDialog) - 1
 	if flattenIdx != 1 {
 		t.Fatalf("move multi-location flatten focus index = %d, want 1", flattenIdx)
 	}
 	app.model.TransferDialog.FocusField = flattenIdx
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if !app.model.TransferDialog.FlattenIntoDest {
 		t.Fatal("space on the focused flatten row should toggle FlattenIntoDest for move")
 	}
@@ -220,7 +220,7 @@ func TestTransferPreviewListPgUpPgDnClampsScroll(t *testing.T) {
 	for _, s := range selected {
 		panel.AddSelection(s)
 	}
-	app.activateCopyAction()
+	app.dialogCtrl.ActivateCopyAction()
 	d := &app.model.TransferDialog
 	if !d.MultiLocation() {
 		t.Fatal("expected multi-location dialog")
@@ -229,7 +229,7 @@ func TestTransferPreviewListPgUpPgDnClampsScroll(t *testing.T) {
 		t.Fatalf("entries = %d, want 12", len(d.Entries))
 	}
 
-	vp := app.transferPreviewListViewportRows()
+	vp := app.dialogCtrl.TransferPreviewListViewportRows()
 	if vp < 1 {
 		t.Fatalf("viewport rows = %d, want >= 1", vp)
 	}
@@ -239,14 +239,14 @@ func TestTransferPreviewListPgUpPgDnClampsScroll(t *testing.T) {
 	}
 
 	for range 20 {
-		app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyPgDn, 0, tcell.ModNone))
+		app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyPgDn, 0, tcell.ModNone))
 	}
 	if d.EntriesScroll != maxScroll {
 		t.Fatalf("scroll after repeated PgDn = %d, want clamped max %d", d.EntriesScroll, maxScroll)
 	}
 
 	for range 20 {
-		app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyPgUp, 0, tcell.ModNone))
+		app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyPgUp, 0, tcell.ModNone))
 	}
 	if d.EntriesScroll != 0 {
 		t.Fatalf("scroll after repeated PgUp = %d, want 0", d.EntriesScroll)
@@ -267,8 +267,8 @@ func TestTransferConfirmWithFlattenEnqueuesFlatJob(t *testing.T) {
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 
-	app.activateCopyAction()
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt))
+	app.dialogCtrl.ActivateCopyAction()
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt))
 	if !app.model.TransferDialog.FlattenIntoDest {
 		t.Fatal("expected FlattenIntoDest set before confirm")
 	}
@@ -309,13 +309,13 @@ func TestTransferEscClearsDestinationTargetMarks(t *testing.T) {
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
 
-	app.activateCopyAction()
-	app.applyTransferDestinationPathValidation()
+	app.dialogCtrl.ActivateCopyAction()
+	app.dialogCtrl.ApplyTransferDestinationPathValidation()
 	if !app.model.DestinationTargetSecondary {
 		t.Fatal("expected Secondary (inactive) panel marked as destination target")
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.TransferDialog.Open {
 		t.Fatal("transfer dialog should close on Esc")
 	}

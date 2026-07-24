@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -36,14 +37,14 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 		t.Fatal("expected current entry tagged after Insert")
 	}
 
-	app.openCopyDialog()
+	app.dialogCtrl.OpenCopyDialog()
 	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindCopy {
 		t.Fatal("copy dialog should open")
 	}
 	if len(p.SelectedPaths) == 0 {
 		t.Fatal("opening copy dialog must not clear selection")
 	}
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.TransferDialog.Open {
 		t.Fatal("copy dialog should close on Esc")
 	}
@@ -51,8 +52,8 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 		t.Fatal("canceling copy dialog must not clear selection")
 	}
 
-	app.openCopyDialog()
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'C', tcell.ModAlt))
+	app.dialogCtrl.OpenCopyDialog()
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'C', tcell.ModAlt))
 	if app.model.TransferDialog.Open {
 		t.Fatal("copy dialog should close on Alt+C")
 	}
@@ -60,14 +61,14 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 		t.Fatal("canceling copy dialog with Alt+C must not clear selection")
 	}
 
-	app.openMoveDialog()
+	app.dialogCtrl.OpenMoveDialog()
 	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindMove {
 		t.Fatal("move dialog should open")
 	}
 	if len(p.SelectedPaths) == 0 {
 		t.Fatal("opening move dialog must not clear selection")
 	}
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.TransferDialog.Open {
 		t.Fatal("move dialog should close on Esc")
 	}
@@ -75,8 +76,8 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 		t.Fatal("canceling move dialog must not clear selection")
 	}
 
-	app.openMoveDialog()
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt))
+	app.dialogCtrl.OpenMoveDialog()
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModAlt))
 	if app.model.TransferDialog.Open {
 		t.Fatal("move dialog should close on Alt+c")
 	}
@@ -84,8 +85,8 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 		t.Fatal("canceling move dialog with Alt+C must not clear selection")
 	}
 
-	app.openCopyDialog()
-	app.confirmCopy()
+	app.dialogCtrl.OpenCopyDialog()
+	app.dialogCtrl.ConfirmCopy()
 	if len(p.SelectedPaths) != 0 {
 		t.Fatal("confirming copy should clear current-directory selection")
 	}
@@ -127,11 +128,11 @@ func TestTransferDialogEnterFromDestinationConfirms(t *testing.T) {
 		t.Fatal("expected current entry tagged after Insert")
 	}
 
-	app.openCopyDialog()
+	app.dialogCtrl.OpenCopyDialog()
 	if app.model.TransferDialog.FocusField != 0 {
 		t.Fatalf("FocusField = %d, want destination row", app.model.TransferDialog.FocusField)
 	}
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.TransferDialog.Open {
 		t.Fatal("copy dialog should close after Enter from destination")
 	}
@@ -154,8 +155,8 @@ func TestTransferDialogDestinationTargetPanel(t *testing.T) {
 	}
 
 	// Prefilled destination is the inactive (Secondary) panel's path.
-	app.openCopyDialog()
-	app.applyTransferDestinationPathValidation()
+	app.dialogCtrl.OpenCopyDialog()
+	app.dialogCtrl.ApplyTransferDestinationPathValidation()
 	if !app.model.DestinationTargetSecondary {
 		t.Fatal("expected Secondary panel marked as destination target")
 	}
@@ -165,7 +166,7 @@ func TestTransferDialogDestinationTargetPanel(t *testing.T) {
 
 	// Retyping the destination to the active (Primary) panel's path flips the target.
 	app.model.TransferDialog.Destination.Value = dir
-	app.applyTransferDestinationPathValidation()
+	app.dialogCtrl.ApplyTransferDestinationPathValidation()
 	if !app.model.DestinationTargetPrimary {
 		t.Fatal("expected Primary panel marked as destination target")
 	}
@@ -173,7 +174,7 @@ func TestTransferDialogDestinationTargetPanel(t *testing.T) {
 		t.Fatal("Secondary panel should no longer be marked as destination target")
 	}
 
-	app.closeTransferDialog()
+	app.dialogCtrl.CloseTransferDialog()
 	if app.model.DestinationTargetPrimary || app.model.DestinationTargetSecondary {
 		t.Fatal("closing the dialog should clear destination target panels")
 	}
@@ -192,8 +193,8 @@ func TestTransferDialogDestinationTargetPanelBorderColor(t *testing.T) {
 		t.Fatalf("inactive Load: %v", err)
 	}
 
-	app.openCopyDialog()
-	app.applyTransferDestinationPathValidation()
+	app.dialogCtrl.OpenCopyDialog()
+	app.dialogCtrl.ApplyTransferDestinationPathValidation()
 	app.render()
 
 	width, height := app.screen.Size()
@@ -235,7 +236,7 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 		t.Fatal("expected current entry tagged after Insert")
 	}
 
-	app.openCopyDialog()
+	app.dialogCtrl.OpenCopyDialog()
 	d := &app.model.TransferDialog
 	if d.FocusField != 0 || d.Phase != dialog.TransferPhaseDestination {
 		t.Fatalf("unexpected initial dialog state: focus=%d phase=%v", d.FocusField, d.Phase)
@@ -245,7 +246,7 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 		t.Fatalf("expected destination prefill cursor > 0, got %d", startCursor)
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if d.Destination.Cursor != startCursor-1 {
 		t.Fatalf("Left: cursor = %d, want %d", d.Destination.Cursor, startCursor-1)
 	}
@@ -253,17 +254,17 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 		t.Fatalf("Left changed sub-focus to %v, want text", d.DestSubFocus)
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if d.Destination.Cursor != startCursor-2 {
 		t.Fatalf("Left again: cursor = %d, want %d", d.Destination.Cursor, startCursor-2)
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if d.Destination.Cursor != startCursor-1 {
 		t.Fatalf("Right: cursor = %d, want %d", d.Destination.Cursor, startCursor-1)
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'X', tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, 'X', tcell.ModNone))
 	wantInsertPos := startCursor - 1
 	runes := []rune(d.Destination.Value)
 	if wantInsertPos < 0 || wantInsertPos >= len(runes) || runes[wantInsertPos] != 'X' {
@@ -295,7 +296,7 @@ func TestTransferDestinationFooterShowsActiveAndInactive(t *testing.T) {
 		t.Fatal("expected current entry tagged after Insert")
 	}
 
-	app.openCopyDialog()
+	app.dialogCtrl.OpenCopyDialog()
 	if app.model.TransferDialog.FocusField != 0 {
 		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
 	}
@@ -329,15 +330,15 @@ func TestTransferDestinationShortcutSetsActiveAndInactivePath(t *testing.T) {
 		t.Fatal("expected current entry tagged after Insert")
 	}
 
-	app.openCopyDialog()
-	wantActive := transferPrefilledDestination(app.activePanel().PathString()).Value
-	wantInactive := transferPrefilledDestination(app.inactivePanel().PathString()).Value
+	app.dialogCtrl.OpenCopyDialog()
+	wantActive := dialogctrl.TransferPrefilledDestination(app.activePanel().PathString()).Value
+	wantInactive := dialogctrl.TransferPrefilledDestination(app.inactivePanel().PathString()).Value
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	if app.model.TransferDialog.Destination.Value != wantInactive {
 		t.Fatalf("after Shift+Right destination = %q, want %q", app.model.TransferDialog.Destination.Value, wantInactive)
 	}
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
 	if app.model.TransferDialog.Destination.Value != wantActive {
 		t.Fatalf("after Shift+Left destination = %q, want %q", app.model.TransferDialog.Destination.Value, wantActive)
 	}
@@ -365,7 +366,7 @@ func TestTransferDestinationShortcutNoOpDuringSelfCopyRename(t *testing.T) {
 		t.Fatalf("footer = %+v, must not show Active/Inactive during self-copy rename", keys)
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
 	if app.model.TransferDialog.SelfCopyNewName.Value != want {
 		t.Fatalf("Shift+Left mutated SelfCopyNewName = %q, want unchanged %q", app.model.TransferDialog.SelfCopyNewName.Value, want)
 	}
@@ -384,8 +385,8 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 		p := app.activePanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
 
-		app.openCopyDialog()
-		app.confirmCopy()
+		app.dialogCtrl.OpenCopyDialog()
+		app.dialogCtrl.ConfirmCopy()
 		if !app.model.TransferDialog.Open {
 			t.Fatal("dialog should stay open")
 		}
@@ -431,15 +432,15 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 
 		p := app.activePanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
-		app.openCopyDialog()
-		app.confirmCopy()
+		app.dialogCtrl.OpenCopyDialog()
+		app.dialogCtrl.ConfirmCopy()
 		app.model.TransferDialog.SelfCopyNewName = dialog.FileDialogField{
 			Value:          "aaa",
 			Prefill:        "aaa",
 			Cursor:         len([]rune("aaa")),
 			PrefillPending: false,
 		}
-		app.confirmCopy()
+		app.dialogCtrl.ConfirmCopy()
 		if !strings.Contains(app.model.Message, "New name must differ") {
 			t.Fatalf("message = %q", app.model.Message)
 		}
@@ -459,15 +460,15 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 
 		p := app.activePanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
-		app.openCopyDialog()
-		app.confirmCopy()
+		app.dialogCtrl.OpenCopyDialog()
+		app.dialogCtrl.ConfirmCopy()
 		app.model.TransferDialog.SelfCopyNewName = dialog.FileDialogField{
 			Value:          "aaa2",
 			Prefill:        "aaa2",
 			Cursor:         len([]rune("aaa2")),
 			PrefillPending: false,
 		}
-		app.confirmCopy()
+		app.dialogCtrl.ConfirmCopy()
 		if len(app.jobState.AllJobs()) != 1 {
 			t.Fatalf("expected 1 job, got %d", len(app.jobState.AllJobs()))
 		}
@@ -497,8 +498,8 @@ func TestTransferSelfCopyMultipleSourcesRejected(t *testing.T) {
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{aaa: true, bbb: true}
-	app.openCopyDialog()
-	app.confirmCopy()
+	app.dialogCtrl.OpenCopyDialog()
+	app.dialogCtrl.ConfirmCopy()
 	if app.model.TransferDialog.Phase != dialog.TransferPhaseDestination {
 		t.Fatalf("phase = %v, want Destination", app.model.TransferDialog.Phase)
 	}
@@ -646,7 +647,7 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		}
 	}
 
-	app.openCopyDialog()
+	app.dialogCtrl.OpenCopyDialog()
 	if !app.model.TransferDialog.Open {
 		t.Fatal("copy dialog should open")
 	}
@@ -670,7 +671,7 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		t.Fatalf("footer = %+v, want Inactive S-right hint", keys)
 	}
 
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	app.dispatch(keymap.ActionFileSymlink)
 	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogSymlink {
 		t.Fatal("symlink dialog should be open")
@@ -715,7 +716,7 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 		}
 	}
 
-	app.openCopyDialog()
+	app.dialogCtrl.OpenCopyDialog()
 	if app.model.TransferDialog.FocusField != 0 {
 		t.Fatalf("FocusField = %d, want 0", app.model.TransferDialog.FocusField)
 	}
@@ -724,11 +725,11 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 		t.Fatalf("path picker = open %v purpose %v, want ApplyTransferDestination",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
 	}
-	app.handlePathPickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.PathPicker.Open {
 		t.Fatal("path picker should close")
 	}
-	app.handleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 
 	app.dispatch(keymap.ActionFileSymlink)
 	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogSymlink {

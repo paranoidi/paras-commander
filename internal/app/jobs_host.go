@@ -23,7 +23,7 @@ func (h jobsHost) RequestBothPanelsVolumeSpaceRefreshAsync() {
 	h.app.requestBothPanelsVolumeSpaceRefreshAsync()
 }
 
-func (h jobsHost) ActivePanelSources() []string { return h.app.activePanelSources() }
+func (h jobsHost) ActivePanelSources() []string { return h.app.dialogCtrl.ActivePanelSources() }
 
 func (h jobsHost) InactivePanel() *panel.State { return h.app.inactivePanel() }
 
@@ -32,7 +32,7 @@ func (h jobsHost) PrimaryPanel() *panel.State { return &h.app.model.Primary }
 func (h jobsHost) SecondaryPanel() *panel.State { return &h.app.model.Secondary }
 
 func (h jobsHost) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, absDest, source string) {
-	h.app.openTransferDialogSelfCopyRename(kind, absDest, source)
+	h.app.dialogCtrl.OpenTransferDialogSelfCopyRename(kind, absDest, source)
 }
 
 func (h jobsHost) SetJobFailedTransientMessage(err error, fallback string) {
