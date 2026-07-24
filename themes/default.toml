@@ -67,6 +67,7 @@ hint = { fg = "bright_white", bold = true }
 [panel.row]                  # file-list row colors
 directory = { fg = "blue", bold = true }
 file = { fg = "white" }
+info = { fg = "bright_black" }  # size / mtime / permissions / meta columns
 selected = { fg = "yellow", bold = true }
 symlink = { fg = "bright_cyan" }
 tree.connector = { fg = "bright_black" }

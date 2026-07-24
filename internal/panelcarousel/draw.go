@@ -260,7 +260,8 @@ func drawCarouselColumn(cp carouselColumnParams) {
 		}
 		drawCarouselRowIconAndText(screen, cp, carouselRowPaintState{
 			Y: y, Entry: entry, CursorKey: cursorKey, BlendCell: blendCell,
-			ListStart: listStart, ListW: listW, NameColOffset: nameColOffset, Text: text, Spans: spans,
+			ListStart: listStart, ListW: listW, NameColOffset: nameColOffset, NameWidth: nameWidth,
+			Text: text, Spans: spans, Styles: p.Styles,
 		})
 	}
 	if columnScrollbarNeeded(hasLane, showSB, p.ScrollbarStyle, total, visibleRows, offset) {
@@ -342,8 +343,10 @@ type carouselRowPaintState struct {
 	ListStart     int
 	ListW         int
 	NameColOffset int
+	NameWidth     int
 	Text          string
 	Spans         []primitive.Span
+	Styles        theme.Theme
 }
 
 // drawCarouselRowIconAndText paints the icon gutter (if enabled) and the cellwise-styled row
@@ -373,7 +376,11 @@ func drawCarouselRowIconAndText(screen tcell.Screen, cp carouselColumnParams, rp
 		}
 	}
 	primitive.StyledTextCellwise(screen, rp.ListStart, rp.Y, rp.ListW, rp.Text, func(ci int) tcell.Style {
-		return rp.BlendCell(rp.NameColOffset + ci)
+		st := rp.BlendCell(rp.NameColOffset + ci)
+		if ci >= rp.NameWidth {
+			return rp.Styles.PanelListingInfoStyle(st)
+		}
+		return st
 	}, rp.Spans)
 }
 
