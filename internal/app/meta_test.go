@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,55 +10,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
-
-func TestRunMetaCommand_expandsF(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	path := dir + "/my file.txt"
-	out, err := runMetaCommand(context.Background(), "echo %f", path, dir)
-	if err != nil {
-		t.Fatalf("runMetaCommand: %v", err)
-	}
-	if out != path {
-		t.Fatalf("out = %q, want %q", out, path)
-	}
-}
-
-func TestRunMetaCommand_success(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	out, err := runMetaCommand(context.Background(), "echo hello", dir+"/file", dir)
-	if err != nil {
-		t.Fatalf("runMetaCommand: %v", err)
-	}
-	if out != "hello" {
-		t.Fatalf("out = %q, want hello", out)
-	}
-}
-
-func TestRunMetaCommand_failure(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	_, err := runMetaCommand(context.Background(), "exit 1", dir+"/file", dir)
-	if err == nil {
-		t.Fatal("expected error for failing command")
-	}
-}
-
-func TestApplyMetaWakeResult_updatesCorrectColumn(t *testing.T) {
-	app := &App{}
-	app.model.MetaResults[0] = []ui.MetaColumnState{
-		{EntryName: "a", Results: map[string]string{"/p": ""}},
-		{EntryName: "b", Results: map[string]string{"/p": ""}},
-	}
-	app.applyMetaWakeResult(metaWakePayload{panelID: 0, entryName: "b", path: "/p", value: "ok"})
-	if got := app.model.MetaResults[0][1].Results["/p"]; got != "ok" {
-		t.Fatalf("column b = %q, want ok", got)
-	}
-	if got := app.model.MetaResults[0][0].Results["/p"]; got != "" {
-		t.Fatalf("column a = %q, want empty", got)
-	}
-}
 
 func TestActivateMetaSelection_preservesCheckedState(t *testing.T) {
 	dir := t.TempDir()
@@ -85,11 +35,8 @@ file = "echo meta"
 		Checked: []bool{true},
 		Focus:   0,
 	}
-	app.activateMetaSelection()
+	app.metaCtrl.ActivateSelection()
 
-	if len(app.metaActiveEntries[ui.PrimaryPanel]) != 1 || app.metaActiveEntries[ui.PrimaryPanel][0] != "mkvinfo" {
-		t.Fatalf("metaActiveEntries = %v, want [mkvinfo]", app.metaActiveEntries[ui.PrimaryPanel])
-	}
 	if len(app.model.MetaResults[ui.PrimaryPanel]) != 1 {
 		t.Fatalf("MetaResults len = %d, want 1", len(app.model.MetaResults[ui.PrimaryPanel]))
 	}
@@ -97,13 +44,13 @@ file = "echo meta"
 		t.Fatalf("column = %+v, want mkvinfo", app.model.MetaResults[ui.PrimaryPanel][0])
 	}
 
-	app.openMetaDialog(ui.PrimaryPanel)
+	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
 	if len(app.model.MetaDialog.Checked) != 1 || !app.model.MetaDialog.Checked[0] {
 		t.Fatalf("reopen Checked = %v, want [true]", app.model.MetaDialog.Checked)
 	}
 }
 
-func TestOpenMetaFileEditor_clearsMetaCache(t *testing.T) {
+func TestOpenMetaFileEditor_succeeds(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")
 	metaPath := filepath.Join(cfgDir, config.DefaultMetaFileName)
@@ -119,9 +66,6 @@ file = "wc -l"
 	}
 
 	app := testMetaDialogApp(t, dir, cfgDir)
-	app.metaCache = map[string]map[string]string{
-		"lines": {filepath.Join(dir, "file.txt"): "42"},
-	}
 
 	prev := externalEditorRunner
 	externalEditorRunner = func(_ context.Context, path string) error {
@@ -132,24 +76,7 @@ file = "wc -l"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	if !app.openMetaFileEditor(metaPath) {
-		t.Fatal("openMetaFileEditor should succeed")
-	}
-	app.metaCacheMu.RLock()
-	empty := len(app.metaCache) == 0
-	app.metaCacheMu.RUnlock()
-	if !empty {
-		t.Fatalf("metaCache = %#v, want cleared", app.metaCache)
-	}
-}
-
-func TestRunMetaCommand_cancelled(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	_, err := runMetaCommand(ctx, "echo hello", dir+"/file", dir)
-	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("err = %v, want context.Canceled", err)
+	if !app.metaCtrl.OpenFileEditor(metaPath) {
+		t.Fatal("OpenFileEditor should succeed")
 	}
 }

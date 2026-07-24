@@ -17,6 +17,7 @@ import (
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
+	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/file"
@@ -77,10 +78,6 @@ type diskIdleSortPayload struct {
 // diskUsageRedrawPayload flushes debounced disk-usage cache/paint updates while a scan is busy.
 type diskUsageRedrawPayload struct{}
 
-// metaRenderFlushPayload is posted by the debounced meta render timer to coalesce frequent
-// metaWakePayload renders into a single repaint (avoids one render per entry with large dirs).
-type metaRenderFlushPayload struct{}
-
 type diskIdleSortPanel struct {
 	timer *time.Timer
 	epoch uint64
@@ -115,6 +112,7 @@ type App struct {
 	jobState        *jobs.State
 	jobsCtrl        *jobsctrl.Handler
 	findCtrl        *findctrl.Handler
+	metaCtrl        *metactrl.Handler
 	commandsCtrl    *commandsctrl.Handler
 	compareCtrl     *comparectrl.Handler
 	dedupCtrl       *dedupctrl.Handler
@@ -146,25 +144,6 @@ type App struct {
 	findDialogSelectionScanFP string
 	// findDialogSelectionScanGen skips reconcile work when marked-selection derived input is unchanged.
 	findDialogSelectionScanGen uint64
-	// metaActiveEntries holds ordered entry names for active meta columns per panel.
-	metaActiveEntries [2][]string
-	// metaNavPath holds the last panel path for which meta was run (used to detect navigation).
-	metaNavPath [2]string
-	// metaCancel holds the cancel function for the in-flight meta run per panel (nil if none).
-	metaCancel [2]context.CancelFunc
-	// metaRunGen is a monotonically increasing generation counter per panel for meta runs.
-	// Workers carry the generation; stale (cancelled) results are discarded by the event handler.
-	metaRunGen [2]uint64
-	// metaLoadGen is a monotonically increasing generation counter per panel for async meta file loads.
-	// Stale loads (navigated away before load finished) are discarded by the event handler.
-	metaLoadGen [2]uint64
-	// metaRenderTimer debounces meta result renders; posted events call scheduleMetaRenderDebounced
-	// instead of a.render() directly so burst results (large dirs) coalesce into few repaints.
-	metaRenderTimer *time.Timer
-	// metaCache stores computed meta results by [cmdName][absPath] for entries with cache = true.
-	// Nil until first caching write. Protected by metaCacheMu.
-	metaCache   map[string]map[string]string
-	metaCacheMu sync.RWMutex
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
 	messageExpiryGen     atomic.Uint64
@@ -532,6 +511,13 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Keys:           keys.Global,
 		KeysFindDialog: keys.FindDialog,
 	})
+	app.metaCtrl = metactrl.New(metactrl.Deps{
+		Host:      metaHost{appShellHost: appShellHost{app: app}},
+		Screen:    screen,
+		Model:     &app.model,
+		Config:    cfg,
+		ConfigDir: resolvedPaths.ConfigDir,
+	})
 	app.commandsCtrl = commandsctrl.New(commandsctrl.Deps{
 		Host:         commandsHost{appShellHost: appShellHost{app: app}},
 		Screen:       screen,
@@ -804,22 +790,17 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 	case renderWakePayload:
 		a.render()
 		out.didRender = true
-	case metaWakePayload:
-		if d.gen == a.metaRunGen[d.panelID] {
-			a.applyMetaWakeResult(d)
-		}
-		a.scheduleMetaRenderDebounced()
-	case metaRenderFlushPayload:
+	case metactrl.WakePayload:
+		a.metaCtrl.HandleWake(d)
+	case metactrl.RenderFlushPayload:
 		a.render()
 		out.didRender = true
-	case metaLoadPayload:
-		a.applyMetaLoad(d)
+	case metactrl.LoadPayload:
+		a.metaCtrl.HandleLoad(d)
 		a.render()
 		out.didRender = true
-	case metaExecFailedPayload:
-		if d.gen == a.metaRunGen[d.panelID] {
-			a.applyMetaExecFailed(d)
-		}
+	case metactrl.ExecFailedPayload:
+		a.metaCtrl.HandleExecFailed(d)
 		a.render()
 		out.didRender = true
 	case pathPickerValidatePayload:

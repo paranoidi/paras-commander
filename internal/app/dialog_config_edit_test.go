@@ -52,7 +52,7 @@ file = "wc -l"
 	}
 
 	app := testMetaDialogApp(t, dir, cfgDir)
-	app.openMetaDialog(ui.PrimaryPanel)
+	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should be open")
 	}
@@ -83,7 +83,7 @@ file = "wc -l"
 	}
 
 	app := testMetaDialogApp(t, dir, cfgDir)
-	app.openMetaDialog(ui.PrimaryPanel)
+	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
 
 	prev := externalEditorRunner
 	externalEditorRunner = func(_ context.Context, path string) error {
@@ -107,7 +107,7 @@ file = "wc -l"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleMetaDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
 	if !strings.Contains(app.model.Message, "updated documentation") {
 		t.Fatalf("Message = %q, want updated documentation notice", app.model.Message)
@@ -131,7 +131,7 @@ file = "wc -l"
 	}
 
 	app := testMetaDialogApp(t, dir, cfgDir)
-	app.openMetaDialog(ui.PrimaryPanel)
+	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
 	if len(app.model.MetaDialog.Entries) != 1 {
 		t.Fatalf("entries len = %d, want lines", len(app.model.MetaDialog.Entries))
 	}
@@ -151,7 +151,7 @@ file = "wc -c"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleMetaDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open after F4 edit")
@@ -314,7 +314,7 @@ file = "wc -l"
 	}
 
 	app := testMetaDialogApp(t, dir, cfgDir)
-	app.openMetaDialog(ui.PrimaryPanel)
+	app.metaCtrl.OpenDialog(ui.PrimaryPanel)
 	app.model.MetaDialog.Checked[0] = true
 	app.model.MetaDialog.Focus = 0
 
@@ -324,7 +324,7 @@ file = "wc -l"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleMetaDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.metaCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
 	if !app.model.MetaDialog.Open {
 		t.Fatal("meta dialog should stay open")

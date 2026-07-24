@@ -144,7 +144,17 @@ go test ./...
 
 ## Lint
 
-Install [golangci-lint](https://golangci-lint.run/welcome/install/) (v2), then:
+Requires [go-task](https://taskfile.dev). Install tools into `./bin`, then lint:
+
+```bash
+task setup   # install golangci-lint, errcheck, ineffassign, gocyclo into ./bin
+task lint    # golangci-lint (includes errcheck, ineffassign, gocyclo)
+task errcheck
+task ineffassign
+task gocyclo
+```
+
+Or, if [golangci-lint](https://golangci-lint.run/welcome/install/) (v2) is already on your PATH:
 
 ```bash
 golangci-lint run ./...

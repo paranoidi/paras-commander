@@ -301,10 +301,10 @@ func (a *App) reconcileAfterEvent() {
 	a.reconcileFindDialogSelectionSizeScans()
 	a.handlePanelDirChanged(ui.PrimaryPanel)
 	a.handlePanelDirChanged(ui.SecondaryPanel)
-	a.handleMetaPanelDirChanged(ui.PrimaryPanel)
-	a.handleMetaPanelDirChanged(ui.SecondaryPanel)
-	a.reconcileMetaForContentChanges(ui.PrimaryPanel)
-	a.reconcileMetaForContentChanges(ui.SecondaryPanel)
+	a.metaCtrl.HandlePanelDirChanged(ui.PrimaryPanel)
+	a.metaCtrl.HandlePanelDirChanged(ui.SecondaryPanel)
+	a.metaCtrl.ReconcileForPanel(ui.PrimaryPanel)
+	a.metaCtrl.ReconcileForPanel(ui.SecondaryPanel)
 	// Panel sync reads the driver's highlight after idle-sort / meta hooks may adjust cursors.
 	if !a.syncFollowNavSkipReconcile.Load() {
 		a.syncFollowFromActive()

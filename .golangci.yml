@@ -3,6 +3,12 @@ version: "2"
 
 linters:
   default: standard
+  enable:
+    - gocyclo
+  settings:
+    gocyclo:
+      # Above current max complexity in the tree; tighten over time.
+      min-complexity: 70
 
 run:
   timeout: 5m

@@ -455,7 +455,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 		return false, true
 	case InputModeMetaDialog:
-		a.handleMetaDialogKey(event)
+		a.metaCtrl.HandleDialogKey(event)
 		a.render()
 		return false, true
 	case InputModeQuickAction:
@@ -820,9 +820,9 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelOpenSelectionsRoot:
 		a.navigateToSelectionsRoot()
 	case keymap.ActionPanelMeta:
-		a.openMetaDialog(a.model.ActivePanel)
+		a.metaCtrl.OpenDialog(a.model.ActivePanel)
 	case keymap.ActionPanelMetaEdit:
-		a.editMetaFile()
+		a.metaCtrl.EditMetaFile()
 	case keymap.ActionPanelFilterOpen:
 		activePanel.OpenFilter(viewportRows)
 		a.clearTransientMessage()
