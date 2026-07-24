@@ -25,3 +25,16 @@ func TestPanelListingCursorStyleInheritsBaseWhenFGUnset(t *testing.T) {
 		t.Fatalf("active cursor = fg %v bg %v, want theme cursor style unchanged", fg, bg)
 	}
 }
+
+func TestPanelListingInfoStyleKeepsRowBackground(t *testing.T) {
+	th := Theme{
+		PanelRowInfo: tcell.StyleDefault.Foreground(tcell.ColorGray),
+		PanelRowFile: tcell.StyleDefault.Foreground(tcell.ColorWhite),
+	}
+	row := tcell.StyleDefault.Foreground(tcell.ColorWhite).Background(tcell.ColorTeal)
+	got := th.PanelListingInfoStyle(row)
+	fg, bg, _ := got.Decompose()
+	if fg != tcell.ColorGray || bg != tcell.ColorTeal {
+		t.Fatalf("info style = fg %v bg %v, want gray on teal", fg, bg)
+	}
+}
