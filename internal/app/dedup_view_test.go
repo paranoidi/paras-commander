@@ -1352,7 +1352,7 @@ func TestDedupProgressDialogCancelClosesScan(t *testing.T) {
 		t.Fatal("expected progress dialog open")
 	}
 
-	app.handleDedupProgressDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dedupCtrl.HandleProgressDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.DedupProgressDialog.Open {
 		t.Fatal("progress dialog should close after cancel")
 	}

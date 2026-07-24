@@ -23,6 +23,10 @@ func (h compareHost) SetTransientMessage(text string, urgency ui.MessageUrgency)
 	h.app.setTransientMessage(text, urgency)
 }
 
+func (h compareHost) ClearTransientMessage() {
+	h.app.clearTransientMessage()
+}
+
 func (h compareHost) CompareMenuDefinitions() []menu.Definition {
 	return h.app.browserMenuDefinitions()
 }

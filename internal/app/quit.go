@@ -42,8 +42,8 @@ func (a *App) stopWorker() {
 	}
 	if a.jobsCtrl != nil {
 		a.jobsCtrl.StopWakeTimer()
+		a.jobsCtrl.StopBlockerNextTimer()
 	}
-	a.stopJobBlockerNextTimer()
 	a.stopSpinnerRedrawTimer()
 	a.stopDiskUsageRedrawDebounce()
 	a.invalidateIdleDiskSortBothPanels()

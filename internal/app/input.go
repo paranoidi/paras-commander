@@ -389,7 +389,7 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 	}
 
 	if resolvedAction == keymap.ActionJobsAnswerBlocker {
-		if rendered := a.handleJobsAnswerBlockerKey(); rendered {
+		if rendered := a.jobsCtrl.HandleAnswerBlockerKey(); rendered {
 			a.render()
 			return true, false, true
 		}
@@ -521,7 +521,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return quit, true
 	case InputModeDedupProgressDialog:
-		a.handleDedupProgressDialogKey(event)
+		a.dedupCtrl.HandleProgressDialogKey(event)
 		a.render()
 		return false, true
 	case InputModeDedupView:
@@ -756,7 +756,7 @@ func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchSelectionsStrip(actionID) {
 		return false
 	}
-	if a.tryDispatchJobs(actionID) {
+	if a.jobsCtrl.TryDispatch(actionID) {
 		return false
 	}
 	if a.tryDispatchMessages(actionID) {

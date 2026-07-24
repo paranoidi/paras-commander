@@ -1,4 +1,4 @@
-package app
+package compare
 
 import (
 	"fmt"
@@ -13,8 +13,9 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func (a *App) openCompareMergeDialog() {
-	if a.model.ViewMode != ui.ViewCompare {
+// OpenMergeDialog opens the merge/sync dialog for the current compare snapshot.
+func (h *Handler) OpenMergeDialog() {
+	if h.model.ViewMode != ui.ViewCompare {
 		return
 	}
 	d := dialog.CompareMergeDialogState{
@@ -23,24 +24,24 @@ func (a *App) openCompareMergeDialog() {
 		CopyMissing:   true,
 		CopyModified:  true,
 		MoveMode:      false,
-		PrimaryPath:   a.model.CompareSnapshot.PrimaryRoot.String(),
-		SecondaryPath: a.model.CompareSnapshot.SecondaryRoot.String(),
+		PrimaryPath:   h.model.CompareSnapshot.PrimaryRoot.String(),
+		SecondaryPath: h.model.CompareSnapshot.SecondaryRoot.String(),
 	}
-	a.refreshCompareMergePreview(&d)
-	a.model.CompareMergeDialog = d
-	a.clearTransientMessage()
+	h.refreshMergePreview(&d)
+	h.model.CompareMergeDialog = d
+	h.host.ClearTransientMessage()
 }
 
-func (a *App) closeCompareMergeDialog() {
-	a.model.CompareMergeDialog = dialog.CompareMergeDialogState{}
+func (h *Handler) closeMergeDialog() {
+	h.model.CompareMergeDialog = dialog.CompareMergeDialogState{}
 }
 
-func (a *App) refreshCompareMergePreview(d *dialog.CompareMergeDialogState) {
-	rows := a.compareCtrl.FilteredRows()
+func (h *Handler) refreshMergePreview(d *dialog.CompareMergeDialogState) {
+	rows := h.FilteredRows()
 	in := comparepkg.MergeInput{
-		PrimarySelected:   a.model.Primary.SelectedPaths,
-		SecondarySelected: a.model.Secondary.SelectedPaths,
-		Filter:            a.model.CompareView.Filter,
+		PrimarySelected:   h.model.Primary.SelectedPaths,
+		SecondarySelected: h.model.Secondary.SelectedPaths,
+		Filter:            h.model.CompareView.Filter,
 	}
 	opts := comparepkg.MergeOptions{
 		Direction:    d.Direction,
@@ -48,7 +49,7 @@ func (a *App) refreshCompareMergePreview(d *dialog.CompareMergeDialogState) {
 		CopyModified: d.CopyModified,
 		MoveMode:     d.MoveMode,
 	}
-	copies, bytes := comparepkg.PreviewMergePlan(a.model.CompareSnapshot, rows, in, opts)
+	copies, bytes := comparepkg.PreviewMergePlan(h.model.CompareSnapshot, rows, in, opts)
 	d.PreviewText = formatMergePreviewText(d.MoveMode, copies, bytes)
 }
 
@@ -60,40 +61,47 @@ func formatMergePreviewText(moveMode bool, n int, bytes int64) string {
 	return fmt.Sprintf("Preview: %d %s (%s)", n, verb, ui.FormatSelectionByteSize(bytes))
 }
 
-func (a *App) handleCompareMergeDialogKey(event *tcell.EventKey) bool {
-	d := &a.model.CompareMergeDialog
+// HandleMergeDialogKey routes keys for the open merge dialog. Returns true always while the
+// dialog is open (matching the caller's "consumed" convention); false when the dialog is closed.
+func (h *Handler) HandleMergeDialogKey(event *tcell.EventKey) bool {
+	d := &h.model.CompareMergeDialog
 	if !d.Open {
 		return false
 	}
 	form := dialog.NewCompareMergeDialogLinearForm()
-	if a.tryStandardDialogActions(event, a.confirmCompareMerge, a.closeCompareMergeDialog, nil) {
+	if dialog.AltDialogOK(event) {
+		h.confirmMerge()
+		return true
+	}
+	if dialog.AltDialogCancel(event) {
+		h.closeMergeDialog()
 		return true
 	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 'l', 'L':
 			d.Direction = comparepkg.MergeTowardPrimary
-			a.refreshCompareMergePreview(d)
+			h.refreshMergePreview(d)
 			return true
 		case 'r', 'R':
 			d.Direction = comparepkg.MergeTowardSecondary
-			a.refreshCompareMergePreview(d)
+			h.refreshMergePreview(d)
 			return true
 		case 'm', 'M':
 			d.CopyMissing = !d.CopyMissing
-			a.refreshCompareMergePreview(d)
+			h.refreshMergePreview(d)
 			return true
 		case 'f', 'F':
 			d.CopyModified = !d.CopyModified
-			a.refreshCompareMergePreview(d)
+			h.refreshMergePreview(d)
 			return true
 		case 'k', 'K':
 			d.MoveMode = false
-			a.refreshCompareMergePreview(d)
+			h.refreshMergePreview(d)
 			return true
 		case 'd', 'D':
 			d.MoveMode = true
-			a.refreshCompareMergePreview(d)
+			h.refreshMergePreview(d)
 			return true
 		}
 	}
@@ -114,15 +122,15 @@ func (a *App) handleCompareMergeDialogKey(event *tcell.EventKey) bool {
 			case 5:
 				d.MoveMode = true
 			}
-			a.refreshCompareMergePreview(d)
+			h.refreshMergePreview(d)
 			return true
 		}
 	}
 	if event.Key() == tcell.KeyEnter {
 		if d.Focus == form.CancelIndex() {
-			a.closeCompareMergeDialog()
+			h.closeMergeDialog()
 		} else {
-			a.confirmCompareMerge()
+			h.confirmMerge()
 		}
 		return true
 	}
@@ -133,13 +141,13 @@ func (a *App) handleCompareMergeDialogKey(event *tcell.EventKey) bool {
 	return true
 }
 
-func (a *App) confirmCompareMerge() {
-	d := a.model.CompareMergeDialog
-	rows := a.compareCtrl.FilteredRows()
+func (h *Handler) confirmMerge() {
+	d := h.model.CompareMergeDialog
+	rows := h.FilteredRows()
 	in := comparepkg.MergeInput{
-		PrimarySelected:   a.model.Primary.SelectedPaths,
-		SecondarySelected: a.model.Secondary.SelectedPaths,
-		Filter:            a.model.CompareView.Filter,
+		PrimarySelected:   h.model.Primary.SelectedPaths,
+		SecondarySelected: h.model.Secondary.SelectedPaths,
+		Filter:            h.model.CompareView.Filter,
 	}
 	opts := comparepkg.MergeOptions{
 		Direction:    d.Direction,
@@ -147,14 +155,14 @@ func (a *App) confirmCompareMerge() {
 		CopyModified: d.CopyModified,
 		MoveMode:     d.MoveMode,
 	}
-	plan, err := comparepkg.BuildMergePlan(a.model.CompareSnapshot, rows, in, opts)
+	plan, err := comparepkg.BuildMergePlan(h.model.CompareSnapshot, rows, in, opts)
 	if err != nil {
-		a.setTransientMessage(err.Error(), ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyWarn)
 		return
 	}
 	preserve := jobs.TransferPreserveFromConfig(
-		a.config.Operations.PreservePermissions,
-		a.config.Operations.PreserveTimestamps,
+		h.config.Operations.PreservePermissions,
+		h.config.Operations.PreserveTimestamps,
 	)
 	jobType := jobs.TypeCopy
 	if d.MoveMode {
@@ -162,16 +170,16 @@ func (a *App) confirmCompareMerge() {
 	}
 	for _, item := range plan.Copies {
 		destDir := filepath.Dir(item.Dst)
-		a.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
+		h.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
 			Type: jobType, Sources: []string{item.Src}, Dest: destDir, Preserve: preserve,
 		})
 	}
-	a.closeCompareMergeDialog()
-	a.compareCtrl.Refresh()
+	h.closeMergeDialog()
+	h.Refresh()
 	verb := "copies"
 	if d.MoveMode {
 		verb = "moves"
 	}
 	msg := fmt.Sprintf("Merge queued (%d %s)", len(plan.Copies), verb)
-	a.setTransientMessage(msg, ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(msg, ui.MessageUrgencyInfo)
 }

@@ -242,10 +242,6 @@ type App struct {
 	gitStatusLoadGen    [2]atomic.Uint64
 	quickViewGitLoadGen atomic.Uint64
 
-	// jobBlockerNextGen invalidates in-flight quick-blocker chain timers.
-	jobBlockerNextGen atomic.Uint64
-	jobBlockerNext    sched.ManagedTimer
-
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
 	lastScreenContentHash uint64
@@ -531,6 +527,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		KeysCompare: keys.Compare,
 		Gitignore:   giCache,
 		DiskIgnore:  duIgnorer,
+		Jobs:        app.jobsCtrl,
 	})
 	app.dedupCtrl = dedupctrl.New(dedupctrl.Deps{
 		Host:       dedupHost{appShellHost: appShellHost{app: app}},
@@ -804,8 +801,8 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 	case transferDestValidatePayload:
 		a.render()
 		out.didRender = true
-	case jobBlockerNextPayload:
-		if a.applyJobBlockerNextPayload(d) {
+	case jobsctrl.JobBlockerNextPayload:
+		if a.jobsCtrl.ApplyBlockerNextPayload(d) {
 			a.render()
 			out.didRender = true
 		}
@@ -1007,7 +1004,7 @@ func (a *App) Run() error {
 func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 	switch {
 	case a.model.ConflictDialog.Open:
-		a.handleConflictDialogKey(event)
+		a.jobsCtrl.HandleBlockerDialogKey(event)
 		return false
 	case a.model.TransferDialog.Open:
 		a.handleTransferDialogKey(event)

@@ -37,7 +37,7 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 		return true
 	case keymap.ActionCompareCycleFilter:
 		if a.model.ViewMode == ui.ViewCompare {
-			a.openCompareFilterDialog()
+			a.compareCtrl.OpenFilterDialog()
 		}
 		return true
 	case keymap.ActionCompareResetFilter:
@@ -52,7 +52,7 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 		return true
 	case keymap.ActionCompareMerge:
 		if a.model.ViewMode == ui.ViewCompare {
-			a.openCompareMergeDialog()
+			a.compareCtrl.OpenMergeDialog()
 		}
 		return true
 	default:
@@ -99,11 +99,11 @@ func (a *App) selectCompareEdge(toEnd bool) {
 
 func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 	if a.model.CompareFilterDialog.Open {
-		a.handleCompareFilterDialogKey(event)
+		a.compareCtrl.HandleFilterDialogKey(event)
 		return false
 	}
 	if a.model.CompareMergeDialog.Open {
-		a.handleCompareMergeDialogKey(event)
+		a.compareCtrl.HandleMergeDialogKey(event)
 		return false
 	}
 	switch event.Key() {

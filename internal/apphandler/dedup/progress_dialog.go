@@ -1,4 +1,4 @@
-package app
+package dedup
 
 import (
 	"github.com/gdamore/tcell/v2"
@@ -6,23 +6,25 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func (a *App) handleDedupProgressDialogKey(event *tcell.EventKey) {
-	st := &a.model.DedupProgressDialog
-	snap := a.model.DedupSnapshot
+// HandleProgressDialogKey routes keys for the open scan-progress dialog (walking / hash-size
+// confirmation / hashing phases).
+func (h *Handler) HandleProgressDialogKey(event *tcell.EventKey) {
+	st := &h.model.DedupProgressDialog
+	snap := h.model.DedupSnapshot
 	confirmGate := snap.Phase == comparepkg.DedupAwaitConfirm
 
 	if dialog.AltDialogCancel(event) {
-		a.closeDedupView()
+		h.Close()
 		return
 	}
 	if confirmGate && dialog.AltDialogOK(event) {
-		a.dedupCtrl.Confirm()
+		h.Confirm()
 		return
 	}
 
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyF9:
-		a.closeDedupView()
+		h.Close()
 		return
 	case tcell.KeyLeft:
 		if confirmGate && st.ButtonFocus > 0 {
@@ -36,9 +38,9 @@ func (a *App) handleDedupProgressDialogKey(event *tcell.EventKey) {
 		return
 	case tcell.KeyEnter:
 		if confirmGate && st.ButtonFocus == 0 {
-			a.dedupCtrl.Confirm()
+			h.Confirm()
 		} else {
-			a.closeDedupView()
+			h.Close()
 		}
 	}
 }

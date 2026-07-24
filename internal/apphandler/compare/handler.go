@@ -7,6 +7,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/hashwalk"
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
+	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
@@ -28,6 +29,7 @@ type Deps struct {
 	KeysCompare *keymap.Map
 	Gitignore   *gitignore.Cache
 	DiskIgnore  diskusage.ShouldIgnoreFolder
+	Jobs        *jobsctrl.Handler
 }
 
 // Host is the app shell surface compare needs.
@@ -35,6 +37,7 @@ type Host interface {
 	host.PanelNavigationHost
 	TogglePanelSelection(panelID int, path string) (conflicts bool)
 	SetTransientMessage(text string, urgency ui.MessageUrgency)
+	ClearTransientMessage()
 	CompareMenuDefinitions() []menu.Definition
 	BrowserMenuDefinitions() []menu.Definition
 }
@@ -49,6 +52,7 @@ type Handler struct {
 	keysCompare *keymap.Map
 	gitignore   *gitignore.Cache
 	diskIgnore  diskusage.ShouldIgnoreFolder
+	jobsCtrl    *jobsctrl.Handler
 
 	session       *comparepkg.Session
 	wake          host.WakeCoalescer
@@ -78,6 +82,7 @@ func New(d Deps) *Handler {
 		keysCompare: d.KeysCompare,
 		gitignore:   d.Gitignore,
 		diskIgnore:  d.DiskIgnore,
+		jobsCtrl:    d.Jobs,
 	}
 }
 

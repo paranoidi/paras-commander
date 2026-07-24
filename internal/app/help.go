@@ -328,7 +328,7 @@ func (a *App) activateJobsHelpAction(actionID string) bool {
 		a.openMenu()
 		return false
 	}
-	if a.tryDispatchJobs(actionID) {
+	if a.jobsCtrl.TryDispatch(actionID) {
 		return false
 	}
 	if a.tryDispatchAuxiliaryScreens(actionID) {

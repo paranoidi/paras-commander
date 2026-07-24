@@ -152,10 +152,15 @@ func (h *Handler) ensureJobsViewSelectionVisible() {
 	h.model.JobsView.EnsureSelectionVisible(n, visible)
 }
 
-// tryDispatchJobs handles jobs.* actions. It returns true if actionID is a jobs-domain
+// TryDispatch handles jobs.* actions. It returns true if actionID is a jobs-domain
 // action (consumed here, including deliberate no-ops outside the jobs view).
 func (h *Handler) TryDispatch(actionID string) bool {
 	switch actionID {
+	case keymap.ActionJobsAnswerBlocker:
+		// The raw-key path answers blockers pre-dispatch (input.go); this covers
+		// menu/help activation. No-op when nothing is waiting for a decision.
+		h.HandleAnswerBlockerKey()
+		return true
 	case keymap.ActionJobsOpen:
 		h.ToggleJobsView()
 		return true

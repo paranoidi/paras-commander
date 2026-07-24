@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -9,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -50,4 +52,8 @@ type Handler struct {
 	// then possibly prompted) in ApplyRefreshes — never on the event-batch path,
 	// which must stay free of filesystem I/O.
 	pendingDanglingSources []pathloc.Path
+
+	// jobBlockerNextGen invalidates in-flight quick-blocker chain timers.
+	jobBlockerNextGen atomic.Uint64
+	jobBlockerNext    sched.ManagedTimer
 }
