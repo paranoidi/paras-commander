@@ -53,7 +53,7 @@ func (a *App) tryDispatchFileOps(actionID string) bool {
 		a.activateMoveAction()
 	case keymap.ActionFileRunForEach:
 		if a.model.ViewMode == ui.ViewBrowser {
-			a.openRunForEachDialog()
+			a.commandsCtrl.OpenRunForEachDialog()
 		}
 	default:
 		return false
@@ -320,7 +320,7 @@ func (a *App) openHardlinkDialog(p *panel.State) {
 func (a *App) executeFileDialog() {
 	switch a.model.FileDialog.DialogType {
 	case dialog.FileDialogRunForEach:
-		a.executeRunForEach()
+		a.commandsCtrl.ExecuteRunForEach()
 	case dialog.FileDialogMassRename:
 		a.executeMassRename()
 	case dialog.FileDialogRename:

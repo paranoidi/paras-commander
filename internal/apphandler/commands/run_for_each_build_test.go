@@ -1,4 +1,4 @@
-package app
+package commands
 
 import (
 	"strings"
@@ -13,7 +13,7 @@ import (
 func TestBuildRunForEachItemExpandsFAndUsesShell(t *testing.T) {
 	active := &panel.State{Path: pathloc.MustParse("/work/proj")}
 	ent := localfs.Entry{Name: "alpha.txt", Path: "/work/proj/alpha.txt", Type: localfs.EntryFile}
-	got, err := buildRunForEachItem(`echo %f >> /tmp/out`, ent, active, nil, false)
+	got, err := BuildRunForEachItem(`echo %f >> /tmp/out`, ent, active, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestBuildRunForEachItemExpandsFAndUsesShell(t *testing.T) {
 func TestBuildRunForEachItemRequiresF(t *testing.T) {
 	active := &panel.State{Path: pathloc.MustParse("/work/proj")}
 	ent := localfs.Entry{Name: "alpha.txt", Path: "/work/proj/alpha.txt", Type: localfs.EntryFile}
-	_, err := buildRunForEachItem(`gzip -9`, ent, active, nil, false)
+	_, err := BuildRunForEachItem(`gzip -9`, ent, active, nil, false)
 	if err == nil {
 		t.Fatal("expected error when iterated macro is missing")
 	}
@@ -40,7 +40,7 @@ func TestBuildRunForEachItemRequiresF(t *testing.T) {
 func TestBuildRunForEachItemPlainArgvWithF(t *testing.T) {
 	active := &panel.State{Path: pathloc.MustParse("/work/proj")}
 	ent := localfs.Entry{Name: "alpha.txt", Path: "/work/proj/alpha.txt", Type: localfs.EntryFile}
-	got, err := buildRunForEachItem(`gzip -9 %f`, ent, active, nil, false)
+	got, err := BuildRunForEachItem(`gzip -9 %f`, ent, active, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestBuildRunForEachItemPlainArgvWithF(t *testing.T) {
 func TestBuildRunForEachItemMacroInArgv(t *testing.T) {
 	active := &panel.State{Path: pathloc.MustParse("/work/proj")}
 	ent := localfs.Entry{Name: "beta.log", Path: "/work/proj/beta.log", Type: localfs.EntryFile}
-	got, err := buildRunForEachItem(`echo %f`, ent, active, nil, false)
+	got, err := BuildRunForEachItem(`echo %f`, ent, active, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

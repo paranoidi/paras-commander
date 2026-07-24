@@ -35,7 +35,7 @@ func (a *App) patchCarouselFilePreviewMessage(titleBase, msg string) {
 		st.ExitCode = 0
 		st.ErrorMsg = msg
 	})
-	a.postCommandWake()
+	a.postRenderWake()
 	a.clampCarouselFilePreviewScroll()
 }
 
@@ -279,7 +279,7 @@ func (a *App) applyCarouselFilePreviewNow() {
 		st.GitStatusText = ""
 		st.GitStatusThemeKey = ""
 	})
-	a.postCommandWake()
+	a.postRenderWake()
 	gen := a.carouselFilePreviewRunGen.Add(1)
 	go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.activePanelChromeBlocked(), a.gitStatusForPath(path), previewTargetCarousel), previewTargetCarousel, gen)
 }
@@ -301,7 +301,7 @@ func (a *App) refreshCarouselFilePreview() {
 	workDir := a.activePanel().PathString()
 	req := a.previewRequest(st.Path, tw, workDir, a.activePanelChromeBlocked(), a.gitStatusForPath(st.Path), previewTargetCarousel)
 	gen := a.carouselFilePreviewRunGen.Add(1)
-	a.postCommandWake()
+	a.postRenderWake()
 	go a.runPreview(a.commandsCtx, req, previewTargetCarousel, gen)
 }
 

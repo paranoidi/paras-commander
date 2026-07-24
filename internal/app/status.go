@@ -11,6 +11,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -276,14 +277,12 @@ func transientErrorText(err error) string {
 	return err.Error()
 }
 
-const jobFailureBannerMaxRunes = 72
-
 // jobFailureLogDetail returns full text for the Messages log on job failure.
 func jobFailureLogDetail(err error, fallback string) string {
 	if err != nil {
-		return firstMessageLine(err.Error())
+		return textutil.FirstLine(err.Error())
 	}
-	return firstMessageLine(fallback)
+	return textutil.FirstLine(fallback)
 }
 
 // jobFailureBannerDetail returns short text for the status banner on job failure.
@@ -298,42 +297,14 @@ func jobFailureBannerDetail(err error, fallback string) string {
 				if short := transientErrorText(errors.New(inner)); short != inner {
 					return short
 				}
-				return truncateStatusBannerRunes(inner, jobFailureBannerMaxRunes)
+				return textutil.TruncateBannerRunes(inner, textutil.BannerMaxRunes)
 			}
 		}
-		return truncateStatusBannerRunes(firstMessageLine(err.Error()), jobFailureBannerMaxRunes)
+		return textutil.TruncateBannerRunes(textutil.FirstLine(err.Error()), textutil.BannerMaxRunes)
 	}
-	line := firstMessageLine(fallback)
+	line := textutil.FirstLine(fallback)
 	if strings.Contains(strings.ToLower(line), "permission denied") {
 		return "permission denied"
 	}
-	return truncateStatusBannerRunes(line, jobFailureBannerMaxRunes)
-}
-
-func truncateStatusBannerRunes(s string, maxRunes int) string {
-	s = strings.TrimSpace(s)
-	if maxRunes <= 0 || s == "" {
-		return s
-	}
-	r := []rune(s)
-	if len(r) <= maxRunes {
-		return s
-	}
-	return strings.TrimSpace(string(r[:maxRunes])) + "…"
-}
-
-// firstMessageLine returns the first non-empty line of s (after trim), for errors that join
-// multiple messages with newlines.
-func firstMessageLine(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return ""
-	}
-	for _, part := range strings.Split(s, "\n") {
-		line := strings.TrimSpace(part)
-		if line != "" {
-			return line
-		}
-	}
-	return s
+	return textutil.TruncateBannerRunes(line, textutil.BannerMaxRunes)
 }

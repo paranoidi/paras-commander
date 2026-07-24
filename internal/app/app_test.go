@@ -173,7 +173,7 @@ func TestCommandsViewLeftClosesView(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	app.openCommandsView()
+	app.commandsCtrl.OpenView()
 	if app.model.ViewMode != ui.ViewCommands {
 		t.Fatalf("ViewMode = %v, want ViewCommands", app.model.ViewMode)
 	}

@@ -148,7 +148,7 @@ func (a *App) refreshFullscreenFilePreview() {
 	req := a.previewRequest(st.Path, tw, a.activePanel().PathString(), a.model.PanelsChromeBlocked(), a.gitStatusForPath(st.Path), previewTargetFullscreen)
 	req.RawMarkdown = a.model.FullscreenFilePreviewRawMarkdown
 	gen := a.filePreviewRunGen.Add(1)
-	a.postCommandWake()
+	a.postRenderWake()
 	go a.runPreview(a.commandsCtx, req, previewTargetFullscreen, gen)
 }
 

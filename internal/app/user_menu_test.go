@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -409,7 +410,7 @@ background = true
 	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModNone))
 	waitCommandsDone(t, app)
 
-	app.applyCommandWake(backgroundWakePayloadForEntry(t, app, "Fail"))
+	app.commandsCtrl.ApplyWake(backgroundWakePayloadForEntry(t, app, "Fail"))
 	if app.model.MessageUrgency != ui.MessageUrgencyError {
 		t.Fatalf("MessageUrgency = %v, want error", app.model.MessageUrgency)
 	}
@@ -438,7 +439,7 @@ background = true
 	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
 	waitCommandsDone(t, app)
 
-	app.applyCommandWake(commandWakePayload{refreshBrowserPanel: true})
+	app.commandsCtrl.ApplyWake(commandsctrl.WakePayload{RefreshBrowserPanel: true})
 	selectEntryByName(t, app, marker)
 }
 
@@ -540,7 +541,7 @@ pool = "missing"
 	}
 }
 
-func backgroundWakePayloadForEntry(t *testing.T, app *App, title string) commandWakePayload {
+func backgroundWakePayloadForEntry(t *testing.T, app *App, title string) commandsctrl.WakePayload {
 	t.Helper()
 	if len(app.model.CommandsList) == 0 {
 		t.Fatal("no command rows")
@@ -554,11 +555,11 @@ func backgroundWakePayloadForEntry(t *testing.T, app *App, title string) command
 	if e.ErrorMsg != "" {
 		res.LaunchErr = errors.New(e.ErrorMsg)
 	}
-	p := commandWakePayload{refreshBrowserPanel: true}
+	p := commandsctrl.WakePayload{RefreshBrowserPanel: true}
 	if log, banner, urg, ok := userMenuBackgroundNotify(title, res); ok {
-		p.notifyLog = log
-		p.notifyBanner = banner
-		p.notifyUrg = urg
+		p.NotifyLog = log
+		p.NotifyBanner = banner
+		p.NotifyUrg = urg
 	}
 	return p
 }

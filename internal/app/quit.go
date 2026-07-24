@@ -11,7 +11,7 @@ func (a *App) handleQuit() bool {
 	if a.chooserMode() {
 		return a.handleQuitImmediate()
 	}
-	if a.hasActiveJobs() || a.hasRunningCommands() {
+	if a.hasActiveJobs() || a.commandsCtrl.HasRunning() {
 		a.openQuitConfirm()
 		return false
 	}
@@ -64,7 +64,7 @@ func (a *App) hasActiveJobs() bool {
 func (a *App) openQuitConfirm() {
 	st := dialog.QuitConfirmState{Open: true, Focus: 0}
 	hasJobs := a.hasActiveJobs()
-	cmds := a.hasRunningCommands()
+	cmds := a.commandsCtrl.HasRunning()
 	switch {
 	case hasJobs && cmds:
 		st.WarnLine1 = "Active jobs or commands are running."

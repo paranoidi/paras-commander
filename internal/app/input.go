@@ -425,7 +425,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 
 	switch a.inputMode() {
 	case InputModeCommandOutputDialog:
-		a.handleCommandOutputDialogKey(event)
+		a.commandsCtrl.HandleOutputDialogKey(event)
 		a.render()
 		return false, true
 	case InputModeMessageDialog:
@@ -513,7 +513,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return quit, true
 	case InputModeCommandsView:
-		quit := a.handleCommandsViewKey(event)
+		quit := a.commandsCtrl.HandleViewKey(event)
 		a.render()
 		return quit, true
 	case InputModeCompareView:
@@ -762,7 +762,7 @@ func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchMessages(actionID) {
 		return false
 	}
-	if a.tryDispatchCommands(actionID) {
+	if a.commandsCtrl.TryDispatch(actionID) {
 		return false
 	}
 	if a.tryDispatchCompare(actionID) {

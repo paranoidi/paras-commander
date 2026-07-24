@@ -1,4 +1,4 @@
-package app
+package commands
 
 import (
 	"context"
@@ -11,20 +11,22 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func (a *App) closeCommandOutputDialog() {
-	a.model.CommandOutputDialog = dialog.CommandOutputDialogState{}
+// CloseOutputDialog closes the command-output dialog.
+func (h *Handler) CloseOutputDialog() {
+	h.model.CommandOutputDialog = dialog.CommandOutputDialogState{}
 }
 
-func (a *App) handleCommandOutputDialogKey(event *tcell.EventKey) {
-	st := &a.model.CommandOutputDialog
-	w, h := a.screen.Size()
-	layout := a.layoutForTerminalSize(w, h)
+// HandleOutputDialogKey handles key events while the command-output dialog is open.
+func (h *Handler) HandleOutputDialogKey(event *tcell.EventKey) {
+	st := &h.model.CommandOutputDialog
+	w, ht := h.screen.Size()
+	layout := h.host.LayoutForTerminalSize(w, ht)
 	visH := max(1, dialog.CommandOutputDialogListH(layout, *st))
 	total := len(st.Lines)
 
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyEnter:
-		a.closeCommandOutputDialog()
+		h.CloseOutputDialog()
 	case tcell.KeyUp:
 		if st.Scroll > 0 {
 			st.Scroll--
@@ -39,13 +41,16 @@ func (a *App) handleCommandOutputDialogKey(event *tcell.EventKey) {
 		st.Scroll = max(0, min(max(total-visH, 0), st.Scroll+visH))
 	case tcell.KeyRune:
 		if dialog.AltDialogOK(event) || dialog.AltDialogCancel(event) {
-			a.closeCommandOutputDialog()
+			h.CloseOutputDialog()
 		}
 	}
 }
 
-func (a *App) runUserMenuCommandDialog(ctx context.Context, argv []string, workDir, title, prefWidth, prefHeight string) {
-	defer a.commandsBatchesInflight.Add(-1)
+// RunUserMenuCommandDialog runs argv and, on completion, opens the command-output dialog with
+// its captured stdout/stderr. Intended to run in its own goroutine (spawned by a user-menu
+// entry with dialog=true).
+func (h *Handler) RunUserMenuCommandDialog(ctx context.Context, argv []string, workDir, title, prefWidth, prefHeight string) {
+	defer h.EndBatch()
 
 	select {
 	case <-ctx.Done():
@@ -58,11 +63,11 @@ func (a *App) runUserMenuCommandDialog(ctx context.Context, argv []string, workD
 	if res.LaunchErr != nil {
 		detail := res.LaunchErr.Error()
 		log := "User menu: " + strings.TrimSpace(title) + ": " + detail
-		a.postCommandWakePayload(commandWakePayload{
-			notifyLog:            log,
-			notifyBanner:         log,
-			notifyUrg:            ui.MessageUrgencyError,
-			clearActiveSelection: true,
+		h.PostWake(WakePayload{
+			NotifyLog:            log,
+			NotifyBanner:         log,
+			NotifyUrg:            ui.MessageUrgencyError,
+			ClearActiveSelection: true,
 		})
 		return
 	}
@@ -95,8 +100,8 @@ func (a *App) runUserMenuCommandDialog(ctx context.Context, argv []string, workD
 		PrefWidth:  prefWidth,
 		PrefHeight: prefHeight,
 	}
-	a.postCommandWakePayload(commandWakePayload{
-		openOutputDialog:     &st,
-		clearActiveSelection: true,
+	h.PostWake(WakePayload{
+		OpenOutputDialog:     &st,
+		ClearActiveSelection: true,
 	})
 }

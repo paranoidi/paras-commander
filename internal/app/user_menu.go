@@ -7,10 +7,12 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -190,8 +192,8 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 	workDir := active.PathString()
 	switch {
 	case entry.Dialog:
-		a.commandsBatchesInflight.Add(1)
-		go a.runUserMenuCommandDialog(a.commandsCtx, argv, workDir, entry.Title, entry.DialogWidth, entry.DialogHeight)
+		a.commandsCtrl.BeginBatch()
+		go a.commandsCtrl.RunUserMenuCommandDialog(a.commandsCtrl.Context(), argv, workDir, entry.Title, entry.DialogWidth, entry.DialogHeight)
 	case entry.Interactive:
 		a.runUserMenuInteractive(argv, workDir, entry.Toast)
 	case entry.Detach:
@@ -200,14 +202,11 @@ func (a *App) runUserMenuEntry(entry usermenu.MenuEntry) {
 		cmdLine := entry.Command
 		rowIdx := a.appendUserMenuCommandRow(cmdLine, expanded)
 		if !entry.Background {
-			a.openCommandsView()
-			a.model.CommandsView.Selected = rowIdx
-			a.model.CommandsView.FocusPane = 0
-			a.ensureCommandsViewSelectionVisible()
+			a.commandsCtrl.OpenViewAt(rowIdx)
 		}
 
-		a.commandsBatchesInflight.Add(1)
-		go a.runUserMenuCommand(a.commandsCtx, rowIdx, argv, workDir, entry.Background, entry.Title, entry.Pool, entry.Toast)
+		a.commandsCtrl.BeginBatch()
+		go a.runUserMenuCommand(a.commandsCtrl.Context(), rowIdx, argv, workDir, entry.Background, entry.Title, entry.Pool, entry.Toast)
 	}
 }
 
@@ -238,7 +237,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 	if notifyLabel == "User menu:" {
 		notifyLabel = "User menu"
 	}
-	a.startRunForEachBatch(runForEachBatchSpec{
+	a.commandsCtrl.StartRunForEachBatch(commandsctrl.RunForEachBatchSpec{
 		Kind:        ui.CommandRunKindRunForEach,
 		Entries:     append([]localfs.Entry(nil), src.Entries...),
 		AllowFiles:  allowFiles,
@@ -247,8 +246,8 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		PoolName:    strings.TrimSpace(entry.Pool),
 		Background:  entry.Background,
 		NotifyLabel: notifyLabel,
-		BuildItem: func(ent localfs.Entry) (runForEachBuiltItem, error) {
-			return buildRunForEachItem(cmdTemplate, ent, active, other, entry.Shell)
+		BuildItem: func(ent localfs.Entry) (commandsctrl.RunForEachBuiltItem, error) {
+			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, active, other, entry.Shell)
 		},
 	})
 }
@@ -288,10 +287,7 @@ func (a *App) refreshAfterUserMenuCommand() {
 }
 
 func (a *App) appendUserMenuCommandRow(cmdLine, expanded string) int {
-	a.commandsMu.Lock()
-	defer a.commandsMu.Unlock()
-	idx := len(a.model.CommandsList)
-	a.model.CommandsList = append(a.model.CommandsList, ui.CommandRunEntry{
+	return a.commandsCtrl.AppendEntry(ui.CommandRunEntry{
 		ID:              cmdrun.NewRunID(),
 		Kind:            ui.CommandRunKindUserMenu,
 		UserCommandLine: cmdLine + " → " + expanded,
@@ -299,31 +295,30 @@ func (a *App) appendUserMenuCommandRow(cmdLine, expanded string) int {
 		Phase:           ui.CommandRunPending,
 		ExitCode:        -1,
 	})
-	return idx
 }
 
 func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, workDir string, background bool, title, poolName, toast string) {
-	defer a.commandsBatchesInflight.Add(-1)
+	defer a.commandsCtrl.EndBatch()
 
 	postBackgroundFinal := func(res cmdrun.RunResult) {
 		if !background {
-			a.postCommandWakePayload(commandWakePayload{clearActiveSelection: true})
+			a.commandsCtrl.PostWake(commandsctrl.WakePayload{ClearActiveSelection: true})
 			return
 		}
-		p := commandWakePayload{refreshBrowserPanel: true, clearActiveSelection: true}
+		p := commandsctrl.WakePayload{RefreshBrowserPanel: true, ClearActiveSelection: true}
 		if log, banner, urg, ok := userMenuBackgroundNotify(title, res); ok {
-			p.notifyLog = log
-			p.notifyBanner = banner
-			p.notifyUrg = urg
+			p.NotifyLog = log
+			p.NotifyBanner = banner
+			p.NotifyUrg = urg
 		} else if toast != "" && res.LaunchErr == nil && res.ExitCode == 0 {
-			p.notifyLog = toast
-			p.notifyBanner = toast
-			p.notifyUrg = ui.MessageUrgencyInfo
+			p.NotifyLog = toast
+			p.NotifyBanner = toast
+			p.NotifyUrg = ui.MessageUrgencyInfo
 		}
-		a.postCommandWakePayload(p)
+		a.commandsCtrl.PostWake(p)
 	}
 	markCanceled := func() {
-		a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+		a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 			e.Phase = ui.CommandRunDone
 			e.ExitCode = -1
 			if e.ErrorMsg == "" {
@@ -331,9 +326,9 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 			}
 		})
 		if background {
-			a.postCommandWakePayload(commandWakePayload{refreshBrowserPanel: true})
+			a.commandsCtrl.PostWake(commandsctrl.WakePayload{RefreshBrowserPanel: true})
 		} else {
-			a.postCommandWake()
+			a.commandsCtrl.PostRenderWake()
 		}
 	}
 
@@ -349,7 +344,7 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 		var err error
 		release, err = a.workPools.Acquire(ctx, poolName)
 		if err != nil {
-			a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+			a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 				e.Phase = ui.CommandRunDone
 				e.ExitCode = -1
 				if ctx.Err() != nil {
@@ -366,16 +361,16 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 		defer release()
 	}
 
-	a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+	a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 		e.Phase = ui.CommandRunRunning
 	})
-	a.postCommandWake()
+	a.commandsCtrl.PostRenderWake()
 
 	res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
-		a.setCommandProcess(idx, p)
+		a.commandsCtrl.SetProcess(idx, p)
 	})
-	a.unregisterCommandProc(idx)
-	a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+	a.commandsCtrl.UnregisterProc(idx)
+	a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 		e.Phase = ui.CommandRunDone
 		e.Stdout = string(res.Stdout)
 		e.Stderr = string(res.Stderr)
@@ -404,22 +399,22 @@ func userMenuBackgroundNotify(title string, res cmdrun.RunResult) (log, banner s
 	case res.LaunchErr != nil:
 		detail := res.LaunchErr.Error()
 		log = prefix + ": " + detail
-		banner = prefix + ": " + truncateStatusBannerRunes(firstMessageLine(detail), jobFailureBannerMaxRunes)
+		banner = prefix + ": " + textutil.TruncateBannerRunes(textutil.FirstLine(detail), textutil.BannerMaxRunes)
 		return log, banner, ui.MessageUrgencyError, true
 	case res.ExitCode != 0:
 		if hasStderr {
-			line := firstMessageLine(stderrText)
+			line := textutil.FirstLine(stderrText)
 			log = prefix + " (exit " + fmt.Sprint(res.ExitCode) + "): " + stderrText
-			banner = prefix + ": " + truncateStatusBannerRunes(line, jobFailureBannerMaxRunes)
+			banner = prefix + ": " + textutil.TruncateBannerRunes(line, textutil.BannerMaxRunes)
 		} else {
 			log = prefix + ": exit " + fmt.Sprint(res.ExitCode)
 			banner = log
 		}
 		return log, banner, ui.MessageUrgencyError, true
 	case hasStderr:
-		line := firstMessageLine(stderrText)
+		line := textutil.FirstLine(stderrText)
 		log = prefix + ": " + stderrText
-		banner = prefix + ": " + truncateStatusBannerRunes(line, jobFailureBannerMaxRunes)
+		banner = prefix + ": " + textutil.TruncateBannerRunes(line, textutil.BannerMaxRunes)
 		return log, banner, ui.MessageUrgencyWarn, true
 	default:
 		return "", "", ui.MessageUrgencyInfo, false

@@ -411,7 +411,7 @@ func (a *App) patchColumnPreviewMessage(titleBase, msg string) {
 		st.ExitCode = 0
 		st.ErrorMsg = msg
 	})
-	a.postCommandWake()
+	a.postRenderWake()
 	a.clampFilePreviewScroll()
 }
 
@@ -639,7 +639,7 @@ func (a *App) applyQuickViewPreviewNow() {
 			st.GitStatusText = ""
 			st.GitStatusThemeKey = ""
 		})
-		a.postCommandWake()
+		a.postRenderWake()
 		gen := a.filePreviewRunGen.Add(1)
 		go a.runPreview(a.commandsCtx, a.previewRequest(path, tw, workDir, a.inactivePreviewChromeBlocked(), a.gitStatusForPath(path), previewTargetInactive), previewTargetInactive, gen)
 	}
@@ -662,7 +662,7 @@ func (a *App) refreshInactiveFilePreview() {
 	workDir := a.activePanel().PathString()
 	req := a.previewRequest(st.Path, tw, workDir, a.inactivePreviewChromeBlocked(), a.gitStatusForPath(st.Path), previewTargetInactive)
 	gen := a.filePreviewRunGen.Add(1)
-	a.postCommandWake()
+	a.postRenderWake()
 	go a.runPreview(a.commandsCtx, req, previewTargetInactive, gen)
 }
 
@@ -845,7 +845,7 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 		runningApplied = true
 	})
 	if runningApplied && runGen == gen.Load() {
-		a.postCommandWake()
+		a.postRenderWake()
 	}
 
 	select {
@@ -863,7 +863,7 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 			canceledApplied = true
 		})
 		if canceledApplied && runGen == gen.Load() {
-			a.postCommandWake()
+			a.postRenderWake()
 			a.clampPreviewScroll(target)
 		}
 		return
@@ -919,7 +919,7 @@ func (a *App) runPreview(ctx context.Context, req preview.Request, target previe
 		doneApplied = true
 	})
 	if doneApplied && runGen == gen.Load() {
-		a.postCommandWake()
+		a.postRenderWake()
 		a.clampPreviewScroll(target)
 	}
 }

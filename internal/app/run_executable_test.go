@@ -25,7 +25,7 @@ func waitCommandsDone(t *testing.T, app *App) {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		if app.commandsBatchesInflight.Load() == 0 {
+		if !app.commandsCtrl.HasRunning() {
 			app.commandsMu.RLock()
 			allDone := len(app.model.CommandsList) > 0
 			for _, e := range app.model.CommandsList {

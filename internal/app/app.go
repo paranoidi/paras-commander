@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
@@ -49,6 +50,17 @@ type statusMessageExpiryPayload struct {
 
 // spinnerTickPayload is posted periodically to animate the menu-bar activity spinner.
 type spinnerTickPayload struct{}
+
+// renderWakePayload wakes PollEvent purely to trigger a repaint after a background goroutine
+// (file preview, run-executable) mutates model state under commandsMu in place. It carries no
+// data on purpose: callers that need to hand data back to the main goroutine post a more
+// specific payload (e.g. commandsctrl.WakePayload) instead.
+type renderWakePayload struct{}
+
+// postRenderWake posts a renderWakePayload.
+func (a *App) postRenderWake() {
+	_ = a.screen.PostEvent(tcell.NewEventInterrupt(renderWakePayload{}))
+}
 
 // pathPickerValidatePayload wakes PollEvent after debounced path-picker filter validation.
 type pathPickerValidatePayload struct{}
@@ -103,6 +115,7 @@ type App struct {
 	jobState        *jobs.State
 	jobsCtrl        *jobsctrl.Handler
 	findCtrl        *findctrl.Handler
+	commandsCtrl    *commandsctrl.Handler
 	compareCtrl     *comparectrl.Handler
 	dedupCtrl       *dedupctrl.Handler
 	jobStopCh       chan struct{}
@@ -189,7 +202,7 @@ type App struct {
 	// cursorNameHintNavSkip, when true, holds the previous bottom-border full-name overlay during file-list nav debounce.
 	cursorNameHintNavSkip atomic.Bool
 	cursorNameHintNav     sched.ManagedTimer
-	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postCommandWake).
+	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postRenderWake).
 	filePreviewRunGen atomic.Uint64
 	// filePreviewHold keeps the last completed inactive-column preview for stale-while-revalidate draws.
 	filePreviewHold ui.FilePreviewState
@@ -215,15 +228,16 @@ type App struct {
 	// forces stacked or side-by-side for this session only (panel.toggle-split-orientation). Cleared on Configuration OK.
 	paneSplitOrientationOverride *ui.SplitOrientation
 
-	commandsMu              sync.RWMutex
-	commandsBatchesInflight atomic.Int32
-	commandsCtx             context.Context
-	commandsCancel          context.CancelFunc
-
-	// commandProcsMu guards commandProcs, which maps a Commands-view row index to the
-	// handle needed to terminate/kill its running subprocess (commands.terminate/commands.kill).
-	commandProcsMu sync.Mutex
-	commandProcs   map[int]*commandProcHandle
+	// commandsMu is the shared async-model-mutation lock for model fields written from
+	// background goroutines (CommandsList via commandsCtrl, FilePreview/QuickView/etc. from the
+	// preview subsystem). render() copies the whole a.model under this same lock, so every
+	// goroutine that mutates a model field must use this mutex rather than a private one — a
+	// split lock would let that whole-struct copy race with a concurrent mutation.
+	commandsMu sync.RWMutex
+	// commandsCtx/commandsCancel is the app-lifetime cancellation context for background
+	// command and preview subprocesses; commandsCancel runs once at quit (see quit.go).
+	commandsCtx    context.Context
+	commandsCancel context.CancelFunc
 
 	workPools *workpool.Registry
 
@@ -518,6 +532,16 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Keys:           keys.Global,
 		KeysFindDialog: keys.FindDialog,
 	})
+	app.commandsCtrl = commandsctrl.New(commandsctrl.Deps{
+		Host:         commandsHost{appShellHost: appShellHost{app: app}},
+		Screen:       screen,
+		Model:        &app.model,
+		Keys:         keys.Global,
+		KeysCommands: keys.Commands,
+		Mu:           &app.commandsMu,
+		Ctx:          app.commandsCtx,
+		WorkPools:    app.workPools,
+	})
 	app.compareCtrl = comparectrl.New(comparectrl.Deps{
 		Host:        compareHost{appShellHost: appShellHost{app: app}},
 		Screen:      screen,
@@ -773,8 +797,11 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			a.render()
 			out.didRender = true
 		}
-	case commandWakePayload:
-		a.applyCommandWake(d)
+	case commandsctrl.WakePayload:
+		a.commandsCtrl.ApplyWake(d)
+		a.render()
+		out.didRender = true
+	case renderWakePayload:
 		a.render()
 		out.didRender = true
 	case metaWakePayload:

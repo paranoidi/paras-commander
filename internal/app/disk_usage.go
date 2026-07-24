@@ -309,7 +309,7 @@ func (a *App) diskUsageScanBusy() bool {
 }
 
 func (a *App) menuBarSpinnerBusy() bool {
-	return a.diskUsageScanBusy() || a.jobState.HasUnfinishedWork() || a.hasRunningCommands()
+	return a.diskUsageScanBusy() || a.jobState.HasUnfinishedWork() || a.commandsCtrl.HasRunning()
 }
 
 func (a *App) stopSpinnerRedrawTimer() {

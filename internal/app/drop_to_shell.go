@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/shell"
 	"github.com/paranoidi/paras-commander/internal/subshell"
+	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -250,7 +251,7 @@ func shellInsertPathList(p *panel.State) []string {
 	if len(p.SelectedPaths) > 0 {
 		paths := make([]string, 0, len(p.SelectedPaths))
 		for sel := range p.SelectedPaths {
-			paths = append(paths, absPathClean(sel))
+			paths = append(paths, textutil.AbsPathClean(sel))
 		}
 		sort.Strings(paths)
 		return paths
@@ -259,7 +260,7 @@ func shellInsertPathList(p *panel.State) []string {
 	if !ok || entry.Name == ".." {
 		return nil
 	}
-	return []string{absPathClean(entry.Path)}
+	return []string{textutil.AbsPathClean(entry.Path)}
 }
 
 // localActivePanelDir returns the active panel directory, or "" when it is remote or

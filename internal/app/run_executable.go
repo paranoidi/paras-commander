@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -98,62 +99,48 @@ func (a *App) runExecutableFromPanel(path string) {
 	cmdLine := formatExecuteCommandLine(workDir, path)
 	argv := []string{path}
 
-	rowIdx := a.appendFileExecuteCommandRow(cmdLine, path)
-	a.openCommandsView()
-	a.model.CommandsView.Selected = rowIdx
-	a.model.CommandsView.FocusPane = 0
-	a.model.CommandsView.ListScroll = 0
-	a.model.CommandsView.StdoutScroll = 0
-	a.model.CommandsView.StderrScroll = 0
-	a.ensureCommandsViewSelectionVisible()
-
-	a.commandsBatchesInflight.Add(1)
-	go a.runFileExecuteCommand(a.commandsCtx, rowIdx, argv, workDir)
-}
-
-func (a *App) appendFileExecuteCommandRow(cmdLine, targetPath string) int {
-	a.commandsMu.Lock()
-	defer a.commandsMu.Unlock()
-	idx := len(a.model.CommandsList)
-	a.model.CommandsList = append(a.model.CommandsList, ui.CommandRunEntry{
+	rowIdx := a.commandsCtrl.AppendEntry(ui.CommandRunEntry{
 		ID:              cmdrun.NewRunID(),
 		Kind:            ui.CommandRunKindFileExecute,
 		UserCommandLine: cmdLine,
-		TargetPath:      absPathClean(targetPath),
+		TargetPath:      textutil.AbsPathClean(path),
 		Phase:           ui.CommandRunPending,
 		ExitCode:        -1,
 	})
-	return idx
+	a.commandsCtrl.OpenViewAt(rowIdx)
+
+	a.commandsCtrl.BeginBatch()
+	go a.runFileExecuteCommand(a.commandsCtrl.Context(), rowIdx, argv, workDir)
 }
 
 func (a *App) runFileExecuteCommand(ctx context.Context, idx int, argv []string, workDir string) {
 	defer func() {
-		a.commandsBatchesInflight.Add(-1)
-		a.postCommandWake()
+		a.commandsCtrl.EndBatch()
+		a.commandsCtrl.PostRenderWake()
 	}()
 	select {
 	case <-ctx.Done():
-		a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+		a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 			e.Phase = ui.CommandRunDone
 			e.ExitCode = -1
 			if e.ErrorMsg == "" {
 				e.ErrorMsg = "Canceled"
 			}
 		})
-		a.postCommandWake()
+		a.commandsCtrl.PostRenderWake()
 		return
 	default:
 	}
-	a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+	a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 		e.Phase = ui.CommandRunRunning
 	})
-	a.postCommandWake()
+	a.commandsCtrl.PostRenderWake()
 
 	res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
-		a.setCommandProcess(idx, p)
+		a.commandsCtrl.SetProcess(idx, p)
 	})
-	a.unregisterCommandProc(idx)
-	a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+	a.commandsCtrl.UnregisterProc(idx)
+	a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 		e.Phase = ui.CommandRunDone
 		e.Stdout = string(res.Stdout)
 		e.Stderr = string(res.Stderr)
@@ -164,5 +151,5 @@ func (a *App) runFileExecuteCommand(ctx context.Context, idx int, argv []string,
 			e.ExitCode = res.ExitCode
 		}
 	})
-	a.postCommandWake()
+	a.commandsCtrl.PostRenderWake()
 }

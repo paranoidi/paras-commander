@@ -63,7 +63,7 @@ func (a *App) fileDialogFieldAfterEdit() func() {
 	case dialog.FileDialogMassRename:
 		extra = a.recomputeMassRenamePreview
 	case dialog.FileDialogRunForEach:
-		extra = a.recomputeRunForEachCommandValidation
+		extra = a.commandsCtrl.RecomputeRunForEachValidation
 	}
 	f := a.focusedField()
 	if f == nil || !f.PathPicker {

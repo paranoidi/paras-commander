@@ -12,6 +12,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -177,8 +178,8 @@ func TestJobFailureBannerDetail(t *testing.T) {
 	if got == "" || strings.TrimSuffix(got, "…") == got {
 		t.Fatalf("expected truncated banner with ellipsis, got %q", got)
 	}
-	if utf8.RuneCountInString(got) != jobFailureBannerMaxRunes+1 {
-		t.Fatalf("len runes = %d, want %d", utf8.RuneCountInString(got), jobFailureBannerMaxRunes+1)
+	if utf8.RuneCountInString(got) != textutil.BannerMaxRunes+1 {
+		t.Fatalf("len runes = %d, want %d", utf8.RuneCountInString(got), textutil.BannerMaxRunes+1)
 	}
 }
 
@@ -256,28 +257,7 @@ func TestSetJobFailedTransientMessageLogsFullError(t *testing.T) {
 	if strings.Contains(app.model.Message, "remove \"") {
 		t.Fatalf("banner should omit repeated remove paths, got %q", app.model.Message)
 	}
-	if utf8.RuneCountInString(app.model.Message) > jobFailureBannerMaxRunes+len("Job failed: ") {
+	if utf8.RuneCountInString(app.model.Message) > textutil.BannerMaxRunes+len("Job failed: ") {
 		t.Fatalf("banner too long, got %q", app.model.Message)
-	}
-}
-
-func TestFirstMessageLine(t *testing.T) {
-	tests := []struct {
-		in, want string
-	}{
-		{"", ""},
-		{"single", "single"},
-		{"first\nsecond", "first"},
-		{"\n\nmiddle\n", "middle"},
-		{"  spaced  ", "spaced"},
-	}
-	for _, tt := range tests {
-		if got := firstMessageLine(tt.in); got != tt.want {
-			t.Errorf("firstMessageLine(%q) = %q, want %q", tt.in, got, tt.want)
-		}
-	}
-	joined := errors.Join(errors.New("alpha"), errors.New("beta"))
-	if got := firstMessageLine(joined.Error()); got != "alpha" {
-		t.Fatalf("first line of joined error = %q, want alpha", got)
 	}
 }

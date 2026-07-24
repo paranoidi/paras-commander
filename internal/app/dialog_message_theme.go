@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -206,7 +207,7 @@ func (a *App) previewThemeByName(name string) {
 	}
 	next, err := theme.Resolve(name, a.paths.ThemesDir)
 	if err != nil {
-		a.setTransientMessage(firstMessageLine(err.Error()), ui.MessageUrgencyCritical)
+		a.setTransientMessage(textutil.FirstLine(err.Error()), ui.MessageUrgencyCritical)
 		if cached, ok := a.themes[name]; ok {
 			a.styles = cached
 		}

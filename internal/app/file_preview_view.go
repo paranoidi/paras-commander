@@ -391,7 +391,7 @@ func (a *App) openFullscreenFilePreviewAt(path string) error {
 		st.CancelSearch()
 	})
 	gen := a.filePreviewRunGen.Add(1)
-	a.postCommandWake()
+	a.postRenderWake()
 	go a.runPreview(
 		a.commandsCtx,
 		a.previewRequest(path, tw, panelPath, a.model.PanelsChromeBlocked(), a.gitStatusForPath(path), previewTargetFullscreen),

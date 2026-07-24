@@ -1,4 +1,4 @@
-package app
+package commands
 
 import (
 	"context"
@@ -8,12 +8,15 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-type runForEachItemBuilder func(entry localfs.Entry) (item runForEachBuiltItem, err error)
+type runForEachItemBuilder func(entry localfs.Entry) (item RunForEachBuiltItem, err error)
 
-type runForEachBatchSpec struct {
+// RunForEachBatchSpec describes one run-for-each style command batch (Run-for-each dialog,
+// user-menu run_for_each entries).
+type RunForEachBatchSpec struct {
 	Kind ui.CommandRunKind
 
 	// Entries to iterate in order.
@@ -37,13 +40,15 @@ type runForEachBatchSpec struct {
 	BuildItem runForEachItemBuilder
 }
 
-func (a *App) startRunForEachBatch(spec runForEachBatchSpec) {
+// StartRunForEachBatch enqueues Commands-view rows for spec.Entries and runs them in the
+// background, one at a time in submission order (gated by PoolName's parallelism, if any).
+func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 	if len(spec.Entries) == 0 {
-		a.setTransientMessage("No paths to run", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("No paths to run", ui.MessageUrgencyWarn)
 		return
 	}
 	if spec.BuildItem == nil {
-		a.setTransientMessage("Run for each: internal error (missing builder)", ui.MessageUrgencyError)
+		h.host.SetTransientMessage("Run for each: internal error (missing builder)", ui.MessageUrgencyError)
 		return
 	}
 
@@ -56,53 +61,43 @@ func (a *App) startRunForEachBatch(spec runForEachBatchSpec) {
 			ExitCode: -1,
 		}
 	}
-	a.commandsMu.Lock()
-	start := len(a.model.CommandsList)
-	a.model.CommandsList = append(a.model.CommandsList, entries...)
-	a.commandsMu.Unlock()
+	h.mu.Lock()
+	start := len(h.model.CommandsList)
+	h.model.CommandsList = append(h.model.CommandsList, entries...)
+	h.mu.Unlock()
 
 	if !spec.Background {
-		a.openCommandsView()
-		a.model.CommandsView.Selected = start
-		a.model.CommandsView.FocusPane = 0
-		a.model.CommandsView.ListScroll = 0
-		a.model.CommandsView.StdoutScroll = 0
-		a.model.CommandsView.StderrScroll = 0
-		a.ensureCommandsViewSelectionVisible()
+		h.OpenViewAt(start)
 	}
 
-	a.commandsBatchesInflight.Add(1)
-	go a.runForEachUnifiedBatch(a.commandsCtx, start, spec)
+	h.BeginBatch()
+	go h.runForEachUnifiedBatch(h.ctx, start, spec)
 }
 
-func (a *App) runForEachUnifiedBatch(ctx context.Context, start int, spec runForEachBatchSpec) {
+func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec RunForEachBatchSpec) {
 	defer func() {
-		a.commandsBatchesInflight.Add(-1)
+		h.EndBatch()
 		var snap []ui.CommandRunEntry
-		a.commandsMu.RLock()
-		if start >= 0 && start < len(a.model.CommandsList) {
+		h.mu.RLock()
+		if start >= 0 && start < len(h.model.CommandsList) {
 			end := start + len(spec.Entries)
-			if end > len(a.model.CommandsList) {
-				end = len(a.model.CommandsList)
+			if end > len(h.model.CommandsList) {
+				end = len(h.model.CommandsList)
 			}
-			snap = append([]ui.CommandRunEntry(nil), a.model.CommandsList[start:end]...)
+			snap = append([]ui.CommandRunEntry(nil), h.model.CommandsList[start:end]...)
 		}
-		a.commandsMu.RUnlock()
+		h.mu.RUnlock()
 
-		p := commandWakePayload{clearActiveSelection: true}
+		p := WakePayload{ClearActiveSelection: true}
 		if spec.Background {
-			p.refreshBrowserPanel = true
+			p.RefreshBrowserPanel = true
 		}
 		if log, banner, urg, ok := summarizeRunForEachIssues(spec.NotifyLabel, snap); ok {
-			p.notifyLog = log
-			p.notifyBanner = banner
-			p.notifyUrg = urg
+			p.NotifyLog = log
+			p.NotifyBanner = banner
+			p.NotifyUrg = urg
 		}
-		if spec.Background || p.notifyLog != "" {
-			a.postCommandWakePayload(p)
-			return
-		}
-		a.postCommandWakePayload(p)
+		h.PostWake(p)
 	}()
 
 	allowFilter := spec.AllowFiles || spec.AllowDirs
@@ -110,81 +105,81 @@ func (a *App) runForEachUnifiedBatch(ctx context.Context, start int, spec runFor
 	for i, ent := range spec.Entries {
 		select {
 		case <-ctx.Done():
-			a.markCommandsCanceled(start+i, len(spec.Entries)-i)
-			a.postCommandWake()
+			h.markCommandsCanceled(start+i, len(spec.Entries)-i)
+			h.PostRenderWake()
 			return
 		default:
 		}
 
 		idx := start + i
-		abs := absPathClean(ent.Path)
+		abs := textutil.AbsPathClean(ent.Path)
 
 		built, buildErr := spec.BuildItem(ent)
 		userLine := built.UserLine
 		if buildErr != nil {
-			a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+			h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 				e.Phase = ui.CommandRunDone
 				e.TargetPath = abs
 				e.UserCommandLine = userLine
 				e.ExitCode = -1
 				e.ErrorMsg = buildErr.Error()
 			})
-			a.postCommandWake()
+			h.PostRenderWake()
 			continue
 		}
 		argvPrefix := built.Argv
 		if len(argvPrefix) == 0 {
-			a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+			h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 				e.Phase = ui.CommandRunDone
 				e.TargetPath = abs
 				e.UserCommandLine = userLine
 				e.ExitCode = -1
 				e.ErrorMsg = "Command is empty"
 			})
-			a.postCommandWake()
+			h.PostRenderWake()
 			continue
 		}
 
 		if allowFilter {
 			if ent.Type == localfs.EntryDirectory && !spec.AllowDirs {
-				a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+				h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 					e.Phase = ui.CommandRunDone
 					e.TargetPath = abs
 					e.UserCommandLine = userLine
 					e.ExitCode = -1
 					e.ErrorMsg = "Skipped: directories are not allowed"
 				})
-				a.postCommandWake()
+				h.PostRenderWake()
 				continue
 			}
 			if ent.Type != localfs.EntryDirectory && !spec.AllowFiles {
-				a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+				h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 					e.Phase = ui.CommandRunDone
 					e.TargetPath = abs
 					e.UserCommandLine = userLine
 					e.ExitCode = -1
 					e.ErrorMsg = "Skipped: files are not allowed"
 				})
-				a.postCommandWake()
+				h.PostRenderWake()
 				continue
 			}
 		}
 
 		argv := append([]string(nil), argvPrefix...)
 
-		a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+		h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 			e.Phase = ui.CommandRunRunning
 			e.TargetPath = abs
 			e.UserCommandLine = userLine
 		})
-		a.postCommandWake()
+		h.PostRenderWake()
 
 		var release func()
 		if strings.TrimSpace(spec.PoolName) != "" {
 			var err error
-			release, err = a.workPools.Acquire(ctx, spec.PoolName)
+			release, err = h.workPools.Acquire(ctx, spec.PoolName)
 			if err != nil {
-				a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+				h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 					e.Phase = ui.CommandRunDone
 					e.ExitCode = -1
 					if ctx.Err() != nil {
@@ -195,20 +190,20 @@ func (a *App) runForEachUnifiedBatch(ctx context.Context, start int, spec runFor
 						e.ErrorMsg = err.Error()
 					}
 				})
-				a.postCommandWake()
+				h.PostRenderWake()
 				continue
 			}
 		}
 
 		res := cmdrun.RunTracked(ctx, argv, spec.WorkDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
-			a.setCommandProcess(idx, p)
+			h.SetProcess(idx, p)
 		})
-		a.unregisterCommandProc(idx)
+		h.UnregisterProc(idx)
 		if release != nil {
 			release()
 		}
 
-		a.patchCommandEntry(idx, func(e *ui.CommandRunEntry) {
+		h.PatchEntry(idx, func(e *ui.CommandRunEntry) {
 			e.Phase = ui.CommandRunDone
 			e.Stdout = string(res.Stdout)
 			e.Stderr = string(res.Stderr)
@@ -219,7 +214,7 @@ func (a *App) runForEachUnifiedBatch(ctx context.Context, start int, spec runFor
 				e.ExitCode = res.ExitCode
 			}
 		})
-		a.postCommandWake()
+		h.PostRenderWake()
 	}
 }
 
@@ -261,7 +256,7 @@ func summarizeRunForEachIssues(notifyLabel string, entries []ui.CommandRunEntry)
 		if strings.TrimSpace(e.Stderr) != "" {
 			stderr++
 			if firstDetail == "" {
-				firstDetail = firstMessageLine(strings.TrimSpace(e.Stderr))
+				firstDetail = textutil.FirstLine(strings.TrimSpace(e.Stderr))
 			}
 			if worstUrg < ui.MessageUrgencyWarn {
 				worstUrg = ui.MessageUrgencyWarn
@@ -288,6 +283,6 @@ func summarizeRunForEachIssues(notifyLabel string, entries []ui.CommandRunEntry)
 	if strings.TrimSpace(firstDetail) != "" {
 		log += " (" + strings.TrimSpace(firstDetail) + ")"
 	}
-	banner = prefix + ": " + truncateStatusBannerRunes(summary, jobFailureBannerMaxRunes)
+	banner = prefix + ": " + textutil.TruncateBannerRunes(summary, textutil.BannerMaxRunes)
 	return log, banner, worstUrg, true
 }

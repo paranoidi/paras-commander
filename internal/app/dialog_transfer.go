@@ -56,14 +56,6 @@ func (a *App) activateMoveAction() {
 	a.openMoveDialog()
 }
 
-func absPathClean(p string) string {
-	abs, err := filepath.Abs(p)
-	if err != nil {
-		return filepath.Clean(p)
-	}
-	return filepath.Clean(abs)
-}
-
 func transferPrefilledDestination(path string) dialog.FileDialogField {
 	path = strings.TrimSpace(path)
 	if path != "" {

@@ -362,7 +362,7 @@ func (a *App) activateCommandsHelpAction(actionID string) bool {
 		a.openMenu()
 		return false
 	}
-	if a.tryDispatchCommands(actionID) {
+	if a.commandsCtrl.TryDispatch(actionID) {
 		return false
 	}
 	if a.tryDispatchAuxiliaryScreens(actionID) {
@@ -374,17 +374,17 @@ func (a *App) activateCommandsHelpAction(actionID string) bool {
 	}
 	switch actionID {
 	case keymap.ActionNavUp:
-		a.moveCommandsSelection(-1)
+		a.commandsCtrl.MoveSelection(-1)
 	case keymap.ActionNavDown:
-		a.moveCommandsSelection(1)
+		a.commandsCtrl.MoveSelection(1)
 	case keymap.ActionNavPageUp:
-		a.moveCommandsSelection(-5)
+		a.commandsCtrl.MoveSelection(-5)
 	case keymap.ActionNavPageDown:
-		a.moveCommandsSelection(5)
+		a.commandsCtrl.MoveSelection(5)
 	case keymap.ActionNavTop:
-		a.selectCommandsEdge(false)
+		a.commandsCtrl.SelectEdge(false)
 	case keymap.ActionNavBottom:
-		a.selectCommandsEdge(true)
+		a.commandsCtrl.SelectEdge(true)
 	}
 	return false
 }
