@@ -545,9 +545,9 @@ func TestAddBookmarkExecuteAppendsToMarksFile(t *testing.T) {
 
 	// Replace prefilled name by typing a fresh value (first printable clears prefill).
 	for _, r := range "myproject" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after Enter")
@@ -585,14 +585,14 @@ func TestAddBookmarkConfirmFromOKButtonWritesFile(t *testing.T) {
 
 	app.dispatch(keymap.ActionBookmarkAdd)
 	for _, r := range "okbtn" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	// Move focus from name field to OK, then confirm (Enter must still append).
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if app.model.FileDialog.FocusedField != 1 {
 		t.Fatalf("FocusedField = %d, want 1 (OK)", app.model.FileDialog.FocusedField)
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after Enter on OK")
@@ -621,7 +621,7 @@ func TestAddBookmarkEmptyNameClosesWithError(t *testing.T) {
 	app.model.FileDialog.Fields[0].Cursor = 0
 	app.model.FileDialog.Fields[0].PrefillPending = false
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after rejected confirm")

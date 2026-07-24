@@ -48,7 +48,7 @@ func (a *App) activateMoveAction() {
 		if entry, ok := p.CurrentEntry(); ok {
 			dest := a.inactivePanel().PathString()
 			if entry.Path == filepath.Join(dest, entry.Name) {
-				a.openRenameDialog(p)
+				a.dialogCtrl.OpenRenameDialog(p)
 				return
 			}
 		}
@@ -317,8 +317,8 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 		return
 	}
 	// Alt+O = OK, Alt+C = Cancel, Alt+P = Add paused (mnemonics; must run before field edit).
-	if a.tryStandardDialogActions(event, a.confirmTransfer, a.closeTransferDialog, []dialogExtraMnemonic{
-		{'p', a.confirmTransferPaused},
+	if dialog.TryStandardDialogActions(event, a.confirmTransfer, a.closeTransferDialog, []dialog.ExtraMnemonic{
+		{Rune: 'p', Fn: a.confirmTransferPaused},
 	}) {
 		return
 	}
@@ -376,7 +376,7 @@ func (a *App) handleTransferDialogKey(event *tcell.EventKey) {
 }
 
 func (a *App) editTransferFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {
-	return a.handleFileDialogFieldKey(event, f, func() {
+	return dialog.HandleFileDialogFieldKey(event, f, a.keys.DialogInput, func() {
 		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
 	})
 }

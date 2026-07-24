@@ -185,7 +185,7 @@ func TestExtractDialogEnqueuesJob(t *testing.T) {
 	if !app.model.FileDialog.Open {
 		t.Fatal("extract dialog not open")
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	flushBackgroundJobs(t, app)
 
 	all := app.jobState.AllJobs()
@@ -290,7 +290,7 @@ func TestFileDialogEscCancelsAndNoMessage(t *testing.T) {
 		t.Fatal("dialog should be open")
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after Esc")
 	}
@@ -313,11 +313,11 @@ func TestFileDialogEnterExecutesRename(t *testing.T) {
 	}
 
 	// Clear prefill by typing a character, enter new name.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'w', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'w', tcell.ModNone))
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after Enter")
@@ -396,9 +396,9 @@ func TestRenameWithoutFocusAfterDoesNotCenterOnNewFile(t *testing.T) {
 	newName := "99.txt"
 	app.dispatch(keymap.ActionFileRename)
 	for _, r := range newName {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	p = app.activePanel()
 	entry, ok := p.CurrentEntry()
@@ -434,10 +434,10 @@ func TestRenameWithFocusAfterSelectsAndCentersNewFile(t *testing.T) {
 	newName := "99.txt"
 	app.dispatch(keymap.ActionFileRename)
 	for _, r := range newName {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	p = app.activePanel()
 	entry, ok := p.CurrentEntry()
@@ -481,18 +481,18 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 		t.Fatalf("expected mass rename dialog, open=%v type=%v", app.model.FileDialog.Open, app.model.FileDialog.DialogType)
 	}
 	d := &app.model.FileDialog
-	if d.FocusedField != massRenameFindFieldFocus {
-		t.Fatalf("FocusedField = %d, want %d (Find)", d.FocusedField, massRenameFindFieldFocus)
+	if d.FocusedField != dialog.MassRenameFindFieldFocus {
+		t.Fatalf("FocusedField = %d, want %d (Find)", d.FocusedField, dialog.MassRenameFindFieldFocus)
 	}
 	for _, r := range "foo_" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	d.FocusedField = 4 // Replace field (0-2 = radios, 3 = Find, 4 = Replace)
 	for _, r := range "bar_" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after Enter")
@@ -521,7 +521,7 @@ func TestMassRenameNoMatchMarksFindInvalid(t *testing.T) {
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
 	for _, r := range "nomatch" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	if !d.Fields[0].InputInvalid {
 		t.Fatal("expected Find input invalid when nothing matches")
@@ -543,27 +543,27 @@ func TestMassRenameModeShortcutKeepsFindFocus(t *testing.T) {
 	if !d.Open || d.DialogType != dialog.FileDialogMassRename {
 		t.Fatalf("expected mass rename dialog")
 	}
-	if d.FocusedField != massRenameFindFieldFocus {
-		t.Fatalf("FocusedField = %d, want %d (Find)", d.FocusedField, massRenameFindFieldFocus)
+	if d.FocusedField != dialog.MassRenameFindFieldFocus {
+		t.Fatalf("FocusedField = %d, want %d (Find)", d.FocusedField, dialog.MassRenameFindFieldFocus)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
 	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
 		t.Fatalf("mode = %v, want regex", d.MassRenameMode)
 	}
-	if d.FocusedField != massRenameFindFieldFocus {
-		t.Fatalf("after Alt+R: focus = %d, want %d", d.FocusedField, massRenameFindFieldFocus)
+	if d.FocusedField != dialog.MassRenameFindFieldFocus {
+		t.Fatalf("after Alt+R: focus = %d, want %d", d.FocusedField, dialog.MassRenameFindFieldFocus)
 	}
 	if d.Fields[0].Label != "Pattern" {
 		t.Fatalf("label = %q, want Pattern", d.Fields[0].Label)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
 	if d.MassRenameMode != dialog.MassRenameModeUISimple {
 		t.Fatalf("mode = %v, want simple", d.MassRenameMode)
 	}
-	if d.FocusedField != massRenameFindFieldFocus {
-		t.Fatalf("after Alt+S: focus = %d, want %d", d.FocusedField, massRenameFindFieldFocus)
+	if d.FocusedField != dialog.MassRenameFindFieldFocus {
+		t.Fatalf("after Alt+S: focus = %d, want %d", d.FocusedField, dialog.MassRenameFindFieldFocus)
 	}
 	if d.Fields[0].Label != "Find" {
 		t.Fatalf("label = %q, want Find", d.Fields[0].Label)
@@ -585,13 +585,13 @@ func TestMassRenameModeShortcutKeepsReplaceFocus(t *testing.T) {
 	const replaceFocus = 3
 	d.FocusedField = replaceFocus
 	for _, r := range "y" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	if d.FocusedField != replaceFocus {
 		t.Fatalf("setup: focus = %d, want %d (Replace)", d.FocusedField, replaceFocus)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
 	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
 		t.Fatalf("mode = %v, want regex", d.MassRenameMode)
 	}
@@ -599,7 +599,7 @@ func TestMassRenameModeShortcutKeepsReplaceFocus(t *testing.T) {
 		t.Fatalf("after Alt+R: focus = %d, want %d (Replace)", d.FocusedField, replaceFocus)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModAlt))
 	if d.MassRenameMode != dialog.MassRenameModeUISimple {
 		t.Fatalf("mode = %v, want simple", d.MassRenameMode)
 	}
@@ -624,9 +624,9 @@ func TestMassRenameRadioFocusAppliesRegexMode(t *testing.T) {
 		t.Fatalf("initial mode = %v, want simple", d.MassRenameMode)
 	}
 	// Up from Find (3) → showModified (5), Up → ExternalEditor (2), Up again → Regex (1)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 	if d.FocusedField != 1 {
 		t.Fatalf("FocusedField = %d, want 1 (Regex radio)", d.FocusedField)
 	}
@@ -650,16 +650,16 @@ func TestMassRenameTabIntoModeRadiosKeepsCurrentMode(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
 	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
 		t.Fatalf("setup mode = %v, want regex", d.MassRenameMode)
 	}
-	if d.FocusedField != massRenameFindFieldFocus {
+	if d.FocusedField != dialog.MassRenameFindFieldFocus {
 		t.Fatalf("setup focus = %d, want Find", d.FocusedField)
 	}
 
 	// Backtab from Find should land on the Regex radio, not force Simple.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModNone))
 	if d.FocusedField != 1 {
 		t.Fatalf("after Backtab: focus = %d, want 1 (Regex radio)", d.FocusedField)
 	}
@@ -668,9 +668,9 @@ func TestMassRenameTabIntoModeRadiosKeepsCurrentMode(t *testing.T) {
 	}
 
 	// Tab to buttons, then Tab again into mode radios — still Regex.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // Find
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // OK
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // mode radios
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // Find
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // OK
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // mode radios
 	if d.FocusedField != 1 {
 		t.Fatalf("after Tab cycle: focus = %d, want 1 (Regex radio)", d.FocusedField)
 	}
@@ -693,14 +693,14 @@ func TestMassRenameRegexCaptureGroupPreviewWithShiftDollar(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
 	for _, r := range `(\d)$` {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	d.FocusedField = 4 // Replace field (0-2 = radios, 3 = Pattern, 4 = Replacement)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '0', tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '$', tcell.ModShift))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '1', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '0', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '$', tcell.ModShift))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '1', tcell.ModNone))
 
 	if d.Fields[1].Value != "0$1" {
 		t.Fatalf("replace = %q, want 0$1", d.Fields[1].Value)
@@ -725,9 +725,9 @@ func TestMassRenameReplacementSyntaxHintHiddenWithoutGroups(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
 	for _, r := range `\.txt$` {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	if d.MassRenameReplacementSyntaxHint != "" {
 		t.Fatalf("hint = %q, want empty for pattern without capture groups", d.MassRenameReplacementSyntaxHint)
@@ -746,9 +746,9 @@ func TestMassRenameRegexpCompileHintForBackslashPattern(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
 	d.FocusedField = 3 // Pattern field (0-2 = radios, 3 = Pattern)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '\\', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '\\', tcell.ModNone))
 
 	if !d.Fields[0].InputInvalid {
 		t.Fatal("expected invalid pattern field")
@@ -779,16 +779,16 @@ func TestMassRenameEnterCancelClosesWithInvalidRegex(t *testing.T) {
 	}
 	// Regex mode + invalid pattern
 	d.FocusedField = 1
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	d.FocusedField = 3 // Pattern field (0-2 = radios, 3 = Pattern)
 	for _, r := range "a++" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	if !d.Fields[0].InputInvalid {
 		t.Fatal("expected invalid pattern")
 	}
 	d.FocusedField = dialog.FileDialogCancelFocusIndex(*d)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.Open {
 		t.Fatal("Enter on Cancel should close dialog even when regexp is invalid")
 	}
@@ -820,11 +820,11 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 		t.Fatalf("expected mass rename dialog")
 	}
 	for _, r := range "1" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	d.FocusedField = 4 // Replace field (0-2 = radios, 3 = Find, 4 = Replace)
 	for _, r := range "2" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	if len(d.MassRenamePreviewBefore) != len(paths) {
 		t.Fatalf("preview rows = %d, want %d (no banner row)", len(d.MassRenamePreviewBefore), len(paths))
@@ -853,7 +853,7 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 	okIdx := dialog.FileDialogOKFocusIndex(*d)
 	// Navigate directly to OK to test the blocked-OK path.
 	d.FocusedField = okIdx
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if !app.model.FileDialog.Open {
 		t.Fatal("Enter on OK with conflicts should not close dialog")
 	}
@@ -879,10 +879,10 @@ func TestFileDialogMkdirCreatesDirectory(t *testing.T) {
 	}
 
 	for _, r := range "newdir" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after Enter")
@@ -904,7 +904,7 @@ func TestFileDialogInsertRune(t *testing.T) {
 	app := newApp(t, screen, dir)
 
 	app.dispatch(keymap.ActionFileRename)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
 
 	field := &app.model.FileDialog.Fields[0]
 	if field.Value != "n" {
@@ -924,9 +924,9 @@ func TestFileDialogBackspace(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileMkdir)
 	for _, r := range "hello" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModNone))
 
 	field := &app.model.FileDialog.Fields[0]
 	if field.Value != "hell" {
@@ -943,7 +943,7 @@ func TestFileDialogLeftRightMoveCursor(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileMkdir)
 	for _, r := range "abc" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 
 	// cursor should be at 3 (end)
@@ -953,12 +953,12 @@ func TestFileDialogLeftRightMoveCursor(t *testing.T) {
 		t.Fatalf("cursor = %d, want %d", field.Cursor, expectedCursor)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if field.Cursor != 2 {
 		t.Fatalf("cursor after left = %d, want 2", field.Cursor)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if field.Cursor != 3 {
 		t.Fatalf("cursor after right = %d, want 3", field.Cursor)
 	}
@@ -973,10 +973,10 @@ func TestFileDialogCtrlWKillWord(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileMkdir)
 	for _, r := range "/foo/bar" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	field := &app.model.FileDialog.Fields[0]
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlW, 0, tcell.ModNone))
 	if field.Value != "/foo/" || field.Cursor != 5 {
 		t.Fatalf("after Ctrl+W: value=%q cursor=%d", field.Value, field.Cursor)
 	}
@@ -991,21 +991,21 @@ func TestFileDialogHomeEnd(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileMkdir)
 	for _, r := range "abcdef" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	// cursor should be at 3 now (moved left 3 from 6)
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
 	field := &app.model.FileDialog.Fields[0]
 	if field.Cursor != 6 {
 		t.Fatalf("cursor after End = %d, want 6", field.Cursor)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
 	if field.Cursor != 0 {
 		t.Fatalf("cursor after Home = %d, want 0", field.Cursor)
 	}
@@ -1052,14 +1052,14 @@ func TestRenameDialogSanitizeF2ApplyTransformsName(t *testing.T) {
 	app := newApp(t, screen, dir)
 
 	app.dispatch(keymap.ActionFileRename)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseSanitize {
 		t.Fatalf("phase = %v, want Sanitize", app.model.FileDialog.RenamePhase)
 	}
 	if got, want := app.model.FileDialog.FocusedField, dialog.FileDialogOKFocusIndex(app.model.FileDialog); got != want {
 		t.Fatalf("sanitize open focus = %d, want OK (%d)", got, want)
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 		t.Fatalf("want back on main rename, got phase %v", app.model.FileDialog.RenamePhase)
 	}
@@ -1076,14 +1076,14 @@ func TestRenameDialogSlugifyF3ApplyTransformsName(t *testing.T) {
 	app := newApp(t, screen, dir)
 
 	app.dispatch(keymap.ActionFileRename)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseSlugify {
 		t.Fatalf("phase = %v, want Slugify", app.model.FileDialog.RenamePhase)
 	}
 	if got, want := app.model.FileDialog.FocusedField, dialog.FileDialogOKFocusIndex(app.model.FileDialog); got != want {
 		t.Fatalf("slugify open focus = %d, want OK (%d)", got, want)
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 		t.Fatalf("want back on main rename, got phase %v", app.model.FileDialog.RenamePhase)
 	}
@@ -1129,11 +1129,11 @@ func TestRenameDialogEncodingF4ApplyConvertsLegacyName(t *testing.T) {
 		t.Fatalf("footer missing F4 Encoding: %+v", keys)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseEncoding {
 		t.Fatalf("phase = %v, want Encoding", app.model.FileDialog.RenamePhase)
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 		t.Fatalf("want back on main rename, got phase %v", app.model.FileDialog.RenamePhase)
 	}
@@ -1150,8 +1150,8 @@ func TestRenameDialogSanitizeEscReturnsWithoutApply(t *testing.T) {
 	app := newApp(t, screen, dir)
 
 	app.dispatch(keymap.ActionFileRename)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.FileDialog.RenamePhase != dialog.RenamePhaseMain {
 		t.Fatalf("phase = %v, want Main", app.model.FileDialog.RenamePhase)
 	}
@@ -1174,7 +1174,7 @@ func TestRenameDialogPrefillClearsOnType(t *testing.T) {
 	}
 
 	// First printable should clear prefill.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
 	if field.Value != "n" {
 		t.Fatalf("after first printable: value = %q, want n", field.Value)
 	}
@@ -1198,9 +1198,9 @@ func TestMkdirScrollsToCreatedDirectory(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileMkdir)
 	for _, r := range "zz-new" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	p = app.activePanel()
 	entry, ok := p.CurrentEntry()
@@ -1243,7 +1243,7 @@ func TestRenameDialogPrefillBackspaceCommitsBeforeDelete(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	field := &app.model.FileDialog.Fields[0]
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModNone))
 	if field.PrefillPending {
 		t.Fatal("PrefillPending should be false after backspace")
 	}
@@ -1262,12 +1262,12 @@ func TestRenameDialogCtrlRRestoresClearedPrefill(t *testing.T) {
 	app.dispatch(keymap.ActionFileRename)
 	field := &app.model.FileDialog.Fields[0]
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
 	if field.Value != "" || field.PrefillPending {
 		t.Fatalf("after Ctrl+L: value=%q pending=%v, want empty/false", field.Value, field.PrefillPending)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModNone))
 	if field.Value != "existing.txt" {
 		t.Fatalf("after Ctrl+R: value = %q, want existing.txt", field.Value)
 	}
@@ -1289,12 +1289,12 @@ func TestRenameDialogCtrlDRestoresEditedPrefill(t *testing.T) {
 	app.dispatch(keymap.ActionFileRename)
 	field := &app.model.FileDialog.Fields[0]
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
 	if field.Value == "existing.txt" {
 		t.Fatalf("expected prefill to be replaced after typing 'x'; value=%q", field.Value)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModNone))
 	if field.Value != "existing.txt" {
 		t.Fatalf("after Ctrl+D: value = %q, want existing.txt", field.Value)
 	}
@@ -1317,8 +1317,8 @@ func TestFileDialogExecutesDelete(t *testing.T) {
 	}
 
 	// Default focus is No; move to Yes then Enter confirms delete.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after confirm")
@@ -1344,14 +1344,14 @@ func TestKeybindingDispatcherOpensFileDialogs(t *testing.T) {
 	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogMkdir {
 		t.Fatal("F7 should open mkdir dialog")
 	}
-	app.closeFileDialog()
+	app.dialogCtrl.CloseFileDialog()
 
 	// Test F8 for delete (default global binding).
 	app.handleKey(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
 	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogDelete {
 		t.Fatal("F8 should open delete dialog")
 	}
-	app.closeFileDialog()
+	app.dialogCtrl.CloseFileDialog()
 }
 
 func TestEmptyPanelShowsErrorForFileOperations(t *testing.T) {
@@ -1381,7 +1381,7 @@ func TestFileDialogEnterOnDeleteWithNoItems(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileDelete)
 	// Esc should work.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.FileDialog.Open {
 		t.Fatal("Esc should close delete dialog")
 	}
@@ -1399,7 +1399,7 @@ func TestDeleteDialogEnterDefaultCancelsWithoutDelete(t *testing.T) {
 	if app.model.FileDialog.FocusedField != 1 {
 		t.Fatalf("FocusedField = %d, want 1 (No)", app.model.FileDialog.FocusedField)
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.Open {
 		t.Fatal("Enter on No should close dialog")
 	}
@@ -1437,7 +1437,7 @@ func TestDeleteDialogWarningPluralDirectories(t *testing.T) {
 	if len(app.model.FileDialog.DeleteEntries) != 2 || app.model.FileDialog.DeleteEntries[0].Name != "a" || app.model.FileDialog.DeleteEntries[1].Name != "b" {
 		t.Fatalf("DeleteEntries = %v, want [a b]", app.model.FileDialog.DeleteEntries)
 	}
-	if app.deleteDialogScanFP == "" {
+	if app.dialogCtrl.DeleteDialogScanFP() == "" {
 		t.Fatal("expected delete dialog scan fingerprint after opening")
 	}
 }
@@ -1494,7 +1494,7 @@ func TestDeleteDialogListScrollsWithPageDown(t *testing.T) {
 	if app.model.FileDialog.DeleteListScroll != 0 {
 		t.Fatalf("DeleteListScroll = %d, want 0 on open", app.model.FileDialog.DeleteListScroll)
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyPgDn, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyPgDn, 0, tcell.ModNone))
 	if app.model.FileDialog.DeleteListScroll == 0 {
 		t.Fatal("PgDn should advance DeleteListScroll when list is clipped")
 	}
@@ -1575,7 +1575,7 @@ func TestMkdirDialogExtractCommonNameF7(t *testing.T) {
 	app.activePanel().SelectedPaths = selected
 
 	app.dispatch(keymap.ActionFileMkdir)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone))
 	if got := app.model.FileDialog.Fields[0].Value; got != "some common name" {
 		t.Fatalf("directory name = %q, want %q", got, "some common name")
 	}
@@ -1628,29 +1628,29 @@ func TestMkdirDialogWithSelectionShowsActionRadiosAndNav(t *testing.T) {
 	}
 
 	// Down navigates: field(0) -> radio0(1) -> radio1(2) -> radio2(3) -> OK(4)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if app.model.FileDialog.FocusedField != 1 {
 		t.Fatalf("Down from field: focus = %d, want 1 (first radio)", app.model.FileDialog.FocusedField)
 	}
 	// Space on first radio selects MkdirActionCreate (already default).
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreate {
 		t.Fatalf("MkdirAction = %v, want MkdirActionCreate after Space on first radio", app.model.FileDialog.MkdirAction)
 	}
 	// Move to second radio and select copy.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreateCopySelect {
 		t.Fatalf("MkdirAction = %v, want MkdirActionCreateCopySelect after Space on second radio", app.model.FileDialog.MkdirAction)
 	}
 	// Down past last radio reaches OK button.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if app.model.FileDialog.FocusedField != 4 {
 		t.Fatalf("Down to OK: focus = %d, want 4", app.model.FileDialog.FocusedField)
 	}
 	// Right moves OK -> Cancel.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if app.model.FileDialog.FocusedField != 5 {
 		t.Fatalf("Right OK->Cancel: focus = %d, want 5", app.model.FileDialog.FocusedField)
 	}
@@ -1672,7 +1672,7 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 	}
 
 	alt := tcell.ModAlt
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'y', alt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'y', alt))
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreateCopySelect {
 		t.Fatalf("Alt+y: MkdirAction = %v, want copy", app.model.FileDialog.MkdirAction)
 	}
@@ -1680,7 +1680,7 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 		t.Fatalf("Alt+y: focus = %d, want 2 (copy radio)", app.model.FileDialog.FocusedField)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'm', alt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'm', alt))
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreateMoveSelect {
 		t.Fatalf("Alt+m: MkdirAction = %v, want move", app.model.FileDialog.MkdirAction)
 	}
@@ -1688,7 +1688,7 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 		t.Fatalf("Alt+m: focus = %d, want 3 (move radio)", app.model.FileDialog.FocusedField)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', alt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', alt))
 	if app.model.FileDialog.MkdirAction != dialog.MkdirActionCreate {
 		t.Fatalf("Alt+r: MkdirAction = %v, want create", app.model.FileDialog.MkdirAction)
 	}
@@ -1697,7 +1697,7 @@ func TestMkdirDialogAltShortcutsSelectActionFromInputField(t *testing.T) {
 	}
 
 	// Alt+C cancels the dialog; it must not select the copy radio.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'c', alt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'c', alt))
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog still open after Alt+c; want cancel")
 	}
@@ -1716,20 +1716,20 @@ func TestMkdirDialogRadioRowsRejectTextInput(t *testing.T) {
 	app.dispatch(keymap.ActionFileMkdir)
 	// Type a fresh value then move down to a radio row.
 	for _, r := range "newdir" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-	if !app.fileDialogOnRadio() {
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if !app.dialogCtrl.FileDialogOnRadio() {
 		t.Fatalf("expected focus on a radio row, focus = %d", app.model.FileDialog.FocusedField)
 	}
 	// Typing must not alter the text field while on a radio row.
 	beforeValue := app.model.FileDialog.Fields[0].Value
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'X', tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'X', tcell.ModNone))
 	if app.model.FileDialog.Fields[0].Value != beforeValue {
 		t.Fatalf("text field changed while on radio: %q -> %q", beforeValue, app.model.FileDialog.Fields[0].Value)
 	}
 	// Backspace also must not alter the text field on a radio row.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyBackspace, 0, tcell.ModNone))
 	if app.model.FileDialog.Fields[0].Value != beforeValue {
 		t.Fatalf("text field changed via Backspace on radio: %q -> %q", beforeValue, app.model.FileDialog.Fields[0].Value)
 	}
@@ -1759,9 +1759,9 @@ func TestMkdirOpenInInactiveOpensOtherPanelAfterCreate(t *testing.T) {
 		t.Fatal("MkdirOpenInInactive = false, want true for file.mkdir-open-in-other")
 	}
 	for _, r := range "otherdir" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	wantOther := filepath.Join(dir, "otherdir")
 	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != filepath.Clean(wantOther) {
@@ -1790,10 +1790,10 @@ func TestMkdirActionCreateOnlyDoesNotQueueJob(t *testing.T) {
 	app.dispatch(keymap.ActionFileMkdir)
 	// Type fresh name (first printable clears prefill).
 	for _, r := range "newdir" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	// MkdirActionCreate is the default; confirm without changing the radio.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should close after Enter")
@@ -1822,11 +1822,11 @@ func TestMkdirActionCreateAndCopyQueuesCopyJob(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileMkdir)
 	for _, r := range "newdir" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	// Set MkdirActionCreateCopySelect via the model (focus-independent path).
 	app.model.FileDialog.MkdirAction = dialog.MkdirActionCreateCopySelect
-	app.executeFileDialog()
+	app.dialogCtrl.ExecuteFileDialog()
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should close after execute")
@@ -1868,10 +1868,10 @@ func TestMkdirActionCreateAndMoveQueuesMoveJob(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileMkdir)
 	for _, r := range "newdir" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	app.model.FileDialog.MkdirAction = dialog.MkdirActionCreateMoveSelect
-	app.executeFileDialog()
+	app.dialogCtrl.ExecuteFileDialog()
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should close after execute")

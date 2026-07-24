@@ -24,10 +24,10 @@ func (h commandsHost) SetTransientMessageBanner(log, banner string, urgency ui.M
 
 func (h commandsHost) ClearTransientMessage() { h.app.clearTransientMessage() }
 
-func (h commandsHost) CloseFileDialog() { h.app.closeFileDialog() }
+func (h commandsHost) CloseFileDialog() { h.app.dialogCtrl.CloseFileDialog() }
 
 func (h commandsHost) FocusedFileDialogField() *dialog.FileDialogField {
-	return h.app.focusedField()
+	return h.app.dialogCtrl.FocusedField()
 }
 
 func (h commandsHost) RefreshAfterUserMenuCommand() { h.app.refreshAfterUserMenuCommand() }

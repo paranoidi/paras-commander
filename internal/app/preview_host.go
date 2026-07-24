@@ -88,11 +88,11 @@ func (h previewHost) EditActiveFile() { h.app.editActiveFile() }
 func (h previewHost) EditFullscreenPreviewFile() { h.app.editFullscreenPreviewFile() }
 
 func (h previewHost) OpenDeleteDialogForPreviewedFile() {
-	h.app.openDeleteDialogForPreviewedFile()
+	h.app.dialogCtrl.OpenDeleteDialogForPreviewedFile()
 }
 
 func (h previewHost) HandleFileDialogFieldKey(ev *tcell.EventKey, f *dialog.FileDialogField, afterEdit func()) bool {
-	return h.app.handleFileDialogFieldKey(ev, f, afterEdit)
+	return dialog.HandleFileDialogFieldKey(ev, f, h.app.keys.DialogInput, afterEdit)
 }
 
 func (h previewHost) PersistPartial(patch map[string]interface{}) error {

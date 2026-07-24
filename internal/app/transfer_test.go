@@ -734,7 +734,7 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogSymlink {
 		t.Fatal("symlink dialog should be open")
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlG, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyCtrlG, 0, tcell.ModNone))
 	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != dialog.PathPickerPurposeApplyFileDialogField {
 		t.Fatalf("path picker = open %v purpose %v, want ApplyFileDialogField",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
@@ -834,20 +834,20 @@ func TestDuplicateDialogFocusCheckboxToggle(t *testing.T) {
 	if app.model.FileDialog.RenameFocusAfter {
 		t.Fatal("RenameFocusAfter = true, want false (default)")
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
 	if !app.model.FileDialog.RenameFocusAfter {
 		t.Fatal("Alt+A should toggle focus-after checkbox on")
 	}
 	okIdx := dialog.FileDialogOKFocusIndex(app.model.FileDialog)
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if app.model.FileDialog.FocusedField != 1 {
 		t.Fatalf("Down from field: focus = %d, want 1 (checkbox)", app.model.FileDialog.FocusedField)
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FileDialog.RenameFocusAfter {
 		t.Fatal("Enter on checkbox should toggle focus-after off")
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if app.model.FileDialog.FocusedField != okIdx {
 		t.Fatalf("Down from checkbox: focus = %d, want OK %d", app.model.FileDialog.FocusedField, okIdx)
 	}
@@ -873,10 +873,10 @@ func TestDuplicateWithFocusAfterSelectsAfterJob(t *testing.T) {
 	newName := "99"
 	app.dispatch(keymap.ActionFileDuplicate)
 	for _, r := range newName {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	flushBackgroundJobs(t, app)
 	app.jobsCtrl.ApplyRefreshes()
@@ -921,16 +921,16 @@ func TestDuplicateConfirmsFromOKButtonWithFocusAfter(t *testing.T) {
 	app.dispatch(keymap.ActionFileDuplicate)
 	// Replace the prefilled name.
 	for _, r := range "copy.txt" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	// Enable focus-after, then navigate focus down to the OK button and confirm
 	// from there (the real user flow that used to drop the copy silently).
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
 	okIdx := dialog.FileDialogOKFocusIndex(app.model.FileDialog)
 	for app.model.FileDialog.FocusedField != okIdx {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should close after OK")
@@ -957,9 +957,9 @@ func TestDuplicateQueuesJobWithNewName(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileDuplicate)
 	for _, r := range "beta" {
-		app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	jobsList := app.jobState.AllJobs()
 	if len(jobsList) != 1 {

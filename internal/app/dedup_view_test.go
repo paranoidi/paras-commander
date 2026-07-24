@@ -971,7 +971,7 @@ func TestDedupViewMarkAndDelete(t *testing.T) {
 	// Confirming (Yes) deletes directly: the other duplicate (b.txt) still lives
 	// in dir, so the delete leaves no directory empty and the cleanup
 	// confirmation must not appear.
-	app.executeDelete()
+	app.dialogCtrl.ExecuteDelete()
 	if app.deleteDialogOpen() {
 		t.Fatal("delete dialog not closed after confirm")
 	}
@@ -1019,7 +1019,7 @@ func TestDedupViewEmptyDirsConfirmDefaultsYesAndRemoves(t *testing.T) {
 			if !app.deleteDialogOpen() {
 				t.Fatal("delete key did not open the delete dialog")
 			}
-			app.executeDelete()
+			app.dialogCtrl.ExecuteDelete()
 			if !app.model.DedupEmptyDirsConfirm.Open {
 				t.Fatal("empty-dirs confirm dialog did not open")
 			}

@@ -3,7 +3,7 @@ package app
 import (
 	"strings"
 
-	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -37,8 +37,8 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		return
 	}
 
-	byPath := entriesByPath(p)
-	need := directoriesNeedingScan(
+	byPath := p.EntriesByPath()
+	need := diskusage.DirectoriesNeedingScan(
 		p.PrunedSelectionRoots(),
 		byPath,
 		p.ListingDevice,
@@ -62,44 +62,6 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		panelID,
 		listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints),
 	)
-}
-
-func directoriesNeedingScan(
-	pruned []string,
-	byPath map[string]localfs.Entry,
-	listingDev uint64,
-	listingDevValid bool,
-	du interface {
-		ByteSize(absPath string) (int64, bool)
-		DiskScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore func(string) bool) bool
-	},
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
-) []string {
-	if du == nil || len(pruned) == 0 {
-		return nil
-	}
-	var need []string
-	for _, path := range pruned {
-		entry, found := byPath[path]
-		if !found {
-			var err error
-			entry, err = localfs.EntryFromPath(path)
-			if err != nil || entry.Type != localfs.EntryDirectory {
-				continue
-			}
-		} else if entry.Type != localfs.EntryDirectory {
-			continue
-		}
-		if _, ok := du.ByteSize(path); ok {
-			continue
-		}
-		if du.DiskScanExcluded(path, descendIntoMountPoints, listingDev, listingDevValid, goduIgnore) {
-			continue
-		}
-		need = append(need, path)
-	}
-	return need
 }
 
 func directoriesNeedingScanFromPathIsDir(

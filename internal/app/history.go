@@ -204,7 +204,7 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			}
 		}
 	}
-	if a.tryStandardDialogActions(event, a.activateHistorySelection, a.closeHistoryDialog, nil) {
+	if dialog.TryStandardDialogActions(event, a.activateHistorySelection, a.closeHistoryDialog, nil) {
 		return
 	}
 

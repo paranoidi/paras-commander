@@ -38,20 +38,20 @@ func (a *App) openExtractDialog(p *panel.State) {
 		Message:        msg,
 		ExtractSources: append([]string(nil), paths...),
 	}
-	a.syncFocusedFileDialogPathFieldCompletion()
+	a.dialogCtrl.SyncFocusedFileDialogPathFieldCompletion()
 	a.clearTransientMessage()
 }
 
 func (a *App) executeExtract() {
 	fd := a.model.FileDialog
-	field := a.focusedField()
+	field := a.dialogCtrl.FocusedField()
 	if field == nil {
-		a.closeFileDialog()
+		a.dialogCtrl.CloseFileDialog()
 		return
 	}
 	dest := strings.TrimSpace(field.Value)
 	sources := append([]string(nil), fd.ExtractSources...)
-	a.closeFileDialog()
+	a.dialogCtrl.CloseFileDialog()
 	if len(sources) == 0 {
 		a.setTransientMessage("No archives to extract", ui.MessageUrgencyWarn)
 		return

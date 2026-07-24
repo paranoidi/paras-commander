@@ -136,7 +136,7 @@ func sftpConnectNavFocus(form dialog.DialogLinearForm, focus int, key tcell.Key,
 }
 
 func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
-	if a.tryStandardDialogActions(event, a.executeSFTPConnectDialog, a.closeSFTPConnectDialog, nil) {
+	if dialog.TryStandardDialogActions(event, a.executeSFTPConnectDialog, a.closeSFTPConnectDialog, nil) {
 		return
 	}
 
@@ -152,7 +152,7 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 			return
 		}
 	}
-	if st.Focus == 1 && a.handleFileDialogFieldKey(event, &st.Location, nil) {
+	if st.Focus == 1 && dialog.HandleFileDialogFieldKey(event, &st.Location, a.keys.DialogInput, nil) {
 		return
 	}
 

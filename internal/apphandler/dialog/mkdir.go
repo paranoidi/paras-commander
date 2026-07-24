@@ -1,4 +1,4 @@
-package app
+package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
@@ -9,45 +9,47 @@ import (
 
 // tryMkdirDialogShortcut handles [dialog.mkdir] while the mkdir dialog is open.
 // Returns true when the event was consumed.
-func (a *App) tryMkdirDialogShortcut(ev *tcell.EventKey) bool {
-	if a.keys.MkdirDialog == nil {
+func (h *Handler) tryMkdirDialogShortcut(ev *tcell.EventKey) bool {
+	if h.keysMkdirDialog == nil {
 		return false
 	}
-	d := &a.model.FileDialog
+	d := &h.model.FileDialog
 	if !d.Open || d.DialogType != dialog.FileDialogMkdir {
 		return false
 	}
-	id, ok := a.keys.MkdirDialog.Lookup(ev)
+	id, ok := h.keysMkdirDialog.Lookup(ev)
 	if !ok {
 		return false
 	}
 	switch id {
 	case keymap.ActionFileMkdirExtractCommonName:
-		return a.applyMkdirExtractCommonName()
+		return h.applyMkdirExtractCommonName()
 	default:
 		return false
 	}
 }
 
-func (a *App) mkdirDialogExtractFooterEligible() bool {
-	if a.keys.MkdirDialog == nil {
+// MkdirDialogExtractFooterEligible reports whether the footer should show the "Extract common
+// name" shortcut hint.
+func (h *Handler) MkdirDialogExtractFooterEligible() bool {
+	if h.keysMkdirDialog == nil {
 		return false
 	}
-	d := &a.model.FileDialog
+	d := &h.model.FileDialog
 	if !d.Open || d.DialogType != dialog.FileDialogMkdir {
 		return false
 	}
-	if len(a.activePanel().SelectedPaths) < 2 {
+	if len(h.host.ActivePanel().SelectedPaths) < 2 {
 		return false
 	}
-	return a.keys.MkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName) != ""
+	return h.keysMkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName) != ""
 }
 
-func (a *App) applyMkdirExtractCommonName() bool {
-	p := a.activePanel()
+func (h *Handler) applyMkdirExtractCommonName() bool {
+	p := h.host.ActivePanel()
 	source, err := ops.ResolveSource(p)
 	if err != nil || len(source.Entries) < 2 {
-		a.setErrorMessage("Mkdir", ops.SourceError("select at least two entries to extract a common name"))
+		h.host.SetErrorMessage("Mkdir", ops.SourceError("select at least two entries to extract a common name"))
 		return true
 	}
 	names := make([]string, len(source.Entries))
@@ -56,10 +58,10 @@ func (a *App) applyMkdirExtractCommonName() bool {
 	}
 	extracted := dialog.ExtractLongestCommonName(names)
 	if extracted == "" {
-		a.setErrorMessage("Mkdir", ops.SourceError("no common name found in selection"))
+		h.host.SetErrorMessage("Mkdir", ops.SourceError("no common name found in selection"))
 		return true
 	}
-	d := &a.model.FileDialog
+	d := &h.model.FileDialog
 	if len(d.Fields) < 1 {
 		return true
 	}

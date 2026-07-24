@@ -110,32 +110,32 @@ func (a *App) addBookmarkDialogInputField() *dialog.FileDialogField {
 func (a *App) executeAddBookmark() {
 	field := a.addBookmarkDialogInputField()
 	if field == nil {
-		a.closeFileDialog()
+		a.dialogCtrl.CloseFileDialog()
 		return
 	}
 	name := strings.TrimSpace(field.Value)
 	path := strings.TrimSpace(a.model.FileDialog.Message)
 	if name == "" {
 		a.setErrorMessage("Add bookmark", fmt.Errorf("name is required"))
-		a.closeFileDialog()
+		a.dialogCtrl.CloseFileDialog()
 		return
 	}
 	if path == "" {
 		a.setErrorMessage("Add bookmark", fmt.Errorf("missing target path"))
-		a.closeFileDialog()
+		a.dialogCtrl.CloseFileDialog()
 		return
 	}
 	marksPath, err := bookmarks.ResolveFile(a.config.Bookmarks.File, a.model.UserHomeDir)
 	if err != nil {
 		a.setErrorMessage("Add bookmark", err)
-		a.closeFileDialog()
+		a.dialogCtrl.CloseFileDialog()
 		return
 	}
 	if err := bookmarks.Append(marksPath, bookmarks.Mark{Name: name, Path: path}); err != nil {
 		a.setErrorMessage("Add bookmark", err)
-		a.closeFileDialog()
+		a.dialogCtrl.CloseFileDialog()
 		return
 	}
-	a.closeFileDialog()
+	a.dialogCtrl.CloseFileDialog()
 	a.setTransientMessage(fmt.Sprintf("Bookmark added: %s → %s", name, marksPath), ui.MessageUrgencyInfo)
 }

@@ -202,7 +202,7 @@ func (a *App) handlePathPickerKey(event *tcell.EventKey) {
 	if a.tryBookmarkDialogShortcut(event) {
 		return
 	}
-	if a.tryStandardDialogActions(event, a.activatePathPickerSelection, a.closePathPicker, nil) {
+	if dialog.TryStandardDialogActions(event, a.activatePathPickerSelection, a.closePathPicker, nil) {
 		return
 	}
 

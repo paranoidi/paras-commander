@@ -1,4 +1,4 @@
-package app
+package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
@@ -8,15 +8,15 @@ import (
 
 // tryRenameDialogShortcut handles [dialog.rename] while the main
 // rename dialog (name field) is active. Returns true when the event was consumed.
-func (a *App) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
-	if a.keys.RenameDialog == nil {
+func (h *Handler) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
+	if h.keysRenameDialog == nil {
 		return false
 	}
-	d := &a.model.FileDialog
+	d := &h.model.FileDialog
 	if !d.Open || !dialog.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != dialog.RenamePhaseMain {
 		return false
 	}
-	id, ok := a.keys.RenameDialog.Lookup(ev)
+	id, ok := h.keysRenameDialog.Lookup(ev)
 	if !ok {
 		return false
 	}
@@ -47,36 +47,40 @@ func (a *App) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
 	}
 }
 
-func (a *App) renameDialogFooterEligible() bool {
-	if a.keys.RenameDialog == nil {
+// RenameDialogFooterEligible reports whether the footer should show the rename dialog's
+// tool-shortcut hints (Sanitize/Slugify/Encoding).
+func (h *Handler) RenameDialogFooterEligible() bool {
+	if h.keysRenameDialog == nil {
 		return false
 	}
-	d := &a.model.FileDialog
+	d := &h.model.FileDialog
 	if !d.Open || !dialog.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != dialog.RenamePhaseMain {
 		return false
 	}
-	return a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize) != "" ||
-		a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify) != "" ||
-		(len(d.RenameEncodingCandidates) > 0 && a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != "")
+	return h.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize) != "" ||
+		h.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify) != "" ||
+		(len(d.RenameEncodingCandidates) > 0 && h.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != "")
 }
 
-func (a *App) renameEncodingFooterEligible() bool {
-	d := &a.model.FileDialog
+// RenameEncodingFooterEligible reports whether the footer should show the Encoding tool
+// shortcut specifically (a subset of RenameDialogFooterEligible's conditions).
+func (h *Handler) RenameEncodingFooterEligible() bool {
+	d := &h.model.FileDialog
 	return d.Open && dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase == dialog.RenamePhaseMain &&
-		len(d.RenameEncodingCandidates) > 0 && a.keys.RenameDialog != nil &&
-		a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != ""
+		len(d.RenameEncodingCandidates) > 0 && h.keysRenameDialog != nil &&
+		h.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != ""
 }
 
-func (a *App) closeRenameToolPhase() {
-	d := &a.model.FileDialog
+func (h *Handler) closeRenameToolPhase() {
+	d := &h.model.FileDialog
 	d.RenamePhase = dialog.RenamePhaseMain
 	d.FocusedField = 0
 }
 
-func (a *App) applyRenameToolAndReturnMain() {
-	d := &a.model.FileDialog
+func (h *Handler) applyRenameToolAndReturnMain() {
+	d := &h.model.FileDialog
 	if len(d.Fields) < 1 {
-		a.closeRenameToolPhase()
+		h.closeRenameToolPhase()
 		return
 	}
 	f := &d.Fields[0]
@@ -88,7 +92,7 @@ func (a *App) applyRenameToolAndReturnMain() {
 	case dialog.RenamePhaseEncoding:
 		idx := d.RenameEncodingSelected
 		if idx < 0 || idx >= len(d.RenameEncodingCandidates) {
-			a.closeRenameToolPhase()
+			h.closeRenameToolPhase()
 			return
 		}
 		f.Value = d.RenameEncodingCandidates[idx].UTF8
@@ -99,8 +103,8 @@ func (a *App) applyRenameToolAndReturnMain() {
 	d.FocusedField = 0
 }
 
-func (a *App) selectRenameEncodingAtFocus() {
-	d := &a.model.FileDialog
+func (h *Handler) selectRenameEncodingAtFocus() {
+	d := &h.model.FileDialog
 	if d.FocusedField < 0 || d.FocusedField >= len(d.RenameEncodingCandidates) {
 		return
 	}

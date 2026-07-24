@@ -7,7 +7,7 @@ import (
 )
 
 func (a *App) handleLinearFormDialogKey(ev *tcell.EventKey, form dialog.DialogLinearForm, h dialogform.Handlers) bool {
-	if a.tryStandardDialogActions(ev, h.OnApply, h.OnCancel, nil) {
+	if dialog.TryStandardDialogActions(ev, h.OnApply, h.OnCancel, nil) {
 		return true
 	}
 	return dialogform.HandleKey(ev, form, h)

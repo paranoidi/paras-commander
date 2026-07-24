@@ -86,6 +86,21 @@ func MassRenamePreviewViewportRows(layoutHeight int, mode MassRenameModeUI) int 
 	return maxBody
 }
 
+// MassRenameFindFieldFocus is FocusedField for the Find / Pattern input (0-2 are mode radios).
+const MassRenameFindFieldFocus = 3
+
+// MassRenameModeRadioFocus returns the FocusedField index of the radio for mode.
+func MassRenameModeRadioFocus(mode MassRenameModeUI) int {
+	switch mode {
+	case MassRenameModeUIRegex:
+		return 1
+	case MassRenameModeUIExternalEditor:
+		return 2
+	default:
+		return 0
+	}
+}
+
 // MassRenameShowModifiedFocusIdx returns the FocusedField index of the "Show only modified" checkbox.
 func MassRenameShowModifiedFocusIdx(state FileDialogState) int {
 	if state.MassRenameMode == MassRenameModeUIExternalEditor {

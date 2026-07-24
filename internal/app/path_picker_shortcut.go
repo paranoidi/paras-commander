@@ -8,10 +8,10 @@ import (
 
 func (a *App) pathPickerHostFooterEligible() bool {
 	if a.model.FileDialog.Open {
-		if a.fileDialogOnButton() {
+		if a.dialogCtrl.FileDialogOnButton() {
 			return false
 		}
-		f := a.focusedField()
+		f := a.dialogCtrl.FocusedField()
 		return f != nil && f.PathPicker
 	}
 	if a.model.TransferDialog.Open &&
@@ -36,10 +36,10 @@ func (a *App) tryPathPickerHostShortcut(ev *tcell.EventKey) bool {
 		return false
 	}
 	if a.model.FileDialog.Open {
-		if a.fileDialogOnButton() {
+		if a.dialogCtrl.FileDialogOnButton() {
 			return false
 		}
-		f := a.focusedField()
+		f := a.dialogCtrl.FocusedField()
 		if f == nil || !f.PathPicker {
 			return false
 		}

@@ -15,6 +15,7 @@ import (
 	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
 	comparectrl "github.com/paranoidi/paras-commander/internal/apphandler/compare"
 	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
+	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
@@ -102,6 +103,7 @@ type App struct {
 	compareCtrl     *comparectrl.Handler
 	dedupCtrl       *dedupctrl.Handler
 	previewCtrl     *previewctrl.Handler
+	dialogCtrl      *dialogctrl.Handler
 	jobStopCh       chan struct{}
 	jobStopOnce     bool
 	diskUsage       *diskusage.Engine
@@ -120,12 +122,6 @@ type App struct {
 	// selectionSizeScanGen / selectionSizeScanPath skip reconcile work when selection-derived input is unchanged.
 	selectionSizeScanGen  [2]uint64
 	selectionSizeScanPath [2]string
-	// deleteDialogScanFP is the last enqueued directory set fingerprint for the delete confirmation dialog.
-	deleteDialogScanFP string
-	// deleteDialogSelGen / deleteDialogPanelPath / deleteDialogPrunedPaths skip ResolveSource while the delete dialog is open.
-	deleteDialogSelGen      uint64
-	deleteDialogPanelPath   string
-	deleteDialogPrunedPaths []string
 	// findDialogSelectionScanFP is the last enqueued directory set fingerprint for find-dialog selection-size scans.
 	findDialogSelectionScanFP string
 	// findDialogSelectionScanGen skips reconcile work when marked-selection derived input is unchanged.
@@ -180,8 +176,6 @@ type App struct {
 
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool
-	// duplicateFocus defers SelectVisibleEntryCentered until a queued duplicate job creates the entry.
-	duplicateFocus duplicateFocusPending
 
 	sftpMu                 sync.Mutex
 	sftpHostKeyWait        *sftpHostKeyWait
@@ -513,6 +507,19 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Mu:              &app.commandsMu,
 		Ctx:             app.commandsCtx,
 	})
+	app.dialogCtrl = dialogctrl.New(dialogctrl.Deps{
+		Host:             dialogHost{appShellHost: appShellHost{app: app}},
+		Screen:           screen,
+		Model:            &app.model,
+		KeysRenameDialog: keys.RenameDialog,
+		KeysMkdirDialog:  keys.MkdirDialog,
+		KeysDialogInput:  keys.DialogInput,
+		Jobs:             app.jobsCtrl,
+		Commands:         app.commandsCtrl,
+		Preview:          app.previewCtrl,
+		DiskUsage:        app.diskUsage,
+		DiskUsageIgnore:  duIgnorer,
+	})
 	if err := app.configureSFTP(); err != nil {
 		app.stopWorker()
 		return nil, fmt.Errorf("configure sftp: %w", err)
@@ -731,7 +738,7 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 	case diskUsageRedrawPayload:
 		out.pollDiskUsageAfter = false
 		a.resortPanelsDiskUsageSorted()
-		a.refreshDeleteDialogSummary()
+		a.dialogCtrl.RefreshDeleteDialogSummary()
 		if a.model.FindDialog.Open {
 			a.model.FindDialog.InvalidateMarkedSelectionSizeLabel()
 			a.renderFindDialogUpdate()

@@ -175,12 +175,12 @@ func (a *App) finishSFTPPassword(password string) {
 
 func (a *App) executeSFTPPassword() {
 	if len(a.model.FileDialog.Fields) == 0 {
-		a.closeFileDialog()
+		a.dialogCtrl.CloseFileDialog()
 		a.finishSFTPPassword("")
 		return
 	}
 	pw := a.model.FileDialog.Fields[0].Value
-	a.closeFileDialog()
+	a.dialogCtrl.CloseFileDialog()
 	a.finishSFTPPassword(pw)
 }
 

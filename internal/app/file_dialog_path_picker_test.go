@@ -39,7 +39,7 @@ func TestSymlinkDialogRightAtEndFocusesPathPickerGlyph(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionFileSymlink)
-	f := app.focusedField()
+	f := app.dialogCtrl.FocusedField()
 	if f == nil || !f.PathPicker {
 		t.Fatal("symlink target field should have PathPicker enabled")
 	}
@@ -47,13 +47,13 @@ func TestSymlinkDialogRightAtEndFocusesPathPickerGlyph(t *testing.T) {
 		t.Fatal("picker glyph should not be focused initially")
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if !f.PickerFocused {
 		t.Fatal("Right at end should focus path-picker glyph")
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if f.PickerFocused {
 		t.Fatal("Left from glyph should return focus to text")
 	}
@@ -91,7 +91,7 @@ func TestSymlinkDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionFileSymlink)
-	f := app.focusedField()
+	f := app.dialogCtrl.FocusedField()
 	if f == nil {
 		t.Fatal("symlink target field missing")
 	}
@@ -104,7 +104,7 @@ func TestSymlinkDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 		t.Fatalf("suffix = %q want oo", f.CompletionSuffix)
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
 	want := filepath.Join(root, "foo") + "/"
 	if f.Value != want {
 		t.Fatalf("Value = %q want %q", f.Value, want)
@@ -149,14 +149,14 @@ func TestSymlinkDialogOpensPathPickerFromGlyph(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionFileSymlink)
-	f := app.focusedField()
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	f := app.dialogCtrl.FocusedField()
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if !f.PickerFocused {
 		t.Fatal("picker glyph should be focused")
 	}
 
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != dialog.PathPickerPurposeApplyFileDialogField {
 		t.Fatalf("path picker = open %v purpose %v, want ApplyFileDialogField",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)

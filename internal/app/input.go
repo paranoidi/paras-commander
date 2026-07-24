@@ -2,7 +2,6 @@ package app
 
 import (
 	"strings"
-	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -221,12 +220,12 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Bookmarks"}}, rest...)
 		}
 	}
-	if a.mkdirDialogExtractFooterEligible() {
+	if a.dialogCtrl.MkdirDialogExtractFooterEligible() {
 		if lbl := a.keys.MkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName); lbl != "" {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF7, KeyLabel: lbl, Hint: "Extract common name"}}, rest...)
 		}
 	}
-	if a.dialogInputRestoreFooterEligible() {
+	if a.dialogCtrl.DialogInputRestoreFooterEligible() {
 		if lbl := a.keys.DialogInput.MenuBindingLabel(keymap.ActionDialogInputRestoreDefault); lbl != "" {
 			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Default"}}, rest...)
 		}
@@ -234,8 +233,8 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	if a.massRenameEditorFooterEligible() {
 		rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Editor"}}, rest...)
 	}
-	if a.renameDialogFooterEligible() {
-		if a.renameEncodingFooterEligible() {
+	if a.dialogCtrl.RenameDialogFooterEligible() {
+		if a.dialogCtrl.RenameEncodingFooterEligible() {
 			if lbl := a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding); lbl != "" {
 				rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: lbl, Hint: "Encoding"}}, rest...)
 			}
@@ -494,12 +493,12 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return false, true
 	case InputModeFileDialog:
-		before := a.fileDialogRect()
-		quit := a.handleFileDialogKey(event)
+		before := a.dialogCtrl.FileDialogRect()
+		quit := a.dialogCtrl.HandleFileDialogKey(event)
 		// Overlay-repaint only the dialog rect when the dialog stayed open, no sub-modal
 		// opened (a path picker flips inputMode away), and the geometry is unchanged.
 		// Anything else (open/close, phase/mode switch, geometry change) needs a full render.
-		if a.model.FileDialog.Open && a.inputMode() == InputModeFileDialog && a.fileDialogRect() == before {
+		if a.model.FileDialog.Open && a.inputMode() == InputModeFileDialog && a.dialogCtrl.FileDialogRect() == before {
 			if !a.paintFileDialogOverlay() {
 				a.render()
 			}
@@ -628,7 +627,7 @@ func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string
 	case tcell.KeyUp, tcell.KeyDown, tcell.KeyInsert:
 		return true
 	}
-	if isPlainPrintableRune(event) {
+	if keymap.IsPlainPrintableRune(event) {
 		return resolvedAction == ""
 	}
 	f := a.activePanel().Filter
@@ -669,7 +668,7 @@ func (a *App) finishResolvedKeyboardAction(nextAction string) (quit bool, render
 
 // shouldStartFilter reports whether a plain printable rune should start the quick filter.
 func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
-	if !isPlainPrintableRune(event) {
+	if !keymap.IsPlainPrintableRune(event) {
 		return false
 	}
 	if _, ok := a.keys.Global.Lookup(event); ok {
@@ -684,7 +683,7 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 
 func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {
 	f := a.activePanel().Filter
-	if isPlainPrintableRune(event) {
+	if keymap.IsPlainPrintableRune(event) {
 		if _, ok := a.keys.Global.Lookup(event); ok {
 			return false
 		}
@@ -779,7 +778,7 @@ func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchPanelLayout(actionID) {
 		return false
 	}
-	if a.tryDispatchFileOps(actionID) {
+	if a.dialogCtrl.TryDispatchFileOps(actionID) {
 		return false
 	}
 	if a.previewCtrl.TryDispatchFileView(actionID) {
@@ -896,7 +895,7 @@ func (a *App) handleFilterKey(event *tcell.EventKey) {
 	case tcell.KeyCtrlL:
 		activePanel.ClearFilter(viewportRows)
 	case tcell.KeyRune:
-		if isPlainPrintableRune(event) {
+		if keymap.IsPlainPrintableRune(event) {
 			activePanel.AppendFilterRune(event.Rune(), viewportRows)
 		}
 	}
@@ -944,10 +943,6 @@ func (a *App) handleSelectionsStripKey(event *tcell.EventKey) bool {
 	default:
 		return false
 	}
-}
-
-func isPlainPrintableRune(event *tcell.EventKey) bool {
-	return event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && unicode.IsPrint(event.Rune())
 }
 
 func (a *App) inQuickFilterUI() bool {

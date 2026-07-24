@@ -135,7 +135,7 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 	if a.tryFlattenToggle(event) {
 		return
 	}
-	if a.tryStandardDialogActions(event, a.confirmFlatten, a.closeFlattenDialog, nil) {
+	if dialog.TryStandardDialogActions(event, a.confirmFlatten, a.closeFlattenDialog, nil) {
 		return
 	}
 	if event.Key() == tcell.KeyEsc {
@@ -194,7 +194,7 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 }
 
 func (a *App) editFlattenFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {
-	return a.handleFileDialogFieldKey(event, f, func() {
+	return dialog.HandleFileDialogFieldKey(event, f, a.keys.DialogInput, func() {
 		a.syncPathFieldCompletion(f, a.transferDestinationTextWidth())
 	})
 }

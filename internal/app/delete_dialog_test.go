@@ -13,13 +13,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func TestDeleteDialogDescendIntoMountPoints(t *testing.T) {
-	t.Parallel()
-	if !deleteDialogDescendIntoMountPoints {
-		t.Fatal("delete dialog must scan across mount points (Samba, etc.)")
-	}
-}
-
 func TestDeleteDialogSummaryRefreshesAfterDiskScanFlush(t *testing.T) {
 	root := t.TempDir()
 	sub := filepath.Join(root, "payload")
@@ -41,11 +34,11 @@ func TestDeleteDialogSummaryRefreshesAfterDiskScanFlush(t *testing.T) {
 	app.model.FileDialog = dialog.FileDialogState{
 		Open:          true,
 		DialogType:    dialog.FileDialogDelete,
-		DeleteSummary: app.deleteDialogSummary(p, source),
+		DeleteSummary: app.dialogCtrl.DeleteDialogSummary(p, source),
 		FocusedField:  1,
 	}
 
-	app.deleteDialogScanFP = ""
+	app.dialogCtrl.ClearDeleteDialogReconcileCache()
 	app.diskUsage.StartScanFromListing([]string{sub}, app.diskUsageIgnore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
@@ -99,7 +92,7 @@ func TestDeleteDialogSummaryRefreshesWhenScanNoLongerNeeded(t *testing.T) {
 		DeleteSummary: "0 files (0 B) stale",
 		FocusedField:  1,
 	}
-	app.reconcileDeleteDialogScans()
+	app.dialogCtrl.ReconcileDeleteDialogScans()
 	if got := app.model.FileDialog.DeleteSummary; got == "0 files (0 B) stale" {
 		t.Fatalf("reconcile should refresh summary from cache, still %q", got)
 	}
@@ -149,7 +142,7 @@ func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{sub: true}
-	app.openDeleteDialog(p)
+	app.dialogCtrl.OpenDeleteDialog(p)
 
 	if strings.HasPrefix(app.model.FileDialog.DeleteSummary, "2 files") {
 		t.Fatalf("summary = %q; should not trust stale cache after files moved out", app.model.FileDialog.DeleteSummary)
@@ -158,7 +151,7 @@ func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
 	deadline = time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
-		app.reconcileDeleteDialogScans()
+		app.dialogCtrl.ReconcileDeleteDialogScans()
 		if !app.diskUsageScanBusy() {
 			if n, ok := app.diskUsage.FileCount(sub); ok && n == 0 {
 				break

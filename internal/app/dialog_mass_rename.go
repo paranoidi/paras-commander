@@ -16,9 +16,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// massRenameFindFieldFocus is FocusedField for the Find / Pattern input (0–2 are mode radios).
-const massRenameFindFieldFocus = 3
-
 func (a *App) openMassRenameDialog(p *panel.State) {
 	src, err := ops.ResolveSource(p)
 	if err != nil {
@@ -46,7 +43,7 @@ func (a *App) openMassRenameDialog(p *panel.State) {
 		Open:                       true,
 		DialogType:                 dialog.FileDialogMassRename,
 		Fields:                     fields,
-		FocusedField:               massRenameFindFieldFocus,
+		FocusedField:               dialog.MassRenameFindFieldFocus,
 		MassRenameMode:             dialog.MassRenameModeUISimple,
 		MassRenameCaseFold:         true,
 		MassRenameStripSpaces:      true,
@@ -236,18 +233,6 @@ func (a *App) recomputeMassRenameExternalEditorPreview() {
 	dialog.MassRenameEnsurePreviewScroll(d, vp, len(before))
 }
 
-// massRenameModeRadioFocus returns the FocusedField index of the radio for mode.
-func massRenameModeRadioFocus(mode dialog.MassRenameModeUI) int {
-	switch mode {
-	case dialog.MassRenameModeUIRegex:
-		return 1
-	case dialog.MassRenameModeUIExternalEditor:
-		return 2
-	default:
-		return 0
-	}
-}
-
 func (a *App) applyMassRenameModeFromFocus() {
 	d := &a.model.FileDialog
 	prev := d.MassRenameMode
@@ -273,7 +258,7 @@ func (a *App) massRenameClampFocusAfterModeChange(prev dialog.MassRenameModeUI) 
 	}
 	if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor {
 		switch d.FocusedField {
-		case massRenameFindFieldFocus, massRenameFindFieldFocus + 1, 7:
+		case dialog.MassRenameFindFieldFocus, dialog.MassRenameFindFieldFocus + 1, 7:
 			d.FocusedField = 3 // show-modified in External
 		case 5:
 			d.FocusedField = 3
@@ -391,7 +376,7 @@ func (a *App) executeMassRename() {
 		return
 	}
 	if len(d.MassRenameSources) == 0 {
-		a.closeFileDialog()
+		a.dialogCtrl.CloseFileDialog()
 		return
 	}
 	rows, err := a.massRenameComputeRows(d)
@@ -409,7 +394,7 @@ func (a *App) executeMassRename() {
 	}
 	if err := ops.ExecuteMassRename(rows); err != nil {
 		a.setErrorMessage("Mass rename failed", err)
-		a.closeFileDialog()
+		a.dialogCtrl.CloseFileDialog()
 		return
 	}
 	n := 0
@@ -421,8 +406,8 @@ func (a *App) executeMassRename() {
 		}
 	}
 	panelDir := a.activePanel().Path
-	a.closeFileDialog()
-	a.refreshBothPanels()
+	a.dialogCtrl.CloseFileDialog()
+	a.dialogCtrl.RefreshBothPanels()
 	a.activePanel().AddRenameMarks(panelDir, renamedNames)
 	a.activePanel().ClearSelection()
 	a.setTransientMessage(fmt.Sprintf("Renamed %d file(s)", n), ui.MessageUrgencyInfo)

@@ -291,7 +291,7 @@ func (a *App) toggleSyncFollow() {
 func (a *App) reconcileAfterEvent() {
 	a.reconcileSelectionSizeScans(ui.PrimaryPanel)
 	a.reconcileSelectionSizeScans(ui.SecondaryPanel)
-	a.reconcileDeleteDialogScans()
+	a.dialogCtrl.ReconcileDeleteDialogScans()
 	a.reconcileFindDialogSelectionSizeScans()
 	a.handlePanelDirChanged(ui.PrimaryPanel)
 	a.handlePanelDirChanged(ui.SecondaryPanel)

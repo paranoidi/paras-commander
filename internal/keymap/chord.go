@@ -28,6 +28,13 @@ func AltLetterModifiers(m tcell.ModMask) bool {
 	return NormalizeAltMeta(m) == tcell.ModAlt
 }
 
+// IsPlainPrintableRune reports whether ev is a printable rune with no modifiers (used to
+// distinguish plain Space/letter presses, e.g. a checkbox space-toggle, from Alt+space or
+// Ctrl+space chords, which never reach this check).
+func IsPlainPrintableRune(event *tcell.EventKey) bool {
+	return event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && unicode.IsPrint(event.Rune())
+}
+
 // EventChord returns a normalized chord representation of ev for reverse-map keys.
 func EventChord(ev *tcell.EventKey) Chord {
 	if ev == nil {

@@ -17,7 +17,7 @@ func (h jobsHost) SetUnsupportedMessage(msg string) {
 	h.app.setUnsupportedMessage(msg)
 }
 
-func (h jobsHost) RefreshBothPanels() { h.app.refreshBothPanels() }
+func (h jobsHost) RefreshBothPanels() { h.app.dialogCtrl.RefreshBothPanels() }
 
 func (h jobsHost) RequestBothPanelsVolumeSpaceRefreshAsync() {
 	h.app.requestBothPanelsVolumeSpaceRefreshAsync()
@@ -43,4 +43,6 @@ func (h jobsHost) SetJobFailedTransientMessage(err error, fallback string) {
 
 func (h jobsHost) DevMode() bool { return h.app.devMode }
 
-func (h jobsHost) PromptDanglingDirDelete(dirs []string) { h.app.promptDanglingDirDelete(dirs) }
+func (h jobsHost) PromptDanglingDirDelete(dirs []string) {
+	h.app.dialogCtrl.PromptDanglingDirDelete(dirs)
+}

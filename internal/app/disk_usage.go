@@ -61,7 +61,7 @@ drained:
 	if flushNow {
 		a.stopDiskUsageRedrawDebounce()
 		a.resortPanelsDiskUsageSorted()
-		a.refreshDeleteDialogSummary()
+		a.dialogCtrl.RefreshDeleteDialogSummary()
 		if a.model.FindDialog.Open {
 			a.model.FindDialog.InvalidateMarkedSelectionSizeLabel()
 			a.renderFindDialogUpdate()

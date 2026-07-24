@@ -17,6 +17,17 @@ func (s *State) rebuildListingByPath() {
 	}
 }
 
+// EntriesByPath returns a lookup map from absolute path to Entry for the panel's currently
+// listed entries, for callers that need to resolve several paths against the listing (delete
+// confirmation and selection-size disk-usage scan reconciliation).
+func (s *State) EntriesByPath() map[string]localfs.Entry {
+	byPath := make(map[string]localfs.Entry, len(s.Entries))
+	for _, e := range s.Entries {
+		byPath[e.Path] = e
+	}
+	return byPath
+}
+
 func (s *State) listingEntry(path string) (localfs.Entry, bool) {
 	if s.listingByPath == nil {
 		return localfs.Entry{}, false

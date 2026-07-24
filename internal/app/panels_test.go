@@ -25,7 +25,7 @@ func TestRefreshBothPanelsInactiveWalksUpWhenDirectoryDeleted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app.refreshBothPanels()
+	app.dialogCtrl.RefreshBothPanels()
 
 	want := filepath.Clean(parent)
 	if got := app.inactivePanel().PathString(); got != want {
@@ -53,7 +53,7 @@ func TestRefreshBothPanelsActiveWalksUpWhenDirectoryDeleted(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	app.refreshBothPanels()
+	app.dialogCtrl.RefreshBothPanels()
 
 	want := filepath.Clean(parent)
 	if got := app.activePanel().PathString(); got != want {
@@ -89,7 +89,7 @@ func TestQuickViewUpdatesAfterDeletedDirectoryRefresh(t *testing.T) {
 	if err := os.RemoveAll(alpha); err != nil {
 		t.Fatal(err)
 	}
-	app.refreshBothPanels()
+	app.dialogCtrl.RefreshBothPanels()
 
 	if !app.model.QuickViewDirOverlayActive {
 		t.Fatal("quick view overlay should stay active after delete refresh")

@@ -458,8 +458,8 @@ func TestF8DeletesOnlyPreviewedFileKeepingPanelSelection(t *testing.T) {
 	}
 
 	// Default focus is No; move to Yes then Enter confirms delete.
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
-	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FileDialog.Open {
 		t.Fatal("dialog should be closed after confirm")
