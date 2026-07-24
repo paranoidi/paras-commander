@@ -68,6 +68,32 @@ type diskIdleSortPanel struct {
 	epoch uint64
 }
 
+// diskUsageState groups the disk-usage engine and its scan/idle-sort bookkeeping.
+type diskUsageState struct {
+	engine *diskusage.Engine
+	ignore diskusage.ShouldIgnoreFolder
+	// scanToastArmed is set when a user-initiated disk usage scan starts and cleared
+	// after the "scan finished" toast fires. Selection-size background scans do not set it, so
+	// their EventJobFinished completions never trigger the toast even when DiskUsageShown is true.
+	scanToastArmed bool
+	idleSort       [2]diskIdleSortPanel // indexed by ui.PrimaryPanel / ui.SecondaryPanel (0/1)
+	// idleNavPath records last reconciled panel cwd so idle-sort debounce survives benign reconcile but resets on chdir.
+	idleNavPath [2]string
+	redrawTimer *time.Timer
+	// deferPoll skips one pollDiskUsageUpdates drain after partial file-list nav while a scan is busy.
+	deferPoll atomic.Bool
+}
+
+// sftpState groups SFTP connection-prompt state (host-key/password waiters) and the
+// SFTP connect dialog's target panel and host list.
+type sftpState struct {
+	mu                 sync.Mutex
+	hostKeyWait        *sftpHostKeyWait
+	passwordWait       *sftpPasswordWait
+	connectTargetPanel int
+	connectHosts       []sshconfig.HostEntry
+}
+
 // syncFollowNavFlushPayload applies latched panel sync after file-list cursor debounce elapses.
 type syncFollowNavFlushPayload struct {
 	gen uint64
@@ -100,17 +126,9 @@ type App struct {
 	dialogCtrl      *dialogctrl.Handler
 	jobStopCh       chan struct{}
 	jobStopOnce     bool
-	diskUsage       *diskusage.Engine
-	diskUsageIgnore diskusage.ShouldIgnoreFolder
+	disk            diskUsageState
 	gitignoreCache  *gitignore.Cache
 	gitStatusCache  *gitstatus.Cache
-	// diskUsageScanToastArmed is set when a user-initiated disk usage scan starts and cleared
-	// after the "scan finished" toast fires. Selection-size background scans do not set it, so
-	// their EventJobFinished completions never trigger the toast even when DiskUsageShown is true.
-	diskUsageScanToastArmed bool
-	diskIdleSort            [2]diskIdleSortPanel // indexed by ui.PrimaryPanel / ui.SecondaryPanel (0/1)
-	// diskIdleNavPath records last reconciled panel cwd so idle-sort debounce survives benign reconcile but resets on chdir.
-	diskIdleNavPath [2]string
 	// selectionSizeScanFP is the last enqueued directory set fingerprint per panel for selection-size scans.
 	selectionSizeScanFP [2]string
 	// selectionSizeScanGen / selectionSizeScanPath skip reconcile work when selection-derived input is unchanged.
@@ -122,11 +140,8 @@ type App struct {
 	findDialogSelectionScanGen uint64
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
-	messageExpiryGen     atomic.Uint64
-	spinnerRedrawTimer   *time.Timer
-	diskUsageRedrawTimer *time.Timer
-	// deferDiskUsagePoll skips one pollDiskUsageUpdates drain after partial file-list nav while a scan is busy.
-	deferDiskUsagePoll atomic.Bool
+	messageExpiryGen   atomic.Uint64
+	spinnerRedrawTimer *time.Timer
 	// syncFollowNavGen invalidates in-flight debounce callbacks for latched panel sync (file-list cursor).
 	syncFollowNavGen atomic.Uint64
 	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent
@@ -169,11 +184,7 @@ type App struct {
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool
 
-	sftpMu                 sync.Mutex
-	sftpHostKeyWait        *sftpHostKeyWait
-	sftpPasswordWait       *sftpPasswordWait
-	sftpConnectTargetPanel int
-	sftpConnectHosts       []sshconfig.HostEntry
+	sftp sftpState
 
 	remotePanelLoadGen  [2]atomic.Uint64
 	gitStatusLoadGen    [2]atomic.Uint64
@@ -408,10 +419,12 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		jobState:  jobState,
 		jobStopCh: make(chan struct{}),
 
-		diskUsage:       duEngine,
-		diskUsageIgnore: duIgnorer,
-		gitignoreCache:  giCache,
-		gitStatusCache:  gitstatus.NewCache(),
+		disk: diskUsageState{
+			engine: duEngine,
+			ignore: duIgnorer,
+		},
+		gitignoreCache: giCache,
+		gitStatusCache: gitstatus.NewCache(),
 	}
 	// OnDirectoryChange hooks are intentionally left unset: derived UI invariants
 	// (panel sync, disk-usage idle-sort arming) are reconciled centrally in
@@ -514,7 +527,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Commands:           app.commandsCtrl,
 		Preview:            app.previewCtrl,
 		Dedup:              app.dedupCtrl,
-		DiskUsage:          app.diskUsage,
+		DiskUsage:          app.disk.engine,
 		DiskUsageIgnore:    duIgnorer,
 	})
 	if err := app.configureSFTP(); err != nil {
@@ -971,7 +984,7 @@ func (a *App) Run() error {
 		// spinnerTickPayload arriving after scan completion leaves EventJobFinished
 		// unread in the engine channel, so maybeScheduleIdleDiskSortBothPanels()
 		// is never called and the idle-sort timer is never armed.
-		if !a.deferDiskUsagePoll.Swap(false) {
+		if !a.disk.deferPoll.Swap(false) {
 			a.pollDiskUsageUpdates()
 		}
 	}

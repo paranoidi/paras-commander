@@ -28,9 +28,9 @@ func TestPromptSFTPHostKeyWaitsForDialog(t *testing.T) {
 	}()
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
-		app.sftpMu.Lock()
-		waiting := app.sftpHostKeyWait != nil
-		app.sftpMu.Unlock()
+		app.sftp.mu.Lock()
+		waiting := app.sftp.hostKeyWait != nil
+		app.sftp.mu.Unlock()
 		if waiting {
 			app.finishHostKeyDialog(sftpb.HostKeyReject)
 			break

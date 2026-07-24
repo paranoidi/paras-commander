@@ -9,7 +9,7 @@ import (
 
 // reconcileSelectionSizeScans enqueues disk-usage walks for selected directories missing cache entries.
 func (a *App) reconcileSelectionSizeScans(panelID int) {
-	if a.diskUsage == nil || a.model.ViewMode != ui.ViewBrowser {
+	if a.disk.engine == nil || a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
 	p := a.panelByID(panelID)
@@ -43,9 +43,9 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		byPath,
 		p.ListingDevice,
 		p.ListingDeviceValid,
-		a.diskUsage,
+		a.disk.engine,
 		a.config.DiskUsage.DescendIntoMountPoints,
-		a.diskUsageIgnore,
+		a.disk.ignore,
 	)
 	fp := strings.Join(need, "\n")
 	if fp == "" {
@@ -56,9 +56,9 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 		return
 	}
 	a.selectionSizeScanFP[panelID] = fp
-	a.diskUsage.StartScanFromListing(
+	a.disk.engine.StartScanFromListing(
 		need,
-		a.diskUsageIgnore,
+		a.disk.ignore,
 		panelID,
 		listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints),
 	)

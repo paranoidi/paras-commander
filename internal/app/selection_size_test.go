@@ -24,7 +24,7 @@ func TestReconcileSelectionSizeScansIdempotentFingerprint(t *testing.T) {
 
 	app := testAppMinimal(t)
 	app.model.ViewMode = ui.ViewBrowser
-	app.diskUsage = diskusage.New()
+	app.disk.engine = diskusage.New()
 	app.model.Primary = panel.State{
 		Path:    pathloc.MustParse(dir),
 		Entries: []localfs.Entry{{Name: "subdir", Path: sub, Type: localfs.EntryDirectory}},

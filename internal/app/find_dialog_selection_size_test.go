@@ -25,7 +25,7 @@ func TestReconcileFindDialogSelectionSizeScansEarlyExitOnUnchangedGen(t *testing
 				},
 			},
 		},
-		diskUsage: diskusage.New(),
+		disk: diskUsageState{engine: diskusage.New()},
 	}
 	st := &app.model.FindDialog
 	st.InvalidateMarkedSelectionDerived()

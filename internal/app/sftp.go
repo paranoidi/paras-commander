@@ -98,9 +98,9 @@ func (a *App) applySFTPConnect(payload sftpConnectPayload) {
 func (a *App) promptSFTPHostKey(ctx context.Context, p sftpb.HostKeyPrompt) (sftpb.HostKeyDecision, error) {
 	_ = ctx // interactive approval is not cancelled by SSH dial context (may be nil from host key callback)
 	reply := make(chan sftpb.HostKeyDecision, 1)
-	a.sftpMu.Lock()
-	a.sftpHostKeyWait = &sftpHostKeyWait{prompt: p, reply: reply}
-	a.sftpMu.Unlock()
+	a.sftp.mu.Lock()
+	a.sftp.hostKeyWait = &sftpHostKeyWait{prompt: p, reply: reply}
+	a.sftp.mu.Unlock()
 	_ = a.screen.PostEvent(tcell.NewEventInterrupt(sftpHostKeyOpenPayload{prompt: p}))
 	d := <-reply
 	return d, nil
@@ -109,9 +109,9 @@ func (a *App) promptSFTPHostKey(ctx context.Context, p sftpb.HostKeyPrompt) (sft
 func (a *App) promptSFTPPassword(ctx context.Context, p sftpb.PasswordPrompt) (string, error) {
 	_ = ctx // same as host key: wait for user input on the main thread
 	reply := make(chan string, 1)
-	a.sftpMu.Lock()
-	a.sftpPasswordWait = &sftpPasswordWait{prompt: p, reply: reply}
-	a.sftpMu.Unlock()
+	a.sftp.mu.Lock()
+	a.sftp.passwordWait = &sftpPasswordWait{prompt: p, reply: reply}
+	a.sftp.mu.Unlock()
 	_ = a.screen.PostEvent(tcell.NewEventInterrupt(sftpPasswordOpenPayload{prompt: p}))
 	return <-reply, nil
 }
@@ -139,10 +139,10 @@ func (a *App) closeHostKeyDialog() {
 }
 
 func (a *App) finishHostKeyDialog(decision sftpb.HostKeyDecision) {
-	a.sftpMu.Lock()
-	wait := a.sftpHostKeyWait
-	a.sftpHostKeyWait = nil
-	a.sftpMu.Unlock()
+	a.sftp.mu.Lock()
+	wait := a.sftp.hostKeyWait
+	a.sftp.hostKeyWait = nil
+	a.sftp.mu.Unlock()
 	a.closeHostKeyDialog()
 	if wait != nil {
 		wait.reply <- decision
@@ -164,10 +164,10 @@ func (a *App) openSFTPPasswordDialog(p sftpb.PasswordPrompt) {
 }
 
 func (a *App) finishSFTPPassword(password string) {
-	a.sftpMu.Lock()
-	wait := a.sftpPasswordWait
-	a.sftpPasswordWait = nil
-	a.sftpMu.Unlock()
+	a.sftp.mu.Lock()
+	wait := a.sftp.passwordWait
+	a.sftp.passwordWait = nil
+	a.sftp.mu.Unlock()
 	if wait != nil {
 		wait.reply <- password
 	}

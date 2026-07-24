@@ -21,7 +21,7 @@ func (a *App) paintFindDialogOverlay() bool {
 	if layout.TooSmall {
 		return false
 	}
-	ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.ShowFileIcons, a.model.DiskUsage, a.config.DiskUsage.DescendIntoMountPoints, a.diskUsageIgnore)
+	ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.ShowFileIcons, a.model.DiskUsage, a.config.DiskUsage.DescendIntoMountPoints, a.disk.ignore)
 	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true
@@ -101,7 +101,7 @@ func (a *App) renderBrowserListNavUpdate() {
 	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
 	a.emitScreenAfterPartialPaint()
 	if a.diskUsageScanBusy() {
-		a.deferDiskUsagePoll.Store(true)
+		a.disk.deferPoll.Store(true)
 	}
 }
 
@@ -154,7 +154,7 @@ func (a *App) render() {
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
 	a.model.FooterKeys = a.activeFooterKeys()
 	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsage.DescendIntoMountPoints
-	a.model.DiskUsageGoduIgnore = a.diskUsageIgnore
+	a.model.DiskUsageGoduIgnore = a.disk.ignore
 	a.previewCtrl.SnapshotPreviewDrawStates()
 	previewOpen := a.model.FilePreviewDraw.Open || a.model.QuickViewDisplayActive()
 	if a.model.ViewMode == ui.ViewFilePreview {

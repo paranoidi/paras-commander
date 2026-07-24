@@ -165,7 +165,7 @@ func TestFindDialogHandleKeyAltDDoesNotClearDiskUsage(t *testing.T) {
 	if !app.model.DiskUsageShown {
 		t.Fatal("expected disk usage to be shown after scan")
 	}
-	if _, ok := app.diskUsage.Size(scanned); !ok {
+	if _, ok := app.disk.engine.Size(scanned); !ok {
 		t.Fatal("expected cached size for scanned directory")
 	}
 
@@ -186,7 +186,7 @@ func TestFindDialogHandleKeyAltDDoesNotClearDiskUsage(t *testing.T) {
 	if !app.model.DiskUsageShown {
 		t.Fatal("disk usage should remain shown after Find Alt+D")
 	}
-	if _, ok := app.diskUsage.Size(scanned); !ok {
+	if _, ok := app.disk.engine.Size(scanned); !ok {
 		t.Fatal("disk usage cache should not be cleared by Find Alt+D")
 	}
 	if app.model.Message == "Disk usage data cleared" {

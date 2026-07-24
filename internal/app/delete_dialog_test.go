@@ -39,23 +39,23 @@ func TestDeleteDialogSummaryRefreshesAfterDiskScanFlush(t *testing.T) {
 	}
 
 	app.dialogCtrl.ClearDeleteDialogReconcileCache()
-	app.diskUsage.StartScanFromListing([]string{sub}, app.diskUsageIgnore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
+	app.disk.engine.StartScanFromListing([]string{sub}, app.disk.ignore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() {
-			if _, ok := app.diskUsage.ByteSize(sub); ok {
+			if _, ok := app.disk.engine.ByteSize(sub); ok {
 				break
 			}
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
-	if _, ok := app.diskUsage.ByteSize(sub); !ok {
+	if _, ok := app.disk.engine.ByteSize(sub); !ok {
 		t.Fatal("disk usage cache never indexed delete target")
 	}
 
 	summary := app.model.FileDialog.DeleteSummary
-	if n, _ := app.diskUsage.FileCount(sub); n >= 2 {
+	if n, _ := app.disk.engine.FileCount(sub); n >= 2 {
 		if strings.HasPrefix(summary, "0 files") {
 			t.Fatalf("summary = %q after scan flush; cache has %d files", summary, n)
 		}
@@ -72,12 +72,12 @@ func TestDeleteDialogSummaryRefreshesWhenScanNoLongerNeeded(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.diskUsage.StartScanFromListing([]string{sub}, app.diskUsageIgnore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
+	app.disk.engine.StartScanFromListing([]string{sub}, app.disk.ignore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() {
-			if _, ok := app.diskUsage.ByteSize(sub); ok {
+			if _, ok := app.disk.engine.ByteSize(sub); ok {
 				break
 			}
 		}
@@ -111,18 +111,18 @@ func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
 
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	app.diskUsage.StartScanFromListing([]string{sub}, app.diskUsageIgnore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
+	app.disk.engine.StartScanFromListing([]string{sub}, app.disk.ignore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() {
-			if n, ok := app.diskUsage.FileCount(sub); ok && n >= 2 {
+			if n, ok := app.disk.engine.FileCount(sub); ok && n >= 2 {
 				break
 			}
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
-	if n, ok := app.diskUsage.FileCount(sub); !ok || n < 2 {
+	if n, ok := app.disk.engine.FileCount(sub); !ok || n < 2 {
 		t.Fatalf("expected cached file count >= 2, got ok=%v n=%d", ok, n)
 	}
 
@@ -136,7 +136,7 @@ func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
 	if err := os.Rename(f2, filepath.Join(dest, "two.dat")); err != nil {
 		t.Fatal(err)
 	}
-	if n, _ := app.diskUsage.FileCount(sub); n < 2 {
+	if n, _ := app.disk.engine.FileCount(sub); n < 2 {
 		t.Fatalf("precondition: cache should still report stale count, got %d", n)
 	}
 
@@ -153,7 +153,7 @@ func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
 		app.pollDiskUsageUpdates()
 		app.dialogCtrl.ReconcileDeleteDialogScans()
 		if !app.diskUsageScanBusy() {
-			if n, ok := app.diskUsage.FileCount(sub); ok && n == 0 {
+			if n, ok := app.disk.engine.FileCount(sub); ok && n == 0 {
 				break
 			}
 		}

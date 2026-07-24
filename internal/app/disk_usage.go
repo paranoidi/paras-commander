@@ -20,14 +20,14 @@ func listingVolumeGateForScan(p *panel.State, descendIntoMountPoints bool) disku
 }
 
 func (a *App) pollDiskUsageUpdates() {
-	if a.diskUsage == nil {
+	if a.disk.engine == nil {
 		return
 	}
 	needRender := false
 	jobFinishedToast := false
 	for {
 		select {
-		case ev := <-a.diskUsage.Events():
+		case ev := <-a.disk.engine.Events():
 			switch ev.Kind {
 			case diskusage.EventSubtreeIndexed:
 				a.maybeScheduleIdleDiskSortBothPanels()
@@ -38,7 +38,7 @@ func (a *App) pollDiskUsageUpdates() {
 				jobFinishedToast = true
 				needRender = true
 			}
-		case <-a.diskUsage.Updates():
+		case <-a.disk.engine.Updates():
 			needRender = true
 		default:
 			goto drained
@@ -48,8 +48,8 @@ drained:
 	// Only user-initiated scans (startDiskUsageScanForPanel) arm the toast flag.
 	// Selection-size background scans do not set it, so their EventJobFinished completions
 	// never show the toast even when DiskUsageShown is true.
-	if jobFinishedToast && a.diskUsageScanToastArmed {
-		a.diskUsageScanToastArmed = false
+	if jobFinishedToast && a.disk.scanToastArmed {
+		a.disk.scanToastArmed = false
 		a.setTransientMessage("Disk usage scan finished", ui.MessageUrgencyInfo)
 	}
 	if !needRender {
@@ -156,7 +156,7 @@ func (a *App) applyIdleDiskSort(panelID int, epoch uint64) {
 	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
-	ps := &a.diskIdleSort[panelID]
+	ps := &a.disk.idleSort[panelID]
 	if ps.epoch != epoch {
 		return
 	}
@@ -179,7 +179,7 @@ func (a *App) armIdleDiskSortTimer(panelID int) {
 	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
-	ps := &a.diskIdleSort[panelID]
+	ps := &a.disk.idleSort[panelID]
 	if ps.timer != nil {
 		ps.timer.Stop()
 		ps.timer = nil
@@ -208,7 +208,7 @@ func (a *App) invalidateIdleDiskSortPanel(panelID int) {
 	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
 		return
 	}
-	ps := &a.diskIdleSort[panelID]
+	ps := &a.disk.idleSort[panelID]
 	if ps.timer != nil {
 		ps.timer.Stop()
 		ps.timer = nil
@@ -237,25 +237,25 @@ func (a *App) startDiskUsageScan() {
 }
 
 func (a *App) abortAllDiskUsageScans() {
-	if a.diskUsage == nil {
+	if a.disk.engine == nil {
 		return
 	}
 	if !a.diskUsageScanBusy() {
 		a.setTransientMessage("No disk usage scan in progress", ui.MessageUrgencyInfo)
 		return
 	}
-	a.diskUsage.Abort()
+	a.disk.engine.Abort()
 	a.invalidateIdleDiskSortBothPanels()
 	a.setTransientMessage("Disk usage scans aborted", ui.MessageUrgencyInfo)
 	a.pollDiskUsageUpdates()
 }
 
 func (a *App) clearAllDiskUsageData() {
-	if a.diskUsage == nil {
+	if a.disk.engine == nil {
 		return
 	}
 	a.stopDiskUsageRedrawDebounce()
-	a.diskUsage.ClearCache()
+	a.disk.engine.ClearCache()
 	a.setDiskUsageShown(false)
 	a.model.DiskUsagePanelID = ui.PrimaryPanel
 	a.setDiskUsageScanScope("", nil)
@@ -272,7 +272,7 @@ func (a *App) clearAllDiskUsageData() {
 }
 
 func (a *App) startDiskUsageScanForPanel(panelID int) {
-	if a.diskUsage == nil || a.diskUsageIgnore == nil {
+	if a.disk.engine == nil || a.disk.ignore == nil {
 		return
 	}
 	if a.model.ViewMode != ui.ViewBrowser {
@@ -293,11 +293,11 @@ func (a *App) startDiskUsageScanForPanel(panelID int) {
 
 	a.setDiskUsageScanScope(p.PathString(), childPaths)
 
-	a.diskUsage.StartScanFromListing(childPaths, a.diskUsageIgnore, panelID, listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints))
+	a.disk.engine.StartScanFromListing(childPaths, a.disk.ignore, panelID, listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints))
 	a.setDiskUsageShown(true)
-	a.diskUsageScanToastArmed = true
+	a.disk.scanToastArmed = true
 	a.model.DiskUsagePanelID = panelID
-	a.model.DiskUsage = a.diskUsage
+	a.model.DiskUsage = a.disk.engine
 	a.setTransientMessage("Disk usage scan started ("+filepath.Clean(p.PathString())+")", ui.MessageUrgencyInfo)
 }
 
@@ -336,21 +336,21 @@ func (a *App) armSpinnerRedrawTimer() {
 }
 
 func (a *App) stopDiskUsageRedrawDebounce() {
-	if a.diskUsageRedrawTimer == nil {
+	if a.disk.redrawTimer == nil {
 		return
 	}
-	a.diskUsageRedrawTimer.Stop()
-	a.diskUsageRedrawTimer = nil
+	a.disk.redrawTimer.Stop()
+	a.disk.redrawTimer = nil
 }
 
 func (a *App) scheduleDiskUsageRedrawDebounced() {
-	if a.diskUsageRedrawTimer != nil {
+	if a.disk.redrawTimer != nil {
 		return
 	}
 	const debounce = 75 * time.Millisecond
-	a.diskUsageRedrawTimer = time.AfterFunc(debounce, func() {
-		a.diskUsageRedrawTimer = nil
-		if a.diskUsage == nil {
+	a.disk.redrawTimer = time.AfterFunc(debounce, func() {
+		a.disk.redrawTimer = nil
+		if a.disk.engine == nil {
 			return
 		}
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(diskUsageRedrawPayload{}))
@@ -372,9 +372,9 @@ func (a *App) handlePanelDirChanged(panelID int) {
 		return
 	}
 	cur := filepath.Clean(p.PathString())
-	if a.diskIdleNavPath[panelID] != cur {
+	if a.disk.idleNavPath[panelID] != cur {
 		a.invalidateIdleDiskSortPanel(panelID)
-		a.diskIdleNavPath[panelID] = cur
+		a.disk.idleNavPath[panelID] = cur
 	}
 	if !a.model.DiskUsageShown {
 		return

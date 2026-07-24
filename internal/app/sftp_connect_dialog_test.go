@@ -48,11 +48,11 @@ func TestSFTPConnectDialogFilterSelectsHost(t *testing.T) {
 		t.Fatal("expected fuzzy matches for alpha")
 	}
 	idx := app.model.SFTPConnectDialog.Ranked[0]
-	if idx < 0 || idx >= len(app.sftpConnectHosts) {
+	if idx < 0 || idx >= len(app.sftp.connectHosts) {
 		t.Fatalf("ranked index out of range: %d", idx)
 	}
-	if app.sftpConnectHosts[idx].Alias != "alpha-server" {
-		t.Fatalf("selected host alias = %q, want alpha-server", app.sftpConnectHosts[idx].Alias)
+	if app.sftp.connectHosts[idx].Alias != "alpha-server" {
+		t.Fatalf("selected host alias = %q, want alpha-server", app.sftp.connectHosts[idx].Alias)
 	}
 
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {

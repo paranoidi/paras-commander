@@ -23,11 +23,11 @@ func (a *App) loadSSHConfig() sshconfig.Config {
 }
 
 func (a *App) openSFTPConnectDialogForPanel(panelID int) {
-	a.sftpConnectTargetPanel = panelID
+	a.sftp.connectTargetPanel = panelID
 	sshCfg := a.loadSSHConfig()
-	a.sftpConnectHosts = append([]sshconfig.HostEntry(nil), sshCfg.Entries...)
+	a.sftp.connectHosts = append([]sshconfig.HostEntry(nil), sshCfg.Entries...)
 
-	display := sshconfig.FormatHostListLines(a.sftpConnectHosts)
+	display := sshconfig.FormatHostListLines(a.sftp.connectHosts)
 
 	prefill := "sftp://"
 	a.model.SFTPConnectDialog = dialog.SFTPConnectDialogState{
@@ -55,7 +55,7 @@ func (a *App) openSFTPConnectDialogForPanel(panelID int) {
 
 func (a *App) closeSFTPConnectDialog() {
 	a.model.SFTPConnectDialog = dialog.SFTPConnectDialogState{}
-	a.sftpConnectHosts = nil
+	a.sftp.connectHosts = nil
 }
 
 func (a *App) syncSFTPConnectDialogRanks() {
@@ -88,10 +88,10 @@ func (a *App) applySFTPConnectHostToLocation() {
 		return
 	}
 	idx := st.Ranked[st.Selected]
-	if idx < 0 || idx >= len(a.sftpConnectHosts) {
+	if idx < 0 || idx >= len(a.sftp.connectHosts) {
 		return
 	}
-	uri, err := a.sftpConnectHosts[idx].BuildSFTPURI("")
+	uri, err := a.sftp.connectHosts[idx].BuildSFTPURI("")
 	if err != nil {
 		a.setErrorMessage("SFTP", err)
 		return

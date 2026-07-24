@@ -39,7 +39,7 @@ func (h findHost) FindDialogScrollingQuery(st *dialog.FindDialogState, width int
 
 func (h findHost) FindDialogQueryWidth() int { return h.app.findDialogQueryWidth() }
 
-func (h findHost) DiskUsageIgnore() diskusage.ShouldIgnoreFolder { return h.app.diskUsageIgnore }
+func (h findHost) DiskUsageIgnore() diskusage.ShouldIgnoreFolder { return h.app.disk.ignore }
 
 func (h findHost) GitignoreCache() *gitignore.Cache { return h.app.gitignoreCache }
 
