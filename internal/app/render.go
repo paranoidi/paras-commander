@@ -74,7 +74,7 @@ func (a *App) browserListNavPartialRenderEligible() bool {
 	if a.model.SyncFollowEnabled && !a.syncFollowNavSkipReconcile.Load() {
 		return false
 	}
-	if a.model.QuickViewEnabled && a.model.QuickViewDisplayActive() && !a.quickViewNavSkipReconcile.Load() {
+	if a.model.QuickViewEnabled && a.model.QuickViewDisplayActive() && !a.previewCtrl.QuickViewNavSkipReconcile() {
 		return false
 	}
 	return true
@@ -83,7 +83,7 @@ func (a *App) browserListNavPartialRenderEligible() bool {
 // renderBrowserListNavUpdate repaints the active file-list column and menu-bar permission tail
 // without redrawing the inactive panel (avoids disk-usage row work on the other column during scans).
 func (a *App) renderBrowserListNavUpdate() {
-	a.syncCarouselChildPreviewCoalesceFlags()
+	a.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 	a.syncCursorNameHintNavCoalesceFlags()
 	a.model.MenuBarPermission = a.menuBarPermissionText()
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
@@ -134,7 +134,7 @@ func (a *App) deleteDialogOpen() bool {
 
 func (a *App) render() {
 	a.stopDiskUsageRedrawDebounce()
-	a.syncCarouselChildPreviewCoalesceFlags()
+	a.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 	a.syncCursorNameHintNavCoalesceFlags()
 	a.model.PanelZoomActivePercent = a.config.UI.Zoom.ActivePercent
 	a.model.PanelZoomInactivePercent = a.config.UI.Zoom.InactivePercent
@@ -155,10 +155,10 @@ func (a *App) render() {
 	a.model.FooterKeys = a.activeFooterKeys()
 	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsage.DescendIntoMountPoints
 	a.model.DiskUsageGoduIgnore = a.diskUsageIgnore
-	a.snapshotPreviewDrawStates()
+	a.previewCtrl.SnapshotPreviewDrawStates()
 	previewOpen := a.model.FilePreviewDraw.Open || a.model.QuickViewDisplayActive()
 	if a.model.ViewMode == ui.ViewFilePreview {
-		a.clampFullscreenFilePreviewScroll()
+		a.previewCtrl.ClampFullscreenFilePreviewScroll()
 	}
 	w, h := a.screen.Size()
 	a.model.SplitOrientation = a.effectivePaneSplitOrientation()
@@ -316,7 +316,7 @@ func (a *App) carouselAutohideInactivePanel() bool {
 }
 
 func (a *App) layoutForTerminalSize(width, height int) ui.Layout {
-	return a.layoutForTerminalSizePreview(width, height, a.filePreviewOpen() || a.model.QuickViewDisplayActive())
+	return a.layoutForTerminalSizePreview(width, height, a.previewCtrl.FilePreviewOpen() || a.model.QuickViewDisplayActive())
 }
 
 // effectiveZoomActivePanel returns the saved zoom preference plus optional session-only override

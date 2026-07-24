@@ -1,4 +1,4 @@
-package app
+package preview
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
-	"github.com/paranoidi/paras-commander/internal/preview"
+	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -18,47 +18,48 @@ import (
 // toggleFilePreviewRawMarkdown flips the fullscreen preview of a markdown file between
 // rendered markdown and raw Chroma-highlighted source. No-op for non-markdown files and
 // while showing a git diff (IsDiff), per file.view.toggle-raw.
-func (a *App) toggleFilePreviewRawMarkdown() {
-	a.commandsMu.RLock()
-	st := a.model.FullscreenFilePreview
-	a.commandsMu.RUnlock()
-	if !st.Open || st.Path == "" || st.IsDiff || !preview.IsMarkdownPath(st.Path) {
+func (h *Handler) toggleFilePreviewRawMarkdown() {
+	h.mu.RLock()
+	st := h.model.FullscreenFilePreview
+	h.mu.RUnlock()
+	if !st.Open || st.Path == "" || st.IsDiff || !previewrun.IsMarkdownPath(st.Path) {
 		return
 	}
-	a.model.FullscreenFilePreviewRawMarkdown = !a.model.FullscreenFilePreviewRawMarkdown
-	a.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) {
+	h.model.FullscreenFilePreviewRawMarkdown = !h.model.FullscreenFilePreviewRawMarkdown
+	h.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) {
 		fp.Scroll = 0
 	})
-	a.refreshFullscreenFilePreview()
-	a.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) {
+	h.refreshFullscreenFilePreview()
+	h.patchFullscreenFilePreview(func(fp *ui.FilePreviewState) {
 		if fp.Search.Active {
 			fp.RecomputeSearch()
 		}
 	})
 }
 
-func (a *App) closeFilePreviewFullscreen() {
-	a.commandsMu.Lock()
-	a.model.FullscreenFilePreview = ui.FilePreviewState{}
-	a.model.FullscreenFilePreviewSearchField = dialog.FileDialogField{}
-	a.commandsMu.Unlock()
-	a.closeFilePreviewThemePicker(false)
-	a.clearFilePreviewHold(previewTargetFullscreen)
-	a.model.ViewMode = ui.ViewBrowser
-	a.model.MenuDefinitions = a.browserMenuDefinitions()
-	a.model.Menu.ActiveMenu = menu.DefaultIndex()
+// CloseFilePreviewFullscreen exits the F3 fullscreen preview view back to the browser.
+func (h *Handler) CloseFilePreviewFullscreen() {
+	h.mu.Lock()
+	h.model.FullscreenFilePreview = ui.FilePreviewState{}
+	h.model.FullscreenFilePreviewSearchField = dialog.FileDialogField{}
+	h.mu.Unlock()
+	h.closeFilePreviewThemePicker(false)
+	h.clearFilePreviewHold(previewTargetFullscreen)
+	h.model.ViewMode = ui.ViewBrowser
+	h.model.MenuDefinitions = h.host.BrowserMenuDefinitions()
+	h.model.Menu.ActiveMenu = menu.DefaultIndex()
 }
 
-func (a *App) fullscreenFilePreviewScrollMetrics() (textW, contentH, lineCount int) {
-	tw, ch, layOK := a.fullscreenFilePreviewLayoutMetrics()
+func (h *Handler) fullscreenFilePreviewScrollMetrics() (textW, contentH, lineCount int) {
+	tw, ch, layOK := h.fullscreenFilePreviewLayoutMetrics()
 	if !layOK {
 		return tw, ch, 0
 	}
 	textW, contentH = tw, ch
-	a.commandsMu.RLock()
-	ph := a.model.FullscreenFilePreview.Phase
-	em := a.model.FullscreenFilePreview.ErrorMsg
-	a.commandsMu.RUnlock()
+	h.mu.RLock()
+	ph := h.model.FullscreenFilePreview.Phase
+	em := h.model.FullscreenFilePreview.ErrorMsg
+	h.mu.RUnlock()
 	switch ph {
 	case ui.FilePreviewPhasePending, ui.FilePreviewPhaseRunning:
 		lineCount = 1
@@ -67,7 +68,7 @@ func (a *App) fullscreenFilePreviewScrollMetrics() (textW, contentH, lineCount i
 			lineCount = 1
 			break
 		}
-		lineCount = a.fullscreenFilePreviewLineCount(textW)
+		lineCount = h.fullscreenFilePreviewLineCount(textW)
 		if lineCount < 1 {
 			lineCount = 1
 		}
@@ -77,19 +78,21 @@ func (a *App) fullscreenFilePreviewScrollMetrics() (textW, contentH, lineCount i
 	return textW, contentH, lineCount
 }
 
-func (a *App) clampFullscreenFilePreviewScroll() {
-	a.commandsMu.RLock()
-	ph := a.model.FullscreenFilePreview.Phase
-	a.commandsMu.RUnlock()
+// ClampFullscreenFilePreviewScroll clamps the F3 fullscreen preview scroll to the valid range,
+// e.g. after a resize changes the visible content height. No-op while content is (re)rendering.
+func (h *Handler) ClampFullscreenFilePreviewScroll() {
+	h.mu.RLock()
+	ph := h.model.FullscreenFilePreview.Phase
+	h.mu.RUnlock()
 	if ph == ui.FilePreviewPhasePending || ph == ui.FilePreviewPhaseRunning {
 		// Content is being (re)rendered (e.g. theme switch in progress) and its
 		// line count is a placeholder — clamping now would zero a valid scroll
 		// position before the real content lands.
 		return
 	}
-	_, ch, lc := a.fullscreenFilePreviewScrollMetrics()
+	_, ch, lc := h.fullscreenFilePreviewScrollMetrics()
 	maxStart := max(0, lc-ch)
-	a.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+	h.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
 		if st.Scroll < 0 {
 			st.Scroll = 0
 		}
@@ -99,10 +102,10 @@ func (a *App) clampFullscreenFilePreviewScroll() {
 	})
 }
 
-func (a *App) fullscreenPreviewScrollBy(delta int) {
-	_, ch, lc := a.fullscreenFilePreviewScrollMetrics()
+func (h *Handler) fullscreenPreviewScrollBy(delta int) {
+	_, ch, lc := h.fullscreenFilePreviewScrollMetrics()
 	maxStart := max(0, lc-ch)
-	a.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+	h.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
 		st.Scroll += delta
 		if st.Scroll < 0 {
 			st.Scroll = 0
@@ -113,10 +116,10 @@ func (a *App) fullscreenPreviewScrollBy(delta int) {
 	})
 }
 
-func (a *App) fullscreenPreviewScrollTo(scroll int) {
-	_, ch, lc := a.fullscreenFilePreviewScrollMetrics()
+func (h *Handler) fullscreenPreviewScrollTo(scroll int) {
+	_, ch, lc := h.fullscreenFilePreviewScrollMetrics()
 	maxStart := max(0, lc-ch)
-	a.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+	h.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
 		st.Scroll = scroll
 		if st.Scroll < 0 {
 			st.Scroll = 0
@@ -127,15 +130,15 @@ func (a *App) fullscreenPreviewScrollTo(scroll int) {
 	})
 }
 
-func (a *App) patchFullscreenFilePreview(fn func(*ui.FilePreviewState)) {
-	a.commandsMu.Lock()
-	defer a.commandsMu.Unlock()
-	fn(&a.model.FullscreenFilePreview)
+func (h *Handler) patchFullscreenFilePreview(fn func(*ui.FilePreviewState)) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	fn(&h.model.FullscreenFilePreview)
 }
 
 // fullscreenFilePreviewKeyboardDispatchAllowed lists actions that may reach dispatch() while
 // the fullscreen file view is active. Preview-local bindings (scroll, search, edit, etc.) are
-// handled in handleFilePreviewViewKey; only auxiliary full-screen views may fall through here.
+// handled in HandleFilePreviewViewKey; only auxiliary full-screen views may fall through here.
 func fullscreenFilePreviewKeyboardDispatchAllowed(id string) bool {
 	switch id {
 	case keymap.ActionPanelExternalBrowser,
@@ -148,50 +151,50 @@ func fullscreenFilePreviewKeyboardDispatchAllowed(id string) bool {
 	}
 }
 
-// handleFilePreviewViewKey handles keys while ViewFilePreview is active (not blocked by transfer menu).
-func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
-	if a.model.FullscreenFilePreview.Search.Editing {
-		return a.handleFilePreviewSearchTypingKey(event)
+// HandleFilePreviewViewKey handles keys while ViewFilePreview is active (not blocked by transfer menu).
+func (h *Handler) HandleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
+	if h.model.FullscreenFilePreview.Search.Editing {
+		return h.handleFilePreviewSearchTypingKey(event)
 	}
-	nextAction := a.actionFromKeyEvent(event)
-	if quit, handled := a.tryFilePreviewAction(nextAction); handled {
+	nextAction := h.host.ActionFromKeyEvent(event)
+	if quit, handled := h.tryFilePreviewAction(nextAction); handled {
 		return quit
 	}
-	if a.model.FilePreviewThemePicker.Open {
-		if a.handleFilePreviewThemePickerKey(event) {
+	if h.model.FilePreviewThemePicker.Open {
+		if h.handleFilePreviewThemePickerKey(event) {
 			return false
 		}
 	}
 
 	switch event.Key() {
 	case tcell.KeyEsc:
-		if a.model.FullscreenFilePreview.Search.Active {
-			a.clearFilePreviewSearchField()
-			a.patchFullscreenFilePreview(func(st *ui.FilePreviewState) { st.CancelSearch() })
+		if h.model.FullscreenFilePreview.Search.Active {
+			h.clearFilePreviewSearchField()
+			h.patchFullscreenFilePreview(func(st *ui.FilePreviewState) { st.CancelSearch() })
 			return false
 		}
-		a.closeFilePreviewFullscreen()
+		h.CloseFilePreviewFullscreen()
 		return false
 	case tcell.KeyLeft:
 		// Left also exits the view (Esc is the primary key); modified Left falls through to chord bindings.
 		if event.Modifiers() == tcell.ModNone {
-			a.closeFilePreviewFullscreen()
+			h.CloseFilePreviewFullscreen()
 			return false
 		}
 	}
 
 	// Scroll using raw keys before action resolution. Up/Down (etc.) are normally bound to
 	// nav.* and would otherwise dispatch to the file list behind the fullscreen view.
-	if a.handleFilePreviewScrollKey(event) {
+	if h.handleFilePreviewScrollKey(event) {
 		return false
 	}
 
-	nextAction = a.actionFromKeyEvent(event)
+	nextAction = h.host.ActionFromKeyEvent(event)
 	if nextAction == keymap.ActionAppQuit {
-		return a.handleQuit()
+		return h.host.HandleQuit()
 	}
 	if nextAction == keymap.ActionAppQuitImmediate {
-		return a.handleQuitImmediate()
+		return h.host.HandleQuitImmediate()
 	}
 	if nextAction != "" {
 		if nextAction == keymap.ActionFileView || nextAction == keymap.ActionFileQuickView {
@@ -200,7 +203,7 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 		if !fullscreenFilePreviewKeyboardDispatchAllowed(nextAction) {
 			return false
 		}
-		a.dispatch(nextAction)
+		h.host.Dispatch(nextAction)
 		return false
 	}
 	return false
@@ -209,52 +212,52 @@ func (a *App) handleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 // tryFilePreviewAction dispatches actions handled directly by the fullscreen file preview
 // (theme picker, raw-markdown toggle, diff hunk nav, search, edit/delete, quick-view paging,
 // and the two quit actions). handled is true when the caller must return immediately from
-// handleFilePreviewViewKey with quit as its return value.
-func (a *App) tryFilePreviewAction(nextAction string) (quit bool, handled bool) {
+// HandleFilePreviewViewKey with quit as its return value.
+func (h *Handler) tryFilePreviewAction(nextAction string) (quit bool, handled bool) {
 	switch nextAction {
 	case keymap.ActionAppQuit:
-		return a.handleQuit(), true
+		return h.host.HandleQuit(), true
 	case keymap.ActionAppQuitImmediate:
-		return a.handleQuitImmediate(), true
+		return h.host.HandleQuitImmediate(), true
 	case keymap.ActionFileViewThemePicker:
-		a.toggleFilePreviewThemePicker()
+		h.toggleFilePreviewThemePicker()
 		return false, true
 	case keymap.ActionFileViewToggleRaw:
-		a.toggleFilePreviewRawMarkdown()
+		h.toggleFilePreviewRawMarkdown()
 		return false, true
 	case keymap.ActionFileViewDiffNextHunk:
-		a.hunkNavigate(previewTargetFullscreen, 1)
+		h.hunkNavigate(previewTargetFullscreen, 1)
 		return false, true
 	case keymap.ActionFileViewDiffPrevHunk:
-		a.hunkNavigate(previewTargetFullscreen, -1)
+		h.hunkNavigate(previewTargetFullscreen, -1)
 		return false, true
 	case keymap.ActionFileViewSearchStart:
-		a.startFilePreviewSearch()
+		h.startFilePreviewSearch()
 		return false, true
 	case keymap.ActionFileViewSearchNext:
-		a.filePreviewSearchNav(1)
+		h.filePreviewSearchNav(1)
 		return false, true
 	case keymap.ActionFileViewSearchPrev:
-		a.filePreviewSearchNav(-1)
+		h.filePreviewSearchNav(-1)
 		return false, true
 	case keymap.ActionFileEdit:
-		a.editFullscreenPreviewFile()
+		h.host.EditFullscreenPreviewFile()
 		return false, true
 	case keymap.ActionFileDelete:
-		if a.model.FullscreenFilePreview.Path != "" {
-			a.openDeleteDialogForPreviewedFile()
+		if h.model.FullscreenFilePreview.Path != "" {
+			h.host.OpenDeleteDialogForPreviewedFile()
 		}
 		return false, true
 	case keymap.ActionFileQuickViewPreviewPageUp, keymap.ActionFileQuickViewPreviewPageDown:
-		_, ch, _ := a.fullscreenFilePreviewScrollMetrics()
+		_, ch, _ := h.fullscreenFilePreviewScrollMetrics()
 		step := ch
 		if step < 1 {
 			step = 1
 		}
 		if nextAction == keymap.ActionFileQuickViewPreviewPageUp {
-			a.fullscreenPreviewScrollBy(-step)
+			h.fullscreenPreviewScrollBy(-step)
 		} else {
-			a.fullscreenPreviewScrollBy(step)
+			h.fullscreenPreviewScrollBy(step)
 		}
 		return false, true
 	default:
@@ -266,36 +269,36 @@ func (a *App) tryFilePreviewAction(nextAction string) (quit bool, handled bool) 
 // the fullscreen file preview. Returns true if the key was consumed, in which case the caller
 // must return false immediately (these keys would otherwise resolve via nav.* actions and
 // dispatch to the file list behind the fullscreen view).
-func (a *App) handleFilePreviewScrollKey(event *tcell.EventKey) bool {
-	_, ch, _ := a.fullscreenFilePreviewScrollMetrics()
+func (h *Handler) handleFilePreviewScrollKey(event *tcell.EventKey) bool {
+	_, ch, _ := h.fullscreenFilePreviewScrollMetrics()
 	step := ch
 	if step < 1 {
 		step = 1
 	}
 	switch event.Key() {
 	case tcell.KeyUp:
-		a.fullscreenPreviewScrollBy(-1)
+		h.fullscreenPreviewScrollBy(-1)
 		return true
 	case tcell.KeyDown:
-		a.fullscreenPreviewScrollBy(1)
+		h.fullscreenPreviewScrollBy(1)
 		return true
 	case tcell.KeyPgUp:
-		a.fullscreenPreviewScrollBy(-step)
+		h.fullscreenPreviewScrollBy(-step)
 		return true
 	case tcell.KeyPgDn:
-		a.fullscreenPreviewScrollBy(step)
+		h.fullscreenPreviewScrollBy(step)
 		return true
 	case tcell.KeyRune:
 		if event.Rune() == ' ' {
-			a.fullscreenPreviewScrollBy(step)
+			h.fullscreenPreviewScrollBy(step)
 			return true
 		}
 	case tcell.KeyHome:
-		a.fullscreenPreviewScrollTo(0)
+		h.fullscreenPreviewScrollTo(0)
 		return true
 	case tcell.KeyEnd:
-		_, ch2, lc := a.fullscreenFilePreviewScrollMetrics()
-		a.fullscreenPreviewScrollTo(max(0, lc-ch2))
+		_, ch2, lc := h.fullscreenFilePreviewScrollMetrics()
+		h.fullscreenPreviewScrollTo(max(0, lc-ch2))
 		return true
 	case tcell.KeyRight:
 		// Default binding maps Right to nav.open; consume the unmodified arrow so chord
@@ -307,73 +310,73 @@ func (a *App) handleFilePreviewScrollKey(event *tcell.EventKey) bool {
 	return false
 }
 
-// openFilePreviewFullscreen opens the full-screen file view (F3 / file.view) for the active selection.
-func (a *App) openFilePreviewFullscreen() {
-	if a.model.ViewMode != ui.ViewBrowser {
+// OpenFilePreviewFullscreen opens the full-screen file view (F3 / file.view) for the active selection.
+func (h *Handler) OpenFilePreviewFullscreen() {
+	if h.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	if a.model.Menu.Open || a.model.ModalDialogOpen() {
+	if h.model.Menu.Open || h.model.ModalDialogOpen() {
 		return
 	}
-	if a.inQuickFilterUI() {
+	if h.host.InQuickFilterUI() {
 		return
 	}
-	active := a.activePanel()
+	active := h.host.ActivePanel()
 	entry, ok := active.CurrentEntry()
 	if !ok || entry.Type == localfs.EntryDirectory {
-		a.setTransientMessage("View: select a file", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("View: select a file", ui.MessageUrgencyWarn)
 		return
 	}
 	path := filepath.Clean(entry.Path)
 	if path == "" || path == "." {
-		a.setErrorMessage("View", fmt.Errorf("no path"))
+		h.host.SetErrorMessage("View", fmt.Errorf("no path"))
 		return
 	}
 	if err := localfs.CheckFilePreviewable(path); err != nil {
 		switch {
 		case errors.Is(err, localfs.ErrFilePreviewBinary):
-			a.setTransientMessage("View: not a text file", ui.MessageUrgencyWarn)
+			h.host.SetTransientMessage("View: not a text file", ui.MessageUrgencyWarn)
 		case errors.Is(err, localfs.ErrFilePreviewIsDir):
-			a.setTransientMessage("View: not a file", ui.MessageUrgencyWarn)
+			h.host.SetTransientMessage("View: not a file", ui.MessageUrgencyWarn)
 		default:
-			a.setErrorMessage("View", err)
+			h.host.SetErrorMessage("View", err)
 		}
 		return
 	}
-	if err := a.openFullscreenFilePreviewAt(path); err != nil {
-		a.setTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
+	if err := h.OpenFullscreenFilePreviewAt(path); err != nil {
+		h.host.SetTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
 	}
 }
 
-// openFullscreenFilePreviewAt opens the full-screen file view for path.
+// OpenFullscreenFilePreviewAt opens the full-screen file view for path.
 // Caller must ensure path is a previewable regular file.
-func (a *App) openFullscreenFilePreviewAt(path string) error {
+func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
 	path = filepath.Clean(path)
-	w, h := a.screen.Size()
-	lay := a.layoutForTerminalSize(w, h)
+	w, ht := h.screen.Size()
+	lay := h.host.LayoutForTerminalSize(w, ht)
 	if lay.TooSmall {
 		return fmt.Errorf("terminal too small")
 	}
-	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary, a.effectivePaneSplitOrientation())
+	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary, h.host.EffectivePaneSplitOrientation())
 	tw := union.Width - 4
 	if tw < 1 {
 		tw = 1
 	}
 	panelPath := filepath.Dir(path)
-	if active := a.activePanel(); active != nil && active.PathString() != "" {
+	if active := h.host.ActivePanel(); active != nil && active.PathString() != "" {
 		panelPath = active.PathString()
 	}
 	titleBase := filepath.Base(path)
-	a.captureFilePreviewHold(previewTargetFullscreen)
-	a.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
-	a.model.FullscreenFilePreviewRawMarkdown = false
-	a.model.ViewMode = ui.ViewFilePreview
-	a.clearFilePreviewSearchField()
-	a.model.Menu.Open = false
-	a.model.Menu.PulldownOpen = false
-	a.model.MenuDefinitions = a.browserMenuDefinitions()
-	a.model.Menu.ActiveMenu = menu.DefaultIndex()
-	a.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
+	h.captureFilePreviewHold(previewTargetFullscreen)
+	h.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
+	h.model.FullscreenFilePreviewRawMarkdown = false
+	h.model.ViewMode = ui.ViewFilePreview
+	h.clearFilePreviewSearchField()
+	h.model.Menu.Open = false
+	h.model.Menu.PulldownOpen = false
+	h.model.MenuDefinitions = h.host.BrowserMenuDefinitions()
+	h.model.Menu.ActiveMenu = menu.DefaultIndex()
+	h.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
 		st.Open = true
 		st.Phase = ui.FilePreviewPhasePending
 		st.Path = path
@@ -390,11 +393,11 @@ func (a *App) openFullscreenFilePreviewAt(path string) error {
 		st.GitStatusThemeKey = ""
 		st.CancelSearch()
 	})
-	gen := a.filePreviewRunGen.Add(1)
-	a.postRenderWake()
-	go a.runPreview(
-		a.commandsCtx,
-		a.previewRequest(path, tw, panelPath, a.model.PanelsChromeBlocked(), a.gitStatusForPath(path), previewTargetFullscreen),
+	gen := h.filePreviewRunGen.Add(1)
+	h.postRenderWake()
+	go h.runPreview(
+		h.ctx,
+		h.previewRequest(path, tw, panelPath, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetFullscreen),
 		previewTargetFullscreen,
 		gen,
 	)

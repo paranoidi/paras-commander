@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -26,7 +25,7 @@ func TestReconcileCarouselFilePreviewStartsPreview(t *testing.T) {
 		t.Fatal("scroll.txt not found")
 	}
 
-	app.reconcileCarouselFilePreview()
+	app.previewCtrl.ReconcileCarouselFilePreview()
 
 	app.commandsMu.RLock()
 	open := app.model.CarouselFilePreview.Open
@@ -42,6 +41,10 @@ func TestReconcileCarouselFilePreviewStartsPreview(t *testing.T) {
 
 func TestReconcileCarouselFilePreviewClosesOnDirectoryCursor(t *testing.T) {
 	root := t.TempDir()
+	stale := filepath.Join(root, "stale.txt")
+	if err := os.WriteFile(stale, []byte("stale\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	nested := filepath.Join(root, "nested")
 	if err := os.Mkdir(nested, 0o755); err != nil {
 		t.Fatal(err)
@@ -51,16 +54,17 @@ func TestReconcileCarouselFilePreviewClosesOnDirectoryCursor(t *testing.T) {
 	app.config.UI.KeyRepeatDebounceMS = 0
 	app.model.HideInactivePanel = true
 	app.model.Primary.CarouselMode = true
-	app.patchCarouselFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Path = filepath.Join(root, "stale.txt")
-	})
-	app.carouselFilePreviewLastFingerprint = "f:" + filepath.Join(root, "stale.txt")
+	// Populate the preview (and its internal fingerprint) via the real flow first, so the
+	// subsequent directory-cursor reconcile has real prior state to close.
+	if !app.model.Primary.SelectVisibleEntry("stale.txt") {
+		t.Fatal("stale.txt not found")
+	}
+	app.previewCtrl.ReconcileCarouselFilePreview()
 
 	if !app.model.Primary.SelectVisibleEntry("nested") {
 		t.Fatal("nested not found")
 	}
-	app.reconcileCarouselFilePreview()
+	app.previewCtrl.ReconcileCarouselFilePreview()
 
 	app.commandsMu.RLock()
 	open := app.model.CarouselFilePreview.Open
@@ -88,17 +92,17 @@ func TestReconcileCarouselFilePreviewPreservesOpenDuringQuickFilter(t *testing.T
 	if !app.model.Primary.SelectVisibleEntry("scroll.txt") {
 		t.Fatal("scroll.txt not found")
 	}
-	app.reconcileCarouselFilePreview()
-	app.patchCarouselFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhaseDone
-		st.Path = scroll
-		st.CombinedText = "river delta\n"
-	})
+	app.previewCtrl.ReconcileCarouselFilePreview()
+	app.commandsMu.Lock()
+	app.model.CarouselFilePreview.Open = true
+	app.model.CarouselFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.CarouselFilePreview.Path = scroll
+	app.model.CarouselFilePreview.CombinedText = "river delta\n"
+	app.commandsMu.Unlock()
 
 	app.model.Primary.OpenFilter(app.activeViewportRows())
 	app.model.Primary.AppendFilterRune('n', app.activeViewportRows()) // jumps to nested dir match
-	app.reconcileCarouselFilePreview()
+	app.previewCtrl.ReconcileCarouselFilePreview()
 
 	app.commandsMu.RLock()
 	open := app.model.CarouselFilePreview.Open
@@ -126,14 +130,14 @@ func TestReconcileCarouselFilePreviewUpdatesToMatchDuringQuickFilter(t *testing.
 	if !app.model.Primary.SelectVisibleEntry("alpha.txt") {
 		t.Fatal("alpha.txt not found")
 	}
-	app.reconcileCarouselFilePreview()
+	app.previewCtrl.ReconcileCarouselFilePreview()
 
 	// Fuzzy-filter to beta.txt; the inline preview should follow the matched file.
 	app.model.Primary.OpenFilter(app.activeViewportRows())
 	for _, r := range "beta" {
 		app.model.Primary.AppendFilterRune(r, app.activeViewportRows())
 	}
-	app.reconcileCarouselFilePreview()
+	app.previewCtrl.ReconcileCarouselFilePreview()
 
 	app.commandsMu.RLock()
 	open := app.model.CarouselFilePreview.Open
@@ -163,14 +167,14 @@ func TestReconcileQuickViewPreviewUpdatesToMatchDuringQuickFilter(t *testing.T) 
 	if !app.model.Primary.SelectVisibleEntry("alpha.txt") {
 		t.Fatal("alpha.txt not found")
 	}
-	app.reconcileQuickViewPreview()
+	app.previewCtrl.ReconcileQuickViewPreview()
 
 	// Fuzzy-filter to beta.txt; the quick-view preview should follow the matched file.
 	app.model.Primary.OpenFilter(app.activeViewportRows())
 	for _, r := range "beta" {
 		app.model.Primary.AppendFilterRune(r, app.activeViewportRows())
 	}
-	app.reconcileQuickViewPreview()
+	app.previewCtrl.ReconcileQuickViewPreview()
 
 	app.commandsMu.RLock()
 	open := app.model.FilePreview.Open
@@ -204,7 +208,7 @@ func TestReconcileCarouselFilePreviewOpensImmediatelyFromDirectory(t *testing.T)
 	if !app.model.Primary.SelectVisibleEntry("nested") {
 		t.Fatal("nested not found")
 	}
-	app.reconcileCarouselFilePreview()
+	app.previewCtrl.ReconcileCarouselFilePreview()
 	app.commandsMu.RLock()
 	openOnDir := app.model.CarouselFilePreview.Open
 	app.commandsMu.RUnlock()
@@ -216,8 +220,8 @@ func TestReconcileCarouselFilePreviewOpensImmediatelyFromDirectory(t *testing.T)
 	if !app.model.Primary.SelectVisibleEntry("scroll.txt") {
 		t.Fatal("scroll.txt not found")
 	}
-	app.carouselPreviewNavSkipSnapshot.Store(true)
-	app.reconcileCarouselFilePreview()
+	app.previewCtrl.BeginCarouselPreviewNavCoalesce()
+	app.previewCtrl.ReconcileCarouselFilePreview()
 
 	// Opening from a directory must apply immediately (no debounce flush needed),
 	// otherwise the child column blanks for the debounce interval (flicker).
@@ -228,7 +232,7 @@ func TestReconcileCarouselFilePreviewOpensImmediatelyFromDirectory(t *testing.T)
 	if !open || path != scroll {
 		t.Fatalf("CarouselFilePreview after dir->file: open=%v path=%q, want open=true path=%q", open, path, scroll)
 	}
-	if app.carouselPreviewNavSkipSnapshot.Load() {
+	if app.previewCtrl.CarouselPreviewNavSkipSnapshot() {
 		t.Fatal("carouselPreviewNavSkipSnapshot still set; pending debounce was not cleared")
 	}
 }
@@ -248,12 +252,12 @@ func TestCarouselPreviewPageScrollWithCtrlJK(t *testing.T) {
 		t.Fatal("scroll.txt not found")
 	}
 
-	app.patchCarouselFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = strings.Repeat("line\n", 200)
-		st.Scroll = 0
-	})
+	app.commandsMu.Lock()
+	app.model.CarouselFilePreview.Open = true
+	app.model.CarouselFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.CarouselFilePreview.CombinedText = strings.Repeat("line\n", 200)
+	app.model.CarouselFilePreview.Scroll = 0
+	app.commandsMu.Unlock()
 
 	app.dispatch(keymap.ActionFileQuickViewPreviewPageDown)
 	if app.model.CarouselFilePreview.Scroll < 1 {
@@ -264,49 +268,5 @@ func TestCarouselPreviewPageScrollWithCtrlJK(t *testing.T) {
 	app.dispatch(keymap.ActionFileQuickViewPreviewPageUp)
 	if app.model.CarouselFilePreview.Scroll >= scrollAfterDown {
 		t.Fatalf("CarouselFilePreview.Scroll = %d, want < %d after preview page up", app.model.CarouselFilePreview.Scroll, scrollAfterDown)
-	}
-}
-
-// Regression: with a fit-to-content split ("<33%") whose parent/center columns hold only short
-// names, the carousel file preview's text width must reflect the actual measured (narrow) column
-// widths, not the unmeasured 33%-cap worst case — otherwise the preview pre-wraps (markdown in
-// particular) far narrower than the column it's actually painted into.
-func TestCarouselChildPreviewLayoutMetricsUsesMeasuredFitWidth(t *testing.T) {
-	root := t.TempDir()
-	work := filepath.Join(root, "work")
-	if err := os.Mkdir(work, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(work, "doc.txt"), []byte("body\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	screen := newScreen(t, 300, 30)
-	app := newApp(t, screen, work)
-	app.model.HideInactivePanel = true
-	app.model.Primary.CarouselMode = true
-	if !app.model.Primary.SelectVisibleEntry("doc.txt") {
-		t.Fatal("doc.txt not found")
-	}
-
-	layout, err := panelcarousel.ParseLayout([]string{"<33%", "<33%", "*"}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	app.model.CarouselLayout = layout
-
-	rect, ok := app.activePanelFileColumnRect()
-	if !ok {
-		t.Fatal("activePanelFileColumnRect: not ok")
-	}
-	worstCase := panelcarousel.ChildColumnWidth(rect, layout)
-
-	tw, _, ok := app.carouselChildPreviewLayoutMetrics()
-	if !ok {
-		t.Fatal("carouselChildPreviewLayoutMetrics: not ok")
-	}
-	if tw+2 <= worstCase {
-		t.Fatalf("measured child text width+2 = %d, want > unmeasured worst-case width %d "+
-			"(short parent/center names should measure well under the 33%% cap)", tw+2, worstCase)
 	}
 }

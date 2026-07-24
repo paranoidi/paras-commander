@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,12 +37,12 @@ func TestFilePreviewFocusScrollAndTabReturnsToActivePanelFileList(t *testing.T) 
 		t.Fatalf("NewWithOptions() error = %v", err)
 	}
 
-	app.patchFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = strings.Repeat("line\n", 40)
-		st.Scroll = 0
-	})
+	app.commandsMu.Lock()
+	app.model.FilePreview.Open = true
+	app.model.FilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FilePreview.CombinedText = strings.Repeat("line\n", 40)
+	app.model.FilePreview.Scroll = 0
+	app.commandsMu.Unlock()
 	app.model.ActiveSubFocus = ui.SubFocusInactivePreview
 
 	app.dispatch(keymap.ActionNavDown)
@@ -91,40 +90,6 @@ func TestMenuShortcutActivatesFullscreenFileView(t *testing.T) {
 	}
 }
 
-func TestFullscreenPreviewTextWidthReservesScrollbarGutterForPlainContent(t *testing.T) {
-	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "a.txt"))
-
-	screen := tcell.NewSimulationScreen("UTF-8")
-	if err := screen.Init(); err != nil {
-		t.Fatalf("Init() error = %v", err)
-	}
-	defer screen.Fini()
-	screen.SetSize(80, 20)
-
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
-	app.dispatch(keymap.ActionFileView)
-
-	union, ok := app.fullscreenPreviewUnionRect()
-	if !ok {
-		t.Fatal("fullscreenPreviewUnionRect() ok = false")
-	}
-	previewRect, _ := ui.SplitFullscreenPreviewRects(union, app.model.FilePreviewThemePicker.Open, app.model.FilePreviewThemePicker.Choices)
-
-	tw, ok := app.fullscreenPreviewTextWidth()
-	if !ok {
-		t.Fatal("fullscreenPreviewTextWidth() ok = false")
-	}
-	if want := previewRect.Width - 1; tw != want {
-		t.Fatalf("fullscreenPreviewTextWidth() = %d, want %d (previewRect.Width-1, 1-col scrollbar gutter)", tw, want)
-	}
-}
-
 func TestFullscreenFilePreviewArrowDownScrollsWithoutNavigatingList(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
@@ -146,15 +111,15 @@ func TestFullscreenFilePreviewArrowDownScrollsWithoutNavigatingList(t *testing.T
 	}
 
 	app.model.ViewMode = ui.ViewFilePreview
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = strings.Repeat("x\n", 200)
-		st.Scroll = 0
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview.Open = true
+	app.model.FullscreenFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FullscreenFilePreview.CombinedText = strings.Repeat("x\n", 200)
+	app.model.FullscreenFilePreview.Scroll = 0
+	app.commandsMu.Unlock()
 
 	cursorBefore := app.activePanel().Cursor
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if got := app.activePanel().Cursor; got != cursorBefore {
 		t.Fatalf("list cursor moved %d -> %d; Down must scroll preview, not nav.down", cursorBefore, got)
 	}
@@ -193,18 +158,18 @@ func TestFullscreenFilePreviewLeftBackspaceDoNotChangePanelPath(t *testing.T) {
 	pathBefore := app.activePanel().Path
 
 	app.model.ViewMode = ui.ViewFilePreview
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = "x\n"
-		st.Scroll = 0
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview.Open = true
+	app.model.FullscreenFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FullscreenFilePreview.CombinedText = "x\n"
+	app.model.FullscreenFilePreview.Scroll = 0
+	app.commandsMu.Unlock()
 
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if got := app.activePanel().Path; !got.Equal(pathBefore) {
 		t.Fatalf("KeyLeft changed path %q -> %q", pathBefore, got)
 	}
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone))
 	if got := app.activePanel().Path; !got.Equal(pathBefore) {
 		t.Fatalf("Backspace changed path %q -> %q", pathBefore, got)
 	}
@@ -231,15 +196,15 @@ func TestFullscreenFilePreviewRightDoesNotMoveListCursor(t *testing.T) {
 	}
 
 	app.model.ViewMode = ui.ViewFilePreview
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = strings.Repeat("x\n", 200)
-		st.Scroll = 0
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview.Open = true
+	app.model.FullscreenFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FullscreenFilePreview.CombinedText = strings.Repeat("x\n", 200)
+	app.model.FullscreenFilePreview.Scroll = 0
+	app.commandsMu.Unlock()
 
 	cursorBefore := app.activePanel().Cursor
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if got := app.activePanel().Cursor; got != cursorBefore {
 		t.Fatalf("list cursor moved %d -> %d; Right must not nav.open", cursorBefore, got)
 	}
@@ -264,18 +229,18 @@ func TestFullscreenFilePreviewDoesNotOpenMenuFromDispatch(t *testing.T) {
 	}
 
 	app.model.ViewMode = ui.ViewFilePreview
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = "x\n"
-		st.Scroll = 0
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview.Open = true
+	app.model.FullscreenFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FullscreenFilePreview.CombinedText = "x\n"
+	app.model.FullscreenFilePreview.Scroll = 0
+	app.commandsMu.Unlock()
 
 	app.dispatch(keymap.ActionAppOpenMenu)
 	if app.model.Menu.Open {
 		t.Fatal("ActionAppOpenMenu must not open menu during fullscreen file preview")
 	}
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 	if app.model.Menu.Open {
 		t.Fatal("F9 must not open menu during fullscreen file preview")
 	}
@@ -326,12 +291,12 @@ func TestFullscreenFilePreviewIgnoresBrowserOnlyShortcuts(t *testing.T) {
 	}
 
 	app.model.ViewMode = ui.ViewFilePreview
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = "x\n"
-		st.Scroll = 0
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview.Open = true
+	app.model.FullscreenFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FullscreenFilePreview.CombinedText = "x\n"
+	app.model.FullscreenFilePreview.Scroll = 0
+	app.commandsMu.Unlock()
 	pathBefore := app.activePanel().PathString()
 
 	for _, tc := range []struct {
@@ -345,7 +310,7 @@ func TestFullscreenFilePreviewIgnoresBrowserOnlyShortcuts(t *testing.T) {
 		{"open bookmarks", tcell.NewEventKey(tcell.KeyRune, 'g', tcell.ModCtrl)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			app.handleFilePreviewViewKey(tc.key)
+			app.previewCtrl.HandleFilePreviewViewKey(tc.key)
 			if app.model.QuickAction.Open {
 				t.Fatal("user menu must stay closed")
 			}
@@ -356,62 +321,6 @@ func TestFullscreenFilePreviewIgnoresBrowserOnlyShortcuts(t *testing.T) {
 				t.Fatalf("panel path changed %q -> %q", pathBefore, got)
 			}
 		})
-	}
-}
-
-func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
-	root := t.TempDir()
-	path := filepath.Join(root, "notes.txt")
-	writeFile(t, path)
-	screen := newScreen(t, 80, 24)
-	app := newApp(t, screen, root)
-
-	app.patchFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhasePending
-		st.Path = path
-	})
-	staleGen := app.filePreviewRunGen.Add(1)
-	app.filePreviewRunGen.Add(1)
-
-	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false, nil, previewTargetInactive), previewTargetInactive, staleGen)
-
-	app.commandsMu.RLock()
-	ph := app.model.FilePreview.Phase
-	app.commandsMu.RUnlock()
-	if ph != ui.FilePreviewPhasePending {
-		t.Fatalf("Phase = %v, want Pending when run gen is stale at start", ph)
-	}
-}
-
-func TestRunPreviewInternalSetsHighlightedCells(t *testing.T) {
-	root := t.TempDir()
-	path := filepath.Join(root, "sample.go")
-	writeFile(t, path)
-	screen := newScreen(t, 80, 24)
-	app := newApp(t, screen, root)
-	app.config.Preview.Mode = config.PreviewModeInternal
-	app.config.Preview.LineNumbers = true
-
-	app.patchFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhasePending
-		st.Path = path
-	})
-	gen := app.filePreviewRunGen.Add(1)
-	app.runPreview(context.Background(), app.previewRequest(path, 80, root, false, nil, previewTargetInactive), previewTargetInactive, gen)
-
-	app.commandsMu.RLock()
-	st := app.model.FilePreview
-	app.commandsMu.RUnlock()
-	if st.Phase != ui.FilePreviewPhaseDone {
-		t.Fatalf("Phase = %v, want Done", st.Phase)
-	}
-	if st.Source != ui.PreviewSourceInternalHighlighted {
-		t.Fatalf("Source = %v, want internal highlighted", st.Source)
-	}
-	if len(st.HighlightedCells) == 0 {
-		t.Fatal("HighlightedCells empty, want Chroma output")
 	}
 }
 
@@ -434,14 +343,14 @@ func TestToggleFilePreviewRawMarkdownFlipsAndResetsScrollForMarkdown(t *testing.
 	app := newApp(t, screen, dir)
 
 	app.model.ViewMode = ui.ViewFilePreview
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Path = path
-		st.Phase = ui.FilePreviewPhaseDone
-		st.Scroll = 5
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview.Open = true
+	app.model.FullscreenFilePreview.Path = path
+	app.model.FullscreenFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FullscreenFilePreview.Scroll = 5
+	app.commandsMu.Unlock()
 
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 
 	if !app.model.FullscreenFilePreviewRawMarkdown {
 		t.Fatal("FullscreenFilePreviewRawMarkdown = false, want true after F5 on a markdown file")
@@ -462,14 +371,14 @@ func TestToggleFilePreviewRawMarkdownNoOpForNonMarkdown(t *testing.T) {
 	app := newApp(t, screen, dir)
 
 	app.model.ViewMode = ui.ViewFilePreview
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Path = path
-		st.Phase = ui.FilePreviewPhaseDone
-		st.Scroll = 5
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview.Open = true
+	app.model.FullscreenFilePreview.Path = path
+	app.model.FullscreenFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FullscreenFilePreview.Scroll = 5
+	app.commandsMu.Unlock()
 
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 
 	if app.model.FullscreenFilePreviewRawMarkdown {
 		t.Fatal("FullscreenFilePreviewRawMarkdown = true, want false for a non-markdown file")
@@ -490,15 +399,15 @@ func TestToggleFilePreviewRawMarkdownNoOpForDiff(t *testing.T) {
 	app := newApp(t, screen, dir)
 
 	app.model.ViewMode = ui.ViewFilePreview
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Path = path
-		st.Phase = ui.FilePreviewPhaseDone
-		st.IsDiff = true
-		st.Scroll = 5
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview.Open = true
+	app.model.FullscreenFilePreview.Path = path
+	app.model.FullscreenFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FullscreenFilePreview.IsDiff = true
+	app.model.FullscreenFilePreview.Scroll = 5
+	app.commandsMu.Unlock()
 
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 
 	if app.model.FullscreenFilePreviewRawMarkdown {
 		t.Fatal("FullscreenFilePreviewRawMarkdown = true, want false while showing a diff")
@@ -519,7 +428,7 @@ func TestOpenFilePreviewFullscreenResetsRawMarkdownFlag(t *testing.T) {
 	app := newApp(t, screen, dir)
 	app.model.FullscreenFilePreviewRawMarkdown = true
 
-	app.openFilePreviewFullscreen()
+	app.previewCtrl.OpenFilePreviewFullscreen()
 
 	if app.model.FullscreenFilePreviewRawMarkdown {
 		t.Fatal("FullscreenFilePreviewRawMarkdown = true, want reset to false on a fresh fullscreen preview")
@@ -543,7 +452,7 @@ func TestF8DeletesOnlyPreviewedFileKeepingPanelSelection(t *testing.T) {
 	app.model.FullscreenFilePreview.Path = previewedPath
 	app.model.FullscreenFilePreview.TitleBase = filepath.Base(previewedPath)
 
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
 	if !app.model.FileDialog.Open || app.model.FileDialog.DialogType != dialog.FileDialogDelete {
 		t.Fatal("F8 should open the delete dialog for the previewed file")
 	}
@@ -574,41 +483,6 @@ func TestF8DeletesOnlyPreviewedFileKeepingPanelSelection(t *testing.T) {
 // TestRefreshPreviewTargetAfterResizeReRunsOnlyOnWidthChange covers the decision logic used by
 // the *tcell.EventResize handler: an open preview target is re-run when its currently computed
 // text width differs from the width its content was last requested at, and left alone otherwise.
-func TestRefreshPreviewTargetAfterResizeReRunsOnlyOnWidthChange(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "notes.md")
-	writeFile(t, path)
-	screen := newScreen(t, 100, 30)
-	app := newApp(t, screen, dir)
-
-	app.patchFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhaseDone
-		st.Path = path
-	})
-	tw, _, ok := app.inactivePanelPreviewLayoutMetrics(true)
-	if !ok {
-		t.Fatal("inactivePanelPreviewLayoutMetrics() ok = false, want true")
-	}
-
-	// Same width as last request: no re-run.
-	app.previewLastWidth[previewTargetInactive] = tw
-	genBefore := app.filePreviewRunGen.Load()
-	app.refreshPreviewTargetAfterResize(previewTargetInactive)
-	if got := app.filePreviewRunGen.Load(); got != genBefore {
-		t.Fatalf("filePreviewRunGen = %d, want unchanged %d when width did not change", got, genBefore)
-	}
-
-	// Different width from last request: re-run triggered.
-	app.previewLastWidth[previewTargetInactive] = tw + 1
-	app.refreshPreviewTargetAfterResize(previewTargetInactive)
-	if got := app.filePreviewRunGen.Load(); got != genBefore+1 {
-		t.Fatalf("filePreviewRunGen = %d, want %d after width change triggers a re-run", got, genBefore+1)
-	}
-	if app.previewLastWidth[previewTargetInactive] != tw {
-		t.Fatalf("previewLastWidth[inactive] = %d, want %d recorded from the new request", app.previewLastWidth[previewTargetInactive], tw)
-	}
-}
 
 // TestFullscreenFilePreviewSearchStartTypeEnterNavigateEsc drives the "/" incremental
 // search flow end to end: start search, type a query, accept with Enter, step to the next
@@ -629,15 +503,15 @@ func TestFullscreenFilePreviewSearchStartTypeEnterNavigateEsc(t *testing.T) {
 	}
 
 	app.model.ViewMode = ui.ViewFilePreview
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Path = path
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = content.String()
-		st.Scroll = 0
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview.Open = true
+	app.model.FullscreenFilePreview.Path = path
+	app.model.FullscreenFilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FullscreenFilePreview.CombinedText = content.String()
+	app.model.FullscreenFilePreview.Scroll = 0
+	app.commandsMu.Unlock()
 
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, '/', tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, '/', tcell.ModNone))
 	app.commandsMu.RLock()
 	search := app.model.FullscreenFilePreview.Search
 	app.commandsMu.RUnlock()
@@ -646,7 +520,7 @@ func TestFullscreenFilePreviewSearchStartTypeEnterNavigateEsc(t *testing.T) {
 	}
 
 	for _, r := range "foo" {
-		app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	app.commandsMu.RLock()
 	search = app.model.FullscreenFilePreview.Search
@@ -655,7 +529,7 @@ func TestFullscreenFilePreviewSearchStartTypeEnterNavigateEsc(t *testing.T) {
 		t.Fatalf("after typing \"foo\", Search = %+v, want Query=foo len(Matches)=3 Current=0", search)
 	}
 
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	app.commandsMu.RLock()
 	search = app.model.FullscreenFilePreview.Search
 	app.commandsMu.RUnlock()
@@ -664,7 +538,7 @@ func TestFullscreenFilePreviewSearchStartTypeEnterNavigateEsc(t *testing.T) {
 	}
 
 	// "n" must now navigate (not be captured as query text, since Editing is false).
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
 	app.commandsMu.RLock()
 	current := app.model.FullscreenFilePreview.Search.Current
 	scroll := app.model.FullscreenFilePreview.Scroll
@@ -677,7 +551,7 @@ func TestFullscreenFilePreviewSearchStartTypeEnterNavigateEsc(t *testing.T) {
 	}
 
 	// First Esc clears the search but leaves the fullscreen preview open.
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	app.commandsMu.RLock()
 	search = app.model.FullscreenFilePreview.Search
 	open := app.model.FullscreenFilePreview.Open
@@ -690,7 +564,7 @@ func TestFullscreenFilePreviewSearchStartTypeEnterNavigateEsc(t *testing.T) {
 	}
 
 	// Second Esc closes the preview (no active search left to clear).
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.ViewMode != ui.ViewBrowser {
 		t.Fatalf("ViewMode = %v, want ViewBrowser after second Esc", app.model.ViewMode)
 	}

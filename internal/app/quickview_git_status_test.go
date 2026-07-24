@@ -12,9 +12,9 @@ import (
 )
 
 // TestQuickViewDirOverlayLoadsGitStatus is a regression test: populateQuickViewDirOverlay's
-// fresh-snapshot path (preview.go) used to build the overlay via panel.State.Load without ever
-// wiring ScheduleGitStatus, so GitColumnActive/GitPending were set but the async fetch never
-// dispatched and GitByPath stayed nil forever (state.go prepareGitColumn no-ops when
+// fresh-snapshot path (internal/apphandler/preview) used to build the overlay via panel.State.Load
+// without ever wiring ScheduleGitStatus, so GitColumnActive/GitPending were set but the async fetch
+// never dispatched and GitByPath stayed nil forever (state.go prepareGitColumn no-ops when
 // ScheduleGitStatus is nil).
 func TestQuickViewDirOverlayLoadsGitStatus(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {

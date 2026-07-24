@@ -24,7 +24,7 @@ type Deps struct {
 	// Mu is the App's shared async-model-mutation lock (guards CommandsList and other model
 	// fields written from background goroutines). render() copies the whole App.model under
 	// this same lock, so CommandsList mutations here must use the identical mutex App uses
-	// elsewhere (internal/app/preview.go etc.) rather than a Handler-private lock — splitting
+	// elsewhere (internal/apphandler/preview etc.) rather than a Handler-private lock — splitting
 	// the lock would let render's whole-struct copy race with CommandsList appends.
 	Mu *sync.RWMutex
 	// Ctx is the app-lifetime cancellation context, canceled once at quit (internal/app/quit.go).

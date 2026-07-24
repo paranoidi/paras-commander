@@ -325,8 +325,7 @@ func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 
 func (a *App) prepareGlobalQuitShortcutCleanup() {
 	a.clearPanelSyncFollowNavCoalesce()
-	a.clearQuickViewNavCoalesce()
-	a.clearCarouselPreviewNavCoalesce()
+	a.previewCtrl.ClearNavCoalesces()
 	a.clearCursorNameHintNavCoalesce()
 	if a.inQuickFilterUI() {
 		a.activePanel().CancelFilter(a.activeViewportRows())
@@ -369,11 +368,11 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 
 	if !a.panelSyncFollowHeldListNav(resolvedAction, event) {
 		a.clearPanelSyncFollowNavCoalesce()
-		a.clearQuickViewNavCoalesce()
+		a.previewCtrl.ClearQuickViewNavCoalesce()
 		a.clearCursorNameHintNavCoalesce()
 	}
-	if !a.carouselPreviewHeldListNav(resolvedAction, event) {
-		a.clearCarouselPreviewNavCoalesce()
+	if !a.previewCtrl.CarouselPreviewHeldListNav(resolvedAction, event) {
+		a.previewCtrl.ClearCarouselPreviewNavCoalesce()
 	}
 	if !a.model.ModalDialogOpen() {
 		if resolvedAction == keymap.ActionPanelDiskUsageAbortAll {
@@ -533,7 +532,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return quit, true
 	case InputModeFilePreviewView:
-		quit := a.handleFilePreviewViewKey(event)
+		quit := a.previewCtrl.HandleFilePreviewViewKey(event)
 		a.render()
 		return quit, true
 	case InputModeDialog:
@@ -737,20 +736,20 @@ func (a *App) dispatchActionLikeKeyboardShortcut(actionID string) bool {
 }
 
 func (a *App) doListNav(move func()) {
-	a.ensureCarouselChildCacheBeforeListNav()
-	a.beginCarouselPreviewNavCoalesce()
+	a.previewCtrl.EnsureCarouselChildCacheBeforeListNav()
+	a.previewCtrl.BeginCarouselPreviewNavCoalesce()
 	move()
 	a.armPanelSyncFollowNavCoalesceAfterListNav()
-	a.armQuickViewNavCoalesceAfterListNav()
-	a.armCarouselPreviewNavCoalesceAfterListNav()
+	a.previewCtrl.ArmQuickViewNavCoalesceAfterListNav()
+	a.previewCtrl.ArmCarouselPreviewNavCoalesceAfterListNav()
 	a.armCursorNameHintNavCoalesceAfterListNav()
 }
 
 func (a *App) dispatch(actionID string) bool {
-	if a.tryDispatchFilePreviewFocus(actionID) {
+	if a.previewCtrl.TryDispatchFilePreviewFocus(actionID) {
 		return false
 	}
-	if a.tryDispatchQuickViewPreviewScroll(actionID) {
+	if a.previewCtrl.TryDispatchQuickViewPreviewScroll(actionID) {
 		return false
 	}
 	if a.tryDispatchSelectionsStrip(actionID) {
@@ -783,7 +782,7 @@ func (a *App) dispatch(actionID string) bool {
 	if a.tryDispatchFileOps(actionID) {
 		return false
 	}
-	if a.tryDispatchFileView(actionID) {
+	if a.previewCtrl.TryDispatchFileView(actionID) {
 		return false
 	}
 	viewportRows := a.activeViewportRows()
@@ -810,8 +809,8 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelSwitch:
 		if a.model.QuickViewEnabled {
 			a.switchPanel()
-		} else if a.filePreviewOpen() {
-			a.cycleSubFocusForTabWithPreview()
+		} else if a.previewCtrl.FilePreviewOpen() {
+			a.previewCtrl.CycleSubFocusForTabWithPreview()
 		} else {
 			a.switchPanel()
 		}

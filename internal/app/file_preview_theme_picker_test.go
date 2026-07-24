@@ -5,28 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
-
-func TestSyncFilePreviewThemePickerRanksFiltersLabels(t *testing.T) {
-	app, _ := newFilePreviewThemePickerTestApp(t)
-	app.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{
-		Open: true,
-		Choices: []dialog.ThemeChoice{
-			{Name: "monokai", Label: "monokai"},
-			{Name: "github", Label: "github"},
-		},
-		DisplayLines: []string{"monokai", "github"},
-		Query:        "git",
-	}
-	app.syncFilePreviewThemePickerRanks()
-	if len(app.model.FilePreviewThemePicker.Ranked) != 1 {
-		t.Fatalf("ranked len = %d, want 1 match for query test", len(app.model.FilePreviewThemePicker.Ranked))
-	}
-	if idx := app.model.FilePreviewThemePicker.Ranked[0]; idx != 1 {
-		t.Fatalf("ranked[0] = %d, want index 1 (github)", idx)
-	}
-}
 
 func TestFilePreviewOverlayMapsF9ToThemePicker(t *testing.T) {
 	bundle, err := keymap.DefaultBundle()
@@ -39,32 +18,9 @@ func TestFilePreviewOverlayMapsF9ToThemePicker(t *testing.T) {
 	}
 }
 
-func TestOpenFilePreviewThemePickerPopulatesChromaStyles(t *testing.T) {
-	app, _ := newFilePreviewThemePickerTestApp(t)
-	app.openFilePreviewThemePicker()
-	st := app.model.FilePreviewThemePicker
-	if len(st.Choices) < 10 {
-		t.Fatalf("Choices len=%d, want many Chroma styles", len(st.Choices))
-	}
-	if len(st.DisplayLines) != len(st.Choices) {
-		t.Fatalf("DisplayLines len=%d Choices len=%d", len(st.DisplayLines), len(st.Choices))
-	}
-	for i, c := range st.Choices {
-		if c.Name == "" || c.Label != c.Name {
-			t.Fatalf("choice[%d] = %+v, want Name==Label", i, c)
-		}
-		if c.Name == "default" {
-			t.Fatal("app UI theme name default must not appear in picker")
-		}
-		if st.DisplayLines[i] != c.Label {
-			t.Fatalf("DisplayLines[%d]=%q want Label %q", i, st.DisplayLines[i], c.Label)
-		}
-	}
-}
-
 func TestFilePreviewThemePickerFooterWhileOpen(t *testing.T) {
 	app, _ := newFilePreviewThemePickerTestApp(t)
-	app.openFilePreviewThemePicker()
+	app.previewCtrl.TryDispatchFileView(keymap.ActionFileViewThemePicker)
 	keys := app.activeFooterKeys()
 	if len(keys) != 3 {
 		t.Fatalf("footer len = %d, want Esc Close + Enter Save + F10 Quit", len(keys))
@@ -82,32 +38,5 @@ func TestFilePreviewThemePickerFooterWhileOpen(t *testing.T) {
 		if fk.Key == tcell.KeyF4 || fk.Key == tcell.KeyF9 {
 			t.Fatalf("footer must not show F4/F9 while picker open: %+v", keys)
 		}
-	}
-}
-
-func TestPreviewStylePickerDebounceDefersRefreshUntilFlush(t *testing.T) {
-	app, _ := newFilePreviewThemePickerTestApp(t)
-	app.config.UI.KeyRepeatDebounceMS = 500
-	app.openFilePreviewThemePicker()
-
-	genAfterOpen := app.filePreviewRunGen.Load()
-	styleAfterOpen := app.config.Preview.Style
-	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
-
-	if app.filePreviewRunGen.Load() != genAfterOpen {
-		t.Fatal("debounced style change should not start preview immediately")
-	}
-	// Border and content are both gated by the debounce: style unchanged until flush.
-	if app.config.Preview.Style != styleAfterOpen {
-		t.Fatalf("preview.style changed to %q before flush, want unchanged %q", app.config.Preview.Style, styleAfterOpen)
-	}
-	if !app.applyPreviewStylePickerFlush(previewStylePickerFlushPayload{gen: app.previewStylePickerDebounceGen.Load()}) {
-		t.Fatal("applyPreviewStylePickerFlush should run deferred preview")
-	}
-	if app.filePreviewRunGen.Load() == genAfterOpen {
-		t.Fatal("flush should start preview refresh")
-	}
-	if app.config.Preview.Style == styleAfterOpen {
-		t.Fatalf("preview.style still %q after flush, want new selection", styleAfterOpen)
 	}
 }

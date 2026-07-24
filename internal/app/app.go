@@ -18,6 +18,7 @@ import (
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
+	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/file"
@@ -51,17 +52,6 @@ type statusMessageExpiryPayload struct {
 
 // spinnerTickPayload is posted periodically to animate the menu-bar activity spinner.
 type spinnerTickPayload struct{}
-
-// renderWakePayload wakes PollEvent purely to trigger a repaint after a background goroutine
-// (file preview, run-executable) mutates model state under commandsMu in place. It carries no
-// data on purpose: callers that need to hand data back to the main goroutine post a more
-// specific payload (e.g. commandsctrl.WakePayload) instead.
-type renderWakePayload struct{}
-
-// postRenderWake posts a renderWakePayload.
-func (a *App) postRenderWake() {
-	_ = a.screen.PostEvent(tcell.NewEventInterrupt(renderWakePayload{}))
-}
 
 // pathPickerValidatePayload wakes PollEvent after debounced path-picker filter validation.
 type pathPickerValidatePayload struct{}
@@ -103,11 +93,6 @@ type App struct {
 	model               ui.Model
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
-	// previewStyleAtPickerOpen is preview.style when the F3 Chroma style picker opens.
-	previewStyleAtPickerOpen string
-	// previewStylePickerDebounceGen invalidates in-flight F3 style-picker preview debounce callbacks.
-	previewStylePickerDebounceGen atomic.Uint64
-	previewStylePickerDebounce    sched.ManagedTimer
 	// jobState manages background job queue and worker lifecycle.
 	jobState        *jobs.State
 	jobsCtrl        *jobsctrl.Handler
@@ -116,6 +101,7 @@ type App struct {
 	commandsCtrl    *commandsctrl.Handler
 	compareCtrl     *comparectrl.Handler
 	dedupCtrl       *dedupctrl.Handler
+	previewCtrl     *previewctrl.Handler
 	jobStopCh       chan struct{}
 	jobStopOnce     bool
 	diskUsage       *diskusage.Engine
@@ -159,16 +145,6 @@ type App struct {
 	// until the debounce flush runs or coalesce is cleared.
 	syncFollowNavSkipReconcile atomic.Bool
 	syncFollowNav              sched.ManagedTimer
-	// quickViewDebounceGen invalidates in-flight quick view preview debounce callbacks.
-	quickViewDebounceGen     atomic.Uint64
-	quickViewDebounce        sched.ManagedTimer
-	quickViewLastFingerprint string
-	// quickViewNavSkipReconcile suppresses reconcileQuickViewPreview while file-list nav coalesce
-	// is holding a pending preview flush (mirrors syncFollowNavSkipReconcile).
-	quickViewNavSkipReconcile atomic.Bool
-	// carouselPreviewDebounceGen invalidates in-flight carousel side-preview debounce callbacks.
-	carouselPreviewDebounceGen atomic.Uint64
-	carouselPreviewDebounce    sched.ManagedTimer
 	// debounceCalibrateRelease infers key release between calibration trials.
 	debounceCalibrateRelease sched.ManagedTimer
 	// navParentBackspaceGuarded, when true, suppresses nav.parent triggered by backspace.
@@ -176,27 +152,9 @@ type App struct {
 	// (debounce timer fires). Prevents accidental directory navigation after erasing filter text.
 	navParentBackspaceGuarded  atomic.Bool
 	navParentBackspaceDebounce sched.ManagedTimer
-	// carouselPreviewNavSkipSnapshot, when true, reuses cached carousel parent/child snapshots during render.
-	carouselPreviewNavSkipSnapshot atomic.Bool
 	// cursorNameHintNavSkip, when true, holds the previous bottom-border full-name overlay during file-list nav debounce.
 	cursorNameHintNavSkip atomic.Bool
 	cursorNameHintNav     sched.ManagedTimer
-	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postRenderWake).
-	filePreviewRunGen atomic.Uint64
-	// filePreviewHold keeps the last completed inactive-column preview for stale-while-revalidate draws.
-	filePreviewHold ui.FilePreviewState
-	// fullscreenFilePreviewHold keeps the last completed F3 preview body while the next file loads.
-	fullscreenFilePreviewHold ui.FilePreviewState
-	// carouselFilePreviewHold keeps the last completed carousel child preview body while loading.
-	carouselFilePreviewHold ui.FilePreviewState
-	// carouselFilePreviewRunGen invalidates in-flight carousel child-column preview subprocess completions.
-	carouselFilePreviewRunGen atomic.Uint64
-	// carouselFilePreviewLastFingerprint tracks the last carousel file preview highlight for debouncing.
-	carouselFilePreviewLastFingerprint string
-	// previewLastWidth records the TextWidth each preview target's content was last requested at
-	// (indexed by previewTarget), so a terminal resize can detect a width change and re-run the
-	// preview (markdown word-wrap/table layout is baked into emitted cells at request time).
-	previewLastWidth [3]int
 
 	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
 	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on
@@ -547,6 +505,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Gitignore:  giCache,
 		DiskIgnore: duIgnorer,
 	})
+	app.previewCtrl = previewctrl.New(previewctrl.Deps{
+		Host:            previewHost{appShellHost: appShellHost{app: app}},
+		Screen:          screen,
+		Model:           &app.model,
+		KeysDialogInput: keys.DialogInput,
+		Mu:              &app.commandsMu,
+		Ctx:             app.commandsCtx,
+	})
 	if err := app.configureSFTP(); err != nil {
 		app.stopWorker()
 		return nil, fmt.Errorf("configure sftp: %w", err)
@@ -591,7 +557,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		}
 		app.model.QuickViewEnabled = true
 		app.model.QuickViewPanel = app.model.ActivePanel
-		app.applyQuickViewPreviewImmediately()
+		app.previewCtrl.ApplyQuickViewPreviewImmediately()
 	}
 	return app, nil
 }
@@ -787,7 +753,7 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		a.commandsCtrl.ApplyWake(d)
 		a.render()
 		out.didRender = true
-	case renderWakePayload:
+	case previewctrl.RenderWakePayload:
 		a.render()
 		out.didRender = true
 	case metactrl.WakePayload:
@@ -819,21 +785,21 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			a.render()
 			out.didRender = true
 		}
-	case quickViewFlushPayload:
-		if a.applyQuickViewPreviewFlush(d) {
+	case previewctrl.QuickViewFlushPayload:
+		if a.previewCtrl.ApplyQuickViewPreviewFlush(d) {
 			a.render()
 			out.didRender = true
 		}
-	case carouselPreviewFlushPayload:
-		if a.applyCarouselPreviewFlush(d) {
+	case previewctrl.CarouselPreviewFlushPayload:
+		if a.previewCtrl.ApplyCarouselPreviewFlush(d) {
 			a.render()
 			out.didRender = true
 		}
 	case cursorNameHintFlushPayload:
 		a.render()
 		out.didRender = true
-	case previewStylePickerFlushPayload:
-		if a.applyPreviewStylePickerFlush(d) {
+	case previewctrl.StylePickerFlushPayload:
+		if a.previewCtrl.ApplyPreviewStylePickerFlush(d) {
 			a.render()
 			out.didRender = true
 		}
@@ -943,13 +909,12 @@ func (a *App) Run() error {
 		case *tcell.EventResize:
 			pollJobsAfter = true
 			a.clearPanelSyncFollowNavCoalesce()
-			a.clearQuickViewNavCoalesce()
-			a.clearCarouselPreviewNavCoalesce()
+			a.previewCtrl.ClearNavCoalesces()
 			a.clearCursorNameHintNavCoalesce()
 			a.screen.Sync()
 			a.ensurePanelsVisible()
 			a.resizeTerminalFeedToLayout()
-			a.refreshPreviewsAfterResize()
+			a.previewCtrl.RefreshPreviewsAfterResize()
 			a.render()
 			didRender = true
 		case *tcell.EventKey:

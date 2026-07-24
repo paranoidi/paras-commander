@@ -52,7 +52,7 @@ func TestSyncDisablesQuickViewWithWarn(t *testing.T) {
 	if app.model.QuickViewEnabled {
 		t.Fatal("quick view should be disabled when sync is enabled")
 	}
-	if app.filePreviewOpen() {
+	if app.previewCtrl.FilePreviewOpen() {
 		t.Fatal("file preview should be closed when sync displaces quick view")
 	}
 	if app.model.MessageUrgency != ui.MessageUrgencyWarn {
@@ -249,18 +249,17 @@ func TestQuickViewPreviewPageScrollWithCtrlJK(t *testing.T) {
 
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "notes.txt")
-	app.dispatch(keymap.ActionFileQuickView)
-	if !app.model.QuickViewEnabled {
-		t.Fatal("quick view should be enabled")
-	}
+	// Set quick view state directly (not via dispatch) so no real async preview load races
+	// the manual FilePreview patch below.
+	app.model.QuickViewEnabled = true
+	app.model.QuickViewPanel = ui.PrimaryPanel
 
-	app.filePreviewRunGen.Add(1)
-	app.patchFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = strings.Repeat("line\n", 200)
-		st.Scroll = 0
-	})
+	app.commandsMu.Lock()
+	app.model.FilePreview.Open = true
+	app.model.FilePreview.Phase = ui.FilePreviewPhaseDone
+	app.model.FilePreview.CombinedText = strings.Repeat("line\n", 200)
+	app.model.FilePreview.Scroll = 0
+	app.commandsMu.Unlock()
 
 	app.dispatch(keymap.ActionFileQuickViewPreviewPageDown) // default Ctrl+J (vi j = down)
 	if app.model.FilePreview.Scroll < 1 {
@@ -287,7 +286,7 @@ func TestQuickViewPersistsAcrossPanelSwitch(t *testing.T) {
 	if !app.model.QuickViewEnabled {
 		t.Fatal("quick view should be enabled")
 	}
-	if !app.filePreviewOpen() {
+	if !app.previewCtrl.FilePreviewOpen() {
 		t.Fatal("file preview should open for highlighted file with quick view on")
 	}
 
@@ -299,7 +298,7 @@ func TestQuickViewPersistsAcrossPanelSwitch(t *testing.T) {
 	if app.model.ActivePanel != ui.SecondaryPanel {
 		t.Fatalf("ActivePanel = %d, want right panel", app.model.ActivePanel)
 	}
-	if app.filePreviewOpen() {
+	if app.previewCtrl.FilePreviewOpen() {
 		t.Fatal("file preview should be hidden while away from quick-view driver panel")
 	}
 
@@ -308,7 +307,7 @@ func TestQuickViewPersistsAcrossPanelSwitch(t *testing.T) {
 	if app.model.ActivePanel != ui.PrimaryPanel {
 		t.Fatalf("ActivePanel = %d, want left panel after return", app.model.ActivePanel)
 	}
-	if !app.filePreviewOpen() {
+	if !app.previewCtrl.FilePreviewOpen() {
 		t.Fatal("file preview should reopen after returning to quick-view driver panel")
 	}
 }
@@ -572,7 +571,7 @@ func TestQuickViewFollowsDirectoryHighlight(t *testing.T) {
 	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != inactiveBefore {
 		t.Fatalf("inactive panel path = %q, want unchanged %q", got, inactiveBefore)
 	}
-	if app.filePreviewOpen() {
+	if app.previewCtrl.FilePreviewOpen() {
 		t.Fatal("file preview should be closed while quick view shows directory listing")
 	}
 }
@@ -624,7 +623,7 @@ func TestQuickViewShowsPreviewOnFileHighlight(t *testing.T) {
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
 
-	if !app.filePreviewOpen() {
+	if !app.previewCtrl.FilePreviewOpen() {
 		t.Fatal("file preview should open for a highlighted file with quick view on")
 	}
 }
@@ -642,7 +641,7 @@ func TestQuickViewPreviewNavDebounceDefersPreviewUntilFlush(t *testing.T) {
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "notes.txt")
 	app.model.QuickViewEnabled = true
-	app.applyQuickViewPreviewImmediately()
+	app.previewCtrl.ApplyQuickViewPreviewImmediately()
 
 	app.commandsMu.RLock()
 	firstPath := app.model.FilePreview.Path
@@ -661,10 +660,10 @@ func TestQuickViewPreviewNavDebounceDefersPreviewUntilFlush(t *testing.T) {
 		t.Fatalf("preview path after debounced nav+reconcile = %q, want %q (still coalescing)", stillPath, notes)
 	}
 
-	app.clearQuickViewNavCoalesce()
+	app.previewCtrl.ClearQuickViewNavCoalesce()
 	app.reconcileAfterEvent()
-	if !app.applyQuickViewPreviewFlush(quickViewFlushPayload{gen: app.quickViewDebounceGen.Load()}) {
-		t.Fatal("applyQuickViewPreviewFlush should apply deferred preview")
+	if !app.previewCtrl.FlushQuickViewPreviewNow() {
+		t.Fatal("FlushQuickViewPreviewNow should apply deferred preview")
 	}
 
 	app.commandsMu.RLock()
@@ -694,7 +693,7 @@ func TestQuickViewDirToFileDebounceKeepsDirOverlayVisible(t *testing.T) {
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "bravo")
 	app.model.QuickViewEnabled = true
-	app.applyQuickViewPreviewImmediately()
+	app.previewCtrl.ApplyQuickViewPreviewImmediately()
 
 	if !app.model.QuickViewDirOverlayActive {
 		t.Fatal("dir overlay should be active when cursor is on a directory")
@@ -711,9 +710,9 @@ func TestQuickViewDirToFileDebounceKeepsDirOverlayVisible(t *testing.T) {
 
 	// Flush the debounce — this is where the bug occurred: applyQuickViewPreviewNow
 	// should set the visual hold before clearing the dir overlay.
-	flushed := app.applyQuickViewPreviewFlush(quickViewFlushPayload{gen: app.quickViewDebounceGen.Load()})
+	flushed := app.previewCtrl.FlushQuickViewPreviewNow()
 	if !flushed {
-		t.Fatal("applyQuickViewPreviewFlush should have applied")
+		t.Fatal("FlushQuickViewPreviewNow should have applied")
 	}
 
 	// After flush: dir overlay must be cleared but the visual hold must be active.
@@ -737,7 +736,7 @@ func TestQuickViewDirToFileDebounceKeepsDirOverlayVisible(t *testing.T) {
 	app.commandsMu.Unlock()
 
 	// After snapshotPreviewDrawStates, the visual hold should be cleared.
-	app.snapshotPreviewDrawStates()
+	app.previewCtrl.SnapshotPreviewDrawStates()
 	if app.model.QuickViewDirOverlayVisualHold {
 		t.Fatal("visual hold should be cleared once file preview has content")
 	}
@@ -778,7 +777,7 @@ func TestQuickViewOffRestoresInactivePanelState(t *testing.T) {
 	if app.model.QuickViewEnabled {
 		t.Fatal("quick view should be disabled after toggle")
 	}
-	if app.filePreviewOpen() {
+	if app.previewCtrl.FilePreviewOpen() {
 		t.Fatal("file preview should be closed after quick view off")
 	}
 	if app.model.QuickViewDirOverlayActive {

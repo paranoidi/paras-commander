@@ -96,7 +96,7 @@ func (a *App) applyStartPaths(rawPaths []string) error {
 			return err
 		}
 		a.model.ActivePanel = ui.PrimaryPanel
-		return a.openFullscreenFilePreviewAt(r.path)
+		return a.previewCtrl.OpenFullscreenFilePreviewAt(r.path)
 	}
 
 	filePanel := -1
@@ -122,7 +122,7 @@ func (a *App) applyStartPaths(rawPaths []string) error {
 		a.model.ActivePanel = filePanel
 		a.model.QuickViewEnabled = true
 		a.model.QuickViewPanel = filePanel
-		a.applyQuickViewPreviewImmediately()
+		a.previewCtrl.ApplyQuickViewPreviewImmediately()
 	}
 	return nil
 }

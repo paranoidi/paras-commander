@@ -308,8 +308,8 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 			p.SetListLayout(panel.ListLayoutFlat, a.panelViewportRows(panelScope))
 			a.model.ActivePanel = panelScope
 		} else {
-			a.clearCarouselPreviewNavCoalesce()
-			a.closeCarouselFilePreview()
+			a.previewCtrl.ClearCarouselPreviewNavCoalesce()
+			a.previewCtrl.CloseCarouselFilePreview()
 		}
 		onOff := "off"
 		if p.CarouselMode {
@@ -325,7 +325,7 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 	case keymap.ActionPanelMeta:
 		a.metaCtrl.OpenDialog(panelScope)
 	case keymap.ActionFileQuickView:
-		a.handleQuickViewToggle()
+		a.previewCtrl.HandleQuickViewToggle()
 	case keymap.ActionRemoteSFTPLink:
 		a.openSFTPConnectDialogForPanel(panelScope)
 	default:

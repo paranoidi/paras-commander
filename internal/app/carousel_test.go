@@ -139,21 +139,20 @@ func TestFirstListNavAfterChdirPaintsCachedChildDuringCoalesce(t *testing.T) {
 	if !left.CarouselSideCache.ChildOK {
 		t.Fatal("child cache should be warm before first list nav")
 	}
-	app.carouselPreviewNavSkipSnapshot.Store(false)
-	app.syncCarouselChildPreviewCoalesceFlags()
+	app.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 	if app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("coalesce should be off before first debounced nav")
 	}
 
-	app.ensureCarouselChildCacheBeforeListNav()
-	app.beginCarouselPreviewNavCoalesce()
+	app.previewCtrl.EnsureCarouselChildCacheBeforeListNav()
+	app.previewCtrl.BeginCarouselPreviewNavCoalesce()
 	if !app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("coalesce should be on before Move on first debounced nav")
 	}
 	if !left.SelectVisibleEntry("Season 02") {
 		t.Fatal("Season 02 not found")
 	}
-	app.armCarouselPreviewNavCoalesceAfterListNav()
+	app.previewCtrl.ArmCarouselPreviewNavCoalesceAfterListNav()
 
 	if !app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("coalesce should stay on after first nav arm")
@@ -192,7 +191,7 @@ func TestCarouselPreviewNavDebounceDefersSideSnapshotUntilFlush(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionNavDown)
-	app.syncCarouselChildPreviewCoalesceFlags()
+	app.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 
 	if !app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("CarouselChildPreviewCoalesce = false, want true during debounce")
@@ -202,10 +201,10 @@ func TestCarouselPreviewNavDebounceDefersSideSnapshotUntilFlush(t *testing.T) {
 		t.Fatalf("child cache after debounced nav = %+v ok=%v, want still maple", still, app.model.Primary.CarouselSideCache.ChildOK)
 	}
 
-	if !app.applyCarouselPreviewFlush(carouselPreviewFlushPayload{gen: app.carouselPreviewDebounceGen.Load()}) {
-		t.Fatal("applyCarouselPreviewFlush should accept flush and load child preview")
+	if !app.previewCtrl.FlushCarouselPreviewNow() {
+		t.Fatal("FlushCarouselPreviewNow should accept flush and load child preview")
 	}
-	app.syncCarouselChildPreviewCoalesceFlags()
+	app.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 	if app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("coalesce should be off after flush")
 	}

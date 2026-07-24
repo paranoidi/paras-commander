@@ -83,7 +83,7 @@ func (a *App) editFullscreenPreviewFile() {
 		a.setErrorMessage("Edit", err)
 		return
 	}
-	a.closeFilePreviewFullscreen()
+	a.previewCtrl.CloseFilePreviewFullscreen()
 	if err := a.activePanel().Refresh(a.activeViewportRows()); err != nil {
 		a.setErrorMessage("Edit", err)
 	}

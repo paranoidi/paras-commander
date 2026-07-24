@@ -10,6 +10,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -201,18 +202,20 @@ func newFilePreviewThemePickerTestApp(t *testing.T) (*App, config.Paths) {
 	}
 	app.model.ViewMode = ui.ViewFilePreview
 	previewPath := filepath.Join(dir, "alpha.txt")
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Path = previewPath
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = "preview\n"
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview = ui.FilePreviewState{
+		Open:         true,
+		Path:         previewPath,
+		Phase:        ui.FilePreviewPhaseDone,
+		CombinedText: "preview\n",
+	}
+	app.commandsMu.Unlock()
 	return app, appPaths
 }
 
 func TestFilePreviewThemePickerOpensOnF9(t *testing.T) {
 	app, _ := newFilePreviewThemePickerTestApp(t)
-	app.handleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 	if !app.model.FilePreviewThemePicker.Open {
 		t.Fatal("style picker open = false, want true after F9")
 	}
@@ -222,14 +225,14 @@ func TestFilePreviewThemePickerNavigatePreviewsWithoutPersist(t *testing.T) {
 	app, appPaths := newFilePreviewThemePickerTestApp(t)
 	initial := app.config.Preview.Style
 	uiTheme := app.config.Theme
-	app.openFilePreviewThemePicker()
-	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.previewCtrl.TryDispatchFileView(keymap.ActionFileViewThemePicker)
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	// Style is debounced: config must not change until flush fires.
 	if app.config.Preview.Style != initial {
 		t.Fatalf("preview style changed to %q before debounce flush, want unchanged", app.config.Preview.Style)
 	}
 	// Picker selection must have advanced though.
-	if app.filePreviewThemePickerSelectedName() == initial {
+	if app.previewCtrl.SelectedPreviewStyleName() == initial {
 		t.Fatalf("picker selection still %q after Down, want different style", initial)
 	}
 	if app.config.Theme != uiTheme {
@@ -246,14 +249,14 @@ func TestFilePreviewThemePickerNavigatePreviewsWithoutPersist(t *testing.T) {
 
 func TestFilePreviewThemePickerEnterClosePersists(t *testing.T) {
 	app, appPaths := newFilePreviewThemePickerTestApp(t)
-	app.openFilePreviewThemePicker()
-	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.previewCtrl.TryDispatchFileView(keymap.ActionFileViewThemePicker)
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	// Read selection from picker state before Enter flushes it.
-	selected := app.filePreviewThemePickerSelectedName()
+	selected := app.previewCtrl.SelectedPreviewStyleName()
 	if selected == "" {
 		t.Fatal("no selection after Down")
 	}
-	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 	if app.model.FilePreviewThemePicker.Open {
 		t.Fatal("style picker still open after Enter save")
 	}
@@ -272,14 +275,14 @@ func TestFilePreviewThemePickerEnterClosePersists(t *testing.T) {
 func TestFilePreviewThemePickerEscReverts(t *testing.T) {
 	app, _ := newFilePreviewThemePickerTestApp(t)
 	initial := app.config.Preview.Style
-	app.openFilePreviewThemePicker()
-	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.previewCtrl.TryDispatchFileView(keymap.ActionFileViewThemePicker)
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	// Simulate the debounce firing so the style actually changes before Esc.
-	app.applyPreviewStylePickerFlush(previewStylePickerFlushPayload{gen: app.previewStylePickerDebounceGen.Load()})
+	app.previewCtrl.FlushStylePickerPreviewNow()
 	if app.config.Preview.Style == initial {
 		t.Fatalf("preview style still %q after flush, want new selection", initial)
 	}
-	app.handleFilePreviewThemePickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.FilePreviewThemePicker.Open {
 		t.Fatal("style picker still open after Esc")
 	}

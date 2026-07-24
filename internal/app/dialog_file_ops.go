@@ -69,7 +69,7 @@ func (a *App) refreshBothPanels() {
 	_ = a.model.Primary.RefreshOrNavigateToExistingAncestor(viewportRows)
 	_ = a.model.Secondary.RefreshOrNavigateToExistingAncestor(viewportRows)
 	a.applyDuplicateFocusPending()
-	a.applyQuickViewPreviewImmediately()
+	a.previewCtrl.ApplyQuickViewPreviewImmediately()
 }
 
 func (a *App) openRenameDialog(p *panel.State) {
@@ -509,7 +509,7 @@ func (a *App) executeDelete() {
 		path := a.model.FullscreenFilePreview.Path
 		a.closeFileDialog()
 		a.jobsCtrl.EnqueueDeleteJob([]string{path}, false, true)
-		a.closeFilePreviewFullscreen()
+		a.previewCtrl.CloseFilePreviewFullscreen()
 		a.setTransientMessage("Delete queued (1 item)", ui.MessageUrgencyInfo)
 		return
 	}

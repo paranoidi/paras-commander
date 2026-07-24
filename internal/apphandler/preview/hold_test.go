@@ -1,4 +1,4 @@
-package app
+package preview
 
 import (
 	"testing"
@@ -7,19 +7,18 @@ import (
 )
 
 func TestSnapshotPreviewDrawStatesHoldsBodyWhileLoading(t *testing.T) {
-	screen := newScreen(t, 80, 24)
-	app := newApp(t, screen, t.TempDir())
+	h, _ := newTestHandler(t, 80, 24)
 
-	app.commandsMu.Lock()
-	app.model.FilePreview = ui.FilePreviewState{
+	h.mu.Lock()
+	h.model.FilePreview = ui.FilePreviewState{
 		Open:         true,
 		Phase:        ui.FilePreviewPhasePending,
 		Path:         "/tmp/new.txt",
 		TitleBase:    "new.txt",
 		CombinedText: "",
 	}
-	app.commandsMu.Unlock()
-	app.filePreviewHold = ui.FilePreviewState{
+	h.mu.Unlock()
+	h.filePreviewHold = ui.FilePreviewState{
 		Open:         true,
 		Phase:        ui.FilePreviewPhaseDone,
 		Path:         "/tmp/old.txt",
@@ -27,9 +26,9 @@ func TestSnapshotPreviewDrawStatesHoldsBodyWhileLoading(t *testing.T) {
 		CombinedText: "previous preview text",
 	}
 
-	app.snapshotPreviewDrawStates()
+	h.SnapshotPreviewDrawStates()
 
-	draw := app.model.FilePreviewDraw
+	draw := h.model.FilePreviewDraw
 	if !draw.BodyHeld {
 		t.Fatal("FilePreviewDraw.BodyHeld = false, want true")
 	}
@@ -42,21 +41,20 @@ func TestSnapshotPreviewDrawStatesHoldsBodyWhileLoading(t *testing.T) {
 }
 
 func TestCaptureFilePreviewHoldFromDonePreview(t *testing.T) {
-	screen := newScreen(t, 80, 24)
-	app := newApp(t, screen, t.TempDir())
+	h, _ := newTestHandler(t, 80, 24)
 
-	app.commandsMu.Lock()
-	app.model.FilePreview = ui.FilePreviewState{
+	h.mu.Lock()
+	h.model.FilePreview = ui.FilePreviewState{
 		Open:         true,
 		Phase:        ui.FilePreviewPhaseDone,
 		Path:         "/tmp/old.txt",
 		CombinedText: "keep me",
 	}
-	app.commandsMu.Unlock()
+	h.mu.Unlock()
 
-	app.captureFilePreviewHold(previewTargetInactive)
+	h.captureFilePreviewHold(previewTargetInactive)
 
-	if app.filePreviewHold.CombinedText != "keep me" {
-		t.Fatalf("hold CombinedText = %q, want keep me", app.filePreviewHold.CombinedText)
+	if h.filePreviewHold.CombinedText != "keep me" {
+		t.Fatalf("hold CombinedText = %q, want keep me", h.filePreviewHold.CombinedText)
 	}
 }

@@ -35,10 +35,10 @@ func (a *App) switchPanel() {
 	leavingDisplay := a.model.QuickViewDisplayActive()
 	a.switchPanelSwap()
 	if leavingDisplay {
-		a.pauseQuickViewDisplay()
+		a.previewCtrl.PauseQuickViewDisplay()
 	}
 	if a.model.QuickViewDisplayActive() {
-		a.resumeQuickViewDisplay()
+		a.previewCtrl.ResumeQuickViewDisplay()
 	}
 }
 
@@ -80,10 +80,7 @@ func (a *App) toggleHideInactivePanel() {
 	if hadQuickView {
 		a.model.QuickViewEnabled = false
 		a.model.QuickViewPanel = -1
-		a.clearQuickViewDebounce()
-		a.closeFilePreview()
-		a.clearQuickViewDirOverlay()
-		a.quickViewLastFingerprint = ""
+		a.previewCtrl.DisableQuickViewDisplay()
 	}
 	a.model.HideInactivePanel = true
 	switch {
@@ -273,10 +270,7 @@ func (a *App) toggleSyncFollow() {
 	if displacedQuickView {
 		a.model.QuickViewEnabled = false
 		a.model.QuickViewPanel = -1
-		a.clearQuickViewDebounce()
-		a.closeFilePreview()
-		a.clearQuickViewDirOverlay()
-		a.quickViewLastFingerprint = ""
+		a.previewCtrl.DisableQuickViewDisplay()
 	}
 	a.clearPanelSyncFollowNavCoalesce()
 	a.model.SyncFollowEnabled = true
@@ -309,8 +303,8 @@ func (a *App) reconcileAfterEvent() {
 	if !a.syncFollowNavSkipReconcile.Load() {
 		a.syncFollowFromActive()
 	}
-	a.reconcileQuickViewPreview()
-	a.reconcileCarouselFilePreview()
+	a.previewCtrl.ReconcileQuickViewPreview()
+	a.previewCtrl.ReconcileCarouselFilePreview()
 }
 
 // syncFollowTargetPath returns the absolute directory path the follower should mirror when
@@ -505,7 +499,7 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 	case keymap.ActionPanelSwitch:
 		if a.model.QuickViewEnabled {
 			a.switchPanel()
-		} else if a.filePreviewOpen() {
+		} else if a.previewCtrl.FilePreviewOpen() {
 			a.model.ActiveSubFocus = ui.SubFocusInactivePreview
 		} else {
 			a.switchPanel()
@@ -695,8 +689,8 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 		if activePanel.CarouselMode {
 			activePanel.SetListLayout(panel.ListLayoutFlat, viewportRows)
 		} else {
-			a.clearCarouselPreviewNavCoalesce()
-			a.closeCarouselFilePreview()
+			a.previewCtrl.ClearCarouselPreviewNavCoalesce()
+			a.previewCtrl.CloseCarouselFilePreview()
 		}
 		onOff := "off"
 		if activePanel.CarouselMode {
@@ -801,7 +795,7 @@ func (a *App) expandAllTreeShallowForPanel(target *panel.State, viewportRows int
 // toggleZoomActivePanelGuarded toggles active-panel zoom unless quick view/file preview is
 // active, carousel mode is on, or the terminal size is below the configured zoom threshold.
 func (a *App) toggleZoomActivePanelGuarded() {
-	if a.filePreviewOpen() || a.model.QuickViewDisplayActive() {
+	if a.previewCtrl.FilePreviewOpen() || a.model.QuickViewDisplayActive() {
 		a.setTransientMessage("Zoom disabled while quick view or file view is active", ui.MessageUrgencyInfo)
 		return
 	}

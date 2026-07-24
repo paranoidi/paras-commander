@@ -81,7 +81,7 @@ func TestQuickViewUpdatesAfterDeletedDirectoryRefresh(t *testing.T) {
 	selectPanelEntryByName(t, left, "alpha")
 	app.model.QuickViewEnabled = true
 	app.model.QuickViewPanel = ui.PrimaryPanel
-	app.applyQuickViewPreviewImmediately()
+	app.previewCtrl.ApplyQuickViewPreviewImmediately()
 	if got := filepath.Clean(app.model.QuickViewDirOverlay.Path.String()); got != filepath.Clean(alpha) {
 		t.Fatalf("overlay path = %q, want %q", got, alpha)
 	}

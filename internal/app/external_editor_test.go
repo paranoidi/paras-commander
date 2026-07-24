@@ -74,12 +74,14 @@ func TestEditFullscreenPreviewFileReturnsToBrowser(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 	app.model.ViewMode = ui.ViewFilePreview
-	app.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Path = filePath
-		st.Phase = ui.FilePreviewPhaseDone
-		st.CombinedText = "preview\n"
-	})
+	app.commandsMu.Lock()
+	app.model.FullscreenFilePreview = ui.FilePreviewState{
+		Open:         true,
+		Path:         filePath,
+		Phase:        ui.FilePreviewPhaseDone,
+		CombinedText: "preview\n",
+	}
+	app.commandsMu.Unlock()
 
 	var edited string
 	prev := externalEditorRunner
