@@ -511,7 +511,11 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		}
 	}
 	primitive.StyledTextCellwise(screen, listContentStart, y, listTextWidth, text, func(ci int) tcell.Style {
-		return blendCell(leftGutter + gitStrip + iconStrip + treeGutterWidth + ci)
+		st := blendCell(leftGutter + gitStrip + iconStrip + treeGutterWidth + ci)
+		if ci >= nameWidth {
+			return panelStyle.Styles.PanelListingInfoStyle(st)
+		}
+		return st
 	}, spans)
 }
 

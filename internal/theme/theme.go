@@ -68,6 +68,8 @@ type Theme struct {
 	PanelRowDirectory           tcell.Style
 	PanelRowSymlink             tcell.Style
 	PanelRowSelected            tcell.Style
+	// PanelRowInfo styles trailing listing columns (size, mtime, permissions, meta).
+	PanelRowInfo tcell.Style
 	// PanelDedupRowAllMarked styles dedup view rows when every file in the duplicate group is marked.
 	PanelDedupRowAllMarked tcell.Style
 	// PanelDedupRowCursorAllMarked styles the cursor row in a fully-marked duplicate group.
@@ -816,6 +818,7 @@ var requiredStyleKeys = []string{
 	"panel.row.directory",
 	"panel.row.symlink",
 	"panel.row.selected",
+	"panel.row.info",
 	"panel.dedup.row.all_marked",
 	"panel.dedup.row.cursor.all_marked",
 	"panel.dedup.row.keep",
@@ -1298,6 +1301,7 @@ func parse(data []byte) (Theme, error) {
 		PanelRowDirectory:                   styles["panel.row.directory"],
 		PanelRowSymlink:                     styles["panel.row.symlink"],
 		PanelRowSelected:                    styles["panel.row.selected"],
+		PanelRowInfo:                        styles["panel.row.info"],
 		PanelDedupRowAllMarked:              styles["panel.dedup.row.all_marked"],
 		PanelDedupRowCursorAllMarked:        styles["panel.dedup.row.cursor.all_marked"],
 		PanelDedupRowKeep:                   styles["panel.dedup.row.keep"],

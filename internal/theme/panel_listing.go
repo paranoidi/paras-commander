@@ -87,6 +87,17 @@ func (t Theme) panelListingCursorThemeStyle(opts PanelListingCursorOpts) tcell.S
 	return t.PanelCursorInactive
 }
 
+// PanelListingInfoStyle applies panel.row.info foreground/attributes onto a listing cell's background.
+func (t Theme) PanelListingInfoStyle(rowCell tcell.Style) tcell.Style {
+	info := t.PanelRowInfo
+	if info == (tcell.Style{}) {
+		info = t.PanelRowFile
+	}
+	fg, _, attrs := info.Decompose()
+	_, bg, _ := rowCell.Decompose()
+	return tcell.StyleDefault.Foreground(fg).Background(bg).Attributes(attrs)
+}
+
 // PanelListingCursorIconKey returns the theme key for panel.*.row.cursor icon overrides on the cursor row.
 func (t Theme) PanelListingCursorIconKey(opts PanelListingCursorOpts) string {
 	if opts.ChromeBlocked {
