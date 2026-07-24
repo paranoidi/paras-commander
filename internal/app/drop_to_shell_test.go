@@ -206,7 +206,7 @@ func TestShellInsertPathListSortsSelections(t *testing.T) {
 func TestAltEnterResolvesToShellInsertPaths(t *testing.T) {
 	app := testAppMinimal(t)
 	for _, mod := range []tcell.ModMask{tcell.ModAlt, tcell.ModShift} {
-		id, ok := app.keys.Lookup(tcell.NewEventKey(tcell.KeyEnter, '\r', mod))
+		id, ok := app.keys.Global.Lookup(tcell.NewEventKey(tcell.KeyEnter, '\r', mod))
 		if !ok || id != keymap.ActionAppShellInsertPaths {
 			t.Fatalf("Enter+%v resolves to %q (ok=%v), want %q", mod, id, ok, keymap.ActionAppShellInsertPaths)
 		}

@@ -256,7 +256,7 @@ func (a *App) terminalPanelHasKeyFocus() bool {
 // handleTerminalPanelKey routes a key while the panel is focused: the [terminal]
 // overlay chords first, everything else encoded to PTY bytes (F10 reaches htop).
 func (a *App) handleTerminalPanelKey(event *tcell.EventKey) (rendered bool) {
-	if id, ok := a.keysTerminal.Lookup(event); ok {
+	if id, ok := a.keys.Terminal.Lookup(event); ok {
 		switch id {
 		case keymap.ActionTerminalTogglePanel:
 			a.toggleTerminalPanelVisible()

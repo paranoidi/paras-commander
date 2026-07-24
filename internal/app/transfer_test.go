@@ -97,7 +97,7 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 		t.Fatal("unexpected quit")
 	}
 	nJobs := len(app.jobState.AllJobs())
-	app.enqueueCopyJob()
+	app.jobsCtrl.EnqueueCopyJob()
 	if len(p.SelectedPaths) != 0 {
 		t.Fatal("enqueueCopyJob should clear current-directory selection")
 	}
@@ -354,7 +354,7 @@ func TestTransferDestinationShortcutNoOpDuringSelfCopyRename(t *testing.T) {
 
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{aaa: true}
-	app.enqueueCopyJob()
+	app.jobsCtrl.EnqueueCopyJob()
 	if app.model.TransferDialog.Phase != dialog.TransferPhaseSelfCopyRename || app.model.TransferDialog.FocusField != 0 {
 		t.Fatalf("want self-copy rename dialog with FocusField 0, got %+v", app.model.TransferDialog)
 	}
@@ -411,7 +411,7 @@ func TestTransferSelfCopyRenameFlow(t *testing.T) {
 
 		p := app.activePanel()
 		p.SelectedPaths = map[string]bool{aaa: true}
-		app.enqueueCopyJob()
+		app.jobsCtrl.EnqueueCopyJob()
 		if !app.model.TransferDialog.Open || app.model.TransferDialog.Phase != dialog.TransferPhaseSelfCopyRename {
 			t.Fatalf("want self-copy rename dialog, got %+v", app.model.TransferDialog)
 		}
@@ -517,7 +517,7 @@ func TestEnqueueMoveJobSameDirUnsupportedDoesNotClearSelection(t *testing.T) {
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
-	app.enqueueMoveJob()
+	app.jobsCtrl.EnqueueMoveJob()
 	if len(p.SelectedPaths) == 0 {
 		t.Fatal("unsupported same-directory move should leave selection intact")
 	}
@@ -556,7 +556,7 @@ func TestEnqueueCopyJobClearsCrossDirectorySelections(t *testing.T) {
 	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
 	p.SelectionsStripOrder = []string{otherTxt}
 
-	app.enqueueCopyJob()
+	app.jobsCtrl.EnqueueCopyJob()
 
 	if p.SelectedPaths != nil {
 		t.Fatalf("expected all queued sources removed from selection, got %#v", p.SelectedPaths)
@@ -602,7 +602,7 @@ func TestEnqueueMoveJobClearsCrossDirectorySelections(t *testing.T) {
 	p.SelectedPaths = map[string]bool{hereTxt: true, otherTxt: true}
 	p.SelectionsStripOrder = []string{otherTxt}
 
-	app.enqueueMoveJob()
+	app.jobsCtrl.EnqueueMoveJob()
 
 	if p.SelectedPaths != nil {
 		t.Fatalf("expected all queued sources removed from selection, got %#v", p.SelectedPaths)
@@ -879,7 +879,7 @@ func TestDuplicateWithFocusAfterSelectsAfterJob(t *testing.T) {
 	app.handleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	flushBackgroundJobs(t, app)
-	app.applyJobRefreshes()
+	app.jobsCtrl.ApplyRefreshes()
 
 	p = app.activePanel()
 	entry, ok := p.CurrentEntry()
@@ -936,7 +936,7 @@ func TestDuplicateConfirmsFromOKButtonWithFocusAfter(t *testing.T) {
 		t.Fatal("dialog should close after OK")
 	}
 	flushBackgroundJobs(t, app)
-	app.applyJobRefreshes()
+	app.jobsCtrl.ApplyRefreshes()
 
 	if _, err := os.Stat(filepath.Join(dir, "copy.txt")); err != nil {
 		t.Fatalf("expected duplicated file at copy.txt: %v", err)

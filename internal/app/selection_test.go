@@ -250,7 +250,7 @@ func setupSelectionsStripFocusTest(t *testing.T) (*App, *panel.State) {
 
 func TestActiveFooterKeysSelectionsStripFocused(t *testing.T) {
 	app, _ := setupSelectionsStripFocusTest(t)
-	want := menu.FunctionKeysSelectionsStripView(app.keys.MenuBindingLabel(keymap.ActionPanelClearSelection))
+	want := menu.FunctionKeysSelectionsStripView(app.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
 	got := app.activeFooterKeys()
 	if len(got) != len(want) {
 		t.Fatalf("footer len = %d, want %d: got %+v", len(got), len(want), got)

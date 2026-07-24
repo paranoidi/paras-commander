@@ -150,7 +150,7 @@ func (a *App) render() {
 	a.reconcileAfterEvent()
 	a.model.MenuBarPermission = a.menuBarPermissionText()
 	a.model.MenuBarJobsAttention = a.menuBarJobsAttentionText()
-	a.model.MenuBarJobs = a.menuBarJobsStripSnapshot()
+	a.model.MenuBarJobs = a.jobsCtrl.MenuBarStripSnapshot()
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
 	a.model.FooterKeys = a.activeFooterKeys()
 	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsage.DescendIntoMountPoints
@@ -226,7 +226,7 @@ func (a *App) paintMenuBarJobsStripOnly() bool {
 	if layout.TooSmall {
 		return false
 	}
-	a.model.MenuBarJobs = a.menuBarJobsStripSnapshot()
+	a.model.MenuBarJobs = a.jobsCtrl.MenuBarStripSnapshot()
 	menus := menu.ActiveDefinitions(a.model.MenuDefinitions)
 	if !ui.DrawMenuBarJobsGapOnly(a.screen, layout, a.model, menus, a.styles) {
 		return false

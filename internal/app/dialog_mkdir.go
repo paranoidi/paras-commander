@@ -10,14 +10,14 @@ import (
 // tryMkdirDialogShortcut handles [dialog.mkdir] while the mkdir dialog is open.
 // Returns true when the event was consumed.
 func (a *App) tryMkdirDialogShortcut(ev *tcell.EventKey) bool {
-	if a.keysMkdirDialog == nil {
+	if a.keys.MkdirDialog == nil {
 		return false
 	}
 	d := &a.model.FileDialog
 	if !d.Open || d.DialogType != dialog.FileDialogMkdir {
 		return false
 	}
-	id, ok := a.keysMkdirDialog.Lookup(ev)
+	id, ok := a.keys.MkdirDialog.Lookup(ev)
 	if !ok {
 		return false
 	}
@@ -30,7 +30,7 @@ func (a *App) tryMkdirDialogShortcut(ev *tcell.EventKey) bool {
 }
 
 func (a *App) mkdirDialogExtractFooterEligible() bool {
-	if a.keysMkdirDialog == nil {
+	if a.keys.MkdirDialog == nil {
 		return false
 	}
 	d := &a.model.FileDialog
@@ -40,7 +40,7 @@ func (a *App) mkdirDialogExtractFooterEligible() bool {
 	if len(a.activePanel().SelectedPaths) < 2 {
 		return false
 	}
-	return a.keysMkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName) != ""
+	return a.keys.MkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName) != ""
 }
 
 func (a *App) applyMkdirExtractCommonName() bool {

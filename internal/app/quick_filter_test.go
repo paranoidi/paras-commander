@@ -358,7 +358,7 @@ func TestQuickFilterKeymapActionClosesFilterAndOpensDirInOtherPanel(t *testing.T
 	screen := newScreen(t, 80, 20)
 	app := newApp(t, screen, dir)
 
-	ev, ok := app.keys.FirstEventKeyForAction(keymap.ActionPanelOpenDirInOther)
+	ev, ok := app.keys.Global.FirstEventKeyForAction(keymap.ActionPanelOpenDirInOther)
 	if !ok {
 		t.Fatal("no key bound to ActionPanelOpenDirInOther")
 	}

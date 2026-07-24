@@ -18,7 +18,7 @@ func TestDrainDiscardProgressEventsCapsDiscards(t *testing.T) {
 	for i := 0; i < jobsctrl.MaxProgressEventsDiscardPerDrain+20; i++ {
 		app.jobState.QueueTestEvent(jobs.Event{Type: jobs.EventProgress, JobID: "j1"})
 	}
-	app.drainDiscardProgressEvents()
+	app.jobsCtrl.DrainDiscardProgressEvents()
 	remaining := 0
 	for {
 		select {
@@ -47,7 +47,7 @@ func TestDrainDiscardProgressEventsAppliesNonProgress(t *testing.T) {
 		JobID:  "j1",
 		Status: jobs.StatusWaitingDecision,
 	})
-	app.drainDiscardProgressEvents()
+	app.jobsCtrl.DrainDiscardProgressEvents()
 	var found *jobs.Job
 	for _, j := range app.jobState.AllJobs() {
 		if j.ID == "j1" {

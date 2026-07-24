@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -245,7 +246,9 @@ func (a *App) confirmFlatten() {
 	}
 	a.closeFlattenDialog()
 	a.activePanel().ClearSelection()
-	a.addFlattenJob(sources, destLoc.String(), d.RemoveEmpty, d.DirRoots)
+	a.jobsCtrl.AddFlattenJob(jobsctrl.FlattenJobRequest{
+		Sources: sources, Dest: destLoc.String(), RemoveEmpty: d.RemoveEmpty, FlattenRoots: d.DirRoots,
+	})
 	noun := "items"
 	if len(sources) == 1 {
 		noun = "item"

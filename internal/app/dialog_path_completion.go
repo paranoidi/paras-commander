@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/paranoidi/paras-commander/internal/app/pathpick"
+	"github.com/paranoidi/paras-commander/internal/pathpick"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 

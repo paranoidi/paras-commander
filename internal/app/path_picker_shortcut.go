@@ -28,10 +28,10 @@ func (a *App) pathPickerHostFooterEligible() bool {
 // tryPathPickerHostShortcut opens the fuzzy path/history picker when the user presses
 // a chord bound to bookmark.open (Open bookmarks) while a path-picker host row is focused.
 func (a *App) tryPathPickerHostShortcut(ev *tcell.EventKey) bool {
-	if a.keys == nil {
+	if a.keys.Global == nil {
 		return false
 	}
-	id, ok := a.keys.Lookup(ev)
+	id, ok := a.keys.Global.Lookup(ev)
 	if !ok || id != keymap.ActionBookmarkOpen {
 		return false
 	}

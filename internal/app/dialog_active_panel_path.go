@@ -57,7 +57,7 @@ func flattenDialogOverlayFooterKeys(a *App, keys *keymap.Map) []menu.FunctionKey
 // inactive panel path when the user presses a chord from [dialog.flatten]
 // while the destination row is focused.
 func (a *App) tryFlattenDialogDestinationShortcut(ev *tcell.EventKey) bool {
-	return tryDestinationShortcut(ev, a.keysFlattenDialog, a.flattenDialogDestinationFooterEligible(),
+	return tryDestinationShortcut(ev, a.keys.FlattenDialog, a.flattenDialogDestinationFooterEligible(),
 		a.applyFlattenDestinationFromActivePanelState, a.applyFlattenDestinationFromInactivePanel)
 }
 
@@ -90,7 +90,7 @@ func transferDialogOverlayFooterKeys(a *App, keys *keymap.Map) []menu.FunctionKe
 // or inactive panel path when the user presses a chord from [dialog.transfer]
 // while the destination row is focused.
 func (a *App) tryTransferDialogDestinationShortcut(ev *tcell.EventKey) bool {
-	return tryDestinationShortcut(ev, a.keysTransferDialog, a.transferDialogDestinationFooterEligible(),
+	return tryDestinationShortcut(ev, a.keys.TransferDialog, a.transferDialogDestinationFooterEligible(),
 		a.applyTransferDestinationFromActivePanel, a.applyTransferDestinationFromInactivePanel)
 }
 

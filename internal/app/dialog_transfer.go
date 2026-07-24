@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -12,6 +13,19 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
+
+func (a *App) addTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) {
+	a.jobsCtrl.AddTransferJob(jobsctrl.TransferJobRequest{
+		Type: jobType, Sources: sources, Dest: dest, StartPaused: startPaused, Preserve: preserve,
+	})
+}
+
+func (a *App) transferPreserveFromConfig() jobs.TransferPreserve {
+	return jobs.TransferPreserveFromConfig(
+		a.config.Operations.PreservePermissions,
+		a.config.Operations.PreserveTimestamps,
+	)
+}
 
 func (a *App) openCopyDialog() {
 	a.openTransferDialog(dialog.TransferKindCopy)

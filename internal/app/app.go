@@ -22,6 +22,7 @@ import (
 	_ "github.com/paranoidi/paras-commander/internal/fsbackend/sftp"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
+	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -85,22 +86,7 @@ type App struct {
 	styles              theme.Theme
 	themes              map[string]theme.Theme
 	paths               config.Paths
-	keys                *keymap.Map
-	keysJobs            *keymap.Map // chords active only in jobs view (overlay)
-	keysCommands        *keymap.Map // chords active only in Commands view (overlay)
-	keysMessages        *keymap.Map // chords active only in Messages view (overlay)
-	keysFilePreview     *keymap.Map // chords active only in F3 full-screen file view (overlay)
-	keysDialogInput     *keymap.Map // chords active only while a dialog input field is focused
-	keysRenameDialog    *keymap.Map // sanitize/slugify while main rename dialog is focused
-	keysMkdirDialog     *keymap.Map // extract common name while mkdir dialog is focused
-	keysBookmarkDialog  *keymap.Map // delete fzf-marks entry while bookmarks picker is open
-	keysFindDialog      *keymap.Map // select all while find dialog is open
-	keysHistoryDialog   *keymap.Map // both-panels toggle while history dialog is open
-	keysFlattenDialog   *keymap.Map // destination panel shortcuts while flatten dialog is open
-	keysTransferDialog  *keymap.Map // destination panel shortcuts while transfer (copy/move) dialog is open
-	keysCompare         *keymap.Map // chords active only in Compare view (overlay)
-	keysDedup           *keymap.Map // chords active only in find-duplicates view (overlay)
-	keysTerminal        *keymap.Map // chords active only while the embedded terminal panel is focused (overlay)
+	keys                *keymap.Bundle // global keymap plus per-view/per-dialog overlays
 	devMode             bool
 	subshell            *subshell.Subshell  // persistent MC-style shell; nil until first Ctrl+O (lazy start)
 	terminalFeed        *subshell.PanelFeed // emulator feed shadowing the subshell for its whole life (started by ensureSubshell)
@@ -112,7 +98,7 @@ type App struct {
 	previewStyleAtPickerOpen string
 	// previewStylePickerDebounceGen invalidates in-flight F3 style-picker preview debounce callbacks.
 	previewStylePickerDebounceGen atomic.Uint64
-	previewStylePickerDebounce    managedTimer
+	previewStylePickerDebounce    sched.ManagedTimer
 	// jobState manages background job queue and worker lifecycle.
 	jobState        *jobs.State
 	jobsCtrl        *jobsctrl.Handler
@@ -180,29 +166,29 @@ type App struct {
 	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent
 	// until the debounce flush runs or coalesce is cleared.
 	syncFollowNavSkipReconcile atomic.Bool
-	syncFollowNav              managedTimer
+	syncFollowNav              sched.ManagedTimer
 	// quickViewDebounceGen invalidates in-flight quick view preview debounce callbacks.
 	quickViewDebounceGen     atomic.Uint64
-	quickViewDebounce        managedTimer
+	quickViewDebounce        sched.ManagedTimer
 	quickViewLastFingerprint string
 	// quickViewNavSkipReconcile suppresses reconcileQuickViewPreview while file-list nav coalesce
 	// is holding a pending preview flush (mirrors syncFollowNavSkipReconcile).
 	quickViewNavSkipReconcile atomic.Bool
 	// carouselPreviewDebounceGen invalidates in-flight carousel side-preview debounce callbacks.
 	carouselPreviewDebounceGen atomic.Uint64
-	carouselPreviewDebounce    managedTimer
+	carouselPreviewDebounce    sched.ManagedTimer
 	// debounceCalibrateRelease infers key release between calibration trials.
-	debounceCalibrateRelease managedTimer
+	debounceCalibrateRelease sched.ManagedTimer
 	// navParentBackspaceGuarded, when true, suppresses nav.parent triggered by backspace.
 	// Armed when backspace erases the last filter character; cleared when the key is released
 	// (debounce timer fires). Prevents accidental directory navigation after erasing filter text.
 	navParentBackspaceGuarded  atomic.Bool
-	navParentBackspaceDebounce managedTimer
+	navParentBackspaceDebounce sched.ManagedTimer
 	// carouselPreviewNavSkipSnapshot, when true, reuses cached carousel parent/child snapshots during render.
 	carouselPreviewNavSkipSnapshot atomic.Bool
 	// cursorNameHintNavSkip, when true, holds the previous bottom-border full-name overlay during file-list nav debounce.
 	cursorNameHintNavSkip atomic.Bool
-	cursorNameHintNav     managedTimer
+	cursorNameHintNav     sched.ManagedTimer
 	// filePreviewRunGen invalidates in-flight preview subprocess completions (skip stale postCommandWake).
 	filePreviewRunGen atomic.Uint64
 	// filePreviewHold keeps the last completed inactive-column preview for stale-while-revalidate draws.
@@ -258,7 +244,7 @@ type App struct {
 
 	// jobBlockerNextGen invalidates in-flight quick-blocker chain timers.
 	jobBlockerNextGen atomic.Uint64
-	jobBlockerNext    managedTimer
+	jobBlockerNext    sched.ManagedTimer
 
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
@@ -380,26 +366,10 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("validate app config: %w", err)
 	}
-	rk, err := resolveKeymapBundle(opts)
+	keys, err := resolveKeymapBundle(opts)
 	if err != nil {
 		return nil, err
 	}
-	km := rk.global
-	kmJobs := rk.jobs
-	kmCommands := rk.commands
-	kmMessages := rk.messages
-	kmFilePreview := rk.filePreview
-	kmDialogInput := rk.dialogInput
-	kmRenameDialog := rk.renameDialog
-	kmMkdirDialog := rk.mkdirDialog
-	kmBookmarkDialog := rk.bookmarkDialog
-	kmFindDialog := rk.findDialog
-	kmHistoryDialog := rk.historyDialog
-	kmFlattenDialog := rk.flattenDialog
-	kmTransferDialog := rk.transferDialog
-	kmCompare := rk.compare
-	kmDedup := rk.dedup
-	kmTerminal := rk.terminal
 	styles, availableThemes, themeChoices, err := resolveThemes(opts)
 	if err != nil {
 		return nil, err
@@ -437,7 +407,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, err
 	}
 	jobState := jobs.NewState()
-	jobState.SetTransferFunc(jobTransferFunc(cfg.Operations, cfg.Jobs))
+	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs))
 	jobState.SetThroughputChart(
 		time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
 		time.Duration(cfg.Jobs.ThroughputChartWindowSec)*time.Second,
@@ -463,31 +433,16 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	cmdCtx, cmdCancel := context.WithCancel(context.Background())
 	app := &App{
-		screen:             screen,
-		config:             cfg,
-		styles:             styles,
-		themes:             availableThemes,
-		paths:              resolvedPaths,
-		keys:               km,
-		keysJobs:           kmJobs,
-		keysCommands:       kmCommands,
-		keysMessages:       kmMessages,
-		keysFilePreview:    kmFilePreview,
-		keysDialogInput:    kmDialogInput,
-		keysRenameDialog:   kmRenameDialog,
-		keysMkdirDialog:    kmMkdirDialog,
-		keysBookmarkDialog: kmBookmarkDialog,
-		keysFindDialog:     kmFindDialog,
-		keysHistoryDialog:  kmHistoryDialog,
-		keysFlattenDialog:  kmFlattenDialog,
-		keysTransferDialog: kmTransferDialog,
-		keysCompare:        kmCompare,
-		keysDedup:          kmDedup,
-		keysTerminal:       kmTerminal,
-		devMode:            opts.DevMode,
-		commandsCtx:        cmdCtx,
-		commandsCancel:     cmdCancel,
-		workPools:          workpool.NewRegistry(poolDefs),
+		screen:         screen,
+		config:         cfg,
+		styles:         styles,
+		themes:         availableThemes,
+		paths:          resolvedPaths,
+		keys:           keys,
+		devMode:        opts.DevMode,
+		commandsCtx:    cmdCtx,
+		commandsCancel: cmdCancel,
+		workPools:      workpool.NewRegistry(poolDefs),
 		model: ui.Model{
 			Primary:                    left,
 			Secondary:                  right,
@@ -503,7 +458,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			DiskUsageShown:             false,
 			ViewMode:                   ui.ViewBrowser,
 			JobActivity:                make(map[string][]string),
-			MenuDefinitions:            menu.BrowserDefinitions(km, opts.DevMode),
+			MenuDefinitions:            menu.BrowserDefinitions(keys.Global, opts.DevMode),
 			ThemeDialog: dialog.ThemeDialogState{
 				CurrentName: styles.Name,
 				Choices:     uiThemeChoices(themeChoices),
@@ -528,14 +483,13 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	// OnDirectoryChange hooks are intentionally left unset: derived UI invariants
 	// (panel sync, disk-usage idle-sort arming) are reconciled centrally in
 	// App.reconcileAfterEvent(), which runs at the end of every Run-loop iteration.
-	jobState.SetEmitHook(app.onJobEmitted)
 	jobState.SetScanConfig(jobs.ScanConfig{
 		YieldInterval:       time.Duration(cfg.Jobs.ScanYieldIntervalMS) * time.Millisecond,
 		YieldEveryN:         cfg.Jobs.ScanYieldEveryN,
 		NiceIncrement:       cfg.Jobs.ScanNiceIncrement,
 		ProgressMinInterval: time.Duration(cfg.Jobs.ScanProgressMinIntervalMS) * time.Millisecond,
 	})
-	jobState.SetScanFunc(jobScanFunc())
+	jobState.SetScanFunc(jobbridge.ScanFunc())
 	jobState.StartWorker(app.jobStopCh)
 	suppressHeavyPathProbes := func(loc pathloc.Path) bool {
 		if loc.IsRemote() {
@@ -556,24 +510,25 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Model:    &app.model,
 		State:    jobState,
 		Config:   cfg,
-		Keys:     km,
-		KeysJobs: kmJobs,
+		Keys:     keys.Global,
+		KeysJobs: keys.Jobs,
 	})
+	jobState.SetEmitHook(app.jobsCtrl.OnJobEmitted)
 	app.findCtrl = findctrl.New(findctrl.Deps{
 		Host:           findHost{appShellHost: appShellHost{app: app}},
 		Screen:         screen,
 		Model:          &app.model,
 		Config:         cfg,
-		Keys:           km,
-		KeysFindDialog: kmFindDialog,
+		Keys:           keys.Global,
+		KeysFindDialog: keys.FindDialog,
 	})
 	app.compareCtrl = comparectrl.New(comparectrl.Deps{
 		Host:        compareHost{appShellHost: appShellHost{app: app}},
 		Screen:      screen,
 		Model:       &app.model,
 		Config:      cfg,
-		Keys:        km,
-		KeysCompare: kmCompare,
+		Keys:        keys.Global,
+		KeysCompare: keys.Compare,
 		Gitignore:   giCache,
 		DiskIgnore:  duIgnorer,
 	})
@@ -594,7 +549,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	app.wireGitStatusLoaders()
 	app.model.Primary.RescheduleGitStatusIfNeeded()
 	app.model.Secondary.RescheduleGitStatusIfNeeded()
-	app.syncJobPathMarks()
+	app.jobsCtrl.SyncJobPathMarks()
 	if secs := cfg.Jobs.FreeSpacePollIntervalSecs; secs > 0 {
 		go app.runVolumeSpaceTicker(time.Duration(secs)*time.Second, app.jobStopCh)
 	}
@@ -634,27 +589,6 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	return app, nil
 }
 
-// resolvedKeymaps holds every keymap.Map used by App, each already defaulted
-// from package defaults when the caller-supplied bundle left it nil.
-type resolvedKeymaps struct {
-	global         *keymap.Map
-	jobs           *keymap.Map
-	commands       *keymap.Map
-	messages       *keymap.Map
-	filePreview    *keymap.Map
-	dialogInput    *keymap.Map
-	renameDialog   *keymap.Map
-	mkdirDialog    *keymap.Map
-	bookmarkDialog *keymap.Map
-	findDialog     *keymap.Map
-	historyDialog  *keymap.Map
-	flattenDialog  *keymap.Map
-	transferDialog *keymap.Map
-	compare        *keymap.Map
-	dedup          *keymap.Map
-	terminal       *keymap.Map
-}
-
 // loadKeymapBundle resolves the raw keymap.Bundle: an explicit bundle or global
 // override for tests takes precedence, otherwise it loads from opts.Paths.
 func loadKeymapBundle(opts Options) (*keymap.Bundle, error) {
@@ -674,60 +608,45 @@ func loadKeymapBundle(opts Options) (*keymap.Bundle, error) {
 
 // resolveKeymapBundle resolves the global keymap and every per-view overlay
 // keymap, falling back to package defaults for any overlay the bundle didn't supply.
-func resolveKeymapBundle(opts Options) (resolvedKeymaps, error) {
+func resolveKeymapBundle(opts Options) (*keymap.Bundle, error) {
 	bundle, err := loadKeymapBundle(opts)
 	if err != nil {
-		return resolvedKeymaps{}, err
+		return nil, err
 	}
 	if bundle.Global == nil {
-		return resolvedKeymaps{}, fmt.Errorf("load keybindings: global keymap is nil")
+		return nil, fmt.Errorf("load keybindings: global keymap is nil")
 	}
-	rk := resolvedKeymaps{
-		global:         bundle.Global,
-		jobs:           bundle.Jobs,
-		commands:       bundle.Commands,
-		messages:       bundle.Messages,
-		filePreview:    bundle.FilePreview,
-		dialogInput:    bundle.DialogInput,
-		renameDialog:   bundle.RenameDialog,
-		mkdirDialog:    bundle.MkdirDialog,
-		bookmarkDialog: bundle.BookmarkDialog,
-		findDialog:     bundle.FindDialog,
-		historyDialog:  bundle.HistoryDialog,
-		flattenDialog:  bundle.FlattenDialog,
-		transferDialog: bundle.TransferDialog,
-		compare:        bundle.Compare,
-		dedup:          bundle.Dedup,
-		terminal:       bundle.Terminal,
-	}
+	// Work on a copy so callers passing an explicit Options.KeymapBundle don't
+	// have their overlays mutated by the defaulting below.
+	rk := *bundle
 	for _, step := range []struct {
 		km    **keymap.Map
 		build func() map[string][]string
 		label string
 	}{
-		{&rk.dialogInput, func() map[string][]string { return map[string][]string{} }, "empty dialog input"},
-		{&rk.renameDialog, keymap.DefaultRenameDialogOverlayKeys, "rename dialog overlay"},
-		{&rk.mkdirDialog, keymap.DefaultMkdirDialogOverlayKeys, "mkdir dialog overlay"},
-		{&rk.bookmarkDialog, keymap.DefaultBookmarkDialogOverlayKeys, "bookmark dialog overlay"},
-		{&rk.findDialog, keymap.DefaultFindDialogOverlayKeys, "find dialog overlay"},
-		{&rk.historyDialog, keymap.DefaultHistoryDialogOverlayKeys, "history dialog overlay"},
-		{&rk.filePreview, keymap.DefaultFilePreviewOverlayKeys, "file preview overlay"},
-		{&rk.flattenDialog, keymap.DefaultFlattenDialogOverlayKeys, "flatten dialog overlay"},
-		{&rk.transferDialog, keymap.DefaultTransferDialogOverlayKeys, "transfer dialog overlay"},
-		{&rk.compare, keymap.DefaultCompareOverlayKeys, "compare overlay"},
-		{&rk.dedup, keymap.DefaultDedupOverlayKeys, "dedup overlay"},
-		{&rk.terminal, keymap.DefaultTerminalOverlayKeys, "terminal overlay"},
+		{&rk.DialogInput, func() map[string][]string { return map[string][]string{} }, "empty dialog input"},
+		{&rk.RenameDialog, keymap.DefaultRenameDialogOverlayKeys, "rename dialog overlay"},
+		{&rk.MkdirDialog, keymap.DefaultMkdirDialogOverlayKeys, "mkdir dialog overlay"},
+		{&rk.BookmarkDialog, keymap.DefaultBookmarkDialogOverlayKeys, "bookmark dialog overlay"},
+		{&rk.FindDialog, keymap.DefaultFindDialogOverlayKeys, "find dialog overlay"},
+		{&rk.HistoryDialog, keymap.DefaultHistoryDialogOverlayKeys, "history dialog overlay"},
+		{&rk.FilePreview, keymap.DefaultFilePreviewOverlayKeys, "file preview overlay"},
+		{&rk.FlattenDialog, keymap.DefaultFlattenDialogOverlayKeys, "flatten dialog overlay"},
+		{&rk.TransferDialog, keymap.DefaultTransferDialogOverlayKeys, "transfer dialog overlay"},
+		{&rk.Compare, keymap.DefaultCompareOverlayKeys, "compare overlay"},
+		{&rk.Dedup, keymap.DefaultDedupOverlayKeys, "dedup overlay"},
+		{&rk.Terminal, keymap.DefaultTerminalOverlayKeys, "terminal overlay"},
 	} {
 		if *step.km != nil {
 			continue
 		}
 		m, err := keymap.Build(step.build())
 		if err != nil {
-			return resolvedKeymaps{}, fmt.Errorf("build %s map: %w", step.label, err)
+			return nil, fmt.Errorf("build %s map: %w", step.label, err)
 		}
 		*step.km = m
 	}
-	return rk, nil
+	return &rk, nil
 }
 
 // resolveThemes resolves the active theme (falling back to theme.Default when
@@ -808,7 +727,7 @@ type eventOutcome struct {
 func (a *App) handleInterruptPayload(data any) eventOutcome {
 	out := eventOutcome{pollDiskUsageAfter: true}
 	switch d := data.(type) {
-	case jobsWakePayload:
+	case jobsctrl.WakePayload:
 		out.pollJobsAfter = true
 		out.applyJobRefreshesAfter = true
 		// Progress wakes are frequent; reconciling both panels here caused
@@ -919,27 +838,27 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			out.didRender = true
 		}
 	case findctrl.WakePayload:
-		if a.pollFindUpdates(d) {
+		if a.findCtrl.PollUpdates(d) {
 			a.renderFindDialogUpdate()
 			out.didRender = true
 		}
 	case findctrl.RankWakePayload:
-		if a.applyFindRank() {
+		if a.findCtrl.ApplyPendingRank() {
 			a.renderFindDialogUpdate()
 			out.didRender = true
 		}
 	case findctrl.ThrottleRankWakePayload:
-		if a.handleFindThrottleRankWake() {
+		if a.findCtrl.HandleThrottleRankWake() {
 			a.renderFindDialogUpdate()
 			out.didRender = true
 		}
 	case findctrl.DebounceRankWakePayload:
-		if a.handleFindDebounceRankWake() {
+		if a.findCtrl.HandleDebounceRankWake() {
 			a.renderFindDialogUpdate()
 			out.didRender = true
 		}
 	case findctrl.FindNavIdlePayload:
-		if a.handleFindNavIdle(d.Epoch) {
+		if a.findCtrl.HandleFindNavIdle(d.Epoch) {
 			a.renderFindDialogUpdate()
 			out.didRender = true
 		}
@@ -1030,7 +949,7 @@ func (a *App) Run() error {
 			didRender = true
 		case *tcell.EventKey:
 			if a.model.ViewMode != ui.ViewJobs {
-				a.drainDiscardProgressEvents()
+				a.jobsCtrl.DrainDiscardProgressEvents()
 			} else {
 				pollJobsAfter = true
 			}
@@ -1051,11 +970,11 @@ func (a *App) Run() error {
 		}
 
 		if pollJobsAfter {
-			jobsDirty = a.pollJobEvents()
+			jobsDirty = a.jobsCtrl.PollEvents()
 			shouldRenderJobs = jobsDirty && a.jobsCtrl.AffectVisible()
 		}
 		if applyJobRefreshesAfter {
-			if a.applyJobRefreshes() && !didRender {
+			if a.jobsCtrl.ApplyRefreshes() && !didRender {
 				a.render()
 				didRender = true
 			}

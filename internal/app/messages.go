@@ -18,7 +18,7 @@ func (a *App) toggleMessagesView() {
 func (a *App) openMessagesView() {
 	a.model.ViewMode = ui.ViewMessages
 	a.model.ActiveSubFocus = ui.SubFocusFileList
-	a.model.MenuDefinitions = menu.MessagesDefinitions(a.keys, a.keysMessages)
+	a.model.MenuDefinitions = menu.MessagesDefinitions(a.keys.Global, a.keys.Messages)
 	a.model.Menu.ActiveMenu = menu.DefaultIndexMessages()
 	a.model.MessagesView.Selected = 0
 	a.model.MessagesView.ListScroll = 0

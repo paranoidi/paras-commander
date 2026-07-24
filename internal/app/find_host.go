@@ -6,6 +6,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -24,7 +25,7 @@ func (h findHost) NavigatePanelToPath(panelID int, path, selectName string) erro
 }
 
 func (h findHost) HandleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool, edit findctrl.ScrollingQueryEdit) bool {
-	inner, ok := edit.Value().(scrollingQueryEdit)
+	inner, ok := edit.Value().(scrollquery.Edit)
 	if !ok {
 		return false
 	}
@@ -32,7 +33,8 @@ func (h findHost) HandleScrollingQueryKey(ev *tcell.EventKey, inputFocused bool,
 }
 
 func (h findHost) FindDialogScrollingQuery(st *dialog.FindDialogState, width int, onChange func()) findctrl.ScrollingQueryEdit {
-	return findctrl.NewScrollingQueryEdit(findDialogScrollingQuery(st, width, onChange))
+	edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
+	return findctrl.NewScrollingQueryEdit(edit)
 }
 
 func (h findHost) FindDialogQueryWidth() int { return h.app.findDialogQueryWidth() }

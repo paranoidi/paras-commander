@@ -60,7 +60,7 @@ func (a *App) confirmJobBlockerDialogWithFocus(focus int) {
 	jobID := st.JobID
 	a.closeJobBlockerDialog()
 	a.jobState.SubmitBlockerDecision(jobID, d)
-	a.pollJobEvents()
+	a.jobsCtrl.PollEvents()
 	a.jobsCtrl.SetListStale(true)
 	a.scheduleJobBlockerDialogChain()
 }
@@ -127,6 +127,16 @@ func (a *App) applyJobBlockerNextPayload(p jobBlockerNextPayload) bool {
 	}
 	a.tryOpenJobBlockerDialog()
 	return a.model.ConflictDialog.Open
+}
+
+func (a *App) tryDispatchJobs(actionID string) bool {
+	if actionID == keymap.ActionJobsAnswerBlocker {
+		// The raw-key path answers blockers pre-dispatch (input.go); this covers
+		// menu/help activation. No-op when nothing is waiting for a decision.
+		a.handleJobsAnswerBlockerKey()
+		return true
+	}
+	return a.jobsCtrl.TryDispatch(actionID)
 }
 
 func (a *App) handleJobsAnswerBlockerKey() (rendered bool) {

@@ -143,12 +143,12 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	}
 	if a.model.FindDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		rest = append(findDialogOverlayFooterKeys(a.keysFindDialog), rest...)
+		rest = append(findDialogOverlayFooterKeys(a.keys.FindDialog), rest...)
 		return footerWithEscClose(rest)
 	}
 	if a.model.HistoryDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		rest = append(historyDialogOverlayFooterKeys(a.keysHistoryDialog, a.model.HistoryDialog.BothPanels), rest...)
+		rest = append(historyDialogOverlayFooterKeys(a.keys.HistoryDialog, a.model.HistoryDialog.BothPanels), rest...)
 		return footerWithEscClose(rest)
 	}
 	if a.model.PathPicker.Open || a.model.MetaDialog.Open {
@@ -180,7 +180,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 	if a.model.ViewMode == ui.ViewBrowser &&
 		a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip &&
 		!a.inQuickFilterUI() {
-		return menu.FunctionKeysSelectionsStripView(a.keys.MenuBindingLabel(keymap.ActionPanelClearSelection))
+		return menu.FunctionKeysSelectionsStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
 	}
 	return menu.FunctionKeys
 }
@@ -192,13 +192,13 @@ func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 		rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
 	}
 	if a.bookmarkDialogDeleteFooterEligible() {
-		if lbl := a.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete); lbl != "" {
+		if lbl := a.keys.BookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete); lbl != "" {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete bookmark"}}, rest...)
 		}
 	}
-	if a.keysBookmarkDialog != nil && a.bookmarkDialogOpen() {
+	if a.keys.BookmarkDialog != nil && a.bookmarkDialogOpen() {
 		if _, ok := a.pathPickerSelectedItem(); ok {
-			if lbl := a.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkOpenOther); lbl != "" {
+			if lbl := a.keys.BookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkOpenOther); lbl != "" {
 				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Open other"}}, rest...)
 			}
 		}
@@ -210,24 +210,24 @@ func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 // group-select/file-dialog/SFTP-connect/path-picker/history/find/meta/user-menu/compare-merge dialogs).
 func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-	if hints := flattenDialogOverlayFooterKeys(a, a.keysFlattenDialog); len(hints) > 0 {
+	if hints := flattenDialogOverlayFooterKeys(a, a.keys.FlattenDialog); len(hints) > 0 {
 		rest = append(hints, rest...)
 	}
-	if hints := transferDialogOverlayFooterKeys(a, a.keysTransferDialog); len(hints) > 0 {
+	if hints := transferDialogOverlayFooterKeys(a, a.keys.TransferDialog); len(hints) > 0 {
 		rest = append(hints, rest...)
 	}
 	if a.pathPickerHostFooterEligible() {
-		if lbl := a.keys.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
+		if lbl := a.keys.Global.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
 			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Bookmarks"}}, rest...)
 		}
 	}
 	if a.mkdirDialogExtractFooterEligible() {
-		if lbl := a.keysMkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName); lbl != "" {
+		if lbl := a.keys.MkdirDialog.MenuBindingLabel(keymap.ActionFileMkdirExtractCommonName); lbl != "" {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF7, KeyLabel: lbl, Hint: "Extract common name"}}, rest...)
 		}
 	}
 	if a.dialogInputRestoreFooterEligible() {
-		if lbl := a.keysDialogInput.MenuBindingLabel(keymap.ActionDialogInputRestoreDefault); lbl != "" {
+		if lbl := a.keys.DialogInput.MenuBindingLabel(keymap.ActionDialogInputRestoreDefault); lbl != "" {
 			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Default"}}, rest...)
 		}
 	}
@@ -236,14 +236,14 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	}
 	if a.renameDialogFooterEligible() {
 		if a.renameEncodingFooterEligible() {
-			if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding); lbl != "" {
+			if lbl := a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding); lbl != "" {
 				rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: lbl, Hint: "Encoding"}}, rest...)
 			}
 		}
-		if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify); lbl != "" {
+		if lbl := a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify); lbl != "" {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: lbl, Hint: "Slugify"}}, rest...)
 		}
-		if lbl := a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize); lbl != "" {
+		if lbl := a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize); lbl != "" {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF2, KeyLabel: lbl, Hint: "Sanitize"}}, rest...)
 		}
 	}
@@ -260,7 +260,7 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		return menu.FunctionKeysFilePreviewView(a.model.FullscreenFilePreviewRawMarkdown), true
 	}
 	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
-		rest := compareViewFooterKeys(a.keysCompare, a.model.CompareView.Filter)
+		rest := compareViewFooterKeys(a.keys.Compare, a.model.CompareView.Filter)
 		rest = append(rest, menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
 		out := footerWithEscClose(rest)
 		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"}
@@ -268,7 +268,7 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		return out, true
 	}
 	if a.model.ViewMode == ui.ViewDedup && !a.inQuickFilterUI() {
-		rest := dedupViewFooterKeys(a.keys, a.keysDedup, a.model.DedupView.TreeDirs)
+		rest := dedupViewFooterKeys(a.keys.Global, a.keys.Dedup, a.model.DedupView.TreeDirs)
 		rest = append(rest,
 			menu.FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
 			menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
@@ -297,6 +297,32 @@ func footerWithEscClose(rest []menu.FunctionKey) []menu.FunctionKey {
 	return out
 }
 
+func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
+	if keys == nil {
+		return nil
+	}
+	var out []menu.FunctionKey
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindUnselectAll); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect all"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectAll); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Select all"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectGroup); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Select group"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindUnselectGroup); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect group"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindOpenInPrimary); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindOpenInSecondary); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ►"})
+	}
+	return out
+}
+
 func (a *App) prepareGlobalQuitShortcutCleanup() {
 	a.clearPanelSyncFollowNavCoalesce()
 	a.clearQuickViewNavCoalesce()
@@ -321,7 +347,7 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 	// Shift+F10 defaults to app.quit-immediate and must not fall through to plain F10.
 	if event.Key() == tcell.KeyF10 {
 		if event.Modifiers()&tcell.ModShift != 0 {
-			if id, ok := a.keys.Lookup(event); ok && id == keymap.ActionAppQuitImmediate {
+			if id, ok := a.keys.Global.Lookup(event); ok && id == keymap.ActionAppQuitImmediate {
 				a.prepareGlobalQuitShortcutCleanup()
 				return true, a.handleQuitImmediate(), false
 			}
@@ -336,7 +362,7 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 		}
 	}
 
-	if id, ok := a.keys.Lookup(event); ok && id == keymap.ActionAppQuitImmediate {
+	if id, ok := a.keys.Global.Lookup(event); ok && id == keymap.ActionAppQuitImmediate {
 		a.prepareGlobalQuitShortcutCleanup()
 		return true, a.handleQuitImmediate(), false
 	}
@@ -421,7 +447,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	case InputModeFindDialog:
 		wasOpen := a.model.FindDialog.Open
 		gsWasOpen := a.model.GroupSelect.Open
-		a.handleFindDialogKey(event)
+		a.findCtrl.HandleDialogKey(event)
 		if !wasOpen || !a.model.FindDialog.Open || (!gsWasOpen && a.model.GroupSelect.Open) {
 			a.render()
 		} else if !a.paintFindDialogOverlay() {
@@ -483,7 +509,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		}
 		return quit, true
 	case InputModeJobsView:
-		quit := a.handleJobsViewKey(event)
+		quit := a.jobsCtrl.HandleJobsViewKey(event)
 		a.render()
 		return quit, true
 	case InputModeCommandsView:
@@ -647,7 +673,7 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 	if !isPlainPrintableRune(event) {
 		return false
 	}
-	if _, ok := a.keys.Lookup(event); ok {
+	if _, ok := a.keys.Global.Lookup(event); ok {
 		// Printable keys bound in the keymap run their action instead of opening quick filter (e.g. '-' unselect group).
 		return false
 	}
@@ -660,7 +686,7 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {
 	f := a.activePanel().Filter
 	if isPlainPrintableRune(event) {
-		if _, ok := a.keys.Lookup(event); ok {
+		if _, ok := a.keys.Global.Lookup(event); ok {
 			return false
 		}
 		return true
@@ -812,7 +838,7 @@ func (a *App) dispatch(actionID string) bool {
 		// Keyboard/menu shortcut targets whichever panel is active (left vs right).
 		a.openHistoryDialog(a.model.ActivePanel)
 	case keymap.ActionPanelFindDialog:
-		a.openFindDialog(a.model.ActivePanel)
+		a.findCtrl.OpenDialog(a.model.ActivePanel)
 	case keymap.ActionAppUserMenu:
 		a.openUserMenu()
 	case keymap.ActionAppUserMenuEdit:
@@ -923,16 +949,6 @@ func (a *App) handleSelectionsStripKey(event *tcell.EventKey) bool {
 
 func isPlainPrintableRune(event *tcell.EventKey) bool {
 	return event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && unicode.IsPrint(event.Rune())
-}
-
-// isDialogInputRune reports a printable rune suitable for dialog text fields.
-// Shifted punctuation (e.g. Shift+4 → '$') often arrives with ModShift; Alt/Ctrl are rejected.
-func isDialogInputRune(event *tcell.EventKey) bool {
-	if event.Key() != tcell.KeyRune || !unicode.IsPrint(event.Rune()) {
-		return false
-	}
-	mod := event.Modifiers()
-	return mod == tcell.ModNone || mod == tcell.ModShift
 }
 
 func (a *App) inQuickFilterUI() bool {

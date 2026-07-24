@@ -47,7 +47,7 @@ func (a *App) applyThroughputChartTick() bool {
 		return false
 	}
 	if a.model.ViewMode == ui.ViewJobs {
-		a.syncJobsList()
+		a.jobsCtrl.SyncJobsList()
 		return true
 	}
 	a.jobsCtrl.SetListStale(true)

@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/app/pathpick"
 	"github.com/paranoidi/paras-commander/internal/bookmarks"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathpick"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )

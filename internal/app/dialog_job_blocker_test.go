@@ -29,7 +29,7 @@ func waitJobsWaitingDecision(t *testing.T, app *App, want int) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		app.pollJobEvents()
+		app.jobsCtrl.PollEvents()
 		if app.jobState.JobsWaitingDecision() >= want {
 			return
 		}
@@ -132,7 +132,7 @@ func TestJobBlockerDialogChainOpensNext(t *testing.T) {
 	app.confirmJobBlockerDialog()
 	deadline := time.Now().Add(2 * time.Second)
 	for app.jobState.JobsWaitingDecision() > 1 && time.Now().Before(deadline) {
-		app.pollJobEvents()
+		app.jobsCtrl.PollEvents()
 		time.Sleep(5 * time.Millisecond)
 	}
 	if app.jobState.JobsWaitingDecision() != 1 {
@@ -180,7 +180,7 @@ func TestHandleKeyCtrlQOpensJobBlockerDialog(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			app.model.ConflictDialog = dialog.ConflictDialogState{}
-			if id, ok := app.keys.Lookup(tc.ev); !ok || id != keymap.ActionJobsAnswerBlocker {
+			if id, ok := app.keys.Global.Lookup(tc.ev); !ok || id != keymap.ActionJobsAnswerBlocker {
 				t.Fatalf("Ctrl+Q lookup = %q %v, want jobs.answer-blocker", id, ok)
 			}
 			quit, rendered := app.handleKey(tc.ev)

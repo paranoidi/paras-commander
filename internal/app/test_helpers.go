@@ -146,7 +146,7 @@ func flushBackgroundJobs(t *testing.T, app *App) {
 	t.Helper()
 	const maxIter = 2000
 	for i := 0; i < maxIter; i++ {
-		app.pollJobEvents()
+		app.jobsCtrl.PollEvents()
 		busy := false
 		for _, j := range app.jobState.AllJobs() {
 			switch j.Status {

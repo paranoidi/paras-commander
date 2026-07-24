@@ -22,7 +22,7 @@ func (h dedupHost) NavigatePanelToPath(panelID int, path string, selectName stri
 func (h dedupHost) EnqueueDeleteJob(paths []string, removeEmptyDirs bool) {
 	// Dedup has its own empty-dirs confirm (openDedupEmptyDirsConfirm); never
 	// double-prompt with the generic dangling-dirs cleanup.
-	h.app.enqueueDeleteJob(paths, removeEmptyDirs, false)
+	h.app.jobsCtrl.EnqueueDeleteJob(paths, removeEmptyDirs, false)
 }
 
 func (h dedupHost) DedupMenuDefinitions() []menu.Definition { return h.app.dedupMenuDefinitions() }

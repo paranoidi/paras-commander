@@ -16,10 +16,10 @@ import (
 // non-matching chord, a nil field, or a field with no Prefill all return false
 // so the caller can fall through to its normal handling.
 func (a *App) tryDialogInputRestore(ev *tcell.EventKey, f *dialog.FileDialogField) bool {
-	if a.keysDialogInput == nil || f == nil {
+	if a.keys.DialogInput == nil || f == nil {
 		return false
 	}
-	id, ok := a.keysDialogInput.Lookup(ev)
+	id, ok := a.keys.DialogInput.Lookup(ev)
 	if !ok || id != keymap.ActionDialogInputRestoreDefault {
 		return false
 	}
@@ -30,10 +30,10 @@ func (a *App) tryDialogInputRestore(ev *tcell.EventKey, f *dialog.FileDialogFiel
 // preferred restore-default shortcut: a focused dialog text field whose
 // Prefill is non-empty (same contexts where restore is meaningful).
 func (a *App) dialogInputRestoreFooterEligible() bool {
-	if a.keysDialogInput == nil {
+	if a.keys.DialogInput == nil {
 		return false
 	}
-	if lbl := a.keysDialogInput.MenuBindingLabel(keymap.ActionDialogInputRestoreDefault); lbl == "" {
+	if lbl := a.keys.DialogInput.MenuBindingLabel(keymap.ActionDialogInputRestoreDefault); lbl == "" {
 		return false
 	}
 	if a.model.FileDialog.Open {
@@ -78,10 +78,10 @@ func (a *App) dialogInputRestoreFooterEligible() bool {
 // Returns true when the chord matched a dialog-input action (even when the
 // edit was a no-op), so the caller should not fall through to generic key handling.
 func (a *App) tryDialogInputFieldActions(ev *tcell.EventKey, f *dialog.FileDialogField) bool {
-	if a.keysDialogInput == nil || f == nil {
+	if a.keys.DialogInput == nil || f == nil {
 		return false
 	}
-	id, ok := a.keysDialogInput.Lookup(ev)
+	id, ok := a.keys.DialogInput.Lookup(ev)
 	if !ok {
 		return false
 	}

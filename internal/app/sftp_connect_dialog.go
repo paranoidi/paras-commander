@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -146,7 +147,8 @@ func (a *App) handleSFTPConnectDialogKey(event *tcell.EventKey) {
 			st.Selected = 0
 			dialog.EnsureSFTPConnectListScroll(st, a.sftpConnectListRows())
 		}
-		if a.handleScrollingQueryKey(event, true, sftpConnectDialogScrollingQuery(st, a.sftpConnectDialogQueryWidth(), onChange)) {
+		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, a.sftpConnectDialogQueryWidth(), onChange)
+		if a.handleScrollingQueryKey(event, true, edit) {
 			return
 		}
 	}

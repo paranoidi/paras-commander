@@ -7,8 +7,10 @@ import (
 	"github.com/gdamore/tcell/v2"
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/dialogform"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
@@ -54,12 +56,12 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 	// Segments: sort mode radios(0-3) | options checkboxes(4-6) | buttons(7).
 	form := dialog.NewDialogLinearForm(7).WithSegments(0, 4, 7)
 	st := &a.model.SortDialog
-	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
-		focus:              &st.Focus,
-		onApply:            a.applySortDialog,
-		onCancel:           a.closeSortDialog,
-		allowPlainOKCancel: true,
-		onMnemonic: func(r rune) bool {
+	a.handleLinearFormDialogKey(event, form, dialogform.Handlers{
+		Focus:              &st.Focus,
+		OnApply:            a.applySortDialog,
+		OnCancel:           a.closeSortDialog,
+		AllowPlainOKCancel: true,
+		OnMnemonic: func(r rune) bool {
 			for i, row := range panel.SortDialogRadios() {
 				if unicode.ToLower(r) == unicode.ToLower(row.Shortcut) {
 					st.SortMode = row.Mode
@@ -82,7 +84,7 @@ func (a *App) handleSortDialogKey(event *tcell.EventKey) {
 			}
 			return true
 		},
-		onSpace: func(focus int) bool {
+		OnSpace: func(focus int) bool {
 			radios := panel.SortDialogRadios()
 			if focus >= 0 && focus < len(radios) {
 				st.SortMode = radios[focus].Mode
@@ -142,19 +144,19 @@ func (a *App) handleListingFormatDialogKey(event *tcell.EventKey) {
 	form := dialog.NewDialogLinearForm(3).WithSegments(0, 3)
 	st := &a.model.ListingFormatDialog
 	radios := panel.ListFormatDialogRadios()
-	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
-		focus:              &st.Focus,
-		onApply:            a.applyListingFormatDialog,
-		onCancel:           a.closeListingFormatDialog,
-		allowPlainOKCancel: true,
-		onMnemonic: func(r rune) bool {
+	a.handleLinearFormDialogKey(event, form, dialogform.Handlers{
+		Focus:              &st.Focus,
+		OnApply:            a.applyListingFormatDialog,
+		OnCancel:           a.closeListingFormatDialog,
+		AllowPlainOKCancel: true,
+		OnMnemonic: func(r rune) bool {
 			if format, ok := listingFormatFromShortcut(r, &st.Focus); ok {
 				st.ListFormat = format
 				return true
 			}
 			return false
 		},
-		onSpace: func(focus int) bool {
+		OnSpace: func(focus int) bool {
 			switch focus {
 			case 0, 1, 2:
 				st.ListFormat = radios[focus].Format
@@ -280,13 +282,13 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 	listRadios := panel.ListFormatDialogRadios()
 	scrollRadios := panel.ScrollModeDialogRadios()
 	sbRadios := uiscrollbar.DialogRadios()
-	a.handleLinearFormDialogKey(event, form, linearFormHandlers{
-		focus:              &st.Focus,
-		onApply:            a.applyConfigDialog,
-		onCancel:           a.closeConfigDialog,
-		allowPlainOKCancel: true,
-		onMoveFocus:        dialog.ConfigDialogMoveScrollFocus,
-		onMnemonic: func(r rune) bool {
+	a.handleLinearFormDialogKey(event, form, dialogform.Handlers{
+		Focus:              &st.Focus,
+		OnApply:            a.applyConfigDialog,
+		OnCancel:           a.closeConfigDialog,
+		AllowPlainOKCancel: true,
+		OnMoveFocus:        dialog.ConfigDialogMoveScrollFocus,
+		OnMnemonic: func(r rune) bool {
 			if mode, ok := scrollModeFromShortcut(r, &st.Focus); ok {
 				st.ScrollMode = mode
 				return true
@@ -320,7 +322,7 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 			}
 			return true
 		},
-		onSpace: func(focus int) bool {
+		OnSpace: func(focus int) bool {
 			switch focus {
 			case 0:
 				st.ShowFileIcons = !st.ShowFileIcons
@@ -485,8 +487,8 @@ func (a *App) executeGroupSelect() {
 func (a *App) confirmGroupSelectFromInput() {
 	gs := &a.model.GroupSelect
 	if gs.Focus == dialog.GroupSelectFocusPattern {
-		e := groupSelectScrollingQuery(gs, a.groupSelectQueryWidth())
-		e.apply()
+		e := scrollquery.NewEdit(&gs.Text, &gs.TextCursor, &gs.TextScroll, a.groupSelectQueryWidth(), nil)
+		e.Apply()
 	}
 	if gs.Focus >= dialog.GroupSelectFocusShellRadio && gs.Focus <= dialog.GroupSelectFocusSimpleRadio {
 		a.applyGroupSelectModeFromFocus()
@@ -543,7 +545,8 @@ func (a *App) handleGroupSelectKey(event *tcell.EventKey) {
 
 	if gs.Focus == dialog.GroupSelectFocusPattern {
 		skipScrolling := event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) && groupSelectAltIsDialogMnemonic(event.Rune())
-		if !skipScrolling && a.handleScrollingQueryKey(event, true, groupSelectScrollingQuery(gs, a.groupSelectQueryWidth())) {
+		edit := scrollquery.NewEdit(&gs.Text, &gs.TextCursor, &gs.TextScroll, a.groupSelectQueryWidth(), nil)
+		if !skipScrolling && a.handleScrollingQueryKey(event, true, edit) {
 			return
 		}
 	}

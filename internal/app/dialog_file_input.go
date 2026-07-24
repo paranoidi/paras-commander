@@ -3,6 +3,7 @@ package app
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -303,7 +304,7 @@ func (a *App) handleFileDialogRune(event *tcell.EventKey) {
 		}
 		return
 	}
-	if isDialogInputRune(event) {
+	if scrollquery.IsDialogInputRune(event) {
 		if f := a.focusedField(); f != nil {
 			a.handleFileDialogFieldKey(event, f, a.fileDialogFieldAfterEdit())
 		}

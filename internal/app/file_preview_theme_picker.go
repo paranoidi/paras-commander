@@ -7,6 +7,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
@@ -198,10 +199,6 @@ func filePreviewThemePickerDisplayLines(st *dialog.FilePreviewThemePickerState) 
 	return lines
 }
 
-func filePreviewThemePickerScrollingQuery(st *dialog.FilePreviewThemePickerState, width int, onChange func()) scrollingQueryEdit {
-	return newScrollingQueryEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, width, onChange)
-}
-
 func (a *App) handleFilePreviewThemePickerKey(event *tcell.EventKey) bool {
 	st := &a.model.FilePreviewThemePicker
 	if !st.Open {
@@ -223,7 +220,8 @@ func (a *App) handleFilePreviewThemePickerKey(event *tcell.EventKey) bool {
 		a.previewFilePreviewThemePickerSelection()
 		dialog.EnsureFilePreviewThemePickerListScroll(st, a.filePreviewThemePickerListRows())
 	}
-	if a.handleScrollingQueryKey(event, true, filePreviewThemePickerScrollingQuery(st, a.filePreviewThemePickerQueryWidth(), onChange)) {
+	edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, a.filePreviewThemePickerQueryWidth(), onChange)
+	if a.handleScrollingQueryKey(event, true, edit) {
 		return true
 	}
 

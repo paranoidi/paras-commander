@@ -666,7 +666,7 @@ func TestDedupViewCopiesPaneSelectAll(t *testing.T) {
 	orchardLantern := filepath.Join(dir, "orchard", "lantern.txt")
 
 	star := tcell.NewEventKey(tcell.KeyRune, '*', tcell.ModNone)
-	if id, ok := app.keys.Lookup(star); !ok || id != keymap.ActionPanelInvertSelection {
+	if id, ok := app.keys.Global.Lookup(star); !ok || id != keymap.ActionPanelInvertSelection {
 		t.Fatalf("* key = %q %v, want panel.invert-selection", id, ok)
 	}
 

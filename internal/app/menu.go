@@ -42,7 +42,7 @@ func (a *App) handleQuickFilterFunctionKey(event *tcell.EventKey) bool {
 	if def, item, ok := menu.FindItemByFKeyLabel(menu.ActiveDefinitions(a.model.MenuDefinitions), label); ok {
 		return a.activateMenuSelection(def, item)
 	}
-	if id, ok := a.keys.Lookup(event); ok && id == keymap.ActionAppUserMenu {
+	if id, ok := a.keys.Global.Lookup(event); ok && id == keymap.ActionAppUserMenu {
 		a.openUserMenu()
 		return false
 	}
@@ -287,7 +287,7 @@ func (a *App) activateScopedPanelMenu(panelScope int, item menu.Item) {
 	case keymap.ActionPanelHistoryDialog:
 		a.openHistoryDialog(panelScope)
 	case keymap.ActionPanelFindDialog:
-		a.openFindDialog(panelScope)
+		a.findCtrl.OpenDialog(panelScope)
 	case keymap.ActionPanelComparePanels:
 		a.openComparePanels()
 	case keymap.ActionPanelFindDuplicates:

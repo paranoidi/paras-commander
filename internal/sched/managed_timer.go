@@ -1,20 +1,20 @@
-package app
+package sched
 
 import (
 	"sync"
 	"time"
 )
 
-// managedTimer is a thread-safe one-shot timer with stop-drain-reset semantics.
+// ManagedTimer is a thread-safe one-shot timer with stop-drain-reset semantics.
 // The zero value is ready to use.
-type managedTimer struct {
+type ManagedTimer struct {
 	mu sync.Mutex
 	t  *time.Timer
 }
 
 // stopDrain stops the timer and drains the channel if it already fired.
 // Must be called with mu held.
-func (mt *managedTimer) stopDrain() {
+func (mt *ManagedTimer) stopDrain() {
 	if mt.t == nil {
 		return
 	}
@@ -28,7 +28,7 @@ func (mt *managedTimer) stopDrain() {
 }
 
 // Clear cancels any pending timer.
-func (mt *managedTimer) Clear() {
+func (mt *ManagedTimer) Clear() {
 	mt.mu.Lock()
 	mt.stopDrain()
 	mt.mu.Unlock()
@@ -36,7 +36,7 @@ func (mt *managedTimer) Clear() {
 
 // Reset cancels any pending timer and schedules fn to run after delay.
 // fn is called without any lock held.
-func (mt *managedTimer) Reset(delay time.Duration, fn func()) {
+func (mt *ManagedTimer) Reset(delay time.Duration, fn func()) {
 	mt.mu.Lock()
 	mt.stopDrain()
 	mt.t = time.AfterFunc(delay, func() {

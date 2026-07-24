@@ -35,7 +35,7 @@ func TestQueueRetainsMultiplePausedTransferJobs(t *testing.T) {
 	if got := len(app.jobState.AllJobs()); got != 3 {
 		t.Fatalf("AllJobs() len = %d, want 3", got)
 	}
-	app.syncJobsList()
+	app.jobsCtrl.SyncJobsList()
 	if got := len(app.model.JobsList); got != 3 {
 		t.Fatalf("JobsList len = %d, want 3", got)
 	}
@@ -63,7 +63,7 @@ func TestFileMenuCopyOpensTransferDialogWithoutEnqueue(t *testing.T) {
 	p := filepath.Join(dir, "a.txt")
 	app.activePanel().SelectedPaths = map[string]bool{p: true}
 
-	defs := menu.BrowserDefinitions(app.keys, false)
+	defs := menu.BrowserDefinitions(app.keys.Global, false)
 	def, item, ok := findFileMenuItem(defs, "Copy")
 	if !ok {
 		t.Fatal("file menu should include Copy")

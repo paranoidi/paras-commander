@@ -14,13 +14,13 @@ import (
 // tryBookmarkDialogShortcut handles [dialog.bookmark] while the bookmarks
 // path picker is open. Returns true when the event was consumed.
 func (a *App) tryBookmarkDialogShortcut(ev *tcell.EventKey) bool {
-	if a.keysBookmarkDialog == nil {
+	if a.keys.BookmarkDialog == nil {
 		return false
 	}
 	if !a.bookmarkDialogOpen() {
 		return false
 	}
-	id, ok := a.keysBookmarkDialog.Lookup(ev)
+	id, ok := a.keys.BookmarkDialog.Lookup(ev)
 	if !ok {
 		return false
 	}
@@ -82,10 +82,10 @@ func (a *App) bookmarkDialogDeleteEligible() bool {
 }
 
 func (a *App) bookmarkDialogDeleteFooterEligible() bool {
-	if a.keysBookmarkDialog == nil || !a.bookmarkDialogDeleteEligible() {
+	if a.keys.BookmarkDialog == nil || !a.bookmarkDialogDeleteEligible() {
 		return false
 	}
-	return a.keysBookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete) != ""
+	return a.keys.BookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete) != ""
 }
 
 // deleteSelectedBookmark removes the selected fzf-marks entry from disk and the open list.

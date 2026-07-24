@@ -150,7 +150,7 @@ func (a *App) toggleCommandsView() {
 func (a *App) openCommandsView() {
 	a.model.ViewMode = ui.ViewCommands
 	a.model.ActiveSubFocus = ui.SubFocusFileList
-	a.model.MenuDefinitions = menu.CommandsDefinitions(a.keys, a.keysCommands)
+	a.model.MenuDefinitions = menu.CommandsDefinitions(a.keys.Global, a.keys.Commands)
 	a.model.Menu.ActiveMenu = menu.DefaultIndexCommands()
 	if a.model.CommandsView.FocusPane < 0 || a.model.CommandsView.FocusPane > 2 {
 		a.model.CommandsView.FocusPane = 0

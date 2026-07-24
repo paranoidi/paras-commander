@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/paranoidi/paras-commander/internal/filenameenc"
+	"github.com/paranoidi/paras-commander/internal/jobbridge"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -199,7 +200,7 @@ func (a *App) promptDanglingDirDelete(dirs []string) {
 		return
 	}
 	if a.model.AnyModalOpen() {
-		a.setTransientMessage(fmt.Sprintf("%d empty %s left behind", len(dirs), plural(len(dirs), "directory", "directories")), ui.MessageUrgencyInfo)
+		a.setTransientMessage(fmt.Sprintf("%d empty %s left behind", len(dirs), jobbridge.Plural(len(dirs), "directory", "directories")), ui.MessageUrgencyInfo)
 		return
 	}
 	a.openDanglingDirsDeleteDialog(dirs)
@@ -217,7 +218,7 @@ func (a *App) openDanglingDirsDeleteDialog(dirs []string) {
 	fd := dialog.FileDialogState{
 		Open:               true,
 		DialogType:         dialog.FileDialogDelete,
-		DeleteSummary:      fmt.Sprintf("%d %s left empty", len(dirs), plural(len(dirs), "directory", "directories")),
+		DeleteSummary:      fmt.Sprintf("%d %s left empty", len(dirs), jobbridge.Plural(len(dirs), "directory", "directories")),
 		DeleteEntries:      entries,
 		FocusedField:       0, // Yes default
 		DeleteDanglingDirs: true,
@@ -475,11 +476,11 @@ func (a *App) executeMkdir() {
 	case dialog.MkdirActionCreateCopySelect:
 		a.activePanel().ClearSelection()
 		a.addTransferJob(jobs.TypeCopy, sources, plan.Path, false, a.transferPreserveFromConfig())
-		a.setTransientMessage(fmt.Sprintf("Created %s; copy queued (%d %s)", plan.Name, len(sources), plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
+		a.setTransientMessage(fmt.Sprintf("Created %s; copy queued (%d %s)", plan.Name, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 	case dialog.MkdirActionCreateMoveSelect:
 		a.activePanel().ClearSelection()
 		a.addTransferJob(jobs.TypeMove, sources, plan.Path, false, a.transferPreserveFromConfig())
-		a.setTransientMessage(fmt.Sprintf("Created %s; move queued (%d %s)", plan.Name, len(sources), plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
+		a.setTransientMessage(fmt.Sprintf("Created %s; move queued (%d %s)", plan.Name, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 	}
 }
 
@@ -493,8 +494,8 @@ func (a *App) executeDelete() {
 			paths[i] = e.Path
 		}
 		a.closeFileDialog()
-		a.enqueueDeleteJob(paths, false, false)
-		a.setTransientMessage(fmt.Sprintf("Delete queued (%d %s)", len(paths), plural(len(paths), "directory", "directories")), ui.MessageUrgencyInfo)
+		a.jobsCtrl.EnqueueDeleteJob(paths, false, false)
+		a.setTransientMessage(fmt.Sprintf("Delete queued (%d %s)", len(paths), jobbridge.Plural(len(paths), "directory", "directories")), ui.MessageUrgencyInfo)
 		return
 	}
 	// Dedup delete: the dialog overlays the dedup view; route to the handler
@@ -507,7 +508,7 @@ func (a *App) executeDelete() {
 	if a.model.ViewMode == ui.ViewFilePreview {
 		path := a.model.FullscreenFilePreview.Path
 		a.closeFileDialog()
-		a.enqueueDeleteJob([]string{path}, false, true)
+		a.jobsCtrl.EnqueueDeleteJob([]string{path}, false, true)
 		a.closeFilePreviewFullscreen()
 		a.setTransientMessage("Delete queued (1 item)", ui.MessageUrgencyInfo)
 		return
@@ -531,7 +532,7 @@ func (a *App) executeDelete() {
 	for i, e := range source.Entries {
 		sources[i] = e.Path
 	}
-	a.enqueueDeleteJob(sources, false, true)
+	a.jobsCtrl.EnqueueDeleteJob(sources, false, true)
 	n := len(sources)
 	delNoun := "items"
 	if n == 1 {

@@ -64,7 +64,7 @@ func (a *App) executeExtract() {
 	}
 	p := a.activePanel()
 	p.ClearSelection()
-	a.enqueueExtractJob(ops.ExtractItemPaths(plan.Items), plan.Destination)
+	a.jobsCtrl.EnqueueExtractJob(ops.ExtractItemPaths(plan.Items), plan.Destination)
 	n := len(plan.Items)
 	noun := "archives"
 	if n == 1 {

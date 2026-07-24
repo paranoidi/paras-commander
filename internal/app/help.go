@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -226,38 +227,38 @@ func (a *App) effectiveKeyStringsForView(actionID string, defaults []string, vm 
 			out = append(out, k)
 		}
 	}
-	if a.keys != nil {
-		add(a.keys.BindingsForAction(actionID))
+	if a.keys.Global != nil {
+		add(a.keys.Global.BindingsForAction(actionID))
 	}
-	if a.keysJobs != nil {
-		add(a.keysJobs.BindingsForAction(actionID))
+	if a.keys.Jobs != nil {
+		add(a.keys.Jobs.BindingsForAction(actionID))
 	}
-	if a.keysCommands != nil {
-		add(a.keysCommands.BindingsForAction(actionID))
+	if a.keys.Commands != nil {
+		add(a.keys.Commands.BindingsForAction(actionID))
 	}
-	if a.keysMessages != nil {
-		add(a.keysMessages.BindingsForAction(actionID))
+	if a.keys.Messages != nil {
+		add(a.keys.Messages.BindingsForAction(actionID))
 	}
-	if a.keysBookmarkDialog != nil {
-		add(a.keysBookmarkDialog.BindingsForAction(actionID))
+	if a.keys.BookmarkDialog != nil {
+		add(a.keys.BookmarkDialog.BindingsForAction(actionID))
 	}
-	if a.keysFindDialog != nil {
-		add(a.keysFindDialog.BindingsForAction(actionID))
+	if a.keys.FindDialog != nil {
+		add(a.keys.FindDialog.BindingsForAction(actionID))
 	}
-	if a.keysHistoryDialog != nil {
-		add(a.keysHistoryDialog.BindingsForAction(actionID))
+	if a.keys.HistoryDialog != nil {
+		add(a.keys.HistoryDialog.BindingsForAction(actionID))
 	}
-	if a.keysFlattenDialog != nil {
-		add(a.keysFlattenDialog.BindingsForAction(actionID))
+	if a.keys.FlattenDialog != nil {
+		add(a.keys.FlattenDialog.BindingsForAction(actionID))
 	}
-	if vm == ui.ViewDedup && a.keysDedup != nil {
-		add(a.keysDedup.BindingsForAction(actionID))
+	if vm == ui.ViewDedup && a.keys.Dedup != nil {
+		add(a.keys.Dedup.BindingsForAction(actionID))
 	}
-	if vm == ui.ViewCompare && a.keysCompare != nil {
-		add(a.keysCompare.BindingsForAction(actionID))
+	if vm == ui.ViewCompare && a.keys.Compare != nil {
+		add(a.keys.Compare.BindingsForAction(actionID))
 	}
-	if vm == ui.ViewFilePreview && a.keysFilePreview != nil {
-		add(a.keysFilePreview.BindingsForAction(actionID))
+	if vm == ui.ViewFilePreview && a.keys.FilePreview != nil {
+		add(a.keys.FilePreview.BindingsForAction(actionID))
 	}
 	if len(out) > 0 {
 		return out
@@ -537,7 +538,8 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 			st.Selected = 0
 			ensureHelpListScroll(st, a.helpListRows())
 		}
-		if a.handleScrollingQueryKey(event, true, helpViewScrollingQuery(st, a.helpDialogQueryWidth(), onChange)) {
+		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, a.helpDialogQueryWidth(), onChange)
+		if a.handleScrollingQueryKey(event, true, edit) {
 			return false
 		}
 	}

@@ -60,5 +60,5 @@ func (a *App) actionFromKeyEvent(ev *tcell.EventKey) string {
 	if a == nil {
 		return ""
 	}
-	return lookupActionForView(ev, a.keys, a.keysJobs, a.keysCommands, a.keysMessages, a.keysFilePreview, a.keysCompare, a.keysDedup, a.model.ViewMode)
+	return lookupActionForView(ev, a.keys.Global, a.keys.Jobs, a.keys.Commands, a.keys.Messages, a.keys.FilePreview, a.keys.Compare, a.keys.Dedup, a.model.ViewMode)
 }

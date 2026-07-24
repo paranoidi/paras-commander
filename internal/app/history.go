@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -194,8 +195,8 @@ func (a *App) activateHistorySelection() {
 }
 
 func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
-	if a.keysHistoryDialog != nil {
-		if id, ok := a.keysHistoryDialog.Lookup(event); ok {
+	if a.keys.HistoryDialog != nil {
+		if id, ok := a.keys.HistoryDialog.Lookup(event); ok {
 			switch id {
 			case keymap.ActionPanelHistoryBothPanels:
 				a.toggleHistoryDialogBothPanels()
@@ -214,7 +215,8 @@ func (a *App) handleHistoryDialogKey(event *tcell.EventKey) {
 			st.Selected = 0
 			dialog.EnsureHistoryListScroll(st, a.historyDialogListRows())
 		}
-		if a.handleScrollingQueryKey(event, true, historyDialogScrollingQuery(st, a.historyDialogQueryWidth(), onChange)) {
+		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, a.historyDialogQueryWidth(), onChange)
+		if a.handleScrollingQueryKey(event, true, edit) {
 			return
 		}
 	}

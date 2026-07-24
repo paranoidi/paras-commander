@@ -9,14 +9,14 @@ import (
 // tryRenameDialogShortcut handles [dialog.rename] while the main
 // rename dialog (name field) is active. Returns true when the event was consumed.
 func (a *App) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
-	if a.keysRenameDialog == nil {
+	if a.keys.RenameDialog == nil {
 		return false
 	}
 	d := &a.model.FileDialog
 	if !d.Open || !dialog.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != dialog.RenamePhaseMain {
 		return false
 	}
-	id, ok := a.keysRenameDialog.Lookup(ev)
+	id, ok := a.keys.RenameDialog.Lookup(ev)
 	if !ok {
 		return false
 	}
@@ -48,23 +48,23 @@ func (a *App) tryRenameDialogShortcut(ev *tcell.EventKey) bool {
 }
 
 func (a *App) renameDialogFooterEligible() bool {
-	if a.keysRenameDialog == nil {
+	if a.keys.RenameDialog == nil {
 		return false
 	}
 	d := &a.model.FileDialog
 	if !d.Open || !dialog.FileDialogHasRenamePhase(d.DialogType) || d.RenamePhase != dialog.RenamePhaseMain {
 		return false
 	}
-	return a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize) != "" ||
-		a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify) != "" ||
-		(len(d.RenameEncodingCandidates) > 0 && a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != "")
+	return a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSanitize) != "" ||
+		a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenSlugify) != "" ||
+		(len(d.RenameEncodingCandidates) > 0 && a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != "")
 }
 
 func (a *App) renameEncodingFooterEligible() bool {
 	d := &a.model.FileDialog
 	return d.Open && dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase == dialog.RenamePhaseMain &&
-		len(d.RenameEncodingCandidates) > 0 && a.keysRenameDialog != nil &&
-		a.keysRenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != ""
+		len(d.RenameEncodingCandidates) > 0 && a.keys.RenameDialog != nil &&
+		a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding) != ""
 }
 
 func (a *App) closeRenameToolPhase() {

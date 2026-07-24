@@ -14,7 +14,7 @@ func TestAuxiliaryScreensOpenFromJobsView(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	app.openJobsView()
+	app.jobsCtrl.OpenJobsView()
 	if !app.tryDispatchAuxiliaryScreens(keymap.ActionCommandsOpen) {
 		t.Fatal("commands.open should be consumed from jobs view")
 	}
@@ -47,7 +47,7 @@ func TestJobsViewMenuIncludesDisplay(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	app.openJobsView()
+	app.jobsCtrl.OpenJobsView()
 	var hasDisplay bool
 	for _, def := range menu.ActiveDefinitions(app.model.MenuDefinitions) {
 		if def.ID == menu.TopDisplay {

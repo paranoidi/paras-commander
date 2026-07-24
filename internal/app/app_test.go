@@ -138,7 +138,7 @@ func testJobsViewDismissKeyClosesViewDoesNotQuit(t *testing.T, key tcell.Key) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, dir)
 
-	app.openJobsView()
+	app.jobsCtrl.OpenJobsView()
 	if app.model.ViewMode != ui.ViewJobs {
 		t.Fatalf("ViewMode = %v, want ViewJobs", app.model.ViewMode)
 	}

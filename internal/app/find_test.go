@@ -30,10 +30,10 @@ func waitFindIndexDone(t *testing.T, app *App) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		app.pollFindUpdates(findctrl.WakePayload{})
-		app.handleFindThrottleRankWake()
-		app.handleFindDebounceRankWake()
-		app.applyFindRank()
+		app.findCtrl.PollUpdates(findctrl.WakePayload{})
+		app.findCtrl.HandleThrottleRankWake()
+		app.findCtrl.HandleDebounceRankWake()
+		app.findCtrl.ApplyPendingRank()
 		if !app.model.FindDialog.Open {
 			t.Fatal("find dialog closed unexpectedly")
 		}
@@ -49,9 +49,9 @@ func waitFindRankDone(t *testing.T, app *App) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		app.handleFindThrottleRankWake()
-		app.handleFindDebounceRankWake()
-		if app.applyFindRank() {
+		app.findCtrl.HandleThrottleRankWake()
+		app.findCtrl.HandleDebounceRankWake()
+		if app.findCtrl.ApplyPendingRank() {
 			return
 		}
 		if !app.model.FindDialog.RankPending {
@@ -82,7 +82,7 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
 	if !st.StayOnCurrentVolume {
@@ -96,13 +96,13 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	}
 
 	for _, r := range "find" {
-		app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	if st.Query != "find" {
 		t.Fatalf("query = %q want find", st.Query)
 	}
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModAlt))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModAlt))
 	if st.StayOnCurrentVolume {
 		t.Fatal("Alt+V should toggle stay-on-volume while typing filter")
 	}
@@ -110,7 +110,7 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 		t.Fatalf("focus = %d want 0 after Alt+V", st.Focus)
 	}
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt))
 	if !st.OnlyDirectories {
 		t.Fatal("Alt+D should toggle only-directories while typing filter")
 	}
@@ -121,7 +121,7 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 		t.Fatalf("focus = %d want 0 after Alt+D", st.Focus)
 	}
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModAlt))
 	if !st.OnlyFiles {
 		t.Fatal("Alt+L should toggle only-files while typing filter")
 	}
@@ -169,7 +169,7 @@ func TestFindDialogHandleKeyAltDDoesNotClearDiskUsage(t *testing.T) {
 		t.Fatal("expected cached size for scanned directory")
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
 	for _, r := range "find" {
@@ -211,28 +211,28 @@ func TestFindDialogQueryAltBAltFCtrlL(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	for _, r := range "foo bar" {
-		app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	st := &app.model.FindDialog
 	if st.Query != "foo bar" || st.QueryCursor != 7 {
 		t.Fatalf("after type: query=%q cursor=%d", st.Query, st.QueryCursor)
 	}
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'b', tcell.ModAlt))
 	if st.QueryCursor != 4 {
 		t.Fatalf("after Alt+b: cursor=%d want 4", st.QueryCursor)
 	}
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt))
 	if st.QueryCursor != 7 {
 		t.Fatalf("after Alt+f: cursor=%d want 7", st.QueryCursor)
 	}
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
 	if st.Query != "" || st.QueryCursor != 0 || st.QueryScroll != 0 {
 		t.Fatalf("after Ctrl+L: query=%q cursor=%d scroll=%d", st.Query, st.QueryCursor, st.QueryScroll)
 	}
@@ -258,7 +258,7 @@ func TestFindDialogQueryHomeEndAndCtrlHomeEndList(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
 	if len(st.Ranked) < 2 {
@@ -266,33 +266,33 @@ func TestFindDialogQueryHomeEndAndCtrlHomeEndList(t *testing.T) {
 	}
 
 	for _, r := range "ab" {
-		app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	if st.QueryCursor != 2 {
 		t.Fatalf("cursor after type = %d want 2", st.QueryCursor)
 	}
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
 	if st.QueryCursor != 0 {
 		t.Fatalf("after Home: cursor=%d want 0", st.QueryCursor)
 	}
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
 	if st.QueryCursor != 2 {
 		t.Fatalf("after End: cursor=%d want 2", st.QueryCursor)
 	}
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModNone))
 	if len(st.Ranked) < 2 {
 		t.Fatalf("ranked len after clear = %d, want at least 2", len(st.Ranked))
 	}
 	st.Selected = len(st.Ranked) - 1
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModCtrl))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModCtrl))
 	if st.Selected != 0 {
 		t.Fatalf("after Ctrl+Home: selected=%d want 0", st.Selected)
 	}
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModCtrl))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModCtrl))
 	if st.Selected != len(st.Ranked)-1 {
 		t.Fatalf("after Ctrl+End: selected=%d want %d", st.Selected, len(st.Ranked)-1)
 	}
@@ -320,20 +320,20 @@ func TestFindDialogSelectsFile(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	if !app.model.FindDialog.Open {
 		t.Fatal("expected find dialog open")
 	}
 	waitFindIndexDone(t, app)
 
 	for _, r := range "target" {
-		app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+		app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	waitFindRankDone(t, app)
 	if len(app.model.FindDialog.Ranked) == 0 {
 		t.Fatal("expected fuzzy matches for target")
 	}
-	app.navigateFindCursor()
+	app.findCtrl.NavigateFindCursor()
 	if app.model.FindDialog.Open {
 		t.Fatal("expected dialog closed")
 	}
@@ -369,7 +369,7 @@ func TestFindDialogInsertMarksAndOKAddsToPanelSelection(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	km := defaultKeymap(t)
@@ -378,18 +378,18 @@ func TestFindDialogInsertMarksAndOKAddsToPanelSelection(t *testing.T) {
 		t.Fatalf("Insert lookup = %q ok=%v", id, ok)
 	}
 	app.model.FindDialog.Selected = findRankedIndexForPath(&app.model.FindDialog, aPath)
-	app.handleFindDialogKey(ev)
+	app.findCtrl.HandleDialogKey(ev)
 	if !app.model.FindDialog.MarkedPaths[filepath.Clean(aPath)] {
 		t.Fatalf("alpha should be marked: %v", app.model.FindDialog.MarkedPaths)
 	}
 
 	app.model.FindDialog.Selected = findRankedIndexForPath(&app.model.FindDialog, bPath)
-	app.handleFindDialogKey(ev)
+	app.findCtrl.HandleDialogKey(ev)
 	if !app.model.FindDialog.MarkedPaths[filepath.Clean(bPath)] {
 		t.Fatal("beta should be marked")
 	}
 
-	app.activateFindDialogOK()
+	app.findCtrl.ActivateDialogOK()
 	if app.model.FindDialog.Open {
 		t.Fatal("expected dialog closed")
 	}
@@ -415,7 +415,7 @@ func newFindDialogTestApp(t *testing.T) *App {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	return app
 }
@@ -452,7 +452,7 @@ func assertFindDialogGroupSelectViaKey(t *testing.T, app *App, key tcell.Key, wa
 
 func TestFindDialogF6OpensGroupSelectForFindContext(t *testing.T) {
 	app := newFindDialogTestApp(t)
-	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone)); !ok || id != keymap.ActionFindSelectGroup {
+	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone)); !ok || id != keymap.ActionFindSelectGroup {
 		t.Fatalf("F6 lookup = %q ok=%v", id, ok)
 	}
 	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF6, "select")
@@ -460,7 +460,7 @@ func TestFindDialogF6OpensGroupSelectForFindContext(t *testing.T) {
 
 func TestFindDialogF7OpensUnselectGroupSelectForFindContext(t *testing.T) {
 	app := newFindDialogTestApp(t)
-	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone)); !ok || id != keymap.ActionFindUnselectGroup {
+	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone)); !ok || id != keymap.ActionFindUnselectGroup {
 		t.Fatalf("F7 lookup = %q ok=%v", id, ok)
 	}
 	assertFindDialogGroupSelectViaKey(t, app, tcell.KeyF7, "unselect")
@@ -488,10 +488,10 @@ func TestFindDialogGroupSelectGlobMarksFullCorpusResults(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
 	for _, r := range "*.txt" {
 		app.handleGroupSelectKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
@@ -530,18 +530,18 @@ func TestFindDialogUnselectAllClearsMarks(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if len(app.model.FindDialog.MarkedPaths) != 2 {
 		t.Fatalf("select all marks = %v", app.model.FindDialog.MarkedPaths)
 	}
 
-	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone)); !ok || id != keymap.ActionFindUnselectAll {
+	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone)); !ok || id != keymap.ActionFindUnselectAll {
 		t.Fatalf("F4 lookup = %q ok=%v", id, ok)
 	}
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone))
 	if app.model.FindDialog.MarkedPaths != nil {
 		t.Fatalf("unselect all cleared marks = %v", app.model.FindDialog.MarkedPaths)
 	}
@@ -569,22 +569,22 @@ func TestFindDialogSelectAllMarksFullCorpusResults(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
-	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)); !ok || id != keymap.ActionFindSelectAll {
+	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)); !ok || id != keymap.ActionFindSelectAll {
 		t.Fatalf("F5 lookup = %q ok=%v", id, ok)
 	}
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if !app.model.FindDialog.MarkedPaths[filepath.Clean(aPath)] || !app.model.FindDialog.MarkedPaths[filepath.Clean(bPath)] {
 		t.Fatalf("select all marks = %v", app.model.FindDialog.MarkedPaths)
 	}
 
 	app.model.FindDialog.MarkedPaths = nil
-	if id, ok := app.keysFindDialog.Lookup(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl)); !ok || id != keymap.ActionFindSelectAll {
+	if id, ok := app.keys.FindDialog.Lookup(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl)); !ok || id != keymap.ActionFindSelectAll {
 		t.Fatalf("Ctrl+A lookup = %q ok=%v", id, ok)
 	}
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyCtrlA, 0, tcell.ModCtrl))
 	if !app.model.FindDialog.MarkedPaths[filepath.Clean(aPath)] || !app.model.FindDialog.MarkedPaths[filepath.Clean(bPath)] {
 		t.Fatalf("Ctrl+A select all marks = %v", app.model.FindDialog.MarkedPaths)
 	}
@@ -611,7 +611,7 @@ func TestFindDialogBulkSelectAllManyFiles(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	waitFindRankDone(t, app)
 
@@ -621,7 +621,7 @@ func TestFindDialogBulkSelectAllManyFiles(t *testing.T) {
 	}
 
 	deadline := time.Now().Add(time.Second)
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if time.Now().After(deadline) {
 		t.Fatal("F5 select-all took too long")
 	}
@@ -659,7 +659,7 @@ func TestFindDialogBulkSelectAllMixedTree(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	waitFindRankDone(t, app)
 
@@ -669,7 +669,7 @@ func TestFindDialogBulkSelectAllMixedTree(t *testing.T) {
 	}
 
 	deadline := time.Now().Add(time.Second)
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if time.Now().After(deadline) {
 		t.Fatal("F5 select-all on mixed tree took too long")
 	}
@@ -699,18 +699,18 @@ func TestFindDialogBulkOKApplyManyFiles(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	waitFindRankDone(t, app)
 
-	app.handleFindDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	st := &app.model.FindDialog
 	if len(st.MarkedPaths) != n {
 		t.Fatalf("marked = %d, want %d", len(st.MarkedPaths), n)
 	}
 
 	deadline := time.Now().Add(3 * time.Second)
-	app.activateFindDialogOK()
+	app.findCtrl.ActivateDialogOK()
 	if time.Now().After(deadline) {
 		t.Fatal("OK apply took too long")
 	}
@@ -746,7 +746,7 @@ func TestFindDialogBulkGroupSelectManyFiles(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	waitFindRankDone(t, app)
 
@@ -817,7 +817,7 @@ func TestFindDialogOnlyDirectoriesFiltersResults(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
 	if findRankedNonDirCount(st) == 0 {
@@ -825,7 +825,7 @@ func TestFindDialogOnlyDirectoriesFiltersResults(t *testing.T) {
 	}
 	totalRanked := len(st.Ranked)
 
-	app.toggleFindOnlyDirectories()
+	app.findCtrl.ToggleOnlyDirectories()
 	if !st.OnlyDirectories {
 		t.Fatal("expected only-directories on")
 	}
@@ -836,7 +836,7 @@ func TestFindDialogOnlyDirectoriesFiltersResults(t *testing.T) {
 		t.Fatalf("ranked len = %d want fewer than %d", len(st.Ranked), totalRanked)
 	}
 
-	app.toggleFindOnlyDirectories()
+	app.findCtrl.ToggleOnlyDirectories()
 	if st.OnlyDirectories {
 		t.Fatal("expected only-directories off")
 	}
@@ -872,7 +872,7 @@ func TestFindDialogOnlyFilesFiltersResults(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
 	if findRankedDirCount(st) == 0 {
@@ -880,7 +880,7 @@ func TestFindDialogOnlyFilesFiltersResults(t *testing.T) {
 	}
 	totalRanked := len(st.Ranked)
 
-	app.toggleFindOnlyFiles()
+	app.findCtrl.ToggleOnlyFiles()
 	if !st.OnlyFiles {
 		t.Fatal("expected only-files on")
 	}
@@ -891,7 +891,7 @@ func TestFindDialogOnlyFilesFiltersResults(t *testing.T) {
 		t.Fatalf("ranked len = %d want fewer than %d", len(st.Ranked), totalRanked)
 	}
 
-	app.toggleFindOnlyFiles()
+	app.findCtrl.ToggleOnlyFiles()
 	if st.OnlyFiles {
 		t.Fatal("expected only-files off")
 	}
@@ -920,13 +920,13 @@ func TestFindDialogStayOnVolumeRestartClearsEntries(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	if len(app.model.FindDialog.Entries) == 0 {
 		t.Fatal("expected at least one indexed entry")
 	}
 
-	app.toggleFindStayOnVolume()
+	app.findCtrl.ToggleStayOnVolume()
 	if app.model.FindDialog.Indexing {
 		waitFindIndexDone(t, app)
 	}
@@ -957,18 +957,18 @@ func TestFindDialogMarkDirRemovesDescendantMarks(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	ev := tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)
 	app.model.FindDialog.Selected = findRankedIndexForPath(&app.model.FindDialog, child)
-	app.handleFindDialogKey(ev)
+	app.findCtrl.HandleDialogKey(ev)
 	if !app.model.FindDialog.MarkedPaths[filepath.Clean(child)] {
 		t.Fatal("child should be marked")
 	}
 
 	app.model.FindDialog.Selected = findRankedIndexForPath(&app.model.FindDialog, sub)
-	app.handleFindDialogKey(ev)
+	app.findCtrl.HandleDialogKey(ev)
 	if app.model.FindDialog.MarkedPaths[filepath.Clean(child)] {
 		t.Fatal("child mark should be removed when parent dir is marked")
 	}
@@ -1002,18 +1002,18 @@ func TestFindDialogMarkFileRemovesAncestorDirMarks(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	ev := tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)
 	app.model.FindDialog.Selected = findRankedIndexForPath(&app.model.FindDialog, sub)
-	app.handleFindDialogKey(ev)
+	app.findCtrl.HandleDialogKey(ev)
 	if !app.model.FindDialog.MarkedPaths[filepath.Clean(sub)] {
 		t.Fatal("sub should be marked")
 	}
 
 	app.model.FindDialog.Selected = findRankedIndexForPath(&app.model.FindDialog, child)
-	app.handleFindDialogKey(ev)
+	app.findCtrl.HandleDialogKey(ev)
 	if app.model.FindDialog.MarkedPaths[filepath.Clean(sub)] {
 		t.Fatal("parent dir mark should be removed when child file is marked")
 	}
@@ -1046,18 +1046,18 @@ func TestFindDialogMarkParentThenChildDirRemovesParentMark(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 
 	ev := tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)
 	app.model.FindDialog.Selected = findRankedIndexForPath(&app.model.FindDialog, sub)
-	app.handleFindDialogKey(ev)
+	app.findCtrl.HandleDialogKey(ev)
 	if !app.model.FindDialog.MarkedPaths[filepath.Clean(sub)] {
 		t.Fatal("sub should be marked")
 	}
 
 	app.model.FindDialog.Selected = findRankedIndexForPath(&app.model.FindDialog, nested)
-	app.handleFindDialogKey(ev)
+	app.findCtrl.HandleDialogKey(ev)
 	if app.model.FindDialog.MarkedPaths[filepath.Clean(sub)] {
 		t.Fatal("parent dir mark should be removed when nested child dir is marked")
 	}
@@ -1108,7 +1108,7 @@ func TestFindDialogSearchOnlySelectionsDefaultScoped(t *testing.T) {
 	}
 
 	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(dirA))
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	if !app.model.FindDialog.ShowSearchSelectionsOption {
 		t.Fatal("expected search-selections checkbox")
 	}
@@ -1152,11 +1152,11 @@ func TestFindDialogSearchOnlySelectionsWidenAndNarrow(t *testing.T) {
 	}
 
 	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(dirA))
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	countScoped := len(app.model.FindDialog.Entries)
 
-	app.toggleFindSearchOnlySelections()
+	app.findCtrl.ToggleSearchOnlySelections()
 	if app.model.FindDialog.SearchOnlySelections {
 		t.Fatal("expected search-only off after toggle")
 	}
@@ -1168,7 +1168,7 @@ func TestFindDialogSearchOnlySelectionsWidenAndNarrow(t *testing.T) {
 		t.Fatalf("entries should grow after widen: before=%d after=%d", countScoped, len(app.model.FindDialog.Entries))
 	}
 
-	app.toggleFindSearchOnlySelections()
+	app.findCtrl.ToggleSearchOnlySelections()
 	if !app.model.FindDialog.SearchOnlySelections {
 		t.Fatal("expected search-only on after second toggle")
 	}
@@ -1199,7 +1199,7 @@ func TestFindDialogNoSearchSelectionsCheckboxForFilesOnly(t *testing.T) {
 	}
 
 	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(f))
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	if app.model.FindDialog.ShowSearchSelectionsOption {
 		t.Fatal("checkbox should be hidden when only files are selected")
 	}
@@ -1222,9 +1222,9 @@ func TestFindDialogScopedMenuUsesPanel(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	app.model.ActivePanel = ui.SecondaryPanel
-	app.openFindDialog(ui.PrimaryPanel)
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	if app.model.FindDialog.PanelID != ui.PrimaryPanel {
 		t.Fatalf("panel id = %d want left", app.model.FindDialog.PanelID)
 	}
-	app.closeFindDialog()
+	app.findCtrl.CloseDialog()
 }

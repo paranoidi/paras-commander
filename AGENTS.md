@@ -20,11 +20,15 @@ Always aim to have ONE source for the truth. This applies to keybindings, theme 
 
 # App package layout
 
-- **`internal/app`**: `App` struct, `Run()` event loop, input dispatch, render/reconcile, and thin `*_bridge.go` / `*_host.go` files that wire feature handlers. Modal file-dialog orchestration lives in `dialog_*.go` (rendering/state remains in `internal/ui/dialog`).
+- **`internal/app`**: `App` struct, `Run()` event loop, input dispatch, render/reconcile, and `*_host.go` files that wire feature handlers. Modal file-dialog orchestration lives in `dialog_*.go` (rendering/state remains in `internal/ui/dialog`). Handlers are called directly through their controller fields (e.g. `a.jobsCtrl.OpenJobsView()`, `a.findCtrl.OpenDialog(...)`) — there are no forwarding bridge files.
 - **`internal/apphandler/*`**: feature handlers (`jobs`, `find`; `dialog` reserved for future path-picker / transfer extraction). Each handler takes a `Deps` struct and a `Host` interface for cross-cutting app services.
 - **`internal/apphandler/host/`**: decomposed host facets (`LayoutHost`, `MessageHost`, `PanelHost`, `ShellHost`) composed into each handler's `Host` interface.
 - **`internal/app/shell_host.go`**: shared `appShellHost` embedded by `jobs_host.go` and `find_host.go`.
-- **`internal/app/helpkeys`**, **`internal/app/pathpick`**, **`internal/app/jobbridge`**: stateless helpers extracted from the app layer (phase 1).
+- **`internal/app/helpkeys`**, **`internal/app/jobbridge`**: stateless helpers extracted from the app layer.
+- **`internal/pathpick`**: path-picker query validation/resolution/completion, independent of `internal/app`.
+- **`internal/scrollquery`**: App-independent core of scrolling-query text fields (cursor/scroll editing, key handling) shared by find/help/history/SFTP-connect/group-select/file-preview-theme-picker/path-picker dialogs. `internal/app/scrolling_query.go` is the thin glue that binds `App` state and calls this package.
+- **`internal/dialogform`**: App-independent core of linear-form dialog key handling (focus navigation, mnemonics, space-toggle, apply/cancel) shared by dialogs built on `dialog.DialogLinearForm` (sort, listing-format, config, and similar). `internal/app/dialog_linear_form.go` is the thin glue.
+- **`internal/sched`**: scheduling primitives shared across the app, including `ManagedTimer` (thread-safe one-shot timer with stop-drain-reset semantics) and the debouncer.
 
 ## Import rule (apphandler)
 

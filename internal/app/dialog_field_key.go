@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/scrollquery"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
@@ -42,7 +43,7 @@ func (a *App) handleFileDialogFieldKey(ev *tcell.EventKey, f *dialog.FileDialogF
 		f.Clear()
 		edited = true
 	case tcell.KeyRune:
-		if isDialogInputRune(ev) {
+		if scrollquery.IsDialogInputRune(ev) {
 			f.InsertRune(ev.Rune())
 			edited = true
 		}
