@@ -41,7 +41,7 @@ func (a *App) paintFileDialogOverlay() bool {
 		return false
 	}
 	if a.model.FileDialog.DialogType == dialog.FileDialogMassRename {
-		a.recomputeMassRenamePreview()
+		a.dialogCtrl.RecomputeMassRenamePreview()
 	}
 	ui.PaintFileDialog(a.screen, layout, a.model.FileDialog, a.styles, a.model.ShowFileIcons)
 	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
@@ -172,7 +172,7 @@ func (a *App) render() {
 		a.model.CommandsDisplay = nil
 	}
 	if a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogMassRename {
-		a.recomputeMassRenamePreview()
+		a.dialogCtrl.RecomputeMassRenamePreview()
 	}
 	// Copy a.model under commandsMu: passing it by value into ui.Render otherwise reads
 	// every field (including CarouselFilePreview/FilePreview/FullscreenFilePreview, which

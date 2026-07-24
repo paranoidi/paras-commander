@@ -36,7 +36,7 @@ func TestPathPickerBackspaceRevealWhenValueFitsWithGhostSuffix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 
 	query := "/synthetic/volume/catalog/branches/widget/12"
@@ -90,7 +90,7 @@ func TestPathPickerBackspaceRevealScrollAtLeftOverflowMarker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 
 	query := "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/~/synthetic/workspace/catalog/"

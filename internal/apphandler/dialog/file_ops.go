@@ -43,9 +43,9 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 	case keymap.ActionFileHardlink:
 		h.openHardlinkDialog(activePanel)
 	case keymap.ActionFileExtract:
-		h.host.OpenExtractDialog(activePanel)
+		h.OpenExtractDialog(activePanel)
 	case keymap.ActionFileFlatten:
-		h.host.OpenFlattenDialog()
+		h.OpenFlattenDialog()
 	case keymap.ActionCopy:
 		h.ActivateCopyAction()
 	case keymap.ActionFileDuplicate:
@@ -77,7 +77,7 @@ func (h *Handler) RefreshBothPanels() {
 // single-entry rename dialog.
 func (h *Handler) OpenRenameDialog(p *panel.State) {
 	if len(p.SelectedPaths) > 0 {
-		h.host.OpenMassRenameDialog(p)
+		h.OpenMassRenameDialog(p)
 		return
 	}
 	entry, err := ops.ResolveSourceSingle(p)
@@ -327,7 +327,7 @@ func (h *Handler) ExecuteFileDialog() {
 	case dialog.FileDialogRunForEach:
 		h.commands.ExecuteRunForEach()
 	case dialog.FileDialogMassRename:
-		h.host.ExecuteMassRename()
+		h.ExecuteMassRename()
 	case dialog.FileDialogRename:
 		h.executeRename()
 	case dialog.FileDialogDuplicate:
@@ -345,9 +345,9 @@ func (h *Handler) ExecuteFileDialog() {
 	case dialog.FileDialogHardlink:
 		h.executeHardlink()
 	case dialog.FileDialogExtract:
-		h.host.ExecuteExtract()
+		h.ExecuteExtract()
 	case dialog.FileDialogAddBookmark:
-		h.host.ExecuteAddBookmark()
+		h.ExecuteAddBookmark()
 	case dialog.FileDialogSFTPPassword:
 		h.host.ExecuteSFTPPassword()
 	default:
@@ -510,7 +510,7 @@ func (h *Handler) ExecuteDelete() {
 	// which enqueues the job and prunes the marked rows.
 	if h.model.ViewMode == ui.ViewDedup {
 		h.CloseFileDialog()
-		h.host.OpenDedupEmptyDirsConfirm()
+		h.openDedupEmptyDirsConfirm()
 		return
 	}
 	if h.model.ViewMode == ui.ViewFilePreview {

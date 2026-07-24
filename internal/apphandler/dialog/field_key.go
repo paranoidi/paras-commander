@@ -9,7 +9,7 @@ func (h *Handler) fileDialogFieldAfterEdit() func() {
 	var extra func()
 	switch h.model.FileDialog.DialogType {
 	case dialog.FileDialogMassRename:
-		extra = h.host.RecomputeMassRenamePreview
+		extra = h.RecomputeMassRenamePreview
 	case dialog.FileDialogRunForEach:
 		extra = h.commands.RecomputeRunForEachValidation
 	}

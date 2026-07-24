@@ -235,7 +235,7 @@ func (a *App) activateMenuSelection(def menu.Definition, item menu.Item) bool {
 			a.dialogCtrl.ActivateMoveAction()
 			return false
 		case keymap.ActionFileFlatten:
-			a.openFlattenDialog()
+			a.dialogCtrl.OpenFlattenDialog()
 			return false
 		default:
 			a.dispatchFileMenuItem(item)

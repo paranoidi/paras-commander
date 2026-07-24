@@ -216,9 +216,9 @@ func (h *Handler) handleFileDialogEnter() {
 	}
 	if h.fileDialogOnMassRenameRadio() {
 		if d.FocusedField == 2 {
-			h.host.LaunchMassRenameExternalEditor()
+			h.LaunchMassRenameExternalEditor()
 		} else {
-			h.host.ApplyMassRenameModeFromFocus()
+			h.ApplyMassRenameModeFromFocus()
 			d.FocusedField = dialog.MassRenameFindFieldFocus
 		}
 		return
@@ -229,17 +229,17 @@ func (h *Handler) handleFileDialogEnter() {
 	}
 	if h.fileDialogOnMassRenameShowModifiedCheckbox() {
 		d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
-		h.host.RecomputeMassRenamePreview()
+		h.RecomputeMassRenamePreview()
 		return
 	}
 	if h.fileDialogOnMassRenameStripCheckbox() {
 		d.MassRenameStripSpaces = !d.MassRenameStripSpaces
-		h.host.RecomputeMassRenamePreview()
+		h.RecomputeMassRenamePreview()
 		return
 	}
 	if h.fileDialogOnMassRenameCaseCheckbox() {
 		d.MassRenameCaseFold = !d.MassRenameCaseFold
-		h.host.RecomputeMassRenamePreview()
+		h.RecomputeMassRenamePreview()
 		return
 	}
 	if h.fileDialogOnRenameFocusCheckbox() {
@@ -264,7 +264,7 @@ func (h *Handler) handleFileDialogRune(event *tcell.EventKey) {
 	d := &h.model.FileDialog
 	if h.fileDialogOnMassRenameRadio() {
 		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
-			h.host.ApplyMassRenameModeFromFocus()
+			h.ApplyMassRenameModeFromFocus()
 		}
 		return
 	}
@@ -277,21 +277,21 @@ func (h *Handler) handleFileDialogRune(event *tcell.EventKey) {
 	if h.fileDialogOnMassRenameShowModifiedCheckbox() {
 		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
 			d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
-			h.host.RecomputeMassRenamePreview()
+			h.RecomputeMassRenamePreview()
 		}
 		return
 	}
 	if h.fileDialogOnMassRenameStripCheckbox() {
 		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
 			d.MassRenameStripSpaces = !d.MassRenameStripSpaces
-			h.host.RecomputeMassRenamePreview()
+			h.RecomputeMassRenamePreview()
 		}
 		return
 	}
 	if h.fileDialogOnMassRenameCaseCheckbox() {
 		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
 			d.MassRenameCaseFold = !d.MassRenameCaseFold
-			h.host.RecomputeMassRenamePreview()
+			h.RecomputeMassRenamePreview()
 		}
 		return
 	}
@@ -325,9 +325,9 @@ func (h *Handler) handleMassRenameAltShortcut(d *dialog.FileDialogState, r rune)
 		if d.FocusedField == 1 || d.FocusedField == 2 {
 			d.FocusedField = 0
 		}
-		h.host.MassRenameClampFocusAfterModeChange(prev)
-		h.host.MassRenameSyncFieldLabels()
-		h.host.RecomputeMassRenamePreview()
+		h.MassRenameClampFocusAfterModeChange(prev)
+		h.MassRenameSyncFieldLabels()
+		h.RecomputeMassRenamePreview()
 		return true
 	case 'r', 'R':
 		prev := d.MassRenameMode
@@ -335,9 +335,9 @@ func (h *Handler) handleMassRenameAltShortcut(d *dialog.FileDialogState, r rune)
 		if d.FocusedField == 0 || d.FocusedField == 2 {
 			d.FocusedField = 1
 		}
-		h.host.MassRenameClampFocusAfterModeChange(prev)
-		h.host.MassRenameSyncFieldLabels()
-		h.host.RecomputeMassRenamePreview()
+		h.MassRenameClampFocusAfterModeChange(prev)
+		h.MassRenameSyncFieldLabels()
+		h.RecomputeMassRenamePreview()
 		return true
 	case 'e', 'E':
 		prev := d.MassRenameMode
@@ -345,23 +345,23 @@ func (h *Handler) handleMassRenameAltShortcut(d *dialog.FileDialogState, r rune)
 		if d.FocusedField < 2 {
 			d.FocusedField = 2
 		}
-		h.host.MassRenameClampFocusAfterModeChange(prev)
-		h.host.MassRenameSyncFieldLabels()
-		h.host.RecomputeMassRenamePreview()
+		h.MassRenameClampFocusAfterModeChange(prev)
+		h.MassRenameSyncFieldLabels()
+		h.RecomputeMassRenamePreview()
 		return true
 	case 'i', 'I':
 		if d.MassRenameMode != dialog.MassRenameModeUIExternalEditor {
 			d.MassRenameCaseFold = !d.MassRenameCaseFold
-			h.host.RecomputeMassRenamePreview()
+			h.RecomputeMassRenamePreview()
 		}
 		return true
 	case 't', 'T':
 		d.MassRenameStripSpaces = !d.MassRenameStripSpaces
-		h.host.RecomputeMassRenamePreview()
+		h.RecomputeMassRenamePreview()
 		return true
 	case 'm', 'M':
 		d.MassRenameShowOnlyModified = !d.MassRenameShowOnlyModified
-		h.host.RecomputeMassRenamePreview()
+		h.RecomputeMassRenamePreview()
 		return true
 	}
 	return false
@@ -372,7 +372,7 @@ func (h *Handler) handleMassRenameAltShortcut(d *dialog.FileDialogState, r rune)
 func (h *Handler) handleMassRenamePreviewScrollKey(d *dialog.FileDialogState, key tcell.Key) bool {
 	switch key {
 	case tcell.KeyF4:
-		h.host.LaunchMassRenameExternalEditor()
+		h.LaunchMassRenameExternalEditor()
 		return true
 	case tcell.KeyPgUp:
 		_, ht := h.screen.Size()
@@ -602,7 +602,7 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 	if key == tcell.KeyUp && onOptionsRow {
 		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = 2
-		h.host.ApplyMassRenameModeFromFocus()
+		h.ApplyMassRenameModeFromFocus()
 		return true
 	}
 	if key == tcell.KeyUp && onButton {
@@ -629,7 +629,7 @@ func (h *Handler) fileDialogMoveFocusKey(event *tcell.EventKey) bool {
 		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = nf
 		if d.DialogType == dialog.FileDialogMassRename && (nf == 0 || nf == 1 || nf == 2) {
-			h.host.ApplyMassRenameModeFromFocus()
+			h.ApplyMassRenameModeFromFocus()
 		}
 		return true
 	}

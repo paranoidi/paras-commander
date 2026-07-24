@@ -232,7 +232,7 @@ func pathPickerNavFocus(purpose dialog.PathPickerPurpose, focus int, key tcell.K
 // HandlePathPickerKey routes a key event for the open fuzzy path/history picker.
 func (h *Handler) HandlePathPickerKey(event *tcell.EventKey) {
 	st := &h.model.PathPicker
-	if h.host.TryBookmarkDialogShortcut(event) {
+	if h.TryBookmarkDialogShortcut(event) {
 		return
 	}
 	if dialog.TryStandardDialogActions(event, h.activatePathPickerSelection, h.ClosePathPicker, nil) {

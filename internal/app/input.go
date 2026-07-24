@@ -190,16 +190,14 @@ func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 	if a.model.MetaDialog.Open {
 		rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
 	}
-	if a.bookmarkDialogDeleteFooterEligible() {
+	if a.dialogCtrl.BookmarkDialogDeleteFooterEligible() {
 		if lbl := a.keys.BookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkDelete); lbl != "" {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete bookmark"}}, rest...)
 		}
 	}
-	if a.keys.BookmarkDialog != nil && a.bookmarkDialogOpen() {
-		if _, ok := a.pathPickerSelectedItem(); ok {
-			if lbl := a.keys.BookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkOpenOther); lbl != "" {
-				rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Open other"}}, rest...)
-			}
+	if a.dialogCtrl.BookmarkDialogOpenOtherFooterEligible() {
+		if lbl := a.keys.BookmarkDialog.MenuBindingLabel(keymap.ActionBookmarkOpenOther); lbl != "" {
+			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Open other"}}, rest...)
 		}
 	}
 	return footerWithEscClose(rest)
@@ -209,7 +207,7 @@ func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 // group-select/file-dialog/SFTP-connect/path-picker/history/find/meta/user-menu/compare-merge dialogs).
 func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-	if hints := flattenDialogOverlayFooterKeys(a, a.keys.FlattenDialog); len(hints) > 0 {
+	if hints := a.dialogCtrl.FlattenDialogOverlayFooterKeys(a.keys.FlattenDialog); len(hints) > 0 {
 		rest = append(hints, rest...)
 	}
 	if hints := a.dialogCtrl.TransferDialogOverlayFooterKeys(a.keys.TransferDialog); len(hints) > 0 {
@@ -230,7 +228,7 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Default"}}, rest...)
 		}
 	}
-	if a.massRenameEditorFooterEligible() {
+	if a.dialogCtrl.MassRenameEditorFooterEligible() {
 		rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Editor"}}, rest...)
 	}
 	if a.dialogCtrl.RenameDialogFooterEligible() {
@@ -825,9 +823,9 @@ func (a *App) dispatch(actionID string) bool {
 		activePanel.OpenFilter(viewportRows)
 		a.clearTransientMessage()
 	case keymap.ActionBookmarkOpen:
-		a.openBookmarkDialog()
+		a.dialogCtrl.OpenBookmarkDialog()
 	case keymap.ActionBookmarkAdd:
-		a.openAddBookmarkDialog()
+		a.dialogCtrl.OpenAddBookmarkDialog()
 	case keymap.ActionRemoteSFTPLink:
 		a.openSFTPConnectDialog()
 	case keymap.ActionPanelToggleSync:

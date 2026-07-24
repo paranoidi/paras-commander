@@ -1,4 +1,4 @@
-package app
+package dialog
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
-	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -17,50 +16,53 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func (a *App) openFlattenDialog() {
-	roots, err := ops.ValidateFlattenSource(a.activePanel())
+// OpenFlattenDialog opens the flatten dialog for the active panel's selection, prefilling the
+// destination from config's FlattenDefaultLocation (falling back to the active panel when the
+// inactive panel is itself one of the flatten sources).
+func (h *Handler) OpenFlattenDialog() {
+	roots, err := ops.ValidateFlattenSource(h.host.ActivePanel())
 	if err != nil {
-		a.flattenSourceErrorToast(err)
+		h.flattenSourceErrorToast(err)
 		return
 	}
 	rootStrs := make([]string, len(roots))
 	for i, r := range roots {
 		rootStrs[i] = r.String()
 	}
-	destPanel := a.inactivePanel()
-	if a.config.Operations.FlattenDefaultLocation == config.FlattenDefaultLocationActive {
-		destPanel = a.activePanel()
+	destPanel := h.host.InactivePanel()
+	if h.host.Config().Operations.FlattenDefaultLocation == config.FlattenDefaultLocationActive {
+		destPanel = h.host.ActivePanel()
 	}
 	inactiveIsSource := false
-	if destPanel == a.inactivePanel() {
-		inactiveLoc, parseErr := pathloc.Parse(a.inactivePanel().PathString())
+	if destPanel == h.host.InactivePanel() {
+		inactiveLoc, parseErr := pathloc.Parse(h.host.InactivePanel().PathString())
 		if parseErr == nil {
 			for _, root := range roots {
 				if root.Equal(inactiveLoc) {
 					inactiveIsSource = true
-					destPanel = a.activePanel()
+					destPanel = h.host.ActivePanel()
 					break
 				}
 			}
 		}
 	}
-	a.model.FlattenDialog = dialog.FlattenDialogState{
+	h.model.FlattenDialog = dialog.FlattenDialogState{
 		Open:         true,
-		Destination:  dialogctrl.TransferPrefilledDestination(destPanel.PathString()),
+		Destination:  TransferPrefilledDestination(destPanel.PathString()),
 		DestSubFocus: dialog.FlattenDestSubFocusText,
-		Recursive:    a.config.Operations.FlattenRecursive,
-		RemoveEmpty:  a.config.Operations.FlattenRemoveEmptyDirs,
+		Recursive:    h.host.Config().Operations.FlattenRecursive,
+		RemoveEmpty:  h.host.Config().Operations.FlattenRemoveEmptyDirs,
 		FocusField:   0,
 		DirRoots:     rootStrs,
 	}
-	a.clearTransientMessage()
+	h.host.ClearTransientMessage()
 	if inactiveIsSource {
-		a.setTransientMessage("Destination set to active panel (inactive panel is the flatten source)", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Destination set to active panel (inactive panel is the flatten source)", ui.MessageUrgencyWarn)
 	}
-	a.dialogCtrl.ArmFlattenDestinationValidateTimer()
+	h.ArmFlattenDestinationValidateTimer()
 }
 
-func (a *App) flattenSourceErrorToast(err error) {
+func (h *Handler) flattenSourceErrorToast(err error) {
 	var opsErr *ops.Error
 	urgency := ui.MessageUrgencyWarn
 	msg := err.Error()
@@ -70,21 +72,22 @@ func (a *App) flattenSourceErrorToast(err error) {
 			urgency = ui.MessageUrgencyError
 		}
 	}
-	a.setTransientMessage(msg, urgency)
+	h.host.SetTransientMessage(msg, urgency)
 }
 
-func (a *App) closeFlattenDialog() {
-	a.dialogCtrl.InvalidateTransferDestValidate()
-	a.model.FlattenDialog = dialog.FlattenDialogState{}
-	a.model.DestinationTargetPrimary = false
-	a.model.DestinationTargetSecondary = false
+// CloseFlattenDialog closes the flatten dialog and clears its destination-target panel markers.
+func (h *Handler) CloseFlattenDialog() {
+	h.InvalidateTransferDestValidate()
+	h.model.FlattenDialog = dialog.FlattenDialogState{}
+	h.model.DestinationTargetPrimary = false
+	h.model.DestinationTargetSecondary = false
 }
 
 // tryFlattenToggle handles the Recursive/RemoveEmpty toggle shortcuts: Alt+R/Alt+E always,
 // and the plain r/e/Space mnemonics when the matching checkbox row is focused. Returns true
 // when handled.
-func (a *App) tryFlattenToggle(event *tcell.EventKey) bool {
-	d := &a.model.FlattenDialog
+func (h *Handler) tryFlattenToggle(event *tcell.EventKey) bool {
+	d := &h.model.FlattenDialog
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		switch event.Rune() {
 		case 'r', 'R':
@@ -125,35 +128,36 @@ func (a *App) tryFlattenToggle(event *tcell.EventKey) bool {
 // navigation on the destination field while it is focused. Returns true when the key was
 // handled (caller should return); false to fall through to the generic focus-move / Enter
 // handling below.
-func (a *App) handleFlattenDestNavKey(event *tcell.EventKey) bool {
-	d := &a.model.FlattenDialog
-	return a.dialogCtrl.DestFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
-		dialog.FlattenDestSubFocusText, dialog.FlattenDestSubFocusPicker, a.dialogCtrl.OpenPathPickerForFlatten)
+func (h *Handler) handleFlattenDestNavKey(event *tcell.EventKey) bool {
+	d := &h.model.FlattenDialog
+	return h.DestFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
+		dialog.FlattenDestSubFocusText, dialog.FlattenDestSubFocusPicker, h.OpenPathPickerForFlatten)
 }
 
-func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
-	d := &a.model.FlattenDialog
-	if a.tryFlattenToggle(event) {
+// HandleFlattenDialogKey dispatches a key event to the open flatten dialog.
+func (h *Handler) HandleFlattenDialogKey(event *tcell.EventKey) {
+	d := &h.model.FlattenDialog
+	if h.tryFlattenToggle(event) {
 		return
 	}
-	if dialog.TryStandardDialogActions(event, a.confirmFlatten, a.closeFlattenDialog, nil) {
+	if dialog.TryStandardDialogActions(event, h.confirmFlatten, h.CloseFlattenDialog, nil) {
 		return
 	}
 	if event.Key() == tcell.KeyEsc {
-		a.closeFlattenDialog()
+		h.CloseFlattenDialog()
 		return
 	}
-	if a.dialogCtrl.TryPathPickerHostShortcut(event) {
+	if h.TryPathPickerHostShortcut(event) {
 		return
 	}
-	if a.tryFlattenDialogDestinationShortcut(event) {
+	if h.TryFlattenDialogDestinationShortcut(event) {
 		return
 	}
 	if event.Key() == tcell.KeyTab &&
-		a.dialogCtrl.DestFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.FlattenDestSubFocusText, a.dialogCtrl.ArmFlattenDestinationValidateTimer) {
+		h.DestFieldAcceptCompletion(&d.Destination, d.DestSubFocus, d.FocusField, dialog.FlattenDestSubFocusText, h.ArmFlattenDestinationValidateTimer) {
 		return
 	}
-	if a.handleFlattenDestNavKey(event) {
+	if h.handleFlattenDestNavKey(event) {
 		return
 	}
 	if focus, ok := dialog.FlattenDialogMoveFocus(d.FocusField, event.Key()); ok {
@@ -167,7 +171,7 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 	if event.Key() == tcell.KeyEnter {
 		tform := dialog.NewFlattenDialogLinearForm()
 		if d.FocusField == 0 && d.DestSubFocus == dialog.FlattenDestSubFocusText {
-			a.confirmFlatten()
+			h.confirmFlatten()
 			return
 		}
 		switch d.FocusField {
@@ -178,57 +182,57 @@ func (a *App) handleFlattenDialogKey(event *tcell.EventKey) {
 			d.RemoveEmpty = !d.RemoveEmpty
 			return
 		case tform.OKIndex():
-			a.confirmFlatten()
+			h.confirmFlatten()
 			return
 		case tform.CancelIndex():
-			a.closeFlattenDialog()
+			h.CloseFlattenDialog()
 			return
 		}
 	}
 	if d.FocusField == 0 {
-		if a.editFlattenFieldKey(event, &d.Destination) {
-			a.dialogCtrl.SyncPathFieldCompletion(&d.Destination, a.dialogCtrl.TransferDestinationTextWidth())
-			a.dialogCtrl.ArmFlattenDestinationValidateTimer()
+		if h.editFlattenFieldKey(event, &d.Destination) {
+			h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
+			h.ArmFlattenDestinationValidateTimer()
 			return
 		}
 	}
 }
 
-func (a *App) editFlattenFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {
-	return dialog.HandleFileDialogFieldKey(event, f, a.keys.DialogInput, func() {
-		a.dialogCtrl.SyncPathFieldCompletion(f, a.dialogCtrl.TransferDestinationTextWidth())
+func (h *Handler) editFlattenFieldKey(event *tcell.EventKey, f *dialog.FileDialogField) bool {
+	return dialog.HandleFileDialogFieldKey(event, f, h.keysDialogInput, func() {
+		h.SyncPathFieldCompletion(f, h.TransferDestinationTextWidth())
 	})
 }
 
-func (a *App) confirmFlatten() {
-	d := a.model.FlattenDialog
+func (h *Handler) confirmFlatten() {
+	d := h.model.FlattenDialog
 	roots, err := pathloc.ParseAll(d.DirRoots)
 	if err != nil {
-		a.setTransientMessage("Invalid flatten source paths", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Invalid flatten source paths", ui.MessageUrgencyWarn)
 		return
 	}
 	dest := strings.TrimSpace(d.Destination.Value)
 	if dest == "" {
-		a.setTransientMessage("Destination required", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Destination required", ui.MessageUrgencyWarn)
 		return
 	}
 	destLoc, err := pathloc.Parse(dest)
 	if err != nil {
-		a.setTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Invalid destination path", ui.MessageUrgencyWarn)
 		return
 	}
 	sources, err := ops.CollectFlattenSources(context.Background(), roots, destLoc, d.Recursive)
 	if err != nil {
 		var opsErr *ops.Error
 		if errors.As(err, &opsErr) {
-			a.setTransientMessage(opsErr.Text, ui.MessageUrgencyWarn)
+			h.host.SetTransientMessage(opsErr.Text, ui.MessageUrgencyWarn)
 		} else {
-			a.setErrorMessage("Flatten", err)
+			h.host.SetErrorMessage("Flatten", err)
 		}
 		return
 	}
 	if len(sources) == 0 {
-		a.setTransientMessage("Nothing to flatten", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Nothing to flatten", ui.MessageUrgencyWarn)
 		return
 	}
 	nSelf := 0
@@ -239,20 +243,20 @@ func (a *App) confirmFlatten() {
 	}
 	if nSelf > 0 {
 		if len(sources) > 1 {
-			a.setTransientMessage("Cannot flatten when some items would overwrite themselves", ui.MessageUrgencyWarn)
+			h.host.SetTransientMessage("Cannot flatten when some items would overwrite themselves", ui.MessageUrgencyWarn)
 			return
 		}
-		a.setTransientMessage("Nothing to flatten", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("Nothing to flatten", ui.MessageUrgencyWarn)
 		return
 	}
-	a.closeFlattenDialog()
-	a.activePanel().ClearSelection()
-	a.jobsCtrl.AddFlattenJob(jobsctrl.FlattenJobRequest{
+	h.CloseFlattenDialog()
+	h.host.ActivePanel().ClearSelection()
+	h.jobs.AddFlattenJob(jobsctrl.FlattenJobRequest{
 		Sources: sources, Dest: destLoc.String(), RemoveEmpty: d.RemoveEmpty, FlattenRoots: d.DirRoots,
 	})
 	noun := "items"
 	if len(sources) == 1 {
 		noun = "item"
 	}
-	a.setTransientMessage(fmt.Sprintf("Flatten queued (%d %s)", len(sources), noun), ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(fmt.Sprintf("Flatten queued (%d %s)", len(sources), noun), ui.MessageUrgencyInfo)
 }

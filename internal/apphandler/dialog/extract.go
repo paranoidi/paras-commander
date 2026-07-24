@@ -1,10 +1,9 @@
-package app
+package dialog
 
 import (
 	"fmt"
 	"strings"
 
-	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/archive"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -12,18 +11,20 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-func (a *App) openExtractDialog(p *panel.State) {
+// OpenExtractDialog opens the archive-extract dialog for p's selection (or cursor entry),
+// prefilling the destination with the inactive panel's path.
+func (h *Handler) OpenExtractDialog(p *panel.State) {
 	source, err := ops.ResolveSource(p)
 	if err != nil {
-		a.setErrorMessage("Extract", err)
+		h.host.SetErrorMessage("Extract", err)
 		return
 	}
 	paths, skipped := ops.FilterArchiveEntries(source.Entries)
 	if len(paths) == 0 {
-		a.setTransientMessage("No supported archives selected", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("No supported archives selected", ui.MessageUrgencyWarn)
 		return
 	}
-	dest := dialogctrl.TransferPrefilledDestination(a.inactivePanel().PathString())
+	dest := TransferPrefilledDestination(h.host.InactivePanel().PathString())
 	dest.Label = "Destination"
 	dest.PathPicker = true
 	fields := []dialog.FileDialogField{dest}
@@ -31,7 +32,7 @@ func (a *App) openExtractDialog(p *panel.State) {
 	if skipped > 0 {
 		msg = fmt.Sprintf("%d non-archive item(s) will be skipped.", skipped)
 	}
-	a.model.FileDialog = dialog.FileDialogState{
+	h.model.FileDialog = dialog.FileDialogState{
 		Open:           true,
 		DialogType:     dialog.FileDialogExtract,
 		Fields:         fields,
@@ -39,33 +40,35 @@ func (a *App) openExtractDialog(p *panel.State) {
 		Message:        msg,
 		ExtractSources: append([]string(nil), paths...),
 	}
-	a.dialogCtrl.SyncFocusedFileDialogPathFieldCompletion()
-	a.clearTransientMessage()
+	h.SyncFocusedFileDialogPathFieldCompletion()
+	h.host.ClearTransientMessage()
 }
 
-func (a *App) executeExtract() {
-	fd := a.model.FileDialog
-	field := a.dialogCtrl.FocusedField()
+// ExecuteExtract runs the extract dialog's OK action: plans and queues an extract job for the
+// archives gathered when the dialog was opened.
+func (h *Handler) ExecuteExtract() {
+	fd := h.model.FileDialog
+	field := h.FocusedField()
 	if field == nil {
-		a.dialogCtrl.CloseFileDialog()
+		h.CloseFileDialog()
 		return
 	}
 	dest := strings.TrimSpace(field.Value)
 	sources := append([]string(nil), fd.ExtractSources...)
-	a.dialogCtrl.CloseFileDialog()
+	h.CloseFileDialog()
 	if len(sources) == 0 {
-		a.setTransientMessage("No archives to extract", ui.MessageUrgencyWarn)
+		h.host.SetTransientMessage("No archives to extract", ui.MessageUrgencyWarn)
 		return
 	}
 	tc := archive.ProbeToolchain()
 	plan, skipped, err := ops.PlanExtract(sources, dest, tc)
 	if err != nil {
-		a.openMessageDialog("Extract", err.Error())
+		h.host.OpenMessageDialog("Extract", err.Error())
 		return
 	}
-	p := a.activePanel()
+	p := h.host.ActivePanel()
 	p.ClearSelection()
-	a.jobsCtrl.EnqueueExtractJob(ops.ExtractItemPaths(plan.Items), plan.Destination)
+	h.jobs.EnqueueExtractJob(ops.ExtractItemPaths(plan.Items), plan.Destination)
 	n := len(plan.Items)
 	noun := "archives"
 	if n == 1 {
@@ -75,5 +78,5 @@ func (a *App) executeExtract() {
 	if len(skipped) > 0 {
 		msg += fmt.Sprintf("; %d skipped (unsupported or missing tool)", len(skipped))
 	}
-	a.setTransientMessage(msg, ui.MessageUrgencyInfo)
+	h.host.SetTransientMessage(msg, ui.MessageUrgencyInfo)
 }

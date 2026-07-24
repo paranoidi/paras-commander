@@ -7,7 +7,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
-	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 // dialogHost implements apphandler/dialog.Host for *App.
@@ -35,18 +34,14 @@ func (h dialogHost) Config() config.Config { return h.app.config }
 
 func (h dialogHost) Styles() theme.Theme { return h.app.styles }
 
-func (h dialogHost) OpenExtractDialog(p *panel.State) { h.app.openExtractDialog(p) }
-
-func (h dialogHost) OpenFlattenDialog() { h.app.openFlattenDialog() }
-
-func (h dialogHost) ExecuteExtract() { h.app.executeExtract() }
-
-func (h dialogHost) ExecuteAddBookmark() { h.app.executeAddBookmark() }
-
 func (h dialogHost) ExecuteSFTPPassword() { h.app.executeSFTPPassword() }
 
-func (h dialogHost) TryBookmarkDialogShortcut(ev *tcell.EventKey) bool {
-	return h.app.tryBookmarkDialogShortcut(ev)
+func (h dialogHost) OpenMessageDialog(title, message string) { h.app.openMessageDialog(title, message) }
+
+func (h dialogHost) InQuickFilterUI() bool { return h.app.inQuickFilterUI() }
+
+func (h dialogHost) OpenFileInExternalEditor(path string) error {
+	return h.app.openFileInExternalEditor(path)
 }
 
 func (h dialogHost) HandlePathPickerScrollingQueryKey(ev *tcell.EventKey) bool {
@@ -64,23 +59,5 @@ func (h dialogHost) ClampFilteredListSelection(selected *int, rankedLen int) {
 func (h dialogHost) HandleFilteredListSelectionKey(ev *tcell.EventKey, focus int, selected *int, rankedLen int, listRows func() int, ensureScroll func()) bool {
 	return handleFilteredListSelectionKey(ev, focus, selected, rankedLen, listRows, ensureScroll)
 }
-
-func (h dialogHost) OpenMassRenameDialog(p *panel.State) { h.app.openMassRenameDialog(p) }
-
-func (h dialogHost) ApplyMassRenameModeFromFocus() { h.app.applyMassRenameModeFromFocus() }
-
-func (h dialogHost) MassRenameSyncFieldLabels() { h.app.massRenameSyncFieldLabels() }
-
-func (h dialogHost) RecomputeMassRenamePreview() { h.app.recomputeMassRenamePreview() }
-
-func (h dialogHost) MassRenameClampFocusAfterModeChange(prev dialog.MassRenameModeUI) {
-	h.app.massRenameClampFocusAfterModeChange(prev)
-}
-
-func (h dialogHost) LaunchMassRenameExternalEditor() { h.app.launchMassRenameExternalEditor() }
-
-func (h dialogHost) ExecuteMassRename() { h.app.executeMassRename() }
-
-func (h dialogHost) OpenDedupEmptyDirsConfirm() { h.app.openDedupEmptyDirsConfirm() }
 
 var _ dialogctrl.Host = dialogHost{}

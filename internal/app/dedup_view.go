@@ -20,8 +20,9 @@ func (h dedupHost) NavigatePanelToPath(panelID int, path string, selectName stri
 }
 
 func (h dedupHost) EnqueueDeleteJob(paths []string, removeEmptyDirs bool) {
-	// Dedup has its own empty-dirs confirm (openDedupEmptyDirsConfirm); never
-	// double-prompt with the generic dangling-dirs cleanup.
+	// Dedup has its own empty-dirs confirm (apphandler/dialog's ExecuteDelete opens it via
+	// Deps.Dedup for the dedup-view branch); never double-prompt with the generic
+	// dangling-dirs cleanup.
 	h.app.jobsCtrl.EnqueueDeleteJob(paths, removeEmptyDirs, false)
 }
 
@@ -57,20 +58,6 @@ func (a *App) openDedupDeleteDialog() {
 	}
 	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
 	a.model.FileDialog = fd
-}
-
-// openDedupEmptyDirsConfirm opens the "remove directories left empty by this
-// delete?" confirmation, shown after the delete-marked-files dialog is
-// confirmed, but only when the delete would actually leave directories
-// dangling. Defaults to Yes (index 0) — removing already-empty directories
-// is low-risk, unlike the file deletion itself.
-func (a *App) openDedupEmptyDirsConfirm() {
-	dirs := a.dedupCtrl.EmptyDirsAfterDelete()
-	if len(dirs) == 0 {
-		a.dedupCtrl.DeleteMarked(false)
-		return
-	}
-	a.model.DedupEmptyDirsConfirm = dialog.DedupEmptyDirsConfirmState{Open: true, Focus: 0, Dirs: dirs}
 }
 
 func (a *App) handleDedupEmptyDirsConfirmKey(event *tcell.EventKey) bool {

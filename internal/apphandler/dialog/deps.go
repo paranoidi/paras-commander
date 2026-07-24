@@ -1,25 +1,25 @@
-// Package dialog owns the file-operation dialog family: the generic FileDialogField-based
-// open/submit/key-handling machinery; the rename, mkdir, delete, duplicate, chmod, chown,
-// symlink, and hardlink dialogs built on it; the copy/move transfer dialog (including the
-// multi-location preview list and self-copy-rename flow); and the path-picker (history/bookmarks
-// fuzzy picker) shared by the transfer, flatten, and file-dialog path fields. Dialog STATE
-// (dialog.FileDialogState, dialog.TransferDialogState, dialog.PathPickerState, etc.) lives in the
-// shared ui.Model as usual; this package holds the orchestration (opening dialogs, dispatching
-// keys, executing the underlying file operation) that used to live in internal/app's dialog_*.go
-// files.
+// Package dialog owns the file-operation and navigation-dialog family: the generic
+// FileDialogField-based open/submit/key-handling machinery; the rename, mkdir, delete,
+// duplicate, chmod, chown, symlink, and hardlink dialogs built on it; the mass-rename dialog;
+// the archive-extract dialog; the flatten dialog; the bookmarks path picker and add-bookmark
+// dialog; the copy/move transfer dialog (including the multi-location preview list and
+// self-copy-rename flow); and the path-picker (history/bookmarks fuzzy picker) shared by the
+// transfer, flatten, and file-dialog path fields. Dialog STATE (dialog.FileDialogState,
+// dialog.TransferDialogState, dialog.PathPickerState, dialog.FlattenDialogState, etc.) lives in
+// the shared ui.Model as usual; this package holds the orchestration (opening dialogs,
+// dispatching keys, executing the underlying file operation).
 //
-// Mass-rename execution, the extract/flatten dialogs, and bookmarks/SFTP dialogs are not part of
-// this package yet: they remain in internal/app and are reached through Host (or, for
-// run-for-each, through Deps.Commands) until a later extraction step folds them in here too. The
-// flatten dialog reaches this package's transfer/path-picker helpers (TransferPrefilledDestination,
-// DestFieldNav, OpenPathPickerForFlatten, ArmFlattenDestinationValidateTimer, etc.) directly as
-// exported Handler methods since it shares that machinery but its own open/key/confirm logic is
-// still internal/app's.
+// The settings/config-edit/message-theme/debounce-calibrate dialogs, the SFTP connect/password
+// dialogs, the history dialog, and the quit/stash confirmations remain in internal/app (see
+// AGENTS.md's App package layout section for why); this package reaches the few app-side pieces
+// it still needs — SFTP password execution, opening the generic message dialog, the quick-filter
+// check, and launching the external editor for mass-rename's External mode — through Host.
 package dialog
 
 import (
 	"github.com/gdamore/tcell/v2"
 	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
+	dedupctrl "github.com/paranoidi/paras-commander/internal/apphandler/dedup"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
@@ -53,6 +53,12 @@ type Deps struct {
 	// KeysTransferDialog is the [dialog.transfer] keymap overlay, consulted by the transfer
 	// dialog's active/inactive-panel destination shortcut.
 	KeysTransferDialog *keymap.Map
+	// KeysFlattenDialog is the [dialog.flatten] keymap overlay, consulted by the flatten
+	// dialog's active/inactive-panel destination shortcut.
+	KeysFlattenDialog *keymap.Map
+	// KeysBookmarkDialog is the [dialog.bookmark] keymap overlay, consulted while the
+	// bookmarks path picker is open (delete/open-other fzf-marks entry chords).
+	KeysBookmarkDialog *keymap.Map
 
 	// Jobs enqueues the delete/transfer jobs backing rename-with-copy-select, mkdir
 	// copy/move-select, delete, and duplicate.
@@ -62,6 +68,9 @@ type Deps struct {
 	// Preview is consulted after file-ops that can affect the open quick view / fullscreen
 	// preview (refresh, or close when the previewed file itself was deleted).
 	Preview *previewctrl.Handler
+	// Dedup drives the "N directories left empty" confirmation shown after a dedup-view
+	// delete leaves directories dangling (ExecuteDelete's dedup branch).
+	Dedup *dedupctrl.Handler
 
 	// DiskUsage / DiskUsageIgnore back the delete confirmation dialog's live size estimate;
 	// both are constructed once at startup and never reassigned, so passing them as plain Deps
@@ -89,9 +98,12 @@ type Handler struct {
 	keysDialogInput    *keymap.Map
 	keysGlobal         *keymap.Map
 	keysTransferDialog *keymap.Map
+	keysFlattenDialog  *keymap.Map
+	keysBookmarkDialog *keymap.Map
 	jobs               *jobsctrl.Handler
 	commands           *commandsctrl.Handler
 	preview            *previewctrl.Handler
+	dedup              *dedupctrl.Handler
 	diskUsage          *diskusage.Engine
 	diskUsageIgnore    diskusage.ShouldIgnoreFolder
 
@@ -126,9 +138,12 @@ func New(d Deps) *Handler {
 		keysDialogInput:    d.KeysDialogInput,
 		keysGlobal:         d.KeysGlobal,
 		keysTransferDialog: d.KeysTransferDialog,
+		keysFlattenDialog:  d.KeysFlattenDialog,
+		keysBookmarkDialog: d.KeysBookmarkDialog,
 		jobs:               d.Jobs,
 		commands:           d.Commands,
 		preview:            d.Preview,
+		dedup:              d.Dedup,
 		diskUsage:          d.DiskUsage,
 		diskUsageIgnore:    d.DiskUsageIgnore,
 	}

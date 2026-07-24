@@ -32,7 +32,7 @@ func flattenDialogTestSetup(t *testing.T) (app *App, activeDir, inactiveDir stri
 		t.Fatal(err)
 	}
 	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
-	app.openFlattenDialog()
+	app.dialogCtrl.OpenFlattenDialog()
 	if !app.model.FlattenDialog.Open {
 		t.Fatal("flatten dialog should be open")
 	}
@@ -70,7 +70,7 @@ func TestFlattenDestinationTargetPanel(t *testing.T) {
 		t.Fatal("Primary panel should no longer be marked as destination target")
 	}
 
-	app.closeFlattenDialog()
+	app.dialogCtrl.CloseFlattenDialog()
 	if app.model.DestinationTargetPrimary || app.model.DestinationTargetSecondary {
 		t.Fatal("closing the dialog should clear destination target panels")
 	}
@@ -96,7 +96,7 @@ func TestFlattenMixedSelectionShowsError(t *testing.T) {
 		filepath.Clean(subDir):   true,
 	}
 
-	app.openFlattenDialog()
+	app.dialogCtrl.OpenFlattenDialog()
 	if app.model.FlattenDialog.Open {
 		t.Fatal("flatten dialog should not open for mixed selection")
 	}
@@ -173,8 +173,8 @@ func TestFlattenConfirmQueuesJob(t *testing.T) {
 	p := app.activePanel()
 	p.SelectedPaths = map[string]bool{filepath.Clean(root): true}
 
-	app.openFlattenDialog()
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	app.dialogCtrl.OpenFlattenDialog()
+	app.dialogCtrl.HandleFlattenDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if app.model.FlattenDialog.Open {
 		t.Fatal("dialog should close after Enter on OK")
@@ -213,12 +213,12 @@ func TestFlattenDestinationShortcutShiftLeftSetsActivePath(t *testing.T) {
 	if app.model.FlattenDialog.Destination.Value != wantActive {
 		t.Fatalf("initial destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantActive)
 	}
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
+	app.dialogCtrl.HandleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	wantInactive := dialogctrl.TransferPrefilledDestination(inactiveDir).Value
 	if app.model.FlattenDialog.Destination.Value != wantInactive {
 		t.Fatalf("after Shift+Right destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
 	}
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
+	app.dialogCtrl.HandleFlattenDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
 	if app.model.FlattenDialog.Destination.Value != wantActive {
 		t.Fatalf("after Shift+Left destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantActive)
 	}
@@ -228,7 +228,7 @@ func TestFlattenDestinationShortcutShiftRightSetsInactivePath(t *testing.T) {
 	t.Parallel()
 	app, _, inactiveDir := flattenDialogTestSetup(t)
 	wantInactive := dialogctrl.TransferPrefilledDestination(inactiveDir).Value
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
+	app.dialogCtrl.HandleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	if app.model.FlattenDialog.Destination.Value != wantInactive {
 		t.Fatalf("destination = %q, want %q", app.model.FlattenDialog.Destination.Value, wantInactive)
 	}
@@ -238,7 +238,7 @@ func TestFlattenDestinationShortcutsNoOpWhenUnfocused(t *testing.T) {
 	t.Parallel()
 	app, _, _ := flattenDialogTestSetup(t)
 	want := app.model.FlattenDialog.Destination.Value
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	app.dialogCtrl.HandleFlattenDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
 	if app.model.FlattenDialog.FocusField != 1 {
 		t.Fatalf("FocusField = %d, want 1 (recursive)", app.model.FlattenDialog.FocusField)
 	}
@@ -246,11 +246,11 @@ func TestFlattenDestinationShortcutsNoOpWhenUnfocused(t *testing.T) {
 	if footerHasHint(keys, "Active path ◄", "S-left") || footerHasHint(keys, "Inactive path ►", "S-right") {
 		t.Fatalf("footer = %+v, must not show Active/Inactive when destination unfocused", keys)
 	}
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
+	app.dialogCtrl.HandleFlattenDialogKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModShift))
 	if app.model.FlattenDialog.Destination.Value != want {
 		t.Fatalf("Shift+Left destination = %q, want unchanged %q", app.model.FlattenDialog.Destination.Value, want)
 	}
-	app.handleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
+	app.dialogCtrl.HandleFlattenDialogKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModShift))
 	if app.model.FlattenDialog.Destination.Value != want {
 		t.Fatalf("Shift+Right destination = %q, want unchanged %q", app.model.FlattenDialog.Destination.Value, want)
 	}
@@ -276,7 +276,7 @@ func TestFlattenInactivePanelIsSourceUsesActive(t *testing.T) {
 		t.Fatal(err)
 	}
 	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(sourceDir): true}
-	app.openFlattenDialog()
+	app.dialogCtrl.OpenFlattenDialog()
 	if !app.model.FlattenDialog.Open {
 		t.Fatal("flatten dialog should be open")
 	}
@@ -307,7 +307,7 @@ func TestFlattenDefaultLocationActivePrefill(t *testing.T) {
 		t.Fatal(err)
 	}
 	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
-	app.openFlattenDialog()
+	app.dialogCtrl.OpenFlattenDialog()
 	want := dialogctrl.TransferPrefilledDestination(activeDir).Value
 	if app.model.FlattenDialog.Destination.Value != want {
 		t.Fatalf("destination = %q, want active panel %q", app.model.FlattenDialog.Destination.Value, want)

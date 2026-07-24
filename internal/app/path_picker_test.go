@@ -36,7 +36,7 @@ func TestApplyPathPickerPathValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 
 	st.Query = "fuzzyonly"
@@ -89,7 +89,7 @@ func TestPathPickerCloseStopsValidateTimer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	app.dialogCtrl.ArmPathPickerValidateTimer()
 	if !app.dialogCtrl.PathPickerValidateArmed() {
 		t.Fatal("expected timer armed")
@@ -130,7 +130,7 @@ func TestPathPickerQueryInsertAdvancesCursorAndScroll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 
 	const longPath = "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/value"
 	for _, r := range longPath {
@@ -218,7 +218,7 @@ func TestPathPickerQueryCtrlWAndAltBWordNav(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 	st.Query = "/foo/bar"
 	st.QueryCursor = len([]rune(st.Query))
@@ -267,7 +267,7 @@ func TestPathPickerTabAcceptsFilesystemCompletion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 
 	prefix := filepath.Join(root, "f")
@@ -321,7 +321,7 @@ func TestPathPickerBackspaceRevealScrollOnLastVisible(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 
 	query := "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/~/projects/paras-commander/"
@@ -376,7 +376,7 @@ func TestPathPickerValidateArmIncrementsGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	before := app.dialogCtrl.PathPickerValidateGeneration()
 	app.dialogCtrl.ArmPathPickerValidateTimer()
 	afterArm := app.dialogCtrl.PathPickerValidateGeneration()

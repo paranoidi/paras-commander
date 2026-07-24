@@ -508,9 +508,12 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		KeysDialogInput:    keys.DialogInput,
 		KeysGlobal:         keys.Global,
 		KeysTransferDialog: keys.TransferDialog,
+		KeysFlattenDialog:  keys.FlattenDialog,
+		KeysBookmarkDialog: keys.BookmarkDialog,
 		Jobs:               app.jobsCtrl,
 		Commands:           app.commandsCtrl,
 		Preview:            app.previewCtrl,
+		Dedup:              app.dedupCtrl,
 		DiskUsage:          app.diskUsage,
 		DiskUsageIgnore:    duIgnorer,
 	})
@@ -984,7 +987,7 @@ func (a *App) handleDialogKey(event *tcell.EventKey) bool {
 		a.dialogCtrl.HandleTransferDialogKey(event)
 		return false
 	case a.model.FlattenDialog.Open:
-		a.handleFlattenDialogKey(event)
+		a.dialogCtrl.HandleFlattenDialogKey(event)
 		return false
 	case a.model.QuitConfirm.Open:
 		return a.handleQuitConfirmKey(event)

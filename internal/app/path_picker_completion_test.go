@@ -37,7 +37,7 @@ func TestPathPickerAcceptLongCompletionScrollsToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 
 	long := "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/value"

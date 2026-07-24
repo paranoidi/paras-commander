@@ -40,7 +40,7 @@ func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	if !app.model.PathPicker.Open {
 		t.Fatal("expected path picker open")
 	}
@@ -91,14 +91,14 @@ func TestBookmarkDialogF8DeletesFZFMark(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	if len(app.model.PathPicker.Items) != 1 {
 		t.Fatalf("items = %d, want 1", len(app.model.PathPicker.Items))
 	}
-	if !app.bookmarkDialogDeleteFooterEligible() {
+	if !app.dialogCtrl.BookmarkDialogDeleteFooterEligible() {
 		t.Fatal("expected delete footer for fzf-marks row")
 	}
-	if !app.tryBookmarkDialogShortcut(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)) {
+	if !app.dialogCtrl.TryBookmarkDialogShortcut(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)) {
 		t.Fatal("F8 should delete selected fzf-marks bookmark")
 	}
 	if len(app.model.PathPicker.Items) != 0 {
@@ -151,21 +151,21 @@ func TestBookmarkDialogDeleteFooterSkippedForGnomeMark(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	if len(app.model.PathPicker.Items) != 1 {
 		t.Fatalf("items = %d, want 1 gnome bookmark", len(app.model.PathPicker.Items))
 	}
 	if app.model.PathPicker.Items[0].Source != "gnome" {
 		t.Fatalf("source = %q, want gnome", app.model.PathPicker.Items[0].Source)
 	}
-	if app.bookmarkDialogDeleteFooterEligible() {
+	if app.dialogCtrl.BookmarkDialogDeleteFooterEligible() {
 		t.Fatal("delete footer should not show for gnome bookmark")
 	}
 	before, err := os.ReadFile(gtkMarks)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if app.tryBookmarkDialogShortcut(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)) {
+	if app.dialogCtrl.TryBookmarkDialogShortcut(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone)) {
 		t.Fatal("F8 should not delete gnome bookmark")
 	}
 	after, err := os.ReadFile(gtkMarks)
@@ -441,7 +441,7 @@ func TestBookmarkDialogFilterSelectsRankedFirst(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	for _, r := range "b" {
 		if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone)); quit {
 			t.Fatal("unexpected quit")
@@ -487,7 +487,7 @@ func TestBookmarkDialogTypingODoesNotActivateWithoutEnter(t *testing.T) {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
 	startPath := app.activePanel().Path
-	app.openBookmarkDialog()
+	app.dialogCtrl.OpenBookmarkDialog()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
@@ -631,22 +631,5 @@ func TestAddBookmarkEmptyNameClosesWithError(t *testing.T) {
 	}
 	if _, err := os.Stat(marksPath); !os.IsNotExist(err) {
 		t.Fatalf("marks file should not exist; stat err = %v", err)
-	}
-}
-
-func TestAddBookmarkDefaultName(t *testing.T) {
-	tests := []struct {
-		path string
-		want string
-	}{
-		{path: "/", want: "root"},
-		{path: "/home/user/projects", want: "projects"},
-		{path: ".", want: "root"},
-		{path: "", want: "root"},
-	}
-	for _, tt := range tests {
-		if got := defaultBookmarkName(tt.path); got != tt.want {
-			t.Fatalf("defaultBookmarkName(%q) = %q, want %q", tt.path, got, tt.want)
-		}
 	}
 }

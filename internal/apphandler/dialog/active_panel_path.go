@@ -81,3 +81,37 @@ func (h *Handler) applyTransferDestinationFromInactivePanel() {
 	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
 	h.ArmTransferDestinationValidateTimer()
 }
+
+func (h *Handler) flattenDialogDestinationFooterEligible() bool {
+	return h.model.FlattenDialog.Open && h.model.FlattenDialog.FocusField == 0
+}
+
+// FlattenDialogOverlayFooterKeys builds the flatten dialog's "Active path"/"Inactive path"
+// footer hints when its destination field is focused.
+func (h *Handler) FlattenDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
+	return DestinationShortcutFooterKeys(keys, h.flattenDialogDestinationFooterEligible())
+}
+
+// TryFlattenDialogDestinationShortcut sets the flatten destination to the active or inactive
+// panel path when the user presses a chord from [dialog.flatten] while the destination row is
+// focused.
+func (h *Handler) TryFlattenDialogDestinationShortcut(ev *tcell.EventKey) bool {
+	return TryDestinationShortcut(ev, h.keysFlattenDialog, h.flattenDialogDestinationFooterEligible(),
+		h.applyFlattenDestinationFromActivePanel, h.applyFlattenDestinationFromInactivePanel)
+}
+
+func (h *Handler) applyFlattenDestinationFromActivePanel() {
+	d := &h.model.FlattenDialog
+	d.Destination = TransferPrefilledDestination(h.host.ActivePanel().PathString())
+	d.DestSubFocus = dialog.FlattenDestSubFocusText
+	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
+	h.ArmFlattenDestinationValidateTimer()
+}
+
+func (h *Handler) applyFlattenDestinationFromInactivePanel() {
+	d := &h.model.FlattenDialog
+	d.Destination = TransferPrefilledDestination(h.host.InactivePanel().PathString())
+	d.DestSubFocus = dialog.FlattenDestSubFocusText
+	h.SyncPathFieldCompletion(&d.Destination, h.TransferDestinationTextWidth())
+	h.ArmFlattenDestinationValidateTimer()
+}
