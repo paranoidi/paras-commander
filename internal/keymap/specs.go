@@ -666,6 +666,22 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"tree", "expand", "all", "shallow", "directory", "nested"},
 		},
 		{
+			ID:          ActionPanelTreePrevSiblingDir,
+			Views:       HelpBrowser,
+			Title:       "Previous sibling directory (tree)",
+			Section:     "Sort & display",
+			DefaultKeys: []string{"M-up"},
+			Keywords:    []string{"tree", "sibling", "directory", "previous", "jump"},
+		},
+		{
+			ID:          ActionPanelTreeNextSiblingDir,
+			Views:       HelpBrowser,
+			Title:       "Next sibling directory (tree)",
+			Section:     "Sort & display",
+			DefaultKeys: []string{"M-down"},
+			Keywords:    []string{"tree", "sibling", "directory", "next", "jump"},
+		},
+		{
 			ID:          ActionPanelToggleZoomActivePanel,
 			Views:       HelpBrowser,
 			Title:       "Toggle zoom active panel",

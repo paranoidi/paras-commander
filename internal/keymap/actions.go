@@ -62,6 +62,8 @@ const (
 	ActionPanelTreeCollapse           = "panel.tree-collapse"
 	ActionPanelTreeCollapseAll        = "panel.tree-collapse-all"
 	ActionPanelTreeExpandAllShallow   = "panel.tree-expand-all-shallow"
+	ActionPanelTreePrevSiblingDir     = "panel.tree-prev-sibling-dir"
+	ActionPanelTreeNextSiblingDir     = "panel.tree-next-sibling-dir"
 	ActionPanelToggleZoomActivePanel  = "panel.toggle-zoom-active-panel"
 	ActionPanelToggleSplitOrientation = "panel.toggle-split-orientation"
 	ActionPanelReverseSort            = "panel.reverse-sort"
@@ -276,6 +278,8 @@ var KnownActions = map[string]struct{}{
 	ActionPanelTreeCollapse:           {},
 	ActionPanelTreeCollapseAll:        {},
 	ActionPanelTreeExpandAllShallow:   {},
+	ActionPanelTreePrevSiblingDir:     {},
+	ActionPanelTreeNextSiblingDir:     {},
 	ActionPanelToggleZoomActivePanel:  {},
 	ActionPanelToggleSplitOrientation: {},
 	ActionPanelReverseSort:            {},

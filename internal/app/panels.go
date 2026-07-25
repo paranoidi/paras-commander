@@ -713,6 +713,10 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 		if a.expandAllTreeShallowForPanel(activePanel, viewportRows) {
 			a.setTransientMessage("Tree view is not available in carousel view", ui.MessageUrgencyInfo)
 		}
+	case keymap.ActionPanelTreePrevSiblingDir:
+		activePanel.JumpTreeSiblingDir(-1, viewportRows)
+	case keymap.ActionPanelTreeNextSiblingDir:
+		activePanel.JumpTreeSiblingDir(1, viewportRows)
 	case keymap.ActionPanelToggleZoomActivePanel:
 		a.toggleZoomActivePanelGuarded()
 	case keymap.ActionPanelToggleSplitOrientation:

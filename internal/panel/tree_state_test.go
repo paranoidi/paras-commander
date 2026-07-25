@@ -475,6 +475,89 @@ func TestCollapseTreeCursorRowJumpsToAndCollapsesParent(t *testing.T) {
 	}
 }
 
+// TestJumpTreeSiblingDir covers next/prev sibling-directory jumps from a nested file, no-wrap
+// at the ends, and no-ops outside tree mode / on a depth-0 file.
+func TestJumpTreeSiblingDir(t *testing.T) {
+	root := t.TempDir()
+	alpha := filepath.Join(root, "alpha")
+	bravo := filepath.Join(root, "bravo")
+	charlie := filepath.Join(root, "charlie")
+	for _, dir := range []string{alpha, bravo, charlie} {
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatalf("Mkdir(%s): %v", dir, err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(bravo, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	state.JumpTreeSiblingDir(1, 10) // outside tree mode: no-op
+
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	rowOf := func(path string) int {
+		t.Helper()
+		for i := 0; i < state.VisibleEntryCount(); i++ {
+			if e, _, ok := state.VisibleEntry(i); ok && e.Path == path {
+				return i
+			}
+		}
+		t.Fatalf("row for %s not found among %d visible rows", path, state.VisibleEntryCount())
+		return -1
+	}
+
+	state.Cursor = rowOf(bravo)
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow(bravo): %v", err)
+	}
+
+	// Nested file under bravo → next sibling dir is charlie; prev is alpha.
+	state.Cursor = rowOf(filepath.Join(bravo, "harbor.txt"))
+	state.JumpTreeSiblingDir(1, 10)
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Path != charlie {
+		t.Fatalf("after next from nested file: CurrentEntry = %+v ok=%v, want %s", entry, ok, charlie)
+	}
+	state.Cursor = rowOf(filepath.Join(bravo, "harbor.txt"))
+	state.JumpTreeSiblingDir(-1, 10)
+	entry, ok = state.CurrentEntry()
+	if !ok || entry.Path != alpha {
+		t.Fatalf("after prev from nested file: CurrentEntry = %+v ok=%v, want %s", entry, ok, alpha)
+	}
+
+	// No wrap past the last / first sibling directory.
+	state.Cursor = rowOf(charlie)
+	state.JumpTreeSiblingDir(1, 10)
+	entry, ok = state.CurrentEntry()
+	if !ok || entry.Path != charlie {
+		t.Fatalf("next at last sibling: CurrentEntry = %+v ok=%v, want unchanged %s", entry, ok, charlie)
+	}
+	state.Cursor = rowOf(alpha)
+	state.JumpTreeSiblingDir(-1, 10)
+	entry, ok = state.CurrentEntry()
+	if !ok || entry.Path != alpha {
+		t.Fatalf("prev at first sibling: CurrentEntry = %+v ok=%v, want unchanged %s", entry, ok, alpha)
+	}
+
+	// Depth-0 file: no parent directory → no-op.
+	state.Cursor = rowOf(filepath.Join(root, "beacon.txt"))
+	beaconIdx := state.Cursor
+	state.JumpTreeSiblingDir(1, 10)
+	if state.Cursor != beaconIdx {
+		t.Fatalf("Cursor after jump on depth-0 file = %d, want unchanged %d", state.Cursor, beaconIdx)
+	}
+}
+
 func TestCollapseAllTree(t *testing.T) {
 	root := t.TempDir()
 	meadow := filepath.Join(root, "meadow")

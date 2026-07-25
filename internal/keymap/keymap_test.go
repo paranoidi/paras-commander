@@ -154,6 +154,8 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelTreeExpandAllShallow, true},
 		{tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt), ActionPanelTreeCollapse, true},
 		{tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt), ActionPanelTreeExpand, true},
+		{tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModAlt), ActionPanelTreePrevSiblingDir, true},
+		{tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt), ActionPanelTreeNextSiblingDir, true},
 		{tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModCtrl), ActionNavForward, true},
 		{tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModCtrl), ActionNavBackward, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt), ActionPanelHistoryDialog, true},

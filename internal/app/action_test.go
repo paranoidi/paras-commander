@@ -124,6 +124,24 @@ func TestActionFromKeyMapsAltRightToTreeExpand(t *testing.T) {
 	}
 }
 
+func TestActionFromKeyMapsAltUpToTreePrevSiblingDir(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModAlt)
+	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionPanelTreePrevSiblingDir {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelTreePrevSiblingDir", got)
+	}
+}
+
+func TestActionFromKeyMapsAltDownToTreeNextSiblingDir(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt)
+	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionPanelTreeNextSiblingDir {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelTreeNextSiblingDir", got)
+	}
+}
+
 func TestActionFromKeyMapsCtrlArrowsToDirectoryHistory(t *testing.T) {
 	km := defaultKeymap(t)
 	fwd := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModCtrl)

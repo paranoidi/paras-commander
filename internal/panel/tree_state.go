@@ -212,6 +212,51 @@ func (s *State) CollapseTreeCursorRow(viewportRows int) error {
 	return nil
 }
 
+// JumpTreeSiblingDir moves the cursor to the previous (delta -1) or next (delta +1) sibling
+// directory of the subject row: the cursor directory itself, or — when the cursor is on a file —
+// its immediate tree parent (same backward depth walk as CollapseTreeCursorRow). Only same-depth
+// directory rows inside the sibling group are considered; files and nested children are skipped.
+// No wrap. No-op outside tree mode, on a depth-0 file, or when no sibling directory exists in
+// that direction. Does not expand, collapse, or rebuild tree rows.
+func (s *State) JumpTreeSiblingDir(delta, viewportRows int) {
+	if s.ListLayout != ListLayoutTree || (delta != -1 && delta != 1) {
+		return
+	}
+	if s.Cursor < 0 || s.Cursor >= len(s.treeRows) {
+		return
+	}
+	row := s.treeRows[s.Cursor]
+	subjectIdx := s.Cursor
+	if row.Value.Entry.Type != localfs.EntryDirectory {
+		if row.Depth == 0 {
+			return
+		}
+		subjectIdx = -1
+		for i := s.Cursor - 1; i >= 0; i-- {
+			if s.treeRows[i].Depth < row.Depth {
+				subjectIdx = i
+				break
+			}
+		}
+		if subjectIdx < 0 {
+			return
+		}
+	}
+	subjectDepth := s.treeRows[subjectIdx].Depth
+	for i := subjectIdx + delta; i >= 0 && i < len(s.treeRows); i += delta {
+		r := s.treeRows[i]
+		if r.Depth < subjectDepth {
+			return
+		}
+		if r.Depth > subjectDepth || r.Value.Entry.Type != localfs.EntryDirectory {
+			continue
+		}
+		s.Cursor = i
+		s.EnsureCursorInViewport(viewportRows)
+		return
+	}
+}
+
 // collapseTreeRow collapses the directory row identified by id and moves the cursor onto it.
 // Shared by CollapseTreeCursorRow's in-place and jump-to-parent branches.
 func (s *State) collapseTreeRow(id string, depth int, viewportRows int) error {
