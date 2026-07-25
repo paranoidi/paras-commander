@@ -63,6 +63,13 @@ type State struct {
 	GitStatusThemeKey string
 	// Search tracks incremental "/" search state and matches within this preview.
 	Search SearchState
+	// ImagePayload is a raw sixel DCS or Kitty APC sequence for image previews (empty for text).
+	ImagePayload string
+	// ImagePxW / ImagePxH are the encoded image dimensions in pixels.
+	ImagePxW int
+	ImagePxH int
+	// ImageProtocol identifies which graphics protocol ImagePayload uses.
+	ImageProtocol ImageProtocol
 
 	wrappedLines     [][]AnsiCell
 	wrapWidth        int

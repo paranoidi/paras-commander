@@ -332,7 +332,9 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 		h.host.SetErrorMessage("View", fmt.Errorf("no path"))
 		return
 	}
-	if err := localfs.CheckFilePreviewable(path); err != nil {
+	err := localfs.CheckFilePreviewable(path)
+	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
+	if err != nil && !isImage {
 		switch {
 		case errors.Is(err, localfs.ErrFilePreviewBinary):
 			h.host.SetTransientMessage("View: not a text file", ui.MessageUrgencyWarn)
@@ -358,15 +360,12 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
 		return fmt.Errorf("terminal too small")
 	}
 	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary, h.host.EffectivePaneSplitOrientation())
-	tw := union.Width - 4
-	if tw < 1 {
-		tw = 1
-	}
 	panelPath := filepath.Dir(path)
 	if active := h.host.ActivePanel(); active != nil && active.PathString() != "" {
 		panelPath = active.PathString()
 	}
 	titleBase := filepath.Base(path)
+	isImage := localfs.IsImagePath(path)
 	h.captureFilePreviewHold(previewTargetFullscreen)
 	h.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
 	h.model.FullscreenFilePreviewRawMarkdown = false
@@ -391,13 +390,25 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
 		st.DiffHunkLines = nil
 		st.GitStatusText = ""
 		st.GitStatusThemeKey = ""
+		// Keep ImagePayload* until the new encode finishes (stale-while-revalidate).
 		st.CancelSearch()
 	})
+	tw, contentH, layOK := h.fullscreenFilePreviewLayoutMetrics()
+	if !layOK {
+		tw = union.Width - 1
+		if tw < 1 {
+			tw = 1
+		}
+		contentH = union.Height - 1
+		if contentH < 0 {
+			contentH = 0
+		}
+	}
 	gen := h.filePreviewRunGen.Add(1)
 	h.postRenderWake()
 	go h.runPreview(
 		h.ctx,
-		h.previewRequest(path, tw, panelPath, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetFullscreen),
+		h.previewRequest(path, tw, contentH, panelPath, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetFullscreen, isImage),
 		previewTargetFullscreen,
 		gen,
 	)

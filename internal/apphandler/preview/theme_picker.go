@@ -3,6 +3,7 @@ package preview
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
@@ -21,6 +22,9 @@ func chromaStyleUIChoices() []dialog.ThemeChoice {
 
 func (h *Handler) toggleFilePreviewThemePicker() {
 	if h.model.ViewMode != ui.ViewFilePreview || !h.model.FullscreenFilePreview.Open {
+		return
+	}
+	if h.model.FullscreenFilePreview.ImagePayload != "" {
 		return
 	}
 	if h.model.FilePreviewThemePicker.Open {
@@ -128,11 +132,11 @@ func (h *Handler) refreshFullscreenFilePreview() {
 	if !st.Open || st.Path == "" {
 		return
 	}
-	tw, ok := h.fullscreenPreviewTextWidth()
+	tw, contentH, ok := h.fullscreenFilePreviewLayoutMetrics()
 	if !ok {
 		return
 	}
-	req := h.previewRequest(st.Path, tw, h.host.ActivePanel().PathString(), h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetFullscreen)
+	req := h.previewRequest(st.Path, tw, contentH, h.host.ActivePanel().PathString(), h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetFullscreen, localfs.IsImagePath(st.Path))
 	req.RawMarkdown = h.model.FullscreenFilePreviewRawMarkdown
 	gen := h.filePreviewRunGen.Add(1)
 	h.postRenderWake()

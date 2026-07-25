@@ -11,6 +11,9 @@ func (st State) Holdable() bool {
 }
 
 func (st State) drawableBody() bool {
+	if st.ImagePayload != "" {
+		return true
+	}
 	if st.Source == SourceInternalHighlighted && len(st.HighlightedCells) > 0 {
 		return true
 	}
@@ -62,6 +65,10 @@ func MergeDrawWithHold(live, hold State) State {
 	out.GutterWidth = hold.GutterWidth
 	out.ErrorMsg = hold.ErrorMsg
 	out.ExitCode = hold.ExitCode
+	out.ImagePayload = hold.ImagePayload
+	out.ImagePxW = hold.ImagePxW
+	out.ImagePxH = hold.ImagePxH
+	out.ImageProtocol = hold.ImageProtocol
 	out.WrapCacheSnapshot(hold)
 	out.BodyHeld = true
 	return out

@@ -231,6 +231,12 @@ type PreviewConfig struct {
 	// Command is a single-line argv template parsed like shellwords (see cmdrun.ParseCommandArgv).
 	// Use %f once to insert the absolute file path as one token; use %w for terminal width; if %f is omitted, the path is appended.
 	Command string `toml:"command"`
+	// Images enables in-process image previews (F3 / quick view / carousel) via sixel or
+	// Kitty graphics. When false, image paths show metadata text instead.
+	Images bool `toml:"images"`
+	// ImageProtocol selects the terminal graphics protocol: "auto", "sixel", or "kitty".
+	// Empty/invalid values normalize to DefaultPreviewImageProtocol ("auto").
+	ImageProtocol string `toml:"image_protocol"`
 }
 
 type UIConfig struct {
@@ -519,10 +525,12 @@ func Default() Config {
 			LocalNames: []string{DefaultUserMenuFileName},
 		},
 		Preview: PreviewConfig{
-			Mode:        DefaultPreviewMode,
-			Style:       DefaultPreviewStyle,
-			LineNumbers: DefaultPreviewLineNumbers,
-			Command:     DefaultFilePreviewCommand,
+			Mode:          DefaultPreviewMode,
+			Style:         DefaultPreviewStyle,
+			LineNumbers:   DefaultPreviewLineNumbers,
+			Command:       DefaultFilePreviewCommand,
+			Images:        DefaultPreviewImages,
+			ImageProtocol: DefaultPreviewImageProtocol,
 		},
 		SFTP: SFTPConfig{
 			IdleTimeoutSecs: DefaultSFTPIdleTimeoutSecs,
@@ -1093,6 +1101,16 @@ func (c *Config) validatePreview(builtin *Config) {
 		c.Preview.Mode = builtin.Preview.Mode
 	}
 	c.Preview.Style = previewValidateStyle(c.Preview.Style)
+	switch strings.ToLower(strings.TrimSpace(c.Preview.ImageProtocol)) {
+	case PreviewImageProtocolSixel:
+		c.Preview.ImageProtocol = PreviewImageProtocolSixel
+	case PreviewImageProtocolKitty:
+		c.Preview.ImageProtocol = PreviewImageProtocolKitty
+	case "", PreviewImageProtocolAuto:
+		c.Preview.ImageProtocol = PreviewImageProtocolAuto
+	default:
+		c.Preview.ImageProtocol = builtin.Preview.ImageProtocol
+	}
 	if c.Preview.Mode == PreviewModeExternal {
 		if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/pc-preview-validate", 80); err != nil {
 			c.Preview.Command = builtin.Preview.Command

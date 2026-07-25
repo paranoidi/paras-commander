@@ -37,6 +37,7 @@ func (a *App) withTerminalReleased(fn func() error) error {
 	}
 	// Resume re-engages a cleared alt-screen; flush even when the logical buffer is unchanged
 	// (ScreenRenderHashCache would otherwise skip Show and leave a blank terminal).
+	a.resetImageOverlay()
 	a.lastScreenContentHash = 0
 	a.screen.HideCursor()
 	a.render()
