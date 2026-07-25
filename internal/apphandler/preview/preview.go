@@ -16,6 +16,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
 func (h *Handler) patchPreviewState(target previewTarget, fn func(*ui.FilePreviewState)) {
@@ -855,11 +856,16 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 		BaseStyle: ui.FilePreviewBodyStyle(h.host.Styles(), chromeBlocked),
 	}
 	if isImage {
-		cw, ch := h.cellPixelDims()
+		cw, ch := previewpanel.CellPixelDims(h.screen)
 		req.Image = true
 		req.ImageMaxPxW = textW * cw
 		req.ImageMaxPxH = contentH * ch
-		req.ImageProtocol = previewrun.ResolveImageProtocol(req.Preview.ImageProtocol, os.Getenv)
+		// No tty ⇒ cannot emit graphics; force metadata fallback instead of a blank box.
+		if _, ok := h.screen.Tty(); !ok {
+			req.ImageProtocol = previewpanel.ImageProtocolNone
+		} else {
+			req.ImageProtocol = previewrun.ResolveImageProtocol(req.Preview.ImageProtocol, os.Getenv)
+		}
 		return req
 	}
 	if gitStatus != nil {
@@ -867,23 +873,6 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 		req.GitStatus = gitStatus
 	}
 	return req
-}
-
-// cellPixelDims returns the terminal cell size in pixels (ioctl), with a 10×20 fallback.
-func (h *Handler) cellPixelDims() (cw, ch int) {
-	tty, ok := h.screen.Tty()
-	if !ok {
-		return 10, 20
-	}
-	ws, err := tty.WindowSize()
-	if err != nil {
-		return 10, 20
-	}
-	cw, ch = ws.CellDimensions()
-	if cw <= 0 || ch <= 0 {
-		return 10, 20
-	}
-	return cw, ch
 }
 
 // gitStatusForPath returns the git status for path from the active panel, or nil if unavailable.

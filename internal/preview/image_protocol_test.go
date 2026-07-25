@@ -23,7 +23,7 @@ func TestResolveImageProtocol(t *testing.T) {
 		{name: "auto ghostty TERM_PROGRAM", cfg: "auto", env: map[string]string{"TERM_PROGRAM": "ghostty"}, want: previewpanel.ImageProtocolKitty},
 		{name: "auto kitty TERM_PROGRAM", cfg: "auto", env: map[string]string{"TERM_PROGRAM": "kitty"}, want: previewpanel.ImageProtocolKitty},
 		{name: "auto xterm-kitty TERM", cfg: "auto", env: map[string]string{"TERM": "xterm-kitty"}, want: previewpanel.ImageProtocolKitty},
-		{name: "auto ghostty TERM prefix", cfg: "auto", env: map[string]string{"TERM": "ghostty"}, want: previewpanel.ImageProtocolKitty},
+		{name: "auto ghostty TERM xterm-ghostty", cfg: "auto", env: map[string]string{"TERM": "xterm-ghostty"}, want: previewpanel.ImageProtocolKitty},
 		{name: "empty cfg is auto", cfg: "", env: map[string]string{"TERM_PROGRAM": "ghostty"}, want: previewpanel.ImageProtocolKitty},
 		{name: "bogus cfg is auto", cfg: "nope", env: map[string]string{}, want: previewpanel.ImageProtocolSixel},
 		{name: "explicit config constants", cfg: config.PreviewImageProtocolKitty, want: previewpanel.ImageProtocolKitty},

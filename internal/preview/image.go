@@ -46,9 +46,9 @@ func runImage(req Request) Result {
 		CombinedText: meta,
 	}
 
-	megapixels := int64(cfg.Width) * int64(cfg.Height)
+	pixels := int64(cfg.Width) * int64(cfg.Height)
 	maxPixels := int64(config.DefaultPreviewImageMaxDecodeMegapixels) * 1_000_000
-	if megapixels > maxPixels {
+	if pixels > maxPixels {
 		metaResult.CombinedText = meta + " / too large"
 		return metaResult
 	}

@@ -25,7 +25,9 @@ func ResolveImageProtocol(cfg string, environ func(string) string) previewpanel.
 			return previewpanel.ImageProtocolKitty
 		}
 		term := strings.ToLower(strings.TrimSpace(environ("TERM")))
-		if term == "xterm-kitty" || strings.HasPrefix(term, "ghostty") {
+		// Ghostty's default TERM is xterm-ghostty (not a "ghostty…" prefix); TERM_PROGRAM
+		// is often missing over SSH, so match the substring.
+		if term == "xterm-kitty" || strings.Contains(term, "ghostty") {
 			return previewpanel.ImageProtocolKitty
 		}
 		return previewpanel.ImageProtocolSixel
