@@ -8,6 +8,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -191,24 +192,37 @@ func (a *App) render() {
 
 // emitScreenAfterFullRender flushes the terminal after ui.Render. When ScreenRenderHashCache is on,
 // identical consecutive frames skip Show() to reduce redundant terminal traffic.
+// Terminal images are locked before Show and emitted after; a changed placement forces Show.
 func (a *App) emitScreenAfterFullRender() {
-	if !a.config.UI.ScreenRenderHashCache {
-		a.screen.Show()
-		return
+	plan := previewpanel.TakeFrameImage()
+	if a.imageOverlaySuppressed() {
+		plan = nil
 	}
-	h := ui.HashScreenLogical(a.screen)
-	if h == a.lastScreenContentHash && a.pendingCursor == a.lastFlushedCursor {
-		return
+	force := a.reconcileImageBeforeShow(plan)
+	if a.config.UI.ScreenRenderHashCache {
+		h := ui.HashScreenLogical(a.screen)
+		if !force && h == a.lastScreenContentHash && a.pendingCursor == a.lastFlushedCursor {
+			return
+		}
+		a.lastScreenContentHash = h
+		a.lastFlushedCursor = a.pendingCursor
 	}
-	a.lastScreenContentHash = h
-	a.lastFlushedCursor = a.pendingCursor
 	a.screen.Show()
+	a.emitImageAfterShow()
 }
 
 // emitScreenAfterPartialPaint runs after targeted SetContent calls (e.g. menu-bar spinner) so
 // the hash cache stays aligned with what the terminal displays.
+// A nil image plan (typical for partial paints) leaves the locked region alone.
 func (a *App) emitScreenAfterPartialPaint() {
+	if plan := previewpanel.TakeFrameImage(); plan != nil {
+		if a.imageOverlaySuppressed() {
+			plan = nil
+		}
+		_ = a.reconcileImageBeforeShow(plan)
+	}
 	a.screen.Show()
+	a.emitImageAfterShow()
 	if a.config.UI.ScreenRenderHashCache {
 		a.lastScreenContentHash = ui.HashScreenLogical(a.screen)
 		a.lastFlushedCursor = a.pendingCursor

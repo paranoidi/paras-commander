@@ -415,6 +415,10 @@ func (h *Handler) patchColumnPreviewMessage(titleBase, msg string) {
 		st.Scroll = 0
 		st.ExitCode = 0
 		st.ErrorMsg = msg
+		st.ImagePayload = ""
+		st.ImagePxW = 0
+		st.ImagePxH = 0
+		st.ImageProtocol = 0
 	})
 	h.postRenderWake()
 	h.clampFilePreviewScroll()
@@ -613,7 +617,9 @@ func (h *Handler) applyQuickViewPreviewNow() {
 			h.model.QuickViewDirOverlayVisualHold = true
 		}
 		h.ClearQuickViewDirOverlay()
-		if err := localfs.CheckFilePreviewable(path); err != nil {
+		err := localfs.CheckFilePreviewable(path)
+		isImage := errors.Is(err, localfs.ErrFilePreviewImage)
+		if err != nil && !isImage {
 			switch {
 			case errors.Is(err, localfs.ErrFilePreviewBinary):
 				h.patchColumnPreviewMessage(filepath.Base(path), "Quick view: not a text file")
@@ -624,7 +630,7 @@ func (h *Handler) applyQuickViewPreviewNow() {
 			}
 			return
 		}
-		tw, _, layOK := h.inactivePanelPreviewLayoutMetrics(true)
+		tw, contentH, layOK := h.inactivePanelPreviewLayoutMetrics(true)
 		if !layOK {
 			tw = 1
 		}
@@ -645,10 +651,12 @@ func (h *Handler) applyQuickViewPreviewNow() {
 			st.DiffHunkLines = nil
 			st.GitStatusText = ""
 			st.GitStatusThemeKey = ""
+			// Keep ImagePayload* so the previous image stays on screen until the new
+			// encode finishes (stale-while-revalidate). Cleared on error / non-image result.
 		})
 		h.postRenderWake()
 		gen := h.filePreviewRunGen.Add(1)
-		go h.runPreview(h.ctx, h.previewRequest(path, tw, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive), previewTargetInactive, gen)
+		go h.runPreview(h.ctx, h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive, isImage), previewTargetInactive, gen)
 	}
 }
 
@@ -662,12 +670,12 @@ func (h *Handler) refreshInactiveFilePreview() {
 	if !st.Open || st.Path == "" {
 		return
 	}
-	tw, _, ok := h.inactivePanelPreviewLayoutMetrics(true)
+	tw, contentH, ok := h.inactivePanelPreviewLayoutMetrics(true)
 	if !ok {
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
-	req := h.previewRequest(st.Path, tw, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive)
+	req := h.previewRequest(st.Path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive, localfs.IsImagePath(st.Path))
 	gen := h.filePreviewRunGen.Add(1)
 	h.postRenderWake()
 	go h.runPreview(h.ctx, req, previewTargetInactive, gen)
@@ -686,13 +694,17 @@ func (h *Handler) RefreshPreviewsAfterResize() {
 func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 	h.mu.RLock()
 	var open bool
+	var path string
 	switch target {
 	case previewTargetFullscreen:
 		open = h.model.FullscreenFilePreview.Open
+		path = h.model.FullscreenFilePreview.Path
 	case previewTargetCarousel:
 		open = h.model.CarouselFilePreview.Open
+		path = h.model.CarouselFilePreview.Path
 	default:
 		open = h.model.FilePreview.Open
+		path = h.model.FilePreview.Path
 	}
 	h.mu.RUnlock()
 	if !open {
@@ -709,7 +721,8 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 	default:
 		tw, _, ok = h.inactivePanelPreviewLayoutMetrics(true)
 	}
-	if !ok || tw == h.previewLastWidth[target] {
+	// Image pixel budget depends on height too; bypass the width-equality skip for images.
+	if !ok || (tw == h.previewLastWidth[target] && !localfs.IsImagePath(path)) {
 		return
 	}
 
@@ -832,7 +845,7 @@ func (h *Handler) ReconcileQuickViewPreview() {
 	h.armQuickViewPreviewDebounce()
 }
 
-func (h *Handler) previewRequest(path string, textW int, workDir string, chromeBlocked bool, gitStatus *gitstatus.Cell, target previewTarget) previewrun.Request {
+func (h *Handler) previewRequest(path string, textW, contentH int, workDir string, chromeBlocked bool, gitStatus *gitstatus.Cell, target previewTarget, isImage bool) previewrun.Request {
 	h.previewLastWidth[target] = textW
 	req := previewrun.Request{
 		Path:      path,
@@ -841,11 +854,36 @@ func (h *Handler) previewRequest(path string, textW int, workDir string, chromeB
 		Preview:   h.host.Config().Preview,
 		BaseStyle: ui.FilePreviewBodyStyle(h.host.Styles(), chromeBlocked),
 	}
+	if isImage {
+		cw, ch := h.cellPixelDims()
+		req.Image = true
+		req.ImageMaxPxW = textW * cw
+		req.ImageMaxPxH = contentH * ch
+		req.ImageProtocol = previewrun.ResolveImageProtocol(req.Preview.ImageProtocol, os.Getenv)
+		return req
+	}
 	if gitStatus != nil {
 		req.GitDiff = true
 		req.GitStatus = gitStatus
 	}
 	return req
+}
+
+// cellPixelDims returns the terminal cell size in pixels (ioctl), with a 10×20 fallback.
+func (h *Handler) cellPixelDims() (cw, ch int) {
+	tty, ok := h.screen.Tty()
+	if !ok {
+		return 10, 20
+	}
+	ws, err := tty.WindowSize()
+	if err != nil {
+		return 10, 20
+	}
+	cw, ch = ws.CellDimensions()
+	if cw <= 0 || ch <= 0 {
+		return 10, 20
+	}
+	return cw, ch
 }
 
 // gitStatusForPath returns the git status for path from the active panel, or nil if unavailable.
@@ -923,6 +961,10 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 			st.DiffHunkLines = nil
 			st.GitStatusText = ""
 			st.GitStatusThemeKey = ""
+			st.ImagePayload = ""
+			st.ImagePxW = 0
+			st.ImagePxH = 0
+			st.ImageProtocol = 0
 			if st.Search.Active {
 				st.RecomputeSearch()
 			}
@@ -945,6 +987,10 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 		st.DiffHunkLines = res.DiffHunkLines
 		st.GitStatusText = res.StatusText
 		st.GitStatusThemeKey = res.StatusThemeKey
+		st.ImagePayload = res.ImagePayload
+		st.ImagePxW = res.ImagePxW
+		st.ImagePxH = res.ImagePxH
+		st.ImageProtocol = res.ImageProtocol
 		if st.Search.Active {
 			st.RecomputeSearch()
 		}

@@ -72,6 +72,13 @@ type Request struct {
 	// RawMarkdown, when true, skips rendered markdown and shows raw Chroma-highlighted
 	// source for a markdown path instead. Ignored for non-markdown paths.
 	RawMarkdown bool
+	// Image, when true, runs the in-process image preview path instead of text/diff/markdown.
+	Image bool
+	// ImageMaxPxW / ImageMaxPxH are the pixel budget for fit-scaling (cells × cell pixel size).
+	ImageMaxPxW int
+	ImageMaxPxH int
+	// ImageProtocol selects sixel vs Kitty encoding (resolved by the caller).
+	ImageProtocol previewpanel.ImageProtocol
 }
 
 // Result is the unified preview output for internal and external backends.
@@ -99,10 +106,20 @@ type Result struct {
 	StatusText string
 	// StatusThemeKey is the panel.git.* theme key used to color StatusText.
 	StatusThemeKey string
+	// ImagePayload is a raw sixel DCS or Kitty APC sequence for image previews (empty for text).
+	ImagePayload string
+	// ImagePxW / ImagePxH are the encoded image dimensions in pixels.
+	ImagePxW int
+	ImagePxH int
+	// ImageProtocol identifies which graphics protocol ImagePayload uses.
+	ImageProtocol previewpanel.ImageProtocol
 }
 
 // Run executes internal Chroma highlighting or an external preview command.
 func Run(ctx context.Context, req Request) Result {
+	if req.Image {
+		return runImage(req)
+	}
 	if req.GitDiff {
 		return runGitDiff(ctx, req)
 	}

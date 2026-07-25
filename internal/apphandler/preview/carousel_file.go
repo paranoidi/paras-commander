@@ -35,6 +35,10 @@ func (h *Handler) patchCarouselFilePreviewMessage(titleBase, msg string) {
 		st.Scroll = 0
 		st.ExitCode = 0
 		st.ErrorMsg = msg
+		st.ImagePayload = ""
+		st.ImagePxW = 0
+		st.ImagePxH = 0
+		st.ImageProtocol = 0
 	})
 	h.postRenderWake()
 	h.clampCarouselFilePreviewScroll()
@@ -247,7 +251,9 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
-	if err := localfs.CheckFilePreviewable(path); err != nil {
+	err := localfs.CheckFilePreviewable(path)
+	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
+	if err != nil && !isImage {
 		switch {
 		case errors.Is(err, localfs.ErrFilePreviewBinary):
 			h.patchCarouselFilePreviewMessage(filepath.Base(path), "Not a text file")
@@ -258,7 +264,7 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 		}
 		return
 	}
-	tw, _, layOK := h.carouselChildPreviewLayoutMetrics()
+	tw, contentH, layOK := h.carouselChildPreviewLayoutMetrics()
 	if !layOK {
 		tw = 1
 	}
@@ -279,10 +285,11 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 		st.DiffHunkLines = nil
 		st.GitStatusText = ""
 		st.GitStatusThemeKey = ""
+		// Keep ImagePayload* until the new encode finishes (stale-while-revalidate).
 	})
 	h.postRenderWake()
 	gen := h.carouselFilePreviewRunGen.Add(1)
-	go h.runPreview(h.ctx, h.previewRequest(path, tw, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel), previewTargetCarousel, gen)
+	go h.runPreview(h.ctx, h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel, isImage), previewTargetCarousel, gen)
 }
 
 // refreshCarouselFilePreview re-runs the current carousel child preview at its current path,
@@ -295,12 +302,12 @@ func (h *Handler) refreshCarouselFilePreview() {
 	if !st.Open || st.Path == "" {
 		return
 	}
-	tw, _, ok := h.carouselChildPreviewLayoutMetrics()
+	tw, contentH, ok := h.carouselChildPreviewLayoutMetrics()
 	if !ok {
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
-	req := h.previewRequest(st.Path, tw, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel)
+	req := h.previewRequest(st.Path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel, localfs.IsImagePath(st.Path))
 	gen := h.carouselFilePreviewRunGen.Add(1)
 	h.postRenderWake()
 	go h.runPreview(h.ctx, req, previewTargetCarousel, gen)

@@ -11,6 +11,9 @@ func (h *Handler) startFilePreviewSearch() {
 	if !h.model.FullscreenFilePreview.Open {
 		return
 	}
+	if h.model.FullscreenFilePreview.ImagePayload != "" {
+		return
+	}
 	h.clearFilePreviewSearchField()
 	h.patchFullscreenFilePreview(func(st *ui.FilePreviewState) {
 		st.StartSearch()

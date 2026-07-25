@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/geom"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
@@ -617,5 +618,63 @@ func TestDrawFullscreenPreviewScrollbarRailStyleOverride(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("no plain rail glyph found to check style against (content should overflow but not fill every row)")
+	}
+}
+
+func TestDrawImageRecordsPlacementAndBlanksBody(t *testing.T) {
+	_ = TakeFrameImage() // clear any prior frame
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 12
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	payload := "\x1bP0;0;8q#0;2;0;0;0#0~~~\x1b\\"
+	Draw(screen, rect, State{
+		Open:          true,
+		Path:          "/tmp/garden.png",
+		TitleBase:     "garden.png",
+		Phase:         PhaseDone,
+		ImagePayload:  payload,
+		ImagePxW:      30,
+		ImagePxH:      20,
+		ImageProtocol: ImageProtocolSixel,
+	}, DrawParams{
+		Theme:     styles,
+		BodyStyle: body,
+	})
+
+	plan := TakeFrameImage()
+	if plan == nil {
+		t.Fatal("TakeFrameImage() = nil, want placement")
+	}
+	if plan.Payload != payload {
+		t.Fatalf("Payload mismatch")
+	}
+	if plan.Path != "/tmp/garden.png" {
+		t.Fatalf("Path = %q", plan.Path)
+	}
+	if plan.X != rect.X+2 || plan.Y != rect.Y+1 {
+		t.Fatalf("origin = (%d,%d), want (%d,%d)", plan.X, plan.Y, rect.X+2, rect.Y+1)
+	}
+	wantRows := geom.JobsPanelContentRows(geom.Rect(rect))
+	if plan.MaxCols != rect.Width-4 || plan.MaxRows != wantRows {
+		t.Fatalf("span budget = %d×%d, want %d×%d", plan.MaxCols, plan.MaxRows, rect.Width-4, wantRows)
+	}
+	if plan.PxW != 30 || plan.PxH != 20 {
+		t.Fatalf("px = %d×%d", plan.PxW, plan.PxH)
+	}
+
+	main, _, _ := screen.Get(plan.X, plan.Y)
+	if main != " " {
+		t.Fatalf("body cell = %q, want space", main)
+	}
+	if TakeFrameImage() != nil {
+		t.Fatal("second TakeFrameImage() should be nil")
 	}
 }

@@ -184,7 +184,8 @@ type App struct {
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool
 
-	sftp sftpState
+	sftp  sftpState
+	image imageOverlay
 
 	remotePanelLoadGen  [2]atomic.Uint64
 	gitStatusLoadGen    [2]atomic.Uint64
@@ -928,6 +929,7 @@ func (a *App) Run() error {
 			a.clearPanelSyncFollowNavCoalesce()
 			a.previewCtrl.ClearNavCoalesces()
 			a.clearCursorNameHintNavCoalesce()
+			a.resetImageOverlay()
 			a.screen.Sync()
 			a.ensurePanelsVisible()
 			a.resizeTerminalFeedToLayout()

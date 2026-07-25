@@ -48,6 +48,41 @@ type DrawParams struct {
 
 const gapBeforePanelTitleEnd = 2
 
+// ImageProtocol identifies the terminal graphics protocol used for an image payload.
+type ImageProtocol int
+
+const (
+	// ImageProtocolNone means no graphics payload (metadata/text fallback).
+	ImageProtocolNone ImageProtocol = iota
+	// ImageProtocolSixel is DEC sixel (DCS).
+	ImageProtocolSixel
+	// ImageProtocolKitty is the Kitty graphics protocol (APC _G).
+	ImageProtocolKitty
+)
+
+// KittyGraphicsImageID is the fixed Kitty image id used for the single on-screen preview.
+const KittyGraphicsImageID = 1
+
+// ImagePlacement records where a terminal image should be emitted after Show().
+// Draw records at most one per frame; TakeFrameImage reads and clears it.
+type ImagePlacement struct {
+	X, Y, MaxCols, MaxRows int
+	PxW, PxH               int
+	Payload, Path          string
+	Protocol               ImageProtocol
+}
+
+// frameImage is the placement recorded by the most recent Draw call in this frame.
+// Render is single-goroutine, so a package var avoids threading an out-param through DrawParams.
+var frameImage *ImagePlacement
+
+// TakeFrameImage returns and clears the placement recorded by Draw, if any.
+func TakeFrameImage() *ImagePlacement {
+	p := frameImage
+	frameImage = nil
+	return p
+}
+
 // BodyStyle is the base text style for preview body rows.
 func BodyStyle(styles theme.Theme, chromeBlocked bool) tcell.Style {
 	bg := auxPanelContentBG(styles, chromeBlocked)
@@ -238,6 +273,31 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	if st.ExitCode != 0 && !hasDrawableBody(st) {
 		line := filepath.Base(st.Path) + ": exit " + itoa(st.ExitCode)
 		drawMessageContent(screen, rect, p.Embedded || p.Borderless, contentTop, contentH, textX, textW, line, body, body)
+		return
+	}
+
+	if st.ImagePayload != "" {
+		for row := 0; row < contentH; row++ {
+			y := contentTop + row
+			if paintLeftMargin {
+				screen.SetContent(leftMarginX, y, ' ', nil, marginStyle)
+			}
+			fillContentRow(screen, textX, y, textW, padStyle)
+			if paintRightMargin {
+				screen.SetContent(rightMarginX, y, ' ', nil, marginStyle)
+			}
+		}
+		frameImage = &ImagePlacement{
+			X:        textX,
+			Y:        contentTop,
+			MaxCols:  textW,
+			MaxRows:  contentH,
+			PxW:      st.ImagePxW,
+			PxH:      st.ImagePxH,
+			Payload:  st.ImagePayload,
+			Path:     st.Path,
+			Protocol: st.ImageProtocol,
+		}
 		return
 	}
 

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -17,8 +19,23 @@ var ErrFilePreviewBinary = errors.New("not a text file")
 // ErrFilePreviewIsDir indicates preview was requested for a directory.
 var ErrFilePreviewIsDir = errors.New("is a directory")
 
+// ErrFilePreviewImage indicates the path is an image extension eligible for sixel preview.
+var ErrFilePreviewImage = errors.New("image file")
+
+// IsImagePath reports whether path has a supported image extension (case-insensitive).
+// Single source of truth for image preview eligibility by name.
+func IsImagePath(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tif", ".tiff":
+		return true
+	default:
+		return false
+	}
+}
+
 // CheckFilePreviewable returns nil if path is a non-directory regular file whose first
 // PreviewSniffBytes bytes contain no NUL and are valid UTF-8.
+// Image paths return ErrFilePreviewImage without opening the file.
 func CheckFilePreviewable(path string) error {
 	fi, err := os.Stat(path)
 	if err != nil {
@@ -26,6 +43,9 @@ func CheckFilePreviewable(path string) error {
 	}
 	if fi.IsDir() {
 		return ErrFilePreviewIsDir
+	}
+	if IsImagePath(path) {
+		return ErrFilePreviewImage
 	}
 	f, err := os.Open(path)
 	if err != nil {

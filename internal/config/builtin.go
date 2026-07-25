@@ -254,6 +254,19 @@ const (
 	DefaultPreviewStyle       = "catppuccin-frappe"
 	DefaultPreviewLineNumbers = true
 	DefaultPreviewTabWidth    = 4
+	// DefaultPreviewImages enables terminal image previews when a graphics protocol is available.
+	DefaultPreviewImages = true
+	// PreviewImageProtocolAuto picks Kitty or sixel from the environment (see ResolveImageProtocol).
+	PreviewImageProtocolAuto = "auto"
+	// PreviewImageProtocolSixel forces DEC sixel encoding.
+	PreviewImageProtocolSixel = "sixel"
+	// PreviewImageProtocolKitty forces Kitty graphics protocol encoding.
+	PreviewImageProtocolKitty = "kitty"
+	// DefaultPreviewImageProtocol is the default [preview].image_protocol value.
+	DefaultPreviewImageProtocol = PreviewImageProtocolAuto
+	// DefaultPreviewImageMaxDecodeMegapixels caps decode/scale work for image previews
+	// (width×height). Larger images fall back to metadata text. Not a config key.
+	DefaultPreviewImageMaxDecodeMegapixels = 64
 	// DefaultMaxPreviewBytes caps internal preview reads (matches cmdrun.MaxStreamBytes).
 	DefaultMaxPreviewBytes = 512 * 1024
 
