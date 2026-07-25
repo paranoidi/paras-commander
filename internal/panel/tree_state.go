@@ -154,7 +154,7 @@ func (s *State) ToggleTreeExpand(viewportRows int) error {
 		return nil
 	}
 	id := row.ID
-	if err := s.setTreeNodeExpanded(id, row.Depth, !s.TreeExpanded[id]); err != nil {
+	if err := s.setTreeNodeExpanded(id, row.Depth, !s.TreeExpanded[id], false); err != nil {
 		return err
 	}
 	s.treeCursorID = id
@@ -176,7 +176,7 @@ func (s *State) ExpandTreeCursorRow(viewportRows int) error {
 		return nil
 	}
 	id := row.ID
-	if err := s.setTreeNodeExpanded(id, row.Depth, true); err != nil {
+	if err := s.setTreeNodeExpanded(id, row.Depth, true, false); err != nil {
 		return err
 	}
 	s.treeCursorID = id
@@ -215,7 +215,7 @@ func (s *State) CollapseTreeCursorRow(viewportRows int) error {
 // collapseTreeRow collapses the directory row identified by id and moves the cursor onto it.
 // Shared by CollapseTreeCursorRow's in-place and jump-to-parent branches.
 func (s *State) collapseTreeRow(id string, depth int, viewportRows int) error {
-	if err := s.setTreeNodeExpanded(id, depth, false); err != nil {
+	if err := s.setTreeNodeExpanded(id, depth, false, false); err != nil {
 		return err
 	}
 	s.treeCursorID = id
@@ -261,25 +261,73 @@ func (s *State) treeRootAncestorID() string {
 	return ""
 }
 
-// ExpandAllTreeShallow expands every depth-0 directory by exactly one level (loading/revealing
-// its immediate children) without recursing into those newly-revealed children. Does not itself
-// enable tree mode — same split of responsibility as ExpandTreeCursorRow.
+// ExpandAllTreeShallow expands directories by exactly one level without recursion. When the
+// cursor is on an already-expanded directory, it expands that directory's immediate child
+// directories (one level under the cursor). Otherwise it expands every depth-0 TreeRoots
+// directory. Async child loads are coalesced (treeExpandQuiet) so the list rebuilds once when
+// all in-flight fetches finish, and the cursor stays on the row the command was issued from.
+// Does not itself enable tree mode — same split of responsibility as ExpandTreeCursorRow.
 func (s *State) ExpandAllTreeShallow(viewportRows int) error {
 	if s.ListLayout != ListLayoutTree {
 		return nil
 	}
+	if s.Cursor >= 0 && s.Cursor < len(s.treeRows) {
+		row := s.treeRows[s.Cursor]
+		if row.Value.Entry.Type == localfs.EntryDirectory && s.TreeExpanded[row.ID] {
+			return s.expandAllTreeShallowChildren(row.ID, row.Depth, viewportRows)
+		}
+	}
+	anchorID := ""
+	if s.Cursor >= 0 && s.Cursor < len(s.treeRows) {
+		anchorID = s.treeRows[s.Cursor].ID
+	}
+	s.treeCursorID = anchorID
 	for i := range s.TreeRoots {
 		root := &s.TreeRoots[i]
 		if root.Value.Entry.Type != localfs.EntryDirectory {
 			continue
 		}
-		if err := s.setTreeNodeExpanded(root.ID, 0, true); err != nil {
+		if err := s.setTreeNodeExpanded(root.ID, 0, true, true); err != nil {
 			return err
 		}
 	}
+	// Async quiet batch: leave treeRows alone until the last ApplyTreeChildLoad rebuilds once.
+	if s.treeExpandQuiet > 0 {
+		return nil
+	}
 	s.rebuildTreeRows()
+	if anchorID != "" {
+		s.reattachTreeCursorByID(anchorID, viewportRows)
+		return nil
+	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
+	return nil
+}
+
+// expandAllTreeShallowChildren expands every immediate directory child of parentID by one
+// level. Cursor stays on the parent. No-op when the parent has no loaded children.
+func (s *State) expandAllTreeShallowChildren(parentID string, parentDepth int, viewportRows int) error {
+	node := findTreeNode(s.TreeRoots, parentID)
+	if node == nil || node.Children == nil {
+		return nil
+	}
+	s.treeCursorID = parentID
+	childDepth := parentDepth + 1
+	for i := range node.Children {
+		child := &node.Children[i]
+		if child.Value.Entry.Type != localfs.EntryDirectory {
+			continue
+		}
+		if err := s.setTreeNodeExpanded(child.ID, childDepth, true, true); err != nil {
+			return err
+		}
+	}
+	if s.treeExpandQuiet > 0 {
+		return nil
+	}
+	s.rebuildTreeRows()
+	s.reattachTreeCursorByID(parentID, viewportRows)
 	return nil
 }
 
@@ -295,6 +343,9 @@ func (s *State) ExpandAllTreeShallow(viewportRows int) error {
 // fallback convention as RemoteLoadScheduler), reads the children synchronously inline exactly as
 // before. A second expand press while a fetch is already in flight for the same node is a no-op.
 //
+// quiet=true (ExpandAllTreeShallow) skips the per-dispatch rebuildTreeRows and increments
+// treeExpandQuiet so ApplyTreeChildLoad coalesces N async results into one rebuild/redraw.
+//
 // ponytail: no placeholder "Loading…"/error child row is synthesized while a fetch is in flight —
 // treeflat.Flatten only reveals a node's children once Node.Children is non-nil, so a loading
 // directory simply shows no children yet (correct, there aren't any to show); the loading
@@ -302,7 +353,7 @@ func (s *State) ExpandAllTreeShallow(viewportRows int) error {
 // panellist.ResolveFolderIconKind). This also makes retry free on failure: TreeExpanded[id] is
 // never set and Children stays nil, so pressing expand again just re-enters this function and
 // dispatches a new fetch — no separate retry state machine needed.
-func (s *State) setTreeNodeExpanded(id string, depth int, expand bool) error {
+func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet bool) error {
 	if s.TreeExpanded == nil {
 		s.TreeExpanded = make(map[string]bool)
 	}
@@ -319,6 +370,10 @@ func (s *State) setTreeNodeExpanded(id string, depth int, expand bool) error {
 					return err
 				}
 				if s.ScheduleTreeChildLoad(TreeChildLoadRequest{DirID: id, Loc: loc}) {
+					if quiet {
+						s.treeExpandQuiet++
+						return nil
+					}
 					s.rebuildTreeRows() // show the loading icon now; real expand happens on async apply
 					return nil
 				}

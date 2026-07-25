@@ -612,6 +612,139 @@ func TestExpandAllTreeShallow(t *testing.T) {
 	}
 }
 
+// TestExpandAllTreeShallowUnderExpandedCursor covers Ctrl+Alt+Right when the cursor already sits
+// on an expanded directory: expand that directory's immediate child directories one level, without
+// recursing further and without re-expanding unrelated depth-0 roots.
+func TestExpandAllTreeShallowUnderExpandedCursor(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	nested := filepath.Join(meadow, "nested")
+	deeper := filepath.Join(nested, "deeper")
+	if err := os.MkdirAll(deeper, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(deeper, "deep.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	orchard := filepath.Join(root, "orchard")
+	if err := os.Mkdir(orchard, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(orchard, "ember.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow (roots): %v", err)
+	}
+	// Cursor on expanded meadow; second shallow expand-all should open meadow's child dirs only.
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		e, _, ok := state.VisibleEntry(i)
+		if ok && e.Path == meadow {
+			state.Cursor = i
+			break
+		}
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow (under meadow): %v", err)
+	}
+	if !state.TreeExpanded[nested] {
+		t.Fatalf("TreeExpanded[%s] = false, want true (immediate child of cursor dir)", nested)
+	}
+	if state.TreeExpanded[deeper] {
+		t.Fatalf("TreeExpanded[%s] = true, want false (must not recurse past one level)", deeper)
+	}
+	cur, _, ok := state.VisibleEntry(state.Cursor)
+	if !ok || cur.Path != meadow {
+		t.Fatalf("cursor after expand-under = %q ok=%v, want meadow", cur.Path, ok)
+	}
+}
+
+// TestExpandAllTreeShallowAsyncCoalescesRedrawAndKeepsCursor covers the async expand-all path:
+// N quiet ScheduleTreeChildLoad dispatches must not rebuild/steal cursor on intermediate
+// ApplyTreeChildLoad calls — only the last apply rebuilds, and the cursor stays on the anchor.
+func TestExpandAllTreeShallowAsyncCoalescesRedrawAndKeepsCursor(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	alpha := filepath.Join(meadow, "alpha")
+	bravo := filepath.Join(meadow, "bravo")
+	for _, dir := range []string{alpha, bravo} {
+		if err := os.MkdirAll(filepath.Join(dir, "child"), 0o755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	// Sync expand roots so meadow's children are visible.
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow (roots): %v", err)
+	}
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		e, _, ok := state.VisibleEntry(i)
+		if ok && e.Path == meadow {
+			state.Cursor = i
+			break
+		}
+	}
+
+	var scheduled []string
+	state.ScheduleTreeChildLoad = func(req TreeChildLoadRequest) bool {
+		scheduled = append(scheduled, req.DirID)
+		return true
+	}
+	beforeCount := state.VisibleEntryCount()
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow (under meadow): %v", err)
+	}
+	if len(scheduled) != 2 {
+		t.Fatalf("scheduled = %v, want 2 child dirs", scheduled)
+	}
+	if state.treeExpandQuiet != 2 {
+		t.Fatalf("treeExpandQuiet = %d, want 2", state.treeExpandQuiet)
+	}
+	if got := state.VisibleEntryCount(); got != beforeCount {
+		t.Fatalf("VisibleEntryCount while quiet = %d, want %d (no intermediate rebuild)", got, beforeCount)
+	}
+
+	alphaEntries := []localfs.Entry{{Name: "child", Path: filepath.Join(alpha, "child"), Type: localfs.EntryDirectory}}
+	if state.ApplyTreeChildLoad(alpha, alphaEntries, nil, 10) {
+		t.Fatal("first ApplyTreeChildLoad returned true, want false (quiet coalesce)")
+	}
+	cur, _, ok := state.VisibleEntry(state.Cursor)
+	if !ok || cur.Path != meadow {
+		t.Fatalf("cursor after first apply = %q ok=%v, want meadow", cur.Path, ok)
+	}
+	if state.TreeExpanded[bravo] {
+		t.Fatal("bravo must still be collapsed until its apply")
+	}
+
+	bravoEntries := []localfs.Entry{{Name: "child", Path: filepath.Join(bravo, "child"), Type: localfs.EntryDirectory}}
+	if !state.ApplyTreeChildLoad(bravo, bravoEntries, nil, 10) {
+		t.Fatal("last ApplyTreeChildLoad returned false, want true (final rebuild)")
+	}
+	if state.treeExpandQuiet != 0 {
+		t.Fatalf("treeExpandQuiet after final = %d, want 0", state.treeExpandQuiet)
+	}
+	if !state.TreeExpanded[alpha] || !state.TreeExpanded[bravo] {
+		t.Fatalf("TreeExpanded alpha/bravo = %v/%v, want both true", state.TreeExpanded[alpha], state.TreeExpanded[bravo])
+	}
+	cur, _, ok = state.VisibleEntry(state.Cursor)
+	if !ok || cur.Path != meadow {
+		t.Fatalf("cursor after final apply = %q ok=%v, want meadow", cur.Path, ok)
+	}
+}
+
 // TestQuickFilterMatchesExpandedTreeChild is the regression test for the quick-filter-does-not-
 // search-expanded-leafs bug: rebuildFilter must build its corpus from VisibleEntry/
 // VisibleEntryCount (which include flattened tree rows), not from the flat, depth-0-only

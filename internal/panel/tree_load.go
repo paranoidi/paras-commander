@@ -23,7 +23,9 @@ type TreeChildLoadScheduler func(req TreeChildLoadRequest) bool
 // ApplyTreeChildLoad applies the result of an async child fetch dispatched via
 // ScheduleTreeChildLoad; call on the main thread. Returns false if the result is stale (the node
 // no longer exists — e.g. ApplyListing re-rooted TreeRoots on navigation — or is no longer marked
-// Loading, e.g. a superseded duplicate callback) and was silently dropped.
+// Loading, e.g. a superseded duplicate callback) and was silently dropped, or when the apply is
+// part of an ExpandAllTreeShallow coalesce (treeExpandQuiet > 0 after decrement) that should not
+// rebuild/redraw yet. Returns true when the visible tree was rebuilt and the UI should redraw.
 func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err error, viewportRows int) bool {
 	node := findTreeNode(s.TreeRoots, dirID)
 	if node == nil || !node.Value.Loading {
@@ -32,8 +34,7 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 	node.Value.Loading = false
 	if err != nil {
 		node.Value.LoadErr = err
-		s.rebuildTreeRows()
-		return true
+		return s.finishTreeChildLoadApply(dirID, viewportRows)
 	}
 	node.Value.LoadErr = nil
 	// useDiskPrimary is forced false here (unlike ApplySort's s.primarySortUsesDiskTotals()):
@@ -45,10 +46,27 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 		s.TreeExpanded = make(map[string]bool)
 	}
 	s.TreeExpanded[dirID] = true
-	s.treeCursorID = dirID
-	s.rebuildTreeRows()
-	s.reattachTreeCursorByID(dirID, viewportRows)
 	s.scheduleTreeChildGitStatus(dirID, entries)
+	return s.finishTreeChildLoadApply(dirID, viewportRows)
+}
+
+// finishTreeChildLoadApply coalesces ExpandAllTreeShallow async applies: while treeExpandQuiet
+// remains positive, node state is already updated but treeRows/cursor/redraw wait for the last
+// in-flight load. Single-row expands (quiet=0) rebuild immediately. Cursor reattaches to
+// treeCursorID when set (expand-all anchor, or the row ExpandTreeCursorRow/ToggleTreeExpand
+// targeted); otherwise falls back to dirID.
+func (s *State) finishTreeChildLoadApply(dirID string, viewportRows int) bool {
+	if s.treeExpandQuiet > 0 {
+		s.treeExpandQuiet--
+		if s.treeExpandQuiet > 0 {
+			return false
+		}
+	}
+	if s.treeCursorID == "" {
+		s.treeCursorID = dirID
+	}
+	s.rebuildTreeRows()
+	s.reattachTreeCursorByID(s.treeCursorID, viewportRows)
 	return true
 }
 

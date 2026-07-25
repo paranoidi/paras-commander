@@ -176,6 +176,10 @@ type State struct {
 	// treeCursorID tracks the node ID the cursor should reattach to after a tree rebuild
 	// (expand/collapse, or an async ApplyTreeChildLoad completing).
 	treeCursorID string
+	// treeExpandQuiet is the number of in-flight async child loads coalesced by
+	// ExpandAllTreeShallow: ApplyTreeChildLoad updates node state but skips rebuild/redraw
+	// until this counter reaches zero, then reattaches the cursor to treeCursorID once.
+	treeExpandQuiet int
 }
 
 // GitStatusRequest describes one async git status fetch for the current listing.

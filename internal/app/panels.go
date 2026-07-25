@@ -779,7 +779,8 @@ func (a *App) collapseAllTreeForPanel(target *panel.State, viewportRows int) {
 }
 
 // expandAllTreeShallowForPanel enables tree layout on target if not already active, then expands
-// every depth-0 directory by exactly one level.
+// directories by one level: under the cursor when it sits on an already-expanded directory,
+// otherwise every depth-0 directory.
 func (a *App) expandAllTreeShallowForPanel(target *panel.State, viewportRows int) (blocked bool) {
 	if target.ListLayout != panel.ListLayoutTree {
 		if !target.SetListLayout(panel.ListLayoutTree, viewportRows) {

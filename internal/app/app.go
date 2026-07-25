@@ -115,20 +115,20 @@ type App struct {
 	// themeAtDialogOpen is the active theme when the theme dialog was opened; Esc restores it after preview.
 	themeAtDialogOpen theme.Theme
 	// jobState manages background job queue and worker lifecycle.
-	jobState        *jobs.State
-	jobsCtrl        *jobsctrl.Handler
-	findCtrl        *findctrl.Handler
-	metaCtrl        *metactrl.Handler
-	commandsCtrl    *commandsctrl.Handler
-	compareCtrl     *comparectrl.Handler
-	dedupCtrl       *dedupctrl.Handler
-	previewCtrl     *previewctrl.Handler
-	dialogCtrl      *dialogctrl.Handler
-	jobStopCh       chan struct{}
-	jobStopOnce     bool
-	disk            diskUsageState
-	gitignoreCache  *gitignore.Cache
-	gitStatusCache  *gitstatus.Cache
+	jobState       *jobs.State
+	jobsCtrl       *jobsctrl.Handler
+	findCtrl       *findctrl.Handler
+	metaCtrl       *metactrl.Handler
+	commandsCtrl   *commandsctrl.Handler
+	compareCtrl    *comparectrl.Handler
+	dedupCtrl      *dedupctrl.Handler
+	previewCtrl    *previewctrl.Handler
+	dialogCtrl     *dialogctrl.Handler
+	jobStopCh      chan struct{}
+	jobStopOnce    bool
+	disk           diskUsageState
+	gitignoreCache *gitignore.Cache
+	gitStatusCache *gitstatus.Cache
 	// selectionSizeScanFP is the last enqueued directory set fingerprint per panel for selection-size scans.
 	selectionSizeScanFP [2]string
 	// selectionSizeScanGen / selectionSizeScanPath skip reconcile work when selection-derived input is unchanged.
