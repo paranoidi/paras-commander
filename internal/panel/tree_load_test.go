@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -322,6 +323,127 @@ func TestApplyTreeChildLoadSchedulesGitStatusForChildren(t *testing.T) {
 	}
 	if len(captured.Paths) != 1 || captured.Paths[0].AbsPath != entries[0].Path {
 		t.Fatalf("captured.Paths = %+v, want one entry for %q", captured.Paths, entries[0].Path)
+	}
+}
+
+// TestRestoreCascadesAsyncChildLoads verifies restoreTreeExpansions cascades a multi-level
+// remembered expansion through the async ScheduleTreeChildLoad path used for remote directories:
+// the parent's child load is dispatched first on navigating back; applying it dispatches the
+// nested child's load in turn; only once both land does the tree show both levels expanded with
+// the cursor reattached to the originally highlighted nested file.
+//
+// A synthetic sftp:// root is used, with no real network I/O: State.Path.IsRemote() is what
+// routes restoreTreeExpansionsIn through the async branch instead of the local synchronous one
+// (see its doc comment), so the test must actually be remote to exercise that branch — a local
+// temp dir would now restore synchronously in one call and never touch ScheduleTreeChildLoad.
+// Navigating is driven directly through resolveLoadCursor/ApplyListing (what State.load calls
+// internally) rather than NavigateTo, since NavigateTo would fetch through the real (unregistered)
+// sftp backend; rememberCursorForPath is likewise called directly to snapshot "leaving root",
+// exactly as State.load does before a real directory change.
+func TestRestoreCascadesAsyncChildLoads(t *testing.T) {
+	root := pathloc.MustParse("sftp://user@example.com/")
+	parentLoc, err := root.Join("parent")
+	if err != nil {
+		t.Fatalf("Join(parent): %v", err)
+	}
+	childLoc, err := parentLoc.Join("child")
+	if err != nil {
+		t.Fatalf("Join(child): %v", err)
+	}
+	leafLoc, err := childLoc.Join("leaf.txt")
+	if err != nil {
+		t.Fatalf("Join(leaf.txt): %v", err)
+	}
+	beaconLoc, err := root.Join("beacon.txt")
+	if err != nil {
+		t.Fatalf("Join(beacon.txt): %v", err)
+	}
+	parent, child, leaf := parentLoc.String(), childLoc.String(), leafLoc.String()
+	rootEntries := []fsbackend.Entry{
+		{Name: "parent", Loc: parentLoc, Type: fsbackend.EntryDirectory},
+		{Name: "beacon.txt", Loc: beaconLoc, Type: fsbackend.EntryFile},
+	}
+
+	s := State{Sort: SortState{Mode: SortName, DirectoriesFirst: true}}
+	if err := s.ApplyListing(root, rootEntries, "", 10, 0, false); err != nil {
+		t.Fatalf("ApplyListing (root): %v", err)
+	}
+	if !s.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	var requests []TreeChildLoadRequest
+	s.ScheduleTreeChildLoad = func(req TreeChildLoadRequest) bool {
+		requests = append(requests, req)
+		return true
+	}
+
+	// Expand parent, deliver its (single) child.
+	if !s.SelectVisibleEntry("parent") {
+		t.Fatal("SelectVisibleEntry(parent) = false, want true")
+	}
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow (parent): %v", err)
+	}
+	if len(requests) != 1 || requests[0].DirID != parent {
+		t.Fatalf("requests after expanding parent = %+v, want one request for %q", requests, parent)
+	}
+	if !s.ApplyTreeChildLoad(parent, []localfs.Entry{{Name: "child", Path: child, Type: localfs.EntryDirectory}}, nil, 10) {
+		t.Fatal("ApplyTreeChildLoad(parent) returned false, want true")
+	}
+
+	// Move onto child, expand it, deliver its leaf, and highlight it.
+	if !s.SelectVisibleEntry("child") {
+		t.Fatal("SelectVisibleEntry(child) = false, want true")
+	}
+	if err := s.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow (child): %v", err)
+	}
+	if len(requests) != 2 || requests[1].DirID != child {
+		t.Fatalf("requests after expanding child = %+v, want a second request for %q", requests, child)
+	}
+	if !s.ApplyTreeChildLoad(child, []localfs.Entry{{Name: "leaf.txt", Path: leaf, Type: localfs.EntryFile}}, nil, 10) {
+		t.Fatal("ApplyTreeChildLoad(child) returned false, want true")
+	}
+	if !s.SelectVisibleEntry("leaf.txt") {
+		t.Fatal("SelectVisibleEntry(leaf.txt) = false, want true")
+	}
+
+	// Simulate leaving root (State.load's rememberCursorForPath call) and arriving elsewhere.
+	s.rememberCursorForPath(root.String())
+	s.Path = pathloc.MustParse("sftp://user@example.com/other")
+
+	// Navigate back: both levels must be remembered and re-dispatched.
+	requests = nil
+	selectedName, indexFallback, centerRecalled := s.resolveLoadCursor(root, "", noIndexCursorFallback)
+	if err := s.ApplyListing(root, rootEntries, selectedName, 10, indexFallback, centerRecalled); err != nil {
+		t.Fatalf("ApplyListing (back to root): %v", err)
+	}
+	if len(requests) != 1 || requests[0].DirID != parent {
+		t.Fatalf("requests after navigating back = %+v, want one request for %q (nested child dispatched only once parent's load lands)", requests, parent)
+	}
+	if got := s.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount while parent's restore load is in flight = %d, want 2 (parent + beacon.txt, still loading)", got)
+	}
+
+	if !s.ApplyTreeChildLoad(parent, []localfs.Entry{{Name: "child", Path: child, Type: localfs.EntryDirectory}}, nil, 10) {
+		t.Fatal("ApplyTreeChildLoad(parent) returned false, want true")
+	}
+	if len(requests) != 2 || requests[1].DirID != child {
+		t.Fatalf("requests after parent's restore load lands = %+v, want a second request for %q (cascade)", requests, child)
+	}
+	if !s.ApplyTreeChildLoad(child, []localfs.Entry{{Name: "leaf.txt", Path: leaf, Type: localfs.EntryFile}}, nil, 10) {
+		t.Fatal("ApplyTreeChildLoad(child) returned false, want true")
+	}
+
+	if !s.TreeExpanded[parent] || !s.TreeExpanded[child] {
+		t.Fatalf("TreeExpanded = %v, want both %q and %q expanded", s.TreeExpanded, parent, child)
+	}
+	if got := s.VisibleEntryCount(); got != 4 {
+		t.Fatalf("VisibleEntryCount after full cascade = %d, want 4 (parent, child, leaf.txt, beacon.txt)", got)
+	}
+	entry, ok := s.CurrentEntry()
+	if !ok || entry.Name != "leaf.txt" {
+		t.Fatalf("CurrentEntry after cascade = %+v ok=%v, want leaf.txt (cursor reattached)", entry, ok)
 	}
 }
 

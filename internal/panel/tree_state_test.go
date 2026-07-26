@@ -1006,3 +1006,168 @@ func TestFilterResultsStayValidAfterTreeExpandChangesRowLayout(t *testing.T) {
 		t.Fatalf("MatchRanges(1) = %v, want no match on harbor.txt's row (stale filter index)", ranges)
 	}
 }
+
+// TestNavigateBackRestoresTreeExpansionAndCursor covers per-directory tree expansion + highlight
+// recall: expanding a subdirectory and moving the cursor onto a nested file, navigating away, then
+// back must restore both the expanded set and the exact highlighted row — not just the row index,
+// since tree-mode Cursor indexes treeRows, not Entries.
+func TestNavigateBackRestoresTreeExpansionAndCursor(t *testing.T) {
+	root := t.TempDir()
+	harbor := filepath.Join(root, "harbor")
+	if err := os.Mkdir(harbor, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(harbor, "willow.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "cinder.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	// Directories sort first, so the cursor sits on "harbor".
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow: %v", err)
+	}
+	if !state.SelectVisibleEntry("willow.txt") {
+		t.Fatal("SelectVisibleEntry(willow.txt) = false, want true")
+	}
+
+	if err := state.NavigateTo(other, "", 10); err != nil {
+		t.Fatalf("NavigateTo(%s): %v", other, err)
+	}
+	if err := state.NavigateTo(root, "", 10); err != nil {
+		t.Fatalf("NavigateTo(%s): %v", root, err)
+	}
+
+	if !state.TreeExpanded[harbor] {
+		t.Fatalf("TreeExpanded[%s] = false after navigating back, want true", harbor)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "willow.txt" {
+		t.Fatalf("CurrentEntry = %+v ok=%v, want willow.txt", entry, ok)
+	}
+}
+
+// TestSameDirRefreshPreservesExpansionAndRefetchesChildren covers the same-directory-reload path
+// (periodic refresh, post-file-op reload): an expanded directory must stay expanded across a
+// refresh, and its children must be re-fetched from disk rather than served from the stale cache
+// — a file deleted inside the expanded directory must disappear from the tree.
+func TestSameDirRefreshPreservesExpansionAndRefetchesChildren(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	doomed := filepath.Join(meadow, "quartz.txt")
+	if err := os.WriteFile(doomed, []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(meadow, "salted.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow: %v", err)
+	}
+	if got := state.VisibleEntryCount(); got != 3 {
+		t.Fatalf("VisibleEntryCount after expand = %d, want 3 (meadow + 2 children)", got)
+	}
+
+	if err := os.Remove(doomed); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if err := state.Refresh(10); err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+
+	if !state.TreeExpanded[meadow] {
+		t.Fatal("TreeExpanded[meadow] = false after refresh, want true (still expanded)")
+	}
+	if got := state.VisibleEntryCount(); got != 2 {
+		t.Fatalf("VisibleEntryCount after refresh = %d, want 2 (meadow + salted.txt; quartz.txt re-fetched away)", got)
+	}
+	if state.SelectVisibleEntry("quartz.txt") {
+		t.Fatal("quartz.txt still visible after refresh, want re-fetch to drop it (not served from cache)")
+	}
+}
+
+// TestReturnToDrasticallyChangedDirectory covers the "drastic content changes" degrade-gracefully
+// requirement: returning to a directory whose expanded subdirectory and highlighted file both
+// vanished (replaced with unrelated content) must show no stale rows, disregard the vanished
+// expansion, and fall back the cursor to the nearest remaining row rather than crashing or
+// resurrecting deleted entries.
+func TestReturnToDrasticallyChangedDirectory(t *testing.T) {
+	root := t.TempDir()
+	lagoon := filepath.Join(root, "lagoon")
+	if err := os.Mkdir(lagoon, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	nested := filepath.Join(lagoon, "ember.txt")
+	if err := os.WriteFile(nested, []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "cinder.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := state.ExpandTreeCursorRow(10); err != nil {
+		t.Fatalf("ExpandTreeCursorRow: %v", err)
+	}
+	if !state.SelectVisibleEntry("ember.txt") {
+		t.Fatal("SelectVisibleEntry(ember.txt) = false, want true")
+	}
+
+	if err := state.NavigateTo(other, "", 10); err != nil {
+		t.Fatalf("NavigateTo(%s): %v", other, err)
+	}
+
+	if err := os.RemoveAll(lagoon); err != nil {
+		t.Fatalf("RemoveAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "granite.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	if err := state.NavigateTo(root, "", 10); err != nil {
+		t.Fatalf("NavigateTo(%s): %v", root, err)
+	}
+
+	// A stale TreeExpanded[lagoon] entry (if any survives) is inert: treeflat.Flatten only
+	// consults flags for nodes that exist in the fresh TreeRoots, and lagoon has none.
+	if state.SelectVisibleEntry("ember.txt") {
+		t.Fatal("ember.txt still selectable after deletion, want it gone from the tree")
+	}
+	if got := state.VisibleEntryCount(); got != 1 {
+		t.Fatalf("VisibleEntryCount = %d, want 1 (granite.txt only, lagoon removed)", got)
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Name != "granite.txt" {
+		t.Fatalf("CurrentEntry = %+v ok=%v, want granite.txt (nearest-remaining fallback)", entry, ok)
+	}
+}
