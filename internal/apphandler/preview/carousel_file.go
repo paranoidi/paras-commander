@@ -39,6 +39,7 @@ func (h *Handler) patchCarouselFilePreviewMessage(titleBase, msg string) {
 		st.ImagePxW = 0
 		st.ImagePxH = 0
 		st.ImageProtocol = 0
+		st.ImageUnicodePlaceholder = false
 	})
 	h.postRenderWake()
 	h.clampCarouselFilePreviewScroll()

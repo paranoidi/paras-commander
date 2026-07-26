@@ -70,6 +70,12 @@ type State struct {
 	ImagePxH int
 	// ImageProtocol identifies which graphics protocol ImagePayload uses.
 	ImageProtocol ImageProtocol
+	// ImageUnicodePlaceholder is true when ImagePayload was encoded for Kitty
+	// Unicode-placeholder display (U=1): Draw paints placeholder cells instead of
+	// recording a cursor-relative placement. Decided upstream in the preview request
+	// (tmux + an outer terminal known to support placeholders) — Draw must not
+	// re-derive it from the environment.
+	ImageUnicodePlaceholder bool
 
 	wrappedLines     [][]AnsiCell
 	wrapWidth        int

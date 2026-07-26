@@ -37,3 +37,66 @@ func TestResolveImageProtocol(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveImageProtocolTmuxUsesClientTermType(t *testing.T) {
+	orig := tmuxClientTermType
+	t.Cleanup(func() { tmuxClientTermType = orig })
+
+	envUnderTmux := func(k string) string {
+		switch k {
+		case "TERM_PROGRAM":
+			return "tmux" // tmux 3.2+ overwrites this for every pane
+		case "TMUX":
+			return "/tmp/tmux-1000/default,1234,0"
+		case "TERM":
+			return "tmux-256color" // tmux's own TERM, not the outer terminal's
+		default:
+			return ""
+		}
+	}
+
+	tmuxClientTermType = func() string { return "ghostty 1.3.1" }
+	if got := ResolveImageProtocol("auto", envUnderTmux); got != previewpanel.ImageProtocolKitty {
+		t.Fatalf("ResolveImageProtocol under tmux+ghostty = %v, want Kitty", got)
+	}
+
+	tmuxClientTermType = func() string { return "wezterm 20260716" }
+	if got := ResolveImageProtocol("auto", envUnderTmux); got != previewpanel.ImageProtocolSixel {
+		t.Fatalf("ResolveImageProtocol under tmux+wezterm = %v, want Sixel", got)
+	}
+}
+
+func TestTmuxSupportsKittyUnicodePlaceholders(t *testing.T) {
+	orig := tmuxClientTermType
+	t.Cleanup(func() { tmuxClientTermType = orig })
+
+	env := func(m map[string]string) func(string) string {
+		return func(k string) string { return m[k] }
+	}
+	tmuxEnv := map[string]string{"TMUX": "/tmp/tmux-1000/default,1234,0"}
+
+	if TmuxSupportsKittyUnicodePlaceholders(nil) {
+		t.Fatal("nil environ: want false")
+	}
+	if TmuxSupportsKittyUnicodePlaceholders(env(nil)) {
+		t.Fatal("empty env (no TMUX): want false")
+	}
+
+	tmuxClientTermType = func() string { return "ghostty 1.3.1" }
+	if !TmuxSupportsKittyUnicodePlaceholders(env(tmuxEnv)) {
+		t.Fatal("tmux+ghostty: want true")
+	}
+	tmuxClientTermType = func() string { return "xterm-kitty" }
+	if !TmuxSupportsKittyUnicodePlaceholders(env(tmuxEnv)) {
+		t.Fatal("tmux+kitty: want true")
+	}
+	tmuxClientTermType = func() string { return "wezterm 20260716" }
+	if TmuxSupportsKittyUnicodePlaceholders(env(tmuxEnv)) {
+		t.Fatal("tmux+wezterm: want false (no Unicode placeholder support)")
+	}
+	// Outside tmux, client_termtype is irrelevant — placeholders are a tmux-only path.
+	tmuxClientTermType = func() string { return "ghostty 1.3.1" }
+	if TmuxSupportsKittyUnicodePlaceholders(env(map[string]string{"TERM_PROGRAM": "ghostty"})) {
+		t.Fatal("ghostty outside tmux: want false")
+	}
+}

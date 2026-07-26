@@ -70,6 +70,11 @@ type ImagePlacement struct {
 	PxW, PxH               int
 	Payload, Path          string
 	Protocol               ImageProtocol
+	// UnicodePlaceholder is true when Draw already painted this image as Kitty Unicode
+	// placeholder cells (X/Y/MaxCols/MaxRows are then unused) instead of recording an
+	// out-of-band cursor-relative placement; the app layer only needs to (re)transmit
+	// Payload in that case, not track a screen position for it.
+	UnicodePlaceholder bool
 }
 
 // frameImage is the placement recorded by the most recent Draw call in this frame.
@@ -277,6 +282,11 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	}
 
 	if st.ImagePayload != "" {
+		if st.ImageUnicodePlaceholder {
+			drawUnicodePlaceholderImage(screen, st, textX, contentTop, textW, contentH,
+				paintLeftMargin, paintRightMargin, leftMarginX, rightMarginX, marginStyle, padStyle)
+			return
+		}
 		for row := 0; row < contentH; row++ {
 			y := contentTop + row
 			if paintLeftMargin {

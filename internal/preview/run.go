@@ -79,6 +79,15 @@ type Request struct {
 	ImageMaxPxH int
 	// ImageProtocol selects sixel vs Kitty encoding (resolved by the caller).
 	ImageProtocol previewpanel.ImageProtocol
+	// ImageUnicodePlaceholder, when true (Kitty protocol under tmux — see
+	// internal/ui/previewpanel/unicode_placeholder.go), encodes the transmit command for
+	// Unicode-placeholder display (U=1) instead of the terminal's own cursor-relative
+	// auto-display.
+	ImageUnicodePlaceholder bool
+	// ImageInTmux is true when running inside a tmux pane ($TMUX set). Sixel encoding uses a
+	// reduced palette and a payload size cap in this case — see
+	// config.DefaultPreviewTmuxSixelColors/MaxBytes.
+	ImageInTmux bool
 }
 
 // Result is the unified preview output for internal and external backends.
@@ -113,6 +122,10 @@ type Result struct {
 	ImagePxH int
 	// ImageProtocol identifies which graphics protocol ImagePayload uses.
 	ImageProtocol previewpanel.ImageProtocol
+	// ImageUnicodePlaceholder is true when ImagePayload was encoded for Kitty
+	// Unicode-placeholder display (Request.ImageUnicodePlaceholder); Draw must then paint
+	// placeholder cells instead of recording a cursor-relative placement.
+	ImageUnicodePlaceholder bool
 }
 
 // Run executes internal Chroma highlighting or an external preview command.

@@ -67,8 +67,16 @@ func runImage(req Request) Result {
 
 	scaled := fitImage(img, req.ImageMaxPxW, req.ImageMaxPxH)
 	bounds := scaled.Bounds()
-	payload, err := encodeImagePayload(scaled, req.ImageProtocol)
+	payload, err := encodeImagePayload(scaled, req.ImageProtocol, req.ImageUnicodePlaceholder, req.ImageInTmux)
 	if err != nil || payload == "" {
+		return metaResult
+	}
+	if req.ImageProtocol == previewpanel.ImageProtocolSixel && req.ImageInTmux &&
+		len(payload) >= config.DefaultPreviewTmuxSixelMaxBytes {
+		// tmux (through 3.5a) silently discards a single escape sequence beyond its hardcoded
+		// ~1MB input buffer rather than forwarding it — sending this would show as the image
+		// flickering and vanishing rather than a clean, if lower-quality, preview.
+		metaResult.CombinedText = meta + " / too large for tmux"
 		return metaResult
 	}
 	return Result{
@@ -78,16 +86,25 @@ func runImage(req Request) Result {
 		ImagePxW:      bounds.Dx(),
 		ImagePxH:      bounds.Dy(),
 		ImageProtocol: req.ImageProtocol,
+
+		ImageUnicodePlaceholder: req.ImageUnicodePlaceholder,
 	}
 }
 
-func encodeImagePayload(img image.Image, proto previewpanel.ImageProtocol) (string, error) {
+func encodeImagePayload(img image.Image, proto previewpanel.ImageProtocol, unicodePlaceholder, inTmux bool) (string, error) {
 	switch proto {
 	case previewpanel.ImageProtocolKitty:
-		return encodeKittyAPC(img)
+		return encodeKittyAPC(img, unicodePlaceholder)
 	case previewpanel.ImageProtocolSixel:
 		var buf bytes.Buffer
-		if err := sixel.NewEncoder(&buf).Encode(img); err != nil {
+		enc := sixel.NewEncoder(&buf)
+		if inTmux {
+			// See config.DefaultPreviewTmuxSixelColors: a smaller palette compresses far
+			// better under sixel's run-length encoding, keeping the payload under tmux's
+			// (pre-3.6) hardcoded input buffer limit for typical previews.
+			enc.Colors = config.DefaultPreviewTmuxSixelColors
+		}
+		if err := enc.Encode(img); err != nil {
 			return "", err
 		}
 		return buf.String(), nil
@@ -96,8 +113,12 @@ func encodeImagePayload(img image.Image, proto previewpanel.ImageProtocol) (stri
 	}
 }
 
-// encodeKittyAPC builds a chunked Kitty graphics transmit+place sequence (f=100 PNG).
-func encodeKittyAPC(img image.Image) (string, error) {
+// encodeKittyAPC builds a chunked Kitty graphics transmit sequence (f=100 PNG). With
+// unicodePlaceholder, the first chunk requests Unicode-placeholder display (U=1) instead of
+// the terminal's own cursor-relative auto-display (C=1) — see
+// internal/ui/previewpanel/unicode_placeholder.go for why (tmux compatibility) and how the
+// placeholder cells that reference this transmitted data get drawn.
+func encodeKittyAPC(img image.Image, unicodePlaceholder bool) (string, error) {
 	var pngBuf bytes.Buffer
 	if err := png.Encode(&pngBuf, img); err != nil {
 		return "", err
@@ -105,6 +126,11 @@ func encodeKittyAPC(img image.Image) (string, error) {
 	encoded := base64.StdEncoding.EncodeToString(pngBuf.Bytes())
 	if encoded == "" {
 		return "", fmt.Errorf("empty png")
+	}
+
+	firstChunkParams := fmt.Sprintf("a=T,f=100,i=%d,C=1,q=2", previewpanel.KittyGraphicsImageID)
+	if unicodePlaceholder {
+		firstChunkParams = fmt.Sprintf("a=T,f=100,i=%d,q=2,U=1", previewpanel.KittyGraphicsImageID)
 	}
 
 	var out strings.Builder
@@ -128,8 +154,7 @@ func encodeKittyAPC(img image.Image) (string, error) {
 			more = 0
 		}
 		if first {
-			fmt.Fprintf(&out, "\x1b_Ga=T,f=100,i=%d,C=1,q=2,m=%d;%s\x1b\\",
-				previewpanel.KittyGraphicsImageID, more, chunk)
+			fmt.Fprintf(&out, "\x1b_G%s,m=%d;%s\x1b\\", firstChunkParams, more, chunk)
 			first = false
 		} else {
 			fmt.Fprintf(&out, "\x1b_Gm=%d;%s\x1b\\", more, chunk)

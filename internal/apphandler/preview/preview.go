@@ -420,6 +420,7 @@ func (h *Handler) patchColumnPreviewMessage(titleBase, msg string) {
 		st.ImagePxW = 0
 		st.ImagePxH = 0
 		st.ImageProtocol = 0
+		st.ImageUnicodePlaceholder = false
 	})
 	h.postRenderWake()
 	h.clampFilePreviewScroll()
@@ -722,9 +723,26 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 	default:
 		tw, _, ok = h.inactivePanelPreviewLayoutMetrics(true)
 	}
+	isImage := localfs.IsImagePath(path)
 	// Image pixel budget depends on height too; bypass the width-equality skip for images.
-	if !ok || (tw == h.previewLastWidth[target] && !localfs.IsImagePath(path)) {
+	if !ok || (tw == h.previewLastWidth[target] && !isImage) {
 		return
+	}
+
+	if isImage {
+		// The stale payload (and any held copy of it) was encoded for the pre-resize pixel
+		// budget; drawing it at the newly computed placement would show a wrong-size image
+		// until the re-encode lands. Clear both so Draw() renders blank/pending instead,
+		// matching the first-open state.
+		h.clearFilePreviewHold(target)
+		h.patchPreviewState(target, func(st *ui.FilePreviewState) {
+			st.Phase = ui.FilePreviewPhasePending
+			st.ImagePayload = ""
+			st.ImagePxW = 0
+			st.ImagePxH = 0
+			st.ImageProtocol = 0
+			st.ImageUnicodePlaceholder = false
+		})
 	}
 
 	switch target {
@@ -866,6 +884,16 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 		} else {
 			req.ImageProtocol = previewrun.ResolveImageProtocol(req.Preview.ImageProtocol, os.Getenv)
 		}
+		req.ImageInTmux = os.Getenv("TMUX") != ""
+		// tmux has no native rendering path for Kitty's cursor-relative placement; encode for
+		// Unicode-placeholder display instead (see internal/ui/previewpanel/unicode_placeholder.go)
+		// — but only when the outer terminal is confirmed to support it (Kitty/Ghostty). Kitty
+		// protocol can also be reached via an explicit image_protocol=kitty override, which
+		// says nothing about the actual terminal's capabilities: blindly using placeholder mode
+		// there sends cells an unsupporting terminal (e.g. WezTerm) can't interpret, and nothing
+		// renders at all.
+		req.ImageUnicodePlaceholder = req.ImageProtocol == previewpanel.ImageProtocolKitty &&
+			previewrun.TmuxSupportsKittyUnicodePlaceholders(os.Getenv)
 		return req
 	}
 	if gitStatus != nil {
@@ -954,6 +982,7 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 			st.ImagePxW = 0
 			st.ImagePxH = 0
 			st.ImageProtocol = 0
+			st.ImageUnicodePlaceholder = false
 			if st.Search.Active {
 				st.RecomputeSearch()
 			}
@@ -980,6 +1009,7 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 		st.ImagePxW = res.ImagePxW
 		st.ImagePxH = res.ImagePxH
 		st.ImageProtocol = res.ImageProtocol
+		st.ImageUnicodePlaceholder = res.ImageUnicodePlaceholder
 		if st.Search.Active {
 			st.RecomputeSearch()
 		}

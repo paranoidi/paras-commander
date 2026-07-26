@@ -267,6 +267,17 @@ const (
 	// DefaultPreviewImageMaxDecodeMegapixels caps decode/scale work for image previews
 	// (width×height). Larger images fall back to metadata text. Not a config key.
 	DefaultPreviewImageMaxDecodeMegapixels = 64
+	// DefaultPreviewTmuxSixelColors is the sixel palette size used under tmux, well below the
+	// protocol max of 256. tmux versions through 3.5a have a hardcoded ~1MB limit on a single
+	// escape sequence's input buffer and silently discard anything larger (only tmux 3.6+
+	// makes this configurable, via input-buffer-size); a smaller palette compresses far better
+	// via sixel's run-length bands, keeping typical previews under that ceiling. Not a config
+	// key.
+	DefaultPreviewTmuxSixelColors = 64
+	// DefaultPreviewTmuxSixelMaxBytes is a safety net below tmux's ~1MB (1,048,576 byte)
+	// pre-3.6 input buffer limit: a sixel payload at or above this size under tmux falls back
+	// to metadata text instead of risking a silently truncated/garbled image. Not a config key.
+	DefaultPreviewTmuxSixelMaxBytes = 900_000
 	// DefaultMaxPreviewBytes caps internal preview reads (matches cmdrun.MaxStreamBytes).
 	DefaultMaxPreviewBytes = 512 * 1024
 

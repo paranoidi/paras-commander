@@ -184,8 +184,9 @@ type App struct {
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool
 
-	sftp  sftpState
-	image imageOverlay
+	sftp           sftpState
+	image          imageOverlay
+	placeholderImg placeholderImage
 
 	remotePanelLoadGen  [2]atomic.Uint64
 	gitStatusLoadGen    [2]atomic.Uint64

@@ -69,6 +69,7 @@ func MergeDrawWithHold(live, hold State) State {
 	out.ImagePxW = hold.ImagePxW
 	out.ImagePxH = hold.ImagePxH
 	out.ImageProtocol = hold.ImageProtocol
+	out.ImageUnicodePlaceholder = hold.ImageUnicodePlaceholder
 	out.WrapCacheSnapshot(hold)
 	out.BodyHeld = true
 	return out

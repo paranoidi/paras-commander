@@ -678,3 +678,58 @@ func TestDrawImageRecordsPlacementAndBlanksBody(t *testing.T) {
 		t.Fatal("second TakeFrameImage() should be nil")
 	}
 }
+
+// TestDrawImagePlacementModeFollowsStateFlagNotEnvironment guards against Draw re-deriving
+// placeholder mode from $TMUX: the decision is made upstream (capability-gated on the actual
+// outer terminal) and carried in State.ImageUnicodePlaceholder. A Kitty image with the flag
+// off must record a cursor-relative placement even with $TMUX set (tmux + WezTerm, which
+// renders placeholder cells as garbage); with the flag on it must paint placeholder cells.
+func TestDrawImagePlacementModeFollowsStateFlagNotEnvironment(t *testing.T) {
+	t.Setenv("TMUX", "/tmp/tmux-1000/default,1234,0")
+	styles := theme.Default()
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: 40, Height: 10}
+	baseState := State{
+		Open:          true,
+		TitleBase:     "photo.png",
+		Source:        SourceExternalANSI,
+		ImagePayload:  "\x1b_Ga=T,f=100,i=1;AAAA\x1b\\",
+		ImagePxW:      100,
+		ImagePxH:      100,
+		ImageProtocol: ImageProtocolKitty,
+	}
+
+	for _, tc := range []struct {
+		name            string
+		placeholder     bool
+		wantPlaceholder bool
+	}{
+		{"flag off records cursor-relative placement", false, false},
+		{"flag on paints placeholder cells", true, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			screen := tcell.NewSimulationScreen("UTF-8")
+			if err := screen.Init(); err != nil {
+				t.Fatalf("Init() error = %v", err)
+			}
+			defer screen.Fini()
+			screen.SetSize(rect.Width, rect.Height)
+
+			st := baseState
+			st.ImageUnicodePlaceholder = tc.placeholder
+			Draw(screen, rect, st, DrawParams{Theme: styles, BodyStyle: body})
+
+			plan := TakeFrameImage()
+			if plan == nil {
+				t.Fatal("Draw recorded no ImagePlacement")
+			}
+			if plan.UnicodePlaceholder != tc.wantPlaceholder {
+				t.Fatalf("plan.UnicodePlaceholder = %v, want %v", plan.UnicodePlaceholder, tc.wantPlaceholder)
+			}
+			cell, _, _ := screen.Get(rect.X+2, rect.Y+1)
+			if gotCell := strings.HasPrefix(cell, string(unicodePlaceholderChar)); gotCell != tc.wantPlaceholder {
+				t.Fatalf("first content cell placeholder rune = %v, want %v (cell %q)", gotCell, tc.wantPlaceholder, cell)
+			}
+		})
+	}
+}
