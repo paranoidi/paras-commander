@@ -3,6 +3,7 @@ package panelcarousel
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"unicode/utf8"
 
@@ -200,6 +201,58 @@ func fitEntryTextLen(e localfs.Entry) int {
 	return n
 }
 
+// Fit-to-content outlier thresholds (see fitListingTextLen).
+const (
+	fitOutlierMinEntries    = 3  // gap peel vs 2nd-max
+	fitOutlierMinGap        = 8  // runes; 2× was too strict (28 vs 15 failed)
+	fitOutlierP90MinEntries = 10 // enough samples for a stable 90th-percentile cap
+)
+
+// maxFitEntryTextLen returns the max fitEntryTextLen over entries (plain "<N" / "<N%" fit).
+func maxFitEntryTextLen(entries []localfs.Entry) int {
+	max := 0
+	for _, e := range entries {
+		if n := fitEntryTextLen(e); n > max {
+			max = n
+		}
+	}
+	return max
+}
+
+// fitListingTextLen returns the content-fit name-text rune length for a listing, ignoring
+// extreme outliers so a few absurd names truncate instead of widening the column.
+// Used only for "<<N" / "<<N%" tokens (ColumnSplitSpec.IgnoreOutlier).
+// Peels max when it jumps ≥fitOutlierMinGap above 2nd-max (n≥3). Larger listings (n≥10)
+// also cap at the 90th percentile so two near-tied giants cannot defeat the gap rule.
+func fitListingTextLen(entries []localfs.Entry) int {
+	if len(entries) == 0 {
+		return 0
+	}
+	lengths := make([]int, len(entries))
+	max, second := 0, 0
+	for i, e := range entries {
+		n := fitEntryTextLen(e)
+		lengths[i] = n
+		if n > max {
+			second = max
+			max = n
+		} else if n > second {
+			second = n
+		}
+	}
+	out := max
+	if len(entries) >= fitOutlierMinEntries && max-second >= fitOutlierMinGap {
+		out = second
+	}
+	if len(entries) >= fitOutlierP90MinEntries {
+		sort.Ints(lengths)
+		if p90 := lengths[(len(lengths)*9-1)/10]; p90 < out {
+			out = p90
+		}
+	}
+	return out
+}
+
 // MeasureFitColumnWidths computes uncapped whole-column content-fit widths for the parent
 // (index 0) and center (index 1) columns whose layout token is fit-mode; index 2 is always 0
 // (fit-mode is rejected there at parse time). Scans every entry in the column's listing (not
@@ -235,10 +288,12 @@ func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, sh
 		// Header title ("Name" / " Name" / "↓Name" ...) must always fit uncropped, so the
 		// fit-to-content width can never shrink below it (see briefHeader).
 		longest := utf8.RuneCountInString(nameTitle)
-		for _, e := range entries {
-			if n := fitEntryTextLen(e); n > longest {
-				longest = n
-			}
+		contentLen := maxFitEntryTextLen(entries)
+		if layout.Splits[i].IgnoreOutlier {
+			contentLen = fitListingTextLen(entries)
+		}
+		if contentLen > longest {
+			longest = contentLen
 		}
 		hasLane := columnHasScrollbarLane(c, inactive, showChild)
 		total, offset := columnListingMetrics(c, center)

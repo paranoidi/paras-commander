@@ -213,7 +213,8 @@ const (
 	MinCarouselFilePreviewColumnWidth = 32
 
 	// DefaultCarouselSplit is the default carousel column width spec (parent | center | child).
-	DefaultCarouselSplit0 = "<33%"
+	// Parent uses "<<33%" (fit with outlier ignore); center uses plain "<33%" fit.
+	DefaultCarouselSplit0 = "<<33%"
 	DefaultCarouselSplit1 = "<33%"
 	DefaultCarouselSplit2 = "*"
 

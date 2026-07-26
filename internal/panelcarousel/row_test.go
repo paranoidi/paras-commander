@@ -152,7 +152,9 @@ func TestMeasureFitColumnWidthsReservesScrollbarLane(t *testing.T) {
 	layout := DefaultLayout()
 	layout.Splits[0] = ColumnSplitSpec{Kind: SplitFitChars, Value: 64}
 	layout.ShowSize[0] = false
-	words := []string{"cat", "otter", "elephant", "hippopotamus", "fox", "gnu", "yak", "seal", "wren", "mole", "lynx"}
+	// Nine entries: enough to need a scrollbar at visibleRows=5, but below the p90
+	// outlier-cap threshold so fit width stays on the true longest name.
+	words := []string{"cat", "otter", "elephant", "hippopotamus", "fox", "gnu", "yak", "seal", "wren"}
 	entries := make([]localfs.Entry, len(words))
 	for i, w := range words {
 		entries[i] = localfs.Entry{Name: w, Path: "/vol/" + w, Type: localfs.EntryFile}
@@ -198,6 +200,108 @@ func TestMeasureFitColumnWidthsEmptyColumnFallsBackToZero(t *testing.T) {
 	got := MeasureFitColumnWidths(layout, parent, center, false, true, uiscrollbar.StyleThumb, 10)
 	if got[0] != 0 {
 		t.Fatalf("MeasureFitColumnWidths col[0] = %d, want 0 (empty listing falls back to cap)", got[0])
+	}
+}
+
+func fitEntriesFromNames(names ...string) []localfs.Entry {
+	entries := make([]localfs.Entry, len(names))
+	for i, name := range names {
+		entries[i] = localfs.Entry{Name: name, Path: "/vol/" + name, Type: localfs.EntryFile}
+	}
+	return entries
+}
+
+func TestFitListingTextLen(t *testing.T) {
+	t.Parallel()
+	const giant = "extraordinarilylongfilename" // 27 runes → fitEntryTextLen 28
+	const giantB = "supercalifragilisticexpial" // 26 runes → fitEntryTextLen 27; near-tied with giant
+	// Real-world case: gap 13 but max < 2×second (28 vs 15) — ratio rules miss this.
+	const cinnamon = "cinnamon-screensaver-command.sh"
+	shorts := []string{
+		"cat", "dog", "elk", "fox", "gnu", "hog", "ibis", "jay", "kite", "lion",
+		"mole", "newt", "owl", "pig", "quail", "rat", "seal", "toad",
+	}
+	cases := []struct {
+		name  string
+		names []string
+		want  string // name whose fitEntryTextLen is the expected content length
+	}{
+		{
+			name:  "single outlier ignored",
+			names: []string{"cat", "otter", "fox", giant},
+			want:  "otter",
+		},
+		{
+			name:  "home-style outlier under 2x second still ignored",
+			names: []string{"cat", "otter", "fox", "VirtualBox VMs", cinnamon},
+			want:  "VirtualBox VMs",
+		},
+		{
+			name:  "two similar long names keep max when few entries",
+			names: []string{"cat", "otter", giant, "supercalifragilistic"},
+			want:  giant,
+		},
+		{
+			name:  "two near-tied giants capped by p90",
+			names: append(append([]string{}, shorts...), giant, giantB),
+			want:  "quail",
+		},
+		{
+			name:  "fewer than three entries keep max",
+			names: []string{"otter", giant},
+			want:  giant,
+		},
+		{
+			name:  "gradual spread keeps max",
+			names: []string{"cat", "otter", "elephant", "hippopotamus"},
+			want:  "hippopotamus",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := fitListingTextLen(fitEntriesFromNames(tc.names...))
+			want := fitEntryTextLen(localfs.Entry{Name: tc.want, Type: localfs.EntryFile})
+			if got != want {
+				t.Fatalf("fitListingTextLen = %d, want %d (%q)", got, want, tc.want)
+			}
+		})
+	}
+}
+
+func TestMeasureFitColumnWidthsIgnoresOutlier(t *testing.T) {
+	t.Parallel()
+	layout := DefaultLayout()
+	layout.Splits[0] = ColumnSplitSpec{Kind: SplitFitChars, Value: 64, IgnoreOutlier: true}
+	layout.ShowSize[0] = false
+	const giant = "extraordinarilylongfilename"
+	parent := Column{
+		Kind:      ColumnParent,
+		Populated: true,
+		Snapshot:  panel.ListingSnapshot{Entries: fitEntriesFromNames("cat", "otter", "fox", giant)},
+	}
+	got := MeasureFitColumnWidths(layout, parent, panel.State{}, false, true, uiscrollbar.StyleThumb, 10)
+	want := fitEntryTextLen(localfs.Entry{Name: "otter", Type: localfs.EntryFile}) + 1 // +1 right margin
+	if got[0] != want {
+		t.Fatalf("MeasureFitColumnWidths col[0] = %d, want %d (2nd-longest, not outlier)", got[0], want)
+	}
+}
+
+func TestMeasureFitColumnWidthsPlainFitKeepsOutlier(t *testing.T) {
+	t.Parallel()
+	layout := DefaultLayout()
+	layout.Splits[0] = ColumnSplitSpec{Kind: SplitFitChars, Value: 64} // "<64", no IgnoreOutlier
+	layout.ShowSize[0] = false
+	const giant = "extraordinarilylongfilename"
+	parent := Column{
+		Kind:      ColumnParent,
+		Populated: true,
+		Snapshot:  panel.ListingSnapshot{Entries: fitEntriesFromNames("cat", "otter", "fox", giant)},
+	}
+	got := MeasureFitColumnWidths(layout, parent, panel.State{}, false, true, uiscrollbar.StyleThumb, 10)
+	want := fitEntryTextLen(localfs.Entry{Name: giant, Type: localfs.EntryFile}) + 1
+	if got[0] != want {
+		t.Fatalf("MeasureFitColumnWidths col[0] = %d, want %d (plain fit keeps longest)", got[0], want)
 	}
 }
 

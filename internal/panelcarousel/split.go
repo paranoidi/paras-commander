@@ -15,14 +15,15 @@ const (
 	SplitFixed ColumnSplitKind = iota
 	SplitPercent
 	SplitFlex
-	SplitFitChars   // "<N": min(measured content, N chars)
-	SplitFitPercent // "<N%": min(measured content, N% of innerW)
+	SplitFitChars   // "<N" / "<<N": min(measured content, N chars)
+	SplitFitPercent // "<N%" / "<<N%": min(measured content, N% of innerW)
 )
 
 // ColumnSplitSpec is one carousel column width token after parsing.
 type ColumnSplitSpec struct {
-	Kind  ColumnSplitKind
-	Value int // cap in chars for Fixed/FitChars; percent 0–100 for Percent/FitPercent; unused for Flex
+	Kind          ColumnSplitKind
+	Value         int  // cap in chars for Fixed/FitChars; percent 0–100 for Percent/FitPercent; unused for Flex
+	IgnoreOutlier bool // "<<N" / "<<N%": measure with fitListingTextLen outlier ignore
 }
 
 // Layout holds resolved carousel column split and per-column size visibility.
@@ -76,7 +77,11 @@ func parseSplitToken(tok string, index int) (ColumnSplitSpec, error) {
 		if index == 2 {
 			return ColumnSplitSpec{}, fmt.Errorf("fit-mode %q not allowed on child column", tok)
 		}
+		ignoreOutlier := strings.HasPrefix(tok, "<<")
 		rest := strings.TrimPrefix(tok, "<")
+		if ignoreOutlier {
+			rest = strings.TrimPrefix(rest, "<")
+		}
 		if strings.HasSuffix(rest, "%") {
 			pctStr := strings.TrimSpace(strings.TrimSuffix(rest, "%"))
 			if pctStr == "" {
@@ -86,13 +91,13 @@ func parseSplitToken(tok string, index int) (ColumnSplitSpec, error) {
 			if err != nil || pct < 0 || pct > 100 {
 				return ColumnSplitSpec{}, fmt.Errorf("invalid percent %q", tok)
 			}
-			return ColumnSplitSpec{Kind: SplitFitPercent, Value: pct}, nil
+			return ColumnSplitSpec{Kind: SplitFitPercent, Value: pct, IgnoreOutlier: ignoreOutlier}, nil
 		}
 		n, err := strconv.Atoi(rest)
 		if err != nil || n < 1 {
 			return ColumnSplitSpec{}, fmt.Errorf("invalid width %q", tok)
 		}
-		return ColumnSplitSpec{Kind: SplitFitChars, Value: n}, nil
+		return ColumnSplitSpec{Kind: SplitFitChars, Value: n, IgnoreOutlier: ignoreOutlier}, nil
 	}
 	if strings.HasSuffix(tok, "%") {
 		pctStr := strings.TrimSpace(strings.TrimSuffix(tok, "%"))

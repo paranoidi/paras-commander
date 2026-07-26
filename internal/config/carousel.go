@@ -28,6 +28,12 @@ func carouselSplitTokenValid(tok string, idx int) bool {
 	if tok == "*" {
 		return true
 	}
+	if strings.HasPrefix(tok, "<<") {
+		if idx == 2 {
+			return false
+		}
+		return carouselSplitCapValid(strings.TrimPrefix(tok, "<<"))
+	}
 	if strings.HasPrefix(tok, "<") {
 		if idx == 2 {
 			return false
@@ -38,7 +44,7 @@ func carouselSplitTokenValid(tok string, idx int) bool {
 }
 
 // carouselSplitCapValid validates the shared "N" / "N%" grammar used by fixed/percent tokens
-// and by fit-mode tokens after stripping their "<" prefix.
+// and by fit-mode tokens after stripping their "<" / "<<" prefix.
 func carouselSplitCapValid(tok string) bool {
 	if strings.HasSuffix(tok, "%") {
 		pctStr := strings.TrimSpace(strings.TrimSuffix(tok, "%"))

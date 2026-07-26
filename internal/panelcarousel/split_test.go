@@ -109,32 +109,51 @@ func TestParseSplitTokenFitModeValid(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if spec.Kind != SplitFitChars || spec.Value != 16 {
-		t.Fatalf("parseSplitToken(^16, 0) = %+v, want Kind=SplitFitChars Value=16", spec)
+	if spec.Kind != SplitFitChars || spec.Value != 16 || spec.IgnoreOutlier {
+		t.Fatalf("parseSplitToken(<16, 0) = %+v, want Kind=SplitFitChars Value=16 IgnoreOutlier=false", spec)
 	}
 
 	spec, err = parseSplitToken("<33%", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if spec.Kind != SplitFitPercent || spec.Value != 33 {
-		t.Fatalf("parseSplitToken(^33%%, 1) = %+v, want Kind=SplitFitPercent Value=33", spec)
+	if spec.Kind != SplitFitPercent || spec.Value != 33 || spec.IgnoreOutlier {
+		t.Fatalf("parseSplitToken(<33%%, 1) = %+v, want Kind=SplitFitPercent Value=33 IgnoreOutlier=false", spec)
+	}
+
+	spec, err = parseSplitToken("<<16", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Kind != SplitFitChars || spec.Value != 16 || !spec.IgnoreOutlier {
+		t.Fatalf("parseSplitToken(<<16, 0) = %+v, want Kind=SplitFitChars Value=16 IgnoreOutlier=true", spec)
+	}
+
+	spec, err = parseSplitToken("<<33%", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Kind != SplitFitPercent || spec.Value != 33 || !spec.IgnoreOutlier {
+		t.Fatalf("parseSplitToken(<<33%%, 0) = %+v, want Kind=SplitFitPercent Value=33 IgnoreOutlier=true", spec)
 	}
 }
 
 func TestParseSplitTokenFitModeRejectedAtChildColumn(t *testing.T) {
 	t.Parallel()
 	if _, err := parseSplitToken("<16", 2); err == nil {
-		t.Fatal("expected error for ^16 at index 2 (child column)")
+		t.Fatal("expected error for <16 at index 2 (child column)")
 	}
 	if _, err := parseSplitToken("<33%", 2); err == nil {
-		t.Fatal("expected error for ^33% at index 2 (child column)")
+		t.Fatal("expected error for <33% at index 2 (child column)")
+	}
+	if _, err := parseSplitToken("<<33%", 2); err == nil {
+		t.Fatal("expected error for <<33% at index 2 (child column)")
 	}
 }
 
 func TestParseSplitTokenFitModeMalformed(t *testing.T) {
 	t.Parallel()
-	for _, tok := range []string{"<", "<abc", "<0", "<-1", "<150%", "<%"} {
+	for _, tok := range []string{"<", "<<", "<abc", "<<abc", "<0", "<-1", "<150%", "<%", "<<%", "<<<33%"} {
 		if _, err := parseSplitToken(tok, 0); err == nil {
 			t.Fatalf("expected error for malformed fit token %q", tok)
 		}

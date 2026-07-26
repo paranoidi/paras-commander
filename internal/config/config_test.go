@@ -220,11 +220,11 @@ func TestValidateResetsInvalidCarouselSplit(t *testing.T) {
 
 func TestValidateAcceptsFitSplitTokensAtParentAndCenter(t *testing.T) {
 	cfg := Default()
-	cfg.Carousel.Split = []string{"<16", "<33%", "*"}
+	cfg.Carousel.Split = []string{"<<16", "<33%", "*"}
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	want := []string{"<16", "<33%", "*"}
+	want := []string{"<<16", "<33%", "*"}
 	for i := range want {
 		if cfg.Carousel.Split[i] != want[i] {
 			t.Fatalf("Carousel.Split[%d] = %q, want %q (fit tokens should survive validation)", i, cfg.Carousel.Split[i], want[i])
@@ -247,7 +247,7 @@ func TestValidateResetsFitSplitTokenAtChildColumn(t *testing.T) {
 }
 
 func TestValidateResetsMalformedFitSplitTokens(t *testing.T) {
-	for _, tok := range []string{"<", "<abc", "<0", "<-1", "<150%", "<%"} {
+	for _, tok := range []string{"<", "<<", "<abc", "<<abc", "<0", "<-1", "<150%", "<%", "<<%", "<<<33%"} {
 		cfg := Default()
 		cfg.Carousel.Split = []string{tok, "*", "*"}
 		if err := cfg.Validate(); err != nil {
