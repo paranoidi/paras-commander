@@ -2,6 +2,7 @@ package panel
 
 import (
 	"context"
+	"maps"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -28,6 +29,11 @@ const noIndexCursorFallback = -1
 type historyCursorSnapshot struct {
 	EntryName string
 	Index     int
+	// CursorPath is the highlighted entry's absolute path, used to disambiguate tree-mode
+	// recall where Index/EntryName alone can't identify a nested descendant row.
+	CursorPath string
+	// TreeExpanded is the expanded node-ID set when leaving in tree mode; nil otherwise.
+	TreeExpanded map[string]bool
 }
 
 // State contains all panel data needed by the App and renderer.
@@ -736,13 +742,19 @@ func (s *State) rememberCursorForPath(dir string) {
 		return
 	}
 	name := ""
+	path := ""
 	if entry, ok := s.CurrentEntry(); ok {
 		name = entry.Name
+		path = entry.Path
 	}
 	if s.HistoryCursorByPath == nil {
 		s.HistoryCursorByPath = make(map[string]historyCursorSnapshot)
 	}
-	s.HistoryCursorByPath[dir] = historyCursorSnapshot{EntryName: name, Index: s.Cursor}
+	snap := historyCursorSnapshot{EntryName: name, Index: s.Cursor, CursorPath: path}
+	if s.ListLayout == ListLayoutTree {
+		snap.TreeExpanded = maps.Clone(s.TreeExpanded)
+	}
+	s.HistoryCursorByPath[dir] = snap
 }
 
 func (s *State) recalledCursorFor(dir string) (selectedName string, indexFallback int, recalled bool) {
@@ -1282,6 +1294,10 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	previousPath := s.Path
 	sameDirReload := previousPath.Equal(listingLoc)
 	priorCursor := s.Cursor
+	priorTreeCursorID := ""
+	if s.ListLayout == ListLayoutTree && sameDirReload && priorCursor >= 0 && priorCursor < len(s.treeRows) {
+		priorTreeCursorID = s.treeRows[priorCursor].ID
+	}
 	priorScroll := s.ScrollOffset
 	wasCentered := false
 	if sameDirReload {
@@ -1333,13 +1349,22 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	}
 	s.ApplySort()
 	if s.ListLayout == ListLayoutTree {
-		// ponytail: full-fidelity refresh (preserving expansions/cached children across a live
-		// directory watch) is async-loading-phase work; for now every ApplyListing re-roots tree
-		// mode fresh, which also resets expansions on a same-directory refresh. Reseeded after
-		// ApplySort (not before) so depth-0 tree rows reflect the panel's sort setting instead of
-		// raw backend order.
+		// TreeRoots is always re-rooted fresh from the just-fetched listing — cached subtree
+		// content is never reused — but the *set* of which dirs were expanded carries over: from
+		// the live in-memory state on a same-directory refresh, or from the per-path recall
+		// snapshot on navigation. restoreTreeExpansions re-fetches each remembered dir's children
+		// (below, after cursor selection needs treeRows populated). Reseeded after ApplySort (not
+		// before) so depth-0 tree rows reflect the panel's sort setting instead of raw backend
+		// order.
+		var keep map[string]bool
+		if sameDirReload {
+			keep = s.TreeExpanded
+		} else if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok {
+			keep = maps.Clone(snap.TreeExpanded)
+		}
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
-		s.TreeExpanded = nil
+		s.TreeExpanded = keep
+		s.restoreTreeExpansions()
 		s.rebuildTreeRows()
 	}
 	s.rebuildFilter()
@@ -1352,6 +1377,17 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 			s.Cursor = len(s.Entries) - 1
 		} else {
 			s.Cursor = indexFallback
+		}
+	}
+	if s.ListLayout == ListLayoutTree {
+		switch {
+		case sameDirReload && priorTreeCursorID != "":
+			s.selectVisibleEntryByPath(priorTreeCursorID)
+		case !sameDirReload && centerRecalled:
+			if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok && snap.CursorPath != "" {
+				s.selectVisibleEntryByPath(snap.CursorPath)
+				s.treeCursorID = snap.CursorPath
+			}
 		}
 	}
 	if sameDirReload {

@@ -456,6 +456,70 @@ func (s *State) loadTreeChildren(dirPath string) ([]treeflat.Node[TreeEntry], er
 	return treeRootsFromEntries(entries), nil
 }
 
+// restoreTreeExpansions re-expands the directories recorded in TreeExpanded against a freshly
+// rooted TreeRoots (see ApplyListing / ApplyTreeChildLoad): content is always re-fetched, never
+// carried over from a stale snapshot, so a remembered expansion can never resurrect stale rows.
+//
+// Local directories load synchronously here, bypassing ScheduleTreeChildLoad even though the app
+// wires it unconditionally for every panel: going through the async dispatch would render one
+// frame with the directory collapsed (children nil) before the goroutine's result lands and
+// re-expands it — a visible flicker on every return to a previously-expanded local directory.
+// Loading inline instead means the first render after navigating back already shows the restored
+// state. A directory whose children resolve this way is recursed into immediately, so several
+// nested local levels restore within a single call.
+//
+// Remote directories still go through setTreeNodeExpanded's normal async dispatch — SFTP latency
+// makes a synchronous load block the UI thread, the exact regression ScheduleTreeChildLoad was
+// introduced to avoid — so a remembered SFTP expansion stays collapsed for one frame while its
+// load is in flight, and the matching ApplyTreeChildLoad calls this again to cascade into the
+// next level once each result lands.
+//
+// A load error (either path) drops the id from TreeExpanded so the row renders collapsed and a
+// later manual expand retries — same recovery as a failed manual expand.
+//
+// ponytail: remote dispatches one setTreeNodeExpanded call per remembered directory rather than
+// batching through the treeExpandQuiet coalescer ExpandAllTreeShallow uses; a stale dispatch from
+// that counter never decrements it (ApplyTreeChildLoad returns early on a vanished node), so
+// sharing it across independent per-directory restores risked wedging it permanently on rapid
+// navigation. Each restore below is self-contained instead. Revisit if a very large expanded set
+// makes restoring an SFTP directory visibly flicker row-by-row as each level lands.
+func (s *State) restoreTreeExpansions() {
+	s.restoreTreeExpansionsIn(s.TreeRoots, 0)
+}
+
+func (s *State) restoreTreeExpansionsIn(nodes []treeflat.Node[TreeEntry], depth int) {
+	remote := s.Path.IsRemote()
+	for i := range nodes {
+		node := &nodes[i]
+		if node.Value.Entry.Type != localfs.EntryDirectory || !s.TreeExpanded[node.ID] {
+			continue
+		}
+		if node.Children == nil {
+			if remote {
+				if err := s.setTreeNodeExpanded(node.ID, depth, true, false); err != nil {
+					delete(s.TreeExpanded, node.ID)
+				}
+				continue // async dispatch in flight; the matching ApplyTreeChildLoad cascades further
+			}
+			children, err := s.loadTreeChildren(node.ID)
+			if err != nil {
+				node.Value.LoadErr = err
+				delete(s.TreeExpanded, node.ID)
+				continue
+			}
+			node.Value.LoadErr = nil
+			node.Children = children
+			s.TreeExpanded[node.ID] = true
+			entries := make([]localfs.Entry, len(children))
+			for j, c := range children {
+				entries[j] = c.Value.Entry
+			}
+			s.scheduleTreeChildGitStatus(node.ID, entries)
+		}
+		s.restoreTreeExpansionsIn(node.Children, depth+1)
+	}
+}
+
 func findTreeNode(nodes []treeflat.Node[TreeEntry], id string) *treeflat.Node[TreeEntry] {
 	for i := range nodes {
 		if nodes[i].ID == id {
