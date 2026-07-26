@@ -156,7 +156,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 			name = filepath.Base(st.Path)
 		}
 		if st.BodyHeld {
-			name += "…"
+			name += string(primitive.Ellipsis)
 		}
 		statusSuffix := ""
 		if st.GitStatusText != "" {
@@ -181,7 +181,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		title := " Preview "
 		if tb := strings.TrimSpace(st.TitleBase); tb != "" {
 			if st.BodyHeld {
-				title = " " + tb + "… "
+				title = " " + tb + string(primitive.Ellipsis) + " "
 			} else {
 				title = " " + tb + " "
 			}

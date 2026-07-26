@@ -5,6 +5,8 @@ package textutil
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 // BannerMaxRunes is the default max length (in runes) for a status banner line before
@@ -21,7 +23,7 @@ func AbsPathClean(p string) string {
 	return filepath.Clean(abs)
 }
 
-// TruncateBannerRunes trims s and, if longer than maxRunes, truncates it with a trailing "…".
+// TruncateBannerRunes trims s and, if longer than maxRunes, truncates it with a trailing Ellipsis.
 func TruncateBannerRunes(s string, maxRunes int) string {
 	s = strings.TrimSpace(s)
 	if maxRunes <= 0 || s == "" {
@@ -31,7 +33,7 @@ func TruncateBannerRunes(s string, maxRunes int) string {
 	if len(r) <= maxRunes {
 		return s
 	}
-	return strings.TrimSpace(string(r[:maxRunes])) + "…"
+	return strings.TrimSpace(string(r[:maxRunes])) + string(primitive.Ellipsis)
 }
 
 // FirstLine returns the first non-empty line of s (after trim), for errors that join

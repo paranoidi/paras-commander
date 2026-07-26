@@ -3,6 +3,8 @@ package usermenu
 import (
 	"fmt"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 const shortLoadErrorMaxRunes = 72
@@ -101,5 +103,5 @@ func truncateRunes(s string, maxRunes int) string {
 	if len(r) <= maxRunes {
 		return s
 	}
-	return strings.TrimSpace(string(r[:maxRunes])) + "…"
+	return strings.TrimSpace(string(r[:maxRunes])) + string(primitive.Ellipsis)
 }

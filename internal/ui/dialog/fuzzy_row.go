@@ -67,7 +67,7 @@ func alignOrigToDisp(orig, disp []rune) []int {
 	for i := range m {
 		m[i] = -1
 	}
-	if len(disp) > 0 && disp[len(disp)-1] == '~' && len(orig) > len(disp)-1 {
+	if len(disp) > 0 && disp[len(disp)-1] == primitive.Ellipsis && len(orig) > len(disp)-1 {
 		for i := 0; i < len(disp)-1 && i < len(orig); i++ {
 			m[i] = i
 		}
@@ -81,7 +81,7 @@ func alignOrigToDisp(orig, disp []rune) []int {
 			di++
 			continue
 		}
-		if disp[di] == '…' {
+		if disp[di] == primitive.Ellipsis {
 			di++
 			continue
 		}

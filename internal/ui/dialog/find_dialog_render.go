@@ -63,7 +63,7 @@ func CenterFindListScroll(state *FindDialogState, listRows int) {
 func findDialogTitle(state FindDialogState) string {
 	title := "Find"
 	if state.Indexing {
-		title = fmt.Sprintf("Find (%d…)", state.IndexedCount)
+		title = fmt.Sprintf("Find (%d%s)", state.IndexedCount, string(primitive.Ellipsis))
 	} else if state.IndexDone && state.IndexedCount > 0 {
 		title = fmt.Sprintf("Find (%d)", state.IndexedCount)
 	}

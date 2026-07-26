@@ -10,15 +10,17 @@ import (
 
 func TestTruncateRightUsesOverflowMarker(t *testing.T) {
 	got := TruncateRight("abcdef", 4)
-	if got != "abc~" {
-		t.Fatalf("TruncateRight() = %q, want %q", got, "abc~")
+	want := "abc" + string(Ellipsis)
+	if got != want {
+		t.Fatalf("TruncateRight() = %q, want %q", got, want)
 	}
 }
 
 func TestTruncateMiddlePreservesBothEnds(t *testing.T) {
 	got := TruncateMiddle("abcdef", 5)
-	if got != "ab~ef" {
-		t.Fatalf("TruncateMiddle() = %q, want %q", got, "ab~ef")
+	want := "ab" + string(Ellipsis) + "ef"
+	if got != want {
+		t.Fatalf("TruncateMiddle() = %q, want %q", got, want)
 	}
 }
 

@@ -30,7 +30,7 @@ func DrawHostKeyDialog(screen tcell.Screen, layout Layout, state HostKeyDialogSt
 		if i >= 4 {
 			break
 		}
-		primitive.Text(screen, rect.X+2, rect.Y+1+i, rect.Width-4, truncateStr(line, rect.Width-4), styles.DialogText.Background(dbg))
+		primitive.Text(screen, rect.X+2, rect.Y+1+i, rect.Width-4, primitive.TruncateRight(line, rect.Width-4), styles.DialogText.Background(dbg))
 	}
 
 	sepY := rect.Y + 5

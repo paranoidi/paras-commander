@@ -8,6 +8,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 // Scheme names a path backend.
@@ -213,7 +215,7 @@ func (p Path) Display(maxRunes int) string {
 	}
 	head := maxRunes / 2
 	tail := maxRunes - head - 1
-	return s[:head] + "…" + s[len(s)-tail:]
+	return s[:head] + string(primitive.Ellipsis) + s[len(s)-tail:]
 }
 
 func parseFile(raw string) (Path, error) {

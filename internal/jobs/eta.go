@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 const etaEMAAlpha = 0.35
@@ -125,7 +127,7 @@ func FormatETA(status Status, startedAt, now time.Time, totalBytes, doneBytes in
 		return "—"
 	}
 	if now.Sub(startedAt) < time.Second {
-		return "…"
+		return string(primitive.Ellipsis)
 	}
 	j := &Job{
 		Status:         StatusRunning,

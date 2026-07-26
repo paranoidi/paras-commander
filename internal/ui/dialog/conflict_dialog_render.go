@@ -175,11 +175,3 @@ func formatConflictDialogBytes(n int64) string {
 	}
 	return fmt.Sprintf("%.1fM", float64(n)/(1024*1024))
 }
-
-func truncateStr(s string, max int) string {
-	runes := []rune(s)
-	if len(runes) <= max {
-		return s
-	}
-	return string(runes[:max-1]) + "~"
-}

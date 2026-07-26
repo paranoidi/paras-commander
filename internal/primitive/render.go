@@ -156,7 +156,10 @@ func styleAt(column int, fallback tcell.Style, spans []Span) tcell.Style {
 	return fallback
 }
 
-// TruncateRight clips value to width runes, using ~ as an overflow marker.
+// Ellipsis is the single-cell overflow marker used when shortening display text.
+const Ellipsis = '…'
+
+// TruncateRight clips value to width runes, using Ellipsis as an overflow marker.
 func TruncateRight(value string, width int) string {
 	if width <= 0 {
 		return ""
@@ -168,7 +171,7 @@ func TruncateRight(value string, width int) string {
 	if width == 1 {
 		return string(runes[:1])
 	}
-	return string(runes[:width-1]) + "~"
+	return string(runes[:width-1]) + string(Ellipsis)
 }
 
 // TruncateMiddle clips value to width runes, preserving both ends when possible.
@@ -185,7 +188,7 @@ func TruncateMiddle(value string, width int) string {
 	}
 	prefix := (width - 1) / 2
 	suffix := width - prefix - 1
-	return string(runes[:prefix]) + "~" + string(runes[len(runes)-suffix:])
+	return string(runes[:prefix]) + string(Ellipsis) + string(runes[len(runes)-suffix:])
 }
 
 func Repeat(value string, count int) string {

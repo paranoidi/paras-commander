@@ -205,12 +205,12 @@ func drawCompareBottomLegend(screen tcell.Screen, rect Rect, chrome AuxPanelChro
 func compareViewTitle(snap comparepkg.Snapshot) string {
 	switch snap.Phase {
 	case comparepkg.PhaseWalking:
-		return " Compare (walking…) "
+		return " Compare (walking" + string(primitive.Ellipsis) + ") "
 	case comparepkg.PhaseHashing:
 		if snap.HashTotal > 0 {
 			return fmt.Sprintf(" Compare (hash %d/%d) ", snap.Hashed, snap.HashTotal)
 		}
-		return " Compare (hashing…) "
+		return " Compare (hashing" + string(primitive.Ellipsis) + ") "
 	case comparepkg.PhaseError:
 		return " Compare (error) "
 	case comparepkg.PhaseCanceled:
@@ -223,9 +223,9 @@ func compareViewTitle(snap comparepkg.Snapshot) string {
 func compareEmptyMessage(snap comparepkg.Snapshot) string {
 	switch snap.Phase {
 	case comparepkg.PhaseWalking:
-		return " Walking directories… "
+		return " Walking directories" + string(primitive.Ellipsis) + " "
 	case comparepkg.PhaseHashing:
-		return " Hashing files… "
+		return " Hashing files" + string(primitive.Ellipsis) + " "
 	case comparepkg.PhaseError:
 		if snap.Err != "" {
 			return " " + snap.Err + " "

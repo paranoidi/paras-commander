@@ -12,6 +12,7 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -175,7 +176,7 @@ func TestJobFailureBannerDetail(t *testing.T) {
 	}
 	long := strings.Repeat("a", 120)
 	got := jobFailureBannerDetail(errors.New(long), "")
-	if got == "" || strings.TrimSuffix(got, "…") == got {
+	if got == "" || strings.TrimSuffix(got, string(primitive.Ellipsis)) == got {
 		t.Fatalf("expected truncated banner with ellipsis, got %q", got)
 	}
 	if utf8.RuneCountInString(got) != textutil.BannerMaxRunes+1 {

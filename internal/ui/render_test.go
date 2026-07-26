@@ -17,6 +17,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/tcelltest"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -947,7 +948,7 @@ func TestDrawFooterShowsViewEditAndOmitsUnusedFKeys(t *testing.T) {
 		t.Fatalf("footer = %q, want F3 View and F4 Edit placeholders", line)
 	}
 	if strings.Contains(line, "Quick") || strings.Contains(line, "UserCmdEdit") {
-		t.Fatalf("footer = %q, shift suffixes should be dropped before ~ truncation at this width", line)
+		t.Fatalf("footer = %q, shift suffixes should be dropped before ellipsis truncation at this width", line)
 	}
 	if strings.Contains(line, "F11") || strings.Contains(line, "F12") {
 		t.Fatalf("footer should not list empty F11/F12 slots, got %q", line)
@@ -1004,8 +1005,9 @@ func TestFooterHintLayoutsDropPrefixBeforeTruncating(t *testing.T) {
 	if layouts[0].showPrefix {
 		t.Fatalf("narrow: want prefix dropped")
 	}
-	if layouts[0].primary != "Mk~" {
-		t.Fatalf("narrow: got primary %q, want Mk~", layouts[0].primary)
+	wantNarrow := "Mk" + string(primitive.Ellipsis)
+	if layouts[0].primary != wantNarrow {
+		t.Fatalf("narrow: got primary %q, want %q", layouts[0].primary, wantNarrow)
 	}
 }
 

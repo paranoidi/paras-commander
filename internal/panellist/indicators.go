@@ -94,7 +94,7 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 		suffixWidth := innerW - prefixWidth - 1
 		truncated := make([]DisplayRune, 0, innerW)
 		truncated = append(truncated, body[:prefixWidth]...)
-		truncated = append(truncated, DisplayRune{Rune: '~', NameIdx: -1})
+		truncated = append(truncated, DisplayRune{Rune: primitive.Ellipsis, NameIdx: -1})
 		truncated = append(truncated, body[len(body)-suffixWidth:]...)
 		core = truncated
 	}

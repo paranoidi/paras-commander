@@ -127,12 +127,12 @@ func helpRowContent(line string, ranges []search.Range, width int, matchStyle tc
 	case width == 1:
 		disp = orig[:1]
 	default:
-		disp = append(append([]rune{}, orig[:width-1]...), '~')
+		disp = append(append([]rune{}, orig[:width-1]...), primitive.Ellipsis)
 	}
 	spans := make([]primitive.Span, 0, len(ranges))
 	truncated := len(orig) > width
 	for i := range disp {
-		if truncated && i == len(disp)-1 && disp[i] == '~' {
+		if truncated && i == len(disp)-1 && disp[i] == primitive.Ellipsis {
 			continue
 		}
 		if helpRangeContains(ranges, i) {

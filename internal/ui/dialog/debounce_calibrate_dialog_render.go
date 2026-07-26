@@ -69,7 +69,7 @@ func drawDebounceCalibrateMeasuringBody(screen tcell.Screen, rect draw.Rect, tex
 	collected := len(state.Samples)
 	line := "Hold a letter or arrow key."
 	if state.MeasureStep == MeasureCollecting {
-		line = "Keep holding…"
+		line = "Keep holding" + string(primitive.Ellipsis)
 	}
 	primitive.Text(screen, textX, y, textW, line, styles.DialogText.Background(dbg))
 	y += 2

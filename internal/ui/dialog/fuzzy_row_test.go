@@ -5,14 +5,18 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
 )
 
 func TestFuzzyPathRowContentUsesFitPathForWidth(t *testing.T) {
 	line := "very/long/parent/directory/important_file.go"
 	text, _ := fuzzyPathRowContent(line, nil, 28, tcell.StyleDefault)
-	if strings.HasSuffix(text, "~") {
+	if strings.ContainsRune(text, '~') {
 		t.Fatalf("display %q should not use tilde truncation", text)
+	}
+	if !strings.ContainsRune(text, primitive.Ellipsis) {
+		t.Fatalf("display %q should use Ellipsis when shortening", text)
 	}
 	if !strings.Contains(text, "important_file.go") {
 		t.Fatalf("display %q should preserve basename", text)

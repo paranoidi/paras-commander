@@ -3,6 +3,8 @@ package textutil
 import (
 	"errors"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 func TestFirstLine(t *testing.T) {
@@ -32,7 +34,8 @@ func TestTruncateBannerRunes(t *testing.T) {
 	}
 	long := "abcdefghijklmnopqrstuvwxyz"
 	got := TruncateBannerRunes(long, 10)
-	if got != "abcdefghij…" {
-		t.Fatalf("got %q", got)
+	want := "abcdefghij" + string(primitive.Ellipsis)
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
 	}
 }

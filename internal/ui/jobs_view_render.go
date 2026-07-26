@@ -536,9 +536,9 @@ func truncateRunes(s string, max int) string {
 		return s
 	}
 	if max <= 1 {
-		return "…"
+		return string(primitive.Ellipsis)
 	}
-	return string(r[:max-1]) + "…"
+	return string(r[:max-1]) + string(primitive.Ellipsis)
 }
 
 func truncateMiddle(s string, max int) string {
@@ -548,5 +548,5 @@ func truncateMiddle(s string, max int) string {
 	}
 	left := max/2 - 1
 	right := max - left - 1
-	return string(r[:left]) + "…" + string(r[len(r)-right:])
+	return string(r[:left]) + string(primitive.Ellipsis) + string(r[len(r)-right:])
 }

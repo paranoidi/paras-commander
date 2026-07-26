@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"time"
+
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 // EstimateJobRemainingSecs returns estimated seconds until the job completes, or -1 if unknown.
@@ -121,7 +123,7 @@ func ComputeQueueETAs(jobs []*Job, now time.Time) map[string]string {
 			continue
 		}
 		if j.Status == StatusRunning && !j.StartedAt.IsZero() && now.Sub(j.StartedAt) < time.Second {
-			out[j.ID] = "…"
+			out[j.ID] = string(primitive.Ellipsis)
 			continue
 		}
 		total := offsetSecs + remain

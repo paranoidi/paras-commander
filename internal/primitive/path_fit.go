@@ -6,8 +6,6 @@ import (
 	"unicode/utf8"
 )
 
-const ellipsisRune = '…'
-
 // FitPathForWidth formats path for display within maxRunes terminal cells.
 // The basename (final path segment) is kept intact when possible; earlier
 // directories are shortened progressively (full name → first rune + ellipsis →
@@ -130,13 +128,13 @@ func nextShorterSegmentForm(seg string) (string, bool) {
 	if n <= 1 {
 		return "", false
 	}
-	if n == 2 && rr[1] == ellipsisRune {
+	if n == 2 && rr[1] == Ellipsis {
 		return string(rr[0]), true
 	}
 	if n == 2 {
 		return string(rr[0]), true
 	}
-	return string(rr[0]) + string(ellipsisRune), true
+	return string(rr[0]) + string(Ellipsis), true
 }
 
 func truncateMiddleEllipsis(value string, width int) string {
@@ -152,5 +150,5 @@ func truncateMiddleEllipsis(value string, width int) string {
 	}
 	prefixLen := (width - 1) / 2
 	suffixLen := width - prefixLen - 1
-	return string(runes[:prefixLen]) + string(ellipsisRune) + string(runes[len(runes)-suffixLen:])
+	return string(runes[:prefixLen]) + string(Ellipsis) + string(runes[len(runes)-suffixLen:])
 }

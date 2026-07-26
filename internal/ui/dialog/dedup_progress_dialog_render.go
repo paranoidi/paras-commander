@@ -55,14 +55,14 @@ func DrawDedupProgressDialog(
 
 	switch snap.Phase {
 	case comparepkg.DedupWalking:
-		status := "Walking directories…" + dedupWalkFilesSuffix(snap.Walked)
+		status := "Walking directories" + string(primitive.Ellipsis) + dedupWalkFilesSuffix(snap.Walked)
 		primitive.Text(screen, textX, y, textW, primitive.FitPathForWidth(status, textW), textStyle)
 	case comparepkg.DedupAwaitConfirm:
 		primitive.Text(screen, textX, y, textW, formatDedupByteSize(snap.HashBytesTotal)+" to hash. Continue?", textStyle)
 	case comparepkg.DedupHashing:
 		label := snap.Current
 		if label == "" {
-			label = "Hashing files…"
+			label = "Hashing files" + string(primitive.Ellipsis)
 		}
 		drawDedupBar(screen, textX, y, textW, dedupFrac(snap.HashedBytes, snap.HashBytesTotal), label, styles)
 		y++
@@ -74,7 +74,7 @@ func DrawDedupProgressDialog(
 		y++
 		drawDedupHashCountRow(screen, rect, y, snap.Hashed, snap.HashTotal, textStyle)
 	default:
-		primitive.Text(screen, textX, y, textW, "Scanning…", textStyle)
+		primitive.Text(screen, textX, y, textW, "Scanning"+string(primitive.Ellipsis), textStyle)
 	}
 
 	buttonY := rect.Y + rect.Height - 2

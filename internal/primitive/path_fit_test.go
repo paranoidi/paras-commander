@@ -37,7 +37,7 @@ func TestFitPathForWidthBasenameOnlyLongerThanMax(t *testing.T) {
 	if utf8.RuneCountInString(got) != 12 {
 		t.Fatalf("want length 12, got %d (%q)", utf8.RuneCountInString(got), got)
 	}
-	if !strings.ContainsRune(got, ellipsisRune) {
+	if !strings.ContainsRune(got, Ellipsis) {
 		t.Fatalf("expected middle ellipsis: %q", got)
 	}
 }
