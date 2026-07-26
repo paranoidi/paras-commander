@@ -5,10 +5,40 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
+// menuBarStripGroupOrder is the fixed display order for menu-bar job status groups.
+var menuBarStripGroupOrder = []string{
+	string(jobs.StatusScanning),
+	string(jobs.StatusCompleted),
+	string(jobs.StatusFailed),
+	string(jobs.StatusQueued),
+	string(jobs.StatusWaitingDecision),
+	string(jobs.StatusPaused),
+	string(jobs.StatusRunning),
+}
+
+// menuBarJobGroups folds per-job statuses into ordered (status, count) groups, dropping
+// canceled jobs entirely and hiding zero-count groups.
+func menuBarJobGroups(statuses []string) []ui.MenuBarJobGroup {
+	counts := make(map[string]int, len(statuses))
+	for _, st := range statuses {
+		if st == string(jobs.StatusCanceled) {
+			continue
+		}
+		counts[st]++
+	}
+	groups := make([]ui.MenuBarJobGroup, 0, len(menuBarStripGroupOrder))
+	for _, st := range menuBarStripGroupOrder {
+		if c := counts[st]; c > 0 {
+			groups = append(groups, ui.MenuBarJobGroup{Status: st, Count: c})
+		}
+	}
+	return groups
+}
+
 // MenuBarStripSnapshot builds menu-bar job progress data from current job state.
 func (h *Handler) MenuBarStripSnapshot() ui.MenuBarJobsStrip {
 	var strip ui.MenuBarJobsStrip
-	strip.QueueStatuses = h.state.MenuBarStripStatuses()
+	strip.Groups = menuBarJobGroups(h.state.MenuBarStripStatuses())
 	all := h.state.AllJobs()
 	var prog *jobs.Job
 	for _, j := range all {

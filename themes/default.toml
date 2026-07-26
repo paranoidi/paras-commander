@@ -36,15 +36,14 @@ accent = { fg = "magenta", bold = true }
 alert = { fg = "bright_red", bold = true }
 selected = { fg = "black", bg = "cyan", bold = true }
 
-[menu.job]                   # menu-bar job queue cells
-canceled = { fg = "red" }
+[menu.job]                   # menu-bar job status groups
 completed = { fg = "green" }
-decision = { fg = "bright_blue" }
-failed = { fg = "bright_red" }
+decision = { fg = "cyan" }
+failed = { fg = "red" }
 paused = { fg = "yellow" }
-queued = { fg = "yellow" }
-running = { fg = "green" }
-scanning = { fg = "bright_cyan" }
+queued = { fg = "bright_blue" }
+running = { fg = "white" }
+scanning = { fg = "magenta" }
 
 [menu.progress]              # menu-bar aggregate progress
 done = { fg = "green" }
@@ -304,14 +303,13 @@ done = "─"
 remaining = "-"
 
 [symbols.menu.job]
-scanning = "◌"
-queued = "○"
-running = "◎"
-paused = "●"
-canceled = "●"
-failed = "●"
-decision = "●"
-completed = "●"
+scanning = "\U000f02ca"
+completed = ""
+failed = ""
+decision = ""
+paused = ""
+running = ""
+queued = ""
 
 [symbols.selections]
 multi_location = "\uef81"

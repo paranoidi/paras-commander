@@ -163,7 +163,6 @@ type Theme struct {
 	MenuJobQueued                    tcell.Style
 	MenuJobRunning                   tcell.Style
 	MenuJobPaused                    tcell.Style
-	MenuJobCanceled                  tcell.Style
 	MenuJobFailed                    tcell.Style
 	MenuJobDecision                  tcell.Style
 	MenuJobCompleted                 tcell.Style
@@ -517,7 +516,6 @@ const (
 	SymbolKeyMenuJobQueued         = "menu.job.queued"
 	SymbolKeyMenuJobRunning        = "menu.job.running"
 	SymbolKeyMenuJobPaused         = "menu.job.paused"
-	SymbolKeyMenuJobCanceled       = "menu.job.canceled"
 	SymbolKeyMenuJobFailed         = "menu.job.failed"
 	SymbolKeyMenuJobDecision       = "menu.job.decision"
 	SymbolKeyMenuJobCompleted      = "menu.job.completed"
@@ -726,21 +724,19 @@ func (t Theme) SymbolMenuJob(status string) rune {
 	}
 	switch status {
 	case "scanning":
-		return '\u25cc'
+		return '\U000f02ca'
 	case "queued":
-		return '\u25cb'
+		return '\uf022'
 	case "running":
-		return '\u25cf'
+		return '\uf01d'
 	case "paused":
-		return '\u25d8'
-	case "canceled":
-		return '\u00d7'
+		return '\uf28b'
 	case "failed":
-		return '!'
+		return '\uf071'
 	case "decision":
-		return '?'
+		return '\uf059'
 	case "completed":
-		return '\u2713'
+		return '\uf05d'
 	default:
 		return '\u00b7'
 	}
@@ -757,8 +753,6 @@ func (t Theme) MenuJobStyle(status string) tcell.Style {
 		return t.MenuJobRunning
 	case "paused":
 		return t.MenuJobPaused
-	case "canceled":
-		return t.MenuJobCanceled
 	case "failed":
 		return t.MenuJobFailed
 	case "decision":
@@ -938,7 +932,6 @@ var requiredStyleKeys = []string{
 	"menu.job.queued",
 	"menu.job.running",
 	"menu.job.paused",
-	"menu.job.canceled",
 	"menu.job.failed",
 	"menu.job.decision",
 	"menu.job.completed",
@@ -1362,7 +1355,6 @@ func parse(data []byte) (Theme, error) {
 		MenuJobQueued:                    styles["menu.job.queued"],
 		MenuJobRunning:                   styles["menu.job.running"],
 		MenuJobPaused:                    styles["menu.job.paused"],
-		MenuJobCanceled:                  styles["menu.job.canceled"],
 		MenuJobFailed:                    styles["menu.job.failed"],
 		MenuJobDecision:                  styles["menu.job.decision"],
 		MenuJobCompleted:                 styles["menu.job.completed"],
