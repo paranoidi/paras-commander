@@ -74,18 +74,23 @@ func paintBrowserPanelsInScope(
 	painted := false
 	var cursorNameHintFallback CursorNameHintFallback
 	if inScope(PrimaryPanel) && layout.Primary.Width > 0 && !showLeftPreview {
+		primaryCtx := PanelContext{
+			PanelID: PrimaryPanel, FileListActive: primaryFileListFocus,
+			CursorRowActive: primaryFileListFocus && !model.QuickAction.Open, ChromeBlocked: primaryChromeBlocked,
+			ActivePanel: model.ActivePanel, OtherPanelPath: primaryOtherPanelPath,
+			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
+			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: primarySelectionsBottomHint,
+			ShowSelectionSizeOnBottom: primarySelectionSizeOnFileBottom,
+			CursorNameHintFallbackOut: cursorNameHintFallbackOut(primaryFileListFocus, &cursorNameHintFallback),
+			CursorNameHintPinnedOut:   model.CursorNameHintPinOutPrimary,
+		}
+		if titlePath, endLabel, ok := model.quickViewDirOverlayTitleChrome(PrimaryPanel, model.Primary.PathString()); ok {
+			primaryCtx.TitlePath = titlePath
+			primaryCtx.TitleEndLabel = endLabel
+		}
 		drawPanel(screen, primaryFile, model.PanelForFileListRender(PrimaryPanel),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
-			PanelContext{
-				PanelID: PrimaryPanel, FileListActive: primaryFileListFocus,
-				CursorRowActive: primaryFileListFocus && !model.QuickAction.Open, ChromeBlocked: primaryChromeBlocked,
-				ActivePanel: model.ActivePanel, OtherPanelPath: primaryOtherPanelPath,
-				HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
-				SplitOrientation: model.SplitOrientation, SelectionsBottomHint: primarySelectionsBottomHint,
-				ShowSelectionSizeOnBottom: primarySelectionSizeOnFileBottom,
-				CursorNameHintFallbackOut: cursorNameHintFallbackOut(primaryFileListFocus, &cursorNameHintFallback),
-				CursorNameHintPinnedOut:   model.CursorNameHintPinOutPrimary,
-			},
+			primaryCtx,
 			PanelDisplayConfig{
 				ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
@@ -106,18 +111,23 @@ func paintBrowserPanelsInScope(
 		}
 	}
 	if inScope(SecondaryPanel) && layout.Secondary.Width > 0 && !showRightPreview {
+		secondaryCtx := PanelContext{
+			PanelID: SecondaryPanel, FileListActive: secondaryFileListFocus,
+			CursorRowActive: secondaryFileListFocus && !model.QuickAction.Open, ChromeBlocked: chromeBlocked,
+			ActivePanel: model.ActivePanel, OtherPanelPath: secondaryOtherPanelPath,
+			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
+			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: secondarySelectionsBottomHint,
+			ShowSelectionSizeOnBottom: secondarySelectionSizeOnFileBottom,
+			CursorNameHintFallbackOut: cursorNameHintFallbackOut(secondaryFileListFocus, &cursorNameHintFallback),
+			CursorNameHintPinnedOut:   model.CursorNameHintPinOutSecondary,
+		}
+		if titlePath, endLabel, ok := model.quickViewDirOverlayTitleChrome(SecondaryPanel, model.Secondary.PathString()); ok {
+			secondaryCtx.TitlePath = titlePath
+			secondaryCtx.TitleEndLabel = endLabel
+		}
 		drawPanel(screen, secondaryFile, model.PanelForFileListRender(SecondaryPanel),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
-			PanelContext{
-				PanelID: SecondaryPanel, FileListActive: secondaryFileListFocus,
-				CursorRowActive: secondaryFileListFocus && !model.QuickAction.Open, ChromeBlocked: chromeBlocked,
-				ActivePanel: model.ActivePanel, OtherPanelPath: secondaryOtherPanelPath,
-				HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
-				SplitOrientation: model.SplitOrientation, SelectionsBottomHint: secondarySelectionsBottomHint,
-				ShowSelectionSizeOnBottom: secondarySelectionSizeOnFileBottom,
-				CursorNameHintFallbackOut: cursorNameHintFallbackOut(secondaryFileListFocus, &cursorNameHintFallback),
-				CursorNameHintPinnedOut:   model.CursorNameHintPinOutSecondary,
-			},
+			secondaryCtx,
 			PanelDisplayConfig{
 				ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,

@@ -126,6 +126,10 @@ type PanelContext struct {
 	// overlay text (points at the live panel.State.CursorNameHintPinned in App.model, not a
 	// paint-time Model snapshot copy).
 	CursorNameHintPinnedOut *string
+	// TitlePath, when non-empty, is the left title path instead of state.PathString().
+	TitlePath string
+	// TitleEndLabel, when non-empty, replaces volume free-space on the title end (title style).
+	TitleEndLabel string
 }
 
 // PanelDisplayConfig carries feature-flag and data inputs to drawPanel.
@@ -208,11 +212,22 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		}
 		primitive.Text(screen, titleX, rect.Y, contentCols, "> "+state.Filter.Query, inputStyle)
 	} else {
-		volumeLabel := panelVolumeFreeSpaceTitle(state.VolumeSpaceOK, state.VolumeAvailBytes, state.VolumeTotalBytes)
+		titlePath := state.PathString()
+		if ctx.TitlePath != "" {
+			titlePath = ctx.TitlePath
+		}
+		endLabel := panelVolumeFreeSpaceTitle(state.VolumeSpaceOK, state.VolumeAvailBytes, state.VolumeTotalBytes)
+		endStyle := chrome.DiskUsageOverview
+		volumeDecorated := true
+		if ctx.TitleEndLabel != "" {
+			endLabel = ctx.TitleEndLabel
+			endStyle = titleStyle
+			volumeDecorated = false
+		}
 		paintPanelTopTitleRow(screen, titleX, innerRight, contentCols, rect.Y,
-			state.PathString(), display.UserHomeDir,
-			panelTitleStyles{Path: titleStyle, End: chrome.DiskUsageOverview, Border: borderStyle},
-			volumeLabel, true)
+			titlePath, display.UserHomeDir,
+			panelTitleStyles{Path: titleStyle, End: endStyle, Border: borderStyle},
+			endLabel, volumeDecorated)
 	}
 
 	visibleRows := PanelListRows(rect)
@@ -744,10 +759,16 @@ func paintPanelTopTitleRow(screen tcell.Screen, titleX, innerRight, contentCols,
 	panelPath, userHomeDir string, ts panelTitleStyles, endLabel string, volumeDecorated bool) {
 	pathSlotCols := contentCols
 	endRunes := utf8.RuneCountInString(endLabel)
-	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+3
+	// Plain end labels (filename / QV dir basename) leave one frame-dash before the corner;
+	// volume labels already include a trailer " ─".
+	endRightMargin := 0
+	if !volumeDecorated {
+		endRightMargin = 1
+	}
+	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+endRightMargin+3
 	endStartX := 0
 	if showEnd {
-		endStartX = innerRight - endRunes + 1
+		endStartX = innerRight - endRunes + 1 - endRightMargin
 		pathSlotCols = endStartX - titleX - gapBeforePanelTitleEnd
 		if pathSlotCols < 3 {
 			showEnd = false

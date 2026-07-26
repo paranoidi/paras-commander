@@ -380,8 +380,9 @@ func TestPaintQuickViewTitleRowGapIsBorderDash(t *testing.T) {
 	chrome := styles.PanelChrome(false, false)
 	titleX, innerRight, contentCols, y := quickViewTitleRowGeom(panelWidth)
 	endLabel := " README.md "
+	const endRightMargin = 1
 	endRunes := utf8.RuneCountInString(endLabel)
-	endStartCol := innerRight - endRunes + 1 - titleX
+	endStartCol := innerRight - endRunes + 1 - endRightMargin - titleX
 	gapStart := endStartCol - gapBeforePanelTitleEnd
 
 	paintQuickViewTitleRow(screen, titleX, innerRight, contentCols, y,
@@ -390,6 +391,11 @@ func TestPaintQuickViewTitleRowGapIsBorderDash(t *testing.T) {
 	gap := tcelltest.TextAt(screen, titleX+gapStart, y, gapBeforePanelTitleEnd)
 	if gap != strings.Repeat("─", gapBeforePanelTitleEnd) {
 		t.Fatalf("gap = %q, want %q", gap, strings.Repeat("─", gapBeforePanelTitleEnd))
+	}
+	// Trailing frame dash between end label and right border corner.
+	trail := tcelltest.TextAt(screen, innerRight, y, 1)
+	if trail != "─" {
+		t.Fatalf("trailing cell = %q, want ─", trail)
 	}
 }
 

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -362,6 +363,27 @@ func (m *Model) PanelForFileListRender(panelID int) panel.State {
 	}
 }
 
+// quickViewDirOverlayTitleChrome returns left path + right basename for the inactive-column
+// title while a quick-view directory overlay (or visual hold) is painted.
+func (m *Model) quickViewDirOverlayTitleChrome(panelID int, ownPath string) (titlePath, endLabel string, ok bool) {
+	if !m.QuickViewDisplayActive() {
+		return "", "", false
+	}
+	var ovPath string
+	switch {
+	case m.QuickViewDirOverlayActive && panelID == m.QuickViewDirOverlayPanelID:
+		ovPath = m.QuickViewDirOverlay.PathString()
+	case m.QuickViewDirOverlayVisualHold && panelID == m.inactivePanelID():
+		ovPath = m.QuickViewDirOverlayVisualHoldPanel.PathString()
+	default:
+		return "", "", false
+	}
+	if base := filepath.Base(ovPath); base != "" && base != "." {
+		endLabel = " " + base + " "
+	}
+	return ownPath, endLabel, true
+}
+
 // PanelsChromeBlocked reports when file/jobs panel chrome should use panel.blocked.*
 // styles because a menu or modal has taken focus. The quick-action list (F2 user menu)
 // is excluded: it floats over the panels without taking over navigation context, so the
@@ -538,19 +560,24 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 		drawFilePreviewPanel(screen, side.FileRect, model.FilePreviewDraw, styles, side.ChromeBlocked, pvFocused,
 			model.QuickViewDisplayActive(), false, false, ownState.PathString(), model.UserHomeDir, model.PanelScrollbar, -1, tcell.Style{})
 	} else if side.ColumnWidth > 0 {
+		panelCtx := PanelContext{
+			PanelID: side.PanelID, FileListActive: side.FileListFocus,
+			CursorRowActive: side.FileListFocus && !model.QuickAction.Open, ChromeBlocked: side.ChromeBlocked,
+			ActivePanel: model.ActivePanel, OtherPanelPath: side.OtherPanelPath,
+			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
+			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: side.SelectionsBottomHint,
+			ShowSelectionSizeOnBottom: side.SelectionSizeOnFileBottom,
+			IsTransferTarget:          side.IsTransferTarget,
+			CursorNameHintFallbackOut: cursorNameHintFallbackOut(side.FileListFocus, cursorNameHintFallback),
+			CursorNameHintPinnedOut:   side.CursorNameHintPinnedOut,
+		}
+		if titlePath, endLabel, ok := model.quickViewDirOverlayTitleChrome(side.PanelID, ownState.PathString()); ok {
+			panelCtx.TitlePath = titlePath
+			panelCtx.TitleEndLabel = endLabel
+		}
 		drawPanel(screen, side.FileRect, model.PanelForFileListRender(side.PanelID),
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
-			PanelContext{
-				PanelID: side.PanelID, FileListActive: side.FileListFocus,
-				CursorRowActive: side.FileListFocus && !model.QuickAction.Open, ChromeBlocked: side.ChromeBlocked,
-				ActivePanel: model.ActivePanel, OtherPanelPath: side.OtherPanelPath,
-				HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
-				SplitOrientation: model.SplitOrientation, SelectionsBottomHint: side.SelectionsBottomHint,
-				ShowSelectionSizeOnBottom: side.SelectionSizeOnFileBottom,
-				IsTransferTarget:          side.IsTransferTarget,
-				CursorNameHintFallbackOut: cursorNameHintFallbackOut(side.FileListFocus, cursorNameHintFallback),
-				CursorNameHintPinnedOut:   side.CursorNameHintPinnedOut,
-			},
+			panelCtx,
 			PanelDisplayConfig{
 				ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,

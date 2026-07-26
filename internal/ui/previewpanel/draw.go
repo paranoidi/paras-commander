@@ -388,12 +388,15 @@ func drawMessageContent(screen tcell.Screen, rect Rect, embedded bool, contentTo
 
 func paintQuickViewTitleRow(screen tcell.Screen, titleX, innerRight, contentCols, y int,
 	panelPath, userHomeDir string, pathStyle tcell.Style, endLabel string, endStyle, borderStyle tcell.Style) {
+	// Leave one frame-dash column between the end label and the right border (same as
+	// paintAuxPanelTopRow / plain panel title end labels).
+	const endRightMargin = 1
 	endRunes := utf8.RuneCountInString(endLabel)
-	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+3
+	showEnd := endLabel != "" && endRunes > 0 && contentCols >= endRunes+gapBeforePanelTitleEnd+endRightMargin+3
 	endStartX := 0
 	pathSlotCols := contentCols
 	if showEnd {
-		endStartX = innerRight - endRunes + 1
+		endStartX = innerRight - endRunes + 1 - endRightMargin
 		pathSlotCols = endStartX - titleX - gapBeforePanelTitleEnd
 		if pathSlotCols < 3 {
 			showEnd = false

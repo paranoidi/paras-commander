@@ -1563,6 +1563,46 @@ func TestRenderQuickViewUsesPreviewChromeWhenDrawClosed(t *testing.T) {
 	}
 }
 
+func TestRenderQuickViewDirOverlayTitleShowsRealPathAndDirname(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const width, height = 80, 12
+	screen.SetSize(width, height)
+
+	inactivePath := "/home/user/projects"
+	previewDir := filepath.Join(inactivePath, "garden")
+	model := Model{
+		Primary:                    panel.State{Path: pathloc.MustParse("/tmp")},
+		Secondary:                  panel.State{Path: pathloc.MustParse(inactivePath)},
+		ActivePanel:                PrimaryPanel,
+		QuickViewEnabled:           true,
+		QuickViewPanel:             PrimaryPanel,
+		QuickViewDirOverlayActive:  true,
+		QuickViewDirOverlayPanelID: SecondaryPanel,
+		QuickViewDirOverlay:        panel.State{Path: pathloc.MustParse(previewDir)},
+		UserHomeDir:                "/home/user",
+	}
+	Render(screen, model, theme.Default())
+
+	primaryWidth := width / 2
+	topRow := tcelltest.TextAt(screen, primaryWidth, 1, width-primaryWidth)
+	if !strings.Contains(topRow, "projects") {
+		t.Fatalf("inactive title row = %q, want real inactive path segment", topRow)
+	}
+	if !strings.Contains(topRow, "garden") {
+		t.Fatalf("inactive title row = %q, want previewed directory basename", topRow)
+	}
+	if strings.Contains(topRow, previewDir) {
+		t.Fatalf("inactive title row = %q, want basename only not full preview path", topRow)
+	}
+	if strings.Contains(topRow, " / ") && strings.Contains(topRow, "%") {
+		t.Fatalf("inactive title row = %q, want no free-space volume stats", topRow)
+	}
+}
+
 func TestRenderHideInactivePanelFullWidthAndOtherPathIndicator(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
