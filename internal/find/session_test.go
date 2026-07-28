@@ -42,7 +42,7 @@ func TestSessionIndexesTree(t *testing.T) {
 	mustWrite(t, filepath.Join(root, "pkg", "a.go"), "x")
 	mustWrite(t, filepath.Join(root, "README"), "y")
 
-	entries := collectSession(t, root, Options{ShowHidden: false})
+	entries := collectSession(t, root, Options{IncludeHidden: false})
 	if len(entries) != 3 {
 		t.Fatalf("len(entries) = %d, want 3 (pkg, pkg/a.go, README)", len(entries))
 	}
@@ -62,11 +62,47 @@ func TestSessionSkipsHidden(t *testing.T) {
 	root := t.TempDir()
 	mustWrite(t, filepath.Join(root, ".hidden"), "x")
 	mustWrite(t, filepath.Join(root, "visible"), "y")
+	mustMkdir(t, filepath.Join(root, ".dotdir"))
+	mustWrite(t, filepath.Join(root, ".dotdir", "inner.txt"), "z")
 
-	entries := collectSession(t, root, Options{})
+	s := Start(context.Background(), root, Options{})
+	defer s.Close()
+	var entries []Entry
+	for batch := range s.Results() {
+		entries = append(entries, batch...)
+	}
+	<-s.Done()
+
 	for _, e := range entries {
-		if filepath.Base(e.Path) == ".hidden" {
+		if strings.HasPrefix(filepath.Base(e.Path), ".") {
 			t.Fatalf("unexpected hidden entry %q", e.Path)
+		}
+	}
+	dirs := s.SkippedHiddenDirs()
+	if len(dirs) != 1 || filepath.Base(dirs[0]) != ".dotdir" {
+		t.Fatalf("SkippedHiddenDirs = %v, want [.dotdir]", dirs)
+	}
+	files := s.SkippedHiddenFiles()
+	if len(files) != 1 || filepath.Base(files[0].Path) != ".hidden" {
+		t.Fatalf("SkippedHiddenFiles = %v, want [.hidden]", files)
+	}
+}
+
+func TestSessionIncludeHiddenIndexesDots(t *testing.T) {
+	root := t.TempDir()
+	mustMkdir(t, filepath.Join(root, ".git"))
+	mustWrite(t, filepath.Join(root, ".git", "config"), "x")
+	mustWrite(t, filepath.Join(root, ".gitignore"), "y")
+	mustWrite(t, filepath.Join(root, "readme"), "z")
+
+	entries := collectSession(t, root, Options{IncludeHidden: true})
+	byRel := map[string]bool{}
+	for _, e := range entries {
+		byRel[e.RelLine] = true
+	}
+	for _, want := range []string{".git", ".git/config", ".gitignore", "readme"} {
+		if !byRel[want] {
+			t.Fatalf("missing %q in %+v", want, byRel)
 		}
 	}
 }

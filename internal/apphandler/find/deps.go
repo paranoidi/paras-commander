@@ -72,6 +72,20 @@ type Handler struct {
 	// config.DefaultFindIndexingCountThrottleMS while a walk is running. Main-thread only.
 	lastIndexCountRenderAt time.Time
 
+	// Deferred hidden expansion (main-thread only). Discovery walks record skipped dot
+	// dirs/files here; IncludeHidden splices/walks them without a full re-index.
+	pendingHiddenDirs    []string
+	pendingHiddenDirSet  map[string]struct{}
+	pendingHiddenFiles   []findpkg.Entry
+	pendingHiddenFileSet map[string]struct{}
+	expandedHiddenRoots  map[string]struct{}
+	hiddenFilesSpliced   bool
+
+	// harvestDirs/Files are filled by walk goroutines under sessionMu and drained on the
+	// main thread in PollUpdates (so empty WakePayload polls in tests still receive them).
+	harvestDirs  []string
+	harvestFiles []findpkg.Entry
+
 	// rankWorkCh carries the latest pending rank input to the single rank worker goroutine.
 	// Capacity 1: the worker drains it; senders drain-then-replace to discard stale inputs.
 	rankWorkCh chan rankInput

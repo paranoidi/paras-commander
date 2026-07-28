@@ -131,6 +131,17 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	if st.Focus != 0 {
 		t.Fatalf("focus = %d want 0 after Alt+L", st.Focus)
 	}
+
+	if st.IncludeHidden {
+		t.Fatal("expected include-hidden default off")
+	}
+	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyRune, 'i', tcell.ModAlt))
+	if !st.IncludeHidden {
+		t.Fatal("Alt+I should toggle include-hidden while typing filter")
+	}
+	if st.Focus != 0 {
+		t.Fatalf("focus = %d want 0 after Alt+I", st.Focus)
+	}
 }
 
 func TestFindDialogHandleKeyAltDDoesNotClearDiskUsage(t *testing.T) {
@@ -933,6 +944,94 @@ func TestFindDialogStayOnVolumeRestartClearsEntries(t *testing.T) {
 	if len(app.model.FindDialog.Entries) == 0 {
 		t.Fatal("expected entries after restart")
 	}
+}
+
+func TestFindDialogIncludeHiddenExpandsWithoutFullRescan(t *testing.T) {
+	root := t.TempDir()
+	visible := filepath.Join(root, "visible.txt")
+	if err := os.WriteFile(visible, []byte("v"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitDir := filepath.Join(root, ".git")
+	if err := os.Mkdir(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gitConfig := filepath.Join(gitDir, "config")
+	if err := os.WriteFile(gitConfig, []byte("g"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dotIgnore := filepath.Join(root, ".gitignore")
+	if err := os.WriteFile(dotIgnore, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
+	waitFindIndexDone(t, app)
+	st := &app.model.FindDialog
+	if st.IncludeHidden {
+		t.Fatal("IncludeHidden default want false")
+	}
+	before := len(st.Entries)
+	if before == 0 {
+		t.Fatal("expected visible entries before include-hidden")
+	}
+	for _, e := range st.Entries {
+		if strings.HasPrefix(filepath.Base(e.AbsPath(st.RootPath)), ".") {
+			t.Fatalf("unexpected hidden entry before toggle: %q", e.RelLine)
+		}
+	}
+
+	app.findCtrl.ToggleIncludeHidden()
+	waitFindIndexDone(t, app)
+	if !st.IncludeHidden {
+		t.Fatal("IncludeHidden want true after toggle")
+	}
+	if len(st.Entries) <= before {
+		t.Fatalf("entries after include-hidden = %d, want > %d", len(st.Entries), before)
+	}
+	byRel := map[string]bool{}
+	for _, e := range st.Entries {
+		byRel[e.RelLine] = true
+	}
+	for _, want := range []string{"visible.txt", ".git", ".git/config", ".gitignore"} {
+		if !byRel[want] {
+			t.Fatalf("missing %q after include-hidden; have %v", want, byRel)
+		}
+	}
+
+	app.findCtrl.ToggleIncludeHidden()
+	waitFindRankDone(t, app)
+	if st.IncludeHidden {
+		t.Fatal("IncludeHidden want false after second toggle")
+	}
+	for _, e := range st.Entries {
+		if strings.HasPrefix(filepath.Base(e.AbsPath(st.RootPath)), ".") || strings.Contains(e.RelLine, ".git/") {
+			t.Fatalf("hidden entry still present after disable: %q", e.RelLine)
+		}
+	}
+	if !byRelHas(st, "visible.txt") {
+		t.Fatal("visible.txt should remain after disabling include-hidden")
+	}
+}
+
+func byRelHas(st *dialog.FindDialogState, rel string) bool {
+	for _, e := range st.Entries {
+		if e.RelLine == rel {
+			return true
+		}
+	}
+	return false
 }
 
 func TestFindDialogMarkDirRemovesDescendantMarks(t *testing.T) {

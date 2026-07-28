@@ -11,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	findpkg "github.com/paranoidi/paras-commander/internal/find"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -55,7 +56,7 @@ func (h *Handler) OpenDialog(panelID int) {
 		Open:                       true,
 		PanelID:                    panelID,
 		RootPath:                   root,
-		ShowHidden:                 p.ShowHidden,
+		IncludeHidden:              false,
 		StayOnCurrentVolume:        true,
 		ListingDevice:              p.ListingDevice,
 		ListingDeviceValid:         p.ListingDeviceValid,
@@ -65,12 +66,14 @@ func (h *Handler) OpenDialog(panelID int) {
 		Focus:                      0,
 		Indexing:                   true,
 	}
+	h.clearHiddenPending()
 	h.startFindIndexer()
 }
 
 func (h *Handler) CloseDialog() {
 	h.stopFindIndexer()
 	h.cancelPendingRank()
+	h.clearHiddenPending()
 	h.model.FindDialog = dialog.FindDialogState{}
 }
 
@@ -116,6 +119,7 @@ func (h *Handler) startFindIndexer() {
 func (h *Handler) restartFindIndexer() {
 	h.stopFindIndexer()
 	h.cancelPendingRank()
+	h.clearHiddenPending()
 	st := &h.model.FindDialog
 	if !st.Open || st.RootPath == "" {
 		return
@@ -123,6 +127,7 @@ func (h *Handler) restartFindIndexer() {
 	st.IndexErr = ""
 	st.Entries = nil
 	st.PathIsDir = nil
+	st.PathSize = nil
 	st.IndexedCount = 0
 	st.Ranked = nil
 	st.MatchRanges = nil
@@ -250,7 +255,7 @@ func (h *Handler) startFindWalk(root string, skipIndexedSelectionSubtrees bool) 
 	}
 
 	sess := findpkg.Start(context.Background(), root, findpkg.Options{
-		ShowHidden:    st.ShowHidden,
+		IncludeHidden: st.IncludeHidden,
 		Gitignore:     h.host.GitignoreCache(),
 		ShouldSkipDir: shouldSkip,
 	})
@@ -289,15 +294,29 @@ func (h *Handler) readFindSession(sess *findpkg.Session, ch chan []findpkg.Entry
 	}
 	<-sess.Done()
 	err := sess.Err()
+	skippedDirs := sess.SkippedHiddenDirs()
+	skippedFiles := sess.SkippedHiddenFiles()
 	h.sessionMu.Lock()
+	active := h.batchCh == ch
 	if h.walks != nil {
 		delete(h.walks, root)
 	}
-	if h.completedRoots == nil {
-		h.completedRoots = make(map[string]struct{})
+	if active {
+		if h.completedRoots == nil {
+			h.completedRoots = make(map[string]struct{})
+		}
+		h.completedRoots[root] = struct{}{}
+		if len(skippedDirs) > 0 {
+			h.harvestDirs = append(h.harvestDirs, skippedDirs...)
+		}
+		if len(skippedFiles) > 0 {
+			h.harvestFiles = append(h.harvestFiles, skippedFiles...)
+		}
 	}
-	h.completedRoots[root] = struct{}{}
 	h.sessionMu.Unlock()
+	if !active {
+		return
+	}
 	payload := WakePayload{Finished: true}
 	if err != nil {
 		payload.WalkErr = err.Error()
@@ -551,15 +570,28 @@ drained:
 			needRender = true
 		}
 	}
+	st := &h.model.FindDialog
+	h.sessionMu.Lock()
+	harvestDirs := h.harvestDirs
+	harvestFiles := h.harvestFiles
+	h.harvestDirs = nil
+	h.harvestFiles = nil
+	h.sessionMu.Unlock()
+	if st.Open && (len(harvestDirs) > 0 || len(harvestFiles) > 0) {
+		h.mergeSkippedHidden(harvestDirs, harvestFiles)
+		if st.IncludeHidden {
+			h.expandPendingHidden()
+			needSync = true
+			needRender = true
+		}
+	}
 	if needSync {
 		throttle := 0
-		st := &h.model.FindDialog
 		if st.Open && st.Indexing {
 			throttle = config.DefaultFindIndexingRankThrottleMS
 		}
 		h.scheduleFindRank(throttle)
 	}
-	st := &h.model.FindDialog
 	if st.Open && payload.WalkErr != "" {
 		st.IndexErr = payload.WalkErr
 		needRender = true
@@ -1289,6 +1321,175 @@ func (h *Handler) ToggleStayOnVolume() {
 	h.restartFindIndexer()
 }
 
+// ToggleIncludeHidden toggles include-hidden. Enabling expands pending skipped dots
+// without a full re-index; disabling strips those entries.
+func (h *Handler) ToggleIncludeHidden() {
+	st := &h.model.FindDialog
+	st.IncludeHidden = !st.IncludeHidden
+	if st.IncludeHidden {
+		h.expandPendingHidden()
+	} else {
+		h.stripExpandedHidden()
+	}
+	h.clearFindNavIdle()
+	h.syncFindDialogRanks()
+}
+
+func (h *Handler) clearHiddenPending() {
+	h.pendingHiddenDirs = nil
+	h.pendingHiddenDirSet = nil
+	h.pendingHiddenFiles = nil
+	h.pendingHiddenFileSet = nil
+	h.expandedHiddenRoots = nil
+	h.hiddenFilesSpliced = false
+	h.sessionMu.Lock()
+	h.harvestDirs = nil
+	h.harvestFiles = nil
+	h.sessionMu.Unlock()
+}
+
+func (h *Handler) mergeSkippedHidden(dirs []string, files []findpkg.Entry) {
+	if h.pendingHiddenDirSet == nil {
+		h.pendingHiddenDirSet = make(map[string]struct{})
+	}
+	for _, d := range dirs {
+		d = filepath.Clean(d)
+		if d == "" {
+			continue
+		}
+		if _, ok := h.pendingHiddenDirSet[d]; ok {
+			continue
+		}
+		h.pendingHiddenDirSet[d] = struct{}{}
+		h.pendingHiddenDirs = append(h.pendingHiddenDirs, d)
+	}
+	if h.pendingHiddenFileSet == nil {
+		h.pendingHiddenFileSet = make(map[string]struct{})
+	}
+	for _, f := range files {
+		p := filepath.Clean(f.Path)
+		if p == "" {
+			continue
+		}
+		if _, ok := h.pendingHiddenFileSet[p]; ok {
+			continue
+		}
+		h.pendingHiddenFileSet[p] = struct{}{}
+		f.Path = p
+		h.pendingHiddenFiles = append(h.pendingHiddenFiles, f)
+	}
+}
+
+func (h *Handler) expandPendingHidden() {
+	st := &h.model.FindDialog
+	if !st.Open || !st.IncludeHidden {
+		return
+	}
+	if !h.hiddenFilesSpliced && len(h.pendingHiddenFiles) > 0 {
+		h.appendFindBatch(st, h.pendingHiddenFiles)
+		h.hiddenFilesSpliced = true
+	}
+	if h.expandedHiddenRoots == nil {
+		h.expandedHiddenRoots = make(map[string]struct{})
+	}
+	for _, dir := range h.pendingHiddenDirs {
+		if _, ok := h.expandedHiddenRoots[dir]; ok {
+			continue
+		}
+		h.appendFindBatch(st, []findpkg.Entry{{
+			Path:  dir,
+			IsDir: true,
+			Type:  localfs.EntryDirectory,
+		}})
+		h.expandedHiddenRoots[dir] = struct{}{}
+		// Allow re-walk after a prior strip cleared completedRoots for this path.
+		h.sessionMu.Lock()
+		if h.completedRoots != nil {
+			delete(h.completedRoots, dir)
+		}
+		h.sessionMu.Unlock()
+		h.startFindWalk(dir, false)
+	}
+}
+
+func (h *Handler) stripExpandedHidden() {
+	st := &h.model.FindDialog
+	if !st.Open {
+		return
+	}
+	h.stopExpandedHiddenWalks()
+
+	dropFiles := h.pendingHiddenFileSet
+	dropDirs := h.pendingHiddenDirs
+	if len(dropFiles) == 0 && len(dropDirs) == 0 {
+		h.expandedHiddenRoots = nil
+		h.hiddenFilesSpliced = false
+		return
+	}
+
+	filtered := st.Entries[:0]
+	for _, e := range st.Entries {
+		abs := filepath.Clean(e.AbsPath(st.RootPath))
+		if _, ok := dropFiles[abs]; ok {
+			continue
+		}
+		if findPathUnderAny(dropDirs, abs) {
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+	st.Entries = filtered
+	st.IndexedCount = len(st.Entries)
+	rebuildFindPathIndex(st)
+
+	h.sessionMu.Lock()
+	if h.indexedPaths != nil {
+		h.indexedPaths = make(map[string]struct{}, len(st.Entries))
+		for _, e := range st.Entries {
+			h.indexedPaths[filepath.Clean(e.AbsPath(st.RootPath))] = struct{}{}
+		}
+	}
+	h.sessionMu.Unlock()
+
+	h.expandedHiddenRoots = nil
+	h.hiddenFilesSpliced = false
+}
+
+func (h *Handler) stopExpandedHiddenWalks() {
+	if len(h.expandedHiddenRoots) == 0 {
+		return
+	}
+	h.sessionMu.Lock()
+	var toClose []*walk
+	for root, w := range h.walks {
+		if _, ok := h.expandedHiddenRoots[root]; !ok {
+			continue
+		}
+		toClose = append(toClose, w)
+		delete(h.walks, root)
+		if h.completedRoots != nil {
+			delete(h.completedRoots, root)
+		}
+	}
+	h.sessionMu.Unlock()
+	for _, w := range toClose {
+		if w != nil && w.sess != nil {
+			w.sess.Close()
+		}
+	}
+}
+
+func findPathUnderAny(roots []string, abs string) bool {
+	abs = filepath.Clean(abs)
+	for _, root := range roots {
+		root = filepath.Clean(root)
+		if abs == root || panel.IsStrictPathDescendant(root, abs) {
+			return true
+		}
+	}
+	return false
+}
+
 // ToggleOnlyDirectories toggles the only-directories result filter.
 func (h *Handler) ToggleOnlyDirectories() {
 	st := &h.model.FindDialog
@@ -1319,16 +1520,19 @@ type findToggleField int
 const (
 	findToggleNone findToggleField = iota
 	findToggleStayOnVolume
+	findToggleIncludeHidden
 	findToggleOnlyDirs
 	findToggleOnlyFiles
 	findToggleSelections
 )
 
-// findToggleFieldForRune maps a mnemonic letter (v/d/l/s) to its toggle field.
+// findToggleFieldForRune maps a mnemonic letter (v/i/d/l/s) to its toggle field.
 func findToggleFieldForRune(r rune) findToggleField {
 	switch r {
 	case 'v', 'V':
 		return findToggleStayOnVolume
+	case 'i', 'I':
+		return findToggleIncludeHidden
 	case 'd', 'D':
 		return findToggleOnlyDirs
 	case 'l', 'L':
@@ -1346,6 +1550,8 @@ func (h *Handler) findToggleFieldForFocus(focus int) findToggleField {
 	switch focus {
 	case st.FindDialogStayOnVolumeFocus():
 		return findToggleStayOnVolume
+	case st.FindDialogIncludeHiddenFocus():
+		return findToggleIncludeHidden
 	case st.FindDialogOnlyDirsFocus():
 		return findToggleOnlyDirs
 	case st.FindDialogOnlyFilesFocus():
@@ -1362,6 +1568,8 @@ func (h *Handler) applyFindToggle(field findToggleField) bool {
 	switch field {
 	case findToggleStayOnVolume:
 		h.ToggleStayOnVolume()
+	case findToggleIncludeHidden:
+		h.ToggleIncludeHidden()
 	case findToggleOnlyDirs:
 		h.ToggleOnlyDirectories()
 	case findToggleOnlyFiles:

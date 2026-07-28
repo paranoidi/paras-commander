@@ -91,13 +91,14 @@ func (e FindEntry) AbsPath(rootPath string) string {
 }
 
 // FindDialogState is a fuzzy picker over recursively indexed paths under a panel root.
-// Focus without selections checkbox: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=OK, 5=Cancel.
-// With selections checkbox: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=search-selections, 5=OK, 6=Cancel.
+// Focus without selections checkbox: 0=list+filter, 1=only-directories, 2=only-files, 3=stay-on-volume, 4=include-hidden, 5=OK, 6=Cancel.
+// With selections checkbox: same row-1 foci, then 5=search-selections, 6=OK, 7=Cancel.
+// Row 1 draws Only directories / Only files / Stay on current volume / Include hidden; selections (when shown) is row 2.
 type FindDialogState struct {
 	Open                bool
 	PanelID             int
 	RootPath            string
-	ShowHidden          bool
+	IncludeHidden       bool
 	StayOnCurrentVolume bool
 	// OnlyDirectories hides non-directory entries from the ranked result list (instant filter).
 	OnlyDirectories bool
@@ -163,10 +164,15 @@ func (s FindDialogState) FindDialogStayOnVolumeFocus() int {
 	return 3
 }
 
+// FindDialogIncludeHiddenFocus returns the focus index for the include-hidden checkbox.
+func (s FindDialogState) FindDialogIncludeHiddenFocus() int {
+	return 4
+}
+
 // FindDialogSelectionsFocus returns the focus index for search-only-selections, or -1 when hidden.
 func (s FindDialogState) FindDialogSelectionsFocus() int {
 	if s.FindDialogHasSelectionsCheckbox() {
-		return 4
+		return 5
 	}
 	return -1
 }
@@ -174,17 +180,17 @@ func (s FindDialogState) FindDialogSelectionsFocus() int {
 // FindDialogOKFocus returns the focus index for the OK button.
 func (s FindDialogState) FindDialogOKFocus() int {
 	if s.FindDialogHasSelectionsCheckbox() {
-		return 5
+		return 6
 	}
-	return 4
+	return 5
 }
 
 // FindDialogCancelFocus returns the focus index for the Cancel button.
 func (s FindDialogState) FindDialogCancelFocus() int {
 	if s.FindDialogHasSelectionsCheckbox() {
-		return 6
+		return 7
 	}
-	return 5
+	return 6
 }
 
 // FindDialogMaxFocus returns the highest focus index (Cancel).

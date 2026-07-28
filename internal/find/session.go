@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,7 +30,9 @@ type Entry struct {
 
 // Options configures a find session walk.
 type Options struct {
-	ShowHidden    bool
+	// IncludeHidden indexes dotfiles/dirs. When false, dot dirs/files are recorded via
+	// SkippedHiddenDirs/SkippedHiddenFiles instead of being indexed or descended into.
+	IncludeHidden bool
 	Gitignore     *gitignore.Cache             // nil disables .gitignore filtering
 	ShouldSkipDir diskusage.ShouldIgnoreFolder // skip descending into matching dirs (volume gate, etc.)
 }
@@ -43,6 +46,10 @@ type Session struct {
 
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
+
+	skippedMu    sync.Mutex
+	skippedDirs  []string
+	skippedFiles []Entry
 }
 
 // Start begins indexing root. The caller must call Close when finished.
@@ -68,6 +75,32 @@ func (s *Session) Done() <-chan struct{} { return s.done }
 
 // Err returns the walk error, if any, after Done is closed.
 func (s *Session) Err() error { return s.err }
+
+// SkippedHiddenDirs returns absolute paths of dot-directories skipped when IncludeHidden was false.
+// Safe to call after Done is closed.
+func (s *Session) SkippedHiddenDirs() []string {
+	s.skippedMu.Lock()
+	defer s.skippedMu.Unlock()
+	if len(s.skippedDirs) == 0 {
+		return nil
+	}
+	out := make([]string, len(s.skippedDirs))
+	copy(out, s.skippedDirs)
+	return out
+}
+
+// SkippedHiddenFiles returns buffered dot-file entries skipped when IncludeHidden was false.
+// Safe to call after Done is closed.
+func (s *Session) SkippedHiddenFiles() []Entry {
+	s.skippedMu.Lock()
+	defer s.skippedMu.Unlock()
+	if len(s.skippedFiles) == 0 {
+		return nil
+	}
+	out := make([]Entry, len(s.skippedFiles))
+	copy(out, s.skippedFiles)
+	return out
+}
 
 // Close cancels the walk and waits for the goroutine.
 func (s *Session) Close() {
@@ -112,8 +145,8 @@ func (s *Session) run(ctx context.Context, opts Options) {
 		}
 	}()
 
-	listOpts := localfs.ListOptions{ShowHidden: opts.ShowHidden}
-	if !opts.ShowHidden {
+	listOpts := localfs.ListOptions{ShowHidden: opts.IncludeHidden}
+	if !opts.IncludeHidden {
 		matcher, matcherErr := localfs.MatcherForListing(false, opts.Gitignore, s.root)
 		if matcherErr != nil {
 			s.err = matcherErr
@@ -135,6 +168,15 @@ func (s *Session) run(ctx context.Context, opts Options) {
 
 		name := d.Name()
 		isDir := d.IsDir()
+
+		if !opts.IncludeHidden && strings.HasPrefix(name, ".") {
+			s.recordSkippedHidden(path, d, isDir)
+			if isDir {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
 		if !localfs.EntryVisible(name, filepath.Dir(path), isDir, listOpts) {
 			if isDir {
 				return filepath.SkipDir
@@ -142,35 +184,9 @@ func (s *Session) run(ctx context.Context, opts Options) {
 			return nil
 		}
 
-		rel, relErr := filepath.Rel(s.root, path)
-		if relErr != nil {
+		entry, ok := buildEntry(s.root, path, d, isDir)
+		if !ok {
 			return nil
-		}
-		rel = filepath.ToSlash(rel)
-
-		entryType := localfs.EntryFile
-		if d.Type()&fs.ModeSymlink != 0 {
-			entryType = localfs.EntrySymlink
-			if info, statErr := os.Stat(path); statErr == nil {
-				isDir = info.IsDir()
-			}
-		}
-		var size int64
-		if isDir {
-			entryType = localfs.EntryDirectory
-		} else if entryType != localfs.EntrySymlink {
-			entryType = localfs.EntryFile
-			if info, infoErr := d.Info(); infoErr == nil {
-				size = info.Size()
-			}
-		}
-
-		entry := Entry{
-			Path:    filepath.Clean(path),
-			RelLine: rel,
-			IsDir:   isDir,
-			Type:    entryType,
-			Size:    size,
 		}
 		shouldFlush := false
 		pendingMu.Lock()
@@ -183,7 +199,7 @@ func (s *Session) run(ctx context.Context, opts Options) {
 			flush()
 		}
 
-		if isDir && opts.ShouldSkipDir != nil && opts.ShouldSkipDir(path) {
+		if entry.IsDir && opts.ShouldSkipDir != nil && opts.ShouldSkipDir(path) {
 			return filepath.SkipDir
 		}
 		return nil
@@ -196,4 +212,54 @@ func (s *Session) run(ctx context.Context, opts Options) {
 	if walkErr != nil && ctx.Err() == nil {
 		s.err = walkErr
 	}
+}
+
+func (s *Session) recordSkippedHidden(path string, d fs.DirEntry, isDir bool) {
+	clean := filepath.Clean(path)
+	if isDir {
+		s.skippedMu.Lock()
+		s.skippedDirs = append(s.skippedDirs, clean)
+		s.skippedMu.Unlock()
+		return
+	}
+	entry, ok := buildEntry(s.root, path, d, false)
+	if !ok {
+		return
+	}
+	s.skippedMu.Lock()
+	s.skippedFiles = append(s.skippedFiles, entry)
+	s.skippedMu.Unlock()
+}
+
+func buildEntry(root, path string, d fs.DirEntry, isDir bool) (Entry, bool) {
+	rel, relErr := filepath.Rel(root, path)
+	if relErr != nil {
+		return Entry{}, false
+	}
+	rel = filepath.ToSlash(rel)
+
+	entryType := localfs.EntryFile
+	if d.Type()&fs.ModeSymlink != 0 {
+		entryType = localfs.EntrySymlink
+		if info, statErr := os.Stat(path); statErr == nil {
+			isDir = info.IsDir()
+		}
+	}
+	var size int64
+	if isDir {
+		entryType = localfs.EntryDirectory
+	} else if entryType != localfs.EntrySymlink {
+		entryType = localfs.EntryFile
+		if info, infoErr := d.Info(); infoErr == nil {
+			size = info.Size()
+		}
+	}
+
+	return Entry{
+		Path:    filepath.Clean(path),
+		RelLine: rel,
+		IsDir:   isDir,
+		Type:    entryType,
+		Size:    size,
+	}, true
 }
