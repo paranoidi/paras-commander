@@ -551,10 +551,10 @@ func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
 		ui.PrimaryPanel,
 		ui.PrimaryPanel,
 		false,
-		app.model.SelectionsPanelMaxRows,
+		app.selectionsStripSplitParams(ui.PrimaryPanel, 0),
 	) {
 		t.Fatalf("viewportRows = %d, want post-parent file list rows %d", vr,
-			ui.FileListViewportRows(app.layoutForTerminalSize(80, 24).Primary, left, ui.PrimaryPanel, ui.PrimaryPanel, false, app.model.SelectionsPanelMaxRows))
+			ui.FileListViewportRows(app.layoutForTerminalSize(80, 24).Primary, left, ui.PrimaryPanel, ui.PrimaryPanel, false, app.selectionsStripSplitParams(ui.PrimaryPanel, 0)))
 	}
 	entry, ok := left.CurrentEntry()
 	if !ok || entry.Name != "sub" {

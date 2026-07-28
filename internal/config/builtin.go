@@ -179,6 +179,13 @@ const (
 	// DefaultPaneSplitOrientation is the default twin-pane layout (primary left, secondary right).
 	DefaultPaneSplitOrientation = PaneSplitSideBySide
 
+	// DefaultSelectionsPanelActivePercent is the strip share of panel height (side-by-side, focused)
+	// or width (stacked) when the selections strip has keyboard focus / is shown stacked.
+	DefaultSelectionsPanelActivePercent = 50
+	// SelectionsPanelActivePercentMin / Max clamp [ui].selections_panel_active_percent in Validate.
+	SelectionsPanelActivePercentMin = 10
+	SelectionsPanelActivePercentMax = 90
+
 	// DefaultShrunkenShowsNameOnly: when true, file panels whose list row text width is below
 	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
 	DefaultShrunkenShowsNameOnly = true

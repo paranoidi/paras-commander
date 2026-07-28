@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -325,7 +326,7 @@ func (a *App) prepareGlobalQuitShortcutCleanup() {
 	a.previewCtrl.ClearNavCoalesces()
 	a.clearCursorNameHintNavCoalesce()
 	if a.inQuickFilterUI() {
-		a.activePanel().CancelFilter(a.activeViewportRows())
+		a.cancelActiveQuickFilter()
 	}
 }
 
@@ -402,7 +403,7 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 			a.closeMenu()
 		}
 		if a.inQuickFilterUI() {
-			a.activePanel().CancelFilter(a.activeViewportRows())
+			a.cancelActiveQuickFilter()
 		}
 		a.openHelpDialog()
 		a.render()
@@ -602,7 +603,7 @@ func (a *App) handleFilterModeKey(event *tcell.EventKey, resolvedAction string) 
 	// Bound actions (same keymap as normal browser mode) dismiss the filter unless
 	// the key is filter-local (typing, match cycling, Insert, etc.).
 	if resolvedAction != "" && !a.quickFilterRetainsKey(event, resolvedAction) {
-		a.activePanel().CancelFilter(a.activeViewportRows())
+		a.cancelActiveQuickFilter()
 		fqQuit, fqRendered := a.finishResolvedKeyboardAction(resolvedAction)
 		if fqRendered {
 			a.render()
@@ -628,7 +629,7 @@ func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string
 	if keymap.IsPlainPrintableRune(event) {
 		return resolvedAction == ""
 	}
-	f := a.activePanel().Filter
+	f := a.activeQuickFilter()
 	switch event.Key() {
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if event.Modifiers()&tcell.ModCtrl != 0 {
@@ -674,13 +675,12 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 		return false
 	}
 	return !ui.IsAuxiliaryView(a.model.ViewMode) &&
-		(a.model.ViewMode != ui.ViewBrowser ||
-			(a.model.ActiveSubFocus != ui.SubFocusSelectionsStrip && a.model.ActiveSubFocus != ui.SubFocusInactivePreview)) &&
+		(a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusInactivePreview) &&
 		!a.model.QuickFilterStartBlocked()
 }
 
 func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {
-	f := a.activePanel().Filter
+	f := a.activeQuickFilter()
 	if keymap.IsPlainPrintableRune(event) {
 		if _, ok := a.keys.Global.Lookup(event); ok {
 			return false
@@ -705,6 +705,25 @@ func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {
 	default:
 		return false
 	}
+}
+
+func (a *App) stripFilterFocused() bool {
+	return a.model.ViewMode == ui.ViewBrowser && a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip
+}
+
+func (a *App) activeQuickFilter() panel.FilterState {
+	if a.stripFilterFocused() {
+		return a.activePanel().StripFilter
+	}
+	return a.activePanel().Filter
+}
+
+func (a *App) cancelActiveQuickFilter() {
+	if a.stripFilterFocused() {
+		a.activePanel().CancelStripFilter(a.selectionsStripViewportRows(a.model.ActivePanel))
+		return
+	}
+	a.activePanel().CancelFilter(a.activeViewportRows())
 }
 
 // dispatchActionLikeKeyboardShortcut runs the same effects as the bound key in normal browser mode.
@@ -820,7 +839,11 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelMetaEdit:
 		a.metaCtrl.EditMetaFile()
 	case keymap.ActionPanelFilterOpen:
-		activePanel.OpenFilter(viewportRows)
+		if a.stripFilterFocused() {
+			a.activePanel().OpenStripFilter(a.selectionsStripViewportRows(a.model.ActivePanel))
+		} else {
+			activePanel.OpenFilter(viewportRows)
+		}
 		a.clearTransientMessage()
 	case keymap.ActionBookmarkOpen:
 		a.dialogCtrl.OpenBookmarkDialog()
@@ -858,6 +881,10 @@ func (a *App) dispatch(actionID string) bool {
 }
 
 func (a *App) handleFilterKey(event *tcell.EventKey) {
+	if a.stripFilterFocused() {
+		a.handleStripFilterKey(event)
+		return
+	}
 	activePanel := a.activePanel()
 	viewportRows := a.activeViewportRows()
 	switch event.Key() {
@@ -899,6 +926,51 @@ func (a *App) handleFilterKey(event *tcell.EventKey) {
 	}
 }
 
+func (a *App) handleStripFilterKey(event *tcell.EventKey) {
+	p := a.activePanel()
+	vr := a.selectionsStripViewportRows(a.model.ActivePanel)
+	switch event.Key() {
+	case tcell.KeyEsc:
+		p.CancelStripFilter(vr)
+	case tcell.KeyUp:
+		p.CycleStripFilterMatch(-1, vr)
+	case tcell.KeyDown:
+		p.CycleStripFilterMatch(1, vr)
+	case tcell.KeyEnter:
+		if p.StripFilter.Query != "" {
+			p.CancelStripFilter(vr)
+			a.navigateFromSelectionsStrip()
+		} else {
+			p.AcceptStripFilter(vr)
+		}
+	case tcell.KeyInsert:
+		p.ToggleOrRemoveStripSelection()
+		if p.SelectionsStripCount() == 0 {
+			p.CancelStripFilter(0)
+			a.model.ActiveSubFocus = ui.SubFocusFileList
+			return
+		}
+		p.CycleStripFilterMatch(1, vr)
+	case tcell.KeyBackspace, tcell.KeyBackspace2:
+		if event.Modifiers()&tcell.ModCtrl != 0 {
+			p.ClearStripFilter(vr)
+		} else {
+			p.BackspaceStripFilter(vr)
+		}
+	case tcell.KeyCtrlL:
+		p.ClearStripFilter(vr)
+	case tcell.KeyRune:
+		if keymap.IsPlainPrintableRune(event) {
+			p.AppendStripFilterRune(event.Rune(), vr)
+		}
+	}
+}
+
+func (a *App) inQuickFilterUI() bool {
+	f := a.activeQuickFilter()
+	return f.Active || f.Editing
+}
+
 func (a *App) handleSelectionsStripKey(event *tcell.EventKey) bool {
 	p := a.activePanel()
 	vr := a.selectionsStripViewportRows(a.model.ActivePanel)
@@ -935,15 +1007,11 @@ func (a *App) handleSelectionsStripKey(event *tcell.EventKey) bool {
 	case tcell.KeyInsert, tcell.KeyDelete:
 		p.ToggleOrRemoveStripSelection()
 		if p.SelectionsStripCount() == 0 {
+			p.CancelStripFilter(0)
 			a.model.ActiveSubFocus = ui.SubFocusFileList
 		}
 		return true
 	default:
 		return false
 	}
-}
-
-func (a *App) inQuickFilterUI() bool {
-	filter := a.activePanel().Filter
-	return filter.Active || filter.Editing
 }

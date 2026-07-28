@@ -55,6 +55,20 @@ func EffectiveSelectionsPanelMaxRows(n int) int {
 	return geom.EffectiveSelectionsPanelMaxRows(n)
 }
 
+// EffectiveSelectionsPanelActivePercent returns percent clamped to 10–90, or the default when out of range.
+func EffectiveSelectionsPanelActivePercent(n int) int {
+	return geom.EffectiveSelectionsPanelActivePercent(n)
+}
+
+// SelectionsStripSplitParams controls how a browser column shares space with the selections strip.
+type SelectionsStripSplitParams = geom.SelectionsStripSplitParams
+
+// SplitPanelForSelections divides a browser column into a file list and selections strip
+// (side-by-side: strip below; stacked: strip to the right).
+func SplitPanelForSelections(column Rect, p SelectionsStripSplitParams) (file Rect, strip Rect) {
+	return geom.SplitPanelForSelections(column, p)
+}
+
 // SplitPanelColumn divides a column into a top file panel and bottom selections strip.
 func SplitPanelColumn(column Rect, stripItemCount int, maxStripContentRows int, minFileContentRows int) (file Rect, strip Rect) {
 	return geom.SplitPanelColumn(column, stripItemCount, maxStripContentRows, minFileContentRows)

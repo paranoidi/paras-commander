@@ -82,7 +82,14 @@ func (h *Handler) inactivePanelPreviewLayoutMetrics(filePreviewOpenForLayout boo
 		p = &h.model.Secondary
 	}
 	stripN := ui.SelectionsStripLayoutItemCount(p, inactiveID, h.model.ActivePanel, h.model.ThemeDialog.Open)
-	fileCol, _ := ui.SplitPanelColumn(col, stripN, h.model.SelectionsPanelMaxRows, ui.MinFileListContentRows)
+	fileCol, _ := ui.SplitPanelForSelections(col, ui.SelectionsStripSplitParams{
+		StripItemCount:     stripN,
+		MaxRows:            h.model.SelectionsPanelMaxRows,
+		ActivePercent:      h.model.SelectionsPanelActivePercent,
+		StripFocused:       false, // inactive column never focuses the strip
+		Orientation:        h.model.SplitOrientation,
+		MinFileContentRows: ui.MinFileListContentRows,
+	})
 	tw := fileCol.Width - 4
 	if tw < 1 {
 		tw = 1

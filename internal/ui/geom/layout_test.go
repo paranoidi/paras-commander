@@ -156,6 +156,50 @@ func TestSplitPanelColumnHidesStripWhenNoItems(t *testing.T) {
 	}
 }
 
+func TestSplitPanelForSelectionsSideBySideGrowsWhenFocused(t *testing.T) {
+	col := Rect{X: 0, Y: 0, Width: 40, Height: 40}
+	_, unfocusedStrip := SplitPanelForSelections(col, SelectionsStripSplitParams{
+		StripItemCount: 20, MaxRows: 5, ActivePercent: 50,
+		StripFocused: false, Orientation: SplitHorizontal, MinFileContentRows: 3,
+	})
+	_, focusedStrip := SplitPanelForSelections(col, SelectionsStripSplitParams{
+		StripItemCount: 20, MaxRows: 5, ActivePercent: 50,
+		StripFocused: true, Orientation: SplitHorizontal, MinFileContentRows: 3,
+	})
+	if focusedStrip.Height <= unfocusedStrip.Height {
+		t.Fatalf("focused strip height %d, want taller than unfocused %d", focusedStrip.Height, unfocusedStrip.Height)
+	}
+	if focusedStrip.Height < 15 {
+		t.Fatalf("focused strip height %d, want grown toward 50%%", focusedStrip.Height)
+	}
+}
+
+func TestSplitPanelForSelectionsStackedPlacesStripRight(t *testing.T) {
+	col := Rect{X: 0, Y: 2, Width: 80, Height: 20}
+	file, strip := SplitPanelForSelections(col, SelectionsStripSplitParams{
+		StripItemCount: 12, MaxRows: 5, ActivePercent: 50,
+		StripFocused: false, Orientation: SplitVertical, MinFileContentRows: 3,
+	})
+	if strip.Height == 0 {
+		t.Fatal("expected strip")
+	}
+	if strip.Height != col.Height {
+		t.Fatalf("strip height = %d, want full column %d", strip.Height, col.Height)
+	}
+	if strip.Y != col.Y || file.Y != col.Y {
+		t.Fatalf("file and strip must share top Y")
+	}
+	if file.X+file.Width != strip.X {
+		t.Fatalf("strip should sit to the right of file list")
+	}
+	if strip.Width != col.Width/2 {
+		t.Fatalf("strip width = %d, want 50%% of %d", strip.Width, col.Width)
+	}
+	if file.Height != col.Height {
+		t.Fatalf("file height = %d, want full column", file.Height)
+	}
+}
+
 func TestSplitJobsSecondaryColumnSizesDetailToLineCount(t *testing.T) {
 	col := Rect{X: 0, Y: 0, Width: 50, Height: 28}
 	detail, activity := SplitJobsSecondaryColumn(col, 10)

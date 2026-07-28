@@ -135,7 +135,14 @@ func (h *Handler) activePanelFileColumnRect() (geom.Rect, bool) {
 		h.model.ActivePanel,
 		h.model.ThemeDialog.Open,
 	)
-	fileCol, _ := ui.SplitPanelColumn(ui.Rect(col), stripN, h.model.SelectionsPanelMaxRows, ui.MinFileListContentRows)
+	fileCol, _ := ui.SplitPanelForSelections(ui.Rect(col), ui.SelectionsStripSplitParams{
+		StripItemCount:     stripN,
+		MaxRows:            h.model.SelectionsPanelMaxRows,
+		ActivePercent:      h.model.SelectionsPanelActivePercent,
+		StripFocused:       h.model.ActiveSubFocus == ui.SubFocusSelectionsStrip,
+		Orientation:        h.model.SplitOrientation,
+		MinFileContentRows: ui.MinFileListContentRows,
+	})
 	if fileCol.Width <= 0 {
 		return geom.Rect{}, false
 	}

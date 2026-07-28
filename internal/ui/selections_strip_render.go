@@ -59,7 +59,20 @@ func drawSelectionsStrip(
 	if _, multiDir, _ := state.SelectionsCommonRoot(); multiDir {
 		endLabel = " " + styles.SymbolSelectionsMultiLocation() + " "
 	}
-	chrome := drawAuxPanelChrome(screen, rect, panelSelectionsChromePadded, endLabel, stripFocused, chromeBlocked, styles)
+	filterUI := stripFocused && (state.StripFilter.Active || state.StripFilter.Editing)
+	title := panelSelectionsChromePadded
+	if filterUI {
+		title = "> " + state.StripFilter.Query
+		endLabel = "" // filter query owns the top row
+	}
+	chrome := drawAuxPanelChrome(screen, rect, title, endLabel, stripFocused, chromeBlocked, styles)
+	if filterUI {
+		inputStyle := styles.FuzzyInput
+		if state.StripFilter.Active && !state.StripFilterHasMatches() {
+			inputStyle = styles.FuzzyInputNomatch
+		}
+		primitive.Text(screen, chrome.TitleX, rect.Y, chrome.TitleWidth, title, inputStyle)
+	}
 
 	if showSelectionSizeOnBottom {
 		if raw, ok := SelectionSizeLabel(
@@ -130,9 +143,11 @@ func drawSelectionsStrip(
 		}
 
 		text := ""
+		pathLabel := ""
 		if idx < len(paths) {
 			p := paths[idx]
-			text = prefix + selectionStripDisplayPath(p, state.Path.String(), userHomeDir, textCols)
+			pathLabel = selectionStripDisplayPath(p, state.Path.String(), userHomeDir, textCols)
+			text = prefix + pathLabel
 		}
 
 		var spans []primitive.Span
@@ -142,6 +157,24 @@ func drawSelectionsStrip(
 				End:   markEnd,
 				Style: baseStyle.Foreground(styles.PanelRowIconForeground(cursorStyleKey, markSource)),
 			}}
+		}
+		if idx < len(paths) {
+			baseRanges := state.StripMatchRanges(idx)
+			if mapped := panel.MapStripBasenameRangesToDisplay(pathLabel, paths[idx], baseRanges); len(mapped) > 0 {
+				matchStyle := styles.FuzzyHighlight
+				if stripFocused && idx == state.SelectionsStripCursor {
+					matchStyle = styles.FuzzyHighlightCursor
+				}
+				_, bg, _ := baseStyle.Decompose()
+				ms := matchStyle.Background(bg)
+				for _, r := range mapped {
+					spans = append(spans, primitive.Span{
+						Start: markCols + r.Start,
+						End:   markCols + r.End,
+						Style: ms,
+					})
+				}
+			}
 		}
 		primitive.StyledText(screen, contentStart, y, rowTextWidth, text, baseStyle, spans)
 	}

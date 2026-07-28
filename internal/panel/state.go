@@ -103,6 +103,8 @@ type State struct {
 	// gitignore.ValidWorkTreeRoot per subdirectory.
 	gitWorkRoot string
 	Filter      FilterState
+	// StripFilter is the selections-strip quick filter (basename fuzzy match), independent of Filter.
+	StripFilter FilterState
 	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
 	DiskSorter func(absPath string) (int64, bool)
 	Sort       SortState
@@ -1113,8 +1115,10 @@ func (s *State) EnsureCursorInViewport(fallbackViewportRows int) {
 // SetFilterCaseInsensitive configures the quick filter case behavior.
 func (s *State) SetFilterCaseInsensitive(value bool, viewportRows int) {
 	s.Filter.CaseInsensitive = value
+	s.StripFilter.CaseInsensitive = value
 	selectedName := s.currentEntryName()
 	s.rebuildFilter()
+	s.rebuildStripFilter()
 	_ = s.SelectVisibleEntry(selectedName)
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)

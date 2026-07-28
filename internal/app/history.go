@@ -41,7 +41,7 @@ func (a *App) openHistoryDialog(panelID int) {
 		return
 	}
 	if a.inQuickFilterUI() {
-		a.activePanel().CancelFilter(a.activeViewportRows())
+		a.cancelActiveQuickFilter()
 	}
 	p := a.panelByID(panelID)
 	panelPaths := append([]string(nil), p.History...)

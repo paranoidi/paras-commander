@@ -44,6 +44,9 @@ func (a *App) switchPanel() {
 }
 
 func (a *App) switchPanelSwap() {
+	if a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip {
+		a.activePanel().CancelStripFilter(0)
+	}
 	if a.model.HideInactivePanel {
 		a.model.HideInactivePanel = false
 		if a.model.ActivePanel == ui.PrimaryPanel {
@@ -146,12 +149,23 @@ func (a *App) panelViewportRows(panelID int) int {
 		col = layout.Secondary
 		p = &a.model.Secondary
 	}
-	return ui.FileListViewportRows(col, p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open, a.model.SelectionsPanelMaxRows)
+	return ui.FileListViewportRows(col, p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open, a.selectionsStripSplitParams(panelID, 0))
 }
 
 func (a *App) wireFileListViewportRows() {
 	a.model.Primary.FileListViewportRows = func() int { return a.panelViewportRows(ui.PrimaryPanel) }
 	a.model.Secondary.FileListViewportRows = func() int { return a.panelViewportRows(ui.SecondaryPanel) }
+}
+
+func (a *App) selectionsStripSplitParams(panelID, stripN int) ui.SelectionsStripSplitParams {
+	return ui.SelectionsStripSplitParams{
+		StripItemCount:     stripN,
+		MaxRows:            a.model.SelectionsPanelMaxRows,
+		ActivePercent:      a.model.SelectionsPanelActivePercent,
+		StripFocused:       a.model.ActivePanel == panelID && a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip,
+		Orientation:        a.model.SplitOrientation,
+		MinFileContentRows: ui.MinFileListContentRows,
+	}
 }
 
 func (a *App) selectionsStripViewportRows(panelID int) int {
@@ -167,12 +181,14 @@ func (a *App) selectionsStripViewportRows(panelID int) int {
 		p = &a.model.Secondary
 	}
 	stripN := ui.SelectionsStripLayoutItemCount(p, panelID, a.model.ActivePanel, a.model.ThemeDialog.Open)
-	_, stripCol := ui.SplitPanelColumn(col, stripN, a.model.SelectionsPanelMaxRows, 3)
+	params := a.selectionsStripSplitParams(panelID, stripN)
+	_, stripCol := ui.SplitPanelForSelections(col, params)
 	return ui.SelectionsStripListRows(stripCol)
 }
 
 func (a *App) toggleSelectionsStripFocus() {
 	if a.model.ActiveSubFocus == ui.SubFocusSelectionsStrip {
+		a.activePanel().CancelStripFilter(a.selectionsStripViewportRows(a.model.ActivePanel))
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 		return
 	}
@@ -493,6 +509,7 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 	case keymap.ActionPanelSelectToggle:
 		p.ToggleOrRemoveStripSelection()
 		if p.SelectionsStripCount() == 0 {
+			p.CancelStripFilter(0)
 			a.model.ActiveSubFocus = ui.SubFocusFileList
 		}
 	case keymap.ActionPanelFocusSelections:
@@ -506,6 +523,7 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 			a.switchPanel()
 		}
 	case keymap.ActionPanelClearSelection:
+		p.CancelStripFilter(0)
 		p.ClearSelection()
 		a.model.ActiveSubFocus = ui.SubFocusFileList
 		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)

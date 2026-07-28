@@ -1833,7 +1833,7 @@ func TestRenderSelectionSizeOnSelectionsStripBottom(t *testing.T) {
 	if stripN == 0 {
 		t.Fatal("stripN = 0, want selections strip visible")
 	}
-	primaryFile, leftStrip := SplitPanelColumn(layout.Primary, stripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
+	primaryFile, leftStrip := SplitPanelForSelections(layout.Primary, browserSelectionsStripSplit(model, PrimaryPanel, stripN))
 	if leftStrip.Height == 0 {
 		t.Fatal("leftStrip.Height = 0, want visible strip")
 	}

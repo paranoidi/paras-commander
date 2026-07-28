@@ -119,7 +119,8 @@ General interface layout, timing, and rendering behavior.
 | `screen_render_hash_cache` | bool | `true` | Skip re-drawing the terminal screen when nothing actually changed since the last frame — reduces flicker and I/O over slow connections. |
 | `key_repeat_debounce_ms` | int | `45` | Coalesces rapid repeated key presses (file-list cursor steps, quick-view/carousel preview reloads, F3 style-picker highlighting) so they don't reload on every single step. `0` disables debouncing; values above 10000 are clamped. |
 | `path_picker_validate_delay_ms` | int | `200` | Delay after the path-picker filter changes before checking whether the typed path exists on disk. |
-| `selections_panel_max_rows` | int | `0` (→ 5) | Maximum visible rows in the cross-directory selections strip. `0` means use the built-in default of 5. |
+| `selections_panel_max_rows` | int | `0` (→ 5) | Maximum visible rows in the cross-directory selections strip when it is visible but not focused (side-by-side). `0` means use the built-in default of 5. |
+| `selections_panel_active_percent` | int | `50` | When the selections strip has keyboard focus in side-by-side layout, cap its height to this percent of the panel column (clamped 10–90). In stacked layout, the strip sits to the right of the file list at this percent of panel width and uses the full panel height. |
 
 ## `[ui.zoom]`
 

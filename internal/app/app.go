@@ -390,21 +390,22 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		commandsCancel: cmdCancel,
 		workPools:      workpool.NewRegistry(poolDefs),
 		model: ui.Model{
-			Primary:                    left,
-			Secondary:                  right,
-			ActivePanel:                ui.PrimaryPanel,
-			SelectionsPanelMaxRows:     cfg.UI.SelectionsPanelMaxRows,
-			HideMenuBar:                !cfg.UI.ShowMenuBar,
-			ShowFileIcons:              cfg.UI.ShowFileIcons,
-			CarouselLayout:             carouselLayoutFromConfig(cfg.Carousel),
-			ShrunkenShowsNameOnly:      cfg.UI.ShrunkenShowsNameOnly,
-			JobsThroughputChartEnabled: cfg.Jobs.ThroughputChartEnabled,
-			UserHomeDir:                homeDir,
-			DiskUsage:                  duEngine,
-			DiskUsageShown:             false,
-			ViewMode:                   ui.ViewBrowser,
-			JobActivity:                make(map[string][]string),
-			MenuDefinitions:            menu.BrowserDefinitions(keys.Global, opts.DevMode),
+			Primary:                      left,
+			Secondary:                    right,
+			ActivePanel:                  ui.PrimaryPanel,
+			SelectionsPanelMaxRows:       cfg.UI.SelectionsPanelMaxRows,
+			SelectionsPanelActivePercent: cfg.UI.SelectionsPanelActivePercent,
+			HideMenuBar:                  !cfg.UI.ShowMenuBar,
+			ShowFileIcons:                cfg.UI.ShowFileIcons,
+			CarouselLayout:               carouselLayoutFromConfig(cfg.Carousel),
+			ShrunkenShowsNameOnly:        cfg.UI.ShrunkenShowsNameOnly,
+			JobsThroughputChartEnabled:   cfg.Jobs.ThroughputChartEnabled,
+			UserHomeDir:                  homeDir,
+			DiskUsage:                    duEngine,
+			DiskUsageShown:               false,
+			ViewMode:                     ui.ViewBrowser,
+			JobActivity:                  make(map[string][]string),
+			MenuDefinitions:              menu.BrowserDefinitions(keys.Global, opts.DevMode),
 			ThemeDialog: dialog.ThemeDialogState{
 				CurrentName: styles.Name,
 				Choices:     uiThemeChoices(themeChoices),
@@ -701,6 +702,8 @@ func newBrowserPanel(path string, opts browserPanelOptions) (panel.State, error)
 	p.ApplySort()
 	p.Filter.CaseInsensitive = opts.cfg.Filter.CaseInsensitive
 	p.Filter.CycleMatches = opts.cfg.Filter.CycleMatches
+	p.StripFilter.CaseInsensitive = opts.cfg.Filter.CaseInsensitive
+	p.StripFilter.CycleMatches = opts.cfg.Filter.CycleMatches
 	p.ScrollMode = opts.scrollMode
 	p.ScrollEdgeMargin = opts.cfg.UI.Scroll.EdgeMargin
 	return p, nil

@@ -51,7 +51,12 @@ func TestPanelScrollbarUsesFullListHeight(t *testing.T) {
 	screen.SetSize(120, 40)
 
 	col := Rect{X: 0, Y: 1, Width: 60, Height: 38}
-	rect := FileListFrameWithStripCount(col, 0, 5)
+	rect := FileListFrameWithStripCount(col, SelectionsStripSplitParams{
+		StripItemCount:     0,
+		MaxRows:            5,
+		ActivePercent:      50,
+		MinFileContentRows: MinFileListContentRows,
+	})
 	visible := PanelListRows(rect)
 	if visible < 10 {
 		t.Fatalf("visible = %d, want reasonable viewport", visible)

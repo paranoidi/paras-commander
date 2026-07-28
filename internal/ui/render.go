@@ -68,11 +68,13 @@ type Model struct {
 	// path validation tick (see App.updateDestinationTargetPanels).
 	DestinationTargetPrimary   bool
 	DestinationTargetSecondary bool
-	// SelectionsPanelMaxRows caps visible rows in the selections strip (0 = use app default).
+	// SelectionsPanelMaxRows caps visible rows in the selections strip when unfocused (0 = use app default).
 	SelectionsPanelMaxRows int
-	ViewMode               ViewMode
-	JobsView               JobsViewState
-	JobsList               []JobEntry
+	// SelectionsPanelActivePercent is strip height share when focused (side-by-side) or width share (stacked).
+	SelectionsPanelActivePercent int
+	ViewMode                     ViewMode
+	JobsView                     JobsViewState
+	JobsList                     []JobEntry
 	// JobPathMarks is the browser file-list job glyph snapshot (progress fields omitted).
 	JobPathMarks []JobPathMark
 	JobActivity  map[string][]string
@@ -611,10 +613,10 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 	rightStripCount := model.Secondary.SelectionsStripCount()
 	leftStripN := SelectionsStripLayoutItemCountFromCount(leftStripCount, PrimaryPanel, model.ActivePanel, previewTheme)
 	rightStripN := SelectionsStripLayoutItemCountFromCount(rightStripCount, SecondaryPanel, model.ActivePanel, previewTheme)
-	primaryFile := FileListFrameWithStripCount(layout.Primary, leftStripN, model.SelectionsPanelMaxRows)
-	secondaryFile := FileListFrameWithStripCount(layout.Secondary, rightStripN, model.SelectionsPanelMaxRows)
-	_, leftStrip := SplitPanelColumn(layout.Primary, leftStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
-	_, rightStrip := SplitPanelColumn(layout.Secondary, rightStripN, model.SelectionsPanelMaxRows, MinFileListContentRows)
+	leftSplit := browserSelectionsStripSplit(model, PrimaryPanel, leftStripN)
+	rightSplit := browserSelectionsStripSplit(model, SecondaryPanel, rightStripN)
+	primaryFile, leftStrip := SplitPanelForSelections(layout.Primary, leftSplit)
+	secondaryFile, rightStrip := SplitPanelForSelections(layout.Secondary, rightSplit)
 
 	primarySelectionsBottomHint := leftStripCount > 0 && leftStripN == 0
 	secondarySelectionsBottomHint := rightStripCount > 0 && rightStripN == 0

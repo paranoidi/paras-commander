@@ -32,8 +32,7 @@ func wrap(value, count int) int {
 }
 
 func (a *App) handleQuickFilterFunctionKey(event *tcell.EventKey) bool {
-	viewportRows := a.activeViewportRows()
-	a.activePanel().CancelFilter(viewportRows)
+	a.cancelActiveQuickFilter()
 	if event.Key() == tcell.KeyF9 {
 		a.openMenu()
 		return false

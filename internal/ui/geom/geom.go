@@ -237,6 +237,94 @@ func EffectiveSelectionsPanelMaxRows(n int) int {
 	return n
 }
 
+const (
+	defaultSelectionsPanelActivePercent = 50
+	selectionsPanelActivePercentMin     = 10
+	selectionsPanelActivePercentMax     = 90
+	// minStackedStripFrameW / minStackedFileFrameW gate horizontal strip splits in stacked layout.
+	minStackedStripFrameW = 8
+	minStackedFileFrameW  = 12
+)
+
+// EffectiveSelectionsPanelActivePercent returns percent clamped to 10–90, or the default when out of range.
+func EffectiveSelectionsPanelActivePercent(n int) int {
+	if n < selectionsPanelActivePercentMin || n > selectionsPanelActivePercentMax {
+		return defaultSelectionsPanelActivePercent
+	}
+	return n
+}
+
+// SelectionsStripSplitParams controls how a browser column shares space with the selections strip.
+type SelectionsStripSplitParams struct {
+	StripItemCount     int
+	MaxRows            int // unfocused side-by-side cap (0 → default 5)
+	ActivePercent      int // focused side-by-side height / stacked width share
+	StripFocused       bool
+	Orientation        SplitOrientation
+	MinFileContentRows int
+}
+
+// SplitPanelForSelections divides a browser column into a file list and selections strip.
+// Side-by-side: strip under the file list (grows toward ActivePercent of column height when focused).
+// Stacked: strip to the right of the file list at ActivePercent of column width, full column height.
+// strip.Height == 0 means the strip is omitted.
+func SplitPanelForSelections(column Rect, p SelectionsStripSplitParams) (file Rect, strip Rect) {
+	minFile := p.MinFileContentRows
+	if minFile <= 0 {
+		minFile = MinFileListContentRows
+	}
+	if p.Orientation == SplitVertical {
+		return splitPanelColumnHorizontal(column, p.StripItemCount, p.ActivePercent, minFile)
+	}
+	maxRows := p.MaxRows
+	if p.StripFocused {
+		maxRows = sideBySideFocusedStripContentRows(column.Height, p.ActivePercent, maxRows)
+	}
+	return SplitPanelColumn(column, p.StripItemCount, maxRows, minFile)
+}
+
+// sideBySideFocusedStripContentRows raises the strip content-row cap toward percent of column height.
+func sideBySideFocusedStripContentRows(columnHeight, activePercent, maxRows int) int {
+	pct := EffectiveSelectionsPanelActivePercent(activePercent)
+	capRows := columnHeight*pct/100 - selectionsStripChromeRows
+	if capRows < 1 {
+		capRows = 1
+	}
+	base := EffectiveSelectionsPanelMaxRows(maxRows)
+	if capRows < base {
+		return base
+	}
+	return capRows
+}
+
+// splitPanelColumnHorizontal places the selections strip to the right of the file list (stacked twin panes).
+func splitPanelColumnHorizontal(column Rect, stripItemCount, activePercent, minFileContentRows int) (file Rect, strip Rect) {
+	minFileFrameH := minFileContentRows + filePanelListChromeRows
+	minStripFrameH := selectionsStripChromeRows + 1
+	if stripItemCount <= 0 ||
+		column.Height < minFileFrameH ||
+		column.Height < minStripFrameH ||
+		column.Width < minStackedFileFrameW+minStackedStripFrameW {
+		return column, Rect{X: column.X, Y: column.Y + column.Height, Width: column.Width, Height: 0}
+	}
+	pct := EffectiveSelectionsPanelActivePercent(activePercent)
+	stripW := column.Width * pct / 100
+	if stripW < minStackedStripFrameW {
+		stripW = minStackedStripFrameW
+	}
+	fileW := column.Width - stripW
+	if fileW < minStackedFileFrameW {
+		stripW = column.Width - minStackedFileFrameW
+		fileW = minStackedFileFrameW
+	}
+	if stripW < minStackedStripFrameW || fileW < minStackedFileFrameW {
+		return column, Rect{X: column.X, Y: column.Y + column.Height, Width: column.Width, Height: 0}
+	}
+	file = Rect{X: column.X, Y: column.Y, Width: fileW, Height: column.Height}
+	strip = Rect{X: column.X + fileW, Y: column.Y, Width: stripW, Height: column.Height}
+	return file, strip
+}
+
 // SplitPanelColumn divides a column into a top file panel and bottom selections strip.
 // stripItemCount is the number of selected paths to show in the strip (0 hides the strip).
 // maxStripContentRows caps visible strip rows; extra items scroll within the strip.

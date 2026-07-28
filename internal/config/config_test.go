@@ -360,21 +360,28 @@ func TestValidateClampsScrollEdgeMargin(t *testing.T) {
 	}
 }
 
-func TestValidateClampsPathPickerValidateDelayMS(t *testing.T) {
+func TestValidateClampsSelectionsPanelActivePercent(t *testing.T) {
 	cfg := Default()
-	cfg.UI.PathPickerValidateDelayMS = -5
+	cfg.UI.SelectionsPanelActivePercent = 5
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.PathPickerValidateDelayMS != DefaultPathPickerValidateDelayMS {
-		t.Fatalf("negative delay = %d, want default %d", cfg.UI.PathPickerValidateDelayMS, DefaultPathPickerValidateDelayMS)
+	if cfg.UI.SelectionsPanelActivePercent != DefaultSelectionsPanelActivePercent {
+		t.Fatalf("percent = %d, want default %d", cfg.UI.SelectionsPanelActivePercent, DefaultSelectionsPanelActivePercent)
 	}
-	cfg.UI.PathPickerValidateDelayMS = 999999
+	cfg.UI.SelectionsPanelActivePercent = 95
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.UI.PathPickerValidateDelayMS != 30000 {
-		t.Fatalf("huge delay = %d, want 30000", cfg.UI.PathPickerValidateDelayMS)
+	if cfg.UI.SelectionsPanelActivePercent != DefaultSelectionsPanelActivePercent {
+		t.Fatalf("percent = %d, want default %d", cfg.UI.SelectionsPanelActivePercent, DefaultSelectionsPanelActivePercent)
+	}
+	cfg.UI.SelectionsPanelActivePercent = 40
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.SelectionsPanelActivePercent != 40 {
+		t.Fatalf("percent = %d, want 40", cfg.UI.SelectionsPanelActivePercent)
 	}
 }
 
