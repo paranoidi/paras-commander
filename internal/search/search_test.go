@@ -26,6 +26,21 @@ func TestMatchPrefixSuffixExactAndInverseTerms(t *testing.T) {
 		{name: "inverse keeps", query: "!test", value: "panel.go", want: true},
 		{name: "and requires all", query: "^main .go$", value: "main_test.go", want: true},
 		{name: "and rejects missing term", query: "^main .go$", value: "not-main.go", want: false},
+		// fzf parse order: $ stripped before ', so '.git$' ≡ exact '.git'
+		{name: "quoted-suffix is exact not literal-dollar", query: "'.git$", value: "repo/.git", want: true},
+		{name: "quoted-suffix exact rejects non-substring", query: "'.git$", value: "repo/git", want: false},
+		{name: "quoted-suffix matches gitignore too", query: "'.git$", value: "repo/.gitignore", want: true},
+		{name: "true suffix matches .git", query: ".git$", value: "repo/.git", want: true},
+		{name: "true suffix rejects .gitignore", query: ".git$", value: "repo/.gitignore", want: false},
+		{name: "true suffix matches file.git", query: ".git$", value: "repo/file.git", want: true},
+		{name: "equal whole string", query: "^foo$", value: "foo", want: true},
+		{name: "equal rejects prefix-only", query: "^foo$", value: "foobar", want: false},
+		{name: "equal rejects suffix-only", query: "^foo$", value: "xfoo", want: false},
+		{name: "boundary match spaced", query: "'foo'", value: "xxx foo xxx", want: true},
+		{name: "boundary match underscore", query: "'foo'", value: "xxx_foo_xxx", want: true},
+		{name: "boundary rejects glued", query: "'foo'", value: "xxxfooxxx", want: false},
+		{name: "inverse suffix excludes", query: "!.git$", value: "repo/.git", want: false},
+		{name: "inverse suffix keeps", query: "!.git$", value: "repo/.gitignore", want: true},
 	}
 
 	for _, tt := range tests {

@@ -30,6 +30,8 @@ const (
 	termPrefix
 	termSuffix
 	termExact
+	termExactBoundary
+	termEqual
 )
 
 type term struct {
@@ -133,31 +135,44 @@ func (q Query) RankCancellable(values []string, opts Options, shouldCancel func(
 	return results, false
 }
 
+// parseTerm follows fzf extended-search token order: ! then $, then '…'/', then ^.
 func parseTerm(field string) (term, bool) {
+	kind := termFuzzy
 	inverse := false
 	if strings.HasPrefix(field, "!") {
 		inverse = true
-		field = strings.TrimPrefix(field, "!")
+		kind = termExact // fzf: negation defaults to exact
+		field = field[1:]
 	}
 	if field == "" {
 		return term{}, false
 	}
 
-	parsed := term{Kind: termFuzzy, Text: field, Inverse: inverse}
-	if strings.HasPrefix(field, "'") {
-		parsed.Kind = termExact
-		parsed.Text = strings.TrimPrefix(field, "'")
-	} else if strings.HasPrefix(field, "^") {
-		parsed.Kind = termPrefix
-		parsed.Text = strings.TrimPrefix(field, "^")
-	} else if strings.HasSuffix(field, "$") {
-		parsed.Kind = termSuffix
-		parsed.Text = strings.TrimSuffix(field, "$")
+	if field != "$" && strings.HasSuffix(field, "$") {
+		kind = termSuffix
+		field = field[:len(field)-1]
 	}
-	if parsed.Text == "" {
+
+	switch {
+	case len(field) > 2 && strings.HasPrefix(field, "'") && strings.HasSuffix(field, "'"):
+		kind = termExactBoundary
+		field = field[1 : len(field)-1]
+	case strings.HasPrefix(field, "'"):
+		kind = termExact // overwrites suffix — fzf: '.git$' ≡ '.git'
+		field = field[1:]
+	case strings.HasPrefix(field, "^"):
+		if kind == termSuffix {
+			kind = termEqual
+		} else {
+			kind = termPrefix
+		}
+		field = field[1:]
+	}
+
+	if field == "" {
 		return term{}, false
 	}
-	return parsed, true
+	return term{Kind: kind, Text: field, Inverse: inverse}, true
 }
 
 func matchTerm(term term, value string, opts Options) Result {
@@ -168,6 +183,10 @@ func matchTerm(term term, value string, opts Options) Result {
 		return matchSuffix(term.Text, value, opts)
 	case termExact:
 		return matchExact(term.Text, value, opts)
+	case termExactBoundary:
+		return matchExactBoundary(term.Text, value, opts)
+	case termEqual:
+		return matchEqual(term.Text, value, opts)
 	default:
 		return matchFuzzy(term.Text, value, opts)
 	}
@@ -244,6 +263,89 @@ func matchExact(needle, value string, opts Options) Result {
 		Score:   700 + bonus + len(needleRunes)*5 - start*2,
 		Ranges:  []Range{{Start: start, End: start + len(needleRunes)}},
 	}
+}
+
+func matchEqual(needle, value string, opts Options) Result {
+	needleRunes := normalizeRunes(needle, opts)
+	if len(needleRunes) == 0 {
+		return Result{Matched: true}
+	}
+	valueRunes := normalizeRunes(value, opts)
+	if len(valueRunes) != len(needleRunes) {
+		return Result{}
+	}
+	for i := range needleRunes {
+		if valueRunes[i] != needleRunes[i] {
+			return Result{}
+		}
+	}
+	return Result{
+		Matched: true,
+		Score:   950 + len(needleRunes)*5,
+		Ranges:  []Range{{Start: 0, End: len(needleRunes)}},
+	}
+}
+
+// matchExactBoundary is fzf 'word' — exact substring with both ends on word boundaries.
+// Underscore counts as a boundary (non-word), same as fzf.
+func matchExactBoundary(needle, value string, opts Options) Result {
+	needleRunes := normalizeRunes(needle, opts)
+	if len(needleRunes) == 0 {
+		return Result{Matched: true}
+	}
+	n := len(needleRunes)
+	valueRunes := []rune(value)
+	if len(valueRunes) < n {
+		return Result{}
+	}
+
+	bestStart := -1
+	bestScore := 0
+	for start := 0; start <= len(valueRunes)-n; start++ {
+		if !runesEqualAt(valueRunes, start, needleRunes, opts) {
+			continue
+		}
+		end := start + n
+		if start > 0 && isWordChar(valueRunes[start-1]) {
+			continue
+		}
+		if end < len(valueRunes) && isWordChar(valueRunes[end]) {
+			continue
+		}
+		score := 750 + n*5 - start*2
+		// ponytail: underscore boundaries rank below whitespace/punct, like fzf
+		if start > 0 && valueRunes[start-1] == '_' {
+			score -= 20
+		}
+		if end < len(valueRunes) && valueRunes[end] == '_' {
+			score -= 10
+		}
+		if bestStart < 0 || score > bestScore {
+			bestStart = start
+			bestScore = score
+		}
+	}
+	if bestStart < 0 {
+		return Result{}
+	}
+	return Result{
+		Matched: true,
+		Score:   bestScore,
+		Ranges:  []Range{{Start: bestStart, End: bestStart + n}},
+	}
+}
+
+func isWordChar(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsNumber(r)
+}
+
+func runesEqualAt(value []rune, start int, needle []rune, opts Options) bool {
+	for i, nr := range needle {
+		if lowerRune(value[start+i], opts.CaseInsensitive) != nr {
+			return false
+		}
+	}
+	return true
 }
 
 func matchFuzzy(needle, value string, opts Options) Result {
