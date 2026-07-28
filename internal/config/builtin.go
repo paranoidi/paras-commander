@@ -272,6 +272,12 @@ const (
 	PreviewImageProtocolKitty = "kitty"
 	// DefaultPreviewImageProtocol is the default [preview].image_protocol value.
 	DefaultPreviewImageProtocol = PreviewImageProtocolAuto
+	// DefaultPreviewVideoThumbCols / Rows are the default video thumbnail grid size.
+	DefaultPreviewVideoThumbCols = 2
+	DefaultPreviewVideoThumbRows = 2
+	// PreviewVideoThumbGridMin / Max clamp [preview].video_thumb_cols/rows in Validate.
+	PreviewVideoThumbGridMin = 1
+	PreviewVideoThumbGridMax = 6
 	// DefaultPreviewImageMaxDecodeMegapixels caps decode/scale work for image previews
 	// (width×height). Larger images fall back to metadata text. Not a config key.
 	DefaultPreviewImageMaxDecodeMegapixels = 64

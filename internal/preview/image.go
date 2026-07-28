@@ -80,13 +80,12 @@ func runImage(req Request) Result {
 		return metaResult
 	}
 	return Result{
-		Source:        previewpanel.SourceExternalANSI,
-		CombinedText:  meta,
-		ImagePayload:  payload,
-		ImagePxW:      bounds.Dx(),
-		ImagePxH:      bounds.Dy(),
-		ImageProtocol: req.ImageProtocol,
-
+		Source:                  previewpanel.SourceExternalANSI,
+		CombinedText:            "", // caption unused for still images (Draw would show it below)
+		ImagePayload:            payload,
+		ImagePxW:                bounds.Dx(),
+		ImagePxH:                bounds.Dy(),
+		ImageProtocol:           req.ImageProtocol,
 		ImageUnicodePlaceholder: req.ImageUnicodePlaceholder,
 	}
 }

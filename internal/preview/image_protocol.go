@@ -78,3 +78,14 @@ func TmuxSupportsKittyUnicodePlaceholders(environ func(string) string) bool {
 	}
 	return tmuxOuterTerminalIsKittyOrGhostty()
 }
+
+// ResolveVideoThumbProtocol picks the graphics protocol for video thumbnail grids.
+// When imagesEnabled is false ([preview].images), returns ImageProtocolNone.
+// Otherwise uses the same auto/sixel/kitty resolution as still-image previews
+// (WezTerm and other non-Kitty/Ghostty terminals get sixel under auto).
+func ResolveVideoThumbProtocol(imagesEnabled bool, cfg string, environ func(string) string) previewpanel.ImageProtocol {
+	if !imagesEnabled {
+		return previewpanel.ImageProtocolNone
+	}
+	return ResolveImageProtocol(cfg, environ)
+}

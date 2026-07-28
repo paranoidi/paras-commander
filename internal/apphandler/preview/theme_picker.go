@@ -3,7 +3,6 @@ package preview
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
-	"github.com/paranoidi/paras-commander/internal/localfs"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
@@ -136,7 +135,7 @@ func (h *Handler) refreshFullscreenFilePreview() {
 	if !ok {
 		return
 	}
-	req := h.previewRequest(st.Path, tw, contentH, h.host.ActivePanel().PathString(), h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetFullscreen, localfs.IsImagePath(st.Path))
+	req := h.previewRequest(st.Path, tw, contentH, h.host.ActivePanel().PathString(), h.model.PanelsChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetFullscreen)
 	req.RawMarkdown = h.model.FullscreenFilePreviewRawMarkdown
 	gen := h.filePreviewRunGen.Add(1)
 	h.postRenderWake()

@@ -123,6 +123,21 @@ Prefer `"auto"`. Explicit `"kitty"` under tmux+WezTerm is unsupported-quality te
 4. If you use tmux: `allow-passthrough on`, plus the `update-environment` lines above.
 5. For large/detailed photos under tmux: prefer tmux ≥ 3.6 and a higher `input-buffer-size`.
 
+## Video thumbnails
+
+Video files show text metadata first, then a thumbnail grid below it (default 2×2,
+configurable via `video_thumb_cols` / `video_thumb_rows`) when graphics are enabled.
+While frames are extracted, a `Generating thumbnails…` line appears under the metadata
+so the text does not jump when the grid arrives.
+
+| Condition | Thumbnails |
+|---|---|
+| `[preview].images = false` | Metadata only |
+| No TTY | Metadata only |
+| otherwise | Same protocol as still images (`ResolveImageProtocol`: Kitty on Kitty/Ghostty, sixel elsewhere including WezTerm) |
+
+Audio files always show metadata text only (no cover art).
+
 ## Related
 
 - Preview settings: [config.md](config.md) — `[preview]`

@@ -282,32 +282,9 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 	}
 
 	if st.ImagePayload != "" {
-		if st.ImageUnicodePlaceholder {
-			drawUnicodePlaceholderImage(screen, st, textX, contentTop, textW, contentH,
-				paintLeftMargin, paintRightMargin, leftMarginX, rightMarginX, marginStyle, padStyle)
-			return
-		}
-		for row := 0; row < contentH; row++ {
-			y := contentTop + row
-			if paintLeftMargin {
-				screen.SetContent(leftMarginX, y, ' ', nil, marginStyle)
-			}
-			fillContentRow(screen, textX, y, textW, padStyle)
-			if paintRightMargin {
-				screen.SetContent(rightMarginX, y, ' ', nil, marginStyle)
-			}
-		}
-		frameImage = &ImagePlacement{
-			X:        textX,
-			Y:        contentTop,
-			MaxCols:  textW,
-			MaxRows:  contentH,
-			PxW:      st.ImagePxW,
-			PxH:      st.ImagePxH,
-			Payload:  st.ImagePayload,
-			Path:     st.Path,
-			Protocol: st.ImageProtocol,
-		}
+		drawImageBody(screen, st, textX, contentTop, textW, contentH, body,
+			paintLeftMargin, paintRightMargin, leftMarginX, rightMarginX, marginStyle, padStyle,
+			scrollGutterX, borderStyle, p)
 		return
 	}
 

@@ -67,3 +67,32 @@ func TestIsImagePathExtensions(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckFilePreviewableMedia(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{"clip.mkv", "song.MP3", "movie.mp4"} {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte{0x00, 0x01}, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		err := CheckFilePreviewable(p)
+		if !errors.Is(err, ErrFilePreviewMedia) {
+			t.Fatalf("%s: err = %v want ErrFilePreviewMedia", name, err)
+		}
+		if !IsMediaPath(p) {
+			t.Fatalf("IsMediaPath(%q) = false", p)
+		}
+	}
+}
+
+func TestIsMediaPathExtensions(t *testing.T) {
+	cases := map[string]bool{
+		"a.mkv": true, "b.mp4": true, "c.webm": true, "d.mp3": true, "e.flac": true,
+		"f.txt": false, "g.png": false, "h.go": false,
+	}
+	for name, want := range cases {
+		if got := IsMediaPath(name); got != want {
+			t.Fatalf("IsMediaPath(%q) = %v, want %v", name, got, want)
+		}
+	}
+}

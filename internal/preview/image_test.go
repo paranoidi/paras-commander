@@ -58,8 +58,8 @@ func TestRunImageEncodesSixelWithinBudget(t *testing.T) {
 	if res.ImagePxW > 20 || res.ImagePxH > 15 {
 		t.Fatalf("scaled = %d×%d, want ≤ 20×15", res.ImagePxW, res.ImagePxH)
 	}
-	if !strings.Contains(res.CombinedText, "PNG") || !strings.Contains(res.CombinedText, "40 × 30") {
-		t.Fatalf("CombinedText = %q, want PNG metadata with native dims", res.CombinedText)
+	if res.CombinedText != "" {
+		t.Fatalf("CombinedText = %q, want empty on successful still-image encode", res.CombinedText)
 	}
 }
 

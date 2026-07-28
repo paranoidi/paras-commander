@@ -330,7 +330,8 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 	}
 	err := localfs.CheckFilePreviewable(path)
 	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
-	if err != nil && !isImage {
+	isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
+	if err != nil && !isImage && !isMedia {
 		switch {
 		case errors.Is(err, localfs.ErrFilePreviewBinary):
 			h.host.SetTransientMessage("View: not a text file", ui.MessageUrgencyWarn)
@@ -361,7 +362,6 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
 		panelPath = active.PathString()
 	}
 	titleBase := filepath.Base(path)
-	isImage := localfs.IsImagePath(path)
 	h.captureFilePreviewHold(previewTargetFullscreen)
 	h.model.FilePreviewThemePicker = dialog.FilePreviewThemePickerState{}
 	h.model.FullscreenFilePreviewRawMarkdown = false
@@ -404,7 +404,7 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
 	h.postRenderWake()
 	go h.runPreview(
 		h.ctx,
-		h.previewRequest(path, tw, contentH, panelPath, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetFullscreen, isImage),
+		h.previewRequest(path, tw, contentH, panelPath, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetFullscreen),
 		previewTargetFullscreen,
 		gen,
 	)

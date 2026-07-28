@@ -232,11 +232,14 @@ type PreviewConfig struct {
 	// Use %f once to insert the absolute file path as one token; use %w for terminal width; if %f is omitted, the path is appended.
 	Command string `toml:"command"`
 	// Images enables in-process image previews (F3 / quick view / carousel) via sixel or
-	// Kitty graphics. When false, image paths show metadata text instead.
+	// Kitty graphics. When false, image paths and video thumbnails show metadata text instead.
 	Images bool `toml:"images"`
 	// ImageProtocol selects the terminal graphics protocol: "auto", "sixel", or "kitty".
 	// Empty/invalid values normalize to DefaultPreviewImageProtocol ("auto").
 	ImageProtocol string `toml:"image_protocol"`
+	// VideoThumbCols / VideoThumbRows set the video thumbnail grid size (default 2×2).
+	VideoThumbCols int `toml:"video_thumb_cols"`
+	VideoThumbRows int `toml:"video_thumb_rows"`
 }
 
 type UIConfig struct {
@@ -529,12 +532,14 @@ func Default() Config {
 			LocalNames: []string{DefaultUserMenuFileName},
 		},
 		Preview: PreviewConfig{
-			Mode:          DefaultPreviewMode,
-			Style:         DefaultPreviewStyle,
-			LineNumbers:   DefaultPreviewLineNumbers,
-			Command:       DefaultFilePreviewCommand,
-			Images:        DefaultPreviewImages,
-			ImageProtocol: DefaultPreviewImageProtocol,
+			Mode:           DefaultPreviewMode,
+			Style:          DefaultPreviewStyle,
+			LineNumbers:    DefaultPreviewLineNumbers,
+			Command:        DefaultFilePreviewCommand,
+			Images:         DefaultPreviewImages,
+			ImageProtocol:  DefaultPreviewImageProtocol,
+			VideoThumbCols: DefaultPreviewVideoThumbCols,
+			VideoThumbRows: DefaultPreviewVideoThumbRows,
 		},
 		SFTP: SFTPConfig{
 			IdleTimeoutSecs: DefaultSFTPIdleTimeoutSecs,
@@ -1118,6 +1123,12 @@ func (c *Config) validatePreview(builtin *Config) {
 		c.Preview.ImageProtocol = PreviewImageProtocolAuto
 	default:
 		c.Preview.ImageProtocol = builtin.Preview.ImageProtocol
+	}
+	if c.Preview.VideoThumbCols < PreviewVideoThumbGridMin || c.Preview.VideoThumbCols > PreviewVideoThumbGridMax {
+		c.Preview.VideoThumbCols = builtin.Preview.VideoThumbCols
+	}
+	if c.Preview.VideoThumbRows < PreviewVideoThumbGridMin || c.Preview.VideoThumbRows > PreviewVideoThumbGridMax {
+		c.Preview.VideoThumbRows = builtin.Preview.VideoThumbRows
 	}
 	if c.Preview.Mode == PreviewModeExternal {
 		if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/pc-preview-validate", 80); err != nil {

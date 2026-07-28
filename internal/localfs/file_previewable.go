@@ -22,6 +22,9 @@ var ErrFilePreviewIsDir = errors.New("is a directory")
 // ErrFilePreviewImage indicates the path is an image extension eligible for sixel preview.
 var ErrFilePreviewImage = errors.New("image file")
 
+// ErrFilePreviewMedia indicates the path is a video/audio extension eligible for media preview.
+var ErrFilePreviewMedia = errors.New("media file")
+
 // IsImagePath reports whether path has a supported image extension (case-insensitive).
 // Single source of truth for image preview eligibility by name.
 func IsImagePath(path string) bool {
@@ -33,9 +36,22 @@ func IsImagePath(path string) bool {
 	}
 }
 
+// IsMediaPath reports whether path has a supported video/audio extension (case-insensitive).
+// Single source of truth for media preview eligibility by name.
+func IsMediaPath(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".mkv", ".mp4", ".m4v", ".webm", ".avi", ".mov", ".mpg", ".mpeg", ".ts", ".ogv",
+		".mp3", ".flac", ".ogg", ".opus", ".m4a", ".wav", ".aac":
+		return true
+	default:
+		return false
+	}
+}
+
 // CheckFilePreviewable returns nil if path is a non-directory regular file whose first
 // PreviewSniffBytes bytes contain no NUL and are valid UTF-8.
 // Image paths return ErrFilePreviewImage without opening the file.
+// Media paths return ErrFilePreviewMedia without opening the file.
 func CheckFilePreviewable(path string) error {
 	fi, err := os.Stat(path)
 	if err != nil {
@@ -46,6 +62,9 @@ func CheckFilePreviewable(path string) error {
 	}
 	if IsImagePath(path) {
 		return ErrFilePreviewImage
+	}
+	if IsMediaPath(path) {
+		return ErrFilePreviewMedia
 	}
 	f, err := os.Open(path)
 	if err != nil {

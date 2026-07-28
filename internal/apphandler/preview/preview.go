@@ -628,7 +628,8 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		h.ClearQuickViewDirOverlay()
 		err := localfs.CheckFilePreviewable(path)
 		isImage := errors.Is(err, localfs.ErrFilePreviewImage)
-		if err != nil && !isImage {
+		isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
+		if err != nil && !isImage && !isMedia {
 			switch {
 			case errors.Is(err, localfs.ErrFilePreviewBinary):
 				h.patchColumnPreviewMessage(filepath.Base(path), "Quick view: not a text file")
@@ -665,7 +666,7 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		})
 		h.postRenderWake()
 		gen := h.filePreviewRunGen.Add(1)
-		go h.runPreview(h.ctx, h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive, isImage), previewTargetInactive, gen)
+		go h.runPreview(h.ctx, h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive), previewTargetInactive, gen)
 	}
 }
 
@@ -684,7 +685,7 @@ func (h *Handler) refreshInactiveFilePreview() {
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
-	req := h.previewRequest(st.Path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive, localfs.IsImagePath(st.Path))
+	req := h.previewRequest(st.Path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive)
 	gen := h.filePreviewRunGen.Add(1)
 	h.postRenderWake()
 	go h.runPreview(h.ctx, req, previewTargetInactive, gen)
@@ -730,13 +731,13 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 	default:
 		tw, _, ok = h.inactivePanelPreviewLayoutMetrics(true)
 	}
-	isImage := localfs.IsImagePath(path)
-	// Image pixel budget depends on height too; bypass the width-equality skip for images.
-	if !ok || (tw == h.previewLastWidth[target] && !isImage) {
+	isImageOrMedia := localfs.IsImagePath(path) || localfs.IsMediaPath(path)
+	// Image/media pixel budget depends on height too; bypass the width-equality skip.
+	if !ok || (tw == h.previewLastWidth[target] && !isImageOrMedia) {
 		return
 	}
 
-	if isImage {
+	if isImageOrMedia {
 		// The stale payload (and any held copy of it) was encoded for the pre-resize pixel
 		// budget; drawing it at the newly computed placement would show a wrong-size image
 		// until the re-encode lands. Clear both so Draw() renders blank/pending instead,
@@ -871,7 +872,7 @@ func (h *Handler) ReconcileQuickViewPreview() {
 	h.armQuickViewPreviewDebounce()
 }
 
-func (h *Handler) previewRequest(path string, textW, contentH int, workDir string, chromeBlocked bool, gitStatus *gitstatus.Cell, target previewTarget, isImage bool) previewrun.Request {
+func (h *Handler) previewRequest(path string, textW, contentH int, workDir string, chromeBlocked bool, gitStatus *gitstatus.Cell, target previewTarget) previewrun.Request {
 	h.previewLastWidth[target] = textW
 	req := previewrun.Request{
 		Path:      path,
@@ -880,25 +881,27 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 		Preview:   h.host.Config().Preview,
 		BaseStyle: ui.FilePreviewBodyStyle(h.host.Styles(), chromeBlocked),
 	}
-	if isImage {
+	isImage := localfs.IsImagePath(path)
+	isMedia := localfs.IsMediaPath(path)
+	if isImage || isMedia {
 		cw, ch := previewpanel.CellPixelDims(h.screen)
-		req.Image = true
 		req.ImageMaxPxW = textW * cw
 		req.ImageMaxPxH = contentH * ch
-		// No tty ⇒ cannot emit graphics; force metadata fallback instead of a blank box.
+		req.ImageCellPxH = ch
+		req.ImageInTmux = os.Getenv("TMUX") != ""
 		if _, ok := h.screen.Tty(); !ok {
 			req.ImageProtocol = previewpanel.ImageProtocolNone
+		} else if isMedia {
+			req.Media = true
+			req.ImageProtocol = previewrun.ResolveVideoThumbProtocol(req.Preview.Images, req.Preview.ImageProtocol, os.Getenv)
 		} else {
-			req.ImageProtocol = previewrun.ResolveImageProtocol(req.Preview.ImageProtocol, os.Getenv)
+			req.Image = true
+			if !req.Preview.Images {
+				req.ImageProtocol = previewpanel.ImageProtocolNone
+			} else {
+				req.ImageProtocol = previewrun.ResolveImageProtocol(req.Preview.ImageProtocol, os.Getenv)
+			}
 		}
-		req.ImageInTmux = os.Getenv("TMUX") != ""
-		// tmux has no native rendering path for Kitty's cursor-relative placement; encode for
-		// Unicode-placeholder display instead (see internal/ui/previewpanel/unicode_placeholder.go)
-		// — but only when the outer terminal is confirmed to support it (Kitty/Ghostty). Kitty
-		// protocol can also be reached via an explicit image_protocol=kitty override, which
-		// says nothing about the actual terminal's capabilities: blindly using placeholder mode
-		// there sends cells an unsupporting terminal (e.g. WezTerm) can't interpret, and nothing
-		// renders at all.
 		req.ImageUnicodePlaceholder = req.ImageProtocol == previewpanel.ImageProtocolKitty &&
 			previewrun.TmuxSupportsKittyUnicodePlaceholders(os.Getenv)
 		return req
@@ -964,8 +967,43 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 	default:
 	}
 
-	res := previewrun.Run(ctx, req)
+	if req.Media {
+		h.runMediaPreview(ctx, req, target, runGen)
+		return
+	}
 
+	res := previewrun.Run(ctx, req)
+	h.applyPreviewResult(req, target, runGen, res)
+}
+
+func (h *Handler) runMediaPreview(ctx context.Context, req previewrun.Request, target previewTarget, runGen uint64) {
+	meta, work := previewrun.RunMediaMeta(req)
+	if meta.ErrorMsg != "" {
+		h.applyPreviewResult(req, target, runGen, meta)
+		return
+	}
+	if work != nil {
+		pending := meta
+		pending.CombinedText = meta.CombinedText + "\n\n" + previewrun.GeneratingThumbnailsLine
+		// Phase=Done so MergeDrawWithHold does not replace this body with a prior hold.
+		h.applyPreviewResult(req, target, runGen, pending)
+
+		select {
+		case <-ctx.Done():
+			h.applyPreviewResult(req, target, runGen, previewrun.Result{ErrorMsg: "Canceled"})
+			return
+		default:
+		}
+		res := previewrun.RunMediaThumbs(ctx, req, work)
+		h.applyPreviewResult(req, target, runGen, res)
+		return
+	}
+	h.applyPreviewResult(req, target, runGen, meta)
+}
+
+func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result) {
+	gen := h.previewRunGenFor(target)
+	path := req.Path
 	if runGen != gen.Load() {
 		return
 	}

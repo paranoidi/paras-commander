@@ -66,6 +66,63 @@ func TestResolveImageProtocolTmuxUsesClientTermType(t *testing.T) {
 	}
 }
 
+func TestResolveVideoThumbProtocol(t *testing.T) {
+	env := func(m map[string]string) func(string) string {
+		return func(k string) string { return m[k] }
+	}
+	cases := []struct {
+		name   string
+		images bool
+		cfg    string
+		env    map[string]string
+		want   previewpanel.ImageProtocol
+	}{
+		{name: "images off", images: false, cfg: "auto", env: map[string]string{"TERM_PROGRAM": "kitty"}, want: previewpanel.ImageProtocolNone},
+		{name: "force sixel", images: true, cfg: "sixel", env: map[string]string{}, want: previewpanel.ImageProtocolSixel},
+		{name: "force kitty", images: true, cfg: "kitty", env: map[string]string{}, want: previewpanel.ImageProtocolKitty},
+		{name: "auto kitty", images: true, cfg: "auto", env: map[string]string{"TERM_PROGRAM": "kitty"}, want: previewpanel.ImageProtocolKitty},
+		{name: "auto ghostty", images: true, cfg: "auto", env: map[string]string{"TERM_PROGRAM": "ghostty"}, want: previewpanel.ImageProtocolKitty},
+		{name: "auto wezterm sixel", images: true, cfg: "auto", env: map[string]string{"TERM_PROGRAM": "WezTerm"}, want: previewpanel.ImageProtocolSixel},
+		{name: "auto unknown sixel", images: true, cfg: "auto", env: map[string]string{}, want: previewpanel.ImageProtocolSixel},
+		{name: "auto xterm-kitty TERM", images: true, cfg: "auto", env: map[string]string{"TERM": "xterm-kitty"}, want: previewpanel.ImageProtocolKitty},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ResolveVideoThumbProtocol(tc.images, tc.cfg, env(tc.env))
+			if got != tc.want {
+				t.Fatalf("ResolveVideoThumbProtocol = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolveVideoThumbProtocolTmux(t *testing.T) {
+	orig := tmuxClientTermType
+	t.Cleanup(func() { tmuxClientTermType = orig })
+
+	envUnderTmux := func(k string) string {
+		switch k {
+		case "TMUX":
+			return "/tmp/tmux-1000/default,1234,0"
+		case "TERM_PROGRAM":
+			return "tmux"
+		case "TERM":
+			return "tmux-256color"
+		default:
+			return ""
+		}
+	}
+
+	tmuxClientTermType = func() string { return "ghostty 1.3.1" }
+	if got := ResolveVideoThumbProtocol(true, "auto", envUnderTmux); got != previewpanel.ImageProtocolKitty {
+		t.Fatalf("tmux+ghostty = %v, want Kitty", got)
+	}
+	tmuxClientTermType = func() string { return "wezterm 20260716" }
+	if got := ResolveVideoThumbProtocol(true, "auto", envUnderTmux); got != previewpanel.ImageProtocolSixel {
+		t.Fatalf("tmux+wezterm = %v, want Sixel", got)
+	}
+}
+
 func TestTmuxSupportsKittyUnicodePlaceholders(t *testing.T) {
 	orig := tmuxClientTermType
 	t.Cleanup(func() { tmuxClientTermType = orig })

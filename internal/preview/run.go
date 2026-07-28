@@ -74,9 +74,13 @@ type Request struct {
 	RawMarkdown bool
 	// Image, when true, runs the in-process image preview path instead of text/diff/markdown.
 	Image bool
+	// Media, when true, runs the in-process media (ffprobe + optional video thumbs) path.
+	Media bool
 	// ImageMaxPxW / ImageMaxPxH are the pixel budget for fit-scaling (cells × cell pixel size).
 	ImageMaxPxW int
 	ImageMaxPxH int
+	// ImageCellPxH is the pixel height of one terminal cell (for reserving metadata rows under video thumbs).
+	ImageCellPxH int
 	// ImageProtocol selects sixel vs Kitty encoding (resolved by the caller).
 	ImageProtocol previewpanel.ImageProtocol
 	// ImageUnicodePlaceholder, when true (Kitty protocol under tmux — see
@@ -132,6 +136,9 @@ type Result struct {
 func Run(ctx context.Context, req Request) Result {
 	if req.Image {
 		return runImage(req)
+	}
+	if req.Media {
+		return runMedia(ctx, req)
 	}
 	if req.GitDiff {
 		return runGitDiff(ctx, req)

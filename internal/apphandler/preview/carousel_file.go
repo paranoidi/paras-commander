@@ -261,7 +261,8 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 	workDir := h.host.ActivePanel().PathString()
 	err := localfs.CheckFilePreviewable(path)
 	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
-	if err != nil && !isImage {
+	isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
+	if err != nil && !isImage && !isMedia {
 		switch {
 		case errors.Is(err, localfs.ErrFilePreviewBinary):
 			h.patchCarouselFilePreviewMessage(filepath.Base(path), "Not a text file")
@@ -297,7 +298,7 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 	})
 	h.postRenderWake()
 	gen := h.carouselFilePreviewRunGen.Add(1)
-	go h.runPreview(h.ctx, h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel, isImage), previewTargetCarousel, gen)
+	go h.runPreview(h.ctx, h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel), previewTargetCarousel, gen)
 }
 
 // refreshCarouselFilePreview re-runs the current carousel child preview at its current path,
@@ -315,7 +316,7 @@ func (h *Handler) refreshCarouselFilePreview() {
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
-	req := h.previewRequest(st.Path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel, localfs.IsImagePath(st.Path))
+	req := h.previewRequest(st.Path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel)
 	gen := h.carouselFilePreviewRunGen.Add(1)
 	h.postRenderWake()
 	go h.runPreview(h.ctx, req, previewTargetCarousel, gen)

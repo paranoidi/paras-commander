@@ -86,7 +86,9 @@ func (a *App) applyStartPaths(rawPaths []string) error {
 		if r.kind == startPathDir {
 			return a.model.Primary.NavigateTo(r.path, "", a.panelViewportRows(ui.PrimaryPanel))
 		}
-		if err := localfs.CheckFilePreviewable(r.path); err != nil && !errors.Is(err, localfs.ErrFilePreviewImage) {
+		if err := localfs.CheckFilePreviewable(r.path); err != nil &&
+			!errors.Is(err, localfs.ErrFilePreviewImage) &&
+			!errors.Is(err, localfs.ErrFilePreviewMedia) {
 			return fmt.Errorf("preview %s: %w", r.path, err)
 		}
 		if err := a.model.Primary.NavigateTo(

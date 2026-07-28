@@ -264,8 +264,10 @@ File preview pane (F3 / quick view / carousel).
 | `style` | string | `"catppuccin-frappe"` | Syntax highlighting theme name used in internal mode. |
 | `line_numbers` | bool | `true` | Show a line-number gutter in internal mode. |
 | `command` | string | `"bat -n --paging=never --color=always --wrap=auto --terminal-width=%w %f"` | External preview command template, used when `mode` is `"external"`. Use `%f` once for the file path and `%w` for the terminal width; if `%f` is omitted, the path is appended. |
-| `images` | bool | `true` | Enable in-process image previews (F3 / quick view / carousel) via sixel or Kitty graphics. When `false`, image paths show format/dimensions/size metadata text instead. |
-| `image_protocol` | string | `"auto"` | Terminal graphics protocol for image previews: `"auto"` (Kitty when `TERM_PROGRAM`/`TERM` looks like kitty/ghostty, otherwise sixel), `"sixel"`, or `"kitty"`. Ignored when `images` is `false`. |
+| `images` | bool | `true` | Enable in-process image and video-thumbnail previews (F3 / quick view / carousel) via sixel or Kitty graphics. When `false`, image and media paths show metadata text instead. |
+| `image_protocol` | string | `"auto"` | Terminal graphics protocol for image and video-thumbnail previews: `"auto"` (Kitty when `TERM_PROGRAM`/`TERM` looks like kitty/ghostty, otherwise sixel — including WezTerm), `"sixel"`, or `"kitty"`. Ignored when `images` is `false`. |
+| `video_thumb_cols` | int | `2` | Columns in the video thumbnail grid (clamped 1–6). |
+| `video_thumb_rows` | int | `2` | Rows in the video thumbnail grid (clamped 1–6). |
 
 ## `[sftp]`
 
