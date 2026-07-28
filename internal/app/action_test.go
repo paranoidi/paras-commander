@@ -97,6 +97,15 @@ func TestActionFromKeyMapsCtrlAltLeftToTreeCollapseAll(t *testing.T) {
 	}
 }
 
+func TestActionFromKeyMapsAltShiftLeftToTreeCollapseAllFull(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt|tcell.ModShift)
+	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionPanelTreeCollapseAllFull {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelTreeCollapseAllFull", got)
+	}
+}
+
 func TestActionFromKeyMapsCtrlAltRightToTreeExpandAllShallow(t *testing.T) {
 	km := defaultKeymap(t)
 	event := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt|tcell.ModCtrl)

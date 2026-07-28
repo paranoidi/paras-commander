@@ -1,6 +1,7 @@
 package panel
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -585,12 +586,92 @@ func TestCollapseAllTree(t *testing.T) {
 		t.Fatalf("VisibleEntryCount after expand = %d, want 2", got)
 	}
 
+	// Manual expand leaves treeExpandAllDepth at 0 → CollapseAllTree clears remaining expansions.
 	state.CollapseAllTree(10)
 	if got := state.VisibleEntryCount(); got != 1 {
 		t.Fatalf("VisibleEntryCount after CollapseAllTree = %d, want 1", got)
 	}
 	if len(state.TreeExpanded) != 0 {
 		t.Fatalf("TreeExpanded = %v, want empty after CollapseAllTree", state.TreeExpanded)
+	}
+}
+
+func TestCollapseAllTreeOneLevelUndoesExpandAll(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	nested := filepath.Join(meadow, "nested")
+	deeper := filepath.Join(nested, "deeper")
+	if err := os.MkdirAll(deeper, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(deeper, "deep.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow 1: %v", err)
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow 2: %v", err)
+	}
+	if !state.TreeExpanded[meadow] || !state.TreeExpanded[nested] {
+		t.Fatalf("TreeExpanded meadow/nested = %v/%v, want both true", state.TreeExpanded[meadow], state.TreeExpanded[nested])
+	}
+	if state.TreeExpanded[deeper] {
+		t.Fatal("TreeExpanded[deeper] = true, want false before collapse")
+	}
+
+	state.CollapseAllTree(10)
+	if !state.TreeExpanded[meadow] {
+		t.Fatal("TreeExpanded[meadow] = false after one collapse, want true (depth-0 stays)")
+	}
+	if state.TreeExpanded[nested] {
+		t.Fatal("TreeExpanded[nested] = true after one collapse, want false (depth-1 collapsed)")
+	}
+	if state.treeExpandAllDepth != 1 {
+		t.Fatalf("treeExpandAllDepth = %d, want 1", state.treeExpandAllDepth)
+	}
+}
+
+// TestCollapseAllTreeFullyClearsEverything resets expand-all depth and all expansions in one press.
+func TestCollapseAllTreeFullyClearsEverything(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	nested := filepath.Join(meadow, "nested")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "deep.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow 1: %v", err)
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow 2: %v", err)
+	}
+	state.CollapseAllTreeFully(10)
+	if len(state.TreeExpanded) != 0 {
+		t.Fatalf("TreeExpanded = %v, want empty", state.TreeExpanded)
+	}
+	if state.treeExpandAllDepth != 0 {
+		t.Fatalf("treeExpandAllDepth = %d, want 0", state.treeExpandAllDepth)
+	}
+	if got := state.VisibleEntryCount(); got != 1 {
+		t.Fatalf("VisibleEntryCount = %d, want 1", got)
 	}
 }
 
@@ -638,11 +719,52 @@ func TestCollapseAllTreeCursorLandsOnRootAncestorNotOldIndex(t *testing.T) {
 
 	state.CollapseAllTree(10)
 
-	// After collapsing everything, the cursor must follow "meadow" (the depth-0 ancestor of the
-	// row it was on) rather than landing on whatever entry now occupies the old numeric index.
+	// Manual expands (treeExpandAllDepth 0) still full-clear: cursor follows "meadow" (the
+	// depth-0 ancestor) rather than landing on whatever entry now occupies the old numeric index.
 	entry, ok := state.CurrentEntry()
 	if !ok || entry.Path != meadow {
 		t.Fatalf("CurrentEntry after CollapseAllTree = %+v ok=%v, want cursor on meadow", entry, ok)
+	}
+}
+
+func TestCollapseAllTreeCursorMovesToCollapsedDepthAncestor(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	nested := filepath.Join(meadow, "nested")
+	deeper := filepath.Join(nested, "deeper")
+	if err := os.MkdirAll(deeper, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(deeper, "deep.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow 1: %v", err)
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow 2: %v", err)
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow 3: %v", err)
+	}
+	deepFile := filepath.Join(deeper, "deep.txt")
+	for i := 0; i < state.VisibleEntryCount(); i++ {
+		if e, _, ok := state.VisibleEntry(i); ok && e.Path == deepFile {
+			state.Cursor = i
+			break
+		}
+	}
+	state.CollapseAllTree(10)
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Path != deeper {
+		t.Fatalf("CurrentEntry after one-level collapse = %+v ok=%v, want deeper (collapsed-depth ancestor)", entry, ok)
 	}
 }
 
@@ -695,10 +817,10 @@ func TestExpandAllTreeShallow(t *testing.T) {
 	}
 }
 
-// TestExpandAllTreeShallowUnderExpandedCursor covers Ctrl+Alt+Right when the cursor already sits
-// on an expanded directory: expand that directory's immediate child directories one level, without
-// recursing further and without re-expanding unrelated depth-0 roots.
-func TestExpandAllTreeShallowUnderExpandedCursor(t *testing.T) {
+// TestExpandAllTreeShallowSecondPressDeepensWholeTree covers Ctrl+Alt+Right pressed twice:
+// first expands depth-0 roots; second expands every depth-1 directory across the tree (not
+// only under the cursor), without recursing to depth 2 in one press.
+func TestExpandAllTreeShallowSecondPressDeepensWholeTree(t *testing.T) {
 	root := t.TempDir()
 	meadow := filepath.Join(root, "meadow")
 	nested := filepath.Join(meadow, "nested")
@@ -710,10 +832,11 @@ func TestExpandAllTreeShallowUnderExpandedCursor(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	orchard := filepath.Join(root, "orchard")
-	if err := os.Mkdir(orchard, 0o755); err != nil {
-		t.Fatalf("Mkdir: %v", err)
+	grove := filepath.Join(orchard, "grove")
+	if err := os.MkdirAll(grove, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(orchard, "ember.txt"), []byte("x"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(grove, "ember.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	state, err := New(root)
@@ -726,7 +849,7 @@ func TestExpandAllTreeShallowUnderExpandedCursor(t *testing.T) {
 	if err := state.ExpandAllTreeShallow(10); err != nil {
 		t.Fatalf("ExpandAllTreeShallow (roots): %v", err)
 	}
-	// Cursor on expanded meadow; second shallow expand-all should open meadow's child dirs only.
+	// Cursor on expanded meadow — second press must still deepen the whole tree.
 	for i := 0; i < state.VisibleEntryCount(); i++ {
 		e, _, ok := state.VisibleEntry(i)
 		if ok && e.Path == meadow {
@@ -735,17 +858,56 @@ func TestExpandAllTreeShallowUnderExpandedCursor(t *testing.T) {
 		}
 	}
 	if err := state.ExpandAllTreeShallow(10); err != nil {
-		t.Fatalf("ExpandAllTreeShallow (under meadow): %v", err)
+		t.Fatalf("ExpandAllTreeShallow (depth 1): %v", err)
 	}
 	if !state.TreeExpanded[nested] {
-		t.Fatalf("TreeExpanded[%s] = false, want true (immediate child of cursor dir)", nested)
+		t.Fatalf("TreeExpanded[%s] = false, want true (depth-1 under meadow)", nested)
+	}
+	if !state.TreeExpanded[grove] {
+		t.Fatalf("TreeExpanded[%s] = false, want true (depth-1 under orchard, not only cursor branch)", grove)
 	}
 	if state.TreeExpanded[deeper] {
 		t.Fatalf("TreeExpanded[%s] = true, want false (must not recurse past one level)", deeper)
 	}
 	cur, _, ok := state.VisibleEntry(state.Cursor)
 	if !ok || cur.Path != meadow {
-		t.Fatalf("cursor after expand-under = %q ok=%v, want meadow", cur.Path, ok)
+		t.Fatalf("cursor after deepen = %q ok=%v, want meadow", cur.Path, ok)
+	}
+}
+
+// TestExpandAllTreeShallowDepthLimit caps successive deepen presses at 5, then returns
+// ErrExpandAllDepthLimit; CollapseAllTree resets the counter.
+func TestExpandAllTreeShallowDepthLimit(t *testing.T) {
+	root := t.TempDir()
+	// Chain of 6 nested dirs so press 5 can expand depth-4 without running out of levels.
+	path := root
+	for i := 0; i < 6; i++ {
+		path = filepath.Join(path, "layer")
+		if err := os.Mkdir(path, 0o755); err != nil {
+			t.Fatalf("Mkdir layer %d: %v", i, err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(path, "leaf.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	for i := 0; i < maxExpandAllShallowDepth; i++ {
+		if err := state.ExpandAllTreeShallow(10); err != nil {
+			t.Fatalf("ExpandAllTreeShallow press %d: %v", i+1, err)
+		}
+	}
+	if err := state.ExpandAllTreeShallow(10); !errors.Is(err, ErrExpandAllDepthLimit) {
+		t.Fatalf("press %d err = %v, want ErrExpandAllDepthLimit", maxExpandAllShallowDepth+1, err)
+	}
+	state.CollapseAllTreeFully(10)
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow after CollapseAllTreeFully: %v", err)
 	}
 }
 
@@ -1056,6 +1218,65 @@ func TestNavigateBackRestoresTreeExpansionAndCursor(t *testing.T) {
 	entry, ok := state.CurrentEntry()
 	if !ok || entry.Name != "willow.txt" {
 		t.Fatalf("CurrentEntry = %+v ok=%v, want willow.txt", entry, ok)
+	}
+}
+
+// TestNavigateBackRestoresTreeExpandAllDepth covers persisting the expand-all deepen counter
+// per directory: deepen twice, leave, return — next expand-all continues at depth 3, not 1.
+func TestNavigateBackRestoresTreeExpandAllDepth(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	nested := filepath.Join(meadow, "nested")
+	deeper := filepath.Join(nested, "deeper")
+	if err := os.MkdirAll(deeper, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(deeper, "leaf.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	other := t.TempDir()
+	if err := os.WriteFile(filepath.Join(other, "cinder.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow 1: %v", err)
+	}
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow 2: %v", err)
+	}
+	if state.treeExpandAllDepth != 2 {
+		t.Fatalf("treeExpandAllDepth before leave = %d, want 2", state.treeExpandAllDepth)
+	}
+
+	if err := state.NavigateTo(other, "", 10); err != nil {
+		t.Fatalf("NavigateTo(%s): %v", other, err)
+	}
+	if err := state.NavigateTo(root, "", 10); err != nil {
+		t.Fatalf("NavigateTo(%s): %v", root, err)
+	}
+	if state.treeExpandAllDepth != 2 {
+		t.Fatalf("treeExpandAllDepth after return = %d, want 2", state.treeExpandAllDepth)
+	}
+	if !state.TreeExpanded[meadow] || !state.TreeExpanded[nested] {
+		t.Fatalf("TreeExpanded meadow/nested = %v/%v after return, want both true", state.TreeExpanded[meadow], state.TreeExpanded[nested])
+	}
+	// Third deepen should open deeper, not re-expand roots.
+	if err := state.ExpandAllTreeShallow(10); err != nil {
+		t.Fatalf("ExpandAllTreeShallow 3 after return: %v", err)
+	}
+	if !state.TreeExpanded[deeper] {
+		t.Fatalf("TreeExpanded[%s] = false after third deepen, want true", deeper)
+	}
+	if state.treeExpandAllDepth != 3 {
+		t.Fatalf("treeExpandAllDepth after third deepen = %d, want 3", state.treeExpandAllDepth)
 	}
 }
 

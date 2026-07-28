@@ -652,10 +652,18 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:          ActionPanelTreeCollapseAll,
 			Views:       HelpBrowser,
-			Title:       "Collapse all (tree)",
+			Title:       "Collapse all one level (tree)",
 			Section:     "Sort & display",
 			DefaultKeys: []string{"M-C-left"},
-			Keywords:    []string{"tree", "collapse", "all", "directory", "nested"},
+			Keywords:    []string{"tree", "collapse", "all", "shallow", "directory", "nested"},
+		},
+		{
+			ID:          ActionPanelTreeCollapseAllFull,
+			Views:       HelpBrowser,
+			Title:       "Collapse all (tree)",
+			Section:     "Sort & display",
+			DefaultKeys: []string{"M-S-left"},
+			Keywords:    []string{"tree", "collapse", "all", "full", "directory", "nested"},
 		},
 		{
 			ID:          ActionPanelTreeExpandAllShallow,

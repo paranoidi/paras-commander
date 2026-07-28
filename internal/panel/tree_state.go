@@ -1,6 +1,8 @@
 package panel
 
 import (
+	"errors"
+
 	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -32,6 +34,14 @@ const (
 // loading or cancellation yet.
 const maxTreeExpandDepth = 32
 
+// maxExpandAllShallowDepth caps how many successive ExpandAllTreeShallow presses deepen the
+// whole tree (each press expands dirs at one more depth level).
+const maxExpandAllShallowDepth = 5
+
+// ErrExpandAllDepthLimit is returned when ExpandAllTreeShallow is pressed after the tree has
+// already been deepened to maxExpandAllShallowDepth.
+var ErrExpandAllDepthLimit = errors.New("expand all depth limit")
+
 // SetListLayout switches the panel's file-list rendering between flat rows and an
 // expand/collapse tree. Entering tree mode seeds TreeRoots fresh from the current
 // (already-loaded) flat Entries as depth-0 nodes with no children loaded yet, and starts with
@@ -60,6 +70,7 @@ func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 	if layout == ListLayoutTree {
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
 		s.TreeExpanded = make(map[string]bool)
+		s.treeExpandAllDepth = 0
 		s.rebuildTreeRows()
 	} else if cursorAncestorID != "" {
 		for i, e := range s.Entries {
@@ -269,16 +280,46 @@ func (s *State) collapseTreeRow(id string, depth int, viewportRows int) error {
 	return nil
 }
 
-// CollapseAllTree clears all expand state, collapsing the tree back to depth 0. No-op outside
-// tree mode. The cursor follows the same nesting logic as CollapseTreeCursorRow: it lands on the
-// cursor row's depth-0 ancestor (or the row itself if already at depth 0), not on whatever row
-// ends up at the old cursor index.
+// CollapseAllTree collapses the whole tree by one expand-all level: directories at
+// depth == treeExpandAllDepth-1 are collapsed and the deepen counter decrements. When the
+// counter is already 0, any remaining expansions (e.g. from single-row expand) are cleared in
+// one shot via CollapseAllTreeFully. No-op outside tree mode or when nothing is expanded. The
+// cursor stays on its row when that row remains visible; otherwise it moves to the ancestor at
+// the collapsed depth (or the depth-0 ancestor on a full clear).
 func (s *State) CollapseAllTree(viewportRows int) {
 	if s.ListLayout != ListLayoutTree {
 		return
 	}
+	if s.treeExpandAllDepth == 0 {
+		s.CollapseAllTreeFully(viewportRows)
+		return
+	}
+	collapseDepth := s.treeExpandAllDepth - 1
+	anchorID := s.collapseAllTreeCursorAnchor(collapseDepth)
+	s.collapseAllTreeDirsAtDepth(s.TreeRoots, 0, collapseDepth)
+	s.treeExpandAllDepth--
+	s.rebuildTreeRows()
+	if anchorID != "" {
+		s.reattachTreeCursorByID(anchorID, viewportRows)
+		return
+	}
+	s.clampCursor()
+	s.EnsureCursorInViewport(viewportRows)
+}
+
+// CollapseAllTreeFully clears all expand state and resets the expand-all deepen counter.
+// No-op outside tree mode. The cursor lands on the cursor row's depth-0 ancestor (or the row
+// itself if already at depth 0).
+func (s *State) CollapseAllTreeFully(viewportRows int) {
+	if s.ListLayout != ListLayoutTree {
+		return
+	}
+	if len(s.TreeExpanded) == 0 && s.treeExpandAllDepth == 0 {
+		return
+	}
 	targetID := s.treeRootAncestorID()
 	s.TreeExpanded = nil
+	s.treeExpandAllDepth = 0
 	s.rebuildTreeRows()
 	if targetID != "" {
 		s.reattachTreeCursorByID(targetID, viewportRows)
@@ -286,6 +327,44 @@ func (s *State) CollapseAllTree(viewportRows int) {
 	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
+}
+
+// collapseAllTreeCursorAnchor picks the row to keep under the cursor after collapsing every
+// directory at collapseDepth. Rows deeper than collapseDepth would disappear with their parent,
+// so the ancestor at collapseDepth is used instead.
+func (s *State) collapseAllTreeCursorAnchor(collapseDepth int) string {
+	if s.Cursor < 0 || s.Cursor >= len(s.treeRows) {
+		return ""
+	}
+	row := s.treeRows[s.Cursor]
+	if row.Depth <= collapseDepth {
+		return row.ID
+	}
+	for i := s.Cursor - 1; i >= 0; i-- {
+		if s.treeRows[i].Depth == collapseDepth {
+			return s.treeRows[i].ID
+		}
+	}
+	return row.ID
+}
+
+// collapseAllTreeDirsAtDepth collapses every directory node at exactly targetDepth.
+func (s *State) collapseAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth, targetDepth int) {
+	for i := range nodes {
+		n := &nodes[i]
+		if n.Value.Entry.Type != localfs.EntryDirectory {
+			continue
+		}
+		if depth == targetDepth {
+			if s.TreeExpanded[n.ID] {
+				_ = s.setTreeNodeExpanded(n.ID, depth, false, false)
+			}
+			continue
+		}
+		if depth < targetDepth && s.TreeExpanded[n.ID] && n.Children != nil {
+			s.collapseAllTreeDirsAtDepth(n.Children, depth+1, targetDepth)
+		}
+	}
 }
 
 // treeRootAncestorID returns the ID of the cursor row's depth-0 ancestor (or the cursor row's own
@@ -306,36 +385,29 @@ func (s *State) treeRootAncestorID() string {
 	return ""
 }
 
-// ExpandAllTreeShallow expands directories by exactly one level without recursion. When the
-// cursor is on an already-expanded directory, it expands that directory's immediate child
-// directories (one level under the cursor). Otherwise it expands every depth-0 TreeRoots
-// directory. Async child loads are coalesced (treeExpandQuiet) so the list rebuilds once when
-// all in-flight fetches finish, and the cursor stays on the row the command was issued from.
-// Does not itself enable tree mode — same split of responsibility as ExpandTreeCursorRow.
+// ExpandAllTreeShallow deepens the whole tree by one level: each successive call expands every
+// loaded directory at depth == treeExpandAllDepth (press 1 → depth 0, press 2 → depth 1, …),
+// up to maxExpandAllShallowDepth. Further presses return ErrExpandAllDepthLimit. Async child
+// loads are coalesced (treeExpandQuiet) so the list rebuilds once when all in-flight fetches
+// finish, and the cursor stays on the row the command was issued from. Does not itself enable
+// tree mode — same split of responsibility as ExpandTreeCursorRow.
 func (s *State) ExpandAllTreeShallow(viewportRows int) error {
 	if s.ListLayout != ListLayoutTree {
 		return nil
 	}
-	if s.Cursor >= 0 && s.Cursor < len(s.treeRows) {
-		row := s.treeRows[s.Cursor]
-		if row.Value.Entry.Type == localfs.EntryDirectory && s.TreeExpanded[row.ID] {
-			return s.expandAllTreeShallowChildren(row.ID, row.Depth, viewportRows)
-		}
+	if s.treeExpandAllDepth >= maxExpandAllShallowDepth {
+		return ErrExpandAllDepthLimit
 	}
+	targetDepth := s.treeExpandAllDepth
 	anchorID := ""
 	if s.Cursor >= 0 && s.Cursor < len(s.treeRows) {
 		anchorID = s.treeRows[s.Cursor].ID
 	}
 	s.treeCursorID = anchorID
-	for i := range s.TreeRoots {
-		root := &s.TreeRoots[i]
-		if root.Value.Entry.Type != localfs.EntryDirectory {
-			continue
-		}
-		if err := s.setTreeNodeExpanded(root.ID, 0, true, true); err != nil {
-			return err
-		}
+	if err := s.expandAllTreeDirsAtDepth(s.TreeRoots, 0, targetDepth); err != nil {
+		return err
 	}
+	s.treeExpandAllDepth++
 	// Async quiet batch: leave treeRows alone until the last ApplyTreeChildLoad rebuilds once.
 	if s.treeExpandQuiet > 0 {
 		return nil
@@ -350,29 +422,26 @@ func (s *State) ExpandAllTreeShallow(viewportRows int) error {
 	return nil
 }
 
-// expandAllTreeShallowChildren expands every immediate directory child of parentID by one
-// level. Cursor stays on the parent. No-op when the parent has no loaded children.
-func (s *State) expandAllTreeShallowChildren(parentID string, parentDepth int, viewportRows int) error {
-	node := findTreeNode(s.TreeRoots, parentID)
-	if node == nil || node.Children == nil {
-		return nil
-	}
-	s.treeCursorID = parentID
-	childDepth := parentDepth + 1
-	for i := range node.Children {
-		child := &node.Children[i]
-		if child.Value.Entry.Type != localfs.EntryDirectory {
+// expandAllTreeDirsAtDepth expands every directory node at exactly targetDepth. Ancestors above
+// targetDepth are walked only when already expanded with loaded children.
+func (s *State) expandAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth, targetDepth int) error {
+	for i := range nodes {
+		n := &nodes[i]
+		if n.Value.Entry.Type != localfs.EntryDirectory {
 			continue
 		}
-		if err := s.setTreeNodeExpanded(child.ID, childDepth, true, true); err != nil {
-			return err
+		if depth == targetDepth {
+			if err := s.setTreeNodeExpanded(n.ID, depth, true, true); err != nil {
+				return err
+			}
+			continue
+		}
+		if depth < targetDepth && s.TreeExpanded[n.ID] && n.Children != nil {
+			if err := s.expandAllTreeDirsAtDepth(n.Children, depth+1, targetDepth); err != nil {
+				return err
+			}
 		}
 	}
-	if s.treeExpandQuiet > 0 {
-		return nil
-	}
-	s.rebuildTreeRows()
-	s.reattachTreeCursorByID(parentID, viewportRows)
 	return nil
 }
 

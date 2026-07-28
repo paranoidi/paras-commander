@@ -34,6 +34,8 @@ type historyCursorSnapshot struct {
 	CursorPath string
 	// TreeExpanded is the expanded node-ID set when leaving in tree mode; nil otherwise.
 	TreeExpanded map[string]bool
+	// TreeExpandAllDepth is the ExpandAllTreeShallow deepen counter when leaving in tree mode.
+	TreeExpandAllDepth int
 }
 
 // State contains all panel data needed by the App and renderer.
@@ -186,6 +188,11 @@ type State struct {
 	// ExpandAllTreeShallow: ApplyTreeChildLoad updates node state but skips rebuild/redraw
 	// until this counter reaches zero, then reattaches the cursor to treeCursorID once.
 	treeExpandQuiet int
+	// treeExpandAllDepth is how many successful ExpandAllTreeShallow presses have deepened
+	// this panel's tree (0 = none yet). Caps at maxExpandAllShallowDepth; CollapseAllTree
+	// decrements it one level at a time. Snapshotted per directory in HistoryCursorByPath and
+	// restored on return; reset when re-entering tree mode.
+	treeExpandAllDepth int
 }
 
 // GitStatusRequest describes one async git status fetch for the current listing.
@@ -753,6 +760,7 @@ func (s *State) rememberCursorForPath(dir string) {
 	snap := historyCursorSnapshot{EntryName: name, Index: s.Cursor, CursorPath: path}
 	if s.ListLayout == ListLayoutTree {
 		snap.TreeExpanded = maps.Clone(s.TreeExpanded)
+		snap.TreeExpandAllDepth = s.treeExpandAllDepth
 	}
 	s.HistoryCursorByPath[dir] = snap
 }
@@ -1361,6 +1369,9 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 			keep = s.TreeExpanded
 		} else if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok {
 			keep = maps.Clone(snap.TreeExpanded)
+			s.treeExpandAllDepth = snap.TreeExpandAllDepth
+		} else {
+			s.treeExpandAllDepth = 0
 		}
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
 		s.TreeExpanded = keep

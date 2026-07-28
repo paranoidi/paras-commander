@@ -86,8 +86,8 @@ func TestPanelTreeExpandActionEnablesTreeAndExpands(t *testing.T) {
 		t.Fatalf("VisibleEntryCount after panel.tree-expand = %d, want 2 (orchard expanded to show ember.txt)", got)
 	}
 
-	// panel.tree-collapse-all should clear the expansion back to depth 0 without disabling
-	// tree mode.
+	// panel.tree-collapse-all collapses one expand-all level (or clears leftover manual
+	// expansions when the deepen counter is already 0) without disabling tree mode.
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelTreeCollapseAll)
 	if app.model.Primary.ListLayout != panel.ListLayoutTree {
 		t.Fatal("panel.tree-collapse-all should not disable tree layout")
@@ -246,5 +246,27 @@ func TestPanelTreeExpandWorksAfterCarouselRoundTrip(t *testing.T) {
 	applyNextInterruptEvent(t, app, screen)
 	if got := app.model.Primary.VisibleEntryCount(); got != 2 {
 		t.Fatalf("VisibleEntryCount after re-expand = %d, want 2 (orchard, ember.txt) — expand was a no-op due to stale TreeExpanded state", got)
+	}
+}
+
+// TestPanelTreeExpandAllShallowDepthLimitToast covers the sixth Ctrl+Alt+Right: after five
+// deepen presses the action shows an info toast instead of expanding further.
+func TestPanelTreeExpandAllShallowDepthLimitToast(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "orchard"), 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	for i := 0; i < 5; i++ {
+		app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelTreeExpandAllShallow)
+	}
+	app.dispatchActionLikeKeyboardShortcut(keymap.ActionPanelTreeExpandAllShallow)
+	if got, want := app.model.Message, "Expand all is limited to depth 5"; got != want {
+		t.Fatalf("Message = %q, want %q", got, want)
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyInfo {
+		t.Fatalf("MessageUrgency = %v, want info", app.model.MessageUrgency)
 	}
 }

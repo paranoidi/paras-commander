@@ -152,12 +152,46 @@ func drainPTYToWriter(ptyMaster *os.File, out io.Writer, maxWait time.Duration) 
 	// File.Fd() flips a pollable fd back to blocking mode — without this SetNonblock the
 	// first read on an idle shell blocks forever (the Ctrl+O toggle-out freeze).
 	_ = unix.SetNonblock(ptyFD, true)
-	for time.Now().Before(deadline) {
+	// Wait up to maxWait for output (typed-line echo can lag the write), then keep
+	// reading until the PTY has been quiet briefly so split writes are not truncated.
+	const quiet = 10 * time.Millisecond
+	var lastData time.Time
+	for {
 		n, err := unix.Read(ptyFD, buf)
 		if n > 0 {
 			_, _ = out.Write(buf[:n])
+			lastData = time.Now()
+			continue
 		}
-		if n <= 0 || errors.Is(err, unix.EAGAIN) {
+		if err != nil && !errors.Is(err, unix.EAGAIN) && !errors.Is(err, unix.EINTR) {
+			return
+		}
+		now := time.Now()
+		if !now.Before(deadline) {
+			return
+		}
+		if !lastData.IsZero() && now.Sub(lastData) >= quiet {
+			return
+		}
+		wait := time.Until(deadline)
+		if !lastData.IsZero() {
+			if q := quiet - now.Sub(lastData); q < wait {
+				wait = q
+			}
+		}
+		if wait <= 0 {
+			return
+		}
+		timeoutMs := int(wait / time.Millisecond)
+		if timeoutMs < 1 {
+			timeoutMs = 1
+		}
+		pfd := []unix.PollFd{{Fd: int32(ptyFD), Events: unix.POLLIN}}
+		nready, perr := unix.Poll(pfd, timeoutMs)
+		if perr != nil && !errors.Is(perr, unix.EINTR) {
+			return
+		}
+		if nready == 0 {
 			return
 		}
 	}

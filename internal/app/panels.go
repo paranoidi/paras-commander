@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -713,6 +714,8 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 		a.collapseTreeForPanel(activePanel, viewportRows)
 	case keymap.ActionPanelTreeCollapseAll:
 		a.collapseAllTreeForPanel(activePanel, viewportRows)
+	case keymap.ActionPanelTreeCollapseAllFull:
+		a.collapseAllTreeFullyForPanel(activePanel, viewportRows)
 	case keymap.ActionPanelTreeExpandAllShallow:
 		if a.expandAllTreeShallowForPanel(activePanel, viewportRows) {
 			a.setTransientMessage("Tree view is not available in carousel view", ui.MessageUrgencyInfo)
@@ -781,14 +784,18 @@ func (a *App) collapseTreeForPanel(target *panel.State, viewportRows int) {
 	}
 }
 
-// collapseAllTreeForPanel clears all expand state on target. Never auto-enables tree mode.
+// collapseAllTreeForPanel collapses one expand-all level on target. Never auto-enables tree mode.
 func (a *App) collapseAllTreeForPanel(target *panel.State, viewportRows int) {
 	target.CollapseAllTree(viewportRows)
 }
 
-// expandAllTreeShallowForPanel enables tree layout on target if not already active, then expands
-// directories by one level: under the cursor when it sits on an already-expanded directory,
-// otherwise every depth-0 directory.
+// collapseAllTreeFullyForPanel clears all expand state on target. Never auto-enables tree mode.
+func (a *App) collapseAllTreeFullyForPanel(target *panel.State, viewportRows int) {
+	target.CollapseAllTreeFully(viewportRows)
+}
+
+// expandAllTreeShallowForPanel enables tree layout on target if not already active, then deepens
+// the whole tree by one level (up to depth 5). Further presses show an info toast.
 func (a *App) expandAllTreeShallowForPanel(target *panel.State, viewportRows int) (blocked bool) {
 	if target.ListLayout != panel.ListLayoutTree {
 		if !target.SetListLayout(panel.ListLayoutTree, viewportRows) {
@@ -796,6 +803,10 @@ func (a *App) expandAllTreeShallowForPanel(target *panel.State, viewportRows int
 		}
 	}
 	if err := target.ExpandAllTreeShallow(viewportRows); err != nil {
+		if errors.Is(err, panel.ErrExpandAllDepthLimit) {
+			a.setTransientMessage("Expand all is limited to depth 5", ui.MessageUrgencyInfo)
+			return false
+		}
 		a.setErrorMessage("Expand all failed", err)
 	}
 	return false
