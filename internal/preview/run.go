@@ -92,6 +92,8 @@ type Request struct {
 	// reduced palette and a payload size cap in this case — see
 	// config.DefaultPreviewTmuxSixelColors/MaxBytes.
 	ImageInTmux bool
+	// Cache, when non-nil, stores/loads downscaled PNG rasters shared with background prefetch.
+	Cache MediaCache
 }
 
 // Result is the unified preview output for internal and external backends.
@@ -135,7 +137,7 @@ type Result struct {
 // Run executes internal Chroma highlighting or an external preview command.
 func Run(ctx context.Context, req Request) Result {
 	if req.Image {
-		return runImage(req)
+		return runImageCtx(ctx, req)
 	}
 	if req.Media {
 		return runMedia(ctx, req)

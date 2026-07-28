@@ -240,6 +240,21 @@ type PreviewConfig struct {
 	// VideoThumbCols / VideoThumbRows set the video thumbnail grid size (default 2×2).
 	VideoThumbCols int `toml:"video_thumb_cols"`
 	VideoThumbRows int `toml:"video_thumb_rows"`
+	// Prefetch enables background decode of nearby images and video thumbnail generation.
+	Prefetch bool `toml:"prefetch"`
+	// PrefetchAlways, when true, runs prefetch whenever Prefetch is on. When false (default),
+	// prefetch only runs while quick view is latched or the active panel is in carousel mode.
+	PrefetchAlways bool `toml:"prefetch_always"`
+	// PrefetchWorkers is the worker-pool size for background prefetch (default 4).
+	PrefetchWorkers int `toml:"prefetch_workers"`
+	// ImageMaxEdgePx caps the longest edge of decoded stills and video-thumb grids before
+	// the final cell-budget fit (default 1024). Applied even when Prefetch is false.
+	ImageMaxEdgePx int `toml:"image_max_edge_px"`
+	// PrefetchMemoryMaxMB is the in-memory prefetch LRU budget in MiB (default 256).
+	PrefetchMemoryMaxMB int `toml:"prefetch_memory_max_mb"`
+	// VideoThumbCacheMaxMB caps the on-disk video thumbnail cache under
+	// $XDG_CACHE_HOME/pc/video-thumbs/ (default 512).
+	VideoThumbCacheMaxMB int `toml:"video_thumb_cache_max_mb"`
 }
 
 type UIConfig struct {
@@ -532,14 +547,20 @@ func Default() Config {
 			LocalNames: []string{DefaultUserMenuFileName},
 		},
 		Preview: PreviewConfig{
-			Mode:           DefaultPreviewMode,
-			Style:          DefaultPreviewStyle,
-			LineNumbers:    DefaultPreviewLineNumbers,
-			Command:        DefaultFilePreviewCommand,
-			Images:         DefaultPreviewImages,
-			ImageProtocol:  DefaultPreviewImageProtocol,
-			VideoThumbCols: DefaultPreviewVideoThumbCols,
-			VideoThumbRows: DefaultPreviewVideoThumbRows,
+			Mode:                 DefaultPreviewMode,
+			Style:                DefaultPreviewStyle,
+			LineNumbers:          DefaultPreviewLineNumbers,
+			Command:              DefaultFilePreviewCommand,
+			Images:               DefaultPreviewImages,
+			ImageProtocol:        DefaultPreviewImageProtocol,
+			VideoThumbCols:       DefaultPreviewVideoThumbCols,
+			VideoThumbRows:       DefaultPreviewVideoThumbRows,
+			Prefetch:             DefaultPreviewPrefetch,
+			PrefetchAlways:       DefaultPreviewPrefetchAlways,
+			PrefetchWorkers:      DefaultPreviewPrefetchWorkers,
+			ImageMaxEdgePx:       DefaultPreviewImageMaxEdgePx,
+			PrefetchMemoryMaxMB:  DefaultPreviewPrefetchMemoryMaxMB,
+			VideoThumbCacheMaxMB: DefaultPreviewVideoThumbCacheMaxMB,
 		},
 		SFTP: SFTPConfig{
 			IdleTimeoutSecs: DefaultSFTPIdleTimeoutSecs,
@@ -1129,6 +1150,18 @@ func (c *Config) validatePreview(builtin *Config) {
 	}
 	if c.Preview.VideoThumbRows < PreviewVideoThumbGridMin || c.Preview.VideoThumbRows > PreviewVideoThumbGridMax {
 		c.Preview.VideoThumbRows = builtin.Preview.VideoThumbRows
+	}
+	if c.Preview.PrefetchWorkers < PreviewPrefetchWorkersMin || c.Preview.PrefetchWorkers > PreviewPrefetchWorkersMax {
+		c.Preview.PrefetchWorkers = builtin.Preview.PrefetchWorkers
+	}
+	if c.Preview.ImageMaxEdgePx < PreviewImageMaxEdgePxMin {
+		c.Preview.ImageMaxEdgePx = builtin.Preview.ImageMaxEdgePx
+	}
+	if c.Preview.PrefetchMemoryMaxMB < 1 {
+		c.Preview.PrefetchMemoryMaxMB = builtin.Preview.PrefetchMemoryMaxMB
+	}
+	if c.Preview.VideoThumbCacheMaxMB < 1 {
+		c.Preview.VideoThumbCacheMaxMB = builtin.Preview.VideoThumbCacheMaxMB
 	}
 	if c.Preview.Mode == PreviewModeExternal {
 		if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/pc-preview-validate", 80); err != nil {

@@ -278,6 +278,25 @@ const (
 	// PreviewVideoThumbGridMin / Max clamp [preview].video_thumb_cols/rows in Validate.
 	PreviewVideoThumbGridMin = 1
 	PreviewVideoThumbGridMax = 6
+	// DefaultPreviewPrefetch enables background image decode / video-thumb generation near the caret.
+	DefaultPreviewPrefetch = true
+	// DefaultPreviewPrefetchAlways, when false, limits prefetch to quick view or carousel mode.
+	// When true, prefetch runs whenever [preview].prefetch is on.
+	DefaultPreviewPrefetchAlways = false
+	// DefaultPreviewPrefetchWorkers is the default worker-pool size for preview prefetch.
+	DefaultPreviewPrefetchWorkers = 4
+	// PreviewPrefetchWorkersMin / Max clamp [preview].prefetch_workers in Validate.
+	PreviewPrefetchWorkersMin = 1
+	PreviewPrefetchWorkersMax = 32
+	// DefaultPreviewImageMaxEdgePx caps the longest edge of decoded stills and video-thumb
+	// grids before the final cell-budget fit (keeps tmux payloads under ~1MB).
+	DefaultPreviewImageMaxEdgePx = 1024
+	// PreviewImageMaxEdgePxMin clamps [preview].image_max_edge_px in Validate.
+	PreviewImageMaxEdgePxMin = 64
+	// DefaultPreviewPrefetchMemoryMaxMB is the in-memory prefetch LRU budget (MiB).
+	DefaultPreviewPrefetchMemoryMaxMB = 256
+	// DefaultPreviewVideoThumbCacheMaxMB caps on-disk video thumbnail cache size (MiB).
+	DefaultPreviewVideoThumbCacheMaxMB = 512
 	// DefaultPreviewImageMaxDecodeMegapixels caps decode/scale work for image previews
 	// (width×height). Larger images fall back to metadata text. Not a config key.
 	DefaultPreviewImageMaxDecodeMegapixels = 64

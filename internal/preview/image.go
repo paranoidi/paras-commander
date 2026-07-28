@@ -2,6 +2,7 @@ package preview
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"image"
@@ -25,18 +26,19 @@ import (
 
 const kittyChunkSize = 4096
 
-func runImage(req Request) Result {
+func runImageCtx(ctx context.Context, req Request) Result {
 	fi, err := os.Stat(req.Path)
 	if err != nil {
 		return Result{ErrorMsg: err.Error()}
 	}
+	maxEdge := ImageMaxEdge(req.Preview)
+
 	f, err := os.Open(req.Path)
 	if err != nil {
 		return Result{ErrorMsg: err.Error()}
 	}
-	defer func() { _ = f.Close() }()
-
 	cfg, format, err := image.DecodeConfig(f)
+	_ = f.Close()
 	if err != nil {
 		return Result{ErrorMsg: err.Error()}
 	}
@@ -57,10 +59,28 @@ func runImage(req Request) Result {
 		return metaResult
 	}
 
-	if _, err := f.Seek(0, 0); err != nil {
+	load := func(context.Context) ([]byte, string, error) {
+		return DecodeStillMaxEdgePNG(req.Path, maxEdge)
+	}
+	var pngBytes []byte
+	if req.Cache != nil {
+		pngBytes, meta, err = req.Cache.LoadStill(ctx, req.Path, fi.ModTime().UnixNano(), fi.Size(), maxEdge, load)
+	} else {
+		pngBytes, meta, err = load(ctx)
+	}
+	if err != nil {
+		if err == errImageTooLarge {
+			metaResult.CombinedText = meta
+			return metaResult
+		}
 		return Result{ErrorMsg: err.Error()}
 	}
-	img, _, err := image.Decode(f)
+	if meta == "" {
+		meta = formatImageMeta(format, cfg.Width, cfg.Height, fi.Size())
+	}
+	metaResult.CombinedText = meta
+
+	img, err := DecodePNGBytes(pngBytes)
 	if err != nil {
 		return Result{ErrorMsg: err.Error()}
 	}
@@ -123,28 +143,17 @@ func encodeKittyAPC(img image.Image, unicodePlaceholder bool) (string, error) {
 		return "", err
 	}
 	encoded := base64.StdEncoding.EncodeToString(pngBuf.Bytes())
-	if encoded == "" {
-		return "", fmt.Errorf("empty png")
-	}
-
-	firstChunkParams := fmt.Sprintf("a=T,f=100,i=%d,C=1,q=2", previewpanel.KittyGraphicsImageID)
+	id := previewpanel.KittyGraphicsImageID
+	firstChunkParams := fmt.Sprintf("a=T,f=100,i=%d,C=1", id)
 	if unicodePlaceholder {
-		firstChunkParams = fmt.Sprintf("a=T,f=100,i=%d,q=2,U=1", previewpanel.KittyGraphicsImageID)
+		firstChunkParams = fmt.Sprintf("a=T,f=100,i=%d,U=1,q=2", id)
 	}
-
 	var out strings.Builder
 	first := true
 	for len(encoded) > 0 {
 		n := kittyChunkSize
 		if n > len(encoded) {
 			n = len(encoded)
-		}
-		// Non-final chunks must be a multiple of 4 bytes.
-		if n < len(encoded) {
-			n -= n % 4
-			if n == 0 {
-				n = len(encoded)
-			}
 		}
 		chunk := encoded[:n]
 		encoded = encoded[n:]

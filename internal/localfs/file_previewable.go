@@ -36,12 +36,25 @@ func IsImagePath(path string) bool {
 	}
 }
 
+// IsVideoPath reports whether path has a supported video extension (case-insensitive).
+// Used for thumbnail generation / prefetch (audio is media but has no video thumbs).
+func IsVideoPath(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".mkv", ".mp4", ".m4v", ".webm", ".avi", ".mov", ".mpg", ".mpeg", ".ts", ".ogv":
+		return true
+	default:
+		return false
+	}
+}
+
 // IsMediaPath reports whether path has a supported video/audio extension (case-insensitive).
 // Single source of truth for media preview eligibility by name.
 func IsMediaPath(path string) bool {
+	if IsVideoPath(path) {
+		return true
+	}
 	switch strings.ToLower(filepath.Ext(path)) {
-	case ".mkv", ".mp4", ".m4v", ".webm", ".avi", ".mov", ".mpg", ".mpeg", ".ts", ".ogv",
-		".mp3", ".flac", ".ogg", ".opus", ".m4a", ".wav", ".aac":
+	case ".mp3", ".flac", ".ogg", ".opus", ".m4a", ".wav", ".aac":
 		return true
 	default:
 		return false

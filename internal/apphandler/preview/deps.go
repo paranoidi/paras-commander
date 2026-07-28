@@ -11,6 +11,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/preview/prefetch"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -87,11 +88,14 @@ type Handler struct {
 	// previewStylePickerDebounceGen invalidates in-flight F3 style-picker preview debounce callbacks.
 	previewStylePickerDebounceGen atomic.Uint64
 	previewStylePickerDebounce    sched.ManagedTimer
+
+	// prefetch is the optional background image/video warm cache (nil when [preview].prefetch is off).
+	prefetch *prefetch.Engine
 }
 
 // New constructs a Handler.
 func New(d Deps) *Handler {
-	return &Handler{
+	h := &Handler{
 		host:            d.Host,
 		screen:          d.Screen,
 		model:           d.Model,
@@ -99,6 +103,8 @@ func New(d Deps) *Handler {
 		mu:              d.Mu,
 		ctx:             d.Ctx,
 	}
+	h.ensurePrefetch()
+	return h
 }
 
 // RenderWakePayload wakes PollEvent purely to trigger a repaint after a background goroutine

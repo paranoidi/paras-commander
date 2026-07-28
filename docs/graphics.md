@@ -128,7 +128,11 @@ Prefer `"auto"`. Explicit `"kitty"` under tmux+WezTerm is unsupported-quality te
 Video files show text metadata first, then a thumbnail grid below it (default 2×2,
 configurable via `video_thumb_cols` / `video_thumb_rows`) when graphics are enabled.
 While frames are extracted, a `Generating thumbnails…` line appears under the metadata
-so the text does not jump when the grid arrives.
+so the text does not jump when the grid arrives. Grids are downscaled to
+`image_max_edge_px` (default 1024) before the final cell-budget fit. Composed thumbnails
+are stored under `$XDG_CACHE_HOME/pc/video-thumbs/` (cap `video_thumb_cache_max_mb`,
+default 512). With `prefetch` enabled (default), nearby videos are warmed in the
+background before the caret lands on them.
 
 | Condition | Thumbnails |
 |---|---|

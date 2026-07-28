@@ -141,6 +141,7 @@ type PanelDisplayConfig struct {
 	DiskUsageGoduIgnore             func(string) bool
 	ShowDiskUsage                   bool
 	JobMarks                        []JobPathMark
+	PreviewPrefetchLoading          map[string]struct{}
 	MetaColumns                     []MetaColumnState
 	ShrunkenShowsNameOnly           bool
 	ScrollbarShowInactive           bool
@@ -395,6 +396,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	var jobWrite bool
 	var jobMarkGlyph rune
 	var rowSuffix panellist.RowSuffix
+	var previewLoading bool
 
 	// Tree-mode gutter (ancestor guide lines + folder expander) is prepended before the
 	// icon/name columns; every other column (size/date/permissions/git/marks) keeps using the
@@ -432,6 +434,9 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			jobMarkGlyph = panelStyle.Styles.SymbolFilelistJob()
 		} else {
 			jobMarkGlyph = 0
+		}
+		if display.PreviewPrefetchLoading != nil {
+			_, previewLoading = display.PreviewPrefetchLoading[entry.Path]
 		}
 		metaText := ""
 		if showMetaEffective {
@@ -497,6 +502,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		drawPanelRowIconStrip(screen, p, panelRowPaintState{
 			Y: y, HasEntry: hasEntry, Entry: cur, Style: style, BlendCell: blendCell,
 			IconKey: iconKey, DiskPending: diskPending, DiskExcluded: diskExcluded,
+			PreviewLoading: previewLoading,
 		})
 	}
 	if treeGutterWidth > 0 {
@@ -511,6 +517,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			paintPanelIconStrip(screen, iconX, y, cur, iconStripStyle, panelStyle.Styles, PanelIconStripContext{
 				CursorStyleKey: iconKey,
 				ChromeBlocked:  ctx.ChromeBlocked,
+				PreviewLoading: previewLoading,
 				Folder: panellist.FolderIconContext{
 					OtherPanelPath:         ctx.OtherPanelPath,
 					DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
@@ -556,17 +563,18 @@ func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx P
 // panelRowPaintState carries the per-entry values drawPanelRow computes in its body that the
 // git-strip and icon-strip paint helpers need alongside the shared panelRowParams.
 type panelRowPaintState struct {
-	Y            int
-	HasEntry     bool
-	Entry        localfs.Entry
-	EntryIndex   int
-	Selected     bool
-	Style        tcell.Style
-	FillCols     int
-	BlendCell    func(int) tcell.Style
-	IconKey      string
-	DiskPending  bool
-	DiskExcluded bool
+	Y              int
+	HasEntry       bool
+	Entry          localfs.Entry
+	EntryIndex     int
+	Selected       bool
+	Style          tcell.Style
+	FillCols       int
+	BlendCell      func(int) tcell.Style
+	IconKey        string
+	DiskPending    bool
+	DiskExcluded   bool
+	PreviewLoading bool
 }
 
 // drawPanelRowGitStrip paints the git-status strip cell (or its blank filler when the row has
@@ -597,6 +605,7 @@ func drawPanelRowIconStrip(screen tcell.Screen, p panelRowParams, rp panelRowPai
 	paintPanelIconStrip(screen, p.IconStart, rp.Y, rp.Entry, iconStripStyle, p.PanelStyle.Styles, PanelIconStripContext{
 		CursorStyleKey: rp.IconKey,
 		ChromeBlocked:  p.Ctx.ChromeBlocked,
+		PreviewLoading: rp.PreviewLoading,
 		Folder: panellist.FolderIconContext{
 			OtherPanelPath:         p.Ctx.OtherPanelPath,
 			DescendIntoMountPoints: p.Display.DiskUsageDescendIntoMountPoints,

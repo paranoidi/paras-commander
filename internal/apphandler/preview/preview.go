@@ -904,6 +904,7 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 		}
 		req.ImageUnicodePlaceholder = req.ImageProtocol == previewpanel.ImageProtocolKitty &&
 			previewrun.TmuxSupportsKittyUnicodePlaceholders(os.Getenv)
+		req.Cache = h.mediaCache()
 		return req
 	}
 	if gitStatus != nil {
@@ -983,10 +984,12 @@ func (h *Handler) runMediaPreview(ctx context.Context, req previewrun.Request, t
 		return
 	}
 	if work != nil {
-		pending := meta
-		pending.CombinedText = meta.CombinedText + "\n\n" + previewrun.GeneratingThumbnailsLine
-		// Phase=Done so MergeDrawWithHold does not replace this body with a prior hold.
-		h.applyPreviewResult(req, target, runGen, pending)
+		if !mediaThumbWarm(req) {
+			pending := meta
+			pending.CombinedText = meta.CombinedText + "\n\n" + previewrun.GeneratingThumbnailsLine
+			// Phase=Done so MergeDrawWithHold does not replace this body with a prior hold.
+			h.applyPreviewResult(req, target, runGen, pending)
+		}
 
 		select {
 		case <-ctx.Done():
@@ -999,6 +1002,27 @@ func (h *Handler) runMediaPreview(ctx context.Context, req previewrun.Request, t
 		return
 	}
 	h.applyPreviewResult(req, target, runGen, meta)
+}
+
+// mediaThumbWarm reports whether the video thumb grid is already in the shared cache
+// (memory or disk), so the UI can skip the "Generating thumbnails…" interim line.
+func mediaThumbWarm(req previewrun.Request) bool {
+	if req.Cache == nil {
+		return false
+	}
+	fi, err := os.Stat(req.Path)
+	if err != nil {
+		return false
+	}
+	cols := req.Preview.VideoThumbCols
+	rows := req.Preview.VideoThumbRows
+	if cols < 1 {
+		cols = 2
+	}
+	if rows < 1 {
+		rows = 2
+	}
+	return req.Cache.HasVideo(req.Path, fi.ModTime().UnixNano(), fi.Size(), previewrun.ImageMaxEdge(req.Preview), cols, rows)
 }
 
 func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result) {

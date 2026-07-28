@@ -268,6 +268,12 @@ File preview pane (F3 / quick view / carousel).
 | `image_protocol` | string | `"auto"` | Terminal graphics protocol for image and video-thumbnail previews: `"auto"` (Kitty when `TERM_PROGRAM`/`TERM` looks like kitty/ghostty, otherwise sixel — including WezTerm), `"sixel"`, or `"kitty"`. Ignored when `images` is `false`. |
 | `video_thumb_cols` | int | `2` | Columns in the video thumbnail grid (clamped 1–6). |
 | `video_thumb_rows` | int | `2` | Rows in the video thumbnail grid (clamped 1–6). |
+| `prefetch` | bool | `true` | Background-decode nearby images and generate video thumbnails before the caret lands on them. |
+| `prefetch_always` | bool | `false` | When `false` (default), prefetch only runs while quick view is latched or the active panel is in carousel mode. Set `true` to prefetch whenever `prefetch` is on, regardless of view mode. |
+| `prefetch_workers` | int | `4` | Worker-pool size for background prefetch (clamped 1–32). Ignored when `prefetch` is `false`. |
+| `image_max_edge_px` | int | `1024` | Longest edge (px) for decoded stills and video-thumb grids before the final cell-budget fit. Keeps tmux graphics payloads under ~1MB. Applied even when `prefetch` is `false` (minimum 64). |
+| `prefetch_memory_max_mb` | int | `256` | In-memory LRU budget (MiB) for prefetched image/video rasters. Evicts oldest entries when exceeded. |
+| `video_thumb_cache_max_mb` | int | `512` | On-disk video thumbnail cache under `$XDG_CACHE_HOME/pc/video-thumbs/` (fallback `~/.cache/pc/video-thumbs/`). Oldest files deleted when the cap is exceeded. |
 
 ## `[sftp]`
 

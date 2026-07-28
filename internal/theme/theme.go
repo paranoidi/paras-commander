@@ -492,6 +492,7 @@ const (
 	SymbolKeyFilelistRenamed          = "filelist.renamed"
 	SymbolKeyFilelistJob              = "filelist.job"
 	SymbolKeyFilelistNoPermission     = "filelist.no_permission"
+	SymbolKeyFilelistPreviewLoading   = "filelist.preview_loading"
 	SymbolKeyFoldersFolder            = "folders.folder"
 	SymbolKeyFoldersOpen              = "folders.open"
 	SymbolKeyFoldersScanning          = "folders.scanning"
@@ -601,6 +602,12 @@ func (t Theme) SymbolFilelistRenamed() rune {
 // Theme.PanelJobMarkStyle; see internal/theme/jobs_style.go).
 func (t Theme) SymbolFilelistJob() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistJob, '\U000f02ca')
+}
+
+// SymbolFilelistPreviewLoading returns the glyph that replaces the leading file icon while a
+// still/video thumb is prefetching (colored via panel.icon.folder.scanning).
+func (t Theme) SymbolFilelistPreviewLoading() rune {
+	return t.filelistSymbolRune(SymbolKeyFilelistPreviewLoading, '\uf03e')
 }
 
 // SymbolFilelistNoPermission returns the suffix glyph for entries the current user cannot access.

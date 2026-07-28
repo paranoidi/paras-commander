@@ -53,6 +53,14 @@ type MediaThumbWork struct {
 	duration float64
 }
 
+// MediaThumbDuration returns the probed duration from MediaThumbWork, or 0.
+func MediaThumbDuration(work *MediaThumbWork) float64 {
+	if work == nil {
+		return 0
+	}
+	return work.duration
+}
+
 // RunMediaMeta probes the file and returns text metadata. When work is non-nil,
 // the caller should show GeneratingThumbnailsLine under the meta, then call RunMediaThumbs.
 func RunMediaMeta(req Request) (res Result, work *MediaThumbWork) {
@@ -138,7 +146,21 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork) Resu
 		return metaResult
 	}
 
-	grid, err := buildVideoThumbGrid(ctx, req.Path, duration, cols, rows, req.ImageMaxPxW, thumbMaxH)
+	maxEdge := ImageMaxEdge(req.Preview)
+	fi, err := os.Stat(req.Path)
+	if err != nil {
+		metaResult.CombinedText = metaText + "\n(thumbnails failed)"
+		return metaResult
+	}
+	load := func(c context.Context) ([]byte, error) {
+		return BuildVideoThumbMaxEdgePNG(c, req.Path, duration, cols, rows, maxEdge)
+	}
+	var pngBytes []byte
+	if req.Cache != nil {
+		pngBytes, err = req.Cache.LoadVideo(ctx, req.Path, fi.ModTime().UnixNano(), fi.Size(), maxEdge, cols, rows, load)
+	} else {
+		pngBytes, err = load(ctx)
+	}
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
 			return Result{ErrorMsg: "Canceled"}
@@ -150,6 +172,13 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork) Resu
 		}
 		return metaResult
 	}
+
+	grid, err := DecodePNGBytes(pngBytes)
+	if err != nil {
+		metaResult.CombinedText = metaText + "\n(thumbnails failed)"
+		return metaResult
+	}
+	grid = fitImage(grid, req.ImageMaxPxW, thumbMaxH)
 
 	bounds := grid.Bounds()
 	payload, err := encodeImagePayload(grid, req.ImageProtocol, req.ImageUnicodePlaceholder, req.ImageInTmux)

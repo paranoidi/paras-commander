@@ -96,3 +96,15 @@ func TestIsMediaPathExtensions(t *testing.T) {
 		}
 	}
 }
+
+func TestIsVideoPathExtensions(t *testing.T) {
+	cases := map[string]bool{
+		"a.mkv": true, "b.mp4": true, "c.webm": true, "d.mp3": false, "e.flac": false,
+		"f.txt": false, "g.png": false,
+	}
+	for name, want := range cases {
+		if got := IsVideoPath(name); got != want {
+			t.Fatalf("IsVideoPath(%q) = %v, want %v", name, got, want)
+		}
+	}
+}

@@ -320,6 +320,7 @@ func (a *App) reconcileAfterEvent() {
 	if !a.syncFollowNavSkipReconcile.Load() {
 		a.syncFollowFromActive()
 	}
+	a.previewCtrl.SchedulePrefetchFromActivePanel()
 	a.previewCtrl.ReconcileQuickViewPreview()
 	a.previewCtrl.ReconcileCarouselFilePreview()
 }

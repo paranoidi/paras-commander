@@ -278,6 +278,7 @@ new = "\uea7f"
 renamed = "\U000f11e8"
 no_permission = "\uf023"
 job = "\U000f02ca"
+preview_loading = "\uf03e"
 
 [symbols.folders]
 folder = "\U000F024B"
