@@ -311,6 +311,8 @@ func (h *Handler) handleFilePreviewScrollKey(event *tcell.EventKey) bool {
 }
 
 // OpenFilePreviewFullscreen opens the full-screen file view (F3 / file.view) for the active selection.
+// When the selections strip has keyboard focus, the highlighted strip row is the target
+// (same resolution as quick view / EditActiveFile).
 func (h *Handler) OpenFilePreviewFullscreen() {
 	if h.model.ViewMode != ui.ViewBrowser {
 		return
@@ -321,15 +323,9 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 	if h.host.InQuickFilterUI() {
 		return
 	}
-	active := h.host.ActivePanel()
-	entry, ok := active.CurrentEntry()
-	if !ok || entry.Type == localfs.EntryDirectory {
+	path, _, mode := h.quickViewWantFile()
+	if mode != quickViewWantFile {
 		h.host.SetTransientMessage("View: select a file", ui.MessageUrgencyWarn)
-		return
-	}
-	path := filepath.Clean(entry.Path)
-	if path == "" || path == "." {
-		h.host.SetErrorMessage("View", fmt.Errorf("no path"))
 		return
 	}
 	err := localfs.CheckFilePreviewable(path)

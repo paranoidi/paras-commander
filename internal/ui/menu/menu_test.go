@@ -510,25 +510,31 @@ func TestFunctionKeysFilePreviewViewShowsRenderWhenRaw(t *testing.T) {
 func TestFunctionKeysSelectionsStripView(t *testing.T) {
 	t.Parallel()
 	keys := FunctionKeysSelectionsStripView("C-u")
-	if len(keys) != 3 {
-		t.Fatalf("len = %d, want F1 + clear + F10", len(keys))
+	if len(keys) != 5 {
+		t.Fatalf("len = %d, want F1 + F3 + F4 + clear + F10", len(keys))
 	}
 	if keys[0].KeyLabel != "F1" || keys[0].Hint != "Help" {
 		t.Fatalf("F1 = %+v", keys[0])
 	}
-	if keys[1].KeyLabel != "C-u" || keys[1].Hint != "Unselect all" {
-		t.Fatalf("clear selection = %+v", keys[1])
+	if keys[1].KeyLabel != "F3" || keys[1].Hint != "View" {
+		t.Fatalf("F3 = %+v", keys[1])
 	}
-	if keys[2].KeyLabel != "F10" || keys[2].Hint != "Quit" {
-		t.Fatalf("F10 = %+v", keys[2])
+	if keys[2].KeyLabel != "F4" || keys[2].Hint != "Edit" {
+		t.Fatalf("F4 = %+v", keys[2])
+	}
+	if keys[3].KeyLabel != "C-u" || keys[3].Hint != "Unselect all" {
+		t.Fatalf("clear selection = %+v", keys[3])
+	}
+	if keys[4].KeyLabel != "F10" || keys[4].Hint != "Quit" {
+		t.Fatalf("F10 = %+v", keys[4])
 	}
 	for _, fk := range keys {
-		if fk.Key == tcell.KeyEsc || fk.Key == tcell.KeyF9 || fk.Key == tcell.KeyF4 {
-			t.Fatalf("strip footer must not list Esc/F9/F4, got %+v", keys)
+		if fk.Key == tcell.KeyEsc || fk.Key == tcell.KeyF9 {
+			t.Fatalf("strip footer must not list Esc/F9, got %+v", keys)
 		}
 	}
 	empty := FunctionKeysSelectionsStripView("")
-	if len(empty) != 2 {
-		t.Fatalf("empty clear label len = %d, want F1 + F10 only", len(empty))
+	if len(empty) != 4 {
+		t.Fatalf("empty clear label len = %d, want F1 + F3 + F4 + F10", len(empty))
 	}
 }

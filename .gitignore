@@ -4,11 +4,12 @@
 .ua/
 .vscode/
 .worktrees/
-/pc
 /paras-commander
+/pc
 bin/
 drafts/
 llm-docs/
+research/
 scripts/
 stub/
 test-cases/

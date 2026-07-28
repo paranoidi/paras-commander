@@ -512,6 +512,10 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 		a.navigateFromSelectionsStrip()
 	case keymap.ActionPanelToggleSync:
 		return false
+	case keymap.ActionFileView, keymap.ActionFileEdit:
+		// Same handlers as the file list (OpenFilePreviewFullscreen / EditActiveFile),
+		// targeting the highlighted strip row via ActiveSubFocus resolution.
+		return false
 	default:
 		if actionID != "" {
 			return true

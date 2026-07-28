@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -260,10 +261,20 @@ func TestActiveFooterKeysSelectionsStripFocused(t *testing.T) {
 			t.Fatalf("footer key %d = %+v, want %+v", i, got[i], want[i])
 		}
 	}
+	var sawView, sawEdit bool
 	for _, fk := range got {
-		if fk.Key == tcell.KeyEsc || fk.Key == tcell.KeyF9 || fk.Key == tcell.KeyF4 {
-			t.Fatalf("strip footer must not list Esc/F9/F4, got %+v", got)
+		if fk.Key == tcell.KeyEsc || fk.Key == tcell.KeyF9 {
+			t.Fatalf("strip footer must not list Esc/F9, got %+v", got)
 		}
+		if fk.Key == tcell.KeyF3 && fk.Hint == "View" {
+			sawView = true
+		}
+		if fk.Key == tcell.KeyF4 && fk.Hint == "Edit" {
+			sawEdit = true
+		}
+	}
+	if !sawView || !sawEdit {
+		t.Fatalf("strip footer must list F3 View and F4 Edit, got %+v", got)
 	}
 }
 
@@ -284,17 +295,73 @@ func TestSelectionsStripClearSelectionViaBinding(t *testing.T) {
 	}
 }
 
-func TestSelectionsStripIgnoresFileEditOnF4(t *testing.T) {
-	app, left := setupSelectionsStripFocusTest(t)
-	before := len(left.SelectedPaths)
+// setupSelectionsStripFileFocusTest marks a file in one directory, then navigates elsewhere
+// so the selections strip lists that file and keyboard focus is on the strip.
+func setupSelectionsStripFileFocusTest(t *testing.T) (*App, string) {
+	t.Helper()
+	root := t.TempDir()
+	harbor := filepath.Join(root, "harbor")
+	meadow := filepath.Join(root, "meadow")
+	if err := os.Mkdir(harbor, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(meadow, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	filePath := filepath.Join(harbor, "willow.txt")
+	writeFile(t, filePath)
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.model.ActivePanel = ui.PrimaryPanel
+	app.model.ActiveSubFocus = ui.SubFocusFileList
+	left := app.panelByID(ui.PrimaryPanel)
+	if err := left.NavigateTo(harbor, "", 20); err != nil {
+		t.Fatalf("NavigateTo harbor: %v", err)
+	}
+	selectPanelEntryByName(t, left, "willow.txt")
+	if selected, _ := left.ToggleSelection(); !selected {
+		t.Fatal("toggle selection on willow.txt")
+	}
+	if err := left.NavigateTo(meadow, "", 20); err != nil {
+		t.Fatalf("NavigateTo meadow: %v", err)
+	}
+	if left.SelectionsStripCount() == 0 {
+		t.Fatal("expected selections strip to list willow.txt while cwd is meadow")
+	}
+	app.model.ActiveSubFocus = ui.SubFocusSelectionsStrip
+	left.SelectionsStripCursor = 0
+	return app, filePath
+}
+
+func TestSelectionsStripFileEditViaF4(t *testing.T) {
+	app, filePath := setupSelectionsStripFileFocusTest(t)
+	var edited string
+	prev := externalEditorRunner
+	externalEditorRunner = func(_ context.Context, path string) error {
+		edited = path
+		return nil
+	}
+	t.Cleanup(func() { externalEditorRunner = prev })
+
 	app.dispatch(keymap.ActionFileEdit)
-	if len(left.SelectedPaths) != before {
-		t.Fatalf("SelectedPaths changed after F4 dispatch on strip focus")
+	if edited != filePath {
+		t.Fatalf("edited = %q, want strip file %q", edited, filePath)
 	}
 	if app.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
 		t.Fatalf("ActiveSubFocus = %d, want selections strip", app.model.ActiveSubFocus)
 	}
-	if app.model.Menu.Open {
-		t.Fatal("F4 dispatch on strip focus must not open menu")
+}
+
+func TestSelectionsStripFileViewViaF3(t *testing.T) {
+	app, filePath := setupSelectionsStripFileFocusTest(t)
+	app.dispatch(keymap.ActionFileView)
+	if app.model.ViewMode != ui.ViewFilePreview {
+		t.Fatalf("ViewMode = %v, want ViewFilePreview", app.model.ViewMode)
+	}
+	if !app.model.FullscreenFilePreview.Open {
+		t.Fatal("fullscreen preview not open")
+	}
+	if app.model.FullscreenFilePreview.Path != filePath {
+		t.Fatalf("preview path = %q, want strip file %q", app.model.FullscreenFilePreview.Path, filePath)
 	}
 }
