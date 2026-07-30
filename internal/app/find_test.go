@@ -49,6 +49,7 @@ func waitFindRankDone(t *testing.T, app *App) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
+		app.findCtrl.PollUpdates(findctrl.WakePayload{})
 		app.findCtrl.HandleThrottleRankWake()
 		app.findCtrl.HandleDebounceRankWake()
 		if app.findCtrl.ApplyPendingRank() {
@@ -1011,7 +1012,7 @@ func TestFindDialogIncludeHiddenExpandsWithoutFullRescan(t *testing.T) {
 	}
 
 	app.findCtrl.ToggleIncludeHidden()
-	waitFindRankDone(t, app)
+	waitFindIndexDone(t, app)
 	if st.IncludeHidden {
 		t.Fatal("IncludeHidden want false after second toggle")
 	}

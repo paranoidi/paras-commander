@@ -60,12 +60,27 @@ func CenterFindListScroll(state *FindDialogState, listRows int) {
 	state.ListScroll = scroll
 }
 
-func findDialogTitle(state FindDialogState) string {
+func formatIndexedCount(n int) string {
+	if n < 1000 {
+		return fmt.Sprintf("%d", n)
+	}
+	if n < 1_000_000 {
+		return fmt.Sprintf("%.2fK", float64(n)/1e3)
+	}
+	return fmt.Sprintf("%.2fM", float64(n)/1e6)
+}
+
+func findDialogTitle(state FindDialogState, styles theme.Theme) string {
 	title := "Find"
+	count := formatIndexedCount(state.IndexedCount)
 	if state.Indexing {
-		title = fmt.Sprintf("Find (%d%s)", state.IndexedCount, string(primitive.Ellipsis))
+		title = fmt.Sprintf("Find (%s%s)", count, string(primitive.Ellipsis))
+		if state.WalkWorkers > 0 {
+			icon := styles.SymbolMenuJob("scanning")
+			title = fmt.Sprintf("%s %d %c", title, state.WalkWorkers, icon)
+		}
 	} else if state.IndexDone && state.IndexedCount > 0 {
-		title = fmt.Sprintf("Find (%d)", state.IndexedCount)
+		title = fmt.Sprintf("Find (%s)", count)
 	}
 	return title
 }
@@ -85,7 +100,7 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	}
 
 	rect := draw.CenteredDialogRect(layout, width, height)
-	borderStyle := draw.DrawDialogFrame(screen, rect, findDialogTitle(state), styles)
+	borderStyle := draw.DrawDialogFrame(screen, rect, findDialogTitle(state, styles), styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	itemBg := dbg
 	primaryCol := rect.X + 2
@@ -161,6 +176,11 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 				ranges = state.MatchRanges[entIdx]
 				if state.MarkedPaths != nil {
 					marked = state.MarkedPaths[ent.AbsPath(state.RootPath)]
+				}
+			} else if idxInRank < len(state.RankDisplayLines) {
+				line = state.RankDisplayLines[idxInRank]
+				if entIdx >= 0 {
+					ranges = state.MatchRanges[entIdx]
 				}
 			}
 			isCursor = listFocused && idxInRank == state.Selected

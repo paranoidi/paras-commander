@@ -1,7 +1,6 @@
 package find
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -9,35 +8,13 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
-	findpkg "github.com/paranoidi/paras-commander/internal/find"
 	"github.com/paranoidi/paras-commander/internal/keymap"
-	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/scan"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
-
-func New(d Deps) *Handler {
-	h := &Handler{
-		host:           d.Host,
-		screen:         d.Screen,
-		model:          d.Model,
-		config:         d.Config,
-		keys:           d.Keys,
-		keysFindDialog: d.KeysFindDialog,
-		rankReady:      make(chan rankResult, 1),
-		rankWorkCh:     make(chan rankInput, 1),
-	}
-	go h.rankWorkerLoop()
-	return h
-}
-
-// WakePayload wakes PollEvent when find indexer batches arrive or finish.
-type WakePayload struct {
-	Finished bool
-	WalkErr  string // set when a walk goroutine exits with an error (applied on main thread)
-}
 
 func (h *Handler) OpenDialog(panelID int) {
 	if ui.IsAuxiliaryView(h.model.ViewMode) {
@@ -66,14 +43,12 @@ func (h *Handler) OpenDialog(panelID int) {
 		Focus:                      0,
 		Indexing:                   true,
 	}
-	h.clearHiddenPending()
 	h.startFindIndexer()
 }
 
 func (h *Handler) CloseDialog() {
 	h.stopFindIndexer()
 	h.cancelPendingRank()
-	h.clearHiddenPending()
 	h.model.FindDialog = dialog.FindDialogState{}
 }
 
@@ -96,331 +71,123 @@ func (h *Handler) findScopeRoots(st *dialog.FindDialogState) []string {
 	return []string{filepath.Clean(st.RootPath)}
 }
 
-func (h *Handler) startFindIndexer() {
-	st := &h.model.FindDialog
-	if !st.Open || st.RootPath == "" {
-		return
-	}
-	h.sessionMu.Lock()
-	h.batchCh = make(chan []findpkg.Entry, 32)
-	h.walks = make(map[string]*walk)
-	h.indexedPaths = make(map[string]struct{})
-	h.completedRoots = make(map[string]struct{})
-	h.sessionMu.Unlock()
-
-	st.Indexing = true
-	st.IndexDone = false
-	st.IndexErr = ""
-	for _, root := range h.findScopeRoots(st) {
-		h.startFindWalk(root, false)
-	}
+// findIndexingSkipsRank is true while a walk is running with an empty query.
+func findIndexingSkipsRank(st *dialog.FindDialogState) bool {
+	return st.Indexing && search.Parse(st.Query).Empty()
 }
 
-func (h *Handler) restartFindIndexer() {
-	h.stopFindIndexer()
-	h.cancelPendingRank()
-	h.clearHiddenPending()
-	st := &h.model.FindDialog
-	if !st.Open || st.RootPath == "" {
-		return
+func findIndexingCountThrottle(indexed int) time.Duration {
+	ms := config.DefaultFindIndexingCountThrottleMS
+	switch {
+	case indexed >= findIndexLargeThreshold:
+		ms *= 2
+	case indexed >= findIndexMediumThreshold:
+		ms += ms / 2
 	}
-	st.IndexErr = ""
-	st.Entries = nil
-	st.PathIsDir = nil
-	st.PathSize = nil
-	st.IndexedCount = 0
-	st.Ranked = nil
-	st.MatchRanges = nil
-	st.Selected = 0
-	st.ListScroll = 0
-	st.RankPending = false
-	h.startFindIndexer()
+	return time.Duration(ms) * time.Millisecond
 }
 
-func (h *Handler) stopFindIndexer() {
-	h.sessionMu.Lock()
-	walks := h.walks
-	ch := h.batchCh
-	h.walks = nil
-	h.batchCh = nil
-	h.indexedPaths = nil
-	h.completedRoots = nil
-	h.sessionMu.Unlock()
-	for _, w := range walks {
-		if w != nil && w.sess != nil {
-			w.sess.Close()
-		}
+// maybeRenderFindIndexing reports whether the find dialog title/count should repaint now.
+// While indexing, repaints are throttled; non-indexing callers always get true.
+func (h *Handler) maybeRenderFindIndexing(st *dialog.FindDialogState) bool {
+	if !st.Open {
+		return false
 	}
-	if ch != nil {
-		close(ch)
-		for range ch {
-		}
+	if !st.Indexing {
+		return true
 	}
+	interval := findIndexingCountThrottle(st.IndexedCount)
+	if time.Since(h.lastIndexCountRenderAt) >= interval {
+		h.lastIndexCountRenderAt = time.Now()
+		return true
+	}
+	return false
 }
 
-func (h *Handler) findWalkActive(root string) bool {
-	h.sessionMu.Lock()
-	defer h.sessionMu.Unlock()
-	_, ok := h.walks[filepath.Clean(root)]
-	return ok
-}
-
-func (h *Handler) findWalkCompleted(root string) bool {
-	h.sessionMu.Lock()
-	defer h.sessionMu.Unlock()
-	_, ok := h.completedRoots[filepath.Clean(root)]
-	return ok
-}
-
-func (h *Handler) findSelectionSkipRoots(st *dialog.FindDialogState) []string {
-	if !st.ShowSearchSelectionsOption {
+func emptyQueryDisplayIndicesFromEntries(entries []dialog.FindEntry, onlyDirs, onlyFiles bool, maxResults int) []int {
+	if len(entries) == 0 {
 		return nil
 	}
-	seen := make(map[string]struct{})
-	var out []string
-	h.sessionMu.Lock()
-	for root := range h.walks {
-		r := filepath.Clean(root)
-		if r == filepath.Clean(st.RootPath) {
+	cap := maxResults
+	if cap <= 0 {
+		cap = len(entries)
+	}
+	if !onlyDirs && !onlyFiles {
+		n := len(entries)
+		if maxResults > 0 && n > maxResults {
+			n = maxResults
+		}
+		out := make([]int, n)
+		for i := range out {
+			out[i] = i
+		}
+		return out
+	}
+	out := make([]int, 0, cap)
+	for i := range entries {
+		if onlyDirs && !entries[i].IsDir {
 			continue
 		}
-		if _, ok := seen[r]; !ok {
-			seen[r] = struct{}{}
-			out = append(out, r)
-		}
-	}
-	for root := range h.completedRoots {
-		r := filepath.Clean(root)
-		if r == filepath.Clean(st.RootPath) {
+		if onlyFiles && entries[i].IsDir {
 			continue
 		}
-		if _, ok := seen[r]; !ok {
-			seen[r] = struct{}{}
-			out = append(out, r)
-		}
-	}
-	h.sessionMu.Unlock()
-	for _, r := range st.SelectionDirRoots {
-		r = filepath.Clean(r)
-		if _, ok := seen[r]; !ok {
-			seen[r] = struct{}{}
-			out = append(out, r)
+		out = append(out, i)
+		if maxResults > 0 && len(out) >= maxResults {
+			break
 		}
 	}
 	return out
 }
 
-func (h *Handler) startFindWalk(root string, skipIndexedSelectionSubtrees bool) {
-	st := &h.model.FindDialog
-	root = filepath.Clean(root)
-	if root == "" {
-		return
-	}
-	h.sessionMu.Lock()
-	if h.walks == nil {
-		h.walks = make(map[string]*walk)
-	}
-	if _, exists := h.walks[root]; exists {
-		h.sessionMu.Unlock()
-		return
-	}
-	if _, done := h.completedRoots[root]; done {
-		h.sessionMu.Unlock()
-		return
-	}
-	ch := h.batchCh
-	h.sessionMu.Unlock()
-	if ch == nil {
-		return
-	}
-
-	volumeSkip := diskusage.ComposeListingVolumeIgnore(nil, h.findVolumeGate(st))
-	var shouldSkip func(string) bool
-	if skipIndexedSelectionSubtrees {
-		skipRoots := h.findSelectionSkipRoots(st)
-		shouldSkip = func(abs string) bool {
-			if volumeSkip != nil && volumeSkip(abs) {
-				return true
-			}
-			abs = filepath.Clean(abs)
-			for _, sr := range skipRoots {
-				if panel.IsStrictPathDescendant(sr, abs) {
-					return true
-				}
-			}
-			return false
+func (h *Handler) applyEmptyQueryDisplayRank(st *dialog.FindDialogState) {
+	maxResults := h.config.UI.Find.MaxResults
+	st.Ranked = emptyQueryDisplayIndicesFromEntries(st.Entries, st.OnlyDirectories, st.OnlyFiles, maxResults)
+	st.RankDisplayLines = nil
+	st.MatchRanges = nil
+	st.FullRanked = nil
+	st.FullRankedEntriesLen = len(st.Entries)
+	st.FullRankedOnlyDirs = st.OnlyDirectories
+	st.FullRankedOnlyFiles = st.OnlyFiles
+	st.RankPending = false
+	if st.Selected >= len(st.Ranked) {
+		if len(st.Ranked) == 0 {
+			st.Selected = 0
+		} else {
+			st.Selected = len(st.Ranked) - 1
 		}
-	} else {
-		shouldSkip = volumeSkip
 	}
-
-	sess := findpkg.Start(context.Background(), root, findpkg.Options{
-		IncludeHidden: st.IncludeHidden,
-		Gitignore:     h.host.GitignoreCache(),
-		ShouldSkipDir: shouldSkip,
-	})
-	h.sessionMu.Lock()
-	if h.batchCh != ch {
-		h.sessionMu.Unlock()
-		sess.Close()
-		return
+	if st.Selected < 0 {
+		st.Selected = 0
 	}
-	h.walks[root] = &walk{root: root, sess: sess}
-	st.Indexing = true
-	st.IndexDone = false
-	h.sessionMu.Unlock()
-	go h.readFindSession(sess, ch, root)
+	dialog.EnsureFindListScroll(st, h.findDialogListRows())
 }
 
-func (h *Handler) readFindSession(sess *findpkg.Session, ch chan []findpkg.Entry, root string) {
-	for batch := range sess.Results() {
-		h.sessionMu.Lock()
-		active := h.batchCh == ch
-		h.sessionMu.Unlock()
-		if !active {
-			return
+func emptyQueryDisplayIndices(n int, onlyDirs, onlyFiles bool, isDirs []bool, maxResults int) []int {
+	if n == 0 {
+		return nil
+	}
+	cap := n
+	if maxResults > 0 && cap > maxResults {
+		cap = maxResults
+	}
+	if !onlyDirs && !onlyFiles {
+		out := make([]int, cap)
+		for i := range out {
+			out[i] = i
 		}
-		select {
-		case ch <- batch:
-		default:
-			ch <- batch
-		}
-		// Only post one WakePayload at a time. PollUpdates drains ALL queued batches in a
-		// single call, so multiple WakePayloads just flood the event queue and push key
-		// events further back, causing visible input lag.
-		if h.wakePending.CompareAndSwap(false, true) {
-			_ = h.screen.PostEvent(tcell.NewEventInterrupt(WakePayload{}))
-		}
+		return out
 	}
-	<-sess.Done()
-	err := sess.Err()
-	skippedDirs := sess.SkippedHiddenDirs()
-	skippedFiles := sess.SkippedHiddenFiles()
-	h.sessionMu.Lock()
-	active := h.batchCh == ch
-	if h.walks != nil {
-		delete(h.walks, root)
-	}
-	if active {
-		if h.completedRoots == nil {
-			h.completedRoots = make(map[string]struct{})
-		}
-		h.completedRoots[root] = struct{}{}
-		if len(skippedDirs) > 0 {
-			h.harvestDirs = append(h.harvestDirs, skippedDirs...)
-		}
-		if len(skippedFiles) > 0 {
-			h.harvestFiles = append(h.harvestFiles, skippedFiles...)
-		}
-	}
-	h.sessionMu.Unlock()
-	if !active {
-		return
-	}
-	payload := WakePayload{Finished: true}
-	if err != nil {
-		payload.WalkErr = err.Error()
-	}
-	_ = h.screen.PostEvent(tcell.NewEventInterrupt(payload))
-}
-
-func (h *Handler) findAllWalksDone() bool {
-	h.sessionMu.Lock()
-	defer h.sessionMu.Unlock()
-	return len(h.walks) == 0
-}
-
-func (h *Handler) updateFindIndexingState() {
-	st := &h.model.FindDialog
-	if !st.Open {
-		return
-	}
-	if h.findAllWalksDone() {
-		st.Indexing = false
-		if !st.IndexDone {
-			st.IndexDone = true
-			h.indexedPaths = nil
-		}
-	} else {
-		st.Indexing = true
-		st.IndexDone = false
-	}
-}
-
-func findRelLine(displayRoot, absPath string) string {
-	rel, err := filepath.Rel(displayRoot, absPath)
-	if err != nil {
-		return filepath.ToSlash(absPath)
-	}
-	return filepath.ToSlash(rel)
-}
-
-func (h *Handler) appendFindBatch(st *dialog.FindDialogState, batch []findpkg.Entry) {
-	if len(batch) == 0 {
-		return
-	}
-	h.sessionMu.Lock()
-	if h.indexedPaths == nil {
-		h.indexedPaths = make(map[string]struct{})
-	}
-	h.sessionMu.Unlock()
-	for _, e := range batch {
-		p := filepath.Clean(e.Path)
-		if p == "" {
+	out := make([]int, 0, cap)
+	for i := 0; i < n && len(out) < cap; i++ {
+		if onlyDirs && (i >= len(isDirs) || !isDirs[i]) {
 			continue
 		}
-		h.sessionMu.Lock()
-		if _, dup := h.indexedPaths[p]; dup {
-			h.sessionMu.Unlock()
+		if onlyFiles && (i >= len(isDirs) || isDirs[i]) {
 			continue
 		}
-		h.indexedPaths[p] = struct{}{}
-		h.sessionMu.Unlock()
-		st.Entries = append(st.Entries, dialog.FindEntry{
-			RelLine: findRelLine(st.RootPath, p),
-			IsDir:   e.IsDir,
-			Type:    e.Type,
-			Size:    e.Size,
-		})
-		if st.PathIsDir == nil {
-			st.PathIsDir = make(map[string]bool)
-		}
-		st.PathIsDir[p] = e.IsDir
-		if !e.IsDir && e.Size > 0 {
-			if st.PathSize == nil {
-				st.PathSize = make(map[string]int64)
-			}
-			st.PathSize[p] = e.Size
-		}
+		out = append(out, i)
 	}
-	st.IndexedCount = len(st.Entries)
-}
-
-func rebuildFindPathIndex(st *dialog.FindDialogState) {
-	if len(st.Entries) == 0 {
-		st.PathIsDir = nil
-		st.PathSize = nil
-		return
-	}
-	isDir := make(map[string]bool, len(st.Entries))
-	sizes := make(map[string]int64)
-	root := st.RootPath
-	for _, e := range st.Entries {
-		abs := filepath.Clean(e.AbsPath(root))
-		if abs == "" {
-			continue
-		}
-		isDir[abs] = e.IsDir
-		if !e.IsDir && e.Size > 0 {
-			sizes[abs] = e.Size
-		}
-	}
-	st.PathIsDir = isDir
-	if len(sizes) == 0 {
-		st.PathSize = nil
-	} else {
-		st.PathSize = sizes
-	}
+	return out
 }
 
 func findEntryAbsPath(st *dialog.FindDialogState, ent dialog.FindEntry) string {
@@ -436,86 +203,19 @@ func (h *Handler) findPathIsDir(st *dialog.FindDialogState) func(string) bool {
 	}
 }
 
-func pathInFindSelectionScope(path string, roots []string) bool {
-	path = filepath.Clean(path)
-	for _, r := range roots {
-		r = filepath.Clean(r)
-		if path == r || panel.IsStrictPathDescendant(r, path) {
-			return true
-		}
-	}
-	return false
-}
-
-func (h *Handler) filterFindEntriesToSelectionScope() {
+func (h *Handler) narrowFindIndexer() {
 	st := &h.model.FindDialog
-	if len(st.SelectionDirRoots) == 0 {
-		return
-	}
-	filtered := st.Entries[:0]
-	h.sessionMu.Lock()
-	h.indexedPaths = make(map[string]struct{})
-	h.sessionMu.Unlock()
-	for _, e := range st.Entries {
-		if pathInFindSelectionScope(e.AbsPath(st.RootPath), st.SelectionDirRoots) {
-			filtered = append(filtered, e)
-			h.sessionMu.Lock()
-			h.indexedPaths[e.AbsPath(st.RootPath)] = struct{}{}
-			h.sessionMu.Unlock()
-		}
-	}
-	st.Entries = filtered
+	h.scan.NarrowSelection(st.SelectionDirRoots)
+	h.syncEntriesFromScan(st)
 	st.IndexedCount = len(st.Entries)
-	rebuildFindPathIndex(st)
 	h.syncFindDialogRanks()
-}
-
-func (h *Handler) stopFindWalksOutsideSelectionScope() {
-	st := &h.model.FindDialog
-	panelRoot := filepath.Clean(st.RootPath)
-	allowed := make(map[string]struct{}, len(st.SelectionDirRoots))
-	for _, r := range st.SelectionDirRoots {
-		allowed[filepath.Clean(r)] = struct{}{}
-	}
-	h.sessionMu.Lock()
-	var stop []*walk
-	for root, w := range h.walks {
-		root = filepath.Clean(root)
-		if root == panelRoot {
-			stop = append(stop, w)
-			continue
-		}
-		if _, ok := allowed[root]; !ok {
-			stop = append(stop, w)
-		}
-	}
-	for _, w := range stop {
-		delete(h.walks, w.root)
-		delete(h.completedRoots, w.root)
-	}
-	h.sessionMu.Unlock()
-	for _, w := range stop {
-		if w.sess != nil {
-			w.sess.Close()
-		}
-	}
 }
 
 func (h *Handler) widenFindIndexer() {
 	st := &h.model.FindDialog
-	panelRoot := filepath.Clean(st.RootPath)
-	if h.findWalkActive(panelRoot) || h.findWalkCompleted(panelRoot) {
-		h.updateFindIndexingState()
-		return
-	}
-	h.startFindWalk(panelRoot, true)
-	h.updateFindIndexingState()
-}
-
-func (h *Handler) narrowFindIndexer() {
-	h.stopFindWalksOutsideSelectionScope()
-	h.filterFindEntriesToSelectionScope()
-	h.updateFindIndexingState()
+	st.IndexDone = false
+	st.Indexing = true
+	h.scan.Widen()
 }
 
 // ToggleSearchOnlySelections toggles search-only-selections mode.
@@ -532,119 +232,16 @@ func (h *Handler) ToggleSearchOnlySelections() {
 	}
 }
 
-func (h *Handler) PollUpdates(payload WakePayload) bool {
-	needRender := false
-	needSync := false
-	gotBatch := false
-	// Clear the dedup flag so the next batch from readFindSession can post a new WakePayload.
-	h.wakePending.Store(false)
-	h.sessionMu.Lock()
-	ch := h.batchCh
-	h.sessionMu.Unlock()
-	if ch != nil {
-		for {
-			select {
-			case batch, ok := <-ch:
-				if !ok {
-					goto drained
-				}
-				st := &h.model.FindDialog
-				if !st.Open {
-					continue
-				}
-				h.appendFindBatch(st, batch)
-				needSync = true
-				gotBatch = true
-			default:
-				goto drained
-			}
-		}
-	}
-drained:
-	// Throttle the live indexed-count repaint: batches arrive many times per second on a fast
-	// disk. The final count is guaranteed by the finished/error render paths below.
-	if gotBatch {
-		interval := time.Duration(config.DefaultFindIndexingCountThrottleMS) * time.Millisecond
-		if time.Since(h.lastIndexCountRenderAt) >= interval {
-			h.lastIndexCountRenderAt = time.Now()
-			needRender = true
-		}
-	}
-	st := &h.model.FindDialog
-	h.sessionMu.Lock()
-	harvestDirs := h.harvestDirs
-	harvestFiles := h.harvestFiles
-	h.harvestDirs = nil
-	h.harvestFiles = nil
-	h.sessionMu.Unlock()
-	if st.Open && (len(harvestDirs) > 0 || len(harvestFiles) > 0) {
-		h.mergeSkippedHidden(harvestDirs, harvestFiles)
-		if st.IncludeHidden {
-			h.expandPendingHidden()
-			needSync = true
-			needRender = true
-		}
-	}
-	if needSync {
-		throttle := 0
-		if st.Open && st.Indexing {
-			throttle = config.DefaultFindIndexingRankThrottleMS
-		}
-		h.scheduleFindRank(throttle)
-	}
-	if st.Open && payload.WalkErr != "" {
-		st.IndexErr = payload.WalkErr
-		needRender = true
-	}
-	if st.Open && (st.Indexing || payload.Finished) {
-		if h.findAllWalksDone() {
-			if st.Indexing || !st.IndexDone {
-				st.Indexing = false
-				st.IndexDone = true
-				h.indexedPaths = nil
-				needRender = true
-			}
-		} else if !st.Indexing {
-			st.Indexing = true
-			st.IndexDone = false
-			needRender = true
-		}
-	}
-	return needRender
-}
-
 func (h *Handler) syncFindDialogRanks() {
 	st := &h.model.FindDialog
-	if !st.Open {
+	if !st.Open || findIndexingSkipsRank(st) {
 		return
 	}
-	ranked, matchRanges := dialog.RankFindEntries(
-		st.Entries,
-		st.Query,
-		st.OnlyDirectories,
-		st.OnlyFiles,
-		h.config.Filter.CaseInsensitive,
-	)
-	st.Ranked = ranked
-	st.MatchRanges = matchRanges
-	h.rankMu.Lock()
-	st.FullRanked = ranked
-	st.FullRankedGen = h.rankGen
-	h.rankMu.Unlock()
-	st.FullRankedEntriesLen = len(st.Entries)
-	st.FullRankedOnlyDirs = st.OnlyDirectories
-	st.FullRankedOnlyFiles = st.OnlyFiles
-	if st.Selected >= len(st.Ranked) {
-		if len(st.Ranked) == 0 {
-			st.Selected = 0
-		} else {
-			st.Selected = len(st.Ranked) - 1
-		}
+	if search.Parse(st.Query).Empty() {
+		h.applyEmptyQueryDisplayRank(st)
+		return
 	}
-	if st.Selected < 0 {
-		st.Selected = 0
-	}
-	dialog.EnsureFindListScroll(st, h.findDialogListRows())
+	h.scheduleFindRank(0)
 }
 
 // cancelPendingRank increments the generation counter so any in-flight or scheduled rank is discarded.
@@ -658,67 +255,26 @@ func (h *Handler) cancelPendingRank() {
 	h.rankMu.Unlock()
 }
 
-// rankWorkerLoop is the single rank worker goroutine. It processes one rank computation at a time,
-// eliminating the memory spike from many concurrent goroutines each holding a large snapshot.
-func (h *Handler) rankWorkerLoop() {
-	for input := range h.rankWorkCh {
-		h.doRank(input)
-	}
+func (h *Handler) dispatchMatch(gen int) {
+	st := &h.model.FindDialog
+	h.scan.RequestMatch(scan.MatchRequest{
+		Gen:             gen,
+		Query:           st.Query,
+		OnlyDirs:        st.OnlyDirectories,
+		OnlyFiles:       st.OnlyFiles,
+		CaseInsensitive: h.config.Filter.CaseInsensitive,
+		MaxResults:      h.config.UI.Find.MaxResults,
+	})
 }
 
-// sendRankWork delivers input to the rank worker, replacing any pending (unconsumed) input.
-// rankSendMu ensures concurrent callers (main thread + timer goroutine) don't interleave.
-func (h *Handler) sendRankWork(input rankInput) {
-	h.rankSendMu.Lock()
-	defer h.rankSendMu.Unlock()
-	// Drain any pending input that hasn't been picked up yet (frees its snapshot memory).
-	select {
-	case <-h.rankWorkCh:
-	default:
-	}
-	h.rankWorkCh <- input
-}
-
-// buildRankInput takes a compact snapshot from the main-thread dialog state.
-// lines/isDirs share string data with st.Entries; no extra string allocations.
-func (h *Handler) buildRankInput(gen int, st *dialog.FindDialogState) rankInput {
-	n := len(st.Entries)
-	lines := make([]string, n)
-	isDirs := make([]bool, n)
-	for i, e := range st.Entries {
-		lines[i] = e.RelLine
-		isDirs[i] = e.IsDir
-	}
-	return rankInput{
-		gen:       gen,
-		lines:     lines,
-		isDirs:    isDirs,
-		query:     st.Query,
-		onlyDirs:  st.OnlyDirectories,
-		onlyFiles: st.OnlyFiles,
-		opts:      search.Options{CaseInsensitive: h.config.Filter.CaseInsensitive},
-	}
-}
-
-// scheduleFindRank takes a snapshot on the main thread and schedules a rank computation.
-//
-// ms == 0: send immediately, cancel any pending timer/wake.
-//
-// ms > 0: throttle mode (for indexing batches). Dispatch immediately if the cooldown has
-// elapsed; otherwise ensure a single trailing-edge timer is running (never reset it — that
-// would turn throttle into debounce). The timer posts ThrottleRankWakePayload so the main
-// thread re-snapshots with the freshest data in HandleThrottleRankWake.
-//
-// ms < 0: debounce mode (for query-typing). Reset the timer on every call so the rank fires
-// abs(ms) milliseconds after the last keystroke. Uses ThrottleRankWakePayload as the wake.
-//
-// rankGen is incremented only when work is actually dispatched (immediate paths); the timer
-// paths leave gen unchanged so in-flight computations are not prematurely cancelled.
-//
-// Called only from the main thread.
+// scheduleFindRank schedules a background match on the scan coordinator.
 func (h *Handler) scheduleFindRank(ms int) {
 	st := &h.model.FindDialog
 	if !st.Open {
+		return
+	}
+	if findIndexingSkipsRank(st) {
+		st.RankPending = false
 		return
 	}
 
@@ -739,7 +295,7 @@ func (h *Handler) scheduleFindRank(ms int) {
 		gen := h.rankGen
 		h.lastRankSentAt = time.Now()
 		h.rankMu.Unlock()
-		h.sendRankWork(h.buildRankInput(gen, st))
+		h.dispatchMatch(gen)
 		return
 	}
 
@@ -778,7 +334,7 @@ func (h *Handler) scheduleFindRank(ms int) {
 		gen := h.rankGen // do NOT increment; let in-flight work for the current query finish
 		h.lastRankSentAt = time.Now()
 		h.rankMu.Unlock()
-		h.sendRankWork(h.buildRankInput(gen, st))
+		h.dispatchMatch(gen)
 		return
 	}
 	// Within cooldown: start a trailing-edge timer once (never reset).
@@ -802,7 +358,7 @@ func (h *Handler) scheduleFindRank(ms int) {
 // Returns true when the dialog is open, a wake was pending, and a rank was scheduled.
 func (h *Handler) HandleThrottleRankWake() bool {
 	st := &h.model.FindDialog
-	if !st.Open {
+	if !st.Open || findIndexingSkipsRank(st) {
 		return false
 	}
 	h.rankMu.Lock()
@@ -815,7 +371,7 @@ func (h *Handler) HandleThrottleRankWake() bool {
 	h.lastRankSentAt = time.Now()
 	h.rankMu.Unlock()
 	st.RankPending = true
-	h.sendRankWork(h.buildRankInput(gen, st))
+	h.dispatchMatch(gen)
 	return true
 }
 
@@ -841,13 +397,11 @@ func (h *Handler) HandleDebounceRankWake() bool {
 	// A query change implies the user wants fresh results — bypass nav-idle debounce.
 	h.clearFindNavIdle()
 	st.RankPending = true
-	h.sendRankWork(h.buildRankInput(gen, st))
+	h.dispatchMatch(gen)
 	return true
 }
 
-// armFindNavIdleTimer resets the navigation-idle debounce timer. While the timer is
-// running ApplyPendingRank defers applying background rank updates to keep the view
-// stable during fast navigation. Called only from the main thread.
+// armFindNavIdleTimer resets the navigation-idle debounce timer.
 func (h *Handler) armFindNavIdleTimer() {
 	if h.findNavTimer != nil {
 		h.findNavTimer.Stop()
@@ -898,124 +452,7 @@ func (h *Handler) HandleFindNavIdle(epoch uint64) bool {
 	return h.ApplyPendingRank()
 }
 
-// doRank is called by the rank worker goroutine. It computes the ranked result for the given
-// input snapshot, then delivers it via rankReady and wakes the event loop.
-func (h *Handler) doRank(input rankInput) {
-	h.rankMu.Lock()
-	if h.rankGen != input.gen {
-		h.rankMu.Unlock()
-		return
-	}
-	h.rankMu.Unlock()
-
-	q := search.Parse(input.query)
-	maxResults := h.config.UI.Find.MaxResults
-
-	var result rankResult
-	result.gen = input.gen
-
-	if q.Empty() {
-		result.fullRanked = filterFindRankIndices(allFindEntryIndices(len(input.lines)), input.onlyDirs, input.onlyFiles, input.isDirs)
-		displayN := len(result.fullRanked)
-		if maxResults > 0 && displayN > maxResults {
-			displayN = maxResults
-		}
-		result.ranked = append([]int(nil), result.fullRanked[:displayN]...)
-	} else {
-		rawFull, cancelled := q.RankCancellable(input.lines, input.opts, func() bool {
-			h.rankMu.Lock()
-			stale := h.rankGen != input.gen
-			h.rankMu.Unlock()
-			return stale
-		})
-		if cancelled {
-			return // new query superseded this one; worker will pick up the next input
-		}
-		result.fullRanked = filterFindRankIndices(rankedIndicesFromResults(rawFull), input.onlyDirs, input.onlyFiles, input.isDirs)
-
-		raw := rawFull
-		if maxResults > 0 && len(raw) > maxResults {
-			raw = raw[:maxResults]
-		}
-		result.ranked = filterFindRankIndices(rankedIndicesFromResults(raw), input.onlyDirs, input.onlyFiles, input.isDirs)
-		result.matchRanges = make(map[int][]search.Range)
-		for _, r := range raw {
-			idx := r.Index
-			if idx >= 0 && idx < len(input.lines) && len(r.Result.Ranges) > 0 {
-				if input.onlyDirs && (idx >= len(input.isDirs) || !input.isDirs[idx]) {
-					continue
-				}
-				if input.onlyFiles && (idx >= len(input.isDirs) || input.isDirs[idx]) {
-					continue
-				}
-				result.matchRanges[idx] = r.Result.Ranges
-			}
-		}
-		if len(result.matchRanges) == 0 {
-			result.matchRanges = nil
-		}
-	}
-
-	h.rankMu.Lock()
-	if h.rankGen != input.gen {
-		h.rankMu.Unlock()
-		return
-	}
-	// Drain any stale result before delivering the fresh one.
-	select {
-	case <-h.rankReady:
-	default:
-	}
-	h.rankReady <- result
-	h.rankMu.Unlock()
-
-	_ = h.screen.PostEvent(tcell.NewEventInterrupt(RankWakePayload{}))
-}
-
-func allFindEntryIndices(n int) []int {
-	if n == 0 {
-		return nil
-	}
-	out := make([]int, n)
-	for i := range out {
-		out[i] = i
-	}
-	return out
-}
-
-func rankedIndicesFromResults(raw []search.RankedResult) []int {
-	out := make([]int, len(raw))
-	for i, r := range raw {
-		out[i] = r.Index
-	}
-	return out
-}
-
-func filterFindRankIndices(indices []int, onlyDirs, onlyFiles bool, isDirs []bool) []int {
-	if !onlyDirs && !onlyFiles {
-		out := append([]int(nil), indices...)
-		return out
-	}
-	filtered := make([]int, 0, len(indices))
-	for _, idx := range indices {
-		if idx < 0 || idx >= len(isDirs) {
-			continue
-		}
-		if onlyDirs && !isDirs[idx] {
-			continue
-		}
-		if onlyFiles && isDirs[idx] {
-			continue
-		}
-		filtered = append(filtered, idx)
-	}
-	return filtered
-}
-
 // ApplyPendingRank applies the latest completed rank result (if any) to the dialog state.
-// Returns true if a result was applied and the UI needs a re-render.
-// Defers applying when the user is actively navigating the list (nav-idle debounce).
-// Called only from the main thread.
 func (h *Handler) ApplyPendingRank() bool {
 	st := &h.model.FindDialog
 	if !st.Open {
@@ -1026,39 +463,45 @@ func (h *Handler) ApplyPendingRank() bool {
 	}
 	h.rankMu.Lock()
 	gen := h.rankGen
-	var result rankResult
-	var ok bool
-	select {
-	case result = <-h.rankReady:
-		ok = true
-	default:
-	}
+	result := h.pendingRank
+	h.pendingRank = nil
 	h.rankMu.Unlock()
 
-	if !ok || result.gen != gen {
+	if result == nil || result.gen != gen {
 		return false
 	}
 
-	// Remember the currently selected entry so we can restore the selection after re-ranking.
 	var selectedRelLine string
 	if st.Selected >= 0 && st.Selected < len(st.Ranked) {
 		if entIdx := st.Ranked[st.Selected]; entIdx >= 0 && entIdx < len(st.Entries) {
 			selectedRelLine = st.Entries[entIdx].RelLine
+		} else if st.Selected < len(st.RankDisplayLines) {
+			selectedRelLine = st.RankDisplayLines[st.Selected]
 		}
 	}
 
 	st.Ranked = result.ranked
-	st.MatchRanges = result.matchRanges // sparse map; nil for empty query
+	st.RankDisplayLines = result.rankDisplayLines
+	st.MatchRanges = result.matchRanges
 	st.FullRanked = result.fullRanked
 	st.FullRankedGen = gen
-	st.FullRankedEntriesLen = len(st.Entries)
-	st.FullRankedOnlyDirs = st.OnlyDirectories
-	st.FullRankedOnlyFiles = st.OnlyFiles
+	st.FullRankedEntriesLen = result.entriesLen
+	if result.entriesLen > 0 && len(st.Entries) == 0 && !st.Indexing {
+		h.syncEntriesFromScan(st)
+		st.FullRankedEntriesLen = len(st.Entries)
+	}
+	st.FullRankedOnlyDirs = result.onlyDirs
+	st.FullRankedOnlyFiles = result.onlyFiles
 
-	// Restore selection by identity (RelLine) so the same item stays highlighted.
 	if selectedRelLine != "" {
 		for i, entIdx := range st.Ranked {
-			if entIdx >= 0 && entIdx < len(st.Entries) && st.Entries[entIdx].RelLine == selectedRelLine {
+			line := ""
+			if entIdx >= 0 && entIdx < len(st.Entries) {
+				line = st.Entries[entIdx].RelLine
+			} else if i < len(st.RankDisplayLines) {
+				line = st.RankDisplayLines[i]
+			}
+			if line == selectedRelLine {
 				st.Selected = i
 				break
 			}
@@ -1206,17 +649,7 @@ func (h *Handler) OpenSelectedInSecondary() {
 func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
 	q := search.Parse(st.Query)
 	if q.Empty() {
-		indices := make([]int, 0, len(st.Entries))
-		for i, e := range st.Entries {
-			if st.OnlyDirectories && !e.IsDir {
-				continue
-			}
-			if st.OnlyFiles && e.IsDir {
-				continue
-			}
-			indices = append(indices, i)
-		}
-		return indices
+		return nil
 	}
 	h.rankMu.Lock()
 	gen := h.rankGen
@@ -1240,10 +673,57 @@ func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
 
 func (h *Handler) findDialogSelectAll() {
 	st := &h.model.FindDialog
+	if search.Parse(st.Query).Empty() {
+		h.findDialogSelectAllEmptyQuery(st)
+		return
+	}
 	indices := h.findDialogResultIndices(st)
 	if len(indices) == 0 {
 		return
 	}
+	h.findDialogSelectAllIndices(st, indices)
+}
+
+func (h *Handler) findDialogSelectAllEmptyQuery(st *dialog.FindDialogState) {
+	if len(st.Entries) == 0 {
+		return
+	}
+	walkOrder := len(st.MarkedPaths) == 0
+	if st.MarkedPaths == nil {
+		st.MarkedPaths = make(map[string]bool)
+	}
+	paths := make([]string, 0, 256)
+	for i := range st.Entries {
+		e := st.Entries[i]
+		if st.OnlyDirectories && !e.IsDir {
+			continue
+		}
+		if st.OnlyFiles && e.IsDir {
+			continue
+		}
+		path := findEntryAbsPath(st, e)
+		if path == "" || st.MarkedPaths[path] {
+			continue
+		}
+		paths = append(paths, path)
+	}
+	if len(paths) == 0 {
+		return
+	}
+	isDir := h.findPathIsDir(st)
+	var conflicts bool
+	if walkOrder {
+		conflicts = panel.BulkApplySelectionAddsWalkOrder(st.MarkedPaths, paths, isDir)
+	} else {
+		conflicts = panel.BulkApplySelectionAdds(st.MarkedPaths, paths, isDir)
+	}
+	if conflicts {
+		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+	}
+	st.InvalidateMarkedSelectionDerived()
+}
+
+func (h *Handler) findDialogSelectAllIndices(st *dialog.FindDialogState, indices []int) {
 	walkOrder := len(st.MarkedPaths) == 0
 	if st.MarkedPaths == nil {
 		st.MarkedPaths = make(map[string]bool, len(indices))
@@ -1321,173 +801,28 @@ func (h *Handler) ToggleStayOnVolume() {
 	h.restartFindIndexer()
 }
 
-// ToggleIncludeHidden toggles include-hidden. Enabling expands pending skipped dots
-// without a full re-index; disabling strips those entries.
+// ToggleIncludeHidden toggles include-hidden via the scan coordinator.
 func (h *Handler) ToggleIncludeHidden() {
 	st := &h.model.FindDialog
 	st.IncludeHidden = !st.IncludeHidden
 	if st.IncludeHidden {
-		h.expandPendingHidden()
-	} else {
-		h.stripExpandedHidden()
+		st.IndexDone = false
+		st.Indexing = true
 	}
-	h.clearFindNavIdle()
-	h.syncFindDialogRanks()
-}
-
-func (h *Handler) clearHiddenPending() {
-	h.pendingHiddenDirs = nil
-	h.pendingHiddenDirSet = nil
-	h.pendingHiddenFiles = nil
-	h.pendingHiddenFileSet = nil
-	h.expandedHiddenRoots = nil
-	h.hiddenFilesSpliced = false
-	h.sessionMu.Lock()
-	h.harvestDirs = nil
-	h.harvestFiles = nil
-	h.sessionMu.Unlock()
-}
-
-func (h *Handler) mergeSkippedHidden(dirs []string, files []findpkg.Entry) {
-	if h.pendingHiddenDirSet == nil {
-		h.pendingHiddenDirSet = make(map[string]struct{})
-	}
-	for _, d := range dirs {
-		d = filepath.Clean(d)
-		if d == "" {
-			continue
+	h.scan.SetIncludeHidden(st.IncludeHidden)
+	if st.IncludeHidden {
+		h.clearFindNavIdle()
+		if search.Parse(st.Query).Empty() && !st.Indexing {
+			h.applyEmptyQueryDisplayRank(st)
+		} else if !findIndexingSkipsRank(st) {
+			h.scheduleFindRank(0)
 		}
-		if _, ok := h.pendingHiddenDirSet[d]; ok {
-			continue
-		}
-		h.pendingHiddenDirSet[d] = struct{}{}
-		h.pendingHiddenDirs = append(h.pendingHiddenDirs, d)
-	}
-	if h.pendingHiddenFileSet == nil {
-		h.pendingHiddenFileSet = make(map[string]struct{})
-	}
-	for _, f := range files {
-		p := filepath.Clean(f.Path)
-		if p == "" {
-			continue
-		}
-		if _, ok := h.pendingHiddenFileSet[p]; ok {
-			continue
-		}
-		h.pendingHiddenFileSet[p] = struct{}{}
-		f.Path = p
-		h.pendingHiddenFiles = append(h.pendingHiddenFiles, f)
-	}
-}
-
-func (h *Handler) expandPendingHidden() {
-	st := &h.model.FindDialog
-	if !st.Open || !st.IncludeHidden {
 		return
 	}
-	if !h.hiddenFilesSpliced && len(h.pendingHiddenFiles) > 0 {
-		h.appendFindBatch(st, h.pendingHiddenFiles)
-		h.hiddenFilesSpliced = true
-	}
-	if h.expandedHiddenRoots == nil {
-		h.expandedHiddenRoots = make(map[string]struct{})
-	}
-	for _, dir := range h.pendingHiddenDirs {
-		if _, ok := h.expandedHiddenRoots[dir]; ok {
-			continue
-		}
-		h.appendFindBatch(st, []findpkg.Entry{{
-			Path:  dir,
-			IsDir: true,
-			Type:  localfs.EntryDirectory,
-		}})
-		h.expandedHiddenRoots[dir] = struct{}{}
-		// Allow re-walk after a prior strip cleared completedRoots for this path.
-		h.sessionMu.Lock()
-		if h.completedRoots != nil {
-			delete(h.completedRoots, dir)
-		}
-		h.sessionMu.Unlock()
-		h.startFindWalk(dir, false)
-	}
-}
-
-func (h *Handler) stripExpandedHidden() {
-	st := &h.model.FindDialog
-	if !st.Open {
-		return
-	}
-	h.stopExpandedHiddenWalks()
-
-	dropFiles := h.pendingHiddenFileSet
-	dropDirs := h.pendingHiddenDirs
-	if len(dropFiles) == 0 && len(dropDirs) == 0 {
-		h.expandedHiddenRoots = nil
-		h.hiddenFilesSpliced = false
-		return
-	}
-
-	filtered := st.Entries[:0]
-	for _, e := range st.Entries {
-		abs := filepath.Clean(e.AbsPath(st.RootPath))
-		if _, ok := dropFiles[abs]; ok {
-			continue
-		}
-		if findPathUnderAny(dropDirs, abs) {
-			continue
-		}
-		filtered = append(filtered, e)
-	}
-	st.Entries = filtered
-	st.IndexedCount = len(st.Entries)
-	rebuildFindPathIndex(st)
-
-	h.sessionMu.Lock()
-	if h.indexedPaths != nil {
-		h.indexedPaths = make(map[string]struct{}, len(st.Entries))
-		for _, e := range st.Entries {
-			h.indexedPaths[filepath.Clean(e.AbsPath(st.RootPath))] = struct{}{}
-		}
-	}
-	h.sessionMu.Unlock()
-
-	h.expandedHiddenRoots = nil
-	h.hiddenFilesSpliced = false
-}
-
-func (h *Handler) stopExpandedHiddenWalks() {
-	if len(h.expandedHiddenRoots) == 0 {
-		return
-	}
-	h.sessionMu.Lock()
-	var toClose []*walk
-	for root, w := range h.walks {
-		if _, ok := h.expandedHiddenRoots[root]; !ok {
-			continue
-		}
-		toClose = append(toClose, w)
-		delete(h.walks, root)
-		if h.completedRoots != nil {
-			delete(h.completedRoots, root)
-		}
-	}
-	h.sessionMu.Unlock()
-	for _, w := range toClose {
-		if w != nil && w.sess != nil {
-			w.sess.Close()
-		}
-	}
-}
-
-func findPathUnderAny(roots []string, abs string) bool {
-	abs = filepath.Clean(abs)
-	for _, root := range roots {
-		root = filepath.Clean(root)
-		if abs == root || panel.IsStrictPathDescendant(root, abs) {
-			return true
-		}
-	}
-	return false
+	// Strip runs async; PollUpdates applies IndexReplaced when done.
+	st.IndexDone = false
+	st.Indexing = true
+	st.RankPending = !search.Parse(st.Query).Empty()
 }
 
 // ToggleOnlyDirectories toggles the only-directories result filter.
@@ -1727,6 +1062,24 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 // matches matcher, honoring filesOnly/dirsOnly. Shared filter pipeline for both
 // ApplyGroupSelect branches (select also filters out already-marked paths itself).
 func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dirsOnly bool, matcher panel.GroupMatcher) []string {
+	if indices == nil {
+		paths := make([]string, 0, 256)
+		for i := range st.Entries {
+			ent := st.Entries[i]
+			if filesOnly && ent.IsDir {
+				continue
+			}
+			if dirsOnly && !ent.IsDir {
+				continue
+			}
+			path := findEntryAbsPath(st, ent)
+			if path == "" || !matcher.Match(filepath.Base(path)) {
+				continue
+			}
+			paths = append(paths, path)
+		}
+		return paths
+	}
 	paths := make([]string, 0, len(indices))
 	for _, entIdx := range indices {
 		if entIdx < 0 || entIdx >= len(st.Entries) {

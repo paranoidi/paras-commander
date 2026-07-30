@@ -1,6 +1,7 @@
 package diskusage
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 )
 
 type scanJob struct {
@@ -50,29 +52,30 @@ type Engine struct {
 	// workerBusy is true while the worker is executing a dequeued scan job (runPlanner or hook).
 	workerBusy atomic.Bool
 
-	// walkConcurrency caps concurrent subdirectory walks in WalkFolder (minimum 1).
-	walkConcurrency int
+	// fsWalk configures adaptive concurrent subdirectory walks in WalkFolder.
+	fsWalk fswalk.Params
 }
 
 const cacheMergeChunkSize = 4096
 
-// New returns an engine with the same default walk concurrency as config.Default().
+// New returns an engine with the same default walk settings as config.Default().
 func New() *Engine {
-	return NewWithWalkConcurrency(config.DefaultDiskUsageWalkConcurrency)
+	return NewWithFSWalk(config.Default().FSWalk)
 }
 
-// NewWithWalkConcurrency creates an engine. walkConcurrency below 1 is replaced with config.DefaultDiskUsageWalkConcurrency.
-func NewWithWalkConcurrency(walkConcurrency int) *Engine {
-	if walkConcurrency < 1 {
-		walkConcurrency = config.DefaultDiskUsageWalkConcurrency
-	}
+// NewWithFSWalk creates an engine using adaptive walk params from config.
+func NewWithFSWalk(cfg config.FSWalkConfig) *Engine {
 	e := &Engine{
 		cache:           make(map[string]int64),
 		fileCounts:      make(map[string]int64),
 		activeWalkRoots: make(map[string]int),
 		updates:         make(chan struct{}, 1),
 		events:          make(chan Event, 256),
-		walkConcurrency: walkConcurrency,
+		fsWalk: fswalk.Params{
+			InitialWorkers:  cfg.InitialWorkers,
+			MaxWorkers:      cfg.MaxWorkers,
+			AdaptIntervalMS: cfg.AdaptIntervalMS,
+		},
 	}
 	e.jobCond = sync.NewCond(&e.jobMu)
 	go e.workerLoop()
@@ -411,7 +414,7 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 				continue
 			}
 
-			tree := WalkFolder(jobPath, nil, shouldIgnore, nil, e.walkConcurrency)
+			tree := WalkFolder(context.Background(), jobPath, nil, shouldIgnore, nil, e.fsWalk)
 
 			if e.gen.Load() != sess {
 				e.mu.Lock()

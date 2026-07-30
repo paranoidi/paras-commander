@@ -87,6 +87,7 @@ type Config struct {
 	Theme      string           `toml:"theme"`
 	Panels     PanelsConfig     `toml:"panels"`
 	DiskUsage  DiskUsageConfig  `toml:"disk_usage"`
+	FSWalk     FSWalkConfig     `toml:"fs_walk"`
 	Carousel   CarouselConfig   `toml:"carousel"`
 	UI         UIConfig         `toml:"ui"`
 	Filter     FilterConfig     `toml:"filter"`
@@ -127,10 +128,13 @@ type DiskUsageConfig struct {
 	IdleSizeSort           bool `toml:"idle_size_sort"`
 	IdleSortDelayMS        int  `toml:"idle_sort_delay_ms"`
 	DescendIntoMountPoints bool `toml:"descend_into_mount_points"`
-	// WalkConcurrency limits concurrent subdirectory branches during a disk-usage walk (minimum 1 after Validate).
-	// Default is DefaultDiskUsageWalkConcurrency.
-	// Low values spare HDD/NAS; raise for fast local SSDs.
-	WalkConcurrency int `toml:"walk_concurrency"`
+}
+
+// FSWalkConfig controls adaptive concurrency for recursive filesystem walks (find + disk-usage).
+type FSWalkConfig struct {
+	InitialWorkers  int `toml:"initial_workers"`
+	MaxWorkers      int `toml:"max_workers"`
+	AdaptIntervalMS int `toml:"adapt_interval_ms"`
 }
 
 // CarouselConfig controls the carousel (multi-column) panel layout.
@@ -447,7 +451,11 @@ func Default() Config {
 			IdleSizeSort:           true,
 			IdleSortDelayMS:        500,
 			DescendIntoMountPoints: false,
-			WalkConcurrency:        DefaultDiskUsageWalkConcurrency,
+		},
+		FSWalk: FSWalkConfig{
+			InitialWorkers:  DefaultFSWalkInitialWorkers,
+			MaxWorkers:      DefaultFSWalkMaxWorkers,
+			AdaptIntervalMS: DefaultFSWalkAdaptIntervalMS,
 		},
 		Carousel: CarouselConfig{
 			Split:                 DefaultCarouselSplit(),
@@ -864,8 +872,14 @@ func (c *Config) validateGeneral(builtin *Config) {
 			c.Panels.RefreshIntervalMS = RefreshIntervalMaxMS
 		}
 	}
-	if c.DiskUsage.WalkConcurrency < 1 {
-		c.DiskUsage.WalkConcurrency = builtin.DiskUsage.WalkConcurrency
+	if c.FSWalk.InitialWorkers < 1 {
+		c.FSWalk.InitialWorkers = builtin.FSWalk.InitialWorkers
+	}
+	if c.FSWalk.MaxWorkers < c.FSWalk.InitialWorkers {
+		c.FSWalk.MaxWorkers = c.FSWalk.InitialWorkers
+	}
+	if c.FSWalk.AdaptIntervalMS < FSWalkAdaptIntervalMinMS {
+		c.FSWalk.AdaptIntervalMS = builtin.FSWalk.AdaptIntervalMS
 	}
 }
 

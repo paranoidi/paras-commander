@@ -9,14 +9,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 )
+
+func testWalkParams() fswalk.Params {
+	return fswalk.Params{InitialWorkers: 1, MaxWorkers: 32, AdaptIntervalMS: 2000}
+}
 
 func collectSession(t *testing.T, root string, opts Options) []Entry {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	s := Start(ctx, root, opts)
+	s := Start(ctx, root, opts, testWalkParams())
 	defer s.Close()
 
 	var all []Entry
@@ -65,7 +70,7 @@ func TestSessionSkipsHidden(t *testing.T) {
 	mustMkdir(t, filepath.Join(root, ".dotdir"))
 	mustWrite(t, filepath.Join(root, ".dotdir", "inner.txt"), "z")
 
-	s := Start(context.Background(), root, Options{})
+	s := Start(context.Background(), root, Options{}, testWalkParams())
 	defer s.Close()
 	var entries []Entry
 	for batch := range s.Results() {
@@ -172,7 +177,7 @@ func TestSessionCancel(t *testing.T) {
 	root := t.TempDir()
 	mustMkdir(t, filepath.Join(root, "a", "b", "c"))
 	ctx := context.Background()
-	s := Start(ctx, root, Options{})
+	s := Start(ctx, root, Options{}, testWalkParams())
 	s.Close()
 	select {
 	case <-s.Done():

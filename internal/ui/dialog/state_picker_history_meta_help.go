@@ -118,13 +118,16 @@ type FindDialogState struct {
 	QueryScroll       int // first visible rune offset for horizontal scrolling
 	Ranked            []int
 	MatchRanges       map[int][]search.Range // sparse: only entries with actual match ranges
-	Selected          int
-	ListScroll        int
-	Focus             int
-	Indexing          bool
-	IndexedCount      int
-	IndexDone         bool
-	IndexErr          string
+	// RankDisplayLines holds RelLine text parallel to Ranked while indexing before Entries sync.
+	RankDisplayLines []string
+	Selected         int
+	ListScroll       int
+	Focus            int
+	Indexing         bool
+	IndexedCount     int
+	WalkWorkers      int
+	IndexDone        bool
+	IndexErr         string
 	// RankPending is true while an async background rank is in progress or scheduled.
 	RankPending bool
 	// FullRanked holds uncapped query-filtered entry indices for bulk select-all / group select.

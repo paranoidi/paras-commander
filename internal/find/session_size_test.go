@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 )
 
 func TestFindWalkCapturesFileSize(t *testing.T) {
@@ -15,7 +17,7 @@ func TestFindWalkCapturesFileSize(t *testing.T) {
 	if err := os.WriteFile(path, content, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	sess := Start(context.Background(), root, Options{})
+	sess := Start(context.Background(), root, Options{}, fswalk.Params{InitialWorkers: 1, MaxWorkers: 32, AdaptIntervalMS: 2000})
 	defer sess.Close()
 	var got int64
 	for batch := range sess.Results() {

@@ -6,10 +6,13 @@
 package diskusage
 
 import (
+	"context"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 )
 
 // File represents nodes in a memoized filesystem tree with accumulated directory sizes.
@@ -76,14 +79,15 @@ func ReadDirInfos(path string) ([]fs.FileInfo, error) {
 }
 
 // WalkFolder traverses path and aggregates sizes on the returned tree (UpdateSize applied before return).
-// walkConcurrency limits concurrent subdirectory branches (minimum 1). Smaller values reduce HDD/NAS read storms.
+// walk configures adaptive concurrent subdirectory branches.
 // progress, when non-nil, receives folder-branch counts analogous to upstream godu; WalkFolder never closes progress.
 func WalkFolder(
+	ctx context.Context,
 	rootPath string,
 	readDir ReadDir,
 	ignore ShouldIgnoreFolder,
 	progress chan<- int,
-	walkConcurrency int,
+	walk fswalk.Params,
 ) *File {
 	if readDir == nil {
 		readDir = ReadDirInfos
@@ -91,15 +95,17 @@ func WalkFolder(
 	if ignore == nil {
 		ignore = func(string) bool { return false }
 	}
-	if walkConcurrency < 1 {
-		walkConcurrency = 1
-	}
 	rootPath = filepath.Clean(rootPath)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	adapt := fswalk.NewAdaptive(ctx, walk)
+	defer adapt.Stop()
+	sem := adapt.Sem()
 
 	var wg sync.WaitGroup
-	sem := make(chan bool, walkConcurrency)
-
-	tree := walkSubFolderConcurrently(rootPath, nil, ignoringReadDir(ignore, readDir), sem, &wg, progress)
+	tree := walkSubFolderConcurrently(ctx, rootPath, nil, ignoringReadDir(ignore, readDir), sem, adapt, &wg, progress)
 	wg.Wait()
 
 	tree.UpdateSize()
@@ -108,10 +114,12 @@ func WalkFolder(
 }
 
 func walkSubFolderConcurrently(
+	ctx context.Context,
 	path string,
 	parent *File,
 	readDir ReadDir,
-	sem chan bool,
+	sem *fswalk.DynSem,
+	adapt *fswalk.Adaptive,
 	wg *sync.WaitGroup,
 	progress chan<- int,
 ) *File {
@@ -125,6 +133,7 @@ func walkSubFolderConcurrently(
 	}
 
 	entries, err := readDir(path)
+	adapt.Bump()
 	if err != nil {
 		return result
 	}
@@ -144,14 +153,16 @@ func walkSubFolderConcurrently(
 			go func(subPath string) {
 				defer wg.Done()
 
-				sem <- true
-				subFolder := walkSubFolderConcurrently(subPath, result, readDir, sem, wg, progress)
+				if err := sem.Acquire(ctx); err != nil {
+					return
+				}
+				subFolder := walkSubFolderConcurrently(ctx, subPath, result, readDir, sem, adapt, wg, progress)
 
 				mu.Lock()
 				result.Files = append(result.Files, subFolder)
 				mu.Unlock()
 
-				<-sem
+				sem.Release()
 			}(subFolderPath)
 			continue
 		}

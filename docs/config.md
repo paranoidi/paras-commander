@@ -42,6 +42,7 @@ These live alongside `config.toml` in the same config directory but are
 - [General (root keys)](#general-root-keys)
 - [\[panels\]](#panels)
 - [\[disk_usage\]](#disk_usage)
+- [\[fs_walk\]](#fs_walk)
 - [\[carousel\]](#carousel)
 - [\[ui\]](#ui)
 - [\[ui.zoom\]](#uizoom)
@@ -95,7 +96,16 @@ Disk-usage view and background walk.
 | `idle_size_sort` | bool | `true` | While a disk-usage scan is running, re-sort by size once the cursor has been idle for a moment instead of resorting on every update. |
 | `idle_sort_delay_ms` | int | `500` | How long the cursor must be idle before the disk-usage idle re-sort (above) triggers. |
 | `descend_into_mount_points` | bool | `false` | Let a disk-usage scan cross into other mounted filesystems instead of stopping at mount boundaries. |
-| `walk_concurrency` | int | `4` | Number of subdirectory branches a disk-usage scan walks concurrently (minimum 1). Lower this on slow HDDs/NAS, raise it on fast local SSDs. |
+
+## `[fs_walk]`
+
+Adaptive concurrency shared by recursive **find** indexing and **disk-usage** tree walks. Each walk starts at `initial_workers`, measures throughput over `adapt_interval_ms`, increases concurrency while the rate improves, then freezes at the best limit for that walk.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `initial_workers` | int | `1` | Starting concurrent directory branches (minimum 1). |
+| `max_workers` | int | `32` | Hard ceiling on concurrent directory branches (must be ≥ `initial_workers`). |
+| `adapt_interval_ms` | int | `800` | Measure window in milliseconds (minimum 500). |
 
 ## `[carousel]`
 

@@ -1,11 +1,13 @@
 package diskusage_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/fswalk"
 )
 
 // TestWalkFolderUnreadableDirCachesZeroNotDot verifies that when a top-level scan root
@@ -21,7 +23,7 @@ func TestWalkFolderUnreadableDirCachesZeroNotDot(t *testing.T) {
 	t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
 
 	// WalkFolder on the locked directory should return a node whose Path() == locked.
-	tree := diskusage.WalkFolder(locked, nil, nil, nil, 1)
+	tree := diskusage.WalkFolder(context.Background(), locked, nil, nil, nil, fswalk.Params{InitialWorkers: 1, MaxWorkers: 1, AdaptIntervalMS: 60000})
 	got := map[string]int64{}
 	diskusage.FlattenSizes(tree, got)
 
@@ -50,7 +52,7 @@ func TestWalkFolderFlatSizes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tree := diskusage.WalkFolder(root, nil, nil, nil, 4)
+	tree := diskusage.WalkFolder(context.Background(), root, nil, nil, nil, fswalk.Params{InitialWorkers: 4, MaxWorkers: 4, AdaptIntervalMS: 60000})
 	got := map[string]int64{}
 	diskusage.FlattenSizes(tree, got)
 

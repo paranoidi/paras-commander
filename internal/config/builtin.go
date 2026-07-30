@@ -26,7 +26,14 @@ const (
 	// KeyRepeatDebounceMaxMS upper clamp for key_repeat_debounce_ms in Config.Validate.
 	KeyRepeatDebounceMaxMS = 10_000
 
-	DefaultDiskUsageWalkConcurrency = 4
+	// DefaultFSWalkInitialWorkers is the starting concurrent directory branches for find and disk-usage walks.
+	DefaultFSWalkInitialWorkers = 1
+	// DefaultFSWalkMaxWorkers caps adaptive walk concurrency for find and disk-usage walks.
+	DefaultFSWalkMaxWorkers = 32
+	// DefaultFSWalkAdaptIntervalMS is the measure window for adaptive walk worker tuning.
+	DefaultFSWalkAdaptIntervalMS = 800
+	// FSWalkAdaptIntervalMinMS is the lower clamp for [fs_walk].adapt_interval_ms in Config.Validate.
+	FSWalkAdaptIntervalMinMS = 500
 
 	// DefaultRefreshIntervalMS is how often both file panels re-read their directories from disk (0 disables).
 	DefaultRefreshIntervalMS = 2500

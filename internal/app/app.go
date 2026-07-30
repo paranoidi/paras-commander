@@ -333,7 +333,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if cfg.Panels.RespectGitignore {
 		giCache = gitignore.NewCache()
 	}
-	duEngine := diskusage.NewWithWalkConcurrency(cfg.DiskUsage.WalkConcurrency)
+	duEngine := diskusage.NewWithFSWalk(cfg.FSWalk)
 
 	panelOpts := browserPanelOptions{
 		list:       listOptions,

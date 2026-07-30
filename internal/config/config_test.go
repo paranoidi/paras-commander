@@ -62,21 +62,31 @@ func TestValidateClampsNegativeDedupChunkBytes(t *testing.T) {
 	}
 }
 
-func TestValidateClampsDiskUsageWalkConcurrency(t *testing.T) {
+func TestValidateClampsFSWalk(t *testing.T) {
 	cfg := Default()
-	cfg.DiskUsage.WalkConcurrency = 0
+	cfg.FSWalk.InitialWorkers = 0
+	cfg.FSWalk.MaxWorkers = 0
+	cfg.FSWalk.AdaptIntervalMS = 100
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.DiskUsage.WalkConcurrency != DefaultDiskUsageWalkConcurrency {
-		t.Fatalf("DiskUsage.WalkConcurrency = %d, want %d", cfg.DiskUsage.WalkConcurrency, DefaultDiskUsageWalkConcurrency)
+	if cfg.FSWalk.InitialWorkers != DefaultFSWalkInitialWorkers {
+		t.Fatalf("FSWalk.InitialWorkers = %d, want %d", cfg.FSWalk.InitialWorkers, DefaultFSWalkInitialWorkers)
 	}
-	cfg.DiskUsage.WalkConcurrency = 2
+	if cfg.FSWalk.MaxWorkers != DefaultFSWalkInitialWorkers {
+		t.Fatalf("FSWalk.MaxWorkers = %d, want %d", cfg.FSWalk.MaxWorkers, DefaultFSWalkInitialWorkers)
+	}
+	if cfg.FSWalk.AdaptIntervalMS != DefaultFSWalkAdaptIntervalMS {
+		t.Fatalf("FSWalk.AdaptIntervalMS = %d, want %d", cfg.FSWalk.AdaptIntervalMS, DefaultFSWalkAdaptIntervalMS)
+	}
+	cfg.FSWalk.InitialWorkers = 4
+	cfg.FSWalk.MaxWorkers = 8
+	cfg.FSWalk.AdaptIntervalMS = 3000
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.DiskUsage.WalkConcurrency != 2 {
-		t.Fatalf("DiskUsage.WalkConcurrency = %d, want 2", cfg.DiskUsage.WalkConcurrency)
+	if cfg.FSWalk.InitialWorkers != 4 || cfg.FSWalk.MaxWorkers != 8 || cfg.FSWalk.AdaptIntervalMS != 3000 {
+		t.Fatalf("FSWalk = %+v, want InitialWorkers=4 MaxWorkers=8 AdaptIntervalMS=3000", cfg.FSWalk)
 	}
 }
 
