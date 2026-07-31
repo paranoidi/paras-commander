@@ -40,7 +40,7 @@ var FunctionKeys = []FunctionKey{
 	{Key: tcell.KeyF7, KeyLabel: "F7", HintShiftPrefix: "Open", Hint: "Mkdir"},
 	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete"},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
-	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+	{Key: tcell.KeyF10, KeyLabel: "F10", HintShiftPrefix: "Now", Hint: "Quit"},
 }
 
 // FunctionKeyLabelByKey returns the F-key label for a tcell.Key, e.g. tcell.KeyF5 → "F5".
