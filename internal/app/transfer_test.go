@@ -661,8 +661,8 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 	if keys[1].Hint != "Default" || keys[1].KeyLabel != "C-r" {
 		t.Fatalf("restore footer = %+v, want C-r Default", keys[1])
 	}
-	if keys[2].Hint != "Bookmarks" || keys[2].KeyLabel != "C-g" {
-		t.Fatalf("bookmarks footer = %+v, want C-g Bookmarks", keys[2])
+	if keys[2].Hint != "Bookmarks" || keys[2].KeyLabel != "C-b" {
+		t.Fatalf("bookmarks footer = %+v, want C-b Bookmarks", keys[2])
 	}
 	if !footerHasHint(keys, "Active path ◄", "S-left") {
 		t.Fatalf("footer = %+v, want Active S-left hint", keys)

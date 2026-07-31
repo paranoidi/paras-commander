@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/shell"
 	"github.com/paranoidi/paras-commander/internal/subshell"
-	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -248,19 +246,7 @@ func (a *App) shellInsertPaths() {
 // shellInsertPathList returns the sorted selected paths, or the focused entry, as absolute
 // cleaned paths. The parent (..) row yields nothing.
 func shellInsertPathList(p *panel.State) []string {
-	if len(p.SelectedPaths) > 0 {
-		paths := make([]string, 0, len(p.SelectedPaths))
-		for sel := range p.SelectedPaths {
-			paths = append(paths, textutil.AbsPathClean(sel))
-		}
-		sort.Strings(paths)
-		return paths
-	}
-	entry, ok := p.CurrentEntry()
-	if !ok || entry.Name == ".." {
-		return nil
-	}
-	return []string{textutil.AbsPathClean(entry.Path)}
+	return panelTargetPaths(p)
 }
 
 // localActivePanelDir returns the active panel directory, or "" when it is remote or

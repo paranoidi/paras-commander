@@ -125,6 +125,7 @@ General interface layout, timing, and rendering behavior.
 |---|---|---|---|
 | `show_menu_bar` | bool | `true` | Show the top menu bar. |
 | `show_file_icons` | bool | `true` | Show file-type icons/glyphs in panel listings. |
+| `leader_menu_show_direct_keys` | bool | `true` | Show the preferred global keybind after each action name in the Esc function menu (e.g. `Copy F5`). Toggle with **F3** while the menu is open. Does not apply to the F2 user menu. |
 | `shrunken_shows_name_only` | bool | `true` | When a panel becomes too narrow for its listing columns, show only the name column instead of truncating everything. |
 | `screen_render_hash_cache` | bool | `true` | Skip re-drawing the terminal screen when nothing actually changed since the last frame — reduces flicker and I/O over slow connections. |
 | `key_repeat_debounce_ms` | int | `45` | Coalesces rapid repeated key presses (file-list cursor steps, quick-view/carousel preview reloads, F3 style-picker highlighting) so they don't reload on every single step. `0` disables debouncing; values above 10000 are clamped. |
@@ -299,7 +300,7 @@ SSH/SFTP remote panel connections.
 
 ## `[shell]`
 
-Drop-to-shell (suspend the TUI, run an interactive shell, resume).
+Open shell (suspend the TUI, run an interactive shell, resume).
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -346,3 +347,23 @@ Find-duplicates scan (within a single directory).
 | `hash_confirm_bytes` | int64 | `34359738368` (32 GiB) | Pause and ask for confirmation before hashing if the total size of hash candidates exceeds this. `0` disables the confirmation gate. |
 | `file_progress_bytes` | int64 | `268435456` (256 MiB) | Show a per-file progress bar in the scan dialog for files at or above this size. `0` disables the per-file bar. |
 | `chunk_bytes` | int64 | `33554432` (32 MiB) | Compare same-size files this many bytes at a time, stopping as soon as content diverges. `0` disables chunked comparison. |
+
+## `keybindings.toml`
+
+Built-in defaults live in `internal/keymap/specs.go` and are written to `keybindings.toml` via `pc --config-stub`. F-keys and selection symbols (`+`, `-`, `*`) are kept alongside leader-menu letter chords (`C-`, `M-`, `C-M-` tiers matching Esc function-menu keys).
+
+**`[leader_key]`** — letter keys for the Esc function menu (`app.leader-menu` in `[main]`). Keys must be a single character: a letter, `?`, comma, or period. Upper- and lower-case letters are distinct (`m` vs `M`). Empty value omits the row; keys must be unique within the table (case-sensitive). Defaults are defined in `internal/keymap/specs.go` (e.g. `file.copy` = `c`, `app.show-help` = `?`, `app.quit` = `q`). Open the menu with **Esc** in the file browser; press a shown letter (or a memorized letter for a hidden row) to run the action.
+
+**`[copy_menu]`** — letter keys for the `"` copy menu (`app.copy-menu` in `[main]`). Defaults: `clipboard.copy-file-url` = `c`, `clipboard.copy-dir-url` = `d`, `clipboard.copy-filename` = `f`, `clipboard.copy-filename-without-ext` = `n`. Empty value omits the row. Keys must be letters and unique within the table.
+
+Notable dual bindings:
+
+| Action | Primary (footer/help) | Letter chord |
+|--------|----------------------|--------------|
+| Edit file | `F4` | `M-e` (`C-e` stays on bookmarks) |
+| Copy | `F5` | `C-c` |
+| Delete | `F8` | `C-d` |
+| Refresh | `C-n` | — |
+| Open bookmarks | `C-b` | legacy `C-g`, `C-e` retained |
+
+Relocated non-leader actions (when a letter chord was needed): carousel `M-v`, disk-usage scan `M-d`, disk-usage clear `M-S-d` (also aborts in-flight scans), SFTP `M-r`, external browser `M-x`. Quick-view preview page down stays `C-j` (jobs.open uses `M-j`). See `consolidate-leader-keys.md` for the full mapping plan.

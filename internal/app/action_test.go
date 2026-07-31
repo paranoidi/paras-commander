@@ -37,7 +37,7 @@ func TestActionFromKeyMapsNavigationKeys(t *testing.T) {
 		{name: "backspace", key: tcell.KeyBackspace, want: keymap.ActionNavParent},
 		{name: "tab", key: tcell.KeyTab, want: keymap.ActionPanelSwitch},
 		{name: "hide inactive panel", key: tcell.KeyBacktab, want: keymap.ActionPanelToggleHideInactive},
-		{name: "disk usage", key: tcell.KeyCtrlD, want: keymap.ActionPanelDiskUsageScan},
+		{name: "delete", key: tcell.KeyCtrlD, want: keymap.ActionFileDelete},
 		{name: "open menu", key: tcell.KeyF9, want: keymap.ActionAppOpenMenu},
 		{name: "quit", key: tcell.KeyF10, want: keymap.ActionAppQuit},
 	}
@@ -64,7 +64,7 @@ func TestActionFromKeyMapsQuitImmediate(t *testing.T) {
 
 // TestActionFromKeyMapsCtrlCToJobsCancel verifies that Ctrl+C triggers
 // jobs.cancel only while the jobs view is focused. In the file browser,
-// Ctrl+C toggles carousel view (panel.toggle-carousel).
+// Ctrl+C copies (copy).
 func TestActionFromKeyMapsCtrlCToJobsCancel(t *testing.T) {
 	bundle, err := keymap.DefaultBundle()
 	if err != nil {
@@ -74,17 +74,17 @@ func TestActionFromKeyMapsCtrlCToJobsCancel(t *testing.T) {
 	if got := lookupActionForView(event, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, bundle.FilePreview, bundle.Compare, bundle.Dedup, ui.ViewJobs); got != keymap.ActionJobsCancel {
 		t.Fatalf("jobs view Ctrl+C = %v, want ActionJobsCancel", got)
 	}
-	if got := lookupActionForView(event, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, bundle.FilePreview, bundle.Compare, bundle.Dedup, ui.ViewBrowser); got != keymap.ActionPanelToggleCarousel {
-		t.Fatalf("browser Ctrl+C = %q, want %s", got, keymap.ActionPanelToggleCarousel)
+	if got := lookupActionForView(event, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, bundle.FilePreview, bundle.Compare, bundle.Dedup, ui.ViewBrowser); got != keymap.ActionCopy {
+		t.Fatalf("browser Ctrl+C = %q, want %s", got, keymap.ActionCopy)
 	}
 }
 
-func TestActionFromKeyEscDoesNotMapToQuit(t *testing.T) {
+func TestActionFromKeyEscOpensLeaderMenuInBrowser(t *testing.T) {
 	km := defaultKeymap(t)
 	event := tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
-	if got != "" {
-		t.Fatalf("actionFromKeyEvent(Esc) = %q, want unbound (dialogs/filter use Esc explicitly)", got)
+	if got != keymap.ActionAppLeaderMenu {
+		t.Fatalf("actionFromKeyEvent(Esc) = %q, want %s", got, keymap.ActionAppLeaderMenu)
 	}
 }
 
@@ -163,12 +163,21 @@ func TestActionFromKeyMapsCtrlArrowsToDirectoryHistory(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsAltEToExternalBrowser(t *testing.T) {
+func TestActionFromKeyMapsAltXToExternalBrowser(t *testing.T) {
 	km := defaultKeymap(t)
-	event := tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModAlt)
+	event := tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModAlt)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionPanelExternalBrowser {
 		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelExternalBrowser", got)
+	}
+}
+
+func TestActionFromKeyMapsAltEToEdit(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModAlt)
+	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionFileEdit {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionFileEdit", got)
 	}
 }
 
@@ -262,30 +271,39 @@ func TestActionFromKeyMapsCtrlFToFindDialog(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsCtrlAltDToAbortDiskUsageScans(t *testing.T) {
+func TestActionFromKeyMapsShiftAltDToClearDiskUsageData(t *testing.T) {
 	km := defaultKeymap(t)
-	ev := tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModAlt)
+	ev := tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt|tcell.ModShift)
 	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
-	if got != keymap.ActionPanelDiskUsageAbortAll {
-		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelDiskUsageAbortAll", got)
+	if got != keymap.ActionPanelDiskUsageClear {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelDiskUsageClear", got)
 	}
 }
 
-func TestActionFromKeyMapsCtrlAltFToFlatten(t *testing.T) {
+func TestActionFromKeyMapsCtrlAltDToDuplicate(t *testing.T) {
 	km := defaultKeymap(t)
-	ev := tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModAlt)
+	ev := tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModAlt)
+	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionFileDuplicate {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionFileDuplicate", got)
+	}
+}
+
+func TestActionFromKeyMapsCtrlLToFlatten(t *testing.T) {
+	km := defaultKeymap(t)
+	ev := tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModCtrl)
 	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionFileFlatten {
 		t.Fatalf("actionFromKeyEvent() = %v, want ActionFileFlatten", got)
 	}
 }
 
-func TestActionFromKeyMapsAltDToClearDiskUsageData(t *testing.T) {
+func TestActionFromKeyMapsAltDToDiskUsageScan(t *testing.T) {
 	km := defaultKeymap(t)
 	ev := tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt)
 	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
-	if got != keymap.ActionPanelDiskUsageClear {
-		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelDiskUsageClear", got)
+	if got != keymap.ActionPanelDiskUsageScan {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelDiskUsageScan", got)
 	}
 }
 
@@ -300,7 +318,7 @@ func TestActionFromKeyIgnoresAltF(t *testing.T) {
 
 func TestActionFromKeyIgnoresUnknownKey(t *testing.T) {
 	km := defaultKeymap(t)
-	event := tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone)
+	event := tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModNone)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != "" {
 		t.Fatalf("actionFromKeyEvent() = %v, want empty string", got)

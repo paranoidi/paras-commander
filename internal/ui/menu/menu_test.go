@@ -187,8 +187,8 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Quick view":    "S-F3",
 		"Sort...":       "C-s",
 		"Toggle hidden": "M-.",
-		"Refresh":       "M-C-r",
-		"Disk usage":    "C-d",
+		"Refresh":       "C-n",
+		"Disk usage":    "M-d",
 		"History...":    "M-h",
 	})
 	assertMenuItemKeyLabels(t, file, map[string]string{
@@ -211,14 +211,15 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		}
 	}
 	assertMenuItemKeyLabels(t, cmd, map[string]string{
-		"Bookmarks":    "C-g",
-		"Add bookmark": "C-b",
-		"Refresh":      "M-C-r",
+		"Bookmarks":    "C-b",
+		"Add bookmark": "C-M-b",
+		"Refresh":      "C-n",
 	})
 	assertMenuItemKeyLabels(t, display, map[string]string{
-		"Commands": "M-c",
-		"Messages": "M-m",
-		"Jobs":     "M-j",
+		"Commands":   "C-M-e",
+		"Messages":   "M-l",
+		"Jobs":       "M-j",
+		"Open shell": "C-o",
 	})
 }
 
@@ -261,9 +262,10 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		t.Fatal("jobs view menus missing Display")
 	}
 	assertMenuItemKeyLabels(t, display, map[string]string{
-		"Commands": "M-c",
-		"Messages": "M-m",
-		"Jobs":     "M-j",
+		"Commands":   "C-M-e",
+		"Messages":   "M-l",
+		"Jobs":       "M-j",
+		"Open shell": "C-o",
 	})
 	if file == nil {
 		t.Fatal("jobs view menus missing File")
@@ -305,7 +307,7 @@ func TestDedupDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	}
 	assertMenuItemKeyLabels(t, &defs[0], map[string]string{
 		"Back to file view": "Esc",
-		"Refresh":           "M-C-r",
+		"Refresh":           "C-n",
 		"Delete marked":     "F8",
 	})
 }
@@ -393,9 +395,10 @@ func TestAuxiliaryViewDefinitionsIncludeDisplay(t *testing.T) {
 				t.Fatalf("Display shortcut = %q, want d", display.Shortcut)
 			}
 			assertMenuItemKeyLabels(t, display, map[string]string{
-				"Commands": "M-c",
-				"Messages": "M-m",
-				"Jobs":     "M-j",
+				"Commands":   "C-M-e",
+				"Messages":   "M-l",
+				"Jobs":       "M-j",
+				"Open shell": "C-o",
 			})
 		})
 	}

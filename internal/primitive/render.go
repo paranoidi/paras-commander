@@ -35,7 +35,7 @@ type BorderGlyphs struct {
 // SharpBorder is the square-corner box style used by file panels and most dialogs.
 var SharpBorder = BorderGlyphs{TopLeft: '┌', TopRight: '┐', BottomLeft: '└', BottomRight: '┘', Horizontal: '─', Vertical: '│'}
 
-// RoundedBorder is the rounded-corner box style (e.g. the F2 quick-action dialog default).
+// RoundedBorder is the rounded-corner box style (e.g. modal dialog frames).
 var RoundedBorder = BorderGlyphs{TopLeft: '╭', TopRight: '╮', BottomLeft: '╰', BottomRight: '╯', Horizontal: '─', Vertical: '│'}
 
 // Box draws a single-line box border inside rect using glyphs. Each cell is written once.

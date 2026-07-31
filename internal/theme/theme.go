@@ -10,17 +10,10 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/themes"
 )
 
 const defaultName = "default"
-
-// QuickAction border style values for dialog.quickaction.border.
-const (
-	QuickActionBorderRounded = "rounded"
-	QuickActionBorderSharp   = "sharp"
-)
 
 // Registry maps stable theme names to parsed render styles.
 type Registry map[string]Theme
@@ -218,18 +211,11 @@ type Theme struct {
 	DialogMassRenameAfterAdded     tcell.Style
 	DialogMassRenameAfterError     tcell.Style
 
-	// DialogQuickAction* is the minimal, separate theme subset for the F2 quick-action
-	// list (buttonless letter-activated menu) — it does not reuse the generic Dialog*
-	// fields above. DialogQuickActionBorderStyle selects the frame glyph set (see
-	// QuickActionBorderGlyphs) and is parsed from dialog.quickaction.border, not a
-	// tcell.Style like the rest of this block.
-	DialogQuickActionFrame        tcell.Style
-	DialogQuickActionSurface      tcell.Style
-	DialogQuickActionText         tcell.Style
-	DialogQuickActionTitle        tcell.Style
-	DialogQuickActionAccent       tcell.Style
-	DialogQuickActionListSelected tcell.Style
-	DialogQuickActionBorderStyle  string
+	LeaderMenuSurface tcell.Style
+	LeaderMenuGroup   tcell.Style
+	LeaderMenuKey     tcell.Style
+	LeaderMenuArrow   tcell.Style
+	LeaderMenuLabel   tcell.Style
 
 	MessageInfo  tcell.Style
 	MessageWarn  tcell.Style
@@ -276,15 +262,6 @@ func (t Theme) TerminalTextStyle() tcell.Style {
 		return t.TerminalText
 	}
 	return t.PanelText
-}
-
-// QuickActionBorderGlyphs returns the border glyph set for the F2 quick-action dialog,
-// selected by DialogQuickActionBorderStyle ("rounded", the default, or "sharp").
-func (t Theme) QuickActionBorderGlyphs() primitive.BorderGlyphs {
-	if t.DialogQuickActionBorderStyle == QuickActionBorderSharp {
-		return primitive.SharpBorder
-	}
-	return primitive.RoundedBorder
 }
 
 // PanelRowIconForeground returns the foreground for cursor-row adornment icons: file-list
@@ -511,6 +488,7 @@ const (
 
 // Menu-bar jobs strip symbol keys ([symbols] table); optional — see SymbolMenuJob / SymbolMenuProgress*.
 const (
+	SymbolKeyLeaderMenuArrow       = "leader_menu.arrow"
 	SymbolKeyMenuProgressDone      = "menu.progress.done"
 	SymbolKeyMenuProgressRemaining = "menu.progress.remaining"
 	SymbolKeyMenuJobScanning       = "menu.job.scanning"
@@ -613,6 +591,16 @@ func (t Theme) SymbolFilelistPreviewLoading() rune {
 // SymbolFilelistNoPermission returns the suffix glyph for entries the current user cannot access.
 func (t Theme) SymbolFilelistNoPermission() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistNoPermission, '\uf023')
+}
+
+// SymbolLeaderMenuArrow returns the separator glyph between shortcut key and label in the leader menu.
+func (t Theme) SymbolLeaderMenuArrow() rune {
+	if s := strings.TrimSpace(t.Symbols[SymbolKeyLeaderMenuArrow]); s != "" {
+		for _, r := range s {
+			return r
+		}
+	}
+	return '\uea9c'
 }
 
 // SymbolTreeExpand returns the collapsed-node expander glyph for tree-style lists
@@ -908,12 +896,11 @@ var requiredStyleKeys = []string{
 	"dialog.massrename.after",
 	"dialog.massrename.after.added",
 	"dialog.massrename.after.error",
-	"dialog.quickaction.frame",
-	"dialog.quickaction.surface",
-	"dialog.quickaction.text",
-	"dialog.quickaction.title",
-	"dialog.quickaction.accent",
-	"dialog.quickaction.list.selected",
+	"leader_menu.surface",
+	"leader_menu.group",
+	"leader_menu.key",
+	"leader_menu.arrow",
+	"leader_menu.label",
 	"message.info",
 	"message.warn",
 	"message.error",
@@ -951,7 +938,7 @@ var requiredStyleKeys = []string{
 var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
 
 // styleSectionRoots are top-level TOML tables for semantic styles (keys inside omit this prefix).
-var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal"}
+var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu"}
 
 var styleSectionRootSet = makeStyleKeySet(styleSectionRoots)
 
@@ -1194,11 +1181,6 @@ func parse(data []byte) (Theme, error) {
 		return Theme{}, err
 	}
 
-	quickActionBorderStyle, err := quickActionBorderStyleField(raw)
-	if err != nil {
-		return Theme{}, err
-	}
-
 	specs, err := collectStyleSpecs(raw)
 	if err != nil {
 		return Theme{}, err
@@ -1417,13 +1399,11 @@ func parse(data []byte) (Theme, error) {
 		DialogMassRenameAfterAdded:     styles["dialog.massrename.after.added"],
 		DialogMassRenameAfterError:     styles["dialog.massrename.after.error"],
 
-		DialogQuickActionFrame:        styles["dialog.quickaction.frame"],
-		DialogQuickActionSurface:      styles["dialog.quickaction.surface"],
-		DialogQuickActionText:         styles["dialog.quickaction.text"],
-		DialogQuickActionTitle:        styles["dialog.quickaction.title"],
-		DialogQuickActionAccent:       styles["dialog.quickaction.accent"],
-		DialogQuickActionListSelected: styles["dialog.quickaction.list.selected"],
-		DialogQuickActionBorderStyle:  quickActionBorderStyle,
+		LeaderMenuSurface: styles["leader_menu.surface"],
+		LeaderMenuGroup:   styles["leader_menu.group"],
+		LeaderMenuKey:     styles["leader_menu.key"],
+		LeaderMenuArrow:   styles["leader_menu.arrow"],
+		LeaderMenuLabel:   styles["leader_menu.label"],
 
 		MessageInfo:  styles["message.info"],
 		MessageWarn:  styles["message.warn"],
@@ -1467,36 +1447,6 @@ func stringField(raw map[string]any, key string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("%s must be a string", key)
 	}
-	return text, nil
-}
-
-// quickActionBorderStyleField extracts and validates dialog.quickaction.border ("rounded",
-// the default, or "sharp"), then deletes it from raw so the generic style-table flattener
-// (collectStyleSpecs) doesn't trip over a plain string sitting among dialog.quickaction's
-// fg/bg style tables.
-func quickActionBorderStyleField(raw map[string]any) (string, error) {
-	dialogTable, _ := raw["dialog"].(map[string]any)
-	if dialogTable == nil {
-		return QuickActionBorderRounded, nil
-	}
-	quickActionTable, _ := dialogTable["quickaction"].(map[string]any)
-	if quickActionTable == nil {
-		return QuickActionBorderRounded, nil
-	}
-	value, ok := quickActionTable["border"]
-	if !ok {
-		return QuickActionBorderRounded, nil
-	}
-	text, ok := value.(string)
-	if !ok {
-		return "", fmt.Errorf("dialog.quickaction.border must be a string")
-	}
-	switch text {
-	case QuickActionBorderRounded, QuickActionBorderSharp:
-	default:
-		return "", fmt.Errorf("dialog.quickaction.border must be %q or %q, got %q", QuickActionBorderRounded, QuickActionBorderSharp, text)
-	}
-	delete(quickActionTable, "border")
 	return text, nil
 }
 

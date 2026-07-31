@@ -460,7 +460,7 @@ func TestRenderUsesBlockedPanelFrameWhenListingFormatDialogOpen(t *testing.T) {
 	}
 }
 
-func TestRenderKeepsActivePanelFrameWhenQuickActionOpen(t *testing.T) {
+func TestRenderKeepsActivePanelFrameWhenLeaderMenuOpen(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -472,9 +472,9 @@ func TestRenderKeepsActivePanelFrameWhenQuickActionOpen(t *testing.T) {
 		Primary:     panel.State{Path: pathloc.MustParse("/tmp")},
 		Secondary:   panel.State{Path: pathloc.MustParse("/tmp")},
 		ActivePanel: PrimaryPanel,
-		QuickAction: dialog.QuickActionState{
+		LeaderMenu: LeaderMenuState{
 			Open:  true,
-			Items: []dialog.QuickActionItem{{Label: "Example"}},
+			Items: []LeaderMenuItem{{Label: "Example"}},
 		},
 	}
 
@@ -483,11 +483,11 @@ func TestRenderKeepsActivePanelFrameWhenQuickActionOpen(t *testing.T) {
 
 	_, cornerStyle, _ := screen.Get(0, 1)
 	if cornerStyle != styles.PanelActiveFrame {
-		t.Fatalf("left (active) panel border style = %v, want active frame %v (quick-action list must not blank panel focus)", cornerStyle, styles.PanelActiveFrame)
+		t.Fatalf("left (active) panel border style = %v, want active frame %v (leader menu must not blank panel focus)", cornerStyle, styles.PanelActiveFrame)
 	}
 }
 
-func TestRenderQuickActionOpenDimsActivePanelCursorRow(t *testing.T) {
+func TestRenderLeaderMenuOpenDimsActivePanelCursorRow(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {
 		t.Fatalf("Init() error = %v", err)
@@ -505,9 +505,9 @@ func TestRenderQuickActionOpenDimsActivePanelCursorRow(t *testing.T) {
 		},
 		Secondary:   panel.State{Path: pathloc.MustParse("/var")},
 		ActivePanel: PrimaryPanel,
-		QuickAction: dialog.QuickActionState{
+		LeaderMenu: LeaderMenuState{
 			Open:  true,
-			Items: []dialog.QuickActionItem{{Label: "Example"}},
+			Items: []LeaderMenuItem{{Label: "Example"}},
 		},
 	}
 
@@ -515,13 +515,13 @@ func TestRenderQuickActionOpenDimsActivePanelCursorRow(t *testing.T) {
 
 	_, leftBorder, _ := screen.Get(0, 1)
 	if leftBorder != styles.PanelActiveFrame {
-		t.Fatalf("left panel border = %v, want active panel border (quick-action must not blank panel focus)", leftBorder)
+		t.Fatalf("left panel border = %v, want active panel border (leader menu must not blank panel focus)", leftBorder)
 	}
 	_, rowStyle, _ := screen.Get(1, 3)
 	_, rowBG, _ := rowStyle.Decompose()
 	_, wantBG, _ := styles.PanelCursorInactive.Decompose()
 	if rowBG != wantBG {
-		t.Fatalf("left list cursor row background = %v, want %v (active panel's cursor row must look inactive while F2 quick-action list is open)", rowBG, wantBG)
+		t.Fatalf("left list cursor row background = %v, want %v (active panel's cursor row must look inactive while leader menu is open)", rowBG, wantBG)
 	}
 }
 

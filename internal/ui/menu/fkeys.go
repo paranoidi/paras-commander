@@ -25,6 +25,9 @@ var FooterEscClose = FunctionKey{Key: tcell.KeyEsc, KeyLabel: "Esc", Hint: "Clos
 // FunctionKeyEditConfig opens meta.toml or menu.toml from meta/user-menu dialogs.
 var FunctionKeyEditConfig = FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Edit config"}
 
+// FunctionKeyLeaderMenuToggleChords toggles direct keybind hints in the Esc function menu.
+var FunctionKeyLeaderMenuToggleChords = FunctionKey{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "Toggle chords"}
+
 // FunctionKeys is the single source of truth for all F-keys shown in the footer
 // and used to route quick-filter function-key presses to menu items.
 var FunctionKeys = []FunctionKey{

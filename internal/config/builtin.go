@@ -197,6 +197,10 @@ const (
 	// ShrunkenListingRowTextWidthThreshold render only the name column (size / meta / mtime / perm hidden).
 	DefaultShrunkenShowsNameOnly = true
 
+	// DefaultLeaderMenuShowDirectKeys shows the preferred global keybind after each action name
+	// in the Esc function menu (e.g. "Copy F5").
+	DefaultLeaderMenuShowDirectKeys = true
+
 	// DefaultPanelScrollbar is the file-list scrollbar indicator style (none, thumb, or bar).
 	DefaultPanelScrollbar = "thumb"
 	// DefaultPanelScrollbarInactive shows scrollbars on the inactive panel when true.
@@ -341,7 +345,7 @@ const (
 	// DefaultSFTPListTimeoutSecs limits remote panel directory listing (ReadDir).
 	DefaultSFTPListTimeoutSecs = 60
 
-	// DefaultShellSyncCwdOnReturn navigates the active panel to the process cwd after drop-to-shell exits.
+	// DefaultShellSyncCwdOnReturn navigates the active panel to the process cwd after open shell exits.
 	DefaultShellSyncCwdOnReturn = true
 	// DefaultShellPersistent keeps one MC-style shell session alive across Ctrl+O toggles (Linux only).
 	DefaultShellPersistent = true

@@ -78,10 +78,34 @@ func TestBrowserHelpExcludesOtherViewAndDialogActions(t *testing.T) {
 		keymap.ActionBookmarkDelete,
 		keymap.ActionDestinationActivePanel,
 		keymap.ActionAppShowHelp,
+		"panel.disk-usage-abort-all",
 	} {
 		if _, ok := byID[forbidden]; ok {
 			t.Fatalf("browser help should not include %q", forbidden)
 		}
+	}
+}
+
+func TestBrowserHelpDiskUsageSectionListsScanAndClearOnly(t *testing.T) {
+	a := newHelpEntriesApp(t)
+	var diskUsage []dialog.HelpEntry
+	for _, e := range a.buildHelpEntries() {
+		if e.Section != "Disk usage" {
+			continue
+		}
+		diskUsage = append(diskUsage, e)
+	}
+	if len(diskUsage) != 2 {
+		t.Fatalf("disk usage help rows = %d, want 2 (scan + clear)", len(diskUsage))
+	}
+	if diskUsage[0].ActionID != keymap.ActionPanelDiskUsageScan {
+		t.Fatalf("first disk usage row = %q, want %q", diskUsage[0].ActionID, keymap.ActionPanelDiskUsageScan)
+	}
+	if diskUsage[1].ActionID != keymap.ActionPanelDiskUsageClear {
+		t.Fatalf("second disk usage row = %q, want %q", diskUsage[1].ActionID, keymap.ActionPanelDiskUsageClear)
+	}
+	if diskUsage[1].Title != "Abort and clear disk usage" {
+		t.Fatalf("clear row title = %q, want %q", diskUsage[1].Title, "Abort and clear disk usage")
 	}
 }
 
@@ -137,9 +161,9 @@ func TestPreviewHelpUsesPreviewSectionAndExcludesBrowserActions(t *testing.T) {
 	}
 	for _, forbidden := range []string{
 		keymap.ActionAppUserMenu,
+		keymap.ActionAppLeaderMenu,
 		keymap.ActionAppUserMenuEdit,
 		keymap.ActionPanelRefresh,
-		keymap.ActionPanelDiskUsageAbortAll,
 		keymap.ActionPanelDiskUsageClear,
 		keymap.ActionBookmarkOpen,
 		keymap.ActionBookmarkAdd,

@@ -311,7 +311,7 @@ func TestFullscreenFilePreviewIgnoresBrowserOnlyShortcuts(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			app.previewCtrl.HandleFilePreviewViewKey(tc.key)
-			if app.model.QuickAction.Open {
+			if app.model.LeaderMenu.Open {
 				t.Fatal("user menu must stay closed")
 			}
 			if app.model.PathPicker.Open {

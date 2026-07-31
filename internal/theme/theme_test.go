@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/themes"
 )
 
@@ -366,43 +365,22 @@ func TestParseDialogSectionFlatKeys(t *testing.T) {
 	}
 }
 
-func TestParseQuickActionBorderDefaultsToRounded(t *testing.T) {
-	data := testTheme(t, "qaborderdefault", nil, nil)
-	th, err := parse(data)
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	if th.DialogQuickActionBorderStyle != QuickActionBorderRounded {
-		t.Fatalf("DialogQuickActionBorderStyle = %q, want %q", th.DialogQuickActionBorderStyle, QuickActionBorderRounded)
-	}
-	if th.QuickActionBorderGlyphs() != (primitive.RoundedBorder) {
-		t.Fatalf("QuickActionBorderGlyphs() = %v, want RoundedBorder", th.QuickActionBorderGlyphs())
-	}
-}
-
-func TestParseQuickActionBorderSharp(t *testing.T) {
-	data := testTheme(t, "qabordersharp", nil, map[string]string{
-		"dialog.quickaction.border": `"sharp"`,
+func TestParseLeaderMenuStyles(t *testing.T) {
+	data := testTheme(t, "modemenu", nil, map[string]string{
+		"leader_menu.key": `{ fg = "white", bold = true }`,
 	})
 	th, err := parse(data)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if th.DialogQuickActionBorderStyle != QuickActionBorderSharp {
-		t.Fatalf("DialogQuickActionBorderStyle = %q, want %q", th.DialogQuickActionBorderStyle, QuickActionBorderSharp)
+	if th.LeaderMenuKey == (tcell.Style{}) {
+		t.Fatal("LeaderMenuKey should be set")
 	}
-	if th.QuickActionBorderGlyphs() != (primitive.SharpBorder) {
-		t.Fatalf("QuickActionBorderGlyphs() = %v, want SharpBorder", th.QuickActionBorderGlyphs())
+	if th.LeaderMenuGroup == (tcell.Style{}) {
+		t.Fatal("LeaderMenuGroup should be set")
 	}
-}
-
-func TestParseQuickActionBorderRejectsInvalidValue(t *testing.T) {
-	data := testTheme(t, "qaborderbad", nil, map[string]string{
-		"dialog.quickaction.border": `"curvy"`,
-	})
-	_, err := parse(data)
-	if err == nil || !strings.Contains(err.Error(), `dialog.quickaction.border must be`) {
-		t.Fatalf("parse() error = %v, want invalid border style error", err)
+	if th.SymbolLeaderMenuArrow() == 0 {
+		t.Fatal("SymbolLeaderMenuArrow should have a default")
 	}
 }
 

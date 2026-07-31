@@ -103,7 +103,7 @@ type PanelContext struct {
 	FileListActive bool
 	// CursorRowActive selects the cursor row's active/inactive highlight and icon key
 	// independent of FileListActive (which also drives border/header chrome). Floating
-	// overlays like the F2 quick-action list dim only the row indicator on the active
+	// overlays like the bottom function menu dim only the row indicator on the active
 	// panel while leaving chrome untouched, so this is normally equal to FileListActive
 	// but can be forced false without affecting chrome.
 	CursorRowActive           bool

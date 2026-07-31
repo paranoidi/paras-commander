@@ -143,14 +143,13 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 	}{
 		{tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModNone), ActionAppQuit, true},
 		{tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModShift), ActionAppQuitImmediate, true},
-		{tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModNone), ActionPanelDiskUsageScan, true},
-		{tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModCtrl), ActionPanelDiskUsageScan, true},
-		{tcell.NewEventKey(tcell.KeyRune, 0x04, tcell.ModCtrl), ActionPanelDiskUsageScan, true},
-		{tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModCtrl), ActionPanelDiskUsageScan, true},
-		{tcell.NewEventKey(tcell.KeyRune, 'D', tcell.ModCtrl), ActionPanelDiskUsageScan, true},
-		{tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModAlt), ActionPanelDiskUsageAbortAll, true},
-		{tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelDiskUsageAbortAll, true},
-		{tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt), ActionPanelDiskUsageClear, true},
+		{tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModNone), ActionFileDelete, true},
+		{tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModCtrl), ActionFileDelete, true},
+		{tcell.NewEventKey(tcell.KeyRune, 0x04, tcell.ModCtrl), ActionFileDelete, true},
+		{tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModCtrl), ActionFileDelete, true},
+		{tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt), ActionPanelDiskUsageScan, true},
+		{tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt|tcell.ModShift), ActionPanelDiskUsageClear, true},
+		{tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModAlt), ActionFileDuplicate, true},
 		{tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelTreeCollapseAll, true},
 		{tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt|tcell.ModShift), ActionPanelTreeCollapseAllFull, true},
 		{tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelTreeExpandAllShallow, true},
@@ -163,17 +162,21 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt), ActionPanelHistoryDialog, true},
 		{tcell.NewEventKey(tcell.KeyCtrlH, 0, tcell.ModCtrl), ActionPanelHistoryDialog, true},
 		{tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModCtrl), ActionPanelFindDialog, true},
-		{tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModAlt), ActionFileFlatten, true},
+		{tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModCtrl), ActionFileFlatten, true},
+		{tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelFindDuplicates, true},
 		{tcell.NewEventKey(tcell.KeyRune, 0x06, tcell.ModCtrl), ActionPanelFindDialog, true},
 		{tcell.NewEventKey(tcell.KeyBackspace2, 0, tcell.ModNone), ActionNavParent, true},
 		{tcell.NewEventKey(tcell.KeyRune, '-', tcell.ModNone), ActionPanelUnselectGroup, true},
 		{tcell.NewEventKey(tcell.KeyRune, '+', tcell.ModNone), ActionPanelSelectGroup, true},
 		{tcell.NewEventKey(tcell.KeyRune, '+', tcell.ModShift), ActionPanelSelectGroup, true},
+		{tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModNone), ActionPanelSortDialog, true},
+		{tcell.NewEventKey(tcell.KeyCtrlS, 0, tcell.ModCtrl), ActionPanelSortDialog, true},
 		{tcell.NewEventKey(tcell.KeyRune, '*', tcell.ModNone), ActionPanelInvertSelection, true},
 		{tcell.NewEventKey(tcell.KeyRune, '*', tcell.ModShift), ActionPanelInvertSelection, true},
 		{tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone), ActionFileView, true},
 		{tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModShift), ActionFileQuickView, true},
 		{tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone), ActionAppUserMenu, true},
+		{tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone), ActionAppLeaderMenu, true},
 		{tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModShift), ActionAppUserMenuEdit, true},
 		{tcell.NewEventKey(tcell.KeyF4, 0, tcell.ModNone), ActionFileEdit, true},
 		{tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModShift), ActionFileDuplicate, true},
@@ -183,7 +186,8 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModShift), ActionFileMkdirOpenInOther, true},
 		{tcell.NewEventKey(tcell.KeyDelete, 0, tcell.ModNone), ActionFileDelete, true},
 		{tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone), ActionFileDelete, true},
-		{tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModAlt), ActionPanelExternalBrowser, true},
+		{tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModAlt), ActionPanelExternalBrowser, true},
+		{tcell.NewEventKey(tcell.KeyRune, 'e', tcell.ModAlt), ActionFileEdit, true},
 		{tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModNone), ActionAppDropToShell, true},
 		{tcell.NewEventKey(tcell.KeyCtrlO, 0, tcell.ModCtrl), ActionAppDropToShell, true},
 		{tcell.NewEventKey(tcell.KeyRune, 0x0f, tcell.ModCtrl), ActionAppDropToShell, true},
@@ -284,13 +288,16 @@ func TestLoadFromPathsUsesDefaultsWhenMissing(t *testing.T) {
 		t.Fatalf("Jobs.Lookup(ctrl-r) = %q %v, want jobs.resume", id, ok)
 	}
 	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModNone))
-	if !ok || id != ActionRemoteSFTPLink {
-		t.Fatalf("Global.Lookup(ctrl-r) = %q %v, want %q", id, ok, ActionRemoteSFTPLink)
+	if !ok || id != ActionFileRename {
+		t.Fatalf("Global.Lookup(ctrl-r) = %q %v, want %q", id, ok, ActionFileRename)
 	}
-	// Alt+Ctrl+R remains panel.refresh on the global map.
-	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModAlt))
-	if !ok || id != ActionPanelRefresh {
-		t.Fatalf("Lookup(alt+ctrl+r) = %q %v, want panel.refresh", id, ok)
+	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
+	if !ok || id != ActionRemoteSFTPLink {
+		t.Fatalf("Global.Lookup(alt+r) = %q %v, want %q", id, ok, ActionRemoteSFTPLink)
+	}
+	id, ok = bundle.Global.Lookup(tcell.NewEventKey(tcell.KeyCtrlR, 0, tcell.ModAlt|tcell.ModCtrl))
+	if !ok || id != ActionFileRunForEach {
+		t.Fatalf("Lookup(alt+ctrl+r) = %q %v, want %q", id, ok, ActionFileRunForEach)
 	}
 }
 
@@ -539,8 +546,8 @@ func TestMenuBindingLabelUsesDefaultsAndPreferredKey(t *testing.T) {
 	if got := m.MenuBindingLabel(ActionPanelSortDialog); got != "C-s" {
 		t.Fatalf("sort dialog = %q, want C-s", got)
 	}
-	if got := m.MenuBindingLabel(ActionRemoteSFTPLink); got != "C-r" {
-		t.Fatalf("SFTP dialog = %q, want C-r", got)
+	if got := m.MenuBindingLabel(ActionRemoteSFTPLink); got != "M-r" {
+		t.Fatalf("SFTP dialog = %q, want M-r", got)
 	}
 	if got := m.MenuBindingLabel(ActionPanelToggleHidden); got != "M-." {
 		t.Fatalf("toggle hidden = %q, want M-.", got)
@@ -555,8 +562,8 @@ func TestMenuBindingLabelUsesDefaultsAndPreferredKey(t *testing.T) {
 		t.Fatalf("history = %q, want preferred M-h", got)
 	}
 	var nilMap *Map
-	if got := nilMap.MenuBindingLabel(ActionPanelRefresh); got != "M-C-r" {
-		t.Fatalf("nil map refresh = %q, want default M-C-r", got)
+	if got := nilMap.MenuBindingLabel(ActionPanelRefresh); got != "C-n" {
+		t.Fatalf("nil map refresh = %q, want default C-n", got)
 	}
 	if got := m.MenuBindingLabel(ActionFileView); got != "F3" {
 		t.Fatalf("menu file view = %q, want F3", got)

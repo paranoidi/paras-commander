@@ -533,7 +533,7 @@ func DrawDialogFrame(screen tcell.Screen, rect Rect, title string, styles theme.
 }
 
 // DrawDialogFrameStyled is DrawDialogFrame with explicit surface/frame/title styles and border
-// glyphs, for dialogs with their own minimal theme (e.g. the F2 quick-action list) instead of
+// glyphs, for dialogs with their own minimal theme (e.g. the bottom function menu) instead of
 // the shared Theme.Dialog* fields. Unlike DrawDialogFrame, titleBase's own foreground is used
 // as-is (only its background is merged with surface) — callers that want the frame-colored-title
 // convention must resolve that themselves, as DrawDialogFrame does.

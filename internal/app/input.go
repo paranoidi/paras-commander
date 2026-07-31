@@ -38,7 +38,7 @@ const (
 	InputModeHistoryDialog
 	InputModeFindDialog
 	InputModeMetaDialog
-	InputModeQuickAction
+	InputModeLeaderMenu
 	InputModeHelpView
 	InputModeHostKeyDialog
 	InputModeSFTPConnectDialog
@@ -69,8 +69,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeFindDialog
 	case a.model.MetaDialog.Open:
 		return InputModeMetaDialog
-	case a.model.QuickAction.Open:
-		return InputModeQuickAction
+	case a.model.LeaderMenu.Open:
+		return InputModeLeaderMenu
 	case a.model.HelpView.Open:
 		return InputModeHelpView
 	case a.model.ThemeDialog.Open:
@@ -136,10 +136,23 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 		})
 	}
-	if a.model.QuickAction.Open {
-		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-		rest = append(append([]menu.FunctionKey(nil), a.quickActionFooterExtra...), rest...)
-		return footerWithEscClose(rest)
+	if a.model.LeaderMenu.Open {
+		if a.model.LeaderMenu.UserMenu {
+			keys := footerWithEscClose([]menu.FunctionKey{
+				menu.FunctionKeyEditConfig,
+				{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+			})
+			return keys
+		}
+		if a.model.LeaderMenu.CopyMenu {
+			return footerWithEscClose([]menu.FunctionKey{
+				{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+			})
+		}
+		return footerWithEscClose([]menu.FunctionKey{
+			menu.FunctionKeyLeaderMenuToggleChords,
+			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+		})
 	}
 	if a.model.FindDialog.Open {
 		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
@@ -332,7 +345,7 @@ func (a *App) prepareGlobalQuitShortcutCleanup() {
 
 // handleGlobalKeyIntercepts handles the pre-dispatch global key intercepts that apply
 // regardless of input mode: terminal-panel focus, F10/Shift-F10 quit, quit-immediate,
-// nav-coalesce clearing, disk-usage abort/clear, jobs-answer-blocker, and global show-help.
+// nav-coalesce clearing, disk-usage clear, jobs-answer-blocker, and global show-help.
 // handled reports whether handleKey should return (quit, rendered) immediately.
 func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction string) (handled, quit, rendered bool) {
 	// Focused terminal panel owns every key before the global intercepts below —
@@ -373,11 +386,6 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 		a.previewCtrl.ClearCarouselPreviewNavCoalesce()
 	}
 	if !a.model.ModalDialogOpen() {
-		if resolvedAction == keymap.ActionPanelDiskUsageAbortAll {
-			a.abortAllDiskUsageScans()
-			a.render()
-			return true, false, true
-		}
 		if resolvedAction == keymap.ActionPanelDiskUsageClear {
 			a.clearAllDiskUsageData()
 			a.render()
@@ -455,10 +463,12 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.metaCtrl.HandleDialogKey(event)
 		a.render()
 		return false, true
-	case InputModeQuickAction:
-		a.handleQuickActionKey(event)
-		a.render()
-		return false, true
+	case InputModeLeaderMenu:
+		quit := a.handleLeaderMenuKey(event)
+		if !quit {
+			a.render()
+		}
+		return quit, true
 	case InputModeHelpView:
 		quit := a.handleHelpDialogKey(event)
 		a.render()
@@ -542,7 +552,7 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return quit, true
 	case InputModeFilter:
-		if fQuit, fRendered, handled := a.handleFilterModeKey(event, resolvedAction); handled {
+		if fQuit, fRendered, handled := a.handleFilterLeaderKey(event, resolvedAction); handled {
 			return fQuit, fRendered
 		}
 		// If neither function key nor filter key, fall through to action dispatch.
@@ -590,10 +600,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	return quit, rendered
 }
 
-// handleFilterModeKey handles the InputModeFilter case in handleKey. handled=false means
+// handleFilterLeaderKey handles the InputModeFilter case in handleKey. handled=false means
 // neither a function key nor a filter key matched, so the caller falls through to normal
 // action dispatch.
-func (a *App) handleFilterModeKey(event *tcell.EventKey, resolvedAction string) (quit, rendered, handled bool) {
+func (a *App) handleFilterLeaderKey(event *tcell.EventKey, resolvedAction string) (quit, rendered, handled bool) {
 	// Function keys in filter mode dismiss the filter and run the menu action.
 	if _, ok := menu.FunctionKeyLabelByKey(event.Key()); ok {
 		quit := a.handleQuickFilterFunctionKey(event)
@@ -739,9 +749,6 @@ func (a *App) cancelActiveQuickFilter() {
 // Returns true when the app should exit immediately from handleQuit.
 func (a *App) dispatchActionLikeKeyboardShortcut(actionID string) bool {
 	switch actionID {
-	case keymap.ActionPanelDiskUsageAbortAll:
-		a.abortAllDiskUsageScans()
-		return false
 	case keymap.ActionPanelDiskUsageClear:
 		a.clearAllDiskUsageData()
 		return false
@@ -755,6 +762,17 @@ func (a *App) dispatchActionLikeKeyboardShortcut(actionID string) bool {
 		return a.handleQuit()
 	case keymap.ActionAppQuitImmediate:
 		return a.handleQuitImmediate()
+	case keymap.ActionAppShowHelp:
+		if !a.model.HelpView.Open && !a.model.ModalDialogOpen() {
+			if a.model.Menu.Open {
+				a.closeMenu()
+			}
+			if a.inQuickFilterUI() {
+				a.cancelActiveQuickFilter()
+			}
+			a.openHelpDialog()
+		}
+		return false
 	default:
 		return a.dispatch(actionID)
 	}
@@ -869,6 +887,15 @@ func (a *App) dispatch(actionID string) bool {
 		a.findCtrl.OpenDialog(a.model.ActivePanel)
 	case keymap.ActionAppUserMenu:
 		a.openUserMenu()
+	case keymap.ActionAppLeaderMenu:
+		a.openBuiltinLeaderMenu()
+	case keymap.ActionAppCopyMenu:
+		a.openCopyMenu()
+	case keymap.ActionClipboardCopyFileURL,
+		keymap.ActionClipboardCopyDirURL,
+		keymap.ActionClipboardCopyFilename,
+		keymap.ActionClipboardCopyFilenameWithoutExt:
+		a.copyToClipboard(actionID)
 	case keymap.ActionAppUserMenuEdit:
 		a.editUserMenu()
 	case keymap.ActionUIOpenTheme:

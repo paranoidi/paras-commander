@@ -208,7 +208,7 @@ type UserMenuConfig struct {
 	LocalNames []string `toml:"local_names"`
 }
 
-// ShellConfig controls drop-to-shell (suspend TUI, run interactive shell, resume).
+// ShellConfig controls open shell (suspend TUI, run interactive shell, resume).
 type ShellConfig struct {
 	// Command is an optional argv template parsed like shellwords (see cmdrun.ParseCommandArgv).
 	// Empty uses $SHELL then bash fallback. Setting it forces the one-shot shell even when
@@ -264,6 +264,8 @@ type PreviewConfig struct {
 type UIConfig struct {
 	ShowMenuBar   bool `toml:"show_menu_bar"`
 	ShowFileIcons bool `toml:"show_file_icons"`
+	// LeaderMenuShowDirectKeys shows the preferred global keybind after each action name in the Esc function menu.
+	LeaderMenuShowDirectKeys bool `toml:"leader_menu_show_direct_keys"`
 	// ShrunkenShowsNameOnly: when true, narrow panels hide trailing listing columns and show only names
 	// (sort and default_listing_format are unchanged; see ShrunkenListingRowTextWidthThreshold in builtin.go).
 	ShrunkenShowsNameOnly bool `toml:"shrunken_shows_name_only"`
@@ -465,6 +467,7 @@ func Default() Config {
 		UI: UIConfig{
 			ShowMenuBar:                  true,
 			ShowFileIcons:                true,
+			LeaderMenuShowDirectKeys:     DefaultLeaderMenuShowDirectKeys,
 			ShrunkenShowsNameOnly:        DefaultShrunkenShowsNameOnly,
 			ScreenRenderHashCache:        DefaultScreenRenderHashCache,
 			KeyRepeatDebounceMS:          DefaultKeyRepeatDebounceMS,

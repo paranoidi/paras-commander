@@ -76,7 +76,7 @@ func paintBrowserPanelsInScope(
 	if inScope(PrimaryPanel) && layout.Primary.Width > 0 && !showLeftPreview {
 		primaryCtx := PanelContext{
 			PanelID: PrimaryPanel, FileListActive: primaryFileListFocus,
-			CursorRowActive: primaryFileListFocus && !model.QuickAction.Open, ChromeBlocked: primaryChromeBlocked,
+			CursorRowActive: primaryFileListFocus && !model.LeaderMenu.Open, ChromeBlocked: primaryChromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: primaryOtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: primarySelectionsBottomHint,
@@ -113,7 +113,7 @@ func paintBrowserPanelsInScope(
 	if inScope(SecondaryPanel) && layout.Secondary.Width > 0 && !showRightPreview {
 		secondaryCtx := PanelContext{
 			PanelID: SecondaryPanel, FileListActive: secondaryFileListFocus,
-			CursorRowActive: secondaryFileListFocus && !model.QuickAction.Open, ChromeBlocked: chromeBlocked,
+			CursorRowActive: secondaryFileListFocus && !model.LeaderMenu.Open, ChromeBlocked: chromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: secondaryOtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: secondarySelectionsBottomHint,

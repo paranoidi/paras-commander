@@ -28,24 +28,26 @@ import (
 func LoadFromPaths(paths config.Paths) (*Bundle, error) {
 	globalLayer := DefaultActionKeys()
 	overlayLayers := defaultOverlayLayers()
+	leaderKeyLayer := DefaultLeaderKeys()
+	copyMenuLayer := DefaultCopyMenuKeys()
 
 	file := strings.TrimSpace(paths.KeybindingsFile)
 	if file == "" && strings.TrimSpace(paths.ConfigDir) != "" {
 		file = filepath.Join(paths.ConfigDir, "keybindings.toml")
 	}
 	if file == "" {
-		return buildBundle(globalLayer, overlayLayers)
+		return buildBundle(globalLayer, overlayLayers, leaderKeyLayer, copyMenuLayer)
 	}
 
 	raw, err := os.ReadFile(file)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return buildBundle(globalLayer, overlayLayers)
+			return buildBundle(globalLayer, overlayLayers, leaderKeyLayer, copyMenuLayer)
 		}
 		return nil, fmt.Errorf("read keybindings %q: %w", file, err)
 	}
 
-	mainUser, overlayUser, err := parseKeybindingsFile(raw, file)
+	mainUser, overlayUser, leaderKeyUser, copyMenuUser, err := parseKeybindingsFile(raw, file)
 	if err != nil {
 		return nil, err
 	}
@@ -53,15 +55,23 @@ func LoadFromPaths(paths config.Paths) (*Bundle, error) {
 	for i, userKeys := range overlayUser {
 		overlayLayers[i] = mergeBindings(overlayLayers[i], userKeys)
 	}
-	return buildBundle(globalLayer, overlayLayers)
+	leaderKeyLayer = mergeLeaderKeys(leaderKeyLayer, leaderKeyUser)
+	copyMenuLayer = mergeCopyMenuKeys(copyMenuLayer, copyMenuUser)
+	return buildBundle(globalLayer, overlayLayers, leaderKeyLayer, copyMenuLayer)
 }
 
 // DefaultBundle returns built-in global + overlay defaults (no keybindings file).
 func DefaultBundle() (*Bundle, error) {
-	return buildBundle(DefaultActionKeys(), defaultOverlayLayers())
+	return buildBundle(DefaultActionKeys(), defaultOverlayLayers(), DefaultLeaderKeys(), DefaultCopyMenuKeys())
 }
 
-func buildBundle(global map[string][]string, overlayLayers []map[string][]string) (*Bundle, error) {
+func buildBundle(global map[string][]string, overlayLayers []map[string][]string, leaderKey, copyMenuKey map[string]string) (*Bundle, error) {
+	if err := validateLeaderKeys(leaderKey); err != nil {
+		return nil, err
+	}
+	if err := validateCopyMenuKeys(copyMenuKey); err != nil {
+		return nil, err
+	}
 	gMap, err := Build(global)
 	if err != nil {
 		return nil, err
@@ -94,38 +104,62 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		Compare:        overlayMaps[12],
 		Dedup:          overlayMaps[13],
 		Terminal:       overlayMaps[14],
+		LeaderKey:      leaderKey,
+		CopyMenuKey:    copyMenuKey,
 	}, nil
 }
 
-func parseKeybindingsFile(raw []byte, label string) (mainKeys map[string][]string, overlayKeys []map[string][]string, err error) {
+func parseKeybindingsFile(raw []byte, label string) (mainKeys map[string][]string, overlayKeys []map[string][]string, leaderKeyKeys, copyMenuKeys map[string]string, err error) {
 	var top map[string]interface{}
 	if err := toml.Unmarshal(raw, &top); err != nil {
-		return nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+		return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 	}
 	if len(top) == 0 {
 		emptyOverlays := make([]map[string][]string, len(overlayRegistry))
 		for i := range emptyOverlays {
 			emptyOverlays[i] = map[string][]string{}
 		}
-		return map[string][]string{}, emptyOverlays, nil
+		return map[string][]string{}, emptyOverlays, map[string]string{}, map[string]string{}, nil
 	}
 	if err := validateKeybindingsTopLevel(top, label); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	mainKeys = map[string][]string{}
 	if rawMain, ok := top[MainShortcutsTable]; ok {
 		table, ok := rawMain.(map[string]interface{})
 		if !ok {
-			return nil, nil, fmt.Errorf("parse keybindings %q: [main] must be a table", label)
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [main] must be a table", label)
 		}
 		if err := collectActionKeys(table, "", mainKeys); err != nil {
-			return nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		for action, keys := range mainKeys {
 			if len(keys) == 0 {
-				return nil, nil, fmt.Errorf("parse keybindings %q: action %q has empty key list", label, action)
+				return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: action %q has empty key list", label, action)
 			}
+		}
+	}
+
+	leaderKeyKeys = map[string]string{}
+	if rawLeaderKey, ok := top[LeaderKeyShortcutsTable]; ok {
+		table, ok := rawLeaderKey.(map[string]interface{})
+		if !ok {
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [leader_key] must be a table", label)
+		}
+		if err := collectMenuLetterKeys(table, "", leaderKeyKeys, label, "leader_key"); err != nil {
+			return nil, nil, nil, nil, err
+		}
+	}
+
+	copyMenuKeys = map[string]string{}
+	if rawCopyMenu, ok := top[CopyMenuShortcutsTable]; ok {
+		table, ok := rawCopyMenu.(map[string]interface{})
+		if !ok {
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: [copy_menu] must be a table", label)
+		}
+		if err := collectMenuLetterKeys(table, "", copyMenuKeys, label, "copy_menu"); err != nil {
+			return nil, nil, nil, nil, err
 		}
 	}
 
@@ -137,20 +171,20 @@ func parseKeybindingsFile(raw []byte, label string) (mainKeys map[string][]strin
 			continue
 		}
 		if err := collectActionKeys(rawTable, "", overlayKeys[i]); err != nil {
-			return nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
+			return nil, nil, nil, nil, fmt.Errorf("parse keybindings %q: %w", label, err)
 		}
 		if err := validateOverlayKeysFromFile(overlayKeys[i], label, spec); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 	}
 
-	return mainKeys, overlayKeys, nil
+	return mainKeys, overlayKeys, leaderKeyKeys, copyMenuKeys, nil
 }
 
 func validateKeybindingsTopLevel(top map[string]interface{}, label string) error {
 	for k, v := range top {
 		switch k {
-		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, CompareShortcutsTable, DedupShortcutsTable, TerminalShortcutsTable:
+		case MainShortcutsTable, JobsShortcutsTable, CommandsShortcutsTable, MessagesShortcutsTable, FilePreviewShortcutsTable, CompareShortcutsTable, DedupShortcutsTable, TerminalShortcutsTable, LeaderKeyShortcutsTable, CopyMenuShortcutsTable:
 			if _, ok := v.(map[string]interface{}); !ok {
 				return fmt.Errorf("parse keybindings %q: [%s] must be a table", label, k)
 			}
@@ -168,7 +202,7 @@ func validateKeybindingsTopLevel(top map[string]interface{}, label string) error
 				}
 			}
 		default:
-			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, jobs, commands, messages, file_preview, compare, dedup, terminal, dialog)", label, k)
+			return fmt.Errorf("parse keybindings %q: unknown field %q (allowed: main, leader_key, copy_menu, jobs, commands, messages, file_preview, compare, dedup, terminal, dialog)", label, k)
 		}
 	}
 	return nil
@@ -197,6 +231,26 @@ func collectActionKeys(node map[string]interface{}, prefix string, out map[strin
 			out[full] = strs
 		default:
 			return fmt.Errorf("key %q: unsupported type %T", full, v)
+		}
+	}
+	return nil
+}
+
+func collectMenuLetterKeys(node map[string]interface{}, prefix string, out map[string]string, label, table string) error {
+	for k, v := range node {
+		full := k
+		if prefix != "" {
+			full = prefix + "." + k
+		}
+		switch vv := v.(type) {
+		case map[string]interface{}:
+			if err := collectMenuLetterKeys(vv, full, out, label, table); err != nil {
+				return err
+			}
+		case string:
+			out[full] = vv
+		default:
+			return fmt.Errorf("parse keybindings %q: %s key %q: expected string", label, table, full)
 		}
 	}
 	return nil
@@ -271,12 +325,17 @@ func EncodeDefaultStub(w io.Writer) error {
 		"# [dialog.find] — find.select-all, find.unselect-all, find.select-group, find.unselect-group.\n" +
 		"# [dialog.history] — panel.history-both-panels.\n" +
 		"# [dialog.flatten] — ui.destination-active and ui.destination-inactive.\n" +
-		"# [dialog.transfer] — ui.destination-active and ui.destination-inactive (copy/move dialog).\n\n"
+		"# [dialog.transfer] — ui.destination-active and ui.destination-inactive (copy/move dialog).\n" +
+		"#\n" +
+		"# [leader_key] — Esc function-menu keys (case-sensitive: f and F may differ; ?, comma, period allowed; empty omits).\n" +
+		"# [copy_menu] — `\"` copy-menu keys (letters only; empty omits).\n\n"
 	if _, err := io.WriteString(w, header); err != nil {
 		return fmt.Errorf("encode keybindings stub header: %w", err)
 	}
 	payload := struct {
 		Main        map[string][]string `toml:"main"`
+		LeaderKey   map[string]string   `toml:"leader_key"`
+		CopyMenu    map[string]string   `toml:"copy_menu"`
 		Jobs        map[string][]string `toml:"jobs"`
 		Commands    map[string][]string `toml:"commands"`
 		Messages    map[string][]string `toml:"messages"`
@@ -287,6 +346,8 @@ func EncodeDefaultStub(w io.Writer) error {
 		Dialog      dialogShortcuts     `toml:"dialog"`
 	}{
 		Main:        DefaultActionKeys(),
+		LeaderKey:   DefaultLeaderKeys(),
+		CopyMenu:    DefaultCopyMenuKeys(),
 		Jobs:        DefaultJobsOverlayKeys(),
 		Commands:    DefaultCommandsOverlayKeys(),
 		Messages:    DefaultMessagesOverlayKeys(),

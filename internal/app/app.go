@@ -205,15 +205,14 @@ type App struct {
 	// chooserFile is non-empty in Helix/editor file-picker mode (--chooser-file).
 	chooserFile string
 
-	// quickActionOnActivate/quickActionOnKey/quickActionFooterExtra are the callbacks
-	// and footer hints for whichever quick-action list is currently open (model.QuickAction).
-	// Only one quick-action dialog can be open at a time.
-	quickActionOnActivate  func(int)
-	quickActionOnKey       func(*tcell.EventKey) bool
-	quickActionFooterExtra []menu.FunctionKey
+	// leaderMenuOnActivate runs the selected menu entry after the leader menu closes.
+	// Returns true when the app should exit (e.g. quit).
+	leaderMenuOnActivate func(int) bool
 
-	// userMenuVisible/userMenuPath are the F2 user-menu quick-action consumer's state:
-	// the currently visible entries and the resolved menu.toml path they came from.
+	// leaderMenuActions holds action IDs parallel to Items when the built-in Esc menu is open.
+	leaderMenuActions []string
+
+	// userMenuVisible/userMenuPath hold the resolved menu.toml entries while the user leader menu is open.
 	userMenuVisible []usermenu.MenuEntry
 	userMenuPath    string
 }

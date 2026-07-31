@@ -30,7 +30,7 @@ func DefinitionsDedup(ignoreEmpty, treeDirs bool) []Definition {
 		Item{Action: keymap.ActionDedupExpandAll, Label: "Expand all", Shortcut: 'a'},
 	)
 	items = append(items,
-		Item{Action: keymap.ActionPanelClearSelection, Label: "Unmark all", Shortcut: 'u'},
+		Item{Action: keymap.ActionPanelClearSelection, Label: "Unselect all", Shortcut: 'u'},
 		Item{Action: keymap.ActionFileDelete, Label: "Delete marked", Shortcut: 'm'},
 	)
 	return []Definition{

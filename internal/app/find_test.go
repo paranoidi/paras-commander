@@ -190,7 +190,7 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	}
 }
 
-func TestFindDialogHandleKeyAltDDoesNotClearDiskUsage(t *testing.T) {
+func TestFindDialogHandleKeyAltDDoesNotStartDiskUsageScan(t *testing.T) {
 	root := t.TempDir()
 	scanned := filepath.Join(root, "scanned")
 	if err := os.Mkdir(scanned, 0o755); err != nil {
@@ -246,8 +246,8 @@ func TestFindDialogHandleKeyAltDDoesNotClearDiskUsage(t *testing.T) {
 	if _, ok := app.disk.engine.Size(scanned); !ok {
 		t.Fatal("disk usage cache should not be cleared by Find Alt+D")
 	}
-	if app.model.Message == "Disk usage data cleared" {
-		t.Fatal("Find Alt+D must not trigger panel.disk-usage-clear")
+	if strings.HasPrefix(app.model.Message, "Disk usage scan started") {
+		t.Fatal("Find Alt+D must not trigger panel.disk-usage-scan")
 	}
 }
 

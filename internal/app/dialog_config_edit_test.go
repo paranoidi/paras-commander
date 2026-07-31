@@ -198,14 +198,14 @@ command = "true"
 		if !strings.Contains(string(b), menuBody) {
 			t.Fatalf("user body not preserved before editor:\n%s", b)
 		}
-		if !strings.Contains(string(b), "# F2 user menu") {
+		if !strings.Contains(string(b), "# User function menu (Esc / F2)") {
 			t.Fatalf("canonical menu doc missing before editor:\n%s", b)
 		}
 		return nil
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
 	if !strings.Contains(app.model.Message, "updated documentation") {
 		t.Fatalf("Message = %q, want updated documentation notice", app.model.Message)
@@ -230,10 +230,9 @@ command = "true"
 
 	app := testUserMenuApp(t, dir, cfgDir)
 	app.openUserMenu()
-	if len(app.model.QuickAction.Items) != 1 {
-		t.Fatalf("items len = %d, want 1", len(app.model.QuickAction.Items))
+	if len(app.model.LeaderMenu.Items) != 1 {
+		t.Fatalf("items len = %d, want 1", len(app.model.LeaderMenu.Items))
 	}
-	app.model.QuickAction.Selected = 0
 
 	prev := externalEditorRunner
 	externalEditorRunner = func(_ context.Context, path string) error {
@@ -250,16 +249,16 @@ command = "true"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
-	if !app.model.QuickAction.Open {
+	if !app.model.LeaderMenu.Open {
 		t.Fatal("user menu dialog should stay open after F9 edit")
 	}
-	if len(app.model.QuickAction.Items) != 2 {
-		t.Fatalf("items len = %d, want 2", len(app.model.QuickAction.Items))
+	if len(app.model.LeaderMenu.Items) != 2 {
+		t.Fatalf("items len = %d, want 2", len(app.model.LeaderMenu.Items))
 	}
-	if app.model.QuickAction.Items[1].Label != "Also" {
-		t.Fatalf("second item = %+v, want Also", app.model.QuickAction.Items[1])
+	if app.model.LeaderMenu.Items[1].Label != "Also" {
+		t.Fatalf("second item = %+v, want Also", app.model.LeaderMenu.Items[1])
 	}
 }
 
@@ -288,9 +287,9 @@ command = "true"
 	}
 	t.Cleanup(func() { externalEditorRunner = prev })
 
-	app.handleQuickActionKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
 
-	if app.model.QuickAction.Open {
+	if app.model.LeaderMenu.Open {
 		t.Fatal("user menu dialog should close after invalid menu.toml")
 	}
 	if app.model.MessageUrgency != ui.MessageUrgencyCritical {

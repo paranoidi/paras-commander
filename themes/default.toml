@@ -215,14 +215,12 @@ label.on_fill = { fg = "bright_white", bold = true }
 label.on_track = { fg = "bright_white", bold = true }
 track = { fg = "white", bg = "bright_black" }
 
-[dialog.quickaction]         # F2 quick-action list — minimal chrome subset + border style
-border = "rounded"           # "rounded" (default) or "sharp"
-frame = { fg = "bright_black" }
-surface = { fg = "white" }    # no distinct background — same as the filelist panels
-text = { fg = "white" }
-title = { fg = "white", bold = true }
-accent = { fg = "white", bg = "black", bold = true }
-list.selected = { fg = "black", bg = "cyan" }
+[leader_menu]                 # Esc function menu letters
+surface = { bg = "black" }
+	group = { fg = "cyan", bold = true }
+	key     = { fg = "magenta", bold = true }
+arrow   = { fg = "bright_black" }
+label   = { fg = "white" }
 
 [dialog.massrename]
 before = { fg = "white" }
@@ -314,6 +312,9 @@ queued = ""
 
 [symbols.selections]
 multi_location = "\uef81"
+
+[symbols.leader_menu]
+arrow = "\uea9c"
 
 [symbols.compare]
 equal = "="

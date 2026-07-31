@@ -59,7 +59,11 @@ func (m *Map) ActionBindings() []Binding {
 			return
 		}
 		if _, seen := keyStrs[ch]; !seen {
-			keyStrs[ch] = ks
+			if fc := FormatChord(ch); fc != "" && fc != "?" && strings.EqualFold(ks, fc) {
+				keyStrs[ch] = fc
+			} else {
+				keyStrs[ch] = ks
+			}
 		}
 	}
 	for _, spec := range DefaultActionSpecs() {

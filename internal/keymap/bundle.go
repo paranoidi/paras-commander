@@ -19,4 +19,8 @@ type Bundle struct {
 	Compare        *Map // Compare-view overlay; may be nil
 	Dedup          *Map // find-duplicates view overlay; may be nil
 	Terminal       *Map // embedded terminal panel overlay; may be nil
+	// LeaderKey maps action ID → single-letter Esc function-menu leader key (merged defaults + user).
+	LeaderKey map[string]string
+	// CopyMenuKey maps action ID → single-letter `"` copy-menu key (merged defaults + user).
+	CopyMenuKey map[string]string
 }

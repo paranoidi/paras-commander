@@ -19,6 +19,8 @@ const (
 	CompareShortcutsTable        = "compare"
 	DedupShortcutsTable          = "dedup"
 	TerminalShortcutsTable       = "terminal"
+	LeaderKeyShortcutsTable      = "leader_key"
+	CopyMenuShortcutsTable       = "copy_menu"
 )
 
 var dialogShortcutSubtables = map[string]struct{}{

@@ -119,6 +119,26 @@ func tryAssignDialogMnemonic(dst *rune, cand rune, used map[rune]struct{}, reser
 	return true
 }
 
+// ItemMnemonics returns one activation letter per label (no OK/Cancel reservation).
+func ItemMnemonics(labels []string, configured []rune) []rune {
+	return assignDialogMnemonics(labels, configured, false)
+}
+
+// ItemIndexForMnemonic returns the item index whose activation letter matches r (case-insensitive).
+func ItemIndexForMnemonic(labels []string, configured []rune, r rune) (int, bool) {
+	if r == 0 || !unicode.IsLetter(r) {
+		return 0, false
+	}
+	shortcuts := assignDialogMnemonics(labels, configured, false)
+	lr := unicode.ToLower(r)
+	for i, sh := range shortcuts {
+		if sh != 0 && sh == lr {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
 // assignDialogMnemonics returns one Alt mnemonic per label. When reserveOKCancel is true,
 // o and c are reserved for buttons. configured[i], when non-zero, is tried before dynamic
 // picks from label; if it is reserved, taken, or invalid, dynamic allocation is used.

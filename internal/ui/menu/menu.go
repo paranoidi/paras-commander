@@ -131,7 +131,6 @@ func Definitions() []Definition {
 			Items: []Item{
 				{Action: keymap.ActionAppUserMenu, Label: "User menu", Shortcut: 'U'},
 				{Action: keymap.ActionFileRunForEach, Label: "Run for each...", Shortcut: 'f'},
-				{Action: keymap.ActionAppDropToShell, Label: "Shell", Shortcut: 's'},
 				{Action: keymap.ActionPanelToggleSplitOrientation, Label: "Toggle split orientation", Shortcut: 'O'},
 				{Action: keymap.ActionPanelComparePanels, Label: "Compare panels", Shortcut: 'p'},
 				{Action: keymap.ActionPanelFindDuplicates, Label: "Find duplicates", Shortcut: 'd'},

@@ -65,7 +65,7 @@ func (a *App) toggleTerminalPanelVisible() {
 
 // toggleTerminalPanelFocus toggles keyboard focus into/out of the panel:
 // hidden → open+focused; visible+unfocused → focused; focused → unfocused
-// (syncing the active panel to the shell cwd, mirroring drop-to-shell return).
+// (syncing the active panel to the shell cwd, mirroring open shell return).
 func (a *App) toggleTerminalPanelFocus() {
 	if a.model.ModalDialogOpen() || a.model.ViewMode != ui.ViewBrowser {
 		return

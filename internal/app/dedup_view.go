@@ -185,7 +185,7 @@ func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.Functi
 	}
 	if global != nil {
 		if lbl := global.MenuBindingLabel(keymap.ActionPanelClearSelection); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unmark all"})
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect all"})
 		}
 	}
 	if dedup != nil {

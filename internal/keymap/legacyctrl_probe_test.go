@@ -12,7 +12,6 @@ func TestLegacyCtrlCodesWithoutMod(t *testing.T) {
 		wantID string
 	}{
 		{0, ActionPanelToggleSplitOrientation},
-		{10, ActionFileQuickViewPreviewPageDown},
 		{17, ActionJobsAnswerBlocker},
 		{6, ActionPanelFindDialog},
 	}

@@ -8,7 +8,14 @@ const (
 	ActionAppShowHelp      = "app.show-help"
 	ActionAppUserMenu      = "app.user-menu"
 	ActionAppUserMenuEdit  = "app.user-menu-edit"
+	ActionAppLeaderMenu    = "app.leader-menu"
+	ActionAppCopyMenu      = "app.copy-menu"
 	ActionAppDropToShell   = "app.drop-to-shell"
+
+	ActionClipboardCopyFileURL            = "clipboard.copy-file-url"
+	ActionClipboardCopyDirURL             = "clipboard.copy-dir-url"
+	ActionClipboardCopyFilename           = "clipboard.copy-filename"
+	ActionClipboardCopyFilenameWithoutExt = "clipboard.copy-filename-without-ext"
 	// ActionAppShellInsertPaths puts the selected/focused paths on the persistent
 	// subshell's command line and enters the shell.
 	ActionAppShellInsertPaths = "app.shell-insert-paths"
@@ -75,7 +82,6 @@ const (
 	ActionBookmarkDelete              = "bookmark.delete"
 	ActionBookmarkOpenOther           = "bookmark.open-other"
 	ActionPanelDiskUsageScan          = "panel.disk-usage-scan"
-	ActionPanelDiskUsageAbortAll      = "panel.disk-usage-abort-all"
 	ActionPanelDiskUsageClear         = "panel.disk-usage-clear"
 	ActionPanelFocusSelections        = "panel.focus-selections"
 	ActionPanelOpenSelectionsRoot     = "panel.open-selections-root"
@@ -234,8 +240,15 @@ var KnownActions = map[string]struct{}{
 	ActionAppShowHelp:         {},
 	ActionAppUserMenu:         {},
 	ActionAppUserMenuEdit:     {},
+	ActionAppLeaderMenu:       {},
+	ActionAppCopyMenu:         {},
 	ActionAppDropToShell:      {},
 	ActionAppShellInsertPaths: {},
+
+	ActionClipboardCopyFileURL:            {},
+	ActionClipboardCopyDirURL:             {},
+	ActionClipboardCopyFilename:           {},
+	ActionClipboardCopyFilenameWithoutExt: {},
 
 	ActionTerminalTogglePanel: {},
 	ActionTerminalFocus:       {},
@@ -293,7 +306,6 @@ var KnownActions = map[string]struct{}{
 	ActionBookmarkDelete:              {},
 	ActionBookmarkOpenOther:           {},
 	ActionPanelDiskUsageScan:          {},
-	ActionPanelDiskUsageAbortAll:      {},
 	ActionPanelDiskUsageClear:         {},
 	ActionPanelFocusSelections:        {},
 	ActionPanelOpenSelectionsRoot:     {},

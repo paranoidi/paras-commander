@@ -154,7 +154,7 @@ type Model struct {
 	SFTPConnectDialog       dialog.SFTPConnectDialogState
 	FindDialog              dialog.FindDialogState
 	MetaDialog              dialog.MetaDialogState
-	QuickAction             dialog.QuickActionState
+	LeaderMenu              LeaderMenuState
 	// MetaResults holds per-panel active meta columns (nil/empty = meta not active).
 	MetaResults [2][]MetaColumnState
 	// FilePreview is the live inactive-panel preview state (mutate only under App.commandsMu).
@@ -243,7 +243,7 @@ func (m *Model) AnyModalOpen() bool {
 	return m.PrimaryModal() != dialog.PrimaryModalNone ||
 		m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.GroupSelect.Open ||
 		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
-		m.FindDialog.Open || m.MetaDialog.Open || m.QuickAction.Open || m.CompareMergeDialog.Open
+		m.FindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open
 }
 
 // SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,
@@ -374,14 +374,14 @@ func (m *Model) quickViewDirOverlayTitleChrome(panelID int, ownPath string) (tit
 }
 
 // PanelsChromeBlocked reports when file/jobs panel chrome should use panel.blocked.*
-// styles because a menu or modal has taken focus. The quick-action list (F2 user menu)
-// is excluded: it floats over the panels without taking over navigation context, so the
+// styles because a menu or modal has taken focus. The leader menu (Esc built-in / F2 user menu)
+// is excluded: it docks above the footer without taking over navigation context, so the
 // active/inactive panel distinction must stay visible underneath it.
 func (m *Model) PanelsChromeBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
-	return m.ModalDialogOpen() && !m.QuickAction.Open
+	return m.ModalDialogOpen() && !m.LeaderMenu.Open
 }
 
 // ModalDialogOpen reports modals that block normal navigation and hide the menu bar row.
@@ -389,7 +389,7 @@ func (m *Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.QuickAction.Open || m.CommandOutputDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open || m.CommandOutputDialog.Open {
 		return true
 	}
 	return false
@@ -405,7 +405,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
-		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.QuickAction.Open ||
+		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open ||
 		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupEmptyDirsConfirm.Open
 }
 
@@ -551,7 +551,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 	} else if side.ColumnWidth > 0 {
 		panelCtx := PanelContext{
 			PanelID: side.PanelID, FileListActive: side.FileListFocus,
-			CursorRowActive: side.FileListFocus && !model.QuickAction.Open, ChromeBlocked: side.ChromeBlocked,
+			CursorRowActive: side.FileListFocus && !model.LeaderMenu.Open, ChromeBlocked: side.ChromeBlocked,
 			ActivePanel: model.ActivePanel, OtherPanelPath: side.OtherPanelPath,
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: side.SelectionsBottomHint,
@@ -671,9 +671,6 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	if model.SortDialog.Open {
 		dialog.DrawSortDialog(screen, layout, model.SortDialog, styles)
 	}
-	if model.QuickAction.Open {
-		dialog.DrawQuickActionDialog(screen, layout, model.QuickAction, styles)
-	}
 	if model.ListingFormatDialog.Open {
 		dialog.DrawListingFormatDialog(screen, layout, model.ListingFormatDialog, styles)
 	}
@@ -710,6 +707,9 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	}
 	if model.HelpView.Open {
 		dialog.DrawHelpDialog(screen, layout, model.HelpView, styles)
+	}
+	if model.LeaderMenu.Open {
+		DrawLeaderMenu(screen, layout, model.LeaderMenu, styles)
 	}
 	drawFooter(screen, layout.Footer, styles, model.FooterKeys)
 	// Transient status must be drawn after modal chrome so it is not overwritten (e.g. theme picker).

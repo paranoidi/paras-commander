@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -576,7 +577,7 @@ func TestClearAllDiskUsageData(t *testing.T) {
 	}
 }
 
-func TestSortDialogHandleKeyAltDTogglesDirectoriesFirstWithoutClearingDiskUsage(t *testing.T) {
+func TestSortDialogHandleKeyAltDTogglesDirectoriesFirstWithoutStartingDiskUsageScan(t *testing.T) {
 	root := t.TempDir()
 	scanned := filepath.Join(root, "scanned")
 	if err := os.Mkdir(scanned, 0o755); err != nil {
@@ -622,7 +623,7 @@ func TestSortDialogHandleKeyAltDTogglesDirectoriesFirstWithoutClearingDiskUsage(
 	if !app.model.DiskUsageShown {
 		t.Fatal("disk usage should remain shown after Sort Alt+D")
 	}
-	if app.model.Message == "Disk usage data cleared" {
-		t.Fatal("Sort Alt+D must not trigger panel.disk-usage-clear")
+	if strings.HasPrefix(app.model.Message, "Disk usage scan started") {
+		t.Fatal("Sort Alt+D must not trigger panel.disk-usage-scan")
 	}
 }

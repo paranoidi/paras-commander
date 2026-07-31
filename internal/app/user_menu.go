@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gdamore/tcell/v2"
 	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -15,7 +14,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
-	"github.com/paranoidi/paras-commander/internal/ui/menu"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
 )
 
@@ -119,7 +117,7 @@ func (a *App) openUserMenu() {
 	active := a.panelByID(a.model.ActivePanel)
 	other := a.panelByID(a.inactivePanelID())
 	ctx := &usermenu.EvalContext{Active: active, Other: other}
-	visible, defIdx, err := usermenu.FilterVisible(mf, ctx)
+	visible, _, err := usermenu.FilterVisible(mf, ctx)
 	if err != nil {
 		a.setUserMenuCritical(err)
 		return
@@ -130,35 +128,21 @@ func (a *App) openUserMenu() {
 	}
 	a.userMenuVisible = visible
 	a.userMenuPath = menuPath
-	a.openQuickAction(
-		dialog.QuickActionState{
-			Title:    "User menu",
-			Items:    userMenuQuickActionItems(visible),
-			Selected: defIdx,
-		},
-		func(i int) {
-			if i < 0 || i >= len(a.userMenuVisible) {
-				return
-			}
-			a.runUserMenuEntry(a.userMenuVisible[i])
-		},
-		func(event *tcell.EventKey) bool {
-			if event.Key() == tcell.KeyF9 {
-				a.editUserMenuConfigFromDialog()
-				return true
-			}
+	items := userMenuLeaderMenuItems(visible)
+	a.openLeaderMenuStrip(items, true, false, "User menu", func(i int) bool {
+		if i < 0 || i >= len(a.userMenuVisible) {
 			return false
-		},
-		[]menu.FunctionKey{menu.FunctionKeyEditConfig},
-	)
-	a.clearTransientMessage()
+		}
+		a.runUserMenuEntry(a.userMenuVisible[i])
+		return false
+	})
 }
 
-// userMenuQuickActionItems maps visible F2 menu entries to quick-action rows.
-func userMenuQuickActionItems(entries []usermenu.MenuEntry) []dialog.QuickActionItem {
-	items := make([]dialog.QuickActionItem, len(entries))
+// userMenuLeaderMenuItems maps visible user-menu entries to leader-menu rows.
+func userMenuLeaderMenuItems(entries []usermenu.MenuEntry) []ui.LeaderMenuItem {
+	items := make([]ui.LeaderMenuItem, len(entries))
 	for i, e := range entries {
-		items[i] = dialog.QuickActionItem{Key: dialog.ConfiguredKeyRune(e.Key), Label: e.Title}
+		items[i] = ui.LeaderMenuItem{Key: dialog.ConfiguredKeyRune(e.Key), Label: e.Title}
 	}
 	return items
 }

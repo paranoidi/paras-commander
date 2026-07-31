@@ -236,23 +236,13 @@ func (a *App) startDiskUsageScan() {
 	a.startDiskUsageScanForPanel(a.model.ActivePanel)
 }
 
-func (a *App) abortAllDiskUsageScans() {
-	if a.disk.engine == nil {
-		return
-	}
-	if !a.diskUsageScanBusy() {
-		a.setTransientMessage("No disk usage scan in progress", ui.MessageUrgencyInfo)
-		return
-	}
-	a.disk.engine.Abort()
-	a.invalidateIdleDiskSortBothPanels()
-	a.setTransientMessage("Disk usage scans aborted", ui.MessageUrgencyInfo)
-	a.pollDiskUsageUpdates()
-}
-
 func (a *App) clearAllDiskUsageData() {
 	if a.disk.engine == nil {
 		return
+	}
+	wasBusy := a.diskUsageScanBusy()
+	if wasBusy {
+		a.disk.engine.Abort()
 	}
 	a.stopDiskUsageRedrawDebounce()
 	a.disk.engine.ClearCache()
@@ -268,7 +258,14 @@ func (a *App) clearAllDiskUsageData() {
 	vrRight := a.panelViewportRows(ui.SecondaryPanel)
 	_ = a.model.Primary.Refresh(vrLeft)
 	_ = a.model.Secondary.Refresh(vrRight)
-	a.setTransientMessage("Disk usage data cleared", ui.MessageUrgencyInfo)
+	msg := "Disk usage data cleared"
+	if wasBusy {
+		msg = "Disk usage scans aborted and data cleared"
+	}
+	a.setTransientMessage(msg, ui.MessageUrgencyInfo)
+	if wasBusy {
+		a.pollDiskUsageUpdates()
+	}
 }
 
 func (a *App) startDiskUsageScanForPanel(panelID int) {
