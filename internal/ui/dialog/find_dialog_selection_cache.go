@@ -127,7 +127,7 @@ func (s *FindDialogState) rebuildMarkedLabel(
 	pending := false
 	for _, p := range s.markedSelCache.pruned {
 		_, b, pend := findMarkedPathImpact(
-			p, s.PathIsDir, s.PathSize, remote,
+			p, s.PathMeta, remote,
 			s.ListingDevice, s.ListingDeviceValid,
 			painter, descendIntoMountPoints, goduIgnore,
 		)
@@ -151,10 +151,11 @@ func (s *FindDialogState) rebuildMarkedLabel(
 
 func (s *FindDialogState) markedPathIsDir() func(string) bool {
 	return func(path string) bool {
-		if s.PathIsDir == nil {
+		if s.PathMeta == nil {
 			return false
 		}
-		return s.PathIsDir[path]
+		isDir, _, ok := s.PathMeta(path)
+		return ok && isDir
 	}
 }
 
@@ -172,8 +173,7 @@ func markedSelectionHasDirs(paths []string, isDir func(string) bool) bool {
 
 func findMarkedPathImpact(
 	path string,
-	pathIsDir map[string]bool,
-	pathSize map[string]int64,
+	pathMeta func(string) (isDir bool, size int64, ok bool),
 	remote bool,
 	listingDevice uint64,
 	listingDeviceValid bool,
@@ -181,12 +181,14 @@ func findMarkedPathImpact(
 	descendIntoMountPoints bool,
 	goduIgnore func(string) bool,
 ) (files, bytes int64, pending bool) {
-	isDir := pathIsDir != nil && pathIsDir[path]
+	isDir := false
+	var size int64
+	if pathMeta != nil {
+		isDir, size, _ = pathMeta(path)
+	}
 	if !isDir {
-		if pathSize != nil {
-			if sz, ok := pathSize[path]; ok {
-				return 1, sz, false
-			}
+		if size > 0 {
+			return 1, size, false
 		}
 		return 1, 0, false
 	}

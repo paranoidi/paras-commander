@@ -1,6 +1,7 @@
 package find
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
@@ -63,6 +64,59 @@ func (h *Handler) findStartOpts(st *dialog.FindDialogState) scan.StartOpts {
 	}
 }
 
+func (h *Handler) bindFindDialogPathMeta(st *dialog.FindDialogState) {
+	st.PathMeta = func(absPath string) (isDir bool, size int64, ok bool) {
+		return lookupFindPathMeta(st, absPath)
+	}
+}
+
+func lookupFindPathMeta(st *dialog.FindDialogState, absPath string) (isDir bool, size int64, ok bool) {
+	absPath = filepath.Clean(absPath)
+	for _, e := range st.Entries {
+		if filepath.Clean(e.AbsPath(st.RootPath)) == absPath {
+			if e.IsDir {
+				return true, 0, true
+			}
+			if e.Size > 0 {
+				return false, e.Size, true
+			}
+			if info, err := os.Stat(absPath); err == nil {
+				return false, info.Size(), true
+			}
+			return false, 0, true
+		}
+	}
+	return false, 0, false
+}
+
+func dialogEntriesFromScan(batch []scan.Entry) []dialog.FindEntry {
+	if len(batch) == 0 {
+		return nil
+	}
+	out := make([]dialog.FindEntry, len(batch))
+	for i, e := range batch {
+		out[i] = dialog.FindEntry{
+			RelLine: e.RelLine,
+			IsDir:   e.IsDir,
+			Type:    e.Type,
+			Size:    e.Size,
+		}
+	}
+	return out
+}
+
+func (h *Handler) appendFindDialogEntries(st *dialog.FindDialogState, batch []scan.Entry) {
+	added := dialogEntriesFromScan(batch)
+	if len(added) == 0 {
+		return
+	}
+	st.Entries = append(st.Entries, added...)
+}
+
+func (h *Handler) replaceFindDialogEntries(st *dialog.FindDialogState, batch []scan.Entry) {
+	st.Entries = dialogEntriesFromScan(batch)
+}
+
 func (h *Handler) startFindIndexer() {
 	st := &h.model.FindDialog
 	if !st.Open || st.RootPath == "" {
@@ -84,8 +138,6 @@ func (h *Handler) restartFindIndexer() {
 	}
 	st.IndexErr = ""
 	st.Entries = nil
-	st.PathIsDir = nil
-	st.PathSize = nil
 	st.IndexedCount = 0
 	st.Ranked = nil
 	st.RankDisplayLines = nil
@@ -101,29 +153,6 @@ func (h *Handler) stopFindIndexer() {
 	h.scan.Cancel()
 }
 
-func (h *Handler) syncEntriesFromScan(st *dialog.FindDialogState) {
-	snap := h.scan.Snapshot()
-	if len(snap) == 0 {
-		st.Entries = nil
-		st.PathIsDir = nil
-		st.PathSize = nil
-		return
-	}
-	entries := make([]dialog.FindEntry, len(snap))
-	for i, e := range snap {
-		entries[i] = dialog.FindEntry{
-			RelLine: e.RelLine,
-			IsDir:   e.IsDir,
-			Type:    e.Type,
-			Size:    e.Size,
-		}
-	}
-	st.Entries = entries
-	isDir, sizes := pathIndexFromSnapshot(st.RootPath, snap)
-	st.PathIsDir = isDir
-	st.PathSize = sizes
-}
-
 func (h *Handler) findWalkParams() fswalk.Params {
 	return fswalk.Params{
 		InitialWorkers:  h.config.FSWalk.InitialWorkers,
@@ -132,30 +161,11 @@ func (h *Handler) findWalkParams() fswalk.Params {
 	}
 }
 
-func pathIndexFromSnapshot(root string, snap []scan.Entry) (map[string]bool, map[string]int64) {
-	isDir := make(map[string]bool, len(snap))
-	sizes := make(map[string]int64)
-	for _, e := range snap {
-		abs := filepath.Clean(e.Path)
-		if abs == "" {
-			abs = filepath.Clean(filepath.Join(root, filepath.FromSlash(e.RelLine)))
-		}
-		isDir[abs] = e.IsDir
-		if !e.IsDir && e.Size > 0 {
-			sizes[abs] = e.Size
-		}
-	}
-	if len(sizes) == 0 {
-		sizes = nil
-	}
-	return isDir, sizes
-}
-
 func (h *Handler) finishFindIndexing(st *dialog.FindDialogState) {
 	st.Indexing = false
 	st.IndexDone = true
 	st.WalkWorkers = 0
-	h.syncEntriesFromScan(st)
+	st.IndexedCount = len(st.Entries)
 	st.RankDisplayLines = nil
 	if search.Parse(st.Query).Empty() {
 		h.applyEmptyQueryDisplayRank(st)
@@ -165,8 +175,23 @@ func (h *Handler) finishFindIndexing(st *dialog.FindDialogState) {
 }
 
 func (h *Handler) applyScanEvent(st *dialog.FindDialogState, ev scan.Event) (needRender, needSync bool) {
+	// UI mirror only: never pull from scan.Coordinator here or from render/rank paths.
 	if ev.Gen != h.scanGen {
 		return false, false
+	}
+	if len(ev.BatchAdded) > 0 {
+		prevLen := len(st.Entries)
+		h.appendFindDialogEntries(st, ev.BatchAdded)
+		if search.Parse(st.Query).Empty() {
+			prevRanked := len(st.Ranked)
+			h.extendEmptyQueryDisplayRank(st, prevLen)
+			if len(st.Ranked) > prevRanked && h.maybeRenderFindIndexing(st) {
+				needRender = true
+			}
+		}
+	}
+	if len(ev.ReplacedEntries) > 0 {
+		h.replaceFindDialogEntries(st, ev.ReplacedEntries)
 	}
 	if ev.CountUpdate {
 		st.IndexedCount = ev.Count
@@ -184,7 +209,6 @@ func (h *Handler) applyScanEvent(st *dialog.FindDialogState, ev scan.Event) (nee
 		}
 	}
 	if ev.IndexReplaced {
-		h.syncEntriesFromScan(st)
 		st.IndexedCount = len(st.Entries)
 		st.Indexing = false
 		st.IndexDone = true
@@ -201,13 +225,10 @@ func (h *Handler) applyScanEvent(st *dialog.FindDialogState, ev scan.Event) (nee
 	if ev.IndexFinished {
 		if ev.IndexErr != "" {
 			st.IndexErr = ev.IndexErr
-			needRender = true
 		}
-		if st.Indexing || !st.IndexDone {
-			h.finishFindIndexing(st)
-			needRender = true
-			needSync = true
-		}
+		h.finishFindIndexing(st)
+		needRender = true
+		needSync = true
 	}
 	if ev.MatchResult {
 		h.rankMu.Lock()

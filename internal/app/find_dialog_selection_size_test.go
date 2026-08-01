@@ -20,8 +20,11 @@ func TestReconcileFindDialogSelectionSizeScansEarlyExitOnUnchangedGen(t *testing
 				MarkedPaths: map[string]bool{
 					filepath.Clean("/tmp/a"): true,
 				},
-				PathIsDir: map[string]bool{
-					filepath.Clean("/tmp/a"): false,
+				PathMeta: func(path string) (isDir bool, size int64, ok bool) {
+					if path == filepath.Clean("/tmp/a") {
+						return false, 0, true
+					}
+					return false, 0, false
 				},
 			},
 		},

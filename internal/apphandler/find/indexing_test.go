@@ -48,6 +48,26 @@ func findMaxConcurrentWalksForCount(indexed int) int {
 	}
 }
 
+func TestAppendEmptyQueryDisplayIndices(t *testing.T) {
+	t.Parallel()
+	entries := []dialog.FindEntry{
+		{RelLine: "a.txt"},
+		{RelLine: "dir", IsDir: true},
+	}
+	got := appendEmptyQueryDisplayIndices(nil, entries, 0, false, false, 0)
+	if len(got) != 2 || got[0] != 0 || got[1] != 1 {
+		t.Fatalf("all entries: got %v want [0 1]", got)
+	}
+	got = appendEmptyQueryDisplayIndices(nil, entries, 0, true, false, 0)
+	if len(got) != 1 || got[0] != 1 {
+		t.Fatalf("only dirs: got %v want [1]", got)
+	}
+	got = appendEmptyQueryDisplayIndices([]int{0}, entries, 1, false, false, 2)
+	if len(got) != 2 || got[1] != 1 {
+		t.Fatalf("extend from 1: got %v want [0 1]", got)
+	}
+}
+
 func TestFindIndexingSkipsRank(t *testing.T) {
 	t.Parallel()
 	st := &dialog.FindDialogState{Indexing: true, Query: ""}
@@ -144,10 +164,8 @@ func TestEmptyQueryDisplayIndices(t *testing.T) {
 	if len(got) != 2 || got[0] != 0 || got[1] != 2 {
 		t.Fatalf("only dirs: got %v", got)
 	}
-	got = emptyQueryDisplayIndicesFromEntries([]dialog.FindEntry{
-		{IsDir: true}, {IsDir: false}, {IsDir: true},
-	}, true, false, 10)
+	got = emptyQueryDisplayIndices(3, true, false, []bool{true, false, true}, 10)
 	if len(got) != 2 || got[0] != 0 || got[1] != 2 {
-		t.Fatalf("from entries only dirs: got %v", got)
+		t.Fatalf("only dirs isDirs slice: got %v", got)
 	}
 }

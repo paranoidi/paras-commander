@@ -30,9 +30,9 @@ func (a *App) reconcileFindDialogSelectionSizeScans() {
 		a.findDialogSelectionScanFP = ""
 		return
 	}
-	need := directoriesNeedingScanFromPathIsDir(
+	need := directoriesNeedingScanFromIsDir(
 		st.PrunedMarkedRoots(),
-		st.PathIsDir,
+		findDialogPathIsDir(st.PathMeta),
 		st.ListingDevice,
 		st.ListingDeviceValid,
 		a.disk.engine,

@@ -19,11 +19,20 @@ import (
 func findRankedIndexForPath(st *dialog.FindDialogState, absPath string) int {
 	want := filepath.Clean(absPath)
 	for i, entIdx := range st.Ranked {
-		if entIdx >= 0 && entIdx < len(st.Entries) && filepath.Clean(st.Entries[entIdx].AbsPath(st.RootPath)) == want {
+		if ent, ok := st.FindEntryAt(entIdx); ok && filepath.Clean(ent.AbsPath(st.RootPath)) == want {
 			return i
 		}
 	}
 	return 0
+}
+
+func findCorpusHasRel(st *dialog.FindDialogState, rel string) bool {
+	for i := 0; i < st.IndexedCount; i++ {
+		if e, ok := st.FindEntryAt(i); ok && e.RelLine == rel {
+			return true
+		}
+	}
+	return false
 }
 
 func waitFindIndexDone(t *testing.T, app *App) {
@@ -63,6 +72,36 @@ func waitFindRankDone(t *testing.T, app *App) {
 	t.Fatal("find rank did not finish in time")
 }
 
+func TestFindDialogEmptyQueryShowsEntries(t *testing.T) {
+	root := t.TempDir()
+	for i := range 10 {
+		name := filepath.Join(root, fmt.Sprintf("file_%02d.txt", i))
+		if err := os.WriteFile(name, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	app, err := New(screen, func() (string, error) { return root, nil })
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	app.findCtrl.OpenDialog(ui.PrimaryPanel)
+	waitFindIndexDone(t, app)
+
+	st := &app.model.FindDialog
+	if len(st.Ranked) == 0 || len(st.Entries) == 0 {
+		t.Fatalf("entries not visible with empty query: ranked=%d entries=%d",
+			len(st.Ranked), len(st.Entries))
+	}
+}
+
 func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	root := t.TempDir()
 	if err := os.Mkdir(filepath.Join(root, "pkg"), 0o755); err != nil {
@@ -86,6 +125,12 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	st := &app.model.FindDialog
+	if len(st.Entries) == 0 {
+		t.Fatalf("Entries len = 0 after index, IndexedCount=%d", st.IndexedCount)
+	}
+	if len(st.Ranked) == 0 {
+		t.Fatalf("Ranked len = 0 after index, Entries=%d", len(st.Entries))
+	}
 	if !st.StayOnCurrentVolume {
 		t.Fatal("expected stay-on-volume default on")
 	}
@@ -628,8 +673,8 @@ func TestFindDialogBulkSelectAllManyFiles(t *testing.T) {
 	waitFindRankDone(t, app)
 
 	st := &app.model.FindDialog
-	if len(st.PathIsDir) < n {
-		t.Fatalf("PathIsDir len = %d, want >= %d", len(st.PathIsDir), n)
+	if st.IndexedCount < n {
+		t.Fatalf("IndexedCount = %d, want >= %d", st.IndexedCount, n)
 	}
 
 	deadline := time.Now().Add(time.Second)
@@ -676,8 +721,8 @@ func TestFindDialogBulkSelectAllMixedTree(t *testing.T) {
 	waitFindRankDone(t, app)
 
 	st := &app.model.FindDialog
-	if len(st.Entries) < dirs+wantMarked {
-		t.Fatalf("entries = %d, want >= %d", len(st.Entries), dirs+wantMarked)
+	if st.IndexedCount < dirs+wantMarked {
+		t.Fatalf("indexed = %d, want >= %d", st.IndexedCount, dirs+wantMarked)
 	}
 
 	deadline := time.Now().Add(time.Second)
@@ -788,7 +833,7 @@ func TestFindDialogBulkGroupSelectManyFiles(t *testing.T) {
 func findRankedNonDirCount(st *dialog.FindDialogState) int {
 	n := 0
 	for _, idx := range st.Ranked {
-		if idx >= 0 && idx < len(st.Entries) && !st.Entries[idx].IsDir {
+		if ent, ok := st.FindEntryAt(idx); ok && !ent.IsDir {
 			n++
 		}
 	}
@@ -798,7 +843,7 @@ func findRankedNonDirCount(st *dialog.FindDialogState) int {
 func findRankedDirCount(st *dialog.FindDialogState) int {
 	n := 0
 	for _, idx := range st.Ranked {
-		if idx >= 0 && idx < len(st.Entries) && st.Entries[idx].IsDir {
+		if ent, ok := st.FindEntryAt(idx); ok && ent.IsDir {
 			n++
 		}
 	}
@@ -934,7 +979,7 @@ func TestFindDialogStayOnVolumeRestartClearsEntries(t *testing.T) {
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
-	if len(app.model.FindDialog.Entries) == 0 {
+	if app.model.FindDialog.IndexedCount == 0 {
 		t.Fatal("expected at least one indexed entry")
 	}
 
@@ -942,7 +987,7 @@ func TestFindDialogStayOnVolumeRestartClearsEntries(t *testing.T) {
 	if app.model.FindDialog.Indexing {
 		waitFindIndexDone(t, app)
 	}
-	if len(app.model.FindDialog.Entries) == 0 {
+	if app.model.FindDialog.IndexedCount == 0 {
 		t.Fatal("expected entries after restart")
 	}
 }
@@ -983,11 +1028,15 @@ func TestFindDialogIncludeHiddenExpandsWithoutFullRescan(t *testing.T) {
 	if st.IncludeHidden {
 		t.Fatal("IncludeHidden default want false")
 	}
-	before := len(st.Entries)
+	before := st.IndexedCount
 	if before == 0 {
 		t.Fatal("expected visible entries before include-hidden")
 	}
-	for _, e := range st.Entries {
+	for i := 0; i < st.IndexedCount; i++ {
+		e, ok := st.FindEntryAt(i)
+		if !ok {
+			continue
+		}
 		if strings.HasPrefix(filepath.Base(e.AbsPath(st.RootPath)), ".") {
 			t.Fatalf("unexpected hidden entry before toggle: %q", e.RelLine)
 		}
@@ -998,12 +1047,14 @@ func TestFindDialogIncludeHiddenExpandsWithoutFullRescan(t *testing.T) {
 	if !st.IncludeHidden {
 		t.Fatal("IncludeHidden want true after toggle")
 	}
-	if len(st.Entries) <= before {
-		t.Fatalf("entries after include-hidden = %d, want > %d", len(st.Entries), before)
+	if st.IndexedCount <= before {
+		t.Fatalf("indexed after include-hidden = %d, want > %d", st.IndexedCount, before)
 	}
 	byRel := map[string]bool{}
-	for _, e := range st.Entries {
-		byRel[e.RelLine] = true
+	for i := 0; i < st.IndexedCount; i++ {
+		if e, ok := st.FindEntryAt(i); ok {
+			byRel[e.RelLine] = true
+		}
 	}
 	for _, want := range []string{"visible.txt", ".git", ".git/config", ".gitignore"} {
 		if !byRel[want] {
@@ -1016,23 +1067,18 @@ func TestFindDialogIncludeHiddenExpandsWithoutFullRescan(t *testing.T) {
 	if st.IncludeHidden {
 		t.Fatal("IncludeHidden want false after second toggle")
 	}
-	for _, e := range st.Entries {
+	for i := 0; i < st.IndexedCount; i++ {
+		e, ok := st.FindEntryAt(i)
+		if !ok {
+			continue
+		}
 		if strings.HasPrefix(filepath.Base(e.AbsPath(st.RootPath)), ".") || strings.Contains(e.RelLine, ".git/") {
 			t.Fatalf("hidden entry still present after disable: %q", e.RelLine)
 		}
 	}
-	if !byRelHas(st, "visible.txt") {
+	if !findCorpusHasRel(st, "visible.txt") {
 		t.Fatal("visible.txt should remain after disabling include-hidden")
 	}
-}
-
-func byRelHas(st *dialog.FindDialogState, rel string) bool {
-	for _, e := range st.Entries {
-		if e.RelLine == rel {
-			return true
-		}
-	}
-	return false
 }
 
 func TestFindDialogMarkDirRemovesDescendantMarks(t *testing.T) {
@@ -1171,7 +1217,11 @@ func TestFindDialogMarkParentThenChildDirRemovesParentMark(t *testing.T) {
 
 func findIndexedUnder(st *dialog.FindDialogState, dir string) bool {
 	dir = filepath.Clean(dir)
-	for _, e := range st.Entries {
+	for i := 0; i < len(st.Entries); i++ {
+		e, ok := st.FindEntryAt(i)
+		if !ok {
+			continue
+		}
 		p := filepath.Clean(e.AbsPath(st.RootPath))
 		if p == dir || panel.IsStrictPathDescendant(dir, p) {
 			return true
@@ -1254,7 +1304,7 @@ func TestFindDialogSearchOnlySelectionsWidenAndNarrow(t *testing.T) {
 	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(dirA))
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
-	countScoped := len(app.model.FindDialog.Entries)
+	countScoped := app.model.FindDialog.IndexedCount
 
 	app.findCtrl.ToggleSearchOnlySelections()
 	if app.model.FindDialog.SearchOnlySelections {
@@ -1264,13 +1314,21 @@ func TestFindDialogSearchOnlySelectionsWidenAndNarrow(t *testing.T) {
 	if !findIndexedUnder(&app.model.FindDialog, dirB) {
 		t.Fatal("expected entries under b after widening scope")
 	}
-	if len(app.model.FindDialog.Entries) <= countScoped {
-		t.Fatalf("entries should grow after widen: before=%d after=%d", countScoped, len(app.model.FindDialog.Entries))
+	if app.model.FindDialog.IndexedCount <= countScoped {
+		t.Fatalf("entries should grow after widen: before=%d after=%d", countScoped, app.model.FindDialog.IndexedCount)
 	}
 
 	app.findCtrl.ToggleSearchOnlySelections()
 	if !app.model.FindDialog.SearchOnlySelections {
 		t.Fatal("expected search-only on after second toggle")
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		app.findCtrl.PollUpdates(findctrl.WakePayload{})
+		if !findIndexedUnder(&app.model.FindDialog, dirB) {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 	if findIndexedUnder(&app.model.FindDialog, dirB) {
 		t.Fatal("did not expect entries under b after narrowing")
@@ -1304,7 +1362,7 @@ func TestFindDialogNoSearchSelectionsCheckboxForFilesOnly(t *testing.T) {
 		t.Fatal("checkbox should be hidden when only files are selected")
 	}
 	waitFindIndexDone(t, app)
-	if len(app.model.FindDialog.Entries) == 0 {
+	if app.model.FindDialog.IndexedCount == 0 {
 		t.Fatal("expected full-tree index")
 	}
 }

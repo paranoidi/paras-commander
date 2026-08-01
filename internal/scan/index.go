@@ -9,12 +9,12 @@ import (
 type Index struct {
 	mu       sync.RWMutex
 	entries  []Entry
-	byRel    map[string]struct{}
+	byRel    map[string]int // RelLine -> index in entries
 	revision int
 }
 
 func newIndex() *Index {
-	return &Index{byRel: make(map[string]struct{})}
+	return &Index{byRel: make(map[string]int)}
 }
 
 func (idx *Index) Revision() int {
@@ -30,32 +30,28 @@ func (idx *Index) Len() int {
 }
 
 // Append ingests a batch; displayRoot rewrites RelLine for multi-root scopes.
-func (idx *Index) Append(displayRoot string, batch []Entry) int {
+// Returns entries actually added (deduped by RelLine).
+func (idx *Index) Append(displayRoot string, batch []Entry) []Entry {
 	if len(batch) == 0 {
-		return 0
+		return nil
 	}
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
-	added := 0
+	added := make([]Entry, 0, len(batch))
 	for _, e := range batch {
-		p := filepath.Clean(e.Path)
-		if p == "" {
-			continue
-		}
-		rel := relLine(displayRoot, p)
+		rel := e.RelLine
 		if rel == "" {
 			continue
 		}
 		if _, dup := idx.byRel[rel]; dup {
 			continue
 		}
-		idx.byRel[rel] = struct{}{}
-		e.Path = p
-		e.RelLine = rel
+		entryIdx := len(idx.entries)
 		idx.entries = append(idx.entries, e)
-		added++
+		idx.byRel[rel] = entryIdx
+		added = append(added, e)
 	}
-	if added > 0 {
+	if len(added) > 0 {
 		idx.revision++
 	}
 	return added
@@ -66,34 +62,26 @@ func (idx *Index) ReplaceEntries(displayRoot string, batch []Entry) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 	idx.entries = idx.entries[:0]
-	idx.byRel = make(map[string]struct{}, len(batch))
+	idx.byRel = make(map[string]int, len(batch))
 	for _, e := range batch {
-		p := filepath.Clean(e.Path)
-		if p == "" {
-			continue
-		}
-		rel := relLine(displayRoot, p)
+		rel := e.RelLine
 		if rel == "" {
 			continue
 		}
-		e.Path = p
-		e.RelLine = rel
-		idx.byRel[rel] = struct{}{}
+		if _, dup := idx.byRel[rel]; dup {
+			continue
+		}
+		entryIdx := len(idx.entries)
 		idx.entries = append(idx.entries, e)
+		idx.byRel[rel] = entryIdx
 	}
 	idx.revision++
 }
 
-// Snapshot returns a copy of all entries for UI sync at index finish.
-func (idx *Index) Snapshot() []Entry {
+func (idx *Index) RunMatch(req MatchRequest, shouldCancel func() bool) MatchOutput {
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
-	if len(idx.entries) == 0 {
-		return nil
-	}
-	out := make([]Entry, len(idx.entries))
-	copy(out, idx.entries)
-	return out
+	return runMatchInPlace(idx.entries, req, shouldCancel)
 }
 
 // View calls fn with entry slices under read lock.
@@ -113,41 +101,20 @@ func (idx *Index) EntryAt(i int) (Entry, bool) {
 	return idx.entries[i], true
 }
 
-// LinesAndDirs returns parallel slices for match workers.
-func (idx *Index) LinesAndDirs() (lines []string, isDirs []bool) {
+// EntryMetaForAbs finds one entry by absolute path under displayRoot.
+func (idx *Index) EntryMetaForAbs(displayRoot, absPath string) (Entry, bool) {
+	displayRoot = filepath.Clean(displayRoot)
+	absPath = filepath.Clean(absPath)
+	rel, err := filepath.Rel(displayRoot, absPath)
+	if err != nil {
+		return Entry{}, false
+	}
+	rel = filepath.ToSlash(rel)
 	idx.mu.RLock()
 	defer idx.mu.RUnlock()
-	n := len(idx.entries)
-	lines = make([]string, n)
-	isDirs = make([]bool, n)
-	for i, e := range idx.entries {
-		lines[i] = e.RelLine
-		isDirs[i] = e.IsDir
+	i, ok := idx.byRel[rel]
+	if !ok {
+		return Entry{}, false
 	}
-	return lines, isDirs
-}
-
-// PathIndex rebuilds absolute-path lookup maps after indexing completes.
-func (idx *Index) PathIndex(displayRoot string) (isDir map[string]bool, sizes map[string]int64) {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-	if len(idx.entries) == 0 {
-		return nil, nil
-	}
-	isDir = make(map[string]bool, len(idx.entries))
-	sizes = make(map[string]int64)
-	for _, e := range idx.entries {
-		abs := filepath.Clean(filepath.Join(displayRoot, filepath.FromSlash(e.RelLine)))
-		if abs == "" {
-			continue
-		}
-		isDir[abs] = e.IsDir
-		if !e.IsDir && e.Size > 0 {
-			sizes[abs] = e.Size
-		}
-	}
-	if len(sizes) == 0 {
-		sizes = nil
-	}
-	return isDir, sizes
+	return idx.entries[i], true
 }

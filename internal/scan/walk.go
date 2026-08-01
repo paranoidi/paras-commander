@@ -3,21 +3,16 @@ package scan
 import (
 	"context"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
-const (
-	batchEntryThreshold = 256
-	batchInterval       = 50 * time.Millisecond
-)
+const batchEntryThreshold = 1024
 
 // WalkOptions configures a directory walk rooted at one path.
 type WalkOptions struct {
@@ -31,13 +26,12 @@ type WalkOptions struct {
 type RootWalk = rootWalk
 
 // StartRootWalk begins indexing root. Call Close when finished.
-func StartRootWalk(ctx context.Context, root string, opts WalkOptions, walk fswalk.Params) *RootWalk {
-	return startRootWalk(ctx, root, opts, walk)
+func StartRootWalk(ctx context.Context, root string, opts WalkOptions, _ fswalk.Params) *RootWalk {
+	return startRootWalk(ctx, root, opts)
 }
 
 type rootWalk struct {
 	root    string
-	walk    fswalk.Params
 	results chan []Entry
 	done    chan struct{}
 	err     error
@@ -45,20 +39,17 @@ type rootWalk struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 
-	adapt *fswalk.Adaptive
-
-	skippedMu    sync.Mutex
-	skippedDirs  []string
-	skippedFiles []Entry
+	skippedMu        sync.Mutex
+	skippedDirs      []string
+	skippedFilePaths []string // RelLine under root for dot-files
 }
 
-func startRootWalk(ctx context.Context, root string, opts WalkOptions, walk fswalk.Params) *rootWalk {
+func startRootWalk(ctx context.Context, root string, opts WalkOptions) *rootWalk {
 	root = filepath.Clean(root)
 	ctx, cancel := context.WithCancel(ctx)
 	w := &rootWalk{
 		root:    root,
-		walk:    walk,
-		results: make(chan []Entry, 8),
+		results: make(chan []Entry, 16),
 		done:    make(chan struct{}),
 		cancel:  cancel,
 	}
@@ -73,12 +64,8 @@ func (w *rootWalk) Done() <-chan struct{} { return w.done }
 
 func (w *rootWalk) Err() error { return w.err }
 
-func (w *rootWalk) Workers() int {
-	if w.adapt == nil {
-		return 0
-	}
-	return w.adapt.Workers()
-}
+// Workers reports 1 while a sequential walk is running.
+func (w *rootWalk) Workers() int { return 1 }
 
 func (w *rootWalk) SkippedHiddenDirs() []string {
 	w.skippedMu.Lock()
@@ -91,14 +78,14 @@ func (w *rootWalk) SkippedHiddenDirs() []string {
 	return out
 }
 
-func (w *rootWalk) SkippedHiddenFiles() []Entry {
+func (w *rootWalk) SkippedHiddenFiles() []string {
 	w.skippedMu.Lock()
 	defer w.skippedMu.Unlock()
-	if len(w.skippedFiles) == 0 {
+	if len(w.skippedFilePaths) == 0 {
 		return nil
 	}
-	out := make([]Entry, len(w.skippedFiles))
-	copy(out, w.skippedFiles)
+	out := make([]string, len(w.skippedFilePaths))
+	copy(out, w.skippedFilePaths)
 	return out
 }
 
@@ -113,60 +100,31 @@ func (w *rootWalk) Abort() {
 }
 
 type walkBatch struct {
-	pending   []Entry
-	pendingMu sync.Mutex
-	flush     func()
+	pending []Entry
+	flush   func()
 }
 
-func (b *walkBatch) appendEntry(entry Entry, adapt *fswalk.Adaptive) bool {
-	adapt.Bump()
-	b.pendingMu.Lock()
+func (b *walkBatch) appendEntry(entry Entry) bool {
 	b.pending = append(b.pending, entry)
-	shouldFlush := len(b.pending) >= batchEntryThreshold
-	b.pendingMu.Unlock()
-	return shouldFlush
+	return len(b.pending) >= batchEntryThreshold
 }
 
 func (w *rootWalk) run(ctx context.Context, opts WalkOptions) {
 	defer w.wg.Done()
 	defer close(w.done)
 
-	adapt := fswalk.NewAdaptive(ctx, w.walk)
-	defer adapt.Stop()
-	w.adapt = adapt
-	sem := adapt.Sem()
-
 	batch := &walkBatch{}
 	batch.flush = func() {
-		batch.pendingMu.Lock()
 		if len(batch.pending) == 0 {
-			batch.pendingMu.Unlock()
 			return
 		}
 		out := append([]Entry(nil), batch.pending...)
 		batch.pending = batch.pending[:0]
-		batch.pendingMu.Unlock()
 		select {
 		case w.results <- out:
 		case <-ctx.Done():
 		}
 	}
-
-	ticker := time.NewTicker(batchInterval)
-	defer ticker.Stop()
-
-	tickDone := make(chan struct{})
-	go func() {
-		defer close(tickDone)
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				batch.flush()
-			}
-		}
-	}()
 
 	listOpts := localfs.ListOptions{ShowHidden: opts.IncludeHidden}
 	if !opts.IncludeHidden {
@@ -178,101 +136,66 @@ func (w *rootWalk) run(ctx context.Context, opts WalkOptions) {
 		listOpts.Gitignore = matcher
 	}
 
-	var walkWg sync.WaitGroup
-	walkWg.Add(1)
-	go func() {
-		defer walkWg.Done()
-		w.walkDirectory(ctx, w.root, opts, listOpts, adapt, sem, &walkWg, batch)
-	}()
-	walkWg.Wait()
-
-	batch.flush()
-	w.cancel()
-	<-tickDone
-	close(w.results)
-	if ctx.Err() != nil && w.err == nil {
-		w.err = ctx.Err()
-	}
-}
-
-func (w *rootWalk) walkDirectory(
-	ctx context.Context,
-	dir string,
-	opts WalkOptions,
-	listOpts localfs.ListOptions,
-	adapt *fswalk.Adaptive,
-	sem *fswalk.DynSem,
-	wg *sync.WaitGroup,
-	batch *walkBatch,
-) {
-	if ctx.Err() != nil {
-		return
-	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return
-	}
-	for _, d := range entries {
+	walkErr := filepath.WalkDir(w.root, func(path string, d fs.DirEntry, err error) error {
 		if ctx.Err() != nil {
-			return
+			return ctx.Err()
 		}
-		path := filepath.Join(dir, d.Name())
+		if err != nil {
+			return nil
+		}
 		if path == w.root {
-			continue
+			return nil
 		}
 
 		name := d.Name()
 		isDir := d.IsDir()
 
 		if !opts.IncludeHidden && strings.HasPrefix(name, ".") {
-			w.recordSkippedHidden(path, d, isDir)
-			continue
+			w.recordSkippedHidden(path, isDir)
+			if isDir {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 
 		if !localfs.EntryVisible(name, filepath.Dir(path), isDir, listOpts) {
-			continue
+			if isDir {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 
 		entry, ok := buildEntry(w.root, path, d, isDir)
 		if !ok {
-			continue
+			return nil
 		}
-		if batch.appendEntry(entry, adapt) {
+		if batch.appendEntry(entry) {
 			batch.flush()
 		}
 
-		if !entry.IsDir {
-			continue
+		if entry.IsDir && opts.ShouldSkipDir != nil && opts.ShouldSkipDir(path) {
+			return filepath.SkipDir
 		}
-		if opts.ShouldSkipDir != nil && opts.ShouldSkipDir(path) {
-			continue
-		}
+		return nil
+	})
 
-		wg.Add(1)
-		go func(subPath string) {
-			defer wg.Done()
-			if err := sem.Acquire(ctx); err != nil {
-				return
-			}
-			defer sem.Release()
-			w.walkDirectory(ctx, subPath, opts, listOpts, adapt, sem, wg, batch)
-		}(path)
+	batch.flush()
+	close(w.results)
+	if walkErr != nil && ctx.Err() == nil {
+		w.err = walkErr
 	}
 }
 
-func (w *rootWalk) recordSkippedHidden(path string, d fs.DirEntry, isDir bool) {
-	clean := filepath.Clean(path)
+func (w *rootWalk) recordSkippedHidden(path string, isDir bool) {
 	if isDir {
+		clean := filepath.Clean(path)
 		w.skippedMu.Lock()
 		w.skippedDirs = append(w.skippedDirs, clean)
 		w.skippedMu.Unlock()
 		return
 	}
-	entry, ok := buildEntry(w.root, path, d, false)
-	if !ok {
-		return
-	}
+	rel := relLine(w.root, path)
 	w.skippedMu.Lock()
-	w.skippedFiles = append(w.skippedFiles, entry)
+	w.skippedFilePaths = append(w.skippedFilePaths, rel)
 	w.skippedMu.Unlock()
 }

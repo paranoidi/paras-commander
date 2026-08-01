@@ -79,8 +79,8 @@ func TestSessionSkipsHidden(t *testing.T) {
 	<-s.Done()
 
 	for _, e := range entries {
-		if strings.HasPrefix(filepath.Base(e.Path), ".") {
-			t.Fatalf("unexpected hidden entry %q", e.Path)
+		if strings.HasPrefix(filepath.Base(e.RelLine), ".") {
+			t.Fatalf("unexpected hidden entry %q", e.RelLine)
 		}
 	}
 	dirs := s.SkippedHiddenDirs()
@@ -88,7 +88,7 @@ func TestSessionSkipsHidden(t *testing.T) {
 		t.Fatalf("SkippedHiddenDirs = %v, want [.dotdir]", dirs)
 	}
 	files := s.SkippedHiddenFiles()
-	if len(files) != 1 || filepath.Base(files[0].Path) != ".hidden" {
+	if len(files) != 1 || filepath.Base(files[0]) != ".hidden" {
 		t.Fatalf("SkippedHiddenFiles = %v, want [.hidden]", files)
 	}
 }

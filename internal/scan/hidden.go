@@ -40,24 +40,24 @@ func maxConcurrentWalksForCount(indexed int) int {
 }
 
 type hiddenState struct {
-	pendingDirs    []string
-	pendingDirSet  map[string]struct{}
-	pendingFiles   []Entry
-	pendingFileSet map[string]struct{}
-	expandedRoots  map[string]struct{}
-	filesSpliceAt  int
-	expandNext     int
-	expandPending  []string
+	pendingDirs        []string
+	pendingDirSet      map[string]struct{}
+	pendingFilePaths   []string
+	pendingFilePathSet map[string]struct{}
+	expandedRoots      map[string]struct{}
+	filesSpliceAt      int
+	expandNext         int
+	expandPending      []string
 }
 
 func newHiddenState() *hiddenState {
 	return &hiddenState{
-		pendingDirSet:  make(map[string]struct{}),
-		pendingFileSet: make(map[string]struct{}),
+		pendingDirSet:      make(map[string]struct{}),
+		pendingFilePathSet: make(map[string]struct{}),
 	}
 }
 
-func (h *hiddenState) mergeSkipped(dirs []string, files []Entry) {
+func (h *hiddenState) mergeSkipped(dirs []string, filePaths []string) {
 	for _, d := range dirs {
 		d = filepath.Clean(d)
 		if d == "" {
@@ -69,30 +69,35 @@ func (h *hiddenState) mergeSkipped(dirs []string, files []Entry) {
 		h.pendingDirSet[d] = struct{}{}
 		h.pendingDirs = append(h.pendingDirs, d)
 	}
-	for _, f := range files {
-		p := filepath.Clean(f.Path)
+	for _, p := range filePaths {
+		p = filepath.Clean(p)
 		if p == "" {
 			continue
 		}
-		if _, ok := h.pendingFileSet[p]; ok {
+		if _, ok := h.pendingFilePathSet[p]; ok {
 			continue
 		}
-		h.pendingFileSet[p] = struct{}{}
-		f.Path = p
-		h.pendingFiles = append(h.pendingFiles, f)
+		h.pendingFilePathSet[p] = struct{}{}
+		h.pendingFilePaths = append(h.pendingFilePaths, p)
 	}
 }
 
-func (h *hiddenState) spliceFilesBatch() []Entry {
-	if h.filesSpliceAt >= len(h.pendingFiles) {
+func (h *hiddenState) spliceFilesBatch(displayRoot string) []Entry {
+	if h.filesSpliceAt >= len(h.pendingFilePaths) {
 		return nil
 	}
 	end := h.filesSpliceAt + hiddenFilesSpliceBatch
-	if end > len(h.pendingFiles) {
-		end = len(h.pendingFiles)
+	if end > len(h.pendingFilePaths) {
+		end = len(h.pendingFilePaths)
 	}
-	batch := h.pendingFiles[h.filesSpliceAt:end]
+	paths := h.pendingFilePaths[h.filesSpliceAt:end]
 	h.filesSpliceAt = end
+	batch := make([]Entry, 0, len(paths))
+	for _, p := range paths {
+		if e, ok := entryFromHiddenFilePath(displayRoot, p); ok {
+			batch = append(batch, e)
+		}
+	}
 	return batch
 }
 
@@ -129,13 +134,14 @@ func pathInSelectionScope(path string, roots []string) bool {
 	return false
 }
 
-func filterEntriesToScope(entries []Entry, _ string, roots []string) []Entry {
+func filterEntriesToScope(entries []Entry, displayRoot string, roots []string) []Entry {
 	if len(roots) == 0 {
 		return entries
 	}
+	displayRoot = filepath.Clean(displayRoot)
 	filtered := make([]Entry, 0, len(entries))
 	for _, e := range entries {
-		abs := filepath.Clean(e.Path)
+		abs := filepath.Clean(filepath.Join(displayRoot, filepath.FromSlash(e.RelLine)))
 		if pathInSelectionScope(abs, roots) {
 			filtered = append(filtered, e)
 		}
@@ -172,10 +178,7 @@ func stripHiddenEntriesByName(entries []Entry, displayRoot string) []Entry {
 	}
 	filtered := make([]Entry, 0, len(entries))
 	for _, e := range entries {
-		abs := filepath.Clean(e.Path)
-		if abs == "" {
-			abs = filepath.Clean(filepath.Join(displayRoot, filepath.FromSlash(e.RelLine)))
-		}
+		abs := filepath.Clean(filepath.Join(displayRoot, filepath.FromSlash(e.RelLine)))
 		if entryPathHidden(displayRoot, abs) {
 			continue
 		}
@@ -184,10 +187,12 @@ func stripHiddenEntriesByName(entries []Entry, displayRoot string) []Entry {
 	return filtered
 }
 
-func dirEntryForHiddenDir(dir string) Entry {
+func dirEntryForHiddenDir(displayRoot, dir string) Entry {
+	dir = filepath.Clean(dir)
+	rel := relLine(displayRoot, dir)
 	return Entry{
-		Path:  filepath.Clean(dir),
-		IsDir: true,
-		Type:  localfs.EntryDirectory,
+		RelLine: rel,
+		IsDir:   true,
+		Type:    localfs.EntryDirectory,
 	}
 }

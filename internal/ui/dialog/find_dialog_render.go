@@ -169,11 +169,15 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 		hasEntry := false
 		if idxInRank < len(state.Ranked) {
 			entIdx := state.Ranked[idxInRank]
-			if entIdx >= 0 && entIdx < len(state.Entries) {
-				ent = state.Entries[entIdx]
+			if ent, ok := state.FindEntryAt(entIdx); ok {
 				hasEntry = true
 				line = ent.RelLine
 				ranges = state.MatchRanges[entIdx]
+				if idxInRank < len(state.RankDisplayLines) {
+					if dl := state.RankDisplayLines[idxInRank]; dl != "" {
+						line = dl
+					}
+				}
 				if state.MarkedPaths != nil {
 					marked = state.MarkedPaths[ent.AbsPath(state.RootPath)]
 				}

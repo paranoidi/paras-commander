@@ -8,30 +8,25 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 )
 
-func runMatch(
-	lines []string,
-	isDirs []bool,
-	req MatchRequest,
-	shouldCancel func() bool,
-) MatchOutput {
+func runMatchInPlace(entries []Entry, req MatchRequest, shouldCancel func() bool) MatchOutput {
+	n := len(entries)
 	q := search.Parse(req.Query)
 	maxResults := req.MaxResults
 	out := MatchOutput{
 		Gen:        req.Gen,
-		EntriesLen: len(lines),
+		EntriesLen: n,
 		OnlyDirs:   req.OnlyDirs,
 		OnlyFiles:  req.OnlyFiles,
 	}
 	opts := search.Options{CaseInsensitive: req.CaseInsensitive}
 
 	if q.Empty() {
-		out.Ranked = emptyDisplayIndices(len(lines), req.OnlyDirs, req.OnlyFiles, isDirs, maxResults)
+		out.Ranked = emptyDisplayIndicesInPlace(entries, req.OnlyDirs, req.OnlyFiles, maxResults)
 		out.FullRanked = out.Ranked
-		out.DisplayRelLines = relLinesForIndices(lines, out.Ranked)
+		out.DisplayRelLines = relLinesForIndicesInPlace(entries, out.Ranked)
 		return out
 	}
 
-	n := len(lines)
 	if n == 0 {
 		return out
 	}
@@ -67,7 +62,7 @@ func runMatch(
 				if shouldCancel != nil && i%10000 == 0 && i > lo && shouldCancel() {
 					return
 				}
-				result := q.Match(lines[i], opts)
+				result := q.Match(entries[i].RelLine, opts)
 				if result.Matched {
 					local = append(local, search.RankedResult{Index: i, Result: result})
 				}
@@ -90,26 +85,26 @@ func runMatch(
 		return merged[i].Result.Score > merged[j].Result.Score
 	})
 
-	out.FullRanked = filterRankIndices(indicesFromResults(merged), req.OnlyDirs, req.OnlyFiles, isDirs)
+	out.FullRanked = filterRankIndicesInPlace(entries, indicesFromResults(merged), req.OnlyDirs, req.OnlyFiles)
 
 	raw := merged
 	if maxResults > 0 && len(raw) > maxResults {
 		raw = raw[:maxResults]
 	}
-	out.Ranked = filterRankIndices(indicesFromResults(raw), req.OnlyDirs, req.OnlyFiles, isDirs)
-	out.DisplayRelLines = relLinesForIndices(lines, out.Ranked)
+	out.Ranked = filterRankIndicesInPlace(entries, indicesFromResults(raw), req.OnlyDirs, req.OnlyFiles)
+	out.DisplayRelLines = relLinesForIndicesInPlace(entries, out.Ranked)
 
 	if len(raw) > 0 {
 		out.MatchRanges = make(map[int][]search.Range)
 		for _, r := range raw {
 			idx := r.Index
-			if idx < 0 || idx >= len(lines) || len(r.Result.Ranges) == 0 {
+			if idx < 0 || idx >= n || len(r.Result.Ranges) == 0 {
 				continue
 			}
-			if req.OnlyDirs && (idx >= len(isDirs) || !isDirs[idx]) {
+			if req.OnlyDirs && !entries[idx].IsDir {
 				continue
 			}
-			if req.OnlyFiles && (idx >= len(isDirs) || isDirs[idx]) {
+			if req.OnlyFiles && entries[idx].IsDir {
 				continue
 			}
 			out.MatchRanges[idx] = r.Result.Ranges
@@ -129,19 +124,19 @@ func indicesFromResults(raw []search.RankedResult) []int {
 	return out
 }
 
-func filterRankIndices(indices []int, onlyDirs, onlyFiles bool, isDirs []bool) []int {
+func filterRankIndicesInPlace(entries []Entry, indices []int, onlyDirs, onlyFiles bool) []int {
 	if !onlyDirs && !onlyFiles {
 		return append([]int(nil), indices...)
 	}
 	filtered := make([]int, 0, len(indices))
 	for _, idx := range indices {
-		if idx < 0 || idx >= len(isDirs) {
+		if idx < 0 || idx >= len(entries) {
 			continue
 		}
-		if onlyDirs && !isDirs[idx] {
+		if onlyDirs && !entries[idx].IsDir {
 			continue
 		}
-		if onlyFiles && isDirs[idx] {
+		if onlyFiles && entries[idx].IsDir {
 			continue
 		}
 		filtered = append(filtered, idx)
@@ -149,7 +144,8 @@ func filterRankIndices(indices []int, onlyDirs, onlyFiles bool, isDirs []bool) [
 	return filtered
 }
 
-func emptyDisplayIndices(n int, onlyDirs, onlyFiles bool, isDirs []bool, maxResults int) []int {
+func emptyDisplayIndicesInPlace(entries []Entry, onlyDirs, onlyFiles bool, maxResults int) []int {
+	n := len(entries)
 	if n == 0 {
 		return nil
 	}
@@ -166,10 +162,10 @@ func emptyDisplayIndices(n int, onlyDirs, onlyFiles bool, isDirs []bool, maxResu
 	}
 	out := make([]int, 0, cap)
 	for i := 0; i < n && len(out) < cap; i++ {
-		if onlyDirs && (i >= len(isDirs) || !isDirs[i]) {
+		if onlyDirs && !entries[i].IsDir {
 			continue
 		}
-		if onlyFiles && (i >= len(isDirs) || isDirs[i]) {
+		if onlyFiles && entries[i].IsDir {
 			continue
 		}
 		out = append(out, i)
@@ -177,14 +173,14 @@ func emptyDisplayIndices(n int, onlyDirs, onlyFiles bool, isDirs []bool, maxResu
 	return out
 }
 
-func relLinesForIndices(lines []string, ranked []int) []string {
+func relLinesForIndicesInPlace(entries []Entry, ranked []int) []string {
 	if len(ranked) == 0 {
 		return nil
 	}
 	out := make([]string, len(ranked))
 	for i, idx := range ranked {
-		if idx >= 0 && idx < len(lines) {
-			out[i] = lines[idx]
+		if idx >= 0 && idx < len(entries) {
+			out[i] = entries[idx].RelLine
 		}
 	}
 	return out

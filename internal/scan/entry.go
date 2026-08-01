@@ -10,19 +10,17 @@ import (
 
 // Entry is one indexed file or directory under a search root.
 type Entry struct {
-	Path    string // absolute, clean
 	RelLine string // path relative to display root (display / fuzzy match)
 	IsDir   bool
 	Type    localfs.EntryType
-	Size    int64 // file byte size from walk; 0 for directories
+	Size    int64 // file byte size from walk; 0 for directories and lazy pending hidden files
 }
 
 func buildEntry(root, path string, d fs.DirEntry, isDir bool) (Entry, bool) {
-	rel, relErr := filepath.Rel(root, path)
-	if relErr != nil {
+	rel := relLine(root, path)
+	if rel == "" || rel == "." {
 		return Entry{}, false
 	}
-	rel = filepath.ToSlash(rel)
 
 	entryType := localfs.EntryFile
 	if d.Type()&fs.ModeSymlink != 0 {
@@ -31,22 +29,32 @@ func buildEntry(root, path string, d fs.DirEntry, isDir bool) (Entry, bool) {
 			isDir = info.IsDir()
 		}
 	}
-	var size int64
 	if isDir {
 		entryType = localfs.EntryDirectory
 	} else if entryType != localfs.EntrySymlink {
 		entryType = localfs.EntryFile
-		if info, infoErr := d.Info(); infoErr == nil {
-			size = info.Size()
-		}
 	}
 
 	return Entry{
-		Path:    filepath.Clean(path),
 		RelLine: rel,
 		IsDir:   isDir,
 		Type:    entryType,
-		Size:    size,
+	}, true
+}
+
+func entryFromHiddenFilePath(displayRoot, pathOrRel string) (Entry, bool) {
+	rel := pathOrRel
+	if filepath.IsAbs(pathOrRel) {
+		rel = relLine(displayRoot, pathOrRel)
+	} else {
+		rel = filepath.ToSlash(pathOrRel)
+	}
+	if rel == "" {
+		return Entry{}, false
+	}
+	return Entry{
+		RelLine: rel,
+		Type:    localfs.EntryFile,
 	}, true
 }
 

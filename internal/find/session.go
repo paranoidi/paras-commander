@@ -38,8 +38,8 @@ func (s *Session) Workers() int { return s.w.Workers() }
 // SkippedHiddenDirs returns absolute paths of dot-directories skipped when IncludeHidden was false.
 func (s *Session) SkippedHiddenDirs() []string { return s.w.SkippedHiddenDirs() }
 
-// SkippedHiddenFiles returns buffered dot-file entries skipped when IncludeHidden was false.
-func (s *Session) SkippedHiddenFiles() []Entry { return s.w.SkippedHiddenFiles() }
+// SkippedHiddenFiles returns absolute paths of dot-files skipped when IncludeHidden was false.
+func (s *Session) SkippedHiddenFiles() []string { return s.w.SkippedHiddenFiles() }
 
 // Close cancels the walk and waits for the goroutine.
 func (s *Session) Close() { s.w.Close() }

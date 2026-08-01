@@ -112,13 +112,16 @@ type FindDialogState struct {
 	SearchOnlySelections bool
 	// SelectionDirRoots is a pruned snapshot of selected directory paths at dialog open.
 	SelectionDirRoots []string
-	Entries           []FindEntry
-	Query             string
-	QueryCursor       int // rune offset of caret within Query (0..len(runes))
-	QueryScroll       int // first visible rune offset for horizontal scrolling
-	Ranked            []int
-	MatchRanges       map[int][]search.Range // sparse: only entries with actual match ranges
-	// RankDisplayLines holds RelLine text parallel to Ranked while indexing before Entries sync.
+	// Entries mirrors the coordinator index; UI thread updates only via scan.Event (llm-docs/navigation.md).
+	Entries []FindEntry
+	// PathMeta resolves isDir and file size by absolute path for marked-selection helpers.
+	PathMeta    func(absPath string) (isDir bool, size int64, ok bool)
+	Query       string
+	QueryCursor int // rune offset of caret within Query (0..len(runes))
+	QueryScroll int // first visible rune offset for horizontal scrolling
+	Ranked      []int
+	MatchRanges map[int][]search.Range // sparse: only entries with actual match ranges
+	// RankDisplayLines holds RelLine text parallel to Ranked while indexing before Entries catch up.
 	RankDisplayLines []string
 	Selected         int
 	ListScroll       int
@@ -138,13 +141,17 @@ type FindDialogState struct {
 	FullRankedOnlyFiles  bool
 	// MarkedPaths holds paths toggled selected in the dialog (applied to the panel on OK).
 	MarkedPaths map[string]bool
-	// PathIsDir maps cleaned absolute path to isDir for O(1) conflict checks during marking.
-	PathIsDir map[string]bool
-	// PathSize maps cleaned absolute path to file byte size from the index walk.
-	PathSize map[string]int64
 	// markedSelGen bumps on MarkedPaths mutations; drives selection-size derived cache.
 	markedSelGen   uint64
 	markedSelCache findMarkedSelCache
+}
+
+// FindEntryAt returns one indexed entry from the UI mirror.
+func (s *FindDialogState) FindEntryAt(idx int) (FindEntry, bool) {
+	if idx < 0 || idx >= len(s.Entries) {
+		return FindEntry{}, false
+	}
+	return s.Entries[idx], true
 }
 
 // FindDialogHasSelectionsCheckbox reports whether the search-selections row is shown.

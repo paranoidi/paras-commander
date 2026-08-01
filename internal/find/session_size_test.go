@@ -9,7 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/fswalk"
 )
 
-func TestFindWalkCapturesFileSize(t *testing.T) {
+func TestFindWalkDoesNotStatSizeDuringIndex(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	path := filepath.Join(root, "sized.txt")
@@ -22,13 +22,13 @@ func TestFindWalkCapturesFileSize(t *testing.T) {
 	var got int64
 	for batch := range sess.Results() {
 		for _, e := range batch {
-			if e.Path == filepath.Clean(path) {
+			if e.RelLine == "sized.txt" {
 				got = e.Size
 			}
 		}
 	}
 	<-sess.Done()
-	if got != int64(len(content)) {
-		t.Fatalf("Size = %d, want %d", got, len(content))
+	if got != 0 {
+		t.Fatalf("Size during walk = %d, want 0 (lazy stat on mark)", got)
 	}
 }

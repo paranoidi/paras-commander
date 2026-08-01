@@ -1,6 +1,9 @@
 package scan
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 func TestEntryPathHidden(t *testing.T) {
 	t.Parallel()
@@ -22,13 +25,27 @@ func TestEntryPathHidden(t *testing.T) {
 	}
 }
 
+func TestFilterEntriesToScope(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	dirA := filepath.Join(root, "a")
+	entries := []Entry{
+		{RelLine: "a/in-a.txt"},
+		{RelLine: "b/in-b.txt"},
+	}
+	got := filterEntriesToScope(entries, root, []string{dirA})
+	if len(got) != 1 || got[0].RelLine != "a/in-a.txt" {
+		t.Fatalf("filterEntriesToScope = %+v", got)
+	}
+}
+
 func TestStripHiddenEntriesByName(t *testing.T) {
 	t.Parallel()
 	root := "/home/user"
 	entries := []Entry{
-		{Path: "/home/user/visible.txt", RelLine: "visible.txt"},
-		{Path: "/home/user/.gitignore", RelLine: ".gitignore"},
-		{Path: "/home/user/.git/config", RelLine: ".git/config"},
+		{RelLine: "visible.txt"},
+		{RelLine: ".gitignore"},
+		{RelLine: ".git/config"},
 	}
 	got := stripHiddenEntriesByName(entries, root)
 	if len(got) != 1 || got[0].RelLine != "visible.txt" {

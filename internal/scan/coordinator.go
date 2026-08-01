@@ -27,16 +27,21 @@ type coordinatorCmd struct {
 }
 
 type walkDoneMsg struct {
-	gen          int
-	root         string
-	err          error
-	skippedDirs  []string
-	skippedFiles []Entry
+	gen              int
+	root             string
+	err              error
+	skippedDirs      []string
+	skippedFilePaths []string
 }
 
 type walkBatchMsg struct {
 	gen   int
+	root  string
 	batch []Entry
+}
+
+type hiddenWorkMsg struct {
+	gen int
 }
 
 // Coordinator owns find index ingest, walks, hidden expansion, and background match.
@@ -73,31 +78,21 @@ func (c *Coordinator) Cancel() {
 	c.cmd <- coordinatorCmd{cancel: true}
 }
 
-// SetIncludeHidden toggles hidden indexing policy. Turning hidden off strips asynchronously.
+// SetIncludeHidden toggles hidden indexing policy.
 func (c *Coordinator) SetIncludeHidden(on bool) {
-	if on {
-		done := make(chan struct{})
-		c.cmd <- coordinatorCmd{includeHidden: &on, done: done}
-		<-done
-		return
-	}
 	c.cmd <- coordinatorCmd{includeHidden: &on}
 }
 
 // Restart clears the index and starts fresh (stay-on-volume toggle).
 func (c *Coordinator) Restart(opts StartOpts) {
-	done := make(chan struct{})
-	c.cmd <- coordinatorCmd{restart: &opts, done: done}
-	<-done
+	c.cmd <- coordinatorCmd{restart: &opts}
 }
 
 // NarrowSelection stops walks outside scope and filters the index.
 func (c *Coordinator) NarrowSelection(roots []string) {
 	out := make([]string, len(roots))
 	copy(out, roots)
-	done := make(chan struct{})
-	c.cmd <- coordinatorCmd{narrowSelection: out, done: done}
-	<-done
+	c.cmd <- coordinatorCmd{narrowSelection: out}
 }
 
 // WidenSelection starts the panel root walk if missing.
@@ -109,28 +104,6 @@ func (c *Coordinator) Widen() {
 func (c *Coordinator) RequestMatch(req MatchRequest) {
 	r := req
 	c.cmd <- coordinatorCmd{match: &r}
-}
-
-// Snapshot returns a copy of the active session index (nil when idle).
-func (c *Coordinator) Snapshot() []Entry {
-	c.sessMu.RLock()
-	s := c.active
-	c.sessMu.RUnlock()
-	if s == nil {
-		return nil
-	}
-	return s.idx.Snapshot()
-}
-
-// IndexedCount returns the live indexed entry count.
-func (c *Coordinator) IndexedCount() int {
-	c.sessMu.RLock()
-	s := c.active
-	c.sessMu.RUnlock()
-	if s == nil {
-		return 0
-	}
-	return s.idx.Len()
 }
 
 type session struct {
@@ -192,7 +165,7 @@ func (c *Coordinator) loop() {
 			switch m := msg.(type) {
 			case walkBatchMsg:
 				if s := c.activeSession(); s != nil && m.gen == s.gen {
-					s.ingestBatch(m.batch)
+					s.ingestBatch(m.root, m.batch)
 				}
 			case walkDoneMsg:
 				if s := c.activeSession(); s != nil && m.gen == s.gen {
@@ -206,6 +179,10 @@ func (c *Coordinator) loop() {
 			case stripDoneMsg:
 				if s := c.activeSession(); s != nil && m.gen == s.gen {
 					s.applyStripDone(m.entries)
+				}
+			case hiddenWorkMsg:
+				if s := c.activeSession(); s != nil && m.gen == s.gen {
+					s.runHiddenWorkStep()
 				}
 			}
 		}
@@ -269,13 +246,17 @@ func (s *session) emit(ev Event) {
 	}
 }
 
-func (s *session) emitCount() {
-	s.emit(Event{
+func (s *session) emitCount(added []Entry) {
+	ev := Event{
 		CountUpdate: true,
 		Count:       s.idx.Len(),
 		WalkWorkers: s.maxWalkWorkers(),
 		IndexActive: len(s.walks) > 0 || s.hiddenWorkPending(),
-	})
+	}
+	if len(added) > 0 {
+		ev.BatchAdded = append([]Entry(nil), added...)
+	}
+	s.emit(ev)
 }
 
 func (s *session) maxWalkWorkers() int {
@@ -368,7 +349,7 @@ func (s *session) startRoots(skipIndexedSelectionSubtrees bool) {
 	for _, root := range s.scopeRoots() {
 		s.startWalk(root, skipIndexedSelectionSubtrees)
 	}
-	s.emitCount()
+	s.emitCount(nil)
 	s.maybeFinish()
 }
 
@@ -391,7 +372,7 @@ func (s *session) startWalk(root string, skipIndexedSelectionSubtrees bool) {
 		Gitignore:     s.opts.Gitignore,
 		ShouldSkipDir: s.shouldSkipForRoot(root, skipIndexedSelectionSubtrees),
 	}
-	sess := startRootWalk(s.ctx, root, wopts, s.opts.Walk)
+	sess := startRootWalk(s.ctx, root, wopts)
 	s.walks[root] = &walkHandle{root: root, sess: sess}
 	go s.readWalk(sess, gen, root)
 }
@@ -399,18 +380,18 @@ func (s *session) startWalk(root string, skipIndexedSelectionSubtrees bool) {
 func (s *session) readWalk(sess *rootWalk, gen int, root string) {
 	for batch := range sess.Results() {
 		select {
-		case s.coord.internal <- walkBatchMsg{gen: gen, batch: batch}:
+		case s.coord.internal <- walkBatchMsg{gen: gen, root: root, batch: batch}:
 		case <-s.ctx.Done():
 			return
 		}
 	}
 	<-sess.Done()
 	msg := walkDoneMsg{
-		gen:          gen,
-		root:         root,
-		err:          sess.Err(),
-		skippedDirs:  sess.SkippedHiddenDirs(),
-		skippedFiles: sess.SkippedHiddenFiles(),
+		gen:              gen,
+		root:             root,
+		err:              sess.Err(),
+		skippedDirs:      sess.SkippedHiddenDirs(),
+		skippedFilePaths: sess.SkippedHiddenFiles(),
 	}
 	select {
 	case s.coord.internal <- msg:
@@ -418,12 +399,23 @@ func (s *session) readWalk(sess *rootWalk, gen int, root string) {
 	}
 }
 
-func (s *session) ingestBatch(batch []Entry) {
+func (s *session) ingestBatch(walkRoot string, batch []Entry) {
 	if len(batch) == 0 {
 		return
 	}
-	if s.idx.Append(s.opts.DisplayRoot, batch) > 0 {
-		s.emitCount()
+	displayRoot := filepath.Clean(s.opts.DisplayRoot)
+	walkRoot = filepath.Clean(walkRoot)
+	if walkRoot != "" && walkRoot != displayRoot {
+		for i, e := range batch {
+			abs := filepath.Join(walkRoot, filepath.FromSlash(e.RelLine))
+			if e.RelLine == "." {
+				abs = walkRoot
+			}
+			batch[i].RelLine = relLine(displayRoot, abs)
+		}
+	}
+	if added := s.idx.Append(displayRoot, batch); len(added) > 0 {
+		s.emitCount(added)
 	}
 	s.maybeFinish()
 }
@@ -431,8 +423,8 @@ func (s *session) ingestBatch(batch []Entry) {
 func (s *session) onWalkDone(msg walkDoneMsg) {
 	delete(s.walks, msg.root)
 	s.completedRoots[msg.root] = struct{}{}
-	if len(msg.skippedDirs) > 0 || len(msg.skippedFiles) > 0 {
-		s.hidden.mergeSkipped(msg.skippedDirs, msg.skippedFiles)
+	if len(msg.skippedDirs) > 0 || len(msg.skippedFilePaths) > 0 {
+		s.hidden.mergeSkipped(msg.skippedDirs, msg.skippedFilePaths)
 		if s.opts.IncludeHidden {
 			s.expandHidden()
 		}
@@ -440,7 +432,7 @@ func (s *session) onWalkDone(msg walkDoneMsg) {
 	if msg.err != nil && s.ctx.Err() == nil {
 		s.lastErr = msg.err
 	}
-	s.emitCount()
+	s.emitCount(nil)
 	s.maybeFinish()
 }
 
@@ -455,42 +447,93 @@ func (s *session) hiddenWorkPending() bool {
 	h := &s.hidden
 	return len(h.expandPending) > 0 ||
 		h.expandNext < len(h.pendingDirs) ||
-		h.filesSpliceAt < len(h.pendingFiles)
+		h.filesSpliceAt < len(h.pendingFilePaths)
 }
 
 func (s *session) maybeFinish() {
 	if !s.allWalksDone() {
 		return
 	}
-	for s.opts.IncludeHidden && s.processHidden() {
+	if s.opts.IncludeHidden && s.hiddenWorkPending() {
+		s.scheduleHiddenWork()
+		return
+	}
+	s.emitIndexFinishedIfReady()
+}
+
+func (s *session) scheduleHiddenWork() {
+	select {
+	case s.coord.internal <- hiddenWorkMsg{gen: s.gen}:
+	default:
+	}
+}
+
+func (s *session) runHiddenWorkStep() {
+	if !s.opts.IncludeHidden || !s.hiddenWorkPending() {
+		s.emitIndexFinishedIfReady()
+		return
+	}
+	if !s.allWalksDone() {
+		return
+	}
+	s.processHiddenOneStep()
+	if !s.allWalksDone() {
+		return
 	}
 	if s.hiddenWorkPending() {
+		s.scheduleHiddenWork()
+		return
+	}
+	s.emitIndexFinishedIfReady()
+}
+
+func (s *session) emitIndexFinishedIfReady() {
+	if !s.allWalksDone() || s.hiddenWorkPending() {
 		return
 	}
 	errStr := ""
 	if s.lastErr != nil {
 		errStr = s.lastErr.Error()
 	}
-	s.emit(Event{IndexFinished: true, Count: s.idx.Len(), WalkWorkers: 0, IndexErr: errStr})
+	s.emit(Event{
+		IndexFinished: true,
+		CountUpdate:   true,
+		Count:         s.idx.Len(),
+		WalkWorkers:   0,
+		IndexActive:   false,
+		IndexErr:      errStr,
+	})
+}
+
+func (s *session) ingestHiddenBatch(batch []Entry) {
+	if len(batch) == 0 {
+		return
+	}
+	displayRoot := filepath.Clean(s.opts.DisplayRoot)
+	if added := s.idx.Append(displayRoot, batch); len(added) > 0 {
+		s.emitCount(added)
+	}
 }
 
 func (s *session) setIncludeHidden(on bool) {
 	s.opts.IncludeHidden = on
 	if on {
-		s.expandHidden()
-		s.emitCount()
-		s.maybeFinish()
+		s.scheduleHiddenWork()
+		s.emitCount(nil)
 		return
 	}
 	s.stopExpandedHiddenWalks()
 	s.hidden.expandPending = nil
 	gen := s.gen
 	displayRoot := s.opts.DisplayRoot
-	snap := s.idx.Snapshot()
-	go func() {
-		filtered := stripHiddenEntriesByName(snap, displayRoot)
-		s.coord.internal <- stripDoneMsg{gen: gen, entries: filtered}
-	}()
+	var filtered []Entry
+	s.idx.View(func(entries []Entry, _ int) {
+		filtered = stripHiddenEntriesByName(append([]Entry(nil), entries...), displayRoot)
+	})
+	select {
+	case s.coord.internal <- stripDoneMsg{gen: gen, entries: filtered}:
+	case <-s.ctx.Done():
+	}
 }
 
 func (s *session) applyStripDone(filtered []Entry) {
@@ -498,60 +541,51 @@ func (s *session) applyStripDone(filtered []Entry) {
 	s.hidden.expandedRoots = nil
 	s.hidden.filesSpliceAt = 0
 	s.hidden.expandNext = 0
-	s.emit(Event{
-		CountUpdate:   true,
-		Count:         s.idx.Len(),
-		WalkWorkers:   s.maxWalkWorkers(),
-		IndexActive:   len(s.walks) > 0 || s.hiddenWorkPending(),
-		IndexReplaced: true,
-	})
+	s.emitIndexReplaced(filtered)
 	s.maybeFinish()
+}
+
+func (s *session) emitIndexReplaced(filtered []Entry) {
+	s.emit(Event{
+		CountUpdate:     true,
+		Count:           s.idx.Len(),
+		WalkWorkers:     s.maxWalkWorkers(),
+		IndexActive:     len(s.walks) > 0 || s.hiddenWorkPending(),
+		IndexReplaced:   true,
+		ReplacedEntries: append([]Entry(nil), filtered...),
+	})
 }
 
 func (s *session) expandHidden() {
 	if !s.opts.IncludeHidden {
 		return
 	}
-	if batch := s.hidden.spliceFilesBatch(); len(batch) > 0 {
-		s.ingestBatch(batch)
-	}
-	s.hidden.enqueueDirs(hiddenEnqueuePerTick)
-	s.processHidden()
+	s.scheduleHiddenWork()
 }
 
-func (s *session) processHidden() bool {
+func (s *session) processHiddenOneStep() {
 	if !s.opts.IncludeHidden {
-		return false
+		return
 	}
-	if batch := s.hidden.spliceFilesBatch(); len(batch) > 0 {
-		s.ingestBatch(batch)
+	displayRoot := s.opts.DisplayRoot
+	if batch := s.hidden.spliceFilesBatch(displayRoot); len(batch) > 0 {
+		s.ingestHiddenBatch(batch)
+		return
 	}
 	s.hidden.enqueueDirs(hiddenEnqueuePerTick)
 	limit := hiddenExpandPerTickForCount(s.idx.Len())
 	maxWalks := maxConcurrentWalksForCount(s.idx.Len())
-	started := false
 	for limit > 0 && len(s.hidden.expandPending) > 0 {
 		if len(s.walks) >= maxWalks {
-			return true
+			return
 		}
 		dir := s.hidden.expandPending[0]
 		s.hidden.expandPending = s.hidden.expandPending[1:]
 		limit--
-		started = true
-		s.ingestBatch([]Entry{dirEntryForHiddenDir(dir)})
+		s.ingestHiddenBatch([]Entry{dirEntryForHiddenDir(displayRoot, dir)})
 		delete(s.completedRoots, filepath.Clean(dir))
 		s.startWalk(dir, false)
 	}
-	if len(s.hidden.expandPending) > 0 ||
-		s.hidden.expandNext < len(s.hidden.pendingDirs) ||
-		s.hidden.filesSpliceAt < len(s.hidden.pendingFiles) {
-		if batch := s.hidden.spliceFilesBatch(); len(batch) > 0 {
-			s.ingestBatch(batch)
-		}
-		s.hidden.enqueueDirs(hiddenEnqueuePerTick)
-		return true
-	}
-	return started
 }
 
 func (s *session) stopExpandedHiddenWalks() {
@@ -593,10 +627,10 @@ func (s *session) narrowSelection(roots []string) {
 	}
 	var filtered []Entry
 	s.idx.View(func(entries []Entry, _ int) {
-		filtered = filterEntriesToScope(entries, s.opts.DisplayRoot, roots)
+		filtered = filterEntriesToScope(append([]Entry(nil), entries...), s.opts.DisplayRoot, roots)
 	})
 	s.idx.ReplaceEntries(s.opts.DisplayRoot, filtered)
-	s.emitCount()
+	s.emitIndexReplaced(filtered)
 	s.maybeFinish()
 }
 
@@ -604,17 +638,17 @@ func (s *session) widen() {
 	panelRoot := filepath.Clean(s.opts.DisplayRoot)
 	s.opts.SearchOnlySelections = false
 	if _, active := s.walks[panelRoot]; active {
-		s.emitCount()
+		s.emitCount(nil)
 		s.maybeFinish()
 		return
 	}
 	if _, done := s.completedRoots[panelRoot]; done {
-		s.emitCount()
+		s.emitCount(nil)
 		s.maybeFinish()
 		return
 	}
 	s.startWalk(panelRoot, true)
-	s.emitCount()
+	s.emitCount(nil)
 	s.maybeFinish()
 }
 
@@ -635,8 +669,7 @@ func (s *session) scheduleMatch(req MatchRequest) {
 	s.matchRunning = true
 	gen := req.Gen
 	go func() {
-		lines, isDirs := s.idx.LinesAndDirs()
-		out := runMatch(lines, isDirs, req, func() bool {
+		out := s.idx.RunMatch(req, func() bool {
 			select {
 			case <-ctx.Done():
 				return true

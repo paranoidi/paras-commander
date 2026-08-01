@@ -21,6 +21,8 @@ type StartOpts struct {
 }
 
 // Event is sent from the scan coordinator to the UI thread.
+// Pay attention: the UI must not read the coordinator index directly — only mirror
+// these payloads into FindDialogState on the main thread (see llm-docs/navigation.md).
 type Event struct {
 	Gen int
 
@@ -34,6 +36,12 @@ type Event struct {
 
 	// IndexReplaced is set after a bulk in-place index rewrite (e.g. include-hidden off).
 	IndexReplaced bool
+
+	// BatchAdded carries newly indexed entries for incremental UI mirror updates.
+	BatchAdded []Entry
+	// ReplacedEntries is the full corpus after IndexReplaced (narrow/strip); incremental
+	// indexing uses BatchAdded only and IndexFinished carries CountUpdate without a bulk replace.
+	ReplacedEntries []Entry
 
 	MatchResult bool
 	Match       MatchOutput

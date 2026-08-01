@@ -64,9 +64,19 @@ func (a *App) reconcileSelectionSizeScans(panelID int) {
 	)
 }
 
-func directoriesNeedingScanFromPathIsDir(
+func findDialogPathIsDir(pathMeta func(string) (isDir bool, size int64, ok bool)) func(string) bool {
+	return func(path string) bool {
+		if pathMeta == nil {
+			return false
+		}
+		isDir, _, ok := pathMeta(path)
+		return ok && isDir
+	}
+}
+
+func directoriesNeedingScanFromIsDir(
 	pruned []string,
-	pathIsDir map[string]bool,
+	isDir func(string) bool,
 	listingDev uint64,
 	listingDevValid bool,
 	du interface {
@@ -76,12 +86,12 @@ func directoriesNeedingScanFromPathIsDir(
 	descendIntoMountPoints bool,
 	goduIgnore func(string) bool,
 ) []string {
-	if du == nil || len(pruned) == 0 {
+	if du == nil || len(pruned) == 0 || isDir == nil {
 		return nil
 	}
 	var need []string
 	for _, path := range pruned {
-		if pathIsDir == nil || !pathIsDir[path] {
+		if !isDir(path) {
 			continue
 		}
 		if _, ok := du.ByteSize(path); ok {

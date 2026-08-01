@@ -43,6 +43,7 @@ func (h *Handler) OpenDialog(panelID int) {
 		Focus:                      0,
 		Indexing:                   true,
 	}
+	h.bindFindDialogPathMeta(&h.model.FindDialog)
 	h.startFindIndexer()
 }
 
@@ -71,9 +72,15 @@ func (h *Handler) findScopeRoots(st *dialog.FindDialogState) []string {
 	return []string{filepath.Clean(st.RootPath)}
 }
 
-// findIndexingSkipsRank is true while a walk is running with an empty query.
-func findIndexingSkipsRank(st *dialog.FindDialogState) bool {
+// findIndexingSkipsMatch is true while a walk is running with an empty query.
+// Display rank still updates incrementally; only background fuzzy match is skipped.
+func findIndexingSkipsMatch(st *dialog.FindDialogState) bool {
 	return st.Indexing && search.Parse(st.Query).Empty()
+}
+
+// findIndexingSkipsRank is an alias kept for call sites; see findIndexingSkipsMatch.
+func findIndexingSkipsRank(st *dialog.FindDialogState) bool {
+	return findIndexingSkipsMatch(st)
 }
 
 func findIndexingCountThrottle(indexed int) time.Duration {
@@ -104,6 +111,91 @@ func (h *Handler) maybeRenderFindIndexing(st *dialog.FindDialogState) bool {
 	return false
 }
 
+func (h *Handler) applyEmptyQueryDisplayRank(st *dialog.FindDialogState) {
+	maxResults := h.config.UI.Find.MaxResults
+	st.Ranked = emptyQueryDisplayIndicesFromEntries(st.Entries, st.OnlyDirectories, st.OnlyFiles, maxResults)
+	st.RankDisplayLines = nil
+	st.MatchRanges = nil
+	st.FullRanked = nil
+	st.FullRankedEntriesLen = len(st.Entries)
+	st.FullRankedOnlyDirs = st.OnlyDirectories
+	st.FullRankedOnlyFiles = st.OnlyFiles
+	st.RankPending = false
+	if st.Selected >= len(st.Ranked) {
+		if len(st.Ranked) == 0 {
+			st.Selected = 0
+		} else {
+			st.Selected = len(st.Ranked) - 1
+		}
+	}
+	if st.Selected < 0 {
+		st.Selected = 0
+	}
+	dialog.EnsureFindListScroll(st, h.findDialogListRows())
+}
+
+// extendEmptyQueryDisplayRank appends walk-order indices for newly mirrored entries.
+func (h *Handler) extendEmptyQueryDisplayRank(st *dialog.FindDialogState, fromIdx int) {
+	prevLen := len(st.Ranked)
+	st.Ranked = appendEmptyQueryDisplayIndices(
+		st.Ranked, st.Entries, fromIdx,
+		st.OnlyDirectories, st.OnlyFiles, h.config.UI.Find.MaxResults,
+	)
+	if len(st.Ranked) == prevLen {
+		return
+	}
+	st.RankDisplayLines = nil
+	st.MatchRanges = nil
+	st.RankPending = false
+	if st.Selected >= len(st.Ranked) {
+		if len(st.Ranked) == 0 {
+			st.Selected = 0
+		} else {
+			st.Selected = len(st.Ranked) - 1
+		}
+	}
+	if st.Selected < 0 {
+		st.Selected = 0
+	}
+	dialog.EnsureFindListScroll(st, h.findDialogListRows())
+}
+
+func appendEmptyQueryDisplayIndices(
+	ranked []int,
+	entries []dialog.FindEntry,
+	fromIdx int,
+	onlyDirs, onlyFiles bool,
+	maxResults int,
+) []int {
+	if fromIdx < 0 {
+		fromIdx = 0
+	}
+	if fromIdx >= len(entries) {
+		return ranked
+	}
+	cap := maxResults
+	if cap <= 0 {
+		cap = len(entries)
+	}
+	if len(ranked) >= cap {
+		return ranked
+	}
+	for i := fromIdx; i < len(entries); i++ {
+		ent := entries[i]
+		if onlyDirs && !ent.IsDir {
+			continue
+		}
+		if onlyFiles && ent.IsDir {
+			continue
+		}
+		ranked = append(ranked, i)
+		if len(ranked) >= cap {
+			break
+		}
+	}
+	return ranked
+}
+
 func emptyQueryDisplayIndicesFromEntries(entries []dialog.FindEntry, onlyDirs, onlyFiles bool, maxResults int) []int {
 	if len(entries) == 0 {
 		return nil
@@ -132,34 +224,11 @@ func emptyQueryDisplayIndicesFromEntries(entries []dialog.FindEntry, onlyDirs, o
 			continue
 		}
 		out = append(out, i)
-		if maxResults > 0 && len(out) >= maxResults {
+		if len(out) >= cap {
 			break
 		}
 	}
 	return out
-}
-
-func (h *Handler) applyEmptyQueryDisplayRank(st *dialog.FindDialogState) {
-	maxResults := h.config.UI.Find.MaxResults
-	st.Ranked = emptyQueryDisplayIndicesFromEntries(st.Entries, st.OnlyDirectories, st.OnlyFiles, maxResults)
-	st.RankDisplayLines = nil
-	st.MatchRanges = nil
-	st.FullRanked = nil
-	st.FullRankedEntriesLen = len(st.Entries)
-	st.FullRankedOnlyDirs = st.OnlyDirectories
-	st.FullRankedOnlyFiles = st.OnlyFiles
-	st.RankPending = false
-	if st.Selected >= len(st.Ranked) {
-		if len(st.Ranked) == 0 {
-			st.Selected = 0
-		} else {
-			st.Selected = len(st.Ranked) - 1
-		}
-	}
-	if st.Selected < 0 {
-		st.Selected = 0
-	}
-	dialog.EnsureFindListScroll(st, h.findDialogListRows())
 }
 
 func emptyQueryDisplayIndices(n int, onlyDirs, onlyFiles bool, isDirs []bool, maxResults int) []int {
@@ -196,18 +265,17 @@ func findEntryAbsPath(st *dialog.FindDialogState, ent dialog.FindEntry) string {
 
 func (h *Handler) findPathIsDir(st *dialog.FindDialogState) func(string) bool {
 	return func(path string) bool {
-		if st.PathIsDir == nil {
+		if st.PathMeta == nil {
 			return false
 		}
-		return st.PathIsDir[filepath.Clean(path)]
+		isDir, _, ok := st.PathMeta(filepath.Clean(path))
+		return ok && isDir
 	}
 }
 
 func (h *Handler) narrowFindIndexer() {
 	st := &h.model.FindDialog
 	h.scan.NarrowSelection(st.SelectionDirRoots)
-	h.syncEntriesFromScan(st)
-	st.IndexedCount = len(st.Entries)
 	h.syncFindDialogRanks()
 }
 
@@ -473,10 +541,12 @@ func (h *Handler) ApplyPendingRank() bool {
 
 	var selectedRelLine string
 	if st.Selected >= 0 && st.Selected < len(st.Ranked) {
-		if entIdx := st.Ranked[st.Selected]; entIdx >= 0 && entIdx < len(st.Entries) {
-			selectedRelLine = st.Entries[entIdx].RelLine
-		} else if st.Selected < len(st.RankDisplayLines) {
+		if st.Selected < len(st.RankDisplayLines) {
 			selectedRelLine = st.RankDisplayLines[st.Selected]
+		} else if entIdx := st.Ranked[st.Selected]; entIdx >= 0 {
+			if ent, ok := st.FindEntryAt(entIdx); ok {
+				selectedRelLine = ent.RelLine
+			}
 		}
 	}
 
@@ -486,20 +556,16 @@ func (h *Handler) ApplyPendingRank() bool {
 	st.FullRanked = result.fullRanked
 	st.FullRankedGen = gen
 	st.FullRankedEntriesLen = result.entriesLen
-	if result.entriesLen > 0 && len(st.Entries) == 0 && !st.Indexing {
-		h.syncEntriesFromScan(st)
-		st.FullRankedEntriesLen = len(st.Entries)
-	}
 	st.FullRankedOnlyDirs = result.onlyDirs
 	st.FullRankedOnlyFiles = result.onlyFiles
 
 	if selectedRelLine != "" {
 		for i, entIdx := range st.Ranked {
 			line := ""
-			if entIdx >= 0 && entIdx < len(st.Entries) {
-				line = st.Entries[entIdx].RelLine
-			} else if i < len(st.RankDisplayLines) {
+			if i < len(st.RankDisplayLines) {
 				line = st.RankDisplayLines[i]
+			} else if ent, ok := st.FindEntryAt(entIdx); ok {
+				line = ent.RelLine
 			}
 			if line == selectedRelLine {
 				st.Selected = i
@@ -599,11 +665,11 @@ func (h *Handler) navigateFindEntryToPanel(panelID int) (string, bool) {
 		return "", false
 	}
 	entIdx := st.Ranked[st.Selected]
-	if entIdx < 0 || entIdx >= len(st.Entries) {
+	ent, ok := st.FindEntryAt(entIdx)
+	if !ok {
 		return "", false
 	}
-	ent := st.Entries[entIdx]
-	path := ent.AbsPath(st.RootPath)
+	path := findEntryAbsPath(st, ent)
 
 	dir, name := path, ""
 	if !ent.IsDir {
@@ -661,6 +727,13 @@ func (h *Handler) findDialogResultIndices(st *dialog.FindDialogState) []int {
 		len(st.FullRanked) > 0 {
 		return st.FullRanked
 	}
+	return h.rankFindCorpusIndices(st)
+}
+
+func (h *Handler) rankFindCorpusIndices(st *dialog.FindDialogState) []int {
+	if len(st.Entries) == 0 {
+		return nil
+	}
 	ranked, _ := dialog.RankFindEntries(
 		st.Entries,
 		st.Query,
@@ -693,15 +766,14 @@ func (h *Handler) findDialogSelectAllEmptyQuery(st *dialog.FindDialogState) {
 		st.MarkedPaths = make(map[string]bool)
 	}
 	paths := make([]string, 0, 256)
-	for i := range st.Entries {
-		e := st.Entries[i]
-		if st.OnlyDirectories && !e.IsDir {
+	for _, ent := range st.Entries {
+		if st.OnlyDirectories && !ent.IsDir {
 			continue
 		}
-		if st.OnlyFiles && e.IsDir {
+		if st.OnlyFiles && ent.IsDir {
 			continue
 		}
-		path := findEntryAbsPath(st, e)
+		path := findEntryAbsPath(st, ent)
 		if path == "" || st.MarkedPaths[path] {
 			continue
 		}
@@ -730,10 +802,11 @@ func (h *Handler) findDialogSelectAllIndices(st *dialog.FindDialogState, indices
 	}
 	paths := make([]string, 0, len(indices))
 	for _, entIdx := range indices {
-		if entIdx < 0 || entIdx >= len(st.Entries) {
+		ent, ok := st.FindEntryAt(entIdx)
+		if !ok {
 			continue
 		}
-		path := findEntryAbsPath(st, st.Entries[entIdx])
+		path := findEntryAbsPath(st, ent)
 		if path == "" || st.MarkedPaths[path] {
 			continue
 		}
@@ -770,10 +843,11 @@ func (h *Handler) findDialogToggleSelectionAndAdvance() {
 		return
 	}
 	entIdx := st.Ranked[st.Selected]
-	if entIdx < 0 || entIdx >= len(st.Entries) {
+	ent, ok := st.FindEntryAt(entIdx)
+	if !ok {
 		return
 	}
-	path := findEntryAbsPath(st, st.Entries[entIdx])
+	path := findEntryAbsPath(st, ent)
 	if path == "" {
 		return
 	}
@@ -1064,8 +1138,11 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dirsOnly bool, matcher panel.GroupMatcher) []string {
 	if indices == nil {
 		paths := make([]string, 0, 256)
-		for i := range st.Entries {
-			ent := st.Entries[i]
+		for i := 0; i < st.IndexedCount; i++ {
+			ent, ok := st.FindEntryAt(i)
+			if !ok {
+				continue
+			}
 			if filesOnly && ent.IsDir {
 				continue
 			}
@@ -1082,10 +1159,10 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 	}
 	paths := make([]string, 0, len(indices))
 	for _, entIdx := range indices {
-		if entIdx < 0 || entIdx >= len(st.Entries) {
+		ent, ok := st.FindEntryAt(entIdx)
+		if !ok {
 			continue
 		}
-		ent := st.Entries[entIdx]
 		if filesOnly && ent.IsDir {
 			continue
 		}

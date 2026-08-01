@@ -26,18 +26,22 @@ func TestFindMarkedSelectionSizeLabelUsesPathSizeWithoutStat(t *testing.T) {
 	root := t.TempDir()
 	a := filepath.Join(root, "a.txt")
 	b := filepath.Join(root, "b.txt")
+	ca := filepath.Clean(a)
+	cb := filepath.Clean(b)
 	st := &FindDialogState{
 		MarkedPaths: map[string]bool{
-			filepath.Clean(a): true,
-			filepath.Clean(b): true,
+			ca: true,
+			cb: true,
 		},
-		PathIsDir: map[string]bool{
-			filepath.Clean(a): false,
-			filepath.Clean(b): false,
-		},
-		PathSize: map[string]int64{
-			filepath.Clean(a): 5,
-			filepath.Clean(b): 5,
+		PathMeta: func(path string) (isDir bool, size int64, ok bool) {
+			switch path {
+			case ca:
+				return false, 5, true
+			case cb:
+				return false, 5, true
+			default:
+				return false, 0, false
+			}
 		},
 	}
 	got, ok := st.MarkedSelectionSizeLabel(false, nil, false, nil, "")
@@ -59,8 +63,12 @@ func TestFindMarkedSelectionDerivedCacheInvalidation(t *testing.T) {
 	path := filepath.Clean(filepath.Join(t.TempDir(), "f.txt"))
 	st := &FindDialogState{
 		MarkedPaths: map[string]bool{path: true},
-		PathIsDir:   map[string]bool{path: false},
-		PathSize:    map[string]int64{path: 100},
+		PathMeta: func(p string) (isDir bool, size int64, ok bool) {
+			if p == path {
+				return false, 100, true
+			}
+			return false, 0, false
+		},
 	}
 	if _, ok := st.MarkedSelectionSizeLabel(false, nil, false, nil, ""); !ok {
 		t.Fatal("expected label")
@@ -77,7 +85,12 @@ func TestFindMarkedSelectionSizeLabelPendingDirs(t *testing.T) {
 	dir := filepath.Clean(filepath.Join(t.TempDir(), "big"))
 	st := &FindDialogState{
 		MarkedPaths: map[string]bool{dir: true},
-		PathIsDir:   map[string]bool{dir: true},
+		PathMeta: func(p string) (isDir bool, size int64, ok bool) {
+			if p == dir {
+				return true, 0, true
+			}
+			return false, 0, false
+		},
 	}
 	working := theme.Default().SymbolWorking()
 	got, ok := st.MarkedSelectionSizeLabel(false, stubMarkedSelectionPainter{}, false, nil, working)
@@ -88,7 +101,6 @@ func TestFindMarkedSelectionSizeLabelPendingDirs(t *testing.T) {
 		t.Fatalf("label = %q, want pending glyph", got)
 	}
 	st.InvalidateMarkedSelectionSizeLabel()
-	st.PathIsDir[dir] = true
 	painter := stubMarkedSelectionPainter{sizes: map[string]int64{dir: 1024}}
 	got2, ok2 := st.MarkedSelectionSizeLabel(false, painter, false, nil, working)
 	if !ok2 {
@@ -103,18 +115,27 @@ func TestPrunedMarkedRootsFilesOnlyFastPath(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	marked := make(map[string]bool, 1000)
-	pathIsDir := make(map[string]bool, 1000)
-	pathSize := make(map[string]int64, 1000)
+	pathMeta := make(map[string]struct {
+		isDir bool
+		size  int64
+	}, 1000)
 	for i := range 1000 {
 		p := filepath.Clean(filepath.Join(root, "file_"+strconv.Itoa(i)+".txt"))
 		marked[p] = true
-		pathIsDir[p] = false
-		pathSize[p] = 1
+		pathMeta[p] = struct {
+			isDir bool
+			size  int64
+		}{false, 1}
 	}
 	st := &FindDialogState{
 		MarkedPaths: marked,
-		PathIsDir:   pathIsDir,
-		PathSize:    pathSize,
+		PathMeta: func(path string) (isDir bool, size int64, ok bool) {
+			meta, ok := pathMeta[path]
+			if !ok {
+				return false, 0, false
+			}
+			return meta.isDir, meta.size, true
+		},
 	}
 	pruned := st.PrunedMarkedRoots()
 	if len(pruned) != 1000 {
