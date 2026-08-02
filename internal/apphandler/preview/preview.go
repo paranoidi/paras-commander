@@ -47,15 +47,9 @@ func (h *Handler) CloseFilePreview() {
 	h.model.FilePreview = ui.FilePreviewState{}
 	h.mu.Unlock()
 	h.clearFilePreviewHold(previewTargetInactive)
-	h.clearQuickViewDirOverlayVisualHold()
 	if h.model.ActiveSubFocus == ui.SubFocusInactivePreview {
 		h.model.ActiveSubFocus = ui.SubFocusFileList
 	}
-}
-
-func (h *Handler) clearQuickViewDirOverlayVisualHold() {
-	h.model.QuickViewDirOverlayVisualHold = false
-	h.model.QuickViewDirOverlayVisualHoldPanel = panel.State{}
 }
 
 // FilePreviewOpen reports whether the inactive-column preview is open.
@@ -611,20 +605,13 @@ func (h *Handler) applyQuickViewPreviewNow() {
 	switch mode {
 	case quickViewWantNone:
 		h.ClearQuickViewDirOverlay()
-		h.clearQuickViewDirOverlayVisualHold()
 		h.patchColumnPreviewMessage("", "Quick view: no file")
 	case quickViewWantDir:
 		h.quickViewFollowDirectory()
 	case quickViewWantStatErr:
 		h.ClearQuickViewDirOverlay()
-		h.clearQuickViewDirOverlayVisualHold()
 		h.patchColumnPreviewMessage("", "Quick view: cannot read selection")
 	case quickViewWantFile:
-		// When coming from a dir overlay, keep showing it until file content arrives.
-		if h.model.QuickViewDirOverlayActive {
-			h.model.QuickViewDirOverlayVisualHoldPanel = h.model.QuickViewDirOverlay
-			h.model.QuickViewDirOverlayVisualHold = true
-		}
 		h.ClearQuickViewDirOverlay()
 		err := localfs.CheckFilePreviewable(path)
 		isImage := errors.Is(err, localfs.ErrFilePreviewImage)

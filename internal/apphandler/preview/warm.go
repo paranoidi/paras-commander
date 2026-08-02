@@ -73,16 +73,6 @@ func (h *Handler) SnapshotPreviewDrawStates() {
 	inactive = ui.MergeFilePreviewDrawWithHold(inactive, h.filePreviewHold)
 	h.overlayQuickViewInactiveDrawTitle(&inactive)
 
-	// During a folder→file debounce transition, keep the dir overlay visible until
-	// the file preview has actual content to display (Phase done or hold content arrived).
-	if h.model.QuickViewDirOverlayVisualHold {
-		if inactive.Open && (inactive.Phase == ui.FilePreviewPhaseDone || inactive.BodyHeld) {
-			h.clearQuickViewDirOverlayVisualHold()
-		} else {
-			// File content not yet ready — suppress the loading chrome.
-			inactive = ui.FilePreviewState{}
-		}
-	}
 	fullscreen = ui.MergeFilePreviewDrawWithHold(fullscreen, h.fullscreenFilePreviewHold)
 	carousel = ui.MergeFilePreviewDrawWithHold(carousel, h.carouselFilePreviewHold)
 
@@ -228,7 +218,7 @@ func (h *Handler) fullscreenFilePreviewLineCount(textW int) int {
 // driver's current file selection so the top-row filename updates during nav coalesce
 // without waiting for the debounced preview reload.
 func (h *Handler) overlayQuickViewInactiveDrawTitle(st *ui.FilePreviewState) {
-	if !h.model.QuickViewDisplayActive() || h.model.QuickViewDirOverlayActive || h.model.QuickViewDirOverlayVisualHold {
+	if !h.model.QuickViewDisplayActive() || h.model.QuickViewDirOverlayActive {
 		return
 	}
 	path, _, mode := h.quickViewWantFile()

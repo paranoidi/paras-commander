@@ -674,10 +674,11 @@ func TestQuickViewPreviewNavDebounceDefersPreviewUntilFlush(t *testing.T) {
 	}
 }
 
-// TestQuickViewDirToFileDebounceKeepsDirOverlayVisible verifies that navigating from a
-// directory entry to a text file during debounce keeps the dir-overlay visible
-// (QuickViewDirOverlayVisualHold) instead of immediately switching to the loading chrome.
-func TestQuickViewDirToFileDebounceKeepsDirOverlayVisible(t *testing.T) {
+// TestQuickViewDirToFileDebounceShowsPendingChromeImmediately verifies that navigating from a
+// directory entry to a text file, once the debounce flushes, immediately drops the stale
+// dir-overlay listing and shows pending file-preview chrome (loading state) rather than
+// mirroring the entered directory's listing until the async preview finishes.
+func TestQuickViewDirToFileDebounceShowsPendingChromeImmediately(t *testing.T) {
 	root := t.TempDir()
 	subdir := filepath.Join(root, "bravo")
 	if err := os.Mkdir(subdir, 0o755); err != nil {
@@ -708,40 +709,33 @@ func TestQuickViewDirToFileDebounceKeepsDirOverlayVisible(t *testing.T) {
 		t.Fatal("dir overlay should still be active while debounce is coalescing")
 	}
 
-	// Flush the debounce — this is where the bug occurred: applyQuickViewPreviewNow
-	// should set the visual hold before clearing the dir overlay.
 	flushed := app.previewCtrl.FlushQuickViewPreviewNow()
 	if !flushed {
 		t.Fatal("FlushQuickViewPreviewNow should have applied")
 	}
 
-	// After flush: dir overlay must be cleared but the visual hold must be active.
+	// After flush: dir overlay must be cleared and the inactive column shows file-preview
+	// chrome (pending/loading), never the stale directory listing.
 	if app.model.QuickViewDirOverlayActive {
 		t.Fatal("dir overlay should be cleared after debounce flush")
 	}
-
-	// The visual hold must be active: the inactive column should show the dir overlay
-	// (not file-preview chrome) while the file preview is still loading.
-	if !app.model.QuickViewDirOverlayVisualHold {
-		t.Fatal("visual hold should be active during dir→file transition while file is loading")
-	}
-	if app.model.InactiveColumnShowsFilePreview(app.inactivePanelID()) {
-		t.Fatal("inactive column should not show file-preview chrome while visual hold is active")
-	}
-
-	// Simulate the file preview completing (Phase=Done).
-	app.commandsMu.Lock()
-	app.model.FilePreview.Phase = ui.FilePreviewPhaseDone
-	app.model.FilePreview.CombinedText = "content"
-	app.commandsMu.Unlock()
-
-	// After snapshotPreviewDrawStates, the visual hold should be cleared.
-	app.previewCtrl.SnapshotPreviewDrawStates()
-	if app.model.QuickViewDirOverlayVisualHold {
-		t.Fatal("visual hold should be cleared once file preview has content")
-	}
 	if !app.model.InactiveColumnShowsFilePreview(app.inactivePanelID()) {
-		t.Fatal("inactive column should show file-preview chrome once content is ready")
+		t.Fatal("inactive column should show file-preview chrome immediately after flush")
+	}
+
+	app.commandsMu.RLock()
+	phase := app.model.FilePreview.Phase
+	imagePayload := app.model.FilePreview.ImagePayload
+	combinedText := app.model.FilePreview.CombinedText
+	app.commandsMu.RUnlock()
+	if phase != ui.FilePreviewPhasePending {
+		t.Fatalf("file preview phase = %v, want FilePreviewPhasePending", phase)
+	}
+	if imagePayload != "" {
+		t.Fatalf("file preview ImagePayload = %q, want empty", imagePayload)
+	}
+	if combinedText != "" {
+		t.Fatalf("file preview CombinedText = %q, want empty", combinedText)
 	}
 }
 
