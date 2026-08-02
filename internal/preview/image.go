@@ -94,10 +94,17 @@ func runImageCtx(ctx context.Context, req Request) Result {
 	if req.ImageProtocol == previewpanel.ImageProtocolSixel && req.ImageInTmux &&
 		len(payload) >= config.DefaultPreviewTmuxSixelMaxBytes {
 		// tmux (through 3.5a) silently discards a single escape sequence beyond its hardcoded
-		// ~1MB input buffer rather than forwarding it — sending this would show as the image
-		// flickering and vanishing rather than a clean, if lower-quality, preview.
-		metaResult.CombinedText = meta + " / too large for tmux"
-		return metaResult
+		// input buffer rather than forwarding it — sending this would show as the image
+		// flickering and vanishing rather than a clean, if lower-quality, preview. Retry at
+		// progressively smaller sizes before giving up.
+		if shrunk, shrunkBounds, ok := shrinkSixelForTmux(img, bounds.Dx(), bounds.Dy(),
+			config.DefaultPreviewTmuxSixelMaxBytes, config.PreviewImageMaxEdgePxMin, req.ImageUnicodePlaceholder); ok {
+			payload = shrunk
+			bounds = shrunkBounds
+		} else {
+			metaResult.CombinedText = meta + " / too large for tmux"
+			return metaResult
+		}
 	}
 	return Result{
 		Source:                  previewpanel.SourceExternalANSI,
@@ -129,6 +136,27 @@ func encodeImagePayload(img image.Image, proto previewpanel.ImageProtocol, unico
 		return buf.String(), nil
 	default:
 		return "", fmt.Errorf("unsupported image protocol %d", proto)
+	}
+}
+
+// shrinkSixelForTmux re-fits and re-encodes img at progressively smaller sizes (0.75x per
+// round) until the sixel payload fits under maxBytes or the next round would shrink an edge
+// to minEdge or below, whichever comes first. ok is false if no size under minEdge fits.
+func shrinkSixelForTmux(img image.Image, w, h, maxBytes, minEdge int, unicodePlaceholder bool) (payload string, bounds image.Rectangle, ok bool) {
+	for {
+		nw, nh := int(float64(w)*0.75), int(float64(h)*0.75)
+		if nw <= minEdge || nh <= minEdge {
+			return "", image.Rectangle{}, false
+		}
+		w, h = nw, nh
+		scaled := fitImage(img, w, h)
+		p, err := encodeImagePayload(scaled, previewpanel.ImageProtocolSixel, unicodePlaceholder, true)
+		if err != nil {
+			return "", image.Rectangle{}, false
+		}
+		if len(p) < maxBytes {
+			return p, scaled.Bounds(), true
+		}
 	}
 }
 

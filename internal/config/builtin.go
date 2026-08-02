@@ -314,10 +314,13 @@ const (
 	// via sixel's run-length bands, keeping typical previews under that ceiling. Not a config
 	// key.
 	DefaultPreviewTmuxSixelColors = 64
-	// DefaultPreviewTmuxSixelMaxBytes is a safety net below tmux's ~1MB (1,048,576 byte)
-	// pre-3.6 input buffer limit: a sixel payload at or above this size under tmux falls back
-	// to metadata text instead of risking a silently truncated/garbled image. Not a config key.
-	DefaultPreviewTmuxSixelMaxBytes = 900_000
+	// DefaultPreviewTmuxSixelMaxBytes is a safety net below tmux's pre-3.6 hardcoded input
+	// buffer limit: a sixel payload at or above this size under tmux falls back to metadata
+	// text (after the shrink-retry loop in runImageCtx gives up) instead of risking a
+	// silently truncated/garbled image. Based on empirical testing rather than tmux's
+	// documented ~1MB buffer size: payloads above ~700KB have never worked reliably in
+	// practice, so 500KB is used as a safe margin. Not a config key.
+	DefaultPreviewTmuxSixelMaxBytes = 500_000
 	// DefaultMaxPreviewBytes caps internal preview reads (matches cmdrun.MaxStreamBytes).
 	DefaultMaxPreviewBytes = 512 * 1024
 

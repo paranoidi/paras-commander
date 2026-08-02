@@ -119,11 +119,12 @@ func TestRunImageSixelUnderTmuxUsesSmallerPalette(t *testing.T) {
 	}
 }
 
-func TestRunImageSixelUnderTmuxFallsBackWhenTooLargeForBuffer(t *testing.T) {
+func TestRunImageSixelUnderTmuxShrinksToFit(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "huge-noisy.png")
-	// Large enough and noisy enough that even the reduced 64-color tmux palette can't bring
-	// the encoded payload under config.DefaultPreviewTmuxSixelMaxBytes.
+	// Large enough and noisy enough that the initial fit-to-panel-budget encode at 700x700
+	// overflows config.DefaultPreviewTmuxSixelMaxBytes, forcing the shrink-retry loop to
+	// kick in rather than bailing straight to the metadata fallback.
 	writeNoisyTestPNG(t, path, 700, 700)
 
 	res := Run(context.Background(), Request{
@@ -138,11 +139,33 @@ func TestRunImageSixelUnderTmuxFallsBackWhenTooLargeForBuffer(t *testing.T) {
 	if res.ErrorMsg != "" {
 		t.Fatalf("ErrorMsg = %q", res.ErrorMsg)
 	}
-	if res.ImagePayload != "" {
-		t.Fatalf("ImagePayload len = %d, want empty (metadata fallback)", len(res.ImagePayload))
+	if res.ImagePayload == "" {
+		t.Fatalf("ImagePayload empty, want a shrunk sixel payload (CombinedText = %q)", res.CombinedText)
 	}
-	if !strings.Contains(res.CombinedText, "too large for tmux") {
-		t.Fatalf("CombinedText = %q, want %q", res.CombinedText, "too large for tmux")
+	if len(res.ImagePayload) >= config.DefaultPreviewTmuxSixelMaxBytes {
+		t.Fatalf("ImagePayload len = %d, want < %d", len(res.ImagePayload), config.DefaultPreviewTmuxSixelMaxBytes)
+	}
+	if res.ImagePxW <= 0 || res.ImagePxH <= 0 {
+		t.Fatalf("ImagePxW/H = %d/%d, want positive", res.ImagePxW, res.ImagePxH)
+	}
+	if res.ImagePxW >= 700 || res.ImagePxH >= 700 {
+		t.Fatalf("ImagePxW/H = %d/%d, want smaller than the unshrunk 700x700 fit", res.ImagePxW, res.ImagePxH)
+	}
+}
+
+func TestShrinkSixelForTmuxFailsAtFloor(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 700, 700))
+	for y := 0; y < 700; y++ {
+		for x := 0; x < 700; x++ {
+			img.Set(x, y, color.RGBA{R: uint8(x), G: uint8(y), B: 80, A: 255})
+		}
+	}
+	payload, _, ok := shrinkSixelForTmux(img, 700, 700, 100, 64, false)
+	if ok {
+		t.Fatalf("ok = true with payload len %d, want false (maxBytes=100 unreachable above floor)", len(payload))
+	}
+	if payload != "" {
+		t.Fatalf("payload = %q, want empty on failure", payload)
 	}
 }
 
