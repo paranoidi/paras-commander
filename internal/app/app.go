@@ -953,7 +953,7 @@ func (a *App) Run() error {
 			a.clearPanelSyncFollowNavCoalesce()
 			a.previewCtrl.ClearNavCoalesces()
 			a.clearCursorNameHintNavCoalesce()
-			a.resetImageOverlay()
+			a.resetImageOverlayForResize()
 			a.screen.Sync()
 			a.ensurePanelsVisible()
 			a.resizeTerminalFeedToLayout()

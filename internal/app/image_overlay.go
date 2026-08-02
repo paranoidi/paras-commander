@@ -233,6 +233,25 @@ func (a *App) resetImageOverlay() {
 	a.placeholderImg = placeholderImage{}
 }
 
+// resetImageOverlayForResize is resetImageOverlay's resize call site. Plain resetImageOverlay
+// unconditionally clears the tracked placement, which forces the next reconcileImageBeforeShow
+// to treat the image as brand new and always retransmit it — even when its content and
+// position turn out to be unchanged by the resize. For a bare-native-sixel image under tmux,
+// this leaves the tracked placement alone instead, so the normal payload/position comparison
+// decides whether anything actually needs to move: tmux frees its own copy of the image on
+// resize (see internal/apphandler/preview.refreshPreviewTargetAfterResize, which under the same
+// condition also skips regenerating the payload itself), so the preview simply goes blank until
+// something else reloads it, instead of paying for an eager re-decode/re-encode/retransmit on
+// every single resize event. Passthrough Sixel and Kitty always reset here regardless: tmux
+// never stores those, and a resize-driven Sync can otherwise leave them undisplayed.
+func (a *App) resetImageOverlayForResize() {
+	if a.image.lastSet && a.image.last.Protocol == previewpanel.ImageProtocolSixel &&
+		preview.TmuxSupportsNativeSixel(os.Getenv) {
+		return
+	}
+	a.resetImageOverlay()
+}
+
 // reconcilePlaceholderImage (re)transmits the Kitty image data backing a tmux
 // Unicode-placeholder display when the payload changed, deleting the previous transmission
 // under the same fixed id first (same rule as the cursor-relative path). plan == nil (or a
