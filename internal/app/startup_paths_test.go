@@ -43,6 +43,32 @@ func TestStartPathsSingleDirectoryOpensPrimary(t *testing.T) {
 	}
 }
 
+func TestStartPathsQuickPreviewEnablesQuickView(t *testing.T) {
+	root := t.TempDir()
+	left := filepath.Join(root, "harbor")
+	if err := os.Mkdir(left, 0o755); err != nil {
+		t.Fatalf("Mkdir left: %v", err)
+	}
+	screen := uitest.Screen(t, 80, 24)
+	app, err := NewWithOptions(screen, Options{
+		CWD:          func() (string, error) { return root, nil },
+		Config:       config.Default(),
+		StartPaths:   []string{left},
+		QuickPreview: true,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	t.Cleanup(app.stopWorker)
+
+	if !app.model.QuickViewEnabled {
+		t.Fatal("QuickViewEnabled = false, want true with QuickPreview")
+	}
+	if app.model.QuickViewPanel != app.model.ActivePanel {
+		t.Fatalf("QuickViewPanel = %d, want active panel %d", app.model.QuickViewPanel, app.model.ActivePanel)
+	}
+}
+
 func TestStartPathsSingleFileOpensFullscreenPreview(t *testing.T) {
 	root := t.TempDir()
 	file := filepath.Join(root, "walrus.txt")

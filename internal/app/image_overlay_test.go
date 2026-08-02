@@ -5,7 +5,14 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
+
+// fakeTmuxEnv is a TMUX value that can never resolve to a real tmux socket (unlike e.g.
+// "/tmp/tmux-1000/default,..." which collides with the actual default socket a developer
+// machine may have live, making preview.TmuxSupportsNativeSixel's subprocess call return real
+// data instead of failing closed).
+const fakeTmuxEnv = "/nonexistent-tmux-test-socket,1234,0"
 
 func TestSplitTerminatedSequences(t *testing.T) {
 	payload := "\x1b_Ga=T,m=1;AAAA\x1b\\\x1b_Gm=0;BBBB\x1b\\"
@@ -44,7 +51,7 @@ func TestWriteKittyDeleteOutsideTmux(t *testing.T) {
 }
 
 func TestWriteKittyDeleteUnderTmuxIsWrapped(t *testing.T) {
-	t.Setenv("TMUX", "/tmp/tmux-1000/default,1234,0")
+	t.Setenv("TMUX", fakeTmuxEnv)
 	var buf bytes.Buffer
 	writeKittyDelete(&buf)
 	want := tmuxPassthroughWrap("\x1b_Ga=d,d=I,i=1\x1b\\")
@@ -57,24 +64,25 @@ func TestWriteImagePayloadOutsideTmuxIsUnwrapped(t *testing.T) {
 	t.Setenv("TMUX", "")
 	payload := "\x1bPq...sixel-data...\x1b\\"
 	var buf bytes.Buffer
-	writeImagePayload(&buf, payload)
+	writeImagePayload(&buf, payload, previewpanel.ImageProtocolSixel)
 	if buf.String() != payload {
 		t.Fatalf("writeImagePayload() = %q, want unwrapped %q", buf.String(), payload)
 	}
 }
 
-// TestWriteImagePayloadUnderTmuxWrapsSixelAsOnePiece covers the bug this test file exists to
-// guard against: a Sixel payload (a single DCS sequence with only its own leading/trailing
-// ESC, no internal ones) must still get passthrough-wrapped under tmux — tmux has no native
-// understanding of Sixel any more than it does Kitty, so leaving it unwrapped (the original,
-// incorrect assumption that tmux's own "native" terminal-features=sixel rendering would pick
-// it up) meant nothing rendered under tmux at all. Splitting a single-terminator payload must
-// yield exactly one chunk, wrapped once — not split mid-sequence.
+// TestWriteImagePayloadUnderTmuxWrapsSixelAsOnePiece covers a Sixel payload (a single DCS
+// sequence with only its own leading/trailing ESC, no internal ones) when tmux's attached
+// outer terminal isn't confirmed to support sixel (preview.TmuxSupportsNativeSixel is false
+// here since fakeTmuxEnv can't reach a real tmux server): it must still get
+// passthrough-wrapped — tmux has no native understanding of anything sent through passthrough,
+// so leaving it unwrapped without confirmed native support meant nothing rendered under tmux
+// at all. Splitting a single-terminator payload must yield exactly one chunk, wrapped once —
+// not split mid-sequence.
 func TestWriteImagePayloadUnderTmuxWrapsSixelAsOnePiece(t *testing.T) {
-	t.Setenv("TMUX", "/tmp/tmux-1000/default,1234,0")
+	t.Setenv("TMUX", fakeTmuxEnv)
 	payload := "\x1bPq\"1;1;10;10#0;2;0;0;0#0~~~~$-\x1b\\"
 	var buf bytes.Buffer
-	writeImagePayload(&buf, payload)
+	writeImagePayload(&buf, payload, previewpanel.ImageProtocolSixel)
 	want := tmuxPassthroughWrap(payload)
 	if buf.String() != want {
 		t.Fatalf("writeImagePayload() = %q, want single wrap %q", buf.String(), want)
@@ -82,10 +90,10 @@ func TestWriteImagePayloadUnderTmuxWrapsSixelAsOnePiece(t *testing.T) {
 }
 
 func TestWriteImagePayloadUnderTmuxWrapsKittyChunksSeparately(t *testing.T) {
-	t.Setenv("TMUX", "/tmp/tmux-1000/default,1234,0")
+	t.Setenv("TMUX", fakeTmuxEnv)
 	payload := "\x1b_Ga=T,m=1;AAAA\x1b\\\x1b_Gm=0;BBBB\x1b\\"
 	var buf bytes.Buffer
-	writeImagePayload(&buf, payload)
+	writeImagePayload(&buf, payload, previewpanel.ImageProtocolKitty)
 	want := tmuxPassthroughWrap("\x1b_Ga=T,m=1;AAAA\x1b\\") + tmuxPassthroughWrap("\x1b_Gm=0;BBBB\x1b\\")
 	if buf.String() != want {
 		t.Fatalf("writeImagePayload() = %q, want %q", buf.String(), want)

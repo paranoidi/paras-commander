@@ -46,6 +46,7 @@ func run(args []string, stderr, stdout io.Writer) error {
 	chooserFile := flags.String("chooser-file", "", "write selected file path on Enter and exit (integration with other tools)")
 	selectPath := flags.String("select", "", "file or directory to open and highlight at startup (chooser mode)")
 	noCarousel := flags.Bool("no-carousel", false, "disable carousel view on the left panel at startup (chooser mode only)")
+	quickPreview := flags.Bool("qp", false, "enable quick preview at startup (requires a path argument)")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -84,6 +85,9 @@ func run(args []string, stderr, stdout io.Writer) error {
 	if len(startPaths) > 0 && chooser != "" {
 		return fmt.Errorf("path arguments cannot be used with --chooser-file")
 	}
+	if *quickPreview && len(startPaths) == 0 {
+		return fmt.Errorf("-qp requires a path argument")
+	}
 
 	return app.Run(app.LaunchConfig{
 		DevMode:           *devMode,
@@ -91,5 +95,6 @@ func run(args []string, stderr, stdout io.Writer) error {
 		ChooserSelect:     selectArg,
 		ChooserNoCarousel: *noCarousel,
 		StartPaths:        startPaths,
+		QuickPreview:      *quickPreview,
 	})
 }

@@ -157,3 +157,36 @@ func TestTmuxSupportsKittyUnicodePlaceholders(t *testing.T) {
 		t.Fatal("ghostty outside tmux: want false")
 	}
 }
+
+func TestTmuxSupportsNativeSixel(t *testing.T) {
+	orig := tmuxClientTermFeatures
+	t.Cleanup(func() { tmuxClientTermFeatures = orig })
+
+	env := func(m map[string]string) func(string) string {
+		return func(k string) string { return m[k] }
+	}
+	tmuxEnv := map[string]string{"TMUX": "/tmp/tmux-1000/default,1234,0"}
+
+	if TmuxSupportsNativeSixel(nil) {
+		t.Fatal("nil environ: want false")
+	}
+	if TmuxSupportsNativeSixel(env(nil)) {
+		t.Fatal("empty env (no TMUX): want false")
+	}
+
+	tmuxClientTermFeatures = func() string { return "256,rgb,sixel,sync" }
+	if !TmuxSupportsNativeSixel(env(tmuxEnv)) {
+		t.Fatal("client_termfeatures has sixel: want true")
+	}
+
+	tmuxClientTermFeatures = func() string { return "256,rgb,sync" }
+	if TmuxSupportsNativeSixel(env(tmuxEnv)) {
+		t.Fatal("client_termfeatures without sixel: want false")
+	}
+
+	// Outside tmux, client_termfeatures is irrelevant — this is a tmux-only path.
+	tmuxClientTermFeatures = func() string { return "sixel" }
+	if TmuxSupportsNativeSixel(env(nil)) {
+		t.Fatal("sixel feature outside tmux: want false")
+	}
+}

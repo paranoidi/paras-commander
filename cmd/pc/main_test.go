@@ -104,3 +104,14 @@ func TestRunRejectsEmptyChooserFile(t *testing.T) {
 		t.Fatalf("error = %v, want non-empty path error", err)
 	}
 }
+
+func TestRunRejectsQuickPreviewWithoutPath(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	err := run([]string{"-qp"}, &stderr, &stdout)
+	if err == nil {
+		t.Fatal("run: nil error, want rejection")
+	}
+	if !strings.Contains(err.Error(), "-qp requires a path argument") {
+		t.Fatalf("error = %v, want -qp path requirement", err)
+	}
+}

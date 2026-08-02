@@ -32,8 +32,8 @@ placeholders under tmux) often produces missing or misplaced images.
 |---|---|---|
 | **Kitty** | Kitty protocol | Kitty with Unicode placeholders |
 | **Ghostty** | Kitty protocol | Kitty with Unicode placeholders |
-| **WezTerm** | Sixel | Sixel (passthrough) |
-| Other Sixel-capable terminals (e.g. foot, many iTerm2 builds) | Sixel | Sixel (passthrough) |
+| **WezTerm** | Sixel | Sixel, sent natively (tmux ships WezTerm as sixel-capable) |
+| Other Sixel-capable terminals (e.g. foot, many iTerm2 builds) | Sixel | Sixel, native if tmux recognizes the terminal as sixel-capable, else passthrough |
 
 With `image_protocol = "auto"`:
 
@@ -46,10 +46,20 @@ With `image_protocol = "auto"`:
 
 ## Required tmux configuration
 
-tmux does **not** render Kitty or Sixel graphics itself for Paras Commander. Both
-protocols are forwarded to the outer terminal with tmux **DCS passthrough**. Without
-passthrough enabled, image escape sequences are dropped or mishandled and previews
-will not work.
+tmux does not understand the Kitty graphics protocol at all — Kitty images are always
+forwarded to the outer terminal with tmux **DCS passthrough**. Without passthrough
+enabled, Kitty escape sequences are dropped or mishandled and Kitty previews will not
+work.
+
+Sixel is different: when tmux reports (via `#{client_termfeatures}`) that the
+currently attached outer terminal supports sixel — true for WezTerm out of the box,
+since tmux ships WezTerm in its built-in terminal-features database — Paras Commander
+sends Sixel **unwrapped**. tmux parses it natively, keeps track of the image, and
+redraws it itself after every tmux-side screen invalidate (status line tick, window
+switch, etc.), which is more robust than passthrough: a passthrough-wrapped image is
+invisible to tmux, so tmux's own next full-screen redraw paints over it and it never
+comes back. When tmux doesn't report sixel support for the attached terminal, Sixel
+falls back to passthrough like Kitty.
 
 Add to `~/.tmux.conf`:
 
@@ -101,8 +111,10 @@ a size cap) and falls back to a text summary (`… / too large for tmux`) when a
 would still exceed the safe limit. Upgrading tmux and raising `input-buffer-size`
 removes that ceiling.
 
-`terminal-features ...:sixel` is **not** required for Paras Commander. It only matters
-for tools that use tmux’s native Sixel path; this app always uses passthrough.
+`terminal-features ...:sixel` (and tmux's built-in per-terminal database, which already
+covers WezTerm) is what Paras Commander relies on to send Sixel unwrapped under tmux —
+see above. If your terminal isn't recognized, add it explicitly, e.g.
+`set -as terminal-features ',your-terminal:sixel'`.
 
 ## Protocol choice (`image_protocol`)
 

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
@@ -126,10 +127,12 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 // This path is still reachable under tmux: Sixel always uses it (no placeholder equivalent
 // exists for Sixel), and so does Kitty when the outer terminal isn't confirmed to support
 // Unicode placeholders (e.g. an explicit image_protocol=kitty override under tmux+WezTerm).
-// tmux has no native understanding of *either* protocol's escape sequences — it must be told
-// to forward them verbatim via passthrough (writeImagePayload/writeKittyDelete below); tmux's
-// own "native" sixel rendering (gated behind `terminal-features ...:sixel`) is not relied on
-// here at all, matching yazi's approach.
+// tmux has no native understanding of Kitty's escape sequences — it must be told to forward
+// them verbatim via passthrough (writeImagePayload/writeKittyDelete below). Sixel is different:
+// when the attached outer terminal's tmux-resolved features include sixel
+// (preview.TmuxSupportsNativeSixel), tmux parses a bare sixel DCS itself, stores the image, and
+// redraws it after every tmux-side invalidate — so it is sent unwrapped, exactly like the
+// no-tmux path below, instead of passthrough-wrapped.
 func (a *App) emitImageAfterShow() {
 	tty, ok := a.screen.Tty()
 	if !ok {
@@ -146,7 +149,8 @@ func (a *App) emitImageAfterShow() {
 	}
 	a.image.pendingEmit = false
 	p := a.image.last
-	if inTmux() {
+	bareNativeSixel := p.Protocol == previewpanel.ImageProtocolSixel && preview.TmuxSupportsNativeSixel(os.Getenv)
+	if inTmux() && !bareNativeSixel {
 		// tmux only positions the *outer* terminal's cursor when the pane cursor is visible,
 		// and does so from its own event loop — while a passthrough-wrapped payload bypasses
 		// that loop and reaches the outer terminal directly. A tcell app runs with the cursor
@@ -160,12 +164,15 @@ func (a *App) emitImageAfterShow() {
 		_, _ = fmt.Fprintf(tty, "\x1b[%d;%dH\x1b[?25h", p.Y+1, p.X+1)
 		_, _ = fmt.Fprintf(tty, "\x1b[%d;%dH\x1b[?25h", p.Y+1, p.X+1)
 		time.Sleep(time.Millisecond)
-		writeImagePayload(tty, p.Payload)
+		writeImagePayload(tty, p.Payload, p.Protocol)
 		_, _ = fmt.Fprint(tty, "\x1b[?25l\x1b8")
 		return
 	}
+	// Bare native sixel under tmux takes this branch too: tmux parses it inline as normal pane
+	// content via its own screen cursor, the same as a real terminal would, so no passthrough
+	// cursor ceremony is needed — plain CUP positions tmux's pane cursor correctly.
 	_, _ = fmt.Fprintf(tty, "\x1b[?2026h\x1b7\x1b[%d;%dH", p.Y+1, p.X+1)
-	writeImagePayload(tty, p.Payload)
+	writeImagePayload(tty, p.Payload, p.Protocol)
 	_, _ = fmt.Fprint(tty, "\x1b8\x1b[?2026l")
 }
 
@@ -173,15 +180,22 @@ func inTmux() bool {
 	return os.Getenv("TMUX") != ""
 }
 
-// writeImagePayload writes an already-encoded image payload (Sixel or Kitty) to w. Under
-// tmux, it's split into its individual ST-terminated escape sequences and each is wrapped
-// separately in tmux's passthrough envelope (see splitTerminatedSequences/tmuxPassthroughWrap
-// for why: several ST-terminated sequences inside one outer wrap is a documented tmux bug).
-// Sixel payloads are a single DCS sequence with no internal ESC bytes besides its own
-// introducer/terminator, so splitting yields exactly one piece — this still wraps the whole
-// thing in one envelope, just via the same general-purpose path Kitty's chunks use.
-func writeImagePayload(w io.Writer, payload string) {
+// writeImagePayload writes an already-encoded image payload (Sixel or Kitty) to w. Outside
+// tmux, or for Sixel when the attached outer terminal's tmux-resolved features include sixel
+// (preview.TmuxSupportsNativeSixel), it's written bare — tmux then parses and stores the sixel
+// image itself, same as any other terminal would. Otherwise, under tmux, it's split into its
+// individual ST-terminated escape sequences and each is wrapped separately in tmux's
+// passthrough envelope (see splitTerminatedSequences/tmuxPassthroughWrap for why: several
+// ST-terminated sequences inside one outer wrap is a documented tmux bug). Sixel payloads are a
+// single DCS sequence with no internal ESC bytes besides its own introducer/terminator, so
+// splitting yields exactly one piece — this still wraps the whole thing in one envelope, just
+// via the same general-purpose path Kitty's chunks use.
+func writeImagePayload(w io.Writer, payload string, proto previewpanel.ImageProtocol) {
 	if !inTmux() {
+		_, _ = io.WriteString(w, payload)
+		return
+	}
+	if proto == previewpanel.ImageProtocolSixel && preview.TmuxSupportsNativeSixel(os.Getenv) {
 		_, _ = io.WriteString(w, payload)
 		return
 	}

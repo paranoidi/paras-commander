@@ -79,6 +79,50 @@ func TmuxSupportsKittyUnicodePlaceholders(environ func(string) string) bool {
 	return tmuxOuterTerminalIsKittyOrGhostty()
 }
 
+// tmuxClientTermFeatures returns tmux's `client_termfeatures`: the comma-separated list of
+// terminal features tmux has resolved for the actually-attached outer terminal (its built-in
+// terminal-features database keyed by client_termtype, combined with any user
+// terminal-overrides). This is the runtime-accurate answer to "will tmux actually redraw a
+// bare sixel DCS I send it" — unlike tmux's own DA1 reply to the pane (which only reflects
+// whether tmux was compiled with --enable-sixel, not whether the attached terminal supports
+// it; tmux falls back to a blank/text placeholder at redraw time otherwise). Cached for the
+// process lifetime, same rationale as tmuxClientTermType.
+var tmuxClientTermFeatures = sync.OnceValue(func() string {
+	out, err := exec.Command("tmux", "display-message", "-p", "#{client_termfeatures}").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(strings.TrimSpace(string(out)))
+})
+
+// TmuxSupportsNativeSixel reports whether, under tmux, the attached outer terminal's resolved
+// features include sixel. When true, tmux parses a bare (unwrapped) sixel DCS sent to it,
+// stores the image, and redraws it itself after every tmux-side invalidate (status tick,
+// window switch, etc.) — see tmux-wrap.md. Passthrough-wrapped sixel never reaches that path:
+// tmux only recognizes a bare `DCS q` introducer, blind-forwards anything wrapped in
+// `DCS tmux;`, and cannot re-send content it never parsed. environ is typically os.Getenv.
+func TmuxSupportsNativeSixel(environ func(string) string) bool {
+	if environ == nil || environ("TMUX") == "" {
+		return false
+	}
+	return strings.Contains(tmuxClientTermFeatures(), "sixel")
+}
+
+// WarmTmuxCaches kicks off tmux's `display-message` capability probes
+// (tmuxClientTermType, tmuxClientTermFeatures) in the background as soon as tmux is detected,
+// so the first image preview doesn't pay for the `tmux` subprocess synchronously on the render
+// path (ResolveImageProtocol / TmuxSupportsKittyUnicodePlaceholders / TmuxSupportsNativeSixel
+// all block on these the first time they're called, then hit the sync.OnceValue cache forever
+// after). No-op outside tmux. Call once at app startup; safe from any goroutine since
+// sync.OnceValue serializes concurrent first calls. environ is typically os.Getenv.
+func WarmTmuxCaches(environ func(string) string) {
+	if environ == nil || environ("TMUX") == "" {
+		return
+	}
+	go tmuxClientTermType()
+	go tmuxClientTermFeatures()
+}
+
 // ResolveVideoThumbProtocol picks the graphics protocol for video thumbnail grids.
 // When imagesEnabled is false ([preview].images), returns ImageProtocolNone.
 // Otherwise uses the same auto/sixel/kitty resolution as still-image previews

@@ -34,6 +34,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/pools"
+	"github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/preview/chromastyles"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/sshconfig"
@@ -225,6 +226,8 @@ type LaunchConfig struct {
 	ChooserNoCarousel bool
 	// StartPaths are optional existing local paths (at most two). See applyStartPaths.
 	StartPaths []string
+	// QuickPreview enables Quick View at startup (pc -qp, requires StartPaths).
+	QuickPreview bool
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -246,6 +249,8 @@ type Options struct {
 	ChooserNoCarousel bool
 	// StartPaths are optional existing local paths (at most two). See applyStartPaths.
 	StartPaths []string
+	// QuickPreview enables Quick View at startup (pc -qp, requires StartPaths).
+	QuickPreview bool
 }
 
 // Run initializes and starts the terminal application.
@@ -260,6 +265,15 @@ func Run(cfg LaunchConfig) error {
 	if err != nil {
 		return err
 	}
+
+	// Fired before the screen even exists: NewWithOptions/App.Run must never block on a `tmux
+	// display-message` subprocess for the first image preview, so the caches these calls warm
+	// (ResolveImageProtocol / TmuxSupportsKittyUnicodePlaceholders / TmuxSupportsNativeSixel)
+	// get a head start here rather than on the render path. Deliberately not in NewWithOptions:
+	// that constructor is also used directly by internal/app's unit tests (without ever calling
+	// Run), and warming there would leak a real `tmux` subprocess result into the process-wide
+	// sync.OnceValue cache tests rely on being unpopulated.
+	preview.WarmTmuxCaches(os.Getenv)
 
 	screen, err := tcell.NewScreen()
 	if err != nil {
@@ -282,6 +296,7 @@ func Run(cfg LaunchConfig) error {
 		ChooserSelect:     cfg.ChooserSelect,
 		ChooserNoCarousel: cfg.ChooserNoCarousel,
 		StartPaths:        cfg.StartPaths,
+		QuickPreview:      cfg.QuickPreview,
 	})
 	if err != nil {
 		return err
@@ -568,6 +583,11 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		if err := app.applyStartPaths(opts.StartPaths); err != nil {
 			app.stopWorker()
 			return nil, err
+		}
+		if opts.QuickPreview && !app.model.QuickViewEnabled {
+			app.model.QuickViewEnabled = true
+			app.model.QuickViewPanel = app.model.ActivePanel
+			app.previewCtrl.ApplyQuickViewPreviewImmediately()
 		}
 	}
 	if opts.ChooserFile != "" {
