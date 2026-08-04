@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -178,6 +179,38 @@ func TestPlainTypingStartsQuickFilterAndMovesToFirstVisibleMatch(t *testing.T) {
 	entry, ok := app.model.Primary.CurrentEntry()
 	if !ok || entry.Name != "notes.txt" {
 		t.Fatalf("CurrentEntry() = %q ok=%v, want first visible match notes.txt", entry.Name, ok)
+	}
+}
+
+func TestQuickFilterSpaceAppendsToQueryInsteadOfTogglingTree(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "foo bar.txt"))
+	writeFile(t, filepath.Join(dir, "other.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+
+	if !app.model.Primary.Filter.Editing || app.model.Primary.Filter.Query != "foo " {
+		t.Fatalf("filter editing=%v query=%q, want space appended to query while typing", app.model.Primary.Filter.Editing, app.model.Primary.Filter.Query)
+	}
+	if app.model.Primary.ListLayout == panel.ListLayoutTree {
+		t.Fatal("space during quick filter must not toggle tree view")
 	}
 }
 

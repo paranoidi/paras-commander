@@ -627,6 +627,12 @@ func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string
 		return true
 	}
 	if keymap.IsPlainPrintableRune(event) {
+		// Space is always filter text while typing, even though it's bound to
+		// panel.toggle-tree — otherwise a space in the query would expand/collapse
+		// the selected row and drop out of the filter.
+		if event.Rune() == ' ' {
+			return true
+		}
 		return resolvedAction == ""
 	}
 	f := a.activeQuickFilter()
@@ -682,6 +688,9 @@ func (a *App) shouldStartFilter(event *tcell.EventKey) bool {
 func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {
 	f := a.activeQuickFilter()
 	if keymap.IsPlainPrintableRune(event) {
+		if event.Rune() == ' ' {
+			return true
+		}
 		if _, ok := a.keys.Global.Lookup(event); ok {
 			return false
 		}
