@@ -214,6 +214,38 @@ func TestQuickFilterSpaceAppendsToQueryInsteadOfTogglingTree(t *testing.T) {
 	}
 }
 
+func TestQuickFilterColonAppendsToQueryInsteadOfOpeningLeaderMenu(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "foo:bar.txt"))
+	writeFile(t, filepath.Join(dir, "other.txt"))
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 20)
+
+	app, err := New(screen, func() (string, error) {
+		return dir, nil
+	})
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+
+	if !app.model.Primary.Filter.Editing || app.model.Primary.Filter.Query != "foo:" {
+		t.Fatalf("filter editing=%v query=%q, want colon appended to query while typing", app.model.Primary.Filter.Editing, app.model.Primary.Filter.Query)
+	}
+	if app.model.LeaderMenu.Open {
+		t.Fatal("leader menu must not open when colon is typed during quick filter")
+	}
+}
+
 func TestPlainTypingMultiLetterSelectsBestRankedMatch(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "abzzc.txt"))

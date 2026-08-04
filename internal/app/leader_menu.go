@@ -82,6 +82,19 @@ func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string
 	})
 }
 
+func (a *App) builtinLeaderMenuOpen() bool {
+	st := a.model.LeaderMenu
+	return st.Open && !st.UserMenu && !st.CopyMenu
+}
+
+func (a *App) toggleBuiltinLeaderMenu() {
+	if a.builtinLeaderMenuOpen() {
+		a.closeLeaderMenu()
+		return
+	}
+	a.openBuiltinLeaderMenu()
+}
+
 func (a *App) openBuiltinLeaderMenu() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return

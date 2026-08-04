@@ -79,12 +79,21 @@ func TestActionFromKeyMapsCtrlCToJobsCancel(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyEscOpensLeaderMenuInBrowser(t *testing.T) {
+func TestActionFromKeyColonOpensLeaderMenuInBrowser(t *testing.T) {
+	km := defaultKeymap(t)
+	event := tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone)
+	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
+	if got != keymap.ActionAppLeaderMenu {
+		t.Fatalf("actionFromKeyEvent(:) = %q, want %s", got, keymap.ActionAppLeaderMenu)
+	}
+}
+
+func TestActionFromKeyEscDoesNotOpenLeaderMenuInBrowser(t *testing.T) {
 	km := defaultKeymap(t)
 	event := tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
-	if got != keymap.ActionAppLeaderMenu {
-		t.Fatalf("actionFromKeyEvent(Esc) = %q, want %s", got, keymap.ActionAppLeaderMenu)
+	if got == keymap.ActionAppLeaderMenu {
+		t.Fatalf("actionFromKeyEvent(Esc) = %q, want not %s", got, keymap.ActionAppLeaderMenu)
 	}
 }
 

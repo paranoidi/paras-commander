@@ -464,6 +464,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.render()
 		return false, true
 	case InputModeLeaderMenu:
+		if resolvedAction == keymap.ActionAppLeaderMenu && a.builtinLeaderMenuOpen() {
+			a.closeLeaderMenu()
+			a.render()
+			return false, true
+		}
 		quit := a.handleLeaderMenuKey(event)
 		if !quit {
 			a.render()
@@ -643,6 +648,10 @@ func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string
 		if event.Rune() == ' ' {
 			return true
 		}
+		// Leader menu key (:) is filter text while typing, not a menu dismiss/open chord.
+		if resolvedAction == keymap.ActionAppLeaderMenu {
+			return true
+		}
 		return resolvedAction == ""
 	}
 	f := a.activeQuickFilter()
@@ -701,8 +710,8 @@ func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {
 		if event.Rune() == ' ' {
 			return true
 		}
-		if _, ok := a.keys.Global.Lookup(event); ok {
-			return false
+		if id, ok := a.keys.Global.Lookup(event); ok {
+			return id == keymap.ActionAppLeaderMenu
 		}
 		return true
 	}
@@ -888,7 +897,7 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionAppUserMenu:
 		a.openUserMenu()
 	case keymap.ActionAppLeaderMenu:
-		a.openBuiltinLeaderMenu()
+		a.toggleBuiltinLeaderMenu()
 	case keymap.ActionAppCopyMenu:
 		a.openCopyMenu()
 	case keymap.ActionClipboardCopyFileURL,

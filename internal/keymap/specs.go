@@ -102,9 +102,9 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Function menu",
 			Section:      "App",
-			DefaultKeys:  []string{"esc"},
-			PreferredKey: "Esc",
-			Keywords:     []string{"function menu", "esc", "shortcuts"},
+			DefaultKeys:  []string{":"},
+			PreferredKey: ":",
+			Keywords:     []string{"function menu", "colon", "shortcuts"},
 		},
 		{
 			ID:           ActionAppCopyMenu,

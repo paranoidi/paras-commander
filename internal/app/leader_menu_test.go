@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -556,6 +557,30 @@ func TestBuiltinLeaderMenuDirectKeyDisabledWhenConfigOff(t *testing.T) {
 		if it.DirectKey != "" {
 			t.Fatalf("DirectKey = %q for %q, want empty when config disabled", it.DirectKey, it.Label)
 		}
+	}
+}
+
+func TestColonKeyOpensBuiltinLeaderMenu(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	id, ok := app.keys.Global.Lookup(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+	if !ok || id != keymap.ActionAppLeaderMenu {
+		t.Fatalf("lookup = %q %v, want %q", id, ok, keymap.ActionAppLeaderMenu)
+	}
+	app.dispatchActionLikeKeyboardShortcut(keymap.ActionAppLeaderMenu)
+	if !app.builtinLeaderMenuOpen() {
+		t.Fatal("expected builtin leader menu open after :")
+	}
+}
+
+func TestColonKeyTogglesBuiltinLeaderMenuClosed(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	app.openBuiltinLeaderMenu()
+	if !app.builtinLeaderMenuOpen() {
+		t.Fatal("expected menu open")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+	if app.model.LeaderMenu.Open {
+		t.Fatal("expected menu closed after second :")
 	}
 }
 
