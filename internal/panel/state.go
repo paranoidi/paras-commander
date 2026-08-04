@@ -1942,10 +1942,11 @@ func (s *State) ClearSelection() {
 // dirsOnly: when true, only directories are matched (regular files skipped).
 // caseSensitive: when true, matching is case-sensitive (shell and simple modes only).
 // meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename.
-func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) error {
+// The returned bool reports whether the pattern matched any entry.
+func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) (bool, error) {
 	matcher, err := NewGroupMatcher(pattern, mode, caseSensitive)
 	if err != nil {
-		return err
+		return false, err
 	}
 	paths := make([]string, 0)
 	isDir := make(map[string]bool)
@@ -1975,7 +1976,7 @@ func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive b
 		}
 	}
 	if len(paths) == 0 {
-		return nil
+		return false, nil
 	}
 	if s.SelectedPaths == nil {
 		s.SelectedPaths = make(map[string]bool, len(paths))
@@ -1987,19 +1988,18 @@ func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive b
 	s.rebuildSelectedDirPaths()
 	s.recomputeSelectionListedBytes()
 	s.invalidateSelectionDerivedFull()
-	return nil
+	return true, nil
 }
 
 // UnselectGroup unselects entries whose basename (or any meta column value) matches the pattern.
 // meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename.
-func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) error {
-	if s.SelectedPaths == nil {
-		return nil
-	}
+// The returned bool reports whether the pattern matched any entry (regardless of prior selection state).
+func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) (bool, error) {
 	matcher, err := NewGroupMatcher(pattern, mode, caseSensitive)
 	if err != nil {
-		return err
+		return false, err
 	}
+	matched := false
 	for i := 0; i < s.VisibleEntryCount(); i++ {
 		entry, _, ok := s.VisibleEntry(i)
 		if !ok {
@@ -2011,18 +2011,19 @@ func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive
 		if dirsOnly && !entry.IsDir() {
 			continue
 		}
-		matched := !meta.OnlyMeta && matcher.Match(entry.Name)
-		if !matched {
+		entryMatched := !meta.OnlyMeta && matcher.Match(entry.Name)
+		if !entryMatched {
 			for _, col := range meta.Cols {
 				if v, ok := col[entry.Path]; ok && v != "" && matcher.Match(v) {
-					matched = true
+					entryMatched = true
 					break
 				}
 			}
 		}
-		if !matched {
+		if !entryMatched {
 			continue
 		}
+		matched = true
 		if !s.SelectedPaths[entry.Path] {
 			continue
 		}
@@ -2030,7 +2031,7 @@ func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive
 		s.removePathFromSelectionsStripOrder(entry.Path)
 	}
 	s.normalizeSelectionsStripCursor()
-	return nil
+	return matched, nil
 }
 
 // RefreshDiskUsageOrdering reapplies cached disk-total ordering when subtree sizes update while staying in one directory.

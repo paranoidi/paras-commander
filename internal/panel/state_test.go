@@ -1742,7 +1742,7 @@ func TestSelectGroupByRegex(t *testing.T) {
 		},
 	}
 
-	if err := state.SelectGroup(`^main.*\.go$`, false, false, false, GroupPatternRegex, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup(`^main.*\.go$`, false, false, false, GroupPatternRegex, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1770,7 +1770,7 @@ func TestSelectGroupByGlob(t *testing.T) {
 		},
 	}
 
-	if err := state.SelectGroup("*.go", false, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup("*.go", false, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1797,7 +1797,7 @@ func TestSelectGroupByGlobCaseInsensitive(t *testing.T) {
 		},
 	}
 
-	if err := state.SelectGroup("*.GO", false, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup("*.GO", false, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1820,7 +1820,7 @@ func TestSelectGroupByGlobCaseSensitive(t *testing.T) {
 		},
 	}
 
-	if err := state.SelectGroup("*.go", false, false, true, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup("*.go", false, false, true, GroupPatternShell, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1846,7 +1846,7 @@ func TestUnselectGroupByGlob(t *testing.T) {
 		},
 	}
 
-	if err := state.UnselectGroup("*.go", false, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.UnselectGroup("*.go", false, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1870,7 +1870,7 @@ func TestSelectGroupFilesOnly(t *testing.T) {
 		},
 	}
 
-	if err := state.SelectGroup("*", true, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup("*", true, false, false, GroupPatternShell, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1895,7 +1895,7 @@ func TestSelectGroupSubstringCaseSensitive(t *testing.T) {
 	}
 
 	// Substring match, case-sensitive
-	if err := state.SelectGroup("main", false, false, true, GroupPatternSimple, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup("main", false, false, true, GroupPatternSimple, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1920,7 +1920,7 @@ func TestSelectGroupSubstringCaseInsensitive(t *testing.T) {
 	}
 
 	// Substring match, case-insensitive
-	if err := state.SelectGroup("main", false, false, false, GroupPatternSimple, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup("main", false, false, false, GroupPatternSimple, GroupSelectMeta{}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -1062,7 +1062,7 @@ func TestSelectGroupMatchesExpandedTreeChild(t *testing.T) {
 		t.Fatalf("ToggleTreeExpand: %v", err)
 	}
 
-	if err := state.SelectGroup("harbor.txt", false, false, true, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.SelectGroup("harbor.txt", false, false, true, GroupPatternShell, GroupSelectMeta{}); err != nil {
 		t.Fatalf("SelectGroup: %v", err)
 	}
 	harborPath := filepath.Join(meadow, "harbor.txt")
@@ -1070,7 +1070,7 @@ func TestSelectGroupMatchesExpandedTreeChild(t *testing.T) {
 		t.Fatalf("SelectedPaths[%q] = false, want true (expanded tree child must be selectable)", harborPath)
 	}
 
-	if err := state.UnselectGroup("harbor.txt", false, false, true, GroupPatternShell, GroupSelectMeta{}); err != nil {
+	if _, err := state.UnselectGroup("harbor.txt", false, false, true, GroupPatternShell, GroupSelectMeta{}); err != nil {
 		t.Fatalf("UnselectGroup: %v", err)
 	}
 	if state.SelectedPaths[harborPath] {

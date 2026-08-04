@@ -461,15 +461,24 @@ func (a *App) executeGroupSelect() {
 			meta.OnlyMeta = gs.OnlyMetaColumns
 		}
 		var err error
+		var matched bool
 		if gs.Mode == "select" {
-			err = p.SelectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, meta)
+			matched, err = p.SelectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, meta)
 			if err == nil {
-				a.setTransientMessage(fmt.Sprintf("Selected matching %q", gs.Text), ui.MessageUrgencyInfo)
+				if matched {
+					a.setTransientMessage(fmt.Sprintf("Selected matching %q", gs.Text), ui.MessageUrgencyInfo)
+				} else {
+					a.setTransientMessage("No matches", ui.MessageUrgencyWarn)
+				}
 			}
 		} else {
-			err = p.UnselectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, meta)
+			matched, err = p.UnselectGroup(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, meta)
 			if err == nil {
-				a.setTransientMessage(fmt.Sprintf("Unselected matching %q", gs.Text), ui.MessageUrgencyInfo)
+				if matched {
+					a.setTransientMessage(fmt.Sprintf("Unselected matching %q", gs.Text), ui.MessageUrgencyInfo)
+				} else {
+					a.setTransientMessage("No matches", ui.MessageUrgencyWarn)
+				}
 			}
 		}
 		if err != nil {

@@ -1218,20 +1218,28 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 		if len(st.MarkedPaths) == 0 {
 			st.MarkedPaths = nil
 		}
-		if conflicts {
+		switch {
+		case len(matched) == 0:
+			h.host.SetTransientMessage("No matches", ui.MessageUrgencyWarn)
+		case conflicts:
 			h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
-		} else {
+		default:
 			h.host.SetTransientMessage(fmt.Sprintf("Selected matching %q", pattern), ui.MessageUrgencyInfo)
 		}
 		st.InvalidateMarkedSelectionDerived()
 		return
 	}
-	for _, path := range matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher) {
+	unmatched := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
+	for _, path := range unmatched {
 		delete(st.MarkedPaths, path)
 	}
 	if len(st.MarkedPaths) == 0 {
 		st.MarkedPaths = nil
 	}
 	st.InvalidateMarkedSelectionDerived()
-	h.host.SetTransientMessage(fmt.Sprintf("Unselected matching %q", pattern), ui.MessageUrgencyInfo)
+	if len(unmatched) == 0 {
+		h.host.SetTransientMessage("No matches", ui.MessageUrgencyWarn)
+	} else {
+		h.host.SetTransientMessage(fmt.Sprintf("Unselected matching %q", pattern), ui.MessageUrgencyInfo)
+	}
 }
