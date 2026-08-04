@@ -251,20 +251,20 @@ func (a *App) applyConfigDialog() {
 	a.syncScrollFromConfig()
 	a.closeConfigDialog()
 	msg := "Configuration saved"
-	patch := map[string]interface{}{
-		"ui": map[string]interface{}{
+	patch := map[string]any{
+		"ui": map[string]any{
 			"show_file_icons":          val,
 			"shrunken_shows_name_only": shrunken,
-			"zoom": map[string]interface{}{
+			"zoom": map[string]any{
 				"active_panel": zoom,
 				"orientation":  paneSplit,
 			},
-			"scroll": map[string]interface{}{
+			"scroll": map[string]any{
 				"mode":      scrollMode,
 				"scrollbar": sb,
 			},
 		},
-		"panels": map[string]interface{}{
+		"panels": map[string]any{
 			"default_listing_format": panel.ListingFormatTOMLValue(lf),
 		},
 	}
