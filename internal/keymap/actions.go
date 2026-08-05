@@ -136,6 +136,7 @@ const (
 	ActionFileView                     = "file.view"
 	ActionFileViewThemePicker          = "file.view.theme-picker"
 	ActionFileViewToggleRaw            = "file.view.toggle-raw"
+	ActionFileViewReload               = "file.view.reload"
 	ActionFileViewDiffNextHunk         = "file.view.diff-next-hunk"
 	ActionFileViewDiffPrevHunk         = "file.view.diff-prev-hunk"
 	ActionFileViewSearchStart          = "file.view.search-start"
@@ -346,6 +347,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileView:                     {},
 	ActionFileViewThemePicker:          {},
 	ActionFileViewToggleRaw:            {},
+	ActionFileViewReload:               {},
 	ActionFileViewDiffNextHunk:         {},
 	ActionFileViewDiffPrevHunk:         {},
 	ActionFileViewSearchStart:          {},

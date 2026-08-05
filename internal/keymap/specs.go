@@ -938,6 +938,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"markdown", "raw", "render", "source", "f5"},
 		},
 		{
+			ID:          ActionFileViewReload,
+			Views:       HelpFilePreview,
+			Title:       "Reload file view",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"reload", "refresh", "f3"},
+		},
+		{
 			ID:          ActionFileViewDiffNextHunk,
 			Views:       HelpBrowser | HelpFilePreview,
 			Title:       "Next diff change",

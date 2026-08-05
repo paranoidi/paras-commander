@@ -225,6 +225,9 @@ func (h *Handler) tryFilePreviewAction(nextAction string) (quit bool, handled bo
 	case keymap.ActionFileViewToggleRaw:
 		h.toggleFilePreviewRawMarkdown()
 		return false, true
+	case keymap.ActionFileViewReload:
+		h.refreshFullscreenFilePreview()
+		return false, true
 	case keymap.ActionFileViewDiffNextHunk:
 		h.hunkNavigate(previewTargetFullscreen, 1)
 		return false, true
