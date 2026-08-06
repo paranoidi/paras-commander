@@ -224,19 +224,19 @@ func TestBuiltinLeaderMenuHasCasePairKeys(t *testing.T) {
 	app.model.ViewMode = ui.ViewBrowser
 	app.openBuiltinLeaderMenu()
 
-	var findLower, findUpper, dupKey bool
+	var findLower, findUpper, diskUsageKey bool
 	for _, it := range app.model.LeaderMenu.Items {
 		switch {
 		case it.Key == 'f' && it.Label == "Find files":
 			findLower = true
 		case it.Key == 'F' && it.Label == "Find duplicates":
 			findUpper = true
-		case it.Key == 'D' && it.Label == "Duplicate":
-			dupKey = true
+		case it.Key == 'D' && it.Label == "Disk usage scan":
+			diskUsageKey = true
 		}
 	}
-	if !findLower || !findUpper || !dupKey {
-		t.Fatalf("items missing case pairs: f=%v F=%v D=%v", findLower, findUpper, dupKey)
+	if !findLower || !findUpper || !diskUsageKey {
+		t.Fatalf("items missing case pairs: f=%v F=%v D=%v", findLower, findUpper, diskUsageKey)
 	}
 }
 

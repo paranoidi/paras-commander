@@ -583,6 +583,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Disk usage",
 			DefaultKeys: []string{"M-d"},
 			Keywords:    []string{"size", "subtree"},
+			LeaderKey:   "D",
 		},
 		{
 			ID:          ActionPanelDiskUsageClear,
@@ -1138,10 +1139,10 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Duplicate",
 			Section:      "File operations",
-			DefaultKeys:  []string{"S-F5", "C-M-d"},
+			DefaultKeys:  []string{"S-F5", "C-p"},
 			PreferredKey: "S-F5",
 			Keywords:     []string{"copy here", "directory", "same directory"},
-			LeaderKey:    "D",
+			LeaderKey:    "p",
 		},
 		{
 			ID:          ActionFileExtract,

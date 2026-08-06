@@ -149,7 +149,7 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModCtrl), ActionFileDelete, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt), ActionPanelDiskUsageScan, true},
 		{tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModAlt|tcell.ModShift), ActionPanelDiskUsageClear, true},
-		{tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModAlt), ActionFileDuplicate, true},
+		{tcell.NewEventKey(tcell.KeyCtrlP, 0, tcell.ModNone), ActionFileDuplicate, true},
 		{tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelTreeCollapseAll, true},
 		{tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt|tcell.ModShift), ActionPanelTreeCollapseAllFull, true},
 		{tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt|tcell.ModCtrl), ActionPanelTreeExpandAllShallow, true},

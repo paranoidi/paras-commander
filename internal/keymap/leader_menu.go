@@ -66,6 +66,7 @@ var leaderMenuGroupActions = map[string][]string{
 	LeaderMenuGroupTools: {
 		ActionPanelFindDialog,
 		ActionPanelFindDuplicates,
+		ActionPanelDiskUsageScan,
 		ActionPanelComparePanels,
 		ActionFileRunForEach,
 	},

@@ -289,9 +289,9 @@ func TestActionFromKeyMapsShiftAltDToClearDiskUsageData(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsCtrlAltDToDuplicate(t *testing.T) {
+func TestActionFromKeyMapsCtrlPToDuplicate(t *testing.T) {
 	km := defaultKeymap(t)
-	ev := tcell.NewEventKey(tcell.KeyCtrlD, 0, tcell.ModAlt)
+	ev := tcell.NewEventKey(tcell.KeyCtrlP, 0, tcell.ModNone)
 	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
 	if got != keymap.ActionFileDuplicate {
 		t.Fatalf("actionFromKeyEvent() = %v, want ActionFileDuplicate", got)
