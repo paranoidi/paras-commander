@@ -356,6 +356,8 @@ Built-in defaults live in `internal/keymap/specs.go` and are written to `keybind
 
 **`[copy_menu]`** — letter keys for the `"` copy menu (`app.copy-menu` in `[main]`). Defaults: `clipboard.copy-file-url` = `c`, `clipboard.copy-dir-url` = `d`, `clipboard.copy-filename` = `f`, `clipboard.copy-filename-without-ext` = `n`. Empty value omits the row. Keys must be letters and unique within the table.
 
+**`[preview_menu]`** — letter keys for the `:` fullscreen-preview menu (`file.view.menu` under `[file_preview]`), open only while the F3 fullscreen file view is focused. Defaults: `file.view.theme-picker` = `t`, `file.view.toggle-raw` = `r`, `file.view.reload` = `R`, `file.view.search-start` = `s`, `file.view.diff-next-hunk` = `n`, `file.view.diff-prev-hunk` = `p`, `file.edit` = `e`, `file.delete` = `d`, `app.quit` = `q`. `r`/`R` is a deliberate case pair (toggle raw markdown vs. reload). Empty value omits the row. Keys must be letters and unique within the table.
+
 Notable dual bindings:
 
 | Action | Primary (footer/help) | Letter chord |

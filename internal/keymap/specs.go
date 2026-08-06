@@ -45,6 +45,9 @@ type ActionSpec struct {
 	LeaderKey string
 	// CopyMenuKey is the activation character for the `"` copy menu (empty = excluded).
 	CopyMenuKey string
+	// PreviewMenuKey is the activation character for the `:` fullscreen-preview menu
+	// (empty = excluded). Letters only; case-sensitive (r vs R).
+	PreviewMenuKey string
 }
 
 // DefaultActionSpecs returns all known configurable actions in display order.
@@ -52,14 +55,15 @@ func DefaultActionSpecs() []ActionSpec {
 	return []ActionSpec{
 		// ── App ──
 		{
-			ID:           ActionAppQuit,
-			Views:        helpAllViews,
-			Title:        "Quit",
-			Section:      "App",
-			DefaultKeys:  []string{"F10"},
-			PreferredKey: "F10",
-			Keywords:     []string{"exit", "close"},
-			LeaderKey:    "q",
+			ID:             ActionAppQuit,
+			Views:          helpAllViews,
+			Title:          "Quit",
+			Section:        "App",
+			DefaultKeys:    []string{"F10"},
+			PreferredKey:   "F10",
+			Keywords:       []string{"exit", "close"},
+			LeaderKey:      "q",
+			PreviewMenuKey: "q",
 		},
 		{
 			ID:           ActionAppQuitImmediate,
@@ -942,14 +946,15 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "o",
 		},
 		{
-			ID:           ActionFileDelete,
-			Views:        HelpBrowser | HelpDedup,
-			Title:        "Delete",
-			Section:      "File operations",
-			DefaultKeys:  []string{"F8", "delete", "C-d"},
-			PreferredKey: "F8",
-			Keywords:     []string{"remove", "trash"},
-			LeaderKey:    "d",
+			ID:             ActionFileDelete,
+			Views:          HelpBrowser | HelpDedup,
+			Title:          "Delete",
+			Section:        "File operations",
+			DefaultKeys:    []string{"F8", "delete", "C-d"},
+			PreferredKey:   "F8",
+			Keywords:       []string{"remove", "trash"},
+			LeaderKey:      "d",
+			PreviewMenuKey: "d",
 		},
 		{
 			ID:          ActionFileChmod,
@@ -994,52 +999,66 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "v",
 		},
 		{
-			ID:          ActionFileViewThemePicker,
+			ID:          ActionFileViewMenu,
 			Views:       HelpFilePreview,
-			Title:       "Theme picker in file view",
+			Title:       "Preview menu",
 			Section:     "Preview",
 			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
-			Keywords:    []string{"theme", "preview", "view", "f9"},
+			Keywords:    []string{"preview menu", "colon", "menu"},
 		},
 		{
-			ID:          ActionFileViewToggleRaw,
-			Views:       HelpFilePreview,
-			Title:       "Toggle raw/rendered markdown in file view",
-			Section:     "Preview",
-			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
-			Keywords:    []string{"markdown", "raw", "render", "source", "f5"},
+			ID:             ActionFileViewThemePicker,
+			Views:          HelpFilePreview,
+			Title:          "Theme picker in file view",
+			Section:        "Preview",
+			DefaultKeys:    nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:       []string{"theme", "preview", "view", "f9"},
+			PreviewMenuKey: "t",
 		},
 		{
-			ID:          ActionFileViewReload,
-			Views:       HelpFilePreview,
-			Title:       "Reload file view",
-			Section:     "Preview",
-			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
-			Keywords:    []string{"reload", "refresh", "f3"},
+			ID:             ActionFileViewToggleRaw,
+			Views:          HelpFilePreview,
+			Title:          "Toggle raw/rendered markdown in file view",
+			Section:        "Preview",
+			DefaultKeys:    nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:       []string{"markdown", "raw", "render", "source", "f5"},
+			PreviewMenuKey: "r",
 		},
 		{
-			ID:          ActionFileViewDiffNextHunk,
-			Views:       HelpBrowser | HelpFilePreview,
-			Title:       "Next diff change",
-			Section:     "Preview",
-			DefaultKeys: []string{"C-M-j"},
-			Keywords:    []string{"diff", "hunk", "change", "chunk", "jump"},
+			ID:             ActionFileViewReload,
+			Views:          HelpFilePreview,
+			Title:          "Reload file view",
+			Section:        "Preview",
+			DefaultKeys:    nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:       []string{"reload", "refresh", "f3"},
+			PreviewMenuKey: "R",
 		},
 		{
-			ID:          ActionFileViewDiffPrevHunk,
-			Views:       HelpBrowser | HelpFilePreview,
-			Title:       "Previous diff change",
-			Section:     "Preview",
-			DefaultKeys: []string{"C-M-k"},
-			Keywords:    []string{"diff", "hunk", "change", "chunk", "jump"},
+			ID:             ActionFileViewDiffNextHunk,
+			Views:          HelpBrowser | HelpFilePreview,
+			Title:          "Next diff change",
+			Section:        "Preview",
+			DefaultKeys:    []string{"C-M-j"},
+			Keywords:       []string{"diff", "hunk", "change", "chunk", "jump"},
+			PreviewMenuKey: "n",
 		},
 		{
-			ID:          ActionFileViewSearchStart,
-			Views:       HelpFilePreview,
-			Title:       "Search in file view",
-			Section:     "Preview",
-			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
-			Keywords:    []string{"search", "find", "incremental"},
+			ID:             ActionFileViewDiffPrevHunk,
+			Views:          HelpBrowser | HelpFilePreview,
+			Title:          "Previous diff change",
+			Section:        "Preview",
+			DefaultKeys:    []string{"C-M-k"},
+			Keywords:       []string{"diff", "hunk", "change", "chunk", "jump"},
+			PreviewMenuKey: "p",
+		},
+		{
+			ID:             ActionFileViewSearchStart,
+			Views:          HelpFilePreview,
+			Title:          "Search in file view",
+			Section:        "Preview",
+			DefaultKeys:    nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:       []string{"search", "find", "incremental"},
+			PreviewMenuKey: "s",
 		},
 		{
 			ID:          ActionFileViewSearchNext,
@@ -1086,14 +1105,15 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"preview", "inactive", "scroll", "page"},
 		},
 		{
-			ID:           ActionFileEdit,
-			Views:        HelpBrowser | HelpFilePreview,
-			Title:        "Edit file",
-			Section:      "File operations",
-			DefaultKeys:  []string{"F4", "M-e"},
-			PreferredKey: "F4",
-			Keywords:     []string{"editor", "edit"},
-			LeaderKey:    "e",
+			ID:             ActionFileEdit,
+			Views:          HelpBrowser | HelpFilePreview,
+			Title:          "Edit file",
+			Section:        "File operations",
+			DefaultKeys:    []string{"F4", "M-e"},
+			PreferredKey:   "F4",
+			Keywords:       []string{"editor", "edit"},
+			LeaderKey:      "e",
+			PreviewMenuKey: "e",
 		},
 		{
 			ID:          ActionMenuFileChattr,

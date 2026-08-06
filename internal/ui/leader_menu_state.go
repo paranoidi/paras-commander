@@ -9,10 +9,12 @@ type LeaderMenuItem struct {
 	DirectKey   string // compact global binding, e.g. "C-s"; built-in Esc menu only
 }
 
-// LeaderMenuState is the renderable bottom function menu (Esc built-in / F2 user menu / `"` copy menu).
+// LeaderMenuState is the renderable bottom function menu (Esc built-in / F2 user menu / `"` copy
+// menu / `:` fullscreen-preview menu).
 type LeaderMenuState struct {
-	Open     bool
-	UserMenu bool // true = F2/menu.toml
-	CopyMenu bool // true = `"` copy menu
-	Items    []LeaderMenuItem
+	Open        bool
+	UserMenu    bool // true = F2/menu.toml
+	CopyMenu    bool // true = `"` copy menu
+	PreviewMenu bool // true = ':' fullscreen-preview menu (ui.ViewFilePreview only)
+	Items       []LeaderMenuItem
 }

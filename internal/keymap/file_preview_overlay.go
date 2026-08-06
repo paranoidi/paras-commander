@@ -6,6 +6,7 @@ import "strings"
 // full-screen file view (F3) is focused ([file_preview]).
 func DefaultFilePreviewOverlayKeys() map[string][]string {
 	return map[string][]string{
+		ActionFileViewMenu:        {":"},
 		ActionFileViewThemePicker: {"F9"},
 		ActionFileViewToggleRaw:   {"F5"},
 		ActionFileViewReload:      {"F3"},

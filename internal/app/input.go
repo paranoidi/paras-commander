@@ -149,6 +149,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 				{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 			})
 		}
+		if a.model.LeaderMenu.PreviewMenu {
+			return footerWithEscClose([]menu.FunctionKey{
+				{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+			})
+		}
 		return footerWithEscClose([]menu.FunctionKey{
 			menu.FunctionKeyLeaderMenuToggleChords,
 			{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
@@ -465,6 +470,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return false, true
 	case InputModeLeaderMenu:
 		if resolvedAction == keymap.ActionAppLeaderMenu && a.builtinLeaderMenuOpen() {
+			a.closeLeaderMenu()
+			a.render()
+			return false, true
+		}
+		if resolvedAction == keymap.ActionFileViewMenu && a.previewLeaderMenuOpen() {
 			a.closeLeaderMenu()
 			a.render()
 			return false, true

@@ -21,6 +21,7 @@ const (
 	TerminalShortcutsTable       = "terminal"
 	LeaderKeyShortcutsTable      = "leader_key"
 	CopyMenuShortcutsTable       = "copy_menu"
+	PreviewMenuShortcutsTable    = "preview_menu"
 )
 
 var dialogShortcutSubtables = map[string]struct{}{

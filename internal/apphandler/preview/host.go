@@ -42,6 +42,7 @@ type Host interface {
 	EditActiveFile()
 	EditFullscreenPreviewFile()
 	OpenDeleteDialogForPreviewedFile()
+	OpenPreviewLeaderMenu()
 	HandleFileDialogFieldKey(ev *tcell.EventKey, f *dialog.FileDialogField, afterEdit func()) bool
 	PersistPartial(patch map[string]interface{}) error
 

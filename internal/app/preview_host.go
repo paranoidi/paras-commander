@@ -91,6 +91,8 @@ func (h previewHost) OpenDeleteDialogForPreviewedFile() {
 	h.app.dialogCtrl.OpenDeleteDialogForPreviewedFile()
 }
 
+func (h previewHost) OpenPreviewLeaderMenu() { h.app.togglePreviewLeaderMenu() }
+
 func (h previewHost) HandleFileDialogFieldKey(ev *tcell.EventKey, f *dialog.FileDialogField, afterEdit func()) bool {
 	return dialog.HandleFileDialogFieldKey(ev, f, h.app.keys.DialogInput, afterEdit)
 }

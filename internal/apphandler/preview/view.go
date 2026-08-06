@@ -219,6 +219,9 @@ func (h *Handler) tryFilePreviewAction(nextAction string) (quit bool, handled bo
 		return h.host.HandleQuit(), true
 	case keymap.ActionAppQuitImmediate:
 		return h.host.HandleQuitImmediate(), true
+	case keymap.ActionFileViewMenu:
+		h.host.OpenPreviewLeaderMenu()
+		return false, true
 	case keymap.ActionFileViewThemePicker:
 		h.toggleFilePreviewThemePicker()
 		return false, true
@@ -266,6 +269,17 @@ func (h *Handler) tryFilePreviewAction(nextAction string) (quit bool, handled bo
 	default:
 		return false, false
 	}
+}
+
+// TryFilePreviewMenuAction dispatches actionID (one of the `:` preview-menu entries) through
+// tryFilePreviewAction, the same path used by fullscreen preview's own direct keys. This is
+// deliberately not the generic action dispatcher: that path targets the inactive-column preview
+// for diff-hunk navigation and doesn't handle Reload/Search-start at all, which would silently
+// misbehave for a menu scoped to the fullscreen view. Returns the quit signal for callers wired
+// like a leader-menu onActivate callback.
+func (h *Handler) TryFilePreviewMenuAction(actionID string) bool {
+	quit, _ := h.tryFilePreviewAction(actionID)
+	return quit
 }
 
 // handleFilePreviewScrollKey handles raw scroll keys (arrows, PgUp/PgDn, space, Home/End) for

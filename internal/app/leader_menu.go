@@ -7,13 +7,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-func (a *App) openLeaderMenu(userMenu, copyMenu bool, items []ui.LeaderMenuItem) {
-	a.model.LeaderMenu = ui.LeaderMenuState{Open: true, UserMenu: userMenu, CopyMenu: copyMenu, Items: items}
+func (a *App) openLeaderMenu(userMenu, copyMenu, previewMenu bool, items []ui.LeaderMenuItem) {
+	a.model.LeaderMenu = ui.LeaderMenuState{Open: true, UserMenu: userMenu, CopyMenu: copyMenu, PreviewMenu: previewMenu, Items: items}
 }
 
 func (a *App) refreshLeaderMenuDirectKeys() {
 	st := &a.model.LeaderMenu
-	if st.UserMenu || st.CopyMenu || len(st.Items) == 0 {
+	if st.UserMenu || st.CopyMenu || st.PreviewMenu || len(st.Items) == 0 {
 		return
 	}
 	actionIdx := 0
@@ -50,7 +50,7 @@ func (a *App) toggleLeaderMenuDirectKeys() {
 }
 
 // openLeaderMenuStrip opens the bottom function menu when items fit; cancels an active quick filter first.
-func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, userMenu, copyMenu bool, prefix string, onActivate func(int) bool) bool {
+func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, userMenu, copyMenu, previewMenu bool, prefix string, onActivate func(int) bool) bool {
 	if a.inQuickFilterUI() {
 		a.cancelActiveQuickFilter()
 	}
@@ -61,7 +61,7 @@ func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, userMenu, copyMenu 
 		return false
 	}
 	a.leaderMenuOnActivate = onActivate
-	a.openLeaderMenu(userMenu, copyMenu, items)
+	a.openLeaderMenu(userMenu, copyMenu, previewMenu, items)
 	a.leaderMenuHiddenWarning(items, prefix)
 	a.clearTransientMessage()
 	return true
@@ -74,7 +74,7 @@ func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string
 		return
 	}
 	a.leaderMenuActions = actions
-	a.openLeaderMenuStrip(items, userMenu, copyMenu, prefix, func(i int) bool {
+	a.openLeaderMenuStrip(items, userMenu, copyMenu, false, prefix, func(i int) bool {
 		if i < 0 || i >= len(actions) {
 			return false
 		}
@@ -84,7 +84,12 @@ func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string
 
 func (a *App) builtinLeaderMenuOpen() bool {
 	st := a.model.LeaderMenu
-	return st.Open && !st.UserMenu && !st.CopyMenu
+	return st.Open && !st.UserMenu && !st.CopyMenu && !st.PreviewMenu
+}
+
+func (a *App) previewLeaderMenuOpen() bool {
+	st := a.model.LeaderMenu
+	return st.Open && st.PreviewMenu
 }
 
 func (a *App) toggleBuiltinLeaderMenu() {
@@ -160,7 +165,7 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 		a.closeLeaderMenu()
 		return false
 	case tcell.KeyF3:
-		if !st.UserMenu && !st.CopyMenu {
+		if !st.UserMenu && !st.CopyMenu && !st.PreviewMenu {
 			a.toggleLeaderMenuDirectKeys()
 		}
 		return false

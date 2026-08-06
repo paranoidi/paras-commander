@@ -103,6 +103,7 @@ func (f *fakeHost) CarouselAutohideInactivePanel() bool       { return false }
 func (f *fakeHost) EditActiveFile()                           {}
 func (f *fakeHost) EditFullscreenPreviewFile()                {}
 func (f *fakeHost) OpenDeleteDialogForPreviewedFile()         {}
+func (f *fakeHost) OpenPreviewLeaderMenu()                    {}
 func (f *fakeHost) HandleFileDialogFieldKey(*tcell.EventKey, *dialog.FileDialogField, func()) bool {
 	return false
 }

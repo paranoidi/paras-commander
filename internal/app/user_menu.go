@@ -129,7 +129,7 @@ func (a *App) openUserMenu() {
 	a.userMenuVisible = visible
 	a.userMenuPath = menuPath
 	items := userMenuLeaderMenuItems(visible)
-	a.openLeaderMenuStrip(items, true, false, "User menu", func(i int) bool {
+	a.openLeaderMenuStrip(items, true, false, false, "User menu", func(i int) bool {
 		if i < 0 || i >= len(a.userMenuVisible) {
 			return false
 		}

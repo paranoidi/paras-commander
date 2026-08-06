@@ -140,6 +140,7 @@ const (
 	ActionFileHardlink                 = "file.hardlink"
 	ActionFileExtract                  = "file.extract"
 	ActionFileView                     = "file.view"
+	ActionFileViewMenu                 = "file.view.menu"
 	ActionFileViewThemePicker          = "file.view.theme-picker"
 	ActionFileViewToggleRaw            = "file.view.toggle-raw"
 	ActionFileViewReload               = "file.view.reload"
@@ -357,6 +358,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileHardlink:                 {},
 	ActionFileExtract:                  {},
 	ActionFileView:                     {},
+	ActionFileViewMenu:                 {},
 	ActionFileViewThemePicker:          {},
 	ActionFileViewToggleRaw:            {},
 	ActionFileViewReload:               {},

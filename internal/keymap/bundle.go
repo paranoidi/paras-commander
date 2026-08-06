@@ -23,4 +23,6 @@ type Bundle struct {
 	LeaderKey map[string]string
 	// CopyMenuKey maps action ID → single-letter `"` copy-menu key (merged defaults + user).
 	CopyMenuKey map[string]string
+	// PreviewMenuKey maps action ID → single-letter `:` fullscreen-preview-menu key (merged defaults + user).
+	PreviewMenuKey map[string]string
 }
