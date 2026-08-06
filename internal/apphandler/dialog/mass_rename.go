@@ -64,8 +64,8 @@ func (h *Handler) MassRenameSyncFieldLabels() {
 	if d.DialogType != dialog.FileDialogMassRename || len(d.Fields) < 2 {
 		return
 	}
-	if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor {
-		return // no fields visible in external editor mode
+	if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor || d.MassRenameMode == dialog.MassRenameModeUICapitalize {
+		return // no fields visible in external editor / capitalize mode
 	}
 	if d.MassRenameMode == dialog.MassRenameModeUISimple {
 		d.Fields[0].Label = "Find"
@@ -100,6 +100,10 @@ func (h *Handler) RecomputeMassRenamePreview() {
 
 	if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor {
 		h.recomputeMassRenameExternalEditorPreview()
+		return
+	}
+	if d.MassRenameMode == dialog.MassRenameModeUICapitalize {
+		h.recomputeMassRenameCapitalizePreview()
 		return
 	}
 
@@ -237,49 +241,126 @@ func (h *Handler) recomputeMassRenameExternalEditorPreview() {
 	dialog.MassRenameEnsurePreviewScroll(d, vp, len(before))
 }
 
+// recomputeMassRenameCapitalizePreview recomputes the before/after preview rows for
+// Capitalize mode. Mirrors recomputeMassRenameExternalEditorPreview's structure: no
+// find/regex match ranges exist in this mode, so before-column highlights are always nil
+// and after-column highlights come from dialog.MassRenameDiff like the external-editor path.
+func (h *Handler) recomputeMassRenameCapitalizePreview() {
+	d := &h.model.FileDialog
+	entries := make([]localfs.Entry, len(d.MassRenameSources))
+	for i, s := range d.MassRenameSources {
+		entries[i] = localfs.Entry{Name: s.Name, Path: s.Path, Type: localfs.EntryFile}
+	}
+	panelPath := h.host.ActivePanel().PathString()
+	rows, err := ops.MassRenameComputeCapitalize(entries, panelPath, d.MassRenameCapEachWord, d.MassRenameCapPunctSep, d.MassRenameStripSpaces)
+	if err != nil {
+		d.Message = err.Error()
+		d.MassRenamePreviewBefore = []string{"! " + err.Error()}
+		d.MassRenamePreviewAfter = []string{""}
+		d.MassRenamePreviewBeforeRemoved = nil
+		d.MassRenamePreviewBeforeReplaced = nil
+		d.MassRenamePreviewAfterAdded = nil
+		return
+	}
+	rowErrs := ops.MassRenameRowErrors(rows)
+	before := make([]string, 0, len(rows))
+	after := make([]string, 0, len(rows))
+	beforeRemoved := make([][]search.Range, 0, len(rows))
+	beforeReplaced := make([][]search.Range, 0, len(rows))
+	afterAdded := make([][]search.Range, 0, len(rows))
+	afterError := make([]bool, 0, len(rows))
+	for i, r := range rows {
+		if d.MassRenameShowOnlyModified && r.OldBase == r.NewBase {
+			continue
+		}
+		before = append(before, r.OldBase)
+		after = append(after, r.NewBase)
+		beforeRemoved = append(beforeRemoved, nil)
+		beforeReplaced = append(beforeReplaced, nil)
+		_, added := dialog.MassRenameDiff(r.OldBase, r.NewBase)
+		afterAdded = append(afterAdded, added)
+		afterError = append(afterError, i < len(rowErrs) && rowErrs[i] != nil)
+	}
+	d.MassRenamePreviewBefore = before
+	d.MassRenamePreviewAfter = after
+	d.MassRenamePreviewBeforeRemoved = beforeRemoved
+	d.MassRenamePreviewBeforeReplaced = beforeReplaced
+	d.MassRenamePreviewAfterAdded = afterAdded
+	d.MassRenamePreviewAfterError = afterError
+	_, height := h.screen.Size()
+	vp := dialog.MassRenamePreviewViewportRows(height, d.MassRenameMode)
+	dialog.MassRenameEnsurePreviewScroll(d, vp, len(before))
+}
+
 // ApplyMassRenameModeFromFocus sets MassRenameMode from the currently focused mode radio and
 // recomputes labels/preview.
 func (h *Handler) ApplyMassRenameModeFromFocus() {
 	d := &h.model.FileDialog
-	prev := d.MassRenameMode
 	switch d.FocusedField {
 	case 0:
-		d.MassRenameMode = dialog.MassRenameModeUISimple
+		h.massRenameSwitchMode(d, dialog.MassRenameModeUISimple)
 	case 1:
-		d.MassRenameMode = dialog.MassRenameModeUIRegex
+		h.massRenameSwitchMode(d, dialog.MassRenameModeUIRegex)
 	case 2:
-		d.MassRenameMode = dialog.MassRenameModeUIExternalEditor
+		h.massRenameSwitchMode(d, dialog.MassRenameModeUIExternalEditor)
+	case 3:
+		h.massRenameSwitchMode(d, dialog.MassRenameModeUICapitalize)
+	}
+}
+
+// massRenameSwitchMode sets the mass-rename mode, snaps focus onto mode's own radio when
+// focus is currently on a different radio row, and refreshes clamp/labels/preview. Shared by
+// ApplyMassRenameModeFromFocus and the Alt-letter mode shortcuts (handleMassRenameAltShortcut).
+func (h *Handler) massRenameSwitchMode(d *dialog.FileDialogState, mode dialog.MassRenameModeUI) {
+	prev := d.MassRenameMode
+	d.MassRenameMode = mode
+	if d.FocusedField < 4 && d.FocusedField != dialog.MassRenameModeRadioFocus(mode) {
+		d.FocusedField = dialog.MassRenameModeRadioFocus(mode)
 	}
 	h.MassRenameClampFocusAfterModeChange(prev)
 	h.MassRenameSyncFieldLabels()
 	h.RecomputeMassRenamePreview()
 }
 
-// MassRenameClampFocusAfterModeChange keeps FocusedField valid when switching modes.
-// prev is the mode before the switch (External omits Find/Replace/Case indices).
+// MassRenameClampFocusAfterModeChange keeps FocusedField valid when switching modes. prev is
+// the mode before the switch. Driven by the FocusIdx helpers rather than literal indices so it
+// generalizes across all four modes: focus on a checkbox row that exists (at some index) in
+// both prev and the new mode follows that checkbox to its new index; focus on a row that only
+// existed in prev (Find/Replace, or a stale Capitalize-only checkbox row) lands on the new
+// mode's "Show only modified" checkbox.
 func (h *Handler) MassRenameClampFocusAfterModeChange(prev dialog.MassRenameModeUI) {
 	d := &h.model.FileDialog
 	if d.MassRenameMode == prev {
 		return
 	}
-	if d.MassRenameMode == dialog.MassRenameModeUIExternalEditor {
-		switch d.FocusedField {
-		case dialog.MassRenameFindFieldFocus, dialog.MassRenameFindFieldFocus + 1, 7:
-			d.FocusedField = 3 // show-modified in External
-		case 5:
-			d.FocusedField = 3
-		case 6:
-			d.FocusedField = 4
-		}
-		return
+	if d.FocusedField < 4 {
+		return // on a radio row: nothing to clamp
 	}
-	if prev == dialog.MassRenameModeUIExternalEditor {
-		switch d.FocusedField {
-		case 3:
-			d.FocusedField = 5
-		case 4:
-			d.FocusedField = 6
+	prevHasFields := prev == dialog.MassRenameModeUISimple || prev == dialog.MassRenameModeUIRegex
+	newHasFields := d.MassRenameMode == dialog.MassRenameModeUISimple || d.MassRenameMode == dialog.MassRenameModeUIRegex
+	if prevHasFields && newHasFields {
+		return // Simple <-> Regex share identical Find/Replace/checkbox indices: no remap needed.
+	}
+	prevState := *d
+	prevState.MassRenameMode = prev
+	switch {
+	case d.FocusedField == dialog.MassRenameShowModifiedFocusIdx(prevState):
+		d.FocusedField = dialog.MassRenameShowModifiedFocusIdx(*d)
+	case d.FocusedField == dialog.MassRenameStripFocusIdx(prevState):
+		d.FocusedField = dialog.MassRenameStripFocusIdx(*d)
+	case dialog.MassRenameCaseFocusIdx(prevState) >= 0 && d.FocusedField == dialog.MassRenameCaseFocusIdx(prevState):
+		if idx := dialog.MassRenameCaseFocusIdx(*d); idx >= 0 {
+			d.FocusedField = idx
+		} else {
+			d.FocusedField = dialog.MassRenameShowModifiedFocusIdx(*d)
 		}
+	case d.FocusedField == dialog.MassRenameFindFieldFocus || d.FocusedField == dialog.MassRenameFindFieldFocus+1:
+		// Leaving Simple/Regex's Find/Replace fields (no idx-helper exists for these).
+		d.FocusedField = dialog.MassRenameShowModifiedFocusIdx(*d)
+	default:
+		// Stale Capitalize-only checkbox index (or a stale button index): fall back to the
+		// new mode's "Show only modified" checkbox.
+		d.FocusedField = dialog.MassRenameShowModifiedFocusIdx(*d)
 	}
 }
 
@@ -352,6 +433,9 @@ func (h *Handler) massRenameComputeRows(d *dialog.FileDialogState) ([]ops.MassRe
 		entries[i] = localfs.Entry{Name: s.Name, Path: s.Path, Type: localfs.EntryFile}
 	}
 	panelPath := h.host.ActivePanel().PathString()
+	if d.MassRenameMode == dialog.MassRenameModeUICapitalize {
+		return ops.MassRenameComputeCapitalize(entries, panelPath, d.MassRenameCapEachWord, d.MassRenameCapPunctSep, d.MassRenameStripSpaces)
+	}
 	find, replace := "", ""
 	if len(d.Fields) > 0 {
 		find = d.Fields[0].Value

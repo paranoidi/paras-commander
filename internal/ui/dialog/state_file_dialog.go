@@ -33,6 +33,7 @@ const (
 	MassRenameModeUISimple MassRenameModeUI = iota
 	MassRenameModeUIRegex
 	MassRenameModeUIExternalEditor
+	MassRenameModeUICapitalize
 )
 
 // MassRenameSource is one selected file (absolute path resolved when the dialog opens).
@@ -144,8 +145,13 @@ type FileDialogState struct {
 	MassRenameCaseFold         bool
 	MassRenameStripSpaces      bool
 	MassRenameShowOnlyModified bool
-	MassRenamePreviewScroll    int
-	MassRenameSources          []MassRenameSource
+	// MassRenameCapEachWord / MassRenameCapPunctSep apply when MassRenameMode ==
+	// MassRenameModeUICapitalize: capitalize every word (vs. only the first letter of the
+	// whole name) and treat ',', '.', '_' as word separators in addition to whitespace/'-'.
+	MassRenameCapEachWord   bool
+	MassRenameCapPunctSep   bool
+	MassRenamePreviewScroll int
+	MassRenameSources       []MassRenameSource
 	// MassRenamePreviewBefore / After are paired basename preview columns (recomputed in app).
 	// Rows with Before starting with "!" are full-width compute-error lines (After empty).
 	MassRenamePreviewBefore         []string

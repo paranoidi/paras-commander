@@ -39,13 +39,11 @@ func resolveEntryPath(entry localfs.Entry, panelPath string) string {
 	return filepath.Clean(p)
 }
 
-// MassRenameCompute applies find/replace to each entry basename and returns one row per entry.
-// In simple mode, an empty find string leaves each basename unchanged (before optional strip).
-// In regex mode, a nil regexp leaves each basename unchanged (caller omits compile for an empty pattern).
-// When stripSpaces is true, leading/trailing Unicode spaces are trimmed from NewBase.
-// Rows with NewBase == OldBase are no-ops (still listed for preview).
-// panelPath is used to resolve non-absolute entry paths (same as PlanRename).
-func MassRenameCompute(entries []localfs.Entry, panelPath string, mode MassRenameMode, find, replace string, caseFold, stripSpaces bool, rx *regexp.Regexp) ([]MassRenameRow, error) {
+// massRenameBuildRows resolves entry paths and applies transform to each basename, optionally
+// stripping leading/trailing Unicode spaces from the result. Shared by MassRenameCompute and
+// MassRenameComputeCapitalize. panelPath is used to resolve non-absolute entry paths (same as
+// PlanRename). Rows with NewBase == OldBase are no-ops (still listed for preview).
+func massRenameBuildRows(entries []localfs.Entry, panelPath string, stripSpaces bool, transform func(oldBase string) (string, error)) ([]MassRenameRow, error) {
 	if len(entries) == 0 {
 		return nil, &Error{Op: "mass-rename", Text: "no files to rename"}
 	}
@@ -53,7 +51,7 @@ func MassRenameCompute(entries []localfs.Entry, panelPath string, mode MassRenam
 	for _, e := range entries {
 		src := resolveEntryPath(e, panelPath)
 		oldBase := filepath.Base(src)
-		nb, err := massRenameTransformBase(mode, oldBase, find, replace, caseFold, rx)
+		nb, err := transform(oldBase)
 		if err != nil {
 			return nil, err
 		}
@@ -63,6 +61,71 @@ func MassRenameCompute(entries []localfs.Entry, panelPath string, mode MassRenam
 		out = append(out, MassRenameRow{SourcePath: src, OldBase: oldBase, NewBase: nb})
 	}
 	return out, nil
+}
+
+// MassRenameCompute applies find/replace to each entry basename and returns one row per entry.
+// In simple mode, an empty find string leaves each basename unchanged (before optional strip).
+// In regex mode, a nil regexp leaves each basename unchanged (caller omits compile for an empty pattern).
+// When stripSpaces is true, leading/trailing Unicode spaces are trimmed from NewBase.
+// Rows with NewBase == OldBase are no-ops (still listed for preview).
+// panelPath is used to resolve non-absolute entry paths (same as PlanRename).
+func MassRenameCompute(entries []localfs.Entry, panelPath string, mode MassRenameMode, find, replace string, caseFold, stripSpaces bool, rx *regexp.Regexp) ([]MassRenameRow, error) {
+	return massRenameBuildRows(entries, panelPath, stripSpaces, func(oldBase string) (string, error) {
+		return massRenameTransformBase(mode, oldBase, find, replace, caseFold, rx)
+	})
+}
+
+// MassRenameComputeCapitalize applies the Capitalize transform (massRenameCapitalize) to each
+// entry basename and returns one row per entry. When stripSpaces is true, leading/trailing
+// Unicode spaces are trimmed from NewBase. panelPath is used to resolve non-absolute entry paths.
+func MassRenameComputeCapitalize(entries []localfs.Entry, panelPath string, eachWord, punctSep, stripSpaces bool) ([]MassRenameRow, error) {
+	return massRenameBuildRows(entries, panelPath, stripSpaces, func(oldBase string) (string, error) {
+		return massRenameCapitalize(oldBase, eachWord, punctSep), nil
+	})
+}
+
+// massRenameIsWordSep reports whether r is a word-boundary character for the Capitalize
+// transform. Unicode whitespace and '-' always separate words; ',', '.', and '_' also do
+// when punctSep is true.
+func massRenameIsWordSep(r rune, punctSep bool) bool {
+	if unicode.IsSpace(r) || r == '-' {
+		return true
+	}
+	if punctSep && (r == ',' || r == '.' || r == '_') {
+		return true
+	}
+	return false
+}
+
+// massRenameCapitalize uppercases the first letter of each word (eachWord) or just the first
+// letter of the whole basename (default). Separator runes (massRenameIsWordSep) are never
+// touched, and no rune is ever lowercased.
+func massRenameCapitalize(oldBase string, eachWord, punctSep bool) string {
+	runes := []rune(oldBase)
+	if len(runes) == 0 {
+		return oldBase
+	}
+	if eachWord {
+		prevSep := true
+		for i, r := range runes {
+			isSep := massRenameIsWordSep(r, punctSep)
+			if !isSep && (i == 0 || prevSep) {
+				runes[i] = unicode.ToUpper(r)
+			}
+			prevSep = isSep
+		}
+		return string(runes)
+	}
+	for i, r := range runes {
+		if massRenameIsWordSep(r, punctSep) {
+			continue
+		}
+		if unicode.IsLetter(r) {
+			runes[i] = unicode.ToUpper(r)
+			break
+		}
+	}
+	return string(runes)
 }
 
 func massRenameTransformBase(mode MassRenameMode, oldBase, find, replace string, caseFold bool, rx *regexp.Regexp) (string, error) {

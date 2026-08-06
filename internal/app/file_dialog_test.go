@@ -487,7 +487,7 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 	for _, r := range "foo_" {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	d.FocusedField = 4 // Replace field (0-2 = radios, 3 = Find, 4 = Replace)
+	d.FocusedField = dialog.MassRenameFindFieldFocus + 1 // Replace field (0-3 = radios, 4 = Find, 5 = Replace)
 	for _, r := range "bar_" {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
@@ -582,7 +582,7 @@ func TestMassRenameModeShortcutKeepsReplaceFocus(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
-	const replaceFocus = 3
+	const replaceFocus = dialog.MassRenameFindFieldFocus + 1
 	d.FocusedField = replaceFocus
 	for _, r := range "y" {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
@@ -623,7 +623,9 @@ func TestMassRenameRadioFocusAppliesRegexMode(t *testing.T) {
 	if d.MassRenameMode != dialog.MassRenameModeUISimple {
 		t.Fatalf("initial mode = %v, want simple", d.MassRenameMode)
 	}
-	// Up from Find (3) → showModified (5), Up → ExternalEditor (2), Up again → Regex (1)
+	// Up from Find (4) → showModified (6), Up → Capitalize radio (3), Up → External (2),
+	// Up again → Regex (1)
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
@@ -679,6 +681,216 @@ func TestMassRenameTabIntoModeRadiosKeepsCurrentMode(t *testing.T) {
 	}
 }
 
+func TestMassRenameCapitalizeTabCyclesThroughCheckboxes(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "wandering-elephant.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	if d.MassRenameMode != dialog.MassRenameModeUICapitalize {
+		t.Fatalf("mode = %v, want capitalize after Alt+A", d.MassRenameMode)
+	}
+
+	okIdx := dialog.FileDialogOKFocusIndex(*d)
+	if okIdx != 8 {
+		t.Fatalf("okIdx = %d, want 8", okIdx)
+	}
+
+	// Down steps through the two capitalize checkbox rows individually (mirrors Find/Replace
+	// in Simple/Regex mode), then reaches OK.
+	d.FocusedField = 3 // Capitalize radio
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if want := dialog.MassRenameShowModifiedFocusIdx(*d); d.FocusedField != want || want != 4 {
+		t.Fatalf("Down from radio: focus = %d, want 4 (Show only modified)", d.FocusedField)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if want := dialog.MassRenameCapEachWordFocusIdx(*d); d.FocusedField != want || want != 6 {
+		t.Fatalf("Down from options row: focus = %d, want 6 (Capitalize each word)", d.FocusedField)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if want := dialog.MassRenameCapPunctFocusIdx(*d); d.FocusedField != want || want != 7 {
+		t.Fatalf("Down from Capitalize each word: focus = %d, want 7 (Treat punctuation as separators)", d.FocusedField)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
+	if d.FocusedField != okIdx {
+		t.Fatalf("Down from Treat punctuation: focus = %d, want %d (OK)", d.FocusedField, okIdx)
+	}
+
+	// Up retraces the same path in reverse.
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	if want := dialog.MassRenameCapPunctFocusIdx(*d); d.FocusedField != want {
+		t.Fatalf("Up from OK: focus = %d, want %d (Treat punctuation as separators)", d.FocusedField, want)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	if want := dialog.MassRenameCapEachWordFocusIdx(*d); d.FocusedField != want {
+		t.Fatalf("Up: focus = %d, want %d (Capitalize each word)", d.FocusedField, want)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone))
+	if want := dialog.MassRenameShowModifiedFocusIdx(*d); d.FocusedField != want {
+		t.Fatalf("Up: focus = %d, want %d (Show only modified)", d.FocusedField, want)
+	}
+
+	// Tab jumps by segment (radio+options row -> checkbox rows -> buttons -> radio), same
+	// pattern as Find/Replace in Simple/Regex mode.
+	d.FocusedField = 3 // Capitalize radio
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if want := dialog.MassRenameCapEachWordFocusIdx(*d); d.FocusedField != want {
+		t.Fatalf("Tab from radio: focus = %d, want %d (Capitalize each word)", d.FocusedField, want)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if d.FocusedField != okIdx {
+		t.Fatalf("Tab from checkbox segment: focus = %d, want %d (OK)", d.FocusedField, okIdx)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone))
+	if d.FocusedField != 3 {
+		t.Fatalf("Tab from OK: focus = %d, want 3 (Capitalize radio)", d.FocusedField)
+	}
+	if d.MassRenameMode != dialog.MassRenameModeUICapitalize {
+		t.Fatalf("mode changed unexpectedly to %v after wrapping Tab", d.MassRenameMode)
+	}
+
+	// Backtab retraces the same path in reverse.
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModNone))
+	if d.FocusedField != okIdx {
+		t.Fatalf("Backtab from radio: focus = %d, want %d (OK)", d.FocusedField, okIdx)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModNone))
+	if d.FocusedField != 3 {
+		t.Fatalf("Backtab from OK: focus = %d, want 3 (Capitalize radio)", d.FocusedField)
+	}
+}
+
+func TestMassRenameClampFocusIntoAndOutOfCapitalize(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "wandering-elephant.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+
+	altSwitch := func(r rune) {
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModAlt))
+	}
+
+	// Simple -> Capitalize: Show only modified / Strip carry over to Capitalize's matching
+	// checkbox; Case and Find/Replace (which Capitalize doesn't have) fall back to Capitalize's
+	// "Show only modified".
+	fromSimpleCases := []struct {
+		label string
+		idx   func() int
+		want  int
+	}{
+		{"ShowModified", func() int { return dialog.MassRenameShowModifiedFocusIdx(*d) }, 4},
+		{"Strip", func() int { return dialog.MassRenameStripFocusIdx(*d) }, 5},
+		{"Case", func() int { return dialog.MassRenameCaseFocusIdx(*d) }, 4},
+		{"Find", func() int { return dialog.MassRenameFindFieldFocus }, 4},
+		{"Replace", func() int { return dialog.MassRenameFindFieldFocus + 1 }, 4},
+	}
+	for _, tc := range fromSimpleCases {
+		altSwitch('s') // back to Simple
+		d.FocusedField = tc.idx()
+		altSwitch('a') // Simple -> Capitalize
+		if d.MassRenameMode != dialog.MassRenameModeUICapitalize {
+			t.Fatalf("%s: mode = %v, want capitalize", tc.label, d.MassRenameMode)
+		}
+		if d.FocusedField != tc.want {
+			t.Fatalf("Simple(%s) -> Capitalize: focus = %d, want %d", tc.label, d.FocusedField, tc.want)
+		}
+	}
+
+	// Capitalize -> Simple/Regex: the capitalize-only checkbox rows have no counterpart, so
+	// focus falls back to the new mode's "Show only modified" (the default-branch case).
+	altSwitch('a')
+	d.FocusedField = dialog.MassRenameCapEachWordFocusIdx(*d)
+	altSwitch('s')
+	if want := dialog.MassRenameShowModifiedFocusIdx(*d); d.FocusedField != want || want != 6 {
+		t.Fatalf("Capitalize(CapEachWord) -> Simple: focus = %d, want 6", d.FocusedField)
+	}
+
+	altSwitch('a')
+	d.FocusedField = dialog.MassRenameCapPunctFocusIdx(*d)
+	altSwitch('r')
+	if want := dialog.MassRenameShowModifiedFocusIdx(*d); d.FocusedField != want || want != 6 {
+		t.Fatalf("Capitalize(CapPunct) -> Regex: focus = %d, want 6", d.FocusedField)
+	}
+
+	// External <-> Capitalize share identical Show-only-modified(4)/Strip(5) indices, so focus
+	// on either checkbox is preserved exactly across the switch, in both directions.
+	altSwitch('e')
+	d.FocusedField = dialog.MassRenameStripFocusIdx(*d)
+	altSwitch('a')
+	if d.FocusedField != 5 {
+		t.Fatalf("External(Strip) -> Capitalize: focus = %d, want 5 (preserved)", d.FocusedField)
+	}
+	altSwitch('e')
+	if d.FocusedField != 5 {
+		t.Fatalf("Capitalize(Strip) -> External: focus = %d, want 5 (preserved)", d.FocusedField)
+	}
+}
+
+func TestMassRenameCapPunctSepToggleEnablesCapEachWord(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "small-package-name.txt")
+	writeFile(t, aPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+
+	// Switch to Capitalize mode
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	if d.MassRenameMode != dialog.MassRenameModeUICapitalize {
+		t.Fatalf("mode = %v, want capitalize after Alt+A", d.MassRenameMode)
+	}
+
+	// Both checkboxes should start off
+	if d.MassRenameCapEachWord {
+		t.Fatal("MassRenameCapEachWord should start as false")
+	}
+	if d.MassRenameCapPunctSep {
+		t.Fatal("MassRenameCapPunctSep should start as false")
+	}
+
+	// Toggle punctuation separator via Alt+P
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModAlt))
+
+	// Both should now be on
+	if !d.MassRenameCapPunctSep {
+		t.Fatal("MassRenameCapPunctSep should be true after Alt+P")
+	}
+	if !d.MassRenameCapEachWord {
+		t.Fatal("MassRenameCapEachWord should be automatically enabled when CapPunctSep is turned on")
+	}
+
+	// Toggle capitalize-each-word independently and verify it doesn't affect punctSep
+	d.FocusedField = dialog.MassRenameCapEachWordFocusIdx(*d)
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
+
+	if d.MassRenameCapEachWord {
+		t.Fatal("MassRenameCapEachWord should be false after space toggle")
+	}
+	if !d.MassRenameCapPunctSep {
+		t.Fatal("MassRenameCapPunctSep should remain true (not affected by CapEachWord toggle)")
+	}
+}
+
 func TestMassRenameRegexCaptureGroupPreviewWithShiftDollar(t *testing.T) {
 	dir := t.TempDir()
 	season1 := filepath.Join(dir, "Season 1")
@@ -697,7 +909,7 @@ func TestMassRenameRegexCaptureGroupPreviewWithShiftDollar(t *testing.T) {
 	for _, r := range `(\d)$` {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	d.FocusedField = 4 // Replace field (0-2 = radios, 3 = Pattern, 4 = Replacement)
+	d.FocusedField = dialog.MassRenameFindFieldFocus + 1 // Replacement field (0-3 = radios, 4 = Pattern, 5 = Replacement)
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '0', tcell.ModNone))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '$', tcell.ModShift))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '1', tcell.ModNone))
@@ -747,7 +959,7 @@ func TestMassRenameRegexpCompileHintForBackslashPattern(t *testing.T) {
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'r', tcell.ModAlt))
-	d.FocusedField = 3 // Pattern field (0-2 = radios, 3 = Pattern)
+	d.FocusedField = dialog.MassRenameFindFieldFocus // Pattern field (0-3 = radios, 4 = Pattern)
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, '\\', tcell.ModNone))
 
 	if !d.Fields[0].InputInvalid {
@@ -780,7 +992,7 @@ func TestMassRenameEnterCancelClosesWithInvalidRegex(t *testing.T) {
 	// Regex mode + invalid pattern
 	d.FocusedField = 1
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
-	d.FocusedField = 3 // Pattern field (0-2 = radios, 3 = Pattern)
+	d.FocusedField = dialog.MassRenameFindFieldFocus // Pattern field (0-3 = radios, 4 = Pattern)
 	for _, r := range "a++" {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
@@ -822,7 +1034,7 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 	for _, r := range "1" {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
-	d.FocusedField = 4 // Replace field (0-2 = radios, 3 = Find, 4 = Replace)
+	d.FocusedField = dialog.MassRenameFindFieldFocus + 1 // Replace field (0-3 = radios, 4 = Find, 5 = Replace)
 	for _, r := range "2" {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}

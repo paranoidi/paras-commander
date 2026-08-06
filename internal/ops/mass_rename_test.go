@@ -63,6 +63,92 @@ func TestMassRenameComputeStripSpaces(t *testing.T) {
 	}
 }
 
+func TestMassRenameComputeCapitalizeDefaultFirstLetterOnly(t *testing.T) {
+	dir := t.TempDir()
+	entries := []localfs.Entry{
+		{Name: "wandering elephant.txt", Path: filepath.Join(dir, "wandering elephant.txt"), Type: localfs.EntryFile},
+	}
+	rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].NewBase != "Wandering elephant.txt" {
+		t.Fatalf("got %q, want %q", rows[0].NewBase, "Wandering elephant.txt")
+	}
+}
+
+func TestMassRenameComputeCapitalizeDefaultSkipsLeadingDigits(t *testing.T) {
+	dir := t.TempDir()
+	entries := []localfs.Entry{
+		{Name: "3 dragons flying.txt", Path: filepath.Join(dir, "3 dragons flying.txt"), Type: localfs.EntryFile},
+	}
+	rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Digits and separators never trigger the "first letter" latch; it fires on the first
+	// rune that actually has an uppercase form (the 'd' in "dragons").
+	if rows[0].NewBase != "3 Dragons flying.txt" {
+		t.Fatalf("got %q, want %q", rows[0].NewBase, "3 Dragons flying.txt")
+	}
+}
+
+func TestMassRenameComputeCapitalizeDefaultAlreadyCapitalizedFirstLetter(t *testing.T) {
+	dir := t.TempDir()
+	entries := []localfs.Entry{
+		{Name: "7.Golden Compass.txt", Path: filepath.Join(dir, "7.Golden Compass.txt"), Type: localfs.EntryFile},
+	}
+	rows, err := MassRenameComputeCapitalize(entries, dir, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// When the first letter is already uppercase, it should not capitalize any other letters.
+	// The bug would incorrectly capitalize 'o' in "Golden" or letters after it.
+	if rows[0].NewBase != "7.Golden Compass.txt" {
+		t.Fatalf("got %q, want %q", rows[0].NewBase, "7.Golden Compass.txt")
+	}
+}
+
+func TestMassRenameComputeCapitalizeEachWord(t *testing.T) {
+	dir := t.TempDir()
+	entries := []localfs.Entry{
+		{Name: "wandering elephant-forest.txt", Path: filepath.Join(dir, "wandering elephant-forest.txt"), Type: localfs.EntryFile},
+	}
+	rows, err := MassRenameComputeCapitalize(entries, dir, true, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Whitespace and '-' are always word separators, even with punctSep off.
+	if rows[0].NewBase != "Wandering Elephant-Forest.txt" {
+		t.Fatalf("got %q, want %q", rows[0].NewBase, "Wandering Elephant-Forest.txt")
+	}
+}
+
+func TestMassRenameComputeCapitalizeEachWordPunctuationSeparators(t *testing.T) {
+	dir := t.TempDir()
+	entries := []localfs.Entry{
+		{Name: "wandering_elephant.forest,journey.txt", Path: filepath.Join(dir, "wandering_elephant.forest,journey.txt"), Type: localfs.EntryFile},
+	}
+	rowsOff, err := MassRenameComputeCapitalize(entries, dir, true, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Punctuation separators off: '_', '.', ',' do not start new words, so only the very
+	// first rune of the whole name gets capitalized.
+	if rowsOff[0].NewBase != "Wandering_elephant.forest,journey.txt" {
+		t.Fatalf("punct off: got %q, want %q", rowsOff[0].NewBase, "Wandering_elephant.forest,journey.txt")
+	}
+	rowsOn, err := MassRenameComputeCapitalize(entries, dir, true, true, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Punctuation separators on: '_', '.', ',' also start new words (including the
+	// extension, since the transform has no notion of "extension").
+	if rowsOn[0].NewBase != "Wandering_Elephant.Forest,Journey.Txt" {
+		t.Fatalf("punct on: got %q, want %q", rowsOn[0].NewBase, "Wandering_Elephant.Forest,Journey.Txt")
+	}
+}
+
 func TestMassRenameComputeRegexCaseFold(t *testing.T) {
 	dir := t.TempDir()
 	re, err := MassRenameCompileRegex(`hello`, true)

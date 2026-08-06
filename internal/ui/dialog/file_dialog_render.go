@@ -263,7 +263,7 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 			"Regular expression",
 			"External $EDITOR",
 			"Show only modified",
-			"Strip spaces",
+			"Trim whitespace",
 			"Case insensitive",
 			"Pattern",
 			"Replacement",
@@ -273,9 +273,9 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 				minWidth = lw
 			}
 		}
-		// Options row: three checkboxes on one line (Show only modified | Strip spaces | Case insensitive).
+		// Options row: three checkboxes on one line (Show only modified | Trim whitespace | Case insensitive).
 		optsRow := utf8.RuneCountInString(draw.CheckboxText("Show only modified", false)) +
-			utf8.RuneCountInString(draw.CheckboxText("Strip spaces", false)) +
+			utf8.RuneCountInString(draw.CheckboxText("Trim whitespace", false)) +
 			utf8.RuneCountInString(draw.CheckboxText("Case insensitive", false)) + 10 // gaps + margins
 		if optsRow > minWidth {
 			minWidth = optsRow
