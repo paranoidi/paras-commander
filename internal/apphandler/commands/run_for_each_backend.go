@@ -28,6 +28,9 @@ type RunForEachBatchSpec struct {
 
 	// WorkDir is used as exec.Cmd.Dir.
 	WorkDir string
+	// PerEntryWorkDir uses each entry's own absolute path as the working directory instead of
+	// WorkDir.
+	PerEntryWorkDir bool
 
 	// PoolName optionally gates each invocation through the work pool registry.
 	PoolName string
@@ -195,7 +198,11 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 			}
 		}
 
-		res := cmdrun.RunTracked(ctx, argv, spec.WorkDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+		workDir := spec.WorkDir
+		if spec.PerEntryWorkDir {
+			workDir = abs
+		}
+		res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
 			h.SetProcess(idx, p)
 		})
 		h.UnregisterProc(idx)

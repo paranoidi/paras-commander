@@ -41,8 +41,8 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 		if msg := strings.TrimSpace(state.Message); msg != "" {
 			helpLines = strings.Count(state.Message, "\n") + 1
 		}
-		// Help block + separator + command block + optional pool section + separator + buttons row.
-		height = helpLines + 1 + runForEachCommandFieldRows(state) + 4
+		// Help block + separator + command block + separator + checkbox + optional pool section + separator + buttons row.
+		height = helpLines + 1 + runForEachCommandFieldRows(state) + 2 + 4
 		if runForEachHasPoolSelector(state) {
 			// Separator + label + blank + pool radios ("No pool" + one per pool).
 			height += 1 + 1 + 1 + (1 + len(state.RunForEachPools))
@@ -356,9 +356,22 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 			if hint := runForEachCommandErrorText(state); hint != "" && y < innerBottom {
 				primitive.Text(screen, draw.DialogTextX(rect), y, rect.Width-4, hint, runForEachCommandErrorStyle(styles, dbg))
 				y++
+			} else if preview := runForEachPreviewText(state); preview != "" && y < innerBottom {
+				primitive.Text(screen, draw.DialogTextX(rect), y, rect.Width-4, "→ "+preview, runForEachPreviewStyle(styles, dbg))
+				y++
 			}
 		}
 	}
+
+	if y >= rect.Y+rect.Height-3 {
+		return
+	}
+	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
+	y++
+	if y < innerBottom {
+		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Run in each selected directory", 'R', state.RunForEachInDirs, state.FocusedField == len(state.Fields), styles)
+	}
+	y++
 
 	if !runForEachHasPoolSelector(state) {
 		return
@@ -382,7 +395,7 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 	primitive.Text(screen, rect.X+2, y, labelWidth, "Worker pool (optional):", labelStyle)
 	y += 2 // blank line between label and pool radios (AGENTS.md dialog layout)
 
-	baseFocus := len(state.Fields)
+	baseFocus := len(state.Fields) + 1
 	if y < innerBottom {
 		focused := state.FocusedField == baseFocus
 		selected := strings.TrimSpace(state.RunForEachPool) == ""
@@ -665,11 +678,16 @@ func runForEachHasPoolSelector(state FileDialogState) bool {
 }
 
 func runForEachExtraFocusRows(state FileDialogState) int {
-	if !runForEachHasPoolSelector(state) {
+	if state.DialogType != FileDialogRunForEach {
 		return 0
 	}
-	// "No pool" + one row per configured pool.
-	return 1 + len(state.RunForEachPools)
+	// Checkbox row.
+	rows := 1
+	if runForEachHasPoolSelector(state) {
+		// "No pool" + one row per configured pool.
+		rows += 1 + len(state.RunForEachPools)
+	}
+	return rows
 }
 
 // renameFocusCheckboxLabel returns the focus-after checkbox caption for rename-like dialogs.

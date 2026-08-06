@@ -49,8 +49,26 @@ func (h *Handler) tryFileDialogPreKey(event *tcell.EventKey, d *dialog.FileDialo
 		if h.tryRenameFocusAltShortcut(event.Rune()) {
 			return true
 		}
+		if h.tryRunForEachInDirsAltShortcut(event.Rune()) {
+			return true
+		}
 	}
 	return false
+}
+
+// tryRunForEachInDirsAltShortcut toggles "Run in each selected directory" via Alt+R on the
+// run-for-each dialog.
+func (h *Handler) tryRunForEachInDirsAltShortcut(r rune) bool {
+	d := &h.model.FileDialog
+	if d.DialogType != dialog.FileDialogRunForEach {
+		return false
+	}
+	if r != 'r' && r != 'R' {
+		return false
+	}
+	d.RunForEachInDirs = !d.RunForEachInDirs
+	h.commands.RecomputeRunForEachValidation()
+	return true
 }
 
 // HandleFileDialogKey routes a key event to the open file dialog. Returns true when the event
@@ -99,7 +117,8 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 	onCheckbox := h.fileDialogOnMassRenameCaseCheckbox() ||
 		h.fileDialogOnMassRenameStripCheckbox() ||
 		h.fileDialogOnRenameFocusCheckbox() ||
-		h.fileDialogOnMassRenameShowModifiedCheckbox()
+		h.fileDialogOnMassRenameShowModifiedCheckbox() ||
+		h.fileDialogOnRunForEachInDirsCheckbox()
 
 	f := h.FocusedField()
 	skipEarlyFieldKey := f != nil && f.PathPicker && !f.PickerFocused && event.Key() == tcell.KeyRight
@@ -246,6 +265,11 @@ func (h *Handler) handleFileDialogEnter() {
 		d.RenameFocusAfter = !d.RenameFocusAfter
 		return
 	}
+	if h.fileDialogOnRunForEachInDirsCheckbox() {
+		d.RunForEachInDirs = !d.RunForEachInDirs
+		h.commands.RecomputeRunForEachValidation()
+		return
+	}
 	if h.fileDialogOnMkdirRadio() {
 		h.selectFocusedMkdirRadio()
 	}
@@ -298,6 +322,13 @@ func (h *Handler) handleFileDialogRune(event *tcell.EventKey) {
 	if h.fileDialogOnRenameFocusCheckbox() {
 		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
 			d.RenameFocusAfter = !d.RenameFocusAfter
+		}
+		return
+	}
+	if h.fileDialogOnRunForEachInDirsCheckbox() {
+		if keymap.IsPlainPrintableRune(event) && event.Rune() == ' ' {
+			d.RunForEachInDirs = !d.RunForEachInDirs
+			h.commands.RecomputeRunForEachValidation()
 		}
 		return
 	}
@@ -669,27 +700,15 @@ func (h *Handler) fileDialogOnMkdirRadio() bool {
 	return d.DialogType == dialog.FileDialogMkdir && d.FocusedField >= base && d.FocusedField < base+extra
 }
 
-func (h *Handler) runForEachExtraFocusRows() int {
-	d := &h.model.FileDialog
-	if d.DialogType != dialog.FileDialogRunForEach {
-		return 0
-	}
-	if len(d.RunForEachPools) == 0 {
-		return 0
-	}
-	// "No pool" + one per configured pool.
-	return 1 + len(d.RunForEachPools)
-}
-
 // fileDialogOnRunForEachPoolRadio returns true when focus is on the run-for-each pool selector rows.
 func (h *Handler) fileDialogOnRunForEachPoolRadio() bool {
 	d := &h.model.FileDialog
-	extra := h.runForEachExtraFocusRows()
-	if extra == 0 {
+	if d.DialogType != dialog.FileDialogRunForEach || len(d.RunForEachPools) == 0 {
 		return false
 	}
-	base := len(d.Fields)
-	return d.DialogType == dialog.FileDialogRunForEach && d.FocusedField >= base && d.FocusedField < base+extra
+	base := len(d.Fields) + 1
+	extra := 1 + len(d.RunForEachPools) // "No pool" + one per configured pool.
+	return d.FocusedField >= base && d.FocusedField < base+extra
 }
 
 // fileDialogOnMassRenameRadio returns true when focus is on one of the three mode radios.
@@ -738,6 +757,13 @@ func (h *Handler) fileDialogOnRenameFocusCheckbox() bool {
 		d.FocusedField == len(d.Fields)
 }
 
+// fileDialogOnRunForEachInDirsCheckbox returns true when focus is on the "Run in each
+// directory" checkbox.
+func (h *Handler) fileDialogOnRunForEachInDirsCheckbox() bool {
+	d := &h.model.FileDialog
+	return d.DialogType == dialog.FileDialogRunForEach && d.FocusedField == len(d.Fields)
+}
+
 // fileDialogRadioIndex returns the 0-based radio index when focus is on a
 // mkdir radio row, or -1 otherwise.
 func (h *Handler) fileDialogRadioIndex() int {
@@ -751,7 +777,7 @@ func (h *Handler) runForEachPoolRadioIndex() int {
 	if !h.fileDialogOnRunForEachPoolRadio() {
 		return -1
 	}
-	return h.model.FileDialog.FocusedField - len(h.model.FileDialog.Fields)
+	return h.model.FileDialog.FocusedField - len(h.model.FileDialog.Fields) - 1
 }
 
 func (h *Handler) selectFocusedRunForEachPoolRadio() {

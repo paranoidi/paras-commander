@@ -247,7 +247,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		Background:  entry.Background,
 		NotifyLabel: notifyLabel,
 		BuildItem: func(ent localfs.Entry) (commandsctrl.RunForEachBuiltItem, error) {
-			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, active, other, entry.Shell)
+			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, active, other, entry.Shell, true)
 		},
 	})
 }

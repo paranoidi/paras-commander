@@ -19,9 +19,11 @@ type RunForEachBuiltItem struct {
 }
 
 // BuildRunForEachItem expands cmdTemplate's macros for ent and returns the argv to run.
-// Returns an error when the template omits the required %f (iterated item) macro.
-func BuildRunForEachItem(cmdTemplate string, ent localfs.Entry, active, other *panel.State, forceShell bool) (RunForEachBuiltItem, error) {
-	if !usermenu.CommandRequiresIteratedF(cmdTemplate) {
+// When requireF is true, returns an error if the template omits the required %f (iterated
+// item) macro; when false (run-in-each-directory mode), %f is optional since the shell is
+// already positioned inside ent's directory.
+func BuildRunForEachItem(cmdTemplate string, ent localfs.Entry, active, other *panel.State, forceShell bool, requireF bool) (RunForEachBuiltItem, error) {
+	if requireF && !usermenu.CommandRequiresIteratedF(cmdTemplate) {
 		return RunForEachBuiltItem{}, errors.New(usermenu.ErrRunForEachRequiresF)
 	}
 	built, err := cmdrun.BuildInvocation(cmdrun.InvocationSpec{

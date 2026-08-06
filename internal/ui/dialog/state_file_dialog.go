@@ -107,6 +107,13 @@ type FileDialogState struct {
 	RunForEachPool string
 	// RunForEachCommandError is shown under the Command input when validation fails.
 	RunForEachCommandError string
+	// RunForEachPreview is the expanded command line for the first selected item, shown under
+	// the Command input while it is valid (mutually exclusive with RunForEachCommandError).
+	RunForEachPreview string
+	// RunForEachInDirs runs the command with cwd set to each selected directory itself instead
+	// of the panel's fixed directory with %f as an argument. Selection must be directories-only
+	// when set.
+	RunForEachInDirs bool
 	// ExtractSources apply when DialogType == FileDialogExtract (archive paths resolved at dialog open).
 	ExtractSources []string
 	// MkdirShowActions enables the extra "Create / Create and copy selected / Create and move selected" radio
