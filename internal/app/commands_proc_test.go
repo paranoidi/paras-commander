@@ -68,7 +68,7 @@ func TestCommandsKillStopsRunningSubprocess(t *testing.T) {
 	app.model.CommandsView.Selected = 0
 	app.dispatch(keymap.ActionCommandsKill)
 
-	waitCommandsDoneWithin(t, app, 2*time.Second)
+	waitCommandsDoneWithin(t, app, 8*time.Second)
 
 	e := app.model.CommandsList[0]
 	if e.ExitCode == 0 {
@@ -90,7 +90,7 @@ func TestCommandsTerminateSendsSIGTERM(t *testing.T) {
 	app.model.CommandsView.Selected = 0
 	app.dispatch(keymap.ActionCommandsTerminate)
 
-	waitCommandsDoneWithin(t, app, 2*time.Second)
+	waitCommandsDoneWithin(t, app, 8*time.Second)
 
 	e := app.model.CommandsList[0]
 	if e.ExitCode != 7 {

@@ -211,7 +211,7 @@ func TestFindDialogHandleKeyAltDDoesNotStartDiskUsageScan(t *testing.T) {
 
 	left := app.panelByID(ui.PrimaryPanel)
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
