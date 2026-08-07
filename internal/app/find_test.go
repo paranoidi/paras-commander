@@ -219,6 +219,11 @@ func TestFindDialogHandleKeyAltDDoesNotStartDiskUsageScan(t *testing.T) {
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
+	// ListingFullyDiskCached reflects the engine's cache map directly, so the loop above can
+	// break before the trailing EventJobFinished (which drives the "scan finished" toast) has
+	// been drained off the events channel. Drain it now so app.model.Message settles before
+	// later assertions check it.
+	app.pollDiskUsageUpdates()
 	if !app.model.DiskUsageShown {
 		t.Fatal("expected disk usage to be shown after scan")
 	}

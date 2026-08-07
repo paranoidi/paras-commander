@@ -3,6 +3,7 @@ package commands
 import (
 	"os"
 	"syscall"
+	"time"
 )
 
 // procHandle lets terminateSelectedCommand/killSelectedCommand reach a running Commands-view
@@ -33,12 +34,23 @@ func (h *Handler) UnregisterProc(idx int) {
 // subprocess its own process-group leader, so signaling the negative pid also reaches anything
 // it forked (e.g. a shell script's commands) — signaling only the top pid would leave those
 // running. Returns false if the row has no tracked (started) subprocess.
+//
+// A row's Phase flips to Running before its goroutine reaches cmd.Start()/onStart (queued rows
+// show progress before a process exists), so a Kill/Terminate pressed right after Running appears
+// can race SetProcess. Retry briefly instead of no-opping — the goroutine registers the handle
+// within milliseconds of Running being visible.
 func (h *Handler) signalCommandRow(idx int, sig syscall.Signal) bool {
-	h.procsMu.Lock()
-	handle, ok := h.procs[idx]
-	h.procsMu.Unlock()
-	if !ok || handle.proc == nil {
-		return false
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for {
+		h.procsMu.Lock()
+		handle, ok := h.procs[idx]
+		h.procsMu.Unlock()
+		if ok && handle.proc != nil {
+			return syscall.Kill(-handle.proc.Pid, sig) == nil
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(2 * time.Millisecond)
 	}
-	return syscall.Kill(-handle.proc.Pid, sig) == nil
 }

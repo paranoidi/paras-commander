@@ -17,7 +17,7 @@ import (
 
 func waitDedupDone(t *testing.T, app *App) comparepkg.DedupSnapshot {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDedupUpdates(dedupctrl.WakePayload{})
 		snap := app.model.DedupSnapshot

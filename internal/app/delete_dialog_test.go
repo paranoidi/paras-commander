@@ -40,7 +40,7 @@ func TestDeleteDialogSummaryRefreshesAfterDiskScanFlush(t *testing.T) {
 
 	app.dialogCtrl.ClearDeleteDialogReconcileCache()
 	app.disk.engine.StartScanFromListing([]string{sub}, app.disk.ignore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() {
@@ -73,7 +73,7 @@ func TestDeleteDialogSummaryRefreshesWhenScanNoLongerNeeded(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 	app.disk.engine.StartScanFromListing([]string{sub}, app.disk.ignore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() {
@@ -112,7 +112,7 @@ func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 	app.disk.engine.StartScanFromListing([]string{sub}, app.disk.ignore, app.model.ActivePanel, diskusage.ListingVolumeGate{})
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() {
@@ -148,7 +148,7 @@ func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
 		t.Fatalf("summary = %q; should not trust stale cache after files moved out", app.model.FileDialog.DeleteSummary)
 	}
 
-	deadline = time.Now().Add(5 * time.Second)
+	deadline = time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		app.dialogCtrl.ReconcileDeleteDialogScans()

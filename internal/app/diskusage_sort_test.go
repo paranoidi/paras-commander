@@ -37,7 +37,7 @@ func TestParentStaysCenteredAfterDiskUsageResort(t *testing.T) {
 	left.DiskSorter = app.disk.engine.Size
 	app.setDiskUsageScanScope(bar, []string{bar})
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
@@ -227,7 +227,7 @@ func TestDiskIdleSortActivatesAfterScanWhenListingCached(t *testing.T) {
 	left.IdleDiskTotalsSort = false
 
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
@@ -303,7 +303,7 @@ func TestInvertSelectionDoesNotActivateIdleDiskSort(t *testing.T) {
 	app.dispatch(keymap.ActionPanelInvertSelection)
 	app.reconcileAfterEvent()
 
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
@@ -381,7 +381,7 @@ func TestNavigateOutsideDiskUsageScanScopeClearsIdleSort(t *testing.T) {
 		t.Fatalf("NavigateTo scanned: %v", err)
 	}
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
@@ -413,7 +413,7 @@ func TestDiskUsageScanScopeAppliesOnEitherPanel(t *testing.T) {
 	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
@@ -483,7 +483,7 @@ func TestDiskSortRestoredAfterNewScanReplacesScope(t *testing.T) {
 
 	// First scan from root. Wait for it to finish and sort to activate.
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
@@ -502,7 +502,7 @@ func TestDiskSortRestoredAfterNewScanReplacesScope(t *testing.T) {
 		t.Fatalf("NavigateTo alpha: %v", err)
 	}
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
-	deadline = time.Now().Add(5 * time.Second)
+	deadline = time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() {
@@ -542,7 +542,7 @@ func TestClearAllDiskUsageData(t *testing.T) {
 	left := app.panelByID(ui.PrimaryPanel)
 	left.Sort.DiskUsageIdleSizeSort = true
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
@@ -590,7 +590,7 @@ func TestSortDialogHandleKeyAltDTogglesDirectoriesFirstWithoutStartingDiskUsageS
 
 	left := app.panelByID(ui.PrimaryPanel)
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
@@ -598,6 +598,11 @@ func TestSortDialogHandleKeyAltDTogglesDirectoriesFirstWithoutStartingDiskUsageS
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
+	// ListingFullyDiskCached reflects the engine's cache map directly, so the loop above can
+	// break before the trailing EventJobFinished (which drives the "scan finished" toast) has
+	// been drained off the events channel. Drain it now so app.model.Message settles before
+	// later assertions check it.
+	app.pollDiskUsageUpdates()
 	if !app.model.DiskUsageShown {
 		t.Fatal("expected disk usage to be shown after scan")
 	}

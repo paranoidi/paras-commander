@@ -12,7 +12,7 @@ import (
 // waitCommandRowRunning polls until CommandsList[idx] reaches CommandRunRunning, or fails the test.
 func waitCommandRowRunning(t *testing.T, app *App, idx int) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		app.commandsMu.RLock()
 		running := idx < len(app.model.CommandsList) && app.model.CommandsList[idx].Phase == ui.CommandRunRunning

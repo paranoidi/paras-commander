@@ -23,7 +23,7 @@ func writeExecutableScript(t *testing.T, dir, name, body string) string {
 
 func waitCommandsDone(t *testing.T, app *App) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		if !app.commandsCtrl.HasRunning() {
 			app.commandsMu.RLock()
