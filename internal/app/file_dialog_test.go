@@ -508,6 +508,82 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 	}
 }
 
+func TestMassRenameApplyKeepsDialogOpenAndReselects(t *testing.T) {
+	dir := t.TempDir()
+	aPath := filepath.Join(dir, "foo_a.txt")
+	bPath := filepath.Join(dir, "foo_b.txt")
+	writeFile(t, aPath)
+	writeFile(t, bPath)
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{aPath: true, bPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	if !d.Open || d.DialogType != dialog.FileDialogMassRename {
+		t.Fatalf("expected mass rename dialog, open=%v type=%v", d.Open, d.DialogType)
+	}
+
+	// First pass: foo_ -> bar_, applied via the Apply button.
+	for _, r := range "foo_" {
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.FocusedField = dialog.MassRenameFindFieldFocus + 1 // Replace field
+	for _, r := range "bar_" {
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.FocusedField = dialog.MassRenameApplyFocusIndex(*d)
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if !d.Open {
+		t.Fatal("dialog should stay open after Apply")
+	}
+	bar1Path := filepath.Join(dir, "bar_a.txt")
+	bar2Path := filepath.Join(dir, "bar_b.txt")
+	if _, err := os.Stat(bar1Path); err != nil {
+		t.Fatalf("bar_a.txt: %v", err)
+	}
+	if _, err := os.Stat(bar2Path); err != nil {
+		t.Fatalf("bar_b.txt: %v", err)
+	}
+	if d.Fields[0].Value != "" || d.Fields[1].Value != "" {
+		t.Fatalf("expected fields cleared after Apply, got %+v / %+v", d.Fields[0], d.Fields[1])
+	}
+	if d.FocusedField != dialog.MassRenameFindFieldFocus {
+		t.Fatalf("FocusedField after Apply = %d, want %d (Find)", d.FocusedField, dialog.MassRenameFindFieldFocus)
+	}
+	p = app.activePanel()
+	if !p.SelectedPaths[bar1Path] || !p.SelectedPaths[bar2Path] {
+		t.Fatalf("expected renamed batch reselected, got %+v", p.SelectedPaths)
+	}
+	if p.SelectedPaths[aPath] || p.SelectedPaths[bPath] {
+		t.Fatalf("old paths should not remain selected, got %+v", p.SelectedPaths)
+	}
+
+	// Second pass: bar_ -> baz_, applied via OK to confirm the dialog closes normally.
+	for _, r := range "bar_" {
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.FocusedField = dialog.MassRenameFindFieldFocus + 1
+	for _, r := range "baz_" {
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after Enter on OK")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "baz_a.txt")); err != nil {
+		t.Fatalf("baz_a.txt: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "baz_b.txt")); err != nil {
+		t.Fatalf("baz_b.txt: %v", err)
+	}
+}
+
 func TestMassRenameNoMatchMarksFindInvalid(t *testing.T) {
 	dir := t.TempDir()
 	aPath := filepath.Join(dir, "foo_a.txt")

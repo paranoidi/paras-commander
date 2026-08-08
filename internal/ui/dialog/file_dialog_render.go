@@ -534,7 +534,7 @@ func fileDialogCancelFocusIndex(state FileDialogState) int {
 		return 1
 	}
 	if state.DialogType == FileDialogMassRename {
-		return massRenameContentEnd(state) + 1
+		return massRenameContentEnd(state) + 2
 	}
 	if renameToolActive(state) {
 		return renameToolOptionCount(state) + 1
@@ -746,11 +746,17 @@ func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, 
 func drawOkCancelButtons(screen tcell.Screen, rect Rect, y int, state FileDialogState, styles theme.Theme) {
 	okFocusIdx := fileDialogOKFocusIndex(state)
 	cancelFocusIdx := fileDialogCancelFocusIndex(state)
-	okDisabled := state.DialogType == FileDialogMassRename && !FileDialogMassRenameOKEnabled(state)
-
-	specs := draw.OKCancelButtonSpecs(state.FocusedField == okFocusIdx, state.FocusedField == cancelFocusIdx)
-	specs[0].Disabled = okDisabled
-	draw.DrawDialogButtonRowCentered(screen, rect, y, specs, styles)
+	if state.DialogType == FileDialogMassRename {
+		disabled := !FileDialogMassRenameOKEnabled(state)
+		specs := []draw.DialogButtonSpec{
+			{Label: "OK", Shortcut: 'O', Focused: state.FocusedField == okFocusIdx, Disabled: disabled},
+			{Label: "Apply", Shortcut: 'L', Focused: state.FocusedField == MassRenameApplyFocusIndex(state), Disabled: disabled},
+			{Label: "Cancel", Shortcut: 'C', Focused: state.FocusedField == cancelFocusIdx},
+		}
+		draw.DrawDialogButtonRowCentered(screen, rect, y, specs, styles)
+		return
+	}
+	draw.DrawDialogButtonRowCentered(screen, rect, y, draw.OKCancelButtonSpecs(state.FocusedField == okFocusIdx, state.FocusedField == cancelFocusIdx), styles)
 }
 
 // FileDialogOKFocusIndex returns the FocusedField index of the OK button.

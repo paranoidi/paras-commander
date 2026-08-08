@@ -259,6 +259,11 @@ func (h *Handler) handleFileDialogEnter() {
 	if h.fileDialogOnMkdirRadio() {
 		h.selectFocusedMkdirRadio()
 	}
+	if h.FileDialogOnButton() && d.DialogType == dialog.FileDialogMassRename &&
+		d.FocusedField == dialog.MassRenameApplyFocusIndex(*d) {
+		h.ApplyMassRenameKeepOpen()
+		return
+	}
 	if h.FileDialogOnButton() && d.DialogType != dialog.FileDialogDelete &&
 		d.FocusedField == dialog.FileDialogCancelFocusIndex(*d) {
 		h.CloseFileDialog()
@@ -359,6 +364,9 @@ func (h *Handler) handleMassRenameAltShortcut(d *dialog.FileDialogState, r rune)
 			toggleMassRenameCapPunctSep(d)
 			h.RecomputeMassRenamePreview()
 		}
+		return true
+	case 'l', 'L':
+		h.ApplyMassRenameKeepOpen()
 		return true
 	}
 	return false
