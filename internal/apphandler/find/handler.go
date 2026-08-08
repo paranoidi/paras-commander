@@ -1181,6 +1181,35 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 	return paths
 }
 
+// CountGroupMatches reports how many find results matching req.Pattern have marked state equal
+// to marked — i.e. how many results ApplyGroupSelect(select) (marked=false) or (unselect)
+// (marked=true) would actually change, split into files and directories, for the group-select
+// dialog's live result preview. Returns (0, 0) for an empty or invalid pattern.
+func (h *Handler) CountGroupMatches(req GroupSelectRequest, marked bool) (files, dirs int) {
+	if req.Pattern == "" {
+		return 0, 0
+	}
+	matcher, err := panel.NewGroupMatcher(req.Pattern, req.PatternMode, req.CaseSensitive)
+	if err != nil {
+		return 0, 0
+	}
+	st := &h.model.FindDialog
+	indices := h.findDialogResultIndices(st)
+	matched := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
+	isDir := h.findPathIsDir(st)
+	for _, path := range matched {
+		if st.MarkedPaths[path] != marked {
+			continue
+		}
+		if isDir(path) {
+			dirs++
+		} else {
+			files++
+		}
+	}
+	return files, dirs
+}
+
 // ApplyGroupSelect marks or unmarks full-corpus find results whose basename matches pattern.
 func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 	st := &h.model.FindDialog

@@ -1,6 +1,8 @@
 package dialog
 
 import (
+	"fmt"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
@@ -61,6 +63,13 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	}
 
 	primitive.Text(screen, textX, y, inputWidth, "Pattern:", styles.DialogText.Background(itemBg))
+	if preview := groupSelectPreviewText(state, styles); preview != "" {
+		pw := utf8.RuneCountInString(preview)
+		px := textX + inputWidth - pw
+		if px > textX+len("Pattern:") {
+			primitive.Text(screen, px, y, pw, preview, styles.DialogText.Background(itemBg))
+		}
+	}
 	y++
 	if y >= innerBottom {
 		return
@@ -69,7 +78,7 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, draw.ScrollingInputState{Value: state.Text, Cursor: state.TextCursor, Scroll: state.TextScroll}, state.Focus == GroupSelectFocusPattern, false, styles)
+	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, draw.ScrollingInputState{Value: state.Text, Cursor: state.TextCursor, Scroll: state.TextScroll}, state.Focus == GroupSelectFocusPattern, groupSelectPatternInvalid(state), styles)
 	y++
 	if y >= innerBottom {
 		return
@@ -114,4 +123,21 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	form := NewDialogLinearForm(7)
 	buttonY := rect.Y + rect.Height - 2
 	draw.DrawOKCancelButtonRow(screen, rect, buttonY, state.Focus == form.OKIndex(), state.Focus == form.CancelIndex(), styles)
+}
+
+// groupSelectPreviewText formats the live result preview shown on the Pattern row:
+// "<files> <file-icon> <folders> <folder-icon>", omitting either count when it's zero. Empty
+// when the preview is hidden or both counts are zero.
+func groupSelectPreviewText(state GroupSelectState, styles theme.Theme) string {
+	if !state.PreviewShow {
+		return ""
+	}
+	var parts []string
+	if state.PreviewFiles > 0 {
+		parts = append(parts, fmt.Sprintf("%d %s", state.PreviewFiles, styles.SymbolFile()))
+	}
+	if state.PreviewFolders > 0 {
+		parts = append(parts, fmt.Sprintf("%d %s", state.PreviewFolders, styles.SymbolFolder()))
+	}
+	return strings.Join(parts, " ")
 }

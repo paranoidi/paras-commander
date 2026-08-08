@@ -66,8 +66,22 @@ func groupSelectPatternHintStyle(styles theme.Theme, dbg tcell.Color) tcell.Styl
 	return styles.DialogText.Foreground(errFG).Background(dbg)
 }
 
+// groupSelectPatternInvalid reports whether the pattern input row should render in the
+// dialog's error style (mass-rename-style): an uncompilable pattern, or a valid pattern that
+// currently matches nothing to select/unselect.
+func groupSelectPatternInvalid(state GroupSelectState) bool {
+	if strings.TrimSpace(state.Text) == "" {
+		return false
+	}
+	if groupSelectShowsPatternHint(state) {
+		return true
+	}
+	return state.PreviewShow && state.PreviewFiles == 0 && state.PreviewFolders == 0
+}
+
 func groupSelectDialogHeight(state GroupSelectState, layoutHeight int) int {
-	// 3 radios + sep + label + blank + input + optional hint + 2 checkbox rows + optional meta row + sep + buttons + borders.
+	// 3 radios + sep + label (doubles as the preview row) + blank + input + optional hint
+	// + 2 checkbox rows + optional meta row + sep + buttons + borders.
 	fixed := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 2 // inner rows + top/bottom border rows
 	if groupSelectShowsPatternHint(state) {
 		fixed++

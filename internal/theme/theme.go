@@ -460,6 +460,8 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 // Symbol keys in the [symbols] table (optional entries — see accessors for defaults).
 const (
 	SymbolKeyPathPicker               = "path_picker"
+	SymbolKeyFile                     = "file"
+	SymbolKeyFolder                   = "folder"
 	SymbolKeyGit                      = "git"
 	SymbolKeyStash                    = "stash"
 	SymbolKeyWorking                  = "working"
@@ -508,6 +510,28 @@ func (t Theme) SymbolWorking() string {
 		}
 	}
 	return "\uf017"
+}
+
+// SymbolFile returns the generic file glyph (e.g. group-select result preview counts) from
+// [symbols] file.
+func (t Theme) SymbolFile() string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[SymbolKeyFile]); s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
+// SymbolFolder returns the generic folder glyph (e.g. group-select result preview counts) from
+// [symbols] folder.
+func (t Theme) SymbolFolder() string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[SymbolKeyFolder]); s != "" {
+			return s
+		}
+	}
+	return ""
 }
 
 // SymbolHiddenDotfiles returns the dotfiles-hidden bottom-indicator glyph from [symbols] hidden_dotfiles.

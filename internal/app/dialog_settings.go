@@ -383,6 +383,66 @@ func (a *App) closeGroupSelect() {
 	a.model.GroupSelect.Open = false
 	a.model.GroupSelect.Text = ""
 	a.model.GroupSelect.PatternCompileHint = ""
+	a.model.GroupSelect.PreviewShow = false
+}
+
+// groupSelectMeta builds the meta-column match data for the panel-context group-select dialog
+// from its current include/only-meta checkboxes. Shared by executeGroupSelect and
+// updateGroupSelectPreview so the two stay in sync.
+func (a *App) groupSelectMeta(gs *dialog.GroupSelectState) panel.GroupSelectMeta {
+	var meta panel.GroupSelectMeta
+	if gs.IncludeMetaColumns && gs.MetaColumnCount > 0 {
+		for _, col := range a.model.MetaResults[a.model.ActivePanel] {
+			if col.Results != nil {
+				meta.Cols = append(meta.Cols, col.Results)
+			}
+		}
+		meta.OnlyMeta = gs.OnlyMetaColumns
+	}
+	return meta
+}
+
+// updateGroupSelectPreview recomputes the group-select dialog's live result preview (matched
+// file/folder counts that would actually change selection state) from the current pattern and
+// options. No-op when the dialog is closed; hides the preview when the pattern is empty or
+// fails to compile.
+func (a *App) updateGroupSelectPreview() {
+	gs := &a.model.GroupSelect
+	if !gs.Open || gs.Text == "" {
+		gs.PreviewShow = false
+		return
+	}
+	if _, err := panel.NewGroupMatcher(gs.Text, gs.PatternMode, gs.CaseSensitive); err != nil {
+		gs.PreviewShow = false
+		return
+	}
+	selectMode := gs.Mode == "select"
+	context := gs.Context
+	if context == "" {
+		context = "panel"
+	}
+	var files, dirs int
+	if context == "find" {
+		files, dirs = a.findCtrl.CountGroupMatches(findctrl.GroupSelectRequest{
+			Mode:          findctrl.GroupSelectMode(gs.Mode),
+			Pattern:       gs.Text,
+			FilesOnly:     gs.FilesOnly,
+			DirsOnly:      gs.DirsOnly,
+			CaseSensitive: gs.CaseSensitive,
+			PatternMode:   gs.PatternMode,
+		}, !selectMode)
+	} else {
+		p := a.activePanel()
+		f, d, err := p.CountGroupMatches(gs.Text, gs.FilesOnly, gs.DirsOnly, gs.CaseSensitive, gs.PatternMode, a.groupSelectMeta(gs), !selectMode)
+		if err != nil {
+			gs.PreviewShow = false
+			return
+		}
+		files, dirs = f, d
+	}
+	gs.PreviewFiles = files
+	gs.PreviewFolders = dirs
+	gs.PreviewShow = true
 }
 
 func (a *App) groupSelectForm() dialog.DialogLinearForm {
@@ -451,15 +511,7 @@ func (a *App) executeGroupSelect() {
 		})
 	default:
 		p := a.activePanel()
-		var meta panel.GroupSelectMeta
-		if gs.IncludeMetaColumns && gs.MetaColumnCount > 0 {
-			for _, col := range a.model.MetaResults[a.model.ActivePanel] {
-				if col.Results != nil {
-					meta.Cols = append(meta.Cols, col.Results)
-				}
-			}
-			meta.OnlyMeta = gs.OnlyMetaColumns
-		}
+		meta := a.groupSelectMeta(gs)
 		var err error
 		var matched bool
 		if gs.Mode == "select" {

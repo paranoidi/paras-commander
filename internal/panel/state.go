@@ -1944,9 +1944,32 @@ func (s *State) ClearSelection() {
 // meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename.
 // The returned bool reports whether the pattern matched any entry.
 func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) (bool, error) {
-	matcher, err := NewGroupMatcher(pattern, mode, caseSensitive)
+	paths, isDir, err := s.groupMatchedPaths(pattern, filesOnly, dirsOnly, caseSensitive, mode, meta)
 	if err != nil {
 		return false, err
+	}
+	if len(paths) == 0 {
+		return false, nil
+	}
+	if s.SelectedPaths == nil {
+		s.SelectedPaths = make(map[string]bool, len(paths))
+	}
+	lookup := func(path string) bool {
+		return isDir[path]
+	}
+	_ = BulkApplySelectionAdds(s.SelectedPaths, paths, lookup)
+	s.rebuildSelectedDirPaths()
+	s.recomputeSelectionListedBytes()
+	s.invalidateSelectionDerivedFull()
+	return true, nil
+}
+
+// groupMatchedPaths returns the visible entries (paths and dir flags) matching pattern under
+// the given filters. Shared matching pipeline for SelectGroup, UnselectGroup, and CountGroupMatches.
+func (s *State) groupMatchedPaths(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) ([]string, map[string]bool, error) {
+	matcher, err := NewGroupMatcher(pattern, mode, caseSensitive)
+	if err != nil {
+		return nil, nil, err
 	}
 	paths := make([]string, 0)
 	isDir := make(map[string]bool)
@@ -1975,63 +1998,51 @@ func (s *State) SelectGroup(pattern string, filesOnly, dirsOnly, caseSensitive b
 			isDir[entry.Path] = entry.IsDir()
 		}
 	}
-	if len(paths) == 0 {
-		return false, nil
+	return paths, isDir, nil
+}
+
+// CountGroupMatches reports how many visible entries matching pattern have selection state
+// equal to selected — i.e. how many entries SelectGroup (selected=false) or UnselectGroup
+// (selected=true) would actually change — split into files and directories, for the
+// group-select dialog's live result preview.
+func (s *State) CountGroupMatches(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta, selected bool) (files, dirs int, err error) {
+	paths, isDir, err := s.groupMatchedPaths(pattern, filesOnly, dirsOnly, caseSensitive, mode, meta)
+	if err != nil {
+		return 0, 0, err
 	}
-	if s.SelectedPaths == nil {
-		s.SelectedPaths = make(map[string]bool, len(paths))
+	for _, p := range paths {
+		if s.SelectedPaths[p] != selected {
+			continue
+		}
+		if isDir[p] {
+			dirs++
+		} else {
+			files++
+		}
 	}
-	lookup := func(path string) bool {
-		return isDir[path]
-	}
-	_ = BulkApplySelectionAdds(s.SelectedPaths, paths, lookup)
-	s.rebuildSelectedDirPaths()
-	s.recomputeSelectionListedBytes()
-	s.invalidateSelectionDerivedFull()
-	return true, nil
+	return files, dirs, nil
 }
 
 // UnselectGroup unselects entries whose basename (or any meta column value) matches the pattern.
 // meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename.
 // The returned bool reports whether the pattern matched any entry (regardless of prior selection state).
 func (s *State) UnselectGroup(pattern string, filesOnly, dirsOnly, caseSensitive bool, mode GroupPatternMode, meta GroupSelectMeta) (bool, error) {
-	matcher, err := NewGroupMatcher(pattern, mode, caseSensitive)
+	paths, isDir, err := s.groupMatchedPaths(pattern, filesOnly, dirsOnly, caseSensitive, mode, meta)
 	if err != nil {
 		return false, err
 	}
-	matched := false
-	for i := 0; i < s.VisibleEntryCount(); i++ {
-		entry, _, ok := s.VisibleEntry(i)
-		if !ok {
+	if len(paths) == 0 {
+		return false, nil
+	}
+	for _, path := range paths {
+		if !s.SelectedPaths[path] {
 			continue
 		}
-		if filesOnly && entry.IsDir() {
-			continue
-		}
-		if dirsOnly && !entry.IsDir() {
-			continue
-		}
-		entryMatched := !meta.OnlyMeta && matcher.Match(entry.Name)
-		if !entryMatched {
-			for _, col := range meta.Cols {
-				if v, ok := col[entry.Path]; ok && v != "" && matcher.Match(v) {
-					entryMatched = true
-					break
-				}
-			}
-		}
-		if !entryMatched {
-			continue
-		}
-		matched = true
-		if !s.SelectedPaths[entry.Path] {
-			continue
-		}
-		s.applySelectionRemove(entry.Path, entry.IsDir())
-		s.removePathFromSelectionsStripOrder(entry.Path)
+		s.applySelectionRemove(path, isDir[path])
+		s.removePathFromSelectionsStripOrder(path)
 	}
 	s.normalizeSelectionsStripCursor()
-	return matched, nil
+	return true, nil
 }
 
 // RefreshDiskUsageOrdering reapplies cached disk-total ordering when subtree sizes update while staying in one directory.

@@ -94,4 +94,10 @@ type GroupSelectState struct {
 	IncludeMetaColumns bool // when true and MetaColumnCount > 0, meta column values are also matched
 	OnlyMetaColumns    bool // when true, match only meta column values (skip filename matching)
 	Focus              int  // 0-2=mode radios, 3=pattern, 4=files only, 5=dirs only, 6=case sensitive, 7=include meta, 8=only meta (last two when MetaColumnCount>0), then OK, Cancel
+
+	// Live result preview shown right-aligned on the Pattern row, recomputed on every state
+	// change. PreviewShow is false while the pattern is empty or fails to compile.
+	PreviewFiles   int
+	PreviewFolders int
+	PreviewShow    bool
 }

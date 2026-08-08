@@ -255,6 +255,8 @@ canceled = { fg = "bright_red", bold = true }
 [symbols]
 working = "\uf017"
 path_picker = "\uf0ca"
+file = "\uf15b"
+folder = "\uf07b"
 git = "\uf1d3"
 stash = "\uef0d"
 # U+F06D1 (nf-md-eye_off_outline); use 8-digit escape — \uf06d1 is U+F06D + "1"

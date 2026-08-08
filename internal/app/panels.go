@@ -310,6 +310,7 @@ func (a *App) reconcileAfterEvent() {
 	a.reconcileSelectionSizeScans(ui.SecondaryPanel)
 	a.dialogCtrl.ReconcileDeleteDialogScans()
 	a.reconcileFindDialogSelectionSizeScans()
+	a.updateGroupSelectPreview()
 	a.handlePanelDirChanged(ui.PrimaryPanel)
 	a.handlePanelDirChanged(ui.SecondaryPanel)
 	a.metaCtrl.HandlePanelDirChanged(ui.PrimaryPanel)
