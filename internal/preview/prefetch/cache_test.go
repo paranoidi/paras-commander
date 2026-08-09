@@ -3,6 +3,7 @@ package prefetch
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"image"
 	"image/png"
 	"os"
@@ -82,6 +83,49 @@ func TestCacheLoadStillSingleflight(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("load calls = %d, want 1", calls)
+	}
+}
+
+// TestCacheLoadStillCachesFailure guards against a decode-fail-reschedule loop: a
+// permanently corrupt file must only be attempted once, and HasStill must report it as
+// warm afterward so the prefetch engine's Schedule() stops re-queuing it forever.
+func TestCacheLoadStillCachesFailure(t *testing.T) {
+	c := NewCache(1024*1024, 1024*1024, "")
+	calls := 0
+	failLoad := func(context.Context) ([]byte, string, error) {
+		calls++
+		return nil, "", fmt.Errorf("corrupt png")
+	}
+	if _, _, err := c.LoadStill(context.Background(), "/bad.png", 1, 10, 64, failLoad); err == nil {
+		t.Fatal("expected error from first load")
+	}
+	if _, _, err := c.LoadStill(context.Background(), "/bad.png", 1, 10, 64, failLoad); err == nil {
+		t.Fatal("expected error from second load")
+	}
+	if calls != 1 {
+		t.Fatalf("load calls = %d, want 1 (failure must be cached, not retried)", calls)
+	}
+	if !c.HasStill("/bad.png", 1, 10, 64) {
+		t.Fatal("expected HasStill to report warm for a permanently failed decode")
+	}
+}
+
+// TestCacheLoadStillDoesNotCacheCancellation ensures a context-cancelled attempt (the
+// request was abandoned, not proven broken) is retried rather than marked failed forever.
+func TestCacheLoadStillDoesNotCacheCancellation(t *testing.T) {
+	c := NewCache(1024*1024, 1024*1024, "")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	calls := 0
+	load := func(context.Context) ([]byte, string, error) {
+		calls++
+		return nil, "", ctx.Err()
+	}
+	if _, _, err := c.LoadStill(ctx, "/cancelled.png", 1, 10, 64, load); err == nil {
+		t.Fatal("expected error from cancelled load")
+	}
+	if c.HasStill("/cancelled.png", 1, 10, 64) {
+		t.Fatal("cancellation must not be recorded as a permanent failure")
 	}
 }
 

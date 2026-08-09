@@ -29,6 +29,7 @@ type Cache struct {
 	mu       sync.Mutex
 	inflight map[string]int // path -> refcount (for loading mark)
 	flights  map[string]*flightCall
+	failed   map[string]error // still/video key -> permanent decode error, until path/mtime/size/size changes the key
 	onChange func()
 }
 
@@ -38,6 +39,7 @@ func NewCache(memoryMaxBytes, diskMaxBytes int64, diskDir string) *Cache {
 		mem:      newMemoryLRU(memoryMaxBytes),
 		inflight: make(map[string]int),
 		flights:  make(map[string]*flightCall),
+		failed:   make(map[string]error),
 	}
 	if diskDir != "" {
 		c.disk = newDiskCache(diskDir, diskMaxBytes)
@@ -81,15 +83,18 @@ func (c *Cache) SnapshotInFlight() []string {
 	return out
 }
 
-// HasStill reports a warm memory hit without marking in-flight.
+// HasStill reports a warm memory hit, or a previously recorded permanent decode failure,
+// without marking in-flight.
 func (c *Cache) HasStill(path string, mtime, size int64, maxEdge int) bool {
-	return c.mem.has(stillKey(path, mtime, size, maxEdge))
+	key := stillKey(path, mtime, size, maxEdge)
+	return c.mem.has(key) || c.isFailed(key)
 }
 
-// HasVideo reports a warm memory or disk hit without marking in-flight.
+// HasVideo reports a warm memory/disk hit, or a previously recorded permanent decode failure,
+// without marking in-flight.
 func (c *Cache) HasVideo(path string, mtime, size int64, maxEdge, cols, rows int) bool {
 	key := videoKey(path, mtime, size, maxEdge, cols, rows)
-	if c.mem.has(key) {
+	if c.mem.has(key) || c.isFailed(key) {
 		return true
 	}
 	if c.disk == nil {
@@ -98,6 +103,32 @@ func (c *Cache) HasVideo(path string, mtime, size int64, maxEdge, cols, rows int
 	dk := videoDiskKey(path, mtime, size, maxEdge, cols, rows)
 	_, ok := c.disk.get(dk)
 	return ok
+}
+
+// isFailed reports whether key is a previously recorded permanent decode failure.
+func (c *Cache) isFailed(key string) bool {
+	_, ok := c.failedErr(key)
+	return ok
+}
+
+// failedErr returns the previously recorded permanent decode failure for key, if any.
+func (c *Cache) failedErr(key string) (error, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	err, ok := c.failed[key]
+	return err, ok
+}
+
+// markFailed records a permanent decode failure for key so HasStill/HasVideo treat it as
+// warm and callers (e.g. the prefetch engine's Schedule) stop re-queuing it every reconcile.
+// Context cancellation isn't recorded — the load may simply not have finished yet.
+func (c *Cache) markFailed(ctx context.Context, key string, err error) {
+	if err == nil || ctx.Err() != nil {
+		return
+	}
+	c.mu.Lock()
+	c.failed[key] = err
+	c.mu.Unlock()
 }
 
 func (c *Cache) doFlight(key, path string, run func() (png []byte, meta string, err error)) (png []byte, meta string, err error) {
@@ -135,6 +166,9 @@ func (c *Cache) LoadStill(ctx context.Context, path string, mtime, size int64, m
 	if png, meta, ok := c.mem.get(key); ok {
 		return png, meta, nil
 	}
+	if ferr, ok := c.failedErr(key); ok {
+		return nil, "", ferr
+	}
 	return c.doFlight(key, path, func() ([]byte, string, error) {
 		if png, meta, ok := c.mem.get(key); ok {
 			return png, meta, nil
@@ -146,6 +180,7 @@ func (c *Cache) LoadStill(ctx context.Context, path string, mtime, size int64, m
 		}
 		png, meta, err := load(ctx)
 		if err != nil {
+			c.markFailed(ctx, key, err)
 			return nil, meta, err
 		}
 		c.mem.put(key, png, meta)
@@ -166,6 +201,9 @@ func (c *Cache) LoadVideo(ctx context.Context, path string, mtime, size int64, m
 			return b, nil
 		}
 	}
+	if ferr, ok := c.failedErr(key); ok {
+		return nil, ferr
+	}
 	png, _, err = c.doFlight(key, path, func() ([]byte, string, error) {
 		if png, _, ok := c.mem.get(key); ok {
 			return png, "", nil
@@ -183,6 +221,7 @@ func (c *Cache) LoadVideo(ctx context.Context, path string, mtime, size int64, m
 		}
 		png, err := load(ctx)
 		if err != nil {
+			c.markFailed(ctx, key, err)
 			return nil, "", err
 		}
 		c.mem.put(key, png, "")

@@ -2,6 +2,7 @@ package prefetch
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sort"
 	"sync"
@@ -246,6 +247,10 @@ func (e *Engine) runJob(it Item) {
 		})
 		_ = metaRes
 		if work == nil {
+			// No probeable duration (unreadable/corrupt video): record the failure so
+			// HasVideo reports warm and Schedule stops re-queuing it every reconcile.
+			key := videoKey(it.Path, it.Mtime, it.Size, e.cfg.ImageMaxEdgePx, e.cfg.VideoThumbCols, e.cfg.VideoThumbRows)
+			e.cache.markFailed(ctx, key, fmt.Errorf("no video duration"))
 			return
 		}
 		_, _ = e.cache.LoadVideo(ctx, it.Path, it.Mtime, it.Size, e.cfg.ImageMaxEdgePx, e.cfg.VideoThumbCols, e.cfg.VideoThumbRows, func(c context.Context) ([]byte, error) {
