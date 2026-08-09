@@ -7,9 +7,9 @@ import (
 )
 
 func TestShortLoadErrorEntryValidation(t *testing.T) {
-	err := errors.New("menu.toml: entry 2: command is required")
+	err := errors.New("menu.toml: [tools.disk_use]: command is required")
 	got := ShortLoadError(err)
-	if got != "entry 2: command is required" {
+	if got != "[tools.disk_use]: command is required" {
 		t.Fatalf("got %q", got)
 	}
 }

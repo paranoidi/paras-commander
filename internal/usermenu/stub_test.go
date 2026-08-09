@@ -68,7 +68,7 @@ func TestWriteMenuStubEmptyPath(t *testing.T) {
 func TestRefreshDocumentationPrependsDoc(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "menu.toml")
-	entries := `[[entry]]
+	entries := `[echo_path]
 title = "Echo path"
 command = "echo %d"
 `

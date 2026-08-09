@@ -84,6 +84,7 @@ func (a *App) reloadLeaderMenu() {
 
 	a.userMenuVisible = visible
 	a.userMenuPath = menuPath
-	a.model.LeaderMenu.Items = userMenuLeaderMenuItems(visible)
+	a.userMenuStack = nil
+	a.model.LeaderMenu.Items = userMenuLeaderMenuItems(visible, a.styles)
 	a.leaderMenuHiddenWarning(a.model.LeaderMenu.Items, "User menu")
 }

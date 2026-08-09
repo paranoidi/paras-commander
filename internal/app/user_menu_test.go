@@ -77,7 +77,7 @@ func TestEditUserMenuOpensExistingPath(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	menuBody := `[[entry]]
+	menuBody := `[always]
 key = "a"
 title = "Always"
 command = "true"
@@ -184,7 +184,7 @@ func TestOpenUserMenuOpensDialogWhenEntriesExist(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(menuPath, []byte(`[[entry]]
+	if err := os.WriteFile(menuPath, []byte(`[always]
 key = "a"
 title = "Always"
 command = "true"
@@ -227,7 +227,7 @@ func TestUserMenuEntryKeyRunsImmediately(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(menuPath, []byte(`[[entry]]
+	if err := os.WriteFile(menuPath, []byte(`[always]
 key = "a"
 title = "Always"
 command = "true"
@@ -289,7 +289,7 @@ func TestUserMenuInteractiveDoesNotOpenCommandsView(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeUserMenuFile(t, menuPath, `[[entry]]
+	writeUserMenuFile(t, menuPath, `[lazygit]
 key = "g"
 title = "lazygit"
 command = "lazygit"
@@ -332,7 +332,7 @@ func TestUserMenuDetachDoesNotOpenCommandsView(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeUserMenuFile(t, menuPath, `[[entry]]
+	writeUserMenuFile(t, menuPath, `[open]
 key = "p"
 title = "Open"
 command = "xdg-open ."
@@ -376,7 +376,7 @@ func TestUserMenuBackgroundDoesNotOpenCommandsView(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeUserMenuFile(t, menuPath, `[[entry]]
+	writeUserMenuFile(t, menuPath, `[always]
 key = "a"
 title = "Always"
 command = "true"
@@ -403,7 +403,7 @@ func TestUserMenuBackgroundNotifiesOnFailure(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeUserMenuFile(t, menuPath, `[[entry]]
+	writeUserMenuFile(t, menuPath, `[fail]
 key = "f"
 title = "Fail"
 command = "false"
@@ -432,7 +432,7 @@ func TestUserMenuBackgroundRefreshesPanelOnCompletion(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeUserMenuFile(t, menuPath, `[[entry]]
+	writeUserMenuFile(t, menuPath, `[touch]
 key = "t"
 title = "Touch"
 command = "touch `+marker+`"
@@ -477,7 +477,7 @@ func TestUserMenuWorkPoolLimitsParallelism(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeUserMenuFile(t, menuPath, `[[entry]]
+	writeUserMenuFile(t, menuPath, `[sleep]
 key = "s"
 title = "Sleep"
 command = "sleep 0.4"
@@ -525,7 +525,7 @@ func TestUserMenuUnknownWorkPool(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeUserMenuFile(t, menuPath, `[[entry]]
+	writeUserMenuFile(t, menuPath, `[bad_pool]
 key = "x"
 title = "Bad pool"
 command = "true"
@@ -543,6 +543,131 @@ pool = "missing"
 	}
 	if !strings.Contains(app.model.Message, "unknown pool") {
 		t.Fatalf("Message = %q, want unknown pool", app.model.Message)
+	}
+}
+
+func userMenuSubmenuFixture(t *testing.T, menuPath string) {
+	t.Helper()
+	writeUserMenuFile(t, menuPath, `[tools]
+key = "t"
+title = "Tools"
+
+[tools.disk_use]
+key = "d"
+title = "Show disk usage"
+command = "true"
+
+[always]
+key = "a"
+title = "Always"
+command = "true"
+`)
+}
+
+func TestUserMenuSubmenuOpensChildren(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	userMenuSubmenuFixture(t, menuPath)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+	if len(app.model.LeaderMenu.Items) != 2 {
+		t.Fatalf("top-level items len = %d, want 2", len(app.model.LeaderMenu.Items))
+	}
+
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("leader menu should stay open after entering submenu")
+	}
+	if len(app.userMenuVisible) != 1 || app.userMenuVisible[0].Title != "Show disk usage" {
+		t.Fatalf("userMenuVisible = %+v, want submenu children", app.userMenuVisible)
+	}
+	if len(app.model.LeaderMenu.Items) != 1 || app.model.LeaderMenu.Items[0].Label != "Show disk usage" {
+		t.Fatalf("items = %+v, want submenu children", app.model.LeaderMenu.Items)
+	}
+	if len(app.userMenuStack) != 1 {
+		t.Fatalf("userMenuStack len = %d, want 1 after entering submenu", len(app.userMenuStack))
+	}
+}
+
+func TestUserMenuEscInSubmenuReturnsToParentLevel(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	userMenuSubmenuFixture(t, menuPath)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+	if len(app.model.LeaderMenu.Items) != 1 {
+		t.Fatalf("test setup: expected to be inside submenu, items = %+v", app.model.LeaderMenu.Items)
+	}
+
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("Esc inside submenu should return to parent level, not close the whole menu")
+	}
+	if len(app.model.LeaderMenu.Items) != 2 {
+		t.Fatalf("items after Esc = %+v, want back to top-level 2 items", app.model.LeaderMenu.Items)
+	}
+	if len(app.userMenuStack) != 0 {
+		t.Fatalf("userMenuStack len = %d, want 0 back at top level", len(app.userMenuStack))
+	}
+}
+
+func TestUserMenuEscAtTopLevelClosesMenu(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	userMenuSubmenuFixture(t, menuPath)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+
+	if app.model.LeaderMenu.Open {
+		t.Fatal("Esc at top level should close the whole menu")
+	}
+}
+
+func TestUserMenuLeafRunFromSubmenuClearsStack(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	userMenuSubmenuFixture(t, menuPath)
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.openUserMenu()
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
+
+	if app.model.LeaderMenu.Open {
+		t.Fatal("leader menu should close after running a leaf from inside a submenu")
+	}
+	if len(app.userMenuStack) != 0 {
+		t.Fatalf("userMenuStack len = %d, want 0 after running a leaf", len(app.userMenuStack))
+	}
+
+	app.model.ViewMode = ui.ViewBrowser
+	app.openUserMenu()
+	if len(app.model.LeaderMenu.Items) != 2 {
+		t.Fatalf("next F2 open items = %+v, want fresh top-level 2 items", app.model.LeaderMenu.Items)
 	}
 }
 
