@@ -211,7 +211,20 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		if state.Filter.Active && !state.FilterHasMatches() {
 			inputStyle = panelStyle.Styles.FuzzyInputNomatch
 		}
-		primitive.Text(screen, titleX, rect.Y, contentCols, "> "+state.Filter.Query, inputStyle)
+		display := "> " + state.Filter.Query
+		if state.Filter.Editing {
+			cursorCol := 2 + state.Filter.Cursor
+			if cursorCol >= len([]rune(display)) {
+				// Widen past end-of-text so the caret span lands on a real cell
+				// (StyledText's trailing pad columns don't apply spans).
+				display += " "
+			}
+			primitive.StyledText(screen, titleX, rect.Y, contentCols, display, inputStyle, []primitive.Span{
+				{Start: cursorCol, End: cursorCol + 1, Style: inputStyle.Reverse(true)},
+			})
+		} else {
+			primitive.Text(screen, titleX, rect.Y, contentCols, display, inputStyle)
+		}
 	} else {
 		titlePath := state.PathString()
 		if ctx.TitlePath != "" {

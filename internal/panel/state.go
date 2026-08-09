@@ -17,6 +17,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/treeflat"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
+	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
 )
 
 const maxNavHistory = 200
@@ -215,6 +216,7 @@ func (s *State) PathString() string {
 // FilterState tracks panel-local quick filter state.
 type FilterState struct {
 	Query           string
+	Cursor          int // rune offset within Query where typed/deleted runes apply
 	Active          bool
 	Editing         bool
 	CaseInsensitive bool
@@ -1156,21 +1158,46 @@ func (s *State) ClearFilter(viewportRows int) {
 	s.Filter.Editing = editing
 }
 
-// AppendFilterRune appends a printable rune to the query.
+// AppendFilterRune inserts a printable rune at the caret.
 func (s *State) AppendFilterRune(value rune, viewportRows int) {
 	s.Filter.Editing = true
-	s.applyFilterQuery(s.Filter.Query+string(value), viewportRows)
+	runes := []rune(s.Filter.Query)
+	pos := lineedit.ClampRuneCursor(s.Filter.Cursor, len(runes))
+	next := make([]rune, 0, len(runes)+1)
+	next = append(next, runes[:pos]...)
+	next = append(next, value)
+	next = append(next, runes[pos:]...)
+	s.Filter.Cursor = pos + 1
+	s.applyFilterQuery(string(next), viewportRows)
 }
 
-// BackspaceFilter removes the last rune from the query.
+// BackspaceFilter removes the rune before the caret.
 func (s *State) BackspaceFilter(viewportRows int) {
 	runes := []rune(s.Filter.Query)
 	if len(runes) == 0 {
 		s.Filter.Editing = false
 		return
 	}
+	pos := lineedit.ClampRuneCursor(s.Filter.Cursor, len(runes))
+	if pos == 0 {
+		return
+	}
 	s.Filter.Editing = true
-	s.applyFilterQuery(string(runes[:len(runes)-1]), viewportRows)
+	next := make([]rune, 0, len(runes)-1)
+	next = append(next, runes[:pos-1]...)
+	next = append(next, runes[pos:]...)
+	s.Filter.Cursor = pos - 1
+	s.applyFilterQuery(string(next), viewportRows)
+}
+
+// MoveFilterCursorHome moves the filter caret to the start of the query.
+func (s *State) MoveFilterCursorHome() {
+	s.Filter.Cursor = 0
+}
+
+// MoveFilterCursorEnd moves the filter caret to the end of the query.
+func (s *State) MoveFilterCursorEnd() {
+	s.Filter.Cursor = len([]rune(s.Filter.Query))
 }
 
 // CycleFilterMatch moves the cursor through fuzzy matches in an order controlled by
@@ -1790,6 +1817,7 @@ func (s *State) clampCursor() {
 
 func (s *State) applyFilterQuery(query string, viewportRows int) {
 	s.Filter.Query = query
+	s.Filter.Cursor = lineedit.ClampRuneCursor(s.Filter.Cursor, len([]rune(query)))
 	s.Filter.Active = query != ""
 	s.rebuildFilter()
 	if len(s.Filter.results) > 0 {

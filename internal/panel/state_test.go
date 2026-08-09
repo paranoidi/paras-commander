@@ -1199,6 +1199,40 @@ func TestQuickFilterMultiLetterSelectsBestRankedMatch(t *testing.T) {
 	}
 }
 
+func TestFilterHomeMovesCaretForPrefixInsert(t *testing.T) {
+	state := State{
+		Entries: []localfs.Entry{
+			{Name: "notes.txt", Path: "/tmp/notes"},
+		},
+		Filter: FilterState{CaseInsensitive: true},
+	}
+
+	state.OpenFilter(5)
+	for _, r := range "bc" {
+		state.AppendFilterRune(r, 5)
+	}
+	state.MoveFilterCursorHome()
+	state.AppendFilterRune('a', 5)
+
+	if got := state.Filter.Query; got != "abc" {
+		t.Fatalf("Filter.Query = %q, want %q", got, "abc")
+	}
+	if state.Filter.Cursor != 1 {
+		t.Fatalf("Filter.Cursor = %d, want 1", state.Filter.Cursor)
+	}
+
+	state.MoveFilterCursorEnd()
+	if state.Filter.Cursor != 3 {
+		t.Fatalf("Filter.Cursor after MoveFilterCursorEnd = %d, want 3", state.Filter.Cursor)
+	}
+
+	state.MoveFilterCursorHome()
+	state.BackspaceFilter(5)
+	if got := state.Filter.Query; got != "abc" {
+		t.Fatalf("BackspaceFilter at caret 0 should be a no-op, Query = %q, want %q", got, "abc")
+	}
+}
+
 func TestCycleFilterMatchStepsVisibleMatchesWithoutSkipping(t *testing.T) {
 	state := State{
 		Entries: []localfs.Entry{

@@ -633,7 +633,7 @@ func (a *App) handleFilterLeaderKey(event *tcell.EventKey, resolvedAction string
 // the same chord is bound to a panel action (match cycling, Insert, query editing).
 func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string) bool {
 	switch event.Key() {
-	case tcell.KeyUp, tcell.KeyDown, tcell.KeyInsert:
+	case tcell.KeyUp, tcell.KeyDown, tcell.KeyInsert, tcell.KeyHome, tcell.KeyEnd:
 		return true
 	}
 	if keymap.IsPlainPrintableRune(event) {
@@ -709,7 +709,7 @@ func (a *App) shouldHandleFilterKey(event *tcell.EventKey) bool {
 	switch event.Key() {
 	case tcell.KeyEsc, tcell.KeyCtrlL:
 		return f.Editing || f.Active
-	case tcell.KeyUp, tcell.KeyDown, tcell.KeyInsert:
+	case tcell.KeyUp, tcell.KeyDown, tcell.KeyInsert, tcell.KeyHome, tcell.KeyEnd:
 		return f.Editing || f.Active
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
 		if event.Modifiers()&tcell.ModCtrl != 0 {
@@ -930,6 +930,10 @@ func (a *App) handleFilterKey(event *tcell.EventKey) {
 		activePanel.CycleFilterMatch(-1, viewportRows)
 	case tcell.KeyDown:
 		activePanel.CycleFilterMatch(1, viewportRows)
+	case tcell.KeyHome:
+		activePanel.MoveFilterCursorHome()
+	case tcell.KeyEnd:
+		activePanel.MoveFilterCursorEnd()
 	case tcell.KeyEnter:
 		if activePanel.Filter.Query != "" {
 			activePanel.CancelFilter(viewportRows)
