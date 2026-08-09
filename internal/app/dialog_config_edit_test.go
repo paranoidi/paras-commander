@@ -198,7 +198,7 @@ command = "true"
 		if !strings.Contains(string(b), menuBody) {
 			t.Fatalf("user body not preserved before editor:\n%s", b)
 		}
-		if !strings.Contains(string(b), "# User function menu (Esc / F2)") {
+		if !strings.Contains(string(b), "# User function menu") {
 			t.Fatalf("canonical menu doc missing before editor:\n%s", b)
 		}
 		return nil

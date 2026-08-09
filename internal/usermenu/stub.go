@@ -11,7 +11,7 @@ import (
 
 // MenuStubTOML is written when no menu.toml exists yet. All entries are commented
 // so the user can uncomment and customize.
-const MenuStubTOML = `# User function menu (Esc / F2)
+const MenuStubTOML = `# User function menu
 #
 # Each action is a uniquely-named TOML table, e.g. [pwd] or [tools.disk_use].
 # The table name is just an identifier (TOML itself enforces uniqueness
