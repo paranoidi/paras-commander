@@ -171,7 +171,7 @@ func TestUserMenuDialogF9RefreshesDocumentationBeforeEditor(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	menuBody := `[[entry]]
+	menuBody := `[always]
 key = "a"
 title = "Always"
 command = "true"
@@ -219,7 +219,7 @@ func TestUserMenuDialogF9ReloadsEntriesAfterEdit(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	menuBody := `[[entry]]
+	menuBody := `[always]
 key = "a"
 title = "Always"
 command = "true"
@@ -240,7 +240,7 @@ command = "true"
 			t.Fatalf("editor path = %q, want %q", path, menuPath)
 		}
 		updated := menuBody + `
-[[entry]]
+[also]
 key = "b"
 title = "Also"
 command = "true"
@@ -269,7 +269,7 @@ func TestUserMenuDialogF9ClosesOnInvalidFile(t *testing.T) {
 	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	menuBody := `[[entry]]
+	menuBody := `[always]
 key = "a"
 title = "Always"
 command = "true"

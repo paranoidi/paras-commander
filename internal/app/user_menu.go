@@ -12,6 +12,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/textutil"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/usermenu"
@@ -126,23 +127,45 @@ func (a *App) openUserMenu() {
 		a.setTransientMessage("User menu: no visible entries", ui.MessageUrgencyWarn)
 		return
 	}
-	a.userMenuVisible = visible
 	a.userMenuPath = menuPath
-	items := userMenuLeaderMenuItems(visible)
+	a.userMenuStack = nil
+	a.openUserMenuLevel(visible)
+}
+
+// openUserMenuLevel opens (or swaps the already-open strip to) one menu level: entries is
+// the flat list of rows to show now, either the top-level menu or a submenu's children.
+// Picking a submenu row pushes the current level onto a.userMenuStack and recurses into it;
+// picking a leaf clears the stack (leaving the whole menu, not just one level) and runs it.
+func (a *App) openUserMenuLevel(entries []usermenu.MenuEntry) {
+	a.userMenuVisible = entries
+	items := userMenuLeaderMenuItems(entries, a.styles)
 	a.openLeaderMenuStrip(items, true, false, "User menu", func(i int) bool {
 		if i < 0 || i >= len(a.userMenuVisible) {
 			return false
 		}
-		a.runUserMenuEntry(a.userMenuVisible[i])
+		entry := a.userMenuVisible[i]
+		if entry.IsSubmenu() {
+			a.userMenuStack = append(a.userMenuStack, a.userMenuVisible)
+			a.openUserMenuLevel(entry.Entries)
+			return false
+		}
+		a.userMenuStack = nil
+		a.runUserMenuEntry(entry)
 		return false
 	})
 }
 
-// userMenuLeaderMenuItems maps visible user-menu entries to leader-menu rows.
-func userMenuLeaderMenuItems(entries []usermenu.MenuEntry) []ui.LeaderMenuItem {
+// userMenuLeaderMenuItems maps visible user-menu entries to leader-menu rows. Submenu rows
+// get the tree-expand glyph appended to their label so they're visually distinguishable
+// from runnable ones.
+func userMenuLeaderMenuItems(entries []usermenu.MenuEntry, styles theme.Theme) []ui.LeaderMenuItem {
 	items := make([]ui.LeaderMenuItem, len(entries))
 	for i, e := range entries {
-		items[i] = ui.LeaderMenuItem{Key: dialog.ConfiguredKeyRune(e.Key), Label: e.Title}
+		label := e.Title
+		if e.IsSubmenu() {
+			label += " " + string(styles.SymbolTreeExpand())
+		}
+		items[i] = ui.LeaderMenuItem{Key: dialog.ConfiguredKeyRune(e.Key), Label: label}
 	}
 	return items
 }

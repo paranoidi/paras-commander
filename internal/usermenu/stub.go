@@ -13,19 +13,41 @@ import (
 // so the user can uncomment and customize.
 const MenuStubTOML = `# User function menu (Esc / F2)
 #
-# Each action is a [[entry]] table. Keep the table name "entry" for every
-# action (e.g. [[toolname]] is ignored — only [[entry]] is loaded).
+# Each action is a uniquely-named TOML table, e.g. [pwd] or [tools.disk_use].
+# The table name is just an identifier (TOML itself enforces uniqueness
+# within its parent); it never appears in the UI — only title= does.
+# Display order in the function menu is the order table headers appear in
+# this file, not alphabetical.
 # Press the highlighted letter in the function menu to run an entry immediately
-# (no Alt needed). Esc closes the menu.
+# (no Alt needed). Esc closes the menu (or, inside a submenu, steps back one level).
 #
-# [[entry]]
+# [pwd]
 # title = "Print working directory"
 # command = "pwd"
 # default = true
 #
-# [[entry]]
+# [echo_dir]
 # title = "Echo active panel directory"
 # command = "echo %d"
+#
+# A table becomes a submenu once it has its own nested [parent.child] tables
+# instead of a command — submenus can nest arbitrarily deep. A submenu table
+# cannot also set command / run_for_each / pool / toast / interactive /
+# detach / background / dialog (mutually exclusive with being a container).
+# key=/default= uniqueness is scoped per menu level, so a key can be reused
+# across sibling submenus but not twice within the same level.
+#
+# [tools]
+# title = "Tools"
+# key = "t"
+#
+# [tools.disk_use]
+# title = "Show disk usage"
+# command = "du -sh %f"
+#
+# [tools.format]
+# title = "Format code"
+# command = "gofmt -w %f"
 #
 # ── File-level ─────────────────────────────────────────────────────────────
 #
@@ -34,10 +56,10 @@ const MenuStubTOML = `# User function menu (Esc / F2)
 #   true  → glob (bare patterns match basename)
 #   false → regex
 #
-# ── [[entry]] fields ───────────────────────────────────────────────────────
+# ── entry table fields ─────────────────────────────────────────────────────
 #
 # title           string   required
-# command         string   required
+# command         string   required (omit only when this table is a submenu container)
 #
 # toast           string   optional
 #   Message shown in the status bar after the command succeeds.
@@ -45,17 +67,20 @@ const MenuStubTOML = `# User function menu (Esc / F2)
 #
 # key             string   optional   (single letter)
 #   Pin the function-menu activation letter; otherwise derived from title.
-#   No letters are reserved.
+#   No letters are reserved. Must be unique among siblings at the same menu
+#   level (the same letter can be reused across different submenus).
 #
 # when            string | [string]   optional   default: always visible
-#   Visibility filter; OR semantics across list items.
+#   Visibility filter; OR semantics across list items. Also applies to a
+#   submenu table itself — a submenu with zero visible children is hidden.
 #
 # shell_patterns  bool     optional   default: file-level (else true)
-#   Override file default for this entry's when= patterns.
+#   Override file default for this entry's when= patterns. A submenu's own
+#   resolved value cascades down as the default for its children.
 #   true → glob; false → regex.
 #
 # default         bool     optional   default: false
-#   Highlight this row among visible entries.
+#   Highlight this row among visible entries at the same menu level.
 #
 # run_for_each    [string] optional   values: "files" | "dirs"
 #   Run once per selected item (or cursor when nothing selected).

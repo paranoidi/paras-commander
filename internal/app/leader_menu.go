@@ -144,6 +144,12 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 
 	switch event.Key() {
 	case tcell.KeyEsc:
+		if st.UserMenu && len(a.userMenuStack) > 0 {
+			parent := a.userMenuStack[len(a.userMenuStack)-1]
+			a.userMenuStack = a.userMenuStack[:len(a.userMenuStack)-1]
+			a.openUserMenuLevel(parent)
+			return false
+		}
 		a.closeLeaderMenu()
 		return false
 	case tcell.KeyF3:

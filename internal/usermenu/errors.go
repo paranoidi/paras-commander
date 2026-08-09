@@ -15,8 +15,8 @@ func ShortLoadError(err error) string {
 		return ""
 	}
 	msg := err.Error()
-	if strings.HasPrefix(msg, "menu.toml: entry ") {
-		return truncateRunes(strings.TrimPrefix(msg, "menu.toml: "), shortLoadErrorMaxRunes)
+	if rest, ok := strings.CutPrefix(msg, "menu.toml: "); ok && strings.HasPrefix(rest, "[") {
+		return truncateRunes(rest, shortLoadErrorMaxRunes)
 	}
 	msg = strings.TrimPrefix(msg, "menu.toml: ")
 	if i := strings.Index(msg, "toml: "); i >= 0 {

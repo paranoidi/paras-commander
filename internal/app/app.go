@@ -215,6 +215,9 @@ type App struct {
 	// userMenuVisible/userMenuPath hold the resolved menu.toml entries while the user leader menu is open.
 	userMenuVisible []usermenu.MenuEntry
 	userMenuPath    string
+
+	// userMenuStack holds ancestor levels while a submenu is open, for Esc back-navigation.
+	userMenuStack [][]usermenu.MenuEntry
 }
 
 // LaunchConfig controls process-level startup (CLI flags).
