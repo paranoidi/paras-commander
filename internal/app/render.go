@@ -41,7 +41,7 @@ func (a *App) paintFileDialogOverlay() bool {
 	if layout.TooSmall {
 		return false
 	}
-	if a.model.FileDialog.DialogType == dialog.FileDialogMassRename {
+	if a.model.FileDialog.DialogType == dialog.FileDialogMassRename && a.model.FileDialog.MassRenamePhase == dialog.MassRenamePhaseMain {
 		a.dialogCtrl.RecomputeMassRenamePreview()
 	}
 	ui.PaintFileDialog(a.screen, layout, a.model.FileDialog, a.styles, a.model.ShowFileIcons)
@@ -172,7 +172,7 @@ func (a *App) render() {
 	} else {
 		a.model.CommandsDisplay = nil
 	}
-	if a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogMassRename {
+	if a.model.FileDialog.Open && a.model.FileDialog.DialogType == dialog.FileDialogMassRename && a.model.FileDialog.MassRenamePhase == dialog.MassRenamePhaseMain {
 		a.dialogCtrl.RecomputeMassRenamePreview()
 	}
 	// Copy a.model under commandsMu: passing it by value into ui.Render otherwise reads

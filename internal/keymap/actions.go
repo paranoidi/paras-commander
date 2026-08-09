@@ -129,9 +129,15 @@ const (
 	ActionFileRenameOpenSanitize = "file.rename.open-sanitize"
 	ActionFileRenameOpenSlugify  = "file.rename.open-slugify"
 	ActionFileRenameOpenEncoding = "file.rename.open-encoding"
-	ActionFileDelete             = "file.delete"
-	ActionFileMkdir              = "file.mkdir"
-	ActionFileMkdirOpenInOther   = "file.mkdir-open-in-other"
+	// ActionFileMassRenameSavePattern / ActionFileMassRenameLoadPattern / ActionFileMassRenameHistory /
+	// ActionFileMassRenameDeletePattern are bound via [dialog.mass_rename], not [main].
+	ActionFileMassRenameSavePattern   = "file.mass-rename.save-pattern"
+	ActionFileMassRenameLoadPattern   = "file.mass-rename.load-pattern"
+	ActionFileMassRenameHistory       = "file.mass-rename.history"
+	ActionFileMassRenameDeletePattern = "file.mass-rename.delete-pattern"
+	ActionFileDelete                  = "file.delete"
+	ActionFileMkdir                   = "file.mkdir"
+	ActionFileMkdirOpenInOther        = "file.mkdir-open-in-other"
 	// ActionFileMkdirExtractCommonName is bound via [dialog.mkdir], not [main].
 	ActionFileMkdirExtractCommonName   = "file.mkdir.extract-common-name"
 	ActionFileChmod                    = "file.chmod"
@@ -347,6 +353,10 @@ var KnownActions = map[string]struct{}{
 	ActionFileRenameOpenSanitize:       {},
 	ActionFileRenameOpenSlugify:        {},
 	ActionFileRenameOpenEncoding:       {},
+	ActionFileMassRenameSavePattern:    {},
+	ActionFileMassRenameLoadPattern:    {},
+	ActionFileMassRenameHistory:        {},
+	ActionFileMassRenameDeletePattern:  {},
 	ActionFileDelete:                   {},
 	ActionFileMkdir:                    {},
 	ActionFileMkdirOpenInOther:         {},

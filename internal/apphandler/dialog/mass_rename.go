@@ -489,6 +489,14 @@ func (h *Handler) ExecuteMassRename() {
 		h.CloseFileDialog()
 		return
 	}
+	histFind, histReplace := "", ""
+	if len(d.Fields) > 0 {
+		histFind = d.Fields[0].Value
+	}
+	if len(d.Fields) > 1 {
+		histReplace = d.Fields[1].Value
+	}
+	h.recordMassRenameHistory(h.massRenameCurrentPattern("", "", histFind, histReplace))
 	n := 0
 	var renamedNames []string
 	for _, r := range rows {
@@ -535,6 +543,14 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 		h.host.SetErrorMessage("Mass rename failed", err)
 		return
 	}
+	histFind, histReplace := "", ""
+	if len(d.Fields) > 0 {
+		histFind = d.Fields[0].Value
+	}
+	if len(d.Fields) > 1 {
+		histReplace = d.Fields[1].Value
+	}
+	h.recordMassRenameHistory(h.massRenameCurrentPattern("", "", histFind, histReplace))
 
 	n := 0
 	newSources := make([]dialog.MassRenameSource, len(rows))
@@ -568,10 +584,11 @@ func (h *Handler) ApplyMassRenameKeepOpen() {
 }
 
 // MassRenameEditorFooterEligible reports whether the F4 "Editor" footer hint should show:
-// the mass-rename dialog is open (in any mode).
+// the mass-rename dialog is open on its main screen (in any mode), not the save/load-pattern
+// sub-screens.
 func (h *Handler) MassRenameEditorFooterEligible() bool {
 	d := &h.model.FileDialog
-	return d.Open && d.DialogType == dialog.FileDialogMassRename
+	return d.Open && d.DialogType == dialog.FileDialogMassRename && d.MassRenamePhase == dialog.MassRenamePhaseMain
 }
 
 // LaunchMassRenameExternalEditor writes the current source names to a temp file, launches the

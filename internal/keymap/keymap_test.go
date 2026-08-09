@@ -370,6 +370,20 @@ func TestRenameDialogOverlayRejectsNonRenameActions(t *testing.T) {
 	}
 }
 
+func TestMassRenameDialogOverlayRejectsNonMassRenameActions(t *testing.T) {
+	dir := t.TempDir()
+	keybindings := filepath.Join(dir, "keybindings.toml")
+	body := "[dialog.mass_rename]\n" +
+		"jobs.cancel = [\"C-r\"]\n"
+	if err := os.WriteFile(keybindings, []byte(body), 0o600); err != nil {
+		t.Fatalf("write keybindings: %v", err)
+	}
+	_, err := LoadFromPaths(config.Paths{ConfigDir: dir, KeybindingsFile: keybindings})
+	if err == nil {
+		t.Fatal("LoadFromPaths: want error for invalid action in [dialog.mass_rename]")
+	}
+}
+
 func TestMkdirDialogOverlayRejectsNonMkdirActions(t *testing.T) {
 	dir := t.TempDir()
 	keybindings := filepath.Join(dir, "keybindings.toml")
@@ -410,6 +424,38 @@ func TestDefaultBundleRenameDialogOverlayF2F3(t *testing.T) {
 	id, ok = bundle.RenameDialog.Lookup(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
 	if !ok || id != ActionFileRenameOpenSlugify {
 		t.Fatalf("RenameDialog F3 = %q %v, want %q", id, ok, ActionFileRenameOpenSlugify)
+	}
+}
+
+func TestDefaultBundleMassRenameDialogOverlayF2F3F5F8(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	id, ok := bundle.MassRenameDialog.Lookup(tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone))
+	if !ok || id != ActionFileMassRenameLoadPattern {
+		t.Fatalf("MassRenameDialog F2 = %q %v, want %q", id, ok, ActionFileMassRenameLoadPattern)
+	}
+	id, ok = bundle.MassRenameDialog.Lookup(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	if !ok || id != ActionFileMassRenameHistory {
+		t.Fatalf("MassRenameDialog F3 = %q %v, want %q", id, ok, ActionFileMassRenameHistory)
+	}
+	id, ok = bundle.MassRenameDialog.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	if !ok || id != ActionFileMassRenameSavePattern {
+		t.Fatalf("MassRenameDialog F5 = %q %v, want %q", id, ok, ActionFileMassRenameSavePattern)
+	}
+	id, ok = bundle.MassRenameDialog.Lookup(tcell.NewEventKey(tcell.KeyF8, 0, tcell.ModNone))
+	if !ok || id != ActionFileMassRenameDeletePattern {
+		t.Fatalf("MassRenameDialog F8 = %q %v, want %q", id, ok, ActionFileMassRenameDeletePattern)
+	}
+}
+
+func TestAllowedInMassRenameDialogOverlayRejectsForeignActions(t *testing.T) {
+	if AllowedInMassRenameDialogOverlay(ActionBookmarkDelete) {
+		t.Fatal("AllowedInMassRenameDialogOverlay should reject foreign actions")
+	}
+	if !AllowedInMassRenameDialogOverlay(ActionFileMassRenameSavePattern) {
+		t.Fatal("AllowedInMassRenameDialogOverlay should accept file.mass-rename.save-pattern")
 	}
 }
 

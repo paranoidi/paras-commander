@@ -79,10 +79,19 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 	if d.Open && dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != dialog.RenamePhaseMain {
 		return h.handleRenameToolKey(event)
 	}
+	if d.Open && d.DialogType == dialog.FileDialogMassRename && d.MassRenamePhase == dialog.MassRenamePhaseSavePrompt {
+		return h.handleMassRenameSavePromptKey(event)
+	}
+	if d.Open && d.DialogType == dialog.FileDialogMassRename && massRenamePickerPhaseOpen(d.MassRenamePhase) {
+		return h.handleMassRenamePickerKey(event)
+	}
 	if h.tryRenameDialogShortcut(event) {
 		return false
 	}
 	if h.tryMkdirDialogShortcut(event) {
+		return false
+	}
+	if h.tryMassRenameDialogShortcut(event) {
 		return false
 	}
 	if h.tryFileDialogPreKey(event, d) {

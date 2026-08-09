@@ -88,24 +88,25 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		return nil, fmt.Errorf("keymap: overlay map count %d != registry %d", len(overlayMaps), len(overlayRegistry))
 	}
 	return &Bundle{
-		Global:         gMap,
-		Jobs:           overlayMaps[0],
-		Commands:       overlayMaps[1],
-		Messages:       overlayMaps[2],
-		FilePreview:    overlayMaps[3],
-		DialogInput:    overlayMaps[4],
-		RenameDialog:   overlayMaps[5],
-		MkdirDialog:    overlayMaps[6],
-		BookmarkDialog: overlayMaps[7],
-		FindDialog:     overlayMaps[8],
-		HistoryDialog:  overlayMaps[9],
-		FlattenDialog:  overlayMaps[10],
-		TransferDialog: overlayMaps[11],
-		Compare:        overlayMaps[12],
-		Dedup:          overlayMaps[13],
-		Terminal:       overlayMaps[14],
-		LeaderKey:      leaderKey,
-		CopyMenuKey:    copyMenuKey,
+		Global:           gMap,
+		Jobs:             overlayMaps[0],
+		Commands:         overlayMaps[1],
+		Messages:         overlayMaps[2],
+		FilePreview:      overlayMaps[3],
+		DialogInput:      overlayMaps[4],
+		RenameDialog:     overlayMaps[5],
+		MkdirDialog:      overlayMaps[6],
+		BookmarkDialog:   overlayMaps[7],
+		FindDialog:       overlayMaps[8],
+		HistoryDialog:    overlayMaps[9],
+		FlattenDialog:    overlayMaps[10],
+		TransferDialog:   overlayMaps[11],
+		Compare:          overlayMaps[12],
+		Dedup:            overlayMaps[13],
+		Terminal:         overlayMaps[14],
+		MassRenameDialog: overlayMaps[15],
+		LeaderKey:        leaderKey,
+		CopyMenuKey:      copyMenuKey,
 	}, nil
 }
 
@@ -284,14 +285,15 @@ func WriteDefaultStub(filename string) error {
 }
 
 type dialogShortcuts struct {
-	Input    map[string][]string `toml:"input"`
-	Rename   map[string][]string `toml:"rename"`
-	Mkdir    map[string][]string `toml:"mkdir"`
-	Bookmark map[string][]string `toml:"bookmark"`
-	Find     map[string][]string `toml:"find"`
-	History  map[string][]string `toml:"history"`
-	Flatten  map[string][]string `toml:"flatten"`
-	Transfer map[string][]string `toml:"transfer"`
+	Input      map[string][]string `toml:"input"`
+	Rename     map[string][]string `toml:"rename"`
+	MassRename map[string][]string `toml:"mass_rename"`
+	Mkdir      map[string][]string `toml:"mkdir"`
+	Bookmark   map[string][]string `toml:"bookmark"`
+	Find       map[string][]string `toml:"find"`
+	History    map[string][]string `toml:"history"`
+	Flatten    map[string][]string `toml:"flatten"`
+	Transfer   map[string][]string `toml:"transfer"`
 }
 
 // EncodeDefaultStub writes the canonical keybindings TOML: a leading
@@ -320,6 +322,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		"#\n" +
 		"# [dialog.input] — ui.input.* only (e.g. restore default placeholder).\n" +
 		"# [dialog.rename] — file.rename.open-sanitize and file.rename.open-slugify.\n" +
+		"# [dialog.mass_rename] — file.mass-rename.save-pattern, file.mass-rename.load-pattern, file.mass-rename.delete-pattern.\n" +
 		"# [dialog.mkdir] — file.mkdir.extract-common-name.\n" +
 		"# [dialog.bookmark] — bookmark.delete (fzf-marks only).\n" +
 		"# [dialog.find] — find.select-all, find.unselect-all, find.select-group, find.unselect-group.\n" +
@@ -356,14 +359,15 @@ func EncodeDefaultStub(w io.Writer) error {
 		Dedup:       DefaultDedupOverlayKeys(),
 		Terminal:    DefaultTerminalOverlayKeys(),
 		Dialog: dialogShortcuts{
-			Input:    DefaultDialogInputOverlayKeys(),
-			Rename:   DefaultRenameDialogOverlayKeys(),
-			Mkdir:    DefaultMkdirDialogOverlayKeys(),
-			Bookmark: DefaultBookmarkDialogOverlayKeys(),
-			Find:     DefaultFindDialogOverlayKeys(),
-			History:  DefaultHistoryDialogOverlayKeys(),
-			Flatten:  DefaultFlattenDialogOverlayKeys(),
-			Transfer: DefaultTransferDialogOverlayKeys(),
+			Input:      DefaultDialogInputOverlayKeys(),
+			Rename:     DefaultRenameDialogOverlayKeys(),
+			MassRename: DefaultMassRenameDialogOverlayKeys(),
+			Mkdir:      DefaultMkdirDialogOverlayKeys(),
+			Bookmark:   DefaultBookmarkDialogOverlayKeys(),
+			Find:       DefaultFindDialogOverlayKeys(),
+			History:    DefaultHistoryDialogOverlayKeys(),
+			Flatten:    DefaultFlattenDialogOverlayKeys(),
+			Transfer:   DefaultTransferDialogOverlayKeys(),
 		},
 	}
 	if err := toml.NewEncoder(w).Encode(payload); err != nil {

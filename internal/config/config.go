@@ -103,6 +103,8 @@ type Config struct {
 	Meta MetaConfig `toml:"meta"`
 	// Pools configures discovery of the separate pools.toml work-pool definitions file.
 	Pools PoolsConfig `toml:"pools"`
+	// MassRename configures discovery of the separate patterns.toml saved mass-rename patterns file.
+	MassRename MassRenameConfig `toml:"mass_rename"`
 	// Compare configures twin-panel directory compare (content hash diff).
 	Compare CompareConfig `toml:"compare"`
 	// Dedup configures find-duplicates within a single directory.
@@ -175,6 +177,14 @@ type CompareConfig struct {
 type PoolsConfig struct {
 	// File is an absolute path or ~/… to the global pools.toml. Empty uses
 	// filepath.Join(configDir, DefaultPoolsFileName) after paths are resolved.
+	File string `toml:"file"`
+}
+
+// MassRenameConfig controls discovery of the separate patterns.toml file (saved mass-rename
+// find/replace patterns).
+type MassRenameConfig struct {
+	// File is an absolute path to the global patterns.toml. Empty uses
+	// filepath.Join(configDir, DefaultMassRenamePatternsFileName) after paths are resolved.
 	File string `toml:"file"`
 }
 
@@ -589,6 +599,9 @@ func Default() Config {
 			DefaultEntryWorkers: DefaultMetaEntryWorkers,
 		},
 		Pools: PoolsConfig{
+			File: "",
+		},
+		MassRename: MassRenameConfig{
 			File: "",
 		},
 		Compare: CompareConfig{

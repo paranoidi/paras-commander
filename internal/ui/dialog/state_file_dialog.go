@@ -92,6 +92,17 @@ type RenameEncodingCandidate struct {
 	UTF8  string
 }
 
+// MassRenamePhase selects the mass-rename dialog screen (main find/replace form vs the
+// save-pattern prompt, load-pattern picker, and pattern-history picker sub-screens).
+type MassRenamePhase int
+
+const (
+	MassRenamePhaseMain MassRenamePhase = iota
+	MassRenamePhaseSavePrompt
+	MassRenamePhaseLoadPicker
+	MassRenamePhaseHistoryPicker
+)
+
 // FileDialogState holds state for any file operation dialog.
 type FileDialogState struct {
 	Open         bool
@@ -168,6 +179,18 @@ type FileDialogState struct {
 	// MassRenameExternalNames holds the per-file basenames returned by the external editor (ExternalEditor mode).
 	// Nil means the editor has not been run yet.
 	MassRenameExternalNames []string
+	// MassRenamePhase selects between the main find/replace form and the save/load/history
+	// pattern sub-screens (see MassRenamePhase).
+	MassRenamePhase MassRenamePhase
+	// MassRenameSavedFields stashes d.Fields while the save-pattern prompt owns Name/Description.
+	MassRenameSavedFields []FileDialogField
+	// MassRenameLoadPicker holds the fuzzy-filtered saved-patterns list while
+	// MassRenamePhase == MassRenamePhaseLoadPicker.
+	MassRenameLoadPicker MassRenamePatternPickerState
+	// MassRenameHistoryPicker holds the fuzzy-filtered in-memory recently-used pattern list while
+	// MassRenamePhase == MassRenamePhaseHistoryPicker. Same widget shape as MassRenameLoadPicker,
+	// backed by a different, session-only item source (see apphandler/dialog's massRenameHistory).
+	MassRenameHistoryPicker MassRenamePatternPickerState
 
 	// Delete confirmation (DialogType == FileDialogDelete).
 	DeleteSummary        string
