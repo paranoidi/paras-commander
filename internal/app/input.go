@@ -426,9 +426,15 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 		return true, false, false
 	}
 
-	// Global show-help (F1 by default). Closes menu or quick filter first.
-	if resolvedAction == keymap.ActionAppShowHelp && !a.model.HelpView.Open {
-		// Do not open help from modal dialogs.
+	// Global show-help (F1 by default). Toggles: closes if already open,
+	// otherwise closes menu or quick filter first and opens.
+	if resolvedAction == keymap.ActionAppShowHelp {
+		if a.model.HelpView.Open {
+			a.closeHelpDialog()
+			a.render()
+			return true, false, true
+		}
+		// Do not open help from other modal dialogs.
 		if a.model.ModalDialogOpen() {
 			return true, false, false
 		}
