@@ -23,6 +23,12 @@ func massRenameContentEnd(state FileDialogState) int {
 	}
 }
 
+// MassRenameApplyFocusIndex returns the FocusedField index of the mass-rename
+// dialog's Apply button.
+func MassRenameApplyFocusIndex(state FileDialogState) int {
+	return massRenameContentEnd(state) + 1
+}
+
 // MassRenameEnsurePreviewScroll clamps scroll so the viewport fits.
 func MassRenameEnsurePreviewScroll(state *FileDialogState, viewportRows, totalRows int) {
 	if viewportRows <= 0 || totalRows <= 0 {

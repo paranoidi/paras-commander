@@ -134,6 +134,14 @@ var overlayRegistry = []OverlaySpec{
 			return fmt.Errorf("parse config %q: [terminal] action %q is not allowed (terminal.toggle-panel, terminal.focus, terminal.grow, terminal.shrink, app.drop-to-shell only)", source, action)
 		},
 	},
+	{
+		TableName: DialogMassRenameShortcutsTable,
+		Defaults:  DefaultMassRenameDialogOverlayKeys,
+		Allowed:   AllowedInMassRenameDialogOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [dialog.mass_rename] action %q is not allowed (file.mass-rename.save-pattern, file.mass-rename.load-pattern, file.mass-rename.delete-pattern only)", source, action)
+		},
+	},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.
@@ -192,6 +200,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "dedup.* only"
 	case TerminalShortcutsTable:
 		return "terminal.toggle-panel, terminal.focus, terminal.grow, terminal.shrink, app.drop-to-shell only"
+	case DialogMassRenameShortcutsTable:
+		return "file.mass-rename.save-pattern, file.mass-rename.load-pattern, file.mass-rename.delete-pattern only"
 	default:
 		return "not allowed"
 	}

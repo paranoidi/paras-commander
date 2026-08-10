@@ -250,6 +250,26 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	if a.dialogCtrl.MassRenameEditorFooterEligible() {
 		rest = append([]menu.FunctionKey{{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Editor"}}, rest...)
 	}
+	if a.dialogCtrl.MassRenameDeletePatternFooterEligible() {
+		if lbl := a.keys.MassRenameDialog.MenuBindingLabel(keymap.ActionFileMassRenameDeletePattern); lbl != "" {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete pattern"}}, rest...)
+		}
+	}
+	if a.dialogCtrl.MassRenameSavePatternFooterEligible() {
+		if lbl := a.keys.MassRenameDialog.MenuBindingLabel(keymap.ActionFileMassRenameSavePattern); lbl != "" {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF5, KeyLabel: lbl, Hint: "Save pattern"}}, rest...)
+		}
+	}
+	if a.dialogCtrl.MassRenameHistoryFooterEligible() {
+		if lbl := a.keys.MassRenameDialog.MenuBindingLabel(keymap.ActionFileMassRenameHistory); lbl != "" {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: lbl, Hint: "History"}}, rest...)
+		}
+	}
+	if a.dialogCtrl.MassRenameLoadPatternFooterEligible() {
+		if lbl := a.keys.MassRenameDialog.MenuBindingLabel(keymap.ActionFileMassRenameLoadPattern); lbl != "" {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF2, KeyLabel: lbl, Hint: "Load pattern"}}, rest...)
+		}
+	}
 	if a.dialogCtrl.RenameDialogFooterEligible() {
 		if a.dialogCtrl.RenameEncodingFooterEligible() {
 			if lbl := a.keys.RenameDialog.MenuBindingLabel(keymap.ActionFileRenameOpenEncoding); lbl != "" {

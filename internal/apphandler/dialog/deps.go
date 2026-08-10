@@ -24,6 +24,7 @@ import (
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -59,6 +60,13 @@ type Deps struct {
 	// KeysBookmarkDialog is the [dialog.bookmark] keymap overlay, consulted while the
 	// bookmarks path picker is open (delete/open-other fzf-marks entry chords).
 	KeysBookmarkDialog *keymap.Map
+	// KeysMassRenameDialog is the [dialog.mass_rename] keymap overlay, consulted while the
+	// main mass-rename dialog is open (save/load/delete pattern chords).
+	KeysMassRenameDialog *keymap.Map
+
+	// ConfigDir is the resolved config directory, used to locate patterns.toml when
+	// Config().MassRename.File is empty (mirrors apphandler/meta.Deps.ConfigDir).
+	ConfigDir string
 
 	// Jobs enqueues the delete/transfer jobs backing rename-with-copy-select, mkdir
 	// copy/move-select, delete, and duplicate.
@@ -90,22 +98,24 @@ type duplicateFocusPending struct {
 // Handler owns the file-operation dialog family: opening dialogs, dispatching their keys, and
 // executing the underlying file operation.
 type Handler struct {
-	host               Host
-	screen             tcell.Screen
-	model              *ui.Model
-	keysRenameDialog   *keymap.Map
-	keysMkdirDialog    *keymap.Map
-	keysDialogInput    *keymap.Map
-	keysGlobal         *keymap.Map
-	keysTransferDialog *keymap.Map
-	keysFlattenDialog  *keymap.Map
-	keysBookmarkDialog *keymap.Map
-	jobs               *jobsctrl.Handler
-	commands           *commandsctrl.Handler
-	preview            *previewctrl.Handler
-	dedup              *dedupctrl.Handler
-	diskUsage          *diskusage.Engine
-	diskUsageIgnore    diskusage.ShouldIgnoreFolder
+	host                 Host
+	screen               tcell.Screen
+	model                *ui.Model
+	keysRenameDialog     *keymap.Map
+	keysMkdirDialog      *keymap.Map
+	keysDialogInput      *keymap.Map
+	keysGlobal           *keymap.Map
+	keysTransferDialog   *keymap.Map
+	keysFlattenDialog    *keymap.Map
+	keysBookmarkDialog   *keymap.Map
+	keysMassRenameDialog *keymap.Map
+	configDir            string
+	jobs                 *jobsctrl.Handler
+	commands             *commandsctrl.Handler
+	preview              *previewctrl.Handler
+	dedup                *dedupctrl.Handler
+	diskUsage            *diskusage.Engine
+	diskUsageIgnore      diskusage.ShouldIgnoreFolder
 
 	// deleteDialogScanFP is the last enqueued directory set fingerprint for the delete
 	// confirmation dialog.
@@ -119,6 +129,11 @@ type Handler struct {
 	// duplicateFocus defers SelectVisibleEntryCentered until a queued duplicate job creates the entry.
 	duplicateFocus duplicateFocusPending
 
+	// massRenameHistory is the in-memory, session-only (never persisted) list of recently-executed
+	// mass-rename patterns, most-recent-first, capped at maxMassRenameHistory. Merged with
+	// patterns.toml's saved list when the load-pattern picker opens (see massRenameLoadPickerItems).
+	massRenameHistory []ops.MassRenamePattern
+
 	// pathPickerValidate / transferDestValidate debounce the path-picker filter's and the
 	// transfer/flatten destination field's "does this path exist" background check; each Arm
 	// posts a PathPickerValidatePayload / TransferDestValidatePayload interrupt through Screen
@@ -130,21 +145,23 @@ type Handler struct {
 // New constructs a Handler.
 func New(d Deps) *Handler {
 	return &Handler{
-		host:               d.Host,
-		screen:             d.Screen,
-		model:              d.Model,
-		keysRenameDialog:   d.KeysRenameDialog,
-		keysMkdirDialog:    d.KeysMkdirDialog,
-		keysDialogInput:    d.KeysDialogInput,
-		keysGlobal:         d.KeysGlobal,
-		keysTransferDialog: d.KeysTransferDialog,
-		keysFlattenDialog:  d.KeysFlattenDialog,
-		keysBookmarkDialog: d.KeysBookmarkDialog,
-		jobs:               d.Jobs,
-		commands:           d.Commands,
-		preview:            d.Preview,
-		dedup:              d.Dedup,
-		diskUsage:          d.DiskUsage,
-		diskUsageIgnore:    d.DiskUsageIgnore,
+		host:                 d.Host,
+		screen:               d.Screen,
+		model:                d.Model,
+		keysRenameDialog:     d.KeysRenameDialog,
+		keysMkdirDialog:      d.KeysMkdirDialog,
+		keysDialogInput:      d.KeysDialogInput,
+		keysGlobal:           d.KeysGlobal,
+		keysTransferDialog:   d.KeysTransferDialog,
+		keysFlattenDialog:    d.KeysFlattenDialog,
+		keysBookmarkDialog:   d.KeysBookmarkDialog,
+		keysMassRenameDialog: d.KeysMassRenameDialog,
+		configDir:            d.ConfigDir,
+		jobs:                 d.Jobs,
+		commands:             d.Commands,
+		preview:              d.Preview,
+		dedup:                d.Dedup,
+		diskUsage:            d.DiskUsage,
+		diskUsageIgnore:      d.DiskUsageIgnore,
 	}
 }

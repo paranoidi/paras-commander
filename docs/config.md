@@ -35,6 +35,7 @@ These live alongside `config.toml` in the same config directory but are
 | `menu.toml` | User menu (F2) command definitions. | `[user_menu].file` |
 | `meta.toml` | Meta column command definitions. | `[meta].file` |
 | `pools.toml` | Worker pool definitions. | `[pools].file` |
+| `patterns.toml` | Saved mass-rename find/replace patterns. | `[mass_rename].file` |
 | `themes/*.toml` | Color themes. | top-level `theme` key |
 
 ## Contents
@@ -326,6 +327,14 @@ Worker pool definitions (used by "run for each" operations).
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `file` | string | `""` | Path to the global `pools.toml`. Empty uses `<config dir>/pools.toml`. |
+
+## `[mass_rename]`
+
+Saved mass-rename find/replace patterns (F2 Load pattern / F5 Save pattern in the mass rename dialog; F3 opens the in-memory pattern-history picker, which is session-only and not backed by this file).
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `file` | string | `""` | Path to the global `patterns.toml`. Empty uses `<config dir>/patterns.toml`. |
 
 ## `[compare]`
 

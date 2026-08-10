@@ -6,7 +6,11 @@ package dialog
 // individual items); use Down/Up to step through individual items within a segment.
 func FileDialogFocusForm(state FileDialogState) DialogTrailingButtonsForm {
 	okIdx := fileDialogOKFocusIndex(state)
-	form := NewDialogTrailingButtonsForm(okIdx, 2)
+	numTrailing := 2
+	if state.DialogType == FileDialogMassRename {
+		numTrailing = 3
+	}
+	form := NewDialogTrailingButtonsForm(okIdx, numTrailing)
 	if okIdx > 0 {
 		form = form.WithSegments(0, okIdx)
 	}

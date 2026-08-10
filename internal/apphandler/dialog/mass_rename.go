@@ -489,6 +489,14 @@ func (h *Handler) ExecuteMassRename() {
 		h.CloseFileDialog()
 		return
 	}
+	histFind, histReplace := "", ""
+	if len(d.Fields) > 0 {
+		histFind = d.Fields[0].Value
+	}
+	if len(d.Fields) > 1 {
+		histReplace = d.Fields[1].Value
+	}
+	h.recordMassRenameHistory(h.massRenameCurrentPattern("", "", histFind, histReplace))
 	n := 0
 	var renamedNames []string
 	for _, r := range rows {
@@ -505,11 +513,82 @@ func (h *Handler) ExecuteMassRename() {
 	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", n), ui.MessageUrgencyInfo)
 }
 
+// ApplyMassRenameKeepOpen runs the mass-rename dialog's Apply action: like
+// ExecuteMassRename, but keeps the dialog open, re-selects the renamed batch
+// under its new names, and clears the Find/Replace (or Pattern/Replacement)
+// inputs so another pass can be queued immediately.
+func (h *Handler) ApplyMassRenameKeepOpen() {
+	d := &h.model.FileDialog
+	h.RecomputeMassRenamePreview()
+	if h.tryRejectMassRenameOK(d) {
+		return
+	}
+	if len(d.MassRenameSources) == 0 {
+		return
+	}
+	rows, err := h.massRenameComputeRows(d)
+	if err != nil {
+		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyWarn)
+		return
+	}
+	if vErr := ops.MassRenameValidateRows(rows); vErr != nil {
+		h.host.SetTransientMessage(vErr.Error(), ui.MessageUrgencyWarn)
+		return
+	}
+	if !ops.MassRenameHasWork(rows) {
+		h.host.SetTransientMessage("Nothing to rename", ui.MessageUrgencyInfo)
+		return
+	}
+	if err := ops.ExecuteMassRename(rows); err != nil {
+		h.host.SetErrorMessage("Mass rename failed", err)
+		return
+	}
+	histFind, histReplace := "", ""
+	if len(d.Fields) > 0 {
+		histFind = d.Fields[0].Value
+	}
+	if len(d.Fields) > 1 {
+		histReplace = d.Fields[1].Value
+	}
+	h.recordMassRenameHistory(h.massRenameCurrentPattern("", "", histFind, histReplace))
+
+	n := 0
+	newSources := make([]dialog.MassRenameSource, len(rows))
+	newPaths := make([]string, len(rows))
+	var renamedNames []string
+	for i, r := range rows {
+		if r.NewBase != r.OldBase {
+			n++
+			renamedNames = append(renamedNames, r.NewBase)
+		}
+		newPath := filepath.Join(filepath.Dir(r.SourcePath), r.NewBase)
+		newSources[i] = dialog.MassRenameSource{Path: newPath, Name: r.NewBase}
+		newPaths[i] = newPath
+	}
+
+	panelDir := h.host.ActivePanel().Path
+	h.RefreshBothPanels()
+	h.host.ActivePanel().AddRenameMarks(panelDir, renamedNames)
+	h.host.ActivePanel().ClearSelection()
+	for _, np := range newPaths {
+		h.host.ActivePanel().AddSelection(np)
+	}
+
+	d.MassRenameSources = newSources
+	d.Fields[0].Clear()
+	d.Fields[1].Clear()
+	d.MassRenameExternalNames = nil
+	d.FocusedField = dialog.MassRenameFindFieldFocus
+	h.RecomputeMassRenamePreview()
+	h.host.SetTransientMessage(fmt.Sprintf("Renamed %d file(s)", n), ui.MessageUrgencyInfo)
+}
+
 // MassRenameEditorFooterEligible reports whether the F4 "Editor" footer hint should show:
-// the mass-rename dialog is open (in any mode).
+// the mass-rename dialog is open on its main screen (in any mode), not the save/load-pattern
+// sub-screens.
 func (h *Handler) MassRenameEditorFooterEligible() bool {
 	d := &h.model.FileDialog
-	return d.Open && d.DialogType == dialog.FileDialogMassRename
+	return d.Open && d.DialogType == dialog.FileDialogMassRename && d.MassRenamePhase == dialog.MassRenamePhaseMain
 }
 
 // LaunchMassRenameExternalEditor writes the current source names to a temp file, launches the

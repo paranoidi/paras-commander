@@ -48,7 +48,14 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 			height += 1 + 1 + 1 + (1 + len(state.RunForEachPools))
 		}
 	case FileDialogMassRename:
-		height = massRenameDialogHeight(layout.Height, state)
+		switch state.MassRenamePhase {
+		case MassRenamePhaseSavePrompt:
+			height = massRenameSavePromptDialogHeight()
+		case MassRenamePhaseLoadPicker, MassRenamePhaseHistoryPicker:
+			height = massRenamePatternPickerDialogHeight(layout.Height)
+		default:
+			height = massRenameDialogHeight(layout.Height, state)
+		}
 	default:
 		if renameToolActive(state) {
 			// Preview label + blank + preview row + separator + options + separator + buttons.
@@ -102,7 +109,16 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, c
 			drawRunForEachDialogFields(screen, rect, borderStyle, state, styles)
 		}
 	case FileDialogMassRename:
-		drawMassRenameDialog(screen, rect, state, borderStyle, styles)
+		switch state.MassRenamePhase {
+		case MassRenamePhaseSavePrompt:
+			drawMassRenameSavePromptContent(screen, rect, state, borderStyle, styles)
+		case MassRenamePhaseLoadPicker:
+			drawMassRenamePatternPickerContent(screen, rect, state.MassRenameLoadPicker, borderStyle, styles)
+		case MassRenamePhaseHistoryPicker:
+			drawMassRenamePatternPickerContent(screen, rect, state.MassRenameHistoryPicker, borderStyle, styles)
+		default:
+			drawMassRenameDialog(screen, rect, state, borderStyle, styles)
+		}
 	default:
 		if renameToolActive(state) {
 			drawRenameToolContent(screen, rect, state, borderStyle, styles)
@@ -147,6 +163,16 @@ func fileDialogOuterTitle(state FileDialogState) string {
 				return "Duplicate"
 			}
 			return "Rename"
+		}
+	}
+	if state.DialogType == FileDialogMassRename {
+		switch state.MassRenamePhase {
+		case MassRenamePhaseSavePrompt:
+			return "Save pattern"
+		case MassRenamePhaseLoadPicker:
+			return "Load pattern"
+		case MassRenamePhaseHistoryPicker:
+			return "Pattern history"
 		}
 	}
 	return fileDialogTitle(state.DialogType)
@@ -519,12 +545,17 @@ func fileDialogOKFocusIndex(state FileDialogState) int {
 	if state.DialogType == FileDialogDelete {
 		return 0
 	}
-	if state.DialogType == FileDialogMassRename {
+	if state.DialogType == FileDialogMassRename && (state.MassRenamePhase == MassRenamePhaseLoadPicker || state.MassRenamePhase == MassRenamePhaseHistoryPicker) {
+		return 1 // list=0, OK=1
+	}
+	if state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain {
 		return massRenameContentEnd(state)
 	}
 	if renameToolActive(state) {
 		return renameToolOptionCount(state)
 	}
+	// SavePrompt phase (Name/Description fields) falls through to the generic formula below,
+	// same as any other two-field dialog: len(state.Fields) == 2.
 	return len(state.Fields) + mkdirExtraFocusRows(state) + renameExtraFocusRows(state) + runForEachExtraFocusRows(state)
 }
 
@@ -533,8 +564,11 @@ func fileDialogCancelFocusIndex(state FileDialogState) int {
 	if state.DialogType == FileDialogDelete {
 		return 1
 	}
-	if state.DialogType == FileDialogMassRename {
-		return massRenameContentEnd(state) + 1
+	if state.DialogType == FileDialogMassRename && (state.MassRenamePhase == MassRenamePhaseLoadPicker || state.MassRenamePhase == MassRenamePhaseHistoryPicker) {
+		return 2
+	}
+	if state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain {
+		return massRenameContentEnd(state) + 2
 	}
 	if renameToolActive(state) {
 		return renameToolOptionCount(state) + 1
@@ -746,11 +780,17 @@ func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, 
 func drawOkCancelButtons(screen tcell.Screen, rect Rect, y int, state FileDialogState, styles theme.Theme) {
 	okFocusIdx := fileDialogOKFocusIndex(state)
 	cancelFocusIdx := fileDialogCancelFocusIndex(state)
-	okDisabled := state.DialogType == FileDialogMassRename && !FileDialogMassRenameOKEnabled(state)
-
-	specs := draw.OKCancelButtonSpecs(state.FocusedField == okFocusIdx, state.FocusedField == cancelFocusIdx)
-	specs[0].Disabled = okDisabled
-	draw.DrawDialogButtonRowCentered(screen, rect, y, specs, styles)
+	if state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain {
+		disabled := !FileDialogMassRenameOKEnabled(state)
+		specs := []draw.DialogButtonSpec{
+			{Label: "OK", Shortcut: 'O', Focused: state.FocusedField == okFocusIdx, Disabled: disabled},
+			{Label: "Apply", Shortcut: 'L', Focused: state.FocusedField == MassRenameApplyFocusIndex(state), Disabled: disabled},
+			{Label: "Cancel", Shortcut: 'C', Focused: state.FocusedField == cancelFocusIdx},
+		}
+		draw.DrawDialogButtonRowCentered(screen, rect, y, specs, styles)
+		return
+	}
+	draw.DrawDialogButtonRowCentered(screen, rect, y, draw.OKCancelButtonSpecs(state.FocusedField == okFocusIdx, state.FocusedField == cancelFocusIdx), styles)
 }
 
 // FileDialogOKFocusIndex returns the FocusedField index of the OK button.

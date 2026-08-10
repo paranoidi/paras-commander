@@ -252,6 +252,10 @@ const (
 	// directory when [pools].file is empty.
 	DefaultPoolsFileName = "pools.toml"
 
+	// DefaultMassRenamePatternsFileName is the basename of the saved mass-rename patterns file
+	// under the config directory when [mass_rename].file is empty.
+	DefaultMassRenamePatternsFileName = "patterns.toml"
+
 	// DefaultMetaEntryWorkers is the number of concurrent background workers used per meta column
 	// entry when the entry does not specify its own workers value in meta.toml.
 	DefaultMetaEntryWorkers = 2
