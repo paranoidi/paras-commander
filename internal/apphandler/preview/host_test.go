@@ -20,11 +20,12 @@ import (
 // queries return a plain non-zoom, non-hidden even split computed via the real leaf ui package
 // so geometry-dependent assertions (column widths etc.) see representative numbers.
 type fakeHost struct {
-	model    *ui.Model
-	cfg      config.Config
-	styles   theme.Theme
-	inactive int // inactive panel ID
-	messages []string
+	model                *ui.Model
+	cfg                  config.Config
+	styles               theme.Theme
+	inactive             int // inactive panel ID
+	messages             []string
+	launchedAsFileViewer bool
 }
 
 func newFakeHost(model *ui.Model) *fakeHost {
@@ -77,6 +78,7 @@ func (f *fakeHost) ActiveViewportRows() int             { return 20 }
 func (f *fakeHost) PanelViewportRows(int) int           { return 20 }
 func (f *fakeHost) SelectionsStripViewportRows(int) int { return 0 }
 func (f *fakeHost) InQuickFilterUI() bool               { return false }
+func (f *fakeHost) LaunchedAsFileViewer() bool          { return f.launchedAsFileViewer }
 func (f *fakeHost) SwitchPanel() {
 	if f.model.ActivePanel == ui.SecondaryPanel {
 		f.model.ActivePanel = ui.PrimaryPanel

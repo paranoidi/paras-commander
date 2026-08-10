@@ -462,7 +462,7 @@ func TestFunctionKeysFilePreviewStylePickerShowsEnterSave(t *testing.T) {
 
 func TestFunctionKeysFilePreviewViewShowsStyleF9(t *testing.T) {
 	t.Parallel()
-	keys := FunctionKeysFilePreviewView(false)
+	keys := FunctionKeysFilePreviewView(false, false)
 	if len(keys) != 9 {
 		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F1 Help + / Search + F3 Reload + F4 Edit + F5 Raw + F8 Delete this + F9 Style + F10", len(keys))
 	}
@@ -501,9 +501,22 @@ func TestFunctionKeysFilePreviewViewShowsStyleF9(t *testing.T) {
 	}
 }
 
+func TestFunctionKeysFilePreviewViewShowsFilelistWhenLaunchedAsFileViewer(t *testing.T) {
+	t.Parallel()
+	keys := FunctionKeysFilePreviewView(false, true)
+	if keys[0] != FooterEscFilelist {
+		t.Fatalf("footer[0] = %+v, want Esc Filelist when launched as file viewer", keys[0])
+	}
+
+	keys = FunctionKeysFilePreviewView(false, false)
+	if keys[0] != FooterEscClose {
+		t.Fatalf("footer[0] = %+v, want Esc Close when not launched as file viewer", keys[0])
+	}
+}
+
 func TestFunctionKeysFilePreviewViewShowsRenderWhenRaw(t *testing.T) {
 	t.Parallel()
-	keys := FunctionKeysFilePreviewView(true)
+	keys := FunctionKeysFilePreviewView(true, false)
 	for i := range keys {
 		if keys[i].Key == tcell.KeyF5 {
 			if keys[i].Hint != "Render" {

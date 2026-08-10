@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/uitest"
@@ -101,6 +102,55 @@ func TestStartPathsSingleFileOpensFullscreenPreview(t *testing.T) {
 	entry, ok := app.model.Primary.CurrentEntry()
 	if !ok || entry.Name != "walrus.txt" {
 		t.Fatalf("current entry = %+v, want walrus.txt", entry)
+	}
+}
+
+func TestStartPathsSingleFileLaunchQuitsOnQ(t *testing.T) {
+	root := t.TempDir()
+	file := filepath.Join(root, "walrus.txt")
+	if err := os.WriteFile(file, []byte("hello preview\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	screen := uitest.Screen(t, 80, 24)
+	app, err := NewWithOptions(screen, Options{
+		CWD:        func() (string, error) { return root, nil },
+		Config:     config.Default(),
+		StartPaths: []string{file},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	t.Cleanup(app.stopWorker)
+
+	if !app.launchedFileViewer {
+		t.Fatal("launchedFileViewer = false, want true after single-file CLI launch")
+	}
+
+	quit := app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, 'q', tcell.ModNone))
+	if !quit {
+		t.Fatal("HandleFilePreviewViewKey('q') quit = false, want true when launched as a standalone file viewer")
+	}
+}
+
+func TestStartPathsDirectoryLaunchDoesNotSetLaunchedFileViewer(t *testing.T) {
+	root := t.TempDir()
+	left := filepath.Join(root, "harbor")
+	if err := os.Mkdir(left, 0o755); err != nil {
+		t.Fatalf("Mkdir left: %v", err)
+	}
+	screen := uitest.Screen(t, 80, 24)
+	app, err := NewWithOptions(screen, Options{
+		CWD:        func() (string, error) { return root, nil },
+		Config:     config.Default(),
+		StartPaths: []string{left},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	t.Cleanup(app.stopWorker)
+
+	if app.launchedFileViewer {
+		t.Fatal("launchedFileViewer = true, want false after directory-only CLI launch")
 	}
 }
 

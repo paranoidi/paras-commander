@@ -25,6 +25,7 @@ type Host interface {
 	PanelViewportRows(panelID int) int
 	SelectionsStripViewportRows(panelID int) int
 	InQuickFilterUI() bool
+	LaunchedAsFileViewer() bool
 	SwitchPanel()
 	SyncFollowTargetPath(driver *panel.State) (string, bool)
 	PanelSyncFollowHeldListNav(resolvedAction string, event *tcell.EventKey) bool

@@ -1062,6 +1062,14 @@ func DefaultActionSpecs() []ActionSpec {
 			PreviewMenuKey: "s",
 		},
 		{
+			ID:          ActionFileViewClose,
+			Views:       HelpFilePreview,
+			Title:       "Close file view",
+			Section:     "Preview",
+			DefaultKeys: nil, // overlay: DefaultFilePreviewOverlayKeys
+			Keywords:    []string{"close", "quit", "back", "browser", "esc"},
+		},
+		{
 			ID:          ActionFileViewSearchNext,
 			Views:       HelpFilePreview,
 			Title:       "Next search match",

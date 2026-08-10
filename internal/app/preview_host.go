@@ -33,6 +33,8 @@ func (h previewHost) SelectionsStripViewportRows(panelID int) int {
 
 func (h previewHost) InQuickFilterUI() bool { return h.app.inQuickFilterUI() }
 
+func (h previewHost) LaunchedAsFileViewer() bool { return h.app.launchedFileViewer }
+
 func (h previewHost) SwitchPanel() { h.app.switchPanel() }
 
 func (h previewHost) SyncFollowTargetPath(driver *panel.State) (string, bool) {

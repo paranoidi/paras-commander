@@ -22,6 +22,11 @@ func (fk FunctionKey) FullHint() string {
 // FooterEscClose is prepended to dialog and menu footers where Esc dismisses the overlay.
 var FooterEscClose = FunctionKey{Key: tcell.KeyEsc, KeyLabel: "Esc", Hint: "Close"}
 
+// FooterEscFilelist is shown instead of FooterEscClose where Esc returns to the twin-panel
+// filelist browser rather than closing back to a prior view (e.g. fullscreen file preview
+// launched directly via `pc <file>`, which has no prior view to "close" back to).
+var FooterEscFilelist = FunctionKey{Key: tcell.KeyEsc, KeyLabel: "Esc", Hint: "Filelist"}
+
 // FunctionKeyEditConfig opens meta.toml or menu.toml from meta/user-menu dialogs.
 var FunctionKeyEditConfig = FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Edit config"}
 
@@ -107,13 +112,19 @@ func FunctionKeysFilePreviewStylePicker() []FunctionKey {
 // Esc is the primary exit key (shown); Left also closes the view. rawMarkdown reflects
 // file.view.toggle-raw's current state: the F5 hint reads "Raw" when showing rendered
 // markdown (F5 would switch to raw source) and "Render" when already showing raw source.
-func FunctionKeysFilePreviewView(rawMarkdown bool) []FunctionKey {
+// launchedAsFileViewer is true when the app was started directly via `pc <file>`, so Esc
+// lands on the filelist browser rather than "closing" back to a prior view (FooterEscFilelist).
+func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer bool) []FunctionKey {
 	toggleHint := "Raw"
 	if rawMarkdown {
 		toggleHint = "Render"
 	}
+	escKey := FooterEscClose
+	if launchedAsFileViewer {
+		escKey = FooterEscFilelist
+	}
 	return []FunctionKey{
-		FooterEscClose,
+		escKey,
 		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
 		{Key: tcell.KeyRune, KeyLabel: "/", Hint: "Search"},
 		{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "Reload"},

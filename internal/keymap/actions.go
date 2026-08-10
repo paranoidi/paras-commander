@@ -155,6 +155,7 @@ const (
 	ActionFileViewSearchStart          = "file.view.search-start"
 	ActionFileViewSearchNext           = "file.view.search-next"
 	ActionFileViewSearchPrev           = "file.view.search-prev"
+	ActionFileViewClose                = "file.view.close"
 	ActionFileQuickView                = "file.quick-view"
 	ActionFileQuickViewPreviewPageUp   = "file.quick-view.preview-page-up"
 	ActionFileQuickViewPreviewPageDown = "file.quick-view.preview-page-down"
@@ -377,6 +378,7 @@ var KnownActions = map[string]struct{}{
 	ActionFileViewSearchStart:          {},
 	ActionFileViewSearchNext:           {},
 	ActionFileViewSearchPrev:           {},
+	ActionFileViewClose:                {},
 	ActionFileQuickView:                {},
 	ActionFileQuickViewPreviewPageUp:   {},
 	ActionFileQuickViewPreviewPageDown: {},

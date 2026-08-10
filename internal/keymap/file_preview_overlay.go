@@ -13,6 +13,7 @@ func DefaultFilePreviewOverlayKeys() map[string][]string {
 		ActionFileViewSearchStart: {"/"},
 		ActionFileViewSearchNext:  {"n"},
 		ActionFileViewSearchPrev:  {"p"},
+		ActionFileViewClose:       {"q"},
 	}
 }
 

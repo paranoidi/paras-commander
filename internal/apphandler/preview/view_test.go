@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -92,6 +93,46 @@ func TestRunPreviewInternalSetsHighlightedCells(t *testing.T) {
 	}
 	if len(st.HighlightedCells) == 0 {
 		t.Fatal("HighlightedCells empty, want Chroma output")
+	}
+}
+
+func TestFileViewCloseActionReturnsToBrowserNormally(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "notes.txt")
+	writeFileForPreviewView(t, path)
+	h, _ := newTestHandler(t, 80, 20)
+	if err := h.OpenFullscreenFilePreviewAt(path); err != nil {
+		t.Fatalf("OpenFullscreenFilePreviewAt: %v", err)
+	}
+
+	quit, handled := h.tryFilePreviewAction(keymap.ActionFileViewClose)
+	if !handled {
+		t.Fatal("handled = false, want true")
+	}
+	if quit {
+		t.Fatal("quit = true, want false when not launched as a standalone file viewer")
+	}
+	if h.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser", h.model.ViewMode)
+	}
+}
+
+func TestFileViewCloseActionQuitsWhenLaunchedAsFileViewer(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "notes.txt")
+	writeFileForPreviewView(t, path)
+	h, fh := newTestHandler(t, 80, 20)
+	fh.launchedAsFileViewer = true
+	if err := h.OpenFullscreenFilePreviewAt(path); err != nil {
+		t.Fatalf("OpenFullscreenFilePreviewAt: %v", err)
+	}
+
+	quit, handled := h.tryFilePreviewAction(keymap.ActionFileViewClose)
+	if !handled {
+		t.Fatal("handled = false, want true")
+	}
+	if !quit {
+		t.Fatal("quit = false, want true when launched as a standalone file viewer")
 	}
 }
 

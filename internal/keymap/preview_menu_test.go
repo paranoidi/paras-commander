@@ -104,3 +104,11 @@ func TestFilePreviewOverlayMapsColonToPreviewMenu(t *testing.T) {
 		t.Fatalf("DefaultFilePreviewOverlayKeys()[ActionFileViewMenu] = %v, want [\":\"]", chords)
 	}
 }
+
+func TestFilePreviewOverlayMapsQToClose(t *testing.T) {
+	keys := DefaultFilePreviewOverlayKeys()
+	chords, ok := keys[ActionFileViewClose]
+	if !ok || len(chords) != 1 || chords[0] != "q" {
+		t.Fatalf("DefaultFilePreviewOverlayKeys()[ActionFileViewClose] = %v, want [\"q\"]", chords)
+	}
+}

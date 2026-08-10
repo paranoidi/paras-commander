@@ -204,6 +204,10 @@ type App struct {
 	lastFlushedCursor hwCursorState
 	// chooserFile is non-empty in Helix/editor file-picker mode (--chooser-file).
 	chooserFile string
+	// launchedFileViewer is true when the app was started with a single CLI file
+	// argument (pc <file>), opening straight into the fullscreen preview with no
+	// twin-panel browser to fall back to.
+	launchedFileViewer bool
 
 	// leaderMenuOnActivate runs the selected menu entry after the leader menu closes.
 	// Returns true when the app should exit (e.g. quit).

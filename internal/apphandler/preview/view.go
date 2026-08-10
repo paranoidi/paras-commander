@@ -219,6 +219,12 @@ func (h *Handler) tryFilePreviewAction(nextAction string) (quit bool, handled bo
 		return h.host.HandleQuit(), true
 	case keymap.ActionAppQuitImmediate:
 		return h.host.HandleQuitImmediate(), true
+	case keymap.ActionFileViewClose:
+		if h.host.LaunchedAsFileViewer() {
+			return h.host.HandleQuit(), true
+		}
+		h.CloseFilePreviewFullscreen()
+		return false, true
 	case keymap.ActionFileViewMenu:
 		h.host.OpenPreviewLeaderMenu()
 		return false, true

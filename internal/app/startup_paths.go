@@ -99,6 +99,7 @@ func (a *App) applyStartPaths(rawPaths []string) error {
 			return err
 		}
 		a.model.ActivePanel = ui.PrimaryPanel
+		a.launchedFileViewer = true
 		return a.previewCtrl.OpenFullscreenFilePreviewAt(r.path)
 	}
 
