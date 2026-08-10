@@ -58,7 +58,12 @@ func filePreviewFrameStyle(styles theme.Theme, previewFocused, chromeBlocked, em
 	if embedded {
 		frame = styles.PanelChrome(true, chromeBlocked).Frame
 	}
-	if chromaStyleName != "" && !chromeBlocked {
+	// Applied regardless of chromeBlocked: the body's already-rendered chroma cells keep
+	// their real background even while a dialog blocks the panel (FilePreviewBodyStyle/
+	// pad/margin styles don't re-derive it), so suppressing it here made the border/empty
+	// rows/margins fall back to the plain theme background and visibly mismatch the
+	// still-chroma-tinted text underneath.
+	if chromaStyleName != "" {
 		frame = chromaformat.FrameStyleFromChroma(frame, chromaStyleName)
 	}
 	return frame

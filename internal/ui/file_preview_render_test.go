@@ -20,12 +20,12 @@ func TestFilePreviewFrameStyleUsesChromaBackground(t *testing.T) {
 	}
 }
 
-func TestFilePreviewFrameStyleSkipsChromaWhenBlocked(t *testing.T) {
+func TestFilePreviewFrameStyleKeepsChromaWhenBlocked(t *testing.T) {
 	styles := theme.Default()
-	want := styles.PanelBlockedFrame
+	want := chromaformat.FrameStyleFromChroma(styles.PanelBlockedFrame, "github")
 	got := filePreviewFrameStyle(styles, false, true, false, "github")
 	if got != want {
-		t.Fatal("blocked preview should keep theme frame without chroma tint")
+		t.Fatal("blocked preview should keep the chroma tint so border/pad background stays consistent with the already-rendered body")
 	}
 }
 
