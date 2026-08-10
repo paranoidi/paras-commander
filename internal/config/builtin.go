@@ -298,6 +298,10 @@ const (
 	// DefaultPreviewPrefetchAlways, when false, limits prefetch to quick view or carousel mode.
 	// When true, prefetch runs whenever [preview].prefetch is on.
 	DefaultPreviewPrefetchAlways = false
+	// DefaultPreviewQuickViewDisableOnInactiveNav, when true, turns off quick view (with a toast)
+	// whenever the non-driver (inactive) panel navigates to a new directory, since quick view
+	// would otherwise immediately overlay the freshly opened listing with a stale preview.
+	DefaultPreviewQuickViewDisableOnInactiveNav = true
 	// DefaultPreviewPrefetchWorkers is the default worker-pool size for preview prefetch.
 	DefaultPreviewPrefetchWorkers = 4
 	// PreviewPrefetchWorkersMin / Max clamp [preview].prefetch_workers in Validate.

@@ -76,6 +76,9 @@ type Handler struct {
 	// quickViewNavSkipReconcile suppresses reconcileQuickViewPreview while file-list nav coalesce
 	// is holding a pending preview flush (mirrors syncFollowNavSkipReconcile in internal/app).
 	quickViewNavSkipReconcile atomic.Bool
+	// quickViewDirNavPath tracks the last-seen cwd per panel (indexed by ui.PrimaryPanel/
+	// ui.SecondaryPanel) so HandlePanelDirChanged only reacts to an actual directory change.
+	quickViewDirNavPath [2]string
 
 	// carouselPreviewDebounceGen invalidates in-flight carousel side-preview debounce callbacks.
 	carouselPreviewDebounceGen atomic.Uint64

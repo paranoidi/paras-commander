@@ -282,6 +282,7 @@ File preview pane (F3 / quick view / carousel).
 | `video_thumb_rows` | int | `2` | Rows in the video thumbnail grid (clamped 1–6). |
 | `prefetch` | bool | `true` | Background-decode nearby images and generate video thumbnails before the caret lands on them. |
 | `prefetch_always` | bool | `false` | When `false` (default), prefetch only runs while quick view is latched or the active panel is in carousel mode. Set `true` to prefetch whenever `prefetch` is on, regardless of view mode. |
+| `quick_view_disable_on_inactive_nav` | bool | `true` | When `true` (default), turns off quick view and shows a toast whenever the inactive (non-driver) panel navigates to a new directory — e.g. via Alt+I/Alt+O, a bookmark "open in other panel", or find/compare/dedup/history/SFTP results — since quick view would otherwise overlay the freshly opened listing with a stale preview. |
 | `prefetch_workers` | int | `4` | Worker-pool size for background prefetch (clamped 1–32). Ignored when `prefetch` is `false`. |
 | `image_max_edge_px` | int | `1024` | Longest edge (px) for decoded stills and video-thumb grids before the final cell-budget fit. Keeps tmux graphics payloads under ~1MB. Applied even when `prefetch` is `false` (minimum 64). |
 | `prefetch_memory_max_mb` | int | `256` | In-memory LRU budget (MiB) for prefetched image/video rasters. Evicts oldest entries when exceeded. |

@@ -259,6 +259,11 @@ type PreviewConfig struct {
 	// PrefetchAlways, when true, runs prefetch whenever Prefetch is on. When false (default),
 	// prefetch only runs while quick view is latched or the active panel is in carousel mode.
 	PrefetchAlways bool `toml:"prefetch_always"`
+	// QuickViewDisableOnInactiveNav, when true (default), turns off quick view and shows a
+	// toast whenever the inactive (non-driver) panel navigates to a new directory — e.g. via
+	// Alt+I/Alt+O, a bookmark "open in other panel", or find/compare/dedup/history/SFTP results —
+	// since quick view would otherwise immediately overlay the freshly opened listing with a preview.
+	QuickViewDisableOnInactiveNav bool `toml:"quick_view_disable_on_inactive_nav"`
 	// PrefetchWorkers is the worker-pool size for background prefetch (default 4).
 	PrefetchWorkers int `toml:"prefetch_workers"`
 	// ImageMaxEdgePx caps the longest edge of decoded stills and video-thumb grids before
@@ -568,20 +573,21 @@ func Default() Config {
 			LocalNames: []string{DefaultUserMenuFileName},
 		},
 		Preview: PreviewConfig{
-			Mode:                 DefaultPreviewMode,
-			Style:                DefaultPreviewStyle,
-			LineNumbers:          DefaultPreviewLineNumbers,
-			Command:              DefaultFilePreviewCommand,
-			Images:               DefaultPreviewImages,
-			ImageProtocol:        DefaultPreviewImageProtocol,
-			VideoThumbCols:       DefaultPreviewVideoThumbCols,
-			VideoThumbRows:       DefaultPreviewVideoThumbRows,
-			Prefetch:             DefaultPreviewPrefetch,
-			PrefetchAlways:       DefaultPreviewPrefetchAlways,
-			PrefetchWorkers:      DefaultPreviewPrefetchWorkers,
-			ImageMaxEdgePx:       DefaultPreviewImageMaxEdgePx,
-			PrefetchMemoryMaxMB:  DefaultPreviewPrefetchMemoryMaxMB,
-			VideoThumbCacheMaxMB: DefaultPreviewVideoThumbCacheMaxMB,
+			Mode:                          DefaultPreviewMode,
+			Style:                         DefaultPreviewStyle,
+			LineNumbers:                   DefaultPreviewLineNumbers,
+			Command:                       DefaultFilePreviewCommand,
+			Images:                        DefaultPreviewImages,
+			ImageProtocol:                 DefaultPreviewImageProtocol,
+			VideoThumbCols:                DefaultPreviewVideoThumbCols,
+			VideoThumbRows:                DefaultPreviewVideoThumbRows,
+			Prefetch:                      DefaultPreviewPrefetch,
+			PrefetchAlways:                DefaultPreviewPrefetchAlways,
+			QuickViewDisableOnInactiveNav: DefaultPreviewQuickViewDisableOnInactiveNav,
+			PrefetchWorkers:               DefaultPreviewPrefetchWorkers,
+			ImageMaxEdgePx:                DefaultPreviewImageMaxEdgePx,
+			PrefetchMemoryMaxMB:           DefaultPreviewPrefetchMemoryMaxMB,
+			VideoThumbCacheMaxMB:          DefaultPreviewVideoThumbCacheMaxMB,
 		},
 		SFTP: SFTPConfig{
 			IdleTimeoutSecs: DefaultSFTPIdleTimeoutSecs,

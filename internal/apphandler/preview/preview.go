@@ -371,6 +371,31 @@ func (h *Handler) HandleQuickViewToggle() {
 	h.ApplyQuickViewPreviewImmediately()
 }
 
+// HandlePanelDirChanged disables quick view when the non-driver (inactive) panel navigates to
+// a new directory, since quick view would otherwise overlay the freshly opened listing with a
+// stale preview. Invoked from App.reconcileAfterEvent for both panels every Run-loop iteration.
+// Idempotent: no-ops when the flag is off, quick view isn't latched, or the path is unchanged.
+func (h *Handler) HandlePanelDirChanged(panelID int) {
+	if !h.host.Config().Preview.QuickViewDisableOnInactiveNav {
+		return
+	}
+	cur := filepath.Clean(h.host.PanelByID(panelID).PathString())
+	prev := h.quickViewDirNavPath[panelID]
+	h.quickViewDirNavPath[panelID] = cur
+	if prev == "" || prev == cur {
+		return // no previously observed path (first sight) or unchanged — nothing to react to.
+	}
+	if !h.model.QuickViewEnabled || h.model.QuickViewPanel == panelID {
+		return
+	}
+	h.model.QuickViewEnabled = false
+	h.model.QuickViewPanel = -1
+	h.ResetQuickViewFingerprint()
+	h.CloseFilePreview()
+	h.ClearQuickViewDirOverlay()
+	h.host.SetTransientMessage("Quick view off — panel navigated", ui.MessageUrgencyInfo)
+}
+
 // PauseQuickViewDisplay hides inactive-column preview while quick view stays latched on the driver panel.
 func (h *Handler) PauseQuickViewDisplay() {
 	h.ResetQuickViewFingerprint()
