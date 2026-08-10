@@ -234,6 +234,8 @@ type LaunchConfig struct {
 	StartPaths []string
 	// QuickPreview enables Quick View at startup (pc -qp, requires StartPaths).
 	QuickPreview bool
+	// Carousel starts the primary panel directly in carousel view (pc --carousel).
+	Carousel bool
 }
 
 // Options controls app construction while keeping startup behavior testable.
@@ -257,6 +259,8 @@ type Options struct {
 	StartPaths []string
 	// QuickPreview enables Quick View at startup (pc -qp, requires StartPaths).
 	QuickPreview bool
+	// Carousel starts the primary panel directly in carousel view (pc --carousel).
+	Carousel bool
 }
 
 // Run initializes and starts the terminal application.
@@ -303,6 +307,7 @@ func Run(cfg LaunchConfig) error {
 		ChooserNoCarousel: cfg.ChooserNoCarousel,
 		StartPaths:        cfg.StartPaths,
 		QuickPreview:      cfg.QuickPreview,
+		Carousel:          cfg.Carousel,
 	})
 	if err != nil {
 		return err
@@ -606,6 +611,10 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		app.model.QuickViewEnabled = true
 		app.model.QuickViewPanel = app.model.ActivePanel
 		app.previewCtrl.ApplyQuickViewPreviewImmediately()
+	}
+	if opts.Carousel {
+		app.model.Primary.CarouselMode = true
+		app.model.Primary.SetListLayout(panel.ListLayoutFlat, app.panelViewportRows(ui.PrimaryPanel))
 	}
 	return app, nil
 }

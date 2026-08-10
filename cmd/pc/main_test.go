@@ -105,6 +105,17 @@ func TestRunRejectsEmptyChooserFile(t *testing.T) {
 	}
 }
 
+func TestRunRejectsCarouselWithChooserFile(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	err := run([]string{"--carousel", "--chooser-file=/tmp/out"}, &stderr, &stdout)
+	if err == nil {
+		t.Fatal("run: nil error, want rejection")
+	}
+	if !strings.Contains(err.Error(), "--carousel cannot be used with --chooser-file") {
+		t.Fatalf("error = %v, want carousel / chooser-file conflict", err)
+	}
+}
+
 func TestRunRejectsQuickPreviewWithoutPath(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	err := run([]string{"-qp"}, &stderr, &stdout)

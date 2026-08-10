@@ -9,11 +9,33 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
+	"github.com/paranoidi/paras-commander/internal/uitest"
 )
+
+func TestCarouselOptionStartsPrimaryPanelInCarousel(t *testing.T) {
+	root := t.TempDir()
+	screen := uitest.Screen(t, 80, 24)
+	app, err := NewWithOptions(screen, Options{
+		CWD:      func() (string, error) { return root, nil },
+		Config:   config.Default(),
+		Carousel: true,
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	t.Cleanup(app.stopWorker)
+	if !app.model.Primary.CarouselMode {
+		t.Fatal("Primary.CarouselMode = false, want true with Carousel option")
+	}
+	if app.model.Primary.ListLayout != panel.ListLayoutFlat {
+		t.Fatalf("Primary.ListLayout = %v, want ListLayoutFlat", app.model.Primary.ListLayout)
+	}
+}
 
 func TestToggleCarouselFlipsActivePanel(t *testing.T) {
 	app := testAppMinimal(t)
