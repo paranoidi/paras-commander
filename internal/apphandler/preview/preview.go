@@ -359,11 +359,23 @@ func (h *Handler) HandleQuickViewToggle() {
 	}
 	h.model.QuickViewEnabled = true
 	h.model.QuickViewPanel = active
-	if h.model.SyncFollowEnabled {
+	hadSync := h.model.SyncFollowEnabled
+	if hadSync {
 		h.model.SyncFollowEnabled = false
 		h.host.ClearPanelSyncFollowNavCoalesce()
+	}
+	hadHidden := h.model.HideInactivePanel
+	if hadHidden {
+		h.model.HideInactivePanel = false
+	}
+	switch {
+	case hadSync && hadHidden:
+		h.host.SetTransientMessage("Quick view on — sync disabled, panel shown", ui.MessageUrgencyWarn)
+	case hadSync:
 		h.host.SetTransientMessage("Quick view on — sync disabled", ui.MessageUrgencyWarn)
-	} else {
+	case hadHidden:
+		h.host.SetTransientMessage("Quick view on — panel shown", ui.MessageUrgencyInfo)
+	default:
 		h.host.SetTransientMessage("Quick view on", ui.MessageUrgencyInfo)
 	}
 	h.ClearCarouselPreviewNavCoalesce()
