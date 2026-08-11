@@ -486,8 +486,11 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	case InputModeFindDialog:
 		wasOpen := a.model.FindDialog.Open
 		gsWasOpen := a.model.GroupSelect.Open
+		primaryPath := a.model.Primary.PathString()
+		secondaryPath := a.model.Secondary.PathString()
 		a.findCtrl.HandleDialogKey(event)
-		if !wasOpen || !a.model.FindDialog.Open || (!gsWasOpen && a.model.GroupSelect.Open) {
+		panelsChanged := a.model.Primary.PathString() != primaryPath || a.model.Secondary.PathString() != secondaryPath
+		if !wasOpen || !a.model.FindDialog.Open || (!gsWasOpen && a.model.GroupSelect.Open) || panelsChanged {
 			a.render()
 		} else if !a.paintFindDialogOverlay() {
 			a.render()
