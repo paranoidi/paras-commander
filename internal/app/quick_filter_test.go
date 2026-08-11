@@ -214,7 +214,7 @@ func TestQuickFilterSpaceAppendsToQueryInsteadOfTogglingTree(t *testing.T) {
 	}
 }
 
-func TestQuickFilterColonAppendsToQueryInsteadOfOpeningLeaderMenu(t *testing.T) {
+func TestQuickFilterColonOpensLeaderMenuAndCancelsFilter(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "foo:bar.txt"))
 	writeFile(t, filepath.Join(dir, "other.txt"))
@@ -238,11 +238,11 @@ func TestQuickFilterColonAppendsToQueryInsteadOfOpeningLeaderMenu(t *testing.T) 
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
 
-	if !app.model.Primary.Filter.Editing || app.model.Primary.Filter.Query != "foo:" {
-		t.Fatalf("filter editing=%v query=%q, want colon appended to query while typing", app.model.Primary.Filter.Editing, app.model.Primary.Filter.Query)
+	if app.model.Primary.Filter.Editing || app.model.Primary.Filter.Active {
+		t.Fatalf("filter editing=%v active=%v, want quick filter cancelled when leader key is pressed", app.model.Primary.Filter.Editing, app.model.Primary.Filter.Active)
 	}
-	if app.model.LeaderMenu.Open {
-		t.Fatal("leader menu must not open when colon is typed during quick filter")
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("leader menu must open when colon is typed during quick filter")
 	}
 }
 

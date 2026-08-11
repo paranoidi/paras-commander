@@ -690,10 +690,6 @@ func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string
 		if event.Rune() == ' ' {
 			return true
 		}
-		// Leader menu key (:) is filter text while typing, not a menu dismiss/open chord.
-		if resolvedAction == keymap.ActionAppLeaderMenu {
-			return true
-		}
 		return resolvedAction == ""
 	}
 	f := a.activeQuickFilter()
