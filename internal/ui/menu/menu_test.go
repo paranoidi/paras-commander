@@ -501,16 +501,21 @@ func TestFunctionKeysFilePreviewViewShowsStyleF9(t *testing.T) {
 	}
 }
 
-func TestFunctionKeysFilePreviewViewShowsFilelistWhenLaunchedAsFileViewer(t *testing.T) {
+func TestFunctionKeysFilePreviewViewOmitsEscCloseWhenLaunchedAsFileViewer(t *testing.T) {
 	t.Parallel()
 	keys := FunctionKeysFilePreviewView(false, true)
-	if keys[0] != FooterEscFilelist {
-		t.Fatalf("footer[0] = %+v, want Esc Filelist when launched as file viewer", keys[0])
+	if len(keys) != 8 {
+		t.Fatalf("FunctionKeysFilePreviewView(launched) len = %d, want 8 (no Esc Close entry)", len(keys))
+	}
+	for _, k := range keys {
+		if k == FooterEscClose {
+			t.Fatalf("footer must omit Esc Close when launched as a standalone file viewer, got %+v", keys)
+		}
 	}
 
 	keys = FunctionKeysFilePreviewView(false, false)
 	if keys[0] != FooterEscClose {
-		t.Fatalf("footer[0] = %+v, want Esc Close when not launched as file viewer", keys[0])
+		t.Fatalf("footer[0] = %+v, want Esc Close when not launched as a standalone file viewer", keys[0])
 	}
 }
 

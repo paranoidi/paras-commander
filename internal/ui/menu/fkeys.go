@@ -22,11 +22,6 @@ func (fk FunctionKey) FullHint() string {
 // FooterEscClose is prepended to dialog and menu footers where Esc dismisses the overlay.
 var FooterEscClose = FunctionKey{Key: tcell.KeyEsc, KeyLabel: "Esc", Hint: "Close"}
 
-// FooterEscFilelist is shown instead of FooterEscClose where Esc returns to the twin-panel
-// filelist browser rather than closing back to a prior view (e.g. fullscreen file preview
-// launched directly via `pc <file>`, which has no prior view to "close" back to).
-var FooterEscFilelist = FunctionKey{Key: tcell.KeyEsc, KeyLabel: "Esc", Hint: "Filelist"}
-
 // FunctionKeyEditConfig opens meta.toml or menu.toml from meta/user-menu dialogs.
 var FunctionKeyEditConfig = FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Edit config"}
 
@@ -109,31 +104,31 @@ func FunctionKeysFilePreviewStylePicker() []FunctionKey {
 }
 
 // FunctionKeysFilePreviewView is the footer legend while the full-screen file view is active.
-// Esc is the primary exit key (shown); Left also closes the view. rawMarkdown reflects
+// Esc is the primary exit key; Left also closes the view. rawMarkdown reflects
 // file.view.toggle-raw's current state: the F5 hint reads "Raw" when showing rendered
 // markdown (F5 would switch to raw source) and "Render" when already showing raw source.
-// launchedAsFileViewer is true when the app was started directly via `pc <file>`, so Esc
-// lands on the filelist browser rather than "closing" back to a prior view (FooterEscFilelist).
+// launchedAsFileViewer is true when the app was started directly via `pc <file>`, where Esc
+// quits the app just like F10 -- the separate "Esc Close" entry is omitted since it would
+// duplicate F10 Quit rather than describe a distinct action.
 func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer bool) []FunctionKey {
 	toggleHint := "Raw"
 	if rawMarkdown {
 		toggleHint = "Render"
 	}
-	escKey := FooterEscClose
-	if launchedAsFileViewer {
-		escKey = FooterEscFilelist
+	out := []FunctionKey{}
+	if !launchedAsFileViewer {
+		out = append(out, FooterEscClose)
 	}
-	return []FunctionKey{
-		escKey,
-		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
-		{Key: tcell.KeyRune, KeyLabel: "/", Hint: "Search"},
-		{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "Reload"},
-		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
-		{Key: tcell.KeyF5, KeyLabel: "F5", Hint: toggleHint},
-		{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete this"},
-		{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Style"},
-		{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
-	}
+	return append(out,
+		FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
+		FunctionKey{Key: tcell.KeyRune, KeyLabel: "/", Hint: "Search"},
+		FunctionKey{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "Reload"},
+		FunctionKey{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
+		FunctionKey{Key: tcell.KeyF5, KeyLabel: "F5", Hint: toggleHint},
+		FunctionKey{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete this"},
+		FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Style"},
+		FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+	)
 }
 
 // FunctionKeysSelectionsStripView returns hints for the footer while the selections strip has keyboard focus.

@@ -132,6 +132,32 @@ func TestStartPathsSingleFileLaunchQuitsOnQ(t *testing.T) {
 	}
 }
 
+func TestStartPathsSingleFileLaunchQuitsOnEsc(t *testing.T) {
+	root := t.TempDir()
+	file := filepath.Join(root, "walrus.txt")
+	if err := os.WriteFile(file, []byte("hello preview\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	screen := uitest.Screen(t, 80, 24)
+	app, err := NewWithOptions(screen, Options{
+		CWD:        func() (string, error) { return root, nil },
+		Config:     config.Default(),
+		StartPaths: []string{file},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	t.Cleanup(app.stopWorker)
+
+	quit := app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if !quit {
+		t.Fatal("HandleFilePreviewViewKey(Esc) quit = false, want true when launched as a standalone file viewer")
+	}
+	if app.model.ViewMode != ui.ViewFilePreview {
+		t.Fatalf("ViewMode = %v, want unchanged ViewFilePreview (no filelist to fall back into) when Esc quits", app.model.ViewMode)
+	}
+}
+
 func TestStartPathsDirectoryLaunchDoesNotSetLaunchedFileViewer(t *testing.T) {
 	root := t.TempDir()
 	left := filepath.Join(root, "harbor")

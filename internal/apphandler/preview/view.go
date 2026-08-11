@@ -37,6 +37,16 @@ func (h *Handler) toggleFilePreviewRawMarkdown() {
 	})
 }
 
+// closeOrQuitFilePreview closes the fullscreen preview back to the browser, or quits the
+// app instead when it was launched directly via `pc <file>` (no browser to fall back to).
+func (h *Handler) closeOrQuitFilePreview() bool {
+	if h.host.LaunchedAsFileViewer() {
+		return h.host.HandleQuit()
+	}
+	h.CloseFilePreviewFullscreen()
+	return false
+}
+
 // CloseFilePreviewFullscreen exits the F3 fullscreen preview view back to the browser.
 func (h *Handler) CloseFilePreviewFullscreen() {
 	h.mu.Lock()
@@ -173,13 +183,11 @@ func (h *Handler) HandleFilePreviewViewKey(event *tcell.EventKey) (quit bool) {
 			h.patchFullscreenFilePreview(func(st *ui.FilePreviewState) { st.CancelSearch() })
 			return false
 		}
-		h.CloseFilePreviewFullscreen()
-		return false
+		return h.closeOrQuitFilePreview()
 	case tcell.KeyLeft:
 		// Left also exits the view (Esc is the primary key); modified Left falls through to chord bindings.
 		if event.Modifiers() == tcell.ModNone {
-			h.CloseFilePreviewFullscreen()
-			return false
+			return h.closeOrQuitFilePreview()
 		}
 	}
 
@@ -220,11 +228,7 @@ func (h *Handler) tryFilePreviewAction(nextAction string) (quit bool, handled bo
 	case keymap.ActionAppQuitImmediate:
 		return h.host.HandleQuitImmediate(), true
 	case keymap.ActionFileViewClose:
-		if h.host.LaunchedAsFileViewer() {
-			return h.host.HandleQuit(), true
-		}
-		h.CloseFilePreviewFullscreen()
-		return false, true
+		return h.closeOrQuitFilePreview(), true
 	case keymap.ActionFileViewMenu:
 		h.host.OpenPreviewLeaderMenu()
 		return false, true
