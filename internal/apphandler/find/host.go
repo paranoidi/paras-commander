@@ -26,4 +26,5 @@ type Host interface {
 	GitignoreCache() *gitignore.Cache
 	PanelViewportRows(panelID int) int
 	OpenGroupSelectDialog(mode GroupSelectMode, forFind bool)
+	OpenFullscreenFilePreviewAt(path string) error
 }

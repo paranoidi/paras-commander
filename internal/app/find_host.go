@@ -52,3 +52,7 @@ func (h findHost) OpenGroupSelectDialog(mode findctrl.GroupSelectMode, forFind b
 	}
 	h.app.openGroupSelect(string(mode), context)
 }
+
+func (h findHost) OpenFullscreenFilePreviewAt(path string) error {
+	return h.app.previewCtrl.OpenFullscreenFilePreviewAt(path)
+}

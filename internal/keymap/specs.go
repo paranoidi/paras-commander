@@ -843,6 +843,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"bookmark", "inactive panel", "other panel", "open"},
 		},
 		{
+			ID:           ActionFindView,
+			Title:        "View",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "F3",
+			Keywords:     []string{"find dialog", "preview", "quick view", "fullscreen"},
+		},
+		{
 			ID:           ActionFindUnselectAll,
 			Title:        "Unselect all",
 			Section:      "Find",
