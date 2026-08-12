@@ -18,6 +18,18 @@ func TestCheckFilePreviewableText(t *testing.T) {
 	}
 }
 
+func TestCheckFilePreviewableLegacyEncoding(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "legacy.txt")
+	// "Käyttö" in Windows-1252/Latin-1: 0xE4 = ä, 0xF6 = ö. Not valid UTF-8, no NUL byte.
+	if err := os.WriteFile(p, []byte("K\xe4ytt\xf6"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckFilePreviewable(p); err != nil {
+		t.Fatalf("err = %v, want nil (legacy-encoded text should be previewable)", err)
+	}
+}
+
 func TestCheckFilePreviewableBinaryNUL(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "b.bin")

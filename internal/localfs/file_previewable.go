@@ -7,13 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"unicode/utf8"
 )
 
 // PreviewSniffBytes is how many leading bytes are read to decide if a file is previewable as text.
 const PreviewSniffBytes = 32768
 
-// ErrFilePreviewBinary indicates the file prefix looks binary (NUL or invalid UTF-8).
+// ErrFilePreviewBinary indicates the file prefix looks binary (contains a NUL byte).
 var ErrFilePreviewBinary = errors.New("not a text file")
 
 // ErrFilePreviewIsDir indicates preview was requested for a directory.
@@ -76,7 +75,9 @@ func IsMediaPath(path string) bool {
 }
 
 // CheckFilePreviewable returns nil if path is a non-directory regular file whose first
-// PreviewSniffBytes bytes contain no NUL and are valid UTF-8.
+// PreviewSniffBytes bytes contain no NUL byte (the same heuristic git uses for binary
+// detection). Non-UTF-8 text (e.g. legacy DOS/Windows codepages) is still previewable —
+// internal/preview's decodeSource transcodes it via a Windows-1252 fallback at render time.
 // Image paths return ErrFilePreviewImage without opening the file.
 // Media paths return ErrFilePreviewMedia without opening the file.
 func CheckFilePreviewable(path string) error {
@@ -107,9 +108,6 @@ func CheckFilePreviewable(path string) error {
 	}
 	buf = buf[:n]
 	if bytes.IndexByte(buf, 0) >= 0 {
-		return ErrFilePreviewBinary
-	}
-	if len(buf) > 0 && !utf8.Valid(buf) {
 		return ErrFilePreviewBinary
 	}
 	return nil

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
@@ -15,7 +16,25 @@ import (
 	"github.com/paranoidi/paras-commander/internal/preview/chromaformat"
 	"github.com/paranoidi/paras-commander/internal/preview/mdformat"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
+	"golang.org/x/text/encoding/charmap"
 )
+
+// decodeSource turns raw file bytes into a UTF-8 string for rendering. Valid UTF-8 passes
+// through unchanged; otherwise it's treated as a legacy single-byte codepage (common in old
+// DOS/Windows-era text files) and transcoded via Windows-1252, which maps every byte to some
+// character so it never fails.
+//
+// ponytail: single fixed fallback encoding, not real charset detection. Upgrade to a
+// scoring/multi-encoding guess (mirroring internal/filenameenc) if this misdetects often.
+func decodeSource(data []byte) string {
+	if utf8.Valid(data) {
+		return string(data)
+	}
+	if decoded, err := charmap.Windows1252.NewDecoder().Bytes(data); err == nil {
+		return string(decoded)
+	}
+	return string(data)
+}
 
 // markdownExtensions are the file extensions eligible for rendered (not raw
 // Chroma-highlighted) markdown in internal preview mode. Single source of
@@ -162,7 +181,7 @@ func runInternal(req Request) Result {
 	if err != nil {
 		return Result{ErrorMsg: err.Error()}
 	}
-	source := string(data)
+	source := decodeSource(data)
 	textW := req.TextWidth
 	if textW < 1 {
 		textW = 1
@@ -212,7 +231,7 @@ func runMarkdown(req Request) Result {
 		return Result{ErrorMsg: err.Error()}
 	}
 	contentW := max(1, req.TextWidth)
-	md := mdformat.Render(string(data), mdformat.Options{
+	md := mdformat.Render(decodeSource(data), mdformat.Options{
 		Path:         req.Path,
 		StyleName:    req.Preview.Style,
 		BaseStyle:    req.BaseStyle,

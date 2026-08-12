@@ -293,6 +293,30 @@ func runGit(t *testing.T, dir string, args ...string) {
 	}
 }
 
+func TestRunInternalDecodesLegacyEncoding(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "legacy.txt")
+	// "Käyttö" in Windows-1252/Latin-1: 0xE4 = ä, 0xF6 = ö. Not valid UTF-8.
+	if err := os.WriteFile(path, []byte("K\xe4ytt\xf6"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res := preview.Run(t.Context(), preview.Request{
+		Path:      path,
+		TextWidth: 40,
+		Preview: config.PreviewConfig{
+			Mode:  config.PreviewModeInternal,
+			Style: config.DefaultPreviewStyle,
+		},
+		BaseStyle: tcell.StyleDefault,
+	})
+	if res.ErrorMsg != "" {
+		t.Fatalf("ErrorMsg = %q", res.ErrorMsg)
+	}
+	if got, want := cellsPrefix(res.HighlightedCells), "Käyttö"; got != want {
+		t.Fatalf("cellsPrefix = %q, want %q", got, want)
+	}
+}
+
 func cellsPrefix(cells []previewpanel.AnsiCell) string {
 	var b strings.Builder
 	for _, c := range cells {
