@@ -151,6 +151,7 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		}
 		if a.model.LeaderMenu.PreviewMenu {
 			return footerWithEscClose([]menu.FunctionKey{
+				menu.FunctionKeyLeaderMenuToggleChords,
 				{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 			})
 		}

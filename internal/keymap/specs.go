@@ -1030,7 +1030,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Title:          "Toggle raw/rendered markdown",
 			Section:        "Preview",
 			DefaultKeys:    nil, // overlay: DefaultFilePreviewOverlayKeys
-			Keywords:       []string{"markdown", "raw", "render", "source", "f5"},
+			Keywords:       []string{"markdown", "raw", "render", "source", "f6"},
 			PreviewMenuKey: "r",
 		},
 		{
@@ -1039,7 +1039,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Title:          "Reload file view",
 			Section:        "Preview",
 			DefaultKeys:    nil, // overlay: DefaultFilePreviewOverlayKeys
-			Keywords:       []string{"reload", "refresh", "f3"},
+			Keywords:       []string{"reload", "refresh", "f5"},
 			PreviewMenuKey: "R",
 		},
 		{

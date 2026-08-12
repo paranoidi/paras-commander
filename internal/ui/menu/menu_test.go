@@ -464,31 +464,31 @@ func TestFunctionKeysFilePreviewViewShowsStyleF9(t *testing.T) {
 	t.Parallel()
 	keys := FunctionKeysFilePreviewView(false, false)
 	if len(keys) != 9 {
-		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F1 Help + / Search + F3 Reload + F4 Edit + F5 Raw + F8 Delete this + F9 Style + F10", len(keys))
+		t.Fatalf("FunctionKeysFilePreviewView len = %d, want Esc + F1 Help + / Search + F4 Edit + F5 Reload + F6 Raw + F8 Delete this + F9 Style + F10", len(keys))
 	}
-	var f3, f4, f5, f8, f9 *FunctionKey
+	var f4, f5, f6, f8, f9 *FunctionKey
 	for i := range keys {
 		switch keys[i].Key {
-		case tcell.KeyF3:
-			f3 = &keys[i]
 		case tcell.KeyF4:
 			f4 = &keys[i]
 		case tcell.KeyF5:
 			f5 = &keys[i]
+		case tcell.KeyF6:
+			f6 = &keys[i]
 		case tcell.KeyF8:
 			f8 = &keys[i]
 		case tcell.KeyF9:
 			f9 = &keys[i]
 		}
 	}
-	if f3 == nil || f3.Hint != "Reload" {
-		t.Fatalf("fullscreen file preview footer must advertise F3 Reload, got %+v", keys)
-	}
 	if f4 == nil || f4.Hint != "Edit" {
 		t.Fatalf("fullscreen file preview footer must advertise F4 Edit, got %+v", keys)
 	}
-	if f5 == nil || f5.Hint != "Raw" {
-		t.Fatalf("fullscreen file preview footer must advertise F5 Raw when rendered, got %+v", keys)
+	if f5 == nil || f5.Hint != "Reload" {
+		t.Fatalf("fullscreen file preview footer must advertise F5 Reload, got %+v", keys)
+	}
+	if f6 == nil || f6.Hint != "Raw" {
+		t.Fatalf("fullscreen file preview footer must advertise F6 Raw when rendered, got %+v", keys)
 	}
 	if f8 == nil || f8.Hint != "Delete this" {
 		t.Fatalf("fullscreen file preview footer must advertise F8 Delete this, got %+v", keys)
@@ -523,14 +523,14 @@ func TestFunctionKeysFilePreviewViewShowsRenderWhenRaw(t *testing.T) {
 	t.Parallel()
 	keys := FunctionKeysFilePreviewView(true, false)
 	for i := range keys {
-		if keys[i].Key == tcell.KeyF5 {
+		if keys[i].Key == tcell.KeyF6 {
 			if keys[i].Hint != "Render" {
-				t.Fatalf("F5 hint = %q, want Render when already showing raw source", keys[i].Hint)
+				t.Fatalf("F6 hint = %q, want Render when already showing raw source", keys[i].Hint)
 			}
 			return
 		}
 	}
-	t.Fatal("fullscreen file preview footer must advertise F5 when raw")
+	t.Fatal("fullscreen file preview footer must advertise F6 when raw")
 }
 
 func TestFunctionKeysSelectionsStripView(t *testing.T) {

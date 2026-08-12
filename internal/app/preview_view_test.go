@@ -324,14 +324,25 @@ func TestFullscreenFilePreviewIgnoresBrowserOnlyShortcuts(t *testing.T) {
 	}
 }
 
-func TestFilePreviewOverlayMapsF5ToToggleRaw(t *testing.T) {
+func TestFilePreviewOverlayMapsF6ToToggleRaw(t *testing.T) {
+	bundle, err := keymap.DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	id, ok := bundle.FilePreview.Lookup(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
+	if !ok || id != keymap.ActionFileViewToggleRaw {
+		t.Fatalf("FilePreview.Lookup(F6) = %q %v, want %s", id, ok, keymap.ActionFileViewToggleRaw)
+	}
+}
+
+func TestFilePreviewOverlayMapsF5ToReload(t *testing.T) {
 	bundle, err := keymap.DefaultBundle()
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
 	id, ok := bundle.FilePreview.Lookup(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
-	if !ok || id != keymap.ActionFileViewToggleRaw {
-		t.Fatalf("FilePreview.Lookup(F5) = %q %v, want %s", id, ok, keymap.ActionFileViewToggleRaw)
+	if !ok || id != keymap.ActionFileViewReload {
+		t.Fatalf("FilePreview.Lookup(F5) = %q %v, want %s", id, ok, keymap.ActionFileViewReload)
 	}
 }
 
@@ -350,10 +361,10 @@ func TestToggleFilePreviewRawMarkdownFlipsAndResetsScrollForMarkdown(t *testing.
 	app.model.FullscreenFilePreview.Scroll = 5
 	app.commandsMu.Unlock()
 
-	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyF6, 0, tcell.ModNone))
 
 	if !app.model.FullscreenFilePreviewRawMarkdown {
-		t.Fatal("FullscreenFilePreviewRawMarkdown = false, want true after F5 on a markdown file")
+		t.Fatal("FullscreenFilePreviewRawMarkdown = false, want true after F6 on a markdown file")
 	}
 	app.commandsMu.RLock()
 	scroll := app.model.FullscreenFilePreview.Scroll

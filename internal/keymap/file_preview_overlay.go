@@ -8,8 +8,8 @@ func DefaultFilePreviewOverlayKeys() map[string][]string {
 	return map[string][]string{
 		ActionFileViewMenu:        {":"},
 		ActionFileViewThemePicker: {"F9"},
-		ActionFileViewToggleRaw:   {"F5"},
-		ActionFileViewReload:      {"F3"},
+		ActionFileViewToggleRaw:   {"F6"},
+		ActionFileViewReload:      {"F5"},
 		ActionFileViewSearchStart: {"/"},
 		ActionFileViewSearchNext:  {"n"},
 		ActionFileViewSearchPrev:  {"p"},

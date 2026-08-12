@@ -13,7 +13,7 @@ func (a *App) openLeaderMenu(userMenu, copyMenu, previewMenu bool, items []ui.Le
 
 func (a *App) refreshLeaderMenuDirectKeys() {
 	st := &a.model.LeaderMenu
-	if st.UserMenu || st.CopyMenu || st.PreviewMenu || len(st.Items) == 0 {
+	if st.UserMenu || st.CopyMenu || len(st.Items) == 0 {
 		return
 	}
 	actionIdx := 0
@@ -22,8 +22,14 @@ func (a *App) refreshLeaderMenuDirectKeys() {
 			continue
 		}
 		directKey := ""
-		if a.config.UI.LeaderMenuShowDirectKeys && a.keys != nil && a.keys.Global != nil && actionIdx < len(a.leaderMenuActions) {
-			directKey = a.keys.Global.MenuBindingLabel(a.leaderMenuActions[actionIdx])
+		if a.config.UI.LeaderMenuShowDirectKeys && a.keys != nil && actionIdx < len(a.leaderMenuActions) {
+			keyMap := a.keys.Global
+			if st.PreviewMenu {
+				keyMap = a.keys.FilePreview
+			}
+			if keyMap != nil {
+				directKey = keyMap.MenuBindingLabel(a.leaderMenuActions[actionIdx])
+			}
 		}
 		st.Items[i].DirectKey = directKey
 		actionIdx++
@@ -171,7 +177,7 @@ func (a *App) handleLeaderMenuKey(event *tcell.EventKey) bool {
 		a.closeLeaderMenu()
 		return false
 	case tcell.KeyF3:
-		if !st.UserMenu && !st.CopyMenu && !st.PreviewMenu {
+		if !st.UserMenu && !st.CopyMenu {
 			a.toggleLeaderMenuDirectKeys()
 		}
 		return false

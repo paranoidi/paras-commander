@@ -106,7 +106,7 @@ func TestPreviewMenuEscClosesMenuNotPreview(t *testing.T) {
 	}
 }
 
-func TestPreviewMenuFooterShowsOnlyEscAndF10(t *testing.T) {
+func TestPreviewMenuFooterShowsEscToggleChordsAndF10(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "note.txt")
 	writeFile(t, path)
@@ -116,11 +116,11 @@ func TestPreviewMenuFooterShowsOnlyEscAndF10(t *testing.T) {
 	app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
 
 	keys := app.activeFooterKeys()
-	if len(keys) != 2 {
-		t.Fatalf("footer keys = %+v, want exactly [Esc Close, F10 Quit]", keys)
+	if len(keys) != 3 {
+		t.Fatalf("footer keys = %+v, want exactly [Esc Close, F3 Toggle chords, F10 Quit]", keys)
 	}
-	if keys[0].Key != tcell.KeyEsc || keys[1].Key != tcell.KeyF10 {
-		t.Fatalf("footer keys = %+v, want Esc then F10", keys)
+	if keys[0].Key != tcell.KeyEsc || keys[1].Key != tcell.KeyF3 || keys[2].Key != tcell.KeyF10 {
+		t.Fatalf("footer keys = %+v, want Esc then F3 then F10", keys)
 	}
 }
 

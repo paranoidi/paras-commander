@@ -126,7 +126,7 @@ General interface layout, timing, and rendering behavior.
 |---|---|---|---|
 | `show_menu_bar` | bool | `true` | Show the top menu bar. |
 | `show_file_icons` | bool | `true` | Show file-type icons/glyphs in panel listings. |
-| `leader_menu_show_direct_keys` | bool | `true` | Show the preferred global keybind after each action name in the Esc function menu (e.g. `Copy F5`). Toggle with **F3** while the menu is open. Does not apply to the F2 user menu. |
+| `leader_menu_show_direct_keys` | bool | `true` | Show the preferred keybind after each action name in the Esc function menu (e.g. `Copy F5`) and the `:` fullscreen-preview menu. Toggle with **F3** while either menu is open. Does not apply to the F2 user menu or the `"` copy-path menu. |
 | `shrunken_shows_name_only` | bool | `true` | When a panel becomes too narrow for its listing columns, show only the name column instead of truncating everything. |
 | `screen_render_hash_cache` | bool | `true` | Skip re-drawing the terminal screen when nothing actually changed since the last frame — reduces flicker and I/O over slow connections. |
 | `key_repeat_debounce_ms` | int | `45` | Coalesces rapid repeated key presses (file-list cursor steps, quick-view/carousel preview reloads, F3 style-picker highlighting) so they don't reload on every single step. `0` disables debouncing; values above 10000 are clamped. |
