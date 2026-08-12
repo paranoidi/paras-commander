@@ -8,10 +8,12 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/mattn/go-sixel"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 	xdraw "golang.org/x/image/draw"
 
@@ -33,14 +35,25 @@ func runImageCtx(ctx context.Context, req Request) Result {
 	}
 	maxEdge := ImageMaxEdge(req.Preview)
 
-	f, err := os.Open(req.Path)
-	if err != nil {
-		return Result{ErrorMsg: err.Error()}
-	}
-	cfg, format, err := image.DecodeConfig(f)
-	_ = f.Close()
-	if err != nil {
-		return Result{ErrorMsg: err.Error()}
+	magickSource := localfs.IsImageMagickPath(req.Path)
+
+	var cfg image.Config
+	var format string
+	if magickSource {
+		// No cheap way to get dimensions without a full ImageMagick decode, so the
+		// too-large pre-check below is skipped for these formats; the caption is
+		// filled in once the full decode (with its own errImageTooLarge guard) runs.
+		format = strings.ToUpper(strings.TrimPrefix(filepath.Ext(req.Path), "."))
+	} else {
+		f, err := os.Open(req.Path)
+		if err != nil {
+			return Result{ErrorMsg: err.Error()}
+		}
+		cfg, format, err = image.DecodeConfig(f)
+		_ = f.Close()
+		if err != nil {
+			return Result{ErrorMsg: err.Error()}
+		}
 	}
 	meta := formatImageMeta(format, cfg.Width, cfg.Height, fi.Size())
 	metaResult := Result{
@@ -48,19 +61,21 @@ func runImageCtx(ctx context.Context, req Request) Result {
 		CombinedText: meta,
 	}
 
-	pixels := int64(cfg.Width) * int64(cfg.Height)
-	maxPixels := int64(config.DefaultPreviewImageMaxDecodeMegapixels) * 1_000_000
-	if pixels > maxPixels {
-		metaResult.CombinedText = meta + " / too large"
-		return metaResult
+	if !magickSource {
+		pixels := int64(cfg.Width) * int64(cfg.Height)
+		maxPixels := int64(config.DefaultPreviewImageMaxDecodeMegapixels) * 1_000_000
+		if pixels > maxPixels {
+			metaResult.CombinedText = meta + " / too large"
+			return metaResult
+		}
 	}
 	if !req.Preview.Images || req.ImageMaxPxW < 1 || req.ImageMaxPxH < 1 ||
 		req.ImageProtocol == previewpanel.ImageProtocolNone {
 		return metaResult
 	}
 
-	load := func(context.Context) ([]byte, string, error) {
-		return DecodeStillMaxEdgePNG(req.Path, maxEdge)
+	load := func(ctx context.Context) ([]byte, string, error) {
+		return DecodeStillMaxEdgePNG(ctx, req.Path, maxEdge)
 	}
 	var pngBytes []byte
 	if req.Cache != nil {

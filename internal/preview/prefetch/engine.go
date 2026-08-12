@@ -233,7 +233,7 @@ func (e *Engine) runJob(it Item) {
 	switch it.Kind {
 	case KindImage:
 		_, _, _ = e.cache.LoadStill(ctx, it.Path, it.Mtime, it.Size, e.cfg.ImageMaxEdgePx, func(c context.Context) ([]byte, string, error) {
-			return previewrun.DecodeStillMaxEdgePNG(it.Path, e.cfg.ImageMaxEdgePx)
+			return previewrun.DecodeStillMaxEdgePNG(c, it.Path, e.cfg.ImageMaxEdgePx)
 		})
 	case KindVideo:
 		// Duration probe via meta path; skip if no video duration.

@@ -7,8 +7,11 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
 // errImageTooLarge is returned (with meta already annotated) when decode is skipped for size.
@@ -16,11 +19,34 @@ var errImageTooLarge = fmt.Errorf("image too large")
 
 // DecodeStillMaxEdgePNG decodes path, clamps the longest edge to maxEdge, and returns PNG bytes
 // plus the metadata caption string used by still-image previews.
-func DecodeStillMaxEdgePNG(path string, maxEdge int) (pngBytes []byte, meta string, err error) {
+func DecodeStillMaxEdgePNG(ctx context.Context, path string, maxEdge int) (pngBytes []byte, meta string, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, "", err
 	}
+
+	if localfs.IsImageMagickPath(path) {
+		converted, err := convertToPNGViaImageMagick(ctx, path)
+		if err != nil {
+			return nil, "", err
+		}
+		img, err := DecodePNGBytes(converted)
+		if err != nil {
+			return nil, "", err
+		}
+		b := img.Bounds()
+		format := strings.ToUpper(strings.TrimPrefix(filepath.Ext(path), "."))
+		meta = formatImageMeta(format, b.Dx(), b.Dy(), fi.Size())
+		if maxEdge > 0 {
+			img = fitImage(img, maxEdge, maxEdge)
+		}
+		var buf bytes.Buffer
+		if err := png.Encode(&buf, img); err != nil {
+			return nil, "", err
+		}
+		return buf.Bytes(), meta, nil
+	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, "", err

@@ -25,6 +25,20 @@ var ErrFilePreviewImage = errors.New("image file")
 // ErrFilePreviewMedia indicates the path is a video/audio extension eligible for media preview.
 var ErrFilePreviewMedia = errors.New("media file")
 
+// imageMagickExtensions lists image extensions Go's stdlib image package cannot decode
+// natively. These route through ImageMagick conversion (see internal/preview/imagemagick.go)
+// before the normal decode/fit/encode pipeline. Add an extension here to support it — no
+// other pipeline change needed.
+var imageMagickExtensions = map[string]bool{
+	".psd": true,
+}
+
+// IsImageMagickPath reports whether path needs ImageMagick conversion before it can be
+// decoded (see imageMagickExtensions).
+func IsImageMagickPath(path string) bool {
+	return imageMagickExtensions[strings.ToLower(filepath.Ext(path))]
+}
+
 // IsImagePath reports whether path has a supported image extension (case-insensitive).
 // Single source of truth for image preview eligibility by name.
 func IsImagePath(path string) bool {
@@ -32,7 +46,7 @@ func IsImagePath(path string) bool {
 	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tif", ".tiff":
 		return true
 	default:
-		return false
+		return IsImageMagickPath(path)
 	}
 }
 

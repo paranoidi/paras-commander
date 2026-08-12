@@ -59,11 +59,24 @@ func TestIsImagePathExtensions(t *testing.T) {
 	cases := map[string]bool{
 		"a.jpg": true, "b.jpeg": true, "c.png": true, "d.gif": true,
 		"e.webp": true, "f.bmp": true, "g.tif": true, "h.tiff": true,
+		"l.psd": true,
 		"i.txt": false, "j.bin": false, "k.go": false,
 	}
 	for name, want := range cases {
 		if got := IsImagePath(name); got != want {
 			t.Fatalf("IsImagePath(%q) = %v, want %v", name, got, want)
+		}
+	}
+}
+
+func TestIsImageMagickPath(t *testing.T) {
+	cases := map[string]bool{
+		"a.psd": true, "b.PSD": true,
+		"c.png": false, "d.txt": false,
+	}
+	for name, want := range cases {
+		if got := IsImageMagickPath(name); got != want {
+			t.Fatalf("IsImageMagickPath(%q) = %v, want %v", name, got, want)
 		}
 	}
 }
