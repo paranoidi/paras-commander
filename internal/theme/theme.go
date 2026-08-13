@@ -120,6 +120,12 @@ type Theme struct {
 	PanelStatusStash          tcell.Style
 	PanelStatusSelectionSize  tcell.Style
 	PanelStatusOtherPanel     tcell.Style
+	// PanelStatusImageSixel/ImageSixelTmux style the bottom-right image-protocol indicator in
+	// the file preview panel (previewpanel.Draw) when the active image is Sixel — ImageSixelTmux
+	// specifically for Sixel-under-tmux, a combination with a known display gap (see
+	// llm-docs/graphics-implementation-lessons.md lesson 11). No indicator for Kitty/None.
+	PanelStatusImageSixel     tcell.Style
+	PanelStatusImageSixelTmux tcell.Style
 	PanelScrollbarTrack       tcell.Style
 	PanelScrollbarThumb       tcell.Style
 	// PanelFileIconFG maps cursor-row style keys (e.g. panel.active.row.cursor) to file-devicon FG
@@ -858,6 +864,8 @@ var requiredStyleKeys = []string{
 	"panel.status.stash",
 	"panel.status.selection_size",
 	"panel.status.other_panel",
+	"panel.status.image_sixel",
+	"panel.status.image_sixel_tmux",
 	"panel.scrollbar.track",
 	"panel.scrollbar.thumb",
 	"panel.blocked.frame",
@@ -1341,6 +1349,8 @@ func parse(data []byte) (Theme, error) {
 		PanelStatusStash:                    styles["panel.status.stash"],
 		PanelStatusSelectionSize:            styles["panel.status.selection_size"],
 		PanelStatusOtherPanel:               styles["panel.status.other_panel"],
+		PanelStatusImageSixel:               styles["panel.status.image_sixel"],
+		PanelStatusImageSixelTmux:           styles["panel.status.image_sixel_tmux"],
 		PanelScrollbarTrack:                 styles["panel.scrollbar.track"],
 		PanelScrollbarThumb:                 styles["panel.scrollbar.thumb"],
 		PanelFileIconFG:                     panelFileIconFG,

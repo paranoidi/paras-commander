@@ -129,6 +129,7 @@ func runImageCtx(ctx context.Context, req Request) Result {
 		ImagePxH:                bounds.Dy(),
 		ImageProtocol:           req.ImageProtocol,
 		ImageUnicodePlaceholder: req.ImageUnicodePlaceholder,
+		ImageInTmux:             req.ImageInTmux,
 	}
 }
 

@@ -685,6 +685,119 @@ func TestDrawImageRecordsPlacementAndBlanksBody(t *testing.T) {
 	}
 }
 
+func rowText(screen tcell.SimulationScreen, y, x0, x1 int) string {
+	var b strings.Builder
+	for x := x0; x <= x1; x++ {
+		main, _, _ := screen.Get(x, y)
+		b.WriteString(main)
+	}
+	return b.String()
+}
+
+// TestDrawImageProtocolIndicatorSixelPlain covers the plain "Sixel" bottom-right label
+// (Sixel protocol, not under tmux).
+func TestDrawImageProtocolIndicatorSixelPlain(t *testing.T) {
+	_ = TakeFrameImage()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 12
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	Draw(screen, rect, State{
+		Open:          true,
+		Path:          "/tmp/garden.png",
+		Phase:         PhaseDone,
+		ImagePayload:  "\x1bP0;0;8q#0;2;0;0;0#0~~~\x1b\\",
+		ImagePxW:      30,
+		ImagePxH:      20,
+		ImageProtocol: ImageProtocolSixel,
+		ImageInTmux:   false,
+	}, DrawParams{Theme: styles, BodyStyle: BodyStyle(styles, false)})
+
+	bottomRow := rowText(screen, rect.Y+rect.Height-1, rect.X, rect.X+rect.Width-1)
+	if !strings.Contains(bottomRow, "Sixel") {
+		t.Fatalf("bottom border row = %q, want it to contain %q", bottomRow, "Sixel")
+	}
+	if strings.Contains(bottomRow, "Tmux") {
+		t.Fatalf("bottom border row = %q, want no Tmux label outside tmux", bottomRow)
+	}
+}
+
+// TestDrawImageProtocolIndicatorSixelTmux covers the red "Sixel+Tmux" label for the
+// known-flaky combination (see llm-docs/graphics-implementation-lessons.md lesson 11/12).
+func TestDrawImageProtocolIndicatorSixelTmux(t *testing.T) {
+	_ = TakeFrameImage()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 12
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	Draw(screen, rect, State{
+		Open:          true,
+		Path:          "/tmp/garden.png",
+		Phase:         PhaseDone,
+		ImagePayload:  "\x1bP0;0;8q#0;2;0;0;0#0~~~\x1b\\",
+		ImagePxW:      30,
+		ImagePxH:      20,
+		ImageProtocol: ImageProtocolSixel,
+		ImageInTmux:   true,
+	}, DrawParams{Theme: styles, BodyStyle: BodyStyle(styles, false)})
+
+	bottomRow := rowText(screen, rect.Y+rect.Height-1, rect.X, rect.X+rect.Width-1)
+	if !strings.Contains(bottomRow, "Sixel+Tmux") {
+		t.Fatalf("bottom border row = %q, want it to contain %q", bottomRow, "Sixel+Tmux")
+	}
+
+	labelX := rect.X + rect.Width - 2 - 1 - len([]rune(" Sixel+Tmux "))
+	_, st, _ := screen.Get(labelX+1, rect.Y+rect.Height-1)
+	fg, _, _ := st.Decompose()
+	wantFg, _, _ := styles.PanelStatusImageSixelTmux.Decompose()
+	if fg != wantFg {
+		t.Fatalf("label style fg = %v, want %v (PanelStatusImageSixelTmux)", fg, wantFg)
+	}
+}
+
+// TestDrawImageProtocolIndicatorKittyOmitted guards against showing the Sixel indicator for
+// Kitty images — only Sixel has the known display gap this label calls out.
+func TestDrawImageProtocolIndicatorKittyOmitted(t *testing.T) {
+	_ = TakeFrameImage()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 12
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	Draw(screen, rect, State{
+		Open:          true,
+		Path:          "/tmp/garden.png",
+		Phase:         PhaseDone,
+		ImagePayload:  "\x1b_Ga=T,f=100;AAAA\x1b\\",
+		ImagePxW:      30,
+		ImagePxH:      20,
+		ImageProtocol: ImageProtocolKitty,
+		ImageInTmux:   true,
+	}, DrawParams{Theme: styles, BodyStyle: BodyStyle(styles, false)})
+
+	bottomRow := rowText(screen, rect.Y+rect.Height-1, rect.X, rect.X+rect.Width-1)
+	if strings.Contains(bottomRow, "Sixel") {
+		t.Fatalf("bottom border row = %q, want no Sixel label for Kitty", bottomRow)
+	}
+}
+
 // TestDrawImagePlacementModeFollowsStateFlagNotEnvironment guards against Draw re-deriving
 // placeholder mode from $TMUX: the decision is made upstream (capability-gated on the actual
 // outer terminal) and carried in State.ImageUnicodePlaceholder. A Kitty image with the flag

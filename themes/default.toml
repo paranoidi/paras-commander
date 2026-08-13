@@ -96,6 +96,8 @@ dotfiles_hidden = { fg = "bright_black" }
 gitignore = { fg = "bright_black" }
 stash = { fg = "yellow", bold = true }
 other_panel = { fg = "cyan", bold = true }
+image_sixel = { fg = "bright_black" }
+image_sixel_tmux = { fg = "bright_red", bold = true }
 
 [panel.git]                   # git status colors
 conflicted = { fg = "red" }

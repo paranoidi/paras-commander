@@ -285,6 +285,9 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		drawImageBody(screen, st, textX, contentTop, textW, contentH, body,
 			paintLeftMargin, paintRightMargin, leftMarginX, rightMarginX, marginStyle, padStyle,
 			scrollGutterX, borderStyle, p)
+		if !p.Embedded && !p.Borderless {
+			paintImageProtocolIndicator(screen, rect, st.ImageProtocol, st.ImageInTmux, p.Theme)
+		}
 		return
 	}
 
@@ -326,6 +329,39 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 				Blocked: p.ChromeBlocked, FrameStyle: railStyle, Theme: p.Theme,
 			})
 		}
+	}
+}
+
+// paintImageProtocolIndicator overlays a bottom-right label on the panel's border row naming
+// the active graphics protocol, but only for Sixel — Kitty and None get no indicator. Sixel
+// under tmux has a known display gap Kitty doesn't share (WezTerm's fix for images surviving
+// an unrelated tmux redraw sweep currently excludes Sixel — see
+// llm-docs/graphics-implementation-lessons.md lesson 11), so that combination gets its own
+// louder "Sixel+Tmux" label (styles.PanelStatusImageSixelTmux, red by default) instead of the
+// plain "Sixel" one (styles.PanelStatusImageSixel), making a known risk visible instead of
+// silent. Caller only invokes this for a boxed panel (not Embedded/Borderless): those have no
+// border row outside the image's own drawn area to paint into without overlapping the image.
+func paintImageProtocolIndicator(screen tcell.Screen, rect Rect, protocol ImageProtocol, inTmux bool, th theme.Theme) {
+	if protocol != ImageProtocolSixel {
+		return
+	}
+	label := " Sixel "
+	style := th.PanelStatusImageSixel
+	if inTmux {
+		label = " Sixel+Tmux "
+		style = th.PanelStatusImageSixelTmux
+	}
+	y := rect.Y + rect.Height - 1
+	innerRight := rect.X + rect.Width - 2
+	const rightMargin = 1
+	runes := []rune(label)
+	n := len(runes)
+	startX := innerRight - n + 1 - rightMargin
+	if startX <= rect.X {
+		return
+	}
+	for i, r := range runes {
+		screen.SetContent(startX+i, y, r, nil, style)
 	}
 }
 

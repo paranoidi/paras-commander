@@ -151,6 +151,11 @@ type Result struct {
 	// Unicode-placeholder display (Request.ImageUnicodePlaceholder); Draw must then paint
 	// placeholder cells instead of recording a cursor-relative placement.
 	ImageUnicodePlaceholder bool
+	// ImageInTmux carries Request.ImageInTmux forward so Draw can show the bottom-right
+	// Sixel/Sixel+Tmux protocol indicator without re-deriving tmux status from the
+	// environment itself (same rationale as ImageUnicodePlaceholder — see lesson 7 in
+	// llm-docs/graphics-implementation-lessons.md).
+	ImageInTmux bool
 }
 
 // Run executes internal Chroma highlighting or an external preview command.

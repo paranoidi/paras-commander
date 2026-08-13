@@ -19,7 +19,7 @@ func TestResolveImageProtocol(t *testing.T) {
 	}{
 		{name: "force sixel", cfg: "sixel", want: previewpanel.ImageProtocolSixel},
 		{name: "force kitty", cfg: "kitty", want: previewpanel.ImageProtocolKitty},
-		{name: "auto wezterm", cfg: "auto", env: map[string]string{"TERM_PROGRAM": "WezTerm", "TERM": "xterm-256color"}, want: previewpanel.ImageProtocolSixel},
+		{name: "auto wezterm", cfg: "auto", env: map[string]string{"TERM_PROGRAM": "WezTerm", "TERM": "xterm-256color"}, want: previewpanel.ImageProtocolKitty},
 		{name: "auto ghostty TERM_PROGRAM", cfg: "auto", env: map[string]string{"TERM_PROGRAM": "ghostty"}, want: previewpanel.ImageProtocolKitty},
 		{name: "auto kitty TERM_PROGRAM", cfg: "auto", env: map[string]string{"TERM_PROGRAM": "kitty"}, want: previewpanel.ImageProtocolKitty},
 		{name: "auto xterm-kitty TERM", cfg: "auto", env: map[string]string{"TERM": "xterm-kitty"}, want: previewpanel.ImageProtocolKitty},
@@ -61,8 +61,8 @@ func TestResolveImageProtocolTmuxUsesClientTermType(t *testing.T) {
 	}
 
 	tmuxClientTermType = func() string { return "wezterm 20260716" }
-	if got := ResolveImageProtocol("auto", envUnderTmux); got != previewpanel.ImageProtocolSixel {
-		t.Fatalf("ResolveImageProtocol under tmux+wezterm = %v, want Sixel", got)
+	if got := ResolveImageProtocol("auto", envUnderTmux); got != previewpanel.ImageProtocolKitty {
+		t.Fatalf("ResolveImageProtocol under tmux+wezterm = %v, want Kitty", got)
 	}
 }
 
@@ -82,7 +82,7 @@ func TestResolveVideoThumbProtocol(t *testing.T) {
 		{name: "force kitty", images: true, cfg: "kitty", env: map[string]string{}, want: previewpanel.ImageProtocolKitty},
 		{name: "auto kitty", images: true, cfg: "auto", env: map[string]string{"TERM_PROGRAM": "kitty"}, want: previewpanel.ImageProtocolKitty},
 		{name: "auto ghostty", images: true, cfg: "auto", env: map[string]string{"TERM_PROGRAM": "ghostty"}, want: previewpanel.ImageProtocolKitty},
-		{name: "auto wezterm sixel", images: true, cfg: "auto", env: map[string]string{"TERM_PROGRAM": "WezTerm"}, want: previewpanel.ImageProtocolSixel},
+		{name: "auto wezterm kitty", images: true, cfg: "auto", env: map[string]string{"TERM_PROGRAM": "WezTerm"}, want: previewpanel.ImageProtocolKitty},
 		{name: "auto unknown sixel", images: true, cfg: "auto", env: map[string]string{}, want: previewpanel.ImageProtocolSixel},
 		{name: "auto xterm-kitty TERM", images: true, cfg: "auto", env: map[string]string{"TERM": "xterm-kitty"}, want: previewpanel.ImageProtocolKitty},
 	}
@@ -118,8 +118,8 @@ func TestResolveVideoThumbProtocolTmux(t *testing.T) {
 		t.Fatalf("tmux+ghostty = %v, want Kitty", got)
 	}
 	tmuxClientTermType = func() string { return "wezterm 20260716" }
-	if got := ResolveVideoThumbProtocol(true, "auto", envUnderTmux); got != previewpanel.ImageProtocolSixel {
-		t.Fatalf("tmux+wezterm = %v, want Sixel", got)
+	if got := ResolveVideoThumbProtocol(true, "auto", envUnderTmux); got != previewpanel.ImageProtocolKitty {
+		t.Fatalf("tmux+wezterm = %v, want Kitty", got)
 	}
 }
 

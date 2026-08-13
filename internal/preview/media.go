@@ -198,6 +198,7 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork) Resu
 		ImagePxH:                bounds.Dy(),
 		ImageProtocol:           req.ImageProtocol,
 		ImageUnicodePlaceholder: req.ImageUnicodePlaceholder,
+		ImageInTmux:             req.ImageInTmux,
 	}
 }
 

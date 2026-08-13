@@ -76,6 +76,12 @@ type State struct {
 	// (tmux + an outer terminal known to support placeholders) — Draw must not
 	// re-derive it from the environment.
 	ImageUnicodePlaceholder bool
+	// ImageInTmux is true when the currently displayed image was requested with $TMUX set.
+	// Draw uses it (only alongside ImageProtocol == ImageProtocolSixel) to show the
+	// bottom-right "Sixel+Tmux" indicator — decided upstream in the preview request, same
+	// rule as ImageUnicodePlaceholder: Draw must not re-derive tmux status from the
+	// environment itself.
+	ImageInTmux bool
 
 	wrappedLines     [][]AnsiCell
 	wrapWidth        int

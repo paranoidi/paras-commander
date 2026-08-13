@@ -459,6 +459,7 @@ func (h *Handler) patchColumnPreviewMessage(titleBase, msg string) {
 		st.ImagePxH = 0
 		st.ImageProtocol = 0
 		st.ImageUnicodePlaceholder = false
+		st.ImageInTmux = false
 	})
 	h.postRenderWake()
 	h.clampFilePreviewScroll()
@@ -783,6 +784,7 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 			st.ImagePxH = 0
 			st.ImageProtocol = 0
 			st.ImageUnicodePlaceholder = false
+			st.ImageInTmux = false
 		})
 	}
 
@@ -1085,6 +1087,7 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 			st.ImagePxH = 0
 			st.ImageProtocol = 0
 			st.ImageUnicodePlaceholder = false
+			st.ImageInTmux = false
 			if st.Search.Active {
 				st.RecomputeSearch()
 			}
@@ -1112,6 +1115,7 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 		st.ImagePxH = res.ImagePxH
 		st.ImageProtocol = res.ImageProtocol
 		st.ImageUnicodePlaceholder = res.ImageUnicodePlaceholder
+		st.ImageInTmux = res.ImageInTmux
 		if st.Search.Active {
 			st.RecomputeSearch()
 		}
