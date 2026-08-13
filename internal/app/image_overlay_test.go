@@ -119,6 +119,85 @@ func TestReconcilePlaceholderImageNilIsNoopOnEmptyState(t *testing.T) {
 	}
 }
 
+// fakeTty is a minimal tcell.Tty backed by a buffer, so tests can exercise
+// reconcilePlaceholderImage's transmit path (which needs a.screen.Tty() to succeed) without a
+// real terminal.
+type fakeTty struct {
+	bytes.Buffer
+}
+
+func (*fakeTty) Start() error                          { return nil }
+func (*fakeTty) Stop() error                           { return nil }
+func (*fakeTty) Drain() error                          { return nil }
+func (*fakeTty) Close() error                          { return nil }
+func (*fakeTty) NotifyResize(func())                   {}
+func (*fakeTty) WindowSize() (tcell.WindowSize, error) { return tcell.WindowSize{}, nil }
+
+// screenWithTty wraps a tcell.Screen and reports a fakeTty as available, since
+// tcell.SimulationScreen.Tty() always returns (nil, false).
+type screenWithTty struct {
+	tcell.Screen
+	tty *fakeTty
+}
+
+func (s *screenWithTty) Tty() (tcell.Tty, bool) { return s.tty, true }
+
+// TestReconcileImageBeforeShowForcesShowOnPlaceholderPayloadChange pins down the fix for the
+// live-reported Kitty+tmux disappearing-image bug: the Unicode-placeholder grid's cell bytes
+// (rune + diacritics + color) encode only row, column, and the fixed KittyGraphicsImageID —
+// never which image currently backs that id — so two different images at the same on-screen
+// grid size produce byte-for-byte identical cell content and the render hash-cache can't see
+// the change. reconcileImageBeforeShow must report forceShow=true whenever
+// reconcilePlaceholderImage actually transmits new data, or Show() (and so the terminal redraw
+// Kitty needs to notice the new data) gets skipped even though fresh image bytes just went out.
+func TestReconcileImageBeforeShowForcesShowOnPlaceholderPayloadChange(t *testing.T) {
+	sim := tcell.NewSimulationScreen("UTF-8")
+	if err := sim.Init(); err != nil {
+		t.Fatalf("screen.Init() error = %v", err)
+	}
+	defer sim.Fini()
+	sim.SetSize(80, 24)
+	screen := &screenWithTty{Screen: sim, tty: &fakeTty{}}
+	a := &App{screen: screen}
+
+	planA := &previewpanel.ImagePlacement{
+		Payload:            "\x1b_Ga=T,f=100,i=1,q=2,U=1,m=0;AAAA\x1b\\",
+		Path:               "/tmp/a.png",
+		Protocol:           previewpanel.ImageProtocolKitty,
+		UnicodePlaceholder: true,
+	}
+	if force := a.reconcileImageBeforeShow(planA); !force {
+		t.Fatal("reconcileImageBeforeShow() = false on first placeholder transmit, want true")
+	}
+	if screen.tty.Len() == 0 {
+		t.Fatal("first transmit did not write to tty")
+	}
+
+	screen.tty.Reset()
+	if force := a.reconcileImageBeforeShow(planA); force {
+		t.Fatal("reconcileImageBeforeShow() = true for unchanged placeholder payload, want false")
+	}
+	if screen.tty.Len() != 0 {
+		t.Fatal("unchanged payload retransmitted to tty, want no-op")
+	}
+
+	// planB has the same on-screen grid geometry as planA (Draw would emit identical cell
+	// bytes for both), only the transmitted image data differs — exactly the case tcell's own
+	// diffing and the app's render hash-cache both can't detect on their own.
+	planB := &previewpanel.ImagePlacement{
+		Payload:            "\x1b_Ga=T,f=100,i=1,q=2,U=1,m=0;BBBB\x1b\\",
+		Path:               "/tmp/b.png",
+		Protocol:           previewpanel.ImageProtocolKitty,
+		UnicodePlaceholder: true,
+	}
+	if force := a.reconcileImageBeforeShow(planB); !force {
+		t.Fatal("reconcileImageBeforeShow() = false when placeholder payload changed, want true")
+	}
+	if screen.tty.Len() == 0 {
+		t.Fatal("changed payload was not retransmitted to tty")
+	}
+}
+
 // TestResetImageOverlayClearsPlaceholderState ensures Suspend/Resume / Sync paths force a
 // re-transmit on the next render: if placeholderImg were left with sent=true and the same
 // payload, reconcilePlaceholderImage would skip the transmit after the terminal's graphics

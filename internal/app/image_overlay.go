@@ -43,7 +43,7 @@ func (a *App) imageOverlaySuppressed() bool {
 // Returns true when the locked region changed (forces Show past the hash cache).
 func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (forceShow bool) {
 	if plan != nil && plan.UnicodePlaceholder {
-		a.reconcilePlaceholderImage(plan)
+		changed := a.reconcilePlaceholderImage(plan)
 		// Defensive: tear down any leftover cursor-relative overlay state. Not expected in
 		// practice (protocol/tmux status doesn't change mid-session), but keeps the two
 		// mechanisms from ever fighting over the same locked region.
@@ -52,10 +52,12 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 			a.image = imageOverlay{}
 			return true
 		}
-		return false
+		return changed
 	}
 	if a.placeholderImg.sent {
-		a.reconcilePlaceholderImage(nil)
+		if a.reconcilePlaceholderImage(nil) {
+			forceShow = true
+		}
 	}
 
 	var cols, rows int
@@ -259,23 +261,31 @@ func (a *App) resetImageOverlayForResize() {
 // This is purely about registering image *data* with the terminal — position-independent, so
 // unlike emitImageAfterShow it runs synchronously here, before Show, since the terminal must
 // already know the image data by the time Show draws the placeholder cells referencing it.
-func (a *App) reconcilePlaceholderImage(plan *previewpanel.ImagePlacement) {
+// Returns true when a delete or transmit was actually sent, so the caller can force Show()
+// past the render hash-cache: the placeholder grid's cell bytes (rune/diacritics/color) encode
+// only row, column, and the fixed KittyGraphicsImageID, never which image is currently backing
+// that id, so two different images at the same on-screen grid size produce byte-for-byte
+// identical cell content — the hash cache can't see the change and, uncorrected, Show() (and so
+// the terminal redraw the real Kitty terminal needs to notice the new data) gets skipped even
+// though fresh image bytes just went out (see llm-docs/graphics-implementation-lessons.md
+// lesson 15).
+func (a *App) reconcilePlaceholderImage(plan *previewpanel.ImagePlacement) (changed bool) {
 	if plan == nil || !plan.UnicodePlaceholder {
 		if !a.placeholderImg.sent {
-			return
+			return false
 		}
 		a.placeholderImg = placeholderImage{}
 		if tty, ok := a.screen.Tty(); ok {
 			_, _ = io.WriteString(tty, tmuxPassthroughWrap(kittyDeleteSequence()))
 		}
-		return
+		return true
 	}
 	if a.placeholderImg.sent && a.placeholderImg.payload == plan.Payload {
-		return
+		return false
 	}
 	tty, ok := a.screen.Tty()
 	if !ok {
-		return
+		return false
 	}
 	if a.placeholderImg.sent {
 		_, _ = io.WriteString(tty, tmuxPassthroughWrap(kittyDeleteSequence()))
@@ -284,6 +294,7 @@ func (a *App) reconcilePlaceholderImage(plan *previewpanel.ImagePlacement) {
 		_, _ = io.WriteString(tty, tmuxPassthroughWrap(chunk))
 	}
 	a.placeholderImg = placeholderImage{sent: true, payload: plan.Payload}
+	return true
 }
 
 func kittyDeleteSequence() string {
