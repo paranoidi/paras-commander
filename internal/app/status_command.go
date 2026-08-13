@@ -6,8 +6,25 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 )
+
+// restartStatusCommandTicker (re)starts the status_command background ticker from cfg,
+// stopping any ticker already running first. Called at startup and after config.toml is
+// reloaded so edits to [status_command] take effect without an app restart.
+func (a *App) restartStatusCommandTicker(cfg config.StatusCommandConfig) {
+	if a.statusCmdStopCh != nil {
+		close(a.statusCmdStopCh)
+		a.statusCmdStopCh = nil
+	}
+	if cfg.Command == "" {
+		return
+	}
+	stop := make(chan struct{})
+	a.statusCmdStopCh = stop
+	go a.runStatusCommandTicker(cfg.Command, time.Duration(cfg.IntervalMS)*time.Millisecond, cfg.MaxWidth, stop)
+}
 
 // statusCommandTimeout bounds a single status_command run so a hung command can't
 // accumulate; independent of the configured poll interval.

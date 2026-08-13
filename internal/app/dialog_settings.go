@@ -448,6 +448,7 @@ func (a *App) openConfigTOMLInEditor(path string) {
 		return
 	}
 	a.config = cfg
+	a.restartStatusCommandTicker(cfg.StatusCommand)
 	a.openConfigDialog()
 	a.setTransientMessage("config.toml reloaded", ui.MessageUrgencyInfo)
 }

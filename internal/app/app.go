@@ -187,6 +187,7 @@ type App struct {
 
 	statusCmdText    string
 	statusCmdRunning atomic.Bool
+	statusCmdStopCh  chan struct{}
 
 	sftp           sftpState
 	image          imageOverlay
@@ -580,14 +581,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if ms := cfg.Panels.RefreshIntervalMS; ms > 0 {
 		go app.runPanelRefreshTicker(time.Duration(ms)*time.Millisecond, app.jobStopCh)
 	}
-	if cmd := cfg.StatusCommand.Command; cmd != "" {
-		go app.runStatusCommandTicker(
-			cmd,
-			time.Duration(cfg.StatusCommand.IntervalMS)*time.Millisecond,
-			cfg.StatusCommand.MaxWidth,
-			app.jobStopCh,
-		)
-	}
+	app.restartStatusCommandTicker(cfg.StatusCommand)
 	if cfg.Jobs.ThroughputChartEnabled {
 		go app.runThroughputChartTicker(
 			time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,

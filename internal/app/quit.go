@@ -38,6 +38,10 @@ func (a *App) stopWorker() {
 		a.jobStopOnce = true
 		close(a.jobStopCh)
 	}
+	if a.statusCmdStopCh != nil {
+		close(a.statusCmdStopCh)
+		a.statusCmdStopCh = nil
+	}
 	if a.jobsCtrl != nil {
 		a.jobsCtrl.StopWakeTimer()
 		a.jobsCtrl.StopBlockerNextTimer()
