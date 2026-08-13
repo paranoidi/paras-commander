@@ -938,7 +938,7 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 			}
 		}
 		req.ImageUnicodePlaceholder = req.ImageProtocol == previewpanel.ImageProtocolKitty &&
-			previewrun.TmuxSupportsKittyUnicodePlaceholders(os.Getenv)
+			previewrun.TmuxSupportsKittyUnicodePlaceholders(os.Getenv, req.Preview.UnicodePlaceholderTerminals)
 		req.Cache = h.mediaCache()
 		return req
 	}

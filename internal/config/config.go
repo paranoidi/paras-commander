@@ -251,6 +251,15 @@ type PreviewConfig struct {
 	// ImageProtocol selects the terminal graphics protocol: "auto", "sixel", or "kitty".
 	// Empty/invalid values normalize to DefaultPreviewImageProtocol ("auto").
 	ImageProtocol string `toml:"image_protocol"`
+	// UnicodePlaceholderTerminals lists additional client_termtype substrings (matched
+	// case-insensitively, alongside the always-on kitty/ghostty) to treat as supporting Kitty
+	// Unicode-placeholder image display under tmux. Empty by default. Kitty protocol support in
+	// WezTerm is reliable and always assumed (cursor-relative placement), but Unicode-placeholder
+	// support is an experimental, build-specific WezTerm capability that client_termtype cannot
+	// distinguish from a build that lacks it — add "wezterm" here only after confirming your
+	// attached build actually supports it; against a build that doesn't, placeholder mode sends
+	// cells the terminal can't interpret and nothing renders.
+	UnicodePlaceholderTerminals []string `toml:"unicode_placeholder_terminals"`
 	// VideoThumbCols / VideoThumbRows set the video thumbnail grid size (default 2×2).
 	VideoThumbCols int `toml:"video_thumb_cols"`
 	VideoThumbRows int `toml:"video_thumb_rows"`
@@ -579,6 +588,7 @@ func Default() Config {
 			Command:                       DefaultFilePreviewCommand,
 			Images:                        DefaultPreviewImages,
 			ImageProtocol:                 DefaultPreviewImageProtocol,
+			UnicodePlaceholderTerminals:   []string{},
 			VideoThumbCols:                DefaultPreviewVideoThumbCols,
 			VideoThumbRows:                DefaultPreviewVideoThumbRows,
 			Prefetch:                      DefaultPreviewPrefetch,

@@ -132,28 +132,31 @@ func TestTmuxSupportsKittyUnicodePlaceholders(t *testing.T) {
 	}
 	tmuxEnv := map[string]string{"TMUX": "/tmp/tmux-1000/default,1234,0"}
 
-	if TmuxSupportsKittyUnicodePlaceholders(nil) {
+	if TmuxSupportsKittyUnicodePlaceholders(nil, nil) {
 		t.Fatal("nil environ: want false")
 	}
-	if TmuxSupportsKittyUnicodePlaceholders(env(nil)) {
+	if TmuxSupportsKittyUnicodePlaceholders(env(nil), nil) {
 		t.Fatal("empty env (no TMUX): want false")
 	}
 
 	tmuxClientTermType = func() string { return "ghostty 1.3.1" }
-	if !TmuxSupportsKittyUnicodePlaceholders(env(tmuxEnv)) {
+	if !TmuxSupportsKittyUnicodePlaceholders(env(tmuxEnv), nil) {
 		t.Fatal("tmux+ghostty: want true")
 	}
 	tmuxClientTermType = func() string { return "xterm-kitty" }
-	if !TmuxSupportsKittyUnicodePlaceholders(env(tmuxEnv)) {
+	if !TmuxSupportsKittyUnicodePlaceholders(env(tmuxEnv), nil) {
 		t.Fatal("tmux+kitty: want true")
 	}
 	tmuxClientTermType = func() string { return "wezterm 20260716" }
-	if TmuxSupportsKittyUnicodePlaceholders(env(tmuxEnv)) {
-		t.Fatal("tmux+wezterm: want false (no Unicode placeholder support)")
+	if TmuxSupportsKittyUnicodePlaceholders(env(tmuxEnv), nil) {
+		t.Fatal("tmux+wezterm, no config opt-in: want false")
+	}
+	if !TmuxSupportsKittyUnicodePlaceholders(env(tmuxEnv), []string{"wezterm"}) {
+		t.Fatal("tmux+wezterm, opted in via config: want true")
 	}
 	// Outside tmux, client_termtype is irrelevant — placeholders are a tmux-only path.
 	tmuxClientTermType = func() string { return "ghostty 1.3.1" }
-	if TmuxSupportsKittyUnicodePlaceholders(env(map[string]string{"TERM_PROGRAM": "ghostty"})) {
+	if TmuxSupportsKittyUnicodePlaceholders(env(map[string]string{"TERM_PROGRAM": "ghostty"}), nil) {
 		t.Fatal("ghostty outside tmux: want false")
 	}
 }

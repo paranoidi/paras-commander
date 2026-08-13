@@ -24,22 +24,31 @@ var tmuxClientTermType = sync.OnceValue(func() string {
 	return strings.ToLower(strings.TrimSpace(string(out)))
 })
 
-// tmuxOuterTerminalIsKittyOrGhostty reports whether tmux's client_termtype identifies the
-// actually-attached terminal as Kitty or Ghostty. environ("TMUX") must already be confirmed
-// non-empty by the caller (this does not check it itself, since callers need that check
-// separately anyway). Deliberately narrower than tmuxOuterTerminalSupportsKittyGraphics below:
-// this one gates Unicode-placeholder support specifically, which WezTerm doesn't have even
-// though it does implement the Kitty graphics protocol itself.
-func tmuxOuterTerminalIsKittyOrGhostty() bool {
+// tmuxOuterTerminalSupportsUnicodePlaceholders reports whether tmux's client_termtype
+// identifies the actually-attached terminal as one known to support Kitty's Unicode-placeholder
+// image display: Kitty and Ghostty always, plus any of the caller-supplied extra substrings
+// (matched case-insensitively) — see PreviewConfig.UnicodePlaceholderTerminals, for terminals
+// like WezTerm where placeholder support is a build-specific capability client_termtype can't
+// reliably confirm. environ("TMUX") must already be confirmed non-empty by the caller (this
+// does not check it itself, since callers need that check separately anyway).
+func tmuxOuterTerminalSupportsUnicodePlaceholders(extra []string) bool {
 	t := tmuxClientTermType()
-	return strings.Contains(t, "kitty") || strings.Contains(t, "ghostty")
+	if strings.Contains(t, "kitty") || strings.Contains(t, "ghostty") {
+		return true
+	}
+	for _, s := range extra {
+		s = strings.ToLower(strings.TrimSpace(s))
+		if s != "" && strings.Contains(t, s) {
+			return true
+		}
+	}
+	return false
 }
 
 // tmuxOuterTerminalSupportsKittyGraphics reports whether tmux's client_termtype identifies a
 // terminal known to implement the Kitty graphics protocol at all (cursor-relative "default
-// placement" — not necessarily Unicode placeholders; see TmuxSupportsKittyUnicodePlaceholders
-// for that narrower, WezTerm-excluding check). environ("TMUX") must already be confirmed
-// non-empty by the caller.
+// placement" — not necessarily Unicode placeholders; see TmuxSupportsKittyUnicodePlaceholders).
+// environ("TMUX") must already be confirmed non-empty by the caller.
 func tmuxOuterTerminalSupportsKittyGraphics() bool {
 	t := tmuxClientTermType()
 	return strings.Contains(t, "kitty") || strings.Contains(t, "ghostty") || strings.Contains(t, "wezterm")
@@ -49,16 +58,9 @@ func tmuxOuterTerminalSupportsKittyGraphics() bool {
 // environ is typically os.Getenv. Invalid/empty cfg is treated as auto.
 //
 // Kitty is preferred over Sixel for any terminal known to implement it, WezTerm included, both
-// outside and under tmux. Under tmux, WezTerm's Kitty support has no Unicode-placeholder mode
-// (see TmuxSupportsKittyUnicodePlaceholders), so it goes through cursor-relative placement via
-// tmux passthrough — the same passthrough-plus-cursor-ceremony path Sixel uses when it isn't
-// tmux-natively-stored, and it shares that path's cursor-position race (lesson 3/8): confirmed
-// live to intermittently misplace at 0,0 or vanish. Sixel under tmux has its own, different
-// known gap (lesson 11: can vanish on an unrelated tmux redraw sweep, unrelated to cursor
-// position). Neither is fully fixed; this is a deliberate choice of Kitty's failure mode over
-// Sixel's (see llm-docs/graphics-implementation-lessons.md lesson 12/13) — revisit if either
-// upstream issue closes, or if the cursor-ceremony mitigation in `emitImageAfterShow` can be
-// made more reliable specifically against WezTerm.
+// outside and under tmux. Under tmux, whether that Kitty traffic goes out as a race-free Unicode
+// placeholder or as cursor-relative-via-passthrough depends on whether the outer terminal is
+// confirmed placeholder-capable — see TmuxSupportsKittyUnicodePlaceholders.
 func ResolveImageProtocol(cfg string, environ func(string) string) previewpanel.ImageProtocol {
 	switch strings.ToLower(strings.TrimSpace(cfg)) {
 	case config.PreviewImageProtocolSixel:
@@ -89,19 +91,19 @@ func ResolveImageProtocol(cfg string, environ func(string) string) previewpanel.
 }
 
 // TmuxSupportsKittyUnicodePlaceholders reports whether, under tmux, the actually-attached
-// outer terminal is known to support Kitty's Unicode-placeholder image display (currently
-// Kitty and Ghostty only). Unlike ResolveImageProtocol's "auto" path,
-// this must be checked even when the Kitty protocol was reached via an explicit
-// image_protocol=kitty config override: forcing Kitty protocol does not make an
-// otherwise-unsupported terminal (e.g. WezTerm) understand Unicode placeholders, so a caller
-// under tmux that skips this check and uses placeholder mode anyway sends cells the terminal
-// can't interpret — nothing renders, on any terminal that ends up here without support.
-// environ is typically os.Getenv.
-func TmuxSupportsKittyUnicodePlaceholders(environ func(string) string) bool {
+// outer terminal is known to support Kitty's Unicode-placeholder image display: Kitty and
+// Ghostty always, plus any client_termtype substring listed in extra (typically
+// PreviewConfig.UnicodePlaceholderTerminals). Unlike ResolveImageProtocol's "auto" path, this
+// must be checked even when the Kitty protocol was reached via an explicit image_protocol=kitty
+// config override: forcing Kitty protocol does not make an otherwise-unsupported terminal
+// understand Unicode placeholders, so a caller under tmux that skips this check and uses
+// placeholder mode anyway sends cells the terminal can't interpret — nothing renders, on any
+// terminal that ends up here without support. environ is typically os.Getenv.
+func TmuxSupportsKittyUnicodePlaceholders(environ func(string) string, extra []string) bool {
 	if environ == nil || environ("TMUX") == "" {
 		return false
 	}
-	return tmuxOuterTerminalIsKittyOrGhostty()
+	return tmuxOuterTerminalSupportsUnicodePlaceholders(extra)
 }
 
 // tmuxClientTermFeatures returns tmux's `client_termfeatures`: the comma-separated list of
