@@ -39,6 +39,7 @@ type Theme struct {
 	MenuBarAlert         tcell.Style // jobs need input (before permission tail)
 	MenuDropdownAccent   tcell.Style
 	MenuDetail           tcell.Style
+	MenuStatus           tcell.Style // status_command text at top-left of menu bar
 
 	PanelActiveFrame   tcell.Style
 	PanelInactiveFrame tcell.Style
@@ -809,6 +810,7 @@ var requiredStyleKeys = []string{
 	"menu.bar.alert",
 	"menu.dropdown.accent",
 	"menu.detail",
+	"menu.status",
 	"panel.active.frame",
 	"panel.inactive.frame",
 	"panel.target.frame",
@@ -1297,6 +1299,7 @@ func parse(data []byte) (Theme, error) {
 		MenuBarAlert:         styles["menu.bar.alert"],
 		MenuDropdownAccent:   styles["menu.dropdown.accent"],
 		MenuDetail:           styles["menu.detail"],
+		MenuStatus:           styles["menu.status"],
 
 		PanelActiveFrame:                    styles["panel.active.frame"],
 		PanelInactiveFrame:                  styles["panel.inactive.frame"],

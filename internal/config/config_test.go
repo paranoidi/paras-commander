@@ -111,6 +111,28 @@ func TestValidateClampsShellTerminalPanelHeight(t *testing.T) {
 	}
 }
 
+func TestValidateClampsStatusCommandIntervalAndMaxWidth(t *testing.T) {
+	cfg := Default()
+	cfg.StatusCommand.IntervalMS = 10
+	cfg.StatusCommand.MaxWidth = 0
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.StatusCommand.IntervalMS != DefaultStatusCommandIntervalMS {
+		t.Fatalf("StatusCommand.IntervalMS = %d, want reset to default %d", cfg.StatusCommand.IntervalMS, DefaultStatusCommandIntervalMS)
+	}
+	if cfg.StatusCommand.MaxWidth != DefaultStatusCommandMaxWidth {
+		t.Fatalf("StatusCommand.MaxWidth = %d, want reset to default %d", cfg.StatusCommand.MaxWidth, DefaultStatusCommandMaxWidth)
+	}
+	cfg.StatusCommand.MaxWidth = 500
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.StatusCommand.MaxWidth != StatusCommandMaxWidthMax {
+		t.Fatalf("StatusCommand.MaxWidth = %d, want clamped to max %d", cfg.StatusCommand.MaxWidth, StatusCommandMaxWidthMax)
+	}
+}
+
 func TestValidateClampsNegativeDiskSpaceCheckMinFileBytes(t *testing.T) {
 	cfg := Default()
 	cfg.Operations.DiskSpaceCheckMinFileBytes = -1

@@ -47,7 +47,7 @@ func (f *fakeHost) LayoutForTerminalSizePreview(w, h int, _ bool) ui.Layout {
 
 func (f *fakeHost) layout(w, h int) ui.Layout {
 	split := ui.PanelPaneSplit{ActivePanel: f.model.ActivePanel, ActivePercent: 50, InactivePercent: 50}
-	return ui.CalculateLayoutWithOrientation(w, h, false, split, ui.SplitHorizontal, 0)
+	return ui.CalculateLayoutWithOrientation(w, h, false, split, ui.SplitHorizontal, 0, 0)
 }
 
 func (f *fakeHost) SetTransientMessage(text string, _ ui.MessageUrgency) {

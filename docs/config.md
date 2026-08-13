@@ -359,6 +359,16 @@ Find-duplicates scan (within a single directory).
 | `file_progress_bytes` | int64 | `268435456` (256 MiB) | Show a per-file progress bar in the scan dialog for files at or above this size. `0` disables the per-file bar. |
 | `chunk_bytes` | int64 | `33554432` (32 MiB) | Compare same-size files this many bytes at a time, stopping as soon as content diverges. `0` disables chunked comparison. |
 
+## `[status_command]`
+
+Runs a shell command on an interval and shows its first line of output at the top-left of the menu bar. Menu labels and the job-progress strip shift right to make room.
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `command` | string | `""` | Shell command line, run via `sh -c` (no `%f`/`%d`/… macro expansion, unlike `meta.toml` commands). Empty disables the feature. |
+| `interval_ms` | int | `3000` | How often `command` runs. Values below `500` are clamped up to the default. |
+| `max_width` | int | `15` | Reserved column width for the displayed text; longer output is ellipsized. Clamped to `[1, 200]`. |
+
 ## `keybindings.toml`
 
 Built-in defaults live in `internal/keymap/specs.go` and are written to `keybindings.toml` via `pc --config-stub`. F-keys and selection symbols (`+`, `-`, `*`) are kept alongside leader-menu letter chords (`C-`, `M-`, `C-M-` tiers matching Esc function-menu keys).

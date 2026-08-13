@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -205,6 +206,9 @@ type Model struct {
 	FooterKeys             []menu.FunctionKey
 	// MenuBarPermission is Unix mode text for the active panel cursor row (e.g. "drwxr-xr-x"); empty when none.
 	MenuBarPermission string
+	// StatusCommandText is the latest status_command output line, drawn at the top-left of
+	// the menu bar (layout.StatusCmd). Empty when the feature is disabled or has no output yet.
+	StatusCommandText string
 	// MenuBarJobsAttention is the core jobs/conflict label (e.g. "! 1"); the menu bar pads it with
 	// spaces on both sides for themed backgrounds and separates it from the activity spinner.
 	MenuBarJobsAttention string
@@ -427,6 +431,16 @@ func (m *Model) MenuBarInteractive() bool {
 	return !m.HideMenuBar && !m.ModalDialogOpen() && m.ViewMode != ViewFilePreview
 }
 
+// statusCmdWidth returns the columns to reserve for model.StatusCommandText at the
+// top-left of the menu bar. The text is already capped to the configured max width by
+// the caller (App.render), so this only measures it.
+func statusCmdWidth(model Model, reserveMenu bool) int {
+	if !reserveMenu || model.StatusCommandText == "" {
+		return 0
+	}
+	return utf8.RuneCountInString(model.StatusCommandText)
+}
+
 // Render paints model into the screen's logical cell buffer. The caller must invoke
 // screen.Show() (or screen.Sync()) to flush to the terminal.
 func Render(screen tcell.Screen, model Model, styles theme.Theme) {
@@ -449,8 +463,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			InactivePercent:   model.PanelZoomInactivePercent,
 			HideInactivePanel: LayoutHideInactivePanel(model.ViewMode, model.HideInactivePanel),
 		},
-		Orientation:  model.SplitOrientation,
-		TerminalRows: terminalRows,
+		Orientation:    model.SplitOrientation,
+		TerminalRows:   terminalRows,
+		StatusCmdWidth: statusCmdWidth(model, reserveMenu),
 	})
 	primitive.Fill(screen, primitive.Rect{Width: width, Height: height}, ' ', tcell.StyleDefault)
 
@@ -466,6 +481,9 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
 		} else {
 			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
+		}
+		if layout.StatusCmd.Width > 0 {
+			drawMenuBarStatusCommand(screen, layout.StatusCmd, model.StatusCommandText, styles.MenuStatus)
 		}
 	}
 	chromeBlocked := model.PanelsChromeBlocked()

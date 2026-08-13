@@ -20,9 +20,12 @@ const (
 
 // Layout is the full Phase 1 screen geometry.
 type Layout struct {
-	Width     int
-	Height    int
-	Menu      Rect
+	Width  int
+	Height int
+	Menu   Rect
+	// StatusCmd is the top-left status_command text area (row 0, before Menu). Zero Rect
+	// means the feature is off or ShowMenuBar is false; Menu.X/Width are shrunk accordingly.
+	StatusCmd Rect
 	Primary   Rect
 	Secondary Rect
 	Footer    Rect
@@ -81,6 +84,10 @@ type LayoutInput struct {
 	// (excluding the separator row). Zero omits the panel entirely. See CalculateLayoutWithOrientation
 	// for clamping/shrink-to-fit/omission behavior when the terminal panel would starve the panel area.
 	TerminalRows int
+	// StatusCmdWidth reserves this many columns at the top-left (row 0) for status_command
+	// text, shrinking Menu from the left. Zero reserves nothing. Caller clamps this to the
+	// configured max width; CalculateLayoutWithOrientation only clamps it to the terminal width.
+	StatusCmdWidth int
 }
 
 func mainPanelAxisSplit(total int, split PanelPaneSplit) (primaryShare, secondaryShare int) {
@@ -169,7 +176,12 @@ func CalculateLayoutWithOrientation(in LayoutInput) Layout {
 	if showMenuBar {
 		menuY = 1
 		panelAreaH = height - 2
-		layout.Menu = Rect{X: 0, Y: 0, Width: width, Height: 1}
+		statusW := 0
+		if in.StatusCmdWidth > 0 {
+			statusW = min(in.StatusCmdWidth, width)
+			layout.StatusCmd = Rect{X: 0, Y: 0, Width: statusW, Height: 1}
+		}
+		layout.Menu = Rect{X: statusW, Y: 0, Width: width - statusW, Height: 1}
 	} else {
 		layout.Menu = Rect{}
 	}

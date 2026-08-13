@@ -362,4 +362,14 @@ const (
 	DefaultShellTerminalPanelHeight = 10
 	// MinShellTerminalPanelHeight is the lower clamp for [shell].terminal_panel_height in Config.Validate.
 	MinShellTerminalPanelHeight = 3
+
+	// DefaultStatusCommandIntervalMS is how often [status_command].command runs.
+	DefaultStatusCommandIntervalMS = 3000
+	// StatusCommandIntervalMinMS is the lower clamp for [status_command].interval_ms in Config.Validate.
+	StatusCommandIntervalMinMS = 500
+	// DefaultStatusCommandMaxWidth is the default reserved column width for the status-command text.
+	DefaultStatusCommandMaxWidth = 15
+	// StatusCommandMaxWidthMin/Max clamp [status_command].max_width in Config.Validate.
+	StatusCommandMaxWidthMin = 1
+	StatusCommandMaxWidthMax = 200
 )

@@ -63,6 +63,11 @@ func menuBarRightTailRuneCount(attention, perm string, showMenuBarSpinner bool) 
 	return attW + 1 + base
 }
 
+// drawMenuBarStatusCommand paints the status_command text in the reserved top-left rect.
+func drawMenuBarStatusCommand(screen tcell.Screen, rect Rect, text string, style tcell.Style) {
+	primitive.Text(screen, rect.X, rect.Y, rect.Width, text, style)
+}
+
 // drawMenuBarBlank fills the menu row with menu background and no labels (modal overlays block the menu).
 func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
 	primitive.Text(screen, rect.X, rect.Y, rect.Width, "", styles.MenuBarInactive)
@@ -311,7 +316,7 @@ func drawPulldownMenu(screen tcell.Screen, layout Layout, state menu.State, menu
 		return
 	}
 
-	menuX := menuBarItemX(state.ActiveMenu, menus)
+	menuX := layout.Menu.X + menuBarItemX(state.ActiveMenu, menus)
 	width := pulldownWidth(menuDefinition)
 	if menuX+width > layout.Width {
 		menuX = max(0, layout.Width-width)

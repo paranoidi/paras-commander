@@ -185,6 +185,9 @@ type App struct {
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool
 
+	statusCmdText    string
+	statusCmdRunning atomic.Bool
+
 	sftp           sftpState
 	image          imageOverlay
 	placeholderImg placeholderImage
@@ -577,6 +580,14 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if ms := cfg.Panels.RefreshIntervalMS; ms > 0 {
 		go app.runPanelRefreshTicker(time.Duration(ms)*time.Millisecond, app.jobStopCh)
 	}
+	if cmd := cfg.StatusCommand.Command; cmd != "" {
+		go app.runStatusCommandTicker(
+			cmd,
+			time.Duration(cfg.StatusCommand.IntervalMS)*time.Millisecond,
+			cfg.StatusCommand.MaxWidth,
+			app.jobStopCh,
+		)
+	}
 	if cfg.Jobs.ThroughputChartEnabled {
 		go app.runThroughputChartTicker(
 			time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
@@ -805,6 +816,12 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 	case volumeSpaceRefreshPayload:
 		out.pollDiskUsageAfter = false
 		if a.applyVolumeSpaceRefresh(d) && a.model.ViewMode == ui.ViewJobs {
+			a.render()
+			out.didRender = true
+		}
+	case statusCommandResultPayload:
+		out.pollDiskUsageAfter = false
+		if a.applyStatusCommandResult(d) {
 			a.render()
 			out.didRender = true
 		}

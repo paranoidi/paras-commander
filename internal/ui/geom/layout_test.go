@@ -65,6 +65,39 @@ func TestCalculateLayoutOmitsMenuRowWhenShowMenuBarFalse(t *testing.T) {
 	}
 }
 
+func TestCalculateLayoutWithOrientationReservesStatusCmdWidth(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{Width: 100, Height: 30, ShowMenuBar: true, StatusCmdWidth: 15})
+
+	if layout.StatusCmd != (Rect{X: 0, Y: 0, Width: 15, Height: 1}) {
+		t.Fatalf("StatusCmd = %+v", layout.StatusCmd)
+	}
+	if layout.Menu != (Rect{X: 15, Y: 0, Width: 85, Height: 1}) {
+		t.Fatalf("Menu = %+v", layout.Menu)
+	}
+}
+
+func TestCalculateLayoutWithOrientationClampsStatusCmdWidthToTerminalWidth(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{Width: 40, Height: 30, ShowMenuBar: true, StatusCmdWidth: 200})
+
+	if layout.StatusCmd.Width != 40 {
+		t.Fatalf("StatusCmd.Width = %d, want 40", layout.StatusCmd.Width)
+	}
+	if layout.Menu != (Rect{X: 40, Y: 0, Width: 0, Height: 1}) {
+		t.Fatalf("Menu = %+v", layout.Menu)
+	}
+}
+
+func TestCalculateLayoutWithOrientationOmitsStatusCmdWhenMenuBarHidden(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{Width: 100, Height: 30, ShowMenuBar: false, StatusCmdWidth: 15})
+
+	if layout.StatusCmd != (Rect{}) {
+		t.Fatalf("StatusCmd = %+v, want empty", layout.StatusCmd)
+	}
+	if layout.Menu != (Rect{}) {
+		t.Fatalf("Menu = %+v, want empty", layout.Menu)
+	}
+}
+
 func TestCalculateLayoutZoomWidensActiveLeftColumn(t *testing.T) {
 	layout := CalculateLayout(100, 30, true, PanelWidthSplit{
 		Zoom: true, ActivePanel: 0, ActivePercent: 70, InactivePercent: 30,

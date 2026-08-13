@@ -22,6 +22,7 @@ bright_white = 15
 
 [menu]                       # misc menu chrome
 detail = { fg = "white" }
+status = { fg = "cyan" }     # status_command text at top-left of menu bar
 spinner = { fg = "bright_magenta", bold = true }
 # dropdown is both a leaf style and a parent of .accent/.frame/.selected — keep dotted here
 dropdown = { fg = "black", bg = "blue" }

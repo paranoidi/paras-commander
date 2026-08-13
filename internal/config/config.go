@@ -109,6 +109,8 @@ type Config struct {
 	Compare CompareConfig `toml:"compare"`
 	// Dedup configures find-duplicates within a single directory.
 	Dedup DedupConfig `toml:"dedup"`
+	// StatusCommand runs a shell command on an interval and shows its output at top-left.
+	StatusCommand StatusCommandConfig `toml:"status_command"`
 }
 
 // PanelsConfig controls file panel browsing, sorting, and listing.
@@ -232,6 +234,22 @@ type ShellConfig struct {
 	// TerminalPanelHeight is the embedded terminal panel's content row count (excludes the
 	// separator row). Minimum 3 after Validate. Default DefaultShellTerminalPanelHeight.
 	TerminalPanelHeight int `toml:"terminal_panel_height"`
+}
+
+// StatusCommandConfig runs a shell command on an interval and shows its first line of
+// output at the top-left of the menu bar (menu labels and job bars shift right to make room).
+type StatusCommandConfig struct {
+	// Command is a shell command line, run via sh -c (no meta.toml-style %f/%d/... macro
+	// expansion — there is no per-panel/per-row context for a global command). Empty disables
+	// the feature.
+	Command string `toml:"command"`
+	// IntervalMS is how often Command runs. Minimum StatusCommandIntervalMinMS after Validate.
+	// Default DefaultStatusCommandIntervalMS.
+	IntervalMS int `toml:"interval_ms"`
+	// MaxWidth caps the reserved column width for the displayed text (longer output is
+	// ellipsized). Clamped to [StatusCommandMaxWidthMin, StatusCommandMaxWidthMax] after
+	// Validate. Default DefaultStatusCommandMaxWidth.
+	MaxWidth int `toml:"max_width"`
 }
 
 // PreviewConfig controls file preview (internal Chroma or external command).
@@ -631,6 +649,11 @@ func Default() Config {
 			FileProgressBytes: DefaultDedupFileProgressBytes,
 			ChunkBytes:        DefaultDedupChunkBytes,
 		},
+		StatusCommand: StatusCommandConfig{
+			Command:    "",
+			IntervalMS: DefaultStatusCommandIntervalMS,
+			MaxWidth:   DefaultStatusCommandMaxWidth,
+		},
 	}
 }
 
@@ -933,6 +956,15 @@ func (c *Config) validateCompareDedupShell(builtin *Config) {
 	}
 	if c.Shell.TerminalPanelHeight < MinShellTerminalPanelHeight {
 		c.Shell.TerminalPanelHeight = builtin.Shell.TerminalPanelHeight
+	}
+	if c.StatusCommand.IntervalMS < StatusCommandIntervalMinMS {
+		c.StatusCommand.IntervalMS = builtin.StatusCommand.IntervalMS
+	}
+	if c.StatusCommand.MaxWidth < StatusCommandMaxWidthMin {
+		c.StatusCommand.MaxWidth = builtin.StatusCommand.MaxWidth
+	}
+	if c.StatusCommand.MaxWidth > StatusCommandMaxWidthMax {
+		c.StatusCommand.MaxWidth = StatusCommandMaxWidthMax
 	}
 }
 

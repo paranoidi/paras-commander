@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
@@ -151,6 +152,7 @@ func (a *App) render() {
 	a.reconcileAfterEvent()
 	a.model.MenuBarPermission = a.menuBarPermissionText()
 	a.model.MenuBarJobsAttention = a.menuBarJobsAttentionText()
+	a.model.StatusCommandText = a.statusCmdText
 	a.model.MenuBarJobs = a.jobsCtrl.MenuBarStripSnapshot()
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
 	a.model.FooterKeys = a.activeFooterKeys()
@@ -261,6 +263,15 @@ func (a *App) menuBarJobsAttentionText() string {
 	return fmt.Sprintf("󰋗 %d %s waiting", n, word)
 }
 
+// statusCommandWidth returns the columns to reserve at the top-left of the menu bar for
+// the status_command text this frame (0 when the feature is disabled).
+func (a *App) statusCommandWidth() int {
+	if a.config.StatusCommand.Command == "" {
+		return 0
+	}
+	return min(utf8.RuneCountInString(a.statusCmdText), a.config.StatusCommand.MaxWidth)
+}
+
 func (a *App) menuBarPermissionText() string {
 	if ui.IsAuxiliaryView(a.model.ViewMode) {
 		return ""
@@ -276,7 +287,7 @@ func (a *App) menuBarPermissionText() string {
 // twin-column split treats panel zoom as off (same rule as when preview is actually open) so
 // callers can size subprocess output (e.g. bat --terminal-width) before preview state is toggled.
 func (a *App) layoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout {
-	return ui.CalculateLayoutWithOrientation(width, height, a.model.MenuBarLayoutReserved(), a.panelPaneSplit(width, filePreviewOpen), a.effectivePaneSplitOrientation(), a.terminalLayoutRows())
+	return ui.CalculateLayoutWithOrientation(width, height, a.model.MenuBarLayoutReserved(), a.panelPaneSplit(width, filePreviewOpen), a.effectivePaneSplitOrientation(), a.terminalLayoutRows(), a.statusCommandWidth())
 }
 
 // applyCarouselPanelZoomPercents widens the active column when carousel view is on so three panes fit.
