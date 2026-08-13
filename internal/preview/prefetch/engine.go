@@ -66,9 +66,6 @@ func NewEngine(parent context.Context, cfg Config) *Engine {
 	if cfg.VideoDiskMaxMB < 1 {
 		cfg.VideoDiskMaxMB = config.DefaultPreviewVideoThumbCacheMaxMB
 	}
-	if cfg.ImageMaxEdgePx < 1 {
-		cfg.ImageMaxEdgePx = config.DefaultPreviewImageMaxEdgePx
-	}
 	if cfg.VideoThumbCols < 1 {
 		cfg.VideoThumbCols = config.DefaultPreviewVideoThumbCols
 	}
@@ -130,7 +127,7 @@ func (e *Engine) Schedule(items []Item) {
 				continue
 			}
 		case KindVideo:
-			if e.cache.HasVideo(it.Path, it.Mtime, it.Size, e.cfg.ImageMaxEdgePx, e.cfg.VideoThumbCols, e.cfg.VideoThumbRows) {
+			if e.cache.HasVideo(it.Path, it.Mtime, it.Size, e.videoMaxEdge(), e.cfg.VideoThumbCols, e.cfg.VideoThumbRows) {
 				continue
 			}
 		default:
@@ -228,6 +225,18 @@ func (e *Engine) worker() {
 	}
 }
 
+// videoMaxEdge returns the video-thumb-grid edge size: "unrestricted" (0) doesn't fit a
+// composited grid of downscaled frames, so it falls back to the tmux-sixel edge as a fixed
+// grid size, reusing the existing constant rather than adding a third one.
+//
+// ponytail: reuse over a dedicated "video thumb max edge" config key.
+func (e *Engine) videoMaxEdge() int {
+	if e.cfg.ImageMaxEdgePx < 1 {
+		return config.DefaultPreviewTmuxSixelMaxEdgePx
+	}
+	return e.cfg.ImageMaxEdgePx
+}
+
 func (e *Engine) runJob(it Item) {
 	ctx := e.ctx
 	switch it.Kind {
@@ -236,12 +245,13 @@ func (e *Engine) runJob(it Item) {
 			return previewrun.DecodeStillMaxEdgePNG(c, it.Path, e.cfg.ImageMaxEdgePx)
 		})
 	case KindVideo:
+		maxEdge := e.videoMaxEdge()
 		// Duration probe via meta path; skip if no video duration.
 		metaRes, work := previewrun.RunMediaMeta(previewrun.Request{
 			Path:          it.Path,
-			Preview:       config.PreviewConfig{Images: true, VideoThumbCols: e.cfg.VideoThumbCols, VideoThumbRows: e.cfg.VideoThumbRows, ImageMaxEdgePx: e.cfg.ImageMaxEdgePx},
-			ImageMaxPxW:   e.cfg.ImageMaxEdgePx,
-			ImageMaxPxH:   e.cfg.ImageMaxEdgePx,
+			Preview:       config.PreviewConfig{Images: true, VideoThumbCols: e.cfg.VideoThumbCols, VideoThumbRows: e.cfg.VideoThumbRows, ImageMaxEdgePx: maxEdge},
+			ImageMaxPxW:   maxEdge,
+			ImageMaxPxH:   maxEdge,
 			ImageCellPxH:  20,
 			ImageProtocol: previewpanel.ImageProtocolSixel,
 		})
@@ -249,12 +259,12 @@ func (e *Engine) runJob(it Item) {
 		if work == nil {
 			// No probeable duration (unreadable/corrupt video): record the failure so
 			// HasVideo reports warm and Schedule stops re-queuing it every reconcile.
-			key := videoKey(it.Path, it.Mtime, it.Size, e.cfg.ImageMaxEdgePx, e.cfg.VideoThumbCols, e.cfg.VideoThumbRows)
+			key := videoKey(it.Path, it.Mtime, it.Size, maxEdge, e.cfg.VideoThumbCols, e.cfg.VideoThumbRows)
 			e.cache.markFailed(ctx, key, fmt.Errorf("no video duration"))
 			return
 		}
-		_, _ = e.cache.LoadVideo(ctx, it.Path, it.Mtime, it.Size, e.cfg.ImageMaxEdgePx, e.cfg.VideoThumbCols, e.cfg.VideoThumbRows, func(c context.Context) ([]byte, error) {
-			return previewrun.BuildVideoThumbMaxEdgePNG(c, it.Path, previewrun.MediaThumbDuration(work), e.cfg.VideoThumbCols, e.cfg.VideoThumbRows, e.cfg.ImageMaxEdgePx)
+		_, _ = e.cache.LoadVideo(ctx, it.Path, it.Mtime, it.Size, maxEdge, e.cfg.VideoThumbCols, e.cfg.VideoThumbRows, func(c context.Context) ([]byte, error) {
+			return previewrun.BuildVideoThumbMaxEdgePNG(c, it.Path, previewrun.MediaThumbDuration(work), e.cfg.VideoThumbCols, e.cfg.VideoThumbRows, maxEdge)
 		})
 	}
 }

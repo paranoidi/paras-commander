@@ -171,6 +171,42 @@ func TestValidateClampsJobsWorkerProgress(t *testing.T) {
 	}
 }
 
+func TestValidateImageMaxEdgeClamps(t *testing.T) {
+	cfg := Default()
+	cfg.Preview.ImageMaxEdgePx = 0
+	cfg.Preview.TmuxSixelMaxEdgePx = 0
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.Preview.ImageMaxEdgePx != 0 {
+		t.Fatalf("ImageMaxEdgePx = %d, want 0 (unrestricted stays 0)", cfg.Preview.ImageMaxEdgePx)
+	}
+	if cfg.Preview.TmuxSixelMaxEdgePx != DefaultPreviewTmuxSixelMaxEdgePx {
+		t.Fatalf("TmuxSixelMaxEdgePx = %d, want default %d", cfg.Preview.TmuxSixelMaxEdgePx, DefaultPreviewTmuxSixelMaxEdgePx)
+	}
+
+	cfg.Preview.ImageMaxEdgePx = 10
+	cfg.Preview.TmuxSixelMaxEdgePx = 10
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.Preview.ImageMaxEdgePx != PreviewImageMaxEdgePxMin {
+		t.Fatalf("ImageMaxEdgePx = %d, want floor %d", cfg.Preview.ImageMaxEdgePx, PreviewImageMaxEdgePxMin)
+	}
+	if cfg.Preview.TmuxSixelMaxEdgePx != DefaultPreviewTmuxSixelMaxEdgePx {
+		t.Fatalf("TmuxSixelMaxEdgePx = %d, want default %d", cfg.Preview.TmuxSixelMaxEdgePx, DefaultPreviewTmuxSixelMaxEdgePx)
+	}
+
+	cfg.Preview.ImageMaxEdgePx = 2000
+	cfg.Preview.TmuxSixelMaxEdgePx = 2000
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.Preview.ImageMaxEdgePx != 2000 || cfg.Preview.TmuxSixelMaxEdgePx != 2000 {
+		t.Fatalf("expected values above the floor to pass through unchanged, got %d/%d", cfg.Preview.ImageMaxEdgePx, cfg.Preview.TmuxSixelMaxEdgePx)
+	}
+}
+
 func TestDefaultPathPickerValidateDelayMS(t *testing.T) {
 	if got := Default().UI.PathPickerValidateDelayMS; got != DefaultPathPickerValidateDelayMS {
 		t.Fatalf("PathPickerValidateDelayMS = %d, want %d", got, DefaultPathPickerValidateDelayMS)

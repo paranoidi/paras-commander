@@ -293,9 +293,14 @@ type PreviewConfig struct {
 	QuickViewDisableOnInactiveNav bool `toml:"quick_view_disable_on_inactive_nav"`
 	// PrefetchWorkers is the worker-pool size for background prefetch (default 4).
 	PrefetchWorkers int `toml:"prefetch_workers"`
-	// ImageMaxEdgePx caps the longest edge of decoded stills and video-thumb grids before
-	// the final cell-budget fit (default 1024). Applied even when Prefetch is false.
+	// ImageMaxEdgePx caps the longest edge of decoded stills, for protocols/contexts that
+	// don't need the tmux-sixel payload-safety clamp below (default 0 = unrestricted).
+	// Applied even when Prefetch is false.
 	ImageMaxEdgePx int `toml:"image_max_edge_px"`
+	// TmuxSixelMaxEdgePx caps the longest edge of decoded stills for Sixel under tmux, and of
+	// video-thumb grids for every protocol/context (default 1024, floor 64). Keeps tmux
+	// graphics payloads under its hardcoded ~1MB input buffer limit.
+	TmuxSixelMaxEdgePx int `toml:"tmux_sixel_max_edge_px"`
 	// PrefetchMemoryMaxMB is the in-memory prefetch LRU budget in MiB (default 256).
 	PrefetchMemoryMaxMB int `toml:"prefetch_memory_max_mb"`
 	// VideoThumbCacheMaxMB caps the on-disk video thumbnail cache under
@@ -614,6 +619,7 @@ func Default() Config {
 			QuickViewDisableOnInactiveNav: DefaultPreviewQuickViewDisableOnInactiveNav,
 			PrefetchWorkers:               DefaultPreviewPrefetchWorkers,
 			ImageMaxEdgePx:                DefaultPreviewImageMaxEdgePx,
+			TmuxSixelMaxEdgePx:            DefaultPreviewTmuxSixelMaxEdgePx,
 			PrefetchMemoryMaxMB:           DefaultPreviewPrefetchMemoryMaxMB,
 			VideoThumbCacheMaxMB:          DefaultPreviewVideoThumbCacheMaxMB,
 		},
@@ -1232,8 +1238,11 @@ func (c *Config) validatePreview(builtin *Config) {
 	if c.Preview.PrefetchWorkers < PreviewPrefetchWorkersMin || c.Preview.PrefetchWorkers > PreviewPrefetchWorkersMax {
 		c.Preview.PrefetchWorkers = builtin.Preview.PrefetchWorkers
 	}
-	if c.Preview.ImageMaxEdgePx < PreviewImageMaxEdgePxMin {
-		c.Preview.ImageMaxEdgePx = builtin.Preview.ImageMaxEdgePx
+	if c.Preview.ImageMaxEdgePx != 0 && c.Preview.ImageMaxEdgePx < PreviewImageMaxEdgePxMin {
+		c.Preview.ImageMaxEdgePx = PreviewImageMaxEdgePxMin
+	}
+	if c.Preview.TmuxSixelMaxEdgePx < PreviewImageMaxEdgePxMin {
+		c.Preview.TmuxSixelMaxEdgePx = builtin.Preview.TmuxSixelMaxEdgePx
 	}
 	if c.Preview.PrefetchMemoryMaxMB < 1 {
 		c.Preview.PrefetchMemoryMaxMB = builtin.Preview.PrefetchMemoryMaxMB

@@ -33,7 +33,7 @@ func runImageCtx(ctx context.Context, req Request) Result {
 	if err != nil {
 		return Result{ErrorMsg: err.Error()}
 	}
-	maxEdge := ImageMaxEdge(req.Preview)
+	maxEdge := EffectiveStillMaxEdge(req.Preview, req.ImageProtocol, req.ImageInTmux)
 
 	magickSource := localfs.IsImageMagickPath(req.Path)
 
