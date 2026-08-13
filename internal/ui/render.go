@@ -480,8 +480,10 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		}
 		drawFilePreviewPanel(screen, previewRect, model.FullscreenFilePreviewDraw, styles, chromeBlocked, true, false, false, true, "", "", model.PanelScrollbar, -1, tcell.Style{})
 		if model.FullscreenFilePreviewDraw.Search.Editing && layout.Footer.Height > 0 {
+			search := model.FullscreenFilePreviewDraw.Search
+			noMatch := model.FullscreenFilePreviewSearchField.Value != "" && len(search.Matches) == 0
 			drawFilePreviewSearchBar(screen, Rect{X: 0, Y: layout.Footer.Y - 1, Width: layout.Width, Height: 1},
-				model.FullscreenFilePreviewSearchField, styles)
+				model.FullscreenFilePreviewSearchField, noMatch, styles)
 		}
 		if model.FilePreviewThemePicker.Open && pickerRect.Width > 0 {
 			dialog.DrawFilePreviewThemePicker(screen, pickerRect, model.FilePreviewThemePicker, styles)
