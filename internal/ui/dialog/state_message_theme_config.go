@@ -56,6 +56,11 @@ type ConfigDialogState struct {
 	PanelScrollbarInactive bool
 	ListFormat             panel.ListFormat
 	Focus                  int // 0=file icons, 1=zoom, 2=shrunken, 3=horizontal split, 4-9=scroll mode (left) / scrollbar (right), 10-12=listing format, 13=OK, 14=Cancel
+
+	// EditStubConfirm shows the "config.toml does not exist, generate default and open it?"
+	// confirmation, entered via F9 when no config.toml exists yet.
+	EditStubConfirm      bool
+	EditStubConfirmFocus int // 0=Yes (default), 1=No
 }
 
 // SortDialogState is the renderable state for the sort configuration modal.

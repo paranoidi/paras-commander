@@ -27,6 +27,10 @@ func configDialogScrollbarColumns(rect draw.Rect) (labelCol, optionCol int) {
 const configDialogHorizontalSplitLabel = "Start in horizontal split mode"
 
 func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogState, styles theme.Theme) {
+	if state.EditStubConfirm {
+		drawConfigEditStubConfirm(screen, layout, state, styles)
+		return
+	}
 	const (
 		width     = 54
 		minWidth  = 38
@@ -101,4 +105,26 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	okFocused := state.Focus == configDialogFocusOK
 	cancelFocused := state.Focus == configDialogFocusCancel
 	draw.DrawOKCancelButtonRow(screen, rect, buttonY, okFocused, cancelFocused, styles)
+}
+
+// drawConfigEditStubConfirm renders the "config.toml does not exist, generate default and open
+// it?" confirmation shown when F9 is pressed in the Configuration dialog with no config.toml yet.
+func drawConfigEditStubConfirm(screen tcell.Screen, layout Layout, state ConfigDialogState, styles theme.Theme) {
+	const width, height = 56, 7
+	rect := draw.CenteredDialogRect(layout, width, height)
+
+	borderStyle := draw.DrawDialogFrame(screen, rect, "Edit Config", styles)
+	_, dbg, _ := styles.DialogSurface.Decompose()
+	textStyle := styles.DialogText.Background(dbg)
+	textX, textW := draw.DialogTextX(rect), draw.DialogContentWidth(rect)
+
+	primitive.Text(screen, textX, rect.Y+1, textW, "config.toml does not exist yet.", textStyle)
+	primitive.Text(screen, textX, rect.Y+2, textW, "Generate default and open in editor?", textStyle)
+
+	buttonY := rect.Y + rect.Height - 2
+	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
+	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
+		{Label: "Yes", Shortcut: 'Y', Focused: state.EditStubConfirmFocus == 0},
+		{Label: "No", Shortcut: 'N', Focused: state.EditStubConfirmFocus == 1},
+	}, styles)
 }

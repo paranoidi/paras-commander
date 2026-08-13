@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
@@ -276,9 +278,17 @@ func (a *App) applyConfigDialog() {
 }
 
 func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
+	st := &a.model.ConfigDialog
+	if st.EditStubConfirm {
+		a.handleConfigEditStubConfirmKey(event)
+		return
+	}
+	if event.Key() == tcell.KeyF9 {
+		a.editConfigTOMLFromDialog()
+		return
+	}
 	// Segments: view checkboxes(0-3) | scroll section(4-9) | listing radios(10-12) | buttons(13).
 	form := dialog.NewDialogLinearForm(13).WithSegments(0, 4, 10, 13)
-	st := &a.model.ConfigDialog
 	listRadios := panel.ListFormatDialogRadios()
 	scrollRadios := panel.ScrollModeDialogRadios()
 	sbRadios := uiscrollbar.DialogRadios()
@@ -352,6 +362,94 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 			return true
 		},
 	})
+}
+
+// handleConfigEditStubConfirmKey handles Yes/No for the "config.toml does not exist, generate
+// default and open it?" confirmation shown from the Configuration dialog's F9 handler.
+func (a *App) handleConfigEditStubConfirmKey(event *tcell.EventKey) {
+	st := &a.model.ConfigDialog
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		switch event.Rune() {
+		case 'y', 'Y':
+			st.EditStubConfirm = false
+			a.createAndEditConfigStub()
+			return
+		case 'n', 'N':
+			st.EditStubConfirm = false
+			return
+		}
+	}
+	switch event.Key() {
+	case tcell.KeyEsc:
+		st.EditStubConfirm = false
+	case tcell.KeyLeft:
+		st.EditStubConfirmFocus = dialog.DialogPairLeftRight(st.EditStubConfirmFocus, false)
+	case tcell.KeyRight:
+		st.EditStubConfirmFocus = dialog.DialogPairLeftRight(st.EditStubConfirmFocus, true)
+	case tcell.KeyEnter:
+		yes := st.EditStubConfirmFocus == 0
+		st.EditStubConfirm = false
+		if yes {
+			a.createAndEditConfigStub()
+		}
+	}
+}
+
+// editConfigTOMLFromDialog handles F9 in the Configuration dialog: opens config.toml in the
+// external editor, or prompts to generate a default stub first when it doesn't exist yet.
+func (a *App) editConfigTOMLFromDialog() {
+	st := &a.model.ConfigDialog
+	if !st.Open {
+		return
+	}
+	path := a.paths.ConfigFile
+	if path == "" {
+		a.setErrorMessage("Edit config", fmt.Errorf("config.toml location is unknown"))
+		return
+	}
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			st.EditStubConfirm = true
+			st.EditStubConfirmFocus = 0
+			return
+		}
+		a.setErrorMessage("Edit config", err)
+		return
+	}
+	a.openConfigTOMLInEditor(path)
+}
+
+// createAndEditConfigStub writes the default config.toml stub (creating the config directory
+// if needed, e.g. on a first run) and opens it in the external editor.
+func (a *App) createAndEditConfigStub() {
+	path := a.paths.ConfigFile
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		a.setErrorMessage("Edit config", err)
+		return
+	}
+	if err := config.WriteDefaultStub(path); err != nil {
+		a.setErrorMessage("Edit config", err)
+		return
+	}
+	a.openConfigTOMLInEditor(path)
+}
+
+// openConfigTOMLInEditor launches the external editor on config.toml, then reloads the config
+// from disk and rebuilds the Configuration dialog so any manual edits take effect immediately.
+func (a *App) openConfigTOMLInEditor(path string) {
+	if err := a.openFileInExternalEditor(path); err != nil {
+		a.setErrorMessage("Edit config", err)
+		return
+	}
+	cfg, err := config.LoadFromPaths(a.paths)
+	if err != nil {
+		a.openConfigDialog()
+		a.setErrorMessage("Edit config", err)
+		return
+	}
+	a.config = cfg
+	a.openConfigDialog()
+	a.setTransientMessage("config.toml reloaded", ui.MessageUrgencyInfo)
 }
 
 // Group selection dialog handlers
