@@ -1057,7 +1057,7 @@ func mediaThumbWarm(req previewrun.Request) bool {
 	if rows < 1 {
 		rows = 2
 	}
-	return req.Cache.HasVideo(req.Path, fi.ModTime().UnixNano(), fi.Size(), previewrun.ImageMaxEdge(req.Preview), cols, rows)
+	return req.Cache.HasVideo(req.Path, fi.ModTime().UnixNano(), fi.Size(), previewrun.VideoThumbMaxEdge(req.Preview), cols, rows)
 }
 
 func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarget, runGen uint64, res previewrun.Result) {

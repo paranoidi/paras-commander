@@ -307,11 +307,21 @@ const (
 	// PreviewPrefetchWorkersMin / Max clamp [preview].prefetch_workers in Validate.
 	PreviewPrefetchWorkersMin = 1
 	PreviewPrefetchWorkersMax = 32
-	// DefaultPreviewImageMaxEdgePx caps the longest edge of decoded stills and video-thumb
-	// grids before the final cell-budget fit (keeps tmux payloads under ~1MB).
-	DefaultPreviewImageMaxEdgePx = 1024
-	// PreviewImageMaxEdgePxMin clamps [preview].image_max_edge_px in Validate.
+	// DefaultPreviewImageMaxEdgePx caps the longest edge of decoded stills before the final
+	// cell-budget fit, for protocols/contexts that don't need the tmux-sixel payload-safety
+	// clamp below. Default 0 = unrestricted (decode at native resolution, still bounded by
+	// DefaultPreviewImageMaxDecodeMegapixels).
+	DefaultPreviewImageMaxEdgePx = 0
+	// PreviewImageMaxEdgePxMin clamps [preview].image_max_edge_px (when >0) and
+	// [preview].tmux_sixel_max_edge_px in Validate.
 	PreviewImageMaxEdgePxMin = 64
+	// DefaultPreviewTmuxSixelMaxEdgePx caps the longest edge of decoded stills for Sixel under
+	// tmux, and video-thumb grids for every protocol/context: Sixel is transmitted as one
+	// unchunked DCS escape sequence, and tmux (through 3.5a) silently discards a single escape
+	// sequence over its hardcoded ~1MB input buffer, so this keeps a typical payload safely
+	// below that ceiling. Kitty is exempt (chunked into ≤4096-byte APC pieces), as is Sixel
+	// outside tmux (no equivalent buffer limit documented for bare terminals).
+	DefaultPreviewTmuxSixelMaxEdgePx = 1024
 	// DefaultPreviewPrefetchMemoryMaxMB is the in-memory prefetch LRU budget (MiB).
 	DefaultPreviewPrefetchMemoryMaxMB = 256
 	// DefaultPreviewVideoThumbCacheMaxMB caps on-disk video thumbnail cache size (MiB).

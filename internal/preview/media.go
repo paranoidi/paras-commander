@@ -146,7 +146,7 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork) Resu
 		return metaResult
 	}
 
-	maxEdge := ImageMaxEdge(req.Preview)
+	maxEdge := VideoThumbMaxEdge(req.Preview)
 	fi, err := os.Stat(req.Path)
 	if err != nil {
 		metaResult.CombinedText = metaText + "\n(thumbnails failed)"

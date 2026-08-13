@@ -1,6 +1,8 @@
 package preview
 
 import (
+	"os"
+
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/preview/prefetch"
@@ -16,11 +18,15 @@ func (h *Handler) ensurePrefetch() {
 	if h.prefetch != nil {
 		return
 	}
+	// Resolve the same effective still-image max-edge a live request would, so prefetched
+	// cache entries share the same cache key and actually get hit.
+	protocol := previewrun.ResolveImageProtocol(cfg.ImageProtocol, os.Getenv)
+	inTmux := os.Getenv("TMUX") != ""
 	h.prefetch = prefetch.NewEngine(h.ctx, prefetch.Config{
 		Workers:        cfg.PrefetchWorkers,
 		MemoryMaxMB:    cfg.PrefetchMemoryMaxMB,
 		VideoDiskMaxMB: cfg.VideoThumbCacheMaxMB,
-		ImageMaxEdgePx: cfg.ImageMaxEdgePx,
+		ImageMaxEdgePx: previewrun.EffectiveStillMaxEdge(cfg, protocol, inTmux),
 		VideoThumbCols: cfg.VideoThumbCols,
 		VideoThumbRows: cfg.VideoThumbRows,
 		OnChange: func() {
