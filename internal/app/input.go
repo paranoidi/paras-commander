@@ -227,8 +227,11 @@ func (a *App) pathPickerMetaFooterKeys() []menu.FunctionKey {
 // group-select/file-dialog/SFTP-connect/path-picker/history/find/meta/user-menu/compare-merge dialogs).
 func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 	rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
-	if a.model.ConfigDialog.Open && !a.model.ConfigDialog.EditStubConfirm {
+	if a.model.ConfigDialog.Open && !a.model.ConfigDialog.EditStubConfirm && !a.model.ConfigDialog.ResetDefaultsConfirm {
 		rest = append([]menu.FunctionKey{menu.FunctionKeyEditConfig}, rest...)
+		if a.configFileExists() {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Reset to defaults"}}, rest...)
+		}
 	}
 	if hints := a.dialogCtrl.FlattenDialogOverlayFooterKeys(a.keys.FlattenDialog); len(hints) > 0 {
 		rest = append(hints, rest...)

@@ -31,6 +31,10 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 		drawConfigEditStubConfirm(screen, layout, state, styles)
 		return
 	}
+	if state.ResetDefaultsConfirm {
+		drawConfigResetDefaultsConfirm(screen, layout, state, styles)
+		return
+	}
 	const (
 		width     = 54
 		minWidth  = 38
@@ -126,5 +130,27 @@ func drawConfigEditStubConfirm(screen tcell.Screen, layout Layout, state ConfigD
 	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
 		{Label: "Yes", Shortcut: 'Y', Focused: state.EditStubConfirmFocus == 0},
 		{Label: "No", Shortcut: 'N', Focused: state.EditStubConfirmFocus == 1},
+	}, styles)
+}
+
+// drawConfigResetDefaultsConfirm renders the "delete config.toml and reset to defaults?"
+// confirmation shown when F8 is pressed in the Configuration dialog with config.toml present.
+func drawConfigResetDefaultsConfirm(screen tcell.Screen, layout Layout, state ConfigDialogState, styles theme.Theme) {
+	const width, height = 56, 7
+	rect := draw.CenteredDialogRect(layout, width, height)
+
+	borderStyle := draw.DrawDialogFrame(screen, rect, "Reset To Defaults", styles)
+	_, dbg, _ := styles.DialogSurface.Decompose()
+	textStyle := styles.DialogText.Background(dbg)
+	textX, textW := draw.DialogTextX(rect), draw.DialogContentWidth(rect)
+
+	primitive.Text(screen, textX, rect.Y+1, textW, "This deletes config.toml and resets all", textStyle)
+	primitive.Text(screen, textX, rect.Y+2, textW, "settings to their defaults. Continue?", textStyle)
+
+	buttonY := rect.Y + rect.Height - 2
+	draw.DrawDialogHSeparator(screen, rect, buttonY-2, borderStyle)
+	draw.DrawDialogButtonRowCentered(screen, rect, buttonY, []draw.DialogButtonSpec{
+		{Label: "Yes", Shortcut: 'Y', Focused: state.ResetDefaultsConfirmFocus == 0, Destructive: true},
+		{Label: "No", Shortcut: 'N', Focused: state.ResetDefaultsConfirmFocus == 1},
 	}, styles)
 }

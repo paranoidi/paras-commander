@@ -283,8 +283,17 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 		a.handleConfigEditStubConfirmKey(event)
 		return
 	}
+	if st.ResetDefaultsConfirm {
+		a.handleConfigResetDefaultsConfirmKey(event)
+		return
+	}
 	if event.Key() == tcell.KeyF9 {
 		a.editConfigTOMLFromDialog()
+		return
+	}
+	if event.Key() == tcell.KeyF8 && a.configFileExists() {
+		st.ResetDefaultsConfirm = true
+		st.ResetDefaultsConfirmFocus = 0
 		return
 	}
 	// Segments: view checkboxes(0-3) | scroll section(4-9) | listing radios(10-12) | buttons(13).
@@ -393,6 +402,70 @@ func (a *App) handleConfigEditStubConfirmKey(event *tcell.EventKey) {
 			a.createAndEditConfigStub()
 		}
 	}
+}
+
+// handleConfigResetDefaultsConfirmKey handles Yes/No for the "delete config.toml and reset to
+// defaults?" confirmation shown from the Configuration dialog's F8 handler.
+func (a *App) handleConfigResetDefaultsConfirmKey(event *tcell.EventKey) {
+	st := &a.model.ConfigDialog
+	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
+		switch event.Rune() {
+		case 'y', 'Y':
+			st.ResetDefaultsConfirm = false
+			a.resetConfigToDefaults()
+			return
+		case 'n', 'N':
+			st.ResetDefaultsConfirm = false
+			return
+		}
+	}
+	switch event.Key() {
+	case tcell.KeyEsc:
+		st.ResetDefaultsConfirm = false
+	case tcell.KeyLeft:
+		st.ResetDefaultsConfirmFocus = dialog.DialogPairLeftRight(st.ResetDefaultsConfirmFocus, false)
+	case tcell.KeyRight:
+		st.ResetDefaultsConfirmFocus = dialog.DialogPairLeftRight(st.ResetDefaultsConfirmFocus, true)
+	case tcell.KeyEnter:
+		yes := st.ResetDefaultsConfirmFocus == 0
+		st.ResetDefaultsConfirm = false
+		if yes {
+			a.resetConfigToDefaults()
+		}
+	}
+}
+
+// configFileExists reports whether config.toml currently exists on disk.
+func (a *App) configFileExists() bool {
+	if a.paths.ConfigFile == "" {
+		return false
+	}
+	_, err := os.Stat(a.paths.ConfigFile)
+	return err == nil
+}
+
+// resetConfigToDefaults deletes config.toml and reloads the (now default) configuration,
+// then rebuilds the Configuration dialog to reflect it.
+func (a *App) resetConfigToDefaults() {
+	path := a.paths.ConfigFile
+	if path == "" {
+		a.setErrorMessage("Reset to defaults", fmt.Errorf("config.toml location is unknown"))
+		return
+	}
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		a.setErrorMessage("Reset to defaults", err)
+		return
+	}
+	cfg, err := config.LoadFromPaths(a.paths)
+	if err != nil {
+		a.openConfigDialog()
+		a.setErrorMessage("Reset to defaults", err)
+		return
+	}
+	a.config = cfg
+	a.restartStatusCommandTicker(cfg.StatusCommand)
+	a.openConfigDialog()
+	a.setTransientMessage("Configuration reset to defaults", ui.MessageUrgencyInfo)
 }
 
 // editConfigTOMLFromDialog handles F9 in the Configuration dialog: opens config.toml in the

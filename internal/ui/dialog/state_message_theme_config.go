@@ -61,6 +61,11 @@ type ConfigDialogState struct {
 	// confirmation, entered via F9 when no config.toml exists yet.
 	EditStubConfirm      bool
 	EditStubConfirmFocus int // 0=Yes (default), 1=No
+
+	// ResetDefaultsConfirm shows the "delete config.toml and reset to defaults?" confirmation,
+	// entered via F8 when config.toml exists.
+	ResetDefaultsConfirm      bool
+	ResetDefaultsConfirmFocus int // 0=Yes (default), 1=No
 }
 
 // SortDialogState is the renderable state for the sort configuration modal.
