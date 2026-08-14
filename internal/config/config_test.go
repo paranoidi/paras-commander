@@ -175,6 +175,7 @@ func TestValidateImageMaxEdgeClamps(t *testing.T) {
 	cfg := Default()
 	cfg.Preview.ImageMaxEdgePx = 0
 	cfg.Preview.TmuxSixelMaxEdgePx = 0
+	cfg.Preview.VideoThumbMaxEdgePx = 0
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
@@ -184,9 +185,13 @@ func TestValidateImageMaxEdgeClamps(t *testing.T) {
 	if cfg.Preview.TmuxSixelMaxEdgePx != DefaultPreviewTmuxSixelMaxEdgePx {
 		t.Fatalf("TmuxSixelMaxEdgePx = %d, want default %d", cfg.Preview.TmuxSixelMaxEdgePx, DefaultPreviewTmuxSixelMaxEdgePx)
 	}
+	if cfg.Preview.VideoThumbMaxEdgePx != DefaultPreviewVideoThumbMaxEdgePx {
+		t.Fatalf("VideoThumbMaxEdgePx = %d, want default %d", cfg.Preview.VideoThumbMaxEdgePx, DefaultPreviewVideoThumbMaxEdgePx)
+	}
 
 	cfg.Preview.ImageMaxEdgePx = 10
 	cfg.Preview.TmuxSixelMaxEdgePx = 10
+	cfg.Preview.VideoThumbMaxEdgePx = 10
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
@@ -196,14 +201,18 @@ func TestValidateImageMaxEdgeClamps(t *testing.T) {
 	if cfg.Preview.TmuxSixelMaxEdgePx != DefaultPreviewTmuxSixelMaxEdgePx {
 		t.Fatalf("TmuxSixelMaxEdgePx = %d, want default %d", cfg.Preview.TmuxSixelMaxEdgePx, DefaultPreviewTmuxSixelMaxEdgePx)
 	}
+	if cfg.Preview.VideoThumbMaxEdgePx != DefaultPreviewVideoThumbMaxEdgePx {
+		t.Fatalf("VideoThumbMaxEdgePx = %d, want default %d", cfg.Preview.VideoThumbMaxEdgePx, DefaultPreviewVideoThumbMaxEdgePx)
+	}
 
 	cfg.Preview.ImageMaxEdgePx = 2000
 	cfg.Preview.TmuxSixelMaxEdgePx = 2000
+	cfg.Preview.VideoThumbMaxEdgePx = 2000
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	if cfg.Preview.ImageMaxEdgePx != 2000 || cfg.Preview.TmuxSixelMaxEdgePx != 2000 {
-		t.Fatalf("expected values above the floor to pass through unchanged, got %d/%d", cfg.Preview.ImageMaxEdgePx, cfg.Preview.TmuxSixelMaxEdgePx)
+	if cfg.Preview.ImageMaxEdgePx != 2000 || cfg.Preview.TmuxSixelMaxEdgePx != 2000 || cfg.Preview.VideoThumbMaxEdgePx != 2000 {
+		t.Fatalf("expected values above the floor to pass through unchanged, got %d/%d/%d", cfg.Preview.ImageMaxEdgePx, cfg.Preview.TmuxSixelMaxEdgePx, cfg.Preview.VideoThumbMaxEdgePx)
 	}
 }
 

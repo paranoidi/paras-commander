@@ -315,13 +315,20 @@ const (
 	// PreviewImageMaxEdgePxMin clamps [preview].image_max_edge_px (when >0) and
 	// [preview].tmux_sixel_max_edge_px in Validate.
 	PreviewImageMaxEdgePxMin = 64
-	// DefaultPreviewTmuxSixelMaxEdgePx caps the longest edge of decoded stills for Sixel under
-	// tmux, and video-thumb grids for every protocol/context: Sixel is transmitted as one
-	// unchunked DCS escape sequence, and tmux (through 3.5a) silently discards a single escape
-	// sequence over its hardcoded ~1MB input buffer, so this keeps a typical payload safely
-	// below that ceiling. Kitty is exempt (chunked into ≤4096-byte APC pieces), as is Sixel
-	// outside tmux (no equivalent buffer limit documented for bare terminals).
+	// DefaultPreviewTmuxSixelMaxEdgePx caps the longest edge of decoded stills and video-thumb
+	// grids for Sixel under tmux: Sixel is transmitted as one unchunked DCS escape sequence, and
+	// tmux (through 3.5a) silently discards a single escape sequence over its hardcoded ~1MB
+	// input buffer, so this keeps a typical payload safely below that ceiling. Kitty is exempt
+	// (chunked into ≤4096-byte APC pieces), as is Sixel outside tmux (no equivalent buffer limit
+	// documented for bare terminals).
 	DefaultPreviewTmuxSixelMaxEdgePx = 1024
+	// DefaultPreviewVideoThumbMaxEdgePx caps the longest edge of composited video-thumb grids
+	// for protocols/contexts that don't need the tmux-sixel payload-safety clamp above. Unlike
+	// still images, a video-thumb grid can't go fully unrestricted: buildVideoThumbGrid tiles
+	// native-resolution frames into a cols×rows composite before this clamp is applied, so the
+	// clamp is what bounds that intermediate composite's memory footprint. Higher than the
+	// tmux-sixel default for better quality, but still bounded.
+	DefaultPreviewVideoThumbMaxEdgePx = 2048
 	// DefaultPreviewPrefetchMemoryMaxMB is the in-memory prefetch LRU budget (MiB).
 	DefaultPreviewPrefetchMemoryMaxMB = 256
 	// DefaultPreviewVideoThumbCacheMaxMB caps on-disk video thumbnail cache size (MiB).

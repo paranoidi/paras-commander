@@ -27,6 +27,7 @@ func (h *Handler) ensurePrefetch() {
 		MemoryMaxMB:    cfg.PrefetchMemoryMaxMB,
 		VideoDiskMaxMB: cfg.VideoThumbCacheMaxMB,
 		ImageMaxEdgePx: previewrun.EffectiveStillMaxEdge(cfg, protocol, inTmux),
+		VideoMaxEdgePx: previewrun.EffectiveVideoThumbMaxEdge(cfg, protocol, inTmux),
 		VideoThumbCols: cfg.VideoThumbCols,
 		VideoThumbRows: cfg.VideoThumbRows,
 		OnChange: func() {

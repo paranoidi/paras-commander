@@ -56,10 +56,37 @@ func TestEffectiveStillMaxEdge(t *testing.T) {
 }
 
 func TestVideoThumbMaxEdgeFallback(t *testing.T) {
-	if got := VideoThumbMaxEdge(config.PreviewConfig{ImageMaxEdgePx: 0}); got != config.DefaultPreviewTmuxSixelMaxEdgePx {
-		t.Fatalf("VideoThumbMaxEdge(0) = %d, want %d", got, config.DefaultPreviewTmuxSixelMaxEdgePx)
+	if got := VideoThumbMaxEdge(config.PreviewConfig{}); got != config.DefaultPreviewVideoThumbMaxEdgePx {
+		t.Fatalf("VideoThumbMaxEdge(empty) = %d, want %d", got, config.DefaultPreviewVideoThumbMaxEdgePx)
 	}
-	if got := VideoThumbMaxEdge(config.PreviewConfig{ImageMaxEdgePx: 512}); got != 512 {
+	if got := VideoThumbMaxEdge(config.PreviewConfig{VideoThumbMaxEdgePx: 512}); got != 512 {
 		t.Fatalf("VideoThumbMaxEdge(512) = %d, want 512", got)
+	}
+}
+
+func TestEffectiveVideoThumbMaxEdge(t *testing.T) {
+	cfg := config.PreviewConfig{ImageMaxEdgePx: 0, TmuxSixelMaxEdgePx: 1024, VideoThumbMaxEdgePx: 2048}
+	cases := []struct {
+		name     string
+		protocol previewpanel.ImageProtocol
+		inTmux   bool
+		want     int
+	}{
+		{"sixel+tmux uses tmux clamp", previewpanel.ImageProtocolSixel, true, 1024},
+		{"sixel outside tmux uses video default", previewpanel.ImageProtocolSixel, false, 2048},
+		{"kitty in tmux uses video default", previewpanel.ImageProtocolKitty, true, 2048},
+		{"kitty outside tmux uses video default", previewpanel.ImageProtocolKitty, false, 2048},
+	}
+	for _, c := range cases {
+		if got := EffectiveVideoThumbMaxEdge(cfg, c.protocol, c.inTmux); got != c.want {
+			t.Errorf("%s: EffectiveVideoThumbMaxEdge() = %d, want %d", c.name, got, c.want)
+		}
+	}
+
+	override := config.PreviewConfig{ImageMaxEdgePx: 777, TmuxSixelMaxEdgePx: 1024, VideoThumbMaxEdgePx: 2048}
+	for _, c := range cases {
+		if got := EffectiveVideoThumbMaxEdge(override, c.protocol, c.inTmux); got != 777 {
+			t.Errorf("%s: explicit ImageMaxEdgePx override = %d, want 777", c.name, got)
+		}
 	}
 }

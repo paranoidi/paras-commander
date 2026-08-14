@@ -36,6 +36,7 @@ type Config struct {
 	MemoryMaxMB    int
 	VideoDiskMaxMB int
 	ImageMaxEdgePx int
+	VideoMaxEdgePx int
 	VideoThumbCols int
 	VideoThumbRows int
 	DiskDir        string
@@ -127,7 +128,7 @@ func (e *Engine) Schedule(items []Item) {
 				continue
 			}
 		case KindVideo:
-			if e.cache.HasVideo(it.Path, it.Mtime, it.Size, e.videoMaxEdge(), e.cfg.VideoThumbCols, e.cfg.VideoThumbRows) {
+			if e.cache.HasVideo(it.Path, it.Mtime, it.Size, e.cfg.VideoMaxEdgePx, e.cfg.VideoThumbCols, e.cfg.VideoThumbRows) {
 				continue
 			}
 		default:
@@ -225,18 +226,6 @@ func (e *Engine) worker() {
 	}
 }
 
-// videoMaxEdge returns the video-thumb-grid edge size: "unrestricted" (0) doesn't fit a
-// composited grid of downscaled frames, so it falls back to the tmux-sixel edge as a fixed
-// grid size, reusing the existing constant rather than adding a third one.
-//
-// ponytail: reuse over a dedicated "video thumb max edge" config key.
-func (e *Engine) videoMaxEdge() int {
-	if e.cfg.ImageMaxEdgePx < 1 {
-		return config.DefaultPreviewTmuxSixelMaxEdgePx
-	}
-	return e.cfg.ImageMaxEdgePx
-}
-
 func (e *Engine) runJob(it Item) {
 	ctx := e.ctx
 	switch it.Kind {
@@ -245,7 +234,7 @@ func (e *Engine) runJob(it Item) {
 			return previewrun.DecodeStillMaxEdgePNG(c, it.Path, e.cfg.ImageMaxEdgePx)
 		})
 	case KindVideo:
-		maxEdge := e.videoMaxEdge()
+		maxEdge := e.cfg.VideoMaxEdgePx
 		// Duration probe via meta path; skip if no video duration.
 		metaRes, work := previewrun.RunMediaMeta(previewrun.Request{
 			Path:          it.Path,
