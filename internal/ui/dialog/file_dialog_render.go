@@ -41,8 +41,8 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 		if msg := strings.TrimSpace(state.Message); msg != "" {
 			helpLines = strings.Count(state.Message, "\n") + 1
 		}
-		// Help block + separator + command block + separator + checkbox + optional pool section + separator + buttons row.
-		height = helpLines + 1 + runForEachCommandFieldRows(state) + 2 + 4
+		// Help block + separator + command block + separator + 2 checkboxes + optional pool section + separator + buttons row.
+		height = helpLines + 1 + runForEachCommandFieldRows(state) + 3 + 4
 		if runForEachHasPoolSelector(state) {
 			// Separator + label + blank + pool radios ("No pool" + one per pool).
 			height += 1 + 1 + 1 + (1 + len(state.RunForEachPools))
@@ -398,6 +398,10 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Run in each selected directory", 'R', state.RunForEachInDirs, state.FocusedField == len(state.Fields), styles)
 	}
 	y++
+	if y < innerBottom {
+		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Allocate pseudo-TTY (interactive)", 'T', state.RunForEachPTY, state.FocusedField == len(state.Fields)+1, styles)
+	}
+	y++
 
 	if !runForEachHasPoolSelector(state) {
 		return
@@ -421,7 +425,7 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 	primitive.Text(screen, rect.X+2, y, labelWidth, "Worker pool (optional):", labelStyle)
 	y += 2 // blank line between label and pool radios (AGENTS.md dialog layout)
 
-	baseFocus := len(state.Fields) + 1
+	baseFocus := len(state.Fields) + 2
 	if y < innerBottom {
 		focused := state.FocusedField == baseFocus
 		selected := strings.TrimSpace(state.RunForEachPool) == ""
@@ -715,8 +719,8 @@ func runForEachExtraFocusRows(state FileDialogState) int {
 	if state.DialogType != FileDialogRunForEach {
 		return 0
 	}
-	// Checkbox row.
-	rows := 1
+	// "Run in each selected directory" + "Allocate pseudo-TTY" checkbox rows.
+	rows := 2
 	if runForEachHasPoolSelector(state) {
 		// "No pool" + one row per configured pool.
 		rows += 1 + len(state.RunForEachPools)

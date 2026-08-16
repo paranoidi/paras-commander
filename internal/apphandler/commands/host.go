@@ -3,6 +3,7 @@ package commands
 import (
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -16,6 +17,11 @@ type Host interface {
 
 	ActivePanel() *panel.State
 	InactivePanel() *panel.State
+
+	// Styles returns the current theme snapshot, read fresh on every use (the settings/theme
+	// dialogs mutate it in place after construction) — needed for the run-for-each PTY
+	// session's terminal text style in the bottom terminal panel.
+	Styles() theme.Theme
 
 	// BrowserMenuDefinitions returns the browser view's menu bar definitions, restored when
 	// the Commands view closes.

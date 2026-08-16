@@ -59,6 +59,7 @@ func (h *Handler) ExecuteRunForEach() {
 	workDir := fd.RunForEachDir
 	poolName := strings.TrimSpace(fd.RunForEachPool)
 	inDirs := fd.RunForEachInDirs
+	usePTY := fd.RunForEachPTY
 	active := h.host.ActivePanel()
 	other := h.host.InactivePanel()
 	h.RecomputeRunForEachValidation()
@@ -75,6 +76,7 @@ func (h *Handler) ExecuteRunForEach() {
 		PerEntryWorkDir: inDirs,
 		PoolName:        poolName,
 		Background:      false,
+		PTY:             usePTY,
 		NotifyLabel:     "Run for each",
 		BuildItem: func(ent localfs.Entry) (RunForEachBuiltItem, error) {
 			return BuildRunForEachItem(cmdLine, ent, active, other, false, !inDirs)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/workpool"
 )
@@ -52,6 +53,21 @@ type Handler struct {
 	// terminate/kill its running subprocess (commands.terminate/commands.kill).
 	procsMu sync.Mutex
 	procs   map[int]*procHandle
+
+	// ptyMu guards entryPTY, the state for the one run-for-each entry (if any) currently
+	// attached to a live interactive PTY session. Batches run strictly sequentially, so at
+	// most one entry ever holds a session at a time. Written from the batch goroutine
+	// (runEntryPTY) and read from the main goroutine (key routing, terminate/kill, cursor
+	// sync), hence the dedicated lock — mirrors the procsMu/procs pattern above.
+	ptyMu    sync.RWMutex
+	entryPTY *entryPTYSession
+}
+
+// entryPTYSession is the live PTY state for one run-for-each entry.
+type entryPTYSession struct {
+	idx  int
+	sub  *subshell.Subshell
+	feed *subshell.PanelFeed
 }
 
 // New creates a Handler.
@@ -79,3 +95,32 @@ func (h *Handler) EndBatch() { h.batchesInflight.Add(-1) }
 
 // HasRunning reports whether any command batch is still in flight.
 func (h *Handler) HasRunning() bool { return h.batchesInflight.Load() > 0 }
+
+// setEntryPTY records or clears the currently active run-for-each PTY session.
+func (h *Handler) setEntryPTY(s *entryPTYSession) {
+	h.ptyMu.Lock()
+	h.entryPTY = s
+	h.ptyMu.Unlock()
+}
+
+// currentEntryPTY returns the active run-for-each PTY session, or nil when none is running.
+func (h *Handler) currentEntryPTY() *entryPTYSession {
+	h.ptyMu.RLock()
+	defer h.ptyMu.RUnlock()
+	return h.entryPTY
+}
+
+// OwnsTerminalPanel reports whether a run-for-each PTY-mode entry currently owns the bottom
+// terminal panel strip — used by internal/app's Alt+P entry points to refuse to clobber it.
+func (h *Handler) OwnsTerminalPanel() bool { return h.currentEntryPTY() != nil }
+
+// ActivePTYSession returns the run-for-each PTY session currently occupying the terminal panel,
+// if any — used by internal/app so Ctrl-O (drop-to-shell) and panel grow/shrink operate on the
+// actual live session instead of always assuming the persistent Alt+P shell.
+func (h *Handler) ActivePTYSession() (sub *subshell.Subshell, feed *subshell.PanelFeed, ok bool) {
+	sess := h.currentEntryPTY()
+	if sess == nil {
+		return nil, nil, false
+	}
+	return sess.sub, sess.feed, true
+}

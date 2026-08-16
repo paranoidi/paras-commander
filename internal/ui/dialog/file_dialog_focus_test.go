@@ -70,3 +70,34 @@ func TestFileDialogFocusFormDuplicateWithFocusCheckbox(t *testing.T) {
 		t.Fatalf("OKIndex = %d want %d", form.OKIndex(), wantContent)
 	}
 }
+
+// TestFileDialogFocusFormRunForEachCheckboxes locks down the two run-for-each checkbox focus
+// indices (RunForEachInDirs at len(Fields), RunForEachPTY at len(Fields)+1) and, when a pool
+// selector is present, that its radios start right after both checkboxes — regression coverage
+// for the baseFocus bump (+1 -> +2) that came with adding the second checkbox.
+func TestFileDialogFocusFormRunForEachCheckboxes(t *testing.T) {
+	st := FileDialogState{
+		DialogType: FileDialogRunForEach,
+		Fields:     []FileDialogField{{}},
+	}
+	form := FileDialogFocusForm(st)
+	wantContent := 1 + 2 // one field + two checkboxes (InDirs, PTY)
+	if form.NumContent != wantContent {
+		t.Fatalf("NumContent = %d want %d", form.NumContent, wantContent)
+	}
+	if form.OKIndex() != wantContent {
+		t.Fatalf("OKIndex = %d want %d", form.OKIndex(), wantContent)
+	}
+
+	stPools := FileDialogState{
+		DialogType:      FileDialogRunForEach,
+		Fields:          []FileDialogField{{}},
+		RunForEachPools: []string{"pool-a", "pool-b"},
+	}
+	formPools := FileDialogFocusForm(stPools)
+	// One field + two checkboxes + "No pool" + two pool radios.
+	wantPoolsContent := 1 + 2 + 1 + 2
+	if formPools.NumContent != wantPoolsContent {
+		t.Fatalf("NumContent (pools) = %d want %d", formPools.NumContent, wantPoolsContent)
+	}
+}

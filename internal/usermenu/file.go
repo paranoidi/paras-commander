@@ -29,6 +29,7 @@ var menuEntryKeys = map[string]struct{}{
 	"interactive":    {},
 	"detach":         {},
 	"background":     {},
+	"pty":            {},
 	"pool":           {},
 	"shell":          {},
 	"shell_patterns": {},
@@ -79,6 +80,7 @@ type MenuEntry struct {
 	Interactive   bool
 	Detach        bool
 	Background    bool
+	PTY           bool
 	Pool          string
 	Shell         bool
 	ShellPatterns bool
@@ -157,6 +159,7 @@ type menuEntry struct {
 	Interactive   *boolField `toml:"interactive"`
 	Detach        *boolField `toml:"detach"`
 	Background    *boolField `toml:"background"`
+	PTY           *boolField `toml:"pty"`
 	Pool          string     `toml:"pool"`
 	Shell         *boolField `toml:"shell"`
 	ShellPatterns *boolField `toml:"shell_patterns"`
@@ -436,6 +439,9 @@ func validateSubmenuMutualExclusion(path string, raw menuEntry) error {
 	if raw.Dialog != nil && raw.Dialog.Set && raw.Dialog.Value {
 		return entryError(path, "dialog "+suffix)
 	}
+	if raw.PTY != nil && raw.PTY.Set && raw.PTY.Value {
+		return entryError(path, "pty "+suffix)
+	}
 	return nil
 }
 
@@ -466,6 +472,7 @@ type entryModes struct {
 	background  bool
 	dialog      bool
 	shell       bool
+	pty         bool
 }
 
 // validateEntryModes resolves raw's mode booleans (MC-style 0/1 or TOML bool, defaulting to
@@ -487,6 +494,9 @@ func validateEntryModes(path string, raw menuEntry, pool string) (entryModes, er
 	}
 	if raw.Dialog != nil && raw.Dialog.Set {
 		m.dialog = raw.Dialog.Value
+	}
+	if raw.PTY != nil && raw.PTY.Set {
+		m.pty = raw.PTY.Value
 	}
 	modeCount := 0
 	if m.interactive {
@@ -511,8 +521,9 @@ func validateEntryModes(path string, raw menuEntry, pool string) (entryModes, er
 }
 
 // decodeRunForEach lowercases/dedupes rawValues into the files/dirs run_for_each list and
-// enforces its combination rules with interactive/detach/dialog and the required %f macro.
-func decodeRunForEach(path string, rawValues []string, interactive, detach, dialog bool, cmd string) ([]string, error) {
+// enforces its combination rules with interactive/detach/dialog, pty requiring run_for_each,
+// and the required %f macro.
+func decodeRunForEach(path string, rawValues []string, interactive, detach, dialog, pty bool, cmd string) ([]string, error) {
 	runForEach := make([]string, 0, len(rawValues))
 	seen := map[string]bool{}
 	for _, raw := range rawValues {
@@ -536,6 +547,9 @@ func decodeRunForEach(path string, rawValues []string, interactive, detach, dial
 	}
 	if len(runForEach) > 0 && !cmdmacro.CommandRequiresMacro(cmd, 'f') {
 		return nil, entryError(path, "run_for_each requires %f in command")
+	}
+	if pty && len(runForEach) == 0 {
+		return nil, entryError(path, "pty requires run_for_each")
 	}
 	return runForEach, nil
 }
@@ -569,7 +583,7 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 	}
 
 	cmd := strings.TrimSpace(raw.Command)
-	runForEach, err := decodeRunForEach(path, raw.RunForEach, modes.interactive, modes.detach, modes.dialog, cmd)
+	runForEach, err := decodeRunForEach(path, raw.RunForEach, modes.interactive, modes.detach, modes.dialog, modes.pty, cmd)
 	if err != nil {
 		return MenuEntry{}, err
 	}
@@ -590,6 +604,7 @@ func decodeLeafEntry(path, title string, raw menuEntry, entryShellPatterns bool)
 		Interactive:   modes.interactive,
 		Detach:        modes.detach,
 		Background:    modes.background,
+		PTY:           modes.pty,
 		Pool:          pool,
 		Shell:         modes.shell,
 		ShellPatterns: entryShellPatterns,

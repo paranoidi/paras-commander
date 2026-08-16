@@ -6,12 +6,20 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// TerminalDrawer paints the embedded terminal panel's live content (PTY output in a later
-// phase). setCell coordinates are panel-content-local (0,0 = first content row, first
-// column); drawTerminalPanel's caller offsets/clips into the panel rect. The returned
-// cursor position is panel-content-local too; cursorVisible false hides the cursor.
+// TerminalDrawer paints the embedded terminal panel's live content and forwards input to it.
+// Both the persistent Alt+P shell and a run-for-each PTY session implement it, so
+// internal/app's panel plumbing needs no special-casing between the two. setCell coordinates
+// are panel-content-local (0,0 = first content row, first column); drawTerminalPanel's caller
+// offsets/clips into the panel rect. The returned cursor position is panel-content-local too;
+// cursorVisible false hides the cursor.
 type TerminalDrawer interface {
 	DrawTo(setCell func(x, y int, r rune, style tcell.Style)) (cursorX, cursorY int, cursorVisible bool)
+	// WriteInput sends encoded key bytes to the live session.
+	WriteInput(b []byte) (int, error)
+	// AppCursorMode reports DECCKM state (for subshell.EncodeKey).
+	AppCursorMode() bool
+	// Cursor returns the emulator cursor position/visibility without a full paint pass.
+	Cursor() (x, y int, visible bool)
 }
 
 // TerminalPanelState is the embedded terminal panel's render/model state.

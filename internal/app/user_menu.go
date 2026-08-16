@@ -252,6 +252,7 @@ func (a *App) executeUserMenuRunForEach(entry usermenu.MenuEntry, active, other 
 		WorkDir:     workDir,
 		PoolName:    strings.TrimSpace(entry.Pool),
 		Background:  entry.Background,
+		PTY:         entry.PTY,
 		NotifyLabel: notifyLabel,
 		BuildItem: func(ent localfs.Entry) (commandsctrl.RunForEachBuiltItem, error) {
 			return commandsctrl.BuildRunForEachItem(cmdTemplate, ent, active, other, entry.Shell, true)

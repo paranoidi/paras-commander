@@ -36,6 +36,9 @@ type Subshell struct {
 	hasPrecmdHook bool // true once Start actually wrote a prompt hook (see precmdInit)
 	feed          *PanelFeed
 	wait          sync.WaitGroup
+	// exitCode is cmd.ProcessState.ExitCode(), captured once cmd.Wait() returns. -1 until
+	// then (matches os/exec's own "not exited, or killed by a signal" sentinel).
+	exitCode int
 }
 
 // StartOptions configures [Start].
@@ -90,21 +93,8 @@ func Start(opts StartOptions) (*Subshell, error) {
 		_, _ = syncPTYSize(ptmx, os.Stdout)
 	}
 
-	s := &Subshell{
-		cmd:   cmd,
-		pty:   ptmx,
-		ptyFD: int(ptmx.Fd()),
-		dead:  make(chan struct{}),
-		alive: true,
-	}
+	s := newSubshell(cmd, ptmx)
 	s.cwdCond = sync.NewCond(&s.mu)
-	s.wait.Go(func() {
-		defer close(s.dead)
-		_ = cmd.Wait()
-		s.mu.Lock()
-		s.alive = false
-		s.mu.Unlock()
-	})
 	s.wait.Go(func() {
 		// Ends on EOF when the child (sole write-end holder) exits.
 		defer func() { _ = pipeR.Close() }()
@@ -130,6 +120,64 @@ func Start(opts StartOptions) (*Subshell, error) {
 		}
 	}
 	return s, nil
+}
+
+// StartArgv forks argv[0] with argv[1:] on a PTY master, no shell wrapper — for one-shot
+// interactive commands (e.g. run-for-each PTY mode) rather than a persistent login shell.
+// Skips the shell-only machinery [Start] needs (cwd pipe, precmd prompt hook): argv is a
+// fully built command line, not "$SHELL -i".
+func StartArgv(argv []string, dir string) (*Subshell, error) {
+	if len(argv) == 0 {
+		return nil, fmt.Errorf("subshell: empty argv")
+	}
+	cmd := exec.Command(argv[0], argv[1:]...)
+	if dir != "" {
+		cmd.Dir = dir
+	}
+
+	ptmx, err := pty.Start(cmd)
+	if err != nil {
+		return nil, fmt.Errorf("subshell: start pty: %w", err)
+	}
+
+	return newSubshell(cmd, ptmx), nil
+}
+
+// newSubshell constructs a Subshell around an already-started cmd/ptmx and starts the
+// exit-watcher goroutine shared by Start and StartArgv.
+func newSubshell(cmd *exec.Cmd, ptmx *os.File) *Subshell {
+	s := &Subshell{
+		cmd:      cmd,
+		pty:      ptmx,
+		ptyFD:    int(ptmx.Fd()),
+		dead:     make(chan struct{}),
+		alive:    true,
+		exitCode: -1,
+	}
+	s.wait.Go(func() {
+		defer close(s.dead)
+		_ = cmd.Wait()
+		s.mu.Lock()
+		s.alive = false
+		if cmd.ProcessState != nil {
+			s.exitCode = cmd.ProcessState.ExitCode()
+		}
+		s.mu.Unlock()
+	})
+	return s
+}
+
+// Done returns a channel that closes once the shell child has exited.
+func (s *Subshell) Done() <-chan struct{} {
+	return s.dead
+}
+
+// ExitCode returns the child's exit code. Meaningful after [Subshell.Done] closes; -1 before
+// then, or if the process never reported a normal exit status (e.g. killed by a signal).
+func (s *Subshell) ExitCode() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.exitCode
 }
 
 // Alive reports whether the shell child is still running.

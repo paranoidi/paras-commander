@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
@@ -31,3 +32,5 @@ func (h commandsHost) FocusedFileDialogField() *dialog.FileDialogField {
 }
 
 func (h commandsHost) RefreshAfterUserMenuCommand() { h.app.refreshAfterUserMenuCommand() }
+
+func (h commandsHost) Styles() theme.Theme { return h.app.styles }

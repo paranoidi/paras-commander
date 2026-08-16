@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -159,6 +160,32 @@ func (f *PanelFeed) Draw(defaultStyle tcell.Style, setCell func(x, y int, r rune
 	}
 	cursorX, cursorY = f.state.Cursor()
 	return cursorX, cursorY, f.state.CursorVisible()
+}
+
+// SnapshotText dumps the current emulator grid as plain text: one line per row, right-trimmed,
+// joined by "\n". Used to capture a one-shot PTY session's final on-screen frame as an entry's
+// Stdout once the session ends (run-for-each PTY mode).
+// ponytail: only the final on-screen frame is kept, no scrollback replay — upgrade to a
+// raw-byte tee on PanelFeed if a full transcript is ever needed.
+func (f *PanelFeed) SnapshotText() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.state.Lock()
+	defer f.state.Unlock()
+
+	lines := make([]string, f.rows)
+	for y := 0; y < f.rows; y++ {
+		var sb strings.Builder
+		for x := 0; x < f.cols; x++ {
+			ch, _, _ := f.state.Cell(x, y)
+			if ch == 0 {
+				ch = ' '
+			}
+			sb.WriteRune(ch)
+		}
+		lines[y] = strings.TrimRight(sb.String(), " ")
+	}
+	return strings.TrimRight(strings.Join(lines, "\n"), "\n")
 }
 
 // WriteScreenTo dumps the current emulator cell content to w as ANSI-escaped

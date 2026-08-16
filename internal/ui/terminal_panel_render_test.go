@@ -30,6 +30,10 @@ func (d *stubTerminalDrawer) DrawTo(setCell func(x, y int, r rune, style tcell.S
 	return 0, 0, false
 }
 
+func (d *stubTerminalDrawer) WriteInput(b []byte) (int, error) { return len(b), nil }
+func (d *stubTerminalDrawer) AppCursorMode() bool              { return false }
+func (d *stubTerminalDrawer) Cursor() (int, int, bool)         { return 0, 0, false }
+
 // panelTopY is where the 5-row panel starts on an 80x20 screen: height(20) - footer(1) - rows(5).
 const panelTopY = 14
 

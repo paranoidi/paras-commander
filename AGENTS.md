@@ -4,7 +4,7 @@ This project is midnight commander inspired twin panel filesystem manager writte
 
 Currently the project is in implementation phase and not all features are implemented.
 
-Read all documantion in llm-docs/ before starting implementing new feature.
+Read llm-docs/index.md and relevant documentation based on that before starting implementing new feature.
 
 Once new feature is implemented update llm-docs/index.md for agents to later refer to.
 

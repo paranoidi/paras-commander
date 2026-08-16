@@ -34,6 +34,10 @@ type CommandRunEntry struct {
 	Stdout          string
 	Stderr          string
 	ErrorMsg        string // launch failure or context cancellation
+	// PTY marks a run-for-each entry that runs attached to a live pseudo-TTY, shown live in
+	// the bottom terminal panel (Alt+P) while it runs, instead of capturing stdout/stderr
+	// into memory buffers.
+	PTY bool
 }
 
 // CommandStderrDisplay returns stderr text for the Commands view, falling back to ErrorMsg when

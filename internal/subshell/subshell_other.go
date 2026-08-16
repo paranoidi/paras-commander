@@ -19,6 +19,21 @@ func Start(StartOptions) (*Subshell, error) {
 	return nil, ErrUnsupportedPlatform
 }
 
+// StartArgv is not available on this platform.
+func StartArgv([]string, string) (*Subshell, error) {
+	return nil, ErrUnsupportedPlatform
+}
+
+// Done returns an already-closed channel on unsupported platforms.
+func (s *Subshell) Done() <-chan struct{} {
+	ch := make(chan struct{})
+	close(ch)
+	return ch
+}
+
+// ExitCode always reports -1 on unsupported platforms.
+func (s *Subshell) ExitCode() int { return -1 }
+
 // Alive always reports false on unsupported platforms.
 func (s *Subshell) Alive() bool {
 	return false
@@ -97,6 +112,9 @@ func (f *PanelFeed) Cursor() (int, int, bool) { return 0, 0, false }
 func (f *PanelFeed) Draw(tcell.Style, func(x, y int, r rune, style tcell.Style)) (int, int, bool) {
 	return 0, 0, false
 }
+
+// SnapshotText always reports empty text on unsupported platforms.
+func (f *PanelFeed) SnapshotText() string { return "" }
 
 // SaveLaunchTerminal is a no-op on unsupported platforms.
 func SaveLaunchTerminal() {}

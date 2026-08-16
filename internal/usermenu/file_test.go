@@ -304,6 +304,30 @@ pool = "build"
 	}
 }
 
+func TestDecodeRunForEachPTY(t *testing.T) {
+	_, err := Decode([]byte(`[bad]
+title = "Bad"
+command = "true"
+pty = true
+`))
+	if err == nil || !strings.Contains(err.Error(), "pty requires run_for_each") {
+		t.Fatalf("err = %v, want pty-without-run_for_each error", err)
+	}
+
+	mf, err := Decode([]byte(`[good]
+title = "Good"
+command = "echo %f"
+run_for_each = ["files"]
+pty = true
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mf.Entries) != 1 || !mf.Entries[0].PTY {
+		t.Fatalf("decoded: %+v", mf.Entries)
+	}
+}
+
 func TestDecodeUnknownRootScalarField(t *testing.T) {
 	_, err := Decode([]byte(`tools = "x"
 

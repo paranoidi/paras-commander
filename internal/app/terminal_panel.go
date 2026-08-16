@@ -14,16 +14,6 @@ import (
 // terminalWakePayload wakes the event loop after a coalesced PTY output burst.
 type terminalWakePayload struct{}
 
-// terminalPanelDrawer adapts subshell.PanelFeed to ui.TerminalDrawer.
-type terminalPanelDrawer struct {
-	feed  *subshell.PanelFeed
-	style tcell.Style
-}
-
-func (d *terminalPanelDrawer) DrawTo(setCell func(x, y int, r rune, style tcell.Style)) (int, int, bool) {
-	return d.feed.Draw(d.style, setCell)
-}
-
 // terminalLayoutRows returns the rows the layout reserves for the terminal panel.
 // Full-screen views (jobs, compare, …) reclaim the strip; the feed keeps running.
 func (a *App) terminalLayoutRows() int {
@@ -51,6 +41,10 @@ func (a *App) toggleTerminalPanelVisible() {
 	if a.model.ModalDialogOpen() || a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
+	if a.commandsCtrl.OwnsTerminalPanel() {
+		a.setTransientMessage("A run-for-each command is using the terminal panel", ui.MessageUrgencyWarn)
+		return
+	}
 	tp := &a.model.TerminalPanel
 	if !tp.Visible {
 		a.openTerminalPanel(false)
@@ -68,6 +62,10 @@ func (a *App) toggleTerminalPanelVisible() {
 // (syncing the active panel to the shell cwd, mirroring open shell return).
 func (a *App) toggleTerminalPanelFocus() {
 	if a.model.ModalDialogOpen() || a.model.ViewMode != ui.ViewBrowser {
+		return
+	}
+	if a.commandsCtrl.OwnsTerminalPanel() {
+		a.setTransientMessage("A run-for-each command is using the terminal panel", ui.MessageUrgencyWarn)
 		return
 	}
 	tp := &a.model.TerminalPanel
@@ -101,6 +99,10 @@ func (a *App) syncTerminalShellToPanelDir() {
 }
 
 func (a *App) openTerminalPanel(focus bool) {
+	if a.commandsCtrl.OwnsTerminalPanel() {
+		a.setTransientMessage("A run-for-each command is using the terminal panel", ui.MessageUrgencyWarn)
+		return
+	}
 	if !a.config.Shell.Persistent || strings.TrimSpace(a.config.Shell.Command) != "" {
 		a.setTransientMessage("Terminal panel requires the persistent shell", ui.MessageUrgencyWarn)
 		return
@@ -135,7 +137,7 @@ func (a *App) openTerminalPanel(focus bool) {
 		// Feed already alive from a previous hide — reuse it so the emulator
 		// state (shell prompt, command output) is instantly visible.
 		a.terminalFeed.Resize(cols, rows)
-		tp.Drawer = &terminalPanelDrawer{feed: a.terminalFeed, style: a.styles.TerminalTextStyle()}
+		tp.Drawer = &subshell.PanelDrawer{Sub: a.subshell, Feed: a.terminalFeed, Style: a.styles.TerminalTextStyle()}
 		return
 	}
 	feed, err := a.subshell.StartPanelFeed(cols, rows, a.postTerminalWake)
@@ -145,7 +147,7 @@ func (a *App) openTerminalPanel(focus bool) {
 		return
 	}
 	a.terminalFeed = feed
-	tp.Drawer = &terminalPanelDrawer{feed: feed, style: a.styles.TerminalTextStyle()}
+	tp.Drawer = &subshell.PanelDrawer{Sub: a.subshell, Feed: feed, Style: a.styles.TerminalTextStyle()}
 }
 
 // closeTerminalPanel hides the panel but keeps the feed alive so the emulator
@@ -219,7 +221,9 @@ func (a *App) resizeTerminalPanel(delta int) {
 			return
 		}
 	}
-	if a.terminalFeed != nil {
+	if _, feed, ok := a.commandsCtrl.ActivePTYSession(); ok && feed != nil {
+		feed.Resize(cols, rows)
+	} else if a.terminalFeed != nil {
 		a.terminalFeed.Resize(cols, rows)
 	}
 	a.render()
@@ -243,7 +247,7 @@ func (a *App) resizeTerminalFeedToLayout() {
 // Any modal surface (dialogs, menu, quick filter) wins over the panel.
 func (a *App) terminalPanelHasKeyFocus() bool {
 	tp := a.model.TerminalPanel
-	if !tp.Visible || !tp.Focused || a.model.ViewMode != ui.ViewBrowser || a.terminalFeed == nil {
+	if !tp.Visible || !tp.Focused || a.model.ViewMode != ui.ViewBrowser || tp.Drawer == nil {
 		return false
 	}
 	if a.model.ModalDialogOpen() || a.model.Menu.Open || a.inQuickFilterUI() {
@@ -275,8 +279,12 @@ func (a *App) handleTerminalPanelKey(event *tcell.EventKey) (rendered bool) {
 			return true
 		}
 	}
-	if b := subshell.EncodeKey(event, a.terminalFeed.AppCursor()); len(b) > 0 {
-		if _, err := a.subshell.WritePTY(b); err != nil {
+	drawer := a.model.TerminalPanel.Drawer
+	if drawer == nil {
+		return false
+	}
+	if b := subshell.EncodeKey(event, drawer.AppCursorMode()); len(b) > 0 {
+		if _, err := drawer.WriteInput(b); err != nil {
 			a.setErrorMessage("Terminal", err)
 			a.render()
 			return true
@@ -292,13 +300,14 @@ type hwCursorState struct {
 	visible bool
 }
 
-// syncTerminalPanelCursor owns the hardware cursor: shown at the emulator cursor while
-// the panel is focused, hidden otherwise (nothing else in the app shows it).
+// syncTerminalPanelCursor owns the hardware cursor: shown at the emulator cursor while the
+// embedded terminal panel or a run-for-each entry's live PTY viewport is focused — both unified
+// through TerminalPanel.Drawer — hidden otherwise (nothing else in the app shows it).
 func (a *App) syncTerminalPanelCursor() {
 	if a.terminalPanelHasKeyFocus() {
 		w, h := a.screen.Size()
 		lay := a.layoutForTerminalSize(w, h)
-		cx, cy, visible := a.terminalFeed.Cursor()
+		cx, cy, visible := a.model.TerminalPanel.Drawer.Cursor()
 		if visible && lay.Terminal.Height > 0 && cx >= 0 && cy >= 0 &&
 			cx < lay.Terminal.Width && cy < lay.Terminal.Height {
 			a.screen.ShowCursor(lay.Terminal.X+cx, lay.Terminal.Y+cy)

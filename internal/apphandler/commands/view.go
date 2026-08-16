@@ -150,16 +150,43 @@ func (h *Handler) selectedRunningCommandRow() (int, bool) {
 
 func (h *Handler) terminateSelectedCommand() {
 	idx, ok := h.selectedRunningCommandRow()
-	if !ok || !h.signalCommandRow(idx, syscall.SIGTERM) {
+	if !ok {
+		h.host.SetTransientMessage("Could not terminate command", ui.MessageUrgencyWarn)
+		return
+	}
+	if h.closeSelectedPTYRow(idx) {
+		return
+	}
+	if !h.signalCommandRow(idx, syscall.SIGTERM) {
 		h.host.SetTransientMessage("Could not terminate command", ui.MessageUrgencyWarn)
 	}
 }
 
 func (h *Handler) killSelectedCommand() {
 	idx, ok := h.selectedRunningCommandRow()
-	if !ok || !h.signalCommandRow(idx, syscall.SIGKILL) {
+	if !ok {
+		h.host.SetTransientMessage("Could not kill command", ui.MessageUrgencyWarn)
+		return
+	}
+	if h.closeSelectedPTYRow(idx) {
+		return
+	}
+	if !h.signalCommandRow(idx, syscall.SIGKILL) {
 		h.host.SetTransientMessage("Could not kill command", ui.MessageUrgencyWarn)
 	}
+}
+
+// closeSelectedPTYRow closes the live PTY session for row idx, when it is the one currently
+// running interactively. Subshell.Close sends SIGHUP then SIGKILL after a short grace, same
+// terminate-vs-kill collapsing the embedded shell panel already relies on. Returns false when
+// idx isn't a live PTY row, so callers fall back to the ordinary os.Process signal path.
+func (h *Handler) closeSelectedPTYRow(idx int) bool {
+	sess := h.currentEntryPTY()
+	if sess == nil || sess.idx != idx {
+		return false
+	}
+	_ = sess.sub.Close()
+	return true
 }
 
 // MoveSelection moves the Commands-list cursor by delta rows (clamped), scrolling into view

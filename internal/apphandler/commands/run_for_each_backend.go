@@ -2,12 +2,15 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/subshell"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -40,6 +43,13 @@ type RunForEachBatchSpec struct {
 	// NotifyLabel prefixes issue summaries (e.g. "Run for each", "User menu: Build").
 	NotifyLabel string
 
+	// PTY runs each entry attached to a live pseudo-TTY, shown interactively in the same
+	// bottom terminal-panel strip Alt+P uses, instead of capturing stdout/stderr into memory
+	// buffers non-interactively. Lets tools that open /dev/tty for prompts (e.g. chezmoi) work
+	// under run-for-each. Falls back silently to the non-PTY path on platforms without PTY
+	// support.
+	PTY bool
+
 	BuildItem runForEachItemBuilder
 }
 
@@ -62,6 +72,7 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 			Kind:     spec.Kind,
 			Phase:    ui.CommandRunPending,
 			ExitCode: -1,
+			PTY:      spec.PTY,
 		}
 	}
 	h.mu.Lock()
@@ -69,7 +80,7 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 	h.model.CommandsList = append(h.model.CommandsList, entries...)
 	h.mu.Unlock()
 
-	if !spec.Background {
+	if !spec.Background && !spec.PTY {
 		h.OpenViewAt(start)
 	}
 
@@ -80,6 +91,13 @@ func (h *Handler) StartRunForEachBatch(spec RunForEachBatchSpec) {
 func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec RunForEachBatchSpec) {
 	defer func() {
 		h.EndBatch()
+		if spec.PTY && !spec.Background {
+			h.mu.Lock()
+			h.model.TerminalPanel.Visible = false
+			h.model.TerminalPanel.Focused = false
+			h.model.TerminalPanel.Drawer = nil
+			h.mu.Unlock()
+		}
 		var snap []ui.CommandRunEntry
 		h.mu.RLock()
 		if start >= 0 && start < len(h.model.CommandsList) {
@@ -104,6 +122,19 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 	}()
 
 	allowFilter := spec.AllowFiles || spec.AllowDirs
+
+	if spec.PTY && !spec.Background {
+		h.mu.Lock()
+		h.model.ViewMode = ui.ViewBrowser
+		tp := &h.model.TerminalPanel
+		if tp.Rows < config.MinShellTerminalPanelHeight {
+			tp.Rows = config.DefaultShellTerminalPanelHeight
+		}
+		tp.Visible = true
+		tp.Focused = true
+		h.mu.Unlock()
+		h.PostRenderWake()
+	}
 
 	for i, ent := range spec.Entries {
 		select {
@@ -202,10 +233,15 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 		if spec.PerEntryWorkDir {
 			workDir = abs
 		}
-		res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
-			h.SetProcess(idx, p)
-		})
-		h.UnregisterProc(idx)
+		var res cmdrun.RunResult
+		if spec.PTY {
+			res = h.runEntryPTY(ctx, idx, argv, workDir, spec.Background)
+		} else {
+			res = cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+				h.SetProcess(idx, p)
+			})
+			h.UnregisterProc(idx)
+		}
 		if release != nil {
 			release()
 		}
@@ -223,6 +259,81 @@ func (h *Handler) runForEachUnifiedBatch(ctx context.Context, start int, spec Ru
 		})
 		h.PostRenderWake()
 	}
+}
+
+// runEntryPTY runs argv attached to a live pseudo-TTY shown in the bottom terminal panel
+// (the same strip Alt+P uses), blocking until it exits. Falls back silently to the ordinary
+// cmdrun.RunTracked path when PTY sessions aren't supported on this platform. When background
+// is true (RunForEachBatchSpec.Background) the command still runs on a real PTY (so tools that
+// open /dev/tty for prompts work) but the panel is left untouched — background batches must not
+// steal the screen.
+func (h *Handler) runEntryPTY(ctx context.Context, idx int, argv []string, workDir string, background bool) cmdrun.RunResult {
+	sub, err := subshell.StartArgv(argv, workDir)
+	if err != nil {
+		if errors.Is(err, subshell.ErrUnsupportedPlatform) {
+			res := cmdrun.RunTracked(ctx, argv, workDir, cmdrun.MaxStreamBytes, func(p *os.Process) {
+				h.SetProcess(idx, p)
+			})
+			h.UnregisterProc(idx)
+			return res
+		}
+		return cmdrun.RunResult{LaunchErr: err, ExitCode: -1}
+	}
+
+	cols, rows, ok := h.terminalPanelDims()
+	if !ok {
+		cols, rows = 80, 24 // ponytail: fallback size when the layout can't be measured; still runs, just at a default size.
+	}
+	feed, err := sub.StartPanelFeed(cols, rows, h.PostRenderWake)
+	if err != nil {
+		_ = sub.Close()
+		return cmdrun.RunResult{LaunchErr: err, ExitCode: -1}
+	}
+
+	h.setEntryPTY(&entryPTYSession{idx: idx, sub: sub, feed: feed})
+	if !background {
+		h.mu.Lock()
+		h.model.TerminalPanel.Drawer = &subshell.PanelDrawer{Sub: sub, Feed: feed, Style: h.host.Styles().TerminalTextStyle()}
+		h.mu.Unlock()
+		h.PostRenderWake()
+	}
+
+	// Unlike cmdrun.RunTracked (exec.CommandContext, killed automatically on ctx cancel),
+	// StartArgv's child has no ctx wiring — close the session ourselves on quit instead of
+	// leaking a PTY child that outlives the app.
+	select {
+	case <-sub.Done():
+	case <-ctx.Done():
+		_ = sub.Close()
+	}
+
+	exitCode := sub.ExitCode()
+	stdout := feed.SnapshotText()
+	_ = sub.Close()
+	h.setEntryPTY(nil)
+	if !background {
+		h.mu.Lock()
+		h.model.TerminalPanel.Drawer = nil
+		h.mu.Unlock()
+		h.PostRenderWake()
+	}
+
+	return cmdrun.RunResult{ExitCode: exitCode, Stdout: []byte(stdout)}
+}
+
+// terminalPanelDims returns the content cols/rows for the bottom terminal panel strip, the same
+// rect drawTerminalPanel paints into. Only returns real dims once TerminalPanel.Visible is true
+// and ViewMode == ui.ViewBrowser (that's how the layout code reserves the strip — see
+// internal/app/terminal_panel.go's terminalLayoutRows) — runEntryPTY calls this only after the
+// batch-level panel setup in runForEachUnifiedBatch has already flipped those on. ok is false
+// when the layout has no room for the strip.
+func (h *Handler) terminalPanelDims() (cols, rows int, ok bool) {
+	w, ht := h.screen.Size()
+	layout := h.host.LayoutForTerminalSize(w, ht)
+	if layout.Terminal.Width <= 0 || layout.Terminal.Height <= 0 {
+		return 0, 0, false
+	}
+	return layout.Terminal.Width, layout.Terminal.Height, true
 }
 
 func summarizeRunForEachIssues(notifyLabel string, entries []ui.CommandRunEntry) (log, banner string, urg ui.MessageUrgency, ok bool) {

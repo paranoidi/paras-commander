@@ -23,6 +23,10 @@ func (a *App) dropToShell() {
 	if a.model.ModalDialogOpen() {
 		return
 	}
+	if sub, _, ok := a.commandsCtrl.ActivePTYSession(); ok {
+		a.runForEachSubshellVisible(sub)
+		return
+	}
 	if a.config.Shell.Persistent && a.persistentShellToggle() {
 		return
 	}
@@ -188,6 +192,26 @@ func (a *App) runShellVisible(chdirBusy bool) {
 		}
 	}
 	a.refreshAfterDropToShell()
+	a.render()
+}
+
+// runForEachSubshellVisible shows a run-for-each PTY session fullscreen (Ctrl-O), independent of
+// the persistent shell singleton. The session's own panel feed is paused/resumed by RunVisible
+// exactly like the persistent shell's, so returning restores the embedded panel view at the
+// correct size. The session's lifecycle (exit detection, cleanup) stays owned by
+// commands.Handler.runEntryPTY — this function only handles the fullscreen round-trip.
+func (a *App) runForEachSubshellVisible(sub *subshell.Subshell) {
+	_, err := sub.RunVisible(a.screen)
+	a.lastScreenContentHash = 0
+	a.screen.HideCursor()
+	if err != nil {
+		a.setErrorMessage("Shell", err)
+	}
+	if cols, rows, ok := a.terminalPanelContentDims(); ok {
+		if _, feed, ptyOK := a.commandsCtrl.ActivePTYSession(); ptyOK && feed != nil {
+			feed.Resize(cols, rows)
+		}
+	}
 	a.render()
 }
 

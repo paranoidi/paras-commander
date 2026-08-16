@@ -126,6 +126,10 @@ type FileDialogState struct {
 	// of the panel's fixed directory with %f as an argument. Selection must be directories-only
 	// when set.
 	RunForEachInDirs bool
+	// RunForEachPTY runs each entry attached to a live pseudo-TTY, shown interactively in the
+	// Commands view, instead of capturing stdout/stderr non-interactively. Lets tools that
+	// open /dev/tty for prompts (e.g. chezmoi) work under run-for-each.
+	RunForEachPTY bool
 	// ExtractSources apply when DialogType == FileDialogExtract (archive paths resolved at dialog open).
 	ExtractSources []string
 	// MkdirShowActions enables the extra "Create / Create and copy selected / Create and move selected" radio

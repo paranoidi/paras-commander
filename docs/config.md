@@ -266,6 +266,12 @@ F2 user menu command definitions.
 | `file` | string | `""` | Path to the global `menu.toml`. Empty uses `<config dir>/menu.toml`. |
 | `local_names` | array of strings | `["menu.toml"]` | Basenames probed in the active panel directory (for a per-directory menu) before falling back to the global file. |
 
+A `menu.toml` `run_for_each` entry may also set `pty = true` (or `pty = 1`) to run each invocation
+attached to a live pseudo-TTY instead of capturing output non-interactively — the same mode as
+the Run-for-each dialog's "Allocate pseudo-TTY (interactive)" checkbox. It requires `run_for_each`
+to be set and cannot be combined with a submenu table. See `llm-docs/commands.md` for the full
+per-entry field list.
+
 ## `[preview]`
 
 File preview pane (F3 / quick view / carousel).
