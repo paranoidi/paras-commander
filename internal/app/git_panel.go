@@ -100,7 +100,11 @@ func (a *App) applyGitStatusLoad(p gitStatusPayload) bool {
 			return false
 		}
 		if p.err != nil {
-			// Leave any already-merged data (cwd + other expanded children) untouched.
+			// Leave any already-merged data (cwd + other expanded children) untouched. Still
+			// counts as this fetch completing, so the pending counter below stays accurate.
+			if pan.NoteTreeChildGitStatusApplied() {
+				pan.RefreshEntryFilter()
+			}
 			return true
 		}
 	}
@@ -109,6 +113,15 @@ func (a *App) applyGitStatusLoad(p gitStatusPayload) bool {
 	}
 	for path, cell := range p.byPath {
 		pan.GitByPath[path] = cell
+	}
+	// Tree-child fetches (expand-all-shallow can dispatch one per newly-loaded directory) are
+	// coalesced: only the arrival that empties the pending counter re-evaluates the filter, so a
+	// multi-directory expand does one O(tree) refresh instead of one per directory. The single
+	// cwd-level fetch has no such storm, so it always refreshes.
+	if p.cwdLevel {
+		pan.RefreshEntryFilter()
+	} else if pan.NoteTreeChildGitStatusApplied() {
+		pan.RefreshEntryFilter()
 	}
 	return true
 }

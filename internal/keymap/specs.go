@@ -355,6 +355,15 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "h",
 		},
 		{
+			ID:           ActionPanelGitFilterMenu,
+			Views:        HelpBrowser,
+			Title:        "Git filter menu",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"M-g"},
+			PreferredKey: "M-g",
+			Keywords:     []string{"git", "filter", "staged", "unstaged", "tracked", "untracked"},
+		},
+		{
 			ID:           ActionPanelHistoryBothPanels,
 			Title:        "Both panels history",
 			Section:      "Navigation",

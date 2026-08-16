@@ -103,9 +103,20 @@ type State struct {
 	// fetches (scheduleTreeChildGitStatus) can reuse it instead of recomputing
 	// gitignore.ValidWorkTreeRoot per subdirectory.
 	gitWorkRoot string
+	// gitStatusChildPending counts tree-child git-status fetches dispatched by
+	// scheduleTreeChildGitStatus that haven't completed yet — see NoteTreeChildGitStatusApplied.
+	gitStatusChildPending int
 	Filter      FilterState
 	// StripFilter is the selections-strip quick filter (basename fuzzy match), independent of Filter.
 	StripFilter FilterState
+	// ActiveEntryFilter narrows visible entries (e.g. git-status filtering); nil means unfiltered.
+	ActiveEntryFilter *EntryFilter
+	// filteredIdx holds raw (unfiltered) entry indices matching ActiveEntryFilter, in display order.
+	filteredIdx []int
+	// filteredTreeShape holds recomputed tree-connector shapes (LastChild/AncestorHasNext),
+	// parallel to filteredIdx, for tree mode with a filter active — see
+	// recomputeFilteredTreeConnectors. nil outside tree mode or when no filter is active.
+	filteredTreeShape []treeConnectorShape
 	// DiskSorter returns cached subtree or file aggregates for Disk usage sorting; absent cache ranks last until known.
 	DiskSorter func(absPath string) (int64, bool)
 	Sort       SortState
@@ -373,6 +384,9 @@ func (s State) CurrentEntry() (localfs.Entry, bool) {
 
 // VisibleEntryCount returns the number of entries currently visible in the panel.
 func (s State) VisibleEntryCount() int {
+	if s.ActiveEntryFilter != nil {
+		return len(s.filteredIdx)
+	}
 	if s.ListLayout == ListLayoutTree {
 		return len(s.treeRows)
 	}
@@ -382,22 +396,25 @@ func (s State) VisibleEntryCount() int {
 // VisibleEntry returns the visible entry and its backing index (Entries index in flat mode,
 // treeRows index in tree mode — every caller today discards this second value).
 func (s State) VisibleEntry(index int) (localfs.Entry, int, bool) {
-	if s.ListLayout == ListLayoutTree {
-		return s.treeVisibleEntry(index)
+	rawIdx, ok := s.translateVisibleIndex(index)
+	if !ok {
+		return localfs.Entry{}, 0, false
 	}
-	return s.flatVisibleEntry(index)
+	if s.ListLayout == ListLayoutTree {
+		return s.treeVisibleEntry(rawIdx)
+	}
+	return s.flatVisibleEntry(rawIdx)
 }
 
-// flatVisibleEntry is VisibleEntry's original body, extracted unchanged.
+// flatVisibleEntry is VisibleEntry's original body, extracted unchanged. Bounds-checks directly
+// against len(s.Entries) rather than VisibleEntryCount(): index here is a raw Entries index (once
+// an active filter has already remapped it through filteredIdx in VisibleEntry), not a filtered
+// display index, so it must not be checked against the filtered count.
 func (s State) flatVisibleEntry(index int) (localfs.Entry, int, bool) {
-	if index < 0 || index >= s.VisibleEntryCount() {
+	if index < 0 || index >= len(s.Entries) {
 		return localfs.Entry{}, 0, false
 	}
-	entryIndex := index
-	if entryIndex < 0 || entryIndex >= len(s.Entries) {
-		return localfs.Entry{}, 0, false
-	}
-	return s.Entries[entryIndex], entryIndex, true
+	return s.Entries[index], index, true
 }
 
 func (s State) treeVisibleEntry(index int) (localfs.Entry, int, bool) {
@@ -1367,6 +1384,7 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 		s.ListingDeviceValid = false
 	}
 	s.prepareGitColumn(listingLoc, localEntries)
+	s.ClearFilterIfInapplicable()
 	s.Entries = localEntries
 	if len(newlyAppeared) > 0 {
 		s.AddNewFileMarks(listingLoc, newlyAppeared)
@@ -1452,6 +1470,10 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 }
 
 func (s *State) prepareGitColumn(listingLoc pathloc.Path, entries []localfs.Entry) {
+	// Any tree-child git-status fetches still in flight belong to the directory being left; their
+	// eventual arrival will be rejected by applyGitStatusLoad's isWithinDir/GitColumnActive checks
+	// anyway, so stop waiting on them rather than leaving the counter stuck non-zero forever.
+	s.gitStatusChildPending = 0
 	if listingLoc.IsRemote() {
 		return
 	}
@@ -1850,6 +1872,7 @@ func primaryFilterMatchIndex(query string, ranked []filterResult) int {
 }
 
 func (s *State) rebuildFilter() {
+	s.rebuildEntryFilter()
 	s.Filter.results = nil
 	if s.Filter.Query == "" {
 		s.Filter.Active = false

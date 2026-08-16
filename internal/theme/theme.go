@@ -119,6 +119,7 @@ type Theme struct {
 	PanelStatusDotfilesHidden tcell.Style
 	PanelStatusGitignore      tcell.Style
 	PanelStatusStash          tcell.Style
+	PanelStatusEntryFilter    tcell.Style
 	PanelStatusSelectionSize  tcell.Style
 	PanelStatusOtherPanel     tcell.Style
 	// PanelStatusImageSixel/ImageSixelTmux style the bottom-right image-protocol indicator in
@@ -384,6 +385,7 @@ const (
 	PanelBottomIndicatorKeyDotfilesHidden = "dotfiles_hidden"
 	PanelBottomIndicatorKeyGitignore      = "gitignore"
 	PanelBottomIndicatorKeyStash          = "stash"
+	PanelBottomIndicatorKeyEntryFilter    = "entry_filter"
 	PanelBottomIndicatorKeySelectionSize  = "selection_size"
 	PanelBottomIndicatorKeySync           = "sync"
 	PanelBottomIndicatorKeyQuickView      = "quick_view"
@@ -425,6 +427,17 @@ func (t Theme) PanelBottomIndicator(id string, fileListActive, chromeBlocked boo
 	case PanelBottomIndicatorKeyStash:
 		if t.PanelStatusStash != (tcell.Style{}) {
 			return t.PanelStatusStash
+		}
+		if chromeBlocked {
+			return t.PanelBlockedTitle
+		}
+		if fileListActive {
+			return t.PanelActiveTitle
+		}
+		return t.PanelInactiveTitle
+	case PanelBottomIndicatorKeyEntryFilter:
+		if t.PanelStatusEntryFilter != (tcell.Style{}) {
+			return t.PanelStatusEntryFilter
 		}
 		if chromeBlocked {
 			return t.PanelBlockedTitle
@@ -864,6 +877,7 @@ var requiredStyleKeys = []string{
 	"panel.status.dotfiles_hidden",
 	"panel.status.gitignore",
 	"panel.status.stash",
+	"panel.status.entry_filter",
 	"panel.status.selection_size",
 	"panel.status.other_panel",
 	"panel.status.image_sixel",
@@ -1350,6 +1364,7 @@ func parse(data []byte) (Theme, error) {
 		PanelStatusDotfilesHidden:           styles["panel.status.dotfiles_hidden"],
 		PanelStatusGitignore:                styles["panel.status.gitignore"],
 		PanelStatusStash:                    styles["panel.status.stash"],
+		PanelStatusEntryFilter:              styles["panel.status.entry_filter"],
 		PanelStatusSelectionSize:            styles["panel.status.selection_size"],
 		PanelStatusOtherPanel:               styles["panel.status.other_panel"],
 		PanelStatusImageSixel:               styles["panel.status.image_sixel"],

@@ -20,6 +20,7 @@ const (
 	PanelBottomIndicatorGitignore      PanelBottomIndicatorID = "gitignore"
 	PanelBottomIndicatorStash          PanelBottomIndicatorID = "stash"
 	PanelBottomIndicatorJobWrite       PanelBottomIndicatorID = "job_write"
+	PanelBottomIndicatorEntryFilter    PanelBottomIndicatorID = "entry_filter"
 	PanelBottomIndicatorSync           PanelBottomIndicatorID = "sync"
 	PanelBottomIndicatorQuickView      PanelBottomIndicatorID = "quick_view"
 	PanelBottomIndicatorOtherPanel     PanelBottomIndicatorID = "other_panel"
@@ -82,6 +83,7 @@ var panelBottomIndicatorRegistry = []panelBottomIndicatorSpec{
 	{ID: PanelBottomIndicatorGitignore, Edge: PanelBottomEdgePhysicalLeft, Order: 1},
 	{ID: PanelBottomIndicatorStash, Edge: PanelBottomEdgePhysicalLeft, Order: 2},
 	{ID: PanelBottomIndicatorJobWrite, Edge: PanelBottomEdgePhysicalLeft, Order: 3},
+	{ID: PanelBottomIndicatorEntryFilter, Edge: PanelBottomEdgePhysicalLeft, Order: 4},
 	{ID: PanelBottomIndicatorSync, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorQuickView, Edge: PanelBottomEdgeEnd, Order: 0},
 	{ID: PanelBottomIndicatorOtherPanel, Edge: PanelBottomEdgeEnd, Order: 1},
@@ -121,6 +123,8 @@ func panelBottomIndicatorVisible(id PanelBottomIndicatorID, ctx PanelBottomIndic
 		return ctx.State.StashPathCount() > 0
 	case PanelBottomIndicatorJobWrite:
 		return ctx.JobWriteMark
+	case PanelBottomIndicatorEntryFilter:
+		return ctx.State.ActiveEntryFilter != nil
 	case PanelBottomIndicatorSync:
 		return ctx.SyncDriverPanelID == ctx.PanelID
 	case PanelBottomIndicatorQuickView:
@@ -153,6 +157,11 @@ func panelBottomIndicatorLabel(id PanelBottomIndicatorID, ctx PanelBottomIndicat
 		return fmt.Sprintf(" %s %d %s stashed ", sym, n, word)
 	case PanelBottomIndicatorJobWrite:
 		return " " + string(ctx.Styles.SymbolFilelistJob()) + " "
+	case PanelBottomIndicatorEntryFilter:
+		if f := ctx.State.ActiveEntryFilter; f != nil {
+			return " " + f.Label + " "
+		}
+		return ""
 	case PanelBottomIndicatorSync:
 		return panelSyncIndicatorLabel(ctx.PanelID, ctx.SplitOrientation)
 	case PanelBottomIndicatorQuickView:

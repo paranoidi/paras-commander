@@ -72,11 +72,18 @@ func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 		s.TreeExpanded = make(map[string]bool)
 		s.treeExpandAllDepth = 0
 		s.rebuildTreeRows()
-	} else if cursorAncestorID != "" {
-		for i, e := range s.Entries {
-			if e.Path == cursorAncestorID {
-				s.Cursor = i
-				break
+	} else {
+		// filteredIdx was last built against treeRows; rebuild it against Entries (flat mode's
+		// backing space) before translating cursorAncestorID's raw Entries index below.
+		s.rebuildFilter()
+		if cursorAncestorID != "" {
+			for i, e := range s.Entries {
+				if e.Path == cursorAncestorID {
+					if pos, ok := s.cursorForRawIndex(i); ok {
+						s.Cursor = pos
+					}
+					break
+				}
 			}
 		}
 	}
@@ -157,10 +164,14 @@ func treeRootsFromEntries(entries []localfs.Entry) []treeflat.Node[TreeEntry] {
 // reads them synchronously (Phase 1 has no async loading yet) and caches them on the node, so a
 // later collapse/expand reuses the cached children instead of re-reading the directory.
 func (s *State) ToggleTreeExpand(viewportRows int) error {
-	if s.ListLayout != ListLayoutTree || s.Cursor < 0 || s.Cursor >= len(s.treeRows) {
+	if s.ListLayout != ListLayoutTree {
 		return nil
 	}
-	row := s.treeRows[s.Cursor]
+	rawIdx, ok := s.rawIndexForCursor()
+	if !ok || rawIdx < 0 || rawIdx >= len(s.treeRows) {
+		return nil
+	}
+	row := s.treeRows[rawIdx]
 	if row.Value.Entry.Type != localfs.EntryDirectory {
 		return nil
 	}
@@ -179,10 +190,14 @@ func (s *State) ToggleTreeExpand(viewportRows int) error {
 // (toggleTreeForPanel in internal/app/panels.go), this does not enable tree mode itself — the
 // caller is responsible for calling SetListLayout first if auto-enabling is desired.
 func (s *State) ExpandTreeCursorRow(viewportRows int) error {
-	if s.ListLayout != ListLayoutTree || s.Cursor < 0 || s.Cursor >= len(s.treeRows) {
+	if s.ListLayout != ListLayoutTree {
 		return nil
 	}
-	row := s.treeRows[s.Cursor]
+	rawIdx, ok := s.rawIndexForCursor()
+	if !ok || rawIdx < 0 || rawIdx >= len(s.treeRows) {
+		return nil
+	}
+	row := s.treeRows[rawIdx]
 	if row.Value.Entry.Type != localfs.EntryDirectory || s.TreeExpanded[row.ID] {
 		return nil
 	}
@@ -205,17 +220,21 @@ func (s *State) ExpandTreeCursorRow(viewportRows int) error {
 // parent pattern in dedup.Handler.CollapseOrParent, but also collapses the parent rather than
 // only moving the cursor onto it.
 func (s *State) CollapseTreeCursorRow(viewportRows int) error {
-	if s.ListLayout != ListLayoutTree || s.Cursor < 0 || s.Cursor >= len(s.treeRows) {
+	if s.ListLayout != ListLayoutTree {
 		return nil
 	}
-	row := s.treeRows[s.Cursor]
+	rawIdx, ok := s.rawIndexForCursor()
+	if !ok || rawIdx < 0 || rawIdx >= len(s.treeRows) {
+		return nil
+	}
+	row := s.treeRows[rawIdx]
 	if row.Value.Entry.Type == localfs.EntryDirectory && s.TreeExpanded[row.ID] {
 		return s.collapseTreeRow(row.ID, row.Depth, viewportRows)
 	}
 	if row.Depth == 0 {
 		return nil
 	}
-	for i := s.Cursor - 1; i >= 0; i-- {
+	for i := rawIdx - 1; i >= 0; i-- {
 		if s.treeRows[i].Depth < row.Depth {
 			return s.collapseTreeRow(s.treeRows[i].ID, s.treeRows[i].Depth, viewportRows)
 		}
@@ -233,17 +252,18 @@ func (s *State) JumpTreeSiblingDir(delta, viewportRows int) {
 	if s.ListLayout != ListLayoutTree || (delta != -1 && delta != 1) {
 		return
 	}
-	if s.Cursor < 0 || s.Cursor >= len(s.treeRows) {
+	rawIdx, ok := s.rawIndexForCursor()
+	if !ok || rawIdx < 0 || rawIdx >= len(s.treeRows) {
 		return
 	}
-	row := s.treeRows[s.Cursor]
-	subjectIdx := s.Cursor
+	row := s.treeRows[rawIdx]
+	subjectIdx := rawIdx
 	if row.Value.Entry.Type != localfs.EntryDirectory {
 		if row.Depth == 0 {
 			return
 		}
 		subjectIdx = -1
-		for i := s.Cursor - 1; i >= 0; i-- {
+		for i := rawIdx - 1; i >= 0; i-- {
 			if s.treeRows[i].Depth < row.Depth {
 				subjectIdx = i
 				break
@@ -262,9 +282,14 @@ func (s *State) JumpTreeSiblingDir(delta, viewportRows int) {
 		if r.Depth > subjectDepth || r.Value.Entry.Type != localfs.EntryDirectory {
 			continue
 		}
-		s.Cursor = i
-		s.EnsureCursorInViewport(viewportRows)
-		return
+		// A matching sibling can itself be filtered out (e.g. an entry filter hiding it); keep
+		// scanning in the same direction for the next visible one instead of landing on a row
+		// that isn't actually shown.
+		if pos, posOK := s.cursorForRawIndex(i); posOK {
+			s.Cursor = pos
+			s.EnsureCursorInViewport(viewportRows)
+			return
+		}
 	}
 }
 
@@ -333,14 +358,15 @@ func (s *State) CollapseAllTreeFully(viewportRows int) {
 // directory at collapseDepth. Rows deeper than collapseDepth would disappear with their parent,
 // so the ancestor at collapseDepth is used instead.
 func (s *State) collapseAllTreeCursorAnchor(collapseDepth int) string {
-	if s.Cursor < 0 || s.Cursor >= len(s.treeRows) {
+	rawIdx, ok := s.rawIndexForCursor()
+	if !ok || rawIdx < 0 || rawIdx >= len(s.treeRows) {
 		return ""
 	}
-	row := s.treeRows[s.Cursor]
+	row := s.treeRows[rawIdx]
 	if row.Depth <= collapseDepth {
 		return row.ID
 	}
-	for i := s.Cursor - 1; i >= 0; i-- {
+	for i := rawIdx - 1; i >= 0; i-- {
 		if s.treeRows[i].Depth == collapseDepth {
 			return s.treeRows[i].ID
 		}
@@ -370,14 +396,15 @@ func (s *State) collapseAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], dep
 // treeRootAncestorID returns the ID of the cursor row's depth-0 ancestor (or the cursor row's own
 // ID if it is already at depth 0). Empty if the cursor is out of range.
 func (s *State) treeRootAncestorID() string {
-	if s.Cursor < 0 || s.Cursor >= len(s.treeRows) {
+	rawIdx, ok := s.rawIndexForCursor()
+	if !ok || rawIdx < 0 || rawIdx >= len(s.treeRows) {
 		return ""
 	}
-	row := s.treeRows[s.Cursor]
+	row := s.treeRows[rawIdx]
 	if row.Depth == 0 {
 		return row.ID
 	}
-	for i := s.Cursor - 1; i >= 0; i-- {
+	for i := rawIdx - 1; i >= 0; i-- {
 		if s.treeRows[i].Depth == 0 {
 			return s.treeRows[i].ID
 		}
@@ -400,8 +427,8 @@ func (s *State) ExpandAllTreeShallow(viewportRows int) error {
 	}
 	targetDepth := s.treeExpandAllDepth
 	anchorID := ""
-	if s.Cursor >= 0 && s.Cursor < len(s.treeRows) {
-		anchorID = s.treeRows[s.Cursor].ID
+	if rawIdx, ok := s.rawIndexForCursor(); ok && rawIdx >= 0 && rawIdx < len(s.treeRows) {
+		anchorID = s.treeRows[rawIdx].ID
 	}
 	s.treeCursorID = anchorID
 	if err := s.expandAllTreeDirsAtDepth(s.TreeRoots, 0, targetDepth); err != nil {
@@ -603,9 +630,10 @@ func findTreeNode(nodes []treeflat.Node[TreeEntry], id string) *treeflat.Node[Tr
 
 func (s *State) rebuildTreeRows() {
 	s.treeRows = treeflat.Flatten(s.TreeRoots, func(id string) bool { return s.TreeExpanded[id] })
-	if s.Filter.Active {
-		s.rebuildFilter()
-	}
+	// Unconditional: rebuildFilter also refreshes filteredIdx (see rebuildEntryFilter), which must
+	// stay in sync with treeRows even when only an entry filter (not the quick filter) is active —
+	// otherwise filteredIdx keeps pointing at stale treeRows positions after an expand/collapse.
+	s.rebuildFilter()
 }
 
 // reattachTreeCursorByID keeps the cursor on the same node (by ID) after a rebuild when
@@ -613,7 +641,11 @@ func (s *State) rebuildTreeRows() {
 func (s *State) reattachTreeCursorByID(id string, viewportRows int) {
 	for i := range s.treeRows {
 		if s.treeRows[i].ID == id {
-			s.Cursor = i
+			// When the row is filtered out, fall through to clampCursor below instead of
+			// reassigning — same fallback as when id isn't found in treeRows at all.
+			if pos, ok := s.cursorForRawIndex(i); ok {
+				s.Cursor = pos
+			}
 			break
 		}
 	}
@@ -628,9 +660,82 @@ func (s *State) reattachTreeCursorByID(id string, viewportRows int) {
 // which stay false while Children is still nil during a load). ok is false outside tree mode or
 // index range.
 func (s State) TreeRowShape(index int) (depth int, lastChild bool, ancestorHasNext []bool, expanded bool, loading bool, ok bool) {
-	if s.ListLayout != ListLayoutTree || index < 0 || index >= len(s.treeRows) {
+	if s.ListLayout != ListLayoutTree {
 		return 0, false, nil, false, false, false
 	}
-	row := s.treeRows[index]
-	return row.Depth, row.LastChild, row.AncestorHasNext, row.Expanded, row.Value.Loading, true
+	rawIdx, idxOK := s.translateVisibleIndex(index)
+	if !idxOK || rawIdx < 0 || rawIdx >= len(s.treeRows) {
+		return 0, false, nil, false, false, false
+	}
+	row := s.treeRows[rawIdx]
+	lastChild, ancestorHasNext = row.LastChild, row.AncestorHasNext
+	// A filter can remove siblings, so the raw tree structure's connector shape (computed by
+	// treeflat.Flatten over every child, filtered or not) is wrong for what's actually on screen —
+	// e.g. a directory whose only surviving visible child would still draw "├─" instead of "└─".
+	// filteredTreeShape holds the shape recomputed for the filtered display sequence instead.
+	if s.ActiveEntryFilter != nil && index >= 0 && index < len(s.filteredTreeShape) {
+		lastChild = s.filteredTreeShape[index].LastChild
+		ancestorHasNext = s.filteredTreeShape[index].AncestorHasNext
+	}
+	return row.Depth, lastChild, ancestorHasNext, row.Expanded, row.Value.Loading, true
+}
+
+// treeConnectorShape holds the recomputed LastChild/AncestorHasNext connector fields for one row
+// of the filtered display sequence — see recomputeFilteredTreeConnectors.
+type treeConnectorShape struct {
+	LastChild       bool
+	AncestorHasNext []bool
+}
+
+// recomputeFilteredTreeConnectors derives LastChild/AncestorHasNext for the filtered display
+// sequence (s.filteredIdx) instead of trusting treeRows' structural values, which are computed by
+// treeflat.Flatten over the full unfiltered child list. Mirrors Flatten's own algorithm but works
+// from a plain sequence of row depths (post-filtering) rather than a Node tree — a row is
+// LastChild when no later row in the filtered sequence at the same depth appears before a
+// shallower one does; AncestorHasNext[k] tracks whether the ancestor at depth k+1 has such a
+// following sibling too, exactly as Flatten defines it. Called after filteredIdx is rebuilt; no-op
+// (clears the cache) outside tree mode or when filteredIdx is empty.
+func (s *State) recomputeFilteredTreeConnectors() {
+	if s.ListLayout != ListLayoutTree || len(s.filteredIdx) == 0 {
+		s.filteredTreeShape = nil
+		return
+	}
+	n := len(s.filteredIdx)
+	depths := make([]int, n)
+	for i, rawIdx := range s.filteredIdx {
+		depths[i] = s.treeRows[rawIdx].Depth
+	}
+	isLast := make([]bool, n)
+	openAtDepth := make(map[int]int, n)
+	for i, d := range depths {
+		if prev, ok := openAtDepth[d]; ok {
+			isLast[prev] = false
+		}
+		isLast[i] = true
+		openAtDepth[d] = i
+		for dd := range openAtDepth {
+			if dd > d {
+				delete(openAtDepth, dd)
+			}
+		}
+	}
+	shapes := make([]treeConnectorShape, n)
+	var stack []bool
+	for i, d := range depths {
+		if len(stack) > d {
+			stack = stack[:d]
+		}
+		var ancestorHasNext []bool
+		if d > 0 && len(stack) > 1 {
+			ancestorHasNext = append([]bool(nil), stack[1:]...)
+		}
+		shapes[i] = treeConnectorShape{LastChild: isLast[i], AncestorHasNext: ancestorHasNext}
+		hasNext := !isLast[i]
+		if len(stack) == d {
+			stack = append(stack, hasNext)
+		} else {
+			stack[d] = hasNext
+		}
+	}
+	s.filteredTreeShape = shapes
 }

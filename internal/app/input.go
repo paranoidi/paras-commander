@@ -961,6 +961,8 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelHistoryDialog:
 		// Keyboard/menu shortcut targets whichever panel is active (left vs right).
 		a.openHistoryDialog(a.model.ActivePanel)
+	case keymap.ActionPanelGitFilterMenu:
+		a.openGitFilterMenu()
 	case keymap.ActionPanelFindDialog:
 		a.findCtrl.OpenDialog(a.model.ActivePanel)
 	case keymap.ActionAppUserMenu:
