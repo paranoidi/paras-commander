@@ -306,7 +306,11 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		if a.model.FilePreviewThemePicker.Open {
 			return menu.FunctionKeysFilePreviewStylePicker(), true
 		}
-		return menu.FunctionKeysFilePreviewView(a.model.FullscreenFilePreviewRawMarkdown, a.launchedFileViewer), true
+		return menu.FunctionKeysFilePreviewView(
+			a.model.FullscreenFilePreviewRawMarkdown,
+			a.launchedFileViewer,
+			a.previewCtrl.FilePreviewToggleRawFooterEligible(),
+		), true
 	}
 	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
 		rest := compareViewFooterKeys(a.keys.Compare, a.model.CompareView.Filter)

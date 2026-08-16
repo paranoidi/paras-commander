@@ -37,6 +37,16 @@ func (h *Handler) toggleFilePreviewRawMarkdown() {
 	})
 }
 
+// FilePreviewToggleRawFooterEligible reports whether the footer should show F6 Raw/Render:
+// true when the fullscreen preview is open on a markdown file that isn't a git diff,
+// mirroring toggleFilePreviewRawMarkdown's own no-op guard.
+func (h *Handler) FilePreviewToggleRawFooterEligible() bool {
+	h.mu.RLock()
+	st := h.model.FullscreenFilePreview
+	h.mu.RUnlock()
+	return st.Open && st.Path != "" && !st.IsDiff && previewrun.IsMarkdownPath(st.Path)
+}
+
 // closeOrQuitFilePreview closes the fullscreen preview back to the browser, or quits the
 // app instead when it was launched directly via `pc <file>` (no browser to fall back to).
 func (h *Handler) closeOrQuitFilePreview() bool {

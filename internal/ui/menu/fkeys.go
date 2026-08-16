@@ -109,10 +109,12 @@ func FunctionKeysFilePreviewStylePicker() []FunctionKey {
 // markdown (F6 would switch to raw source) and "Render" when already showing raw source.
 // launchedAsFileViewer is true when the app was started directly via `pc <file>`, where Esc
 // quits the app just like F10 -- the separate "Esc Close" entry is omitted since it would
-// duplicate F10 Quit rather than describe a distinct action. F3 is reserved for toggling
-// direct-key chord hints in the `:` leader menu (menu.FunctionKeyLeaderMenuToggleChords),
+// duplicate F10 Quit rather than describe a distinct action. showToggleRaw is false for files
+// file.view.toggle-raw would no-op on (non-markdown, or a git diff), in which case the F6 entry
+// is omitted entirely rather than advertising an action that does nothing. F3 is reserved for
+// toggling direct-key chord hints in the `:` leader menu (menu.FunctionKeyLeaderMenuToggleChords),
 // matching the file-list view, so it is not listed here.
-func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer bool) []FunctionKey {
+func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer, showToggleRaw bool) []FunctionKey {
 	toggleHint := "Raw"
 	if rawMarkdown {
 		toggleHint = "Render"
@@ -121,12 +123,16 @@ func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer bool) []Funct
 	if !launchedAsFileViewer {
 		out = append(out, FooterEscClose)
 	}
-	return append(out,
+	out = append(out,
 		FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
 		FunctionKey{Key: tcell.KeyRune, KeyLabel: "/", Hint: "Search"},
 		FunctionKey{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
 		FunctionKey{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Reload"},
-		FunctionKey{Key: tcell.KeyF6, KeyLabel: "F6", Hint: toggleHint},
+	)
+	if showToggleRaw {
+		out = append(out, FunctionKey{Key: tcell.KeyF6, KeyLabel: "F6", Hint: toggleHint})
+	}
+	return append(out,
 		FunctionKey{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete this"},
 		FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Style"},
 		FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
