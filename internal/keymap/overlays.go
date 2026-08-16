@@ -142,6 +142,14 @@ var overlayRegistry = []OverlaySpec{
 			return fmt.Errorf("parse config %q: [dialog.mass_rename] action %q is not allowed (file.mass-rename.save-pattern, file.mass-rename.load-pattern, file.mass-rename.delete-pattern only)", source, action)
 		},
 	},
+	{
+		TableName: DialogRunForEachShortcutsTable,
+		Defaults:  DefaultRunForEachDialogOverlayKeys,
+		Allowed:   AllowedInRunForEachDialogOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [dialog.run_for_each] action %q is not allowed (file.run-for-each.history only)", source, action)
+		},
+	},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.
@@ -202,6 +210,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "terminal.toggle-panel, terminal.focus, terminal.grow, terminal.shrink, app.drop-to-shell only"
 	case DialogMassRenameShortcutsTable:
 		return "file.mass-rename.save-pattern, file.mass-rename.load-pattern, file.mass-rename.delete-pattern only"
+	case DialogRunForEachShortcutsTable:
+		return "file.run-for-each.history only"
 	default:
 		return "not allowed"
 	}

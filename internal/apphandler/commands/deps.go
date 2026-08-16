@@ -61,6 +61,11 @@ type Handler struct {
 	// sync), hence the dedicated lock — mirrors the procsMu/procs pattern above.
 	ptyMu    sync.RWMutex
 	entryPTY *entryPTYSession
+
+	// runForEachHistory is the in-memory, session-only (never persisted) list of recently-run
+	// run-for-each command lines, most-recent-first, capped at maxRunForEachHistory. Backs the
+	// F3 command-history picker on the run-for-each dialog's main screen.
+	runForEachHistory []string
 }
 
 // entryPTYSession is the live PTY state for one run-for-each entry.

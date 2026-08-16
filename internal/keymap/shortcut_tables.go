@@ -11,6 +11,7 @@ const (
 	DialogInputShortcutsTable      = "dialog.input"
 	DialogRenameShortcutsTable     = "dialog.rename"
 	DialogMassRenameShortcutsTable = "dialog.mass_rename"
+	DialogRunForEachShortcutsTable = "dialog.run_for_each"
 	DialogMkdirShortcutsTable      = "dialog.mkdir"
 	DialogBookmarkShortcutsTable   = "dialog.bookmark"
 	DialogFindShortcutsTable       = "dialog.find"
@@ -26,15 +27,16 @@ const (
 )
 
 var dialogShortcutSubtables = map[string]struct{}{
-	"input":       {},
-	"rename":      {},
-	"mass_rename": {},
-	"mkdir":       {},
-	"bookmark":    {},
-	"find":        {},
-	"history":     {},
-	"flatten":     {},
-	"transfer":    {},
+	"input":        {},
+	"rename":       {},
+	"mass_rename":  {},
+	"mkdir":        {},
+	"bookmark":     {},
+	"find":         {},
+	"history":      {},
+	"flatten":      {},
+	"transfer":     {},
+	"run_for_each": {},
 }
 
 // AllShortcutTablePaths returns every shortcut table path (top-level and dialog.*).
@@ -54,6 +56,7 @@ func AllShortcutTablePaths() []string {
 		DialogHistoryShortcutsTable,
 		DialogFlattenShortcutsTable,
 		DialogTransferShortcutsTable,
+		DialogRunForEachShortcutsTable,
 		CompareShortcutsTable,
 		DedupShortcutsTable,
 		TerminalShortcutsTable,

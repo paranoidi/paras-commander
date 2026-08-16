@@ -56,3 +56,25 @@ func TestValidateRunForEachCommandInDirsAllowsDirsWithoutF(t *testing.T) {
 		t.Fatal("expected a preview line")
 	}
 }
+
+func TestRecordRunForEachHistoryDedupAndCap(t *testing.T) {
+	h := &Handler{}
+
+	for range maxRunForEachHistory + 5 {
+		h.recordRunForEachHistory("echo %f")
+	}
+	if got := h.RunForEachHistory(); len(got) != 1 {
+		t.Fatalf("history = %+v, want deduped to 1 entry", got)
+	}
+
+	for i := range maxRunForEachHistory + 5 {
+		h.recordRunForEachHistory("echo " + string(rune('a'+i%26)))
+	}
+	got := h.RunForEachHistory()
+	if len(got) != maxRunForEachHistory {
+		t.Fatalf("history len = %d, want cap %d", len(got), maxRunForEachHistory)
+	}
+	if got[0] != "echo y" {
+		t.Fatalf("history[0] = %q, want most-recent %q", got[0], "echo y")
+	}
+}

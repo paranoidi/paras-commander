@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -9,6 +10,10 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
+
+// maxRunForEachHistory caps the in-memory, session-only recently-run command list (see
+// Handler.runForEachHistory), mirroring apphandler/dialog's recordMassRenameHistory shape.
+const maxRunForEachHistory = 20
 
 // OpenRunForEachDialog opens the Run-for-each command dialog for the active panel's selection
 // (or the whole listing when nothing is selected).
@@ -29,7 +34,8 @@ func (h *Handler) OpenRunForEachDialog() {
 		"Do not wrap % macros in quotes.\n" +
 		">> | && etc. run via sh -c; otherwise argv is parsed without a shell.\n" +
 		"Check \"Run in each selected directory\" (Alt+R) to cd into each selected directory " +
-		"instead (directories only; %f becomes optional)."
+		"instead (directories only; %f becomes optional).\n" +
+		"F3 opens command history."
 	fields := []dialog.FileDialogField{{Label: "Command", Value: "", Cursor: 0}}
 	h.model.FileDialog = dialog.FileDialogState{
 		Open:              true,
@@ -66,6 +72,7 @@ func (h *Handler) ExecuteRunForEach() {
 	if strings.TrimSpace(fd.RunForEachCommandError) != "" {
 		return
 	}
+	h.recordRunForEachHistory(cmdLine)
 	h.host.CloseFileDialog()
 	h.StartRunForEachBatch(RunForEachBatchSpec{
 		Kind:            ui.CommandRunKindRunForEach,
@@ -82,6 +89,30 @@ func (h *Handler) ExecuteRunForEach() {
 			return BuildRunForEachItem(cmdLine, ent, active, other, false, !inDirs)
 		},
 	})
+}
+
+// recordRunForEachHistory prepends cmd to the in-memory command-line history, removing any
+// existing equal entry first and capping the list at maxRunForEachHistory (mirrors
+// apphandler/dialog's recordMassRenameHistory remove-then-prepend-then-cap shape).
+func (h *Handler) recordRunForEachHistory(cmd string) {
+	hist := make([]string, 0, len(h.runForEachHistory)+1)
+	hist = append(hist, cmd)
+	for _, e := range h.runForEachHistory {
+		if e == cmd {
+			continue
+		}
+		hist = append(hist, e)
+	}
+	if len(hist) > maxRunForEachHistory {
+		hist = hist[:maxRunForEachHistory]
+	}
+	h.runForEachHistory = hist
+}
+
+// RunForEachHistory returns a snapshot of the in-memory, session-only recently-run command
+// list, most-recent-first, for the F3 command-history picker.
+func (h *Handler) RunForEachHistory() []string {
+	return slices.Clone(h.runForEachHistory)
 }
 
 // RecomputeRunForEachValidation refreshes the run-for-each dialog's inline command validation

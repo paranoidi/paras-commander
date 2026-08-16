@@ -110,6 +110,7 @@ func buildBundle(global map[string][]string, overlayLayers []map[string][]string
 		Dedup:            overlayMaps[13],
 		Terminal:         overlayMaps[14],
 		MassRenameDialog: overlayMaps[15],
+		RunForEachDialog: overlayMaps[16],
 		LeaderKey:        leaderKey,
 		CopyMenuKey:      copyMenuKey,
 		PreviewMenuKey:   previewMenuKey,
@@ -311,6 +312,7 @@ type dialogShortcuts struct {
 	History    map[string][]string `toml:"history"`
 	Flatten    map[string][]string `toml:"flatten"`
 	Transfer   map[string][]string `toml:"transfer"`
+	RunForEach map[string][]string `toml:"run_for_each"`
 }
 
 // EncodeDefaultStub writes the canonical keybindings TOML: a leading
@@ -346,6 +348,7 @@ func EncodeDefaultStub(w io.Writer) error {
 		"# [dialog.history] — panel.history-both-panels.\n" +
 		"# [dialog.flatten] — ui.destination-active and ui.destination-inactive.\n" +
 		"# [dialog.transfer] — ui.destination-active and ui.destination-inactive (copy/move dialog).\n" +
+		"# [dialog.run_for_each] — file.run-for-each.history.\n" +
 		"#\n" +
 		"# [leader_key] — Esc function-menu keys (case-sensitive: f and F may differ; ?, comma, period allowed; empty omits).\n" +
 		"# [copy_menu] — `\"` copy-menu keys (letters only; empty omits).\n" +
@@ -389,6 +392,7 @@ func EncodeDefaultStub(w io.Writer) error {
 			History:    DefaultHistoryDialogOverlayKeys(),
 			Flatten:    DefaultFlattenDialogOverlayKeys(),
 			Transfer:   DefaultTransferDialogOverlayKeys(),
+			RunForEach: DefaultRunForEachDialogOverlayKeys(),
 		},
 	}
 	if err := toml.NewEncoder(w).Encode(payload); err != nil {

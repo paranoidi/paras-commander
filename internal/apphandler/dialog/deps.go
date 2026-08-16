@@ -63,6 +63,9 @@ type Deps struct {
 	// KeysMassRenameDialog is the [dialog.mass_rename] keymap overlay, consulted while the
 	// main mass-rename dialog is open (save/load/delete pattern chords).
 	KeysMassRenameDialog *keymap.Map
+	// KeysRunForEachDialog is the [dialog.run_for_each] keymap overlay, consulted while the
+	// main run-for-each dialog is open (command-history chord).
+	KeysRunForEachDialog *keymap.Map
 
 	// ConfigDir is the resolved config directory, used to locate patterns.toml when
 	// Config().MassRename.File is empty (mirrors apphandler/meta.Deps.ConfigDir).
@@ -109,6 +112,7 @@ type Handler struct {
 	keysFlattenDialog    *keymap.Map
 	keysBookmarkDialog   *keymap.Map
 	keysMassRenameDialog *keymap.Map
+	keysRunForEachDialog *keymap.Map
 	configDir            string
 	jobs                 *jobsctrl.Handler
 	commands             *commandsctrl.Handler
@@ -156,6 +160,7 @@ func New(d Deps) *Handler {
 		keysFlattenDialog:    d.KeysFlattenDialog,
 		keysBookmarkDialog:   d.KeysBookmarkDialog,
 		keysMassRenameDialog: d.KeysMassRenameDialog,
+		keysRunForEachDialog: d.KeysRunForEachDialog,
 		configDir:            d.ConfigDir,
 		jobs:                 d.Jobs,
 		commands:             d.Commands,

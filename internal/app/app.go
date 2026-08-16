@@ -557,6 +557,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		KeysFlattenDialog:    keys.FlattenDialog,
 		KeysBookmarkDialog:   keys.BookmarkDialog,
 		KeysMassRenameDialog: keys.MassRenameDialog,
+		KeysRunForEachDialog: keys.RunForEachDialog,
 		ConfigDir:            resolvedPaths.ConfigDir,
 		Jobs:                 app.jobsCtrl,
 		Commands:             app.commandsCtrl,

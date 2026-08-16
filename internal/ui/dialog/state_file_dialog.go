@@ -130,6 +130,14 @@ type FileDialogState struct {
 	// Commands view, instead of capturing stdout/stderr non-interactively. Lets tools that
 	// open /dev/tty for prompts (e.g. chezmoi) work under run-for-each.
 	RunForEachPTY bool
+	// RunForEachHistoryOpen is true while the F3 command-history picker sub-screen is shown
+	// instead of the main run-for-each form.
+	RunForEachHistoryOpen bool
+	// RunForEachHistoryPicker holds the fuzzy-filtered in-memory recently-run command list
+	// while RunForEachHistoryOpen is true. Same widget shape as MassRenamePatternPickerState,
+	// backed by a different, session-only item source (see apphandler/commands's
+	// runForEachHistory).
+	RunForEachHistoryPicker RunForEachHistoryPickerState
 	// ExtractSources apply when DialogType == FileDialogExtract (archive paths resolved at dialog open).
 	ExtractSources []string
 	// MkdirShowActions enables the extra "Create / Create and copy selected / Create and move selected" radio

@@ -278,6 +278,11 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: lbl, Hint: "History"}}, rest...)
 		}
 	}
+	if a.dialogCtrl.RunForEachHistoryFooterEligible() {
+		if lbl := a.keys.RunForEachDialog.MenuBindingLabel(keymap.ActionFileRunForEachHistory); lbl != "" {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: lbl, Hint: "History"}}, rest...)
+		}
+	}
 	if a.dialogCtrl.MassRenameLoadPatternFooterEligible() {
 		if lbl := a.keys.MassRenameDialog.MenuBindingLabel(keymap.ActionFileMassRenameLoadPattern); lbl != "" {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF2, KeyLabel: lbl, Hint: "Load pattern"}}, rest...)

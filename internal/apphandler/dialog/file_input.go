@@ -88,19 +88,34 @@ func (h *Handler) tryRunForEachPTYAltShortcut(r rune) bool {
 	return true
 }
 
+// trySubPhaseFileDialogKey routes a key event to whichever dialog sub-phase/picker screen is
+// currently open (rename tool, mass-rename save-prompt/load/history picker, run-for-each
+// command-history picker), if any. handled is true when one of those sub-phases owned the
+// event, in which case quit is its result (see HandleFileDialogKey's return convention).
+// Split out of HandleFileDialogKey to keep that function's branch count in check as new
+// sub-phases are added.
+func (h *Handler) trySubPhaseFileDialogKey(event *tcell.EventKey, d *dialog.FileDialogState) (quit, handled bool) {
+	switch {
+	case d.Open && dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != dialog.RenamePhaseMain:
+		return h.handleRenameToolKey(event), true
+	case d.Open && d.DialogType == dialog.FileDialogMassRename && d.MassRenamePhase == dialog.MassRenamePhaseSavePrompt:
+		return h.handleMassRenameSavePromptKey(event), true
+	case d.Open && d.DialogType == dialog.FileDialogMassRename && massRenamePickerPhaseOpen(d.MassRenamePhase):
+		return h.handleMassRenamePickerKey(event), true
+	case d.Open && d.DialogType == dialog.FileDialogRunForEach && d.RunForEachHistoryOpen:
+		return h.handleRunForEachHistoryPickerKey(event), true
+	default:
+		return false, false
+	}
+}
+
 // HandleFileDialogKey routes a key event to the open file dialog. Returns true when the event
 // requests quitting the app (never for the file dialog itself; matches the App.handleKey
 // (bool quit) convention shared across auxiliary key handlers).
 func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 	d := &h.model.FileDialog
-	if d.Open && dialog.FileDialogHasRenamePhase(d.DialogType) && d.RenamePhase != dialog.RenamePhaseMain {
-		return h.handleRenameToolKey(event)
-	}
-	if d.Open && d.DialogType == dialog.FileDialogMassRename && d.MassRenamePhase == dialog.MassRenamePhaseSavePrompt {
-		return h.handleMassRenameSavePromptKey(event)
-	}
-	if d.Open && d.DialogType == dialog.FileDialogMassRename && massRenamePickerPhaseOpen(d.MassRenamePhase) {
-		return h.handleMassRenamePickerKey(event)
+	if quit, handled := h.trySubPhaseFileDialogKey(event, d); handled {
+		return quit
 	}
 	if h.tryRenameDialogShortcut(event) {
 		return false
@@ -109,6 +124,9 @@ func (h *Handler) HandleFileDialogKey(event *tcell.EventKey) bool {
 		return false
 	}
 	if h.tryMassRenameDialogShortcut(event) {
+		return false
+	}
+	if h.tryRunForEachDialogShortcut(event) {
 		return false
 	}
 	if h.tryFileDialogPreKey(event, d) {

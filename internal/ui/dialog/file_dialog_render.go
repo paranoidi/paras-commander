@@ -37,6 +37,10 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 	case FileDialogAddBookmark:
 		height = 10
 	case FileDialogRunForEach:
+		if state.RunForEachHistoryOpen {
+			height = runForEachHistoryPickerDialogHeight(layout.Height)
+			break
+		}
 		helpLines := 0
 		if msg := strings.TrimSpace(state.Message); msg != "" {
 			helpLines = strings.Count(state.Message, "\n") + 1
@@ -105,7 +109,9 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, c
 	case FileDialogAddBookmark:
 		drawAddBookmarkDialogContent(screen, rect, state, borderStyle, styles)
 	case FileDialogRunForEach:
-		if len(state.Fields) > 0 {
+		if state.RunForEachHistoryOpen {
+			drawRunForEachHistoryPickerContent(screen, rect, state.RunForEachHistoryPicker, borderStyle, styles)
+		} else if len(state.Fields) > 0 {
 			drawRunForEachDialogFields(screen, rect, borderStyle, state, styles)
 		}
 	case FileDialogMassRename:
@@ -174,6 +180,9 @@ func fileDialogOuterTitle(state FileDialogState) string {
 		case MassRenamePhaseHistoryPicker:
 			return "Pattern history"
 		}
+	}
+	if state.DialogType == FileDialogRunForEach && state.RunForEachHistoryOpen {
+		return "History"
 	}
 	return fileDialogTitle(state.DialogType)
 }
@@ -552,6 +561,9 @@ func fileDialogOKFocusIndex(state FileDialogState) int {
 	if state.DialogType == FileDialogMassRename && (state.MassRenamePhase == MassRenamePhaseLoadPicker || state.MassRenamePhase == MassRenamePhaseHistoryPicker) {
 		return 1 // list=0, OK=1
 	}
+	if state.DialogType == FileDialogRunForEach && state.RunForEachHistoryOpen {
+		return 1 // list=0, OK=1
+	}
 	if state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain {
 		return massRenameContentEnd(state)
 	}
@@ -569,6 +581,9 @@ func fileDialogCancelFocusIndex(state FileDialogState) int {
 		return 1
 	}
 	if state.DialogType == FileDialogMassRename && (state.MassRenamePhase == MassRenamePhaseLoadPicker || state.MassRenamePhase == MassRenamePhaseHistoryPicker) {
+		return 2
+	}
+	if state.DialogType == FileDialogRunForEach && state.RunForEachHistoryOpen {
 		return 2
 	}
 	if state.DialogType == FileDialogMassRename && state.MassRenamePhase == MassRenamePhaseMain {

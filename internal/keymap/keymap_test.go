@@ -459,6 +459,40 @@ func TestAllowedInMassRenameDialogOverlayRejectsForeignActions(t *testing.T) {
 	}
 }
 
+func TestRunForEachDialogOverlayRejectsNonRunForEachActions(t *testing.T) {
+	dir := t.TempDir()
+	keybindings := filepath.Join(dir, "keybindings.toml")
+	body := "[dialog.run_for_each]\n" +
+		"jobs.cancel = [\"C-r\"]\n"
+	if err := os.WriteFile(keybindings, []byte(body), 0o600); err != nil {
+		t.Fatalf("write keybindings: %v", err)
+	}
+	_, err := LoadFromPaths(config.Paths{ConfigDir: dir, KeybindingsFile: keybindings})
+	if err == nil {
+		t.Fatal("LoadFromPaths: want error for invalid action in [dialog.run_for_each]")
+	}
+}
+
+func TestDefaultBundleRunForEachDialogOverlayF3(t *testing.T) {
+	bundle, err := DefaultBundle()
+	if err != nil {
+		t.Fatalf("DefaultBundle: %v", err)
+	}
+	id, ok := bundle.RunForEachDialog.Lookup(tcell.NewEventKey(tcell.KeyF3, 0, tcell.ModNone))
+	if !ok || id != ActionFileRunForEachHistory {
+		t.Fatalf("RunForEachDialog F3 = %q %v, want %q", id, ok, ActionFileRunForEachHistory)
+	}
+}
+
+func TestAllowedInRunForEachDialogOverlayRejectsForeignActions(t *testing.T) {
+	if AllowedInRunForEachDialogOverlay(ActionBookmarkDelete) {
+		t.Fatal("AllowedInRunForEachDialogOverlay should reject foreign actions")
+	}
+	if !AllowedInRunForEachDialogOverlay(ActionFileRunForEachHistory) {
+		t.Fatal("AllowedInRunForEachDialogOverlay should accept file.run-for-each.history")
+	}
+}
+
 func TestDefaultBundleMkdirDialogOverlayF7(t *testing.T) {
 	bundle, err := DefaultBundle()
 	if err != nil {
