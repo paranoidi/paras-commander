@@ -71,6 +71,7 @@ func MergeDrawWithHold(live, hold State) State {
 	out.ImageProtocol = hold.ImageProtocol
 	out.ImageUnicodePlaceholder = hold.ImageUnicodePlaceholder
 	out.ImageInTmux = hold.ImageInTmux
+	out.ImageCapabilityUncertain = hold.ImageCapabilityUncertain
 	out.WrapCacheSnapshot(hold)
 	out.BodyHeld = true
 	return out

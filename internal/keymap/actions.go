@@ -210,6 +210,10 @@ const (
 	ActionUIOpenConfig        = "ui.open-config"
 	ActionUICalibrateDebounce = "ui.calibrate-debounce"
 
+	// ActionPreviewImageCapabilityDialog opens the M-F3 image terminal-capabilities dialog
+	// (Sixel/Kitty/Kitty-placeholder confirmation checkboxes + Auto/Sixel/Kitty protocol radio).
+	ActionPreviewImageCapabilityDialog = "preview.image-capability-dialog"
+
 	// ActionFindSelectAll marks all ranked find-dialog results and is bound via
 	// [dialog.find], not [main].
 	// ActionDialogInputRestoreDefault restores a focused dialog input field's suggested default
@@ -418,9 +422,10 @@ var KnownActions = map[string]struct{}{
 	ActionMessagesClose: {},
 	ActionMessagesClear: {},
 
-	ActionUIOpenTheme:         {},
-	ActionUIOpenConfig:        {},
-	ActionUICalibrateDebounce: {},
+	ActionUIOpenTheme:                  {},
+	ActionUIOpenConfig:                 {},
+	ActionUICalibrateDebounce:          {},
+	ActionPreviewImageCapabilityDialog: {},
 
 	ActionDialogInputRestoreDefault: {},
 

@@ -41,6 +41,7 @@ func (h *Handler) patchCarouselFilePreviewMessage(titleBase, msg string) {
 		st.ImageProtocol = 0
 		st.ImageUnicodePlaceholder = false
 		st.ImageInTmux = false
+		st.ImageCapabilityUncertain = false
 	})
 	h.postRenderWake()
 	h.clampCarouselFilePreviewScroll()

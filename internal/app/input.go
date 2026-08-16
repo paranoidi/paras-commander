@@ -21,6 +21,7 @@ const (
 	InputModeSortDialog
 	InputModeListingFormatDialog
 	InputModeConfigDialog
+	InputModeImageCapabilityDialog
 	InputModeDebounceCalibrateDialog
 	InputModeGroupSelect
 	InputModeMenu
@@ -81,6 +82,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeListingFormatDialog
 	case a.model.ConfigDialog.Open:
 		return InputModeConfigDialog
+	case a.model.ImageCapabilityDialog.Open:
+		return InputModeImageCapabilityDialog
 	case a.model.DebounceCalibrateDialog.Open:
 		return InputModeDebounceCalibrateDialog
 	case a.model.HostKeyDialog.Open:
@@ -232,6 +235,9 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 		if a.configFileExists() {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Reset to defaults"}}, rest...)
 		}
+	}
+	if a.model.ImageCapabilityDialog.Open {
+		rest = append([]menu.FunctionKey{{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Auto detect"}}, rest...)
 	}
 	if hints := a.dialogCtrl.FlattenDialogOverlayFooterKeys(a.keys.FlattenDialog); len(hints) > 0 {
 		rest = append(hints, rest...)
@@ -541,6 +547,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return false, true
 	case InputModeConfigDialog:
 		a.handleConfigDialogKey(event)
+		a.render()
+		return false, true
+	case InputModeImageCapabilityDialog:
+		a.handleImageCapabilityDialogKey(event)
 		a.render()
 		return false, true
 	case InputModeDebounceCalibrateDialog:
@@ -956,6 +966,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openThemeDialog()
 	case keymap.ActionUIOpenConfig:
 		a.openConfigDialog()
+	case keymap.ActionPreviewImageCapabilityDialog:
+		a.openImageCapabilityDialog()
 	case keymap.ActionUICalibrateDebounce:
 		a.openDebounceCalibrateDialog()
 	case keymap.ActionMenuFileChattr:

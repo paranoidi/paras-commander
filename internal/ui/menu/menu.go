@@ -70,6 +70,7 @@ func BrowserDefinitions(km *keymap.Map, dev bool) []Definition {
 func Definitions() []Definition {
 	optionsItems := []Item{
 		{Action: keymap.ActionUIOpenConfig, Label: "Configuration", Shortcut: 'c'},
+		{Action: keymap.ActionPreviewImageCapabilityDialog, Label: "Configure graphics", Shortcut: 'g'},
 		{Action: keymap.ActionUICalibrateDebounce, Label: "Calibrate Debounce", Shortcut: 'd'},
 		{Action: keymap.ActionUIOpenTheme, Label: "Theme", Shortcut: 't'},
 	}

@@ -1371,6 +1371,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"settings", "toml"},
 		},
 		{
+			ID:          ActionPreviewImageCapabilityDialog,
+			Views:       HelpBrowser | HelpFilePreview,
+			Title:       "Image terminal capabilities",
+			Section:     "Preview",
+			DefaultKeys: []string{"M-F3"},
+			Keywords:    []string{"sixel", "kitty", "placeholder", "wezterm", "graphics", "image"},
+		},
+		{
 			ID:           ActionDialogInputRestoreDefault,
 			Title:        "Restore default placeholder",
 			Section:      "UI",

@@ -111,6 +111,10 @@ type Request struct {
 	// reduced palette and a payload size cap in this case — see
 	// config.DefaultPreviewTmuxSixelColors/MaxBytes.
 	ImageInTmux bool
+	// ImageCapabilityUncertain carries preview.CapabilityUncertain's verdict (resolved by the
+	// caller, alongside ImageProtocol/ImageUnicodePlaceholder) forward into Result/State so the
+	// footer hint doesn't re-derive it from the environment — same pattern as ImageInTmux.
+	ImageCapabilityUncertain bool
 	// Cache, when non-nil, stores/loads downscaled PNG rasters shared with background prefetch.
 	Cache MediaCache
 }
@@ -156,6 +160,9 @@ type Result struct {
 	// environment itself (same rationale as ImageUnicodePlaceholder — see lesson 7 in
 	// llm-docs/graphics-implementation-lessons.md).
 	ImageInTmux bool
+	// ImageCapabilityUncertain carries Request.ImageCapabilityUncertain forward — see that
+	// field's doc comment.
+	ImageCapabilityUncertain bool
 }
 
 // Run executes internal Chroma highlighting or an external preview command.

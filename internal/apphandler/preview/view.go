@@ -154,7 +154,8 @@ func fullscreenFilePreviewKeyboardDispatchAllowed(id string) bool {
 	case keymap.ActionPanelExternalBrowser,
 		keymap.ActionJobsOpen,
 		keymap.ActionCommandsOpen,
-		keymap.ActionMessagesOpen:
+		keymap.ActionMessagesOpen,
+		keymap.ActionPreviewImageCapabilityDialog:
 		return true
 	default:
 		return false

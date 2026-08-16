@@ -287,6 +287,19 @@ const (
 	PreviewImageProtocolKitty = "kitty"
 	// DefaultPreviewImageProtocol is the default [preview].image_protocol value.
 	DefaultPreviewImageProtocol = PreviewImageProtocolAuto
+	// PreviewTerminalCapabilityAuto/Yes/No are the tri-state values for [preview].terminal_sixel,
+	// terminal_kitty, and terminal_kitty_placeholder — user-confirmed overrides for the
+	// auto-detection heuristic in ResolveImageProtocol/TmuxSupportsKittyUnicodePlaceholders, set
+	// via the M-F3 image-capabilities dialog. "auto" (default) leaves the heuristic in charge;
+	// "yes"/"no" pin the answer regardless of what the environment/tmux introspection would guess.
+	PreviewTerminalCapabilityAuto = "auto"
+	PreviewTerminalCapabilityYes  = "yes"
+	PreviewTerminalCapabilityNo   = "no"
+	// DefaultPreviewTerminalSixel / DefaultPreviewTerminalKitty / DefaultPreviewTerminalKittyPlaceholder
+	// are the default (auto) values for the three tri-state fields above.
+	DefaultPreviewTerminalSixel            = PreviewTerminalCapabilityAuto
+	DefaultPreviewTerminalKitty            = PreviewTerminalCapabilityAuto
+	DefaultPreviewTerminalKittyPlaceholder = PreviewTerminalCapabilityAuto
 	// DefaultPreviewVideoThumbCols / Rows are the default video thumbnail grid size.
 	DefaultPreviewVideoThumbCols = 2
 	DefaultPreviewVideoThumbRows = 2

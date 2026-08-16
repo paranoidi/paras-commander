@@ -17,6 +17,7 @@ type footerHintLayout struct {
 
 func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu.FunctionKey) {
 	keyRegionWidth := rect.Width
+	startX := rect.X
 
 	for col := rect.X; col < rect.X+rect.Width; col++ {
 		screen.SetContent(col, rect.Y, ' ', nil, styles.FooterLabel)
@@ -32,7 +33,7 @@ func drawFooter(screen tcell.Screen, rect Rect, styles theme.Theme, fkeys []menu
 	if n > 0 && keyRegionWidth > 0 {
 		layouts, sumW := footerHintStringsFittingWidth(visible, keyRegionWidth)
 		remaining := keyRegionWidth - sumW
-		x := rect.X
+		x := startX
 		gapsBetween := n - 1
 		for i, item := range visible {
 			layout := layouts[i]

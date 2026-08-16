@@ -82,6 +82,12 @@ type State struct {
 	// rule as ImageUnicodePlaceholder: Draw must not re-derive tmux status from the
 	// environment itself.
 	ImageInTmux bool
+	// ImageCapabilityUncertain is true when the currently displayed image's protocol/placeholder
+	// capability was decided by low-confidence guesswork rather than an explicit user
+	// confirmation (preview.CapabilityUncertain, decided upstream in the preview request — same
+	// rule as ImageInTmux/ImageUnicodePlaceholder). Draw carries it into ImagePlacement so the
+	// app layer can show the bottom-left "capability unknown" footer hint without re-deriving it.
+	ImageCapabilityUncertain bool
 
 	wrappedLines     [][]AnsiCell
 	wrapWidth        int

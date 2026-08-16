@@ -129,8 +129,9 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 // This path is still reachable under tmux: Sixel always uses it (no placeholder equivalent
 // exists for Sixel), and so does Kitty when the outer terminal isn't confirmed to support
 // Unicode placeholders — Kitty and Ghostty always are; other terminals (e.g. WezTerm) only if
-// the user has listed them in [preview].unicode_placeholder_terminals, since client_termtype
-// alone can't confirm placeholder support for them.
+// the user has confirmed it via [preview].terminal_kitty_placeholder = "yes" (the M-F3
+// image-capabilities dialog), since client_termtype alone can't confirm placeholder support
+// for them.
 // tmux has no native understanding of Kitty's escape sequences — it must be told to forward
 // them verbatim via passthrough (writeImagePayload/writeKittyDelete below). Sixel is different:
 // when the attached outer terminal's tmux-resolved features include sixel

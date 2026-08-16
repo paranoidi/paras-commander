@@ -68,6 +68,22 @@ type ConfigDialogState struct {
 	ResetDefaultsConfirmFocus int // 0=Yes (default), 1=No
 }
 
+// ImageCapabilityDialogState is the M-F3 image terminal-capabilities modal: three tri-state
+// capability confirmations (persisted as "auto"/"yes"/"no" in [preview]) plus a radio forcing
+// the active graphics protocol ([preview].image_protocol).
+type ImageCapabilityDialogState struct {
+	Open bool
+	// SixelSupported / KittySupported / KittyPlaceholderSupported reflect the checkbox state:
+	// checked means the corresponding [preview].terminal_* key is persisted as "yes", unchecked
+	// as "auto" (there is no "no" state in this dialog — see ApplyImageCapabilityDialog).
+	SixelSupported            bool
+	KittySupported            bool
+	KittyPlaceholderSupported bool
+	// Protocol is one of config.PreviewImageProtocolAuto/Sixel/Kitty.
+	Protocol string
+	Focus    int // 0-2=checkboxes, 3-5=protocol radios, 6=OK, 7=Cancel
+}
+
 // SortDialogState is the renderable state for the sort configuration modal.
 type SortDialogState struct {
 	Open                  bool

@@ -191,14 +191,15 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork) Resu
 	}
 
 	return Result{
-		Source:                  previewpanel.SourceExternalANSI,
-		CombinedText:            metaText,
-		ImagePayload:            payload,
-		ImagePxW:                bounds.Dx(),
-		ImagePxH:                bounds.Dy(),
-		ImageProtocol:           req.ImageProtocol,
-		ImageUnicodePlaceholder: req.ImageUnicodePlaceholder,
-		ImageInTmux:             req.ImageInTmux,
+		Source:                   previewpanel.SourceExternalANSI,
+		CombinedText:             metaText,
+		ImagePayload:             payload,
+		ImagePxW:                 bounds.Dx(),
+		ImagePxH:                 bounds.Dy(),
+		ImageProtocol:            req.ImageProtocol,
+		ImageUnicodePlaceholder:  req.ImageUnicodePlaceholder,
+		ImageInTmux:              req.ImageInTmux,
+		ImageCapabilityUncertain: req.ImageCapabilityUncertain,
 	}
 }
 

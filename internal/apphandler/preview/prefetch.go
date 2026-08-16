@@ -20,7 +20,7 @@ func (h *Handler) ensurePrefetch() {
 	}
 	// Resolve the same effective still-image max-edge a live request would, so prefetched
 	// cache entries share the same cache key and actually get hit.
-	protocol := previewrun.ResolveImageProtocol(cfg.ImageProtocol, os.Getenv)
+	protocol := previewrun.ResolveImageProtocol(cfg, os.Getenv)
 	inTmux := os.Getenv("TMUX") != ""
 	h.prefetch = prefetch.NewEngine(h.ctx, prefetch.Config{
 		Workers:        cfg.PrefetchWorkers,

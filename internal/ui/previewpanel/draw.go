@@ -287,6 +287,7 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 			scrollGutterX, borderStyle, p)
 		if !p.Embedded && !p.Borderless {
 			paintImageProtocolIndicator(screen, rect, st.ImageProtocol, st.ImageInTmux, p.Theme)
+			paintCapabilityUncertainIndicator(screen, rect, st.ImageCapabilityUncertain, borderStyle)
 		}
 		return
 	}
@@ -358,6 +359,31 @@ func paintImageProtocolIndicator(screen tcell.Screen, rect Rect, protocol ImageP
 	n := len(runes)
 	startX := innerRight - n + 1 - rightMargin
 	if startX <= rect.X {
+		return
+	}
+	for i, r := range runes {
+		screen.SetContent(startX+i, y, r, nil, style)
+	}
+}
+
+// paintCapabilityUncertainIndicator overlays a bottom-left label on the panel's border row
+// (mirroring paintImageProtocolIndicator's bottom-right Sixel label) hinting that the
+// currently displayed image's terminal graphics capability was auto-detected, not confirmed
+// by the user, and that M-F3 opens the dialog to confirm/override it. Painted only when
+// State.ImageCapabilityUncertain is true, in the plain border style (no distinct highlight
+// color — this is a low-urgency hint, not a warning). Caller only invokes this for a boxed
+// panel (not Embedded/Borderless): those have no border row outside the image's own drawn area.
+func paintCapabilityUncertainIndicator(screen tcell.Screen, rect Rect, uncertain bool, style tcell.Style) {
+	if !uncertain {
+		return
+	}
+	label := " M-F3 "
+	y := rect.Y + rect.Height - 1
+	const leftMargin = 1
+	startX := rect.X + leftMargin
+	runes := []rune(label)
+	innerRight := rect.X + rect.Width - 2
+	if startX+len(runes)-1 > innerRight {
 		return
 	}
 	for i, r := range runes {

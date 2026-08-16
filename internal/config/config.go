@@ -269,15 +269,23 @@ type PreviewConfig struct {
 	// ImageProtocol selects the terminal graphics protocol: "auto", "sixel", or "kitty".
 	// Empty/invalid values normalize to DefaultPreviewImageProtocol ("auto").
 	ImageProtocol string `toml:"image_protocol"`
-	// UnicodePlaceholderTerminals lists additional client_termtype substrings (matched
-	// case-insensitively, alongside the always-on kitty/ghostty) to treat as supporting Kitty
-	// Unicode-placeholder image display under tmux. Empty by default. Kitty protocol support in
-	// WezTerm is reliable and always assumed (cursor-relative placement), but Unicode-placeholder
-	// support is an experimental, build-specific WezTerm capability that client_termtype cannot
-	// distinguish from a build that lacks it — add "wezterm" here only after confirming your
+	// TerminalSixel / TerminalKitty / TerminalKittyPlaceholder are tri-state user confirmations
+	// ("auto"/"yes"/"no", default "auto") for terminal graphics capabilities that environment/tmux
+	// introspection alone cannot always answer — set via the M-F3 image-capabilities dialog rather
+	// than by hand-editing this file. "auto" leaves the ResolveImageProtocol/
+	// TmuxSupportsKittyUnicodePlaceholders heuristics in charge; "yes"/"no" pin the answer.
+	//
+	// TerminalSixel / TerminalKitty override which graphics protocol "auto" picks when exactly one
+	// is "yes" (or overturn a heuristic guess of the other when it's "no"); TerminalKittyPlaceholder
+	// additionally confirms Kitty Unicode-placeholder support under tmux for terminals like WezTerm,
+	// where Kitty protocol support is reliable and always assumed (cursor-relative placement) but
+	// placeholder support is an experimental, build-specific capability that tmux's client_termtype
+	// can't distinguish from a build that lacks it — confirm this only once you've verified your
 	// attached build actually supports it; against a build that doesn't, placeholder mode sends
 	// cells the terminal can't interpret and nothing renders.
-	UnicodePlaceholderTerminals []string `toml:"unicode_placeholder_terminals"`
+	TerminalSixel            string `toml:"terminal_sixel"`
+	TerminalKitty            string `toml:"terminal_kitty"`
+	TerminalKittyPlaceholder string `toml:"terminal_kitty_placeholder"`
 	// VideoThumbCols / VideoThumbRows set the video thumbnail grid size (default 2×2).
 	VideoThumbCols int `toml:"video_thumb_cols"`
 	VideoThumbRows int `toml:"video_thumb_rows"`
@@ -617,7 +625,9 @@ func Default() Config {
 			Command:                       DefaultFilePreviewCommand,
 			Images:                        DefaultPreviewImages,
 			ImageProtocol:                 DefaultPreviewImageProtocol,
-			UnicodePlaceholderTerminals:   []string{},
+			TerminalSixel:                 DefaultPreviewTerminalSixel,
+			TerminalKitty:                 DefaultPreviewTerminalKitty,
+			TerminalKittyPlaceholder:      DefaultPreviewTerminalKittyPlaceholder,
 			VideoThumbCols:                DefaultPreviewVideoThumbCols,
 			VideoThumbRows:                DefaultPreviewVideoThumbRows,
 			Prefetch:                      DefaultPreviewPrefetch,
@@ -1236,6 +1246,9 @@ func (c *Config) validatePreview(builtin *Config) {
 	default:
 		c.Preview.ImageProtocol = builtin.Preview.ImageProtocol
 	}
+	c.Preview.TerminalSixel = validateTerminalCapability(c.Preview.TerminalSixel, builtin.Preview.TerminalSixel)
+	c.Preview.TerminalKitty = validateTerminalCapability(c.Preview.TerminalKitty, builtin.Preview.TerminalKitty)
+	c.Preview.TerminalKittyPlaceholder = validateTerminalCapability(c.Preview.TerminalKittyPlaceholder, builtin.Preview.TerminalKittyPlaceholder)
 	if c.Preview.VideoThumbCols < PreviewVideoThumbGridMin || c.Preview.VideoThumbCols > PreviewVideoThumbGridMax {
 		c.Preview.VideoThumbCols = builtin.Preview.VideoThumbCols
 	}
@@ -1264,6 +1277,22 @@ func (c *Config) validatePreview(builtin *Config) {
 		if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/pc-preview-validate", 80); err != nil {
 			c.Preview.Command = builtin.Preview.Command
 		}
+	}
+}
+
+// validateTerminalCapability normalizes a [preview] terminal_* tri-state value to
+// "auto"/"yes"/"no", falling back to fallback for anything else (mirrors ImageProtocol's
+// switch/normalize pattern above).
+func validateTerminalCapability(v, fallback string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case PreviewTerminalCapabilityYes:
+		return PreviewTerminalCapabilityYes
+	case PreviewTerminalCapabilityNo:
+		return PreviewTerminalCapabilityNo
+	case "", PreviewTerminalCapabilityAuto:
+		return PreviewTerminalCapabilityAuto
+	default:
+		return fallback
 	}
 }
 

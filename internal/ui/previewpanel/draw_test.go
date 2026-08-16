@@ -852,3 +852,59 @@ func TestDrawImagePlacementModeFollowsStateFlagNotEnvironment(t *testing.T) {
 		})
 	}
 }
+
+// TestDrawImagePlacementCapabilityUncertainFollowsState guards against Draw re-deriving the
+// footer-hint flag from the environment: it must come straight from State.ImageCapabilityUncertain
+// (set upstream by preview.CapabilityUncertain), for both the cursor-relative and the
+// Unicode-placeholder placement path.
+// TestDrawCapabilityUncertainIndicatorFollowsState covers the bottom-left "M-F3" discoverability
+// indicator painted directly from State.ImageCapabilityUncertain (mirrors the bottom-right Sixel
+// indicator tests above) — it must appear only when the flag is true, for both the
+// cursor-relative and Unicode-placeholder display paths.
+func TestDrawCapabilityUncertainIndicatorFollowsState(t *testing.T) {
+	styles := theme.Default()
+	body := BodyStyle(styles, false)
+	const panelWidth, panelHeight = 40, 12
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	baseState := State{
+		Open:          true,
+		TitleBase:     "photo.png",
+		Source:        SourceExternalANSI,
+		ImagePayload:  "\x1b_Ga=T,f=100,i=1;AAAA\x1b\\",
+		ImagePxW:      100,
+		ImagePxH:      100,
+		ImageProtocol: ImageProtocolKitty,
+	}
+
+	for _, tc := range []struct {
+		name        string
+		placeholder bool
+		uncertain   bool
+	}{
+		{"cursor-relative, uncertain", false, true},
+		{"cursor-relative, confirmed", false, false},
+		{"placeholder, uncertain", true, true},
+		{"placeholder, confirmed", true, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_ = TakeFrameImage()
+			screen := tcell.NewSimulationScreen("UTF-8")
+			if err := screen.Init(); err != nil {
+				t.Fatalf("Init() error = %v", err)
+			}
+			defer screen.Fini()
+			screen.SetSize(rect.Width, rect.Height)
+
+			st := baseState
+			st.ImageUnicodePlaceholder = tc.placeholder
+			st.ImageCapabilityUncertain = tc.uncertain
+			Draw(screen, rect, st, DrawParams{Theme: styles, BodyStyle: body})
+
+			bottomRow := rowText(screen, rect.Y+rect.Height-1, rect.X, rect.X+rect.Width-1)
+			gotHint := strings.Contains(bottomRow, "M-F3")
+			if gotHint != tc.uncertain {
+				t.Fatalf("bottom border row = %q, contains M-F3 = %v, want %v", bottomRow, gotHint, tc.uncertain)
+			}
+		})
+	}
+}

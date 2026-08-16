@@ -435,11 +435,11 @@ func TestOptionsMenuKeepsThemeChoicesOutOfPulldown(t *testing.T) {
 		t.Fatalf("index 3 label = %q, want Options", options.Label)
 	}
 	items := options.Items
-	if len(items) != 3 {
-		t.Fatalf("options items len = %d, want configuration, calibrate debounce, and theme entries", len(items))
+	if len(items) != 4 {
+		t.Fatalf("options items len = %d, want configuration, configure graphics, calibrate debounce, and theme entries", len(items))
 	}
-	if items[0].Action != keymap.ActionUIOpenConfig || items[1].Action != keymap.ActionUICalibrateDebounce || items[2].Action != keymap.ActionUIOpenTheme {
-		t.Fatalf("unexpected Options actions: %+v / %+v / %+v", items[0].Action, items[1].Action, items[2].Action)
+	if items[0].Action != keymap.ActionUIOpenConfig || items[1].Action != keymap.ActionPreviewImageCapabilityDialog || items[2].Action != keymap.ActionUICalibrateDebounce || items[3].Action != keymap.ActionUIOpenTheme {
+		t.Fatalf("unexpected Options actions: %+v / %+v / %+v / %+v", items[0].Action, items[1].Action, items[2].Action, items[3].Action)
 	}
 }
 

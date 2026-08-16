@@ -122,14 +122,15 @@ func runImageCtx(ctx context.Context, req Request) Result {
 		}
 	}
 	return Result{
-		Source:                  previewpanel.SourceExternalANSI,
-		CombinedText:            "", // caption unused for still images (Draw would show it below)
-		ImagePayload:            payload,
-		ImagePxW:                bounds.Dx(),
-		ImagePxH:                bounds.Dy(),
-		ImageProtocol:           req.ImageProtocol,
-		ImageUnicodePlaceholder: req.ImageUnicodePlaceholder,
-		ImageInTmux:             req.ImageInTmux,
+		Source:                   previewpanel.SourceExternalANSI,
+		CombinedText:             "", // caption unused for still images (Draw would show it below)
+		ImagePayload:             payload,
+		ImagePxW:                 bounds.Dx(),
+		ImagePxH:                 bounds.Dy(),
+		ImageProtocol:            req.ImageProtocol,
+		ImageUnicodePlaceholder:  req.ImageUnicodePlaceholder,
+		ImageInTmux:              req.ImageInTmux,
+		ImageCapabilityUncertain: req.ImageCapabilityUncertain,
 	}
 }
 

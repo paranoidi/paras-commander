@@ -460,6 +460,7 @@ func (h *Handler) patchColumnPreviewMessage(titleBase, msg string) {
 		st.ImageProtocol = 0
 		st.ImageUnicodePlaceholder = false
 		st.ImageInTmux = false
+		st.ImageCapabilityUncertain = false
 	})
 	h.postRenderWake()
 	h.clampFilePreviewScroll()
@@ -785,6 +786,7 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 			st.ImageProtocol = 0
 			st.ImageUnicodePlaceholder = false
 			st.ImageInTmux = false
+			st.ImageCapabilityUncertain = false
 		})
 	}
 
@@ -928,17 +930,18 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 			req.ImageProtocol = previewpanel.ImageProtocolNone
 		} else if isMedia {
 			req.Media = true
-			req.ImageProtocol = previewrun.ResolveVideoThumbProtocol(req.Preview.Images, req.Preview.ImageProtocol, os.Getenv)
+			req.ImageProtocol = previewrun.ResolveVideoThumbProtocol(req.Preview.Images, req.Preview, os.Getenv)
 		} else {
 			req.Image = true
 			if !req.Preview.Images {
 				req.ImageProtocol = previewpanel.ImageProtocolNone
 			} else {
-				req.ImageProtocol = previewrun.ResolveImageProtocol(req.Preview.ImageProtocol, os.Getenv)
+				req.ImageProtocol = previewrun.ResolveImageProtocol(req.Preview, os.Getenv)
 			}
 		}
 		req.ImageUnicodePlaceholder = req.ImageProtocol == previewpanel.ImageProtocolKitty &&
-			previewrun.TmuxSupportsKittyUnicodePlaceholders(os.Getenv, req.Preview.UnicodePlaceholderTerminals)
+			previewrun.TmuxSupportsKittyUnicodePlaceholders(os.Getenv, req.Preview)
+		req.ImageCapabilityUncertain = previewrun.CapabilityUncertain(req.Preview, os.Getenv)
 		req.Cache = h.mediaCache()
 		return req
 	}
@@ -1089,6 +1092,7 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 			st.ImageProtocol = 0
 			st.ImageUnicodePlaceholder = false
 			st.ImageInTmux = false
+			st.ImageCapabilityUncertain = false
 			if st.Search.Active {
 				st.RecomputeSearch()
 			}
@@ -1117,6 +1121,7 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 		st.ImageProtocol = res.ImageProtocol
 		st.ImageUnicodePlaceholder = res.ImageUnicodePlaceholder
 		st.ImageInTmux = res.ImageInTmux
+		st.ImageCapabilityUncertain = res.ImageCapabilityUncertain
 		if st.Search.Active {
 			st.RecomputeSearch()
 		}
