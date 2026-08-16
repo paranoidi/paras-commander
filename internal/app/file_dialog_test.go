@@ -113,6 +113,28 @@ func TestFileMenuMkdirOpensMkdirDialog(t *testing.T) {
 	}
 }
 
+func TestQuestionMarkInsertsLiteralInFileDialogInsteadOfOpeningHelp(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF7, 0, tcell.ModNone)); quit {
+		t.Fatal("handleKey(F7) quit = true, want false")
+	}
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, '?', tcell.ModNone)); quit {
+		t.Fatal("handleKey('?') quit = true, want false")
+	}
+
+	if app.model.HelpView.Open {
+		t.Fatal("'?' should not open help while a file dialog is open")
+	}
+	if len(app.model.FileDialog.Fields) != 1 || app.model.FileDialog.Fields[0].Value != "?" {
+		t.Fatalf("expected '?' typed into mkdir field, got %+v", app.model.FileDialog.Fields)
+	}
+}
+
 func TestFileMenuDeleteOpensDeleteConfirmation(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "test.txt"))

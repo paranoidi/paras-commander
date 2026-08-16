@@ -87,7 +87,7 @@ func DefaultActionSpecs() []ActionSpec {
 			ID:           ActionAppShowHelp,
 			Title:        "Help",
 			Section:      "App",
-			DefaultKeys:  []string{"F1"},
+			DefaultKeys:  []string{"F1", "?"},
 			PreferredKey: "F1",
 			Keywords:     []string{"help screen"},
 			LeaderKey:    "?",

@@ -459,8 +459,13 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 			a.render()
 			return true, false, true
 		}
-		// Do not open help from other modal dialogs.
+		// Do not open help from other modal dialogs. A rune alias (e.g. "?") must fall
+		// through uninterrupted so dialog text fields still receive it as literal input;
+		// F1 has no text meaning so it can still be safely consumed here.
 		if a.model.ModalDialogOpen() {
+			if event.Key() == tcell.KeyRune {
+				return false, false, false
+			}
 			return true, false, false
 		}
 		if a.model.Menu.Open {

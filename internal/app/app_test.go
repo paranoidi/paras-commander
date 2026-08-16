@@ -31,6 +31,19 @@ func TestMenuBarPermissionHiddenInJobsView(t *testing.T) {
 	}
 }
 
+func TestQuestionMarkOpensHelpAsF1Alias(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, '?', tcell.ModNone)); quit {
+		t.Fatal("handleKey('?') quit = true, want false")
+	}
+	if !app.model.HelpView.Open {
+		t.Fatal("'?' should open help like F1 in the browser view")
+	}
+}
+
 func TestHelpViewEnterRunsCopyLikeKeyboardShortcut(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 24)
