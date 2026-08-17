@@ -209,6 +209,8 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 		primitive.StyledText(screen, textX, y, rowWidth, text, baseStyle, spans)
 	}
 
+	draw.DrawDialogListScrollbar(screen, rect, listTop, listH, len(state.Ranked), state.ListScroll, ctx.ScrollbarStyle, borderStyle, styles)
+
 	sepAfterList := listTop + listH
 	if sepAfterList >= buttonY {
 		sepAfterList = buttonY - 1

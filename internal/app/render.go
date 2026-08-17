@@ -23,7 +23,7 @@ func (a *App) paintFindDialogOverlay() bool {
 	if layout.TooSmall {
 		return false
 	}
-	ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.ShowFileIcons, a.model.DiskUsage, a.config.DiskUsage.DescendIntoMountPoints, a.disk.ignore)
+	ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.ShowFileIcons, a.model.PanelScrollbar, a.model.DiskUsage, a.config.DiskUsage.DescendIntoMountPoints, a.disk.ignore)
 	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true
@@ -45,7 +45,7 @@ func (a *App) paintFileDialogOverlay() bool {
 	if a.model.FileDialog.DialogType == dialog.FileDialogMassRename && a.model.FileDialog.MassRenamePhase == dialog.MassRenamePhaseMain {
 		a.dialogCtrl.RecomputeMassRenamePreview()
 	}
-	ui.PaintFileDialog(a.screen, layout, a.model.FileDialog, a.styles, a.model.ShowFileIcons)
+	ui.PaintFileDialog(a.screen, layout, a.model.FileDialog, a.styles, a.model.ShowFileIcons, a.model.PanelScrollbar)
 	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true

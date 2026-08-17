@@ -182,7 +182,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
 	_, height := h.screen.Size()
-	vp := dialog.MassRenamePreviewViewportRows(height, d.MassRenameMode)
+	vp := dialog.MassRenamePreviewViewportRows(height, *d)
 	dialog.MassRenameEnsurePreviewScroll(&h.model.FileDialog, vp, len(before))
 }
 
@@ -237,7 +237,7 @@ func (h *Handler) recomputeMassRenameExternalEditorPreview() {
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
 	_, height := h.screen.Size()
-	vp := dialog.MassRenamePreviewViewportRows(height, d.MassRenameMode)
+	vp := dialog.MassRenamePreviewViewportRows(height, *d)
 	dialog.MassRenameEnsurePreviewScroll(d, vp, len(before))
 }
 
@@ -288,7 +288,7 @@ func (h *Handler) recomputeMassRenameCapitalizePreview() {
 	d.MassRenamePreviewAfterAdded = afterAdded
 	d.MassRenamePreviewAfterError = afterError
 	_, height := h.screen.Size()
-	vp := dialog.MassRenamePreviewViewportRows(height, d.MassRenameMode)
+	vp := dialog.MassRenamePreviewViewportRows(height, *d)
 	dialog.MassRenameEnsurePreviewScroll(d, vp, len(before))
 }
 

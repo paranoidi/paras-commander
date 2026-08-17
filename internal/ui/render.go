@@ -25,10 +25,11 @@ const (
 
 func dialogRenderContext(model Model, styles theme.Theme) dialog.DialogRenderContext {
 	return dialog.DialogRenderContext{
-		Styles:      styles,
-		UserHomeDir: model.UserHomeDir,
-		ShowIcons:   model.ShowFileIcons,
-		IconLead:    DialogListIconLeadingWidth(model.ShowFileIcons),
+		Styles:         styles,
+		UserHomeDir:    model.UserHomeDir,
+		ShowIcons:      model.ShowFileIcons,
+		IconLead:       DialogListIconLeadingWidth(model.ShowFileIcons),
+		ScrollbarStyle: model.PanelScrollbar,
 	}
 }
 

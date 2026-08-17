@@ -433,7 +433,7 @@ func (h *Handler) handleMassRenamePreviewScrollKey(d *dialog.FileDialogState, ke
 		return true
 	case tcell.KeyPgUp:
 		_, ht := h.screen.Size()
-		vp := dialog.MassRenamePreviewViewportRows(ht, d.MassRenameMode)
+		vp := dialog.MassRenamePreviewViewportRows(ht, *d)
 		d.MassRenamePreviewScroll -= vp
 		if d.MassRenamePreviewScroll < 0 {
 			d.MassRenamePreviewScroll = 0
@@ -441,7 +441,7 @@ func (h *Handler) handleMassRenamePreviewScrollKey(d *dialog.FileDialogState, ke
 		return true
 	case tcell.KeyPgDn:
 		_, ht := h.screen.Size()
-		vp := dialog.MassRenamePreviewViewportRows(ht, d.MassRenameMode)
+		vp := dialog.MassRenamePreviewViewportRows(ht, *d)
 		dialog.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))
 		d.MassRenamePreviewScroll += vp
 		dialog.MassRenameEnsurePreviewScroll(d, vp, len(d.MassRenamePreviewBefore))

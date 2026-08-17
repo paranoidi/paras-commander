@@ -123,7 +123,7 @@ func DrawFileDialog(screen tcell.Screen, layout Layout, state FileDialogState, c
 		case MassRenamePhaseHistoryPicker:
 			drawMassRenamePatternPickerContent(screen, rect, state.MassRenameHistoryPicker, borderStyle, styles)
 		default:
-			drawMassRenameDialog(screen, rect, state, borderStyle, styles)
+			drawMassRenameDialog(screen, rect, state, borderStyle, styles, ctx.ScrollbarStyle)
 		}
 	default:
 		if renameToolActive(state) {

@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // massRenameContentEnd returns the FocusedField index of the OK button for a mass rename dialog.
@@ -52,7 +53,7 @@ func MassRenameEnsurePreviewScroll(state *FileDialogState, viewportRows, totalRo
 // switching modes does not resize it. ExternalEditor skips the fields section at render time,
 // which gives the preview area the freed rows automatically.
 func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
-	maxVP := MassRenamePreviewViewportRows(layoutHeight, MassRenameModeUISimple)
+	maxVP := massRenameSizingMaxPreviewRows(layoutHeight)
 	previewCount := len(state.MassRenamePreviewBefore)
 	if previewCount < 1 {
 		previewCount = 1
@@ -79,26 +80,58 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	return height
 }
 
-// MassRenamePreviewViewportRows returns the preview page size for PgUp/PgDn scrolling.
-// ExternalEditor and Capitalize skip (or shrink) the fields section, so their effective
-// viewport is larger.
-func MassRenamePreviewViewportRows(layoutHeight int, mode MassRenameModeUI) int {
-	// Base overhead matches the Simple/Regex fixed layout (see massRenameDialogHeight).
-	// +1 accounts for the separator row above buttons drawn outside drawMassRenameDialog.
-	overhead := 15
-	switch mode {
-	case MassRenameModeUIExternalEditor:
-		// ExternalEditor omits fields (4) + sep-before-preview (1) = 5 rows.
-		overhead = 10
-	case MassRenameModeUICapitalize:
-		// Capitalize's two single-item checkbox rows replace four field rows (net -2).
-		overhead = 13
-	}
-	maxBody := layoutHeight - overhead
+// massRenameSizingMaxPreviewRows estimates how many preview rows the Simple/Regex layout (the
+// fixed sizing baseline — see massRenameDialogHeight's doc comment) could show at layoutHeight.
+// Used only to pick how tall to make the dialog before its final height is known; not accurate
+// enough for scroll paging or the scrollbar — see MassRenamePreviewViewportRows for that.
+func massRenameSizingMaxPreviewRows(layoutHeight int) int {
+	// 1 top pad + (4 radios + options row + sep + 2 fields x2 rows + sep) + sep-above-buttons +
+	// buttons row + bottom border.
+	maxBody := layoutHeight - 15
 	if maxBody < 3 {
 		maxBody = 3
 	}
 	return maxBody
+}
+
+// massRenameFixedRows returns the number of dialog rows consumed above the preview list for
+// state's mode: mode radios, options row, separators, and (for Simple/Regex/Capitalize) the
+// fields or checkboxes section, including any visible regex hint rows.
+func massRenameFixedRows(state FileDialogState) int {
+	fixed := 4 + 1 + 1 // mode radios + options row + separator
+	switch state.MassRenameMode {
+	case MassRenameModeUIExternalEditor:
+		// No fields/checkboxes section.
+	case MassRenameModeUICapitalize:
+		fixed += 2 + 1 // two checkboxes + separator
+	default:
+		fixed += 4 + 1 // two fields (label+input each) + separator
+		if massRenameShowsPatternHint(state) {
+			fixed++
+		}
+		if massRenameShowsReplacementHint(state) {
+			fixed++
+		}
+	}
+	return fixed
+}
+
+// massRenamePreviewViewportRowsForHeight returns the preview row count visible in a mass
+// rename dialog of dialogHeight for state — the exact geometry drawMassRenameDialog paints.
+func massRenamePreviewViewportRowsForHeight(dialogHeight int, state FileDialogState) int {
+	vp := dialogHeight - 4 - massRenameFixedRows(state)
+	if vp < 1 {
+		vp = 1
+	}
+	return vp
+}
+
+// MassRenamePreviewViewportRows returns the preview page size for PgUp/PgDn scrolling and the
+// scrollbar, matching exactly what drawMassRenameDialog draws for state at layoutHeight (the
+// same value FileDialogRect uses to size the dialog) — the single source of truth so paging
+// and the visual scrollbar never drift apart.
+func MassRenamePreviewViewportRows(layoutHeight int, state FileDialogState) int {
+	return massRenamePreviewViewportRowsForHeight(massRenameDialogHeight(layoutHeight, state), state)
 }
 
 // MassRenameFindFieldFocus is FocusedField for the Find / Pattern input (0-3 are mode radios).
@@ -167,7 +200,7 @@ func MassRenameCapPunctFocusIdx(state FileDialogState) int {
 	return -1
 }
 
-func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
+func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme, scrollbarStyle uiscrollbar.Style) {
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	labelStyle := styles.DialogText.Background(dbg)
 	beforeBase := styles.DialogMassRenameBefore.Background(dbg)
@@ -289,10 +322,8 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		}
 	}
 
-	vp := innerBottom - y - 1 // row innerBottom-1 is the global separator above buttons
-	if vp < 1 {
-		vp = 1
-	}
+	vp := massRenamePreviewViewportRowsForHeight(rect.Height, state)
+	previewTopY := y
 	before := state.MassRenamePreviewBefore
 	after := state.MassRenamePreviewAfter
 	beforeRemovedRanges := state.MassRenamePreviewBeforeRemoved
@@ -365,4 +396,5 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		primitive.StyledText(screen, primaryCol+primaryW+sepW, y, secondaryW, rbText, afterBase, rbSpans)
 		y++
 	}
+	draw.DrawDialogListScrollbar(screen, rect, previewTopY, vp, n, scroll, scrollbarStyle, borderStyle, styles)
 }

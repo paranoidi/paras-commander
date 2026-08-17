@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // FindDialogListRows returns the visible find-dialog list row count (matches DrawFindDialog).
@@ -46,6 +47,7 @@ func PaintFindDialog(
 	state *dialog.FindDialogState,
 	styles theme.Theme,
 	showIcons bool,
+	scrollbarStyle uiscrollbar.Style,
 	painter DiskUsagePainter,
 	descendIntoMountPoints bool,
 	goduIgnore func(string) bool,
@@ -55,9 +57,10 @@ func PaintFindDialog(
 	}
 	selectionLabel := FindDialogSelectionSizePadded(state, painter, descendIntoMountPoints, goduIgnore, styles.SymbolWorking())
 	ctx := dialog.DialogRenderContext{
-		Styles:    styles,
-		ShowIcons: showIcons,
-		IconLead:  DialogListIconLeadingWidth(showIcons),
+		Styles:         styles,
+		ShowIcons:      showIcons,
+		IconLead:       DialogListIconLeadingWidth(showIcons),
+		ScrollbarStyle: scrollbarStyle,
 	}
 	dialog.DrawFindDialog(screen, layout, *state, ctx, PaintFindDialogRowIcon, selectionLabel)
 }

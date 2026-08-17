@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
 // PaintFileDialog repaints any file dialog (rename, mkdir, copy/move, mass rename,
@@ -17,14 +18,16 @@ func PaintFileDialog(
 	state dialog.FileDialogState,
 	styles theme.Theme,
 	showIcons bool,
+	scrollbarStyle uiscrollbar.Style,
 ) {
 	if !state.Open {
 		return
 	}
 	ctx := dialog.DialogRenderContext{
-		Styles:    styles,
-		ShowIcons: showIcons,
-		IconLead:  DialogListIconLeadingWidth(showIcons),
+		Styles:         styles,
+		ShowIcons:      showIcons,
+		IconLead:       DialogListIconLeadingWidth(showIcons),
+		ScrollbarStyle: scrollbarStyle,
 	}
 	dialog.DrawFileDialog(screen, layout, state, ctx, PaintDeleteDialogRowIcon)
 }
