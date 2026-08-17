@@ -3,6 +3,7 @@ package previewpanel
 import (
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -78,14 +79,17 @@ type ImagePlacement struct {
 }
 
 // frameImage is the placement recorded by the most recent Draw call in this frame.
-// Render is single-goroutine, so a package var avoids threading an out-param through DrawParams.
-var frameImage *ImagePlacement
+// Render is single-goroutine per *App in production, so a package var avoids threading an
+// out-param through DrawParams; atomic.Pointer only guards against concurrent *App instances
+// in parallel tests, which otherwise race on this var (go test -race). It does not make
+// concurrent App instances' placements mutually consistent — that would need the out-param
+// threaded through DrawParams instead. ponytail: package-global-per-process ceiling, revisit
+// if parallel tests ever assert on TakeFrameImage's value.
+var frameImage atomic.Pointer[ImagePlacement]
 
 // TakeFrameImage returns and clears the placement recorded by Draw, if any.
 func TakeFrameImage() *ImagePlacement {
-	p := frameImage
-	frameImage = nil
-	return p
+	return frameImage.Swap(nil)
 }
 
 // BodyStyle is the base text style for preview body rows.

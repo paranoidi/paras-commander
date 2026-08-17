@@ -129,7 +129,7 @@ func drawImageOnly(screen tcell.Screen, st State, textX, top, textW, rows int,
 			screen.SetContent(rightMarginX, y, ' ', nil, marginStyle)
 		}
 	}
-	frameImage = &ImagePlacement{
+	frameImage.Store(&ImagePlacement{
 		X:        textX,
 		Y:        top,
 		MaxCols:  textW,
@@ -139,5 +139,5 @@ func drawImageOnly(screen tcell.Screen, st State, textX, top, textW, rows int,
 		Payload:  st.ImagePayload,
 		Path:     st.Path,
 		Protocol: st.ImageProtocol,
-	}
+	})
 }

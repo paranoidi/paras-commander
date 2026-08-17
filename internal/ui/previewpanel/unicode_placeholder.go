@@ -42,12 +42,12 @@ func drawUnicodePlaceholderImage(screen tcell.Screen, st State, textX, contentTo
 			screen.SetContent(rightMarginX, y, ' ', nil, marginStyle)
 		}
 	}
-	frameImage = &ImagePlacement{
+	frameImage.Store(&ImagePlacement{
 		Payload:            st.ImagePayload,
 		Path:               st.Path,
 		Protocol:           st.ImageProtocol,
 		UnicodePlaceholder: true,
-	}
+	})
 }
 
 // clampPlaceholderDim keeps a computed grid dimension within [1, max] and within the
