@@ -223,7 +223,12 @@ func MassRenameReplacementSyntaxHint(rx *regexp.Regexp) string {
 	return "Replacement: $n or ${n} for groups; ${0} is full match; use ${n} before digits"
 }
 
-// massRenameNormalizeRegexReplacement converts \1–\9 backrefs to $1–$9 for Go regexp expansion.
+// massRenameNormalizeRegexReplacement converts \1–\9 backrefs to ${1}–${9} for Go regexp
+// expansion, and auto-braces bare $N group refs that are immediately followed by a letter
+// or underscore — Go's regexp.Expand would otherwise fold that trailing text into the group
+// name (e.g. "$1E" looks up a nonexistent group "1E" and silently expands to ""). A $N
+// followed by another digit (e.g. "$10") stays untouched: that's genuinely ambiguous between
+// group 10 and group 1 followed by literal "0", so the user must write "${1}0" to disambiguate.
 // \\1 is left as a literal backslash followed by a digit.
 func massRenameNormalizeRegexReplacement(template string) string {
 	runes := []rune(template)
@@ -235,9 +240,23 @@ func massRenameNormalizeRegexReplacement(template string) string {
 				escapes++
 			}
 			if escapes%2 == 0 {
-				b.WriteRune('$')
+				b.WriteString("${")
 				b.WriteRune(runes[i+1])
+				b.WriteByte('}')
 				i++
+				continue
+			}
+		}
+		if runes[i] == '$' && i+1 < len(runes) && runes[i+1] >= '0' && runes[i+1] <= '9' {
+			j := i + 1
+			for j < len(runes) && runes[j] >= '0' && runes[j] <= '9' {
+				j++
+			}
+			if j < len(runes) && (unicode.IsLetter(runes[j]) || runes[j] == '_') {
+				b.WriteString("${")
+				b.WriteString(string(runes[i+1 : j]))
+				b.WriteByte('}')
+				i = j - 1
 				continue
 			}
 		}

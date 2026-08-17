@@ -241,6 +241,24 @@ func TestMassRenameComputeRegexAmbiguousDollarGroup(t *testing.T) {
 	}
 }
 
+func TestMassRenameComputeRegexDollarGroupFollowedByLetter(t *testing.T) {
+	dir := t.TempDir()
+	re, err := MassRenameCompileRegex(`S(\d+)E(\d+)`, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := []localfs.Entry{
+		{Name: "Show Grape S02E09 - Meadow.mkv", Path: filepath.Join(dir, "Show Grape S02E09 - Meadow.mkv"), Type: localfs.EntryFile},
+	}
+	rows, err := MassRenameCompute(entries, dir, MassRenameModeRegex, "", `S$1E$2`, false, false, re)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rows[0].NewBase != "Show Grape S02E09 - Meadow.mkv" {
+		t.Fatalf("S$1E$2: got %q, want season/episode digits preserved", rows[0].NewBase)
+	}
+}
+
 func TestMassRenameComputeRegexBackslashGroup(t *testing.T) {
 	dir := t.TempDir()
 	re, err := MassRenameCompileRegex(`(\d)$`, false)
