@@ -298,20 +298,15 @@ func (a *App) closeSubshell() {
 	a.subshell = nil
 }
 
+// refreshAfterDropToShell re-lists the active panel's directory after returning from the shell,
+// in case files changed while the user was away. If syncPanelCwdAfterShell (above, when
+// SyncCwdOnReturn is on) already scheduled a navigation for this panel, State.Refresh is a no-op
+// while that's still in flight — see its doc comment.
 func (a *App) refreshAfterDropToShell() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	p := a.activePanel()
-	if p.ListingPending {
-		// syncPanelCwdAfterShell (called just above, when SyncCwdOnReturn is on) already
-		// scheduled an async navigation for this panel. Scheduling a second async load here
-		// for the pre-shell path would race it on the same per-panel generation counter and
-		// can spuriously supersede the real navigation with a reload of the directory it's
-		// leaving — the in-flight navigation already brings fresh contents for wherever it lands.
-		return
-	}
-	if err := p.Refresh(a.activeViewportRows()); err != nil {
+	if err := a.activePanel().Refresh(a.activeViewportRows()); err != nil {
 		a.setErrorMessage("Shell", err)
 	}
 }

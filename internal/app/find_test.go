@@ -399,21 +399,10 @@ func TestFindDialogSelectsFile(t *testing.T) {
 	// Stray wake events from the find index/rank background work can already be queued on
 	// screen alongside our own navigation's async-load event; drain everything pending rather
 	// than assume the very next event is ours.
-	deadline := time.Now().Add(2 * time.Second)
 	wantDir := filepath.Clean(sub)
-	for filepath.Clean(app.activePanel().Path.String()) != wantDir {
-		for screen.HasPendingEvent() {
-			ev := screen.PollEvent()
-			if interruptEv, ok := ev.(*tcell.EventInterrupt); ok {
-				app.handleInterruptPayload(interruptEv.Data())
-				app.reconcileAfterEvent()
-			}
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("timeout waiting for find navigation's async load to land")
-		}
-		time.Sleep(time.Millisecond)
-	}
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return filepath.Clean(app.activePanel().Path.String()) == wantDir
+	})
 	if app.model.FindDialog.Open {
 		t.Fatal("expected dialog closed")
 	}

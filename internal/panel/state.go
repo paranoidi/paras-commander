@@ -271,7 +271,14 @@ func (s *State) Load(path string) error {
 
 // Refresh reloads the current path. When the entry under the cursor still exists, it is re-selected by name;
 // otherwise the prior row index is restored (clamped), matching MC-style behavior after moves/deletes.
+// A no-op while a load is already in flight (ListingPending): Path still holds the pre-load
+// directory until that load lands, so scheduling a second one here would race it on the shared
+// generation counter and could clobber a real navigation with a stale-directory reload — the
+// in-flight load already brings fresh contents for wherever it lands.
 func (s *State) Refresh(viewportRows int) error {
+	if s.ListingPending {
+		return nil
+	}
 	priorCursor := s.Cursor
 	entry, ok := s.CurrentEntry()
 	selectedName := ""

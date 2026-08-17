@@ -485,11 +485,7 @@ func (h *Handler) executeMkdir() {
 				}
 			}
 		}
-	}
-	if openInInactive {
 		active.EnsureCursorInViewport(viewportRows)
-	}
-	if openInInactive {
 		if err := h.host.NavigatePanelToPath(h.host.InactivePanelID(), plan.Path, ""); err != nil {
 			h.host.SetErrorMessage("Mkdir", err)
 			return

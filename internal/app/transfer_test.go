@@ -895,28 +895,15 @@ func TestDuplicateWithFocusAfterSelectsAfterJob(t *testing.T) {
 	// drops a PostEvent when full, and the job's own progress/completion events share that same
 	// queue with our panel-async-load events — letting it fill up between big drain calls is what
 	// makes this flaky, not the async-load mechanism itself.
-	deadline := time.Now().Add(5 * time.Second)
 	applied := false
-	for {
-		for app.screen.HasPendingEvent() {
-			ev := app.screen.PollEvent()
-			if interruptEv, ok := ev.(*tcell.EventInterrupt); ok {
-				app.handleInterruptPayload(interruptEv.Data())
-				app.reconcileAfterEvent()
-			}
-		}
+	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool {
 		app.jobsCtrl.PollEvents()
 		if !applied {
 			applied = app.jobsCtrl.ApplyRefreshes()
 		}
-		if e, ok := app.activePanel().CurrentEntry(); ok && e.Name == newName {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("timeout waiting for duplicate job + post-job focus to land")
-		}
-		time.Sleep(2 * time.Millisecond)
-	}
+		e, ok := app.activePanel().CurrentEntry()
+		return ok && e.Name == newName
+	})
 
 	p = app.activePanel()
 	entry, ok := p.CurrentEntry()

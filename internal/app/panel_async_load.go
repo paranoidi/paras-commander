@@ -17,6 +17,34 @@ import (
 // substitute a fake (e.g. one that blocks forever) without touching the real filesystem.
 var fetchListingForAsyncLoad = panel.FetchListing
 
+// raceAsyncListingFetch runs snap's fetch off the UI thread, racing it against a give-up timer
+// (timeout). Go cannot cancel a goroutine parked inside a real blocking syscall, so whichever of
+// {fetch, timeout} finishes first "wins" and calls onResult exactly once, with err set to a
+// timeout error for the timer side; the loser's outcome (a stuck fetch that does eventually
+// return) is silently dropped, and the timer is stopped once the fetch wins so it doesn't sit in
+// the runtime's timer heap for the rest of its duration. Shared by asyncLoadScheduler and
+// quickViewAsyncLoadScheduler, which differ only in what payload they build from the result and
+// where they post it.
+func (a *App) raceAsyncListingFetch(snap panel.ListingRefreshSnapshot, timeout time.Duration, onResult func(loc pathloc.Path, entries []fsbackend.Entry, gitignoreActive, dotfilesHiddenActive bool, err error)) {
+	var settled atomic.Bool
+	var timer atomic.Pointer[time.Timer] // set right after time.AfterFunc below; both post() callers only ever run after that
+	post := func(loc pathloc.Path, entries []fsbackend.Entry, gitignoreActive, dotfilesHiddenActive bool, err error) {
+		if settled.CompareAndSwap(false, true) {
+			if t := timer.Load(); t != nil {
+				t.Stop()
+			}
+			onResult(loc, entries, gitignoreActive, dotfilesHiddenActive, err)
+		}
+	}
+	timer.Store(time.AfterFunc(timeout, func() {
+		post(pathloc.Path{}, nil, false, false, fmt.Errorf("listing timed out after %s", timeout))
+	}))
+	go func() {
+		entries, loc, gitignoreActive, dotfilesHiddenActive, err := fetchListingForAsyncLoad(context.Background(), snap)
+		post(loc, entries, gitignoreActive, dotfilesHiddenActive, err)
+	}()
+}
+
 type panelAsyncLoadPayload struct {
 	panelID              int
 	gen                  uint64
@@ -34,46 +62,25 @@ func (a *App) wireAsyncPanelLoaders() {
 }
 
 // asyncLoadScheduler runs a directory listing off the UI thread for panelID. A local path can
-// stall just as badly as a remote one (network mount, autofs trigger), and Go cannot cancel a
-// goroutine parked inside a real blocking syscall — so alongside the fetch itself, a timer races
-// it to give up after config.SFTP.ListTimeoutSecs and surface a timed-out navigation instead of
-// leaving the panel on ListingPending forever. Whichever of {fetch, timeout} finishes first wins
-// via settled; the loser's result (if the stuck fetch eventually does return) is silently
-// dropped. This is independent of panelAsyncLoadGen, which still separately drops a result
-// superseded by a newer navigation.
+// stall just as badly as a remote one (network mount, autofs trigger) — see
+// raceAsyncListingFetch for how the give-up timeout works. This is independent of
+// panelAsyncLoadGen, which separately drops a result superseded by a newer navigation.
 func (a *App) asyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 	return func(req panel.AsyncLoadRequest) bool {
 		gen := a.panelAsyncLoadGen[panelID].Add(1)
 		timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 		snap := a.panelByID(panelID).ListingRefreshSnapshot(req.Loc, timeout)
-
-		var settled atomic.Bool
-		post := func(p panelAsyncLoadPayload) {
-			if settled.CompareAndSwap(false, true) {
-				_ = a.screen.PostEvent(tcell.NewEventInterrupt(p))
-			}
-		}
-
-		go func() {
-			entries, listingLoc, gitignoreActive, dotfilesHiddenActive, err := fetchListingForAsyncLoad(context.Background(), snap)
-			post(panelAsyncLoadPayload{
+		a.raceAsyncListingFetch(snap, timeout, func(loc pathloc.Path, entries []fsbackend.Entry, gitignoreActive, dotfilesHiddenActive bool, err error) {
+			_ = a.screen.PostEvent(tcell.NewEventInterrupt(panelAsyncLoadPayload{
 				panelID:              panelID,
 				gen:                  gen,
 				req:                  req,
-				loc:                  listingLoc,
+				loc:                  loc,
 				entries:              entries,
 				gitignoreActive:      gitignoreActive,
 				dotfilesHiddenActive: dotfilesHiddenActive,
 				err:                  err,
-			})
-		}()
-		time.AfterFunc(timeout, func() {
-			post(panelAsyncLoadPayload{
-				panelID: panelID,
-				gen:     gen,
-				req:     req,
-				err:     fmt.Errorf("listing timed out after %s", timeout),
-			})
+			}))
 		})
 		return true
 	}
@@ -128,32 +135,16 @@ func (a *App) quickViewAsyncLoadScheduler() panel.AsyncLoadScheduler {
 		gen := a.quickViewAsyncLoadGen.Add(1)
 		timeout := time.Duration(a.config.SFTP.ListTimeoutSecs) * time.Second
 		snap := a.model.QuickViewDirOverlay.ListingRefreshSnapshot(req.Loc, timeout)
-
-		var settled atomic.Bool
-		post := func(p quickViewAsyncLoadPayload) {
-			if settled.CompareAndSwap(false, true) {
-				_ = a.screen.PostEvent(tcell.NewEventInterrupt(p))
-			}
-		}
-
-		go func() {
-			entries, listingLoc, gitignoreActive, dotfilesHiddenActive, err := fetchListingForAsyncLoad(context.Background(), snap)
-			post(quickViewAsyncLoadPayload{
+		a.raceAsyncListingFetch(snap, timeout, func(loc pathloc.Path, entries []fsbackend.Entry, gitignoreActive, dotfilesHiddenActive bool, err error) {
+			_ = a.screen.PostEvent(tcell.NewEventInterrupt(quickViewAsyncLoadPayload{
 				gen:                  gen,
 				req:                  req,
-				loc:                  listingLoc,
+				loc:                  loc,
 				entries:              entries,
 				gitignoreActive:      gitignoreActive,
 				dotfilesHiddenActive: dotfilesHiddenActive,
 				err:                  err,
-			})
-		}()
-		time.AfterFunc(timeout, func() {
-			post(quickViewAsyncLoadPayload{
-				gen: gen,
-				req: req,
-				err: fmt.Errorf("listing timed out after %s", timeout),
-			})
+			}))
 		})
 		return true
 	}

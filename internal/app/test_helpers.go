@@ -41,6 +41,35 @@ func applyNextInterruptEvent(t *testing.T, app *App, screen tcell.SimulationScre
 	}
 }
 
+// drainInterruptEventsUntil applies every EventInterrupt currently queued on screen (each via
+// handleInterruptPayload + reconcileAfterEvent, same as applyNextInterruptEvent), then checks
+// cond; it repeats until cond reports true or timeout elapses, failing the test on timeout. Use
+// this instead of applyNextInterruptEvent when the exact number/order of async events an action
+// schedules isn't easy to predict — e.g. it races unrelated background events (job progress,
+// find-index wake-ups) for the same bounded screen event queue, or depends on generation-counter
+// supersession ordering. cond may do its own polling as a side effect (e.g. draining a non-screen
+// event source like jobsCtrl) before reporting whether the wait is over.
+func drainInterruptEventsUntil(t *testing.T, app *App, screen tcell.SimulationScreen, timeout time.Duration, cond func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for {
+		for screen.HasPendingEvent() {
+			ev := screen.PollEvent()
+			if interruptEv, ok := ev.(*tcell.EventInterrupt); ok {
+				app.handleInterruptPayload(interruptEv.Data())
+				app.reconcileAfterEvent()
+			}
+		}
+		if cond() {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timeout waiting for async event(s) to land")
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
 func waitUntilAppJobsFinished(t *testing.T, app *App, d time.Duration) {
 	t.Helper()
 	deadline := time.Now().Add(d)

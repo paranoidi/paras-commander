@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -921,23 +920,9 @@ func TestSyncFollowsBookmarkLikeNavigationFromActivePanel(t *testing.T) {
 	// each application can itself schedule a further async mirror (render() re-checks sync-follow,
 	// same as the reconcile pass does) — so rather than guess an exact event count, drain
 	// repeatedly until Secondary actually settles on its final target.
-	deadline := time.Now().Add(2 * time.Second)
-	for {
-		for app.screen.HasPendingEvent() {
-			ev := app.screen.PollEvent()
-			if interruptEv, ok := ev.(*tcell.EventInterrupt); ok {
-				app.handleInterruptPayload(interruptEv.Data())
-				app.reconcileAfterEvent()
-			}
-		}
-		if filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()) == filepath.Clean(betaChild) {
-			break
-		}
-		if time.Now().After(deadline) {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()) == filepath.Clean(betaChild)
+	})
 
 	// Cursor in /beta lands on "child" (only entry); sync should mirror it.
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(betaChild); got != want {

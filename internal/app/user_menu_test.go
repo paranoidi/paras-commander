@@ -448,31 +448,15 @@ background = true
 	// RefreshAfterUserMenuCommand's reload is async; drain until the newly-created marker file
 	// actually shows up rather than assuming the very next screen event is that reload landing.
 	screen := app.screen.(tcell.SimulationScreen)
-	deadline := time.Now().Add(2 * time.Second)
-	for {
-		for screen.HasPendingEvent() {
-			ev := screen.PollEvent()
-			if interruptEv, ok := ev.(*tcell.EventInterrupt); ok {
-				app.handleInterruptPayload(interruptEv.Data())
-				app.reconcileAfterEvent()
-			}
-		}
-		found := false
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
 		p := app.activePanel()
 		for i := 0; i < p.VisibleEntryCount(); i++ {
 			if e, _, ok := p.VisibleEntry(i); ok && e.Name == marker {
-				found = true
-				break
+				return true
 			}
 		}
-		if found {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("timeout waiting for post-command panel refresh to land")
-		}
-		time.Sleep(time.Millisecond)
-	}
+		return false
+	})
 	selectEntryByName(t, app, marker)
 }
 

@@ -43,9 +43,11 @@ func (h *Handler) applyPendingPanelFocus() {
 		return
 	}
 	vr := h.host.PanelViewportRows(f.panelID)
-	found := p.SelectVisibleEntryInViewport(f.name, vr)
+	var found bool
 	if f.centered {
 		found = p.SelectVisibleEntryCentered(f.name, vr)
+	} else {
+		found = p.SelectVisibleEntryInViewport(f.name, vr)
 	}
 	if found {
 		h.pendingFocus = pendingPanelFocus{}

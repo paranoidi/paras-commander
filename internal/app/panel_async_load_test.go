@@ -38,7 +38,9 @@ func TestAsyncLoadSchedulerTimesOutStuckFetch(t *testing.T) {
 
 	block := make(chan struct{})
 	t.Cleanup(func() { close(block) })
+	started := make(chan struct{})
 	swapFetchListingForAsyncLoad(t, func(ctx context.Context, snap panel.ListingRefreshSnapshot) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {
+		close(started)
 		<-block // never returns before the test's cleanup unblocks it
 		return nil, pathloc.Path{}, false, false, nil
 	})
@@ -48,6 +50,7 @@ func TestAsyncLoadSchedulerTimesOutStuckFetch(t *testing.T) {
 	if err := pan.NavigateTo(sub, "", app.activeViewportRows()); err != nil {
 		t.Fatalf("NavigateTo: %v", err)
 	}
+	<-started // the fetch goroutine has read/invoked the swapped-in fake before cleanup can restore it
 	if !pan.ListingPending {
 		t.Fatal("ListingPending should be true while the fetch is stuck")
 	}
