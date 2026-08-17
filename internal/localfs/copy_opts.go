@@ -2,13 +2,18 @@ package localfs
 
 // CopyFileOpts configures optional local copy behavior (buffer reuse, kernel fast paths, sparse/preallocate).
 type CopyFileOpts struct {
-	Buf            []byte
-	CopyFileRange  bool
-	SparseCopy     bool
-	Preallocate    bool
-	PreallocateMin int64
-	SyncPerFile    bool
-	SyncMinFileKiB int
+	Buf []byte
+	// CopyFileRange enables the copy_file_range(2) fast path.
+	CopyFileRange bool
+	// CopyFileRangeChunkBytes caps each copy_file_range(2) syscall so cancellation
+	// (checked between chunks) responds promptly on large files. <= 0 falls back
+	// to the syscall's own max (math.MaxInt32).
+	CopyFileRangeChunkBytes int64
+	SparseCopy              bool
+	Preallocate             bool
+	PreallocateMin          int64
+	SyncPerFile             bool
+	SyncMinFileKiB          int
 }
 
 func (o CopyFileOpts) syncNow(size int64) bool {

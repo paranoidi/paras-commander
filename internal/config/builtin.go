@@ -143,11 +143,15 @@ const (
 	DefaultDiskSpaceCheckMinFileBytes = 50 * 1024 * 1024
 	DefaultCowFileCloning             = true
 	DefaultCopyFileRange              = true
-	DefaultSparseFileCopy             = false
-	DefaultPreallocateDestination     = false
-	DefaultPreallocateMinFileBytes    = 1024 * 1024
-	DefaultSyncAtJobEnd               = false
-	DefaultSyncMinFileKiB             = 0
+	// DefaultCopyFileRangeChunkMiB bounds each copy_file_range(2) syscall so job
+	// cancellation (checked between chunks) responds promptly instead of blocking
+	// for the whole remaining file.
+	DefaultCopyFileRangeChunkMiB   = 8
+	DefaultSparseFileCopy          = false
+	DefaultPreallocateDestination  = false
+	DefaultPreallocateMinFileBytes = 1024 * 1024
+	DefaultSyncAtJobEnd            = false
+	DefaultSyncMinFileKiB          = 0
 
 	// FlattenDefaultLocationActive is the active panel path for flatten dialog default destination.
 	FlattenDefaultLocationActive = "active"

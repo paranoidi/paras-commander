@@ -36,9 +36,15 @@ func resetCopyFilesForFallback(srcFile, dstFile *os.File) {
 
 // tryKernelFileRangeCopy uses copy_file_range(2) between open file descriptors.
 // On unsupported errno it returns (false, nil) so the caller can fall back to read/write.
-func tryKernelFileRangeCopy(ctx context.Context, srcFile, dstFile *os.File, size int64, onWritten func(int64)) (ok bool, err error) {
+// chunkBytes caps each syscall's transfer size so ctx cancellation (checked between
+// chunks) responds promptly instead of blocking for the whole remaining file; <= 0
+// or larger than math.MaxInt32 falls back to math.MaxInt32 (the syscall's own max).
+func tryKernelFileRangeCopy(ctx context.Context, srcFile, dstFile *os.File, size, chunkBytes int64, onWritten func(int64)) (ok bool, err error) {
 	if size == 0 {
 		return true, nil
+	}
+	if chunkBytes <= 0 || chunkBytes > math.MaxInt32 {
+		chunkBytes = math.MaxInt32
 	}
 	var copied int64
 	for copied < size {
@@ -47,8 +53,8 @@ func tryKernelFileRangeCopy(ctx context.Context, srcFile, dstFile *os.File, size
 		}
 		remain := size - copied
 		chunk := remain
-		if chunk > math.MaxInt32 {
-			chunk = math.MaxInt32
+		if chunk > chunkBytes {
+			chunk = chunkBytes
 		}
 		n, err := unix.CopyFileRange(int(srcFile.Fd()), nil, int(dstFile.Fd()), nil, int(chunk), 0)
 		if err != nil {

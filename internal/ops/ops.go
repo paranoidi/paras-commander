@@ -107,13 +107,14 @@ func (o Options) syncFileMeetsMinSize(size int64) bool {
 // LocalCopyFileOpts builds localfs.CopyFileOpts for a single file copy.
 func (o Options) LocalCopyFileOpts(buf []byte) localfs.CopyFileOpts {
 	return localfs.CopyFileOpts{
-		Buf:            buf,
-		CopyFileRange:  o.CopyFileRange,
-		SparseCopy:     o.SparseFileCopy,
-		Preallocate:    o.PreallocateDestination,
-		PreallocateMin: o.PreallocateMinFileBytes,
-		SyncPerFile:    o.SyncAfterEachFile,
-		SyncMinFileKiB: o.SyncMinFileKiB,
+		Buf:                     buf,
+		CopyFileRange:           o.CopyFileRange,
+		CopyFileRangeChunkBytes: int64(config.DefaultCopyFileRangeChunkMiB) * 1024 * 1024,
+		SparseCopy:              o.SparseFileCopy,
+		Preallocate:             o.PreallocateDestination,
+		PreallocateMin:          o.PreallocateMinFileBytes,
+		SyncPerFile:             o.SyncAfterEachFile,
+		SyncMinFileKiB:          o.SyncMinFileKiB,
 	}
 }
 

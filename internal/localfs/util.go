@@ -128,7 +128,7 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 		fastDone = ok
 	}
 	if !fastDone && extra.CopyFileRange {
-		ok, ferr := tryKernelFileRangeCopy(ctx, srcFile, dstFile, srcInfo.Size(), onWritten)
+		ok, ferr := tryKernelFileRangeCopy(ctx, srcFile, dstFile, srcInfo.Size(), extra.CopyFileRangeChunkBytes, onWritten)
 		if ferr != nil {
 			abortPartialLocalCopy(dstFile, target)
 			return fmt.Errorf("copy content %q -> %q: %w", src, target, ferr)
