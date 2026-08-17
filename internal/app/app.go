@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -193,9 +194,10 @@ type App struct {
 	image          imageOverlay
 	placeholderImg placeholderImage
 
-	remotePanelLoadGen  [2]atomic.Uint64
-	gitStatusLoadGen    [2]atomic.Uint64
-	quickViewGitLoadGen atomic.Uint64
+	panelAsyncLoadGen     [2]atomic.Uint64
+	gitStatusLoadGen      [2]atomic.Uint64
+	quickViewGitLoadGen   atomic.Uint64
+	quickViewAsyncLoadGen atomic.Uint64
 
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
@@ -268,7 +270,15 @@ type Options struct {
 }
 
 // Run initializes and starts the terminal application.
-func Run(cfg LaunchConfig) error {
+func Run(cfg LaunchConfig) (err error) {
+	// Runs last (registered first: LIFO defer order runs screen.Fini/closeSubshell below
+	// before this), so the terminal is already restored by the time a crash is reported.
+	defer func() {
+		if r := recover(); r != nil {
+			err = reportCrash(r, debug.Stack())
+		}
+	}()
+
 	paths, err := config.DefaultPaths()
 	if err != nil {
 		return err
@@ -570,7 +580,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		app.stopWorker()
 		return nil, fmt.Errorf("configure sftp: %w", err)
 	}
-	app.wireRemotePanelLoaders()
+	app.wireAsyncPanelLoaders()
 	app.wireTreeChildLoaders()
 	app.wireGitStatusLoaders()
 	app.model.Primary.RescheduleGitStatusIfNeeded()
@@ -929,8 +939,8 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		a.openSFTPPasswordDialog(d.prompt)
 		a.render()
 		out.didRender = true
-	case remotePanelLoadPayload:
-		if a.applyRemotePanelLoad(d) {
+	case panelAsyncLoadPayload:
+		if a.applyPanelAsyncLoad(d) {
 			a.render()
 			out.didRender = true
 		}
@@ -946,6 +956,11 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		}
 	case quickViewGitStatusPayload:
 		if a.applyQuickViewGitStatusLoad(d) {
+			a.render()
+			out.didRender = true
+		}
+	case quickViewAsyncLoadPayload:
+		if a.applyQuickViewAsyncLoad(d) {
 			a.render()
 			out.didRender = true
 		}

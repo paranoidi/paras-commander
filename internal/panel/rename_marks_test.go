@@ -19,13 +19,13 @@ func TestRenameMarkAndDropOnLeave(t *testing.T) {
 		t.Fatal("expected rename mark on alpha.txt")
 	}
 	other := pathloc.MustParse(t.TempDir())
-	if err := s.load(other, "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
+	if err := s.load(other, "", 10, noIndexCursorFallback, asyncLoadOpts{}); err != nil {
 		t.Fatalf("load: %v", err)
 	}
 	if s.IsRenameMarked(ent) {
 		t.Fatal("rename marks should not apply after leaving dest directory")
 	}
-	if err := s.load(dest, "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
+	if err := s.load(dest, "", 10, noIndexCursorFallback, asyncLoadOpts{}); err != nil {
 		t.Fatalf("reload dest: %v", err)
 	}
 	if s.IsRenameMarked(ent) {

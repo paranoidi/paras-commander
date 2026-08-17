@@ -176,6 +176,8 @@ func TestChooserEnterDirectoryDoesNotWrite(t *testing.T) {
 	if quit := app.handleNavOpen(&app.model.Primary, 10); quit {
 		t.Fatal("handleNavOpen quit on directory")
 	}
+	applyNextInterruptEvent(t, app, screen) // async load: quick-view overlay populated at startup
+	applyNextInterruptEvent(t, app, screen) // async load, Primary enters nested
 	if app.model.Primary.PathString() != sub {
 		t.Fatalf("panel path = %q, want %q", app.model.Primary.PathString(), sub)
 	}

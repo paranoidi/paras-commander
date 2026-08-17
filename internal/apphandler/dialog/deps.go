@@ -90,12 +90,15 @@ type Deps struct {
 	DiskUsageIgnore diskusage.ShouldIgnoreFolder
 }
 
-// duplicateFocusPending defers SelectVisibleEntryCentered until a queued duplicate job creates
-// the entry (the job runs asynchronously, so the panel can't select the new name immediately).
-type duplicateFocusPending struct {
-	panelID int
-	listDir string
-	name    string
+// pendingPanelFocus defers a select-and-scroll until the target entry actually appears in the
+// panel's listing (a queued duplicate job or an async directory reload can both delay this).
+// centered picks SelectVisibleEntryCentered (rename/duplicate) vs SelectVisibleEntryInViewport
+// (mkdir's plain-create case, which respects the panel's own scroll mode instead of forcing center).
+type pendingPanelFocus struct {
+	panelID  int
+	listDir  string
+	name     string
+	centered bool
 }
 
 // Handler owns the file-operation dialog family: opening dialogs, dispatching their keys, and
@@ -130,8 +133,9 @@ type Handler struct {
 	deleteDialogPanelPath   string
 	deleteDialogPrunedPaths []string
 
-	// duplicateFocus defers SelectVisibleEntryCentered until a queued duplicate job creates the entry.
-	duplicateFocus duplicateFocusPending
+	// pendingFocus defers SelectVisibleEntryCentered until the target entry appears in the panel's
+	// listing; retried from App.reconcileAfterEvent via ReconcilePendingPanelFocus.
+	pendingFocus pendingPanelFocus
 
 	// massRenameHistory is the in-memory, session-only (never persisted) list of recently-executed
 	// mass-rename patterns, most-recent-first, capped at maxMassRenameHistory. Merged with

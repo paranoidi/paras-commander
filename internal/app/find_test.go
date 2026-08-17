@@ -396,10 +396,16 @@ func TestFindDialogSelectsFile(t *testing.T) {
 		t.Fatal("expected fuzzy matches for target")
 	}
 	app.findCtrl.NavigateFindCursor()
+	// Stray wake events from the find index/rank background work can already be queued on
+	// screen alongside our own navigation's async-load event; drain everything pending rather
+	// than assume the very next event is ours.
+	wantDir := filepath.Clean(sub)
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return filepath.Clean(app.activePanel().Path.String()) == wantDir
+	})
 	if app.model.FindDialog.Open {
 		t.Fatal("expected dialog closed")
 	}
-	wantDir := filepath.Clean(sub)
 	if got := filepath.Clean(app.activePanel().Path.String()); got != wantDir {
 		t.Fatalf("panel dir = %q want %q", got, wantDir)
 	}

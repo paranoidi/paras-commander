@@ -309,7 +309,7 @@ SSH/SFTP remote panel connections.
 | `ssh_config_file` | string | `""` | Path to the OpenSSH client config file. Empty uses `~/.ssh/config`. |
 | `idle_timeout_secs` | int | `60` | How long an unused pooled SFTP connection stays open before closing (clamped 15–3600). |
 | `dial_timeout_secs` | int | `30` | Limit on TCP connect + SSH handshake time (clamped 5–300). |
-| `list_timeout_secs` | int | `60` | Limit on a remote directory listing request (clamped 5–300). |
+| `list_timeout_secs` | int | `60` | Limit on any panel directory listing request — SFTP or local, since a local path can be a slow network mount too (clamped 5–300). |
 
 ## `[shell]`
 

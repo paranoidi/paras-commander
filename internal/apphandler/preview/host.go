@@ -34,6 +34,7 @@ type Host interface {
 	ArmCursorNameHintNavCoalesceAfterListNav()
 	PathVolumeContendsWithActiveJob(path string) bool
 	QuickViewGitStatusScheduler() panel.GitStatusScheduler
+	QuickViewAsyncLoadScheduler() panel.AsyncLoadScheduler
 	EffectivePaneSplitOrientation() ui.SplitOrientation
 	PanelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit
 	LayoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout

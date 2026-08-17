@@ -69,8 +69,19 @@ func (h *Handler) RefreshBothPanels() {
 	viewportRows := h.host.ActiveViewportRows()
 	_ = h.model.Primary.RefreshOrNavigateToExistingAncestor(viewportRows)
 	_ = h.model.Secondary.RefreshOrNavigateToExistingAncestor(viewportRows)
-	h.applyDuplicateFocusPending()
+	// Immediate attempt for the (still common) case where nothing is actually async — e.g. no
+	// scheduler wired. When the reload above is async, this attempt is a harmless no-op (entries
+	// are still stale) and ReconcilePendingPanelFocus retries it once the reload lands.
+	h.applyPendingPanelFocus()
 	h.preview.ApplyQuickViewPreviewImmediately()
+}
+
+// ReconcilePendingPanelFocus retries a select-and-center scheduled by rename/mkdir/duplicate
+// whose triggering directory reload hadn't landed yet. Called from App.reconcileAfterEvent after
+// every event (including the reload's own async completion), matching that chokepoint's
+// idempotent, retry-until-it-holds design.
+func (h *Handler) ReconcilePendingPanelFocus() {
+	h.applyPendingPanelFocus()
 }
 
 // OpenRenameDialog opens the mass-rename dialog when p has a selection, otherwise the
@@ -382,12 +393,14 @@ func (h *Handler) executeRename() {
 	}
 	focusAfter := h.model.FileDialog.RenameFocusAfter
 	panelDir := p.Path
+	panelID := h.model.ActivePanel
+	listDir := p.PathString()
 	h.CloseFileDialog()
+	if focusAfter {
+		h.schedulePanelFocus(panelID, listDir, plan.NewName)
+	}
 	h.RefreshBothPanels()
 	h.host.ActivePanel().AddRenameMarks(panelDir, []string{plan.NewName})
-	if focusAfter {
-		h.host.ActivePanel().SelectVisibleEntryCentered(plan.NewName, h.host.ActiveViewportRows())
-	}
 	h.host.SetTransientMessage(fmt.Sprintf("Renamed to %s", plan.NewName), ui.MessageUrgencyInfo)
 }
 
@@ -440,18 +453,28 @@ func (h *Handler) executeMkdir() {
 		return
 	}
 
-	h.CloseFileDialog()
-	h.RefreshBothPanels()
 	createdName := plan.Name
 	if loc, err := pathloc.Parse(plan.Path); err == nil {
 		createdName = loc.Base()
 	}
+	panelID := h.model.ActivePanel
+	listDir := p.PathString()
+	h.CloseFileDialog()
 	active := h.host.ActivePanel()
 	viewportRows := h.host.ActiveViewportRows()
 	if openInInactive {
 		if priorEntryName != "" && priorEntryName != createdName {
-			active.SelectVisibleEntry(priorEntryName)
-		} else if entry, ok := active.CurrentEntry(); ok && entry.Name == createdName {
+			h.schedulePanelFocusScroll(panelID, listDir, priorEntryName, false)
+		}
+		// The createdName-under-cursor fallback (step off the just-created directory before
+		// reload) still runs synchronously below on the panel's pre-reload cursor state — no
+		// specific target name to defer, so there is nothing to schedule here.
+	} else {
+		h.schedulePanelFocusScroll(panelID, listDir, createdName, false)
+	}
+	h.RefreshBothPanels()
+	if openInInactive {
+		if entry, ok := active.CurrentEntry(); ok && entry.Name == createdName {
 			if !active.SelectVisibleEntry("..") {
 				for i := 0; i < active.VisibleEntryCount(); i++ {
 					e, _, ok := active.VisibleEntry(i)
@@ -462,13 +485,7 @@ func (h *Handler) executeMkdir() {
 				}
 			}
 		}
-	} else {
-		active.SelectVisibleEntryInViewport(createdName, viewportRows)
-	}
-	if openInInactive {
 		active.EnsureCursorInViewport(viewportRows)
-	}
-	if openInInactive {
 		if err := h.host.NavigatePanelToPath(h.host.InactivePanelID(), plan.Path, ""); err != nil {
 			h.host.SetErrorMessage("Mkdir", err)
 			return

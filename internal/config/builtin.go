@@ -384,7 +384,8 @@ const (
 	DefaultSFTPIdleTimeoutSecs = 60
 	// DefaultSFTPDialTimeoutSecs limits connect/handshake time.
 	DefaultSFTPDialTimeoutSecs = 30
-	// DefaultSFTPListTimeoutSecs limits remote panel directory listing (ReadDir).
+	// DefaultSFTPListTimeoutSecs limits how long any panel directory listing (SFTP ReadDir or
+	// local, including slow network mounts) gets before the app gives up on it.
 	DefaultSFTPListTimeoutSecs = 60
 
 	// DefaultShellSyncCwdOnReturn navigates the active panel to the process cwd after open shell exits.

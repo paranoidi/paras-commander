@@ -50,6 +50,7 @@ func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
 	if app.model.PathPicker.Open {
 		t.Fatal("expected dialog closed")
 	}
+	applyNextInterruptEvent(t, app, screen) // async load triggered by the bookmark navigation
 	if got := app.activePanel().Path.String(); got != filepath.Clean(target) {
 		t.Fatalf("panel path = %q want %q", got, filepath.Clean(target))
 	}
@@ -222,6 +223,7 @@ func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 		}
 	}
 	app.dispatch(keymap.ActionNavOpen)
+	applyNextInterruptEvent(t, app, screen) // async load: panel actually enters alpha (empty) before the next search
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
 		if ok && entry.Name == "beta" {
@@ -249,6 +251,7 @@ func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 	if app.model.HistoryDialog.Open {
 		t.Fatal("expected dialog closed")
 	}
+	applyNextInterruptEvent(t, app, screen) // async load triggered by the history navigation
 	want := filepath.Clean(alpha)
 	if got := filepath.Clean(app.activePanel().Path.String()); got != want {
 		t.Fatalf("panel path = %q want %q", got, want)
@@ -268,9 +271,9 @@ func TestHistoryDialogF5TogglesBothPanels(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	navigatePanelIntoDir(t, app, ui.PrimaryPanel, "alpha")
+	navigatePanelIntoDir(t, app, screen, ui.PrimaryPanel, "alpha")
 	app.model.ActivePanel = ui.SecondaryPanel
-	navigatePanelIntoDir(t, app, ui.SecondaryPanel, "beta")
+	navigatePanelIntoDir(t, app, screen, ui.SecondaryPanel, "beta")
 
 	app.openHistoryDialog(ui.PrimaryPanel)
 	if !app.model.HistoryDialog.Open {
@@ -318,9 +321,9 @@ func TestHistoryDialogBothPanelsOKNavigatesPanelID(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
 
-	navigatePanelIntoDir(t, app, ui.PrimaryPanel, "alpha")
+	navigatePanelIntoDir(t, app, screen, ui.PrimaryPanel, "alpha")
 	app.model.ActivePanel = ui.SecondaryPanel
-	navigatePanelIntoDir(t, app, ui.SecondaryPanel, "beta")
+	navigatePanelIntoDir(t, app, screen, ui.SecondaryPanel, "beta")
 
 	app.openHistoryDialog(ui.PrimaryPanel)
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone)); quit {
@@ -345,6 +348,7 @@ func TestHistoryDialogBothPanelsOKNavigatesPanelID(t *testing.T) {
 		}
 	}
 	app.activateHistorySelection()
+	applyNextInterruptEvent(t, app, screen) // async load triggered by the history navigation
 	if got := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()); got != wantBeta {
 		t.Fatalf("left panel path = %q want %q", got, wantBeta)
 	}
@@ -380,7 +384,7 @@ func TestHistoryDialogFooterF5Hints(t *testing.T) {
 	}
 	screen := newScreen(t, 80, 24)
 	app := newApp(t, screen, root)
-	navigatePanelIntoDir(t, app, ui.PrimaryPanel, "alpha")
+	navigatePanelIntoDir(t, app, screen, ui.PrimaryPanel, "alpha")
 
 	app.openHistoryDialog(ui.PrimaryPanel)
 	keys := app.activeFooterKeys()
@@ -456,6 +460,7 @@ func TestBookmarkDialogFilterSelectsRankedFirst(t *testing.T) {
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
+	applyNextInterruptEvent(t, app, screen) // async load triggered by the bookmark navigation
 	if got := app.activePanel().Path.String(); got != filepath.Clean(tBeta) {
 		t.Fatalf("panel path = %q want %q", got, filepath.Clean(tBeta))
 	}

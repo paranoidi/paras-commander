@@ -18,9 +18,12 @@ import (
 )
 
 // applyNextInterruptEvent blocks until screen posts an EventInterrupt (e.g. from an async
-// scheduler goroutine such as treeChildLoadScheduler/remoteLoadScheduler) and applies it via
-// handleInterruptPayload, mirroring what Run()'s event loop does. Used by tests that dispatch an
-// action that triggers async work and need the result applied before asserting on panel state.
+// scheduler goroutine such as treeChildLoadScheduler/asyncLoadScheduler) and applies it via
+// handleInterruptPayload, then runs reconcileAfterEvent — mirroring what Run()'s event loop does
+// for every event, interrupts included. That reconcile pass is what retries things like
+// ReconcilePendingPanelFocus (rename/mkdir/duplicate's deferred select-and-center) once the async
+// reload they were waiting on has just landed. Used by tests that dispatch an action triggering
+// async work and need the result (and its follow-on reconcile) applied before asserting on state.
 func applyNextInterruptEvent(t *testing.T, app *App, screen tcell.SimulationScreen) {
 	t.Helper()
 	done := make(chan tcell.Event, 1)
@@ -32,8 +35,38 @@ func applyNextInterruptEvent(t *testing.T, app *App, screen tcell.SimulationScre
 			t.Fatalf("PollEvent returned %T, want *tcell.EventInterrupt", ev)
 		}
 		app.handleInterruptPayload(interruptEv.Data())
+		app.reconcileAfterEvent()
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout waiting for async event")
+	}
+}
+
+// drainInterruptEventsUntil applies every EventInterrupt currently queued on screen (each via
+// handleInterruptPayload + reconcileAfterEvent, same as applyNextInterruptEvent), then checks
+// cond; it repeats until cond reports true or timeout elapses, failing the test on timeout. Use
+// this instead of applyNextInterruptEvent when the exact number/order of async events an action
+// schedules isn't easy to predict — e.g. it races unrelated background events (job progress,
+// find-index wake-ups) for the same bounded screen event queue, or depends on generation-counter
+// supersession ordering. cond may do its own polling as a side effect (e.g. draining a non-screen
+// event source like jobsCtrl) before reporting whether the wait is over.
+func drainInterruptEventsUntil(t *testing.T, app *App, screen tcell.SimulationScreen, timeout time.Duration, cond func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for {
+		for screen.HasPendingEvent() {
+			ev := screen.PollEvent()
+			if interruptEv, ok := ev.(*tcell.EventInterrupt); ok {
+				app.handleInterruptPayload(interruptEv.Data())
+				app.reconcileAfterEvent()
+			}
+		}
+		if cond() {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timeout waiting for async event(s) to land")
+		}
+		time.Sleep(time.Millisecond)
 	}
 }
 

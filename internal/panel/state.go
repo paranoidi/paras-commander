@@ -175,9 +175,13 @@ type State struct {
 	// SuppressHeavyPathProbes, when set, skips statfs and device lookup in load() for paths
 	// where those syscalls would contend with active background job I/O on the same volume.
 	SuppressHeavyPathProbes func(pathloc.Path) bool
-	// ScheduleRemoteLoad runs remote directory listing off the UI thread (set by app; nil = synchronous).
-	ScheduleRemoteLoad RemoteLoadScheduler
-	// ListingPending is true while an asynchronous remote listing is in flight.
+	// ScheduleAsyncLoad runs a directory listing off the UI thread (set by app; nil = synchronous,
+	// used by tests that construct a bare State). Not remote-only: a local path can be just as
+	// slow as a remote one (network mount, autofs trigger), and Go cannot cancel a goroutine
+	// blocked inside a real blocking syscall — running it off-thread is what keeps the UI
+	// responsive even when the underlying Stat/ReadDir never returns.
+	ScheduleAsyncLoad AsyncLoadScheduler
+	// ListingPending is true while an asynchronous listing is in flight.
 	ListingPending bool
 	// ScheduleGitStatus runs git status for the current listing off the UI thread (set by app).
 	ScheduleGitStatus GitStatusScheduler
@@ -285,19 +289,26 @@ func NewWithOptions(path string, opts localfs.ListOptions, gitignoreCache *gitig
 
 // Load replaces the panel contents with a fresh directory snapshot.
 func (s *State) Load(path string) error {
-	return s.loadPathString(path, "", 0, noIndexCursorFallback, remoteLoadOpts{})
+	return s.loadPathString(path, "", 0, noIndexCursorFallback, asyncLoadOpts{})
 }
 
 // Refresh reloads the current path. When the entry under the cursor still exists, it is re-selected by name;
 // otherwise the prior row index is restored (clamped), matching MC-style behavior after moves/deletes.
+// A no-op while a load is already in flight (ListingPending): Path still holds the pre-load
+// directory until that load lands, so scheduling a second one here would race it on the shared
+// generation counter and could clobber a real navigation with a stale-directory reload — the
+// in-flight load already brings fresh contents for wherever it lands.
 func (s *State) Refresh(viewportRows int) error {
+	if s.ListingPending {
+		return nil
+	}
 	priorCursor := s.Cursor
 	entry, ok := s.CurrentEntry()
 	selectedName := ""
 	if ok {
 		selectedName = entry.Name
 	}
-	return s.load(s.Path, selectedName, viewportRows, priorCursor, remoteLoadOpts{})
+	return s.load(s.Path, selectedName, viewportRows, priorCursor, asyncLoadOpts{})
 }
 
 // RefreshOrNavigateToExistingAncestor reloads the current directory when it still exists.
@@ -352,7 +363,7 @@ func (s *State) SetShowHidden(shown bool, viewportRows int) error {
 		selectedName = entry.Name
 	}
 	s.ShowHidden = shown
-	return s.load(s.Path, selectedName, viewportRows, priorCursor, remoteLoadOpts{})
+	return s.load(s.Path, selectedName, viewportRows, priorCursor, asyncLoadOpts{})
 }
 
 // Move changes the cursor by delta and keeps it visible.
@@ -689,7 +700,7 @@ func (s *State) NavigateTo(path string, selectedName string, viewportRows int) e
 func (s *State) NavigateToPath(loc pathloc.Path, selectedName string, viewportRows int) error {
 	target := loc.String()
 	s.recordVisit(target)
-	if err := s.load(loc, selectedName, viewportRows, noIndexCursorFallback, remoteLoadOpts{
+	if err := s.load(loc, selectedName, viewportRows, noIndexCursorFallback, asyncLoadOpts{
 		rollback:        func() { s.revertRecordedVisit(target) },
 		syncHistoryHead: true,
 	}); err != nil {
@@ -713,7 +724,7 @@ func (s *State) HistoryBackward(viewportRows int) (bool, error) {
 	}
 	prevIdx := s.HistoryIndex
 	s.HistoryIndex = nextIdx
-	if err := s.loadPathString(target, "", viewportRows, noIndexCursorFallback, remoteLoadOpts{
+	if err := s.loadPathString(target, "", viewportRows, noIndexCursorFallback, asyncLoadOpts{
 		rollback: func() { s.HistoryIndex = prevIdx },
 	}); err != nil {
 		s.HistoryIndex = prevIdx
@@ -737,7 +748,7 @@ func (s *State) HistoryForward(viewportRows int) (bool, error) {
 	target := cleanPathString(s.History[nextIdx])
 	prevIdx := s.HistoryIndex
 	s.HistoryIndex = nextIdx
-	if err := s.loadPathString(target, "", viewportRows, noIndexCursorFallback, remoteLoadOpts{
+	if err := s.loadPathString(target, "", viewportRows, noIndexCursorFallback, asyncLoadOpts{
 		rollback: func() { s.HistoryIndex = prevIdx },
 	}); err != nil {
 		s.HistoryIndex = prevIdx
@@ -903,7 +914,7 @@ const NoIndexCursorFallback = noIndexCursorFallback
 
 // LoadWithViewport loads path and restores selectedName, indexFallback, or HistoryCursorByPath recall.
 func (s *State) LoadWithViewport(path string, selectedName string, viewportRows int, indexFallback int) error {
-	return s.loadPathString(path, selectedName, viewportRows, indexFallback, remoteLoadOpts{})
+	return s.loadPathString(path, selectedName, viewportRows, indexFallback, asyncLoadOpts{})
 }
 
 func (s *State) resolveLoadCursor(loc pathloc.Path, selectedName string, indexFallback int) (string, int, bool) {
@@ -1298,7 +1309,7 @@ func previousFilterMatchIndex(results []filterResult, cursor int) int {
 	return len(results) - 1
 }
 
-func (s *State) loadPathString(path string, selectedName string, viewportRows int, indexFallback int, remote remoteLoadOpts) error {
+func (s *State) loadPathString(path string, selectedName string, viewportRows int, indexFallback int, remote asyncLoadOpts) error {
 	loc, err := pathloc.Parse(path)
 	if err != nil {
 		return err
@@ -1306,15 +1317,15 @@ func (s *State) loadPathString(path string, selectedName string, viewportRows in
 	return s.load(loc, selectedName, viewportRows, indexFallback, remote)
 }
 
-func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, indexFallback int, remote remoteLoadOpts) error {
+func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, indexFallback int, remote asyncLoadOpts) error {
 	if !loc.Equal(s.Path) {
 		s.rememberCursorForPath(s.Path.String())
 		s.dropNewFileMarks(s.Path.String())
 		s.dropRenameMarks(s.Path.String())
 	}
 	selectedName, indexFallback, centerRecalled := s.resolveLoadCursor(loc, selectedName, indexFallback)
-	if loc.IsRemote() && s.ScheduleRemoteLoad != nil {
-		if s.ScheduleRemoteLoad(RemoteLoadRequest{
+	if s.ScheduleAsyncLoad != nil {
+		if s.ScheduleAsyncLoad(AsyncLoadRequest{
 			Loc:                  loc,
 			SelectedName:         selectedName,
 			ViewportRows:         viewportRows,

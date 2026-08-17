@@ -10,6 +10,8 @@ type SFTPConfig struct {
 	IdleTimeoutSecs int `toml:"idle_timeout_secs"`
 	// DialTimeoutSecs limits TCP+SSH handshake time (minimum 5 after Validate).
 	DialTimeoutSecs int `toml:"dial_timeout_secs"`
-	// ListTimeoutSecs limits remote panel directory listing via SFTP ReadDir (minimum 5 after Validate).
+	// ListTimeoutSecs limits how long any panel directory listing gets before the app gives up on
+	// it — both SFTP ReadDir and local paths (a local path can be a slow network mount just as
+	// easily as an sftp:// one; see internal/app/panel_async_load.go) — (minimum 5 after Validate).
 	ListTimeoutSecs int `toml:"list_timeout_secs"`
 }

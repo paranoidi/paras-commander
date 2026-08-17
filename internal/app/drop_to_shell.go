@@ -322,6 +322,10 @@ func (a *App) closeSubshell() {
 	a.subshell = nil
 }
 
+// refreshAfterDropToShell re-lists the active panel's directory after returning from the shell,
+// in case files changed while the user was away. If syncPanelCwdAfterShell (above, when
+// SyncCwdOnReturn is on) already scheduled a navigation for this panel, State.Refresh is a no-op
+// while that's still in flight — see its doc comment.
 func (a *App) refreshAfterDropToShell() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return

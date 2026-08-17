@@ -28,6 +28,7 @@ func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
 	p := app.activePanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
@@ -119,6 +120,7 @@ func TestTransferDialogEnterFromDestinationConfirms(t *testing.T) {
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
 	p := app.activePanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
@@ -153,6 +155,7 @@ func TestTransferDialogDestinationTargetPanel(t *testing.T) {
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
 	// Prefilled destination is the inactive (Secondary) panel's path.
 	app.dialogCtrl.OpenCopyDialog()
@@ -192,6 +195,7 @@ func TestTransferDialogDestinationTargetPanelBorderColor(t *testing.T) {
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
 	app.dialogCtrl.OpenCopyDialog()
 	app.dialogCtrl.ApplyTransferDestinationPathValidation()
@@ -227,6 +231,7 @@ func TestTransferDialogDestinationLeftRightMoveCursor(t *testing.T) {
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
 	p := app.activePanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
@@ -287,6 +292,7 @@ func TestTransferDestinationFooterShowsActiveAndInactive(t *testing.T) {
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
 	p := app.activePanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
@@ -321,6 +327,7 @@ func TestTransferDestinationShortcutSetsActiveAndInactivePath(t *testing.T) {
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dstDir
 
 	p := app.activePanel()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyInsert, 0, tcell.ModNone)); quit {
@@ -547,9 +554,11 @@ func TestEnqueueCopyJobClearsCrossDirectorySelections(t *testing.T) {
 	if err := app.activePanel().Load(here); err != nil {
 		t.Fatalf("Load here: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, active panel enters here
 	if err := app.inactivePanel().Load(dst); err != nil {
 		t.Fatalf("Load dest: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dst
 
 	p := app.activePanel()
 	hereTxt := filepath.Join(here, "here.txt")
@@ -593,9 +602,11 @@ func TestEnqueueMoveJobClearsCrossDirectorySelections(t *testing.T) {
 	if err := app.activePanel().Load(here); err != nil {
 		t.Fatalf("Load here: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, active panel enters here
 	if err := app.inactivePanel().Load(dst); err != nil {
 		t.Fatalf("Load dest: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters dst
 
 	p := app.activePanel()
 	hereTxt := filepath.Join(here, "here.txt")
@@ -879,8 +890,20 @@ func TestDuplicateWithFocusAfterSelectsAfterJob(t *testing.T) {
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
-	flushBackgroundJobs(t, app)
-	app.jobsCtrl.ApplyRefreshes()
+	// Drain screen events continuously while the job runs (rather than in one big batch
+	// afterward): tcell's event queue is a bounded, non-blocking buffer (10 slots) that silently
+	// drops a PostEvent when full, and the job's own progress/completion events share that same
+	// queue with our panel-async-load events — letting it fill up between big drain calls is what
+	// makes this flaky, not the async-load mechanism itself.
+	applied := false
+	drainInterruptEventsUntil(t, app, screen, 5*time.Second, func() bool {
+		app.jobsCtrl.PollEvents()
+		if !applied {
+			applied = app.jobsCtrl.ApplyRefreshes()
+		}
+		e, ok := app.activePanel().CurrentEntry()
+		return ok && e.Name == newName
+	})
 
 	p = app.activePanel()
 	entry, ok := p.CurrentEntry()

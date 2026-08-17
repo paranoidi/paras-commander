@@ -2053,7 +2053,7 @@ func TestLoadAppliesDiskTotalsSortImmediatelyWhenListingFullyCached(t *testing.T
 			return 0, false
 		}
 	}
-	if err := state.load(pathloc.MustParse(dir), "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
+	if err := state.load(pathloc.MustParse(dir), "", 10, noIndexCursorFallback, asyncLoadOpts{}); err != nil {
 		t.Fatalf("load: %v", err)
 	}
 	if !state.IdleDiskTotalsSort {
@@ -2087,7 +2087,7 @@ func TestLoadDoesNotApplyDiskTotalsSortWithoutAnalysisEligibility(t *testing.T) 
 		// DiskUsageIdleSortEligible left false: selection-size cache must not flip sort.
 	}
 	state.DiskSorter = func(string) (int64, bool) { return 1, true }
-	if err := state.load(pathloc.MustParse(dir), "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
+	if err := state.load(pathloc.MustParse(dir), "", 10, noIndexCursorFallback, asyncLoadOpts{}); err != nil {
 		t.Fatalf("load: %v", err)
 	}
 	if state.IdleDiskTotalsSort {

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -80,10 +81,12 @@ func TestQuickViewDirRecallsFromInactivePanelHistory(t *testing.T) {
 	if err := right.NavigateTo(alpha, "", app.panelViewportRows(ui.SecondaryPanel)); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, entering alpha
 	selectPanelEntryByName(t, right, "b.txt")
 	if err := right.Parent(app.panelViewportRows(ui.SecondaryPanel)); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Parent back to root
 
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
@@ -116,6 +119,7 @@ func TestQuickViewDirMirrorsInactivePanelWhenAlreadyInDirectory(t *testing.T) {
 	if err := right.NavigateTo(alpha, "", app.panelViewportRows(ui.SecondaryPanel)); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, entering alpha
 	selectPanelEntryByName(t, right, "b.txt")
 
 	app.model.ActivePanel = ui.PrimaryPanel
@@ -153,10 +157,12 @@ func TestQuickViewDirRecallsLastSelectedEntry(t *testing.T) {
 	if err := left.NavigateTo(alpha, "", app.panelViewportRows(ui.PrimaryPanel)); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, entering alpha
 	selectPanelEntryByName(t, left, "b.txt")
 	if err := left.Parent(app.panelViewportRows(ui.PrimaryPanel)); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Parent back to root
 	selectPanelEntryByName(t, left, "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
@@ -187,6 +193,7 @@ func TestQuickViewTabPreservesLatchedDirectoryPreview(t *testing.T) {
 	if err := app.panelByID(ui.SecondaryPanel).Load(child); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Secondary enters child
 	inactiveBefore := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String())
 
 	app.model.ActivePanel = ui.PrimaryPanel
@@ -195,10 +202,12 @@ func TestQuickViewTabPreservesLatchedDirectoryPreview(t *testing.T) {
 	if err := left.NavigateTo(alpha, "", app.panelViewportRows(ui.PrimaryPanel)); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, entering alpha
 	selectPanelEntryByName(t, left, "inside.txt")
 	if err := left.Parent(app.panelViewportRows(ui.PrimaryPanel)); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Parent back to root
 	selectPanelEntryByName(t, left, "alpha")
 	app.model.QuickViewEnabled = true
 	app.reconcileAfterEvent()
@@ -325,6 +334,7 @@ func TestToggleSyncEnablesAndImmediatelyMirrorsHighlightedFolder(t *testing.T) {
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror
 
 	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.PrimaryPanel {
 		t.Fatalf("Sync state after enable = (enabled=%v panel=%d), want (true, PrimaryPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
@@ -353,15 +363,18 @@ func TestSyncFollowAppliesBeforeRenderAfterNav(t *testing.T) {
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror
 
 	app.dispatch(keymap.ActionNavDown)
 	app.render()
+	applyNextInterruptEvent(t, app, screen) // async load, sync-follow mirrors beta
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
 		t.Fatalf("after down+render follower path = %q, want %q", got, want)
 	}
 
 	app.dispatch(keymap.ActionNavDown)
 	app.render()
+	applyNextInterruptEvent(t, app, screen) // async load, sync-follow mirrors gamma
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "gamma")); got != want {
 		t.Fatalf("after second down+render follower path = %q, want %q", got, want)
 	}
@@ -379,6 +392,7 @@ func TestPanelSyncFollowNavDebounceDefersFollowerUntilCleared(t *testing.T) {
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
 		t.Fatalf("right after sync enable = %q, want %q", got, want)
 	}
@@ -390,6 +404,7 @@ func TestPanelSyncFollowNavDebounceDefersFollowerUntilCleared(t *testing.T) {
 	}
 	app.clearPanelSyncFollowNavCoalesce()
 	app.reconcileAfterEvent()
+	applyNextInterruptEvent(t, app, screen) // async load, sync-follow mirrors beta after coalesce clears
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
 		t.Fatalf("follower path after clear+reconcile = %q, want %q", got, want)
 	}
@@ -421,6 +436,7 @@ func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {
 	if err := left.NavigateTo(alpha, "", 20); err != nil {
 		t.Fatalf("NavigateTo alpha: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, entering alpha
 	if left.SelectionsStripCount() == 0 {
 		t.Fatal("expected selections strip to list beta while cwd is alpha")
 	}
@@ -428,6 +444,7 @@ func TestSyncFollowUsesSelectionsStripWhenStripFocused(t *testing.T) {
 	left.SelectionsStripCursor = 0
 
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror
 
 	want := filepath.Clean(beta)
 	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != want {
@@ -472,6 +489,7 @@ func TestToggleSyncFromOtherPanelClearsPreviousDriverFirst(t *testing.T) {
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror
 	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.PrimaryPanel {
 		t.Fatalf("Sync state after left enable = (enabled=%v panel=%d), want (true, PrimaryPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
 	}
@@ -484,6 +502,7 @@ func TestToggleSyncFromOtherPanelClearsPreviousDriverFirst(t *testing.T) {
 	app.model.ActivePanel = ui.SecondaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.SecondaryPanel), "gamma")
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror (now right-driven)
 
 	if !app.model.SyncFollowEnabled || app.model.SyncFollowPanel != ui.SecondaryPanel {
 		t.Fatalf("Sync state after right toggle = (enabled=%v panel=%d), want (true, SecondaryPanel)", app.model.SyncFollowEnabled, app.model.SyncFollowPanel)
@@ -508,6 +527,7 @@ func TestSyncFollowsCursorMovementOverDirectory(t *testing.T) {
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
@@ -515,6 +535,7 @@ func TestSyncFollowsCursorMovementOverDirectory(t *testing.T) {
 	// Move cursor onto beta and verify the right panel mirrors it.
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "beta")
 	app.reconcileAfterEvent()
+	applyNextInterruptEvent(t, app, screen) // async load, sync-follow mirrors beta
 
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(beta); got != want {
 		t.Fatalf("right panel after move = %q, want %q", got, want)
@@ -534,6 +555,7 @@ func TestSyncSkipsCursorMovementOverFile(t *testing.T) {
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
@@ -802,6 +824,7 @@ func TestQuickViewDirDoesNotMoveOpenInOtherPanelIndicator(t *testing.T) {
 	if err := app.panelByID(ui.SecondaryPanel).Load(child); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Secondary enters child
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.model.QuickViewEnabled = true
@@ -883,6 +906,7 @@ func TestSyncFollowsBookmarkLikeNavigationFromActivePanel(t *testing.T) {
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(alpha); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
@@ -891,8 +915,14 @@ func TestSyncFollowsBookmarkLikeNavigationFromActivePanel(t *testing.T) {
 	if err := app.navigatePanelToDirectory(ui.PrimaryPanel, beta, ""); err != nil {
 		t.Fatalf("navigatePanelToDirectory: %v", err)
 	}
-	// In the Run loop this is what fires after the bookmark dialog closes.
-	app.reconcileAfterEvent()
+	// applyNextInterruptEvent itself now runs reconcileAfterEvent after applying each event
+	// (mirroring Run()'s loop for every event, interrupts included — see its doc comment), and
+	// each application can itself schedule a further async mirror (render() re-checks sync-follow,
+	// same as the reconcile pass does) — so rather than guess an exact event count, drain
+	// repeatedly until Secondary actually settles on its final target.
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()) == filepath.Clean(betaChild)
+	})
 
 	// Cursor in /beta lands on "child" (only entry); sync should mirror it.
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(betaChild); got != want {
@@ -949,6 +979,7 @@ func TestSyncFollowsAfterSelectToggleAdvance(t *testing.T) {
 	app.model.ActivePanel = ui.PrimaryPanel
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "alpha")); got != want {
 		t.Fatalf("right panel after enable = %q, want %q", got, want)
 	}
@@ -956,6 +987,7 @@ func TestSyncFollowsAfterSelectToggleAdvance(t *testing.T) {
 	// Insert: toggle selection on alpha and advance cursor to beta.
 	app.dispatch(keymap.ActionPanelSelectToggle)
 	app.reconcileAfterEvent()
+	applyNextInterruptEvent(t, app, screen) // async load, sync-follow mirrors beta
 
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()), filepath.Clean(filepath.Join(root, "beta")); got != want {
 		t.Fatalf("right panel after Insert advance = %q, want %q (reconciler should mirror new highlight)", got, want)
@@ -979,8 +1011,10 @@ func TestSyncFollowSkipsHistoryRecordingOnFollower(t *testing.T) {
 
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "alpha")
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, immediate sync-follow mirror
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "beta")
 	app.reconcileAfterEvent()
+	applyNextInterruptEvent(t, app, screen) // async load, sync-follow mirrors beta
 
 	right := app.panelByID(ui.SecondaryPanel)
 	if got, want := filepath.Clean(right.PathString()), filepath.Clean(beta); got != want {
