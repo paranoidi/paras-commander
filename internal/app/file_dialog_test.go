@@ -792,9 +792,9 @@ func TestMassRenameCapitalizeTabCyclesThroughCheckboxes(t *testing.T) {
 	app.dispatch(keymap.ActionFileRename)
 	d := &app.model.FileDialog
 
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModAlt))
 	if d.MassRenameMode != dialog.MassRenameModeUICapitalize {
-		t.Fatalf("mode = %v, want capitalize after Alt+A", d.MassRenameMode)
+		t.Fatalf("mode = %v, want capitalize after Alt+Z", d.MassRenameMode)
 	}
 
 	okIdx := dialog.FileDialogOKFocusIndex(*d)
@@ -900,7 +900,7 @@ func TestMassRenameClampFocusIntoAndOutOfCapitalize(t *testing.T) {
 	for _, tc := range fromSimpleCases {
 		altSwitch('s') // back to Simple
 		d.FocusedField = tc.idx()
-		altSwitch('a') // Simple -> Capitalize
+		altSwitch('z') // Simple -> Capitalize
 		if d.MassRenameMode != dialog.MassRenameModeUICapitalize {
 			t.Fatalf("%s: mode = %v, want capitalize", tc.label, d.MassRenameMode)
 		}
@@ -911,14 +911,14 @@ func TestMassRenameClampFocusIntoAndOutOfCapitalize(t *testing.T) {
 
 	// Capitalize -> Simple/Regex: the capitalize-only checkbox rows have no counterpart, so
 	// focus falls back to the new mode's "Show only modified" (the default-branch case).
-	altSwitch('a')
+	altSwitch('z')
 	d.FocusedField = dialog.MassRenameCapEachWordFocusIdx(*d)
 	altSwitch('s')
 	if want := dialog.MassRenameShowModifiedFocusIdx(*d); d.FocusedField != want || want != 6 {
 		t.Fatalf("Capitalize(CapEachWord) -> Simple: focus = %d, want 6", d.FocusedField)
 	}
 
-	altSwitch('a')
+	altSwitch('z')
 	d.FocusedField = dialog.MassRenameCapPunctFocusIdx(*d)
 	altSwitch('r')
 	if want := dialog.MassRenameShowModifiedFocusIdx(*d); d.FocusedField != want || want != 6 {
@@ -929,7 +929,7 @@ func TestMassRenameClampFocusIntoAndOutOfCapitalize(t *testing.T) {
 	// on either checkbox is preserved exactly across the switch, in both directions.
 	altSwitch('e')
 	d.FocusedField = dialog.MassRenameStripFocusIdx(*d)
-	altSwitch('a')
+	altSwitch('z')
 	if d.FocusedField != 5 {
 		t.Fatalf("External(Strip) -> Capitalize: focus = %d, want 5 (preserved)", d.FocusedField)
 	}
@@ -953,9 +953,9 @@ func TestMassRenameCapPunctSepToggleEnablesCapEachWord(t *testing.T) {
 	d := &app.model.FileDialog
 
 	// Switch to Capitalize mode
-	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModAlt))
 	if d.MassRenameMode != dialog.MassRenameModeUICapitalize {
-		t.Fatalf("mode = %v, want capitalize after Alt+A", d.MassRenameMode)
+		t.Fatalf("mode = %v, want capitalize after Alt+Z", d.MassRenameMode)
 	}
 
 	// Both checkboxes should start off

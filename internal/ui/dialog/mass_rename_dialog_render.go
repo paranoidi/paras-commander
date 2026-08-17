@@ -255,7 +255,7 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawDialogRadio(screen, optX, y, "Capitalize", 'a', state.MassRenameMode == MassRenameModeUICapitalize, state.FocusedField == 3, styles)
+	draw.DrawDialogRadio(screen, optX, y, "Capitalize", 'z', state.MassRenameMode == MassRenameModeUICapitalize, state.FocusedField == 3, styles)
 	y++
 	if y >= innerBottom {
 		return

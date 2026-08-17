@@ -805,7 +805,7 @@ func drawOkCancelButtons(screen tcell.Screen, rect Rect, y int, state FileDialog
 		disabled := !FileDialogMassRenameOKEnabled(state)
 		specs := []draw.DialogButtonSpec{
 			{Label: "OK", Shortcut: 'O', Focused: state.FocusedField == okFocusIdx, Disabled: disabled},
-			{Label: "Apply", Shortcut: 'L', Focused: state.FocusedField == MassRenameApplyFocusIndex(state), Disabled: disabled},
+			{Label: "Apply", Shortcut: 'A', Focused: state.FocusedField == MassRenameApplyFocusIndex(state), Disabled: disabled},
 			{Label: "Cancel", Shortcut: 'C', Focused: state.FocusedField == cancelFocusIdx},
 		}
 		draw.DrawDialogButtonRowCentered(screen, rect, y, specs, styles)

@@ -388,7 +388,7 @@ func (h *Handler) handleMassRenameAltShortcut(d *dialog.FileDialogState, r rune)
 	case 'e', 'E':
 		h.massRenameSwitchMode(d, dialog.MassRenameModeUIExternalEditor)
 		return true
-	case 'a', 'A':
+	case 'z', 'Z':
 		h.massRenameSwitchMode(d, dialog.MassRenameModeUICapitalize)
 		return true
 	case 'i', 'I':
@@ -417,7 +417,7 @@ func (h *Handler) handleMassRenameAltShortcut(d *dialog.FileDialogState, r rune)
 			h.RecomputeMassRenamePreview()
 		}
 		return true
-	case 'l', 'L':
+	case 'a', 'A':
 		h.ApplyMassRenameKeepOpen()
 		return true
 	}
