@@ -106,7 +106,7 @@ type State struct {
 	// gitStatusChildPending counts tree-child git-status fetches dispatched by
 	// scheduleTreeChildGitStatus that haven't completed yet — see NoteTreeChildGitStatusApplied.
 	gitStatusChildPending int
-	Filter      FilterState
+	Filter                FilterState
 	// StripFilter is the selections-strip quick filter (basename fuzzy match), independent of Filter.
 	StripFilter FilterState
 	// ActiveEntryFilter narrows visible entries (e.g. git-status filtering); nil means unfiltered.
@@ -203,10 +203,22 @@ type State struct {
 	// until this counter reaches zero, then reattaches the cursor to treeCursorID once.
 	treeExpandQuiet int
 	// treeExpandAllDepth is how many successful ExpandAllTreeShallow presses have deepened
-	// this panel's tree (0 = none yet). Caps at maxExpandAllShallowDepth; CollapseAllTree
+	// this panel's tree (0 = none yet). Caps at MaxExpandAllShallowDepth; CollapseAllTree
 	// decrements it one level at a time. Snapshotted per directory in HistoryCursorByPath and
 	// restored on return; reset when re-entering tree mode.
 	treeExpandAllDepth int
+	// treeExpandAllAuto is true while an ExpandAllTreeFully cascade is in progress: each level's
+	// async loads (see treeExpandQuiet) complete on their own schedule, and
+	// finishTreeChildLoadApply re-drives the next level automatically until MaxExpandAllShallowDepth
+	// is reached. Reset alongside treeExpandAllDepth wherever that gets reset, so a cascade orphaned
+	// by mid-flight navigation can never misfire on a later, unrelated single-row expand.
+	treeExpandAllAuto bool
+	// treeCollapseGen bumps on every CollapseAllTree/CollapseAllTreeFully call. Each tree node's
+	// async child-load dispatch captures the generation at dispatch time (TreeEntry.LoadGen);
+	// ApplyTreeChildLoad compares it against the current value to drop stragglers — fetches
+	// dispatched before the user's last whole-tree collapse, landing after it — instead of letting
+	// them silently re-expand a directory the user just asked to collapse.
+	treeCollapseGen int
 }
 
 // GitStatusRequest describes one async git status fetch for the current listing.
@@ -1419,8 +1431,10 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 		} else if snap, ok := s.HistoryCursorByPath[cleanPathString(listingLoc.String())]; ok {
 			keep = maps.Clone(snap.TreeExpanded)
 			s.treeExpandAllDepth = snap.TreeExpandAllDepth
+			s.treeExpandAllAuto = false
 		} else {
 			s.treeExpandAllDepth = 0
+			s.treeExpandAllAuto = false
 		}
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
 		s.TreeExpanded = keep

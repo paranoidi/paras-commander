@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
@@ -897,13 +898,13 @@ func TestExpandAllTreeShallowDepthLimit(t *testing.T) {
 	if !state.SetListLayout(ListLayoutTree, 10) {
 		t.Fatal("SetListLayout(Tree) = false, want true")
 	}
-	for i := 0; i < maxExpandAllShallowDepth; i++ {
+	for i := 0; i < MaxExpandAllShallowDepth; i++ {
 		if err := state.ExpandAllTreeShallow(10); err != nil {
 			t.Fatalf("ExpandAllTreeShallow press %d: %v", i+1, err)
 		}
 	}
 	if err := state.ExpandAllTreeShallow(10); !errors.Is(err, ErrExpandAllDepthLimit) {
-		t.Fatalf("press %d err = %v, want ErrExpandAllDepthLimit", maxExpandAllShallowDepth+1, err)
+		t.Fatalf("press %d err = %v, want ErrExpandAllDepthLimit", MaxExpandAllShallowDepth+1, err)
 	}
 	state.CollapseAllTreeFully(10)
 	if err := state.ExpandAllTreeShallow(10); err != nil {
@@ -987,6 +988,428 @@ func TestExpandAllTreeShallowAsyncCoalescesRedrawAndKeepsCursor(t *testing.T) {
 	cur, _, ok = state.VisibleEntry(state.Cursor)
 	if !ok || cur.Path != meadow {
 		t.Fatalf("cursor after final apply = %q ok=%v, want meadow", cur.Path, ok)
+	}
+}
+
+// TestExpandAllTreeFullyAsyncCascadesThroughLevels covers Alt+Shift+Right when
+// ScheduleTreeChildLoad is wired: each level's expand dispatches async loads, and
+// finishTreeChildLoadApply must drive the next level automatically as those loads land, until the
+// whole tree reaches max depth. Only the very last ApplyTreeChildLoad call in the cascade should
+// report a redraw. Also covers pressing Alt+Shift+Right again once fully expanded: it must return
+// ErrExpandAllDepthLimit rather than looping forever or re-expanding.
+func TestExpandAllTreeFullyAsyncCascadesThroughLevels(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	alpha := filepath.Join(meadow, "alpha")
+	bravo := filepath.Join(meadow, "bravo")
+	for _, dir := range []string{alpha, bravo} {
+		if err := os.MkdirAll(filepath.Join(dir, "child"), 0o755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	var scheduled []string
+	state.ScheduleTreeChildLoad = func(req TreeChildLoadRequest) bool {
+		scheduled = append(scheduled, req.DirID)
+		return true
+	}
+
+	if err := state.ExpandAllTreeFully(10); err != nil {
+		t.Fatalf("ExpandAllTreeFully: %v", err)
+	}
+	if state.treeExpandQuiet == 0 {
+		t.Fatal("treeExpandQuiet = 0, want > 0 (level 0 dispatched asynchronously)")
+	}
+	if !state.treeExpandAllAuto {
+		t.Fatal("treeExpandAllAuto = false, want true")
+	}
+
+	// Drain the dispatched loads level by level, feeding each directory's real (possibly empty)
+	// children back in via ApplyTreeChildLoad, until driveExpandAllTreeAuto stops scheduling more.
+	var results []bool
+	pending := scheduled
+	scheduled = nil
+	for len(pending) > 0 {
+		for _, dirID := range pending {
+			des, err := os.ReadDir(dirID)
+			if err != nil {
+				t.Fatalf("ReadDir(%s): %v", dirID, err)
+			}
+			var entries []localfs.Entry
+			for _, de := range des {
+				typ := localfs.EntryFile
+				if de.IsDir() {
+					typ = localfs.EntryDirectory
+				}
+				entries = append(entries, localfs.Entry{Name: de.Name(), Path: filepath.Join(dirID, de.Name()), Type: typ})
+			}
+			results = append(results, state.ApplyTreeChildLoad(dirID, entries, nil, 10))
+		}
+		pending = scheduled
+		scheduled = nil
+	}
+
+	if len(results) == 0 {
+		t.Fatal("no ApplyTreeChildLoad calls made")
+	}
+	for i, redrew := range results {
+		want := i == len(results)-1
+		if redrew != want {
+			t.Fatalf("results[%d] = %v, want %v (only the final apply should signal a redraw)", i, redrew, want)
+		}
+	}
+	if state.treeExpandAllDepth != MaxExpandAllShallowDepth {
+		t.Fatalf("treeExpandAllDepth = %d, want %d", state.treeExpandAllDepth, MaxExpandAllShallowDepth)
+	}
+	if state.treeExpandAllAuto {
+		t.Fatal("treeExpandAllAuto = true, want false once the cascade completes")
+	}
+	if state.treeExpandQuiet != 0 {
+		t.Fatalf("treeExpandQuiet = %d, want 0", state.treeExpandQuiet)
+	}
+	if !state.TreeExpanded[alpha] || !state.TreeExpanded[bravo] {
+		t.Fatalf("TreeExpanded alpha/bravo = %v/%v, want both true", state.TreeExpanded[alpha], state.TreeExpanded[bravo])
+	}
+	if err := state.ExpandAllTreeFully(10); !errors.Is(err, ErrExpandAllDepthLimit) {
+		t.Fatalf("ExpandAllTreeFully once fully expanded err = %v, want ErrExpandAllDepthLimit", err)
+	}
+}
+
+// TestExpandAllTreeFullyOutrunsLaggingGitStatus is the regression test for the "Alt-G, u (unstaged
+// filter), Alt+Shift+Right no longer expands to maximum depth" bug: an earlier version scoped
+// expandAllTreeDirsAtDepth to the active entry filter's Match, but for a git-status filter Match
+// reads State.GitByPath, which for a directory's children is only populated once that directory's
+// own async git-status fetch (scheduleTreeChildGitStatus, see tree_load.go) lands — a dispatch
+// separate from, and not waited on by, the tree-child *listing* fetch driveExpandAllTreeAuto
+// actually advances the cascade on. So the instant a level's listing lands and the cascade checks
+// whether to descend into it, that level's own git-status cell can easily still be in flight; a
+// filter-aware expand would see the zero-value Cell, conclude "doesn't match", and stop the
+// cascade right there — even though the real (not-yet-arrived) status does match. This test wires
+// separate, independently-controlled mocks for the tree-child listing scheduler and the git-status
+// scheduler so the listing for "alpha" can land while its git-status fetch is still deliberately
+// left unresolved, then asserts expand-all still opens alpha regardless (expand-all must never
+// consult the filter — see expandAllTreeDirsAtDepth's doc comment).
+func TestExpandAllTreeFullyOutrunsLaggingGitStatus(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	alpha := filepath.Join(meadow, "alpha")
+	if err := os.MkdirAll(alpha, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(alpha, "leaf.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	state.GitColumnActive = true
+	state.gitWorkRoot = "/fake/repo"
+	// Simulates the cwd-level git status fetch (prepareGitColumn) having already landed before the
+	// user pressed expand-all: "meadow" itself is known-modified, but nothing below it yet.
+	state.GitByPath = map[string]gitstatus.Cell{meadow: {Unstaged: gitstatus.Modified}}
+	state.SetEntryFilter(GitUnstagedFilter())
+
+	var scheduledLoads []string
+	state.ScheduleTreeChildLoad = func(req TreeChildLoadRequest) bool {
+		scheduledLoads = append(scheduledLoads, req.DirID)
+		return true
+	}
+	var scheduledGitStatus []string
+	state.ScheduleGitStatus = func(req GitStatusRequest) bool {
+		// Deliberately does not populate GitByPath — simulates the fetch staying in flight
+		// through the rest of this test, i.e. the worst case of the race.
+		scheduledGitStatus = append(scheduledGitStatus, req.ListDir)
+		return true
+	}
+
+	if err := state.ExpandAllTreeFully(10); err != nil {
+		t.Fatalf("ExpandAllTreeFully: %v", err)
+	}
+	if len(scheduledLoads) != 1 || scheduledLoads[0] != meadow {
+		t.Fatalf("scheduledLoads after first press = %v, want [%q]", scheduledLoads, meadow)
+	}
+	scheduledLoads = nil
+
+	// Lands meadow's listing (contains "alpha"): this dispatches alpha's own (still unresolved)
+	// git-status fetch and, synchronously as part of the same call (driveExpandAllTreeAuto via
+	// finishTreeChildLoadApply), drives the cascade's attempt to descend into depth 1 — the exact
+	// moment the race matters. The call legitimately returns false here: it dispatched a further
+	// async load for alpha and is still coalescing (treeExpandQuiet > 0), so no redraw yet — that
+	// alone is not the bug, it is what proves the cascade didn't stop at meadow.
+	state.ApplyTreeChildLoad(meadow, []localfs.Entry{{Name: "alpha", Path: alpha, Type: localfs.EntryDirectory}}, nil, 10)
+	if len(scheduledGitStatus) != 1 || scheduledGitStatus[0] != meadow {
+		t.Fatalf("scheduledGitStatus after meadow's load = %v, want [%q]", scheduledGitStatus, meadow)
+	}
+	if _, stillUnresolved := state.GitByPath[alpha]; stillUnresolved {
+		t.Fatal("test bug: GitByPath[alpha] should still be unset, simulating the lagging fetch")
+	}
+	if len(scheduledLoads) != 1 || scheduledLoads[0] != alpha {
+		t.Fatalf("scheduledLoads after meadow's load applied = %v, want [%q] — expand-all must attempt to descend into alpha even though its git-status cell hasn't arrived yet", scheduledLoads, alpha)
+	}
+
+	// Land alpha's own (empty) listing to finish the cascade, and only now let its git-status
+	// fetch resolve (simulating it finally arriving) — confirms the end-to-end result once
+	// everything settles: alpha ends up expanded and visible under the filter.
+	state.ApplyTreeChildLoad(alpha, nil, nil, 10)
+	state.GitByPath[alpha] = gitstatus.Cell{Unstaged: gitstatus.Modified}
+	state.RefreshEntryFilter()
+	if !state.TreeExpanded[alpha] {
+		t.Fatal("TreeExpanded[alpha] = false, want true once alpha's own listing has landed")
+	}
+}
+
+// TestCollapseAllTreeDuringActiveFullExpandCascadeStaysCollapsed is the regression test for
+// pressing Ctrl+Alt+Left (collapse one level) while an Alt+Shift+Right ("expand all to max
+// depth") cascade is still resolving async child loads in the background: without disarming
+// treeExpandAllAuto, finishTreeChildLoadApply keeps calling driveExpandAllTreeAuto as the
+// remaining loads land, which silently re-expands whatever the collapse just closed — the tree
+// looks like the collapse key did nothing.
+func TestCollapseAllTreeDuringActiveFullExpandCascadeStaysCollapsed(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	alpha := filepath.Join(meadow, "alpha")
+	bravo := filepath.Join(meadow, "bravo")
+	for _, dir := range []string{alpha, bravo} {
+		if err := os.MkdirAll(filepath.Join(dir, "child"), 0o755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	var scheduled []string
+	state.ScheduleTreeChildLoad = func(req TreeChildLoadRequest) bool {
+		scheduled = append(scheduled, req.DirID)
+		return true
+	}
+	drainOneLevel := func() {
+		t.Helper()
+		pending := scheduled
+		scheduled = nil
+		for _, dirID := range pending {
+			des, err := os.ReadDir(dirID)
+			if err != nil {
+				t.Fatalf("ReadDir(%s): %v", dirID, err)
+			}
+			var entries []localfs.Entry
+			for _, de := range des {
+				typ := localfs.EntryFile
+				if de.IsDir() {
+					typ = localfs.EntryDirectory
+				}
+				entries = append(entries, localfs.Entry{Name: de.Name(), Path: filepath.Join(dirID, de.Name()), Type: typ})
+			}
+			state.ApplyTreeChildLoad(dirID, entries, nil, 10)
+		}
+	}
+
+	if err := state.ExpandAllTreeFully(10); err != nil {
+		t.Fatalf("ExpandAllTreeFully: %v", err)
+	}
+	if !state.treeExpandAllAuto {
+		t.Fatal("treeExpandAllAuto = false, want true (cascade should still be armed)")
+	}
+
+	// Drain level 0 (meadow) and level 1 (alpha, bravo) fully, so both are genuinely
+	// TreeExpanded — matching what a user would actually see on screen — while leaving level 2
+	// (alpha/child, bravo/child) dispatched but still in flight.
+	drainOneLevel() // meadow's own load lands; cascades to dispatching alpha+bravo
+	drainOneLevel() // alpha+bravo land; cascades to dispatching alpha/child+bravo/child
+	if !state.TreeExpanded[alpha] || !state.TreeExpanded[bravo] {
+		t.Fatalf("TreeExpanded alpha/bravo = %v/%v, want both true before collapsing",
+			state.TreeExpanded[alpha], state.TreeExpanded[bravo])
+	}
+	if !state.treeExpandAllAuto {
+		t.Fatal("treeExpandAllAuto = false, want still true (level 2 loads still pending)")
+	}
+	if len(scheduled) == 0 {
+		t.Fatal("no further loads scheduled — test setup didn't leave the cascade mid-flight")
+	}
+
+	// User presses Ctrl+Alt+Left now, while level 2's loads are still mid-flight. This must
+	// collapse the deepest currently-visible level (alpha/bravo, depth 1) rather than silently
+	// doing nothing, and must stop the cascade from continuing to deepen.
+	state.CollapseAllTree(10)
+	if state.treeExpandAllAuto {
+		t.Fatal("treeExpandAllAuto = true after CollapseAllTree, want false (must disarm the cascade)")
+	}
+	if !state.TreeExpanded[meadow] || state.TreeExpanded[alpha] || state.TreeExpanded[bravo] {
+		t.Fatalf("after collapse: meadow=%v alpha=%v bravo=%v, want meadow expanded, alpha/bravo collapsed",
+			state.TreeExpanded[meadow], state.TreeExpanded[alpha], state.TreeExpanded[bravo])
+	}
+
+	// Let the stale in-flight level-2 loads land. With the cascade disarmed, this must not
+	// re-expand alpha/bravo (the collapse just closed) or resume deepening further.
+	drainOneLevel()
+	if state.treeExpandAllAuto {
+		t.Fatal("treeExpandAllAuto = true after draining stale loads, want false (must stay disarmed)")
+	}
+	if state.TreeExpanded[alpha] || state.TreeExpanded[bravo] {
+		t.Fatalf("after draining stale in-flight loads: alpha=%v bravo=%v, want both still collapsed",
+			state.TreeExpanded[alpha], state.TreeExpanded[bravo])
+	}
+}
+
+// TestCollapseAllTreeOnUnevenTreeCollapsesEveryBranchFrontier is the regression test for a tree
+// with branches of very different depths — the common shape of a real directory tree, and
+// exactly what ExpandAllTreeFully produces after "expand all to max depth" (each branch expands
+// as deep as it independently goes). A shared-absolute-depth collapse model can spend an entire
+// press on whichever branch happens to be deepest, leaving a shallower branch the user is
+// actually looking at untouched for several more presses even though it's fully expanded. One
+// CollapseAllTree press must instead peel every branch's own frontier simultaneously: the shallow
+// branch collapses completely (it has nothing deeper to peel), and the deep branch retreats by
+// exactly one level — both in the same press.
+func TestCollapseAllTreeOnUnevenTreeCollapsesEveryBranchFrontier(t *testing.T) {
+	root := t.TempDir()
+	shallow := filepath.Join(root, "shallow")
+	if err := os.Mkdir(shallow, 0o755); err != nil {
+		t.Fatalf("Mkdir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(shallow, "leaf.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	deep := filepath.Join(root, "deep")
+	mid := filepath.Join(deep, "mid")
+	inner := filepath.Join(mid, "inner")
+	if err := os.MkdirAll(inner, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(inner, "leaf.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+	if err := state.ExpandAllTreeFully(10); err != nil {
+		t.Fatalf("ExpandAllTreeFully: %v", err)
+	}
+	if !state.TreeExpanded[shallow] || !state.TreeExpanded[deep] || !state.TreeExpanded[mid] || !state.TreeExpanded[inner] {
+		t.Fatalf("after full expand: shallow=%v deep=%v mid=%v inner=%v, want all true",
+			state.TreeExpanded[shallow], state.TreeExpanded[deep], state.TreeExpanded[mid], state.TreeExpanded[inner])
+	}
+
+	state.CollapseAllTree(10)
+
+	if state.TreeExpanded[shallow] {
+		t.Fatal("shallow still expanded after one CollapseAllTree press, want collapsed — its branch has nothing deeper to peel")
+	}
+	if state.TreeExpanded[inner] {
+		t.Fatal("inner still expanded after one CollapseAllTree press, want collapsed — it's the deep branch's frontier")
+	}
+	if !state.TreeExpanded[deep] || !state.TreeExpanded[mid] {
+		t.Fatalf("deep/mid = %v/%v after one press, want both still expanded (only their frontier, inner, should have peeled)",
+			state.TreeExpanded[deep], state.TreeExpanded[mid])
+	}
+}
+
+// TestCollapseAllTreeIgnoresStragglerLoadDispatchedBeforeCollapse is the regression test for a
+// tree-child fetch that was in flight (dispatched by an ExpandAllTreeFully cascade, or any
+// expand) when the user pressed collapse, landing only after the collapse already ran. Without
+// gating ApplyTreeChildLoad on treeCollapseGen, such a straggler would still set
+// TreeExpanded[dirID] = true on arrival — invisible if its parent is also collapsed (hidden
+// either way), but if the parent is still expanded elsewhere in the tree, this silently
+// reintroduces newly visible content well after the user asked to collapse everything, which is
+// what "collapse does nothing for a few presses, then more collapsing is needed" looks like from
+// the keyboard.
+func TestCollapseAllTreeIgnoresStragglerLoadDispatchedBeforeCollapse(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	alpha := filepath.Join(meadow, "alpha")
+	bravo := filepath.Join(meadow, "bravo")
+	for _, dir := range []string{alpha, bravo} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+	}
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 10) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	var scheduled []string
+	state.ScheduleTreeChildLoad = func(req TreeChildLoadRequest) bool {
+		scheduled = append(scheduled, req.DirID)
+		return true
+	}
+	drain := func(dirID string) {
+		t.Helper()
+		des, err := os.ReadDir(dirID)
+		if err != nil {
+			t.Fatalf("ReadDir(%s): %v", dirID, err)
+		}
+		var entries []localfs.Entry
+		for _, de := range des {
+			typ := localfs.EntryFile
+			if de.IsDir() {
+				typ = localfs.EntryDirectory
+			}
+			entries = append(entries, localfs.Entry{Name: de.Name(), Path: filepath.Join(dirID, de.Name()), Type: typ})
+		}
+		state.ApplyTreeChildLoad(dirID, entries, nil, 10)
+	}
+
+	if err := state.ExpandAllTreeFully(10); err != nil {
+		t.Fatalf("ExpandAllTreeFully: %v", err)
+	}
+	// Drain meadow's own load (level 0) so it's genuinely expanded, cascading to dispatching
+	// alpha/bravo (level 1) — leave those two in flight, not yet landed.
+	pending := scheduled
+	scheduled = nil
+	for _, d := range pending {
+		drain(d)
+	}
+	if !state.TreeExpanded[meadow] {
+		t.Fatal("meadow should be expanded before collapsing")
+	}
+	if len(scheduled) == 0 {
+		t.Fatal("no further loads scheduled — test setup didn't leave alpha/bravo in flight")
+	}
+	stragglers := scheduled
+	scheduled = nil
+
+	// User collapses now, while alpha/bravo are still in flight. meadow has no expanded
+	// directory child yet (alpha/bravo haven't landed), so meadow itself is the frontier and
+	// collapses.
+	state.CollapseAllTree(10)
+	if state.TreeExpanded[meadow] {
+		t.Fatal("meadow should be collapsed after CollapseAllTree")
+	}
+
+	// The straggler loads for alpha/bravo land now, after the collapse.
+	for _, d := range stragglers {
+		drain(d)
+	}
+	if state.TreeExpanded[alpha] || state.TreeExpanded[bravo] {
+		t.Fatalf("alpha/bravo = %v/%v after straggler loads landed post-collapse, want both still false",
+			state.TreeExpanded[alpha], state.TreeExpanded[bravo])
+	}
+	if state.TreeExpanded[meadow] {
+		t.Fatal("meadow should still be collapsed after stragglers landed")
 	}
 }
 

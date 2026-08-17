@@ -19,6 +19,14 @@ type TreeEntry struct {
 	// successful fetch. The directory stays collapsed (TreeExpanded never set) while set, so a
 	// later expand attempt naturally retries.
 	LoadErr error
+	// LoadGen captures State.treeCollapseGen at the moment this node's async child fetch was
+	// dispatched (see setTreeNodeExpanded). ApplyTreeChildLoad compares it against the current
+	// generation to detect a straggler: a fetch dispatched before the user's last whole-tree
+	// collapse (CollapseAllTree/CollapseAllTreeFully), landing after it. Without this, such a
+	// fetch would still set TreeExpanded[dirID] = true on arrival — silently re-expanding a
+	// directory (or, if its parent is still expanded elsewhere in the tree, introducing newly
+	// visible content) moments after the user asked to collapse everything.
+	LoadGen int
 }
 
 // ListLayout selects how a panel's file list renders.
@@ -34,12 +42,12 @@ const (
 // loading or cancellation yet.
 const maxTreeExpandDepth = 32
 
-// maxExpandAllShallowDepth caps how many successive ExpandAllTreeShallow presses deepen the
+// MaxExpandAllShallowDepth caps how many successive ExpandAllTreeShallow presses deepen the
 // whole tree (each press expands dirs at one more depth level).
-const maxExpandAllShallowDepth = 5
+const MaxExpandAllShallowDepth = 5
 
 // ErrExpandAllDepthLimit is returned when ExpandAllTreeShallow is pressed after the tree has
-// already been deepened to maxExpandAllShallowDepth.
+// already been deepened to MaxExpandAllShallowDepth.
 var ErrExpandAllDepthLimit = errors.New("expand all depth limit")
 
 // SetListLayout switches the panel's file-list rendering between flat rows and an
@@ -71,6 +79,7 @@ func (s *State) SetListLayout(layout ListLayout, viewportRows int) bool {
 		s.TreeRoots = treeRootsFromEntries(s.Entries)
 		s.TreeExpanded = make(map[string]bool)
 		s.treeExpandAllDepth = 0
+		s.treeExpandAllAuto = false
 		s.rebuildTreeRows()
 	} else {
 		// filteredIdx was last built against treeRows; rebuild it against Entries (flat mode's
@@ -305,24 +314,43 @@ func (s *State) collapseTreeRow(id string, depth int, viewportRows int) error {
 	return nil
 }
 
-// CollapseAllTree collapses the whole tree by one expand-all level: directories at
-// depth == treeExpandAllDepth-1 are collapsed and the deepen counter decrements. When the
-// counter is already 0, any remaining expansions (e.g. from single-row expand) are cleared in
-// one shot via CollapseAllTreeFully. No-op outside tree mode or when nothing is expanded. The
-// cursor stays on its row when that row remains visible; otherwise it moves to the ancestor at
-// the collapsed depth (or the depth-0 ancestor on a full clear).
+// CollapseAllTree collapses the whole tree by one level: every directory that is TreeExpanded but
+// has no expanded directory child — the deepest currently-open point ("frontier") in its own
+// branch — is collapsed, across every branch simultaneously, via collapseExpandedLeaves. This
+// collapses by frontier rather than a shared absolute depth so an unevenly deep tree (the norm
+// after ExpandAllTreeFully, since each branch expands as deep as it independently goes) still
+// shows a visible change in every branch on every press, not just whichever branch is deepest.
+// Also disarms any in-progress ExpandAllTreeFully cascade, so a still-loading "expand to max
+// depth" can't re-expand what this collapse just closed. treeExpandAllDepth decrements by one per
+// press; collapseExpandedLeaves also reports whether anything is left expanded in scope, and once
+// nothing is, the counter snaps to 0 immediately rather than drifting above 0 on a tree that
+// bottomed out shallower than MaxExpandAllShallowDepth. No-op outside tree mode. The cursor stays
+// on its own row when that row survives the peel; otherwise it clamps into range.
 func (s *State) CollapseAllTree(viewportRows int) {
 	if s.ListLayout != ListLayoutTree {
 		return
 	}
+	s.treeExpandAllAuto = false
+	s.treeCollapseGen++
 	if s.treeExpandAllDepth == 0 {
 		s.CollapseAllTreeFully(viewportRows)
 		return
 	}
-	collapseDepth := s.treeExpandAllDepth - 1
-	anchorID := s.collapseAllTreeCursorAnchor(collapseDepth)
-	s.collapseAllTreeDirsAtDepth(s.TreeRoots, 0, collapseDepth)
-	s.treeExpandAllDepth--
+	anchorID := ""
+	if rawIdx, ok := s.rawIndexForCursor(); ok && rawIdx >= 0 && rawIdx < len(s.treeRows) {
+		anchorID = s.treeRows[rawIdx].ID
+	}
+	collapsedAny, remainingAny := s.collapseExpandedLeaves(s.TreeRoots, 0)
+	if !collapsedAny {
+		s.CollapseAllTreeFully(viewportRows)
+		return
+	}
+	if s.treeExpandAllDepth > 0 {
+		s.treeExpandAllDepth--
+	}
+	if !remainingAny {
+		s.treeExpandAllDepth = 0
+	}
 	s.rebuildTreeRows()
 	if anchorID != "" {
 		s.reattachTreeCursorByID(anchorID, viewportRows)
@@ -332,6 +360,47 @@ func (s *State) CollapseAllTree(viewportRows int) {
 	s.EnsureCursorInViewport(viewportRows)
 }
 
+// collapseExpandedLeaves collapses every directory that is TreeExpanded but has no expanded
+// directory child — the deepest currently-open point in its own branch ("frontier") — leaving
+// ancestors above it expanded, and reports (collapsedAny, remainingAny): whether anything was
+// collapsed this call, and whether any in-scope directory is still TreeExpanded afterward (used by
+// CollapseAllTree to snap treeExpandAllDepth to 0 once nothing is left to peel). Recursing into an
+// already-expanded child first means a node with a still-open descendant stays expanded this round
+// (only the descendant's frontier peels, and the ancestor counts toward remainingAny); a node
+// whose children are all collapsed, unloaded, or absent is itself the frontier and collapses now.
+//
+// When an entry filter is active, a branch the filter doesn't match is skipped entirely (same
+// Match check row-visibility filtering uses), so a press only ever spends itself on branches the
+// user can actually see, and never counts a filtered-out branch toward remainingAny either.
+// expandAllTreeDirsAtDepth deliberately does NOT apply the same filter skip when expanding (see
+// its doc comment: filtering there would race the async git-status fetch a freshly-loaded level's
+// own Match depends on), so after "expand all to max depth" under a filter, most of what got
+// expanded typically sits outside it — this filter check is what keeps a collapse press from
+// landing on one of those invisible branches instead.
+func (s *State) collapseExpandedLeaves(nodes []treeflat.Node[TreeEntry], depth int) (collapsedAny, remainingAny bool) {
+	for i := range nodes {
+		n := &nodes[i]
+		if n.Value.Entry.Type != localfs.EntryDirectory || !s.TreeExpanded[n.ID] {
+			continue
+		}
+		if s.ActiveEntryFilter != nil && !s.ActiveEntryFilter.Match(n.Value.Entry, s) {
+			continue
+		}
+		childCollapsed := false
+		if n.Children != nil {
+			childCollapsed, _ = s.collapseExpandedLeaves(n.Children, depth+1)
+		}
+		if childCollapsed {
+			collapsedAny = true
+			remainingAny = true
+			continue
+		}
+		_ = s.setTreeNodeExpanded(n.ID, depth, false, false)
+		collapsedAny = true
+	}
+	return collapsedAny, remainingAny
+}
+
 // CollapseAllTreeFully clears all expand state and resets the expand-all deepen counter.
 // No-op outside tree mode. The cursor lands on the cursor row's depth-0 ancestor (or the row
 // itself if already at depth 0).
@@ -339,12 +408,14 @@ func (s *State) CollapseAllTreeFully(viewportRows int) {
 	if s.ListLayout != ListLayoutTree {
 		return
 	}
+	s.treeCollapseGen++
 	if len(s.TreeExpanded) == 0 && s.treeExpandAllDepth == 0 {
 		return
 	}
 	targetID := s.treeRootAncestorID()
 	s.TreeExpanded = nil
 	s.treeExpandAllDepth = 0
+	s.treeExpandAllAuto = false
 	s.rebuildTreeRows()
 	if targetID != "" {
 		s.reattachTreeCursorByID(targetID, viewportRows)
@@ -352,45 +423,6 @@ func (s *State) CollapseAllTreeFully(viewportRows int) {
 	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
-}
-
-// collapseAllTreeCursorAnchor picks the row to keep under the cursor after collapsing every
-// directory at collapseDepth. Rows deeper than collapseDepth would disappear with their parent,
-// so the ancestor at collapseDepth is used instead.
-func (s *State) collapseAllTreeCursorAnchor(collapseDepth int) string {
-	rawIdx, ok := s.rawIndexForCursor()
-	if !ok || rawIdx < 0 || rawIdx >= len(s.treeRows) {
-		return ""
-	}
-	row := s.treeRows[rawIdx]
-	if row.Depth <= collapseDepth {
-		return row.ID
-	}
-	for i := rawIdx - 1; i >= 0; i-- {
-		if s.treeRows[i].Depth == collapseDepth {
-			return s.treeRows[i].ID
-		}
-	}
-	return row.ID
-}
-
-// collapseAllTreeDirsAtDepth collapses every directory node at exactly targetDepth.
-func (s *State) collapseAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth, targetDepth int) {
-	for i := range nodes {
-		n := &nodes[i]
-		if n.Value.Entry.Type != localfs.EntryDirectory {
-			continue
-		}
-		if depth == targetDepth {
-			if s.TreeExpanded[n.ID] {
-				_ = s.setTreeNodeExpanded(n.ID, depth, false, false)
-			}
-			continue
-		}
-		if depth < targetDepth && s.TreeExpanded[n.ID] && n.Children != nil {
-			s.collapseAllTreeDirsAtDepth(n.Children, depth+1, targetDepth)
-		}
-	}
 }
 
 // treeRootAncestorID returns the ID of the cursor row's depth-0 ancestor (or the cursor row's own
@@ -414,7 +446,7 @@ func (s *State) treeRootAncestorID() string {
 
 // ExpandAllTreeShallow deepens the whole tree by one level: each successive call expands every
 // loaded directory at depth == treeExpandAllDepth (press 1 → depth 0, press 2 → depth 1, …),
-// up to maxExpandAllShallowDepth. Further presses return ErrExpandAllDepthLimit. Async child
+// up to MaxExpandAllShallowDepth. Further presses return ErrExpandAllDepthLimit. Async child
 // loads are coalesced (treeExpandQuiet) so the list rebuilds once when all in-flight fetches
 // finish, and the cursor stays on the row the command was issued from. Does not itself enable
 // tree mode — same split of responsibility as ExpandTreeCursorRow.
@@ -422,7 +454,7 @@ func (s *State) ExpandAllTreeShallow(viewportRows int) error {
 	if s.ListLayout != ListLayoutTree {
 		return nil
 	}
-	if s.treeExpandAllDepth >= maxExpandAllShallowDepth {
+	if s.treeExpandAllDepth >= MaxExpandAllShallowDepth {
 		return ErrExpandAllDepthLimit
 	}
 	targetDepth := s.treeExpandAllDepth
@@ -449,8 +481,56 @@ func (s *State) ExpandAllTreeShallow(viewportRows int) error {
 	return nil
 }
 
+// ExpandAllTreeFully deepens the whole tree in one action, from the current expand-all depth up
+// to MaxExpandAllShallowDepth — the one-shot mirror of CollapseAllTreeFully. Because deepening
+// past level 0 normally waits on async child loads, this arms treeExpandAllAuto and lets
+// finishTreeChildLoadApply drive each subsequent level automatically as loads land; see
+// driveExpandAllTreeAuto. No-op outside tree mode; returns ErrExpandAllDepthLimit when already
+// at max depth.
+func (s *State) ExpandAllTreeFully(viewportRows int) error {
+	if s.ListLayout != ListLayoutTree {
+		return nil
+	}
+	if s.treeExpandAllDepth >= MaxExpandAllShallowDepth {
+		return ErrExpandAllDepthLimit
+	}
+	s.treeExpandAllAuto = true
+	return s.driveExpandAllTreeAuto(viewportRows)
+}
+
+// driveExpandAllTreeAuto advances the tree through successive ExpandAllTreeShallow levels while
+// treeExpandAllAuto is armed. A level that resolves synchronously (nothing left to load, or no
+// scheduler wired) lets the loop continue immediately; a level that dispatches async loads
+// (treeExpandQuiet > 0) stops the loop here and returns — finishTreeChildLoadApply re-enters this
+// once that batch's ApplyTreeChildLoad calls finish, continuing the cascade until depth 5.
+func (s *State) driveExpandAllTreeAuto(viewportRows int) error {
+	for s.treeExpandAllDepth < MaxExpandAllShallowDepth {
+		if err := s.ExpandAllTreeShallow(viewportRows); err != nil {
+			return err
+		}
+		if s.treeExpandQuiet > 0 {
+			return nil
+		}
+	}
+	s.treeExpandAllAuto = false
+	return nil
+}
+
 // expandAllTreeDirsAtDepth expands every directory node at exactly targetDepth. Ancestors above
 // targetDepth are walked only when already expanded with loaded children.
+//
+// Deliberately NOT filter-aware, unlike collapseExpandedLeaves: skipping a branch here would mean
+// consulting s.ActiveEntryFilter.Match on a node whose own GitByPath cell may not have arrived
+// yet. A directory's git-status cell is only populated once its *parent* has been expanded and
+// scheduleTreeChildGitStatus's async fetch for it lands (see tree_load.go) — a separate dispatch
+// from the tree-child *listing* fetch that finishTreeChildLoadApply/driveExpandAllTreeAuto
+// actually waits on before advancing to the next depth. So the moment expand-all decides whether
+// to descend into a level it just loaded, that level's own Match-relevant status can easily still
+// be in flight; treating a not-yet-arrived (zero-value) Cell as "doesn't match" would wrongly cut
+// the cascade short on branches that do match, well before real max depth. Expanding blind avoids
+// the race entirely — collapseExpandedLeaves' filter check plus CollapseAllTree's
+// anyExpandedInFilterScope reset (see there) are what actually keep treeExpandAllDepth in sync
+// with what's visible, independent of whether expand itself is filter-scoped.
 func (s *State) expandAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth, targetDepth int) error {
 	for i := range nodes {
 		n := &nodes[i]
@@ -504,6 +584,7 @@ func (s *State) setTreeNodeExpanded(id string, depth int, expand bool, quiet boo
 				return nil // already loading; don't dispatch a second concurrent fetch
 			}
 			node.Value.Loading = true
+			node.Value.LoadGen = s.treeCollapseGen
 			if s.ScheduleTreeChildLoad != nil {
 				loc, err := pathloc.Parse(id)
 				if err != nil {

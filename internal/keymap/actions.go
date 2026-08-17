@@ -72,6 +72,7 @@ const (
 	ActionPanelTreeCollapseAll        = "panel.tree-collapse-all"
 	ActionPanelTreeCollapseAllFull    = "panel.tree-collapse-all-full"
 	ActionPanelTreeExpandAllShallow   = "panel.tree-expand-all-shallow"
+	ActionPanelTreeExpandAllFull      = "panel.tree-expand-all-full"
 	ActionPanelTreePrevSiblingDir     = "panel.tree-prev-sibling-dir"
 	ActionPanelTreeNextSiblingDir     = "panel.tree-next-sibling-dir"
 	ActionPanelToggleZoomActivePanel  = "panel.toggle-zoom-active-panel"
@@ -312,6 +313,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelTreeCollapseAll:        {},
 	ActionPanelTreeCollapseAllFull:    {},
 	ActionPanelTreeExpandAllShallow:   {},
+	ActionPanelTreeExpandAllFull:      {},
 	ActionPanelTreePrevSiblingDir:     {},
 	ActionPanelTreeNextSiblingDir:     {},
 	ActionPanelToggleZoomActivePanel:  {},

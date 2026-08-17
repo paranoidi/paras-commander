@@ -749,6 +749,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"tree", "expand", "all", "shallow", "directory", "nested"},
 		},
 		{
+			ID:          ActionPanelTreeExpandAllFull,
+			Views:       HelpBrowser,
+			Title:       "Expand all to max depth (tree)",
+			Section:     "Sort & display",
+			DefaultKeys: []string{"M-S-right"},
+			Keywords:    []string{"tree", "expand", "all", "full", "max", "depth", "directory", "nested"},
+		},
+		{
 			ID:          ActionPanelTreePrevSiblingDir,
 			Views:       HelpBrowser,
 			Title:       "Previous sibling directory (tree)",

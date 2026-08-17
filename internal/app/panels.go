@@ -742,6 +742,10 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 		if a.expandAllTreeShallowForPanel(activePanel, viewportRows) {
 			a.setTransientMessage("Tree view is not available in carousel view", ui.MessageUrgencyInfo)
 		}
+	case keymap.ActionPanelTreeExpandAllFull:
+		if a.expandAllTreeFullyForPanel(activePanel, viewportRows) {
+			a.setTransientMessage("Tree view is not available in carousel view", ui.MessageUrgencyInfo)
+		}
 	case keymap.ActionPanelTreePrevSiblingDir:
 		activePanel.JumpTreeSiblingDir(-1, viewportRows)
 	case keymap.ActionPanelTreeNextSiblingDir:
@@ -830,6 +834,27 @@ func (a *App) expandAllTreeShallowForPanel(target *panel.State, viewportRows int
 			return false
 		}
 		a.setErrorMessage("Expand all failed", err)
+		return false
+	}
+	return false
+}
+
+// expandAllTreeFullyForPanel enables tree layout on target if not already active, then expands
+// the whole tree straight to the maximum depth (5) in one action — the expand-side mirror of
+// collapseAllTreeFullyForPanel.
+func (a *App) expandAllTreeFullyForPanel(target *panel.State, viewportRows int) (blocked bool) {
+	if target.ListLayout != panel.ListLayoutTree {
+		if !target.SetListLayout(panel.ListLayoutTree, viewportRows) {
+			return true
+		}
+	}
+	if err := target.ExpandAllTreeFully(viewportRows); err != nil {
+		if errors.Is(err, panel.ErrExpandAllDepthLimit) {
+			a.setTransientMessage("Expand all is limited to depth 5", ui.MessageUrgencyInfo)
+			return false
+		}
+		a.setErrorMessage("Expand all failed", err)
+		return false
 	}
 	return false
 }

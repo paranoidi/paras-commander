@@ -43,6 +43,15 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 	// current flat-mode sort state — an original Phase 1 design decision, not new scope.
 	SortEntries(entries, s.Sort, s.DiskSorter, false)
 	node.Children = treeRootsFromEntries(entries)
+	// A straggler: this fetch was dispatched before the user's last whole-tree collapse
+	// (CollapseAllTree/CollapseAllTreeFully bump treeCollapseGen) and is only landing now. The
+	// children are still cached above so a later manual re-expand won't need to re-fetch, but the
+	// directory must not silently pop back open — that's exactly the "collapse looks like it did
+	// nothing, then more collapsing needed later" symptom once a sibling directory whose parent is
+	// still expanded elsewhere in the tree gets new visible content from a late arrival like this.
+	if node.Value.LoadGen != s.treeCollapseGen {
+		return s.finishTreeChildLoadApply(dirID, viewportRows)
+	}
 	if s.TreeExpanded == nil {
 		s.TreeExpanded = make(map[string]bool)
 	}
@@ -59,10 +68,18 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 // remains positive, node state is already updated but treeRows/cursor/redraw wait for the last
 // in-flight load. Single-row expands (quiet=0) rebuild immediately. Cursor reattaches to
 // treeCursorID when set (expand-all anchor, or the row ExpandTreeCursorRow/ToggleTreeExpand
-// targeted); otherwise falls back to dirID.
+// targeted); otherwise falls back to dirID. When treeExpandAllAuto is armed (an ExpandAllTreeFully
+// cascade in progress), the last load of each level re-invokes driveExpandAllTreeAuto to dispatch
+// the next level instead of rebuilding/redrawing immediately.
 func (s *State) finishTreeChildLoadApply(dirID string, viewportRows int) bool {
 	if s.treeExpandQuiet > 0 {
 		s.treeExpandQuiet--
+		if s.treeExpandQuiet > 0 {
+			return false
+		}
+	}
+	if s.treeExpandAllAuto {
+		_ = s.driveExpandAllTreeAuto(viewportRows)
 		if s.treeExpandQuiet > 0 {
 			return false
 		}
