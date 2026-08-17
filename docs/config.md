@@ -204,8 +204,8 @@ Background file-operation jobs: display, timing, and throttling.
 | `worker_progress_min_bytes` | int | `524288` (512 KiB) | Minimum bytes copied between worker progress events (clamped 64 KiB–64 MiB). |
 | `worker_progress_min_interval_ms` | int | `200` | Minimum milliseconds between worker progress events while copying (clamped 50–5000). |
 | `throughput_chart_window_sec` | int | `45` | Time span shown by the job details throughput chart, in seconds (clamped 20–120). |
-| `throughput_chart_column_ms` | int | `400` | Milliseconds represented by each throughput chart column, and the chart's redraw interval (clamped 80–2000). |
-| `throughput_chart_enabled` | bool | `true` | Show the throughput strip and chart in job details. |
+| `throughput_chart_column_ms` | int | `400` | Milliseconds represented by each throughput chart column (clamped 80–2000). This is also the sampling interval for the displayed transfer speed, so lowering it makes the Speed column react faster and raising it makes it steadier. |
+| `throughput_chart_enabled` | bool | `true` | Show the throughput strip and chart in job details. Disabling it stops recording chart history but not speed sampling. |
 | `free_space_on_progress_wake` | bool | `true` | Refresh both panels' free-space display whenever a job progress update wakes the UI. |
 | `free_space_poll_interval_secs` | int | `5` | How often to refresh panel free space while any job is running. `0` disables polling (max 3600). |
 | `scan_yield_interval_ms` | int | `50` | Cooperative sleep interval during a pre-copy directory scan while a transfer job is active, so the UI stays responsive (clamped 50–5000). |

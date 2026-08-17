@@ -583,12 +583,10 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		go app.runPanelRefreshTicker(time.Duration(ms)*time.Millisecond, app.jobStopCh)
 	}
 	app.restartStatusCommandTicker(cfg.StatusCommand)
-	if cfg.Jobs.ThroughputChartEnabled {
-		go app.runThroughputChartTicker(
-			time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
-			app.jobStopCh,
-		)
-	}
+	go app.runThroughputChartTicker(
+		time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
+		app.jobStopCh,
+	)
 	if opts.ChooserFile != "" {
 		app.chooserFile = opts.ChooserFile
 	}

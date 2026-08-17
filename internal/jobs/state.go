@@ -61,12 +61,11 @@ func (s *State) SetThroughputChart(columnDur, window time.Duration, enabled bool
 	s.throughputChartEnabled = enabled
 }
 
-// CloseActiveJobThroughputColumn closes at most one throughput column for the active running job.
-// Returns true when a new strip sample was appended.
-func (s *State) CloseActiveJobThroughputColumn(now time.Time) bool {
-	if !s.throughputChartEnabled {
-		return false
-	}
+// SampleActiveJobThroughput advances the active running job's fixed throughput-column clock to now,
+// updating its smoothed DisplaySpeedBPS and (when the chart is enabled) its strip. It is safe and
+// expected to call this more often than one column duration; columns close only once each.
+// Returns true when a new strip sample was appended (i.e. the chart needs a repaint).
+func (s *State) SampleActiveJobThroughput(now time.Time) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	job := s.active
@@ -75,15 +74,13 @@ func (s *State) CloseActiveJobThroughputColumn(now time.Time) bool {
 	}
 	columnDur := s.throughputChartBin
 	if columnDur <= 0 {
-		columnDur = 400 * time.Millisecond
+		columnDur = time.Duration(config.DefaultThroughputChartColumnMS) * time.Millisecond
 	}
 	win := s.throughputChartWindow
 	if win <= 0 {
-		win = 45 * time.Second
+		win = time.Duration(config.DefaultThroughputChartWindowSec) * time.Second
 	}
-	before := len(job.ThroughputStrip)
-	CloseOneThroughputColumn(job, now, job.DoneBytes, columnDur, win)
-	return len(job.ThroughputStrip) > before
+	return SampleThroughputColumns(job, now, job.DoneBytes, columnDur, win, s.throughputChartEnabled)
 }
 
 // NewState creates a job state manager connected to a fresh queue and worker.

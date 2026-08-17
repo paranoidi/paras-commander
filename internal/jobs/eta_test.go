@@ -52,8 +52,9 @@ func TestApplyProgressETAUpdatesSmoothedRate(t *testing.T) {
 	if j.ETABytesPerSec < wantApprox*0.9 || j.ETABytesPerSec > wantApprox*1.1 {
 		t.Fatalf("ETABytesPerSec = %v, want ~%v", j.ETABytesPerSec, wantApprox)
 	}
-	if j.DisplaySpeedBPS <= 0 {
-		t.Fatal("expected positive DisplaySpeedBPS")
+	// Displayed speed is sampled on the throughput-column clock, not on progress events.
+	if j.DisplaySpeedBPS != 0 {
+		t.Fatalf("DisplaySpeedBPS = %v, want untouched by progress events", j.DisplaySpeedBPS)
 	}
 }
 

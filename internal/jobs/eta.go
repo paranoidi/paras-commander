@@ -8,6 +8,9 @@ import (
 
 const etaEMAAlpha = 0.35
 
+// displaySpeedEMAAlpha smooths DisplaySpeedBPS. It is applied once per throughput chart column
+// (SampleThroughputColumns), not per progress event, so its time constant is a fixed
+// columnDur/alpha of wall time regardless of how often the worker emits progress.
 const displaySpeedEMAAlpha = 0.15
 
 // etaProgressMinInterval is the minimum wall time between ETA throughput samples.
@@ -19,7 +22,9 @@ const etaBlendTransitionSecs = 45.0
 // etaBlendEMAFloor is the minimum weight kept on EMA after blending fully ramps (rest is cumulative).
 const etaBlendEMAFloor = 0.25
 
-// ApplyProgressETA updates smoothed bytes/sec and files/sec from monotonic DoneBytes and DoneFiles samples.
+// ApplyProgressETA updates the ETA's smoothed bytes/sec and files/sec from monotonic DoneBytes and
+// DoneFiles samples. It does not touch DisplaySpeedBPS: displayed speed is sampled on the fixed
+// throughput-column clock instead (see SampleThroughputColumns).
 func ApplyProgressETA(job *Job, doneBytes int64, doneFiles int, now time.Time) {
 	if job == nil {
 		return
@@ -47,11 +52,6 @@ func ApplyProgressETA(job *Job, doneBytes int64, doneFiles int, now time.Time) {
 			job.ETABytesPerSec = instantB
 		} else {
 			job.ETABytesPerSec = etaEMAAlpha*instantB + (1-etaEMAAlpha)*job.ETABytesPerSec
-		}
-		if job.DisplaySpeedBPS <= 0 {
-			job.DisplaySpeedBPS = instantB
-		} else {
-			job.DisplaySpeedBPS = displaySpeedEMAAlpha*instantB + (1-displaySpeedEMAAlpha)*job.DisplaySpeedBPS
 		}
 		processed = true
 	}

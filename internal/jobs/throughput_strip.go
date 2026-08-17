@@ -2,17 +2,30 @@ package jobs
 
 import "time"
 
-// CloseOneThroughputColumn closes at most one fixed-duration column on the throughput strip.
-// The first call anchors the open column; later calls append one B/s sample when columnDur has elapsed.
-// Returns true when a sample was appended.
-func CloseOneThroughputColumn(job *Job, now time.Time, doneBytes int64, columnDur, window time.Duration) bool {
+// throughputStripMaxCap bounds strip memory regardless of window/column configuration.
+const throughputStripMaxCap = 640
+
+func throughputStripMaxBins(columnDur, window time.Duration) int {
+	return min(int(window/columnDur)+10, throughputStripMaxCap)
+}
+
+// SampleThroughputColumns advances the job's fixed wall-clock column grid to now.
+//
+// The column grid is the single sampling clock for transfer speed: every fully elapsed column
+// feeds one instantaneous B/s value (bytes moved since the grid last advanced, spread evenly over
+// the elapsed columns) into job.DisplaySpeedBPS, the EMA shown in the Speed column and plotted by
+// the details chart. Sampling on this grid rather than on worker progress events keeps the speed
+// and the chart independent of the throttled, irregular EventProgress cadence: idle columns feed
+// zero and decay the EMA instead of being skipped, and a burst of bytes delivered in one event is
+// spread across the columns it actually covers instead of spiking a single one.
+//
+// When recordStrip is true each closed column also appends the current DisplaySpeedBPS to the
+// strip, so the chart scrolls exactly one column per columnDur while the job runs. Leading zero
+// columns before the first bytes move are not recorded (the UI shows "collecting samples" until
+// then). Returns true when the strip grew.
+func SampleThroughputColumns(job *Job, now time.Time, doneBytes int64, columnDur, window time.Duration, recordStrip bool) bool {
 	if job == nil || columnDur <= 0 || window <= 0 {
 		return false
-	}
-	maxBins := int(window/columnDur) + 10
-	const maxStripCap = 640
-	if maxBins > maxStripCap {
-		maxBins = maxStripCap
 	}
 	if !job.throughputStripOpenSet {
 		job.throughputStripOpenSet = true
@@ -22,24 +35,44 @@ func CloseOneThroughputColumn(job *Job, now time.Time, doneBytes int64, columnDu
 	}
 	openStart := time.Unix(0, job.ThroughputStripOpenBin)
 	if now.Before(openStart) {
+		// Wall clock moved backwards; re-anchor rather than replay the grid.
 		job.ThroughputStripOpenBin = now.UnixNano()
 		job.ThroughputStripDoneAtOpen = doneBytes
 		return false
 	}
-	if now.Sub(openStart) < columnDur {
+	cols := int(now.Sub(openStart) / columnDur)
+	if cols <= 0 {
 		return false
 	}
+
 	db := doneBytes - job.ThroughputStripDoneAtOpen
-	nextOpen := openStart.Add(columnDur)
-	job.ThroughputStripOpenBin = nextOpen.UnixNano()
-	job.ThroughputStripDoneAtOpen = doneBytes
-	if db <= 0 {
-		// Advance the column clock without recording a sample (metadata / idle gaps).
-		return false
+	instant := 0.0
+	if db > 0 {
+		instant = float64(db) / (float64(cols) * columnDur.Seconds())
 	}
-	bps := float64(db) / columnDur.Seconds()
-	throughputStripAppend(job, bps, maxBins)
-	return true
+	job.ThroughputStripOpenBin = openStart.Add(time.Duration(cols) * columnDur).UnixNano()
+	job.ThroughputStripDoneAtOpen = doneBytes
+
+	maxBins := throughputStripMaxBins(columnDur, window)
+	// A long main-loop stall replays at most a full strip worth of columns; the EMA has
+	// converged well before that, so further iterations would change nothing.
+	if cols > maxBins {
+		cols = maxBins
+	}
+	grew := false
+	for i := 0; i < cols; i++ {
+		if job.DisplaySpeedBPS <= 0 {
+			job.DisplaySpeedBPS = instant
+		} else {
+			job.DisplaySpeedBPS = displaySpeedEMAAlpha*instant + (1-displaySpeedEMAAlpha)*job.DisplaySpeedBPS
+		}
+		if !recordStrip || (job.DisplaySpeedBPS <= 0 && len(job.ThroughputStrip) == 0) {
+			continue
+		}
+		throughputStripAppend(job, job.DisplaySpeedBPS, maxBins)
+		grew = true
+	}
+	return grew
 }
 
 func throughputStripAppend(job *Job, bps float64, maxBins int) {
