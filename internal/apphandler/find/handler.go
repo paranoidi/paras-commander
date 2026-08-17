@@ -277,8 +277,9 @@ func (h *Handler) findPathIsDir(st *dialog.FindDialogState) func(string) bool {
 
 func (h *Handler) narrowFindIndexer() {
 	st := &h.model.FindDialog
+	st.IndexDone = false
+	st.Indexing = true
 	h.scan.NarrowSelection(st.SelectionDirRoots)
-	h.syncFindDialogRanks()
 }
 
 func (h *Handler) widenFindIndexer() {
@@ -1098,9 +1099,6 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 		if field := findToggleFieldForRune(event.Rune()); field != findToggleNone {
 			if field != findToggleSelections || st.FindDialogHasSelectionsCheckbox() {
 				h.applyFindToggle(field)
-				if field == findToggleSelections {
-					st.Focus = st.FindDialogSelectionsFocus()
-				}
 			}
 			return
 		}

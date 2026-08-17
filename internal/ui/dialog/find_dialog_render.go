@@ -128,7 +128,7 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	volumeW := utf8.RuneCountInString(draw.CheckboxText("Stay on current volume", state.StayOnCurrentVolume)) + 1
 	draw.DrawDialogCheckbox(screen, volumeX+volumeW+cbGap, cbY, "Include hidden", 'I', state.IncludeHidden, state.Focus == state.FindDialogIncludeHiddenFocus(), styles)
 	if state.ShowSearchSelectionsOption {
-		draw.DrawDialogCheckbox(screen, cbCol, cbY+1, "Search only from selections", 'S', state.SearchOnlySelections, state.Focus == state.FindDialogSelectionsFocus(), styles)
+		draw.DrawDialogCheckbox(screen, cbCol, cbY+1, "Search only from selected directories", 'S', state.SearchOnlySelections, state.Focus == state.FindDialogSelectionsFocus(), styles)
 	}
 
 	checkboxRows := 1

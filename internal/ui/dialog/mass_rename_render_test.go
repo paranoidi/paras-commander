@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -45,6 +46,65 @@ func TestDrawMassRenameDialogLastItemVisible(t *testing.T) {
 	}
 	if !strings.Contains(dump.String(), "echo.txt") {
 		t.Fatalf("last preview item (echo.txt) not visible on screen:\n%s", dump.String())
+	}
+}
+
+// TestMassRenamePreviewViewportRowsMatchesRenderedRows guards against
+// MassRenamePreviewViewportRows (used for PgUp/PgDn paging and the scrollbar) drifting from the
+// row count drawMassRenameDialog actually paints — the two were independent hand-tuned formulas
+// before and disagreed by a couple of rows, capping scroll short of the list's true end. Runs
+// across every mode at a height that forces the dialog to clamp (the case that exposed the bug).
+func TestMassRenamePreviewViewportRowsMatchesRenderedRows(t *testing.T) {
+	const n = 30
+	before := make([]string, n)
+	after := make([]string, n)
+	for i := range before {
+		before[i] = fmt.Sprintf("file-%02d.txt", i)
+		after[i] = before[i]
+	}
+
+	cases := []struct {
+		name  string
+		state FileDialogState
+	}{
+		{"Simple", FileDialogState{MassRenameMode: MassRenameModeUISimple, Fields: []FileDialogField{{Label: "Find"}, {Label: "Replace"}}}},
+		{"Regex", FileDialogState{MassRenameMode: MassRenameModeUIRegex, Fields: []FileDialogField{{Label: "Pattern"}, {Label: "Replacement"}}}},
+		{"ExternalEditor", FileDialogState{MassRenameMode: MassRenameModeUIExternalEditor}},
+		{"Capitalize", FileDialogState{MassRenameMode: MassRenameModeUICapitalize}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			screen := tcell.NewSimulationScreen("UTF-8")
+			if err := screen.Init(); err != nil {
+				t.Fatalf("Init() error = %v", err)
+			}
+			defer screen.Fini()
+			screen.SetSize(80, 24) // short enough that massRenameDialogHeight clamps
+
+			state := tc.state
+			state.Open = true
+			state.DialogType = FileDialogMassRename
+			state.MassRenamePreviewBefore = before
+			state.MassRenamePreviewAfter = after
+
+			layout := Layout{Width: 80, Height: 24}
+			vp := MassRenamePreviewViewportRows(layout.Height, state)
+			state.MassRenamePreviewScroll = n - vp // scroll to the reported true last page
+
+			styles := theme.Default()
+			DrawFileDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil)
+
+			var dump strings.Builder
+			for y := 0; y < 24; y++ {
+				dump.WriteString(tcelltest.TextAt(screen, 0, y, 80))
+				dump.WriteByte('\n')
+			}
+			last := before[n-1]
+			if !strings.Contains(dump.String(), last) {
+				t.Fatalf("%s: last preview item (%s) not visible when scrolled to MassRenamePreviewViewportRows' reported max (vp=%d) — it has drifted from what drawMassRenameDialog actually draws:\n%s", tc.name, last, vp, dump.String())
+			}
+		})
 	}
 }
 

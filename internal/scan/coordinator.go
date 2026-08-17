@@ -309,6 +309,16 @@ func (s *session) shouldSkipForRoot(root string, skipIndexedSelectionSubtrees bo
 	}
 }
 
+func (s *session) isExplicitSelectionRoot(root string) bool {
+	root = filepath.Clean(root)
+	for _, r := range s.opts.SelectionRoots {
+		if filepath.Clean(r) == root {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *session) selectionSkipRoots() []string {
 	if !s.opts.SearchOnlySelections {
 		return nil
@@ -366,10 +376,15 @@ func (s *session) startWalk(root string, skipIndexedSelectionSubtrees bool) {
 	}
 
 	gen := s.gen
+	gi := s.opts.Gitignore
+	if s.isExplicitSelectionRoot(root) {
+		// An explicitly selected directory is searched in full even when git-ignored.
+		gi = nil
+	}
 	wopts := WalkOptions{
 		Root:          root,
 		IncludeHidden: s.opts.IncludeHidden,
-		Gitignore:     s.opts.Gitignore,
+		Gitignore:     gi,
 		ShouldSkipDir: s.shouldSkipForRoot(root, skipIndexedSelectionSubtrees),
 	}
 	sess := startRootWalk(s.ctx, root, wopts)

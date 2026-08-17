@@ -17,10 +17,10 @@ func DrawDialogListScrollbar(screen tcell.Screen, rect Rect, topY, visible, tota
 	if !ok {
 		return
 	}
-	_, dbg, _ := styles.DialogSurface.Decompose()
+	track, thumb := styles.DialogScrollbarStyles()
 	scrollbarTheme := styles
-	scrollbarTheme.PanelScrollbarTrack = styles.PanelScrollbarTrack.Background(dbg)
-	scrollbarTheme.PanelScrollbarThumb = styles.PanelScrollbarThumb.Background(dbg)
+	scrollbarTheme.PanelScrollbarTrack = track
+	scrollbarTheme.PanelScrollbarThumb = thumb
 	uiscrollbar.Draw(uiscrollbar.DrawParams{
 		Screen:     screen,
 		X:          rect.X + rect.Width - 1,

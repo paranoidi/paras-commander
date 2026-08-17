@@ -62,14 +62,9 @@ func massRenameDialogHeight(layoutHeight int, state FileDialogState) int {
 	if previewCount < vp {
 		vp = previewCount
 	}
-	// 4 radios + options checkbox row + sep + two fields (label+input each) + sep before preview.
-	fixed := 4 + 1 + 1 + 4 + 1
-	if massRenameShowsPatternHint(state) {
-		fixed++
-	}
-	if massRenameShowsReplacementHint(state) {
-		fixed++
-	}
+	// 4 radios + options checkbox row + sep before the fields section (always sized as if
+	// Simple/Regex regardless of the actual mode, per the doc comment above).
+	fixed := 4 + 1 + 1 + massRenameFieldsSectionRows(state)
 	height := 1 + fixed + vp + 3 // top pad + body + sep-above-buttons + buttons row + bottom border
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2
@@ -94,6 +89,21 @@ func massRenameSizingMaxPreviewRows(layoutHeight int) int {
 	return maxBody
 }
 
+// massRenameFieldsSectionRows returns the row count of the Simple/Regex fields section: two
+// fields (label+input each), a separator, and any visible regex compile/replacement hint rows.
+// Shared by massRenameDialogHeight (which always sizes for this section, regardless of the
+// actual mode) and massRenameFixedRows (which only counts it when the mode is Simple/Regex).
+func massRenameFieldsSectionRows(state FileDialogState) int {
+	rows := 4 + 1 // two fields (label+input each) + separator
+	if massRenameShowsPatternHint(state) {
+		rows++
+	}
+	if massRenameShowsReplacementHint(state) {
+		rows++
+	}
+	return rows
+}
+
 // massRenameFixedRows returns the number of dialog rows consumed above the preview list for
 // state's mode: mode radios, options row, separators, and (for Simple/Regex/Capitalize) the
 // fields or checkboxes section, including any visible regex hint rows.
@@ -105,13 +115,7 @@ func massRenameFixedRows(state FileDialogState) int {
 	case MassRenameModeUICapitalize:
 		fixed += 2 + 1 // two checkboxes + separator
 	default:
-		fixed += 4 + 1 // two fields (label+input each) + separator
-		if massRenameShowsPatternHint(state) {
-			fixed++
-		}
-		if massRenameShowsReplacementHint(state) {
-			fixed++
-		}
+		fixed += massRenameFieldsSectionRows(state)
 	}
 	return fixed
 }
@@ -119,6 +123,8 @@ func massRenameFixedRows(state FileDialogState) int {
 // massRenamePreviewViewportRowsForHeight returns the preview row count visible in a mass
 // rename dialog of dialogHeight for state — the exact geometry drawMassRenameDialog paints.
 func massRenamePreviewViewportRowsForHeight(dialogHeight int, state FileDialogState) int {
+	// 4 = top pad (1) + sep-above-buttons + buttons row + bottom border (3), mirroring
+	// massRenameDialogHeight's "1 + fixed + vp + 3" (dialogHeight already bakes in fixed).
 	vp := dialogHeight - 4 - massRenameFixedRows(state)
 	if vp < 1 {
 		vp = 1
