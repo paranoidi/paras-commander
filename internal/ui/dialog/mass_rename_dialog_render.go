@@ -1,6 +1,7 @@
 package dialog
 
 import (
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -90,18 +91,32 @@ func massRenameSizingMaxPreviewRows(layoutHeight int) int {
 }
 
 // massRenameFieldsSectionRows returns the row count of the Simple/Regex fields section: two
-// fields (label+input each), a separator, and any visible regex compile/replacement hint rows.
+// fields (label+input each), a separator, and any visible regex replacement hint row. The
+// pattern compile-error hint shares the Pattern/Find label row (right-aligned) rather than
+// consuming its own row — see massRenamePatternLabelText and its use in drawMassRenameDialog.
 // Shared by massRenameDialogHeight (which always sizes for this section, regardless of the
 // actual mode) and massRenameFixedRows (which only counts it when the mode is Simple/Regex).
 func massRenameFieldsSectionRows(state FileDialogState) int {
 	rows := 4 + 1 // two fields (label+input each) + separator
-	if massRenameShowsPatternHint(state) {
-		rows++
-	}
 	if massRenameShowsReplacementHint(state) {
 		rows++
 	}
 	return rows
+}
+
+// massRenamePatternLabelText returns the Find/Pattern field's label with its live pattern-match
+// count, e.g. "Pattern (12):". The count is omitted (plain "Pattern:") when the field is empty.
+func massRenamePatternLabelText(state FileDialogState) string {
+	label := "Find"
+	pattern := ""
+	if len(state.Fields) > 0 {
+		label = state.Fields[0].Label
+		pattern = state.Fields[0].Value
+	}
+	if pattern == "" {
+		return label + ":"
+	}
+	return fmt.Sprintf("%s (%d):", label, state.MassRenameMatchCount)
 }
 
 // massRenameFixedRows returns the number of dialog rows consumed above the preview list for
@@ -297,19 +312,26 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 			if y >= innerBottom {
 				return
 			}
-			primitive.Text(screen, primaryCol, y, innerW, field.Label+":", labelStyle)
+			labelText := field.Label + ":"
+			if fi == 0 {
+				labelText = massRenamePatternLabelText(state)
+			}
+			primitive.Text(screen, primaryCol, y, innerW, labelText, labelStyle)
+			if fi == 0 {
+				if hint := massRenamePatternHintText(state); hint != "" {
+					hw := utf8.RuneCountInString(hint)
+					hx := primaryCol + innerW - hw
+					if hx > primaryCol+utf8.RuneCountInString(labelText) {
+						primitive.Text(screen, hx, y, hw, hint, massRenamePatternHintStyle(styles, dbg))
+					}
+				}
+			}
 			y++
 			if y >= innerBottom {
 				return
 			}
 			drawInputField(screen, primaryCol, y, innerW, field, state.FocusedField == focusIdx, styles)
 			y++
-			if fi == 0 && state.MassRenameMode == MassRenameModeUIRegex {
-				if hint := massRenamePatternHintText(state); hint != "" && y < innerBottom {
-					primitive.Text(screen, primaryCol, y, innerW, hint, massRenamePatternHintStyle(styles, dbg))
-					y++
-				}
-			}
 			if fi == 1 && state.MassRenameMode == MassRenameModeUIRegex {
 				if hint := massRenameReplacementHintText(state); hint != "" && y < innerBottom {
 					primitive.Text(screen, primaryCol, y, innerW, hint, massRenameReplacementHintStyle(styles, dbg))

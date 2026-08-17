@@ -108,6 +108,76 @@ func TestMassRenamePreviewViewportRowsMatchesRenderedRows(t *testing.T) {
 	}
 }
 
+func TestDrawMassRenameDialogPatternLabelShowsMatchCount(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 40)
+
+	state := FileDialogState{
+		Open:       true,
+		DialogType: FileDialogMassRename,
+		Fields: []FileDialogField{
+			{Label: "Find", Value: "foo"},
+			{Label: "Replace"},
+		},
+		MassRenameMode:       MassRenameModeUISimple,
+		MassRenameMatchCount: 3,
+	}
+	layout := Layout{Width: 80, Height: 40}
+	styles := theme.Default()
+	DrawFileDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil)
+
+	var dump strings.Builder
+	for y := 0; y < 40; y++ {
+		dump.WriteString(tcelltest.TextAt(screen, 0, y, 80))
+		dump.WriteByte('\n')
+	}
+	if !strings.Contains(dump.String(), "Find (3):") {
+		t.Fatalf("label row does not show match count as \"Find (3):\":\n%s", dump.String())
+	}
+}
+
+func TestDrawMassRenameDialogPatternLabelHidesCountWhenEmpty(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 40)
+
+	state := FileDialogState{
+		Open:       true,
+		DialogType: FileDialogMassRename,
+		Fields: []FileDialogField{
+			{Label: "Find", Value: ""},
+			{Label: "Replace"},
+		},
+		MassRenameMode:       MassRenameModeUISimple,
+		MassRenameMatchCount: 0,
+	}
+	layout := Layout{Width: 80, Height: 40}
+	styles := theme.Default()
+	DrawFileDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil)
+
+	var dump strings.Builder
+	for y := 0; y < 40; y++ {
+		dump.WriteString(tcelltest.TextAt(screen, 0, y, 80))
+		dump.WriteByte('\n')
+	}
+	if strings.Contains(dump.String(), "Find (0):") {
+		t.Fatalf("label row shows \"(0)\" for an empty pattern; want plain \"Find:\":\n%s", dump.String())
+	}
+	if !strings.Contains(dump.String(), "Find:") {
+		t.Fatalf("label row does not show plain \"Find:\" for an empty pattern:\n%s", dump.String())
+	}
+}
+
+// TestDrawMassRenameDialogShowsRegexpCompileHint verifies the regexp compile-error hint is
+// painted on the same row as the Pattern label, right-aligned flush against the right margin
+// (mirroring how the match count is right-aligned on the Find/Pattern row).
 func TestDrawMassRenameDialogShowsRegexpCompileHint(t *testing.T) {
 	_, err := ops.MassRenameCompileRegex(`\`, false)
 	if err == nil {
@@ -142,20 +212,33 @@ func TestDrawMassRenameDialogShowsRegexpCompileHint(t *testing.T) {
 	styles := theme.Default()
 	DrawFileDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil)
 
-	var found string
+	var labelRow string
+	var labelY int
+	found := false
 	for y := 0; y < 24; y++ {
-		line := tcelltest.TextAt(screen, 2, y, 76)
-		if strings.Contains(line, "backslash") {
-			found = strings.TrimSpace(line)
+		line := tcelltest.TextAt(screen, 0, y, 80)
+		if strings.Contains(line, "Pattern (") {
+			labelRow = line
+			labelY = y
+			found = true
 			break
 		}
 	}
-	if found == "" {
+	if !found {
 		var dump strings.Builder
 		for y := 6; y <= 14; y++ {
 			dump.WriteString(tcelltest.TextAt(screen, 0, y, 80))
 			dump.WriteByte('\n')
 		}
-		t.Fatalf("regexp hint not painted on screen; hint=%q\nscreen dump:\n%s", hint, dump.String())
+		t.Fatalf("Pattern label row not found on screen:\n%s", dump.String())
+	}
+
+	// Strip trailing screen background, the right border, and its 1-space margin, so what
+	// remains is exactly the dialog's right-aligned content on this row.
+	trimmed := strings.TrimRight(labelRow, " ")
+	trimmed = strings.TrimSuffix(trimmed, "│")
+	trimmed = strings.TrimRight(trimmed, " ")
+	if !strings.HasSuffix(trimmed, hint) {
+		t.Fatalf("row %d = %q, want it to end with %q (regexp hint right-aligned on the Pattern label row)", labelY, labelRow, hint)
 	}
 }

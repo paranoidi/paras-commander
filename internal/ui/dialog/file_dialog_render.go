@@ -332,7 +332,9 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 			}
 		}
 		if h := massRenamePatternHintText(state); h != "" {
-			hw := utf8.RuneCountInString(h) + 4
+			// Pattern hint shares the label row (right-aligned), so the dialog must be wide
+			// enough for label + gap + hint together, not just the hint alone.
+			hw := utf8.RuneCountInString(massRenamePatternLabelText(state)) + 1 + utf8.RuneCountInString(h) + 4
 			if hw > minWidth {
 				minWidth = hw
 			}

@@ -184,6 +184,9 @@ type FileDialogState struct {
 	MassRenamePreviewAfterAdded     [][]search.Range
 	// MassRenamePreviewAfterError marks after-column rows with a validation conflict (per-row).
 	MassRenamePreviewAfterError []bool
+	// MassRenameMatchCount is the number of source files whose basename matches the current
+	// pattern (Simple/Regex modes only; recomputed in RecomputeMassRenamePreview).
+	MassRenameMatchCount int
 	// MassRenamePatternCompileHint is a short regexp compile error shown under the Pattern field (regex mode).
 	MassRenamePatternCompileHint string
 	// MassRenameReplacementSyntaxHint is shown under the Replacement field when the pattern has capture groups.

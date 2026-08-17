@@ -84,6 +84,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 		return
 	}
 	d.Message = ""
+	d.MassRenameMatchCount = 0
 	d.MassRenamePatternCompileHint = ""
 	d.MassRenameReplacementSyntaxHint = ""
 	if len(d.Fields) > 0 {
@@ -163,10 +164,13 @@ func (h *Handler) RecomputeMassRenamePreview() {
 	afterAdded := make([][]search.Range, 0, len(rows))
 	afterError := make([]bool, 0, len(rows))
 	for i, r := range rows {
+		matchRanges := ops.MassRenameMatchRanges(r.OldBase, mode, find, caseFold, rx)
+		if len(matchRanges) > 0 {
+			d.MassRenameMatchCount++
+		}
 		if d.MassRenameShowOnlyModified && r.OldBase == r.NewBase {
 			continue
 		}
-		matchRanges := ops.MassRenameMatchRanges(r.OldBase, mode, find, caseFold, rx)
 		removed, replaced := ops.MassRenameBeforePreviewHighlightRanges(matchRanges, replace)
 		before = append(before, r.OldBase)
 		after = append(after, r.NewBase)

@@ -467,6 +467,32 @@ func TestDeleteSelectedMassRenamePatternRemovesHistoryEntryInMemoryOnly(t *testi
 	}
 }
 
+func TestRecomputeMassRenamePreviewMatchCount(t *testing.T) {
+	h, _ := newMassRenamePatternTestHandler(t)
+	openMainMassRenameDialog(h)
+	d := &h.model.FileDialog
+	d.MassRenameSources = []uidialog.MassRenameSource{
+		{Path: "/tmp/foo1.txt", Name: "foo1.txt"},
+		{Path: "/tmp/foo2.txt", Name: "foo2.txt"},
+		{Path: "/tmp/bar.txt", Name: "bar.txt"},
+	}
+	d.Fields[0].Value = "foo"
+	d.Fields[1].Value = "baz"
+
+	h.RecomputeMassRenamePreview()
+
+	if d.MassRenameMatchCount != 2 {
+		t.Fatalf("MassRenameMatchCount = %d, want 2", d.MassRenameMatchCount)
+	}
+
+	// "Show only modified" filters the preview rows but must not change the match count.
+	d.MassRenameShowOnlyModified = true
+	h.RecomputeMassRenamePreview()
+	if d.MassRenameMatchCount != 2 {
+		t.Fatalf("MassRenameMatchCount with ShowOnlyModified = %d, want 2", d.MassRenameMatchCount)
+	}
+}
+
 func TestMassRenamePatternsPathUsesConfigDir(t *testing.T) {
 	h, _ := newMassRenamePatternTestHandler(t)
 	got := h.massRenamePatternsPath()
