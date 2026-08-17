@@ -65,6 +65,7 @@ func drawMessagesView(
 		scroll = max(0, n-visibleRows)
 	}
 
+	rowBase := styles.JobsRow.Background(bg)
 	for row := 0; row < visibleRows; row++ {
 		idx := scroll + row
 		y := rect.Y + 2 + row
@@ -72,21 +73,15 @@ func drawMessagesView(
 			break
 		}
 		entry := entries[idx]
-		lineStyle := styles.JobsRow.Background(bg)
-		if idx == state.Selected {
-			if chromeBlocked {
-				lineStyle = styles.PanelBlockedCursor
-			} else {
-				lineStyle = styles.PanelRowSelected.Background(bg)
-			}
-		}
+		selected := idx == state.Selected
+		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, true)
+		paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
 
-		timeStyle := styles.JobsRow.Background(bg)
+		timeStyle := rowBase
 		urgStyle := messageUrgencyListStyle(styles, entry.Urg, bg)
-		if idx == state.Selected {
+		if selected {
 			timeStyle = lineStyle
-			_, rowBg, _ := lineStyle.Decompose()
-			urgStyle = urgStyle.Background(rowBg)
+			urgStyle = lineStyle
 		}
 		timeShow := entry.Time
 		if timeShow == "" {

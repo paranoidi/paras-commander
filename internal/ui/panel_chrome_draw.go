@@ -131,3 +131,28 @@ func auxPanelListHeaderStyle(chrome theme.PanelChrome, blocked bool, contentBG t
 	}
 	return chrome.Header.Background(contentBG)
 }
+
+// auxPanelListRowStyle resolves a jobs/commands/messages list row's style: rowBase normally,
+// or the shared cursor style (theme.Theme.PanelListingCursorStyle) when the row is selected.
+func auxPanelListRowStyle(styles theme.Theme, rowBase tcell.Style, selected, chromeBlocked, active bool) tcell.Style {
+	if !selected {
+		return rowBase
+	}
+	return styles.PanelListingCursorStyle(rowBase, theme.PanelListingCursorOpts{
+		ChromeBlocked:  chromeBlocked,
+		FileListActive: active,
+	})
+}
+
+// paintAuxPanelRowMargin fills the single-cell margin column at x (e.g. the row's left
+// or right edge, just inside the panel border) with style.
+func paintAuxPanelRowMargin(screen tcell.Screen, x, y int, style tcell.Style) {
+	primitive.Text(screen, x, y, 1, "", style)
+}
+
+// paintAuxPanelRowMargins fills both the left margin (rect.X+1) and right margin
+// (contentX+contentW, just inside the right border) of a jobs/commands/messages list row.
+func paintAuxPanelRowMargins(screen tcell.Screen, rect Rect, contentX, contentW, y int, style tcell.Style) {
+	paintAuxPanelRowMargin(screen, rect.X+1, y, style)
+	paintAuxPanelRowMargin(screen, contentX+contentW, y, style)
+}

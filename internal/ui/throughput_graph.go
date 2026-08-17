@@ -121,7 +121,7 @@ func throughputGraphBodyBraille(bucketMax []float64, graphHeight int) []string {
 }
 
 // ThroughputDetailLines returns detail-panel lines for the throughput chart section.
-// width is the interior content width in runes (one leading margin space is added per line).
+// width is the interior content width in runes.
 // strip holds one fixed-clock B/s sample per column (oldest left, newest right); see jobs.CloseOneThroughputColumn.
 func ThroughputDetailLines(strip []float64, width int, running bool) []string {
 	if !running {
@@ -130,27 +130,28 @@ func ThroughputDetailLines(strip []float64, width int, running bool) []string {
 	if width < 8 {
 		width = 8
 	}
-	chartCols := width - 1
+	chartCols := width
 	if chartCols < 1 {
 		chartCols = 1
 	}
 
 	if len(strip) == 0 {
-		return []string{" " + truncateRunes("(collecting samples"+string(primitive.Ellipsis)+")", width-1)}
+		return []string{truncateRunes("(collecting samples"+string(primitive.Ellipsis)+")", width)}
 	}
 
 	buckets := jobs.ThroughputChartColumnBuckets(strip, chartCols)
 	body := throughputGraphBodyBraille(buckets, throughputGraphBodyRows)
 	if len(body) == 0 {
-		return []string{" (graph error)"}
+		return []string{"(graph error)"}
 	}
-	// Right-align samples in the chart area (no fake zero-throughput columns on the left).
-	padCols := chartCols - len(buckets)
-	if padCols > 0 {
-		pad := strings.Repeat(" ", padCols)
-		for i := range body {
-			body[i] = " " + pad + body[i][1:]
-		}
+	// Right-align samples in the chart area (no fake zero-throughput columns on the left);
+	// each body line has a leading margin rune from throughputGraphBodyBraille that we drop here.
+	pad := ""
+	if padCols := chartCols - len(buckets); padCols > 0 {
+		pad = strings.Repeat(" ", padCols)
+	}
+	for i := range body {
+		body[i] = pad + body[i][1:]
 	}
 	return body
 }

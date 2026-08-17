@@ -12,6 +12,10 @@ type FunctionKey struct {
 	KeyLabel        string    // "F1"
 	Hint            string    // primary footer label suffix (e.g. "Mkdir")
 	HintShiftPrefix string    // Shift-alternative suffix shown after Hint (e.g. "Ren" in MovRen)
+	// RequiresActiveJob marks jobs-view actions (cancel/pause/resume/reorder) that are
+	// no-ops once the selected job has reached a terminal state; FunctionKeysJobsView
+	// hides them in that case.
+	RequiresActiveJob bool
 }
 
 // FullHint returns the combined footer hint text for width layout.
@@ -57,18 +61,32 @@ func FunctionKeyLabelByKey(k tcell.Key) (string, bool) {
 var FunctionKeysJobs = []FunctionKey{
 	FooterEscClose,
 	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
-	{Key: tcell.KeyCtrlC, KeyLabel: "C-c", Hint: "Cancel"},
-	{Key: tcell.KeyCtrlP, KeyLabel: "C-p", Hint: "Pause"},
-	{Key: tcell.KeyCtrlR, KeyLabel: "C-r", Hint: "Resume"},
-	{Key: tcell.KeyUp, KeyLabel: "C-up", Hint: "Move up"},
-	{Key: tcell.KeyDown, KeyLabel: "C-down", Hint: "Move down"},
+	{Key: tcell.KeyCtrlC, KeyLabel: "C-c", Hint: "Cancel", RequiresActiveJob: true},
+	{Key: tcell.KeyCtrlP, KeyLabel: "C-p", Hint: "Pause", RequiresActiveJob: true},
+	{Key: tcell.KeyCtrlR, KeyLabel: "C-r", Hint: "Resume", RequiresActiveJob: true},
+	{Key: tcell.KeyUp, KeyLabel: "C-up", Hint: "Move up", RequiresActiveJob: true},
+	{Key: tcell.KeyDown, KeyLabel: "C-down", Hint: "Move down", RequiresActiveJob: true},
 	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear"},
 	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
 }
 
-// FunctionKeysJobsView returns hints for the jobs screen footer.
-func FunctionKeysJobsView() []FunctionKey { return FunctionKeysJobs }
+// FunctionKeysJobsView returns hints for the jobs screen footer. selectedFinished
+// hides the cancel/pause/resume/reorder actions, which are no-ops on a completed,
+// failed, or canceled job.
+func FunctionKeysJobsView(selectedFinished bool) []FunctionKey {
+	if !selectedFinished {
+		return FunctionKeysJobs
+	}
+	out := make([]FunctionKey, 0, len(FunctionKeysJobs))
+	for _, fk := range FunctionKeysJobs {
+		if fk.RequiresActiveJob {
+			continue
+		}
+		out = append(out, fk)
+	}
+	return out
+}
 
 // FunctionKeysCommandsView is the footer legend while the Commands screen is active.
 var FunctionKeysCommands = []FunctionKey{

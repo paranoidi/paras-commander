@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -343,7 +344,9 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		return menu.FunctionKeysMessagesView(), true
 	}
 	if a.model.ViewMode == ui.ViewJobs && !a.inQuickFilterUI() {
-		return menu.FunctionKeysJobsView(), true
+		sel := a.model.JobsView.Selected
+		finished := sel >= 0 && sel < len(a.model.JobsList) && jobs.Status(a.model.JobsList[sel].Status).IsFinished()
+		return menu.FunctionKeysJobsView(finished), true
 	}
 	return nil, false
 }

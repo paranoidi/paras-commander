@@ -92,6 +92,7 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 		scroll = max(0, n-visibleRows)
 	}
 
+	rowBase := styles.JobsRow.Background(bg)
 	for row := 0; row < visibleRows; row++ {
 		idx := scroll + row
 		y := rect.Y + 2 + row
@@ -99,18 +100,15 @@ func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewSta
 			break
 		}
 		entry := entries[idx]
-		lineStyle := styles.JobsRow.Background(bg)
-		if idx == state.Selected {
-			if chromeBlocked {
-				lineStyle = styles.PanelBlockedCursor
-			} else if active {
-				lineStyle = styles.PanelRowSelected.Background(bg)
-			} else {
-				lineStyle = styles.PanelCursorInactive.Background(bg)
-			}
-		}
+		selected := idx == state.Selected
+		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, active)
+		_, lineBG, _ := lineStyle.Decompose()
+		paintAuxPanelRowMargins(screen, rect, contentX, contentW, y, lineStyle)
 
-		markStyle := commandPhaseStyle(entry, styles).Background(bg)
+		markStyle := commandPhaseStyle(entry, styles).Background(lineBG)
+		if selected {
+			markStyle = lineStyle
+		}
 		mark := commandPhaseMark(entry)
 		primitive.Text(screen, contentX, y, commandsListColMarker, mark, markStyle)
 

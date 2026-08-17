@@ -18,7 +18,7 @@ const jobsDetailLineBudgetFallback = 4096
 
 // Jobs list column layout to the Status column: icon, type (widest jobs.Type is "delete"), separator space.
 const (
-	jobsListColIcon      = 2
+	jobsListColIcon      = 3
 	jobsListColTypeRunes = 7 // internal/jobs.Type: extract (longest)
 	jobsListColTypeCell  = jobsListColTypeRunes + 1
 	jobsListColPrefix    = jobsListColIcon + jobsListColTypeCell // offset from row start to Status column
@@ -130,7 +130,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		return
 	}
 
-	hdr := fmt.Sprintf("%-2s%-*s %-10s%-10s%-10sProgress", "", jobsListColTypeRunes, "Type", "Status", "ETA", "Speed")
+	hdr := fmt.Sprintf("%-3s%-*s %-10s%-10s%-10sProgress", "", jobsListColTypeRunes, "Type", "Status", "ETA", "Speed")
 	headerStyle := auxPanelListHeaderStyle(layout.Chrome, chromeBlocked, bg)
 	primitive.Text(screen, contentX, rect.Y+1, contentW, hdr, headerStyle)
 
@@ -146,6 +146,7 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		scroll = max(0, n-visibleRows)
 	}
 
+	rowBase := styles.JobsRow.Background(bg)
 	for row := 0; row < visibleRows; row++ {
 		idx := scroll + row
 		y := rect.Y + 2 + row
@@ -153,22 +154,15 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 			break
 		}
 		entry := jobs[idx]
-		lineStyle := styles.JobsRow.Background(bg)
-		if idx == state.Selected {
-			if chromeBlocked {
-				lineStyle = styles.PanelBlockedCursor
-			} else if active {
-				lineStyle = styles.PanelRowSelected.Background(bg)
-			} else {
-				lineStyle = styles.PanelCursorInactive.Background(bg)
-			}
-		}
+		selected := idx == state.Selected
+		lineStyle := auxPanelListRowStyle(styles, rowBase, selected, chromeBlocked, active)
+		_, lineBG, _ := lineStyle.Decompose()
+		paintAuxPanelRowMargin(screen, rect.X+1, y, lineStyle)
 
 		pct := jobPercentDone(entry)
 		eta := formatJobETA(entry, now)
-		statusStyle := styles.JobsStatusStyle(entry.Status).Background(bg)
+		statusStyle := styles.JobsStatusStyle(entry.Status).Background(lineBG)
 		iconStyle := styles.JobsIconStyle(entry.Status)
-		_, lineBG, _ := lineStyle.Decompose()
 		iconFG, _, iconAttrs := iconStyle.Decompose()
 		iconRenderStyle := tcell.StyleDefault.Foreground(iconFG).Background(lineBG)
 		if iconAttrs&tcell.AttrBold != 0 {
@@ -180,8 +174,12 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		if iconAttrs&tcell.AttrReverse != 0 {
 			iconRenderStyle = iconRenderStyle.Reverse(true)
 		}
+		if selected {
+			statusStyle = lineStyle
+			iconRenderStyle = lineStyle
+		}
 		iconGlyph := styles.SymbolJobsList(entry.Status)
-		primitive.Text(screen, contentX, y, 2, iconGlyph, iconRenderStyle)
+		primitive.Text(screen, contentX, y, jobsListColIcon, iconGlyph, iconRenderStyle)
 		line := fmt.Sprintf("%-*s ", jobsListColTypeRunes, truncateRunes(entry.Type, jobsListColTypeRunes))
 		primitive.Text(screen, contentX+jobsListColIcon, y, jobsListColTypeCell, line, lineStyle)
 		xStatus := contentX + jobsListColPrefix
@@ -192,10 +190,13 @@ func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs
 		speedLabel := formatJobSpeed(entry, now)
 		primitive.Text(screen, xSpeed, y, jobsListColSpeed, truncateRunes(speedLabel, jobsListColSpeed-1), lineStyle)
 		xProg := xSpeed + jobsListColSpeed
-		barW := contentW - jobsListColPrefix - jobsListColStatus - jobsListColETA - jobsListColSpeed
+		barW := rect.X + rect.Width - 1 - xProg // reach the border, no trailing margin
 		if barW < 0 {
 			barW = 0
 		}
+		// Leave a one-cell gap, unhighlighted even on the selected row, so the
+		// cyan cursor background never touches the progress bar's own colors.
+		paintAuxPanelRowMargin(screen, xProg-1, y, rowBase)
 		drawJobsProgressBar(screen, xProg, y, barW, pct,
 			styles.JobsProgressFill,
 			styles.JobsProgressTrack,
@@ -318,9 +319,9 @@ func detailDurationOrETALine(j JobEntry, now time.Time) string {
 		if j.StartedAt.IsZero() || j.FinishedAt.IsZero() || j.FinishedAt.Before(j.StartedAt) {
 			label = "—"
 		}
-		return fmt.Sprintf(" Took:        %s", label)
+		return fmt.Sprintf("Took:        %s", label)
 	}
-	return fmt.Sprintf(" ETA:         %s", formatJobETAFull(j, now))
+	return fmt.Sprintf("ETA:         %s", formatJobETAFull(j, now))
 }
 
 // jobDetailProgressLine formats the Details panel progress row. Byte totals are shown
@@ -331,7 +332,7 @@ func jobDetailProgressLine(j JobEntry) string {
 	if j.TotalFiles <= 0 {
 		tfLabel = "?"
 	}
-	line := fmt.Sprintf(" Progress:    %d / %s items", j.DoneFiles, tfLabel)
+	line := fmt.Sprintf("Progress:    %d / %s items", j.DoneFiles, tfLabel)
 	if j.TotalBytes > 0 {
 		line += fmt.Sprintf("   %s / %s bytes", formatJobBytes(j.DoneBytes), formatJobBytes(j.TotalBytes))
 	} else if j.Type == string(jobs.TypeDelete) && j.DoneBytes > 0 {
@@ -352,20 +353,20 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 		pathMax = jobsDetailLineBudgetFallback
 	}
 	if j.ID == "" {
-		return []string{" No job selected"}
+		return []string{"No job selected"}
 	}
-	prefixDestination := " Destination: "
-	prefixError := " Error:       "
-	prefixSources := " Sources:     "
-	prefixCurrent := " Current:     "
+	prefixDestination := "Destination: "
+	prefixError := "Error:       "
+	prefixSources := "Sources:     "
+	prefixCurrent := "Current:     "
 	lines := []string{
-		fmt.Sprintf(" Type:        %s", j.Type),
-		fmt.Sprintf(" Status:      %s", j.Status),
+		fmt.Sprintf("Type:        %s", j.Type),
+		fmt.Sprintf("Status:      %s", j.Status),
 	}
 	if j.Error != "" {
 		lines = append(lines, fmt.Sprintf(prefixError+"%s", truncateMiddle(j.Error, jobsDetailPathBudget(pathMax, prefixError))))
 	}
-	src := " —"
+	src := "—"
 	if len(j.Sources) > 0 {
 		srcBody := j.Sources[0]
 		suffix := ""
@@ -381,7 +382,7 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	}
 	lines = append(lines, fmt.Sprintf(prefixSources+"%s", src))
 	if j.Type != string(jobs.TypeDelete) {
-		dest := " —"
+		dest := "—"
 		if j.Destination != "" {
 			destDisplay := primitive.PathWithHomeTilde(j.Destination, userHomeDir)
 			dest = primitive.FitPathForWidth(destDisplay, jobsDetailPathBudget(pathMax, prefixDestination))

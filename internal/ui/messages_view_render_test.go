@@ -51,16 +51,17 @@ func TestDrawMessagesViewInfoUsesReadableForeground(t *testing.T) {
 		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 10},
 		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 10},
 	}
-	entries := []MessageLogEntry{{
-		Time: "12:34:56",
-		Text: "Connecting to sftp://user@host/",
-		Urg:  MessageUrgencyInfo,
-	}}
-	drawMessagesView(screen, layout, MessagesViewState{}, entries, styles, false, SplitHorizontal)
+	entries := []MessageLogEntry{
+		{Time: "12:34:55", Text: "Job failed", Urg: MessageUrgencyError},
+		{Time: "12:34:56", Text: "Connecting to sftp://user@host/", Urg: MessageUrgencyInfo},
+	}
+	// Selected points at row 0 so row 1 (checked below) is unselected and keeps
+	// its urgency-derived color instead of the selected row's cursor style.
+	drawMessagesView(screen, layout, MessagesViewState{Selected: 0}, entries, styles, false, SplitHorizontal)
 
 	contentX := layout.Primary.X + 2
 	msgCol := contentX + messagesListColTime + 1 // first content rune after 'C'
-	_, st, _ := screen.Get(msgCol, layout.Primary.Y+2)
+	_, st, _ := screen.Get(msgCol, layout.Primary.Y+3)
 	fg, _, _ := st.Decompose()
 	bannerFG, _, _ := styles.MessageInfo.Decompose()
 	if fg == bannerFG {
