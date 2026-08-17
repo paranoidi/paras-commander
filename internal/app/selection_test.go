@@ -242,6 +242,7 @@ func setupSelectionsStripFocusTest(t *testing.T) (*App, *panel.State) {
 	if err := left.NavigateTo(alpha, "", 20); err != nil {
 		t.Fatalf("NavigateTo alpha: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Primary enters alpha
 	if left.SelectionsStripCount() == 0 {
 		t.Fatal("expected selections strip to list beta while cwd is alpha")
 	}
@@ -318,6 +319,7 @@ func setupSelectionsStripFileFocusTest(t *testing.T) (*App, string) {
 	if err := left.NavigateTo(harbor, "", 20); err != nil {
 		t.Fatalf("NavigateTo harbor: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Primary enters harbor
 	selectPanelEntryByName(t, left, "willow.txt")
 	if selected, _ := left.ToggleSelection(); !selected {
 		t.Fatal("toggle selection on willow.txt")
@@ -325,6 +327,7 @@ func setupSelectionsStripFileFocusTest(t *testing.T) (*App, string) {
 	if err := left.NavigateTo(meadow, "", 20); err != nil {
 		t.Fatalf("NavigateTo meadow: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Primary enters meadow
 	if left.SelectionsStripCount() == 0 {
 		t.Fatal("expected selections strip to list willow.txt while cwd is meadow")
 	}

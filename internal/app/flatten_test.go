@@ -28,9 +28,11 @@ func flattenDialogTestSetup(t *testing.T) (app *App, activeDir, inactiveDir stri
 	if err := app.activePanel().Load(activeDir); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, active panel enters activeDir
 	if err := app.inactivePanel().Load(inactiveDir); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters inactiveDir
 	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
 	app.dialogCtrl.OpenFlattenDialog()
 	if !app.model.FlattenDialog.Open {
@@ -271,10 +273,12 @@ func TestFlattenInactivePanelIsSourceUsesActive(t *testing.T) {
 	if err := app.activePanel().Load(activeDir); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, active panel enters activeDir
 	// inactive panel is navigated into the directory being flattened
 	if err := app.inactivePanel().Load(sourceDir); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters sourceDir
 	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(sourceDir): true}
 	app.dialogCtrl.OpenFlattenDialog()
 	if !app.model.FlattenDialog.Open {
@@ -303,9 +307,11 @@ func TestFlattenDefaultLocationActivePrefill(t *testing.T) {
 	if err := app.activePanel().Load(activeDir); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, active panel enters activeDir
 	if err := app.inactivePanel().Load(inactiveDir); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, inactive panel enters inactiveDir
 	app.activePanel().SelectedPaths = map[string]bool{filepath.Clean(root): true}
 	app.dialogCtrl.OpenFlattenDialog()
 	want := dialogctrl.TransferPrefilledDestination(activeDir).Value

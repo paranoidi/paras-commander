@@ -301,6 +301,7 @@ func TestQuickFilterEnterOpensDirectoryAndClearsQuery(t *testing.T) {
 	}
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	applyNextInterruptEvent(t, app, screen) // async load, entering subdir
 
 	wantPath := filepath.Clean(sub)
 	if got := filepath.Clean(app.model.Primary.Path.String()); got != wantPath {
@@ -444,6 +445,7 @@ func TestQuickFilterKeymapActionClosesFilterAndOpensDirInOtherPanel(t *testing.T
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Secondary opens subdir
 	if app.model.Primary.Filter.Editing || app.model.Primary.Filter.Active || app.model.Primary.Filter.Query != "" {
 		t.Fatalf("filter should be cleared, got editing=%v active=%v query=%q",
 			app.model.Primary.Filter.Editing, app.model.Primary.Filter.Active, app.model.Primary.Filter.Query)

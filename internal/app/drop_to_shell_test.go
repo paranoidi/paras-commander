@@ -44,6 +44,7 @@ func TestDropToShellStartsInPanelDirectory(t *testing.T) {
 	if err := app.model.Primary.Load(panelDir); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Primary enters alpha
 
 	var gotWd string
 	prev := dropToShellRunner
@@ -77,6 +78,7 @@ func TestDropToShellSyncsPanelCwdOnReturn(t *testing.T) {
 	if err := app.model.Primary.Load(panelDir); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Primary enters alpha
 
 	prev := dropToShellRunner
 	dropToShellRunner = func(_ context.Context, _ []string) error {
@@ -85,6 +87,7 @@ func TestDropToShellSyncsPanelCwdOnReturn(t *testing.T) {
 	t.Cleanup(func() { dropToShellRunner = prev })
 
 	app.dropToShell()
+	applyNextInterruptEvent(t, app, screen) // async load, syncPanelCwdAfterShell navigates to otherDir
 	if got := filepath.Clean(app.model.Primary.PathString()); got != otherDir {
 		t.Fatalf("panel path = %q, want %q", got, otherDir)
 	}
@@ -105,6 +108,7 @@ func TestDropToShellSkipsSyncWhenDisabled(t *testing.T) {
 	if err := app.model.Primary.Load(panelDir); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Primary enters alpha
 
 	prev := dropToShellRunner
 	dropToShellRunner = func(_ context.Context, _ []string) error {

@@ -18,9 +18,12 @@ import (
 )
 
 // applyNextInterruptEvent blocks until screen posts an EventInterrupt (e.g. from an async
-// scheduler goroutine such as treeChildLoadScheduler/remoteLoadScheduler) and applies it via
-// handleInterruptPayload, mirroring what Run()'s event loop does. Used by tests that dispatch an
-// action that triggers async work and need the result applied before asserting on panel state.
+// scheduler goroutine such as treeChildLoadScheduler/asyncLoadScheduler) and applies it via
+// handleInterruptPayload, then runs reconcileAfterEvent — mirroring what Run()'s event loop does
+// for every event, interrupts included. That reconcile pass is what retries things like
+// ReconcilePendingPanelFocus (rename/mkdir/duplicate's deferred select-and-center) once the async
+// reload they were waiting on has just landed. Used by tests that dispatch an action triggering
+// async work and need the result (and its follow-on reconcile) applied before asserting on state.
 func applyNextInterruptEvent(t *testing.T, app *App, screen tcell.SimulationScreen) {
 	t.Helper()
 	done := make(chan tcell.Event, 1)
@@ -32,6 +35,7 @@ func applyNextInterruptEvent(t *testing.T, app *App, screen tcell.SimulationScre
 			t.Fatalf("PollEvent returned %T, want *tcell.EventInterrupt", ev)
 		}
 		app.handleInterruptPayload(interruptEv.Data())
+		app.reconcileAfterEvent()
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout waiting for async event")
 	}

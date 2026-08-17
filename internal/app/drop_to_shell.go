@@ -302,7 +302,16 @@ func (a *App) refreshAfterDropToShell() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
-	if err := a.activePanel().Refresh(a.activeViewportRows()); err != nil {
+	p := a.activePanel()
+	if p.ListingPending {
+		// syncPanelCwdAfterShell (called just above, when SyncCwdOnReturn is on) already
+		// scheduled an async navigation for this panel. Scheduling a second async load here
+		// for the pre-shell path would race it on the same per-panel generation counter and
+		// can spuriously supersede the real navigation with a reload of the directory it's
+		// leaving — the in-flight navigation already brings fresh contents for wherever it lands.
+		return
+	}
+	if err := p.Refresh(a.activeViewportRows()); err != nil {
 		a.setErrorMessage("Shell", err)
 	}
 }

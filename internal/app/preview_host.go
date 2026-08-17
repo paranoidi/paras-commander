@@ -63,6 +63,10 @@ func (h previewHost) QuickViewGitStatusScheduler() panel.GitStatusScheduler {
 	return h.app.quickViewGitStatusScheduler()
 }
 
+func (h previewHost) QuickViewAsyncLoadScheduler() panel.AsyncLoadScheduler {
+	return h.app.quickViewAsyncLoadScheduler()
+}
+
 func (h previewHost) EffectivePaneSplitOrientation() ui.SplitOrientation {
 	return h.app.effectivePaneSplitOrientation()
 }

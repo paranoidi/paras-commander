@@ -21,13 +21,13 @@ func TestNewFileMarkTierAndDropOnLeave(t *testing.T) {
 		t.Fatalf("tier = %v, want latest", got)
 	}
 	other := pathloc.MustParse(t.TempDir())
-	if err := s.load(other, "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
+	if err := s.load(other, "", 10, noIndexCursorFallback, asyncLoadOpts{}); err != nil {
 		t.Fatalf("load: %v", err)
 	}
 	if got := s.NewFileMarkTier(ent); got != panellist.NewFileMarkNone {
 		t.Fatal("marks should not apply after leaving dest directory")
 	}
-	if err := s.load(dest, "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
+	if err := s.load(dest, "", 10, noIndexCursorFallback, asyncLoadOpts{}); err != nil {
 		t.Fatalf("reload dest: %v", err)
 	}
 	if got := s.NewFileMarkTier(ent); got != panellist.NewFileMarkNone {
@@ -90,7 +90,7 @@ func TestSetShowHiddenDoesNotMarkRevealedDotfilesAsNew(t *testing.T) {
 	}
 	loc := pathloc.MustParse(dir)
 	s := State{Path: pathloc.MustParse(t.TempDir()), Sort: defaultSortState()}
-	if err := s.load(loc, "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
+	if err := s.load(loc, "", 10, noIndexCursorFallback, asyncLoadOpts{}); err != nil {
 		t.Fatalf("load: %v", err)
 	}
 	if err := s.SetShowHidden(true, 10); err != nil {
@@ -110,7 +110,7 @@ func TestLoadIntoDirectoryDoesNotMarkExistingEntriesAsNew(t *testing.T) {
 	}
 	loc := pathloc.MustParse(dir)
 	s := State{Path: pathloc.MustParse(t.TempDir()), Sort: defaultSortState()}
-	if err := s.load(loc, "", 10, noIndexCursorFallback, remoteLoadOpts{}); err != nil {
+	if err := s.load(loc, "", 10, noIndexCursorFallback, asyncLoadOpts{}); err != nil {
 		t.Fatalf("load: %v", err)
 	}
 	ent := localfs.Entry{Name: "preexisting.txt", Type: localfs.EntryFile}

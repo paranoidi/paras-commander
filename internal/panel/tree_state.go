@@ -454,7 +454,7 @@ func (s *State) expandAllTreeDirsAtDepth(nodes []treeflat.Node[TreeEntry], depth
 // false here — the caller's immediate rebuildTreeRows()/cursor-reattach only shows the row's
 // loading icon; the real expand happens later in ApplyTreeChildLoad on the main thread once the
 // fetch completes) or, when no scheduler is wired (nil, or it declines the request — same
-// fallback convention as RemoteLoadScheduler), reads the children synchronously inline exactly as
+// fallback convention as AsyncLoadScheduler), reads the children synchronously inline exactly as
 // before. A second expand press while a fetch is already in flight for the same node is a no-op.
 //
 // quiet=true (ExpandAllTreeShallow) skips the per-dispatch rebuildTreeRows and increments

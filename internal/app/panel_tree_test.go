@@ -125,6 +125,7 @@ func TestSyncFollowsCursorOntoTreeChildRow(t *testing.T) {
 
 	selectPanelEntryByName(t, app.panelByID(ui.PrimaryPanel), "grove")
 	app.dispatch(keymap.ActionPanelToggleSync)
+	applyNextInterruptEvent(t, app, screen) // async load, Secondary follows onto grove
 
 	if got, want := filepath.Clean(app.panelByID(ui.SecondaryPanel).PathString()), filepath.Clean(grove); got != want {
 		t.Fatalf("follower path after sync latch = %q, want %q (cursor was on tree child row)", got, want)

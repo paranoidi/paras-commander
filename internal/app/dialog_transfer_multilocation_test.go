@@ -263,6 +263,7 @@ func TestTransferConfirmWithFlattenEnqueuesFlatJob(t *testing.T) {
 	if err := app.inactivePanel().Load(dst); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}
+	applyNextInterruptEvent(t, app, app.screen.(tcell.SimulationScreen)) // async load, inactive panel enters dst
 	p := app.activePanel()
 	p.AddSelection(filepath.Join(alpha, "river.txt"))
 	p.AddSelection(filepath.Join(bravo, "stone.txt"))
@@ -334,6 +335,7 @@ func TestOpenSelectionsRootNavigatesToCommonRoot(t *testing.T) {
 	if quit, _ := app.handleKey(ev); quit {
 		t.Fatal("unexpected quit")
 	}
+	applyNextInterruptEvent(t, app, app.screen.(tcell.SimulationScreen)) // async load, active panel jumps to common root
 	if got := app.activePanel().PathString(); got != root {
 		t.Fatalf("panel path = %q, want common root %q", got, root)
 	}

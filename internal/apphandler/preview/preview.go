@@ -582,7 +582,7 @@ func (h *Handler) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, f
 		Gitignore:                  follower.Gitignore,
 		DiskSorter:                 follower.DiskSorter,
 		SuppressHeavyPathProbes:    follower.SuppressHeavyPathProbes,
-		ScheduleRemoteLoad:         follower.ScheduleRemoteLoad,
+		ScheduleAsyncLoad:          h.host.QuickViewAsyncLoadScheduler(),
 		IdleDiskTotalsSort:         follower.IdleDiskTotalsSort,
 		DiskUsageIdleSortEligible:  follower.DiskUsageIdleSortEligible,
 		DiskUsageIdleSortActivated: follower.DiskUsageIdleSortActivated,

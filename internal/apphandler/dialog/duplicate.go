@@ -88,7 +88,7 @@ func (h *Handler) executeDuplicate() {
 	h.CloseFileDialog()
 	h.AddTransferJob(jobs.TypeCopy, []string{plan.SourcePath}, plan.DestPath, false, h.TransferPreserveFromConfig())
 	if focusAfter {
-		h.scheduleDuplicateFocus(panelID, listDir, plan.NewName)
+		h.schedulePanelFocus(panelID, listDir, plan.NewName)
 	}
 	h.RefreshBothPanels()
 	h.host.SetTransientMessage(fmt.Sprintf("Copy queued as %s", plan.NewName), ui.MessageUrgencyInfo)

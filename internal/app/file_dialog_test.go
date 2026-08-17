@@ -399,6 +399,8 @@ func TestRenameWithoutFocusAfterDoesNotCenterOnNewFile(t *testing.T) {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Primary
+	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Secondary
 
 	p = app.activePanel()
 	entry, ok := p.CurrentEntry()
@@ -438,6 +440,8 @@ func TestRenameWithFocusAfterSelectsAndCentersNewFile(t *testing.T) {
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModAlt))
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Primary
+	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Secondary
 
 	p = app.activePanel()
 	entry, ok := p.CurrentEntry()
@@ -1489,6 +1493,8 @@ func TestMkdirScrollsToCreatedDirectory(t *testing.T) {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Primary
+	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Secondary
 
 	p = app.activePanel()
 	entry, ok := p.CurrentEntry()
@@ -2050,6 +2056,9 @@ func TestMkdirOpenInInactiveOpensOtherPanelAfterCreate(t *testing.T) {
 		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
 	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Primary
+	applyNextInterruptEvent(t, app, screen) // async reload, RefreshBothPanels: Secondary (superseded below)
+	applyNextInterruptEvent(t, app, screen) // async load, Secondary opens otherdir
 
 	wantOther := filepath.Join(dir, "otherdir")
 	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != filepath.Clean(wantOther) {

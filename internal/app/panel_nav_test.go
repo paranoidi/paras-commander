@@ -250,6 +250,8 @@ func TestLeftMenuToggleHiddenIsGlobal(t *testing.T) {
 	if !app.model.Secondary.ShowHidden {
 		t.Fatal("right ShowHidden = false, want true (toggle is global, not panel-scoped)")
 	}
+	applyNextInterruptEvent(t, app, screen) // async reload, Primary
+	applyNextInterruptEvent(t, app, screen) // async reload, Secondary
 	if len(app.model.Primary.Entries) != 2 {
 		t.Fatalf("left len(Entries) = %d, want hidden and visible entries", len(app.model.Primary.Entries))
 	}
@@ -315,6 +317,7 @@ func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
 	}
 	app.model.ActivePanel = ui.PrimaryPanel
 	app.dispatch(keymap.ActionPanelOpenDirInOther)
+	applyNextInterruptEvent(t, app, screen) // async load, Secondary opens alpha
 
 	wantRoot := filepath.Clean(root)
 	wantAlpha := filepath.Clean(alpha)
@@ -335,6 +338,7 @@ func TestOpenSelectedDirectoryInInactivePanel(t *testing.T) {
 	}
 	app.model.ActivePanel = ui.SecondaryPanel
 	app.dispatch(keymap.ActionPanelOpenDirInOther)
+	applyNextInterruptEvent(t, app, screen) // async load, Primary opens gamma
 
 	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != wantAlpha {
 		t.Fatalf("right panel path = %q want %q after second open", got, wantAlpha)
@@ -365,6 +369,7 @@ func TestOpenActivePathInInactivePanel(t *testing.T) {
 	}
 	app.model.ActivePanel = ui.PrimaryPanel
 	app.dispatch(keymap.ActionNavOpen)
+	applyNextInterruptEvent(t, app, screen) // async load, Primary enters alpha
 
 	for i := 0; i < left.VisibleEntryCount(); i++ {
 		entry, _, ok := left.VisibleEntry(i)
@@ -379,6 +384,7 @@ func TestOpenActivePathInInactivePanel(t *testing.T) {
 	}
 
 	app.dispatch(keymap.ActionPanelOpenActivePathInOther)
+	applyNextInterruptEvent(t, app, screen) // async load, Secondary mirrors active path
 
 	if got := filepath.Clean(app.panelByID(ui.SecondaryPanel).Path.String()); got != wantAlpha {
 		t.Fatalf("right panel path = %q want active cwd %q", got, wantAlpha)
@@ -428,12 +434,13 @@ func TestOpenInOtherPanelDisablesSync(t *testing.T) {
 	}
 }
 
-func navigatePanelIntoDir(t *testing.T, app *App, panelID int, name string) {
+func navigatePanelIntoDir(t *testing.T, app *App, screen tcell.SimulationScreen, panelID int, name string) {
 	t.Helper()
 	p := app.panelByID(panelID)
 	selectPanelEntryByName(t, p, name)
 	app.model.ActivePanel = panelID
 	app.dispatch(keymap.ActionNavOpen)
+	applyNextInterruptEvent(t, app, screen) // async load triggered by entering the directory
 }
 
 // Regression: Parent must center the exited directory in the file list on first paint (same as rename recall).
@@ -458,7 +465,9 @@ func TestParentNavigationCentersInAppViewport(t *testing.T) {
 	if _, err := app.activePanel().Enter(app.activeViewportRows()); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, entering asdf
 	app.dispatch(keymap.ActionNavParent)
+	applyNextInterruptEvent(t, app, screen) // async load, Parent back to bar
 	app.render()
 	p := app.activePanel()
 	vr := app.activeViewportRows()
@@ -519,6 +528,7 @@ func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
 	if _, err := left.Enter(app.activeViewportRows()); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, entering sub
 	if ui.SelectionsStripLayoutItemCount(left, ui.PrimaryPanel, ui.PrimaryPanel, false) == 0 {
 		t.Fatal("strip should be visible after entering sub with cross-dir selection")
 	}
@@ -538,6 +548,7 @@ func TestParentCentersWhenSelectionsStripShrinksAfterChdir(t *testing.T) {
 	if err := left.Parent(staleVR); err != nil {
 		t.Fatal(err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load, Parent back to root
 	vr := app.activeViewportRows()
 	if staleVR >= vr {
 		t.Fatalf("staleVR = %d, want smaller than post-parent %d (strip must shrink file list)", staleVR, vr)

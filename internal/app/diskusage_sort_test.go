@@ -203,6 +203,7 @@ func TestHandlePanelDirChangedLeftClearsIdleTimerOnChdir(t *testing.T) {
 	if err := left.NavigateTo(filepath.Clean(alpha), "", vr); err != nil {
 		t.Fatalf("NavigateTo: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load lands before handlePanelDirChanged checks Path
 	app.handlePanelDirChanged(ui.PrimaryPanel)
 
 	if app.disk.idleSort[ui.PrimaryPanel].timer != nil {
@@ -368,6 +369,7 @@ func TestNavigateOutsideDiskUsageScanScopeClearsIdleSort(t *testing.T) {
 	if err := left.NavigateTo(other, "", vr); err != nil {
 		t.Fatalf("NavigateTo other: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load lands before handlePanelDirChanged checks Path
 	app.handlePanelDirChanged(ui.PrimaryPanel)
 
 	if left.IdleDiskTotalsSort {
@@ -380,6 +382,7 @@ func TestNavigateOutsideDiskUsageScanScopeClearsIdleSort(t *testing.T) {
 	if err := left.NavigateTo(scanned, "", vr); err != nil {
 		t.Fatalf("NavigateTo scanned: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load lands before handlePanelDirChanged checks Path
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
@@ -501,6 +504,7 @@ func TestDiskSortRestoredAfterNewScanReplacesScope(t *testing.T) {
 	if err := left.NavigateTo(alpha, "", vr); err != nil {
 		t.Fatalf("NavigateTo alpha: %v", err)
 	}
+	applyNextInterruptEvent(t, app, screen) // async load lands before the scan reads left.Path
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
 	deadline = time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {

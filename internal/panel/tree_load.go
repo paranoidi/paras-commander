@@ -17,7 +17,7 @@ type TreeChildLoadRequest struct {
 
 // TreeChildLoadScheduler starts an asynchronous child listing for req. The result is applied via
 // ApplyTreeChildLoad on the main event thread. Return false to fall back to loading synchronously
-// (nil scheduler convention — e.g. in tests — matching RemoteLoadScheduler).
+// (nil scheduler convention — e.g. in tests — matching AsyncLoadScheduler).
 type TreeChildLoadScheduler func(req TreeChildLoadRequest) bool
 
 // ApplyTreeChildLoad applies the result of an async child fetch dispatched via
