@@ -88,6 +88,9 @@ func (h *Handler) executeDuplicate() {
 	h.CloseFileDialog()
 	h.AddTransferJob(jobs.TypeCopy, []string{plan.SourcePath}, plan.DestPath, false, h.TransferPreserveFromConfig())
 	if focusAfter {
+		// The copy is only queued above, not yet on disk, so it can't be tied to a specific
+		// reload (unlike rename/mkdir's RefreshBothPanelsWithFocus); this polls instead, via
+		// ReconcilePendingPanelFocus, until the job's terminal event eventually refreshes the panel.
 		h.schedulePanelFocus(panelID, listDir, plan.NewName)
 	}
 	h.RefreshBothPanels()

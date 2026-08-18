@@ -64,7 +64,7 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 
 // RefreshBothPanels re-lists both panels, walking up when their directory vanished (e.g. a
 // completed job removed the active panel's cwd), then applies any pending post-duplicate focus
-// and refreshes the quick-view preview.
+// (see ReconcilePendingPanelFocus) and refreshes the quick-view preview.
 func (h *Handler) RefreshBothPanels() {
 	viewportRows := h.host.ActiveViewportRows()
 	_ = h.model.Primary.RefreshOrNavigateToExistingAncestor(viewportRows)
@@ -76,10 +76,30 @@ func (h *Handler) RefreshBothPanels() {
 	h.preview.ApplyQuickViewPreviewImmediately()
 }
 
-// ReconcilePendingPanelFocus retries a select-and-center scheduled by rename/mkdir/duplicate
-// whose triggering directory reload hadn't landed yet. Called from App.reconcileAfterEvent after
-// every event (including the reload's own async completion), matching that chokepoint's
-// idempotent, retry-until-it-holds design.
+// RefreshBothPanelsWithFocus is RefreshBothPanels, except the panel matching panelID reloads via
+// RefreshOrNavigateToExistingAncestorWithHook so onApplied runs once, right after that panel's
+// own reload lands (sync or async) — used by rename/mkdir, whose target already exists on disk by
+// the time this runs, so the very next reload of that specific panel is guaranteed to contain it.
+// Unlike RefreshBothPanels this does not touch pendingPanelFocus/applyPendingPanelFocus — that
+// mechanism is reserved for duplicate's post-copy-job focus (see ReconcilePendingPanelFocus).
+func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
+	viewportRows := h.host.ActiveViewportRows()
+	if panelID == ui.PrimaryPanel {
+		_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
+		_ = h.model.Secondary.RefreshOrNavigateToExistingAncestor(viewportRows)
+	} else {
+		_ = h.model.Primary.RefreshOrNavigateToExistingAncestor(viewportRows)
+		_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
+	}
+	h.preview.ApplyQuickViewPreviewImmediately()
+}
+
+// ReconcilePendingPanelFocus retries a select-and-center scheduled after duplicate's transfer job
+// enqueue: the duplicated file doesn't exist yet at enqueue time (AddTransferJob only queues an
+// async copy), so the focus that follows it can't be tied to a specific reload the way
+// rename/mkdir's can — it lands later, off of the job's own terminal-event refresh. Called from
+// App.reconcileAfterEvent after every event (including that later refresh), matching that
+// chokepoint's idempotent, retry-until-it-holds design.
 func (h *Handler) ReconcilePendingPanelFocus() {
 	h.applyPendingPanelFocus()
 }
@@ -394,12 +414,14 @@ func (h *Handler) executeRename() {
 	focusAfter := h.model.FileDialog.RenameFocusAfter
 	panelDir := p.Path
 	panelID := h.model.ActivePanel
-	listDir := p.PathString()
 	h.CloseFileDialog()
 	if focusAfter {
-		h.schedulePanelFocus(panelID, listDir, plan.NewName)
+		h.RefreshBothPanelsWithFocus(panelID, func() {
+			h.host.PanelByID(panelID).SelectVisibleEntryCentered(plan.NewName, h.host.PanelViewportRows(panelID))
+		})
+	} else {
+		h.RefreshBothPanels()
 	}
-	h.RefreshBothPanels()
 	h.host.ActivePanel().AddRenameMarks(panelDir, []string{plan.NewName})
 	h.host.SetTransientMessage(fmt.Sprintf("Renamed to %s", plan.NewName), ui.MessageUrgencyInfo)
 }
@@ -458,21 +480,27 @@ func (h *Handler) executeMkdir() {
 		createdName = loc.Base()
 	}
 	panelID := h.model.ActivePanel
-	listDir := p.PathString()
 	h.CloseFileDialog()
 	active := h.host.ActivePanel()
 	viewportRows := h.host.ActiveViewportRows()
+	focusName := ""
 	if openInInactive {
 		if priorEntryName != "" && priorEntryName != createdName {
-			h.schedulePanelFocusScroll(panelID, listDir, priorEntryName, false)
+			focusName = priorEntryName
 		}
 		// The createdName-under-cursor fallback (step off the just-created directory before
 		// reload) still runs synchronously below on the panel's pre-reload cursor state — no
 		// specific target name to defer, so there is nothing to schedule here.
 	} else {
-		h.schedulePanelFocusScroll(panelID, listDir, createdName, false)
+		focusName = createdName
 	}
-	h.RefreshBothPanels()
+	if focusName != "" {
+		h.RefreshBothPanelsWithFocus(panelID, func() {
+			h.host.PanelByID(panelID).SelectVisibleEntryInViewport(focusName, h.host.PanelViewportRows(panelID))
+		})
+	} else {
+		h.RefreshBothPanels()
+	}
 	if openInInactive {
 		if entry, ok := active.CurrentEntry(); ok && entry.Name == createdName {
 			if !active.SelectVisibleEntry("..") {

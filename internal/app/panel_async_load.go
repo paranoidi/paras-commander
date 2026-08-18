@@ -111,6 +111,9 @@ func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
 	if p.req.SyncHistoryHead && pan.HistoryIndex == 0 && len(pan.History) > 0 {
 		pan.History[0] = pan.PathString()
 	}
+	if p.req.OnApplied != nil {
+		p.req.OnApplied()
+	}
 	return true
 }
 

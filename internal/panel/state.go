@@ -299,6 +299,14 @@ func (s *State) Load(path string) error {
 // generation counter and could clobber a real navigation with a stale-directory reload — the
 // in-flight load already brings fresh contents for wherever it lands.
 func (s *State) Refresh(viewportRows int) error {
+	return s.RefreshWithHook(viewportRows, nil)
+}
+
+// RefreshWithHook is Refresh, running onApplied once after the reload lands (sync or async).
+// ponytail: like Refresh, this no-ops while a load is already in flight (ListingPending), and in
+// that case onApplied is simply dropped rather than queued — an existing property of Refresh, not
+// new here. Upgrade path: a per-panel pending-hook queue, if this is ever observed to matter.
+func (s *State) RefreshWithHook(viewportRows int, onApplied func()) error {
 	if s.ListingPending {
 		return nil
 	}
@@ -308,24 +316,30 @@ func (s *State) Refresh(viewportRows int) error {
 	if ok {
 		selectedName = entry.Name
 	}
-	return s.load(s.Path, selectedName, viewportRows, priorCursor, asyncLoadOpts{})
+	return s.load(s.Path, selectedName, viewportRows, priorCursor, asyncLoadOpts{onApplied: onApplied})
 }
 
 // RefreshOrNavigateToExistingAncestor reloads the current directory when it still exists.
 // When the current path is missing, it walks up to the nearest existing ancestor and navigates
 // there in one step (highlighting the first missing child name when possible).
 func (s *State) RefreshOrNavigateToExistingAncestor(viewportRows int) error {
+	return s.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, nil)
+}
+
+// RefreshOrNavigateToExistingAncestorWithHook is RefreshOrNavigateToExistingAncestor, running
+// onApplied once after the reload (or ancestor navigation) lands.
+func (s *State) RefreshOrNavigateToExistingAncestorWithHook(viewportRows int, onApplied func()) error {
 	if s.Path.IsZero() || DirectoryExists(s.Path) {
-		return s.Refresh(viewportRows)
+		return s.RefreshWithHook(viewportRows, onApplied)
 	}
 	current := s.Path
 	for {
 		parent := current.Parent()
 		if parent.Equal(current) {
-			return s.Refresh(viewportRows)
+			return s.RefreshWithHook(viewportRows, onApplied)
 		}
 		if DirectoryExists(parent) {
-			return s.NavigateToPath(parent, current.Base(), viewportRows)
+			return s.NavigateToPathWithHook(parent, current.Base(), viewportRows, onApplied)
 		}
 		current = parent
 	}
@@ -698,10 +712,16 @@ func (s *State) NavigateTo(path string, selectedName string, viewportRows int) e
 
 // NavigateToPath loads loc after recording it in navigation history (MRU timeline).
 func (s *State) NavigateToPath(loc pathloc.Path, selectedName string, viewportRows int) error {
+	return s.NavigateToPathWithHook(loc, selectedName, viewportRows, nil)
+}
+
+// NavigateToPathWithHook is NavigateToPath, running onApplied once after the reload lands (sync or async).
+func (s *State) NavigateToPathWithHook(loc pathloc.Path, selectedName string, viewportRows int, onApplied func()) error {
 	target := loc.String()
 	s.recordVisit(target)
 	if err := s.load(loc, selectedName, viewportRows, noIndexCursorFallback, asyncLoadOpts{
 		rollback:        func() { s.revertRecordedVisit(target) },
+		onApplied:       onApplied,
 		syncHistoryHead: true,
 	}); err != nil {
 		return err
@@ -1332,6 +1352,7 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 			IndexFallback:        indexFallback,
 			CenterRecalledCursor: centerRecalled,
 			Rollback:             remote.rollback,
+			OnApplied:            remote.onApplied,
 			SyncHistoryHead:      remote.syncHistoryHead,
 		}) {
 			s.ListingPending = true
@@ -1344,7 +1365,13 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 	}
 	s.GitignoreActive = gitignoreActive
 	s.DotfilesHiddenActive = dotfilesHiddenActive
-	return s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, indexFallback, centerRecalled)
+	if err := s.ApplyListing(listingLoc, backendEntries, selectedName, viewportRows, indexFallback, centerRecalled); err != nil {
+		return err
+	}
+	if remote.onApplied != nil {
+		remote.onApplied()
+	}
+	return nil
 }
 
 func (s *State) fetchBackendEntries(loc pathloc.Path) ([]fsbackend.Entry, pathloc.Path, bool, bool, error) {

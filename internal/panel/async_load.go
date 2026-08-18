@@ -17,6 +17,8 @@ type AsyncLoadRequest struct {
 	CenterRecalledCursor bool
 	// Rollback runs on the main thread when listing fails (e.g. revert history index).
 	Rollback func()
+	// OnApplied runs on the main thread once, after ApplyListing succeeds for this request.
+	OnApplied func()
 	// SyncHistoryHead, when true, sets History[0] to Path after a successful load (NavigateToPath).
 	SyncHistoryHead bool
 }
@@ -28,6 +30,7 @@ type AsyncLoadScheduler func(req AsyncLoadRequest) bool
 // asyncLoadOpts carries per-load rollback/history behavior.
 type asyncLoadOpts struct {
 	rollback        func()
+	onApplied       func()
 	syncHistoryHead bool
 }
 
