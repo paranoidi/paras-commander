@@ -149,6 +149,9 @@ usage.cursor.selected = { fg = "yellow", bg = "bright_blue", bold = true }
 [panel.target]
 frame = { fg = "green" }
 
+[panel.vimotion]
+frame = { fg = "yellow" }
+
 [panel.carousel.inactive]
 row.cursor = { bg = "black" }
 row.cursor.selected = { fg = "yellow", bg = "black", bold = true }

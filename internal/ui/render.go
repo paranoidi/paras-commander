@@ -64,6 +64,9 @@ type Model struct {
 	Secondary      panel.State
 	ActivePanel    int
 	ActiveSubFocus int // SubFocus*; applies to ActivePanel when ViewBrowser.
+	// ViMotionMode gates vi-style hjkl/leader-letter navigation and highlights the
+	// active panel's border (see PanelContext.ViMotionActive).
+	ViMotionMode bool
 	// SplitOrientation selects side-by-side (SplitHorizontal) or stacked (SplitVertical) twin panes.
 	SplitOrientation SplitOrientation
 	// HideInactivePanel gives the active column full width and hides the inactive twin panel.
@@ -568,7 +571,16 @@ type browserPanelSide struct {
 	SelectionSizeOnFileBottom  bool
 	SelectionSizeOnStripBottom bool
 	IsTransferTarget           bool
+	ViMotionActive             bool
 	CursorNameHintPinnedOut    *string
+}
+
+// viMotionActive reports whether panelID's border should render in the vi-motion accent color
+// (see Model.ViMotionMode / PanelContext.ViMotionActive). Shared by the full-render path
+// (drawBrowserView) and the partial-render list-nav path (paintBrowserPanelsInScope) so they
+// can't diverge.
+func viMotionActive(model Model, panelID int) bool {
+	return model.ViMotionMode && model.ActivePanel == panelID
 }
 
 // drawBrowserPanel paints one twin column (file list or file preview) plus its selections strip
@@ -592,6 +604,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: side.SelectionsBottomHint,
 			ShowSelectionSizeOnBottom: side.SelectionSizeOnFileBottom,
 			IsTransferTarget:          side.IsTransferTarget,
+			ViMotionActive:            side.ViMotionActive,
 			CursorNameHintFallbackOut: cursorNameHintFallbackOut(side.FileListFocus, cursorNameHintFallback),
 			CursorNameHintPinnedOut:   side.CursorNameHintPinnedOut,
 		}
@@ -665,6 +678,7 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 		OtherPanelPath: primaryOtherPanelPath, SelectionsBottomHint: primarySelectionsBottomHint,
 		SelectionSizeOnFileBottom: primarySelectionSizeOnFileBottom, SelectionSizeOnStripBottom: leftSelectionSizeOnStripBottom,
 		IsTransferTarget: model.DestinationTargetPrimary, CursorNameHintPinnedOut: model.CursorNameHintPinOutPrimary,
+		ViMotionActive: viMotionActive(model, PrimaryPanel),
 	})
 	drawBrowserPanel(screen, model, styles, syncDriver, quickViewDriver, &cursorNameHintFallback, browserPanelSide{
 		PanelID: SecondaryPanel, ColumnWidth: layout.Secondary.Width, FileRect: secondaryFile, StripRect: rightStrip,
@@ -672,6 +686,7 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 		OtherPanelPath: secondaryOtherPanelPath, SelectionsBottomHint: secondarySelectionsBottomHint,
 		SelectionSizeOnFileBottom: secondarySelectionSizeOnFileBottom, SelectionSizeOnStripBottom: rightSelectionSizeOnStripBottom,
 		IsTransferTarget: model.DestinationTargetSecondary, CursorNameHintPinnedOut: model.CursorNameHintPinOutSecondary,
+		ViMotionActive: viMotionActive(model, SecondaryPanel),
 	})
 	if model.TerminalPanel.Visible && layout.Terminal.Height > 0 {
 		drawTerminalPanel(screen, layout.Terminal, model.TerminalPanel, styles)

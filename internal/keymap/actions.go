@@ -32,6 +32,7 @@ const (
 	ActionTerminalShrink = "terminal.shrink"
 
 	ActionPanelSwitch                 = "panel.switch"
+	ActionPanelViMotionToggle         = "panel.vi-motion-toggle"
 	ActionNavUp                       = "nav.up"
 	ActionNavDown                     = "nav.down"
 	ActionNavPageUp                   = "nav.page-up"
@@ -274,6 +275,7 @@ var KnownActions = map[string]struct{}{
 	ActionTerminalShrink:      {},
 
 	ActionPanelSwitch:                 {},
+	ActionPanelViMotionToggle:         {},
 	ActionNavUp:                       {},
 	ActionNavDown:                     {},
 	ActionNavPageUp:                   {},

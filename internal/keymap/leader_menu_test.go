@@ -21,8 +21,8 @@ func TestDefaultLeaderKeysAllowCasePairs(t *testing.T) {
 	if keys[ActionAppShowHelp] != "?" {
 		t.Fatalf("help = %q, want ?", keys[ActionAppShowHelp])
 	}
-	if keys[ActionJobsOpen] != "j" || keys[ActionMessagesOpen] != "L" || keys[ActionCommandsOpen] != "E" {
-		t.Fatalf("views = jobs %q messages %q commands %q, want j / L / E", keys[ActionJobsOpen], keys[ActionMessagesOpen], keys[ActionCommandsOpen])
+	if keys[ActionJobsOpen] != "J" || keys[ActionMessagesOpen] != "L" || keys[ActionCommandsOpen] != "E" {
+		t.Fatalf("views = jobs %q messages %q commands %q, want J / L / E", keys[ActionJobsOpen], keys[ActionMessagesOpen], keys[ActionCommandsOpen])
 	}
 }
 

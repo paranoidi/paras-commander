@@ -45,7 +45,10 @@ type Theme struct {
 	PanelInactiveFrame tcell.Style
 	// PanelTargetFrame overrides the border for a panel whose current directory is the
 	// resolved Copy/Move/Flatten destination (see App.updateDestinationTargetPanels).
-	PanelTargetFrame     tcell.Style
+	PanelTargetFrame tcell.Style
+	// PanelViMotionFrame overrides the border for the active panel while vi-motion
+	// navigation mode is on (see Model.ViMotionMode).
+	PanelViMotionFrame   tcell.Style
 	PanelActiveSurface   tcell.Style
 	PanelInactiveSurface tcell.Style
 	PanelActiveTitle     tcell.Style
@@ -838,6 +841,7 @@ var requiredStyleKeys = []string{
 	"panel.active.frame",
 	"panel.inactive.frame",
 	"panel.target.frame",
+	"panel.vimotion.frame",
 	"panel.active.surface",
 	"panel.inactive.surface",
 	"panel.active.title",
@@ -1331,6 +1335,7 @@ func parse(data []byte) (Theme, error) {
 		PanelActiveFrame:                    styles["panel.active.frame"],
 		PanelInactiveFrame:                  styles["panel.inactive.frame"],
 		PanelTargetFrame:                    styles["panel.target.frame"],
+		PanelViMotionFrame:                  styles["panel.vimotion.frame"],
 		PanelActiveSurface:                  styles["panel.active.surface"],
 		PanelInactiveSurface:                styles["panel.inactive.surface"],
 		PanelActiveTitle:                    styles["panel.active.title"],

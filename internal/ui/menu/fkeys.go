@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 )
 
 // FunctionKey describes a labeled footer key with an optional hint.
@@ -16,6 +17,8 @@ type FunctionKey struct {
 	// no-ops once the selected job has reached a terminal state; FunctionKeysJobsView
 	// hides them in that case.
 	RequiresActiveJob bool
+	// ActionID is the keymap action bound to this key, used to resolve its vi-motion leader letter.
+	ActionID string
 }
 
 // FullHint returns the combined footer hint text for width layout.
@@ -35,16 +38,16 @@ var FunctionKeyLeaderMenuToggleChords = FunctionKey{Key: tcell.KeyF3, KeyLabel: 
 // FunctionKeys is the single source of truth for all F-keys shown in the footer
 // and used to route quick-filter function-key presses to menu items.
 var FunctionKeys = []FunctionKey{
-	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
-	{Key: tcell.KeyF2, KeyLabel: "F2", HintShiftPrefix: "Edit", Hint: "UserCmd"},
-	{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", Hint: "View"},
-	{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
-	{Key: tcell.KeyF5, KeyLabel: "F5", HintShiftPrefix: "Duplicate", Hint: "Copy"},
-	{Key: tcell.KeyF6, KeyLabel: "F6", HintShiftPrefix: "Ren", Hint: "Mov"},
-	{Key: tcell.KeyF7, KeyLabel: "F7", HintShiftPrefix: "Open", Hint: "Mkdir"},
-	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete"},
-	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
-	{Key: tcell.KeyF10, KeyLabel: "F10", HintShiftPrefix: "Now", Hint: "Quit"},
+	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
+	{Key: tcell.KeyF2, KeyLabel: "F2", HintShiftPrefix: "Edit", Hint: "UserCmd", ActionID: keymap.ActionAppUserMenu},
+	{Key: tcell.KeyF3, KeyLabel: "F3", HintShiftPrefix: "Quick", Hint: "View", ActionID: keymap.ActionFileView},
+	{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit", ActionID: keymap.ActionFileEdit},
+	{Key: tcell.KeyF5, KeyLabel: "F5", HintShiftPrefix: "Duplicate", Hint: "Copy", ActionID: keymap.ActionCopy},
+	{Key: tcell.KeyF6, KeyLabel: "F6", HintShiftPrefix: "Ren", Hint: "Mov", ActionID: keymap.ActionMove},
+	{Key: tcell.KeyF7, KeyLabel: "F7", HintShiftPrefix: "Open", Hint: "Mkdir", ActionID: keymap.ActionFileMkdir},
+	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Delete", ActionID: keymap.ActionFileDelete},
+	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
+	{Key: tcell.KeyF10, KeyLabel: "F10", HintShiftPrefix: "Now", Hint: "Quit", ActionID: keymap.ActionAppQuit},
 }
 
 // FunctionKeyLabelByKey returns the F-key label for a tcell.Key, e.g. tcell.KeyF5 → "F5".

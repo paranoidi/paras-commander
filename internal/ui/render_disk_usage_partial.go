@@ -81,6 +81,8 @@ func paintBrowserPanelsInScope(
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: primarySelectionsBottomHint,
 			ShowSelectionSizeOnBottom: primarySelectionSizeOnFileBottom,
+			IsTransferTarget:          model.DestinationTargetPrimary,
+			ViMotionActive:            viMotionActive(model, PrimaryPanel),
 			CursorNameHintFallbackOut: cursorNameHintFallbackOut(primaryFileListFocus, &cursorNameHintFallback),
 			CursorNameHintPinnedOut:   model.CursorNameHintPinOutPrimary,
 		}
@@ -118,6 +120,8 @@ func paintBrowserPanelsInScope(
 			HideInactivePanel: model.HideInactivePanel, SyncDriverPanelID: syncDriver, QuickViewDriverPanelID: quickViewDriver,
 			SplitOrientation: model.SplitOrientation, SelectionsBottomHint: secondarySelectionsBottomHint,
 			ShowSelectionSizeOnBottom: secondarySelectionSizeOnFileBottom,
+			IsTransferTarget:          model.DestinationTargetSecondary,
+			ViMotionActive:            viMotionActive(model, SecondaryPanel),
 			CursorNameHintFallbackOut: cursorNameHintFallbackOut(secondaryFileListFocus, &cursorNameHintFallback),
 			CursorNameHintPinnedOut:   model.CursorNameHintPinOutSecondary,
 		}

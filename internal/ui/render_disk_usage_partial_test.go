@@ -144,6 +144,116 @@ func TestPaintBrowserListNavPanelOnlySkipsOtherColumn(t *testing.T) {
 	}
 }
 
+func TestPaintBrowserListNavPanelOnlyViMotionBorderColor(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	const w, h = 80, 24
+	screen.SetSize(w, h)
+
+	model := Model{
+		ViewMode:       ViewBrowser,
+		ActivePanel:    PrimaryPanel,
+		ActiveSubFocus: SubFocusFileList,
+		ViMotionMode:   true,
+		Primary: panel.State{
+			Path: pathloc.MustParse("/local/home"),
+			Entries: []localfs.Entry{
+				{Name: "alpha", Path: "/local/home/alpha", Type: localfs.EntryDirectory},
+				{Name: "beta", Path: "/local/home/beta", Type: localfs.EntryDirectory},
+			},
+			Cursor: 1,
+		},
+		Secondary: panel.State{
+			Path: pathloc.MustParse("/nas/share"),
+			Entries: []localfs.Entry{
+				{Name: "slowdir", Path: "/nas/share/slowdir", Type: localfs.EntryDirectory},
+			},
+		},
+	}
+	styles := theme.Default()
+	layout := CalculateLayoutWithOrientation(w, h, true, PanelPaneSplit{
+		ActivePanel:     PrimaryPanel,
+		ActivePercent:   50,
+		InactivePercent: 50,
+	}, SplitHorizontal, 0, 0)
+
+	Render(screen, model, styles)
+	model.Primary.Cursor = 0
+	if !PaintBrowserListNavPanelOnly(screen, layout, model, styles, PrimaryPanel) {
+		t.Fatal("expected list-nav partial paint to succeed")
+	}
+
+	wantFG, _, _ := styles.PanelViMotionFrame.Decompose()
+	notWantFG, _, _ := styles.PanelActiveFrame.Decompose()
+	_, priStyle, _ := screen.Get(layout.Primary.X, layout.Primary.Y)
+	priFG, _, _ := priStyle.Decompose()
+	if priFG != wantFG {
+		t.Fatalf("active panel border fg = %v, want vi-motion frame fg %v", priFG, wantFG)
+	}
+	if priFG == notWantFG {
+		t.Fatal("active panel border should not use the plain active frame color while vi-motion mode is on")
+	}
+}
+
+func TestPaintBrowserListNavPanelOnlyTransferTargetBorderColor(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	const w, h = 80, 24
+	screen.SetSize(w, h)
+
+	model := Model{
+		ViewMode:                 ViewBrowser,
+		ActivePanel:              PrimaryPanel,
+		ActiveSubFocus:           SubFocusFileList,
+		DestinationTargetPrimary: true,
+		Primary: panel.State{
+			Path: pathloc.MustParse("/local/home"),
+			Entries: []localfs.Entry{
+				{Name: "alpha", Path: "/local/home/alpha", Type: localfs.EntryDirectory},
+				{Name: "beta", Path: "/local/home/beta", Type: localfs.EntryDirectory},
+			},
+			Cursor: 1,
+		},
+		Secondary: panel.State{
+			Path: pathloc.MustParse("/nas/share"),
+			Entries: []localfs.Entry{
+				{Name: "slowdir", Path: "/nas/share/slowdir", Type: localfs.EntryDirectory},
+			},
+		},
+	}
+	styles := theme.Default()
+	layout := CalculateLayoutWithOrientation(w, h, true, PanelPaneSplit{
+		ActivePanel:     PrimaryPanel,
+		ActivePercent:   50,
+		InactivePercent: 50,
+	}, SplitHorizontal, 0, 0)
+
+	Render(screen, model, styles)
+	model.Primary.Cursor = 0
+	if !PaintBrowserListNavPanelOnly(screen, layout, model, styles, PrimaryPanel) {
+		t.Fatal("expected list-nav partial paint to succeed")
+	}
+
+	wantFG, _, _ := styles.PanelTargetFrame.Decompose()
+	notWantFG, _, _ := styles.PanelActiveFrame.Decompose()
+	_, priStyle, _ := screen.Get(layout.Primary.X, layout.Primary.Y)
+	priFG, _, _ := priStyle.Decompose()
+	if priFG != wantFG {
+		t.Fatalf("active panel border fg = %v, want transfer-target frame fg %v", priFG, wantFG)
+	}
+	if priFG == notWantFG {
+		t.Fatal("active panel border should not use the plain active frame color while it is the transfer target")
+	}
+}
+
 func TestPaintDiskUsageBrowserPanelsOnlyRejectsNonBrowser(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")

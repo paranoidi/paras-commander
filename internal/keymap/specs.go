@@ -100,6 +100,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"F2"},
 			PreferredKey: "F2",
 			Keywords:     []string{"menu.toml", "custom commands"},
+			LeaderKey:    "s",
 		},
 		{
 			ID:           ActionAppLeaderMenu,
@@ -254,6 +255,15 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"shift-tab", "single panel", "hide panel"},
 		},
 		{
+			ID:          ActionPanelViMotionToggle,
+			Views:       HelpBrowser,
+			Title:       "Toggle vi-motion mode",
+			Section:     "Navigation",
+			DefaultKeys: []string{"esc"},
+			Keywords:    []string{"vim", "vi", "hjkl", "modal", "normal mode"},
+			LeaderKey:   "z",
+		},
+		{
 			ID:          ActionNavUp,
 			Views:       helpAllButPreview,
 			Title:       "Cursor up",
@@ -352,7 +362,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"M-h", "C-h"},
 			PreferredKey: "M-h",
 			Keywords:     []string{"history", "picker", "navigate", "alt-h"},
-			LeaderKey:    "h",
+			LeaderKey:    "H",
 		},
 		{
 			ID:           ActionPanelGitFilterMenu,
@@ -1213,7 +1223,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"C-l"},
 			PreferredKey: "C-l",
 			Keywords:     []string{"flatten", "hoist", "directory"},
-			LeaderKey:    "l",
+			LeaderKey:    "t",
 		},
 
 		// ── Commands ──
@@ -1303,7 +1313,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"M-j"},
 			PreferredKey: "M-j",
 			Keywords:     []string{"queue", "background"},
-			LeaderKey:    "j",
+			LeaderKey:    "J",
 		},
 		{
 			ID:           ActionJobsAnswerBlocker,

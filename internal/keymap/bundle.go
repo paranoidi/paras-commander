@@ -28,3 +28,17 @@ type Bundle struct {
 	// PreviewMenuKey maps action ID → single-letter `:` fullscreen-preview-menu key (merged defaults + user).
 	PreviewMenuKey map[string]string
 }
+
+// ActionForLeaderKey returns the action ID bound to the Esc function-menu leader key r,
+// if any (reverse lookup over LeaderKey, which maps action ID → letter).
+func (b *Bundle) ActionForLeaderKey(r rune) (string, bool) {
+	if b == nil {
+		return "", false
+	}
+	for actionID, letter := range b.LeaderKey {
+		if letter == string(r) {
+			return actionID, true
+		}
+	}
+	return "", false
+}

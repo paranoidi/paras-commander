@@ -208,7 +208,25 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		!a.inQuickFilterUI() {
 		return menu.FunctionKeysSelectionsStripView(a.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))
 	}
+	if a.model.ViMotionMode {
+		return viMotionFooterKeys(menu.FunctionKeys, a.keys)
+	}
 	return menu.FunctionKeys
+}
+
+// viMotionFooterKeys swaps each entry's KeyLabel for its vi-motion leader letter (when the
+// bound action has one) and drops HintShiftPrefix — Shift-alternative hints don't apply once
+// bare letters dispatch actions directly in vi-motion mode.
+func viMotionFooterKeys(fkeys []menu.FunctionKey, bundle *keymap.Bundle) []menu.FunctionKey {
+	out := make([]menu.FunctionKey, len(fkeys))
+	for i, fk := range fkeys {
+		fk.HintShiftPrefix = ""
+		if letter, ok := bundle.LeaderKey[fk.ActionID]; ok {
+			fk.KeyLabel = letter
+		}
+		out[i] = fk
+	}
+	return out
 }
 
 // pathPickerMetaFooterKeys builds footer hints for the PathPicker / MetaDialog overlay branch.
@@ -651,8 +669,35 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 				return false, true
 			}
 		}
-		// Plain printable keys start the quick filter.
-		if a.shouldStartFilter(event) {
+		// vi-motion mode: hjkl act like the arrow-key nav actions, and every leader-menu
+		// letter fires its action directly without opening the ":" menu first.
+		viMotionNav := false
+		if a.model.ViMotionMode && keymap.IsPlainPrintableRune(event) {
+			switch event.Rune() {
+			case 'h':
+				resolvedAction = keymap.ActionNavParent
+				viMotionNav = true
+			case 'j':
+				resolvedAction = keymap.ActionNavDown
+				viMotionNav = true
+			case 'k':
+				resolvedAction = keymap.ActionNavUp
+				viMotionNav = true
+			case 'l':
+				resolvedAction = keymap.ActionNavOpen
+				viMotionNav = true
+			default:
+				if actionID, ok := a.keys.ActionForLeaderKey(event.Rune()); ok {
+					quit := a.dispatchActionLikeKeyboardShortcut(actionID)
+					a.render()
+					return quit, true
+				}
+			}
+		}
+		// Plain printable keys start the quick filter. Skipped when vi-motion mode just
+		// remapped this rune to a nav action above (h/j/k/l), matching a real arrow-key
+		// press, which shouldStartFilter would never intercept either.
+		if !viMotionNav && a.shouldStartFilter(event) {
 			a.handleFilterKey(event)
 			a.render()
 			return false, true
@@ -722,6 +767,12 @@ func (a *App) handleFilterLeaderKey(event *tcell.EventKey, resolvedAction string
 func (a *App) quickFilterRetainsKey(event *tcell.EventKey, resolvedAction string) bool {
 	switch event.Key() {
 	case tcell.KeyUp, tcell.KeyDown, tcell.KeyInsert, tcell.KeyHome, tcell.KeyEnd:
+		return true
+	case tcell.KeyEsc:
+		// Esc always means "cancel the quick filter" here, even though it's globally
+		// bound to panel.vi-motion-toggle — without this, handleFilterLeaderKey's
+		// "bound actions dismiss the filter and dispatch normally" path would also
+		// flip vi-motion mode as a side effect of just cancelling a filter.
 		return true
 	}
 	if keymap.IsPlainPrintableRune(event) {
@@ -998,6 +1049,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openImageCapabilityDialog()
 	case keymap.ActionUICalibrateDebounce:
 		a.openDebounceCalibrateDialog()
+	case keymap.ActionPanelViMotionToggle:
+		a.model.ViMotionMode = !a.model.ViMotionMode
 	case keymap.ActionMenuFileChattr:
 		a.setUnsupportedMessage("Chattr")
 	case keymap.ActionDevShowInfo:

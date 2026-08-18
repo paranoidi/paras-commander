@@ -119,6 +119,10 @@ type PanelContext struct {
 	// IsTransferTarget marks this panel as the resolved Copy/Move/Flatten destination
 	// (its border is painted with theme.PanelTargetFrame instead of the normal frame).
 	IsTransferTarget bool
+	// ViMotionActive marks this panel as the active panel while vi-motion mode is on
+	// (its border is painted with theme.PanelViMotionFrame instead of the normal frame,
+	// unless IsTransferTarget also applies — transfer-target takes priority).
+	ViMotionActive bool
 	// CursorNameHintFallbackOut receives the full cursor name when it does not fit on the
 	// panel bottom border and should be painted above the footer instead.
 	CursorNameHintFallbackOut *CursorNameHintFallback
@@ -158,6 +162,8 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	borderStyle := chrome.Frame
 	if ctx.IsTransferTarget {
 		borderStyle = panelStyle.Styles.PanelTargetFrame
+	} else if ctx.ViMotionActive {
+		borderStyle = panelStyle.Styles.PanelViMotionFrame
 	}
 	titleStyle := chrome.Title
 	headerStyle := chrome.Header
