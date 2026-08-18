@@ -571,7 +571,11 @@ func (h *Handler) populateQuickViewDirOverlay(ov *panel.State, driver, follower 
 }
 
 // initQuickViewDirOverlayFromFollower prepares QuickViewDirOverlay for a directory preview load.
-// The real inactive panel path, cursor, and selection are not modified.
+// The real inactive panel path, cursor, and selection are not modified. Async listing/git-status
+// requests the overlay dispatches are scheduled and applied through the same per-panel-ID
+// machinery as the two real panels, via the synthetic ui.QuickViewOverlayPanel ID — followerID
+// (the real inactive panel this overlay stands in for) is only used for viewport-row sizing,
+// which must keep following the real follower panel's layout slot, not the overlay's.
 func (h *Handler) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, follower *panel.State, followerID int) {
 	*ov = panel.State{
 		Sort:                       driver.Sort,
@@ -583,12 +587,12 @@ func (h *Handler) initQuickViewDirOverlayFromFollower(ov *panel.State, driver, f
 		Gitignore:                  follower.Gitignore,
 		DiskSorter:                 follower.DiskSorter,
 		SuppressHeavyPathProbes:    follower.SuppressHeavyPathProbes,
-		ScheduleAsyncLoad:          h.host.QuickViewAsyncLoadScheduler(),
+		ScheduleAsyncLoad:          h.host.AsyncLoadScheduler(ui.QuickViewOverlayPanel),
 		IdleDiskTotalsSort:         follower.IdleDiskTotalsSort,
 		DiskUsageIdleSortEligible:  follower.DiskUsageIdleSortEligible,
 		DiskUsageIdleSortActivated: follower.DiskUsageIdleSortActivated,
 		HistoryCursorByPath:        panel.MergeHistoryCursorByPath(follower.HistoryCursorByPath, driver.HistoryCursorByPath),
-		ScheduleGitStatus:          h.host.QuickViewGitStatusScheduler(),
+		ScheduleGitStatus:          h.host.GitStatusScheduler(ui.QuickViewOverlayPanel),
 	}
 	ov.FileListViewportRows = func() int { return h.host.PanelViewportRows(followerID) }
 }

@@ -94,8 +94,8 @@ func (f *fakeHost) ArmPanelSyncFollowNavCoalesceAfterListNav()              {}
 func (f *fakeHost) ClearPanelSyncFollowNavCoalesce()                        {}
 func (f *fakeHost) ArmCursorNameHintNavCoalesceAfterListNav()               {}
 func (f *fakeHost) PathVolumeContendsWithActiveJob(string) bool             { return false }
-func (f *fakeHost) QuickViewGitStatusScheduler() panel.GitStatusScheduler   { return nil }
-func (f *fakeHost) QuickViewAsyncLoadScheduler() panel.AsyncLoadScheduler   { return nil }
+func (f *fakeHost) GitStatusScheduler(int) panel.GitStatusScheduler         { return nil }
+func (f *fakeHost) AsyncLoadScheduler(int) panel.AsyncLoadScheduler         { return nil }
 func (f *fakeHost) EffectivePaneSplitOrientation() ui.SplitOrientation      { return ui.SplitHorizontal }
 func (f *fakeHost) PanelPaneSplit(int, bool) ui.PanelPaneSplit {
 	return ui.PanelPaneSplit{ActivePanel: f.model.ActivePanel, ActivePercent: 50, InactivePercent: 50}

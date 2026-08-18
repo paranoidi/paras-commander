@@ -127,10 +127,14 @@ func (a *App) activePanel() *panel.State {
 }
 
 func (a *App) panelByID(panelID int) *panel.State {
-	if panelID == ui.PrimaryPanel {
+	switch panelID {
+	case ui.PrimaryPanel:
 		return &a.model.Primary
+	case ui.QuickViewOverlayPanel:
+		return &a.model.QuickViewDirOverlay
+	default:
+		return &a.model.Secondary
 	}
-	return &a.model.Secondary
 }
 
 func (a *App) activeViewportRows() int {

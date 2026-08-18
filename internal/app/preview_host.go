@@ -59,12 +59,12 @@ func (h previewHost) PathVolumeContendsWithActiveJob(path string) bool {
 	return h.app.pathVolumeContendsWithActiveJob(path)
 }
 
-func (h previewHost) QuickViewGitStatusScheduler() panel.GitStatusScheduler {
-	return h.app.quickViewGitStatusScheduler()
+func (h previewHost) GitStatusScheduler(panelID int) panel.GitStatusScheduler {
+	return h.app.gitStatusScheduler(panelID)
 }
 
-func (h previewHost) QuickViewAsyncLoadScheduler() panel.AsyncLoadScheduler {
-	return h.app.quickViewAsyncLoadScheduler()
+func (h previewHost) AsyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
+	return h.app.asyncLoadScheduler(panelID)
 }
 
 func (h previewHost) EffectivePaneSplitOrientation() ui.SplitOrientation {

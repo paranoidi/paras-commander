@@ -21,6 +21,14 @@ import (
 const (
 	PrimaryPanel = iota
 	SecondaryPanel
+	// QuickViewOverlayPanel is a synthetic panel ID for QuickViewDirOverlay, letting the async
+	// directory-load and git-status schedulers (internal/app) resolve it through the same
+	// panelByID path as the two real panels instead of forking a quickview-only copy of each
+	// scheduler/gen-counter/payload/apply quartet. It never appears as an ActivePanel or
+	// inactivePanelID value and is not one of the two rendered/navigable panels — callers that
+	// loop over "the two panels" or derive "the other panel" must keep using
+	// PrimaryPanel/SecondaryPanel explicitly, not a range over this const block.
+	QuickViewOverlayPanel
 )
 
 func dialogRenderContext(model Model, styles theme.Theme) dialog.DialogRenderContext {

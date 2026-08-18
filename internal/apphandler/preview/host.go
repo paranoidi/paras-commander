@@ -33,8 +33,12 @@ type Host interface {
 	ClearPanelSyncFollowNavCoalesce()
 	ArmCursorNameHintNavCoalesceAfterListNav()
 	PathVolumeContendsWithActiveJob(path string) bool
-	QuickViewGitStatusScheduler() panel.GitStatusScheduler
-	QuickViewAsyncLoadScheduler() panel.AsyncLoadScheduler
+	// GitStatusScheduler and AsyncLoadScheduler return the shared per-panel-ID schedulers
+	// (internal/app), for panelID one of ui.PrimaryPanel, ui.SecondaryPanel, or
+	// ui.QuickViewOverlayPanel — the latter used to populate QuickViewDirOverlay through the same
+	// scheduling/gen-counter/apply machinery as a real panel instead of a quickview-only fork.
+	GitStatusScheduler(panelID int) panel.GitStatusScheduler
+	AsyncLoadScheduler(panelID int) panel.AsyncLoadScheduler
 	EffectivePaneSplitOrientation() ui.SplitOrientation
 	PanelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit
 	LayoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout

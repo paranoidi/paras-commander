@@ -194,10 +194,9 @@ type App struct {
 	image          imageOverlay
 	placeholderImg placeholderImage
 
-	panelAsyncLoadGen     [2]atomic.Uint64
-	gitStatusLoadGen      [2]atomic.Uint64
-	quickViewGitLoadGen   atomic.Uint64
-	quickViewAsyncLoadGen atomic.Uint64
+	// Indexed by panel ID (ui.PrimaryPanel, ui.SecondaryPanel, ui.QuickViewOverlayPanel).
+	panelAsyncLoadGen [3]atomic.Uint64
+	gitStatusLoadGen  [3]atomic.Uint64
 
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
@@ -951,16 +950,6 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		}
 	case gitStatusPayload:
 		if a.applyGitStatusLoad(d) {
-			a.render()
-			out.didRender = true
-		}
-	case quickViewGitStatusPayload:
-		if a.applyQuickViewGitStatusLoad(d) {
-			a.render()
-			out.didRender = true
-		}
-	case quickViewAsyncLoadPayload:
-		if a.applyQuickViewAsyncLoad(d) {
 			a.render()
 			out.didRender = true
 		}
