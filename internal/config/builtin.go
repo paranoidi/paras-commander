@@ -324,6 +324,13 @@ const (
 	// PreviewPrefetchWorkersMin / Max clamp [preview].prefetch_workers in Validate.
 	PreviewPrefetchWorkersMin = 1
 	PreviewPrefetchWorkersMax = 32
+	// DefaultPreviewPrefetchWindow bounds background prefetch to entries within this many
+	// positions of the cursor in each direction. Keeps prefetch from queuing an entire large
+	// directory, which would let far-away files evict already-warm near-cursor cache entries.
+	DefaultPreviewPrefetchWindow = 5
+	// PreviewPrefetchWindowMin / Max clamp [preview].prefetch_window in Validate.
+	PreviewPrefetchWindowMin = 1
+	PreviewPrefetchWindowMax = 50
 	// DefaultPreviewImageMaxEdgePx caps the longest edge of decoded stills before the final
 	// cell-budget fit, for protocols/contexts that don't need the tmux-sixel payload-safety
 	// clamp below. Default 0 = unrestricted (decode at native resolution, still bounded by

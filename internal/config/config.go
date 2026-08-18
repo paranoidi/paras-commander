@@ -301,6 +301,10 @@ type PreviewConfig struct {
 	QuickViewDisableOnInactiveNav bool `toml:"quick_view_disable_on_inactive_nav"`
 	// PrefetchWorkers is the worker-pool size for background prefetch (default 4).
 	PrefetchWorkers int `toml:"prefetch_workers"`
+	// PrefetchWindow bounds background prefetch to entries within this many positions of the
+	// cursor in each direction (default 5, clamped 1-50). Farther entries are never queued, so
+	// they can't evict already-warm near-cursor cache entries.
+	PrefetchWindow int `toml:"prefetch_window"`
 	// ImageMaxEdgePx caps the longest edge of decoded stills, for protocols/contexts that
 	// don't need the tmux-sixel payload-safety clamp below (default 0 = unrestricted).
 	// Applied even when Prefetch is false.
@@ -634,6 +638,7 @@ func Default() Config {
 			PrefetchAlways:                DefaultPreviewPrefetchAlways,
 			QuickViewDisableOnInactiveNav: DefaultPreviewQuickViewDisableOnInactiveNav,
 			PrefetchWorkers:               DefaultPreviewPrefetchWorkers,
+			PrefetchWindow:                DefaultPreviewPrefetchWindow,
 			ImageMaxEdgePx:                DefaultPreviewImageMaxEdgePx,
 			TmuxSixelMaxEdgePx:            DefaultPreviewTmuxSixelMaxEdgePx,
 			VideoThumbMaxEdgePx:           DefaultPreviewVideoThumbMaxEdgePx,
@@ -1257,6 +1262,9 @@ func (c *Config) validatePreview(builtin *Config) {
 	}
 	if c.Preview.PrefetchWorkers < PreviewPrefetchWorkersMin || c.Preview.PrefetchWorkers > PreviewPrefetchWorkersMax {
 		c.Preview.PrefetchWorkers = builtin.Preview.PrefetchWorkers
+	}
+	if c.Preview.PrefetchWindow < PreviewPrefetchWindowMin || c.Preview.PrefetchWindow > PreviewPrefetchWindowMax {
+		c.Preview.PrefetchWindow = builtin.Preview.PrefetchWindow
 	}
 	if c.Preview.ImageMaxEdgePx != 0 && c.Preview.ImageMaxEdgePx < PreviewImageMaxEdgePxMin {
 		c.Preview.ImageMaxEdgePx = PreviewImageMaxEdgePxMin

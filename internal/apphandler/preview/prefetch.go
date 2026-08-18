@@ -1,6 +1,7 @@
 package preview
 
 import (
+	"cmp"
 	"os"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -84,22 +85,32 @@ func (h *Handler) SchedulePrefetchFromActivePanel() {
 		return
 	}
 	if !h.prefetchSurfaceActive() {
-		h.prefetch.Schedule(nil)
+		h.prefetch.Schedule(nil, 0)
 		return
 	}
 	p := h.host.ActivePanel()
 	if p == nil {
 		return
 	}
-	entries := make([]localfs.Entry, 0, p.VisibleEntryCount())
-	for i := 0; i < p.VisibleEntryCount(); i++ {
+	dir := 0
+	if p.Path == h.prefetchLastPath {
+		dir = cmp.Compare(p.Cursor, h.prefetchLastCursor)
+	}
+	h.prefetchLastPath = p.Path
+	h.prefetchLastCursor = p.Cursor
+
+	window := h.host.Config().Preview.PrefetchWindow
+	start := max(p.Cursor-window, 0)
+	end := min(p.Cursor+window+1, p.VisibleEntryCount())
+	entries := make([]localfs.Entry, 0, end-start)
+	for i := start; i < end; i++ {
 		ent, _, ok := p.VisibleEntry(i)
 		if !ok {
 			continue
 		}
 		entries = append(entries, ent)
 	}
-	h.prefetch.ScheduleFromListing(entries, p.Cursor)
+	h.prefetch.ScheduleFromListing(entries, p.Cursor-start, window, dir)
 }
 
 // prefetchSurfaceActive reports whether background prefetch should run for the current UI.

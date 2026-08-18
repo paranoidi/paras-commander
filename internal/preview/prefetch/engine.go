@@ -23,11 +23,11 @@ const (
 
 // Item is one candidate file near the caret.
 type Item struct {
-	Path     string
-	Kind     Kind
-	Distance int
-	Mtime    int64
-	Size     int64
+	Path   string
+	Kind   Kind
+	Offset int // signed distance from the caret: negative = before, positive = after
+	Mtime  int64
+	Size   int64
 }
 
 // Config configures the prefetch engine.
@@ -114,9 +114,11 @@ func (e *Engine) Close() {
 	e.wg.Wait()
 }
 
-// Schedule replaces the pending queue with items sorted by Distance (nearest first).
+// Schedule replaces the pending queue with items sorted nearest-first, prioritizing dir
+// (positive = caret moving toward later entries, negative = earlier, 0 = no bias) over raw
+// distance: all items in the direction of travel are queued before any item behind it.
 // Already-warm and non-media entries are dropped.
-func (e *Engine) Schedule(items []Item) {
+func (e *Engine) Schedule(items []Item, dir int) {
 	filtered := make([]Item, 0, len(items))
 	for _, it := range items {
 		if it.Path == "" {
@@ -137,7 +139,11 @@ func (e *Engine) Schedule(items []Item) {
 		filtered = append(filtered, it)
 	}
 	sort.SliceStable(filtered, func(i, j int) bool {
-		return filtered[i].Distance < filtered[j].Distance
+		gi, gj := priorityGroup(filtered[i].Offset, dir), priorityGroup(filtered[j].Offset, dir)
+		if gi != gj {
+			return gi < gj
+		}
+		return abs(filtered[i].Offset) < abs(filtered[j].Offset)
 	})
 	e.mu.Lock()
 	e.pending = filtered
@@ -145,10 +151,33 @@ func (e *Engine) Schedule(items []Item) {
 	e.mu.Unlock()
 }
 
-// ScheduleFromListing builds Items from a panel listing around cursorIdx.
-func (e *Engine) ScheduleFromListing(entries []localfs.Entry, cursorIdx int) {
+// priorityGroup buckets an item so Schedule's sort queues the caret entry first, then every
+// item ahead in the direction of travel, then everything behind — each bucket nearest-first.
+func priorityGroup(offset, dir int) int {
+	switch {
+	case offset == 0:
+		return 0
+	case dir == 0 || (dir > 0) == (offset > 0):
+		return 1
+	default:
+		return 2
+	}
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+// ScheduleFromListing builds Items from a panel listing around cursorIdx, biased toward dir.
+// Entries more than window positions from cursorIdx are dropped, even if the caller didn't
+// pre-slice entries to that range — the window invariant is enforced here so no caller can
+// reintroduce whole-directory prefetch by passing an unbounded listing.
+func (e *Engine) ScheduleFromListing(entries []localfs.Entry, cursorIdx, window, dir int) {
 	if len(entries) == 0 {
-		e.Schedule(nil)
+		e.Schedule(nil, dir)
 		return
 	}
 	if cursorIdx < 0 {
@@ -159,6 +188,10 @@ func (e *Engine) ScheduleFromListing(entries []localfs.Entry, cursorIdx int) {
 	}
 	items := make([]Item, 0, len(entries))
 	for i, ent := range entries {
+		offset := i - cursorIdx
+		if abs(offset) > window {
+			continue
+		}
 		if ent.Type == localfs.EntryDirectory {
 			continue
 		}
@@ -181,19 +214,15 @@ func (e *Engine) ScheduleFromListing(entries []localfs.Entry, cursorIdx int) {
 				size = fi.Size()
 			}
 		}
-		d := i - cursorIdx
-		if d < 0 {
-			d = -d
-		}
 		items = append(items, Item{
-			Path:     path,
-			Kind:     kind,
-			Distance: d,
-			Mtime:    mtime,
-			Size:     size,
+			Path:   path,
+			Kind:   kind,
+			Offset: offset,
+			Mtime:  mtime,
+			Size:   size,
 		})
 	}
-	e.Schedule(items)
+	e.Schedule(items, dir)
 }
 
 func (e *Engine) takeNext() (Item, bool) {

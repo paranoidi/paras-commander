@@ -11,6 +11,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/preview/prefetch"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -94,6 +95,11 @@ type Handler struct {
 
 	// prefetch is the optional background image/video warm cache (nil when [preview].prefetch is off).
 	prefetch *prefetch.Engine
+	// prefetchLastCursor / prefetchLastPath record the previous SchedulePrefetchFromActivePanel
+	// call's position, so the next call can tell which direction the caret is moving and bias
+	// the prefetch queue that way.
+	prefetchLastCursor int
+	prefetchLastPath   pathloc.Path
 }
 
 // New constructs a Handler.
