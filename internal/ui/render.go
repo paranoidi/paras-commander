@@ -89,9 +89,13 @@ type Model struct {
 	JobPathMarks []JobPathMark
 	// PreviewPrefetchLoading lists absolute paths currently being decoded/thumbnailed by prefetch.
 	PreviewPrefetchLoading map[string]struct{}
-	JobActivity            map[string][]string
-	CommandsView           CommandsViewState
-	CommandsList           []CommandRunEntry
+	// PreviewPrefetchWarm lists absolute paths whose prefetch cache is currently warm, within the
+	// same bounded window SchedulePrefetchFromActivePanel schedules — used only to tint image/video
+	// file icons bright magenta (warm) vs standard magenta (cold) as a prefetch debugging aid.
+	PreviewPrefetchWarm map[string]struct{}
+	JobActivity         map[string][]string
+	CommandsView        CommandsViewState
+	CommandsList        []CommandRunEntry
 	// CommandsDisplay is a mutex-backed snapshot refreshed in App.render for ViewCommands (avoids races with worker updates).
 	CommandsDisplay     []CommandRunEntry
 	MessagesView        MessagesViewState
@@ -601,7 +605,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 				ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(side.PanelID),
-				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, MetaColumns: model.MetaResults[side.PanelID],
+				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, MetaColumns: model.MetaResults[side.PanelID],
 				ShrunkenShowsNameOnly: model.ShrunkenShowsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
 				CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
 			})

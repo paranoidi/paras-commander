@@ -154,6 +154,10 @@ type Theme struct {
 	PanelIconFolderScanning tcell.Style
 	// PanelIconFolderExcluded styles directory rows skipped by disk-usage traversal (devicons).
 	PanelIconFolderExcluded tcell.Style
+	// PanelIconPreviewWarm styles image/video file icons whose prefetch cache is warm (a debug tint).
+	PanelIconPreviewWarm tcell.Style
+	// PanelIconPreviewCold styles image/video file icons whose prefetch cache is not yet warm.
+	PanelIconPreviewCold tcell.Style
 	// MenuSpinner styles the menu-bar activity spinner (braille dot spinner).
 	MenuSpinner tcell.Style
 	// MenuProgress* styles segmented progress in the menu-bar jobs strip.
@@ -899,6 +903,8 @@ var requiredStyleKeys = []string{
 	"panel.blocked.text",
 	"panel.icon.folder.scanning",
 	"panel.icon.folder.excluded",
+	"panel.icon.preview.warm",
+	"panel.icon.preview.cold",
 	"menu.spinner",
 	"panel.usage.normal",
 	"panel.usage.selected",
@@ -1389,6 +1395,8 @@ func parse(data []byte) (Theme, error) {
 
 		PanelIconFolderScanning:          styles["panel.icon.folder.scanning"],
 		PanelIconFolderExcluded:          styles["panel.icon.folder.excluded"],
+		PanelIconPreviewWarm:             styles["panel.icon.preview.warm"],
+		PanelIconPreviewCold:             styles["panel.icon.preview.cold"],
 		MenuSpinner:                      styles["menu.spinner"],
 		MenuProgressDone:                 styles["menu.progress.done"],
 		MenuProgressRemaining:            styles["menu.progress.remaining"],

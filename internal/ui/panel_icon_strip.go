@@ -23,6 +23,10 @@ type PanelIconStripContext struct {
 	// PreviewLoading replaces the file icon with the prefetch-loading glyph (magenta like
 	// panel.icon.folder.scanning). Ignored for directories.
 	PreviewLoading bool
+	// PreviewWarm tints the file icon bright magenta (warm/preloaded) vs standard magenta (not
+	// yet preloaded) for image/video files — a prefetch-cache debugging aid. Ignored for
+	// directories, non-image/video files, and while PreviewLoading is true.
+	PreviewWarm bool
 }
 
 // fileDeviconForeground picks the file-icon color: cursor override, else devicon hex, else row FG.
@@ -40,6 +44,15 @@ func fileDeviconForeground(rowStyle tcell.Style, deviconHex string, th theme.The
 		}
 	}
 	return rowFG
+}
+
+// previewIconForeground picks the warm/cold prefetch-debug tint color: cursor override, else the
+// theme's panel.icon.preview.{warm,cold} color.
+func previewIconForeground(warm bool, th theme.Theme, cursorStyleKey string) tcell.Color {
+	if warm {
+		return th.PanelRowIconForeground(cursorStyleKey, th.PanelIconPreviewWarm)
+	}
+	return th.PanelRowIconForeground(cursorStyleKey, th.PanelIconPreviewCold)
 }
 
 func paintPanelIconStrip(
@@ -82,7 +95,14 @@ func paintPanelIconStrip(
 		if icon == "" {
 			icon = " "
 		}
-		fg = fileDeviconForeground(rowStyle, st.Color, th, ctx.CursorStyleKey, ctx.ChromeBlocked)
+		switch {
+		case ctx.ChromeBlocked:
+			fg = fileDeviconForeground(rowStyle, "", th, ctx.CursorStyleKey, true)
+		case localfs.IsImagePath(entry.Path) || localfs.IsVideoPath(entry.Path):
+			fg = previewIconForeground(ctx.PreviewWarm, th, ctx.CursorStyleKey)
+		default:
+			fg = fileDeviconForeground(rowStyle, st.Color, th, ctx.CursorStyleKey, ctx.ChromeBlocked)
+		}
 	}
 	iconStyle := rowStyle.Foreground(fg)
 

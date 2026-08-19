@@ -13,8 +13,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
-// GeneratingThumbnailsLine is appended under media metadata while ffmpeg extracts frames.
-const GeneratingThumbnailsLine = "Generating thumbnails…"
+// GeneratingThumbnailsLabel is appended under media metadata while ffmpeg extracts frames.
+const GeneratingThumbnailsLabel = "Generating thumbnails"
 
 // ffprobeDoc is the JSON shape returned by ffprobe -of json.
 type ffprobeDoc struct {
@@ -62,7 +62,7 @@ func MediaThumbDuration(work *MediaThumbWork) float64 {
 }
 
 // RunMediaMeta probes the file and returns text metadata. When work is non-nil,
-// the caller should show GeneratingThumbnailsLine under the meta, then call RunMediaThumbs.
+// the caller should show GeneratingThumbnailsLabel under the meta, then call RunMediaThumbs.
 func RunMediaMeta(req Request) (res Result, work *MediaThumbWork) {
 	raw, err := ffprobeJSON(req.Path)
 	if err != nil {
@@ -113,7 +113,8 @@ func RunMediaMeta(req Request) (res Result, work *MediaThumbWork) {
 }
 
 // RunMediaThumbs extracts and encodes the thumbnail grid after RunMediaMeta reported work.
-func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork) Result {
+// onProgress, if non-nil, is called after each thumbnail frame is extracted.
+func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork, onProgress func(done, total int)) Result {
 	metaText := ""
 	duration := 0.0
 	if work != nil {
@@ -149,33 +150,33 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork) Resu
 	maxEdge := EffectiveVideoThumbMaxEdge(req.Preview, req.ImageProtocol, req.ImageInTmux)
 	fi, err := os.Stat(req.Path)
 	if err != nil {
-		metaResult.CombinedText = metaText + "\n(thumbnails failed)"
+		metaResult.CombinedText = metaText + "\n\n(thumbnails failed)"
 		return metaResult
 	}
-	load := func(c context.Context) ([]byte, error) {
-		return BuildVideoThumbMaxEdgePNG(c, req.Path, duration, cols, rows, maxEdge)
+	load := func(c context.Context, notify func(done, total int)) ([]byte, error) {
+		return BuildVideoThumbMaxEdgePNG(c, req.Path, duration, cols, rows, maxEdge, notify)
 	}
 	var pngBytes []byte
 	if req.Cache != nil {
-		pngBytes, err = req.Cache.LoadVideo(ctx, req.Path, fi.ModTime().UnixNano(), fi.Size(), maxEdge, cols, rows, load)
+		pngBytes, err = req.Cache.LoadVideo(ctx, req.Path, fi.ModTime().UnixNano(), fi.Size(), maxEdge, cols, rows, onProgress, load)
 	} else {
-		pngBytes, err = load(ctx)
+		pngBytes, err = load(ctx, onProgress)
 	}
 	if err != nil {
 		if ctx != nil && ctx.Err() != nil {
 			return Result{ErrorMsg: "Canceled"}
 		}
 		if strings.Contains(err.Error(), "executable file not found") {
-			metaResult.CombinedText = metaText + "\n(ffmpeg not found; thumbnails skipped)"
+			metaResult.CombinedText = metaText + "\n\n(ffmpeg not found; thumbnails skipped)"
 		} else {
-			metaResult.CombinedText = metaText + "\n(thumbnails failed)"
+			metaResult.CombinedText = metaText + "\n\n(thumbnails failed)"
 		}
 		return metaResult
 	}
 
 	grid, err := DecodePNGBytes(pngBytes)
 	if err != nil {
-		metaResult.CombinedText = metaText + "\n(thumbnails failed)"
+		metaResult.CombinedText = metaText + "\n\n(thumbnails failed)"
 		return metaResult
 	}
 	grid = fitImage(grid, req.ImageMaxPxW, thumbMaxH)
@@ -208,7 +209,7 @@ func runMedia(ctx context.Context, req Request) Result {
 	if meta.ErrorMsg != "" || work == nil {
 		return meta
 	}
-	return RunMediaThumbs(ctx, req, work)
+	return RunMediaThumbs(ctx, req, work, nil)
 }
 
 func primaryVideoStream(doc ffprobeDoc) *ffprobeStream {

@@ -88,6 +88,10 @@ mount = { fg = "bright_blue" }
 scanning = { fg = "bright_magenta" }
 excluded = { fg = "black" }
 
+[panel.icon.preview]          # prefetch-cache debug tint for image/video file icons
+warm = { fg = "yellow" }            # cache warm (preloaded)
+cold = { fg = "magenta" }          # not yet preloaded
+
 [panel.status]                # bottom-border status segments
 sync = { fg = "green", bold = true }
 quick_view = { fg = "green", bold = true }

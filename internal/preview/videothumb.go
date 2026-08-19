@@ -52,7 +52,7 @@ func extractFramePNG(videoPath string, timeSec float64) (image.Image, error) {
 	return img, nil
 }
 
-func extractThumbFrames(ctx context.Context, videoPath string, durationSec float64, cols, rows int) ([]image.Image, error) {
+func extractThumbFrames(ctx context.Context, videoPath string, durationSec float64, cols, rows int, onFrame func(done, total int)) ([]image.Image, error) {
 	n := cols * rows
 	marks := calculateTimeMarks(durationSec, n)
 	if len(marks) == 0 {
@@ -72,6 +72,9 @@ func extractThumbFrames(ctx context.Context, videoPath string, durationSec float
 			return nil, err
 		}
 		frames = append(frames, img)
+		if onFrame != nil {
+			onFrame(len(frames), n)
+		}
 	}
 	return frames, nil
 }
@@ -148,11 +151,11 @@ func scaleImageExact(src image.Image, w, h int) image.Image {
 }
 
 // buildVideoThumbGrid extracts and composites a thumbnail grid for path.
-func buildVideoThumbGrid(ctx context.Context, path string, durationSec float64, cols, rows, maxW, maxH int) (image.Image, error) {
+func buildVideoThumbGrid(ctx context.Context, path string, durationSec float64, cols, rows, maxW, maxH int, onFrame func(done, total int)) (image.Image, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, err
 	}
-	frames, err := extractThumbFrames(ctx, path, durationSec, cols, rows)
+	frames, err := extractThumbFrames(ctx, path, durationSec, cols, rows, onFrame)
 	if err != nil {
 		return nil, err
 	}

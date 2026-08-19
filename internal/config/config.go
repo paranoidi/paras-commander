@@ -321,6 +321,9 @@ type PreviewConfig struct {
 	VideoThumbMaxEdgePx int `toml:"video_thumb_max_edge_px"`
 	// PrefetchMemoryMaxMB is the in-memory prefetch LRU budget in MiB (default 256).
 	PrefetchMemoryMaxMB int `toml:"prefetch_memory_max_mb"`
+	// RenderCacheMaxMB is the in-memory LRU budget in MiB for final render-ready payloads keyed
+	// by exact on-screen pixel box, protocol, and tmux state (default 32).
+	RenderCacheMaxMB int `toml:"render_cache_max_mb"`
 	// VideoThumbCacheMaxMB caps the on-disk video thumbnail cache under
 	// $XDG_CACHE_HOME/pc/video-thumbs/ (default 512).
 	VideoThumbCacheMaxMB int `toml:"video_thumb_cache_max_mb"`
@@ -643,6 +646,7 @@ func Default() Config {
 			TmuxSixelMaxEdgePx:            DefaultPreviewTmuxSixelMaxEdgePx,
 			VideoThumbMaxEdgePx:           DefaultPreviewVideoThumbMaxEdgePx,
 			PrefetchMemoryMaxMB:           DefaultPreviewPrefetchMemoryMaxMB,
+			RenderCacheMaxMB:              DefaultPreviewRenderCacheMaxMB,
 			VideoThumbCacheMaxMB:          DefaultPreviewVideoThumbCacheMaxMB,
 		},
 		SFTP: SFTPConfig{
@@ -1277,6 +1281,9 @@ func (c *Config) validatePreview(builtin *Config) {
 	}
 	if c.Preview.PrefetchMemoryMaxMB < 1 {
 		c.Preview.PrefetchMemoryMaxMB = builtin.Preview.PrefetchMemoryMaxMB
+	}
+	if c.Preview.RenderCacheMaxMB < 1 {
+		c.Preview.RenderCacheMaxMB = builtin.Preview.RenderCacheMaxMB
 	}
 	if c.Preview.VideoThumbCacheMaxMB < 1 {
 		c.Preview.VideoThumbCacheMaxMB = builtin.Preview.VideoThumbCacheMaxMB

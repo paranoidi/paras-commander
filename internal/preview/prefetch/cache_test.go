@@ -8,7 +8,11 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
 func TestMemoryLRUEvictsByByteBudget(t *testing.T) {
@@ -62,7 +66,7 @@ func TestDiskCacheRoundTripAndEvict(t *testing.T) {
 }
 
 func TestCacheLoadStillSingleflight(t *testing.T) {
-	c := NewCache(1024*1024, 1024*1024, "")
+	c := NewCache(1024*1024, 1024*1024, 1024*1024, "")
 	calls := 0
 	load := func(context.Context) ([]byte, string, error) {
 		calls++
@@ -86,11 +90,100 @@ func TestCacheLoadStillSingleflight(t *testing.T) {
 	}
 }
 
+// TestCacheLoadVideoBroadcastsProgressToJoiningCaller guards against a bug where a caller
+// joining an already-running LoadVideo flight (e.g. the foreground preview panel opening a
+// video the background prefetch engine already started generating thumbnails for) never saw
+// progress updates, because only the flight leader's own load closure ran.
+func TestCacheLoadVideoBroadcastsProgressToJoiningCaller(t *testing.T) {
+	c := NewCache(1024*1024, 1024*1024, 1024*1024, "")
+	key := videoKey("/clip.mp4", 1, 10, 64, 2, 2)
+
+	img := image.NewRGBA(image.Rect(0, 0, 2, 2))
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	pngBytes := buf.Bytes()
+
+	proceed := make(chan struct{})
+	leaderLoad := func(ctx context.Context, notify func(done, total int)) ([]byte, error) {
+		<-proceed
+		notify(1, 2)
+		notify(2, 2)
+		return pngBytes, nil
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		if _, err := c.LoadVideo(context.Background(), "/clip.mp4", 1, 10, 64, 2, 2, nil, leaderLoad); err != nil {
+			t.Errorf("leader LoadVideo: %v", err)
+		}
+	}()
+
+	deadline := time.Now().Add(5 * time.Second)
+	waitFor := func(cond func() bool) {
+		for !cond() {
+			if time.Now().After(deadline) {
+				t.Fatal("timed out waiting for flight state")
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}
+	waitFor(func() bool {
+		c.mu.Lock()
+		_, ok := c.flights[key]
+		c.mu.Unlock()
+		return ok
+	})
+
+	var mu sync.Mutex
+	var joinerProgress [][2]int
+	go func() {
+		defer wg.Done()
+		joinerLoad := func(context.Context, func(done, total int)) ([]byte, error) {
+			t.Error("joiner must not run its own load closure while the leader's flight is in progress")
+			return nil, nil
+		}
+		onProgress := func(done, total int) {
+			mu.Lock()
+			joinerProgress = append(joinerProgress, [2]int{done, total})
+			mu.Unlock()
+		}
+		if _, err := c.LoadVideo(context.Background(), "/clip.mp4", 1, 10, 64, 2, 2, onProgress, joinerLoad); err != nil {
+			t.Errorf("joiner LoadVideo: %v", err)
+		}
+	}()
+
+	waitFor(func() bool {
+		c.mu.Lock()
+		call, ok := c.flights[key]
+		c.mu.Unlock()
+		if !ok {
+			return true
+		}
+		call.listenersMu.Lock()
+		n := len(call.listeners)
+		call.listenersMu.Unlock()
+		return n >= 1
+	})
+	close(proceed)
+	wg.Wait()
+
+	mu.Lock()
+	defer mu.Unlock()
+	want := [][2]int{{1, 2}, {2, 2}}
+	if len(joinerProgress) != len(want) || joinerProgress[0] != want[0] || joinerProgress[1] != want[1] {
+		t.Fatalf("joinerProgress = %v, want %v", joinerProgress, want)
+	}
+}
+
 // TestCacheLoadStillCachesFailure guards against a decode-fail-reschedule loop: a
 // permanently corrupt file must only be attempted once, and HasStill must report it as
 // warm afterward so the prefetch engine's Schedule() stops re-queuing it forever.
 func TestCacheLoadStillCachesFailure(t *testing.T) {
-	c := NewCache(1024*1024, 1024*1024, "")
+	c := NewCache(1024*1024, 1024*1024, 1024*1024, "")
 	calls := 0
 	failLoad := func(context.Context) ([]byte, string, error) {
 		calls++
@@ -113,7 +206,7 @@ func TestCacheLoadStillCachesFailure(t *testing.T) {
 // TestCacheLoadStillDoesNotCacheCancellation ensures a context-cancelled attempt (the
 // request was abandoned, not proven broken) is retried rather than marked failed forever.
 func TestCacheLoadStillDoesNotCacheCancellation(t *testing.T) {
-	c := NewCache(1024*1024, 1024*1024, "")
+	c := NewCache(1024*1024, 1024*1024, 1024*1024, "")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	calls := 0
@@ -126,6 +219,71 @@ func TestCacheLoadStillDoesNotCacheCancellation(t *testing.T) {
 	}
 	if c.HasStill("/cancelled.png", 1, 10, 64) {
 		t.Fatal("cancellation must not be recorded as a permanent failure")
+	}
+}
+
+func TestCacheLoadRenderCachesHit(t *testing.T) {
+	c := NewCache(1024*1024, 1024*1024, 1024*1024, "")
+	calls := 0
+	load := func(context.Context) ([]byte, int, int, error) {
+		calls++
+		return []byte("payload-lighthouse"), 12, 8, nil
+	}
+	payload1, w1, h1, err := c.LoadRender(context.Background(), "/lighthouse.png", 1, 10,
+		previewpanel.ImageProtocolKitty, false, false, 100, 100, load)
+	if err != nil || w1 != 12 || h1 != 8 || string(payload1) != "payload-lighthouse" {
+		t.Fatalf("first load: payload=%q w=%d h=%d err=%v", payload1, w1, h1, err)
+	}
+	payload2, w2, h2, err := c.LoadRender(context.Background(), "/lighthouse.png", 1, 10,
+		previewpanel.ImageProtocolKitty, false, false, 100, 100, load)
+	if err != nil || w2 != 12 || h2 != 8 || !bytes.Equal(payload1, payload2) {
+		t.Fatalf("second load: payload=%q w=%d h=%d err=%v", payload2, w2, h2, err)
+	}
+	if calls != 1 {
+		t.Fatalf("load calls = %d, want 1 (second call should be a cache hit)", calls)
+	}
+}
+
+func TestCacheLoadRenderKeysDoNotCollideAcrossBoxes(t *testing.T) {
+	c := NewCache(1024*1024, 1024*1024, 1024*1024, "")
+	loadFor := func(w, h int) func(context.Context) ([]byte, int, int, error) {
+		return func(context.Context) ([]byte, int, int, error) {
+			return []byte(fmt.Sprintf("payload-%dx%d", w, h)), w, h, nil
+		}
+	}
+	pA, wA, hA, err := c.LoadRender(context.Background(), "/harbor.png", 1, 10,
+		previewpanel.ImageProtocolKitty, false, false, 50, 50, loadFor(50, 40))
+	if err != nil || wA != 50 || hA != 40 {
+		t.Fatalf("box A load: payload=%q w=%d h=%d err=%v", pA, wA, hA, err)
+	}
+	pB, wB, hB, err := c.LoadRender(context.Background(), "/harbor.png", 1, 10,
+		previewpanel.ImageProtocolKitty, false, false, 100, 100, loadFor(100, 80))
+	if err != nil || wB != 100 || hB != 80 {
+		t.Fatalf("box B load: payload=%q w=%d h=%d err=%v", pB, wB, hB, err)
+	}
+	if bytes.Equal(pA, pB) {
+		t.Fatalf("expected distinct payloads for distinct boxes, got %q for both", pA)
+	}
+}
+
+func TestCacheHasRenderReportsWarmthForExactBoxOnly(t *testing.T) {
+	c := NewCache(1024*1024, 1024*1024, 1024*1024, "")
+	if c.HasRender("/orchard.png", 1, 10, previewpanel.ImageProtocolKitty, false, false, 100, 100) {
+		t.Fatal("expected HasRender false before LoadRender")
+	}
+	load := func(context.Context) ([]byte, int, int, error) {
+		return []byte("payload-orchard"), 12, 8, nil
+	}
+	if _, _, _, err := c.LoadRender(context.Background(), "/orchard.png", 1, 10,
+		previewpanel.ImageProtocolKitty, false, false, 100, 100, load); err != nil {
+		t.Fatal(err)
+	}
+	if !c.HasRender("/orchard.png", 1, 10, previewpanel.ImageProtocolKitty, false, false, 100, 100) {
+		t.Fatal("expected HasRender true after LoadRender")
+	}
+	// A different box (unrelated to the one just warmed) must still report cold.
+	if c.HasRender("/orchard.png", 1, 10, previewpanel.ImageProtocolKitty, false, false, 200, 200) {
+		t.Fatal("expected HasRender false for a different box")
 	}
 }
 
