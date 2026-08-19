@@ -7,8 +7,11 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"sync"
 
 	xdraw "golang.org/x/image/draw"
+
+	"github.com/paranoidi/paras-commander/internal/workpool"
 )
 
 // Thumbnail timing/grid logic adapted from github.com/kmou424/go-video-thumb (MIT).
@@ -52,29 +55,65 @@ func extractFramePNG(videoPath string, timeSec float64) (image.Image, error) {
 	return img, nil
 }
 
-func extractThumbFrames(ctx context.Context, videoPath string, durationSec float64, cols, rows int, onFrame func(done, total int)) ([]image.Image, error) {
+// extractThumbFrames extracts cols*rows frames, running up to workers ffmpeg processes
+// concurrently. onFrame, if non-nil, is called once per completed frame with a monotonically
+// increasing done count, serialized so calls always land in strict 1..n order — even though
+// frames land in the returned slice at their own timestamp index regardless of completion order.
+func extractThumbFrames(ctx context.Context, videoPath string, durationSec float64, cols, rows, workers int, onFrame func(done int)) ([]image.Image, error) {
 	n := cols * rows
 	marks := calculateTimeMarks(durationSec, n)
 	if len(marks) == 0 {
 		return nil, fmt.Errorf("no frame timestamps")
 	}
-	frames := make([]image.Image, 0, n)
-	for _, t := range marks {
-		if ctx != nil {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			default:
+	runCtx := ctx
+	if runCtx == nil {
+		runCtx = context.Background()
+	}
+	runCtx, cancel := context.WithCancel(runCtx)
+	defer cancel()
+
+	pool := workpool.New(workers)
+	frames := make([]image.Image, len(marks))
+	var (
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		done     int
+		firstErr error
+	)
+	for i, t := range marks {
+		if err := pool.Acquire(runCtx); err != nil {
+			break
+		}
+		wg.Add(1)
+		go func(i int, t float64) {
+			defer wg.Done()
+			img, err := extractFramePNG(videoPath, t)
+			pool.Release() // free the slot immediately — bookkeeping/callback below don't need it
+			if err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = err
+					cancel()
+				}
+				mu.Unlock()
+				return
 			}
-		}
-		img, err := extractFramePNG(videoPath, t)
-		if err != nil {
-			return nil, err
-		}
-		frames = append(frames, img)
-		if onFrame != nil {
-			onFrame(len(frames), n)
-		}
+			frames[i] = img // disjoint index per goroutine, safe without mu
+			mu.Lock()
+			done++
+			if onFrame != nil {
+				onFrame(done)
+			}
+			mu.Unlock()
+		}(i, t)
+	}
+	wg.Wait()
+
+	if firstErr != nil {
+		return nil, firstErr
+	}
+	if ctx != nil && ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
 	return frames, nil
 }
@@ -150,14 +189,27 @@ func scaleImageExact(src image.Image, w, h int) image.Image {
 	return dst
 }
 
-// buildVideoThumbGrid extracts and composites a thumbnail grid for path.
-func buildVideoThumbGrid(ctx context.Context, path string, durationSec float64, cols, rows, maxW, maxH int, onFrame func(done, total int)) (image.Image, error) {
+// buildVideoThumbGrid extracts and composites a thumbnail grid for path. The reported total
+// (via onFrame) is cols*rows+1: one step per extracted frame plus one final step for compositing
+// them into the grid, which is itself slow enough (scaling every tile) to warrant its own step
+// rather than leaving progress looking stalled at n/n while it runs.
+func buildVideoThumbGrid(ctx context.Context, path string, durationSec float64, cols, rows, maxW, maxH, workers int, onFrame func(done, total int)) (image.Image, error) {
 	if _, err := os.Stat(path); err != nil {
 		return nil, err
 	}
-	frames, err := extractThumbFrames(ctx, path, durationSec, cols, rows, onFrame)
+	totalSteps := cols*rows + 1
+	frameProgress := func(done int) {
+		if onFrame != nil {
+			onFrame(done, totalSteps)
+		}
+	}
+	frames, err := extractThumbFrames(ctx, path, durationSec, cols, rows, workers, frameProgress)
 	if err != nil {
 		return nil, err
 	}
-	return composeThumbGrid(frames, cols, rows, maxW, maxH), nil
+	grid := composeThumbGrid(frames, cols, rows, maxW, maxH)
+	if onFrame != nil {
+		onFrame(totalSteps, totalSteps)
+	}
+	return grid, nil
 }

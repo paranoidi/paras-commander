@@ -32,16 +32,17 @@ type Item struct {
 
 // Config configures the prefetch engine.
 type Config struct {
-	Workers          int
-	MemoryMaxMB      int
-	RenderCacheMaxMB int
-	VideoDiskMaxMB   int
-	ImageMaxEdgePx   int
-	VideoMaxEdgePx   int
-	VideoThumbCols   int
-	VideoThumbRows   int
-	DiskDir          string
-	OnChange         func() // optional wake for loading-mark redraw
+	Workers           int
+	MemoryMaxMB       int
+	RenderCacheMaxMB  int
+	VideoDiskMaxMB    int
+	ImageMaxEdgePx    int
+	VideoMaxEdgePx    int
+	VideoThumbCols    int
+	VideoThumbRows    int
+	VideoThumbWorkers int
+	DiskDir           string
+	OnChange          func() // optional wake for loading-mark redraw
 }
 
 // RenderBox is the exact on-screen pixel box the currently active preview surface would render
@@ -96,6 +97,9 @@ func NewEngine(parent context.Context, cfg Config) *Engine {
 	}
 	if cfg.VideoThumbRows < 1 {
 		cfg.VideoThumbRows = config.DefaultPreviewVideoThumbRows
+	}
+	if cfg.VideoThumbWorkers < 1 {
+		cfg.VideoThumbWorkers = config.DefaultPreviewVideoThumbWorkers
 	}
 	diskDir := cfg.DiskDir
 	if diskDir == "" {
@@ -424,7 +428,7 @@ func (e *Engine) runJob(it Item) {
 			return
 		}
 		_, _ = e.cache.LoadVideo(ctx, it.Path, it.Mtime, it.Size, maxEdge, e.cfg.VideoThumbCols, e.cfg.VideoThumbRows, nil, func(c context.Context, notify func(done, total int)) ([]byte, error) {
-			return previewrun.BuildVideoThumbMaxEdgePNG(c, it.Path, previewrun.MediaThumbDuration(work), e.cfg.VideoThumbCols, e.cfg.VideoThumbRows, maxEdge, notify)
+			return previewrun.BuildVideoThumbMaxEdgePNG(c, it.Path, previewrun.MediaThumbDuration(work), e.cfg.VideoThumbCols, e.cfg.VideoThumbRows, maxEdge, e.cfg.VideoThumbWorkers, notify)
 		})
 	}
 }

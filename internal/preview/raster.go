@@ -84,11 +84,11 @@ func DecodeStillMaxEdgePNG(ctx context.Context, path string, maxEdge int) (pngBy
 
 // BuildVideoThumbMaxEdgePNG extracts and composites a video thumb grid, clamping the grid to
 // maxEdge×maxEdge before encoding as PNG.
-func BuildVideoThumbMaxEdgePNG(ctx context.Context, path string, durationSec float64, cols, rows, maxEdge int, onFrame func(done, total int)) ([]byte, error) {
+func BuildVideoThumbMaxEdgePNG(ctx context.Context, path string, durationSec float64, cols, rows, maxEdge, workers int, onFrame func(done, total int)) ([]byte, error) {
 	if maxEdge < 1 {
 		maxEdge = 1
 	}
-	grid, err := buildVideoThumbGrid(ctx, path, durationSec, cols, rows, maxEdge, maxEdge, onFrame)
+	grid, err := buildVideoThumbGrid(ctx, path, durationSec, cols, rows, maxEdge, maxEdge, workers, onFrame)
 	if err != nil {
 		return nil, err
 	}

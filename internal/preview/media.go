@@ -137,6 +137,10 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork, onPr
 	if rows < 1 {
 		rows = 2
 	}
+	workers := req.Preview.VideoThumbWorkers
+	if workers < 1 {
+		workers = 2
+	}
 	cellH := req.ImageCellPxH
 	if cellH < 1 {
 		cellH = 20
@@ -154,7 +158,7 @@ func RunMediaThumbs(ctx context.Context, req Request, work *MediaThumbWork, onPr
 		return metaResult
 	}
 	load := func(c context.Context, notify func(done, total int)) ([]byte, error) {
-		return BuildVideoThumbMaxEdgePNG(c, req.Path, duration, cols, rows, maxEdge, notify)
+		return BuildVideoThumbMaxEdgePNG(c, req.Path, duration, cols, rows, maxEdge, workers, notify)
 	}
 	var pngBytes []byte
 	if req.Cache != nil {

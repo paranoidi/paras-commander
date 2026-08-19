@@ -29,14 +29,15 @@ func (h *Handler) ensurePrefetch() {
 	inTmux := os.Getenv("TMUX") != ""
 	workers := effectivePrefetchWorkers(cfg.PrefetchWorkers, runtime.GOMAXPROCS(0))
 	h.prefetch = prefetch.NewEngine(h.ctx, prefetch.Config{
-		Workers:          workers,
-		MemoryMaxMB:      cfg.PrefetchMemoryMaxMB,
-		RenderCacheMaxMB: cfg.RenderCacheMaxMB,
-		VideoDiskMaxMB:   cfg.VideoThumbCacheMaxMB,
-		ImageMaxEdgePx:   previewrun.EffectiveStillMaxEdge(cfg, protocol, inTmux),
-		VideoMaxEdgePx:   previewrun.EffectiveVideoThumbMaxEdge(cfg, protocol, inTmux),
-		VideoThumbCols:   cfg.VideoThumbCols,
-		VideoThumbRows:   cfg.VideoThumbRows,
+		Workers:           workers,
+		MemoryMaxMB:       cfg.PrefetchMemoryMaxMB,
+		RenderCacheMaxMB:  cfg.RenderCacheMaxMB,
+		VideoDiskMaxMB:    cfg.VideoThumbCacheMaxMB,
+		ImageMaxEdgePx:    previewrun.EffectiveStillMaxEdge(cfg, protocol, inTmux),
+		VideoMaxEdgePx:    previewrun.EffectiveVideoThumbMaxEdge(cfg, protocol, inTmux),
+		VideoThumbCols:    cfg.VideoThumbCols,
+		VideoThumbRows:    cfg.VideoThumbRows,
+		VideoThumbWorkers: cfg.VideoThumbWorkers,
 		OnChange: func() {
 			h.syncPrefetchLoadingMarks()
 			h.postRenderWake()

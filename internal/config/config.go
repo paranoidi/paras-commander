@@ -289,6 +289,9 @@ type PreviewConfig struct {
 	// VideoThumbCols / VideoThumbRows set the video thumbnail grid size (default 2×2).
 	VideoThumbCols int `toml:"video_thumb_cols"`
 	VideoThumbRows int `toml:"video_thumb_rows"`
+	// VideoThumbWorkers sets how many ffmpeg frame-extraction processes run concurrently
+	// when building one video's thumbnail grid (default 2).
+	VideoThumbWorkers int `toml:"video_thumb_workers"`
 	// Prefetch enables background decode of nearby images and video thumbnail generation.
 	Prefetch bool `toml:"prefetch"`
 	// PrefetchAlways, when true, runs prefetch whenever Prefetch is on. When false (default),
@@ -637,6 +640,7 @@ func Default() Config {
 			TerminalKittyPlaceholder:      DefaultPreviewTerminalKittyPlaceholder,
 			VideoThumbCols:                DefaultPreviewVideoThumbCols,
 			VideoThumbRows:                DefaultPreviewVideoThumbRows,
+			VideoThumbWorkers:             DefaultPreviewVideoThumbWorkers,
 			Prefetch:                      DefaultPreviewPrefetch,
 			PrefetchAlways:                DefaultPreviewPrefetchAlways,
 			QuickViewDisableOnInactiveNav: DefaultPreviewQuickViewDisableOnInactiveNav,
@@ -1263,6 +1267,9 @@ func (c *Config) validatePreview(builtin *Config) {
 	}
 	if c.Preview.VideoThumbRows < PreviewVideoThumbGridMin || c.Preview.VideoThumbRows > PreviewVideoThumbGridMax {
 		c.Preview.VideoThumbRows = builtin.Preview.VideoThumbRows
+	}
+	if c.Preview.VideoThumbWorkers < PreviewVideoThumbWorkersMin || c.Preview.VideoThumbWorkers > PreviewVideoThumbWorkersMax {
+		c.Preview.VideoThumbWorkers = builtin.Preview.VideoThumbWorkers
 	}
 	if c.Preview.PrefetchWorkers < PreviewPrefetchWorkersMin || c.Preview.PrefetchWorkers > PreviewPrefetchWorkersMax {
 		c.Preview.PrefetchWorkers = builtin.Preview.PrefetchWorkers

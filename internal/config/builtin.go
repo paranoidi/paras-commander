@@ -310,6 +310,12 @@ const (
 	// PreviewVideoThumbGridMin / Max clamp [preview].video_thumb_cols/rows in Validate.
 	PreviewVideoThumbGridMin = 1
 	PreviewVideoThumbGridMax = 6
+	// DefaultPreviewVideoThumbWorkers is the default number of concurrent ffmpeg
+	// frame-extraction processes used to build one video's thumbnail grid.
+	DefaultPreviewVideoThumbWorkers = 2
+	// PreviewVideoThumbWorkersMin / Max clamp [preview].video_thumb_workers in Validate.
+	PreviewVideoThumbWorkersMin = 1
+	PreviewVideoThumbWorkersMax = 8
 	// DefaultPreviewPrefetch enables background image decode / video-thumb generation near the caret.
 	DefaultPreviewPrefetch = true
 	// DefaultPreviewPrefetchAlways, when false, limits prefetch to quick view or carousel mode.
