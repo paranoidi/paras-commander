@@ -39,8 +39,6 @@ func (a *App) treeChildLoadScheduler(panelID int) panel.TreeChildLoadScheduler {
 	return func(req panel.TreeChildLoadRequest) bool {
 		snap := a.panelByID(panelID).ListingRefreshSnapshot(req.Loc, time.Duration(a.config.SFTP.ListTimeoutSecs)*time.Second)
 		go func() {
-			_ = a.treeExpandAllPool.Acquire(context.Background())
-			defer a.treeExpandAllPool.Release()
 			backendEntries, _, _, _, err := panel.FetchListing(context.Background(), snap)
 			var entries []localfs.Entry
 			if err == nil {
