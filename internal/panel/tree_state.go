@@ -50,6 +50,14 @@ const MaxExpandAllShallowDepth = 5
 // already been deepened to MaxExpandAllShallowDepth.
 var ErrExpandAllDepthLimit = errors.New("expand all depth limit")
 
+// MaxExpandAllTotalRows caps how many flattened tree rows ExpandAllTreeFully will grow to before
+// it stops cascading further levels, guarding against unbounded memory/render cost on very wide
+// trees (depth is already capped by MaxExpandAllShallowDepth; this caps breadth).
+const MaxExpandAllTotalRows = 20000
+
+// ErrExpandAllRowLimit is returned when ExpandAllTreeFully's cascade would exceed MaxExpandAllTotalRows.
+var ErrExpandAllRowLimit = errors.New("expand all row limit")
+
 // SetListLayout switches the panel's file-list rendering between flat rows and an
 // expand/collapse tree. Entering tree mode seeds TreeRoots fresh from the current
 // (already-loaded) flat Entries as depth-0 nodes with no children loaded yet, and starts with
@@ -513,6 +521,10 @@ func (s *State) driveExpandAllTreeAuto(viewportRows int) error {
 		}
 		if s.treeExpandQuiet > 0 {
 			return nil
+		}
+		if len(s.treeRows) > MaxExpandAllTotalRows {
+			s.treeExpandAllAuto = false
+			return ErrExpandAllRowLimit
 		}
 	}
 	s.treeExpandAllAuto = false

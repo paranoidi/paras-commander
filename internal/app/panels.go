@@ -858,6 +858,10 @@ func (a *App) expandAllTreeFullyForPanel(target *panel.State, viewportRows int) 
 			a.setTransientMessage("Expand all is limited to depth 5", ui.MessageUrgencyInfo)
 			return false
 		}
+		if errors.Is(err, panel.ErrExpandAllRowLimit) {
+			a.setTransientMessage("Expand all stopped: too many entries (limit 20,000)", ui.MessageUrgencyInfo)
+			return false
+		}
 		a.setErrorMessage("Expand all failed", err)
 		return false
 	}
