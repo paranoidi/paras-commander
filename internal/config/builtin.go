@@ -100,6 +100,10 @@ const (
 
 	// DefaultCompareHashConcurrency limits parallel file hashing during panel compare.
 	DefaultCompareHashConcurrency = 4
+
+	// DefaultTreeExpandAllConcurrency caps how many concurrent directory-listing fetches
+	// run at once while tree-mode "expand all to max depth" cascades through levels.
+	DefaultTreeExpandAllConcurrency = 8
 	// DefaultCompareReadBufferKiB is the per-worker read buffer for compare hashing.
 	DefaultCompareReadBufferKiB = 256
 	// DefaultCompareStayOnVolumeDefault is the initial stay-on-volume option when opening compare.

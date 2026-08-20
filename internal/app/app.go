@@ -193,6 +193,10 @@ type App struct {
 
 	workPools *workpool.Registry
 
+	// treeExpandAllPool caps concurrent directory-listing fetches spawned by tree-mode
+	// "expand all to max depth" (see treeChildLoadScheduler in tree_load.go).
+	treeExpandAllPool *workpool.Pool
+
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool
 
@@ -434,16 +438,17 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	}
 	cmdCtx, cmdCancel := context.WithCancel(context.Background())
 	app := &App{
-		screen:         screen,
-		config:         cfg,
-		styles:         styles,
-		themes:         availableThemes,
-		paths:          resolvedPaths,
-		keys:           keys,
-		devMode:        opts.DevMode,
-		commandsCtx:    cmdCtx,
-		commandsCancel: cmdCancel,
-		workPools:      workpool.NewRegistry(poolDefs),
+		screen:            screen,
+		config:            cfg,
+		styles:            styles,
+		themes:            availableThemes,
+		paths:             resolvedPaths,
+		keys:              keys,
+		devMode:           opts.DevMode,
+		commandsCtx:       cmdCtx,
+		commandsCancel:    cmdCancel,
+		workPools:         workpool.NewRegistry(poolDefs),
+		treeExpandAllPool: workpool.New(config.DefaultTreeExpandAllConcurrency),
 		model: ui.Model{
 			Primary:                      left,
 			Secondary:                    right,

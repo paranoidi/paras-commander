@@ -39,12 +39,18 @@ func (a *App) treeChildLoadScheduler(panelID int) panel.TreeChildLoadScheduler {
 	return func(req panel.TreeChildLoadRequest) bool {
 		snap := a.panelByID(panelID).ListingRefreshSnapshot(req.Loc, time.Duration(a.config.SFTP.ListTimeoutSecs)*time.Second)
 		go func() {
+			_ = a.treeExpandAllPool.Acquire(context.Background())
+			defer a.treeExpandAllPool.Release()
 			backendEntries, _, _, _, err := panel.FetchListing(context.Background(), snap)
 			var entries []localfs.Entry
 			if err == nil {
 				entries, err = fsbackend.ToPanelEntries(backendEntries)
 			}
-			_ = a.screen.PostEvent(tcell.NewEventInterrupt(treeChildLoadPayload{
+			// PostEventWait is deprecated as "unsafe" (it can block indefinitely if the main loop
+			// stalls) but that block-until-delivered behavior is exactly what's needed here:
+			// PostEvent silently drops the event when tcell's fixed-size queue is full, which is
+			// what let treeExpandQuiet get stuck > 0 under a burst of concurrent fetches.
+			a.screen.PostEventWait(tcell.NewEventInterrupt(treeChildLoadPayload{ //nolint:staticcheck // SA1019: guaranteed delivery required, see comment above
 				panelID: panelID,
 				dirID:   req.DirID,
 				entries: entries,
