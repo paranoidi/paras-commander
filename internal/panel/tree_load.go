@@ -102,7 +102,12 @@ func (s *State) finishTreeChildLoadApply(dirID string, viewportRows int) bool {
 		if s.treeExpandQuiet > 0 {
 			// The next cascade level was just dispatched and is itself async: ExpandAllTreeShallow
 			// already rebuilt treeRows again with the new level's Loading icons, so report a state
-			// change to trigger a render instead of swallowing it.
+			// change to trigger a render instead of swallowing it. That rebuild can insert new rows
+			// above/below the cursor's numeric position (other branches expanding), so reattach by
+			// treeCursorID here too — otherwise the cursor visibly sits on whatever row shifted into
+			// its old slot for the brief window until the next progress repaint or level settle
+			// corrects it.
+			s.reattachTreeCursorByID(s.treeCursorID, viewportRows)
 			return true
 		}
 	}

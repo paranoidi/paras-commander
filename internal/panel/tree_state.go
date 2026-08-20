@@ -305,6 +305,7 @@ func (s *State) JumpTreeSiblingDir(delta, viewportRows int) {
 		if pos, posOK := s.cursorForRawIndex(i); posOK {
 			s.Cursor = pos
 			s.EnsureCursorInViewport(viewportRows)
+			s.syncTreeCursorIDToCursor()
 			return
 		}
 	}
@@ -743,13 +744,40 @@ func findTreeNode(nodes []treeflat.Node[TreeEntry], id string) *treeflat.Node[Tr
 }
 
 // PeekTreeRows rebuilds treeRows from the current TreeRoots/TreeExpanded state without touching
-// treeExpandQuiet/cursor bookkeeping. Safe to call at any time, including mid-cascade while an
+// treeExpandQuiet bookkeeping. Safe to call at any time, including mid-cascade while an
 // ExpandAllTreeFully quiet batch is still landing — lets the app throttle a progress repaint
 // during a long batch instead of leaving the screen static until the whole level settles.
+//
+// Reattaches by treeCursorID (the expand-all anchor, or a single-row expand's target) rather than
+// just clamping the existing numeric Cursor position: a progress repaint fires mid-cascade, before
+// the level that's still loading has settled and reattached the cursor itself, and other branches
+// can insert rows above/below the anchor's row in the meantime — clamping alone would leave Cursor
+// pointing at whatever row shifted into that same numeric slot, which is exactly what made the
+// selection visibly jump to unrelated rows throughout a cascade instead of staying on the
+// directory the command was issued from.
 func (s *State) PeekTreeRows(viewportRows int) {
 	s.rebuildTreeRows()
+	if s.treeCursorID != "" {
+		s.reattachTreeCursorByID(s.treeCursorID, viewportRows)
+		return
+	}
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
+}
+
+// syncTreeCursorIDToCursor updates treeCursorID to the row currently under the cursor, when in
+// tree mode. Called from every user-driven cursor move (Move/Top/Bottom in state.go,
+// JumpTreeSiblingDir above) so a still-in-flight ExpandAllTreeFully cascade or single async expand
+// keeps reattaching to wherever the user has since moved the cursor, instead of snapping it back
+// to the row the command was originally issued from on the next progress repaint or level settle.
+// No-op outside tree mode or when the cursor is out of range.
+func (s *State) syncTreeCursorIDToCursor() {
+	if s.ListLayout != ListLayoutTree {
+		return
+	}
+	if rawIdx, ok := s.rawIndexForCursor(); ok && rawIdx >= 0 && rawIdx < len(s.treeRows) {
+		s.treeCursorID = s.treeRows[rawIdx].ID
+	}
 }
 
 func (s *State) rebuildTreeRows() {

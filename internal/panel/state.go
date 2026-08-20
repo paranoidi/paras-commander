@@ -396,6 +396,7 @@ func (s *State) Move(delta int, viewportRows int) {
 	s.Cursor += delta
 	s.clampCursor()
 	s.EnsureCursorInViewport(viewportRows)
+	s.syncTreeCursorIDToCursor()
 }
 
 // Page moves the cursor by a viewport-sized delta.
@@ -411,6 +412,7 @@ func (s *State) Page(delta int, viewportRows int) {
 func (s *State) Top(viewportRows int) {
 	s.Cursor = 0
 	s.EnsureCursorInViewport(viewportRows)
+	s.syncTreeCursorIDToCursor()
 }
 
 // Bottom moves the cursor to the last entry.
@@ -422,6 +424,7 @@ func (s *State) Bottom(viewportRows int) {
 	}
 	s.Cursor = s.VisibleEntryCount() - 1
 	s.EnsureCursorInViewport(viewportRows)
+	s.syncTreeCursorIDToCursor()
 }
 
 // CurrentEntry returns the entry under the cursor.
