@@ -448,7 +448,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		commandsCtx:       cmdCtx,
 		commandsCancel:    cmdCancel,
 		workPools:         workpool.NewRegistry(poolDefs),
-		treeExpandAllPool: workpool.New(config.DefaultTreeExpandAllConcurrency),
+		treeExpandAllPool: workpool.New(config.DefaultFSWalkMaxWorkers),
 		model: ui.Model{
 			Primary:                      left,
 			Secondary:                    right,
