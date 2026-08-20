@@ -467,11 +467,14 @@ func (s *State) ExpandAllTreeShallow(viewportRows int) error {
 		return err
 	}
 	s.treeExpandAllDepth++
-	// Async quiet batch: leave treeRows alone until the last ApplyTreeChildLoad rebuilds once.
+	// Rebuild treeRows immediately so newly-dispatched directories' Loading state (the
+	// scanning-icon indicator) shows up on screen the moment this level starts loading, not only
+	// once the whole level's async fetches land.
+	s.rebuildTreeRows()
+	// Async quiet batch: cursor reattach waits until the last ApplyTreeChildLoad settles.
 	if s.treeExpandQuiet > 0 {
 		return nil
 	}
-	s.rebuildTreeRows()
 	if anchorID != "" {
 		s.reattachTreeCursorByID(anchorID, viewportRows)
 		return nil

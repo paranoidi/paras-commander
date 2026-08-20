@@ -994,8 +994,10 @@ func TestExpandAllTreeShallowAsyncCoalescesRedrawAndKeepsCursor(t *testing.T) {
 // TestExpandAllTreeFullyAsyncCascadesThroughLevels covers Alt+Shift+Right when
 // ScheduleTreeChildLoad is wired: each level's expand dispatches async loads, and
 // finishTreeChildLoadApply must drive the next level automatically as those loads land, until the
-// whole tree reaches max depth. Only the very last ApplyTreeChildLoad call in the cascade should
-// report a redraw. Also covers pressing Alt+Shift+Right again once fully expanded: it must return
+// whole tree reaches max depth. Only the level-terminal ApplyTreeChildLoad call in each level's
+// batch (the one that drains treeExpandQuiet to 0) should report a redraw — that rebuild is what
+// surfaces the next level's Loading icons (or, on the final level, the fully-settled result).
+// Also covers pressing Alt+Shift+Right again once fully expanded: it must return
 // ErrExpandAllDepthLimit rather than looping forever or re-expanding.
 func TestExpandAllTreeFullyAsyncCascadesThroughLevels(t *testing.T) {
 	root := t.TempDir()
@@ -1033,11 +1035,15 @@ func TestExpandAllTreeFullyAsyncCascadesThroughLevels(t *testing.T) {
 
 	// Drain the dispatched loads level by level, feeding each directory's real (possibly empty)
 	// children back in via ApplyTreeChildLoad, until driveExpandAllTreeAuto stops scheduling more.
-	var results []bool
+	// Within a level's batch, only the last apply (which drains treeExpandQuiet to 0) should
+	// report a redraw: it rebuilds treeRows either with the next level's freshly-dispatched
+	// Loading icons, or — on the final level — with the fully-settled cascade result.
+	var levelCount int
 	pending := scheduled
 	scheduled = nil
 	for len(pending) > 0 {
-		for _, dirID := range pending {
+		levelCount++
+		for i, dirID := range pending {
 			des, err := os.ReadDir(dirID)
 			if err != nil {
 				t.Fatalf("ReadDir(%s): %v", dirID, err)
@@ -1050,20 +1056,17 @@ func TestExpandAllTreeFullyAsyncCascadesThroughLevels(t *testing.T) {
 				}
 				entries = append(entries, localfs.Entry{Name: de.Name(), Path: filepath.Join(dirID, de.Name()), Type: typ})
 			}
-			results = append(results, state.ApplyTreeChildLoad(dirID, entries, nil, 10))
+			redrew := state.ApplyTreeChildLoad(dirID, entries, nil, 10)
+			want := i == len(pending)-1
+			if redrew != want {
+				t.Fatalf("level %d results[%d] = %v, want %v (only the level-terminal apply should signal a redraw)", levelCount, i, redrew, want)
+			}
 		}
 		pending = scheduled
 		scheduled = nil
 	}
-
-	if len(results) == 0 {
+	if levelCount == 0 {
 		t.Fatal("no ApplyTreeChildLoad calls made")
-	}
-	for i, redrew := range results {
-		want := i == len(results)-1
-		if redrew != want {
-			t.Fatalf("results[%d] = %v, want %v (only the final apply should signal a redraw)", i, redrew, want)
-		}
 	}
 	if state.treeExpandAllDepth != MaxExpandAllShallowDepth {
 		t.Fatalf("treeExpandAllDepth = %d, want %d", state.treeExpandAllDepth, MaxExpandAllShallowDepth)

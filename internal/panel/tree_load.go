@@ -81,7 +81,10 @@ func (s *State) finishTreeChildLoadApply(dirID string, viewportRows int) bool {
 	if s.treeExpandAllAuto {
 		_ = s.driveExpandAllTreeAuto(viewportRows)
 		if s.treeExpandQuiet > 0 {
-			return false
+			// The next cascade level was just dispatched and is itself async: its
+			// ExpandAllTreeShallow call already rebuilt treeRows with the new level's Loading
+			// icons, so report a state change to trigger a render instead of swallowing it.
+			return true
 		}
 	}
 	if s.treeCursorID == "" {
