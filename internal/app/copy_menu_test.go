@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -15,6 +16,9 @@ import (
 func testCopyMenuApp(t *testing.T) (*App, string) {
 	t.Helper()
 	clipboard.Reset()
+	prevWriter := clipboard.OSWriter
+	clipboard.OSWriter = func(string) error { return nil }
+	t.Cleanup(func() { clipboard.OSWriter = prevWriter })
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "meadow.txt")
 	writeFile(t, filePath)
@@ -127,14 +131,8 @@ func TestCopyMenuEmptySelectionOnParentRowWarns(t *testing.T) {
 
 func TestCopyToClipboardWarnsWhenClipboardToolUnavailable(t *testing.T) {
 	app, _ := testCopyMenuApp(t)
+	clipboard.OSWriter = func(string) error { return errors.New("no clipboard tool available") }
 	app.copyToClipboard(keymap.ActionClipboardCopyFilename)
-	if app.model.Message == "" {
-		t.Fatal("expected message after copy attempt")
-	}
-	if strings.Contains(app.model.Message, "Copied:") && !strings.Contains(app.model.Message, "Copy failed") {
-		// OS clipboard succeeded in this environment — skip failure-path assertion.
-		return
-	}
 	if !strings.Contains(app.model.Message, "Copy failed") {
 		t.Fatalf("message = %q, want copy failure wording", app.model.Message)
 	}

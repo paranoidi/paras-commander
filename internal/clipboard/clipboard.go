@@ -27,6 +27,10 @@ func Reset() {
 	mu.Unlock()
 }
 
+// OSWriter performs the actual OS clipboard write. Tests may replace this to
+// avoid touching the real system clipboard.
+var OSWriter = setOS
+
 // Set stores text and attempts to copy it to the OS clipboard.
 // Returns nil when an external tool succeeds; otherwise returns an error after
 // storing the value in-process (callers may still treat the copy as best-effort).
@@ -35,7 +39,7 @@ func Set(text string) error {
 	lastSet = text
 	mu.Unlock()
 
-	if err := setOS(text); err != nil {
+	if err := OSWriter(text); err != nil {
 		return fmt.Errorf("clipboard: %w", err)
 	}
 	return nil
