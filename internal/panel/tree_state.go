@@ -466,11 +466,22 @@ func (s *State) ExpandAllTreeShallow(viewportRows int) error {
 		return ErrExpandAllDepthLimit
 	}
 	targetDepth := s.treeExpandAllDepth
-	anchorID := ""
-	if rawIdx, ok := s.rawIndexForCursor(); ok && rawIdx >= 0 && rawIdx < len(s.treeRows) {
-		anchorID = s.treeRows[rawIdx].ID
+	// Inside an ExpandAllTreeFully auto-cascade, treeCursorID was already captured once, before
+	// the first level, by ExpandAllTreeFully itself — re-deriving it from the current cursor
+	// *position* on each subsequent level would pick up the wrong node: earlier levels insert new
+	// rows above/below the anchor as other branches expand, so the same numeric cursor position
+	// increasingly points at a different row each time, walking the selection to random locations
+	// over the course of the cascade. A manual single-level press (treeExpandAllAuto false) has no
+	// such drift risk — it runs once, so deriving fresh from the cursor's current row is correct
+	// and is what lets each individual press track wherever the user has since moved the cursor.
+	anchorID := s.treeCursorID
+	if !s.treeExpandAllAuto {
+		anchorID = ""
+		if rawIdx, ok := s.rawIndexForCursor(); ok && rawIdx >= 0 && rawIdx < len(s.treeRows) {
+			anchorID = s.treeRows[rawIdx].ID
+		}
+		s.treeCursorID = anchorID
 	}
-	s.treeCursorID = anchorID
 	if err := s.expandAllTreeDirsAtDepth(s.TreeRoots, 0, targetDepth); err != nil {
 		return err
 	}
@@ -506,6 +517,13 @@ func (s *State) ExpandAllTreeFully(viewportRows int) error {
 		return ErrExpandAllDepthLimit
 	}
 	s.treeExpandAllAuto = true
+	// Captured once, up front: every level of the cascade reattaches the cursor to this same node
+	// (see the treeExpandAllAuto branch in ExpandAllTreeShallow) instead of re-deriving it from
+	// cursor position on each level, which drifts as sibling branches insert rows.
+	s.treeCursorID = ""
+	if rawIdx, ok := s.rawIndexForCursor(); ok && rawIdx >= 0 && rawIdx < len(s.treeRows) {
+		s.treeCursorID = s.treeRows[rawIdx].ID
+	}
 	return s.driveExpandAllTreeAuto(viewportRows)
 }
 

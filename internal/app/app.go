@@ -193,10 +193,10 @@ type App struct {
 
 	workPools *workpool.Registry
 
-	// treeExpandProgressRenderAt tracks, per panel, the last time a tree-expand-all quiet batch
-	// (many directories landing at one cascade level) forced a throttled progress repaint. See
-	// applyTreeChildLoad in tree_load.go.
-	treeExpandProgressRenderAt [2]time.Time
+	// treeChildResults coalesces async tree-child-load completions so a wide directory (thousands
+	// of concurrent fetches) posts at most one pending tcell interrupt at a time instead of one per
+	// fetch. See treeChildResultQueue in tree_load.go.
+	treeChildResults treeChildResultQueue
 
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool
@@ -968,8 +968,8 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			a.render()
 			out.didRender = true
 		}
-	case treeChildLoadPayload:
-		if a.applyTreeChildLoad(d) {
+	case treeChildResultsReadyPayload:
+		if a.applyTreeChildResults() {
 			a.render()
 			out.didRender = true
 		}

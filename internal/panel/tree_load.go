@@ -57,10 +57,23 @@ func (s *State) ApplyTreeChildLoad(dirID string, entries []localfs.Entry, err er
 	}
 	s.TreeExpanded[dirID] = true
 	s.scheduleTreeChildGitStatus(dirID, entries)
-	// Cascades any remembered-but-not-yet-restored expansion nested under the directory that
-	// just finished loading (e.g. a recalled snapshot with several levels deep on an SFTP
-	// panel, where each level's children only become available after its own async load).
-	s.restoreTreeExpansions()
+	// Cascades any remembered-but-not-yet-restored expansion nested under the directory that just
+	// finished loading (e.g. a recalled snapshot with several levels deep on an SFTP panel, where
+	// each level's children only become available after its own async load). Scoped to just
+	// node.Children rather than the whole tree (s.restoreTreeExpansions(), used instead on the
+	// once-per-navigation re-root path in ApplyListing): this call runs once per single directory
+	// completion, potentially thousands of times over one ExpandAllTreeFully cascade level, so
+	// walking the *entire* already-loaded tree on every single completion turned an O(tree size)
+	// cascade into O(tree size) squared and stalled the UI for seconds on a large tree. Nothing
+	// outside node.Children needs revisiting here — any remembered expansion elsewhere was already
+	// cascaded when its own parent loaded.
+	//
+	// ponytail: depth restarts at 0 for this scoped walk rather than threading node's real absolute
+	// depth through from findTreeNode — maxTreeExpandDepth is a runaway/symlink-cycle safety net,
+	// not a user-facing limit, so undercounting it here by node's own depth is an acceptable
+	// simplification. Thread real depth through if a deeply-nested SFTP snapshot ever needs the
+	// exact global cap enforced mid-cascade.
+	s.restoreTreeExpansionsIn(node.Children, 0)
 	return s.finishTreeChildLoadApply(dirID, viewportRows)
 }
 
