@@ -66,6 +66,85 @@ func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
 	}
 }
 
+func TestDispatchQuickViewFilePreviewStaleGenSkipsPatch(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "binary.dat")
+	if err := os.WriteFile(path, []byte("a\x00b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h, _ := newTestHandler(t, 80, 24)
+
+	h.mu.Lock()
+	h.model.FilePreview.Open = true
+	h.model.FilePreview.Phase = ui.FilePreviewPhasePending
+	h.model.FilePreview.Path = path
+	h.mu.Unlock()
+	staleGen := h.filePreviewRunGen.Add(1)
+	h.filePreviewRunGen.Add(1)
+
+	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive)
+	h.dispatchQuickViewFilePreview(path, req, staleGen)
+
+	h.mu.RLock()
+	ph := h.model.FilePreview.Phase
+	h.mu.RUnlock()
+	if ph != ui.FilePreviewPhasePending {
+		t.Fatalf("Phase = %v, want unchanged Pending when gen is stale (CheckFilePreviewable result for a superseded dispatch must not clobber fresher state)", ph)
+	}
+}
+
+func TestDispatchQuickViewFilePreviewCurrentGenAppliesPreview(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "sample.go")
+	writeFileForPreviewView(t, path)
+	h, fh := newTestHandler(t, 80, 24)
+	fh.cfg.Preview.Mode = config.PreviewModeInternal
+
+	h.mu.Lock()
+	h.model.FilePreview.Open = true
+	h.model.FilePreview.Phase = ui.FilePreviewPhasePending
+	h.model.FilePreview.Path = path
+	h.mu.Unlock()
+	gen := h.filePreviewRunGen.Add(1)
+	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive)
+	h.dispatchQuickViewFilePreview(path, req, gen)
+
+	h.mu.RLock()
+	st := h.model.FilePreview
+	h.mu.RUnlock()
+	if !st.Open || st.Phase != ui.FilePreviewPhaseDone {
+		t.Fatalf("FilePreview = {Open:%v Phase:%v}, want Open=true Phase=Done", st.Open, st.Phase)
+	}
+	if st.Path != path {
+		t.Fatalf("FilePreview.Path = %q, want %q", st.Path, path)
+	}
+}
+
+func TestDispatchQuickViewFilePreviewCurrentGenAppliesNotPreviewableMessage(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "binary.dat")
+	if err := os.WriteFile(path, []byte("a\x00b"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h, _ := newTestHandler(t, 80, 24)
+
+	h.mu.Lock()
+	h.model.FilePreview.Open = true
+	h.model.FilePreview.Phase = ui.FilePreviewPhasePending
+	h.model.FilePreview.Path = path
+	h.mu.Unlock()
+	gen := h.filePreviewRunGen.Add(1)
+	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive)
+	h.dispatchQuickViewFilePreview(path, req, gen)
+
+	h.mu.RLock()
+	st := h.model.FilePreview
+	h.mu.RUnlock()
+	if st.Phase != ui.FilePreviewPhaseDone || st.ErrorMsg != "Quick view: not a text file" {
+		t.Fatalf("FilePreview = {Phase:%v ErrorMsg:%q}, want Done with the not-a-text-file message", st.Phase, st.ErrorMsg)
+	}
+}
+
 func TestRunPreviewInternalSetsHighlightedCells(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "sample.go")

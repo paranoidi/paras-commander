@@ -266,6 +266,38 @@ func TestClearCacheRemovesSizes(t *testing.T) {
 	}
 }
 
+func TestCacheVersionIncrementsOnMutationOnly(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	f := filepath.Join(root, "file.dat")
+	if err := os.WriteFile(f, []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	e := New()
+	v0 := e.CacheVersion()
+
+	e.StartScanFromListing([]string{f}, nil, 0, ListingVolumeGate{})
+	waitUntil(t, func() bool {
+		_, ok := e.Size(f)
+		return ok
+	}, 5*time.Second, "file size not cached")
+
+	v1 := e.CacheVersion()
+	if v1 == v0 {
+		t.Fatal("CacheVersion should increment after a cache mutation")
+	}
+	if got := e.CacheVersion(); got != v1 {
+		t.Fatalf("CacheVersion changed without a mutation: got %d, want %d", got, v1)
+	}
+
+	e.ClearCache()
+	if v2 := e.CacheVersion(); v2 == v1 {
+		t.Fatal("CacheVersion should increment after ClearCache")
+	}
+}
+
 func TestPendingForPanelOtherPanelNotTinted(t *testing.T) {
 	t.Parallel()
 

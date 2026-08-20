@@ -656,20 +656,6 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		h.patchColumnPreviewMessage("", "Quick view: cannot read selection")
 	case quickViewWantFile:
 		h.ClearQuickViewDirOverlay()
-		err := localfs.CheckFilePreviewable(path)
-		isImage := errors.Is(err, localfs.ErrFilePreviewImage)
-		isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
-		if err != nil && !isImage && !isMedia {
-			switch {
-			case errors.Is(err, localfs.ErrFilePreviewBinary):
-				h.patchColumnPreviewMessage(filepath.Base(path), "Quick view: not a text file")
-			case errors.Is(err, localfs.ErrFilePreviewIsDir):
-				h.patchColumnPreviewMessage("", "Quick view: not a file")
-			default:
-				h.patchColumnPreviewMessage(filepath.Base(path), err.Error())
-			}
-			return
-		}
 		tw, contentH, layOK := h.inactivePanelPreviewLayoutMetrics(true)
 		if !layOK {
 			tw = 1
@@ -696,8 +682,42 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		})
 		h.postRenderWake()
 		gen := h.filePreviewRunGen.Add(1)
-		go h.runPreview(h.ctx, h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive), previewTargetInactive, gen)
+		req := h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive)
+		go h.dispatchQuickViewFilePreview(path, req, gen)
 	}
+}
+
+// dispatchQuickViewFilePreview is dispatchFilePreviewCheck for the inactive-column quick view.
+func (h *Handler) dispatchQuickViewFilePreview(path string, req previewrun.Request, gen uint64) {
+	h.dispatchFilePreviewCheck(path, req, previewTargetInactive, gen,
+		"Quick view: not a text file", "Quick view: not a file", h.patchColumnPreviewMessage)
+}
+
+// dispatchFilePreviewCheck runs CheckFilePreviewable (a stat/open/read that can block for a long
+// time on a slow filesystem such as a network mount) off the UI goroutine for target, so
+// highlighting a new file never blocks input handling — only the "Pending" placeholder state is
+// set synchronously by the caller. gen guards against a superseded dispatch (the user already
+// moved on to another file) clobbering fresher preview content once its slow I/O finally
+// completes. notTextMsg/notFileMsg are target's wording for the two not-previewable cases.
+func (h *Handler) dispatchFilePreviewCheck(path string, req previewrun.Request, target previewTarget, gen uint64, notTextMsg, notFileMsg string, patchMessage func(titleBase, msg string)) {
+	err := localfs.CheckFilePreviewable(path)
+	if gen != h.previewRunGenFor(target).Load() {
+		return
+	}
+	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
+	isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
+	if err != nil && !isImage && !isMedia {
+		switch {
+		case errors.Is(err, localfs.ErrFilePreviewBinary):
+			patchMessage(filepath.Base(path), notTextMsg)
+		case errors.Is(err, localfs.ErrFilePreviewIsDir):
+			patchMessage("", notFileMsg)
+		default:
+			patchMessage(filepath.Base(path), err.Error())
+		}
+		return
+	}
+	h.runPreview(h.ctx, req, target, gen)
 }
 
 // refreshInactiveFilePreview re-runs the current inactive-column (quick view) preview at its

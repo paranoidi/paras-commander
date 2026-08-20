@@ -1,12 +1,12 @@
 package preview
 
 import (
-	"errors"
 	"path/filepath"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
+	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
@@ -261,20 +261,6 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
-	err := localfs.CheckFilePreviewable(path)
-	isImage := errors.Is(err, localfs.ErrFilePreviewImage)
-	isMedia := errors.Is(err, localfs.ErrFilePreviewMedia)
-	if err != nil && !isImage && !isMedia {
-		switch {
-		case errors.Is(err, localfs.ErrFilePreviewBinary):
-			h.patchCarouselFilePreviewMessage(filepath.Base(path), "Not a text file")
-		case errors.Is(err, localfs.ErrFilePreviewIsDir):
-			h.patchCarouselFilePreviewMessage("", "Not a file")
-		default:
-			h.patchCarouselFilePreviewMessage(filepath.Base(path), err.Error())
-		}
-		return
-	}
 	tw, contentH, layOK := h.carouselChildPreviewLayoutMetrics()
 	if !layOK {
 		tw = 1
@@ -300,7 +286,14 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 	})
 	h.postRenderWake()
 	gen := h.carouselFilePreviewRunGen.Add(1)
-	go h.runPreview(h.ctx, h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel), previewTargetCarousel, gen)
+	req := h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel)
+	go h.dispatchCarouselFilePreview(path, req, gen)
+}
+
+// dispatchCarouselFilePreview is dispatchFilePreviewCheck for the carousel side preview.
+func (h *Handler) dispatchCarouselFilePreview(path string, req previewrun.Request, gen uint64) {
+	h.dispatchFilePreviewCheck(path, req, previewTargetCarousel, gen,
+		"Not a text file", "Not a file", h.patchCarouselFilePreviewMessage)
 }
 
 // refreshCarouselFilePreview re-runs the current carousel child preview at its current path,

@@ -25,16 +25,17 @@ func (a *App) pollDiskUsageUpdates() {
 	}
 	needRender := false
 	jobFinishedToast := false
+	idleSortCheckDue := false
 	for {
 		select {
 		case ev := <-a.disk.engine.Events():
 			switch ev.Kind {
 			case diskusage.EventSubtreeIndexed:
-				a.maybeScheduleIdleDiskSortBothPanels()
+				idleSortCheckDue = true
 				needRender = true
 			case diskusage.EventJobFinished:
 				// Last-resort schedule after session completes (subtree events should suffice).
-				a.maybeScheduleIdleDiskSortBothPanels()
+				idleSortCheckDue = true
 				jobFinishedToast = true
 				needRender = true
 			}
@@ -45,6 +46,13 @@ func (a *App) pollDiskUsageUpdates() {
 		}
 	}
 drained:
+	// maybeScheduleIdleDiskSortBothPanels does an O(panel entries) recheck per panel; call it at
+	// most once per pollDiskUsageUpdates invocation rather than once per drained event above — a
+	// scan dominated by many small top-level files can queue hundreds of EventSubtreeIndexed
+	// between polls, and each one used to trigger its own recheck.
+	if idleSortCheckDue {
+		a.maybeScheduleIdleDiskSortBothPanels()
+	}
 	// Only user-initiated scans (startDiskUsageScanForPanel) arm the toast flag.
 	// Selection-size background scans do not set it, so their EventJobFinished completions
 	// never show the toast even when DiskUsageShown is true.
@@ -382,6 +390,11 @@ func (a *App) handlePanelDirChanged(panelID int) {
 	if p.IdleDiskTotalsSort {
 		return
 	}
+	ver := a.disk.engine.CacheVersion()
+	if a.disk.lastCheckedCacheVer[panelID] == ver {
+		return
+	}
+	a.disk.lastCheckedCacheVer[panelID] = ver
 	if p.ListingFullyDiskCached() {
 		p.DiskUsageIdleSortActivated = true
 		p.IdleDiskTotalsSort = true

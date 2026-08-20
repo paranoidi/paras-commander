@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -245,6 +246,66 @@ func TestDiskIdleSortActivatesAfterScanWhenListingCached(t *testing.T) {
 
 	if !left.IdleDiskTotalsSort {
 		t.Fatalf("IdleDiskTotalsSort still false epoch=%d busy=%v", ep, app.diskUsageScanBusy())
+	}
+}
+
+// Regression: a scan dominated by many small top-level files posts one EventSubtreeIndexed per
+// file, which can queue up faster than pollDiskUsageUpdates drains them. Each drained event used
+// to trigger its own O(panel entries) ListingFullyDiskCached recheck, so a backlog of N events
+// cost O(N * panel entries) in a single pollDiskUsageUpdates call — on top of the legitimate,
+// one-time O(panel entries) recheck(s) and O(entries*log(entries)) sort that activating idle-sort
+// itself requires. The recheck must run at most once per call regardless of how many events were
+// queued, so total DiskSorter calls must stay near that legitimate one-time cost, not scale with
+// the number of queued events.
+func TestPollDiskUsageUpdatesRechecksIdleSortOnceRegardlessOfEventBacklog(t *testing.T) {
+	root := t.TempDir()
+	const numFiles = 30
+	for i := range numFiles {
+		name := fmt.Sprintf("file-%02d.dat", i)
+		if err := os.WriteFile(filepath.Join(root, name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+
+	left := app.panelByID(ui.PrimaryPanel)
+	left.Sort.DiskUsageIdleSizeSort = true
+	left.IdleDiskTotalsSort = false
+
+	var diskSorterCalls atomic.Int64
+	realSorter := left.DiskSorter
+	left.DiskSorter = func(abs string) (int64, bool) {
+		diskSorterCalls.Add(1)
+		return realSorter(abs)
+	}
+
+	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
+
+	// Let the scan finish and queue all its EventSubtreeIndexed events without draining them, so
+	// they back up in the channel exactly like a burst of many small files completing faster than
+	// the UI goroutine polls.
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) && app.disk.engine.DiskScanBusy() {
+		time.Sleep(2 * time.Millisecond)
+	}
+	if app.disk.engine.DiskScanBusy() {
+		t.Fatal("scan did not finish before deadline")
+	}
+
+	diskSorterCalls.Store(0)
+	app.pollDiskUsageUpdates()
+
+	// One event-triggered recheck pass, one immediate reconcile-triggered recheck pass, and one
+	// O(n*log n) sort once idle-sort activates: measured ~5x numFiles, so 8x leaves headroom
+	// without hiding a regression. The old per-event bug reran a full recheck pass per queued
+	// event (>= numFiles events for this scan shape), which would blow well past this bound.
+	if got, want := diskSorterCalls.Load(), int64(8*numFiles); got > want {
+		t.Fatalf("DiskSorter called %d times by one pollDiskUsageUpdates after a %d-file scan, want <= %d; this indicates the per-event recheck regression (cost scaling with queued events, not with panel entries)", got, numFiles, want)
+	}
+	if !left.IdleDiskTotalsSort {
+		t.Fatal("IdleDiskTotalsSort should have activated once the listing was fully cached")
 	}
 }
 

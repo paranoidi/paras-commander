@@ -37,6 +37,10 @@ type Engine struct {
 	// generation it started with to drop stale walk results.
 	gen atomic.Uint64
 
+	// cacheVersion increments on every cache mutation, so callers can cheaply detect whether
+	// cached results changed since they last checked (e.g. to skip a redundant recheck).
+	cacheVersion atomic.Uint64
+
 	jobMu   sync.Mutex
 	jobCond *sync.Cond
 	queue   []scanJob
@@ -77,6 +81,9 @@ func NewWithFSWalk(cfg config.FSWalkConfig) *Engine {
 			AdaptIntervalMS: cfg.AdaptIntervalMS,
 		},
 	}
+	// Start at 1 so a caller's zero-value "last checked version" never matches a live engine's
+	// version, forcing that caller's first check to actually run.
+	e.cacheVersion.Store(1)
 	e.jobCond = sync.NewCond(&e.jobMu)
 	go e.workerLoop()
 	return e
@@ -237,6 +244,12 @@ func (e *Engine) finishCurJobRoot(abs string) {
 	e.jobMu.Unlock()
 }
 
+// CacheVersion returns a counter incremented on every cache mutation, so callers can cheaply
+// detect whether cached results changed since they last checked.
+func (e *Engine) CacheVersion() uint64 {
+	return e.cacheVersion.Load()
+}
+
 // Size returns cached subtree or file aggregate if present for absPath.
 func (e *Engine) Size(absPath string) (int64, bool) {
 	e.mu.RLock()
@@ -303,6 +316,7 @@ func (e *Engine) ClearCache() {
 	for k := range e.fileCounts {
 		delete(e.fileCounts, k)
 	}
+	e.cacheVersion.Add(1)
 	e.mu.Unlock()
 	e.poke()
 }
@@ -406,6 +420,7 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 				e.mu.Lock()
 				e.cache[jobPath] = fi.Size()
 				e.fileCounts[jobPath] = 1
+				e.cacheVersion.Add(1)
 				delete(e.activeWalkRoots, jobPath)
 				e.mu.Unlock()
 				e.finishCurJobRoot(jobPath)
@@ -451,6 +466,7 @@ func (e *Engine) runPlanner(sess uint64, childAbs []string, shouldIgnore ShouldI
 						e.fileCounts[k] = fc
 					}
 				}
+				e.cacheVersion.Add(1)
 				e.mu.Unlock()
 			}
 			if e.gen.Load() != sess {
