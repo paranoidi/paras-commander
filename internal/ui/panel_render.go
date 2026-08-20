@@ -461,6 +461,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			metaText = MetaRowText(metaLayouts, entry.Path)
 		}
 		rowSuffix = panellist.NewRowSuffix(jobMarkGlyph, newFileTier, renameMark, subtreeMark, jobWrite)
+		rowSuffix.Working = state.ShowLoadingGlyph && entry.Type == localfs.EntryDirectory && entry.Path == state.ListingPendingPath
 		rowOpts.Suffix = rowSuffix
 		text = formatEntry(entry, effTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
 		nameWidth = effNameWidth

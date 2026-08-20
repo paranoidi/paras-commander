@@ -65,6 +65,13 @@ type diskIdleSortPayload struct {
 // diskUsageRedrawPayload flushes debounced disk-usage cache/paint updates while a scan is busy.
 type diskUsageRedrawPayload struct{}
 
+// dirLoadingIndicatorPayload arms the row working-indicator glyph for one panel's pending
+// navigation load once it has been in flight longer than dirLoadingIndicatorDelayMS.
+type dirLoadingIndicatorPayload struct {
+	PanelID int
+	Epoch   uint64
+}
+
 type diskIdleSortPanel struct {
 	timer *time.Timer
 	epoch uint64
@@ -200,6 +207,12 @@ type App struct {
 	// Indexed by panel ID (ui.PrimaryPanel, ui.SecondaryPanel, ui.QuickViewOverlayPanel).
 	panelAsyncLoadGen [3]atomic.Uint64
 	gitStatusLoadGen  [3]atomic.Uint64
+
+	// dirLoadIndicatorTimer/dirLoadIndicatorEpoch arm the row working-indicator glyph for a
+	// panel navigation load pending longer than dirLoadingIndicatorDelayMS; indexed by
+	// ui.PrimaryPanel/ui.SecondaryPanel. See dir_loading_indicator.go.
+	dirLoadIndicatorTimer [2]*time.Timer
+	dirLoadIndicatorEpoch [2]uint64
 
 	// lastScreenContentHash is the FNV hash of the logical buffer after the last successful Show
 	// when ScreenRenderHashCache is enabled (see emitScreenAfterFullRender).
@@ -801,6 +814,10 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		}
 	case diskIdleSortPayload:
 		a.applyIdleDiskSort(d.PanelID, d.Epoch)
+		a.render()
+		out.didRender = true
+	case dirLoadingIndicatorPayload:
+		a.applyDirLoadingIndicator(d.PanelID, d.Epoch)
 		a.render()
 		out.didRender = true
 	case diskUsageRedrawPayload:

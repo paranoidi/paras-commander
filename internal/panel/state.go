@@ -183,6 +183,17 @@ type State struct {
 	ScheduleAsyncLoad AsyncLoadScheduler
 	// ListingPending is true while an asynchronous listing is in flight.
 	ListingPending bool
+	// ListingPendingPath is the path being loaded while ListingPending is true. Path/Entries
+	// still hold the pre-navigation listing until the load applies, so this is how a renderer
+	// identifies which row in that old listing the in-flight load corresponds to.
+	ListingPendingPath string
+	// ShowLoadingGlyph is set by the app once a pending load has been in flight longer than its
+	// working-indicator delay; render checks this (not just ListingPending) so nothing is drawn
+	// before that threshold.
+	ShowLoadingGlyph bool
+	// OnAsyncLoadPending is called once whenever ListingPending transitions to true (set by the
+	// app; nil = no-op). Same pattern as OnDirectoryChange.
+	OnAsyncLoadPending func()
 	// ScheduleGitStatus runs git status for the current listing off the UI thread (set by app).
 	ScheduleGitStatus GitStatusScheduler
 	// ScheduleTreeChildLoad runs a tree-mode directory's first-expand child listing off the UI
@@ -1356,6 +1367,10 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 			SyncHistoryHead:      remote.syncHistoryHead,
 		}) {
 			s.ListingPending = true
+			s.ListingPendingPath = loc.String()
+			if s.OnAsyncLoadPending != nil {
+				s.OnAsyncLoadPending()
+			}
 			return nil
 		}
 	}

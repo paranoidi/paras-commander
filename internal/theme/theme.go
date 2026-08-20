@@ -630,6 +630,13 @@ func (t Theme) SymbolFilelistJob() rune {
 	return t.filelistSymbolRune(SymbolKeyFilelistJob, '\U000f02ca')
 }
 
+// SymbolFilelistWorking returns the row-suffix glyph for a directory whose async navigation
+// load has been pending longer than the working-indicator delay (colored via
+// Theme.PanelIconFolderScanning, the same style used for disk-scan-pending folder icons).
+func (t Theme) SymbolFilelistWorking() rune {
+	return t.filelistSymbolRune(SymbolKeyWorking, '')
+}
+
 // SymbolFilelistPreviewLoading returns the glyph that replaces the leading file icon while a
 // still/video thumb is prefetching (colored via panel.icon.folder.scanning).
 func (t Theme) SymbolFilelistPreviewLoading() rune {

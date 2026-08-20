@@ -32,6 +32,9 @@ type RowSuffix struct {
 	// JobWrite is true when JobGlyph marks a job's write (destination) tree rather
 	// than its read (source) tree; see Theme.PanelJobMarkStyle.
 	JobWrite bool
+	// Working marks a directory whose async navigation load has been pending longer than the
+	// working-indicator delay; see Theme.SymbolFilelistWorking.
+	Working bool
 }
 
 // SuffixDecorationLen returns how many trailing runes are reserved for row suffix indicators.
@@ -44,6 +47,9 @@ func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th th
 		n += 2
 	}
 	if suffix.RenameMark && width > n+2 {
+		n += 2
+	}
+	if suffix.Working && width > n+2 {
 		n += 2
 	}
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
@@ -117,6 +123,10 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistRenamed(), NameIdx: -1})
 		used += 2
 	}
+	if suffix.Working && width > used+2 {
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistWorking(), NameIdx: -1})
+		used += 2
+	}
 	if subtree && width > used+2 {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistSelectionSubtree(), NameIdx: -1})
 		used += 2
@@ -151,6 +161,8 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, c
 	case r == th.SymbolFilelistRenamed() && suffix.RenameMark:
 		base := th.PanelRowMarkRenamed
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
+	case r == th.SymbolFilelistWorking() && suffix.Working:
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelIconFolderScanning)), true
 	case r == th.SymbolFilelistSelectionSubtree() && suffix.SubtreeSelection:
 		base := th.PanelRowMarkSelectionSubtree
 		if chromeBlocked {
@@ -178,7 +190,7 @@ func ListingSuffixSpans(
 ) []primitive.Span {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
 	if suffix.JobGlyph == 0 && suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree &&
-		!entry.AccessDenied {
+		!suffix.Working && !entry.AccessDenied {
 		return nil
 	}
 	display := EntryDisplayRunes(entry, nameWidth, showIcons, suffix, th)

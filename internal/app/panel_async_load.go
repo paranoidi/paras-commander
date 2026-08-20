@@ -57,6 +57,8 @@ type panelAsyncLoadPayload struct {
 func (a *App) wireAsyncPanelLoaders() {
 	a.model.Primary.ScheduleAsyncLoad = a.asyncLoadScheduler(ui.PrimaryPanel)
 	a.model.Secondary.ScheduleAsyncLoad = a.asyncLoadScheduler(ui.SecondaryPanel)
+	a.model.Primary.OnAsyncLoadPending = func() { a.armDirLoadingIndicatorTimer(ui.PrimaryPanel) }
+	a.model.Secondary.OnAsyncLoadPending = func() { a.armDirLoadingIndicatorTimer(ui.SecondaryPanel) }
 }
 
 // asyncLoadScheduler runs a directory listing off the UI thread for panelID (one of
@@ -105,6 +107,9 @@ func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
 	}
 	pan := a.panelByID(p.panelID)
 	pan.ListingPending = false
+	pan.ListingPendingPath = ""
+	pan.ShowLoadingGlyph = false
+	a.invalidateDirLoadingIndicator(p.panelID)
 	if p.err != nil {
 		if p.req.Rollback != nil {
 			p.req.Rollback()
