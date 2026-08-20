@@ -59,11 +59,23 @@ func (a *App) treeChildLoadScheduler(panelID int) panel.TreeChildLoadScheduler {
 	}
 }
 
+// treeExpandProgressRenderInterval bounds how often a still-in-flight expand-all quiet batch
+// forces a progress repaint (see applyTreeChildLoad). On a very large/slow tree a single cascade
+// level's batch can take many seconds to land; without this the screen would sit static (no
+// visible loading icons, no growing row count) for the whole batch instead of showing progress.
+const treeExpandProgressRenderInterval = 200 * time.Millisecond
+
 func (a *App) applyTreeChildLoad(p treeChildLoadPayload) bool {
 	pan := a.panelByID(p.panelID)
 	if !pan.ApplyTreeChildLoad(p.dirID, p.entries, p.err, a.panelViewportRows(p.panelID)) {
+		if now := time.Now(); now.Sub(a.treeExpandProgressRenderAt[p.panelID]) >= treeExpandProgressRenderInterval {
+			a.treeExpandProgressRenderAt[p.panelID] = now
+			pan.PeekTreeRows(a.panelViewportRows(p.panelID))
+			return true
+		}
 		return false
 	}
+	a.treeExpandProgressRenderAt[p.panelID] = time.Time{}
 	if p.err != nil {
 		a.setErrorMessage("Expand failed", p.err)
 	}

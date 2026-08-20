@@ -79,11 +79,17 @@ func (s *State) finishTreeChildLoadApply(dirID string, viewportRows int) bool {
 		}
 	}
 	if s.treeExpandAllAuto {
+		// Rebuild treeRows now, before deciding whether to dispatch another level: the level that
+		// just fully landed has real children in TreeRoots already (ApplyTreeChildLoad sets them
+		// per-node as each fetch arrives), but treeRows is a flatten cache that's otherwise only
+		// refreshed lazily — without this, driveExpandAllTreeAuto's MaxExpandAllTotalRows check
+		// reads a stale, undercounted len(s.treeRows) and never stops the cascade in time.
+		s.rebuildTreeRows()
 		_ = s.driveExpandAllTreeAuto(viewportRows)
 		if s.treeExpandQuiet > 0 {
-			// The next cascade level was just dispatched and is itself async: its
-			// ExpandAllTreeShallow call already rebuilt treeRows with the new level's Loading
-			// icons, so report a state change to trigger a render instead of swallowing it.
+			// The next cascade level was just dispatched and is itself async: ExpandAllTreeShallow
+			// already rebuilt treeRows again with the new level's Loading icons, so report a state
+			// change to trigger a render instead of swallowing it.
 			return true
 		}
 	}

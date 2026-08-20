@@ -516,15 +516,15 @@ func (s *State) ExpandAllTreeFully(viewportRows int) error {
 // once that batch's ApplyTreeChildLoad calls finish, continuing the cascade until depth 5.
 func (s *State) driveExpandAllTreeAuto(viewportRows int) error {
 	for s.treeExpandAllDepth < MaxExpandAllShallowDepth {
+		if len(s.treeRows) > MaxExpandAllTotalRows {
+			s.treeExpandAllAuto = false
+			return ErrExpandAllRowLimit
+		}
 		if err := s.ExpandAllTreeShallow(viewportRows); err != nil {
 			return err
 		}
 		if s.treeExpandQuiet > 0 {
 			return nil
-		}
-		if len(s.treeRows) > MaxExpandAllTotalRows {
-			s.treeExpandAllAuto = false
-			return ErrExpandAllRowLimit
 		}
 	}
 	s.treeExpandAllAuto = false
@@ -722,6 +722,16 @@ func findTreeNode(nodes []treeflat.Node[TreeEntry], id string) *treeflat.Node[Tr
 		}
 	}
 	return nil
+}
+
+// PeekTreeRows rebuilds treeRows from the current TreeRoots/TreeExpanded state without touching
+// treeExpandQuiet/cursor bookkeeping. Safe to call at any time, including mid-cascade while an
+// ExpandAllTreeFully quiet batch is still landing — lets the app throttle a progress repaint
+// during a long batch instead of leaving the screen static until the whole level settles.
+func (s *State) PeekTreeRows(viewportRows int) {
+	s.rebuildTreeRows()
+	s.clampCursor()
+	s.EnsureCursorInViewport(viewportRows)
 }
 
 func (s *State) rebuildTreeRows() {

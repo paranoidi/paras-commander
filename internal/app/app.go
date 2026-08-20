@@ -193,6 +193,11 @@ type App struct {
 
 	workPools *workpool.Registry
 
+	// treeExpandProgressRenderAt tracks, per panel, the last time a tree-expand-all quiet batch
+	// (many directories landing at one cascade level) forced a throttled progress repaint. See
+	// applyTreeChildLoad in tree_load.go.
+	treeExpandProgressRenderAt [2]time.Time
+
 	volumeRefreshInFlight [2]atomic.Bool
 	panelRefreshInFlight  [2]atomic.Bool
 
