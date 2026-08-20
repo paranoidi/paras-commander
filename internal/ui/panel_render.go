@@ -294,6 +294,11 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		paintPanelIconStripBlank(screen, iconStart, headerY, headerStyle)
 	}
 	listContentStart := iconStart + iconStrip
+	if headerTreeGutter > 0 {
+		for i := 0; i < headerTreeGutter; i++ {
+			screen.SetContent(listContentStart+i, headerY, ' ', nil, headerStyle)
+		}
+	}
 	primitive.Text(screen, listContentStart+headerTreeGutter, headerY, headerTextWidth, header, headerStyle)
 
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
