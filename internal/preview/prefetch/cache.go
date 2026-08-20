@@ -3,7 +3,11 @@ package prefetch
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
+
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
 func stillKey(path string, mtime, size int64, maxEdge int) string {
@@ -14,16 +18,63 @@ func videoKey(path string, mtime, size int64, maxEdge, cols, rows int) string {
 	return fmt.Sprintf("video\x00%s\x00%d\x00%d\x00%d\x00%d\x00%d", path, mtime, size, maxEdge, cols, rows)
 }
 
+// renderKey identifies a final render-ready payload: decode+resize+protocol-encode output for
+// one exact on-screen pixel box, distinct from stillKey's maxEdge-clamped intermediate PNG.
+func renderKey(path string, mtime, size int64, proto previewpanel.ImageProtocol, unicodePlaceholder, inTmux bool, maxPxW, maxPxH int) string {
+	return fmt.Sprintf("render\x00%s\x00%d\x00%d\x00%d\x00%t\x00%t\x00%d\x00%d",
+		path, mtime, size, proto, unicodePlaceholder, inTmux, maxPxW, maxPxH)
+}
+
+// packRenderMeta/parseRenderMeta stash the render payload's pixel dimensions in memoryLRU's meta
+// string field, since (png []byte, meta string) doesn't have room for a second int pair.
+func packRenderMeta(w, h int) string {
+	return fmt.Sprintf("%d,%d", w, h)
+}
+
+func parseRenderMeta(meta string) (w, h int) {
+	before, after, ok := strings.Cut(meta, ",")
+	if !ok {
+		return 0, 0
+	}
+	w, _ = strconv.Atoi(before)
+	h, _ = strconv.Atoi(after)
+	return w, h
+}
+
 type flightCall struct {
 	done chan struct{}
 	png  []byte
 	meta string
 	err  error
+
+	listenersMu sync.Mutex
+	listeners   []func(done, total int)
+}
+
+// addListener registers a progress listener that receives every subsequent notify call, even
+// from a caller that joined after the flight's work already started.
+func (f *flightCall) addListener(fn func(done, total int)) {
+	f.listenersMu.Lock()
+	f.listeners = append(f.listeners, fn)
+	f.listenersMu.Unlock()
+}
+
+// notify broadcasts a progress update to every registered listener, including callers that
+// joined an already-running flight rather than started it.
+func (f *flightCall) notify(done, total int) {
+	f.listenersMu.Lock()
+	listeners := f.listeners
+	f.listenersMu.Unlock()
+	for _, fn := range listeners {
+		fn(done, total)
+	}
 }
 
 // Cache implements preview.MediaCache with memory LRU + video disk store + singleflight.
 type Cache struct {
-	mem  *memoryLRU
+	mem    *memoryLRU
+	render *memoryLRU // final render-ready payloads, separate budget from mem so per-render
+	// writes never evict not-yet-consumed prefetched maxEdge PNGs.
 	disk *diskCache
 
 	mu       sync.Mutex
@@ -34,9 +85,10 @@ type Cache struct {
 }
 
 // NewCache builds a MediaCache. diskDir may be empty to disable disk persistence.
-func NewCache(memoryMaxBytes, diskMaxBytes int64, diskDir string) *Cache {
+func NewCache(memoryMaxBytes, diskMaxBytes, renderMaxBytes int64, diskDir string) *Cache {
 	c := &Cache{
 		mem:      newMemoryLRU(memoryMaxBytes),
+		render:   newMemoryLRU(renderMaxBytes),
 		inflight: make(map[string]int),
 		flights:  make(map[string]*flightCall),
 		failed:   make(map[string]error),
@@ -105,6 +157,16 @@ func (c *Cache) HasVideo(path string, mtime, size int64, maxEdge, cols, rows int
 	return ok
 }
 
+// HasRender reports a warm memory hit for the exact render-payload box, without marking in-flight.
+// Unlike HasStill/HasVideo, a permanent LoadRender failure isn't memoized (LoadRender doesn't call
+// markFailed — see its doc comment), so a render that keeps failing will keep getting retried by
+// Schedule's dedup check below; that's an accepted tradeoff since the retried work (resize+encode
+// of an already-decoded image) is cheap, unlike a full decode retry.
+func (c *Cache) HasRender(path string, mtime, size int64, proto previewpanel.ImageProtocol, unicodePlaceholder, inTmux bool, maxPxW, maxPxH int) bool {
+	key := renderKey(path, mtime, size, proto, unicodePlaceholder, inTmux, maxPxW, maxPxH)
+	return c.render.has(key)
+}
+
 // isFailed reports whether key is a previously recorded permanent decode failure.
 func (c *Cache) isFailed(key string) bool {
 	_, ok := c.failedErr(key)
@@ -131,20 +193,26 @@ func (c *Cache) markFailed(ctx context.Context, key string, err error) {
 	c.mu.Unlock()
 }
 
-func (c *Cache) doFlight(key, path string, run func() (png []byte, meta string, err error)) (png []byte, meta string, err error) {
+func (c *Cache) doFlight(key, path string, onProgress func(done, total int), run func(notify func(done, total int)) (png []byte, meta string, err error)) (png []byte, meta string, err error) {
 	c.mu.Lock()
 	if call, ok := c.flights[key]; ok {
+		if onProgress != nil {
+			call.addListener(onProgress)
+		}
 		c.mu.Unlock()
 		<-call.done
 		return call.png, call.meta, call.err
 	}
 	call := &flightCall{done: make(chan struct{})}
+	if onProgress != nil {
+		call.addListener(onProgress)
+	}
 	c.flights[key] = call
 	c.inflight[path]++
 	c.notifyLocked()
 	c.mu.Unlock()
 
-	png, meta, err = run()
+	png, meta, err = run(call.notify)
 
 	c.mu.Lock()
 	call.png, call.meta, call.err = png, meta, err
@@ -169,7 +237,7 @@ func (c *Cache) LoadStill(ctx context.Context, path string, mtime, size int64, m
 	if ferr, ok := c.failedErr(key); ok {
 		return nil, "", ferr
 	}
-	return c.doFlight(key, path, func() ([]byte, string, error) {
+	return c.doFlight(key, path, nil, func(func(done, total int)) ([]byte, string, error) {
 		if png, meta, ok := c.mem.get(key); ok {
 			return png, meta, nil
 		}
@@ -188,8 +256,46 @@ func (c *Cache) LoadStill(ctx context.Context, path string, mtime, size int64, m
 	})
 }
 
-// LoadVideo implements preview.MediaCache.
-func (c *Cache) LoadVideo(ctx context.Context, path string, mtime, size int64, maxEdge, cols, rows int, load func(context.Context) (png []byte, err error)) (png []byte, err error) {
+// LoadRender implements preview.MediaCache. It caches the final protocol-encoded payload for one
+// exact on-screen pixel box, so re-rendering an already-seen box (e.g. landing back on a file at
+// unchanged panel geometry) skips decode/resize/encode entirely.
+func (c *Cache) LoadRender(ctx context.Context, path string, mtime, size int64,
+	proto previewpanel.ImageProtocol, unicodePlaceholder, inTmux bool, maxPxW, maxPxH int,
+	load func(context.Context) (payload []byte, w, h int, err error),
+) (payload []byte, w, h int, err error) {
+	key := renderKey(path, mtime, size, proto, unicodePlaceholder, inTmux, maxPxW, maxPxH)
+	if payload, meta, ok := c.render.get(key); ok {
+		w, h := parseRenderMeta(meta)
+		return payload, w, h, nil
+	}
+	payload, meta, err := c.doFlight(key, path, nil, func(func(done, total int)) ([]byte, string, error) {
+		if payload, meta, ok := c.render.get(key); ok {
+			return payload, meta, nil
+		}
+		select {
+		case <-ctx.Done():
+			return nil, "", ctx.Err()
+		default:
+		}
+		payload, w, h, err := load(ctx)
+		if err != nil {
+			return nil, "", err
+		}
+		meta := packRenderMeta(w, h)
+		c.render.put(key, payload, meta)
+		return payload, meta, nil
+	})
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	w, h = parseRenderMeta(meta)
+	return payload, w, h, nil
+}
+
+// LoadVideo implements preview.MediaCache. onProgress, if non-nil, is called with each frame
+// completed by load — even when this call joins a flight already started by another caller
+// (e.g. the background prefetch engine), since progress is broadcast to every joiner.
+func (c *Cache) LoadVideo(ctx context.Context, path string, mtime, size int64, maxEdge, cols, rows int, onProgress func(done, total int), load func(context.Context, func(done, total int)) (png []byte, err error)) (png []byte, err error) {
 	key := videoKey(path, mtime, size, maxEdge, cols, rows)
 	if png, _, ok := c.mem.get(key); ok {
 		return png, nil
@@ -204,7 +310,7 @@ func (c *Cache) LoadVideo(ctx context.Context, path string, mtime, size int64, m
 	if ferr, ok := c.failedErr(key); ok {
 		return nil, ferr
 	}
-	png, _, err = c.doFlight(key, path, func() ([]byte, string, error) {
+	png, _, err = c.doFlight(key, path, onProgress, func(notify func(done, total int)) ([]byte, string, error) {
 		if png, _, ok := c.mem.get(key); ok {
 			return png, "", nil
 		}
@@ -219,7 +325,7 @@ func (c *Cache) LoadVideo(ctx context.Context, path string, mtime, size int64, m
 			return nil, "", ctx.Err()
 		default:
 		}
-		png, err := load(ctx)
+		png, err := load(ctx, notify)
 		if err != nil {
 			c.markFailed(ctx, key, err)
 			return nil, "", err

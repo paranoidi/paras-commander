@@ -142,6 +142,7 @@ type PanelDisplayConfig struct {
 	ShowDiskUsage                   bool
 	JobMarks                        []JobPathMark
 	PreviewPrefetchLoading          map[string]struct{}
+	PreviewPrefetchWarm             map[string]struct{}
 	MetaColumns                     []MetaColumnState
 	ShrunkenShowsNameOnly           bool
 	ScrollbarShowInactive           bool
@@ -410,6 +411,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	var jobMarkGlyph rune
 	var rowSuffix panellist.RowSuffix
 	var previewLoading bool
+	var previewWarm bool
 
 	// Tree-mode gutter (ancestor guide lines + folder expander) is prepended before the
 	// icon/name columns; every other column (size/date/permissions/git/marks) keeps using the
@@ -450,6 +452,9 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		}
 		if display.PreviewPrefetchLoading != nil {
 			_, previewLoading = display.PreviewPrefetchLoading[entry.Path]
+		}
+		if display.PreviewPrefetchWarm != nil {
+			_, previewWarm = display.PreviewPrefetchWarm[entry.Path]
 		}
 		metaText := ""
 		if showMetaEffective {
@@ -515,7 +520,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		drawPanelRowIconStrip(screen, p, panelRowPaintState{
 			Y: y, HasEntry: hasEntry, Entry: cur, Style: style, BlendCell: blendCell,
 			IconKey: iconKey, DiskPending: diskPending, DiskExcluded: diskExcluded,
-			PreviewLoading: previewLoading,
+			PreviewLoading: previewLoading, PreviewWarm: previewWarm,
 		})
 	}
 	if treeGutterWidth > 0 {
@@ -531,6 +536,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 				CursorStyleKey: iconKey,
 				ChromeBlocked:  ctx.ChromeBlocked,
 				PreviewLoading: previewLoading,
+				PreviewWarm:    previewWarm,
 				Folder: panellist.FolderIconContext{
 					OtherPanelPath:         ctx.OtherPanelPath,
 					DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
@@ -588,6 +594,7 @@ type panelRowPaintState struct {
 	DiskPending    bool
 	DiskExcluded   bool
 	PreviewLoading bool
+	PreviewWarm    bool
 }
 
 // drawPanelRowGitStrip paints the git-status strip cell (or its blank filler when the row has
@@ -619,6 +626,7 @@ func drawPanelRowIconStrip(screen tcell.Screen, p panelRowParams, rp panelRowPai
 		CursorStyleKey: rp.IconKey,
 		ChromeBlocked:  p.Ctx.ChromeBlocked,
 		PreviewLoading: rp.PreviewLoading,
+		PreviewWarm:    rp.PreviewWarm,
 		Folder: panellist.FolderIconContext{
 			OtherPanelPath:         p.Ctx.OtherPanelPath,
 			DescendIntoMountPoints: p.Display.DiskUsageDescendIntoMountPoints,

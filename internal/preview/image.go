@@ -28,6 +28,11 @@ import (
 
 const kittyChunkSize = 4096
 
+// errRenderTmuxTooLarge is the sentinel error runImageCtx's fitAndEncode closure returns through
+// Cache.LoadRender's (payload, w, h, err) shape when the sixel payload still doesn't fit tmux's
+// input buffer after shrinkSixelForTmux's retry loop gives up.
+var errRenderTmuxTooLarge = fmt.Errorf("render payload too large for tmux")
+
 func runImageCtx(ctx context.Context, req Request) Result {
 	fi, err := os.Stat(req.Path)
 	if err != nil {
@@ -95,43 +100,70 @@ func runImageCtx(ctx context.Context, req Request) Result {
 	}
 	metaResult.CombinedText = meta
 
-	img, err := DecodePNGBytes(pngBytes)
-	if err != nil {
-		return Result{ErrorMsg: err.Error()}
+	// fitAndEncode is the expensive part — decode + cell-fit resize + protocol encode (plus the
+	// tmux sixel shrink-retry loop) — cached whole by LoadRender keyed on the exact pixel box,
+	// so a re-render of an already-seen box skips straight to the cached payload.
+	fitAndEncode := func(context.Context) ([]byte, int, int, error) {
+		return EncodeRenderPayload(pngBytes, req.ImageMaxPxW, req.ImageMaxPxH, req.ImageProtocol, req.ImageUnicodePlaceholder, req.ImageInTmux)
 	}
 
-	scaled := fitImage(img, req.ImageMaxPxW, req.ImageMaxPxH)
-	bounds := scaled.Bounds()
-	payload, err := encodeImagePayload(scaled, req.ImageProtocol, req.ImageUnicodePlaceholder, req.ImageInTmux)
-	if err != nil || payload == "" {
-		return metaResult
+	var payload []byte
+	var pxW, pxH int
+	if req.Cache != nil {
+		payload, pxW, pxH, err = req.Cache.LoadRender(ctx, req.Path, fi.ModTime().UnixNano(), fi.Size(),
+			req.ImageProtocol, req.ImageUnicodePlaceholder, req.ImageInTmux,
+			req.ImageMaxPxW, req.ImageMaxPxH, fitAndEncode)
+	} else {
+		payload, pxW, pxH, err = fitAndEncode(ctx)
 	}
-	if req.ImageProtocol == previewpanel.ImageProtocolSixel && req.ImageInTmux &&
-		len(payload) >= config.DefaultPreviewTmuxSixelMaxBytes {
-		// tmux (through 3.5a) silently discards a single escape sequence beyond its hardcoded
-		// input buffer rather than forwarding it — sending this would show as the image
-		// flickering and vanishing rather than a clean, if lower-quality, preview. Retry at
-		// progressively smaller sizes before giving up.
-		if shrunk, shrunkBounds, ok := shrinkSixelForTmux(img, bounds.Dx(), bounds.Dy(),
-			config.DefaultPreviewTmuxSixelMaxBytes, config.PreviewImageMaxEdgePxMin, req.ImageUnicodePlaceholder); ok {
-			payload = shrunk
-			bounds = shrunkBounds
-		} else {
+	if err != nil {
+		if err == errRenderTmuxTooLarge {
 			metaResult.CombinedText = meta + " / too large for tmux"
-			return metaResult
 		}
+		return metaResult
 	}
 	return Result{
 		Source:                   previewpanel.SourceExternalANSI,
 		CombinedText:             "", // caption unused for still images (Draw would show it below)
-		ImagePayload:             payload,
-		ImagePxW:                 bounds.Dx(),
-		ImagePxH:                 bounds.Dy(),
+		ImagePayload:             string(payload),
+		ImagePxW:                 pxW,
+		ImagePxH:                 pxH,
 		ImageProtocol:            req.ImageProtocol,
 		ImageUnicodePlaceholder:  req.ImageUnicodePlaceholder,
 		ImageInTmux:              req.ImageInTmux,
 		ImageCapabilityUncertain: req.ImageCapabilityUncertain,
 	}
+}
+
+// EncodeRenderPayload runs the cell-fit resize + protocol encode used for both the foreground
+// render path and prefetch's eager render-cache warming: bilinear-fit an already-decoded maxEdge
+// PNG to the exact target pixel box, protocol-encode it (Kitty/Sixel), and — for Sixel under tmux
+// — shrink-retry until the payload fits tmux's hardcoded input buffer limit.
+func EncodeRenderPayload(pngBytes []byte, maxPxW, maxPxH int, proto previewpanel.ImageProtocol, unicodePlaceholder, inTmux bool) ([]byte, int, int, error) {
+	img, err := DecodePNGBytes(pngBytes)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	scaled := fitImage(img, maxPxW, maxPxH)
+	bounds := scaled.Bounds()
+	p, err := encodeImagePayload(scaled, proto, unicodePlaceholder, inTmux)
+	if err != nil || p == "" {
+		return nil, 0, 0, fmt.Errorf("empty render payload")
+	}
+	if proto == previewpanel.ImageProtocolSixel && inTmux &&
+		len(p) >= config.DefaultPreviewTmuxSixelMaxBytes {
+		// tmux (through 3.5a) silently discards a single escape sequence beyond its hardcoded
+		// input buffer rather than forwarding it — sending this would show as the image
+		// flickering and vanishing rather than a clean, if lower-quality, preview. Retry at
+		// progressively smaller sizes before giving up.
+		if shrunk, shrunkBounds, ok := shrinkSixelForTmux(img, bounds.Dx(), bounds.Dy(),
+			config.DefaultPreviewTmuxSixelMaxBytes, config.PreviewImageMaxEdgePxMin, unicodePlaceholder); ok {
+			p, bounds = shrunk, shrunkBounds
+		} else {
+			return nil, 0, 0, errRenderTmuxTooLarge
+		}
+	}
+	return []byte(p), bounds.Dx(), bounds.Dy(), nil
 }
 
 func encodeImagePayload(img image.Image, proto previewpanel.ImageProtocol, unicodePlaceholder, inTmux bool) (string, error) {

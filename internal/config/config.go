@@ -289,6 +289,9 @@ type PreviewConfig struct {
 	// VideoThumbCols / VideoThumbRows set the video thumbnail grid size (default 2×2).
 	VideoThumbCols int `toml:"video_thumb_cols"`
 	VideoThumbRows int `toml:"video_thumb_rows"`
+	// VideoThumbWorkers sets how many ffmpeg frame-extraction processes run concurrently
+	// when building one video's thumbnail grid (default 2).
+	VideoThumbWorkers int `toml:"video_thumb_workers"`
 	// Prefetch enables background decode of nearby images and video thumbnail generation.
 	Prefetch bool `toml:"prefetch"`
 	// PrefetchAlways, when true, runs prefetch whenever Prefetch is on. When false (default),
@@ -301,6 +304,10 @@ type PreviewConfig struct {
 	QuickViewDisableOnInactiveNav bool `toml:"quick_view_disable_on_inactive_nav"`
 	// PrefetchWorkers is the worker-pool size for background prefetch (default 4).
 	PrefetchWorkers int `toml:"prefetch_workers"`
+	// PrefetchWindow bounds background prefetch to entries within this many positions of the
+	// cursor in each direction (default 5, clamped 1-50). Farther entries are never queued, so
+	// they can't evict already-warm near-cursor cache entries.
+	PrefetchWindow int `toml:"prefetch_window"`
 	// ImageMaxEdgePx caps the longest edge of decoded stills, for protocols/contexts that
 	// don't need the tmux-sixel payload-safety clamp below (default 0 = unrestricted).
 	// Applied even when Prefetch is false.
@@ -317,6 +324,9 @@ type PreviewConfig struct {
 	VideoThumbMaxEdgePx int `toml:"video_thumb_max_edge_px"`
 	// PrefetchMemoryMaxMB is the in-memory prefetch LRU budget in MiB (default 256).
 	PrefetchMemoryMaxMB int `toml:"prefetch_memory_max_mb"`
+	// RenderCacheMaxMB is the in-memory LRU budget in MiB for final render-ready payloads keyed
+	// by exact on-screen pixel box, protocol, and tmux state (default 32).
+	RenderCacheMaxMB int `toml:"render_cache_max_mb"`
 	// VideoThumbCacheMaxMB caps the on-disk video thumbnail cache under
 	// $XDG_CACHE_HOME/pc/video-thumbs/ (default 512).
 	VideoThumbCacheMaxMB int `toml:"video_thumb_cache_max_mb"`
@@ -630,14 +640,17 @@ func Default() Config {
 			TerminalKittyPlaceholder:      DefaultPreviewTerminalKittyPlaceholder,
 			VideoThumbCols:                DefaultPreviewVideoThumbCols,
 			VideoThumbRows:                DefaultPreviewVideoThumbRows,
+			VideoThumbWorkers:             DefaultPreviewVideoThumbWorkers,
 			Prefetch:                      DefaultPreviewPrefetch,
 			PrefetchAlways:                DefaultPreviewPrefetchAlways,
 			QuickViewDisableOnInactiveNav: DefaultPreviewQuickViewDisableOnInactiveNav,
 			PrefetchWorkers:               DefaultPreviewPrefetchWorkers,
+			PrefetchWindow:                DefaultPreviewPrefetchWindow,
 			ImageMaxEdgePx:                DefaultPreviewImageMaxEdgePx,
 			TmuxSixelMaxEdgePx:            DefaultPreviewTmuxSixelMaxEdgePx,
 			VideoThumbMaxEdgePx:           DefaultPreviewVideoThumbMaxEdgePx,
 			PrefetchMemoryMaxMB:           DefaultPreviewPrefetchMemoryMaxMB,
+			RenderCacheMaxMB:              DefaultPreviewRenderCacheMaxMB,
 			VideoThumbCacheMaxMB:          DefaultPreviewVideoThumbCacheMaxMB,
 		},
 		SFTP: SFTPConfig{
@@ -1255,8 +1268,14 @@ func (c *Config) validatePreview(builtin *Config) {
 	if c.Preview.VideoThumbRows < PreviewVideoThumbGridMin || c.Preview.VideoThumbRows > PreviewVideoThumbGridMax {
 		c.Preview.VideoThumbRows = builtin.Preview.VideoThumbRows
 	}
+	if c.Preview.VideoThumbWorkers < PreviewVideoThumbWorkersMin || c.Preview.VideoThumbWorkers > PreviewVideoThumbWorkersMax {
+		c.Preview.VideoThumbWorkers = builtin.Preview.VideoThumbWorkers
+	}
 	if c.Preview.PrefetchWorkers < PreviewPrefetchWorkersMin || c.Preview.PrefetchWorkers > PreviewPrefetchWorkersMax {
 		c.Preview.PrefetchWorkers = builtin.Preview.PrefetchWorkers
+	}
+	if c.Preview.PrefetchWindow < PreviewPrefetchWindowMin || c.Preview.PrefetchWindow > PreviewPrefetchWindowMax {
+		c.Preview.PrefetchWindow = builtin.Preview.PrefetchWindow
 	}
 	if c.Preview.ImageMaxEdgePx != 0 && c.Preview.ImageMaxEdgePx < PreviewImageMaxEdgePxMin {
 		c.Preview.ImageMaxEdgePx = PreviewImageMaxEdgePxMin
@@ -1269,6 +1288,9 @@ func (c *Config) validatePreview(builtin *Config) {
 	}
 	if c.Preview.PrefetchMemoryMaxMB < 1 {
 		c.Preview.PrefetchMemoryMaxMB = builtin.Preview.PrefetchMemoryMaxMB
+	}
+	if c.Preview.RenderCacheMaxMB < 1 {
+		c.Preview.RenderCacheMaxMB = builtin.Preview.RenderCacheMaxMB
 	}
 	if c.Preview.VideoThumbCacheMaxMB < 1 {
 		c.Preview.VideoThumbCacheMaxMB = builtin.Preview.VideoThumbCacheMaxMB

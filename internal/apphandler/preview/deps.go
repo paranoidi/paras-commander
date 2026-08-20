@@ -11,6 +11,8 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/preview/prefetch"
 	"github.com/paranoidi/paras-commander/internal/sched"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -94,6 +96,29 @@ type Handler struct {
 
 	// prefetch is the optional background image/video warm cache (nil when [preview].prefetch is off).
 	prefetch *prefetch.Engine
+	// prefetchLastCursor / prefetchLastPath / prefetchLastSurfaceActive record the previous
+	// SchedulePrefetchFromActivePanel call's position and surface state, so the next call can
+	// tell which direction the caret is moving (to bias the prefetch queue that way) and skip
+	// rebuilding the queue entirely when nothing has actually changed since last time.
+	prefetchLastCursor        int
+	prefetchLastPath          pathloc.Path
+	prefetchLastSurfaceActive bool
+	// prefetchLastEntryCount additionally guards the skip-rebuild check above against a listing
+	// change that doesn't move the caret or path (e.g. M-. toggling hidden/gitignored files) —
+	// without it, such a change is invisible to the check and prefetch scheduling is silently
+	// skipped even though the near-caret window now covers a completely different set of entries.
+	prefetchLastEntryCount int
+	// prefetchLastEntries / prefetchLastBox cache the most recently scheduled window and render box
+	// (written only from SchedulePrefetchFromActivePanel on the main goroutine, read under Mu), so
+	// rebuildPrefetchWarmMap can refresh the warm-icon snapshot from syncPrefetchLoadingMarks — which
+	// the Cache's OnChange callback can invoke from a background prefetch-worker goroutine — without
+	// that path touching Host/ActivePanel or screen state itself.
+	prefetchLastEntries []localfs.Entry
+	prefetchLastBox     *prefetch.RenderBox
+	// prefetchWarmMapDebounce coalesces bursts of Cache.OnChange firings (one per completed
+	// decode/render) into a single rebuildPrefetchWarmMap call shortly after the burst settles,
+	// instead of doing a full window rescan on every individual completion.
+	prefetchWarmMapDebounce sched.ManagedTimer
 }
 
 // New constructs a Handler.

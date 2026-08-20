@@ -51,12 +51,25 @@ func TestExtractFramePNGAndMediaThumbs(t *testing.T) {
 	if meta.CombinedText == "" {
 		t.Fatal("empty meta")
 	}
-	res := RunMediaThumbs(context.Background(), req, work)
+	var progress [][2]int
+	res := RunMediaThumbs(context.Background(), req, work, func(done, total int) {
+		progress = append(progress, [2]int{done, total})
+	})
 	if res.ErrorMsg != "" {
 		t.Fatalf("RunMediaThumbs: %s", res.ErrorMsg)
 	}
 	if res.ImagePayload == "" {
 		t.Fatal("want ImagePayload")
+	}
+	wantFrames := req.Preview.VideoThumbCols * req.Preview.VideoThumbRows
+	wantSteps := wantFrames + 1 // +1 for the final compositing step
+	if len(progress) != wantSteps {
+		t.Fatalf("onProgress called %d times, want %d", len(progress), wantSteps)
+	}
+	for i, p := range progress {
+		if p[0] != i+1 || p[1] != wantSteps {
+			t.Fatalf("onProgress call %d = %v, want (%d, %d)", i, p, i+1, wantSteps)
+		}
 	}
 	_ = os.Remove(clip)
 }

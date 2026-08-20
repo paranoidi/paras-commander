@@ -310,6 +310,12 @@ const (
 	// PreviewVideoThumbGridMin / Max clamp [preview].video_thumb_cols/rows in Validate.
 	PreviewVideoThumbGridMin = 1
 	PreviewVideoThumbGridMax = 6
+	// DefaultPreviewVideoThumbWorkers is the default number of concurrent ffmpeg
+	// frame-extraction processes used to build one video's thumbnail grid.
+	DefaultPreviewVideoThumbWorkers = 2
+	// PreviewVideoThumbWorkersMin / Max clamp [preview].video_thumb_workers in Validate.
+	PreviewVideoThumbWorkersMin = 1
+	PreviewVideoThumbWorkersMax = 8
 	// DefaultPreviewPrefetch enables background image decode / video-thumb generation near the caret.
 	DefaultPreviewPrefetch = true
 	// DefaultPreviewPrefetchAlways, when false, limits prefetch to quick view or carousel mode.
@@ -319,11 +325,22 @@ const (
 	// whenever the non-driver (inactive) panel navigates to a new directory, since quick view
 	// would otherwise immediately overlay the freshly opened listing with a stale preview.
 	DefaultPreviewQuickViewDisableOnInactiveNav = true
-	// DefaultPreviewPrefetchWorkers is the default worker-pool size for preview prefetch.
+	// DefaultPreviewPrefetchWorkers is the default worker-pool size for preview prefetch. The
+	// effective count is further capped to leave one CPU free for the UI thread (see
+	// effectivePrefetchWorkers in internal/apphandler/preview/prefetch.go), so this can be set
+	// generously without risking input-handling starvation on low-core machines — it only
+	// determines how much of a many-core machine's headroom prefetch is allowed to use.
 	DefaultPreviewPrefetchWorkers = 4
 	// PreviewPrefetchWorkersMin / Max clamp [preview].prefetch_workers in Validate.
 	PreviewPrefetchWorkersMin = 1
 	PreviewPrefetchWorkersMax = 32
+	// DefaultPreviewPrefetchWindow bounds background prefetch to entries within this many
+	// positions of the cursor in each direction. Keeps prefetch from queuing an entire large
+	// directory, which would let far-away files evict already-warm near-cursor cache entries.
+	DefaultPreviewPrefetchWindow = 5
+	// PreviewPrefetchWindowMin / Max clamp [preview].prefetch_window in Validate.
+	PreviewPrefetchWindowMin = 1
+	PreviewPrefetchWindowMax = 50
 	// DefaultPreviewImageMaxEdgePx caps the longest edge of decoded stills before the final
 	// cell-budget fit, for protocols/contexts that don't need the tmux-sixel payload-safety
 	// clamp below. Default 0 = unrestricted (decode at native resolution, still bounded by
@@ -348,6 +365,14 @@ const (
 	DefaultPreviewVideoThumbMaxEdgePx = 2048
 	// DefaultPreviewPrefetchMemoryMaxMB is the in-memory prefetch LRU budget (MiB).
 	DefaultPreviewPrefetchMemoryMaxMB = 256
+	// DefaultPreviewRenderCacheMaxMB is the in-memory LRU budget (MiB) for final render-ready
+	// payloads (post cell-fit resize, post protocol-encode) keyed by exact pixel box. Matches
+	// DefaultPreviewPrefetchMemoryMaxMB — a near-fullscreen preview box (e.g. -qp / F3) can
+	// produce multi-MB Kitty/Sixel payloads per entry, not the "tens of KB" a small inactive-
+	// column pane would; a low budget here causes real eviction thrashing (a warm near-cursor
+	// entry getting evicted to make room for another) well within a normal ±window during active
+	// navigation at that box size.
+	DefaultPreviewRenderCacheMaxMB = 256
 	// DefaultPreviewVideoThumbCacheMaxMB caps on-disk video thumbnail cache size (MiB).
 	DefaultPreviewVideoThumbCacheMaxMB = 512
 	// DefaultPreviewImageMaxDecodeMegapixels caps decode/scale work for image previews
