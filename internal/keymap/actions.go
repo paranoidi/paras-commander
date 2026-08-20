@@ -97,6 +97,7 @@ const (
 	ActionPanelMetaEdit               = "panel.meta-edit"
 	ActionPanelComparePanels          = "panel.compare-panels"
 	ActionPanelFindDuplicates         = "panel.find-duplicates"
+	ActionPanelFilterDialog           = "panel.filter-dialog"
 
 	// Compare view
 	ActionCompareClose       = "compare.close"
@@ -338,6 +339,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelMetaEdit:               {},
 	ActionPanelComparePanels:          {},
 	ActionPanelFindDuplicates:         {},
+	ActionPanelFilterDialog:           {},
 
 	ActionCompareClose:       {},
 	ActionCompareCycleFilter: {},

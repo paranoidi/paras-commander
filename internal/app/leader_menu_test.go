@@ -135,7 +135,7 @@ func TestBuiltinLeaderMenuMkdirOpenInOtherKey(t *testing.T) {
 	}
 }
 
-func TestBuiltinLeaderMenuCasePairFindVsFindDuplicates(t *testing.T) {
+func TestBuiltinLeaderMenuCasePairFindVsFilter(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.model.ViewMode = ui.ViewBrowser
 	app.openBuiltinLeaderMenu()
@@ -154,9 +154,23 @@ func TestBuiltinLeaderMenuCasePairFindVsFindDuplicates(t *testing.T) {
 	if app.model.LeaderMenu.Open {
 		t.Fatal("leader menu should close after F")
 	}
+	if !app.model.FilterDialog.Open {
+		t.Fatal("expected Filter dialog after uppercase F")
+	}
+}
+
+func TestBuiltinLeaderMenuCasePairDuplicateVsFindDuplicates(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	app.model.ViewMode = ui.ViewBrowser
+	app.openBuiltinLeaderMenu()
+
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'P', tcell.ModNone))
+	if app.model.LeaderMenu.Open {
+		t.Fatal("leader menu should close after P")
+	}
 	waitDedupDone(t, app)
 	if app.model.ViewMode != ui.ViewDedup {
-		t.Fatalf("view = %v, want dedup after uppercase F", app.model.ViewMode)
+		t.Fatalf("view = %v, want dedup after uppercase P", app.model.ViewMode)
 	}
 }
 
@@ -229,7 +243,7 @@ func TestBuiltinLeaderMenuHasCasePairKeys(t *testing.T) {
 		switch {
 		case it.Key == 'f' && it.Label == "Find files":
 			findLower = true
-		case it.Key == 'F' && it.Label == "Find duplicates":
+		case it.Key == 'F' && it.Label == "Filter":
 			findUpper = true
 		case it.Key == 'D' && it.Label == "Disk usage scan":
 			diskUsageKey = true

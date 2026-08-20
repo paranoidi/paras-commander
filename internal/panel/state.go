@@ -2144,6 +2144,37 @@ func (s *State) CountGroupMatches(pattern string, filesOnly, dirsOnly, caseSensi
 	return files, dirs, nil
 }
 
+// CountPatternMatches reports how many visible entries match pattern under the given filters,
+// split into files and directories — a plain total count (unlike CountGroupMatches, which counts
+// only matches whose selection state would flip). Used by the Filter dialog's live preview.
+func (s *State) CountPatternMatches(pattern string, mode GroupPatternMode, caseSensitive, filesOnly, dirsOnly bool) (files, dirs int, err error) {
+	matcher, err := NewGroupMatcher(pattern, mode, caseSensitive)
+	if err != nil {
+		return 0, 0, err
+	}
+	for i := 0; i < s.VisibleEntryCount(); i++ {
+		entry, _, ok := s.VisibleEntry(i)
+		if !ok {
+			continue
+		}
+		if filesOnly && entry.IsDir() {
+			continue
+		}
+		if dirsOnly && !entry.IsDir() {
+			continue
+		}
+		if !matcher.Match(entry.Name) {
+			continue
+		}
+		if entry.IsDir() {
+			dirs++
+		} else {
+			files++
+		}
+	}
+	return files, dirs, nil
+}
+
 // UnselectGroup unselects entries whose basename (or any meta column value) matches the pattern.
 // meta: optional meta column data; when Cols is non-empty, values are also matched; OnlyMeta skips filename.
 // The returned bool reports whether the pattern matched any entry (regardless of prior selection state).

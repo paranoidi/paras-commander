@@ -164,6 +164,7 @@ type Model struct {
 	SortDialog              dialog.SortDialogState
 	ListingFormatDialog     dialog.ListingFormatDialogState
 	GroupSelect             dialog.GroupSelectState
+	FilterDialog            dialog.FilterDialogState
 	PathPicker              dialog.PathPickerState
 	HistoryDialog           dialog.HistoryDialogState
 	SFTPConnectDialog       dialog.SFTPConnectDialogState
@@ -259,7 +260,7 @@ func (m *Model) PrimaryModal() dialog.PrimaryModal {
 // "a dialog owns the keyboard" checks.
 func (m *Model) AnyModalOpen() bool {
 	return m.PrimaryModal() != dialog.PrimaryModalNone ||
-		m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.GroupSelect.Open ||
+		m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
 		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
 		m.FindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open
 }
@@ -407,7 +408,7 @@ func (m *Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open || m.CommandOutputDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open || m.CommandOutputDialog.Open {
 		return true
 	}
 	return false
@@ -422,7 +423,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open ||
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
-		m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
+		m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
 		m.TransferDialog.Open || m.FlattenDialog.Open || m.ConflictDialog.Open || m.QuitConfirm.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open ||
 		m.CommandOutputDialog.Open || m.DedupProgressDialog.Open || m.DedupEmptyDirsConfirm.Open
 }
@@ -732,6 +733,9 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	}
 	if model.GroupSelect.Open {
 		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)
+	}
+	if model.FilterDialog.Open {
+		dialog.DrawFilterDialog(screen, layout, model.FilterDialog, styles)
 	}
 	if model.MetaDialog.Open {
 		dialog.DrawMetaDialog(screen, layout, model.MetaDialog, styles)

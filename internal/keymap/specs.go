@@ -445,7 +445,16 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"C-M-f"},
 			PreferredKey: "C-M-f",
 			Keywords:     []string{"duplicate", "dedup", "dupes", "hash", "identical", "remove"},
-			LeaderKey:    "F",
+			LeaderKey:    "P",
+		},
+		{
+			ID:          ActionPanelFilterDialog,
+			Views:       HelpBrowser,
+			Title:       "Filter",
+			Section:     "Filter",
+			DefaultKeys: []string{"M-f"},
+			Keywords:    []string{"regex", "glob", "pattern", "narrow", "hide", "shell"},
+			LeaderKey:   "F",
 		},
 		{
 			ID:          ActionCompareClose,

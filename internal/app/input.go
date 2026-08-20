@@ -25,6 +25,7 @@ const (
 	InputModeImageCapabilityDialog
 	InputModeDebounceCalibrateDialog
 	InputModeGroupSelect
+	InputModeFilterDialog
 	InputModeMenu
 	InputModeFilter
 	InputModeFileDialog
@@ -67,6 +68,8 @@ func (a *App) inputMode() InputMode {
 		return InputModeSFTPConnectDialog
 	case a.model.GroupSelect.Open:
 		return InputModeGroupSelect
+	case a.model.FilterDialog.Open:
+		return InputModeFilterDialog
 	case a.model.FindDialog.Open:
 		return InputModeFindDialog
 	case a.model.MetaDialog.Open:
@@ -578,6 +581,10 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		a.handleGroupSelectKey(event)
 		a.render()
 		return false, true
+	case InputModeFilterDialog:
+		quit := a.dialogCtrl.HandleFilterDialogKey(event)
+		a.render()
+		return quit, true
 	case InputModeHostKeyDialog:
 		_ = a.handleHostKeyDialogKey(event)
 		a.render()
@@ -916,6 +923,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.openMenu()
 	case keymap.ActionPanelFindDuplicates:
 		a.openFindDuplicates()
+	case keymap.ActionPanelFilterDialog:
+		a.dialogCtrl.OpenFilterDialog()
 	case keymap.ActionAppDropToShell:
 		a.dropToShell()
 	case keymap.ActionAppShellInsertPaths:

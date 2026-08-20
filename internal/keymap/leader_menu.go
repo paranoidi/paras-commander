@@ -62,11 +62,12 @@ var leaderMenuGroupActions = map[string][]string{
 	LeaderMenuGroupView: {
 		ActionPanelToggleHidden,
 		ActionPanelMeta,
+		ActionPanelFilterDialog,
+		ActionPanelDiskUsageScan,
 	},
 	LeaderMenuGroupTools: {
 		ActionPanelFindDialog,
 		ActionPanelFindDuplicates,
-		ActionPanelDiskUsageScan,
 		ActionPanelComparePanels,
 		ActionFileRunForEach,
 	},

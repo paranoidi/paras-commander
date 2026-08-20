@@ -316,12 +316,12 @@ func TestActionFromKeyMapsAltDToDiskUsageScan(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyIgnoresAltF(t *testing.T) {
+func TestActionFromKeyMapsAltFToFilterDialog(t *testing.T) {
 	km := defaultKeymap(t)
 	event := tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModAlt)
 	got := lookupActionForView(event, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
-	if got != "" {
-		t.Fatalf("actionFromKeyEvent() = %v, want empty string", got)
+	if got != keymap.ActionPanelFilterDialog {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionPanelFilterDialog", got)
 	}
 }
 
