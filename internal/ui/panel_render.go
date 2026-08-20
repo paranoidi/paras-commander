@@ -270,7 +270,17 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	showMeta := len(metaLayouts) > 0
 	showMetaEffective := showMeta && !nameOnlyDisplay
 	listTextWidth := rowTextWidth
-	header := panelListHeader(listTextWidth, state, display.ShowIcons, showMetaEffective, metaLayouts, nameOnlyDisplay, showGit)
+	// In tree mode, panelColumnLayout zeroes iconStrip (icons move into each row's tree gutter
+	// instead of a shared strip), but drawPanelRow still reserves panelIconStripCells of gutter
+	// width at depth 0 (see treeGutterWidth there). The header has no per-depth gutter of its own,
+	// so shift/narrow it by that same fixed amount — this is the single place that offset is
+	// computed; row drawing keeps deriving its own (per-depth) gutter independently.
+	headerTreeGutter := 0
+	if state.ListLayout == panel.ListLayoutTree && panelIconStripCells > 0 && panelIconStripCells < listTextWidth {
+		headerTreeGutter = panelIconStripCells
+	}
+	headerTextWidth := listTextWidth - headerTreeGutter
+	header := panelListHeader(headerTextWidth, state, display.ShowIcons, showMetaEffective, metaLayouts, nameOnlyDisplay, showGit)
 	headerY := rect.Y + 1
 	if leftGutter > 0 {
 		for i := 0; i < leftGutter; i++ {
@@ -284,7 +294,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 		paintPanelIconStripBlank(screen, iconStart, headerY, headerStyle)
 	}
 	listContentStart := iconStart + iconStrip
-	primitive.Text(screen, listContentStart, headerY, listTextWidth, header, headerStyle)
+	primitive.Text(screen, listContentStart+headerTreeGutter, headerY, headerTextWidth, header, headerStyle)
 
 	listFmt := panel.EffectiveListFormat(state.ListFormat)
 	// listTextWidth already has the git strip excluded; pass false to avoid double-subtracting.
