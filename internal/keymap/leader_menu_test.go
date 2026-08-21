@@ -38,7 +38,7 @@ func TestBuildLeaderMenuEntriesGroupedOrder(t *testing.T) {
 	if entries[0].GroupTitle != LeaderMenuGroupFile || entries[0].GroupColumn != 0 || entries[1].ActionID != ActionFileDelete {
 		t.Fatalf("file group = %+v, %+v", entries[0], entries[1])
 	}
-	if entries[2].GroupTitle != LeaderMenuGroupApp || entries[2].GroupColumn != 2 || entries[3].ActionID != ActionAppShowHelp {
+	if entries[2].GroupTitle != LeaderMenuGroupApp || entries[2].GroupColumn != 3 || entries[3].ActionID != ActionAppShowHelp {
 		t.Fatalf("app group = %+v, %+v", entries[2], entries[3])
 	}
 }
@@ -88,11 +88,11 @@ func TestBuildLeaderMenuEntriesGroupColumns(t *testing.T) {
 		}
 		return -1
 	}
-	if colFor(LeaderMenuGroupFile) != 0 || colFor(LeaderMenuGroupSelection) != 1 || colFor(LeaderMenuGroupView) != 1 || colFor(LeaderMenuGroupTools) != 1 {
-		t.Fatalf("columns = file %d selection %d view %d tools %d, want 0 1 1 1", colFor(LeaderMenuGroupFile), colFor(LeaderMenuGroupSelection), colFor(LeaderMenuGroupView), colFor(LeaderMenuGroupTools))
+	if colFor(LeaderMenuGroupFile) != 0 || colFor(LeaderMenuGroupSelection) != 1 || colFor(LeaderMenuGroupView) != 1 || colFor(LeaderMenuGroupTools) != 2 {
+		t.Fatalf("columns = file %d selection %d view %d tools %d, want 0 1 1 2", colFor(LeaderMenuGroupFile), colFor(LeaderMenuGroupSelection), colFor(LeaderMenuGroupView), colFor(LeaderMenuGroupTools))
 	}
-	if colFor(LeaderMenuGroupNavigation) != 2 || colFor(LeaderMenuGroupDisplay) != 2 || colFor(LeaderMenuGroupApp) != 2 {
-		t.Fatalf("columns = nav %d display %d app %d, want 2 2 2", colFor(LeaderMenuGroupNavigation), colFor(LeaderMenuGroupDisplay), colFor(LeaderMenuGroupApp))
+	if colFor(LeaderMenuGroupNavigation) != 3 || colFor(LeaderMenuGroupDisplay) != 3 || colFor(LeaderMenuGroupApp) != 3 {
+		t.Fatalf("columns = nav %d display %d app %d, want 3 3 3", colFor(LeaderMenuGroupNavigation), colFor(LeaderMenuGroupDisplay), colFor(LeaderMenuGroupApp))
 	}
 }
 

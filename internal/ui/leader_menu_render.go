@@ -12,10 +12,12 @@ import (
 )
 
 const (
-	leaderMenuMacroColumns = 3
+	leaderMenuMacroColumns = 4
 	leaderMenuItemColumns  = 3
 	leaderMenuLeftMargin   = 5
 	leaderMenuMarginRows   = 1 // empty surface row above and below content
+	leaderMenuColumnGap    = 2 // blank columns between packed macro columns
+	leaderMenuRightMargin  = 5 // blank columns after the rightmost column's longest item
 )
 
 func leaderMenuIsGrouped(items []LeaderMenuItem) bool {
@@ -40,15 +42,21 @@ func leaderMenuMaxContentRows(layout geom.Layout) int {
 	return maxHeight - 2*leaderMenuMarginRows
 }
 
+// leaderMenuClampColumn maps an item's (possibly out-of-range) GroupColumn to a
+// valid macro-column index, defaulting to 0.
+func leaderMenuClampColumn(col int) int {
+	if col < 0 || col >= leaderMenuMacroColumns {
+		return 0
+	}
+	return col
+}
+
 func leaderMenuSplitByColumn(items []LeaderMenuItem) [leaderMenuMacroColumns][]LeaderMenuItem {
 	var buckets [leaderMenuMacroColumns][]LeaderMenuItem
 	col := 0
 	for _, it := range items {
 		if it.GroupTitle != "" {
-			col = it.GroupColumn
-		}
-		if col < 0 || col >= leaderMenuMacroColumns {
-			col = 0
+			col = leaderMenuClampColumn(it.GroupColumn)
 		}
 		buckets[col] = append(buckets[col], it)
 	}
@@ -263,14 +271,21 @@ func leaderMenuCellPrefixWidth(key rune) int {
 	return width + 3 // space, arrow, space
 }
 
+// leaderMenuCellWidth is the width a single item's key+arrow+label(+direct-key
+// suffix) needs to render without truncation.
+func leaderMenuCellWidth(key rune, label, directKey string) int {
+	w := leaderMenuCellPrefixWidth(key) + utf8.RuneCountInString(strings.TrimSpace(label))
+	if directKey != "" {
+		w += utf8.RuneCountInString(" " + directKey)
+	}
+	return w
+}
+
 func leaderMenuDirectKeyFitsColumn(colWidth int, key rune, label, directKey string) bool {
 	if directKey == "" {
 		return true
 	}
-	prefix := leaderMenuCellPrefixWidth(key)
-	suffixWidth := utf8.RuneCountInString(" " + directKey)
-	labelWidth := utf8.RuneCountInString(strings.TrimSpace(label))
-	return prefix+labelWidth+suffixWidth <= colWidth
+	return leaderMenuCellWidth(key, label, directKey) <= colWidth
 }
 
 func leaderMenuDirectKeysFitColumns(layout geom.Layout, items []LeaderMenuItem) bool {
@@ -281,8 +296,22 @@ func leaderMenuDirectKeysFitColumns(layout geom.Layout, items []LeaderMenuItem) 
 	if len(visible) == 0 {
 		return true
 	}
-	grouped := leaderMenuIsGrouped(visible)
-	colWidth := leaderMenuColumnWidth(layout, grouped)
+	if leaderMenuIsGrouped(visible) {
+		rect := LeaderMenuRect(layout, leaderMenuContentRows(visible))
+		buckets := leaderMenuSplitByColumn(visible)
+		natural := leaderMenuMacroColumnNaturalWidths(buckets, true)
+		if _, fits := leaderMenuMacroColumnGap(rect, natural); fits {
+			return true
+		}
+		colWidth := leaderMenuColumnWidth(layout, true)
+		for _, w := range natural {
+			if w > colWidth {
+				return false
+			}
+		}
+		return true
+	}
+	colWidth := leaderMenuColumnWidth(layout, false)
 	for i, it := range visible {
 		if it.GroupTitle != "" || it.DirectKey == "" {
 			continue
@@ -296,6 +325,86 @@ func leaderMenuDirectKeysFitColumns(layout geom.Layout, items []LeaderMenuItem) 
 		}
 	}
 	return true
+}
+
+// leaderMenuMacroColumnNaturalWidth is the width a macro column's bucket needs
+// to show every item's key+arrow+label(+direct-key suffix) without truncation.
+func leaderMenuMacroColumnNaturalWidth(bucket []LeaderMenuItem, showDirectKeys bool) int {
+	width := 0
+	for _, it := range bucket {
+		if it.GroupTitle != "" {
+			width = max(width, utf8.RuneCountInString(strings.TrimSpace(it.GroupTitle)))
+			continue
+		}
+		directKey := ""
+		if showDirectKeys {
+			directKey = it.DirectKey
+		}
+		width = max(width, leaderMenuCellWidth(it.Key, it.Label, directKey))
+	}
+	return max(width, 4)
+}
+
+// leaderMenuMacroColumnNaturalWidths computes leaderMenuMacroColumnNaturalWidth
+// for every bucket.
+func leaderMenuMacroColumnNaturalWidths(buckets [leaderMenuMacroColumns][]LeaderMenuItem, showDirectKeys bool) [leaderMenuMacroColumns]int {
+	natural := [leaderMenuMacroColumns]int{}
+	for i, b := range buckets {
+		natural[i] = leaderMenuMacroColumnNaturalWidth(b, showDirectKeys)
+	}
+	return natural
+}
+
+// leaderMenuMacroColumnGap returns the gap to place between every pair of adjacent
+// macro columns so columns 1..N-2 sit evenly spaced between column 0 (left-anchored)
+// and the last column (right-anchored), and whether that gap is wide enough to use.
+func leaderMenuMacroColumnGap(rect geom.Rect, natural [leaderMenuMacroColumns]int) (gap int, ok bool) {
+	if rect.Width <= leaderMenuLeftMargin {
+		return 0, false
+	}
+	leftEdge := rect.X + leaderMenuLeftMargin
+	rightEdge := rect.X + rect.Width - leaderMenuRightMargin
+	sum := 0
+	for _, w := range natural {
+		sum += w
+	}
+	numGaps := leaderMenuMacroColumns - 1
+	gap = (rightEdge - leftEdge - sum) / numGaps
+	return gap, gap >= leaderMenuColumnGap
+}
+
+// leaderMenuMacroColumnLayout computes the 4 macro-column x-offsets and widths:
+// column 0 left-anchored, the last column right-anchored (with leaderMenuRightMargin
+// blank columns after it), and the columns in between evenly spaced across the gap,
+// with a fallback to uniform division when that doesn't fit. fits reports which
+// layout was used.
+func leaderMenuMacroColumnLayout(rect geom.Rect, buckets [leaderMenuMacroColumns][]LeaderMenuItem, showDirectKeys bool) (xs [leaderMenuMacroColumns]int, widths [leaderMenuMacroColumns]int, fits bool) {
+	natural := leaderMenuMacroColumnNaturalWidths(buckets, showDirectKeys)
+	widths = natural
+	xBase := rect.X + leaderMenuLeftMargin
+	last := leaderMenuMacroColumns - 1
+
+	gap, fits := leaderMenuMacroColumnGap(rect, natural)
+	if fits {
+		xs[0] = xBase
+		x := xBase + natural[0]
+		for i := 1; i < last; i++ {
+			x += gap
+			xs[i] = x
+			x += natural[i]
+		}
+		xs[last] = rect.X + rect.Width - leaderMenuRightMargin - natural[last]
+		return xs, widths, true
+	}
+
+	// Fallback: today's uniform division across the full width.
+	contentWidth := rect.Width - leaderMenuLeftMargin
+	colWidth := max(contentWidth/leaderMenuMacroColumns, 4)
+	for i := range xs {
+		xs[i] = xBase + i*colWidth
+		widths[i] = colWidth
+	}
+	return xs, widths, false
 }
 
 // DrawLeaderMenu paints the bottom function menu above the footer.
@@ -348,27 +457,21 @@ func DrawLeaderMenu(screen tcell.Screen, layout geom.Layout, state LeaderMenuSta
 }
 
 func drawLeaderMenuGrouped(screen tcell.Screen, rect geom.Rect, items []LeaderMenuItem, arrow rune, showDirectKeys bool, keyStyle, arrowStyle, labelStyle, groupStyle, surface tcell.Style) {
-	contentWidth := rect.Width - leaderMenuLeftMargin
-	macroW := contentWidth / leaderMenuMacroColumns
-	if macroW < 4 {
-		macroW = 4
-	}
-	xBase := rect.X + leaderMenuLeftMargin
+	buckets := leaderMenuSplitByColumn(items)
+	xs, widths, _ := leaderMenuMacroColumnLayout(rect, buckets, showDirectKeys)
 	yBase := rect.Y + leaderMenuMarginRows
 	colY := [leaderMenuMacroColumns]int{}
 	for i := range colY {
 		colY[i] = yBase
 	}
 	for i, it := range items {
-		col := it.GroupColumn
-		if col < 0 || col >= leaderMenuMacroColumns {
-			col = 0
-		}
-		x := xBase + col*macroW
+		col := leaderMenuClampColumn(it.GroupColumn)
+		x := xs[col]
+		w := widths[col]
 		y := colY[col]
 		if it.GroupTitle != "" {
 			text := strings.TrimSpace(it.GroupTitle)
-			primitive.Text(screen, x, y, macroW, text, groupStyle)
+			primitive.Text(screen, x, y, w, text, groupStyle)
 			colY[col] = y + 1
 			continue
 		}
@@ -380,7 +483,7 @@ func drawLeaderMenuGrouped(screen tcell.Screen, rect geom.Rect, items []LeaderMe
 		if !showDirectKeys {
 			directKey = ""
 		}
-		drawLeaderMenuCell(screen, x, y, macroW, key, arrow, it.Label, directKey, keyStyle, arrowStyle, labelStyle, surface)
+		drawLeaderMenuCell(screen, x, y, w, key, arrow, it.Label, directKey, keyStyle, arrowStyle, labelStyle, surface)
 		colY[col] = y + 1
 	}
 }

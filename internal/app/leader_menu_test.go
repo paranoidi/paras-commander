@@ -440,7 +440,7 @@ func TestBuiltinLeaderMenuSetsDirectKey(t *testing.T) {
 
 func TestBuiltinLeaderMenuHiddenEntryStillActivatesByKey(t *testing.T) {
 	dir := t.TempDir()
-	screen := newScreen(t, 80, 16)
+	screen := newScreen(t, 80, 14)
 	app, err := NewWithOptions(screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: config.Default(),
@@ -473,7 +473,7 @@ func TestBuiltinLeaderMenuHiddenEntryStillActivatesByKey(t *testing.T) {
 
 func TestBuiltinLeaderMenuOmitsDirectKeysWhenHeightConstrained(t *testing.T) {
 	dir := t.TempDir()
-	screen := newScreen(t, 80, 16)
+	screen := newScreen(t, 80, 14)
 	app, err := NewWithOptions(screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: config.Default(),

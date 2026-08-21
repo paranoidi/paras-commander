@@ -86,10 +86,13 @@ func TestLeaderMenuIndexForKeyCaseInsensitiveForAutoKeys(t *testing.T) {
 	}
 }
 
-func leaderMenuMacroX(macroCol int) int {
-	contentWidth := 80 - leaderMenuLeftMargin
-	macroW := contentWidth / leaderMenuMacroColumns
-	return leaderMenuLeftMargin + macroCol*macroW
+func leaderMenuMacroX(layout geom.Layout, items []LeaderMenuItem, macroCol int) int {
+	visible := LeaderMenuVisibleItems(layout, items)
+	rect := LeaderMenuRect(layout, leaderMenuContentRows(visible))
+	buckets := leaderMenuSplitByColumn(visible)
+	showDirectKeys := leaderMenuShowDirectKeys(layout, items)
+	xs, _, _ := leaderMenuMacroColumnLayout(rect, buckets, showDirectKeys)
+	return xs[macroCol]
 }
 
 func TestDrawLeaderMenuRendersConfiguredCase(t *testing.T) {
@@ -112,7 +115,7 @@ func TestDrawLeaderMenuRendersConfiguredCase(t *testing.T) {
 	DrawLeaderMenu(screen, layout, state, theme.Default())
 
 	wantKeyFG, _, _ := theme.Default().LeaderMenuKey.Decompose()
-	x := leaderMenuMacroX(1)
+	x := leaderMenuMacroX(layout, state.Items, 1)
 	mainc, style, _ := screen.Get(x, 46)
 	fg, _, _ := style.Decompose()
 	if mainc != "f" || fg != wantKeyFG {
@@ -136,7 +139,7 @@ func TestDrawLeaderMenuRendersGroupTitleCyan(t *testing.T) {
 	DrawLeaderMenu(screen, layout, state, theme.Default())
 
 	wantFG, _, _ := theme.Default().LeaderMenuGroup.Decompose()
-	x := leaderMenuMacroX(0)
+	x := leaderMenuMacroX(layout, state.Items, 0)
 	_, style, _ := screen.Get(x, 46)
 	fg, _, _ := style.Decompose()
 	if fg != wantFG {
@@ -172,7 +175,7 @@ func TestDrawLeaderMenuOmitsDirectKeyWhenWidthConstrained(t *testing.T) {
 	DrawLeaderMenu(screen, layout, state, styles)
 
 	wantArrowFG, _, _ := styles.LeaderMenuArrow.Decompose()
-	x := leaderMenuLeftMargin + (40-leaderMenuLeftMargin)/leaderMenuMacroColumns
+	x := leaderMenuMacroX(layout, items, 1)
 	y := 48
 	suffixCol := x + 4 + len("Find files")
 	mainc, style, _ := screen.Get(suffixCol+1, y)
@@ -209,7 +212,7 @@ func TestDrawLeaderMenuOmitsDirectKeyWhenEntriesHidden(t *testing.T) {
 	DrawLeaderMenu(screen, layout, state, styles)
 
 	wantArrowFG, _, _ := styles.LeaderMenuArrow.Decompose()
-	x := leaderMenuMacroX(1)
+	x := leaderMenuMacroX(layout, items, 1)
 	y := 2 // group header on row 1, first action on row 2
 	suffixCol := x + 4 + len("Find files")
 	mainc, style, _ := screen.Get(suffixCol+1, y)
@@ -240,7 +243,7 @@ func TestDrawLeaderMenuRendersDirectKeySuffix(t *testing.T) {
 
 	wantLabelFG, _, _ := styles.LeaderMenuLabel.Decompose()
 	wantArrowFG, _, _ := styles.LeaderMenuArrow.Decompose()
-	x := leaderMenuMacroX(1)
+	x := leaderMenuMacroX(layout, state.Items, 1)
 	y := 47           // group header on row above action
 	labelCol := x + 4 // key, space, arrow, space
 	mainc, style, _ := screen.Get(labelCol, y)
@@ -261,6 +264,36 @@ func TestDrawLeaderMenuRendersDirectKeySuffix(t *testing.T) {
 	}
 }
 
+func TestLeaderMenuMacroColumnLayoutRightMargin(t *testing.T) {
+	items := []LeaderMenuItem{
+		{GroupTitle: "File", GroupColumn: 0},
+		{Key: 'c', Label: "Copy", GroupColumn: 0},
+		{GroupTitle: "Selection", GroupColumn: 1},
+		{Key: 'g', Label: "Select group", GroupColumn: 1},
+		{GroupTitle: "Tools", GroupColumn: 2},
+		{Key: 'f', Label: "Find files", GroupColumn: 2},
+		{GroupTitle: "App", GroupColumn: 3},
+		{Key: 'q', Label: "Quit", GroupColumn: 3},
+	}
+	rect := geom.Rect{X: 0, Y: 0, Width: 120, Height: 10}
+	buckets := leaderMenuSplitByColumn(items)
+	xs, widths, fits := leaderMenuMacroColumnLayout(rect, buckets, false)
+	if !fits {
+		t.Fatal("expected packed layout to fit at width 120")
+	}
+	for i := range leaderMenuMacroColumns - 1 {
+		end := xs[i] + widths[i]
+		if xs[i+1] < end+leaderMenuColumnGap {
+			t.Fatalf("column %d overlaps column %d: end=%d next=%d", i, i+1, end, xs[i+1])
+		}
+	}
+	last := leaderMenuMacroColumns - 1
+	got := rect.X + rect.Width - (xs[last] + widths[last])
+	if got != leaderMenuRightMargin {
+		t.Fatalf("right margin = %d, want %d", got, leaderMenuRightMargin)
+	}
+}
+
 func TestDrawLeaderMenuRendersQuestionMarkHelp(t *testing.T) {
 	screen := tcell.NewSimulationScreen("")
 	if err := screen.Init(); err != nil {
@@ -276,7 +309,7 @@ func TestDrawLeaderMenuRendersQuestionMarkHelp(t *testing.T) {
 	}
 	DrawLeaderMenu(screen, layout, state, theme.Default())
 
-	x := leaderMenuMacroX(2)
+	x := leaderMenuMacroX(layout, state.Items, 2)
 	mainc, _, _ := screen.Get(x, 47)
 	if mainc != "?" {
 		t.Fatalf("help key = %q, want ?", mainc)

@@ -100,7 +100,7 @@ func (f *fakeHost) AsyncLoadScheduler(int) panel.AsyncLoadScheduler         { re
 func (f *fakeHost) PeekGitStatus(string, string, []gitstatus.ListingPaths) (map[string]gitstatus.Cell, bool) {
 	return nil, false
 }
-func (f *fakeHost) EffectivePaneSplitOrientation() ui.SplitOrientation      { return ui.SplitHorizontal }
+func (f *fakeHost) EffectivePaneSplitOrientation() ui.SplitOrientation { return ui.SplitHorizontal }
 func (f *fakeHost) PanelPaneSplit(int, bool) ui.PanelPaneSplit {
 	return ui.PanelPaneSplit{ActivePanel: f.model.ActivePanel, ActivePercent: 50, InactivePercent: 50}
 }

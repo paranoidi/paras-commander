@@ -16,15 +16,16 @@ const (
 	LeaderMenuGroupApp        = "App"
 )
 
-// leaderMenuGroupColumn assigns each group to a macro column (0=File, 1=Selection+Tools, 2=rest).
+// leaderMenuGroupColumn assigns each group to a macro column
+// (0=File, 1=Selection+View, 2=Tools, 3=Navigation+Display+App).
 var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupFile:       0,
 	LeaderMenuGroupSelection:  1,
 	LeaderMenuGroupView:       1,
-	LeaderMenuGroupTools:      1,
-	LeaderMenuGroupNavigation: 2,
-	LeaderMenuGroupDisplay:    2,
-	LeaderMenuGroupApp:        2,
+	LeaderMenuGroupTools:      2,
+	LeaderMenuGroupNavigation: 3,
+	LeaderMenuGroupDisplay:    3,
+	LeaderMenuGroupApp:        3,
 }
 
 var leaderMenuGroupOrder = []string{
@@ -50,8 +51,6 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionFileDuplicate,
 		ActionFileView,
 		ActionFileQuickView,
-		ActionFileExtract,
-		ActionFileFlatten,
 	},
 	LeaderMenuGroupSelection: {
 		ActionPanelSelectGroup,
@@ -70,6 +69,8 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionPanelFindDuplicates,
 		ActionPanelComparePanels,
 		ActionFileRunForEach,
+		ActionFileExtract,
+		ActionFileFlatten,
 	},
 	LeaderMenuGroupNavigation: {
 		ActionPanelHistoryDialog,
