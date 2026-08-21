@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -65,6 +66,13 @@ func (h previewHost) GitStatusScheduler(panelID int) panel.GitStatusScheduler {
 
 func (h previewHost) AsyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 	return h.app.asyncLoadScheduler(panelID)
+}
+
+func (h previewHost) PeekGitStatus(workRoot, listDir string, paths []gitstatus.ListingPaths) (map[string]gitstatus.Cell, bool) {
+	if h.app.gitStatusCache == nil {
+		return nil, false
+	}
+	return h.app.gitStatusCache.PeekStatusesForListing(workRoot, listDir, paths)
 }
 
 func (h previewHost) EffectivePaneSplitOrientation() ui.SplitOrientation {

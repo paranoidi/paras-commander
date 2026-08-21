@@ -7,6 +7,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -96,6 +97,9 @@ func (f *fakeHost) ArmCursorNameHintNavCoalesceAfterListNav()               {}
 func (f *fakeHost) PathVolumeContendsWithActiveJob(string) bool             { return false }
 func (f *fakeHost) GitStatusScheduler(int) panel.GitStatusScheduler         { return nil }
 func (f *fakeHost) AsyncLoadScheduler(int) panel.AsyncLoadScheduler         { return nil }
+func (f *fakeHost) PeekGitStatus(string, string, []gitstatus.ListingPaths) (map[string]gitstatus.Cell, bool) {
+	return nil, false
+}
 func (f *fakeHost) EffectivePaneSplitOrientation() ui.SplitOrientation      { return ui.SplitHorizontal }
 func (f *fakeHost) PanelPaneSplit(int, bool) ui.PanelPaneSplit {
 	return ui.PanelPaneSplit{ActivePanel: f.model.ActivePanel, ActivePercent: 50, InactivePercent: 50}

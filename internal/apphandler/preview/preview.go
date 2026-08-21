@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -567,8 +568,30 @@ func (h *Handler) populateQuickViewDirOverlay(ov *panel.State, driver, follower 
 	ov.Entries = snap.Entries
 	ov.Cursor = snap.Cursor
 	ov.ScrollOffset = snap.Scroll
+	h.primeQuickViewGitColumn(ov, canonical)
 	ov.EnsureCursorInViewport(vr)
 	return nil
+}
+
+// primeQuickViewGitColumn reserves the git status column on the overlay's first synchronous
+// frame (a cheap, cache-backed work-tree check — no git subprocess) so the listing doesn't flash
+// without the column while the real async listing load (dispatched by ov.Load above) is still in
+// flight. Cell content is filled in immediately from a synchronous cache peek when available,
+// otherwise it stays blank until the async git-status fetch that ApplyListing/prepareGitColumn
+// dispatches once the async listing lands.
+func (h *Handler) primeQuickViewGitColumn(ov *panel.State, dir string) {
+	workRoot := gitignore.ValidWorkTreeRoot(dir)
+	ov.GitColumnActive = workRoot != ""
+	if !ov.GitColumnActive {
+		return
+	}
+	paths := make([]gitstatus.ListingPaths, len(ov.Entries))
+	for i, e := range ov.Entries {
+		paths[i] = gitstatus.ListingPaths{AbsPath: filepath.Clean(e.Path), IsDir: e.Type == localfs.EntryDirectory}
+	}
+	if byPath, ok := h.host.PeekGitStatus(workRoot, dir, paths); ok {
+		ov.GitByPath = byPath
+	}
 }
 
 // initQuickViewDirOverlayFromFollower prepares QuickViewDirOverlay for a directory preview load.

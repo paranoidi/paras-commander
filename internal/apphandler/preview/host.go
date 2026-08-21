@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/apphandler/host"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/gitstatus"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
 	"github.com/paranoidi/paras-commander/internal/theme"
@@ -39,6 +40,10 @@ type Host interface {
 	// scheduling/gen-counter/apply machinery as a real panel instead of a quickview-only fork.
 	GitStatusScheduler(panelID int) panel.GitStatusScheduler
 	AsyncLoadScheduler(panelID int) panel.AsyncLoadScheduler
+	// PeekGitStatus returns cached Git cells for listDir without shelling out to git, so the
+	// quick-view directory overlay can paint the correct git column on its first synchronous
+	// frame when the data is already cached; ok is false on a cache miss.
+	PeekGitStatus(workRoot, listDir string, paths []gitstatus.ListingPaths) (statuses map[string]gitstatus.Cell, ok bool)
 	EffectivePaneSplitOrientation() ui.SplitOrientation
 	PanelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit
 	LayoutForTerminalSizePreview(width, height int, filePreviewOpen bool) ui.Layout

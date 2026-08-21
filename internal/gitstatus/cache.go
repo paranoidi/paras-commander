@@ -51,14 +51,9 @@ func (c *Cache) StatusesForListing(ctx context.Context, workRoot, listDir string
 		return nil, err
 	}
 
-	c.mu.Lock()
-	ent, ok := c.entries[listDir]
-	if ok && ent.fingerprint == fp && ent.snapshot != nil {
-		sn := ent.snapshot
-		c.mu.Unlock()
+	if sn, ok := c.lookup(listDir, fp); ok {
 		return mapFromSnapshot(sn, paths), nil
 	}
-	c.mu.Unlock()
 
 	sn, err := querySnapshot(ctx, workRoot)
 	if err != nil {
@@ -70,6 +65,42 @@ func (c *Cache) StatusesForListing(ctx context.Context, workRoot, listDir string
 	c.mu.Unlock()
 
 	return mapFromSnapshot(sn, paths), nil
+}
+
+// PeekStatusesForListing returns cached Git cells for listDir without shelling out to git; ok is
+// false when no fresh cache entry exists yet (caller should fall back to StatusesForListing).
+func (c *Cache) PeekStatusesForListing(workRoot, listDir string, paths []ListingPaths) (result map[string]Cell, ok bool) {
+	if c == nil {
+		return nil, false
+	}
+	listDir, err := filepath.Abs(listDir)
+	if err != nil {
+		return nil, false
+	}
+	listDir = filepath.Clean(listDir)
+	workRoot = filepath.Clean(workRoot)
+	if workRoot == "" {
+		return nil, false
+	}
+	fp, err := statusFingerprint(workRoot, listDir)
+	if err != nil {
+		return nil, false
+	}
+	sn, ok := c.lookup(listDir, fp)
+	if !ok {
+		return nil, false
+	}
+	return mapFromSnapshot(sn, paths), true
+}
+
+func (c *Cache) lookup(listDir, fingerprint string) (*snapshot, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	ent, ok := c.entries[listDir]
+	if !ok || ent.fingerprint != fingerprint || ent.snapshot == nil {
+		return nil, false
+	}
+	return ent.snapshot, true
 }
 
 func mapFromSnapshot(sn *snapshot, paths []ListingPaths) map[string]Cell {
