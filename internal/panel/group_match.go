@@ -41,6 +41,9 @@ func NewGroupMatcher(pattern string, mode GroupPatternMode, caseSensitive bool) 
 		pattern:       pattern,
 		caseSensitive: caseSensitive,
 	}
+	if !caseSensitive && mode != GroupPatternRegex {
+		m.pattern = strings.ToLower(pattern)
+	}
 	switch mode {
 	case GroupPatternShell:
 		if _, err := filepath.Match(pattern, "x"); err != nil {
@@ -63,24 +66,20 @@ func NewGroupMatcher(pattern string, mode GroupPatternMode, caseSensitive bool) 
 func (m GroupMatcher) Match(name string) bool {
 	switch m.mode {
 	case GroupPatternShell:
-		pattern := m.pattern
 		value := name
 		if !m.caseSensitive {
-			pattern = strings.ToLower(pattern)
 			value = strings.ToLower(value)
 		}
-		matched, _ := filepath.Match(pattern, value)
+		matched, _ := filepath.Match(m.pattern, value)
 		return matched
 	case GroupPatternRegex:
 		return m.rx.MatchString(name)
 	case GroupPatternSimple:
 		n := name
-		p := m.pattern
 		if !m.caseSensitive {
 			n = strings.ToLower(n)
-			p = strings.ToLower(p)
 		}
-		return strings.Contains(n, p)
+		return strings.Contains(n, m.pattern)
 	default:
 		return false
 	}

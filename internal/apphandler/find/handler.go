@@ -1191,11 +1191,14 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 }
 
 // matchingFindPaths returns the absolute paths of entries at indices whose basename
-// matches matcher, honoring filesOnly/dirsOnly. Shared filter pipeline for both
-// ApplyGroupSelect branches (select also filters out already-marked paths itself).
-func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dirsOnly bool, matcher panel.GroupMatcher) []string {
+// matches matcher, honoring filesOnly/dirsOnly, along with an isDir map built in the
+// same pass (mirroring panel.State.groupMatchedPaths) so callers never need a separate
+// per-path PathMeta lookup. Shared filter pipeline for both ApplyGroupSelect branches
+// (select also filters out already-marked paths itself).
+func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dirsOnly bool, matcher panel.GroupMatcher) ([]string, map[string]bool) {
 	if indices == nil {
 		paths := make([]string, 0, 256)
+		isDir := make(map[string]bool, 256)
 		for i := 0; i < st.IndexedCount; i++ {
 			ent, ok := st.FindEntryAt(i)
 			if !ok {
@@ -1212,10 +1215,12 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 				continue
 			}
 			paths = append(paths, path)
+			isDir[path] = ent.IsDir
 		}
-		return paths
+		return paths, isDir
 	}
 	paths := make([]string, 0, len(indices))
+	isDir := make(map[string]bool, len(indices))
 	for _, entIdx := range indices {
 		ent, ok := st.FindEntryAt(entIdx)
 		if !ok {
@@ -1235,8 +1240,9 @@ func matchingFindPaths(st *dialog.FindDialogState, indices []int, filesOnly, dir
 			continue
 		}
 		paths = append(paths, path)
+		isDir[path] = ent.IsDir
 	}
-	return paths
+	return paths, isDir
 }
 
 // CountGroupMatches reports how many find results matching req.Pattern have marked state equal
@@ -1253,13 +1259,12 @@ func (h *Handler) CountGroupMatches(req GroupSelectRequest, marked bool) (files,
 	}
 	st := &h.model.FindDialog
 	indices := h.findDialogResultIndices(st)
-	matched := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
-	isDir := h.findPathIsDir(st)
+	matched, isDir := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
 	for _, path := range matched {
 		if st.MarkedPaths[path] != marked {
 			continue
 		}
-		if isDir(path) {
+		if isDir[path] {
 			dirs++
 		} else {
 			files++
@@ -1286,7 +1291,7 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 		if st.MarkedPaths == nil {
 			st.MarkedPaths = make(map[string]bool, len(indices))
 		}
-		matched := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
+		matched, isDir := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
 		paths := make([]string, 0, len(matched))
 		for _, path := range matched {
 			if !st.MarkedPaths[path] {
@@ -1295,11 +1300,11 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 		}
 		conflicts := false
 		if len(paths) > 0 {
-			isDir := h.findPathIsDir(st)
+			lookup := func(path string) bool { return isDir[path] }
 			if walkOrder {
-				conflicts = panel.BulkApplySelectionAddsWalkOrder(st.MarkedPaths, paths, isDir)
+				conflicts = panel.BulkApplySelectionAddsWalkOrder(st.MarkedPaths, paths, lookup)
 			} else {
-				conflicts = panel.BulkApplySelectionAdds(st.MarkedPaths, paths, isDir)
+				conflicts = panel.BulkApplySelectionAdds(st.MarkedPaths, paths, lookup)
 			}
 		}
 		if len(st.MarkedPaths) == 0 {
@@ -1316,7 +1321,7 @@ func (h *Handler) ApplyGroupSelect(req GroupSelectRequest) {
 		st.InvalidateMarkedSelectionDerived()
 		return
 	}
-	unmatched := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
+	unmatched, _ := matchingFindPaths(st, indices, req.FilesOnly, req.DirsOnly, matcher)
 	for _, path := range unmatched {
 		delete(st.MarkedPaths, path)
 	}
