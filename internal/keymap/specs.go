@@ -1230,7 +1230,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionCommandsOpen,
 			Views:        helpAllViews,
-			Title:        "Open Commands view",
+			Title:        "Open commands view",
 			Section:      "Commands",
 			DefaultKeys:  []string{"C-M-e"},
 			PreferredKey: "C-M-e",
@@ -1278,7 +1278,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionMessagesOpen,
 			Views:        helpAllViews,
-			Title:        "Open Messages view",
+			Title:        "Open messages view",
 			Section:      "Messages",
 			DefaultKeys:  []string{"M-l"},
 			PreferredKey: "M-l",
