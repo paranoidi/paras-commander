@@ -144,6 +144,10 @@ type FindDialogState struct {
 	// markedSelGen bumps on MarkedPaths mutations; drives selection-size derived cache.
 	markedSelGen   uint64
 	markedSelCache findMarkedSelCache
+	// pathIndex maps each entry's cleaned absolute path to its index in Entries, giving
+	// PathMeta O(1) lookups instead of a linear scan of Entries. Kept in sync by
+	// RebuildPathIndex/ExtendPathIndex as Entries is replaced/appended.
+	pathIndex map[string]int
 }
 
 // FindEntryAt returns one indexed entry from the UI mirror.
@@ -152,6 +156,32 @@ func (s *FindDialogState) FindEntryAt(idx int) (FindEntry, bool) {
 		return FindEntry{}, false
 	}
 	return s.Entries[idx], true
+}
+
+// RebuildPathIndex rebuilds the absolute-path → Entries-index lookup from scratch.
+// Call after replacing or clearing Entries.
+func (s *FindDialogState) RebuildPathIndex() {
+	s.pathIndex = make(map[string]int, len(s.Entries))
+	for i, e := range s.Entries {
+		s.pathIndex[filepath.Clean(e.AbsPath(s.RootPath))] = i
+	}
+}
+
+// ExtendPathIndex adds Entries[from:] to the path index. Call after appending to Entries.
+func (s *FindDialogState) ExtendPathIndex(from int) {
+	if s.pathIndex == nil {
+		s.RebuildPathIndex()
+		return
+	}
+	for i := from; i < len(s.Entries); i++ {
+		s.pathIndex[filepath.Clean(s.Entries[i].AbsPath(s.RootPath))] = i
+	}
+}
+
+// PathIndexLookup returns the Entries index for a cleaned absolute path, or false if unknown.
+func (s *FindDialogState) PathIndexLookup(absPath string) (int, bool) {
+	i, ok := s.pathIndex[absPath]
+	return i, ok
 }
 
 // FindDialogHasSelectionsCheckbox reports whether the search-selections row is shown.

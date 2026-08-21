@@ -72,21 +72,21 @@ func (h *Handler) bindFindDialogPathMeta(st *dialog.FindDialogState) {
 
 func lookupFindPathMeta(st *dialog.FindDialogState, absPath string) (isDir bool, size int64, ok bool) {
 	absPath = filepath.Clean(absPath)
-	for _, e := range st.Entries {
-		if filepath.Clean(e.AbsPath(st.RootPath)) == absPath {
-			if e.IsDir {
-				return true, 0, true
-			}
-			if e.Size > 0 {
-				return false, e.Size, true
-			}
-			if info, err := os.Stat(absPath); err == nil {
-				return false, info.Size(), true
-			}
-			return false, 0, true
-		}
+	idx, found := st.PathIndexLookup(absPath)
+	if !found {
+		return false, 0, false
 	}
-	return false, 0, false
+	e := st.Entries[idx]
+	if e.IsDir {
+		return true, 0, true
+	}
+	if e.Size > 0 {
+		return false, e.Size, true
+	}
+	if info, err := os.Stat(absPath); err == nil {
+		return false, info.Size(), true
+	}
+	return false, 0, true
 }
 
 func dialogEntriesFromScan(batch []scan.Entry) []dialog.FindEntry {
@@ -110,11 +110,14 @@ func (h *Handler) appendFindDialogEntries(st *dialog.FindDialogState, batch []sc
 	if len(added) == 0 {
 		return
 	}
+	from := len(st.Entries)
 	st.Entries = append(st.Entries, added...)
+	st.ExtendPathIndex(from)
 }
 
 func (h *Handler) replaceFindDialogEntries(st *dialog.FindDialogState, batch []scan.Entry) {
 	st.Entries = dialogEntriesFromScan(batch)
+	st.RebuildPathIndex()
 }
 
 func (h *Handler) startFindIndexer() {
@@ -138,6 +141,7 @@ func (h *Handler) restartFindIndexer() {
 	}
 	st.IndexErr = ""
 	st.Entries = nil
+	st.RebuildPathIndex()
 	st.IndexedCount = 0
 	st.Ranked = nil
 	st.RankDisplayLines = nil
