@@ -172,6 +172,35 @@ func entryPathHidden(displayRoot, abs string) bool {
 	return false
 }
 
+// wasSkipped reports whether e was previously recorded as skipped (by
+// dot-name or gitignore) during a walk with IncludeHidden off — either
+// directly, or as a descendant of a skipped directory.
+func (h *hiddenState) wasSkipped(displayRoot string, e Entry) bool {
+	abs := filepath.Clean(filepath.Join(displayRoot, filepath.FromSlash(e.RelLine)))
+	for _, d := range h.pendingDirs {
+		if abs == d || panel.IsStrictPathDescendant(d, abs) {
+			return true
+		}
+	}
+	_, ok := h.pendingFilePathSet[e.RelLine]
+	return ok
+}
+
+// stripHiddenAndSkipped is stripHiddenEntriesByName plus wasSkipped, used
+// when toggling Include Hidden back off so gitignore-revealed entries are
+// hidden again along with dot-named ones.
+func (h *hiddenState) stripHiddenAndSkipped(entries []Entry, displayRoot string) []Entry {
+	filtered := make([]Entry, 0, len(entries))
+	for _, e := range entries {
+		abs := filepath.Clean(filepath.Join(displayRoot, filepath.FromSlash(e.RelLine)))
+		if entryPathHidden(displayRoot, abs) || h.wasSkipped(displayRoot, e) {
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+	return filtered
+}
+
 func stripHiddenEntriesByName(entries []Entry, displayRoot string) []Entry {
 	if len(entries) == 0 {
 		return nil

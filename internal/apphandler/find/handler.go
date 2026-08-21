@@ -9,6 +9,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
+	"github.com/paranoidi/paras-commander/internal/gitignore"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -47,6 +48,28 @@ func (h *Handler) OpenDialog(panelID int) {
 	}
 	h.bindFindDialogPathMeta(&h.model.FindDialog)
 	h.startFindIndexer()
+	// Start the walk normally (above) so gitignore skips get recorded as usual,
+	// then flip Include Hidden on through the same path the checkbox uses — that
+	// way toggling it back off correctly re-hides what was revealed.
+	if len(selRoots) == 0 && rootGitignoreExcluded(h.host.GitignoreCache(), root) {
+		h.ToggleIncludeHidden()
+		h.host.SetTransientMessage("Explicit search on gitignore allowed", ui.MessageUrgencyInfo)
+	}
+}
+
+// rootGitignoreExcluded reports whether root itself is excluded by a
+// .gitignore rule from one of its ancestors (e.g. root is a node_modules/
+// or similar directory matched from above) — the degenerate case where a
+// plain walk would silently index nothing.
+func rootGitignoreExcluded(gi *gitignore.Cache, root string) bool {
+	if gi == nil {
+		return false
+	}
+	m, err := gi.MatcherForDir(root)
+	if err != nil || m == nil {
+		return false
+	}
+	return m.Ignored(root, true)
 }
 
 func (h *Handler) CloseDialog() {

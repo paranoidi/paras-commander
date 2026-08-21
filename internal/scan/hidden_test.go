@@ -39,6 +39,25 @@ func TestFilterEntriesToScope(t *testing.T) {
 	}
 }
 
+func TestHiddenStateStripHiddenAndSkipped(t *testing.T) {
+	t.Parallel()
+	root := "/home/user"
+	h := newHiddenState()
+	h.mergeSkipped([]string{filepath.Join(root, "skipdir")}, []string{"skipfile.txt"})
+
+	entries := []Entry{
+		{RelLine: "visible.txt"},
+		{RelLine: "skipdir"},
+		{RelLine: "skipdir/inner.txt"},
+		{RelLine: "skipfile.txt"},
+		{RelLine: ".hidden"},
+	}
+	got := h.stripHiddenAndSkipped(entries, root)
+	if len(got) != 1 || got[0].RelLine != "visible.txt" {
+		t.Fatalf("stripHiddenAndSkipped = %+v, want only visible.txt", got)
+	}
+}
+
 func TestStripHiddenEntriesByName(t *testing.T) {
 	t.Parallel()
 	root := "/home/user"

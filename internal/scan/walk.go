@@ -159,6 +159,9 @@ func (w *rootWalk) run(ctx context.Context, opts WalkOptions) {
 		}
 
 		if !localfs.EntryVisible(name, filepath.Dir(path), isDir, listOpts) {
+			// Shared with the dot-prefix skip above: recording gitignore skips here too
+			// lets Include Hidden reveal them via the same replay pipeline (hidden.go).
+			w.recordSkippedHidden(path, isDir)
 			if isDir {
 				return filepath.SkipDir
 			}

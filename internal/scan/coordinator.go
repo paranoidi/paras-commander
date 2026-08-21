@@ -543,7 +543,7 @@ func (s *session) setIncludeHidden(on bool) {
 	displayRoot := s.opts.DisplayRoot
 	var filtered []Entry
 	s.idx.View(func(entries []Entry, _ int) {
-		filtered = stripHiddenEntriesByName(append([]Entry(nil), entries...), displayRoot)
+		filtered = s.hidden.stripHiddenAndSkipped(append([]Entry(nil), entries...), displayRoot)
 	})
 	select {
 	case s.coord.internal <- stripDoneMsg{gen: gen, entries: filtered}:
