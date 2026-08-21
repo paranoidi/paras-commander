@@ -384,6 +384,9 @@ func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 		return nil
 	}
 	var out []menu.FunctionKey
+	if lbl := keys.MenuBindingLabel(keymap.ActionFindSelectParentDirs); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Parent dirs"})
+	}
 	if lbl := keys.MenuBindingLabel(keymap.ActionFindView); lbl != "" {
 		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "View"})
 	}
@@ -1002,6 +1005,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.toggleSelectionsStripFocus()
 	case keymap.ActionPanelOpenSelectionsRoot:
 		a.navigateToSelectionsRoot()
+	case keymap.ActionPanelSelectParentDirs:
+		a.selectParentDirs()
 	case keymap.ActionPanelMeta:
 		a.metaCtrl.OpenDialog(a.model.ActivePanel)
 	case keymap.ActionPanelMetaEdit:

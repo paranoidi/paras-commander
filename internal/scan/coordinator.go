@@ -629,9 +629,6 @@ func (s *session) narrowSelection(roots []string) {
 	}
 	for root, w := range s.walks {
 		root = filepath.Clean(root)
-		if root == panelRoot {
-			continue
-		}
 		if _, ok := allowed[root]; !ok {
 			if w.sess != nil {
 				w.sess.Close()
@@ -640,6 +637,10 @@ func (s *session) narrowSelection(roots []string) {
 			delete(s.completedRoots, root)
 		}
 	}
+	// The panel-root walk (if it ran to completion before narrowing) is no
+	// longer a complete picture of the corpus once out-of-scope entries are
+	// filtered out below — widen() must be able to re-walk it.
+	delete(s.completedRoots, panelRoot)
 	var filtered []Entry
 	s.idx.View(func(entries []Entry, _ int) {
 		filtered = filterEntriesToScope(append([]Entry(nil), entries...), s.opts.DisplayRoot, roots)

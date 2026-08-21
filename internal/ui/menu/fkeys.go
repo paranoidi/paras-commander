@@ -162,9 +162,12 @@ func FunctionKeysFilePreviewView(rawMarkdown, launchedAsFileViewer, showToggleRa
 
 // FunctionKeysSelectionsStripView returns hints for the footer while the selections strip has keyboard focus.
 // F3 View and F4 Edit use the same handlers as the file list, targeting the highlighted strip row.
+// F2 selects the unique parent directories of the whole selection (panel.select-parent-dirs), replacing its normal
+// global meaning (open the user-command menu) only in this context.
 func FunctionKeysSelectionsStripView(clearSelectionLabel string) []FunctionKey {
 	out := []FunctionKey{
 		{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
+		{Key: tcell.KeyF2, KeyLabel: "F2", Hint: "Parent dirs"},
 		{Key: tcell.KeyF3, KeyLabel: "F3", Hint: "View"},
 		{Key: tcell.KeyF4, KeyLabel: "F4", Hint: "Edit"},
 	}

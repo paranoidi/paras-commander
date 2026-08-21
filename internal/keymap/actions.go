@@ -53,6 +53,7 @@ const (
 	ActionFindUnselectAll             = "find.unselect-all"
 	ActionFindSelectGroup             = "find.select-group"
 	ActionFindUnselectGroup           = "find.unselect-group"
+	ActionFindSelectParentDirs        = "find.select-parent-dirs"
 	ActionFindOpenInPrimary           = "find.open-primary"
 	ActionFindOpenInSecondary         = "find.open-secondary"
 	ActionPanelRefresh                = "panel.refresh"
@@ -89,6 +90,7 @@ const (
 	ActionPanelDiskUsageClear         = "panel.disk-usage-clear"
 	ActionPanelFocusSelections        = "panel.focus-selections"
 	ActionPanelOpenSelectionsRoot     = "panel.open-selections-root"
+	ActionPanelSelectParentDirs       = "panel.select-parent-dirs"
 	ActionPanelToggleHideInactive     = "panel.toggle-hide-inactive"
 	ActionPanelExternalBrowser        = "panel.external-browser"
 	ActionPanelOpenDirInOther         = "panel.open-dir-in-other"
@@ -296,6 +298,7 @@ var KnownActions = map[string]struct{}{
 	ActionFindUnselectAll:             {},
 	ActionFindSelectGroup:             {},
 	ActionFindUnselectGroup:           {},
+	ActionFindSelectParentDirs:        {},
 	ActionFindOpenInPrimary:           {},
 	ActionFindOpenInSecondary:         {},
 	ActionPanelRefresh:                {},
@@ -332,6 +335,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelDiskUsageClear:         {},
 	ActionPanelFocusSelections:        {},
 	ActionPanelOpenSelectionsRoot:     {},
+	ActionPanelSelectParentDirs:       {},
 	ActionPanelToggleHideInactive:     {},
 	ActionPanelExternalBrowser:        {},
 	ActionPanelOpenDirInOther:         {},

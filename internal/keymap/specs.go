@@ -247,6 +247,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"selections", "root", "common", "navigate"},
 		},
 		{
+			ID:           ActionPanelSelectParentDirs,
+			Views:        HelpBrowser,
+			Title:        "Select parent dirs",
+			Section:      "Navigation",
+			PreferredKey: "F2",
+			Keywords:     []string{"selections", "containing", "directories", "parent", "convert", "strip", "F2"},
+		},
+		{
 			ID:          ActionPanelToggleHideInactive,
 			Views:       HelpBrowser,
 			Title:       "Hide inactive panel",
@@ -917,6 +925,14 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
 			PreferredKey: "F7",
 			Keywords:     []string{"find dialog", "pattern", "glob", "deselect"},
+		},
+		{
+			ID:           ActionFindSelectParentDirs,
+			Title:        "Select parent dirs",
+			Section:      "Find",
+			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
+			PreferredKey: "F2",
+			Keywords:     []string{"find dialog", "containing", "directories", "parent", "convert"},
 		},
 		{
 			ID:           ActionFindOpenInPrimary,

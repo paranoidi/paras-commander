@@ -41,7 +41,7 @@ func (h *Handler) OpenDialog(panelID int) {
 		ListingDevice:              p.ListingDevice,
 		ListingDeviceValid:         p.ListingDeviceValid,
 		ShowSearchSelectionsOption: len(selRoots) > 0,
-		SearchOnlySelections:       len(selRoots) > 0,
+		SearchOnlySelections:       false,
 		SelectionDirRoots:          selRoots,
 		Focus:                      0,
 		Indexing:                   true,
@@ -324,6 +324,8 @@ func (h *Handler) ToggleSearchOnlySelections() {
 	} else {
 		h.widenFindIndexer()
 	}
+	h.clearFindNavIdle()
+	h.syncFindDialogRanks()
 }
 
 func (h *Handler) syncFindDialogRanks() {
@@ -644,6 +646,24 @@ func (h *Handler) findDialogMarkedCount() int {
 	return n
 }
 
+// findDialogMarkedPaths returns the cleaned absolute paths of every marked
+// (on == true) find-dialog result. Callers that need to filter further (e.g.
+// against the target panel's existing selection) do so on top of this.
+func findDialogMarkedPaths(st *dialog.FindDialogState) []string {
+	paths := make([]string, 0, len(st.MarkedPaths))
+	for path, on := range st.MarkedPaths {
+		if !on {
+			continue
+		}
+		path = filepath.Clean(path)
+		if path == "" {
+			continue
+		}
+		paths = append(paths, path)
+	}
+	return paths
+}
+
 func (h *Handler) applyFindDialogMarkedSelections() {
 	st := &h.model.FindDialog
 	p := h.host.PanelByID(st.PanelID)
@@ -681,21 +701,72 @@ func (h *Handler) applyFindDialogMarkedSelections() {
 	h.host.SetTransientMessage(fmt.Sprintf("Added %d to selection", added), ui.MessageUrgencyInfo)
 }
 
+// findDialogSelectParentDirs replaces the target panel's selection with the
+// unique immediate parent directories of the marked find results, falling
+// back to the single cursor entry when nothing is marked (mirrors
+// ActivateDialogOK's marked-else-cursor pattern).
+func (h *Handler) findDialogSelectParentDirs() {
+	st := &h.model.FindDialog
+	paths := findDialogMarkedPaths(st)
+	if len(paths) == 0 {
+		if p, ok := findDialogCursorPath(st); ok {
+			paths = []string{p}
+		}
+	}
+	if len(paths) == 0 {
+		h.host.SetTransientMessage("No selection", ui.MessageUrgencyInfo)
+		return
+	}
+	p := h.host.PanelByID(st.PanelID)
+	dirs := p.ParentDirsExcludingSelf(paths)
+	if len(dirs) == 0 {
+		// Every candidate path's parent is the target panel's own current
+		// directory — there's nothing to select (see ParentDirsExcludingSelf).
+		h.host.SetTransientMessage("Already in the containing directory", ui.MessageUrgencyInfo)
+		return
+	}
+	message, conflicts := p.SelectDirs(dirs)
+	h.model.ActivePanel = st.PanelID
+	h.model.ActiveSubFocus = ui.SubFocusFileList
+	h.CloseDialog()
+	if conflicts {
+		h.host.SetTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+		return
+	}
+	h.host.SetTransientMessage(message, ui.MessageUrgencyInfo)
+}
+
+// findDialogCursorEntry returns the entry and absolute path currently under the
+// find dialog cursor. False when there is no valid selection.
+func findDialogCursorEntry(st *dialog.FindDialogState) (dialog.FindEntry, string, bool) {
+	if len(st.Ranked) == 0 || st.Selected < 0 || st.Selected >= len(st.Ranked) {
+		return dialog.FindEntry{}, "", false
+	}
+	entIdx := st.Ranked[st.Selected]
+	ent, ok := st.FindEntryAt(entIdx)
+	if !ok {
+		return dialog.FindEntry{}, "", false
+	}
+	return ent, findEntryAbsPath(st, ent), true
+}
+
+// findDialogCursorPath returns the absolute path of the entry currently under
+// the find dialog cursor. False when there is no valid selection.
+func findDialogCursorPath(st *dialog.FindDialogState) (string, bool) {
+	_, path, ok := findDialogCursorEntry(st)
+	return path, ok
+}
+
 // navigateFindEntryToPanel points panelID at the currently selected result
 // (cd into a directory; cd into a file's parent and highlight it). It does not
 // change the active panel or close the dialog. Returns the entry basename and
 // true on success; false if there is no valid selection or navigation fails.
 func (h *Handler) navigateFindEntryToPanel(panelID int) (string, bool) {
 	st := &h.model.FindDialog
-	if len(st.Ranked) == 0 || st.Selected < 0 || st.Selected >= len(st.Ranked) {
-		return "", false
-	}
-	entIdx := st.Ranked[st.Selected]
-	ent, ok := st.FindEntryAt(entIdx)
+	ent, path, ok := findDialogCursorEntry(st)
 	if !ok {
 		return "", false
 	}
-	path := findEntryAbsPath(st, ent)
 
 	dir, name := path, ""
 	if !ent.IsDir {
@@ -1091,6 +1162,8 @@ func (h *Handler) tryFindDialogActionKey(event *tcell.EventKey) bool {
 		h.host.OpenGroupSelectDialog(GroupSelectModeSelect, true)
 	case keymap.ActionFindUnselectGroup:
 		h.host.OpenGroupSelectDialog(GroupSelectModeUnselect, true)
+	case keymap.ActionFindSelectParentDirs:
+		h.findDialogSelectParentDirs()
 	case keymap.ActionFindOpenInPrimary:
 		h.OpenSelectedInPrimary()
 	case keymap.ActionFindOpenInSecondary:

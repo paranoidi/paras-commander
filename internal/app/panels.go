@@ -202,6 +202,27 @@ func (a *App) toggleSelectionsStripFocus() {
 	}
 }
 
+// reconcileSelectionsStripFocus drops strip focus back to the file list whenever the
+// active panel's strip has become empty (every selection now lives inside the panel's
+// current directory, so the strip itself is no longer rendered — see
+// buildSelectionsStripPaths). Any selection mutation can cause this (select-parent-dirs
+// collapsing to an in-place directory, navigation making a previously off-listing
+// selection local again, Insert/Delete removing the last strip entry, …), so this is
+// checked centrally on every reconcile pass rather than re-derived at each mutation
+// site: focus must never point at an invisible, empty strip, or key routing (arrows,
+// Enter, F-keys) silently misfires against it instead of the file list.
+func (a *App) reconcileSelectionsStripFocus() {
+	if a.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
+		return
+	}
+	p := a.activePanel()
+	if p.SelectionsStripCount() > 0 {
+		return
+	}
+	p.CancelStripFilter(0)
+	a.model.ActiveSubFocus = ui.SubFocusFileList
+}
+
 // navigateToSelectionsRoot moves the active panel to the deepest common ancestor of its
 // selected paths — the directory copy/move is permitted from when selections span
 // multiple parent directories.
@@ -218,6 +239,39 @@ func (a *App) navigateToSelectionsRoot() {
 	if err := a.navigatePanelToDirectory(a.model.ActivePanel, root.String(), ""); err != nil {
 		a.setErrorMessage("Navigate failed", err)
 	}
+}
+
+// selectParentDirs replaces the active panel's whole selection with the unique
+// immediate parent directories of every currently-selected path.
+func (a *App) selectParentDirs() {
+	p := a.activePanel()
+	if p.SelectedPathCount() == 0 {
+		a.setTransientMessage("No selections", ui.MessageUrgencyInfo)
+		return
+	}
+	dirs := p.SelectedParentDirs()
+	if len(dirs) == 0 {
+		// Every selected path's parent is the panel's own current directory —
+		// there's nothing to select (see ParentDirsExcludingSelf).
+		a.setTransientMessage("Already in the containing directory", ui.MessageUrgencyInfo)
+		return
+	}
+	p.ClearSelection()
+	message, conflicts := p.SelectDirs(dirs)
+	// The new selection may now sit entirely inside the panel's current directory
+	// (e.g. it collapsed to a single directory that's a listed sibling here), which
+	// hides the strip. Drop strip focus in that case — same as ActionPanelClearSelection
+	// and the strip's own Insert/Delete handling — so ActiveSubFocus is correct
+	// immediately, not just after the next reconcile pass.
+	if p.SelectionsStripCount() == 0 {
+		p.CancelStripFilter(0)
+		a.model.ActiveSubFocus = ui.SubFocusFileList
+	}
+	if conflicts {
+		a.setTransientMessage("Removed conflicting selections", ui.MessageUrgencyWarn)
+		return
+	}
+	a.setTransientMessage(message, ui.MessageUrgencyInfo)
 }
 
 // navigateFromSelectionsStrip opens the directory for the highlighted strip path in the active panel
@@ -310,6 +364,7 @@ func (a *App) toggleSyncFollow() {
 // consistent). New invariants belong here, not sprinkled at call sites: any code path
 // that mutates panel state automatically triggers them via the Run-loop chokepoint.
 func (a *App) reconcileAfterEvent() {
+	a.reconcileSelectionsStripFocus()
 	a.reconcileSelectionSizeScans(ui.PrimaryPanel)
 	a.reconcileSelectionSizeScans(ui.SecondaryPanel)
 	a.dialogCtrl.ReconcileDeleteDialogScans()
@@ -538,6 +593,11 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
 	case keymap.ActionNavOpen:
 		a.navigateFromSelectionsStrip()
+	case keymap.ActionAppUserMenu:
+		// F2 opens the user-command menu everywhere else; the Selections Strip has no
+		// room for its own dedicated chord, so while it's focused F2 selects the unique
+		// parent directories of the whole selection instead (see selectParentDirs).
+		a.selectParentDirs()
 	case keymap.ActionPanelToggleSync:
 		return false
 	case keymap.ActionFileView, keymap.ActionFileEdit:

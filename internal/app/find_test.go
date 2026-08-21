@@ -1273,15 +1273,15 @@ func TestFindDialogSearchOnlySelectionsDefaultScoped(t *testing.T) {
 	if !app.model.FindDialog.ShowSearchSelectionsOption {
 		t.Fatal("expected search-selections checkbox")
 	}
-	if !app.model.FindDialog.SearchOnlySelections {
-		t.Fatal("expected search-only selections default on")
+	if app.model.FindDialog.SearchOnlySelections {
+		t.Fatal("expected search-only selections default off")
 	}
 	waitFindIndexDone(t, app)
 	if !findIndexedUnder(&app.model.FindDialog, dirA) {
 		t.Fatal("expected entries under selected dir a")
 	}
-	if findIndexedUnder(&app.model.FindDialog, dirB) {
-		t.Fatal("did not expect entries under dir b")
+	if !findIndexedUnder(&app.model.FindDialog, dirB) {
+		t.Fatal("expected entries under dir b when search-only-selections is off by default")
 	}
 }
 
@@ -1315,23 +1315,14 @@ func TestFindDialogSearchOnlySelectionsWidenAndNarrow(t *testing.T) {
 	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(dirA))
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
-	countScoped := app.model.FindDialog.IndexedCount
-
-	app.findCtrl.ToggleSearchOnlySelections()
-	if app.model.FindDialog.SearchOnlySelections {
-		t.Fatal("expected search-only off after toggle")
-	}
-	waitFindIndexDone(t, app)
+	countWide := app.model.FindDialog.IndexedCount
 	if !findIndexedUnder(&app.model.FindDialog, dirB) {
-		t.Fatal("expected entries under b after widening scope")
-	}
-	if app.model.FindDialog.IndexedCount <= countScoped {
-		t.Fatalf("entries should grow after widen: before=%d after=%d", countScoped, app.model.FindDialog.IndexedCount)
+		t.Fatal("expected entries under b by default (search-only-selections off)")
 	}
 
 	app.findCtrl.ToggleSearchOnlySelections()
 	if !app.model.FindDialog.SearchOnlySelections {
-		t.Fatal("expected search-only on after second toggle")
+		t.Fatal("expected search-only on after toggle")
 	}
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
@@ -1346,6 +1337,18 @@ func TestFindDialogSearchOnlySelectionsWidenAndNarrow(t *testing.T) {
 	}
 	if !findIndexedUnder(&app.model.FindDialog, dirA) {
 		t.Fatal("expected entries under a preserved after narrow")
+	}
+
+	app.findCtrl.ToggleSearchOnlySelections()
+	if app.model.FindDialog.SearchOnlySelections {
+		t.Fatal("expected search-only off after second toggle")
+	}
+	waitFindIndexDone(t, app)
+	if !findIndexedUnder(&app.model.FindDialog, dirB) {
+		t.Fatal("expected entries under b after widening scope")
+	}
+	if app.model.FindDialog.IndexedCount < countWide {
+		t.Fatalf("entries should be restored after widen: before=%d after=%d", countWide, app.model.FindDialog.IndexedCount)
 	}
 }
 
