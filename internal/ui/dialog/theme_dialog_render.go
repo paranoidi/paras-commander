@@ -98,11 +98,7 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 		if state.Focus == 0 && idx == state.Selected {
 			style = styles.DialogOptionRowStyle(true, true)
 		}
-		marker := "( )"
-		if idx == state.Selected {
-			marker = "(*)"
-		}
-		part := " " + marker + " "
+		part := " " + styles.SymbolDialogRadio(idx == state.Selected) + " "
 		primitive.Text(screen, primaryCol, y, utf8.RuneCountInString(part), part, style)
 		labelX := primaryCol + utf8.RuneCountInString(part)
 		labelMax := listRightEdge - labelX

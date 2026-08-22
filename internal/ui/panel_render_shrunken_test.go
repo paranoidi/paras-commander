@@ -62,11 +62,11 @@ func TestRenderShrunkenNameOnlyOmitsMtimeOnFirstListRow(t *testing.T) {
 			Entries: []localfs.Entry{entry},
 			Cursor:  0,
 		},
-		Secondary:             panel.State{Path: pathloc.MustParse("/tmp")},
-		ActivePanel:           PrimaryPanel,
-		ActiveSubFocus:        SubFocusFileList,
-		HideMenuBar:           false,
-		ShowFileIcons:         false,
+		Secondary:            panel.State{Path: pathloc.MustParse("/tmp")},
+		ActivePanel:          PrimaryPanel,
+		ActiveSubFocus:       SubFocusFileList,
+		HideMenuBar:          false,
+		UseNerdfontIcons:     false,
 		ShrunkenShowsNameOnly: true,
 	}
 

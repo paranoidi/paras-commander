@@ -47,7 +47,7 @@ type ThemeDialogState struct {
 // ConfigDialogState is the Options → Configuration modal (runtime UI toggles persisted to config.toml).
 type ConfigDialogState struct {
 	Open                   bool
-	ShowFileIcons          bool
+	UseNerdfontIcons       bool
 	ZoomActivePanel        bool
 	ShrunkenShowsNameOnly  bool
 	PaneSplitStacked       bool
@@ -55,7 +55,7 @@ type ConfigDialogState struct {
 	PanelScrollbar         uiscrollbar.Style
 	PanelScrollbarInactive bool
 	ListFormat             panel.ListFormat
-	Focus                  int // 0=file icons, 1=zoom, 2=shrunken, 3=horizontal split, 4-9=scroll mode (left) / scrollbar (right), 10-12=listing format, 13=OK, 14=Cancel
+	Focus                  int // 0=nerdfont icons, 1=zoom, 2=shrunken, 3=horizontal split, 4-9=scroll mode (left) / scrollbar (right), 10-12=listing format, 13=OK, 14=Cancel
 
 	// EditStubConfirm shows the "config.toml does not exist, generate default and open it?"
 	// confirmation, entered via F9 when no config.toml exists yet.

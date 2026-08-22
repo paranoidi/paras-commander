@@ -56,7 +56,7 @@ func (a *App) openDedupDeleteDialog() {
 		DeleteEntries: entries,
 		FocusedField:  1, // No (safe default); Yes stays index 0.
 	}
-	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.ShowFileIcons))
+	fd.DeleteLayoutMinWidth = dialog.ComputeDeleteDialogLayoutMinWidth(fd, ui.DialogListIconLeadingWidth(a.model.UseNerdfontIcons))
 	a.model.FileDialog = fd
 }
 

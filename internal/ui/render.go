@@ -35,8 +35,8 @@ func dialogRenderContext(model Model, styles theme.Theme) dialog.DialogRenderCon
 	return dialog.DialogRenderContext{
 		Styles:         styles,
 		UserHomeDir:    model.UserHomeDir,
-		ShowIcons:      model.ShowFileIcons,
-		IconLead:       DialogListIconLeadingWidth(model.ShowFileIcons),
+		ShowIcons:      model.UseNerdfontIcons,
+		IconLead:       DialogListIconLeadingWidth(model.UseNerdfontIcons),
 		ScrollbarStyle: model.PanelScrollbar,
 	}
 }
@@ -113,8 +113,8 @@ type Model struct {
 	DedupCopiesList     []DedupRow
 	// HideMenuBar mirrors !ui.show_menu_bar: when true, the top menu row is omitted and panels extend upward.
 	HideMenuBar bool
-	// ShowFileIcons mirrors ui.show_file_icons (Nerd Font glyphs before file names).
-	ShowFileIcons bool
+	// UseNerdfontIcons mirrors ui.use_nerdfont_icons (when false, forces ASCII markers in dialogs and hides file icons).
+	UseNerdfontIcons bool
 	// CarouselLayout mirrors [carousel].split and [carousel].show_size.
 	CarouselLayout panelcarousel.Layout
 	// PanelZoomEnabled mirrors effective zoom for layout (saved [ui.zoom].active_panel plus optional
@@ -616,7 +616,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			PanelStyleConfig{Styles: styles, ScrollbarStyle: model.PanelScrollbar},
 			panelCtx,
 			PanelDisplayConfig{
-				ShowIcons: model.ShowFileIcons, UserHomeDir: model.UserHomeDir,
+				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(side.PanelID),
 				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, MetaColumns: model.MetaResults[side.PanelID],

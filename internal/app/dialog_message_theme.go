@@ -166,7 +166,7 @@ func (a *App) closeThemeDialog() {
 
 // cancelThemeDialog restores the theme active before the dialog was opened and closes it.
 func (a *App) cancelThemeDialog() {
-	a.styles = a.themeAtDialogOpen
+	a.setStyles(a.themeAtDialogOpen)
 	a.closeThemeDialog()
 }
 
@@ -209,13 +209,13 @@ func (a *App) previewThemeByName(name string) {
 	if err != nil {
 		a.setTransientMessage(textutil.FirstLine(err.Error()), ui.MessageUrgencyCritical)
 		if cached, ok := a.themes[name]; ok {
-			a.styles = cached
+			a.setStyles(cached)
 		}
 		return
 	}
 	a.closeMessageDialog()
 	a.clearTransientMessage()
-	a.styles = next
+	a.setStyles(next)
 	a.themes[name] = next
 }
 
@@ -251,7 +251,7 @@ func (a *App) applyTheme(name string) bool {
 		a.openMessageDialog("Theme failed", err.Error())
 		return false
 	}
-	a.styles = nextTheme
+	a.setStyles(nextTheme)
 	a.themes[name] = nextTheme
 	a.config.Theme = name
 	a.model.ThemeDialog.CurrentName = name

@@ -16,7 +16,7 @@ import (
 func (h *Handler) FileDialogRect() ui.Rect {
 	w, ht := h.screen.Size()
 	layout := h.host.LayoutForTerminalSize(w, ht)
-	r, ok := dialog.FileDialogRect(layout, h.model.FileDialog, ui.DialogListIconLeadingWidth(h.model.ShowFileIcons))
+	r, ok := dialog.FileDialogRect(layout, h.model.FileDialog, ui.DialogListIconLeadingWidth(h.model.UseNerdfontIcons))
 	if !ok {
 		return ui.Rect{}
 	}

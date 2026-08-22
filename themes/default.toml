@@ -273,7 +273,17 @@ stash = "\uef0d"
 # U+F06D1 (nf-md-eye_off_outline); use 8-digit escape — \uf06d1 is U+F06D + "1"
 hidden_dotfiles = "\U000F06D1"
 
+
+[symbols.dialog.checkbox]
+checked = "\U000F0856"
+unchecked = "\U000F0131"
+
+[symbols.dialog.radio]
+selected = "\U000F043E"
+unselected = "\U000F043D"
+
 [symbols.jobs.list]
+
 scanning = "\uf110"
 queued = "\u23F3"
 running = "\uf144"

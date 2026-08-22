@@ -125,7 +125,7 @@ General interface layout, timing, and rendering behavior.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `show_menu_bar` | bool | `true` | Show the top menu bar. |
-| `show_file_icons` | bool | `true` | Show file-type icons/glyphs in panel listings. |
+| `use_nerdfont_icons` | bool | `true` | Enable Nerd Font icons: shows file-type glyphs in panel listings and uses Nerd Font markers in dialogs (checkboxes, radios). When off, forces ASCII markers in dialogs and hides file icons. |
 | `leader_menu_show_direct_keys` | bool | `true` | Show the preferred keybind after each action name in the Esc function menu (e.g. `Copy F5`) and the `:` fullscreen-preview menu. Toggle with **F3** while either menu is open. Does not apply to the F2 user menu or the `"` copy-path menu. |
 | `shrunken_shows_name_only` | bool | `true` | When a panel becomes too narrow for its listing columns, show only the name column instead of truncating everything. |
 | `screen_render_hash_cache` | bool | `true` | Skip re-drawing the terminal screen when nothing actually changed since the last frame — reduces flicker and I/O over slow connections. |

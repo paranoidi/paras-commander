@@ -53,7 +53,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	primitive.Text(screen, primaryCol, y, rect.Width-4, "View options:", styles.DialogText.Background(dbg))
 	y++
 	y++
-	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Show file icons", 'f', state.ShowFileIcons, state.Focus == 0, styles)
+	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Use nerdfont icons", 'd', state.UseNerdfontIcons, state.Focus == 0, styles)
 	y++
 	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Zoom active panel", 'z', state.ZoomActivePanel, state.Focus == 1, styles)
 	y++

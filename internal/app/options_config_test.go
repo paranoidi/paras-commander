@@ -72,7 +72,7 @@ func TestNewWithOptionsAppliesProvidedTheme(t *testing.T) {
 	}
 }
 
-func TestNewWithOptionsSetsShowFileIconsFromConfig(t *testing.T) {
+func TestNewWithOptionsSetsUseNerdfontIconsFromConfig(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -84,7 +84,7 @@ func TestNewWithOptionsSetsShowFileIconsFromConfig(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	cfg := config.Default()
-	cfg.UI.ShowFileIcons = false
+	cfg.UI.UseNerdfontIcons = false
 	app, err := NewWithOptions(screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
@@ -95,8 +95,8 @@ func TestNewWithOptionsSetsShowFileIconsFromConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithOptions() error = %v", err)
 	}
-	if app.model.ShowFileIcons {
-		t.Fatal("ShowFileIcons = true, want false from config")
+	if app.model.UseNerdfontIcons {
+		t.Fatal("UseNerdfontIcons = true, want false from config")
 	}
 }
 
@@ -206,15 +206,15 @@ func TestOptionsMenuOpensConfigurationDialog(t *testing.T) {
 	if !app.model.ConfigDialog.Open {
 		t.Fatal("configuration dialog open = false, want true")
 	}
-	if !app.model.ConfigDialog.ShowFileIcons {
-		t.Fatal("working copy ShowFileIcons = false, want default true")
+	if !app.model.ConfigDialog.UseNerdfontIcons {
+		t.Fatal("working copy UseNerdfontIcons = false, want default true")
 	}
 	if app.model.ConfigDialog.ListFormat != panel.ListFormatPerm {
 		t.Fatalf("ConfigDialog.ListFormat = %v, want perm", app.model.ConfigDialog.ListFormat)
 	}
 }
 
-func TestConfigDialogApplyPersistsShowFileIcons(t *testing.T) {
+func TestConfigDialogApplyPersistsUseNerdfontIcons(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))
 
@@ -239,7 +239,7 @@ func TestConfigDialogApplyPersistsShowFileIcons(t *testing.T) {
 	}
 
 	app.openConfigDialog()
-	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModNone))
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
 
 	if quit {
@@ -248,18 +248,18 @@ func TestConfigDialogApplyPersistsShowFileIcons(t *testing.T) {
 	if app.model.ConfigDialog.Open {
 		t.Fatal("config dialog should close after apply")
 	}
-	if app.model.ShowFileIcons {
-		t.Fatal("ShowFileIcons = true, want false after toggle")
+	if app.model.UseNerdfontIcons {
+		t.Fatal("UseNerdfontIcons = true, want false after toggle")
 	}
-	if app.config.UI.ShowFileIcons {
-		t.Fatal("config UI ShowFileIcons = true, want false")
+	if app.config.UI.UseNerdfontIcons {
+		t.Fatal("config UI UseNerdfontIcons = true, want false")
 	}
 	reloaded, err := config.LoadFromPaths(appPaths)
 	if err != nil {
 		t.Fatalf("LoadFromPaths after persist: %v", err)
 	}
-	if reloaded.UI.ShowFileIcons {
-		t.Fatalf("persisted show_file_icons = true, want false")
+	if reloaded.UI.UseNerdfontIcons {
+		t.Fatalf("persisted use_nerdfont_icons = true, want false")
 	}
 }
 

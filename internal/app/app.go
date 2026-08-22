@@ -380,6 +380,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	styles.UseNerdfontIcons = cfg.UI.UseNerdfontIcons
 	path, err := cwd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
@@ -456,7 +457,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 			SelectionsPanelMaxRows:       cfg.UI.SelectionsPanelMaxRows,
 			SelectionsPanelActivePercent: cfg.UI.SelectionsPanelActivePercent,
 			HideMenuBar:                  !cfg.UI.ShowMenuBar,
-			ShowFileIcons:                cfg.UI.ShowFileIcons,
+			UseNerdfontIcons:             cfg.UI.UseNerdfontIcons,
 			CarouselLayout:               carouselLayoutFromConfig(cfg.Carousel),
 			ShrunkenShowsNameOnly:        cfg.UI.ShrunkenShowsNameOnly,
 			JobsThroughputChartEnabled:   cfg.Jobs.ThroughputChartEnabled,
@@ -987,6 +988,12 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		}
 	}
 	return out
+}
+
+// setStyles sets the app styles and stamps the theme with the current UseNerdfontIcons config.
+func (a *App) setStyles(t theme.Theme) {
+	t.UseNerdfontIcons = a.config.UI.UseNerdfontIcons
+	a.styles = t
 }
 
 // Run starts the event loop.

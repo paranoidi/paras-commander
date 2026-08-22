@@ -9,7 +9,9 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
-// CheckboxText returns the marker+label string used for width calculations (matches draw row text).
+// CheckboxText returns the ASCII marker+label string for width calculations.
+// Always uses ASCII markers unconditionally; DrawDialogCheckbox renders the actual glyphs from the theme.
+// Since ASCII markers are always the same width or wider than icon glyphs, this remains a safe upper bound.
 func CheckboxText(label string, checked bool) string {
 	if checked {
 		return "[x] " + label
@@ -17,7 +19,9 @@ func CheckboxText(label string, checked bool) string {
 	return "[ ] " + label
 }
 
-// RadioText returns the marker+label string used for width calculations (matches draw row text).
+// RadioText returns the ASCII marker+label string for width calculations.
+// Always uses ASCII markers unconditionally; DrawDialogRadio renders the actual glyphs from the theme.
+// Since ASCII markers are always the same width or wider than icon glyphs, this remains a safe upper bound.
 func RadioText(label string, selected bool) string {
 	if selected {
 		return " (*) " + label
@@ -36,10 +40,7 @@ func DrawDialogCheckbox(
 	styles theme.Theme,
 ) {
 	style := styles.DialogOptionRowStyle(focused, checked)
-	marker := " [ ] "
-	if checked {
-		marker = " [x] "
-	}
+	marker := " " + styles.SymbolDialogCheckbox(checked) + " "
 	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, style)
 	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, styles.DialogAccent)
 }
@@ -55,10 +56,7 @@ func DrawDialogRadio(
 	styles theme.Theme,
 ) {
 	style := styles.DialogOptionRowStyle(focused, selected)
-	marker := " ( ) "
-	if selected {
-		marker = " (*) "
-	}
+	marker := " " + styles.SymbolDialogRadio(selected) + " "
 	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, style)
 	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, styles.DialogAccent)
 }

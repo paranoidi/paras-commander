@@ -209,7 +209,7 @@ func (a *App) openConfigDialog() {
 	sb, _ := uiscrollbar.ParseStyle(a.config.UI.Scroll.Scrollbar)
 	a.model.ConfigDialog = dialog.ConfigDialogState{
 		Open:                   true,
-		ShowFileIcons:          a.config.UI.ShowFileIcons,
+		UseNerdfontIcons:       a.config.UI.UseNerdfontIcons,
 		ZoomActivePanel:        a.config.UI.Zoom.ActivePanel,
 		ShrunkenShowsNameOnly:  a.config.UI.ShrunkenShowsNameOnly,
 		PaneSplitStacked:       a.config.UI.Zoom.Orientation == config.PaneSplitStacked,
@@ -228,7 +228,7 @@ func (a *App) closeConfigDialog() {
 func (a *App) applyConfigDialog() {
 	a.zoomActivePanelOverride = nil
 	a.paneSplitOrientationOverride = nil
-	val := a.model.ConfigDialog.ShowFileIcons
+	val := a.model.ConfigDialog.UseNerdfontIcons
 	zoom := a.model.ConfigDialog.ZoomActivePanel
 	shrunken := a.model.ConfigDialog.ShrunkenShowsNameOnly
 	paneSplit := config.PaneSplitSideBySide
@@ -238,14 +238,15 @@ func (a *App) applyConfigDialog() {
 	scrollMode := panel.ScrollModeTOMLValue(a.model.ConfigDialog.ScrollMode)
 	sb := uiscrollbar.TOMLValue(a.model.ConfigDialog.PanelScrollbar)
 	lf := panel.EffectiveListFormat(a.model.ConfigDialog.ListFormat)
-	a.config.UI.ShowFileIcons = val
+	a.config.UI.UseNerdfontIcons = val
+	a.setStyles(a.styles)
 	a.config.UI.Zoom.ActivePanel = zoom
 	a.config.UI.ShrunkenShowsNameOnly = shrunken
 	a.config.UI.Zoom.Orientation = paneSplit
 	a.config.UI.Scroll.Mode = scrollMode
 	a.config.UI.Scroll.Scrollbar = sb
 	a.config.Panels.DefaultListingFormat = panel.ListingFormatTOMLValue(lf)
-	a.model.ShowFileIcons = val
+	a.model.UseNerdfontIcons = val
 	a.model.ShrunkenShowsNameOnly = shrunken
 	a.model.PanelScrollbar = uiscrollbar.EffectiveStyle(a.model.ConfigDialog.PanelScrollbar)
 	a.model.Primary.ListFormat = lf
@@ -255,7 +256,7 @@ func (a *App) applyConfigDialog() {
 	msg := "Configuration saved"
 	patch := map[string]any{
 		"ui": map[string]any{
-			"show_file_icons":          val,
+			"use_nerdfont_icons":       val,
 			"shrunken_shows_name_only": shrunken,
 			"zoom": map[string]any{
 				"active_panel": zoom,
@@ -324,8 +325,8 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 				}
 			}
 			switch r {
-			case 'f', 'F':
-				st.ShowFileIcons = !st.ShowFileIcons
+			case 'd', 'D':
+				st.UseNerdfontIcons = !st.UseNerdfontIcons
 				st.Focus = 0
 			case 'z', 'Z':
 				st.ZoomActivePanel = !st.ZoomActivePanel
@@ -344,7 +345,7 @@ func (a *App) handleConfigDialogKey(event *tcell.EventKey) {
 		OnSpace: func(focus int) bool {
 			switch focus {
 			case 0:
-				st.ShowFileIcons = !st.ShowFileIcons
+				st.UseNerdfontIcons = !st.UseNerdfontIcons
 			case 1:
 				st.ZoomActivePanel = !st.ZoomActivePanel
 			case 2:

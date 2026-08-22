@@ -260,6 +260,10 @@ type Theme struct {
 	// from the [symbols] section of the theme file.
 	Symbols map[string]string
 
+	// UseNerdfontIcons is set at runtime from config.UI.UseNerdfontIcons; when false,
+	// dialogs use plain ASCII markers (forcing legacy mode regardless of theme symbols).
+	UseNerdfontIcons bool
+
 	FooterKey        tcell.Style
 	FooterLabel      tcell.Style
 	FooterLabelShift tcell.Style

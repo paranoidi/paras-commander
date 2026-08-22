@@ -334,7 +334,7 @@ type PreviewConfig struct {
 
 type UIConfig struct {
 	ShowMenuBar   bool `toml:"show_menu_bar"`
-	ShowFileIcons bool `toml:"show_file_icons"`
+	UseNerdfontIcons bool `toml:"use_nerdfont_icons"`
 	// LeaderMenuShowDirectKeys shows the preferred global keybind after each action name in the Esc function menu.
 	LeaderMenuShowDirectKeys bool `toml:"leader_menu_show_direct_keys"`
 	// ShrunkenShowsNameOnly: when true, narrow panels hide trailing listing columns and show only names
@@ -537,7 +537,7 @@ func Default() Config {
 		},
 		UI: UIConfig{
 			ShowMenuBar:                  true,
-			ShowFileIcons:                true,
+			UseNerdfontIcons:             true,
 			LeaderMenuShowDirectKeys:     DefaultLeaderMenuShowDirectKeys,
 			ShrunkenShowsNameOnly:        DefaultShrunkenShowsNameOnly,
 			ScreenRenderHashCache:        DefaultScreenRenderHashCache,

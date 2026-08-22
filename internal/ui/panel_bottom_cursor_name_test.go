@@ -176,9 +176,9 @@ func TestRenderDrawsCursorNameHintAboveFooterWhenTooWideForBorder(t *testing.T) 
 			Entries: []localfs.Entry{{Name: longName, Path: "/tmp/" + longName}},
 			Cursor:  0,
 		},
-		Secondary:     panel.State{Path: pathloc.MustParse("/var")},
-		ActivePanel:   PrimaryPanel,
-		ShowFileIcons: true,
+		Secondary:        panel.State{Path: pathloc.MustParse("/var")},
+		ActivePanel:      PrimaryPanel,
+		UseNerdfontIcons: true,
 	}
 	Render(screen, model, theme.Default())
 

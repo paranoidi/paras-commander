@@ -130,9 +130,9 @@ func TestRenderDrawsOpenInOtherPanelIcon(t *testing.T) {
 			}},
 			Cursor: 0,
 		},
-		Secondary:     panel.State{Path: pathloc.MustParse("/tmp/child")},
-		ActivePanel:   PrimaryPanel,
-		ShowFileIcons: true,
+		Secondary:        panel.State{Path: pathloc.MustParse("/tmp/child")},
+		ActivePanel:      PrimaryPanel,
+		UseNerdfontIcons: true,
 	}
 	Render(screen, model, theme.Default())
 
