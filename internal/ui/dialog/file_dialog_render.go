@@ -184,6 +184,12 @@ func fileDialogOuterTitle(state FileDialogState) string {
 	if state.DialogType == FileDialogRunForEach && state.RunForEachHistoryOpen {
 		return "History"
 	}
+	if state.DialogType == FileDialogDelete && state.DeleteDanglingDirs {
+		if len(state.DeleteEntries) == 1 {
+			return "Delete empty leftover dir?"
+		}
+		return "Delete empty leftover dirs?"
+	}
 	return fileDialogTitle(state.DialogType)
 }
 

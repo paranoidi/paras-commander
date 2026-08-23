@@ -7,6 +7,28 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 )
 
+func TestFileDialogOuterTitleDanglingDirsDelete(t *testing.T) {
+	single := FileDialogState{
+		DialogType:         FileDialogDelete,
+		DeleteDanglingDirs: true,
+		DeleteEntries:      []DeleteListEntry{{Name: "empty"}},
+	}
+	if title := fileDialogOuterTitle(single); title != "Delete empty leftover dir?" {
+		t.Fatalf("single title = %q, want Delete empty leftover dir?", title)
+	}
+	multi := FileDialogState{
+		DialogType:         FileDialogDelete,
+		DeleteDanglingDirs: true,
+		DeleteEntries: []DeleteListEntry{
+			{Name: "a"},
+			{Name: "b"},
+		},
+	}
+	if title := fileDialogOuterTitle(multi); title != "Delete empty leftover dirs?" {
+		t.Fatalf("multi title = %q, want Delete empty leftover dirs?", title)
+	}
+}
+
 func TestDeleteDialogListViewportRowsSmallListUncapped(t *testing.T) {
 	state := FileDialogState{
 		DeleteSummary: "2 files (300 B)",
