@@ -33,6 +33,9 @@ func HandleKey(ev *tcell.EventKey, form dialog.DialogLinearForm, h Handlers) boo
 	case tcell.KeyEnter:
 		if *h.Focus == form.CancelIndex() {
 			h.OnCancel()
+		} else if h.OnSpace != nil && h.OnSpace(*h.Focus) {
+			// Enter activates the focused row (radio/checkbox) like Space; OK applies only
+			// when OnSpace does not handle the current focus (e.g. plain input rows).
 		} else {
 			h.OnApply()
 		}

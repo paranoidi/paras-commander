@@ -94,3 +94,32 @@ func TestHandleKeySpaceCallsOnSpace(t *testing.T) {
 		t.Fatalf("OnSpace got focus %d, want 0", gotFocus)
 	}
 }
+
+func TestHandleKeyEnterCallsOnSpaceBeforeApply(t *testing.T) {
+	form := dialog.NewDialogLinearForm(2).WithSegments(0, 2) // radio(0), checkbox(1), OK(2), Cancel(3)
+	focus := 0
+	applied := false
+	h := Handlers{
+		Focus:    &focus,
+		OnApply:  func() { applied = true },
+		OnCancel: func() {},
+		OnSpace: func(f int) bool {
+			return f < form.OKIndex()
+		},
+	}
+	if !HandleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone), form, h) {
+		t.Fatal("expected Enter to be consumed")
+	}
+	if applied {
+		t.Fatal("Enter on radio should activate via OnSpace, not apply dialog")
+	}
+
+	focus = form.OKIndex()
+	applied = false
+	if !HandleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone), form, h) {
+		t.Fatal("expected Enter to be consumed")
+	}
+	if !applied {
+		t.Fatal("Enter on OK should apply when OnSpace does not handle focus")
+	}
+}

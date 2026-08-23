@@ -687,7 +687,6 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 	if key == tcell.KeyUp && onOptionsRow {
 		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = 3
-		h.ApplyMassRenameModeFromFocus()
 		return true
 	}
 	if key == tcell.KeyUp && onButton {
@@ -716,9 +715,6 @@ func (h *Handler) fileDialogMoveFocusKey(event *tcell.EventKey) bool {
 	if nf, ok := form.MoveFocus(d.FocusedField, event.Key()); ok {
 		h.clearFileDialogPickerSubfocus()
 		d.FocusedField = nf
-		if d.DialogType == dialog.FileDialogMassRename && (nf == 0 || nf == 1 || nf == 2 || nf == 3) {
-			h.ApplyMassRenameModeFromFocus()
-		}
 		return true
 	}
 	return false

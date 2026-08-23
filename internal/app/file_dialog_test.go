@@ -710,7 +710,7 @@ func TestMassRenameModeShortcutKeepsReplaceFocus(t *testing.T) {
 	}
 }
 
-func TestMassRenameRadioFocusAppliesRegexMode(t *testing.T) {
+func TestMassRenameRadioFocusDoesNotApplyModeUntilActivated(t *testing.T) {
 	dir := t.TempDir()
 	aPath := filepath.Join(dir, "x.txt")
 	writeFile(t, aPath)
@@ -734,8 +734,16 @@ func TestMassRenameRadioFocusAppliesRegexMode(t *testing.T) {
 	if d.FocusedField != 1 {
 		t.Fatalf("FocusedField = %d, want 1 (Regex radio)", d.FocusedField)
 	}
+	if d.MassRenameMode != dialog.MassRenameModeUISimple {
+		t.Fatalf("mode = %v, want simple after focusing radio without activation", d.MassRenameMode)
+	}
+	if d.Fields[0].Label != "Find" {
+		t.Fatalf("label = %q, want Find", d.Fields[0].Label)
+	}
+
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))
 	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
-		t.Fatalf("mode = %v, want regex after focusing radio", d.MassRenameMode)
+		t.Fatalf("mode = %v, want regex after Space on focused radio", d.MassRenameMode)
 	}
 	if d.Fields[0].Label != "Pattern" {
 		t.Fatalf("label = %q, want Pattern", d.Fields[0].Label)

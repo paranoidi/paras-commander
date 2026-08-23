@@ -39,8 +39,8 @@ func (h *Handler) confirmFilterDialog() {
 	h.closeFilterDialog()
 }
 
-// applyFilterDialogFocus applies the filter for the given focus index live
-// (while the dialog is still open) so the compare list updates in real time.
+// applyFilterDialogFocus applies the filter for the given focus index when the user
+// activates a radio row (Enter/Space/Alt mnemonic), not on arrow-key navigation.
 func (h *Handler) applyFilterDialogFocus(focus int) {
 	if f, ok := dialog.CompareFilterForFocus(focus); ok {
 		h.SetFilter(f)
@@ -69,9 +69,16 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) {
 	if event.Key() == tcell.KeyEnter {
 		if d.Focus == dialog.CompareFilterDialogCancelIndex() {
 			h.cancelFilterDialog()
+		} else if d.Focus < dialog.CompareFilterDialogOKIndex() {
+			h.applyFilterDialogFocus(d.Focus)
 		} else {
 			h.confirmFilterDialog()
 		}
+		return
+	}
+	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && event.Rune() == ' ' &&
+		d.Focus < dialog.CompareFilterDialogOKIndex() {
+		h.applyFilterDialogFocus(d.Focus)
 		return
 	}
 	// Alt+letter shortcuts navigate to a filter option and apply live.
@@ -87,10 +94,6 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) {
 	}
 	if nf, ok := dialog.CompareFilterDialogMoveFocus(d.Focus, event.Key()); ok {
 		d.Focus = nf
-		// Apply live when navigating to a radio option (not a button).
-		if nf < dialog.CompareFilterDialogOKIndex() {
-			h.applyFilterDialogFocus(nf)
-		}
 	}
 }
 

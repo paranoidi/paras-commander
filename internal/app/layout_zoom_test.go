@@ -73,7 +73,7 @@ inactive_percent = 30
 	}
 
 	app.openConfigDialog()
-	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt)); quit {
 		t.Fatal("handleKey quit")
 	}
 	if app.zoomActivePanelOverride != nil {

@@ -240,7 +240,7 @@ func TestConfigDialogApplyPersistsUseNerdfontIcons(t *testing.T) {
 
 	app.openConfigDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
@@ -291,7 +291,7 @@ func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
 
 	app.openConfigDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModNone))
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
@@ -336,7 +336,7 @@ func TestConfigDialogApplyPersistsPaneSplitOrientation(t *testing.T) {
 
 	app.openConfigDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
 	}
@@ -383,7 +383,7 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 
 	app.openConfigDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 't', tcell.ModNone))
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")
@@ -429,7 +429,7 @@ func TestConfigDialogApplyPersistsDefaultListingFormat(t *testing.T) {
 
 	app.openConfigDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
-	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModAlt))
 
 	if quit {
 		t.Fatal("handleKey() quit = true, want false")

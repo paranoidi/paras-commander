@@ -108,27 +108,15 @@ func (h *Handler) HandleMergeDialogKey(event *tcell.EventKey) bool {
 	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone {
 		switch event.Rune() {
 		case ' ':
-			switch d.Focus {
-			case 0:
-				d.Direction = comparepkg.MergeTowardPrimary
-			case 1:
-				d.Direction = comparepkg.MergeTowardSecondary
-			case 2:
-				d.CopyMissing = !d.CopyMissing
-			case 3:
-				d.CopyModified = !d.CopyModified
-			case 4:
-				d.MoveMode = false
-			case 5:
-				d.MoveMode = true
-			}
-			h.refreshMergePreview(d)
+			h.activateCompareMergeDialogFocus(d)
 			return true
 		}
 	}
 	if event.Key() == tcell.KeyEnter {
 		if d.Focus == form.CancelIndex() {
 			h.closeMergeDialog()
+		} else if h.activateCompareMergeDialogFocus(d) {
+			// radio/checkbox activated; stay open
 		} else {
 			h.confirmMerge()
 		}
@@ -138,6 +126,27 @@ func (h *Handler) HandleMergeDialogKey(event *tcell.EventKey) bool {
 		d.Focus = nf
 		return true
 	}
+	return true
+}
+
+func (h *Handler) activateCompareMergeDialogFocus(d *dialog.CompareMergeDialogState) bool {
+	switch d.Focus {
+	case 0:
+		d.Direction = comparepkg.MergeTowardPrimary
+	case 1:
+		d.Direction = comparepkg.MergeTowardSecondary
+	case 2:
+		d.CopyMissing = !d.CopyMissing
+	case 3:
+		d.CopyModified = !d.CopyModified
+	case 4:
+		d.MoveMode = false
+	case 5:
+		d.MoveMode = true
+	default:
+		return false
+	}
+	h.refreshMergePreview(d)
 	return true
 }
 
