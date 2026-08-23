@@ -19,7 +19,7 @@ func TestPaintSelectionsStripBottomSizeFrameDashBeforeCorner(t *testing.T) {
 	rect := Rect{X: 0, Y: 0, Width: 30, Height: 5}
 	styles := theme.Default()
 	chrome := styles.PanelChrome(true, false)
-	drawAuxPanelChrome(screen, rect, panelSelectionsChromePadded, "", true, false, styles)
+	drawAuxPanelChrome(screen, rect, panelSelectionsChromePadded, "", true, false, false, styles)
 	endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, true, false)
 	paintSelectionsStripBottomSize(screen, rect, "2 items (1 KiB)", endStyle, chrome.Frame)
 

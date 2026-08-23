@@ -109,6 +109,7 @@ func paintBrowserPanelsInScope(
 				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 				ShowSelectionSizeOnBottom: leftSelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,
 				ScrollbarShowInactive: model.PanelScrollbarInactive, PanelFileListActive: primaryFileListFocus,
+				ViMotionActive: viMotionStripActive(model, PrimaryPanel),
 			})
 		}
 	}
@@ -148,6 +149,7 @@ func paintBrowserPanelsInScope(
 				DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 				ShowSelectionSizeOnBottom: rightSelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,
 				ScrollbarShowInactive: model.PanelScrollbarInactive, PanelFileListActive: secondaryFileListFocus,
+				ViMotionActive: viMotionStripActive(model, SecondaryPanel),
 			})
 		}
 	}

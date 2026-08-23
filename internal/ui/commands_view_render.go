@@ -49,7 +49,7 @@ func CommandsStreamPanels(column Rect, entry CommandRunEntry) (stdoutRect, stder
 
 func drawCommandsListPanel(screen tcell.Screen, rect Rect, state CommandsViewState, entries []CommandRunEntry, styles theme.Theme, chromeBlocked bool, userHomeDir string) {
 	active := state.FocusPane == 0
-	layout := drawAuxPanelChrome(screen, rect, " Commands ", "", active, chromeBlocked, styles)
+	layout := drawAuxPanelChrome(screen, rect, " Commands ", "", active, chromeBlocked, false, styles)
 	bg := layout.ContentBG
 
 	contentX := rect.X + 2
@@ -191,7 +191,7 @@ func CommandPanelLines(text string, width int) []string {
 }
 
 func drawCommandsStreamPanel(screen tcell.Screen, rect Rect, title string, scroll int, lines []string, styles theme.Theme, chromeBlocked bool, focused bool) {
-	layout := drawAuxPanelChrome(screen, rect, title, "", focused, chromeBlocked, styles)
+	layout := drawAuxPanelChrome(screen, rect, title, "", focused, chromeBlocked, false, styles)
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	contentTop := rect.Y + 1
 	contentH := JobsPanelContentRows(rect)

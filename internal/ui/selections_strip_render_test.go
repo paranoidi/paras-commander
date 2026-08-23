@@ -131,6 +131,51 @@ func TestSelectionsStripMarkOnCursorRow(t *testing.T) {
 	}
 }
 
+func TestSelectionsStripViMotionBorderColor(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	filePath := filepath.Join(dir, "picked.txt")
+	if err := os.WriteFile(filePath, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	styles := theme.Default()
+	const width, height = 60, 8
+	screen.SetSize(width, height)
+	rect := Rect{X: 0, Y: 0, Width: width, Height: height}
+	state := panel.State{
+		Path:                 pathloc.MustParse(sub),
+		SelectionsStripOrder: []string{filePath},
+		SelectedPaths:        map[string]bool{filePath: true},
+	}
+
+	drawSelectionsStrip(screen, rect, state, true, false, SelectionsStripOpts{
+		Styles: styles, ViMotionActive: true, ScrollbarStyle: uiscrollbar.StyleNone,
+		ScrollbarShowInactive: true, PanelFileListActive: false,
+	})
+
+	wantFG, _, _ := styles.PanelViMotionFrame.Decompose()
+	notWantFG, _, _ := styles.PanelActiveFrame.Decompose()
+	_, borderStyle, _ := screen.Get(rect.X, rect.Y)
+	gotFG, _, _ := borderStyle.Decompose()
+	if gotFG != wantFG {
+		t.Fatalf("strip border fg = %v, want vi-motion frame fg %v", gotFG, wantFG)
+	}
+	if gotFG == notWantFG {
+		t.Fatal("strip border should not use plain active frame while vi-motion is on")
+	}
+}
+
 func TestSelectionsStripTitleShowsMultiLocationIcon(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")

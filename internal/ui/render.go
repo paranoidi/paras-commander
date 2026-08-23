@@ -575,12 +575,18 @@ type browserPanelSide struct {
 	CursorNameHintPinnedOut    *string
 }
 
-// viMotionActive reports whether panelID's border should render in the vi-motion accent color
-// (see Model.ViMotionMode / PanelContext.ViMotionActive). Shared by the full-render path
-// (drawBrowserView) and the partial-render list-nav path (paintBrowserPanelsInScope) so they
-// can't diverge.
+// viMotionActive reports whether the file-list panel border should render in the vi-motion accent color.
 func viMotionActive(model Model, panelID int) bool {
-	return model.ViMotionMode && model.ActivePanel == panelID
+	return model.ViMotionMode &&
+		model.ActivePanel == panelID &&
+		model.renderSubFocus() == SubFocusFileList
+}
+
+// viMotionStripActive reports whether the selections strip border should use the vi-motion accent.
+func viMotionStripActive(model Model, panelID int) bool {
+	return model.ViMotionMode &&
+		model.ActivePanel == panelID &&
+		model.renderSubFocus() == SubFocusSelectionsStrip
 }
 
 // drawBrowserPanel paints one twin column (file list or file preview) plus its selections strip
@@ -631,6 +637,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints, DiskUsageGoduIgnore: model.DiskUsageGoduIgnore,
 			ShowSelectionSizeOnBottom: side.SelectionSizeOnStripBottom, ScrollbarStyle: model.PanelScrollbar,
 			ScrollbarShowInactive: model.PanelScrollbarInactive, PanelFileListActive: side.FileListFocus,
+			ViMotionActive: viMotionStripActive(model, side.PanelID),
 		})
 	}
 }

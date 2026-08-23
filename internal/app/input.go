@@ -1164,6 +1164,14 @@ func (a *App) inQuickFilterUI() bool {
 }
 
 func (a *App) handleSelectionsStripKey(event *tcell.EventKey) bool {
+	if a.model.ViMotionMode && !a.inQuickFilterUI() {
+		if remapped, ok := viMotionSelectionsStripKey(event); ok {
+			if remapped == nil {
+				return true
+			}
+			event = remapped
+		}
+	}
 	p := a.activePanel()
 	vr := a.selectionsStripViewportRows(a.model.ActivePanel)
 	switch event.Key() {
@@ -1205,5 +1213,26 @@ func (a *App) handleSelectionsStripKey(event *tcell.EventKey) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+// viMotionSelectionsStripKey maps vi-motion hjkl to strip-local navigation keys. ok=false leaves
+// the event unchanged (fall through to filter text or outer vi-motion leader dispatch).
+// remapped=nil means the key was consumed with no action (e.g. h has no strip equivalent).
+func viMotionSelectionsStripKey(event *tcell.EventKey) (remapped *tcell.EventKey, ok bool) {
+	if !keymap.IsPlainPrintableRune(event) {
+		return nil, false
+	}
+	switch event.Rune() {
+	case 'j':
+		return tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone), true
+	case 'k':
+		return tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone), true
+	case 'l':
+		return tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone), true
+	case 'h':
+		return nil, true
+	default:
+		return nil, false
 	}
 }

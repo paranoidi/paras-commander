@@ -600,6 +600,11 @@ func (a *App) tryDispatchSelectionsStrip(actionID string) bool {
 		a.selectParentDirs()
 	case keymap.ActionPanelToggleSync:
 		return false
+	case keymap.ActionPanelViMotionToggle:
+		// Esc (panel.vi-motion-toggle) must still flip vi-motion mode while the strip
+		// is focused — same as the file list. Strip filter Esc cancels the filter first
+		// via InputModeFilter / quickFilterRetainsKey and never reaches here.
+		return false
 	case keymap.ActionFileView, keymap.ActionFileEdit:
 		// Same handlers as the file list (OpenFilePreviewFullscreen / EditActiveFile),
 		// targeting the highlighted strip row via ActiveSubFocus resolution.

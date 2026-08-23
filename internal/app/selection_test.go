@@ -250,6 +250,57 @@ func setupSelectionsStripFocusTest(t *testing.T) (*App, *panel.State) {
 	return app, left
 }
 
+func TestViMotionHJKLSelectionsStripWhenFocused(t *testing.T) {
+	app, left := setupSelectionsStripFocusTest(t)
+	root := filepath.Dir(left.Path.String())
+	gamma := filepath.Join(root, "gamma")
+	if err := os.Mkdir(gamma, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	left.BulkAddSelections([]string{gamma}, nil)
+	if left.SelectionsStripCount() < 2 {
+		t.Fatalf("need at least 2 strip rows, got %d", left.SelectionsStripCount())
+	}
+	left.SelectionsStripCursor = 0
+
+	app.model.ViMotionMode = true
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
+	if left.SelectionsStripCursor != 1 {
+		t.Fatalf("'j' with vi-motion on: strip cursor = %d, want 1", left.SelectionsStripCursor)
+	}
+	if left.StripFilter.Active || left.StripFilter.Editing || left.StripFilter.Query != "" {
+		t.Fatalf("'j' with vi-motion on must not open strip filter, got %+v", left.StripFilter)
+	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
+	if left.SelectionsStripCursor != 0 {
+		t.Fatalf("'k' with vi-motion on: strip cursor = %d, want 0", left.SelectionsStripCursor)
+	}
+}
+
+func TestViMotionToggleEscWhileSelectionsStripFocused(t *testing.T) {
+	app, _ := setupSelectionsStripFocusTest(t)
+	if app.model.ViMotionMode {
+		t.Fatal("ViMotionMode should start false")
+	}
+	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone)); quit {
+		t.Fatal("handleKey(Esc) quit = true, want false")
+	}
+	if !app.model.ViMotionMode {
+		t.Fatal("Esc with selections strip focused should toggle ViMotionMode on")
+	}
+	if app.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
+		t.Fatalf("ActiveSubFocus = %d, want selections strip", app.model.ActiveSubFocus)
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
+	if app.model.ViMotionMode {
+		t.Fatal("second Esc should toggle ViMotionMode back off")
+	}
+	if app.model.ActiveSubFocus != ui.SubFocusSelectionsStrip {
+		t.Fatalf("ActiveSubFocus = %d, want selections strip after toggle off", app.model.ActiveSubFocus)
+	}
+}
+
 func TestActiveFooterKeysSelectionsStripFocused(t *testing.T) {
 	app, _ := setupSelectionsStripFocusTest(t)
 	want := menu.FunctionKeysSelectionsStripView(app.keys.Global.MenuBindingLabel(keymap.ActionPanelClearSelection))

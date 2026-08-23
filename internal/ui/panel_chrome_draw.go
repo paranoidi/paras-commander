@@ -19,9 +19,14 @@ type AuxPanelChromeLayout struct {
 
 // drawAuxPanelChrome paints border, surface fill, and title overlay for an auxiliary panel.
 // When endLabel is non-empty, the top row uses a split layout (title left, endLabel right).
-func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title, endLabel string, active, blocked bool, styles theme.Theme) AuxPanelChromeLayout {
+// viMotion selects the vi-motion accent frame on the active, unblocked panel (selections strip).
+func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title, endLabel string, active, blocked, viMotion bool, styles theme.Theme) AuxPanelChromeLayout {
 	chrome := styles.PanelChrome(active, blocked)
-	primitive.Box(screen, primitive.Rect(rect), chrome.Frame, primitive.SharpBorder)
+	borderStyle := chrome.Frame
+	if viMotion && active && !blocked {
+		borderStyle = styles.PanelViMotionFrame
+	}
+	primitive.Box(screen, primitive.Rect(rect), borderStyle, primitive.SharpBorder)
 	inner := Rect{X: rect.X + 1, Y: rect.Y + 1, Width: rect.Width - 2, Height: rect.Height - 2}
 	if inner.Width > 0 && inner.Height > 0 {
 		primitive.Fill(screen, primitive.Rect(inner), ' ', chrome.Surface)
@@ -34,10 +39,11 @@ func drawAuxPanelChrome(screen tcell.Screen, rect Rect, title, endLabel string, 
 	}
 	if endLabel != "" {
 		endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, active, blocked)
-		paintAuxPanelTopRow(screen, titleX, innerRight, contentCols, rect.Y, title, endLabel, chrome.Title, endStyle, chrome.Frame)
+		paintAuxPanelTopRow(screen, titleX, innerRight, contentCols, rect.Y, title, endLabel, chrome.Title, endStyle, borderStyle)
 	} else {
-		paintAuxPanelTopRow(screen, titleX, innerRight, contentCols, rect.Y, title, "", chrome.Title, chrome.Title, chrome.Frame)
+		paintAuxPanelTopRow(screen, titleX, innerRight, contentCols, rect.Y, title, "", chrome.Title, chrome.Title, borderStyle)
 	}
+	chrome.Frame = borderStyle
 	return AuxPanelChromeLayout{
 		Inner:      inner,
 		TitleX:     titleX,

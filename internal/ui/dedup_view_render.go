@@ -189,7 +189,7 @@ func drawDedupTreePane(
 	styles theme.Theme,
 	chromeBlocked bool,
 ) {
-	layoutChrome := drawAuxPanelChrome(screen, rect, p.Title, p.EndLabel, p.Focused, chromeBlocked, styles)
+	layoutChrome := drawAuxPanelChrome(screen, rect, p.Title, p.EndLabel, p.Focused, chromeBlocked, false, styles)
 	bg := layoutChrome.ContentBG
 
 	contentX := rect.X + 2

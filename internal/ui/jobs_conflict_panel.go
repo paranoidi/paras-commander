@@ -263,7 +263,7 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 	if d == nil {
 		return
 	}
-	layout := drawAuxPanelChrome(screen, rect, " Disk space ", "", focused, chromeBlocked, styles)
+	layout := drawAuxPanelChrome(screen, rect, " Disk space ", "", focused, chromeBlocked, false, styles)
 	borderStyle := layout.Chrome.Frame
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	warn := styles.MessageWarn.Background(layout.ContentBG)
@@ -330,7 +330,7 @@ func drawJobsDiskSpacePanel(screen tcell.Screen, rect Rect, state JobsViewState,
 }
 
 func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewState, c *jobs.ConflictEvent, styles theme.Theme, chromeBlocked, focused bool, userHomeDir string) {
-	layout := drawAuxPanelChrome(screen, rect, " File exists ", "", focused, chromeBlocked, styles)
+	layout := drawAuxPanelChrome(screen, rect, " File exists ", "", focused, chromeBlocked, false, styles)
 	borderStyle := layout.Chrome.Frame
 	body := auxPanelBodyText(styles, chromeBlocked, layout.ContentBG)
 	prompt := styles.DialogText.Background(layout.ContentBG)

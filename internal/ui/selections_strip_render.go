@@ -29,6 +29,7 @@ type SelectionsStripOpts struct {
 	ScrollbarStyle                  uiscrollbar.Style
 	ScrollbarShowInactive           bool
 	PanelFileListActive             bool
+	ViMotionActive                  bool
 }
 
 // drawSelectionsStrip renders the per-panel list of selected paths outside the current directory.
@@ -65,7 +66,7 @@ func drawSelectionsStrip(
 		title = "> " + state.StripFilter.Query
 		endLabel = "" // filter query owns the top row
 	}
-	chrome := drawAuxPanelChrome(screen, rect, title, endLabel, stripFocused, chromeBlocked, styles)
+	chrome := drawAuxPanelChrome(screen, rect, title, endLabel, stripFocused, chromeBlocked, opts.ViMotionActive, styles)
 	if filterUI {
 		inputStyle := styles.FuzzyInput
 		if state.StripFilter.Active && !state.StripFilterHasMatches() {
