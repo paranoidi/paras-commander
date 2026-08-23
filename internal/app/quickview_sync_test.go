@@ -282,6 +282,67 @@ func TestQuickViewPreviewPageScrollWithCtrlJK(t *testing.T) {
 	}
 }
 
+func TestQuickViewDirOverlayPageScrollWithCtrlJK(t *testing.T) {
+	root := t.TempDir()
+	folder := filepath.Join(root, "orchard")
+	if err := os.Mkdir(folder, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Enough entries to overflow a typical inactive-column viewport so page-down moves scroll.
+	names := []string{
+		"apple.txt", "banana.txt", "cherry.txt", "delta.txt", "echo.txt",
+		"falcon.txt", "ginger.txt", "harbor.txt", "indigo.txt", "jasper.txt",
+		"kelvin.txt", "lemon.txt", "maple.txt", "nectar.txt", "orange.txt",
+		"pepper.txt", "quince.txt", "river.txt", "sunset.txt", "tulip.txt",
+		"umbra.txt", "violet.txt", "willow.txt", "xenon.txt", "yellow.txt",
+		"zephyr.txt", "amber.txt", "bronze.txt", "copper.txt", "drift.txt",
+		"ember.txt", "flint.txt", "grove.txt", "hazel.txt", "ivory.txt",
+		"jade.txt", "kite.txt", "lotus.txt", "mirth.txt", "noble.txt",
+	}
+	for _, name := range names {
+		writeFile(t, filepath.Join(folder, name))
+	}
+
+	screen := newScreen(t, 100, 30)
+	app := newApp(t, screen, root)
+	app.config.UI.KeyRepeatDebounceMS = 0
+
+	left := app.panelByID(ui.PrimaryPanel)
+	app.model.ActivePanel = ui.PrimaryPanel
+	selectPanelEntryByName(t, left, "orchard")
+	driverCursorBefore := left.Cursor
+
+	app.model.QuickViewEnabled = true
+	app.model.QuickViewPanel = ui.PrimaryPanel
+	app.previewCtrl.ApplyQuickViewPreviewImmediately()
+	if !app.model.QuickViewDirOverlayActive {
+		t.Fatal("expected directory overlay for orchard")
+	}
+	ov := &app.model.QuickViewDirOverlay
+	ov.Cursor = 0
+	ov.ScrollOffset = 0
+
+	app.dispatch(keymap.ActionFileQuickViewPreviewPageDown)
+	if ov.Cursor < 1 && ov.ScrollOffset < 1 {
+		t.Fatalf("overlay after page down: cursor=%d scroll=%d, want movement", ov.Cursor, ov.ScrollOffset)
+	}
+	cursorAfterDown := ov.Cursor
+	scrollAfterDown := ov.ScrollOffset
+
+	if left.Cursor != driverCursorBefore {
+		t.Fatalf("driver cursor = %d, want unchanged %d", left.Cursor, driverCursorBefore)
+	}
+
+	app.dispatch(keymap.ActionFileQuickViewPreviewPageUp)
+	if ov.Cursor >= cursorAfterDown && ov.ScrollOffset >= scrollAfterDown {
+		t.Fatalf("overlay after page up: cursor=%d scroll=%d, want less than cursor=%d scroll=%d",
+			ov.Cursor, ov.ScrollOffset, cursorAfterDown, scrollAfterDown)
+	}
+	if left.Cursor != driverCursorBefore {
+		t.Fatalf("driver cursor after page up = %d, want unchanged %d", left.Cursor, driverCursorBefore)
+	}
+}
+
 func TestQuickViewPersistsAcrossPanelSwitch(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "notes.txt"))
