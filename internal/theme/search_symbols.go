@@ -6,7 +6,7 @@ const SymbolKeySearchIcon = "search.icon"
 
 // SymbolSearchIcon returns the leading glyph painted inside scrollquery-based filter/search
 // input rows (find, history, path picker, help, mass-rename pattern picker, run-for-each
-// history picker, SFTP connect, panel filter, F6 group select, F3 style picker).
+// history picker, SFTP connect, F3 style picker).
 // When UseNerdfontIcons is false, returns the ASCII "/" marker.
 // Otherwise consults the theme's [symbols.search] section or uses the Nerd Font search glyph.
 func (t Theme) SymbolSearchIcon() string {

@@ -7,6 +7,35 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 )
 
+func TestGroupSelectDialogHeight(t *testing.T) {
+	t.Parallel()
+
+	base := GroupSelectState{PatternMode: panel.GroupPatternShell}
+	if got := groupSelectDialogHeight(base, 40); got != 13 {
+		t.Fatalf("base height = %d, want 13", got)
+	}
+
+	withPreview := base
+	withPreview.PreviewShow = true
+	withPreview.PreviewFiles = 2
+	if got := groupSelectDialogHeight(withPreview, 40); got != 13 {
+		t.Fatalf("preview height = %d, want 13", got)
+	}
+
+	withMeta := base
+	withMeta.MetaColumnCount = 3
+	if got := groupSelectDialogHeight(withMeta, 40); got != 14 {
+		t.Fatalf("meta height = %d, want 14", got)
+	}
+
+	withHint := base
+	withHint.Text = "["
+	withHint.PatternMode = panel.GroupPatternRegex
+	if got := groupSelectDialogHeight(withHint, 40); got != 14 {
+		t.Fatalf("hint height = %d, want 14", got)
+	}
+}
+
 func TestGroupSelectMoveFocusCheckboxGrid(t *testing.T) {
 	t.Parallel()
 	form := NewDialogLinearForm(7)

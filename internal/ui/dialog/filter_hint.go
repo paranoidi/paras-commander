@@ -73,19 +73,18 @@ func filterPatternInvalid(state FilterDialogState) bool {
 	return state.PreviewShow && state.PreviewFiles == 0 && state.PreviewFolders == 0
 }
 
-func filterDialogHeight(state FilterDialogState, layoutHeight int) int {
-	// 3 radios + sep + label (doubles as the preview row) + blank + input + optional hint
-	// + 2 checkbox rows (files/dirs only, case sensitive) + sep + buttons + borders.
-	fixed := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 2 // inner rows + top/bottom border rows
+func filterDialogInnerRows(state FilterDialogState) int {
+	rows := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 1 // mode radios, separator, Pattern label, blank, input, filter checkboxes, separator, buttons
 	if filterShowsPatternHint(state) {
-		fixed++
+		rows++
 	}
-	height := fixed
+	return rows
+}
+
+func filterDialogHeight(state FilterDialogState, layoutHeight int) int {
+	height := filterDialogInnerRows(state) + 2 // top and bottom border rows
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2
-	}
-	if height < 14 {
-		height = 14
 	}
 	return height
 }

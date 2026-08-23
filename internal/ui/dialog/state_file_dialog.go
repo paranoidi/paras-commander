@@ -174,7 +174,7 @@ type FileDialogState struct {
 	MassRenameCapEachWord   bool
 	MassRenameCapPunctSep   bool
 	MassRenamePreviewScroll int
-	MassRenameSources []MassRenameSource
+	MassRenameSources       []MassRenameSource
 	// MassRenameComputeError, when non-empty, replaces the before/after preview with a
 	// full-width warning line (set when ops.MassRenameCompute fails). Must not be encoded
 	// into MassRenamePreviewBefore — basenames can legitimately start with '!'.

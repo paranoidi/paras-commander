@@ -79,22 +79,21 @@ func groupSelectPatternInvalid(state GroupSelectState) bool {
 	return state.PreviewShow && state.PreviewFiles == 0 && state.PreviewFolders == 0
 }
 
-func groupSelectDialogHeight(state GroupSelectState, layoutHeight int) int {
-	// 3 radios + sep + label (doubles as the preview row) + blank + input + optional hint
-	// + 2 checkbox rows + optional meta row + sep + buttons + borders.
-	fixed := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 2 // inner rows + top/bottom border rows
+func groupSelectDialogInnerRows(state GroupSelectState) int {
+	rows := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 1 // mode radios, separator, Pattern label, blank, input, filter checkboxes, separator, buttons
 	if groupSelectShowsPatternHint(state) {
-		fixed++
+		rows++
 	}
 	if state.MetaColumnCount > 0 {
-		fixed++
+		rows++
 	}
-	height := fixed
+	return rows
+}
+
+func groupSelectDialogHeight(state GroupSelectState, layoutHeight int) int {
+	height := groupSelectDialogInnerRows(state) + 2 // top and bottom border rows
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2
-	}
-	if height < 14 {
-		height = 14
 	}
 	return height
 }

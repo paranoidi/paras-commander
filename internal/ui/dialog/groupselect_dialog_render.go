@@ -62,10 +62,11 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 		return
 	}
 
+	primitive.Text(screen, textX, y, inputWidth, "Pattern:", styles.DialogText.Background(itemBg))
 	if preview := groupSelectPreviewText(state, styles); preview != "" {
 		pw := utf8.RuneCountInString(preview)
 		px := textX + inputWidth - pw
-		if px > textX {
+		if px > textX+len("Pattern:") {
 			primitive.Text(screen, px, y, pw, preview, styles.DialogText.Background(itemBg))
 		}
 	}
@@ -77,7 +78,7 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, draw.ScrollingInputState{Value: state.Text, Cursor: state.TextCursor, Scroll: state.TextScroll, LeadingSymbol: styles.SymbolSearchIcon()}, state.Focus == GroupSelectFocusPattern, groupSelectPatternInvalid(state), styles)
+	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, draw.ScrollingInputState{Value: state.Text, Cursor: state.TextCursor, Scroll: state.TextScroll}, state.Focus == GroupSelectFocusPattern, groupSelectPatternInvalid(state), styles)
 	y++
 	if y >= innerBottom {
 		return
