@@ -1009,18 +1009,41 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 	return req
 }
 
-// gitStatusForPath returns the git status for path from the active panel, or nil if unavailable.
+// gitCellForPath returns a copy of by[path], or nil if absent.
+func gitCellForPath(by map[string]gitstatus.Cell, path string) *gitstatus.Cell {
+	if cell, ok := by[path]; ok {
+		cellCopy := cell
+		return &cellCopy
+	}
+	return nil
+}
+
+// gitStatusForPath returns the git status for path, or nil if unavailable.
+// Prefers the active panel's GitByPath map when the async listing fetch has landed, else peeks
+// the shared git-status cache for the file's parent directory (a cache miss returns nil rather
+// than blocking on git — CLI startup primes GitByPath itself before opening a preview; see
+// App.primeGitStatusForCLIPreview).
 func (h *Handler) gitStatusForPath(path string) *gitstatus.Cell {
-	p := h.host.ActivePanel()
-	if p == nil || p.GitByPath == nil {
+	path = filepath.Clean(path)
+	if p := h.host.ActivePanel(); p != nil {
+		if cell := gitCellForPath(p.GitByPath, path); cell != nil {
+			return cell
+		}
+	}
+	listDir := filepath.Dir(path)
+	if listDir == "" || listDir == "." {
 		return nil
 	}
-	cell, ok := p.GitByPath[path]
+	workRoot := gitignore.ValidWorkTreeRoot(listDir)
+	if workRoot == "" {
+		return nil
+	}
+	paths := []gitstatus.ListingPaths{{AbsPath: path, IsDir: false}}
+	byPath, ok := h.host.PeekGitStatus(workRoot, listDir, paths)
 	if !ok {
 		return nil
 	}
-	cellCopy := cell
-	return &cellCopy
+	return gitCellForPath(byPath, path)
 }
 
 func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target previewTarget, runGen uint64) {

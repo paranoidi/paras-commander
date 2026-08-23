@@ -27,6 +27,7 @@ type fakeHost struct {
 	inactive             int // inactive panel ID
 	messages             []string
 	launchedAsFileViewer bool
+	peekGitStatus        func(workRoot, listDir string, paths []gitstatus.ListingPaths) (map[string]gitstatus.Cell, bool)
 }
 
 func newFakeHost(model *ui.Model) *fakeHost {
@@ -97,7 +98,10 @@ func (f *fakeHost) ArmCursorNameHintNavCoalesceAfterListNav()               {}
 func (f *fakeHost) PathVolumeContendsWithActiveJob(string) bool             { return false }
 func (f *fakeHost) GitStatusScheduler(int) panel.GitStatusScheduler         { return nil }
 func (f *fakeHost) AsyncLoadScheduler(int) panel.AsyncLoadScheduler         { return nil }
-func (f *fakeHost) PeekGitStatus(string, string, []gitstatus.ListingPaths) (map[string]gitstatus.Cell, bool) {
+func (f *fakeHost) PeekGitStatus(workRoot, listDir string, paths []gitstatus.ListingPaths) (map[string]gitstatus.Cell, bool) {
+	if f.peekGitStatus != nil {
+		return f.peekGitStatus(workRoot, listDir, paths)
+	}
 	return nil, false
 }
 func (f *fakeHost) EffectivePaneSplitOrientation() ui.SplitOrientation { return ui.SplitHorizontal }

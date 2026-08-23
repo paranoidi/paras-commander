@@ -2,9 +2,11 @@ package app
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -104,6 +106,74 @@ func TestStartPathsSingleFileOpensFullscreenPreview(t *testing.T) {
 	if !ok || entry.Name != "walrus.txt" {
 		t.Fatalf("current entry = %+v, want walrus.txt", entry)
 	}
+}
+
+func TestStartPathsSingleDirtyFileShowsGitDiff(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not in PATH")
+	}
+	root := t.TempDir()
+	runQuickViewGit(t, root, "init")
+	runQuickViewGit(t, root, "config", "user.email", "t@example.com")
+	runQuickViewGit(t, root, "config", "user.name", "test")
+
+	file := filepath.Join(root, "harbor.txt")
+	if err := os.WriteFile(file, []byte("alpha\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runQuickViewGit(t, root, "add", "harbor.txt")
+	runQuickViewGit(t, root, "commit", "-m", "init")
+	if err := os.WriteFile(file, []byte("bravo\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := uitest.Screen(t, 80, 24)
+	cfg := config.Default()
+	cfg.Preview.Mode = config.PreviewModeInternal
+	app, err := NewWithOptions(screen, Options{
+		CWD:        func() (string, error) { return root, nil },
+		Config:     cfg,
+		StartPaths: []string{file},
+	})
+	if err != nil {
+		t.Fatalf("NewWithOptions: %v", err)
+	}
+	t.Cleanup(app.stopWorker)
+
+	if app.model.ViewMode != ui.ViewFilePreview {
+		t.Fatalf("ViewMode = %v, want ViewFilePreview", app.model.ViewMode)
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		app.commandsMu.RLock()
+		phase := app.model.FullscreenFilePreview.Phase
+		isDiff := app.model.FullscreenFilePreview.IsDiff
+		errMsg := app.model.FullscreenFilePreview.ErrorMsg
+		app.commandsMu.RUnlock()
+		if phase == ui.FilePreviewPhaseDone {
+			if errMsg != "" {
+				t.Fatalf("preview ErrorMsg = %q", errMsg)
+			}
+			if !isDiff {
+				t.Fatal("FullscreenFilePreview.IsDiff = false, want true for CLI open of a dirty git-tracked file")
+			}
+			return
+		}
+		// Preview completion posts a RenderWakePayload interrupt; drain so Done is applied.
+		for screen.HasPendingEvent() {
+			ev := screen.PollEvent()
+			if interruptEv, ok := ev.(*tcell.EventInterrupt); ok {
+				app.handleInterruptPayload(interruptEv.Data())
+			}
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	app.commandsMu.RLock()
+	phase := app.model.FullscreenFilePreview.Phase
+	isDiff := app.model.FullscreenFilePreview.IsDiff
+	app.commandsMu.RUnlock()
+	t.Fatalf("timeout waiting for dirty-file CLI preview; Phase=%v IsDiff=%v", phase, isDiff)
 }
 
 func TestStartPathsSingleFileLaunchQuitsOnQ(t *testing.T) {
