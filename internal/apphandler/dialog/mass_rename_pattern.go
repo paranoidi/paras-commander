@@ -377,7 +377,7 @@ func (h *Handler) syncMassRenamePickerRanks() {
 // history) currently shows, derived from the dialog's actual on-screen rect (see
 // massRenamePatternPickerDialogHeight / drawMassRenamePatternPickerContent).
 func (h *Handler) MassRenamePatternPickerListRows() int {
-	rows := h.FileDialogRect().Height - 8
+	rows := h.FileDialogRect().Height - 6
 	if rows < 1 {
 		rows = 1
 	}

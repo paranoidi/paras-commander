@@ -45,10 +45,10 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 	case listH < 4:
 		listH = 4
 	}
-	height := 8 + listH
+	height := 6 + listH
 	if height > layout.Height-2 {
 		height = layout.Height - 2
-		listH = height - 8
+		listH = height - 6
 		if listH < 4 {
 			return
 		}
@@ -65,15 +65,13 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 	primaryCol := rect.X + 2
 	inputWidth := rect.Width - 4
 
-	primitive.Text(screen, primaryCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
-
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+3, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll}, filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, filterFocused, false, styles)
 
-	sepBeforeList := rect.Y + 4
+	sepBeforeList := rect.Y + 2
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
 
-	listTop := rect.Y + 5
+	listTop := rect.Y + 3
 	rowWidth := inputWidth
 	for row := 0; row < listH; row++ {
 		y := listTop + row

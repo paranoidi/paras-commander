@@ -45,10 +45,10 @@ func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnect
 	case listH < 3:
 		listH = 3
 	}
-	height := 12 + listH
+	height := 10 + listH
 	if height > layout.Height-2 {
 		height = layout.Height - 2
-		listH = height - 12
+		listH = height - 10
 		if listH < 3 {
 			listH = 3
 		}
@@ -61,15 +61,13 @@ func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnect
 	primaryCol := rect.X + 2
 	inputWidth := rect.Width - 4
 
-	primitive.Text(screen, primaryCol, rect.Y+1, inputWidth, "SSH config hosts:", styles.DialogText.Background(itemBg))
-
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+3, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll}, filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, filterFocused, false, styles)
 
-	sepBeforeList := rect.Y + 4
+	sepBeforeList := rect.Y + 2
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
 
-	listTop := rect.Y + 5
+	listTop := rect.Y + 3
 	rowWidth := inputWidth
 	for row := 0; row < listH; row++ {
 		y := listTop + row

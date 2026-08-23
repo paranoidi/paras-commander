@@ -42,6 +42,7 @@ func TestDefaultMatchesEmbeddedTheme(t *testing.T) {
 		assertSymbolStrEqual(t, label, got.SymbolJobsList(status), embedded.SymbolJobsList(status))
 	}
 	assertSymbolStrEqual(t, "SymbolWorking", got.SymbolWorking(), embedded.SymbolWorking())
+	assertSymbolStrEqual(t, "SymbolSearchIcon", got.SymbolSearchIcon(), embedded.SymbolSearchIcon())
 
 	assertStyleEqual(t, "PanelRowMarkNew", got.PanelRowMarkNew, embedded.PanelRowMarkNew)
 	assertStyleEqual(t, "PanelRowMarkNewPrevious", got.PanelRowMarkNewPrevious, embedded.PanelRowMarkNewPrevious)
@@ -50,6 +51,7 @@ func TestDefaultMatchesEmbeddedTheme(t *testing.T) {
 	assertStyleEqual(t, "PanelRowMarkNoPermission", got.PanelRowMarkNoPermission, embedded.PanelRowMarkNoPermission)
 	assertStyleEqual(t, "PanelIconFolderMount", got.PanelIconFolderMount, embedded.PanelIconFolderMount)
 	assertStyleEqual(t, "PanelRowSelected", got.PanelRowSelected, embedded.PanelRowSelected)
+	assertStyleEqual(t, "DialogSearchIcon", got.DialogSearchIcon, embedded.DialogSearchIcon)
 }
 
 func assertSymbolRuneEqual(t *testing.T, label string, got, want rune) {

@@ -10,7 +10,7 @@ func TestFindDialogMetricsListRowsFitDialogRect(t *testing.T) {
 	}
 	rect := centeredDialogRectForTest(layout, width, height)
 	checkboxRows := 2
-	listTop := rect.Y + 5 + checkboxRows + 1
+	listTop := rect.Y + 3 + checkboxRows + 1
 	buttonY := rect.Y + height - 2
 	if listTop+listH >= buttonY {
 		t.Fatalf("list rows spill into button row: listTop=%d listH=%d buttonY=%d", listTop, listH, buttonY)

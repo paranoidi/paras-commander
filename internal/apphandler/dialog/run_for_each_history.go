@@ -66,7 +66,7 @@ func (h *Handler) syncRunForEachHistoryPickerRanks() {
 // shows, derived from the dialog's actual on-screen rect (see runForEachHistoryPickerDialogHeight
 // / drawRunForEachHistoryPickerContent).
 func (h *Handler) RunForEachHistoryPickerListRows() int {
-	rows := h.FileDialogRect().Height - 8
+	rows := h.FileDialogRect().Height - 6
 	if rows < 1 {
 		rows = 1
 	}

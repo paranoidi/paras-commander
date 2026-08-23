@@ -26,18 +26,15 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	inputWidth := metrics.InputWidth
 	listH := metrics.ListH
 
-	// Filter label.
-	primitive.Text(screen, primaryCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
-
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+3, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll}, filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, filterFocused, false, styles)
 
 	// Separator before list.
-	sepBeforeList := rect.Y + 4
+	sepBeforeList := rect.Y + 2
 	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
 
 	// List header.
-	listTop := rect.Y + 5
+	listTop := rect.Y + 3
 	headerStyle := styles.DialogText.Background(itemBg)
 	headerLine := padRight("Key", metrics.KeyPad) + padRight("Section", metrics.SecPad) + "Action"
 	if n := len([]rune(headerLine)); n > inputWidth {

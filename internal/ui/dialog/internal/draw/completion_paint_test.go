@@ -19,7 +19,7 @@ func TestPaintScrollingInputGhostNotErrorWhenInvalid(t *testing.T) {
 	value := "/tmp/x"
 	suffix := "YZ"
 	cursor := len([]rune(value))
-	PaintScrollingInputContent(screen, 2, 2, 16, value, suffix, cursor, 0, true, true, true, false, th)
+	PaintScrollingInputContent(screen, 2, 2, 16, value, suffix, cursor, 0, true, true, true, false, "", th)
 
 	col := 2 + cursor + len([]rune(suffix)) - 1
 	_, gotSt, _ := screen.Get(col, 2)

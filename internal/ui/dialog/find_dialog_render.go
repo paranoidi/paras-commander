@@ -109,15 +109,13 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	fileListCol := primaryCol
 	fileListWidth := inputWidth
 
-	primitive.Text(screen, primaryCol, rect.Y+1, inputWidth, "Filter:", styles.DialogText.Background(itemBg))
-
 	filterFocused := state.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+3, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll}, filterFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, filterFocused, false, styles)
 
-	sepAfterFilter := rect.Y + 4
+	sepAfterFilter := rect.Y + 2
 	draw.DrawDialogHSeparator(screen, rect, sepAfterFilter, borderStyle)
 
-	cbY := rect.Y + 5
+	cbY := rect.Y + 3
 	draw.DrawDialogRadio(screen, cbCol, cbY, "Only directories", 'D', state.OnlyDirectories, state.Focus == state.FindDialogOnlyDirsFocus(), styles)
 	radio1W := utf8.RuneCountInString(draw.RadioText("Only directories", state.OnlyDirectories)) + 1
 	const cbGap = 4
@@ -135,7 +133,7 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 	if state.ShowSearchSelectionsOption {
 		checkboxRows = 2
 	}
-	sepAfterCheckbox := rect.Y + 5 + checkboxRows
+	sepAfterCheckbox := rect.Y + 3 + checkboxRows
 	draw.DrawDialogHSeparator(screen, rect, sepAfterCheckbox, borderStyle)
 
 	listTop := sepAfterCheckbox + 1

@@ -28,14 +28,14 @@ func ComputeHelpDialogListMetrics(layout Layout) (m HelpDialogListMetrics, ok bo
 	if maxH > 36 {
 		maxH = 36
 	}
-	listH := maxH - 9
+	listH := maxH - 7
 	if listH < 4 {
 		listH = 4
 	}
-	height := 9 + listH
+	height := 7 + listH
 	if height > layout.Height-2 {
 		height = layout.Height - 2
-		listH = height - 9
+		listH = height - 7
 		if listH < 4 {
 			return m, false
 		}

@@ -59,11 +59,10 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 		return
 	}
 
-	primitive.Text(screen, textX, y, inputWidth, "Pattern:", styles.DialogText.Background(dbg))
 	if preview := filterPreviewText(state, styles); preview != "" {
 		pw := utf8.RuneCountInString(preview)
 		px := textX + inputWidth - pw
-		if px > textX+len("Pattern:") {
+		if px > textX {
 			primitive.Text(screen, px, y, pw, preview, styles.DialogText.Background(dbg))
 		}
 	}
@@ -75,7 +74,7 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 	if y >= innerBottom {
 		return
 	}
-	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, draw.ScrollingInputState{Value: state.Text, Cursor: state.TextCursor, Scroll: state.TextScroll}, state.Focus == FilterFocusPattern, filterPatternInvalid(state), styles)
+	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, draw.ScrollingInputState{Value: state.Text, Cursor: state.TextCursor, Scroll: state.TextScroll, LeadingSymbol: styles.SymbolSearchIcon()}, state.Focus == FilterFocusPattern, filterPatternInvalid(state), styles)
 	y++
 	if y >= innerBottom {
 		return

@@ -15,7 +15,7 @@ func FindDialogMetrics(layout Layout, showSearchSelectionsOption bool) (width, h
 	if showSearchSelectionsOption {
 		checkboxRows = 2
 	}
-	baseHeight := 9 + checkboxRows
+	baseHeight := 7 + checkboxRows
 
 	listH = layout.Height - 14
 	switch {

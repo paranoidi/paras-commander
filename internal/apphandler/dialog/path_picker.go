@@ -157,9 +157,9 @@ func (h *Handler) PathPickerListRows() int {
 	case listH < 4:
 		listH = 4
 	}
-	dialogHeight := 9 + listH
+	dialogHeight := 7 + listH
 	if dialogHeight > layout.Height-2 {
-		listH = layout.Height - 2 - 9
+		listH = layout.Height - 2 - 7
 		if listH < 4 {
 			return 4
 		}

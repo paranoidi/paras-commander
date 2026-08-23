@@ -5,6 +5,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 	"github.com/paranoidi/paras-commander/internal/ui/lineedit"
@@ -382,11 +383,14 @@ func AdjustScrollRevealOnErase(value string, cursor, scroll, width, suffixLen in
 // textFocused controls caret reverse-video highlighting.
 // valueAsPlaceholder, when true and not invalid, paints the committed value runes in the
 // placeholder/ghost style too (for pending-prefill/suggested-default rendering).
+// leadingSymbol, when non-empty, paints that glyph plus one separator space at the start of the
+// row (in the row's own base style) and narrows the scrolling text area to the remaining columns.
 func PaintScrollingInputContent(
 	screen tcell.Screen, x, y, width int,
 	value, completionSuffix string,
 	cursor, scroll int,
 	textFocused, invalid, focused, valueAsPlaceholder bool,
+	leadingSymbol string,
 	styles theme.Theme,
 ) (int, int) {
 	if width <= 0 {
@@ -395,6 +399,33 @@ func PaintScrollingInputContent(
 	committedStyle := styles.DialogInputBaseStyle(focused, invalid)
 	markerStyle := styles.DialogInputBaseStyle(focused, false)
 	_, ghostStyle := styles.DialogInputPair(focused)
+
+	if leadingSymbol != "" {
+		iconStyle := styles.DialogSearchIconStyle(committedStyle)
+		iconCols := runewidth.StringWidth(leadingSymbol) + 1
+		col := 0
+		for _, r := range leadingSymbol {
+			w := runewidth.RuneWidth(r)
+			if w < 1 {
+				w = 1
+			}
+			if col+w > iconCols {
+				break
+			}
+			screen.SetContent(x+col, y, r, nil, iconStyle)
+			col += w
+		}
+		for col < iconCols {
+			screen.SetContent(x+col, y, ' ', nil, iconStyle)
+			col++
+		}
+		x += iconCols
+		width -= iconCols
+		if width <= 0 {
+			return cursor, scroll
+		}
+	}
+
 	if valueAsPlaceholder && !invalid {
 		committedStyle = ghostStyle
 	}
@@ -457,6 +488,9 @@ type ScrollingInputState struct {
 	Value            string
 	Cursor, Scroll   int
 	CompletionSuffix string
+	// LeadingSymbol, when set, is painted (plus one separator space) at the start of the input
+	// row instead of a separate label row above it. Zero value means no icon.
+	LeadingSymbol string
 }
 
 // DrawScrollingDialogInput paints a dialog input row with horizontal scrolling.
@@ -464,7 +498,7 @@ func DrawScrollingDialogInput(screen tcell.Screen, x, y, width int, input Scroll
 	if width <= 0 {
 		return
 	}
-	PaintScrollingInputContent(screen, x, y, width, input.Value, input.CompletionSuffix, input.Cursor, input.Scroll, focused, invalid, focused, false, styles)
+	PaintScrollingInputContent(screen, x, y, width, input.Value, input.CompletionSuffix, input.Cursor, input.Scroll, focused, invalid, focused, false, input.LeadingSymbol, styles)
 }
 
 // DialogButtonSpec describes one rendered dialog button (label, Alt shortcut, focus).

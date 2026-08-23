@@ -200,6 +200,7 @@ type Theme struct {
 	DialogText                     tcell.Style
 	DialogSurface                  tcell.Style
 	DialogAccent                   tcell.Style
+	DialogSearchIcon               tcell.Style
 	DialogInputActive              tcell.Style
 	DialogInputActivePlaceholder   tcell.Style
 	DialogInputActiveError         tcell.Style
@@ -281,6 +282,17 @@ func (t Theme) TerminalTextStyle() tcell.Style {
 		return t.TerminalText
 	}
 	return t.PanelText
+}
+
+// DialogSearchIconStyle returns the styled foreground/background for the leading search-icon
+// glyph painted inside filter/search input rows. Falls back to base (the row's own style) when
+// the theme omits dialog.search_icon, so themes without it render identically to before this
+// style existed.
+func (t Theme) DialogSearchIconStyle(base tcell.Style) tcell.Style {
+	if t.DialogSearchIcon != (tcell.Style{}) {
+		return t.DialogSearchIcon
+	}
+	return base
 }
 
 // PanelRowIconForeground returns the foreground for cursor-row adornment icons: file-list
@@ -940,6 +952,7 @@ var requiredStyleKeys = []string{
 	"dialog.text",
 	"dialog.surface",
 	"dialog.accent",
+	"dialog.search_icon",
 	"dialog.input.active",
 	"dialog.input.active.placeholder",
 	"dialog.input.active.error",
@@ -1449,6 +1462,7 @@ func parse(data []byte) (Theme, error) {
 		DialogText:                     styles["dialog.text"],
 		DialogSurface:                  styles["dialog.surface"],
 		DialogAccent:                   styles["dialog.accent"],
+		DialogSearchIcon:               styles["dialog.search_icon"],
 		DialogInputActive:              styles["dialog.input.active"],
 		DialogInputActivePlaceholder:   styles["dialog.input.active.placeholder"],
 		DialogInputActiveError:         styles["dialog.input.active.error"],

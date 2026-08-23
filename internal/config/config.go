@@ -333,7 +333,7 @@ type PreviewConfig struct {
 }
 
 type UIConfig struct {
-	ShowMenuBar   bool `toml:"show_menu_bar"`
+	ShowMenuBar      bool `toml:"show_menu_bar"`
 	UseNerdfontIcons bool `toml:"use_nerdfont_icons"`
 	// LeaderMenuShowDirectKeys shows the preferred global keybind after each action name in the Esc function menu.
 	LeaderMenuShowDirectKeys bool `toml:"leader_menu_show_direct_keys"`

@@ -196,6 +196,7 @@ text = { fg = "white" }
 title = { bold = true }
 # bg matters for the path-picker trailing glyph when that control is focused; shortcut letters use fg+bold only.
 accent = { fg = "white", bg = "black", bold = true }
+search_icon = { fg = "black", bg = "bright_black" }
 
 [dialog.button]
 active = { fg = "black", bg = "cyan" }
@@ -338,6 +339,9 @@ multi_location = "\uef81"
 
 [symbols.leader_menu]
 arrow = "\uea9c"
+
+[symbols.search]
+icon = "\uf002"
 
 [symbols.compare]
 equal = "="

@@ -287,7 +287,7 @@ func TestPaintScrollingInputContentCaretVisibleAfterScrollFlip(t *testing.T) {
 	value := "ABCDEFGHIJKLMNOPQRST" // 20 runes
 	const x, y, width = 2, 2, 10
 	cursor := 9
-	PaintScrollingInputContent(screen, x, y, width, value, "", cursor, 0, true, false, true, false, th)
+	PaintScrollingInputContent(screen, x, y, width, value, "", cursor, 0, true, false, true, false, "", th)
 
 	got, _, _ := screen.Get(x+width-1, y)
 	right := string(ScrollOverflowRight)
@@ -324,7 +324,7 @@ func TestPaintScrollingInputContentValueAsPlaceholderStyleAndCaretVisible(t *tes
 	value := "ABCDEFGHIJKLMNOPQRST" // 20 runes
 	const x, y, width = 2, 2, 10
 	cursor := 9
-	gotCursor, gotScroll := PaintScrollingInputContent(screen, x, y, width, value, "", cursor, 0, true, false, true, true, th)
+	gotCursor, gotScroll := PaintScrollingInputContent(screen, x, y, width, value, "", cursor, 0, true, false, true, true, "", th)
 
 	lay := ScrollingInputLayoutFor(gotScroll, width, ScrollContentLen(len([]rune(value)), gotCursor))
 	nonCaretUsesPlaceholder := false

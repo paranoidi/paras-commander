@@ -498,6 +498,7 @@ func drawInputField(screen tcell.Screen, x, y, width int, field FileDialogField,
 		field.Value, "",
 		field.Cursor, field.Scroll,
 		focused, invalid, focused, prefillPending,
+		"",
 		styles,
 	)
 }
@@ -533,6 +534,7 @@ func drawPathInputRow(screen tcell.Screen, x, y, width int, field FileDialogFiel
 		field.Value, suffix,
 		field.Cursor, field.Scroll,
 		textFocused, pathInvalid, rowFocused, prefillPending,
+		"",
 		styles,
 	)
 

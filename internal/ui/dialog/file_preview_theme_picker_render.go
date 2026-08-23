@@ -35,7 +35,7 @@ func DrawFilePreviewThemePicker(screen tcell.Screen, rect geom.Rect, state FileP
 	primaryCol := rect.X + 2
 	inputWidth := filePreviewThemePickerQueryWidth(rect)
 
-	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll}, true, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, true, false, styles)
 
 	sepY := rect.Y + 2
 	for x := rect.X + 1; x < rect.X+rect.Width-1; x++ {

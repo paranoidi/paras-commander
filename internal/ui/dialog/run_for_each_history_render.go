@@ -20,12 +20,12 @@ func runForEachHistoryPickerDialogHeight(layoutHeight int) int {
 	case listH < 4:
 		listH = 4
 	}
-	height := 8 + listH
+	height := 6 + listH
 	if height > layoutHeight-2 {
 		height = layoutHeight - 2
 	}
-	if height < 12 {
-		height = 12
+	if height < 10 {
+		height = 10
 	}
 	return height
 }
@@ -40,7 +40,6 @@ func drawRunForEachHistoryPickerContent(screen tcell.Screen, rect Rect, st RunFo
 		return
 	}
 	_, dbg, _ := styles.DialogSurface.Decompose()
-	textStyle := styles.DialogText.Background(dbg)
 	primaryCol := draw.DialogTextX(rect)
 	innerBottom := rect.Y + rect.Height - 2
 
@@ -48,13 +47,8 @@ func drawRunForEachHistoryPickerContent(screen tcell.Screen, rect Rect, st RunFo
 	if y >= innerBottom {
 		return
 	}
-	primitive.Text(screen, primaryCol, y, innerWidth, "Filter:", textStyle)
-	y += 2 // blank line between label and input (AGENTS.md dialog input layout)
-	if y >= innerBottom {
-		return
-	}
 	queryFocused := st.Focus == 0
-	draw.DrawScrollingDialogInput(screen, primaryCol, y, innerWidth, draw.ScrollingInputState{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll}, queryFocused, false, styles)
+	draw.DrawScrollingDialogInput(screen, primaryCol, y, innerWidth, draw.ScrollingInputState{Value: st.Query, Cursor: st.QueryCursor, Scroll: st.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, queryFocused, false, styles)
 	y++
 	if y >= innerBottom {
 		return
