@@ -37,7 +37,7 @@ func ActionRunnableInView(vm ui.ViewMode, actionID string) bool {
 	return ok && spec.Views&viewMask(vm) != 0
 }
 
-// JoinDisplay joins every binding into one readable string (comma-separated).
+// JoinDisplay joins every binding into one readable string ("|"-separated).
 // When preferredKey is non-empty and appears in keys, it is listed first.
 func JoinDisplay(keys []string, preferredKey string) string {
 	if len(keys) == 0 {
@@ -47,7 +47,7 @@ func JoinDisplay(keys []string, preferredKey string) string {
 	out := ""
 	for i, k := range ordered {
 		if i > 0 {
-			out += ", "
+			out += " | "
 		}
 		out += HumanKey(k)
 	}

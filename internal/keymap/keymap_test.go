@@ -54,6 +54,16 @@ func TestFormatChordCtrlSpace(t *testing.T) {
 	}
 }
 
+func TestFormatChordSpace(t *testing.T) {
+	ch, err := ParseKey("space")
+	if err != nil {
+		t.Fatalf("ParseKey: %v", err)
+	}
+	if got := FormatChord(ch); got != "Space" {
+		t.Fatalf("FormatChord(space) = %q, want Space", got)
+	}
+}
+
 func TestFormatChordAltLetterUppercase(t *testing.T) {
 	ch, err := ParseKey("M-m")
 	if err != nil {

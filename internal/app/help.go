@@ -1,6 +1,7 @@
 package app
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -91,7 +92,7 @@ func (a *App) syncHelpRanks() {
 		if !metricsOK {
 			continue
 		}
-		painted := dialog.FormatHelpRow(st.Entries[idx], 0, metrics.KeyPad, metrics.KeyPad+metrics.SecPad, metrics.InputWidth)
+		painted, _, _ := dialog.FormatHelpRow(st.Entries[idx], metrics.KeyColWidth, metrics.InputWidth)
 		st.MatchRanges[idx] = q.Match(painted, opts).Ranges
 	}
 	if st.Selected >= len(st.Ranked) {
@@ -104,27 +105,7 @@ func (a *App) syncHelpRanks() {
 	if st.Selected < 0 {
 		st.Selected = 0
 	}
-	ensureHelpListScroll(st, a.helpListRows())
-}
-
-func ensureHelpListScroll(st *dialog.HelpViewState, listRows int) {
-	n := len(st.Ranked)
-	if n == 0 || listRows <= 0 {
-		st.ListScroll = 0
-		return
-	}
-	if st.Selected < 0 {
-		st.Selected = 0
-	}
-	if st.Selected >= n {
-		st.Selected = n - 1
-	}
-	if st.ListScroll > st.Selected {
-		st.ListScroll = st.Selected
-	}
-	if st.Selected >= st.ListScroll+listRows {
-		st.ListScroll = st.Selected - listRows + 1
-	}
+	st.EnsureListScroll(a.helpListRows())
 }
 
 // applyHelpListNav applies PgUp/PgDn/Ctrl+Home/Ctrl+End to the ranked help
@@ -135,31 +116,31 @@ func (a *App) applyHelpListNav(key tcell.Key, mods tcell.ModMask) bool {
 	if st.Focus != 0 || len(st.Ranked) == 0 {
 		return false
 	}
-	sel, ok := dialog.ListNavKeySelection(key, mods, st.Selected, len(st.Ranked), max(1, a.helpListRows()-1))
-	if !ok {
-		return false
+	switch key {
+	case tcell.KeyPgUp:
+		st.Selected = st.PageUpSelection(a.helpListRows())
+	case tcell.KeyPgDn:
+		st.Selected = st.PageDownSelection(a.helpListRows())
+	default:
+		sel, ok := dialog.ListNavKeySelection(key, mods, st.Selected, len(st.Ranked), 1)
+		if !ok {
+			return false
+		}
+		st.Selected = sel
 	}
-	st.Selected = sel
-	ensureHelpListScroll(st, a.helpListRows())
+	st.EnsureListScroll(a.helpListRows())
 	return true
 }
 
+// helpListRows returns the visible list height, reusing dialog.ComputeHelpDialogListMetrics
+// (the single source of truth for help-dialog chrome/height math) so scroll bookkeeping stays
+// in lockstep with what actually gets drawn.
 func (a *App) helpListRows() int {
-	_, termH := a.screen.Size()
-	// Centered dialog: 7 rows margin top/bottom → max height = termH - 14.
-	// Total dialog height = 9 + listH (title, sep, filter label, blank, input, sep, header, sep after list, button row).
-	maxHeight := termH - 14
-	if maxHeight < 12 {
-		maxHeight = 12
+	w, h := a.screen.Size()
+	if m, ok := dialog.ComputeHelpDialogListMetrics(dialog.Layout{Width: w, Height: h}); ok {
+		return m.ListH
 	}
-	listH := maxHeight - 9
-	if listH < 4 {
-		listH = 4
-	}
-	if listH > 27 {
-		listH = 27 // cap at 36 total height - 9 chrome
-	}
-	return listH
+	return 4
 }
 
 // buildHelpEntries constructs help entries for the browser view.
@@ -193,7 +174,27 @@ func (a *App) buildHelpEntriesForView(vm ui.ViewMode) []dialog.HelpEntry {
 			FuzzyExtra: strings.TrimSpace(spec.ID + helpkeys.ConcatKeywords(spec.Keywords)),
 		})
 	}
+	sortHelpEntriesBySection(entries)
 	return entries
+}
+
+// sortHelpEntriesBySection stable-sorts entries by keymap.HelpSectionOrder priority (ties
+// broken by existing order), making Entries section-contiguous. This runs unconditionally at
+// build time (not just in browse mode) — grouping vs. falling back to the flat relevance list
+// is purely a rendering concern keyed off the filter query, not a rebuild concern. A Section
+// not present in HelpSectionOrder sorts alphabetically after all known sections.
+func sortHelpEntriesBySection(entries []dialog.HelpEntry) {
+	sort.SliceStable(entries, func(i, j int) bool {
+		pi, ki := keymap.HelpSectionPriority[entries[i].Section]
+		pj, kj := keymap.HelpSectionPriority[entries[j].Section]
+		if ki != kj {
+			return ki // known sections sort before unknown ones
+		}
+		if ki {
+			return pi < pj
+		}
+		return entries[i].Section < entries[j].Section
+	})
 }
 
 // helpSectionForView returns the help grouping for an action in vm. Preview-only and
@@ -534,9 +535,8 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 
 	if st.Focus == 0 {
 		onChange := func() {
-			a.syncHelpRanks()
 			st.Selected = 0
-			ensureHelpListScroll(st, a.helpListRows())
+			a.syncHelpRanks() // re-ranks and calls st.EnsureListScroll itself
 		}
 		edit := scrollquery.NewEdit(&st.Query, &st.QueryCursor, &st.QueryScroll, a.helpDialogQueryWidth(), onChange)
 		if a.handleScrollingQueryKey(event, true, edit) {
@@ -585,13 +585,13 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 		if st.Focus == 0 {
 			if len(st.Ranked) > 0 {
 				st.Selected = dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), -1)
-				ensureHelpListScroll(st, a.helpListRows())
+				st.EnsureListScroll(a.helpListRows())
 			}
 		} else {
 			st.Focus = 0 // back to list
 			if len(st.Ranked) > 0 {
 				st.Selected = len(st.Ranked) - 1
-				ensureHelpListScroll(st, a.helpListRows())
+				st.EnsureListScroll(a.helpListRows())
 			}
 		}
 	case tcell.KeyDown:
@@ -600,7 +600,7 @@ func (a *App) handleHelpDialogKey(event *tcell.EventKey) bool {
 				next := dialog.ListClampedSelectionDelta(st.Selected, len(st.Ranked), 1)
 				if next != st.Selected {
 					st.Selected = next
-					ensureHelpListScroll(st, a.helpListRows())
+					st.EnsureListScroll(a.helpListRows())
 				} else if st.Selected == len(st.Ranked)-1 {
 					st.Focus = 1 // move to Close button
 				}

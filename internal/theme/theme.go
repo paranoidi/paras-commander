@@ -226,6 +226,8 @@ type Theme struct {
 	DialogMassRenameAfter          tcell.Style
 	DialogMassRenameAfterAdded     tcell.Style
 	DialogMassRenameAfterError     tcell.Style
+	DialogHelpSection              tcell.Style
+	DialogHelpKey                  tcell.Style
 
 	LeaderMenuSurface tcell.Style
 	LeaderMenuGroup   tcell.Style
@@ -978,6 +980,8 @@ var requiredStyleKeys = []string{
 	"dialog.massrename.after",
 	"dialog.massrename.after.added",
 	"dialog.massrename.after.error",
+	"dialog.help.section",
+	"dialog.help.key",
 	"leader_menu.surface",
 	"leader_menu.group",
 	"leader_menu.key",
@@ -1488,6 +1492,8 @@ func parse(data []byte) (Theme, error) {
 		DialogMassRenameAfter:          styles["dialog.massrename.after"],
 		DialogMassRenameAfterAdded:     styles["dialog.massrename.after.added"],
 		DialogMassRenameAfterError:     styles["dialog.massrename.after.error"],
+		DialogHelpSection:              styles["dialog.help.section"],
+		DialogHelpKey:                  styles["dialog.help.key"],
 
 		LeaderMenuSurface: styles["leader_menu.surface"],
 		LeaderMenuGroup:   styles["leader_menu.group"],

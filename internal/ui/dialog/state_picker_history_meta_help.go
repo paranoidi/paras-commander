@@ -279,7 +279,7 @@ type HelpEntry struct {
 	ActionID string // keymap action id (e.g. file.copy)
 	Title    string // "Copy"
 	Keys     string // "F5"
-	Section  string // "File operations"
+	Section  string // "File"
 	// FuzzyExtra is action id and keywords for the rank-only corpus (after Title), space-separated.
 	FuzzyExtra string
 }

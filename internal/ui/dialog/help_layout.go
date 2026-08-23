@@ -2,13 +2,18 @@ package dialog
 
 import "github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 
+// HelpDialogChromeRows is the number of fixed (non-list) rows in the help dialog: both
+// borders, the filter input, separator-before-list, separator-after-list, and the button
+// row. The single source of truth for total-height/list-height math shared by
+// ComputeHelpDialogListMetrics and App.helpListRows.
+const HelpDialogChromeRows = 6
+
 // HelpDialogListMetrics holds list geometry for the help dialog (shared by draw and rank sync).
 type HelpDialogListMetrics struct {
-	Rect       draw.Rect
-	InputWidth int
-	KeyPad     int
-	SecPad     int
-	ListH      int
+	Rect        draw.Rect
+	InputWidth  int
+	KeyColWidth int
+	ListH       int
 }
 
 // ComputeHelpDialogListMetrics mirrors DrawHelpDialog sizing for the scrollable list area.
@@ -28,37 +33,30 @@ func ComputeHelpDialogListMetrics(layout Layout) (m HelpDialogListMetrics, ok bo
 	if maxH > 36 {
 		maxH = 36
 	}
-	listH := maxH - 7
+	listH := maxH - HelpDialogChromeRows
 	if listH < 4 {
 		listH = 4
 	}
-	height := 7 + listH
+	height := HelpDialogChromeRows + listH
 	if height > layout.Height-2 {
 		height = layout.Height - 2
-		listH = height - 7
+		listH = height - HelpDialogChromeRows
 		if listH < 4 {
 			return m, false
 		}
 	}
 	rect := draw.CenteredDialogRect(layout, maxW, height)
-	primaryCol := rect.X + 2
 	inputWidth := rect.Width - 4
 	if inputWidth < 10 {
 		return m, false
 	}
-	colKey := primaryCol
-	colSection := primaryCol + 28
-	if colSection > rect.X+rect.Width-3 {
-		colSection = rect.X + rect.Width - 3
-	}
-	colTitle := primaryCol + 50
-	if colTitle > rect.X+rect.Width-3 {
-		colTitle = rect.X + rect.Width - 3
+	keyColWidth := 28
+	if keyColWidth > inputWidth-3 {
+		keyColWidth = inputWidth - 3
 	}
 	m.Rect = rect
 	m.InputWidth = inputWidth
-	m.KeyPad = colSection - colKey
-	m.SecPad = colTitle - colSection
+	m.KeyColWidth = keyColWidth
 	m.ListH = listH
 	return m, true
 }

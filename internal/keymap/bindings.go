@@ -317,6 +317,9 @@ func contains(ss []string, s string) bool {
 func chordKeyName(ch Chord, isCtrlKey bool) string {
 	if ch.Key == tcell.KeyRune {
 		r := ch.Rune
+		if r == ' ' {
+			return "Space"
+		}
 		if ch.Mod&tcell.ModAlt != 0 && unicode.IsLetter(r) {
 			r = unicode.ToUpper(r)
 		}

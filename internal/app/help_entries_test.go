@@ -86,11 +86,11 @@ func TestBrowserHelpExcludesOtherViewAndDialogActions(t *testing.T) {
 	}
 }
 
-func TestBrowserHelpDiskUsageSectionListsScanAndClearOnly(t *testing.T) {
+func TestBrowserHelpDiskUsageRowsInViewSection(t *testing.T) {
 	a := newHelpEntriesApp(t)
 	var diskUsage []dialog.HelpEntry
 	for _, e := range a.buildHelpEntries() {
-		if e.Section != "Disk usage" {
+		if e.ActionID != keymap.ActionPanelDiskUsageScan && e.ActionID != keymap.ActionPanelDiskUsageClear {
 			continue
 		}
 		diskUsage = append(diskUsage, e)
@@ -106,6 +106,11 @@ func TestBrowserHelpDiskUsageSectionListsScanAndClearOnly(t *testing.T) {
 	}
 	if diskUsage[1].Title != "Abort and clear disk usage" {
 		t.Fatalf("clear row title = %q, want %q", diskUsage[1].Title, "Abort and clear disk usage")
+	}
+	for _, e := range diskUsage {
+		if e.Section != "View" {
+			t.Fatalf("%s section = %q, want %q", e.ActionID, e.Section, "View")
+		}
 	}
 }
 

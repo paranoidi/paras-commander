@@ -1,6 +1,8 @@
 package dialog
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -30,43 +32,48 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	draw.DrawScrollingDialogInput(screen, primaryCol, rect.Y+1, inputWidth, draw.ScrollingInputState{Value: state.Query, Cursor: state.QueryCursor, Scroll: state.QueryScroll, LeadingSymbol: styles.SymbolSearchIcon()}, filterFocused, false, styles)
 
 	// Separator before list.
-	sepBeforeList := rect.Y + 2
-	draw.DrawDialogHSeparator(screen, rect, sepBeforeList, borderStyle)
+	listTop := rect.Y + 2
+	draw.DrawDialogHSeparator(screen, rect, listTop, borderStyle)
 
-	// List header.
-	listTop := rect.Y + 3
-	headerStyle := styles.DialogText.Background(itemBg)
-	headerLine := padRight("Key", metrics.KeyPad) + padRight("Section", metrics.SecPad) + "Action"
-	if n := len([]rune(headerLine)); n > inputWidth {
-		headerLine = string([]rune(headerLine)[:inputWidth])
-	}
-	primitive.Text(screen, primaryCol, listTop, inputWidth, headerLine, headerStyle)
-
-	// List rows.
+	// List rows start right after the separator — no column-title row. Rows are always grouped
+	// under non-selectable section headers, in browse mode and while filtering alike.
 	rowWidth := inputWidth
+	visualRows := BuildHelpVisualRows(state.Entries, state.Ranked)
 	for row := 0; row < listH; row++ {
 		y := listTop + 1 + row
 		if y >= rect.Y+rect.Height-2 {
 			break
 		}
-		idxInRank := state.ListScroll + row
+		visualIdx := state.ListScroll + row
 		baseStyle := styles.DialogText.Background(itemBg)
 		line := ""
+		keyStart := -1
+		keyEnd := -1
 		var ranges []search.Range
 		isCursor := false
-		if idxInRank < len(state.Ranked) {
-			entIdx := state.Ranked[idxInRank]
-			if entIdx >= 0 && entIdx < len(state.Entries) {
-				ent := state.Entries[entIdx]
-				line = FormatHelpRow(ent, 0, metrics.KeyPad, metrics.KeyPad+metrics.SecPad, rowWidth)
-				if entIdx < len(state.MatchRanges) {
-					ranges = state.MatchRanges[entIdx]
+		isHeader := false
+		if visualIdx >= 0 && visualIdx < len(visualRows) {
+			vr := visualRows[visualIdx]
+			if vr.IsHeader {
+				isHeader = true
+				line = vr.Header
+			} else if vr.RankedIdx < len(state.Ranked) {
+				entIdx := state.Ranked[vr.RankedIdx]
+				if entIdx >= 0 && entIdx < len(state.Entries) {
+					ent := state.Entries[entIdx]
+					line, keyStart, keyEnd = FormatHelpRow(ent, metrics.KeyColWidth, rowWidth)
+					if entIdx < len(state.MatchRanges) {
+						ranges = state.MatchRanges[entIdx]
+					}
 				}
+				isCursor = state.Focus == 0 && vr.RankedIdx == state.Selected
 			}
-			isCursor = state.Focus == 0 && idxInRank == state.Selected
 		}
 		matchStyle := styles.FuzzyHighlight
-		if isCursor {
+		switch {
+		case isHeader:
+			baseStyle = styles.DialogHelpSection.Background(itemBg)
+		case isCursor:
 			baseStyle = styles.DialogOptionRowStyle(true, false)
 			matchStyle = styles.FuzzyHighlightCursor
 		}
@@ -74,6 +81,9 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 		matchStyle = matchStyle.Background(rowBg)
 
 		rendered, spans := helpRowContent(line, ranges, rowWidth, matchStyle)
+		if keyStart >= 0 && !isCursor {
+			spans = append(spans, primitive.Span{Start: keyStart, End: keyEnd, Style: styles.DialogHelpKey.Background(rowBg)})
+		}
 		primitive.StyledText(screen, primaryCol, y, rowWidth, rendered, baseStyle, spans)
 	}
 
@@ -89,27 +99,62 @@ func DrawHelpDialog(screen tcell.Screen, layout Layout, state HelpViewState, sty
 	}, styles)
 }
 
-// FormatHelpRow builds a single text line for a help entry (padded columns then title).
-// colKey/colSection/colTitle are absolute column indices only for computing pad widths:
-// use colKey=0, colSection=keyPad, colTitle=keyPad+secPad when callers have pad widths.
-func FormatHelpRow(ent HelpEntry, colKey, colSection, colTitle, width int) string {
-	keys := ent.Keys
-	section := ent.Section
-	row := padRight(keys, colSection-colKey)
-	row += padRight(section, colTitle-colSection)
-	row += ent.Title
-	if n := len([]rune(row)); n > width {
-		row = string([]rune(row)[:width])
+// FormatHelpRow builds a single text line for a help entry: the shortcut keys right-aligned
+// within a fixed-width column on the left, then a guaranteed one-space gap, then the title.
+// Keys wider than keyColWidth still get their one-space gap (the column grows for that row).
+// keyStart/keyEnd is the rune range where the key text sits, for styling it distinctly from
+// the rest of the row.
+func FormatHelpRow(ent HelpEntry, keyColWidth, width int) (line string, keyStart, keyEnd int) {
+	if width <= 0 {
+		return "", 0, 0
 	}
-	return row
+	keys := []rune(ent.Keys)
+	pad := keyColWidth - len(keys)
+	if pad < 0 {
+		pad = 0
+	}
+	keyStart, keyEnd = pad, pad+len(keys)
+	line = strings.Repeat(" ", pad) + string(keys) + " " + ent.Title
+	if r := []rune(line); len(r) > width {
+		line = string(r[:width])
+	}
+	return line, keyStart, keyEnd
 }
 
-func padRight(s string, minWidth int) string {
-	r := []rune(s)
-	if len(r) >= minWidth {
-		return s + " "
+// HelpVisualRow is one on-screen row of the help list: a non-selectable section-header row
+// (IsHeader true, Header set) or an entry row (IsHeader false, RankedIdx indexes into
+// Ranked/Entries).
+type HelpVisualRow struct {
+	IsHeader  bool
+	Header    string
+	RankedIdx int
+}
+
+// BuildHelpVisualRows expands Ranked into on-screen rows, inserting a section-header row
+// before each run of same-section entries, in Ranked order — in browse mode (empty filter
+// query) that's section-contiguous because Entries itself was built in section-priority order
+// (see App.buildHelpEntriesForView); while filtering, Ranked is relevance-ordered instead, so
+// a header can repeat if matches from the same section aren't adjacent in the ranked results.
+// Entries follow their header immediately, with no spacer row between sections — the dialog's
+// separator above the list already provides that break for the first header, and repeating it
+// for every section would waste a row of vertical space.
+func BuildHelpVisualRows(entries []HelpEntry, ranked []int) []HelpVisualRow {
+	rows := make([]HelpVisualRow, 0, len(ranked))
+	prevSection := ""
+	havePrev := false
+	for i, entIdx := range ranked {
+		if entIdx < 0 || entIdx >= len(entries) {
+			continue
+		}
+		section := entries[entIdx].Section
+		if !havePrev || section != prevSection {
+			rows = append(rows, HelpVisualRow{IsHeader: true, Header: section})
+		}
+		rows = append(rows, HelpVisualRow{RankedIdx: i})
+		prevSection = section
+		havePrev = true
 	}
-	return s + string(make([]rune, minWidth-len(r)))
+	return rows
 }
 
 func helpRowContent(line string, ranges []search.Range, width int, matchStyle tcell.Style) (string, []primitive.Span) {

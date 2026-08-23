@@ -234,6 +234,10 @@ surface = { bg = "black" }
 arrow   = { fg = "bright_black" }
 label   = { fg = "white" }
 
+[dialog.help]
+section = { fg = "cyan", bold = true }
+key     = { fg = "magenta", bold = true }
+
 [dialog.massrename]
 before = { fg = "white" }
 before.removed = { fg = "red", bold = true }
