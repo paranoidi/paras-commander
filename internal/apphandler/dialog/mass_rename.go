@@ -76,6 +76,20 @@ func (h *Handler) MassRenameSyncFieldLabels() {
 	}
 }
 
+// setMassRenameComputeError records a compute failure in MassRenameComputeError and clears
+// the paired preview columns. Callers must not encode errors into MassRenamePreviewBefore
+// (basenames may start with '!').
+func setMassRenameComputeError(d *dialog.FileDialogState, msg string) {
+	d.Message = msg
+	d.MassRenameComputeError = msg
+	d.MassRenamePreviewBefore = nil
+	d.MassRenamePreviewAfter = nil
+	d.MassRenamePreviewBeforeRemoved = nil
+	d.MassRenamePreviewBeforeReplaced = nil
+	d.MassRenamePreviewAfterAdded = nil
+	d.MassRenamePreviewAfterError = nil
+}
+
 // RecomputeMassRenamePreview recomputes the before/after preview rows from the current
 // find/replace (or external-editor names) and dialog options.
 func (h *Handler) RecomputeMassRenamePreview() {
@@ -84,6 +98,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 		return
 	}
 	d.Message = ""
+	d.MassRenameComputeError = ""
 	d.MassRenameMatchCount = 0
 	d.MassRenamePatternCompileHint = ""
 	d.MassRenameReplacementSyntaxHint = ""
@@ -96,6 +111,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 		d.MassRenamePreviewBeforeRemoved = nil
 		d.MassRenamePreviewBeforeReplaced = nil
 		d.MassRenamePreviewAfterAdded = nil
+		d.MassRenamePreviewAfterError = nil
 		return
 	}
 
@@ -145,12 +161,7 @@ func (h *Handler) RecomputeMassRenamePreview() {
 	d.MassRenameReplacementSyntaxHint = ops.MassRenameReplacementSyntaxHint(rx)
 	rows, err := ops.MassRenameCompute(entries, panelPath, mode, find, replace, caseFold, d.MassRenameStripSpaces, rx)
 	if err != nil {
-		d.Message = err.Error()
-		d.MassRenamePreviewBefore = []string{"! " + err.Error()}
-		d.MassRenamePreviewAfter = []string{""}
-		d.MassRenamePreviewBeforeRemoved = nil
-		d.MassRenamePreviewBeforeReplaced = nil
-		d.MassRenamePreviewAfterAdded = nil
+		setMassRenameComputeError(d, err.Error())
 		return
 	}
 	if len(d.Fields) > 0 && !d.Fields[0].InputInvalid && !ops.MassRenameFindMatchesAny(rows, mode, find, caseFold, rx) {
@@ -258,12 +269,7 @@ func (h *Handler) recomputeMassRenameCapitalizePreview() {
 	panelPath := h.host.ActivePanel().PathString()
 	rows, err := ops.MassRenameComputeCapitalize(entries, panelPath, d.MassRenameCapEachWord, d.MassRenameCapPunctSep, d.MassRenameStripSpaces)
 	if err != nil {
-		d.Message = err.Error()
-		d.MassRenamePreviewBefore = []string{"! " + err.Error()}
-		d.MassRenamePreviewAfter = []string{""}
-		d.MassRenamePreviewBeforeRemoved = nil
-		d.MassRenamePreviewBeforeReplaced = nil
-		d.MassRenamePreviewAfterAdded = nil
+		setMassRenameComputeError(d, err.Error())
 		return
 	}
 	rowErrs := ops.MassRenameRowErrors(rows)

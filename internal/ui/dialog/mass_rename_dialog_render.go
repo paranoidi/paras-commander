@@ -352,6 +352,11 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 
 	vp := massRenamePreviewViewportRowsForHeight(rect.Height, state)
 	previewTopY := y
+	if errMsg := strings.TrimSpace(state.MassRenameComputeError); errMsg != "" {
+		primitive.Text(screen, primaryCol, y, innerW, errMsg, warnStyle)
+		draw.DrawDialogListScrollbar(screen, rect, previewTopY, vp, 1, 0, scrollbarStyle, borderStyle, styles)
+		return
+	}
 	before := state.MassRenamePreviewBefore
 	after := state.MassRenamePreviewAfter
 	beforeRemovedRanges := state.MassRenamePreviewBeforeRemoved
@@ -398,11 +403,6 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		rb := ""
 		if i < len(after) {
 			rb = after[i]
-		}
-		if strings.HasPrefix(lb, "!") {
-			primitive.Text(screen, primaryCol, y, innerW, lb, warnStyle)
-			y++
-			continue
 		}
 		var removed, replaced, added []search.Range
 		if i < len(beforeRemovedRanges) {

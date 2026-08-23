@@ -323,9 +323,6 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 		}
 		for i := 0; i < len(state.MassRenamePreviewBefore); i++ {
 			lb := state.MassRenamePreviewBefore[i]
-			if strings.HasPrefix(lb, "!") {
-				continue
-			}
 			lw := utf8.RuneCountInString(lb)
 			rw := 0
 			if i < len(state.MassRenamePreviewAfter) {
@@ -335,6 +332,11 @@ func fileDialogWidth(screenWidth int, state FileDialogState, deleteListIconLead 
 			pairOuter := 2*max(lw, rw) + 1 + 4
 			if pairOuter > minWidth {
 				minWidth = pairOuter
+			}
+		}
+		if errMsg := strings.TrimSpace(state.MassRenameComputeError); errMsg != "" {
+			if lw := utf8.RuneCountInString(errMsg) + 4; lw > minWidth {
+				minWidth = lw
 			}
 		}
 		if h := massRenamePatternHintText(state); h != "" {

@@ -11,6 +11,77 @@ import (
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
 
+// TestDrawMassRenameDialogShowsBangPrefixedNameAsPreviewRow guards against treating
+// basenames that start with '!' as compute-error banners (they are legitimate names).
+func TestDrawMassRenameDialogShowsBangPrefixedNameAsPreviewRow(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 40)
+
+	state := FileDialogState{
+		Open:       true,
+		DialogType: FileDialogMassRename,
+		Fields: []FileDialogField{
+			{Label: "Find", Value: "!"},
+			{Label: "Replace", Value: "X"},
+		},
+		MassRenameMode:          MassRenameModeUISimple,
+		MassRenamePreviewBefore: []string{"!important", "normal"},
+		MassRenamePreviewAfter:  []string{"Ximportant", "normal"},
+	}
+	layout := Layout{Width: 80, Height: 40}
+	styles := theme.Default()
+	DrawFileDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil)
+
+	var dump strings.Builder
+	for y := 0; y < 40; y++ {
+		dump.WriteString(tcelltest.TextAt(screen, 0, y, 80))
+		dump.WriteByte('\n')
+	}
+	out := dump.String()
+	if !strings.Contains(out, "!important") {
+		t.Fatalf("bang-prefixed basename missing from preview:\n%s", out)
+	}
+	if !strings.Contains(out, "Ximportant") {
+		t.Fatalf("renamed after column missing for bang-prefixed basename:\n%s", out)
+	}
+}
+
+// TestDrawMassRenameDialogShowsComputeError verifies MassRenameComputeError paints as a
+// full-width warning instead of being encoded into a Before row with a '!' prefix.
+func TestDrawMassRenameDialogShowsComputeError(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 40)
+
+	const errMsg = "no files to rename"
+	state := FileDialogState{
+		Open:                   true,
+		DialogType:             FileDialogMassRename,
+		Fields:                 []FileDialogField{{Label: "Find"}, {Label: "Replace"}},
+		MassRenameMode:         MassRenameModeUISimple,
+		MassRenameComputeError: errMsg,
+	}
+	layout := Layout{Width: 80, Height: 40}
+	styles := theme.Default()
+	DrawFileDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil)
+
+	var dump strings.Builder
+	for y := 0; y < 40; y++ {
+		dump.WriteString(tcelltest.TextAt(screen, 0, y, 80))
+		dump.WriteByte('\n')
+	}
+	if !strings.Contains(dump.String(), errMsg) {
+		t.Fatalf("compute error %q not visible:\n%s", errMsg, dump.String())
+	}
+}
+
 func TestDrawMassRenameDialogLastItemVisible(t *testing.T) {
 	screen := tcell.NewSimulationScreen("UTF-8")
 	if err := screen.Init(); err != nil {

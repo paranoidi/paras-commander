@@ -534,6 +534,77 @@ func TestMassRenameTwoSelectedFiles(t *testing.T) {
 	}
 }
 
+func TestMassRenameBangPrefixedDirectory(t *testing.T) {
+	dir := t.TempDir()
+	bangPath := filepath.Join(dir, "!important")
+	normalPath := filepath.Join(dir, "normal")
+	if err := os.Mkdir(bangPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(normalPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	p := app.activePanel()
+	p.SelectedPaths = map[string]bool{bangPath: true, normalPath: true}
+
+	app.dispatch(keymap.ActionFileRename)
+	d := &app.model.FileDialog
+	if !d.Open || d.DialogType != dialog.FileDialogMassRename {
+		t.Fatalf("expected mass rename dialog, open=%v type=%v", d.Open, d.DialogType)
+	}
+	if len(d.MassRenameSources) != 2 {
+		t.Fatalf("sources = %d, want 2 (bang-prefixed dir must be included)", len(d.MassRenameSources))
+	}
+	foundBang := false
+	for _, s := range d.MassRenameSources {
+		if s.Name == "!important" {
+			foundBang = true
+			break
+		}
+	}
+	if !foundBang {
+		t.Fatalf("sources = %#v, want a source named !important", d.MassRenameSources)
+	}
+
+	for _, r := range "!" {
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	d.FocusedField = dialog.MassRenameFindFieldFocus + 1
+	for _, r := range "X" {
+		app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
+	}
+	if d.MassRenameComputeError != "" {
+		t.Fatalf("MassRenameComputeError = %q, want empty", d.MassRenameComputeError)
+	}
+	foundBangPreview := false
+	for i, lb := range d.MassRenamePreviewBefore {
+		if lb == "!important" {
+			foundBangPreview = true
+			if i >= len(d.MassRenamePreviewAfter) || d.MassRenamePreviewAfter[i] != "Ximportant" {
+				t.Fatalf("after for !important = %v, want Ximportant", d.MassRenamePreviewAfter)
+			}
+		}
+	}
+	if !foundBangPreview {
+		t.Fatalf("preview before = %v, want !important as a normal paired row", d.MassRenamePreviewBefore)
+	}
+
+	d.FocusedField = dialog.FileDialogOKFocusIndex(*d)
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone))
+	if app.model.FileDialog.Open {
+		t.Fatal("dialog should be closed after Enter")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "Ximportant")); err != nil {
+		t.Fatalf("Ximportant: %v", err)
+	}
+	if _, err := os.Stat(bangPath); !os.IsNotExist(err) {
+		t.Fatal("old path !important should not exist")
+	}
+}
+
 func TestMassRenameApplyKeepsDialogOpenAndReselects(t *testing.T) {
 	dir := t.TempDir()
 	aPath := filepath.Join(dir, "foo_a.txt")
@@ -1151,10 +1222,8 @@ func TestMassRenameConflictBlocksOKWithCriticalToast(t *testing.T) {
 	if len(d.MassRenamePreviewBefore) != len(paths) {
 		t.Fatalf("preview rows = %d, want %d (no banner row)", len(d.MassRenamePreviewBefore), len(paths))
 	}
-	for _, lb := range d.MassRenamePreviewBefore {
-		if strings.HasPrefix(lb, "!") {
-			t.Fatalf("unexpected banner row %q", lb)
-		}
+	if d.MassRenameComputeError != "" {
+		t.Fatalf("unexpected MassRenameComputeError %q", d.MassRenameComputeError)
 	}
 	conflictIdx := -1
 	for i, lb := range d.MassRenamePreviewBefore {
