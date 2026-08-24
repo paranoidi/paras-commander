@@ -108,7 +108,7 @@ func (h *Handler) scheduleBlockerDialogChain() {
 	h.jobBlockerNextGen.Add(1)
 	delay := time.Duration(h.config.Jobs.BlockerDialogNextDebounceMS) * time.Millisecond
 	gen := h.jobBlockerNextGen.Add(1)
-	h.jobBlockerNext.Reset(delay, func() {
+	h.jobBlockerNext.Arm(delay, func() {
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(JobBlockerNextPayload{gen: gen}))
 	})
 }
@@ -116,7 +116,7 @@ func (h *Handler) scheduleBlockerDialogChain() {
 // StopBlockerNextTimer cancels any pending quick-blocker chain timer.
 func (h *Handler) StopBlockerNextTimer() {
 	h.jobBlockerNextGen.Add(1)
-	h.jobBlockerNext.Clear()
+	h.jobBlockerNext.Stop()
 }
 
 // ApplyBlockerNextPayload opens the next quick blocker dialog for a chain wake, ignoring stale

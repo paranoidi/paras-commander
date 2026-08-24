@@ -7,13 +7,13 @@ import (
 )
 
 func (h *Handler) clearPreviewStylePickerDebounce() {
-	h.previewStylePickerDebounce.Clear()
+	h.previewStylePickerDebounce.Stop()
 	h.previewStylePickerDebounceGen.Add(1)
 }
 
 func (h *Handler) schedulePreviewStylePickerDebounceTimer(gen uint64) {
 	delay := time.Duration(h.host.Config().UI.KeyRepeatDebounceMS) * time.Millisecond
-	h.previewStylePickerDebounce.Reset(delay, func() {
+	h.previewStylePickerDebounce.Arm(delay, func() {
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(StylePickerFlushPayload{gen: gen}))
 	})
 }

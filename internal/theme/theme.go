@@ -1819,16 +1819,10 @@ func parseHexColor(value string) (tcell.Color, error) {
 	if len(value) != 7 || value[0] != '#' {
 		return tcell.ColorDefault, fmt.Errorf("expected #RRGGBB, got %q", value)
 	}
-	var rgb [3]int32
-	for i := range rgb {
-		part := value[1+i*2 : 3+i*2]
-		parsed, err := strconv.ParseUint(part, 16, 8)
-		if err != nil {
-			return tcell.ColorDefault, fmt.Errorf("invalid hex color %q", value)
-		}
-		rgb[i] = int32(parsed)
+	if _, err := strconv.ParseUint(value[1:], 16, 32); err != nil {
+		return tcell.ColorDefault, fmt.Errorf("invalid hex color %q", value)
 	}
-	return tcell.NewRGBColor(rgb[0], rgb[1], rgb[2]), nil
+	return tcell.GetColor(value), nil
 }
 
 func makeStyleKeySet(keys []string) map[string]bool {

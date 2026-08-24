@@ -12,10 +12,6 @@ func DefaultTransferDialogOverlayKeys() map[string][]string {
 // AllowedInTransferDialogOverlay reports whether actionID may appear under
 // [dialog.transfer].
 func AllowedInTransferDialogOverlay(actionID string) bool {
-	switch actionID {
-	case ActionDestinationActivePanel, ActionDestinationInactivePanel:
-		return true
-	default:
-		return false
-	}
+	_, ok := DefaultTransferDialogOverlayKeys()[actionID]
+	return ok
 }

@@ -55,5 +55,5 @@ type Handler struct {
 
 	// jobBlockerNextGen invalidates in-flight quick-blocker chain timers.
 	jobBlockerNextGen atomic.Uint64
-	jobBlockerNext    sched.ManagedTimer
+	jobBlockerNext    sched.Debouncer
 }

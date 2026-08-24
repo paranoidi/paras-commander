@@ -18,10 +18,6 @@ func DefaultTerminalOverlayKeys() map[string][]string {
 
 // AllowedInTerminalOverlay reports whether actionID may appear under [terminal].
 func AllowedInTerminalOverlay(actionID string) bool {
-	switch actionID {
-	case ActionTerminalTogglePanel, ActionTerminalFocus, ActionTerminalGrow, ActionTerminalShrink, ActionAppDropToShell:
-		return true
-	default:
-		return false
-	}
+	_, ok := DefaultTerminalOverlayKeys()[actionID]
+	return ok
 }

@@ -13,5 +13,6 @@ func DefaultRunForEachDialogOverlayKeys() map[string][]string {
 // AllowedInRunForEachDialogOverlay reports whether actionID may appear under
 // [dialog.run_for_each].
 func AllowedInRunForEachDialogOverlay(actionID string) bool {
-	return actionID == ActionFileRunForEachHistory
+	_, ok := DefaultRunForEachDialogOverlayKeys()[actionID]
+	return ok
 }

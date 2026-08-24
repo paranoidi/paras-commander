@@ -159,17 +159,17 @@ type App struct {
 	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent
 	// until the debounce flush runs or coalesce is cleared.
 	syncFollowNavSkipReconcile atomic.Bool
-	syncFollowNav              sched.ManagedTimer
+	syncFollowNav              sched.Debouncer
 	// debounceCalibrateRelease infers key release between calibration trials.
-	debounceCalibrateRelease sched.ManagedTimer
+	debounceCalibrateRelease sched.Debouncer
 	// navParentBackspaceGuarded, when true, suppresses nav.parent triggered by backspace.
 	// Armed when backspace erases the last filter character; cleared when the key is released
 	// (debounce timer fires). Prevents accidental directory navigation after erasing filter text.
 	navParentBackspaceGuarded  atomic.Bool
-	navParentBackspaceDebounce sched.ManagedTimer
+	navParentBackspaceDebounce sched.Debouncer
 	// cursorNameHintNavSkip, when true, holds the previous bottom-border full-name overlay during file-list nav debounce.
 	cursorNameHintNavSkip atomic.Bool
-	cursorNameHintNav     sched.ManagedTimer
+	cursorNameHintNav     sched.Debouncer
 
 	// zoomActivePanelOverride is nil → layout uses cfg.UI.ZoomActivePanel; when non-nil it forces
 	// zoom on/off for this session only (Alt+z / panel.toggle-zoom-active-panel). Cleared on

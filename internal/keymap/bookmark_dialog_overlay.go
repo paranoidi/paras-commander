@@ -12,10 +12,6 @@ func DefaultBookmarkDialogOverlayKeys() map[string][]string {
 // AllowedInBookmarkDialogOverlay reports whether actionID may appear under
 // [dialog.bookmark].
 func AllowedInBookmarkDialogOverlay(actionID string) bool {
-	switch actionID {
-	case ActionBookmarkDelete, ActionBookmarkOpenOther:
-		return true
-	default:
-		return false
-	}
+	_, ok := DefaultBookmarkDialogOverlayKeys()[actionID]
+	return ok
 }

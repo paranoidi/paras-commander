@@ -15,10 +15,6 @@ func DefaultMassRenameDialogOverlayKeys() map[string][]string {
 // AllowedInMassRenameDialogOverlay reports whether actionID may appear under
 // [dialog.mass_rename].
 func AllowedInMassRenameDialogOverlay(actionID string) bool {
-	switch actionID {
-	case ActionFileMassRenameSavePattern, ActionFileMassRenameLoadPattern, ActionFileMassRenameHistory, ActionFileMassRenameDeletePattern:
-		return true
-	default:
-		return false
-	}
+	_, ok := DefaultMassRenameDialogOverlayKeys()[actionID]
+	return ok
 }

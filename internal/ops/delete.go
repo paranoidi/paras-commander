@@ -11,24 +11,16 @@ import (
 type DeletePlan struct {
 	Entries      []localfs.Entry
 	IncludeDirs  bool
-	DeleteMode   string // "permanent"
-	ConfirmFirst bool   // whether to confirm before executing
+	ConfirmFirst bool // whether to confirm before executing
 }
 
 // PlanDelete validates a delete operation.
 //
 // - Source must have at least one entry.
 // - Directories are removed recursively (with appropriate warning).
-// - Delete mode must be "permanent" (the only v1 option).
-func PlanDelete(source Source, confirmDelete bool, deleteMode string) (DeletePlan, error) {
+func PlanDelete(source Source, confirmDelete bool) (DeletePlan, error) {
 	if len(source.Entries) == 0 {
 		return DeletePlan{}, &Error{Op: "delete", Text: "no entries to delete"}
-	}
-	if deleteMode == "" {
-		deleteMode = "permanent"
-	}
-	if deleteMode != "permanent" {
-		return DeletePlan{}, &Error{Op: "delete", Text: "unsupported delete mode: " + deleteMode}
 	}
 
 	includeDirs := false
@@ -42,7 +34,6 @@ func PlanDelete(source Source, confirmDelete bool, deleteMode string) (DeletePla
 	return DeletePlan{
 		Entries:      source.Entries,
 		IncludeDirs:  includeDirs,
-		DeleteMode:   deleteMode,
 		ConfirmFirst: confirmDelete,
 	}, nil
 }

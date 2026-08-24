@@ -104,11 +104,11 @@ func (a *App) failDebounceCalibrateMeasuringTooSoon() {
 }
 
 func (a *App) clearDebounceCalibrateReleaseTimer() {
-	a.debounceCalibrateRelease.Clear()
+	a.debounceCalibrateRelease.Stop()
 }
 
 func (a *App) armDebounceCalibrateReleaseTimer() {
-	a.debounceCalibrateRelease.Reset(dialog.MeasureReleaseIdle(), func() {
+	a.debounceCalibrateRelease.Arm(dialog.MeasureReleaseIdle(), func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(debounceCalibrateReleasePayload{}))
 	})
 }

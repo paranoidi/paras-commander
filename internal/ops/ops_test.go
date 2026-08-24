@@ -353,7 +353,7 @@ func TestPlanDelete(t *testing.T) {
 	entry := localfs.Entry{Name: "a.txt", Path: filePath}
 	source := Source{Kind: SourceCursor, Entries: []localfs.Entry{entry}}
 
-	plan, err := PlanDelete(source, true, "permanent")
+	plan, err := PlanDelete(source, true)
 	if err != nil {
 		t.Fatalf("PlanDelete() error = %v", err)
 	}
@@ -373,7 +373,6 @@ func TestExecuteDeleteFile(t *testing.T) {
 	entry := localfs.Entry{Name: "a.txt", Path: filePath}
 	plan := DeletePlan{
 		Entries:      []localfs.Entry{entry},
-		DeleteMode:   "permanent",
 		ConfirmFirst: false,
 	}
 
@@ -396,7 +395,6 @@ func TestExecuteDeleteDirectory(t *testing.T) {
 	entry := localfs.Entry{Name: "subdir", Path: subDir, Type: localfs.EntryDirectory}
 	plan := DeletePlan{
 		Entries:      []localfs.Entry{entry},
-		DeleteMode:   "permanent",
 		ConfirmFirst: false,
 	}
 
@@ -436,7 +434,6 @@ func TestExecuteDeleteDirectoryWithHiddenFile(t *testing.T) {
 	entry := localfs.Entry{Name: "nested", Path: subDir, Type: localfs.EntryDirectory}
 	plan := DeletePlan{
 		Entries:      []localfs.Entry{entry},
-		DeleteMode:   "permanent",
 		ConfirmFirst: false,
 	}
 	if err := ExecuteDelete(plan); err != nil {
@@ -460,7 +457,7 @@ func TestOpsErrorNestedDeleteMessage(t *testing.T) {
 }
 
 func TestPlanDeleteEmpty(t *testing.T) {
-	_, err := PlanDelete(Source{}, true, "permanent")
+	_, err := PlanDelete(Source{}, true)
 	if err == nil {
 		t.Fatal("PlanDelete() error = nil, want error for empty source")
 	}

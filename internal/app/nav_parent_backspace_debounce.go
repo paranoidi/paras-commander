@@ -18,7 +18,7 @@ func (a *App) armNavParentBackspaceGuard() {
 	}
 	a.navParentBackspaceGuarded.Store(true)
 	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
-	a.navParentBackspaceDebounce.Reset(delay, func() {
+	a.navParentBackspaceDebounce.Arm(delay, func() {
 		a.navParentBackspaceGuarded.Store(false)
 	})
 }

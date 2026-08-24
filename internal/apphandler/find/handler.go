@@ -97,15 +97,10 @@ func (h *Handler) findScopeRoots(st *dialog.FindDialogState) []string {
 	return []string{filepath.Clean(st.RootPath)}
 }
 
-// findIndexingSkipsMatch is true while a walk is running with an empty query.
+// findIndexingSkipsRank is true while a walk is running with an empty query.
 // Display rank still updates incrementally; only background fuzzy match is skipped.
-func findIndexingSkipsMatch(st *dialog.FindDialogState) bool {
-	return st.Indexing && search.Parse(st.Query).Empty()
-}
-
-// findIndexingSkipsRank is an alias kept for call sites; see findIndexingSkipsMatch.
 func findIndexingSkipsRank(st *dialog.FindDialogState) bool {
-	return findIndexingSkipsMatch(st)
+	return st.Indexing && search.Parse(st.Query).Empty()
 }
 
 func findIndexingCountThrottle(indexed int) time.Duration {
@@ -252,34 +247,6 @@ func emptyQueryDisplayIndicesFromEntries(entries []dialog.FindEntry, onlyDirs, o
 		if len(out) >= cap {
 			break
 		}
-	}
-	return out
-}
-
-func emptyQueryDisplayIndices(n int, onlyDirs, onlyFiles bool, isDirs []bool, maxResults int) []int {
-	if n == 0 {
-		return nil
-	}
-	cap := n
-	if maxResults > 0 && cap > maxResults {
-		cap = maxResults
-	}
-	if !onlyDirs && !onlyFiles {
-		out := make([]int, cap)
-		for i := range out {
-			out[i] = i
-		}
-		return out
-	}
-	out := make([]int, 0, cap)
-	for i := 0; i < n && len(out) < cap; i++ {
-		if onlyDirs && (i >= len(isDirs) || !isDirs[i]) {
-			continue
-		}
-		if onlyFiles && (i >= len(isDirs) || isDirs[i]) {
-			continue
-		}
-		out = append(out, i)
 	}
 	return out
 }

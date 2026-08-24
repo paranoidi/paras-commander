@@ -220,7 +220,6 @@ Copy/move file-transfer behavior.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `confirm_delete` | bool | `true` | Ask for confirmation before deleting files or directories. |
-| `delete_mode` | string | `"permanent"` | How delete removes files. Currently only `"permanent"` is supported. |
 | `preserve_permissions` | bool | `true` | Preserve source file permissions on copy. |
 | `preserve_timestamps` | bool | `true` | Preserve source file modification times on copy. |
 | `copy_buffer_kib` | int | `256` | Read/write buffer size, in KiB, used for userspace file copies. |

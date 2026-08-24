@@ -9,7 +9,7 @@ import (
 )
 
 func (h *Handler) clearCarouselPreviewDebounce() {
-	h.carouselPreviewDebounce.Clear()
+	h.carouselPreviewDebounce.Stop()
 	h.carouselPreviewDebounceGen.Add(1)
 	h.carouselPreviewNavSkipSnapshot.Store(false)
 }
@@ -38,7 +38,7 @@ func (h *Handler) carouselPreviewNavCoalesceContext() bool {
 
 func (h *Handler) scheduleCarouselPreviewDebounceTimer(gen uint64) {
 	delay := time.Duration(h.host.Config().UI.KeyRepeatDebounceMS) * time.Millisecond
-	h.carouselPreviewDebounce.Reset(delay, func() {
+	h.carouselPreviewDebounce.Arm(delay, func() {
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(CarouselPreviewFlushPayload{gen: gen}))
 	})
 }

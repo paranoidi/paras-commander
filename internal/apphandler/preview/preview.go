@@ -875,7 +875,7 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 }
 
 func (h *Handler) clearQuickViewDebounce() {
-	h.quickViewDebounce.Clear()
+	h.quickViewDebounce.Stop()
 	h.quickViewDebounceGen.Add(1)
 	h.quickViewNavSkipReconcile.Store(false)
 }
@@ -910,7 +910,7 @@ func (h *Handler) ClearNavCoalesces() {
 
 func (h *Handler) scheduleQuickViewDebounceTimer(gen uint64) {
 	delay := time.Duration(h.host.Config().UI.KeyRepeatDebounceMS) * time.Millisecond
-	h.quickViewDebounce.Reset(delay, func() {
+	h.quickViewDebounce.Arm(delay, func() {
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(QuickViewFlushPayload{gen: gen}))
 	})
 }

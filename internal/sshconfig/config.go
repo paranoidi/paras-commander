@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 // HostEntry is one connectable Host stanza from ssh_config.
@@ -335,7 +336,7 @@ func FormatHostListLines(entries []HostEntry) []string {
 	}
 	aliasPad := 0
 	for _, e := range entries {
-		if w := runeLen(strings.TrimSpace(e.Alias)); w > aliasPad {
+		if w := utf8.RuneCountInString(strings.TrimSpace(e.Alias)); w > aliasPad {
 			aliasPad = w
 		}
 	}
@@ -353,7 +354,7 @@ func (e HostEntry) formatHostListRow(aliasPad int) string {
 		return target
 	}
 	col := padRunesRight(alias, aliasPad)
-	if runeLen(alias) < aliasPad {
+	if utf8.RuneCountInString(alias) < aliasPad {
 		col += " "
 	}
 	return col + target
@@ -373,10 +374,6 @@ func (e HostEntry) listTargetLabel() string {
 	default:
 		return host
 	}
-}
-
-func runeLen(s string) int {
-	return len([]rune(s))
 }
 
 func padRunesRight(s string, minWidth int) string {

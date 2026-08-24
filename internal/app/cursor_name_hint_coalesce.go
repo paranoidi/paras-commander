@@ -12,7 +12,7 @@ type cursorNameHintFlushPayload struct{}
 
 // clearCursorNameHintNavCoalesce stops the pending coalesce so the next paint uses the current cursor name.
 func (a *App) clearCursorNameHintNavCoalesce() {
-	a.cursorNameHintNav.Clear()
+	a.cursorNameHintNav.Stop()
 	a.cursorNameHintNavSkip.Store(false)
 }
 
@@ -24,7 +24,7 @@ func (a *App) armCursorNameHintNavCoalesceAfterListNav() {
 	}
 	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
 	a.cursorNameHintNavSkip.Store(true)
-	a.cursorNameHintNav.Reset(delay, func() {
+	a.cursorNameHintNav.Arm(delay, func() {
 		a.cursorNameHintNavSkip.Store(false)
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(cursorNameHintFlushPayload{}))
 	})

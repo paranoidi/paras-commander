@@ -597,7 +597,7 @@ func (h *Handler) ExecuteDelete() {
 		return
 	}
 	cfg := h.host.Config()
-	_, err = ops.PlanDelete(source, cfg.Operations.ConfirmDelete, cfg.Operations.DeleteMode)
+	_, err = ops.PlanDelete(source, cfg.Operations.ConfirmDelete)
 	if err != nil {
 		h.host.SetErrorMessage("Delete", err)
 		h.CloseFileDialog()

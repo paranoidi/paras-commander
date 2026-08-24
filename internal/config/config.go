@@ -30,7 +30,6 @@ const (
 	ListingFormatPerm  = "perm"
 	ListingFormatBrief = "brief"
 	SortDiskUsage      = "disk_usage"
-	DeletePermanent    = "permanent"
 	FilterModeFuzzy    = "fuzzy"
 	FilterSyntaxFZF    = "subset-fzf"
 	// FilterCycleMatchesVisual orders ↑/↓ among matches by panel row (basename sort order).
@@ -461,12 +460,10 @@ type JobsConfig struct {
 
 type OperationsConfig struct {
 	// ConfirmDelete shows a confirmation dialog before deleting files.
-	ConfirmDelete bool `toml:"confirm_delete"`
-	// DeleteMode selects how delete jobs remove files (currently only "permanent").
-	DeleteMode          string `toml:"delete_mode"`
-	PreservePermissions bool   `toml:"preserve_permissions"`
-	PreserveTimestamps  bool   `toml:"preserve_timestamps"`
-	CopyBufferKiB       int    `toml:"copy_buffer_kib"`
+	ConfirmDelete       bool `toml:"confirm_delete"`
+	PreservePermissions bool `toml:"preserve_permissions"`
+	PreserveTimestamps  bool `toml:"preserve_timestamps"`
+	CopyBufferKiB       int  `toml:"copy_buffer_kib"`
 	// SyncAfterEachFile fsyncs each copied file before closing (durable; slow for many small files).
 	SyncAfterEachFile bool `toml:"sync_after_each_file"`
 	// DiskSpaceCheckMinFileBytes: per-file mid-copy disk checks run only when the source file size is >= this value.
@@ -597,7 +594,6 @@ func Default() Config {
 		},
 		Operations: OperationsConfig{
 			ConfirmDelete:              true,
-			DeleteMode:                 DeletePermanent,
 			PreservePermissions:        DefaultPreservePermissions,
 			PreserveTimestamps:         DefaultPreserveTimestamps,
 			CopyBufferKiB:              DefaultCopyBufferKiB,
@@ -1010,10 +1006,6 @@ func (c *Config) validateSortAndDelete(builtin *Config) {
 	}
 	if !c.listingFormatValid(c.Panels.DefaultListingFormat) {
 		c.Panels.DefaultListingFormat = DefaultListingFormat
-	}
-	// SortReverse is now supported, no clamping needed
-	if c.Operations.DeleteMode != DeletePermanent {
-		c.Operations.DeleteMode = builtin.Operations.DeleteMode
 	}
 }
 

@@ -99,7 +99,7 @@ const prefetchWarmMapDebounceDelay = 20 * time.Millisecond
 // scheduleWarmMapRebuild debounces rebuildPrefetchWarmMap — see prefetchWarmMapDebounce's doc
 // comment on Handler.
 func (h *Handler) scheduleWarmMapRebuild() {
-	h.prefetchWarmMapDebounce.Reset(prefetchWarmMapDebounceDelay, func() {
+	h.prefetchWarmMapDebounce.Arm(prefetchWarmMapDebounceDelay, func() {
 		h.rebuildPrefetchWarmMap()
 		h.postRenderWake()
 	})

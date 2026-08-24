@@ -512,7 +512,7 @@ func (a *App) panelSyncFollowHeldListNav(resolvedAction string, event *tcell.Eve
 
 // clearPanelSyncFollowNavCoalesce stops pending follower sync and allows reconcile to mirror again.
 func (a *App) clearPanelSyncFollowNavCoalesce() {
-	a.syncFollowNav.Clear()
+	a.syncFollowNav.Stop()
 	a.syncFollowNavGen.Add(1)
 	a.syncFollowNavSkipReconcile.Store(false)
 }
@@ -527,7 +527,7 @@ func (a *App) armPanelSyncFollowNavCoalesceAfterListNav() {
 	gen := a.syncFollowNavGen.Add(1)
 	delay := time.Duration(a.config.UI.KeyRepeatDebounceMS) * time.Millisecond
 	a.syncFollowNavSkipReconcile.Store(true)
-	a.syncFollowNav.Reset(delay, func() {
+	a.syncFollowNav.Arm(delay, func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(syncFollowNavFlushPayload{gen: gen}))
 	})
 }

@@ -156,23 +156,6 @@ func TestMaybeRenderFindIndexingThrottles(t *testing.T) {
 	}
 }
 
-func TestEmptyQueryDisplayIndices(t *testing.T) {
-	t.Parallel()
-	isDirs := []bool{true, false, true, false}
-	got := emptyQueryDisplayIndices(4, false, false, isDirs, 2)
-	if len(got) != 2 || got[0] != 0 || got[1] != 1 {
-		t.Fatalf("cap all: got %v", got)
-	}
-	got = emptyQueryDisplayIndices(4, true, false, isDirs, 10)
-	if len(got) != 2 || got[0] != 0 || got[1] != 2 {
-		t.Fatalf("only dirs: got %v", got)
-	}
-	got = emptyQueryDisplayIndices(3, true, false, []bool{true, false, true}, 10)
-	if len(got) != 2 || got[0] != 0 || got[1] != 2 {
-		t.Fatalf("only dirs isDirs slice: got %v", got)
-	}
-}
-
 func TestRootGitignoreExcluded(t *testing.T) {
 	t.Parallel()
 	if rootGitignoreExcluded(nil, "/anything") {

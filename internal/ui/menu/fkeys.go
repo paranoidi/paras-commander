@@ -178,9 +178,6 @@ func FunctionKeysSelectionsStripView(clearSelectionLabel string) []FunctionKey {
 	return out
 }
 
-// FunctionKeyHints returns a label list suitable for footer rendering.
-func FunctionKeyHints() []FunctionKey { return FunctionKeys }
-
 var fKeyNum = map[tcell.Key]int{
 	tcell.KeyF1: 1, tcell.KeyF2: 2, tcell.KeyF3: 3, tcell.KeyF4: 4,
 	tcell.KeyF5: 5, tcell.KeyF6: 6, tcell.KeyF7: 7, tcell.KeyF8: 8,
@@ -196,4 +193,20 @@ func FKeyNum(k tcell.Key) (int, bool) {
 // KeyLabel returns the F-key label for a numeric key, e.g. 5 → "F5".
 func KeyLabel(n int) string {
 	return "F" + strconv.Itoa(n)
+}
+
+// FindItemByFKeyLabel returns the first non-separator item whose KeyLabel equals label (e.g. "F5").
+func FindItemByFKeyLabel(defs []Definition, label string) (def Definition, item Item, ok bool) {
+	if label == "" {
+		return Definition{}, Item{}, false
+	}
+	for _, d := range defs {
+		for _, it := range d.Items {
+			if it.Separator || it.KeyLabel != label {
+				continue
+			}
+			return d, it, true
+		}
+	}
+	return Definition{}, Item{}, false
 }

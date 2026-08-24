@@ -73,7 +73,7 @@ type Handler struct {
 
 	// quickViewDebounceGen invalidates in-flight quick view preview debounce callbacks.
 	quickViewDebounceGen     atomic.Uint64
-	quickViewDebounce        sched.ManagedTimer
+	quickViewDebounce        sched.Debouncer
 	quickViewLastFingerprint string
 	// quickViewNavSkipReconcile suppresses reconcileQuickViewPreview while file-list nav coalesce
 	// is holding a pending preview flush (mirrors syncFollowNavSkipReconcile in internal/app).
@@ -84,7 +84,7 @@ type Handler struct {
 
 	// carouselPreviewDebounceGen invalidates in-flight carousel side-preview debounce callbacks.
 	carouselPreviewDebounceGen atomic.Uint64
-	carouselPreviewDebounce    sched.ManagedTimer
+	carouselPreviewDebounce    sched.Debouncer
 	// carouselPreviewNavSkipSnapshot, when true, reuses cached carousel parent/child snapshots during render.
 	carouselPreviewNavSkipSnapshot atomic.Bool
 
@@ -92,7 +92,7 @@ type Handler struct {
 	previewStyleAtPickerOpen string
 	// previewStylePickerDebounceGen invalidates in-flight F3 style-picker preview debounce callbacks.
 	previewStylePickerDebounceGen atomic.Uint64
-	previewStylePickerDebounce    sched.ManagedTimer
+	previewStylePickerDebounce    sched.Debouncer
 
 	// prefetch is the optional background image/video warm cache (nil when [preview].prefetch is off).
 	prefetch *prefetch.Engine
@@ -118,7 +118,7 @@ type Handler struct {
 	// prefetchWarmMapDebounce coalesces bursts of Cache.OnChange firings (one per completed
 	// decode/render) into a single rebuildPrefetchWarmMap call shortly after the burst settles,
 	// instead of doing a full window rescan on every individual completion.
-	prefetchWarmMapDebounce sched.ManagedTimer
+	prefetchWarmMapDebounce sched.Debouncer
 }
 
 // New constructs a Handler.
