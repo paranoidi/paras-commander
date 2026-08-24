@@ -31,8 +31,14 @@ func TestGroupSelectDialogHeight(t *testing.T) {
 	withHint := base
 	withHint.Text = "["
 	withHint.PatternMode = panel.GroupPatternRegex
-	if got := groupSelectDialogHeight(withHint, 40); got != 14 {
-		t.Fatalf("hint height = %d, want 14", got)
+	if got := groupSelectDialogHeight(withHint, 40); got != 13 {
+		t.Fatalf("hint height = %d, want 13 (reserved row; no grow)", got)
+	}
+
+	withHintAndMeta := withHint
+	withHintAndMeta.MetaColumnCount = 3
+	if got := groupSelectDialogHeight(withHintAndMeta, 40); got != 14 {
+		t.Fatalf("hint+meta height = %d, want 14", got)
 	}
 }
 

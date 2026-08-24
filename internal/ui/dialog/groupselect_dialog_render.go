@@ -74,22 +74,20 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	if y >= innerBottom {
 		return
 	}
-	y++ // blank row between label and input
-	if y >= innerBottom {
-		return
-	}
+	// Input sits directly under the Pattern: label; the next row is reserved for the
+	// compile-error hint so the dialog never grows when the hint appears.
 	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, draw.ScrollingInputState{Value: state.Text, Cursor: state.TextCursor, Scroll: state.TextScroll}, state.Focus == GroupSelectFocusPattern, groupSelectPatternInvalid(state), styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
 
-	if hint := groupSelectPatternHintText(state); hint != "" && y < innerBottom {
+	if hint := groupSelectPatternHintText(state); hint != "" {
 		primitive.Text(screen, textX, y, inputWidth, hint, groupSelectPatternHintStyle(styles, dbg))
-		y++
-		if y >= innerBottom {
-			return
-		}
+	}
+	y++ // reserved hint row (blank when pattern is valid)
+	if y >= innerBottom {
+		return
 	}
 
 	// col2X aligns the second checkbox on every two-column row.
