@@ -96,6 +96,23 @@ func TestFileMenuRenameOpensRenameDialog(t *testing.T) {
 	}
 }
 
+func TestFileMenuMoveOpensMoveDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "test.txt"))
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	activateFileMenuItem(t, app, 'M')
+
+	if app.model.FileDialog.Open {
+		t.Fatal("File dialog should not open for Move")
+	}
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindMove {
+		t.Fatalf("TransferDialog = %+v, want open Move", app.model.TransferDialog)
+	}
+}
+
 func TestFileMenuMkdirOpensMkdirDialog(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "test.txt"))

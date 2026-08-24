@@ -16,6 +16,33 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
+func TestActivateMoveActionSamePanelPathOpensMoveDialog(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "river.txt"))
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	// newApp leaves both panels on dir — previously F6/ActivateMoveAction routed to rename.
+	if app.activePanel().PathString() != app.inactivePanel().PathString() {
+		t.Fatalf("panels paths = %q / %q, want same for this regression",
+			app.activePanel().PathString(), app.inactivePanel().PathString())
+	}
+	if len(app.activePanel().SelectedPaths) != 0 {
+		t.Fatal("want empty selection")
+	}
+
+	app.dialogCtrl.ActivateMoveAction()
+	if app.model.FileDialog.Open {
+		t.Fatalf("FileDialog opened (type=%v); want move destination dialog, not rename",
+			app.model.FileDialog.DialogType)
+	}
+	if !app.model.TransferDialog.Open || app.model.TransferDialog.Kind != dialog.TransferKindMove {
+		t.Fatalf("TransferDialog = %+v, want open Move destination dialog", app.model.TransferDialog)
+	}
+	if app.model.TransferDialog.Phase != dialog.TransferPhaseDestination {
+		t.Fatalf("Phase = %v, want Destination so the user can edit the path", app.model.TransferDialog.Phase)
+	}
+}
+
 func TestCopyMoveClearsSelectionOnlyWhenQueued(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "a.txt"))

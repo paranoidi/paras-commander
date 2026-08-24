@@ -11,6 +11,7 @@ func (a *App) dispatchFileMenuItem(item menu.Item) {
 		keymap.ActionFileFlatten,
 		keymap.ActionFileDelete,
 		keymap.ActionFileMkdir,
+		keymap.ActionFileRename,
 		keymap.ActionFileChmod,
 		keymap.ActionFileChown,
 		keymap.ActionFileSymlink,

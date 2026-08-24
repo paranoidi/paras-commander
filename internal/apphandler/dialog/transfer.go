@@ -29,18 +29,10 @@ func (h *Handler) ActivateCopyAction() {
 }
 
 // ActivateMoveAction is the single user-facing entry point for move (keyboard, menu, F-keys).
-// With no selection, a single cursor item already shown in the passive panel opens Rename instead.
+// Always opens the move destination dialog, including when both panels share a path — the user
+// can edit the destination; confirming the same path still routes to the self-move rename step.
+// Same-directory rename is file.rename (Shift+F6), not file.move.
 func (h *Handler) ActivateMoveAction() {
-	p := h.host.ActivePanel()
-	if len(p.SelectedPaths) == 0 {
-		if entry, ok := p.CurrentEntry(); ok {
-			dest := h.host.InactivePanel().PathString()
-			if entry.Path == filepath.Join(dest, entry.Name) {
-				h.OpenRenameDialog(p)
-				return
-			}
-		}
-	}
 	h.OpenMoveDialog()
 }
 
