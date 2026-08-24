@@ -8,6 +8,8 @@ import (
 
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -250,5 +252,92 @@ func TestRefreshPreviewTargetAfterResizeReRunsOnlyOnWidthChange(t *testing.T) {
 	}
 	if h.previewLastWidth[previewTargetInactive] != tw {
 		t.Fatalf("previewLastWidth[inactive] = %d, want %d recorded from the new request", h.previewLastWidth[previewTargetInactive], tw)
+	}
+}
+
+func TestApplyQuickViewPreviewSkipsEmptyFile(t *testing.T) {
+	root := t.TempDir()
+	emptyPath := filepath.Join(root, "blank.txt")
+	if err := os.WriteFile(emptyPath, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	h, fh := newTestHandler(t, 80, 24)
+	h.model.Primary = panel.State{Path: pathloc.MustParse(root)}
+	if err := h.model.Primary.Load(root); err != nil {
+		t.Fatal(err)
+	}
+	emptyIdx := -1
+	for i, e := range h.model.Primary.Entries {
+		if e.Name == "blank.txt" {
+			emptyIdx = i
+			break
+		}
+	}
+	if emptyIdx < 0 {
+		t.Fatal("blank.txt not in listing")
+	}
+	h.model.Primary.Cursor = emptyIdx
+	h.model.ActivePanel = ui.PrimaryPanel
+	h.model.ViewMode = ui.ViewBrowser
+	h.model.QuickViewEnabled = true
+	h.model.QuickViewPanel = ui.PrimaryPanel
+	fh.inactive = ui.SecondaryPanel
+
+	genBefore := h.filePreviewRunGen.Load()
+	h.applyQuickViewPreviewNow()
+
+	h.mu.RLock()
+	st := h.model.FilePreview
+	h.mu.RUnlock()
+	if st.Phase != ui.FilePreviewPhaseDone || st.ErrorMsg != "Quick view: empty file" {
+		t.Fatalf("FilePreview = {Phase:%v ErrorMsg:%q}, want Done with empty-file message", st.Phase, st.ErrorMsg)
+	}
+	if got := h.filePreviewRunGen.Load(); got != genBefore+1 {
+		t.Fatalf("filePreviewRunGen = %d, want %d (invalidate in-flight on empty)", got, genBefore+1)
+	}
+	path, _, mode := h.quickViewWantFile()
+	if mode != quickViewWantEmpty || path != emptyPath {
+		t.Fatalf("quickViewWantFile = (%q, %v), want (%q, empty)", path, mode, emptyPath)
+	}
+}
+
+func TestOpenFilePreviewFullscreenAllowsEmptyFile(t *testing.T) {
+	root := t.TempDir()
+	emptyPath := filepath.Join(root, "blank.txt")
+	if err := os.WriteFile(emptyPath, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	h, fh := newTestHandler(t, 80, 24)
+	fh.cfg.Preview.Mode = config.PreviewModeInternal
+	h.model.Primary = panel.State{Path: pathloc.MustParse(root)}
+	if err := h.model.Primary.Load(root); err != nil {
+		t.Fatal(err)
+	}
+	emptyIdx := -1
+	for i, e := range h.model.Primary.Entries {
+		if e.Name == "blank.txt" {
+			emptyIdx = i
+			break
+		}
+	}
+	if emptyIdx < 0 {
+		t.Fatal("blank.txt not in listing")
+	}
+	h.model.Primary.Cursor = emptyIdx
+	h.model.ActivePanel = ui.PrimaryPanel
+	h.model.ViewMode = ui.ViewBrowser
+
+	h.OpenFilePreviewFullscreen()
+
+	if h.model.ViewMode != ui.ViewFilePreview {
+		t.Fatalf("ViewMode = %v, want ViewFilePreview for explicit F3 on empty file", h.model.ViewMode)
+	}
+	h.mu.RLock()
+	path := h.model.FullscreenFilePreview.Path
+	h.mu.RUnlock()
+	if path != emptyPath {
+		t.Fatalf("FullscreenFilePreview.Path = %q, want %q", path, emptyPath)
 	}
 }

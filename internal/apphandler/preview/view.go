@@ -362,7 +362,7 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 		return
 	}
 	path, _, mode := h.quickViewWantFile()
-	if mode != quickViewWantFile {
+	if mode != quickViewWantFile && mode != quickViewWantEmpty {
 		h.host.SetTransientMessage("View: select a file", ui.MessageUrgencyWarn)
 		return
 	}

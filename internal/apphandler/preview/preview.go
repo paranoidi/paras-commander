@@ -485,6 +485,8 @@ func (h *Handler) quickViewFingerprint() string {
 		return "none"
 	case quickViewWantFile:
 		return "f:" + path
+	case quickViewWantEmpty:
+		return "z:" + path
 	case quickViewWantDir:
 		if path, ok := h.host.SyncFollowTargetPath(h.host.ActivePanel()); ok {
 			return "d:" + path
@@ -501,11 +503,14 @@ type quickViewWantMode int
 const (
 	quickViewWantNone quickViewWantMode = iota
 	quickViewWantFile
+	quickViewWantEmpty
 	quickViewWantDir
 	quickViewWantStatErr
 )
 
-// quickViewWantFile returns an absolute file path to preview when mode == quickViewWantFile.
+// quickViewWantFile returns an absolute file path to preview when mode == quickViewWantFile
+// or quickViewWantEmpty. Empty (0-byte) files are skipped by inactive-column quick view but
+// remain valid targets for explicit F3 / file.view.
 func (h *Handler) quickViewWantFile() (path string, workDir string, mode quickViewWantMode) {
 	p := h.host.ActivePanel()
 	workDir = p.PathString()
@@ -525,6 +530,9 @@ func (h *Handler) quickViewWantFile() (path string, workDir string, mode quickVi
 		if fi.IsDir() {
 			return "", workDir, quickViewWantDir
 		}
+		if fi.Size() == 0 {
+			return selPath, workDir, quickViewWantEmpty
+		}
 		return selPath, workDir, quickViewWantFile
 	}
 	entry, ok := p.CurrentEntry()
@@ -537,6 +545,9 @@ func (h *Handler) quickViewWantFile() (path string, workDir string, mode quickVi
 	path = filepath.Clean(entry.Path)
 	if path == "" || path == "." {
 		return "", workDir, quickViewWantNone
+	}
+	if entry.Size == 0 {
+		return path, workDir, quickViewWantEmpty
 	}
 	return path, workDir, quickViewWantFile
 }
@@ -682,6 +693,12 @@ func (h *Handler) applyQuickViewPreviewNow() {
 	case quickViewWantNone:
 		h.ClearQuickViewDirOverlay()
 		h.patchColumnPreviewMessage("", "Quick view: no file")
+	case quickViewWantEmpty:
+		// Invalidate any in-flight quick-view subprocess so a late completion cannot
+		// overwrite the empty-file message.
+		h.filePreviewRunGen.Add(1)
+		h.ClearQuickViewDirOverlay()
+		h.patchColumnPreviewMessage("", "Quick view: empty file")
 	case quickViewWantDir:
 		h.quickViewFollowDirectory()
 	case quickViewWantStatErr:
