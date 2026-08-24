@@ -2,8 +2,10 @@ package ui
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 // MetaColumnLayout is a rendered meta column ready for panel list rows.
@@ -66,13 +68,14 @@ func MetaRowText(layouts []MetaColumnLayout, path string) string {
 const (
 	// panelListMetaMaxFields caps how many tab/newline-delimited fields a meta command may emit.
 	panelListMetaMaxFields = 8
-	// panelMetaRawMaxBytes rejects absurdly large stdout before splitting.
+	// panelMetaRawMaxBytes clips absurdly large stdout before splitting.
 	panelMetaRawMaxBytes = 16384
 )
 
 // layoutMetaCells formats meta command stdout for the panel column.
 // Tab (\t) and line feed (\n) delimit fields (after \r\n/\r normalization); if neither appears
 // in the trimmed payload, the whole string is one legacy cell (width capped by panelListMetaMax).
+// Cells that still overflow after shrinking are clipped with a trailing ellipsis.
 // Column count is the maximum field count across all non-empty rows; shorter rows pad with empty cells.
 func layoutMetaCells(metaResults map[string]string) (metaColW int, formatted map[string]string) {
 	formatted = make(map[string]string, len(metaResults))
@@ -88,11 +91,7 @@ func layoutMetaCells(metaResults map[string]string) (metaColW int, formatted map
 			formatted[path] = ""
 			continue
 		}
-		fields, tooLong := parseMetaRaw(raw)
-		if tooLong {
-			formatted[path] = "too long"
-			continue
-		}
+		fields := parseMetaRaw(raw)
 		if len(fields) == 0 {
 			formatted[path] = ""
 			continue
@@ -177,21 +176,16 @@ func clampMetaColW(w int) int {
 	return w
 }
 
-// parseMetaRaw splits one command's stdout into fields. tooLong is true if the value must not be shown.
-func parseMetaRaw(raw string) (fields []string, tooLong bool) {
+// parseMetaRaw splits one command's stdout into fields.
+func parseMetaRaw(raw string) []string {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
-		return nil, false
+		return nil
 	}
-	if len(trimmed) > panelMetaRawMaxBytes {
-		return nil, true
-	}
+	trimmed = clipMetaRawBytes(trimmed)
 
 	if !strings.ContainsAny(trimmed, "\t\n") {
-		if runewidth.StringWidth(trimmed) > panelListMetaMax {
-			return nil, true
-		}
-		return []string{trimmed}, false
+		return []string{trimmed}
 	}
 
 	norm := strings.ReplaceAll(trimmed, "\r\n", "\n")
@@ -201,7 +195,28 @@ func parseMetaRaw(raw string) (fields []string, tooLong bool) {
 	if len(out) > panelListMetaMaxFields {
 		out = out[:panelListMetaMaxFields]
 	}
-	return out, false
+	return out
+}
+
+func clipMetaRawBytes(s string) string {
+	if len(s) <= panelMetaRawMaxBytes {
+		return s
+	}
+	s = s[:panelMetaRawMaxBytes]
+	for len(s) > 0 && !utf8.ValidString(s) {
+		s = s[:len(s)-1]
+	}
+	return s
+}
+
+func truncateMetaDisplay(s string, w int) string {
+	if w <= 0 {
+		return ""
+	}
+	if runewidth.StringWidth(s) <= w {
+		return s
+	}
+	return runewidth.Truncate(s, w, string(primitive.Ellipsis))
 }
 
 func metaCellAllDigits(s string) bool {
@@ -222,21 +237,18 @@ func padMetaLineToWidth(s string, w int) string {
 		return s
 	}
 	if runewidth.StringWidth(s) > w {
-		s = runewidth.Truncate(s, w, "")
+		s = truncateMetaDisplay(s, w)
 	}
 	return runewidth.FillRight(s, w)
 }
 
 func alignMetaCell(s string, colW int, rightDigits bool) string {
 	if colW <= 0 {
-		if runewidth.StringWidth(s) <= 0 {
-			return ""
-		}
-		return runewidth.Truncate(s, 0, "")
+		return ""
 	}
 	t := s
 	if runewidth.StringWidth(s) > colW {
-		t = runewidth.Truncate(s, colW, "")
+		t = truncateMetaDisplay(s, colW)
 	}
 	if rightDigits && metaCellAllDigits(t) {
 		return runewidth.FillLeft(t, colW)

@@ -20,7 +20,7 @@ type MetaFile struct {
 // File runs for regular files; Dirs runs for directories; %f = absolute row path in shell scripts.
 //
 // Stdout is shown in the panel Meta column. If the trimmed output contains no tab or newline,
-// it is one cell (legacy): display width over the panel meta budget is replaced with "too long".
+// it is one cell (legacy). Cells that exceed the panel meta budget are clipped with a trailing ….
 // Otherwise fields are split on tab and line feed (after \r\n/\r normalization to \n, then \n→\t),
 // up to 8 fields; empty fields are preserved.
 type MetaEntry struct {

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/paranoidi/paras-commander/internal/primitive"
 )
 
 func TestLayoutMetaCells_emptyMap(t *testing.T) {
@@ -24,12 +25,19 @@ func TestLayoutMetaCells_legacySingleCell(t *testing.T) {
 	}
 }
 
-func TestLayoutMetaCells_legacyTooLongByDisplayWidth(t *testing.T) {
+func TestLayoutMetaCells_legacyTruncatesWithEllipsis(t *testing.T) {
 	// 21 ASCII letters => display width 21 > panelListMetaMax (20)
 	s := strings.Repeat("a", panelListMetaMax+1)
-	_, m := layoutMetaCells(map[string]string{"p": s})
-	if m["p"] != "too long" {
-		t.Fatalf("got %q", m["p"])
+	w, m := layoutMetaCells(map[string]string{"p": s})
+	want := strings.Repeat("a", panelListMetaMax-1) + string(primitive.Ellipsis)
+	if m["p"] != want {
+		t.Fatalf("got %q want %q", m["p"], want)
+	}
+	if runewidth.StringWidth(m["p"]) != panelListMetaMax {
+		t.Fatalf("display width = %d, want %d", runewidth.StringWidth(m["p"]), panelListMetaMax)
+	}
+	if w != panelListMetaMax {
+		t.Fatalf("col w=%d want %d", w, panelListMetaMax)
 	}
 }
 
@@ -100,8 +108,11 @@ func TestLayoutMetaColumns_twoColumns(t *testing.T) {
 		t.Fatalf("totalW = %d, want %d", totalW, layouts[0].Width+2+layouts[1].Width)
 	}
 	hdr := MetaHeaderText(layouts)
-	if !strings.Contains(hdr, "Line") || !strings.Contains(hdr, "Size") {
+	if !strings.Contains(hdr, "Size") {
 		t.Fatalf("header = %q", hdr)
+	}
+	if runewidth.StringWidth(hdr) != totalW {
+		t.Fatalf("header width = %d, want %d (%q)", runewidth.StringWidth(hdr), totalW, hdr)
 	}
 	row := MetaRowText(layouts, "/p")
 	if !strings.Contains(row, "42") || !strings.Contains(row, "1K") {
@@ -112,7 +123,20 @@ func TestLayoutMetaColumns_twoColumns(t *testing.T) {
 func TestLayoutMetaCells_rawTooLarge(t *testing.T) {
 	s := strings.Repeat("x", panelMetaRawMaxBytes+1)
 	_, m := layoutMetaCells(map[string]string{"p": s})
-	if m["p"] != "too long" {
-		t.Fatalf("got %q", m["p"])
+	want := strings.Repeat("x", panelListMetaMax-1) + string(primitive.Ellipsis)
+	if m["p"] != want {
+		t.Fatalf("got %q want %q", m["p"], want)
+	}
+}
+
+func TestLayoutMetaCells_fieldOverflowUsesEllipsis(t *testing.T) {
+	long := strings.Repeat("b", panelListMetaMax)
+	_, m := layoutMetaCells(map[string]string{"p": long + "\t1"})
+	got := m["p"]
+	if !strings.ContainsRune(got, primitive.Ellipsis) {
+		t.Fatalf("expected ellipsis in %q", got)
+	}
+	if runewidth.StringWidth(got) > panelListMetaMax {
+		t.Fatalf("width %d > max %d: %q", runewidth.StringWidth(got), panelListMetaMax, got)
 	}
 }
