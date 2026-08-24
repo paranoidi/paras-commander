@@ -139,6 +139,37 @@ func TestCalculateLayoutZoomWidensActiveRightColumn(t *testing.T) {
 	}
 }
 
+func TestCalculateLayoutSwapPanesPutsSecondaryOnTheLeft(t *testing.T) {
+	layout := CalculateLayout(100, 30, true, PanelPaneSplit{
+		SwapPanes: true, Zoom: true, ActivePanel: 1, ActivePercent: 70, InactivePercent: 30,
+	})
+	if layout.Secondary != (Rect{X: 0, Y: 1, Width: 70, Height: 28}) {
+		t.Fatalf("Secondary (first slot) = %+v, want x=0 width=70", layout.Secondary)
+	}
+	if layout.Primary != (Rect{X: 70, Y: 1, Width: 30, Height: 28}) {
+		t.Fatalf("Primary (second slot) = %+v, want x=70 width=30", layout.Primary)
+	}
+}
+
+func TestCalculateLayoutStackedSwapPanesPutsSecondaryOnTop(t *testing.T) {
+	layout := CalculateLayoutWithOrientation(LayoutInput{
+		Width: 80, Height: 40, ShowMenuBar: true,
+		Split: PanelPaneSplit{
+			SwapPanes: true, Zoom: true, ActivePanel: 1, ActivePercent: 70, InactivePercent: 30,
+		},
+		Orientation: SplitVertical,
+	})
+	panelH := 38
+	wantPrimaryH := (panelH * 30) / 100
+	wantSecondaryH := panelH - wantPrimaryH
+	if layout.Secondary != (Rect{X: 0, Y: 1, Width: 80, Height: wantSecondaryH}) {
+		t.Fatalf("Secondary (first slot) = %+v, want y=1 height=%d", layout.Secondary, wantSecondaryH)
+	}
+	if layout.Primary.Y != 1+wantSecondaryH || layout.Primary.Height != panelH-wantSecondaryH {
+		t.Fatalf("Primary (second slot) = %+v, want y=%d height=%d", layout.Primary, 1+wantSecondaryH, panelH-wantSecondaryH)
+	}
+}
+
 func TestPanelListRows(t *testing.T) {
 	rows := PanelListRows(Rect{Width: 50, Height: 12})
 	if rows != 9 {
@@ -489,6 +520,16 @@ func TestCalculateLayoutTerminalRowsIgnoredWhenTooSmall(t *testing.T) {
 func TestMergePaneRectsSideBySide(t *testing.T) {
 	primary := Rect{X: 0, Y: 1, Width: 50, Height: 28}
 	secondary := Rect{X: 50, Y: 1, Width: 50, Height: 28}
+	got := MergePaneRects(primary, secondary, SplitHorizontal)
+	want := Rect{X: 0, Y: 1, Width: 100, Height: 28}
+	if got != want {
+		t.Fatalf("MergePaneRects = %+v want %+v", got, want)
+	}
+}
+
+func TestMergePaneRectsSideBySideSwappedPrimaryOnRight(t *testing.T) {
+	primary := Rect{X: 50, Y: 1, Width: 50, Height: 28}
+	secondary := Rect{X: 0, Y: 1, Width: 50, Height: 28}
 	got := MergePaneRects(primary, secondary, SplitHorizontal)
 	want := Rect{X: 0, Y: 1, Width: 100, Height: 28}
 	if got != want {

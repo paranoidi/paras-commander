@@ -68,6 +68,9 @@ type PanelPaneSplit struct {
 	ActivePercent     int
 	InactivePercent   int
 	HideInactivePanel bool
+	// SwapPanes draws Secondary in the first visual slot (left/top) and Primary in the second
+	// (right/bottom). Identity shares from mainPanelAxisSplit are unchanged.
+	SwapPanes bool
 }
 
 // PanelWidthSplit is a legacy alias for PanelPaneSplit (split applies to width in side-by-side layout).
@@ -130,20 +133,23 @@ func mainPanelRowHeights(total int, split PanelPaneSplit) (primaryH, secondaryH 
 }
 
 // MergePaneRects returns one rectangle spanning both browser panes.
+// Slot order does not matter (Primary may sit left/top or right/bottom).
 func MergePaneRects(primary, secondary Rect, orientation SplitOrientation) Rect {
+	x := min(primary.X, secondary.X)
+	y := min(primary.Y, secondary.Y)
 	if orientation == SplitVertical {
 		return Rect{
-			X:      primary.X,
-			Y:      primary.Y,
-			Width:  primary.Width,
+			X:      x,
+			Y:      y,
+			Width:  max(primary.Width, secondary.Width),
 			Height: primary.Height + secondary.Height,
 		}
 	}
 	return Rect{
-		X:      primary.X,
-		Y:      primary.Y,
+		X:      x,
+		Y:      y,
 		Width:  primary.Width + secondary.Width,
-		Height: primary.Height,
+		Height: max(primary.Height, secondary.Height),
 	}
 }
 
@@ -214,12 +220,22 @@ func CalculateLayoutWithOrientation(in LayoutInput) Layout {
 
 	if orientation == SplitVertical {
 		primaryH, secondaryH := mainPanelRowHeights(panelAreaH, split)
+		if split.SwapPanes {
+			layout.Secondary = Rect{X: 0, Y: menuY, Width: width, Height: secondaryH}
+			layout.Primary = Rect{X: 0, Y: menuY + secondaryH, Width: width, Height: primaryH}
+			return layout
+		}
 		layout.Primary = Rect{X: 0, Y: menuY, Width: width, Height: primaryH}
 		layout.Secondary = Rect{X: 0, Y: menuY + primaryH, Width: width, Height: secondaryH}
 		return layout
 	}
 
 	primaryW, secondaryW := mainPanelColumnWidths(width, split)
+	if split.SwapPanes {
+		layout.Secondary = Rect{X: 0, Y: menuY, Width: secondaryW, Height: panelAreaH}
+		layout.Primary = Rect{X: secondaryW, Y: menuY, Width: primaryW, Height: panelAreaH}
+		return layout
+	}
 	layout.Primary = Rect{X: 0, Y: menuY, Width: primaryW, Height: panelAreaH}
 	layout.Secondary = Rect{X: primaryW, Y: menuY, Width: secondaryW, Height: panelAreaH}
 	return layout

@@ -327,6 +327,7 @@ func (a *App) panelPaneSplit(width int, filePreviewOpen bool) ui.PanelPaneSplit 
 		ActivePercent:     activePct,
 		InactivePercent:   inactivePct,
 		HideInactivePanel: ui.LayoutHideInactivePanel(a.model.ViewMode, a.model.HideInactivePanel || a.carouselAutohideInactivePanel()),
+		SwapPanes:         a.model.ViewMode == ui.ViewBrowser && a.model.SwapPanes,
 	}
 }
 

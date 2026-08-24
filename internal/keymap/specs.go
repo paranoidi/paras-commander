@@ -851,6 +851,15 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:     []string{"layout", "stacked", "horizontal", "vertical", "split", "orientation"},
 		},
 		{
+			ID:           ActionPanelSwapPanes,
+			Views:        HelpBrowser,
+			Title:        "Swap panels",
+			Section:      "View",
+			DefaultKeys:  []string{"C-M-space"},
+			PreferredKey: "C-M-space",
+			Keywords:     []string{"swap", "order", "left", "right", "top", "bottom", "panes"},
+		},
+		{
 			ID:          ActionPanelReverseSort,
 			Views:       HelpBrowser,
 			Title:       "Reverse sort",

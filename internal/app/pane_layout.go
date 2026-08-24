@@ -52,3 +52,10 @@ func (a *App) togglePaneSplitOrientation() {
 	}
 	a.setTransientMessage("Split: "+paneSplitOrientationLabel(next), ui.MessageUrgencyInfo)
 }
+
+func (a *App) toggleSwapPanes() {
+	if a.model.ViewMode != ui.ViewBrowser {
+		return
+	}
+	a.model.SwapPanes = !a.model.SwapPanes
+}

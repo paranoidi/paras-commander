@@ -214,6 +214,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Bookmarks":    "C-b",
 		"Add bookmark": "C-M-b",
 		"Refresh":      "C-n",
+		"Swap panels":  "C-M-space",
 	})
 	assertMenuItemKeyLabels(t, display, map[string]string{
 		"Commands":   "C-M-e",

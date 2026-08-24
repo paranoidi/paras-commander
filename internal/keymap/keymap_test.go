@@ -54,6 +54,16 @@ func TestFormatChordCtrlSpace(t *testing.T) {
 	}
 }
 
+func TestFormatChordCtrlAltSpace(t *testing.T) {
+	ch, err := ParseKey("C-M-space")
+	if err != nil {
+		t.Fatalf("ParseKey: %v", err)
+	}
+	if got := FormatChord(ch); got != "Alt-Ctrl-Space" {
+		t.Fatalf("FormatChord(C-M-space) = %q, want Alt-Ctrl-Space", got)
+	}
+}
+
 func TestFormatChordSpace(t *testing.T) {
 	ch, err := ParseKey("space")
 	if err != nil {
@@ -92,6 +102,7 @@ func TestParseKeyNamedAndModifiers(t *testing.T) {
 		{input: "pgup", want: Chord{Key: tcell.KeyPgUp}},
 		{input: "C-d", want: Chord{Key: tcell.KeyCtrlD}},
 		{input: "C-space", want: Chord{Key: tcell.KeyCtrlSpace}},
+		{input: "C-M-space", want: Chord{Key: tcell.KeyCtrlSpace, Mod: tcell.ModAlt}},
 		{input: "C-M-d", want: Chord{Key: tcell.KeyCtrlD, Mod: tcell.ModAlt}},
 		{input: "M-left", want: Chord{Key: tcell.KeyLeft, Mod: tcell.ModAlt}},
 		{input: "M-C-left", want: Chord{Key: tcell.KeyLeft, Mod: tcell.ModAlt | tcell.ModCtrl}},
@@ -221,6 +232,9 @@ func TestDefaultLookupMatchesSimulationKeys(t *testing.T) {
 		{tcell.NewEventKey(tcell.KeyNUL, 0, tcell.ModNone), ActionPanelToggleSplitOrientation, true},
 		{tcell.NewEventKey(tcell.KeyRune, 0, tcell.ModNone), ActionPanelToggleSplitOrientation, true},
 		{tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModCtrl), ActionPanelToggleSplitOrientation, true},
+		{tcell.NewEventKey(tcell.KeyCtrlSpace, 0, tcell.ModAlt), ActionPanelSwapPanes, true},
+		{tcell.NewEventKey(tcell.KeyNUL, 0, tcell.ModAlt), ActionPanelSwapPanes, true},
+		{tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModCtrl|tcell.ModAlt), ActionPanelSwapPanes, true},
 	}
 	for _, tt := range tests {
 		id, ok := m.Lookup(tt.ev)

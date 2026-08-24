@@ -79,6 +79,7 @@ const (
 	ActionPanelTreeNextSiblingDir     = "panel.tree-next-sibling-dir"
 	ActionPanelToggleZoomActivePanel  = "panel.toggle-zoom-active-panel"
 	ActionPanelToggleSplitOrientation = "panel.toggle-split-orientation"
+	ActionPanelSwapPanes              = "panel.swap-panes"
 	ActionPanelReverseSort            = "panel.reverse-sort"
 	ActionPanelFilterOpen             = "panel.filter-open"
 	ActionPanelToggleHidden           = "panel.toggle-hidden"
@@ -324,6 +325,7 @@ var KnownActions = map[string]struct{}{
 	ActionPanelTreeNextSiblingDir:     {},
 	ActionPanelToggleZoomActivePanel:  {},
 	ActionPanelToggleSplitOrientation: {},
+	ActionPanelSwapPanes:              {},
 	ActionPanelReverseSort:            {},
 	ActionPanelFilterOpen:             {},
 	ActionPanelToggleHidden:           {},

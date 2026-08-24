@@ -71,6 +71,8 @@ type Model struct {
 	SplitOrientation SplitOrientation
 	// HideInactivePanel gives the active column full width and hides the inactive twin panel.
 	HideInactivePanel bool
+	// SwapPanes draws Secondary in the first visual slot (left/top) and Primary in the second.
+	SwapPanes bool
 	// SyncFollowEnabled gates latched panel sync. When true, SyncFollowPanel
 	// (PrimaryPanel or SecondaryPanel) names the driver whose caret moves auto-load
 	// the highlighted directory into the inactive panel.
@@ -480,6 +482,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			ActivePercent:     model.PanelZoomActivePercent,
 			InactivePercent:   model.PanelZoomInactivePercent,
 			HideInactivePanel: LayoutHideInactivePanel(model.ViewMode, model.HideInactivePanel),
+			SwapPanes:         model.ViewMode == ViewBrowser && model.SwapPanes,
 		},
 		Orientation:    model.SplitOrientation,
 		TerminalRows:   terminalRows,

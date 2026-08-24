@@ -824,6 +824,8 @@ func (a *App) tryDispatchPanelLayout(actionID string) bool {
 		a.toggleZoomActivePanelGuarded()
 	case keymap.ActionPanelToggleSplitOrientation:
 		a.togglePaneSplitOrientation()
+	case keymap.ActionPanelSwapPanes:
+		a.toggleSwapPanes()
 	case keymap.ActionPanelReverseSort:
 		activePanel.ToggleSortReverse(viewportRows)
 		direction := "ascending"
