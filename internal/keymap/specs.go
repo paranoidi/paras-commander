@@ -772,7 +772,7 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:          ActionPanelTreeExpand,
 			Views:       HelpBrowser,
-			Title:       "Expand tree row",
+			Title:       "Expand / deepen tree row",
 			Section:     "View",
 			DefaultKeys: []string{"M-right"},
 			Keywords:    []string{"tree", "expand", "directory", "nested"},

@@ -244,10 +244,18 @@ func TestToggleTreeExpandNoOpOnFileRow(t *testing.T) {
 func TestExpandTreeCursorRow(t *testing.T) {
 	root := t.TempDir()
 	meadow := filepath.Join(root, "meadow")
-	if err := os.Mkdir(meadow, 0o755); err != nil {
-		t.Fatalf("Mkdir: %v", err)
+	nested := filepath.Join(meadow, "nested")
+	deep := filepath.Join(nested, "deep")
+	if err := os.MkdirAll(deep, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(meadow, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "valley.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(deep, "stone.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "beacon.txt"), []byte("x"), 0o644); err != nil {
@@ -257,33 +265,141 @@ func TestExpandTreeCursorRow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	if !state.SetListLayout(ListLayoutTree, 10) {
+	if !state.SetListLayout(ListLayoutTree, 20) {
 		t.Fatal("SetListLayout(Tree) = false, want true")
 	}
 
-	// Directories sort first, so the cursor sits on "meadow".
-	if err := state.ExpandTreeCursorRow(10); err != nil {
-		t.Fatalf("ExpandTreeCursorRow (dir): %v", err)
-	}
-	if got := state.VisibleEntryCount(); got != 3 {
-		t.Fatalf("VisibleEntryCount after expand = %d, want 3 (meadow + harbor.txt + beacon.txt)", got)
+	rowOf := func(path string) int {
+		t.Helper()
+		for i := 0; i < state.VisibleEntryCount(); i++ {
+			if e, _, ok := state.VisibleEntry(i); ok && e.Path == path {
+				return i
+			}
+		}
+		t.Fatalf("row for %s not found among %d visible rows", path, state.VisibleEntryCount())
+		return -1
 	}
 
-	// No-op: already expanded.
-	if err := state.ExpandTreeCursorRow(10); err != nil {
-		t.Fatalf("ExpandTreeCursorRow (already expanded): %v", err)
+	// Press 1: expand meadow (cursor starts on it — directories sort first).
+	if err := state.ExpandTreeCursorRow(20); err != nil {
+		t.Fatalf("ExpandTreeCursorRow press1: %v", err)
 	}
-	if got := state.VisibleEntryCount(); got != 3 {
-		t.Fatalf("VisibleEntryCount unchanged = %d, want 3", got)
+	if !state.TreeExpanded[meadow] {
+		t.Fatal("TreeExpanded[meadow] = false after press1")
+	}
+	if state.TreeExpanded[nested] {
+		t.Fatal("TreeExpanded[nested] = true after press1, want still collapsed")
+	}
+	if got := state.VisibleEntryCount(); got != 4 {
+		t.Fatalf("VisibleEntryCount after press1 = %d, want 4 (meadow + nested + harbor + beacon)", got)
+	}
+
+	// Press 2 on already-expanded meadow: deepen one level → expand nested.
+	if err := state.ExpandTreeCursorRow(20); err != nil {
+		t.Fatalf("ExpandTreeCursorRow press2: %v", err)
+	}
+	if !state.TreeExpanded[nested] {
+		t.Fatal("TreeExpanded[nested] = false after press2, want expanded")
+	}
+	if state.TreeExpanded[deep] {
+		t.Fatal("TreeExpanded[deep] = true after press2, want still collapsed")
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Path != meadow {
+		t.Fatalf("cursor after press2 = %+v ok=%v, want meadow", entry, ok)
+	}
+	if got := state.VisibleEntryCount(); got != 6 {
+		t.Fatalf("VisibleEntryCount after press2 = %d, want 6", got)
+	}
+
+	// Press 3: deepen again → expand deep.
+	if err := state.ExpandTreeCursorRow(20); err != nil {
+		t.Fatalf("ExpandTreeCursorRow press3: %v", err)
+	}
+	if !state.TreeExpanded[deep] {
+		t.Fatal("TreeExpanded[deep] = false after press3, want expanded")
+	}
+	if got := state.VisibleEntryCount(); got != 7 {
+		t.Fatalf("VisibleEntryCount after press3 = %d, want 7", got)
 	}
 
 	// No-op on a file row.
-	state.Cursor = 1 // harbor.txt, meadow's child
-	if err := state.ExpandTreeCursorRow(10); err != nil {
+	state.Cursor = rowOf(filepath.Join(meadow, "harbor.txt"))
+	before := state.VisibleEntryCount()
+	if err := state.ExpandTreeCursorRow(20); err != nil {
 		t.Fatalf("ExpandTreeCursorRow (file row): %v", err)
 	}
-	if got := state.VisibleEntryCount(); got != 3 {
-		t.Fatalf("VisibleEntryCount changed on file row: got %d, want 3", got)
+	if got := state.VisibleEntryCount(); got != before {
+		t.Fatalf("VisibleEntryCount changed on file row: got %d, want %d", got, before)
+	}
+}
+
+// TestExpandTreeCursorRowDeepensUnevenFrontier: when one child dir under the selection is already
+// expanded and a sibling is still collapsed, one deepen press expands the sibling and the open
+// child's children in the same frontier step.
+func TestExpandTreeCursorRowDeepensUnevenFrontier(t *testing.T) {
+	root := t.TempDir()
+	meadow := filepath.Join(root, "meadow")
+	alpha := filepath.Join(meadow, "alpha")
+	bravo := filepath.Join(meadow, "bravo")
+	alphaChild := filepath.Join(alpha, "canyon")
+	if err := os.MkdirAll(alphaChild, 0o755); err != nil {
+		t.Fatalf("MkdirAll(alphaChild): %v", err)
+	}
+	if err := os.MkdirAll(bravo, 0o755); err != nil {
+		t.Fatalf("MkdirAll(bravo): %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(alphaChild, "river.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(bravo, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if !state.SetListLayout(ListLayoutTree, 20) {
+		t.Fatal("SetListLayout(Tree) = false, want true")
+	}
+
+	rowOf := func(path string) int {
+		t.Helper()
+		for i := 0; i < state.VisibleEntryCount(); i++ {
+			if e, _, ok := state.VisibleEntry(i); ok && e.Path == path {
+				return i
+			}
+		}
+		t.Fatalf("row for %s not found among %d visible rows", path, state.VisibleEntryCount())
+		return -1
+	}
+
+	if err := state.ExpandTreeCursorRow(20); err != nil {
+		t.Fatalf("ExpandTreeCursorRow(meadow): %v", err)
+	}
+	state.Cursor = rowOf(alpha)
+	if err := state.ExpandTreeCursorRow(20); err != nil {
+		t.Fatalf("ExpandTreeCursorRow(alpha): %v", err)
+	}
+	if !state.TreeExpanded[alpha] || state.TreeExpanded[bravo] || state.TreeExpanded[alphaChild] {
+		t.Fatalf("precondition: alpha=%v bravo=%v alphaChild=%v",
+			state.TreeExpanded[alpha], state.TreeExpanded[bravo], state.TreeExpanded[alphaChild])
+	}
+
+	state.Cursor = rowOf(meadow)
+	if err := state.ExpandTreeCursorRow(20); err != nil {
+		t.Fatalf("ExpandTreeCursorRow deepen: %v", err)
+	}
+	if !state.TreeExpanded[bravo] {
+		t.Fatal("TreeExpanded[bravo] = false, want expanded (collapsed sibling)")
+	}
+	if !state.TreeExpanded[alphaChild] {
+		t.Fatal("TreeExpanded[alphaChild] = false, want expanded (frontier under open alpha)")
+	}
+	entry, ok := state.CurrentEntry()
+	if !ok || entry.Path != meadow {
+		t.Fatalf("cursor after deepen = %+v ok=%v, want meadow", entry, ok)
 	}
 }
 

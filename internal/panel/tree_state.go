@@ -202,8 +202,10 @@ func (s *State) ToggleTreeExpand(viewportRows int) error {
 	return nil
 }
 
-// ExpandTreeCursorRow expands the directory row under the cursor. No-op outside tree mode, out
-// of range, on file rows, or when the row is already expanded. Unlike ToggleTreeExpand's caller
+// ExpandTreeCursorRow expands the directory row under the cursor. When the row is already
+// expanded, it deepens that subtree by one frontier level: every collapsed directory child of
+// an already-expanded ancestor under the selection is expanded (see expandSubtreeOneLevel).
+// No-op outside tree mode, out of range, or on file rows. Unlike ToggleTreeExpand's caller
 // (toggleTreeForPanel in internal/app/panels.go), this does not enable tree mode itself — the
 // caller is responsible for calling SetListLayout first if auto-enabling is desired.
 func (s *State) ExpandTreeCursorRow(viewportRows int) error {
@@ -215,16 +217,62 @@ func (s *State) ExpandTreeCursorRow(viewportRows int) error {
 		return nil
 	}
 	row := s.treeRows[rawIdx]
-	if row.Value.Entry.Type != localfs.EntryDirectory || s.TreeExpanded[row.ID] {
+	if row.Value.Entry.Type != localfs.EntryDirectory {
 		return nil
 	}
 	id := row.ID
+	if s.TreeExpanded[id] {
+		return s.deepenTreeUnderCursor(id, row.Depth, viewportRows)
+	}
 	if err := s.setTreeNodeExpanded(id, row.Depth, true, false); err != nil {
 		return err
 	}
 	s.treeCursorID = id
 	s.rebuildTreeRows()
 	s.reattachTreeCursorByID(id, viewportRows)
+	return nil
+}
+
+// deepenTreeUnderCursor expands one frontier level under an already-expanded directory: every
+// collapsed directory that is a direct child of an expanded ancestor within that subtree. Does
+// not touch treeExpandAllDepth. Async child loads coalesce via quiet setTreeNodeExpanded.
+func (s *State) deepenTreeUnderCursor(rootID string, rootDepth, viewportRows int) error {
+	node := findTreeNode(s.TreeRoots, rootID)
+	if node == nil || node.Children == nil {
+		return nil
+	}
+	s.treeCursorID = rootID
+	if err := s.expandSubtreeOneLevel(node.Children, rootDepth+1); err != nil {
+		return err
+	}
+	s.rebuildTreeRows()
+	if s.treeExpandQuiet > 0 {
+		return nil
+	}
+	s.reattachTreeCursorByID(rootID, viewportRows)
+	return nil
+}
+
+// expandSubtreeOneLevel expands every collapsed directory child of nodes; for already-expanded
+// directories with loaded children it recurses so one press advances the whole subtree frontier.
+func (s *State) expandSubtreeOneLevel(nodes []treeflat.Node[TreeEntry], depth int) error {
+	for i := range nodes {
+		n := &nodes[i]
+		if n.Value.Entry.Type != localfs.EntryDirectory {
+			continue
+		}
+		if !s.TreeExpanded[n.ID] {
+			if err := s.setTreeNodeExpanded(n.ID, depth, true, true); err != nil {
+				return err
+			}
+			continue
+		}
+		if n.Children != nil {
+			if err := s.expandSubtreeOneLevel(n.Children, depth+1); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
