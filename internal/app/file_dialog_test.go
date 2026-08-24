@@ -1619,11 +1619,27 @@ func TestMkdirDialogPrefillsFromCursorEntry(t *testing.T) {
 
 	app.dispatch(keymap.ActionFileMkdir)
 	f := &app.model.FileDialog.Fields[0]
-	if f.Value != "cursor-name.txt" || f.Prefill != "cursor-name.txt" {
-		t.Fatalf("field = %+v, want Value and Prefill cursor-name.txt", f)
+	if f.Value != "cursor-name" || f.Prefill != "cursor-name" {
+		t.Fatalf("field = %+v, want Value and Prefill cursor-name", f)
 	}
 	if !f.PrefillPending {
 		t.Fatal("PrefillPending should be true with a non-empty suggestion")
+	}
+}
+
+func TestMkdirDialogPrefillsDirectoryKeepsFullName(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "photos.backup"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	screen := newScreen(t, 80, 20)
+	app := newApp(t, screen, dir)
+
+	app.dispatch(keymap.ActionFileMkdir)
+	f := &app.model.FileDialog.Fields[0]
+	if f.Value != "photos.backup" || f.Prefill != "photos.backup" {
+		t.Fatalf("field = %+v, want Value and Prefill photos.backup", f)
 	}
 }
 

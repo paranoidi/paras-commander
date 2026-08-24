@@ -144,7 +144,7 @@ func (h *Handler) OpenMkdirDialog(openInInactive bool) {
 	p := h.host.ActivePanel()
 	name := ""
 	if entry, ok := p.CurrentEntry(); ok {
-		name = entry.Name
+		name = mkdirPrefillName(entry)
 	}
 	cursor := 0
 	if name != "" {

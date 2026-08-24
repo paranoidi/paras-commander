@@ -1,11 +1,30 @@
 package dialog
 
 import (
+	"path/filepath"
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/keymap"
+	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
+
+// mkdirPrefillName is the suggested directory name from the cursor entry: files drop the
+// last extension; directories keep the full basename. Names that are only an extension
+// (".gitignore") stay unchanged so the field is not emptied.
+func mkdirPrefillName(entry localfs.Entry) string {
+	name := entry.Name
+	if entry.IsDir() {
+		return name
+	}
+	stem := strings.TrimSuffix(name, filepath.Ext(name))
+	if stem == "" {
+		return name
+	}
+	return stem
+}
 
 // tryMkdirDialogShortcut handles [dialog.mkdir] while the mkdir dialog is open.
 // Returns true when the event was consumed.
