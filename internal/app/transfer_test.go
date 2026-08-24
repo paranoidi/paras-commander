@@ -693,14 +693,17 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
 	}
 	keys := app.activeFooterKeys()
-	if len(keys) != 6 {
-		t.Fatalf("footer len = %d, want Esc + Default + Bookmarks + Active + Inactive + F10", len(keys))
+	if len(keys) != 7 {
+		t.Fatalf("footer len = %d, want Esc + Default + Bookmarks + History + Active + Inactive + F10", len(keys))
 	}
 	if keys[1].Hint != "Default" || keys[1].KeyLabel != "C-r" {
 		t.Fatalf("restore footer = %+v, want C-r Default", keys[1])
 	}
 	if keys[2].Hint != "Bookmarks" || keys[2].KeyLabel != "C-b" {
 		t.Fatalf("bookmarks footer = %+v, want C-b Bookmarks", keys[2])
+	}
+	if keys[3].Hint != "History" || keys[3].KeyLabel != "M-h" {
+		t.Fatalf("history footer = %+v, want M-h History", keys[3])
 	}
 	if !footerHasHint(keys, "Active path ◄", "S-left") {
 		t.Fatalf("footer = %+v, want Active S-left hint", keys)
@@ -715,11 +718,14 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		t.Fatal("symlink dialog should be open")
 	}
 	keys = app.activeFooterKeys()
-	if len(keys) != 3 {
-		t.Fatalf("symlink footer len = %d, want Esc + Paths + F10", len(keys))
+	if len(keys) != 4 {
+		t.Fatalf("symlink footer len = %d, want Esc + Bookmarks + History + F10", len(keys))
 	}
 	if keys[1].Hint != "Bookmarks" {
-		t.Fatalf("symlink footer middle = %+v, want Bookmarks hint", keys[1])
+		t.Fatalf("symlink footer = %+v, want Bookmarks hint at [1]", keys[1])
+	}
+	if keys[2].Hint != "History" {
+		t.Fatalf("symlink footer = %+v, want History hint at [2]", keys[2])
 	}
 }
 
@@ -763,10 +769,33 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 		t.Fatalf("path picker = open %v purpose %v, want ApplyTransferDestination",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
 	}
+	if app.model.PathPicker.Title != "Bookmarks" {
+		t.Fatalf("path picker title = %q, want Bookmarks", app.model.PathPicker.Title)
+	}
+	for _, it := range app.model.PathPicker.Items {
+		if it.Source == "history" {
+			t.Fatalf("bookmarks picker should not include history items, got %+v", it)
+		}
+	}
 	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.PathPicker.Open {
 		t.Fatal("path picker should close")
 	}
+
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModAlt))
+	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != dialog.PathPickerPurposeApplyTransferDestination {
+		t.Fatalf("history path picker = open %v purpose %v, want ApplyTransferDestination",
+			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
+	}
+	if app.model.PathPicker.Title != "History" {
+		t.Fatalf("path picker title = %q, want History", app.model.PathPicker.Title)
+	}
+	for _, it := range app.model.PathPicker.Items {
+		if it.Source != "history" {
+			t.Fatalf("history picker item Source = %q, want history", it.Source)
+		}
+	}
+	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 
 	app.dispatch(keymap.ActionFileSymlink)
@@ -777,6 +806,9 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 	if !app.model.PathPicker.Open || app.model.PathPicker.Purpose != dialog.PathPickerPurposeApplyFileDialogField {
 		t.Fatalf("path picker = open %v purpose %v, want ApplyFileDialogField",
 			app.model.PathPicker.Open, app.model.PathPicker.Purpose)
+	}
+	if app.model.PathPicker.Title != "Bookmarks" {
+		t.Fatalf("symlink path picker title = %q, want Bookmarks", app.model.PathPicker.Title)
 	}
 }
 

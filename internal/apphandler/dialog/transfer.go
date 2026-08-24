@@ -221,7 +221,7 @@ func (h *Handler) handleTransferDestinationNav(event *tcell.EventKey) bool {
 		return false
 	}
 	return h.DestFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
-		dialog.TransferDestSubFocusText, dialog.TransferDestSubFocusPicker, h.OpenPathPickerForTransfer)
+		dialog.TransferDestSubFocusText, dialog.TransferDestSubFocusPicker, h.OpenPathPickerForTransferBookmarks)
 }
 
 // handleTransferEnter handles Enter on the transfer dialog: confirm from the destination

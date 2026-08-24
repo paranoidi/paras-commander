@@ -131,7 +131,7 @@ func (h *Handler) tryFlattenToggle(event *tcell.EventKey) bool {
 func (h *Handler) handleFlattenDestNavKey(event *tcell.EventKey) bool {
 	d := &h.model.FlattenDialog
 	return h.DestFieldNav(event, &d.Destination, &d.DestSubFocus, &d.FocusField,
-		dialog.FlattenDestSubFocusText, dialog.FlattenDestSubFocusPicker, h.OpenPathPickerForFlatten)
+		dialog.FlattenDestSubFocusText, dialog.FlattenDestSubFocusPicker, h.OpenPathPickerForFlattenBookmarks)
 }
 
 // HandleFlattenDialogKey dispatches a key event to the open flatten dialog.

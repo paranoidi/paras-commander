@@ -270,7 +270,7 @@ func (h *Handler) handleFileDialogEnter() {
 		return
 	}
 	if f := h.FocusedField(); f != nil && f.PathPicker && f.PickerFocused {
-		h.OpenPathPickerForFileField(d.FocusedField)
+		h.OpenPathPickerForFileFieldBookmarks(d.FocusedField)
 		return
 	}
 	if h.fileDialogOnMassRenameRadio() {

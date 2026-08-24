@@ -19,22 +19,10 @@ func (h *Handler) OpenBookmarkDialog() {
 	if h.host.InQuickFilterUI() {
 		h.host.ActivePanel().CancelFilter(h.host.ActiveViewportRows())
 	}
-	marks, err := bookmarks.LoadAll(h.host.Config().Bookmarks.File, h.model.UserHomeDir)
+	items, err := h.PathPickerItemsBookmarks()
 	if err != nil {
 		h.host.SetErrorMessage("Bookmarks", err)
 		return
-	}
-	panelPath := h.host.ActivePanel().PathString()
-	home := h.model.UserHomeDir
-	items := make([]dialog.PathPickerItem, len(marks))
-	for i := range marks {
-		cp := filepath.Clean(marks[i].Path)
-		items[i] = dialog.PathPickerItem{
-			Source:      marks[i].Origin.PathPickerSource(),
-			Name:        marks[i].Name,
-			Path:        marks[i].Path,
-			PathMissing: PathEntryMissing(panelPath, home, cp),
-		}
 	}
 	h.model.PathPicker = dialog.PathPickerState{
 		Open:       true,

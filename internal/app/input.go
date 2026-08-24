@@ -268,8 +268,15 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 		rest = append(hints, rest...)
 	}
 	if a.dialogCtrl.PathPickerHostFooterEligible() {
+		var pathHints []menu.FunctionKey
 		if lbl := a.keys.Global.MenuBindingLabel(keymap.ActionBookmarkOpen); lbl != "" {
-			rest = append([]menu.FunctionKey{{KeyLabel: lbl, Hint: "Bookmarks"}}, rest...)
+			pathHints = append(pathHints, menu.FunctionKey{KeyLabel: lbl, Hint: "Bookmarks"})
+		}
+		if lbl := a.keys.Global.MenuBindingLabel(keymap.ActionPanelHistoryDialog); lbl != "" {
+			pathHints = append(pathHints, menu.FunctionKey{KeyLabel: lbl, Hint: "History"})
+		}
+		if len(pathHints) > 0 {
+			rest = append(pathHints, rest...)
 		}
 	}
 	if a.dialogCtrl.MkdirDialogExtractFooterEligible() {

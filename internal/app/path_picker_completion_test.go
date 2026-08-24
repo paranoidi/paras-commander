@@ -101,7 +101,7 @@ func TestPathPickerItemsSkipMissingHistoryPaths(t *testing.T) {
 	}
 	app.model.Primary.History = []string{gone, exists}
 	app.model.Secondary.History = nil
-	items, err := app.dialogCtrl.PathPickerItemsHistoryAndBookmarks()
+	items, err := app.dialogCtrl.PathPickerItemsHistory()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -322,9 +322,9 @@ func (h *Handler) PathPickerQueryWidth() int {
 	return width - 4
 }
 
-// PathPickerItemsHistoryAndBookmarks returns merged passive-first panel histories plus
-// bookmarks (deduped by cleaned path), each with a display line for fuzzy matching.
-func (h *Handler) PathPickerItemsHistoryAndBookmarks() ([]dialog.PathPickerItem, error) {
+// PathPickerItemsHistory returns merged passive-first panel histories (deduped by cleaned
+// path), skipping missing pathlike entries.
+func (h *Handler) PathPickerItemsHistory() ([]dialog.PathPickerItem, error) {
 	passive := h.host.InactivePanel()
 	active := h.host.ActivePanel()
 	panelPath := active.PathString()
@@ -346,12 +346,20 @@ func (h *Handler) PathPickerItemsHistoryAndBookmarks() ([]dialog.PathPickerItem,
 			PathMissing: PathEntryMissing(panelPath, home, cp),
 		})
 	}
+	return items, nil
+}
 
+// PathPickerItemsBookmarks returns fzf-marks and GTK bookmarks (deduped by cleaned path).
+func (h *Handler) PathPickerItemsBookmarks() ([]dialog.PathPickerItem, error) {
+	panelPath := h.host.ActivePanel().PathString()
+	home := h.model.UserHomeDir
 	cfg := h.host.Config()
-	marks, err := bookmarks.LoadAll(cfg.Bookmarks.File, h.model.UserHomeDir)
+	marks, err := bookmarks.LoadAll(cfg.Bookmarks.File, home)
 	if err != nil {
-		return items, err
+		return nil, err
 	}
+	seen := make(map[string]struct{}, len(marks))
+	items := make([]dialog.PathPickerItem, 0, len(marks))
 	for i := range marks {
 		cp := filepath.Clean(marks[i].Path)
 		if _, ok := seen[cp]; ok {
@@ -378,75 +386,41 @@ func PathEntryMissing(panelPath, home, path string) bool {
 	return err != nil
 }
 
-// OpenPathPickerForFlatten opens the fuzzy path/history picker to apply the flatten dialog's
-// destination field.
-func (h *Handler) OpenPathPickerForFlatten() {
-	h.transferDestValidate.Invalidate()
-	items, err := h.PathPickerItemsHistoryAndBookmarks()
-	if err != nil {
-		h.host.SetErrorMessage("Choose path", err)
-		return
-	}
-	if len(items) == 0 {
-		h.host.SetTransientMessage("No paths in history or bookmarks", ui.MessageUrgencyInfo)
-		return
-	}
-	h.model.PathPicker = dialog.PathPickerState{
-		Open:       true,
-		Title:      "Choose path",
-		Purpose:    dialog.PathPickerPurposeApplyFlattenDestination,
-		Query:      "",
-		Items:      items,
-		Focus:      0,
-		Selected:   0,
-		ListScroll: 0,
-	}
-	h.SyncPathPickerRanks()
-}
+// pathPickerListKind selects bookmarks-only vs history-only items for apply-to-field pickers.
+type pathPickerListKind int
 
-// OpenPathPickerForTransfer opens the fuzzy path/history picker to apply the transfer
-// (copy/move) dialog's destination field.
-func (h *Handler) OpenPathPickerForTransfer() {
-	h.transferDestValidate.Invalidate()
-	items, err := h.PathPickerItemsHistoryAndBookmarks()
-	if err != nil {
-		h.host.SetErrorMessage("Choose path", err)
-		return
-	}
-	if len(items) == 0 {
-		h.host.SetTransientMessage("No paths in history or bookmarks", ui.MessageUrgencyInfo)
-		return
-	}
-	h.model.PathPicker = dialog.PathPickerState{
-		Open:       true,
-		Title:      "Choose path",
-		Purpose:    dialog.PathPickerPurposeApplyTransferDestination,
-		Query:      "",
-		Items:      items,
-		Focus:      0,
-		Selected:   0,
-		ListScroll: 0,
-	}
-	h.SyncPathPickerRanks()
-}
+const (
+	pathPickerListBookmarks pathPickerListKind = iota
+	pathPickerListHistory
+)
 
-// OpenPathPickerForFileField opens the fuzzy path/history picker to apply a generic file
-// dialog's path-picker field (fieldIndex into FileDialogState.Fields).
-func (h *Handler) OpenPathPickerForFileField(fieldIndex int) {
-	items, err := h.PathPickerItemsHistoryAndBookmarks()
+func (h *Handler) openPathPickerApply(purpose dialog.PathPickerPurpose, kind pathPickerListKind, fileFieldIndex int) {
+	var (
+		items                     []dialog.PathPickerItem
+		err                       error
+		title, emptyMsg, errTitle string
+	)
+	switch kind {
+	case pathPickerListBookmarks:
+		title, emptyMsg, errTitle = "Bookmarks", "No bookmarks", "Bookmarks"
+		items, err = h.PathPickerItemsBookmarks()
+	case pathPickerListHistory:
+		title, emptyMsg, errTitle = "History", "No paths in history", "History"
+		items, err = h.PathPickerItemsHistory()
+	}
 	if err != nil {
-		h.host.SetErrorMessage("Choose path", err)
+		h.host.SetErrorMessage(errTitle, err)
 		return
 	}
 	if len(items) == 0 {
-		h.host.SetTransientMessage("No paths in history or bookmarks", ui.MessageUrgencyInfo)
+		h.host.SetTransientMessage(emptyMsg, ui.MessageUrgencyInfo)
 		return
 	}
 	h.model.PathPicker = dialog.PathPickerState{
 		Open:           true,
-		Title:          "Choose path",
-		Purpose:        dialog.PathPickerPurposeApplyFileDialogField,
-		FileFieldIndex: fieldIndex,
+		Title:          title,
+		Purpose:        purpose,
+		FileFieldIndex: fileFieldIndex,
 		Query:          "",
 		Items:          items,
 		Focus:          0,
@@ -454,6 +428,46 @@ func (h *Handler) OpenPathPickerForFileField(fieldIndex int) {
 		ListScroll:     0,
 	}
 	h.SyncPathPickerRanks()
+}
+
+// OpenPathPickerForFlattenBookmarks opens the bookmarks path picker to apply the flatten
+// dialog's destination field.
+func (h *Handler) OpenPathPickerForFlattenBookmarks() {
+	h.transferDestValidate.Invalidate()
+	h.openPathPickerApply(dialog.PathPickerPurposeApplyFlattenDestination, pathPickerListBookmarks, 0)
+}
+
+// OpenPathPickerForFlattenHistory opens the history path picker to apply the flatten
+// dialog's destination field.
+func (h *Handler) OpenPathPickerForFlattenHistory() {
+	h.transferDestValidate.Invalidate()
+	h.openPathPickerApply(dialog.PathPickerPurposeApplyFlattenDestination, pathPickerListHistory, 0)
+}
+
+// OpenPathPickerForTransferBookmarks opens the bookmarks path picker to apply the transfer
+// (copy/move) dialog's destination field.
+func (h *Handler) OpenPathPickerForTransferBookmarks() {
+	h.transferDestValidate.Invalidate()
+	h.openPathPickerApply(dialog.PathPickerPurposeApplyTransferDestination, pathPickerListBookmarks, 0)
+}
+
+// OpenPathPickerForTransferHistory opens the history path picker to apply the transfer
+// (copy/move) dialog's destination field.
+func (h *Handler) OpenPathPickerForTransferHistory() {
+	h.transferDestValidate.Invalidate()
+	h.openPathPickerApply(dialog.PathPickerPurposeApplyTransferDestination, pathPickerListHistory, 0)
+}
+
+// OpenPathPickerForFileFieldBookmarks opens the bookmarks path picker to apply a generic
+// file dialog's path-picker field (fieldIndex into FileDialogState.Fields).
+func (h *Handler) OpenPathPickerForFileFieldBookmarks(fieldIndex int) {
+	h.openPathPickerApply(dialog.PathPickerPurposeApplyFileDialogField, pathPickerListBookmarks, fieldIndex)
+}
+
+// OpenPathPickerForFileFieldHistory opens the history path picker to apply a generic file
+// dialog's path-picker field (fieldIndex into FileDialogState.Fields).
+func (h *Handler) OpenPathPickerForFileFieldHistory(fieldIndex int) {
+	h.openPathPickerApply(dialog.PathPickerPurposeApplyFileDialogField, pathPickerListHistory, fieldIndex)
 }
 
 // ArmPathPickerValidateTimer (re)arms the debounced "does the typed query resolve to an
