@@ -99,6 +99,36 @@ func TestListDirMissingDirectoryErrorNoDuplicatePath(t *testing.T) {
 	}
 }
 
+func TestEntryFromDirEntrySkipsVanishedName(t *testing.T) {
+	dir := t.TempDir()
+	keep := filepath.Join(dir, "harbor.txt")
+	gone := filepath.Join(dir, "willow.txt")
+	mustWriteFile(t, keep)
+	mustWriteFile(t, gone)
+
+	dirEntries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	if err := os.Remove(gone); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+
+	var names []string
+	for _, de := range dirEntries {
+		entry, keepEntry, err := entryFromDirEntry(dir, de)
+		if err != nil {
+			t.Fatalf("entryFromDirEntry(%q): %v", de.Name(), err)
+		}
+		if keepEntry {
+			names = append(names, entry.Name)
+		}
+	}
+	if len(names) != 1 || names[0] != "harbor.txt" {
+		t.Fatalf("names = %v, want [harbor.txt]", names)
+	}
+}
+
 func entryNames(entries []Entry) []string {
 	names := make([]string, 0, len(entries))
 	for _, entry := range entries {

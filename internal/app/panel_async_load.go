@@ -119,6 +119,12 @@ func (a *App) applyPanelAsyncLoad(p panelAsyncLoadPayload) bool {
 		}
 		return true
 	}
+	// Same-directory listing that started before an optimistic mutation: drop it so pruned
+	// rows are not resurrected. Navigation applies (loc != Path) still land even if epoch
+	// moved — Path is still the old directory until ApplyListing.
+	if p.req.Loc.Equal(pan.Path) && p.req.ListingEpoch != pan.ListingEpoch {
+		return true
+	}
 	pan.GitignoreActive = p.gitignoreActive
 	pan.DotfilesHiddenActive = p.dotfilesHiddenActive
 	if err := pan.ApplyListing(p.loc, p.entries, p.req.SelectedName, p.req.ViewportRows, p.req.IndexFallback, p.req.CenterRecalledCursor); err != nil {

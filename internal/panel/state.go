@@ -187,6 +187,10 @@ type State struct {
 	// still hold the pre-navigation listing until the load applies, so this is how a renderer
 	// identifies which row in that old listing the in-flight load corresponds to.
 	ListingPendingPath string
+	// ListingEpoch increments on every in-memory listing mutation (ApplyListing, optimistic
+	// remove/rename/insert). Async and periodic applies that started against an older epoch are
+	// dropped so a pre-mutation ReadDir cannot resurrect rows the UI already pruned.
+	ListingEpoch uint64
 	// ShowLoadingGlyph is set by the app once a pending load has been in flight longer than its
 	// working-indicator delay; render checks this (not just ListingPending) so nothing is drawn
 	// before that threshold.
@@ -305,21 +309,25 @@ func (s *State) Load(path string) error {
 
 // Refresh reloads the current path. When the entry under the cursor still exists, it is re-selected by name;
 // otherwise the prior row index is restored (clamped), matching MC-style behavior after moves/deletes.
-// A no-op while a load is already in flight (ListingPending): Path still holds the pre-load
-// directory until that load lands, so scheduling a second one here would race it on the shared
-// generation counter and could clobber a real navigation with a stale-directory reload — the
-// in-flight load already brings fresh contents for wherever it lands.
+// A no-op while a load is already in flight to a *different* directory (ListingPendingPath != Path):
+// Path still holds the pre-navigation directory until that load lands, so scheduling a same-dir
+// refresh here would race it on the shared generation counter and could clobber a real navigation.
+// An in-flight *same-directory* load is superseded (generation bump drops the stale result) so a
+// post-mutation refresh is not dropped behind an older periodic/Refresh ReadDir.
 func (s *State) Refresh(viewportRows int) error {
 	return s.RefreshWithHook(viewportRows, nil)
 }
 
 // RefreshWithHook is Refresh, running onApplied once after the reload lands (sync or async).
-// ponytail: like Refresh, this no-ops while a load is already in flight (ListingPending), and in
-// that case onApplied is simply dropped rather than queued — an existing property of Refresh, not
-// new here. Upgrade path: a per-panel pending-hook queue, if this is ever observed to matter.
+// When a same-directory load is already pending, a new load is scheduled (superseding the old
+// one); onApplied from the superseded request is dropped with its generation. When a
+// cross-directory navigation is pending, this is a no-op and onApplied is not queued.
 func (s *State) RefreshWithHook(viewportRows int, onApplied func()) error {
 	if s.ListingPending {
-		return nil
+		pending := s.ListingPendingPath
+		if pending != "" && pending != s.Path.String() {
+			return nil
+		}
 	}
 	priorCursor := s.Cursor
 	entry, ok := s.CurrentEntry()
@@ -1368,6 +1376,7 @@ func (s *State) load(loc pathloc.Path, selectedName string, viewportRows int, in
 			Rollback:             remote.rollback,
 			OnApplied:            remote.onApplied,
 			SyncHistoryHead:      remote.syncHistoryHead,
+			ListingEpoch:         s.ListingEpoch,
 		}) {
 			s.ListingPending = true
 			s.ListingPendingPath = loc.String()
@@ -1414,6 +1423,8 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	if err != nil {
 		return err
 	}
+
+	s.ListingEpoch++
 
 	previousPath := s.Path
 	sameDirReload := previousPath.Equal(listingLoc)

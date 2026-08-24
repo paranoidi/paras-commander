@@ -19,6 +19,7 @@ type panelRefreshApplyPayload struct {
 	Entries              []fsbackend.Entry
 	GitignoreActive      bool
 	DotfilesHiddenActive bool
+	ListingEpoch         uint64
 }
 
 func (a *App) runPanelRefreshTicker(interval time.Duration, stop <-chan struct{}) {
@@ -58,8 +59,9 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 	}
 	snap := p.ListingRefreshSnapshot(p.Path, time.Duration(a.config.SFTP.ListTimeoutSecs)*time.Second)
 	path := p.Path
+	epoch := p.ListingEpoch
 	baseline := panel.BackendEntriesFromPanel(p.Entries)
-	go func(panelID int, snap panel.ListingRefreshSnapshot, path pathloc.Path, baseline []fsbackend.Entry) {
+	go func(panelID int, snap panel.ListingRefreshSnapshot, path pathloc.Path, epoch uint64, baseline []fsbackend.Entry) {
 		defer a.panelRefreshInFlight[panelID].Store(false)
 		entries, listingLoc, gitignoreActive, dotfilesHiddenActive, err := panel.FetchListing(context.Background(), snap)
 		if err != nil {
@@ -74,8 +76,9 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 			Entries:              entries,
 			GitignoreActive:      gitignoreActive,
 			DotfilesHiddenActive: dotfilesHiddenActive,
+			ListingEpoch:         epoch,
 		}))
-	}(panelID, snap, path, baseline)
+	}(panelID, snap, path, epoch, baseline)
 }
 
 func (a *App) applyPanelListingRefresh(p panelRefreshApplyPayload) bool {
@@ -84,6 +87,9 @@ func (a *App) applyPanelListingRefresh(p panelRefreshApplyPayload) bool {
 		return false
 	}
 	if !pan.Path.Equal(p.Path) {
+		return false
+	}
+	if p.ListingEpoch != pan.ListingEpoch {
 		return false
 	}
 	if fsbackend.EntriesListingEqual(p.Entries, panel.BackendEntriesFromPanel(pan.Entries)) {

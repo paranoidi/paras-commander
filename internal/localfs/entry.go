@@ -1,6 +1,7 @@
 package localfs
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -86,27 +87,45 @@ func ListDir(path string, opts ListOptions) (DirectoryListing, error) {
 			continue
 		}
 
-		path := filepath.Join(cleanPath, name)
-		info, err := dirEntry.Info()
+		entry, keep, err := entryFromDirEntry(cleanPath, dirEntry)
 		if err != nil {
-			return DirectoryListing{}, fmt.Errorf("read metadata for %q: %w", path, err)
+			return DirectoryListing{}, err
 		}
-
-		dev, devOK := entryDevice(info)
-		entries = append(entries, Entry{
-			Name:         name,
-			Path:         path,
-			Type:         classify(info.Mode()),
-			Size:         info.Size(),
-			Mode:         info.Mode(),
-			ModifiedAt:   info.ModTime(),
-			Dev:          dev,
-			DevValid:     devOK,
-			AccessDenied: entryAccessDenied(path, info),
-		})
+		if !keep {
+			continue
+		}
+		entries = append(entries, entry)
 	}
 
 	return DirectoryListing{Path: cleanPath, Entries: entries}, nil
+}
+
+// entryFromDirEntry stats one ReadDir result. When the name vanishes between ReadDir and Info
+// (e.g. a concurrent move/delete), keep is false and the caller skips it — aborting the whole
+// listing for that race would toast a transient lstat error and leave a stale panel.
+func entryFromDirEntry(cleanPath string, dirEntry os.DirEntry) (Entry, bool, error) {
+	name := dirEntry.Name()
+	path := filepath.Join(cleanPath, name)
+	info, err := dirEntry.Info()
+	if err != nil {
+		if os.IsNotExist(err) || errors.Is(err, fs.ErrNotExist) {
+			return Entry{}, false, nil
+		}
+		return Entry{}, false, fmt.Errorf("read metadata for %q: %w", path, err)
+	}
+
+	dev, devOK := entryDevice(info)
+	return Entry{
+		Name:         name,
+		Path:         path,
+		Type:         classify(info.Mode()),
+		Size:         info.Size(),
+		Mode:         info.Mode(),
+		ModifiedAt:   info.ModTime(),
+		Dev:          dev,
+		DevValid:     devOK,
+		AccessDenied: entryAccessDenied(path, info),
+	}, true, nil
 }
 
 // IsDir returns true if the entry is a directory.

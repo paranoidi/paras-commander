@@ -65,13 +65,19 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 // RefreshBothPanels re-lists both panels, walking up when their directory vanished (e.g. a
 // completed job removed the active panel's cwd), then applies any pending post-duplicate focus
 // (see ReconcilePendingPanelFocus) and refreshes the quick-view preview.
+// When reloads are async, ApplyQuickViewPreviewImmediately also runs from each panel's OnApplied
+// so the overlay tracks the post-reload cursor rather than the stale pre-refresh listing.
 func (h *Handler) RefreshBothPanels() {
 	viewportRows := h.host.ActiveViewportRows()
-	_ = h.model.Primary.RefreshOrNavigateToExistingAncestor(viewportRows)
-	_ = h.model.Secondary.RefreshOrNavigateToExistingAncestor(viewportRows)
+	onApplied := func() {
+		h.applyPendingPanelFocus()
+		h.preview.ApplyQuickViewPreviewImmediately()
+	}
+	_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
+	_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
 	// Immediate attempt for the (still common) case where nothing is actually async — e.g. no
 	// scheduler wired. When the reload above is async, this attempt is a harmless no-op (entries
-	// are still stale) and ReconcilePendingPanelFocus retries it once the reload lands.
+	// are still stale) and OnApplied / ReconcilePendingPanelFocus retries once the reload lands.
 	h.applyPendingPanelFocus()
 	h.preview.ApplyQuickViewPreviewImmediately()
 }
@@ -84,12 +90,22 @@ func (h *Handler) RefreshBothPanels() {
 // mechanism is reserved for duplicate's post-copy-job focus (see ReconcilePendingPanelFocus).
 func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
 	viewportRows := h.host.ActiveViewportRows()
+	wrap := func() {
+		if onApplied != nil {
+			onApplied()
+		}
+		h.preview.ApplyQuickViewPreviewImmediately()
+	}
 	if panelID == ui.PrimaryPanel {
-		_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
-		_ = h.model.Secondary.RefreshOrNavigateToExistingAncestor(viewportRows)
+		_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, wrap)
+		_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, func() {
+			h.preview.ApplyQuickViewPreviewImmediately()
+		})
 	} else {
-		_ = h.model.Primary.RefreshOrNavigateToExistingAncestor(viewportRows)
-		_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, onApplied)
+		_ = h.model.Primary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, func() {
+			h.preview.ApplyQuickViewPreviewImmediately()
+		})
+		_ = h.model.Secondary.RefreshOrNavigateToExistingAncestorWithHook(viewportRows, wrap)
 	}
 	h.preview.ApplyQuickViewPreviewImmediately()
 }
@@ -415,6 +431,7 @@ func (h *Handler) executeRename() {
 	panelDir := p.Path
 	panelID := h.model.ActivePanel
 	h.CloseFileDialog()
+	p.RenameEntry(entry.Path, plan.NewName, h.host.PanelViewportRows(panelID))
 	if focusAfter {
 		h.RefreshBothPanelsWithFocus(panelID, func() {
 			h.host.PanelByID(panelID).SelectVisibleEntryCentered(plan.NewName, h.host.PanelViewportRows(panelID))
@@ -483,6 +500,12 @@ func (h *Handler) executeMkdir() {
 	h.CloseFileDialog()
 	active := h.host.ActivePanel()
 	viewportRows := h.host.ActiveViewportRows()
+	active.InsertEntry(localfs.Entry{
+		Name: createdName,
+		Path: plan.Path,
+		Type: localfs.EntryDirectory,
+		Mode: 0o755,
+	}, viewportRows)
 	focusName := ""
 	if openInInactive {
 		if priorEntryName != "" && priorEntryName != createdName {
