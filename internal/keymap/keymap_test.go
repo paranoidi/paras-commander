@@ -282,6 +282,15 @@ func TestDefaultOverlayMapsLeftToCloseView(t *testing.T) {
 			}
 		})
 	}
+	id, ok := bundle.Dedup.Lookup(left)
+	if !ok || id != ActionDedupCollapse {
+		t.Fatalf("dedup overlay left = %q %v, want dedup.collapse", id, ok)
+	}
+	right := tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone)
+	id, ok = bundle.Dedup.Lookup(right)
+	if !ok || id != ActionDedupToggleNode {
+		t.Fatalf("dedup overlay right = %q %v, want dedup.toggle-node", id, ok)
+	}
 }
 
 func TestDefaultMessagesOverlayMapsF8ToClear(t *testing.T) {

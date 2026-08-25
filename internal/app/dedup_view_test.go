@@ -204,13 +204,15 @@ func TestDedupViewSkipsSymlinks(t *testing.T) {
 	}
 }
 
-func TestDedupViewPlainLeftDoesNotCloseView(t *testing.T) {
+func TestDedupViewPlainLeftCollapseDoesNotCloseView(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("dup"), 0o644); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "b.txt"), []byte("dup"), 0o644); err != nil {
-		t.Fatal(err)
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	screen := newScreen(t, 80, 24)
@@ -221,14 +223,25 @@ func TestDedupViewPlainLeftDoesNotCloseView(t *testing.T) {
 		t.Fatalf("ViewMode = %v, want ViewDedup", app.model.ViewMode)
 	}
 
-	// Plain Left has no dedup binding (tree collapse moved to Alt+Left): it must not close
-	// the view or quit the app, just do nothing.
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlT, 0, tcell.ModCtrl))
+	if got := len(app.model.DedupList); got != 1 {
+		t.Fatalf("groups-mode rows = %d, want 1 (collapsed header)", got)
+	}
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	if got := len(app.model.DedupList); got != 2 {
+		t.Fatalf("after plain Right expand rows = %d, want 2", got)
+	}
+
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if quit {
 		t.Fatal("KeyLeft in dedup view must not quit the application")
 	}
 	if app.model.ViewMode != ui.ViewDedup {
 		t.Fatalf("ViewMode = %v, want ViewDedup after KeyLeft", app.model.ViewMode)
+	}
+	if got := len(app.model.DedupList); got != 1 {
+		t.Fatalf("after plain Left collapse rows = %d, want 1", got)
 	}
 }
 

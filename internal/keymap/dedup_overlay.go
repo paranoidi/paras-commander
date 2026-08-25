@@ -8,8 +8,8 @@ func DefaultDedupOverlayKeys() map[string][]string {
 		ActionDedupClose:       {"esc"},
 		ActionDedupToggleSort:  {"C-s"}, // match the file-list sort shortcut (panel.sort-dialog)
 		ActionDedupToggleEmpty: {"M-e"},
-		ActionDedupToggleNode:  {"M-right"},
-		ActionDedupCollapse:    {"M-left"}, // collapse node, or jump to parent
+		ActionDedupToggleNode:  {"right", "M-right"},
+		ActionDedupCollapse:    {"left", "M-left"}, // collapse node, or jump to parent
 		ActionDedupToggleTree:  {"C-t"},    // groups tree ↔ directory tree
 		ActionDedupCollapseAll: {"M-C-left"},
 		ActionDedupExpandAll:   {"M-C-right"},
