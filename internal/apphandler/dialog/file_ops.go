@@ -63,7 +63,7 @@ func (h *Handler) TryDispatchFileOps(actionID string) bool {
 }
 
 // RefreshBothPanels re-lists both panels, walking up when their directory vanished (e.g. a
-// completed job removed the active panel's cwd), then applies any pending post-duplicate focus
+// completed job removed the active panel's cwd), then applies any pending post-transfer focus
 // (see ReconcilePendingPanelFocus) and refreshes the quick-view preview.
 // When reloads are async, ApplyQuickViewPreviewImmediately also runs from each panel's OnApplied
 // so the overlay tracks the post-reload cursor rather than the stale pre-refresh listing.
@@ -87,7 +87,8 @@ func (h *Handler) RefreshBothPanels() {
 // own reload lands (sync or async) — used by rename/mkdir, whose target already exists on disk by
 // the time this runs, so the very next reload of that specific panel is guaranteed to contain it.
 // Unlike RefreshBothPanels this does not touch pendingPanelFocus/applyPendingPanelFocus — that
-// mechanism is reserved for duplicate's post-copy-job focus (see ReconcilePendingPanelFocus).
+// mechanism is reserved for post-job focus (duplicate / transfer-to-other-panel; see
+// ReconcilePendingPanelFocus).
 func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
 	viewportRows := h.host.ActiveViewportRows()
 	wrap := func() {
@@ -110,12 +111,12 @@ func (h *Handler) RefreshBothPanelsWithFocus(panelID int, onApplied func()) {
 	h.preview.ApplyQuickViewPreviewImmediately()
 }
 
-// ReconcilePendingPanelFocus retries a select-and-center scheduled after duplicate's transfer job
-// enqueue: the duplicated file doesn't exist yet at enqueue time (AddTransferJob only queues an
-// async copy), so the focus that follows it can't be tied to a specific reload the way
-// rename/mkdir's can — it lands later, off of the job's own terminal-event refresh. Called from
-// App.reconcileAfterEvent after every event (including that later refresh), matching that
-// chokepoint's idempotent, retry-until-it-holds design.
+// ReconcilePendingPanelFocus retries a deferred select scheduled after a transfer job enqueue
+// (duplicate focus-after, or copy/move into the other panel): the target may not exist yet at
+// enqueue time (AddTransferJob only queues an async job), so the focus can't be tied to a
+// specific reload the way rename/mkdir's can — it lands later, off of the job's own
+// terminal-event refresh. Called from App.reconcileAfterEvent after every event (including that
+// later refresh), matching that chokepoint's idempotent, retry-until-it-holds design.
 func (h *Handler) ReconcilePendingPanelFocus() {
 	h.applyPendingPanelFocus()
 }

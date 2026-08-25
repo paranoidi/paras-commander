@@ -170,6 +170,9 @@ const (
 	DefaultRemoveDanglingDirs = true
 	// DefaultRenameFocusAfter is the initial state of the rename dialog focus-after-rename checkbox.
 	DefaultRenameFocusAfter = false
+	// DefaultFocusOtherPanelAfterTransfer selects the first transferred entry in the other
+	// panel after a copy/move into that panel's cwd, when the user has not moved its cursor.
+	DefaultFocusOtherPanelAfterTransfer = true
 
 	// DefaultListingFormat is the persisted default_listing_format value (Name and size only).
 	DefaultListingFormat = ListingFormatBrief

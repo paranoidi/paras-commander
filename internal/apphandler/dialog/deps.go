@@ -91,14 +91,22 @@ type Deps struct {
 }
 
 // pendingPanelFocus defers a select-and-scroll until the target entry actually appears in the
-// panel's listing. Used only for duplicate's post-copy focus: the queued copy job's terminal
-// event refreshes the panel on its own schedule, decoupled from executeDuplicate's own reload, so
-// the target can't be tied to one specific reload (unlike rename/mkdir, which use
+// panel's listing. Used for duplicate's post-copy focus and for copy/move into the other panel:
+// the queued job's terminal event refreshes the panel on its own schedule, decoupled from
+// enqueue, so the target can't be tied to one specific reload (unlike rename/mkdir, which use
 // RefreshBothPanelsWithFocus's one-shot OnApplied hook instead).
 type pendingPanelFocus struct {
 	panelID int
 	listDir string
-	name    string
+	// name is a single basename (duplicate focus-after); empty when using candidateNames.
+	name string
+	// candidateNames are top-level dest names for transfer-to-other-panel focus; apply picks
+	// the first that appears in the panel's visible listing order.
+	candidateNames []string
+	// snapCursorPath, when non-empty, must still match CurrentEntry at apply time or focus is aborted.
+	snapCursorPath string
+	// center selects SelectVisibleEntryCentered; false uses SelectVisibleEntryInViewport.
+	center bool
 }
 
 // Handler owns the file-operation dialog family: opening dialogs, dispatching their keys, and
@@ -133,9 +141,9 @@ type Handler struct {
 	deleteDialogPanelPath   string
 	deleteDialogPrunedPaths []string
 
-	// pendingFocus defers duplicate's post-copy SelectVisibleEntryCentered until the target entry
-	// appears in the panel's listing; retried from App.reconcileAfterEvent via
-	// ReconcilePendingPanelFocus.
+	// pendingFocus defers post-job select-and-scroll (duplicate focus-after, or copy/move into
+	// the other panel) until the target entry appears in the panel's listing; retried from
+	// App.reconcileAfterEvent via ReconcilePendingPanelFocus.
 	pendingFocus pendingPanelFocus
 
 	// massRenameHistory is the in-memory, session-only (never persisted) list of recently-executed

@@ -10,11 +10,13 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// AddTransferJob enqueues a copy/move job through Deps.Jobs.
+// AddTransferJob enqueues a copy/move job through Deps.Jobs, then optionally arms
+// focus-other-panel-after-transfer when the destination is the inactive panel's cwd.
 func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest string, startPaused bool, preserve jobs.TransferPreserve) {
 	h.jobs.AddTransferJob(jobsctrl.TransferJobRequest{
 		Type: jobType, Sources: sources, Dest: dest, StartPaused: startPaused, Preserve: preserve,
 	})
+	h.maybeScheduleTransferOtherPanelFocus(jobType, sources, dest, preserve)
 }
 
 // TransferPreserveFromConfig reads the live copy-preserve settings (permissions/timestamps)

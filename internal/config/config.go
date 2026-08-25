@@ -491,6 +491,9 @@ type OperationsConfig struct {
 	FlattenRemoveEmptyDirs bool `toml:"flatten_remove_empty_dirs"`
 	// RenameFocusAfter is the default for the rename dialog focus-after-rename checkbox.
 	RenameFocusAfter bool `toml:"rename_focus_after"`
+	// FocusOtherPanelAfterTransfer selects the first transferred entry in the inactive panel
+	// after a copy/move into that panel's current directory, when the user has not moved its cursor.
+	FocusOtherPanelAfterTransfer bool `toml:"focus_other_panel_after_transfer"`
 	// RemoveDanglingDirs prompts (delete confirm dialog, default Yes) to remove directories
 	// left empty by a browser move or delete job after it completes.
 	RemoveDanglingDirs bool `toml:"remove_dangling_directories"`
@@ -609,8 +612,9 @@ func Default() Config {
 			FlattenDefaultLocation:     DefaultFlattenDefaultLocation,
 			FlattenRecursive:           DefaultFlattenRecursive,
 			FlattenRemoveEmptyDirs:     DefaultFlattenRemoveEmptyDirs,
-			RenameFocusAfter:           DefaultRenameFocusAfter,
-			RemoveDanglingDirs:         DefaultRemoveDanglingDirs,
+			RenameFocusAfter:             DefaultRenameFocusAfter,
+			FocusOtherPanelAfterTransfer: DefaultFocusOtherPanelAfterTransfer,
+			RemoveDanglingDirs:           DefaultRemoveDanglingDirs,
 		},
 		Logging: LoggingConfig{
 			Enabled: false,

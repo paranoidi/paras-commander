@@ -236,6 +236,7 @@ Copy/move file-transfer behavior.
 | `flatten_recursive` | bool | `false` | Default state of the flatten dialog's "recursive" checkbox. |
 | `flatten_remove_empty_dirs` | bool | `true` | Default state of the flatten dialog's "remove empty directories" checkbox. |
 | `rename_focus_after` | bool | `false` | Default state of the rename dialog's "focus after rename" checkbox. |
+| `focus_other_panel_after_transfer` | bool | `true` | After a copy/move into the other panel's current directory completes, select the first transferred entry (panel listing order) and scroll it into view — only if the user has not moved that panel's cursor since the job was queued. |
 | `remove_dangling_directories` | bool | `true` | After a move or delete job finishes, prompt (default answer: Yes) to remove directories that were left empty by the operation. |
 
 ## `[logging]`
