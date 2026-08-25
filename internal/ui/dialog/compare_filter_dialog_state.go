@@ -7,12 +7,12 @@ import (
 
 // CompareFilterDialogState is the compare category filter picker modal.
 // Focus 0-5 are filter radio rows; 6 = OK; 7 = Cancel.
-// OriginalFocus holds the focus index active when the dialog opened, used to
-// restore the filter if the user cancels.
+// Filter is the pending radio selection (updated by Space/Enter/Alt mnemonic;
+// applied to the view only on OK).
 type CompareFilterDialogState struct {
-	Open          bool
-	Focus         int
-	OriginalFocus int
+	Open   bool
+	Focus  int
+	Filter comparepkg.Filter
 }
 
 func compareFilterDialogNumContent() int {

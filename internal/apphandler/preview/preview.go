@@ -664,6 +664,11 @@ func (h *Handler) quickViewFollowDirectory() {
 	ov := &h.model.QuickViewDirOverlay
 	h.model.QuickViewDirOverlayPanelID = followerID
 	if err := h.populateQuickViewDirOverlay(ov, driver, follower, targetPath, followerID); err != nil {
+		// populateQuickViewDirOverlay resets *ov before its fetch, so a failure here (e.g. the
+		// target directory vanished between selection and populate) must not leave ov active with
+		// a blanked-out Path — clear it the same way the "no target" branch above does.
+		h.ClearQuickViewDirOverlay()
+		h.patchColumnPreviewMessage("", "Quick view: cannot read selection")
 		return
 	}
 	h.model.QuickViewDirOverlayActive = true

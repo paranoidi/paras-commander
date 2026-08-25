@@ -549,6 +549,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"sync", "reconcile", "copy", "duplicate"},
 		},
 		{
+			ID:          ActionCompareToggleEmpty,
+			Views:       HelpCompare,
+			Title:       "Toggle empty files",
+			Section:     "Navigation",
+			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
+			Keywords:    []string{"empty", "zero", "hide", "ignore"},
+		},
+		{
 			ID:          ActionDedupClose,
 			Views:       HelpDedup,
 			Title:       "Close view",

@@ -15,11 +15,11 @@ func (h *Handler) OpenFilterDialog() {
 	if h.model.ViewMode != ui.ViewCompare {
 		return
 	}
-	focus := dialog.FocusForCompareFilter(h.model.CompareView.Filter)
+	cur := h.model.CompareView.Filter
 	h.model.CompareFilterDialog = dialog.CompareFilterDialogState{
-		Open:          true,
-		Focus:         focus,
-		OriginalFocus: focus,
+		Open:   true,
+		Focus:  dialog.FocusForCompareFilter(cur),
+		Filter: cur,
 	}
 }
 
@@ -27,23 +27,19 @@ func (h *Handler) closeFilterDialog() {
 	h.model.CompareFilterDialog = dialog.CompareFilterDialogState{}
 }
 
-func (h *Handler) cancelFilterDialog() {
-	d := &h.model.CompareFilterDialog
-	if f, ok := dialog.CompareFilterForFocus(d.OriginalFocus); ok {
-		h.SetFilter(f)
-	}
-	h.closeFilterDialog()
-}
-
 func (h *Handler) confirmFilterDialog() {
+	d := &h.model.CompareFilterDialog
+	h.SetFilter(d.Filter)
 	h.closeFilterDialog()
 }
 
-// applyFilterDialogFocus applies the filter for the given focus index when the user
-// activates a radio row (Enter/Space/Alt mnemonic), not on arrow-key navigation.
-func (h *Handler) applyFilterDialogFocus(focus int) {
+// selectFilterDialogRadio sets the pending radio selection for focus without
+// applying it to the view (Space/Enter/Alt mnemonic).
+func (h *Handler) selectFilterDialogRadio(focus int) {
+	d := &h.model.CompareFilterDialog
 	if f, ok := dialog.CompareFilterForFocus(focus); ok {
-		h.SetFilter(f)
+		d.Filter = f
+		d.Focus = focus
 	}
 }
 
@@ -59,18 +55,18 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) {
 		return
 	}
 	if dialog.AltDialogCancel(event) {
-		h.cancelFilterDialog()
+		h.closeFilterDialog()
 		return
 	}
 	if event.Key() == tcell.KeyEsc {
-		h.cancelFilterDialog()
+		h.closeFilterDialog()
 		return
 	}
 	if event.Key() == tcell.KeyEnter {
 		if d.Focus == dialog.CompareFilterDialogCancelIndex() {
-			h.cancelFilterDialog()
+			h.closeFilterDialog()
 		} else if d.Focus < dialog.CompareFilterDialogOKIndex() {
-			h.applyFilterDialogFocus(d.Focus)
+			h.selectFilterDialogRadio(d.Focus)
 		} else {
 			h.confirmFilterDialog()
 		}
@@ -78,16 +74,14 @@ func (h *Handler) HandleFilterDialogKey(event *tcell.EventKey) {
 	}
 	if event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && event.Rune() == ' ' &&
 		d.Focus < dialog.CompareFilterDialogOKIndex() {
-		h.applyFilterDialogFocus(d.Focus)
+		h.selectFilterDialogRadio(d.Focus)
 		return
 	}
-	// Alt+letter shortcuts navigate to a filter option and apply live.
+	// Alt+letter selects a filter option (pending until OK), like sort-dialog mnemonics.
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		for _, row := range comparepkg.FilterDialogRadios() {
 			if filterShortcutMatches(event.Rune(), row.Shortcut) {
-				newFocus := dialog.FocusForCompareFilter(row.Filter)
-				d.Focus = newFocus
-				h.applyFilterDialogFocus(newFocus)
+				h.selectFilterDialogRadio(dialog.FocusForCompareFilter(row.Filter))
 				return
 			}
 		}

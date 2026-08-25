@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -90,8 +91,13 @@ func TestQuickViewUpdatesAfterDeletedDirectoryRefresh(t *testing.T) {
 		t.Fatal(err)
 	}
 	app.dialogCtrl.RefreshBothPanels()
-	applyNextInterruptEvent(t, app, screen) // Primary async reload
-	applyNextInterruptEvent(t, app, screen) // Secondary async reload
+	// Both panel reloads race an unrelated leftover async reload of the quick-view overlay's
+	// pre-delete snapshot (scheduled by the setup ApplyQuickViewPreviewImmediately above, before
+	// alpha was removed) for the same bounded screen event queue, so drain until both panels have
+	// actually landed rather than assuming a fixed 2-event order.
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return !app.model.Primary.ListingPending && !app.model.Secondary.ListingPending
+	})
 
 	if !app.model.QuickViewDirOverlayActive {
 		t.Fatal("quick view overlay should stay active after delete refresh")

@@ -55,18 +55,23 @@ func (a *App) tryDispatchCompare(actionID string) bool {
 			a.compareCtrl.OpenMergeDialog()
 		}
 		return true
+	case keymap.ActionCompareToggleEmpty:
+		if a.model.ViewMode == ui.ViewCompare {
+			a.compareCtrl.ToggleIgnoreEmpty()
+		}
+		return true
 	default:
 		return false
 	}
 }
 
-// compareVisibleRows returns the merged twin-panel row count used for Compare-list paging
-// and scroll-into-view math.
+// compareVisibleRows returns the merged twin-panel list row count used for Compare-list
+// paging and scroll-into-view math (must match drawCompareView's PanelListRows).
 func (a *App) compareVisibleRows() int {
 	width, height := a.screen.Size()
 	layout := a.layoutForTerminalSize(width, height)
 	rect := ui.MergeTwinPanelRects(layout.Primary, layout.Secondary, a.model.SplitOrientation)
-	return max(0, rect.Height-2)
+	return ui.PanelListRows(rect)
 }
 
 // moveCompareSelection moves the Compare-list cursor by delta rows (clamped), scrolling into
@@ -152,10 +157,7 @@ func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 		if st.Selected < len(rows)-1 {
 			st.Selected++
 		}
-		width, height := a.screen.Size()
-		layout := a.layoutForTerminalSize(width, height)
-		rect := ui.MergeTwinPanelRects(layout.Primary, layout.Secondary, a.model.SplitOrientation)
-		a.compareCtrl.EnsureSelectionVisible(max(0, rect.Height-2))
+		a.compareCtrl.EnsureSelectionVisible(a.compareVisibleRows())
 		return false
 	}
 
@@ -181,7 +183,7 @@ func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 	return false
 }
 
-func compareViewFooterKeys(keys *keymap.Map, filter comparepkg.Filter) []menu.FunctionKey {
+func compareViewFooterKeys(keys *keymap.Map, filter comparepkg.Filter, ignoreEmpty bool) []menu.FunctionKey {
 	if keys == nil {
 		return nil
 	}
@@ -193,6 +195,13 @@ func compareViewFooterKeys(keys *keymap.Map, filter comparepkg.Filter) []menu.Fu
 			Hint:            "Category",
 			HintShiftPrefix: filterLabel,
 		})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionCompareToggleEmpty); lbl != "" {
+		hint := "Ignore empty"
+		if ignoreEmpty {
+			hint = "Show empty"
+		}
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint})
 	}
 	out = append(out, menu.FunctionKey{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Merge"})
 	return out

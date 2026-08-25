@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -405,6 +406,56 @@ func TestDrawCompareViewStripsCommonPathPrefixSingleSided(t *testing.T) {
 	}
 }
 
+func TestDrawCompareViewUsesFullListHeight(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	const panelH = 14
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: panelH},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: panelH},
+	}
+	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
+	visibleRows := PanelListRows(rect)
+	if visibleRows <= 0 {
+		t.Fatalf("PanelListRows() = %d, want > 0", visibleRows)
+	}
+	lastListY := rect.Y + 2 + visibleRows - 1
+	if lastListY != rect.Y+rect.Height-2 {
+		t.Fatalf("last list row y = %d, want %d (row above bottom border)", lastListY, rect.Y+rect.Height-2)
+	}
+
+	rows := make([]comparepkg.Row, visibleRows)
+	for i := range rows {
+		name := fmt.Sprintf("file-%02d.txt", i)
+		rows[i] = comparepkg.Row{
+			Kind:         comparepkg.KindContentDiff,
+			PrimaryRel:   name,
+			SecondaryRel: name,
+			HashDone:     true,
+		}
+	}
+	snap := comparepkg.Snapshot{
+		PrimaryRoot:   pathloc.MustParse("/left-root"),
+		SecondaryRoot: pathloc.MustParse("/right-root"),
+		Phase:         comparepkg.PhaseDone,
+		Rows:          rows,
+	}
+	view := CompareViewState{Selected: visibleRows - 1, Filter: comparepkg.FilterAll}
+
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: rows}, theme.Default(), false, "", SplitHorizontal)
+
+	want := fmt.Sprintf("file-%02d.txt", visibleRows-1)
+	got := rowTextAt(screen, rect.X+2, lastListY, 20)
+	if got != want {
+		t.Fatalf("last list row text = %q, want %q (empty/missing last item)", got, want)
+	}
+}
+
 func rowTextAt(screen tcell.SimulationScreen, x, y, width int) string {
 	var b strings.Builder
 	for dx := 0; dx < width; dx++ {
@@ -426,4 +477,64 @@ func cellStyleAt(screen tcell.SimulationScreen, x, y int) tcell.Style {
 	}
 	_, style, _ := screen.Get(x, y)
 	return style
+}
+
+func TestDrawCompareViewActiveHashingGlyphIsGreen(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 14)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 11},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 11},
+	}
+	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
+	contentX := rect.X + 2
+	contentW := rect.Width - 4
+	pathW := (contentW - compareStatusCol - 1) / 2
+	statusX := contentX + pathW + 1
+	lineY := rect.Y + 2
+
+	rows := []comparepkg.Row{
+		{
+			Kind:         comparepkg.KindEqual,
+			PrimaryRel:   "active.bin",
+			SecondaryRel: "active.bin",
+			Hashing:      true,
+		},
+		{
+			Kind:         comparepkg.KindEqual,
+			PrimaryRel:   "queued.bin",
+			SecondaryRel: "queued.bin",
+		},
+	}
+	snap := comparepkg.Snapshot{
+		PrimaryRoot:   pathloc.MustParse("/left-root"),
+		SecondaryRoot: pathloc.MustParse("/right-root"),
+		Phase:         comparepkg.PhaseHashing,
+		Rows:          rows,
+		HashTotal:     2,
+	}
+	view := CompareViewState{Selected: 0, Filter: comparepkg.FilterAll, FocusColumn: CompareColumnPrimary}
+
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: rows}, styles, false, "", SplitHorizontal)
+
+	wantFG, _, _ := styles.CompareHashing.Decompose()
+	// Pending disk glyph is a Nerd Font private-use rune; the simulation screen often
+	// reports it as a space cell — read the status column origin directly.
+	_, activeStyle, _ := screen.Get(statusX, lineY)
+	activeFG, _, _ := activeStyle.Decompose()
+	if activeFG != wantFG {
+		t.Fatalf("active hashing glyph fg = %v, want compare.hashing %v", activeFG, wantFG)
+	}
+
+	_, queuedStyle, _ := screen.Get(statusX, lineY+1)
+	queuedFG, _, _ := queuedStyle.Decompose()
+	if queuedFG == wantFG {
+		t.Fatalf("queued pending glyph should not use compare.hashing green")
+	}
 }

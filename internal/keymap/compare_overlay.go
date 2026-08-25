@@ -10,6 +10,7 @@ func DefaultCompareOverlayKeys() map[string][]string {
 		ActionCompareResetFilter: {"S-F3"},
 		ActionCompareRefresh:     {"M-r"},
 		ActionCompareMerge:       {"F5"},
+		ActionCompareToggleEmpty: {"M-e"},
 	}
 }
 

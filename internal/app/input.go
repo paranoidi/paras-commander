@@ -347,7 +347,7 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		), true
 	}
 	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
-		rest := compareViewFooterKeys(a.keys.Compare, a.model.CompareView.Filter)
+		rest := compareViewFooterKeys(a.keys.Compare, a.model.CompareView.Filter, a.model.CompareView.IgnoreEmpty)
 		rest = append(rest, menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
 		out := footerWithEscClose(rest)
 		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"}

@@ -2,6 +2,8 @@
 package compare
 
 import (
+	"fmt"
+
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -43,7 +45,38 @@ type Row struct {
 	Size         int64
 	Hash         [32]byte
 	HashDone     bool
-	Err          string
+	// Hashing is true while a worker is actively reading this row's file(s).
+	// Distinct from pending (!HashDone): queued rows stay pending without Hashing.
+	Hashing bool
+	Err     string
+}
+
+// MarkHashing sets Hashing on pending rows whose primary and/or secondary rel is
+// currently being content-hashed. rows may be mutated in place; the same slice is returned.
+func MarkHashing(rows []Row, hashingPrimary, hashingSecondary map[string]struct{}) []Row {
+	if len(hashingPrimary) == 0 && len(hashingSecondary) == 0 {
+		for i := range rows {
+			rows[i].Hashing = false
+		}
+		return rows
+	}
+	for i := range rows {
+		rows[i].Hashing = false
+		if rows[i].HashDone {
+			continue
+		}
+		if rel := rows[i].PrimaryRel; rel != "" {
+			if _, ok := hashingPrimary[rel]; ok {
+				rows[i].Hashing = true
+			}
+		}
+		if rel := rows[i].SecondaryRel; rel != "" {
+			if _, ok := hashingSecondary[rel]; ok {
+				rows[i].Hashing = true
+			}
+		}
+	}
+	return rows
 }
 
 // Snapshot is an immutable compare result generation.
@@ -149,15 +182,44 @@ func FilterForFocus(focus int) (Filter, bool) {
 	return radios[focus].Filter, true
 }
 
-// FilteredRows returns rows from snap that match filter.
-func FilteredRows(snap Snapshot, filter Filter) []Row {
+// FilteredRows returns rows from snap that match filter. When ignoreEmpty is true,
+// rows with Size == 0 are omitted.
+func FilteredRows(snap Snapshot, filter Filter, ignoreEmpty bool) []Row {
 	out := make([]Row, 0, len(snap.Rows))
 	for _, row := range snap.Rows {
+		if ignoreEmpty && row.Size == 0 {
+			continue
+		}
 		if FilterMatches(filter, row.Kind) {
 			out = append(out, row)
 		}
 	}
 	return out
+}
+
+// CountEmptyRows returns how many snapshot rows have Size == 0.
+func CountEmptyRows(snap Snapshot) int {
+	n := 0
+	for _, row := range snap.Rows {
+		if row.Size == 0 {
+			n++
+		}
+	}
+	return n
+}
+
+// EndLabel returns the compare view top-right chrome label for the active category
+// filter, appending " · N empty hidden" when empties are ignored and at least one
+// zero-byte row is hidden.
+func EndLabel(filter Filter, ignoreEmpty bool, snap Snapshot) string {
+	label := FilterLabel(filter)
+	if !ignoreEmpty {
+		return label
+	}
+	if n := CountEmptyRows(snap); n > 0 {
+		return fmt.Sprintf("%s · %d empty hidden", label, n)
+	}
+	return label
 }
 
 // CycleFilter advances f.

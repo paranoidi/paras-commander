@@ -109,6 +109,7 @@ const (
 	ActionCompareResetFilter = "compare.reset-filter"
 	ActionCompareRefresh     = "compare.refresh"
 	ActionCompareMerge       = "compare.merge"
+	ActionCompareToggleEmpty = "compare.toggle-empty"
 
 	// Dedup (find-duplicates) view
 	ActionDedupClose       = "dedup.close"
@@ -354,6 +355,7 @@ var KnownActions = map[string]struct{}{
 	ActionCompareResetFilter: {},
 	ActionCompareRefresh:     {},
 	ActionCompareMerge:       {},
+	ActionCompareToggleEmpty: {},
 
 	ActionDedupClose:       {},
 	ActionDedupToggleSort:  {},

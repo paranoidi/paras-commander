@@ -138,6 +138,7 @@ func (h *Handler) open(primary, secondary pathloc.Path, showHidden bool, volGate
 	h.model.CompareView = ui.CompareViewState{
 		Filter:      comparepkg.FilterAll,
 		FocusColumn: ui.CompareColumnPrimary,
+		IgnoreEmpty: true,
 	}
 
 	hs := hashwalk.FromCompareConfig(h.config.Compare, h.diskIgnore, volGate)
@@ -224,9 +225,20 @@ func (h *Handler) SetFilter(f comparepkg.Filter) {
 	h.ensureSelectionVisible(0)
 }
 
-// FilteredRows returns snapshot rows matching the active filter.
+// ToggleIgnoreEmpty flips whether zero-byte compare rows are hidden.
+func (h *Handler) ToggleIgnoreEmpty() {
+	if h.model.ViewMode != ui.ViewCompare {
+		return
+	}
+	st := &h.model.CompareView
+	st.IgnoreEmpty = !st.IgnoreEmpty
+	h.ensureSelectionVisible(0)
+}
+
+// FilteredRows returns snapshot rows matching the active filter and empty-file toggle.
 func (h *Handler) FilteredRows() []comparepkg.Row {
-	return comparepkg.FilteredRows(h.model.CompareSnapshot, h.model.CompareView.Filter)
+	st := h.model.CompareView
+	return comparepkg.FilteredRows(h.model.CompareSnapshot, st.Filter, st.IgnoreEmpty)
 }
 
 // EnsureSelectionVisible keeps the cursor row visible for visibleRows height.
@@ -257,6 +269,13 @@ func (h *Handler) ensureSelectionVisible(visibleRows int) {
 	}
 	if st.Selected >= st.ListScroll+visibleRows {
 		st.ListScroll = st.Selected - visibleRows + 1
+	}
+	maxScroll := max(0, n-visibleRows)
+	if st.ListScroll > maxScroll {
+		st.ListScroll = maxScroll
+	}
+	if st.ListScroll < 0 {
+		st.ListScroll = 0
 	}
 }
 

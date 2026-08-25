@@ -25,8 +25,10 @@ func (t Theme) SymbolCompareSecondaryOnly() string {
 func (t Theme) SymbolCompareContentDiff() string {
 	return t.compareSymbol(SymbolKeyCompareContentDiff, "\u2260")
 }
-func (t Theme) SymbolComparePending() string { return t.compareSymbol(SymbolKeyComparePending, "?") }
-func (t Theme) SymbolCompareError() string   { return t.compareSymbol(SymbolKeyCompareError, "!") }
+func (t Theme) SymbolComparePending() string {
+	return t.compareSymbol(SymbolKeyComparePending, "\U000f02ca")
+}
+func (t Theme) SymbolCompareError() string { return t.compareSymbol(SymbolKeyCompareError, "!") }
 
 func (t Theme) compareSymbol(key, fallback string) string {
 	if t.Symbols != nil {

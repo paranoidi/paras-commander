@@ -40,7 +40,7 @@ func drawCompareView(
 	primary := data.Primary
 	secondary := data.Secondary
 	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, orientation)
-	endLabel := panelSelectionSizePadded(comparepkg.FilterLabel(view.Filter))
+	endLabel := panelSelectionSizePadded(comparepkg.EndLabel(view.Filter, view.IgnoreEmpty, snap))
 	title := compareViewTitle(snap)
 	layoutChrome := drawAuxPanelChrome(screen, rect, title, endLabel, true, chromeBlocked, false, styles)
 	bg := layoutChrome.ContentBG
@@ -71,7 +71,8 @@ func drawCompareView(
 	primitive.Text(screen, contentX, headerY, leftPathW, primaryHeader, headerStyle)
 	primitive.Text(screen, rightX, headerY, pathW, secondaryHeader, headerStyle)
 
-	visibleRows := rect.Y + rect.Height - 2 - y
+	// Same chrome math as file panels / dedup: title + path header + bottom frame.
+	visibleRows := PanelListRows(rect)
 	if visibleRows <= 0 {
 		drawCompareBottomLegend(screen, rect, layoutChrome, "", styles)
 		return
@@ -129,7 +130,7 @@ func drawCompareView(
 		}
 		primitive.Text(screen, contentX+leftPathW, lineY, comparePathGapCol, "", lineStyle)
 		glyph := compareGlyphCentered(compareRowGlyph(styles, entry))
-		primitive.Text(screen, statusX, lineY, compareStatusCol, glyph, lineStyle)
+		primitive.Text(screen, statusX, lineY, compareStatusCol, glyph, compareGlyphStyle(styles, entry, lineStyle))
 		primitive.Text(screen, rightX-1, lineY, 1, "", rightStyle)
 		if rightPath == "" {
 			effectiveRight := absentStyle
@@ -146,7 +147,7 @@ func drawCompareView(
 	if view.Selected >= 0 && view.Selected < len(rows) {
 		row := rows[view.Selected]
 		glyph := compareRowGlyph(styles, row)
-		legend = comparepkg.RowLegend(row.Kind, glyph)
+		legend = comparepkg.RowLegend(row, glyph)
 		if row.Err != "" {
 			legend = primitive.FitPathForWidth(row.Err, rect.Width-4)
 		}
@@ -249,14 +250,18 @@ func compareGlyphCentered(glyph string) string {
 	return strings.Repeat(" ", left) + glyph + strings.Repeat(" ", pad-left)
 }
 
+// compareGlyphStyle colors the pending disk glyph green while a worker is actively
+// hashing that row; queued pending rows keep the ordinary row style.
+func compareGlyphStyle(styles theme.Theme, row comparepkg.Row, lineStyle tcell.Style) tcell.Style {
+	if !row.Hashing || !comparepkg.RowPending(row) {
+		return lineStyle
+	}
+	return styles.CompareHashingOn(lineStyle)
+}
+
 func compareRowGlyph(styles theme.Theme, row comparepkg.Row) string {
-	if !row.HashDone && row.Kind != comparepkg.KindContentDiff && row.Err == "" {
-		if row.PrimaryRel != "" && row.SecondaryRel != "" && row.PrimaryRel == row.SecondaryRel {
-			return styles.SymbolComparePending()
-		}
-		if row.Kind == comparepkg.KindPrimaryOnly || row.Kind == comparepkg.KindSecondaryOnly || row.PrimaryRel == "" || row.SecondaryRel == "" {
-			return styles.SymbolComparePending()
-		}
+	if comparepkg.RowPending(row) {
+		return styles.SymbolComparePending()
 	}
 	if row.Err != "" {
 		return styles.SymbolCompareError()

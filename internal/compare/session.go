@@ -21,6 +21,7 @@ type hashJob struct {
 	side int // 0 primary, 1 secondary
 	rel  string
 	loc  pathloc.Path
+	size int64
 }
 
 // Session runs walk + hash + classify in the background.
@@ -147,12 +148,17 @@ func (s *Session) run(ctx context.Context) {
 	pErr := make(map[string]string)
 	sErr := make(map[string]string)
 
-	jobs := make([]hashJob, 0, len(primary)+len(secondary))
-	for _, f := range primary {
-		jobs = append(jobs, hashJob{side: 0, rel: f.Rel, loc: f.Abs})
-	}
-	for _, f := range secondary {
-		jobs = append(jobs, hashJob{side: 1, rel: f.Rel, loc: f.Abs})
+	jobs := hashJobsNeeded(primary, secondary)
+	if len(jobs) == 0 {
+		s.publish(Snapshot{
+			PrimaryRoot:     s.primaryRoot,
+			SecondaryRoot:   s.secondaryRoot,
+			Phase:           PhaseDone,
+			Rows:            Classify(primary, secondary, pHash, sHash, pErr, sErr),
+			WalkedPrimary:   len(primary),
+			WalkedSecondary: len(secondary),
+		})
+		return
 	}
 
 	workers := s.opts.HashWorkers
@@ -178,14 +184,11 @@ func (s *Session) run(ctx context.Context) {
 	var wg sync.WaitGroup
 	var hashed atomic.Int32
 	var mu sync.Mutex
+	hashingP := map[string]struct{}{}
+	hashingS := map[string]struct{}{}
+	lastRows := Classify(primary, secondary, pHash, sHash, pErr, sErr)
 
-	const flushInterval = 50
-
-	flush := func() {
-		mu.Lock()
-		rows := Classify(primary, secondary, pHash, sHash, pErr, sErr)
-		h := int(hashed.Load())
-		mu.Unlock()
+	publishRows := func(rows []Row, h int) {
 		s.publish(Snapshot{
 			PrimaryRoot:     s.primaryRoot,
 			SecondaryRoot:   s.secondaryRoot,
@@ -198,6 +201,15 @@ func (s *Session) run(ctx context.Context) {
 		})
 	}
 
+	// stampPublish copies lastRows, marks in-flight hashes, and publishes (no re-Classify).
+	stampPublish := func() {
+		mu.Lock()
+		rows := MarkHashing(append([]Row(nil), lastRows...), hashingP, hashingS)
+		h := int(hashed.Load())
+		mu.Unlock()
+		publishRows(rows, h)
+	}
+
 	for i := 0; i < workers; i++ {
 		wg.Add(1)
 		buf := make([]byte, bufSize)
@@ -207,8 +219,22 @@ func (s *Session) run(ctx context.Context) {
 				if ctx.Err() != nil {
 					return
 				}
+				mu.Lock()
+				if job.side == 0 {
+					hashingP[job.rel] = struct{}{}
+				} else {
+					hashingS[job.rel] = struct{}{}
+				}
+				mu.Unlock()
+				stampPublish()
+
 				sum, err := HashFile(ctx, job.loc, buf, s.opts.MaxHashBytes)
 				mu.Lock()
+				if job.side == 0 {
+					delete(hashingP, job.rel)
+				} else {
+					delete(hashingS, job.rel)
+				}
 				if err != nil {
 					if job.side == 0 {
 						pErr[job.rel] = err.Error()
@@ -220,10 +246,13 @@ func (s *Session) run(ctx context.Context) {
 				} else {
 					sHash[job.rel] = sum
 				}
+				n := int(hashed.Add(1))
+				// Reclassify on every completion so finished small files leave Pending
+				// immediately (not only every N hashes) while larger jobs are still running.
+				lastRows = Classify(primary, secondary, pHash, sHash, pErr, sErr)
+				rows := MarkHashing(append([]Row(nil), lastRows...), hashingP, hashingS)
 				mu.Unlock()
-				if n := hashed.Add(1); n%flushInterval == 0 {
-					flush()
-				}
+				publishRows(rows, n)
 			}
 		}()
 	}

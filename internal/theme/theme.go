@@ -259,6 +259,10 @@ type Theme struct {
 	JobsIconsDecision  tcell.Style
 	JobsIconsCompleted tcell.Style
 
+	// CompareHashing styles the compare-view pending disk glyph while a file is
+	// actively being content-hashed (queued pending rows keep the row style).
+	CompareHashing tcell.Style
+
 	// Symbols holds global glyphs (e.g. Nerd Font job status icons) referenced by the UI
 	// from the [symbols] section of the theme file.
 	Symbols map[string]string
@@ -371,6 +375,11 @@ func (t Theme) DialogProgressLabelOnBar(onFill bool) tcell.Style {
 		return mergeForegroundOnBar(t.DialogProgressLabelOnFill, t.DialogProgressFill)
 	}
 	return mergeForegroundOnBar(t.DialogProgressLabelOnTrack, t.DialogProgressTrack)
+}
+
+// CompareHashingOn returns the compare-view hashing-glyph foreground merged onto lineStyle's background.
+func (t Theme) CompareHashingOn(lineStyle tcell.Style) tcell.Style {
+	return mergeForegroundOnSurface(t.CompareHashing, lineStyle)
 }
 
 func mergeForegroundOnBar(labelSrc, bar tcell.Style) tcell.Style {
@@ -1006,6 +1015,7 @@ var requiredStyleKeys = []string{
 	"jobs.icons.failed",
 	"jobs.icons.decision",
 	"jobs.icons.completed",
+	"compare.hashing",
 	"menu.progress.done",
 	"menu.progress.remaining",
 	"menu.job.scanning",
@@ -1024,7 +1034,7 @@ var requiredStyleKeys = []string{
 var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
 
 // styleSectionRoots are top-level TOML tables for semantic styles (keys inside omit this prefix).
-var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu"}
+var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare"}
 
 var styleSectionRootSet = makeStyleKeySet(styleSectionRoots)
 
@@ -1524,6 +1534,8 @@ func parse(data []byte) (Theme, error) {
 		JobsIconsDecision:  styles["jobs.icons.decision"],
 		JobsIconsCompleted: styles["jobs.icons.completed"],
 
+		CompareHashing: styles["compare.hashing"],
+
 		Symbols: symbols,
 
 		FooterKey:        styles["footer.key"],
@@ -1657,7 +1669,7 @@ func collectStyleSpecs(raw map[string]any) (map[string]styleSpec, error) {
 		found = true
 	}
 	if !found {
-		return nil, fmt.Errorf("theme must define at least one style section ([menu], [panel], [dialog], [jobs], [message], [footer], [fuzzy], or [terminal])")
+		return nil, fmt.Errorf("theme must define at least one style section ([menu], [panel], [dialog], [jobs], [message], [footer], [fuzzy], [terminal], [leader_menu], or [compare])")
 	}
 	for key := range specs {
 		if !requiredStyleKeySet[key] {

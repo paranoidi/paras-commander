@@ -8,6 +8,7 @@ type CompareViewState struct {
 	ListScroll  int
 	Filter      comparepkg.Filter
 	FocusColumn CompareColumnFocus
+	IgnoreEmpty bool // hide zero-byte rows (default true on open)
 }
 
 // CompareColumnFocus is which path column has keyboard focus for selection.

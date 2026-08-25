@@ -1,6 +1,7 @@
 package compare
 
 import (
+	"fmt"
 	"sync/atomic"
 	"testing"
 
@@ -53,6 +54,9 @@ func TestOpenSetsPrimaryColumnFocus(t *testing.T) {
 
 	if model.CompareView.FocusColumn != ui.CompareColumnPrimary {
 		t.Fatalf("open FocusColumn = %v, want primary", model.CompareView.FocusColumn)
+	}
+	if !model.CompareView.IgnoreEmpty {
+		t.Fatal("open IgnoreEmpty = false, want true")
 	}
 }
 
@@ -142,5 +146,54 @@ func TestDiscardReturnSkipsOnClose(t *testing.T) {
 	h.Close()
 	if model.ViewMode != ui.ViewBrowser {
 		t.Fatalf("ViewMode = %v, want browser", model.ViewMode)
+	}
+}
+
+func TestEnsureSelectionVisibleScrollsWhenCursorPastViewport(t *testing.T) {
+	const visible = 5
+	rows := make([]comparepkg.Row, 12)
+	for i := range rows {
+		name := fmt.Sprintf("row-%02d.txt", i)
+		rows[i] = comparepkg.Row{PrimaryRel: name, SecondaryRel: name, Kind: comparepkg.KindEqual, HashDone: true}
+	}
+	model := &ui.Model{
+		CompareView:     ui.CompareViewState{Selected: 0, ListScroll: 0},
+		CompareSnapshot: comparepkg.Snapshot{Rows: rows, Phase: comparepkg.PhaseDone},
+	}
+	h := New(Deps{Host: compareHandlerHost{}, Model: model})
+
+	// Cursor on last painted row (index visible-1) must not scroll yet.
+	model.CompareView.Selected = visible - 1
+	h.EnsureSelectionVisible(visible)
+	if model.CompareView.ListScroll != 0 {
+		t.Fatalf("at bottom of first page: ListScroll = %d, want 0", model.CompareView.ListScroll)
+	}
+
+	// One more Down must scroll so the selection stays in view.
+	model.CompareView.Selected = visible
+	h.EnsureSelectionVisible(visible)
+	if model.CompareView.ListScroll != 1 {
+		t.Fatalf("past viewport: ListScroll = %d, want 1", model.CompareView.ListScroll)
+	}
+	if model.CompareView.Selected < model.CompareView.ListScroll ||
+		model.CompareView.Selected >= model.CompareView.ListScroll+visible {
+		t.Fatalf("selected %d outside [%d, %d)", model.CompareView.Selected,
+			model.CompareView.ListScroll, model.CompareView.ListScroll+visible)
+	}
+}
+
+func TestEnsureSelectionVisibleClampsMaxScroll(t *testing.T) {
+	rows := make([]comparepkg.Row, 10)
+	for i := range rows {
+		rows[i] = comparepkg.Row{PrimaryRel: "f.txt", Kind: comparepkg.KindPrimaryOnly, HashDone: true}
+	}
+	model := &ui.Model{
+		CompareView:     ui.CompareViewState{Selected: 9, ListScroll: 100},
+		CompareSnapshot: comparepkg.Snapshot{Rows: rows, Phase: comparepkg.PhaseDone},
+	}
+	h := New(Deps{Host: compareHandlerHost{}, Model: model})
+	h.EnsureSelectionVisible(4)
+	if model.CompareView.ListScroll != 6 {
+		t.Fatalf("ListScroll = %d, want 6 (max 10-4)", model.CompareView.ListScroll)
 	}
 }

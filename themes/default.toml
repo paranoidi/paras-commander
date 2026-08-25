@@ -229,10 +229,10 @@ track = { fg = "white", bg = "bright_black" }
 
 [leader_menu]                 # Esc function menu letters
 surface = { bg = "black" }
-	group = { fg = "cyan", bold = true }
-	key     = { fg = "magenta", bold = true }
-arrow   = { fg = "bright_black" }
-label   = { fg = "white" }
+group = { fg = "cyan", bold = true }
+key = { fg = "magenta", bold = true }
+arrow = { fg = "bright_black" }
+label = { fg = "white" }
 
 [dialog.help]
 section = { fg = "cyan", bold = true }
@@ -268,6 +268,9 @@ queued = { fg = "yellow", bold = true }
 scanning = { fg = "bright_cyan", bold = true }
 canceled = { fg = "bright_red", bold = true }
 
+[compare]
+hashing = { fg = "bright_green", bold = true }
+
 [symbols]
 working = "\uf017"
 path_picker = "\uf0ca"
@@ -278,7 +281,6 @@ stash = "\uef0d"
 # U+F06D1 (nf-md-eye_off_outline); use 8-digit escape — \uf06d1 is U+F06D + "1"
 hidden_dotfiles = "\U000F06D1"
 
-
 [symbols.dialog.checkbox]
 checked = "\U000F0856"
 unchecked = "\U000F0131"
@@ -288,7 +290,6 @@ selected = "\U000F043E"
 unselected = "\U000F043D"
 
 [symbols.jobs.list]
-
 scanning = "\uf110"
 queued = "\u23F3"
 running = "\uf144"
@@ -353,5 +354,5 @@ relocated = "\u2194"
 primary_only = "<"
 secondary_only = ">"
 content_diff = "\u2260"
-pending = "?"
+pending = "\U000f02ca"
 error = "!"

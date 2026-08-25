@@ -10,7 +10,7 @@ func DefaultDedupOverlayKeys() map[string][]string {
 		ActionDedupToggleEmpty: {"M-e"},
 		ActionDedupToggleNode:  {"right", "M-right"},
 		ActionDedupCollapse:    {"left", "M-left"}, // collapse node, or jump to parent
-		ActionDedupToggleTree:  {"C-t"},    // groups tree ↔ directory tree
+		ActionDedupToggleTree:  {"C-t"},            // groups tree ↔ directory tree
 		ActionDedupCollapseAll: {"M-C-left"},
 		ActionDedupExpandAll:   {"M-C-right"},
 		ActionDedupPrevDir:     {"M-up"},

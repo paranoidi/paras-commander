@@ -116,7 +116,12 @@ func Classify(primary, secondary []FileRecord, pHash, sHash map[string][32]byte,
 		}
 	}
 
-	// Pending hashes (not yet computed).
+	// Unpaired files without a hash yet: still hashing only when a same-size unpaired
+	// peer exists on the other side (hashJobsNeeded). Otherwise hashing was skipped —
+	// mark HashDone so the pending glyph does not stick forever (e.g. unique-size or
+	// sole-side empty files).
+	pUnpairedSizes := unpairedSizeSet(pByRel, sByRel, pConsumed)
+	sUnpairedSizes := unpairedSizeSet(sByRel, pByRel, sConsumed)
 	for rel, f := range pByRel {
 		if pConsumed[rel] {
 			continue
@@ -124,7 +129,8 @@ func Classify(primary, secondary []FileRecord, pHash, sHash map[string][32]byte,
 		if pErr[rel] != "" {
 			continue
 		}
-		rows = append(rows, Row{Kind: KindPrimaryOnly, PrimaryRel: f.rel, Size: f.size})
+		done := !sUnpairedSizes[f.size]
+		rows = append(rows, Row{Kind: KindPrimaryOnly, PrimaryRel: f.rel, Size: f.size, HashDone: done})
 	}
 	for rel, f := range sByRel {
 		if sConsumed[rel] {
@@ -133,7 +139,8 @@ func Classify(primary, secondary []FileRecord, pHash, sHash map[string][32]byte,
 		if sErr[rel] != "" {
 			continue
 		}
-		rows = append(rows, Row{Kind: KindSecondaryOnly, SecondaryRel: f.rel, Size: f.size})
+		done := !pUnpairedSizes[f.size]
+		rows = append(rows, Row{Kind: KindSecondaryOnly, SecondaryRel: f.rel, Size: f.size, HashDone: done})
 	}
 
 	sortRows(rows)
