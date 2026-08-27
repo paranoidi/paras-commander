@@ -479,6 +479,19 @@ func panelSyncFollowListNavAction(actionID string) bool {
 	}
 }
 
+// browserFolderChangeNavAction reports whether actionID changes the active panel's current
+// directory (as opposed to just moving the cursor within it). Kept separate from
+// panelSyncFollowListNavAction, which also drives sync-follow's held-nav debounce — a distinct
+// concern that folder-change actions should not affect.
+func browserFolderChangeNavAction(actionID string) bool {
+	switch actionID {
+	case keymap.ActionNavOpen, keymap.ActionNavParent:
+		return true
+	default:
+		return false
+	}
+}
+
 // panelSyncFollowNavCoalesceContext is true when latched sync should mirror the file-list cursor
 // (not the selections strip) from the active driver panel.
 func (a *App) panelSyncFollowNavCoalesceContext() bool {

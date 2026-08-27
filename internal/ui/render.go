@@ -488,7 +488,8 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		TerminalRows:   terminalRows,
 		StatusCmdWidth: statusCmdWidth(model, reserveMenu),
 	})
-	primitive.Fill(screen, primitive.Rect{Width: width, Height: height}, ' ', tcell.StyleDefault)
+	_, backgroundBG, _ := styles.PanelInactiveSurface.Decompose()
+	primitive.Fill(screen, primitive.Rect{Width: width, Height: height}, ' ', tcell.StyleDefault.Background(backgroundBG))
 
 	if layout.TooSmall {
 		primitive.Text(screen, 0, 0, width, "Terminal too small", styles.MessageInfo)

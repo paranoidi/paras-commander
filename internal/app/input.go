@@ -744,13 +744,22 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	}
 	quit, rendered = a.finishResolvedKeyboardAction(nextAction)
 	if rendered {
-		if panelSyncFollowListNavAction(nextAction) && a.browserListNavPartialRenderEligible() {
-			a.renderBrowserListNavUpdate()
+		if a.browserListNavPartialRenderEligibleFor(nextAction) {
+			a.renderBrowserListNavUpdate(a.model.ActivePanel)
 		} else {
 			a.render()
 		}
 	}
 	return quit, rendered
+}
+
+// browserListNavPartialRenderEligibleFor reports whether actionID's render can repaint only the
+// active panel (cursor-only list nav or a folder change), per browserListNavPartialRenderEligible.
+func (a *App) browserListNavPartialRenderEligibleFor(actionID string) bool {
+	if !panelSyncFollowListNavAction(actionID) && !browserFolderChangeNavAction(actionID) {
+		return false
+	}
+	return a.browserListNavPartialRenderEligible()
 }
 
 // handleFilterLeaderKey handles the InputModeFilter case in handleKey. handled=false means

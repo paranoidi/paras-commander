@@ -18,9 +18,12 @@ type ListingSnapshot struct {
 
 // SnapshotParent returns a parent-directory preview for carousel mode.
 // The cursor highlights the directory name of the current path (the exited child).
-// The second bool is false when the pane should be blank (filesystem root, load error, pending listing).
+// The second bool is false when the pane should be blank (filesystem root, load error).
+// While a navigation is in flight (ListingPending), this still reads off s.Path/s.Entries — the
+// last successfully loaded directory, unchanged until ApplyListing lands — rather than blanking,
+// so the parent pane doesn't flash empty for the one frame the async load takes to land.
 func (s *State) SnapshotParent(viewportRows int) (ListingSnapshot, bool) {
-	if s.Path.IsZero() || s.ListingPending {
+	if s.Path.IsZero() {
 		s.storeCarouselParentCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
@@ -39,17 +42,16 @@ func (s *State) SnapshotParent(viewportRows int) (ListingSnapshot, bool) {
 }
 
 // SnapshotChild returns a child-directory preview when the cursor is on a directory.
-// The second bool is false when the pane should be blank (file under cursor, load error, pending listing).
-// While CarouselChildPreviewCoalesce is set, BuildColumns uses the cache only; this method is not called.
+// The second bool is false when the pane should be blank (file under cursor, load error).
+// While CarouselChildPreviewCoalesce is set, BuildColumns uses the cache only; this method is not
+// called. Otherwise this reads off s.Entries/cursor regardless of ListingPending — during a
+// pending navigation those still reflect the last successfully loaded directory, so the child
+// pane doesn't flash empty for the one frame the async load takes to land.
 func (s *State) SnapshotChild(viewportRows int) (ListingSnapshot, bool) {
 	if s.CarouselChildPreviewCoalesce {
 		if s.CarouselChildCachePaintDuringCoalesce() {
 			return s.CarouselSideCache.Child, true
 		}
-		return ListingSnapshot{}, false
-	}
-	if s.ListingPending {
-		s.invalidateCarouselChildCache()
 		return ListingSnapshot{}, false
 	}
 	entry, ok := s.CurrentEntry()

@@ -966,7 +966,11 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		out.didRender = true
 	case panelAsyncLoadPayload:
 		if a.applyPanelAsyncLoad(d) {
-			a.render()
+			if a.browserListNavPartialRenderEligible() {
+				a.renderBrowserListNavUpdate(d.panelID)
+			} else {
+				a.render()
+			}
 			out.didRender = true
 		}
 	case treeChildResultsReadyPayload:

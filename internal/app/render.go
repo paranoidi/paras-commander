@@ -82,9 +82,9 @@ func (a *App) browserListNavPartialRenderEligible() bool {
 	return true
 }
 
-// renderBrowserListNavUpdate repaints the active file-list column and menu-bar permission tail
-// without redrawing the inactive panel (avoids disk-usage row work on the other column during scans).
-func (a *App) renderBrowserListNavUpdate() {
+// renderBrowserListNavUpdate repaints panelID's file-list column and menu-bar permission tail
+// without redrawing the other panel (avoids disk-usage row work on the other column during scans).
+func (a *App) renderBrowserListNavUpdate(panelID int) {
 	a.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 	a.syncCursorNameHintNavCoalesceFlags()
 	a.model.MenuBarPermission = a.menuBarPermissionText()
@@ -95,7 +95,7 @@ func (a *App) renderBrowserListNavUpdate() {
 	model.CursorNameHintPinOutPrimary = &a.model.Primary.CursorNameHintPinned
 	model.CursorNameHintPinOutSecondary = &a.model.Secondary.CursorNameHintPinned
 	model.HideInactivePanel = a.model.HideInactivePanel || a.carouselAutohideInactivePanel()
-	if layout.TooSmall || !ui.PaintBrowserListNavPanelOnly(a.screen, layout, model, a.styles, a.model.ActivePanel) {
+	if layout.TooSmall || !ui.PaintBrowserListNavPanelOnly(a.screen, layout, model, a.styles, panelID) {
 		a.render()
 		return
 	}
