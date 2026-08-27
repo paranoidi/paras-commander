@@ -248,6 +248,7 @@ type HistoryDialogState struct {
 	PanelPaths        []string // snapshot of PanelID history at open (for F5 toggle back)
 	PanelCurrentIndex int      // snapshot HistoryIndex at open
 	DisplayLines      []string // per-row UI text ("* path" / "  path"); len == len(Paths)
+	PathMissing       []bool   // len == len(Paths); true when the path no longer exists on disk
 	Query             string
 	QueryCursor       int              // rune offset of caret within Query (0..len(runes))
 	QueryScroll       int              // first visible rune offset for horizontal scrolling

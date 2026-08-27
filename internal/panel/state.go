@@ -2,6 +2,7 @@ package panel
 
 import (
 	"context"
+	"fmt"
 	"maps"
 	"path/filepath"
 	"sort"
@@ -754,55 +755,62 @@ func (s *State) NavigateToPathWithHook(loc pathloc.Path, selectedName string, vi
 	return nil
 }
 
-// HistoryBackward moves to an older entry in the timeline (larger HistoryIndex).
-func (s *State) HistoryBackward(viewportRows int) (bool, error) {
-	if len(s.History) == 0 || s.HistoryIndex >= len(s.History)-1 {
-		return false, nil
-	}
-	nextIdx := s.HistoryIndex + 1
-	target := cleanPathString(s.History[nextIdx])
-	if target == "" {
-		return false, nil
-	}
-	prevIdx := s.HistoryIndex
-	s.HistoryIndex = nextIdx
-	if err := s.loadPathString(target, "", viewportRows, noIndexCursorFallback, asyncLoadOpts{
-		rollback: func() { s.HistoryIndex = prevIdx },
-	}); err != nil {
-		s.HistoryIndex = prevIdx
-		return false, err
-	}
-	if s.ListingPending {
-		return true, nil
-	}
-	if s.HistoryIndex >= 0 && s.HistoryIndex < len(s.History) {
-		s.History[s.HistoryIndex] = cleanPathString(s.Path.String())
-	}
-	return true, nil
+// HistoryBackward moves to an older, still-existing entry in the timeline (larger HistoryIndex),
+// skipping past entries whose directory no longer exists locally.
+func (s *State) HistoryBackward(viewportRows int) (bool, string, error) {
+	return s.historyNavigate(viewportRows, 1)
 }
 
-// HistoryForward moves to a newer entry in the timeline (smaller HistoryIndex).
-func (s *State) HistoryForward(viewportRows int) (bool, error) {
-	if s.HistoryIndex <= 0 {
-		return false, nil
+// HistoryForward moves to a newer, still-existing entry (smaller HistoryIndex), same skip behavior.
+func (s *State) HistoryForward(viewportRows int) (bool, string, error) {
+	return s.historyNavigate(viewportRows, -1)
+}
+
+func (s *State) historyNavigate(viewportRows int, step int) (bool, string, error) {
+	idx := s.HistoryIndex
+	var skipped []string
+	for {
+		if step > 0 {
+			if len(s.History) == 0 || idx >= len(s.History)-1 {
+				break
+			}
+		} else if idx <= 0 {
+			break
+		}
+		idx += step
+		target := cleanPathString(s.History[idx])
+		if target == "" {
+			continue
+		}
+		if loc, err := pathloc.Parse(target); err == nil && !loc.IsRemote() && !DirectoryExists(loc) {
+			skipped = append(skipped, target)
+			continue
+		}
+		prevIdx := s.HistoryIndex
+		s.HistoryIndex = idx
+		if err := s.loadPathString(target, "", viewportRows, noIndexCursorFallback, asyncLoadOpts{
+			rollback: func() { s.HistoryIndex = prevIdx },
+		}); err != nil {
+			s.HistoryIndex = prevIdx
+			return false, "", err
+		}
+		if !s.ListingPending && s.HistoryIndex >= 0 && s.HistoryIndex < len(s.History) {
+			s.History[s.HistoryIndex] = cleanPathString(s.Path.String())
+		}
+		return true, historySkipWarning(skipped), nil
 	}
-	nextIdx := s.HistoryIndex - 1
-	target := cleanPathString(s.History[nextIdx])
-	prevIdx := s.HistoryIndex
-	s.HistoryIndex = nextIdx
-	if err := s.loadPathString(target, "", viewportRows, noIndexCursorFallback, asyncLoadOpts{
-		rollback: func() { s.HistoryIndex = prevIdx },
-	}); err != nil {
-		s.HistoryIndex = prevIdx
-		return false, err
+	return false, historySkipWarning(skipped), nil
+}
+
+func historySkipWarning(skipped []string) string {
+	switch len(skipped) {
+	case 0:
+		return ""
+	case 1:
+		return fmt.Sprintf("Skipped missing directory %q", skipped[0])
+	default:
+		return fmt.Sprintf("Skipped %d missing directories, starting with %q", len(skipped), skipped[0])
 	}
-	if s.ListingPending {
-		return true, nil
-	}
-	if s.HistoryIndex >= 0 && s.HistoryIndex < len(s.History) {
-		s.History[s.HistoryIndex] = cleanPathString(s.Path.String())
-	}
-	return true, nil
 }
 
 func (s *State) recordVisit(target string) {

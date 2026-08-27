@@ -700,7 +700,7 @@ func TestHistoryBackwardReentersDirectoryLeftByParent(t *testing.T) {
 		t.Fatalf("Path = %q, want root %q", state.Path, root)
 	}
 
-	moved, err := state.HistoryBackward(5)
+	moved, _, err := state.HistoryBackward(5)
 	if err != nil || !moved {
 		t.Fatalf("HistoryBackward to sub: moved=%v err=%v", moved, err)
 	}
@@ -708,7 +708,7 @@ func TestHistoryBackwardReentersDirectoryLeftByParent(t *testing.T) {
 		t.Fatalf("Path = %q, want sub %q", state.Path, sub)
 	}
 
-	moved, err = state.HistoryBackward(5)
+	moved, _, err = state.HistoryBackward(5)
 	if err != nil || !moved {
 		t.Fatalf("HistoryBackward to nested: moved=%v err=%v", moved, err)
 	}
@@ -716,12 +716,50 @@ func TestHistoryBackwardReentersDirectoryLeftByParent(t *testing.T) {
 		t.Fatalf("Path = %q, want nested %q", state.Path, nested)
 	}
 
-	moved, err = state.HistoryBackward(5)
+	moved, _, err = state.HistoryBackward(5)
 	if err != nil {
 		t.Fatalf("HistoryBackward at end error = %v", err)
 	}
 	if moved {
 		t.Fatal("HistoryBackward at end moved = true, want false")
+	}
+}
+
+func TestHistoryBackwardSkipsMissingDirectory(t *testing.T) {
+	root := t.TempDir()
+	a := filepath.Join(root, "a")
+	b := filepath.Join(root, "b")
+	c := filepath.Join(root, "c")
+	for _, d := range []string{a, b, c} {
+		if err := os.Mkdir(d, 0o755); err != nil {
+			t.Fatalf("Mkdir(%s) error = %v", d, err)
+		}
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	for _, d := range []string{a, b, c} {
+		if err := state.NavigateTo(d, "", 5); err != nil {
+			t.Fatalf("NavigateTo(%s) error = %v", d, err)
+		}
+	}
+	// History = [c, b, a] (MRU first), HistoryIndex = 0 (current: c)
+
+	if err := os.RemoveAll(b); err != nil {
+		t.Fatalf("RemoveAll(b) error = %v", err)
+	}
+
+	moved, warning, err := state.HistoryBackward(5)
+	if err != nil || !moved {
+		t.Fatalf("HistoryBackward: moved=%v err=%v", moved, err)
+	}
+	if state.Path.String() != a {
+		t.Fatalf("Path = %q, want %q (missing b should be skipped)", state.Path, a)
+	}
+	if warning == "" {
+		t.Fatal("warning = \"\", want non-empty (b was skipped)")
 	}
 }
 
@@ -765,7 +803,7 @@ func TestHistoryNavigationRestoresPriorHighlightedEntry(t *testing.T) {
 		t.Fatalf("Parent() error = %v", err)
 	}
 
-	moved, err := state.HistoryBackward(5)
+	moved, _, err := state.HistoryBackward(5)
 	if err != nil || !moved {
 		t.Fatalf("HistoryBackward: moved=%v err=%v", moved, err)
 	}
@@ -777,7 +815,7 @@ func TestHistoryNavigationRestoresPriorHighlightedEntry(t *testing.T) {
 		t.Fatal("cursor reset to row 0 after HistoryBackward, want prior highlight")
 	}
 
-	moved, err = state.HistoryForward(5)
+	moved, _, err = state.HistoryForward(5)
 	if err != nil || !moved {
 		t.Fatalf("HistoryForward: moved=%v err=%v", moved, err)
 	}

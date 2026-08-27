@@ -728,12 +728,16 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 			a.setErrorMessage("Navigate to home failed", err)
 		}
 	case keymap.ActionNavForward:
-		if _, err := activePanel.HistoryForward(viewportRows); err != nil {
+		if _, warning, err := activePanel.HistoryForward(viewportRows); err != nil {
 			a.setErrorMessage("Forward history failed", err)
+		} else if warning != "" {
+			a.setTransientMessage(warning, ui.MessageUrgencyWarn)
 		}
 	case keymap.ActionNavBackward:
-		if _, err := activePanel.HistoryBackward(viewportRows); err != nil {
+		if _, warning, err := activePanel.HistoryBackward(viewportRows); err != nil {
 			a.setErrorMessage("Backward history failed", err)
+		} else if warning != "" {
+			a.setTransientMessage(warning, ui.MessageUrgencyWarn)
 		}
 	default:
 		return false, false

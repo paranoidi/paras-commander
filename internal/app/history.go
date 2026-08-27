@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/gdamore/tcell/v2"
+	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/scrollquery"
@@ -32,6 +33,14 @@ func historyDisplayLinesFor(paths []string, markPath string) []string {
 			prefix = "* "
 		}
 		out[i] = prefix + p
+	}
+	return out
+}
+
+func historyPathMissingFor(paths []string) []bool {
+	out := make([]bool, len(paths))
+	for i, p := range paths {
+		out[i] = dialogctrl.PathEntryMissing("", "", p)
 	}
 	return out
 }
@@ -66,6 +75,7 @@ func (a *App) openHistoryDialog(panelID int) {
 		PanelPaths:        panelPaths,
 		PanelCurrentIndex: curIdx,
 		DisplayLines:      display,
+		PathMissing:       historyPathMissingFor(panelPaths),
 		Query:             "",
 		Focus:             0,
 		Selected:          0,
@@ -99,6 +109,7 @@ func (a *App) toggleHistoryDialogBothPanels() {
 		st.BothPanels = true
 		st.Paths = a.mergedPanelHistories()
 	}
+	st.PathMissing = historyPathMissingFor(st.Paths)
 	a.reloadHistoryDialogList()
 }
 

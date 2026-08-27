@@ -80,6 +80,7 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 		line := ""
 		var ranges []search.Range
 		isCursor := false
+		missing := false
 		if idxInRank < len(state.Ranked) {
 			entIdx := state.Ranked[idxInRank]
 			if entIdx >= 0 && entIdx < len(state.DisplayLines) {
@@ -88,12 +89,18 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 					ranges = state.MatchRanges[entIdx]
 				}
 			}
+			if entIdx >= 0 && entIdx < len(state.PathMissing) {
+				missing = state.PathMissing[entIdx]
+			}
 			isCursor = state.Focus == 0 && idxInRank == state.Selected
 		}
 		matchStyle := styles.FuzzyHighlight
-		if isCursor {
+		switch {
+		case isCursor:
 			baseStyle = styles.DialogOptionRowStyle(true, false)
 			matchStyle = styles.FuzzyHighlightCursor
+		case missing:
+			baseStyle = styles.DialogOptionInvalidStyle()
 		}
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)
