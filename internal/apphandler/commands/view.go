@@ -239,6 +239,10 @@ func (h *Handler) HandleViewKey(event *tcell.EventKey) bool {
 		return false
 	}
 
+	if h.model.ViMotionMode {
+		event = keymap.RemapViMotionKey(event)
+	}
+
 	nextAction := h.host.ActionFromKeyEvent(event)
 	if nextAction == keymap.ActionAppQuit {
 		return h.host.HandleQuit()
@@ -248,6 +252,17 @@ func (h *Handler) HandleViewKey(event *tcell.EventKey) bool {
 	}
 	if nextAction == keymap.ActionAppOpenMenu {
 		h.host.OpenMenu()
+		return false
+	}
+	if nextAction == keymap.ActionAppLeaderMenu {
+		h.host.ToggleLeaderMenu()
+		return false
+	}
+	// Note: 'k' is Kill's leader letter (ActionCommandsKill), but with vi-motion mode on, the
+	// remap above already turned a bare 'k' into KeyUp before this point, so it never reaches
+	// DispatchLeaderLetter as a rune — Kill stays reachable via the `:` menu, F9 menu, and its
+	// S-F8 chord.
+	if h.host.DispatchLeaderLetter(event) {
 		return false
 	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {

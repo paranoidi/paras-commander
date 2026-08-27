@@ -9,8 +9,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
-// viewMask maps a ViewMode to its ActionSpec.Views bit.
-func viewMask(vm ui.ViewMode) keymap.HelpViews {
+// ViewMask maps a ViewMode to its ActionSpec.Views bit.
+func ViewMask(vm ui.ViewMode) keymap.HelpViews {
 	switch vm {
 	case ui.ViewJobs:
 		return keymap.HelpJobs
@@ -34,7 +34,7 @@ func viewMask(vm ui.ViewMode) keymap.HelpViews {
 // truth for help visibility (internal/keymap/specs.go).
 func ActionRunnableInView(vm ui.ViewMode, actionID string) bool {
 	spec, ok := keymap.SpecForAction(actionID)
-	return ok && spec.Views&viewMask(vm) != 0
+	return ok && spec.Views&ViewMask(vm) != 0
 }
 
 // JoinDisplay joins every binding into one readable string ("|"-separated).

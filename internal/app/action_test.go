@@ -62,17 +62,17 @@ func TestActionFromKeyMapsQuitImmediate(t *testing.T) {
 	}
 }
 
-// TestActionFromKeyMapsCtrlCToJobsCancel verifies that Ctrl+C triggers
-// jobs.cancel only while the jobs view is focused. In the file browser,
-// Ctrl+C copies (copy).
-func TestActionFromKeyMapsCtrlCToJobsCancel(t *testing.T) {
+// TestActionFromKeyCtrlCShadowsGlobalCopyInJobsView verifies that Ctrl+C maps to
+// jobs.cancel in the jobs view (the overlay's dedicated chord shadows the global file.copy
+// binding there) but to the global file.copy action in the file browser.
+func TestActionFromKeyCtrlCShadowsGlobalCopyInJobsView(t *testing.T) {
 	bundle, err := keymap.DefaultBundle()
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
 	event := tcell.NewEventKey(tcell.KeyCtrlC, 0, tcell.ModNone)
 	if got := lookupActionForView(event, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, bundle.FilePreview, bundle.Compare, bundle.Dedup, ui.ViewJobs); got != keymap.ActionJobsCancel {
-		t.Fatalf("jobs view Ctrl+C = %v, want ActionJobsCancel", got)
+		t.Fatalf("jobs view Ctrl+C = %v, want %s", got, keymap.ActionJobsCancel)
 	}
 	if got := lookupActionForView(event, bundle.Global, bundle.Jobs, bundle.Commands, bundle.Messages, bundle.FilePreview, bundle.Compare, bundle.Dedup, ui.ViewBrowser); got != keymap.ActionCopy {
 		t.Fatalf("browser Ctrl+C = %q, want %s", got, keymap.ActionCopy)

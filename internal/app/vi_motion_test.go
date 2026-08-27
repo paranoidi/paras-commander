@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/menu"
 )
 
@@ -162,5 +163,43 @@ func TestViMotionFooterKeysSwapLettersAndDropShift(t *testing.T) {
 	mov = findByHint(keys, "Mov")
 	if mov.HintShiftPrefix != "" {
 		t.Fatalf("vi-motion on: Mov HintShiftPrefix = %q, want empty", mov.HintShiftPrefix)
+	}
+}
+
+// TestViMotionAuxiliaryFooterKeysSwapLetters verifies the 5 secondary views' (Compare, Dedup,
+// Commands, Messages, Jobs) footer F-key hints switch to their vi-motion leader letters while
+// vi-motion mode is on, mirroring the browser's own footer behavior (viMotionFooterKeys).
+func TestViMotionAuxiliaryFooterKeysSwapLetters(t *testing.T) {
+	dir := t.TempDir()
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.model.ViewMode = ui.ViewCommands
+
+	findByHint := func(keys []menu.FunctionKey, hint string) (menu.FunctionKey, bool) {
+		for _, fk := range keys {
+			if fk.Hint == hint {
+				return fk, true
+			}
+		}
+		return menu.FunctionKey{}, false
+	}
+
+	keys, ok := app.auxiliaryViewFooterKeys()
+	if !ok {
+		t.Fatal("expected Commands view footer")
+	}
+	term, ok := findByHint(keys, "Term")
+	if !ok || term.KeyLabel != "F8" {
+		t.Fatalf("vi-motion off: Term KeyLabel = %+v, want F8", term)
+	}
+
+	app.model.ViMotionMode = true
+	keys, ok = app.auxiliaryViewFooterKeys()
+	if !ok {
+		t.Fatal("expected Commands view footer")
+	}
+	term, ok = findByHint(keys, "Term")
+	if !ok || term.KeyLabel != "t" {
+		t.Fatalf("vi-motion on: Term KeyLabel = %+v, want t (commands.terminate leader letter)", term)
 	}
 }

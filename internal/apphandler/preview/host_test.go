@@ -63,6 +63,8 @@ func (f *fakeHost) OpenMenuByShortcut(rune) bool              { return false }
 func (f *fakeHost) Dispatch(string)                           {}
 func (f *fakeHost) TryDispatchAuxiliaryScreens(string) bool   { return false }
 func (f *fakeHost) ActionFromKeyEvent(*tcell.EventKey) string { return "" }
+func (f *fakeHost) ToggleLeaderMenu()                         {}
+func (f *fakeHost) DispatchLeaderLetter(*tcell.EventKey) bool { return false }
 func (f *fakeHost) ActivePanel() *panel.State {
 	if f.model.ActivePanel == ui.SecondaryPanel {
 		return &f.model.Secondary

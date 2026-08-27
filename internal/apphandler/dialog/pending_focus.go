@@ -22,7 +22,6 @@ func (h *Handler) schedulePanelFocus(panelID int, listDir, name string) {
 		panelID: panelID,
 		listDir: listDir,
 		name:    name,
-		center:  true,
 	}
 }
 
@@ -35,7 +34,6 @@ func (h *Handler) scheduleTransferOtherPanelFocus(panelID int, listDir string, c
 		listDir:        listDir,
 		candidateNames: append([]string(nil), candidates...),
 		snapCursorPath: snapCursorPath,
-		center:         false,
 	}
 }
 
@@ -53,15 +51,16 @@ func (h *Handler) maybeScheduleTransferOtherPanelFocus(jobType jobs.Type, source
 	if err != nil {
 		return
 	}
+	destIsDir := ops.DestinationIsDirAtEnqueue(destLoc)
 	destDir := destLoc
-	if !ops.DestinationIsDirAtEnqueue(destLoc) {
+	if !destIsDir {
 		destDir = destLoc.Parent()
 	}
 	inactive := h.host.InactivePanel()
 	if inactive == nil || inactive.Path.IsZero() || !destDir.Equal(inactive.Path) {
 		return
 	}
-	candidates := transferTopLevelDestNames(sources, dest, preserve.FlattenIntoDest)
+	candidates := transferTopLevelDestNames(sources, dest, destIsDir, preserve.FlattenIntoDest)
 	if len(candidates) == 0 {
 		return
 	}
@@ -104,8 +103,10 @@ func (h *Handler) applyPendingPanelFocus() {
 		}
 	}
 	vr := h.host.PanelViewportRows(f.panelID)
+	// f.name set means schedulePanelFocus (duplicate focus-after): center. Otherwise it's
+	// scheduleTransferOtherPanelFocus (candidateNames): scroll into viewport only.
 	var ok bool
-	if f.center {
+	if f.name != "" {
 		ok = p.SelectVisibleEntryCentered(name, vr)
 	} else {
 		ok = p.SelectVisibleEntryInViewport(name, vr)
@@ -139,8 +140,9 @@ func firstVisibleCandidate(p *panel.State, candidates []string) string {
 }
 
 // transferTopLevelDestNames returns the basenames (or first path segments for structured
-// transfers) that will appear as rows in the destination directory listing.
-func transferTopLevelDestNames(sources []string, dest string, flatten bool) []string {
+// transfers) that will appear as rows in the destination directory listing. isDir is the
+// caller's already-known DestinationIsDirAtEnqueue result, since that call does a Stat.
+func transferTopLevelDestNames(sources []string, dest string, isDir, flatten bool) []string {
 	srcLocs, err := pathloc.ParseAll(sources)
 	if err != nil || len(srcLocs) == 0 {
 		return nil
@@ -149,7 +151,7 @@ func transferTopLevelDestNames(sources []string, dest string, flatten bool) []st
 	if err != nil {
 		return nil
 	}
-	if !ops.DestinationIsDirAtEnqueue(destLoc) {
+	if !isDir {
 		base := destLoc.Base()
 		if base == "" {
 			return nil

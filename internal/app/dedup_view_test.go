@@ -223,7 +223,7 @@ func TestDedupViewPlainLeftCollapseDoesNotCloseView(t *testing.T) {
 		t.Fatalf("ViewMode = %v, want ViewDedup", app.model.ViewMode)
 	}
 
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlT, 0, tcell.ModCtrl))
+	app.tryDispatchDedup(keymap.ActionDedupToggleTree)
 	if got := len(app.model.DedupList); got != 1 {
 		t.Fatalf("groups-mode rows = %d, want 1 (collapsed header)", got)
 	}
@@ -245,7 +245,74 @@ func TestDedupViewPlainLeftCollapseDoesNotCloseView(t *testing.T) {
 	}
 }
 
-func TestDedupViewAltArrowJumpsBetweenVisibleDirs(t *testing.T) {
+// TestDedupViewViMotionHJKLOnlyWhenModeOn verifies 'j'/'k' move the main-pane selection like
+// Down/Up only while vi-motion mode is on, mirroring the browser's own hjkl gating.
+func TestDedupViewViMotionHJKLOnlyWhenModeOn(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, rel := range []string{"lantern.txt", filepath.Join("meadow", "lantern.txt")} {
+		if err := os.WriteFile(filepath.Join(dir, rel), []byte("dup"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	before := app.model.DedupView.Main.Selected
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
+	if app.model.DedupView.Main.Selected != before {
+		t.Fatalf("vi-motion off: 'j' moved selection from %d to %d", before, app.model.DedupView.Main.Selected)
+	}
+
+	app.model.ViMotionMode = true
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
+	if app.model.DedupView.Main.Selected != before+1 {
+		t.Fatalf("vi-motion on: 'j' selection = %d, want %d", app.model.DedupView.Main.Selected, before+1)
+	}
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
+	if app.model.DedupView.Main.Selected != before {
+		t.Fatalf("vi-motion on: 'k' selection = %d, want %d", app.model.DedupView.Main.Selected, before)
+	}
+}
+
+// TestDedupViewViMotionLeaderLetterOnlyWhenModeOn verifies a bound leader-menu letter (here
+// 'v', dedup.close) fires its action directly only while vi-motion mode is on.
+func TestDedupViewViMotionLeaderLetterOnlyWhenModeOn(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b.txt"), []byte("dup"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, dir)
+	app.openFindDuplicates()
+	waitDedupDone(t, app)
+
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
+	if app.model.ViewMode != ui.ViewDedup {
+		t.Fatal("vi-motion off: 'v' must not close the dedup view")
+	}
+
+	app.model.ViMotionMode = true
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("vi-motion on: 'v' should dispatch dedup.close directly, ViewMode = %v", app.model.ViewMode)
+	}
+}
+
+// dedupPrevDir/dedupNextDir dispatch ActionDedupPrevDir/NextDir directly. Neither action has a
+// dedicated chord (see DefaultDedupOverlayKeys) — they're reachable via the `:` menu, F9 menu,
+// or direct leader letters ('p'/'N') when vi-motion mode is on.
+func dedupPrevDir(app *App) { app.tryDispatchDedup(keymap.ActionDedupPrevDir) }
+func dedupNextDir(app *App) { app.tryDispatchDedup(keymap.ActionDedupNextDir) }
+
+func TestDedupViewJumpsBetweenVisibleDirs(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "meadow"), 0o755); err != nil {
 		t.Fatal(err)
@@ -287,32 +354,32 @@ func TestDedupViewAltArrowJumpsBetweenVisibleDirs(t *testing.T) {
 	// Main pane: meadow (dir), orchard (dir), lantern.txt (file).
 	mainSelDir("meadow")
 	before := app.model.DedupView.Main.Selected
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModAlt))
+	dedupPrevDir(app)
 	if app.model.DedupView.Main.Selected != before {
-		t.Fatalf("Alt+Up on first dir moved cursor from %d to %d", before, app.model.DedupView.Main.Selected)
+		t.Fatalf("PrevDir on first dir moved cursor from %d to %d", before, app.model.DedupView.Main.Selected)
 	}
 
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt))
+	dedupNextDir(app)
 	mainSelDir("orchard")
 
 	before = app.model.DedupView.Main.Selected
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt))
+	dedupNextDir(app)
 	if app.model.DedupView.Main.Selected != before {
-		t.Fatal("Alt+Down on last dir should stay (next row is a file)")
+		t.Fatal("NextDir on last dir should stay (next row is a file)")
 	}
 
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)) // file row
 	if app.model.DedupList[app.model.DedupView.Main.Selected].Value.Kind != ui.DedupRowFile {
 		t.Fatal("expected file row after Down from orchard")
 	}
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModAlt))
+	dedupPrevDir(app)
 	mainSelDir("orchard")
 
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyEnd, 0, tcell.ModNone))
 	before = app.model.DedupView.Main.Selected
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt))
+	dedupNextDir(app)
 	if app.model.DedupView.Main.Selected != before {
-		t.Fatal("Alt+Down on last row should stay when no next dir exists")
+		t.Fatal("NextDir on last row should stay when no next dir exists")
 	}
 
 	// Copies pane: cursor is on root file; Tab focuses copies dirs.
@@ -322,22 +389,22 @@ func TestDedupViewAltArrowJumpsBetweenVisibleDirs(t *testing.T) {
 	}
 	copiesSelDir("meadow")
 
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt))
+	dedupNextDir(app)
 	copiesSelDir("orchard")
 
 	before = app.model.DedupView.Copies.Selected
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModAlt))
+	dedupNextDir(app)
 	if app.model.DedupView.Copies.Selected != before {
-		t.Fatal("Alt+Down on last copies dir should stay")
+		t.Fatal("NextDir on last copies dir should stay")
 	}
 
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModAlt))
+	dedupPrevDir(app)
 	copiesSelDir("meadow")
 
 	before = app.model.DedupView.Copies.Selected
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModAlt))
+	dedupPrevDir(app)
 	if app.model.DedupView.Copies.Selected != before {
-		t.Fatal("Alt+Up on first copies dir should stay")
+		t.Fatal("PrevDir on first copies dir should stay")
 	}
 }
 
@@ -624,7 +691,7 @@ func TestDedupViewMainPaneFolderSelectToggle(t *testing.T) {
 			break
 		}
 	}
-	app.handleDedupViewKey(dedupCtrlK())
+	dedupMarkKeep(app)
 	if !app.model.DedupView.Kept[meadowLantern] {
 		t.Fatalf("meadow lantern not kept: %v", app.model.DedupView.Kept)
 	}
@@ -754,7 +821,7 @@ func TestDedupViewRightExpandsCollapsedDirInPlace(t *testing.T) {
 	}
 
 	// First Right on orchard: expand only, cursor stays on the folder row.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	rows = app.model.DedupList
 	sel := app.model.DedupView.Main.Selected
 	if sel != 0 || rows[sel].ID != "d:orchard" {
@@ -788,8 +855,8 @@ func TestDedupViewRightDescendsToFirstFile(t *testing.T) {
 	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyHome, 0, tcell.ModNone))
 
 	// Expand orchard in place, then descend on the second Right.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	rows := app.model.DedupList
 	sel := app.model.DedupView.Main.Selected
 	if sel < 0 || sel >= len(rows) || rows[sel].Value.Kind != ui.DedupRowFile {
@@ -830,9 +897,9 @@ func TestDedupViewRightOnExpandedDirDoesNotCollapse(t *testing.T) {
 			break
 		}
 	}
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	beforeRows := len(app.model.DedupList)
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if got := len(app.model.DedupList); got != beforeRows {
 		t.Fatalf("rows after Right on expanded dir = %d, want %d (no collapse)", got, beforeRows)
 	}
@@ -877,13 +944,13 @@ func TestDedupViewCopiesPaneRightDescendsToFirstFile(t *testing.T) {
 	}
 
 	// First Right expands meadow in place; second Right descends to the first file.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	rows := app.model.DedupCopiesList
 	sel := app.model.DedupView.Copies.Selected
 	if sel < 0 || sel >= len(rows) || rows[sel].ID != "d:meadow" {
 		t.Fatalf("copies cursor on %q at %d, want meadow dir after first Right", rows[sel].ID, sel)
 	}
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	rows = app.model.DedupCopiesList
 	sel = app.model.DedupView.Copies.Selected
 	if sel < 0 || sel >= len(rows) || rows[sel].Value.Kind != ui.DedupRowFile {
@@ -913,35 +980,35 @@ func TestDedupViewTreeCollapseAndModes(t *testing.T) {
 		t.Fatalf("dirs-mode rows = %d, want 2 (meadow dir collapsed + root lantern.txt)", got)
 	}
 
-	// Ctrl+T switches to the groups tree: one collapsed group header.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlT, 0, tcell.ModCtrl))
+	// ToggleTree switches to the groups tree: one collapsed group header.
+	app.tryDispatchDedup(keymap.ActionDedupToggleTree)
 	if app.model.DedupView.TreeDirs {
-		t.Fatal("Ctrl+T did not switch to groups tree mode")
+		t.Fatal("ToggleTree did not switch to groups tree mode")
 	}
 	if got := len(app.model.DedupList); got != 1 {
 		t.Fatalf("groups-mode rows = %d, want 1 (collapsed header)", got)
 	}
 
 	// Right expands the group header; the copy row appears.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if got := len(app.model.DedupList); got != 2 {
 		t.Fatalf("after expand rows = %d, want 2", got)
 	}
 	// Left collapses again.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModAlt))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyLeft, 0, tcell.ModNone))
 	if got := len(app.model.DedupList); got != 1 {
 		t.Fatalf("after collapse rows = %d, want 1", got)
 	}
 	// Right again re-expands.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModAlt))
+	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone))
 	if got := len(app.model.DedupList); got != 2 {
 		t.Fatalf("after re-expand rows = %d, want 2", got)
 	}
 
-	// Ctrl+T switches back to the directory tree.
-	app.handleDedupViewKey(tcell.NewEventKey(tcell.KeyCtrlT, 0, tcell.ModCtrl))
+	// ToggleTree switches back to the directory tree.
+	app.tryDispatchDedup(keymap.ActionDedupToggleTree)
 	if !app.model.DedupView.TreeDirs {
-		t.Fatal("Ctrl+T did not switch back to directory tree mode")
+		t.Fatal("ToggleTree did not switch back to directory tree mode")
 	}
 	if got := len(app.model.DedupList); got != 2 {
 		t.Fatalf("dirs-mode rows = %d, want 2 (collapse state preserved)", got)
@@ -1174,8 +1241,12 @@ func TestDedupProgressDialogFooterShowsEscAndF10(t *testing.T) {
 	}
 }
 
-func dedupCtrlK() *tcell.EventKey {
-	return tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModCtrl)
+// dedupMarkKeep marks the current selection to keep. ActionDedupMarkKeep has no dedicated
+// chord (see DefaultDedupOverlayKeys) — it's reachable via the `:` menu, F9 menu, or a direct
+// leader letter ('m') when vi-motion mode is on — so tests dispatch the action directly rather
+// than simulating a keypress.
+func dedupMarkKeep(app *App) {
+	app.tryDispatchDedup(keymap.ActionDedupMarkKeep)
 }
 
 func TestDedupViewKeepMarking(t *testing.T) {
@@ -1194,7 +1265,7 @@ func TestDedupViewKeepMarking(t *testing.T) {
 	app.openFindDuplicates()
 	waitDedupDone(t, app)
 
-	app.handleDedupViewKey(dedupCtrlK())
+	dedupMarkKeep(app)
 	if !app.model.DedupView.Kept[aPath] {
 		t.Fatalf("Kept missing %q: %v", aPath, app.model.DedupView.Kept)
 	}
@@ -1230,7 +1301,7 @@ func TestDedupViewKeepMarking(t *testing.T) {
 			break
 		}
 	}
-	app.handleDedupViewKey(dedupCtrlK())
+	dedupMarkKeep(app)
 	if app.model.Message != "Duplicate keep" {
 		t.Fatalf("message = %q, want Duplicate keep toast when switching keeper", app.model.Message)
 	}
@@ -1247,7 +1318,7 @@ func TestDedupViewKeepMarking(t *testing.T) {
 			break
 		}
 	}
-	app.handleDedupViewKey(dedupCtrlK())
+	dedupMarkKeep(app)
 	if len(app.model.DedupView.Kept) != 0 {
 		t.Fatalf("toggle-off keep left Kept = %v", app.model.DedupView.Kept)
 	}
@@ -1287,7 +1358,7 @@ func TestDedupViewCopiesPaneKeep(t *testing.T) {
 		}
 	}
 
-	app.handleDedupViewKey(dedupCtrlK())
+	dedupMarkKeep(app)
 	if !app.model.DedupView.Kept[meadowLantern] {
 		t.Fatalf("copy not kept: %v", app.model.DedupView.Kept)
 	}
@@ -1331,7 +1402,7 @@ func TestDedupViewCopiesPaneFolderKeep(t *testing.T) {
 	orchardLantern := filepath.Join(dir, "orchard", "lantern.txt")
 	rootLantern := filepath.Join(dir, "lantern.txt")
 
-	app.handleDedupViewKey(dedupCtrlK())
+	dedupMarkKeep(app)
 	if !app.model.DedupView.Kept[meadowLantern] || !app.model.DedupView.Kept[meadowBeacon] {
 		t.Fatalf("meadow files not kept: %v", app.model.DedupView.Kept)
 	}

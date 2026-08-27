@@ -25,20 +25,23 @@ func TestCompareViewFooterEscFirst(t *testing.T) {
 	if keys[0] != menu.FooterEscClose {
 		t.Fatalf("footer[0] = %+v, want Esc Close", keys[0])
 	}
-	var foundMerge, foundEmpty bool
+	var foundMerge bool
 	for _, fk := range keys {
 		if fk.Key == tcell.KeyF5 && fk.Hint == "Merge" {
 			foundMerge = true
-		}
-		if fk.Hint == "Show empty" {
-			foundEmpty = true
 		}
 	}
 	if !foundMerge {
 		t.Fatalf("footer missing F5 Merge: %+v", keys)
 	}
-	if !foundEmpty {
-		t.Fatalf("footer missing Show empty (ignore-empty on): %+v", keys)
+	var foundToggleEmpty bool
+	for _, fk := range keys {
+		if fk.Hint == "Show empty" || fk.Hint == "Ignore empty" {
+			foundToggleEmpty = true
+		}
+	}
+	if !foundToggleEmpty {
+		t.Fatalf("footer missing toggle-empty hint: %+v", keys)
 	}
 }
 
@@ -81,14 +84,62 @@ func TestCompareViewToggleEmpty(t *testing.T) {
 		t.Fatalf("filtered after show = %d, want 2", n)
 	}
 	keys := app.activeFooterKeys()
-	var foundIgnore bool
+	var foundToggleEmpty bool
 	for _, fk := range keys {
-		if fk.Hint == "Ignore empty" {
-			foundIgnore = true
+		if fk.Hint == "Ignore empty" || fk.Hint == "Show empty" {
+			foundToggleEmpty = true
 		}
 	}
-	if !foundIgnore {
-		t.Fatalf("footer missing Ignore empty after toggle: %+v", keys)
+	if !foundToggleEmpty {
+		t.Fatalf("footer missing toggle-empty hint after toggle: %+v", keys)
+	}
+}
+
+// TestCompareViewViMotionHJKLOnlyWhenModeOn verifies 'h'/'l' move the column focus like the
+// arrow keys only while vi-motion mode is on, mirroring the browser's own hjkl gating.
+func TestCompareViewViMotionHJKLOnlyWhenModeOn(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	app.model.ViewMode = ui.ViewCompare
+	app.model.CompareView = ui.CompareViewState{FocusColumn: ui.CompareColumnSecondary}
+	app.model.CompareSnapshot = comparepkg.Snapshot{
+		Rows: []comparepkg.Row{
+			{PrimaryRel: "a.txt", SecondaryRel: "b.txt", Kind: comparepkg.KindContentDiff, HashDone: true},
+		},
+	}
+
+	app.handleCompareViewKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
+	if app.model.CompareView.FocusColumn != ui.CompareColumnSecondary {
+		t.Fatalf("vi-motion off: 'h' moved FocusColumn to %v, want unchanged secondary", app.model.CompareView.FocusColumn)
+	}
+
+	app.model.ViMotionMode = true
+	app.handleCompareViewKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
+	if app.model.CompareView.FocusColumn != ui.CompareColumnPrimary {
+		t.Fatalf("vi-motion on: 'h' FocusColumn = %v, want primary", app.model.CompareView.FocusColumn)
+	}
+	app.handleCompareViewKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModNone))
+	if app.model.CompareView.FocusColumn != ui.CompareColumnSecondary {
+		t.Fatalf("vi-motion on: 'l' FocusColumn = %v, want secondary", app.model.CompareView.FocusColumn)
+	}
+}
+
+// TestCompareViewViMotionLeaderLetterOnlyWhenModeOn verifies a bound leader-menu letter (here
+// 'c', compare.close) fires its action directly only while vi-motion mode is on.
+func TestCompareViewViMotionLeaderLetterOnlyWhenModeOn(t *testing.T) {
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, t.TempDir())
+	app.model.ViewMode = ui.ViewCompare
+
+	app.handleCompareViewKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
+	if app.model.ViewMode != ui.ViewCompare {
+		t.Fatal("vi-motion off: 'c' must not close the compare view")
+	}
+
+	app.model.ViMotionMode = true
+	app.handleCompareViewKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("vi-motion on: 'c' should dispatch compare.close directly, ViewMode = %v", app.model.ViewMode)
 	}
 }
 

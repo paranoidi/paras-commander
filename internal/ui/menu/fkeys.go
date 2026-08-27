@@ -63,15 +63,15 @@ func FunctionKeyLabelByKey(k tcell.Key) (string, bool) {
 // FunctionKeysJobs is the footer legend while the jobs view is active.
 var FunctionKeysJobs = []FunctionKey{
 	FooterEscClose,
-	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
-	{Key: tcell.KeyCtrlC, KeyLabel: "C-c", Hint: "Cancel", RequiresActiveJob: true},
-	{Key: tcell.KeyCtrlP, KeyLabel: "C-p", Hint: "Pause", RequiresActiveJob: true},
-	{Key: tcell.KeyCtrlR, KeyLabel: "C-r", Hint: "Resume", RequiresActiveJob: true},
-	{Key: tcell.KeyUp, KeyLabel: "C-up", Hint: "Move up", RequiresActiveJob: true},
-	{Key: tcell.KeyDown, KeyLabel: "C-down", Hint: "Move down", RequiresActiveJob: true},
-	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear"},
-	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
-	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
+	{Key: tcell.KeyCtrlC, KeyLabel: "C-c", Hint: "Cancel", RequiresActiveJob: true, ActionID: keymap.ActionJobsCancel},
+	{Key: tcell.KeyCtrlP, KeyLabel: "C-p", Hint: "Pause", RequiresActiveJob: true, ActionID: keymap.ActionJobsPause},
+	{Key: tcell.KeyCtrlR, KeyLabel: "C-r", Hint: "Resume", RequiresActiveJob: true, ActionID: keymap.ActionJobsResume},
+	{Key: tcell.KeyUp, KeyLabel: "C-up", Hint: "Move up", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueUp},
+	{Key: tcell.KeyDown, KeyLabel: "C-down", Hint: "Move down", RequiresActiveJob: true, ActionID: keymap.ActionJobsQueueDown},
+	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear", ActionID: keymap.ActionJobsClearFinished},
+	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
+	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
 }
 
 // FunctionKeysJobsView returns hints for the jobs screen footer. selectedFinished
@@ -94,10 +94,10 @@ func FunctionKeysJobsView(selectedFinished bool) []FunctionKey {
 // FunctionKeysCommandsView is the footer legend while the Commands screen is active.
 var FunctionKeysCommands = []FunctionKey{
 	FooterEscClose,
-	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
-	{Key: tcell.KeyF8, KeyLabel: "F8", HintShiftPrefix: "Kill", Hint: "Term"},
-	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
-	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
+	{Key: tcell.KeyF8, KeyLabel: "F8", HintShiftPrefix: "Kill", Hint: "Term", ActionID: keymap.ActionCommandsTerminate},
+	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
+	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
 }
 
 // FunctionKeysCommandsView returns hints for the Commands screen footer.
@@ -106,10 +106,10 @@ func FunctionKeysCommandsView() []FunctionKey { return FunctionKeysCommands }
 // FunctionKeysMessagesView is the footer legend while the Messages screen is active.
 var FunctionKeysMessages = []FunctionKey{
 	FooterEscClose,
-	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"},
-	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear"},
-	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
-	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+	{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp},
+	{Key: tcell.KeyF8, KeyLabel: "F8", Hint: "Clear", ActionID: keymap.ActionMessagesClear},
+	{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
+	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
 }
 
 // FunctionKeysMessagesView returns hints for the Messages screen footer.

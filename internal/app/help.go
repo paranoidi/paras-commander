@@ -16,25 +16,28 @@ import (
 // helpContext describes what the F1 help dialog shows for a given ui.ViewMode.
 // Entry visibility itself comes from ActionSpec.Views (internal/keymap/specs.go).
 type helpContext struct {
-	title    string                             // dialog title
-	activate func(a *App, actionID string) bool // nil = dispatchActionLikeKeyboardShortcut
+	title     string                             // dialog title
+	menuTitle string                             // prefix for `:` leader-menu transient messages (browser has none)
+	activate  func(a *App, actionID string) bool // nil = dispatchActionLikeKeyboardShortcut
 }
 
 // helpContextFor resolves the help content for the current view. This is the single place
 // that knows what "contextual help" means for each ui.ViewMode — new views plug in here
-// instead of growing another branch in openHelpDialog/activateHelpAction.
+// instead of growing another branch in openHelpDialog/activateHelpAction. menuTitle doubles as
+// the `:` per-view leader menu's transient-message prefix (openViewLeaderMenu); the menu itself
+// has no visible title bar, so view context there comes from the group headers it renders.
 func (a *App) helpContextFor(vm ui.ViewMode) helpContext {
 	switch vm {
 	case ui.ViewDedup:
-		return helpContext{title: "Help — Dedup", activate: (*App).activateDedupHelpAction}
+		return helpContext{title: "Help — Dedup", menuTitle: "Dedup — Actions", activate: (*App).activateDedupHelpAction}
 	case ui.ViewJobs:
-		return helpContext{title: "Help — Jobs", activate: (*App).activateJobsHelpAction}
+		return helpContext{title: "Help — Jobs", menuTitle: "Jobs — Actions", activate: (*App).activateJobsHelpAction}
 	case ui.ViewCommands:
-		return helpContext{title: "Help — Commands", activate: (*App).activateCommandsHelpAction}
+		return helpContext{title: "Help — Commands", menuTitle: "Commands — Actions", activate: (*App).activateCommandsHelpAction}
 	case ui.ViewMessages:
-		return helpContext{title: "Help — Messages", activate: (*App).activateMessagesHelpAction}
+		return helpContext{title: "Help — Messages", menuTitle: "Messages — Actions", activate: (*App).activateMessagesHelpAction}
 	case ui.ViewCompare:
-		return helpContext{title: "Help — Compare", activate: (*App).activateCompareHelpAction}
+		return helpContext{title: "Help — Compare", menuTitle: "Compare — Actions", activate: (*App).activateCompareHelpAction}
 	case ui.ViewFilePreview:
 		return helpContext{title: "Help — Preview"}
 	default:

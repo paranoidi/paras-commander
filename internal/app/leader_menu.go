@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/paranoidi/paras-commander/internal/app/helpkeys"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
@@ -74,7 +76,10 @@ func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, userMenu, copyMenu,
 }
 
 // openLeaderMenuDispatch wires action IDs parallel to non-group menu rows and opens the strip.
-func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string, userMenu, copyMenu bool, prefix string) {
+// activate runs the chosen action; the browser's builtin/copy menus pass
+// dispatchActionLikeKeyboardShortcut, while per-view menus (openViewLeaderMenu) pass
+// activateHelpAction so the action runs through that view's own controller.
+func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string, userMenu, copyMenu bool, prefix string, activate func(actionID string) bool) {
 	if len(actions) == 0 {
 		a.setTransientMessage(prefix+": no entries configured", ui.MessageUrgencyWarn)
 		return
@@ -84,7 +89,7 @@ func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string
 		if i < 0 || i >= len(actions) {
 			return false
 		}
-		return a.dispatchActionLikeKeyboardShortcut(actions[i])
+		return activate(actions[i])
 	})
 }
 
@@ -103,7 +108,11 @@ func (a *App) toggleBuiltinLeaderMenu() {
 		a.closeLeaderMenu()
 		return
 	}
-	a.openBuiltinLeaderMenu()
+	if a.model.ViewMode == ui.ViewBrowser {
+		a.openBuiltinLeaderMenu()
+		return
+	}
+	a.openViewLeaderMenu()
 }
 
 func (a *App) openBuiltinLeaderMenu() {
@@ -118,6 +127,38 @@ func (a *App) openBuiltinLeaderMenu() {
 		a.setTransientMessage("Function menu: no entries configured", ui.MessageUrgencyWarn)
 		return
 	}
+	items, actions := a.buildLeaderMenuItems(entries)
+	a.openLeaderMenuDispatch(items, actions, false, false, "Function menu", a.dispatchActionLikeKeyboardShortcut)
+}
+
+// openViewLeaderMenu opens the `:` leader menu scoped to the current auxiliary view's own
+// actions (Compare, Dedup, Jobs, Commands, Messages), built from
+// keymap.Bundle.LeaderMenuEntriesForView. Activation reuses activateHelpAction — the same
+// per-view dispatch the F1 help dialog uses — so entries run through that view's own
+// controller instead of the browser-only dispatchActionLikeKeyboardShortcut.
+func (a *App) openViewLeaderMenu() {
+	if a.keys == nil {
+		return
+	}
+	hc := a.helpContextFor(a.model.ViewMode)
+	prefix := hc.menuTitle
+	if prefix == "" {
+		return
+	}
+	vm := helpkeys.ViewMask(a.model.ViewMode)
+	entries := a.keys.LeaderMenuEntriesForView(vm)
+	if len(entries) == 0 {
+		a.setTransientMessage(prefix+": no entries configured", ui.MessageUrgencyWarn)
+		return
+	}
+	items, actions := a.buildLeaderMenuItems(entries)
+	a.openLeaderMenuDispatch(items, actions, false, false, prefix, a.activateHelpAction)
+}
+
+// buildLeaderMenuItems converts leader-menu entries into UI items plus their parallel action-ID
+// slice, resolving each non-group entry's direct-key hint from the global keymap. Shared by
+// openBuiltinLeaderMenu and openViewLeaderMenu, which differ only in their entries source.
+func (a *App) buildLeaderMenuItems(entries []keymap.LeaderMenuEntry) ([]ui.LeaderMenuItem, []string) {
 	var items []ui.LeaderMenuItem
 	var actions []string
 	for _, e := range entries {
@@ -137,7 +178,54 @@ func (a *App) openBuiltinLeaderMenu() {
 		})
 		actions = append(actions, e.ActionID)
 	}
-	a.openLeaderMenuDispatch(items, actions, false, false, "Function menu")
+	return items, actions
+}
+
+// dispatchLeaderLetterDirectFire fires the current auxiliary view's own leader-menu action bound
+// to event's rune directly, without opening the `:` menu, when vi-motion mode is on — the same
+// mechanism the browser already uses (see input.go's InputModeNormal handling), scoped per view
+// via keymap.Bundle.ActionForLeaderKeyInView so cross-view letter reuse (e.g. Compare's `c` =
+// Close vs. Dedup's `c` = Collapse) stays unambiguous. Returns false (no-op) when vi-motion mode
+// is off, event isn't a plain letter, or no action in this view's leader menu is bound to it.
+func (a *App) dispatchLeaderLetterDirectFire(event *tcell.EventKey) bool {
+	if !a.model.ViMotionMode || !keymap.IsPlainPrintableRune(event) {
+		return false
+	}
+	actionID, ok := a.keys.ActionForLeaderKeyInView(event.Rune(), helpkeys.ViewMask(a.model.ViewMode))
+	if !ok {
+		return false
+	}
+	a.activateHelpAction(actionID)
+	return true
+}
+
+// dispatchAuxiliaryViewCommonKeys handles the key/action set shared by every auxiliary view's key
+// handler (Compare, Dedup, Messages): app quit, quit-immediate, F9 menu, leader-menu toggle,
+// vi-motion leader-letter direct-fire, and F-key menu shortcuts. Returns handled=true when event
+// was fully handled here, in which case the caller should return result immediately; otherwise the
+// caller continues with its own view-specific dispatch.
+func (a *App) dispatchAuxiliaryViewCommonKeys(event *tcell.EventKey, nextAction string) (result, handled bool) {
+	if nextAction == keymap.ActionAppQuit {
+		return a.handleQuit(), true
+	}
+	if nextAction == keymap.ActionAppQuitImmediate {
+		return a.handleQuitImmediate(), true
+	}
+	if nextAction == keymap.ActionAppOpenMenu {
+		a.openMenu()
+		return false, true
+	}
+	if nextAction == keymap.ActionAppLeaderMenu {
+		a.toggleBuiltinLeaderMenu()
+		return false, true
+	}
+	if a.dispatchLeaderLetterDirectFire(event) {
+		return false, true
+	}
+	if a.tryOpenMenuByShortcut(event) {
+		return false, true
+	}
+	return false, false
 }
 
 func (a *App) closeLeaderMenu() {

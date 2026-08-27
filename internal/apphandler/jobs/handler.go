@@ -219,6 +219,15 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 		return false
 	}
 
+	// vi-motion mode's hjkl-remap and direct-fire leader letters are skipped while the
+	// blocker/conflict pane has focus, so a bare letter never fires a queue action while the
+	// user is mid-decision on a blocker (Alt+letter blocker-decision shortcuts still work via
+	// handleJobsConflictPaneKey below).
+	blockerFocused := h.jobsViewConflictVisible() && h.model.JobsView.FocusPane == 1
+	if h.model.ViMotionMode && !blockerFocused {
+		event = keymap.RemapViMotionKey(event)
+	}
+
 	nextAction := h.host.ActionFromKeyEvent(event)
 	if nextAction == keymap.ActionAppQuit {
 		return h.host.HandleQuit()
@@ -228,6 +237,13 @@ func (h *Handler) HandleJobsViewKey(event *tcell.EventKey) bool {
 	}
 	if nextAction == keymap.ActionAppOpenMenu {
 		h.host.OpenMenu()
+		return false
+	}
+	if nextAction == keymap.ActionAppLeaderMenu {
+		h.host.ToggleLeaderMenu()
+		return false
+	}
+	if !blockerFocused && h.host.DispatchLeaderLetter(event) {
 		return false
 	}
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {

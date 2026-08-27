@@ -111,6 +111,9 @@ func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 		a.compareCtrl.HandleMergeDialogKey(event)
 		return false
 	}
+	if a.model.ViMotionMode {
+		event = keymap.RemapViMotionKey(event)
+	}
 	switch event.Key() {
 	case tcell.KeyEsc:
 		a.closeCompareView()
@@ -124,18 +127,8 @@ func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 	}
 
 	nextAction := a.actionFromKeyEvent(event)
-	if nextAction == keymap.ActionAppQuit {
-		return a.handleQuit()
-	}
-	if nextAction == keymap.ActionAppQuitImmediate {
-		return a.handleQuitImmediate()
-	}
-	if nextAction == keymap.ActionAppOpenMenu {
-		a.openMenu()
-		return false
-	}
-	if a.tryOpenMenuByShortcut(event) {
-		return false
+	if result, handled := a.dispatchAuxiliaryViewCommonKeys(event, nextAction); handled {
+		return result
 	}
 	if nextAction != "" && a.tryDispatchCompare(nextAction) {
 		return false
@@ -194,6 +187,7 @@ func compareViewFooterKeys(keys *keymap.Map, filter comparepkg.Filter, ignoreEmp
 			KeyLabel:        lbl,
 			Hint:            "Category",
 			HintShiftPrefix: filterLabel,
+			ActionID:        keymap.ActionCompareCycleFilter,
 		})
 	}
 	if lbl := keys.MenuBindingLabel(keymap.ActionCompareToggleEmpty); lbl != "" {
@@ -201,8 +195,8 @@ func compareViewFooterKeys(keys *keymap.Map, filter comparepkg.Filter, ignoreEmp
 		if ignoreEmpty {
 			hint = "Show empty"
 		}
-		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint})
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: hint, ActionID: keymap.ActionCompareToggleEmpty})
 	}
-	out = append(out, menu.FunctionKey{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Merge"})
+	out = append(out, menu.FunctionKey{Key: tcell.KeyF5, KeyLabel: "F5", Hint: "Merge", ActionID: keymap.ActionCompareMerge})
 	return out
 }

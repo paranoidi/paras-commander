@@ -1,3 +1,4 @@
+*.txt
 .aliases
 .cursor/
 .llm-docs/
@@ -7,6 +8,7 @@
 /paras-commander
 /pc
 bin/
+deferred-plans/
 drafts/
 llm-docs/
 research/

@@ -35,6 +35,30 @@ func IsPlainPrintableRune(event *tcell.EventKey) bool {
 	return event.Key() == tcell.KeyRune && event.Modifiers() == tcell.ModNone && unicode.IsPrint(event.Rune())
 }
 
+// RemapViMotionKey substitutes h/j/k/l plain-rune events for the equivalent arrow-key event
+// (Left/Down/Up/Right), so vi-motion mode's hjkl navigation flows through each view's existing,
+// unmodified arrow-key handling rather than a hand-written per-view action mapping. Any other
+// event (including h/j/k/l with a modifier) passes through unchanged.
+func RemapViMotionKey(event *tcell.EventKey) *tcell.EventKey {
+	if event.Key() != tcell.KeyRune || event.Modifiers() != tcell.ModNone {
+		return event
+	}
+	var target tcell.Key
+	switch event.Rune() {
+	case 'h':
+		target = tcell.KeyLeft
+	case 'j':
+		target = tcell.KeyDown
+	case 'k':
+		target = tcell.KeyUp
+	case 'l':
+		target = tcell.KeyRight
+	default:
+		return event
+	}
+	return tcell.NewEventKey(target, 0, event.Modifiers())
+}
+
 // EventChord returns a normalized chord representation of ev for reverse-map keys.
 func EventChord(ev *tcell.EventKey) Chord {
 	if ev == nil {

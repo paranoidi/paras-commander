@@ -10,12 +10,57 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/textutil"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
+
+// TestMessagesViewViMotionHJKLOnlyWhenModeOn verifies 'j'/'k' move the message-list selection
+// like Down/Up only while vi-motion mode is on, mirroring the browser's own hjkl gating.
+func TestMessagesViewViMotionHJKLOnlyWhenModeOn(t *testing.T) {
+	app := testAppMinimal(t)
+	app.setTransientMessage("first", ui.MessageUrgencyInfo)
+	app.setTransientMessage("second", ui.MessageUrgencyInfo)
+	app.openMessagesView()
+
+	before := app.model.MessagesView.Selected
+	app.handleMessagesViewKey(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
+	if app.model.MessagesView.Selected != before {
+		t.Fatalf("vi-motion off: 'j' moved selection from %d to %d", before, app.model.MessagesView.Selected)
+	}
+
+	app.model.ViMotionMode = true
+	app.handleMessagesViewKey(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
+	if app.model.MessagesView.Selected == before {
+		t.Fatal("vi-motion on: 'j' should move the selection")
+	}
+	moved := app.model.MessagesView.Selected
+	app.handleMessagesViewKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))
+	if app.model.MessagesView.Selected != before {
+		t.Fatalf("vi-motion on: 'k' selection = %d, want %d (back from %d)", app.model.MessagesView.Selected, before, moved)
+	}
+}
+
+// TestMessagesViewViMotionLeaderLetterOnlyWhenModeOn verifies a bound leader-menu letter (here
+// 'x', messages.close) fires its action directly only while vi-motion mode is on.
+func TestMessagesViewViMotionLeaderLetterOnlyWhenModeOn(t *testing.T) {
+	app := testAppMinimal(t)
+	app.openMessagesView()
+
+	app.handleMessagesViewKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
+	if app.model.ViewMode != ui.ViewMessages {
+		t.Fatal("vi-motion off: 'x' must not close the messages view")
+	}
+
+	app.model.ViMotionMode = true
+	app.handleMessagesViewKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("vi-motion on: 'x' should dispatch messages.close directly, ViewMode = %v", app.model.ViewMode)
+	}
+}
 
 func TestSetErrorMessageOpsErrorNoDuplicatePrefix(t *testing.T) {
 	t.Parallel()

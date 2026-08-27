@@ -8,8 +8,35 @@ import (
 )
 
 func TestDefaultLeaderKeysUnique(t *testing.T) {
-	if err := validateLeaderKeys(DefaultLeaderKeys()); err != nil {
+	if err := validateLeaderKeysPerScope(DefaultLeaderKeys()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestValidateLeaderKeysPerScopeAllowsCrossViewReuse(t *testing.T) {
+	// Two different actions sharing the same letter in two independent view scopes is legal:
+	// each rendered menu is a closed set, so the key only needs to be unique within its own menu.
+	saved := leaderMenuViewSpecs
+	defer func() { leaderMenuViewSpecs = saved }()
+	leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
+		HelpCompare: {
+			order:   []string{LeaderMenuGroupCompare},
+			actions: map[string][]string{LeaderMenuGroupCompare: {ActionCompareClose}},
+		},
+		HelpDedup: {
+			order:   []string{LeaderMenuGroupTree},
+			actions: map[string][]string{LeaderMenuGroupTree: {ActionDedupCollapse}},
+		},
+	}
+	keys := map[string]string{
+		ActionCompareClose:  "c",
+		ActionDedupCollapse: "c",
+	}
+	if err := validateLeaderKeysPerScope(keys); err != nil {
+		t.Fatalf("cross-view reuse of %q should be legal: %v", "c", err)
+	}
+	if err := validateLeaderKeys(keys); err == nil {
+		t.Fatal("naive validateLeaderKeys on the merged map should reject the duplicate")
 	}
 }
 
@@ -171,7 +198,7 @@ func TestDefaultLeaderKeysAllowPunctuation(t *testing.T) {
 	if keys[ActionPanelToggleHidden] != "." || keys[ActionPanelMeta] != "," {
 		t.Fatalf("view keys = hidden %q meta %q, want . / ,", keys[ActionPanelToggleHidden], keys[ActionPanelMeta])
 	}
-	if err := validateLeaderKeys(keys); err != nil {
+	if err := validateLeaderKeysPerScope(keys); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -201,6 +228,137 @@ func TestBuildLeaderMenuEntriesViewGroup(t *testing.T) {
 		if viewActions[i] != want[i] {
 			t.Fatalf("view[%d] = %q, want %q", i, viewActions[i], want[i])
 		}
+	}
+}
+
+// checkLeaderMenuEntriesForView asserts entries built for vm match leaderMenuViewSpecs[vm]'s
+// group order, per-group action membership/order, and the spec's own column assignment.
+func checkLeaderMenuEntriesForView(t *testing.T, vm HelpViews) {
+	t.Helper()
+	spec, ok := leaderMenuViewSpecs[vm]
+	if !ok {
+		t.Fatalf("no leaderMenuViewSpecs entry for %v", vm)
+	}
+	keys := DefaultLeaderKeys()
+	entries := BuildLeaderMenuEntriesForView(keys, vm)
+	if len(entries) == 0 {
+		t.Fatal("expected non-empty entries")
+	}
+
+	var gotGroups []string
+	groupActions := map[string][]string{}
+	groupColumn := map[string]int{}
+	var curGroup string
+	for _, e := range entries {
+		if e.GroupTitle != "" {
+			curGroup = e.GroupTitle
+			gotGroups = append(gotGroups, curGroup)
+			groupColumn[curGroup] = e.GroupColumn
+			continue
+		}
+		groupActions[curGroup] = append(groupActions[curGroup], e.ActionID)
+		if e.GroupColumn != groupColumn[curGroup] {
+			t.Fatalf("action %q GroupColumn = %d, want %d (matching its group header)", e.ActionID, e.GroupColumn, groupColumn[curGroup])
+		}
+	}
+
+	var wantGroups []string
+	for _, g := range spec.order {
+		if len(spec.actions[g]) > 0 {
+			wantGroups = append(wantGroups, g)
+		}
+	}
+	if len(gotGroups) != len(wantGroups) {
+		t.Fatalf("groups = %v, want %v", gotGroups, wantGroups)
+	}
+	for i := range wantGroups {
+		if gotGroups[i] != wantGroups[i] {
+			t.Fatalf("group[%d] = %q, want %q", i, gotGroups[i], wantGroups[i])
+		}
+		wantActions := spec.actions[wantGroups[i]]
+		var wantBound []string
+		for _, id := range wantActions {
+			if _, ok := keys[id]; ok {
+				wantBound = append(wantBound, id)
+			}
+		}
+		gotActions := groupActions[wantGroups[i]]
+		if len(gotActions) != len(wantBound) {
+			t.Fatalf("group %q actions = %v, want %v", wantGroups[i], gotActions, wantBound)
+		}
+		for j := range wantBound {
+			if gotActions[j] != wantBound[j] {
+				t.Fatalf("group %q action[%d] = %q, want %q", wantGroups[i], j, gotActions[j], wantBound[j])
+			}
+		}
+		wantCol := spec.column[wantGroups[i]]
+		if groupColumn[wantGroups[i]] != wantCol {
+			t.Fatalf("group %q column = %d, want %d", wantGroups[i], groupColumn[wantGroups[i]], wantCol)
+		}
+	}
+}
+
+func TestBuildLeaderMenuEntriesForViewCompare(t *testing.T) {
+	checkLeaderMenuEntriesForView(t, HelpCompare)
+}
+
+func TestBuildLeaderMenuEntriesForViewDedup(t *testing.T) {
+	checkLeaderMenuEntriesForView(t, HelpDedup)
+}
+
+func TestBuildLeaderMenuEntriesForViewJobs(t *testing.T) {
+	checkLeaderMenuEntriesForView(t, HelpJobs)
+}
+
+func TestBuildLeaderMenuEntriesForViewCommands(t *testing.T) {
+	checkLeaderMenuEntriesForView(t, HelpCommands)
+}
+
+func TestBuildLeaderMenuEntriesForViewMessages(t *testing.T) {
+	checkLeaderMenuEntriesForView(t, HelpMessages)
+}
+
+func TestActionForLeaderKeyInViewScopedPerView(t *testing.T) {
+	saved := leaderMenuViewSpecs
+	defer func() { leaderMenuViewSpecs = saved }()
+	leaderMenuViewSpecs = map[HelpViews]leaderMenuViewSpec{
+		HelpCompare: {
+			order:   []string{LeaderMenuGroupCompare},
+			actions: map[string][]string{LeaderMenuGroupCompare: {ActionCompareClose}},
+		},
+		HelpDedup: {
+			order:   []string{LeaderMenuGroupTree},
+			actions: map[string][]string{LeaderMenuGroupTree: {ActionDedupCollapse}},
+		},
+	}
+	b := &Bundle{LeaderKey: map[string]string{
+		ActionCompareClose:  "c",
+		ActionDedupCollapse: "c",
+	}}
+
+	id, ok := b.ActionForLeaderKeyInView('c', HelpCompare)
+	if !ok || id != ActionCompareClose {
+		t.Fatalf("Compare 'c' = %q %v, want %s", id, ok, ActionCompareClose)
+	}
+	id, ok = b.ActionForLeaderKeyInView('c', HelpDedup)
+	if !ok || id != ActionDedupCollapse {
+		t.Fatalf("Dedup 'c' = %q %v, want %s", id, ok, ActionDedupCollapse)
+	}
+	// A view with no leaderMenuViewSpecs entry (e.g. the browser) never resolves.
+	if _, ok := b.ActionForLeaderKeyInView('c', HelpBrowser); ok {
+		t.Fatal("HelpBrowser has no per-view leader menu; expected not found")
+	}
+	// A letter not bound in a given view's own scope is not found there, even though it's
+	// bound in another view's scope.
+	if _, ok := b.ActionForLeaderKeyInView('z', HelpCompare); ok {
+		t.Fatal("unbound letter should not resolve")
+	}
+}
+
+func TestActionForLeaderKeyInViewNilBundle(t *testing.T) {
+	var b *Bundle
+	if _, ok := b.ActionForLeaderKeyInView('c', HelpCompare); ok {
+		t.Fatal("nil bundle should never resolve")
 	}
 }
 

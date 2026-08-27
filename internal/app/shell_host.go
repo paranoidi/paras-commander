@@ -42,3 +42,9 @@ func (h appShellHost) TryDispatchAuxiliaryScreens(actionID string) bool {
 func (h appShellHost) ActionFromKeyEvent(ev *tcell.EventKey) string {
 	return h.app.actionFromKeyEvent(ev)
 }
+
+func (h appShellHost) ToggleLeaderMenu() { h.app.toggleBuiltinLeaderMenu() }
+
+func (h appShellHost) DispatchLeaderLetter(event *tcell.EventKey) bool {
+	return h.app.dispatchLeaderLetterDirectFire(event)
+}

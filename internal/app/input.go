@@ -348,35 +348,45 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 	}
 	if a.model.ViewMode == ui.ViewCompare && !a.inQuickFilterUI() {
 		rest := compareViewFooterKeys(a.keys.Compare, a.model.CompareView.Filter, a.model.CompareView.IgnoreEmpty)
-		rest = append(rest, menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"})
+		rest = append(rest, menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit})
 		out := footerWithEscClose(rest)
-		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"}
+		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp}
 		out = append(out[:1], append([]menu.FunctionKey{f1}, out[1:]...)...)
-		return out, true
+		return a.viMotionAuxiliaryFooterKeys(out), true
 	}
 	if a.model.ViewMode == ui.ViewDedup && !a.inQuickFilterUI() {
 		rest := dedupViewFooterKeys(a.keys.Global, a.keys.Dedup, a.model.DedupView.TreeDirs)
 		rest = append(rest,
-			menu.FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu"},
-			menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"},
+			menu.FunctionKey{Key: tcell.KeyF9, KeyLabel: "F9", Hint: "Menu", ActionID: keymap.ActionAppOpenMenu},
+			menu.FunctionKey{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
 		)
 		out := footerWithEscClose(rest)
-		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help"}
+		f1 := menu.FunctionKey{Key: tcell.KeyF1, KeyLabel: "F1", Hint: "Help", ActionID: keymap.ActionAppShowHelp}
 		out = append(out[:1], append([]menu.FunctionKey{f1}, out[1:]...)...)
-		return out, true
+		return a.viMotionAuxiliaryFooterKeys(out), true
 	}
 	if a.model.ViewMode == ui.ViewCommands && !a.inQuickFilterUI() {
-		return menu.FunctionKeysCommandsView(), true
+		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysCommandsView()), true
 	}
 	if a.model.ViewMode == ui.ViewMessages && !a.inQuickFilterUI() {
-		return menu.FunctionKeysMessagesView(), true
+		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysMessagesView()), true
 	}
 	if a.model.ViewMode == ui.ViewJobs && !a.inQuickFilterUI() {
 		sel := a.model.JobsView.Selected
 		finished := sel >= 0 && sel < len(a.model.JobsList) && jobs.Status(a.model.JobsList[sel].Status).IsFinished()
-		return menu.FunctionKeysJobsView(finished), true
+		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysJobsView(finished)), true
 	}
 	return nil, false
+}
+
+// viMotionAuxiliaryFooterKeys applies viMotionFooterKeys to one of the 5 secondary views'
+// footer hints (Compare/Dedup/Commands/Messages/Jobs) when vi-motion mode is on, mirroring how
+// activeFooterKeys already does this for the browser's own menu.FunctionKeys.
+func (a *App) viMotionAuxiliaryFooterKeys(keys []menu.FunctionKey) []menu.FunctionKey {
+	if !a.model.ViMotionMode {
+		return keys
+	}
+	return viMotionFooterKeys(keys, a.keys)
 }
 
 func footerWithEscClose(rest []menu.FunctionKey) []menu.FunctionKey {

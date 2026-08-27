@@ -598,6 +598,128 @@ func TestColonKeyTogglesBuiltinLeaderMenuClosed(t *testing.T) {
 	}
 }
 
+func TestColonKeyOpensPerViewLeaderMenuInCompare(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	app.model.ViewMode = ui.ViewCompare
+
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+	if quit {
+		t.Fatal("handleKey() quit = true for :")
+	}
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("expected leader menu open in Compare view")
+	}
+	if app.model.LeaderMenu.UserMenu || app.model.LeaderMenu.CopyMenu || app.model.LeaderMenu.PreviewMenu {
+		t.Fatalf("leader menu state = %+v, want plain builtin menu", app.model.LeaderMenu)
+	}
+	var foundGroup, foundClose bool
+	for _, it := range app.model.LeaderMenu.Items {
+		if it.GroupTitle == keymap.LeaderMenuGroupCompare {
+			foundGroup = true
+		}
+		if it.Key == 'c' && it.Label == "Close compare view" {
+			foundClose = true
+		}
+	}
+	if !foundGroup {
+		t.Fatal("expected Compare group header")
+	}
+	if !foundClose {
+		t.Fatalf("items = %+v, want Close compare view with key c", app.model.LeaderMenu.Items)
+	}
+
+	// Activating 'c' runs it through activateCompareHelpAction (tryDispatchCompare), closing
+	// the Compare view and the leader menu, mirroring what F1 help does for the same action.
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
+	if app.model.LeaderMenu.Open {
+		t.Fatal("leader menu should close after activation")
+	}
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser after Close", app.model.ViewMode)
+	}
+}
+
+func TestColonKeyOpensPerViewLeaderMenuInDedup(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	app.model.ViewMode = ui.ViewDedup
+
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+	if quit {
+		t.Fatal("handleKey() quit = true for :")
+	}
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("expected leader menu open in Dedup view")
+	}
+	var foundTree, foundDuplicates bool
+	for _, it := range app.model.LeaderMenu.Items {
+		switch it.GroupTitle {
+		case keymap.LeaderMenuGroupTree:
+			foundTree = true
+		case keymap.LeaderMenuGroupDuplicates:
+			foundDuplicates = true
+		}
+	}
+	if !foundTree || !foundDuplicates {
+		t.Fatalf("groups: tree=%v duplicates=%v, want both", foundTree, foundDuplicates)
+	}
+
+	// 'v' = dedup.close (activateDedupHelpAction -> tryDispatchDedup).
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'v', tcell.ModNone))
+	if app.model.LeaderMenu.Open {
+		t.Fatal("leader menu should close after activation")
+	}
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser after dedup close", app.model.ViewMode)
+	}
+}
+
+func TestColonKeyOpensPerViewLeaderMenuInMessages(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	app.openMessagesView()
+
+	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+	if quit {
+		t.Fatal("handleKey() quit = true for :")
+	}
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("expected leader menu open in Messages view")
+	}
+	var foundClear bool
+	for _, it := range app.model.LeaderMenu.Items {
+		if it.Key == 'c' && it.Label == "Clear messages" {
+			foundClear = true
+		}
+	}
+	if !foundClear {
+		t.Fatalf("items = %+v, want Clear messages with key c", app.model.LeaderMenu.Items)
+	}
+
+	// 'x' = messages.close (activateMessagesHelpAction -> tryDispatchMessages).
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
+	if app.model.LeaderMenu.Open {
+		t.Fatal("leader menu should close after activation")
+	}
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser after messages close", app.model.ViewMode)
+	}
+}
+
+func TestColonKeyTogglesPerViewLeaderMenuClosed(t *testing.T) {
+	app := testLeaderMenuApp(t)
+	app.model.ViewMode = ui.ViewCompare
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("expected menu open")
+	}
+	app.handleKey(tcell.NewEventKey(tcell.KeyRune, ':', tcell.ModNone))
+	if app.model.LeaderMenu.Open {
+		t.Fatal("expected menu closed after second :")
+	}
+	if app.model.ViewMode != ui.ViewCompare {
+		t.Fatalf("ViewMode = %v, want ViewCompare (unaffected by closing the menu)", app.model.ViewMode)
+	}
+}
+
 func TestCtrlSOpensSortDialog(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.model.ViewMode = ui.ViewBrowser

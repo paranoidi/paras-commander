@@ -106,6 +106,9 @@ func (a *App) selectMessagesEdge(toEnd bool) {
 }
 
 func (a *App) handleMessagesViewKey(event *tcell.EventKey) bool {
+	if a.model.ViMotionMode {
+		event = keymap.RemapViMotionKey(event)
+	}
 	switch event.Key() {
 	case tcell.KeyEsc:
 		a.closeMessagesView()
@@ -113,18 +116,8 @@ func (a *App) handleMessagesViewKey(event *tcell.EventKey) bool {
 	}
 
 	nextAction := a.actionFromKeyEvent(event)
-	if nextAction == keymap.ActionAppQuit {
-		return a.handleQuit()
-	}
-	if nextAction == keymap.ActionAppQuitImmediate {
-		return a.handleQuitImmediate()
-	}
-	if nextAction == keymap.ActionAppOpenMenu {
-		a.openMenu()
-		return false
-	}
-	if a.tryOpenMenuByShortcut(event) {
-		return false
+	if result, handled := a.dispatchAuxiliaryViewCommonKeys(event, nextAction); handled {
+		return result
 	}
 	if nextAction != "" && a.tryDispatchMessages(nextAction) {
 		return false

@@ -40,4 +40,12 @@ type ShellHost interface {
 	Dispatch(actionID string)
 	TryDispatchAuxiliaryScreens(actionID string) bool
 	ActionFromKeyEvent(ev *tcell.EventKey) string
+	// ToggleLeaderMenu opens (or, if already open, closes) the `:` leader menu scoped to
+	// the current auxiliary view's own actions.
+	ToggleLeaderMenu()
+	// DispatchLeaderLetter fires the auxiliary view's own leader-menu action bound to event's
+	// rune directly, without opening the `:` menu, when vi-motion mode is on. Returns false
+	// (no-op) when vi-motion mode is off, event isn't a plain letter, or no action in this
+	// view's leader menu is bound to it.
+	DispatchLeaderLetter(event *tcell.EventKey) bool
 }

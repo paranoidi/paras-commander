@@ -170,35 +170,35 @@ func dedupViewFooterKeys(global, dedup *keymap.Map, treeDirs bool) []menu.Functi
 	var out []menu.FunctionKey
 	if global != nil {
 		if lbl := global.MenuBindingLabel(keymap.ActionPanelRefresh); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Refresh"})
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Refresh", ActionID: keymap.ActionPanelRefresh})
 		}
 	}
 	if dedup != nil {
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupToggleTree); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Dirs/Groups"})
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Dirs/Groups", ActionID: keymap.ActionDedupToggleTree})
 		}
 		if !treeDirs {
 			if lbl := dedup.MenuBindingLabel(keymap.ActionDedupToggleSort); lbl != "" {
-				out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Sort"})
+				out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Sort", ActionID: keymap.ActionDedupToggleSort})
 			}
 		}
 	}
 	if global != nil {
 		if lbl := global.MenuBindingLabel(keymap.ActionPanelClearSelection); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect all"})
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Unselect all", ActionID: keymap.ActionPanelClearSelection})
 		}
 	}
 	if dedup != nil {
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupMarkKeep); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Keep"})
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Keep", ActionID: keymap.ActionDedupMarkKeep})
 		}
 		if lbl := dedup.MenuBindingLabel(keymap.ActionDedupCompare); lbl != "" {
-			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Compare"})
+			out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Compare", ActionID: keymap.ActionDedupCompare})
 		}
 	}
 	if global != nil {
 		if lbl := global.MenuBindingLabel(keymap.ActionFileDelete); lbl != "" {
-			out = append(out, menu.FunctionKey{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete"})
+			out = append(out, menu.FunctionKey{Key: tcell.KeyF8, KeyLabel: lbl, Hint: "Delete", ActionID: keymap.ActionFileDelete})
 		}
 	}
 	return out
@@ -215,19 +215,12 @@ func (a *App) dedupVisibleRows() int {
 }
 
 func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
+	if a.model.ViMotionMode {
+		event = keymap.RemapViMotionKey(event)
+	}
 	nextAction := a.actionFromKeyEvent(event)
-	if nextAction == keymap.ActionAppQuit {
-		return a.handleQuit()
-	}
-	if nextAction == keymap.ActionAppQuitImmediate {
-		return a.handleQuitImmediate()
-	}
-	if nextAction == keymap.ActionAppOpenMenu {
-		a.openMenu()
-		return false
-	}
-	if a.tryOpenMenuByShortcut(event) {
-		return false
+	if result, handled := a.dispatchAuxiliaryViewCommonKeys(event, nextAction); handled {
+		return result
 	}
 
 	visible := a.dedupVisibleRows()

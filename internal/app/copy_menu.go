@@ -27,7 +27,7 @@ func (a *App) openCopyMenu() {
 		items = append(items, ui.LeaderMenuItem{Key: e.Key, Label: e.Label})
 		actions = append(actions, e.ActionID)
 	}
-	a.openLeaderMenuDispatch(items, actions, false, true, "Copy menu")
+	a.openLeaderMenuDispatch(items, actions, false, true, "Copy menu", a.dispatchActionLikeKeyboardShortcut)
 }
 
 func (a *App) copyToClipboard(actionID string) {

@@ -16,7 +16,7 @@ func TestTransferTopLevelDestNamesSingleFile(t *testing.T) {
 	if err := os.WriteFile(src, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	got := transferTopLevelDestNames([]string{src}, dst, false)
+	got := transferTopLevelDestNames([]string{src}, dst, true, false)
 	if len(got) != 1 || got[0] != "willow.txt" {
 		t.Fatalf("got %v, want [willow.txt]", got)
 	}
@@ -42,7 +42,7 @@ func TestTransferTopLevelDestNamesStructuredBatch(t *testing.T) {
 	if err := os.Mkdir(dst, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	got := transferTopLevelDestNames([]string{f1, f2}, dst, false)
+	got := transferTopLevelDestNames([]string{f1, f2}, dst, true, false)
 	if len(got) != 2 || got[0] != "orchard" || got[1] != "meadow" {
 		t.Fatalf("got %v, want [orchard meadow]", got)
 	}
@@ -62,7 +62,7 @@ func TestTransferTopLevelDestNamesFlatten(t *testing.T) {
 	if err := os.Mkdir(dst, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	got := transferTopLevelDestNames([]string{f1}, dst, true)
+	got := transferTopLevelDestNames([]string{f1}, dst, true, true)
 	if len(got) != 1 || got[0] != "cedar.txt" {
 		t.Fatalf("got %v, want [cedar.txt]", got)
 	}

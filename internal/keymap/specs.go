@@ -451,6 +451,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"M-x"},
 			PreferredKey: "M-x",
 			Keywords:     []string{"xdg-open", "gui", "file manager", "finder"},
+			LeaderKey:    "e",
 		},
 		{
 			ID:           ActionPanelOpenDirInOther,
@@ -515,6 +516,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"back", "browser"},
+			LeaderKey:   "c",
 		},
 		{
 			ID:          ActionCompareCycleFilter,
@@ -523,6 +525,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"equal", "relocated", "missing", "diff"},
+			LeaderKey:   "C",
 		},
 		{
 			ID:          ActionCompareResetFilter,
@@ -531,6 +534,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"clear", "all", "show all"},
+			LeaderKey:   "r",
 		},
 		{
 			ID:          ActionCompareRefresh,
@@ -539,6 +543,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"rescan", "rehash"},
+			LeaderKey:   "R",
 		},
 		{
 			ID:          ActionCompareMerge,
@@ -547,6 +552,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"sync", "reconcile", "copy", "duplicate"},
+			LeaderKey:   "m",
 		},
 		{
 			ID:          ActionCompareToggleEmpty,
@@ -555,6 +561,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Navigation",
 			DefaultKeys: nil, // overlay: DefaultCompareOverlayKeys
 			Keywords:    []string{"empty", "zero", "hide", "ignore"},
+			LeaderKey:   "t",
 		},
 		{
 			ID:          ActionDedupClose,
@@ -563,6 +570,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"back", "browser"},
+			LeaderKey:   "v",
 		},
 		{
 			ID:          ActionDedupToggleSort,
@@ -571,6 +579,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"sort", "path", "wasted", "order"},
+			LeaderKey:   "t",
 		},
 		{
 			ID:          ActionDedupToggleEmpty,
@@ -579,6 +588,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"empty", "zero", "hide", "ignore"},
+			LeaderKey:   "T",
 		},
 		{
 			ID:          ActionDedupToggleNode,
@@ -587,6 +597,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "expand", "collapse", "fold", "node"},
+			LeaderKey:   "e",
 		},
 		{
 			ID:          ActionDedupCollapse,
@@ -595,6 +606,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "collapse", "fold", "parent"},
+			LeaderKey:   "c",
 		},
 		{
 			ID:          ActionDedupToggleTree,
@@ -603,6 +615,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "view", "mode", "directory", "group"},
+			LeaderKey:   "g",
 		},
 		{
 			ID:          ActionDedupCollapseAll,
@@ -611,6 +624,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "collapse", "fold", "all"},
+			LeaderKey:   "C",
 		},
 		{
 			ID:          ActionDedupExpandAll,
@@ -619,6 +633,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"tree", "expand", "unfold", "all"},
+			LeaderKey:   "a",
 		},
 		{
 			ID:          ActionDedupPrevDir,
@@ -627,6 +642,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"directory", "folder", "up", "previous", "jump"},
+			LeaderKey:   "p",
 		},
 		{
 			ID:          ActionDedupNextDir,
@@ -635,6 +651,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"directory", "folder", "down", "next", "jump"},
+			LeaderKey:   "N",
 		},
 		{
 			ID:          ActionDedupMarkKeep,
@@ -643,6 +660,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"keep", "survivor", "duplicate", "dedup"},
+			LeaderKey:   "m",
 		},
 		{
 			ID:          ActionDedupCompare,
@@ -651,6 +669,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Find duplicates",
 			DefaultKeys: nil, // overlay: DefaultDedupOverlayKeys
 			Keywords:    []string{"compare", "diff", "directory", "merge"},
+			LeaderKey:   "D",
 		},
 
 		// ── Disk usage ──
@@ -680,6 +699,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Selection",
 			DefaultKeys: []string{"insert"},
 			Keywords:    []string{"select", "mark"},
+			LeaderKey:   "S",
 		},
 		{
 			ID:          ActionPanelSelectGroup,
@@ -1311,6 +1331,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Commands",
 			DefaultKeys: nil, // overlay: DefaultCommandsOverlayKeys
 			Keywords:    []string{"back", "browser", "esc"},
+			LeaderKey:   "x",
 		},
 		{
 			ID:           ActionCommandsTerminate,
@@ -1320,6 +1341,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  nil, // overlay: DefaultCommandsOverlayKeys
 			PreferredKey: "F8",
 			Keywords:     []string{"sigterm", "stop", "process"},
+			LeaderKey:    "t",
 		},
 		{
 			ID:           ActionCommandsKill,
@@ -1329,6 +1351,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  nil, // overlay: DefaultCommandsOverlayKeys
 			PreferredKey: "S-F8",
 			Keywords:     []string{"sigkill", "force", "stop", "process"},
+			LeaderKey:    "k",
 		},
 		{
 			ID:           ActionFileRunForEach,
@@ -1359,6 +1382,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Messages",
 			DefaultKeys: nil, // overlay: DefaultMessagesOverlayKeys
 			Keywords:    []string{"back", "browser", "esc"},
+			LeaderKey:   "x",
 		},
 		{
 			ID:          ActionMessagesClear,
@@ -1367,6 +1391,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Messages",
 			DefaultKeys: nil,
 			Keywords:    []string{"log", "toast", "status"},
+			LeaderKey:   "c",
 		},
 
 		// ── Jobs ──
@@ -1390,6 +1415,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"C-q", "M-q"},
 			PreferredKey: "C-q",
 			Keywords:     []string{"blocker", "waiting", "conflict"},
+			LeaderKey:    "a",
 		},
 		{
 			ID:          ActionJobsCancel,
@@ -1398,6 +1424,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Jobs",
 			DefaultKeys: nil,
 			Keywords:    []string{"abort"},
+			LeaderKey:   "j",
 		},
 		{
 			ID:          ActionJobsPause,
@@ -1406,6 +1433,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Jobs",
 			DefaultKeys: nil,
 			Keywords:    []string{"hold"},
+			LeaderKey:   "p",
 		},
 		{
 			ID:          ActionJobsResume,
@@ -1414,6 +1442,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Jobs",
 			DefaultKeys: nil,
 			Keywords:    []string{"unpause", "start"},
+			LeaderKey:   "r",
 		},
 		{
 			ID:          ActionJobsQueueUp,
@@ -1422,6 +1451,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Jobs",
 			DefaultKeys: nil,
 			Keywords:    []string{"reorder"},
+			LeaderKey:   "m",
 		},
 		{
 			ID:          ActionJobsQueueDown,
@@ -1430,6 +1460,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Jobs",
 			DefaultKeys: nil,
 			Keywords:    []string{"reorder"},
+			LeaderKey:   "M",
 		},
 		{
 			ID:          ActionJobsClose,
@@ -1438,6 +1469,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Jobs",
 			DefaultKeys: nil, // overlay: DefaultJobsOverlayKeys
 			Keywords:    []string{"back", "browser", "esc"},
+			LeaderKey:   "x",
 		},
 		{
 			ID:          ActionJobsClearFinished,
@@ -1446,6 +1478,7 @@ func DefaultActionSpecs() []ActionSpec {
 			Section:     "Jobs",
 			DefaultKeys: nil,
 			Keywords:    []string{"remove", "done"},
+			LeaderKey:   "c",
 		},
 
 		// ── Options dialogs ──

@@ -30,12 +30,44 @@ type Bundle struct {
 }
 
 // ActionForLeaderKey returns the action ID bound to the Esc function-menu leader key r,
-// if any (reverse lookup over LeaderKey, which maps action ID → letter).
+// if any (reverse lookup over LeaderKey, which maps action ID → letter). Only considers
+// actions in the browser's built-in leader menu (leaderMenuGroupActions) — the sole caller is
+// vi-motion mode's browser-only "every leader-menu letter fires directly" shortcut (see
+// internal/app/input.go), and per-view leader-menu actions (Compare/Dedup/Jobs/Commands/
+// Messages) may legally reuse the same letter for a different action in their own closed
+// scope, so an unscoped reverse lookup here would resolve ambiguously.
 func (b *Bundle) ActionForLeaderKey(r rune) (string, bool) {
 	if b == nil {
 		return "", false
 	}
+	return b.actionForLeaderKeyInScope(r, flattenGroupActions(leaderMenuGroupActions))
+}
+
+// ActionForLeaderKeyInView returns the action ID bound to leader-menu letter r within vm's own
+// per-view leader menu (leaderMenuViewSpecs[vm]), if any. Parallel to ActionForLeaderKey but
+// scoped to one auxiliary view's closed letter set instead of the browser's — the sole caller is
+// vi-motion mode's per-view "every leader-menu letter fires directly" shortcut (see
+// internal/app/leader_menu.go), and different views may legally reuse the same letter for a
+// different action in their own scope (e.g. Compare's `c` = Close vs. Dedup's `c` = Collapse), so
+// an unscoped or browser-scoped reverse lookup would resolve ambiguously or miss entirely.
+func (b *Bundle) ActionForLeaderKeyInView(r rune, vm HelpViews) (string, bool) {
+	if b == nil {
+		return "", false
+	}
+	spec, ok := leaderMenuViewSpecs[vm]
+	if !ok {
+		return "", false
+	}
+	return b.actionForLeaderKeyInScope(r, flattenGroupActions(spec.actions))
+}
+
+// actionForLeaderKeyInScope is the shared reverse lookup behind ActionForLeaderKey and
+// ActionForLeaderKeyInView: the action ID within scope bound to leader-menu letter r, if any.
+func (b *Bundle) actionForLeaderKeyInScope(r rune, scope map[string]struct{}) (string, bool) {
 	for actionID, letter := range b.LeaderKey {
+		if _, ok := scope[actionID]; !ok {
+			continue
+		}
 		if letter == string(r) {
 			return actionID, true
 		}

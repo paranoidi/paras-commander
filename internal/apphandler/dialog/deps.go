@@ -105,8 +105,6 @@ type pendingPanelFocus struct {
 	candidateNames []string
 	// snapCursorPath, when non-empty, must still match CurrentEntry at apply time or focus is aborted.
 	snapCursorPath string
-	// center selects SelectVisibleEntryCentered; false uses SelectVisibleEntryInViewport.
-	center bool
 }
 
 // Handler owns the file-operation dialog family: opening dialogs, dispatching their keys, and

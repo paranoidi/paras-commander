@@ -68,7 +68,7 @@ func DefaultBundle() (*Bundle, error) {
 }
 
 func buildBundle(global map[string][]string, overlayLayers []map[string][]string, leaderKey, copyMenuKey, previewMenuKey map[string]string) (*Bundle, error) {
-	if err := validateLeaderKeys(leaderKey); err != nil {
+	if err := validateLeaderKeysPerScope(leaderKey); err != nil {
 		return nil, err
 	}
 	if err := validateCopyMenuKeys(copyMenuKey); err != nil {
