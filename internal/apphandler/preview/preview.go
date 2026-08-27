@@ -577,6 +577,13 @@ func (h *Handler) populateQuickViewDirOverlay(ov *panel.State, driver, follower 
 		return nil
 	}
 	vr := h.host.PanelViewportRows(panelID)
+	if h.host.PathVolumeContendsWithActiveJob(canonical) {
+		// The synchronous SnapshotDirectory below can block the UI goroutine for seconds on a
+		// volume an active job is saturating, so skip the instant first frame and rely solely on
+		// the async load dispatched by ov.Load — same non-blocking, timeout-guarded path a real
+		// panel uses when navigating into a contended directory.
+		return ov.Load(canonical)
+	}
 	snap, err := driver.SnapshotDirectory(canonical, vr, driver, follower)
 	if err != nil {
 		return err
@@ -656,9 +663,6 @@ func (h *Handler) quickViewFollowDirectory() {
 	follower := h.host.PanelByID(followerID)
 	targetPath = panel.CleanPathString(targetPath)
 	if targetPath == "" {
-		return
-	}
-	if h.host.PathVolumeContendsWithActiveJob(targetPath) {
 		return
 	}
 	ov := &h.model.QuickViewDirOverlay
