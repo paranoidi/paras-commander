@@ -36,10 +36,12 @@ func (s *State) RemoveEntriesByPath(paths []string, viewportRows int) bool {
 	}
 
 	kept := make([]localfs.Entry, 0, len(s.Entries))
+	removedNames := make([]string, 0, len(drop))
 	removed := false
 	for _, e := range s.Entries {
 		if drop[filepath.Clean(e.Path)] {
 			removed = true
+			removedNames = append(removedNames, e.Name)
 			continue
 		}
 		kept = append(kept, e)
@@ -55,6 +57,12 @@ func (s *State) RemoveEntriesByPath(paths []string, viewportRows int) bool {
 	}
 	if !removed && !treeRemoved {
 		return false
+	}
+	if len(removedNames) > 0 {
+		// A stale reload can land after this optimistic prune but before the job's real
+		// filesystem op completes, still seeing the file on disk — without this, that
+		// reappearance reads as newly created (see newlyAppearedNames / rename_marks.go).
+		s.MarkPendingRemoval(s.Path, removedNames)
 	}
 
 	s.ListingEpoch++

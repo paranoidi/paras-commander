@@ -5,7 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/paranoidi/paras-commander/internal/fsbackend"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
@@ -211,5 +213,38 @@ func TestRefreshDoesNotClobberCrossDirNavigation(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("calls = %d, want 1 (cross-dir pending must not schedule refresh)", calls)
+	}
+}
+
+// TestRemoveEntriesByPathThenStaleReloadDoesNotMarkReappearanceAsNew reproduces the delete/move
+// race: RemoveEntriesByPath prunes a row optimistically when the job is enqueued, but a reload
+// that lands before the physical filesystem op completes still sees the file on disk. That
+// reappearance must not be flagged as newly created (it would show a spurious new-file icon
+// alongside the in-flight job's own icon).
+func TestRemoveEntriesByPathThenStaleReloadDoesNotMarkReappearanceAsNew(t *testing.T) {
+	dir := t.TempDir()
+	gone := filepath.Join(dir, "departing.txt")
+	if err := os.WriteFile(gone, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	if !state.RemoveEntriesByPath([]string{gone}, 10) {
+		t.Fatal("RemoveEntriesByPath = false, want true")
+	}
+
+	// Simulate a stale periodic-refresh read landing before the delete/move job's real op
+	// completes: the file is still physically present.
+	staleListing := []fsbackend.Entry{{Name: "departing.txt", Type: fsbackend.EntryFile}}
+	if _, err := state.ApplyPeriodicRefresh(pathloc.MustParse(dir), staleListing, 10); err != nil {
+		t.Fatalf("ApplyPeriodicRefresh: %v", err)
+	}
+
+	departing := localfs.Entry{Name: "departing.txt", Type: localfs.EntryFile}
+	if got := state.NewFileMarkTier(departing); got != panellist.NewFileMarkNone {
+		t.Fatalf("tier = %v, want none (reappearance during in-flight removal must not be new)", got)
 	}
 }

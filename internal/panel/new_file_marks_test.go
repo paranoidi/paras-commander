@@ -119,6 +119,31 @@ func TestLoadIntoDirectoryDoesNotMarkExistingEntriesAsNew(t *testing.T) {
 	}
 }
 
+func TestFilterPendingRemovalSuppressesRaceAndSelfCleans(t *testing.T) {
+	t.Parallel()
+	dir := pathloc.MustParse(t.TempDir())
+	s := State{Path: dir}
+	s.MarkPendingRemoval(dir, []string{"vanishing.txt"})
+
+	// Stale reload: the file is still on disk (physical op hasn't landed yet).
+	stillThere := []localfs.Entry{{Name: "vanishing.txt", Type: localfs.EntryFile}}
+	got := s.filterPendingRemoval(dir, []string{"vanishing.txt"}, stillThere)
+	if len(got) != 0 {
+		t.Fatalf("filterPendingRemoval = %v, want empty (suppressed)", got)
+	}
+
+	// A later reload confirms it's actually gone: the pending mark self-cleans, so an
+	// unrelated file later created with the same name is no longer suppressed.
+	gone := []localfs.Entry{{Name: "unrelated.txt", Type: localfs.EntryFile}}
+	if got := s.filterPendingRemoval(dir, nil, gone); len(got) != 0 {
+		t.Fatalf("filterPendingRemoval = %v, want empty", got)
+	}
+	got = s.filterPendingRemoval(dir, []string{"vanishing.txt"}, []localfs.Entry{{Name: "vanishing.txt", Type: localfs.EntryFile}})
+	if len(got) != 1 || got[0] != "vanishing.txt" {
+		t.Fatalf("filterPendingRemoval = %v, want [vanishing.txt] once suppression cleared", got)
+	}
+}
+
 func TestNewFileMarkTierRecopyPromotesToLatest(t *testing.T) {
 	t.Parallel()
 	dest := pathloc.MustParse(t.TempDir())

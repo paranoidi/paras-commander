@@ -1449,6 +1449,7 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 	var newlyAppeared []string
 	if sameDirReload && s.entriesShowHidden == s.ShowHidden {
 		newlyAppeared = newlyAppearedNames(s.Entries, localEntries)
+		newlyAppeared = s.filterPendingRemoval(listingLoc, newlyAppeared, localEntries)
 	}
 	s.entriesShowHidden = s.ShowHidden
 	s.Path = listingLoc
