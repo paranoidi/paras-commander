@@ -112,3 +112,9 @@ func CheckFilePreviewable(path string) error {
 	}
 	return nil
 }
+
+// IsGraphicalPreviewPath reports whether path is previewed through the terminal graphics path
+// (sixel/Kitty) rather than as text. Single source of truth for that branch.
+func IsGraphicalPreviewPath(path string) bool {
+	return IsImagePath(path) || IsMediaPath(path)
+}

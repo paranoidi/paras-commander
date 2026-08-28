@@ -37,7 +37,9 @@ func (h *Handler) carouselPreviewNavCoalesceContext() bool {
 }
 
 func (h *Handler) scheduleCarouselPreviewDebounceTimer(gen uint64) {
-	delay := time.Duration(h.host.Config().UI.KeyRepeatDebounceMS) * time.Millisecond
+	// Empty for directory targets, so the child-listing coalesce keeps the key-repeat delay.
+	path, _ := h.carouselFilePreviewWantPath()
+	delay := h.previewDebounceDelay(path)
 	h.carouselPreviewDebounce.Arm(delay, func() {
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(CarouselPreviewFlushPayload{gen: gen}))
 	})

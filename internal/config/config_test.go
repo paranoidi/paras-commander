@@ -917,3 +917,24 @@ func TestValidateKeyRepeatDebounceMS(t *testing.T) {
 		t.Fatalf("KeyRepeatDebounceMS = %d, want clamp %d", cfg.UI.KeyRepeatDebounceMS, KeyRepeatDebounceMaxMS)
 	}
 }
+
+func TestValidateImagePreviewDebounceMS(t *testing.T) {
+	cfg := Default()
+	if cfg.UI.ImagePreviewDebounceMS != DefaultImagePreviewDebounceMS {
+		t.Fatalf("default ImagePreviewDebounceMS = %d, want %d", cfg.UI.ImagePreviewDebounceMS, DefaultImagePreviewDebounceMS)
+	}
+	cfg.UI.ImagePreviewDebounceMS = -1
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.ImagePreviewDebounceMS != DefaultImagePreviewDebounceMS {
+		t.Fatalf("ImagePreviewDebounceMS = %d, want default %d", cfg.UI.ImagePreviewDebounceMS, DefaultImagePreviewDebounceMS)
+	}
+	cfg.UI.ImagePreviewDebounceMS = 20_000
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if cfg.UI.ImagePreviewDebounceMS != KeyRepeatDebounceMaxMS {
+		t.Fatalf("ImagePreviewDebounceMS = %d, want clamp %d", cfg.UI.ImagePreviewDebounceMS, KeyRepeatDebounceMaxMS)
+	}
+}

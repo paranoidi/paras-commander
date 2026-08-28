@@ -13,6 +13,11 @@ const (
 	// Zero disables coalescing (immediate per-event behavior).
 	DefaultKeyRepeatDebounceMS = 45
 
+	// DefaultImagePreviewDebounceMS replaces DefaultKeyRepeatDebounceMS when the coalesced preview
+	// target is an image or media file. Those previews decode, scale and re-emit a sixel/Kitty
+	// payload to the TTY, which is far more expensive than a text reload, so they wait longer.
+	DefaultImagePreviewDebounceMS = 500
+
 	// DebounceCalibrationMarginMS is added to the measured key-repeat interval when calibrating.
 	DebounceCalibrationMarginMS = 10
 	// DebounceCalibrationMinRepeatSamples is how many repeat intervals one hold must yield.

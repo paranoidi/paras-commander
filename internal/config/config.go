@@ -346,6 +346,10 @@ type UIConfig struct {
 	// carousel child preview reloads, and F3 style-picker re-highlighting. Zero disables debouncing.
 	// Default DefaultKeyRepeatDebounceMS.
 	KeyRepeatDebounceMS int `toml:"key_repeat_debounce_ms"`
+	// ImagePreviewDebounceMS replaces KeyRepeatDebounceMS when the coalesced preview target is an
+	// image or media file. Only selects the delay: KeyRepeatDebounceMS = 0 disables debouncing
+	// entirely. Default DefaultImagePreviewDebounceMS.
+	ImagePreviewDebounceMS int `toml:"image_preview_debounce_ms"`
 	// PathPickerValidateDelayMS waits after the filter changes before checking whether the typed path exists.
 	// Default DefaultPathPickerValidateDelayMS. Use 0 to validate on the next scheduler tick (still not per-key synchronous).
 	PathPickerValidateDelayMS int `toml:"path_picker_validate_delay_ms"`
@@ -542,6 +546,7 @@ func Default() Config {
 			ShrunkenShowsNameOnly:        DefaultShrunkenShowsNameOnly,
 			ScreenRenderHashCache:        DefaultScreenRenderHashCache,
 			KeyRepeatDebounceMS:          DefaultKeyRepeatDebounceMS,
+			ImagePreviewDebounceMS:       DefaultImagePreviewDebounceMS,
 			PathPickerValidateDelayMS:    DefaultPathPickerValidateDelayMS,
 			SelectionsPanelMaxRows:       0,
 			SelectionsPanelActivePercent: DefaultSelectionsPanelActivePercent,
@@ -1029,6 +1034,12 @@ func (c *Config) validateUI(builtin *Config) {
 	}
 	if c.UI.KeyRepeatDebounceMS > KeyRepeatDebounceMaxMS {
 		c.UI.KeyRepeatDebounceMS = KeyRepeatDebounceMaxMS
+	}
+	if c.UI.ImagePreviewDebounceMS < 0 {
+		c.UI.ImagePreviewDebounceMS = builtin.UI.ImagePreviewDebounceMS
+	}
+	if c.UI.ImagePreviewDebounceMS > KeyRepeatDebounceMaxMS {
+		c.UI.ImagePreviewDebounceMS = KeyRepeatDebounceMaxMS
 	}
 	if c.UI.Find.QueryDebounceMS < 0 {
 		c.UI.Find.QueryDebounceMS = builtin.UI.Find.QueryDebounceMS

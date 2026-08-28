@@ -917,8 +917,26 @@ func (h *Handler) ClearNavCoalesces() {
 	h.clearCarouselPreviewDebounce()
 }
 
+// previewDebounceDelay returns the coalesce delay for a preview target. Image and media targets
+// decode, scale and re-emit a sixel/Kitty payload to the TTY, which is far more expensive than a
+// text reload, so they get their own longer delay.
+//
+// ponytail: this only picks the delay — KeyRepeatDebounceMS <= 0 still short-circuits the whole
+// coalesce machinery at the call sites, so image targets are not debounced either in that case.
+// Making the image delay fully independent means reworking those early-outs (notably
+// BeginCarouselPreviewNavCoalesce, which would otherwise arm nothing and strand the preview).
+func (h *Handler) previewDebounceDelay(path string) time.Duration {
+	cfg := h.host.Config().UI
+	ms := cfg.KeyRepeatDebounceMS
+	if localfs.IsGraphicalPreviewPath(path) {
+		ms = cfg.ImagePreviewDebounceMS
+	}
+	return time.Duration(ms) * time.Millisecond
+}
+
 func (h *Handler) scheduleQuickViewDebounceTimer(gen uint64) {
-	delay := time.Duration(h.host.Config().UI.KeyRepeatDebounceMS) * time.Millisecond
+	path, _, _ := h.quickViewWantFile()
+	delay := h.previewDebounceDelay(path)
 	h.quickViewDebounce.Arm(delay, func() {
 		_ = h.screen.PostEvent(tcell.NewEventInterrupt(QuickViewFlushPayload{gen: gen}))
 	})
@@ -1001,9 +1019,8 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 		Preview:   h.host.Config().Preview,
 		BaseStyle: ui.FilePreviewBodyStyle(h.host.Styles(), chromeBlocked),
 	}
-	isImage := localfs.IsImagePath(path)
 	isMedia := localfs.IsMediaPath(path)
-	if isImage || isMedia {
+	if localfs.IsGraphicalPreviewPath(path) {
 		cw, ch := previewpanel.CellPixelDims(h.screen)
 		req.ImageMaxPxW = textW * cw
 		req.ImageMaxPxH = contentH * ch

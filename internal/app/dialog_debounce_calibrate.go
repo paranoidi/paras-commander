@@ -15,13 +15,16 @@ import (
 
 func (a *App) openDebounceCalibrateDialog() {
 	a.clearTransientMessage()
-	ms := a.config.UI.KeyRepeatDebounceMS
+	value := dialog.FormatDebounceMS(a.config.UI.KeyRepeatDebounceMS)
+	imageValue := dialog.FormatDebounceMS(a.config.UI.ImagePreviewDebounceMS)
 	a.model.DebounceCalibrateDialog = dialog.DebounceCalibrateDialogState{
-		Open:   true,
-		Phase:  dialog.DebounceCalibrateEdit,
-		Focus:  0,
-		Value:  dialog.FormatDebounceMS(ms),
-		Cursor: utf8.RuneCountInString(dialog.FormatDebounceMS(ms)),
+		Open:        true,
+		Phase:       dialog.DebounceCalibrateEdit,
+		Focus:       0,
+		Value:       value,
+		Cursor:      utf8.RuneCountInString(value),
+		ImageValue:  imageValue,
+		ImageCursor: utf8.RuneCountInString(imageValue),
 	}
 }
 
@@ -34,19 +37,29 @@ func (a *App) applyDebounceCalibrateDialog() {
 	st := &a.model.DebounceCalibrateDialog
 	ms, err := dialog.ParseDebounceMSInput(st.Value)
 	if err != nil {
+		st.Focus = 0
 		st.Status = fmt.Sprintf("Enter 0–%d", config.KeyRepeatDebounceMaxMS)
 		return
 	}
+	imageMS, err := dialog.ParseDebounceMSInput(st.ImageValue)
+	if err != nil {
+		st.Focus = 1
+		// The status row sits under the first field, so name the field this one is about.
+		st.Status = fmt.Sprintf("Image preview: enter 0–%d", config.KeyRepeatDebounceMaxMS)
+		return
+	}
 	a.config.UI.KeyRepeatDebounceMS = ms
+	a.config.UI.ImagePreviewDebounceMS = imageMS
 	a.closeDebounceCalibrateDialog()
-	msg := fmt.Sprintf("Debounce set to %d ms", ms)
+	msg := fmt.Sprintf("Debounce set to %d ms (images %d ms)", ms, imageMS)
 	patch := map[string]interface{}{
 		"ui": map[string]interface{}{
-			"key_repeat_debounce_ms": ms,
+			"key_repeat_debounce_ms":    ms,
+			"image_preview_debounce_ms": imageMS,
 		},
 	}
 	if err := a.persistPartial(patch); err != nil {
-		msg = fmt.Sprintf("Debounce set to %d ms (could not write config: %v)", ms, err)
+		msg = fmt.Sprintf("%s (could not write config: %v)", msg, err)
 	}
 	a.setTransientMessage(msg, ui.MessageUrgencyInfo)
 }
@@ -69,7 +82,7 @@ func (a *App) abortDebounceCalibrateMeasuring() {
 	st.Phase = dialog.DebounceCalibrateEdit
 	st.Value = st.InputSnapshot
 	st.Cursor = utf8.RuneCountInString(st.Value)
-	st.Focus = dialog.NewDialogTrailingButtonsForm(1, 3).MiddleButtonIndex()
+	st.Focus = dialog.NewDialogTrailingButtonsForm(2, 3).MiddleButtonIndex()
 	st.Status = ""
 	st.MeasureStep = dialog.MeasureAwaitPress
 	st.Samples = nil
@@ -135,7 +148,7 @@ func (a *App) handleDebounceCalibrateDialogKey(event *tcell.EventKey) {
 		return
 	}
 
-	form := dialog.NewDialogTrailingButtonsForm(1, 3)
+	form := dialog.NewDialogTrailingButtonsForm(2, 3)
 	if dialog.AltDialogOK(event) {
 		a.applyDebounceCalibrateDialog()
 		return
@@ -164,8 +177,13 @@ func (a *App) handleDebounceCalibrateDialogKey(event *tcell.EventKey) {
 		return
 	}
 
-	if st.Focus == 0 {
-		if a.handleDebounceCalibrateInputKey(event) {
+	switch st.Focus {
+	case 0:
+		if a.handleDebounceCalibrateInputKey(event, &st.Value, &st.Cursor) {
+			return
+		}
+	case 1:
+		if a.handleDebounceCalibrateInputKey(event, &st.ImageValue, &st.ImageCursor) {
 			return
 		}
 	}
@@ -180,38 +198,38 @@ func altDialogCalibrate(ev *tcell.EventKey) bool {
 		(ev.Rune() == 'l' || ev.Rune() == 'L')
 }
 
-func (a *App) handleDebounceCalibrateInputKey(event *tcell.EventKey) bool {
-	st := &a.model.DebounceCalibrateDialog
-	st.Status = ""
+// handleDebounceCalibrateInputKey edits one numeric field of the dialog; shared by both inputs.
+func (a *App) handleDebounceCalibrateInputKey(event *tcell.EventKey, value *string, cursor *int) bool {
+	a.model.DebounceCalibrateDialog.Status = ""
 	switch event.Key() {
 	case tcell.KeyBackspace, tcell.KeyBackspace2:
-		if st.Cursor > 0 {
-			runes := []rune(st.Value)
-			st.Value = string(runes[:st.Cursor-1]) + string(runes[st.Cursor:])
-			st.Cursor--
+		if *cursor > 0 {
+			runes := []rune(*value)
+			*value = string(runes[:*cursor-1]) + string(runes[*cursor:])
+			*cursor--
 		}
 		return true
 	case tcell.KeyDelete:
-		runes := []rune(st.Value)
-		if st.Cursor < len(runes) {
-			st.Value = string(runes[:st.Cursor]) + string(runes[st.Cursor+1:])
+		runes := []rune(*value)
+		if *cursor < len(runes) {
+			*value = string(runes[:*cursor]) + string(runes[*cursor+1:])
 		}
 		return true
 	case tcell.KeyLeft:
-		if st.Cursor > 0 {
-			st.Cursor--
+		if *cursor > 0 {
+			*cursor--
 		}
 		return true
 	case tcell.KeyRight:
-		if st.Cursor < utf8.RuneCountInString(st.Value) {
-			st.Cursor++
+		if *cursor < utf8.RuneCountInString(*value) {
+			*cursor++
 		}
 		return true
 	case tcell.KeyHome:
-		st.Cursor = 0
+		*cursor = 0
 		return true
 	case tcell.KeyEnd:
-		st.Cursor = utf8.RuneCountInString(st.Value)
+		*cursor = utf8.RuneCountInString(*value)
 		return true
 	case tcell.KeyRune:
 		if event.Modifiers() != tcell.ModNone {
@@ -220,10 +238,10 @@ func (a *App) handleDebounceCalibrateInputKey(event *tcell.EventKey) bool {
 		if !unicode.IsDigit(event.Rune()) {
 			return true
 		}
-		runes := []rune(st.Value)
-		runes = append(runes[:st.Cursor], append([]rune{event.Rune()}, runes[st.Cursor:]...)...)
-		st.Value = string(runes)
-		st.Cursor++
+		runes := []rune(*value)
+		runes = append(runes[:*cursor], append([]rune{event.Rune()}, runes[*cursor:]...)...)
+		*value = string(runes)
+		*cursor++
 		return true
 	default:
 		return false

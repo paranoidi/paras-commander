@@ -11,6 +11,10 @@ type DebounceCalibrateDialogState struct {
 	Value  string
 	Cursor int
 
+	// Image/media preview debounce (focus 1); not calibrated.
+	ImageValue  string
+	ImageCursor int
+
 	Status string
 
 	// Measurement sub-flow (Phase == DebounceCalibrateMeasuring).
