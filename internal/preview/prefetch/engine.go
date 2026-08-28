@@ -42,7 +42,6 @@ type Config struct {
 	VideoThumbRows    int
 	VideoThumbWorkers int
 	DiskDir           string
-	OnChange          func() // optional wake for loading-mark redraw
 }
 
 // RenderBox is the exact on-screen pixel box the currently active preview surface would render
@@ -78,8 +77,11 @@ func (e *Engine) currentRenderBox() *RenderBox {
 	return e.renderBox
 }
 
-// NewEngine starts workers when workers > 0. Caller must Close.
-func NewEngine(parent context.Context, cfg Config) *Engine {
+// NewEngine starts workers when workers > 0. Caller must Close. onChange, if non-nil, is the
+// wake for loading-mark redraw; it is a parameter rather than a Config field so Config stays
+// comparable — the app layer compares the live-derived config against the running engine's to
+// notice a settings change that moves the cache keys (see apphandler/preview.ensurePrefetch).
+func NewEngine(parent context.Context, cfg Config, onChange func()) *Engine {
 	if cfg.Workers < 1 {
 		cfg.Workers = config.DefaultPreviewPrefetchWorkers
 	}
@@ -120,8 +122,8 @@ func NewEngine(parent context.Context, cfg Config) *Engine {
 		cancel: cancel,
 	}
 	e.cond = sync.NewCond(&e.mu)
-	if cfg.OnChange != nil {
-		e.cache.SetOnChange(cfg.OnChange)
+	if onChange != nil {
+		e.cache.SetOnChange(onChange)
 	}
 	for i := 0; i < cfg.Workers; i++ {
 		e.wg.Add(1)

@@ -441,7 +441,7 @@ func TestScheduleWithRenderBoxWarmsRenderCache(t *testing.T) {
 	}
 	mtime, size := fi.ModTime().UnixNano(), fi.Size()
 
-	e := NewEngine(context.Background(), Config{Workers: 1, ImageMaxEdgePx: 64})
+	e := NewEngine(context.Background(), Config{Workers: 1, ImageMaxEdgePx: 64}, nil)
 	t.Cleanup(e.Close)
 
 	box := &RenderBox{Proto: previewpanel.ImageProtocolKitty, MaxPxW: 20, MaxPxH: 20}
@@ -472,7 +472,7 @@ func TestScheduleWithNilRenderBoxSkipsRenderWarming(t *testing.T) {
 	}
 	mtime, size := fi.ModTime().UnixNano(), fi.Size()
 
-	e := NewEngine(context.Background(), Config{Workers: 1, ImageMaxEdgePx: 64})
+	e := NewEngine(context.Background(), Config{Workers: 1, ImageMaxEdgePx: 64}, nil)
 	t.Cleanup(e.Close)
 
 	e.Schedule([]Item{{Path: path, Kind: KindImage, Mtime: mtime, Size: size}}, 0, 0, 5, nil)

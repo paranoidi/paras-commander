@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
@@ -13,23 +14,43 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
-// ensurePrefetch starts or stops the prefetch engine to match live config.
+// ensurePrefetch starts, stops, or restarts the prefetch engine to match live config.
 func (h *Handler) ensurePrefetch() {
 	cfg := h.host.Config().Preview
 	if !cfg.Prefetch || !cfg.Images {
 		h.stopPrefetch()
 		return
 	}
+	want := prefetchEngineConfig(cfg)
 	if h.prefetch != nil {
-		return
+		if want == h.prefetchCfg {
+			return
+		}
+		// A settings dialog changed something the running engine froze at construction — most
+		// importantly the still-decode max edge, which moves with the image protocol (the M-F3
+		// image-capabilities dialog switches that at runtime, and Sixel under tmux clamps to
+		// [preview].tmux_sixel_max_edge_px while every other combination uses
+		// [preview].image_max_edge_px). Keeping the old value means prefetch warms one
+		// LoadStill key while the live preview asks for another: every image then re-decodes on
+		// first selection (visible as the prefetch loading glyph flashing on an entry the warm
+		// tint already called preloaded). Restart so both sides agree on the keys again.
+		h.stopPrefetch()
 	}
-	// Resolve the same effective still-image max-edge a live request would, so prefetched
-	// cache entries share the same cache key and actually get hit.
+	h.prefetchCfg = want
+	h.prefetch = prefetch.NewEngine(h.ctx, want, func() {
+		h.syncPrefetchLoadingMarks()
+		h.postRenderWake()
+	})
+}
+
+// prefetchEngineConfig derives the engine config from live preview settings. The two max-edge
+// values resolve exactly as a live request's do (previewRequest → runImageCtx), so prefetched
+// entries share the cache keys the foreground path will look up.
+func prefetchEngineConfig(cfg config.PreviewConfig) prefetch.Config {
 	protocol := previewrun.ResolveImageProtocol(cfg, os.Getenv)
 	inTmux := os.Getenv("TMUX") != ""
-	workers := effectivePrefetchWorkers(cfg.PrefetchWorkers, runtime.GOMAXPROCS(0))
-	h.prefetch = prefetch.NewEngine(h.ctx, prefetch.Config{
-		Workers:           workers,
+	return prefetch.Config{
+		Workers:           effectivePrefetchWorkers(cfg.PrefetchWorkers, runtime.GOMAXPROCS(0)),
 		MemoryMaxMB:       cfg.PrefetchMemoryMaxMB,
 		RenderCacheMaxMB:  cfg.RenderCacheMaxMB,
 		VideoDiskMaxMB:    cfg.VideoThumbCacheMaxMB,
@@ -38,11 +59,7 @@ func (h *Handler) ensurePrefetch() {
 		VideoThumbCols:    cfg.VideoThumbCols,
 		VideoThumbRows:    cfg.VideoThumbRows,
 		VideoThumbWorkers: cfg.VideoThumbWorkers,
-		OnChange: func() {
-			h.syncPrefetchLoadingMarks()
-			h.postRenderWake()
-		},
-	})
+	}
 }
 
 // effectivePrefetchWorkers leaves at least one CPU free for the main/UI goroutine — the fixed
@@ -60,6 +77,14 @@ func (h *Handler) stopPrefetch() {
 	}
 	h.prefetch.Close()
 	h.prefetch = nil
+	// Clear the skip-rebuild guard too: a restart (ensurePrefetch noticing changed settings)
+	// leaves the caret exactly where it was, so without this the next
+	// SchedulePrefetchFromActivePanel call would short-circuit and the fresh engine would sit
+	// idle until the user moved the cursor.
+	h.prefetchLastSurfaceActive = false
+	h.prefetchLastPath = pathloc.Path{}
+	h.prefetchLastCursor = 0
+	h.prefetchLastEntryCount = 0
 	h.mu.Lock()
 	h.model.PreviewPrefetchLoading = nil
 	h.model.PreviewPrefetchWarm = nil

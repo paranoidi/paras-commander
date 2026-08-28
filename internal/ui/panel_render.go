@@ -431,8 +431,6 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	var jobWrite bool
 	var jobMarkGlyph rune
 	var rowSuffix panellist.RowSuffix
-	var previewLoading bool
-	var previewWarm bool
 
 	// Tree-mode gutter (ancestor guide lines + folder expander) is prepended before the
 	// icon/name columns; every other column (size/date/permissions/git/marks) keeps using the
@@ -470,12 +468,6 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 			jobMarkGlyph = panelStyle.Styles.SymbolFilelistJob()
 		} else {
 			jobMarkGlyph = 0
-		}
-		if display.PreviewPrefetchLoading != nil {
-			_, previewLoading = display.PreviewPrefetchLoading[entry.Path]
-		}
-		if display.PreviewPrefetchWarm != nil {
-			_, previewWarm = display.PreviewPrefetchWarm[entry.Path]
 		}
 		metaText := ""
 		if showMetaEffective {
@@ -542,7 +534,6 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		drawPanelRowIconStrip(screen, p, panelRowPaintState{
 			Y: y, HasEntry: hasEntry, Entry: cur, Style: style, BlendCell: blendCell,
 			IconKey: iconKey, DiskPending: diskPending, DiskExcluded: diskExcluded,
-			PreviewLoading: previewLoading, PreviewWarm: previewWarm,
 		})
 	}
 	if treeGutterWidth > 0 {
@@ -554,23 +545,10 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		if hasEntry {
 			iconX := gutterX + connW
 			iconStripStyle := blendCell(leftGutter + gitStrip + iconStrip + connW)
-			paintPanelIconStrip(screen, iconX, y, cur, iconStripStyle, panelStyle.Styles, PanelIconStripContext{
-				CursorStyleKey: iconKey,
-				ChromeBlocked:  ctx.ChromeBlocked,
-				PreviewLoading: previewLoading,
-				PreviewWarm:    previewWarm,
-				Folder: panellist.FolderIconContext{
-					OtherPanelPath:         ctx.OtherPanelPath,
-					DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
-					ListingDev:             state.ListingDevice,
-					ListingDevValid:        state.ListingDeviceValid,
-					DiskPending:            diskPending,
-					DiskExcluded:           diskExcluded,
-					DiskUsageChrome:        display.ShowDiskUsage,
-					TreeExpanded:           treeExpanded,
-					TreeLoading:            treeLoading,
-				},
-			})
+			iconCtx := panelIconStripContextFor(display, ctx, state, cur, iconKey, diskPending, diskExcluded)
+			iconCtx.Folder.TreeExpanded = treeExpanded
+			iconCtx.Folder.TreeLoading = treeLoading
+			paintPanelIconStrip(screen, iconX, y, cur, iconStripStyle, panelStyle.Styles, iconCtx)
 		}
 	}
 	primitive.StyledTextCellwise(screen, listContentStart, y, listTextWidth, text, func(ci int) tcell.Style {
@@ -604,19 +582,17 @@ func panelRowStyle(entry localfs.Entry, entryIndex int, state panel.State, ctx P
 // panelRowPaintState carries the per-entry values drawPanelRow computes in its body that the
 // git-strip and icon-strip paint helpers need alongside the shared panelRowParams.
 type panelRowPaintState struct {
-	Y              int
-	HasEntry       bool
-	Entry          localfs.Entry
-	EntryIndex     int
-	Selected       bool
-	Style          tcell.Style
-	FillCols       int
-	BlendCell      func(int) tcell.Style
-	IconKey        string
-	DiskPending    bool
-	DiskExcluded   bool
-	PreviewLoading bool
-	PreviewWarm    bool
+	Y            int
+	HasEntry     bool
+	Entry        localfs.Entry
+	EntryIndex   int
+	Selected     bool
+	Style        tcell.Style
+	FillCols     int
+	BlendCell    func(int) tcell.Style
+	IconKey      string
+	DiskPending  bool
+	DiskExcluded bool
 }
 
 // drawPanelRowGitStrip paints the git-status strip cell (or its blank filler when the row has
@@ -644,21 +620,8 @@ func drawPanelRowIconStrip(screen tcell.Screen, p panelRowParams, rp panelRowPai
 		return
 	}
 	iconStripStyle := rp.BlendCell(p.LeftGutter + p.GitStrip)
-	paintPanelIconStrip(screen, p.IconStart, rp.Y, rp.Entry, iconStripStyle, p.PanelStyle.Styles, PanelIconStripContext{
-		CursorStyleKey: rp.IconKey,
-		ChromeBlocked:  p.Ctx.ChromeBlocked,
-		PreviewLoading: rp.PreviewLoading,
-		PreviewWarm:    rp.PreviewWarm,
-		Folder: panellist.FolderIconContext{
-			OtherPanelPath:         p.Ctx.OtherPanelPath,
-			DescendIntoMountPoints: p.Display.DiskUsageDescendIntoMountPoints,
-			ListingDev:             p.State.ListingDevice,
-			ListingDevValid:        p.State.ListingDeviceValid,
-			DiskPending:            rp.DiskPending,
-			DiskExcluded:           rp.DiskExcluded,
-			DiskUsageChrome:        p.Display.ShowDiskUsage,
-		},
-	})
+	paintPanelIconStrip(screen, p.IconStart, rp.Y, rp.Entry, iconStripStyle, p.PanelStyle.Styles,
+		panelIconStripContextFor(p.Display, p.Ctx, p.State, rp.Entry, rp.IconKey, rp.DiskPending, rp.DiskExcluded))
 }
 
 // panelColumnLayout computes the leading-column (gutter/git/icon) widths and offsets for a
@@ -750,19 +713,8 @@ func drawPanelCarousel(screen tcell.Screen, p panelCarouselParams) bool {
 			return panelStyle.Styles.SymbolFilelistJob(), st, write, true
 		},
 		PaintIcon: func(sc tcell.Screen, x, y int, entry localfs.Entry, rowStyle tcell.Style, cursorKey string, diskPending, diskExcluded bool) {
-			paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles, PanelIconStripContext{
-				CursorStyleKey: cursorKey,
-				ChromeBlocked:  ctx.ChromeBlocked,
-				Folder: panellist.FolderIconContext{
-					OtherPanelPath:         ctx.OtherPanelPath,
-					DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
-					ListingDev:             state.ListingDevice,
-					ListingDevValid:        state.ListingDeviceValid,
-					DiskPending:            diskPending,
-					DiskExcluded:           diskExcluded,
-					DiskUsageChrome:        display.ShowDiskUsage,
-				},
-			})
+			paintPanelIconStrip(sc, x, y, entry, rowStyle, panelStyle.Styles,
+				panelIconStripContextFor(display, ctx, state, entry, cursorKey, diskPending, diskExcluded))
 		},
 		NewFileMark: func(entry localfs.Entry) panellist.NewFileMarkTier {
 			return state.NewFileMarkTier(entry)

@@ -103,6 +103,11 @@ type Handler struct {
 
 	// prefetch is the optional background image/video warm cache (nil when [preview].prefetch is off).
 	prefetch *prefetch.Engine
+	// prefetchCfg is the config the running engine was built with, compared against the
+	// live-derived one on every ensurePrefetch call so a settings change that moves the cache
+	// keys (image protocol, max-edge clamps, video grid shape) restarts the engine instead of
+	// leaving it warming keys the foreground preview path never asks for.
+	prefetchCfg prefetch.Config
 	// prefetchLastCursor / prefetchLastPath / prefetchLastSurfaceActive record the previous
 	// SchedulePrefetchFromActivePanel call's position and surface state, so the next call can
 	// tell which direction the caret is moving (to bias the prefetch queue that way) and skip

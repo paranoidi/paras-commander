@@ -13,6 +13,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	previewrun "github.com/paranoidi/paras-commander/internal/preview"
 	"github.com/paranoidi/paras-commander/internal/ui"
+	"github.com/paranoidi/paras-commander/internal/ui/previewpanel"
 )
 
 // configCountingHost wraps fakeHost to count Config() calls. SchedulePrefetchFromActivePanel
@@ -229,5 +230,44 @@ func TestEffectivePrefetchWorkers(t *testing.T) {
 		if got := effectivePrefetchWorkers(c.configured, c.gomaxprocs); got != c.want {
 			t.Errorf("effectivePrefetchWorkers(%d, %d) = %d, want %d", c.configured, c.gomaxprocs, got, c.want)
 		}
+	}
+}
+
+// A settings change that moves the cache keys must restart the engine. The M-F3
+// image-capabilities dialog switches [preview].image_protocol at runtime, and under tmux that
+// changes the effective still-decode max edge (tmux_sixel_max_edge_px for Sixel vs
+// image_max_edge_px for Kitty) — an engine frozen at the old value warms LoadStill keys the live
+// preview path never asks for, so every image re-decodes on first selection.
+func TestEnsurePrefetch_RestartsWhenStillMaxEdgeChanges(t *testing.T) {
+	t.Setenv("TMUX", "/tmp/tmux-1000/default,1,0")
+	handler, fh := newTestHandler(t, 80, 24)
+	t.Cleanup(handler.stopPrefetch)
+
+	fh.cfg.Preview.ImageProtocol = config.PreviewImageProtocolKitty
+	handler.ensurePrefetch()
+	kittyEngine := handler.prefetch
+	if kittyEngine == nil {
+		t.Fatal("ensurePrefetch: no engine started")
+	}
+	kittyEdge := handler.prefetchCfg.ImageMaxEdgePx
+
+	handler.ensurePrefetch()
+	if handler.prefetch != kittyEngine {
+		t.Fatal("ensurePrefetch restarted the engine with unchanged config")
+	}
+
+	fh.cfg.Preview.ImageProtocol = config.PreviewImageProtocolSixel
+	handler.ensurePrefetch()
+	if handler.prefetch == kittyEngine {
+		t.Fatal("ensurePrefetch kept the old engine after the image protocol changed")
+	}
+	if got := handler.prefetchCfg.ImageMaxEdgePx; got == kittyEdge {
+		t.Fatalf("still max edge unchanged after protocol switch: %d", got)
+	}
+	if want := previewrun.EffectiveStillMaxEdge(fh.cfg.Preview, previewpanel.ImageProtocolSixel, true); handler.prefetchCfg.ImageMaxEdgePx != want {
+		t.Fatalf("still max edge = %d, want %d (tmux sixel clamp)", handler.prefetchCfg.ImageMaxEdgePx, want)
+	}
+	if handler.prefetchLastSurfaceActive {
+		t.Fatal("restart left the skip-rebuild guard armed; fresh engine would stay idle")
 	}
 }

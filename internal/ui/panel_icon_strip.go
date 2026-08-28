@@ -5,6 +5,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 	"github.com/paranoidi/paras-commander/internal/localfs"
+	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
@@ -27,6 +28,31 @@ type PanelIconStripContext struct {
 	// yet preloaded) for image/video files — a prefetch-cache debugging aid. Ignored for
 	// directories, non-image/video files, and while PreviewLoading is true.
 	PreviewWarm bool
+}
+
+// panelIconStripContextFor builds the icon-strip context shared by every panel row painter
+// (plain list row, tree row, carousel column row) so the preview-prefetch marks and the
+// folder-icon context can't drift between them. Tree callers set Folder.TreeExpanded /
+// Folder.TreeLoading on the result rather than threading them through every call site.
+func panelIconStripContextFor(display PanelDisplayConfig, ctx PanelContext, state panel.State,
+	entry localfs.Entry, cursorStyleKey string, diskPending, diskExcluded bool) PanelIconStripContext {
+	_, previewLoading := display.PreviewPrefetchLoading[entry.Path]
+	_, previewWarm := display.PreviewPrefetchWarm[entry.Path]
+	return PanelIconStripContext{
+		CursorStyleKey: cursorStyleKey,
+		ChromeBlocked:  ctx.ChromeBlocked,
+		PreviewLoading: previewLoading,
+		PreviewWarm:    previewWarm,
+		Folder: panellist.FolderIconContext{
+			OtherPanelPath:         ctx.OtherPanelPath,
+			DescendIntoMountPoints: display.DiskUsageDescendIntoMountPoints,
+			ListingDev:             state.ListingDevice,
+			ListingDevValid:        state.ListingDeviceValid,
+			DiskPending:            diskPending,
+			DiskExcluded:           diskExcluded,
+			DiskUsageChrome:        display.ShowDiskUsage,
+		},
+	}
 }
 
 // fileDeviconForeground picks the file-icon color: cursor override, else devicon hex, else row FG.
