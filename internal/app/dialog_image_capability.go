@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"unicode"
 
@@ -87,15 +88,18 @@ func (a *App) applyImageCapabilityDialog() {
 
 	a.closeImageCapabilityDialog()
 	msg := "Image terminal capabilities saved"
-	if a.paths.ConfigFile == "" {
-		a.setTransientMessage(msg, ui.MessageUrgencyInfo)
+	urgency := ui.MessageUrgencyInfo
+	if !a.paths.CanPersist() {
+		msg = fmt.Sprintf("%s (config save failed: no config path)", msg)
+		urgency = ui.MessageUrgencyWarn
+		a.setTransientMessage(msg, urgency)
 		return
 	}
-	if err := config.PatchPreviewTerminalKeys(a.paths.ConfigFile, sixel, kitty, placeholder, protocol); err != nil {
-		a.setErrorMessage("Save image terminal capabilities", err)
-		return
+	if err := config.PatchPreviewTerminalKeysForPaths(a.paths, sixel, kitty, placeholder, protocol); err != nil {
+		msg = fmt.Sprintf("%s (config save failed: %v)", msg, err)
+		urgency = ui.MessageUrgencyWarn
 	}
-	a.setTransientMessage(msg, ui.MessageUrgencyInfo)
+	a.setTransientMessage(msg, urgency)
 }
 
 // autoDetectImageCapabilityDialog seeds the dialog's checkboxes from preview.DetectTerminalCapabilities

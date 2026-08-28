@@ -22,13 +22,22 @@ var previewTableHeaderRe = regexp.MustCompile(`^\[preview\]\s*(#.*)?$`)
 // [[section]]), used to find where the [preview] table's line range ends.
 var anyTableHeaderRe = regexp.MustCompile(`^\[.+\]\s*(#.*)?$`)
 
-// previewKeyLineRe returns a regexp matching a line assigning a quoted-string value to key
-// (e.g. `terminal_sixel = "auto"  # comment`), capturing the `key = ` prefix (group 1) and any
-// trailing whitespace/comment (group 2) so both can be preserved verbatim around the new value.
-// The key must be followed immediately by optional whitespace then `=`, so "terminal_kitty"
-// never matches a "terminal_kitty_placeholder" line.
+// previewKeyLineRe returns a regexp matching a line assigning a string value to key
+// (e.g. `terminal_sixel = "auto"  # comment`, `terminal_kitty = 'yes'`, or `image_protocol = kitty`),
+// capturing the `key = ` prefix (group 1) and any trailing whitespace/comment (group 2) so both can
+// be preserved verbatim around the new value. The key must be followed immediately by optional
+// whitespace then `=`, so "terminal_kitty" never matches a "terminal_kitty_placeholder" line.
 func previewKeyLineRe(key string) *regexp.Regexp {
-	return regexp.MustCompile(`^(\s*` + regexp.QuoteMeta(key) + `\s*=\s*)"[^"]*"(.*)$`)
+	return regexp.MustCompile(`^(\s*` + regexp.QuoteMeta(key) + `\s*=\s*)(?:"[^"]*"|'[^']*'|[a-z_]+)(.*)$`)
+}
+
+// PatchPreviewTerminalKeysForPaths resolves paths to config.toml and calls PatchPreviewTerminalKeys.
+func PatchPreviewTerminalKeysForPaths(paths Paths, sixel, kitty, kittyPlaceholder, imageProtocol string) error {
+	configFile, err := resolvePersistPaths(paths)
+	if err != nil {
+		return err
+	}
+	return PatchPreviewTerminalKeys(configFile, sixel, kitty, kittyPlaceholder, imageProtocol)
 }
 
 // PatchPreviewTerminalKeys rewrites exactly the 4 known [preview] scalar keys

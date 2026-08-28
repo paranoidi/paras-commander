@@ -325,3 +325,69 @@ func TestPatchPreviewTerminalKeysAtomicWrite(t *testing.T) {
 		t.Fatalf("mode changed: %v -> %v", before.Mode(), after.Mode())
 	}
 }
+
+// TestPatchPreviewTerminalKeysSingleQuotedAndBareValues guards against the regex only matching
+// double-quoted values: hand-edited configs may use single quotes or bare identifiers.
+func TestPatchPreviewTerminalKeysSingleQuotedAndBareValues(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	initial := strings.Join([]string{
+		`[preview]`,
+		`  terminal_sixel = 'auto'`,
+		`  terminal_kitty = auto`,
+		`  terminal_kitty_placeholder = 'no'`,
+		`  image_protocol = kitty`,
+		``,
+	}, "\n")
+	if err := os.WriteFile(path, []byte(initial), 0o644); err != nil {
+		t.Fatalf("seed file: %v", err)
+	}
+
+	if err := PatchPreviewTerminalKeys(path, "yes", "yes", "yes", "kitty"); err != nil {
+		t.Fatalf("PatchPreviewTerminalKeys: %v", err)
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read patched file: %v", err)
+	}
+	gotStr := string(got)
+	for _, key := range []string{"terminal_sixel", "terminal_kitty", "terminal_kitty_placeholder", "image_protocol"} {
+		if n := strings.Count(gotStr, key+" ="); n != 1 {
+			t.Fatalf("%s appears %d times, want 1:\n%s", key, n, gotStr)
+		}
+	}
+	for _, want := range []string{
+		`terminal_sixel = "yes"`,
+		`terminal_kitty = "yes"`,
+		`terminal_kitty_placeholder = "yes"`,
+		`image_protocol = "kitty"`,
+	} {
+		if !strings.Contains(gotStr, want) {
+			t.Errorf("output missing %q\n--- got ---\n%s", want, gotStr)
+		}
+	}
+}
+
+func TestPatchPreviewTerminalKeysForPaths(t *testing.T) {
+	dir := t.TempDir()
+	paths := Paths{ConfigDir: dir}.WithResolvedLocations()
+	if err := PatchPreviewTerminalKeysForPaths(paths, "yes", "no", "yes", "kitty"); err != nil {
+		t.Fatalf("PatchPreviewTerminalKeysForPaths: %v", err)
+	}
+	got, err := os.ReadFile(paths.ConfigFile)
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	gotStr := string(got)
+	for _, want := range []string{
+		`terminal_sixel = "yes"`,
+		`terminal_kitty = "no"`,
+		`terminal_kitty_placeholder = "yes"`,
+		`image_protocol = "kitty"`,
+	} {
+		if !strings.Contains(gotStr, want) {
+			t.Errorf("output missing %q\n--- got ---\n%s", want, gotStr)
+		}
+	}
+}
