@@ -83,7 +83,7 @@ func ShowChildPreviewColumn(center panel.State, quickViewEnabled bool, filePrevi
 func BuildColumns(center panel.State, viewportRows int, quickViewEnabled bool, filePreviewEligible bool) (parent, mid, child Column, childKind ChildPreviewKind) {
 	mid = Column{Kind: ColumnCenter, Populated: true, Active: true}
 	childKind = ChildPreviewKindFor(center, quickViewEnabled, filePreviewEligible)
-	if snap, ok := center.SnapshotParent(viewportRows); ok {
+	if snap, ok := center.SnapshotParent(); ok {
 		parent = Column{Kind: ColumnParent, Populated: true, Snapshot: snap}
 	}
 	if !ShowChildPreviewColumn(center, quickViewEnabled, filePreviewEligible) {
@@ -102,7 +102,7 @@ func BuildColumns(center panel.State, viewportRows int, quickViewEnabled bool, f
 		}
 		return parent, mid, child, childKind
 	}
-	if snap, ok := center.SnapshotChild(viewportRows); ok {
+	if snap, ok := center.SnapshotChild(); ok {
 		child = Column{Kind: ColumnChild, Populated: true, Snapshot: snap}
 	}
 	return parent, mid, child, childKind

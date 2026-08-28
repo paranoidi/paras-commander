@@ -28,6 +28,8 @@ type fakeHost struct {
 	messages             []string
 	launchedAsFileViewer bool
 	peekGitStatus        func(workRoot, listDir string, paths []gitstatus.ListingPaths) (map[string]gitstatus.Cell, bool)
+	scheduledParent      []int // panel IDs passed to ScheduleCarouselParentSnapshot, in order
+	scheduledChild       []int // panel IDs passed to ScheduleCarouselChildSnapshot, in order
 }
 
 func newFakeHost(model *ui.Model) *fakeHost {
@@ -100,6 +102,12 @@ func (f *fakeHost) ArmCursorNameHintNavCoalesceAfterListNav()               {}
 func (f *fakeHost) PathVolumeContendsWithActiveJob(string) bool             { return false }
 func (f *fakeHost) GitStatusScheduler(int) panel.GitStatusScheduler         { return nil }
 func (f *fakeHost) AsyncLoadScheduler(int) panel.AsyncLoadScheduler         { return nil }
+func (f *fakeHost) ScheduleCarouselParentSnapshot(panelID, _ int) {
+	f.scheduledParent = append(f.scheduledParent, panelID)
+}
+func (f *fakeHost) ScheduleCarouselChildSnapshot(panelID, _ int) {
+	f.scheduledChild = append(f.scheduledChild, panelID)
+}
 func (f *fakeHost) PeekGitStatus(workRoot, listDir string, paths []gitstatus.ListingPaths) (map[string]gitstatus.Cell, bool) {
 	if f.peekGitStatus != nil {
 		return f.peekGitStatus(workRoot, listDir, paths)

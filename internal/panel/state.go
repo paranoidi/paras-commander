@@ -141,8 +141,11 @@ type State struct {
 	CarouselSideCache struct {
 		Parent   ListingSnapshot
 		ParentOK bool
-		Child    ListingSnapshot
-		ChildOK  bool
+		// ParentSourceDir is the center panel's directory (State.Path) when Parent was cached;
+		// used to reject a stale parent preview after the center directory changes.
+		ParentSourceDir string
+		Child           ListingSnapshot
+		ChildOK         bool
 		// ChildCursorDir is the absolute path of the directory entry under the center cursor when
 		// Child was cached; used to reject stale previews during nav coalesce.
 		ChildCursorDir string

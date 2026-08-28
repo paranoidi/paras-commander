@@ -87,6 +87,13 @@ type Handler struct {
 	carouselPreviewDebounce    sched.Debouncer
 	// carouselPreviewNavSkipSnapshot, when true, reuses cached carousel parent/child snapshots during render.
 	carouselPreviewNavSkipSnapshot atomic.Bool
+	// carouselSide holds each panel's async side-column dispatch bookkeeping (indexed by
+	// ui.PrimaryPanel/ui.SecondaryPanel; see carouselSideSlot). The "does this need a fetch at
+	// all" question is answered by the cache-validity check itself (CarouselParentCacheValid/
+	// CarouselChildCacheValidFor), which makes the dispatch self-correcting: any change that
+	// invalidates the cache (chdir, cursor move, cache clear) re-triggers a fetch without needing
+	// its own hook.
+	carouselSide [2]carouselSideState
 
 	// previewStyleAtPickerOpen is preview.style when the F3 Chroma style picker opens.
 	previewStyleAtPickerOpen string

@@ -4,14 +4,57 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
+
+// primeCarouselParentCache simulates the async parent-snapshot apply (internal/app's
+// applyCarouselSnapshot) so SnapshotParent's pure-cache-read behavior can be tested without a real
+// async round trip.
+func primeCarouselParentCache(t *testing.T, state *State, viewportRows int) {
+	t.Helper()
+	target, ok := state.CarouselParentPreviewTarget()
+	if !ok {
+		t.Fatal("no parent preview target")
+	}
+	snap, err := state.buildListingSnapshot(state.Path.Parent(), state.Path.Base(), noIndexCursorFallback, viewportRows, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.CarouselSideCache.Parent = snap
+	state.CarouselSideCache.ParentOK = true
+	state.CarouselSideCache.ParentSourceDir = target
+}
+
+// primeCarouselChildCache simulates the async child-snapshot apply (internal/app's
+// applyCarouselSnapshot) so SnapshotChild's pure-cache-read behavior can be tested without a real
+// async round trip.
+func primeCarouselChildCache(t *testing.T, state *State, viewportRows int) {
+	t.Helper()
+	target, ok := state.CarouselChildPreviewTarget()
+	if !ok {
+		t.Fatal("no child preview target")
+	}
+	child, err := pathloc.Parse(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selectedName, indexFallback, centerRecalled := state.recalledCursorFor(target)
+	snap, err := state.buildListingSnapshot(child, selectedName, indexFallback, viewportRows, centerRecalled)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.CarouselSideCache.Child = snap
+	state.CarouselSideCache.ChildOK = true
+	state.CarouselSideCache.ChildCursorDir = target
+}
 
 func TestSnapshotParentFalseAtRoot(t *testing.T) {
 	state, err := New("/")
 	if err != nil {
 		t.Skip("cannot open /:", err)
 	}
-	if _, ok := state.SnapshotParent(10); ok {
+	if _, ok := state.SnapshotParent(); ok {
 		t.Fatal("SnapshotParent at filesystem root = true, want false")
 	}
 }
@@ -26,7 +69,8 @@ func TestSnapshotParentHighlightsChildDir(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap, ok := state.SnapshotParent(10)
+	primeCarouselParentCache(t, &state, 10)
+	snap, ok := state.SnapshotParent()
 	if !ok {
 		t.Fatal("SnapshotParent = false, want true")
 	}
@@ -54,7 +98,7 @@ func TestSnapshotChildFalseOnFile(t *testing.T) {
 			break
 		}
 	}
-	if _, ok := state.SnapshotChild(10); ok {
+	if _, ok := state.SnapshotChild(); ok {
 		t.Fatal("SnapshotChild on file = true, want false")
 	}
 }
@@ -87,7 +131,8 @@ func TestSnapshotChildAppliesIdleDiskTotalsSort(t *testing.T) {
 	if !state.SelectVisibleEntry("maple") {
 		t.Fatal("maple not found")
 	}
-	snap, ok := state.SnapshotChild(10)
+	primeCarouselChildCache(t, &state, 10)
+	snap, ok := state.SnapshotChild()
 	if !ok {
 		t.Fatal("SnapshotChild = false, want true")
 	}
@@ -109,9 +154,9 @@ func TestSnapshotParentIgnoresChildCoalesce(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	primeCarouselParentCache(t, &state, 10)
 	state.CarouselChildPreviewCoalesce = true
-	state.CarouselSideCache.ParentOK = false
-	snap, ok := state.SnapshotParent(10)
+	snap, ok := state.SnapshotParent()
 	if !ok {
 		t.Fatal("SnapshotParent during child coalesce = false, want true")
 	}
@@ -136,7 +181,8 @@ func TestSnapshotChildCoalesceUsesCache(t *testing.T) {
 	if !state.SelectVisibleEntry("maple") {
 		t.Fatal("maple not found")
 	}
-	first, ok := state.SnapshotChild(10)
+	primeCarouselChildCache(t, &state, 10)
+	first, ok := state.SnapshotChild()
 	if !ok {
 		t.Fatal("SnapshotChild = false, want true")
 	}
@@ -153,7 +199,7 @@ func TestSnapshotChildCoalesceUsesCache(t *testing.T) {
 	if !state.CarouselChildCachePaintDuringCoalesce() {
 		t.Fatal("coalesce should still paint cached child until flush")
 	}
-	cached, ok := state.SnapshotChild(10)
+	cached, ok := state.SnapshotChild()
 	if !ok {
 		t.Fatal("coalesced SnapshotChild = false, want cached paint")
 	}
@@ -175,7 +221,8 @@ func TestCarouselChildCacheInvalidatedOnChdir(t *testing.T) {
 	if !state.SelectVisibleEntry("maple") {
 		t.Fatal("maple not found")
 	}
-	if _, ok := state.SnapshotChild(10); !ok {
+	primeCarouselChildCache(t, &state, 10)
+	if _, ok := state.SnapshotChild(); !ok {
 		t.Fatal("SnapshotChild = false, want true")
 	}
 	if !state.CarouselSideCache.ChildOK {
@@ -205,7 +252,8 @@ func TestCarouselChildCachePaintDuringCoalesceOnFileCursor(t *testing.T) {
 	if !state.SelectVisibleEntry("maple") {
 		t.Fatal("maple not found")
 	}
-	if _, ok := state.SnapshotChild(10); !ok {
+	primeCarouselChildCache(t, &state, 10)
+	if _, ok := state.SnapshotChild(); !ok {
 		t.Fatal("SnapshotChild = false, want true")
 	}
 	for i, e := range state.Entries {
@@ -218,7 +266,7 @@ func TestCarouselChildCachePaintDuringCoalesceOnFileCursor(t *testing.T) {
 	if !state.CarouselChildCachePaintDuringCoalesce() {
 		t.Fatal("coalesce should paint cached child while cursor is on a file")
 	}
-	if _, ok := state.SnapshotChild(10); !ok {
+	if _, ok := state.SnapshotChild(); !ok {
 		t.Fatal("coalesced SnapshotChild = false, want cached maple listing")
 	}
 }
@@ -270,7 +318,8 @@ func TestSnapshotChildRecallsCursor(t *testing.T) {
 	if err := state.Parent(10); err != nil {
 		t.Fatal(err)
 	}
-	snap, ok := state.SnapshotChild(10)
+	primeCarouselChildCache(t, &state, 10)
+	snap, ok := state.SnapshotChild()
 	if !ok {
 		t.Fatal("SnapshotChild = false, want true")
 	}

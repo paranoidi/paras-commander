@@ -40,6 +40,13 @@ type Host interface {
 	// scheduling/gen-counter/apply machinery as a real panel instead of a quickview-only fork.
 	GitStatusScheduler(panelID int) panel.GitStatusScheduler
 	AsyncLoadScheduler(panelID int) panel.AsyncLoadScheduler
+	// ScheduleCarouselParentSnapshot and ScheduleCarouselChildSnapshot dispatch an async fetch
+	// (off the UI thread, timeout-guarded) that fills panelID's CarouselSideCache.Parent/Child —
+	// internal/panel.State.SnapshotParent/SnapshotChild only ever read that cache, so painting
+	// the carousel never blocks on I/O. Each reads the live panel's current path/cursor itself to
+	// build the request.
+	ScheduleCarouselParentSnapshot(panelID int, viewportRows int)
+	ScheduleCarouselChildSnapshot(panelID int, viewportRows int)
 	// PeekGitStatus returns cached Git cells for listDir without shelling out to git, so the
 	// quick-view directory overlay can paint the correct git column on its first synchronous
 	// frame when the data is already cached; ok is false on a cache miss.

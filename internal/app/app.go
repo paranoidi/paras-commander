@@ -213,6 +213,16 @@ type App struct {
 	panelAsyncLoadGen [3]atomic.Uint64
 	gitStatusLoadGen  [3]atomic.Uint64
 
+	// carouselParentSnapshotGen/carouselChildSnapshotGen guard async carousel side-column
+	// snapshot fetches against a superseded result landing late; indexed by ui.PrimaryPanel/
+	// ui.SecondaryPanel. See carousel_async.go.
+	carouselParentSnapshotGen [2]atomic.Uint64
+	carouselChildSnapshotGen  [2]atomic.Uint64
+	// carouselPaintDefer holds back a repaint for this panel while its carousel parent-column
+	// snapshot for the newly navigated-to directory has not landed yet; the parent snapshot's own
+	// arrival — or the deadline — releases it. See renderAfterAsyncApply and carousel_async.go.
+	carouselPaintDefer [2]carouselPaintDeferState
+
 	// dirLoadIndicatorTimer/dirLoadIndicatorEpoch arm the row working-indicator glyph for a
 	// panel navigation load pending longer than dirLoadingIndicatorDelayMS; indexed by
 	// ui.PrimaryPanel/ui.SecondaryPanel. See dir_loading_indicator.go.
@@ -966,13 +976,13 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		out.didRender = true
 	case panelAsyncLoadPayload:
 		if a.applyPanelAsyncLoad(d) {
-			if a.browserListNavPartialRenderEligible() {
-				a.renderBrowserListNavUpdate(d.panelID)
-			} else {
-				a.render()
-			}
+			a.renderAfterAsyncApply(d.panelID)
 			out.didRender = true
 		}
+	case carouselSnapshotPayload:
+		out.didRender = a.applyCarouselSnapshotAndRender(d)
+	case carouselPaintReleasePayload:
+		out.didRender = a.applyCarouselPaintRelease(d)
 	case treeChildResultsReadyPayload:
 		if a.applyTreeChildResults() {
 			a.render()

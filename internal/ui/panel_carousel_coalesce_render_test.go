@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,9 +10,33 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
+	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
+
+// primeChildCacheForTest simulates the async child-snapshot apply (internal/app's
+// applyCarouselSnapshot) so carousel rendering can be tested against a warm cache without a real
+// async round trip — SnapshotChild never touches the filesystem itself anymore.
+func primeChildCacheForTest(t *testing.T, state *panel.State, target string, viewportRows int) {
+	t.Helper()
+	loc, err := pathloc.Parse(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selectedName, indexFallback, centerRecalled := state.RecalledCursorFor(target)
+	entries, listingLoc, _, _, err := panel.FetchListing(context.Background(), state.ListingRefreshSnapshot(loc, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap, err := state.BuildListingSnapshotFromEntries(listingLoc, entries, selectedName, indexFallback, viewportRows, centerRecalled)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.CarouselSideCache.Child = snap
+	state.CarouselSideCache.ChildOK = true
+	state.CarouselSideCache.ChildCursorDir = target
+}
 
 // Regression: ui.Render clears the full screen each frame, so carousel child preview must be
 // repainted from cache during coalesce — skipping the child column leaves it blank.
@@ -32,7 +57,8 @@ func TestCarouselCoalesceRepaintsCachedChildAfterFullScreenClear(t *testing.T) {
 	if !state.SelectVisibleEntry("walnut") {
 		t.Fatal("walnut not found")
 	}
-	if _, ok := state.SnapshotChild(10); !ok {
+	primeChildCacheForTest(t, &state, childDir, 10)
+	if _, ok := state.SnapshotChild(); !ok {
 		t.Fatal("SnapshotChild = false, want child preview cached")
 	}
 	state.CarouselMode = true

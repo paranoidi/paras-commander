@@ -68,6 +68,14 @@ func (h previewHost) AsyncLoadScheduler(panelID int) panel.AsyncLoadScheduler {
 	return h.app.asyncLoadScheduler(panelID)
 }
 
+func (h previewHost) ScheduleCarouselParentSnapshot(panelID int, viewportRows int) {
+	h.app.scheduleCarouselParentSnapshot(panelID, viewportRows)
+}
+
+func (h previewHost) ScheduleCarouselChildSnapshot(panelID int, viewportRows int) {
+	h.app.scheduleCarouselChildSnapshot(panelID, viewportRows)
+}
+
 func (h previewHost) PeekGitStatus(workRoot, listDir string, paths []gitstatus.ListingPaths) (map[string]gitstatus.Cell, bool) {
 	if h.app.gitStatusCache == nil {
 		return nil, false

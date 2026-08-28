@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -155,11 +156,10 @@ func TestFirstListNavAfterChdirPaintsCachedChildDuringCoalesce(t *testing.T) {
 	app.model.Primary.CarouselMode = true
 
 	left := app.panelByID(ui.PrimaryPanel)
-	if _, ok := left.SnapshotChild(20); !ok {
+	app.scheduleCarouselChildSnapshot(ui.PrimaryPanel, 20)
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool { return left.CarouselSideCache.ChildOK })
+	if _, ok := left.SnapshotChild(); !ok {
 		t.Fatal("SnapshotChild on Season 01 = false, want true")
-	}
-	if !left.CarouselSideCache.ChildOK {
-		t.Fatal("child cache should be warm before first list nav")
 	}
 	app.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 	if app.model.Primary.CarouselChildPreviewCoalesce {
@@ -188,6 +188,128 @@ func TestFirstListNavAfterChdirPaintsCachedChildDuringCoalesce(t *testing.T) {
 	}
 }
 
+// TestCarouselChildSnapshotDispatchedWithoutNavKey is a regression test: the child preview column
+// must load for whatever the cursor already sits on after a chdir, without waiting for the user to
+// press a nav key. Dispatch used to be hooked only to the nav-key paths, so entering a directory
+// whose default highlight is a subdirectory left the child column empty (and the previously cached
+// listing on screen) until the cursor was moved off that entry and back.
+func TestCarouselChildSnapshotDispatchedWithoutNavKey(t *testing.T) {
+	root := t.TempDir()
+	inner := filepath.Join(root, "walnut")
+	nested := filepath.Join(inner, "acorn")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 160, 30)
+	app := newApp(t, screen, root)
+	app.model.Primary.CarouselMode = true
+
+	left := app.panelByID(ui.PrimaryPanel)
+	selectPanelEntryByName(t, left, "walnut")
+	// Enter walnut; its default highlight is the "acorn" subdirectory. No nav key is pressed after
+	// the chdir — only the reconcile pass that Run() performs after every event.
+	app.dispatch(keymap.ActionNavOpen)
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
+		app.reconcileAfterEvent()
+		return left.CarouselSideCache.ChildOK
+	})
+
+	if got := left.CarouselSideCache.ChildCursorDir; got != nested {
+		t.Fatalf("child cache dir = %q, want %q (child must load for the default highlight)", got, nested)
+	}
+	if _, ok := left.SnapshotChild(); !ok {
+		t.Fatal("SnapshotChild = false, want the child column populated without a nav keypress")
+	}
+}
+
+// TestCarouselNavPaintDeferredUntilParentSnapshotLands is a regression test for carousel flicker
+// on folder change: the carousel's column geometry is measured from the parent listing, so a
+// navigation must not paint while the parent snapshot still describes the previous directory —
+// doing so laid the columns out against the old parent's name lengths and then visibly re-laid
+// them out one frame later. The paint is held until the parent snapshot lands (or its deadline).
+func TestCarouselNavPaintDeferredUntilParentSnapshotLands(t *testing.T) {
+	root := t.TempDir()
+	inner := filepath.Join(root, "walnut")
+	if err := os.Mkdir(inner, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 160, 30)
+	app := newApp(t, screen, inner)
+	app.model.Primary.CarouselMode = true
+	left := app.panelByID(ui.PrimaryPanel)
+
+	// Parent cache still tagged for some other directory: exactly the window right after a chdir,
+	// before this panel's parent snapshot fetch has landed.
+	left.CarouselSideCache.ParentOK = true
+	left.CarouselSideCache.ParentSourceDir = root
+	if !app.carouselParentPaintPending(ui.PrimaryPanel) {
+		t.Fatal("parent paint should be pending while the parent cache is stale for the current dir")
+	}
+
+	app.renderAfterAsyncApply(ui.PrimaryPanel)
+	if !app.carouselPaintDefer[ui.PrimaryPanel].active {
+		t.Fatal("repaint should be deferred while the carousel parent snapshot is stale")
+	}
+
+	// The parent snapshot landing releases the held paint.
+	app.scheduleCarouselParentSnapshot(ui.PrimaryPanel, 20)
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
+		return !app.carouselPaintDefer[ui.PrimaryPanel].active
+	})
+	if !left.CarouselParentCacheValid() {
+		t.Fatal("parent cache should be valid for the current directory once the snapshot landed")
+	}
+	if app.carouselParentPaintPending(ui.PrimaryPanel) {
+		t.Fatal("parent paint should no longer be pending after the snapshot landed")
+	}
+}
+
+// TestCarouselDeferredPaintNotReleasedByChildSnapshot is a regression test: ReconcileCarouselSidePreview
+// dispatches the parent and child fetches in the same pass and they race, so a small child directory
+// routinely lands before a large parent one. Only the parent drives column geometry, so releasing the
+// held paint on the child's arrival re-created the exact flicker the deferral exists to prevent — the
+// frame painted with the parent's fit width still unmeasured, which resolveWidths falls back to the
+// configured cap for, throwing the center column across the panel until the parent landed.
+func TestCarouselDeferredPaintNotReleasedByChildSnapshot(t *testing.T) {
+	root := t.TempDir()
+	inner := filepath.Join(root, "walnut")
+	nested := filepath.Join(inner, "acorn")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	screen := newScreen(t, 160, 30)
+	app := newApp(t, screen, inner)
+	app.model.Primary.CarouselMode = true
+	left := app.panelByID(ui.PrimaryPanel)
+	selectPanelEntryByName(t, left, "acorn")
+
+	// Parent cache still tagged for another directory: the window right after a chdir.
+	left.CarouselSideCache.ParentOK = true
+	left.CarouselSideCache.ParentSourceDir = root
+	app.renderAfterAsyncApply(ui.PrimaryPanel)
+	if !app.carouselPaintDefer[ui.PrimaryPanel].active {
+		t.Fatal("repaint should be deferred while the carousel parent snapshot is stale")
+	}
+
+	// Child lands first, on its own — the parent fetch is never dispatched here.
+	app.scheduleCarouselChildSnapshot(ui.PrimaryPanel, 20)
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
+		return left.CarouselSideCache.ChildOK
+	})
+	if !app.carouselPaintDefer[ui.PrimaryPanel].active {
+		t.Fatal("child snapshot must not release a paint deferred on the parent column's geometry")
+	}
+
+	// The parent landing is what releases it.
+	app.scheduleCarouselParentSnapshot(ui.PrimaryPanel, 20)
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
+		return !app.carouselPaintDefer[ui.PrimaryPanel].active
+	})
+	if app.carouselPaintDefer[ui.PrimaryPanel].active {
+		t.Fatal("parent snapshot landing should release the deferred paint")
+	}
+}
+
 func TestCarouselPreviewNavDebounceDefersSideSnapshotUntilFlush(t *testing.T) {
 	root := t.TempDir()
 	maple := filepath.Join(root, "maple")
@@ -204,7 +326,11 @@ func TestCarouselPreviewNavDebounceDefersSideSnapshotUntilFlush(t *testing.T) {
 
 	left := app.panelByID(ui.PrimaryPanel)
 	selectPanelEntryByName(t, left, "maple")
-	if _, ok := left.SnapshotChild(20); !ok {
+	app.scheduleCarouselChildSnapshot(ui.PrimaryPanel, 20)
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
+		return left.CarouselSideCache.ChildOK && left.CarouselSideCache.Child.Path.String() == maple
+	})
+	if _, ok := left.SnapshotChild(); !ok {
 		t.Fatal("SnapshotChild on maple = false, want true")
 	}
 	first := app.model.Primary.CarouselSideCache.Child
@@ -226,6 +352,9 @@ func TestCarouselPreviewNavDebounceDefersSideSnapshotUntilFlush(t *testing.T) {
 	if !app.previewCtrl.FlushCarouselPreviewNow() {
 		t.Fatal("FlushCarouselPreviewNow should accept flush and load child preview")
 	}
+	drainInterruptEventsUntil(t, app, screen, 3*time.Second, func() bool {
+		return app.model.Primary.CarouselSideCache.ChildOK && app.model.Primary.CarouselSideCache.Child.Path.String() == oak
+	})
 	app.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 	if app.model.Primary.CarouselChildPreviewCoalesce {
 		t.Fatal("coalesce should be off after flush")

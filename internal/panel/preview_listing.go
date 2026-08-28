@@ -16,38 +16,30 @@ type ListingSnapshot struct {
 	Scroll  int
 }
 
-// SnapshotParent returns a parent-directory preview for carousel mode.
-// The cursor highlights the directory name of the current path (the exited child).
-// The second bool is false when the pane should be blank (filesystem root, load error).
-// While a navigation is in flight (ListingPending), this still reads off s.Path/s.Entries — the
-// last successfully loaded directory, unchanged until ApplyListing lands — rather than blanking,
-// so the parent pane doesn't flash empty for the one frame the async load takes to land.
-func (s *State) SnapshotParent(viewportRows int) (ListingSnapshot, bool) {
+// SnapshotParent returns the cached parent-directory preview for carousel mode. It never touches
+// the filesystem: the cache is populated asynchronously (see internal/app's carousel snapshot
+// dispatch, triggered on center-directory change) and this is a pure read, so painting the
+// carousel never blocks the UI on I/O. The second bool is false only when there is structurally no
+// parent to show (no path yet, or already at the filesystem root). Otherwise this keeps returning
+// the last cached preview even while it's stale for the current center directory (an async fetch
+// for the new target is in flight) — showing briefly-stale content instead of blanking avoids a
+// flash on every folder change, the same hold-stale-content-while-loading pattern used elsewhere
+// (quick view, the file preview panel); CarouselParentCacheValid is for the dispatch side to decide
+// whether a fresh fetch is needed, not for gating what gets painted here.
+func (s *State) SnapshotParent() (ListingSnapshot, bool) {
 	if s.Path.IsZero() {
-		s.storeCarouselParentCache(ListingSnapshot{}, false)
 		return ListingSnapshot{}, false
 	}
-	parent := s.Path.Parent()
-	if parent.Equal(s.Path) {
-		s.storeCarouselParentCache(ListingSnapshot{}, false)
+	if s.Path.Parent().Equal(s.Path) {
 		return ListingSnapshot{}, false
 	}
-	snap, err := s.buildListingSnapshot(parent, s.Path.Base(), noIndexCursorFallback, viewportRows, false)
-	if err != nil {
-		s.storeCarouselParentCache(ListingSnapshot{}, false)
-		return ListingSnapshot{}, false
-	}
-	s.storeCarouselParentCache(snap, true)
-	return snap, true
+	return s.CarouselSideCache.Parent, s.CarouselSideCache.ParentOK
 }
 
-// SnapshotChild returns a child-directory preview when the cursor is on a directory.
-// The second bool is false when the pane should be blank (file under cursor, load error).
-// While CarouselChildPreviewCoalesce is set, BuildColumns uses the cache only; this method is not
-// called. Otherwise this reads off s.Entries/cursor regardless of ListingPending — during a
-// pending navigation those still reflect the last successfully loaded directory, so the child
-// pane doesn't flash empty for the one frame the async load takes to land.
-func (s *State) SnapshotChild(viewportRows int) (ListingSnapshot, bool) {
+// SnapshotChild returns the cached child-directory preview when the cursor is on a directory. It
+// is a pure cache read on the same terms as SnapshotParent (see there); the second bool is false
+// only when the cursor is structurally not on a directory.
+func (s *State) SnapshotChild() (ListingSnapshot, bool) {
 	if s.CarouselChildPreviewCoalesce {
 		if s.CarouselChildCachePaintDuringCoalesce() {
 			return s.CarouselSideCache.Child, true
@@ -56,46 +48,9 @@ func (s *State) SnapshotChild(viewportRows int) (ListingSnapshot, bool) {
 	}
 	entry, ok := s.CurrentEntry()
 	if !ok || entry.Type != localfs.EntryDirectory {
-		s.invalidateCarouselChildCache()
 		return ListingSnapshot{}, false
 	}
-	child, err := pathloc.Parse(entry.Path)
-	if err != nil {
-		s.invalidateCarouselChildCache()
-		return ListingSnapshot{}, false
-	}
-	selectedName, indexFallback, centerRecalled := s.recalledCursorFor(child.String())
-	snap, err := s.buildListingSnapshot(child, selectedName, indexFallback, viewportRows, centerRecalled)
-	if err != nil {
-		s.invalidateCarouselChildCache()
-		return ListingSnapshot{}, false
-	}
-	target, okTarget := s.carouselChildPreviewTarget()
-	if !okTarget {
-		s.invalidateCarouselChildCache()
-		return ListingSnapshot{}, false
-	}
-	s.storeCarouselChildCache(snap, true, target)
-	return snap, true
-}
-
-func (s *State) storeCarouselParentCache(snap ListingSnapshot, ok bool) {
-	if ok {
-		s.CarouselSideCache.Parent = snap
-		s.CarouselSideCache.ParentOK = true
-		return
-	}
-	s.CarouselSideCache.ParentOK = false
-}
-
-func (s *State) storeCarouselChildCache(snap ListingSnapshot, ok bool, cursorDir string) {
-	if ok {
-		s.CarouselSideCache.Child = snap
-		s.CarouselSideCache.ChildOK = true
-		s.CarouselSideCache.ChildCursorDir = cursorDir
-		return
-	}
-	s.invalidateCarouselChildCache()
+	return s.CarouselSideCache.Child, s.CarouselSideCache.ChildOK
 }
 
 // SnapshotDirectory builds a sorted listing for dir using s for list/sort/backend settings and
@@ -190,7 +145,16 @@ func (s *State) buildListingSnapshot(loc pathloc.Path, selectedName string, inde
 	if err != nil {
 		return ListingSnapshot{}, err
 	}
-	localEntries, err := fsbackend.ToPanelEntries(backendEntries)
+	return s.BuildListingSnapshotFromEntries(listingLoc, backendEntries, selectedName, indexFallback, viewportRows, centerRecalled)
+}
+
+// BuildListingSnapshotFromEntries builds a sorted, cursor-centered listing snapshot from entries
+// already fetched off-thread. It is the tail half of buildListingSnapshot, split out so an async
+// carousel side-column fetch can do the filesystem read on a background goroutine and defer this
+// step — which reads s.Sort/IdleDiskTotalsSort/DiskSorter — to the owning (UI) goroutine once the
+// entries are back.
+func (s *State) BuildListingSnapshotFromEntries(loc pathloc.Path, rawEntries []fsbackend.Entry, selectedName string, indexFallback int, viewportRows int, centerRecalled bool) (ListingSnapshot, error) {
+	localEntries, err := fsbackend.ToPanelEntries(rawEntries)
 	if err != nil {
 		return ListingSnapshot{}, err
 	}
@@ -218,7 +182,7 @@ func (s *State) buildListingSnapshot(loc pathloc.Path, selectedName string, inde
 	centerOnHighlight := centerRecalled || selectedName != "" || indexFallback >= 0
 	temp.applyHighlightScroll(viewportRows, centerOnHighlight)
 	return ListingSnapshot{
-		Path:    listingLoc,
+		Path:    loc,
 		Entries: temp.Entries,
 		Cursor:  temp.Cursor,
 		Scroll:  temp.ScrollOffset,

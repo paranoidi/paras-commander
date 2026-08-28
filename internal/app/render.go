@@ -82,6 +82,52 @@ func (a *App) browserListNavPartialRenderEligible() bool {
 	return true
 }
 
+// renderPanelAsyncResult repaints after an async result has been applied to panelID, preferring
+// the cheaper single-panel partial repaint over a full-screen render when eligible — an async
+// apply is not itself a user-driven navigation event, so this checks eligibility directly rather
+// than going through browserListNavPartialRenderEligibleFor's per-action gate.
+func (a *App) renderPanelAsyncResult(panelID int) {
+	if a.browserListNavPartialRenderEligible() {
+		a.renderBrowserListNavUpdate(panelID)
+	} else {
+		a.render()
+	}
+}
+
+// carouselParentPaintPending reports whether panelID is showing a carousel whose parent-column
+// snapshot has not caught up with the panel's current directory. The carousel's column geometry is
+// measured from the parent listing when the parent split is fit-to-content, so painting in this
+// window would lay the columns out against the previous directory's names and then visibly
+// re-lay them out one frame later, when the parent snapshot lands.
+func (a *App) carouselParentPaintPending(panelID int) bool {
+	if panelID != ui.PrimaryPanel && panelID != ui.SecondaryPanel {
+		return false
+	}
+	pan := a.panelByID(panelID)
+	if pan == nil || !pan.CarouselMode || pan.Path.IsZero() {
+		return false
+	}
+	if pan.Path.Parent().Equal(pan.Path) {
+		return false // at the filesystem root there is no parent column to wait for
+	}
+	return !pan.CarouselParentCacheValid()
+}
+
+// renderAfterAsyncApply repaints for an applied async panel-navigation result, except while the
+// panel's carousel parent column is still catching up (carouselParentPaintPending) — then the
+// paint is deferred so the new directory is drawn once, with correct column widths, instead of
+// once against the old parent's measurements and again a frame later. The deferred paint is
+// always released: raceAsyncListingFetch posts a result for every dispatch, timeouts included, and
+// the carouselSnapshotPayload arm renders on arrival whether or not the snapshot applied cleanly.
+func (a *App) renderAfterAsyncApply(panelID int) {
+	if a.carouselParentPaintPending(panelID) {
+		a.carouselPaintDefer[panelID].active = true
+		a.armCarouselPaintDeferTimer(panelID)
+		return
+	}
+	a.renderPanelAsyncResult(panelID)
+}
+
 // renderBrowserListNavUpdate repaints panelID's file-list column and menu-bar permission tail
 // without redrawing the other panel (avoids disk-usage row work on the other column during scans).
 func (a *App) renderBrowserListNavUpdate(panelID int) {
