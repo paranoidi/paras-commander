@@ -67,10 +67,21 @@ func (a *App) renderDeleteDialogUpdate() {
 	a.render()
 }
 
+// panelOnlyPaintBlocked reports whether an overlay (modal dialog or pulldown menu) is drawn on
+// top of the panels. A panel-only partial paint would then paint over that overlay and leave it
+// corrupted until something repaints it, so such frames must go through a full ui.Render, which
+// redraws the overlay on top of the panels in the same frame.
+func (a *App) panelOnlyPaintBlocked() bool {
+	return a.model.ModalDialogOpen() || a.model.Menu.Open
+}
+
 // browserListNavPartialRenderEligible reports whether file-list navigation can repaint only the
 // active column (inactive panel unchanged this frame).
 func (a *App) browserListNavPartialRenderEligible() bool {
 	if a.model.ViewMode != ui.ViewBrowser || a.model.ActiveSubFocus != ui.SubFocusFileList {
+		return false
+	}
+	if a.panelOnlyPaintBlocked() {
 		return false
 	}
 	if a.model.SyncFollowEnabled && !a.syncFollowNavSkipReconcile.Load() {
@@ -156,7 +167,7 @@ func (a *App) renderBrowserListNavUpdate(panelID int) {
 // paintDiskUsageBrowserUpdate repaints disk-usage scan-scope panels and the menu-bar spinner
 // without a full twin-panel render. Returns false when ui.Render is required instead.
 func (a *App) paintDiskUsageBrowserUpdate() bool {
-	if a.model.ViewMode != ui.ViewBrowser {
+	if a.model.ViewMode != ui.ViewBrowser || a.panelOnlyPaintBlocked() {
 		return false
 	}
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
