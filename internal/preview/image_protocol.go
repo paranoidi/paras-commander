@@ -203,8 +203,27 @@ func TmuxSupportsNativeSixel(environ func(string) string) bool {
 	if environ == nil || environ("TMUX") == "" {
 		return false
 	}
-	return strings.Contains(tmuxClientTermFeatures(), "sixel")
+	if !strings.Contains(tmuxClientTermFeatures(), "sixel") {
+		return false
+	}
+	// A tmux built without image support still reports whatever sixel capability its terminal
+	// database claims for the attached terminal, but has nowhere to put an image: it parses the
+	// DCS and drops it, so a bare payload disappears silently. Only "0" is a positive denial —
+	// tmux versions too old to know this format expand it to the empty string, and those are
+	// exactly the builds lesson 9's client_termfeatures rule was verified against.
+	return tmuxImageSupport() != "0"
 }
+
+// tmuxImageSupport returns tmux's `#{image_support}`: "1" when this tmux can store and render
+// images itself, "0" when it cannot, and "" on versions that don't know the format. Cached for
+// the process lifetime like the other tmux probes, and overridable in tests.
+var tmuxImageSupport = sync.OnceValue(func() string {
+	out, err := exec.Command("tmux", "display-message", "-p", "#{image_support}").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+})
 
 // WarmTmuxCaches kicks off tmux's `display-message` capability probes
 // (tmuxClientTermType, tmuxClientTermFeatures) in the background as soon as tmux is detected,
@@ -219,6 +238,7 @@ func WarmTmuxCaches(environ func(string) string) {
 	}
 	go tmuxClientTermType()
 	go tmuxClientTermFeatures()
+	go tmuxImageSupport()
 }
 
 // kittyOrGhosttyConfirmedByEnv is like kittyGraphicsConfirmedByEnv but deliberately excludes

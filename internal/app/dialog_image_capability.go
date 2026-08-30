@@ -76,15 +76,17 @@ func (a *App) applyImageCapabilityDialog() {
 		}
 		return config.PreviewTerminalCapabilityAuto
 	}
-	sixel := tri(st.SixelSupported)
-	kitty := tri(st.KittySupported)
-	placeholder := tri(st.KittyPlaceholderSupported)
-	protocol := effectiveImageProtocol(st.Protocol)
+	keys := config.PreviewTerminalKeys{
+		Sixel:            tri(st.SixelSupported),
+		Kitty:            tri(st.KittySupported),
+		KittyPlaceholder: tri(st.KittyPlaceholderSupported),
+		ImageProtocol:    effectiveImageProtocol(st.Protocol),
+	}
 
-	a.config.Preview.TerminalSixel = sixel
-	a.config.Preview.TerminalKitty = kitty
-	a.config.Preview.TerminalKittyPlaceholder = placeholder
-	a.config.Preview.ImageProtocol = protocol
+	a.config.Preview.TerminalSixel = keys.Sixel
+	a.config.Preview.TerminalKitty = keys.Kitty
+	a.config.Preview.TerminalKittyPlaceholder = keys.KittyPlaceholder
+	a.config.Preview.ImageProtocol = keys.ImageProtocol
 
 	a.closeImageCapabilityDialog()
 	msg := "Image terminal capabilities saved"
@@ -95,7 +97,7 @@ func (a *App) applyImageCapabilityDialog() {
 		a.setTransientMessage(msg, urgency)
 		return
 	}
-	if err := config.PatchPreviewTerminalKeysForPaths(a.paths, sixel, kitty, placeholder, protocol); err != nil {
+	if err := config.PatchPreviewTerminalKeysForPaths(a.paths, keys); err != nil {
 		msg = fmt.Sprintf("%s (config save failed: %v)", msg, err)
 		urgency = ui.MessageUrgencyWarn
 	}
@@ -129,7 +131,7 @@ func (a *App) handleImageCapabilityDialogKey(event *tcell.EventKey) {
 			for i, radio := range radios {
 				if unicode.ToLower(r) == unicode.ToLower(radio.Shortcut) {
 					st.Protocol = radio.Protocol
-					st.Focus = 3 + i
+					st.Focus = dialog.ImageCapabilityDialogFocusProtocolRadio + i
 					return true
 				}
 			}
@@ -157,7 +159,7 @@ func (a *App) handleImageCapabilityDialogKey(event *tcell.EventKey) {
 			case 2:
 				toggleKittyPlaceholderSupported(st)
 			case 3, 4, 5:
-				st.Protocol = radios[focus-3].Protocol
+				st.Protocol = radios[focus-dialog.ImageCapabilityDialogFocusProtocolRadio].Protocol
 			case form.OKIndex():
 				a.applyImageCapabilityDialog()
 			case form.CancelIndex():

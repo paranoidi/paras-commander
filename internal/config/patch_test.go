@@ -154,7 +154,7 @@ func TestPatchPreviewTerminalKeys(t *testing.T) {
 				}
 			}
 
-			if err := PatchPreviewTerminalKeys(path, "yes", "no", "yes", "kitty"); err != nil {
+			if err := PatchPreviewTerminalKeys(path, PreviewTerminalKeys{Sixel: "yes", Kitty: "no", KittyPlaceholder: "yes", ImageProtocol: "kitty"}); err != nil {
 				t.Fatalf("PatchPreviewTerminalKeys: %v", err)
 			}
 
@@ -199,7 +199,7 @@ func TestPatchPreviewTerminalKeysIndentedKeys(t *testing.T) {
 		t.Fatalf("seed file: %v", err)
 	}
 
-	if err := PatchPreviewTerminalKeys(path, "yes", "no", "yes", "kitty"); err != nil {
+	if err := PatchPreviewTerminalKeys(path, PreviewTerminalKeys{Sixel: "yes", Kitty: "no", KittyPlaceholder: "yes", ImageProtocol: "kitty"}); err != nil {
 		t.Fatalf("PatchPreviewTerminalKeys: %v", err)
 	}
 
@@ -233,7 +233,7 @@ func TestPatchPreviewTerminalKeysAgainstGeneratedStub(t *testing.T) {
 		t.Fatalf("WriteDefaultStub: %v", err)
 	}
 
-	if err := PatchPreviewTerminalKeys(path, "yes", "no", "yes", "kitty"); err != nil {
+	if err := PatchPreviewTerminalKeys(path, PreviewTerminalKeys{Sixel: "yes", Kitty: "no", KittyPlaceholder: "yes", ImageProtocol: "kitty"}); err != nil {
 		t.Fatalf("PatchPreviewTerminalKeys: %v", err)
 	}
 
@@ -268,10 +268,10 @@ func TestPatchPreviewTerminalKeysDoesNotDuplicateOnRepeatedCalls(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.toml")
 
-	if err := PatchPreviewTerminalKeys(path, "auto", "auto", "auto", "auto"); err != nil {
+	if err := PatchPreviewTerminalKeys(path, PreviewTerminalKeys{Sixel: "auto", Kitty: "auto", KittyPlaceholder: "auto", ImageProtocol: "auto"}); err != nil {
 		t.Fatalf("first patch: %v", err)
 	}
-	if err := PatchPreviewTerminalKeys(path, "yes", "no", "yes", "kitty"); err != nil {
+	if err := PatchPreviewTerminalKeys(path, PreviewTerminalKeys{Sixel: "yes", Kitty: "no", KittyPlaceholder: "yes", ImageProtocol: "kitty"}); err != nil {
 		t.Fatalf("second patch: %v", err)
 	}
 
@@ -304,7 +304,7 @@ func TestPatchPreviewTerminalKeysAtomicWrite(t *testing.T) {
 		t.Fatalf("stat before: %v", err)
 	}
 
-	if err := PatchPreviewTerminalKeys(path, "auto", "auto", "auto", "auto"); err != nil {
+	if err := PatchPreviewTerminalKeys(path, PreviewTerminalKeys{Sixel: "auto", Kitty: "auto", KittyPlaceholder: "auto", ImageProtocol: "auto"}); err != nil {
 		t.Fatalf("patch: %v", err)
 	}
 
@@ -343,7 +343,7 @@ func TestPatchPreviewTerminalKeysSingleQuotedAndBareValues(t *testing.T) {
 		t.Fatalf("seed file: %v", err)
 	}
 
-	if err := PatchPreviewTerminalKeys(path, "yes", "yes", "yes", "kitty"); err != nil {
+	if err := PatchPreviewTerminalKeys(path, PreviewTerminalKeys{Sixel: "yes", Kitty: "yes", KittyPlaceholder: "yes", ImageProtocol: "kitty"}); err != nil {
 		t.Fatalf("PatchPreviewTerminalKeys: %v", err)
 	}
 
@@ -372,7 +372,7 @@ func TestPatchPreviewTerminalKeysSingleQuotedAndBareValues(t *testing.T) {
 func TestPatchPreviewTerminalKeysForPaths(t *testing.T) {
 	dir := t.TempDir()
 	paths := Paths{ConfigDir: dir}.WithResolvedLocations()
-	if err := PatchPreviewTerminalKeysForPaths(paths, "yes", "no", "yes", "kitty"); err != nil {
+	if err := PatchPreviewTerminalKeysForPaths(paths, PreviewTerminalKeys{Sixel: "yes", Kitty: "no", KittyPlaceholder: "yes", ImageProtocol: "kitty"}); err != nil {
 		t.Fatalf("PatchPreviewTerminalKeysForPaths: %v", err)
 	}
 	got, err := os.ReadFile(paths.ConfigFile)

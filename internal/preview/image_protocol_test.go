@@ -326,3 +326,31 @@ func TestDetectTerminalCapabilities(t *testing.T) {
 		t.Fatalf("tmux+wezterm with sixel feature: got sixel=%v kitty=%v placeholder=%v, want true/true/false (placeholder never auto-detected for WezTerm)", sixel, kitty, placeholder)
 	}
 }
+
+// A tmux built without image support reports the terminal's sixel capability but would swallow a
+// bare payload, so #{image_support} == "0" vetoes the native transport. An empty value (tmux too
+// old to know the format) keeps lesson 9's client_termfeatures-only rule.
+func TestTmuxSupportsNativeSixelImageSupport(t *testing.T) {
+	origFeat, origImg := tmuxClientTermFeatures, tmuxImageSupport
+	t.Cleanup(func() { tmuxClientTermFeatures, tmuxImageSupport = origFeat, origImg })
+	tmuxEnv := func(k string) string {
+		if k == "TMUX" {
+			return "/tmp/tmux-1000/default,1234,0"
+		}
+		return ""
+	}
+	tmuxClientTermFeatures = func() string { return "256,rgb,sixel,sync" }
+
+	tmuxImageSupport = func() string { return "1" }
+	if !TmuxSupportsNativeSixel(tmuxEnv) {
+		t.Fatal("image_support=1: want native")
+	}
+	tmuxImageSupport = func() string { return "" }
+	if !TmuxSupportsNativeSixel(tmuxEnv) {
+		t.Fatal("image_support unknown (old tmux): want native, per the client_termfeatures rule")
+	}
+	tmuxImageSupport = func() string { return "0" }
+	if TmuxSupportsNativeSixel(tmuxEnv) {
+		t.Fatal("image_support=0: tmux cannot store images, want passthrough")
+	}
+}

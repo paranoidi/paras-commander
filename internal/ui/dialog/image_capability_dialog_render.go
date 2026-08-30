@@ -28,9 +28,9 @@ const (
 	imageCapabilityDialogFocusSixelCheckbox = 0
 	imageCapabilityDialogFocusKittyCheckbox = 1
 	imageCapabilityDialogFocusPlaceholder   = 2
-	imageCapabilityDialogFocusAutoRadio     = 3
-	imageCapabilityDialogFocusSixelRadio    = 4
-	imageCapabilityDialogFocusKittyRadio    = 5
+	// ImageCapabilityDialogFocusProtocolRadio is the first protocol radio; the rest follow in
+	// ImageCapabilityDialogRadios order.
+	ImageCapabilityDialogFocusProtocolRadio = 3
 	imageCapabilityDialogFocusOK            = 6
 	imageCapabilityDialogFocusCancel        = 7
 )
@@ -43,6 +43,8 @@ func ImageCapabilityDialogForm() DialogLinearForm {
 
 // DrawImageCapabilityDialog renders the M-F3 image terminal-capabilities modal.
 func DrawImageCapabilityDialog(screen tcell.Screen, layout Layout, state ImageCapabilityDialogState, styles theme.Theme) {
+	// height: border, prompt, blank, 3 checkboxes, separator, label, blank, 3 protocol radios,
+	// separator, blank, buttons, border.
 	const width, height = 46, 16
 	rect := draw.CenteredDialogRect(layout, width, height)
 
@@ -66,7 +68,7 @@ func DrawImageCapabilityDialog(screen tcell.Screen, layout Layout, state ImageCa
 	primitive.Text(screen, textX, y, textW, "Active protocol:", textStyle)
 	y += 2
 	for i, r := range ImageCapabilityDialogRadios() {
-		draw.DrawDialogRadio(screen, optionX, y, r.Label, r.Shortcut, state.Protocol == r.Protocol, state.Focus == imageCapabilityDialogFocusAutoRadio+i, styles)
+		draw.DrawDialogRadio(screen, optionX, y, r.Label, r.Shortcut, state.Protocol == r.Protocol, state.Focus == ImageCapabilityDialogFocusProtocolRadio+i, styles)
 		y++
 	}
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
