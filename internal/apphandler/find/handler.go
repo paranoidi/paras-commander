@@ -724,6 +724,16 @@ func findDialogCursorPath(st *dialog.FindDialogState) (string, bool) {
 	return path, ok
 }
 
+// findDialogPinToggleCursor pins/unpins the entry currently under the find dialog cursor.
+func (h *Handler) findDialogPinToggleCursor() {
+	st := &h.model.FindDialog
+	ent, path, ok := findDialogCursorEntry(st)
+	if !ok {
+		return
+	}
+	h.host.PinTogglePath(filepath.Base(path), path, ent.IsDir)
+}
+
 // navigateFindEntryToPanel points panelID at the currently selected result
 // (cd into a directory; cd into a file's parent and highlight it). It does not
 // change the active panel or close the dialog. Returns the entry basename and
@@ -1148,6 +1158,10 @@ func (h *Handler) HandleDialogKey(event *tcell.EventKey) {
 	}
 	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelSelectToggle {
 		h.findDialogToggleSelectionAndAdvance()
+		return
+	}
+	if id, ok := h.keys.Lookup(event); ok && id == keymap.ActionPanelPinToggle {
+		h.findDialogPinToggleCursor()
 		return
 	}
 	if dialog.AltDialogOK(event) {

@@ -68,6 +68,7 @@ func (h *Handler) CloseFilePreviewFullscreen() {
 	h.model.ViewMode = ui.ViewBrowser
 	h.model.MenuDefinitions = h.host.BrowserMenuDefinitions()
 	h.model.Menu.ActiveMenu = menu.DefaultIndex()
+	h.host.FilePreviewFullscreenClosed()
 }
 
 func (h *Handler) fullscreenFilePreviewScrollMetrics() (textW, contentH, lineCount int) {

@@ -39,6 +39,7 @@ const (
 	InputModeFilePreviewView
 	InputModePathPicker
 	InputModeHistoryDialog
+	InputModePinDialog
 	InputModeFindDialog
 	InputModeMetaDialog
 	InputModeLeaderMenu
@@ -64,6 +65,8 @@ func (a *App) inputMode() InputMode {
 		return InputModePathPicker
 	case a.model.HistoryDialog.Open:
 		return InputModeHistoryDialog
+	case a.model.PinDialog.Open:
+		return InputModePinDialog
 	case a.model.SFTPConnectDialog.Open:
 		return InputModeSFTPConnectDialog
 	case a.model.GroupSelect.Open:
@@ -177,6 +180,11 @@ func (a *App) activeFooterKeys() []menu.FunctionKey {
 		rest = append(historyDialogOverlayFooterKeys(a.keys.HistoryDialog, a.model.HistoryDialog.BothPanels), rest...)
 		return footerWithEscClose(rest)
 	}
+	if a.model.PinDialog.Open {
+		rest := []menu.FunctionKey{{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit"}}
+		rest = append(pinDialogOverlayFooterKeys(a.keys.PinDialog), rest...)
+		return footerWithEscClose(rest)
+	}
 	if a.model.PathPicker.Open || a.model.MetaDialog.Open {
 		return a.pathPickerMetaFooterKeys()
 	}
@@ -274,6 +282,11 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 		}
 		if lbl := a.keys.Global.MenuBindingLabel(keymap.ActionPanelHistoryDialog); lbl != "" {
 			pathHints = append(pathHints, menu.FunctionKey{KeyLabel: lbl, Hint: "History"})
+		}
+		if a.dialogCtrl.PathPickerPinnedFooterEligible() {
+			if lbl := a.keys.Global.MenuBindingLabel(keymap.ActionPanelPinDialog); lbl != "" {
+				pathHints = append(pathHints, menu.FunctionKey{KeyLabel: lbl, Hint: "Pinned"})
+			}
 		}
 		if len(pathHints) > 0 {
 			rest = append(pathHints, rest...)
@@ -428,6 +441,30 @@ func findDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
 	return out
 }
 
+func pinDialogOverlayFooterKeys(keys *keymap.Map) []menu.FunctionKey {
+	if keys == nil {
+		return nil
+	}
+	var out []menu.FunctionKey
+	if lbl := keys.MenuBindingLabel(keymap.ActionPinView); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "View"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionPinOpenInPrimary); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ◄"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionPinOpenInSecondary); lbl != "" {
+		out = append(out, menu.FunctionKey{KeyLabel: lbl, Hint: "Open ►"})
+	}
+	if lbl := keys.MenuBindingLabel(keymap.ActionPinRemove); lbl != "" {
+		fk := menu.FunctionKey{KeyLabel: lbl, Hint: "Remove"}
+		if keys.MenuBindingLabel(keymap.ActionPinRemoveAll) != "" {
+			fk.HintShiftPrefix = "All"
+		}
+		out = append(out, fk)
+	}
+	return out
+}
+
 func (a *App) prepareGlobalQuitShortcutCleanup() {
 	a.clearPanelSyncFollowNavCoalesce()
 	a.previewCtrl.ClearNavCoalesces()
@@ -526,6 +563,110 @@ func (a *App) handleGlobalKeyIntercepts(event *tcell.EventKey, resolvedAction st
 	return false, false, false
 }
 
+// inputModeKeyHandlers maps InputMode values whose key handling is exactly "run the
+// mode's key handler, then render" to that handler (returning quit). Extracting these
+// collapses roughly two dozen near-identical switch cases that used to live in
+// handleKey into one map lookup, keeping handleKey's cyclomatic complexity under the
+// gocyclo threshold. Modes with extra logic around the handler call (InputModeFindDialog's
+// partial-repaint check, InputModeLeaderMenu's per-menu close checks, InputModeFileDialog's
+// overlay repaint, InputModeFilter's fall-through) stay in handleKey's switch below.
+var inputModeKeyHandlers = map[InputMode]func(*App, *tcell.EventKey) bool{
+	InputModeCommandOutputDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.commandsCtrl.HandleOutputDialogKey(ev)
+		return false
+	},
+	InputModeMessageDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleMessageDialogKey(ev)
+		return false
+	},
+	InputModePathPicker: func(a *App, ev *tcell.EventKey) bool {
+		a.dialogCtrl.HandlePathPickerKey(ev)
+		return false
+	},
+	InputModeHistoryDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleHistoryDialogKey(ev)
+		return false
+	},
+	InputModePinDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.pinCtrl.HandleDialogKey(ev)
+		return false
+	},
+	InputModeSFTPConnectDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleSFTPConnectDialogKey(ev)
+		return false
+	},
+	InputModeMetaDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.metaCtrl.HandleDialogKey(ev)
+		return false
+	},
+	InputModeHelpView: func(a *App, ev *tcell.EventKey) bool {
+		return a.handleHelpDialogKey(ev)
+	},
+	InputModeThemeDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleThemeDialogKey(ev)
+		return false
+	},
+	InputModeSortDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleSortDialogKey(ev)
+		return false
+	},
+	InputModeListingFormatDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleListingFormatDialogKey(ev)
+		return false
+	},
+	InputModeConfigDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleConfigDialogKey(ev)
+		return false
+	},
+	InputModeImageCapabilityDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleImageCapabilityDialogKey(ev)
+		return false
+	},
+	InputModeDebounceCalibrateDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.handleDebounceCalibrateDialogKey(ev)
+		return false
+	},
+	InputModeGroupSelect: func(a *App, ev *tcell.EventKey) bool {
+		a.handleGroupSelectKey(ev)
+		return false
+	},
+	InputModeFilterDialog: func(a *App, ev *tcell.EventKey) bool {
+		return a.dialogCtrl.HandleFilterDialogKey(ev)
+	},
+	InputModeHostKeyDialog: func(a *App, ev *tcell.EventKey) bool {
+		_ = a.handleHostKeyDialogKey(ev)
+		return false
+	},
+	InputModeJobsView: func(a *App, ev *tcell.EventKey) bool {
+		return a.jobsCtrl.HandleJobsViewKey(ev)
+	},
+	InputModeCommandsView: func(a *App, ev *tcell.EventKey) bool {
+		return a.commandsCtrl.HandleViewKey(ev)
+	},
+	InputModeCompareView: func(a *App, ev *tcell.EventKey) bool {
+		return a.handleCompareViewKey(ev)
+	},
+	InputModeDedupProgressDialog: func(a *App, ev *tcell.EventKey) bool {
+		a.dedupCtrl.HandleProgressDialogKey(ev)
+		return false
+	},
+	InputModeDedupView: func(a *App, ev *tcell.EventKey) bool {
+		return a.handleDedupViewKey(ev)
+	},
+	InputModeMessagesView: func(a *App, ev *tcell.EventKey) bool {
+		return a.handleMessagesViewKey(ev)
+	},
+	InputModeFilePreviewView: func(a *App, ev *tcell.EventKey) bool {
+		return a.previewCtrl.HandleFilePreviewViewKey(ev)
+	},
+	InputModeDialog: func(a *App, ev *tcell.EventKey) bool {
+		return a.handleDialogKey(ev)
+	},
+	InputModeMenu: func(a *App, ev *tcell.EventKey) bool {
+		return a.handleMenuKey(ev)
+	},
+}
+
 func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 	a.deferDiskIdleSortOnUserActivity()
 	resolvedAction := a.actionFromKeyEvent(event)
@@ -533,27 +674,14 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		return iquit, irendered
 	}
 
-	switch a.inputMode() {
-	case InputModeCommandOutputDialog:
-		a.commandsCtrl.HandleOutputDialogKey(event)
+	mode := a.inputMode()
+	if handler, ok := inputModeKeyHandlers[mode]; ok {
+		quit := handler(a, event)
 		a.render()
-		return false, true
-	case InputModeMessageDialog:
-		a.handleMessageDialogKey(event)
-		a.render()
-		return false, true
-	case InputModePathPicker:
-		a.dialogCtrl.HandlePathPickerKey(event)
-		a.render()
-		return false, true
-	case InputModeHistoryDialog:
-		a.handleHistoryDialogKey(event)
-		a.render()
-		return false, true
-	case InputModeSFTPConnectDialog:
-		a.handleSFTPConnectDialogKey(event)
-		a.render()
-		return false, true
+		return quit, true
+	}
+
+	switch mode {
 	case InputModeFindDialog:
 		wasOpen := a.model.FindDialog.Open
 		gsWasOpen := a.model.GroupSelect.Open
@@ -566,10 +694,6 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		} else if !a.paintFindDialogOverlay() {
 			a.render()
 		}
-		return false, true
-	case InputModeMetaDialog:
-		a.metaCtrl.HandleDialogKey(event)
-		a.render()
 		return false, true
 	case InputModeLeaderMenu:
 		if resolvedAction == keymap.ActionAppLeaderMenu && a.builtinLeaderMenuOpen() {
@@ -602,46 +726,6 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 			a.render()
 		}
 		return quit, true
-	case InputModeHelpView:
-		quit := a.handleHelpDialogKey(event)
-		a.render()
-		return quit, true
-	case InputModeThemeDialog:
-		a.handleThemeDialogKey(event)
-		a.render()
-		return false, true
-	case InputModeSortDialog:
-		a.handleSortDialogKey(event)
-		a.render()
-		return false, true
-	case InputModeListingFormatDialog:
-		a.handleListingFormatDialogKey(event)
-		a.render()
-		return false, true
-	case InputModeConfigDialog:
-		a.handleConfigDialogKey(event)
-		a.render()
-		return false, true
-	case InputModeImageCapabilityDialog:
-		a.handleImageCapabilityDialogKey(event)
-		a.render()
-		return false, true
-	case InputModeDebounceCalibrateDialog:
-		a.handleDebounceCalibrateDialogKey(event)
-		a.render()
-		return false, true
-	case InputModeGroupSelect:
-		a.handleGroupSelectKey(event)
-		a.render()
-		return false, true
-	case InputModeFilterDialog:
-		quit := a.dialogCtrl.HandleFilterDialogKey(event)
-		a.render()
-		return quit, true
-	case InputModeHostKeyDialog:
-		_ = a.handleHostKeyDialogKey(event)
-		a.render()
-		return false, true
 	case InputModeFileDialog:
 		before := a.dialogCtrl.FileDialogRect()
 		quit := a.dialogCtrl.HandleFileDialogKey(event)
@@ -655,42 +739,6 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 		} else {
 			a.render()
 		}
-		return quit, true
-	case InputModeJobsView:
-		quit := a.jobsCtrl.HandleJobsViewKey(event)
-		a.render()
-		return quit, true
-	case InputModeCommandsView:
-		quit := a.commandsCtrl.HandleViewKey(event)
-		a.render()
-		return quit, true
-	case InputModeCompareView:
-		quit := a.handleCompareViewKey(event)
-		a.render()
-		return quit, true
-	case InputModeDedupProgressDialog:
-		a.dedupCtrl.HandleProgressDialogKey(event)
-		a.render()
-		return false, true
-	case InputModeDedupView:
-		quit := a.handleDedupViewKey(event)
-		a.render()
-		return quit, true
-	case InputModeMessagesView:
-		quit := a.handleMessagesViewKey(event)
-		a.render()
-		return quit, true
-	case InputModeFilePreviewView:
-		quit := a.previewCtrl.HandleFilePreviewViewKey(event)
-		a.render()
-		return quit, true
-	case InputModeDialog:
-		quit := a.handleDialogKey(event)
-		a.render()
-		return quit, true
-	case InputModeMenu:
-		quit := a.handleMenuKey(event)
-		a.render()
 		return quit, true
 	case InputModeFilter:
 		if fQuit, fRendered, handled := a.handleFilterLeaderKey(event, resolvedAction); handled {
@@ -1070,6 +1118,8 @@ func (a *App) dispatch(actionID string) bool {
 	case keymap.ActionPanelHistoryDialog:
 		// Keyboard/menu shortcut targets whichever panel is active (left vs right).
 		a.openHistoryDialog(a.model.ActivePanel)
+	case keymap.ActionPanelPinDialog:
+		a.pinCtrl.OpenDialog()
 	case keymap.ActionPanelGitFilterMenu:
 		a.toggleGitFilterMenu()
 	case keymap.ActionPanelFindDialog:

@@ -10,6 +10,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 const (
@@ -23,6 +24,9 @@ type compareViewData struct {
 	Rows      []comparepkg.Row
 	Primary   panel.State
 	Secondary panel.State
+	// RowMarks resolves the pin/in-progress-job trailing marks for one row's absolute path;
+	// nil (the zero value, used by existing test literals) paints no marks.
+	RowMarks dialog.RowMarksFunc
 }
 
 func drawCompareView(
@@ -126,7 +130,20 @@ func drawCompareView(
 			}
 			primitive.Text(screen, contentX, lineY, leftPathW, "-", effectiveLeft)
 		} else {
-			primitive.Text(screen, contentX, lineY, leftPathW, primitive.FitPathForWidth(leftPath, leftPathW), leftStyle)
+			leftMarks := dialog.RowMarks{}
+			if data.RowMarks != nil {
+				leftMarks = data.RowMarks(entryPrimaryAbs(snap, entry))
+			}
+			leftMarksW := dialog.RowMarksWidth(leftMarks)
+			leftFitW := leftPathW - leftMarksW
+			if leftFitW < 1 {
+				leftFitW = 1
+			}
+			primitive.Text(screen, contentX, lineY, leftFitW, primitive.FitPathForWidth(leftPath, leftFitW), leftStyle)
+			if leftMarksW > 0 {
+				_, leftBG, _ := leftStyle.Decompose()
+				dialog.DrawRowMarksSuffix(screen, contentX+leftFitW, lineY, leftMarksW, leftMarks, leftBG, styles)
+			}
 		}
 		primitive.Text(screen, contentX+leftPathW, lineY, comparePathGapCol, "", lineStyle)
 		glyph := compareGlyphCentered(compareRowGlyph(styles, entry))
@@ -139,7 +156,20 @@ func drawCompareView(
 			}
 			primitive.Text(screen, rightX, lineY, pathW+1, "-", effectiveRight)
 		} else {
-			primitive.Text(screen, rightX, lineY, pathW+1, primitive.FitPathForWidth(rightPath, pathW), rightStyle)
+			rightMarks := dialog.RowMarks{}
+			if data.RowMarks != nil {
+				rightMarks = data.RowMarks(entrySecondaryAbs(snap, entry))
+			}
+			rightMarksW := dialog.RowMarksWidth(rightMarks)
+			rightFitW := pathW - rightMarksW
+			if rightFitW < 1 {
+				rightFitW = 1
+			}
+			primitive.Text(screen, rightX, lineY, rightFitW, primitive.FitPathForWidth(rightPath, rightFitW), rightStyle)
+			// +1 preserves the original pathW+1 sizing's one-cell buffer to the border,
+			// regardless of whether rightMarksW is 0.
+			_, rightBG, _ := rightStyle.Decompose()
+			dialog.DrawRowMarksSuffix(screen, rightX+rightFitW, lineY, rightMarksW+1, rightMarks, rightBG, styles)
 		}
 	}
 

@@ -12,10 +12,10 @@ type LeaderMenuItem struct {
 // LeaderMenuState is the renderable bottom function menu (Esc built-in / F2 user menu / `"` copy
 // menu / `:` fullscreen-preview menu).
 type LeaderMenuState struct {
-	Open           bool
-	UserMenu       bool // true = F2/menu.toml
-	CopyMenu       bool // true = `"` copy menu
-	PreviewMenu    bool // true = ':' fullscreen-preview menu (ui.ViewFilePreview only)
-	GitFilterMenu  bool // true = Alt-G git filter menu
-	Items          []LeaderMenuItem
+	Open          bool
+	UserMenu      bool // true = F2/menu.toml
+	CopyMenu      bool // true = `"` copy menu
+	PreviewMenu   bool // true = ':' fullscreen-preview menu (ui.ViewFilePreview only)
+	GitFilterMenu bool // true = Alt-G git filter menu
+	Items         []LeaderMenuItem
 }

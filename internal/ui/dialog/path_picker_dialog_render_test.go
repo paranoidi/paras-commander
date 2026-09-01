@@ -3,6 +3,7 @@ package dialog
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -36,7 +37,7 @@ func TestDrawPathPickerDialogSmoke(t *testing.T) {
 		ListScroll: 0,
 		Focus:      0,
 	}
-	DrawPathPickerDialog(screen, layout, state, styles)
+	DrawPathPickerDialog(screen, layout, state, styles, nil)
 	cell, _, _ := screen.Get(4, layout.Menu.Height+4)
 	if cell == "" || cell == " " {
 		t.Fatal("expected filter row content")
@@ -66,7 +67,7 @@ func TestDrawPathPickerDialogInvalidPathRowStyle(t *testing.T) {
 		ListScroll: 0,
 		Focus:      1, // OK focused, list row not active
 	}
-	DrawPathPickerDialog(screen, layout, state, styles)
+	DrawPathPickerDialog(screen, layout, state, styles, nil)
 
 	listY := -1
 	nameCol := -1
@@ -88,6 +89,60 @@ func TestDrawPathPickerDialogInvalidPathRowStyle(t *testing.T) {
 	_, rowStyle, _ := screen.Get(nameCol, listY)
 	if rowStyle != styles.DialogOptionInvalidStyle() {
 		t.Fatalf("invalid path row style = %v, want dialog.option.invalid %v", rowStyle, styles.DialogOptionInvalidStyle())
+	}
+}
+
+func TestDrawPathPickerDialogShowsPinGlyphOnlyForPinnedRow(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+	styles := theme.Default()
+	layout := geom.CalculateLayout(80, 24, true, geom.PanelWidthSplit{})
+	state := PathPickerState{
+		Open:  true,
+		Title: "Bookmarks",
+		Items: []PathPickerItem{
+			{Source: "fzf-marks", Name: "alpha", Path: "/tmp/pinned-alpha"},
+			{Source: "fzf-marks", Name: "bravo", Path: "/tmp/other-bravo"},
+		},
+		Ranked:     []int{0, 1},
+		Selected:   -1,
+		ListScroll: 0,
+		Focus:      0,
+	}
+	rowMarks := func(absPath string) RowMarks {
+		return RowMarks{Pinned: absPath == "/tmp/pinned-alpha"}
+	}
+	DrawPathPickerDialog(screen, layout, state, styles, rowMarks)
+
+	pinGlyph := []rune(styles.SymbolPin())[0]
+	rowContainingHasGlyph := func(needle string) bool {
+		for y := layout.Menu.Height; y < 24; y++ {
+			row := ""
+			hasGlyph := false
+			for x := 0; x < 80; x++ {
+				cell, _, _ := screen.Get(x, y)
+				row += cell
+				r, _ := utf8.DecodeRuneInString(cell)
+				if r == pinGlyph {
+					hasGlyph = true
+				}
+			}
+			if strings.Contains(row, needle) {
+				return hasGlyph
+			}
+		}
+		t.Fatalf("row containing %q not found on screen", needle)
+		return false
+	}
+	if !rowContainingHasGlyph("alpha") {
+		t.Error("expected pin glyph on pinned row")
+	}
+	if rowContainingHasGlyph("bravo") {
+		t.Error("did not expect pin glyph on unpinned row")
 	}
 }
 

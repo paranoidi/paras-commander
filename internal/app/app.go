@@ -20,6 +20,7 @@ import (
 	findctrl "github.com/paranoidi/paras-commander/internal/apphandler/find"
 	jobsctrl "github.com/paranoidi/paras-commander/internal/apphandler/jobs"
 	metactrl "github.com/paranoidi/paras-commander/internal/apphandler/meta"
+	pinctrl "github.com/paranoidi/paras-commander/internal/apphandler/pin"
 	previewctrl "github.com/paranoidi/paras-commander/internal/apphandler/preview"
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
@@ -136,6 +137,7 @@ type App struct {
 	dedupCtrl      *dedupctrl.Handler
 	previewCtrl    *previewctrl.Handler
 	dialogCtrl     *dialogctrl.Handler
+	pinCtrl        *pinctrl.Handler
 	jobStopCh      chan struct{}
 	jobStopOnce    bool
 	disk           diskUsageState
@@ -606,6 +608,16 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		Dedup:                app.dedupCtrl,
 		DiskUsage:            app.disk.engine,
 		DiskUsageIgnore:      duIgnorer,
+	})
+	app.pinCtrl = pinctrl.New(pinctrl.Deps{
+		Host:            pinHost{appShellHost: appShellHost{app: app}},
+		Screen:          screen,
+		Model:           &app.model,
+		KeysPinDialog:   keys.PinDialog,
+		KeysDialogInput: keys.DialogInput,
+		Compare:         app.compareCtrl,
+		Dedup:           app.dedupCtrl,
+		Preview:         app.previewCtrl,
 	})
 	if err := app.configureSFTP(); err != nil {
 		app.stopWorker()

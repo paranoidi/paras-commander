@@ -291,37 +291,61 @@ func (h *Handler) MoveColumnFocus(delta int) {
 	}
 }
 
-// ToggleColumnSelection toggles the path under the focused column into the matching panel.
-func (h *Handler) ToggleColumnSelection() (conflicts bool) {
+// selectedColumnTarget resolves the row/column under the current selection and focused
+// column to an absolute path and its owning panel. ok is false when nothing is selected or
+// the focused side has no counterpart entry; err is set when the resolved path itself is
+// invalid (rare — a caller may surface it, or ignore it and treat it like !ok).
+func (h *Handler) selectedColumnTarget() (abs pathloc.Path, panelID int, ok bool, err error) {
 	st := &h.model.CompareView
 	rows := h.FilteredRows()
 	if st.Selected < 0 || st.Selected >= len(rows) {
-		return false
+		return pathloc.Path{}, 0, false, nil
 	}
 	row := rows[st.Selected]
 	snap := h.model.CompareSnapshot
 	var rel string
-	panelID := ui.PrimaryPanel
+	root := snap.PrimaryRoot
+	panelID = ui.PrimaryPanel
 	switch st.FocusColumn {
 	case ui.CompareColumnSecondary:
 		rel = row.SecondaryRel
+		root = snap.SecondaryRoot
 		panelID = ui.SecondaryPanel
 	default:
 		rel = row.PrimaryRel
 	}
 	if rel == "" {
-		return false
+		return pathloc.Path{}, 0, false, nil
 	}
-	root := snap.PrimaryRoot
-	if panelID == ui.SecondaryPanel {
-		root = snap.SecondaryRoot
+	abs, err = comparepkg.JoinRel(root, rel)
+	if err != nil {
+		return pathloc.Path{}, 0, false, err
 	}
-	abs, err := comparepkg.JoinRel(root, rel)
+	return abs, panelID, true, nil
+}
+
+// ToggleColumnSelection toggles the path under the focused column into the matching panel.
+func (h *Handler) ToggleColumnSelection() (conflicts bool) {
+	abs, panelID, ok, err := h.selectedColumnTarget()
 	if err != nil {
 		h.host.SetTransientMessage(err.Error(), ui.MessageUrgencyError)
 		return false
 	}
+	if !ok {
+		return false
+	}
 	return h.host.TogglePanelSelection(panelID, abs.String())
+}
+
+// SelectedColumnPinTarget returns the absolute path under the focused column, for pinning.
+// Compare rows are always files. False when nothing is selected or the focused side has no
+// counterpart entry.
+func (h *Handler) SelectedColumnPinTarget() (path string, ok bool) {
+	abs, _, ok, err := h.selectedColumnTarget()
+	if !ok || err != nil {
+		return "", false
+	}
+	return abs.String(), true
 }
 
 // NavigateFromSelection opens the highlighted path in the browser.

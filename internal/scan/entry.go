@@ -43,7 +43,7 @@ func buildEntry(root, path string, d fs.DirEntry, isDir bool) (Entry, bool) {
 }
 
 func entryFromHiddenFilePath(displayRoot, pathOrRel string) (Entry, bool) {
-	rel := pathOrRel
+	var rel string
 	if filepath.IsAbs(pathOrRel) {
 		rel = relLine(displayRoot, pathOrRel)
 	} else {

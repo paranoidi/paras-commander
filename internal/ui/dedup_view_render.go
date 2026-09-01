@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
@@ -10,6 +11,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/primitive"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 const (
@@ -88,6 +90,7 @@ func drawDedupView(
 	chromeBlocked bool,
 	userHomeDir string,
 	orientation SplitOrientation,
+	rowMarks dialog.RowMarksFunc,
 ) {
 	if snap.Phase != comparepkg.DedupDone {
 		return
@@ -128,6 +131,7 @@ func drawDedupView(
 		MarkedDirs:       markedDirs,
 		DangerMarkedDirs: dangerMarkedDirs,
 		KeptDirs:         keptDirs,
+		RowMarks:         rowMarks,
 	}, snap, view, styles, chromeBlocked)
 
 	copiesHeader := ""
@@ -149,6 +153,7 @@ func drawDedupView(
 		MarkedDirs:       markedDirs,
 		DangerMarkedDirs: dangerMarkedDirs,
 		KeptDirs:         keptDirs,
+		RowMarks:         rowMarks,
 	}, snap, view, styles, chromeBlocked)
 }
 
@@ -170,12 +175,13 @@ type dedupPaneParams struct {
 	EmptyText        string
 	DimByGroup       bool // groups mode: dim rows outside ActiveGroup
 	ActiveGroup      int
-	HintDirs         map[string]bool // dirs mode: DirRel keys whose subtree contains ActiveGroup (collapsed-folder hint)
-	CopiesPane       bool            // copies pane: dir rows can show fully-marked copy styling
-	FullyMarkedDirs  map[string]bool // DirRel keys whose entire descendant duplicate subtree is marked
-	MarkedDirs       map[string]bool // DirRel keys of dirs whose subtree has a marked file
-	DangerMarkedDirs map[string]bool // DirRel keys of dirs whose subtree has a fully-marked group
-	KeptDirs         map[string]bool // DirRel keys of dirs whose subtree has a kept file
+	HintDirs         map[string]bool     // dirs mode: DirRel keys whose subtree contains ActiveGroup (collapsed-folder hint)
+	CopiesPane       bool                // copies pane: dir rows can show fully-marked copy styling
+	FullyMarkedDirs  map[string]bool     // DirRel keys whose entire descendant duplicate subtree is marked
+	MarkedDirs       map[string]bool     // DirRel keys of dirs whose subtree has a marked file
+	DangerMarkedDirs map[string]bool     // DirRel keys of dirs whose subtree has a fully-marked group
+	KeptDirs         map[string]bool     // DirRel keys of dirs whose subtree has a kept file
+	RowMarks         dialog.RowMarksFunc // resolves the pin/in-progress-job trailing marks for one row's absolute path
 }
 
 // drawDedupTreePane paints one tree pane: chrome, header line, and tree rows
@@ -262,7 +268,7 @@ func drawDedupTreePane(
 				Selected:       marked || dirFullyMarked,
 			})
 		}
-		drawDedupPathColumn(screen, styles, p, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked)
+		drawDedupPathColumn(screen, styles, p, snap, d, entry, lineY, pathX, pathW, lineStyle, cursorStyleKey, chromeBlocked)
 		primitive.Text(screen, gapBeforeCountX, lineY, 1, "", lineStyle)
 
 		drawDedupDetailColumns(screen, cols, d, lineY, lineStyle, dim, rowSelected || kept || groupAllMarked || dirFullyMarked, innerRight)
@@ -312,10 +318,22 @@ func dedupRowStyle(styles theme.Theme, p dedupPaneParams, d DedupRowData, entry 
 	return lineStyle
 }
 
-// drawDedupPathColumn paints the tree connector, expand/collapse gutter, fitted path text, and
-// trailing subtree-mark suffix for one row, moved out of drawDedupTreePane's per-row path
-// column block.
-func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked bool) {
+// dedupRowAbsPath returns the absolute path for one dedup row: file rows use their own
+// AbsKey directly; dir rows join snap.EffectiveDisplayRoot() with DirRel, mirroring
+// apphandler/dedup.Handler.selectedDirAbs's directory-path join.
+func dedupRowAbsPath(snap comparepkg.DedupSnapshot, d DedupRowData) string {
+	if d.Kind == DedupRowFile {
+		return d.AbsKey
+	}
+	root := strings.TrimSuffix(snap.EffectiveDisplayRoot().String(), "/")
+	return root + "/" + d.DirRel
+}
+
+// drawDedupPathColumn paints the tree connector, expand/collapse gutter, fitted path text, the
+// trailing pin/in-progress-job marks, and subtree-mark suffix for one row, moved out of
+// drawDedupTreePane's per-row path column block. Pin/job marks are painted before the subtree
+// glyph, matching panellist's job/pin-before-subtree suffix ordering.
+func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPaneParams, snap comparepkg.DedupSnapshot, d DedupRowData, entry DedupRow, lineY, pathX, pathW int, lineStyle tcell.Style, cursorStyleKey string, chromeBlocked bool) {
 	connectorPrefix := dedupTreeConnectorPrefix(styles, entry)
 	gutter, gutterStyle := dedupTreeGutter(styles, entry, lineStyle, chromeBlocked)
 	prefix := connectorPrefix
@@ -324,10 +342,16 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	}
 	keptSubtree := d.Kind == DedupRowDir && p.KeptDirs[d.DirRel]
 	subtreeMark := keptSubtree || (d.Kind == DedupRowDir && p.MarkedDirs[d.DirRel])
+	marks := dialog.RowMarks{}
+	if p.RowMarks != nil {
+		marks = p.RowMarks(dedupRowAbsPath(snap, d))
+	}
+	marksW := dialog.RowMarksWidth(marks)
 	fitW := pathW - len([]rune(prefix))
 	if subtreeMark {
 		fitW -= 2 // room for subtree mark suffix, like panellist.SuffixDecorationLen
 	}
+	fitW -= marksW
 	pathText := primitive.FitPathForWidth(d.Display, max(fitW, 4))
 	_, rowBG, _ := lineStyle.Decompose()
 	connectorStyle := styles.PanelRowTreeConnector.Background(rowBG)
@@ -342,7 +366,12 @@ func drawDedupPathColumn(screen tcell.Screen, styles theme.Theme, p dedupPanePar
 	} else {
 		primitive.Text(screen, x, lineY, pathW-(x-pathX), pathText, lineStyle)
 	}
-	if markX := x + len([]rune(pathText)) + 1; subtreeMark && markX < pathX+pathW {
+	cursorX := x + len([]rune(pathText))
+	if marksW > 0 && cursorX+marksW <= pathX+pathW {
+		used := dialog.DrawRowMarksSuffix(screen, cursorX, lineY, marksW, marks, rowBG, styles)
+		cursorX += used
+	}
+	if markX := cursorX + 1; subtreeMark && markX < pathX+pathW {
 		var base tcell.Style
 		switch {
 		case keptSubtree:

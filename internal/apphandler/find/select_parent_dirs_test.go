@@ -46,6 +46,7 @@ func (f *fakeFindHost) GitignoreCache() *gitignore.Cache              { return n
 func (f *fakeFindHost) PanelViewportRows(int) int                     { return 0 }
 func (f *fakeFindHost) OpenGroupSelectDialog(GroupSelectMode, bool)   {}
 func (f *fakeFindHost) OpenFullscreenFilePreviewAt(string) error      { return nil }
+func (f *fakeFindHost) PinTogglePath(string, string, bool)            {}
 
 func newTestFindHandler(host *fakeFindHost, model *ui.Model) *Handler {
 	return &Handler{

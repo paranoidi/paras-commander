@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestDrawDedupViewUsesFullListHeight(t *testing.T) {
@@ -45,7 +47,7 @@ func TestDrawDedupViewUsesFullListHeight(t *testing.T) {
 		t.Fatalf("rows = %d, want %d", len(list), visibleRows)
 	}
 
-	drawDedupView(screen, layout, DedupViewState{}, snap, list, nil, theme.Default(), false, "", SplitHorizontal)
+	drawDedupView(screen, layout, DedupViewState{}, snap, list, nil, theme.Default(), false, "", SplitHorizontal, nil)
 
 	ch, _, _ := screen.Get(rect.X+2, lastListY)
 	if strings.TrimSpace(ch) == "" {
@@ -87,7 +89,7 @@ func TestDrawDedupViewSelectedRowUsesActiveCursorStyle(t *testing.T) {
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
 	view := DedupViewState{Main: DedupPane{Selected: 1}}
 
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	_, activeBG, _ := styles.PanelCursorActive.Decompose()
 	_, jobsBG, _ := styles.JobsRow.Decompose()
@@ -157,7 +159,7 @@ func TestDrawDedupViewRootPathHeaderUsesPanelHeaderBackground(t *testing.T) {
 		Root:  root,
 		Phase: comparepkg.DedupDone,
 	}
-	drawDedupView(screen, layout, DedupViewState{}, snap, nil, nil, styles, false, home, SplitHorizontal)
+	drawDedupView(screen, layout, DedupViewState{}, snap, nil, nil, styles, false, home, SplitHorizontal, nil)
 
 	_, wantHeaderBG, _ := styles.PanelActiveHeader.Decompose()
 	_, surfaceBG, _ := styles.PanelActiveSurface.Decompose()
@@ -225,7 +227,7 @@ func TestDrawDedupViewFullyMarkedGroupUsesRedRowStyle(t *testing.T) {
 		},
 	}
 
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	wantFG, _, _ := styles.PanelDedupRowAllMarked.Decompose()
 	_, selectedFG, _ := styles.PanelActiveCursorSelected.Decompose()
@@ -298,7 +300,7 @@ func TestDrawDedupViewHighlightsDuplicateSiblingsOfCursor(t *testing.T) {
 	}
 	view.Main.Selected = cursorIdx
 
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	wantHintFG, _, _ := styles.PanelHint.Decompose()
 	wantBaseFG, _, _ := styles.JobsRow.Decompose()
@@ -368,7 +370,7 @@ func TestDrawDedupViewHighlightsCollapsedFolderContainingCursorSibling(t *testin
 	}
 	view.Main.Selected = cursorIdx
 
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	wantHintFG, _, _ := styles.PanelHint.Decompose()
 
@@ -415,7 +417,7 @@ func TestDrawDedupViewTitleBarKeepsFrameDashesAfterTitle(t *testing.T) {
 	snap.Groups = append(snap.Groups, dedupTestGroup(1, 1024, "alpha.bin"))
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
 	view := DedupViewState{}
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	title := dedupViewTitle(snap, 0)
 	titleRunes := len([]rune(title))
@@ -492,7 +494,7 @@ func TestDrawDedupViewDirectoryFolderIconUsesDirectoryBlue(t *testing.T) {
 		},
 	}
 	list, _ := DedupRowsFromSnapshot(snap, view)
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	gutterX := contentX
 	fg, _, _ := cellStyleAt(screen, gutterX, lineY).Decompose()
@@ -545,7 +547,7 @@ func TestDrawDedupViewOpenFolderIconUsesDirectoryBlue(t *testing.T) {
 		Main:        DedupPane{Selected: 1},
 	}
 	list, _ := DedupRowsFromSnapshot(snap, view)
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	gutterX := contentX
 	fg, _, _ := cellStyleAt(screen, gutterX, lineY).Decompose()
@@ -599,7 +601,7 @@ func TestDrawDedupViewCursorSelectedDirFolderIconUsesDirectoryBlue(t *testing.T)
 	if list[0].Value.Kind != DedupRowDir {
 		t.Fatalf("first row kind = %v, want DedupRowDir", list[0].Value.Kind)
 	}
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	wantDirFG, _, _ := styles.PanelRowDirectory.Decompose()
 	_, cursorFG, _ := styles.PanelCursorActive.Decompose()
@@ -658,7 +660,7 @@ func TestDrawDedupViewDetailsUseListingColumns(t *testing.T) {
 		t.Fatal("expected group header row with ShowSize")
 	}
 
-	drawDedupView(screen, layout, DedupViewState{}, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, DedupViewState{}, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	innerRight := rect.X + rect.Width - 2
 	sizeW, countW := dedupListColumnWidths(list)
@@ -720,7 +722,7 @@ func TestDrawDedupViewHeaderShowsListingColumnTitles(t *testing.T) {
 		}},
 	}
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
-	drawDedupView(screen, layout, DedupViewState{}, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, DedupViewState{}, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	sizeW, countW := dedupListColumnWidths(list)
 	cols := dedupListColumnLayout(contentX, innerRight, sizeW, countW)
@@ -804,7 +806,7 @@ func TestDrawDedupViewDirRowShowsSubtreeMarkIndicator(t *testing.T) {
 		Main:        DedupPane{Selected: 2}, // keep cursor off the dir row
 	}
 	list, _ := DedupRowsFromSnapshot(snap, view)
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	var meadowRow DedupRow
 	for _, row := range list {
@@ -866,7 +868,7 @@ func TestDrawDedupViewDirRowShowsRedSubtreeMarkWhenGroupFullyMarked(t *testing.T
 		Main:        DedupPane{Selected: 3}, // keep cursor off the dir row
 	}
 	list, _ := DedupRowsFromSnapshot(snap, view)
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	var meadowRow DedupRow
 	for _, row := range list {
@@ -925,7 +927,7 @@ func TestDrawDedupViewNestedRowShowsTreeConnectors(t *testing.T) {
 		Main:        DedupPane{},
 	}
 	list, _ := DedupRowsFromSnapshot(snap, view)
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	wantConnectorFG, _, _ := styles.PanelRowTreeConnector.Decompose()
 	branch := styles.SymbolTreeBranch()
@@ -1079,7 +1081,7 @@ func TestDrawDedupViewCopiesPaneEmptyHeaderOmitsPathDot(t *testing.T) {
 	snap := comparepkg.DedupSnapshot{Root: root, Phase: comparepkg.DedupDone}
 	snap.Groups = append(snap.Groups, dedupTestGroup(1, 1024, "alpha.bin"))
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
-	drawDedupView(screen, layout, DedupViewState{Main: DedupPane{Selected: -1}}, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, DedupViewState{Main: DedupPane{Selected: -1}}, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	ch, _, _ := screen.Get(contentX, headerY)
 	if ch == "." {
@@ -1109,7 +1111,7 @@ func TestDrawDedupViewCopiesPaneEmptyTextStartsAtContentColumn(t *testing.T) {
 	snap := comparepkg.DedupSnapshot{Root: root, Phase: comparepkg.DedupDone}
 	snap.Groups = append(snap.Groups, dedupTestGroup(1, 1024, "alpha.bin"))
 	list, _ := DedupRowsFromSnapshot(snap, DedupViewState{IgnoreEmpty: true})
-	drawDedupView(screen, layout, DedupViewState{Main: DedupPane{Selected: -1}}, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, DedupViewState{Main: DedupPane{Selected: -1}}, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	ch, _, _ := screen.Get(contentX, emptyY)
 	if ch != "S" {
@@ -1176,7 +1178,7 @@ func TestDrawDedupViewCopiesPaneDirUsesSelectionStyleWhenFullyMarked(t *testing.
 		},
 		Main: DedupPane{Selected: DedupRowIndexByID(list, mainSel.ID)},
 	}
-	drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal, nil)
 
 	wantSelectedFG, _, _ := styles.PanelRowSelected.Decompose()
 	_, normalFG, _ := styles.PanelRowDirectory.Decompose()
@@ -1274,7 +1276,7 @@ func TestDrawDedupViewFileTreePaneDirUsesSelectionStyleWhenFullyMarked(t *testin
 		},
 		Main: DedupPane{Selected: 0},
 	}
-	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal)
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, nil)
 
 	wantSelectedFG, _, _ := styles.PanelRowSelected.Decompose()
 	_, normalFG, _ := styles.PanelRowDirectory.Decompose()
@@ -1314,5 +1316,70 @@ func TestDrawDedupViewFileTreePaneDirUsesSelectionStyleWhenFullyMarked(t *testin
 	fg, _, _ = cellStyleAt(screen, orchardNameX, orchardRowY).Decompose()
 	if fg == wantSelectedFG {
 		t.Fatalf("partially marked orchard dir fg %v, should not use selection fg", fg)
+	}
+}
+
+func TestDrawDedupViewShowsPinGlyphOnFileAndDirRows(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 16)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 13},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 13},
+	}
+	rect := layout.Primary
+	contentX := rect.X + 2
+	firstLineY := rect.Y + 2
+
+	snap := comparepkg.DedupSnapshot{
+		Root:  pathloc.MustParse("/scan/root"),
+		Phase: comparepkg.DedupDone,
+		Groups: []comparepkg.DedupGroup{
+			dedupTestGroup(1, 1024, "dirX/dup.bin", "dirY/dup.bin"),
+		},
+	}
+	view := DedupViewState{TreeDirs: true, IgnoreEmpty: true}
+	list, _ := DedupRowsFromSnapshot(snap, view)
+
+	fileIdx := DedupRowIndexByID(list, "/root/dirX/dup.bin")
+	dirIdx := DedupRowIndexByID(list, "d:dirY")
+	if fileIdx < 0 || dirIdx < 0 {
+		t.Fatalf("rows = %+v, missing expected file/dir rows", list)
+	}
+	pinnedFileAbs := list[fileIdx].Value.AbsKey
+	const pinnedDirAbs = "/scan/root/dirY"
+	rowMarks := func(absPath string) dialog.RowMarks {
+		return dialog.RowMarks{Pinned: absPath == pinnedFileAbs || absPath == pinnedDirAbs}
+	}
+
+	drawDedupView(screen, layout, view, snap, list, nil, styles, false, "", SplitHorizontal, rowMarks)
+
+	pinGlyph := []rune(styles.SymbolPin())[0]
+	rowHasGlyph := func(idx int) bool {
+		y := firstLineY + idx
+		for x := contentX; x < rect.X+rect.Width-2; x++ {
+			str, _, _ := screen.Get(x, y)
+			r, _ := utf8.DecodeRuneInString(str)
+			if r == pinGlyph {
+				return true
+			}
+		}
+		return false
+	}
+	if !rowHasGlyph(fileIdx) {
+		t.Error("expected pin glyph on pinned file row")
+	}
+	if !rowHasGlyph(dirIdx) {
+		t.Error("expected pin glyph on pinned dir row")
+	}
+	for i, row := range list {
+		if i != fileIdx && i != dirIdx && row.Value.Kind == DedupRowFile && rowHasGlyph(i) {
+			t.Errorf("row %d: unexpected pin glyph on unpinned row", i)
+		}
 	}
 }

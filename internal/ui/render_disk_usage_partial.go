@@ -72,6 +72,7 @@ func paintBrowserPanelsInScope(
 	quickViewDriver := model.QuickViewDriverPanelID()
 
 	painted := false
+	pinnedPaths := PinnedPathSet(model.PinnedItems)
 	var cursorNameHintFallback CursorNameHintFallback
 	if inScope(PrimaryPanel) && layout.Primary.Width > 0 && !showLeftPreview {
 		primaryCtx := PanelContext{
@@ -97,7 +98,7 @@ func paintBrowserPanelsInScope(
 				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(PrimaryPanel),
-				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, MetaColumns: model.MetaResults[PrimaryPanel],
+				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, MetaColumns: model.MetaResults[PrimaryPanel],
 				ShrunkenShowsNameOnly: model.ShrunkenShowsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
 				CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
 			})
@@ -137,7 +138,7 @@ func paintBrowserPanelsInScope(
 				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(SecondaryPanel),
-				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, MetaColumns: model.MetaResults[SecondaryPanel],
+				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, MetaColumns: model.MetaResults[SecondaryPanel],
 				ShrunkenShowsNameOnly: model.ShrunkenShowsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
 				CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
 			})

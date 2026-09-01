@@ -90,7 +90,7 @@ const findDialogPreferredWidth = 117 // 50% wider than the history/path picker d
 // FindRowIconPainter draws file-list devicons for one find dialog row; nil skips icons.
 type FindRowIconPainter func(screen tcell.Screen, x, y int, entry FindEntry, styles theme.Theme)
 
-func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, ctx DialogRenderContext, paintIcon FindRowIconPainter, selectionSizeLabel string) {
+func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, ctx DialogRenderContext, paintIcon FindRowIconPainter, selectionSizeLabel string, rowMarks RowMarksFunc) {
 	styles := ctx.Styles
 	showIcons := ctx.ShowIcons
 	iconLead := ctx.IconLead
@@ -165,6 +165,7 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 		marked := false
 		var ent FindEntry
 		hasEntry := false
+		absPath := ""
 		if idxInRank < len(state.Ranked) {
 			entIdx := state.Ranked[idxInRank]
 			if ent, ok := state.FindEntryAt(entIdx); ok {
@@ -176,8 +177,9 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 						line = dl
 					}
 				}
+				absPath = ent.AbsPath(state.RootPath)
 				if state.MarkedPaths != nil {
-					marked = state.MarkedPaths[ent.AbsPath(state.RootPath)]
+					marked = state.MarkedPaths[absPath]
 				}
 			} else if idxInRank < len(state.RankDisplayLines) {
 				line = state.RankDisplayLines[idxInRank]
@@ -203,8 +205,20 @@ func DrawFindDialog(screen tcell.Screen, layout Layout, state FindDialogState, c
 			}
 			textX = fileListCol + iconLead
 		}
-		text, spans := fuzzyPathRowContent(line, ranges, rowWidth, matchStyle)
-		primitive.StyledText(screen, textX, y, rowWidth, text, baseStyle, spans)
+		marks := RowMarks{}
+		if rowMarks != nil {
+			marks = rowMarks(absPath)
+		}
+		marksW := RowMarksWidth(marks)
+		fitWidth := rowWidth - marksW
+		if fitWidth < 1 {
+			fitWidth = 1
+		}
+		text, spans := fuzzyPathRowContent(line, ranges, fitWidth, matchStyle)
+		primitive.StyledText(screen, textX, y, fitWidth, text, baseStyle, spans)
+		if marksW > 0 {
+			DrawRowMarksSuffix(screen, textX+fitWidth, y, marksW, marks, bg, styles)
+		}
 	}
 
 	draw.DrawDialogListScrollbar(screen, rect, listTop, listH, len(state.Ranked), state.ListScroll, ctx.ScrollbarStyle, borderStyle, styles)

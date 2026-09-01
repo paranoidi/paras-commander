@@ -29,7 +29,7 @@ func EnsurePathPickerListScroll(state *PathPickerState, listRows int) {
 	}
 }
 
-func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerState, styles theme.Theme) {
+func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerState, styles theme.Theme, rowMarks RowMarksFunc) {
 	width := 78
 	if width > layout.Width-4 {
 		width = layout.Width - 4
@@ -75,7 +75,12 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 
 	listTop := rect.Y + 3
 	rowWidth := inputWidth
-	sourceW, nameW, pathW := pathPickerColumnWidths(state.Items, rowWidth)
+	marksW := pathPickerRowMarksWidth(state.Items, rowMarks)
+	gridWidth := rowWidth - marksW
+	if gridWidth < 1 {
+		gridWidth = 1
+	}
+	sourceW, nameW, pathW := pathPickerColumnWidths(state.Items, gridWidth)
 	for row := 0; row < listH; row++ {
 		y := listTop + row
 		idxInRank := state.ListScroll + row
@@ -104,7 +109,14 @@ func DrawPathPickerDialog(screen tcell.Screen, layout Layout, state PathPickerSt
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)
 		text, spans := pathPickerRowContent(item, ranges, sourceW, nameW, pathW, matchStyle)
-		primitive.StyledText(screen, primaryCol, y, rowWidth, text, baseStyle, spans)
+		primitive.StyledText(screen, primaryCol, y, gridWidth, text, baseStyle, spans)
+		if marksW > 0 {
+			marks := RowMarks{}
+			if rowMarks != nil {
+				marks = rowMarks(item.Path)
+			}
+			DrawRowMarksSuffix(screen, primaryCol+gridWidth, y, marksW, marks, bg, styles)
+		}
 	}
 
 	sepAfterList := listTop + listH

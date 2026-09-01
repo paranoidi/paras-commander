@@ -56,3 +56,7 @@ func (h findHost) OpenGroupSelectDialog(mode findctrl.GroupSelectMode, forFind b
 func (h findHost) OpenFullscreenFilePreviewAt(path string) error {
 	return h.app.previewCtrl.OpenFullscreenFilePreviewAt(path)
 }
+
+func (h findHost) PinTogglePath(name, path string, isDir bool) {
+	h.app.pinCtrl.TogglePath(name, path, isDir)
+}

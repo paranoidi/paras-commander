@@ -33,6 +33,6 @@ func BenchmarkDrawDedupViewLargeList(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal)
+		drawDedupView(screen, layout, view, snap, list, copies, styles, false, "", SplitHorizontal, nil)
 	}
 }

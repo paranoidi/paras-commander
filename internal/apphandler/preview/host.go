@@ -61,6 +61,11 @@ type Host interface {
 	EditFullscreenPreviewFile()
 	OpenDeleteDialogForPreviewedFile()
 	OpenPreviewLeaderMenu()
+	// FilePreviewFullscreenClosed is called at the end of CloseFilePreviewFullscreen, once
+	// the view mode is already back to the browser, so app-side callers can restore any
+	// dialog the F3 preview was launched from (e.g. the Pin dialog). No-op when the preview
+	// wasn't launched from such a caller.
+	FilePreviewFullscreenClosed()
 	HandleFileDialogFieldKey(ev *tcell.EventKey, f *dialog.FileDialogField, afterEdit func()) bool
 	PersistPartial(patch map[string]interface{}) error
 

@@ -693,8 +693,8 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 		t.Fatalf("FocusField = %d, want 0 (destination)", app.model.TransferDialog.FocusField)
 	}
 	keys := app.activeFooterKeys()
-	if len(keys) != 7 {
-		t.Fatalf("footer len = %d, want Esc + Default + Bookmarks + History + Active + Inactive + F10", len(keys))
+	if len(keys) != 8 {
+		t.Fatalf("footer len = %d, want Esc + Default + Bookmarks + History + Pinned + Active + Inactive + F10", len(keys))
 	}
 	if keys[1].Hint != "Default" || keys[1].KeyLabel != "C-r" {
 		t.Fatalf("restore footer = %+v, want C-r Default", keys[1])
@@ -704,6 +704,9 @@ func TestPathPickerHostFooterShowsPathsOnCopyAndSymlinkDialogs(t *testing.T) {
 	}
 	if keys[3].Hint != "History" || keys[3].KeyLabel != "M-h" {
 		t.Fatalf("history footer = %+v, want M-h History", keys[3])
+	}
+	if keys[4].Hint != "Pinned" || keys[4].KeyLabel != "M-n" {
+		t.Fatalf("pinned footer = %+v, want M-n Pinned", keys[4])
 	}
 	if !footerHasHint(keys, "Active path ◄", "S-left") {
 		t.Fatalf("footer = %+v, want Active S-left hint", keys)
@@ -772,11 +775,6 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 	if app.model.PathPicker.Title != "Bookmarks" {
 		t.Fatalf("path picker title = %q, want Bookmarks", app.model.PathPicker.Title)
 	}
-	for _, it := range app.model.PathPicker.Items {
-		if it.Source == "history" {
-			t.Fatalf("bookmarks picker should not include history items, got %+v", it)
-		}
-	}
 	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if app.model.PathPicker.Open {
 		t.Fatal("path picker should close")
@@ -789,11 +787,6 @@ func TestPathPickerHostBookmarkOpenOpensPickerFromCopyAndSymlinkDialogs(t *testi
 	}
 	if app.model.PathPicker.Title != "History" {
 		t.Fatalf("path picker title = %q, want History", app.model.PathPicker.Title)
-	}
-	for _, it := range app.model.PathPicker.Items {
-		if it.Source != "history" {
-			t.Fatalf("history picker item Source = %q, want history", it.Source)
-		}
 	}
 	app.dialogCtrl.HandlePathPickerKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))

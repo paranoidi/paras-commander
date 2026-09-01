@@ -150,6 +150,14 @@ var overlayRegistry = []OverlaySpec{
 			return fmt.Errorf("parse config %q: [dialog.run_for_each] action %q is not allowed (file.run-for-each.history only)", source, action)
 		},
 	},
+	{
+		TableName: DialogPinShortcutsTable,
+		Defaults:  DefaultPinDialogOverlayKeys,
+		Allowed:   AllowedInPinDialogOverlay,
+		DisallowedActionError: func(source, action string) error {
+			return fmt.Errorf("parse config %q: [dialog.pin] action %q is not allowed (pin.open-primary, pin.open-secondary, pin.remove only)", source, action)
+		},
+	},
 }
 
 // OverlayTableNames returns all overlay TOML table names in registry order.
@@ -212,6 +220,8 @@ func overlayNotAllowedHint(spec OverlaySpec) string {
 		return "file.mass-rename.save-pattern, file.mass-rename.load-pattern, file.mass-rename.delete-pattern only"
 	case DialogRunForEachShortcutsTable:
 		return "file.run-for-each.history only"
+	case DialogPinShortcutsTable:
+		return "pin.open-primary, pin.open-secondary, pin.remove only"
 	default:
 		return "not allowed"
 	}

@@ -153,6 +153,10 @@ func (a *App) handleCompareViewKey(event *tcell.EventKey) bool {
 		a.compareCtrl.EnsureSelectionVisible(a.compareVisibleRows())
 		return false
 	}
+	if nextAction == keymap.ActionPanelPinToggle {
+		a.pinCtrl.ToggleCompareSelection()
+		return false
+	}
 
 	visible := a.compareVisibleRows()
 	switch event.Key() {

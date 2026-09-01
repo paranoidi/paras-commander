@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	comparepkg "github.com/paranoidi/paras-commander/internal/compare"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog"
 )
 
 func TestDrawCompareViewPrimaryFocusHighlightsLeftColumn(t *testing.T) {
@@ -536,5 +538,67 @@ func TestDrawCompareViewActiveHashingGlyphIsGreen(t *testing.T) {
 	queuedFG, _, _ := queuedStyle.Decompose()
 	if queuedFG == wantFG {
 		t.Fatalf("queued pending glyph should not use compare.hashing green")
+	}
+}
+
+func TestDrawCompareViewShowsPinGlyphOnlyOnPinnedSide(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 14)
+
+	styles := theme.Default()
+	layout := Layout{
+		Primary:   Rect{X: 0, Y: 1, Width: 40, Height: 11},
+		Secondary: Rect{X: 40, Y: 1, Width: 40, Height: 11},
+	}
+	rect := MergeTwinPanelRects(layout.Primary, layout.Secondary, SplitHorizontal)
+	contentX := rect.X + 2
+	contentW := rect.Width - 4
+	pathW := (contentW - compareStatusCol - 1) / 2
+	leftX := contentX
+	rightX := contentX + pathW + compareStatusCol + 1
+	lineY := rect.Y + 2
+
+	snap := comparepkg.Snapshot{
+		PrimaryRoot:   pathloc.MustParse("/left-root"),
+		SecondaryRoot: pathloc.MustParse("/right-root"),
+		Phase:         comparepkg.PhaseDone,
+		Rows: []comparepkg.Row{
+			{
+				Kind:         comparepkg.KindContentDiff,
+				PrimaryRel:   "alpha.txt",
+				SecondaryRel: "beta.txt",
+				HashDone:     true,
+			},
+		},
+	}
+	view := CompareViewState{Selected: -1, Filter: comparepkg.FilterAll}
+	rows := []comparepkg.Row{snap.Rows[0]}
+	pinnedAbs := entryPrimaryAbs(snap, rows[0])
+	rowMarks := func(absPath string) dialog.RowMarks {
+		return dialog.RowMarks{Pinned: absPath == pinnedAbs}
+	}
+
+	drawCompareView(screen, layout, view, compareViewData{Snap: snap, Rows: rows, RowMarks: rowMarks}, styles, false, "", SplitHorizontal)
+
+	pinGlyph := []rune(styles.SymbolPin())[0]
+	hasGlyph := func(xStart, xEnd int) bool {
+		for x := xStart; x < xEnd; x++ {
+			str, _, _ := screen.Get(x, lineY)
+			r, _ := utf8.DecodeRuneInString(str)
+			if r == pinGlyph {
+				return true
+			}
+		}
+		return false
+	}
+	if !hasGlyph(leftX, leftX+pathW) {
+		t.Error("expected pin glyph on pinned primary (left) column")
+	}
+	if hasGlyph(rightX, rightX+pathW+1) {
+		t.Error("did not expect pin glyph on unpinned secondary (right) column")
 	}
 }

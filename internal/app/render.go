@@ -23,7 +23,7 @@ func (a *App) paintFindDialogOverlay() bool {
 	if layout.TooSmall {
 		return false
 	}
-	ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.UseNerdfontIcons, a.model.PanelScrollbar, a.model.DiskUsage, a.config.DiskUsage.DescendIntoMountPoints, a.disk.ignore)
+	ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.UseNerdfontIcons, a.model.PanelScrollbar, a.model.DiskUsage, a.config.DiskUsage.DescendIntoMountPoints, a.disk.ignore, a.model.PinnedItems, a.model.JobPathMarks)
 	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true

@@ -147,11 +147,14 @@ type PanelDisplayConfig struct {
 	JobMarks                        []JobPathMark
 	PreviewPrefetchLoading          map[string]struct{}
 	PreviewPrefetchWarm             map[string]struct{}
-	MetaColumns                     []MetaColumnState
-	ShrunkenShowsNameOnly           bool
-	ScrollbarShowInactive           bool
-	CarouselLayout                  panelcarousel.Layout
-	CarouselFilePreview             FilePreviewState
+	// PinnedPaths lists absolute paths currently in the app's pin list, for the row-suffix pin
+	// glyph; see ui.PinnedPathSet.
+	PinnedPaths           map[string]struct{}
+	MetaColumns           []MetaColumnState
+	ShrunkenShowsNameOnly bool
+	ScrollbarShowInactive bool
+	CarouselLayout        panelcarousel.Layout
+	CarouselFilePreview   FilePreviewState
 }
 
 func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle PanelStyleConfig, ctx PanelContext, display PanelDisplayConfig) {
@@ -475,6 +478,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		}
 		rowSuffix = panellist.NewRowSuffix(jobMarkGlyph, newFileTier, renameMark, subtreeMark, jobWrite)
 		rowSuffix.Working = state.ShowLoadingGlyph && entry.Type == localfs.EntryDirectory && entry.Path == state.ListingPendingPath
+		_, rowSuffix.Pinned = display.PinnedPaths[entry.Path]
 		rowOpts.Suffix = rowSuffix
 		text = formatEntry(entry, effTextWidth, rowOpts, panelStyle.Styles, display.Painter, metaText)
 		nameWidth = effNameWidth

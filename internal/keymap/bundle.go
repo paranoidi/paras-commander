@@ -21,6 +21,7 @@ type Bundle struct {
 	Terminal         *Map // embedded terminal panel overlay; may be nil
 	MassRenameDialog *Map // mass-rename dialog (save/load/delete pattern shortcuts)
 	RunForEachDialog *Map // run-for-each dialog (command history shortcut)
+	PinDialog        *Map // pin dialog (open-primary/open-secondary/remove shortcuts)
 	// LeaderKey maps action ID → single-letter Esc function-menu leader key (merged defaults + user).
 	LeaderKey map[string]string
 	// CopyMenuKey maps action ID → single-letter `"` copy-menu key (merged defaults + user).

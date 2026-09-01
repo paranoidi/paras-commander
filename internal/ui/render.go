@@ -174,8 +174,12 @@ type Model struct {
 	HistoryDialog           dialog.HistoryDialogState
 	SFTPConnectDialog       dialog.SFTPConnectDialogState
 	FindDialog              dialog.FindDialogState
-	MetaDialog              dialog.MetaDialogState
-	LeaderMenu              LeaderMenuState
+	// PinnedItems is the ad-hoc, session-only pin list (most-recently-pinned first),
+	// shared by the main panel, Find dialog, Compare view, and Dedup view. Never persisted.
+	PinnedItems []PinnedItem
+	PinDialog   dialog.PinDialogState
+	MetaDialog  dialog.MetaDialogState
+	LeaderMenu  LeaderMenuState
 	// MetaResults holds per-panel active meta columns (nil/empty = meta not active).
 	MetaResults [2][]MetaColumnState
 	// FilePreview is the live inactive-panel preview state (mutate only under App.commandsMu).
@@ -267,7 +271,7 @@ func (m *Model) AnyModalOpen() bool {
 	return m.PrimaryModal() != dialog.PrimaryModalNone ||
 		m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open ||
 		m.FileDialog.Open || m.SFTPConnectDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open ||
-		m.FindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open
+		m.FindDialog.Open || m.MetaDialog.Open || m.LeaderMenu.Open || m.CompareMergeDialog.Open || m.PinDialog.Open
 }
 
 // SyncDriverPanelID returns the PrimaryPanel/SecondaryPanel id that drives latched panel sync,
@@ -413,7 +417,7 @@ func (m *Model) ModalDialogOpen() bool {
 	if m.PrimaryModal() != dialog.PrimaryModalNone {
 		return true
 	}
-	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open || m.CommandOutputDialog.Open {
+	if m.SortDialog.Open || m.ListingFormatDialog.Open || m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.MetaDialog.Open || m.HelpView.Open || m.FileDialog.Open || m.HostKeyDialog.Open || m.MessageDialog.Open || m.DedupProgressDialog.Open || m.StashRestoreDialog.Open || m.LeaderMenu.Open || m.CommandOutputDialog.Open || m.PinDialog.Open {
 		return true
 	}
 	return false
@@ -425,7 +429,7 @@ func (m *Model) QuickFilterStartBlocked() bool {
 	if m.Menu.Open {
 		return true
 	}
-	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open ||
+	return m.MessageDialog.Open || m.PathPicker.Open || m.HistoryDialog.Open || m.SFTPConnectDialog.Open || m.FindDialog.Open || m.PinDialog.Open ||
 		m.MetaDialog.Open || m.ThemeDialog.Open || m.SortDialog.Open ||
 		m.ListingFormatDialog.Open ||
 		m.ConfigDialog.Open || m.ImageCapabilityDialog.Open || m.DebounceCalibrateDialog.Open || m.GroupSelect.Open || m.FilterDialog.Open || m.FileDialog.Open || m.HostKeyDialog.Open ||
@@ -499,10 +503,11 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	menus := menu.ActiveDefinitions(model.MenuDefinitions)
 	showMenuBarSpinner := model.MenuBarActivitySpinner
 	if reserveMenu {
+		pinCount := len(model.PinnedItems)
 		if model.ModalDialogOpen() {
-			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
+			drawMenuBarBlank(screen, layout.Menu, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
 		} else {
-			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase)
+			drawMenuBar(screen, layout.Menu, model.Menu, menus, styles, model.MenuBarJobs, model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner, model.SpinPhase, pinCount)
 		}
 		if layout.StatusCmd.Width > 0 {
 			drawMenuBarStatusCommand(screen, layout.StatusCmd, model.StatusCommandText, styles.MenuStatus)
@@ -540,7 +545,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 	case ViewCompare:
 		filtered := comparepkg.FilteredRows(model.CompareSnapshot, model.CompareView.Filter, model.CompareView.IgnoreEmpty)
 		drawCompareView(screen, layout, model.CompareView,
-			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary},
+			compareViewData{Snap: model.CompareSnapshot, Rows: filtered, Primary: model.Primary, Secondary: model.Secondary, RowMarks: rowMarksResolver(model.PinnedItems, model.JobPathMarks)},
 			styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
 		if model.CompareMergeDialog.Open {
 			dialog.DrawCompareMergeDialog(screen, layout, model.CompareMergeDialog, styles, model.UserHomeDir)
@@ -549,7 +554,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 			dialog.DrawCompareFilterDialog(screen, layout, model.CompareFilterDialog, styles)
 		}
 	case ViewDedup:
-		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation)
+		drawDedupView(screen, layout, model.DedupView, model.DedupSnapshot, model.DedupList, model.DedupCopiesList, styles, chromeBlocked, model.UserHomeDir, model.SplitOrientation, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 	case ViewMessages:
 		drawMessagesView(screen, layout, model.MessagesView, model.MessageLog, styles, chromeBlocked, model.SplitOrientation)
 	default:
@@ -596,7 +601,7 @@ func viMotionStripActive(model Model, panelID int) bool {
 // drawBrowserPanel paints one twin column (file list or file preview) plus its selections strip
 // for the browser view. Called once per side (PrimaryPanel, SecondaryPanel) with the side-specific
 // rects/flags precomputed by drawBrowserView; the two calls are mirror images of each other.
-func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, syncDriver, quickViewDriver int, cursorNameHintFallback *CursorNameHintFallback, side browserPanelSide) {
+func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, syncDriver, quickViewDriver int, pinnedPaths map[string]struct{}, cursorNameHintFallback *CursorNameHintFallback, side browserPanelSide) {
 	ownState := model.Primary
 	if side.PanelID == SecondaryPanel {
 		ownState = model.Secondary
@@ -629,7 +634,7 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 				ShowIcons: model.UseNerdfontIcons, UserHomeDir: model.UserHomeDir,
 				Painter: model.DiskUsage, DiskUsageDescendIntoMountPoints: model.DiskUsageDescendIntoMountPoints,
 				DiskUsageGoduIgnore: model.DiskUsageGoduIgnore, ShowDiskUsage: model.showPanelDiskUsage(side.PanelID),
-				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, MetaColumns: model.MetaResults[side.PanelID],
+				JobMarks: model.JobPathMarks, PreviewPrefetchLoading: model.PreviewPrefetchLoading, PreviewPrefetchWarm: model.PreviewPrefetchWarm, PinnedPaths: pinnedPaths, MetaColumns: model.MetaResults[side.PanelID],
 				ShrunkenShowsNameOnly: model.ShrunkenShowsNameOnly, ScrollbarShowInactive: model.PanelScrollbarInactive,
 				CarouselLayout: model.CarouselLayout, CarouselFilePreview: model.CarouselFilePreviewDraw,
 			})
@@ -682,8 +687,9 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 
 	syncDriver := model.SyncDriverPanelID()
 	quickViewDriver := model.QuickViewDriverPanelID()
+	pinnedPaths := PinnedPathSet(model.PinnedItems)
 	var cursorNameHintFallback CursorNameHintFallback
-	drawBrowserPanel(screen, model, styles, syncDriver, quickViewDriver, &cursorNameHintFallback, browserPanelSide{
+	drawBrowserPanel(screen, model, styles, syncDriver, quickViewDriver, pinnedPaths, &cursorNameHintFallback, browserPanelSide{
 		PanelID: PrimaryPanel, ColumnWidth: layout.Primary.Width, FileRect: primaryFile, StripRect: leftStrip,
 		ShowPreview: showLeftPreview, FileListFocus: primaryFileListFocus, ChromeBlocked: primaryChromeBlocked,
 		OtherPanelPath: primaryOtherPanelPath, SelectionsBottomHint: primarySelectionsBottomHint,
@@ -691,7 +697,7 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 		IsTransferTarget: model.DestinationTargetPrimary, CursorNameHintPinnedOut: model.CursorNameHintPinOutPrimary,
 		ViMotionActive: viMotionActive(model, PrimaryPanel),
 	})
-	drawBrowserPanel(screen, model, styles, syncDriver, quickViewDriver, &cursorNameHintFallback, browserPanelSide{
+	drawBrowserPanel(screen, model, styles, syncDriver, quickViewDriver, pinnedPaths, &cursorNameHintFallback, browserPanelSide{
 		PanelID: SecondaryPanel, ColumnWidth: layout.Secondary.Width, FileRect: secondaryFile, StripRect: rightStrip,
 		ShowPreview: showRightPreview, FileListFocus: secondaryFileListFocus, ChromeBlocked: chromeBlocked,
 		OtherPanelPath: secondaryOtherPanelPath, SelectionsBottomHint: secondarySelectionsBottomHint,
@@ -739,10 +745,13 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		dialog.DrawListingFormatDialog(screen, layout, model.ListingFormatDialog, styles)
 	}
 	if model.PathPicker.Open {
-		dialog.DrawPathPickerDialog(screen, layout, model.PathPicker, styles)
+		dialog.DrawPathPickerDialog(screen, layout, model.PathPicker, styles, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 	}
 	if model.HistoryDialog.Open {
-		dialog.DrawHistoryDialog(screen, layout, model.HistoryDialog, styles)
+		dialog.DrawHistoryDialog(screen, layout, model.HistoryDialog, styles, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
+	}
+	if model.PinDialog.Open {
+		dialog.DrawPinDialog(screen, layout, model.PinDialog, pinDialogItems(model.PinnedItems), styles)
 	}
 	if model.SFTPConnectDialog.Open {
 		dialog.DrawSFTPConnectDialog(screen, layout, model.SFTPConnectDialog, styles)
@@ -755,7 +764,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 			model.DiskUsageGoduIgnore,
 			styles.SymbolWorking(),
 		)
-		dialog.DrawFindDialog(screen, layout, model.FindDialog, dialogRenderContext(model, styles), PaintFindDialogRowIcon, selectionLabel)
+		dialog.DrawFindDialog(screen, layout, model.FindDialog, dialogRenderContext(model, styles), PaintFindDialogRowIcon, selectionLabel, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
 	}
 	if model.GroupSelect.Open {
 		dialog.DrawGroupSelectDialog(screen, layout, model.GroupSelect, styles)

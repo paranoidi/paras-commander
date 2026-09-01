@@ -769,6 +769,8 @@ func (a *App) tryDispatchSelectionActions(actionID string) bool {
 		a.setTransientMessage("Selection cleared", ui.MessageUrgencyInfo)
 	case keymap.ActionPanelStashToggle:
 		a.togglePanelSelectionStash()
+	case keymap.ActionPanelPinToggle:
+		a.pinCtrl.ToggleActivePanelCursor()
 	default:
 		return false
 	}

@@ -237,6 +237,9 @@ func (a *App) handleDedupViewKey(event *tcell.EventKey) bool {
 		a.dedupCtrl.SelectToggleAndAdvance()
 		a.dedupCtrl.EnsureSelectionVisible(visible)
 		return false
+	case keymap.ActionPanelPinToggle:
+		a.pinCtrl.ToggleDedupSelection()
+		return false
 	case keymap.ActionPanelInvertSelection:
 		if a.model.DedupView.FocusCopies {
 			a.dedupCtrl.ToggleCopiesPaneSelectAll()

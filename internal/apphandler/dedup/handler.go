@@ -1040,6 +1040,25 @@ func (h *Handler) selectedDirAbs() string {
 	return row.Value.File.Abs.Parent().String()
 }
 
+// SelectedPinTarget returns the absolute path and directory-ness of the currently focused-pane
+// row, for pinning. Dir rows reuse selectedDirAbs's directory-path join; file rows use their
+// own absolute path (not the parent, unlike selectedDirAbs which resolves a navigation
+// target). False when nothing is selected or the row is neither a file nor a directory row.
+func (h *Handler) SelectedPinTarget() (path string, isDir bool, ok bool) {
+	row, rowOK := h.selectedRow()
+	if !rowOK {
+		return "", false, false
+	}
+	switch row.Value.Kind {
+	case ui.DedupRowDir:
+		return h.selectedDirAbs(), true, true
+	case ui.DedupRowFile:
+		return row.Value.File.Abs.String(), false, true
+	default:
+		return "", false, false
+	}
+}
+
 // ClearMarks unmarks every file and clears keep designations, reusing the
 // file-list clear-selection binding.
 func (h *Handler) ClearMarks() {

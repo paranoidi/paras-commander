@@ -28,14 +28,30 @@ func (h *Handler) PathPickerHostFooterEligible() bool {
 	return false
 }
 
-// TryPathPickerHostShortcut opens a bookmarks-only or history-only path picker when the
-// user presses bookmark.open or panel.history-dialog while a path-picker host row is focused.
+// PathPickerPinnedFooterEligible reports whether the Pinned path-picker shortcut should be
+// advertised in the footer. Unlike Bookmarks/History (all three path-picker hosts), Pinned is
+// scoped to the copy/move (transfer) dialog's destination field only.
+func (h *Handler) PathPickerPinnedFooterEligible() bool {
+	d := &h.model.TransferDialog
+	return d.Open && d.Phase == dialog.TransferPhaseDestination && d.FocusField == 0
+}
+
+// TryPathPickerHostShortcut opens a bookmarks-only, history-only, or (transfer destination
+// field only) pinned-directories-only path picker when the user presses bookmark.open,
+// panel.history-dialog, or panel.pin-dialog while a path-picker host row is focused.
 func (h *Handler) TryPathPickerHostShortcut(ev *tcell.EventKey) bool {
 	if h.keysGlobal == nil {
 		return false
 	}
 	id, ok := h.keysGlobal.Lookup(ev)
 	if !ok {
+		return false
+	}
+	if id == keymap.ActionPanelPinDialog {
+		if h.PathPickerPinnedFooterEligible() {
+			h.OpenPathPickerForTransferPinned()
+			return true
+		}
 		return false
 	}
 	var bookmarks bool

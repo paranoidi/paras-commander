@@ -17,26 +17,6 @@ func (a *App) mergedPanelHistories() []string {
 	return panel.MergeNavigationHistories(a.inactivePanel().History, a.activePanel().History)
 }
 
-func historyMarkPath(st *dialog.HistoryDialogState) string {
-	idx := st.PanelCurrentIndex
-	if idx < 0 || idx >= len(st.PanelPaths) {
-		return ""
-	}
-	return panel.CleanPathString(st.PanelPaths[idx])
-}
-
-func historyDisplayLinesFor(paths []string, markPath string) []string {
-	out := make([]string, len(paths))
-	for i, p := range paths {
-		prefix := "  "
-		if markPath != "" && panel.CleanPathString(p) == markPath {
-			prefix = "* "
-		}
-		out[i] = prefix + p
-	}
-	return out
-}
-
 func historyPathMissingFor(paths []string) []bool {
 	out := make([]bool, len(paths))
 	for i, p := range paths {
@@ -62,10 +42,6 @@ func (a *App) openHistoryDialog(panelID int) {
 	if curIdx < 0 || curIdx >= len(panelPaths) {
 		curIdx = 0
 	}
-	display := historyDisplayLinesFor(panelPaths, historyMarkPath(&dialog.HistoryDialogState{
-		PanelPaths:        panelPaths,
-		PanelCurrentIndex: curIdx,
-	}))
 	a.model.HistoryDialog = dialog.HistoryDialogState{
 		Open:              true,
 		PanelID:           panelID,
@@ -74,7 +50,7 @@ func (a *App) openHistoryDialog(panelID int) {
 		BothPanels:        false,
 		PanelPaths:        panelPaths,
 		PanelCurrentIndex: curIdx,
-		DisplayLines:      display,
+		DisplayLines:      panelPaths,
 		PathMissing:       historyPathMissingFor(panelPaths),
 		Query:             "",
 		Focus:             0,
@@ -125,7 +101,7 @@ func (a *App) reloadHistoryDialogList() {
 			selectedPath = st.Paths[idx]
 		}
 	}
-	st.DisplayLines = historyDisplayLinesFor(st.Paths, historyMarkPath(st))
+	st.DisplayLines = st.Paths
 	a.syncHistoryDialogRanks()
 	if selectedPath != "" {
 		want := panel.CleanPathString(selectedPath)

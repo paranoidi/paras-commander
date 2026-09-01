@@ -51,6 +51,8 @@ func PaintFindDialog(
 	painter DiskUsagePainter,
 	descendIntoMountPoints bool,
 	goduIgnore func(string) bool,
+	pinnedItems []PinnedItem,
+	jobMarks []JobPathMark,
 ) {
 	if state == nil || !state.Open {
 		return
@@ -62,5 +64,5 @@ func PaintFindDialog(
 		IconLead:       DialogListIconLeadingWidth(showIcons),
 		ScrollbarStyle: scrollbarStyle,
 	}
-	dialog.DrawFindDialog(screen, layout, *state, ctx, PaintFindDialogRowIcon, selectionLabel)
+	dialog.DrawFindDialog(screen, layout, *state, ctx, PaintFindDialogRowIcon, selectionLabel, rowMarksResolver(pinnedItems, jobMarks))
 }

@@ -87,6 +87,8 @@ type Theme struct {
 	PanelRowMarkRenamed tcell.Style
 	// PanelRowMarkNoPermission styles the file-list suffix for entries the current user cannot access.
 	PanelRowMarkNoPermission tcell.Style
+	// PanelRowMarkPinned styles the file-list suffix for entries in the pin list.
+	PanelRowMarkPinned tcell.Style
 	// PanelRowMarkJob styles the file-list job mark when the row is under a job's
 	// write (destination) tree; PanelRowMarkJobRead styles the read (source) tree;
 	// PanelRowMarkJobDecision styles either while the matched job waits on a user
@@ -518,6 +520,7 @@ const (
 	SymbolKeyFolder                   = "folder"
 	SymbolKeyGit                      = "git"
 	SymbolKeyStash                    = "stash"
+	SymbolKeyPin                      = "pin"
 	SymbolKeyWorking                  = "working"
 	SymbolKeyHiddenDotfiles           = "hidden_dotfiles"
 	SymbolKeyFilelistSelectionSubtree = "filelist.selection_subtree"
@@ -616,6 +619,22 @@ func (t Theme) SymbolStash() string {
 		}
 	}
 	return "\ue73d"
+}
+
+// SymbolPin returns the menu-bar pin-count badge glyph from [symbols] pin.
+func (t Theme) SymbolPin() string {
+	if t.Symbols != nil {
+		if s := strings.TrimSpace(t.Symbols[SymbolKeyPin]); s != "" {
+			return s
+		}
+	}
+	return "\U000F0403"
+}
+
+// SymbolPinRune returns SymbolPin() as a single rune (zero-alloc), for row-suffix glyph
+// slots that are always one rune wide.
+func (t Theme) SymbolPinRune() rune {
+	return t.filelistSymbolRune(SymbolKeyPin, '\U000F0403')
 }
 
 // SymbolGit returns the panel Git column header glyph from [symbols] git.
@@ -905,6 +924,7 @@ var requiredStyleKeys = []string{
 	"panel.row.mark.new.previous",
 	"panel.row.mark.renamed",
 	"panel.row.mark.no_permission",
+	"panel.row.mark.pinned",
 	"panel.row.mark.job",
 	"panel.row.mark.job.read",
 	"panel.row.mark.job.decision",
@@ -1392,6 +1412,7 @@ func parse(data []byte) (Theme, error) {
 		PanelRowMarkNewPrevious:             styles["panel.row.mark.new.previous"],
 		PanelRowMarkRenamed:                 styles["panel.row.mark.renamed"],
 		PanelRowMarkNoPermission:            styles["panel.row.mark.no_permission"],
+		PanelRowMarkPinned:                  styles["panel.row.mark.pinned"],
 		PanelRowMarkJob:                     styles["panel.row.mark.job"],
 		PanelRowMarkJobRead:                 styles["panel.row.mark.job.read"],
 		PanelRowMarkJobDecision:             styles["panel.row.mark.job.decision"],

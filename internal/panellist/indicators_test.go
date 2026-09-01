@@ -84,6 +84,62 @@ func TestSuffixDecorationLenReservesPermissionMark(t *testing.T) {
 	}
 }
 
+func TestSuffixDecorationLenReservesPinnedMark(t *testing.T) {
+	th := theme.Default()
+	entry := localfs.Entry{Name: "alpha.txt", Type: localfs.EntryFile}
+	got := SuffixDecorationLen(20, RowSuffix{Pinned: true}, entry, th)
+	if got != 2 {
+		t.Fatalf("SuffixDecorationLen = %d, want 2", got)
+	}
+}
+
+func TestEntryDisplayRunesAppendsPinGlyph(t *testing.T) {
+	th := theme.Default()
+	entry := localfs.Entry{Name: "alpha.txt", Type: localfs.EntryFile}
+	display := EntryDisplayRunes(entry, 20, true, RowSuffix{Pinned: true}, th)
+	runes := RunesFromDisplay(display)
+	wantGlyph := pinSymbolRune(th)
+	found := false
+	for _, r := range runes {
+		if r == wantGlyph {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("display runes %q missing pin glyph %q", string(runes), string(wantGlyph))
+	}
+}
+
+func TestSuffixSpanStylePinned(t *testing.T) {
+	th := theme.Default()
+	entry := localfs.Entry{Name: "alpha.txt", Type: localfs.EntryFile}
+	st, ok := SuffixSpanStyle(pinSymbolRune(th), RowSuffix{Pinned: true}, entry, "", "", th, false)
+	if !ok {
+		t.Fatal("expected pinned suffix style")
+	}
+	fg, _, _ := st.Decompose()
+	wantFG, _, _ := th.PanelRowMarkPinned.Decompose()
+	if fg != wantFG {
+		t.Fatalf("fg = %v, want panel.row.mark.pinned %v", fg, wantFG)
+	}
+	_, ok = SuffixSpanStyle(pinSymbolRune(th), RowSuffix{Pinned: false}, entry, "", "", th, false)
+	if ok {
+		t.Fatal("expected no style when not pinned")
+	}
+}
+
+func TestListingSuffixSpansPinnedOnlyReturnsSpan(t *testing.T) {
+	th := theme.Default()
+	entry := localfs.Entry{Name: "alpha.txt", Type: localfs.EntryFile}
+	spans := ListingSuffixSpans(entry, 20, true, RowSuffix{Pinned: true}, "", th, false, "", func(int) tcell.Style {
+		return tcell.StyleDefault
+	})
+	if len(spans) != 1 {
+		t.Fatalf("spans len = %d, want 1 pin glyph", len(spans))
+	}
+}
+
 func TestListingSuffixSpansCursorIconOnCursorRow(t *testing.T) {
 	th := theme.Default()
 	th.PanelFileIconFG = map[string]tcell.Color{

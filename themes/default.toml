@@ -78,6 +78,7 @@ new = { fg = "bright_green" }
 new.previous = { fg = "bright_yellow" }
 renamed = { fg = "cyan" }
 no_permission = { fg = "bright_black" }
+pinned = { fg = "magenta" }
 job = { fg = "green" }
 job.read = { fg = "yellow" }
 job.decision = { fg = "red" }
@@ -278,6 +279,7 @@ file = "\uf15b"
 folder = "\uf07b"
 git = "\uf1d3"
 stash = "\uef0d"
+pin = "\U000F0403"
 # U+F06D1 (nf-md-eye_off_outline); use 8-digit escape — \uf06d1 is U+F06D + "1"
 hidden_dotfiles = "\U000F06D1"
 

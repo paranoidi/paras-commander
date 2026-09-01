@@ -29,7 +29,7 @@ func EnsureHistoryListScroll(state *HistoryDialogState, listRows int) {
 	}
 }
 
-func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogState, styles theme.Theme) {
+func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogState, styles theme.Theme, rowMarks RowMarksFunc) {
 	width := 78
 	if width > layout.Width-4 {
 		width = layout.Width - 4
@@ -81,6 +81,7 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 		var ranges []search.Range
 		isCursor := false
 		missing := false
+		absPath := ""
 		if idxInRank < len(state.Ranked) {
 			entIdx := state.Ranked[idxInRank]
 			if entIdx >= 0 && entIdx < len(state.DisplayLines) {
@@ -91,6 +92,9 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 			}
 			if entIdx >= 0 && entIdx < len(state.PathMissing) {
 				missing = state.PathMissing[entIdx]
+			}
+			if entIdx >= 0 && entIdx < len(state.Paths) {
+				absPath = state.Paths[entIdx]
 			}
 			isCursor = state.Focus == 0 && idxInRank == state.Selected
 		}
@@ -104,8 +108,20 @@ func DrawHistoryDialog(screen tcell.Screen, layout Layout, state HistoryDialogSt
 		}
 		_, bg, _ := baseStyle.Decompose()
 		matchStyle = matchStyle.Background(bg)
-		text, spans := fuzzyRowContent(line, ranges, rowWidth, matchStyle, false)
-		primitive.StyledText(screen, primaryCol, y, rowWidth, text, baseStyle, spans)
+		marks := RowMarks{}
+		if rowMarks != nil {
+			marks = rowMarks(absPath)
+		}
+		marksW := RowMarksWidth(marks)
+		fitWidth := rowWidth - marksW
+		if fitWidth < 1 {
+			fitWidth = 1
+		}
+		text, spans := fuzzyRowContent(line, ranges, fitWidth, matchStyle, false)
+		primitive.StyledText(screen, primaryCol, y, fitWidth, text, baseStyle, spans)
+		if marksW > 0 {
+			DrawRowMarksSuffix(screen, primaryCol+fitWidth, y, marksW, marks, bg, styles)
+		}
 	}
 
 	sepAfterList := listTop + listH

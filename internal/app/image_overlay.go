@@ -76,6 +76,11 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 		}
 	}
 
+	if imageLog != nil {
+		imageTrace("reconcile: plan=%v cols=%d rows=%d lastSet=%v suppressed=%v",
+			plan != nil, cols, rows, a.image.lastSet, a.imageOverlaySuppressed())
+	}
+
 	// Path is ignored: during stale-while-revalidate the held payload is shown under the
 	// new filename; tearing down the overlay for a path-only change flashes the cell buffer.
 	if plan != nil && a.image.lastSet &&
@@ -86,6 +91,7 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 		cols == a.image.lastCols &&
 		rows == a.image.lastRows {
 		a.image.last.Path = plan.Path
+		imageTrace("reconcile: unchanged plan, keeping locked region")
 		return false
 	}
 
@@ -97,6 +103,8 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 		// it, but others (WezTerm) do not: without the delete, successive replacements can
 		// each remain visible and get flushed to the screen as a visible slideshow instead of
 		// cleanly replacing in place. Always delete before installing a different Kitty image.
+		imageTrace("unlock: x=%d y=%d cols=%d rows=%d (cells become dirty for tcell)",
+			a.image.last.X, a.image.last.Y, a.image.lastCols, a.image.lastRows)
 		a.screen.LockRegion(a.image.last.X, a.image.last.Y, a.image.lastCols, a.image.lastRows, false)
 		a.image.lastSet = false
 		a.image.last = previewpanel.ImagePlacement{}
@@ -109,6 +117,7 @@ func (a *App) reconcileImageBeforeShow(plan *previewpanel.ImagePlacement) (force
 	}
 
 	if plan != nil {
+		imageTrace("lock: x=%d y=%d cols=%d rows=%d", plan.X, plan.Y, cols, rows)
 		a.screen.LockRegion(plan.X, plan.Y, cols, rows, true)
 		a.image.last = *plan
 		a.image.lastSet = true
@@ -154,8 +163,12 @@ func (a *App) emitImageAfterShow() {
 	}
 	a.image.pendingEmit = false
 	p := a.image.last
-	bareNativeSixel := p.Protocol == previewpanel.ImageProtocolSixel && preview.TmuxSupportsNativeSixel(os.Getenv)
-	if inTmux() && !bareNativeSixel {
+	bareNativeSixel := a.nativeSixelTransport(p.Protocol)
+	tmux := inTmux()
+	imageTrace("emit: x=%d y=%d cols=%d rows=%d bytes=%d proto=%d native=%v tmux=%v",
+		p.X, p.Y, a.image.lastCols, a.image.lastRows, len(p.Payload), p.Protocol,
+		bareNativeSixel, tmux)
+	if tmux && !bareNativeSixel {
 		// tmux only positions the *outer* terminal's cursor when the pane cursor is visible,
 		// and does so from its own event loop — while a passthrough-wrapped payload bypasses
 		// that loop and reaches the outer terminal directly. A tcell app runs with the cursor
@@ -169,16 +182,77 @@ func (a *App) emitImageAfterShow() {
 		_, _ = fmt.Fprintf(tty, "\x1b[%d;%dH\x1b[?25h", p.Y+1, p.X+1)
 		_, _ = fmt.Fprintf(tty, "\x1b[%d;%dH\x1b[?25h", p.Y+1, p.X+1)
 		time.Sleep(time.Millisecond)
-		writeImagePayload(tty, p.Payload, p.Protocol)
+		writeImagePayload(tty, p.Payload, p.Protocol, false)
 		_, _ = fmt.Fprint(tty, "\x1b[?25l\x1b8")
 		return
 	}
 	// Bare native sixel under tmux takes this branch too: tmux parses it inline as normal pane
 	// content via its own screen cursor, the same as a real terminal would, so no passthrough
-	// cursor ceremony is needed — plain CUP positions tmux's pane cursor correctly.
+	// cursor ceremony is needed — plain CUP positions tmux's pane cursor correctly. Synchronized
+	// output is used outside tmux only (it prevents flicker there); under tmux it tells tmux to
+	// defer its own redraws, which for a bare sixel means deferring the very redraw that paints
+	// the image tmux just stored — pure added latency at best. yazi never wraps its tmux writes
+	// in it either.
+	if tmux {
+		if bareNativeSixel {
+			blankImageCellsForTmux(tty, p, a.image.lastCols, a.image.lastRows)
+		}
+		_, _ = fmt.Fprintf(tty, "\x1b7\x1b[%d;%dH", p.Y+1, p.X+1)
+		writeImagePayload(tty, p.Payload, p.Protocol, true)
+		_, _ = fmt.Fprint(tty, "\x1b8")
+		return
+	}
 	_, _ = fmt.Fprintf(tty, "\x1b[?2026h\x1b7\x1b[%d;%dH", p.Y+1, p.X+1)
-	writeImagePayload(tty, p.Payload, p.Protocol)
+	writeImagePayload(tty, p.Payload, p.Protocol, false)
 	_, _ = fmt.Fprint(tty, "\x1b8\x1b[?2026l")
+}
+
+// nativeSixelTransport reports whether this placement is a Sixel image that should be written
+// bare under tmux (tmux stores and renders it) instead of passthrough-wrapped (the outer terminal
+// renders it, and tmux's next per-line repaint erases it — see graphics lesson 19).
+func (a *App) nativeSixelTransport(proto previewpanel.ImageProtocol) bool {
+	if proto != previewpanel.ImageProtocolSixel {
+		return false
+	}
+	// ponytail: env override instead of a config field + dialog radios, for A/B testing the two
+	// transports under tmux. Promote to a real setting once one of them is shown to win.
+	switch os.Getenv("PC_SIXEL_TRANSPORT") {
+	case "passthrough":
+		return false
+	case "native":
+		return true
+	}
+	return preview.TmuxSupportsNativeSixel(os.Getenv)
+}
+
+// blankImageCellsForTmux overwrites the cells a bare (native) Sixel image is about to occupy with
+// spaces, before the payload.
+//
+// tmux keeps one image "span" per cell per placement and does not evict the spans of an older
+// image when a new one is placed over the same cells: both stay, and every later redraw of that
+// region paints all of them, in placement order, so an image drawn earlier can be painted over
+// the current one. The visible result is a preview that shows the wrong image or nothing at all,
+// getting worse the more images have been shown in that spot — and a re-display of an image
+// already in the stack looking fine, which is what made it look intermittent.
+//
+// A plain text write is the one thing that makes tmux drop the spans under those cells
+// (image_grid_damage), so blanking the rect first leaves the new image as the only placement
+// there. The blanks are immediately covered by the payload in the same write, so nothing flashes.
+// Not needed for passthrough (tmux stores no image at all) or outside tmux (the terminal has no
+// placement bookkeeping to confuse).
+func blankImageCellsForTmux(w io.Writer, p previewpanel.ImagePlacement, cols, rows int) {
+	if cols < 1 || rows < 1 {
+		return
+	}
+	imageTrace("blank: x=%d y=%d cols=%d rows=%d (spaces over the image cells)", p.X, p.Y, cols, rows)
+	blank := strings.Repeat(" ", cols)
+	var b strings.Builder
+	b.WriteString("\x1b7")
+	for row := 0; row < rows; row++ {
+		fmt.Fprintf(&b, "\x1b[%d;%dH%s", p.Y+1+row, p.X+1, blank)
+	}
+	b.WriteString("\x1b8")
+	_, _ = io.WriteString(w, b.String())
 }
 
 func inTmux() bool {
@@ -187,7 +261,7 @@ func inTmux() bool {
 
 // writeImagePayload writes an already-encoded image payload (Sixel or Kitty) to w. Outside
 // tmux, or for Sixel when the attached outer terminal's tmux-resolved features include sixel
-// (preview.TmuxSupportsNativeSixel), it's written bare — tmux then parses and stores the sixel
+// (preview.TmuxSupportsNativeSixel, passed in as nativeSixel), it's written bare — tmux then parses and stores the sixel
 // image itself, same as any other terminal would. Otherwise, under tmux, it's split into its
 // individual ST-terminated escape sequences and each is wrapped separately in tmux's
 // passthrough envelope (see splitTerminatedSequences/tmuxPassthroughWrap for why: several
@@ -195,12 +269,12 @@ func inTmux() bool {
 // single DCS sequence with no internal ESC bytes besides its own introducer/terminator, so
 // splitting yields exactly one piece — this still wraps the whole thing in one envelope, just
 // via the same general-purpose path Kitty's chunks use.
-func writeImagePayload(w io.Writer, payload string, proto previewpanel.ImageProtocol) {
+func writeImagePayload(w io.Writer, payload string, proto previewpanel.ImageProtocol, nativeSixel bool) {
 	if !inTmux() {
 		_, _ = io.WriteString(w, payload)
 		return
 	}
-	if proto == previewpanel.ImageProtocolSixel && preview.TmuxSupportsNativeSixel(os.Getenv) {
+	if proto == previewpanel.ImageProtocolSixel && nativeSixel {
 		_, _ = io.WriteString(w, payload)
 		return
 	}
@@ -224,6 +298,7 @@ func writeKittyDelete(w io.Writer) {
 // reconcilePlaceholderImage would early-out on an unchanged payload and leave placeholder
 // cells with no backing image.
 func (a *App) resetImageOverlay() {
+	imageTrace("resetImageOverlay: lastSet=%v placeholder=%v", a.image.lastSet, a.placeholderImg.sent)
 	needKittyDelete := a.placeholderImg.sent ||
 		(a.image.lastSet && a.image.last.Protocol == previewpanel.ImageProtocolKitty)
 	if a.image.lastSet {
@@ -250,8 +325,7 @@ func (a *App) resetImageOverlay() {
 // every single resize event. Passthrough Sixel and Kitty always reset here regardless: tmux
 // never stores those, and a resize-driven Sync can otherwise leave them undisplayed.
 func (a *App) resetImageOverlayForResize() {
-	if a.image.lastSet && a.image.last.Protocol == previewpanel.ImageProtocolSixel &&
-		preview.TmuxSupportsNativeSixel(os.Getenv) {
+	if a.image.lastSet && a.nativeSixelTransport(a.image.last.Protocol) {
 		return
 	}
 	a.resetImageOverlay()

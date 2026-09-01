@@ -341,7 +341,6 @@ func (h *Handler) PathPickerItemsHistory() ([]dialog.PathPickerItem, error) {
 		}
 		seen[cp] = struct{}{}
 		items = append(items, dialog.PathPickerItem{
-			Source:      "history",
 			Path:        cp,
 			PathMissing: PathEntryMissing(panelPath, home, cp),
 		})
@@ -376,6 +375,30 @@ func (h *Handler) PathPickerItemsBookmarks() ([]dialog.PathPickerItem, error) {
 	return items, nil
 }
 
+// PathPickerItemsPinned returns pinned directories only (files excluded — the Pinned selector
+// is for picking a destination), deduped by cleaned path.
+func (h *Handler) PathPickerItemsPinned() ([]dialog.PathPickerItem, error) {
+	panelPath := h.host.ActivePanel().PathString()
+	home := h.model.UserHomeDir
+	seen := make(map[string]struct{}, len(h.model.PinnedItems))
+	items := make([]dialog.PathPickerItem, 0, len(h.model.PinnedItems))
+	for _, p := range h.model.PinnedItems {
+		if !p.IsDir {
+			continue
+		}
+		cp := filepath.Clean(p.Path)
+		if _, ok := seen[cp]; ok {
+			continue
+		}
+		seen[cp] = struct{}{}
+		items = append(items, dialog.PathPickerItem{
+			Path:        cp,
+			PathMissing: PathEntryMissing(panelPath, home, cp),
+		})
+	}
+	return items, nil
+}
+
 // PathEntryMissing reports whether path (typed relative to panelPath/home) currently resolves
 // to an existing filesystem entry. Shared by the path picker and the bookmarks dialog.
 func PathEntryMissing(panelPath, home, path string) bool {
@@ -392,6 +415,7 @@ type pathPickerListKind int
 const (
 	pathPickerListBookmarks pathPickerListKind = iota
 	pathPickerListHistory
+	pathPickerListPinned
 )
 
 func (h *Handler) openPathPickerApply(purpose dialog.PathPickerPurpose, kind pathPickerListKind, fileFieldIndex int) {
@@ -407,6 +431,9 @@ func (h *Handler) openPathPickerApply(purpose dialog.PathPickerPurpose, kind pat
 	case pathPickerListHistory:
 		title, emptyMsg, errTitle = "History", "No paths in history", "History"
 		items, err = h.PathPickerItemsHistory()
+	case pathPickerListPinned:
+		title, emptyMsg, errTitle = "Pinned", "No pinned directories", "Pinned"
+		items, err = h.PathPickerItemsPinned()
 	}
 	if err != nil {
 		h.host.SetErrorMessage(errTitle, err)
@@ -456,6 +483,13 @@ func (h *Handler) OpenPathPickerForTransferBookmarks() {
 func (h *Handler) OpenPathPickerForTransferHistory() {
 	h.transferDestValidate.Invalidate()
 	h.openPathPickerApply(dialog.PathPickerPurposeApplyTransferDestination, pathPickerListHistory, 0)
+}
+
+// OpenPathPickerForTransferPinned opens the pinned-directories-only path picker to apply the
+// transfer (copy/move) dialog's destination field.
+func (h *Handler) OpenPathPickerForTransferPinned() {
+	h.transferDestValidate.Invalidate()
+	h.openPathPickerApply(dialog.PathPickerPurposeApplyTransferDestination, pathPickerListPinned, 0)
 }
 
 // OpenPathPickerForFileFieldBookmarks opens the bookmarks path picker to apply a generic

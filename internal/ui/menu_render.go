@@ -68,20 +68,28 @@ func drawMenuBarStatusCommand(screen tcell.Screen, rect Rect, text string, style
 	primitive.Text(screen, rect.X, rect.Y, rect.Width, text, style)
 }
 
+// drawMenuBarJobsGapWithPinBadge draws the pin-count badge (if any) at the start of the gap
+// region, then the jobs queue/progress strip in whatever span remains.
+func drawMenuBarJobsGapWithPinBadge(screen tcell.Screen, y, gapStart, gapWidth int, jobsStrip MenuBarJobsStrip, pinCount int, styles theme.Theme) {
+	if gapWidth <= 0 {
+		return
+	}
+	consumed := drawMenuBarPinBadge(screen, y, gapStart, gapWidth, pinCount, styles)
+	DrawMenuBarJobsGap(screen, y, gapStart+consumed, gapWidth-consumed, jobsStrip, styles)
+}
+
 // drawMenuBarBlank fills the menu row with menu background and no labels (modal overlays block the menu).
-func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
+func drawMenuBarBlank(screen tcell.Screen, rect Rect, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8, pinCount int) {
 	primitive.Text(screen, rect.X, rect.Y, rect.Width, "", styles.MenuBarInactive)
 	tailW := menuBarRightTailRuneCount(attention, perm, showMenuBarSpinner)
 	clipExclusive := menuBarMenusClipExclusive(rect, tailW)
 	gapStart := rect.X
 	gapWidth := clipExclusive - gapStart
-	if gapWidth > 0 {
-		DrawMenuBarJobsGap(screen, rect.Y, gapStart, gapWidth, jobsStrip, styles)
-	}
+	drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, jobsStrip, pinCount, styles)
 	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
 }
 
-func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8) {
+func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.Definition, styles theme.Theme, jobsStrip MenuBarJobsStrip, attention, perm string, showMenuBarSpinner bool, spinPhase uint8, pinCount int) {
 	x := rect.X
 	barStyle := styles.MenuBarInactive
 	if state.Open {
@@ -114,9 +122,7 @@ func drawMenuBar(screen tcell.Screen, rect Rect, state menu.State, menus []menu.
 	}
 	gapStart := min(x, clipExclusive)
 	gapWidth := clipExclusive - gapStart
-	if gapWidth > 0 {
-		DrawMenuBarJobsGap(screen, rect.Y, gapStart, gapWidth, jobsStrip, styles)
-	}
+	drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, jobsStrip, pinCount, styles)
 	drawMenuBarRightTail(screen, rect, attention, perm, styles.MenuBarAlert, styles.MenuDetail, styles.MenuSpinner, showMenuBarSpinner, spinPhase)
 }
 
@@ -171,7 +177,7 @@ func DrawMenuBarJobsGapOnly(screen tcell.Screen, layout Layout, model Model, men
 	if gapWidth <= 0 {
 		return false
 	}
-	DrawMenuBarJobsGap(screen, rect.Y, gapStart, gapWidth, model.MenuBarJobs, styles)
+	drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, model.MenuBarJobs, len(model.PinnedItems), styles)
 	return true
 }
 

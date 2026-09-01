@@ -115,6 +115,12 @@ func (h previewHost) OpenDeleteDialogForPreviewedFile() {
 
 func (h previewHost) OpenPreviewLeaderMenu() { h.app.togglePreviewLeaderMenu() }
 
+// FilePreviewFullscreenClosed reopens the Pin dialog, restored exactly as it was, when the
+// just-closed F3 preview was launched from there; no-op otherwise.
+func (h previewHost) FilePreviewFullscreenClosed() {
+	h.app.pinCtrl.ReopenAfterPreviewClose()
+}
+
 func (h previewHost) HandleFileDialogFieldKey(ev *tcell.EventKey, f *dialog.FileDialogField, afterEdit func()) bool {
 	return dialog.HandleFileDialogFieldKey(ev, f, h.app.keys.DialogInput, afterEdit)
 }

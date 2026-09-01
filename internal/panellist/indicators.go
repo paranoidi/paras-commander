@@ -35,6 +35,8 @@ type RowSuffix struct {
 	// Working marks a directory whose async navigation load has been pending longer than the
 	// working-indicator delay; see Theme.SymbolFilelistWorking.
 	Working bool
+	// Pinned marks an entry present in the app's pin list; see Theme.SymbolPin.
+	Pinned bool
 }
 
 // SuffixDecorationLen returns how many trailing runes are reserved for row suffix indicators.
@@ -50,6 +52,9 @@ func SuffixDecorationLen(width int, suffix RowSuffix, entry localfs.Entry, th th
 		n += 2
 	}
 	if suffix.Working && width > n+2 {
+		n += 2
+	}
+	if suffix.Pinned && width > n+2 {
 		n += 2
 	}
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
@@ -127,6 +132,10 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistWorking(), NameIdx: -1})
 		used += 2
 	}
+	if suffix.Pinned && width > used+2 {
+		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: pinSymbolRune(th), NameIdx: -1})
+		used += 2
+	}
 	if subtree && width > used+2 {
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistSelectionSubtree(), NameIdx: -1})
 		used += 2
@@ -135,6 +144,13 @@ func EntryDisplayRunes(entry localfs.Entry, width int, showFileIcons bool, suffi
 		out = append(out, DisplayRune{Rune: ' ', NameIdx: -1}, DisplayRune{Rune: th.SymbolFilelistNoPermission(), NameIdx: -1})
 	}
 	return out
+}
+
+// pinSymbolRune returns th.SymbolPinRune() for row-suffix glyph slots, which are always one
+// rune wide (SymbolPin itself is a string since it is shared with the multi-rune-capable
+// menubar pin badge).
+func pinSymbolRune(th theme.Theme) rune {
+	return th.SymbolPinRune()
 }
 
 // RunesFromDisplay extracts runes from a display slice.
@@ -163,6 +179,8 @@ func SuffixSpanStyle(r rune, suffix RowSuffix, entry localfs.Entry, jobStatus, c
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, base)), true
 	case r == th.SymbolFilelistWorking() && suffix.Working:
 		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelIconFolderScanning)), true
+	case r == pinSymbolRune(th) && suffix.Pinned:
+		return tcell.StyleDefault.Foreground(th.PanelRowIconForeground(cursorStyleKey, th.PanelRowMarkPinned)), true
 	case r == th.SymbolFilelistSelectionSubtree() && suffix.SubtreeSelection:
 		base := th.PanelRowMarkSelectionSubtree
 		if chromeBlocked {
@@ -190,7 +208,7 @@ func ListingSuffixSpans(
 ) []primitive.Span {
 	subtree := suffix.SubtreeSelection && entry.Type == localfs.EntryDirectory
 	if suffix.JobGlyph == 0 && suffix.NewFileTier == NewFileMarkNone && !suffix.RenameMark && !subtree &&
-		!suffix.Working && !entry.AccessDenied {
+		!suffix.Working && !suffix.Pinned && !entry.AccessDenied {
 		return nil
 	}
 	display := EntryDisplayRunes(entry, nameWidth, showIcons, suffix, th)

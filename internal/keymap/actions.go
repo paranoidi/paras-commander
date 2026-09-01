@@ -103,6 +103,16 @@ const (
 	ActionPanelFindDuplicates         = "panel.find-duplicates"
 	ActionPanelFilterDialog           = "panel.filter-dialog"
 
+	// Pin dialog: an ad-hoc, session-only pin list of files/directories, added/removed from
+	// the main panel, Find dialog, Compare view, and Dedup view.
+	ActionPanelPinDialog     = "panel.pin-dialog"
+	ActionPanelPinToggle     = "panel.pin-toggle"
+	ActionPinOpenInPrimary   = "pin.open-primary"
+	ActionPinOpenInSecondary = "pin.open-secondary"
+	ActionPinRemove          = "pin.remove"
+	ActionPinRemoveAll       = "pin.remove-all"
+	ActionPinView            = "pin.view"
+
 	// Compare view
 	ActionCompareClose       = "compare.close"
 	ActionCompareCycleFilter = "compare.cycle-filter"
@@ -349,6 +359,14 @@ var KnownActions = map[string]struct{}{
 	ActionPanelComparePanels:          {},
 	ActionPanelFindDuplicates:         {},
 	ActionPanelFilterDialog:           {},
+
+	ActionPanelPinDialog:     {},
+	ActionPanelPinToggle:     {},
+	ActionPinOpenInPrimary:   {},
+	ActionPinOpenInSecondary: {},
+	ActionPinRemove:          {},
+	ActionPinRemoveAll:       {},
+	ActionPinView:            {},
 
 	ActionCompareClose:       {},
 	ActionCompareCycleFilter: {},

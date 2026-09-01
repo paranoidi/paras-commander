@@ -3,8 +3,11 @@ package dialog
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/theme"
+	"github.com/paranoidi/paras-commander/internal/ui/dialog/internal/draw"
 )
 
 func TestFindDialogTitleIndexingWorkers(t *testing.T) {
@@ -76,5 +79,61 @@ func TestFindDialogTitleIndexingNoWorkerSuffixWord(t *testing.T) {
 	got := findDialogTitle(st, theme.Default())
 	if strings.Contains(got, "workers") {
 		t.Fatalf("title must not contain workers: %q", got)
+	}
+}
+
+func TestDrawFindDialogShowsPinGlyphOnlyForPinnedRow(t *testing.T) {
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(80, 24)
+
+	layout := Layout{Width: 80, Height: 24}
+	styles := theme.Default()
+	state := FindDialogState{
+		Open:     true,
+		RootPath: "/root",
+		Entries: []FindEntry{
+			{RelLine: "pinned.txt"},
+			{RelLine: "other.txt"},
+		},
+		Ranked:   []int{0, 1},
+		Selected: -1,
+	}
+
+	pinnedAbs := state.Entries[0].AbsPath(state.RootPath)
+	rowMarks := func(absPath string) RowMarks {
+		return RowMarks{Pinned: absPath == pinnedAbs}
+	}
+
+	DrawFindDialog(screen, layout, state, DialogRenderContext{Styles: styles}, nil, "", rowMarks)
+
+	width, height, _, ok := FindDialogMetrics(layout, false)
+	if !ok {
+		t.Fatal("FindDialogMetrics: want ok")
+	}
+	rect := draw.CenteredDialogRect(layout, width, height)
+	checkboxRows := 1
+	sepAfterCheckbox := rect.Y + 3 + checkboxRows
+	listTop := sepAfterCheckbox + 1
+
+	pinGlyph := []rune(styles.SymbolPin())[0]
+	rowHasGlyph := func(y int) bool {
+		for x := rect.X + 1; x < rect.X+rect.Width-1; x++ {
+			str, _, _ := screen.Get(x, y)
+			r, _ := utf8.DecodeRuneInString(str)
+			if r == pinGlyph {
+				return true
+			}
+		}
+		return false
+	}
+	if !rowHasGlyph(listTop) {
+		t.Error("expected pin glyph on pinned row")
+	}
+	if rowHasGlyph(listTop + 1) {
+		t.Error("did not expect pin glyph on unpinned row")
 	}
 }

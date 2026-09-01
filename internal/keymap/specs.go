@@ -64,6 +64,7 @@ var HelpSectionOrder = []string{
 	"Display",
 	"App",
 	"Find",
+	"Pin",
 	"Find duplicates",
 	"Jobs",
 	"Commands",
@@ -434,6 +435,15 @@ func DefaultActionSpecs() []ActionSpec {
 			LeaderKey:    "f",
 		},
 		{
+			ID:           ActionPanelPinDialog,
+			Views:        HelpBrowser,
+			Title:        "Pin dialog",
+			Section:      "Navigation",
+			DefaultKeys:  []string{"M-n"},
+			PreferredKey: "M-n",
+			Keywords:     []string{"pin", "pinned", "bookmark", "jump", "quick access"},
+		},
+		{
 			ID:           ActionPanelRefresh,
 			Views:        HelpBrowser | HelpDedup,
 			Title:        "Refresh panel",
@@ -742,9 +752,18 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Toggle selection stash",
 			Section:      "Selection",
+			DefaultKeys:  []string{"C-M-insert"},
+			PreferredKey: "C-M-insert",
+			Keywords:     []string{"stash", "clipboard", "buffer", "selection"},
+		},
+		{
+			ID:           ActionPanelPinToggle,
+			Views:        HelpBrowser | HelpCompare | HelpDedup,
+			Title:        "Toggle pin",
+			Section:      "Selection",
 			DefaultKeys:  []string{"M-insert"},
 			PreferredKey: "M-insert",
-			Keywords:     []string{"stash", "clipboard", "buffer", "selection"},
+			Keywords:     []string{"pin", "bookmark", "mark", "quick access"},
 		},
 
 		// ── Sort & display ──
@@ -1020,6 +1039,46 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  nil, // overlay: DefaultFindDialogOverlayKeys
 			PreferredKey: "S-right",
 			Keywords:     []string{"find dialog", "right panel", "reveal", "cd"},
+		},
+		{
+			ID:           ActionPinView,
+			Title:        "View",
+			Section:      "Pin",
+			DefaultKeys:  nil, // overlay: DefaultPinDialogOverlayKeys
+			PreferredKey: "F3",
+			Keywords:     []string{"pin dialog", "preview", "quick view", "fullscreen"},
+		},
+		{
+			ID:           ActionPinOpenInPrimary,
+			Title:        "Open in primary panel",
+			Section:      "Pin",
+			DefaultKeys:  nil, // overlay: DefaultPinDialogOverlayKeys
+			PreferredKey: "S-left",
+			Keywords:     []string{"pin dialog", "left panel", "reveal", "cd"},
+		},
+		{
+			ID:           ActionPinOpenInSecondary,
+			Title:        "Open in secondary panel",
+			Section:      "Pin",
+			DefaultKeys:  nil, // overlay: DefaultPinDialogOverlayKeys
+			PreferredKey: "S-right",
+			Keywords:     []string{"pin dialog", "right panel", "reveal", "cd"},
+		},
+		{
+			ID:           ActionPinRemove,
+			Title:        "Remove pin",
+			Section:      "Pin",
+			DefaultKeys:  nil, // overlay: DefaultPinDialogOverlayKeys
+			PreferredKey: "F8",
+			Keywords:     []string{"pin dialog", "unpin", "delete", "remove"},
+		},
+		{
+			ID:           ActionPinRemoveAll,
+			Title:        "Remove all pins",
+			Section:      "Pin",
+			DefaultKeys:  nil, // overlay: DefaultPinDialogOverlayKeys
+			PreferredKey: "S-F8",
+			Keywords:     []string{"pin dialog", "unpin", "delete", "remove", "clear all"},
 		},
 		{
 			ID:           ActionDestinationActivePanel,
