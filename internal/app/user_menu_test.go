@@ -220,6 +220,42 @@ command = "true"
 	}
 }
 
+func TestF2KeyTogglesUserMenuClosed(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(menuPath, []byte(`[always]
+key = "a"
+title = "Always"
+command = "true"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app := testUserMenuApp(t, dir, cfgDir)
+	app.model.ViewMode = ui.ViewBrowser
+
+	app.toggleUserMenu()
+	if !app.userMenuOpen() {
+		t.Fatal("expected user menu open")
+	}
+
+	f2 := tcell.NewEventKey(tcell.KeyF2, 0, tcell.ModNone)
+	_, rendered := app.handleKey(f2)
+	if !rendered {
+		t.Fatal("second F2 should render after closing the user menu")
+	}
+	if app.model.LeaderMenu.Open {
+		t.Fatal("second F2 should close the user menu")
+	}
+	if len(app.userMenuStack) != 0 {
+		t.Fatalf("userMenuStack len = %d, want 0 after toggle close", len(app.userMenuStack))
+	}
+}
+
 func TestUserMenuEntryKeyRunsImmediately(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")

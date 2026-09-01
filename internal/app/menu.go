@@ -42,7 +42,7 @@ func (a *App) handleQuickFilterFunctionKey(event *tcell.EventKey) bool {
 		return a.activateMenuSelection(def, item)
 	}
 	if id, ok := a.keys.Global.Lookup(event); ok && id == keymap.ActionAppUserMenu {
-		a.openUserMenu()
+		a.toggleUserMenu()
 		return false
 	}
 	return false

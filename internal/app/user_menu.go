@@ -83,6 +83,14 @@ func (a *App) editUserMenu() {
 	a.openUserMenuEditor(path)
 }
 
+func (a *App) toggleUserMenu() {
+	if a.userMenuOpen() {
+		a.closeUserMenu()
+		return
+	}
+	a.openUserMenu()
+}
+
 func (a *App) openUserMenu() {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
@@ -139,7 +147,7 @@ func (a *App) openUserMenu() {
 func (a *App) openUserMenuLevel(entries []usermenu.MenuEntry) {
 	a.userMenuVisible = entries
 	items := userMenuLeaderMenuItems(entries, a.styles)
-	a.openLeaderMenuStrip(items, true, false, false, "User menu", func(i int) bool {
+	a.openLeaderMenuStrip(items, true, false, false, false, "User menu", func(i int) bool {
 		if i < 0 || i >= len(a.userMenuVisible) {
 			return false
 		}

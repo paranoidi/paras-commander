@@ -37,7 +37,7 @@ func (a *App) openPreviewLeaderMenu() {
 		actions = append(actions, e.ActionID)
 	}
 	a.leaderMenuActions = actions
-	a.openLeaderMenuStrip(items, false, false, true, "Preview menu", func(i int) bool {
+	a.openLeaderMenuStrip(items, false, false, true, false, "Preview menu", func(i int) bool {
 		if i < 0 || i >= len(actions) {
 			return false
 		}

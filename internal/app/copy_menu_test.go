@@ -47,7 +47,7 @@ func testCopyMenuApp(t *testing.T) (*App, string) {
 
 func TestOpenCopyMenuShowsCopyActions(t *testing.T) {
 	app, _ := testCopyMenuApp(t)
-	app.openCopyMenu()
+	app.toggleCopyMenu()
 	if !app.model.LeaderMenu.Open {
 		t.Fatal("expected copy menu open")
 	}
@@ -64,7 +64,7 @@ func TestOpenCopyMenuShowsCopyActions(t *testing.T) {
 
 func TestCopyMenuFilenameKeyCopiesBasename(t *testing.T) {
 	app, _ := testCopyMenuApp(t)
-	app.openCopyMenu()
+	app.toggleCopyMenu()
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModNone))
 	if app.model.LeaderMenu.Open {
 		t.Fatal("copy menu should close after f")
@@ -76,7 +76,7 @@ func TestCopyMenuFilenameKeyCopiesBasename(t *testing.T) {
 
 func TestCopyMenuFileURLKeyCopiesPath(t *testing.T) {
 	app, filePath := testCopyMenuApp(t)
-	app.openCopyMenu()
+	app.toggleCopyMenu()
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'c', tcell.ModNone))
 	if got := clipboard.LastSet(); got != filePath {
 		t.Fatalf("clipboard = %q, want %q", got, filePath)
@@ -85,7 +85,7 @@ func TestCopyMenuFileURLKeyCopiesPath(t *testing.T) {
 
 func TestCopyMenuDirURLKeyCopiesParent(t *testing.T) {
 	app, filePath := testCopyMenuApp(t)
-	app.openCopyMenu()
+	app.toggleCopyMenu()
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
 	wantDir := filepath.Dir(filePath)
 	if got := clipboard.LastSet(); got != wantDir {
@@ -95,7 +95,7 @@ func TestCopyMenuDirURLKeyCopiesParent(t *testing.T) {
 
 func TestCopyMenuNameWithoutExtKey(t *testing.T) {
 	app, _ := testCopyMenuApp(t)
-	app.openCopyMenu()
+	app.toggleCopyMenu()
 	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'n', tcell.ModNone))
 	if got := clipboard.LastSet(); got != "meadow" {
 		t.Fatalf("clipboard = %q, want meadow", got)
@@ -109,8 +109,25 @@ func TestQuoteKeyOpensCopyMenu(t *testing.T) {
 		t.Fatalf("lookup = %q %v, want %q", id, ok, keymap.ActionAppCopyMenu)
 	}
 	app.dispatchActionLikeKeyboardShortcut(keymap.ActionAppCopyMenu)
-	if !app.model.LeaderMenu.Open || !app.model.LeaderMenu.CopyMenu {
-		t.Fatal("expected copy menu open after dispatch")
+	if !app.copyMenuOpen() {
+		t.Fatalf("LeaderMenu = %+v, want copy menu open", app.model.LeaderMenu)
+	}
+}
+
+func TestQuoteKeyTogglesCopyMenuClosed(t *testing.T) {
+	app, _ := testCopyMenuApp(t)
+	app.toggleCopyMenu()
+	if !app.copyMenuOpen() {
+		t.Fatal("expected copy menu open")
+	}
+
+	quote := tcell.NewEventKey(tcell.KeyRune, '"', tcell.ModNone)
+	_, rendered := app.handleKey(quote)
+	if !rendered {
+		t.Fatal("second \" should render after closing the copy menu")
+	}
+	if app.model.LeaderMenu.Open {
+		t.Fatal("second \" should close the copy menu")
 	}
 }
 

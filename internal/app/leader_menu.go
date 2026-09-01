@@ -9,8 +9,15 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-func (a *App) openLeaderMenu(userMenu, copyMenu, previewMenu bool, items []ui.LeaderMenuItem) {
-	a.model.LeaderMenu = ui.LeaderMenuState{Open: true, UserMenu: userMenu, CopyMenu: copyMenu, PreviewMenu: previewMenu, Items: items}
+func (a *App) openLeaderMenu(userMenu, copyMenu, previewMenu, gitFilterMenu bool, items []ui.LeaderMenuItem) {
+	a.model.LeaderMenu = ui.LeaderMenuState{
+		Open:          true,
+		UserMenu:      userMenu,
+		CopyMenu:      copyMenu,
+		PreviewMenu:   previewMenu,
+		GitFilterMenu: gitFilterMenu,
+		Items:         items,
+	}
 }
 
 func (a *App) refreshLeaderMenuDirectKeys() {
@@ -58,7 +65,7 @@ func (a *App) toggleLeaderMenuDirectKeys() {
 }
 
 // openLeaderMenuStrip opens the bottom function menu when items fit; cancels an active quick filter first.
-func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, userMenu, copyMenu, previewMenu bool, prefix string, onActivate func(int) bool) bool {
+func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, userMenu, copyMenu, previewMenu, gitFilterMenu bool, prefix string, onActivate func(int) bool) bool {
 	if a.inQuickFilterUI() {
 		a.cancelActiveQuickFilter()
 	}
@@ -69,7 +76,7 @@ func (a *App) openLeaderMenuStrip(items []ui.LeaderMenuItem, userMenu, copyMenu,
 		return false
 	}
 	a.leaderMenuOnActivate = onActivate
-	a.openLeaderMenu(userMenu, copyMenu, previewMenu, items)
+	a.openLeaderMenu(userMenu, copyMenu, previewMenu, gitFilterMenu, items)
 	a.leaderMenuHiddenWarning(items, prefix)
 	a.clearTransientMessage()
 	return true
@@ -85,7 +92,7 @@ func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string
 		return
 	}
 	a.leaderMenuActions = actions
-	a.openLeaderMenuStrip(items, userMenu, copyMenu, false, prefix, func(i int) bool {
+	a.openLeaderMenuStrip(items, userMenu, copyMenu, false, false, prefix, func(i int) bool {
 		if i < 0 || i >= len(actions) {
 			return false
 		}
@@ -95,12 +102,27 @@ func (a *App) openLeaderMenuDispatch(items []ui.LeaderMenuItem, actions []string
 
 func (a *App) builtinLeaderMenuOpen() bool {
 	st := a.model.LeaderMenu
-	return st.Open && !st.UserMenu && !st.CopyMenu && !st.PreviewMenu
+	return st.Open && !st.UserMenu && !st.CopyMenu && !st.PreviewMenu && !st.GitFilterMenu
 }
 
 func (a *App) previewLeaderMenuOpen() bool {
 	st := a.model.LeaderMenu
 	return st.Open && st.PreviewMenu
+}
+
+func (a *App) gitFilterMenuOpen() bool {
+	st := a.model.LeaderMenu
+	return st.Open && st.GitFilterMenu
+}
+
+func (a *App) userMenuOpen() bool {
+	st := a.model.LeaderMenu
+	return st.Open && st.UserMenu
+}
+
+func (a *App) copyMenuOpen() bool {
+	st := a.model.LeaderMenu
+	return st.Open && st.CopyMenu
 }
 
 func (a *App) toggleBuiltinLeaderMenu() {
@@ -232,6 +254,11 @@ func (a *App) closeLeaderMenu() {
 	a.model.LeaderMenu = ui.LeaderMenuState{}
 	a.leaderMenuOnActivate = nil
 	a.leaderMenuActions = nil
+}
+
+func (a *App) closeUserMenu() {
+	a.userMenuStack = nil
+	a.closeLeaderMenu()
 }
 
 func (a *App) activateLeaderMenu(i int) bool {

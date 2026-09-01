@@ -582,6 +582,21 @@ func (a *App) handleKey(event *tcell.EventKey) (quit bool, rendered bool) {
 			a.render()
 			return false, true
 		}
+		if resolvedAction == keymap.ActionPanelGitFilterMenu && a.gitFilterMenuOpen() {
+			a.closeLeaderMenu()
+			a.render()
+			return false, true
+		}
+		if resolvedAction == keymap.ActionAppCopyMenu && a.copyMenuOpen() {
+			a.closeLeaderMenu()
+			a.render()
+			return false, true
+		}
+		if resolvedAction == keymap.ActionAppUserMenu && a.userMenuOpen() {
+			a.closeUserMenu()
+			a.render()
+			return false, true
+		}
 		quit := a.handleLeaderMenuKey(event)
 		if !quit {
 			a.render()
@@ -1056,15 +1071,15 @@ func (a *App) dispatch(actionID string) bool {
 		// Keyboard/menu shortcut targets whichever panel is active (left vs right).
 		a.openHistoryDialog(a.model.ActivePanel)
 	case keymap.ActionPanelGitFilterMenu:
-		a.openGitFilterMenu()
+		a.toggleGitFilterMenu()
 	case keymap.ActionPanelFindDialog:
 		a.findCtrl.OpenDialog(a.model.ActivePanel)
 	case keymap.ActionAppUserMenu:
-		a.openUserMenu()
+		a.toggleUserMenu()
 	case keymap.ActionAppLeaderMenu:
 		a.toggleBuiltinLeaderMenu()
 	case keymap.ActionAppCopyMenu:
-		a.openCopyMenu()
+		a.toggleCopyMenu()
 	case keymap.ActionClipboardCopyFileURL,
 		keymap.ActionClipboardCopyDirURL,
 		keymap.ActionClipboardCopyFilename,

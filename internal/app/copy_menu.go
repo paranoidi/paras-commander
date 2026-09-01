@@ -9,7 +9,11 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-func (a *App) openCopyMenu() {
+func (a *App) toggleCopyMenu() {
+	if a.copyMenuOpen() {
+		a.closeLeaderMenu()
+		return
+	}
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
 	}
