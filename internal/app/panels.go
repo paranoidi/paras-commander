@@ -696,7 +696,7 @@ func (a *App) tryDispatchNavigation(actionID string) (handled, quit bool) {
 			break
 		}
 		entry, ok := activePanel.CurrentEntry()
-		if !ok || entry.Type != localfs.EntryDirectory {
+		if !ok || !entry.ResolvesToDir() {
 			break
 		}
 		if err := a.navigatePanelToDirectory(a.inactivePanelID(), entry.Path, ""); err != nil {

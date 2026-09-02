@@ -153,6 +153,49 @@ func TestEntryFromPath(t *testing.T) {
 	}
 }
 
+func TestResolvesToDir(t *testing.T) {
+	dir := t.TempDir()
+	realDir := filepath.Join(dir, "real-dir")
+	mustMkdir(t, realDir)
+	realFile := filepath.Join(dir, "real-file")
+	mustWriteFile(t, realFile)
+
+	dirLink := filepath.Join(dir, "dir-link")
+	if err := os.Symlink(realDir, dirLink); err != nil {
+		t.Fatalf("Symlink(dir) error = %v", err)
+	}
+	fileLink := filepath.Join(dir, "file-link")
+	if err := os.Symlink(realFile, fileLink); err != nil {
+		t.Fatalf("Symlink(file) error = %v", err)
+	}
+	brokenLink := filepath.Join(dir, "broken-link")
+	if err := os.Symlink(filepath.Join(dir, "does-not-exist"), brokenLink); err != nil {
+		t.Fatalf("Symlink(broken) error = %v", err)
+	}
+
+	listing, err := ListDir(dir, DefaultListOptions())
+	if err != nil {
+		t.Fatalf("ListDir() error = %v", err)
+	}
+
+	want := map[string]bool{
+		"real-dir":    true,
+		"real-file":   false,
+		"dir-link":    true,
+		"file-link":   false,
+		"broken-link": false,
+	}
+	got := map[string]bool{}
+	for _, e := range listing.Entries {
+		got[e.Name] = e.ResolvesToDir()
+	}
+	for name, w := range want {
+		if got[name] != w {
+			t.Errorf("ResolvesToDir(%q) = %v, want %v", name, got[name], w)
+		}
+	}
+}
+
 func mustMkdir(t *testing.T, path string) {
 	t.Helper()
 	if err := os.Mkdir(path, 0o755); err != nil {

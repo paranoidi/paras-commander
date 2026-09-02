@@ -669,6 +669,68 @@ func TestEnterDirectoryAndParentPreservesExitedDirectory(t *testing.T) {
 	}
 }
 
+func TestEnterDirectorySymlinkFollowsTarget(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "target")
+	if err := os.Mkdir(target, 0o755); err != nil {
+		t.Fatalf("Mkdir() error = %v", err)
+	}
+	testutil.WriteFile(t, filepath.Join(target, "inside.txt"))
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatalf("Symlink() error = %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if !state.SelectVisibleEntry("link") {
+		t.Fatal("SelectVisibleEntry(link) = false, want true")
+	}
+
+	entered, err := state.Enter(5)
+	if err != nil {
+		t.Fatalf("Enter() error = %v", err)
+	}
+	if !entered {
+		t.Fatal("Enter() entered = false, want true")
+	}
+	if filepath.Base(state.Path.String()) != "link" {
+		t.Fatalf("Path = %q, want link", state.Path)
+	}
+	if !state.SelectVisibleEntry("inside.txt") {
+		t.Fatalf("expected inside.txt to be listed after entering symlink, entries = %v", entryNames(state.Entries))
+	}
+}
+
+func TestEnterBrokenSymlinkIsInert(t *testing.T) {
+	root := t.TempDir()
+	link := filepath.Join(root, "broken")
+	if err := os.Symlink(filepath.Join(root, "missing"), link); err != nil {
+		t.Fatalf("Symlink() error = %v", err)
+	}
+
+	state, err := New(root)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	if !state.SelectVisibleEntry("broken") {
+		t.Fatal("SelectVisibleEntry(broken) = false, want true")
+	}
+
+	entered, err := state.Enter(5)
+	if err != nil {
+		t.Fatalf("Enter() error = %v", err)
+	}
+	if entered {
+		t.Fatal("Enter() entered = true, want false")
+	}
+	if state.Path.String() != root {
+		t.Fatalf("Path = %q, want unchanged %q", state.Path, root)
+	}
+}
+
 func TestHistoryBackwardReentersDirectoryLeftByParent(t *testing.T) {
 	root := t.TempDir()
 	sub := filepath.Join(root, "sub")

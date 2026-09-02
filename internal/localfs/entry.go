@@ -133,6 +133,21 @@ func (e Entry) IsDir() bool {
 	return e.Type == EntryDirectory
 }
 
+// ResolvesToDir reports whether e is a directory, or a symlink whose target is a
+// directory. Unlike IsDir, this stats the filesystem for symlinks — call it only
+// on a user-triggered action (e.g. Enter), never on a per-paint/per-row hot path
+// (see the Dev/AccessDenied fields above for why).
+func (e Entry) ResolvesToDir() bool {
+	if e.Type == EntryDirectory {
+		return true
+	}
+	if e.Type != EntrySymlink {
+		return false
+	}
+	info, err := os.Stat(e.Path)
+	return err == nil && info.IsDir()
+}
+
 func classify(mode fs.FileMode) EntryType {
 	switch {
 	case mode.IsDir():

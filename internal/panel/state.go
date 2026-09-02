@@ -704,7 +704,7 @@ func PruneNestedPaths(paths []string) []string {
 // Enter opens the selected directory. Regular files are intentionally inert.
 func (s *State) Enter(viewportRows int) (bool, error) {
 	entry, ok := s.CurrentEntry()
-	if !ok || entry.Type != localfs.EntryDirectory {
+	if !ok || !entry.ResolvesToDir() {
 		return false, nil
 	}
 	if err := s.NavigateTo(entry.Path, "", viewportRows); err != nil {
