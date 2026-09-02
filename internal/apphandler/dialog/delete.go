@@ -154,5 +154,7 @@ func (h *Handler) ReconcileDeleteDialogScans() {
 }
 
 func (h *Handler) deleteDialogOpen() bool {
-	return h.model.FileDialog.Open && h.model.FileDialog.DialogType == dialog.FileDialogDelete
+	return h.model.FileDialog.Open &&
+		h.model.FileDialog.DialogType == dialog.FileDialogDelete &&
+		!h.model.FileDialog.DeleteDanglingDirs
 }
