@@ -273,7 +273,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	layoutRes := panelColumnLayout(rect, state, display)
 	leftGutter, iconStrip, nameOnlyDisplay := layoutRes.LeftGutter, layoutRes.IconStrip, layoutRes.NameOnlyDisplay
 	showGit, gitStrip, rowTextWidth := layoutRes.ShowGit, layoutRes.GitStrip, layoutRes.RowTextWidth
-	gitStart, iconStart, fullRowCells, diskDenom := layoutRes.GitStart, layoutRes.IconStart, layoutRes.FullRowCells, layoutRes.DiskDenom
+	gitStart, iconStart, diskDenom := layoutRes.GitStart, layoutRes.IconStart, layoutRes.DiskDenom
 
 	metaLayouts, metaTotalW := LayoutMetaColumns(display.MetaColumns)
 	showMeta := len(metaLayouts) > 0
@@ -330,7 +330,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			RowOpts: rowOpts, ListTextWidth: listTextWidth, ListContentStart: listContentStart, NameWidth: nameWidth,
 			LeftGutter: leftGutter, GitStrip: gitStrip, IconStrip: iconStrip,
 			GitStart: gitStart, IconStart: iconStart, ShowGit: showGit,
-			FullRowCells: fullRowCells, DiskDenom: diskDenom,
+			DiskDenom: diskDenom,
 			MetaLayouts: metaLayouts, ShowMetaEffective: showMetaEffective,
 		})
 	}
@@ -377,7 +377,6 @@ type panelColumnLayoutResult struct {
 	RowTextWidth    int
 	GitStart        int
 	IconStart       int
-	FullRowCells    int
 	DiskDenom       int64
 }
 
@@ -399,7 +398,6 @@ type panelRowParams struct {
 	GitStart          int
 	IconStart         int
 	ShowGit           bool
-	FullRowCells      int
 	DiskDenom         int64
 	MetaLayouts       []MetaColumnLayout
 	ShowMetaEffective bool
@@ -412,7 +410,7 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 	listTextWidth, listContentStart, nameWidth := p.ListTextWidth, p.ListContentStart, p.NameWidth
 	leftGutter, gitStrip, iconStrip := p.LeftGutter, p.GitStrip, p.IconStrip
 	showGit := p.ShowGit
-	fullRowCells, diskDenom := p.FullRowCells, p.DiskDenom
+	diskDenom := p.DiskDenom
 	metaLayouts, showMetaEffective := p.MetaLayouts, p.ShowMetaEffective
 	rowOpts := p.RowOpts
 	y := rect.Y + 2 + row
@@ -485,7 +483,8 @@ func drawPanelRow(screen tcell.Screen, row int, p panelRowParams) {
 		listTextWidth = effTextWidth
 		listContentStart += treeGutterWidth
 		if display.ShowDiskUsage && display.Painter != nil && diskDenom > 0 {
-			fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, display.Painter), diskDenom, fullRowCells)
+			barMaxWidth := leftGutter + gitStrip + iconStrip + treeGutterWidth + nameWidth
+			fillCols = diskUsageFillColumns(entryDiskUsageBytes(entry, true, display.Painter), diskDenom, barMaxWidth)
 		}
 	}
 
@@ -653,12 +652,11 @@ func panelColumnLayout(rect Rect, state panel.State, display PanelDisplayConfig)
 	}
 	gitStart := rect.X + 1 + leftGutter
 	iconStart := gitStart + gitStrip
-	fullRowCells := leftGutter + gitStrip + iconStrip + rowTextWidth
 	diskDenom := panelDiskUsageDenom(display.ShowDiskUsage, display.Painter, state.VisibleEntries())
 	return panelColumnLayoutResult{
 		LeftGutter: leftGutter, IconStrip: iconStrip, NameOnlyDisplay: nameOnlyDisplay,
 		ShowGit: showGit, GitStrip: gitStrip, RowTextWidth: rowTextWidth,
-		GitStart: gitStart, IconStart: iconStart, FullRowCells: fullRowCells, DiskDenom: diskDenom,
+		GitStart: gitStart, IconStart: iconStart, DiskDenom: diskDenom,
 	}
 }
 
