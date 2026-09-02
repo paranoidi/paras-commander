@@ -405,7 +405,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"M-h", "C-h"},
 			PreferredKey: "M-h",
 			Keywords:     []string{"history", "picker", "navigate", "alt-h"},
-			LeaderKey:    "H",
+			LeaderKey:    "h",
 		},
 		{
 			ID:           ActionPanelGitFilterMenu,
@@ -437,21 +437,22 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:           ActionPanelPinDialog,
 			Views:        HelpBrowser,
-			Title:        "Pin dialog",
+			Title:        "Pinned items",
 			Section:      "Navigation",
 			DefaultKeys:  []string{"M-n"},
 			PreferredKey: "M-n",
 			Keywords:     []string{"pin", "pinned", "bookmark", "jump", "quick access"},
+			LeaderKey:    "n",
 		},
 		{
 			ID:           ActionPanelRefresh,
 			Views:        HelpBrowser | HelpDedup,
 			Title:        "Refresh panel",
 			Section:      "Navigation",
-			DefaultKeys:  []string{"C-n"},
-			PreferredKey: "C-n",
+			DefaultKeys:  []string{"C-y"},
+			PreferredKey: "C-y",
 			Keywords:     []string{"reload"},
-			LeaderKey:    "n",
+			LeaderKey:    "y",
 		},
 		{
 			ID:           ActionPanelExternalBrowser,
@@ -1432,7 +1433,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"M-l"},
 			PreferredKey: "M-l",
 			Keywords:     []string{"log", "toast", "status", "banner"},
-			LeaderKey:    "L",
+			LeaderKey:    "l",
 		},
 		{
 			ID:          ActionMessagesClose,
@@ -1464,7 +1465,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"M-j"},
 			PreferredKey: "M-j",
 			Keywords:     []string{"queue", "background"},
-			LeaderKey:    "J",
+			LeaderKey:    "j",
 		},
 		{
 			ID:           ActionJobsAnswerBlocker,

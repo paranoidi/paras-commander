@@ -33,8 +33,8 @@ var leaderMenuGroupColumn = map[string]int{
 	LeaderMenuGroupFile:       0,
 	LeaderMenuGroupSelection:  1,
 	LeaderMenuGroupView:       1,
+	LeaderMenuGroupNavigation: 2,
 	LeaderMenuGroupTools:      2,
-	LeaderMenuGroupNavigation: 3,
 	LeaderMenuGroupDisplay:    3,
 	LeaderMenuGroupApp:        3,
 }
@@ -43,8 +43,8 @@ var leaderMenuGroupOrder = []string{
 	LeaderMenuGroupFile,
 	LeaderMenuGroupSelection,
 	LeaderMenuGroupView,
-	LeaderMenuGroupTools,
 	LeaderMenuGroupNavigation,
+	LeaderMenuGroupTools,
 	LeaderMenuGroupDisplay,
 	LeaderMenuGroupApp,
 }
@@ -87,6 +87,7 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionPanelHistoryDialog,
 		ActionPanelRefresh,
 		ActionBookmarkOpen,
+		ActionPanelPinDialog,
 	},
 	LeaderMenuGroupDisplay: {
 		ActionJobsOpen,

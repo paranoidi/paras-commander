@@ -187,7 +187,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Quick view":    "S-F3",
 		"Sort...":       "C-s",
 		"Toggle hidden": "M-.",
-		"Refresh":       "C-n",
+		"Refresh":       "C-y",
 		"Disk usage":    "M-d",
 		"History...":    "M-h",
 	})
@@ -214,7 +214,7 @@ func TestBrowserDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	assertMenuItemKeyLabels(t, cmd, map[string]string{
 		"Bookmarks":    "C-b",
 		"Add bookmark": "C-M-b",
-		"Refresh":      "C-n",
+		"Refresh":      "C-y",
 		"Swap panels":  "C-M-space",
 	})
 	assertMenuItemKeyLabels(t, display, map[string]string{
@@ -309,7 +309,7 @@ func TestDedupDefinitionsFillsMenuKeyLabels(t *testing.T) {
 	}
 	assertMenuItemKeyLabels(t, &defs[0], map[string]string{
 		"Back to file view": "Esc",
-		"Refresh":           "C-n",
+		"Refresh":           "C-y",
 		"Delete marked":     "F8",
 	})
 }

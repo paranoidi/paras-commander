@@ -48,8 +48,8 @@ func TestDefaultLeaderKeysAllowCasePairs(t *testing.T) {
 	if keys[ActionAppShowHelp] != "?" {
 		t.Fatalf("help = %q, want ?", keys[ActionAppShowHelp])
 	}
-	if keys[ActionJobsOpen] != "J" || keys[ActionMessagesOpen] != "L" || keys[ActionCommandsOpen] != "E" {
-		t.Fatalf("views = jobs %q messages %q commands %q, want J / L / E", keys[ActionJobsOpen], keys[ActionMessagesOpen], keys[ActionCommandsOpen])
+	if keys[ActionJobsOpen] != "j" || keys[ActionMessagesOpen] != "l" || keys[ActionCommandsOpen] != "E" {
+		t.Fatalf("views = jobs %q messages %q commands %q, want j / l / E", keys[ActionJobsOpen], keys[ActionMessagesOpen], keys[ActionCommandsOpen])
 	}
 }
 
@@ -118,8 +118,8 @@ func TestBuildLeaderMenuEntriesGroupColumns(t *testing.T) {
 	if colFor(LeaderMenuGroupFile) != 0 || colFor(LeaderMenuGroupSelection) != 1 || colFor(LeaderMenuGroupView) != 1 || colFor(LeaderMenuGroupTools) != 2 {
 		t.Fatalf("columns = file %d selection %d view %d tools %d, want 0 1 1 2", colFor(LeaderMenuGroupFile), colFor(LeaderMenuGroupSelection), colFor(LeaderMenuGroupView), colFor(LeaderMenuGroupTools))
 	}
-	if colFor(LeaderMenuGroupNavigation) != 3 || colFor(LeaderMenuGroupDisplay) != 3 || colFor(LeaderMenuGroupApp) != 3 {
-		t.Fatalf("columns = nav %d display %d app %d, want 3 3 3", colFor(LeaderMenuGroupNavigation), colFor(LeaderMenuGroupDisplay), colFor(LeaderMenuGroupApp))
+	if colFor(LeaderMenuGroupNavigation) != 2 || colFor(LeaderMenuGroupDisplay) != 3 || colFor(LeaderMenuGroupApp) != 3 {
+		t.Fatalf("columns = nav %d display %d app %d, want 2 3 3", colFor(LeaderMenuGroupNavigation), colFor(LeaderMenuGroupDisplay), colFor(LeaderMenuGroupApp))
 	}
 }
 
@@ -188,8 +188,8 @@ func TestDefaultBundleLeaderKey(t *testing.T) {
 			t.Fatalf("invalid entry: %+v", e)
 		}
 	}
-	if actions != 33 {
-		t.Fatalf("action entries = %d, want 33", actions)
+	if actions != 34 {
+		t.Fatalf("action entries = %d, want 34", actions)
 	}
 }
 

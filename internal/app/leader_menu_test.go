@@ -194,13 +194,13 @@ func TestBuiltinLeaderMenuHistoryKey(t *testing.T) {
 	app.model.ViewMode = ui.ViewBrowser
 	app.openBuiltinLeaderMenu()
 
-	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'H', tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
 
 	if app.model.LeaderMenu.Open {
-		t.Fatal("leader menu should close after H")
+		t.Fatal("leader menu should close after h")
 	}
 	if !app.model.HistoryDialog.Open {
-		t.Fatal("expected history dialog after H")
+		t.Fatal("expected history dialog after h")
 	}
 }
 
@@ -258,9 +258,9 @@ func TestBuiltinLeaderMenuJobsKeyOpensJobsView(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.model.ViewMode = ui.ViewBrowser
 	app.openBuiltinLeaderMenu()
-	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'J', tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'j', tcell.ModNone))
 	if app.model.ViewMode != ui.ViewJobs {
-		t.Fatalf("view after J = %v, want jobs", app.model.ViewMode)
+		t.Fatalf("view after j = %v, want jobs", app.model.ViewMode)
 	}
 }
 
@@ -268,9 +268,9 @@ func TestBuiltinLeaderMenuMessagesKeyOpensMessagesView(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.model.ViewMode = ui.ViewBrowser
 	app.openBuiltinLeaderMenu()
-	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'L', tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModNone))
 	if app.model.ViewMode != ui.ViewMessages {
-		t.Fatalf("view after p = %v, want messages", app.model.ViewMode)
+		t.Fatalf("view after l = %v, want messages", app.model.ViewMode)
 	}
 }
 

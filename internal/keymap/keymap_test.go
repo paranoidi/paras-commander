@@ -675,8 +675,8 @@ func TestMenuBindingLabelUsesDefaultsAndPreferredKey(t *testing.T) {
 		t.Fatalf("history = %q, want preferred M-h", got)
 	}
 	var nilMap *Map
-	if got := nilMap.MenuBindingLabel(ActionPanelRefresh); got != "C-n" {
-		t.Fatalf("nil map refresh = %q, want default C-n", got)
+	if got := nilMap.MenuBindingLabel(ActionPanelRefresh); got != "C-y" {
+		t.Fatalf("nil map refresh = %q, want default C-y", got)
 	}
 	if got := m.MenuBindingLabel(ActionFileView); got != "F3" {
 		t.Fatalf("menu file view = %q, want F3", got)
