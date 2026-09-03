@@ -21,6 +21,8 @@ func (s stubMarkedSelectionPainter) DiskScanExcluded(string, bool, uint64, bool,
 	return false
 }
 
+func (s stubMarkedSelectionPainter) IsKnownExcluded(string) bool { return false }
+
 func TestFindMarkedSelectionSizeLabelUsesPathSizeWithoutStat(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
@@ -44,7 +46,7 @@ func TestFindMarkedSelectionSizeLabelUsesPathSizeWithoutStat(t *testing.T) {
 			}
 		},
 	}
-	got, ok := st.MarkedSelectionSizeLabel(false, nil, false, nil, "")
+	got, ok := st.MarkedSelectionSizeLabel(false, nil, "")
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}
@@ -52,7 +54,7 @@ func TestFindMarkedSelectionSizeLabelUsesPathSizeWithoutStat(t *testing.T) {
 		t.Fatalf("label = %q, want %q", got, "2 items (10 B)")
 	}
 	// Cached on second call.
-	got2, ok2 := st.MarkedSelectionSizeLabel(false, nil, false, nil, "")
+	got2, ok2 := st.MarkedSelectionSizeLabel(false, nil, "")
 	if !ok2 || got2 != got {
 		t.Fatalf("cached label = %q, want %q", got2, got)
 	}
@@ -70,7 +72,7 @@ func TestFindMarkedSelectionDerivedCacheInvalidation(t *testing.T) {
 			return false, 0, false
 		},
 	}
-	if _, ok := st.MarkedSelectionSizeLabel(false, nil, false, nil, ""); !ok {
+	if _, ok := st.MarkedSelectionSizeLabel(false, nil, ""); !ok {
 		t.Fatal("expected label")
 	}
 	gen := st.MarkedSelGen()
@@ -93,7 +95,7 @@ func TestFindMarkedSelectionSizeLabelPendingDirs(t *testing.T) {
 		},
 	}
 	working := theme.Default().SymbolWorking()
-	got, ok := st.MarkedSelectionSizeLabel(false, stubMarkedSelectionPainter{}, false, nil, working)
+	got, ok := st.MarkedSelectionSizeLabel(false, stubMarkedSelectionPainter{}, working)
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}
@@ -102,7 +104,7 @@ func TestFindMarkedSelectionSizeLabelPendingDirs(t *testing.T) {
 	}
 	st.InvalidateMarkedSelectionSizeLabel()
 	painter := stubMarkedSelectionPainter{sizes: map[string]int64{dir: 1024}}
-	got2, ok2 := st.MarkedSelectionSizeLabel(false, painter, false, nil, working)
+	got2, ok2 := st.MarkedSelectionSizeLabel(false, painter, working)
 	if !ok2 {
 		t.Fatal("ok2 = false after disk refresh")
 	}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
@@ -187,16 +188,53 @@ func TestApplySelectionAddsMatchesSequentialClear(t *testing.T) {
 	}
 }
 
-func TestBulkApplySelectionAddsMatchesApplySelectionAdds(t *testing.T) {
+// BulkApplySelectionAdds resolves conflicts by path depth (shallowest directory processed
+// first), not by the sequential "last add wins" rule ApplySelectionAdds uses — the two only
+// agree when the batch happens to already be walk-ordered (every directory before its own
+// descendants). This is why Bulk no longer matches Apply for every input order: it trades
+// order-dependence for O(n log n) batch performance, which is safe because a bulk call
+// represents one atomic "mark all these paths" action, not a sequence of distinct user actions
+// (interactive single-path toggling keeps its own "last action wins" semantics unchanged, via
+// State.ToggleSelection / resolveSelectionConflicts).
+func TestBulkApplySelectionAddsOrderIndependent(t *testing.T) {
 	_, parent, child, file := testSelectionConflictDirs(t)
 	isDir := testExistingIsDir(t, map[string]bool{
 		filepath.Clean(parent): true,
 		filepath.Clean(child):  true,
 	})
+	// For each batch, only the deepest path in the ancestor/descendant chain should survive,
+	// regardless of the order the batch is given in: shallower dirs are always processed
+	// first (depth sort) and then evicted by clearSelectionDirAncestors once their
+	// descendant is added.
+	cases := []struct {
+		order []string
+		want  string
+	}{
+		{[]string{file, parent}, file},
+		{[]string{parent, file}, file},
+		{[]string{child, parent}, child},
+		{[]string{parent, child, file}, file},
+	}
+	for _, tc := range cases {
+		want := map[string]bool{filepath.Clean(tc.want): true}
+		got := make(map[string]bool)
+		BulkApplySelectionAdds(got, tc.order, isDir)
+		if len(got) != len(want) || !got[filepath.Clean(tc.want)] {
+			t.Fatalf("order %v: got %v want %v", tc.order, got, want)
+		}
+	}
+}
+
+func TestBulkApplySelectionAddsWalkOrderedMatchesApplySelectionAdds(t *testing.T) {
+	_, parent, child, file := testSelectionConflictDirs(t)
+	isDir := testExistingIsDir(t, map[string]bool{
+		filepath.Clean(parent): true,
+		filepath.Clean(child):  true,
+	})
+	// Walk-ordered batches (parent before descendant, matching how SelectGroup feeds it from
+	// a listing/tree traversal) are exactly where Bulk and Apply are guaranteed to agree.
 	orders := [][]string{
-		{file, parent},
 		{parent, file},
-		{child, parent},
 		{parent, child, file},
 	}
 	for _, order := range orders {
@@ -214,6 +252,54 @@ func TestBulkApplySelectionAddsMatchesApplySelectionAdds(t *testing.T) {
 				t.Fatalf("order %v: unexpected %q in %v", order, path, got)
 			}
 		}
+	}
+}
+
+func TestBulkApplySelectionAddsClearsPreexistingDescendants(t *testing.T) {
+	_, parent, child, file := testSelectionConflictDirs(t)
+	isDir := testExistingIsDir(t, map[string]bool{
+		filepath.Clean(parent): true,
+		filepath.Clean(child):  true,
+	})
+	// A pre-existing selection contains a deep descendant; a bulk batch then adds a shallower
+	// covering directory. The descendant must be evicted even though it was never part of the
+	// batch itself (Phase 1 of applySelectionAddsBulk).
+	selected := map[string]bool{filepath.Clean(file): true}
+	if !BulkApplySelectionAdds(selected, []string{parent}, isDir) {
+		t.Fatal("expected conflicts removed")
+	}
+	if selected[filepath.Clean(file)] {
+		t.Fatal("preexisting descendant file should be removed when covering parent dir is bulk-added")
+	}
+	if !selected[filepath.Clean(parent)] {
+		t.Fatal("parent dir should be selected")
+	}
+}
+
+func TestBulkApplySelectionAddsLargeFlatListingIsFast(t *testing.T) {
+	root := t.TempDir()
+	const n = 8000
+	paths := make([]string, n)
+	pathIsDir := make(map[string]bool, n)
+	for i := range n {
+		p := filepath.Join(root, fmt.Sprintf("dir_%05d", i))
+		paths[i] = p
+		pathIsDir[filepath.Clean(p)] = true
+	}
+	isDir := func(path string) bool { return pathIsDir[filepath.Clean(path)] }
+	selected := make(map[string]bool, n)
+	done := make(chan struct{})
+	go func() {
+		BulkApplySelectionAdds(selected, paths, isDir)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("BulkApplySelectionAdds took too long on a large flat listing (likely quadratic)")
+	}
+	if len(selected) != n {
+		t.Fatalf("got %d selected, want %d", len(selected), n)
 	}
 }
 

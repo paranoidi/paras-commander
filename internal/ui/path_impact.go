@@ -11,18 +11,10 @@ func PathsDeleteImpact(
 	pruned []string,
 	byPath map[string]localfs.Entry,
 	remote bool,
-	listingDevice uint64,
-	listingDeviceValid bool,
 	painter DiskUsagePainter,
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
 ) (files, bytes int64, pending bool) {
 	for _, path := range pruned {
-		f, b, pend := pathImpact(
-			path, byPath, remote,
-			listingDevice, listingDeviceValid,
-			painter, descendIntoMountPoints, goduIgnore,
-		)
+		f, b, pend := pathImpact(path, byPath, remote, painter)
 		files += f
 		bytes += b
 		if pend {
@@ -49,11 +41,7 @@ func pathImpact(
 	path string,
 	byPath map[string]localfs.Entry,
 	remote bool,
-	listingDevice uint64,
-	listingDeviceValid bool,
 	painter DiskUsagePainter,
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
 ) (files, bytes int64, pending bool) {
 	entry, found := byPath[path]
 	if !found {
@@ -79,7 +67,11 @@ func pathImpact(
 		}
 		return fc, sz, false
 	}
-	if painter.DiskScanExcluded(path, descendIntoMountPoints, listingDevice, listingDeviceValid, goduIgnore) {
+	// IsKnownExcluded only, not DiskScanExcluded: this runs once per selected/pruned root here,
+	// so a live Stat fallback would reintroduce a synchronous per-path filesystem call on every
+	// render for a large selection. A background reconcile pass (see diskusage.MarkExcluded)
+	// populates the excluded cache; until it does, an excluded path just stays "pending".
+	if painter.IsKnownExcluded(path) {
 		return 0, 0, false
 	}
 	return 0, 0, true

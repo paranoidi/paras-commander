@@ -2,6 +2,7 @@ package panel
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -134,7 +135,82 @@ func BulkApplySelectionAdds(selected map[string]bool, paths []string, isDir func
 		}
 		return false
 	}
-	return ApplySelectionAdds(selected, paths, isDir)
+	return applySelectionAddsBulk(selected, paths, isDir)
+}
+
+// applySelectionAddsBulk marks a batch of paths using the same conflict rules as repeated
+// single-path adds (ClearSelectionConflicts), but in O((n+m)*log(m) + (n+m)*depth) instead of
+// the O(n^2) cost of resolving conflicts one path at a time against the whole selection. Correct
+// for any input order and any pre-existing selection:
+//
+//   - Phase 1 clears existing selected paths that are strict descendants of a directory being
+//     added, in one pass over the pre-existing selection (independent of batch size).
+//   - Phase 2 sorts the batch by depth ascending so every directory is processed before its own
+//     descendants regardless of the caller's input order, then adds it same as
+//     BulkApplySelectionAddsWalkOrder (ancestor-clearing on each add already handles the reverse
+//     direction: a newly added path evicts an already-selected covering ancestor directory).
+func applySelectionAddsBulk(selected map[string]bool, paths []string, isDir func(string) bool) bool {
+	if len(paths) == 0 {
+		return false
+	}
+	if isDir == nil {
+		isDir = func(string) bool { return false }
+	}
+	cleaned := make([]string, 0, len(paths))
+	newDirSet := make(map[string]bool)
+	for _, path := range paths {
+		path = cleanPathString(path)
+		if path == "" {
+			continue
+		}
+		cleaned = append(cleaned, path)
+		if isDir(path) {
+			newDirSet[path] = true
+		}
+	}
+	if len(cleaned) == 0 {
+		return false
+	}
+	var removed bool
+	if len(newDirSet) > 0 && len(selected) > 0 {
+		for p := range selected {
+			if pathHasAncestorIn(p, newDirSet) {
+				delete(selected, p)
+				removed = true
+			}
+		}
+	}
+	sort.SliceStable(cleaned, func(i, j int) bool {
+		return pathDepth(cleaned[i]) < pathDepth(cleaned[j])
+	})
+	for _, path := range cleaned {
+		if clearSelectionDirAncestors(selected, path, isDir) {
+			removed = true
+		}
+		selected[path] = true
+	}
+	return removed
+}
+
+// pathHasAncestorIn reports whether any strict ancestor of path is present in set.
+func pathHasAncestorIn(path string, set map[string]bool) bool {
+	if len(set) == 0 {
+		return false
+	}
+	loc, err := pathloc.Parse(path)
+	if err != nil {
+		return false
+	}
+	for {
+		parent := loc.Parent()
+		if parent.Equal(loc) || parent.IsZero() {
+			return false
+		}
+		if set[cleanPathString(parent.String())] {
+			return true
+		}
+		loc = parent
+	}
 }
 
 // BulkApplySelectionAddsWalkOrder marks paths assuming parents appear before descendants

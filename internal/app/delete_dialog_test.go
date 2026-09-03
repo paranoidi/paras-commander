@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
+	dialogctrl "github.com/paranoidi/paras-commander/internal/apphandler/dialog"
 	"github.com/paranoidi/paras-commander/internal/diskusage"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/ops"
@@ -93,8 +95,29 @@ func TestDeleteDialogSummaryRefreshesWhenScanNoLongerNeeded(t *testing.T) {
 		FocusedField:  1,
 	}
 	app.dialogCtrl.ReconcileDeleteDialogScans()
+	waitForDeleteDialogScanApplied(t, app, screen)
 	if got := app.model.FileDialog.DeleteSummary; got == "0 files (0 B) stale" {
 		t.Fatalf("reconcile should refresh summary from cache, still %q", got)
+	}
+}
+
+// waitForDeleteDialogScanApplied drains the debounced background ReconcileDeleteDialogScans
+// result (posted as a dialogctrl.DeleteDialogScanNeedPayload interrupt event) so
+// ApplyDeleteDialogScanNeed runs before the test inspects the delete dialog summary.
+func waitForDeleteDialogScanApplied(t *testing.T, app *App, screen tcell.SimulationScreen) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		for screen.HasPendingEvent() {
+			ev := screen.PollEvent()
+			if interruptEv, ok := ev.(*tcell.EventInterrupt); ok {
+				app.handleInterruptPayload(interruptEv.Data())
+				if _, ok := interruptEv.Data().(dialogctrl.DeleteDialogScanNeedPayload); ok {
+					return
+				}
+			}
+		}
+		time.Sleep(2 * time.Millisecond)
 	}
 }
 
@@ -152,6 +175,11 @@ func TestDeleteDialogSummaryIgnoresStaleCacheAfterFilesMovedOut(t *testing.T) {
 	for time.Now().Before(deadline) {
 		app.pollDiskUsageUpdates()
 		app.dialogCtrl.ReconcileDeleteDialogScans()
+		for screen.HasPendingEvent() {
+			if ev, ok := screen.PollEvent().(*tcell.EventInterrupt); ok {
+				app.handleInterruptPayload(ev.Data())
+			}
+		}
 		if !app.diskUsageScanBusy() {
 			if n, ok := app.disk.engine.FileCount(sub); ok && n == 0 {
 				break

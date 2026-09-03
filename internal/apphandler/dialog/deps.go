@@ -36,6 +36,16 @@ type PathPickerValidatePayload struct{}
 // path validation.
 type TransferDestValidatePayload struct{}
 
+// DeleteDialogScanNeedPayload carries the result of a background diskusage.DirectoriesNeedingScan
+// pass (the per-directory mount-exclusion stat check) for the open delete confirmation dialog
+// back to the main goroutine. Gen/Path identify the panel selection state the scan was computed
+// from; if that's changed by the time this is applied, it's discarded as stale.
+type DeleteDialogScanNeedPayload struct {
+	Need []string
+	Gen  uint64
+	Path string
+}
+
 // Deps wires the dialog handler at app construction.
 type Deps struct {
 	Host   Host
@@ -138,6 +148,12 @@ type Handler struct {
 	deleteDialogSelGen      uint64
 	deleteDialogPanelPath   string
 	deleteDialogPrunedPaths []string
+	// deleteDialogScanArmedGen / deleteDialogScanArmedPath record what ReconcileDeleteDialogScans
+	// last armed deleteDialogScanDebounce for, so repeated calls with an unchanged source (e.g.
+	// once per event while the dialog just sits open) don't keep resetting the debounce timer
+	// and postponing the scan indefinitely.
+	deleteDialogScanArmedGen  uint64
+	deleteDialogScanArmedPath string
 
 	// pendingFocus defers post-job select-and-scroll (duplicate focus-after, or copy/move into
 	// the other panel) until the target entry appears in the panel's listing; retried from
@@ -155,6 +171,10 @@ type Handler struct {
 	// so Run() re-renders once the check lands.
 	pathPickerValidate   sched.Debouncer
 	transferDestValidate sched.Debouncer
+	// deleteDialogScanDebounce defers the delete dialog's per-directory mount-exclusion stat
+	// check (which of its directories still need a background disk-usage scan) to a background
+	// goroutine instead of running it inline in ReconcileDeleteDialogScans on the main goroutine.
+	deleteDialogScanDebounce sched.Debouncer
 }
 
 // New constructs a Handler.

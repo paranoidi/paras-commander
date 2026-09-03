@@ -112,6 +112,22 @@ type syncFollowNavFlushPayload struct {
 	gen uint64
 }
 
+// selectionScanNeedPayload carries the result of a background diskusage.DirectoriesNeedingScan
+// pass (the per-directory mount-exclusion stat check) for one panel's selection back to the main
+// goroutine. Gen is the panel's SelectionDerivedGen() at dispatch time; if the selection has
+// changed again by the time this is applied, it's discarded as stale.
+type selectionScanNeedPayload struct {
+	PanelID int
+	Need    []string
+	Gen     uint64
+}
+
+// findDialogSelectionScanNeedPayload is the find-dialog equivalent of selectionScanNeedPayload.
+type findDialogSelectionScanNeedPayload struct {
+	Need []string
+	Gen  uint64
+}
+
 // App owns lifecycle, state, and input dispatch.
 type App struct {
 	screen              tcell.Screen
@@ -148,10 +164,16 @@ type App struct {
 	// selectionSizeScanGen / selectionSizeScanPath skip reconcile work when selection-derived input is unchanged.
 	selectionSizeScanGen  [2]uint64
 	selectionSizeScanPath [2]string
+	// selectionSizeScanDebounce defers the per-directory mount-exclusion stat check (which
+	// selected directories still need a background disk-usage scan) to a background goroutine
+	// instead of running it inline in reconcileSelectionSizeScans on the main goroutine.
+	selectionSizeScanDebounce [2]sched.Debouncer
 	// findDialogSelectionScanFP is the last enqueued directory set fingerprint for find-dialog selection-size scans.
 	findDialogSelectionScanFP string
 	// findDialogSelectionScanGen skips reconcile work when marked-selection derived input is unchanged.
 	findDialogSelectionScanGen uint64
+	// findDialogSelectionScanDebounce is the find-dialog equivalent of selectionSizeScanDebounce.
+	findDialogSelectionScanDebounce sched.Debouncer
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
 	messageExpiryGen   atomic.Uint64
@@ -901,6 +923,10 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 	case dialogctrl.TransferDestValidatePayload:
 		a.render()
 		out.didRender = true
+	case dialogctrl.DeleteDialogScanNeedPayload:
+		a.dialogCtrl.ApplyDeleteDialogScanNeed(d)
+		a.renderDeleteDialogUpdate()
+		out.didRender = true
 	case jobsctrl.JobBlockerNextPayload:
 		if a.jobsCtrl.ApplyBlockerNextPayload(d) {
 			a.render()
@@ -911,6 +937,10 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			a.render()
 			out.didRender = true
 		}
+	case selectionScanNeedPayload:
+		a.applySelectionScanNeed(d)
+	case findDialogSelectionScanNeedPayload:
+		a.applyFindDialogSelectionScanNeed(d)
 	case cursorNameHintFlushPayload:
 		a.render()
 		out.didRender = true

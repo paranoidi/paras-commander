@@ -70,6 +70,8 @@ func (stubSelectionSizePainter) DiskScanExcluded(string, bool, uint64, bool, fun
 	return false
 }
 
+func (stubSelectionSizePainter) IsKnownExcluded(string) bool { return false }
+
 func TestPanelSelectionSizePaddedAndCenterLayout(t *testing.T) {
 	t.Parallel()
 	if got := panelSelectionSizePadded("3 items (1 KiB)"); got != " 3 items (1 KiB) " {
@@ -109,7 +111,7 @@ func TestSelectionSizeLabelFilesOnly(t *testing.T) {
 			"/tmp/b.txt": true,
 		},
 	}
-	got, ok := SelectionSizeLabel(&state, false, nil, false, nil, "")
+	got, ok := SelectionSizeLabel(&state, false, nil, "")
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}
@@ -133,7 +135,7 @@ func TestMarkedPathsSelectionSizeLabelFiles(t *testing.T) {
 		filepath.Clean(a): true,
 		filepath.Clean(b): true,
 	}
-	got, ok := MarkedPathsSelectionSizeLabel(marked, false, 0, false, nil, false, nil, "")
+	got, ok := MarkedPathsSelectionSizeLabel(marked, false, nil, "")
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}
@@ -154,7 +156,7 @@ func TestSelectionSizeLabelPendingWorkingGlyph(t *testing.T) {
 	}
 	painter := stubSelectionSizePainter{sizes: map[string]int64{}}
 	working := theme.Default().SymbolWorking()
-	got, ok := SelectionSizeLabel(&state, false, painter, false, nil, working)
+	got, ok := SelectionSizeLabel(&state, false, painter, working)
 	if !ok {
 		t.Fatal("ok = false, want true")
 	}

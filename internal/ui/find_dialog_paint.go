@@ -20,20 +20,12 @@ func FindDialogListRows(layout Layout, showSearchSelectionsOption bool) int {
 func FindDialogSelectionSizePadded(
 	state *dialog.FindDialogState,
 	painter DiskUsagePainter,
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
 	workingSym string,
 ) string {
 	if state == nil {
 		return ""
 	}
-	raw, ok := state.MarkedSelectionSizeLabel(
-		false,
-		painter,
-		descendIntoMountPoints,
-		goduIgnore,
-		workingSym,
-	)
+	raw, ok := state.MarkedSelectionSizeLabel(false, painter, workingSym)
 	if !ok {
 		return ""
 	}
@@ -49,15 +41,13 @@ func PaintFindDialog(
 	showIcons bool,
 	scrollbarStyle uiscrollbar.Style,
 	painter DiskUsagePainter,
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
 	pinnedItems []PinnedItem,
 	jobMarks []JobPathMark,
 ) {
 	if state == nil || !state.Open {
 		return
 	}
-	selectionLabel := FindDialogSelectionSizePadded(state, painter, descendIntoMountPoints, goduIgnore, styles.SymbolWorking())
+	selectionLabel := FindDialogSelectionSizePadded(state, painter, styles.SymbolWorking())
 	ctx := dialog.DialogRenderContext{
 		Styles:         styles,
 		ShowIcons:      showIcons,

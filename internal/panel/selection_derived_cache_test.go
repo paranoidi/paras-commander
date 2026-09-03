@@ -166,6 +166,39 @@ func TestBulkAddSelectionsRemovesDirAncestorForFile(t *testing.T) {
 	}
 }
 
+// TestBulkAddSelectionsNestedParentDirsOutOfOrder covers SelectDirs/ParentDirsOf feeding a
+// batch of parent directories at different depths (e.g. selected files at "/a/b/file" and
+// "/a/b/c/file" promote to parent dirs "/a/b" and "/a/b/c" — an ancestor/descendant pair) in
+// an order that is not walk-ordered (deepest first). The established system rule (see
+// TestClearSelectionConflictsParentDirThenChild) is that the deeper, more specific directory
+// wins over a shallower covering one; BulkAddSelections must resolve to that same outcome
+// regardless of batch order, not just when the batch happens to already be walk-ordered.
+func TestBulkAddSelectionsNestedParentDirsOutOfOrder(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	parent := filepath.Join(root, "b")
+	child := filepath.Join(parent, "c")
+	pathIsDir := map[string]bool{
+		filepath.Clean(parent): true,
+		filepath.Clean(child):  true,
+	}
+	isDir := func(path string) bool { return pathIsDir[filepath.Clean(path)] }
+	s := &State{Path: pathloc.MustParse(root)}
+	// Deepest path given first, deliberately violating walk order.
+	if !s.BulkAddSelections([]string{child, parent}, isDir) {
+		t.Fatal("expected conflict removal for nested dirs")
+	}
+	if s.SelectedPaths[filepath.Clean(parent)] {
+		t.Fatal("shallower parent dir should be removed, superseded by the more specific child dir")
+	}
+	if !s.SelectedPaths[filepath.Clean(child)] {
+		t.Fatal("child dir should be selected")
+	}
+	if len(s.SelectedPaths) != 1 {
+		t.Fatalf("selected = %v, want only child", s.SelectedPaths)
+	}
+}
+
 func BenchmarkBulkAddSelections1500Files(b *testing.B) {
 	root := b.TempDir()
 	paths := make([]string, 1500)

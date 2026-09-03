@@ -1863,6 +1863,17 @@ func TestDeleteDialogWarningPluralDirectories(t *testing.T) {
 	if len(app.model.FileDialog.DeleteEntries) != 2 || app.model.FileDialog.DeleteEntries[0].Name != "a" || app.model.FileDialog.DeleteEntries[1].Name != "b" {
 		t.Fatalf("DeleteEntries = %v, want [a b]", app.model.FileDialog.DeleteEntries)
 	}
+	// ReconcileDeleteDialogScans computes what needs scanning on a debounced background
+	// goroutine; drain its posted result before checking the enqueued fingerprint.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) && app.dialogCtrl.DeleteDialogScanFP() == "" {
+		for screen.HasPendingEvent() {
+			if ev, ok := screen.PollEvent().(*tcell.EventInterrupt); ok {
+				app.handleInterruptPayload(ev.Data())
+			}
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
 	if app.dialogCtrl.DeleteDialogScanFP() == "" {
 		t.Fatal("expected delete dialog scan fingerprint after opening")
 	}

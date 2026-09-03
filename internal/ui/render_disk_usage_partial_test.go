@@ -28,6 +28,7 @@ func (partialDiskUsagePainter) DiskScanBusy() bool               { return true }
 func (partialDiskUsagePainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {
 	return false
 }
+func (partialDiskUsagePainter) IsKnownExcluded(string) bool { return false }
 
 func TestPaintDiskUsageBrowserPanelsOnlyScopedPanel(t *testing.T) {
 	t.Parallel()

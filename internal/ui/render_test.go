@@ -214,6 +214,8 @@ func (testDiskUsageMap) DiskScanExcluded(string, bool, uint64, bool, func(string
 	return false
 }
 
+func (testDiskUsageMap) IsKnownExcluded(string) bool { return false }
+
 func TestFormatEntryDirectorySizeUsesDiskUsageCache(t *testing.T) {
 	const rowW = 50
 	nameWidth := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)

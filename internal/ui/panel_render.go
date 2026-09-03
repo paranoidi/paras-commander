@@ -179,8 +179,6 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			&state,
 			state.Path.IsRemote(),
 			display.Painter,
-			display.DiskUsageDescendIntoMountPoints,
-			display.DiskUsageGoduIgnore,
 			panelStyle.Styles.SymbolWorking(),
 		)
 	}

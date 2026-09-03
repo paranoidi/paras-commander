@@ -1,0 +1,6 @@
+/data
+/mount
+/config.json
+/slowfs.log
+/.slowfs.pid
+/timingcheck/timingcheck

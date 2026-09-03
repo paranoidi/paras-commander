@@ -46,8 +46,6 @@ func drawSelectionsStrip(
 	styles := opts.Styles
 	userHomeDir := opts.UserHomeDir
 	painter := opts.Painter
-	diskUsageDescendIntoMountPoints := opts.DiskUsageDescendIntoMountPoints
-	diskUsageGoduIgnore := opts.DiskUsageGoduIgnore
 	showSelectionSizeOnBottom := opts.ShowSelectionSizeOnBottom
 	scrollbarStyle := opts.ScrollbarStyle
 	scrollbarShowInactive := opts.ScrollbarShowInactive
@@ -80,8 +78,6 @@ func drawSelectionsStrip(
 			&state,
 			state.Path.IsRemote(),
 			painter,
-			diskUsageDescendIntoMountPoints,
-			diskUsageGoduIgnore,
 			styles.SymbolWorking(),
 		); ok {
 			endStyle := styles.PanelBottomIndicator(theme.PanelBottomIndicatorKeySelectionSize, stripFocused, chromeBlocked)

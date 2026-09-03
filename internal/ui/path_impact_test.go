@@ -27,7 +27,7 @@ func TestPathsDeleteImpactSingleFile(t *testing.T) {
 	byPath := map[string]localfs.Entry{
 		path: {Path: path, Type: localfs.EntryFile, Size: 100},
 	}
-	files, bytes, pending := PathsDeleteImpact([]string{path}, byPath, false, 0, false, nil, false, nil)
+	files, bytes, pending := PathsDeleteImpact([]string{path}, byPath, false, nil)
 	if files != 1 || bytes != 100 || pending {
 		t.Fatalf("got files=%d bytes=%d pending=%v", files, bytes, pending)
 	}
@@ -43,7 +43,7 @@ func TestPathsDeleteImpactCachedDirectory(t *testing.T) {
 		sizes:      map[string]int64{dir: 5000},
 		fileCounts: map[string]int64{dir: 42},
 	}
-	files, bytes, pending := PathsDeleteImpact([]string{dir}, byPath, false, 0, false, painter, false, nil)
+	files, bytes, pending := PathsDeleteImpact([]string{dir}, byPath, false, painter)
 	if files != 42 || bytes != 5000 || pending {
 		t.Fatalf("got files=%d bytes=%d pending=%v", files, bytes, pending)
 	}
@@ -56,7 +56,7 @@ func TestPathsDeleteImpactPendingDirectory(t *testing.T) {
 		dir: {Path: dir, Type: localfs.EntryDirectory},
 	}
 	painter := stubSelectionSizePainter{sizes: map[string]int64{}}
-	files, bytes, pending := PathsDeleteImpact([]string{dir}, byPath, false, 0, false, painter, false, nil)
+	files, bytes, pending := PathsDeleteImpact([]string{dir}, byPath, false, painter)
 	if files != 0 || bytes != 0 || !pending {
 		t.Fatalf("got files=%d bytes=%d pending=%v", files, bytes, pending)
 	}
@@ -68,7 +68,7 @@ func TestPathsDeleteImpactRemoteDirectory(t *testing.T) {
 	byPath := map[string]localfs.Entry{
 		dir: {Path: dir, Type: localfs.EntryDirectory},
 	}
-	files, bytes, pending := PathsDeleteImpact([]string{dir}, byPath, true, 0, false, nil, false, nil)
+	files, bytes, pending := PathsDeleteImpact([]string{dir}, byPath, true, nil)
 	if files != 0 || bytes != 0 || pending {
 		t.Fatalf("remote dir: files=%d bytes=%d pending=%v", files, bytes, pending)
 	}

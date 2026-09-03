@@ -20,6 +20,7 @@ func (panicDiskScanPainter) DiskScanBusy() bool               { return false }
 func (panicDiskScanPainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {
 	panic("DiskScanExcluded must not run when disk-usage metering is off")
 }
+func (panicDiskScanPainter) IsKnownExcluded(string) bool { return false }
 
 func TestDrawPanelSkipsDiskScanExcludedWhenMeteringOff(t *testing.T) {
 	t.Parallel()

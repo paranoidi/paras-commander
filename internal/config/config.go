@@ -370,6 +370,10 @@ type UIConfig struct {
 	// PathPickerValidateDelayMS waits after the filter changes before checking whether the typed path exists.
 	// Default DefaultPathPickerValidateDelayMS. Use 0 to validate on the next scheduler tick (still not per-key synchronous).
 	PathPickerValidateDelayMS int `toml:"path_picker_validate_delay_ms"`
+	// SelectionSizeScanDebounceMS waits after the selection changes before scanning selected
+	// directories for background disk-usage size (stats each one to check mount boundaries).
+	// Default DefaultSelectionSizeScanDebounceMS. Use 0 to run on the next scheduler tick.
+	SelectionSizeScanDebounceMS int `toml:"selection_size_scan_debounce_ms"`
 	// SelectionsPanelMaxRows caps visible rows in the cross-directory selections strip (0 = default 5).
 	SelectionsPanelMaxRows int `toml:"selections_panel_max_rows"`
 	// SelectionsPanelActivePercent is the strip share of panel height when focused in side-by-side
@@ -565,6 +569,7 @@ func Default() Config {
 			KeyRepeatDebounceMS:          DefaultKeyRepeatDebounceMS,
 			ImagePreviewDebounceMS:       DefaultImagePreviewDebounceMS,
 			PathPickerValidateDelayMS:    DefaultPathPickerValidateDelayMS,
+			SelectionSizeScanDebounceMS:  DefaultSelectionSizeScanDebounceMS,
 			SelectionsPanelMaxRows:       0,
 			SelectionsPanelActivePercent: DefaultSelectionsPanelActivePercent,
 			Zoom: UIZoomConfig{
@@ -1045,6 +1050,12 @@ func (c *Config) validateUI(builtin *Config) {
 	const pathPickerValidateMaxMS = 30_000
 	if c.UI.PathPickerValidateDelayMS > pathPickerValidateMaxMS {
 		c.UI.PathPickerValidateDelayMS = pathPickerValidateMaxMS
+	}
+	if c.UI.SelectionSizeScanDebounceMS < 0 {
+		c.UI.SelectionSizeScanDebounceMS = builtin.UI.SelectionSizeScanDebounceMS
+	}
+	if c.UI.SelectionSizeScanDebounceMS > pathPickerValidateMaxMS {
+		c.UI.SelectionSizeScanDebounceMS = pathPickerValidateMaxMS
 	}
 	if c.UI.KeyRepeatDebounceMS < 0 {
 		c.UI.KeyRepeatDebounceMS = builtin.UI.KeyRepeatDebounceMS

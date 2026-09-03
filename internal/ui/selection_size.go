@@ -91,8 +91,6 @@ func SelectionSizeLabel(
 	state *panel.State,
 	remote bool,
 	painter DiskUsagePainter,
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
 	workingSym string,
 ) (label string, ok bool) {
 	if state == nil {
@@ -115,11 +113,7 @@ func SelectionSizeLabel(
 			if e, ok := state.ListingEntryAt(p); ok && e.Type != localfs.EntryDirectory {
 				continue
 			}
-			_, b, needScan := pathImpact(
-				p, byPath, remote,
-				state.ListingDevice, state.ListingDeviceValid,
-				painter, descendIntoMountPoints, goduIgnore,
-			)
+			_, b, needScan := pathImpact(p, byPath, remote, painter)
 			total += b
 			if needScan {
 				pending = true
@@ -136,11 +130,7 @@ func SelectionSizeLabel(
 			if _, ok := state.ListingEntryAt(p); ok {
 				continue
 			}
-			_, b, needScan := pathImpact(
-				p, byPath, remote,
-				state.ListingDevice, state.ListingDeviceValid,
-				painter, descendIntoMountPoints, goduIgnore,
-			)
+			_, b, needScan := pathImpact(p, byPath, remote, painter)
 			total += b
 			if needScan {
 				pending = true
@@ -163,11 +153,7 @@ func SelectionSizeLabel(
 func MarkedPathsSelectionSizeLabel(
 	marked map[string]bool,
 	remote bool,
-	listingDevice uint64,
-	listingDeviceValid bool,
 	painter DiskUsagePainter,
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
 	workingSym string,
 ) (label string, ok bool) {
 	if len(marked) == 0 {
@@ -188,11 +174,7 @@ func MarkedPathsSelectionSizeLabel(
 	var total int64
 	pending := false
 	for _, p := range pruned {
-		_, b, needScan := pathImpact(
-			p, nil, remote,
-			listingDevice, listingDeviceValid,
-			painter, descendIntoMountPoints, goduIgnore,
-		)
+		_, b, needScan := pathImpact(p, nil, remote, painter)
 		total += b
 		if needScan {
 			pending = true

@@ -31,6 +31,8 @@ func (fixedSizeDiskPainter) DiskScanExcluded(string, bool, uint64, bool, func(st
 	return false
 }
 
+func (fixedSizeDiskPainter) IsKnownExcluded(string) bool { return false }
+
 func TestSubtreeSelectionMarkUsesDiskUsageBarBackground(t *testing.T) {
 	t.Parallel()
 	screen := tcell.NewSimulationScreen("UTF-8")

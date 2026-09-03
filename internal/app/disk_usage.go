@@ -84,10 +84,20 @@ drained:
 				a.armSpinnerRedrawTimer()
 				return
 			}
+			// paintDiskUsageBrowserUpdate only repaints panels showPanelDiskUsage considers in
+			// scope (the explicit Disk Usage view). A plain selection/delete-dialog background
+			// scan never is, so without this the periodic redraw heartbeat (armSpinnerRedrawTimer
+			// -> spinnerTickPayload -> Run()'s pollDiskUsageUpdates call) depends entirely on
+			// Run()'s own end-of-loop menuBarSpinnerBusy check re-arming it one hop later, which
+			// only happens if something already reached that iteration. Arm it here directly so a
+			// selection-size scan's progressive size updates keep repainting via a.render() below
+			// without waiting on unrelated input.
+			a.armSpinnerRedrawTimer()
 		}
 		a.render()
 		return
 	}
+	a.armSpinnerRedrawTimer()
 	a.scheduleDiskUsageRedrawDebounced()
 }
 

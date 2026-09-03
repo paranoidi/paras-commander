@@ -23,7 +23,11 @@ type findMarkedSelCache struct {
 // MarkedSelectionSizePainter supplies directory subtree sizes for the find-dialog selection indicator.
 type MarkedSelectionSizePainter interface {
 	ByteSize(absPath string) (int64, bool)
+	// DiskScanExcluded Stat's absPath — avoid calling this per path in a loop; use IsKnownExcluded.
 	DiskScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore func(string) bool) bool
+	// IsKnownExcluded reports whether a background pass already determined absPath is excluded,
+	// with no filesystem access. False just means "not known yet", not "not excluded".
+	IsKnownExcluded(absPath string) bool
 }
 
 // MarkedSelGen returns the marked-selection derived-cache generation.
@@ -58,8 +62,6 @@ func (s *FindDialogState) PrunedMarkedRoots() []string {
 func (s *FindDialogState) MarkedSelectionSizeLabel(
 	remote bool,
 	painter MarkedSelectionSizePainter,
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
 	workingSym string,
 ) (label string, ok bool) {
 	if len(s.MarkedPaths) == 0 {
@@ -72,7 +74,7 @@ func (s *FindDialogState) MarkedSelectionSizeLabel(
 		}
 		return s.markedSelCache.label, true
 	}
-	s.rebuildMarkedLabel(remote, painter, descendIntoMountPoints, goduIgnore, workingSym)
+	s.rebuildMarkedLabel(remote, painter, workingSym)
 	if !s.markedSelCache.labelBuilt || s.markedSelCache.label == "" {
 		return "", false
 	}
@@ -115,8 +117,6 @@ func (s *FindDialogState) rebuildMarkedPruned() {
 func (s *FindDialogState) rebuildMarkedLabel(
 	remote bool,
 	painter MarkedSelectionSizePainter,
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
 	workingSym string,
 ) {
 	s.ensureMarkedPruned()
@@ -126,11 +126,7 @@ func (s *FindDialogState) rebuildMarkedLabel(
 	var total int64
 	pending := false
 	for _, p := range s.markedSelCache.pruned {
-		_, b, pend := findMarkedPathImpact(
-			p, s.PathMeta, remote,
-			s.ListingDevice, s.ListingDeviceValid,
-			painter, descendIntoMountPoints, goduIgnore,
-		)
+		_, b, pend := findMarkedPathImpact(p, s.PathMeta, remote, painter)
 		total += b
 		if pend {
 			pending = true
@@ -175,11 +171,7 @@ func findMarkedPathImpact(
 	path string,
 	pathMeta func(string) (isDir bool, size int64, ok bool),
 	remote bool,
-	listingDevice uint64,
-	listingDeviceValid bool,
 	painter MarkedSelectionSizePainter,
-	descendIntoMountPoints bool,
-	goduIgnore func(string) bool,
 ) (files, bytes int64, pending bool) {
 	isDir := false
 	var size int64
@@ -201,7 +193,8 @@ func findMarkedPathImpact(
 	if sz, ok := painter.ByteSize(path); ok {
 		return 0, sz, false
 	}
-	if painter.DiskScanExcluded(path, descendIntoMountPoints, listingDevice, listingDeviceValid, goduIgnore) {
+	// IsKnownExcluded only, not DiskScanExcluded — see ui.pathImpact for why.
+	if painter.IsKnownExcluded(path) {
 		return 0, 0, false
 	}
 	return 0, 0, true

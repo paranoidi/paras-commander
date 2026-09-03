@@ -25,6 +25,15 @@ type Engine struct {
 
 	cache      map[string]int64
 	fileCounts map[string]int64
+	// excluded records absPaths ScanExcluded has already determined would not be descended into,
+	// so render-path callers (pathImpact) can check IsKnownExcluded instead of re-Stat'ing on
+	// every frame. Populated by DirectoriesNeedingScan's background pass (see MarkExcluded).
+	// ponytail: keyed by path only, not by the listingDev/descendIntoMountPoints context that
+	// produced it — a path selected under two panels with different listing devices, or a
+	// descend_into_mount_points toggle mid-session, can leave a stale entry. Revisit only if
+	// that's ever actually reported; the cost is a wrong pending/excluded display hint, never
+	// incorrect byte totals for anything that gets scanned.
+	excluded map[string]bool
 	// activeWalkRoots maps an in-flight walk root to the panel that started that subtree scan.
 	activeWalkRoots map[string]int
 
@@ -72,6 +81,7 @@ func NewWithFSWalk(cfg config.FSWalkConfig) *Engine {
 	e := &Engine{
 		cache:           make(map[string]int64),
 		fileCounts:      make(map[string]int64),
+		excluded:        make(map[string]bool),
 		activeWalkRoots: make(map[string]int),
 		updates:         make(chan struct{}, 1),
 		events:          make(chan Event, 256),
@@ -274,7 +284,9 @@ func (e *Engine) FileCount(absPath string) (int64, bool) {
 	return n, ok
 }
 
-// DiskScanExcluded implements ui.DiskUsagePainter.
+// DiskScanExcluded implements ui.DiskUsagePainter. It Stat's absPath — callers on a hot path
+// covering many paths (e.g. a render loop over a large selection) should prefer IsKnownExcluded
+// plus a background pass that calls MarkExcluded, rather than calling this per path inline.
 func (e *Engine) DiskScanExcluded(absPath string, descendIntoMountPoints bool, listingDev uint64, listingDevValid bool, goduIgnore func(string) bool) bool {
 	if e == nil {
 		return false
@@ -284,6 +296,28 @@ func (e *Engine) DiskScanExcluded(absPath string, descendIntoMountPoints bool, l
 		gi = goduIgnore
 	}
 	return ScanExcluded(absPath, descendIntoMountPoints, listingDev, listingDevValid, gi)
+}
+
+// MarkExcluded records that absPath was determined excluded from disk-usage scanning (by a
+// background DirectoriesNeedingScan pass), so IsKnownExcluded can answer without a Stat.
+func (e *Engine) MarkExcluded(absPath string) {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	e.excluded[filepath.Clean(absPath)] = true
+	e.mu.Unlock()
+}
+
+// IsKnownExcluded reports whether absPath was previously found excluded via MarkExcluded.
+// O(1), no filesystem access — unlike DiskScanExcluded, safe to call on a render hot path.
+func (e *Engine) IsKnownExcluded(absPath string) bool {
+	if e == nil {
+		return false
+	}
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.excluded[filepath.Clean(absPath)]
 }
 
 // InvalidateSubtree drops cached sizes and file counts for rootAbs and every indexed path under it.
@@ -297,6 +331,11 @@ func (e *Engine) InvalidateSubtree(rootAbs string) {
 		if pathIsOrUnder(k, root) {
 			delete(e.cache, k)
 			delete(e.fileCounts, k)
+		}
+	}
+	for k := range e.excluded {
+		if pathIsOrUnder(k, root) {
+			delete(e.excluded, k)
 		}
 	}
 	e.mu.Unlock()
@@ -315,6 +354,9 @@ func (e *Engine) ClearCache() {
 	}
 	for k := range e.fileCounts {
 		delete(e.fileCounts, k)
+	}
+	for k := range e.excluded {
+		delete(e.excluded, k)
 	}
 	e.cacheVersion.Add(1)
 	e.mu.Unlock()

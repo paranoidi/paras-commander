@@ -35,6 +35,7 @@ func DirectoriesNeedingScan(
 			continue
 		}
 		if du.DiskScanExcluded(path, descendIntoMountPoints, listingDev, listingDevValid, goduIgnore) {
+			du.MarkExcluded(path)
 			continue
 		}
 		need = append(need, path)

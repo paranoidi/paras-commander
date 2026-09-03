@@ -367,6 +367,14 @@ func TestInvertSelectionDoesNotActivateIdleDiskSort(t *testing.T) {
 
 	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
+		// reconcileSelectionSizeScans now computes what needs scanning on a debounced
+		// background goroutine and posts the result as an interrupt event; drain it so
+		// StartScanFromListing actually gets called before checking scan completion.
+		for screen.HasPendingEvent() {
+			if ev, ok := screen.PollEvent().(*tcell.EventInterrupt); ok {
+				app.handleInterruptPayload(ev.Data())
+			}
+		}
 		app.pollDiskUsageUpdates()
 		if !app.diskUsageScanBusy() && left.ListingFullyDiskCached() {
 			break

@@ -7,6 +7,14 @@ const (
 	// DefaultPathPickerValidateDelayMS is the debounce before filesystem checks on the path-picker filter.
 	DefaultPathPickerValidateDelayMS = 200
 
+	// DefaultSelectionSizeScanDebounceMS waits after the panel selection, find-dialog marked
+	// selection, or open delete-confirmation dialog's source selection changes before computing
+	// which directories still need a background disk-usage scan. That computation stats every
+	// directory not yet cached (mount-boundary check); debouncing it off the main goroutine
+	// keeps rapid selection changes (e.g. select-all across thousands of directories) from
+	// blocking input handling.
+	DefaultSelectionSizeScanDebounceMS = 100
+
 	// DefaultKeyRepeatDebounceMS coalesces rapid file-list cursor steps, quick view preview reloads,
 	// carousel child preview reloads, and F3 style-picker re-highlighting. Terminals do not report
 	// key-up; after this many milliseconds without another qualifying step, deferred work runs once.

@@ -760,8 +760,6 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 		selectionLabel := FindDialogSelectionSizePadded(
 			&model.FindDialog,
 			model.DiskUsage,
-			model.DiskUsageDescendIntoMountPoints,
-			model.DiskUsageGoduIgnore,
 			styles.SymbolWorking(),
 		)
 		dialog.DrawFindDialog(screen, layout, model.FindDialog, dialogRenderContext(model, styles), PaintFindDialogRowIcon, selectionLabel, rowMarksResolver(model.PinnedItems, model.JobPathMarks))
