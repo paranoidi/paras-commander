@@ -317,6 +317,8 @@ func newConflictResolver(job *jobs.Job, waitBlocker func(jobs.BlockerRequest) jo
 			return true, nil
 		case jobs.DecisionSkip, jobs.DecisionSkipAll:
 			return false, nil
+		case jobs.DecisionOverwriteAllSameSize:
+			return facts.SourceSize == facts.DestSize, nil
 		case jobs.DecisionCancel:
 			return false, jobs.ErrUserCanceled
 		case jobs.DecisionRetry:

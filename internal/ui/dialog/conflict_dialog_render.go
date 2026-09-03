@@ -35,8 +35,8 @@ func drawConflictFileDialog(screen tcell.Screen, layout Layout, state ConflictDi
 	if width < 48 {
 		width = min(48, layout.Width-2)
 	}
-	// new(3) + blank + existing(3) + sep + prompt + blank + 2 button rows + bottom inner margin
-	const height = 14
+	// new(3) + blank + existing(3) + sep + prompt + blank + 3 button rows + bottom inner margin
+	const height = 15
 	rect := draw.CenteredDialogRect(layout, width, height)
 
 	borderStyle := draw.DrawDialogFrame(screen, rect, "File exists", styles)
@@ -65,12 +65,17 @@ func drawConflictFileDialog(screen tcell.Screen, layout Layout, state ConflictDi
 	}
 	row2 := []draw.DialogButtonSpec{
 		{Label: "Skip All", Shortcut: 'L', Focused: state.Focus == 3},
-		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == 4},
-		{Label: "Postpone", Shortcut: 'P', Focused: state.Focus == 5},
+		{Label: "Match Size", Shortcut: 'M', Focused: state.Focus == 4, Destructive: true},
+		{Label: "Cancel", Shortcut: 'C', Focused: state.Focus == 5},
+	}
+	row3 := []draw.DialogButtonSpec{
+		{Label: "Postpone", Shortcut: 'P', Focused: state.Focus == 6},
 	}
 	draw.DrawDialogButtonRowCentered(screen, rect, y, row1, styles)
 	y++
 	draw.DrawDialogButtonRowCentered(screen, rect, y, row2, styles)
+	y++
+	draw.DrawDialogButtonRowCentered(screen, rect, y, row3, styles)
 }
 
 func drawConflictDiskSpaceDialog(screen tcell.Screen, layout Layout, state ConflictDialogState, styles theme.Theme, userHomeDir string) {

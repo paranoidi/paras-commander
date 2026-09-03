@@ -11,12 +11,15 @@ const (
 	DecisionCancel       ConflictDecision = "cancel"
 	// DecisionRetry applies to disk-space blockers only (re-check free space and continue).
 	DecisionRetry ConflictDecision = "retry"
+	// DecisionOverwriteAllSameSize applies to every remaining conflict in the job: overwrite when
+	// source and destination sizes match, skip otherwise. No further prompting once selected.
+	DecisionOverwriteAllSameSize ConflictDecision = "overwrite-all-same-size"
 )
 
 // ApplyAll reports whether the decision applies to all remaining conflicts
 // in the current job.
 func (d ConflictDecision) ApplyAll() bool {
-	return d == DecisionOverwriteAll || d == DecisionSkipAll
+	return d == DecisionOverwriteAll || d == DecisionSkipAll || d == DecisionOverwriteAllSameSize
 }
 
 // ConflictRequest represents a user-facing conflict that requires a decision.
@@ -81,6 +84,9 @@ func ApplyDecision(policy ConflictPolicy, newDecision ConflictDecision) (overwri
 	case DecisionSkipAll:
 		policy.activeDecision = DecisionSkipAll
 		return false, true, false, policy
+	case DecisionOverwriteAllSameSize:
+		policy.activeDecision = DecisionOverwriteAllSameSize
+		return true, false, false, policy
 	case DecisionCancel:
 		return false, false, true, policy
 	case DecisionRetry:

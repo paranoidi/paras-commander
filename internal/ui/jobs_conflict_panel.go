@@ -36,12 +36,12 @@ func FirstJobEntryWaitingDecisionIndex(entries []JobEntry) int {
 // JobsBlockerMaxButtonIndex returns the maximum focused button index for the blocker panel.
 func JobsBlockerMaxButtonIndex(j JobEntry) int {
 	if j.PendingBlocker == nil {
-		return 4
+		return 5
 	}
 	if j.PendingBlocker.Kind == jobs.BlockerKindDiskSpace {
 		return 1
 	}
-	return 4
+	return 5
 }
 
 func jobsDetailPaneFocused(state JobsViewState, showConflict bool) bool {
@@ -73,6 +73,8 @@ func ConflictDecisionFromButtonIndex(idx int) jobs.ConflictDecision {
 		return jobs.DecisionOverwriteAll
 	case 3:
 		return jobs.DecisionSkipAll
+	case 4:
+		return jobs.DecisionOverwriteAllSameSize
 	default:
 		return jobs.DecisionCancel
 	}
@@ -94,7 +96,7 @@ func JobBlockerDialogMaxFocus(b jobs.BlockerDetails) int {
 	if b.Kind == jobs.BlockerKindDiskSpace {
 		return 2
 	}
-	return 5
+	return 6
 }
 
 // JobBlockerDialogPostponeFocus returns the focus index of the Postpone button.
@@ -102,7 +104,7 @@ func JobBlockerDialogPostponeFocus(b jobs.BlockerDetails) int {
 	if b.Kind == jobs.BlockerKindDiskSpace {
 		return 2
 	}
-	return 5
+	return 6
 }
 
 // JobBlockerDialogIsPostpone reports whether focus selects Postpone (not a ConflictDecision).
@@ -122,7 +124,7 @@ func JobBlockerDialogDecision(b jobs.BlockerDetails, focus int) (jobs.ConflictDe
 		}
 		return jobs.DecisionCancel, true
 	}
-	if focus < 0 || focus > 4 {
+	if focus < 0 || focus > 5 {
 		return "", false
 	}
 	return ConflictDecisionFromButtonIndex(focus), true
@@ -150,10 +152,12 @@ func JobBlockerDialogFocusFromShortcut(b jobs.BlockerDetails, r rune) (int, bool
 		return 2, true
 	case 'l', 'L':
 		return 3, true
-	case 'c', 'C':
+	case 'm', 'M':
 		return 4, true
-	case 'p', 'P':
+	case 'c', 'C':
 		return 5, true
+	case 'p', 'P':
+		return 6, true
 	default:
 		return 0, false
 	}
@@ -198,6 +202,7 @@ func JobBlockerDialogMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) 
 	}
 	col := focus % 3
 	row := focus / 3
+	maxRow := max / 3
 	switch key {
 	case tcell.KeyTab:
 		if focus >= max {
@@ -218,10 +223,10 @@ func JobBlockerDialogMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) 
 		}
 		return focus, true
 	case tcell.KeyRight:
-		if col < 2 {
+		if col < 2 && focus+1 <= max {
 			return focus + 1, true
 		}
-		if row == 0 {
+		if row < maxRow {
 			return focus + 1, true
 		}
 		return focus, true
@@ -231,7 +236,7 @@ func JobBlockerDialogMoveFocus(b jobs.BlockerDetails, focus int, key tcell.Key) 
 		}
 		return focus, true
 	case tcell.KeyDown:
-		if row < 1 {
+		if row < maxRow {
 			next := focus + 3
 			if next > max {
 				return max, true
@@ -359,8 +364,8 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	if f < 0 {
 		f = 0
 	}
-	if f > 4 {
-		f = 4
+	if f > 5 {
+		f = 5
 	}
 
 	row1 := []dialog.DialogButtonSpec{
@@ -370,7 +375,8 @@ func drawJobsFileConflictPanel(screen tcell.Screen, rect Rect, state JobsViewSta
 	}
 	row2 := []dialog.DialogButtonSpec{
 		{Label: "Skip All", Shortcut: 'L', Focused: focused && f == 3},
-		{Label: "Cancel", Shortcut: 'C', Focused: focused && f == 4},
+		{Label: "Match Size", Shortcut: 'M', Focused: focused && f == 4, Destructive: true},
+		{Label: "Cancel", Shortcut: 'C', Focused: focused && f == 5},
 	}
 	if y <= rect.Y+rect.Height-3 {
 		dialog.DrawDialogButtonRowCentered(screen, rect, y, row1, styles)

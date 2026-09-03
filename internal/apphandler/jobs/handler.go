@@ -311,6 +311,9 @@ func (h *Handler) handleJobsConflictPaneKey(event *tcell.EventKey) bool {
 		case 'l', 'L':
 			h.submitJobsConflictDecision(jobs.DecisionSkipAll)
 			return false
+		case 'm', 'M':
+			h.submitJobsConflictDecision(jobs.DecisionOverwriteAllSameSize)
+			return false
 		case 'c', 'C':
 			h.submitJobsConflictDecision(jobs.DecisionCancel)
 			return false

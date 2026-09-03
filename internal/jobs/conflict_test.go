@@ -71,6 +71,23 @@ func TestConflictPolicySkipAll(t *testing.T) {
 	}
 }
 
+func TestConflictPolicyOverwriteAllSameSize(t *testing.T) {
+	p := NewConflictPolicy()
+	overwrite, skip, cancel, updated := ApplyDecision(p, DecisionOverwriteAllSameSize)
+	if !overwrite {
+		t.Fatal("expected overwrite")
+	}
+	if skip {
+		t.Fatal("expected no skip")
+	}
+	if cancel {
+		t.Fatal("expected no cancel")
+	}
+	if updated.Decision() != DecisionOverwriteAllSameSize {
+		t.Fatalf("expected active decision overwrite-all-same-size, got %q", updated.Decision())
+	}
+}
+
 func TestConflictPolicyCancel(t *testing.T) {
 	p := NewConflictPolicy()
 	overwrite, skip, cancel, updated := ApplyDecision(p, DecisionCancel)
@@ -112,6 +129,7 @@ func TestApplyAll(t *testing.T) {
 	}{
 		{DecisionOverwriteAll, true},
 		{DecisionSkipAll, true},
+		{DecisionOverwriteAllSameSize, true},
 		{DecisionOverwrite, false},
 		{DecisionSkip, false},
 		{DecisionCancel, false},
