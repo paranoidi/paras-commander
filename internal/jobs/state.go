@@ -455,7 +455,17 @@ func (s *State) SubmitConflictDecision(jobID string, d ConflictDecision) {
 }
 
 // CancelJob requests cancellation of a queued or running job. Returns true if the job was found.
+//
+// Under the pipelined pre-scan, a job's background plan producer (see jobs/scan.go) can still be
+// streaming long after the job leaves StatusScanning — while Queued, Paused, WaitingDecision, or
+// even Running (the streamed transfer may still be consuming from a producer that hasn't finished
+// enumerating the rest of the tree). The deferred s.cancelJobScan(id) below — already idempotent,
+// a no-op once the producer has finished and cleared itself — runs on every return, so canceling
+// a job by any path also unblocks its producer instead of leaving it blocked forever on a full
+// channel send nobody drains. The one exception is the final fallback branch, which calls it
+// explicitly because it needs the found/not-found result the deferred call discards.
 func (s *State) CancelJob(id string) bool {
+	defer s.cancelJobScan(id)
 	s.mu.Lock()
 	if s.active != nil && s.active.ID == id {
 		if s.cancelRun != nil {
@@ -489,7 +499,6 @@ func (s *State) CancelJob(id string) bool {
 	}
 	if job := s.findJobUnlocked(id); job != nil && job.Status == StatusScanning {
 		s.mu.Unlock()
-		s.cancelJobScan(id)
 		return true
 	}
 	if s.queue.CancelQueuedJobByID(id) {
@@ -501,12 +510,9 @@ func (s *State) CancelJob(id string) bool {
 		})
 		return true
 	}
-	if s.cancelJobScan(id) {
-		s.mu.Unlock()
-		return true
-	}
+	found := s.cancelJobScan(id)
 	s.mu.Unlock()
-	return false
+	return found
 }
 
 // StartWorker launches the background worker goroutine. It returns immediately.
@@ -674,6 +680,15 @@ func (s *State) workerShutdown() {
 	if cancel != nil {
 		cancel()
 	}
+	// Cancel every still-running plan producer, not just the active job's: under the pipelined
+	// pre-scan a producer can outlive its job's presence in s.active (e.g. still streaming while
+	// the job sits in waitingBlocker/pendingDequeued/the FIFO), and none of those are otherwise
+	// visited below.
+	s.scanMu.Lock()
+	for _, scanCancel := range s.scanCancel {
+		scanCancel()
+	}
+	s.scanMu.Unlock()
 	s.mu.Lock()
 	for _, j := range s.waitingBlocker {
 		if j != nil {

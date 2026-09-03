@@ -2,7 +2,9 @@ package jobs
 
 import (
 	"context"
+	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -697,5 +699,97 @@ func TestFirstWaitingBlockerJobFIFO(t *testing.T) {
 	}
 	if s.FirstWaitingBlockerJob() == j1 {
 		t.Fatal("FirstWaitingBlockerJob should return a copy, not the stored pointer")
+	}
+}
+
+// TestCancelJobWhileQueuedButStillStreamingCancelsProducer covers the pipelining correctness
+// fix in CancelJob: under the streamed pre-scan, a job's plan producer can still be running
+// (blocked trying to send its next item into a full downstream channel) long after the job has
+// left StatusScanning for StatusQueued. Before the fix, only the StatusScanning branch of
+// CancelJob canceled the producer's context, so canceling a queued-but-still-streaming job left
+// its producer goroutine blocked forever. This test never starts the worker, so the job stays
+// queued (never dequeued) with its producer still live when CancelJob runs.
+func TestCancelJobWhileQueuedButStillStreamingCancelsProducer(t *testing.T) {
+	s := NewState()
+	s.SetScanConfig(ScanConfig{ProgressMinInterval: 5 * time.Millisecond})
+
+	firstItem := make(chan struct{})
+	producerCtxCanceled := make(chan struct{})
+	producerExited := make(chan struct{})
+	before := runtime.NumGoroutine()
+
+	s.SetScanFunc(func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks ScanWalkHooks) PlanProducer {
+		itemsCh := make(chan ops.PlanItem) // unbuffered and never read: models a producer
+		doneCh := make(chan struct{})      // still walking with a full downstream channel.
+		go func() {
+			defer close(producerExited)
+			defer close(doneCh)
+			close(firstItem)
+			select {
+			case itemsCh <- ops.PlanItem{}:
+				t.Error("producer send should not succeed: nothing reads itemsCh in this test")
+			case <-ctx.Done():
+				close(producerCtxCanceled)
+			}
+		}()
+		return PlanProducer{
+			Items:     itemsCh,
+			FirstItem: firstItem,
+			Totals:    func() (int, int, int64) { return 0, 0, 0 },
+			Done:      doneCh,
+			Err:       func() error { return ctx.Err() },
+		}
+	})
+
+	job := &Job{ID: "still-streaming", Type: TypeCopy, Status: StatusScanning, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")}
+	s.AddJob(job)
+
+	deadline := time.After(3 * time.Second)
+	for {
+		all := s.AllJobs()
+		if len(all) == 1 && all[0].Status == StatusQueued {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("timeout waiting StatusQueued; last seen: %+v", all)
+		case <-time.After(5 * time.Millisecond):
+		}
+	}
+
+	// The producer must still be blocked on its send at this point (queued, never dequeued).
+	select {
+	case <-producerCtxCanceled:
+		t.Fatal("producer context canceled before CancelJob was even called")
+	default:
+	}
+
+	if !s.CancelJob(job.ID) {
+		t.Fatal("CancelJob() = false, want true for a queued job")
+	}
+
+	select {
+	case <-producerCtxCanceled:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for producer's context to be canceled by CancelJob")
+	}
+	select {
+	case <-producerExited:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for producer goroutine to exit after cancellation")
+	}
+
+	// Secondary, coarser check: goroutine count should settle back near its starting point
+	// rather than staying elevated (allow some slack for unrelated background goroutines).
+	var after int
+	for i := 0; i < 20; i++ {
+		after = runtime.NumGoroutine()
+		if after <= before+2 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if after > before+2 {
+		t.Fatalf("NumGoroutine() after cancel = %d, want <= %d (before=%d)", after, before+2, before)
 	}
 }

@@ -343,6 +343,44 @@ func BuildPlanCtx(ctx context.Context, sources []pathloc.Path, destination pathl
 		return nil, err
 	}
 	var items []PlanItem
+	sink := func(it PlanItem) error {
+		items = append(items, it)
+		return nil
+	}
+	if err := buildPlan(ctx, sources, destination, followDirChildren, opts, sink); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+// BuildPlanStreamCtx is BuildPlanCtx but streams discovered PlanItems to out as they are found
+// instead of building a slice, letting a consumer start transferring before the whole source
+// tree is enumerated. The producer (this call) owns out: it closes out exactly once, whether the
+// walk finishes normally, fails, or is canceled via ctx. Callers should drain out until closed and
+// then call BuildPlanStreamCtx's return value to learn whether the walk succeeded.
+func BuildPlanStreamCtx(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, followDirChildren bool, opts PlanBuildOptions, out chan<- PlanItem) error {
+	defer close(out)
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := validateBatchDestinationCtx(ctx, sources, destination); err != nil {
+		return err
+	}
+	sink := func(it PlanItem) error {
+		select {
+		case out <- it:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return buildPlan(ctx, sources, destination, followDirChildren, opts, sink)
+}
+
+// buildPlan walks sources and feeds each discovered PlanItem to sink, in the same
+// parent-before-children order regardless of whether sink appends to a slice (BuildPlanCtx)
+// or sends on a channel (BuildPlanStreamCtx).
+func buildPlan(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, followDirChildren bool, opts PlanBuildOptions, sink func(PlanItem) error) error {
 	var visitCount int
 	afterVisit := func(path string) error {
 		if err := ctx.Err(); err != nil {
@@ -365,33 +403,33 @@ func BuildPlanCtx(ctx context.Context, sources []pathloc.Path, destination pathl
 	}
 	for _, srcLoc := range sources {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return err
 		}
 		dstLoc, err := resolveDestinationNamedCtx(ctx, destination, TransferDestName(srcLoc, nameRoot))
 		if err != nil {
-			return nil, err
+			return err
 		}
 		if DestinationUnderSource(srcLoc, dstLoc) {
-			return nil, fmt.Errorf("cannot copy %s into a subdirectory of itself", srcLoc)
+			return fmt.Errorf("cannot copy %s into a subdirectory of itself", srcLoc)
 		}
 		if srcLoc.IsRemote() || destination.IsRemote() || !useLocalFastPath(srcLoc, dstLoc) {
-			if err := planRemoteSource(ctx, srcLoc, dstLoc, followDirChildren, &items, afterVisit); err != nil {
-				return nil, err
+			if err := planRemoteSource(ctx, srcLoc, dstLoc, followDirChildren, sink, afterVisit); err != nil {
+				return err
 			}
 			continue
 		}
-		if err := planLocalSource(srcLoc, dstLoc, followDirChildren, &items, afterVisit); err != nil {
-			return nil, err
+		if err := planLocalSource(srcLoc, dstLoc, followDirChildren, sink, afterVisit); err != nil {
+			return err
 		}
 	}
-	return items, nil
+	return nil
 }
 
-// planRemoteSource plans one BuildPlanCtx source through the fsbackend stat/walk path: used
+// planRemoteSource plans one buildPlan source through the fsbackend stat/walk path: used
 // when either endpoint is remote or the local os fast path isn't available for this src/dst
-// pair. Stats srcLoc, then either walks a directory tree via walkBackendTree or appends a
-// single planItemFromEntry to *items.
-func planRemoteSource(ctx context.Context, srcLoc, dstLoc pathloc.Path, followDirChildren bool, items *[]PlanItem, afterVisit func(string) error) error {
+// pair. Stats srcLoc, then either walks a directory tree via walkBackendTree or feeds a
+// single planItemFromEntry to sink.
+func planRemoteSource(ctx context.Context, srcLoc, dstLoc pathloc.Path, followDirChildren bool, sink func(PlanItem) error, afterVisit func(string) error) error {
 	srcEnt, err := statEntry(ctx, srcLoc)
 	if err != nil {
 		return fmt.Errorf("stat %q: %w", srcLoc, err)
@@ -400,7 +438,7 @@ func planRemoteSource(ctx context.Context, srcLoc, dstLoc pathloc.Path, followDi
 		if !followDirChildren {
 			return nil
 		}
-		return walkBackendTree(ctx, srcLoc, dstLoc, items, afterVisit)
+		return walkBackendTree(ctx, srcLoc, dstLoc, sink, afterVisit)
 	}
 	if err := afterVisit(srcLoc.String()); err != nil {
 		return err
@@ -409,14 +447,13 @@ func planRemoteSource(ctx context.Context, srcLoc, dstLoc pathloc.Path, followDi
 	if err != nil {
 		return err
 	}
-	*items = append(*items, item)
-	return nil
+	return sink(item)
 }
 
-// planLocalSource plans one BuildPlanCtx source through the local os.Lstat/WalkDirRecursive
-// fast path (both endpoints local and useLocalFastPath allows it). Appends resulting items
-// to *items.
-func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, items *[]PlanItem, afterVisit func(string) error) error {
+// planLocalSource plans one buildPlan source through the local os.Lstat/WalkDirRecursive
+// fast path (both endpoints local and useLocalFastPath allows it). Feeds resulting items
+// to sink.
+func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, sink func(PlanItem) error, afterVisit func(string) error) error {
 	src, err := srcLoc.FilePath()
 	if err != nil {
 		return err
@@ -450,16 +487,16 @@ func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, items 
 			if err != nil {
 				return err
 			}
-			if info.IsDir() {
-				*items = append(*items, planItemFromLocalInfo(srcItem, dstItem, info, true, localfs.IsSymlink(info)))
-			} else if localfs.IsSymlink(info) {
-				*items = append(*items, planItemFromLocalInfo(srcItem, dstItem, info, false, true))
-			} else if info.Mode().IsRegular() {
-				*items = append(*items, planItemFromLocalInfo(srcItem, dstItem, info, false, false))
-			} else {
+			switch {
+			case info.IsDir():
+				return sink(planItemFromLocalInfo(srcItem, dstItem, info, true, localfs.IsSymlink(info)))
+			case localfs.IsSymlink(info):
+				return sink(planItemFromLocalInfo(srcItem, dstItem, info, false, true))
+			case info.Mode().IsRegular():
+				return sink(planItemFromLocalInfo(srcItem, dstItem, info, false, false))
+			default:
 				return fmt.Errorf("unsupported file type for %q (mode %v)", path, info.Mode())
 			}
-			return nil
 		})
 	}
 	if err := afterVisit(src); err != nil {
@@ -467,13 +504,12 @@ func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, items 
 	}
 	switch {
 	case localfs.IsSymlink(srcInfo):
-		*items = append(*items, planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, true))
+		return sink(planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, true))
 	case srcInfo.Mode().IsRegular():
-		*items = append(*items, planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, false))
+		return sink(planItemFromLocalInfo(srcLoc, dstLoc, srcInfo, false, false))
 	default:
 		return fmt.Errorf("unsupported file type for %q (mode %v)", src, srcInfo.Mode())
 	}
-	return nil
 }
 
 func planItemFromLocalInfo(src, dst pathloc.Path, info os.FileInfo, isDir, isSymlink bool) PlanItem {

@@ -63,7 +63,28 @@ type Job struct {
 	FinishedAt    time.Time
 
 	// Plan is the pre-built copy/move plan from pre-scan; nil until scan completes or for delete jobs.
+	// Populated only as a synchronous-rebuild fallback (see jobbridge.TransferFunc) when the job
+	// never went through PlanCh — the normal streaming pre-scan leaves this nil throughout.
 	Plan []ops.PlanItem
+	// PlanCh streams PlanItems from the background pre-scan producer (see jobs/scan.go) as they
+	// are discovered, instead of jobbridge waiting for a fully-built Plan slice. Set once by
+	// startJobScan before the job leaves StatusScanning; nil for delete/extract jobs and for any
+	// copy/move/flatten job whose scan hasn't started yet.
+	PlanCh <-chan ops.PlanItem
+	// PlanErr, paired with PlanCh, retrieves the producer's terminal walk error once PlanCh is
+	// observed closed (nil on a clean end). Safe to call from any goroutine at any time — it is
+	// backed by the producer's own synchronization, not by job.mu (there is none) — which is why
+	// PlanErr is a func rather than a plain field: unlike PlanCh (written once, before the job
+	// leaves StatusScanning, then never touched again), the producer may still be running when a
+	// consumer wants this value, so a plain field read here would race the scan goroutine.
+	PlanErr func() error
+	// PlanComplete is true once the PlanCh producer has finished enumerating the whole source
+	// tree (success or failure) and written its final totals. Like TotalFiles/TotalDirs/
+	// TotalBytes, it is only safe to read while holding jobs.State's lock (e.g. via AllJobs()/
+	// Snapshot(), which copy the job under that lock) — the scan producer keeps writing it after
+	// the job leaves StatusScanning, so jobbridge (which has no access to that lock) must not
+	// read it directly; see jobbridge.TransferFunc's streamed-job dispatch.
+	PlanComplete bool
 	// PausedAfterScan when true transitions to StatusPaused instead of StatusQueued when pre-scan completes.
 	PausedAfterScan bool
 

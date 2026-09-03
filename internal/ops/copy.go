@@ -93,6 +93,24 @@ func prepareCopyDestinationCtx(ctx context.Context, sources []pathloc.Path, dest
 	return fmt.Errorf("destination directory %q does not exist", destination)
 }
 
+// validateBatchDestinationCtx enforces prepareCopyDestinationCtx's "destination directory must
+// already exist for a multi-source copy" rule without its single-directory-source auto-mkdir.
+// BuildPlanStreamCtx uses this instead of prepareCopyDestinationCtx: mkdir'ing a new destination
+// name before the streamed walk resolves it would trick resolveDestinationNamedCtx into treating
+// dest as an existing container (see BuildCopyPlanWithTotalsCtx's ordering comment) — instead,
+// the top-level directory PlanItem the walk produces first reaches copyDirItem, which already
+// mkdir's a missing destination lazily, same as prepareCopyDestinationCtx would have.
+func validateBatchDestinationCtx(ctx context.Context, sources []pathloc.Path, destination pathloc.Path) error {
+	isDir, err := destinationIsDir(ctx, destination)
+	if err != nil {
+		return fmt.Errorf("stat destination %q: %w", destination, err)
+	}
+	if isDir || len(sources) == 1 {
+		return nil
+	}
+	return fmt.Errorf("destination directory %q does not exist", destination)
+}
+
 // SummarizePlan returns plan item count, directory count, and regular-file byte sum.
 func SummarizePlan(plan []PlanItem) (totalItems, totalDirs int, totalBytes int64) {
 	for _, item := range plan {
@@ -145,6 +163,73 @@ func ExecuteCopyUsingPlan(ctx context.Context, plan []PlanItem, sources []pathlo
 		planOptional: plan,
 	}.executeCopy()
 	return doneFiles, doneBytes, err
+}
+
+// ExecuteCopyUsingPlanChan runs the copy loop consuming a streamed plan channel (from
+// BuildPlanStreamCtx) instead of a pre-built slice, so transfer can start before the producer
+// finishes enumerating the source tree. planErr, when non-nil, is called once planCh is observed
+// closed to retrieve the producer's terminal error (nil on a clean end); it must be safe to call
+// concurrently with the producer still running (e.g. a mutex-guarded closure), since planCh may
+// close for reasons unrelated to the producer having fully stored its result yet. That error
+// becomes this call's returned error, unless an earlier item-level error already aborted the loop.
+func ExecuteCopyUsingPlanChan(ctx context.Context, planCh <-chan PlanItem, planErr func() error, sources []pathloc.Path, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, error) {
+	doneFiles, doneBytes, _, err := executeCopyIter(ctx, planIterChan(ctx, planCh, planErr), destination, opts, throttle, progress, resolver, diskWait)
+	return doneFiles, doneBytes, err
+}
+
+// planIter yields one plan item per call until exhausted. ok is false once iteration ends;
+// err carries the terminal error, if any (nil on a clean end). Shared by the slice-backed
+// (ExecuteCopyUsingPlan/ExecuteMoveWithPlan) and channel-backed (*Chan) executors so the
+// per-item copy loop in executeCopyIter is written once.
+type planIter func() (item PlanItem, ok bool, err error)
+
+// planIterSlice iterates a pre-built plan slice — no behavior change from ranging over it directly.
+func planIterSlice(plan []PlanItem) planIter {
+	i := 0
+	return func() (PlanItem, bool, error) {
+		if i >= len(plan) {
+			return PlanItem{}, false, nil
+		}
+		it := plan[i]
+		i++
+		return it, true, nil
+	}
+}
+
+// planIterChan iterates a streamed plan channel, selecting on ctx so cancellation interrupts a
+// blocked receive. See ExecuteCopyUsingPlanChan for the planErr contract.
+func planIterChan(ctx context.Context, planCh <-chan PlanItem, planErr func() error) planIter {
+	return func() (PlanItem, bool, error) {
+		select {
+		case it, ok := <-planCh:
+			if !ok {
+				if planErr != nil {
+					return PlanItem{}, false, planErr()
+				}
+				return PlanItem{}, false, nil
+			}
+			return it, true, nil
+		case <-ctx.Done():
+			return PlanItem{}, false, ctx.Err()
+		}
+	}
+}
+
+// drainPlanChanDiscard reads and discards planCh until it closes or ctx is done. Used when a
+// move's rename fast path succeeds and the streamed plan (built for the copy-fallback phase)
+// turns out to be unneeded: something must still drain it so the background producer's blocked
+// channel send can complete and its goroutine exit, rather than leaking until job cancellation.
+func drainPlanChanDiscard(ctx context.Context, planCh <-chan PlanItem) {
+	for {
+		select {
+		case _, ok := <-planCh:
+			if !ok {
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 // copyRunState carries the mutable tallies and throttled-progress state shared
@@ -320,14 +405,29 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 			return 0, 0, nil, err
 		}
 	}
+	return executeCopyIter(ctx, planIterSlice(plan), destination, opts, throttle, progress, resolver, diskWait)
+}
 
+// executeCopyIter runs the per-item copy loop shared by every plan source (pre-built slice or
+// streamed channel): it drives iter to exhaustion, dispatching each item to the matching
+// copyDirItem/copySymlinkItem/copyRegularItem helper, then applies deferred dir metadata and
+// syncs once the plan is exhausted.
+func executeCopyIter(ctx context.Context, iter planIter, destination pathloc.Path, opts Options, throttle ProgressEmitThrottle, progress ProgressCallback, resolver ConflictResolver, diskWait DiskWaitFunc) (int, int64, []pathloc.Path, error) {
 	state := &copyRunState{th: effectiveProgressThrottle(throttle), progress: progress}
 	copyBuf := make([]byte, BufferSize(opts.CopyBufferKiB))
 
-	for _, item := range plan {
+	for {
 		if err := ctx.Err(); err != nil {
 			return state.doneFiles, state.doneBytes, state.transferredOut, err
 		}
+		item, ok, err := iter()
+		if !ok {
+			if err != nil {
+				return state.doneFiles, state.doneBytes, state.transferredOut, err
+			}
+			break
+		}
+
 		if item.IsDir && !item.IsSymlink {
 			if err := copyDirItem(ctx, item, opts, state); err != nil {
 				return state.doneFiles, state.doneBytes, state.transferredOut, err

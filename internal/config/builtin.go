@@ -149,6 +149,10 @@ const (
 	DefaultScanNiceIncrement = 10
 	// DefaultScanProgressMinIntervalMS throttles scan-progress UI events during pre-scan walks.
 	DefaultScanProgressMinIntervalMS = 200
+	// DefaultPlanStreamBufferItems bounds the pre-scan producer's PlanItem channel so a
+	// multi-terabyte/million-file walk holds only a few hundred KB of buffered items in memory
+	// regardless of tree size, same order of magnitude as DefaultScanYieldEveryN.
+	DefaultPlanStreamBufferItems = 256
 
 	DefaultPreservePermissions        = true
 	DefaultPreserveTimestamps         = true

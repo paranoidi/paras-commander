@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/archive"
@@ -49,27 +51,133 @@ func EventUpdatesMarks(t jobs.EventType) bool {
 	}
 }
 
-// ScanFunc returns the jobs scan function wired to ops plan building.
+// ScanFunc returns the jobs plan producer wired to ops.BuildPlanStreamCtx. It runs two
+// independent walks over the same sources/destination: a delivery walk (raw → relay → items,
+// gating FirstItem) that the transfer executor drains via Job.PlanCh, and a separate counting
+// walk (countCh → count goroutine) that only tallies running Totals and is never blocked by a
+// slow/stalled transfer consumer — a large file mid-copy stalls the relay's handoff to items,
+// but the counting walk keeps enumerating and Totals keeps growing regardless. Both walks start
+// immediately; ScanFunc returns without blocking for the source tree to be fully enumerated.
 func ScanFunc() jobs.ScanFunc {
-	return func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks jobs.ScanWalkHooks) (jobs.ScanResult, error) {
+	return func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks jobs.ScanWalkHooks) jobs.PlanProducer {
 		opts := ops.PlanBuildOptions{
 			YieldEveryN:   hooks.YieldEveryN,
 			Yield:         hooks.Yield,
 			FlatDestNames: hooks.FlatDestNames,
+			OnPath:        hooks.OnPath,
 		}
-		if hooks.OnPath != nil {
-			opts.OnPath = hooks.OnPath
+
+		// raw is the bounded channel BuildPlanStreamCtx's delivery-walk goroutine sends into; it
+		// is the one memory bound for the delivery pipeline (see
+		// config.DefaultPlanStreamBufferItems). items is unbuffered: the relay goroutine below
+		// forwards one item at a time to whoever eventually reads Job.PlanCh, so backpressure on
+		// a slow/absent consumer propagates straight back through raw to the delivery walk
+		// itself. This backpressure is exactly why totals must come from the separate counting
+		// walk below rather than from this relay.
+		raw := make(chan ops.PlanItem, config.DefaultPlanStreamBufferItems)
+		items := make(chan ops.PlanItem)
+		firstItem := make(chan struct{})
+		deliveryDone := make(chan struct{})
+		walkErrCh := make(chan error, 1)
+
+		// files/dirs/totalBytes are updated once per discovered item by the counting goroutine
+		// below (potentially millions of times for a large tree) and read by Totals() every
+		// ~200ms (jobs/scan.go's ticker); atomics keep that off the critical section mu otherwise
+		// guards for walkErr, which is written at most once per walk.
+		var files, dirs, totalBytes atomic.Int64
+		var mu sync.Mutex
+		var walkErr error
+
+		go func() {
+			walkErrCh <- ops.BuildPlanStreamCtx(ctx, sources, destination, true, opts, raw)
+		}()
+
+		go func() {
+			defer close(items)
+			firstItemSeen := false
+			for {
+				select {
+				case it, ok := <-raw:
+					if !ok {
+						e := <-walkErrCh
+						mu.Lock()
+						walkErr = e
+						mu.Unlock()
+						close(deliveryDone)
+						return
+					}
+					if !firstItemSeen {
+						firstItemSeen = true
+						close(firstItem)
+					}
+					select {
+					case items <- it:
+					case <-ctx.Done():
+						e := <-walkErrCh
+						mu.Lock()
+						walkErr = e
+						mu.Unlock()
+						close(deliveryDone)
+						return
+					}
+				case <-ctx.Done():
+					e := <-walkErrCh
+					mu.Lock()
+					walkErr = e
+					mu.Unlock()
+					close(deliveryDone)
+					return
+				}
+			}
+		}()
+
+		// Counting walk: a second, independent BuildPlanStreamCtx call over the same
+		// sources/destination, drained by a goroutine that does nothing but tally
+		// files/dirs/totalBytes and discard each item. Because nothing downstream of countCh
+		// ever blocks, this walk proceeds at full enumeration speed no matter how slowly the
+		// delivery side above is being consumed. Its own walk error is intentionally discarded:
+		// PlanProducer.Err must reflect only the delivery walk's terminal error, since that is
+		// what job.PlanErr feeds to the executor.
+		countCh := make(chan ops.PlanItem, config.DefaultPlanStreamBufferItems)
+		countDone := make(chan struct{})
+
+		go func() {
+			_ = ops.BuildPlanStreamCtx(ctx, sources, destination, true, opts, countCh)
+		}()
+
+		go func() {
+			defer close(countDone)
+			for it := range countCh {
+				files.Add(1)
+				if it.IsDir {
+					dirs.Add(1)
+				}
+				if !it.IsDir && !it.IsSymlink {
+					totalBytes.Add(it.FileSize)
+				}
+			}
+		}()
+
+		done := make(chan struct{})
+		go func() {
+			<-deliveryDone
+			<-countDone
+			close(done)
+		}()
+
+		return jobs.PlanProducer{
+			Items:     items,
+			FirstItem: firstItem,
+			Totals: func() (int, int, int64) {
+				return int(files.Load()), int(dirs.Load()), totalBytes.Load()
+			},
+			Done: done,
+			Err: func() error {
+				mu.Lock()
+				defer mu.Unlock()
+				return walkErr
+			},
 		}
-		plan, totalItems, totalDirs, totalBytes, err := ops.BuildCopyPlanWithTotalsCtx(ctx, sources, destination, opts)
-		if err != nil {
-			return jobs.ScanResult{}, err
-		}
-		return jobs.ScanResult{
-			Plan:       plan,
-			TotalFiles: totalItems,
-			TotalDirs:  totalDirs,
-			TotalBytes: totalBytes,
-		}, nil
 	}
 }
 
@@ -142,13 +250,66 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg)
 		resolver := newConflictResolver(job, waitBlocker)
 		diskWait := diskWaitFromBlocker(waitBlocker)
+		progress := func(sourcePath, destPath string, doneFiles int, doneBytes int64) {
+			emit(jobs.Event{
+				Type:            jobs.EventProgress,
+				JobID:           job.ID,
+				Status:          jobs.StatusRunning,
+				DoneFiles:       doneFiles,
+				DoneBytes:       doneBytes,
+				CurrentPath:     sourcePath,
+				CurrentDestPath: destPath,
+			})
+		}
+
+		// runTransfer executes tc and, on success, emits the final DoneFiles/DoneBytes tally
+		// through emit (like every other progress update in this function) rather than writing
+		// job fields directly: job.Status transitions and ApplyEvent-driven field writes are the
+		// app event loop's job, not the worker's — direct writes here would race the event loop
+		// reading the same job via AllJobs()/Snapshot().
+		runTransfer := func(tc transferExecCtx) error {
+			doneFiles, doneBytes, err := executeJobByType(tc)
+			if err == nil {
+				emit(jobs.Event{
+					Type:      jobs.EventProgress,
+					JobID:     job.ID,
+					Status:    jobs.StatusRunning,
+					DoneFiles: doneFiles,
+					DoneBytes: doneBytes,
+				})
+			}
+			return mapOpsCanceled(err)
+		}
+
+		// job.PlanCh is set once by the background pre-scan producer (jobs/scan.go) before the
+		// job ever becomes dequeue-eligible, so reading it here is race-free even though that
+		// producer may still be actively streaming. job.TotalFiles/TotalDirs/TotalBytes/
+		// PlanComplete are NOT: the producer keeps writing those under jobs.State's lock for as
+		// long as it runs, which this package has no access to, so this function must not read
+		// them directly. That is why the streamed path below skips the upfront whole-payload
+		// EnsureDiskSpace gate unconditionally instead of only when PlanComplete is already
+		// true — ops.copyRegularItem's per-file check (gated by disk_space_check_min_file_bytes)
+		// is the safety net for streamed jobs, same trade-off mc makes (mc has no upfront check
+		// at all); see llm-docs/jobs.md.
+		if job.PlanCh != nil && (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) {
+			return runTransfer(transferExecCtx{
+				ctx:      ctx,
+				job:      job,
+				opts:     opts,
+				throttle: throttle,
+				progress: progress,
+				resolver: resolver,
+				diskWait: diskWait,
+				emit:     emit,
+			})
+		}
+
+		// Fallback path: job.PlanCh is nil, meaning this job's scan either never ran (delete/
+		// extract) or was bypassed (e.g. a copy/move/flatten job injected directly into
+		// StatusQueued in tests). opsPlan/totalBytes come from job.Plan — the synchronous-
+		// rebuild slice fallback — safe to read unlocked because nothing streams into it.
 		opsPlan := job.Plan
 		var planErr error
-		// totalBytes starts from job.TotalBytes (set during the pre-scan phase, which
-		// happens-before this call via the queue/dequeue lock). If we build a fresh plan
-		// below we use that value directly instead of reading job.TotalBytes back after
-		// emit: the emit is only enqueued, not yet applied by ApplyEvent on the app's
-		// event-loop goroutine, so re-reading the field here would race that write.
 		totalBytes := job.TotalBytes
 		if (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) && len(opsPlan) == 0 {
 			var tf int
@@ -174,18 +335,7 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 				}
 			}
 		}
-		progress := func(sourcePath, destPath string, doneFiles int, doneBytes int64) {
-			emit(jobs.Event{
-				Type:            jobs.EventProgress,
-				JobID:           job.ID,
-				Status:          jobs.StatusRunning,
-				DoneFiles:       doneFiles,
-				DoneBytes:       doneBytes,
-				CurrentPath:     sourcePath,
-				CurrentDestPath: destPath,
-			})
-		}
-		doneFiles, doneBytes, err := executeJobByType(transferExecCtx{
+		return runTransfer(transferExecCtx{
 			ctx:      ctx,
 			job:      job,
 			opsPlan:  opsPlan,
@@ -197,21 +347,6 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) fun
 			diskWait: diskWait,
 			emit:     emit,
 		})
-		if err == nil {
-			// Final tally goes through emit (like every other progress update in this
-			// function) rather than writing job fields directly: job.Status transitions
-			// and ApplyEvent-driven field writes are the app event loop's job, not the
-			// worker's — direct writes here would race the event loop reading the same
-			// job via AllJobs()/Snapshot().
-			emit(jobs.Event{
-				Type:      jobs.EventProgress,
-				JobID:     job.ID,
-				Status:    jobs.StatusRunning,
-				DoneFiles: doneFiles,
-				DoneBytes: doneBytes,
-			})
-		}
-		return mapOpsCanceled(err)
 	}
 }
 
@@ -351,15 +486,21 @@ func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err e
 	job := tc.job
 	switch job.Type {
 	case jobs.TypeCopy:
-		if tc.planErr != nil {
+		switch {
+		case job.PlanCh != nil:
+			doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlanChan(tc.ctx, job.PlanCh, job.PlanErr, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
+		case tc.planErr != nil:
 			doneFiles, doneBytes, err = ops.ExecuteCopy(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-		} else {
+		default:
 			doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlan(tc.ctx, tc.opsPlan, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 		}
 	case jobs.TypeMove, jobs.TypeFlatten:
-		if len(tc.opsPlan) > 0 {
+		switch {
+		case job.PlanCh != nil:
+			doneFiles, doneBytes, err = ops.ExecuteMoveWithPlanChan(tc.ctx, job.PlanCh, job.PlanErr, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
+		case len(tc.opsPlan) > 0:
 			doneFiles, doneBytes, err = ops.ExecuteMoveWithPlan(tc.ctx, tc.opsPlan, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-		} else {
+		default:
 			doneFiles, doneBytes, err = ops.ExecuteMove(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 		}
 		if err == nil && job.Type == jobs.TypeFlatten && job.FlattenRemoveEmpty {

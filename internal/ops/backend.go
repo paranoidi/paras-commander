@@ -456,7 +456,7 @@ func planItemFromEntry(srcLoc, dstLoc pathloc.Path, ent fsbackend.Entry) (PlanIt
 	}
 }
 
-func walkBackendTree(ctx context.Context, rootSrc, rootDst pathloc.Path, items *[]PlanItem, afterVisit func(string) error) error {
+func walkBackendTree(ctx context.Context, rootSrc, rootDst pathloc.Path, sink func(PlanItem) error, afterVisit func(string) error) error {
 	rootEnt, err := statEntry(ctx, rootSrc)
 	if err != nil {
 		return err
@@ -464,13 +464,13 @@ func walkBackendTree(ctx context.Context, rootSrc, rootDst pathloc.Path, items *
 	if rootEnt.Type != fsbackend.EntryDirectory {
 		return fmt.Errorf("%q is not a directory", rootSrc)
 	}
-	if err := appendBackendWalk(ctx, rootSrc, rootDst, items, afterVisit); err != nil {
+	if err := appendBackendWalk(ctx, rootSrc, rootDst, sink, afterVisit); err != nil {
 		return err
 	}
 	return nil
 }
 
-func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, items *[]PlanItem, afterVisit func(string) error) error {
+func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, sink func(PlanItem) error, afterVisit func(string) error) error {
 	be, err := backendFor(dirSrc)
 	if err != nil {
 		return err
@@ -487,7 +487,9 @@ func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, items *
 	if err != nil {
 		return err
 	}
-	*items = append(*items, item)
+	if err := sink(item); err != nil {
+		return err
+	}
 	if afterVisit != nil {
 		if err := afterVisit(dirSrc.String()); err != nil {
 			return err
@@ -506,19 +508,21 @@ func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, items *
 		}
 		switch e.Type {
 		case fsbackend.EntryDirectory:
-			if err := appendBackendWalk(ctx, e.Loc, childDst, items, afterVisit); err != nil {
+			if err := appendBackendWalk(ctx, e.Loc, childDst, sink, afterVisit); err != nil {
 				return err
 			}
 		case fsbackend.EntrySymlink:
 			mod := e.ModifiedAt
-			*items = append(*items, PlanItem{
+			if err := sink(PlanItem{
 				Src:        e.Loc,
 				Dst:        childDst,
 				IsSymlink:  true,
 				Mode:       e.Mode.Perm(),
 				AccessTime: mod,
 				ModTime:    mod,
-			})
+			}); err != nil {
+				return err
+			}
 			if afterVisit != nil {
 				if err := afterVisit(e.Loc.String()); err != nil {
 					return err
@@ -526,14 +530,16 @@ func appendBackendWalk(ctx context.Context, dirSrc, dirDst pathloc.Path, items *
 			}
 		case fsbackend.EntryFile:
 			mod := e.ModifiedAt
-			*items = append(*items, PlanItem{
+			if err := sink(PlanItem{
 				Src:        e.Loc,
 				Dst:        childDst,
 				FileSize:   e.Size,
 				Mode:       e.Mode.Perm(),
 				AccessTime: mod,
 				ModTime:    mod,
-			})
+			}); err != nil {
+				return err
+			}
 			if afterVisit != nil {
 				if err := afterVisit(e.Loc.String()); err != nil {
 					return err

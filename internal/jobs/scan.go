@@ -11,12 +11,23 @@ import (
 	"github.com/paranoidi/paras-commander/internal/priority"
 )
 
-// ScanResult is returned by ScanFunc after a successful pre-scan walk.
-type ScanResult struct {
-	Plan       []ops.PlanItem
-	TotalFiles int
-	TotalDirs  int
-	TotalBytes int64
+// PlanProducer represents an in-progress background pre-scan walk, started immediately and
+// running independently of whoever holds it. Items streams discovered PlanItems as they're
+// found — it is meant for exactly one consumer, the eventual transfer executor (via
+// Job.PlanCh); runJobScan itself never reads from it, only from FirstItem/Totals/Done/Err
+// below, so a job can leave StatusScanning and start transferring the items already produced
+// while the walk continues in the background. FirstItem closes as soon as the walk has found
+// its first item (or never closes for a source that turns out empty — Done covers that case).
+// Totals returns the running file/dir/byte counts so far and is safe to call at any time,
+// including after Done closes. Done closes once the walk has finished (success, error, or ctx
+// cancellation) and Items has been fully handed off, at which point Err returns the terminal
+// walk error (nil on a clean end).
+type PlanProducer struct {
+	Items     chan ops.PlanItem
+	FirstItem <-chan struct{}
+	Totals    func() (files, dirs int, bytes int64)
+	Done      <-chan struct{}
+	Err       func() error
 }
 
 // ScanWalkHooks are optional callbacks during a pre-scan walk.
@@ -28,8 +39,9 @@ type ScanWalkHooks struct {
 	FlatDestNames bool
 }
 
-// ScanFunc builds a transfer plan and totals; wired by the app using internal/ops.
-type ScanFunc func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks ScanWalkHooks) (ScanResult, error)
+// ScanFunc starts a background plan walk for sources/destination and returns immediately with a
+// PlanProducer streaming into it; wired by the app using internal/ops (see jobbridge.ScanFunc).
+type ScanFunc func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks ScanWalkHooks) PlanProducer
 
 // ScanConfig tunes background pre-scan walks for queued copy/move jobs.
 type ScanConfig struct {
@@ -46,7 +58,7 @@ func (s *State) SetScanConfig(cfg ScanConfig) {
 	s.scanConfig = cfg
 }
 
-// SetScanFunc sets the plan builder used for copy/move pre-scan (required for transfer jobs).
+// SetScanFunc sets the plan producer used for copy/move pre-scan (required for transfer jobs).
 func (s *State) SetScanFunc(fn ScanFunc) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -93,7 +105,6 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 		defer restore()
 	}
 
-	var lastProgress time.Time
 	yieldInterval := cfg.YieldInterval
 	if yieldInterval <= 0 {
 		yieldInterval = time.Duration(config.DefaultScanYieldIntervalMS) * time.Millisecond
@@ -107,6 +118,7 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 		progressMin = time.Duration(config.DefaultScanProgressMinIntervalMS) * time.Millisecond
 	}
 
+	var lastProgress time.Time
 	hooks := ScanWalkHooks{
 		FlatDestNames: job.FlatDestNames(),
 		OnPath: func(path string) error {
@@ -134,8 +146,83 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 		},
 	}
 
-	result, err := scanFn(ctx, job.Sources, job.Destination, hooks)
-	if err != nil {
+	producer := scanFn(ctx, job.Sources, job.Destination, hooks)
+
+	s.mu.Lock()
+	job.PlanCh = producer.Items
+	job.PlanErr = producer.Err
+	s.mu.Unlock()
+
+	flipped := false
+	flipToRunnable := func() {
+		if flipped {
+			return
+		}
+		flipped = true
+		s.mu.Lock()
+		if job.PausedAfterScan {
+			job.Status = StatusPaused
+		} else {
+			job.Status = StatusQueued
+		}
+		s.mu.Unlock()
+		s.signalWorker()
+	}
+
+	writeTotalsAndEmit := func() {
+		files, dirs, bytes := producer.Totals()
+		s.mu.Lock()
+		job.TotalFiles = files
+		job.TotalDirs = dirs
+		job.TotalBytes = bytes
+		status := job.Status
+		s.mu.Unlock()
+		s.emit(Event{
+			Type:       EventScanTotals,
+			JobID:      job.ID,
+			Status:     status,
+			TotalFiles: files,
+			TotalDirs:  dirs,
+			TotalBytes: bytes,
+		})
+	}
+
+	ticker := time.NewTicker(progressMin)
+	defer ticker.Stop()
+
+	// firstItemCh is nil'd out after firing once so the select doesn't keep re-selecting an
+	// already-closed channel (which would busy-loop instead of blocking on the next tick/Done).
+	firstItemCh := producer.FirstItem
+
+waitLoop:
+	for {
+		select {
+		case <-producer.Done:
+			break waitLoop
+		case <-firstItemCh:
+			// As soon as the first item is known to have arrived, let the job start
+			// transferring while the walk keeps running in the background.
+			flipToRunnable()
+			firstItemCh = nil
+		case <-ticker.C:
+			writeTotalsAndEmit()
+		}
+	}
+
+	// The channel closes immediately for a tiny/empty source without ever crossing the
+	// files>0/dirs>0 check above; flip here too so the job doesn't stay stuck in Scanning.
+	// alreadyFlipped is captured before this idempotent call so the error branch below can tell
+	// whether the job had already left Scanning (and possibly started transferring) by the time
+	// the walk ended.
+	alreadyFlipped := flipped
+	flipToRunnable()
+
+	// Only fail/cancel the job here if it never left Scanning. Once flipToRunnable has already
+	// run once, the transfer worker may be actively executing the job (or have already finished
+	// it) using job.PlanCh; the executor independently observes the same walk error via
+	// job.PlanErr() when the plan channel closes and owns the job's outcome from that point on.
+	// Writing job.Status here too would race that event-driven completion path.
+	if err := producer.Err(); err != nil && !alreadyFlipped {
 		if errors.Is(err, context.Canceled) {
 			s.finishScanCanceled(job)
 			return
@@ -144,30 +231,10 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 		return
 	}
 
-	pausedAfter := false
 	s.mu.Lock()
-	job.Plan = result.Plan
-	job.TotalFiles = result.TotalFiles
-	job.TotalDirs = result.TotalDirs
-	job.TotalBytes = result.TotalBytes
-	pausedAfter = job.PausedAfterScan
-	if pausedAfter {
-		job.Status = StatusPaused
-	} else {
-		job.Status = StatusQueued
-	}
-	nextStatus := job.Status
+	job.PlanComplete = true
 	s.mu.Unlock()
-
-	s.emit(Event{
-		Type:       EventScanTotals,
-		JobID:      job.ID,
-		Status:     nextStatus,
-		TotalFiles: result.TotalFiles,
-		TotalDirs:  result.TotalDirs,
-		TotalBytes: result.TotalBytes,
-	})
-	s.signalWorker()
+	writeTotalsAndEmit()
 }
 
 func (s *State) transferActive() bool {
