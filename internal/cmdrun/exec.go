@@ -59,9 +59,9 @@ func RunTracked(ctx context.Context, argv []string, dir string, maxStreamBytes i
 	// which suspends the child and sends the app to the background.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 
-	var stdoutBuf, stderrBuf cappedWriter
-	stdoutBuf.max = maxStreamBytes
-	stderrBuf.max = maxStreamBytes
+	var stdoutBuf, stderrBuf CappedWriter
+	stdoutBuf.Max = maxStreamBytes
+	stderrBuf.Max = maxStreamBytes
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
 
@@ -75,8 +75,8 @@ func RunTracked(ctx context.Context, argv []string, dir string, maxStreamBytes i
 	out := RunResult{
 		Stdout:     stdoutBuf.Bytes(),
 		Stderr:     stripJobControlNoise(stderrBuf.Bytes()),
-		StdoutTrim: stdoutBuf.trimmed,
-		StderrTrim: stderrBuf.trimmed,
+		StdoutTrim: stdoutBuf.Trimmed,
+		StderrTrim: stderrBuf.Trimmed,
 		ExitCode:   -1,
 	}
 	if err != nil {
@@ -144,32 +144,36 @@ func isJobControlNoise(line []byte) bool {
 	return false
 }
 
-type cappedWriter struct {
-	data    []byte
-	max     int
-	trimmed bool
+// CappedWriter is an io.Writer that keeps only the last Max bytes written, setting Trimmed once
+// the cap is exceeded. Shared by Run's pipe-captured stdout/stderr and any other subprocess
+// capture (e.g. preview.runRuleCommandCapture's PTY read loop) that needs the same tail-keeping
+// cap.
+type CappedWriter struct {
+	Data    []byte
+	Max     int
+	Trimmed bool
 }
 
-func (w *cappedWriter) Write(p []byte) (int, error) {
+func (w *CappedWriter) Write(p []byte) (int, error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	w.data = append(w.data, p...)
-	if len(w.data) > w.max {
-		w.trimmed = true
-		w.data = w.data[len(w.data)-w.max:]
+	w.Data = append(w.Data, p...)
+	if len(w.Data) > w.Max {
+		w.Trimmed = true
+		w.Data = w.Data[len(w.Data)-w.Max:]
 	}
 	return len(p), nil
 }
 
-func (w *cappedWriter) Bytes() []byte {
-	b := w.data
-	if !w.trimmed {
+func (w *CappedWriter) Bytes() []byte {
+	b := w.Data
+	if !w.Trimmed {
 		return append([]byte(nil), b...)
 	}
 	suffix := truncationMarker
-	if len(b)+len(suffix) > w.max {
-		keep := w.max - len(suffix)
+	if len(b)+len(suffix) > w.Max {
+		keep := w.Max - len(suffix)
 		if keep < 0 {
 			keep = 0
 		}

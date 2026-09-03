@@ -40,18 +40,7 @@ func runRuleCommandCapture(ctx context.Context, argv []string, dir string, maxBy
 	_, _ = term.MakeRaw(int(ptmx.Fd()))
 
 	scanner := &terminalQueryScanner{sixelOK: sixelOK}
-	var out []byte
-	var trimmed bool
-	appendCapped := func(b []byte) {
-		if len(b) == 0 {
-			return
-		}
-		out = append(out, b...)
-		if len(out) > maxBytes {
-			trimmed = true
-			out = out[len(out)-maxBytes:]
-		}
-	}
+	captured := cmdrun.CappedWriter{Max: maxBytes}
 
 	buf := make([]byte, 32*1024)
 	for {
@@ -61,7 +50,7 @@ func runRuleCommandCapture(ctx context.Context, argv []string, dir string, maxBy
 			if len(reply) > 0 {
 				_, _ = ptmx.Write(reply)
 			}
-			appendCapped(clean)
+			_, _ = captured.Write(clean)
 		}
 		if rErr != nil {
 			// Reading a pty master after the child (sole slave holder) exits and closes it
@@ -69,10 +58,13 @@ func runRuleCommandCapture(ctx context.Context, argv []string, dir string, maxBy
 			break
 		}
 	}
-	appendCapped(scanner.Flush())
+	_, _ = captured.Write(scanner.Flush())
 
 	waitErr := cmd.Wait()
-	res := cmdrun.RunResult{Stdout: out, StdoutTrim: trimmed, ExitCode: -1}
+	// captured.Data, not .Bytes(): runRuleCommand discards the result outright whenever
+	// StdoutTrim is set (a partial escape sequence can't be trusted), so there's no reason to pay
+	// for .Bytes()'s truncation-marker suffix/copy here.
+	res := cmdrun.RunResult{Stdout: captured.Data, StdoutTrim: captured.Trimmed, ExitCode: -1}
 	var exitErr *exec.ExitError
 	switch {
 	case waitErr == nil:

@@ -365,8 +365,7 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 	}
 	path, _, mode := h.quickViewWantFile()
 	if mode == quickViewWantDir {
-		if dirPath, ok := h.host.SyncFollowTargetPath(h.host.ActivePanel()); ok &&
-			previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, true, filepath.Dir(dirPath)) {
+		if dirPath, ok := h.activeDirRuleTarget(); ok {
 			// ponytail: unlike quick view, fullscreen has no directory-overlay fallback. If
 			// every matching rule declines, this falls through into the internal preview path
 			// below and errors reading the directory as a file (EISDIR) — shown as a plain

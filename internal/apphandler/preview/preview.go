@@ -679,6 +679,17 @@ func (h *Handler) quickViewFollowDirectory() {
 	h.model.QuickViewDirOverlayActive = true
 }
 
+// activeDirRuleTarget reports the active panel's synced directory when a [[preview.commands]]
+// rule could match it, so callers can route it through a rule preview instead of the built-in
+// directory-listing overlay.
+func (h *Handler) activeDirRuleTarget() (string, bool) {
+	dirPath, ok := h.host.SyncFollowTargetPath(h.host.ActivePanel())
+	if !ok || !previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, true, filepath.Dir(dirPath)) {
+		return "", false
+	}
+	return dirPath, true
+}
+
 // dispatchQuickViewDirPreview shows a directory via a matching [[preview.commands]] rule instead
 // of the built-in directory-listing overlay (see quickViewFollowDirectory). Only called after
 // previewrun.MatchAnyCommandRule confirms a rule could match; runDirPreviewRules falls back to
@@ -775,8 +786,7 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		h.ClearQuickViewDirOverlay()
 		h.patchColumnPreviewMessage("", "Quick view: empty file")
 	case quickViewWantDir:
-		if dirPath, ok := h.host.SyncFollowTargetPath(h.host.ActivePanel()); ok &&
-			previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, true, filepath.Dir(dirPath)) {
+		if dirPath, ok := h.activeDirRuleTarget(); ok {
 			h.dispatchQuickViewDirPreview(dirPath)
 		} else {
 			h.quickViewFollowDirectory()

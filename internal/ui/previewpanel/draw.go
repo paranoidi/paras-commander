@@ -278,7 +278,18 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		return
 	}
 
-	if st.ImagePayload != "" {
+	// ChromeBlocked (a dialog or menu covers this pane) skips the image entirely rather than
+	// drawing it: a locked cursor-relative placement would visually clash with whatever's drawn
+	// on top of it, and a Unicode-placeholder image is worse — its glyph cells are ordinary text
+	// as far as tcell is concerned, so with nothing here to stop it, this pane keeps redrawing
+	// them every frame regardless of what opened on top, while the app layer (which does know a
+	// dialog is open) separately deletes the transmitted image data those glyphs reference —
+	// leaving raw, undecodable placeholder glyphs visible through/around the dialog under tmux
+	// (outside tmux, cursor-relative mode's own suppression already hid the image cleanly, which
+	// is why this was tmux-only). Not calling drawImageBody also means TakeFrameImage() finds no
+	// placement for this frame, matching the app layer's own suppression instead of relying on
+	// it alone.
+	if st.ImagePayload != "" && !p.ChromeBlocked {
 		drawImageBody(screen, st, textX, contentTop, textW, contentH, body,
 			paintLeftMargin, paintRightMargin, leftMarginX, rightMarginX, marginStyle, padStyle,
 			scrollGutterX, borderStyle, p)
@@ -288,6 +299,9 @@ func Draw(screen tcell.Screen, rect Rect, st State, p DrawParams) {
 		}
 		return
 	}
+	// ChromeBlocked with an image falls through to the plain-text path below instead of the
+	// image layout — CombinedText (e.g. a rule command's caption) still renders reasonably; an
+	// image-only result just paints blank, matching drawImageOnly's own blank-fill.
 
 	lines := previewWrappedLines(st, textW, body)
 	scroll := st.Scroll

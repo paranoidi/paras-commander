@@ -685,6 +685,57 @@ func TestDrawImageRecordsPlacementAndBlanksBody(t *testing.T) {
 	}
 }
 
+// TestDrawSkipsImageWhenChromeBlocked covers the actual reported bug: a dialog/menu covering
+// the preview pane (ChromeBlocked) must stop Draw from recording an image placement or writing
+// Unicode-placeholder glyph cells — otherwise a placeholder image keeps redrawing those cells
+// every frame regardless of what's drawn on top of them, and once the app layer (which knows a
+// dialog is open, unlike this package) deletes the transmitted image data those glyphs
+// reference, they render as raw undecodable characters visible through/around the dialog.
+func TestDrawSkipsImageWhenChromeBlocked(t *testing.T) {
+	_ = TakeFrameImage() // clear any prior frame
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	const panelWidth, panelHeight = 40, 12
+	screen.SetSize(panelWidth, panelHeight)
+
+	styles := theme.Default()
+	body := BodyStyle(styles, false)
+	rect := Rect{X: 0, Y: 0, Width: panelWidth, Height: panelHeight}
+	payload := "\x1bP0;0;8q#0;2;0;0;0#0~~~\x1b\\"
+	Draw(screen, rect, State{
+		Open:                    true,
+		Path:                    "/tmp/garden.png",
+		TitleBase:               "garden.png",
+		Phase:                   PhaseDone,
+		ImagePayload:            payload,
+		ImagePxW:                30,
+		ImagePxH:                20,
+		ImageProtocol:           ImageProtocolKitty,
+		ImageUnicodePlaceholder: true,
+	}, DrawParams{
+		Theme:         styles,
+		BodyStyle:     body,
+		ChromeBlocked: true,
+	})
+
+	if plan := TakeFrameImage(); plan != nil {
+		t.Fatalf("TakeFrameImage() = %+v, want nil while ChromeBlocked", plan)
+	}
+
+	// No placeholder glyph cell should have been written anywhere in the pane.
+	for y := rect.Y; y < rect.Y+rect.Height; y++ {
+		for x := rect.X; x < rect.X+rect.Width; x++ {
+			main, _, _ := screen.Get(x, y)
+			if main == string(unicodePlaceholderChar) {
+				t.Fatalf("found placeholder glyph at (%d,%d) while ChromeBlocked", x, y)
+			}
+		}
+	}
+}
+
 func rowText(screen tcell.SimulationScreen, y, x0, x1 int) string {
 	var b strings.Builder
 	for x := x0; x <= x1; x++ {

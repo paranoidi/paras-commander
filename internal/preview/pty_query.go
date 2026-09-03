@@ -20,13 +20,6 @@ type terminalQueryScanner struct {
 	carry   []byte
 }
 
-var (
-	da1Query   = []byte("\x1b[c")
-	da10Query  = []byte("\x1b[0c")
-	cprQuery   = []byte("\x1b[6n")
-	allQueries = [][]byte{da10Query, da1Query, cprQuery}
-)
-
 // da1Reply answers a DA1 "Send Device Attributes" query. Real terminals reply "\x1b[?<params>c";
 // param 4 is the DEC-defined signal for Sixel graphics support. There is no equivalent DA1 param
 // for Kitty's graphics protocol, so sixelOK is the only capability this can honestly advertise.
@@ -45,12 +38,24 @@ func cprReply() []byte {
 	return []byte("\x1b[1;1R")
 }
 
-// partialQueryPrefixLen reports whether rest could still grow into one of allQueries: it
+// knownQueries lists every literal query Scan recognizes, paired with the reply it answers with
+// (sixelOK-dependent for the two DA1 spellings). Checked in order, so both the full-match switch
+// and the partial-prefix check share one list instead of drifting.
+var knownQueries = []struct {
+	query []byte
+	reply func(sixelOK bool) []byte
+}{
+	{[]byte("\x1b[0c"), da1Reply},
+	{[]byte("\x1b[c"), da1Reply},
+	{[]byte("\x1b[6n"), func(bool) []byte { return cprReply() }},
+}
+
+// partialQueryPrefixLen reports whether rest could still grow into one of knownQueries: it
 // matches a query's prefix exactly and hasn't reached that query's full length yet (a
 // full-length match is caught by the caller before this is ever consulted).
 func partialQueryPrefixLen(rest []byte) int {
-	for _, q := range allQueries {
-		if len(rest) < len(q) && bytes.Equal(rest, q[:len(rest)]) {
+	for _, kq := range knownQueries {
+		if len(rest) < len(kq.query) && bytes.Equal(rest, kq.query[:len(rest)]) {
 			return len(rest)
 		}
 	}
@@ -77,16 +82,17 @@ func (s *terminalQueryScanner) Scan(chunk []byte) (clean, reply []byte) {
 			continue
 		}
 		rest := buf[i:]
+		matched := false
+		for _, kq := range knownQueries {
+			if bytes.HasPrefix(rest, kq.query) {
+				reply = append(reply, kq.reply(s.sixelOK)...)
+				i += len(kq.query)
+				matched = true
+				break
+			}
+		}
 		switch {
-		case bytes.HasPrefix(rest, da10Query):
-			reply = append(reply, da1Reply(s.sixelOK)...)
-			i += len(da10Query)
-		case bytes.HasPrefix(rest, da1Query):
-			reply = append(reply, da1Reply(s.sixelOK)...)
-			i += len(da1Query)
-		case bytes.HasPrefix(rest, cprQuery):
-			reply = append(reply, cprReply()...)
-			i += len(cprQuery)
+		case matched:
 		case partialQueryPrefixLen(rest) > 0:
 			s.carry = append(s.carry, rest...)
 			return clean, reply
