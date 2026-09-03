@@ -118,7 +118,7 @@ func entryFromDirEntry(cleanPath string, dirEntry os.DirEntry) (Entry, bool, err
 	return Entry{
 		Name:         name,
 		Path:         path,
-		Type:         classify(info.Mode()),
+		Type:         ClassifyMode(info.Mode()),
 		Size:         info.Size(),
 		Mode:         info.Mode(),
 		ModifiedAt:   info.ModTime(),
@@ -148,7 +148,8 @@ func (e Entry) ResolvesToDir() bool {
 	return err == nil && info.IsDir()
 }
 
-func classify(mode fs.FileMode) EntryType {
+// ClassifyMode maps a file mode to an EntryType (dir/symlink/regular/other).
+func ClassifyMode(mode fs.FileMode) EntryType {
 	switch {
 	case mode.IsDir():
 		return EntryDirectory

@@ -117,6 +117,10 @@ type Request struct {
 	ImageCapabilityUncertain bool
 	// Cache, when non-nil, stores/loads downscaled PNG rasters shared with background prefetch.
 	Cache MediaCache
+	// IsDir is true when Path is a directory. Set by the caller (an os.Stat is often already
+	// available there); RunRules uses it to match [[preview.commands]] "t d"/"d <pattern>"
+	// rules without re-statting Path itself.
+	IsDir bool
 }
 
 // Result is the unified preview output for internal and external backends.
@@ -163,6 +167,10 @@ type Result struct {
 	// ImageCapabilityUncertain carries Request.ImageCapabilityUncertain forward — see that
 	// field's doc comment.
 	ImageCapabilityUncertain bool
+	// ImageFirst carries forward into previewpanel.State.ImageFirst — see that field's doc
+	// comment. Set by an external [[preview.commands]] rule whose stdout had the image before
+	// its trailing text, so Draw renders them in the command's own output order.
+	ImageFirst bool
 }
 
 // Run executes internal Chroma highlighting or an external preview command.
@@ -273,26 +281,35 @@ func runExternal(ctx context.Context, req Request) Result {
 	if res.LaunchErr != nil {
 		return Result{ErrorMsg: res.LaunchErr.Error(), ExitCode: -1}
 	}
-	var b strings.Builder
-	b.WriteString(string(res.Stdout))
-	if len(res.Stderr) > 0 {
-		if b.Len() > 0 {
-			b.WriteByte('\n')
-		}
-		b.WriteString("--- stderr ---\n")
-		b.WriteString(string(res.Stderr))
-	}
-	combined := b.String()
-	truncated := res.StdoutTrim || res.StderrTrim
-	if truncated {
-		combined += "\n\n[output truncated]\n"
-	}
+	combined, truncated := combineStdoutStderr(res.Stdout, res.Stderr, res.StdoutTrim || res.StderrTrim)
 	return Result{
 		Source:       previewpanel.SourceExternalANSI,
 		CombinedText: combined,
 		ExitCode:     res.ExitCode,
 		Truncated:    truncated,
 	}
+}
+
+// combineStdoutStderr joins a subprocess's captured stdout/stderr the way the external preview
+// path has always rendered it: stdout, then a "--- stderr ---" separator and stderr when
+// present, then a truncation notice when either stream was capped. Shared by runExternal and
+// the [[preview.commands]] rule runner (rules.go) so both external-command preview paths render
+// identically.
+func combineStdoutStderr(stdout, stderr []byte, truncated bool) (combined string, wasTruncated bool) {
+	var b strings.Builder
+	b.WriteString(string(stdout))
+	if len(stderr) > 0 {
+		if b.Len() > 0 {
+			b.WriteByte('\n')
+		}
+		b.WriteString("--- stderr ---\n")
+		b.WriteString(string(stderr))
+	}
+	combined = b.String()
+	if truncated {
+		combined += "\n\n[output truncated]\n"
+	}
+	return combined, truncated
 }
 
 // gitDiffFallback shows plain file content with a git-status label when there is

@@ -872,6 +872,28 @@ func TestValidatePreviewModeAndStyle(t *testing.T) {
 	}
 }
 
+func TestValidatePreviewCommandsDropsInvalidRulesKeepsValid(t *testing.T) {
+	cfg := Default()
+	cfg.Preview.Commands = []PreviewCommandRule{
+		{When: []string{"f *.md"}, Command: "  "},                // empty command: dropped
+		{When: []string{"f *.pdf"}, Command: "%f %f"},            // %f used twice: fails PreviewCommandArgv, dropped
+		{When: []string{"f *.epub"}, Command: "ebook-viewer %f"}, // valid: kept
+		{When: []string{"t d"}, Command: "eza --tree %f"},        // valid, directory rule: kept
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	if len(cfg.Preview.Commands) != 2 {
+		t.Fatalf("Commands = %#v, want 2 surviving rules", cfg.Preview.Commands)
+	}
+	if cfg.Preview.Commands[0].Command != "ebook-viewer %f" {
+		t.Fatalf("Commands[0].Command = %q, want %q", cfg.Preview.Commands[0].Command, "ebook-viewer %f")
+	}
+	if cfg.Preview.Commands[1].Command != "eza --tree %f" {
+		t.Fatalf("Commands[1].Command = %q, want %q", cfg.Preview.Commands[1].Command, "eza --tree %f")
+	}
+}
+
 func TestLoadFromPathsValidatesCustomPreviewStyle(t *testing.T) {
 	t.Cleanup(chromastyles.ResetForTest)
 	dir := t.TempDir()

@@ -3,6 +3,7 @@ package preview
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -363,6 +364,21 @@ func (h *Handler) OpenFilePreviewFullscreen() {
 		return
 	}
 	path, _, mode := h.quickViewWantFile()
+	if mode == quickViewWantDir {
+		if dirPath, ok := h.host.SyncFollowTargetPath(h.host.ActivePanel()); ok &&
+			previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, true, filepath.Dir(dirPath)) {
+			// ponytail: unlike quick view, fullscreen has no directory-overlay fallback. If
+			// every matching rule declines, this falls through into the internal preview path
+			// below and errors reading the directory as a file (EISDIR) — shown as a plain
+			// error message in the pane. Add a proper fallback if that proves annoying in practice.
+			if err := h.OpenFullscreenFilePreviewAt(dirPath); err != nil {
+				h.host.SetTransientMessage("View: "+err.Error(), ui.MessageUrgencyWarn)
+			}
+			return
+		}
+		h.host.SetTransientMessage("View: select a file", ui.MessageUrgencyWarn)
+		return
+	}
 	if mode != quickViewWantFile && mode != quickViewWantEmpty {
 		h.host.SetTransientMessage("View: select a file", ui.MessageUrgencyWarn)
 		return
@@ -396,9 +412,15 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
 		return fmt.Errorf("terminal too small")
 	}
 	union := ui.MergeTwinPanelRects(lay.Primary, lay.Secondary, h.host.EffectivePaneSplitOrientation())
+	info, statErr := os.Stat(path)
+	isDir := statErr == nil && info.IsDir()
 	panelPath := filepath.Dir(path)
 	if active := h.host.ActivePanel(); active != nil && active.PathString() != "" {
 		panelPath = active.PathString()
+	}
+	if isDir {
+		// So a rule command like "eza --tree ." works without needing %f.
+		panelPath = path
 	}
 	titleBase := filepath.Base(path)
 	h.captureFilePreviewHold(previewTargetFullscreen)
@@ -415,6 +437,7 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
 		st.Phase = ui.FilePreviewPhasePending
 		st.Path = path
 		st.TitleBase = titleBase
+		st.IsDir = isDir
 		st.CombinedText = ""
 		st.SetHighlightedCells(nil)
 		st.Source = ui.PreviewSourceExternalANSI
@@ -443,7 +466,7 @@ func (h *Handler) OpenFullscreenFilePreviewAt(path string) error {
 	h.postRenderWake()
 	go h.runPreview(
 		h.ctx,
-		h.previewRequest(path, tw, contentH, panelPath, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetFullscreen),
+		h.previewRequest(path, tw, contentH, panelPath, h.model.PanelsChromeBlocked(), h.gitStatusForPath(path), previewTargetFullscreen, isDir),
 		previewTargetFullscreen,
 		gen,
 	)

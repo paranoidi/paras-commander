@@ -58,7 +58,7 @@ func TestFilePreviewRunGenStaleSkipsRunningPatch(t *testing.T) {
 	staleGen := h.filePreviewRunGen.Add(1)
 	h.filePreviewRunGen.Add(1)
 
-	h.runPreview(context.Background(), h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive), previewTargetInactive, staleGen)
+	h.runPreview(context.Background(), h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive, false), previewTargetInactive, staleGen)
 
 	h.mu.RLock()
 	ph := h.model.FilePreview.Phase
@@ -84,7 +84,7 @@ func TestDispatchQuickViewFilePreviewStaleGenSkipsPatch(t *testing.T) {
 	staleGen := h.filePreviewRunGen.Add(1)
 	h.filePreviewRunGen.Add(1)
 
-	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive)
+	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive, false)
 	h.dispatchQuickViewFilePreview(path, req, staleGen)
 
 	h.mu.RLock()
@@ -108,7 +108,7 @@ func TestDispatchQuickViewFilePreviewCurrentGenAppliesPreview(t *testing.T) {
 	h.model.FilePreview.Path = path
 	h.mu.Unlock()
 	gen := h.filePreviewRunGen.Add(1)
-	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive)
+	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive, false)
 	h.dispatchQuickViewFilePreview(path, req, gen)
 
 	h.mu.RLock()
@@ -136,7 +136,7 @@ func TestDispatchQuickViewFilePreviewCurrentGenAppliesNotPreviewableMessage(t *t
 	h.model.FilePreview.Path = path
 	h.mu.Unlock()
 	gen := h.filePreviewRunGen.Add(1)
-	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive)
+	req := h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive, false)
 	h.dispatchQuickViewFilePreview(path, req, gen)
 
 	h.mu.RLock()
@@ -161,7 +161,7 @@ func TestRunPreviewInternalSetsHighlightedCells(t *testing.T) {
 	h.model.FilePreview.Path = path
 	h.mu.Unlock()
 	gen := h.filePreviewRunGen.Add(1)
-	h.runPreview(context.Background(), h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive), previewTargetInactive, gen)
+	h.runPreview(context.Background(), h.previewRequest(path, 80, 20, root, false, nil, previewTargetInactive, false), previewTargetInactive, gen)
 
 	h.mu.RLock()
 	st := h.model.FilePreview

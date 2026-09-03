@@ -330,7 +330,7 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 			RowOpts: rowOpts, ListTextWidth: listTextWidth, ListContentStart: listContentStart, NameWidth: nameWidth,
 			LeftGutter: leftGutter, GitStrip: gitStrip, IconStrip: iconStrip,
 			GitStart: gitStart, IconStart: iconStart, ShowGit: showGit,
-			DiskDenom: diskDenom,
+			DiskDenom:   diskDenom,
 			MetaLayouts: metaLayouts, ShowMetaEffective: showMetaEffective,
 		})
 	}

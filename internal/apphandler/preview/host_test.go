@@ -28,6 +28,7 @@ type fakeHost struct {
 	messages             []string
 	launchedAsFileViewer bool
 	peekGitStatus        func(workRoot, listDir string, paths []gitstatus.ListingPaths) (map[string]gitstatus.Cell, bool)
+	syncFollowTargetPath func(*panel.State) (string, bool)
 	scheduledParent      []int // panel IDs passed to ScheduleCarouselParentSnapshot, in order
 	scheduledChild       []int // panel IDs passed to ScheduleCarouselChildSnapshot, in order
 }
@@ -94,7 +95,12 @@ func (f *fakeHost) SwitchPanel() {
 		f.inactive = ui.PrimaryPanel
 	}
 }
-func (f *fakeHost) SyncFollowTargetPath(*panel.State) (string, bool)        { return "", false }
+func (f *fakeHost) SyncFollowTargetPath(p *panel.State) (string, bool) {
+	if f.syncFollowTargetPath != nil {
+		return f.syncFollowTargetPath(p)
+	}
+	return "", false
+}
 func (f *fakeHost) PanelSyncFollowHeldListNav(string, *tcell.EventKey) bool { return false }
 func (f *fakeHost) ArmPanelSyncFollowNavCoalesceAfterListNav()              {}
 func (f *fakeHost) ClearPanelSyncFollowNavCoalesce()                        {}

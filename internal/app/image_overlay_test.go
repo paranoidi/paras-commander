@@ -64,7 +64,7 @@ func TestWriteImagePayloadOutsideTmuxIsUnwrapped(t *testing.T) {
 	t.Setenv("TMUX", "")
 	payload := "\x1bPq...sixel-data...\x1b\\"
 	var buf bytes.Buffer
-	writeImagePayload(&buf, payload, previewpanel.ImageProtocolSixel)
+	writeImagePayload(&buf, payload, previewpanel.ImageProtocolSixel, false)
 	if buf.String() != payload {
 		t.Fatalf("writeImagePayload() = %q, want unwrapped %q", buf.String(), payload)
 	}
@@ -82,7 +82,7 @@ func TestWriteImagePayloadUnderTmuxWrapsSixelAsOnePiece(t *testing.T) {
 	t.Setenv("TMUX", fakeTmuxEnv)
 	payload := "\x1bPq\"1;1;10;10#0;2;0;0;0#0~~~~$-\x1b\\"
 	var buf bytes.Buffer
-	writeImagePayload(&buf, payload, previewpanel.ImageProtocolSixel)
+	writeImagePayload(&buf, payload, previewpanel.ImageProtocolSixel, false)
 	want := tmuxPassthroughWrap(payload)
 	if buf.String() != want {
 		t.Fatalf("writeImagePayload() = %q, want single wrap %q", buf.String(), want)
@@ -93,7 +93,7 @@ func TestWriteImagePayloadUnderTmuxWrapsKittyChunksSeparately(t *testing.T) {
 	t.Setenv("TMUX", fakeTmuxEnv)
 	payload := "\x1b_Ga=T,m=1;AAAA\x1b\\\x1b_Gm=0;BBBB\x1b\\"
 	var buf bytes.Buffer
-	writeImagePayload(&buf, payload, previewpanel.ImageProtocolKitty)
+	writeImagePayload(&buf, payload, previewpanel.ImageProtocolKitty, false)
 	want := tmuxPassthroughWrap("\x1b_Ga=T,m=1;AAAA\x1b\\") + tmuxPassthroughWrap("\x1b_Gm=0;BBBB\x1b\\")
 	if buf.String() != want {
 		t.Fatalf("writeImagePayload() = %q, want %q", buf.String(), want)

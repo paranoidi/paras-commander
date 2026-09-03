@@ -77,8 +77,20 @@ func drawImageBody(screen tcell.Screen, st State, textX, contentTop, textW, cont
 		}
 	}
 
+	// ImageFirst puts the image at contentTop and the caption below it instead of the default
+	// caption-above-image order. The second block's offset must be sized by the FIRST block's
+	// own height (captionH for the default order, neededImageRows+sep when ImageFirst) — using
+	// captionH in both cases would place the caption inside the image's rows whenever the image
+	// is taller than the caption, hiding it under the image's locked screen region.
+	imageTop := contentTop + captionH
+	captionTop := contentTop
+	if st.ImageFirst {
+		imageTop = contentTop
+		captionTop = contentTop + neededImageRows + sep
+	}
+
 	for row := 0; row < textRows; row++ {
-		y := contentTop + row
+		y := captionTop + row
 		idx := scroll + row
 		if idx < len(lines) {
 			drawLine(screen, textX, y, textW, lines[idx], padStyle)
@@ -93,7 +105,7 @@ func drawImageBody(screen tcell.Screen, st State, textX, contentTop, textW, cont
 				railStyle = p.ScrollbarRailStyle
 			}
 			uiscrollbar.Draw(uiscrollbar.DrawParams{
-				Screen: screen, X: scrollGutterX, ListTopY: contentTop, Visible: textRows,
+				Screen: screen, X: scrollGutterX, ListTopY: captionTop, Visible: textRows,
 				Metrics: metrics, Style: p.ScrollbarStyle, Active: scrollbarActive,
 				Blocked: p.ChromeBlocked, FrameStyle: railStyle, Theme: p.Theme,
 			})
@@ -103,7 +115,6 @@ func drawImageBody(screen tcell.Screen, st State, textX, contentTop, textW, cont
 	if neededImageRows < 1 {
 		return
 	}
-	imageTop := contentTop + captionH
 	drawImageOnly(screen, st, textX, imageTop, textW, neededImageRows,
 		paintLeftMargin, paintRightMargin, leftMarginX, rightMarginX, marginStyle, padStyle)
 }

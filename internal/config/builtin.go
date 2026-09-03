@@ -403,6 +403,13 @@ const (
 	DefaultPreviewTmuxSixelMaxBytes = 500_000
 	// DefaultMaxPreviewBytes caps internal preview reads (matches cmdrun.MaxStreamBytes).
 	DefaultMaxPreviewBytes = 512 * 1024
+	// DefaultPreviewCommandsMaxStreamBytes caps stdout capture for a [[preview.commands]] rule,
+	// well above cmdrun.MaxStreamBytes (512KiB, sized for typical text/ANSI output): a rule's
+	// stdout may be a raw Sixel or Kitty graphics payload for a near-fullscreen pane, which can
+	// legitimately run into several MB, and unlike text output, a payload truncated mid-escape-
+	// sequence corrupts the terminal (an unterminated Sixel DCS or Kitty APC) rather than just
+	// looking cut off. Not a config key.
+	DefaultPreviewCommandsMaxStreamBytes = 8 * 1024 * 1024
 
 	// DefaultPreviewGitDiffContextLines is the unified-diff context (-U) for git-dirty
 	// file previews (F3 / quick view / carousel). Git's default (~3) shows only local

@@ -18,11 +18,11 @@ func TestDeleteDialogOpenExcludesDanglingDirs(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name              string
-		open              bool
-		dialogType        dialog.FileDialogType
+		name               string
+		open               bool
+		dialogType         dialog.FileDialogType
 		deleteDanglingDirs bool
-		wantOpen          bool
+		wantOpen           bool
 	}{
 		{
 			name:               "regular delete dialog is open",

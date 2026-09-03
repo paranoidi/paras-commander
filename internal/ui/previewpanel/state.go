@@ -31,7 +31,10 @@ type State struct {
 	Path string
 	// TitleBase is shown in the panel title (usually filepath.Base(Path)).
 	TitleBase string
-	Source    Source
+	// IsDir is true when Path is a directory being previewed by an external
+	// [[preview.commands]] rule (see internal/preview.RunRules) rather than a file.
+	IsDir  bool
+	Source Source
 	// CombinedText is stdout plus optional stderr (external mode); may contain ANSI escapes.
 	CombinedText string
 	// HighlightedCells is the flat pre-wrap body for internal Chroma highlighting.
@@ -88,6 +91,12 @@ type State struct {
 	// rule as ImageInTmux/ImageUnicodePlaceholder). Draw carries it into ImagePlacement so the
 	// app layer can show the bottom-left "capability unknown" footer hint without re-deriving it.
 	ImageCapabilityUncertain bool
+	// ImageFirst, when true, draws the image above the CombinedText caption instead of
+	// drawImageBody's default (caption above image, used by pc's own video-thumbnail
+	// previews). Set for external [[preview.commands]] rule output whose image came before
+	// its trailing text in the command's own stdout, so the rendered order matches the
+	// command's actual output order instead of always reordering it.
+	ImageFirst bool
 
 	wrappedLines     [][]AnsiCell
 	wrapWidth        int

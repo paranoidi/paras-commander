@@ -21,7 +21,7 @@ func EntryFromPath(path string) (Entry, error) {
 	return Entry{
 		Name:       filepath.Base(abs),
 		Path:       abs,
-		Type:       classify(info.Mode()),
+		Type:       ClassifyMode(info.Mode()),
 		Size:       info.Size(),
 		Mode:       info.Mode(),
 		ModifiedAt: info.ModTime(),

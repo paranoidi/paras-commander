@@ -286,7 +286,7 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 	})
 	h.postRenderWake()
 	gen := h.carouselFilePreviewRunGen.Add(1)
-	req := h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel)
+	req := h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel, false)
 	go h.dispatchCarouselFilePreview(path, req, gen)
 }
 
@@ -311,7 +311,7 @@ func (h *Handler) refreshCarouselFilePreview() {
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
-	req := h.previewRequest(st.Path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel)
+	req := h.previewRequest(st.Path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetCarousel, false)
 	gen := h.carouselFilePreviewRunGen.Add(1)
 	h.postRenderWake()
 	go h.runPreview(h.ctx, req, previewTargetCarousel, gen)

@@ -282,7 +282,9 @@ File preview pane (F3 / quick view / carousel).
 | `mode` | string | `"internal"` | Preview engine: `"internal"` (built-in syntax highlighting) or `"external"` (runs `command` as a subprocess). |
 | `style` | string | `"catppuccin-frappe"` | Syntax highlighting theme name used in internal mode. |
 | `line_numbers` | bool | `true` | Show a line-number gutter in internal mode. |
-| `command` | string | `"bat -n --paging=never --color=always --wrap=auto --terminal-width=%w %f"` | External preview command template, used when `mode` is `"external"`. Use `%f` once for the file path and `%w` for the terminal width; if `%f` is omitted, the path is appended. |
+| `command` | string | `"bat -n --paging=never --color=always --wrap=auto --terminal-width=%w %f"` | External preview command template, used when `mode` is `"external"` and no `commands` rule matches (or every matching rule declines). Use `%f` once for the file path and `%w` for the terminal width; if `%f` is omitted, the path is appended. |
+| `commands` | array of tables | `[]` | Per-pattern external preview commands, tried in order before `mode`/`command` or the internal preview — see below. |
+| `shell_patterns` | bool | `false` | Selects glob matching (`filepath.Match`, `true`) vs. regexp matching (`false`, default) for every `commands` rule's `f`/`d` predicates. |
 | `images` | bool | `true` | Enable in-process image and video-thumbnail previews (F3 / quick view / carousel) via sixel or Kitty graphics. When `false`, image and media paths show metadata text instead. |
 | `image_protocol` | string | `"auto"` | Terminal graphics protocol for image and video-thumbnail previews: `"auto"` (Kitty when `TERM_PROGRAM`/`TERM` looks like kitty, ghostty, or WezTerm, otherwise sixel), `"sixel"`, or `"kitty"`. Ignored when `images` is `false`. |
 | `terminal_sixel` | string | `"auto"` | Confirms whether the attached terminal supports Sixel graphics: `"auto"` (undecided, falls through to detection), `"yes"`, or `"no"`. Set from the M-F3 image terminal-capabilities dialog (also reachable via the top menu: Options → Configure graphics) rather than by hand; drives `"auto"` `image_protocol` resolution and the file preview panel's bottom-left discoverability hint (shown while any of these three fields is still `"auto"` and detection couldn't confirm it either). |
@@ -302,6 +304,32 @@ File preview pane (F3 / quick view / carousel).
 | `prefetch_memory_max_mb` | int | `256` | In-memory LRU budget (MiB) for prefetched image/video rasters. Evicts oldest entries when exceeded. |
 | `render_cache_max_mb` | int | `256` | In-memory LRU budget (MiB) for final render-ready image payloads (post cell-fit resize, post protocol-encode), keyed by exact on-screen pixel box/protocol/tmux state. Lets landing back on an already-rendered file at unchanged panel geometry skip decode/resize/encode entirely. A near-fullscreen preview box (e.g. `-qp` or F3) can produce multi-MB payloads per entry, so this is sized well above the small-pane case to avoid evicting still-needed near-cursor entries during normal navigation. Evicts oldest entries when exceeded. |
 | `video_thumb_cache_max_mb` | int | `512` | On-disk video thumbnail cache under `$XDG_CACHE_HOME/pc/video-thumbs/` (fallback `~/.cache/pc/video-thumbs/`). Oldest files deleted when the cap is exceeded. |
+
+Each `[[preview.commands]]` entry has a `when` array and a `command`:
+
+```toml
+[[preview.commands]]
+when = ["f *.epub"]
+command = "ebook-viewer %f"
+
+[[preview.commands]]
+when = ["t d"]
+command = "eza --tree --level=2 %f"
+```
+
+`when` uses the same predicate language as `[[entry]]` in `meta.toml` (see `[meta]` below):
+`f <pattern>` matches the file name, `d <pattern>` matches a directory name, `t <letters>`
+matches by type (`r` regular file, `d` directory, `l` symlink, `n` anything but a directory), and
+predicates combine with `!`/`&`/`|`. Rules are tried top-to-bottom; for each rule whose `when`
+matches the file or directory being previewed, its `command` runs (`%f`/`%w` macros, same as the
+`command` field above). Exit code is the contract: **0 means the command took responsibility —
+its stdout is the preview** — and non-zero means it declined, so the next matching rule is tried,
+then `mode`/`command`, then the internal preview. A command's stdout that starts with a raw Sixel
+or Kitty graphics escape sequence is detected automatically and shown the same way pc's own
+built-in image preview is (bypassing normal text rendering) — no separate flag is needed to
+signal "this output is a graphics payload" vs. plain/ANSI text. `commands` rules apply to both
+files and directories, in both quick view and the F3 fullscreen preview; carousel's parent/child
+directory navigation columns are unaffected (they list directories for navigation, not preview).
 
 ## `[sftp]`
 

@@ -329,6 +329,23 @@ type PreviewConfig struct {
 	// VideoThumbCacheMaxMB caps the on-disk video thumbnail cache under
 	// $XDG_CACHE_HOME/pc/video-thumbs/ (default 512).
 	VideoThumbCacheMaxMB int `toml:"video_thumb_cache_max_mb"`
+	// Commands lists external preview commands tried, in order, against the file or directory
+	// being previewed, before falling back to Mode/Command or the internal preview. Each rule's
+	// When predicates use the same language as [[entry]] in meta.toml (internal/entrymatch):
+	// "f <glob-or-regex>", "d <pattern>", "t <type-letters>", combined with !/&/|. A rule whose
+	// command exits 0 has taken responsibility for the preview — its stdout is either plain/ANSI
+	// text or a raw Sixel/Kitty graphics payload (auto-detected). A non-zero exit means the rule
+	// declined; the next matching rule is tried, then Mode/Command or the internal preview.
+	Commands []PreviewCommandRule `toml:"commands"`
+	// ShellPatterns selects filepath.Match (true) vs regexp (false, default) for every
+	// Commands rule's f/d predicates.
+	ShellPatterns bool `toml:"shell_patterns"`
+}
+
+// PreviewCommandRule is one [[preview.commands]] entry (see PreviewConfig.Commands).
+type PreviewCommandRule struct {
+	When    []string `toml:"when"`
+	Command string   `toml:"command"`
 }
 
 type UIConfig struct {
@@ -1306,6 +1323,19 @@ func (c *Config) validatePreview(builtin *Config) {
 		if _, err := cmdrun.PreviewCommandArgv(c.Preview.Command, "/tmp/pc-preview-validate", 80); err != nil {
 			c.Preview.Command = builtin.Preview.Command
 		}
+	}
+	if len(c.Preview.Commands) > 0 {
+		kept := c.Preview.Commands[:0]
+		for _, rule := range c.Preview.Commands {
+			if strings.TrimSpace(rule.Command) == "" {
+				continue
+			}
+			if _, err := cmdrun.PreviewCommandArgv(rule.Command, "/tmp/pc-preview-validate", 80); err != nil {
+				continue
+			}
+			kept = append(kept, rule)
+		}
+		c.Preview.Commands = kept
 	}
 }
 

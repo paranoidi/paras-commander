@@ -814,6 +814,9 @@ type eventOutcome struct {
 
 // handleInterruptPayload handles the EventInterrupt payload type-switch for Run.
 func (a *App) handleInterruptPayload(data any) eventOutcome {
+	if out, ok := a.handlePreviewInterruptPayload(data); ok {
+		return out
+	}
 	out := eventOutcome{pollDiskUsageAfter: true}
 	switch d := data.(type) {
 	case jobsctrl.WakePayload:
@@ -879,9 +882,6 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		a.commandsCtrl.ApplyWake(d)
 		a.render()
 		out.didRender = true
-	case previewctrl.RenderWakePayload:
-		a.render()
-		out.didRender = true
 	case metactrl.WakePayload:
 		a.metaCtrl.HandleWake(d)
 	case metactrl.RenderFlushPayload:
@@ -911,24 +911,9 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			a.render()
 			out.didRender = true
 		}
-	case previewctrl.QuickViewFlushPayload:
-		if a.previewCtrl.ApplyQuickViewPreviewFlush(d) {
-			a.render()
-			out.didRender = true
-		}
-	case previewctrl.CarouselPreviewFlushPayload:
-		if a.previewCtrl.ApplyCarouselPreviewFlush(d) {
-			a.render()
-			out.didRender = true
-		}
 	case cursorNameHintFlushPayload:
 		a.render()
 		out.didRender = true
-	case previewctrl.StylePickerFlushPayload:
-		if a.previewCtrl.ApplyPreviewStylePickerFlush(d) {
-			a.render()
-			out.didRender = true
-		}
 	case debounceCalibrateReleasePayload:
 		if a.applyDebounceCalibrateReleasePayload() {
 			a.render()
@@ -1014,6 +999,43 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		}
 	}
 	return out
+}
+
+// handlePreviewInterruptPayload dispatches previewctrl's wake/flush interrupt payloads. Split
+// out of handleInterruptPayload to keep that switch's cyclomatic complexity within
+// golangci-lint's gocyclo threshold — previewctrl has the most payload types of any single
+// subsystem there. ok is false when data isn't a previewctrl payload, so the caller falls
+// through to its own switch.
+func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
+	out := eventOutcome{pollDiskUsageAfter: true}
+	switch d := data.(type) {
+	case previewctrl.RenderWakePayload:
+		a.render()
+		out.didRender = true
+	case previewctrl.QuickViewFlushPayload:
+		if a.previewCtrl.ApplyQuickViewPreviewFlush(d) {
+			a.render()
+			out.didRender = true
+		}
+	case previewctrl.CarouselPreviewFlushPayload:
+		if a.previewCtrl.ApplyCarouselPreviewFlush(d) {
+			a.render()
+			out.didRender = true
+		}
+	case previewctrl.QuickViewDirRuleDeclinedPayload:
+		if a.previewCtrl.ApplyQuickViewDirRuleDeclined(d) {
+			a.render()
+			out.didRender = true
+		}
+	case previewctrl.StylePickerFlushPayload:
+		if a.previewCtrl.ApplyPreviewStylePickerFlush(d) {
+			a.render()
+			out.didRender = true
+		}
+	default:
+		return eventOutcome{}, false
+	}
+	return out, true
 }
 
 // setStyles sets the app styles and stamps the theme with the current UseNerdfontIcons config.

@@ -165,3 +165,9 @@ type CarouselPreviewFlushPayload struct{ gen uint64 }
 
 // StylePickerFlushPayload re-runs F3 preview highlighting after style-picker debounce.
 type StylePickerFlushPayload struct{ gen uint64 }
+
+// QuickViewDirRuleDeclinedPayload signals that every [[preview.commands]] rule matching the
+// directory currently open in quick view declined (non-zero exit), or the async run raced past
+// a superseded gen. The main goroutine falls back to the built-in directory-overlay listing —
+// see Handler.ApplyQuickViewDirRuleDeclined.
+type QuickViewDirRuleDeclinedPayload struct{ gen uint64 }

@@ -472,6 +472,7 @@ func (h *Handler) patchColumnPreviewMessage(titleBase, msg string) {
 		st.ImageUnicodePlaceholder = false
 		st.ImageInTmux = false
 		st.ImageCapabilityUncertain = false
+		st.ImageFirst = false
 	})
 	h.postRenderWake()
 	h.clampFilePreviewScroll()
@@ -678,6 +679,71 @@ func (h *Handler) quickViewFollowDirectory() {
 	h.model.QuickViewDirOverlayActive = true
 }
 
+// dispatchQuickViewDirPreview shows a directory via a matching [[preview.commands]] rule instead
+// of the built-in directory-listing overlay (see quickViewFollowDirectory). Only called after
+// previewrun.MatchAnyCommandRule confirms a rule could match; runDirPreviewRules falls back to
+// the overlay via QuickViewDirRuleDeclinedPayload if every matching rule declines.
+func (h *Handler) dispatchQuickViewDirPreview(dirPath string) {
+	h.ClearQuickViewDirOverlay()
+	tw, contentH, layOK := h.inactivePanelPreviewLayoutMetrics(true)
+	if !layOK {
+		tw = 1
+	}
+	titleBase := filepath.Base(dirPath)
+	h.captureFilePreviewHold(previewTargetInactive)
+	h.patchFilePreview(func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhasePending
+		st.Path = dirPath
+		st.TitleBase = titleBase
+		st.IsDir = true
+		st.CombinedText = ""
+		st.SetHighlightedCells(nil)
+		st.Source = ui.PreviewSourceExternalANSI
+		st.Scroll = 0
+		st.ExitCode = 0
+		st.ErrorMsg = ""
+		st.IsDiff = false
+		st.DiffHunkLines = nil
+		st.GitStatusText = ""
+		st.GitStatusThemeKey = ""
+	})
+	h.postRenderWake()
+	gen := h.filePreviewRunGen.Add(1)
+	// WorkDir is dirPath itself, so a rule command like "eza --tree ." works without needing %f.
+	req := h.previewRequest(dirPath, tw, contentH, dirPath, h.inactivePreviewChromeBlocked(), nil, previewTargetInactive, true)
+	go h.runDirPreviewRules(h.ctx, req, gen)
+}
+
+// runDirPreviewRules runs previewrun.RunRules for a directory preview off the UI goroutine. A
+// match applies normally via applyPreviewResult; when every matching rule declines, it posts
+// QuickViewDirRuleDeclinedPayload so the main goroutine falls back to the directory overlay.
+func (h *Handler) runDirPreviewRules(ctx context.Context, req previewrun.Request, gen uint64) {
+	if gen != h.filePreviewRunGen.Load() {
+		return
+	}
+	if res, matched := previewrun.RunRules(ctx, req); matched {
+		h.applyPreviewResult(req, previewTargetInactive, gen, res)
+		return
+	}
+	if gen != h.filePreviewRunGen.Load() {
+		return
+	}
+	_ = h.screen.PostEvent(tcell.NewEventInterrupt(QuickViewDirRuleDeclinedPayload{gen: gen}))
+}
+
+// ApplyQuickViewDirRuleDeclined falls back to the directory-overlay listing after every
+// [[preview.commands]] rule matching the previewed directory declined. Returns true when a
+// repaint is needed.
+func (h *Handler) ApplyQuickViewDirRuleDeclined(p QuickViewDirRuleDeclinedPayload) bool {
+	if p.gen != h.filePreviewRunGen.Load() {
+		return false
+	}
+	h.CloseFilePreview()
+	h.quickViewFollowDirectory()
+	return true
+}
+
 // ApplyQuickViewPreviewImmediately applies the current quick-view target without debouncing.
 func (h *Handler) ApplyQuickViewPreviewImmediately() {
 	if !h.model.QuickViewDisplayActive() || h.model.ViewMode != ui.ViewBrowser {
@@ -709,7 +775,12 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		h.ClearQuickViewDirOverlay()
 		h.patchColumnPreviewMessage("", "Quick view: empty file")
 	case quickViewWantDir:
-		h.quickViewFollowDirectory()
+		if dirPath, ok := h.host.SyncFollowTargetPath(h.host.ActivePanel()); ok &&
+			previewrun.MatchAnyCommandRule(h.host.Config().Preview, dirPath, true, filepath.Dir(dirPath)) {
+			h.dispatchQuickViewDirPreview(dirPath)
+		} else {
+			h.quickViewFollowDirectory()
+		}
 	case quickViewWantStatErr:
 		h.ClearQuickViewDirOverlay()
 		h.patchColumnPreviewMessage("", "Quick view: cannot read selection")
@@ -736,12 +807,13 @@ func (h *Handler) applyQuickViewPreviewNow() {
 			st.DiffHunkLines = nil
 			st.GitStatusText = ""
 			st.GitStatusThemeKey = ""
+			st.IsDir = false
 			// Keep ImagePayload* so the previous image stays on screen until the new
 			// encode finishes (stale-while-revalidate). Cleared on error / non-image result.
 		})
 		h.postRenderWake()
 		gen := h.filePreviewRunGen.Add(1)
-		req := h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive)
+		req := h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive, false)
 		go h.dispatchQuickViewFilePreview(path, req, gen)
 	}
 }
@@ -789,12 +861,19 @@ func (h *Handler) refreshInactiveFilePreview() {
 	if !st.Open || st.Path == "" {
 		return
 	}
+	if st.IsDir {
+		// No standalone "re-run rules at the new width" path for directories: re-open
+		// through dispatchQuickViewDirPreview, which handles both the match and the
+		// decline-to-overlay-fallback outcomes.
+		h.dispatchQuickViewDirPreview(st.Path)
+		return
+	}
 	tw, contentH, ok := h.inactivePanelPreviewLayoutMetrics(true)
 	if !ok {
 		return
 	}
 	workDir := h.host.ActivePanel().PathString()
-	req := h.previewRequest(st.Path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive)
+	req := h.previewRequest(st.Path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(st.Path), previewTargetInactive, false)
 	gen := h.filePreviewRunGen.Add(1)
 	h.postRenderWake()
 	go h.runPreview(h.ctx, req, previewTargetInactive, gen)
@@ -870,6 +949,7 @@ func (h *Handler) refreshPreviewTargetAfterResize(target previewTarget) {
 			st.ImageUnicodePlaceholder = false
 			st.ImageInTmux = false
 			st.ImageCapabilityUncertain = false
+			st.ImageFirst = false
 		})
 	}
 
@@ -1010,7 +1090,7 @@ func (h *Handler) ReconcileQuickViewPreview() {
 	h.armQuickViewPreviewDebounce()
 }
 
-func (h *Handler) previewRequest(path string, textW, contentH int, workDir string, chromeBlocked bool, gitStatus *gitstatus.Cell, target previewTarget) previewrun.Request {
+func (h *Handler) previewRequest(path string, textW, contentH int, workDir string, chromeBlocked bool, gitStatus *gitstatus.Cell, target previewTarget, isDir bool) previewrun.Request {
 	h.previewLastWidth[target] = textW
 	req := previewrun.Request{
 		Path:      path,
@@ -1018,13 +1098,16 @@ func (h *Handler) previewRequest(path string, textW, contentH int, workDir strin
 		WorkDir:   workDir,
 		Preview:   h.host.Config().Preview,
 		BaseStyle: ui.FilePreviewBodyStyle(h.host.Styles(), chromeBlocked),
+		IsDir:     isDir,
 	}
+	// Computed unconditionally (not just for image/media paths) so a [[preview.commands]] rule
+	// can turn a non-graphical extension into a graphics preview and still get a pixel budget.
+	cw, ch := previewpanel.CellPixelDims(h.screen)
+	req.ImageMaxPxW = textW * cw
+	req.ImageMaxPxH = contentH * ch
+	req.ImageCellPxH = ch
 	isMedia := localfs.IsMediaPath(path)
 	if localfs.IsGraphicalPreviewPath(path) {
-		cw, ch := previewpanel.CellPixelDims(h.screen)
-		req.ImageMaxPxW = textW * cw
-		req.ImageMaxPxH = contentH * ch
-		req.ImageCellPxH = ch
 		req.ImageInTmux = os.Getenv("TMUX") != ""
 		if _, ok := h.screen.Tty(); !ok {
 			req.ImageProtocol = previewpanel.ImageProtocolNone
@@ -1127,6 +1210,11 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 		}
 		return
 	default:
+	}
+
+	if res, matched := previewrun.RunRules(ctx, req); matched {
+		h.applyPreviewResult(req, target, runGen, res)
+		return
 	}
 
 	if req.Media {
@@ -1234,6 +1322,7 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 			st.ImageUnicodePlaceholder = false
 			st.ImageInTmux = false
 			st.ImageCapabilityUncertain = false
+			st.ImageFirst = false
 			if st.Search.Active {
 				st.RecomputeSearch()
 			}
@@ -1263,6 +1352,7 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 		st.ImageUnicodePlaceholder = res.ImageUnicodePlaceholder
 		st.ImageInTmux = res.ImageInTmux
 		st.ImageCapabilityUncertain = res.ImageCapabilityUncertain
+		st.ImageFirst = res.ImageFirst
 		if st.Search.Active {
 			st.RecomputeSearch()
 		}
