@@ -43,6 +43,33 @@ func (h *Handler) previewRunGenFor(target previewTarget) *atomic.Uint64 {
 	}
 }
 
+// patchFilePreviewPending resets target's preview state to the "opening path" placeholder: title
+// and phase paint synchronously so quick view and the carousel child preview never sit blank while
+// the (possibly slow — ffprobe/ffmpeg for video, a preview.commands rule, etc.) body loads,
+// regardless of whether that body arrives moments later or only after a nav debounce elapses.
+// Shared by both targets so the open-transition placeholder is identical for each.
+func (h *Handler) patchFilePreviewPending(target previewTarget, path string, isDir bool) {
+	h.captureFilePreviewHold(target)
+	h.patchPreviewState(target, func(st *ui.FilePreviewState) {
+		st.Open = true
+		st.Phase = ui.FilePreviewPhasePending
+		st.Path = path
+		st.TitleBase = filepath.Base(path)
+		st.IsDir = isDir
+		st.CombinedText = ""
+		st.SetHighlightedCells(nil)
+		st.Source = ui.PreviewSourceExternalANSI
+		st.Scroll = 0
+		st.ExitCode = 0
+		st.ErrorMsg = ""
+		st.IsDiff = false
+		st.DiffHunkLines = nil
+		st.GitStatusText = ""
+		st.GitStatusThemeKey = ""
+	})
+	h.postRenderWake()
+}
+
 // CloseFilePreview closes the inactive-column (quick view) preview.
 func (h *Handler) CloseFilePreview() {
 	h.mu.Lock()
@@ -700,26 +727,7 @@ func (h *Handler) dispatchQuickViewDirPreview(dirPath string) {
 	if !layOK {
 		tw = 1
 	}
-	titleBase := filepath.Base(dirPath)
-	h.captureFilePreviewHold(previewTargetInactive)
-	h.patchFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhasePending
-		st.Path = dirPath
-		st.TitleBase = titleBase
-		st.IsDir = true
-		st.CombinedText = ""
-		st.SetHighlightedCells(nil)
-		st.Source = ui.PreviewSourceExternalANSI
-		st.Scroll = 0
-		st.ExitCode = 0
-		st.ErrorMsg = ""
-		st.IsDiff = false
-		st.DiffHunkLines = nil
-		st.GitStatusText = ""
-		st.GitStatusThemeKey = ""
-	})
-	h.postRenderWake()
+	h.patchFilePreviewPending(previewTargetInactive, dirPath, true)
 	gen := h.filePreviewRunGen.Add(1)
 	// WorkDir is dirPath itself, so a rule command like "eza --tree ." works without needing %f.
 	req := h.previewRequest(dirPath, tw, contentH, dirPath, h.inactivePreviewChromeBlocked(), nil, previewTargetInactive, true)
@@ -800,28 +808,9 @@ func (h *Handler) applyQuickViewPreviewNow() {
 		if !layOK {
 			tw = 1
 		}
-		titleBase := filepath.Base(path)
-		h.captureFilePreviewHold(previewTargetInactive)
-		h.patchFilePreview(func(st *ui.FilePreviewState) {
-			st.Open = true
-			st.Phase = ui.FilePreviewPhasePending
-			st.Path = path
-			st.TitleBase = titleBase
-			st.CombinedText = ""
-			st.SetHighlightedCells(nil)
-			st.Source = ui.PreviewSourceExternalANSI
-			st.Scroll = 0
-			st.ExitCode = 0
-			st.ErrorMsg = ""
-			st.IsDiff = false
-			st.DiffHunkLines = nil
-			st.GitStatusText = ""
-			st.GitStatusThemeKey = ""
-			st.IsDir = false
-			// Keep ImagePayload* so the previous image stays on screen until the new
-			// encode finishes (stale-while-revalidate). Cleared on error / non-image result.
-		})
-		h.postRenderWake()
+		// Keep ImagePayload* so the previous image stays on screen until the new encode
+		// finishes (stale-while-revalidate); patchFilePreviewPending doesn't touch it.
+		h.patchFilePreviewPending(previewTargetInactive, path, false)
 		gen := h.filePreviewRunGen.Add(1)
 		req := h.previewRequest(path, tw, contentH, workDir, h.inactivePreviewChromeBlocked(), h.gitStatusForPath(path), previewTargetInactive, false)
 		go h.dispatchQuickViewFilePreview(path, req, gen)
@@ -1096,6 +1085,18 @@ func (h *Handler) ReconcileQuickViewPreview() {
 	sig := h.quickViewFingerprint()
 	if sig == h.quickViewLastFingerprint {
 		return
+	}
+	h.mu.RLock()
+	previewOpen := h.model.FilePreview.Open
+	h.mu.RUnlock()
+	if !previewOpen {
+		// Opening from closed (e.g. moving onto a file from a directory): paint the title
+		// synchronously so the column never sits blank for the debounce interval, but still
+		// let armQuickViewPreviewDebounce below gate the actual (possibly slow — ffprobe/ffmpeg
+		// for video) body load behind the usual nav debounce.
+		if path, _, mode := h.quickViewWantFile(); mode == quickViewWantFile {
+			h.patchFilePreviewPending(previewTargetInactive, path, false)
+		}
 	}
 	h.armQuickViewPreviewDebounce()
 }

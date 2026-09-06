@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ui"
@@ -185,7 +186,7 @@ func TestReconcileQuickViewPreviewUpdatesToMatchDuringQuickFilter(t *testing.T) 
 	}
 }
 
-func TestReconcileCarouselFilePreviewOpensImmediatelyFromDirectory(t *testing.T) {
+func TestReconcileCarouselFilePreviewShowsTitleImmediatelyFromDirectory(t *testing.T) {
 	root := t.TempDir()
 	scroll := filepath.Join(root, "scroll.txt")
 	if err := os.WriteFile(scroll, []byte("river delta\n"), 0o644); err != nil {
@@ -223,18 +224,37 @@ func TestReconcileCarouselFilePreviewOpensImmediatelyFromDirectory(t *testing.T)
 	app.previewCtrl.BeginCarouselPreviewNavCoalesce()
 	app.previewCtrl.ReconcileCarouselFilePreview()
 
-	// Opening from a directory must apply immediately (no debounce flush needed),
-	// otherwise the child column blanks for the debounce interval (flicker).
+	// Opening from a directory must paint the title immediately (no blank child column while
+	// waiting), but the actual preview body still respects the nav debounce — it must not have
+	// been dispatched yet.
 	app.commandsMu.RLock()
 	open := app.model.CarouselFilePreview.Open
 	path := app.model.CarouselFilePreview.Path
+	phase := app.model.CarouselFilePreview.Phase
 	app.commandsMu.RUnlock()
 	if !open || path != scroll {
 		t.Fatalf("CarouselFilePreview after dir->file: open=%v path=%q, want open=true path=%q", open, path, scroll)
 	}
-	if app.previewCtrl.CarouselPreviewNavSkipSnapshot() {
-		t.Fatal("carouselPreviewNavSkipSnapshot still set; pending debounce was not cleared")
+	if phase != ui.FilePreviewPhasePending {
+		t.Fatalf("CarouselFilePreview.Phase = %v, want Pending (body dispatch must wait for the debounce)", phase)
 	}
+	if !app.previewCtrl.CarouselPreviewNavSkipSnapshot() {
+		t.Fatal("carouselPreviewNavSkipSnapshot not set; body dispatch was not debounced")
+	}
+
+	// Flushing the debounce now dispatches the body.
+	app.previewCtrl.FlushCarouselPreviewNow()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		app.commandsMu.RLock()
+		done := app.model.CarouselFilePreview.Phase == ui.FilePreviewPhaseDone
+		app.commandsMu.RUnlock()
+		if done {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("carousel file preview never completed after debounce flush")
 }
 
 func TestCarouselPreviewPageScrollWithCtrlJK(t *testing.T) {

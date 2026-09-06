@@ -265,26 +265,9 @@ func (h *Handler) applyCarouselFilePreviewNow() {
 	if !layOK {
 		tw = 1
 	}
-	titleBase := filepath.Base(path)
-	h.captureFilePreviewHold(previewTargetCarousel)
-	h.patchCarouselFilePreview(func(st *ui.FilePreviewState) {
-		st.Open = true
-		st.Phase = ui.FilePreviewPhasePending
-		st.Path = path
-		st.TitleBase = titleBase
-		st.CombinedText = ""
-		st.SetHighlightedCells(nil)
-		st.Source = ui.PreviewSourceExternalANSI
-		st.Scroll = 0
-		st.ExitCode = 0
-		st.ErrorMsg = ""
-		st.IsDiff = false
-		st.DiffHunkLines = nil
-		st.GitStatusText = ""
-		st.GitStatusThemeKey = ""
-		// Keep ImagePayload* until the new encode finishes (stale-while-revalidate).
-	})
-	h.postRenderWake()
+	// Keep ImagePayload* until the new encode finishes (stale-while-revalidate);
+	// patchFilePreviewPending doesn't touch it.
+	h.patchFilePreviewPending(previewTargetCarousel, path, false)
 	gen := h.carouselFilePreviewRunGen.Add(1)
 	req := h.previewRequest(path, tw, contentH, workDir, h.activePanelChromeBlocked(), h.gitStatusForPath(path), previewTargetCarousel, false)
 	go h.dispatchCarouselFilePreview(path, req, gen)
@@ -356,14 +339,20 @@ func (h *Handler) ReconcileCarouselFilePreview() {
 	previewOpen := h.model.CarouselFilePreview.Open
 	h.mu.RUnlock()
 	if !previewOpen {
-		// Moving onto a file from a directory (or with nothing previewed yet) opens
-		// the preview from closed. Debouncing here would blank the child column for
-		// the debounce interval before the title paints, causing a visible flicker.
-		// Apply immediately so the title renders in the same frame; the body still
-		// loads asynchronously. File→file and directory navigation keep the existing
-		// content visible meanwhile, so they debounce as before.
-		h.ClearCarouselPreviewNavCoalesce()
-		h.applyCarouselFilePreviewAfterFlush()
+		if h.host.Config().UI.KeyRepeatDebounceMS <= 0 {
+			h.ClearCarouselPreviewNavCoalesce()
+			h.applyCarouselFilePreviewAfterFlush()
+			return
+		}
+		// Moving onto a file from a directory (or with nothing previewed yet) opens the
+		// preview from closed. Paint the title synchronously so the column never sits blank
+		// for the debounce interval, but let the body — ffprobe/ffmpeg for video, a
+		// preview.commands rule, etc. — wait out the same nav debounce as file-to-file moves,
+		// same as quick view (see patchFilePreviewPending / ReconcileQuickViewPreview).
+		if path, ok := h.carouselFilePreviewWantPath(); ok {
+			h.patchFilePreviewPending(previewTargetCarousel, path, false)
+		}
+		h.ArmCarouselPreviewNavCoalesceAfterListNav()
 		return
 	}
 	if h.carouselPreviewNavSkipSnapshot.Load() {
