@@ -93,6 +93,9 @@ type State struct {
 	// (SetShowHidden) rather than external filesystem changes — otherwise files that were always on
 	// disk but newly revealed by the filter would get marked as new.
 	entriesShowHidden bool
+	// listingApplied is false until ApplyListing has populated Entries at least once; see
+	// hadPriorListing in ApplyListing.
+	listingApplied bool
 	// GitColumnActive is true when the listing path is inside a Git work tree with valid metadata (local panels only).
 	GitColumnActive bool
 	// GitPending is true while async git status is in flight for this listing.
@@ -1469,11 +1472,19 @@ func (s *State) ApplyListing(listingLoc pathloc.Path, backendEntries []fsbackend
 		wasCentered = s.cursorAppearsCentered(s.effectiveFileListViewportRows(viewportRows))
 	}
 	var newlyAppeared []string
-	if sameDirReload && s.entriesShowHidden == s.ShowHidden {
+	// hadPriorListing is false only before the very first listing lands on a panel built by
+	// NewDeferred (Path already set, Entries still empty), where the diff below would otherwise
+	// mark every file in the startup directory as new. A State that already carries entries
+	// (constructed in place, or reloaded after showing another directory) always counts as
+	// having one, and once a listing has been applied an empty directory gaining files still
+	// diffs normally.
+	hadPriorListing := s.listingApplied || len(s.Entries) > 0
+	if sameDirReload && hadPriorListing && s.entriesShowHidden == s.ShowHidden {
 		newlyAppeared = newlyAppearedNames(s.Entries, localEntries)
 		newlyAppeared = s.filterPendingRemoval(listingLoc, newlyAppeared, localEntries)
 	}
 	s.entriesShowHidden = s.ShowHidden
+	s.listingApplied = true
 	s.Path = listingLoc
 	if listingLoc.IsRemote() {
 		s.GitignoreActive = false
