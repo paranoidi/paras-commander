@@ -72,7 +72,8 @@ func (a *App) applyFindDialogSelectionScanNeed(d findDialogSelectionScanNeedPayl
 	if !st.Open || st.MarkedSelGen() != d.Gen {
 		return
 	}
-	fp := strings.Join(d.Need, "\n")
+	need := a.filterJobContendedPaths(d.Need)
+	fp := strings.Join(need, "\n")
 	if fp == "" {
 		a.findDialogSelectionScanFP = ""
 		return
@@ -82,7 +83,7 @@ func (a *App) applyFindDialogSelectionScanNeed(d findDialogSelectionScanNeedPayl
 	}
 	a.findDialogSelectionScanFP = fp
 	a.disk.engine.StartScanFromListing(
-		d.Need,
+		need,
 		a.disk.ignore,
 		st.PanelID,
 		diskusage.ListingVolumeGate{

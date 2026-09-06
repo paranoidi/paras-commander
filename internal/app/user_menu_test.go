@@ -28,15 +28,12 @@ func testUserMenuAppConfig(t *testing.T, dir, cfgDir string, cfg config.Config) 
 	cfg.UserMenu = config.UserMenuConfig{LocalNames: []string{"menu.toml"}}
 	th, _ := loadTestTheme(t)
 	screen := newScreen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: cfg,
 		Theme:  th,
 		Paths:  config.Paths{ConfigDir: cfgDir},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}

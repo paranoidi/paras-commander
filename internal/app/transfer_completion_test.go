@@ -19,13 +19,7 @@ func TestTransferDialogPrefillDestinationTrailingSlash(t *testing.T) {
 	t.Cleanup(screen.Fini)
 	screen.SetSize(80, 24)
 
-	app, err := NewWithOptions(screen, Options{
-		CWD:    func() (string, error) { return root, nil },
-		Config: config.Default(),
-	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 	if err := app.inactivePanel().Load(root); err != nil {
 		t.Fatal(err)
 	}
@@ -49,13 +43,10 @@ func TestTransferDialogCopyPreserveAltAndFocusedShortcuts(t *testing.T) {
 	cfg := config.Default()
 	cfg.Operations.PreservePermissions = true
 	cfg.Operations.PreserveTimestamps = true
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 
 	app.dialogCtrl.OpenCopyDialog()
 	d := &app.model.TransferDialog
@@ -107,13 +98,10 @@ func TestTransferDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 	screen.SetSize(80, 24)
 
 	cfg := config.Default()
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 
 	for _, open := range []func(){app.dialogCtrl.OpenCopyDialog, app.dialogCtrl.OpenMoveDialog} {
 		open()

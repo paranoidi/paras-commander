@@ -74,6 +74,7 @@ func (s *terminalQueryScanner) Scan(chunk []byte) (clean, reply []byte) {
 		buf = append(s.carry, chunk...)
 		s.carry = nil
 	}
+	clean = make([]byte, 0, len(buf))
 	i := 0
 	for i < len(buf) {
 		if buf[i] != 0x1b {

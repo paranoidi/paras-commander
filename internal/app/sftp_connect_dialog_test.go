@@ -25,10 +25,7 @@ func TestSFTPConnectDialogFilterSelectsHost(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 24)
 
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 	app.config.SFTP.SSHConfigFile = sshConfig
 
 	app.openSFTPConnectDialogForPanel(ui.PrimaryPanel)

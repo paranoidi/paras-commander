@@ -50,6 +50,22 @@ func (a *App) pathVolumeContendsWithActiveJob(path string) bool {
 	return false
 }
 
+// filterJobContendedPaths drops paths that share a local device with an unfinished job's
+// source/destination, so automatic disk-usage scans don't compete with a job already
+// saturating that volume. Explicit user-requested scans intentionally don't call this.
+func (a *App) filterJobContendedPaths(paths []string) []string {
+	if len(paths) == 0 || !a.jobState.HasUnfinishedWork() {
+		return paths
+	}
+	out := paths[:0:0]
+	for _, p := range paths {
+		if !a.pathVolumeContendsWithActiveJob(p) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 func (a *App) requestVolumeSpaceRefreshAsync(panelID int) {
 	p := a.panelByID(panelID)
 	if p == nil {

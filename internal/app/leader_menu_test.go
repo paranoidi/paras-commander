@@ -17,14 +17,11 @@ func testLeaderMenuApp(t *testing.T) *App {
 	t.Helper()
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 50)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: config.Default(),
 		Paths:  config.Paths{ConfigDir: filepath.Join(dir, "config")},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -365,14 +362,11 @@ func TestBuiltinLeaderMenuF3TogglesDirectKeysAndPersists(t *testing.T) {
 	dir := t.TempDir()
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-leader-chords")}.WithResolvedLocations()
 	screen := newScreen(t, 80, 50)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: config.Default(),
 		Paths:  appPaths,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -441,14 +435,11 @@ func TestBuiltinLeaderMenuSetsDirectKey(t *testing.T) {
 func TestBuiltinLeaderMenuHiddenEntryStillActivatesByKey(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 14)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: config.Default(),
 		Paths:  config.Paths{ConfigDir: filepath.Join(dir, "config")},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -474,14 +465,11 @@ func TestBuiltinLeaderMenuHiddenEntryStillActivatesByKey(t *testing.T) {
 func TestBuiltinLeaderMenuOmitsDirectKeysWhenHeightConstrained(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 80, 14)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: config.Default(),
 		Paths:  config.Paths{ConfigDir: filepath.Join(dir, "config")},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -504,14 +492,11 @@ func TestBuiltinLeaderMenuOmitsDirectKeysWhenHeightConstrained(t *testing.T) {
 func TestBuiltinLeaderMenuOmitsDirectKeysWhenWidthConstrained(t *testing.T) {
 	dir := t.TempDir()
 	screen := newScreen(t, 40, 50)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: config.Default(),
 		Paths:  config.Paths{ConfigDir: filepath.Join(dir, "config")},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}
@@ -550,14 +535,11 @@ func TestBuiltinLeaderMenuDirectKeyDisabledWhenConfigOff(t *testing.T) {
 	cfg := config.Default()
 	cfg.UI.LeaderMenuShowDirectKeys = false
 	screen := newScreen(t, 80, 50)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: cfg,
 		Paths:  config.Paths{ConfigDir: filepath.Join(dir, "config")},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}

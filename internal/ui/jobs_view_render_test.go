@@ -157,6 +157,45 @@ func TestJobDetailProgressLineDeleteOmitsByteRatio(t *testing.T) {
 	}
 }
 
+func TestJobDetailProgressLineShowsScanningIndicatorWhileBackgroundScanIncomplete(t *testing.T) {
+	t.Parallel()
+
+	running := JobEntry{
+		Type:         string(jobs.TypeCopy),
+		Status:       "running",
+		DoneFiles:    1,
+		TotalFiles:   10,
+		PlanComplete: false,
+	}
+	if line := jobDetailProgressLine(running); !strings.Contains(line, "scanning") {
+		t.Fatalf("copy job still transferring with incomplete background scan should show scanning indicator; got %q", line)
+	}
+
+	complete := running
+	complete.PlanComplete = true
+	if line := jobDetailProgressLine(complete); strings.Contains(line, "scanning") {
+		t.Fatalf("job with PlanComplete should not show scanning indicator; got %q", line)
+	}
+
+	scanningStatus := running
+	scanningStatus.Status = "scanning"
+	if line := jobDetailProgressLine(scanningStatus); strings.Contains(line, "scanning…") {
+		t.Fatalf("status already scanning should not duplicate the indicator; got %q", line)
+	}
+
+	finished := running
+	finished.Status = "completed"
+	if line := jobDetailProgressLine(finished); strings.Contains(line, "scanning") {
+		t.Fatalf("finished job should never show scanning indicator; got %q", line)
+	}
+
+	del := running
+	del.Type = string(jobs.TypeDelete)
+	if line := jobDetailProgressLine(del); strings.Contains(line, "scanning") {
+		t.Fatalf("delete jobs never pre-scan; must not show scanning indicator; got %q", line)
+	}
+}
+
 func TestJobDetailLineCountOmitsThroughputGraphWhenDisabled(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)

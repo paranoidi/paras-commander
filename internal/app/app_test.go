@@ -97,12 +97,7 @@ func TestActiveFooterKeysBrowserShowsF7JobsViewUsesJobsLegend(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	browserKeys := menu.FunctionKeys
 	if got := app.activeFooterKeys(); len(got) != len(browserKeys) {
@@ -212,12 +207,7 @@ func TestMenuShortcutCopyOpensTransferDialog(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 	if err := app.inactivePanel().Load(dstDir); err != nil {
 		t.Fatalf("inactive Load: %v", err)
 	}

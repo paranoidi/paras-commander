@@ -2,21 +2,117 @@ package ui
 
 import (
 	"github.com/paranoidi/paras-commander/internal/jobs"
-	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
-// resolvedJobDestinationPath matches ops.ResolveDestination for a fixed dest-is-dir flag
-// without calling Stat (see jobs.Job.DestIsDir at enqueue time).
+// jobPathIndex answers "is this path at or under one of the job's source / resolved-destination
+// roots" in O(path depth) instead of O(len(Sources)).
+//
+// EntryPathJobMarkStatus runs once per visible row on every frame, and every job progress event
+// triggers a repaint: scanning the source list per row made a job built from a large multi-select
+// (3000 sources x ~45 rows = 135k filepath.Rel calls per repaint) freeze the UI for the whole
+// duration of the job. Matching walks the row path's own ancestors against these sets instead,
+// so cost depends on path depth, never on how many files the job moves.
+type jobPathIndex struct {
+	sources    map[string]struct{} // normalized source paths
+	sourceDirs []string            // deduplicated parents of sources
+	dests      map[string]struct{} // normalized per-source destination paths
+}
+
+// newJobPathIndex resolves each source's destination the same way ops.ResolveDestination does
+// for a fixed dest-is-dir flag (jobs.Job.DestIsDir, decided by a single Stat at enqueue), so no
+// filesystem call happens here or on the render path.
 // ponytail: basename-only approximation for in-flight glyphs; batch-relative names
-// (ops.TransferDestName) would cost a common-root walk per row paint.
-func resolvedJobDestinationPath(src, dest string, destIsDir bool) string {
-	srcLoc, err1 := pathloc.Parse(src)
-	destLoc, err2 := pathloc.Parse(dest)
-	if err1 != nil || err2 != nil {
-		return dest
+// (ops.TransferDestName) would need a common-root walk per source.
+func newJobPathIndex(m JobPathMark) *jobPathIndex {
+	idx := &jobPathIndex{
+		sources: make(map[string]struct{}, len(m.Sources)),
+		dests:   make(map[string]struct{}, len(m.Sources)),
 	}
-	return ops.ResolveDestination(srcLoc, destLoc).String()
+	var destLoc pathloc.Path
+	destOK := false
+	if m.Destination != "" {
+		if loc, err := pathloc.Parse(m.Destination); err == nil {
+			destLoc, destOK = loc, true
+		}
+	}
+	seenDir := make(map[string]struct{})
+	for _, src := range m.Sources {
+		loc, err := pathloc.Parse(src)
+		if err != nil {
+			continue
+		}
+		s := loc.String()
+		if s == "" || s == "." {
+			continue
+		}
+		idx.sources[s] = struct{}{}
+		if dir := loc.Parent().String(); dir != "" && dir != "." {
+			if _, seen := seenDir[dir]; !seen {
+				seenDir[dir] = struct{}{}
+				idx.sourceDirs = append(idx.sourceDirs, dir)
+			}
+		}
+		if !destOK {
+			continue
+		}
+		if !m.DestIsDir {
+			idx.dests[destLoc.String()] = struct{}{}
+			continue
+		}
+		if child, err := destLoc.Join(loc.Base()); err == nil {
+			idx.dests[child.String()] = struct{}{}
+		}
+	}
+	return idx
+}
+
+// walkRoots visits absPath and then each of its ancestors, deepest first, so the first hit is
+// always the longest matching root. It stops at the filesystem/scheme root.
+func walkRoots(absPath string, hit func(path string) bool) {
+	cur, err := pathloc.Parse(absPath)
+	if err != nil {
+		return
+	}
+	for {
+		s := cur.String()
+		if s == "" || s == "." || hit(s) {
+			return
+		}
+		parent := cur.Parent()
+		if parent.String() == s {
+			return
+		}
+		cur = parent
+	}
+}
+
+// rootMatch returns the length of the longest source or destination root containing absPath and
+// whether that root is a destination (destinations win when both match at the same depth), or
+// (0, false) when nothing matches.
+func (idx *jobPathIndex) rootMatch(absPath string) (maxLen int, isDest bool) {
+	walkRoots(absPath, func(s string) bool {
+		if _, ok := idx.dests[s]; ok {
+			maxLen, isDest = len(s), true
+			return true
+		}
+		if _, ok := idx.sources[s]; ok {
+			maxLen, isDest = len(s), false
+			return true
+		}
+		return false
+	})
+	return maxLen, isDest
+}
+
+// destMatch reports whether absPath is at or under one of the resolved destination roots.
+func (idx *jobPathIndex) destMatch(absPath string) bool {
+	found := false
+	walkRoots(absPath, func(s string) bool {
+		_, found = idx.dests[s]
+		return found
+	})
+	return found
 }
 
 func jobTypeMarkPriority(t string) int {
@@ -34,33 +130,11 @@ func jobTypeMarkPriority(t string) int {
 	}
 }
 
-// longestMatchingRootLen returns the maximum length of a clean path (source or
-// resolved destination) that matches absPath as root-of-subtree, and whether that
-// best match is a destination root (destination preferred on equal length), or
-// (0, false) if none.
+// longestMatchingRootLen returns the maximum length of a path (source or resolved
+// destination) that matches absPath as root-of-subtree, and whether that best match is a
+// destination root (destination preferred on equal length), or (0, false) if none.
 func longestMatchingRootLen(j JobPathMark, absPath string) (maxLen int, isDest bool) {
-	for _, src := range j.Sources {
-		if src == "" {
-			continue
-		}
-		if pathloc.EqualOrUnderStrings(src, absPath) {
-			if n := len(src); n > maxLen {
-				maxLen = n
-				isDest = false
-			}
-		}
-		if j.Destination == "" {
-			continue
-		}
-		dst := resolvedJobDestinationPath(src, j.Destination, j.DestIsDir)
-		if dst != "" && dst != "." && pathloc.EqualOrUnderStrings(dst, absPath) {
-			if n := len(dst); n >= maxLen {
-				maxLen = n
-				isDest = true
-			}
-		}
-	}
-	return maxLen, isDest
+	return j.index().rootMatch(absPath)
 }
 
 // EntryPathJobMarkStatus returns the status of the best non-finished job that
@@ -112,31 +186,30 @@ func EntryPathMarkedByJobs(absPath string, jobMarks []JobPathMark) bool {
 }
 
 // PanelTouchedByJobs reports whether panelPath overlaps any non-finished job source or destination tree.
+//
+// Overlap in the "panel is inside a job root" direction is the index's ancestor walk. The other
+// direction — a source or destination living under panelPath — needs no per-source scan either:
+// a source is under panelPath exactly when its parent directory is at or under panelPath, and
+// every resolved destination is j.Destination itself or a direct child of it.
 func PanelTouchedByJobs(panelPath string, jobMarks []JobPathMark) bool {
 	if panelPath == "" || len(jobMarks) == 0 {
 		return false
 	}
-	p := panelPath
 	for _, j := range jobMarks {
-		if jobs.Status(j.Status).IsFinished() {
+		if jobs.Status(j.Status).IsFinished() || len(j.Sources) == 0 {
 			continue
 		}
-		for _, src := range j.Sources {
-			if src == "" {
-				continue
-			}
-			if pathloc.TreesOverlapStrings(p, src) {
+		idx := j.index()
+		if n, _ := idx.rootMatch(panelPath); n > 0 {
+			return true
+		}
+		for _, dir := range idx.sourceDirs {
+			if pathloc.EqualOrUnderStrings(panelPath, dir) {
 				return true
 			}
-			if j.Destination == "" {
-				continue
-			}
-			dst := resolvedJobDestinationPath(src, j.Destination, j.DestIsDir)
-			if dst != "" && dst != "." {
-				if pathloc.TreesOverlapStrings(p, dst) {
-					return true
-				}
-			}
+		}
+		if j.Destination != "" && pathloc.EqualOrUnderStrings(panelPath, j.Destination) {
+			return true
 		}
 	}
 	return false
@@ -165,17 +238,10 @@ func PanelInsideJobWriteTree(panelPath string, jobMarks []JobPathMark) (bool, st
 				hit = true
 			}
 		}
-		if !hit {
-			for _, src := range j.Sources {
-				if src == "" {
-					continue
-				}
-				dst := resolvedJobDestinationPath(src, j.Destination, j.DestIsDir)
-				if dst != "" && dst != "." && pathloc.EqualOrUnderStrings(dst, panelPath) {
-					hit = true
-					break
-				}
-			}
+		// Every per-source resolved destination lives at-or-under j.Destination, so panelPath can
+		// only match one if it is itself at-or-under j.Destination — skip the index walk otherwise.
+		if !hit && pathloc.EqualOrUnderStrings(j.Destination, panelPath) {
+			hit = j.index().destMatch(panelPath)
 		}
 		if !hit {
 			continue

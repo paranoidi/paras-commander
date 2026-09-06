@@ -167,7 +167,10 @@ func (h *Handler) ApplyDeleteDialogScanNeed(d DeleteDialogScanNeedPayload) {
 	if p.SelectionDerivedGen() != d.Gen || p.PathString() != d.Path {
 		return
 	}
-	fp := strings.Join(d.Need, "\n")
+	// Skip directories on a volume an unfinished job is already saturating; the next
+	// selection change reconciles again.
+	need := h.host.FilterJobContendedPaths(d.Need)
+	fp := strings.Join(need, "\n")
 	if fp == "" {
 		h.deleteDialogScanFP = ""
 		h.RefreshDeleteDialogSummary()
@@ -178,7 +181,7 @@ func (h *Handler) ApplyDeleteDialogScanNeed(d DeleteDialogScanNeedPayload) {
 	}
 	h.deleteDialogScanFP = fp
 	h.diskUsage.StartScanFromListing(
-		d.Need,
+		need,
 		h.diskUsageIgnore,
 		h.model.ActivePanel,
 		diskusage.ListingVolumeGate{},

@@ -40,7 +40,7 @@ func TestJobVolumeDevsSameDirectory(t *testing.T) {
 	}
 }
 
-func TestJobVolumeDevsMissingPathsCacheNothing(t *testing.T) {
+func TestJobVolumeDevsUseContainingDirectories(t *testing.T) {
 	t.Parallel()
 	other := t.TempDir()
 	job := &jobs.Job{
@@ -48,7 +48,27 @@ func TestJobVolumeDevsMissingPathsCacheNothing(t *testing.T) {
 		Destination: pathloc.MustParse(filepath.Join(other, "dst")),
 	}
 	job.ComputeVolumeDevs()
+	dev, ok := diskusage.PathDevice(other)
+	if !ok {
+		t.Fatal("PathDevice failed for temp dir")
+	}
+	// Sources are resolved through their parent directory (one stat per distinct directory
+	// instead of one per source), so a source that does not exist yet still contributes the
+	// volume it would live on.
+	if !job.HasVolumeDev(dev) {
+		t.Fatalf("source's containing directory volume should be cached, got %v", job.VolumeDevs)
+	}
+}
+
+func TestJobVolumeDevsMissingParentCachesNothing(t *testing.T) {
+	t.Parallel()
+	gone := filepath.Join(t.TempDir(), "absent")
+	job := &jobs.Job{
+		Sources:     pathloc.PathsForTest(filepath.Join(gone, "sub", "ghost.dat")),
+		Destination: pathloc.MustParse(filepath.Join(gone, "sub", "dst")),
+	}
+	job.ComputeVolumeDevs()
 	if len(job.VolumeDevs) != 0 {
-		t.Fatalf("nonexistent job paths must cache no volume devs, got %v", job.VolumeDevs)
+		t.Fatalf("job paths under a nonexistent directory must cache no volume devs, got %v", job.VolumeDevs)
 	}
 }

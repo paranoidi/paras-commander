@@ -21,15 +21,11 @@ import (
 func TestCarouselOptionStartsPrimaryPanelInCarousel(t *testing.T) {
 	root := t.TempDir()
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:      func() (string, error) { return root, nil },
 		Config:   config.Default(),
 		Carousel: true,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	if !app.model.Primary.CarouselMode {
 		t.Fatal("Primary.CarouselMode = false, want true with Carousel option")
 	}
@@ -96,7 +92,7 @@ func TestCarouselForcesPanelZoomRegardlessOfConfigAndWidth(t *testing.T) {
 	cfg.UI.Zoom.ActivePercent = 70
 	cfg.UI.Zoom.InactivePercent = 30
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -104,9 +100,6 @@ func TestCarouselForcesPanelZoomRegardlessOfConfigAndWidth(t *testing.T) {
 		Paths:  config.Paths{}.WithResolvedLocations(),
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.model.Primary.CarouselMode = true
 	lay := app.layoutForTerminalSize(160, 30)

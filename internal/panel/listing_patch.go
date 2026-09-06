@@ -144,27 +144,48 @@ func (s *State) RenameEntry(oldPath, newName string, viewportRows int) bool {
 // InsertEntry adds an entry to the in-memory listing when its parent directory is this panel's
 // Path. No-op when the row already exists or the parent does not match. Returns true when inserted.
 func (s *State) InsertEntry(entry localfs.Entry, viewportRows int) bool {
-	if s == nil || entry.Path == "" || s.Path.IsZero() {
+	return s.InsertEntries([]localfs.Entry{entry}, viewportRows)
+}
+
+// InsertEntries adds multiple entries to the in-memory listing in one batch: entries whose
+// parent directory isn't this panel's Path, or that already exist, are skipped, and the
+// expensive index rebuild/sort/filter passes run once for the whole batch rather than once per
+// entry — inserting one at a time (each doing its own O(entries) duplicate scan and full
+// ApplySort) is O(n²) and stalls the UI when a job's optimistic listing update touches many
+// individually selected sources (e.g. select-all across a large directory). Returns true when
+// anything was inserted.
+func (s *State) InsertEntries(entries []localfs.Entry, viewportRows int) bool {
+	if s == nil || s.Path.IsZero() || len(entries) == 0 {
 		return false
 	}
-	loc, err := pathloc.Parse(entry.Path)
-	if err != nil {
-		return false
-	}
-	if !loc.Parent().Equal(s.Path) {
-		return false
-	}
-	clean := filepath.Clean(entry.Path)
+	existing := make(map[string]bool, len(s.Entries)+len(entries))
 	for _, e := range s.Entries {
-		if filepath.Clean(e.Path) == clean {
-			return false
+		existing[filepath.Clean(e.Path)] = true
+	}
+	inserted := false
+	for _, entry := range entries {
+		if entry.Path == "" {
+			continue
 		}
+		loc, err := pathloc.Parse(entry.Path)
+		if err != nil || !loc.Parent().Equal(s.Path) {
+			continue
+		}
+		clean := filepath.Clean(entry.Path)
+		if existing[clean] {
+			continue
+		}
+		existing[clean] = true
+		if entry.Name == "" {
+			entry.Name = loc.Base()
+		}
+		entry.Path = clean
+		s.Entries = append(s.Entries, entry)
+		inserted = true
 	}
-	if entry.Name == "" {
-		entry.Name = loc.Base()
+	if !inserted {
+		return false
 	}
-	entry.Path = clean
-	s.Entries = append(s.Entries, entry)
 	s.ListingEpoch++
 	s.rebuildListingByPath()
 	s.recomputeSelectionListedBytes()

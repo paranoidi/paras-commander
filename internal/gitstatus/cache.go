@@ -55,7 +55,7 @@ func (c *Cache) StatusesForListing(ctx context.Context, workRoot, listDir string
 		return mapFromSnapshot(sn, paths), nil
 	}
 
-	sn, err := querySnapshot(ctx, workRoot)
+	sn, err := querySnapshot(ctx, workRoot, listDir)
 	if err != nil {
 		return nil, err
 	}

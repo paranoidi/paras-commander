@@ -108,6 +108,67 @@ func TestInsertEntryOnlyWhenParentMatches(t *testing.T) {
 	}
 }
 
+func TestInsertEntriesBatchSkipsDuplicatesAndForeignParents(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "harbor.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	foreign := filepath.Join(t.TempDir(), "outsider.txt")
+	batch := []localfs.Entry{
+		{Name: "beacon.txt", Path: filepath.Join(dir, "beacon.txt"), Type: localfs.EntryFile, Size: 3},
+		// Duplicate of an already-listed row: must be skipped, not appended twice.
+		{Name: "harbor.txt", Path: filepath.Join(dir, "harbor.txt"), Type: localfs.EntryFile},
+		// Duplicate within the batch itself: only the first should be kept.
+		{Name: "beacon.txt", Path: filepath.Join(dir, "beacon.txt"), Type: localfs.EntryFile},
+		{Name: "outsider.txt", Path: foreign, Type: localfs.EntryFile},
+		{Name: "cellar.txt", Path: filepath.Join(dir, "cellar.txt"), Type: localfs.EntryFile, Size: 5},
+	}
+	if !state.InsertEntries(batch, 10) {
+		t.Fatal("InsertEntries = false, want true")
+	}
+	if !state.SelectVisibleEntry("beacon.txt") {
+		t.Fatal("beacon missing after batch insert")
+	}
+	if !state.SelectVisibleEntry("cellar.txt") {
+		t.Fatal("cellar missing after batch insert")
+	}
+	if state.SelectVisibleEntry("outsider.txt") {
+		t.Fatal("foreign-parent entry should not have been inserted")
+	}
+	count := 0
+	for _, e := range state.Entries {
+		if e.Name == "beacon.txt" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("beacon.txt appears %d times, want 1 (in-batch duplicate not deduped)", count)
+	}
+	// One insert pass, not one per entry: single-entry InsertEntry already covers per-call
+	// epoch bumping, this only needs to confirm the batch bumped it exactly once overall.
+	if state.ListingEpoch == 0 {
+		t.Fatal("ListingEpoch should have advanced")
+	}
+}
+
+func TestInsertEntriesEmptyBatchIsNoop(t *testing.T) {
+	dir := t.TempDir()
+	state, err := New(dir)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	if state.InsertEntries(nil, 10) {
+		t.Fatal("InsertEntries(nil) should be false")
+	}
+	if state.InsertEntries([]localfs.Entry{}, 10) {
+		t.Fatal("InsertEntries(empty) should be false")
+	}
+}
+
 func TestRenameEntryUpdatesPathAndSelection(t *testing.T) {
 	dir := t.TempDir()
 	oldPath := filepath.Join(dir, "willow.txt")

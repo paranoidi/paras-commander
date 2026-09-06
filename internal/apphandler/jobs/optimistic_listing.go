@@ -42,8 +42,8 @@ func (h *Handler) applyListingPatchBoth(remove []string, insert []localfs.Entry)
 		if len(remove) > 0 {
 			pan.RemoveEntriesByPath(remove, vr)
 		}
-		for _, e := range insert {
-			pan.InsertEntry(e, vr)
+		if len(insert) > 0 {
+			pan.InsertEntries(insert, vr)
 		}
 	}
 }
@@ -74,9 +74,10 @@ func (h *Handler) destEntriesForJob(job *jobs.Job) []localfs.Entry {
 	if job.FlatDestNames() {
 		nameRoot = pathloc.Path{}
 	}
+	lookup := h.newSourceEntryLookup()
 	out := make([]localfs.Entry, 0, len(job.Sources))
 	for _, src := range job.Sources {
-		entry := h.lookupSourceEntry(src)
+		entry := lookup.at(src)
 		var destLoc pathloc.Path
 		var err error
 		if job.DestIsDir {
@@ -98,20 +99,44 @@ func (h *Handler) destEntriesForJob(job *jobs.Job) []localfs.Entry {
 	return out
 }
 
-func (h *Handler) lookupSourceEntry(src pathloc.Path) localfs.Entry {
+// sourceEntryLookup resolves job sources against both panels' listings without any
+// per-source scanning. ListingEntryAt is an O(1) hit against the panel's incrementally
+// maintained path index; the cleaned-path map is built at most once (and only when some
+// source's path doesn't match a raw listing key), so resolving N sources stays O(N +
+// panel entries) instead of O(N × panel entries) — the latter froze the UI when a
+// large selection was queued from the panel that isn't checked first.
+type sourceEntryLookup struct {
+	panels  []*panel.State
+	cleaned map[string]localfs.Entry
+}
+
+func (h *Handler) newSourceEntryLookup() *sourceEntryLookup {
+	return &sourceEntryLookup{panels: []*panel.State{h.host.PrimaryPanel(), h.host.SecondaryPanel()}}
+}
+
+func (l *sourceEntryLookup) at(src pathloc.Path) localfs.Entry {
 	srcPath := filepath.Clean(src.String())
-	for _, pan := range []*panel.State{h.host.PrimaryPanel(), h.host.SecondaryPanel()} {
+	for _, pan := range l.panels {
 		if pan == nil {
 			continue
 		}
-		if e, ok := pan.EntriesByPath()[srcPath]; ok {
+		if e, ok := pan.ListingEntryAt(srcPath); ok {
 			return e
 		}
-		for _, e := range pan.Entries {
-			if filepath.Clean(e.Path) == srcPath {
-				return e
+	}
+	if l.cleaned == nil {
+		l.cleaned = map[string]localfs.Entry{}
+		for _, pan := range l.panels {
+			if pan == nil {
+				continue
+			}
+			for _, e := range pan.Entries {
+				l.cleaned[filepath.Clean(e.Path)] = e
 			}
 		}
+	}
+	if e, ok := l.cleaned[srcPath]; ok {
+		return e
 	}
 	return localfs.Entry{
 		Name: src.Base(),

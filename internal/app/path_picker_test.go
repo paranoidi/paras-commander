@@ -29,13 +29,10 @@ func TestApplyPathPickerPathValidation(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 
@@ -82,13 +79,10 @@ func TestPathPickerCloseStopsValidateTimer(t *testing.T) {
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
 	cfg.UI.PathPickerValidateDelayMS = 5000
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	app.dialogCtrl.ArmPathPickerValidateTimer()
 	if !app.dialogCtrl.PathPickerValidateArmed() {
@@ -123,13 +117,10 @@ func TestPathPickerQueryInsertAdvancesCursorAndScroll(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 
 	const longPath = "/very/long/path/with/many/segments/that/exceeds/the/visible/picker/input/width/value"
@@ -211,13 +202,10 @@ func TestPathPickerQueryCtrlWAndAltBWordNav(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 	st.Query = "/foo/bar"
@@ -260,13 +248,10 @@ func TestPathPickerTabAcceptsFilesystemCompletion(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 
@@ -314,13 +299,10 @@ func TestPathPickerBackspaceRevealScrollOnLastVisible(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 
@@ -369,13 +351,10 @@ func TestPathPickerValidateArmIncrementsGeneration(t *testing.T) {
 	screen.SetSize(80, 24)
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	before := app.dialogCtrl.PathPickerValidateGeneration()
 	app.dialogCtrl.ArmPathPickerValidateTimer()

@@ -22,12 +22,7 @@ func TestQuickFilterFunctionKeyClosesFuzzyAndRunsFullscreenFileView(t *testing.T
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.activePanel().OpenFilter(app.activeViewportRows())
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'x', tcell.ModNone))
@@ -63,12 +58,7 @@ func TestQuickFilterF9ClosesFuzzyAndOpensMenu(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.activePanel().OpenFilter(app.activeViewportRows())
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF9, 0, tcell.ModNone))
@@ -94,12 +84,7 @@ func TestQuickFilterF10Quits(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.activePanel().OpenFilter(app.activeViewportRows())
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyF10, 0, tcell.ModNone))
@@ -123,12 +108,7 @@ func TestQuickFilterEmptyOverlayThenTypingEnterOnFileClearsFuzzy(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.activePanel().OpenFilter(app.activeViewportRows())
 	if !app.model.Primary.Filter.Editing {
@@ -164,12 +144,7 @@ func TestPlainTypingStartsQuickFilterAndMovesToFirstVisibleMatch(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModNone))
 
@@ -194,12 +169,7 @@ func TestQuickFilterSpaceAppendsToQueryInsteadOfTogglingTree(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModNone))
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
@@ -226,12 +196,7 @@ func TestQuickFilterColonOpensLeaderMenuAndCancelsFilter(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'f', tcell.ModNone))
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone))
@@ -258,12 +223,7 @@ func TestPlainTypingMultiLetterSelectsBestRankedMatch(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	for _, r := range "abc" {
 		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
@@ -289,12 +249,7 @@ func TestQuickFilterEnterOpensDirectoryAndClearsQuery(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	for _, r := range "sub" {
 		app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone))
@@ -325,12 +280,7 @@ func TestQuickFilterInsertSelectsAndAdvancesCursor(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
 	if app.model.Primary.Filter.Query != "a" {
@@ -365,12 +315,7 @@ func TestQuickFilterEmptyQueryEnterExitsEditing(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.activePanel().OpenFilter(app.activeViewportRows())
 	if !app.model.Primary.Filter.Editing {
@@ -396,12 +341,7 @@ func TestFilterModeEscCancelsInsteadOfQuitting(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.activePanel().OpenFilter(app.activeViewportRows())
 	quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
@@ -469,12 +409,7 @@ func TestQuickFilterUpDownCyclesMatches(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.activePanel().OpenFilter(app.activeViewportRows())
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 's', tcell.ModNone))

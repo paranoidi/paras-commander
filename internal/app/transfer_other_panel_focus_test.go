@@ -154,13 +154,10 @@ func TestCopyToOtherPanelFocusDisabledByConfig(t *testing.T) {
 	screen := newScreen(t, 80, 24)
 	cfg := config.Default()
 	cfg.Operations.FocusOtherPanelAfterTransfer = false
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return srcDir, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	app.config.UI.KeyRepeatDebounceMS = 0
 	app.config.Shell.Persistent = false
 	t.Cleanup(func() {

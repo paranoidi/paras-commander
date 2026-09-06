@@ -25,15 +25,12 @@ func TestNewWithOptionsAppliesConfiguredHiddenFilesToBothPanels(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Panels.ShowHidden = true
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	if !app.model.Primary.ShowHidden || !app.model.Secondary.ShowHidden {
 		t.Fatalf("ShowHidden left=%v right=%v, want both true", app.model.Primary.ShowHidden, app.model.Secondary.ShowHidden)
@@ -56,16 +53,13 @@ func TestNewWithOptionsAppliesProvidedTheme(t *testing.T) {
 
 	styles := theme.Default()
 	styles.Name = "custom"
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
 		Config: config.Default(),
 		Theme:  styles,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	if app.styles.Name != "custom" {
 		t.Fatalf("app theme name = %q, want custom", app.styles.Name)
@@ -85,16 +79,13 @@ func TestNewWithOptionsSetsUseNerdfontIconsFromConfig(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.UI.UseNerdfontIcons = false
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
 		Config: cfg,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 	if app.model.UseNerdfontIcons {
 		t.Fatal("UseNerdfontIcons = true, want false from config")
 	}
@@ -116,16 +107,13 @@ func TestNewWithOptionsAppliesDefaultListingFormatFromConfig(t *testing.T) {
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
 		Config: cfg,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 	if app.model.Primary.ListFormat != panel.ListFormatBrief || app.model.Secondary.ListFormat != panel.ListFormatBrief {
 		t.Fatalf("panels ListFormat = %v/%v, want brief", app.model.Primary.ListFormat, app.model.Secondary.ListFormat)
 	}
@@ -147,16 +135,13 @@ func TestNewWithOptionsAppliesFilterCycleMatchesToPanels(t *testing.T) {
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate() error = %v", err)
 	}
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
 		Config: cfg,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 	if app.model.Primary.Filter.CycleMatches != config.FilterCycleMatchesRanked {
 		t.Fatalf("Left.Filter.CycleMatches = %q, want ranked", app.model.Primary.Filter.CycleMatches)
 	}
@@ -181,16 +166,13 @@ func TestOptionsMenuOpensConfigurationDialog(t *testing.T) {
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("Validate: %v", err)
 	}
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
 		Config: cfg,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.dispatch(keymap.ActionAppOpenMenu)
 	app.moveMenu(3) // File → Command → Display → Options
@@ -226,7 +208,7 @@ func TestConfigDialogApplyPersistsUseNerdfontIcons(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-icons")}.WithResolvedLocations()
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -234,9 +216,6 @@ func TestConfigDialogApplyPersistsUseNerdfontIcons(t *testing.T) {
 		Paths:  appPaths,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openConfigDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'd', tcell.ModNone))
@@ -277,7 +256,7 @@ func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-zoom")}.WithResolvedLocations()
 	cfg := config.Default()
 	cfg.UI.Zoom.ActivePanel = false
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -285,9 +264,6 @@ func TestConfigDialogApplyPersistsZoomActivePanel(t *testing.T) {
 		Paths:  appPaths,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openConfigDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'z', tcell.ModNone))
@@ -322,7 +298,7 @@ func TestConfigDialogApplyPersistsPaneSplitOrientation(t *testing.T) {
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-split")}.WithResolvedLocations()
 	cfg := config.Default()
 	cfg.UI.Zoom.Orientation = config.PaneSplitSideBySide
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -330,9 +306,6 @@ func TestConfigDialogApplyPersistsPaneSplitOrientation(t *testing.T) {
 		Paths:  appPaths,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openConfigDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'h', tcell.ModNone))
@@ -366,7 +339,7 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-scroll")}.WithResolvedLocations()
 	cfg := config.Default()
 	cfg.UI.Scroll.Mode = config.DefaultScrollMode
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -374,9 +347,6 @@ func TestConfigDialogApplyPersistsScrollMode(t *testing.T) {
 		Paths:  appPaths,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 	if app.model.Primary.ScrollMode != panel.ScrollModeEdge {
 		t.Fatalf("Left.ScrollMode = %q, want edge from config default", app.model.Primary.ScrollMode)
 	}
@@ -415,7 +385,7 @@ func TestConfigDialogApplyPersistsDefaultListingFormat(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-cfg-lf")}.WithResolvedLocations()
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -423,9 +393,6 @@ func TestConfigDialogApplyPersistsDefaultListingFormat(t *testing.T) {
 		Paths:  appPaths,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openConfigDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'p', tcell.ModNone))
@@ -458,7 +425,7 @@ func TestOptionsMenuOpensThemeDialog(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	defaultTheme := theme.Default()
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -468,9 +435,6 @@ func TestOptionsMenuOpensThemeDialog(t *testing.T) {
 			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
 		},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.dispatch(keymap.ActionAppOpenMenu)
 	app.moveMenu(3) // File → Command → Display → Options

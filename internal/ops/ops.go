@@ -138,9 +138,22 @@ func SelfTargetCount(sources []pathloc.Path, destDir pathloc.Path, flatDestNames
 	if !flatDestNames {
 		root = TransferNameRoot(sources)
 	}
+	// One stat for destDir, not one per source: ResolveDestinationNamed stats the
+	// destination on every call, so a large selection on a high-latency mount would
+	// otherwise block the UI for len(sources) x round-trip latency at enqueue time.
+	destIsDir, err := destinationIsDir(context.Background(), destDir)
+	if err != nil {
+		destIsDir = false
+	}
 	n := 0
 	for _, src := range sources {
-		if PathsEquivalent(src, ResolveDestinationNamed(destDir, TransferDestName(src, root))) {
+		dst := destDir
+		if destIsDir {
+			if child, err := destDir.Join(TransferDestName(src, root)); err == nil {
+				dst = child
+			}
+		}
+		if PathsEquivalent(src, dst) {
 			n++
 		}
 	}

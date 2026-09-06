@@ -238,6 +238,11 @@ func (h *Handler) SchedulePrefetchFromActivePanel() {
 	if p == nil {
 		return
 	}
+	if h.host.PathVolumeContendsWithActiveJob(p.PathString()) {
+		// A job is already saturating this volume; skip starting new prefetch decodes.
+		// The next caret move reschedules, so this is self-healing.
+		return
+	}
 	// Skip the cache-lookup/sort/Schedule rebuild when nothing has moved since the previous
 	// call — reconcileAfterEvent runs this on every input event, including repeats that don't
 	// touch the active panel at all, so this keeps that common case free. VisibleEntryCount is

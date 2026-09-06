@@ -9,6 +9,26 @@ import (
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
 
+// walkAncestors calls visit with each strict ancestor of path (as a cleaned string), nearest
+// first, stopping as soon as visit returns true or the root is reached; its own return value
+// is that early-stop result.
+func walkAncestors(path string, visit func(ancestor string) bool) bool {
+	loc, err := pathloc.Parse(path)
+	if err != nil {
+		return false
+	}
+	for {
+		parent := loc.Parent()
+		if parent.Equal(loc) || parent.IsZero() {
+			return false
+		}
+		if visit(cleanPathString(parent.String())) {
+			return true
+		}
+		loc = parent
+	}
+}
+
 // clearSelectionDirAncestors removes selected directory ancestors of path.
 func clearSelectionDirAncestors(selected map[string]bool, path string, isDir func(string) bool) bool {
 	if len(selected) == 0 {
@@ -21,23 +41,14 @@ func clearSelectionDirAncestors(selected map[string]bool, path string, isDir fun
 	if isDir == nil {
 		isDir = func(string) bool { return false }
 	}
-	loc, err := pathloc.Parse(path)
-	if err != nil {
-		return false
-	}
 	var removed bool
-	for {
-		parent := loc.Parent()
-		if parent.Equal(loc) || parent.IsZero() {
-			break
-		}
-		ps := cleanPathString(parent.String())
+	walkAncestors(path, func(ps string) bool {
 		if ps != "" && selected[ps] && isDir(ps) {
 			delete(selected, ps)
 			removed = true
 		}
-		loc = parent
-	}
+		return false
+	})
 	return removed
 }
 
@@ -197,20 +208,9 @@ func pathHasAncestorIn(path string, set map[string]bool) bool {
 	if len(set) == 0 {
 		return false
 	}
-	loc, err := pathloc.Parse(path)
-	if err != nil {
-		return false
-	}
-	for {
-		parent := loc.Parent()
-		if parent.Equal(loc) || parent.IsZero() {
-			return false
-		}
-		if set[cleanPathString(parent.String())] {
-			return true
-		}
-		loc = parent
-	}
+	return walkAncestors(path, func(ancestor string) bool {
+		return set[ancestor]
+	})
 }
 
 // BulkApplySelectionAddsWalkOrder marks paths assuming parents appear before descendants

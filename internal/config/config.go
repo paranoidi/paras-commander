@@ -473,14 +473,18 @@ type JobsConfig struct {
 	FreeSpaceOnProgressWake bool `toml:"free_space_on_progress_wake"`
 	// FreeSpacePollIntervalSecs is how often to refresh panel free space while any job is unfinished (0 disables).
 	FreeSpacePollIntervalSecs int `toml:"free_space_poll_interval_secs"`
-	// ScanYieldIntervalMS is cooperative sleep during pre-scan while a transfer job is running.
+	// ScanYieldIntervalMS is cooperative sleep during pre-scan walks, so they never fully
+	// saturate the scheduler at the UI's expense.
 	ScanYieldIntervalMS int `toml:"scan_yield_interval_ms"`
-	// ScanYieldEveryN triggers cooperative yield every N walk entries during pre-scan while a transfer is active.
+	// ScanYieldEveryN triggers cooperative yield every N walk entries during pre-scan.
 	ScanYieldEveryN int `toml:"scan_yield_every_n"`
-	// ScanNiceIncrement is added to nice on Linux for pre-scan when a transfer is active (0 uses builtin default).
-	ScanNiceIncrement int `toml:"scan_nice_increment"`
 	// ScanProgressMinIntervalMS throttles scan-progress events during pre-scan.
 	ScanProgressMinIntervalMS int `toml:"scan_progress_min_interval_ms"`
+	// ScanDisableAdaptiveThrottle disables the pre-scan counting walk's adaptive contention
+	// probe (see jobbridge.ScanFunc), which otherwise periodically pauses the background
+	// counting walk and measures whether that improves the job's transfer throughput, backing
+	// off the pause when it doesn't. Default false.
+	ScanDisableAdaptiveThrottle bool `toml:"scan_disable_adaptive_throttle"`
 }
 
 type OperationsConfig struct {
@@ -619,8 +623,8 @@ func Default() Config {
 			FreeSpacePollIntervalSecs:   DefaultFreeSpacePollIntervalSecs,
 			ScanYieldIntervalMS:         DefaultScanYieldIntervalMS,
 			ScanYieldEveryN:             DefaultScanYieldEveryN,
-			ScanNiceIncrement:           DefaultScanNiceIncrement,
 			ScanProgressMinIntervalMS:   DefaultScanProgressMinIntervalMS,
+			ScanDisableAdaptiveThrottle: false,
 		},
 		Operations: OperationsConfig{
 			ConfirmDelete:                true,
@@ -1047,15 +1051,15 @@ func (c *Config) validateUI(builtin *Config) {
 	if c.UI.PathPickerValidateDelayMS < 0 {
 		c.UI.PathPickerValidateDelayMS = builtin.UI.PathPickerValidateDelayMS
 	}
-	const pathPickerValidateMaxMS = 30_000
-	if c.UI.PathPickerValidateDelayMS > pathPickerValidateMaxMS {
-		c.UI.PathPickerValidateDelayMS = pathPickerValidateMaxMS
+	const debounceMaxMS = 30_000
+	if c.UI.PathPickerValidateDelayMS > debounceMaxMS {
+		c.UI.PathPickerValidateDelayMS = debounceMaxMS
 	}
 	if c.UI.SelectionSizeScanDebounceMS < 0 {
 		c.UI.SelectionSizeScanDebounceMS = builtin.UI.SelectionSizeScanDebounceMS
 	}
-	if c.UI.SelectionSizeScanDebounceMS > pathPickerValidateMaxMS {
-		c.UI.SelectionSizeScanDebounceMS = pathPickerValidateMaxMS
+	if c.UI.SelectionSizeScanDebounceMS > debounceMaxMS {
+		c.UI.SelectionSizeScanDebounceMS = debounceMaxMS
 	}
 	if c.UI.KeyRepeatDebounceMS < 0 {
 		c.UI.KeyRepeatDebounceMS = builtin.UI.KeyRepeatDebounceMS
@@ -1237,12 +1241,6 @@ func (c *Config) validateJobsScan(builtin *Config) {
 	}
 	if c.Jobs.ScanYieldEveryN > ScanYieldEveryNMax {
 		c.Jobs.ScanYieldEveryN = ScanYieldEveryNMax
-	}
-	if c.Jobs.ScanNiceIncrement < 0 {
-		c.Jobs.ScanNiceIncrement = builtin.Jobs.ScanNiceIncrement
-	}
-	if c.Jobs.ScanNiceIncrement > 19 {
-		c.Jobs.ScanNiceIncrement = 19
 	}
 	if c.Jobs.ScanProgressMinIntervalMS <= 0 {
 		c.Jobs.ScanProgressMinIntervalMS = builtin.Jobs.ScanProgressMinIntervalMS

@@ -235,12 +235,11 @@ func (h *Handler) confirmFlatten() {
 		h.host.SetTransientMessage("Nothing to flatten", ui.MessageUrgencyWarn)
 		return
 	}
-	nSelf := 0
-	for _, src := range sources {
-		if ops.ResolvedSameAsSource(pathloc.MustParse(src), destLoc) {
-			nSelf++
-		}
+	srcLocs := make([]pathloc.Path, len(sources))
+	for i, src := range sources {
+		srcLocs[i] = pathloc.MustParse(src)
 	}
+	nSelf := ops.SelfTargetCount(srcLocs, destLoc, true)
 	if nSelf > 0 {
 		if len(sources) > 1 {
 			h.host.SetTransientMessage("Cannot flatten when some items would overwrite themselves", ui.MessageUrgencyWarn)

@@ -120,19 +120,62 @@ func loadTestTheme(t *testing.T) (theme.Theme, config.Paths) {
 
 func testAppMinimal(t *testing.T) *App {
 	t.Helper()
-	root := t.TempDir()
-	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
-		CWD:    func() (string, error) { return root, nil },
+	app := newTestApp(t, newScreen(t, 80, 24), testOptions(t.TempDir()))
+	// The persistent subshell would grab a real PTY and /dev/tty under a simulation screen.
+	app.config.Shell.Persistent = false
+	return app
+}
+
+// testOptions returns the Options an app-level test starts from: cwd fixed at dir with the
+// built-in default config. Callers tweak the returned struct before passing it to newTestApp.
+func testOptions(dir string) Options {
+	return Options{
+		CWD:    func() (string, error) { return dir, nil },
 		Config: config.Default(),
-	})
+	}
+}
+
+// newTestApp builds an App and lands both panels' startup listings. Production does the latter
+// from Run() (see loadStartupPanelListings); tests never reach Run(), so panels built by
+// NewWithOptions are empty until settleStartupPanelListings runs. Build test apps through here
+// rather than calling New/NewWithOptions directly, so that rule lives in one place.
+func newTestApp(t *testing.T, screen tcell.SimulationScreen, opts Options) *App {
+	t.Helper()
+	app, err := NewWithOptions(screen, opts)
 	if err != nil {
 		t.Fatalf("NewWithOptions: %v", err)
 	}
-	// The persistent subshell would grab a real PTY and /dev/tty under a simulation screen.
-	app.config.Shell.Persistent = false
+	settleStartupPanelListings(t, app)
 	t.Cleanup(app.stopWorker)
 	return app
+}
+
+// settleStartupPanelListings applies both panels' first directory listing synchronously.
+// Startup schedules it through the same off-the-UI-thread path as every later navigation (see
+// App.loadStartupPanelListings), so a test that inspects entries right after building an App has
+// to land it first; doing that here rather than pumping the interrupt queue keeps tests
+// deterministic and leaves the event queue untouched. Bumping the generation counter first makes
+// applyPanelAsyncLoad drop the in-flight scheduled result as superseded.
+func settleStartupPanelListings(t *testing.T, app *App) {
+	t.Helper()
+	for i, p := range []*panel.State{&app.model.Primary, &app.model.Secondary} {
+		app.panelAsyncLoadGen[i].Add(1)
+		// A start-path or chooser navigation scheduled during construction is still in flight;
+		// land that target rather than the pre-navigation path.
+		target := p.PathString()
+		if p.ListingPending && p.ListingPendingPath != "" {
+			target = p.ListingPendingPath
+		}
+		sched := p.ScheduleAsyncLoad
+		p.ScheduleAsyncLoad = nil
+		p.ListingPending = false
+		p.ListingPendingPath = ""
+		err := p.Load(target)
+		p.ScheduleAsyncLoad = sched
+		if err != nil {
+			t.Fatalf("startup listing for panel %d: %v", i, err)
+		}
+	}
 }
 
 func newScreen(t *testing.T, w, h int) tcell.SimulationScreen {
@@ -141,20 +184,15 @@ func newScreen(t *testing.T, w, h int) tcell.SimulationScreen {
 
 func newApp(t *testing.T, screen tcell.SimulationScreen, dir string) *App {
 	t.Helper()
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 	app.config.UI.KeyRepeatDebounceMS = 0
 	// The persistent subshell would grab a real PTY and /dev/tty under a simulation screen.
 	app.config.Shell.Persistent = false
+	// Registered after newTestApp's stopWorker cleanup, so LIFO order flushes before stopping.
 	t.Cleanup(func() {
 		if !app.jobStopOnce {
 			flushBackgroundJobs(t, app)
 		}
-		app.stopWorker()
 	})
 	return app
 }

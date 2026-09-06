@@ -210,10 +210,10 @@ Background file-operation jobs: display, timing, and throttling.
 | `throughput_chart_enabled` | bool | `true` | Show the throughput strip and chart in job details. Disabling it stops recording chart history but not speed sampling. |
 | `free_space_on_progress_wake` | bool | `true` | Refresh both panels' free-space display whenever a job progress update wakes the UI. |
 | `free_space_poll_interval_secs` | int | `5` | How often to refresh panel free space while any job is running. `0` disables polling (max 3600). |
-| `scan_yield_interval_ms` | int | `50` | Cooperative sleep interval during a pre-copy directory scan while a transfer job is active, so the UI stays responsive (clamped 50–5000). |
+| `scan_yield_interval_ms` | int | `50` | Cooperative sleep interval during a pre-copy directory scan, so the UI stays responsive (clamped 50–5000). |
 | `scan_yield_every_n` | int | `64` | Number of walked entries between cooperative yields during pre-scan (max 4096). |
-| `scan_nice_increment` | int | `10` | Linux `nice` increment applied to pre-scan while a transfer job is active, so scanning doesn't starve the copy (0–19). |
 | `scan_progress_min_interval_ms` | int | `200` | Throttle for scan-progress UI updates during pre-scan (clamped 50–5000). |
+| `scan_disable_adaptive_throttle` | bool | `false` | Disable the pre-scan counting walk's adaptive contention probe. When enabled (default), the counting walk periodically pauses itself and measures whether that improves the job's transfer throughput, growing a duty-cycle pause when it measurably helps (e.g. on a contended mechanical disk) and decaying it back to zero otherwise (SSD/NVMe/network storage). |
 
 ## `[operations]`
 

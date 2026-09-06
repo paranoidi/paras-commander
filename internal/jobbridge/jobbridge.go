@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -58,13 +57,27 @@ func EventUpdatesMarks(t jobs.EventType) bool {
 // slow/stalled transfer consumer — a large file mid-copy stalls the relay's handoff to items,
 // but the counting walk keeps enumerating and Totals keeps growing regardless. Both walks start
 // immediately; ScanFunc returns without blocking for the source tree to be fully enumerated.
-func ScanFunc() jobs.ScanFunc {
+//
+// The counting walk additionally runs an adaptive contention probe (see scan_throttle.go) unless
+// jobsCfg.ScanDisableAdaptiveThrottle is set: it periodically pauses the counting walk and
+// measures whether that improves the job's transfer throughput, growing a duty-cycle pause when
+// it measurably does and decaying it otherwise. This is pure measured-evidence throttling — no
+// disk-type detection — so it self-corrects to zero pause on SSD/NVMe/network storage.
+func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 	return func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks jobs.ScanWalkHooks) jobs.PlanProducer {
 		opts := ops.PlanBuildOptions{
 			YieldEveryN:   hooks.YieldEveryN,
 			Yield:         hooks.Yield,
 			FlatDestNames: hooks.FlatDestNames,
 			OnPath:        hooks.OnPath,
+		}
+
+		// countOpts is the counting walk's own copy of opts (the delivery walk above keeps the
+		// original, untouched) with Yield wrapped by the adaptive throttle when a throughput
+		// signal is available and the probe isn't disabled.
+		countOpts := opts
+		if hooks.ThroughputBPS != nil && !jobsCfg.ScanDisableAdaptiveThrottle {
+			countOpts.Yield = newAdaptiveThrottleYield(opts.Yield, hooks.ThroughputBPS)
 		}
 
 		// raw is the bounded channel BuildPlanStreamCtx's delivery-walk goroutine sends into; it
@@ -82,10 +95,8 @@ func ScanFunc() jobs.ScanFunc {
 
 		// files/dirs/totalBytes are updated once per discovered item by the counting goroutine
 		// below (potentially millions of times for a large tree) and read by Totals() every
-		// ~200ms (jobs/scan.go's ticker); atomics keep that off the critical section mu otherwise
-		// guards for walkErr, which is written at most once per walk.
+		// ~200ms (jobs/scan.go's ticker); atomics keep that off any lock.
 		var files, dirs, totalBytes atomic.Int64
-		var mu sync.Mutex
 		var walkErr error
 
 		go func() {
@@ -94,16 +105,21 @@ func ScanFunc() jobs.ScanFunc {
 
 		go func() {
 			defer close(items)
+			// finish records the walk's terminal error and signals deliveryDone. walkErr is
+			// written here exactly once; every reader (job.PlanErr, Err() below) only consults it
+			// after observing items/job.PlanCh close or receiving from deliveryDone/Done, each of
+			// which happens-after this write per Go's channel memory model, so no mutex is needed
+			// to publish it.
+			finish := func() {
+				walkErr = <-walkErrCh
+				close(deliveryDone)
+			}
 			firstItemSeen := false
 			for {
 				select {
 				case it, ok := <-raw:
 					if !ok {
-						e := <-walkErrCh
-						mu.Lock()
-						walkErr = e
-						mu.Unlock()
-						close(deliveryDone)
+						finish()
 						return
 					}
 					if !firstItemSeen {
@@ -113,19 +129,11 @@ func ScanFunc() jobs.ScanFunc {
 					select {
 					case items <- it:
 					case <-ctx.Done():
-						e := <-walkErrCh
-						mu.Lock()
-						walkErr = e
-						mu.Unlock()
-						close(deliveryDone)
+						finish()
 						return
 					}
 				case <-ctx.Done():
-					e := <-walkErrCh
-					mu.Lock()
-					walkErr = e
-					mu.Unlock()
-					close(deliveryDone)
+					finish()
 					return
 				}
 			}
@@ -142,7 +150,7 @@ func ScanFunc() jobs.ScanFunc {
 		countDone := make(chan struct{})
 
 		go func() {
-			_ = ops.BuildPlanStreamCtx(ctx, sources, destination, true, opts, countCh)
+			_ = ops.BuildPlanStreamCtx(ctx, sources, destination, true, countOpts, countCh)
 		}()
 
 		go func() {
@@ -173,8 +181,6 @@ func ScanFunc() jobs.ScanFunc {
 			},
 			Done: done,
 			Err: func() error {
-				mu.Lock()
-				defer mu.Unlock()
 				return walkErr
 			},
 		}
@@ -479,30 +485,30 @@ type transferExecCtx struct {
 	emit     func(jobs.Event)
 }
 
-// executeJobByType runs the ops.Execute* call matching tc.job.Type (copy/move/flatten use the
-// pre-built plan when available; delete/extract build and emit their own PlanTotals since they
-// don't take a shared plan).
+// planSource names where tc's plan comes from, for ops.ExecuteCopyFrom/ExecuteMoveFrom: a
+// streaming background producer (job.PlanCh) takes priority when present; otherwise an
+// already-built, non-empty tc.opsPlan is used; otherwise the zero PlanSource tells the Execute*
+// call to build (and, for a prior failed synchronous build, retry building) the plan itself.
+func (tc transferExecCtx) planSource() ops.PlanSource {
+	if tc.job.PlanCh != nil {
+		return ops.PlanSource{Chan: tc.job.PlanCh, ChanErr: tc.job.PlanErr}
+	}
+	if tc.planErr == nil && len(tc.opsPlan) > 0 {
+		return ops.PlanSource{Slice: tc.opsPlan}
+	}
+	return ops.PlanSource{}
+}
+
+// executeJobByType runs the ops.Execute* call matching tc.job.Type (copy/move/flatten dispatch
+// on tc.planSource(); delete/extract build and emit their own PlanTotals since they don't take a
+// shared plan).
 func executeJobByType(tc transferExecCtx) (doneFiles int, doneBytes int64, err error) {
 	job := tc.job
 	switch job.Type {
 	case jobs.TypeCopy:
-		switch {
-		case job.PlanCh != nil:
-			doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlanChan(tc.ctx, job.PlanCh, job.PlanErr, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-		case tc.planErr != nil:
-			doneFiles, doneBytes, err = ops.ExecuteCopy(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-		default:
-			doneFiles, doneBytes, err = ops.ExecuteCopyUsingPlan(tc.ctx, tc.opsPlan, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-		}
+		doneFiles, doneBytes, err = ops.ExecuteCopyFrom(tc.ctx, tc.planSource(), job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 	case jobs.TypeMove, jobs.TypeFlatten:
-		switch {
-		case job.PlanCh != nil:
-			doneFiles, doneBytes, err = ops.ExecuteMoveWithPlanChan(tc.ctx, job.PlanCh, job.PlanErr, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-		case len(tc.opsPlan) > 0:
-			doneFiles, doneBytes, err = ops.ExecuteMoveWithPlan(tc.ctx, tc.opsPlan, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-		default:
-			doneFiles, doneBytes, err = ops.ExecuteMove(tc.ctx, job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
-		}
+		doneFiles, doneBytes, err = ops.ExecuteMoveFrom(tc.ctx, tc.planSource(), job.Sources, job.Destination, tc.opts, tc.throttle, tc.progress, tc.resolver, tc.diskWait)
 		if err == nil && job.Type == jobs.TypeFlatten && job.FlattenRemoveEmpty {
 			if cleanErr := ops.RemoveEmptyDirsUnder(tc.ctx, job.FlattenRoots); cleanErr != nil {
 				err = cleanErr

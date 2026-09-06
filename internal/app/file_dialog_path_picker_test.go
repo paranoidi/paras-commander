@@ -22,13 +22,7 @@ func TestSymlinkDialogRightAtEndFocusesPathPickerGlyph(t *testing.T) {
 	t.Cleanup(screen.Fini)
 	screen.SetSize(80, 24)
 
-	app, err := NewWithOptions(screen, Options{
-		CWD:    func() (string, error) { return root, nil },
-		Config: config.Default(),
-	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 	p := app.activePanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
@@ -74,13 +68,7 @@ func TestSymlinkDialogTabAcceptsFilesystemCompletion(t *testing.T) {
 	t.Cleanup(screen.Fini)
 	screen.SetSize(80, 24)
 
-	app, err := NewWithOptions(screen, Options{
-		CWD:    func() (string, error) { return root, nil },
-		Config: config.Default(),
-	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 	p := app.activePanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
@@ -132,13 +120,10 @@ func TestSymlinkDialogOpensPathPickerFromGlyph(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	p := app.activePanel()
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)

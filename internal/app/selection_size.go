@@ -77,7 +77,8 @@ func (a *App) applySelectionScanNeed(d selectionScanNeedPayload) {
 	if p.SelectionDerivedGen() != d.Gen {
 		return
 	}
-	fp := strings.Join(d.Need, "\n")
+	need := a.filterJobContendedPaths(d.Need)
+	fp := strings.Join(need, "\n")
 	if fp == "" {
 		a.selectionSizeScanFP[d.PanelID] = ""
 		return
@@ -87,7 +88,7 @@ func (a *App) applySelectionScanNeed(d selectionScanNeedPayload) {
 	}
 	a.selectionSizeScanFP[d.PanelID] = fp
 	a.disk.engine.StartScanFromListing(
-		d.Need,
+		need,
 		a.disk.ignore,
 		d.PanelID,
 		listingVolumeGateForScan(p, a.config.DiskUsage.DescendIntoMountPoints),

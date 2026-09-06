@@ -141,18 +141,37 @@ const (
 	// DefaultFreeSpacePollIntervalSecs is the period for background volume free-space refresh while jobs run (0 disables).
 	DefaultFreeSpacePollIntervalSecs = 5
 
-	// DefaultScanYieldIntervalMS is cooperative sleep duration during pre-scan while a transfer is active.
+	// DefaultScanYieldIntervalMS is cooperative sleep duration during pre-scan walks.
 	DefaultScanYieldIntervalMS = 50
-	// DefaultScanYieldEveryN invokes cooperative yield every N plan walk entries while a transfer is active.
+	// DefaultScanYieldEveryN invokes cooperative yield every N plan walk entries during pre-scan.
 	DefaultScanYieldEveryN = 64
-	// DefaultScanNiceIncrement is added to the process nice value for pre-scan on Linux when a transfer is active.
-	DefaultScanNiceIncrement = 10
 	// DefaultScanProgressMinIntervalMS throttles scan-progress UI events during pre-scan walks.
 	DefaultScanProgressMinIntervalMS = 200
 	// DefaultPlanStreamBufferItems bounds the pre-scan producer's PlanItem channel so a
 	// multi-terabyte/million-file walk holds only a few hundred KB of buffered items in memory
 	// regardless of tree size, same order of magnitude as DefaultScanYieldEveryN.
 	DefaultPlanStreamBufferItems = 256
+
+	// DefaultScanThrottleProbeIntervalSec is how often the pre-scan counting walk's adaptive
+	// throttle re-probes for measurable contention with the transfer (see jobbridge.ScanFunc).
+	DefaultScanThrottleProbeIntervalSec = 4
+	// DefaultScanThrottleProbeWindowMS is how long each probe pauses the counting walk while
+	// comparing throughput just before vs. during the pause.
+	DefaultScanThrottleProbeWindowMS = 800
+	// DefaultScanThrottleSignificantDropThreshold is the fractional throughput increase during a
+	// probe pause (relative to just before it) required to count as "pausing measurably helped".
+	DefaultScanThrottleSignificantDropThreshold = 0.20
+	// DefaultScanThrottleDutyPauseInitialMS seeds the counting walk's duty-cycle pause the first
+	// time a probe measures a benefit (starting from a zero pause).
+	DefaultScanThrottleDutyPauseInitialMS = 50
+	// DefaultScanThrottleDutyPauseMaxMS caps the extra pause injected per counting-walk yield tick.
+	DefaultScanThrottleDutyPauseMaxMS = 500
+	// DefaultScanThrottleDutyPauseGrowFactor scales the duty-cycle pause up after a probe measures
+	// a benefit.
+	DefaultScanThrottleDutyPauseGrowFactor = 1.5
+	// DefaultScanThrottleDutyPauseDecayFactor scales the duty-cycle pause down after a probe finds
+	// no benefit.
+	DefaultScanThrottleDutyPauseDecayFactor = 0.5
 
 	DefaultPreservePermissions        = true
 	DefaultPreserveTimestamps         = true

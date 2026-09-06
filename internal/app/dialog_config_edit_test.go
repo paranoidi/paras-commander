@@ -20,15 +20,12 @@ func testMetaDialogApp(t *testing.T, dir, cfgDir string) *App {
 	cfg := config.Default()
 	cfg.Meta = config.MetaConfig{LocalNames: []string{"meta.toml"}}
 	screen := newScreen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: cfg,
 		Theme:  th,
 		Paths:  config.Paths{ConfigDir: cfgDir},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := app.model.Primary.Load(dir); err != nil {
 		t.Fatal(err)
 	}

@@ -65,8 +65,8 @@ func TestCacheStatusesForListingRealGit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	GitCommand = func(ctx context.Context, workRoot string) (string, error) {
-		return defaultGitCommand(ctx, workRoot)
+	GitCommand = func(ctx context.Context, workRoot, listDir string) (string, error) {
+		return defaultGitCommand(ctx, workRoot, listDir)
 	}
 	cache := NewCache()
 	paths := []ListingPaths{

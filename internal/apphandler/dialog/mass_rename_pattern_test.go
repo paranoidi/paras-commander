@@ -43,6 +43,8 @@ func (f *fakeMassRenamePatternHost) PanelByID(int) *panel.State                 
 func (f *fakeMassRenamePatternHost) ActiveViewportRows() int                       { return 20 }
 func (f *fakeMassRenamePatternHost) PanelViewportRows(int) int                     { return 20 }
 func (f *fakeMassRenamePatternHost) ClearTransientMessage()                        {}
+func (f *fakeMassRenamePatternHost) PathVolumeContendsWithActiveJob(string) bool   { return false }
+func (f *fakeMassRenamePatternHost) FilterJobContendedPaths(p []string) []string   { return p }
 func (f *fakeMassRenamePatternHost) Config() config.Config                         { return f.cfg }
 func (f *fakeMassRenamePatternHost) Styles() theme.Theme                           { return theme.Theme{} }
 func (f *fakeMassRenamePatternHost) OpenMessageDialog(string, string)              {}

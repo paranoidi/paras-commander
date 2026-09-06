@@ -14,15 +14,11 @@ import (
 func TestChooserModeEnablesQuickViewByDefault(t *testing.T) {
 	root := t.TempDir()
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:         func() (string, error) { return root, nil },
 		Config:      config.Default(),
 		ChooserFile: filepath.Join(t.TempDir(), "out"),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	if app.model.HideInactivePanel {
 		t.Fatal("HideInactivePanel = true, want false in chooser mode")
 	}
@@ -37,15 +33,11 @@ func TestChooserModeEnablesQuickViewByDefault(t *testing.T) {
 func TestChooserModeEnablesCarouselByDefault(t *testing.T) {
 	root := t.TempDir()
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:         func() (string, error) { return root, nil },
 		Config:      config.Default(),
 		ChooserFile: filepath.Join(t.TempDir(), "out"),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	if !app.model.Primary.CarouselMode {
 		t.Fatal("Left.CarouselMode = false, want true by default in chooser mode")
 	}
@@ -54,16 +46,12 @@ func TestChooserModeEnablesCarouselByDefault(t *testing.T) {
 func TestChooserNoCarouselDisablesPrimaryPanelCarousel(t *testing.T) {
 	root := t.TempDir()
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:               func() (string, error) { return root, nil },
 		Config:            config.Default(),
 		ChooserFile:       filepath.Join(t.TempDir(), "out"),
 		ChooserNoCarousel: true,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	if app.model.Primary.CarouselMode {
 		t.Fatal("Left.CarouselMode = true, want false with ChooserNoCarousel")
 	}
@@ -76,16 +64,12 @@ func TestChooserSelectHighlightsFile(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:           func() (string, error) { return root, nil },
 		Config:        config.Default(),
 		ChooserFile:   filepath.Join(t.TempDir(), "out"),
 		ChooserSelect: file,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	entry, ok := app.model.Primary.CurrentEntry()
 	if !ok {
 		t.Fatal("no current entry")
@@ -102,16 +86,12 @@ func TestChooserSelectMissingFileOpensParent(t *testing.T) {
 	root := t.TempDir()
 	missing := filepath.Join(root, "scratch.go")
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:           func() (string, error) { return root, nil },
 		Config:        config.Default(),
 		ChooserFile:   filepath.Join(t.TempDir(), "out"),
 		ChooserSelect: missing,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	if app.model.Primary.PathString() != root {
 		t.Fatalf("panel path = %q, want %q", app.model.Primary.PathString(), root)
 	}
@@ -125,15 +105,11 @@ func TestChooserEnterWritesAndQuits(t *testing.T) {
 	}
 	chooserOut := filepath.Join(t.TempDir(), "chooser-out")
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:         func() (string, error) { return root, nil },
 		Config:      config.Default(),
 		ChooserFile: chooserOut,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	if !app.model.Primary.SelectVisibleEntry("picked.txt") {
 		t.Fatal("SelectVisibleEntry(picked.txt) = false")
 	}
@@ -161,15 +137,11 @@ func TestChooserEnterDirectoryDoesNotWrite(t *testing.T) {
 	}
 	chooserOut := filepath.Join(t.TempDir(), "chooser-out")
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:         func() (string, error) { return root, nil },
 		Config:      config.Default(),
 		ChooserFile: chooserOut,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	if !app.model.Primary.SelectVisibleEntry("nested") {
 		t.Fatal("SelectVisibleEntry(nested) = false")
 	}
@@ -194,15 +166,11 @@ func TestChooserDispatchEnterQuits(t *testing.T) {
 	}
 	chooserOut := filepath.Join(t.TempDir(), "chooser-out")
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:         func() (string, error) { return root, nil },
 		Config:      config.Default(),
 		ChooserFile: chooserOut,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	if !app.model.Primary.SelectVisibleEntry("open.me") {
 		t.Fatal("SelectVisibleEntry(open.me) = false")
 	}
@@ -214,15 +182,11 @@ func TestChooserDispatchEnterQuits(t *testing.T) {
 
 func TestChooserQuitSkipsConfirm(t *testing.T) {
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:         func() (string, error) { return t.TempDir(), nil },
 		Config:      config.Default(),
 		ChooserFile: filepath.Join(t.TempDir(), "out"),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	if !app.handleQuit() {
 		t.Fatal("handleQuit = false, want immediate quit in chooser mode")
 	}

@@ -530,10 +530,9 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 	jobState.SetScanConfig(jobs.ScanConfig{
 		YieldInterval:       time.Duration(cfg.Jobs.ScanYieldIntervalMS) * time.Millisecond,
 		YieldEveryN:         cfg.Jobs.ScanYieldEveryN,
-		NiceIncrement:       cfg.Jobs.ScanNiceIncrement,
 		ProgressMinInterval: time.Duration(cfg.Jobs.ScanProgressMinIntervalMS) * time.Millisecond,
 	})
-	jobState.SetScanFunc(jobbridge.ScanFunc())
+	jobState.SetScanFunc(jobbridge.ScanFunc(cfg.Jobs))
 	jobState.StartWorker(app.jobStopCh)
 	suppressHeavyPathProbes := func(loc pathloc.Path) bool {
 		if loc.IsRemote() {
@@ -802,9 +801,10 @@ type browserPanelOptions struct {
 }
 
 // newBrowserPanel constructs a panel.State at path with sort/list/scroll/filter
-// options applied consistently; used for both the left and right startup panel.
+// options applied consistently; used for both the left and right startup panel. The directory
+// itself is NOT read here — see loadStartupPanelListings.
 func newBrowserPanel(path string, opts browserPanelOptions) (panel.State, error) {
-	p, err := panel.NewWithOptions(path, opts.list, opts.gitignore)
+	p, err := panel.NewDeferred(path, opts.list, opts.gitignore)
 	if err != nil {
 		return panel.State{}, err
 	}
@@ -823,6 +823,25 @@ func newBrowserPanel(path string, opts browserPanelOptions) (panel.State, error)
 	p.ScrollMode = opts.scrollMode
 	p.ScrollEdgeMargin = opts.cfg.UI.Scroll.EdgeMargin
 	return p, nil
+}
+
+// loadStartupPanelListings kicks off both panels' first directory listing. Panels are built by
+// panel.NewDeferred (path only, no I/O), so this is what actually fills them — and it runs from
+// Run(), after the first frame is on screen and with something draining the event queue, so the
+// listing goes through ScheduleAsyncLoad and lands via panelAsyncLoadPayload like any later
+// navigation. Reading the directory in the constructor instead left the terminal blank until the
+// first ReadDir returned, which on a slow network mount is minutes. A panel whose listing is
+// already in flight (a chooser or start-path navigation scheduled during construction) is left
+// alone. Failures surface as the usual "List failed" message when the result arrives.
+func (a *App) loadStartupPanelListings() {
+	for _, p := range []*panel.State{&a.model.Primary, &a.model.Secondary} {
+		if p.ListingPending {
+			continue
+		}
+		if err := p.Load(p.PathString()); err != nil {
+			a.setErrorMessage("List failed", err)
+		}
+	}
 }
 
 // eventOutcome carries the loop-local render/poll flags produced by handleInterruptPayload
@@ -1079,6 +1098,7 @@ func (a *App) Run() error {
 	a.screen.HideCursor()
 	a.ensurePanelsVisible()
 	a.render()
+	a.loadStartupPanelListings()
 	for {
 		event := a.screen.PollEvent()
 		var jobsDirty bool

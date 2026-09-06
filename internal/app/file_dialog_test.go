@@ -59,12 +59,7 @@ func TestFileMenuExitQuits(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.dispatch(keymap.ActionAppOpenMenu)
 	// Open pulldown first, then press shortcut.
@@ -398,14 +393,10 @@ func TestRenameDialogConfigFocusAfterDefaultOn(t *testing.T) {
 	screen := newScreen(t, 80, 20)
 	cfg := config.Default()
 	cfg.Operations.RenameFocusAfter = true
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	app.config.UI.KeyRepeatDebounceMS = 0
 
 	app.dispatch(keymap.ActionFileRename)

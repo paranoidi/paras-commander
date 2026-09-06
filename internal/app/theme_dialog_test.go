@@ -32,7 +32,7 @@ func TestThemeDialogAppliesThemeImmediately(t *testing.T) {
 		ConfigDir: filepath.Join(t.TempDir(), "persist-theme"),
 		ThemesDir: themePaths.ThemesDir,
 	}.WithResolvedLocations()
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -44,9 +44,6 @@ func TestThemeDialogAppliesThemeImmediately(t *testing.T) {
 			{Name: secondTheme.Name, Label: "Test Theme", Theme: secondTheme},
 		},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openThemeDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
@@ -92,7 +89,7 @@ func TestThemeDialogNavigatePreviewsWithoutPersist(t *testing.T) {
 
 	defaultTheme := theme.Default()
 	secondTheme, themePaths := loadTestTheme(t)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -104,9 +101,6 @@ func TestThemeDialogNavigatePreviewsWithoutPersist(t *testing.T) {
 			{Name: secondTheme.Name, Label: "Test Theme", Theme: secondTheme},
 		},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openThemeDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
@@ -138,7 +132,7 @@ func TestThemeDialogEscRevertsPreview(t *testing.T) {
 
 	defaultTheme := theme.Default()
 	secondTheme, themePaths := loadTestTheme(t)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -150,9 +144,6 @@ func TestThemeDialogEscRevertsPreview(t *testing.T) {
 			{Name: secondTheme.Name, Label: "Test Theme", Theme: secondTheme},
 		},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openThemeDialog()
 	app.handleKey(tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone))
@@ -189,7 +180,7 @@ func newFilePreviewThemePickerTestApp(t *testing.T) (*App, config.Paths) {
 	appPaths := config.Paths{
 		ConfigDir: filepath.Join(t.TempDir(), "persist-f3-style"),
 	}.WithResolvedLocations()
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -197,9 +188,6 @@ func newFilePreviewThemePickerTestApp(t *testing.T) (*App, config.Paths) {
 		Theme:  theme.Default(),
 		Paths:  appPaths,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 	app.model.ViewMode = ui.ViewFilePreview
 	previewPath := filepath.Join(dir, "alpha.txt")
 	app.commandsMu.Lock()
@@ -303,7 +291,7 @@ func TestActiveFooterKeysThemeDialogShowsF5Reload(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	defaultTheme := theme.Default()
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -313,9 +301,6 @@ func TestActiveFooterKeysThemeDialogShowsF5Reload(t *testing.T) {
 			{Name: defaultTheme.Name, Label: "Default", Theme: defaultTheme},
 		},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openThemeDialog()
 	if !app.model.ThemeDialog.Open {
@@ -372,7 +357,7 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -381,9 +366,6 @@ func TestThemeDialogF5ReloadsCurrentPreviewFromDisk(t *testing.T) {
 		ThemeChoices: choices,
 		Paths:        paths,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openThemeDialog()
 	_, bg1, _ := app.styles.MenuBarInactive.Decompose()
@@ -438,7 +420,7 @@ func TestThemeDialogF5ReloadsMenuDropdownAccentFromDisk(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -447,9 +429,6 @@ func TestThemeDialogF5ReloadsMenuDropdownAccentFromDisk(t *testing.T) {
 		ThemeChoices: choices,
 		Paths:        paths,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openThemeDialog()
 	wantFG1, _, _ := styles.MenuDropdownAccent.Decompose()
@@ -510,7 +489,7 @@ func TestThemePreviewReloadErrorSetsCriticalStatusMessage(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -519,9 +498,6 @@ func TestThemePreviewReloadErrorSetsCriticalStatusMessage(t *testing.T) {
 		ThemeChoices: choices,
 		Paths:        paths,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openThemeDialog()
 	if err := os.Chmod(themesDir, 0); err != nil {

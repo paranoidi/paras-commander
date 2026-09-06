@@ -50,15 +50,11 @@ func TestSwapPanesMovesSecondaryToFirstSlot(t *testing.T) {
 		t.Fatalf("Mkdir right: %v", err)
 	}
 	screen := uitest.Screen(t, 100, 30)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:        func() (string, error) { return root, nil },
 		Config:     config.Default(),
 		StartPaths: []string{left, right},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	applyNextInterruptEvent(t, app, screen)
 	applyNextInterruptEvent(t, app, screen)
 

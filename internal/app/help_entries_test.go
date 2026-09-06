@@ -18,10 +18,7 @@ func newHelpEntriesApp(t *testing.T) *App {
 	}
 	t.Cleanup(screen.Fini)
 	screen.SetSize(80, 24)
-	a, err := New(screen, func() (string, error) { return t.TempDir(), nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	a := newTestApp(t, screen, testOptions(t.TempDir()))
 	return a
 }
 
@@ -32,10 +29,7 @@ func TestBuildHelpEntriesIncludesCrossPanelOpenActions(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	a, err := New(screen, func() (string, error) { return t.TempDir(), nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	a := newTestApp(t, screen, testOptions(t.TempDir()))
 	entries := a.buildHelpEntries()
 	var keysOpenDir, keysOpenCwd string
 	for _, e := range entries {

@@ -54,6 +54,10 @@ func (a *App) schedulePanelListingRefresh(panelID int) {
 	if panelID < 0 || panelID > ui.SecondaryPanel {
 		return
 	}
+	if a.pathVolumeContendsWithActiveJob(p.PathString()) {
+		// A job is already saturating this volume; the next tick retries.
+		return
+	}
 	if !a.panelRefreshInFlight[panelID].CompareAndSwap(false, true) {
 		return
 	}

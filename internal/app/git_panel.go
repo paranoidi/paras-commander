@@ -84,6 +84,11 @@ func (a *App) gitStatusScheduler(panelID int) panel.GitStatusScheduler {
 			return false
 		}
 		listDir := filepath.Clean(req.ListDir)
+		if a.pathVolumeContendsWithActiveJob(listDir) {
+			// A job is already saturating this volume. false means "not scheduled", so the
+			// caller's pending/generation bookkeeping stays intact and retries on its next trigger.
+			return false
+		}
 		host, hostErr := pan.Path.FilePath()
 		cwdLevel := hostErr == nil && filepath.Clean(host) == listDir
 		var gen uint64

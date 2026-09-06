@@ -22,6 +22,15 @@ type Host interface {
 	ActiveViewportRows() int
 	PanelViewportRows(panelID int) int
 
+	// PathVolumeContendsWithActiveJob reports whether path sits on the same local volume as an
+	// unfinished job, so automatic disk-usage scans can skip competing with it.
+	PathVolumeContendsWithActiveJob(path string) bool
+
+	// FilterJobContendedPaths drops paths that contend with an unfinished job's volume (see
+	// PathVolumeContendsWithActiveJob), so automatic disk-usage scans don't compete with a job
+	// already saturating that volume.
+	FilterJobContendedPaths(paths []string) []string
+
 	// ClearTransientMessage clears the status banner (e.g. when a transfer/extract dialog opens).
 	ClearTransientMessage()
 

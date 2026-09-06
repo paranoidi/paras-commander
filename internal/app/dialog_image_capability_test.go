@@ -64,16 +64,13 @@ func TestOptionsMenuOpensImageCapabilityDialog(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
 		Config: config.Default(),
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.dispatch(keymap.ActionAppOpenMenu)
 	app.moveMenu(3) // File → Command → Display → Options
@@ -103,7 +100,7 @@ func TestImageCapabilityDialogApplyPersists(t *testing.T) {
 	screen.SetSize(80, 20)
 
 	appPaths := config.Paths{ConfigDir: filepath.Join(t.TempDir(), "persist-image-capability")}.WithResolvedLocations()
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -111,9 +108,6 @@ func TestImageCapabilityDialogApplyPersists(t *testing.T) {
 		Paths:  appPaths,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.openImageCapabilityDialog()
 	app.handleImageCapabilityDialogKey(tcell.NewEventKey(tcell.KeyRune, 'k', tcell.ModNone))

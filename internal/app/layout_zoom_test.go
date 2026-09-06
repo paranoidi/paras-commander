@@ -42,7 +42,7 @@ inactive_percent = 30
 		t.Fatalf("WriteFile config: %v", err)
 	}
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -50,9 +50,6 @@ inactive_percent = 30
 		Paths:  appPaths,
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	layBefore := app.layoutForTerminalSize(100, 30)
 	if layBefore.Primary.Width != 50 || layBefore.Secondary.Width != 50 {
@@ -105,7 +102,7 @@ func TestLayoutForTerminalSizeIgnoresZoomInAuxiliaryViews(t *testing.T) {
 	cfg.UI.Zoom.ActivePercent = 70
 	cfg.UI.Zoom.InactivePercent = 30
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -113,9 +110,6 @@ func TestLayoutForTerminalSizeIgnoresZoomInAuxiliaryViews(t *testing.T) {
 		Paths:  config.Paths{}.WithResolvedLocations(),
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	layBrowser := app.layoutForTerminalSize(100, 30)
 	if layBrowser.Primary.Width != 70 || layBrowser.Secondary.Width != 30 {
@@ -139,12 +133,7 @@ func TestLayoutForTerminalSizeIgnoresHideInactivePanelInAuxiliaryViews(t *testin
 	defer screen.Fini()
 	screen.SetSize(100, 30)
 
-	app, err := New(screen, func() (string, error) {
-		return t.TempDir(), nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(t.TempDir()))
 
 	app.model.HideInactivePanel = true
 	app.model.ActivePanel = ui.PrimaryPanel
@@ -182,7 +171,7 @@ func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 	cfg.UI.Zoom.ActivePercent = 70
 	cfg.UI.Zoom.InactivePercent = 30
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -190,9 +179,6 @@ func TestLayoutForTerminalSizeDisablesZoomWhileFilePreviewOpen(t *testing.T) {
 		Paths:  config.Paths{}.WithResolvedLocations(),
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	layZoomed := app.layoutForTerminalSize(100, 30)
 	if layZoomed.Primary.Width != 70 || layZoomed.Secondary.Width != 30 {
@@ -237,7 +223,7 @@ func TestLayoutForTerminalSizeDisablesZoomAtOrAboveDisabledAboveWidth(t *testing
 	cfg.UI.Zoom.ActivePercent = 70
 	cfg.UI.Zoom.InactivePercent = 30
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -245,9 +231,6 @@ func TestLayoutForTerminalSizeDisablesZoomAtOrAboveDisabledAboveWidth(t *testing
 		Paths:  config.Paths{}.WithResolvedLocations(),
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	lay := app.layoutForTerminalSize(160, 30)
 	if lay.Primary.Width != 80 || lay.Secondary.Width != 80 {
@@ -282,7 +265,7 @@ func TestLayoutForTerminalSizeZoomNotSuppressedWhenDisabledAboveWidthIsZero(t *t
 	cfg.UI.Zoom.ActivePercent = 70
 	cfg.UI.Zoom.InactivePercent = 30
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -290,9 +273,6 @@ func TestLayoutForTerminalSizeZoomNotSuppressedWhenDisabledAboveWidthIsZero(t *t
 		Paths:  config.Paths{}.WithResolvedLocations(),
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	lay := app.layoutForTerminalSize(300, 30)
 	if lay.Primary.Width != 210 || lay.Secondary.Width != 90 {
@@ -314,7 +294,7 @@ func TestPanelToggleZoomNoOpOnWideTerminal(t *testing.T) {
 	cfg := config.Default()
 	cfg.UI.Zoom.DisabledAboveWidth = 155
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -322,9 +302,6 @@ func TestPanelToggleZoomNoOpOnWideTerminal(t *testing.T) {
 		Paths:  config.Paths{}.WithResolvedLocations(),
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.dispatch(keymap.ActionPanelToggleZoomActivePanel)
 	if app.zoomActivePanelOverride != nil {
@@ -349,7 +326,7 @@ func TestPanelToggleZoomNoOpWhileFilePreviewOpen(t *testing.T) {
 	cfg := config.Default()
 	cfg.UI.Zoom.ActivePanel = false
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -357,9 +334,6 @@ func TestPanelToggleZoomNoOpWhileFilePreviewOpen(t *testing.T) {
 		Paths:  config.Paths{}.WithResolvedLocations(),
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.commandsMu.Lock()
 	app.model.FilePreview.Open = true

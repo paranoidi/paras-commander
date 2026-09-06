@@ -8,7 +8,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
-	"github.com/paranoidi/paras-commander/internal/priority"
 )
 
 // PlanProducer represents an in-progress background pre-scan walk, started immediately and
@@ -35,6 +34,11 @@ type ScanWalkHooks struct {
 	OnPath      func(path string) error
 	YieldEveryN int
 	Yield       func()
+	// ThroughputBPS returns the job's current EMA-smoothed transfer throughput in bytes/sec
+	// (Job.ETABytesPerSec), read under State's lock. jobbridge's counting-walk throttle uses it
+	// to measure whether pausing the counting walk actually improves transfer throughput; zero
+	// means no measurable throughput yet (the job hasn't started transferring, or is idle).
+	ThroughputBPS func() float64
 	// FlatDestNames requests dest/<basename> plan naming (flatten jobs); see ops.PlanBuildOptions.
 	FlatDestNames bool
 }
@@ -47,7 +51,6 @@ type ScanFunc func(ctx context.Context, sources []pathloc.Path, destination path
 type ScanConfig struct {
 	YieldInterval       time.Duration
 	YieldEveryN         int
-	NiceIncrement       int
 	ProgressMinInterval time.Duration
 }
 
@@ -100,11 +103,6 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 		return
 	}
 
-	if s.transferActive() {
-		restore := priority.ApplyBackgroundPriority(cfg.NiceIncrement)
-		defer restore()
-	}
-
 	yieldInterval := cfg.YieldInterval
 	if yieldInterval <= 0 {
 		yieldInterval = time.Duration(config.DefaultScanYieldIntervalMS) * time.Millisecond
@@ -136,13 +134,15 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 		},
 		YieldEveryN: yieldEvery,
 		Yield: func() {
-			if !s.transferActive() {
-				return
-			}
 			select {
 			case <-ctx.Done():
 			case <-time.After(yieldInterval):
 			}
+		},
+		ThroughputBPS: func() float64 {
+			s.mu.Lock()
+			defer s.mu.Unlock()
+			return job.ETABytesPerSec
 		},
 	}
 
@@ -235,12 +235,6 @@ waitLoop:
 	job.PlanComplete = true
 	s.mu.Unlock()
 	writeTotalsAndEmit()
-}
-
-func (s *State) transferActive() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.active != nil && s.active.Status == StatusRunning
 }
 
 func (s *State) clearScanCancel(jobID string) {

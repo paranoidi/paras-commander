@@ -286,7 +286,30 @@ func New(path string) (State, error) {
 // NewWithOptions loads a panel rooted at path with configured listing defaults.
 // gitignoreCache is optional; when set it is used for the initial listing (and later reloads).
 func NewWithOptions(path string, opts localfs.ListOptions, gitignoreCache *gitignore.Cache) (State, error) {
-	state := State{
+	state := newState(opts, gitignoreCache)
+	if err := state.Load(path); err != nil {
+		return State{}, err
+	}
+	return state, nil
+}
+
+// NewDeferred builds a panel rooted at path *without* reading the directory: it only parses the
+// path and applies the listing defaults. The caller must call Load once ScheduleAsyncLoad is
+// wired, so the very first listing runs off the UI thread like every later one. Reading it here
+// instead would block startup inside a blocking ReadDir before the first frame is ever drawn —
+// on a slow network mount the terminal stays blank for as long as the listing takes.
+func NewDeferred(path string, opts localfs.ListOptions, gitignoreCache *gitignore.Cache) (State, error) {
+	state := newState(opts, gitignoreCache)
+	loc, err := pathloc.Parse(path)
+	if err != nil {
+		return State{}, err
+	}
+	state.Path = loc
+	return state, nil
+}
+
+func newState(opts localfs.ListOptions, gitignoreCache *gitignore.Cache) State {
+	return State{
 		Cursor:       0,
 		ScrollOffset: 0,
 		ShowHidden:   opts.ShowHidden,
@@ -300,10 +323,6 @@ func NewWithOptions(path string, opts localfs.ListOptions, gitignoreCache *gitig
 			DirectoriesFirst: true,
 		},
 	}
-	if err := state.Load(path); err != nil {
-		return State{}, err
-	}
-	return state, nil
 }
 
 // Load replaces the panel contents with a fresh directory snapshot.

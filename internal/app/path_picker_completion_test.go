@@ -30,13 +30,10 @@ func TestPathPickerAcceptLongCompletionScrollsToEnd(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	st := &app.model.PathPicker
 
@@ -92,13 +89,10 @@ func TestPathPickerItemsSkipMissingHistoryPaths(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.model.Primary.History = []string{gone, exists}
 	app.model.Secondary.History = nil
 	items, err := app.dialogCtrl.PathPickerItemsHistory()

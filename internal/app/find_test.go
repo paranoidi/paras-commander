@@ -87,10 +87,7 @@ func TestFindDialogEmptyQueryShowsEntries(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -117,10 +114,7 @@ func TestFindDialogQueryAltVAltDToggleCheckboxes(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -204,10 +198,7 @@ func TestFindDialogHandleKeyAltDDoesNotStartDiskUsageScan(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	left := app.panelByID(ui.PrimaryPanel)
 	app.startDiskUsageScanForPanel(ui.PrimaryPanel)
@@ -268,10 +259,7 @@ func TestFindDialogQueryAltBAltFCtrlL(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -315,10 +303,7 @@ func TestFindDialogQueryHomeEndAndCtrlHomeEndList(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -377,10 +362,7 @@ func TestFindDialogSelectsFile(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	if !app.model.FindDialog.Open {
@@ -432,10 +414,7 @@ func TestFindDialogInsertMarksAndOKAddsToPanelSelection(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -479,10 +458,7 @@ func newFindDialogTestApp(t *testing.T) *App {
 	}
 	t.Cleanup(screen.Fini)
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
 	return app
@@ -551,10 +527,7 @@ func TestFindDialogGroupSelectGlobMarksFullCorpusResults(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -593,10 +566,7 @@ func TestFindDialogUnselectAllClearsMarks(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -632,10 +602,7 @@ func TestFindDialogSelectAllMarksFullCorpusResults(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -674,10 +641,7 @@ func TestFindDialogBulkSelectAllManyFiles(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -722,10 +686,7 @@ func TestFindDialogBulkSelectAllMixedTree(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -762,10 +723,7 @@ func TestFindDialogBulkOKApplyManyFiles(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -809,10 +767,7 @@ func TestFindDialogBulkGroupSelectManyFiles(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -880,10 +835,7 @@ func TestFindDialogOnlyDirectoriesFiltersResults(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -935,10 +887,7 @@ func TestFindDialogOnlyFilesFiltersResults(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -983,10 +932,7 @@ func TestFindDialogStayOnVolumeRestartClearsEntries(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -1028,10 +974,7 @@ func TestFindDialogIncludeHiddenExpandsWithoutFullRescan(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -1109,10 +1052,7 @@ func TestFindDialogMarkDirRemovesDescendantMarks(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -1154,10 +1094,7 @@ func TestFindDialogMarkFileRemovesAncestorDirMarks(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -1198,10 +1135,7 @@ func TestFindDialogMarkParentThenChildDirRemovesParentMark(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	waitFindIndexDone(t, app)
@@ -1263,10 +1197,7 @@ func TestFindDialogSearchOnlySelectionsDefaultScoped(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(dirA))
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
@@ -1307,10 +1238,7 @@ func TestFindDialogSearchOnlySelectionsWidenAndNarrow(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(dirA))
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
@@ -1365,10 +1293,7 @@ func TestFindDialogNoSearchSelectionsCheckboxForFilesOnly(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 
 	app.panelByID(ui.PrimaryPanel).AddSelection(filepath.Clean(f))
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
@@ -1389,10 +1314,7 @@ func TestFindDialogScopedMenuUsesPanel(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 	app.model.ActivePanel = ui.SecondaryPanel
 	app.findCtrl.OpenDialog(ui.PrimaryPanel)
 	if app.model.FindDialog.PanelID != ui.PrimaryPanel {

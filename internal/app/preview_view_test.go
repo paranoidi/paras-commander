@@ -25,7 +25,7 @@ func TestFilePreviewFocusScrollAndTabReturnsToActivePanelFileList(t *testing.T) 
 	defer screen.Fini()
 	screen.SetSize(100, 30)
 
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD: func() (string, error) {
 			return dir, nil
 		},
@@ -33,9 +33,6 @@ func TestFilePreviewFocusScrollAndTabReturnsToActivePanelFileList(t *testing.T) 
 		Paths:  config.Paths{}.WithResolvedLocations(),
 		Theme:  theme.Default(),
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions() error = %v", err)
-	}
 
 	app.commandsMu.Lock()
 	app.model.FilePreview.Open = true
@@ -71,12 +68,7 @@ func TestMenuShortcutActivatesFullscreenFileView(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.dispatch(keymap.ActionFileView)
 	if app.model.ViewMode != ui.ViewFilePreview {
@@ -103,12 +95,7 @@ func TestFullscreenFilePreviewArrowDownScrollsWithoutNavigatingList(t *testing.T
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.model.ViewMode = ui.ViewFilePreview
 	app.commandsMu.Lock()
@@ -146,12 +133,7 @@ func TestFullscreenFilePreviewLeftBackspaceDoNotChangePanelPath(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 	if err := app.activePanel().Load(sub); err != nil {
 		t.Fatalf("Load(sub): %v", err)
 	}
@@ -188,12 +170,7 @@ func TestFullscreenFilePreviewRightDoesNotMoveListCursor(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.model.ViewMode = ui.ViewFilePreview
 	app.commandsMu.Lock()
@@ -221,12 +198,7 @@ func TestFullscreenFilePreviewDoesNotOpenMenuFromDispatch(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.model.ViewMode = ui.ViewFilePreview
 	app.commandsMu.Lock()
@@ -283,12 +255,7 @@ func TestFullscreenFilePreviewIgnoresBrowserOnlyShortcuts(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.model.ViewMode = ui.ViewFilePreview
 	app.commandsMu.Lock()

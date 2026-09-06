@@ -214,3 +214,13 @@ CRITICAL:
 
 - Do not remove ANY files which are not being tracked by git.
 
+# Feature documentation
+
+- Features should be documented for end-user under ./docs/
+- Each feature should live it's own file, update the file as feature evolves
+- Feature is a large functionality, not a simple button or a toggle. Examples: (terminal graphics, job queue, panel comparison)
+
+# Performance
+
+- All IO/Disk/Network operations should be implemented in a separate goroutine/process in async manner UNLESS it is directly related to immediate UI feedback like path autocomplete where such heavy machinery is not warranted.
+  

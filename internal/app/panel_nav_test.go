@@ -25,12 +25,7 @@ func TestDispatchMovesOnlyActivePanel(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.dispatch(keymap.ActionNavDown)
 	if app.model.Primary.Cursor != 1 {
@@ -62,12 +57,7 @@ func TestHideInactivePanelToggleAndTabShow(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.model.SyncFollowEnabled = true
 	app.model.SyncFollowPanel = ui.PrimaryPanel
@@ -105,12 +95,7 @@ func TestDispatchTogglesSelectionOnlyInActivePanel(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	leftEntry, ok := app.model.Primary.CurrentEntry()
 	if !ok {
@@ -151,12 +136,7 @@ func TestMenuInputUsesMenuStateInsteadOfPanelNavigation(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.dispatch(keymap.ActionAppOpenMenu)
 	if !app.model.Menu.Open {
@@ -223,12 +203,7 @@ func TestLeftMenuToggleHiddenIsGlobal(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 20)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 	app.model.ActivePanel = ui.SecondaryPanel
 
 	app.dispatch(keymap.ActionAppOpenMenu)
@@ -274,12 +249,7 @@ func TestToggleHiddenConvergesDivergedPanels(t *testing.T) {
 	defer screen.Fini()
 	screen.SetSize(80, 24)
 
-	app, err := New(screen, func() (string, error) {
-		return dir, nil
-	})
-	if err != nil {
-		t.Fatalf("New() error = %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(dir))
 
 	app.model.Secondary.ShowHidden = true
 	app.model.ActivePanel = ui.PrimaryPanel

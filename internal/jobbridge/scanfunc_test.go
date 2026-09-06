@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 )
@@ -42,7 +43,7 @@ func TestScanFuncTotalsKeepGrowingWithStalledConsumer(t *testing.T) {
 		t.Fatalf("Parse destination: %v", err)
 	}
 
-	scanFn := ScanFunc()
+	scanFn := ScanFunc(config.JobsConfig{})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

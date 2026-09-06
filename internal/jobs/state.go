@@ -95,7 +95,6 @@ func NewState() *State {
 		scanConfig: ScanConfig{
 			YieldInterval:       time.Duration(config.DefaultScanYieldIntervalMS) * time.Millisecond,
 			YieldEveryN:         config.DefaultScanYieldEveryN,
-			NiceIncrement:       config.DefaultScanNiceIncrement,
 			ProgressMinInterval: time.Duration(config.DefaultScanProgressMinIntervalMS) * time.Millisecond,
 		},
 	}

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -478,5 +479,57 @@ func TestPanelInsideJobWriteTree(t *testing.T) {
 				t.Fatalf("PanelInsideJobWriteTree(%q) = (%v, %q), want (%v, %q)", tt.panelPath, marked, status, tt.wantMarked, tt.wantStatus)
 			}
 		})
+	}
+}
+
+// TestPanelInsideJobWriteTree_destinationContainmentShortCircuit guards the containment
+// short-circuit: a panel path that isn't inside the job's destination tree must return false
+// without consulting the index, and an exact destination match must still hit — both
+// regardless of how many sources the job carries.
+func TestPanelInsideJobWriteTree_destinationContainmentShortCircuit(t *testing.T) {
+	t.Parallel()
+	sources := make([]string, 5000)
+	for i := range sources {
+		sources[i] = filepath.Join("/src", "file_"+string(rune('a'+i%26)))
+	}
+	job := JobPathMark{
+		Type:        string(jobs.TypeCopy),
+		Status:      string(jobs.StatusRunning),
+		Sources:     sources,
+		Destination: "/dest",
+		DestIsDir:   true,
+	}
+	if marked, _ := PanelInsideJobWriteTree("/unrelated/elsewhere", []JobPathMark{job}); marked {
+		t.Fatal("panel path outside the job's destination tree must not be marked")
+	}
+	if marked, status := PanelInsideJobWriteTree("/dest", []JobPathMark{job}); !marked || status != string(jobs.StatusRunning) {
+		t.Fatalf("exact destination dir match should still hit regardless of Sources size; got (%v, %q)", marked, status)
+	}
+}
+
+// TestEntryPathJobMarkStatus_matchesRowsForVeryLargeSourceLists guards the ancestor index:
+// per-row source and destination glyphs must keep working for a job built from a huge
+// multi-select, since matching walks the row path's ancestors rather than the source list.
+func TestEntryPathJobMarkStatus_matchesRowsForVeryLargeSourceLists(t *testing.T) {
+	t.Parallel()
+	sources := make([]string, 20000)
+	for i := range sources {
+		sources[i] = filepath.Join("/src", fmt.Sprintf("file_%05d.txt", i))
+	}
+	job := JobPathMarksFromEntries([]JobEntry{{
+		Type:        string(jobs.TypeCopy),
+		Status:      string(jobs.StatusRunning),
+		Sources:     sources,
+		Destination: "/dest",
+		DestIsDir:   true,
+	}})
+	if marked, _, write := EntryPathJobMarkStatus("/src/file_19999.txt", job); !marked || write {
+		t.Fatalf("last source should be marked as a read; got marked=%v write=%v", marked, write)
+	}
+	if marked, _, write := EntryPathJobMarkStatus("/dest/file_00007.txt", job); !marked || !write {
+		t.Fatalf("resolved destination should be marked as a write; got marked=%v write=%v", marked, write)
+	}
+	if marked, _, _ := EntryPathJobMarkStatus("/src/absent.txt", job); marked {
+		t.Fatal("path that is neither a source nor a destination must not be marked")
 	}
 }

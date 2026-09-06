@@ -36,4 +36,9 @@ type JobEntry struct {
 	ThroughputStrip []float64
 	// PendingBlocker is set when the job waits on a conflict or disk-space prompt.
 	PendingBlocker *jobs.BlockerDetails
+	// PlanComplete matches jobs.Job.PlanComplete: true once the background pre-scan has finished
+	// enumerating the whole source tree. False (for a copy/move/flatten job) means TotalFiles/
+	// TotalDirs/TotalBytes are still growing in the background even though the transfer itself
+	// may already be running.
+	PlanComplete bool
 }

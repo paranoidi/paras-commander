@@ -17,16 +17,13 @@ func TestDevMenuShowInfoToast(t *testing.T) {
 	defer screen.Fini()
 
 	styles, paths := loadTestTheme(t)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:     func() (string, error) { return t.TempDir(), nil },
 		Config:  config.Default(),
 		Theme:   styles,
 		Paths:   paths,
 		DevMode: true,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 
 	app.dispatch(keymap.ActionAppOpenMenu)
 	if !app.openMenuByShortcut('v') {

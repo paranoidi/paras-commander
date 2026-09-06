@@ -345,7 +345,26 @@ func jobDetailProgressLine(j JobEntry) string {
 		}
 		line += fmt.Sprintf("   (%s dirs)", tdLabel)
 	}
+	if jobStillScanningInBackground(j) {
+		line += "   (scanning…)"
+	}
 	return line
+}
+
+// jobStillScanningInBackground reports whether a copy/move/flatten job's background pre-scan
+// (jobbridge.ScanFunc's counting walk) is still enumerating the source tree after the job has
+// already left the "scanning" status and started transferring — meaning TotalFiles/TotalDirs/
+// TotalBytes above are still provisional and will keep growing.
+func jobStillScanningInBackground(j JobEntry) bool {
+	if j.PlanComplete || j.Status == "scanning" || jobs.Status(j.Status).IsFinished() {
+		return false
+	}
+	switch jobs.Type(j.Type) {
+	case jobs.TypeCopy, jobs.TypeMove, jobs.TypeFlatten:
+		return true
+	default:
+		return false
+	}
 }
 
 func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir string, throughputChartEnabled bool) []string {

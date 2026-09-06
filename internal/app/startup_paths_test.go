@@ -25,15 +25,11 @@ func TestStartPathsSingleDirectoryOpensPrimary(t *testing.T) {
 		t.Fatalf("Mkdir right: %v", err)
 	}
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:        func() (string, error) { return root, nil },
 		Config:     config.Default(),
 		StartPaths: []string{left},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	applyNextInterruptEvent(t, app, screen) // async load from the single StartPath
 
 	if got := app.model.Primary.PathString(); got != left {
@@ -54,16 +50,12 @@ func TestStartPathsQuickPreviewEnablesQuickView(t *testing.T) {
 		t.Fatalf("Mkdir left: %v", err)
 	}
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:          func() (string, error) { return root, nil },
 		Config:       config.Default(),
 		StartPaths:   []string{left},
 		QuickPreview: true,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 
 	if !app.model.QuickViewEnabled {
 		t.Fatal("QuickViewEnabled = false, want true with QuickPreview")
@@ -80,15 +72,11 @@ func TestStartPathsSingleFileOpensFullscreenPreview(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:        func() (string, error) { return root, nil },
 		Config:     config.Default(),
 		StartPaths: []string{file},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 
 	if app.model.ViewMode != ui.ViewFilePreview {
 		t.Fatalf("ViewMode = %v, want ViewFilePreview", app.model.ViewMode)
@@ -130,15 +118,11 @@ func TestStartPathsSingleDirtyFileShowsGitDiff(t *testing.T) {
 	screen := uitest.Screen(t, 80, 24)
 	cfg := config.Default()
 	cfg.Preview.Mode = config.PreviewModeInternal
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:        func() (string, error) { return root, nil },
 		Config:     cfg,
 		StartPaths: []string{file},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 
 	if app.model.ViewMode != ui.ViewFilePreview {
 		t.Fatalf("ViewMode = %v, want ViewFilePreview", app.model.ViewMode)
@@ -183,15 +167,11 @@ func TestStartPathsSingleFileLaunchQuitsOnQ(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:        func() (string, error) { return root, nil },
 		Config:     config.Default(),
 		StartPaths: []string{file},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 
 	if !app.launchedFileViewer {
 		t.Fatal("launchedFileViewer = false, want true after single-file CLI launch")
@@ -210,15 +190,11 @@ func TestStartPathsSingleFileLaunchQuitsOnEsc(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:        func() (string, error) { return root, nil },
 		Config:     config.Default(),
 		StartPaths: []string{file},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 
 	quit := app.previewCtrl.HandleFilePreviewViewKey(tcell.NewEventKey(tcell.KeyEsc, 0, tcell.ModNone))
 	if !quit {
@@ -236,15 +212,11 @@ func TestStartPathsDirectoryLaunchDoesNotSetLaunchedFileViewer(t *testing.T) {
 		t.Fatalf("Mkdir left: %v", err)
 	}
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:        func() (string, error) { return root, nil },
 		Config:     config.Default(),
 		StartPaths: []string{left},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 
 	if app.launchedFileViewer {
 		t.Fatal("launchedFileViewer = true, want false after directory-only CLI launch")
@@ -279,15 +251,11 @@ func TestStartPathsTwoDirectories(t *testing.T) {
 		t.Fatalf("Mkdir right: %v", err)
 	}
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:        func() (string, error) { return root, nil },
 		Config:     config.Default(),
 		StartPaths: []string{left, right},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	applyNextInterruptEvent(t, app, screen) // async load, Primary StartPath
 	applyNextInterruptEvent(t, app, screen) // async load, Secondary StartPath
 
@@ -333,15 +301,11 @@ func TestStartPathsFileThenDirectoryEnablesQuickViewOnPrimary(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:        func() (string, error) { return root, nil },
 		Config:     config.Default(),
 		StartPaths: []string{file, rightDir},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	applyNextInterruptEvent(t, app, screen) // async load, Primary StartPath (file's dir)
 	applyNextInterruptEvent(t, app, screen) // async load, Secondary StartPath
 
@@ -388,15 +352,11 @@ func TestStartPathsDirectoryThenFileEnablesQuickViewOnSecondary(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	screen := uitest.Screen(t, 80, 24)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:        func() (string, error) { return root, nil },
 		Config:     config.Default(),
 		StartPaths: []string{leftDir, file},
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
-	t.Cleanup(app.stopWorker)
 	applyNextInterruptEvent(t, app, screen) // async load, Primary StartPath
 	applyNextInterruptEvent(t, app, screen) // async load, Secondary StartPath (file's dir)
 

@@ -23,17 +23,11 @@ func testCopyMenuApp(t *testing.T) (*App, string) {
 	filePath := filepath.Join(dir, "meadow.txt")
 	writeFile(t, filePath)
 	screen := newScreen(t, 80, 50)
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return dir, nil },
 		Config: config.Default(),
 		Paths:  config.Paths{ConfigDir: filepath.Join(dir, "config")},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := app.model.Primary.Load(dir); err != nil {
-		t.Fatal(err)
-	}
 	app.model.ViewMode = ui.ViewBrowser
 	for i := 0; i < app.model.Primary.VisibleEntryCount(); i++ {
 		entry, _, ok := app.model.Primary.VisibleEntry(i)

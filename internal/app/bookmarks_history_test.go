@@ -33,13 +33,10 @@ func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
 	screen.SetSize(80, 24)
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	if !app.model.PathPicker.Open {
 		t.Fatal("expected path picker open")
@@ -84,14 +81,11 @@ func TestBookmarkDialogF8DeletesFZFMark(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:          func() (string, error) { return root, nil },
 		Config:       cfg,
 		KeymapBundle: bundle,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	if len(app.model.PathPicker.Items) != 1 {
 		t.Fatalf("items = %d, want 1", len(app.model.PathPicker.Items))
@@ -144,14 +138,11 @@ func TestBookmarkDialogDeleteFooterSkippedForGnomeMark(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultBundle: %v", err)
 	}
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:          func() (string, error) { return root, nil },
 		Config:       cfg,
 		KeymapBundle: bundle,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	if len(app.model.PathPicker.Items) != 1 {
 		t.Fatalf("items = %d, want 1 gnome bookmark", len(app.model.PathPicker.Items))
@@ -210,10 +201,7 @@ func TestHistoryDialogFilterNavigatesToMatch(t *testing.T) {
 	}
 	defer screen.Fini()
 	screen.SetSize(80, 24)
-	app, err := New(screen, func() (string, error) { return root, nil })
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
+	app := newTestApp(t, screen, testOptions(root))
 	p := app.panelByID(ui.PrimaryPanel)
 	for i := 0; i < p.VisibleEntryCount(); i++ {
 		entry, _, ok := p.VisibleEntry(i)
@@ -438,13 +426,10 @@ func TestBookmarkDialogFilterSelectsRankedFirst(t *testing.T) {
 	screen.SetSize(80, 24)
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	app.dialogCtrl.OpenBookmarkDialog()
 	for _, r := range "b" {
 		if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, r, tcell.ModNone)); quit {
@@ -484,13 +469,10 @@ func TestBookmarkDialogTypingODoesNotActivateWithoutEnter(t *testing.T) {
 	screen.SetSize(80, 24)
 	cfg := config.Default()
 	cfg.Bookmarks.File = marksPath
-	app, err := NewWithOptions(screen, Options{
+	app := newTestApp(t, screen, Options{
 		CWD:    func() (string, error) { return root, nil },
 		Config: cfg,
 	})
-	if err != nil {
-		t.Fatalf("NewWithOptions: %v", err)
-	}
 	startPath := app.activePanel().Path
 	app.dialogCtrl.OpenBookmarkDialog()
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyRune, 'o', tcell.ModNone)); quit {
