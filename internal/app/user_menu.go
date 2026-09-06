@@ -276,7 +276,7 @@ func (a *App) runUserMenuInteractive(argv []string, workDir, toast string) {
 		return
 	}
 	a.activePanel().ClearSelection()
-	a.refreshAfterUserMenuCommand()
+	a.refreshAfterBackgroundCommand()
 	if toast != "" {
 		a.setTransientMessage(toast, ui.MessageUrgencyInfo)
 	}
@@ -294,7 +294,7 @@ func (a *App) runUserMenuDetached(argv []string, workDir, toast string) {
 	}
 }
 
-func (a *App) refreshAfterUserMenuCommand() {
+func (a *App) refreshAfterBackgroundCommand() {
 	if a.model.ViewMode == ui.ViewBrowser {
 		if err := a.activePanel().Refresh(a.activeViewportRows()); err != nil {
 			a.setErrorMessage("User menu", err)
@@ -322,7 +322,7 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 			return
 		}
 		p := commandsctrl.WakePayload{RefreshBrowserPanel: true, ClearActiveSelection: true}
-		if log, banner, urg, ok := userMenuBackgroundNotify(title, res); ok {
+		if log, banner, urg, ok := backgroundRunNotify("User menu: "+backgroundRunTitle(title), res); ok {
 			p.NotifyLog = log
 			p.NotifyBanner = banner
 			p.NotifyUrg = urg
@@ -400,14 +400,18 @@ func (a *App) runUserMenuCommand(ctx context.Context, idx int, argv []string, wo
 	postBackgroundFinal(res)
 }
 
-// userMenuBackgroundNotify returns status text when a background user-menu run should alert the user.
-func userMenuBackgroundNotify(title string, res cmdrun.RunResult) (log, banner string, urg ui.MessageUrgency, ok bool) {
+// backgroundRunTitle defaults an empty user-menu entry title to "command" for notify text.
+func backgroundRunTitle(title string) string {
 	title = strings.TrimSpace(title)
 	if title == "" {
-		title = "command"
+		return "command"
 	}
-	prefix := "User menu: " + title
+	return title
+}
 
+// backgroundRunNotify returns status text when a backgrounded run (user-menu or file-execute)
+// should alert the user: prefix identifies the run (e.g. "User menu: <title>" or "Run: <cmdLine>").
+func backgroundRunNotify(prefix string, res cmdrun.RunResult) (log, banner string, urg ui.MessageUrgency, ok bool) {
 	stderrText := strings.TrimSpace(string(res.Stderr))
 	hasStderr := stderrText != ""
 

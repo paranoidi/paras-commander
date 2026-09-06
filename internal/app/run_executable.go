@@ -2,11 +2,15 @@ package app
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
+	commandsctrl "github.com/paranoidi/paras-commander/internal/apphandler/commands"
 	"github.com/paranoidi/paras-commander/internal/cmdrun"
+	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/entrymatch"
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/textutil"
@@ -76,6 +80,26 @@ func formatExecuteCommandLine(panelDir, path string) string {
 	return rel
 }
 
+// resolveExecuteBackground reports whether path should run in background mode: tracked as a
+// Commands-view row but without switching ViewMode there, per the first matching
+// [[panels.execute_rules]] entry (see PanelsConfig.ExecuteRules). No match means foreground
+// (today's default: switch to Commands view immediately).
+func resolveExecuteBackground(rules []config.ExecuteRule, shellPatterns bool, name string, mode fs.FileMode) bool {
+	if len(rules) == 0 {
+		return false
+	}
+	ctx := &entrymatch.Context{
+		Row:           &localfs.Entry{Name: name, Type: localfs.EntryFile, Mode: mode},
+		ShellPatterns: shellPatterns,
+	}
+	for _, rule := range rules {
+		if ok, err := entrymatch.EvalWhenAny(rule.When, ctx); err == nil && ok {
+			return rule.Background
+		}
+	}
+	return false
+}
+
 func (a *App) runExecutableFromPanel(path string) {
 	if a.model.ViewMode != ui.ViewBrowser {
 		return
@@ -90,7 +114,8 @@ func (a *App) runExecutableFromPanel(path string) {
 		a.setErrorMessage("Run", os.ErrInvalid)
 		return
 	}
-	if _, err := os.Stat(path); err != nil {
+	fi, err := os.Stat(path)
+	if err != nil {
 		a.setErrorMessage("Run", err)
 		return
 	}
@@ -98,6 +123,7 @@ func (a *App) runExecutableFromPanel(path string) {
 	workDir := p.PathString()
 	cmdLine := formatExecuteCommandLine(workDir, path)
 	argv := []string{path}
+	background := resolveExecuteBackground(a.config.Panels.ExecuteRules, a.config.Panels.ShellPatterns, filepath.Base(path), fi.Mode())
 
 	rowIdx := a.commandsCtrl.AppendEntry(ui.CommandRunEntry{
 		ID:              cmdrun.NewRunID(),
@@ -107,17 +133,16 @@ func (a *App) runExecutableFromPanel(path string) {
 		Phase:           ui.CommandRunPending,
 		ExitCode:        -1,
 	})
-	a.commandsCtrl.OpenViewAt(rowIdx)
+	if !background {
+		a.commandsCtrl.OpenViewAt(rowIdx)
+	}
 
 	a.commandsCtrl.BeginBatch()
-	go a.runFileExecuteCommand(a.commandsCtrl.Context(), rowIdx, argv, workDir)
+	go a.runFileExecuteCommand(a.commandsCtrl.Context(), rowIdx, argv, workDir, cmdLine, background)
 }
 
-func (a *App) runFileExecuteCommand(ctx context.Context, idx int, argv []string, workDir string) {
-	defer func() {
-		a.commandsCtrl.EndBatch()
-		a.commandsCtrl.PostRenderWake()
-	}()
+func (a *App) runFileExecuteCommand(ctx context.Context, idx int, argv []string, workDir, cmdLine string, background bool) {
+	defer a.commandsCtrl.EndBatch()
 	select {
 	case <-ctx.Done():
 		a.commandsCtrl.PatchEntry(idx, func(e *ui.CommandRunEntry) {
@@ -127,7 +152,11 @@ func (a *App) runFileExecuteCommand(ctx context.Context, idx int, argv []string,
 				e.ErrorMsg = "Canceled"
 			}
 		})
-		a.commandsCtrl.PostRenderWake()
+		if background {
+			a.commandsCtrl.PostWake(commandsctrl.WakePayload{RefreshBrowserPanel: true})
+		} else {
+			a.commandsCtrl.PostRenderWake()
+		}
 		return
 	default:
 	}
@@ -151,5 +180,15 @@ func (a *App) runFileExecuteCommand(ctx context.Context, idx int, argv []string,
 			e.ExitCode = res.ExitCode
 		}
 	})
-	a.commandsCtrl.PostRenderWake()
+	if !background {
+		a.commandsCtrl.PostRenderWake()
+		return
+	}
+	wp := commandsctrl.WakePayload{RefreshBrowserPanel: true}
+	if log, banner, urg, ok := backgroundRunNotify("Run: "+cmdLine, res); ok {
+		wp.NotifyLog = log
+		wp.NotifyBanner = banner
+		wp.NotifyUrg = urg
+	}
+	a.commandsCtrl.PostWake(wp)
 }

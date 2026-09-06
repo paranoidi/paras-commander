@@ -87,6 +87,27 @@ File panel browsing, sorting, and listing.
 | `refresh_interval_ms` | int | `2500` | How often panels re-read their directory from disk in the background. `0` disables automatic refresh; non-zero values are clamped to 200–60000. |
 | `open_files_externally` | bool | `true` | Open non-executable files with the OS-associated external application on Enter. |
 | `run_executables_on_enter` | bool | `true` | Run executable files directly when pressing Enter on them. |
+| `execute_rules` | array of tables | see below | Per-pattern rules choosing background vs. foreground mode for Enter-executed files — see below. |
+| `shell_patterns` | bool | `true` | Selects glob matching (`filepath.Match`, `true`, default) vs. regexp matching (`false`) for every `execute_rules` rule's `f`/`d` predicates. |
+
+Each `[[panels.execute_rules]]` entry has a `when` array and a `background` flag:
+
+```toml
+[[panels.execute_rules]]
+when = ["f *.AppImage", "f *.appimage"]
+background = true
+```
+
+`when` uses the same predicate language as `[[preview.commands]]`/`[[entry]]` in `meta.toml`:
+`f <pattern>` matches the file name, `t <letters>` matches by type, combined with `!`/`&`/`|`.
+Rules are tried top-to-bottom against the executed file; the first rule whose `when` matches
+decides the mode, and later rules are not tried. No match keeps the default: foreground, switching
+to the Commands view immediately and waiting for the process to finish. `background = true` runs
+the file without switching views — the file list stays visible, the run is tracked as a Commands
+view row you can open later (`commands.open`, default `Ctrl+Alt+E`) to inspect its output or
+terminate it (F8/Shift+F8) while it's still running, and a toast only appears if it fails to
+launch, exits non-zero, or writes to stderr. The built-in default rule backgrounds AppImage
+launchers; add more rules for other GUI programs you run directly from a panel.
 
 ## `[disk_usage]`
 

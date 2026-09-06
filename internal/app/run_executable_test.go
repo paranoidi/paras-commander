@@ -172,3 +172,78 @@ func TestRunExecutablesOnEnterDefaultConfig(t *testing.T) {
 		t.Fatal("Default().RunExecutablesOnEnter should be true")
 	}
 }
+
+func TestDefaultExecuteRulesBackgroundsAppImage(t *testing.T) {
+	cfg := config.Default()
+	if !cfg.Panels.ShellPatterns {
+		t.Fatal("Default().Panels.ShellPatterns should be true")
+	}
+	if len(cfg.Panels.ExecuteRules) != 1 {
+		t.Fatalf("ExecuteRules = %#v, want 1 built-in rule", cfg.Panels.ExecuteRules)
+	}
+	rule := cfg.Panels.ExecuteRules[0]
+	if !rule.Background {
+		t.Fatal("built-in AppImage rule should set Background = true")
+	}
+	if !resolveExecuteBackground(cfg.Panels.ExecuteRules, cfg.Panels.ShellPatterns, "launcher.AppImage", 0o755) {
+		t.Fatal("launcher.AppImage should match the built-in rule")
+	}
+	if !resolveExecuteBackground(cfg.Panels.ExecuteRules, cfg.Panels.ShellPatterns, "launcher.appimage", 0o755) {
+		t.Fatal("launcher.appimage should match the built-in rule")
+	}
+	if resolveExecuteBackground(cfg.Panels.ExecuteRules, cfg.Panels.ShellPatterns, "runme.sh", 0o755) {
+		t.Fatal("runme.sh should not match the built-in rule")
+	}
+}
+
+func TestNavOpenAppImageStaysInFileList(t *testing.T) {
+	root := t.TempDir()
+	marker := "PARAS_EXEC_MARKER"
+	writeExecutableScript(t, root, "launcher.AppImage", "#!/bin/sh\necho "+marker+"\n")
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	selectEntryByName(t, app, "launcher.AppImage")
+
+	app.dispatch(keymap.ActionNavOpen)
+	waitCommandsDone(t, app)
+
+	if app.model.ViewMode != ui.ViewBrowser {
+		t.Fatalf("ViewMode = %v, want ViewBrowser (AppImage should stay in the file list)", app.model.ViewMode)
+	}
+	if len(app.model.CommandsList) != 1 {
+		t.Fatalf("CommandsList len = %d, want 1", len(app.model.CommandsList))
+	}
+	e := app.model.CommandsList[0]
+	if e.Kind != ui.CommandRunKindFileExecute {
+		t.Fatalf("Kind = %q, want %q", e.Kind, ui.CommandRunKindFileExecute)
+	}
+	if e.Phase != ui.CommandRunDone {
+		t.Fatalf("Phase = %v, want CommandRunDone", e.Phase)
+	}
+	if e.ExitCode != 0 {
+		t.Fatalf("ExitCode = %d, want 0; stderr=%q err=%q", e.ExitCode, e.Stderr, e.ErrorMsg)
+	}
+	if !strings.Contains(e.Stdout, marker) {
+		t.Fatalf("Stdout = %q, want substring %q", e.Stdout, marker)
+	}
+}
+
+func TestNavOpenExecuteRuleOverridesToForeground(t *testing.T) {
+	root := t.TempDir()
+	writeExecutableScript(t, root, "launcher.AppImage", "#!/bin/sh\necho ok\n")
+
+	screen := newScreen(t, 80, 24)
+	app := newApp(t, screen, root)
+	app.config.Panels.ExecuteRules = append([]config.ExecuteRule{
+		{When: []string{"f launcher.AppImage"}, Background: false},
+	}, app.config.Panels.ExecuteRules...)
+	selectEntryByName(t, app, "launcher.AppImage")
+
+	app.dispatch(keymap.ActionNavOpen)
+	waitCommandsDone(t, app)
+
+	if app.model.ViewMode != ui.ViewCommands {
+		t.Fatalf("ViewMode = %v, want ViewCommands (earlier rule should override the built-in background one)", app.model.ViewMode)
+	}
+}

@@ -478,7 +478,7 @@ background = true
 	waitCommandsDone(t, app)
 
 	app.commandsCtrl.ApplyWake(commandsctrl.WakePayload{RefreshBrowserPanel: true})
-	// RefreshAfterUserMenuCommand's reload is async; drain until the newly-created marker file
+	// RefreshAfterBackgroundCommand's reload is async; drain until the newly-created marker file
 	// actually shows up rather than assuming the very next screen event is that reload landing.
 	screen := app.screen.(tcell.SimulationScreen)
 	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
@@ -494,22 +494,22 @@ background = true
 }
 
 func TestUserMenuBackgroundNotify(t *testing.T) {
-	log, banner, urg, ok := userMenuBackgroundNotify("Build", cmdrun.RunResult{LaunchErr: errors.New("executable not found")})
+	log, banner, urg, ok := backgroundRunNotify("Build", cmdrun.RunResult{LaunchErr: errors.New("executable not found")})
 	if !ok || urg != ui.MessageUrgencyError || !strings.Contains(log, "Build") || banner == "" {
 		t.Fatalf("launch err: ok=%v urg=%v log=%q banner=%q", ok, urg, log, banner)
 	}
 
-	log, _, urg, ok = userMenuBackgroundNotify("Lint", cmdrun.RunResult{ExitCode: 2, Stderr: []byte("syntax error\n")})
+	log, _, urg, ok = backgroundRunNotify("Lint", cmdrun.RunResult{ExitCode: 2, Stderr: []byte("syntax error\n")})
 	if !ok || urg != ui.MessageUrgencyError || !strings.Contains(log, "exit 2") {
 		t.Fatalf("exit+stderr: ok=%v urg=%v log=%q", ok, urg, log)
 	}
 
-	log, _, urg, ok = userMenuBackgroundNotify("Warn", cmdrun.RunResult{ExitCode: 0, Stderr: []byte("note\n")})
+	log, _, urg, ok = backgroundRunNotify("Warn", cmdrun.RunResult{ExitCode: 0, Stderr: []byte("note\n")})
 	if !ok || urg != ui.MessageUrgencyWarn {
 		t.Fatalf("stderr only: ok=%v urg=%v log=%q", ok, urg, log)
 	}
 
-	_, _, _, ok = userMenuBackgroundNotify("OK", cmdrun.RunResult{ExitCode: 0})
+	_, _, _, ok = backgroundRunNotify("OK", cmdrun.RunResult{ExitCode: 0})
 	if ok {
 		t.Fatal("clean success should not notify")
 	}
@@ -731,7 +731,7 @@ func backgroundWakePayloadForEntry(t *testing.T, app *App, title string) command
 		res.LaunchErr = errors.New(e.ErrorMsg)
 	}
 	p := commandsctrl.WakePayload{RefreshBrowserPanel: true}
-	if log, banner, urg, ok := userMenuBackgroundNotify(title, res); ok {
+	if log, banner, urg, ok := backgroundRunNotify("User menu: "+backgroundRunTitle(title), res); ok {
 		p.NotifyLog = log
 		p.NotifyBanner = banner
 		p.NotifyUrg = urg

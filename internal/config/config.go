@@ -124,6 +124,19 @@ type PanelsConfig struct {
 	RefreshIntervalMS     int  `toml:"refresh_interval_ms"`
 	OpenFilesExternally   bool `toml:"open_files_externally"`
 	RunExecutablesOnEnter bool `toml:"run_executables_on_enter"`
+	// ExecuteRules chooses background vs. foreground mode for Enter-executed files (see
+	// runExecutableFromPanel). Tried top-to-bottom; the first rule whose When predicates match
+	// wins. No match keeps the default: foreground, switching to the Commands view immediately.
+	ExecuteRules []ExecuteRule `toml:"execute_rules"`
+	// ShellPatterns selects filepath.Match (true) vs regexp (false) for every ExecuteRules
+	// rule's f/d predicates.
+	ShellPatterns bool `toml:"shell_patterns"`
+}
+
+// ExecuteRule is one [[panels.execute_rules]] entry (see PanelsConfig.ExecuteRules).
+type ExecuteRule struct {
+	When       []string `toml:"when"`
+	Background bool     `toml:"background"`
 }
 
 // DiskUsageConfig controls the disk-usage (F-key) view and its background walk.
@@ -548,6 +561,10 @@ func Default() Config {
 			RefreshIntervalMS:     DefaultRefreshIntervalMS,
 			OpenFilesExternally:   true,
 			RunExecutablesOnEnter: true,
+			ShellPatterns:         true,
+			ExecuteRules: []ExecuteRule{
+				{When: []string{"f *.AppImage", "f *.appimage"}, Background: true},
+			},
 		},
 		DiskUsage: DiskUsageConfig{
 			IdleSizeSort:           true,

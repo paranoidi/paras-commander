@@ -31,6 +31,6 @@ func (h commandsHost) FocusedFileDialogField() *dialog.FileDialogField {
 	return h.app.dialogCtrl.FocusedField()
 }
 
-func (h commandsHost) RefreshAfterUserMenuCommand() { h.app.refreshAfterUserMenuCommand() }
+func (h commandsHost) RefreshAfterBackgroundCommand() { h.app.refreshAfterBackgroundCommand() }
 
 func (h commandsHost) Styles() theme.Theme { return h.app.styles }

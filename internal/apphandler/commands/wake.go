@@ -37,7 +37,7 @@ func (h *Handler) ApplyWake(p WakePayload) {
 		h.host.ActivePanel().ClearSelection()
 	}
 	if p.RefreshBrowserPanel {
-		h.host.RefreshAfterUserMenuCommand()
+		h.host.RefreshAfterBackgroundCommand()
 	}
 	if strings.TrimSpace(p.NotifyLog) != "" {
 		h.host.SetTransientMessageBanner(p.NotifyLog, p.NotifyBanner, p.NotifyUrg)

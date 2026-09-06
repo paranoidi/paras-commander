@@ -38,7 +38,7 @@ type Host interface {
 	// or nil when none is focused (e.g. a rename sub-phase).
 	FocusedFileDialogField() *dialog.FileDialogField
 
-	// RefreshAfterUserMenuCommand refreshes the active browser panel after a background
-	// user-menu/run-for-each command finishes (no-op outside the browser view).
-	RefreshAfterUserMenuCommand()
+	// RefreshAfterBackgroundCommand refreshes the active browser panel after a background
+	// user-menu/run-for-each/file-execute command finishes (no-op outside the browser view).
+	RefreshAfterBackgroundCommand()
 }
