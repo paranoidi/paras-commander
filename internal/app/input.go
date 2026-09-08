@@ -315,6 +315,11 @@ func (a *App) primaryModalFooterKeys() []menu.FunctionKey {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF5, KeyLabel: lbl, Hint: "Save pattern"}}, rest...)
 		}
 	}
+	if a.dialogCtrl.MassRenameOverwritePatternFooterEligible() {
+		if lbl := a.keys.MassRenameDialog.MenuBindingLabel(keymap.ActionFileMassRenameSavePattern); lbl != "" {
+			rest = append([]menu.FunctionKey{{Key: tcell.KeyF5, KeyLabel: lbl, Hint: "Overwrite existing"}}, rest...)
+		}
+	}
 	if a.dialogCtrl.MassRenameHistoryFooterEligible() {
 		if lbl := a.keys.MassRenameDialog.MenuBindingLabel(keymap.ActionFileMassRenameHistory); lbl != "" {
 			rest = append([]menu.FunctionKey{{Key: tcell.KeyF3, KeyLabel: lbl, Hint: "History"}}, rest...)

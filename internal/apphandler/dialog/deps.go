@@ -161,9 +161,14 @@ type Handler struct {
 	pendingFocus pendingPanelFocus
 
 	// massRenameHistory is the in-memory, session-only (never persisted) list of recently-executed
-	// mass-rename patterns, most-recent-first, capped at maxMassRenameHistory. Merged with
-	// patterns.toml's saved list when the load-pattern picker opens (see massRenameLoadPickerItems).
+	// mass-rename patterns, most-recent-first, capped at maxMassRenameHistory. Shown by the F3
+	// pattern-history picker (openMassRenameHistoryPicker); patterns.toml is a separate list.
 	massRenameHistory []ops.MassRenamePattern
+
+	// massRenamePatternName is the name of the saved pattern last loaded, saved or overwritten
+	// this session. The load and overwrite pickers open with it preselected (see
+	// selectMassRenamePatternByName).
+	massRenamePatternName string
 
 	// pathPickerValidate / transferDestValidate debounce the path-picker filter's and the
 	// transfer/flatten destination field's "does this path exist" background check; each Arm

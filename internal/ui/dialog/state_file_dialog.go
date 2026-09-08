@@ -93,7 +93,8 @@ type RenameEncodingCandidate struct {
 }
 
 // MassRenamePhase selects the mass-rename dialog screen (main find/replace form vs the
-// save-pattern prompt, load-pattern picker, and pattern-history picker sub-screens).
+// save-pattern prompt, load-pattern picker, pattern-history picker, and overwrite-pattern
+// picker sub-screens).
 type MassRenamePhase int
 
 const (
@@ -101,6 +102,11 @@ const (
 	MassRenamePhaseSavePrompt
 	MassRenamePhaseLoadPicker
 	MassRenamePhaseHistoryPicker
+	// MassRenamePhaseOverwritePicker is the save-pattern prompt's "Overwrite existing" picker:
+	// the same saved-patterns list as MassRenamePhaseLoadPicker (and the same backing
+	// MassRenameLoadPicker state), but activating an entry writes the current find/replace over
+	// that entry instead of loading it into the form.
+	MassRenamePhaseOverwritePicker
 )
 
 // FileDialogState holds state for any file operation dialog.
@@ -203,7 +209,8 @@ type FileDialogState struct {
 	// MassRenameSavedFields stashes d.Fields while the save-pattern prompt owns Name/Description.
 	MassRenameSavedFields []FileDialogField
 	// MassRenameLoadPicker holds the fuzzy-filtered saved-patterns list while
-	// MassRenamePhase == MassRenamePhaseLoadPicker.
+	// MassRenamePhase == MassRenamePhaseLoadPicker or MassRenamePhaseOverwritePicker (both read
+	// patterns.toml; they differ only in what activating an entry does).
 	MassRenameLoadPicker MassRenamePatternPickerState
 	// MassRenameHistoryPicker holds the fuzzy-filtered in-memory recently-used pattern list while
 	// MassRenamePhase == MassRenamePhaseHistoryPicker. Same widget shape as MassRenameLoadPicker,

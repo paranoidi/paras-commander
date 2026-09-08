@@ -55,6 +55,14 @@ func (h *Handler) MassRenameSavePatternFooterEligible() bool {
 	return d.MassRenameMode != dialog.MassRenameModeUIExternalEditor
 }
 
+// MassRenameOverwritePatternFooterEligible reports whether the footer should show the F5
+// "Overwrite existing" hint: the save-pattern prompt is open, where F5 (same binding as "Save
+// pattern" on the main screen) opens the overwrite picker instead.
+func (h *Handler) MassRenameOverwritePatternFooterEligible() bool {
+	d := &h.model.FileDialog
+	return d.Open && d.DialogType == dialog.FileDialogMassRename && d.MassRenamePhase == dialog.MassRenamePhaseSavePrompt
+}
+
 // MassRenameLoadPatternFooterEligible reports whether the footer should show the F2 "Load
 // pattern" hint: the mass-rename dialog is open on its main screen.
 func (h *Handler) MassRenameLoadPatternFooterEligible() bool {
@@ -69,11 +77,11 @@ func (h *Handler) MassRenameHistoryFooterEligible() bool {
 	return d.Open && d.DialogType == dialog.FileDialogMassRename && d.MassRenamePhase == dialog.MassRenamePhaseMain
 }
 
-// massRenamePickerPhaseOpen reports whether phase is one of the two picker sub-screens (load or
-// history) that share handleMassRenamePickerKey's key handling and currentMassRenamePickerState's
-// backing-state selection.
+// massRenamePickerPhaseOpen reports whether phase is one of the picker sub-screens (load,
+// history or overwrite) that share handleMassRenamePickerKey's key handling and
+// currentMassRenamePickerState's backing-state selection.
 func massRenamePickerPhaseOpen(phase dialog.MassRenamePhase) bool {
-	return phase == dialog.MassRenamePhaseLoadPicker || phase == dialog.MassRenamePhaseHistoryPicker
+	return dialog.MassRenamePickerPhase(phase)
 }
 
 // MassRenameDeletePatternFooterEligible reports whether the footer should show the F8 "Delete
@@ -147,11 +155,7 @@ func (h *Handler) openMassRenameSavePrompt() {
 // closeMassRenameSavePrompt restores the main dialog's fields and returns to the main screen
 // (Esc / Cancel).
 func (h *Handler) closeMassRenameSavePrompt() {
-	d := &h.model.FileDialog
-	d.Fields = d.MassRenameSavedFields
-	d.MassRenameSavedFields = nil
-	d.MassRenamePhase = dialog.MassRenamePhaseMain
-	d.FocusedField = dialog.MassRenameFindFieldFocus
+	h.restoreMassRenameMainScreen()
 }
 
 // confirmMassRenameSavePrompt validates the Name field, upserts the pattern into patterns.toml
@@ -169,24 +173,26 @@ func (h *Handler) confirmMassRenameSavePrompt() {
 	}
 	description := strings.TrimSpace(d.Fields[1].Value)
 
-	mainFields := d.MassRenameSavedFields
-	find, replace := "", ""
-	if len(mainFields) > 0 {
-		find = mainFields[0].Value
-	}
-	if len(mainFields) > 1 {
-		replace = mainFields[1].Value
-	}
+	find, replace := h.massRenameStashedFindReplace()
 	p := h.massRenameCurrentPattern(name, description, find, replace)
 	if err := ops.UpsertMassRenamePattern(h.massRenamePatternsPath(), p); err != nil {
 		h.host.SetErrorMessage("Save pattern", err)
 		return
 	}
+	h.massRenamePatternName = name
+	h.restoreMassRenameMainScreen()
+	h.host.SetTransientMessage(fmt.Sprintf("Pattern saved: %s", name), ui.MessageUrgencyInfo)
+}
+
+// restoreMassRenameMainScreen unstashes the main find/replace fields saved by
+// openMassRenameSavePrompt and returns to the main screen. Shared by the save prompt's OK and
+// by the overwrite picker, which both end the save flow.
+func (h *Handler) restoreMassRenameMainScreen() {
+	d := &h.model.FileDialog
 	d.Fields = d.MassRenameSavedFields
 	d.MassRenameSavedFields = nil
 	d.MassRenamePhase = dialog.MassRenamePhaseMain
 	d.FocusedField = dialog.MassRenameFindFieldFocus
-	h.host.SetTransientMessage(fmt.Sprintf("Pattern saved: %s", name), ui.MessageUrgencyInfo)
 }
 
 // handleMassRenameSavePromptKey routes keys while the save-pattern prompt is open. Mirrors
@@ -198,6 +204,13 @@ func (h *Handler) handleMassRenameSavePromptKey(event *tcell.EventKey) bool {
 	d := &h.model.FileDialog
 	okIdx := len(d.Fields)
 	cancelIdx := okIdx + 1
+
+	if h.keysMassRenameDialog != nil {
+		if id, ok := h.keysMassRenameDialog.Lookup(event); ok && id == keymap.ActionFileMassRenameSavePattern {
+			h.openMassRenameOverwritePicker()
+			return false
+		}
+	}
 
 	if event.Key() == tcell.KeyRune && keymap.AltLetterModifiers(event.Modifiers()) {
 		if dialog.TryStandardDialogActions(event, h.confirmMassRenameSavePrompt, h.closeMassRenameSavePrompt, nil) {
@@ -274,6 +287,19 @@ func (h *Handler) handleMassRenameSavePromptKey(event *tcell.EventKey) bool {
 	return false
 }
 
+// massRenameStashedFindReplace returns the main screen's Find/Replace values stashed in
+// MassRenameSavedFields while the save-pattern prompt owns d.Fields.
+func (h *Handler) massRenameStashedFindReplace() (find, replace string) {
+	fields := h.model.FileDialog.MassRenameSavedFields
+	if len(fields) > 0 {
+		find = fields[0].Value
+	}
+	if len(fields) > 1 {
+		replace = fields[1].Value
+	}
+	return find, replace
+}
+
 // massRenameCurrentPattern builds an ops.MassRenamePattern from the given name/description/
 // find/replace and the dialog's current mode and option flags. Shared by
 // confirmMassRenameSavePrompt (name/description from the save prompt) and history recording
@@ -337,6 +363,67 @@ func (h *Handler) openMassRenameLoadPicker() {
 	d.MassRenameLoadPicker = dialog.MassRenamePatternPickerState{Items: items}
 	d.MassRenamePhase = dialog.MassRenamePhaseLoadPicker
 	h.syncMassRenamePickerRanks()
+	h.selectMassRenamePatternByName(&d.MassRenameLoadPicker, h.massRenamePatternName)
+}
+
+// selectMassRenamePatternByName moves the picker cursor onto the entry named name, so the load
+// and overwrite pickers open on the pattern last loaded, saved or overwritten this session
+// (see Handler.massRenamePatternName). No-op when name is empty or no longer in the list.
+func (h *Handler) selectMassRenamePatternByName(st *dialog.MassRenamePatternPickerState, name string) {
+	if name == "" {
+		return
+	}
+	for i, entIdx := range st.Ranked {
+		if entIdx < 0 || entIdx >= len(st.Items) || st.Items[entIdx].Name != name {
+			continue
+		}
+		st.Selected = i
+		dialog.EnsureMassRenamePatternPickerListScroll(st, h.MassRenamePatternPickerListRows())
+		return
+	}
+}
+
+// openMassRenameOverwritePicker opens the saved-patterns picker from the save-pattern prompt
+// (F5): picking an entry writes the current find/replace over it. Shares
+// MassRenameLoadPicker's state and rendering with the load picker; only
+// activateMassRenamePickerSelection and closeMassRenamePicker branch on the phase.
+func (h *Handler) openMassRenameOverwritePicker() {
+	d := &h.model.FileDialog
+	items, err := ops.LoadMassRenamePatterns(h.massRenamePatternsPath())
+	if err != nil {
+		h.host.SetErrorMessage("Overwrite pattern", err)
+		return
+	}
+	if len(items) == 0 {
+		h.host.SetTransientMessage("No saved patterns", ui.MessageUrgencyWarn)
+		return
+	}
+	d.MassRenameLoadPicker = dialog.MassRenamePatternPickerState{Items: items}
+	d.MassRenamePhase = dialog.MassRenamePhaseOverwritePicker
+	h.syncMassRenamePickerRanks()
+	h.selectMassRenamePatternByName(&d.MassRenameLoadPicker, h.massRenamePatternName)
+}
+
+// overwriteMassRenamePattern replaces the picked saved pattern with the current mode/find/
+// replace/options, keeping its name and (unless the save prompt's Description field was typed
+// into) its description, then ends the save flow on the main screen.
+func (h *Handler) overwriteMassRenamePattern(target ops.MassRenamePattern) {
+	d := &h.model.FileDialog
+	description := target.Description
+	if len(d.Fields) > 1 {
+		if typed := strings.TrimSpace(d.Fields[1].Value); typed != "" {
+			description = typed
+		}
+	}
+	find, replace := h.massRenameStashedFindReplace()
+	p := h.massRenameCurrentPattern(target.Name, description, find, replace)
+	if err := ops.UpsertMassRenamePattern(h.massRenamePatternsPath(), p); err != nil {
+		h.host.SetErrorMessage("Overwrite pattern", err)
+		return
+	}
+	h.massRenamePatternName = target.Name
+	h.restoreMassRenameMainScreen()
+	h.host.SetTransientMessage(fmt.Sprintf("Pattern overwritten: %s", target.Name), ui.MessageUrgencyInfo)
 }
 
 // openMassRenameHistoryPicker opens the fuzzy pattern-history picker over the in-memory,
@@ -350,11 +437,16 @@ func (h *Handler) openMassRenameHistoryPicker() {
 	h.syncMassRenamePickerRanks()
 }
 
-// closeMassRenamePicker returns to the main mass-rename screen without applying a selection
-// (Esc / Cancel), from either the load-pattern or pattern-history picker. d.Fields are left
-// untouched.
+// closeMassRenamePicker leaves the open picker without applying a selection (Esc / Cancel).
+// The overwrite picker returns to the save-pattern prompt it was opened from; the load and
+// history pickers return to the main screen. d.Fields are left untouched either way.
 func (h *Handler) closeMassRenamePicker() {
 	d := &h.model.FileDialog
+	if d.MassRenamePhase == dialog.MassRenamePhaseOverwritePicker {
+		d.MassRenamePhase = dialog.MassRenamePhaseSavePrompt
+		d.FocusedField = 0
+		return
+	}
 	d.MassRenamePhase = dialog.MassRenamePhaseMain
 	d.FocusedField = dialog.MassRenameFindFieldFocus
 }
@@ -394,9 +486,10 @@ func (h *Handler) MassRenamePatternPickerQueryWidth() int {
 	return w
 }
 
-// activateMassRenamePickerSelection applies the selected pattern (from either the load or
-// history picker) back into the main mass-rename dialog's mode/fields/options and recomputes the
-// preview (Enter / OK).
+// activateMassRenamePickerSelection applies the selected pattern (Enter / OK). On the load and
+// history pickers it loads the pattern back into the main mass-rename dialog's mode/fields/
+// options and recomputes the preview; on the overwrite picker it instead writes the current
+// settings over the picked saved pattern (see overwriteMassRenamePattern).
 func (h *Handler) activateMassRenamePickerSelection() {
 	d := &h.model.FileDialog
 	st := h.currentMassRenamePickerState()
@@ -409,6 +502,14 @@ func (h *Handler) activateMassRenamePickerSelection() {
 	}
 	p := st.Items[entIdx]
 
+	if d.MassRenamePhase == dialog.MassRenamePhaseOverwritePicker {
+		h.overwriteMassRenamePattern(p)
+		return
+	}
+
+	if p.Name != "" {
+		h.massRenamePatternName = p.Name
+	}
 	mode := massRenameModeFromString(p.Mode)
 	if d.MassRenameMode != mode {
 		h.massRenameSwitchMode(d, mode)
@@ -435,8 +536,8 @@ func (h *Handler) activateMassRenamePickerSelection() {
 	h.RecomputeMassRenamePreview()
 }
 
-// deleteSelectedMassRenamePattern removes the selected entry (F8): on the load picker, a saved
-// pattern is removed from disk; on the history picker, a history entry is spliced out of the
+// deleteSelectedMassRenamePattern removes the selected entry (F8): on the load and overwrite
+// pickers, a saved pattern is removed from disk; on the history picker, a history entry is spliced out of the
 // in-memory list only. Returns true when the shortcut was handled (including errors shown to the
 // user).
 func (h *Handler) deleteSelectedMassRenamePattern() bool {

@@ -396,7 +396,7 @@ Worker pool definitions (used by "run for each" operations).
 
 ## `[mass_rename]`
 
-Saved mass-rename find/replace patterns (F2 Load pattern / F5 Save pattern in the mass rename dialog; F3 opens the in-memory pattern-history picker, which is session-only and not backed by this file).
+Saved mass-rename find/replace patterns (F2 Load pattern / F5 Save pattern in the mass rename dialog; F5 again on the Name/Description save prompt opens **Overwrite existing**, a picker over the saved patterns whose selection writes the current find/replace over that entry, keeping its name; F8 deletes the selected saved pattern. F3 opens the in-memory pattern-history picker, which is session-only and not backed by this file).
 
 | Key | Type | Default | Description |
 |---|---|---|---|

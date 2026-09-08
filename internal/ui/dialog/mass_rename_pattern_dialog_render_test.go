@@ -149,3 +149,32 @@ func TestMassRenameOKCancelFocusIndicesForSubPhases(t *testing.T) {
 		t.Fatalf("history picker Cancel focus = %d, want 2", cancel)
 	}
 }
+
+func TestFileDialogRectMassRenameOverwritePickerPhase(t *testing.T) {
+	layout := testLayout(120, 40)
+	state := FileDialogState{
+		Open:            true,
+		DialogType:      FileDialogMassRename,
+		MassRenamePhase: MassRenamePhaseOverwritePicker,
+		Fields: []FileDialogField{
+			{Label: "Name"},
+			{Label: "Description"},
+		},
+	}
+	rect, ok := FileDialogRect(layout, state, 0)
+	if !ok {
+		t.Fatal("expected drawable rect for overwrite-pattern picker")
+	}
+	if rect.Height != massRenamePatternPickerDialogHeight(layout.Height) {
+		t.Fatalf("height = %d, want %d", rect.Height, massRenamePatternPickerDialogHeight(layout.Height))
+	}
+	if title := fileDialogOuterTitle(state); title != "Overwrite pattern" {
+		t.Fatalf("title = %q, want %q", title, "Overwrite pattern")
+	}
+	if okIdx := FileDialogOKFocusIndex(state); okIdx != 1 {
+		t.Fatalf("overwrite picker OK focus = %d, want 1", okIdx)
+	}
+	if cancel := FileDialogCancelFocusIndex(state); cancel != 2 {
+		t.Fatalf("overwrite picker Cancel focus = %d, want 2", cancel)
+	}
+}

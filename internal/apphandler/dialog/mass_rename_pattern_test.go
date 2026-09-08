@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/keymap"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/search"
@@ -501,5 +502,207 @@ func TestMassRenamePatternsPathUsesConfigDir(t *testing.T) {
 	want := filepath.Join(h.configDir, "patterns.toml")
 	if got != want {
 		t.Fatalf("massRenamePatternsPath() = %q, want %q", got, want)
+	}
+}
+
+func TestMassRenameOverwritePatternFooterEligible(t *testing.T) {
+	h, _ := newMassRenamePatternTestHandler(t)
+	openMainMassRenameDialog(h)
+	if h.MassRenameOverwritePatternFooterEligible() {
+		t.Fatal("eligible on the main screen; F5 there is Save pattern")
+	}
+	h.openMassRenameSavePrompt()
+	if !h.MassRenameOverwritePatternFooterEligible() {
+		t.Fatal("want eligible on the save-pattern prompt")
+	}
+}
+
+func TestOpenMassRenameOverwritePickerWarnsWithoutSavedPatterns(t *testing.T) {
+	h, fh := newMassRenamePatternTestHandler(t)
+	openMainMassRenameDialog(h)
+	h.openMassRenameSavePrompt()
+
+	h.openMassRenameOverwritePicker()
+
+	if h.model.FileDialog.MassRenamePhase != uidialog.MassRenamePhaseSavePrompt {
+		t.Fatalf("phase = %v, want SavePrompt", h.model.FileDialog.MassRenamePhase)
+	}
+	if len(fh.messages) != 1 || fh.messages[0] != "No saved patterns" {
+		t.Fatalf("messages = %v, want No saved patterns", fh.messages)
+	}
+}
+
+func TestActivateMassRenameOverwritePickerReplacesPattern(t *testing.T) {
+	h, fh := newMassRenamePatternTestHandler(t)
+	openMainMassRenameDialog(h)
+	path := ops.MassRenamePatternsResolveFile("", h.configDir)
+	seed := []ops.MassRenamePattern{
+		{Name: "lantern", Description: "regex cleanup", Mode: "regex", Find: `\d+`, Replace: "#"},
+		{Name: "harbor", Description: "strip prefix", Mode: "simple", Find: "meadow", Replace: ""},
+	}
+	if err := ops.SaveMassRenamePatterns(path, seed); err != nil {
+		t.Fatalf("SaveMassRenamePatterns: %v", err)
+	}
+	h.openMassRenameSavePrompt()
+	h.openMassRenameOverwritePicker()
+	if h.model.FileDialog.MassRenamePhase != uidialog.MassRenamePhaseOverwritePicker {
+		t.Fatalf("phase = %v, want OverwritePicker", h.model.FileDialog.MassRenamePhase)
+	}
+	h.model.FileDialog.MassRenameLoadPicker.Selected = 1
+
+	h.activateMassRenamePickerSelection()
+
+	d := &h.model.FileDialog
+	if d.MassRenamePhase != uidialog.MassRenamePhaseMain {
+		t.Fatalf("phase = %v, want Main", d.MassRenamePhase)
+	}
+	if len(d.Fields) != 2 || d.Fields[0].Label != "Find" || d.Fields[0].Value != "walrus" {
+		t.Fatalf("Fields not restored: %+v", d.Fields)
+	}
+	if d.FocusedField != uidialog.MassRenameFindFieldFocus {
+		t.Fatalf("FocusedField = %d, want %d", d.FocusedField, uidialog.MassRenameFindFieldFocus)
+	}
+	if len(fh.messages) != 1 || fh.messages[0] != "Pattern overwritten: harbor" {
+		t.Fatalf("messages = %v, want Pattern overwritten: harbor", fh.messages)
+	}
+
+	patterns, err := ops.LoadMassRenamePatterns(path)
+	if err != nil {
+		t.Fatalf("LoadMassRenamePatterns: %v", err)
+	}
+	if len(patterns) != 2 {
+		t.Fatalf("patterns = %+v, want 2 (overwrite, not append)", patterns)
+	}
+	got := patterns[1]
+	if got.Name != "harbor" || got.Description != "strip prefix" {
+		t.Fatalf("identity changed: %+v", got)
+	}
+	if got.Find != "walrus" || got.Replace != "otter" || got.Mode != "simple" || !got.CaseFold {
+		t.Fatalf("settings not overwritten: %+v", got)
+	}
+	if patterns[0].Find != `\d+` {
+		t.Fatalf("unrelated pattern changed: %+v", patterns[0])
+	}
+}
+
+func TestActivateMassRenameOverwritePickerKeepsTypedDescription(t *testing.T) {
+	h, _ := newMassRenamePatternTestHandler(t)
+	openMainMassRenameDialog(h)
+	path := ops.MassRenamePatternsResolveFile("", h.configDir)
+	seed := []ops.MassRenamePattern{{Name: "harbor", Description: "strip prefix", Mode: "simple", Find: "meadow"}}
+	if err := ops.SaveMassRenamePatterns(path, seed); err != nil {
+		t.Fatalf("SaveMassRenamePatterns: %v", err)
+	}
+	h.openMassRenameSavePrompt()
+	h.model.FileDialog.Fields[1].Value = "swap walrus for otter"
+	h.openMassRenameOverwritePicker()
+
+	h.activateMassRenamePickerSelection()
+
+	patterns, err := ops.LoadMassRenamePatterns(path)
+	if err != nil {
+		t.Fatalf("LoadMassRenamePatterns: %v", err)
+	}
+	if len(patterns) != 1 || patterns[0].Description != "swap walrus for otter" {
+		t.Fatalf("patterns = %+v, want typed description kept", patterns)
+	}
+}
+
+func TestCloseMassRenameOverwritePickerReturnsToSavePrompt(t *testing.T) {
+	h, _ := newMassRenamePatternTestHandler(t)
+	openMainMassRenameDialog(h)
+	path := ops.MassRenamePatternsResolveFile("", h.configDir)
+	if err := ops.SaveMassRenamePatterns(path, []ops.MassRenamePattern{{Name: "harbor", Mode: "simple"}}); err != nil {
+		t.Fatalf("SaveMassRenamePatterns: %v", err)
+	}
+	h.openMassRenameSavePrompt()
+	h.model.FileDialog.Fields[0].Value = "meadow"
+	h.openMassRenameOverwritePicker()
+
+	h.closeMassRenamePicker()
+
+	d := &h.model.FileDialog
+	if d.MassRenamePhase != uidialog.MassRenamePhaseSavePrompt {
+		t.Fatalf("phase = %v, want SavePrompt", d.MassRenamePhase)
+	}
+	if len(d.Fields) != 2 || d.Fields[0].Label != "Name" || d.Fields[0].Value != "meadow" {
+		t.Fatalf("prompt fields lost: %+v", d.Fields)
+	}
+	if d.FocusedField != 0 {
+		t.Fatalf("FocusedField = %d, want 0", d.FocusedField)
+	}
+}
+
+func TestSavePromptF5OpensOverwritePicker(t *testing.T) {
+	h, _ := newMassRenamePatternTestHandler(t)
+	keys, err := keymap.Build(keymap.DefaultMassRenameDialogOverlayKeys())
+	if err != nil {
+		t.Fatalf("keymap.Build: %v", err)
+	}
+	h.keysMassRenameDialog = keys
+	openMainMassRenameDialog(h)
+	path := ops.MassRenamePatternsResolveFile("", h.configDir)
+	if err := ops.SaveMassRenamePatterns(path, []ops.MassRenamePattern{{Name: "harbor", Mode: "simple"}}); err != nil {
+		t.Fatalf("SaveMassRenamePatterns: %v", err)
+	}
+	h.openMassRenameSavePrompt()
+
+	h.handleMassRenameSavePromptKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
+
+	if h.model.FileDialog.MassRenamePhase != uidialog.MassRenamePhaseOverwritePicker {
+		t.Fatalf("phase = %v, want OverwritePicker", h.model.FileDialog.MassRenamePhase)
+	}
+}
+
+func TestMassRenamePickersPreselectLastUsedPattern(t *testing.T) {
+	h, _ := newMassRenamePatternTestHandler(t)
+	openMainMassRenameDialog(h)
+	path := ops.MassRenamePatternsResolveFile("", h.configDir)
+	seed := []ops.MassRenamePattern{
+		{Name: "lantern", Description: "regex cleanup", Mode: "regex", Find: `\d+`, Replace: "#"},
+		{Name: "harbor", Description: "strip prefix", Mode: "simple", Find: "meadow", Replace: ""},
+		{Name: "thicket", Description: "swap words", Mode: "simple", Find: "badger", Replace: "otter"},
+	}
+	if err := ops.SaveMassRenamePatterns(path, seed); err != nil {
+		t.Fatalf("SaveMassRenamePatterns: %v", err)
+	}
+
+	// Nothing used yet: the picker opens on the first entry.
+	h.openMassRenameLoadPicker()
+	if got := h.model.FileDialog.MassRenameLoadPicker.Selected; got != 0 {
+		t.Fatalf("Selected = %d, want 0 before any pattern is used", got)
+	}
+
+	// Load "thicket", then reopen: the picker lands back on it.
+	h.model.FileDialog.MassRenameLoadPicker.Selected = 2
+	h.activateMassRenamePickerSelection()
+	if h.massRenamePatternName != "thicket" {
+		t.Fatalf("massRenamePatternName = %q, want thicket", h.massRenamePatternName)
+	}
+	h.openMassRenameLoadPicker()
+	if got := h.model.FileDialog.MassRenameLoadPicker.Selected; got != 2 {
+		t.Fatalf("load picker Selected = %d, want 2 (thicket)", got)
+	}
+
+	// The overwrite picker preselects it too, so F5/F5/Enter re-saves the loaded pattern.
+	h.closeMassRenamePicker()
+	h.openMassRenameSavePrompt()
+	h.openMassRenameOverwritePicker()
+	if got := h.model.FileDialog.MassRenameLoadPicker.Selected; got != 2 {
+		t.Fatalf("overwrite picker Selected = %d, want 2 (thicket)", got)
+	}
+}
+
+func TestMassRenameHistoryEntryDoesNotBecomePreselection(t *testing.T) {
+	h, _ := newMassRenamePatternTestHandler(t)
+	openMainMassRenameDialog(h)
+	h.recordMassRenameHistory(ops.MassRenamePattern{Mode: "simple", Find: "badger", Replace: "otter"})
+	h.massRenamePatternName = "thicket"
+	h.openMassRenameHistoryPicker()
+
+	h.activateMassRenamePickerSelection()
+
+	if h.massRenamePatternName != "thicket" {
+		t.Fatalf("massRenamePatternName = %q, want thicket (unnamed history entry must not clear it)", h.massRenamePatternName)
 	}
 }
