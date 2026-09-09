@@ -38,7 +38,7 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	const (
 		width     = 54
 		minWidth  = 38
-		minHeight = 23
+		minHeight = 20
 	)
 	rect, ok := draw.ClampCenteredDialogRect(layout, width, minHeight, minWidth, minHeight)
 	if !ok {
@@ -51,7 +51,6 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	leftOptionCol := draw.DialogOptionX(rect)
 	y := rect.Y + 1
 	primitive.Text(screen, primaryCol, y, rect.Width-4, "View options:", styles.DialogText.Background(dbg))
-	y++
 	y++
 	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Use nerdfont icons", 'd', state.UseNerdfontIcons, state.Focus == 0, styles)
 	y++
@@ -71,7 +70,6 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 
 	primitive.Text(screen, primaryCol, y, utf8.RuneCountInString(scrollModeLabel), scrollModeLabel, styles.DialogText.Background(dbg))
 	primitive.Text(screen, rightLabelCol, y, sbLabelW, sbLabel, styles.DialogText.Background(dbg))
-	y++
 	y++
 
 	scrollRadios := panel.ScrollModeDialogRadios()
@@ -94,7 +92,6 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	y++
 
 	primitive.Text(screen, primaryCol, y, rect.Width-4, "Default listing format:", styles.DialogText.Background(dbg))
-	y++
 	y++
 
 	lf := panel.EffectiveListFormat(state.ListFormat)

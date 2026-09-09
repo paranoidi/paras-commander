@@ -45,10 +45,10 @@ func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnect
 	case listH < 3:
 		listH = 3
 	}
-	height := 10 + listH
+	height := 9 + listH
 	if height > layout.Height-2 {
 		height = layout.Height - 2
-		listH = height - 10
+		listH = height - 9
 		if listH < 3 {
 			listH = 3
 		}
@@ -102,7 +102,7 @@ func DrawSFTPConnectDialog(screen tcell.Screen, layout Layout, state SFTPConnect
 
 	locLabelY := sep1 + 1
 	primitive.Text(screen, primaryCol, locLabelY, inputWidth, "Location:", styles.DialogText.Background(itemBg))
-	inputY := locLabelY + 2
+	inputY := locLabelY + 1
 	drawInputField(screen, primaryCol, inputY, inputWidth, state.Location, state.Focus == 1, styles)
 	draw.DrawDialogHSeparator(screen, rect, inputY+1, borderStyle)
 

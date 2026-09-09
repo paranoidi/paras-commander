@@ -37,7 +37,7 @@ func transferDialogMaxHeight(layoutHeight int) int {
 
 // transferMultiChromeRows returns the interior row count for the multi-location layout
 // other than the scrollable preview list itself (top/bottom border added separately):
-// Source label, blank, root path, blank, Destination label, blank, input row, separator,
+// Source label, root path, blank, Destination label, input row, separator,
 // preserve-permissions/timestamps checkboxes (copy only) + flatten checkbox, "Result"
 // separator, separator, blank, button row.
 func transferMultiChromeRows(kind TransferKind) int {
@@ -45,7 +45,7 @@ func transferMultiChromeRows(kind TransferKind) int {
 	if kind == TransferKindCopy {
 		checkboxRows += 2 // Preserve permissions + Preserve timestamps
 	}
-	const fixedRows = 12 // 8 rows through the destination separator + Result separator(1) + separator/blank/button(3)
+	const fixedRows = 10 // 6 rows through the destination separator + Result separator(1) + separator/blank/button(3)
 	return fixedRows + checkboxRows
 }
 
@@ -117,14 +117,14 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 	}
 
 	width := PreferredFormDialogWidth
-	height := 10
+	height := 9
 	title := "Copy"
 	if state.Kind == TransferKindMove {
-		height = 8
+		height = 7
 		title = "Move"
 	}
 	if state.Phase == TransferPhaseSelfCopyRename {
-		height = 9
+		height = 8
 		if state.Kind == TransferKindCopy {
 			title = "Copy — New name"
 		} else {
@@ -146,11 +146,11 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 		nameLabel := "New name:"
 		primitive.Text(screen, rect.X+2, rect.Y+3, rect.Width-4, nameLabel, styles.DialogText.Background(dbg))
 
-		inputY := rect.Y + 5
+		inputY := rect.Y + 4
 		inputWidth := rect.Width - 4
 		drawInputField(screen, rect.X+2, inputY, inputWidth, state.SelfCopyNewName, state.FocusField == 0, styles)
 
-		sepY := rect.Y + 6
+		sepY := rect.Y + 5
 		draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
 
 		buttonY := rect.Y + rect.Height - 2
@@ -161,7 +161,7 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 	destLabel := "Destination:"
 	primitive.Text(screen, rect.X+2, rect.Y+1, rect.Width-4, destLabel, styles.DialogText.Background(dbg))
 
-	inputY := rect.Y + 3
+	inputY := rect.Y + 2
 	inputWidth := rect.Width - 4
 	rowFocused := state.FocusField == 0
 	pickerFocused := rowFocused && state.DestSubFocus == TransferDestSubFocusPicker
@@ -169,7 +169,7 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 	drawPathInputRow(screen, rect.X+2, inputY, inputWidth, state.Destination, rowFocused, pickerFocused, destInvalid, styles)
 
 	if state.Kind == TransferKindCopy {
-		sep1Y := rect.Y + 4
+		sep1Y := rect.Y + 3
 		draw.DrawDialogHSeparator(screen, rect, sep1Y, borderStyle)
 
 		// One cell left of labels/fields so "[ ]" aligns with other dialog content (see mass rename).
@@ -184,7 +184,7 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 		return
 	}
 
-	sepY := rect.Y + 4
+	sepY := rect.Y + 3
 	draw.DrawDialogHSeparator(screen, rect, sepY, borderStyle)
 
 	buttonY := rect.Y + rect.Height - 2
@@ -220,14 +220,12 @@ func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state T
 	y := rect.Y + 1
 	primitive.Text(screen, textX, y, contentW, "Source:", textStyle)
 	y++
-	y++ // blank row between label and content
 	rootLabel := primitive.FitPathForWidth(primitive.PathWithHomeTilde(state.CommonRoot, userHomeDir), contentW)
 	primitive.Text(screen, textX, y, contentW, rootLabel, textStyle)
 	y++
 	y++ // blank row between root path and Destination:
 	primitive.Text(screen, textX, y, contentW, "Destination:", textStyle)
 	y++
-	y++ // blank row between label and input
 
 	rowFocused := state.FocusField == 0
 	pickerFocused := rowFocused && state.DestSubFocus == TransferDestSubFocusPicker

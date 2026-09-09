@@ -71,10 +71,6 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 	if y >= innerBottom {
 		return
 	}
-	y++ // blank row between label and input
-	if y >= innerBottom {
-		return
-	}
 	draw.DrawScrollingDialogInput(screen, textX, y, inputWidth, draw.ScrollingInputState{Value: state.Text, Cursor: state.TextCursor, Scroll: state.TextScroll}, state.Focus == FilterFocusPattern, filterPatternInvalid(state), styles)
 	y++
 	if y >= innerBottom {

@@ -12,12 +12,12 @@ import (
 )
 
 func dedupProgressDialogHeight(phase comparepkg.DedupPhase) int {
-	// Directory label + blank + path + separator + status row (+ per-file bar row
+	// Directory label + path + separator + status row (+ per-file bar row
 	// + hash count row when hashing) + blank + buttons + borders.
 	if phase == comparepkg.DedupHashing {
-		return 12
+		return 11
 	}
-	return 11
+	return 10
 }
 
 // DrawDedupProgressDialog paints the find-duplicates scan progress modal.
@@ -46,7 +46,7 @@ func DrawDedupProgressDialog(
 
 	y := rect.Y + 1
 	primitive.Text(screen, textX, y, textW, "Directory:", textStyle)
-	y += 2
+	y++
 	rootPath := primitive.FitPathForWidth(primitive.PathWithHomeTilde(snap.Root.String(), userHomeDir), textW)
 	primitive.Text(screen, textX, y, textW, rootPath, textStyle)
 	y++

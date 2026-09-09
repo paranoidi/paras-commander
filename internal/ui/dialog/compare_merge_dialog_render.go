@@ -9,15 +9,15 @@ import (
 )
 
 func compareMergeDialogHeight(showSharedPrefix bool) int {
-	// Destination: label + blank + [optional shared] + radio1 + path1 + radio2 + path2 + sep
-	dest := 7
+	// Destination: label + [optional shared] + radio1 + path1 + radio2 + path2 + sep
+	dest := 6
 	if showSharedPrefix {
 		dest++
 	}
-	// Transfer:  label + blank + 2 checkboxes + sep = 5
-	// Operation: label + blank + 2 radios + sep = 5
+	// Transfer:  label + 2 checkboxes + sep = 4
+	// Operation: label + 2 radios + sep = 4
 	// preview + blank + button = 3
-	y := 1 + dest + 5 + 5 + 3
+	y := 1 + dest + 4 + 4 + 3
 	return y + 1 // inner bottom margin + bottom border
 }
 
@@ -43,7 +43,7 @@ func DrawCompareMergeDialog(screen tcell.Screen, layout Layout, state CompareMer
 
 	// Destination section
 	primitive.Text(screen, draw.DialogTextX(rect), y, draw.DialogContentWidth(rect), "Destination:", pathStyle)
-	y += 2
+	y++
 	if sharedPrefix != "" {
 		primitive.Text(screen, draw.DialogTextX(rect), y, draw.DialogContentWidth(rect),
 			"Shared: "+primitive.FitPathForWidth(sharedPrefix, draw.DialogContentWidth(rect)-len("Shared: ")), pathStyle)
@@ -62,7 +62,7 @@ func DrawCompareMergeDialog(screen tcell.Screen, layout Layout, state CompareMer
 
 	// Transfer section
 	primitive.Text(screen, draw.DialogTextX(rect), y, draw.DialogContentWidth(rect), "Transfer:", pathStyle)
-	y += 2
+	y++
 	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Missing files", 'M', state.CopyMissing, state.Focus == 2, styles)
 	y++
 	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Modified files (content differs)", 'F', state.CopyModified, state.Focus == 3, styles)
@@ -72,7 +72,7 @@ func DrawCompareMergeDialog(screen tcell.Screen, layout Layout, state CompareMer
 
 	// Operation section
 	primitive.Text(screen, draw.DialogTextX(rect), y, draw.DialogContentWidth(rect), "Operation:", pathStyle)
-	y += 2
+	y++
 	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Copy (keep source files)", 'K', !state.MoveMode, state.Focus == 4, styles)
 	y++
 	draw.DrawDialogRadio(screen, draw.DialogOptionX(rect), y, "Move (delete source after transfer)", 'D', state.MoveMode, state.Focus == 5, styles)

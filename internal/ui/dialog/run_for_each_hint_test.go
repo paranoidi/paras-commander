@@ -7,11 +7,11 @@ func TestRunForEachCommandFieldRowsWithError(t *testing.T) {
 		DialogType:             FileDialogRunForEach,
 		RunForEachCommandError: "Command must include %f to represent the selected item",
 	}
-	if got := runForEachCommandFieldRows(state); got != 5 {
-		t.Fatalf("rows = %d, want 5", got)
+	if got := runForEachCommandFieldRows(state); got != 4 {
+		t.Fatalf("rows = %d, want 4", got)
 	}
-	if runForEachCommandFieldRows(FileDialogState{DialogType: FileDialogRunForEach}) != 4 {
-		t.Fatal("expected 4 rows without error")
+	if runForEachCommandFieldRows(FileDialogState{DialogType: FileDialogRunForEach}) != 3 {
+		t.Fatal("expected 3 rows without error")
 	}
 }
 
@@ -26,8 +26,8 @@ func TestRunForEachPreviewTextShownWhenValid(t *testing.T) {
 	if !runForEachShowsPreview(state) {
 		t.Fatal("expected runForEachShowsPreview to be true")
 	}
-	if got := runForEachCommandFieldRows(state); got != 5 {
-		t.Fatalf("rows = %d, want 5", got)
+	if got := runForEachCommandFieldRows(state); got != 4 {
+		t.Fatalf("rows = %d, want 4", got)
 	}
 }
 
@@ -41,7 +41,7 @@ func TestRunForEachPreviewTextHiddenWhenErrorPresent(t *testing.T) {
 		t.Fatalf("preview = %q, want empty when error is shown", got)
 	}
 	// Error + preview both present must still add only one row (mutually exclusive display).
-	if got := runForEachCommandFieldRows(state); got != 5 {
-		t.Fatalf("rows = %d, want 5", got)
+	if got := runForEachCommandFieldRows(state); got != 4 {
+		t.Fatalf("rows = %d, want 4", got)
 	}
 }

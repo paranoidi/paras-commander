@@ -44,9 +44,9 @@ func runForEachPreviewStyle(styles theme.Theme, dbg tcell.Color) tcell.Style {
 	return styles.DialogText.Background(dbg)
 }
 
-// runForEachCommandFieldRows is vertical space for the command block (label, blank, input, optional error/preview).
+// runForEachCommandFieldRows is vertical space for the command block (label, input, optional error/preview).
 func runForEachCommandFieldRows(state FileDialogState) int {
-	rows := 4
+	rows := 3
 	if runForEachShowsCommandError(state) || runForEachShowsPreview(state) {
 		rows++
 	}

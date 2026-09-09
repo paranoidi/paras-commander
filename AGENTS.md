@@ -121,9 +121,11 @@ All dialogs with labeled content blocks (text inputs, radio groups, checkbox gro
 ### Layout
 
 - The label and the content below it must be on separate rows.
-- A blank (empty) line must exist between the label row and the content row(s) below it (text input, first radio/checkbox option, preview value, etc.).
+- **The content row sits directly beneath its label row — no blank row between them** (text input, first radio/checkbox option, preview value, etc.). This is the compact layout, and it is the convention everywhere; a dialog that spaces a label away from the thing it labels is a bug, not a style choice.
 - Do not place the label and its content on the same line, even with visual separators.
-- Section labels followed by radio or checkbox options use the same pattern as text fields: **label row → blank row → option rows** (e.g. Run-for-each **Worker pool (optional):** then pool radios). Standalone option rows without a section label (e.g. mkdir post-action radios directly under a separator) do not need an extra label row.
+- Section labels followed by radio or checkbox options use the same pattern as text fields: **label row → option rows** (e.g. Run-for-each **Worker pool (optional):** then pool radios). Standalone option rows without a section label (e.g. mkdir post-action radios directly under a separator) do not need an extra label row.
+- Blank rows still do section work: one blank row above the first button row (see below), and a blank row between a section's last content row and the next section's label where no separator already does that job. What went away is only the gap between a label and its own content.
+- Guard: `TestDialogLabelsAreFollowedByContentRow` (`internal/ui/dialog/dialog_label_spacing_test.go`) renders dialogs and asserts the row under each label is the content. Add a case for every new labelled row.
 
 - Elements should be spaced and aligned following these examples:
 

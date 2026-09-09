@@ -80,7 +80,8 @@ func groupSelectPatternInvalid(state GroupSelectState) bool {
 }
 
 func groupSelectDialogInnerRows(state GroupSelectState) int {
-	// mode radios, separator, Pattern label, input, reserved hint row, filter checkboxes, separator, buttons
+	// mode radios, separator, Pattern label, input, reserved hint row, filter
+	// checkboxes, separator, buttons
 	rows := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 1
 	if state.MetaColumnCount > 0 {
 		rows++

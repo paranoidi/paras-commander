@@ -35,7 +35,7 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 	case FileDialogDelete:
 		height = fileDeleteDialogHeight(layout.Height, state)
 	case FileDialogAddBookmark:
-		height = 10
+		height = 9
 	case FileDialogRunForEach:
 		if state.RunForEachHistoryOpen {
 			height = runForEachHistoryPickerDialogHeight(layout.Height)
@@ -48,8 +48,8 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 		// Help block + separator + command block + separator + 2 checkboxes + optional pool section + separator + buttons row.
 		height = helpLines + 1 + runForEachCommandFieldRows(state) + 3 + 4
 		if runForEachHasPoolSelector(state) {
-			// Separator + label + blank + pool radios ("No pool" + one per pool).
-			height += 1 + 1 + 1 + (1 + len(state.RunForEachPools))
+			// Separator + label + pool radios ("No pool" + one per pool).
+			height += 1 + 1 + (1 + len(state.RunForEachPools))
 		}
 	case FileDialogMassRename:
 		switch state.MassRenamePhase {
@@ -62,10 +62,10 @@ func FileDialogRect(layout Layout, state FileDialogState, deleteIconLead int) (R
 		}
 	default:
 		if renameToolActive(state) {
-			// Preview label + blank + preview row + separator + options + separator + buttons.
+			// Preview label + preview row + separator + options + separator + buttons.
 			height = renameToolDialogHeight()
 		} else if len(state.Fields) > 0 {
-			height = len(state.Fields)*4 + 4 // +1 separator row above buttons
+			height = len(state.Fields)*3 + 4 // +1 separator row above buttons
 		} else {
 			height = 5
 		}
@@ -153,7 +153,7 @@ func renameToolActive(state FileDialogState) bool {
 	return FileDialogHasRenamePhase(state.DialogType) && state.RenamePhase != RenamePhaseMain
 }
 
-func renameToolDialogHeight() int { return 10 }
+func renameToolDialogHeight() int { return 9 }
 
 func fileDialogOuterTitle(state FileDialogState) string {
 	if FileDialogHasRenamePhase(state.DialogType) {
@@ -393,7 +393,7 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 		}
 		fieldStyle := styles.DialogText.Background(dbg)
 		primitive.Text(screen, draw.DialogTextX(rect), y, labelWidth, field.Label+":", fieldStyle)
-		y += 2
+		y++
 		if y >= innerBottom {
 			break
 		}
@@ -444,7 +444,7 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 	}
 	labelStyle := styles.DialogText.Background(dbg)
 	primitive.Text(screen, rect.X+2, y, labelWidth, "Worker pool (optional):", labelStyle)
-	y += 2 // blank line between label and pool radios (AGENTS.md dialog layout)
+	y++ // pool radios sit directly beneath the label
 
 	baseFocus := len(state.Fields) + 2
 	if y < innerBottom {
@@ -467,7 +467,7 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState, styles theme.Theme) {
 	fieldStartY := rect.Y + 1
 	for i, field := range state.Fields {
-		y := fieldStartY + i*4
+		y := fieldStartY + i*3
 		if y >= rect.Y+rect.Height-3 {
 			break
 		}
@@ -483,8 +483,8 @@ func drawMultiFieldDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		fieldStyle = fieldStyle.Background(dbg)
 		primitive.Text(screen, rect.X+2, y, labelWidth, field.Label+":", fieldStyle)
 
-		// Blank line between label and input.
-		inputY := y + 2
+		// Input row sits directly beneath the label.
+		inputY := y + 1
 		if inputY >= rect.Y+rect.Height-3 {
 			continue
 		}
@@ -658,7 +658,7 @@ func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState
 	_, dbg, _ := styles.DialogSurface.Decompose()
 	labelStyle := styles.DialogText.Background(dbg)
 	primitive.Text(screen, primaryCol, y, innerWidth, "Preview:", labelStyle)
-	y += 2 // blank line between label and preview value (AGENTS.md dialog input layout)
+	y++ // preview value sits directly beneath the label
 	if y >= innerBottom {
 		return
 	}
@@ -770,7 +770,7 @@ func drawRenameFocusCheckbox(screen tcell.Screen, rect Rect, state FileDialogSta
 	if !renameHasFocusCheckbox(state) || len(state.Fields) == 0 {
 		return
 	}
-	fieldsBottom := rect.Y + 1 + len(state.Fields)*4
+	fieldsBottom := rect.Y + 1 + len(state.Fields)*3
 	sepY := fieldsBottom
 	if sepY >= rect.Y+rect.Height-2 {
 		return
@@ -790,9 +790,9 @@ func drawMkdirActionRows(screen tcell.Screen, rect Rect, state FileDialogState, 
 	if !mkdirHasActions(state) || len(state.Fields) == 0 {
 		return
 	}
-	// drawMultiFieldDialog lays out each field as: label row, blank row, input row, blank row.
-	// The first row after the last field block sits at rect.Y + 1 + len(Fields)*4.
-	fieldsBottom := rect.Y + 1 + len(state.Fields)*4
+	// drawMultiFieldDialog lays out each field as: label row, input row, blank row.
+	// The first row after the last field block sits at rect.Y + 1 + len(Fields)*3.
+	fieldsBottom := rect.Y + 1 + len(state.Fields)*3
 	sepY := fieldsBottom
 	if sepY >= rect.Y+rect.Height-2 {
 		return
@@ -844,7 +844,7 @@ func drawDeleteButtons(screen tcell.Screen, rect Rect, y int, state FileDialogSt
 }
 
 func drawAddBookmarkDialogContent(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
-	if rect.Width < 4 || rect.Height < 10 {
+	if rect.Width < 4 || rect.Height < 9 {
 		return
 	}
 	_, dbg, _ := styles.DialogSurface.Decompose()
@@ -852,6 +852,7 @@ func drawAddBookmarkDialogContent(screen tcell.Screen, rect Rect, state FileDial
 	primaryCol := rect.X + 2
 	innerWidth := rect.Width - 4
 
+	// Content rows sit directly beneath their label row.
 	primitive.Text(screen, primaryCol, rect.Y+1, innerWidth, "Path:", textStyle)
 	pathValue := state.Message
 	if utf8.RuneCountInString(pathValue) > innerWidth {
@@ -865,6 +866,6 @@ func drawAddBookmarkDialogContent(screen tcell.Screen, rect Rect, state FileDial
 
 	if len(state.Fields) > 0 {
 		focused := state.FocusedField == 0
-		drawInputField(screen, primaryCol, rect.Y+6, innerWidth, state.Fields[0], focused, styles)
+		drawInputField(screen, primaryCol, rect.Y+5, innerWidth, state.Fields[0], focused, styles)
 	}
 }

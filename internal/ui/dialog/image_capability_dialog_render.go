@@ -43,7 +43,7 @@ func ImageCapabilityDialogForm() DialogLinearForm {
 
 // DrawImageCapabilityDialog renders the M-F3 image terminal-capabilities modal.
 func DrawImageCapabilityDialog(screen tcell.Screen, layout Layout, state ImageCapabilityDialogState, styles theme.Theme) {
-	const width, height = 46, 16
+	const width, height = 46, 14
 	rect := draw.CenteredDialogRect(layout, width, height)
 
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Image Terminal Capabilities", styles)
@@ -53,7 +53,7 @@ func DrawImageCapabilityDialog(screen tcell.Screen, layout Layout, state ImageCa
 
 	y := rect.Y + 1
 	primitive.Text(screen, textX, y, textW, "Confirm terminal capabilities:", textStyle)
-	y += 2
+	y++
 	draw.DrawDialogCheckbox(screen, optionX, y, "Sixel supported", 's', state.SixelSupported, state.Focus == imageCapabilityDialogFocusSixelCheckbox, styles)
 	y++
 	draw.DrawDialogCheckbox(screen, optionX, y, "Kitty supported", 'k', state.KittySupported, state.Focus == imageCapabilityDialogFocusKittyCheckbox, styles)
@@ -64,7 +64,7 @@ func DrawImageCapabilityDialog(screen tcell.Screen, layout Layout, state ImageCa
 	y++
 
 	primitive.Text(screen, textX, y, textW, "Active protocol:", textStyle)
-	y += 2
+	y++
 	for i, r := range ImageCapabilityDialogRadios() {
 		draw.DrawDialogRadio(screen, optionX, y, r.Label, r.Shortcut, state.Protocol == r.Protocol, state.Focus == imageCapabilityDialogFocusAutoRadio+i, styles)
 		y++

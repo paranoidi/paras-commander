@@ -23,7 +23,7 @@ func DrawDebounceCalibrateDialog(screen tcell.Screen, layout Layout, state Debou
 		// user — not when Calibrate starts or ends, and not when a status line appears (e.g.
 		// "Released too soon" while measuring). The status row is reserved whether or not it is
 		// painted.
-		height = 14
+		height = 12
 	)
 
 	status := strings.TrimSpace(state.Status)
@@ -43,7 +43,7 @@ func DrawDebounceCalibrateDialog(screen tcell.Screen, layout Layout, state Debou
 	}
 
 	primitive.Text(screen, textX, y, textW, "Debounce (ms):", styles.DialogText.Background(dbg))
-	y += 2
+	y++
 	draw.DrawSimpleDialogInput(screen, textX, y, textW, state.Value, state.Focus == 0, false, styles)
 	y++
 	hint := "Used for file-list scroll, quick view, carousel etc."
@@ -58,7 +58,7 @@ func DrawDebounceCalibrateDialog(screen tcell.Screen, layout Layout, state Debou
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
 	primitive.Text(screen, textX, y, textW, "Image preview debounce (ms):", styles.DialogText.Background(dbg))
-	y += 2
+	y++
 	draw.DrawSimpleDialogInput(screen, textX, y, textW, state.ImageValue, state.Focus == 1, false, styles)
 
 	buttonY := rect.Y + rect.Height - 2

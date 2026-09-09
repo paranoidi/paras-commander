@@ -31,16 +31,16 @@ func EnsureMassRenamePatternPickerListScroll(state *MassRenamePatternPickerState
 }
 
 // massRenameSavePromptDialogHeight returns the outer dialog height for the save-pattern
-// prompt: two fields (Name, Description), each laid out as label / blank / input / blank
-// (mirrors the generic multi-field dialog height formula, len(Fields)*4+4).
+// prompt: two fields (Name, Description), each laid out as label / input / blank
+// (mirrors the generic multi-field dialog height formula, len(Fields)*3+4).
 func massRenameSavePromptDialogHeight() int {
-	return 2*4 + 4
+	return 2*3 + 4
 }
 
 // drawMassRenameSavePromptContent draws the Name/Description save-pattern prompt body. It
 // reuses drawMultiFieldDialog verbatim: at this phase d.Fields holds exactly the two
 // {Name, Description} fields set up by openMassRenameSavePrompt, laid out the same way any
-// other two-field file dialog is (label row -> blank row -> input row).
+// other two-field file dialog is (label row -> input row).
 func drawMassRenameSavePromptContent(screen tcell.Screen, rect Rect, state FileDialogState, borderStyle tcell.Style, styles theme.Theme) {
 	drawMultiFieldDialog(screen, rect, state, styles)
 }

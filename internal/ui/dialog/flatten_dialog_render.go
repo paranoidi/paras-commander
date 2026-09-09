@@ -12,21 +12,21 @@ const flattenDialogNumContent = 3
 // DrawFlattenDialog paints the flatten confirmation modal.
 func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogState, styles theme.Theme) {
 	width := PreferredFormDialogWidth
-	height := 10
+	height := 9
 	rect := draw.CenteredDialogRect(layout, width, height)
 	borderStyle := draw.DrawDialogFrame(screen, rect, "Flatten", styles)
 	_, dbg, _ := styles.DialogSurface.Decompose()
 
 	primitive.Text(screen, draw.DialogTextX(rect), rect.Y+1, draw.DialogContentWidth(rect), "Destination:", styles.DialogText.Background(dbg))
 
-	inputY := rect.Y + 3
+	inputY := rect.Y + 2
 	inputWidth := draw.DialogContentWidth(rect)
 	rowFocused := state.FocusField == 0
 	pickerFocused := rowFocused && state.DestSubFocus == FlattenDestSubFocusPicker
 	destInvalid := state.DestPathInvalid && !state.DestPathCheckPending
 	drawPathInputRow(screen, draw.DialogTextX(rect), inputY, inputWidth, state.Destination, rowFocused, pickerFocused, destInvalid, styles)
 
-	sep1Y := rect.Y + 4
+	sep1Y := rect.Y + 3
 	draw.DrawDialogHSeparator(screen, rect, sep1Y, borderStyle)
 
 	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), sep1Y+1, "Recursive flatten", 'R', state.Recursive, state.FocusField == 1, styles)

@@ -91,7 +91,7 @@ func massRenameSizingMaxPreviewRows(layoutHeight int) int {
 }
 
 // massRenameFieldsSectionRows returns the row count of the Simple/Regex fields section: two
-// fields (label+input each), a separator, and any visible regex replacement hint row. The
+// fields (label, input each), a separator, and any visible regex replacement hint row. The
 // pattern compile-error hint shares the Pattern/Find label row (right-aligned) rather than
 // consuming its own row — see massRenamePatternLabelText and its use in drawMassRenameDialog.
 // Shared by massRenameDialogHeight (which always sizes for this section, regardless of the

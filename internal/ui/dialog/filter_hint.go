@@ -74,7 +74,7 @@ func filterPatternInvalid(state FilterDialogState) bool {
 }
 
 func filterDialogInnerRows(state FilterDialogState) int {
-	rows := 3 + 1 + 1 + 1 + 1 + 2 + 1 + 1 // mode radios, separator, Pattern label, blank, input, filter checkboxes, separator, buttons
+	rows := 3 + 1 + 1 + 1 + 2 + 1 + 1 // mode radios, separator, Pattern label, input, filter checkboxes, separator, buttons
 	if filterShowsPatternHint(state) {
 		rows++
 	}
