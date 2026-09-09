@@ -858,15 +858,45 @@ func TestMassRenameTabIntoModeRadiosKeepsCurrentMode(t *testing.T) {
 		t.Fatalf("after Backtab: mode = %v, want regex", d.MassRenameMode)
 	}
 
-	// Tab to buttons, then Tab again into mode radios — still Regex.
+	// Tab steps Find -> Replace (two text inputs are separate Tab stops), then buttons, then
+	// back into the mode radios — still Regex.
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // Find
+	if d.FocusedField != dialog.MassRenameFindFieldFocus {
+		t.Fatalf("Tab from radio: focus = %d, want %d (Find)", d.FocusedField, dialog.MassRenameFindFieldFocus)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // Replace
+	if d.FocusedField != dialog.MassRenameFindFieldFocus+1 {
+		t.Fatalf("Tab from Find: focus = %d, want %d (Replace)", d.FocusedField, dialog.MassRenameFindFieldFocus+1)
+	}
+	okIdx := dialog.FileDialogOKFocusIndex(*d)
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // OK
+	if d.FocusedField != okIdx {
+		t.Fatalf("Tab from Replace: focus = %d, want %d (OK)", d.FocusedField, okIdx)
+	}
 	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyTab, 0, tcell.ModNone)) // mode radios
 	if d.FocusedField != 1 {
 		t.Fatalf("after Tab cycle: focus = %d, want 1 (Regex radio)", d.FocusedField)
 	}
 	if d.MassRenameMode != dialog.MassRenameModeUIRegex {
 		t.Fatalf("after Tab cycle: mode = %v, want regex", d.MassRenameMode)
+	}
+
+	// Backtab retraces: radio -> OK -> Replace -> Find -> radio.
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModNone))
+	if d.FocusedField != okIdx {
+		t.Fatalf("Backtab from radio: focus = %d, want %d (OK)", d.FocusedField, okIdx)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModNone))
+	if d.FocusedField != dialog.MassRenameFindFieldFocus+1 {
+		t.Fatalf("Backtab from OK: focus = %d, want %d (Replace)", d.FocusedField, dialog.MassRenameFindFieldFocus+1)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModNone))
+	if d.FocusedField != dialog.MassRenameFindFieldFocus {
+		t.Fatalf("Backtab from Replace: focus = %d, want %d (Find)", d.FocusedField, dialog.MassRenameFindFieldFocus)
+	}
+	app.dialogCtrl.HandleFileDialogKey(tcell.NewEventKey(tcell.KeyBacktab, 0, tcell.ModNone))
+	if d.FocusedField != 1 {
+		t.Fatalf("Backtab from Find: focus = %d, want 1 (Regex radio)", d.FocusedField)
 	}
 }
 

@@ -72,7 +72,13 @@ All dialogs (modal overlays) must follow these navigation and rendering rules:
   - Left from first button does nothing.
   - Right from last button does nothing.
   - Does not wrap around.
-- **Tab/Shift+Tab**: Same as Down/Up (cycles through all focusable items for convenience).
+- **Tab/Shift+Tab**: Jump between *groups* of controls, not between individual items — a radio
+  block, a checkbox block, and the button strip are each one group, and Tab lands on the first
+  item of the next group (wrapping around). Declared via `DialogTrailingButtonsForm.WithSegments`
+  (`internal/ui/dialog/dialog_focus.go`).
+  - **Every text input is its own group.** In a dialog with more than one text input, Tab steps
+    from one input to the next before it leaves the block (mass rename Find → Replace, chown
+    User → Group, symlink Target → Link path). Use Up/Down to step item-by-item inside a group.
 - **Enter**: Activates the focused button or confirms the dialog.
 - **Esc**: Cancels/closes the dialog.
 

@@ -623,6 +623,10 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 				default:
 					d.FocusedField = dialog.MassRenameFindFieldFocus
 				}
+			case onFindOrReplace && d.FocusedField == dialog.MassRenameFindFieldFocus:
+				// Find and Replace are separate Tab stops: with several text inputs in one
+				// group, Tab steps between them before leaving the group.
+				d.FocusedField = dialog.MassRenameFindFieldFocus + 1
 			case onFindOrReplace || onCapRows:
 				d.FocusedField = okIdx
 			case onButton:
@@ -633,13 +637,16 @@ func (h *Handler) massRenameMoveFocusKey(event *tcell.EventKey) bool {
 			switch {
 			case onRadio || onOptionsRow:
 				d.FocusedField = okIdx
+			case onFindOrReplace && d.FocusedField == dialog.MassRenameFindFieldFocus+1:
+				d.FocusedField = dialog.MassRenameFindFieldFocus
 			case onFindOrReplace || onCapRows:
 				d.FocusedField = dialog.MassRenameModeRadioFocus(d.MassRenameMode)
 			case onButton:
 				if externalMode || capitalizeMode {
 					d.FocusedField = dialog.MassRenameModeRadioFocus(d.MassRenameMode)
 				} else {
-					d.FocusedField = dialog.MassRenameFindFieldFocus
+					// Replace is the last stop before the buttons.
+					d.FocusedField = dialog.MassRenameFindFieldFocus + 1
 				}
 			}
 		}

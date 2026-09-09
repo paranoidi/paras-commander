@@ -101,3 +101,50 @@ func TestFileDialogFocusFormRunForEachCheckboxes(t *testing.T) {
 		t.Fatalf("NumContent (pools) = %d want %d", formPools.NumContent, wantPoolsContent)
 	}
 }
+
+// TestFileDialogFocusFormTabsBetweenInputs covers the multi-text-input rule: each input row is
+// its own Tab group, so Tab steps between them instead of jumping straight to the buttons.
+func TestFileDialogFocusFormTabsBetweenInputs(t *testing.T) {
+	st := FileDialogState{
+		DialogType: FileDialogChown,
+		Fields:     []FileDialogField{{Label: "User"}, {Label: "Group"}},
+	}
+	form := FileDialogFocusForm(st)
+	okIdx := form.OKIndex()
+	if okIdx != 2 {
+		t.Fatalf("OKIndex = %d want 2", okIdx)
+	}
+	for _, tc := range []struct {
+		from int
+		key  tcell.Key
+		want int
+	}{
+		{0, tcell.KeyTab, 1},
+		{1, tcell.KeyTab, okIdx},
+		{okIdx, tcell.KeyTab, 0},
+		{okIdx, tcell.KeyBacktab, 1},
+		{1, tcell.KeyBacktab, 0},
+		{0, tcell.KeyBacktab, okIdx},
+	} {
+		if nf, ok := form.MoveFocus(tc.from, tc.key); !ok || nf != tc.want {
+			t.Fatalf("MoveFocus(%d, %v) = %d,%v want %d,true", tc.from, tc.key, nf, ok, tc.want)
+		}
+	}
+}
+
+// TestFileDialogFocusFormSingleInputTabsToButtons locks in the unchanged group jump for dialogs
+// with one text input plus extra option rows: Tab leaves the whole content block at once.
+func TestFileDialogFocusFormSingleInputTabsToButtons(t *testing.T) {
+	st := FileDialogState{
+		DialogType:       FileDialogMkdir,
+		MkdirShowActions: true,
+		Fields:           []FileDialogField{{}},
+	}
+	form := FileDialogFocusForm(st)
+	if nf, ok := form.MoveFocus(0, tcell.KeyTab); !ok || nf != form.OKIndex() {
+		t.Fatalf("Tab from name field: focus = %d ok=%v want %d", nf, ok, form.OKIndex())
+	}
+	if nf, ok := form.MoveFocus(2, tcell.KeyTab); !ok || nf != form.OKIndex() {
+		t.Fatalf("Tab from radio row: focus = %d ok=%v want %d", nf, ok, form.OKIndex())
+	}
+}
