@@ -136,6 +136,9 @@ type Model struct {
 	PanelScrollbarInactive bool
 	// JobsThroughputChartEnabled mirrors [jobs].throughput_chart_enabled (strip + graph off when false).
 	JobsThroughputChartEnabled bool
+	// JobsTransferRateLimitBPS is the global transfer rate limit in bytes/sec (session-only,
+	// not persisted); 0 means unlimited and shows nothing on the Queue panel border.
+	JobsTransferRateLimitBPS int64
 	// UserHomeDir is filepath.Clean(os.UserHomeDir()); empty skips ~ substitution in panel titles.
 	UserHomeDir string
 	// CursorNameHintPinOutPrimary / CursorNameHintPinOutSecondary are set by App for one paint
@@ -535,7 +538,7 @@ func Render(screen tcell.Screen, model Model, styles theme.Theme) {
 		}
 	case ViewJobs:
 		now := time.Now()
-		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobActivity, styles, now, chromeBlocked, model.UserHomeDir, model.JobsThroughputChartEnabled)
+		drawJobsView(screen, layout, model.JobsView, model.JobsList, model.JobActivity, styles, now, chromeBlocked, model.UserHomeDir, model.JobsThroughputChartEnabled, model.JobsTransferRateLimitBPS)
 	case ViewCommands:
 		cmdEntries := model.CommandsList
 		if len(model.CommandsDisplay) > 0 {

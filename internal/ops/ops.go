@@ -60,7 +60,13 @@ type Options struct {
 	// FlatDestNames resolves every source to dest/<basename> (flatten jobs) instead of
 	// batch-relative names below the sources' common parent (see TransferNameRoot).
 	FlatDestNames bool
+	// RateLimit throttles transfer throughput when set; nil (the default) means unlimited.
+	// Callers must check for nil before calling it.
+	RateLimit RateLimiter
 }
+
+// RateLimiter throttles n bytes just spent, blocking until permitted or ctx is canceled.
+type RateLimiter func(ctx context.Context, n int) error
 
 // DefaultOptions returns operation defaults aligned with config.Default().Operations.
 func DefaultOptions() Options {

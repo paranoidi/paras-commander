@@ -34,7 +34,7 @@ func TestTransferFuncUsesJobPreserveOptions(t *testing.T) {
 
 	cfg := config.Default()
 	cfg.Operations.PreservePermissions = true
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs)
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, nil)
 
 	job := &jobs.Job{
 		ID:                  jobs.NewJobID(),

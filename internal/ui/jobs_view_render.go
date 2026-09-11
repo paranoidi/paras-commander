@@ -89,8 +89,9 @@ func drawJobsView(
 	chromeBlocked bool,
 	userHomeDir string,
 	throughputChartEnabled bool,
+	rateLimitBPS int64,
 ) {
-	drawJobsListPanel(screen, layout.Primary, state, jobs, styles, now, chromeBlocked)
+	drawJobsListPanel(screen, layout.Primary, state, jobs, styles, now, chromeBlocked, rateLimitBPS)
 	var sel JobEntry
 	if state.Selected >= 0 && state.Selected < len(jobs) {
 		sel = jobs[state.Selected]
@@ -110,9 +111,20 @@ func drawJobsView(
 	}
 }
 
-func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool) {
+// formatRateLimitLabel renders the Queue panel border's rate-limit indicator: empty when
+// unlimited (0), otherwise the throughput string padded for the border (e.g. " 20MB/s ").
+// A free function, not a method on drawJobsListPanel, because that function's own
+// "jobs []JobEntry" parameter shadows the internal/jobs package name.
+func formatRateLimitLabel(bps int64) string {
+	if bps <= 0 {
+		return ""
+	}
+	return panelSelectionSizePadded(jobs.FormatThroughput(float64(bps)))
+}
+
+func drawJobsListPanel(screen tcell.Screen, rect Rect, state JobsViewState, jobs []JobEntry, styles theme.Theme, now time.Time, chromeBlocked bool, rateLimitBPS int64) {
 	active := state.FocusPane == 0
-	layout := drawAuxPanelChrome(screen, rect, " Queue ", "", active, chromeBlocked, false, styles)
+	layout := drawAuxPanelChrome(screen, rect, " Queue ", formatRateLimitLabel(rateLimitBPS), active, chromeBlocked, false, styles)
 	bg := layout.ContentBG
 
 	contentX := rect.X + 2

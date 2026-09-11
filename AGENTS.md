@@ -100,7 +100,17 @@ All dialogs (modal overlays) must follow these navigation and rendering rules:
 - Checkbox and radio rows use `Theme.DialogOptionRowStyle` (resolved from `dialog.option.inactive`, `dialog.option.active`, `dialog.option.selected`, and `dialog.option.active.selected` when focused and checked/marked; row background always matches `dialog.surface` — do not set `bg` on option keys).
 - Do not use `styles.DialogText` for input row fill; input rows use `theme.Theme.DialogInputPair(focused)` (resolved from `dialog.input.active` / `dialog.input.inactive` and their `.placeholder` entries). Those styles carry both foreground and background for the input row—do not substitute `DialogText` for fill.
 
-### Horizontal columns (do not confuse `rect.X+1` and `rect.X+2`)
+### Text overlaid directly on a border (not inside a dialog)
+
+Any label painted on top of a panel/dialog border line (top-row end labels like the Queue
+rate-limit indicator or compare/dedup filter indicators, bottom-row selection-size indicators,
+etc.) must carry one space of padding on each side so it doesn't run flush into the border
+dashes — `──100MB/s─` is a bug, `── 100MB/s ─` is correct. Use `panelSelectionSizePadded` /
+`SelectionSizePadded` (`internal/ui/selection_size.go`) to pad the raw text; do not pass an
+unpadded string to `drawAuxPanelChrome`'s `endLabel` or similar. This has been missed more than
+once (e.g. the jobs rate-limit indicator) — check it whenever adding a new border-overlaid label.
+
+## Horizontal columns (do not confuse `rect.X+1` and `rect.X+2`)
 
 Use `draw.DialogTextX(rect)`, `draw.DialogOptionX(rect)`, and `draw.DialogContentWidth(rect)` in `internal/ui/dialog/internal/draw/geom.go` instead of re-deriving offsets.
 

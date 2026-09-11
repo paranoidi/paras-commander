@@ -49,6 +49,27 @@ type State struct {
 	scanFunc   ScanFunc
 	scanMu     sync.Mutex
 	scanCancel map[string]context.CancelFunc
+
+	// rateLimiter throttles transfer throughput; a global, session-only setting (not per-job,
+	// not persisted). Zero limit means unlimited.
+	rateLimiter *RateLimiter
+}
+
+// SetTransferRateLimit sets the global transfer rate limit in bytes/sec (0 = unlimited).
+func (s *State) SetTransferRateLimit(bps int64) {
+	s.rateLimiter.SetLimit(bps)
+}
+
+// TransferRateLimit returns the current global transfer rate limit in bytes/sec (0 = unlimited).
+func (s *State) TransferRateLimit() int64 {
+	return s.rateLimiter.Limit()
+}
+
+// Wait blocks until n bytes may be spent under the current transfer rate limit, or ctx is
+// canceled. Threaded into internal/ops as a plain func value so internal/ops need not import
+// internal/jobs.
+func (s *State) Wait(ctx context.Context, n int) error {
+	return s.rateLimiter.Wait(ctx, n)
 }
 
 // SetThroughputChart configures column duration and history window for the jobs details throughput strip.
@@ -92,6 +113,7 @@ func NewState() *State {
 		blockerWait:            make(map[string]chan ConflictDecision),
 		throughputChartEnabled: true,
 		scanCancel:             make(map[string]context.CancelFunc),
+		rateLimiter:            &RateLimiter{},
 		scanConfig: ScanConfig{
 			YieldInterval:       time.Duration(config.DefaultScanYieldIntervalMS) * time.Millisecond,
 			YieldEveryN:         config.DefaultScanYieldEveryN,

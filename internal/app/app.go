@@ -448,7 +448,7 @@ func NewWithOptions(screen tcell.Screen, opts Options) (*App, error) {
 		return nil, err
 	}
 	jobState := jobs.NewState()
-	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs))
+	jobState.SetTransferFunc(jobbridge.TransferFunc(cfg.Operations, cfg.Jobs, jobState.Wait))
 	jobState.SetThroughputChart(
 		time.Duration(cfg.Jobs.ThroughputChartColumnMS)*time.Millisecond,
 		time.Duration(cfg.Jobs.ThroughputChartWindowSec)*time.Second,

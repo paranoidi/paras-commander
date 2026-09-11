@@ -18,6 +18,10 @@ func DefaultJobsOverlayKeys() map[string][]string {
 		ActionJobsQueueUp:       {"C-up"},
 		ActionJobsQueueDown:     {"C-down"},
 		ActionJobsClearFinished: {"F8"},
+
+		ActionJobsRateLimitIncrease: {"+"},
+		ActionJobsRateLimitDecrease: {"-"},
+		ActionJobsRateLimitClear:    {"C-u"},
 	}
 }
 

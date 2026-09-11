@@ -51,7 +51,7 @@ func TestTransferFuncOverwriteAllSameSizeSkipsDifferingSize(t *testing.T) {
 	}
 
 	cfg := config.Default()
-	transfer := TransferFunc(cfg.Operations, cfg.Jobs)
+	transfer := TransferFunc(cfg.Operations, cfg.Jobs, nil)
 
 	job := &jobs.Job{
 		ID:          jobs.NewJobID(),

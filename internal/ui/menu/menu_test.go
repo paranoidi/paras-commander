@@ -243,6 +243,7 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Move up in queue":   "C-up",
 		"Move down in queue": "C-down",
 		"Clear finished":     "F8",
+		"Clear rate limit":   "C-u",
 		"Back to file view":  "left",
 	}
 	for _, item := range defs[0].Items {

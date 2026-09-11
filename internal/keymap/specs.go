@@ -1540,6 +1540,31 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"remove", "done"},
 			LeaderKey:   "c",
 		},
+		{
+			ID:          ActionJobsRateLimitIncrease,
+			Views:       HelpJobs,
+			Title:       "Increase transfer rate limit (+10MB/s)",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"throttle", "bandwidth", "speed"},
+		},
+		{
+			ID:          ActionJobsRateLimitDecrease,
+			Views:       HelpJobs,
+			Title:       "Decrease transfer rate limit (-10MB/s)",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"throttle", "bandwidth", "speed"},
+		},
+		{
+			ID:          ActionJobsRateLimitClear,
+			Views:       HelpJobs,
+			Title:       "Clear rate limit",
+			Section:     "Jobs",
+			DefaultKeys: nil,
+			Keywords:    []string{"unlimited", "throttle", "bandwidth"},
+			LeaderKey:   "u",
+		},
 
 		// ── Options dialogs ──
 		{

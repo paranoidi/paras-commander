@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -193,6 +194,18 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		case keymap.ActionJobsResume:
 			h.resumeSelectedPausedJob()
 		}
+		return true
+	case keymap.ActionJobsRateLimitIncrease, keymap.ActionJobsRateLimitDecrease:
+		if h.model.ViewMode != ui.ViewJobs || h.model.JobsView.FocusPane != 0 {
+			return true
+		}
+		h.adjustRateLimit(actionID == keymap.ActionJobsRateLimitIncrease)
+		return true
+	case keymap.ActionJobsRateLimitClear:
+		if h.model.ViewMode != ui.ViewJobs {
+			return true
+		}
+		h.state.SetTransferRateLimit(0)
 		return true
 	default:
 		return false
@@ -541,6 +554,43 @@ func (h *Handler) maxActivityScroll(contentH int) int {
 	act := h.model.JobActivity[sel.ID]
 	total := ui.JobActivityLineCount(act)
 	return max(0, total-contentH)
+}
+
+const rateLimitStepBPS int64 = 10 * 1024 * 1024        // 10MB/s (binary MB, matches jobs.FormatThroughput)
+const rateLimitNoJobStartBPS int64 = 100 * 1024 * 1024 // 100MB/s fallback when nothing is transferring
+
+// adjustRateLimit steps the global transfer rate limit by one 10MB/s increment.
+// Enabling it from Unlimited (0), via either + or -, starts from the active job's
+// current speed (rounded to the nearest step), or rateLimitNoJobStartBPS if no job
+// is running. Decreasing floors at one step; only ActionJobsRateLimitClear returns
+// to Unlimited.
+func (h *Handler) adjustRateLimit(increase bool) {
+	cur := h.state.TransferRateLimit()
+	switch {
+	case cur == 0:
+		cur = h.startingRateLimit()
+	case increase:
+		cur += rateLimitStepBPS
+	default:
+		cur -= rateLimitStepBPS
+		if cur < rateLimitStepBPS {
+			cur = rateLimitStepBPS
+		}
+	}
+	h.state.SetTransferRateLimit(cur)
+}
+
+func (h *Handler) startingRateLimit() int64 {
+	active := h.state.ActiveJob()
+	if active == nil {
+		return rateLimitNoJobStartBPS
+	}
+	bps := jobs.EffectiveDisplayThroughputBPS(active.Status, active.StartedAt, time.Now(), active.DoneBytes, active.DisplaySpeedBPS)
+	if bps <= 0 {
+		return rateLimitNoJobStartBPS
+	}
+	steps := max(int64(math.Round(bps/float64(rateLimitStepBPS))), 1)
+	return steps * rateLimitStepBPS
 }
 
 func (h *Handler) moveJobInQueue(delta int) {

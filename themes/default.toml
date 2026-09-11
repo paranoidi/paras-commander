@@ -329,8 +329,8 @@ leaf = "·"
 running = "\uf141"
 
 [symbols.menu.progress]
-done = "─"
-remaining = "-"
+done = "■"
+remaining = "■"
 
 [symbols.menu.job]
 scanning = "\U000f02ca"

@@ -343,12 +343,21 @@ func copyRegularItem(ctx context.Context, item PlanItem, opts Options, resolver 
 	var err error
 	if useLocalFastPath(item.Src, item.Dst) {
 		copied, err = copyFileWithConflict(ctx, srcStr, dstStr, opts, resolver, copyBuf, func(delta int64) {
+			// ponytail: throttles after each buffer write, so kernel fast-path copies
+			// (reflink/copy_file_range, which report their whole size in one onWritten
+			// call) get throttled as a post-hoc approximation rather than smoothly.
+			if opts.RateLimit != nil {
+				_ = opts.RateLimit(ctx, int(delta))
+			}
 			state.doneBytes += delta
 			state.bytesSinceEmit += delta
 			state.emitProgress(srcStr, dstStr, false)
 		})
 	} else {
 		copied, err = copyFileTransfer(ctx, item.Src, item.Dst, opts, resolver, copyBuf, func(delta int64) {
+			if opts.RateLimit != nil {
+				_ = opts.RateLimit(ctx, int(delta))
+			}
 			state.doneBytes += delta
 			state.bytesSinceEmit += delta
 			state.emitProgress(srcStr, dstStr, false)

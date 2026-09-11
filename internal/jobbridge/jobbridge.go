@@ -251,9 +251,9 @@ func ActivityFailureLabel(ev jobs.Event) string {
 }
 
 // TransferFunc builds the job worker transfer function from config.
-func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
+func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rateWait ops.RateLimiter) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
-		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg)
+		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
 		resolver := newConflictResolver(job, waitBlocker)
 		diskWait := diskWaitFromBlocker(waitBlocker)
 		progress := func(sourcePath, destPath string, doneFiles int, doneBytes int64) {
@@ -392,7 +392,7 @@ func mapOpsCanceled(err error) error {
 // buildTransferOptions builds the ops.Options and progress-emit throttle for a transfer job.
 // CoW cloning / copy_file_range / sparse-file copy / preallocation are local-filesystem-only
 // optimizations, so they're stripped when either the destination or any source is remote.
-func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg config.JobsConfig) (ops.Options, ops.ProgressEmitThrottle) {
+func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rateWait ops.RateLimiter) (ops.Options, ops.ProgressEmitThrottle) {
 	opts := ops.Options{
 		PreservePermissions:        job.PreservePermissions,
 		PreserveTimestamps:         job.PreserveTimestamps,
@@ -407,6 +407,7 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 		SyncAtJobEnd:               opsCfg.SyncAtJobEnd,
 		SyncMinFileKiB:             opsCfg.SyncMinFileKiB,
 		FlatDestNames:              job.FlatDestNames(),
+		RateLimit:                  rateWait,
 	}
 	if job.Destination.IsRemote() {
 		opts.CowFileCloning = false

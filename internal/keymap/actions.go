@@ -205,6 +205,10 @@ const (
 	ActionJobsQueueDown     = "jobs.queue-down"
 	ActionJobsAnswerBlocker = "jobs.answer-blocker"
 
+	ActionJobsRateLimitIncrease = "jobs.rate-limit-increase"
+	ActionJobsRateLimitDecrease = "jobs.rate-limit-decrease"
+	ActionJobsRateLimitClear    = "jobs.rate-limit-clear"
+
 	// Commands screen + external command execution
 	ActionCommandsOpen      = "commands.open"
 	ActionCommandsClose     = "commands.close"
@@ -448,6 +452,10 @@ var KnownActions = map[string]struct{}{
 	ActionJobsQueueUp:       {},
 	ActionJobsQueueDown:     {},
 	ActionJobsAnswerBlocker: {},
+
+	ActionJobsRateLimitIncrease: {},
+	ActionJobsRateLimitDecrease: {},
+	ActionJobsRateLimitClear:    {},
 
 	ActionCommandsOpen:      {},
 	ActionCommandsClose:     {},

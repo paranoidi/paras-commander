@@ -16,6 +16,7 @@ func DefinitionsJobs() []Definition {
 				{Action: keymap.ActionJobsQueueUp, Label: "Move up in queue", Shortcut: 'u'},
 				{Action: keymap.ActionJobsQueueDown, Label: "Move down in queue", Shortcut: 'd'},
 				{Action: keymap.ActionJobsClearFinished, Label: "Clear finished", Shortcut: 'l'},
+				{Action: keymap.ActionJobsRateLimitClear, Label: "Clear rate limit", Shortcut: 'C'},
 				{Action: keymap.ActionJobsClose, Label: "Back to file view", Shortcut: 'b'},
 			},
 		},

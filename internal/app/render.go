@@ -213,6 +213,7 @@ func (a *App) render() {
 	a.model.MenuBarJobs = a.jobsCtrl.MenuBarStripSnapshot()
 	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
 	a.model.FooterKeys = a.activeFooterKeys()
+	a.model.JobsTransferRateLimitBPS = a.jobState.TransferRateLimit()
 	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsage.DescendIntoMountPoints
 	a.model.DiskUsageGoduIgnore = a.disk.ignore
 	a.previewCtrl.SnapshotPreviewDrawStates()
