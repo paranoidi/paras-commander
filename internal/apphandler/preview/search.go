@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
+	"github.com/paranoidi/paras-commander/internal/ui/geom"
 )
 
 // startFilePreviewSearch begins an incremental "/" search in the fullscreen preview.
@@ -100,7 +101,8 @@ func (h *Handler) filePreviewSearchNav(dir int) {
 	h.scrollFilePreviewToSearchMatch(next)
 }
 
-// scrollFilePreviewToSearchMatch scrolls the fullscreen preview so search match idx is visible.
+// scrollFilePreviewToSearchMatch scrolls the fullscreen preview so search match idx is centered
+// in the viewport when possible (clamped at the start/end of the file).
 func (h *Handler) scrollFilePreviewToSearchMatch(idx int) {
 	h.mu.RLock()
 	st := h.model.FullscreenFilePreview
@@ -108,10 +110,11 @@ func (h *Handler) scrollFilePreviewToSearchMatch(idx int) {
 	if idx < 0 || idx >= len(st.Search.Matches) {
 		return
 	}
-	tw, ok := h.previewTextWidth(previewTargetFullscreen)
-	if !ok || tw < 1 {
+	tw, ch, lc := h.fullscreenFilePreviewScrollMetrics()
+	if tw < 1 || ch < 1 {
 		return
 	}
-	offset := st.SourceLineToScrollOffset(st.Search.Matches[idx].Line, tw, tcell.StyleDefault)
+	matchLine := st.SourceLineToScrollOffset(st.Search.Matches[idx].Line, tw, tcell.StyleDefault)
+	offset := geom.ScrollOffset(matchLine, ch, lc)
 	h.hunkScrollTo(previewTargetFullscreen, offset)
 }
