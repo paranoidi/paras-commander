@@ -70,6 +70,7 @@ func paintBrowserPanelsInScope(
 	secondaryOtherPanelPath := model.Primary.PathString()
 	syncDriver := model.SyncDriverPanelID()
 	quickViewDriver := model.QuickViewDriverPanelID()
+	quickViewIndicatorActive, quickViewIndicatorRight := quickViewIndicatorSide(model, primaryFile, secondaryFile)
 
 	painted := false
 	pinnedPaths := PinnedPathSet(model.PinnedItems)
@@ -86,6 +87,8 @@ func paintBrowserPanelsInScope(
 			ViMotionActive:            viMotionActive(model, PrimaryPanel),
 			CursorNameHintFallbackOut: cursorNameHintFallbackOut(primaryFileListFocus, &cursorNameHintFallback),
 			CursorNameHintPinnedOut:   model.CursorNameHintPinOutPrimary,
+			QuickViewIndicator:        quickViewIndicatorActive && model.ActivePanel == PrimaryPanel,
+			QuickViewIndicatorRight:   quickViewIndicatorRight,
 		}
 		if titlePath, endLabel, ok := model.quickViewDirOverlayTitleChrome(PrimaryPanel, model.Primary.PathString()); ok {
 			primaryCtx.TitlePath = titlePath
@@ -126,6 +129,8 @@ func paintBrowserPanelsInScope(
 			ViMotionActive:            viMotionActive(model, SecondaryPanel),
 			CursorNameHintFallbackOut: cursorNameHintFallbackOut(secondaryFileListFocus, &cursorNameHintFallback),
 			CursorNameHintPinnedOut:   model.CursorNameHintPinOutSecondary,
+			QuickViewIndicator:        quickViewIndicatorActive && model.ActivePanel == SecondaryPanel,
+			QuickViewIndicatorRight:   quickViewIndicatorRight,
 		}
 		if titlePath, endLabel, ok := model.quickViewDirOverlayTitleChrome(SecondaryPanel, model.Secondary.PathString()); ok {
 			secondaryCtx.TitlePath = titlePath

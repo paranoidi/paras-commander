@@ -134,7 +134,17 @@ type PanelContext struct {
 	TitlePath string
 	// TitleEndLabel, when non-empty, replaces volume free-space on the title end (title style).
 	TitleEndLabel string
+	// QuickViewIndicator marks this panel's cursor row with a one-cell arrow glyph overlapping
+	// the border, pointing toward the quick-view preview panel. QuickViewIndicatorRight selects
+	// which border/glyph: true draws U+E0B0 on the right border, false draws U+E0B2 on the left.
+	QuickViewIndicator      bool
+	QuickViewIndicatorRight bool
 }
+
+const (
+	quickViewIndicatorGlyphRight rune = ''
+	quickViewIndicatorGlyphLeft  rune = ''
+)
 
 // PanelDisplayConfig carries feature-flag and data inputs to drawPanel.
 type PanelDisplayConfig struct {
@@ -343,6 +353,33 @@ func drawPanel(screen tcell.Screen, rect Rect, state panel.State, panelStyle Pan
 	} else {
 		drawPanelCursorNameHintForState(screen, rect, ctx.PanelID, state, bottomCtx, ctx.FileListActive, ctx.ChromeBlocked, titleStyle, display.ShowIcons, nameWidth, display.JobMarks, ctx.CursorNameHintFallbackOut, ctx.CursorNameHintPinnedOut)
 	}
+
+	if ctx.QuickViewIndicator {
+		drawPanelQuickViewIndicator(screen, rect, state, ctx, panelStyle.Styles, borderStyle, visibleRows)
+	}
+}
+
+// drawPanelQuickViewIndicator paints the cursor row's border-overlap arrow glyph pointing
+// toward the quick-view preview panel. It paints last — after the scrollbar, which shares the
+// same border column for every visible row — so its track/thumb glyph never overdraws it.
+func drawPanelQuickViewIndicator(screen tcell.Screen, rect Rect, state panel.State, ctx PanelContext, styles theme.Theme, borderStyle tcell.Style, visibleRows int) {
+	entry, _, ok := state.VisibleEntry(state.Cursor)
+	if !ok {
+		return
+	}
+	row := state.Cursor - state.ScrollOffset
+	if row < 0 || row >= visibleRows {
+		return
+	}
+	glyph := quickViewIndicatorGlyphLeft
+	x := rect.X
+	if ctx.QuickViewIndicatorRight {
+		glyph = quickViewIndicatorGlyphRight
+		x = rect.X + rect.Width - 1
+	}
+	style, _ := panelRowStyle(entry, state.Cursor, state, ctx, styles)
+	_, rowBG, _ := style.Decompose()
+	screen.SetContent(x, rect.Y+2+row, glyph, nil, borderStyle.Foreground(rowBG))
 }
 
 // panelCarouselParams carries drawPanel's locals needed to paint the carousel-mode

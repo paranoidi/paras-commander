@@ -2,6 +2,7 @@ package ui
 
 import (
 	"testing"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -252,6 +253,60 @@ func TestPaintBrowserListNavPanelOnlyTransferTargetBorderColor(t *testing.T) {
 	}
 	if priFG == notWantFG {
 		t.Fatal("active panel border should not use the plain active frame color while it is the transfer target")
+	}
+}
+
+// TestPaintBrowserListNavPanelOnlyShowsQuickViewIndicator guards against the cheaper
+// single-panel partial repaint (the path App.renderBrowserListNavUpdate falls into while a nav
+// key is held down and quick-view coalescing is active — see browserListNavPartialRenderEligible
+// in internal/app/render.go) losing the quick-view cursor-row indicator glyph. It has its own
+// PanelContext construction, separate from drawBrowserPanel's, so it needs the same wiring.
+func TestPaintBrowserListNavPanelOnlyShowsQuickViewIndicator(t *testing.T) {
+	t.Parallel()
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	t.Cleanup(screen.Fini)
+	const w, h = 80, 24
+	screen.SetSize(w, h)
+
+	model := Model{
+		ViewMode:         ViewBrowser,
+		ActivePanel:      PrimaryPanel,
+		ActiveSubFocus:   SubFocusFileList,
+		QuickViewEnabled: true,
+		QuickViewPanel:   PrimaryPanel,
+		Primary: panel.State{
+			Path: pathloc.MustParse("/local/home"),
+			Entries: []localfs.Entry{
+				{Name: "alpha", Path: "/local/home/alpha", Type: localfs.EntryFile},
+				{Name: "beta", Path: "/local/home/beta", Type: localfs.EntryFile},
+			},
+			Cursor: 0,
+		},
+		Secondary: panel.State{
+			Path: pathloc.MustParse("/nas/share"),
+		},
+	}
+	styles := theme.Default()
+	layout := CalculateLayoutWithOrientation(w, h, true, PanelPaneSplit{
+		ActivePanel:     PrimaryPanel,
+		ActivePercent:   50,
+		InactivePercent: 50,
+	}, SplitHorizontal, 0, 0)
+
+	Render(screen, model, styles)
+	model.Primary.Cursor = 1
+	if !PaintBrowserListNavPanelOnly(screen, layout, model, styles, PrimaryPanel) {
+		t.Fatal("expected list-nav partial paint to succeed")
+	}
+
+	x, y := layout.Primary.X+layout.Primary.Width-1, layout.Primary.Y+2+model.Primary.Cursor
+	ch, _, _ := screen.Get(x, y)
+	r, _ := utf8.DecodeRuneInString(ch)
+	if r != quickViewIndicatorGlyphRight {
+		t.Fatalf("indicator glyph at (%d,%d) = %q, want %q — partial nav repaint must carry the same QuickViewIndicator wiring as the full render", x, y, r, quickViewIndicatorGlyphRight)
 	}
 }
 

@@ -585,6 +585,28 @@ type browserPanelSide struct {
 	IsTransferTarget           bool
 	ViMotionActive             bool
 	CursorNameHintPinnedOut    *string
+	// QuickViewIndicatorActive is true for the side currently driving quick view (the active
+	// panel showing the file list while the other side shows the preview); see PanelContext.
+	QuickViewIndicatorActive bool
+	QuickViewIndicatorRight  bool
+}
+
+// quickViewIndicatorSide reports whether quick view is currently displaying (active) and, if so,
+// whether the preview panel sits physically to the right of the driver (right) — the cursor-row
+// arrow glyph paints on whichever border faces it. Takes the driver and other panel's already
+// swap-resolved file rects (layout.Primary/Secondary post-SwapPanes) rather than re-deriving the
+// swap logic, so it's a plain rect-X comparison. Shared by the full render (drawBrowserView) and
+// the partial nav/disk-usage repaints (paintBrowserPanelsInScope), which build their own
+// PanelContext independently and must agree on this.
+func quickViewIndicatorSide(model Model, primaryFile, secondaryFile Rect) (active, right bool) {
+	if !model.QuickViewDisplayActive() {
+		return false, false
+	}
+	driverRect, otherRect := primaryFile, secondaryFile
+	if model.ActivePanel == SecondaryPanel {
+		driverRect, otherRect = secondaryFile, primaryFile
+	}
+	return true, otherRect.X > driverRect.X
 }
 
 // viMotionActive reports whether the file-list panel border should render in the vi-motion accent color.
@@ -625,6 +647,8 @@ func drawBrowserPanel(screen tcell.Screen, model Model, styles theme.Theme, sync
 			ViMotionActive:            side.ViMotionActive,
 			CursorNameHintFallbackOut: cursorNameHintFallbackOut(side.FileListFocus, cursorNameHintFallback),
 			CursorNameHintPinnedOut:   side.CursorNameHintPinnedOut,
+			QuickViewIndicator:        side.QuickViewIndicatorActive,
+			QuickViewIndicatorRight:   side.QuickViewIndicatorRight,
 		}
 		if titlePath, endLabel, ok := model.quickViewDirOverlayTitleChrome(side.PanelID, ownState.PathString()); ok {
 			panelCtx.TitlePath = titlePath
@@ -691,6 +715,8 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 	syncDriver := model.SyncDriverPanelID()
 	quickViewDriver := model.QuickViewDriverPanelID()
 	pinnedPaths := PinnedPathSet(model.PinnedItems)
+	quickViewIndicatorActive, quickViewIndicatorRight := quickViewIndicatorSide(model, primaryFile, secondaryFile)
+
 	var cursorNameHintFallback CursorNameHintFallback
 	drawBrowserPanel(screen, model, styles, syncDriver, quickViewDriver, pinnedPaths, &cursorNameHintFallback, browserPanelSide{
 		PanelID: PrimaryPanel, ColumnWidth: layout.Primary.Width, FileRect: primaryFile, StripRect: leftStrip,
@@ -698,7 +724,9 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 		OtherPanelPath: primaryOtherPanelPath, SelectionsBottomHint: primarySelectionsBottomHint,
 		SelectionSizeOnFileBottom: primarySelectionSizeOnFileBottom, SelectionSizeOnStripBottom: leftSelectionSizeOnStripBottom,
 		IsTransferTarget: model.DestinationTargetPrimary, CursorNameHintPinnedOut: model.CursorNameHintPinOutPrimary,
-		ViMotionActive: viMotionActive(model, PrimaryPanel),
+		ViMotionActive:           viMotionActive(model, PrimaryPanel),
+		QuickViewIndicatorActive: quickViewIndicatorActive && model.ActivePanel == PrimaryPanel,
+		QuickViewIndicatorRight:  quickViewIndicatorRight,
 	})
 	drawBrowserPanel(screen, model, styles, syncDriver, quickViewDriver, pinnedPaths, &cursorNameHintFallback, browserPanelSide{
 		PanelID: SecondaryPanel, ColumnWidth: layout.Secondary.Width, FileRect: secondaryFile, StripRect: rightStrip,
@@ -706,7 +734,9 @@ func drawBrowserView(screen tcell.Screen, layout geom.Layout, model Model, style
 		OtherPanelPath: secondaryOtherPanelPath, SelectionsBottomHint: secondarySelectionsBottomHint,
 		SelectionSizeOnFileBottom: secondarySelectionSizeOnFileBottom, SelectionSizeOnStripBottom: rightSelectionSizeOnStripBottom,
 		IsTransferTarget: model.DestinationTargetSecondary, CursorNameHintPinnedOut: model.CursorNameHintPinOutSecondary,
-		ViMotionActive: viMotionActive(model, SecondaryPanel),
+		ViMotionActive:           viMotionActive(model, SecondaryPanel),
+		QuickViewIndicatorActive: quickViewIndicatorActive && model.ActivePanel == SecondaryPanel,
+		QuickViewIndicatorRight:  quickViewIndicatorRight,
 	})
 	if model.TerminalPanel.Visible && layout.Terminal.Height > 0 {
 		drawTerminalPanel(screen, layout.Terminal, model.TerminalPanel, styles)
