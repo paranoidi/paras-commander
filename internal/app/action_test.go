@@ -298,12 +298,12 @@ func TestActionFromKeyMapsCtrlPToDuplicate(t *testing.T) {
 	}
 }
 
-func TestActionFromKeyMapsCtrlLToFlatten(t *testing.T) {
+func TestActionFromKeyMapsCtrlLToSymlink(t *testing.T) {
 	km := defaultKeymap(t)
 	ev := tcell.NewEventKey(tcell.KeyCtrlL, 0, tcell.ModCtrl)
 	got := lookupActionForView(ev, km, nil, nil, nil, nil, nil, nil, ui.ViewBrowser)
-	if got != keymap.ActionFileFlatten {
-		t.Fatalf("actionFromKeyEvent() = %v, want ActionFileFlatten", got)
+	if got != keymap.ActionFileSymlink {
+		t.Fatalf("actionFromKeyEvent() = %v, want ActionFileSymlink", got)
 	}
 }
 

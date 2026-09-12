@@ -59,6 +59,7 @@ var leaderMenuGroupActions = map[string][]string{
 		ActionFileEdit,
 		ActionFileMkdir,
 		ActionFileMkdirOpenInOther,
+		ActionFileSymlink,
 		ActionFileDuplicate,
 		ActionFileView,
 		ActionFileQuickView,

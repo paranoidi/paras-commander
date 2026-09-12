@@ -265,9 +265,9 @@ func TestBuiltinLeaderMenuMessagesKeyOpensMessagesView(t *testing.T) {
 	app := testLeaderMenuApp(t)
 	app.model.ViewMode = ui.ViewBrowser
 	app.openBuiltinLeaderMenu()
-	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'l', tcell.ModNone))
+	app.handleLeaderMenuKey(tcell.NewEventKey(tcell.KeyRune, 'L', tcell.ModNone))
 	if app.model.ViewMode != ui.ViewMessages {
-		t.Fatalf("view after l = %v, want messages", app.model.ViewMode)
+		t.Fatalf("view after L = %v, want messages", app.model.ViewMode)
 	}
 }
 

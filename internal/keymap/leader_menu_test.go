@@ -48,8 +48,8 @@ func TestDefaultLeaderKeysAllowCasePairs(t *testing.T) {
 	if keys[ActionAppShowHelp] != "?" {
 		t.Fatalf("help = %q, want ?", keys[ActionAppShowHelp])
 	}
-	if keys[ActionJobsOpen] != "j" || keys[ActionMessagesOpen] != "l" || keys[ActionCommandsOpen] != "E" {
-		t.Fatalf("views = jobs %q messages %q commands %q, want j / l / E", keys[ActionJobsOpen], keys[ActionMessagesOpen], keys[ActionCommandsOpen])
+	if keys[ActionJobsOpen] != "j" || keys[ActionMessagesOpen] != "L" || keys[ActionCommandsOpen] != "E" {
+		t.Fatalf("views = jobs %q messages %q commands %q, want j / L / E", keys[ActionJobsOpen], keys[ActionMessagesOpen], keys[ActionCommandsOpen])
 	}
 }
 
@@ -188,8 +188,8 @@ func TestDefaultBundleLeaderKey(t *testing.T) {
 			t.Fatalf("invalid entry: %+v", e)
 		}
 	}
-	if actions != 34 {
-		t.Fatalf("action entries = %d, want 34", actions)
+	if actions != 35 {
+		t.Fatalf("action entries = %d, want 35", actions)
 	}
 }
 

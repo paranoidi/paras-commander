@@ -1165,12 +1165,14 @@ func DefaultActionSpecs() []ActionSpec {
 			Keywords:    []string{"owner", "group", "chown"},
 		},
 		{
-			ID:          ActionFileSymlink,
-			Views:       HelpBrowser,
-			Title:       "Symlink",
-			Section:     "File",
-			DefaultKeys: nil, // unbound by default (menu only)
-			Keywords:    []string{"link", "symbolic"},
+			ID:           ActionFileSymlink,
+			Views:        HelpBrowser,
+			Title:        "Symlink",
+			Section:      "File",
+			DefaultKeys:  []string{"C-l"},
+			PreferredKey: "C-l",
+			Keywords:     []string{"link", "symbolic"},
+			LeaderKey:    "l",
 		},
 		{
 			ID:          ActionFileHardlink,
@@ -1367,10 +1369,10 @@ func DefaultActionSpecs() []ActionSpec {
 			Views:        HelpBrowser,
 			Title:        "Flatten directories",
 			Section:      "Tools",
-			DefaultKeys:  []string{"C-l"},
-			PreferredKey: "C-l",
+			DefaultKeys:  []string{"C-z"},
+			PreferredKey: "C-z",
 			Keywords:     []string{"flatten", "hoist", "directory"},
-			LeaderKey:    "t",
+			LeaderKey:    "z",
 		},
 
 		// ── Commands ──
@@ -1433,7 +1435,7 @@ func DefaultActionSpecs() []ActionSpec {
 			DefaultKeys:  []string{"M-l"},
 			PreferredKey: "M-l",
 			Keywords:     []string{"log", "toast", "status", "banner"},
-			LeaderKey:    "l",
+			LeaderKey:    "L",
 		},
 		{
 			ID:          ActionMessagesClose,
