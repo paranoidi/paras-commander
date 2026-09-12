@@ -91,6 +91,17 @@ func TestExtractLongestCommonName_PreservesLeadingDot(t *testing.T) {
 	}
 }
 
+func TestExtractLongestCommonName_SuffixWithDots(t *testing.T) {
+	names := []string{
+		"01.Wandering.Otter.Meadow.avi",
+		"02.Wandering.Otter.Meadow.avi",
+	}
+	got := ExtractLongestCommonName(names)
+	if got == "" {
+		t.Fatalf("ExtractLongestCommonName() = %q, want non-empty", got)
+	}
+}
+
 func TestExtractLongestCommonName_PrefixFromNameStart(t *testing.T) {
 	names := []string{
 		"aproject 01",

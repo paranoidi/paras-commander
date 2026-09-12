@@ -91,8 +91,9 @@ func isWeakCommonNameMatch(names []string, raw, normalized string) bool {
 	if !suffixOnly {
 		return false
 	}
-	// Reject extension-like suffix fragments (e.g. ".txt" shared by unrelated basenames).
-	return strings.Contains(normalized, ".") || len([]rune(normalized)) <= 4
+	// Reject short suffix-only fragments (e.g. a bare extension like "txt" or "mkv"
+	// shared by otherwise-unrelated basenames).
+	return len([]rune(normalized)) <= 4
 }
 
 func normalizeExtractedCommonName(s string, startsAtNameStart bool) string {
