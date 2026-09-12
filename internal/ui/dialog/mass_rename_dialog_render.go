@@ -267,10 +267,10 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 	caseFocusIdx := MassRenameCaseFocusIdx(state)
 	stripX := optX + utf8.RuneCountInString(draw.CheckboxText("Show only modified", false)) + 3
 	caseX := stripX + utf8.RuneCountInString(draw.CheckboxText("Trim whitespace", false)) + 3
-	draw.DrawDialogCheckbox(screen, optX, y, "Show only modified", 'm', state.MassRenameShowOnlyModified, state.FocusedField == showModifiedFocusIdx, styles)
-	draw.DrawDialogCheckbox(screen, stripX, y, "Trim whitespace", 't', state.MassRenameStripSpaces, state.FocusedField == stripFocusIdx, styles)
+	draw.DrawDialogCheckbox(screen, optX, y, "Show only modified", 'm', state.MassRenameShowOnlyModified, state.FocusedField == showModifiedFocusIdx, false, styles)
+	draw.DrawDialogCheckbox(screen, stripX, y, "Trim whitespace", 't', state.MassRenameStripSpaces, state.FocusedField == stripFocusIdx, false, styles)
 	if caseFocusIdx >= 0 {
-		draw.DrawDialogCheckbox(screen, caseX, y, "Case insensitive", 'i', state.MassRenameCaseFold, state.FocusedField == caseFocusIdx, styles)
+		draw.DrawDialogCheckbox(screen, caseX, y, "Case insensitive", 'i', state.MassRenameCaseFold, state.FocusedField == caseFocusIdx, false, styles)
 	}
 	y++
 	if y >= innerBottom {
@@ -290,12 +290,12 @@ func drawMassRenameDialog(screen tcell.Screen, rect Rect, state FileDialogState,
 		if y >= innerBottom {
 			return
 		}
-		draw.DrawDialogCheckbox(screen, optX, y, "Capitalize each word", 'w', state.MassRenameCapEachWord, state.FocusedField == MassRenameCapEachWordFocusIdx(state), styles)
+		draw.DrawDialogCheckbox(screen, optX, y, "Capitalize each word", 'w', state.MassRenameCapEachWord, state.FocusedField == MassRenameCapEachWordFocusIdx(state), false, styles)
 		y++
 		if y >= innerBottom {
 			return
 		}
-		draw.DrawDialogCheckbox(screen, optX, y, "Treat punctuation as separators", 'p', state.MassRenameCapPunctSep, state.FocusedField == MassRenameCapPunctFocusIdx(state), styles)
+		draw.DrawDialogCheckbox(screen, optX, y, "Treat punctuation as separators", 'p', state.MassRenameCapPunctSep, state.FocusedField == MassRenameCapPunctFocusIdx(state), false, styles)
 		y++
 		if y >= innerBottom {
 			return

@@ -159,9 +159,9 @@ func DrawThemeDialog(screen tcell.Screen, layout Layout, state ThemeDialogState,
 	}, true)
 
 	// --- Checkboxes ---
-	draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Selected", 'S', true, false, styles)
+	draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Selected", 'S', true, false, false, styles)
 	previewY++
-	draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, styles)
+	draw.DrawDialogCheckbox(screen, previewLeft, previewY, "Unselected", 'U', false, false, false, styles)
 	previewY++
 
 	// --- Separator ---

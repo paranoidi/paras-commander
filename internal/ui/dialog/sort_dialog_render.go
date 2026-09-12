@@ -39,7 +39,7 @@ func DrawSortDialog(screen tcell.Screen, layout Layout, state SortDialogState, s
 		{"Reverse", 'r', state.SortReverse, state.Focus == 5},
 		{"Directories first", 'd', state.DirectoriesFirst, state.Focus == 6},
 	} {
-		draw.DrawDialogCheckbox(screen, primaryCol, y, cb.label, cb.shortcut, cb.checked, cb.isFocus, styles)
+		draw.DrawDialogCheckbox(screen, primaryCol, y, cb.label, cb.shortcut, cb.checked, cb.isFocus, false, styles)
 		y++
 	}
 

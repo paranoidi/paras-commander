@@ -217,6 +217,7 @@ type Theme struct {
 	DialogOptionActiveSelected     tcell.Style
 	DialogOptionSelected           tcell.Style
 	DialogOptionInvalid            tcell.Style
+	DialogOptionDisabled           tcell.Style
 	DialogStatusSelectionSize      tcell.Style
 	DialogProgressTrack            tcell.Style
 	DialogProgressFill             tcell.Style
@@ -358,6 +359,11 @@ func (t Theme) DialogOptionRowStyle(focused, selected bool) tcell.Style {
 // DialogOptionInvalidStyle returns the resolved style for invalid/missing option rows.
 func (t Theme) DialogOptionInvalidStyle() tcell.Style {
 	return mergeForegroundOnSurface(t.DialogOptionInvalid, t.DialogSurface)
+}
+
+// DialogOptionDisabledStyle returns the resolved style for a disabled (inert) option row.
+func (t Theme) DialogOptionDisabledStyle() tcell.Style {
+	return mergeForegroundOnSurface(t.DialogOptionDisabled, t.DialogSurface)
 }
 
 // DialogStatusSelectionSizeStyle returns the find-dialog selection count/size label on a horizontal separator.
@@ -998,6 +1004,7 @@ var requiredStyleKeys = []string{
 	"dialog.option.active.selected",
 	"dialog.option.selected",
 	"dialog.option.invalid",
+	"dialog.option.disabled",
 	"dialog.status.selection_size",
 	"dialog.progress.track",
 	"dialog.progress.fill",
@@ -1308,6 +1315,7 @@ func parse(data []byte) (Theme, error) {
 		"dialog.option.active.selected":  {},
 		"dialog.option.selected":         {},
 		"dialog.option.invalid":          {},
+		"dialog.option.disabled":         {},
 		"dialog.status.selection_size":   {},
 		"dialog.progress.label.on_fill":  {},
 		"dialog.progress.label.on_track": {},
@@ -1512,6 +1520,7 @@ func parse(data []byte) (Theme, error) {
 		DialogOptionActiveSelected:     styles["dialog.option.active.selected"],
 		DialogOptionSelected:           styles["dialog.option.selected"],
 		DialogOptionInvalid:            styles["dialog.option.invalid"],
+		DialogOptionDisabled:           styles["dialog.option.disabled"],
 		DialogStatusSelectionSize:      styles["dialog.status.selection_size"],
 		DialogProgressTrack:            styles["dialog.progress.track"],
 		DialogProgressFill:             styles["dialog.progress.fill"],

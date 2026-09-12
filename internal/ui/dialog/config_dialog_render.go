@@ -52,13 +52,13 @@ func DrawConfigDialog(screen tcell.Screen, layout Layout, state ConfigDialogStat
 	y := rect.Y + 1
 	primitive.Text(screen, primaryCol, y, rect.Width-4, "View options:", styles.DialogText.Background(dbg))
 	y++
-	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Use nerdfont icons", 'd', state.UseNerdfontIcons, state.Focus == 0, styles)
+	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Use nerdfont icons", 'd', state.UseNerdfontIcons, state.Focus == 0, false, styles)
 	y++
-	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Zoom active panel", 'z', state.ZoomActivePanel, state.Focus == 1, styles)
+	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Zoom active panel", 'z', state.ZoomActivePanel, state.Focus == 1, false, styles)
 	y++
-	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Shrunken shows only name", 's', state.ShrunkenShowsNameOnly, state.Focus == 2, styles)
+	draw.DrawDialogCheckbox(screen, leftOptionCol, y, "Shrunken shows only name", 's', state.ShrunkenShowsNameOnly, state.Focus == 2, false, styles)
 	y++
-	draw.DrawDialogCheckbox(screen, leftOptionCol, y, configDialogHorizontalSplitLabel, 'h', state.PaneSplitStacked, state.Focus == 3, styles)
+	draw.DrawDialogCheckbox(screen, leftOptionCol, y, configDialogHorizontalSplitLabel, 'h', state.PaneSplitStacked, state.Focus == 3, false, styles)
 	y++
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++

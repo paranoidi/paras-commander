@@ -37,12 +37,18 @@ func DrawDialogCheckbox(
 	shortcut rune,
 	checked bool,
 	focused bool,
+	disabled bool,
 	styles theme.Theme,
 ) {
 	style := styles.DialogOptionRowStyle(focused, checked)
+	accent := styles.DialogAccent
+	if disabled {
+		style = styles.DialogOptionDisabledStyle()
+		accent = style
+	}
 	marker := " " + styles.SymbolDialogCheckbox(checked) + " "
 	primitive.Text(screen, x, y, utf8.RuneCountInString(marker), marker, style)
-	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, styles.DialogAccent)
+	drawDialogItem(screen, x+utf8.RuneCountInString(marker), y, label, shortcut, style, accent)
 }
 
 func DrawDialogRadio(

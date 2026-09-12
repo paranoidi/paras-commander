@@ -54,11 +54,11 @@ func DrawImageCapabilityDialog(screen tcell.Screen, layout Layout, state ImageCa
 	y := rect.Y + 1
 	primitive.Text(screen, textX, y, textW, "Confirm terminal capabilities:", textStyle)
 	y++
-	draw.DrawDialogCheckbox(screen, optionX, y, "Sixel supported", 's', state.SixelSupported, state.Focus == imageCapabilityDialogFocusSixelCheckbox, styles)
+	draw.DrawDialogCheckbox(screen, optionX, y, "Sixel supported", 's', state.SixelSupported, state.Focus == imageCapabilityDialogFocusSixelCheckbox, false, styles)
 	y++
-	draw.DrawDialogCheckbox(screen, optionX, y, "Kitty supported", 'k', state.KittySupported, state.Focus == imageCapabilityDialogFocusKittyCheckbox, styles)
+	draw.DrawDialogCheckbox(screen, optionX, y, "Kitty supported", 'k', state.KittySupported, state.Focus == imageCapabilityDialogFocusKittyCheckbox, false, styles)
 	y++
-	draw.DrawDialogCheckbox(screen, optionX, y, "Kitty placeholder supported", 'p', state.KittyPlaceholderSupported, state.Focus == imageCapabilityDialogFocusPlaceholder, styles)
+	draw.DrawDialogCheckbox(screen, optionX, y, "Kitty placeholder supported", 'p', state.KittyPlaceholderSupported, state.Focus == imageCapabilityDialogFocusPlaceholder, false, styles)
 	y++
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++

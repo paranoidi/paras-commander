@@ -13,6 +13,7 @@ var dialogSurfaceForegroundStyleKeys = map[string]struct{}{
 	"dialog.option.active.selected":  {},
 	"dialog.option.selected":         {},
 	"dialog.option.invalid":          {},
+	"dialog.option.disabled":         {},
 	"dialog.status.selection_size":   {},
 	"dialog.progress.label.on_fill":  {},
 	"dialog.progress.label.on_track": {},

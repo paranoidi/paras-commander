@@ -86,15 +86,15 @@ func DrawFilterDialog(screen tcell.Screen, layout Layout, state FilterDialogStat
 	}
 
 	col2X := optionX + utf8.RuneCountInString(draw.CheckboxText("Files only", false)) + 3 // +1 pad +2 gap
-	draw.DrawDialogCheckbox(screen, optionX, y, "Files only", 'F', state.FilesOnly, state.Focus == FilterFocusFilesOnly, styles)
-	draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", 'D', state.DirsOnly, state.Focus == FilterFocusDirsOnly, styles)
+	draw.DrawDialogCheckbox(screen, optionX, y, "Files only", 'F', state.FilesOnly, state.Focus == FilterFocusFilesOnly, false, styles)
+	draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", 'D', state.DirsOnly, state.Focus == FilterFocusDirsOnly, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
 
 	if FilterShowsCaseSensitive(state) {
-		draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == FilterFocusCase, styles)
+		draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == FilterFocusCase, false, styles)
 	}
 	y++
 	if y >= innerBottom {

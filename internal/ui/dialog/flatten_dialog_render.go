@@ -29,8 +29,8 @@ func DrawFlattenDialog(screen tcell.Screen, layout Layout, state FlattenDialogSt
 	sep1Y := rect.Y + 3
 	draw.DrawDialogHSeparator(screen, rect, sep1Y, borderStyle)
 
-	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), sep1Y+1, "Recursive flatten", 'R', state.Recursive, state.FocusField == 1, styles)
-	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), sep1Y+2, "Remove empty directories", 'E', state.RemoveEmpty, state.FocusField == 2, styles)
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), sep1Y+1, "Recursive flatten", 'R', state.Recursive, state.FocusField == 1, false, styles)
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), sep1Y+2, "Remove empty directories", 'E', state.RemoveEmpty, state.FocusField == 2, false, styles)
 
 	sep2Y := sep1Y + 3
 	draw.DrawDialogHSeparator(screen, rect, sep2Y, borderStyle)

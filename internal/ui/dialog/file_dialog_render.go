@@ -416,11 +416,11 @@ func drawRunForEachDialogFields(screen tcell.Screen, rect Rect, borderStyle tcel
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++
 	if y < innerBottom {
-		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Run in each selected directory", 'R', state.RunForEachInDirs, state.FocusedField == len(state.Fields), styles)
+		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Run in each selected directory", 'R', state.RunForEachInDirs, state.FocusedField == len(state.Fields), false, styles)
 	}
 	y++
 	if y < innerBottom {
-		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Allocate pseudo-TTY (interactive)", 'T', state.RunForEachPTY, state.FocusedField == len(state.Fields)+1, styles)
+		draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Allocate pseudo-TTY (interactive)", 'T', state.RunForEachPTY, state.FocusedField == len(state.Fields)+1, false, styles)
 	}
 	y++
 
@@ -677,10 +677,10 @@ func drawRenameToolContent(screen tcell.Screen, rect Rect, state FileDialogState
 		return
 	}
 	if state.RenamePhase == RenamePhaseSanitize {
-		draw.DrawDialogCheckbox(screen, optionCol, y, `Replace "." with space`, '.', state.RenameSanitizeDots, state.FocusedField == 0, styles)
+		draw.DrawDialogCheckbox(screen, optionCol, y, `Replace "." with space`, '.', state.RenameSanitizeDots, state.FocusedField == 0, false, styles)
 		y++
 		if y < innerBottom {
-			draw.DrawDialogCheckbox(screen, optionCol, y, `Replace "_" with space`, '_', state.RenameSanitizeUnderscores, state.FocusedField == 1, styles)
+			draw.DrawDialogCheckbox(screen, optionCol, y, `Replace "_" with space`, '_', state.RenameSanitizeUnderscores, state.FocusedField == 1, false, styles)
 		}
 	} else if state.RenamePhase == RenamePhaseSlugify {
 		dotSel := state.RenameSlugifySep == RenameSlugifyDot
@@ -780,7 +780,7 @@ func drawRenameFocusCheckbox(screen tcell.Screen, rect Rect, state FileDialogSta
 	if y >= rect.Y+rect.Height-2 {
 		return
 	}
-	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, renameFocusCheckboxLabel(state), 'A', state.RenameFocusAfter, state.FocusedField == len(state.Fields), styles)
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, renameFocusCheckboxLabel(state), 'A', state.RenameFocusAfter, state.FocusedField == len(state.Fields), false, styles)
 }
 
 // drawMkdirActionRows draws the radio button section under the directory-name input

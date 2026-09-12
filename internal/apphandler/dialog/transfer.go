@@ -70,6 +70,7 @@ func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 		st.PreservePermissions = cfg.Operations.PreservePermissions
 		st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
 		st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
+		st.SourceIsRemote = h.host.ActivePanel().Path.IsRemote()
 	}
 	if root, ok := h.multiDirSelectionCommonRoot(); ok {
 		st.CommonRoot = root
@@ -167,6 +168,7 @@ func (h *Handler) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, abs
 		st.PreservePermissions = cfg.Operations.PreservePermissions
 		st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
 		st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
+		st.SourceIsRemote = h.host.ActivePanel().Path.IsRemote()
 	}
 	h.model.TransferDialog = st
 	h.host.ClearTransientMessage()
@@ -197,7 +199,9 @@ func (h *Handler) handleTransferAltShortcut(event *tcell.EventKey) bool {
 				d.PreserveTimestamps = !d.PreserveTimestamps
 				return true
 			case 'd', 'D':
-				d.DereferenceSymlinks = !d.DereferenceSymlinks
+				if !d.DereferenceUnsupported() {
+					d.DereferenceSymlinks = !d.DereferenceSymlinks
+				}
 				return true
 			}
 		}
@@ -280,7 +284,7 @@ func (h *Handler) handleTransferCheckboxRune(event *tcell.EventKey) {
 				d.PreserveTimestamps = !d.PreserveTimestamps
 			}
 		case 'd', 'D':
-			if d.FocusField == 3 {
+			if d.FocusField == 3 && !d.DereferenceUnsupported() {
 				d.DereferenceSymlinks = !d.DereferenceSymlinks
 			}
 		case ' ':
@@ -290,7 +294,9 @@ func (h *Handler) handleTransferCheckboxRune(event *tcell.EventKey) {
 			case 2:
 				d.PreserveTimestamps = !d.PreserveTimestamps
 			case 3:
-				d.DereferenceSymlinks = !d.DereferenceSymlinks
+				if !d.DereferenceUnsupported() {
+					d.DereferenceSymlinks = !d.DereferenceSymlinks
+				}
 			}
 		}
 	}

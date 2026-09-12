@@ -63,9 +63,9 @@ func DrawCompareMergeDialog(screen tcell.Screen, layout Layout, state CompareMer
 	// Transfer section
 	primitive.Text(screen, draw.DialogTextX(rect), y, draw.DialogContentWidth(rect), "Transfer:", pathStyle)
 	y++
-	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Missing files", 'M', state.CopyMissing, state.Focus == 2, styles)
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Missing files", 'M', state.CopyMissing, state.Focus == 2, false, styles)
 	y++
-	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Modified files (content differs)", 'F', state.CopyModified, state.Focus == 3, styles)
+	draw.DrawDialogCheckbox(screen, draw.DialogOptionX(rect), y, "Modified files (content differs)", 'F', state.CopyModified, state.Focus == 3, false, styles)
 	y++
 	draw.DrawDialogHSeparator(screen, rect, y, borderStyle)
 	y++

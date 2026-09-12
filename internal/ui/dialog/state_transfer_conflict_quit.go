@@ -1,6 +1,10 @@
 package dialog
 
-import "github.com/paranoidi/paras-commander/internal/jobs"
+import (
+	"strings"
+
+	"github.com/paranoidi/paras-commander/internal/jobs"
+)
 
 // PrimaryModal identifies which exclusive modal occupies the primary dialog layer.
 // Overlay modals (Sort, GroupSelect, FileDialog) may draw on top; see Render.
@@ -50,6 +54,7 @@ type TransferDialogState struct {
 	PreservePermissions  bool // copy only
 	PreserveTimestamps   bool // copy only
 	DereferenceSymlinks  bool // copy only
+	SourceIsRemote       bool // copy only; true when the source panel is SFTP
 	FlattenIntoDest      bool // last content row when MultiLocation(); copies as dest/<basename>
 	FocusField           int  // content indices then OK, Add paused, Cancel; see TransferDialogLinearForm
 	SelfCopyDestDir      string
@@ -77,6 +82,12 @@ type TransferDialogState struct {
 // from their common root.
 func (st TransferDialogState) MultiLocation() bool {
 	return st.CommonRoot != "" && st.Phase == TransferPhaseDestination
+}
+
+// DereferenceUnsupported reports whether "Dereference symlinks" should be disabled:
+// SFTP has no inode-equivalent identity to dereference against, on either side of the copy.
+func (st TransferDialogState) DereferenceUnsupported() bool {
+	return st.SourceIsRemote || strings.HasPrefix(strings.TrimSpace(st.Destination.Value), "sftp://")
 }
 
 // ConflictDialogState holds the quick job-blocker answer dialog (Ctrl+Q).

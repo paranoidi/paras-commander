@@ -92,15 +92,15 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 
 	// col2X aligns the second checkbox on every two-column row.
 	col2X := optionX + utf8.RuneCountInString(draw.CheckboxText("Include meta columns", false)) + 3 // +1 pad +2 gap
-	draw.DrawDialogCheckbox(screen, optionX, y, "Files only", 'F', state.FilesOnly, state.Focus == GroupSelectFocusFilesOnly, styles)
-	draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", 'D', state.DirsOnly, state.Focus == GroupSelectFocusDirsOnly, styles)
+	draw.DrawDialogCheckbox(screen, optionX, y, "Files only", 'F', state.FilesOnly, state.Focus == GroupSelectFocusFilesOnly, false, styles)
+	draw.DrawDialogCheckbox(screen, col2X, y, "Directories only", 'D', state.DirsOnly, state.Focus == GroupSelectFocusDirsOnly, false, styles)
 	y++
 	if y >= innerBottom {
 		return
 	}
 
 	if GroupSelectShowsCaseSensitive(state) {
-		draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == GroupSelectFocusCase, styles)
+		draw.DrawDialogCheckbox(screen, optionX, y, "Case sensitive", 'E', state.CaseSensitive, state.Focus == GroupSelectFocusCase, false, styles)
 	}
 	y++
 	if y >= innerBottom {
@@ -108,8 +108,8 @@ func DrawGroupSelectDialog(screen tcell.Screen, layout Layout, state GroupSelect
 	}
 
 	if state.MetaColumnCount > 0 {
-		draw.DrawDialogCheckbox(screen, optionX, y, "Include meta columns", 'M', state.IncludeMetaColumns, state.Focus == GroupSelectFocusIncludeMeta, styles)
-		draw.DrawDialogCheckbox(screen, col2X, y, "Only meta columns", 'N', state.OnlyMetaColumns, state.Focus == GroupSelectFocusOnlyMeta, styles)
+		draw.DrawDialogCheckbox(screen, optionX, y, "Include meta columns", 'M', state.IncludeMetaColumns, state.Focus == GroupSelectFocusIncludeMeta, false, styles)
+		draw.DrawDialogCheckbox(screen, col2X, y, "Only meta columns", 'N', state.OnlyMetaColumns, state.Focus == GroupSelectFocusOnlyMeta, false, styles)
 		y++
 		if y >= innerBottom {
 			return

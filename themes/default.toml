@@ -218,6 +218,7 @@ active.selected = { fg = "bright_white", bold = true }
 inactive = { fg = "white" }
 selected = { fg = "yellow" }
 invalid = { fg = "red" }
+disabled = { fg = "black" }
 
 [dialog.status]              # dialog status segments (e.g. find selection size)
 selection_size = { fg = "yellow" }

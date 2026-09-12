@@ -173,9 +173,10 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 		draw.DrawDialogHSeparator(screen, rect, sep1Y, borderStyle)
 
 		// One cell left of labels/fields so "[ ]" aligns with other dialog content (see mass rename).
-		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+1, "Preserve permissions", 'r', state.PreservePermissions, state.FocusField == 1, styles)
-		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+2, "Preserve timestamps", 't', state.PreserveTimestamps, state.FocusField == 2, styles)
-		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+3, "Dereference symlinks", 'd', state.DereferenceSymlinks, state.FocusField == 3, styles)
+		derefDisabled := state.DereferenceUnsupported()
+		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+1, "Preserve permissions", 'r', state.PreservePermissions, state.FocusField == 1, false, styles)
+		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+2, "Preserve timestamps", 't', state.PreserveTimestamps, state.FocusField == 2, false, styles)
+		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+3, "Dereference symlinks", 'd', state.DereferenceSymlinks, state.FocusField == 3, derefDisabled, styles)
 
 		sep2Y := sep1Y + 4
 		draw.DrawDialogHSeparator(screen, rect, sep2Y, borderStyle)
@@ -239,17 +240,17 @@ func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state T
 
 	focusIdx := 1
 	if state.Kind == TransferKindCopy {
-		draw.DrawDialogCheckbox(screen, optX, y, "Preserve permissions", 'r', state.PreservePermissions, state.FocusField == focusIdx, styles)
+		draw.DrawDialogCheckbox(screen, optX, y, "Preserve permissions", 'r', state.PreservePermissions, state.FocusField == focusIdx, false, styles)
 		y++
 		focusIdx++
-		draw.DrawDialogCheckbox(screen, optX, y, "Preserve timestamps", 't', state.PreserveTimestamps, state.FocusField == focusIdx, styles)
+		draw.DrawDialogCheckbox(screen, optX, y, "Preserve timestamps", 't', state.PreserveTimestamps, state.FocusField == focusIdx, false, styles)
 		y++
 		focusIdx++
-		draw.DrawDialogCheckbox(screen, optX, y, "Dereference symlinks", 'd', state.DereferenceSymlinks, state.FocusField == focusIdx, styles)
+		draw.DrawDialogCheckbox(screen, optX, y, "Dereference symlinks", 'd', state.DereferenceSymlinks, state.FocusField == focusIdx, state.DereferenceUnsupported(), styles)
 		y++
 		focusIdx++
 	}
-	draw.DrawDialogCheckbox(screen, optX, y, "Flatten into destination", 'i', state.FlattenIntoDest, state.FocusField == focusIdx, styles)
+	draw.DrawDialogCheckbox(screen, optX, y, "Flatten into destination", 'i', state.FlattenIntoDest, state.FocusField == focusIdx, false, styles)
 	y++
 
 	bfg, _, _ := styles.DialogFrame.Decompose()
