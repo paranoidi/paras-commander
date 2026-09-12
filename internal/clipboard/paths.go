@@ -16,15 +16,21 @@ func BuildFileURLs(paths []string) string {
 // BuildDirURLs joins parent directory URLs; when no dirname can be derived, panelDir is used.
 func BuildDirURLs(paths []string, panelDir string) string {
 	fallback := pathURL(panelDir)
+	seen := make(map[string]struct{}, len(paths))
 	lines := make([]string, 0, len(paths))
 	for _, raw := range paths {
 		line := dirURL(raw)
 		if line == "" {
 			line = fallback
 		}
-		if line != "" {
-			lines = append(lines, line)
+		if line == "" {
+			continue
 		}
+		if _, dup := seen[line]; dup {
+			continue
+		}
+		seen[line] = struct{}{}
+		lines = append(lines, line)
 	}
 	if len(lines) == 0 && fallback != "" {
 		return fallback

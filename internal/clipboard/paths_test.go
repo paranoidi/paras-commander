@@ -28,6 +28,16 @@ func TestBuildDirURLs(t *testing.T) {
 			t.Fatalf("got %q, want panel dir", got)
 		}
 	})
+	t.Run("dedupes shared parent directory", func(t *testing.T) {
+		got := BuildDirURLs([]string{
+			"/tmp/meadow/report.txt",
+			"/tmp/meadow/summary.txt",
+			"/tmp/meadow/archive.txt",
+		}, "/tmp/panel")
+		if got != "/tmp/meadow" {
+			t.Fatalf("got %q, want single deduped parent", got)
+		}
+	})
 }
 
 func TestBuildFilenames(t *testing.T) {
