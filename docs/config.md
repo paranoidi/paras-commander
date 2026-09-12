@@ -245,6 +245,7 @@ Copy/move file-transfer behavior.
 | `confirm_delete` | bool | `true` | Ask for confirmation before deleting files or directories. |
 | `preserve_permissions` | bool | `true` | Preserve source file permissions on copy. |
 | `preserve_timestamps` | bool | `true` | Preserve source file modification times on copy. |
+| `dereference_symlinks` | bool | `false` | Copy dialog only: copy through symlinks (file or directory targets) instead of recreating them at the destination. Local-to-local Copy only; never applied to Move, and has no effect when either endpoint is remote. |
 | `copy_buffer_kib` | int | `256` | Read/write buffer size, in KiB, used for userspace file copies. |
 | `sync_after_each_file` | bool | `true` | fsync each copied file before closing it. Durable, but slow when copying many small files. |
 | `disk_space_check_min_file_bytes` | int64 | `52428800` (50 MiB) | Only run the mid-copy free-space check for files at least this large. `0` checks before every file. |

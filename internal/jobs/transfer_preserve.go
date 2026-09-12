@@ -6,12 +6,16 @@ type TransferPreserve struct {
 	PreserveTimestamps  bool
 	// FlattenIntoDest requests dest/<basename> naming (transfer-dialog "Flatten into destination").
 	FlattenIntoDest bool
+	// DereferenceSymlinks requests copying through symlinks instead of recreating them.
+	// Copy only — AddTransferJob forces this false for Move regardless of this value.
+	DereferenceSymlinks bool
 }
 
-// FromConfig returns transfer preserve flags from operations config defaults.
-func TransferPreserveFromConfig(preservePermissions, preserveTimestamps bool) TransferPreserve {
+// TransferPreserveFromConfig returns transfer preserve flags from operations config defaults.
+func TransferPreserveFromConfig(preservePermissions, preserveTimestamps, dereferenceSymlinks bool) TransferPreserve {
 	return TransferPreserve{
 		PreservePermissions: preservePermissions,
 		PreserveTimestamps:  preserveTimestamps,
+		DereferenceSymlinks: dereferenceSymlinks,
 	}
 }

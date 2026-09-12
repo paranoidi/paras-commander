@@ -50,14 +50,18 @@ type Job struct {
 	Destination pathloc.Path
 	// DestIsDir is whether Destination was an existing directory at enqueue time (same as ops.ResolveDestination Stat semantics).
 	// Used by UI path marks so listing render does not Stat the destination per row.
-	DestIsDir     bool
-	TotalFiles    int
-	TotalDirs     int
-	DoneFiles     int
-	TotalBytes    int64
-	DoneBytes     int64
-	CurrentPath   string
-	Error         string
+	DestIsDir   bool
+	TotalFiles  int
+	TotalDirs   int
+	DoneFiles   int
+	TotalBytes  int64
+	DoneBytes   int64
+	CurrentPath string
+	Error       string
+	// Warnings collects non-fatal per-item issues encountered while building the transfer
+	// plan (currently: a symlink that could not be safely dereferenced and was relinked
+	// instead — see DereferenceSymlinks). Unlike Error, warnings never fail the job.
+	Warnings      []string
 	ScanStartedAt time.Time
 	StartedAt     time.Time
 	FinishedAt    time.Time
@@ -134,6 +138,9 @@ type Job struct {
 	// Per-job copy/move metadata options (from transfer dialog or config at enqueue).
 	PreservePermissions bool
 	PreserveTimestamps  bool
+	// DereferenceSymlinks copies through symlinks instead of recreating them. Copy jobs only —
+	// AddTransferJob is the single place that decides this, and always forces it false for Move.
+	DereferenceSymlinks bool
 	// FlattenIntoDest requests dest/<basename> naming for a copy/move job (transfer-dialog
 	// "Flatten into destination" checkbox), independent of TypeFlatten jobs.
 	FlattenIntoDest bool

@@ -175,6 +175,7 @@ const (
 
 	DefaultPreservePermissions        = true
 	DefaultPreserveTimestamps         = true
+	DefaultDereferenceSymlinks        = false
 	DefaultCopyBufferKiB              = 256
 	DefaultSyncAfterEachFile          = true
 	DefaultDiskSpaceCheckMinFileBytes = 50 * 1024 * 1024

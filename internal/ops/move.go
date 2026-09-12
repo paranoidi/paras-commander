@@ -232,7 +232,7 @@ func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources 
 		plan = planOptional
 		_, _, tb = SummarizePlan(plan)
 	} else {
-		plan, _, _, tb, planErr = BuildCopyPlanWithTotalsCtx(ctx, sources, destination, PlanBuildOptions{FlatDestNames: opts.FlatDestNames})
+		plan, _, _, tb, planErr = BuildCopyPlanWithTotalsCtx(ctx, sources, destination, PlanBuildOptions{FlatDestNames: opts.FlatDestNames, DereferenceSymlinks: opts.DereferenceSymlinks})
 		if planErr != nil {
 			return 0, 0, fmt.Errorf("move copy phase plan: %w", planErr)
 		}

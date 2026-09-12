@@ -23,7 +23,7 @@ func (h *Handler) AddTransferJob(jobType jobs.Type, sources []string, dest strin
 // from Host.Config(), not a construction-time snapshot: the settings dialog mutates them at runtime.
 func (h *Handler) TransferPreserveFromConfig() jobs.TransferPreserve {
 	cfg := h.host.Config()
-	return jobs.TransferPreserveFromConfig(cfg.Operations.PreservePermissions, cfg.Operations.PreserveTimestamps)
+	return jobs.TransferPreserveFromConfig(cfg.Operations.PreservePermissions, cfg.Operations.PreserveTimestamps, cfg.Operations.DereferenceSymlinks)
 }
 
 // activateDuplicateAction copies the highlighted file or directory beside itself under a new name.

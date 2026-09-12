@@ -41,6 +41,11 @@ type ScanWalkHooks struct {
 	ThroughputBPS func() float64
 	// FlatDestNames requests dest/<basename> plan naming (flatten jobs); see ops.PlanBuildOptions.
 	FlatDestNames bool
+	// DereferenceSymlinks requests copying through symlinks during the walk; see ops.PlanBuildOptions.
+	DereferenceSymlinks bool
+	// OnWarning reports a non-fatal per-item issue during the walk (e.g. a symlink relinked
+	// instead of dereferenced). Optional.
+	OnWarning func(string)
 }
 
 // ScanFunc starts a background plan walk for sources/destination and returns immediately with a
@@ -118,7 +123,13 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 
 	var lastProgress time.Time
 	hooks := ScanWalkHooks{
-		FlatDestNames: job.FlatDestNames(),
+		FlatDestNames:       job.FlatDestNames(),
+		DereferenceSymlinks: job.DereferenceSymlinks,
+		OnWarning: func(msg string) {
+			s.mu.Lock()
+			job.Warnings = append(job.Warnings, msg)
+			s.mu.Unlock()
+		},
 		OnPath: func(path string) error {
 			now := time.Now()
 			if lastProgress.IsZero() || now.Sub(lastProgress) >= progressMin {

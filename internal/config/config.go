@@ -505,6 +505,10 @@ type OperationsConfig struct {
 	ConfirmDelete       bool `toml:"confirm_delete"`
 	PreservePermissions bool `toml:"preserve_permissions"`
 	PreserveTimestamps  bool `toml:"preserve_timestamps"`
+	// DereferenceSymlinks copies through symlinks (file or directory targets) at their real
+	// content instead of recreating them at the destination. Local-to-local Copy dialog only;
+	// never applied to Move, and has no effect when either endpoint is remote.
+	DereferenceSymlinks bool `toml:"dereference_symlinks"`
 	CopyBufferKiB       int  `toml:"copy_buffer_kib"`
 	// SyncAfterEachFile fsyncs each copied file before closing (durable; slow for many small files).
 	SyncAfterEachFile bool `toml:"sync_after_each_file"`
@@ -647,6 +651,7 @@ func Default() Config {
 			ConfirmDelete:                true,
 			PreservePermissions:          DefaultPreservePermissions,
 			PreserveTimestamps:           DefaultPreserveTimestamps,
+			DereferenceSymlinks:          DefaultDereferenceSymlinks,
 			CopyBufferKiB:                DefaultCopyBufferKiB,
 			SyncAfterEachFile:            DefaultSyncAfterEachFile,
 			DiskSpaceCheckMinFileBytes:   DefaultDiskSpaceCheckMinFileBytes,

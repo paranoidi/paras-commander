@@ -1031,7 +1031,7 @@ func (h *Handler) enqueueTransferJob(opts transferEnqueueOpts) {
 		Type:     opts.jobType,
 		Sources:  sources,
 		Dest:     dest,
-		Preserve: jobs.TransferPreserveFromConfig(h.config.Operations.PreservePermissions, h.config.Operations.PreserveTimestamps),
+		Preserve: jobs.TransferPreserveFromConfig(h.config.Operations.PreservePermissions, h.config.Operations.PreserveTimestamps, h.config.Operations.DereferenceSymlinks),
 	})
 	h.host.SetTransientMessage(fmt.Sprintf("%s queued (%d %s)", opts.toastVerb, len(sources), jobbridge.Plural(len(sources), "file", "files")), ui.MessageUrgencyInfo)
 }
@@ -1076,6 +1076,10 @@ func (h *Handler) AddTransferJob(req TransferJobRequest) {
 		PreservePermissions: req.Preserve.PreservePermissions,
 		PreserveTimestamps:  req.Preserve.PreserveTimestamps,
 		FlattenIntoDest:     req.Preserve.FlattenIntoDest,
+		// DereferenceSymlinks is Copy-only: this is the single place that decides the value
+		// written onto the job, and it is unconditionally false for Move regardless of what
+		// the dialog/request asked for.
+		DereferenceSymlinks: req.Preserve.DereferenceSymlinks && req.Type == jobs.TypeCopy,
 		PromptDanglingDirs:  req.Type == jobs.TypeMove && h.config.Operations.RemoveDanglingDirs,
 	}
 	h.commitJob(job)

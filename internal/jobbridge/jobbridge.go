@@ -66,16 +66,21 @@ func EventUpdatesMarks(t jobs.EventType) bool {
 func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 	return func(ctx context.Context, sources []pathloc.Path, destination pathloc.Path, hooks jobs.ScanWalkHooks) jobs.PlanProducer {
 		opts := ops.PlanBuildOptions{
-			YieldEveryN:   hooks.YieldEveryN,
-			Yield:         hooks.Yield,
-			FlatDestNames: hooks.FlatDestNames,
-			OnPath:        hooks.OnPath,
+			YieldEveryN:         hooks.YieldEveryN,
+			Yield:               hooks.Yield,
+			FlatDestNames:       hooks.FlatDestNames,
+			OnPath:              hooks.OnPath,
+			DereferenceSymlinks: hooks.DereferenceSymlinks,
+			OnWarning:           hooks.OnWarning,
 		}
 
 		// countOpts is the counting walk's own copy of opts (the delivery walk above keeps the
 		// original, untouched) with Yield wrapped by the adaptive throttle when a throughput
-		// signal is available and the probe isn't disabled.
+		// signal is available and the probe isn't disabled. OnWarning is cleared: the counting
+		// walk enumerates the same tree independently, so leaving it wired would double-report
+		// every symlink-dereference fallback (once per walk) instead of once.
 		countOpts := opts
+		countOpts.OnWarning = nil
 		if hooks.ThroughputBPS != nil && !jobsCfg.ScanDisableAdaptiveThrottle {
 			countOpts.Yield = newAdaptiveThrottleYield(opts.Yield, hooks.ThroughputBPS)
 		}
@@ -319,7 +324,13 @@ func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rat
 		totalBytes := job.TotalBytes
 		if (job.Type == jobs.TypeCopy || job.Type == jobs.TypeMove || job.Type == jobs.TypeFlatten) && len(opsPlan) == 0 {
 			var tf int
-			opsPlan, tf, _, totalBytes, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{FlatDestNames: job.FlatDestNames()})
+			// ponytail: no OnWarning here — this synchronous-rebuild fallback only runs when a
+			// job bypassed the streamed pre-scan (job.PlanCh nil; tests or a job injected
+			// directly into StatusQueued), so there is no jobs.State lock available from this
+			// package to guard a job.Warnings append the way jobs/scan.go does for the normal
+			// path. DereferenceSymlinks fallbacks still relink correctly; they just go unlogged
+			// on this rare path.
+			opsPlan, tf, _, totalBytes, planErr = ops.BuildCopyPlanWithTotalsCtx(ctx, job.Sources, job.Destination, ops.PlanBuildOptions{FlatDestNames: job.FlatDestNames(), DereferenceSymlinks: job.DereferenceSymlinks})
 			if planErr == nil {
 				emit(jobs.Event{
 					Type:       jobs.EventPlanTotals,
@@ -407,6 +418,7 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 		SyncAtJobEnd:               opsCfg.SyncAtJobEnd,
 		SyncMinFileKiB:             opsCfg.SyncMinFileKiB,
 		FlatDestNames:              job.FlatDestNames(),
+		DereferenceSymlinks:        job.DereferenceSymlinks,
 		RateLimit:                  rateWait,
 	}
 	if job.Destination.IsRemote() {
@@ -414,6 +426,7 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 		opts.CopyFileRange = false
 		opts.SparseFileCopy = false
 		opts.PreallocateDestination = false
+		opts.DereferenceSymlinks = false
 	}
 	for _, src := range job.Sources {
 		if src.IsRemote() {
@@ -421,6 +434,7 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 			opts.CopyFileRange = false
 			opts.SparseFileCopy = false
 			opts.PreallocateDestination = false
+			opts.DereferenceSymlinks = false
 			break
 		}
 	}

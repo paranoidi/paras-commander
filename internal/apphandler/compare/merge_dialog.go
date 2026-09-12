@@ -172,6 +172,7 @@ func (h *Handler) confirmMerge() {
 	preserve := jobs.TransferPreserveFromConfig(
 		h.config.Operations.PreservePermissions,
 		h.config.Operations.PreserveTimestamps,
+		h.config.Operations.DereferenceSymlinks,
 	)
 	jobType := jobs.TypeCopy
 	if d.MoveMode {

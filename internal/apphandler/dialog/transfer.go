@@ -69,6 +69,7 @@ func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 		cfg := h.host.Config()
 		st.PreservePermissions = cfg.Operations.PreservePermissions
 		st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
+		st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
 	}
 	if root, ok := h.multiDirSelectionCommonRoot(); ok {
 		st.CommonRoot = root
@@ -165,6 +166,7 @@ func (h *Handler) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, abs
 		cfg := h.host.Config()
 		st.PreservePermissions = cfg.Operations.PreservePermissions
 		st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
+		st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
 	}
 	h.model.TransferDialog = st
 	h.host.ClearTransientMessage()
@@ -180,9 +182,9 @@ func (h *Handler) CloseTransferDialog() {
 }
 
 // handleTransferAltShortcut handles the Alt-letter mnemonics that must run before standard
-// dialog actions and field editing: Alt+R/Alt+T toggle preserve-permissions/timestamps on a
-// copy's destination phase, and Alt+I toggles "Flatten into destination" for a multi-location
-// transfer. Returns true when the rune was handled.
+// dialog actions and field editing: Alt+R/Alt+T/Alt+D toggle preserve-permissions/timestamps/
+// dereference-symlinks on a copy's destination phase, and Alt+I toggles "Flatten into
+// destination" for a multi-location transfer. Returns true when the rune was handled.
 func (h *Handler) handleTransferAltShortcut(event *tcell.EventKey) bool {
 	d := &h.model.TransferDialog
 	if d.Phase == dialog.TransferPhaseDestination && d.Kind == dialog.TransferKindCopy {
@@ -193,6 +195,9 @@ func (h *Handler) handleTransferAltShortcut(event *tcell.EventKey) bool {
 				return true
 			case 't', 'T':
 				d.PreserveTimestamps = !d.PreserveTimestamps
+				return true
+			case 'd', 'D':
+				d.DereferenceSymlinks = !d.DereferenceSymlinks
 				return true
 			}
 		}
@@ -274,12 +279,18 @@ func (h *Handler) handleTransferCheckboxRune(event *tcell.EventKey) {
 			if d.FocusField == 2 {
 				d.PreserveTimestamps = !d.PreserveTimestamps
 			}
+		case 'd', 'D':
+			if d.FocusField == 3 {
+				d.DereferenceSymlinks = !d.DereferenceSymlinks
+			}
 		case ' ':
 			switch d.FocusField {
 			case 1:
 				d.PreservePermissions = !d.PreservePermissions
 			case 2:
 				d.PreserveTimestamps = !d.PreserveTimestamps
+			case 3:
+				d.DereferenceSymlinks = !d.DereferenceSymlinks
 			}
 		}
 	}
@@ -457,6 +468,7 @@ func (h *Handler) confirmTransferEnqueue(startPaused bool) {
 		PreservePermissions: d.PreservePermissions,
 		PreserveTimestamps:  d.PreserveTimestamps,
 		FlattenIntoDest:     flat,
+		DereferenceSymlinks: d.DereferenceSymlinks,
 	}
 	h.AddTransferJob(jobType, sourcesCopy, dest, startPaused, preserve)
 	h.CloseTransferDialog()
@@ -505,6 +517,7 @@ func (h *Handler) confirmTransferSelfCopyRename(sources []string, startPaused bo
 	preserve := jobs.TransferPreserve{
 		PreservePermissions: d.PreservePermissions,
 		PreserveTimestamps:  d.PreserveTimestamps,
+		DereferenceSymlinks: d.DereferenceSymlinks,
 	}
 	h.AddTransferJob(jobType, sourcesCopy, finalDest, startPaused, preserve)
 	h.CloseTransferDialog()

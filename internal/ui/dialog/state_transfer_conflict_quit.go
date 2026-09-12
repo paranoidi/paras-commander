@@ -49,6 +49,7 @@ type TransferDialogState struct {
 	DestSubFocus         int  // TransferDestSubFocus* when Phase==TransferPhaseDestination and FocusField==0
 	PreservePermissions  bool // copy only
 	PreserveTimestamps   bool // copy only
+	DereferenceSymlinks  bool // copy only
 	FlattenIntoDest      bool // last content row when MultiLocation(); copies as dest/<basename>
 	FocusField           int  // content indices then OK, Add paused, Cancel; see TransferDialogLinearForm
 	SelfCopyDestDir      string
@@ -97,15 +98,15 @@ type QuitConfirmState struct {
 
 // TransferDialogEffectiveNumContent returns the focusable content count for the current
 // dialog screen: self-copy rename = 1; destination phase = destination row plus, for
-// copy, the two preserve checkboxes; plus one more (Flatten into destination, always
-// last) when MultiLocation().
+// copy, the three preserve/dereference checkboxes; plus one more (Flatten into destination,
+// always last) when MultiLocation().
 func TransferDialogEffectiveNumContent(st TransferDialogState) int {
 	if st.Phase == TransferPhaseSelfCopyRename {
 		return 1
 	}
 	n := 1 // destination
 	if st.Kind == TransferKindCopy {
-		n = 3 // destination + two preserve checkboxes
+		n = 4 // destination + preserve permissions/timestamps + dereference symlinks
 	}
 	if st.MultiLocation() {
 		n++

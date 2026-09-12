@@ -60,6 +60,11 @@ type Options struct {
 	// FlatDestNames resolves every source to dest/<basename> (flatten jobs) instead of
 	// batch-relative names below the sources' common parent (see TransferNameRoot).
 	FlatDestNames bool
+	// DereferenceSymlinks copies through symlinks (file or directory targets) instead of
+	// recreating them at the destination. Local-to-local Copy only; never applies to Move
+	// (enforced at enqueue, see apphandler/jobs.Handler.AddTransferJob) and has no effect when
+	// either endpoint is remote.
+	DereferenceSymlinks bool
 	// RateLimit throttles transfer throughput when set; nil (the default) means unlimited.
 	// Callers must check for nil before calling it.
 	RateLimit RateLimiter
@@ -84,6 +89,7 @@ func DefaultOptions() Options {
 		PreallocateMinFileBytes:    o.PreallocateMinFileBytes,
 		SyncAtJobEnd:               o.SyncAtJobEnd,
 		SyncMinFileKiB:             o.SyncMinFileKiB,
+		DereferenceSymlinks:        o.DereferenceSymlinks,
 	}
 }
 
@@ -121,6 +127,7 @@ func (o Options) LocalCopyFileOpts(buf []byte) localfs.CopyFileOpts {
 		PreallocateMin:          o.PreallocateMinFileBytes,
 		SyncPerFile:             o.SyncAfterEachFile,
 		SyncMinFileKiB:          o.SyncMinFileKiB,
+		FollowSymlinks:          o.DereferenceSymlinks,
 	}
 }
 
@@ -437,7 +444,7 @@ func buildPlan(ctx context.Context, sources []pathloc.Path, destination pathloc.
 			}
 			continue
 		}
-		if err := planLocalSource(srcLoc, dstLoc, followDirChildren, sink, afterVisit); err != nil {
+		if err := planLocalSource(srcLoc, dstLoc, followDirChildren, opts, sink, afterVisit); err != nil {
 			return err
 		}
 	}
@@ -471,8 +478,11 @@ func planRemoteSource(ctx context.Context, srcLoc, dstLoc pathloc.Path, followDi
 
 // planLocalSource plans one buildPlan source through the local os.Lstat/WalkDirRecursive
 // fast path (both endpoints local and useLocalFastPath allows it). Feeds resulting items
-// to sink.
-func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, sink func(PlanItem) error, afterVisit func(string) error) error {
+// to sink. When opts.DereferenceSymlinks is set, symlinks at or under src are resolved via
+// localfs.WalkDirRecursiveDeref instead of walked as symlinks (see planDerefWarning); a symlink
+// that cannot be safely dereferenced falls back to being planned as a symlink item, same as the
+// non-dereferencing path, with opts.OnWarning notified.
+func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, opts PlanBuildOptions, sink func(PlanItem) error, afterVisit func(string) error) error {
 	src, err := srcLoc.FilePath()
 	if err != nil {
 		return err
@@ -480,6 +490,13 @@ func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, sink f
 	srcInfo, err := os.Lstat(src)
 	if err != nil {
 		return fmt.Errorf("stat %q: %w", src, err)
+	}
+	if opts.DereferenceSymlinks && localfs.IsSymlink(srcInfo) {
+		if resolved, statErr := os.Stat(src); statErr != nil {
+			planDerefWarning(opts, src, PathErrorReason(statErr).Error())
+		} else {
+			srcInfo = resolved
+		}
 	}
 	if srcInfo.IsDir() {
 		if !followDirChildren {
@@ -489,7 +506,7 @@ func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, sink f
 		if err != nil {
 			return err
 		}
-		return localfs.WalkDirRecursive(src, func(path string, info os.FileInfo) error {
+		walkFn := func(path string, info os.FileInfo) error {
 			if err := afterVisit(path); err != nil {
 				return err
 			}
@@ -516,7 +533,13 @@ func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, sink f
 			default:
 				return fmt.Errorf("unsupported file type for %q (mode %v)", path, info.Mode())
 			}
-		})
+		}
+		if opts.DereferenceSymlinks {
+			return localfs.WalkDirRecursiveDeref(src, func(path, reason string) {
+				planDerefWarning(opts, path, reason)
+			}, walkFn)
+		}
+		return localfs.WalkDirRecursive(src, walkFn)
 	}
 	if err := afterVisit(src); err != nil {
 		return err
@@ -529,6 +552,16 @@ func planLocalSource(srcLoc, dstLoc pathloc.Path, followDirChildren bool, sink f
 	default:
 		return fmt.Errorf("unsupported file type for %q (mode %v)", src, srcInfo.Mode())
 	}
+}
+
+// planDerefWarning reports a non-fatal symlink-dereference fallback through opts.OnWarning
+// (nil-safe): the entry at path could not be safely dereferenced (reason) and was planned as a
+// plain symlink instead.
+func planDerefWarning(opts PlanBuildOptions, path, reason string) {
+	if opts.OnWarning == nil {
+		return
+	}
+	opts.OnWarning(fmt.Sprintf("link %q: %s, copied as symlink", path, reason))
 }
 
 func planItemFromLocalInfo(src, dst pathloc.Path, info os.FileInfo, isDir, isSymlink bool) PlanItem {

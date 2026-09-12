@@ -397,6 +397,12 @@ func detailStaticLines(j JobEntry, now time.Time, pathMax int, userHomeDir strin
 	if j.Error != "" {
 		lines = append(lines, fmt.Sprintf(prefixError+"%s", truncateMiddle(j.Error, jobsDetailPathBudget(pathMax, prefixError))))
 	}
+	if len(j.Warnings) > 0 {
+		lines = append(lines, fmt.Sprintf("Warnings (%d):", len(j.Warnings)))
+		for _, w := range j.Warnings {
+			lines = append(lines, truncateMiddle(w, pathMax))
+		}
+	}
 	src := "—"
 	if len(j.Sources) > 0 {
 		srcBody := j.Sources[0]

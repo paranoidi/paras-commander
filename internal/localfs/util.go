@@ -92,7 +92,14 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 		return fmt.Errorf("stat source %q: %w", src, err)
 	}
 	if IsSymlink(srcInfo) {
-		return copySymlink(src, dst, dir)
+		if !extra.FollowSymlinks {
+			return copySymlink(src, dst, dir)
+		}
+		resolved, err := os.Stat(src)
+		if err != nil {
+			return fmt.Errorf("stat source %q: %w", src, err)
+		}
+		srcInfo = resolved
 	}
 
 	target := dst
@@ -262,39 +269,110 @@ func copySymlink(src, dst string, dir bool) error {
 // WalkDirRecursive walks a directory recursively, calling fn for every file,
 // directory, and symlink including the root. It returns entries in deterministic order.
 func WalkDirRecursive(root string, fn func(path string, info fs.FileInfo) error) error {
-	return walkDirRecursive(root, fn)
-}
-
-func walkDirRecursive(dir string, fn func(string, fs.FileInfo) error) error {
-	info, err := os.Lstat(dir)
+	info, err := os.Lstat(root)
 	if err != nil {
 		return err
 	}
-	if err := fn(dir, info); err != nil {
+	return walkDirRecursive(root, info, fn)
+}
+
+// walkDirRecursive walks path (already Lstat'd as info) and its descendants, calling fn once per
+// node. Recursion passes each child's already-known os.ReadDir info down instead of re-Lstat-ing
+// it at the top of the call, since os.ReadDir's DirEntry.Info() is itself Lstat-based.
+func walkDirRecursive(path string, info fs.FileInfo, fn func(string, fs.FileInfo) error) error {
+	if err := fn(path, info); err != nil {
 		return err
 	}
 	if !info.IsDir() {
 		return nil
 	}
-	entries, err := os.ReadDir(dir)
+	entries, err := os.ReadDir(path)
 	if err != nil {
 		return err
 	}
 	for _, entry := range entries {
-		path := filepath.Join(dir, entry.Name())
-		info, err := entry.Info()
+		childPath := filepath.Join(path, entry.Name())
+		childInfo, err := entry.Info()
 		if err != nil {
 			return err
 		}
-		if info.IsDir() {
-			// walkDirRecursive calls fn on the directory, so no need to call it here.
-			if err := walkDirRecursive(path, fn); err != nil {
-				return err
+		if err := walkDirRecursive(childPath, childInfo, fn); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// maxSymlinkDerefDepth caps how deep WalkDirRecursiveDeref will chase a chain of
+// directory symlinks, guarding against pathological long non-repeating chains the same
+// way maxTreeExpandDepth (internal/panel/tree_state.go) guards tree-expand recursion.
+const maxSymlinkDerefDepth = 32
+
+// WalkDirRecursiveDeref walks like WalkDirRecursive, except every symlink encountered
+// (including the root) is dereferenced: fn receives the resolved FileInfo (no ModeSymlink bit),
+// and a symlink resolving to a directory is walked as if its target's children lived at the
+// symlink's own path — path is always the logical/symlink-named path, never the resolved real
+// path (os.Stat/os.ReadDir/os.Open on that path string already follow the symlink).
+//
+// A symlink that cannot be safely dereferenced falls back to the plain WalkDirRecursive
+// behavior for that node (fn receives the Lstat info, no recursion): onFallback(path, reason) is
+// called first, with reason describing why — a broken target or permission error (the os.Stat
+// error text), "cycle detected" (the resolved directory matches one already open on the current
+// recursion path, via os.SameFile), or "max depth exceeded" (maxSymlinkDerefDepth directory
+// symlinks deep). Cycle detection is scoped to the current recursion path (an ancestor stack
+// pushed on recursion-enter, implicit via the Go call stack, and popped on return) rather than a
+// whole-tree visited set, so two sibling symlinks pointing at the same shared, non-cyclic target
+// are not mistaken for a cycle.
+func WalkDirRecursiveDeref(root string, onFallback func(path string, reason string), fn func(path string, info fs.FileInfo) error) error {
+	info, err := os.Lstat(root)
+	if err != nil {
+		return err
+	}
+	return walkDirRecursiveDeref(root, info, nil, onFallback, fn)
+}
+
+func walkDirRecursiveDeref(path string, lstatInfo fs.FileInfo, ancestors []fs.FileInfo, onFallback func(string, string), fn func(string, fs.FileInfo) error) error {
+	nodeInfo := lstatInfo
+	if IsSymlink(lstatInfo) {
+		resolved, err := os.Stat(path)
+		if err != nil {
+			onFallback(path, pathErrorReason(err).Error())
+			return fn(path, lstatInfo)
+		}
+		if !resolved.IsDir() {
+			return fn(path, resolved)
+		}
+		if len(ancestors) >= maxSymlinkDerefDepth {
+			onFallback(path, "max depth exceeded")
+			return fn(path, lstatInfo)
+		}
+		for _, a := range ancestors {
+			if os.SameFile(a, resolved) {
+				onFallback(path, "cycle detected")
+				return fn(path, lstatInfo)
 			}
-		} else {
-			if err := fn(path, info); err != nil {
-				return err
-			}
+		}
+		nodeInfo = resolved
+	}
+	if err := fn(path, nodeInfo); err != nil {
+		return err
+	}
+	if !nodeInfo.IsDir() {
+		return nil
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	childAncestors := append(ancestors, nodeInfo)
+	for _, entry := range entries {
+		childPath := filepath.Join(path, entry.Name())
+		childInfo, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if err := walkDirRecursiveDeref(childPath, childInfo, childAncestors, onFallback, fn); err != nil {
+			return err
 		}
 	}
 	return nil

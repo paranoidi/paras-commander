@@ -14,6 +14,9 @@ type CopyFileOpts struct {
 	PreallocateMin          int64
 	SyncPerFile             bool
 	SyncMinFileKiB          int
+	// FollowSymlinks makes CopyFile read through a symlink source (copying the target's
+	// content) instead of recreating the symlink itself.
+	FollowSymlinks bool
 }
 
 func (o CopyFileOpts) syncNow(size int64) bool {

@@ -21,6 +21,13 @@ type PlanBuildOptions struct {
 	Yield       func()
 	// FlatDestNames mirrors Options.FlatDestNames for plan building.
 	FlatDestNames bool
+	// DereferenceSymlinks mirrors Options.DereferenceSymlinks for plan building: symlinks
+	// under a walked source are resolved and classified as their target (file or directory)
+	// instead of as a symlink. See planLocalSource / localfs.WalkDirRecursiveDeref.
+	DereferenceSymlinks bool
+	// OnWarning reports a non-fatal per-item issue during plan building (e.g. a symlink that
+	// fell back to being relinked instead of dereferenced). Optional; nil-safe.
+	OnWarning func(string)
 }
 
 // ConflictResolver is called when a destination path already exists.
@@ -406,7 +413,7 @@ func executeCopyWithPlan(ctx context.Context, planOptional []PlanItem, sources [
 	if planOptional != nil {
 		plan = planOptional
 	} else {
-		plan, err = BuildPlanCtx(ctx, sources, destination, true, PlanBuildOptions{FlatDestNames: opts.FlatDestNames})
+		plan, err = BuildPlanCtx(ctx, sources, destination, true, PlanBuildOptions{FlatDestNames: opts.FlatDestNames, DereferenceSymlinks: opts.DereferenceSymlinks})
 		if err != nil {
 			return 0, 0, nil, fmt.Errorf("build copy plan: %w", err)
 		}

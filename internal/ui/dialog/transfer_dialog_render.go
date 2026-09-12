@@ -38,12 +38,12 @@ func transferDialogMaxHeight(layoutHeight int) int {
 // transferMultiChromeRows returns the interior row count for the multi-location layout
 // other than the scrollable preview list itself (top/bottom border added separately):
 // Source label, root path, blank, Destination label, input row, separator,
-// preserve-permissions/timestamps checkboxes (copy only) + flatten checkbox, "Result"
-// separator, separator, blank, button row.
+// preserve-permissions/timestamps/dereference-symlinks checkboxes (copy only) + flatten
+// checkbox, "Result" separator, separator, blank, button row.
 func transferMultiChromeRows(kind TransferKind) int {
 	checkboxRows := 1 // Flatten into destination
 	if kind == TransferKindCopy {
-		checkboxRows += 2 // Preserve permissions + Preserve timestamps
+		checkboxRows += 3 // Preserve permissions + Preserve timestamps + Dereference symlinks
 	}
 	const fixedRows = 10 // 6 rows through the destination separator + Result separator(1) + separator/blank/button(3)
 	return fixedRows + checkboxRows
@@ -117,7 +117,7 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 	}
 
 	width := PreferredFormDialogWidth
-	height := 9
+	height := 10
 	title := "Copy"
 	if state.Kind == TransferKindMove {
 		height = 7
@@ -175,8 +175,9 @@ func DrawTransferDialog(screen tcell.Screen, layout Layout, state TransferDialog
 		// One cell left of labels/fields so "[ ]" aligns with other dialog content (see mass rename).
 		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+1, "Preserve permissions", 'r', state.PreservePermissions, state.FocusField == 1, styles)
 		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+2, "Preserve timestamps", 't', state.PreserveTimestamps, state.FocusField == 2, styles)
+		draw.DrawDialogCheckbox(screen, rect.X+1, sep1Y+3, "Dereference symlinks", 'd', state.DereferenceSymlinks, state.FocusField == 3, styles)
 
-		sep2Y := sep1Y + 3
+		sep2Y := sep1Y + 4
 		draw.DrawDialogHSeparator(screen, rect, sep2Y, borderStyle)
 
 		buttonY := rect.Y + rect.Height - 2
@@ -242,6 +243,9 @@ func drawMultiLocationTransferDialog(screen tcell.Screen, layout Layout, state T
 		y++
 		focusIdx++
 		draw.DrawDialogCheckbox(screen, optX, y, "Preserve timestamps", 't', state.PreserveTimestamps, state.FocusField == focusIdx, styles)
+		y++
+		focusIdx++
+		draw.DrawDialogCheckbox(screen, optX, y, "Dereference symlinks", 'd', state.DereferenceSymlinks, state.FocusField == focusIdx, styles)
 		y++
 		focusIdx++
 	}

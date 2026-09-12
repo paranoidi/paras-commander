@@ -22,8 +22,11 @@ type JobEntry struct {
 	DoneBytes   int64
 	TotalBytes  int64
 	Error       string
-	StartedAt   time.Time
-	FinishedAt  time.Time
+	// Warnings mirrors jobs.Job.Warnings: non-fatal per-item issues (e.g. a symlink relinked
+	// instead of dereferenced) that do not fail the job.
+	Warnings   []string
+	StartedAt  time.Time
+	FinishedAt time.Time
 	// ETABytesPerSec is smoothed throughput from recent progress samples (bytes/s).
 	ETABytesPerSec float64
 	// ETAFilesPerSec is smoothed completion rate from recent progress samples (files/s).

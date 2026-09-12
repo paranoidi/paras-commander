@@ -172,8 +172,8 @@ func TestTransferFlattenToggleFocusedSpace(t *testing.T) {
 	app.dialogCtrl.ActivateCopyAction()
 
 	flattenIdx := dialog.TransferDialogEffectiveNumContent(app.model.TransferDialog) - 1
-	if flattenIdx != 3 {
-		t.Fatalf("copy multi-location flatten focus index = %d, want 3", flattenIdx)
+	if flattenIdx != 4 {
+		t.Fatalf("copy multi-location flatten focus index = %d, want 4", flattenIdx)
 	}
 	app.model.TransferDialog.FocusField = flattenIdx
 	app.dialogCtrl.HandleTransferDialogKey(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModNone))

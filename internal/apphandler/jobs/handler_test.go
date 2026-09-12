@@ -401,3 +401,68 @@ func TestApplyRefreshesReloadsPanelsAndSyncsJobPathMarks(t *testing.T) {
 		t.Fatal("completed flatten job should not mark source paths")
 	}
 }
+
+// TestAddTransferJobMoveNeverSetsDereferenceSymlinks guards the enforcement choke point:
+// a Move request must never carry DereferenceSymlinks through onto the resulting Job, even
+// when the request (transfer dialog / TransferPreserve) asked for it — the option only makes
+// sense for Copy.
+func TestAddTransferJobMoveNeverSetsDereferenceSymlinks(t *testing.T) {
+	t.Parallel()
+	state := jobs.NewState()
+	h := New(Deps{
+		Host:   jobsHostStub{},
+		Model:  &ui.Model{},
+		State:  state,
+		Config: config.Default(),
+	})
+
+	h.AddTransferJob(TransferJobRequest{
+		Type:    jobs.TypeMove,
+		Sources: []string{"/src/thistlewood.txt"},
+		Dest:    "/dst",
+		Preserve: jobs.TransferPreserve{
+			DereferenceSymlinks: true,
+		},
+	})
+
+	all := state.AllJobs()
+	if len(all) != 1 {
+		t.Fatalf("len(AllJobs()) = %d, want 1", len(all))
+	}
+	if all[0].Type != jobs.TypeMove {
+		t.Fatalf("job type = %v, want Move", all[0].Type)
+	}
+	if all[0].DereferenceSymlinks {
+		t.Fatal("Move job must never have DereferenceSymlinks set, even when requested")
+	}
+}
+
+// TestAddTransferJobCopyKeepsDereferenceSymlinks is the Copy-side counterpart: the same
+// request field on a Copy job is passed through unchanged.
+func TestAddTransferJobCopyKeepsDereferenceSymlinks(t *testing.T) {
+	t.Parallel()
+	state := jobs.NewState()
+	h := New(Deps{
+		Host:   jobsHostStub{},
+		Model:  &ui.Model{},
+		State:  state,
+		Config: config.Default(),
+	})
+
+	h.AddTransferJob(TransferJobRequest{
+		Type:    jobs.TypeCopy,
+		Sources: []string{"/src/thistlewood.txt"},
+		Dest:    "/dst",
+		Preserve: jobs.TransferPreserve{
+			DereferenceSymlinks: true,
+		},
+	})
+
+	all := state.AllJobs()
+	if len(all) != 1 {
+		t.Fatalf("len(AllJobs()) = %d, want 1", len(all))
+	}
+	if !all[0].DereferenceSymlinks {
+		t.Fatal("Copy job should keep DereferenceSymlinks as requested")
+	}
+}
