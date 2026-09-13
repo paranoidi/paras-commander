@@ -34,7 +34,7 @@ func TestAllJobsDedupesSameIDInActiveAndWaitingBlocker(t *testing.T) {
 		Destination: pathloc.MustParse("/dst"),
 	}
 	s.mu.Lock()
-	s.active = j
+	s.active = []*Job{j}
 	s.waitingBlocker = []*Job{j}
 	s.mu.Unlock()
 
@@ -78,7 +78,7 @@ func TestMenuBarStripStatusesDedupesOverlappingBuckets(t *testing.T) {
 		Destination: pathloc.MustParse("/dst"),
 	}
 	s.mu.Lock()
-	s.active = j
+	s.active = []*Job{j}
 	s.waitingBlocker = []*Job{j}
 	s.mu.Unlock()
 

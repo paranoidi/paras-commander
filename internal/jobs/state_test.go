@@ -35,6 +35,85 @@ func TestWorkerSkipsPausedJobInFavorOfQueued(t *testing.T) {
 	}
 }
 
+func TestDeleteJobRunsWhileTransferHoldsLease(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	release := make(chan struct{})
+	started := make(chan string, 2)
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		started <- job.ID
+		if job.Type == TypeCopy {
+			<-release
+		}
+		return nil
+	})
+	s.StartWorker(stop)
+	defer close(stop)
+
+	s.AddJob(&Job{ID: "copy-1", Type: TypeCopy, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), Destination: pathloc.MustParse("/y")})
+
+	select {
+	case id := <-started:
+		if id != "copy-1" {
+			t.Fatalf("first started = %q, want copy-1", id)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for copy to start")
+	}
+
+	s.AddJob(&Job{ID: "del-1", Type: TypeDelete, Status: StatusQueued, Sources: pathloc.PathsForTest("/z")})
+
+	select {
+	case id := <-started:
+		if id != "del-1" {
+			t.Fatalf("second started = %q, want del-1", id)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for delete to run while copy is blocked")
+	}
+
+	// The delete's status flip to StatusCompleted happens on the worker goroutine after
+	// TransferFunc returns, so poll briefly instead of asserting immediately.
+	deadline := time.Now().Add(3 * time.Second)
+	var deleteCompleted, sawOverlap, copyStillRunning bool
+	for time.Now().Before(deadline) {
+		all := s.AllJobs()
+		var haveCopy, haveDelete bool
+		for _, j := range all {
+			switch j.ID {
+			case "copy-1":
+				haveCopy = true
+				if !j.Status.IsFinished() {
+					copyStillRunning = true
+				}
+			case "del-1":
+				haveDelete = true
+				if j.Status == StatusCompleted {
+					deleteCompleted = true
+				}
+			}
+		}
+		if haveCopy && haveDelete {
+			sawOverlap = true
+		}
+		if deleteCompleted {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	close(release)
+
+	if !sawOverlap {
+		t.Fatal("AllJobs() never listed both copy and delete jobs during the overlap")
+	}
+	if !deleteCompleted {
+		t.Fatal("delete job never reached StatusCompleted while the copy job was still holding the transfer lease")
+	}
+	if !copyStillRunning {
+		t.Fatal("copy job should still be running (blocked) while the delete job completed")
+	}
+}
+
 func TestWorkerYieldsTransferLeaseWhileWaitingConflictDecision(t *testing.T) {
 	s := NewState()
 	stop := make(chan struct{})
@@ -425,7 +504,7 @@ func TestStateSnapshotIncludesActive(t *testing.T) {
 func (s *State) setActiveForTest(job *Job) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.active = job
+	s.active = []*Job{job}
 }
 
 func TestWorkerArchivesFinishedToHistory(t *testing.T) {
@@ -599,7 +678,7 @@ func TestMenuBarStripStatusesOrderDoneOngoingQueued(t *testing.T) {
 		{ID: "d1", Status: StatusCompleted},
 		{ID: "d2", Status: StatusFailed},
 	}
-	s.active = &Job{ID: "run", Status: StatusRunning}
+	s.active = []*Job{{ID: "run", Status: StatusRunning}}
 	s.mu.Unlock()
 	s.queue.Enqueue(&Job{ID: "scan", Status: StatusScanning, Type: TypeCopy, Sources: pathloc.PathsForTest("/s"), Destination: pathloc.MustParse("/t")})
 	s.queue.Enqueue(&Job{ID: "q1", Status: StatusQueued, Type: TypeCopy, Sources: pathloc.PathsForTest("/a"), Destination: pathloc.MustParse("/b")})

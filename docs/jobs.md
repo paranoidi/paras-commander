@@ -2,7 +2,8 @@
 
 The jobs view (open with Alt+J) has a Queue panel on the left listing all
 background copy/move jobs. While that panel is focused, you can cap how fast
-transfers run.
+transfers run. Delete jobs start immediately and run in parallel with
+transfers instead of waiting behind a running copy/move.
 
 The limit is global — it applies to all transfers together, not to a single
 job — and it's session-only: it always starts back at Unlimited the next time

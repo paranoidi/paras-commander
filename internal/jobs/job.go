@@ -181,3 +181,9 @@ func (j *Job) NeedsPreScan() bool {
 	}
 	return j.Type == TypeCopy || j.Type == TypeMove || j.Type == TypeFlatten
 }
+
+// holdsTransferLease reports whether the job must serialize on the single transfer lease.
+// ponytail: global lease; becomes a per-device lane key when device queues land
+func (j *Job) holdsTransferLease() bool {
+	return j.Type != TypeDelete
+}

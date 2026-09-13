@@ -5,8 +5,10 @@ package jobs
 // (e.g. active not cleared yet while entering waitingBlocker); use dedupeJobsByID before UI use.
 func (s *State) collectAllJobsUnlocked() []*Job {
 	var all []*Job
-	if s.active != nil {
-		all = append(all, s.active)
+	for _, j := range s.active {
+		if j != nil {
+			all = append(all, j)
+		}
 	}
 	for _, j := range s.waitingBlocker {
 		if j != nil {
@@ -34,8 +36,10 @@ func (s *State) collectMenuBarStripJobsUnlocked() []*Job {
 			all = append(all, j)
 		}
 	}
-	if s.active != nil {
-		all = append(all, s.active)
+	for _, j := range s.active {
+		if j != nil {
+			all = append(all, j)
+		}
 	}
 	for _, j := range s.waitingBlocker {
 		if j != nil && !j.Status.IsFinished() {

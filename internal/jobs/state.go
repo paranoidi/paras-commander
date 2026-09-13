@@ -11,14 +11,17 @@ import (
 
 // State provides a thread-safe view of all tracked jobs for the UI layer.
 type State struct {
-	mu     sync.Mutex
-	queue  *Queue
-	active *Job // Job currently holding the transfer lease (running copy/move), or nil.
+	mu    sync.Mutex
+	queue *Queue
+	// active is the set of currently running jobs (at most one holding the transfer lease, plus
+	// any number of concurrent delete jobs — see Job.holdsTransferLease).
+	active []*Job
 	// waitingBlocker holds jobs that yielded the lease while awaiting user blocker input (FIFO).
 	waitingBlocker []*Job
 	finished       []*Job
-	cancelRun      context.CancelFunc
-	events         chan Event
+	// cancelRun maps a running job's ID to its cancel func.
+	cancelRun map[string]context.CancelFunc
+	events    chan Event
 	// wake unblocks the worker when a job is enqueued while the queue was empty.
 	wake chan struct{}
 
@@ -89,7 +92,7 @@ func (s *State) SetThroughputChart(columnDur, window time.Duration, enabled bool
 func (s *State) SampleActiveJobThroughput(now time.Time) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	job := s.active
+	job := s.leaseHolderUnlocked()
 	if job == nil || job.Status != StatusRunning {
 		return false
 	}
@@ -111,6 +114,7 @@ func NewState() *State {
 		events:                 make(chan Event, 100),
 		wake:                   make(chan struct{}, 1),
 		blockerWait:            make(map[string]chan ConflictDecision),
+		cancelRun:              make(map[string]context.CancelFunc),
 		throughputChartEnabled: true,
 		scanCancel:             make(map[string]context.CancelFunc),
 		rateLimiter:            &RateLimiter{},
@@ -173,6 +177,46 @@ func (s *State) removePendingDequeuedByID(id string) {
 	}
 }
 
+// activeByIDUnlocked returns the running job with the given ID, or nil. Caller must hold s.mu.
+func (s *State) activeByIDUnlocked(id string) *Job {
+	for _, j := range s.active {
+		if j != nil && j.ID == id {
+			return j
+		}
+	}
+	return nil
+}
+
+// addActiveUnlocked appends job to the running set if not already present by ID. Caller must hold s.mu.
+func (s *State) addActiveUnlocked(job *Job) {
+	if job == nil || s.activeByIDUnlocked(job.ID) != nil {
+		return
+	}
+	s.active = append(s.active, job)
+}
+
+// removeActiveUnlocked removes the running job with the given ID, reporting whether it was present.
+// Caller must hold s.mu.
+func (s *State) removeActiveUnlocked(id string) bool {
+	for i, j := range s.active {
+		if j != nil && j.ID == id {
+			s.active = append(s.active[:i], s.active[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+// leaseHolderUnlocked returns the running job holding the transfer lease, or nil. Caller must hold s.mu.
+func (s *State) leaseHolderUnlocked() *Job {
+	for _, j := range s.active {
+		if j != nil && j.holdsTransferLease() {
+			return j
+		}
+	}
+	return nil
+}
+
 // AddJob adds a job to the queue and emits an enqueued event.
 func (s *State) AddJob(job *Job) {
 	job.ComputeVolumeDevs()
@@ -204,10 +248,11 @@ func (s *State) signalWorker() {
 func (s *State) ActiveJob() *Job {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.active == nil {
+	job := s.leaseHolderUnlocked()
+	if job == nil {
 		return nil
 	}
-	cp := *s.active
+	cp := *job
 	return &cp
 }
 
@@ -238,8 +283,10 @@ func (s *State) FirstWaitingBlockerJob() *Job {
 func (s *State) HasUnfinishedWork() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.active != nil && !s.active.Status.IsFinished() {
-		return true
+	for _, j := range s.active {
+		if j != nil && !j.Status.IsFinished() {
+			return true
+		}
 	}
 	for _, j := range s.waitingBlocker {
 		if j != nil && !j.Status.IsFinished() {
@@ -342,7 +389,7 @@ func (s *State) ApplyEvent(ev Event) {
 				job.StartedAt = time.Now()
 			}
 			ResetProgressETA(job)
-			s.active = job
+			s.addActiveUnlocked(job)
 		}
 	case EventScanProgress:
 		job := s.findJobUnlocked(ev.JobID)
@@ -378,9 +425,7 @@ func (s *State) ApplyEvent(ev Event) {
 		if job != nil {
 			job.Status = StatusRunning
 			job.PendingBlocker = nil
-			if s.active == nil || s.active.ID == ev.JobID {
-				s.active = job
-			}
+			s.addActiveUnlocked(job)
 		}
 	case EventProgress:
 		j := s.findJobUnlocked(ev.JobID)
@@ -412,14 +457,14 @@ func (s *State) ApplyEvent(ev Event) {
 // Canceled pass ""); a non-empty errMsg overwrites the active job's error and fills the job
 // record's error only when still unset (first error wins).
 func (s *State) finalizeJob(jobID string, status Status, errMsg string) {
-	if s.active != nil && s.active.ID == jobID {
-		s.active.Status = status
+	if j := s.activeByIDUnlocked(jobID); j != nil {
+		j.Status = status
 		if errMsg != "" {
-			s.active.Error = errMsg
+			j.Error = errMsg
 		}
-		s.active.FinishedAt = time.Now()
-		s.active.PendingBlocker = nil
-		s.active = nil
+		j.FinishedAt = time.Now()
+		j.PendingBlocker = nil
+		s.removeActiveUnlocked(jobID)
 	}
 	if j := s.findJobUnlocked(jobID); j != nil {
 		j.Status = status
@@ -492,9 +537,8 @@ func (s *State) SubmitConflictDecision(jobID string, d ConflictDecision) {
 func (s *State) CancelJob(id string) bool {
 	defer s.cancelJobScan(id)
 	s.mu.Lock()
-	if s.active != nil && s.active.ID == id {
-		if s.cancelRun != nil {
-			cancel := s.cancelRun
+	if s.activeByIDUnlocked(id) != nil {
+		if cancel := s.cancelRun[id]; cancel != nil {
 			s.mu.Unlock()
 			cancel()
 			return true
@@ -580,9 +624,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		s.blockerRegMu.Unlock()
 
 		s.mu.Lock()
-		if s.active != nil && s.active.ID == job.ID {
-			s.active = nil
-		}
+		s.removeActiveUnlocked(job.ID)
 		s.removePendingDequeuedByID(job.ID)
 		job.Status = StatusWaitingDecision
 		job.PendingBlocker = &jobSnap
@@ -614,7 +656,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		s.mu.Lock()
 		s.removeWaitingBlockerUnlocked(job.ID)
 		job.PendingBlocker = nil
-		s.active = job
+		s.addActiveUnlocked(job)
 		job.Status = StatusRunning
 		s.mu.Unlock()
 
@@ -630,15 +672,17 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		return d
 	}
 
-	s.transferLease.Lock()
-	defer s.transferLease.Unlock()
+	if job.holdsTransferLease() {
+		s.transferLease.Lock()
+		defer s.transferLease.Unlock()
+	}
 
 	jobCtx, cancel := context.WithCancel(context.Background())
 	s.mu.Lock()
 	job.Status = StatusRunning
 	s.removePendingDequeuedByID(job.ID)
-	s.active = job
-	s.cancelRun = cancel
+	s.addActiveUnlocked(job)
+	s.cancelRun[job.ID] = cancel
 	s.mu.Unlock()
 
 	s.emit(Event{
@@ -666,11 +710,10 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 	}
 	job.FinishedAt = time.Now()
 
-	s.cancelRun = nil
-	if s.active != nil && s.active.ID == job.ID {
+	delete(s.cancelRun, job.ID)
+	if s.removeActiveUnlocked(job.ID) {
 		s.finished = append(s.finished, job)
 	}
-	s.active = nil
 	job.PendingBlocker = nil
 	s.mu.Unlock()
 
@@ -700,12 +743,15 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 
 func (s *State) workerShutdown() {
 	s.mu.Lock()
-	cancel := s.cancelRun
+	cancels := make([]context.CancelFunc, 0, len(s.cancelRun))
+	for _, cancel := range s.cancelRun {
+		cancels = append(cancels, cancel)
+	}
 	s.mu.Unlock()
-	if cancel != nil {
+	for _, cancel := range cancels {
 		cancel()
 	}
-	// Cancel every still-running plan producer, not just the active job's: under the pipelined
+	// Cancel every still-running plan producer, not just the active jobs': under the pipelined
 	// pre-scan a producer can outlive its job's presence in s.active (e.g. still streaming while
 	// the job sits in waitingBlocker/pendingDequeued/the FIFO), and none of those are otherwise
 	// visited below.
@@ -727,8 +773,10 @@ func (s *State) workerShutdown() {
 		}
 	}
 	s.pendingDequeued = nil
-	if s.active != nil && !s.active.Status.IsFinished() {
-		s.active.Status = StatusCanceled
+	for _, j := range s.active {
+		if j != nil && !j.Status.IsFinished() {
+			j.Status = StatusCanceled
+		}
 	}
 	s.mu.Unlock()
 }
@@ -775,8 +823,8 @@ func (s *State) findJobUnlocked(id string) *Job {
 			return j
 		}
 	}
-	if s.active != nil && s.active.ID == id {
-		return s.active
+	if j := s.activeByIDUnlocked(id); j != nil {
+		return j
 	}
 	for _, j := range s.waitingBlocker {
 		if j != nil && j.ID == id {
