@@ -148,6 +148,9 @@ type Job struct {
 	// FlattenIntoDest requests dest/<basename> naming for a copy/move job (transfer-dialog
 	// "Flatten into destination" checkbox), independent of TypeFlatten jobs.
 	FlattenIntoDest bool
+
+	// RemovingSources is true once a move's copy fallback is deleting its transferred sources.
+	RemovingSources bool
 }
 
 // FlatDestNames reports whether the job should resolve every source to dest/<basename>

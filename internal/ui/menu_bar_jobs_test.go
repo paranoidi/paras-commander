@@ -120,6 +120,38 @@ func TestDrawMenuBarJobsGapLightbar(t *testing.T) {
 	}
 }
 
+func TestDrawMenuBarJobsGapDeleteLightbar(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	doneGfxHead := tcell.StyleDefault.Foreground(tcell.ColorWhite)
+	doneGfxTrail := tcell.StyleDefault.Foreground(tcell.ColorGreen)
+	delGfxHead := tcell.StyleDefault.Foreground(tcell.ColorRed)
+	delGfxTrail := tcell.StyleDefault.Foreground(tcell.ColorYellow)
+	styles.MenuProgressDoneGfx = []tcell.Style{doneGfxHead, doneGfxTrail}
+	styles.MenuProgressDeleteGfx = []tcell.Style{delGfxHead, delGfxTrail}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(10, 2)
+
+	strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 1, Deleting: true, LightbarHead: 1}
+	if exited := DrawMenuBarJobsGap(screen, 0, 0, 5, strip, styles); exited {
+		t.Fatal("head 1 of 5 done cells must not report exited")
+	}
+
+	_, gotHeadStyle, _ := screen.Get(1, 0)
+	if gotHeadStyle != delGfxHead {
+		t.Fatalf("cell 1 style = %v, want delete light-bar head %v", gotHeadStyle, delGfxHead)
+	}
+	_, gotTrailStyle, _ := screen.Get(0, 0)
+	if gotTrailStyle != delGfxTrail {
+		t.Fatalf("cell 0 style = %v, want delete light-bar trail %v", gotTrailStyle, delGfxTrail)
+	}
+}
+
 func TestDrawMenuBarJobsGapIndeterminatePingPong(t *testing.T) {
 	t.Parallel()
 	styles := theme.Default()

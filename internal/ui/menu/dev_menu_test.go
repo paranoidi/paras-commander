@@ -8,9 +8,10 @@ func TestDevDefinitionShortcuts(t *testing.T) {
 		t.Fatalf("Dev menu shortcut = %q, want v", def.Shortcut)
 	}
 	want := map[string]rune{
-		"Show info":  's',
-		"Show warn":  'w',
-		"Show error": 'e',
+		"Show info":       's',
+		"Show warn":       'w',
+		"Show error":      'e',
+		"Delete bar demo": 'd',
 	}
 	for _, item := range def.Items {
 		got, ok := want[item.Label]

@@ -172,6 +172,10 @@ type Theme struct {
 	// (menu.progress.done.gfx.0..gfx.9, gfx.0 = head). Empty when the theme defines none,
 	// in which case the done span renders as a static MenuProgressDone fill.
 	MenuProgressDoneGfx []tcell.Style
+	// MenuProgressDeleteGfx is the optional light-bar gradient used while the bar represents
+	// deletion (menu.progress.delete.gfx.0..gfx.9). Empty when the theme defines none —
+	// the renderer falls back to MenuProgressDoneGfx.
+	MenuProgressDeleteGfx []tcell.Style
 	// MenuJob* styles one-cell queue glyph per live job status in the menu bar.
 	MenuJobScanning                  tcell.Style
 	MenuJobQueued                    tcell.Style
@@ -1064,12 +1068,16 @@ var requiredStyleKeys = []string{
 
 var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
 
-// optionalStyleKeys are style keys a theme may omit; menu.progress.done.gfx.0..9 is the
-// optional light-bar gradient over the menu-bar progress bar's done span (gfx.0 = head).
+// optionalStyleKeys are style keys a theme may omit; menu.progress.done.gfx.0..9 and
+// menu.progress.delete.gfx.0..9 are the optional light-bar gradients over the menu-bar
+// progress bar's done span (gfx.0 = head).
 var optionalStyleKeys = func() []string {
-	keys := make([]string, 0, 10)
+	keys := make([]string, 0, 20)
 	for i := 0; i < 10; i++ {
 		keys = append(keys, fmt.Sprintf("menu.progress.done.gfx.%d", i))
+	}
+	for i := 0; i < 10; i++ {
+		keys = append(keys, fmt.Sprintf("menu.progress.delete.gfx.%d", i))
 	}
 	return keys
 }()
@@ -1362,17 +1370,13 @@ func parse(data []byte) (Theme, error) {
 		styles[key] = style
 	}
 
-	var menuProgressDoneGfx []tcell.Style
-	for _, key := range optionalStyleKeys {
-		spec, ok := specs[key]
-		if !ok {
-			continue
-		}
-		style, err := buildStyle(spec, palette)
-		if err != nil {
-			return Theme{}, fmt.Errorf("style %q: %w", key, err)
-		}
-		menuProgressDoneGfx = append(menuProgressDoneGfx, style)
+	menuProgressDoneGfx, err := optionalGfx(specs, palette, "menu.progress.done.gfx")
+	if err != nil {
+		return Theme{}, err
+	}
+	menuProgressDeleteGfx, err := optionalGfx(specs, palette, "menu.progress.delete.gfx")
+	if err != nil {
+		return Theme{}, err
 	}
 
 	panelFileIcons := map[string]tcell.Color{}
@@ -1502,6 +1506,7 @@ func parse(data []byte) (Theme, error) {
 		MenuProgressDone:                 styles["menu.progress.done"],
 		MenuProgressRemaining:            styles["menu.progress.remaining"],
 		MenuProgressDoneGfx:              menuProgressDoneGfx,
+		MenuProgressDeleteGfx:            menuProgressDeleteGfx,
 		MenuJobScanning:                  styles["menu.job.scanning"],
 		MenuJobQueued:                    styles["menu.job.queued"],
 		MenuJobRunning:                   styles["menu.job.running"],
@@ -1843,6 +1848,25 @@ func decodeStyleSpec(key string, table map[string]any) (styleSpec, error) {
 		}
 	}
 	return spec, nil
+}
+
+// optionalGfx loads consecutive optional gradient keys prefix.0 .. prefix.9, stopping at the
+// first missing index so a theme can define a short trail without sparse holes.
+func optionalGfx(specs map[string]styleSpec, palette map[string]tcell.Color, prefix string) ([]tcell.Style, error) {
+	var out []tcell.Style
+	for i := 0; i < 10; i++ {
+		key := fmt.Sprintf("%s.%d", prefix, i)
+		spec, ok := specs[key]
+		if !ok {
+			break
+		}
+		style, err := buildStyle(spec, palette)
+		if err != nil {
+			return nil, fmt.Errorf("style %q: %w", key, err)
+		}
+		out = append(out, style)
+	}
+	return out, nil
 }
 
 func buildStyle(spec styleSpec, palette map[string]tcell.Color) (tcell.Style, error) {

@@ -210,7 +210,7 @@ func TestMoveCopyFallbackChanParity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("executeCopyIter error = %v", err)
 	}
-	chanFiles, chanBytes, err := finishMoveCopyPhase(context.Background(), MustPaths(srcChan), transferred, copyFiles, copyBytes)
+	chanFiles, chanBytes, err := finishMoveCopyPhase(context.Background(), MustPaths(srcChan), transferred, copyFiles, copyBytes, nil)
 	if err != nil {
 		t.Fatalf("finishMoveCopyPhase error = %v", err)
 	}

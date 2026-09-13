@@ -2,6 +2,7 @@ package app
 
 import (
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/jobs"
@@ -1160,6 +1161,8 @@ func (a *App) dispatch(actionID string) bool {
 		a.setTransientMessage("Example warn message", ui.MessageUrgencyWarn)
 	case keymap.ActionDevShowError:
 		a.setTransientMessage("Example error message", ui.MessageUrgencyError)
+	case keymap.ActionDevDemoDeleteBar:
+		a.devDeleteBarDemoStart = time.Now()
 	}
 	return false
 }

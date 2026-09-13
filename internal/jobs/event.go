@@ -16,6 +16,8 @@ const (
 	EventCompleted  EventType = "completed"
 	EventFailed     EventType = "failed"
 	EventCanceled   EventType = "canceled"
+	// EventRemovingSources is emitted once when a move's copy fallback starts deleting its sources.
+	EventRemovingSources EventType = "removing-sources"
 )
 
 // DroppableWhenChannelFull reports whether emit may discard the event when the

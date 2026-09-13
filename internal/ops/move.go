@@ -245,14 +245,18 @@ func executeMoveCopyPhase(ctx context.Context, planOptional []PlanItem, sources 
 	if err != nil {
 		return doneFiles, doneBytes, fmt.Errorf("move copy phase: %w", err)
 	}
-	return finishMoveCopyPhase(ctx, sources, transferred, doneFiles, doneBytes)
+	return finishMoveCopyPhase(ctx, sources, transferred, doneFiles, doneBytes, opts.OnRemoveSources)
 }
 
 // finishMoveCopyPhase removes transferred sources and any now-empty source directory roots
 // after a move's copy-fallback phase has copied everything to destination. Shared by the
 // slice-backed (executeMoveCopyPhase) and channel-backed (ExecuteMoveWithPlanChan) fallback
-// phases so this tail logic has one source of truth.
-func finishMoveCopyPhase(ctx context.Context, sources []pathloc.Path, transferred []pathloc.Path, doneFiles int, doneBytes int64) (int, int64, error) {
+// phases so this tail logic has one source of truth. onRemove, when non-nil, is called once
+// before the removal loop begins.
+func finishMoveCopyPhase(ctx context.Context, sources []pathloc.Path, transferred []pathloc.Path, doneFiles int, doneBytes int64, onRemove func()) (int, int64, error) {
+	if onRemove != nil {
+		onRemove()
+	}
 	for _, src := range transferred {
 		if err := ctx.Err(); err != nil {
 			return doneFiles, doneBytes, err
@@ -334,5 +338,5 @@ func ExecuteMoveWithPlanChan(ctx context.Context, planCh <-chan PlanItem, planEr
 	if err != nil {
 		return copyFiles, copyBytes, fmt.Errorf("move copy phase: %w", err)
 	}
-	return finishMoveCopyPhase(ctx, sources, transferred, copyFiles, copyBytes)
+	return finishMoveCopyPhase(ctx, sources, transferred, copyFiles, copyBytes, opts.OnRemoveSources)
 }

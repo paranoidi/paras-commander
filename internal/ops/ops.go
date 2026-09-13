@@ -68,6 +68,9 @@ type Options struct {
 	// RateLimit throttles transfer throughput when set; nil (the default) means unlimited.
 	// Callers must check for nil before calling it.
 	RateLimit RateLimiter
+	// OnRemoveSources is called once when a move's copy fallback starts removing transferred
+	// sources; nil means no-op.
+	OnRemoveSources func()
 }
 
 // RateLimiter throttles n bytes just spent, blocking until permitted or ctx is canceled.

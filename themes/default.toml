@@ -50,7 +50,11 @@ scanning = { fg = "magenta" }
 done = { fg = "green" }
 done.gfx.0 = { fg = "white" }          # light bar head (optional, gfx.0..gfx.9)
 done.gfx.1 = { fg = "bright_green" }   # light bar trail
-remaining = { fg = "bright_black" }
+delete.gfx.0 = { fg = "bright_red" }   # delete light bar head (optional, gfx.0..gfx.9)
+delete.gfx.1 = { fg = "red" }
+delete.gfx.2 = { fg = "bright_yellow" }
+delete.gfx.3 = { fg = "yellow" }
+remaining = { fg = "black" }
 
 [message]
 info = { fg = "black", bg = "white" }

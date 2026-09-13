@@ -24,6 +24,10 @@ type MenuBarJobsStrip struct {
 	// ProgressFrac is meaningless; the bar renders indeterminate: an empty track with the gradient
 	// ping-ponging across it.
 	ProgressIndeterminate bool
+	// Deleting means the bar represents removal — a delete job or a move's source-removal phase.
+	// The light-bar gradient uses MenuProgressDeleteGfx (falling back to MenuProgressDoneGfx when
+	// the theme defines none).
+	Deleting bool
 	// LightbarHead is the light-bar gradient's frame counter: the done-span cell index of the
 	// head (MenuProgressDoneGfx[0]), trailing gradient cells behind it. The caller advances it
 	// one per animation frame and resets it to 0 when DrawMenuBarJobsGap reports lightbarExited.
@@ -149,6 +153,9 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 	doneStyle := styles.MenuProgressDone
 	remStyle := styles.MenuProgressRemaining
 	gfx := styles.MenuProgressDoneGfx
+	if strip.Deleting && len(styles.MenuProgressDeleteGfx) > 0 {
+		gfx = styles.MenuProgressDeleteGfx
+	}
 
 	if strip.ProgressIndeterminate {
 		// Empty track; the gradient (gfx colours, then the done colour as the last trail cell —

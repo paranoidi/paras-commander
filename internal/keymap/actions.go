@@ -264,9 +264,10 @@ const (
 
 // Dev menu actions (menu routing only; enabled with pc -dev).
 const (
-	ActionDevShowInfo  = "dev.show-info"
-	ActionDevShowWarn  = "dev.show-warn"
-	ActionDevShowError = "dev.show-error"
+	ActionDevShowInfo      = "dev.show-info"
+	ActionDevShowWarn      = "dev.show-warn"
+	ActionDevShowError     = "dev.show-error"
+	ActionDevDemoDeleteBar = "dev.demo-delete-bar"
 )
 
 // KnownActions lists action IDs accepted in keybindings.toml for the current app.

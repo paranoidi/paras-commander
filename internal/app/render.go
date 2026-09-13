@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"time"
 	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -292,7 +293,27 @@ func (a *App) emitScreenAfterPartialPaint() {
 // refreshMenuBarJobsStrip rebuilds Model.MenuBarJobs from job state and stamps the light-bar head.
 func (a *App) refreshMenuBarJobsStrip() {
 	a.model.MenuBarJobs = a.jobsCtrl.MenuBarStripSnapshot()
+	if a.devDeleteBarDemoActive() {
+		frac := float64(time.Since(a.devDeleteBarDemoStart)) / float64(devDeleteBarDemoFill)
+		if frac > 1 {
+			frac = 1
+		}
+		a.model.MenuBarJobs = ui.MenuBarJobsStrip{
+			HasProgress:  true,
+			Deleting:     true,
+			ProgressFrac: frac,
+		}
+	}
 	a.model.MenuBarJobs.LightbarHead = a.lightbarHead
+}
+
+const (
+	devDeleteBarDemoFill  = 4 * time.Second
+	devDeleteBarDemoTotal = 10 * time.Second
+)
+
+func (a *App) devDeleteBarDemoActive() bool {
+	return !a.devDeleteBarDemoStart.IsZero() && time.Since(a.devDeleteBarDemoStart) < devDeleteBarDemoTotal
 }
 
 // paintMenuBarJobsStripOnly updates Model.MenuBarJobs and repaints only the menu-bar jobs gap

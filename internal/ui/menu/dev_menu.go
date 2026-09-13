@@ -13,6 +13,7 @@ func DevDefinition() Definition {
 			{Action: keymap.ActionDevShowInfo, Label: "Show info", Shortcut: 's'},
 			{Action: keymap.ActionDevShowWarn, Label: "Show warn", Shortcut: 'w'},
 			{Action: keymap.ActionDevShowError, Label: "Show error", Shortcut: 'e'},
+			{Action: keymap.ActionDevDemoDeleteBar, Label: "Delete bar demo", Shortcut: 'd'},
 		},
 	}
 }

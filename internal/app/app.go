@@ -185,6 +185,8 @@ type App struct {
 	spinnerRedrawTimer *time.Timer
 	// lightbarHead is the menu-bar progress light bar's frame counter (ui.MenuBarJobsStrip.LightbarHead).
 	lightbarHead int
+	// devDeleteBarDemoStart is the wall time when Dev → Delete bar demo began; zero when inactive.
+	devDeleteBarDemoStart time.Time
 	// syncFollowNavGen invalidates in-flight debounce callbacks for latched panel sync (file-list cursor).
 	syncFollowNavGen atomic.Uint64
 	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent

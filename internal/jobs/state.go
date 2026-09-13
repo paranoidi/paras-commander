@@ -392,6 +392,10 @@ func (s *State) ApplyEvent(ev Event) {
 			ApplyProgressETA(j, ev.DoneBytes, ev.DoneFiles, now)
 			j.PendingBlocker = nil
 		}
+	case EventRemovingSources:
+		if j := s.findJobUnlocked(ev.JobID); j != nil {
+			j.RemovingSources = true
+		}
 	case EventCompleted:
 		s.finalizeJob(ev.JobID, StatusCompleted, "")
 	case EventFailed:

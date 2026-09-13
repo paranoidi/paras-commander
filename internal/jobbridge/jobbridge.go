@@ -260,6 +260,9 @@ func ActivityFailureLabel(ev jobs.Event) string {
 func TransferFunc(opsCfg config.OperationsConfig, jobsCfg config.JobsConfig, rateWait ops.RateLimiter) func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 	return func(ctx context.Context, job *jobs.Job, emit func(jobs.Event), waitBlocker func(jobs.BlockerRequest) jobs.ConflictDecision) error {
 		opts, throttle := buildTransferOptions(job, opsCfg, jobsCfg, rateWait)
+		opts.OnRemoveSources = func() {
+			emit(jobs.Event{Type: jobs.EventRemovingSources, JobID: job.ID, Status: jobs.StatusRunning})
+		}
 		resolver := newConflictResolver(job, waitBlocker)
 		diskWait := diskWaitFromBlocker(waitBlocker)
 		progress := func(sourcePath, destPath string, doneFiles int, doneBytes int64) {

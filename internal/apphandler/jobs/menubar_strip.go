@@ -80,6 +80,12 @@ func (h *Handler) MenuBarStripSnapshot() ui.MenuBarJobsStrip {
 			// meaningless before that; the renderer shows an indeterminate bar.
 			strip.ProgressIndeterminate = prog.NeedsPreScan() && !prog.TotalsComplete
 		}
+		strip.Deleting = prog.Type == jobs.TypeDelete || prog.RemovingSources
+		if prog.RemovingSources {
+			// Copy is done; the bar is full while sources are removed.
+			strip.ProgressFrac, strip.ProgressIndeterminate = 1, false
+			strip.HasProgress = true
+		}
 	}
 	if prog == nil {
 		for _, j := range all {

@@ -324,9 +324,9 @@ func (a *App) diskUsageScanBusy() bool {
 }
 
 // menuBarSpinnerBusy reports whether the menu-bar activity heartbeat should keep ticking:
-// any unfinished job or other menu-bar activity (menuBarOtherActivity).
+// any unfinished job or other menu-bar activity (menuBarOtherActivity), or the Dev delete-bar demo.
 func (a *App) menuBarSpinnerBusy() bool {
-	return a.menuBarOtherActivity() || a.jobState.HasUnfinishedWork()
+	return a.menuBarOtherActivity() || a.jobState.HasUnfinishedWork() || a.devDeleteBarDemoActive()
 }
 
 // menuBarSpinnerVisible is like menuBarSpinnerBusy but drops unfinished-job work from the
