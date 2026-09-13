@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
 	"github.com/paranoidi/paras-commander/internal/keymap"
@@ -148,11 +149,11 @@ func TestChooserEnterDirectoryDoesNotWrite(t *testing.T) {
 	if quit := app.handleNavOpen(&app.model.Primary, 10); quit {
 		t.Fatal("handleNavOpen quit on directory")
 	}
-	applyNextInterruptEvent(t, app, screen) // async load: quick-view overlay populated at startup
-	applyNextInterruptEvent(t, app, screen) // async load, Primary enters nested
-	if app.model.Primary.PathString() != sub {
-		t.Fatalf("panel path = %q, want %q", app.model.Primary.PathString(), sub)
-	}
+	// The nested load races the startup quick-view overlay load for the screen event queue,
+	// so drain until the panel has actually entered nested rather than counting events.
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return app.model.Primary.PathString() == sub
+	})
 	if _, err := os.Stat(chooserOut); err == nil {
 		t.Fatal("chooser file created on directory enter")
 	}
