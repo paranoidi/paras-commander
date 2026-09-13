@@ -21,6 +21,7 @@ func TestScanFlipsToQueuedAfterFirstItemAndGrowsTotals(t *testing.T) {
 	s.SetScanConfig(ScanConfig{ProgressMinInterval: 10 * time.Millisecond})
 
 	firstItem := make(chan struct{})
+	totalsDoneCh := make(chan struct{})
 	doneCh := make(chan struct{})
 	var filesN atomic.Int64
 
@@ -32,8 +33,9 @@ func TestScanFlipsToQueuedAfterFirstItemAndGrowsTotals(t *testing.T) {
 				n := int(filesN.Load())
 				return n, 0, int64(n) * 100
 			},
-			Done: doneCh,
-			Err:  func() error { return nil },
+			TotalsDone: totalsDoneCh,
+			Done:       doneCh,
+			Err:        func() error { return nil },
 		}
 	})
 
@@ -98,8 +100,30 @@ func TestScanFlipsToQueuedAfterFirstItemAndGrowsTotals(t *testing.T) {
 	}
 grown:
 
-	// Finish the walk: Done closes, Err returns nil, job.PlanComplete must end up true.
+	// Counting walk finishes first: TotalsComplete flips while the delivery walk (PlanComplete)
+	// is still running.
 	filesN.Store(20)
+	close(totalsDoneCh)
+	deadline = time.After(3 * time.Second)
+	for {
+		all := s.AllJobs()
+		if len(all) == 1 && all[0].TotalsComplete {
+			if all[0].PlanComplete {
+				t.Fatalf("PlanComplete must not flip on TotalsDone alone; got %+v", all)
+			}
+			if all[0].TotalFiles != 20 {
+				t.Fatalf("TotalFiles after TotalsDone = %d, want 20", all[0].TotalFiles)
+			}
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("timeout waiting TotalsComplete=true; last seen: %+v", all)
+		case <-time.After(5 * time.Millisecond):
+		}
+	}
+
+	// Finish the walk: Done closes, Err returns nil, job.PlanComplete must end up true.
 	close(doneCh)
 
 	deadline = time.After(3 * time.Second)

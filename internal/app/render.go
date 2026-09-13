@@ -145,7 +145,7 @@ func (a *App) renderBrowserListNavUpdate(panelID int) {
 	a.previewCtrl.SyncCarouselChildPreviewCoalesceFlags()
 	a.syncCursorNameHintNavCoalesceFlags()
 	a.model.MenuBarPermission = a.menuBarPermissionText()
-	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
+	a.model.MenuBarActivitySpinner = a.menuBarSpinnerVisible()
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
 	model := a.model
@@ -170,7 +170,7 @@ func (a *App) paintDiskUsageBrowserUpdate() bool {
 	if a.model.ViewMode != ui.ViewBrowser || a.panelOnlyPaintBlocked() {
 		return false
 	}
-	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
+	a.model.MenuBarActivitySpinner = a.menuBarSpinnerVisible()
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
 	if layout.TooSmall {
@@ -210,8 +210,8 @@ func (a *App) render() {
 	a.model.MenuBarPermission = a.menuBarPermissionText()
 	a.model.MenuBarJobsAttention = a.menuBarJobsAttentionText()
 	a.model.StatusCommandText = a.statusCmdText
-	a.model.MenuBarJobs = a.jobsCtrl.MenuBarStripSnapshot()
-	a.model.MenuBarActivitySpinner = a.menuBarSpinnerBusy()
+	a.refreshMenuBarJobsStrip()
+	a.model.MenuBarActivitySpinner = a.menuBarSpinnerVisible()
 	a.model.FooterKeys = a.activeFooterKeys()
 	a.model.JobsTransferRateLimitBPS = a.jobState.TransferRateLimit()
 	a.model.DiskUsageDescendIntoMountPoints = a.config.DiskUsage.DescendIntoMountPoints
@@ -289,24 +289,33 @@ func (a *App) emitScreenAfterPartialPaint() {
 	}
 }
 
+// refreshMenuBarJobsStrip rebuilds Model.MenuBarJobs from job state and stamps the light-bar head.
+func (a *App) refreshMenuBarJobsStrip() {
+	a.model.MenuBarJobs = a.jobsCtrl.MenuBarStripSnapshot()
+	a.model.MenuBarJobs.LightbarHead = a.lightbarHead
+}
+
 // paintMenuBarJobsStripOnly updates Model.MenuBarJobs and repaints only the menu-bar jobs gap
 // (queue + progress between labels and permission tail). Caller sets lastJobBatchMenuBarStripOnly.
-func (a *App) paintMenuBarJobsStripOnly() bool {
+// Returns painted (whether the gap was repainted) and lightbarExited (see ui.DrawMenuBarJobsGap) —
+// the spinner tick handler uses the latter to reset the light bar's frame counter.
+func (a *App) paintMenuBarJobsStripOnly() (painted, lightbarExited bool) {
 	if !a.model.MenuBarLayoutReserved() {
-		return false
+		return false, false
 	}
 	w, h := a.screen.Size()
 	layout := a.layoutForTerminalSize(w, h)
 	if layout.TooSmall {
-		return false
+		return false, false
 	}
-	a.model.MenuBarJobs = a.jobsCtrl.MenuBarStripSnapshot()
+	a.refreshMenuBarJobsStrip()
 	menus := menu.ActiveDefinitions(a.model.MenuDefinitions)
-	if !ui.DrawMenuBarJobsGapOnly(a.screen, layout, a.model, menus, a.styles) {
-		return false
+	painted, lightbarExited = ui.DrawMenuBarJobsGapOnly(a.screen, layout, a.model, menus, a.styles)
+	if !painted {
+		return false, false
 	}
 	a.emitScreenAfterPartialPaint()
-	return true
+	return true, lightbarExited
 }
 
 func (a *App) menuBarJobsAttentionText() string {

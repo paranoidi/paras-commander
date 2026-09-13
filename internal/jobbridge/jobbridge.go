@@ -184,7 +184,8 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 			Totals: func() (int, int, int64) {
 				return int(files.Load()), int(dirs.Load()), totalBytes.Load()
 			},
-			Done: done,
+			TotalsDone: countDone,
+			Done:       done,
 			Err: func() error {
 				return walkErr
 			},

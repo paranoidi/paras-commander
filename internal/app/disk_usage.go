@@ -323,10 +323,36 @@ func (a *App) diskUsageScanBusy() bool {
 	return a.model.DiskUsage.DiskScanBusy()
 }
 
+// menuBarSpinnerBusy reports whether the menu-bar activity heartbeat should keep ticking:
+// any unfinished job or other menu-bar activity (menuBarOtherActivity).
 func (a *App) menuBarSpinnerBusy() bool {
-	return a.diskUsageScanBusy() || a.jobState.HasUnfinishedWork() || a.commandsCtrl.HasRunning() ||
+	return a.menuBarOtherActivity() || a.jobState.HasUnfinishedWork()
+}
+
+// menuBarSpinnerVisible is like menuBarSpinnerBusy but drops unfinished-job work from the
+// spinner condition while a menu-bar job bar (progress or scanning) is on screen: the animated
+// bar replaces the spinner for jobs, while disk-usage scans, running commands, and directory
+// loads still show it.
+func (a *App) menuBarSpinnerVisible() bool {
+	lightbarShown := a.config.Jobs.ProgressLightbar && a.model.MenuBarJobs.HasProgress
+	return a.menuBarOtherActivity() || (a.jobState.HasUnfinishedWork() && !lightbarShown)
+}
+
+// menuBarOtherActivity is every menu-bar spinner source other than file-operation jobs:
+// disk-usage scans, running commands, and directory loads.
+func (a *App) menuBarOtherActivity() bool {
+	return a.diskUsageScanBusy() || a.commandsCtrl.HasRunning() ||
 		a.model.Primary.ShowLoadingGlyph || a.model.Secondary.ShowLoadingGlyph
 }
+
+const (
+	// menuBarSpinnerTick is the menu-bar activity heartbeat (spinnerTickPayload) period.
+	menuBarSpinnerTick = 100 * time.Millisecond
+	// menuBarLightbarFrame is the animation step of the menu-bar progress light bar; the gradient
+	// advances one cell per frame. Must be a multiple of menuBarSpinnerTick.
+	menuBarLightbarFrame         = 100 * time.Millisecond
+	menuBarLightbarTicksPerFrame = uint8(menuBarLightbarFrame / menuBarSpinnerTick)
+)
 
 func (a *App) stopSpinnerRedrawTimer() {
 	if a.spinnerRedrawTimer == nil {
@@ -344,8 +370,7 @@ func (a *App) armSpinnerRedrawTimer() {
 	if a.spinnerRedrawTimer != nil {
 		return
 	}
-	const delay = 90 * time.Millisecond
-	a.spinnerRedrawTimer = time.AfterFunc(delay, func() {
+	a.spinnerRedrawTimer = time.AfterFunc(menuBarSpinnerTick, func() {
 		a.spinnerRedrawTimer = nil
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(spinnerTickPayload{}))
 	})

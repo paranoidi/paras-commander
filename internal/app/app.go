@@ -178,6 +178,8 @@ type App struct {
 	// scheduled expirations carry the generation and are ignored if stale.
 	messageExpiryGen   atomic.Uint64
 	spinnerRedrawTimer *time.Timer
+	// lightbarHead is the menu-bar progress light bar's frame counter (ui.MenuBarJobsStrip.LightbarHead).
+	lightbarHead int
 	// syncFollowNavGen invalidates in-flight debounce callbacks for latched panel sync (file-list cursor).
 	syncFollowNavGen atomic.Uint64
 	// syncFollowNavSkipReconcile, when true, suppresses syncFollowFromActive in reconcileAfterEvent
@@ -884,6 +886,15 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 			}
 			out.didRender = true
 		}
+		if a.config.Jobs.ProgressLightbar && a.model.MenuBarJobs.HasProgress &&
+			a.model.SpinPhase%menuBarLightbarTicksPerFrame == 0 {
+			a.lightbarHead++
+			if _, exited := a.paintMenuBarJobsStripOnly(); exited {
+				a.lightbarHead = 0
+				a.paintMenuBarJobsStripOnly()
+			}
+			out.didRender = true
+		}
 	case diskIdleSortPayload:
 		a.applyIdleDiskSort(d.PanelID, d.Epoch)
 		a.render()
@@ -1154,7 +1165,11 @@ func (a *App) Run() error {
 			}
 		}
 		if shouldRenderJobs && !didRender {
-			if !a.jobsCtrl.LastBatchMenuBarStripOnly() || !a.paintMenuBarJobsStripOnly() {
+			painted := false
+			if a.jobsCtrl.LastBatchMenuBarStripOnly() {
+				painted, _ = a.paintMenuBarJobsStripOnly()
+			}
+			if !painted {
 				a.render()
 			}
 			didRender = true

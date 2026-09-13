@@ -61,19 +61,106 @@ func TestLayoutMenuBarJobsStrip(t *testing.T) {
 	}
 }
 
-func TestMenuBarProgressFilledCells(t *testing.T) {
+func TestMenuBarProgressCutoff(t *testing.T) {
 	t.Parallel()
-	if !menuBarProgressFilledCells(0.5, 10, 4) {
-		t.Fatal("50% of 10 => 5 filled, index 4 should be filled")
+	if got := menuBarProgressCutoff(0.5, 10); got != 5 {
+		t.Fatalf("50%% of 10 => 5 filled, got %d", got)
 	}
-	if menuBarProgressFilledCells(0.5, 10, 5) {
-		t.Fatal("50% of 10 => 5 filled, index 5 should be empty")
+	if got := menuBarProgressCutoff(1, 3); got != 3 {
+		t.Fatalf("100%% => all filled, got %d", got)
 	}
-	if !menuBarProgressFilledCells(1, 3, 2) {
-		t.Fatal("100% => all filled")
+	if got := menuBarProgressCutoff(0, 8); got != 0 {
+		t.Fatalf("0%% => none filled, got %d", got)
 	}
-	if menuBarProgressFilledCells(0, 8, 0) {
-		t.Fatal("0% => none filled")
+}
+
+func TestDrawMenuBarJobsGapLightbar(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	gfxHead := tcell.StyleDefault.Foreground(tcell.ColorWhite)
+	gfxTrail := tcell.StyleDefault.Foreground(tcell.ColorGreen)
+	styles.MenuProgressDoneGfx = []tcell.Style{gfxHead, gfxTrail}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(10, 3)
+
+	strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 1, LightbarHead: 1}
+	if exited := DrawMenuBarJobsGap(screen, 0, 0, 5, strip, styles); exited {
+		t.Fatal("head 1 of 5 done cells must not report exited")
+	}
+	// Exited once the whole gradient has slid past the 5-cell done span.
+	strip.LightbarHead = 5 + len(styles.MenuProgressDoneGfx) - 1
+	if exited := DrawMenuBarJobsGap(screen, 1, 0, 5, strip, styles); !exited {
+		t.Fatal("head past done edge + gradient must report exited")
+	}
+
+	_, gotHeadStyle, _ := screen.Get(1, 0)
+	if gotHeadStyle != gfxHead {
+		t.Fatalf("cell 1 style = %v, want light-bar head %v", gotHeadStyle, gfxHead)
+	}
+	_, gotTrailStyle, _ := screen.Get(0, 0)
+	if gotTrailStyle != gfxTrail {
+		t.Fatalf("cell 0 style = %v, want light-bar trail %v", gotTrailStyle, gfxTrail)
+	}
+	for x := 2; x < 5; x++ {
+		_, gotStyle, _ := screen.Get(x, 0)
+		if gotStyle != styles.MenuProgressDone {
+			t.Fatalf("cell %d style = %v, want plain done style %v", x, gotStyle, styles.MenuProgressDone)
+		}
+	}
+	// The exited frame paints no gradient cell; the caller resets the head and repaints.
+	for x := 0; x < 5; x++ {
+		if _, gotStyle, _ := screen.Get(x, 1); gotStyle != styles.MenuProgressDone {
+			t.Fatalf("exited frame: cell %d style = %v, want plain done style", x, gotStyle)
+		}
+	}
+}
+
+func TestDrawMenuBarJobsGapIndeterminatePingPong(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	gfx0 := tcell.StyleDefault.Foreground(tcell.ColorPurple)
+	gfx1 := tcell.StyleDefault.Foreground(tcell.ColorOrange)
+	styles.MenuProgressDoneGfx = []tcell.Style{gfx0, gfx1}
+
+	screen := tcell.NewSimulationScreen("UTF-8")
+	if err := screen.Init(); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+	defer screen.Fini()
+	screen.SetSize(10, 3)
+
+	// width 5 => progW 5, period 8; LightbarHead 6 => p=6 => x=2, moving left.
+	strip := MenuBarJobsStrip{HasProgress: true, ProgressIndeterminate: true, LightbarHead: 6}
+	exited := DrawMenuBarJobsGap(screen, 0, 0, 5, strip, styles)
+	if exited {
+		t.Fatal("exited = true at LightbarHead 6, want false")
+	}
+	wantStyle := map[int]tcell.Style{
+		0: styles.MenuProgressRemaining,
+		1: styles.MenuProgressRemaining,
+		2: gfx0,
+		3: gfx1,
+		4: styles.MenuProgressDone,
+	}
+	for x, want := range wantStyle {
+		_, got, _ := screen.Get(x, 0)
+		if got != want {
+			t.Fatalf("cell %d style = %v, want %v", x, got, want)
+		}
+	}
+
+	strip.LightbarHead = 7
+	if exited = DrawMenuBarJobsGap(screen, 1, 0, 5, strip, styles); exited {
+		t.Fatal("exited = true at LightbarHead 7 (last leftward frame), want false")
+	}
+	strip.LightbarHead = 8 // back at cell 0 after a full bounce
+	if exited = DrawMenuBarJobsGap(screen, 1, 0, 5, strip, styles); !exited {
+		t.Fatal("exited = false at LightbarHead 8, want true")
 	}
 }
 

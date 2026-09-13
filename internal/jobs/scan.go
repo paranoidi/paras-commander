@@ -25,8 +25,10 @@ type PlanProducer struct {
 	Items     chan ops.PlanItem
 	FirstItem <-chan struct{}
 	Totals    func() (files, dirs int, bytes int64)
-	Done      <-chan struct{}
-	Err       func() error
+	// TotalsDone closes once Totals is final (the counting walk finished); nil means "only at Done".
+	TotalsDone <-chan struct{}
+	Done       <-chan struct{}
+	Err        func() error
 }
 
 // ScanWalkHooks are optional callbacks during a pre-scan walk.
@@ -204,6 +206,7 @@ func (s *State) runJobScan(job *Job, ctx context.Context, cancel context.CancelF
 	// firstItemCh is nil'd out after firing once so the select doesn't keep re-selecting an
 	// already-closed channel (which would busy-loop instead of blocking on the next tick/Done).
 	firstItemCh := producer.FirstItem
+	totalsDoneCh := producer.TotalsDone
 
 waitLoop:
 	for {
@@ -215,6 +218,12 @@ waitLoop:
 			// transferring while the walk keeps running in the background.
 			flipToRunnable()
 			firstItemCh = nil
+		case <-totalsDoneCh:
+			s.mu.Lock()
+			job.TotalsComplete = true
+			s.mu.Unlock()
+			writeTotalsAndEmit()
+			totalsDoneCh = nil
 		case <-ticker.C:
 			writeTotalsAndEmit()
 		}
@@ -244,6 +253,7 @@ waitLoop:
 
 	s.mu.Lock()
 	job.PlanComplete = true
+	job.TotalsComplete = true
 	s.mu.Unlock()
 	writeTotalsAndEmit()
 }

@@ -135,6 +135,9 @@ const (
 	DefaultThroughputChartColumnMS = 400
 	// DefaultThroughputChartEnabled turns on the jobs details throughput strip + chart rendering.
 	DefaultThroughputChartEnabled = true
+	// DefaultProgressLightbar turns on the moving light-bar highlight over the menu-bar job
+	// progress bar's done span, and suppresses the menu-bar spinner for file-operation jobs.
+	DefaultProgressLightbar = true
 
 	// DefaultFreeSpaceOnProgressWake schedules async statfs on both panels after each progress UI wake.
 	DefaultFreeSpaceOnProgressWake = true

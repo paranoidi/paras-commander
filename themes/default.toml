@@ -48,6 +48,8 @@ scanning = { fg = "magenta" }
 
 [menu.progress]              # menu-bar aggregate progress
 done = { fg = "green" }
+done.gfx.0 = { fg = "white" }          # light bar head (optional, gfx.0..gfx.9)
+done.gfx.1 = { fg = "bright_green" }   # light bar trail
 remaining = { fg = "bright_black" }
 
 [message]

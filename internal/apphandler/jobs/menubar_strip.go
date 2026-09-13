@@ -76,6 +76,18 @@ func (h *Handler) MenuBarStripSnapshot() ui.MenuBarJobsStrip {
 		if f, ok := jobProgressFraction(prog); ok {
 			strip.ProgressFrac = f
 			strip.HasProgress = true
+			// Totals keep growing until the counting walk finishes, so the fraction is
+			// meaningless before that; the renderer shows an indeterminate bar.
+			strip.ProgressIndeterminate = prog.NeedsPreScan() && !prog.TotalsComplete
+		}
+	}
+	if prog == nil {
+		for _, j := range all {
+			if j != nil && j.Status == jobs.StatusScanning {
+				strip.HasProgress = true
+				strip.ProgressIndeterminate = true
+				break
+			}
 		}
 	}
 	return strip

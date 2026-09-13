@@ -89,6 +89,10 @@ type Job struct {
 	// the job leaves StatusScanning, so jobbridge (which has no access to that lock) must not
 	// read it directly; see jobbridge.TransferFunc's streamed-job dispatch.
 	PlanComplete bool
+	// TotalsComplete is true once TotalFiles/TotalDirs/TotalBytes are final: the counting walk has
+	// finished. Unlike PlanComplete it does not wait for the delivery walk, which the transfer
+	// executor drains and so only ends near the end of the job. Same locking rule as PlanComplete.
+	TotalsComplete bool
 	// PausedAfterScan when true transitions to StatusPaused instead of StatusQueued when pre-scan completes.
 	PausedAfterScan bool
 

@@ -168,6 +168,10 @@ type Theme struct {
 	// MenuProgress* styles segmented progress in the menu-bar jobs strip.
 	MenuProgressDone      tcell.Style
 	MenuProgressRemaining tcell.Style
+	// MenuProgressDoneGfx is the optional moving light-bar gradient over the done span
+	// (menu.progress.done.gfx.0..gfx.9, gfx.0 = head). Empty when the theme defines none,
+	// in which case the done span renders as a static MenuProgressDone fill.
+	MenuProgressDoneGfx []tcell.Style
 	// MenuJob* styles one-cell queue glyph per live job status in the menu bar.
 	MenuJobScanning                  tcell.Style
 	MenuJobQueued                    tcell.Style
@@ -1060,6 +1064,18 @@ var requiredStyleKeys = []string{
 
 var requiredStyleKeySet = makeStyleKeySet(requiredStyleKeys)
 
+// optionalStyleKeys are style keys a theme may omit; menu.progress.done.gfx.0..9 is the
+// optional light-bar gradient over the menu-bar progress bar's done span (gfx.0 = head).
+var optionalStyleKeys = func() []string {
+	keys := make([]string, 0, 10)
+	for i := 0; i < 10; i++ {
+		keys = append(keys, fmt.Sprintf("menu.progress.done.gfx.%d", i))
+	}
+	return keys
+}()
+
+var optionalStyleKeySet = makeStyleKeySet(optionalStyleKeys)
+
 // styleSectionRoots are top-level TOML tables for semantic styles (keys inside omit this prefix).
 var styleSectionRoots = []string{"menu", "panel", "dialog", "jobs", "message", "footer", "fuzzy", "terminal", "leader_menu", "compare"}
 
@@ -1346,6 +1362,19 @@ func parse(data []byte) (Theme, error) {
 		styles[key] = style
 	}
 
+	var menuProgressDoneGfx []tcell.Style
+	for _, key := range optionalStyleKeys {
+		spec, ok := specs[key]
+		if !ok {
+			continue
+		}
+		style, err := buildStyle(spec, palette)
+		if err != nil {
+			return Theme{}, fmt.Errorf("style %q: %w", key, err)
+		}
+		menuProgressDoneGfx = append(menuProgressDoneGfx, style)
+	}
+
 	panelFileIcons := map[string]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
 		"panel.active.row.cursor":                     {},
@@ -1472,6 +1501,7 @@ func parse(data []byte) (Theme, error) {
 		MenuSpinner:                      styles["menu.spinner"],
 		MenuProgressDone:                 styles["menu.progress.done"],
 		MenuProgressRemaining:            styles["menu.progress.remaining"],
+		MenuProgressDoneGfx:              menuProgressDoneGfx,
 		MenuJobScanning:                  styles["menu.job.scanning"],
 		MenuJobQueued:                    styles["menu.job.queued"],
 		MenuJobRunning:                   styles["menu.job.running"],
@@ -1702,7 +1732,7 @@ func collectStyleSpecs(raw map[string]any) (map[string]styleSpec, error) {
 		return nil, fmt.Errorf("theme must define at least one style section ([menu], [panel], [dialog], [jobs], [message], [footer], [fuzzy], [terminal], [leader_menu], or [compare])")
 	}
 	for key := range specs {
-		if !requiredStyleKeySet[key] {
+		if !requiredStyleKeySet[key] && !optionalStyleKeySet[key] {
 			return nil, fmt.Errorf("unknown style %q", key)
 		}
 	}

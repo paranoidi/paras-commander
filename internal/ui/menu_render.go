@@ -69,13 +69,14 @@ func drawMenuBarStatusCommand(screen tcell.Screen, rect Rect, text string, style
 }
 
 // drawMenuBarJobsGapWithPinBadge draws the pin-count badge (if any) at the start of the gap
-// region, then the jobs queue/progress strip in whatever span remains.
-func drawMenuBarJobsGapWithPinBadge(screen tcell.Screen, y, gapStart, gapWidth int, jobsStrip MenuBarJobsStrip, pinCount int, styles theme.Theme) {
+// region, then the jobs queue/progress strip in whatever span remains. Returns lightbarExited
+// from the inner DrawMenuBarJobsGap call (see its doc comment).
+func drawMenuBarJobsGapWithPinBadge(screen tcell.Screen, y, gapStart, gapWidth int, jobsStrip MenuBarJobsStrip, pinCount int, styles theme.Theme) bool {
 	if gapWidth <= 0 {
-		return
+		return false
 	}
 	consumed := drawMenuBarPinBadge(screen, y, gapStart, gapWidth, pinCount, styles)
-	DrawMenuBarJobsGap(screen, y, gapStart+consumed, gapWidth-consumed, jobsStrip, styles)
+	return DrawMenuBarJobsGap(screen, y, gapStart+consumed, gapWidth-consumed, jobsStrip, styles)
 }
 
 // drawMenuBarBlank fills the menu row with menu background and no labels (modal overlays block the menu).
@@ -159,9 +160,10 @@ func menuBarMenusEndX(rect Rect, menus []menu.Definition, permissionTailRunes in
 
 // DrawMenuBarJobsGapOnly repaints the jobs queue/progress gap between menu labels and the right tail.
 // It does not redraw menu labels, the tail, or the rest of the frame — use after job progress updates.
-func DrawMenuBarJobsGapOnly(screen tcell.Screen, layout Layout, model Model, menus []menu.Definition, styles theme.Theme) bool {
+// Returns painted (whether anything was drawn) and lightbarExited (see DrawMenuBarJobsGap).
+func DrawMenuBarJobsGapOnly(screen tcell.Screen, layout Layout, model Model, menus []menu.Definition, styles theme.Theme) (painted, lightbarExited bool) {
 	if !model.MenuBarLayoutReserved() || layout.Menu.Width <= 0 {
-		return false
+		return false, false
 	}
 	showMenuBarSpinner := model.MenuBarActivitySpinner
 	tailW := menuBarRightTailRuneCount(model.MenuBarJobsAttention, model.MenuBarPermission, showMenuBarSpinner)
@@ -175,10 +177,10 @@ func DrawMenuBarJobsGapOnly(screen tcell.Screen, layout Layout, model Model, men
 	}
 	gapWidth = clipEx - gapStart
 	if gapWidth <= 0 {
-		return false
+		return false, false
 	}
-	drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, model.MenuBarJobs, len(model.PinnedItems), styles)
-	return true
+	exited := drawMenuBarJobsGapWithPinBadge(screen, rect.Y, gapStart, gapWidth, model.MenuBarJobs, len(model.PinnedItems), styles)
+	return true, exited
 }
 
 // DrawMenuBarPermissionTailOnly repaints the jobs-attention, permission, and spinner tail on the

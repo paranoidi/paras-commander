@@ -20,6 +20,14 @@ type MenuBarJobsStrip struct {
 	Groups       []MenuBarJobGroup
 	ProgressFrac float64
 	HasProgress  bool
+	// ProgressIndeterminate means totals are unknown or still provisional (streaming pre-scan), so
+	// ProgressFrac is meaningless; the bar renders indeterminate: an empty track with the gradient
+	// ping-ponging across it.
+	ProgressIndeterminate bool
+	// LightbarHead is the light-bar gradient's frame counter: the done-span cell index of the
+	// head (MenuProgressDoneGfx[0]), trailing gradient cells behind it. The caller advances it
+	// one per animation frame and resets it to 0 when DrawMenuBarJobsGap reports lightbarExited.
+	LightbarHead int
 }
 
 const menuBarJobsProgressMinWidth = 3
@@ -84,16 +92,19 @@ func LayoutMenuBarJobsStrip(totalWidth, stripWidth int, wantProgress bool) (queu
 }
 
 // DrawMenuBarJobsGap clears the span with the menu bar background, then paints queue / progress.
-func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip MenuBarJobsStrip, styles theme.Theme) {
+// It returns lightbarExited: the light-bar gradient has completed its pass (slid past the done
+// edge, or bounced back to cell 0 when indeterminate); the caller resets LightbarHead to 0 and
+// repaints.
+func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip MenuBarJobsStrip, styles theme.Theme) bool {
 	if totalWidth <= 0 {
-		return
+		return false
 	}
 	for i := 0; i < totalWidth; i++ {
 		screen.SetContent(startX+i, y, ' ', nil, styles.MenuBarInactive)
 	}
 	wantProgress := strip.HasProgress && strip.ProgressFrac >= 0 && strip.ProgressFrac <= 1
 	if len(strip.Groups) == 0 && !wantProgress {
-		return
+		return false
 	}
 	stripWidth := MenuBarJobsGroupsWidth(strip.Groups, styles)
 	queueW, progW := LayoutMenuBarJobsStrip(totalWidth, stripWidth, wantProgress)
@@ -137,25 +148,63 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 	remSym := styles.SymbolMenuProgressRemaining()
 	doneStyle := styles.MenuProgressDone
 	remStyle := styles.MenuProgressRemaining
+	gfx := styles.MenuProgressDoneGfx
+
+	if strip.ProgressIndeterminate {
+		// Empty track; the gradient (gfx colours, then the done colour as the last trail cell —
+		// so a theme without gfx still gets a single bouncing done-coloured cell) ping-pongs
+		// between the bar's ends.
+		grad := append(append(make([]tcell.Style, 0, len(gfx)+1), gfx...), doneStyle)
+		period := max(2*(progW-1), 1)
+		p := strip.LightbarHead % period
+		head, right := p, true
+		if p >= progW {
+			head, right = period-p, false
+		}
+		for i := 0; i < progW && x < end; i++ {
+			k := head - i
+			if !right {
+				k = i - head
+			}
+			if k >= 0 && k < len(grad) {
+				screen.SetContent(x, y, doneSym, nil, grad[k])
+			} else {
+				screen.SetContent(x, y, remSym, nil, remStyle)
+			}
+			x++
+		}
+		// Exited once the head is back at cell 0 after a full bounce; the caller resets to 0
+		// (the same frame), keeping the counter bounded.
+		return strip.LightbarHead >= period
+	}
+
+	cutoff := menuBarProgressCutoff(strip.ProgressFrac, progW)
 	for i := 0; i < progW && x < end; i++ {
-		if menuBarProgressFilledCells(strip.ProgressFrac, progW, i) {
+		switch k := strip.LightbarHead - i; {
+		case i < cutoff && k >= 0 && k < len(gfx):
+			screen.SetContent(x, y, doneSym, nil, gfx[k])
+		case i < cutoff:
 			screen.SetContent(x, y, doneSym, nil, doneStyle)
-		} else {
+		default:
 			screen.SetContent(x, y, remSym, nil, remStyle)
 		}
 		x++
 	}
+	// Exited once no gradient cell is over the done span any more; the wrap is the caller's so
+	// the head never jumps when cutoff grows (a modulus on cutoff would).
+	return len(gfx) > 0 && strip.LightbarHead >= cutoff+len(gfx)-1
 }
 
-func menuBarProgressFilledCells(frac float64, progW, index int) bool {
+// menuBarProgressCutoff returns the number of filled (done) cells for frac across progW cells.
+func menuBarProgressCutoff(frac float64, progW int) int {
 	if progW <= 0 {
-		return false
+		return 0
 	}
 	if frac <= 0 {
-		return false
+		return 0
 	}
 	if frac >= 1 {
-		return true
+		return progW
 	}
 	cutoff := int(math.Round(frac * float64(progW)))
 	if cutoff < 0 {
@@ -164,5 +213,5 @@ func menuBarProgressFilledCells(frac float64, progW, index int) bool {
 	if cutoff > progW {
 		cutoff = progW
 	}
-	return index < cutoff
+	return cutoff
 }

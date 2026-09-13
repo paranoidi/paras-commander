@@ -482,6 +482,11 @@ type JobsConfig struct {
 	ThroughputChartColumnMS int `toml:"throughput_chart_column_ms"`
 	// ThroughputChartEnabled controls the details-panel throughput strip and chart rendering.
 	ThroughputChartEnabled bool `toml:"throughput_chart_enabled"`
+	// ProgressLightbar animates a moving highlight over the done portion of the menu-bar job
+	// progress bar. While on, the menu-bar activity spinner is not shown for file-operation
+	// jobs (the animated bar replaces it); the spinner still appears for disk-usage scans,
+	// running commands, and directory loads.
+	ProgressLightbar bool `toml:"progress_lightbar"`
 	// FreeSpaceOnProgressWake runs async statfs on both panels when a progress UI wake is applied (see applyJobRefreshes).
 	FreeSpaceOnProgressWake bool `toml:"free_space_on_progress_wake"`
 	// FreeSpacePollIntervalSecs is how often to refresh panel free space while any job is unfinished (0 disables).
@@ -640,6 +645,7 @@ func Default() Config {
 			ThroughputChartWindowSec:    DefaultThroughputChartWindowSec,
 			ThroughputChartColumnMS:     DefaultThroughputChartColumnMS,
 			ThroughputChartEnabled:      DefaultThroughputChartEnabled,
+			ProgressLightbar:            DefaultProgressLightbar,
 			FreeSpaceOnProgressWake:     DefaultFreeSpaceOnProgressWake,
 			FreeSpacePollIntervalSecs:   DefaultFreeSpacePollIntervalSecs,
 			ScanYieldIntervalMS:         DefaultScanYieldIntervalMS,
