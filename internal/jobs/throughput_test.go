@@ -26,6 +26,14 @@ func TestFormatThroughput(t *testing.T) {
 			t.Fatalf("FormatThroughput(%v) = %q, want %q", tt.bps, got, tt.want)
 		}
 	}
+
+	// Widest output must fit the menu-bar speed pill's fixed text slot (8 cells).
+	const maxWidth = 8
+	for bps := 1.0; bps <= 999*1024*1024*1024; bps *= 1.7 {
+		if got := FormatThroughput(bps); len(got) > maxWidth {
+			t.Fatalf("FormatThroughput(%v) = %q (len %d), want len <= %d", bps, got, len(got), maxWidth)
+		}
+	}
 }
 
 func TestEffectiveDisplayThroughputBPS(t *testing.T) {

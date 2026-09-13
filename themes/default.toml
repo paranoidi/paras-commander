@@ -56,6 +56,10 @@ delete.gfx.2 = { fg = "bright_yellow" }
 delete.gfx.3 = { fg = "yellow" }
 remaining = { fg = "black" }
 
+[menu.speed]                 # menu-bar transfer speed pill left of the progress bar
+cap = { fg = "bright_black" }
+text = { fg = "default", bg = "bright_black" }
+
 [message]
 info = { fg = "black", bg = "white" }
 warn = { fg = "black", bg = "yellow", bold = true }
@@ -338,6 +342,10 @@ running = "\uf141"
 [symbols.menu.progress]
 done = "■"
 remaining = "■"
+
+[symbols.menu.speed]
+left = ""   # powerline left half-circle
+right = ""  # powerline right half-circle
 
 [symbols.menu.job]
 scanning = "\U000f02ca"

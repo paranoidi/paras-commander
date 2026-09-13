@@ -216,3 +216,101 @@ func TestDrawMenuBarJobsGapHidesZeroCountGroups(t *testing.T) {
 		}
 	}
 }
+
+func TestDrawMenuBarJobsGapSpeedPill(t *testing.T) {
+	t.Parallel()
+	styles := theme.Default()
+	doneSym := string(styles.SymbolMenuProgressDone())
+	remSym := string(styles.SymbolMenuProgressRemaining())
+
+	newScreen := func(t *testing.T) tcell.SimulationScreen {
+		t.Helper()
+		screen := tcell.NewSimulationScreen("UTF-8")
+		if err := screen.Init(); err != nil {
+			t.Fatalf("Init() error = %v", err)
+		}
+		t.Cleanup(screen.Fini)
+		screen.SetSize(32, 3)
+		return screen
+	}
+
+	barStartX := func(t *testing.T, screen tcell.SimulationScreen, totalWidth int) int {
+		t.Helper()
+		for x := 0; x < totalWidth; x++ {
+			str, _, _ := screen.Get(x, 0)
+			if str == doneSym || str == remSym {
+				return x
+			}
+		}
+		t.Fatal("no progress bar cell found")
+		return -1
+	}
+
+	const totalWidth = 20 // >= 12 (slot) + 1 (margin) + 3 (min bar) + queueW(0), room to spare
+
+	for _, speed := range []string{"120MB/s", "1.5KB/s", "99.9MB/s", ""} {
+		t.Run("speed_"+speed, func(t *testing.T) {
+			t.Parallel()
+			screen := newScreen(t)
+			strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 0.5, Speed: speed}
+			DrawMenuBarJobsGap(screen, 0, 0, totalWidth, strip, styles)
+
+			gotBarX := barStartX(t, screen, totalWidth)
+			if wantBarX := menuBarSpeedSlotWidth + 1; gotBarX != wantBarX {
+				t.Fatalf("Speed %q: bar starts at x=%d, want %d (slot stays fixed width)", speed, gotBarX, wantBarX)
+			}
+
+			// Margin cell right before the bar is untouched menu-bar background.
+			if str, style, _ := screen.Get(gotBarX-1, 0); str != " " || style != styles.MenuBarInactive {
+				t.Fatalf("Speed %q: margin cell = %q/%v, want blank MenuBarInactive", speed, str, style)
+			}
+
+			if speed == "" {
+				// No pill: every slot cell stays menu-bar background.
+				for x := 0; x < menuBarSpeedSlotWidth; x++ {
+					if str, style, _ := screen.Get(x, 0); str != " " || style != styles.MenuBarInactive {
+						t.Fatalf("empty speed: slot cell %d = %q/%v, want blank MenuBarInactive", x, str, style)
+					}
+				}
+				return
+			}
+
+			// Pill hugs the right edge of the slot: right cap at the last slot cell.
+			rightCapX := menuBarSpeedSlotWidth - 1
+			if str, style, _ := screen.Get(rightCapX, 0); str != string(styles.SymbolMenuSpeedRight()) || style != styles.MenuSpeedCap {
+				t.Fatalf("Speed %q: right cap at %d = %q/%v, want %q/%v", speed, rightCapX, str, style, styles.SymbolMenuSpeedRight(), styles.MenuSpeedCap)
+			}
+			// First text-run cell (left cap + one space in) carries MenuSpeedText.
+			textX := rightCapX - 1 - len([]rune(speed))
+			if str, style, _ := screen.Get(textX, 0); str != speed[:1] || style != styles.MenuSpeedText {
+				t.Fatalf("Speed %q: text cell at %d = %q/%v, want %q/%v", speed, textX, str, style, speed[:1], styles.MenuSpeedText)
+			}
+			// Left cap sits right-aligned before the text run.
+			leftCapX := textX - 2
+			if str, style, _ := screen.Get(leftCapX, 0); str != string(styles.SymbolMenuSpeedLeft()) || style != styles.MenuSpeedCap {
+				t.Fatalf("Speed %q: left cap at %d = %q/%v, want %q/%v", speed, leftCapX, str, style, styles.SymbolMenuSpeedLeft(), styles.MenuSpeedCap)
+			}
+		})
+	}
+
+	t.Run("deleting hides the pill", func(t *testing.T) {
+		t.Parallel()
+		screen := newScreen(t)
+		strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 0.5, Speed: "120MB/s", Deleting: true}
+		DrawMenuBarJobsGap(screen, 0, 0, totalWidth, strip, styles)
+		if gotBarX := barStartX(t, screen, totalWidth); gotBarX != 0 {
+			t.Fatalf("Deleting: bar starts at x=%d, want 0 (no pill slot)", gotBarX)
+		}
+	})
+
+	t.Run("narrow gap drops the pill, keeps the bar", func(t *testing.T) {
+		t.Parallel()
+		screen := newScreen(t)
+		const narrowWidth = 10 // < 12 (slot) + 1 (margin) + 3 (min bar)
+		strip := MenuBarJobsStrip{HasProgress: true, ProgressFrac: 0.5, Speed: "120MB/s"}
+		DrawMenuBarJobsGap(screen, 0, 0, narrowWidth, strip, styles)
+		if gotBarX := barStartX(t, screen, narrowWidth); gotBarX != 0 {
+			t.Fatalf("narrow gap: bar starts at x=%d, want 0 (bar keeps full span)", gotBarX)
+		}
+	})
+}

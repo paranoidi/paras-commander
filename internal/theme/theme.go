@@ -176,6 +176,11 @@ type Theme struct {
 	// deletion (menu.progress.delete.gfx.0..gfx.9). Empty when the theme defines none —
 	// the renderer falls back to MenuProgressDoneGfx.
 	MenuProgressDeleteGfx []tcell.Style
+	// MenuSpeedCap and MenuSpeedText style the transfer-speed pill left of the menu-bar progress
+	// bar (menu.speed.cap, menu.speed.text). Both are optional; the fallbacks match the default
+	// theme's values.
+	MenuSpeedCap  tcell.Style
+	MenuSpeedText tcell.Style
 	// MenuJob* styles one-cell queue glyph per live job status in the menu bar.
 	MenuJobScanning                  tcell.Style
 	MenuJobQueued                    tcell.Style
@@ -571,6 +576,8 @@ const (
 	SymbolKeyMenuJobFailed         = "menu.job.failed"
 	SymbolKeyMenuJobDecision       = "menu.job.decision"
 	SymbolKeyMenuJobCompleted      = "menu.job.completed"
+	SymbolKeyMenuSpeedLeft         = "menu.speed.left"
+	SymbolKeyMenuSpeedRight        = "menu.speed.right"
 )
 
 // SymbolWorking returns the in-progress glyph appended to selection-size indicators.
@@ -811,6 +818,22 @@ func (t Theme) SymbolMenuProgressRemaining() rune {
 		return g
 	}
 	return '\u25cb' // ○
+}
+
+// SymbolMenuSpeedLeft returns the left cap glyph for the menu-bar transfer-speed pill.
+func (t Theme) SymbolMenuSpeedLeft() rune {
+	if g := t.menuBarSymbolTrim(SymbolKeyMenuSpeedLeft); g != 0 {
+		return g
+	}
+	return '['
+}
+
+// SymbolMenuSpeedRight returns the right cap glyph for the menu-bar transfer-speed pill.
+func (t Theme) SymbolMenuSpeedRight() rune {
+	if g := t.menuBarSymbolTrim(SymbolKeyMenuSpeedRight); g != 0 {
+		return g
+	}
+	return ']'
 }
 
 func (t Theme) menuBarSymbolTrim(key string) rune {
@@ -1079,6 +1102,7 @@ var optionalStyleKeys = func() []string {
 	for i := 0; i < 10; i++ {
 		keys = append(keys, fmt.Sprintf("menu.progress.delete.gfx.%d", i))
 	}
+	keys = append(keys, "menu.speed.cap", "menu.speed.text")
 	return keys
 }()
 
@@ -1378,6 +1402,14 @@ func parse(data []byte) (Theme, error) {
 	if err != nil {
 		return Theme{}, err
 	}
+	menuSpeedCap, err := optionalStyle(specs, palette, "menu.speed.cap", tcell.StyleDefault.Foreground(tcell.ColorGray))
+	if err != nil {
+		return Theme{}, err
+	}
+	menuSpeedText, err := optionalStyle(specs, palette, "menu.speed.text", tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorGray))
+	if err != nil {
+		return Theme{}, err
+	}
 
 	panelFileIcons := map[string]tcell.Color{}
 	allowedPanelIconStyles := map[string]struct{}{
@@ -1507,6 +1539,8 @@ func parse(data []byte) (Theme, error) {
 		MenuProgressRemaining:            styles["menu.progress.remaining"],
 		MenuProgressDoneGfx:              menuProgressDoneGfx,
 		MenuProgressDeleteGfx:            menuProgressDeleteGfx,
+		MenuSpeedCap:                     menuSpeedCap,
+		MenuSpeedText:                    menuSpeedText,
 		MenuJobScanning:                  styles["menu.job.scanning"],
 		MenuJobQueued:                    styles["menu.job.queued"],
 		MenuJobRunning:                   styles["menu.job.running"],
@@ -1867,6 +1901,19 @@ func optionalGfx(specs map[string]styleSpec, palette map[string]tcell.Color, pre
 		out = append(out, style)
 	}
 	return out, nil
+}
+
+// optionalStyle loads a single optional style key, returning fallback when the theme omits it.
+func optionalStyle(specs map[string]styleSpec, palette map[string]tcell.Color, key string, fallback tcell.Style) (tcell.Style, error) {
+	spec, ok := specs[key]
+	if !ok {
+		return fallback, nil
+	}
+	style, err := buildStyle(spec, palette)
+	if err != nil {
+		return tcell.Style{}, fmt.Errorf("style %q: %w", key, err)
+	}
+	return style, nil
 }
 
 func buildStyle(spec styleSpec, palette map[string]tcell.Color) (tcell.Style, error) {

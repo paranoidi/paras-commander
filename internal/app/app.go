@@ -185,6 +185,10 @@ type App struct {
 	spinnerRedrawTimer *time.Timer
 	// lightbarHead is the menu-bar progress light bar's frame counter (ui.MenuBarJobsStrip.LightbarHead).
 	lightbarHead int
+	// menuBarSpeed is the speed-pill text last taken from a jobs progress wake; light-bar frames
+	// repaint the strip far more often than the throughput sample changes, so they reuse it.
+	menuBarSpeed      string
+	menuBarSpeedStale bool
 	// devDeleteBarDemoStart is the wall time when Dev → Delete bar demo began; zero when inactive.
 	devDeleteBarDemoStart time.Time
 	// syncFollowNavGen invalidates in-flight debounce callbacks for latched panel sync (file-list cursor).
@@ -1180,6 +1184,7 @@ func (a *App) Run() error {
 
 		if pollJobsAfter {
 			jobsDirty = a.jobsCtrl.PollEvents()
+			a.menuBarSpeedStale = a.menuBarSpeedStale || jobsDirty
 			shouldRenderJobs = jobsDirty && a.jobsCtrl.AffectVisible()
 		}
 		if applyJobRefreshesAfter {

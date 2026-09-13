@@ -1,6 +1,8 @@
 package jobs
 
 import (
+	"time"
+
 	"github.com/paranoidi/paras-commander/internal/jobs"
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
@@ -85,6 +87,12 @@ func (h *Handler) MenuBarStripSnapshot() ui.MenuBarJobsStrip {
 			// Copy is done; the bar is full while sources are removed.
 			strip.ProgressFrac, strip.ProgressIndeterminate = 1, false
 			strip.HasProgress = true
+		}
+		if prog.Status == jobs.StatusRunning && !strip.Deleting {
+			bps := jobs.EffectiveDisplayThroughputBPS(prog.Status, prog.StartedAt, time.Now(), prog.DoneBytes, prog.DisplaySpeedBPS)
+			if bps > 0 {
+				strip.Speed = jobs.FormatThroughput(bps)
+			}
 		}
 	}
 	if prog == nil {

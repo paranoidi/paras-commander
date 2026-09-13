@@ -293,6 +293,10 @@ func (a *App) emitScreenAfterPartialPaint() {
 // refreshMenuBarJobsStrip rebuilds Model.MenuBarJobs from job state and stamps the light-bar head.
 func (a *App) refreshMenuBarJobsStrip() {
 	a.model.MenuBarJobs = a.jobsCtrl.MenuBarStripSnapshot()
+	if a.menuBarSpeedStale {
+		a.menuBarSpeed, a.menuBarSpeedStale = a.model.MenuBarJobs.Speed, false
+	}
+	a.model.MenuBarJobs.Speed = a.menuBarSpeed
 	if a.devDeleteBarDemoActive() {
 		frac := float64(time.Since(a.devDeleteBarDemoStart)) / float64(devDeleteBarDemoFill)
 		if frac > 1 {

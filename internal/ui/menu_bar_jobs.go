@@ -32,9 +32,18 @@ type MenuBarJobsStrip struct {
 	// head (MenuProgressDoneGfx[0]), trailing gradient cells behind it. The caller advances it
 	// one per animation frame and resets it to 0 when DrawMenuBarJobsGap reports lightbarExited.
 	LightbarHead int
+	// Speed is the formatted transfer throughput (e.g. "120MB/s") shown as a pill left of the
+	// progress bar. Empty means no pill (no running transfer, or Deleting).
+	Speed string
 }
 
 const menuBarJobsProgressMinWidth = 3
+
+// menuBarSpeedTextMaxWidth is the widest jobs.FormatThroughput output ("99.9MB/s" = 8 cells).
+const menuBarSpeedTextMaxWidth = 8
+
+// menuBarSpeedSlotWidth is the fixed-width speed-pill slot: cap, space, text, space, cap.
+const menuBarSpeedSlotWidth = 1 + 1 + menuBarSpeedTextMaxWidth + 1 + 1
 
 // MenuBarJobsGroupsWidth measures the cell width of the rendered group strip: each group is
 // "<glyph> <count>", groups separated by one space.
@@ -112,6 +121,11 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 	}
 	stripWidth := MenuBarJobsGroupsWidth(strip.Groups, styles)
 	queueW, progW := LayoutMenuBarJobsStrip(totalWidth, stripWidth, wantProgress)
+	speedW := 0
+	if progW > 0 && !strip.Deleting && progW >= menuBarSpeedSlotWidth+1+menuBarJobsProgressMinWidth {
+		speedW = menuBarSpeedSlotWidth
+		progW -= speedW + 1 // slot + one-space margin before the bar
+	}
 	x := startX
 	end := startX + totalWidth
 	if queueW > 0 {
@@ -147,6 +161,12 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 	if queueW > 0 && progW > 0 && x < end {
 		screen.SetContent(x, y, ' ', nil, styles.MenuBarInactive)
 		x++
+	}
+	if speedW > 0 {
+		if strip.Speed != "" {
+			drawMenuBarSpeedPill(screen, x, y, speedW, strip.Speed, styles)
+		}
+		x += speedW + 1 // slot + one-space margin before the bar
 	}
 	doneSym := styles.SymbolMenuProgressDone()
 	remSym := styles.SymbolMenuProgressRemaining()
@@ -200,6 +220,31 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 	// Exited once no gradient cell is over the done span any more; the wrap is the caller's so
 	// the head never jumps when cutoff grows (a modulus on cutoff would).
 	return len(gfx) > 0 && strip.LightbarHead >= cutoff+len(gfx)-1
+}
+
+// drawMenuBarSpeedPill draws the transfer-speed pill right-aligned in a slotW-wide slot starting
+// at slotX (hugging the progress bar), leaving unused slot cells at their already-cleared
+// MenuBarInactive fill.
+func drawMenuBarSpeedPill(screen tcell.Screen, slotX, y, slotW int, speed string, styles theme.Theme) {
+	text := []rune(speed)
+	if len(text) > menuBarSpeedTextMaxWidth {
+		text = text[:menuBarSpeedTextMaxWidth]
+	}
+	pillW := 1 + 1 + runewidth.StringWidth(string(text)) + 1 + 1
+	px := slotX + slotW - pillW
+	capStyle := styles.MenuSpeedCap
+	textStyle := styles.MenuSpeedText
+	screen.SetContent(px, y, styles.SymbolMenuSpeedLeft(), nil, capStyle)
+	px++
+	screen.SetContent(px, y, ' ', nil, textStyle)
+	px++
+	for _, r := range text {
+		screen.SetContent(px, y, r, nil, textStyle)
+		px += runewidth.RuneWidth(r)
+	}
+	screen.SetContent(px, y, ' ', nil, textStyle)
+	px++
+	screen.SetContent(px, y, styles.SymbolMenuSpeedRight(), nil, capStyle)
 }
 
 // menuBarProgressCutoff returns the number of filled (done) cells for frac across progW cells.
