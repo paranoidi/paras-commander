@@ -66,11 +66,7 @@ func (h *Handler) openTransferDialog(kind dialog.TransferKind) {
 		FocusField:   0, // destination path row
 	}
 	if kind == dialog.TransferKindCopy {
-		cfg := h.host.Config()
-		st.PreservePermissions = cfg.Operations.PreservePermissions
-		st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
-		st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
-		st.SourceIsRemote = h.host.ActivePanel().Path.IsRemote()
+		h.applyCopyDefaults(&st)
 	}
 	if root, ok := h.multiDirSelectionCommonRoot(); ok {
 		st.CommonRoot = root
@@ -164,11 +160,7 @@ func (h *Handler) OpenTransferDialogSelfCopyRename(kind dialog.TransferKind, abs
 		FocusField:           0,
 	}
 	if kind == dialog.TransferKindCopy {
-		cfg := h.host.Config()
-		st.PreservePermissions = cfg.Operations.PreservePermissions
-		st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
-		st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
-		st.SourceIsRemote = h.host.ActivePanel().Path.IsRemote()
+		h.applyCopyDefaults(&st)
 	}
 	h.model.TransferDialog = st
 	h.host.ClearTransientMessage()
@@ -181,6 +173,22 @@ func (h *Handler) CloseTransferDialog() {
 	h.model.TransferDialog = dialog.TransferDialogState{}
 	h.model.DestinationTargetPrimary = false
 	h.model.DestinationTargetSecondary = false
+}
+
+// applyCopyDefaults seeds a copy dialog's checkbox state from config and the source panel.
+func (h *Handler) applyCopyDefaults(st *dialog.TransferDialogState) {
+	cfg := h.host.Config()
+	st.PreservePermissions = cfg.Operations.PreservePermissions
+	st.PreserveTimestamps = cfg.Operations.PreserveTimestamps
+	st.DereferenceSymlinks = cfg.Operations.DereferenceSymlinks
+	st.SourceIsRemote = h.host.ActivePanel().Path.IsRemote()
+}
+
+// toggleDereferenceSymlinks flips the copy dialog's dereference checkbox unless it is disabled.
+func toggleDereferenceSymlinks(d *dialog.TransferDialogState) {
+	if !d.DereferenceUnsupported() {
+		d.DereferenceSymlinks = !d.DereferenceSymlinks
+	}
 }
 
 // handleTransferAltShortcut handles the Alt-letter mnemonics that must run before standard
@@ -199,9 +207,7 @@ func (h *Handler) handleTransferAltShortcut(event *tcell.EventKey) bool {
 				d.PreserveTimestamps = !d.PreserveTimestamps
 				return true
 			case 'd', 'D':
-				if !d.DereferenceUnsupported() {
-					d.DereferenceSymlinks = !d.DereferenceSymlinks
-				}
+				toggleDereferenceSymlinks(d)
 				return true
 			}
 		}
@@ -284,8 +290,8 @@ func (h *Handler) handleTransferCheckboxRune(event *tcell.EventKey) {
 				d.PreserveTimestamps = !d.PreserveTimestamps
 			}
 		case 'd', 'D':
-			if d.FocusField == 3 && !d.DereferenceUnsupported() {
-				d.DereferenceSymlinks = !d.DereferenceSymlinks
+			if d.FocusField == 3 {
+				toggleDereferenceSymlinks(d)
 			}
 		case ' ':
 			switch d.FocusField {
@@ -294,9 +300,7 @@ func (h *Handler) handleTransferCheckboxRune(event *tcell.EventKey) {
 			case 2:
 				d.PreserveTimestamps = !d.PreserveTimestamps
 			case 3:
-				if !d.DereferenceUnsupported() {
-					d.DereferenceSymlinks = !d.DereferenceSymlinks
-				}
+				toggleDereferenceSymlinks(d)
 			}
 		}
 	}
