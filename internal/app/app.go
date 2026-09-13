@@ -174,6 +174,11 @@ type App struct {
 	findDialogSelectionScanGen uint64
 	// findDialogSelectionScanDebounce is the find-dialog equivalent of selectionSizeScanDebounce.
 	findDialogSelectionScanDebounce sched.Debouncer
+	// historyMissingGen guards applyHistoryDialogMissing against a stale background missing-path
+	// scan (StartPathsMissingScan) landing after the History dialog closed or its path list was
+	// rebuilt (toggleHistoryDialogBothPanels); bumped by openHistoryDialog, closeHistoryDialog,
+	// and startHistoryMissingScan.
+	historyMissingGen uint64
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
 	messageExpiryGen   atomic.Uint64
@@ -857,7 +862,7 @@ type eventOutcome struct {
 
 // handleInterruptPayload handles the EventInterrupt payload type-switch for Run.
 func (a *App) handleInterruptPayload(data any) eventOutcome {
-	if out, ok := a.handlePreviewInterruptPayload(data); ok {
+	if out, ok := a.handleEarlyInterruptPayload(data); ok {
 		return out
 	}
 	out := eventOutcome{pollDiskUsageAfter: true}
@@ -1059,6 +1064,23 @@ func (a *App) handleInterruptPayload(data any) eventOutcome {
 		}
 	}
 	return out
+}
+
+// handleEarlyInterruptPayload dispatches the interrupt payload types handled ahead of
+// handleInterruptPayload's own switch — one "if ok" per type there would each add to that
+// switch's cyclomatic complexity, so they're tried here instead, in a function that starts
+// fresh under golangci-lint's gocyclo threshold. ok is false when data matches none of them,
+// so the caller falls through to its own switch.
+func (a *App) handleEarlyInterruptPayload(data any) (eventOutcome, bool) {
+	if out, ok := a.handlePreviewInterruptPayload(data); ok {
+		return out, true
+	}
+	if p, ok := data.(dialogctrl.PathsMissingPayload); ok {
+		a.applyPathsMissing(p)
+		a.render()
+		return eventOutcome{pollDiskUsageAfter: true, didRender: true}, true
+	}
+	return eventOutcome{}, false
 }
 
 // handlePreviewInterruptPayload dispatches previewctrl's wake/flush interrupt payloads. Split

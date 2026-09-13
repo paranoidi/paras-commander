@@ -35,6 +35,7 @@ func (h *Handler) OpenBookmarkDialog() {
 		ListScroll: 0,
 	}
 	h.SyncPathPickerRanks()
+	h.startPathPickerMissingScan()
 }
 
 // OpenAddBookmarkDialog presents the centered dialog to append a new fzf-marks entry

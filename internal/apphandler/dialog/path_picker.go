@@ -39,6 +39,7 @@ func (h *Handler) PathPickerValidateGeneration() uint64 {
 func (h *Handler) ClosePathPicker() {
 	purpose := h.model.PathPicker.Purpose
 	h.pathPickerValidate.Invalidate()
+	h.pathPickerMissingGen++
 	h.model.PathPicker = dialog.PathPickerState{}
 	if h.model.TransferDialog.Open && h.model.TransferDialog.Phase == dialog.TransferPhaseDestination &&
 		purpose == dialog.PathPickerPurposeApplyTransferDestination {
@@ -323,34 +324,28 @@ func (h *Handler) PathPickerQueryWidth() int {
 }
 
 // PathPickerItemsHistory returns merged passive-first panel histories (deduped by cleaned
-// path), skipping missing pathlike entries.
+// path). PathMissing starts false for every item; startPathPickerMissingScan fills it in
+// asynchronously after the picker opens.
 func (h *Handler) PathPickerItemsHistory() ([]dialog.PathPickerItem, error) {
 	passive := h.host.InactivePanel()
 	active := h.host.ActivePanel()
-	panelPath := active.PathString()
-	home := h.model.UserHomeDir
 	seen := make(map[string]struct{})
 	var items []dialog.PathPickerItem
 
 	for _, cp := range panel.MergeNavigationHistories(passive.History, active.History) {
-		if pathpick.QueryLooksPathlike(cp) && PathEntryMissing(panelPath, home, cp) {
-			continue
-		}
 		if _, ok := seen[cp]; ok {
 			continue
 		}
 		seen[cp] = struct{}{}
-		items = append(items, dialog.PathPickerItem{
-			Path:        cp,
-			PathMissing: PathEntryMissing(panelPath, home, cp),
-		})
+		items = append(items, dialog.PathPickerItem{Path: cp})
 	}
 	return items, nil
 }
 
 // PathPickerItemsBookmarks returns fzf-marks and GTK bookmarks (deduped by cleaned path).
+// PathMissing starts false for every item; startPathPickerMissingScan fills it in
+// asynchronously after the picker opens.
 func (h *Handler) PathPickerItemsBookmarks() ([]dialog.PathPickerItem, error) {
-	panelPath := h.host.ActivePanel().PathString()
 	home := h.model.UserHomeDir
 	cfg := h.host.Config()
 	marks, err := bookmarks.LoadAll(cfg.Bookmarks.File, home)
@@ -366,20 +361,18 @@ func (h *Handler) PathPickerItemsBookmarks() ([]dialog.PathPickerItem, error) {
 		}
 		seen[cp] = struct{}{}
 		items = append(items, dialog.PathPickerItem{
-			Source:      marks[i].Origin.PathPickerSource(),
-			Name:        marks[i].Name,
-			Path:        cp,
-			PathMissing: PathEntryMissing(panelPath, home, cp),
+			Source: marks[i].Origin.PathPickerSource(),
+			Name:   marks[i].Name,
+			Path:   cp,
 		})
 	}
 	return items, nil
 }
 
 // PathPickerItemsPinned returns pinned directories only (files excluded — the Pinned selector
-// is for picking a destination), deduped by cleaned path.
+// is for picking a destination), deduped by cleaned path. PathMissing starts false for every
+// item; startPathPickerMissingScan fills it in asynchronously after the picker opens.
 func (h *Handler) PathPickerItemsPinned() ([]dialog.PathPickerItem, error) {
-	panelPath := h.host.ActivePanel().PathString()
-	home := h.model.UserHomeDir
 	seen := make(map[string]struct{}, len(h.model.PinnedItems))
 	items := make([]dialog.PathPickerItem, 0, len(h.model.PinnedItems))
 	for _, p := range h.model.PinnedItems {
@@ -391,12 +384,35 @@ func (h *Handler) PathPickerItemsPinned() ([]dialog.PathPickerItem, error) {
 			continue
 		}
 		seen[cp] = struct{}{}
-		items = append(items, dialog.PathPickerItem{
-			Path:        cp,
-			PathMissing: PathEntryMissing(panelPath, home, cp),
-		})
+		items = append(items, dialog.PathPickerItem{Path: cp})
 	}
 	return items, nil
+}
+
+// startPathPickerMissingScan bumps the path picker's missing-scan generation and starts a
+// background scan of every open item's path, so ApplyPathPickerMissing can later fill in
+// PathMissing without blocking dialog open on stats (see StartPathsMissingScan).
+func (h *Handler) startPathPickerMissingScan() {
+	st := &h.model.PathPicker
+	h.pathPickerMissingGen++
+	paths := make([]string, len(st.Items))
+	for i, it := range st.Items {
+		paths[i] = it.Path
+	}
+	panelPath := h.host.ActivePanel().PathString()
+	StartPathsMissingScan(h.screen, "picker", h.pathPickerMissingGen, panelPath, h.model.UserHomeDir, paths)
+}
+
+// ApplyPathPickerMissing applies a background missing-path scan's result to the open path
+// picker's items. Ignored if the picker has since closed or a newer scan has been started.
+func (h *Handler) ApplyPathPickerMissing(p PathsMissingPayload) {
+	st := &h.model.PathPicker
+	if !st.Open || p.Gen != h.pathPickerMissingGen {
+		return
+	}
+	for i := range st.Items {
+		st.Items[i].PathMissing = p.Missing[st.Items[i].Path]
+	}
 }
 
 // PathEntryMissing reports whether path (typed relative to panelPath/home) currently resolves
@@ -455,6 +471,7 @@ func (h *Handler) openPathPickerApply(purpose dialog.PathPickerPurpose, kind pat
 		ListScroll:     0,
 	}
 	h.SyncPathPickerRanks()
+	h.startPathPickerMissingScan()
 }
 
 // OpenPathPickerForFlattenBookmarks opens the bookmarks path picker to apply the flatten

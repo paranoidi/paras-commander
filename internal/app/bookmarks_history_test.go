@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/paranoidi/paras-commander/internal/config"
@@ -47,9 +48,14 @@ func TestBookmarkDialogOpensAndNavigates(t *testing.T) {
 	if app.model.PathPicker.Open {
 		t.Fatal("expected dialog closed")
 	}
-	applyNextInterruptEvent(t, app, screen) // async load triggered by the bookmark navigation
-	if got := app.activePanel().Path.String(); got != filepath.Clean(target) {
-		t.Fatalf("panel path = %q want %q", got, filepath.Clean(target))
+	// Opening the bookmark dialog also kicked off a background missing-path scan, so more than
+	// one interrupt event may be queued (in either order) — drain until the navigation lands.
+	want := filepath.Clean(target)
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return app.activePanel().Path.String() == want
+	})
+	if got := app.activePanel().Path.String(); got != want {
+		t.Fatalf("panel path = %q want %q", got, want)
 	}
 }
 
@@ -336,7 +342,11 @@ func TestHistoryDialogBothPanelsOKNavigatesPanelID(t *testing.T) {
 		}
 	}
 	app.activateHistorySelection()
-	applyNextInterruptEvent(t, app, screen) // async load triggered by the history navigation
+	// openHistoryDialog also kicked off a background missing-path scan, so more than one
+	// interrupt event may be queued (in either order) — drain until the navigation lands.
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()) == wantBeta
+	})
 	if got := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()); got != wantBeta {
 		t.Fatalf("left panel path = %q want %q", got, wantBeta)
 	}
@@ -445,9 +455,14 @@ func TestBookmarkDialogFilterSelectsRankedFirst(t *testing.T) {
 	if quit, _ := app.handleKey(tcell.NewEventKey(tcell.KeyEnter, 0, tcell.ModNone)); quit {
 		t.Fatal("unexpected quit")
 	}
-	applyNextInterruptEvent(t, app, screen) // async load triggered by the bookmark navigation
-	if got := app.activePanel().Path.String(); got != filepath.Clean(tBeta) {
-		t.Fatalf("panel path = %q want %q", got, filepath.Clean(tBeta))
+	// Opening the bookmark dialog also kicked off a background missing-path scan, so more than
+	// one interrupt event may be queued (in either order) — drain until the navigation lands.
+	wantBeta := filepath.Clean(tBeta)
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return app.activePanel().Path.String() == wantBeta
+	})
+	if got := app.activePanel().Path.String(); got != wantBeta {
+		t.Fatalf("panel path = %q want %q", got, wantBeta)
 	}
 }
 

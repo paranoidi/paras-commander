@@ -68,7 +68,11 @@ func TestPathPickerAcceptLongCompletionScrollsToEnd(t *testing.T) {
 	}
 }
 
-func TestPathPickerItemsSkipMissingHistoryPaths(t *testing.T) {
+// TestPathPickerItemsHistoryIncludesMissingPaths verifies that a missing history path is kept
+// (not filtered out) with PathMissing starting false — the async scan started separately by
+// startPathPickerMissingScan is what later flags it, so building the item list itself must
+// never stat anything.
+func TestPathPickerItemsHistoryIncludesMissingPaths(t *testing.T) {
 	root := t.TempDir()
 	exists := filepath.Join(root, "exists")
 	if err := os.MkdirAll(exists, 0o755); err != nil {
@@ -101,10 +105,13 @@ func TestPathPickerItemsSkipMissingHistoryPaths(t *testing.T) {
 	}
 	cleanExists := filepath.Clean(exists)
 	cleanGone := filepath.Clean(gone)
-	foundExists := false
+	foundExists, foundGone := false, false
 	for _, it := range items {
+		if it.PathMissing {
+			t.Fatalf("item %+v: PathMissing true, want false (filled in later by the async scan)", it)
+		}
 		if it.Path == cleanGone {
-			t.Fatalf("missing path %q should be filtered from picker items", gone)
+			foundGone = true
 		}
 		if it.Path == cleanExists {
 			foundExists = true
@@ -115,5 +122,8 @@ func TestPathPickerItemsSkipMissingHistoryPaths(t *testing.T) {
 	}
 	if !foundExists {
 		t.Fatalf("expected %q in picker items, got %d items", exists, len(items))
+	}
+	if !foundGone {
+		t.Fatalf("expected missing path %q to still be present in picker items, got %d items", gone, len(items))
 	}
 }

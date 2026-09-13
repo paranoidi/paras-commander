@@ -17,14 +17,6 @@ func (a *App) mergedPanelHistories() []string {
 	return panel.MergeNavigationHistories(a.inactivePanel().History, a.activePanel().History)
 }
 
-func historyPathMissingFor(paths []string) []bool {
-	out := make([]bool, len(paths))
-	for i, p := range paths {
-		out[i] = dialogctrl.PathEntryMissing("", "", p)
-	}
-	return out
-}
-
 func (a *App) openHistoryDialog(panelID int) {
 	if ui.IsAuxiliaryView(a.model.ViewMode) {
 		return
@@ -51,7 +43,7 @@ func (a *App) openHistoryDialog(panelID int) {
 		PanelPaths:        panelPaths,
 		PanelCurrentIndex: curIdx,
 		DisplayLines:      panelPaths,
-		PathMissing:       historyPathMissingFor(panelPaths),
+		PathMissing:       make([]bool, len(panelPaths)),
 		Query:             "",
 		Focus:             0,
 		Selected:          0,
@@ -67,10 +59,52 @@ func (a *App) openHistoryDialog(panelID int) {
 	}
 	a.model.HistoryDialog.Selected = selected
 	dialog.EnsureHistoryListScroll(&a.model.HistoryDialog, a.historyDialogListRows())
+	a.startHistoryMissingScan()
 }
 
 func (a *App) closeHistoryDialog() {
 	a.model.HistoryDialog = dialog.HistoryDialogState{}
+	a.historyMissingGen++
+}
+
+// startHistoryMissingScan bumps the history dialog's missing-scan generation and starts a
+// background scan of its current path list, so applyHistoryDialogMissing can later fill in
+// PathMissing without blocking dialog open/toggle on stats (see StartPathsMissingScan).
+func (a *App) startHistoryMissingScan() {
+	a.historyMissingGen++
+	st := &a.model.HistoryDialog
+	dialogctrl.StartPathsMissingScan(a.screen, "history", a.historyMissingGen, "", "", st.Paths)
+}
+
+// applyPathsMissing routes a background missing-path scan's result (dialogctrl.PathsMissingPayload)
+// to whichever dialog started it. Split out of handleInterruptPayload to keep that switch's
+// cyclomatic complexity within golangci-lint's gocyclo threshold (same reasoning as
+// handlePreviewInterruptPayload).
+func (a *App) applyPathsMissing(p dialogctrl.PathsMissingPayload) {
+	switch p.Target {
+	case "picker":
+		a.dialogCtrl.ApplyPathPickerMissing(p)
+	case "history":
+		a.applyHistoryDialogMissing(p)
+	case "pin":
+		a.pinCtrl.ApplyMissing(p)
+	}
+}
+
+// applyHistoryDialogMissing applies a background missing-path scan's result to the open
+// history dialog's paths. Ignored if the dialog has since closed or a newer scan has been
+// started (e.g. by toggleHistoryDialogBothPanels).
+func (a *App) applyHistoryDialogMissing(p dialogctrl.PathsMissingPayload) {
+	st := &a.model.HistoryDialog
+	if !st.Open || p.Gen != a.historyMissingGen {
+		return
+	}
+	for i := range st.PathMissing {
+		if i >= len(st.Paths) {
+			break
+		}
+		st.PathMissing[i] = p.Missing[st.Paths[i]]
+	}
 }
 
 func (a *App) toggleHistoryDialogBothPanels() {
@@ -85,8 +119,9 @@ func (a *App) toggleHistoryDialogBothPanels() {
 		st.BothPanels = true
 		st.Paths = a.mergedPanelHistories()
 	}
-	st.PathMissing = historyPathMissingFor(st.Paths)
+	st.PathMissing = make([]bool, len(st.Paths))
 	a.reloadHistoryDialogList()
+	a.startHistoryMissingScan()
 }
 
 func (a *App) reloadHistoryDialogList() {

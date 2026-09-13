@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/paranoidi/paras-commander/internal/ui"
 	"github.com/paranoidi/paras-commander/internal/ui/dialog"
@@ -124,6 +125,10 @@ func TestOpenPinDialogRecomputesPathMissing(t *testing.T) {
 	if !app.model.PinDialog.Open {
 		t.Fatal("expected Pin dialog to open with a non-empty pin list")
 	}
+	if app.model.PinnedItems[0].PathMissing || app.model.PinnedItems[1].PathMissing {
+		t.Fatal("PathMissing should start false right after open; the scan runs asynchronously")
+	}
+	applyNextInterruptEvent(t, app, screen) // background missing-path scan started by OpenDialog
 	if app.model.PinnedItems[0].PathMissing {
 		t.Fatalf("PinnedItems[0] (%q) should exist", present)
 	}
@@ -320,9 +325,14 @@ func TestActivatePinSelectionClosesOnlyOnSuccess(t *testing.T) {
 	if app.model.PinDialog.Open {
 		t.Fatal("dialog should close after a successful activation")
 	}
-	applyNextInterruptEvent(t, app, screen) // async load triggered by the navigation
-	if got := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()); got != filepath.Clean(sub) {
-		t.Fatalf("active panel path = %q, want %q", got, sub)
+	// The first OpenDialog also kicked off a background missing-path scan, so more than one
+	// interrupt event may be queued (in either order) — drain until the navigation lands.
+	want := filepath.Clean(sub)
+	drainInterruptEventsUntil(t, app, screen, 2*time.Second, func() bool {
+		return filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()) == want
+	})
+	if got := filepath.Clean(app.panelByID(ui.PrimaryPanel).Path.String()); got != want {
+		t.Fatalf("active panel path = %q, want %q", got, want)
 	}
 }
 

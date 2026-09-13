@@ -46,6 +46,11 @@ type Handler struct {
 	// exactly, once the preview later closes, instead of dropping back to plain panel
 	// browsing.
 	reopenAfterPreview bool
+
+	// missingGen guards ApplyMissing against a stale background missing-path scan
+	// (dialogctrl.StartPathsMissingScan) landing after the dialog closed or reopened; bumped
+	// by startMissingScan and CloseDialog.
+	missingGen uint64
 }
 
 // New constructs a Handler.

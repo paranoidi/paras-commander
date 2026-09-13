@@ -176,6 +176,10 @@ type Handler struct {
 	// so Run() re-renders once the check lands.
 	pathPickerValidate   sched.Debouncer
 	transferDestValidate sched.Debouncer
+	// pathPickerMissingGen guards ApplyPathPickerMissing against a stale background missing-path
+	// scan (StartPathsMissingScan) landing after the picker closed or reopened with a new item
+	// set; bumped by startPathPickerMissingScan and ClosePathPicker.
+	pathPickerMissingGen uint64
 	// deleteDialogScanDebounce defers the delete dialog's per-directory mount-exclusion stat
 	// check (which of its directories still need a background disk-usage scan) to a background
 	// goroutine instead of running it inline in ReconcileDeleteDialogScans on the main goroutine.

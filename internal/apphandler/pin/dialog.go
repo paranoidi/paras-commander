@@ -23,8 +23,8 @@ func (h *Handler) listRows() int {
 	return dialog.PinDialogListRows(layout.Height)
 }
 
-// OpenDialog opens the Pin dialog, recomputing each pinned item's PathMissing (same
-// recompute-once-at-open timing as History, not a live per-render stat).
+// OpenDialog opens the Pin dialog. Every item's PathMissing starts false; a background scan
+// (startMissingScan) fills it in once it lands, so opening never blocks on a stat.
 func (h *Handler) OpenDialog() {
 	if ui.IsAuxiliaryView(h.model.ViewMode) {
 		return
@@ -37,15 +37,41 @@ func (h *Handler) OpenDialog() {
 		return
 	}
 	for i := range h.model.PinnedItems {
-		h.model.PinnedItems[i].PathMissing = dialogctrl.PathEntryMissing("", "", h.model.PinnedItems[i].Path)
+		h.model.PinnedItems[i].PathMissing = false
 	}
 	h.model.PinDialog = dialog.PinDialogState{Open: true, Selected: 0, ListScroll: 0}
 	h.SyncDialogRanks()
+	h.startMissingScan()
 }
 
 // CloseDialog closes the Pin dialog.
 func (h *Handler) CloseDialog() {
 	h.model.PinDialog = dialog.PinDialogState{}
+	h.missingGen++
+}
+
+// startMissingScan bumps the Pin dialog's missing-scan generation and starts a background scan
+// of every pinned item's path, so ApplyMissing can later fill in PathMissing without blocking
+// dialog open on stats (see dialogctrl.StartPathsMissingScan).
+func (h *Handler) startMissingScan() {
+	h.missingGen++
+	paths := make([]string, len(h.model.PinnedItems))
+	for i, it := range h.model.PinnedItems {
+		paths[i] = it.Path
+	}
+	dialogctrl.StartPathsMissingScan(h.screen, "pin", h.missingGen, "", "", paths)
+}
+
+// ApplyMissing applies a background missing-path scan's result to PinnedItems, keyed by path
+// so an F8 removal during the scan can't misapply a result to the wrong index. Ignored if the
+// dialog has since closed or a newer scan has been started.
+func (h *Handler) ApplyMissing(p dialogctrl.PathsMissingPayload) {
+	if !h.model.PinDialog.Open || p.Gen != h.missingGen {
+		return
+	}
+	for i := range h.model.PinnedItems {
+		h.model.PinnedItems[i].PathMissing = p.Missing[h.model.PinnedItems[i].Path]
+	}
 }
 
 // SyncDialogRanks re-ranks PinnedItems against the dialog's current Query, clamps Selected,
