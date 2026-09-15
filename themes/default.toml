@@ -304,7 +304,7 @@ unselected = "\U000F043D"
 
 [symbols.jobs.list]
 scanning = "\uf110"
-queued = "\u23F3"
+queued = "\uf017"
 running = "\uf144"
 paused = "\uf28b"
 canceled = "\uf52f"
