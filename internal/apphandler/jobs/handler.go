@@ -192,7 +192,7 @@ func (h *Handler) TryDispatch(actionID string) bool {
 		case keymap.ActionJobsPause:
 			h.pauseSelectedQueuedJob()
 		case keymap.ActionJobsResume:
-			h.resumeSelectedPausedJob()
+			h.resumeOrRetrySelectedJob()
 		}
 		return true
 	case keymap.ActionJobsRateLimitIncrease, keymap.ActionJobsRateLimitDecrease:
@@ -671,7 +671,9 @@ func (h *Handler) pauseSelectedQueuedJob() {
 	h.ensureJobsViewSelectionVisible()
 }
 
-func (h *Handler) resumeSelectedPausedJob() {
+// resumeOrRetrySelectedJob resumes a paused job or retries a failed one, whichever the
+// selected job is — the same ActionJobsResume key/menu entry doubles as Retry on a failed job.
+func (h *Handler) resumeOrRetrySelectedJob() {
 	n := len(h.model.JobsList)
 	if n == 0 {
 		return
@@ -681,17 +683,35 @@ func (h *Handler) resumeSelectedPausedJob() {
 		return
 	}
 	id := h.model.JobsList[sel].ID
-	if h.model.JobsList[sel].Status != string(jobs.StatusPaused) {
-		h.host.SetTransientMessage("Selected job is not paused", ui.MessageUrgencyWarn)
-		return
-	}
-	if !h.state.ResumeJob(id) {
-		h.host.SetTransientMessage("Could not resume job", ui.MessageUrgencyWarn)
+	switch jobs.Status(h.model.JobsList[sel].Status) {
+	case jobs.StatusPaused:
+		if !h.state.ResumeJob(id) {
+			h.host.SetTransientMessage("Could not resume job", ui.MessageUrgencyWarn)
+			return
+		}
+	case jobs.StatusFailed:
+		if !h.state.RetryJob(id) {
+			h.host.SetTransientMessage("Could not retry job", ui.MessageUrgencyWarn)
+			return
+		}
+	default:
+		h.host.SetTransientMessage("Selected job is not paused or failed", ui.MessageUrgencyWarn)
 		return
 	}
 	h.SyncJobsList()
 	h.SyncJobPathMarks()
 	h.ensureJobsViewSelectionVisible()
+}
+
+// SelectedJobStatus returns the status of the currently selected job in the jobs view, or ""
+// when nothing is selected. Single source of truth for the Resume/Retry footer hint and
+// leader-menu label.
+func (h *Handler) SelectedJobStatus() jobs.Status {
+	sel := h.model.JobsView.Selected
+	if sel < 0 || sel >= len(h.model.JobsList) {
+		return ""
+	}
+	return jobs.Status(h.model.JobsList[sel].Status)
 }
 
 func (h *Handler) clearFinishedJobs() {

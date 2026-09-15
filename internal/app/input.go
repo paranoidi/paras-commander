@@ -391,9 +391,8 @@ func (a *App) auxiliaryViewFooterKeys() ([]menu.FunctionKey, bool) {
 		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysMessagesView()), true
 	}
 	if a.model.ViewMode == ui.ViewJobs && !a.inQuickFilterUI() {
-		sel := a.model.JobsView.Selected
-		finished := sel >= 0 && sel < len(a.model.JobsList) && jobs.Status(a.model.JobsList[sel].Status).IsFinished()
-		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysJobsView(finished)), true
+		status := a.jobsCtrl.SelectedJobStatus()
+		return a.viMotionAuxiliaryFooterKeys(menu.FunctionKeysJobsView(status.IsFinished(), status == jobs.StatusFailed)), true
 	}
 	return nil, false
 }

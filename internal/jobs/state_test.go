@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"github.com/paranoidi/paras-commander/internal/ops"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"runtime"
@@ -870,5 +871,68 @@ func TestCancelJobWhileQueuedButStillStreamingCancelsProducer(t *testing.T) {
 	}
 	if after > before+2 {
 		t.Fatalf("NumGoroutine() after cancel = %d, want <= %d (before=%d)", after, before+2, before)
+	}
+}
+
+// TestRetryJobRequeuesFailedJob covers RetryJob re-queuing a failed job under the same ID and
+// clearing its error, and rejecting retry once the job is no longer failed.
+func TestRetryJobRequeuesFailedJob(t *testing.T) {
+	s := NewState()
+	stop := make(chan struct{})
+	defer close(stop)
+
+	var attempts atomic.Int32
+	s.SetTransferFunc(func(ctx context.Context, job *Job, emit func(Event), waitBlocker func(BlockerRequest) ConflictDecision) error {
+		if attempts.Add(1) == 1 {
+			return errors.New("permission denied")
+		}
+		return nil
+	})
+	s.StartWorker(stop)
+
+	job := &Job{ID: "retry-me", Type: TypeDelete, Status: StatusQueued, Sources: pathloc.PathsForTest("/x"), TotalFiles: 1}
+	s.AddJob(job)
+
+	deadline := time.After(5 * time.Second)
+	var gotFailed bool
+	for !gotFailed {
+		select {
+		case <-deadline:
+			t.Fatal("timeout waiting for EventFailed")
+		case ev := <-s.Events():
+			if ev.Type == EventFailed && ev.JobID == "retry-me" {
+				gotFailed = true
+			}
+		}
+	}
+
+	if !s.RetryJob("retry-me") {
+		t.Fatal("RetryJob() = false, want true for a failed job")
+	}
+	all := s.AllJobs()
+	if len(all) != 1 {
+		t.Fatalf("AllJobs len = %d, want 1", len(all))
+	}
+	if all[0].Status != StatusQueued {
+		t.Fatalf("status after retry = %q, want %q", all[0].Status, StatusQueued)
+	}
+	if all[0].Error != "" {
+		t.Fatalf("error after retry = %q, want empty", all[0].Error)
+	}
+
+	var gotCompleted bool
+	for !gotCompleted {
+		select {
+		case <-deadline:
+			t.Fatal("timeout waiting for EventCompleted")
+		case ev := <-s.Events():
+			if ev.Type == EventCompleted && ev.JobID == "retry-me" {
+				gotCompleted = true
+			}
+		}
+	}
+
+	if s.RetryJob("retry-me") {
+		t.Fatal("RetryJob() = true, want false for a completed job")
 	}
 }

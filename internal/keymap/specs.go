@@ -1500,10 +1500,10 @@ func DefaultActionSpecs() []ActionSpec {
 		{
 			ID:          ActionJobsResume,
 			Views:       HelpJobs,
-			Title:       "Resume paused job",
+			Title:       "Resume / retry job",
 			Section:     "Jobs",
 			DefaultKeys: nil,
-			Keywords:    []string{"unpause", "start"},
+			Keywords:    []string{"unpause", "start", "retry", "failed"},
 			LeaderKey:   "r",
 		},
 		{

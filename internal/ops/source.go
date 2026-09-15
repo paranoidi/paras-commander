@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
@@ -49,6 +50,36 @@ func PathErrorReason(err error) error {
 		return pathErr.Err
 	}
 	return err
+}
+
+// RootFirstErrorText renders err as "<root cause>: <outer context>", e.g.
+// "permission denied: move copy phase: create directory "/x": mkdir /x". It walks the wrap
+// chain to the innermost error (unwrapping any *os.PathError to its errno text along the way)
+// and moves that root cause to the front, so it survives middle-truncation in the UI instead
+// of being buried behind an outer wrap chain.
+func RootFirstErrorText(err error) string {
+	if err == nil {
+		return ""
+	}
+	inner := err
+	for {
+		if reason := PathErrorReason(inner); reason != inner {
+			inner = reason
+			continue
+		}
+		if u := errors.Unwrap(inner); u != nil {
+			inner = u
+			continue
+		}
+		break
+	}
+	root := inner.Error()
+	full := err.Error()
+	rest := strings.TrimSuffix(full, ": "+root)
+	if rest == full || rest == "" {
+		return full
+	}
+	return root + ": " + rest
 }
 
 func nestedErrorText(err error) string {

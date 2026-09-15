@@ -74,16 +74,21 @@ var FunctionKeysJobs = []FunctionKey{
 	{Key: tcell.KeyF10, KeyLabel: "F10", Hint: "Quit", ActionID: keymap.ActionAppQuit},
 }
 
-// FunctionKeysJobsView returns hints for the jobs screen footer. selectedFinished
-// hides the cancel/pause/resume/reorder actions, which are no-ops on a completed,
-// failed, or canceled job.
-func FunctionKeysJobsView(selectedFinished bool) []FunctionKey {
+// FunctionKeysJobsView returns hints for the jobs screen footer. selectedFinished hides the
+// cancel/pause/resume/reorder actions, which are no-ops on a completed, failed, or canceled
+// job — except Resume, which selectedFailed keeps around relabeled "Retry" since it doubles
+// as retry on a failed job.
+func FunctionKeysJobsView(selectedFinished, selectedFailed bool) []FunctionKey {
 	if !selectedFinished {
 		return FunctionKeysJobs
 	}
 	out := make([]FunctionKey, 0, len(FunctionKeysJobs))
 	for _, fk := range FunctionKeysJobs {
 		if fk.RequiresActiveJob {
+			if selectedFailed && fk.ActionID == keymap.ActionJobsResume {
+				fk.Hint = "Retry"
+				out = append(out, fk)
+			}
 			continue
 		}
 		out = append(out, fk)

@@ -12,7 +12,7 @@ func DefinitionsJobs() []Definition {
 			Items: []Item{
 				{Action: keymap.ActionJobsCancel, Label: "Cancel job", Shortcut: 'c'},
 				{Action: keymap.ActionJobsPause, Label: "Pause queued job", Shortcut: 'p'},
-				{Action: keymap.ActionJobsResume, Label: "Resume paused job", Shortcut: 'r'},
+				{Action: keymap.ActionJobsResume, Label: "Resume / retry job", Shortcut: 'r'},
 				{Action: keymap.ActionJobsQueueUp, Label: "Move up in queue", Shortcut: 'u'},
 				{Action: keymap.ActionJobsQueueDown, Label: "Move down in queue", Shortcut: 'd'},
 				{Action: keymap.ActionJobsClearFinished, Label: "Clear finished", Shortcut: 'l'},

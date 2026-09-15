@@ -239,7 +239,7 @@ func TestJobsDefinitionsFillsMenuKeyLabels(t *testing.T) {
 		"Kill job":           "S-F8",
 		"Cancel job":         "C-c",
 		"Pause queued job":   "C-p",
-		"Resume paused job":  "C-r",
+		"Resume / retry job": "C-r",
 		"Move up in queue":   "C-up",
 		"Move down in queue": "C-down",
 		"Clear finished":     "F8",

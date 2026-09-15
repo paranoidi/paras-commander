@@ -247,7 +247,7 @@ waitLoop:
 			s.finishScanCanceled(job)
 			return
 		}
-		s.finishScanFailed(job, err.Error())
+		s.finishScanFailed(job, ops.RootFirstErrorText(err))
 		return
 	}
 

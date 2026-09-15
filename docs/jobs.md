@@ -25,3 +25,17 @@ With the Queue panel focused:
 
 The current limit appears on the right side of the Queue panel's border
 (e.g. `40MB/s`). Nothing is shown there when the limit is Unlimited.
+
+# Retrying a failed job
+
+A copy, move, flatten, delete, or extract job that fails (e.g. `permission
+denied` on the destination) stays in the Queue panel as a failed row instead
+of disappearing. Select it and press `Ctrl+R` — the footer shows **Retry**
+and the `:` leader menu shows "Retry failed job" while a failed job is
+selected — to re-run it from scratch under the same job ID. Any files
+already transferred before the failure hit the normal overwrite/skip
+conflict prompt on retry.
+
+`Ctrl+R` (**Jobs → Resume / retry job**) is the same key used to resume a
+paused job; it resumes when the selected job is paused and retries when it
+is failed.

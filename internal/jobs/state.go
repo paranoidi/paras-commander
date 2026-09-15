@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/paranoidi/paras-commander/internal/config"
+	"github.com/paranoidi/paras-commander/internal/ops"
 )
 
 // State provides a thread-safe view of all tracked jobs for the UI layer.
@@ -318,6 +319,29 @@ func (s *State) ResumeJob(id string) bool {
 // PauseQueuedJob pauses a queued job still waiting in the FIFO. Returns false if not found or not StatusQueued.
 func (s *State) PauseQueuedJob(id string) bool {
 	return s.queue.PauseQueuedJob(id)
+}
+
+// RetryJob re-queues a failed job as a fresh run with the same ID and spec.
+// Returns false when id is not a failed job.
+func (s *State) RetryJob(id string) bool {
+	s.mu.Lock()
+	job := s.findJobUnlocked(id)
+	if job == nil || job.Status != StatusFailed {
+		s.mu.Unlock()
+		return false
+	}
+	for i, j := range s.finished {
+		if j != nil && j.ID == id {
+			s.finished = append(s.finished[:i], s.finished[i+1:]...)
+			break
+		}
+	}
+	s.mu.Unlock()
+	// Scan failures stay in the FIFO with StatusFailed; drop a stray queue entry if present.
+	s.queue.RemoveJobByID(id)
+
+	s.AddJob(job.RetryClone())
+	return true
 }
 
 // AllJobs returns active job (if any), jobs waiting for blocker input, queued jobs, then recently finished jobs.
@@ -704,7 +728,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 		job.Status = StatusCanceled
 	case transferErr != nil:
 		job.Status = StatusFailed
-		job.Error = transferErr.Error()
+		job.Error = ops.RootFirstErrorText(transferErr)
 	default:
 		job.Status = StatusCompleted
 	}
@@ -729,7 +753,7 @@ func (s *State) runJob(job *Job, stop <-chan struct{}) {
 			Type:   EventFailed,
 			JobID:  job.ID,
 			Status: StatusFailed,
-			Error:  transferErr.Error(),
+			Error:  ops.RootFirstErrorText(transferErr),
 			Err:    transferErr,
 		})
 	default:

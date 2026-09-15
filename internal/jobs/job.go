@@ -182,6 +182,40 @@ func (j *Job) NeedsPreScan() bool {
 	return j.Type == TypeCopy || j.Type == TypeMove || j.Type == TypeFlatten
 }
 
+// RetryClone returns a fresh Job with the same ID and only the enqueue-time spec fields
+// copied from j — everything else (progress, ETA, PlanCh, Error, timestamps, PendingBlocker)
+// starts zero, mirroring how AddTransferJob/EnqueueDeleteJob/EnqueueExtractJob/AddFlattenJob
+// build a job at enqueue time. Status is StatusScanning when the type needs a pre-scan,
+// otherwise StatusQueued; TotalFiles is preset to len(Sources) for delete/extract, matching
+// their enqueue path (copy/move/flatten recompute it during scan).
+func (j *Job) RetryClone() *Job {
+	totalFiles := 0
+	if j.Type == TypeDelete || j.Type == TypeExtract {
+		totalFiles = len(j.Sources)
+	}
+	clone := &Job{
+		ID:                    j.ID,
+		Type:                  j.Type,
+		Status:                StatusQueued,
+		Sources:               j.Sources,
+		Destination:           j.Destination,
+		DestIsDir:             ops.DestinationIsDirAtEnqueue(j.Destination),
+		TotalFiles:            totalFiles,
+		FlattenRemoveEmpty:    j.FlattenRemoveEmpty,
+		FlattenRoots:          j.FlattenRoots,
+		DeleteRemoveEmptyDirs: j.DeleteRemoveEmptyDirs,
+		PromptDanglingDirs:    j.PromptDanglingDirs,
+		PreservePermissions:   j.PreservePermissions,
+		PreserveTimestamps:    j.PreserveTimestamps,
+		DereferenceSymlinks:   j.DereferenceSymlinks,
+		FlattenIntoDest:       j.FlattenIntoDest,
+	}
+	if clone.NeedsPreScan() {
+		clone.Status = StatusScanning
+	}
+	return clone
+}
+
 // holdsTransferLease reports whether the job must serialize on the single transfer lease.
 // ponytail: global lease; becomes a per-device lane key when device queues land
 func (j *Job) holdsTransferLease() bool {
