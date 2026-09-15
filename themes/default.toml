@@ -350,7 +350,7 @@ right = ""  # powerline right half-circle
 [symbols.menu.job]
 scanning = "\U000f02ca"
 completed = ""
-failed = ""
+failed = ""
 decision = ""
 paused = ""
 running = ""
