@@ -368,7 +368,7 @@ func jobDetailProgressLine(j JobEntry) string {
 // already left the "scanning" status and started transferring — meaning TotalFiles/TotalDirs/
 // TotalBytes above are still provisional and will keep growing.
 func jobStillScanningInBackground(j JobEntry) bool {
-	if j.PlanComplete || j.Status == "scanning" || jobs.Status(j.Status).IsFinished() {
+	if j.TotalsComplete || j.Status == "scanning" || jobs.Status(j.Status).IsFinished() {
 		return false
 	}
 	switch jobs.Type(j.Type) {

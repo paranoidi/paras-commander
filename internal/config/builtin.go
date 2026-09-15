@@ -193,6 +193,10 @@ const (
 	DefaultPreallocateMinFileBytes = 1024 * 1024
 	DefaultSyncAtJobEnd            = false
 	DefaultSyncMinFileKiB          = 0
+	// DefaultSyncWriteBehindMiB bounds how far copy progress can run ahead of the disk when
+	// sync_after_each_file is on: an extra fsync every this many MiB during a large file's copy,
+	// so the end-of-file fsync stays short. 0 disables the mid-copy fsyncs.
+	DefaultSyncWriteBehindMiB = 64
 
 	// FlattenDefaultLocationActive is the active panel path for flatten dialog default destination.
 	FlattenDefaultLocationActive = "active"

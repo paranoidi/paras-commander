@@ -39,3 +39,12 @@ func TestSyncFilePolicy(t *testing.T) {
 		t.Fatal("file at/above threshold should sync")
 	}
 }
+
+func TestLocalCopyFileOptsSyncWriteBehind(t *testing.T) {
+	t.Parallel()
+	o := Options{SyncWriteBehindMiB: 64}
+	got := o.LocalCopyFileOpts(nil).SyncWriteBehindBytes
+	if want := int64(64 << 20); got != want {
+		t.Fatalf("SyncWriteBehindBytes = %d, want %d", got, want)
+	}
+}

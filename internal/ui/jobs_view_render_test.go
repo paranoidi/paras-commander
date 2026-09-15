@@ -161,20 +161,20 @@ func TestJobDetailProgressLineShowsScanningIndicatorWhileBackgroundScanIncomplet
 	t.Parallel()
 
 	running := JobEntry{
-		Type:         string(jobs.TypeCopy),
-		Status:       "running",
-		DoneFiles:    1,
-		TotalFiles:   10,
-		PlanComplete: false,
+		Type:           string(jobs.TypeCopy),
+		Status:         "running",
+		DoneFiles:      1,
+		TotalFiles:     10,
+		TotalsComplete: false,
 	}
 	if line := jobDetailProgressLine(running); !strings.Contains(line, "scanning") {
 		t.Fatalf("copy job still transferring with incomplete background scan should show scanning indicator; got %q", line)
 	}
 
 	complete := running
-	complete.PlanComplete = true
+	complete.TotalsComplete = true
 	if line := jobDetailProgressLine(complete); strings.Contains(line, "scanning") {
-		t.Fatalf("job with PlanComplete should not show scanning indicator; got %q", line)
+		t.Fatalf("job with TotalsComplete should not show scanning indicator; got %q", line)
 	}
 
 	scanningStatus := running

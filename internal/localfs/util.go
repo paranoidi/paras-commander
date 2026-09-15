@@ -125,6 +125,32 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 		}
 	}
 
+	// Bounded write-behind: when this file is going to be fsync'd anyway, also fsync every
+	// SyncWriteBehindBytes during the copy instead of only at the end. Without this, a
+	// filesystem with a large dirty-data buffer (e.g. ZFS) accepts writes at memory speed and
+	// reports every byte through onWritten long before it reaches disk; the single end-of-file
+	// fsync then blocks for as long as the whole flush takes with zero further progress
+	// callbacks, so job speed/ETA decay toward zero mid-file. Reporting progress after each
+	// bounded flush keeps DoneBytes from running more than N bytes ahead of the disk and keeps
+	// the final fsync short.
+	var syncErr error
+	if extra.syncNow(srcInfo.Size()) && extra.SyncWriteBehindBytes > 0 {
+		inner := onWritten
+		var sinceSync int64
+		onWritten = func(n int64) {
+			sinceSync += n
+			if sinceSync >= extra.SyncWriteBehindBytes {
+				if err := dstFile.Sync(); err != nil && syncErr == nil {
+					syncErr = err
+				}
+				sinceSync = 0
+			}
+			if inner != nil {
+				inner(n)
+			}
+		}
+	}
+
 	fastDone := false
 	if tryKernelFastCopy {
 		ok, ferr := tryKernelReflinkCopy(ctx, srcFile, dstFile, srcInfo.Size(), onWritten)
@@ -166,6 +192,10 @@ func CopyFile(ctx context.Context, src, dst string, bufSize int, preservePerms, 
 			abortPartialLocalCopy(dstFile, target)
 			return fmt.Errorf("copy content %q -> %q: %w", src, target, err)
 		}
+	}
+	if syncErr != nil {
+		abortPartialLocalCopy(dstFile, target)
+		return fmt.Errorf("sync destination %q: %w", target, syncErr)
 	}
 	if extra.syncNow(srcInfo.Size()) {
 		if err := dstFile.Sync(); err != nil {

@@ -534,6 +534,10 @@ type OperationsConfig struct {
 	SyncAtJobEnd bool `toml:"sync_at_job_end"`
 	// SyncMinFileKiB skips fsync for copied files smaller than this threshold (0 = no minimum).
 	SyncMinFileKiB int `toml:"sync_min_file_kib"`
+	// SyncWriteBehindMiB: with sync_after_each_file, also fsync every this many MiB mid-copy so
+	// job progress follows the disk instead of the kernel's write cache; 0 = only the
+	// end-of-file fsync.
+	SyncWriteBehindMiB int `toml:"sync_write_behind_mib"`
 	// FlattenDefaultLocation is the default destination prefill panel: "active" or "inactive".
 	FlattenDefaultLocation string `toml:"flatten_default_location"`
 	// FlattenRecursive is the default for the flatten dialog recursive checkbox.
@@ -668,6 +672,7 @@ func Default() Config {
 			PreallocateMinFileBytes:      DefaultPreallocateMinFileBytes,
 			SyncAtJobEnd:                 DefaultSyncAtJobEnd,
 			SyncMinFileKiB:               DefaultSyncMinFileKiB,
+			SyncWriteBehindMiB:           DefaultSyncWriteBehindMiB,
 			FlattenDefaultLocation:       DefaultFlattenDefaultLocation,
 			FlattenRecursive:             DefaultFlattenRecursive,
 			FlattenRemoveEmptyDirs:       DefaultFlattenRemoveEmptyDirs,
@@ -1287,6 +1292,9 @@ func (c *Config) validateOperations(builtin *Config) {
 	}
 	if c.Operations.DiskSpaceCheckMinFileBytes < 0 {
 		c.Operations.DiskSpaceCheckMinFileBytes = builtin.Operations.DiskSpaceCheckMinFileBytes
+	}
+	if c.Operations.SyncWriteBehindMiB < 0 {
+		c.Operations.SyncWriteBehindMiB = builtin.Operations.SyncWriteBehindMiB
 	}
 	loc := strings.ToLower(strings.TrimSpace(c.Operations.FlattenDefaultLocation))
 	if loc != FlattenDefaultLocationActive && loc != FlattenDefaultLocationInactive {

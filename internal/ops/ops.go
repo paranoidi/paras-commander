@@ -57,6 +57,9 @@ type Options struct {
 	SyncAtJobEnd bool
 	// SyncMinFileKiB skips fsync for files smaller than this threshold (0 = no minimum).
 	SyncMinFileKiB int
+	// SyncWriteBehindMiB fsyncs every this many MiB mid-copy (when SyncAfterEachFile applies)
+	// so progress follows the disk instead of the kernel's write cache. 0 disables it.
+	SyncWriteBehindMiB int
 	// FlatDestNames resolves every source to dest/<basename> (flatten jobs) instead of
 	// batch-relative names below the sources' common parent (see TransferNameRoot).
 	FlatDestNames bool
@@ -92,6 +95,7 @@ func DefaultOptions() Options {
 		PreallocateMinFileBytes:    o.PreallocateMinFileBytes,
 		SyncAtJobEnd:               o.SyncAtJobEnd,
 		SyncMinFileKiB:             o.SyncMinFileKiB,
+		SyncWriteBehindMiB:         o.SyncWriteBehindMiB,
 		DereferenceSymlinks:        o.DereferenceSymlinks,
 	}
 }
@@ -130,6 +134,7 @@ func (o Options) LocalCopyFileOpts(buf []byte) localfs.CopyFileOpts {
 		PreallocateMin:          o.PreallocateMinFileBytes,
 		SyncPerFile:             o.SyncAfterEachFile,
 		SyncMinFileKiB:          o.SyncMinFileKiB,
+		SyncWriteBehindBytes:    int64(o.SyncWriteBehindMiB) << 20,
 		FollowSymlinks:          o.DereferenceSymlinks,
 	}
 }

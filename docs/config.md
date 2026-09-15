@@ -257,6 +257,7 @@ Copy/move file-transfer behavior.
 | `preallocate_min_file_bytes` | int64 | `1048576` (1 MiB) | Only preallocate for files at least this large. `0` preallocates for every file. |
 | `sync_at_job_end` | bool | `false` | fsync all copied local files once at the end of the job, instead of per-file (only relevant when `sync_after_each_file` is `false`). |
 | `sync_min_file_kib` | int | `0` | Skip fsync for copied files smaller than this size. `0` means no minimum (all files are synced). |
+| `sync_write_behind_mib` | int | `64` | With `sync_after_each_file`, also fsync every this many MiB while copying a large file, so job speed/progress follow the disk rather than the kernel's write cache and the end-of-file fsync stays short. `0` = a single fsync at the end of each file. |
 | `flatten_default_location` | string | `"active"` | Default destination panel prefilled in the flatten dialog: `"active"` or `"inactive"`. |
 | `flatten_recursive` | bool | `false` | Default state of the flatten dialog's "recursive" checkbox. |
 | `flatten_remove_empty_dirs` | bool | `true` | Default state of the flatten dialog's "remove empty directories" checkbox. |

@@ -421,6 +421,7 @@ func buildTransferOptions(job *jobs.Job, opsCfg config.OperationsConfig, jobsCfg
 		PreallocateMinFileBytes:    opsCfg.PreallocateMinFileBytes,
 		SyncAtJobEnd:               opsCfg.SyncAtJobEnd,
 		SyncMinFileKiB:             opsCfg.SyncMinFileKiB,
+		SyncWriteBehindMiB:         opsCfg.SyncWriteBehindMiB,
 		FlatDestNames:              job.FlatDestNames(),
 		DereferenceSymlinks:        job.DereferenceSymlinks,
 		RateLimit:                  rateWait,

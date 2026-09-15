@@ -14,6 +14,8 @@ type CopyFileOpts struct {
 	PreallocateMin          int64
 	SyncPerFile             bool
 	SyncMinFileKiB          int
+	// SyncWriteBehindBytes: with SyncPerFile, fsync every this many bytes mid-copy; 0 = off.
+	SyncWriteBehindBytes int64
 	// FollowSymlinks makes CopyFile read through a symlink source (copying the target's
 	// content) instead of recreating the symlink itself.
 	FollowSymlinks bool
