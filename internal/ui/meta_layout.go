@@ -11,9 +11,10 @@ import (
 
 // MetaColumnLayout is a rendered meta column ready for panel list rows.
 type MetaColumnLayout struct {
-	Title     string
-	Width     int
-	Formatted map[string]string
+	Title      string
+	Width      int
+	Formatted  map[string]string
+	RightAlign bool
 }
 
 // LayoutMetaColumns formats each active meta column and returns layouts plus total terminal width
@@ -24,11 +25,12 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 	}
 	layouts = make([]MetaColumnLayout, len(cols))
 	for i, col := range cols {
-		w, formatted := layoutMetaCells(col.Results)
+		w, formatted, rightAlign := layoutMetaCells(col.Results)
 		layouts[i] = MetaColumnLayout{
-			Title:     col.ColumnTitle,
-			Width:     w,
-			Formatted: formatted,
+			Title:      col.ColumnTitle,
+			Width:      w,
+			Formatted:  formatted,
+			RightAlign: rightAlign,
 		}
 		if i > 0 {
 			totalWidth += 2
@@ -45,7 +47,7 @@ func MetaHeaderText(layouts []MetaColumnLayout) string {
 	}
 	parts := make([]string, len(layouts))
 	for i, lay := range layouts {
-		parts[i] = padMetaLineToWidth(lay.Title, lay.Width)
+		parts[i] = padMetaLineToWidth(lay.Title, lay.Width, lay.RightAlign)
 	}
 	return strings.Join(parts, "  ")
 }
@@ -76,7 +78,7 @@ func MetaRowText(layouts []MetaColumnLayout, path string) string {
 		if lay.Formatted != nil {
 			text = lay.Formatted[path]
 		}
-		parts[i] = padMetaLineToWidth(text, lay.Width)
+		parts[i] = padMetaLineToWidth(text, lay.Width, false)
 	}
 	return strings.Join(parts, "  ")
 }
@@ -93,10 +95,13 @@ const (
 // in the trimmed payload, the whole string is one legacy cell (width capped by panelListMetaMax).
 // Cells that still overflow after shrinking are clipped with a trailing ellipsis.
 // Column count is the maximum field count across all non-empty rows; shorter rows pad with empty cells.
-func layoutMetaCells(metaResults map[string]string) (metaColW int, formatted map[string]string) {
+func layoutMetaCells(metaResults map[string]string) (metaColW int, formatted map[string]string, rightAlign bool) {
 	formatted = make(map[string]string, len(metaResults))
+	// ponytail: an empty column is treated as numeric (vacuously all-digit) so a numeric
+	// column's header never jumps left in a directory with no results yet; a text column's
+	// header flips left once content arrives. Upgrade path: an explicit align key in meta.toml.
 	if len(metaResults) == 0 {
-		return panelListMetaMinCells, formatted
+		return panelListMetaMinCells, formatted, true
 	}
 
 	parsed := make(map[string][]string, len(metaResults))
@@ -119,7 +124,7 @@ func layoutMetaCells(metaResults map[string]string) (metaColW int, formatted map
 	}
 
 	if nCols == 0 {
-		return clampMetaColW(panelListMetaMinCells), formatted
+		return clampMetaColW(panelListMetaMinCells), formatted, true
 	}
 
 	colW := make([]int, nCols)
@@ -179,7 +184,16 @@ func layoutMetaCells(metaResults map[string]string) (metaColW int, formatted map
 			metaColW = w
 		}
 	}
-	return clampMetaColW(metaColW), formatted
+
+	rightAlign = nCols == 1
+	for _, row := range parsed {
+		if !metaCellAllDigits(row[0]) {
+			rightAlign = false
+			break
+		}
+	}
+
+	return clampMetaColW(metaColW), formatted, rightAlign
 }
 
 func clampMetaColW(w int) int {
@@ -248,12 +262,16 @@ func metaCellAllDigits(s string) bool {
 }
 
 // padMetaLineToWidth pads or truncates the full meta column string to w terminal cells.
-func padMetaLineToWidth(s string, w int) string {
+// right pads on the left (right-aligning the text) instead of the default left-align.
+func padMetaLineToWidth(s string, w int, right bool) string {
 	if w <= 0 {
 		return s
 	}
 	if runewidth.StringWidth(s) > w {
 		s = truncateMetaDisplay(s, w)
+	}
+	if right {
+		return runewidth.FillLeft(s, w)
 	}
 	return runewidth.FillRight(s, w)
 }

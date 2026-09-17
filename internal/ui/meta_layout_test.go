@@ -9,14 +9,14 @@ import (
 )
 
 func TestLayoutMetaCells_emptyMap(t *testing.T) {
-	w, m := layoutMetaCells(map[string]string{})
+	w, m, _ := layoutMetaCells(map[string]string{})
 	if w != panelListMetaMinCells || len(m) != 0 {
 		t.Fatalf("empty: w=%d len(m)=%d", w, len(m))
 	}
 }
 
 func TestLayoutMetaCells_legacySingleCell(t *testing.T) {
-	w, m := layoutMetaCells(map[string]string{"p": "hello"})
+	w, m, _ := layoutMetaCells(map[string]string{"p": "hello"})
 	if got := m["p"]; got != "hello" {
 		t.Fatalf("got %q want hello", got)
 	}
@@ -28,7 +28,7 @@ func TestLayoutMetaCells_legacySingleCell(t *testing.T) {
 func TestLayoutMetaCells_legacyTruncatesWithEllipsis(t *testing.T) {
 	// 21 ASCII letters => display width 21 > panelListMetaMax (20)
 	s := strings.Repeat("a", panelListMetaMax+1)
-	w, m := layoutMetaCells(map[string]string{"p": s})
+	w, m, _ := layoutMetaCells(map[string]string{"p": s})
 	want := strings.Repeat("a", panelListMetaMax-1) + string(primitive.Ellipsis)
 	if m["p"] != want {
 		t.Fatalf("got %q want %q", m["p"], want)
@@ -42,7 +42,7 @@ func TestLayoutMetaCells_legacyTruncatesWithEllipsis(t *testing.T) {
 }
 
 func TestLayoutMetaCells_tabDelimitedDigitsAlign(t *testing.T) {
-	_, m := layoutMetaCells(map[string]string{
+	_, m, _ := layoutMetaCells(map[string]string{
 		"a": "5\t12",
 		"b": "13\t3",
 	})
@@ -56,14 +56,14 @@ func TestLayoutMetaCells_tabDelimitedDigitsAlign(t *testing.T) {
 }
 
 func TestLayoutMetaCells_newlineDelimited(t *testing.T) {
-	_, m := layoutMetaCells(map[string]string{"p": "x\ny\nz"})
+	_, m, _ := layoutMetaCells(map[string]string{"p": "x\ny\nz"})
 	if got := m["p"]; got != "x y z" {
 		t.Fatalf("got %q want x y z", got)
 	}
 }
 
 func TestLayoutMetaCells_dynamicMoreFieldsLaterRow(t *testing.T) {
-	_, m := layoutMetaCells(map[string]string{
+	_, m, _ := layoutMetaCells(map[string]string{
 		"narrow": "a\tb",
 		"wide":   "a\tb\tc\td",
 	})
@@ -80,7 +80,7 @@ func TestLayoutMetaCells_dynamicMoreFieldsLaterRow(t *testing.T) {
 }
 
 func TestLayoutMetaCells_mixedLegacyAndDelimitedUsesMaxColumns(t *testing.T) {
-	_, m := layoutMetaCells(map[string]string{
+	_, m, _ := layoutMetaCells(map[string]string{
 		"plain": "xy",
 		"tab":   "1\t2",
 	})
@@ -120,9 +120,46 @@ func TestLayoutMetaColumns_twoColumns(t *testing.T) {
 	}
 }
 
+func TestLayoutMetaColumns_singleDigitColumnRightAlignsHeader(t *testing.T) {
+	cols := []MetaColumnState{
+		{ColumnTitle: "LC", Results: map[string]string{
+			"/heron":   "484",
+			"/lantern": "371",
+			"/quartz":  "17",
+		}},
+	}
+	layouts, _ := LayoutMetaColumns(cols)
+	if !layouts[0].RightAlign {
+		t.Fatalf("expected numeric column to be right-aligned")
+	}
+	hdr := MetaHeaderText(layouts)
+	want := runewidth.FillLeft("LC", layouts[0].Width)
+	if hdr != want {
+		t.Fatalf("header = %q want %q", hdr, want)
+	}
+}
+
+func TestLayoutMetaColumns_textColumnStaysLeftAligned(t *testing.T) {
+	cols := []MetaColumnState{
+		{ColumnTitle: "Owner", Results: map[string]string{
+			"/heron":   "falcon",
+			"/lantern": "wombat",
+		}},
+	}
+	layouts, _ := LayoutMetaColumns(cols)
+	if layouts[0].RightAlign {
+		t.Fatalf("expected text column to stay left-aligned")
+	}
+	hdr := MetaHeaderText(layouts)
+	want := runewidth.FillRight("Owner", layouts[0].Width)
+	if hdr != want {
+		t.Fatalf("header = %q want %q", hdr, want)
+	}
+}
+
 func TestLayoutMetaCells_rawTooLarge(t *testing.T) {
 	s := strings.Repeat("x", panelMetaRawMaxBytes+1)
-	_, m := layoutMetaCells(map[string]string{"p": s})
+	_, m, _ := layoutMetaCells(map[string]string{"p": s})
 	want := strings.Repeat("x", panelListMetaMax-1) + string(primitive.Ellipsis)
 	if m["p"] != want {
 		t.Fatalf("got %q want %q", m["p"], want)
@@ -131,7 +168,7 @@ func TestLayoutMetaCells_rawTooLarge(t *testing.T) {
 
 func TestLayoutMetaCells_fieldOverflowUsesEllipsis(t *testing.T) {
 	long := strings.Repeat("b", panelListMetaMax)
-	_, m := layoutMetaCells(map[string]string{"p": long + "\t1"})
+	_, m, _ := layoutMetaCells(map[string]string{"p": long + "\t1"})
 	got := m["p"]
 	if !strings.ContainsRune(got, primitive.Ellipsis) {
 		t.Fatalf("expected ellipsis in %q", got)

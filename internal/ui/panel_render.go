@@ -935,7 +935,7 @@ func formatEntry(entry localfs.Entry, width int, opts panelRowOpts, styles theme
 	}
 	if tw == 0 {
 		if opts.ShowMeta {
-			metaPadded := padMetaLineToWidth(metaText, opts.MetaColW)
+			metaPadded := padMetaLineToWidth(metaText, opts.MetaColW, false)
 			return fmt.Sprintf("%-*s  %s %*s", nameWidth, name, metaPadded, panelListSizeCells, formatListedSize(entry, painter))
 		}
 		return fmt.Sprintf("%-*s %*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter))
@@ -948,7 +948,7 @@ func formatEntry(entry localfs.Entry, width int, opts panelRowOpts, styles theme
 		third = formatTime(entry.ModifiedAt)
 	}
 	if opts.ShowMeta {
-		metaPadded := padMetaLineToWidth(metaText, opts.MetaColW)
+		metaPadded := padMetaLineToWidth(metaText, opts.MetaColW, false)
 		return fmt.Sprintf("%-*s  %s %*s  %-*s", nameWidth, name, metaPadded, panelListSizeCells, formatListedSize(entry, painter), tw, third)
 	}
 	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter), tw, third)
