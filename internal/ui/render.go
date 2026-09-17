@@ -55,6 +55,10 @@ type MetaColumnState struct {
 	ColumnTitle string
 	Order       int
 	Results     map[string]string // abs path → raw stdout
+	// Pending is the raw value a Results cell holds while its command is still in flight (the
+	// theme's meta-running icon). Layout ignores such cells when deciding column alignment so the
+	// header does not shift once real values replace them.
+	Pending string
 }
 
 // Model is the renderable subset of application state.

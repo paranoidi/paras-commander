@@ -475,6 +475,7 @@ func (h *Handler) runForPanel(panelID int, cmdDefs []metacmds.MetaEntry, cols []
 			results[e.Path] = runningMarker
 		}
 		cols[i].Results = results
+		cols[i].Pending = runningMarker
 	}
 
 	h.model.MetaResults[panelID] = cols

@@ -25,7 +25,7 @@ func LayoutMetaColumns(cols []MetaColumnState) (layouts []MetaColumnLayout, tota
 	}
 	layouts = make([]MetaColumnLayout, len(cols))
 	for i, col := range cols {
-		w, formatted, rightAlign := layoutMetaCells(col.Results)
+		w, formatted, rightAlign := layoutMetaCells(col.Results, col.Pending)
 		layouts[i] = MetaColumnLayout{
 			Title:      col.ColumnTitle,
 			Width:      w,
@@ -67,7 +67,9 @@ func CarouselMeta(cols []MetaColumnState) panelcarousel.Meta {
 	}
 }
 
-// MetaRowText returns the padded meta segment for one file row.
+// MetaRowText returns the padded meta segment for one file row. Each column's text is padded to
+// lay.Width on the same side as its header (RightAlign), so a numeric column whose content is
+// narrower than the minimum column width stays flush with its right-aligned title.
 func MetaRowText(layouts []MetaColumnLayout, path string) string {
 	if len(layouts) == 0 {
 		return ""
@@ -78,7 +80,7 @@ func MetaRowText(layouts []MetaColumnLayout, path string) string {
 		if lay.Formatted != nil {
 			text = lay.Formatted[path]
 		}
-		parts[i] = padMetaLineToWidth(text, lay.Width, false)
+		parts[i] = padMetaLineToWidth(text, lay.Width, lay.RightAlign)
 	}
 	return strings.Join(parts, "  ")
 }
@@ -95,7 +97,10 @@ const (
 // in the trimmed payload, the whole string is one legacy cell (width capped by panelListMetaMax).
 // Cells that still overflow after shrinking are clipped with a trailing ellipsis.
 // Column count is the maximum field count across all non-empty rows; shorter rows pad with empty cells.
-func layoutMetaCells(metaResults map[string]string) (metaColW int, formatted map[string]string, rightAlign bool) {
+// Cells equal to pending (the in-flight marker) are laid out like any other but do not vote on
+// alignment, so a numeric column is right-aligned from the first frame instead of flipping once
+// results arrive.
+func layoutMetaCells(metaResults map[string]string, pending string) (metaColW int, formatted map[string]string, rightAlign bool) {
 	formatted = make(map[string]string, len(metaResults))
 	// ponytail: an empty column is treated as numeric (vacuously all-digit) so a numeric
 	// column's header never jumps left in a directory with no results yet; a text column's
@@ -186,7 +191,10 @@ func layoutMetaCells(metaResults map[string]string) (metaColW int, formatted map
 	}
 
 	rightAlign = nCols == 1
-	for _, row := range parsed {
+	for path, row := range parsed {
+		if pending != "" && metaResults[path] == pending {
+			continue
+		}
 		if !metaCellAllDigits(row[0]) {
 			rightAlign = false
 			break
