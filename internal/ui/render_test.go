@@ -222,7 +222,7 @@ func TestFormatEntryDirectorySizeUsesDiskUsageCache(t *testing.T) {
 	dir := localfs.Entry{Name: "projects", Path: "/home/u/projects", Type: localfs.EntryDirectory}
 	cache := testDiskUsageMap{"/home/u/projects": 5000}
 	got := formatEntry(dir, rowW, panelRowOpts{ListFmt: panel.ListFormatMtime}, theme.Default(), cache, "")
-	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/projects", panelListSizeCells, formatByteSizeListed(5000), panelListModTimeCells, "")
+	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/projects", panellist.SizeCells, formatByteSizeListed(5000), panelListModTimeCells, "")
 	if got != want {
 		t.Fatalf("full row = %q, want %q", got, want)
 	}
@@ -233,7 +233,7 @@ func TestFormatEntryDirectorySizeEmptyWithoutCache(t *testing.T) {
 	nameWidth := panelListNameWidth(rowW, panel.ListFormatMtime, false, false)
 	dir := localfs.Entry{Name: "empty", Path: "/tmp/empty", Type: localfs.EntryDirectory}
 	got := formatEntry(dir, rowW, panelRowOpts{ListFmt: panel.ListFormatMtime}, theme.Default(), nil, "")
-	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/empty", panelListSizeCells, "", panelListModTimeCells, "")
+	want := fmt.Sprintf("%-*s %*s  %-*s", nameWidth, "/empty", panellist.SizeCells, "", panelListModTimeCells, "")
 	if got != want {
 		t.Fatalf("full row = %q, want %q", got, want)
 	}

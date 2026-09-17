@@ -9,6 +9,7 @@ import (
 	"github.com/paranoidi/paras-commander/internal/localfs"
 	"github.com/paranoidi/paras-commander/internal/panel"
 	"github.com/paranoidi/paras-commander/internal/panelcarousel"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 	"github.com/paranoidi/paras-commander/internal/pathloc"
 	"github.com/paranoidi/paras-commander/internal/theme"
 )
@@ -51,9 +52,9 @@ func TestDrawPanelInfoColumnUsesPanelRowInfoFG(t *testing.T) {
 	// EntryDisplayRunes prefixes files with a space when icons are off.
 	nameX := rect.X + 2
 	sizeX := rect.X + 1 + nameWidth + 1
-	// Size is right-aligned in panelListSizeCells; skip leading pad spaces.
+	// Size is right-aligned in panellist.SizeCells; skip leading pad spaces.
 	sizeIconX := sizeX
-	for x := sizeX; x < sizeX+panelListSizeCells; x++ {
+	for x := sizeX; x < sizeX+panellist.SizeCells; x++ {
 		ch, _, _ := screen.Get(x, rowY)
 		r, _ := utf8.DecodeRuneInString(ch)
 		if r != ' ' && r != 0 {

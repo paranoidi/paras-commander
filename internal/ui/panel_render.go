@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"math"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -20,12 +19,11 @@ import (
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
 
-// Layout after the name column: one space, size (panelListSizeCells), optional two spaces + third column.
+// Layout after the name column: one space, size (panellist.SizeCells), optional two spaces + third column.
 // When meta is active the column order is: name | meta | size | (mtime | perm | none).
 const (
 	panelListModTimeCells = 16
 	panelListPermCells    = 10
-	panelListSizeCells    = 5
 	// panelListMetaMax is the maximum display width (terminal cells) for the rendered Meta column
 	// (single-cell legacy or tab/newline multi-field layout; see layoutMetaCells).
 	panelListMetaMax = 20
@@ -39,11 +37,11 @@ func panelListReservedAfterName(f panel.ListFormat, nameOnly bool) int {
 	}
 	switch panel.EffectiveListFormat(f) {
 	case panel.ListFormatBrief:
-		return 1 + panelListSizeCells
+		return 1 + panellist.SizeCells
 	case panel.ListFormatPerm:
-		return 1 + panelListSizeCells + 2 + panelListPermCells
+		return 1 + panellist.SizeCells + 2 + panelListPermCells
 	default:
-		return 1 + panelListSizeCells + 2 + panelListModTimeCells
+		return 1 + panellist.SizeCells + 2 + panelListModTimeCells
 	}
 }
 
@@ -895,19 +893,13 @@ func panelListHeader(rowTextWidth int, state panel.State, showIcons bool, showMe
 	}
 	nameTitle, sizeTitle, thirdTitle := state.ListColumnTitles(showIcons)
 	nameTitle = truncateHeaderRunes(nameWidth, nameTitle)
-	sizeTitle = truncateHeaderRunes(panelListSizeCells, sizeTitle)
+	sizeTitle = truncateHeaderRunes(panellist.SizeCells, sizeTitle)
 	metaHdr := MetaHeaderText(metaLayouts)
 	if tw == 0 {
-		if showMeta {
-			return fmt.Sprintf("%-*s  %s %*s", nameWidth, nameTitle, metaHdr, panelListSizeCells, sizeTitle)
-		}
-		return fmt.Sprintf("%-*s %*s", nameWidth, nameTitle, panelListSizeCells, sizeTitle)
+		return panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true)
 	}
 	thirdTitle = truncateHeaderRunes(tw, thirdTitle)
-	if showMeta {
-		return fmt.Sprintf("%-*s  %s %*s  %-*s", nameWidth, nameTitle, metaHdr, panelListSizeCells, sizeTitle, tw, thirdTitle)
-	}
-	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, nameTitle, panelListSizeCells, sizeTitle, tw, thirdTitle)
+	return fmt.Sprintf("%s  %-*s", panellist.JoinRow(nameWidth, nameTitle, metaHdr, showMeta, sizeTitle, true), tw, thirdTitle)
 }
 
 // panelRowOpts holds display options shared by formatEntry and matchSpans.
@@ -933,12 +925,10 @@ func formatEntry(entry localfs.Entry, width int, opts panelRowOpts, styles theme
 	if opts.NameOnly {
 		return fmt.Sprintf("%-*s", width, name)
 	}
+	size := panellist.FormatListedSize(entry, painter)
+	metaPadded := padMetaLineToWidth(metaText, opts.MetaColW, false)
 	if tw == 0 {
-		if opts.ShowMeta {
-			metaPadded := padMetaLineToWidth(metaText, opts.MetaColW, false)
-			return fmt.Sprintf("%-*s  %s %*s", nameWidth, name, metaPadded, panelListSizeCells, formatListedSize(entry, painter))
-		}
-		return fmt.Sprintf("%-*s %*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter))
+		return panellist.JoinRow(nameWidth, name, metaPadded, opts.ShowMeta, size, true)
 	}
 	var third string
 	switch listFmt {
@@ -947,11 +937,7 @@ func formatEntry(entry localfs.Entry, width int, opts panelRowOpts, styles theme
 	default:
 		third = formatTime(entry.ModifiedAt)
 	}
-	if opts.ShowMeta {
-		metaPadded := padMetaLineToWidth(metaText, opts.MetaColW, false)
-		return fmt.Sprintf("%-*s  %s %*s  %-*s", nameWidth, name, metaPadded, panelListSizeCells, formatListedSize(entry, painter), tw, third)
-	}
-	return fmt.Sprintf("%-*s %*s  %-*s", nameWidth, name, panelListSizeCells, formatListedSize(entry, painter), tw, third)
+	return fmt.Sprintf("%s  %-*s", panellist.JoinRow(nameWidth, name, metaPadded, opts.ShowMeta, size, true), tw, third)
 }
 
 func matchSpans(entry localfs.Entry, rowWidth int, ranges []search.Range, highlightCursor bool, styles theme.Theme, opts panelRowOpts, nameBGAt func(displayIndex int) tcell.Style) []primitive.Span {
@@ -1021,7 +1007,7 @@ func panelVolumePairSizes(avail, total uint64, maxW int) (freeStr, totalStr stri
 	ia := byteSizeCompactSuffixIdx(a)
 	ib := byteSizeCompactSuffixIdx(b)
 	if ia < 0 || ib < 0 {
-		return formatByteSizeCompact(a, maxW), formatByteSizeCompact(b, maxW)
+		return panellist.FormatByteSizeCompact(a, maxW), panellist.FormatByteSizeCompact(b, maxW)
 	}
 	use := ia
 	if ib < use {
@@ -1031,7 +1017,7 @@ func panelVolumePairSizes(avail, total uint64, maxW int) (freeStr, totalStr stri
 	sfx := byteSizeCompactSuffixRune(use)
 	va := float64(a) / float64(div)
 	vb := float64(b) / float64(div)
-	return formatHumanScaled(va, sfx, maxW), formatHumanScaled(vb, sfx, maxW)
+	return panellist.FormatHumanScaled(va, sfx, maxW), panellist.FormatHumanScaled(vb, sfx, maxW)
 }
 
 func byteSizeCompactSuffixIdx(n int64) int {
@@ -1041,7 +1027,7 @@ func byteSizeCompactSuffixIdx(n int64) int {
 	}
 	v := float64(n) / float64(KiB)
 	sfxIdx := 0
-	suffixes := byteCompactSuffixes[:]
+	suffixes := panellist.ByteCompactSuffixes[:]
 	for v >= 1024 && sfxIdx < len(suffixes)-1 {
 		v /= 1024
 		sfxIdx++
@@ -1062,14 +1048,11 @@ func tierDivisorFromSuffixIdx(sfxIdx int) uint64 {
 }
 
 func byteSizeCompactSuffixRune(sfxIdx int) byte {
-	if sfxIdx < 0 || sfxIdx >= len(byteCompactSuffixes) {
-		return byteCompactSuffixes[0]
+	if sfxIdx < 0 || sfxIdx >= len(panellist.ByteCompactSuffixes) {
+		return panellist.ByteCompactSuffixes[0]
 	}
-	return byteCompactSuffixes[sfxIdx]
+	return panellist.ByteCompactSuffixes[sfxIdx]
 }
-
-// byteCompactSuffixes matches formatByteSizeListed / formatByteSizeCompact scaling.
-var byteCompactSuffixes = [...]byte{'K', 'M', 'G', 'T', 'P', 'E'}
 
 func uint64ToListingSizeInt64(u uint64) int64 {
 	maxI := uint64(math.MaxInt64)
@@ -1079,69 +1062,9 @@ func uint64ToListingSizeInt64(u uint64) int64 {
 	return int64(u)
 }
 
-func formatListedSize(entry localfs.Entry, painter DiskUsagePainter) string {
-	if entry.Type == localfs.EntryDirectory {
-		if painter != nil {
-			if sz, ok := painter.ByteSize(entry.Path); ok {
-				return formatByteSizeListed(sz)
-			}
-		}
-		return ""
-	}
-	return formatByteSizeListed(entry.Size)
-}
-
-// formatByteSizeListed renders a short right-aligned size for the panel column (see panelListSizeCells).
+// formatByteSizeListed renders a short right-aligned size for the panel column (see panellist.SizeCells).
 func formatByteSizeListed(n int64) string {
-	return formatByteSizeCompact(n, panelListSizeCells)
-}
-
-// formatByteSizeCompact renders n using the same binary scaling as the panel size column (KiB steps, K/M/G/… suffix).
-func formatByteSizeCompact(n int64, maxW int) string {
-	const KiB = int64(1024)
-	if maxW < 1 {
-		return ""
-	}
-	if n < 0 {
-		n = 0
-	}
-	if n < KiB {
-		s := strconv.FormatInt(n, 10)
-		if len(s) > maxW {
-			return s[:maxW]
-		}
-		return s
-	}
-	v := float64(n)
-	suffixes := byteCompactSuffixes[:]
-	v /= float64(KiB)
-	sfxIdx := 0
-	for v >= 1024 && sfxIdx < len(suffixes)-1 {
-		v /= 1024
-		sfxIdx++
-	}
-	return formatHumanScaled(v, suffixes[sfxIdx], maxW)
-}
-
-func formatHumanScaled(v float64, sfx byte, maxW int) string {
-	if v >= 10 || math.Abs(v-math.Round(v)) < 1e-3 {
-		s := fmt.Sprintf("%.0f%c", v, sfx)
-		if len(s) <= maxW {
-			return s
-		}
-	}
-	s := fmt.Sprintf("%.1f%c", v, sfx)
-	if len(s) <= maxW {
-		return s
-	}
-	s = fmt.Sprintf("%.0f%c", v, sfx)
-	if len(s) <= maxW {
-		return s
-	}
-	if len(s) > maxW {
-		return s[:maxW]
-	}
-	return s
+	return panellist.FormatByteSizeCompact(n, panellist.SizeCells)
 }
 
 // FormatByteSize renders a byte count with binary prefixes (B, KiB, MiB, GiB, TiB) for dialogs and labels.

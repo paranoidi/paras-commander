@@ -7,10 +7,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/panel"
+	"github.com/paranoidi/paras-commander/internal/panellist"
 )
 
 func TestFormatByteSizeListedFitsPanelColumn(t *testing.T) {
-	maxW := panelListSizeCells
+	maxW := panellist.SizeCells
 	tests := []int64{
 		0, 1, 1023, 1024, 1536, 5000,
 		1024 * 1024,

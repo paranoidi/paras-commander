@@ -76,7 +76,7 @@ func TestFormatBriefRowAndHeaderWithMeta(t *testing.T) {
 	hdr := briefHeader(listNameHeaderTitle(showIcons), "Size", listW, true, metaW, "Status")
 	row := formatBriefRow(localfs.Entry{Name: "otter", Type: localfs.EntryFile}, colWidth, showIcons, true, panellist.RowSuffix{}, theme.Default(), nil, 0, metaW, metaText)
 
-	wantHdr := fmt.Sprintf("%-*s  %-*s %*s", nameWidthForColumn(colWidth, showIcons, 0, true, metaW), "Name", metaW, "Status", listSizeCells, "Size")
+	wantHdr := fmt.Sprintf("%-*s  %-*s %*s", nameWidthForColumn(colWidth, showIcons, 0, true, metaW), "Name", metaW, "Status", panellist.SizeCells, "Size")
 	if hdr != wantHdr {
 		t.Fatalf("briefHeader with meta = %q, want %q", hdr, wantHdr)
 	}
@@ -173,7 +173,7 @@ func TestMeasureFitColumnWidthsParentWithIconsAndSize(t *testing.T) {
 
 	got := MeasureFitColumnWidths(layout, parent, center, true, true, uiscrollbar.StyleThumb, 10, 0)
 	longest := fitEntryTextLen(localfs.Entry{Name: "hippopotamus", Type: localfs.EntryFile})
-	want := longest + columnListLeadingGutter() + columnListIconStrip() + 1 + listSizeCells + 1 // +1 right margin
+	want := longest + columnListLeadingGutter() + columnListIconStrip() + 1 + panellist.SizeCells + 1 // +1 right margin
 	if got[0] != want {
 		t.Fatalf("MeasureFitColumnWidths col[0] = %d, want %d (icons+size, no scrollbar)", got[0], want)
 	}

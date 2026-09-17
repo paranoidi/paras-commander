@@ -1,10 +1,7 @@
 package panelcarousel
 
 import (
-	"fmt"
-	"math"
 	"sort"
-	"strconv"
 	"unicode/utf8"
 
 	"github.com/paranoidi/paras-commander/internal/localfs"
@@ -14,8 +11,6 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui/geom"
 	"github.com/paranoidi/paras-commander/internal/uiscrollbar"
 )
-
-const listSizeCells = 5
 
 // Meta is the center column's pre-laid-out meta segment (from ui.LayoutMetaColumns).
 // Width 0 means no meta columns are active.
@@ -32,74 +27,7 @@ func formatBriefRow(entry localfs.Entry, width int, showIcons bool, showSize boo
 	nameWidth := nameWidthFromRowText(rowTextWidth, showSize, metaW)
 	display := panellist.EntryDisplayRunes(entry, nameWidth, showIcons, suffix, styles)
 	name := string(panellist.RunesFromDisplay(display))
-	if metaW > 0 {
-		if !showSize {
-			return fmt.Sprintf("%-*s  %s", nameWidth, name, metaText)
-		}
-		return fmt.Sprintf("%-*s  %s %*s", nameWidth, name, metaText, listSizeCells, formatListedSize(entry, disk))
-	}
-	if !showSize {
-		return fmt.Sprintf("%-*s", nameWidth, name)
-	}
-	return fmt.Sprintf("%-*s %*s", nameWidth, name, listSizeCells, formatListedSize(entry, disk))
-}
-
-func formatListedSize(entry localfs.Entry, disk DiskUsageSource) string {
-	if entry.Type == localfs.EntryDirectory {
-		if disk != nil {
-			if sz, ok := disk.ByteSize(entry.Path); ok {
-				return formatByteSizeCompact(sz, listSizeCells)
-			}
-		}
-		return ""
-	}
-	return formatByteSizeCompact(entry.Size, listSizeCells)
-}
-
-var byteCompactSuffixes = []byte{'K', 'M', 'G', 'T', 'P', 'E'}
-
-func formatByteSizeCompact(n int64, maxW int) string {
-	const KiB = int64(1024)
-	if maxW < 1 {
-		return ""
-	}
-	if n < 0 {
-		n = 0
-	}
-	if n < KiB {
-		s := strconv.FormatInt(n, 10)
-		if len(s) > maxW {
-			return s[:maxW]
-		}
-		return s
-	}
-	v := float64(n)
-	suffixes := byteCompactSuffixes[:]
-	v /= float64(KiB)
-	sfxIdx := 0
-	for v >= 1024 && sfxIdx < len(suffixes)-1 {
-		v /= 1024
-		sfxIdx++
-	}
-	return formatHumanScaled(v, suffixes[sfxIdx], maxW)
-}
-
-func formatHumanScaled(v float64, sfx byte, maxW int) string {
-	if v >= 10 || math.Abs(v-math.Round(v)) < 1e-3 {
-		s := fmt.Sprintf("%.0f%c", v, sfx)
-		if len(s) <= maxW {
-			return s
-		}
-	}
-	s := fmt.Sprintf("%.1f%c", v, sfx)
-	if len(s) <= maxW {
-		return s
-	}
-	s = fmt.Sprintf("%.0f%c", v, sfx)
-	if len(s) > maxW {
-		return s[:maxW]
-	}
-	return s
+	return panellist.JoinRow(nameWidth, name, metaText, metaW > 0, panellist.FormatListedSize(entry, disk), showSize)
 }
 
 func listNameHeaderTitle(showIcons bool) string {
@@ -169,16 +97,7 @@ func columnScrollbarReserve(hasLane, showSB bool, style uiscrollbar.Style, total
 // formatBriefRow's (0/"" for the parent and child columns, which never carry meta).
 func briefHeader(nameTitle, sizeTitle string, rowTextWidth int, showSize bool, metaW int, metaText string) string {
 	nameWidth := nameWidthFromRowText(rowTextWidth, showSize, metaW)
-	if metaW > 0 {
-		if !showSize {
-			return fmt.Sprintf("%-*s  %s", nameWidth, nameTitle, metaText)
-		}
-		return fmt.Sprintf("%-*s  %s %*s", nameWidth, nameTitle, metaText, listSizeCells, sizeTitle)
-	}
-	if !showSize {
-		return fmt.Sprintf("%-*s", nameWidth, nameTitle)
-	}
-	return fmt.Sprintf("%-*s %*s", nameWidth, nameTitle, listSizeCells, sizeTitle)
+	return panellist.JoinRow(nameWidth, nameTitle, metaText, metaW > 0, sizeTitle, showSize)
 }
 
 // nameWidthFromRowText is the single arithmetic source for how much of a row's text width goes
@@ -186,7 +105,7 @@ func briefHeader(nameTitle, sizeTitle string, rowTextWidth int, showSize bool, m
 func nameWidthFromRowText(rowTextWidth int, showSize bool, metaW int) int {
 	nw := rowTextWidth
 	if showSize {
-		nw -= 1 + listSizeCells
+		nw -= 1 + panellist.SizeCells
 	}
 	if metaW > 0 {
 		nw -= 2 + metaW
@@ -316,7 +235,7 @@ func MeasureFitColumnWidths(layout Layout, parent Column, center panel.State, sh
 			w += columnListLeadingGutter() + columnListIconStrip()
 		}
 		if layout.ShowSize[i] {
-			w += 1 + listSizeCells
+			w += 1 + panellist.SizeCells
 		}
 		if i == 1 && metaW > 0 {
 			w += 2 + metaW
