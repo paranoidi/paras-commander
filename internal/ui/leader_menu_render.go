@@ -163,8 +163,8 @@ func LeaderMenuMinContentY(layout geom.Layout) int {
 	return 0
 }
 
-// leaderMenuKeys returns the activation rune per action item (group headers skipped):
-// the pinned Key verbatim, otherwise an auto mnemonic that never collides
+// leaderMenuKeys returns the activation rune per item, indexed like items (0 for group
+// headers): the pinned Key verbatim, otherwise an auto mnemonic that never collides
 // (case-insensitively) with any pinned key, regardless of order. When two items pin the
 // exact same rune, only the first keeps it verbatim; the later exact duplicate keeps the
 // auto-assigned fallback from dialog.ItemMnemonics (which already skipped the taken letter)
@@ -180,7 +180,7 @@ func leaderMenuKeys(items []LeaderMenuItem) []rune {
 		labels = append(labels, it.Label)
 		configured = append(configured, it.Key)
 	}
-	keys := dialog.ItemMnemonics(labels, configured)
+	actionKeys := dialog.ItemMnemonics(labels, configured)
 	seen := map[rune]struct{}{}
 	for i, k := range configured {
 		if k == 0 {
@@ -190,33 +190,18 @@ func leaderMenuKeys(items []LeaderMenuItem) []rune {
 			continue
 		}
 		seen[k] = struct{}{}
-		keys[i] = k
+		actionKeys[i] = k
 	}
-	return keys
-}
-
-func leaderMenuDisplayKey(items []LeaderMenuItem, i int) rune {
-	if i < 0 || i >= len(items) {
-		return 0
-	}
-	if items[i].GroupTitle != "" {
-		return 0
-	}
-	keys := leaderMenuKeys(items)
+	keys := make([]rune, len(items))
 	actionIdx := 0
-	for j, it := range items {
+	for i, it := range items {
 		if it.GroupTitle != "" {
 			continue
 		}
-		if j == i {
-			if actionIdx < len(keys) {
-				return keys[actionIdx]
-			}
-			return 0
-		}
+		keys[i] = actionKeys[actionIdx]
 		actionIdx++
 	}
-	return 0
+	return keys
 }
 
 // LeaderMenuIndexForKey returns the action index (skipping group headers) activated by r.
@@ -226,11 +211,11 @@ func LeaderMenuIndexForKey(items []LeaderMenuItem, r rune) (int, bool) {
 	}
 	keys := leaderMenuKeys(items)
 	actionIdx := 0
-	for _, it := range items {
+	for i, it := range items {
 		if it.GroupTitle != "" {
 			continue
 		}
-		k := keys[actionIdx]
+		k := keys[i]
 		if it.Key != 0 {
 			if k == r {
 				return actionIdx, true
@@ -315,15 +300,12 @@ func leaderMenuDirectKeysFitColumns(layout geom.Layout, items []LeaderMenuItem) 
 		return true
 	}
 	colWidth := leaderMenuColumnWidth(layout, false)
+	keys := leaderMenuKeys(visible)
 	for i, it := range visible {
 		if it.GroupTitle != "" || it.DirectKey == "" {
 			continue
 		}
-		key := it.Key
-		if key == 0 {
-			key = leaderMenuDisplayKey(visible, i)
-		}
-		if !leaderMenuDirectKeyFitsColumn(colWidth, key, it.Label, it.DirectKey) {
+		if !leaderMenuDirectKeyFitsColumn(colWidth, keys[i], it.Label, it.DirectKey) {
 			return false
 		}
 	}
@@ -467,6 +449,7 @@ func drawLeaderMenuGrouped(screen tcell.Screen, rect geom.Rect, items []LeaderMe
 	for i := range colY {
 		colY[i] = yBase
 	}
+	keys := leaderMenuKeys(items)
 	for i, it := range items {
 		col := leaderMenuClampColumn(it.GroupColumn)
 		x := xs[col]
@@ -478,15 +461,11 @@ func drawLeaderMenuGrouped(screen tcell.Screen, rect geom.Rect, items []LeaderMe
 			colY[col] = y + 1
 			continue
 		}
-		key := it.Key
-		if key == 0 {
-			key = leaderMenuDisplayKey(items, i)
-		}
 		directKey := it.DirectKey
 		if !showDirectKeys {
 			directKey = ""
 		}
-		drawLeaderMenuCell(screen, x, y, w, key, arrow, it.Label, directKey, keyStyle, arrowStyle, labelStyle, surface)
+		drawLeaderMenuCell(screen, x, y, w, keys[i], arrow, it.Label, directKey, keyStyle, arrowStyle, labelStyle, surface)
 		colY[col] = y + 1
 	}
 }
@@ -500,6 +479,7 @@ func drawLeaderMenuFlat(screen tcell.Screen, rect geom.Rect, items []LeaderMenuI
 	xBase := rect.X + leaderMenuLeftMargin
 	y := rect.Y + leaderMenuMarginRows
 	col := 0
+	keys := leaderMenuKeys(items)
 	for i, it := range items {
 		if it.GroupTitle != "" {
 			continue
@@ -509,7 +489,7 @@ func drawLeaderMenuFlat(screen tcell.Screen, rect geom.Rect, items []LeaderMenuI
 		if !showDirectKeys {
 			directKey = ""
 		}
-		drawLeaderMenuCell(screen, x, y, colWidth, leaderMenuDisplayKey(items, i), arrow, it.Label, directKey, keyStyle, arrowStyle, labelStyle, surface)
+		drawLeaderMenuCell(screen, x, y, colWidth, keys[i], arrow, it.Label, directKey, keyStyle, arrowStyle, labelStyle, surface)
 		col++
 		if col >= leaderMenuItemColumns {
 			col = 0

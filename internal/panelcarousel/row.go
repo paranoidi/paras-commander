@@ -26,18 +26,17 @@ type Meta struct {
 }
 
 // formatBriefRow formats icon+name+[meta]+size for carousel columns. metaW is the pre-laid-out
-// meta segment width (0 = none, center column only) and metaText its already-padded text.
+// meta segment width (0 = none, center column only) and metaText its text, already padded to metaW.
 func formatBriefRow(entry localfs.Entry, width int, showIcons bool, showSize bool, suffix panellist.RowSuffix, styles theme.Theme, disk DiskUsageSource, scrollbarReserve int, metaW int, metaText string) string {
 	rowTextWidth := columnListTextWidth(width, showIcons, scrollbarReserve)
 	nameWidth := nameWidthFromRowText(rowTextWidth, showSize, metaW)
 	display := panellist.EntryDisplayRunes(entry, nameWidth, showIcons, suffix, styles)
 	name := string(panellist.RunesFromDisplay(display))
 	if metaW > 0 {
-		metaPadded := fmt.Sprintf("%-*s", metaW, metaText)
 		if !showSize {
-			return fmt.Sprintf("%-*s  %s", nameWidth, name, metaPadded)
+			return fmt.Sprintf("%-*s  %s", nameWidth, name, metaText)
 		}
-		return fmt.Sprintf("%-*s  %s %*s", nameWidth, name, metaPadded, listSizeCells, formatListedSize(entry, disk))
+		return fmt.Sprintf("%-*s  %s %*s", nameWidth, name, metaText, listSizeCells, formatListedSize(entry, disk))
 	}
 	if !showSize {
 		return fmt.Sprintf("%-*s", nameWidth, name)
@@ -171,11 +170,10 @@ func columnScrollbarReserve(hasLane, showSB bool, style uiscrollbar.Style, total
 func briefHeader(nameTitle, sizeTitle string, rowTextWidth int, showSize bool, metaW int, metaText string) string {
 	nameWidth := nameWidthFromRowText(rowTextWidth, showSize, metaW)
 	if metaW > 0 {
-		metaPadded := fmt.Sprintf("%-*s", metaW, metaText)
 		if !showSize {
-			return fmt.Sprintf("%-*s  %s", nameWidth, nameTitle, metaPadded)
+			return fmt.Sprintf("%-*s  %s", nameWidth, nameTitle, metaText)
 		}
-		return fmt.Sprintf("%-*s  %s %*s", nameWidth, nameTitle, metaPadded, listSizeCells, sizeTitle)
+		return fmt.Sprintf("%-*s  %s %*s", nameWidth, nameTitle, metaText, listSizeCells, sizeTitle)
 	}
 	if !showSize {
 		return fmt.Sprintf("%-*s", nameWidth, nameTitle)

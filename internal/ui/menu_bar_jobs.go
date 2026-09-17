@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 
@@ -227,10 +226,7 @@ func DrawMenuBarJobsGap(screen tcell.Screen, y, startX, totalWidth int, strip Me
 // (hugging the progress bar). The text is left-padded to menuBarSpeedTextMaxWidth inside the
 // pill, so the pill never changes width as the speed fluctuates (e.g. 99MB/s vs 100MB/s).
 func drawMenuBarSpeedPill(screen tcell.Screen, slotX, y int, speed string, styles theme.Theme) {
-	text := []rune(speed)
-	if len(text) > menuBarSpeedTextMaxWidth {
-		text = text[:menuBarSpeedTextMaxWidth]
-	}
+	text := runewidth.FillLeft(runewidth.Truncate(speed, menuBarSpeedTextMaxWidth, ""), menuBarSpeedTextMaxWidth)
 	capStyle := styles.MenuSpeedCap
 	textStyle := styles.MenuSpeedText
 	px := slotX
@@ -238,7 +234,7 @@ func drawMenuBarSpeedPill(screen tcell.Screen, slotX, y int, speed string, style
 	px++
 	screen.SetContent(px, y, ' ', nil, textStyle)
 	px++
-	for _, r := range fmt.Sprintf("%*s", menuBarSpeedTextMaxWidth, string(text)) {
+	for _, r := range text {
 		screen.SetContent(px, y, r, nil, textStyle)
 		px += runewidth.RuneWidth(r)
 	}

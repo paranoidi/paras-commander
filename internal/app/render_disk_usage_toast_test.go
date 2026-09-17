@@ -12,10 +12,10 @@ import (
 // treats the primary panel as an active scan scope.
 type toastDiskUsagePainter struct{}
 
-func (toastDiskUsagePainter) ByteSize(string) (int64, bool)      { return 0, false }
-func (toastDiskUsagePainter) FileCount(string) (int64, bool)     { return 0, false }
-func (toastDiskUsagePainter) PendingForPanel(string, int) bool   { return false }
-func (toastDiskUsagePainter) DiskScanBusy() bool                 { return true }
+func (toastDiskUsagePainter) ByteSize(string) (int64, bool)    { return 0, false }
+func (toastDiskUsagePainter) FileCount(string) (int64, bool)   { return 0, false }
+func (toastDiskUsagePainter) PendingForPanel(string, int) bool { return false }
+func (toastDiskUsagePainter) DiskScanBusy() bool               { return true }
 func (toastDiskUsagePainter) DiskScanExcluded(string, bool, uint64, bool, func(string) bool) bool {
 	return false
 }
