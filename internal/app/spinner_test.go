@@ -18,15 +18,14 @@ func TestArmSpinnerRedrawTimerRearmsAfterBusyTick(t *testing.T) {
 		t.Fatal("expected spinner busy with running job")
 	}
 	app.armSpinnerRedrawTimer()
-	if app.spinnerRedrawTimer == nil {
+	if !app.spinnerRedrawTimer.Armed() {
 		t.Fatal("expected spinner timer armed")
 	}
 	// Simulate timer callback: nil timer then post tick (we only need timer cleared).
 	app.spinnerRedrawTimer.Stop()
-	app.spinnerRedrawTimer = nil
 	// End-of-loop behavior: busy always re-arms.
 	app.armSpinnerRedrawTimer()
-	if app.spinnerRedrawTimer == nil {
+	if !app.spinnerRedrawTimer.Armed() {
 		t.Fatal("expected spinner timer re-armed when still busy")
 	}
 }
@@ -35,7 +34,7 @@ func TestArmSpinnerRedrawTimerStopsWhenIdle(t *testing.T) {
 	t.Parallel()
 	app := testAppMinimal(t)
 	app.armSpinnerRedrawTimer()
-	if app.spinnerRedrawTimer != nil {
+	if app.spinnerRedrawTimer.Armed() {
 		t.Fatal("expected no timer when idle")
 	}
 }

@@ -144,7 +144,7 @@ func TestStartPathsSingleDirtyFileShowsGitDiff(t *testing.T) {
 			}
 			return
 		}
-		// Preview completion posts a RenderWakePayload interrupt; drain so Done is applied.
+		// Preview completion posts a PreviewClampPayload interrupt; drain so Done is applied.
 		for screen.HasPendingEvent() {
 			ev := screen.PollEvent()
 			if interruptEv, ok := ev.(*tcell.EventInterrupt); ok {

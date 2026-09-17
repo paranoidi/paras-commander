@@ -76,11 +76,13 @@ func ScanFunc(jobsCfg config.JobsConfig) jobs.ScanFunc {
 
 		// countOpts is the counting walk's own copy of opts (the delivery walk above keeps the
 		// original, untouched) with Yield wrapped by the adaptive throttle when a throughput
-		// signal is available and the probe isn't disabled. OnWarning is cleared: the counting
-		// walk enumerates the same tree independently, so leaving it wired would double-report
-		// every symlink-dereference fallback (once per walk) instead of once.
+		// signal is available and the probe isn't disabled. OnWarning and OnPath are cleared: the
+		// counting walk enumerates the same tree independently, so leaving them wired would
+		// double-report every symlink-dereference fallback and every progress path (once per
+		// walk), and OnPath's rate-limit state is not safe for two concurrent walks.
 		countOpts := opts
 		countOpts.OnWarning = nil
+		countOpts.OnPath = nil
 		if hooks.ThroughputBPS != nil && !jobsCfg.ScanDisableAdaptiveThrottle {
 			countOpts.Yield = newAdaptiveThrottleYield(opts.Yield, hooks.ThroughputBPS)
 		}

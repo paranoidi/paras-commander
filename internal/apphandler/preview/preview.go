@@ -1216,8 +1216,7 @@ func (h *Handler) runPreview(ctx context.Context, req previewrun.Request, target
 			canceledApplied = true
 		})
 		if canceledApplied && runGen == gen.Load() {
-			h.postRenderWake()
-			h.clampPreviewScroll(target)
+			h.postPreviewClamp(target)
 		}
 		return
 	default:
@@ -1370,8 +1369,7 @@ func (h *Handler) applyPreviewResult(req previewrun.Request, target previewTarge
 		doneApplied = true
 	})
 	if doneApplied && runGen == gen.Load() {
-		h.postRenderWake()
-		h.clampPreviewScroll(target)
+		h.postPreviewClamp(target)
 	}
 }
 

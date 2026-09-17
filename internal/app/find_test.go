@@ -37,7 +37,7 @@ func findCorpusHasRel(st *dialog.FindDialogState, rel string) bool {
 
 func waitFindIndexDone(t *testing.T, app *App) {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(raceSlowdown * 3 * time.Second)
 	for time.Now().Before(deadline) {
 		app.findCtrl.PollUpdates(findctrl.WakePayload{})
 		app.findCtrl.HandleThrottleRankWake()
@@ -56,7 +56,7 @@ func waitFindIndexDone(t *testing.T, app *App) {
 
 func waitFindRankDone(t *testing.T, app *App) {
 	t.Helper()
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(raceSlowdown * 3 * time.Second)
 	for time.Now().Before(deadline) {
 		app.findCtrl.PollUpdates(findctrl.WakePayload{})
 		app.findCtrl.HandleThrottleRankWake()
@@ -652,7 +652,7 @@ func TestFindDialogBulkSelectAllManyFiles(t *testing.T) {
 		t.Fatalf("IndexedCount = %d, want >= %d", st.IndexedCount, n)
 	}
 
-	deadline := time.Now().Add(time.Second)
+	deadline := time.Now().Add(raceSlowdown * time.Second)
 	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if time.Now().After(deadline) {
 		t.Fatal("F5 select-all took too long")
@@ -697,7 +697,7 @@ func TestFindDialogBulkSelectAllMixedTree(t *testing.T) {
 		t.Fatalf("indexed = %d, want >= %d", st.IndexedCount, dirs+wantMarked)
 	}
 
-	deadline := time.Now().Add(time.Second)
+	deadline := time.Now().Add(raceSlowdown * time.Second)
 	app.findCtrl.HandleDialogKey(tcell.NewEventKey(tcell.KeyF5, 0, tcell.ModNone))
 	if time.Now().After(deadline) {
 		t.Fatal("F5 select-all on mixed tree took too long")
@@ -735,7 +735,7 @@ func TestFindDialogBulkOKApplyManyFiles(t *testing.T) {
 		t.Fatalf("marked = %d, want %d", len(st.MarkedPaths), n)
 	}
 
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(raceSlowdown * 3 * time.Second)
 	app.findCtrl.ActivateDialogOK()
 	if time.Now().After(deadline) {
 		t.Fatal("OK apply took too long")
@@ -778,7 +778,7 @@ func TestFindDialogBulkGroupSelectManyFiles(t *testing.T) {
 	if st.IndexedCount != wantEntries {
 		t.Fatalf("indexed = %d, want %d", st.IndexedCount, wantEntries)
 	}
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(raceSlowdown * 3 * time.Second)
 	app.findCtrl.ApplyGroupSelect(findctrl.GroupSelectRequest{
 		Mode: findctrl.GroupSelectModeSelect, Pattern: "*.txt", PatternMode: panel.GroupPatternShell,
 	})
@@ -1252,7 +1252,7 @@ func TestFindDialogSearchOnlySelectionsWidenAndNarrow(t *testing.T) {
 	if !app.model.FindDialog.SearchOnlySelections {
 		t.Fatal("expected search-only on after toggle")
 	}
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(raceSlowdown * 3 * time.Second)
 	for time.Now().Before(deadline) {
 		app.findCtrl.PollUpdates(findctrl.WakePayload{})
 		if !findIndexedUnder(&app.model.FindDialog, dirB) {

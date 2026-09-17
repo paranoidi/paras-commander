@@ -355,11 +355,7 @@ const (
 )
 
 func (a *App) stopSpinnerRedrawTimer() {
-	if a.spinnerRedrawTimer == nil {
-		return
-	}
 	a.spinnerRedrawTimer.Stop()
-	a.spinnerRedrawTimer = nil
 }
 
 func (a *App) armSpinnerRedrawTimer() {
@@ -367,30 +363,24 @@ func (a *App) armSpinnerRedrawTimer() {
 		a.stopSpinnerRedrawTimer()
 		return
 	}
-	if a.spinnerRedrawTimer != nil {
+	if a.spinnerRedrawTimer.Armed() {
 		return
 	}
-	a.spinnerRedrawTimer = time.AfterFunc(menuBarSpinnerTick, func() {
-		a.spinnerRedrawTimer = nil
+	a.spinnerRedrawTimer.Arm(menuBarSpinnerTick, func() {
 		_ = a.screen.PostEvent(tcell.NewEventInterrupt(spinnerTickPayload{}))
 	})
 }
 
 func (a *App) stopDiskUsageRedrawDebounce() {
-	if a.disk.redrawTimer == nil {
-		return
-	}
 	a.disk.redrawTimer.Stop()
-	a.disk.redrawTimer = nil
 }
 
 func (a *App) scheduleDiskUsageRedrawDebounced() {
-	if a.disk.redrawTimer != nil {
+	if a.disk.redrawTimer.Armed() {
 		return
 	}
 	const debounce = 75 * time.Millisecond
-	a.disk.redrawTimer = time.AfterFunc(debounce, func() {
-		a.disk.redrawTimer = nil
+	a.disk.redrawTimer.Arm(debounce, func() {
 		if a.disk.engine == nil {
 			return
 		}

@@ -461,6 +461,12 @@ func (a *App) syncFollowFromActive() {
 	if filepath.Clean(follower.PathString()) == targetPath {
 		return
 	}
+	// A load to targetPath already in flight is left alone: re-issuing it every reconcile pass
+	// would bump the async-load generation and drop each result before it lands, so a slow
+	// follower listing could never complete while any other event kept the loop busy.
+	if follower.ListingPending && filepath.Clean(follower.ListingPendingPath) == targetPath {
+		return
+	}
 	if a.pathVolumeContendsWithActiveJob(targetPath) {
 		return
 	}

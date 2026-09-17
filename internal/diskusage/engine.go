@@ -113,6 +113,9 @@ func (e *Engine) workerLoop() {
 		}
 		e.curJobRoots = roots
 		e.curJobSourcePanel = job.sourcePanel
+		// Flip busy under jobMu so DiskScanBusy never observes "queue empty, worker idle"
+		// between the pop and the start of the walk.
+		e.workerBusy.Store(true)
 		e.jobMu.Unlock()
 
 		func() {
@@ -122,7 +125,6 @@ func (e *Engine) workerLoop() {
 				e.curJobSourcePanel = -1
 				e.jobMu.Unlock()
 			}()
-			e.workerBusy.Store(true)
 			defer e.workerBusy.Store(false)
 
 			sess := e.gen.Add(1)
@@ -178,12 +180,13 @@ func (e *Engine) DiskScanBusy() bool {
 	if e == nil {
 		return false
 	}
-	if e.workerBusy.Load() {
-		return true
-	}
 	e.jobMu.Lock()
 	queued := len(e.queue)
+	busy := e.workerBusy.Load()
 	e.jobMu.Unlock()
+	if busy {
+		return true
+	}
 	e.mu.RLock()
 	activeN := len(e.activeWalkRoots)
 	e.mu.RUnlock()

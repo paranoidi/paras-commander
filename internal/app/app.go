@@ -92,7 +92,7 @@ type diskUsageState struct {
 	// lastCheckedCacheVer records the engine cache version last checked by handlePanelDirChanged
 	// per panel, so a fully-cached recheck is skipped when the engine's cache hasn't changed since.
 	lastCheckedCacheVer [2]uint64
-	redrawTimer         *time.Timer
+	redrawTimer         sched.Debouncer
 	// deferPoll skips one pollDiskUsageUpdates drain after partial file-list nav while a scan is busy.
 	deferPoll atomic.Bool
 }
@@ -182,7 +182,7 @@ type App struct {
 	// messageExpiryGen increments whenever the transient message or its schedule changes;
 	// scheduled expirations carry the generation and are ignored if stale.
 	messageExpiryGen   atomic.Uint64
-	spinnerRedrawTimer *time.Timer
+	spinnerRedrawTimer sched.Debouncer
 	// lightbarHead is the menu-bar progress light bar's frame counter (ui.MenuBarJobsStrip.LightbarHead).
 	lightbarHead int
 	// menuBarSpeed is the speed-pill text last taken from a jobs progress wake; light-bar frames
@@ -1102,6 +1102,10 @@ func (a *App) handlePreviewInterruptPayload(data any) (eventOutcome, bool) {
 	out := eventOutcome{pollDiskUsageAfter: true}
 	switch d := data.(type) {
 	case previewctrl.RenderWakePayload:
+		a.render()
+		out.didRender = true
+	case previewctrl.PreviewClampPayload:
+		a.previewCtrl.ApplyPreviewClamp(d)
 		a.render()
 		out.didRender = true
 	case previewctrl.QuickViewFlushPayload:

@@ -9,7 +9,8 @@ import (
 	"github.com/paranoidi/paras-commander/internal/ui"
 )
 
-func runDetachedXDGOpen(path string) error {
+// runDetachedXDGOpen launches xdg-open on path without waiting for it. Tests replace this.
+var runDetachedXDGOpen = func(path string) error {
 	cmd := exec.Command("xdg-open", path)
 	if err := cmd.Start(); err != nil {
 		return err

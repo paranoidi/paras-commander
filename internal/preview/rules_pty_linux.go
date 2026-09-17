@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"os/exec"
+	"syscall"
 
 	"github.com/creack/pty"
 	"golang.org/x/term"
@@ -26,18 +27,31 @@ func runRuleCommandCapture(ctx context.Context, argv []string, dir string, maxBy
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
 
-	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 24, Cols: 80})
+	ptmx, tty, err := pty.Open()
 	if err != nil {
 		return cmdrun.RunResult{LaunchErr: err, ExitCode: -1}
 	}
 	defer func() { _ = ptmx.Close() }()
-	// A fresh pty starts in canonical (line-buffered, echoing) mode: a byte-oriented read by
-	// the child (e.g. dd reading our DA1 reply) would never see it until a newline shows up,
-	// and echo would mirror our synthetic replies back into the very stream we're capturing.
-	// Raw mode fixes both. Master and slave share one termios, so setting it via the master
-	// applies to the child's end too; the returned prior state is never restored since this
-	// pty is discarded (not reused) once the command exits.
+	if err := pty.Setsize(ptmx, &pty.Winsize{Rows: 24, Cols: 80}); err != nil {
+		_ = tty.Close()
+		return cmdrun.RunResult{LaunchErr: err, ExitCode: -1}
+	}
+	// A fresh pty starts in canonical (line-buffered, echoing) mode with output post-processing:
+	// a byte-oriented read by the child (e.g. dd reading our DA1 reply) would never see it until
+	// a newline shows up, echo would mirror our synthetic replies back into the very stream
+	// we're capturing, and ONLCR would turn the child's "\n" into "\r\n". Raw mode fixes all
+	// three, and must be set before the child starts so none of its output goes through the
+	// cooked settings. Master and slave share one termios, so setting it via the master applies
+	// to the child's end too; the prior state is never restored since this pty is discarded
+	// (not reused) once the command exits.
 	_, _ = term.MakeRaw(int(ptmx.Fd()))
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = tty, tty, tty
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true}
+	err = cmd.Start()
+	_ = tty.Close()
+	if err != nil {
+		return cmdrun.RunResult{LaunchErr: err, ExitCode: -1}
+	}
 
 	scanner := &terminalQueryScanner{sixelOK: sixelOK}
 	captured := cmdrun.CappedWriter{Max: maxBytes}

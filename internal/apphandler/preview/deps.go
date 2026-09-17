@@ -157,6 +157,21 @@ func (h *Handler) postRenderWake() {
 	_ = h.screen.PostEvent(tcell.NewEventInterrupt(RenderWakePayload{}))
 }
 
+// PreviewClampPayload asks the main goroutine to clamp a preview's scroll to its content and
+// repaint, after a background preview run has landed new content. Clamping reads layout state
+// (pane split, screen size) that only the main goroutine may touch, so the goroutine posts this
+// instead of clamping itself.
+type PreviewClampPayload struct{ target previewTarget }
+
+func (h *Handler) postPreviewClamp(target previewTarget) {
+	_ = h.screen.PostEvent(tcell.NewEventInterrupt(PreviewClampPayload{target: target}))
+}
+
+// ApplyPreviewClamp handles PreviewClampPayload on the main goroutine.
+func (h *Handler) ApplyPreviewClamp(p PreviewClampPayload) {
+	h.clampPreviewScroll(p.target)
+}
+
 // QuickViewFlushPayload reloads the inactive-column quick view preview after file-list debounce.
 type QuickViewFlushPayload struct{ gen uint64 }
 
