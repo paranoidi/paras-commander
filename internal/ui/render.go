@@ -2,7 +2,6 @@ package ui
 
 import (
 	"path/filepath"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -821,17 +820,7 @@ func drawModalOverlays(screen tcell.Screen, layout geom.Layout, model Model, men
 	drawFooter(screen, layout.Footer, styles, model.FooterKeys)
 	// Transient status must be drawn after modal chrome so it is not overwritten (e.g. theme picker).
 	// Draw before the generic message dialog so that modal stays the topmost curated surface when both apply.
-	msg := strings.TrimSpace(model.Message)
-	if msg != "" && layout.Footer.Height > 0 {
-		msgY := layout.Footer.Y - 1
-		if model.TerminalPanel.Visible && layout.Terminal.Height > 0 {
-			// The terminal panel occupies the row directly above the footer; paint the
-			// transient message over the panel's top row instead (message wins).
-			msgY = layout.Terminal.Y
-		}
-		row := Rect{X: 0, Y: msgY, Width: layout.Width, Height: 1}
-		drawStatusMessageOverlay(screen, row, msg, model.MessageUrgency, styles)
-	}
+	PaintTransientStatusMessage(screen, layout, model, styles)
 	if model.StashRestoreDialog.Open {
 		dialog.DrawStashRestoreDialog(screen, layout, model.StashRestoreDialog, styles)
 	}

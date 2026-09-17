@@ -25,7 +25,7 @@ func (a *App) paintFindDialogOverlay() bool {
 		return false
 	}
 	ui.PaintFindDialog(a.screen, layout, &a.model.FindDialog, a.styles, a.model.UseNerdfontIcons, a.model.PanelScrollbar, a.model.DiskUsage, a.model.PinnedItems, a.model.JobPathMarks)
-	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
+	ui.PaintTransientStatusMessage(a.screen, layout, a.model, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true
 }
@@ -47,7 +47,7 @@ func (a *App) paintFileDialogOverlay() bool {
 		a.dialogCtrl.RecomputeMassRenamePreview()
 	}
 	ui.PaintFileDialog(a.screen, layout, a.model.FileDialog, a.styles, a.model.UseNerdfontIcons, a.model.PanelScrollbar)
-	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
+	ui.PaintTransientStatusMessage(a.screen, layout, a.model, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true
 }
@@ -158,7 +158,7 @@ func (a *App) renderBrowserListNavUpdate(panelID int) {
 		return
 	}
 	ui.DrawMenuBarPermissionTailOnly(a.screen, layout, a.model, a.styles)
-	ui.PaintTransientStatusMessage(a.screen, layout, a.model.Message, a.model.MessageUrgency, a.styles)
+	ui.PaintTransientStatusMessage(a.screen, layout, a.model, a.styles)
 	a.emitScreenAfterPartialPaint()
 	if a.diskUsageScanBusy() {
 		a.disk.deferPoll.Store(true)
@@ -184,6 +184,7 @@ func (a *App) paintDiskUsageBrowserUpdate() bool {
 	if !ui.PaintDiskUsageBrowserPanelsOnly(a.screen, layout, model, a.styles) {
 		return false
 	}
+	ui.PaintTransientStatusMessage(a.screen, layout, a.model, a.styles)
 	a.emitScreenAfterPartialPaint()
 	return true
 }
