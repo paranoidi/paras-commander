@@ -109,45 +109,61 @@ func (a *App) openUserMenu() {
 		return
 	}
 
+	visible, warnings, ok := a.loadUserMenuVisible(menuPath)
+	if !ok {
+		return
+	}
+	a.userMenuPath = menuPath
+	a.userMenuWarnings = warnings
+	a.userMenuStack = nil
+	a.openUserMenuLevel(visible)
+}
+
+// loadUserMenuVisible loads menuPath, validates it, and resolves the entries visible for the
+// current panel context — the shared block behind both openUserMenu and reloadLeaderMenu.
+// On any failure it emits the appropriate message itself (setUserMenuCritical/
+// setTransientMessage) and returns ok=false; the caller only needs to decide what to do next
+// (return, or close the strip). warnings is mf.Warnings (e.g. a duplicate key= at one level).
+func (a *App) loadUserMenuVisible(menuPath string) (visible []usermenu.MenuEntry, warnings []string, ok bool) {
 	mf, err := usermenu.LoadFile(menuPath)
 	if err != nil {
 		a.setUserMenuCritical(err)
-		return
+		return nil, nil, false
 	}
 	if err := mf.ValidatePoolRefs(usermenu.PoolNameSet(a.workPools.Names())); err != nil {
 		a.setUserMenuCritical(err)
-		return
+		return nil, nil, false
 	}
 	if len(mf.Entries) == 0 {
 		a.setTransientMessage("User menu: no entries (edit with Shift+F2)", ui.MessageUrgencyWarn)
-		return
+		return nil, nil, false
 	}
 
 	active := a.panelByID(a.model.ActivePanel)
 	other := a.panelByID(a.inactivePanelID())
 	ctx := &usermenu.EvalContext{Active: active, Other: other}
-	visible, _, err := usermenu.FilterVisible(mf, ctx)
+	v, _, err := usermenu.FilterVisible(mf, ctx)
 	if err != nil {
 		a.setUserMenuCritical(err)
-		return
+		return nil, nil, false
 	}
-	if len(visible) == 0 {
+	if len(v) == 0 {
 		a.setTransientMessage("User menu: no visible entries", ui.MessageUrgencyWarn)
-		return
+		return nil, nil, false
 	}
-	a.userMenuPath = menuPath
-	a.userMenuStack = nil
-	a.openUserMenuLevel(visible)
+	return v, mf.Warnings, true
 }
 
 // openUserMenuLevel opens (or swaps the already-open strip to) one menu level: entries is
-// the flat list of rows to show now, either the top-level menu or a submenu's children.
-// Picking a submenu row pushes the current level onto a.userMenuStack and recurses into it;
-// picking a leaf clears the stack (leaving the whole menu, not just one level) and runs it.
+// the flat list of rows to show now, either the top-level menu or a submenu's children. This
+// is the single place any user-menu level is shown (top level, submenu, Esc-back, reload), so
+// it is also the single place a.userMenuWarnings is toasted. Picking a submenu row pushes the
+// current level onto a.userMenuStack and recurses into it; picking a leaf clears the stack
+// (leaving the whole menu, not just one level) and runs it.
 func (a *App) openUserMenuLevel(entries []usermenu.MenuEntry) {
 	a.userMenuVisible = entries
 	items := userMenuLeaderMenuItems(entries, a.styles)
-	a.openLeaderMenuStrip(items, true, false, false, false, "User menu", func(i int) bool {
+	opened := a.openLeaderMenuStrip(items, true, false, false, false, "User menu", func(i int) bool {
 		if i < 0 || i >= len(a.userMenuVisible) {
 			return false
 		}
@@ -161,6 +177,14 @@ func (a *App) openUserMenuLevel(entries []usermenu.MenuEntry) {
 		a.runUserMenuEntry(entry)
 		return false
 	})
+	if !opened {
+		return
+	}
+	// openLeaderMenuStrip clears the transient message internally, so the warning toast
+	// must be set after it returns.
+	for _, w := range a.userMenuWarnings {
+		a.setTransientMessage(w, ui.MessageUrgencyWarn)
+	}
 }
 
 // userMenuLeaderMenuItems maps visible user-menu entries to leader-menu rows. Submenu rows

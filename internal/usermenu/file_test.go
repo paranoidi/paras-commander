@@ -385,20 +385,6 @@ command = "true"
 `,
 			want: "single letter",
 		},
-		{
-			name: "duplicate keys",
-			body: `[one]
-key = "a"
-title = "One"
-command = "true"
-
-[two]
-key = "a"
-title = "Two"
-command = "true"
-`,
-			want: "duplicate key",
-		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -410,6 +396,25 @@ command = "true"
 				t.Fatalf("err = %v, want substring %q", err, tc.want)
 			}
 		})
+	}
+}
+
+func TestDecodeDuplicateKeyWarns(t *testing.T) {
+	mf, err := Decode([]byte(`[one]
+key = "a"
+title = "One"
+command = "true"
+
+[two]
+key = "a"
+title = "Two"
+command = "true"
+`))
+	if err != nil {
+		t.Fatalf("err = %v, want nil (duplicate key is a warning, not an error)", err)
+	}
+	if len(mf.Warnings) != 1 || mf.Warnings[0] != `User menu: duplicate key "a": "One" and "Two"` {
+		t.Fatalf("warnings = %v, want [%q]", mf.Warnings, `User menu: duplicate key "a": "One" and "Two"`)
 	}
 }
 
@@ -638,7 +643,7 @@ title = "A"
 }
 
 func TestDecodeDuplicateKeyWithinSubmenuLevel(t *testing.T) {
-	_, err := Decode([]byte(`[tools]
+	mf, err := Decode([]byte(`[tools]
 title = "Tools"
 
 [tools.one]
@@ -651,8 +656,11 @@ title = "Two"
 command = "true"
 key = "x"
 `))
-	if err == nil || !strings.Contains(err.Error(), "duplicate key") {
-		t.Fatalf("err = %v, want duplicate key error within one submenu level", err)
+	if err != nil {
+		t.Fatalf("err = %v, want nil (duplicate key within one submenu level is a warning)", err)
+	}
+	if len(mf.Warnings) != 1 || !strings.Contains(mf.Warnings[0], "duplicate key") {
+		t.Fatalf("warnings = %v, want one entry containing %q", mf.Warnings, "duplicate key")
 	}
 }
 

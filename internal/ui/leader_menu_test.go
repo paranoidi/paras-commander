@@ -86,6 +86,38 @@ func TestLeaderMenuIndexForKeyCaseInsensitiveForAutoKeys(t *testing.T) {
 	}
 }
 
+func TestLeaderMenuAutoKeySkipsLaterPinnedKey(t *testing.T) {
+	items := []LeaderMenuItem{{Label: "Test stuff"}, {Key: 't', Label: "Tools"}}
+	if got := leaderMenuDisplayKey(items, 0); got != 's' {
+		t.Fatalf("display key 0 = %q, want s", got)
+	}
+	if got := leaderMenuDisplayKey(items, 1); got != 't' {
+		t.Fatalf("display key 1 = %q, want t", got)
+	}
+	if i, ok := LeaderMenuIndexForKey(items, 't'); !ok || i != 1 {
+		t.Fatalf("t = %d %v, want 1 true", i, ok)
+	}
+	if i, ok := LeaderMenuIndexForKey(items, 's'); !ok || i != 0 {
+		t.Fatalf("s = %d %v, want 0 true", i, ok)
+	}
+}
+
+func TestLeaderMenuDuplicatePinnedKeyFallsBack(t *testing.T) {
+	items := []LeaderMenuItem{{Key: 't', Label: "Tools"}, {Key: 't', Label: "Test stuff"}}
+	if got := leaderMenuDisplayKey(items, 0); got != 't' {
+		t.Fatalf("display key 0 = %q, want t", got)
+	}
+	if got := leaderMenuDisplayKey(items, 1); got != 's' {
+		t.Fatalf("display key 1 = %q, want s (auto fallback, t already pinned)", got)
+	}
+	if i, ok := LeaderMenuIndexForKey(items, 't'); !ok || i != 0 {
+		t.Fatalf("t = %d %v, want 0 true", i, ok)
+	}
+	if i, ok := LeaderMenuIndexForKey(items, 's'); !ok || i != 1 {
+		t.Fatalf("s = %d %v, want 1 true", i, ok)
+	}
+}
+
 func leaderMenuMacroX(layout geom.Layout, items []LeaderMenuItem, macroCol int) int {
 	visible := LeaderMenuVisibleItems(layout, items)
 	rect := LeaderMenuRect(layout, leaderMenuContentRows(visible))

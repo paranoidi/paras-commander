@@ -2,6 +2,7 @@ package ui
 
 import (
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
@@ -162,16 +163,14 @@ func LeaderMenuMinContentY(layout geom.Layout) int {
 	return 0
 }
 
-func leaderMenuDisplayKey(items []LeaderMenuItem, i int) rune {
-	if i < 0 || i >= len(items) {
-		return 0
-	}
-	if items[i].GroupTitle != "" {
-		return 0
-	}
-	if items[i].Key != 0 {
-		return items[i].Key
-	}
+// leaderMenuKeys returns the activation rune per action item (group headers skipped):
+// the pinned Key verbatim, otherwise an auto mnemonic that never collides
+// (case-insensitively) with any pinned key, regardless of order. When two items pin the
+// exact same rune, only the first keeps it verbatim; the later exact duplicate keeps the
+// auto-assigned fallback from dialog.ItemMnemonics (which already skipped the taken letter)
+// so both rows stay reachable and display distinct letters. Case variants (f vs F) are not
+// duplicates and both stay verbatim.
+func leaderMenuKeys(items []LeaderMenuItem) []rune {
 	var labels []string
 	var configured []rune
 	for _, it := range items {
@@ -181,15 +180,37 @@ func leaderMenuDisplayKey(items []LeaderMenuItem, i int) rune {
 		labels = append(labels, it.Label)
 		configured = append(configured, it.Key)
 	}
+	keys := dialog.ItemMnemonics(labels, configured)
+	seen := map[rune]struct{}{}
+	for i, k := range configured {
+		if k == 0 {
+			continue
+		}
+		if _, dup := seen[k]; dup {
+			continue
+		}
+		seen[k] = struct{}{}
+		keys[i] = k
+	}
+	return keys
+}
+
+func leaderMenuDisplayKey(items []LeaderMenuItem, i int) rune {
+	if i < 0 || i >= len(items) {
+		return 0
+	}
+	if items[i].GroupTitle != "" {
+		return 0
+	}
+	keys := leaderMenuKeys(items)
 	actionIdx := 0
 	for j, it := range items {
 		if it.GroupTitle != "" {
 			continue
 		}
 		if j == i {
-			shortcuts := dialog.ItemMnemonics(labels, configured)
-			if actionIdx < len(shortcuts) {
-				return shortcuts[actionIdx]
+			if actionIdx < len(keys) {
+				return keys[actionIdx]
 			}
 			return 0
 		}
@@ -203,41 +224,23 @@ func LeaderMenuIndexForKey(items []LeaderMenuItem, r rune) (int, bool) {
 	if r == 0 {
 		return 0, false
 	}
+	keys := leaderMenuKeys(items)
 	actionIdx := 0
 	for _, it := range items {
 		if it.GroupTitle != "" {
 			continue
 		}
-		if it.Key != 0 && it.Key == r {
+		k := keys[actionIdx]
+		if it.Key != 0 {
+			if k == r {
+				return actionIdx, true
+			}
+		} else if k != 0 && unicode.ToLower(k) == unicode.ToLower(r) {
 			return actionIdx, true
 		}
 		actionIdx++
 	}
-	var autoLabels []string
-	var autoConfigured []rune
-	actionIdx = 0
-	var autoIndices []int
-	for _, it := range items {
-		if it.GroupTitle != "" {
-			continue
-		}
-		if it.Key != 0 {
-			actionIdx++
-			continue
-		}
-		autoLabels = append(autoLabels, it.Label)
-		autoConfigured = append(autoConfigured, it.Key)
-		autoIndices = append(autoIndices, actionIdx)
-		actionIdx++
-	}
-	if len(autoLabels) == 0 {
-		return 0, false
-	}
-	j, ok := dialog.ItemIndexForMnemonic(autoLabels, autoConfigured, r)
-	if !ok {
-		return 0, false
-	}
-	return autoIndices[j], true
+	return 0, false
 }
 
 // leaderMenuShowDirectKeys reports whether direct keybind suffixes may be drawn.

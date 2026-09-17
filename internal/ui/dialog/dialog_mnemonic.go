@@ -124,24 +124,11 @@ func ItemMnemonics(labels []string, configured []rune) []rune {
 	return assignDialogMnemonics(labels, configured, false)
 }
 
-// ItemIndexForMnemonic returns the item index whose activation letter matches r (case-insensitive).
-func ItemIndexForMnemonic(labels []string, configured []rune, r rune) (int, bool) {
-	if r == 0 || !unicode.IsLetter(r) {
-		return 0, false
-	}
-	shortcuts := assignDialogMnemonics(labels, configured, false)
-	lr := unicode.ToLower(r)
-	for i, sh := range shortcuts {
-		if sh != 0 && sh == lr {
-			return i, true
-		}
-	}
-	return 0, false
-}
-
 // assignDialogMnemonics returns one Alt mnemonic per label. When reserveOKCancel is true,
-// o and c are reserved for buttons. configured[i], when non-zero, is tried before dynamic
-// picks from label; if it is reserved, taken, or invalid, dynamic allocation is used.
+// o and c are reserved for buttons. Pass 1 reserves every non-zero configured[i] verbatim
+// (lowercased), regardless of label order, so a pinned key is never stolen by an earlier
+// label's dynamic pick. Pass 2 assigns dynamic candidates from dialogMnemonicCandidates(label)
+// only for slots still unset.
 func assignDialogMnemonics(labels []string, configured []rune, reserveOKCancel bool) []rune {
 	shortcuts := make([]rune, len(labels))
 	used := map[rune]struct{}{}
@@ -149,12 +136,15 @@ func assignDialogMnemonics(labels []string, configured []rune, reserveOKCancel b
 		used['o'] = struct{}{}
 		used['c'] = struct{}{}
 	}
-	for i, label := range labels {
+	for i := range labels {
 		var cfg rune
 		if i < len(configured) {
 			cfg = configured[i]
 		}
-		if tryAssignDialogMnemonic(&shortcuts[i], cfg, used, reserveOKCancel) {
+		tryAssignDialogMnemonic(&shortcuts[i], cfg, used, reserveOKCancel)
+	}
+	for i, label := range labels {
+		if shortcuts[i] != 0 {
 			continue
 		}
 		for _, cand := range dialogMnemonicCandidates(label) {

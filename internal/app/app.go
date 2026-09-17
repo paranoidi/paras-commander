@@ -293,6 +293,10 @@ type App struct {
 	userMenuVisible []usermenu.MenuEntry
 	userMenuPath    string
 
+	// userMenuWarnings holds non-fatal menu.toml problems (e.g. a duplicate key= at one
+	// level) from the last load, toasted every time a user-menu level is shown.
+	userMenuWarnings []string
+
 	// userMenuStack holds ancestor levels while a submenu is open, for Esc back-navigation.
 	userMenuStack [][]usermenu.MenuEntry
 }

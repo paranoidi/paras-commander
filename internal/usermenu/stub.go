@@ -35,7 +35,10 @@ const MenuStubTOML = `# User function menu
 # cannot also set command / run_for_each / pool / toast / interactive /
 # detach / background / dialog (mutually exclusive with being a container).
 # key=/default= uniqueness is scoped per menu level, so a key can be reused
-# across sibling submenus but not twice within the same level.
+# across sibling submenus but not twice within the same level. A duplicate
+# key= within one level is warned about when the menu is opened; the later
+# entry falls back to an auto-derived letter instead of the menu failing to
+# open.
 #
 # [tools]
 # title = "Tools"
@@ -67,8 +70,10 @@ const MenuStubTOML = `# User function menu
 #
 # key             string   optional   (single letter)
 #   Pin the function-menu activation letter; otherwise derived from title.
-#   No letters are reserved. Must be unique among siblings at the same menu
-#   level (the same letter can be reused across different submenus).
+#   No letters are reserved. Should be unique among siblings at the same menu
+#   level (the same letter can be reused across different submenus); a
+#   duplicate is warned about when the menu opens and the later entry falls
+#   back to an auto-derived letter instead.
 #
 # when            string | [string]   optional   default: always visible
 #   Visibility filter; OR semantics across list items. Also applies to a

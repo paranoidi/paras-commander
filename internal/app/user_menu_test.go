@@ -217,6 +217,41 @@ command = "true"
 	}
 }
 
+func TestOpenUserMenuWarnsOnDuplicateKey(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, "config")
+	menuPath := filepath.Join(cfgDir, config.DefaultUserMenuFileName)
+	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(menuPath, []byte(`[one]
+key = "a"
+title = "One"
+command = "true"
+
+[two]
+key = "a"
+title = "Two"
+command = "true"
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	app := testUserMenuApp(t, dir, cfgDir)
+
+	app.openUserMenu()
+
+	if !app.model.LeaderMenu.Open {
+		t.Fatal("user menu dialog should open despite the duplicate key")
+	}
+	if app.model.MessageUrgency != ui.MessageUrgencyWarn {
+		t.Fatalf("MessageUrgency = %v, want warn", app.model.MessageUrgency)
+	}
+	if !strings.Contains(app.model.Message, "duplicate key") {
+		t.Fatalf("Message = %q, want it to mention duplicate key", app.model.Message)
+	}
+}
+
 func TestF2KeyTogglesUserMenuClosed(t *testing.T) {
 	dir := t.TempDir()
 	cfgDir := filepath.Join(dir, "config")

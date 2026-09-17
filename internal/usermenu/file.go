@@ -65,6 +65,9 @@ func (s *boolField) UnmarshalTOML(data interface{}) error {
 type MenuFile struct {
 	ShellPatterns bool
 	Entries       []MenuEntry
+	// Warnings holds non-fatal problems to surface to the user, e.g. a duplicate key= among
+	// siblings at one menu level (the later entry falls back to an auto-derived letter).
+	Warnings []string
 }
 
 // MenuEntry is one named menu.toml table. A non-nil Entries makes it a submenu container
@@ -310,7 +313,7 @@ func Decode(data []byte) (*MenuFile, error) {
 	pinnedKeys := make(map[rune]string)
 	defaultCount := 0
 	for _, name := range rootNames {
-		entry, err := decodeEntryAtPath(meta, top[name], name, orderIndex, out.ShellPatterns, pinnedKeys, &defaultCount)
+		entry, err := decodeEntryAtPath(meta, top[name], name, orderIndex, out.ShellPatterns, pinnedKeys, &defaultCount, &out.Warnings)
 		if err != nil {
 			return nil, err
 		}
@@ -321,8 +324,9 @@ func Decode(data []byte) (*MenuFile, error) {
 
 // decodeEntryAtPath decodes the table at the dotted path into a MenuEntry: a submenu
 // container when it has nested child tables, otherwise a runnable leaf. pinnedKeys and
-// defaultCount enforce "unique key=" / "only one default=true" among siblings at this level.
-func decodeEntryAtPath(meta toml.MetaData, prim toml.Primitive, path string, orderIndex map[string]int, shellPatternsDefault bool, pinnedKeys map[rune]string, defaultCount *int) (MenuEntry, error) {
+// defaultCount enforce "unique key=" / "only one default=true" among siblings at this level;
+// a duplicate key= is non-fatal and appends a message to *warnings instead of erroring.
+func decodeEntryAtPath(meta toml.MetaData, prim toml.Primitive, path string, orderIndex map[string]int, shellPatternsDefault bool, pinnedKeys map[rune]string, defaultCount *int, warnings *[]string) (MenuEntry, error) {
 	// Discover child tables and validate field names from the untyped map first: decoding
 	// straight into the typed menuEntry struct would fail with a confusing type-mismatch
 	// error if a child table happens to share a name with a scalar field (e.g. [tools.command]).
@@ -353,8 +357,10 @@ func decodeEntryAtPath(meta toml.MetaData, prim toml.Primitive, path string, ord
 		return MenuEntry{}, fmt.Errorf("menu.toml: [%s]: title is required", path)
 	}
 
-	if err := validateEntryKey(path, raw.Key, pinnedKeys); err != nil {
+	if warn, err := validateEntryKey(path, raw.Key, title, pinnedKeys); err != nil {
 		return MenuEntry{}, err
+	} else if warn != "" {
+		*warnings = append(*warnings, warn)
 	}
 	if raw.Default {
 		(*defaultCount)++
@@ -366,15 +372,16 @@ func decodeEntryAtPath(meta toml.MetaData, prim toml.Primitive, path string, ord
 	entryShellPatterns := resolveShellPatterns(shellPatternsDefault, raw.ShellPatterns)
 
 	if len(childNames) > 0 {
-		return decodeSubmenuEntry(meta, prim, path, title, raw, childNames, orderIndex, entryShellPatterns)
+		return decodeSubmenuEntry(meta, prim, path, title, raw, childNames, orderIndex, entryShellPatterns, warnings)
 	}
 	return decodeLeafEntry(path, title, raw, entryShellPatterns)
 }
 
 // decodeSubmenuEntry decodes a table with nested child tables into a submenu container,
 // recursing into each child in file-header order with fresh pinnedKeys/defaultCount (sibling
-// key=/default= uniqueness is scoped per menu level).
-func decodeSubmenuEntry(meta toml.MetaData, prim toml.Primitive, path, title string, raw menuEntry, childNames []string, orderIndex map[string]int, entryShellPatterns bool) (MenuEntry, error) {
+// key=/default= uniqueness is scoped per menu level); warnings is threaded through unchanged
+// so duplicate-key messages from every level land in the same file-level MenuFile.Warnings.
+func decodeSubmenuEntry(meta toml.MetaData, prim toml.Primitive, path, title string, raw menuEntry, childNames []string, orderIndex map[string]int, entryShellPatterns bool, warnings *[]string) (MenuEntry, error) {
 	if err := validateSubmenuMutualExclusion(path, raw); err != nil {
 		return MenuEntry{}, err
 	}
@@ -394,7 +401,7 @@ func decodeSubmenuEntry(meta toml.MetaData, prim toml.Primitive, path, title str
 	children := make([]MenuEntry, 0, len(childNames))
 	for _, name := range childNames {
 		childPath := path + "." + name
-		child, err := decodeEntryAtPath(meta, primMap[name], childPath, orderIndex, entryShellPatterns, childPinned, &childDefault)
+		child, err := decodeEntryAtPath(meta, primMap[name], childPath, orderIndex, entryShellPatterns, childPinned, &childDefault, warnings)
 		if err != nil {
 			return MenuEntry{}, err
 		}
@@ -622,21 +629,25 @@ func entryError(path, msg string) error {
 	return fmt.Errorf("menu.toml: [%s]: %s", path, msg)
 }
 
-func validateEntryKey(path, key string, pinned map[rune]string) error {
+// validateEntryKey validates key against the single-letter rule (a hard error) and records it
+// in pinned for the *first* entry that claims a given letter. A duplicate at the same menu
+// level is not fatal: it returns a warning message instead of an error, and pinned keeps
+// pointing at the first entry (the later entry falls back to an auto-derived letter).
+func validateEntryKey(path, key, title string, pinned map[rune]string) (warning string, err error) {
 	key = strings.TrimSpace(key)
 	if key == "" {
-		return nil
+		return "", nil
 	}
 	runes := []rune(key)
 	if len(runes) != 1 || !unicode.IsLetter(runes[0]) {
-		return entryError(path, fmt.Sprintf("key must be a single letter, got %q", key))
+		return "", entryError(path, fmt.Sprintf("key must be a single letter, got %q", key))
 	}
 	lr := unicode.ToLower(runes[0])
 	if prev, dup := pinned[lr]; dup {
-		return entryError(path, fmt.Sprintf("duplicate key %q (also used by [%s])", key, prev))
+		return fmt.Sprintf("User menu: duplicate key %q: %q and %q", key, prev, title), nil
 	}
-	pinned[lr] = path
-	return nil
+	pinned[lr] = title
+	return "", nil
 }
 
 // validateDimSpec checks that a dialog_width or dialog_height value is a positive integer
